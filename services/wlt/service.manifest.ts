@@ -20,11 +20,16 @@ export const wltServiceManifest = {
 
   // WLT Foundation Foundation: reference-only endpoints require fresh journey-gate and API health evidence at services/wlt/evidence/WLT Foundation-runtime-foundation/.
   // WLT Payment Sessions: minimal payment-session reference create/read is active for DSH handoff.
-  // WLT Payment Sessions+ financial mutations (simulated provider) are APPROVED as the local/staging default;
-  // production provider swap remains env-only and forbidden without WLT_ALLOW_PRODUCTION_PROVIDER=true.
+  // WLT Payment Sessions+ financial mutations are approved for the local/staging
+  // provider-lab posture only. Production provider access remains blocked by
+  // runtime configuration unless WLT_ALLOW_PRODUCTION_PROVIDER is explicitly true.
   referenceRuntimeVerified: true,
   journeyRuntimeVerified: false,
   paymentSessionReferenceReady: true,
+  localSimulatorMutationsReady: true,
+  stagingProviderLabMutationsReady: true,
+  productionMutationsReady: false,
+  productionMutationBlocker: "Production provider mutations remain blocked unless WLT_ALLOW_PRODUCTION_PROVIDER is explicitly true and journey runtime evidence is refreshed.",
   mutationRuntimeReady: true,
   mutationJourneysApproved: true,
 

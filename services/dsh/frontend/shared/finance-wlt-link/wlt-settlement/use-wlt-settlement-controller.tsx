@@ -23,7 +23,7 @@ function useWltSettlementController() {
   return { state, loadByPartner, reset };
 }
 
-function useWltSettlementSummaryController() {
+export function useWltSettlementSummaryController() {
   const [state, setState] = useState<DshWltSettlementSummaryState>({ kind: "idle" });
 
   const loadSummary = useCallback(async (partnerId: string) => {

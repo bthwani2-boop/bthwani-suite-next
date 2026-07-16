@@ -1,0 +1,422 @@
+openapi: 3.1.0
+info:
+  title: BThwani Core Platform Control API
+  version: 0.1.0
+  description: Sovereign platform-control read model and blocked mutation workflow contract.
+
+x-bthwani-owner: core/platform-control
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-scope: platform-runtime-control
+
+paths:
+  /platform/v1/runtime-config:
+    get:
+      operationId: getPlatformRuntimeConfig
+      summary: Return the current platform-control runtime snapshot.
+      tags: [PlatformRuntime]
+      responses:
+        "200":
+          description: Platform runtime snapshot.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlatformRuntimeSnapshot"
+  /platform/v1/runtime-config/effective:
+    get:
+      operationId: getEffectiveRuntimeConfig
+      summary: Return the effective runtime configuration for the requested scope.
+      tags: [PlatformRuntime]
+      parameters:
+        - name: surface
+          in: query
+          schema: { type: string }
+        - name: city
+          in: query
+          schema: { type: string }
+        - name: zone
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Effective runtime configuration.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlatformEffectiveRuntimeConfig"
+  /platform/v1/variables:
+    get:
+      operationId: listPlatformVariables
+      summary: List platform variables.
+      tags: [PlatformVariables]
+      responses:
+        "200":
+          description: Platform variables.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [variables]
+                properties:
+                  variables:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PlatformVariable"
+  /platform/v1/variables/{key}:
+    get:
+      operationId: getPlatformVariable
+      summary: Get a platform variable by key.
+      tags: [PlatformVariables]
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "404":
+          description: Variable is not present until the variable store exists.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlatformApiError"
+  /platform/v1/feature-flags:
+    get:
+      operationId: listPlatformFeatureFlags
+      summary: List platform feature flags.
+      tags: [PlatformFlags]
+      responses:
+        "200":
+          description: Feature flags.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [flags]
+                properties:
+                  flags:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PlatformFeatureFlag"
+  /platform/v1/services:
+    get:
+      operationId: listPlatformServices
+      summary: List platform service posture.
+      tags: [PlatformServices]
+      responses:
+        "200":
+          description: Platform services.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [services]
+                properties:
+                  services:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PlatformServicePosture"
+  /platform/v1/health:
+    get:
+      operationId: getPlatformHealth
+      summary: Return platform health posture.
+      tags: [PlatformHealth]
+      responses:
+        "200":
+          description: Health posture.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlatformHealthSnapshot"
+  /platform/v1/audit-events:
+    get:
+      operationId: listPlatformAuditEvents
+      summary: List platform audit events.
+      tags: [PlatformAudit]
+      responses:
+        "200":
+          description: Audit events.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [events]
+                properties:
+                  events:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PlatformAuditEvent"
+  /platform/v1/change-sets:
+    get:
+      operationId: listPlatformChangeSets
+      summary: List platform change sets.
+      tags: [PlatformChangeSets]
+      responses:
+        "200":
+          description: Change sets.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [changeSets]
+                properties:
+                  changeSets:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PlatformChangeSet"
+    post:
+      operationId: createPlatformChangeSet
+      summary: Create a platform change set proposal.
+      tags: [PlatformChangeSets]
+      responses:
+        "409":
+          description: Change workflow is not enabled in P1.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlatformApiError"
+  /platform/v1/change-sets/{id}/validate:
+    post:
+      operationId: validatePlatformChangeSet
+      summary: Validate a platform change set.
+      tags: [PlatformChangeSets]
+      parameters:
+        - $ref: "#/components/parameters/ChangeSetId"
+      responses:
+        "409": { $ref: "#/components/responses/ChangeWorkflowRequired" }
+  /platform/v1/change-sets/{id}/submit:
+    post:
+      operationId: submitPlatformChangeSet
+      summary: Submit a platform change set for approval.
+      tags: [PlatformChangeSets]
+      parameters:
+        - $ref: "#/components/parameters/ChangeSetId"
+      responses:
+        "409": { $ref: "#/components/responses/ChangeWorkflowRequired" }
+  /platform/v1/change-sets/{id}/approve:
+    post:
+      operationId: approvePlatformChangeSet
+      summary: Approve a platform change set.
+      tags: [PlatformChangeSets]
+      parameters:
+        - $ref: "#/components/parameters/ChangeSetId"
+      responses:
+        "409": { $ref: "#/components/responses/ChangeWorkflowRequired" }
+  /platform/v1/change-sets/{id}/reject:
+    post:
+      operationId: rejectPlatformChangeSet
+      summary: Reject a platform change set.
+      tags: [PlatformChangeSets]
+      parameters:
+        - $ref: "#/components/parameters/ChangeSetId"
+      responses:
+        "409": { $ref: "#/components/responses/ChangeWorkflowRequired" }
+  /platform/v1/change-sets/{id}/apply:
+    post:
+      operationId: applyPlatformChangeSet
+      summary: Apply an approved platform change set.
+      tags: [PlatformChangeSets]
+      parameters:
+        - $ref: "#/components/parameters/ChangeSetId"
+      responses:
+        "409": { $ref: "#/components/responses/ChangeWorkflowRequired" }
+  /platform/v1/change-sets/{id}/rollback:
+    post:
+      operationId: rollbackPlatformChangeSet
+      summary: Roll back an applied platform change set.
+      tags: [PlatformChangeSets]
+      parameters:
+        - $ref: "#/components/parameters/ChangeSetId"
+      responses:
+        "409": { $ref: "#/components/responses/ChangeWorkflowRequired" }
+  /platform/v1/rollouts:
+    post:
+      operationId: createPlatformRollout
+      summary: Create a platform rollout.
+      tags: [PlatformRollouts]
+      responses:
+        "409": { $ref: "#/components/responses/RolloutWorkflowRequired" }
+  /platform/v1/rollouts/{id}/advance:
+    post:
+      operationId: advancePlatformRollout
+      summary: Advance a platform rollout.
+      tags: [PlatformRollouts]
+      parameters:
+        - $ref: "#/components/parameters/RolloutId"
+      responses:
+        "409": { $ref: "#/components/responses/RolloutWorkflowRequired" }
+  /platform/v1/rollouts/{id}/pause:
+    post:
+      operationId: pausePlatformRollout
+      summary: Pause a platform rollout.
+      tags: [PlatformRollouts]
+      parameters:
+        - $ref: "#/components/parameters/RolloutId"
+      responses:
+        "409": { $ref: "#/components/responses/RolloutWorkflowRequired" }
+  /platform/v1/rollouts/{id}/abort:
+    post:
+      operationId: abortPlatformRollout
+      summary: Abort a platform rollout.
+      tags: [PlatformRollouts]
+      parameters:
+        - $ref: "#/components/parameters/RolloutId"
+      responses:
+        "409": { $ref: "#/components/responses/RolloutWorkflowRequired" }
+  /platform/v1/rollouts/{id}/rollback:
+    post:
+      operationId: rollbackPlatformRollout
+      summary: Roll back a platform rollout.
+      tags: [PlatformRollouts]
+      parameters:
+        - $ref: "#/components/parameters/RolloutId"
+      responses:
+        "409": { $ref: "#/components/responses/RolloutWorkflowRequired" }
+
+components:
+  parameters:
+    ChangeSetId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+    RolloutId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+  responses:
+    ChangeWorkflowRequired:
+      description: Change workflow is not enabled in P1.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/PlatformApiError"
+    RolloutWorkflowRequired:
+      description: Rollout workflow is not enabled in P1.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/PlatformApiError"
+  schemas:
+    PlatformControlState:
+      type: string
+      enum: [FIX_REQUIRED, PARTIALLY_BOUND, UNKNOWN_HEALTH, ROLLBACK_UNAVAILABLE, CONTRACT_REQUIRED, READ_ONLY_BOUND]
+    PlatformRuntimeSnapshot:
+      type: object
+      required: [status, revision, generatedAt, variablesState, flagsState, rolloutsState, healthState, auditState, rollbackState, servicesState, evidence]
+      properties:
+        status:
+          $ref: "#/components/schemas/PlatformControlState"
+        revision:
+          type: string
+        generatedAt:
+          type: string
+          format: date-time
+        variablesState:
+          $ref: "#/components/schemas/PlatformControlState"
+        flagsState:
+          $ref: "#/components/schemas/PlatformControlState"
+        rolloutsState:
+          $ref: "#/components/schemas/PlatformControlState"
+        healthState:
+          $ref: "#/components/schemas/PlatformControlState"
+        auditState:
+          $ref: "#/components/schemas/PlatformControlState"
+        rollbackState:
+          $ref: "#/components/schemas/PlatformControlState"
+        servicesState:
+          $ref: "#/components/schemas/PlatformControlState"
+        evidence:
+          type: array
+          items:
+            type: string
+    PlatformEffectiveRuntimeConfig:
+      type: object
+      required: [revision, stale, fallbackUsed, evaluationTrace, values]
+      properties:
+        revision: { type: string }
+        stale: { type: boolean }
+        fallbackUsed: { type: boolean }
+        evaluationTrace:
+          type: array
+          items: { type: string }
+        values:
+          type: object
+          additionalProperties: true
+    PlatformVariable:
+      type: object
+      required: [key, ownerService, valueType, classification, scopeType, revision, status]
+      properties:
+        key: { type: string }
+        ownerService: { type: string }
+        valueType: { type: string }
+        classification: { type: string }
+        scopeType: { type: string }
+        scopeId: { type: string }
+        revision: { type: string }
+        status:
+          $ref: "#/components/schemas/PlatformControlState"
+        effectiveFrom:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+    PlatformFeatureFlag:
+      type: object
+      required: [key, status, revision]
+      properties:
+        key: { type: string }
+        status:
+          $ref: "#/components/schemas/PlatformControlState"
+        revision: { type: string }
+        enabled:
+          type: boolean
+    PlatformServicePosture:
+      type: object
+      required: [service, state, evidenceSource]
+      properties:
+        service: { type: string }
+        state:
+          $ref: "#/components/schemas/PlatformControlState"
+        evidenceSource: { type: string }
+    PlatformHealthSnapshot:
+      type: object
+      required: [state, checkedAt, services]
+      properties:
+        state:
+          $ref: "#/components/schemas/PlatformControlState"
+        checkedAt:
+          type: string
+          format: date-time
+        services:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlatformServicePosture"
+    PlatformAuditEvent:
+      type: object
+      required: [id, action, actorId, createdAt, status]
+      properties:
+        id: { type: string }
+        action: { type: string }
+        actorId: { type: string }
+        createdAt:
+          type: string
+          format: date-time
+        status:
+          $ref: "#/components/schemas/PlatformControlState"
+    PlatformChangeSet:
+      type: object
+      required: [id, status, createdAt]
+      properties:
+        id: { type: string }
+        status:
+          $ref: "#/components/schemas/PlatformControlState"
+        createdAt:
+          type: string
+          format: date-time
+    PlatformApiError:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }

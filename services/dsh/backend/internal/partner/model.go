@@ -2,15 +2,17 @@ package partner
 
 import (
 	"errors"
+	"strings"
 	"time"
 )
 
 var (
-	ErrNotFound                     = errors.New("partner not found")
-	ErrInvalid                      = errors.New("invalid partner input")
-	ErrForbidden                    = errors.New("partner action forbidden")
-	ErrInvalidTransition            = errors.New("invalid partner status transition")
-	ErrConflict                     = errors.New("partner conflict — duplicate legal identity")
+	ErrNotFound                    = errors.New("partner not found")
+	ErrInvalid                     = errors.New("invalid partner input")
+	ErrForbidden                   = errors.New("partner action forbidden")
+	ErrInvalidTransition           = errors.New("invalid partner status transition")
+	ErrConflict                    = errors.New("partner conflict — duplicate legal identity")
+	ErrVersionConflict             = errors.New("optimistic concurrency control failed — version mismatch")
 	ErrStorePublicationGatesFailed = errors.New("store publication gates failed: linked store must be active, visible, serviceable, partner-ready, catalog approved, and marketing visible")
 )
 
@@ -101,21 +103,21 @@ type Partner struct {
 	Notes               string           `json:"notes"`
 	// Payout destination reference — DSH holds only the WLT reference ID and
 	// masked display strings. Raw bank data is never stored in DSH after Phase 5.
-	PayoutDestinationID  string `json:"payoutDestinationId"`
-	MaskedAccountNumber  string `json:"maskedAccountNumber"`
-	MaskedIBAN           string `json:"maskedIban"`
-	MaskedMobileNumber   string `json:"maskedMobileNumber"`
+	PayoutDestinationID string `json:"payoutDestinationId"`
+	MaskedAccountNumber string `json:"maskedAccountNumber"`
+	MaskedIBAN          string `json:"maskedIban"`
+	MaskedMobileNumber  string `json:"maskedMobileNumber"`
 	// Legacy bank display fields retained for backward compatibility.
 	// New writes go through WLT; these are populated from masked values only.
-	BeneficiaryName               string `json:"beneficiaryName"`
-	BankName                      string `json:"bankName"`
-	BankBranch                    string `json:"bankBranch"`
-	BankAccountNumber             string `json:"accountNumber"`
-	BankIBAN                      string `json:"iban"`
-	PayoutMobileNumber            string `json:"payoutMobileNumber"`
-	SettlementPreference          string `json:"settlementPreference"`
-	BankAccountHolderMatchesOwner bool   `json:"bankAccountHolderMatchesOwner"`
-	BankNotes                     string `json:"bankNotes"`
+	BeneficiaryName               string    `json:"beneficiaryName"`
+	BankName                      string    `json:"bankName"`
+	BankBranch                    string    `json:"bankBranch"`
+	BankAccountNumber             string    `json:"accountNumber"`
+	BankIBAN                      string    `json:"iban"`
+	PayoutMobileNumber            string    `json:"payoutMobileNumber"`
+	SettlementPreference          string    `json:"settlementPreference"`
+	BankAccountHolderMatchesOwner bool      `json:"bankAccountHolderMatchesOwner"`
+	BankNotes                     string    `json:"bankNotes"`
 	Version                       int       `json:"version"`
 	CreatedAt                     time.Time `json:"createdAt"`
 	UpdatedAt                     time.Time `json:"updatedAt"`
@@ -400,10 +402,10 @@ type UpdatePartnerInput struct {
 	BankAccountHolderMatchesOwner *bool  `json:"bankAccountHolderMatchesOwner"`
 	BankNotes                     string `json:"bankNotes"`
 	// WLT relay fields: populated by the repository after WLT upsert.
-	PayoutDestinationID  string `json:"-"`
-	MaskedAccountNumber  string `json:"-"`
-	MaskedIBAN           string `json:"-"`
-	MaskedMobileNumber   string `json:"-"`
+	PayoutDestinationID string `json:"-"`
+	MaskedAccountNumber string `json:"-"`
+	MaskedIBAN          string `json:"-"`
+	MaskedMobileNumber  string `json:"-"`
 	// ActorID of the caller issuing the update — used for WLT audit.
 	UpdatedByActorID string `json:"-"`
 }
@@ -471,4 +473,131 @@ type PartnerListQuery struct {
 	CreatedByActorID string
 	Limit            int
 	Offset           int
+}
+
+// ─── Store team members ─────────────────────────────────────────────────────
+// Closes the partner-store backend gap: app-partner's team management screen
+// (services/dsh/frontend/app-partner/team/PartnerTeamManagementScreen.tsx)
+// already calls these operations against the OpenAPI contract; there was no
+// Go implementation until this backend path.
+
+type StoreTeamMember struct {
+	ID                 string `json:"id"`
+	Name               string `json:"name"`
+	Role               string `json:"role"`
+	RoleLabel          string `json:"roleLabel"`
+	Status             string `json:"status"`
+	StatusLabel        string `json:"statusLabel"`
+	BranchAssignment   string `json:"branchAssignment"`
+	PermissionsSummary string `json:"permissionsSummary"`
+	DeliveryAssignment string `json:"deliveryAssignment"`
+	InviteLifecycle    string `json:"inviteLifecycle"`
+	OperationalImpact  string `json:"operationalImpact"`
+	AuditNote          string `json:"auditNote"`
+	InlineAction       string `json:"inlineAction"`
+	InlineActionLabel  string `json:"inlineActionLabel"`
+}
+
+type InviteTeamMemberInput struct {
+	Identity         string `json:"identity"`
+	InvitedByActorID string `json:"-"`
+}
+
+func (i InviteTeamMemberInput) Validate() error {
+	if strings.TrimSpace(i.Identity) == "" {
+		return ErrInvalid
+	}
+	return nil
+}
+
+type TeamMemberActionInput struct {
+	Action  string `json:"action"`
+	ActorID string `json:"-"`
+}
+
+func (i TeamMemberActionInput) Validate() error {
+	switch i.Action {
+	case "pause", "activate", "block", "resend-invite", "cancel-invite":
+		return nil
+	default:
+		return ErrInvalid
+	}
+	return nil
+}
+
+// ─── Store courier settings ─────────────────────────────────────────────────
+
+type StoreCourierSettings struct {
+	CourierName       string   `json:"courierName"`
+	CourierPhone      string   `json:"courierPhone"`
+	IsActive          bool     `json:"isActive"`
+	Policy            string   `json:"policy"`
+	PricingSource     string   `json:"pricingSource"`
+	Compensation      string   `json:"compensation"`
+	SelectedBranchIDs []string `json:"selectedBranchIds"`
+	Version           int64    `json:"version"`
+}
+
+func (i StoreCourierSettings) Validate() error {
+	if strings.TrimSpace(i.CourierName) == "" || strings.TrimSpace(i.CourierPhone) == "" {
+		return ErrInvalid
+	}
+
+	// Validate combinations
+	if i.Policy == "free_delivery" && i.PricingSource != "bthwani_pricing" {
+		return ErrInvalid
+	}
+	if i.Policy == "store_paid" && i.Compensation != "store_wallet" {
+		return ErrInvalid
+	}
+
+	return nil
+}
+
+// ─── Store coverage zones ───────────────────────────────────────────────────
+
+type StoreCoverageZone struct {
+	ID                  string `json:"id"`
+	Name                string `json:"name"`
+	Status              string `json:"status"`
+	StatusLabel         string `json:"statusLabel"`
+	BranchRelation      string `json:"branchRelation"`
+	ServiceModeRelation string `json:"serviceModeRelation"`
+	PolicySummary       string `json:"policySummary"`
+	PolicyReason        string `json:"policyReason"`
+	OperationalImpact   string `json:"operationalImpact"`
+	PricingReference    string `json:"pricingReference"`
+	CommissionReference string `json:"commissionReference"`
+	PayoutReference     string `json:"payoutReference"`
+	ReviewActionLabel   string `json:"reviewActionLabel"`
+	AuditNote           string `json:"auditNote"`
+}
+
+// ─── Partner operational scopes ─────────────────────────────────────────────
+
+type OperationalScope struct {
+	ScopeID     string   `json:"scopeId"`
+	StoreID     string   `json:"storeId"`
+	PartnerID   string   `json:"partnerId"`
+	DisplayName string   `json:"displayName"`
+	Role        string   `json:"role"`
+	Permissions []string `json:"permissions"`
+}
+
+// scopePermissionsByRole is the auditable source of truth for what each
+// team role can do within a store scope. Referenced by
+// ListPartnerScopesForActor — not duplicated inline in query-mapping code.
+var scopePermissionsByRole = map[string][]string{
+	"owner":      {"team.manage", "courier.manage", "coverage.read", "catalog.manage", "orders.manage"},
+	"manager":    {"team.manage", "courier.manage", "coverage.read", "orders.manage"},
+	"supervisor": {"coverage.read", "orders.manage"},
+	"staff":      {"orders.manage"},
+	"courier":    {"orders.manage"},
+}
+
+func permissionsForRole(role string) []string {
+	if perms, ok := scopePermissionsByRole[role]; ok {
+		return perms
+	}
+	return scopePermissionsByRole["staff"]
 }

@@ -202,7 +202,7 @@ export function getDshModeTrackingStageFilter(
   };
 }
 
-function isDshFulfillmentDeliveryMode(
+export function isDshFulfillmentDeliveryMode(
   value: string | null | undefined,
 ): value is DshFulfillmentDeliveryMode {
   return value === 'bthwani_delivery' || value === 'partner_delivery' || value === 'pickup';

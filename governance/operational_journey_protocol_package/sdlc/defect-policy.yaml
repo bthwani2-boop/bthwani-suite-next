@@ -1,0 +1,19 @@
+version: 1
+authority: governance/26_SDLC_TEAM_AND_STAGE_GATES.md
+severities:
+  Critical:
+    examples: security_breach_financial_corruption_data_loss_broad_privilege_bypass
+    release_decision: absolute_block
+  High:
+    examples: major_function_broken_or_high_security_risk
+    release_decision: default_block
+  Medium:
+    examples: tolerable_issue_with_workaround
+    release_decision: risk_acceptance_required
+  Low:
+    examples: limited_impact
+    release_decision: may_schedule
+  Cosmetic:
+    examples: visual_only_without_functional_impact
+    release_decision: quality_profile_decision
+rule: severity_must_not_be_lowered_to_pass_a_gate

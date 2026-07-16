@@ -1,0 +1,25 @@
+version: 1
+authority: governance/07_SECURITY_AND_SECRETS.md
+secure_sdlc_refs:
+  - NIST_SSDF_1_1
+  - OWASP_SAMM_V2
+  - OWASP_ASVS_5_0_0
+  - OWASP_API_SECURITY_TOP_10_2023
+  - OWASP_MASVS_MASTG
+risk_triggers:
+  - auth_sessions_rbac
+  - tenant_context
+  - pii_secrets
+  - public_or_admin_api
+  - wlt_financial_truth
+  - files_media
+  - infrastructure_runtime_ci
+required_controls_when_applicable:
+  - threat_model
+  - trust_boundaries
+  - object_authorization
+  - tenant_isolation_negative_tests
+  - secret_scan
+  - dependency_review
+  - vulnerability_status
+  - independent_retest_for_critical_or_high

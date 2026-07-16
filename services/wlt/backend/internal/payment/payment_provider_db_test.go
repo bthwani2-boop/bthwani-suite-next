@@ -59,11 +59,12 @@ func TestAuthorizeSessionWithProvider_DBFlow(t *testing.T) {
 	ctx := context.Background()
 	checkoutIntentID := fmt.Sprintf("test-checkout-auth-%d", time.Now().UnixNano())
 
-	// Insert initial session
+	// Insert initial session with its own amount/currency -- authorize now
+	// reads these from the session row, never from caller input.
 	var sessionID string
 	err := db.QueryRowContext(ctx, `
-		INSERT INTO wlt_payment_sessions (checkout_intent_id, client_id, store_id, payment_method, status)
-		VALUES ($1, 'client-test', 'store-test', 'official_wallet', 'reference_created')
+		INSERT INTO wlt_payment_sessions (checkout_intent_id, client_id, store_id, payment_method, status, amount_minor_units, currency)
+		VALUES ($1, 'client-test', 'store-test', 'official_wallet', 'reference_created', 1000, 'YER')
 		RETURNING id`, checkoutIntentID).Scan(&sessionID)
 	if err != nil {
 		t.Fatalf("failed to insert test session: %v", err)
@@ -77,7 +78,7 @@ func TestAuthorizeSessionWithProvider_DBFlow(t *testing.T) {
 	}
 
 	// Run AuthorizeSessionWithProvider
-	session, err := AuthorizeSessionWithProvider(ctx, db, client, sessionID, 1000, "YER", provider.RequestMeta{})
+	session, err := AuthorizeSessionWithProvider(ctx, db, client, sessionID, provider.RequestMeta{})
 	if err != nil {
 		t.Fatalf("AuthorizeSessionWithProvider returned error: %v", err)
 	}
@@ -170,7 +171,11 @@ func TestCaptureSessionWithProvider_DBFlow(t *testing.T) {
 	}
 }
 
-func TestProviderFailure_DBFlow(t *testing.T) {
+// TestAuthorizeSessionWithProvider_IgnoresCallerAmount verifies that the
+// amount actually sent to the provider (and persisted) comes from the
+// session's own row, not from any caller-supplied value -- there is no
+// longer an amount/currency parameter to pass a tampered value through.
+func TestAuthorizeSessionWithProvider_IgnoresCallerAmount(t *testing.T) {
 	db := getTestDB(t)
 	if db == nil {
 		return
@@ -178,37 +183,260 @@ func TestProviderFailure_DBFlow(t *testing.T) {
 	defer db.Close()
 
 	ctx := context.Background()
-	checkoutIntentID := fmt.Sprintf("test-checkout-fail-%d", time.Now().UnixNano())
+	checkoutIntentID := fmt.Sprintf("test-checkout-tamper-%d", time.Now().UnixNano())
 
-	// Insert initial session
 	var sessionID string
 	err := db.QueryRowContext(ctx, `
-		INSERT INTO wlt_payment_sessions (checkout_intent_id, client_id, store_id, payment_method, status)
-		VALUES ($1, 'client-test', 'store-test', 'official_wallet', 'reference_created')
+		INSERT INTO wlt_payment_sessions (checkout_intent_id, client_id, store_id, payment_method, status, amount_minor_units, currency)
+		VALUES ($1, 'client-test', 'store-test', 'official_wallet', 'reference_created', 500, 'YER')
+		RETURNING id`, checkoutIntentID).Scan(&sessionID)
+	if err != nil {
+		t.Fatalf("failed to insert test session: %v", err)
+	}
+
+	client := &recordingProvider{
+		res: provider.ProviderResult{ProviderReference: "card-auth-002", Status: "authorized"},
+	}
+
+	session, err := AuthorizeSessionWithProvider(ctx, db, client, sessionID, provider.RequestMeta{})
+	if err != nil {
+		t.Fatalf("AuthorizeSessionWithProvider returned error: %v", err)
+	}
+	if amt, _ := client.body["amountMinorUnits"].(int64); amt != 500 {
+		t.Errorf("expected provider to be called with the session's own amount (500), got %v", client.body["amountMinorUnits"])
+	}
+	if session.AmountMinorUnits != 500 {
+		t.Errorf("expected persisted amount to remain 500, got %d", session.AmountMinorUnits)
+	}
+}
+
+// TestAuthorizeSessionWithProvider_NotAuthorizableState verifies a session
+// already past the authorizable window (e.g. already captured) is rejected
+// with ErrNotAuthorizable instead of being re-authorized.
+func TestAuthorizeSessionWithProvider_NotAuthorizableState(t *testing.T) {
+	db := getTestDB(t)
+	if db == nil {
+		return
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+	checkoutIntentID := fmt.Sprintf("test-checkout-notauth-%d", time.Now().UnixNano())
+
+	var sessionID string
+	err := db.QueryRowContext(ctx, `
+		INSERT INTO wlt_payment_sessions (checkout_intent_id, client_id, store_id, payment_method, status, provider_reference, amount_minor_units, currency)
+		VALUES ($1, 'client-test', 'store-test', 'official_wallet', 'captured', 'card-auth-003', 500, 'YER')
+		RETURNING id`, checkoutIntentID).Scan(&sessionID)
+	if err != nil {
+		t.Fatalf("failed to insert test session: %v", err)
+	}
+
+	client := &fakeProvider{res: provider.ProviderResult{ProviderReference: "card-auth-004", Status: "authorized"}}
+
+	_, err = AuthorizeSessionWithProvider(ctx, db, client, sessionID, provider.RequestMeta{})
+	if err != ErrNotAuthorizable {
+		t.Fatalf("expected ErrNotAuthorizable for an already-captured session, got %v", err)
+	}
+}
+
+// TestProviderDecline_DBFlow verifies that a clean provider decline (a
+// provider.Error, e.g. the provider explicitly responded with an HTTP 402
+// and a decoded error body) still marks the session 'failed' and does NOT
+// open a reconciliation case -- this is the existing, correct behavior for
+// an unambiguous rejection.
+func TestProviderDecline_DBFlow(t *testing.T) {
+	db := getTestDB(t)
+	if db == nil {
+		return
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+	checkoutIntentID := fmt.Sprintf("test-checkout-decline-%d", time.Now().UnixNano())
+
+	var sessionID string
+	err := db.QueryRowContext(ctx, `
+		INSERT INTO wlt_payment_sessions (checkout_intent_id, client_id, store_id, payment_method, status, amount_minor_units, currency)
+		VALUES ($1, 'client-test', 'store-test', 'official_wallet', 'reference_created', 1000, 'YER')
 		RETURNING id`, checkoutIntentID).Scan(&sessionID)
 	if err != nil {
 		t.Fatalf("failed to insert test session: %v", err)
 	}
 
 	client := &fakeProvider{
-		err: errors.New("provider connection refused"),
+		err: provider.Error{Code: "CARD_DECLINED", StatusCode: 402, Message: "declined"},
 	}
 
-	// Run AuthorizeSessionWithProvider which should fail
-	_, err = AuthorizeSessionWithProvider(ctx, db, client, sessionID, 1000, "YER", provider.RequestMeta{})
+	_, err = AuthorizeSessionWithProvider(ctx, db, client, sessionID, provider.RequestMeta{})
 	if err == nil {
 		t.Fatalf("expected error from AuthorizeSessionWithProvider, got nil")
 	}
 
-	// Verify DB state directly - status must turn to failed
 	var status string
 	err = db.QueryRowContext(ctx, `
 		SELECT status FROM wlt_payment_sessions WHERE id = $1`, sessionID).Scan(&status)
 	if err != nil {
 		t.Fatalf("failed to query DB row: %v", err)
 	}
-
 	if status != "failed" {
 		t.Errorf("expected status 'failed', got %q", status)
+	}
+
+	var caseCount int
+	err = db.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM wlt_reconciliation_cases WHERE payment_session_id = $1`, sessionID).Scan(&caseCount)
+	if err != nil {
+		t.Fatalf("failed to query reconciliation cases: %v", err)
+	}
+	if caseCount != 0 {
+		t.Errorf("expected no reconciliation case for a clean decline, got %d", caseCount)
+	}
+}
+
+// TestProviderAmbiguousError_Authorize_DBFlow verifies that a plain
+// transport-level error (not a provider.Error -- e.g. a network timeout or
+// connection failure where WLT genuinely does not know whether the
+// provider processed the authorize call) leaves the session
+// 'provider_result_unknown', opens an open reconciliation case, and does
+// NOT enqueue any DSH outbox event (DSH's checkout intent should just stay
+// in its existing payment_pending state until a human resolves it).
+func TestProviderAmbiguousError_Authorize_DBFlow(t *testing.T) {
+	db := getTestDB(t)
+	if db == nil {
+		return
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+	checkoutIntentID := fmt.Sprintf("test-checkout-ambig-auth-%d", time.Now().UnixNano())
+
+	var sessionID string
+	err := db.QueryRowContext(ctx, `
+		INSERT INTO wlt_payment_sessions (checkout_intent_id, client_id, store_id, payment_method, status, amount_minor_units, currency)
+		VALUES ($1, 'client-test', 'store-test', 'official_wallet', 'reference_created', 1000, 'YER')
+		RETURNING id`, checkoutIntentID).Scan(&sessionID)
+	if err != nil {
+		t.Fatalf("failed to insert test session: %v", err)
+	}
+
+	client := &fakeProvider{
+		err: context.DeadlineExceeded,
+	}
+
+	_, err = AuthorizeSessionWithProvider(ctx, db, client, sessionID, provider.RequestMeta{})
+	if err == nil {
+		t.Fatalf("expected error from AuthorizeSessionWithProvider, got nil")
+	}
+
+	var status string
+	err = db.QueryRowContext(ctx, `
+		SELECT status FROM wlt_payment_sessions WHERE id = $1`, sessionID).Scan(&status)
+	if err != nil {
+		t.Fatalf("failed to query DB row: %v", err)
+	}
+	if status != "provider_result_unknown" {
+		t.Errorf("expected status 'provider_result_unknown', got %q", status)
+	}
+
+	var operation, caseStatus string
+	err = db.QueryRowContext(ctx, `
+		SELECT operation, status FROM wlt_reconciliation_cases WHERE payment_session_id = $1`, sessionID).Scan(&operation, &caseStatus)
+	if err != nil {
+		t.Fatalf("expected a reconciliation case row: %v", err)
+	}
+	if operation != "authorize" {
+		t.Errorf("expected operation 'authorize', got %q", operation)
+	}
+	if caseStatus != "open" {
+		t.Errorf("expected case status 'open', got %q", caseStatus)
+	}
+
+	var outboxCount int
+	err = db.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM wlt_dsh_outbox_events WHERE payment_session_id = $1`, sessionID).Scan(&outboxCount)
+	if err != nil {
+		t.Fatalf("failed to query dsh outbox: %v", err)
+	}
+	if outboxCount != 0 {
+		t.Errorf("expected no dsh outbox event for an ambiguous provider result, got %d", outboxCount)
+	}
+}
+
+// TestProviderAmbiguousError_Capture_DBFlow is the capture-path equivalent
+// of TestProviderAmbiguousError_Authorize_DBFlow.
+func TestProviderAmbiguousError_Capture_DBFlow(t *testing.T) {
+	db := getTestDB(t)
+	if db == nil {
+		return
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+	checkoutIntentID := fmt.Sprintf("test-checkout-ambig-cap-%d", time.Now().UnixNano())
+
+	var sessionID string
+	err := db.QueryRowContext(ctx, `
+		INSERT INTO wlt_payment_sessions (checkout_intent_id, client_id, store_id, payment_method, status, provider_reference, amount_minor_units, currency)
+		VALUES ($1, 'client-test', 'store-test', 'official_wallet', 'authorized', 'card-auth-ambig', 1000, 'YER')
+		RETURNING id`, checkoutIntentID).Scan(&sessionID)
+	if err != nil {
+		t.Fatalf("failed to insert test session: %v", err)
+	}
+
+	client := &fakeProvider{
+		err: errors.New("connection reset"),
+	}
+
+	_, err = CaptureSessionWithProvider(ctx, db, client, sessionID, provider.RequestMeta{})
+	if err == nil {
+		t.Fatalf("expected error from CaptureSessionWithProvider, got nil")
+	}
+
+	var status string
+	err = db.QueryRowContext(ctx, `
+		SELECT status FROM wlt_payment_sessions WHERE id = $1`, sessionID).Scan(&status)
+	if err != nil {
+		t.Fatalf("failed to query DB row: %v", err)
+	}
+	if status != "provider_result_unknown" {
+		t.Errorf("expected status 'provider_result_unknown', got %q", status)
+	}
+
+	var operation string
+	err = db.QueryRowContext(ctx, `
+		SELECT operation FROM wlt_reconciliation_cases WHERE payment_session_id = $1`, sessionID).Scan(&operation)
+	if err != nil {
+		t.Fatalf("expected a reconciliation case row: %v", err)
+	}
+	if operation != "capture" {
+		t.Errorf("expected operation 'capture', got %q", operation)
+	}
+
+	var outboxCount int
+	err = db.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM wlt_dsh_outbox_events WHERE payment_session_id = $1`, sessionID).Scan(&outboxCount)
+	if err != nil {
+		t.Fatalf("failed to query dsh outbox: %v", err)
+	}
+	if outboxCount != 0 {
+		t.Errorf("expected no dsh outbox event for an ambiguous provider result, got %d", outboxCount)
+	}
+
+	// A session stuck in provider_result_unknown must not be re-authorizable
+	// or re-capturable -- retrying could double-charge if the first attempt
+	// actually succeeded on the provider's side. The existing precondition
+	// checks (not authorize/capture provider paths) must reject this.
+	client2 := &fakeProvider{
+		res: provider.ProviderResult{ProviderReference: "should-not-be-used", Status: "captured"},
+	}
+	_, err = CaptureSessionWithProvider(ctx, db, client2, sessionID, provider.RequestMeta{})
+	if err == nil || err.Error() != "payment session must be authorized before capture" {
+		t.Fatalf("expected capture precondition error for provider_result_unknown session, got %v", err)
+	}
+
+	_, err = AuthorizeSessionWithProvider(ctx, db, client2, sessionID, provider.RequestMeta{})
+	if !errors.Is(err, ErrNotAuthorizable) {
+		t.Fatalf("expected ErrNotAuthorizable for provider_result_unknown session, got %v", err)
 	}
 }

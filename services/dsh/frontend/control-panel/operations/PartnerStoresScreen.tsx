@@ -138,7 +138,7 @@ export function PartnerStoresScreen({ hubHref: _hubHref, subGroup: _subGroup }: 
             <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
               <button
                 type="button"
-                onClick={() => router.push(`/catalogs?storeId=${activeStore.id}`)}
+                onClick={() => router.push(`/dsh/catalogs?storeId=${activeStore.id}`)}
                 style={{
                   flex: 1,
                   padding: '6px 10px',
@@ -156,7 +156,7 @@ export function PartnerStoresScreen({ hubHref: _hubHref, subGroup: _subGroup }: 
               </button>
               <button
                 type="button"
-                onClick={() => router.push(`/partners?storeId=${activeStore.id}`)}
+                onClick={() => router.push(`/dsh/partners?storeId=${activeStore.id}`)}
                 style={{
                   flex: 1,
                   padding: '6px 10px',

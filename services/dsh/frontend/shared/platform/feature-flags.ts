@@ -8,9 +8,9 @@ export interface FeatureFlagsConfig {
 }
 
 export const DEFAULT_FEATURE_FLAGS: FeatureFlagsConfig = {
-  'DSH:sanaa-pilot': true,
+  'DSH:sanaa-pilot': false,
   'DSH:capability:store-pickup': false,
-  'DSH:capability:awnak': true,
+  'DSH:capability:awnak': false,
 };
 
 export class FeatureFlagsRegistry {
@@ -22,8 +22,6 @@ export class FeatureFlagsRegistry {
     this.initialized = true;
 
     if (typeof process !== 'undefined' && process.env) {
-      const env = process.env;
-
       const parseBool = (val: string | undefined, defaultVal: boolean): boolean => {
         if (!val) return defaultVal;
         const normalized = val.trim().toLowerCase();
@@ -31,17 +29,17 @@ export class FeatureFlagsRegistry {
       };
 
       this.flags['DSH:sanaa-pilot'] = parseBool(
-        env.EXPO_PUBLIC_FLAG_SANAA_PILOT ?? env.NEXT_PUBLIC_FLAG_SANAA_PILOT,
+        process.env.EXPO_PUBLIC_FLAG_SANAA_PILOT ?? process.env.NEXT_PUBLIC_FLAG_SANAA_PILOT,
         DEFAULT_FEATURE_FLAGS['DSH:sanaa-pilot']
       );
 
       this.flags['DSH:capability:store-pickup'] = parseBool(
-        env.EXPO_PUBLIC_FLAG_STORE_PICKUP ?? env.NEXT_PUBLIC_FLAG_STORE_PICKUP,
+        process.env.EXPO_PUBLIC_FLAG_STORE_PICKUP ?? process.env.NEXT_PUBLIC_FLAG_STORE_PICKUP,
         DEFAULT_FEATURE_FLAGS['DSH:capability:store-pickup']
       );
 
       this.flags['DSH:capability:awnak'] = parseBool(
-        env.EXPO_PUBLIC_FLAG_AWNAK ?? env.NEXT_PUBLIC_FLAG_AWNAK,
+        process.env.EXPO_PUBLIC_FLAG_AWNAK ?? process.env.NEXT_PUBLIC_FLAG_AWNAK,
         DEFAULT_FEATURE_FLAGS['DSH:capability:awnak']
       );
     }
@@ -59,9 +57,5 @@ export class FeatureFlagsRegistry {
       this.initialize();
     }
     return { ...this.flags };
-  }
-
-  public static override(newFlags: Partial<FeatureFlagsConfig>): void {
-    this.flags = { ...this.flags, ...newFlags } as FeatureFlagsConfig;
   }
 }

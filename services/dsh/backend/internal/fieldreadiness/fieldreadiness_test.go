@@ -3,6 +3,7 @@ package fieldreadiness
 import (
 	"context"
 	"testing"
+	"time"
 
 	"dsh-api/internal/store"
 )
@@ -26,9 +27,16 @@ func TestResolveOnboardingStatusComplete(t *testing.T) {
 }
 
 func TestCreateVisitRequiresStoreAndAgent(t *testing.T) {
+	validLoc := &LocationEvidence{
+		Latitude:       15.3694,
+		Longitude:      44.1910,
+		AccuracyMeters: 5.0,
+		CapturedAt:     time.Now(),
+		Provider:       "gps",
+	}
 	cases := []CreateVisitInput{
-		{FieldAgentID: "agent-1"},
-		{StoreID: "store-1"},
+		{FieldAgentID: "agent-1", StartLocation: validLoc},
+		{StoreID: "store-1", StartLocation: validLoc},
 	}
 	actor := store.StoreActor{ID: "agent-1", Role: "field"}
 	for _, input := range cases {
@@ -38,6 +46,32 @@ func TestCreateVisitRequiresStoreAndAgent(t *testing.T) {
 		}
 	}
 }
+
+func TestCreateVisitRequiresGPS(t *testing.T) {
+	actor := store.StoreActor{ID: "agent-1", Role: "field"}
+	// nil location
+	_, err := CreateVisit(context.Background(), nil, actor, CreateVisitInput{StoreID: "s", FieldAgentID: "a"})
+	if err != ErrLocationRequired {
+		t.Fatalf("expected ErrLocationRequired for nil GPS, got %v", err)
+	}
+	// mocked location
+	_, err = CreateVisit(context.Background(), nil, actor, CreateVisitInput{
+		StoreID: "s", FieldAgentID: "a",
+		StartLocation: &LocationEvidence{Latitude: 15.3, Longitude: 44.1, AccuracyMeters: 5, CapturedAt: time.Now(), IsMocked: true},
+	})
+	if err != ErrLocationMocked {
+		t.Fatalf("expected ErrLocationMocked, got %v", err)
+	}
+	// poor accuracy
+	_, err = CreateVisit(context.Background(), nil, actor, CreateVisitInput{
+		StoreID: "s", FieldAgentID: "a",
+		StartLocation: &LocationEvidence{Latitude: 15.3, Longitude: 44.1, AccuracyMeters: 200, CapturedAt: time.Now()},
+	})
+	if err != ErrLocationAccuracy {
+		t.Fatalf("expected ErrLocationAccuracy, got %v", err)
+	}
+}
+
 
 func TestCreateEscalationRequiresStoreRaisedByAndDescription(t *testing.T) {
 	cases := []CreateEscalationInput{

@@ -95,3 +95,151 @@ func TestCreateOrderStoresRealPriceSnapshotDBIntegration(t *testing.T) {
 		t.Fatalf("expected dsh_order_items.unit_price=42.00, got %v", storedUnitPrice)
 	}
 }
+
+// seedOrderFixture creates a store, checkout intent, and order row with a WLT
+// payment session reference already attached, mirroring what CreateOrder
+// would have produced for a wallet/cod order.
+func seedOrderFixture(t *testing.T, db *sql.DB, status string) (order *Order, paymentSessionID string) {
+	t.Helper()
+	ctx := context.Background()
+	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
+	storeID := "order-outbox-test-store-" + suffix
+	clientID := "order-outbox-test-client-" + suffix
+	paymentSessionID = "order-outbox-test-ps-" + suffix
+
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_stores (id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible)
+		VALUES ($1, $1, 'Order Outbox Test Store', 'active', 'SAN', 'SAN-1', 'serviceable', true)`,
+		storeID); err != nil {
+		t.Fatalf("failed to insert test store: %v", err)
+	}
+	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_stores WHERE id = $1`, storeID) })
+
+	var intentID string
+	if err := db.QueryRowContext(ctx, `
+		INSERT INTO dsh_checkout_intents (client_id, cart_id, store_id, state, payment_method, wlt_payment_session_id)
+		VALUES ($1, gen_random_uuid(), $2, 'confirmed', 'wallet', $3)
+		RETURNING id::text`,
+		clientID, storeID, paymentSessionID,
+	).Scan(&intentID); err != nil {
+		t.Fatalf("failed to insert test checkout intent: %v", err)
+	}
+
+	var o Order
+	if err := db.QueryRowContext(ctx, `
+		INSERT INTO dsh_orders (checkout_intent_id, store_id, client_id, status, wlt_payment_ref_id)
+		VALUES ($1::uuid, $2, $3, $4, $5)
+		RETURNING id::text, checkout_intent_id::text, store_id, client_id, status,
+		          COALESCE(rejection_reason, ''), wlt_payment_ref_id, created_at, updated_at`,
+		intentID, storeID, clientID, status, paymentSessionID,
+	).Scan(
+		&o.ID, &o.CheckoutIntentID, &o.StoreID, &o.ClientID,
+		&o.Status, &o.RejectionReason, &o.WltPaymentRefID,
+		&o.CreatedAt, &o.UpdatedAt,
+	); err != nil {
+		t.Fatalf("failed to insert test order: %v", err)
+	}
+	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_orders WHERE id = $1::uuid`, o.ID) })
+	return &o, paymentSessionID
+}
+
+func fetchFinancialClosureOutboxRow(t *testing.T, db *sql.DB, paymentSessionID string) (eventType string, orderID sql.NullString, reason string, found bool) {
+	t.Helper()
+	err := db.QueryRow(`
+		SELECT event_type, order_id::text, reason
+		FROM dsh_checkout_financial_closure_outbox
+		WHERE payment_session_id = $1`, paymentSessionID,
+	).Scan(&eventType, &orderID, &reason)
+	if err == sql.ErrNoRows {
+		return "", sql.NullString{}, "", false
+	}
+	if err != nil {
+		t.Fatalf("failed to query financial closure outbox: %v", err)
+	}
+	return eventType, orderID, reason, true
+}
+
+// TestRejectOrderEnqueuesCancelForOrderWhenPaymentRefExistsDBIntegration
+// proves rejecting a pending order that already has a WLT payment session
+// reference enqueues a durable cancel_for_order outbox event in the same
+// transaction as the rejection — closing the gap where order rejection never
+// triggered any WLT financial action.
+func TestRejectOrderEnqueuesCancelForOrderWhenPaymentRefExistsDBIntegration(t *testing.T) {
+	db := openRequiredDB(t)
+	order, paymentSessionID := seedOrderFixture(t, db, string(StatusPending))
+	t.Cleanup(func() {
+		_, _ = db.Exec(`DELETE FROM dsh_checkout_financial_closure_outbox WHERE payment_session_id = $1`, paymentSessionID)
+	})
+
+	rejected, err := RejectOrder(db, order.ID, "partner-1", "out of stock")
+	if err != nil {
+		t.Fatalf("RejectOrder failed: %v", err)
+	}
+	if rejected.Status != StatusCancelled {
+		t.Fatalf("expected status cancelled, got %s", rejected.Status)
+	}
+
+	eventType, orderID, reason, found := fetchFinancialClosureOutboxRow(t, db, paymentSessionID)
+	if !found {
+		t.Fatalf("expected a cancel_for_order outbox event, found none")
+	}
+	if eventType != "cancel_for_order" {
+		t.Fatalf("expected event_type=cancel_for_order, got %q", eventType)
+	}
+	if !orderID.Valid || orderID.String != order.ID {
+		t.Fatalf("expected order_id=%q, got %+v", order.ID, orderID)
+	}
+	if reason != "out of stock" {
+		t.Fatalf("expected reason='out of stock', got %q", reason)
+	}
+}
+
+// TestCancelOrderByOperatorEnqueuesCancelForOrderDBIntegration proves an
+// operator-initiated cancellation also enqueues the cancel_for_order outbox
+// event, going through the shared transitionOrder/transitionOrderTx path.
+func TestCancelOrderByOperatorEnqueuesCancelForOrderDBIntegration(t *testing.T) {
+	db := openRequiredDB(t)
+	order, paymentSessionID := seedOrderFixture(t, db, string(StatusPending))
+	t.Cleanup(func() {
+		_, _ = db.Exec(`DELETE FROM dsh_checkout_financial_closure_outbox WHERE payment_session_id = $1`, paymentSessionID)
+	})
+
+	cancelled, err := CancelOrderByOperator(db, order.ID, "operator-1", "store unresponsive")
+	if err != nil {
+		t.Fatalf("CancelOrderByOperator failed: %v", err)
+	}
+	if cancelled.Status != StatusCancelled {
+		t.Fatalf("expected status cancelled, got %s", cancelled.Status)
+	}
+
+	eventType, orderID, reason, found := fetchFinancialClosureOutboxRow(t, db, paymentSessionID)
+	if !found {
+		t.Fatalf("expected a cancel_for_order outbox event, found none")
+	}
+	if eventType != "cancel_for_order" {
+		t.Fatalf("expected event_type=cancel_for_order, got %q", eventType)
+	}
+	if !orderID.Valid || orderID.String != order.ID {
+		t.Fatalf("expected order_id=%q, got %+v", order.ID, orderID)
+	}
+	if reason != "store unresponsive" {
+		t.Fatalf("expected reason='store unresponsive', got %q", reason)
+	}
+}
+
+// TestAcceptOrderEnqueuesNothingDBIntegration proves a non-cancelling
+// transition (accept) through the same shared transitionOrder/
+// transitionOrderTx helper does not write a financial closure outbox event.
+func TestAcceptOrderEnqueuesNothingDBIntegration(t *testing.T) {
+	db := openRequiredDB(t)
+	order, paymentSessionID := seedOrderFixture(t, db, string(StatusPending))
+
+	if _, err := AcceptOrder(db, order.ID, "partner-1"); err != nil {
+		t.Fatalf("AcceptOrder failed: %v", err)
+	}
+
+	_, _, _, found := fetchFinancialClosureOutboxRow(t, db, paymentSessionID)
+	if found {
+		t.Fatalf("expected no outbox event for a non-cancelling transition")
+	}
+}

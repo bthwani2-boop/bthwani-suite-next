@@ -1,8 +1,10 @@
 import type { DshStoreSummaryDto, DshStoreDetailDto } from "./store-discovery.types";
 import { resolveDshImageSource } from "../_kernel/dsh-media-url";
+import type { DshFulfillmentDeliveryMode } from "../delivery/delivery.contract";
 import {
   formatDeliveryMode,
   formatServiceArea,
+  toFulfillmentModes,
 } from "./store-discovery.formatters";
 
 type StoreTone =
@@ -30,6 +32,8 @@ export type DshStoreCardViewModel = {
   readonly placeholderEmoji: string;
   readonly placeholderTone: PlaceholderTone;
   readonly deliveryModeLabels: readonly string[];
+  /** Canonical checkout fulfillment modes this store has enabled, derived via toFulfillmentModes(). */
+  readonly availableFulfillmentModes: readonly DshFulfillmentDeliveryMode[];
   readonly distanceLabel: string | null;
   readonly distanceKm: number | null;
   readonly followerCountLabel: string | null;
@@ -129,6 +133,7 @@ export function toCardViewModel(dto: DshStoreSummaryDto): DshStoreCardViewModel 
     placeholderEmoji: CATEGORY_EMOJI[category] ?? CATEGORY_EMOJI["domain-bthwani-store"],
     placeholderTone: CATEGORY_TONE[category] ?? CATEGORY_TONE["domain-bthwani-store"],
     deliveryModeLabels: dto.deliveryModes.map(formatDeliveryMode),
+    availableFulfillmentModes: toFulfillmentModes(dto.deliveryModes),
     distanceLabel: dto.distanceKm == null ? null : `${dto.distanceKm.toFixed(1)} كم`,
     distanceKm: dto.distanceKm ?? null,
     followerCountLabel: formatFollowerCount(dto.followerCount),

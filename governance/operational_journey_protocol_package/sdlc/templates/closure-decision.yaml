@@ -1,0 +1,14 @@
+capabilityId:
+branch:
+resolvedCommitSha:
+currentStage:
+requestedStage:
+applicableGates: []
+passedGates: []
+failedGates: []
+missingEvidence: []
+requiredApprovals: []
+separationOfDutiesPass: false
+openBlockers: []
+residualRisks: []
+decision: FIX_REQUIRED

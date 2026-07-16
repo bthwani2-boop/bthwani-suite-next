@@ -5,10 +5,6 @@ import { Svg, Circle, Rect, Path } from "react-native-svg";
 import { AppHeader } from "../../../../apps/app-client/runtime/src/shell/AppHeader";
 import { BottomNavBar, type BottomNavItem } from "../../../../apps/app-client/runtime/src/shell/BottomNavBar";
 import { brandScale, colorRoles, StateView } from '@bthwani/ui-kit';
-import { configureIdentitySession } from "@bthwani/core-identity";
-import { resolveIdentityApiBaseUrl } from "../shared/_kernel/identity-api-base-url";
-
-configureIdentitySession(resolveIdentityApiBaseUrl());
 
 // Import routes/screens
 import { HomeDiscoveryRoute } from "./home-discovery/HomeDiscoveryRoute";
@@ -245,7 +241,7 @@ export function DshClientSurface() {
               accessibilityLabel: "عربة التسوق",
               badgeCount: 0,
               onPress: () => {
-                setActiveTab("wallet");
+                setActiveTab("cart");
               },
             },
           ]}
@@ -274,7 +270,7 @@ export function DshClientSurface() {
             <StoreDetailRoute
               storeId={selectedStoreId}
               onBack={() => setSelectedStoreId(null)}
-              onGoToCart={() => setActiveTab("wallet")}
+              onGoToCart={() => setActiveTab("cart")}
             />
           )
         ) : activeTab === "orders" ? (
@@ -282,9 +278,16 @@ export function DshClientSurface() {
             onOpenOrder={setActiveOrderId}
           />
         ) : activeTab === "wallet" ? (
+          <StateView
+            title="محفظة بثواني"
+            description="الرصيد وإدارة طرق الدفع ستتوفر قريباً."
+            actionLabel="تصفح المتاجر"
+            onActionPress={() => setActiveTab("stores")}
+          />
+        ) : activeTab === "cart" ? (
           commerceStoreId === null ? (
             <StateView
-              title="اختر متجرًا للمتابعة"
+              title="السلة فارغة"
               description="يلزم اختيار متجر أولاً لعرض السلة وإتمام الطلب."
               actionLabel="تصفح المتاجر"
               onActionPress={() => setActiveTab("stores")}

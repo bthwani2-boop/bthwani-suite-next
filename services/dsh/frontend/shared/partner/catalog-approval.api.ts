@@ -2,6 +2,7 @@
 // (POST/GET /dsh/catalog-approvals, GET /dsh/partner/catalog-approvals,
 // POST /dsh/catalog-approvals/{id}/transition).
 // Replaces the previous in-memory mock in partner.workflow.ts.
+import { getIdentityAccessToken } from '@bthwani/core-identity';
 import { PlatformVarsRegistry } from '../platform/platform-vars';
 import { createDshFlexibleHttpClient } from '../_kernel/dsh-http-request';
 import type {
@@ -23,7 +24,8 @@ function resolveBaseUrl(): string | null {
 async function request<T>(path: string, options?: { method?: 'POST'; body?: unknown }): Promise<T | null> {
   const baseUrl = resolveBaseUrl();
   if (!baseUrl) return null;
-  const token = PlatformVarsRegistry.get('dshAuthBearerToken');
+  const isBffMode = baseUrl.startsWith('/');
+  const token = isBffMode ? undefined : getIdentityAccessToken();
   const { request: send } = createDshFlexibleHttpClient(baseUrl);
   try {
     return await send<T>(path, {

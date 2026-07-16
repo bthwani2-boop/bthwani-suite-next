@@ -21,6 +21,19 @@ export type DshEscalationCategory =
   | "equipment_failure"
   | "other";
 
+/** GPS evidence submitted by the mobile device. */
+export type DshLocationEvidence = {
+  readonly latitude: number;
+  readonly longitude: number;
+  readonly accuracyMeters: number;
+  readonly capturedAt: string; // ISO 8601
+  readonly provider?: string;
+  readonly deviceReference?: string;
+  readonly isMocked?: boolean;
+};
+
+export type DshGeofenceStatus = "inside" | "outside" | "unknown";
+
 export type DshFieldVisit = {
   readonly id: string;
   readonly storeId: string;
@@ -32,6 +45,21 @@ export type DshFieldVisit = {
   readonly completedAt?: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
+  // GPS evidence — present when location was captured
+  readonly geofenceRadiusMeters?: number;
+  readonly startLatitude?: number | null;
+  readonly startLongitude?: number | null;
+  readonly startAccuracyMeters?: number | null;
+  readonly startGeofenceStatus?: DshGeofenceStatus | null;
+  readonly startDistanceFromStoreMeters?: number | null;
+  readonly startIsMocked?: boolean;
+  readonly completionLatitude?: number | null;
+  readonly completionLongitude?: number | null;
+  readonly completionAccuracyMeters?: number | null;
+  readonly completionGeofenceStatus?: DshGeofenceStatus | null;
+  readonly completionDistanceFromStoreMeters?: number | null;
+  readonly storeLatitude?: number | null;
+  readonly storeLongitude?: number | null;
 };
 
 export type DshReadinessCheck = {
@@ -78,6 +106,16 @@ export type DshOnboardingStatus = {
 
 export type DshCreateVisitInput = {
   readonly visitType?: DshVisitType;
+  /** GPS evidence captured at visit start — required by the backend. */
+  readonly startLocation: DshLocationEvidence;
+  /** Store's registered coordinates for geofence computation. */
+  readonly storeLatitude?: number;
+  readonly storeLongitude?: number;
+};
+
+export type DshCompleteVisitInput = {
+  /** GPS evidence captured at visit completion — required by the backend. */
+  readonly completionLocation: DshLocationEvidence;
 };
 
 export type DshUpsertCheckInput = {
@@ -98,6 +136,7 @@ export type DshUpdateEscalationInput = {
   readonly status: DshEscalationStatus;
   readonly resolutionNote?: string;
 };
+
 
 export const CHECK_TYPE_LABELS: Record<DshCheckType, string> = {
   location_verified: "التحقق من الموقع",

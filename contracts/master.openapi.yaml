@@ -11,6 +11,7 @@ x-bthwani-runtime-dependency: false
 x-bthwani-contracts:
   core:
     identity: ../core/identity/contracts/auth.openapi.yaml
+    platformControl: ../core/platform-control/contracts/platform-control.openapi.yaml
     providers: ../core/providers/contracts/providers.openapi.yaml
     workforce: ../core/workforce/contracts/workforce.openapi.yaml
   services:

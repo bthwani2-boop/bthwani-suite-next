@@ -19,6 +19,7 @@ export type DshCapability = {
     | "dsh.client.orders"
     | "dsh.client.dispatch"
     | "dsh.field.readiness"
+    | "dsh.field.finance"
     | "dsh.support.hub"
     | "dsh.operator.analytics"
     | "dsh.notifications"
@@ -73,6 +74,7 @@ export type DshCapability = {
     | "support-analytics"
     | "store-analytics"
     | "partner-performance"
+    | "field-finance"
   )[];
 };
 
@@ -97,8 +99,13 @@ export const DSH_CAPABILITY_MAP = [
       "listDshStores",
       "getDshStore",
       "getDshStoreContext",
-      "getOperatorDshStore",
       "listOperatorDshStores",
+      "getOperatorDshStore",
+      "getDshPartnerStoreCourierSettings",
+      "getPartnerStoreSettings",
+      "listDshPartnerScopes",
+      "listDshPartnerStoreCoverageZones",
+      "updateDshPartnerStoreCourierSettings",
       "governDshStore",
       "listDshStoreAudit",
     ],
@@ -164,11 +171,14 @@ export const DSH_CAPABILITY_MAP = [
       "linkCatalogAsset",
       "unlinkCatalogAsset",
       "listCatalogAssetLinks",
+      "getPublicCatalogMedia",
+      "patchCatalogPlatformPolicy",
+      "updateFieldProductProposal",
+      "updatePartnerProductProposal",
       "listReels",
       "reviewReel",
       "submitReel",
       "listPublicReels",
-      "patchCatalogPlatformPolicy",
       "putDomainImage",
       "putNodeImage",
       "putMasterProductImage",
@@ -258,6 +268,7 @@ export const DSH_CAPABILITY_MAP = [
       "listDshDispatchAssignments",
       "listDshCaptainAssignments",
       "acceptDshAssignment",
+      "pushDshCaptainLocation",
       "declineDshAssignment",
       "updateDshDeliveryStatus",
       "submitDshPoD",
@@ -285,6 +296,8 @@ export const DSH_CAPABILITY_MAP = [
       "updateDshOperatorEscalation",
       "getDshPartnerOnboardingStatus",
       "getDshFieldWorkQueue",
+      "putStoreImage",
+      "uploadWorkforceMedia",
       "submitFieldStoreVerification",
     ],
     surfaces: ["app-field", "app-partner", "control-panel"],
@@ -292,6 +305,23 @@ export const DSH_CAPABILITY_MAP = [
     closureState: "FIX_REQUIRED",
     topic: "field-ops",
     topicScope: ["field-visits", "readiness-checklist", "escalation", "partner-onboarding"],
+  },
+  // ── Field Finance (WLT-owned wallet/commissions/payouts, DSH BFF) ──────────
+  {
+    id: "dsh.field.finance",
+    status: "experience-fix-required",
+    contractOperations: [
+      "getDshFieldMeWallet",
+      "getDshFieldMeCommissions",
+      "getDshFieldMeLedgerEntries",
+      "getDshFieldMePayoutRequests",
+      "submitDshFieldMePayoutRequest",
+    ],
+    surfaces: ["app-field"],
+    runtimeBound: true,
+    closureState: "FIX_REQUIRED",
+    topic: "field-ops",
+    topicScope: ["field-finance"],
   },
   // ── Support, Incidents & Escalation Room ───────────────────────────────────
   {
@@ -440,6 +470,17 @@ export const DSH_CAPABILITY_MAP = [
       "listDshCaptainCredentials",
       "upsertDshCaptainCredential",
       "listDshAdminAudit",
+      "approveDshControlPanelFinancePayoutRequest",
+      "assignDshControlPanelFinanceReconciliationCase",
+      "getDshControlPanelFinanceFinancialSummary",
+      "getDshControlPanelFinanceReconciliationCase",
+      "getDshPartnerFinanceSettlementSummary",
+      "getStoreDiagnostics",
+      "listDshControlPanelFinancePayoutRequests",
+      "listDshControlPanelFinanceReconciliationCases",
+      "listDshPartnerFinanceSettlements",
+      "rejectDshControlPanelFinancePayoutRequest",
+      "resolveDshControlPanelFinanceReconciliationCase",
     ],
     surfaces: ["control-panel"],
     runtimeBound: true,
@@ -479,6 +520,12 @@ export const DSH_CAPABILITY_MAP = [
       "listFieldPartnerFieldVisits",
       "getMedia",
       "updatePartnerStoreSettings",
+      "acceptDshPartnerInvite",
+      "executeDshPartnerStoreTeamMemberAction",
+      "inviteDshPartnerStoreTeamMember",
+      "listDshPartnerInvites",
+      "listDshPartnerStoreTeam",
+      "rejectDshPartnerInvite",
     ],
     surfaces: ["control-panel", "app-field", "app-partner"],
     runtimeBound: true,

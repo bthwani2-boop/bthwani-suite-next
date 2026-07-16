@@ -307,6 +307,64 @@ auth_permission_matrix:
 - role policy لا تكون داخل UI surface.
 - UI يعرض الحالة، ولا يملك القرار.
 
+### 17.10.1) tenant_context_propagation_matrix
+
+إلزامي عند انطباق ملحق SaaS/Tenancy.
+
+```yaml
+tenant_context_propagation_matrix:
+  identity_session:
+  backend_middleware:
+  domain_service:
+  repository_query:
+  database_row:
+  outbox_or_event:
+  generated_contract:
+  shared_brain:
+  affected_surfaces:
+  audit_or_trace:
+  result: PASS | FAIL
+```
+
+### 17.10.2) tenant_isolation_matrix
+
+```yaml
+tenant_isolation_matrix:
+  - entity:
+    canonical_tenant_owner:
+    tenant_id_column:
+    query_enforcement:
+    database_enforcement:
+    cross_tenant_negative_test:
+    privileged_access_policy:
+    audit_event:
+    result: PASS | FAIL
+```
+
+### 17.10.3) tenant_resource_isolation_matrix
+
+```yaml
+tenant_resource_isolation_matrix:
+  postgres_rows:
+  cache_keys:
+  object_storage_paths:
+  message_queues:
+  outbox_events:
+  background_jobs:
+  search_indexes:
+  logs_and_traces:
+  rate_limits:
+  idempotency_keys:
+  files_and_media:
+  result: PASS | FAIL
+```
+
+قواعد:
+
+- Tenant context must come from trusted identity/session context, not a free client-supplied value.
+- Global entities must be explicitly classified as `GLOBAL`; do not rely on unexplained `tenant_id = NULL`.
+- Cross-tenant privileged access requires delegated context, reason, expiry, audit, and no self-approval.
+
 ---
 
 ### 17.11) risk_based_test_matrix

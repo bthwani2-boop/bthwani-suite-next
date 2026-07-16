@@ -58,7 +58,6 @@ export type DshCaptainRouteRendererProps = {
   activeOrderDraft: string;
   showBottomNav: boolean;
   bottomNavNode: React.ReactNode;
-  dshAuthBearerToken?: string | null;
   dshClientId?: string | null;
   // Props for account/profile routes
   isCaptainAvailable: boolean;
@@ -120,7 +119,7 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
     selectedSupportScreen, isPickupSheetVisible, isDeliverySheetVisible, isDeclineSheetVisible,
     declineOrderId, declineSheetState, pickupSheetState, captainPodState, captainPodPhotoUri,
     activeOrderMessages, activeOrderDraft, showBottomNav, bottomNavNode,
-    dshAuthBearerToken, dshClientId,
+    dshClientId,
     isCaptainAvailable, captainDisplayName, currentAvailabilityMeta, captainAccountNavItems,
     walletBalanceLabel, appearanceHydrated, appearanceMode, wltSummaryLabel,
     onOpenOrder, onRetryInbox, onConfirmPickup, onConfirmDelivery, onConfirmPodSubmission,
@@ -264,7 +263,6 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
     if (route === 'account-finance') return (
       <DshCaptainFinanceScreen
         onBack={onGoToAccount}
-        dshAuthBearerToken={dshAuthBearerToken || null}
         dshClientId={dshClientId || null}
       />
     );
@@ -373,7 +371,6 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
         onBack={onOpenSupportDirectory}
         onNavigate={onOpenSupportScreen}
         captainCollectsCod={captainCollectsCod}
-        dshAuthBearerToken={dshAuthBearerToken || ''}
         dshClientId={dshClientId || ''}
         activeOrderId={activeOrderId}
         onAcceptTask={onAcceptTask}

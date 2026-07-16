@@ -5,6 +5,8 @@ packages:
   - "shared/ui-kit"
   - "services/*"
   - "core/identity"
+  - "core/platform-control"
+  - "core/providers"
   - "core/workforce"
   - "contracts"
 

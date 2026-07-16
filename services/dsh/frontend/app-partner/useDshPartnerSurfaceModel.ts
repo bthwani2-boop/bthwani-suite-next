@@ -9,8 +9,8 @@ import type {
   DshPartnerSupportCommandContext,
   DshPartnerOperationalFlowId,
   PartnerHubSection,
+  DshPartnerOperationalScope,
 } from '../shared/partner/partner.types';
-import { storeScopeOptions } from '../shared/partner/partner.types';
 import type { PartnerOrderItem } from '../shared/orders';
 
 // Topic models
@@ -19,6 +19,8 @@ import { useStoreScopeModel } from '../shared/partner/store-scope.model';
 import { usePartnerOrdersModel } from './orders/usePartnerOrdersModel';
 import { usePartnerSupportModel } from '../shared/support/partner-support.model';
 import { usePartnerOpsSummaryModel } from '../shared/operations/partner-ops-summary.model';
+import { usePartnerTeamModel, type PartnerTeamMutationResult } from './team/usePartnerTeamModel';
+import type { PartnerTeamMember } from './team/partner-team.types';
 import type { PartnerDeliveryOpsSummary } from '../shared/partner/partner.adapters';
 
 export type DshPartnerSurfaceState = {
@@ -58,13 +60,19 @@ export type DshPartnerSurfaceActions = {
   openStoreScope: () => void;
   openSupportScreen: (screenId: DshPartnerSupportRouteId, source?: DshPartnerSupportCommandContext['source']) => void;
   handleMarkReady: (orderId: string) => void;
+  refreshOrders: () => void;
+  onInviteMember: (identity: string) => Promise<PartnerTeamMutationResult>;
+  onMemberAction: (memberId: string, actionLabel: string) => Promise<PartnerTeamMutationResult>;
   handleHardwareBackPress: () => boolean;
 };
 
 export type DshPartnerSurfaceModel = {
   state: DshPartnerSurfaceState;
   actions: DshPartnerSurfaceActions;
-  selectedStoreScope: { id: string; label: string; description: string };
+  scopes: DshPartnerOperationalScope[];
+  selectedStoreScope: DshPartnerOperationalScope | undefined;
+  isLoadingScopes: boolean;
+  scopesError: string | null;
   runtimePartnerProfile: {
     storeName: string;
     branchLabel: string;
@@ -77,6 +85,9 @@ export type DshPartnerSurfaceModel = {
   partnerOrders: readonly PartnerOrderItem[];
   deliveryOpsSummary: PartnerDeliveryOpsSummary;
   isCommandCenterInline: boolean;
+  teamMembers: readonly PartnerTeamMember[];
+  isTeamLoading: boolean;
+  teamError: string | null;
 };
 
 export function useDshPartnerSurfaceModel(
@@ -96,6 +107,10 @@ export function useDshPartnerSurfaceModel(
     setRoute: profile.setRoute,
   });
   const opsSummary = usePartnerOpsSummaryModel(orders.partnerOrders);
+  const team = usePartnerTeamModel({
+    route: profile.route,
+    selectedStoreScopeId: storeScope.selectedStoreScopeId ?? 'all',
+  });
 
   // ── Sync order search mode when route changes ─────────────────────────────
   React.useEffect(() => {
@@ -132,7 +147,7 @@ export function useDshPartnerSurfaceModel(
     storeScopeVisible: storeScope.storeScopeVisible,
     accountHubSection: profile.accountHubSection,
     ordersSearchMode: orders.ordersSearchMode,
-    selectedStoreScopeId: storeScope.selectedStoreScopeId,
+    selectedStoreScopeId: storeScope.selectedStoreScopeId ?? 'all',
     editingProductId: orders.editingProductId,
     activeOrderId: orders.activeOrderId,
     supportNav: support.supportNav,
@@ -161,17 +176,26 @@ export function useDshPartnerSurfaceModel(
     openStoreScope: storeScope.openStoreScope,
     openSupportScreen: support.openSupportScreen,
     handleMarkReady: orders.handleMarkReady,
+    refreshOrders: orders.refresh,
+    onInviteMember: team.onInviteMember,
+    onMemberAction: team.onMemberAction,
     handleHardwareBackPress,
   };
 
   return {
     state,
     actions,
+    scopes: storeScope.scopes,
     selectedStoreScope: storeScope.selectedStoreScope,
+    isLoadingScopes: storeScope.isLoadingScopes,
+    scopesError: storeScope.scopesError,
     runtimePartnerProfile: storeScope.runtimePartnerProfile,
     partnerOrdersState: orders.partnerOrdersState,
     partnerOrders: orders.partnerOrders,
     deliveryOpsSummary: opsSummary.deliveryOpsSummary,
     isCommandCenterInline: support.isCommandCenterInline,
+    teamMembers: team.teamMembers,
+    isTeamLoading: team.isTeamLoading,
+    teamError: team.teamError,
   };
 }

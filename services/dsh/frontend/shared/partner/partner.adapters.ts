@@ -4,7 +4,7 @@
 import type { DshRuntimeOrderRow } from '../operations/dsh-operational-runtime-adapter';
 import { getSurfaceModeCapability } from '../identity-access';
 import type { DshOrderLifecycleHandoff } from '../orders/dsh-order-lifecycle-handoffs';
-import type { PartnerStoreScopeOption, PartnerRuntimeProfile } from './partner.types';
+import type { DshPartnerOperationalScope, PartnerRuntimeProfile } from './partner.types';
 
 // ── Partner order item adapter ─────────────────────────────────────────────
 
@@ -131,13 +131,23 @@ export function buildPartnerDeliveryOpsSummary(
 
 // ── Partner profile builder ────────────────────────────────────────────────
 
-export function buildPartnerProfileFromScope(scope: PartnerStoreScopeOption): PartnerRuntimeProfile {
+export function buildPartnerProfileFromScope(scope?: DshPartnerOperationalScope): PartnerRuntimeProfile {
+  if (!scope) {
+    return {
+      storeName: 'غير محدد',
+      branchLabel: 'غير محدد',
+      cityLabel: 'غير محدد',
+      managerLabel: 'غير محدد',
+      todayHoursLabel: 'غير محدد',
+      activeZoneLabel: 'غير محدد',
+    };
+  }
   return {
-    storeName: scope.label,
-    branchLabel: scope.label,
-    cityLabel: scope.description,
-    managerLabel: 'غير محدد',
+    storeName: scope.displayName,
+    branchLabel: scope.displayName,
+    cityLabel: scope.storeId,
+    managerLabel: scope.role === 'owner' ? 'المالك' : scope.role === 'manager' ? 'مدير الفرع' : 'موظف',
     todayHoursLabel: 'يتطلب ربط ساعات التشغيل',
-    activeZoneLabel: scope.label,
+    activeZoneLabel: scope.displayName,
   };
 }

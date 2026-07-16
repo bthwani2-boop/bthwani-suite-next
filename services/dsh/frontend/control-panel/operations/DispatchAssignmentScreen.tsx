@@ -88,8 +88,7 @@ export function DispatchAssignmentScreen({ subGroup }: DispatchAssignmentScreenP
     fetchDshRuntimeOrders({ status: 'pending', limit: 100, scope: 'operator' }).then((result) => {
       if (cancelled) return;
       if (result.kind === 'ok') {
-        const isEmpty = result.orders.length === 0;
-        if (!isEmpty) setRows(result.orders.map(buildRuntimeDispatchRow));
+        setRows(result.orders.map(buildRuntimeDispatchRow));
         setRuntimeLoaded(true);
         setRuntimeError(null);
         setRuntimeOffline(false);

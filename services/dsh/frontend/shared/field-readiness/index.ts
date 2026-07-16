@@ -10,3 +10,20 @@ export {
   useFieldWorkQueueController,
   useFieldVerificationController,
 } from "./use-field-readiness-controller";
+export {
+  enqueueFieldOperation,
+  markOperationSynced,
+  markOperationFailed,
+  getDueOperations,
+  getPendingCount,
+  purgeSyncedOperations,
+  getAllOperations,
+} from "./field-offline-queue";
+export type {
+  FieldOfflineOperation,
+  FieldOfflineOperationType,
+  FieldOfflineOperationStatus,
+} from "./field-offline-queue";
+export { useFieldOfflineSync } from "./use-field-offline-sync";
+export type { FieldOfflineExecutorMap } from "./use-field-offline-sync";
+

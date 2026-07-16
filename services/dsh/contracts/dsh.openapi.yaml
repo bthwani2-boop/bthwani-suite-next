@@ -21,6 +21,7 @@ paths:
       summary: Return the authenticated field agent's wallet balance.
       tags:
         - DshFieldFinance
+      security: [{ bearerAuth: [] }]
       responses:
         "200":
           description: Wallet returned successfully.
@@ -29,18 +30,22 @@ paths:
               schema:
                 type: object
                 properties:
-                  actorId: { type: string }
-                  actorType: { type: string }
-                  status: { type: string }
-                  currency: { type: string }
-                  availableBalanceMinorUnits: { type: integer, format: int64 }
-                  pendingBalanceMinorUnits: { type: integer, format: int64 }
-                  heldBalanceMinorUnits: { type: integer, format: int64 }
-                  earnedTotalMinorUnits: { type: integer, format: int64 }
-                  settledTotalMinorUnits: { type: integer, format: int64 }
-                  paidTotalMinorUnits: { type: integer, format: int64 }
-                  lastLedgerEntryAt: { type: string, format: date-time, nullable: true }
-                  updatedAt: { type: string, format: date-time, nullable: true }
+                  wallet:
+                    type: object
+                    properties:
+                      actorId: { type: string }
+                      actorType: { type: string }
+                      status: { type: string }
+                      currency: { type: string }
+                      availableBalanceMinorUnits: { type: integer, format: int64 }
+                      pendingBalanceMinorUnits: { type: integer, format: int64 }
+                      heldBalanceMinorUnits: { type: integer, format: int64 }
+                      earnedTotalMinorUnits: { type: integer, format: int64 }
+                      settledTotalMinorUnits: { type: integer, format: int64 }
+                      paidTotalMinorUnits: { type: integer, format: int64 }
+                      lastLedgerEntryAt: { type: string, format: date-time, nullable: true }
+                      updatedAt: { type: string, format: date-time, nullable: true }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
 
   /dsh/field/me/finance/commissions:
     get:
@@ -48,29 +53,34 @@ paths:
       summary: Return the authenticated field agent's commissions.
       tags:
         - DshFieldFinance
+      security: [{ bearerAuth: [] }]
       responses:
         "200":
           description: Commissions list returned successfully.
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id: { type: string }
-                    beneficiaryActorId: { type: string }
-                    beneficiaryActorType: { type: string }
-                    sourceType: { type: string }
-                    sourceId: { type: string }
-                    visitId: { type: string, nullable: true }
-                    storeId: { type: string, nullable: true }
-                    partnerId: { type: string, nullable: true }
-                    commissionPolicyId: { type: string, nullable: true }
-                    amountMinorUnits: { type: integer, format: int64 }
-                    currency: { type: string }
-                    status: { type: string }
-                    idempotencyKey: { type: string, nullable: true }
+                type: object
+                properties:
+                  commissions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        beneficiaryActorId: { type: string }
+                        beneficiaryActorType: { type: string }
+                        sourceType: { type: string }
+                        sourceId: { type: string }
+                        visitId: { type: string, nullable: true }
+                        storeId: { type: string, nullable: true }
+                        partnerId: { type: string, nullable: true }
+                        commissionPolicyId: { type: string, nullable: true }
+                        amountMinorUnits: { type: integer, format: int64 }
+                        currency: { type: string }
+                        status: { type: string }
+                        idempotencyKey: { type: string, nullable: true }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
 
   /dsh/field/me/finance/ledger-entries:
     get:
@@ -78,6 +88,7 @@ paths:
       summary: Return the authenticated field agent's ledger entries.
       tags:
         - DshFieldFinance
+      security: [{ bearerAuth: [] }]
       responses:
         "200":
           description: Ledger entries returned successfully.
@@ -87,6 +98,7 @@ paths:
                 type: array
                 items:
                   type: object
+        "401": { $ref: "#/components/responses/Unauthenticated" }
 
   /dsh/field/me/finance/payout-requests:
     get:
@@ -94,27 +106,72 @@ paths:
       summary: Return the authenticated field agent's payout requests.
       tags:
         - DshFieldFinance
+      security: [{ bearerAuth: [] }]
       responses:
         "200":
           description: Payout requests returned successfully.
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
+                type: object
+                properties:
+                  payoutRequests:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        beneficiaryActorId: { type: string }
+                        beneficiaryActorType: { type: string }
+                        amountMinorUnits: { type: integer, format: int64 }
+                        currency: { type: string }
+                        status: { type: string }
+                        requestedAt: { type: string, format: date-time }
+                        completedAt: { type: string, format: date-time, nullable: true }
+                        failureReason: { type: string, nullable: true }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
     post:
       operationId: submitDshFieldMePayoutRequest
       summary: Submit a new payout request for the authenticated field agent.
       tags:
         - DshFieldFinance
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - amountMinorUnits
+                - currency
+                - idempotencyKey
+              properties:
+                amountMinorUnits: { type: integer, format: int64 }
+                currency: { type: string }
+                idempotencyKey: { type: string }
       responses:
-        "200":
+        "201":
           description: Payout request created successfully.
           content:
             application/json:
               schema:
                 type: object
+                properties:
+                  payoutRequest:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      beneficiaryActorId: { type: string }
+                      beneficiaryActorType: { type: string }
+                      amountMinorUnits: { type: integer, format: int64 }
+                      currency: { type: string }
+                      status: { type: string }
+                      requestedAt: { type: string, format: date-time }
+                      completedAt: { type: string, format: date-time, nullable: true }
+                      failureReason: { type: string, nullable: true }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
 
   /dsh/health:
     get:
@@ -514,6 +571,27 @@ paths:
           $ref: "#/components/responses/NotFound"
 
   /dsh/partner/stores/{storeId}/settings:
+    get:
+      operationId: getPartnerStoreSettings
+      summary: Get bounded operating settings for the authenticated partner's own store.
+      tags: [DshStoreGovernance]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/StoreId"
+      responses:
+        "200":
+          description: Store settings.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartnerStoreSettingsRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
     patch:
       operationId: updatePartnerStoreSettings
       summary: Update bounded operating settings for the authenticated partner's own store.
@@ -547,6 +625,71 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+
+  /dsh/partner/stores/{storeId}/courier-settings:
+    get:
+      operationId: getDshPartnerStoreCourierSettings
+      summary: Get store courier settings.
+      tags: [DshPartner]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Courier settings.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartnerStoreCourierSettings" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+    put:
+      operationId: updateDshPartnerStoreCourierSettings
+      summary: Update store courier settings.
+      tags: [DshPartner]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshPartnerStoreCourierSettings" }
+      responses:
+        "200":
+          description: Courier settings updated.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartnerStoreCourierSettings" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/partner/stores/{storeId}/coverage-zones:
+    get:
+      operationId: listDshPartnerStoreCoverageZones
+      summary: Get store coverage zones.
+      tags: [DshPartner]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: List of coverage zones.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/DshPartnerCoverageZone" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
 
   /dsh/field/stores/{storeId}/verifications:
     post:
@@ -653,6 +796,34 @@ paths:
         "409":
           $ref: "#/components/responses/Conflict"
 
+  /dsh/operator/diagnostics/stores/{storeId}:
+    get:
+      operationId: getStoreDiagnostics
+      summary: Get store publication diagnostics
+      tags: [Operator Store Management]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/StoreId"
+      responses:
+        "200":
+          description: Store diagnostics.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  isReady: { type: boolean }
+                  blockers:
+                    type: array
+                    items: { type: string }
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /dsh/operator/stores/{storeId}/audit:
     get:
       operationId: listDshStoreAudit
@@ -750,6 +921,7 @@ paths:
               type: object
               description: All fields are optional. Only provided fields are updated.
               properties:
+                expectedVersion: { type: integer }
                 nameAr: { type: string }
                 nameEn: { type: string }
                 icon: { type: string }
@@ -800,6 +972,7 @@ paths:
               type: object
               description: All fields are optional. Only provided fields are updated.
               properties:
+                expectedVersion: { type: integer }
                 nameAr: { type: string }
                 nameEn: { type: string }
                 icon: { type: string }
@@ -883,6 +1056,7 @@ paths:
               type: object
               description: All fields are optional. Only provided fields are updated. Do NOT send canonicalImageObjectKey — images are managed via DAM asset links.
               properties:
+                expectedVersion: { type: integer }
                 canonicalNameAr: { type: string }
                 canonicalNameEn: { type: string }
                 brand: { type: string }
@@ -975,6 +1149,7 @@ paths:
                 All fields must be sent (PUT semantics — omitted fields will be cleared).
                 This prevents unintentional zeroing of booleans and integers.
               properties:
+                expectedVersion: { type: integer }
                 isActive: { type: boolean }
                 requiresMarketingReview: { type: boolean }
                 requiresProductImage: { type: boolean }
@@ -1005,6 +1180,7 @@ paths:
               type: object
               description: All fields are optional. Only provided fields are updated.
               properties:
+                expectedVersion: { type: integer }
                 isActive: { type: boolean }
                 requiresMarketingReview: { type: boolean }
                 requiresProductImage: { type: boolean }
@@ -1835,7 +2011,7 @@ paths:
           in: query
           schema:
             type: string
-            enum: [pending, payment_pending, confirmed, cancelled, expired]
+            enum: [pending, wlt_handoff_failed, payment_pending, payment_confirmed, payment_failed, confirmed, cancelled, expired]
       responses:
         "200":
           description: List of checkout intents.
@@ -2344,6 +2520,43 @@ paths:
               schema: { type: object, additionalProperties: true }
         "401": { $ref: "#/components/responses/Unauthenticated" }
 
+  /dsh/partner/me/finance/settlements:
+    get:
+      operationId: listDshPartnerFinanceSettlements
+      summary: Partner reads their own governed WLT settlements view through the DSH finance proxy. WLT service auth stays server-side.
+      tags: [DshFinanceProxy]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema: { type: string }
+        - name: cursor
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: WLT settlements view (verbatim passthrough).
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/partner/me/finance/settlements/summary:
+    get:
+      operationId: getDshPartnerFinanceSettlementSummary
+      summary: Partner reads their own governed WLT settlement summary through the DSH finance proxy.
+      tags: [DshFinanceProxy]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: WLT settlement summary (verbatim passthrough).
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
   /dsh/control-panel/finance/refunds/{refundId}:
     get:
       operationId: getDshControlPanelFinanceRefund
@@ -2398,6 +2611,20 @@ paths:
       responses:
         "200":
           description: WLT ledger entries view (verbatim passthrough).
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/control-panel/finance/financial-summary:
+    get:
+      operationId: getDshControlPanelFinanceFinancialSummary
+      summary: Operator reads the WLT ledger-kernel financial summary (Assets/Liabilities/Revenue/Net Position per currency) through the DSH finance proxy.
+      tags: [DshFinanceProxy]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: WLT financial summary view (verbatim passthrough).
           content:
             application/json:
               schema: { type: object, additionalProperties: true }
@@ -2464,6 +2691,173 @@ paths:
             application/json:
               schema: { type: object, additionalProperties: true }
         "401": { $ref: "#/components/responses/Unauthenticated" }
+  /dsh/control-panel/finance/payout-requests:
+    get:
+      operationId: listDshControlPanelFinancePayoutRequests
+      summary: Operator reads the governed WLT payout requests view through the DSH finance proxy.
+      tags: [DshFinanceProxy]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema: { type: string }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: string }
+        - name: cursor
+          in: query
+          required: false
+          schema: { type: string }
+        - name: beneficiaryActorId
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: WLT payout requests view (verbatim passthrough).
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/control-panel/finance/payout-requests/{payoutId}/approve:
+    post:
+      operationId: approveDshControlPanelFinancePayoutRequest
+      summary: Operator approves a governed WLT payout request through the DSH finance proxy.
+      tags: [DshFinanceProxy]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: payoutId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: WLT payout request approval result (verbatim passthrough).
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/control-panel/finance/payout-requests/{payoutId}/reject:
+    post:
+      operationId: rejectDshControlPanelFinancePayoutRequest
+      summary: Operator rejects a governed WLT payout request through the DSH finance proxy.
+      tags: [DshFinanceProxy]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: payoutId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: WLT payout request rejection result (verbatim passthrough).
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/control-panel/finance/reconciliation-cases:
+    get:
+      operationId: listDshControlPanelFinanceReconciliationCases
+      summary: Operator reads governed WLT reconciliation cases view through the DSH finance proxy.
+      tags: [DshFinanceProxy]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [open, resolved]
+      responses:
+        "200":
+          description: WLT reconciliation cases view (verbatim passthrough).
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/control-panel/finance/reconciliation-cases/{caseId}:
+    get:
+      operationId: getDshControlPanelFinanceReconciliationCase
+      summary: Operator reads one governed WLT reconciliation case through the DSH finance proxy.
+      tags: [DshFinanceProxy]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: caseId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: WLT reconciliation case view (verbatim passthrough).
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/control-panel/finance/reconciliation-cases/{caseId}/assign:
+    post:
+      operationId: assignDshControlPanelFinanceReconciliationCase
+      summary: Operator assigns a reconciliation case to himself/another operator.
+      tags: [DshFinanceProxy]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: caseId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: WLT reconciliation case assignment result (verbatim passthrough).
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/control-panel/finance/reconciliation-cases/{caseId}/resolve:
+    post:
+      operationId: resolveDshControlPanelFinanceReconciliationCase
+      summary: Operator resolves a reconciliation case.
+      tags: [DshFinanceProxy]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: caseId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [resolutionAction, resolutionNote]
+              properties:
+                resolutionAction:
+                  type: string
+                  enum: [confirmed_success, confirmed_failed, manual_adjustment, ignored]
+                resolutionNote:
+                  type: string
+      responses:
+        "200":
+          description: WLT reconciliation case resolution result (verbatim passthrough).
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
   /dsh/captain/finance/cod-records:
     get:
       operationId: listDshCaptainFinanceCodRecords
@@ -4167,16 +4561,211 @@ paths:
   /dsh/partner/activation/readiness:
     get:
       operationId: getDshPartnerSelfReadiness
-      summary: Partner reads their own readiness checklist.
+      summary: Get own partner readiness status.
+      tags: [DshPartner]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Readiness object.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartnerReadiness" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/partner/stores/{storeId}/team:
+    get:
+      operationId: listDshPartnerStoreTeam
+      summary: List team members for a store.
+      tags: [DshPartner]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: List of team members.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  members:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/DshPartnerTeamMember"
+                required: [members]
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/partner/stores/{storeId}/team/invites:
+    post:
+      operationId: inviteDshPartnerStoreTeamMember
+      summary: Invite a new team member.
+      tags: [DshPartner]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                identity:
+                  type: string
+              required: [identity]
+      responses:
+        "200":
+          description: Invite sent.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                required: [success]
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/partner/stores/{storeId}/team/members/{memberId}/action:
+    post:
+      operationId: executeDshPartnerStoreTeamMemberAction
+      summary: Execute an action on a team member.
+      tags: [DshPartner]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema: { type: string }
+        - name: memberId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  enum: [pause, activate, block, resend-invite, cancel-invite]
+              required: [action]
+      responses:
+        "200":
+          description: Action executed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                required: [success]
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/partner/scopes:
+    get:
+      operationId: listDshPartnerScopes
+      summary: Partner lists their authorized operational scopes (stores/branches).
       tags: [DshPartnerActivation]
       security:
         - bearerAuth: []
       responses:
         "200":
-          description: Partner readiness checklist.
+          description: Authorized operational scopes.
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/DshPartnerReadiness" }
+              schema:
+                type: object
+                required: [scopes]
+                properties:
+                  scopes:
+                    type: array
+                    items: { $ref: "#/components/schemas/DshPartnerOperationalScope" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/partner/invites:
+    get:
+      operationId: listDshPartnerInvites
+      summary: List pending team invitations for the authenticated actor across all stores.
+      tags: [DshPartner]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Pending invites.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [invites]
+                properties:
+                  invites:
+                    type: array
+                    items: { $ref: "#/components/schemas/DshPartnerTeamMember" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/partner/invites/{inviteId}/accept:
+    post:
+      operationId: acceptDshPartnerInvite
+      summary: Accept a pending team invitation.
+      tags: [DshPartner]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: inviteId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Invite accepted.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                required: [success]
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/partner/invites/{inviteId}/reject:
+    post:
+      operationId: rejectDshPartnerInvite
+      summary: Reject a pending team invitation.
+      tags: [DshPartner]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: inviteId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Invite rejected.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                required: [success]
+        "400": { $ref: "#/components/responses/InvalidRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "404": { $ref: "#/components/responses/NotFound" }
 
@@ -4877,6 +5466,28 @@ components:
         - pickup
         - express
 
+    DshPartnerOperationalScope:
+      type: object
+      required:
+        - scopeId
+        - storeId
+        - partnerId
+        - displayName
+        - role
+        - permissions
+      properties:
+        scopeId: { type: string }
+        storeId: { type: string }
+        partnerId: { type: string }
+        displayName: { type: string }
+        role:
+          type: string
+          enum: [owner, manager, staff]
+        permissions:
+          type: array
+          items:
+            type: string
+
     DshStoreDetail:
       allOf:
         - $ref: "#/components/schemas/DshStoreSummary"
@@ -5153,7 +5764,7 @@ components:
 
     DshCatalogAsset:
       type: object
-      required: [id, objectKey, mimeType, sizeBytes, status, sourceSurface, uploadedBy, createdAt, updatedAt]
+      required: [id, objectKey, mimeType, sizeBytes, status, sourceSurface, uploadedBy, createdAt, updatedAt, version]
       properties:
         id: { type: string }
         objectKey: { type: string }
@@ -5192,7 +5803,7 @@ components:
 
     DshMasterProduct:
       type: object
-      required: [id, domainId, canonicalNameAr, canonicalNameEn, brand, unit, measurementType, approvalStatus, isActive, createdSource, createdAt, updatedAt]
+      required: [id, domainId, canonicalNameAr, canonicalNameEn, brand, unit, measurementType, approvalStatus, isActive, createdSource, createdAt, updatedAt, version]
       properties:
         id: { type: string }
         domainId: { type: string }
@@ -5252,7 +5863,7 @@ components:
 
     DshProductProposal:
       type: object
-      required: [id, proposedNameAr, proposedNameEn, domainId, brand, sourceSurface, sourceActorId, status, reviewNote, createdAt, updatedAt, reviewStage, auditRequired, resubmissionCount]
+      required: [id, proposedNameAr, proposedNameEn, domainId, brand, sourceSurface, sourceActorId, status, reviewNote, createdAt, updatedAt, reviewStage, auditRequired, resubmissionCount, version]
       properties:
         id: { type: string }
         proposedNameAr: { type: string }
@@ -5333,7 +5944,7 @@ components:
     DshCentralCatalogDomain:
 
       type: object
-      required: [id, slug, nameAr, nameEn, icon, sortOrder, isActive, isClientVisible, requiresProductCatalog, isManualRequest]
+      required: [id, slug, nameAr, nameEn, icon, sortOrder, isActive, isClientVisible, requiresProductCatalog, isManualRequest, version]
       properties:
         id: { type: string }
         slug: { type: string }
@@ -5350,7 +5961,7 @@ components:
 
     DshCentralCatalogNode:
       type: object
-      required: [id, domainId, level, slug, nameAr, nameEn, icon, sortOrder, isActive, isClientVisible]
+      required: [id, domainId, level, slug, nameAr, nameEn, icon, sortOrder, isActive, isClientVisible, version]
       properties:
         id: { type: string }
         domainId: { type: string }
@@ -5413,7 +6024,7 @@ components:
 
     DshCatalogPolicySnapshot:
       type: object
-      required: [id, policyScope, isActive]
+      required: [id, policyScope, isActive, version]
       properties:
         id: { type: string }
         domainId: { type: ["string", "null"] }
@@ -5785,6 +6396,26 @@ components:
           type: string
           enum: [serviceable, store_unavailable, out_of_area, catalog_unavailable]
         reason: { type: string }
+        availableModes:
+          type: array
+          description: >-
+            Per-mode availability for this store+location, derived from the
+            store's enabled delivery modes and the same zone/distance check as
+            `serviceable`/`code`. Never a static three-mode list.
+          items:
+            $ref: "#/components/schemas/FulfillmentModeAvailability"
+
+    FulfillmentModeAvailability:
+      type: object
+      required: [mode, available]
+      properties:
+        mode:
+          type: string
+          enum: [bthwani_delivery, partner_delivery, pickup]
+        available: { type: boolean }
+        unavailableReasonCode:
+          type: string
+          enum: [mode_not_enabled, out_of_area, store_unavailable]
 
     # ─── Checkout Intent schemas ────────────────────────────────────
 
@@ -5801,7 +6432,7 @@ components:
           enum: [bthwani_delivery, partner_delivery, pickup]
         state:
           type: string
-          enum: [pending, wlt_handoff_failed, payment_pending, confirmed, cancelled, expired]
+          enum: [pending, wlt_handoff_failed, payment_pending, payment_confirmed, payment_failed, confirmed, cancelled, expired]
         paymentMethod:
           type: string
           enum: [cod, wallet, mixed, official_wallet]
@@ -5862,11 +6493,14 @@ components:
 
     DshOrder:
       type: object
-      required: [id, checkoutIntentId, storeId, clientId, status, wltPaymentRefId, createdAt, updatedAt]
+      required: [id, checkoutIntentId, storeId, fulfillmentMode, clientId, status, wltPaymentRefId, createdAt, updatedAt]
       properties:
         id: { type: string }
         checkoutIntentId: { type: string }
         storeId: { type: string }
+        fulfillmentMode:
+          type: string
+          enum: [bthwani_delivery, partner_delivery, pickup]
         clientId: { type: string }
         status: { $ref: "#/components/schemas/DshOrderStatus" }
         rejectionReason: { type: string }
@@ -6739,6 +7373,58 @@ components:
         email: { type: string }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+
+    DshPartnerTeamMember:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        role: { type: string, enum: [owner, supervisor, staff, courier] }
+        roleLabel: { type: string }
+        status: { type: string, enum: [active, paused, invited, blocked, review-needed] }
+        statusLabel: { type: string }
+        branchAssignment: { type: string }
+        permissionsSummary: { type: string }
+        deliveryAssignment: { type: string }
+        inviteLifecycle: { type: string }
+        operationalImpact: { type: string }
+        auditNote: { type: string }
+        inlineActionLabel: { type: string }
+      required: [id, name, role, roleLabel, status, statusLabel, branchAssignment, permissionsSummary, deliveryAssignment, inviteLifecycle, operationalImpact, auditNote, inlineActionLabel]
+
+    DshPartnerStoreCourierSettings:
+      type: object
+      properties:
+        courierName: { type: string }
+        courierPhone: { type: string }
+        isActive: { type: boolean }
+        policy: { type: string }
+        pricingSource: { type: string }
+        compensation: { type: string }
+        selectedBranchIds:
+          type: array
+          items: { type: string }
+        version: { type: integer, format: int64 }
+      required: [courierName, courierPhone, isActive, policy, pricingSource, compensation, selectedBranchIds, version]
+
+    DshPartnerCoverageZone:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        status: { type: string, enum: [active, pending, blocked] }
+        statusLabel: { type: string }
+        branchRelation: { type: string }
+        serviceModeRelation: { type: string }
+        policySummary: { type: string }
+        policyReason: { type: string }
+        operationalImpact: { type: string }
+        pricingReference: { type: string }
+        commissionReference: { type: string }
+        payoutReference: { type: string }
+        reviewActionLabel: { type: string }
+        auditNote: { type: string }
+      required: [id, name, status, statusLabel, branchRelation, serviceModeRelation, policySummary, policyReason, operationalImpact, pricingReference, commissionReference, payoutReference, reviewActionLabel, auditNote]
 
     DshPartnerReadiness:
       type: object

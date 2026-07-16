@@ -13,6 +13,8 @@ import (
 	_ "github.com/lib/pq"
 
 	"dsh-api/internal/auth"
+	"dsh-api/internal/checkoutfinanceoutbox"
+	"dsh-api/internal/fieldcommissionoutbox"
 	dshHttp "dsh-api/internal/http"
 	"dsh-api/internal/media"
 	"dsh-api/internal/wlt"
@@ -61,8 +63,10 @@ func main() {
 		outboxCtx, stopOutbox := context.WithCancel(context.Background())
 		cancelOutbox = stopOutbox
 		go wltoutbox.RunWorker(outboxCtx, db, wltClient, 15*time.Second)
+		go fieldcommissionoutbox.RunWorker(outboxCtx, db, wltClient, 15*time.Second)
+		go checkoutfinanceoutbox.RunWorker(outboxCtx, db, wltClient, 15*time.Second)
 	} else {
-		log.Println("[dsh-api] WLT outbox worker disabled: DSH_WLT_BASE_URL and WLT_DSH_SERVICE_TOKEN are required")
+		log.Println("[dsh-api] WLT outbox workers disabled: DSH_WLT_BASE_URL and WLT_DSH_SERVICE_TOKEN are required")
 	}
 
 	server := &http.Server{

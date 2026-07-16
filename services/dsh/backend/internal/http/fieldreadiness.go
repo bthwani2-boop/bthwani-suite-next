@@ -16,7 +16,10 @@ func (s *protectedStoreServer) handleCreateFieldVisit(w http.ResponseWriter, r *
 	}
 	storeID := r.PathValue("storeId")
 	var body struct {
-		VisitType string `json:"visitType"`
+		VisitType      string                       `json:"visitType"`
+		StartLocation  *fieldreadiness.LocationEvidence `json:"startLocation"`
+		StoreLatitude  *float64                     `json:"storeLatitude"`
+		StoreLongitude *float64                     `json:"storeLongitude"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
@@ -26,9 +29,12 @@ func (s *protectedStoreServer) handleCreateFieldVisit(w http.ResponseWriter, r *
 		vt = fieldreadiness.VisitType(body.VisitType)
 	}
 	visit, err := fieldreadiness.CreateVisit(r.Context(), s.db, actor, fieldreadiness.CreateVisitInput{
-		StoreID:      storeID,
-		FieldAgentID: actor.ID,
-		VisitType:    vt,
+		StoreID:        storeID,
+		FieldAgentID:   actor.ID,
+		VisitType:      vt,
+		StartLocation:  body.StartLocation,
+		StoreLatitude:  body.StoreLatitude,
+		StoreLongitude: body.StoreLongitude,
 	})
 	if err != nil {
 		s.writeFieldReadinessError(w, err)
@@ -90,7 +96,15 @@ func (s *protectedStoreServer) handleCompleteFieldVisit(w http.ResponseWriter, r
 		return
 	}
 	visitID := r.PathValue("visitId")
-	visit, err := fieldreadiness.CompleteVisit(r.Context(), s.db, actor, visitID)
+	var body struct {
+		CompletionLocation *fieldreadiness.LocationEvidence `json:"completionLocation"`
+	}
+	if !decodeProtectedJSON(w, r, &body) {
+		return
+	}
+	visit, err := fieldreadiness.CompleteVisit(r.Context(), s.db, actor, visitID, fieldreadiness.CompleteVisitInput{
+		CompletionLocation: body.CompletionLocation,
+	})
 	if err != nil {
 		s.writeFieldReadinessError(w, err)
 		return
@@ -261,6 +275,16 @@ func (s *protectedStoreServer) writeFieldReadinessError(w http.ResponseWriter, e
 		store.SendError(w, http.StatusConflict, "VISIT_ALREADY_COMPLETE", "visit is already complete")
 	case errors.Is(err, fieldreadiness.ErrConflict):
 		store.SendError(w, http.StatusConflict, "VISIT_ALREADY_IN_PROGRESS", "store or agent already has an in-progress visit")
+	case errors.Is(err, fieldreadiness.ErrLocationRequired):
+		store.SendError(w, http.StatusBadRequest, "LOCATION_REQUIRED", "GPS location evidence is required")
+	case errors.Is(err, fieldreadiness.ErrLocationStale):
+		store.SendError(w, http.StatusBadRequest, "LOCATION_STALE", "GPS location is too old — please recapture")
+	case errors.Is(err, fieldreadiness.ErrLocationAccuracy):
+		store.SendError(w, http.StatusBadRequest, "LOCATION_ACCURACY", "GPS accuracy is insufficient")
+	case errors.Is(err, fieldreadiness.ErrLocationMocked):
+		store.SendError(w, http.StatusBadRequest, "LOCATION_MOCKED", "mocked GPS location is not permitted")
+	case errors.Is(err, fieldreadiness.ErrGeofenceViolation):
+		store.SendError(w, http.StatusConflict, "GEOFENCE_VIOLATION", "completion location is outside the allowed geofence radius")
 	case errors.Is(err, fieldreadiness.ErrInvalid):
 		store.SendError(w, http.StatusBadRequest, "INVALID_INPUT", err.Error())
 	default:
@@ -270,18 +294,38 @@ func (s *protectedStoreServer) writeFieldReadinessError(w http.ResponseWriter, e
 
 func marshalVisit(v fieldreadiness.Visit) map[string]any {
 	m := map[string]any{
-		"id":           v.ID,
-		"storeId":      v.StoreID,
-		"fieldAgentId": v.FieldAgentID,
-		"visitType":    v.VisitType,
-		"status":       v.Status,
-		"notes":        v.Notes,
-		"startedAt":    v.StartedAt,
-		"createdAt":    v.CreatedAt,
-		"updatedAt":    v.UpdatedAt,
+		"id":                   v.ID,
+		"storeId":              v.StoreID,
+		"fieldAgentId":         v.FieldAgentID,
+		"visitType":            v.VisitType,
+		"status":               v.Status,
+		"notes":                v.Notes,
+		"startedAt":            v.StartedAt,
+		"createdAt":            v.CreatedAt,
+		"updatedAt":            v.UpdatedAt,
+		"geofenceRadiusMeters": v.GeofenceRadiusMeters,
+		"startIsMocked":        v.StartIsMocked,
 	}
 	if v.CompletedAt != nil {
 		m["completedAt"] = v.CompletedAt
+	}
+	if v.StartLatitude != nil {
+		m["startLatitude"] = v.StartLatitude
+		m["startLongitude"] = v.StartLongitude
+		m["startAccuracyMeters"] = v.StartAccuracyMeters
+		m["startGeofenceStatus"] = v.StartGeofenceStatus
+		m["startDistanceFromStoreMeters"] = v.StartDistanceFromStoreMeters
+	}
+	if v.CompletionLatitude != nil {
+		m["completionLatitude"] = v.CompletionLatitude
+		m["completionLongitude"] = v.CompletionLongitude
+		m["completionAccuracyMeters"] = v.CompletionAccuracyMeters
+		m["completionGeofenceStatus"] = v.CompletionGeofenceStatus
+		m["completionDistanceFromStoreMeters"] = v.CompletionDistanceFromStoreMeters
+	}
+	if v.StoreLatitude != nil {
+		m["storeLatitude"] = v.StoreLatitude
+		m["storeLongitude"] = v.StoreLongitude
 	}
 	return m
 }

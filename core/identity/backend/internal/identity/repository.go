@@ -104,6 +104,22 @@ func (r *Repository) BootstrapLocalActors(ctx context.Context, input LocalBootst
 				Permission{Service: "workforce", Surface: "control-panel", Action: "provider.activation:issue", Scope: "all"},
 				Permission{Service: "workforce", Surface: "control-panel", Action: "reference:manage", Scope: "all"},
 				Permission{Service: "workforce", Surface: "control-panel", Action: "audit:read", Scope: "all"},
+				Permission{Service: "dsh", Surface: "control-panel", Action: "platform:read", Scope: "all"},
+				Permission{Service: "dsh", Surface: "control-panel", Action: "platform:variables:propose", Scope: "all"},
+				Permission{Service: "dsh", Surface: "control-panel", Action: "platform:variables:approve", Scope: "all"},
+				Permission{Service: "dsh", Surface: "control-panel", Action: "platform:variables:apply", Scope: "all"},
+				Permission{Service: "dsh", Surface: "control-panel", Action: "platform:variables:rollback", Scope: "all"},
+				Permission{Service: "dsh", Surface: "control-panel", Action: "platform:flags:manage", Scope: "all"},
+				Permission{Service: "dsh", Surface: "control-panel", Action: "platform:rollouts:manage", Scope: "all"},
+				Permission{Service: "dsh", Surface: "control-panel", Action: "platform:services:manage", Scope: "all"},
+				Permission{Service: "dsh", Surface: "control-panel", Action: "platform:health:read", Scope: "all"},
+				Permission{Service: "dsh", Surface: "control-panel", Action: "platform:health:acknowledge", Scope: "all"},
+				Permission{Service: "dsh", Surface: "control-panel", Action: "platform:audit:read", Scope: "all"},
+				Permission{Service: "dsh", Surface: "control-panel", Action: "platform:audit:export", Scope: "all"},
+				Permission{Service: "dsh", Surface: "control-panel", Action: "platform:wlt-policy:read", Scope: "all"},
+				Permission{Service: "providers", Surface: "control-panel", Action: "provider:read", Scope: "all"},
+				Permission{Service: "providers", Surface: "control-panel", Action: "provider:update", Scope: "all"},
+				Permission{Service: "providers", Surface: "control-panel", Action: "provider:test", Scope: "all"},
 			)
 		}
 		if actor.role == "field" || actor.role == "captain" {
@@ -461,7 +477,7 @@ func (r *Repository) ResolveAccessToken(ctx context.Context, token string) (Acto
 	var sessionID string
 	var expiresAt time.Time
 	err := r.db.QueryRowContext(ctx, `
-		SELECT a.id, a.username, a.password_hash, a.tenant_id, a.roles, a.permissions, a.active,
+		SELECT a.id, a.username, a.password_hash, a.tenant_id, a.phone_e164, a.roles, a.permissions, a.active,
 		       s.id, s.access_expires_at
 		FROM identity_sessions s
 		JOIN identity_actors a ON a.id = s.actor_id
@@ -469,7 +485,7 @@ func (r *Repository) ResolveAccessToken(ctx context.Context, token string) (Acto
 		  AND s.revoked_at IS NULL
 		  AND s.access_expires_at > now()
 		  AND a.active = true`, hash).Scan(
-		&actor.ID, &actor.Username, &actor.PasswordHash, &actor.TenantID,
+		&actor.ID, &actor.Username, &actor.PasswordHash, &actor.TenantID, &actor.PhoneE164,
 		&roles, &permissionsJSON, &actor.Active, &sessionID, &expiresAt,
 	)
 	if err != nil {
@@ -620,7 +636,7 @@ func toIdentity(actor Actor, sessionID string, expiresAt time.Time) ActorIdentit
 		services[permission.Service] = true
 	}
 	return ActorIdentity{
-		Subject: actor.ID, TenantID: actor.TenantID, Roles: actor.Roles,
+		Subject: actor.ID, TenantID: actor.TenantID, PhoneE164: actor.PhoneE164, Roles: actor.Roles,
 		Permissions: actor.Permissions, AuthState: "authenticated",
 		SurfaceAccess: surfaces, ServiceAccess: services,
 		SessionID: sessionID, ExpiresAt: expiresAt,

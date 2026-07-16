@@ -1,0 +1,26 @@
+version: 1
+authority: governance/26_SDLC_TEAM_AND_STAGE_GATES.md
+quality_metrics:
+  - requirements_linked_to_tests
+  - completed_capabilities_across_surfaces
+  - escaped_defects
+  - reopened_defects
+  - flaky_tests
+  - rollback_success
+  - error_rate
+  - data_integrity
+security_metrics:
+  - ssdf_coverage
+  - samm_maturity
+  - vulnerability_age
+  - critical_high_remediation_time
+  - sbom_coverage
+  - provenance_coverage
+  - threat_model_completion
+delivery_metrics:
+  - lead_time
+  - deployment_frequency
+  - change_failure_rate
+  - mean_time_to_restore
+  - gate_wait_time
+  - automated_gate_ratio

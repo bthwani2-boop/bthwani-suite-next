@@ -59,6 +59,50 @@ func TestReadRoutesStillWorkWhenMutationsDisabled(t *testing.T) {
 	}
 }
 
+// TestMutationRoutesRequireServiceAuth checks that once mutations are
+// enabled, every financial-mutation route still rejects a caller that has
+// no valid X-Service-Caller/Authorization credentials -- the mutation gate
+// (WLT_MUTATIONS_ENABLED) is not itself authentication.
+func TestMutationRoutesRequireServiceAuth(t *testing.T) {
+	t.Setenv("WLT_DSH_SERVICE_TOKEN", "test-dsh-service-token")
+	router := NewRouter(nil, true)
+
+	mutationRoutes := []struct {
+		method string
+		path   string
+	}{
+		{http.MethodPost, "/wlt/payment-sessions/ps-1/authorize"},
+		{http.MethodPost, "/wlt/payment-sessions/ps-1/capture"},
+		{http.MethodPost, "/wlt/payment-sessions/ps-1/expire"},
+		{http.MethodPost, "/wlt/payment-sessions/ps-1/cod-collect"},
+		{http.MethodPost, "/wlt/refunds"},
+		{http.MethodPost, "/wlt/refunds/r-1/approve"},
+		{http.MethodPost, "/wlt/refunds/r-1/complete"},
+		{http.MethodPost, "/wlt/refunds/r-1/reject"},
+		{http.MethodPost, "/wlt/settlements"},
+		{http.MethodPost, "/wlt/settlements/s-1/post"},
+		{http.MethodPost, "/wlt/cod-records/c-1/collect"},
+		{http.MethodPost, "/wlt/cod-records/c-1/remit"},
+		{http.MethodPost, "/wlt/commissions"},
+		{http.MethodPost, "/wlt/ledger/entries"},
+		{http.MethodPost, "/wlt/payout-requests"},
+		{http.MethodPost, "/wlt/payout-requests/p-1/approve"},
+		{http.MethodPost, "/wlt/payout-requests/p-1/reject"},
+		{http.MethodPost, "/wlt/payout-requests/p-1/process"},
+		{http.MethodPost, "/wlt/payout-requests/p-1/complete"},
+		{http.MethodPost, "/wlt/payout-requests/p-1/fail"},
+	}
+
+	for _, route := range mutationRoutes {
+		req := httptest.NewRequest(route.method, route.path, nil)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		if rec.Code != http.StatusUnauthorized {
+			t.Fatalf("%s %s: expected 401 (no service auth), got %d", route.method, route.path, rec.Code)
+		}
+	}
+}
+
 func TestFinancialReadRoutesRequireInternalServiceAuth(t *testing.T) {
 	t.Setenv("WLT_DSH_SERVICE_TOKEN", "test-dsh-service-token")
 	router := NewRouter(nil, true)

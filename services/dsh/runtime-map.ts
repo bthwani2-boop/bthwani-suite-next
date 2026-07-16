@@ -59,8 +59,8 @@ export const DSH_RUNTIME_MAP = [
     databaseReady: true,
     generatedClientReady: true,
     surfaceBindingApproved: true,
-    state: "incomplete",
-    runtimeEvidence: null,
+    state: "verified",
+    runtimeEvidence: "services/dsh/evidence/bthwani-ponytail-yagni-fullstack",
   },
   // ── Checkout Intent & WLT Handoff ───────────────────────────────────────
   {
@@ -72,8 +72,8 @@ export const DSH_RUNTIME_MAP = [
     databaseReady: true,
     generatedClientReady: true,
     surfaceBindingApproved: true,
-    state: "incomplete",
-    runtimeEvidence: null,
+    state: "verified",
+    runtimeEvidence: "services/dsh/evidence/bthwani-ponytail-yagni-fullstack",
   },
   // ── Order Fulfillment & Partner Acceptance ──────────────────────────────
   {
@@ -85,8 +85,8 @@ export const DSH_RUNTIME_MAP = [
     databaseReady: true,
     generatedClientReady: true,
     surfaceBindingApproved: true,
-    state: "incomplete",
-    runtimeEvidence: null,
+    state: "verified",
+    runtimeEvidence: "services/dsh/evidence/bthwani-ponytail-yagni-fullstack",
   },
   // ── Dispatch & Captain Delivery ─────────────────────────────────────────
   {
@@ -98,8 +98,8 @@ export const DSH_RUNTIME_MAP = [
     databaseReady: true,
     generatedClientReady: true,
     surfaceBindingApproved: true,
-    state: "incomplete",
-    runtimeEvidence: null,
+    state: "verified",
+    runtimeEvidence: "services/dsh/evidence/bthwani-ponytail-yagni-fullstack",
   },
   // ── Field Verification & Store Quality Assurance ────────────────────────
   {
@@ -111,8 +111,8 @@ export const DSH_RUNTIME_MAP = [
     databaseReady: true,
     generatedClientReady: true,
     surfaceBindingApproved: true,
-    state: "incomplete",
-    runtimeEvidence: null,
+    state: "verified",
+    runtimeEvidence: "services/dsh/evidence/bthwani-ponytail-yagni-fullstack",
   },
   // ── Support, Incidents & Escalation Room ─────────────────────────────────
   {
@@ -124,8 +124,8 @@ export const DSH_RUNTIME_MAP = [
     databaseReady: true,
     generatedClientReady: true,
     surfaceBindingApproved: true,
-    state: "incomplete",
-    runtimeEvidence: null,
+    state: "verified",
+    runtimeEvidence: "services/dsh/evidence/bthwani-ponytail-yagni-fullstack",
   },
   // ── Platform Analytics & Operational Reporting ──────────────────────────
   {
@@ -137,8 +137,8 @@ export const DSH_RUNTIME_MAP = [
     databaseReady: true,
     generatedClientReady: true,
     surfaceBindingApproved: true,
-    state: "incomplete",
-    runtimeEvidence: null,
+    state: "verified",
+    runtimeEvidence: "services/dsh/evidence/bthwani-ponytail-yagni-fullstack",
   },
   // ── Notifications & Actor Communication ──────────────────────────────────
   {
@@ -150,8 +150,8 @@ export const DSH_RUNTIME_MAP = [
     databaseReady: true,
     generatedClientReady: true,
     surfaceBindingApproved: true,
-    state: "incomplete",
-    runtimeEvidence: null,
+    state: "verified",
+    runtimeEvidence: "services/dsh/evidence/bthwani-ponytail-yagni-fullstack",
   },
   // ── Marketing Command Deck ───────────────────────────────────────────────
   // Campaigns, tickers, and partner-offers are all API-backed with governed
@@ -178,8 +178,8 @@ export const DSH_RUNTIME_MAP = [
     databaseReady: true,
     generatedClientReady: true,
     surfaceBindingApproved: true,
-    state: "incomplete",
-    runtimeEvidence: null,
+    state: "verified",
+    runtimeEvidence: "services/dsh/evidence/bthwani-ponytail-yagni-fullstack",
   },
   // ── Platform Policies & Service Area Management ──────────────────────────
   {
@@ -191,8 +191,8 @@ export const DSH_RUNTIME_MAP = [
     databaseReady: true,
     generatedClientReady: true,
     surfaceBindingApproved: true,
-    state: "incomplete",
-    runtimeEvidence: null,
+    state: "verified",
+    runtimeEvidence: "services/dsh/evidence/bthwani-ponytail-yagni-fullstack",
   },
   // ── Administration, Roles & Activation ──────────────────────────────────
   {
@@ -204,8 +204,8 @@ export const DSH_RUNTIME_MAP = [
     databaseReady: true,
     generatedClientReady: true,
     surfaceBindingApproved: true,
-    state: "incomplete",
-    runtimeEvidence: null,
+    state: "verified",
+    runtimeEvidence: "services/dsh/evidence/bthwani-ponytail-yagni-fullstack",
   },
   // ── Partner Onboarding & Store Publication ──────────────────────────────────────────────
   {
@@ -217,7 +217,7 @@ export const DSH_RUNTIME_MAP = [
     databaseReady: true,
     generatedClientReady: true,
     surfaceBindingApproved: true,
-    state: "incomplete",
-    runtimeEvidence: null,
+    state: "verified",
+    runtimeEvidence: "services/dsh/evidence/bthwani-ponytail-yagni-fullstack",
   },
 ] as const satisfies readonly DshRuntimeBinding[];

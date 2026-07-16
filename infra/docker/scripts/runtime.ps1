@@ -16,12 +16,14 @@
 
 param(
   [Parameter(Mandatory = $true)]
-  [ValidateSet("up", "down", "reset", "status", "logs", "migrate", "seed", "smoke", "doctor", "all")]
+  [ValidateSet("up", "down", "reset", "status", "logs", "migrate", "seed", "smoke", "doctor", "all", "bootstrap-dev", "verify-catalog")]
   [string]$Action,
 
   [string]$Profiles = "",
 
-  [string]$Service = ""
+  [string]$Service = "",
+
+  [switch]$Force
 )
 
 $ErrorActionPreference = "Stop"
@@ -473,17 +475,78 @@ function Invoke-WltFinancialProviderSmoke {
   if ($LASTEXITCODE -ne 0) { throw "WLT financial provider smoke failed" }
 }
 
+function Invoke-WltPsql {
+  param([string]$Sql)
+  $result = $Sql |
+    docker compose @(Get-ComposeBase) exec -T postgres `
+      psql -U wlt_runtime -d wlt_runtime -v ON_ERROR_STOP=1 -tA
+  if ($LASTEXITCODE -ne 0) { throw "WLT psql command failed (exit $LASTEXITCODE)" }
+  return ($result -join "`n").Trim()
+}
+
+# Probe map + backfill-decision logic shared with
+# tools/scripts/test-wlt-migration-ledger.ps1 (see that file's header comment).
+. (Join-Path $ScriptDir "wlt-migration-probes.ps1")
+
 function Invoke-WltMigrate {
   $MigrationDir = "services/wlt/database/migrations"
   $MigrationFiles = Get-ChildItem -LiteralPath $MigrationDir -Filter "*.sql" | Sort-Object Name
   if ($MigrationFiles.Count -eq 0) { throw "No migration files found in $MigrationDir" }
+  Test-WltMigrationProbeCoverage -MigrationFiles $MigrationFiles
   Write-Host "`n--- Applying WLT migrations ---"
+
+  # Migration ledger: each applied file is recorded with its checksum so a
+  # re-run applies only new migrations and refuses silently-edited history.
+  Invoke-WltPsql @"
+CREATE TABLE IF NOT EXISTS runtime_schema_migrations (
+  migration_name TEXT        PRIMARY KEY,
+  checksum       TEXT        NOT NULL,
+  applied_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+"@ | Out-Null
+
+  # On an environment where migrations already ran before this ledger
+  # existed, backfill the ledger (without replaying history) only for the
+  # contiguous prefix of migrations whose schema objects are verified
+  # present via $script:WltMigrationProbes. Any migration beyond that
+  # verified prefix falls through to the normal apply loop below and is
+  # genuinely executed, exactly as it would be on a fresh database.
+  $LedgerRowCount = Invoke-WltPsql "SELECT COUNT(*) FROM runtime_schema_migrations;"
+  $SentinelExists = Invoke-WltPsql "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'wlt_payment_sessions';"
+  if ($LedgerRowCount -eq "0" -and $SentinelExists -ne "0") {
+    Write-Host "  Detected pre-existing WLT schema with no migration ledger; probing each migration's schema objects before backfilling."
+    $backfillList = Get-WltLegacyBackfillList -MigrationFiles $MigrationFiles -PsqlRunner ${function:Invoke-WltPsql}
+    foreach ($f in $backfillList) {
+      $checksum = (Get-FileHash -LiteralPath $f.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+      Invoke-WltPsql @"
+INSERT INTO runtime_schema_migrations (migration_name, checksum)
+VALUES ('$($f.Name)', '$checksum')
+ON CONFLICT (migration_name) DO NOTHING;
+"@ | Out-Null
+      Write-Host "  Backfilled (schema already present): $($f.Name)"
+    }
+  }
+
   foreach ($f in $MigrationFiles) {
+    $checksum = (Get-FileHash -LiteralPath $f.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+    $recorded = Invoke-WltPsql "SELECT checksum FROM runtime_schema_migrations WHERE migration_name = '$($f.Name)';"
+    if ($recorded -eq $checksum) {
+      Write-Host "  Skipping (already applied): $($f.Name)"
+      continue
+    }
+    if ($recorded -ne "") {
+      throw "Migration ledger checksum mismatch for $($f.Name): recorded $recorded, file $checksum. Applied migrations must never be edited; add a new migration instead."
+    }
     Write-Host "  Applying: $($f.Name)"
     Get-Content -LiteralPath $f.FullName -Raw |
       docker compose @(Get-ComposeBase) exec -T postgres `
         psql -U wlt_runtime -d wlt_runtime -v ON_ERROR_STOP=1
     if ($LASTEXITCODE -ne 0) { throw "WLT migration failed for $($f.Name) (exit $LASTEXITCODE)" }
+    Invoke-WltPsql @"
+INSERT INTO runtime_schema_migrations (migration_name, checksum)
+VALUES ('$($f.Name)', '$checksum')
+ON CONFLICT (migration_name) DO UPDATE SET checksum = EXCLUDED.checksum, applied_at = NOW();
+"@ | Out-Null
     Write-Host "  $($f.Name): PASS"
   }
   Write-Host "WLT migration: PASS"
@@ -564,7 +627,7 @@ function Wait-ForMinIO {
       Write-Host "  /minio/health/live: PASS"
       break
     } catch {
-      if ($i -eq $max) { throw "/minio/health/live: FAIL — $_" }
+      if ($i -eq $max) { throw "/minio/health/live: FAIL - $_" }
       Start-Sleep -Seconds 3
     }
   }
@@ -600,23 +663,9 @@ function Invoke-DshMediaSeed {
   # keys. If any file listed here is missing, those SQL seeds would create rows
   # pointing at a MinIO object that was never uploaded -- the exact drift this
   # check exists to prevent.
-  $ExpectedFiles = @(
-    "node-dairy-cheese.png", "node-canned-food.png", "node-local-vegetables.png",
-    "node-imported-fruits.png", "node-sweets-cake.png", "node-sweets-chocolate.png",
-    "product-cheese-kraft.png", "product-canned-tuna.png", "product-local-tomato.png",
-    "product-imported-banana.png", "product-chocolate-box.png",
-    "node-phones-tablets.png", "node-smartphones.png", "node-android-phones.png", "node-ios-phones.png",
-    "product-galaxy-s24.png", "product-iphone-15.png",
-    "node-medications.png", "node-baby-care.png", "node-pain-relief.png", "node-baby-milk.png",
-    "node-headache-migraine.png", "node-infant-formula.png",
-    "product-panadol-advance.png", "product-solpadeine-soluble.png", "product-aptamil-1.png",
-    "store-test-grocery-hero.png", "store-test-grocery-logo.png",
-    "store-1001-hero.png", "store-1001-logo.png",
-    "store-1002-hero.png", "store-1002-logo.png",
-    "store-1003-hero.png", "store-1003-logo.png", "store-1004-hero.png", "store-1004-logo.png",
-    "store-1005-hero.png", "store-1005-logo.png", "store-1006-hero.png", "store-1006-logo.png",
-    "banner-001.png", "banner-002.png", "promo-001.png"
-  )
+  $ManifestPath = (Resolve-Path "services/dsh/database/seeds/local/media/media-manifest.json").Path
+  $Manifest = Get-Content -Raw -LiteralPath $ManifestPath | ConvertFrom-Json
+  $ExpectedFiles = $Manifest.media | Select-Object -ExpandProperty relativeSourcePath
 
   $MediaDirectory = (Resolve-Path "services/dsh/database/seeds/local/media").Path
   $Missing = $ExpectedFiles | Where-Object { -not (Test-Path (Join-Path $MediaDirectory $_)) }
@@ -658,9 +707,22 @@ function Invoke-DshSmoke {
   Write-Host "  /dsh/health: $($health | ConvertTo-Json -Compress)"
   if ($health.status -ne "healthy") { throw "/dsh/health not healthy: $($health.status)" }
 
-  $readiness = Invoke-RestMethod "http://localhost:58080/dsh/readiness" -TimeoutSec 10 -ErrorAction Stop
-  Write-Host "  /dsh/readiness: $($readiness | ConvertTo-Json -Compress)"
-  if ($readiness.status -ne "ready") { throw "/dsh/readiness not ready: $($readiness.status)" }
+  $readiness = $null
+  $readinessReady = $false
+  for ($i = 1; $i -le 10; $i++) {
+    try {
+      $readiness = Invoke-RestMethod "http://localhost:58080/dsh/readiness" -TimeoutSec 10 -ErrorAction Stop
+      Write-Host "  /dsh/readiness attempt $i/10: $($readiness | ConvertTo-Json -Compress)"
+      if ($readiness.status -eq "ready") {
+        $readinessReady = $true
+        break
+      }
+    } catch {
+      Write-Host "  /dsh/readiness attempt $i/10 not ready: $_"
+    }
+    Start-Sleep -Seconds 3
+  }
+  if (-not $readinessReady) { throw "/dsh/readiness not ready after retries" }
 
   $stores = Invoke-RestMethod "http://localhost:58080/dsh/stores?limit=10&offset=0" -TimeoutSec 10 -ErrorAction Stop
   $count = if ($stores.stores) { $stores.stores.Count } else { 0 }
@@ -775,6 +837,10 @@ function Invoke-DshSmoke {
   $transBody3 = @{ nextStatus = "catalog-adopted"; note = "smoke adopt" } | ConvertTo-Json
   $proposal = Invoke-RestMethod "http://localhost:58080/dsh/operator/catalog/product-proposals/$($proposal.proposal.id)/transition" -Method Post -Headers $operatorHeaders -ContentType "application/json" -Body $transBody3 -TimeoutSec 10
   if ([string]::IsNullOrWhiteSpace($proposal.proposal.adoptedMasterProductId)) { throw "master product was not created during adoption" }
+
+  # Attach an image to the Master Product so it can be approved and client-visible
+  $imageBody = @{ assetId = "asset-node-canned-food" } | ConvertTo-Json
+  Invoke-RestMethod "http://localhost:58080/dsh/operator/catalog/master-products/$($proposal.proposal.adoptedMasterProductId)/images/canonical_product_image" -Method Put -Headers $operatorHeaders -ContentType "application/json" -Body $imageBody -TimeoutSec 10
 
   # Transition to catalog-approved
   $transBody4 = @{ nextStatus = "catalog-approved"; note = "smoke approve" } | ConvertTo-Json
@@ -1017,6 +1083,23 @@ if ($Action -eq "up") {
 
   docker compose @(Get-ComposeBase) @(Get-ComposeProfileArgs) up -d
   Write-Host "Containers started."
+
+  if ($ProfileList -contains "identity") {
+    Wait-ForIdentityApi
+  }
+  if ($ProfileList -contains "workforce") {
+    Wait-ForWorkforceApi
+  }
+  if ($ProfileList -contains "wlt") {
+    Wait-ForWltApi
+  }
+  if ($ProfileList -contains "dsh") {
+    Wait-ForDshApi
+  }
+  if (($ProfileList -contains "media") -or ($ProfileList -contains "dsh")) {
+    Wait-ForMinIO
+  }
+  Write-Host "runtime:up: PASS"
 }
 
 # ── Action: down ──────────────────────────────────────────────────────────────
@@ -1027,6 +1110,9 @@ elseif ($Action -eq "down") {
 
 # ── Action: reset ─────────────────────────────────────────────────────────────
 elseif ($Action -eq "reset") {
+  if (-not $Force) {
+    throw "runtime reset is a destructive operation. You must provide the -Force flag to proceed."
+  }
   Write-Host "=== runtime:reset (profiles: $($ProfileList -join ','))"
   docker info | Out-Null
   docker compose @(Get-ComposeBase) @(Get-ComposeProfileArgs) down -v --remove-orphans
@@ -1035,6 +1121,15 @@ elseif ($Action -eq "reset") {
   # Start database first to avoid API health checks deadlocking on missing tables
   docker compose @(Get-ComposeBase) @(Get-ComposeProfileArgs) up -d postgres
   Wait-ForPostgres
+
+  if (($ProfileList -contains "media") -or ($ProfileList -contains "dsh")) {
+    docker compose @(Get-ComposeBase) @(Get-ComposeProfileArgs) up -d minio
+    if ($LASTEXITCODE -ne 0) { throw "MinIO start failed for reset (exit $LASTEXITCODE)" }
+
+    Wait-ForMinIO
+    Invoke-MinioInit
+    Invoke-DshMediaSeed
+  }
 
   # Run database migrations before starting the API containers
   if ($ProfileList -contains "identity") {
@@ -1067,7 +1162,6 @@ elseif ($Action -eq "reset") {
   }
   if ($ProfileList -contains "dsh") {
     Wait-ForDshApi
-    Invoke-DshDevBootstrap
     Invoke-DshSmoke
   }
   if ($ProfileList -contains "wlt") {
@@ -1088,6 +1182,36 @@ elseif ($Action -eq "reset") {
     Invoke-ValkeySmoke
   }
   Write-Host "reset: PASS"
+}
+
+elseif ($Action -eq "bootstrap-dev") {
+  if ($env:NODE_ENV -eq "production") {
+    throw "bootstrap-dev is not allowed in production."
+  }
+  if (-not $Force) {
+    throw "bootstrap-dev requires -Force flag."
+  }
+  Write-Host "=== runtime:bootstrap-dev (profiles: $($ProfileList -join ','))"
+  if ($ProfileList -contains "identity") {
+    Wait-ForIdentityApi
+  }
+  if ($ProfileList -contains "dsh") {
+    Wait-ForMinIO
+    Invoke-MinioInit
+    Invoke-DshMediaSeed
+    Wait-ForDshApi
+    Invoke-DshDevBootstrap
+  } else {
+    Write-Host "DSH profile is not active. Skipping bootstrap."
+  }
+}
+
+# ── Action: verify-catalog ────────────────────────────────────────────────────
+elseif ($Action -eq "verify-catalog") {
+  Write-Host "=== runtime:verify-catalog"
+  pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/verify-catalog.ps1
+  if ($LASTEXITCODE -ne 0) { throw "verify-catalog failed (exit $LASTEXITCODE)" }
+  Write-Host "verify-catalog: PASS"
 }
 
 # ── Action: status ────────────────────────────────────────────────────────────

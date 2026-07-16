@@ -40,6 +40,8 @@ func TestComputeCheckoutSnapshotDBIntegration(t *testing.T) {
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
 	storeID := "cart-price-test-store-" + suffix
 	clientID := "cart-price-test-client-" + suffix
+	domainID := "domain-" + suffix
+	productID := "prod-" + suffix
 
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_stores (id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible)
@@ -47,27 +49,40 @@ func TestComputeCheckoutSnapshotDBIntegration(t *testing.T) {
 		storeID); err != nil {
 		t.Fatalf("failed to insert test store: %v", err)
 	}
-	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_stores WHERE id = $1`, storeID) })
+	t.Cleanup(func() {
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_cart_items WHERE cart_id IN (SELECT id FROM dsh_carts WHERE store_id = $1)`, storeID)
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_carts WHERE store_id = $1`, storeID)
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_store_assortments WHERE store_id = $1`, storeID)
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_master_products WHERE id = $1`, productID)
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_store_catalog_domains WHERE store_id = $1`, storeID)
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_catalog_domains WHERE id = $1`, domainID)
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_stores WHERE id = $1`, storeID)
+	})
 
-	var domainID string
 	if err := db.QueryRowContext(ctx, `
 		INSERT INTO dsh_catalog_domains (id, slug, name_ar)
 		VALUES ($1, $1, 'Cart Price Test Domain')
 		RETURNING id`,
-		"domain-"+suffix,
+		domainID,
 	).Scan(&domainID); err != nil {
 		t.Fatalf("failed to insert test domain: %v", err)
 	}
-	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_catalog_domains WHERE id = $1`, domainID) })
 
-	var productID string
 	if err := db.QueryRowContext(ctx, `
 		INSERT INTO dsh_master_products (id, domain_id, canonical_name_ar, sku)
 		VALUES ($1, $2, 'Test Widget', $3)
 		RETURNING id`,
-		"prod-"+suffix, domainID, "sku-"+suffix,
+		productID, domainID, "sku-"+suffix,
 	).Scan(&productID); err != nil {
 		t.Fatalf("failed to insert test master product: %v", err)
+	}
+
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_store_catalog_domains (store_id, domain_id, status, approved_at)
+		VALUES ($1, $2, 'approved', NOW())`,
+		storeID, domainID,
+	); err != nil {
+		t.Fatalf("failed to approve test store domain: %v", err)
 	}
 
 	if _, err := db.ExecContext(ctx, `

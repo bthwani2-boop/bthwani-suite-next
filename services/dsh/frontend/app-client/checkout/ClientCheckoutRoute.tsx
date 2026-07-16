@@ -19,8 +19,9 @@ type Props = {
 export function ClientCheckoutRoute({ storeId, serviceAreaCode = "sana", onBrowseCatalog, onBack, onSuccess }: Props) {
   const identity = useIdentitySession();
   const [checkoutData, setCheckoutData] = React.useState<{ cart: DshCart; deliveryAddress: string; note: string; paymentMethod: DshPaymentMethod } | null>(null);
+  const [wantsCheckout, setWantsCheckout] = React.useState(false);
 
-  if (identity.state.kind !== "authenticated") {
+  if (wantsCheckout && identity.state.kind !== "authenticated") {
     return (
       <View style={{ flex: 1 }}>
         <TopBar title="إتمام الطلب" subtitle="سجل الدخول للمتابعة" />
@@ -44,7 +45,10 @@ export function ClientCheckoutRoute({ storeId, serviceAreaCode = "sana", onBrows
         deliveryAddress={checkoutData.deliveryAddress}
         note={checkoutData.note}
         paymentMethod={checkoutData.paymentMethod}
-        onCancel={() => setCheckoutData(null)}
+        onCancel={() => {
+          setCheckoutData(null);
+          setWantsCheckout(false);
+        }}
         onSuccess={onSuccess}
       />
     );
@@ -54,8 +58,13 @@ export function ClientCheckoutRoute({ storeId, serviceAreaCode = "sana", onBrows
     <CartScreen
       storeId={storeId}
       serviceAreaCode={serviceAreaCode}
-      authKind="authenticated"
-      onProceedToCheckout={(cart, deliveryAddress, note, paymentMethod) => setCheckoutData({ cart, deliveryAddress, note, paymentMethod })}
+      authKind={identity.state.kind === "authenticated" ? "authenticated" : "unauthenticated"}
+      onProceedToCheckout={(cart, deliveryAddress, note, paymentMethod) => {
+        setCheckoutData({ cart, deliveryAddress, note, paymentMethod });
+        if (identity.state.kind !== "authenticated") {
+          setWantsCheckout(true);
+        }
+      }}
       {...(onBrowseCatalog ? { onBrowseCatalog } : {})}
       {...(onBack ? { onBack } : {})}
     />

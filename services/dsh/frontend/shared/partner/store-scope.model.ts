@@ -3,16 +3,41 @@
 // No JSX. No ui-kit. No Tamagui.
 
 import React from 'react';
-import { storeScopeOptions } from './partner.types';
+import type { DshPartnerOperationalScope } from './partner.types';
 import { buildPartnerProfileFromScope } from './partner.adapters';
+import { fetchPartnerScopes } from './partner.api';
 
 export function useStoreScopeModel() {
   const [storeScopeVisible, setStoreScopeVisible] = React.useState(false);
-  const [selectedStoreScopeId, setSelectedStoreScopeId] = React.useState('all');
+  const [selectedStoreScopeId, setSelectedStoreScopeId] = React.useState<string | null>(null);
+  const [scopes, setScopes] = React.useState<DshPartnerOperationalScope[]>([]);
+  const [isLoadingScopes, setIsLoadingScopes] = React.useState(true);
+  const [scopesError, setScopesError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    let active = true;
+    setIsLoadingScopes(true);
+    setScopesError(null);
+    fetchPartnerScopes().then((res) => {
+      if (active) {
+        setScopes(res.scopes);
+        if (res.scopes.length > 0 && !selectedStoreScopeId) {
+          setSelectedStoreScopeId(res.scopes[0]!.scopeId);
+        }
+        setIsLoadingScopes(false);
+      }
+    }).catch((err) => {
+      if (active) {
+        setScopesError('Failed to load store scopes');
+        setIsLoadingScopes(false);
+      }
+    });
+    return () => { active = false; };
+  }, [selectedStoreScopeId]);
 
   const selectedStoreScope = React.useMemo(
-    () => storeScopeOptions.find((o) => o.id === selectedStoreScopeId) ?? storeScopeOptions[0]!,
-    [selectedStoreScopeId],
+    () => scopes.find((o) => o.scopeId === selectedStoreScopeId) ?? scopes[0],
+    [scopes, selectedStoreScopeId],
   );
 
   const runtimePartnerProfile = React.useMemo(
@@ -28,6 +53,9 @@ export function useStoreScopeModel() {
     selectedStoreScopeId,
     setSelectedStoreScopeId,
     selectedStoreScope,
+    scopes,
+    isLoadingScopes,
+    scopesError,
     runtimePartnerProfile,
     openStoreScope,
   };

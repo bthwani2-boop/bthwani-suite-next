@@ -33,12 +33,6 @@ import {
 } from '../../shared/store';
 import { getSurfaceModeCapability, getSurfaceRoleSummaryForMode } from '../../shared/identity-access';
 
-const BRANCH_OPTIONS = [
-  { id: 'all', label: 'كل الفروع' },
-  { id: 'yasmin', label: 'فرع الياسمين' },
-  { id: 'nada', label: 'فرع الندى' },
-] as const;
-
 const BOTTOM_INSET = 144;
 
 function SelectionBlock<T extends string>({
@@ -84,7 +78,18 @@ function SelectionBlock<T extends string>({
   );
 }
 
-export function DshPartnerStoreCourierScreen({ onBack }: { onBack: () => void }) {
+import { fetchPartnerStoreCourierSettings, updatePartnerStoreCourierSettings } from '../../shared/partner';
+import type { DshPartnerOperationalScope } from '../../shared/partner/partner.types';
+
+export function DshPartnerStoreCourierScreen({
+  storeId,
+  scopes,
+  onBack,
+}: {
+  storeId: string;
+  scopes: readonly DshPartnerOperationalScope[];
+  onBack: () => void;
+}) {
   const { direction } = useDirection();
   const [courierName, setCourierName] = React.useState('');
   const [courierPhone, setCourierPhone] = React.useState('');
@@ -93,7 +98,26 @@ export function DshPartnerStoreCourierScreen({ onBack }: { onBack: () => void })
   const [policy, setPolicy] = React.useState<StoreDeliveryPolicy>('free_delivery');
   const [pricingSource, setPricingSource] = React.useState<StoreDeliveryPricingSource>('bthwani_pricing');
   const [compensation, setCompensation] = React.useState<StoreCourierCompensation>('none');
+  const [version, setVersion] = React.useState<number>(0);
   const [savedLabel, setSavedLabel] = React.useState<string | null>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    fetchPartnerStoreCourierSettings(storeId).then((data) => {
+      if (data) {
+        setCourierName(data.courierName || '');
+        setCourierPhone(data.courierPhone || '');
+        setIsActive(data.isActive || false);
+        setPolicy((data.policy as StoreDeliveryPolicy) || 'free_delivery');
+        setPricingSource((data.pricingSource as StoreDeliveryPricingSource) || 'bthwani_pricing');
+        setCompensation((data.compensation as StoreCourierCompensation) || 'none');
+        setSelectedBranchIds(data.selectedBranchIds?.length ? [...data.selectedBranchIds] : ['all']);
+        setVersion(data.version || 0);
+      }
+    }).finally(() => {
+      setIsLoading(false);
+    });
+  }, [storeId]);
 
   const requiresCompensation = isStoreDeliveryPolicyCompensationRequired(policy);
   const canSave = courierName.trim().length > 0 && courierPhone.trim().length > 0;
@@ -102,9 +126,14 @@ export function DshPartnerStoreCourierScreen({ onBack }: { onBack: () => void })
   const selectedPricingLabel = resolveStoreDeliveryPricingSourceLabel(pricingSource);
   const selectedCompensationLabel = resolveStoreCourierCompensationLabel(compensation);
 
+  const dynamicBranchOptions = React.useMemo(() => {
+    const branches = scopes.map(scope => ({ id: scope.scopeId, label: scope.displayName }));
+    return [{ id: 'all', label: 'كل الفروع' }, ...branches];
+  }, [scopes]);
+
   const branchLabel = selectedBranchIds.includes('all')
     ? 'كل الفروع'
-    : BRANCH_OPTIONS.filter((b) => selectedBranchIds.includes(b.id)).map((b) => b.label).join(' · ');
+    : dynamicBranchOptions.filter((b) => selectedBranchIds.includes(b.id)).map((b) => b.label).join(' · ');
 
   function toggleBranch(id: string) {
     setSelectedBranchIds((current) => {
@@ -171,7 +200,7 @@ export function DshPartnerStoreCourierScreen({ onBack }: { onBack: () => void })
       <Box gap={3} paddingY={2}>
         <Text role="bodyStrong" align="start">الفروع المخصصة</Text>
         <Box layoutDirection="row" style={{ flexWrap: 'wrap', gap: spacing[2] }}>
-          {BRANCH_OPTIONS.map((branch) => {
+          {dynamicBranchOptions.map((branch) => {
             const isSelected = selectedBranchIds.includes(branch.id);
             return (
               <Chip
@@ -261,7 +290,24 @@ export function DshPartnerStoreCourierScreen({ onBack }: { onBack: () => void })
           if (!canSave) {
             return;
           }
-          setSavedLabel('تم الحفظ محليًا — يحتاج تفعيل backend لاحقًا.');
+          setSavedLabel('جاري الحفظ...');
+          updatePartnerStoreCourierSettings(storeId, {
+            courierName,
+            courierPhone,
+            isActive,
+            policy,
+            pricingSource,
+            compensation,
+            selectedBranchIds,
+            version,
+          }).then((res) => {
+            setVersion(res.version || 0);
+            setSavedLabel('تم الحفظ بنجاح');
+            setTimeout(() => setSavedLabel(null), 3000);
+          }).catch((err: unknown) => {
+            const msg = err instanceof Error ? err.message : 'حدث خطأ أثناء الحفظ';
+            setSavedLabel(`فشل الحفظ: ${msg}`);
+          });
         }}
       />
     </MobileScrollView>

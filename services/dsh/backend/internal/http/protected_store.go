@@ -113,6 +113,7 @@ func (s *protectedStoreServer) mediaClient() *media.Client {
 
 func partnerRequestWithActor(r *http.Request, actor store.StoreActor) *http.Request {
 	ctx := context.WithValue(r.Context(), "actor_id", actor.ID)
+	ctx = context.WithValue(ctx, "actor_phone", actor.PhoneE164)
 	ctx = context.WithValue(ctx, "actor_surface", dshActorSurface(actor.Role))
 	return r.WithContext(ctx)
 }
@@ -329,6 +330,35 @@ func (s *protectedStoreServer) handleOperatorStoreDetail(w http.ResponseWriter, 
 	store.SendJSON(w, http.StatusOK, map[string]any{"store": store.RowToDetail(*row)})
 }
 
+func (s *protectedStoreServer) handleOperatorStoreDiagnostics(w http.ResponseWriter, r *http.Request) {
+	_, ok := s.requirePermission(w, r, "control-panel", PartnersPermissionRead, "operator")
+	if !ok {
+		return
+	}
+	storeId := r.PathValue("storeId")
+	row, err := store.GetStoreByIDInternal(r.Context(), s.db, storeId)
+	if err != nil {
+		s.writeStoreError(w, err)
+		return
+	}
+
+	blockers := []string{}
+	// Example logic for publication blockers
+	if row.LogoURL == nil || *row.LogoURL == "" {
+		blockers = append(blockers, "Missing store logo")
+	}
+	if row.HeroImageURL == nil || *row.HeroImageURL == "" {
+		blockers = append(blockers, "Missing store cover image")
+	}
+
+	isReady := len(blockers) == 0
+
+	store.SendJSON(w, http.StatusOK, map[string]any{
+		"isReady":  isReady,
+		"blockers": blockers,
+	})
+}
+
 func (s *protectedStoreServer) handlePartnerSettings(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "partner")
 	if !ok {
@@ -343,6 +373,36 @@ func (s *protectedStoreServer) handlePartnerSettings(w http.ResponseWriter, r *h
 		r.Header.Get("Idempotency-Key"), r.Header.Get("X-Correlation-ID"), input,
 	)
 	s.writeActionResponse(w, response, err)
+}
+
+func (s *protectedStoreServer) handleGetPartnerSettings(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "partner")
+	if !ok {
+		return
+	}
+	storeID := r.PathValue("storeId")
+	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, actor, storeID)
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		return
+	}
+	if !canAccess {
+		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor cannot access this store")
+		return
+	}
+	row, err := store.GetStoreByIDInternal(r.Context(), s.db, storeID)
+	if err != nil {
+		s.writeStoreError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{
+		"storeId":        row.ID,
+		"status":         row.Status,
+		"deliveryModes":  row.DeliveryModes,
+		"storeOpen":      row.Status == store.StatusActive,
+		"listingEnabled": row.IsVisible,
+		"version":        row.Version,
+	})
 }
 
 func (s *protectedStoreServer) handleFieldVerification(w http.ResponseWriter, r *http.Request) {
@@ -406,6 +466,147 @@ func (s *protectedStoreServer) handleStoreAudit(w http.ResponseWriter, r *http.R
 	store.SendJSON(w, http.StatusOK, map[string]any{"events": events})
 }
 
+// ─── Store team, courier settings, coverage zones, partner scopes ───────────
+// Thin auth wrappers: verify the actor can access storeId via the existing
+// store.ActorCanAccessStore primitive, then delegate to the pure business
+// handler in partner/handler.go. Mirrors handleGetPartnerSettings above.
+
+func (s *protectedStoreServer) handlePartnerStoreTeam(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "partner")
+	if !ok {
+		return
+	}
+	storeID := r.PathValue("storeId")
+	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, actor, storeID)
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		return
+	}
+	if !canAccess {
+		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor cannot access this store")
+		return
+	}
+	partner.HandleGetStoreTeam(s.db)(w, partnerRequestWithActor(r, actor))
+}
+
+func (s *protectedStoreServer) handlePartnerInviteTeamMember(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "partner")
+	if !ok {
+		return
+	}
+	storeID := r.PathValue("storeId")
+	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, actor, storeID)
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		return
+	}
+	if !canAccess {
+		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor cannot access this store")
+		return
+	}
+	partner.HandleInviteStoreTeamMember(s.db)(w, partnerRequestWithActor(r, actor))
+}
+
+func (s *protectedStoreServer) handlePartnerListInvites(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "partner")
+	if !ok {
+		return
+	}
+	partner.HandleListInvites(s.db)(w, partnerRequestWithActor(r, actor))
+}
+
+func (s *protectedStoreServer) handlePartnerAcceptInvite(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "partner")
+	if !ok {
+		return
+	}
+	partner.HandleAcceptInvite(s.db)(w, partnerRequestWithActor(r, actor))
+}
+
+func (s *protectedStoreServer) handlePartnerRejectInvite(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "partner")
+	if !ok {
+		return
+	}
+	partner.HandleRejectInvite(s.db)(w, partnerRequestWithActor(r, actor))
+}
+
+func (s *protectedStoreServer) handlePartnerTeamMemberAction(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "partner")
+	if !ok {
+		return
+	}
+	storeID := r.PathValue("storeId")
+	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, actor, storeID)
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		return
+	}
+	if !canAccess {
+		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor cannot access this store")
+		return
+	}
+	partner.HandleExecuteStoreTeamMemberAction(s.db)(w, partnerRequestWithActor(r, actor))
+}
+
+func (s *protectedStoreServer) handlePartnerGetCourierSettings(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "partner")
+	if !ok {
+		return
+	}
+	storeID := r.PathValue("storeId")
+	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, actor, storeID)
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		return
+	}
+	if !canAccess {
+		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor cannot access this store")
+		return
+	}
+	partner.HandleGetStoreCourierSettings(s.db)(w, r)
+}
+
+func (s *protectedStoreServer) handlePartnerUpdateCourierSettings(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "partner")
+	if !ok {
+		return
+	}
+	storeID := r.PathValue("storeId")
+	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, actor, storeID)
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		return
+	}
+	if !canAccess {
+		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor cannot access this store")
+		return
+	}
+	partner.HandleUpdateStoreCourierSettings(s.db)(w, r)
+}
+
+func (s *protectedStoreServer) handlePartnerCoverageZones(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "partner")
+	if !ok {
+		return
+	}
+	storeID := r.PathValue("storeId")
+	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, actor, storeID)
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		return
+	}
+	if !canAccess {
+		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor cannot access this store")
+		return
+	}
+	partner.HandleListStoreCoverageZones(s.db)(w, r)
+}
+
+func (s *protectedStoreServer) handlePartnerScopes(w http.ResponseWriter, r *http.Request) {
+	s.servePartnerSelfHandler(w, r, partner.HandleListPartnerScopes(s.db))
+}
+
 func (s *protectedStoreServer) requireActor(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -422,7 +623,7 @@ func (s *protectedStoreServer) requireActor(
 	}
 	for _, role := range allowedRoles {
 		if identity.HasRole(role) {
-			return store.StoreActor{ID: identity.Subject, Role: role}, true
+			return store.StoreActor{ID: identity.Subject, Role: role, PhoneE164: identity.PhoneE164}, true
 		}
 	}
 	store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor role cannot perform this action")

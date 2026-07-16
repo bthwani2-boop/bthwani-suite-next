@@ -1,0 +1,20 @@
+version: 1
+authority: governance/26_SDLC_TEAM_AND_STAGE_GATES.md
+quality_model: ISO_IEC_25010_2023_ALIGNED
+characteristics:
+  - functional_suitability
+  - performance_efficiency
+  - compatibility
+  - usability
+  - reliability
+  - security
+  - maintainability
+  - portability
+  - flexibility
+required_for_governed_journeys:
+  - measurable_acceptance_criteria
+  - defect_severity
+  - risk_based_test_strategy
+  - flaky_test_policy
+  - performance_reliability_accessibility_gate_when_applicable
+  - independent_qa_approval_when_applicable

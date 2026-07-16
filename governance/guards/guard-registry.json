@@ -241,12 +241,12 @@
       "source_file": "tools/guards/guard-registry-gate.mjs"
     },
     {
-      "id": "operational-journey-factory",
-      "name": "Operational Journey Template Factory Gate",
-      "script": "guard:operational-journey-factory",
+      "id": "sdlc",
+      "name": "SDLC Stage Gate",
+      "script": "guard:sdlc",
       "exit_level": "fail",
-      "description": "Verifies the operational journey factory templates, generators, package bindings, output policy, and no-skip multi-surface rules.",
-      "source_file": "tools/guards/operational-journey-template-factory-gate.mjs"
+      "description": "Validates SDLC support package structure, stage transition vocabulary, authority separation, and quality/security profiles.",
+      "source_file": "tools/guards/sdlc/Invoke-SdlcGate.ps1"
     },
     {
       "id": "markdown-governance",
@@ -364,45 +364,6 @@
       "exit_level": "warn",
       "description": "Checks repository naming with ls-lint. Warn-only while legacy names remain.",
       "source_file": ".ls-lint.yml"
-    },
-    {
-      "id": "foundation-cross-journey-remediation",
-      "name": "Foundation Cross-Journey Remediation Gate",
-      "script": "guard:foundation-cross-journey-remediation",
-      "exit_level": "fail",
-      "description": "Verifies that cross-journey gaps are fully remediated or triaged.",
-      "source_file": "tools/guards/foundation-cross-journey-remediation-gate.mjs"
-    },
-    {
-      "id": "operational-diagnostics-reconciliation",
-      "name": "Operational Diagnostics Reconciliation Gate",
-      "script": "guard:operational-diagnostics-reconciliation",
-      "exit_level": "fail",
-      "description": "Enforces reconciliation of gaps and checks stale outputs and raw reports.",
-      "source_file": "tools/guards/operational-diagnostics-reconciliation-gate.mjs"
-    },
-    {
-      "id": "dsh-order-lifecycle-execution",
-      "name": "DSH Order Lifecycle Execution Gate",
-      "script": "guard:dsh-order-lifecycle-execution",
-      "exit_level": "fail",
-      "description": "Verifies execution status, checks for open blocking gaps, and checks transition capabilities.",
-      "source_file": "tools/guards/dsh-order-lifecycle-execution-gate.mjs"
-    },
-    {
-      "id": "foundation-cross-journey-closure",
-      "name": "Foundation Cross-Journey Closure Gate",
-      "script": "guard:foundation-cross-journey-closure",
-      "exit_level": "fail",
-      "description": "Verifies foundation cross-journey closure status and checks for open gaps.",
-      "source_file": "tools/guards/foundation-cross-journey-closure-gate.mjs"
-    },
-    {
-      "id": "dsh-order-lifecycle-all",
-      "name": "DSH Order Lifecycle All Gate",
-      "script": "guard:dsh-order-lifecycle-all",
-      "exit_level": "fail",
-      "description": "Runs all DSH order lifecycle diagnostic and verification gates."
     },
     {
       "id": "runtime-real-bindings",

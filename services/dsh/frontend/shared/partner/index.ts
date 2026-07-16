@@ -60,6 +60,15 @@ export {
   fieldListFieldVisits,
   fieldGetPartnerStore,
   fieldUpdatePartnerStore,
+  fetchPartnerScopes,
+  fetchPartnerTeam,
+  invitePartnerTeamMember,
+  executePartnerTeamMemberAction,
+  fetchPartnerStoreCourierSettings,
+  updatePartnerStoreCourierSettings,
+  fetchPartnerStoreCoverageZones,
+  fetchPartnerStoreSettings,
+  updatePartnerStoreSettings,
 } from "./partner.api";
 export type { DshPartnerReadinessItem, DshPartnerDocumentType } from "./partner.types";
 export { REQUIRED_DOCUMENT_TYPES, DOCUMENT_TYPE_LABELS } from "./partner.types";

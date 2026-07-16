@@ -274,7 +274,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Get bounded operating settings for the authenticated partner's own store. */
+        get: operations["getPartnerStoreSettings"];
         put?: never;
         post?: never;
         delete?: never;
@@ -282,6 +283,41 @@ export interface paths {
         head?: never;
         /** Update bounded operating settings for the authenticated partner's own store. */
         patch: operations["updatePartnerStoreSettings"];
+        trace?: never;
+    };
+    "/dsh/partner/stores/{storeId}/courier-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get store courier settings. */
+        get: operations["getDshPartnerStoreCourierSettings"];
+        /** Update store courier settings. */
+        put: operations["updateDshPartnerStoreCourierSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/stores/{storeId}/coverage-zones": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get store coverage zones. */
+        get: operations["listDshPartnerStoreCoverageZones"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/dsh/field/stores/{storeId}/verifications": {
@@ -329,6 +365,23 @@ export interface paths {
         put?: never;
         /** Apply an authenticated and audited lifecycle, visibility, or serviceability action. */
         post: operations["governDshStore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/diagnostics/stores/{storeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get store publication diagnostics */
+        get: operations["getStoreDiagnostics"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1571,6 +1624,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dsh/partner/me/finance/settlements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Partner reads their own governed WLT settlements view through the DSH finance proxy. WLT service auth stays server-side. */
+        get: operations["listDshPartnerFinanceSettlements"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/me/finance/settlements/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Partner reads their own governed WLT settlement summary through the DSH finance proxy. */
+        get: operations["getDshPartnerFinanceSettlementSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/dsh/control-panel/finance/refunds/{refundId}": {
         parameters: {
             query?: never;
@@ -1597,6 +1684,23 @@ export interface paths {
         };
         /** Operator reads the governed WLT ledger entries view through the DSH finance proxy. */
         get: operations["listDshControlPanelFinanceLedgerEntries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/control-panel/finance/financial-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Operator reads the WLT ledger-kernel financial summary (Assets/Liabilities/Revenue/Net Position per currency) through the DSH finance proxy. */
+        get: operations["getDshControlPanelFinanceFinancialSummary"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1633,6 +1737,125 @@ export interface paths {
         get: operations["listDshControlPanelFinanceCommissions"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/control-panel/finance/payout-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Operator reads the governed WLT payout requests view through the DSH finance proxy. */
+        get: operations["listDshControlPanelFinancePayoutRequests"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/control-panel/finance/payout-requests/{payoutId}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Operator approves a governed WLT payout request through the DSH finance proxy. */
+        post: operations["approveDshControlPanelFinancePayoutRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/control-panel/finance/payout-requests/{payoutId}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Operator rejects a governed WLT payout request through the DSH finance proxy. */
+        post: operations["rejectDshControlPanelFinancePayoutRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/control-panel/finance/reconciliation-cases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Operator reads governed WLT reconciliation cases view through the DSH finance proxy. */
+        get: operations["listDshControlPanelFinanceReconciliationCases"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/control-panel/finance/reconciliation-cases/{caseId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Operator reads one governed WLT reconciliation case through the DSH finance proxy. */
+        get: operations["getDshControlPanelFinanceReconciliationCase"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/control-panel/finance/reconciliation-cases/{caseId}/assign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Operator assigns a reconciliation case to himself/another operator. */
+        post: operations["assignDshControlPanelFinanceReconciliationCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/control-panel/finance/reconciliation-cases/{caseId}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Operator resolves a reconciliation case. */
+        post: operations["resolveDshControlPanelFinanceReconciliationCase"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2671,10 +2894,129 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Partner reads their own readiness checklist. */
+        /** Get own partner readiness status. */
         get: operations["getDshPartnerSelfReadiness"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/stores/{storeId}/team": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List team members for a store. */
+        get: operations["listDshPartnerStoreTeam"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/stores/{storeId}/team/invites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Invite a new team member. */
+        post: operations["inviteDshPartnerStoreTeamMember"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/stores/{storeId}/team/members/{memberId}/action": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Execute an action on a team member. */
+        post: operations["executeDshPartnerStoreTeamMemberAction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/scopes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Partner lists their authorized operational scopes (stores/branches). */
+        get: operations["listDshPartnerScopes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/invites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List pending team invitations for the authenticated actor across all stores. */
+        get: operations["listDshPartnerInvites"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/invites/{inviteId}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Accept a pending team invitation. */
+        post: operations["acceptDshPartnerInvite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/invites/{inviteId}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject a pending team invitation. */
+        post: operations["rejectDshPartnerInvite"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3024,6 +3366,15 @@ export interface components {
         DshStoreCategory: string;
         /** @enum {string} */
         DshStoreDeliveryMode: "delivery" | "pickup" | "express";
+        DshPartnerOperationalScope: {
+            scopeId: string;
+            storeId: string;
+            partnerId: string;
+            displayName: string;
+            /** @enum {string} */
+            role: "owner" | "manager" | "staff";
+            permissions: string[];
+        };
         DshStoreDetail: components["schemas"]["DshStoreSummary"] & {
             /** Format: date-time */
             createdAt: string;
@@ -3198,7 +3549,7 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
-            version?: number;
+            version: number;
         };
         MasterProductSummary: {
             id: string;
@@ -3552,6 +3903,15 @@ export interface components {
             /** @enum {string} */
             code: "serviceable" | "store_unavailable" | "out_of_area" | "catalog_unavailable";
             reason?: string;
+            /** @description Per-mode availability for this store+location, derived from the store's enabled delivery modes and the same zone/distance check as `serviceable`/`code`. Never a static three-mode list. */
+            availableModes?: components["schemas"]["FulfillmentModeAvailability"][];
+        };
+        FulfillmentModeAvailability: {
+            /** @enum {string} */
+            mode: "bthwani_delivery" | "partner_delivery" | "pickup";
+            available: boolean;
+            /** @enum {string} */
+            unavailableReasonCode?: "mode_not_enabled" | "out_of_area" | "store_unavailable";
         };
         DshCheckoutIntent: {
             id: string;
@@ -3561,7 +3921,7 @@ export interface components {
             /** @enum {string} */
             fulfillmentMode: "bthwani_delivery" | "partner_delivery" | "pickup";
             /** @enum {string} */
-            state: "pending" | "wlt_handoff_failed" | "payment_pending" | "confirmed" | "cancelled" | "expired";
+            state: "pending" | "wlt_handoff_failed" | "payment_pending" | "payment_confirmed" | "payment_failed" | "confirmed" | "cancelled" | "expired";
             /** @enum {string} */
             paymentMethod: "cod" | "wallet" | "mixed" | "official_wallet";
             /** @description Opaque WLT-owned payment-session reference. DSH never mutates financial truth. */
@@ -3604,6 +3964,8 @@ export interface components {
             id: string;
             checkoutIntentId: string;
             storeId: string;
+            /** @enum {string} */
+            fulfillmentMode: "bthwani_delivery" | "partner_delivery" | "pickup";
             clientId: string;
             status: components["schemas"]["DshOrderStatus"];
             rejectionReason?: string;
@@ -4183,6 +4545,51 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
         };
+        DshPartnerTeamMember: {
+            id: string;
+            name: string;
+            /** @enum {string} */
+            role: "owner" | "supervisor" | "staff" | "courier";
+            roleLabel: string;
+            /** @enum {string} */
+            status: "active" | "paused" | "invited" | "blocked" | "review-needed";
+            statusLabel: string;
+            branchAssignment: string;
+            permissionsSummary: string;
+            deliveryAssignment: string;
+            inviteLifecycle: string;
+            operationalImpact: string;
+            auditNote: string;
+            inlineActionLabel: string;
+        };
+        DshPartnerStoreCourierSettings: {
+            courierName: string;
+            courierPhone: string;
+            isActive: boolean;
+            policy: string;
+            pricingSource: string;
+            compensation: string;
+            selectedBranchIds: string[];
+            /** Format: int64 */
+            version: number;
+        };
+        DshPartnerCoverageZone: {
+            id: string;
+            name: string;
+            /** @enum {string} */
+            status: "active" | "pending" | "blocked";
+            statusLabel: string;
+            branchRelation: string;
+            serviceModeRelation: string;
+            policySummary: string;
+            policyReason: string;
+            operationalImpact: string;
+            pricingReference: string;
+            commissionReference: string;
+            payoutReference: string;
+            reviewActionLabel: string;
+            auditNote: string;
+        };
         DshPartnerReadiness: {
             partnerId: string;
             canActivate: boolean;
@@ -4729,29 +5136,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        actorId?: string;
-                        actorType?: string;
-                        status?: string;
-                        currency?: string;
-                        /** Format: int64 */
-                        availableBalanceMinorUnits?: number;
-                        /** Format: int64 */
-                        pendingBalanceMinorUnits?: number;
-                        /** Format: int64 */
-                        heldBalanceMinorUnits?: number;
-                        /** Format: int64 */
-                        earnedTotalMinorUnits?: number;
-                        /** Format: int64 */
-                        settledTotalMinorUnits?: number;
-                        /** Format: int64 */
-                        paidTotalMinorUnits?: number;
-                        /** Format: date-time */
-                        lastLedgerEntryAt?: string | null;
-                        /** Format: date-time */
-                        updatedAt?: string | null;
+                        wallet?: {
+                            actorId?: string;
+                            actorType?: string;
+                            status?: string;
+                            currency?: string;
+                            /** Format: int64 */
+                            availableBalanceMinorUnits?: number;
+                            /** Format: int64 */
+                            pendingBalanceMinorUnits?: number;
+                            /** Format: int64 */
+                            heldBalanceMinorUnits?: number;
+                            /** Format: int64 */
+                            earnedTotalMinorUnits?: number;
+                            /** Format: int64 */
+                            settledTotalMinorUnits?: number;
+                            /** Format: int64 */
+                            paidTotalMinorUnits?: number;
+                            /** Format: date-time */
+                            lastLedgerEntryAt?: string | null;
+                            /** Format: date-time */
+                            updatedAt?: string | null;
+                        };
                     };
                 };
             };
+            401: components["responses"]["Unauthenticated"];
         };
     };
     getDshFieldMeCommissions: {
@@ -4770,23 +5180,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        id?: string;
-                        beneficiaryActorId?: string;
-                        beneficiaryActorType?: string;
-                        sourceType?: string;
-                        sourceId?: string;
-                        visitId?: string | null;
-                        storeId?: string | null;
-                        partnerId?: string | null;
-                        commissionPolicyId?: string | null;
-                        /** Format: int64 */
-                        amountMinorUnits?: number;
-                        currency?: string;
-                        status?: string;
-                        idempotencyKey?: string | null;
-                    }[];
+                        commissions?: {
+                            id?: string;
+                            beneficiaryActorId?: string;
+                            beneficiaryActorType?: string;
+                            sourceType?: string;
+                            sourceId?: string;
+                            visitId?: string | null;
+                            storeId?: string | null;
+                            partnerId?: string | null;
+                            commissionPolicyId?: string | null;
+                            /** Format: int64 */
+                            amountMinorUnits?: number;
+                            currency?: string;
+                            status?: string;
+                            idempotencyKey?: string | null;
+                        }[];
+                    };
                 };
             };
+            401: components["responses"]["Unauthenticated"];
         };
     };
     getDshFieldMeLedgerEntries: {
@@ -4807,6 +5220,7 @@ export interface operations {
                     "application/json": Record<string, never>[];
                 };
             };
+            401: components["responses"]["Unauthenticated"];
         };
     };
     getDshFieldMePayoutRequests: {
@@ -4824,9 +5238,25 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>[];
+                    "application/json": {
+                        payoutRequests?: {
+                            id?: string;
+                            beneficiaryActorId?: string;
+                            beneficiaryActorType?: string;
+                            /** Format: int64 */
+                            amountMinorUnits?: number;
+                            currency?: string;
+                            status?: string;
+                            /** Format: date-time */
+                            requestedAt?: string;
+                            /** Format: date-time */
+                            completedAt?: string | null;
+                            failureReason?: string | null;
+                        }[];
+                    };
                 };
             };
+            401: components["responses"]["Unauthenticated"];
         };
     };
     submitDshFieldMePayoutRequest: {
@@ -4836,17 +5266,43 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: int64 */
+                    amountMinorUnits: number;
+                    currency: string;
+                    idempotencyKey: string;
+                };
+            };
+        };
         responses: {
             /** @description Payout request created successfully. */
-            200: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": {
+                        payoutRequest?: {
+                            id?: string;
+                            beneficiaryActorId?: string;
+                            beneficiaryActorType?: string;
+                            /** Format: int64 */
+                            amountMinorUnits?: number;
+                            currency?: string;
+                            status?: string;
+                            /** Format: date-time */
+                            requestedAt?: string;
+                            /** Format: date-time */
+                            completedAt?: string | null;
+                            failureReason?: string | null;
+                        };
+                    };
                 };
             };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
         };
     };
     getDshHealth: {
@@ -5262,6 +5718,31 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    getPartnerStoreSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: components["parameters"]["StoreId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Store settings. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartnerStoreSettingsRequest"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     updatePartnerStoreSettings: {
         parameters: {
             query?: never;
@@ -5294,6 +5775,79 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    getDshPartnerStoreCourierSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Courier settings. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerStoreCourierSettings"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    updateDshPartnerStoreCourierSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshPartnerStoreCourierSettings"];
+            };
+        };
+        responses: {
+            /** @description Courier settings updated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerStoreCourierSettings"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    listDshPartnerStoreCoverageZones: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of coverage zones. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerCoverageZone"][];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
         };
     };
     submitFieldStoreVerification: {
@@ -5396,6 +5950,34 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    getStoreDiagnostics: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: components["parameters"]["StoreId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Store diagnostics. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        isReady?: boolean;
+                        blockers?: string[];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     listDshStoreAudit: {
@@ -5516,6 +6098,7 @@ export interface operations {
         requestBody?: {
             content: {
                 "application/json": {
+                    expectedVersion?: number;
                     nameAr?: string;
                     nameEn?: string;
                     icon?: string;
@@ -5588,6 +6171,7 @@ export interface operations {
         requestBody?: {
             content: {
                 "application/json": {
+                    expectedVersion?: number;
                     nameAr?: string;
                     nameEn?: string;
                     icon?: string;
@@ -5670,6 +6254,7 @@ export interface operations {
         requestBody?: {
             content: {
                 "application/json": {
+                    expectedVersion?: number;
                     canonicalNameAr?: string;
                     canonicalNameEn?: string;
                     brand?: string;
@@ -5788,6 +6373,7 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    expectedVersion?: number;
                     isActive?: boolean;
                     requiresMarketingReview?: boolean;
                     requiresProductImage?: boolean;
@@ -5824,6 +6410,7 @@ export interface operations {
         requestBody?: {
             content: {
                 "application/json": {
+                    expectedVersion?: number;
                     isActive?: boolean;
                     requiresMarketingReview?: boolean;
                     requiresProductImage?: boolean;
@@ -6849,7 +7436,7 @@ export interface operations {
     listOperatorCheckoutIntents: {
         parameters: {
             query?: {
-                state?: "pending" | "payment_pending" | "confirmed" | "cancelled" | "expired";
+                state?: "pending" | "wlt_handoff_failed" | "payment_pending" | "payment_confirmed" | "payment_failed" | "confirmed" | "cancelled" | "expired";
             };
             header?: never;
             path?: never;
@@ -7441,6 +8028,55 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
         };
     };
+    listDshPartnerFinanceSettlements: {
+        parameters: {
+            query?: {
+                limit?: string;
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description WLT settlements view (verbatim passthrough). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    getDshPartnerFinanceSettlementSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description WLT settlement summary (verbatim passthrough). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
     getDshControlPanelFinanceRefund: {
         parameters: {
             query?: never;
@@ -7484,6 +8120,29 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description WLT ledger entries view (verbatim passthrough). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    getDshControlPanelFinanceFinancialSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description WLT financial summary view (verbatim passthrough). */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -7551,6 +8210,199 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthenticated"];
+        };
+    };
+    listDshControlPanelFinancePayoutRequests: {
+        parameters: {
+            query?: {
+                status?: string;
+                limit?: string;
+                cursor?: string;
+                beneficiaryActorId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description WLT payout requests view (verbatim passthrough). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    approveDshControlPanelFinancePayoutRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payoutId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description WLT payout request approval result (verbatim passthrough). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    rejectDshControlPanelFinancePayoutRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payoutId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description WLT payout request rejection result (verbatim passthrough). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listDshControlPanelFinanceReconciliationCases: {
+        parameters: {
+            query?: {
+                status?: "open" | "resolved";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description WLT reconciliation cases view (verbatim passthrough). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    getDshControlPanelFinanceReconciliationCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description WLT reconciliation case view (verbatim passthrough). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    assignDshControlPanelFinanceReconciliationCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description WLT reconciliation case assignment result (verbatim passthrough). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    resolveDshControlPanelFinanceReconciliationCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    resolutionAction: "confirmed_success" | "confirmed_failed" | "manual_adjustment" | "ignored";
+                    resolutionNote: string;
+                };
+            };
+        };
+        responses: {
+            /** @description WLT reconciliation case resolution result (verbatim passthrough). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     listDshCaptainFinanceCodRecords: {
@@ -9629,7 +10481,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Partner readiness checklist. */
+            /** @description Readiness object. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -9638,6 +10490,194 @@ export interface operations {
                     "application/json": components["schemas"]["DshPartnerReadiness"];
                 };
             };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    listDshPartnerStoreTeam: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of team members. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        members: components["schemas"]["DshPartnerTeamMember"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    inviteDshPartnerStoreTeamMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    identity: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Invite sent. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    executeDshPartnerStoreTeamMemberAction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: string;
+                memberId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    action: "pause" | "activate" | "block" | "resend-invite" | "cancel-invite";
+                };
+            };
+        };
+        responses: {
+            /** @description Action executed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    listDshPartnerScopes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorized operational scopes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        scopes: components["schemas"]["DshPartnerOperationalScope"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    listDshPartnerInvites: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Pending invites. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        invites: components["schemas"]["DshPartnerTeamMember"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    acceptDshPartnerInvite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                inviteId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Invite accepted. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                    };
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    rejectDshPartnerInvite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                inviteId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Invite rejected. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                    };
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
             401: components["responses"]["Unauthenticated"];
             404: components["responses"]["NotFound"];
         };

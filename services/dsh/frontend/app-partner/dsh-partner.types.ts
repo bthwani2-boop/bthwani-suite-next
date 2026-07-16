@@ -7,6 +7,7 @@ import type {
   DshPartnerSupportRouteId,
   PartnerHubSection,
 } from '../shared/partner/partner.types';
+import type { PartnerTeamMember } from './team/partner-team.types';
 // Re-export domain types from shared so consumers can import from one place.
 export type {
   DshPartnerOperationalFlowId,
@@ -50,7 +51,6 @@ export type DshPartnerHubSurfaceProps = {
   activeZoneLabel?: string;
   storeOpen?: boolean;
   listingEnabled?: boolean;
-  serviceModes?: readonly { id: string; label: string; description: string; enabled: boolean }[];
   activeOrdersCount?: number;
   urgentOrdersCount?: number;
   pendingActionsCount?: number;
@@ -64,9 +64,10 @@ export type DshPartnerHubSurfaceProps = {
   onOpenOperationalFlow?: (screenId: DshPartnerOperationalFlowId) => void;
   onOpenSupportScreen?: (screenId: DshPartnerSupportRouteId) => void;
   onOpenStoreCourierSetup?: () => void;
+  onOpenTeamManagement?: () => void;
+  teamMembers?: readonly PartnerTeamMember[];
   onToggleAvailability?: (isAvailable: boolean) => void;
   canonicalStoreId?: string;
-  dshAuthBearerToken?: string | null;
   dshClientId?: string | null;
   walletBalanceLabel?: string;
 };

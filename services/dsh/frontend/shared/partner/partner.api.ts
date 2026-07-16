@@ -17,6 +17,10 @@ import type {
   DshReviewDocumentInput,
   DshCreatePartnerFieldVisitRequest,
   DshPartnerListResponse,
+  DshPartnerOperationalScope,
+  DshPartnerTeamMember,
+  DshPartnerStoreCourierSettings,
+  DshPartnerCoverageZone,
 } from "./partner.types";
 
 const baseUrl = resolveDshApiBaseUrl();
@@ -131,6 +135,42 @@ export function fetchPartnerSelfReadiness(): Promise<DshPartnerReadiness> {
   return request("/dsh/partner/activation/readiness");
 }
 
+export function fetchPartnerScopes(): Promise<{ scopes: DshPartnerOperationalScope[] }> {
+  return request("/dsh/partner/scopes");
+}
+
+export function fetchPartnerTeam(storeId: string): Promise<{ members: DshPartnerTeamMember[] }> {
+  return request(`/dsh/partner/stores/${storeId}/team`);
+}
+
+export function invitePartnerTeamMember(storeId: string, identity: string): Promise<{ success: boolean }> {
+  return request(`/dsh/partner/stores/${storeId}/team/invites`, { method: "POST", body: { identity } });
+}
+
+export function executePartnerTeamMemberAction(storeId: string, memberId: string, action: string): Promise<{ success: boolean }> {
+  return request(`/dsh/partner/stores/${storeId}/team/members/${memberId}/action`, { method: "POST", body: { action } });
+}
+
+export function fetchPartnerStoreCourierSettings(storeId: string): Promise<DshPartnerStoreCourierSettings> {
+  return request(`/dsh/partner/stores/${storeId}/courier-settings`);
+}
+
+export function updatePartnerStoreCourierSettings(storeId: string, settings: DshPartnerStoreCourierSettings): Promise<DshPartnerStoreCourierSettings> {
+  return request(`/dsh/partner/stores/${storeId}/courier-settings`, { method: "PUT", body: settings });
+}
+
+export function fetchPartnerStoreCoverageZones(storeId: string): Promise<DshPartnerCoverageZone[]> {
+  return request(`/dsh/partner/stores/${storeId}/coverage-zones`);
+}
+
+export function fetchPartnerStoreSettings(storeId: string): Promise<unknown> {
+  return request(`/dsh/partner/stores/${storeId}/settings`);
+}
+
+export function updatePartnerStoreSettings(storeId: string, settings: unknown): Promise<unknown> {
+  return request(`/dsh/partner/stores/${storeId}/settings`, { method: "PATCH", body: settings });
+}
+
 // ── Field intake ──────────────────────────────────────────────────────────────
 
 export function fieldListDrafts(params: { status?: string; limit?: number; offset?: number } = {}): Promise<DshPartnerListResponse> {
@@ -146,12 +186,18 @@ export function fieldCreateDraft(input: DshCreatePartnerInput): Promise<DshPartn
   return request("/dsh/field/partners/drafts", { method: "POST", body: input });
 }
 
-export function fieldGetPartner(partnerId: string): Promise<DshPartner> {
-  return request(`/dsh/field/partners/${partnerId}`);
+// ── Partner: analytics ────────────────────────────────────────────────────
+
+export function fetchPartnerPerformance(period: 'today' | 'week' | 'month' = 'today'): Promise<import('./partner.types').DshPartnerPerformanceResponse> {
+  return request(`/dsh/partner/analytics/performance?period=${period}`);
 }
 
 export function fieldUpdatePartner(partnerId: string, input: DshUpdatePartnerRequest, version: number): Promise<DshPartner> {
   return request(`/dsh/field/partners/${partnerId}?version=${version}`, { method: "PATCH", body: input });
+}
+
+export function fieldGetPartner(partnerId: string): Promise<DshPartner> {
+  return request(`/dsh/field/partners/${partnerId}`);
 }
 
 export function fieldUploadDocument(partnerId: string, input: DshAddDocumentInput): Promise<DshPartnerDocument> {

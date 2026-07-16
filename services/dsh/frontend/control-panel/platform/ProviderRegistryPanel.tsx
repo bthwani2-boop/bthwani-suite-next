@@ -11,7 +11,7 @@ import {
   spacing,
 } from "@bthwani/ui-kit";
 import { WebView as View, WebStyleSheet as StyleSheet } from "@bthwani/ui-kit/web";
-import { PLATFORM_PROVIDER_REGISTRY, toProviderVisibleFields } from "../../shared/platform";
+import { PROVIDER_AFFECTED_SURFACES, WLT_BOUNDARY_PROVIDER_KINDS } from "../../shared/platform";
 import type { ProviderVisibleFields } from "../../shared/platform";
 import { MapsProviderInspector } from "./MapsProviderInspector";
 
@@ -35,21 +35,33 @@ import React, { useEffect, useState } from "react";
 import { listProviders, getProviderHealth } from "../../shared/platform";
 import type { ExternalProvider, ExternalProviderHealthItem } from "../../shared/platform";
 
-function externalToVisibleProvider(ep: ExternalProvider): ProviderVisibleFields {
+function stringParam(parameters: ExternalProvider["parameters"], key: string): string | null {
+  if (!parameters || typeof parameters !== "object") return null;
+  const value = (parameters as Record<string, unknown>)[key];
+  return typeof value === "string" && value.trim().length > 0 ? value : null;
+}
+
+function isWltBoundaryProvider(kind: string): boolean {
+  return WLT_BOUNDARY_PROVIDER_KINDS.some((boundaryKind) => boundaryKind === kind || (boundaryKind === "payments" && kind === "payment"));
+}
+
+function externalToVisibleProvider(ep: ExternalProvider, health: readonly ExternalProviderHealthItem[]): ProviderVisibleFields {
+  const healthItem = health.find((item) => item.kind === ep.kind);
+
   return {
     id: ep.providerId,
     kind: ep.kind,
     label: ep.kind === "maps" ? "خرائط قوقل وسحابة الموقع (Google Maps)" : ep.code,
     selectedProvider: ep.code,
     fallbackProvider: null,
-    environment: "production",
+    environment: stringParam(ep.parameters, "environment") ?? "unknown",
     status: ep.active ? "active" : "inactive",
     credentialVisibility: "backend_secret_only",
-    maskedCredential: "••••••••",
-    lastHealthStatus: "healthy",
-    lastHealthCheckedAt: ep.updatedAt ?? null,
-    affectedSurfaces: ep.kind === "maps" ? ["dsh-client", "dsh-captain", "dsh-operator"] : [],
-    wltBoundary: false,
+    maskedCredential: null,
+    lastHealthStatus: healthItem?.status ?? "unknown",
+    lastHealthCheckedAt: healthItem?.checkedAt ?? null,
+    affectedSurfaces: PROVIDER_AFFECTED_SURFACES[ep.kind as keyof typeof PROVIDER_AFFECTED_SURFACES] ?? [],
+    wltBoundary: isWltBoundaryProvider(ep.kind),
     auditRequired: false,
     rollbackTarget: null,
     publicRuntimeConfig: {},
@@ -80,7 +92,7 @@ export function ProviderRegistryPanel() {
   }, []);
 
   const mapsProvider = providers.find((p) => p.kind === "maps");
-  const mappedMapsProvider = mapsProvider ? externalToVisibleProvider(mapsProvider) : null;
+  const mappedMapsProvider = mapsProvider ? externalToVisibleProvider(mapsProvider, health) : null;
 
   return (
     <ScrollScreen>
@@ -134,7 +146,7 @@ export function ProviderRegistryPanel() {
       <Card>
         <View style={styles.notice}>
           <Text role="caption">
-            تعديل المزودين يتطلب عقد Backend موثق. لا يمكن تطبيق أي تغيير محلياً أو كمعاينة فقط.
+            تعديل المزودين محجوب بسياسة P0 حتى يمر عبر Change Workflow موثق. لا يتم تطبيق أي تغيير محلياً أو كمعاينة فقط.
           </Text>
         </View>
       </Card>

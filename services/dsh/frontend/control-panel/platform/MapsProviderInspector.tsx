@@ -16,7 +16,7 @@ export function MapsProviderInspector({ provider }: Props) {
         <Text role="titleMd">{provider.label}</Text>
 
         <ListItem title="المزود المختار" subtitle={provider.selectedProvider} />
-        <ListItem title="البيئة" subtitle={provider.environment} />
+        <ListItem title="البيئة" subtitle={provider.environment === "unknown" ? "غير معروفة من المصدر" : provider.environment} />
         <ListItem title="الحالة" subtitle={provider.status} />
         <ListItem title="المفتاح المُقنَّع" subtitle={provider.maskedCredential ?? "غير متاح"} />
         <ListItem title="رؤية الاعتماد" subtitle={provider.credentialVisibility} />
@@ -45,8 +45,8 @@ export function MapsProviderInspector({ provider }: Props) {
         />
         <StateView
           tone="warning"
-          title="التطبيق يتطلب عقد Backend"
-          description="لا يمكن تفعيل هذا المزود أو تعديله من الواجهة مباشرة. يتطلب عقد Backend موثق."
+          title="التعديل يمر عبر Change Workflow"
+          description="لا يمكن تفعيل هذا المزود أو تعديله من الواجهة مباشرة حتى يتوفر مسار مقترح واعتماد وتدقيق وتراجع."
         />
       </View>
     </Card>

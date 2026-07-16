@@ -1,0 +1,4 @@
+interface:
+  display_name: "BThwani SDLC Stage Gate Orchestrator"
+  short_description: "Route governed BThwani changes through SDLC stage gates."
+  default_prompt: "Classify this BThwani change, select the applicable SDLC gates, and produce a minimal gate decision."

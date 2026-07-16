@@ -60,7 +60,11 @@ func (p *Provider) Ready(ctx context.Context) bool {
 	}
 	client := p.Client()
 	if client == nil {
-		return false
+		p.connect(ctx)
+		client = p.Client()
+		if client == nil {
+			return false
+		}
 	}
 	return client.EnsureBucket(ctx) == nil
 }

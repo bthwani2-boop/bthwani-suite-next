@@ -11,44 +11,58 @@ import (
 )
 
 type LedgerEntry struct {
-	ID               string  `json:"id"`
-	EntryType        string  `json:"entryType"`
-	ActorID          string  `json:"actorId"`
-	ActorType        string  `json:"actorType"`
-	OrderID          *string `json:"orderId"`
-	ReferenceID      string  `json:"referenceId"`
-	ReferenceType    string  `json:"referenceType"`
-	AmountMinorUnits int64   `json:"amountMinorUnits"`
-	Currency         string  `json:"currency"`
-	DebitCredit      string  `json:"debitCredit"`
-	BalanceAfter     int64   `json:"balanceAfter"`
-	Description      string  `json:"description"`
-	CreatedAt        string  `json:"createdAt"`
+	ID                  string  `json:"id"`
+	EntryType           string  `json:"entryType"`
+	ActorID             string  `json:"actorId"`
+	ActorType           string  `json:"actorType"`
+	SourceType          string  `json:"sourceType"`
+	SourceID            string  `json:"sourceId"`
+	OrderID             *string `json:"orderId"`
+	VisitID             *string `json:"visitId"`
+	StoreID             *string `json:"storeId"`
+	PartnerID           *string `json:"partnerId"`
+	CommissionEventID   *string `json:"commissionEventId"`
+	ReferenceID         string  `json:"referenceId"`
+	ReferenceType       string  `json:"referenceType"`
+	AmountMinorUnits    int64   `json:"amountMinorUnits"`
+	Currency            string  `json:"currency"`
+	DebitCredit         string  `json:"debitCredit"`
+	BalanceAfter        int64   `json:"balanceAfter"`
+	Description         string  `json:"description"`
+	IdempotencyKey      *string `json:"idempotencyKey"`
+	CreatedAt           string  `json:"createdAt"`
 }
 
 type CreateLedgerEntryInput struct {
-	EntryType        string  `json:"entryType"`
-	ActorID          string  `json:"actorId"`
-	ActorType        string  `json:"actorType"`
-	OrderID          *string `json:"orderId"`
-	ReferenceID      string  `json:"referenceId"`
-	ReferenceType    string  `json:"referenceType"`
-	AmountMinorUnits int64   `json:"amountMinorUnits"`
-	Currency         string  `json:"currency"`
-	DebitCredit      string  `json:"debitCredit"`
-	BalanceAfter     int64   `json:"balanceAfter"`
-	Description      string  `json:"description"`
+	EntryType           string  `json:"entryType"`
+	ActorID             string  `json:"actorId"`
+	ActorType           string  `json:"actorType"`
+	SourceType          string  `json:"sourceType"`
+	SourceID            string  `json:"sourceId"`
+	OrderID             *string `json:"orderId"`
+	VisitID             *string `json:"visitId"`
+	StoreID             *string `json:"storeId"`
+	PartnerID           *string `json:"partnerId"`
+	CommissionEventID   *string `json:"commissionEventId"`
+	ReferenceID         string  `json:"referenceId"`
+	ReferenceType       string  `json:"referenceType"`
+	AmountMinorUnits    int64   `json:"amountMinorUnits"`
+	Currency            string  `json:"currency"`
+	DebitCredit         string  `json:"debitCredit"`
+	BalanceAfter        int64   `json:"balanceAfter"`
+	Description         string  `json:"description"`
+	IdempotencyKey      *string `json:"idempotencyKey"`
 }
 
-const ledgerCols = `id, entry_type, actor_id, actor_type, order_id, reference_id,
-	reference_type, amount_minor_units, currency, debit_credit, balance_after, description, created_at`
+const ledgerCols = `id, entry_type, actor_id, actor_type, source_type, source_id, order_id, visit_id, store_id, partner_id, commission_event_id, reference_id,
+	reference_type, amount_minor_units, currency, debit_credit, balance_after, description, idempotency_key, created_at`
 
 func scanEntry(row *sql.Row) (*LedgerEntry, error) {
 	var e LedgerEntry
 	err := row.Scan(
-		&e.ID, &e.EntryType, &e.ActorID, &e.ActorType, &e.OrderID,
+		&e.ID, &e.EntryType, &e.ActorID, &e.ActorType, &e.SourceType, &e.SourceID, &e.OrderID, &e.VisitID, &e.StoreID, &e.PartnerID, &e.CommissionEventID,
 		&e.ReferenceID, &e.ReferenceType, &e.AmountMinorUnits, &e.Currency,
-		&e.DebitCredit, &e.BalanceAfter, &e.Description, &e.CreatedAt,
+		&e.DebitCredit, &e.BalanceAfter, &e.Description, &e.IdempotencyKey, &e.CreatedAt,
 	)
 	if err != nil {
 		return nil, err
@@ -59,9 +73,9 @@ func scanEntry(row *sql.Row) (*LedgerEntry, error) {
 func scanEntryRow(rows *sql.Rows) (*LedgerEntry, error) {
 	var e LedgerEntry
 	err := rows.Scan(
-		&e.ID, &e.EntryType, &e.ActorID, &e.ActorType, &e.OrderID,
+		&e.ID, &e.EntryType, &e.ActorID, &e.ActorType, &e.SourceType, &e.SourceID, &e.OrderID, &e.VisitID, &e.StoreID, &e.PartnerID, &e.CommissionEventID,
 		&e.ReferenceID, &e.ReferenceType, &e.AmountMinorUnits, &e.Currency,
-		&e.DebitCredit, &e.BalanceAfter, &e.Description, &e.CreatedAt,
+		&e.DebitCredit, &e.BalanceAfter, &e.Description, &e.IdempotencyKey, &e.CreatedAt,
 	)
 	if err != nil {
 		return nil, err
@@ -70,8 +84,8 @@ func scanEntryRow(rows *sql.Rows) (*LedgerEntry, error) {
 }
 
 func AppendLedgerEntry(db *sql.DB, input CreateLedgerEntryInput) (*LedgerEntry, error) {
-	if input.EntryType == "" || input.ActorID == "" {
-		return nil, fmt.Errorf("entryType and actorId are required")
+	if input.EntryType == "" || input.ActorID == "" || input.SourceType == "" || input.SourceID == "" {
+		return nil, fmt.Errorf("entryType, actorId, sourceType, and sourceId are required")
 	}
 	actorType := input.ActorType
 	if actorType == "" {
@@ -87,15 +101,15 @@ func AppendLedgerEntry(db *sql.DB, input CreateLedgerEntryInput) (*LedgerEntry, 
 	}
 	const q = `
 		INSERT INTO wlt_ledger_entries
-			(entry_type, actor_id, actor_type, order_id, reference_id, reference_type,
-			 amount_minor_units, currency, debit_credit, balance_after, description)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+			(entry_type, actor_id, actor_type, source_type, source_id, order_id, visit_id, store_id, partner_id, commission_event_id, reference_id, reference_type,
+			 amount_minor_units, currency, debit_credit, balance_after, description, idempotency_key)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
 		RETURNING ` + ledgerCols
 	row := db.QueryRow(q,
-		input.EntryType, input.ActorID, actorType, input.OrderID,
+		input.EntryType, input.ActorID, actorType, input.SourceType, input.SourceID, input.OrderID, input.VisitID, input.StoreID, input.PartnerID, input.CommissionEventID,
 		input.ReferenceID, input.ReferenceType,
 		input.AmountMinorUnits, currency, debitCredit,
-		input.BalanceAfter, input.Description,
+		input.BalanceAfter, input.Description, input.IdempotencyKey,
 	)
 	return scanEntry(row)
 }

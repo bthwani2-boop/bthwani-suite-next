@@ -32,6 +32,8 @@ export * from './platform-vars';
 export * from './platform-vars.policy';
 export * from './platform-vars.view-model';
 export * from './platform-vars.model';
+export * from './platform-control.api';
+export * from './use-platform-control-runtime-controller';
 export * from './FeatureFlagProvider';
 export * from './PlatformVarsProvider';
 export * from './resolve-dsh-color-token';
@@ -45,4 +47,3 @@ export * from "./use-platform-policies-controller";
 export * from "./store-onboarding-fee-policy.view-model";
 export * from "./use-store-onboarding-fee-policy-form-controller";
 export * from "./platform-policies.api";
-

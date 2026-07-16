@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"dsh-api/internal/checkoutfinanceoutbox"
 )
 
 var (
@@ -41,6 +43,7 @@ type Order struct {
 	ID               string
 	CheckoutIntentID string
 	StoreID          string
+	FulfillmentMode  string
 	ClientID         string
 	Status           OrderStatus
 	RejectionReason  string
@@ -123,13 +126,13 @@ func CreateOrder(db *sql.DB, input CreateOrderInput) (*Order, error) {
 
 	var order Order
 	err = tx.QueryRow(`
-		INSERT INTO dsh_orders (checkout_intent_id, store_id, client_id, status, wlt_payment_ref_id)
-		VALUES ($1::uuid, $2, $3, $4, $5)
-		RETURNING id::text, checkout_intent_id::text, store_id, client_id, status,
+		INSERT INTO dsh_orders (checkout_intent_id, store_id, fulfillment_mode, client_id, status, wlt_payment_ref_id)
+		VALUES ($1::uuid, $2, (SELECT fulfillment_mode FROM dsh_checkout_intents WHERE id = $1::uuid), $3, $4, $5)
+		RETURNING id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status,
 		          COALESCE(rejection_reason, ''), wlt_payment_ref_id, created_at, updated_at`,
 		input.CheckoutIntentID, storeID, input.ClientID, string(StatusPending), wltPaymentSessionID,
 	).Scan(
-		&order.ID, &order.CheckoutIntentID, &order.StoreID, &order.ClientID,
+		&order.ID, &order.CheckoutIntentID, &order.StoreID, &order.FulfillmentMode, &order.ClientID,
 		&order.Status, &order.RejectionReason, &order.WltPaymentRefID,
 		&order.CreatedAt, &order.UpdatedAt,
 	)
@@ -188,7 +191,7 @@ func CreateOrder(db *sql.DB, input CreateOrderInput) (*Order, error) {
 
 func GetOrder(db *sql.DB, orderID string) (*Order, error) {
 	order, err := scanOrderRow(db.QueryRow(`
-		SELECT id::text, checkout_intent_id::text, store_id, client_id, status,
+		SELECT id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status,
 		       COALESCE(rejection_reason, ''), wlt_payment_ref_id, created_at, updated_at
 		FROM dsh_orders
 		WHERE id = $1::uuid`, orderID))
@@ -208,7 +211,7 @@ func GetOrder(db *sql.DB, orderID string) (*Order, error) {
 
 func GetClientOrder(db *sql.DB, orderID, clientID string) (*Order, error) {
 	order, err := scanOrderRow(db.QueryRow(`
-		SELECT id::text, checkout_intent_id::text, store_id, client_id, status,
+		SELECT id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status,
 		       COALESCE(rejection_reason, ''), wlt_payment_ref_id, created_at, updated_at
 		FROM dsh_orders
 		WHERE id = $1::uuid AND client_id = $2`, orderID, clientID))
@@ -231,7 +234,7 @@ func ListClientOrders(db *sql.DB, clientID string, limit int) ([]Order, error) {
 		limit = 50
 	}
 	rows, err := db.Query(`
-		SELECT id::text, checkout_intent_id::text, store_id, client_id, status,
+		SELECT id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status,
 		       COALESCE(rejection_reason, ''), wlt_payment_ref_id, created_at, updated_at
 		FROM dsh_orders
 		WHERE client_id = $1
@@ -252,7 +255,7 @@ func ListPartnerOrders(db *sql.DB, storeID, statusFilter string, limit int) ([]O
 		statusFilter = string(StatusPending)
 	}
 	rows, err := db.Query(`
-		SELECT id::text, checkout_intent_id::text, store_id, client_id, status,
+		SELECT id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status,
 		       COALESCE(rejection_reason, ''), wlt_payment_ref_id, created_at, updated_at
 		FROM dsh_orders
 		WHERE store_id = $1 AND status = $2
@@ -275,7 +278,7 @@ func ListOperatorOrders(db *sql.DB, statusFilter string, limit int) ([]Order, er
 	)
 	if statusFilter != "" {
 		rows, err = db.Query(`
-			SELECT id::text, checkout_intent_id::text, store_id, client_id, status,
+			SELECT id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status,
 			       COALESCE(rejection_reason, ''), wlt_payment_ref_id, created_at, updated_at
 			FROM dsh_orders
 			WHERE status = $1
@@ -283,7 +286,7 @@ func ListOperatorOrders(db *sql.DB, statusFilter string, limit int) ([]Order, er
 			LIMIT $2`, statusFilter, limit)
 	} else {
 		rows, err = db.Query(`
-			SELECT id::text, checkout_intent_id::text, store_id, client_id, status,
+			SELECT id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status,
 			       COALESCE(rejection_reason, ''), wlt_payment_ref_id, created_at, updated_at
 			FROM dsh_orders
 			ORDER BY created_at DESC
@@ -315,7 +318,7 @@ func RejectOrder(db *sql.DB, orderID, actorID, reason string) (*Order, error) {
 		UPDATE dsh_orders
 		SET status = $1, rejection_reason = $2, updated_at = NOW()
 		WHERE id = $3::uuid AND status = 'pending'
-		RETURNING id::text, checkout_intent_id::text, store_id, client_id, status,
+		RETURNING id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status,
 		          COALESCE(rejection_reason, ''), wlt_payment_ref_id, created_at, updated_at`,
 		string(StatusCancelled), reason, orderID))
 	if errors.Is(err, sql.ErrNoRows) {
@@ -332,10 +335,35 @@ func RejectOrder(db *sql.DB, orderID, actorID, reason string) (*Order, error) {
 		return nil, err
 	}
 
+	if err = enqueueOrderFinancialClosure(tx, order, reason); err != nil {
+		return nil, err
+	}
+
 	if err = tx.Commit(); err != nil {
 		return nil, err
 	}
 	return order, nil
+}
+
+// enqueueOrderFinancialClosure enqueues a durable cancel_for_order outbox
+// event, inside the same transaction that commits the order rejection/
+// cancellation, whenever the order has a WLT payment session reference.
+// Without this, rejecting/cancelling an order never triggers any WLT
+// financial action, even though the linkage (wlt_payment_ref_id) is already
+// available on the order row.
+func enqueueOrderFinancialClosure(tx *sql.Tx, order *Order, reason string) error {
+	if order.WltPaymentRefID == "" {
+		return nil
+	}
+	orderID := order.ID
+	return checkoutfinanceoutbox.Enqueue(tx, checkoutfinanceoutbox.EnqueueInput{
+		EventType:        checkoutfinanceoutbox.EventTypeCancelForOrder,
+		CheckoutIntentID: order.CheckoutIntentID,
+		PaymentSessionID: order.WltPaymentRefID,
+		OrderID:          &orderID,
+		ClientID:         order.ClientID,
+		Reason:           reason,
+	})
 }
 
 // CancelOrderByOperator lets an operator cancel an order that is stuck before
@@ -422,7 +450,7 @@ func transitionOrderTx(tx *sql.Tx, orderID, actorRole string,
 		UPDATE dsh_orders
 		SET status = $1, updated_at = NOW()
 		WHERE id = $2::uuid
-		RETURNING id::text, checkout_intent_id::text, store_id, client_id, status,
+		RETURNING id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status,
 		          COALESCE(rejection_reason, ''), wlt_payment_ref_id, created_at, updated_at`,
 		string(toStatus), orderID))
 	if err != nil {
@@ -434,6 +462,16 @@ func transitionOrderTx(tx *sql.Tx, orderID, actorRole string,
 		VALUES ($1::uuid, $2, $3, $4, NULLIF($5, ''))`,
 		order.ID, actorRole, fromStatus, string(toStatus), note); err != nil {
 		return nil, err
+	}
+
+	// Cancelling an order (e.g. CancelOrderByOperator) must also close out
+	// any WLT payment session tied to it. Other transitions driven through
+	// this shared helper (accept, prepare, dispatch, deliver, ...) never move
+	// to StatusCancelled, so this only fires on the cancellation path.
+	if toStatus == StatusCancelled {
+		if err = enqueueOrderFinancialClosure(tx, order, note); err != nil {
+			return nil, err
+		}
 	}
 
 	return order, nil
@@ -467,7 +505,7 @@ func listOrderItems(db *sql.DB, orderID string) ([]OrderItem, error) {
 func scanOrderRow(row *sql.Row) (*Order, error) {
 	var o Order
 	err := row.Scan(
-		&o.ID, &o.CheckoutIntentID, &o.StoreID, &o.ClientID,
+		&o.ID, &o.CheckoutIntentID, &o.StoreID, &o.FulfillmentMode, &o.ClientID,
 		&o.Status, &o.RejectionReason, &o.WltPaymentRefID,
 		&o.CreatedAt, &o.UpdatedAt,
 	)
@@ -482,7 +520,7 @@ func scanOrders(rows *sql.Rows) ([]Order, error) {
 	for rows.Next() {
 		var o Order
 		if err := rows.Scan(
-			&o.ID, &o.CheckoutIntentID, &o.StoreID, &o.ClientID,
+			&o.ID, &o.CheckoutIntentID, &o.StoreID, &o.FulfillmentMode, &o.ClientID,
 			&o.Status, &o.RejectionReason, &o.WltPaymentRefID,
 			&o.CreatedAt, &o.UpdatedAt,
 		); err != nil {

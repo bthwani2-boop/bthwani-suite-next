@@ -1,8 +1,8 @@
 // app-field — DshFieldFinanceScreen
 // Displays the authenticated field agent's own financial data from DSH.
 // Never reads financial truth from WLT directly or via partnerId enumeration.
-import React from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import React, { useState } from 'react';
+import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import {
   Badge,
   Button,
@@ -47,7 +47,8 @@ function commissionStatusTone(
 
 export function DshFieldFinanceScreen({ onBack }: DshFieldFinanceScreenProps) {
   const controller = useFieldFinanceController();
-  const { state } = controller;
+  const { state, submittingPayout, submitPayoutError, submitPayoutRequest } = controller;
+  const [payoutAmountInput, setPayoutAmountInput] = useState('');
 
   if (state.kind === 'idle' || state.kind === 'loading') {
     return (
@@ -71,7 +72,19 @@ export function DshFieldFinanceScreen({ onBack }: DshFieldFinanceScreenProps) {
     );
   }
 
-  const { wallet, commissions, payoutRequests } = state;
+  const { wallet, commissions, payoutRequests, commissionsError, payoutRequestsError } = state;
+
+  const handleSubmitPayout = async () => {
+    const amount = Number.parseFloat(payoutAmountInput);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return;
+    }
+    const amountMinorUnits = Math.round(amount * 100);
+    const ok = await submitPayoutRequest(amountMinorUnits, wallet.currency);
+    if (ok) {
+      setPayoutAmountInput('');
+    }
+  };
 
   return (
     <View style={styles.root}>
@@ -124,9 +137,36 @@ export function DshFieldFinanceScreen({ onBack }: DshFieldFinanceScreenProps) {
           onPress={controller.refresh}
         />
 
+        {/* Payout submission */}
+        <View style={styles.card}>
+          <Text role="titleMd" style={styles.rtl}>طلب صرف جديد</Text>
+          <Text role="caption" tone="muted" style={styles.rtl}>
+            الرصيد المتاح: {formatAmount(wallet.availableBalanceMinorUnits, wallet.currency)}
+          </Text>
+          <TextInput
+            value={payoutAmountInput}
+            onChangeText={setPayoutAmountInput}
+            keyboardType="decimal-pad"
+            placeholder={`المبلغ (${wallet.currency})`}
+            style={styles.input}
+            textAlign="right"
+          />
+          {submitPayoutError ? (
+            <Text role="caption" tone="danger" style={styles.rtl}>{submitPayoutError}</Text>
+          ) : null}
+          <Button
+            label={submittingPayout ? 'جارٍ الإرسال...' : 'إرسال طلب الصرف'}
+            tone="primary"
+            disabled={submittingPayout}
+            onPress={handleSubmitPayout}
+          />
+        </View>
+
         {/* Commissions */}
         <Text role="titleSm" style={styles.sectionTitle}>العمولات</Text>
-        {commissions.length === 0 ? (
+        {commissionsError ? (
+          <StateView tone="danger" title="تعذر تحميل العمولات" description={commissionsError} />
+        ) : commissions.length === 0 ? (
           <StateView tone="neutral" title="لا توجد عمولات بعد" />
         ) : (
           commissions.map((c) => (
@@ -146,7 +186,9 @@ export function DshFieldFinanceScreen({ onBack }: DshFieldFinanceScreenProps) {
 
         {/* Payout Requests */}
         <Text role="titleSm" style={styles.sectionTitle}>طلبات الصرف</Text>
-        {payoutRequests.length === 0 ? (
+        {payoutRequestsError ? (
+          <StateView tone="danger" title="تعذر تحميل طلبات الصرف" description={payoutRequestsError} />
+        ) : payoutRequests.length === 0 ? (
           <StateView tone="neutral" title="لا توجد طلبات صرف" />
         ) : (
           payoutRequests.map((p) => (
@@ -182,6 +224,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   divider: { height: 1, backgroundColor: colorRoles.borderSubtle },
+  input: {
+    borderWidth: 1,
+    borderColor: colorRoles.borderSubtle,
+    borderRadius: 8,
+    padding: spacing[3],
+  },
   rowBetween: {
     flexDirection: 'row-reverse',
     justifyContent: 'space-between',

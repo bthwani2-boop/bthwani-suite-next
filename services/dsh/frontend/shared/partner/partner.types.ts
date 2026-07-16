@@ -237,8 +237,6 @@ export const DOCUMENT_TYPE_LABELS: Record<DshPartnerDocumentType, string> = {
   other: "مستند آخر",
 };
 
-type DshFulfillmentDeliveryMode = 'partner_delivery' | 'bthwani_delivery' | 'pickup';
-
 export const DSH_PARTNER_OPERATIONAL_FLOW_IDS = [
   'order-accept',
   'order-get',
@@ -385,18 +383,58 @@ export const DSH_PARTNER_OPERATIONAL_FLOW_TO_SUPPORT_ROUTE: Record<DshPartnerOpe
   'partner-commission-summary': null,
 };
 
-export type PartnerStoreScopeOption = {
-  id: string;
-  label: string;
-  description: string;
+export type DshPartnerOperationalScope = {
+  readonly scopeId: string;
+  readonly storeId: string;
+  readonly partnerId: string;
+  readonly displayName: string;
+  readonly role: 'owner' | 'manager' | 'staff';
+  readonly permissions: string[];
 };
 
-export const storeScopeOptions: readonly PartnerStoreScopeOption[] = [
-  { id: 'all', label: 'كل الفروع', description: 'إظهار لوحة موحدة لكل فروع الشريك.' },
-  { id: 'fakhama-1', label: 'فرع الفخامة 1', description: 'الفرع التشغيلي الأساسي الحالي.' },
-  { id: 'fakhama-2', label: 'فرع الفخامة 2', description: 'فرع مدينة الرياض الحيوي للشريك.' },
-  { id: 'fakhama-3', label: 'فرع الفخامة 3', description: 'فرع طريق الملك عبد العزيز المطور.' },
-] as const;
+export type DshPartnerTeamMember = {
+  readonly id: string;
+  readonly name: string;
+  readonly role: 'owner' | 'supervisor' | 'staff' | 'courier';
+  readonly roleLabel: string;
+  readonly status: 'active' | 'paused' | 'invited' | 'blocked' | 'review-needed';
+  readonly statusLabel: string;
+  readonly branchAssignment: string;
+  readonly permissionsSummary: string;
+  readonly deliveryAssignment: string;
+  readonly inviteLifecycle: string;
+  readonly operationalImpact: string;
+  readonly auditNote: string;
+  readonly inlineActionLabel: string;
+};
+
+export type DshPartnerStoreCourierSettings = {
+  readonly courierName: string;
+  readonly courierPhone: string;
+  readonly isActive: boolean;
+  readonly policy: string;
+  readonly pricingSource: string;
+  readonly compensation: string;
+  readonly selectedBranchIds: string[];
+  readonly version?: number;
+};
+
+export type DshPartnerCoverageZone = {
+  readonly id: string;
+  readonly name: string;
+  readonly status: 'active' | 'pending' | 'blocked';
+  readonly statusLabel: string;
+  readonly branchRelation: string;
+  readonly serviceModeRelation: string;
+  readonly policySummary: string;
+  readonly policyReason: string;
+  readonly operationalImpact: string;
+  readonly pricingReference: string;
+  readonly commissionReference: string;
+  readonly payoutReference: string;
+  readonly reviewActionLabel: string;
+  readonly auditNote: string;
+};
 
 export type PartnerRuntimeProfile = {
   storeName: string;
@@ -421,7 +459,7 @@ export type DshPartnerRoute =
   | 'category-management'
   | 'product-media'
   | 'product-overrides'
-  | 'team-management';
+  | 'team';
 
 export type PartnerHubSection = 'hub' | 'profile' | 'operations' | 'inventory' | 'wallet' | 'analytics' | 'settings';
 
@@ -509,4 +547,13 @@ type UiAuditRow = {
   id: string; who: string; why: string; when: string; permissionResult: string;
   slaBreachReason: string; supportTicketLink: string; proofRequired: string;
   evidenceState: string; resolutionPath: string; note: string; statusTone: string;
+};
+
+export type DshPartnerPerformanceResponse = {
+  readonly storeId: string;
+  readonly totalOrders: number;
+  readonly acceptedOrders: number;
+  readonly rejectedOrders: number;
+  readonly period: string;
+  readonly generatedAt: string;
 };

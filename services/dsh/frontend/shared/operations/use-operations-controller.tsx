@@ -12,52 +12,72 @@ import {
   getOperationsGroupMeta,
   buildOperationsHref,
   OPERATIONS_CANONICAL_GROUPS,
+  coerceOperationsPanel,
 } from './operations-registry';
 
 export type UseOperationsControllerProps = {
-  group?: CanonicalOperationsGroupId;
-  orderId?: string;
-  panel?: any;
-  state?: OperationsViewState;
+  group?: CanonicalOperationsGroupId | undefined;
+  orderId?: string | undefined;
+  panel?: OperationsPanelId | undefined;
+  state?: OperationsViewState | undefined;
   searchParams?: {
     get: (key: string) => string | null;
-  };
+  } | undefined;
   router?: {
     push: (href: string) => void;
-  };
+  } | undefined;
 };
 
-function useOperationsController({
+function isCanonicalOperationsGroupId(value: string | undefined | null): value is CanonicalOperationsGroupId {
+  return OPERATIONS_CANONICAL_GROUPS.some((groupMeta) => groupMeta.id === value);
+}
+
+function resolveCanonicalOperationsGroup(
+  value: string | undefined | null,
+): CanonicalOperationsGroupId | undefined {
+  return isCanonicalOperationsGroupId(value) ? value : undefined;
+}
+
+function resolveSubGroupForGroup(
+  groupMeta: OperationsGroupMeta,
+  value: string | undefined,
+) {
+  const subGroups = groupMeta.subGroups ?? [];
+  return subGroups.find((subGroupMeta) => subGroupMeta.id === value)?.id ?? subGroups[0]?.id;
+}
+
+export function useOperationsController({
   group = 'command-center',
   orderId,
   panel,
-  state = 'ready',
   searchParams,
   router,
 }: UseOperationsControllerProps) {
-  const workspaceParam = searchParams?.get('workspace') as CanonicalOperationsGroupId | null;
-  const [activeGroupState, setActiveGroupState] = useState<CanonicalOperationsGroupId>(group);
+  const rawWorkspaceParam = searchParams?.get('workspace');
+  const workspaceParam = resolveCanonicalOperationsGroup(rawWorkspaceParam);
+  const groupProp = resolveCanonicalOperationsGroup(group);
+  const hasUrlState = Boolean(searchParams && router);
+
+  const [activeGroupState, setActiveGroupState] = useState<CanonicalOperationsGroupId>(groupProp ?? 'command-center');
 
   useEffect(() => {
-    if (workspaceParam) {
-      setActiveGroupState(workspaceParam);
-    } else {
-      setActiveGroupState(group);
+    if (!hasUrlState) {
+      setActiveGroupState(groupProp ?? 'command-center');
     }
-  }, [workspaceParam, group]);
+  }, [groupProp, hasUrlState]);
 
-  const activeGroup = workspaceParam || activeGroupState;
-  const setActiveGroup = setActiveGroupState;
+  const activeGroup = hasUrlState
+    ? workspaceParam ?? groupProp ?? 'command-center'
+    : activeGroupState;
 
-  // getOperationsGroupMeta always falls back to OPERATIONS_CANONICAL_GROUPS[0], so never undefined
-  const activeGroupMeta = useMemo(() => getOperationsGroupMeta(activeGroup)!, [activeGroup]);
+  const activeGroupMeta = useMemo(() => getOperationsGroupMeta(activeGroup), [activeGroup]);
   
   const getParam = useCallback((key: string) => {
     return searchParams?.get(key) ?? undefined;
   }, [searchParams]);
 
   const activeSubGroup = useMemo(() => {
-    return getParam('subGroup') || activeGroupMeta.subGroups?.[0]?.id || undefined;
+    return resolveSubGroupForGroup(activeGroupMeta, getParam('subGroup'));
   }, [activeGroupMeta, getParam]);
 
   const activeSubGroupMeta = useMemo(() => {
@@ -65,15 +85,17 @@ function useOperationsController({
   }, [activeGroupMeta, activeSubGroup]);
 
   const focusParams = useMemo<OperationsFocusParams>(() => {
+    const resolvedPanel = coerceOperationsPanel(getParam('panel')) ?? coerceOperationsPanel(panel);
+
     return {
       orderId: getParam('orderId') || orderId,
       customerId: getParam('customerId'),
       ticketId: getParam('ticketId'),
       callId: getParam('callId'),
-      panel: (getParam('panel') as OperationsPanelId) || panel,
-      subGroup: getParam('subGroup'),
+      panel: resolvedPanel,
+      subGroup: activeSubGroup,
     };
-  }, [orderId, getParam, panel]);
+  }, [orderId, getParam, panel, activeSubGroup]);
 
   const hubHref = useMemo(() => buildOperationsHref(activeGroup, focusParams), [activeGroup, focusParams]);
 
@@ -105,8 +127,11 @@ function useOperationsController({
   }, [focusParams]);
 
   const handleSelectTab = useCallback((id: string) => {
-    const groupId = id as CanonicalOperationsGroupId;
-    setActiveGroup(groupId);
+    const groupId = resolveCanonicalOperationsGroup(id);
+    if (!groupId) {
+      return;
+    }
+
     const nextParams = {
       orderId: focusParams.orderId,
       customerId: focusParams.customerId,
@@ -114,20 +139,27 @@ function useOperationsController({
       callId: focusParams.callId,
       panel: focusParams.panel,
     };
+
     if (router) {
       router.push(buildOperationsHref(groupId, nextParams));
+    } else {
+      setActiveGroupState(groupId);
     }
   }, [focusParams, router]);
 
   const handleSelectSubTab = useCallback((id: string) => {
-    if (router) {
-      router.push(buildOperationsHref(activeGroup, { ...focusParams, subGroup: id }));
+    const nextSubGroup = resolveSubGroupForGroup(activeGroupMeta, id);
+    if (nextSubGroup !== id) {
+      return;
     }
-  }, [activeGroup, focusParams, router]);
+
+    if (router) {
+      router.push(buildOperationsHref(activeGroup, { ...focusParams, subGroup: nextSubGroup }));
+    }
+  }, [activeGroup, activeGroupMeta, focusParams, router]);
 
   return {
     activeGroup,
-    setActiveGroup,
     activeGroupMeta,
     activeSubGroup,
     activeSubGroupMeta,

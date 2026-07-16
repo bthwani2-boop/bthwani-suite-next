@@ -6,23 +6,15 @@ import { Box, StateView } from '@bthwani/ui-kit';
 import {
   WebControlPanelLaneTabs,
   WebControlPanelSubTabs,
-  WebControlPanelWorkbench,
-  WebControlPanelDenseHeader,
 } from '@bthwani/ui-kit/web';
-import type {
-  CanonicalOperationsGroupId,
-  OperationsFocusParams,
-  OperationsPanelId,
-  OperationsViewState,
-} from './operations.types';
-import { getDshControlPanelGovernanceEntry } from '../../shared/orders/orders.contract';
+import type { CanonicalOperationsGroupId, OperationsPanelId, OperationsViewState } from './operations.types';
+import { DSH_NAV_ITEMS } from '@bthwani/control-panel/shell';
 import styles from '../shared/control-panel-surface.module.css';
 import {
-  getOperationsGroupMeta,
   buildOperationsHref,
-  OPERATIONS_CANONICAL_GROUPS,
   resolveOperationsStateCopy,
-} from './operations.registry';
+  useOperationsController,
+} from '../../shared/operations';
 // React.lazy — each screen is a separate JS chunk loaded only when its tab is active.
 // Named-export screens use .then(m => ({ default: m.ScreenName })) to satisfy lazy().
 const CommandCenterScreen = React.lazy(() => import('./CommandCenterScreen').then((m) => ({ default: m.CommandCenterScreen })));
@@ -40,12 +32,18 @@ const AreaCapacityScreen = React.lazy(() => import('./AreaCapacityScreen').then(
 const ExceptionsEscalationsScreen = React.lazy(() => import('./ExceptionsEscalationsScreen').then((m) => ({ default: m.ExceptionsEscalationsScreen })));
 const AuditSupportSlaScreen = React.lazy(() => import('./AuditSupportSlaScreen').then((m) => ({ default: m.AuditSupportSlaScreen })));
 
-type ScreenComponent = React.ComponentType<{ hubHref: string; subGroup?: string }>;
+type ScreenProps = { hubHref: string; subGroup?: string };
+type ScreenComponent = React.ComponentType<ScreenProps>;
+type LazyScreenComponent = React.LazyExoticComponent<ScreenComponent>;
 
 type GroupScreenConfig = {
-  default: ScreenComponent;
-  bySubGroup?: Record<string, ScreenComponent>;
+  default: ScreenComponent | LazyScreenComponent;
+  bySubGroup?: Record<string, ScreenComponent | LazyScreenComponent>;
 };
+
+function getDshRoute(section: (typeof DSH_NAV_ITEMS)[number]['section']) {
+  return DSH_NAV_ITEMS.find((item) => item.section === section)?.route ?? '/dsh/dashboard';
+}
 
 export type ControlPanelDshOperationsScreenProps = {
   group?: CanonicalOperationsGroupId;
@@ -90,74 +88,41 @@ const SCREEN_RENDERERS: Record<CanonicalOperationsGroupId, GroupScreenConfig> = 
       awnak: AwnakScreen,
     },
   },
-};
+} satisfies Record<CanonicalOperationsGroupId, GroupScreenConfig>;
 
 export function ControlPanelDshOperationsScreen({
   group = 'command-center',
   orderId,
   panel,
   state = 'ready',
-  fallbackHref = '/operations',
+  fallbackHref = '/dsh/operations',
 }: ControlPanelDshOperationsScreenProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [activeGroup, setActiveGroup] = React.useState<CanonicalOperationsGroupId>(group);
-
-  React.useEffect(() => {
-    setActiveGroup(group);
-  }, [group]);
-
-  const activeGroupMeta = getOperationsGroupMeta(activeGroup) ?? getOperationsGroupMeta('command-center')!;
-  const activeSubGroup = searchParams.get('subGroup') || activeGroupMeta.subGroups?.[0]?.id || undefined;
-  const activeSubGroupMeta = activeGroupMeta.subGroups?.find((sub) => sub.id === activeSubGroup);
-
-  const focusParams: OperationsFocusParams = {
+  const {
+    activeGroup,
+    activeGroupMeta,
+    activeSubGroup,
+    activeSubGroupMeta,
+    focusParams,
+    hubHref,
+    tabItems,
+    subTabItems,
+    focusContextItems,
+    handleSelectTab,
+    handleSelectSubTab,
+  } = useOperationsController({
+    group,
     orderId,
-    customerId: searchParams.get('customerId') ?? undefined,
-    ticketId: searchParams.get('ticketId') ?? undefined,
-    callId: searchParams.get('callId') ?? undefined,
     panel,
-    subGroup: searchParams.get('subGroup') ?? undefined,
-  };
-  const hubHref = buildOperationsHref(activeGroup, focusParams);
+    state,
+    searchParams,
+    router,
+  });
 
-  const screenConfig = SCREEN_RENDERERS[activeGroup];
+  const screenConfig = SCREEN_RENDERERS[activeGroup] ?? SCREEN_RENDERERS['command-center'];
   const ActiveScreen = ((activeSubGroup && screenConfig.bySubGroup?.[activeSubGroup])
-    ?? screenConfig.default) as any;
-
-  const governance = getDshControlPanelGovernanceEntry('operations');
-  const kpiItems = React.useMemo<{ id: string; label: string; value: string }[]>(() => [], []);
-  const tabItems = React.useMemo(
-    () =>
-      OPERATIONS_CANONICAL_GROUPS.map((item) => {
-        // Shorthand properties avoid the guard's id: colon-value regex pattern.
-        const id = item.id;
-        const label = item.label;
-        const active = item.id === activeGroup;
-        return { id, label, active };
-      }),
-    [activeGroup],
-  );
-  const subTabItems = React.useMemo(
-    () =>
-      activeGroupMeta.subGroups?.map((sub) => {
-        const id = sub.id;
-        const label = sub.label;
-        const active = activeSubGroup === sub.id;
-        return { id, label, active };
-      }),
-    [activeGroupMeta.subGroups, activeSubGroup],
-  );
-  const focusContextItems = React.useMemo(
-    () =>
-      [
-        focusParams.orderId ? { label: 'orderId', value: focusParams.orderId } : null,
-        focusParams.customerId ? { label: 'customerId', value: focusParams.customerId } : null,
-        focusParams.ticketId ? { label: 'ticketId', value: focusParams.ticketId } : null,
-        focusParams.callId ? { label: 'callId', value: focusParams.callId } : null,
-      ].filter((item): item is { label: string; value: string } => item !== null),
-    [focusParams.callId, focusParams.customerId, focusParams.orderId, focusParams.ticketId],
-  );
+    ?? screenConfig.default) as ScreenComponent;
 
   if (state !== 'ready') {
     return (
@@ -167,25 +132,6 @@ export function ControlPanelDshOperationsScreen({
     );
   }
 
-  const handleSelectTab = React.useCallback((id: string) => {
-    const groupId = id as CanonicalOperationsGroupId;
-    setActiveGroup(groupId);
-    // Switch main tabs, reset subGroup
-    const nextParams = {
-      orderId: focusParams.orderId,
-      customerId: focusParams.customerId,
-      ticketId: focusParams.ticketId,
-      callId: focusParams.callId,
-      panel: focusParams.panel,
-    };
-    router.push(buildOperationsHref(groupId, nextParams));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusParams.orderId, focusParams.customerId, focusParams.ticketId, focusParams.callId, focusParams.panel, router]);
-
-  const handleSelectSubTab = React.useCallback((id: string) => {
-    router.push(buildOperationsHref(activeGroup, { ...focusParams, subGroup: id }));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeGroup, focusParams.orderId, focusParams.customerId, focusParams.ticketId, focusParams.callId, focusParams.panel, router]);
 
   return (
     <div className={styles.surfaceCockpit} dir="rtl">
@@ -198,65 +144,34 @@ export function ControlPanelDshOperationsScreen({
           </div>
           <Box gap={0}>
             {/* Breadcrumb Navigation */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                fontSize: '11px',
-                color: 'var(--bthwani-control-panel-text-muted)',
-                marginBottom: '4px',
-                userSelect: 'none',
-              }}
-            >
-              <span
-                style={{ cursor: 'pointer', transition: 'color 0.2s' }}
-                onClick={() => router.push('/')}
-                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--bthwani-control-panel-brand)')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = '')}
+            <div className={styles.surfaceBreadcrumb}>
+              <button
+                type="button"
+                className={styles.surfaceBreadcrumbButton}
+                onClick={() => router.push(getDshRoute('dashboard'))}
               >
                 الرئيسية
-              </span>
-              <span style={{ fontSize: '9px', opacity: 0.5 }}>◀</span>
-              <span
-                style={{ cursor: 'pointer', transition: 'color 0.2s' }}
-                onClick={() => router.push(buildOperationsHref())}
-                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--bthwani-control-panel-brand)')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = '')}
+              </button>
+              <span className={styles.surfaceBreadcrumbSeparator}>◀</span>
+              <button
+                type="button"
+                className={styles.surfaceBreadcrumbButton}
+                onClick={() => router.push(getDshRoute('operations'))}
               >
                 العمليات
-              </span>
-              <span style={{ fontSize: '9px', opacity: 0.5 }}>◀</span>
-              <span
-                style={{
-                  cursor: 'pointer',
-                  fontWeight: !activeSubGroupMeta ? 700 : 'normal',
-                  color: !activeSubGroupMeta ? 'var(--bthwani-control-panel-text)' : undefined,
-                  transition: 'color 0.2s',
-                }}
+              </button>
+              <span className={styles.surfaceBreadcrumbSeparator}>◀</span>
+              <button
+                type="button"
+                className={activeSubGroupMeta ? styles.surfaceBreadcrumbButton : styles.surfaceBreadcrumbCurrent}
                 onClick={() => router.push(buildOperationsHref(activeGroup))}
-                onMouseEnter={(e) => {
-                  if (activeSubGroupMeta) {
-                    e.currentTarget.style.color = 'var(--bthwani-control-panel-brand)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (activeSubGroupMeta) {
-                    e.currentTarget.style.color = '';
-                  }
-                }}
               >
                 {activeGroupMeta.label}
-              </span>
+              </button>
               {activeSubGroupMeta && (
                 <>
-                  <span style={{ fontSize: '9px', opacity: 0.5 }}>◀</span>
-                  <span
-                    style={{
-                      fontWeight: 700,
-                      color: 'var(--bthwani-control-panel-text)',
-                    }}
-                  >
+                  <span className={styles.surfaceBreadcrumbSeparator}>◀</span>
+                  <span className={styles.surfaceBreadcrumbLeaf}>
                     {activeSubGroupMeta.label}
                   </span>
                 </>
@@ -274,12 +189,6 @@ export function ControlPanelDshOperationsScreen({
         </div>
         <div className={styles.surfaceHeaderActions}>
           <div className={styles.surfacePulseCompact}>
-            {kpiItems.map((metric) => (
-              <div className={styles.commandKpi} key={metric.id}>
-                <span className={styles.commandKpiLabel}>{metric.label}</span>
-                <span className={styles.commandKpiValue}>{metric.value}</span>
-              </div>
-            ))}
           </div>
         </div>
       </header>
@@ -302,10 +211,10 @@ export function ControlPanelDshOperationsScreen({
         <div className={styles.surfaceInnerScroll}>
           <Box padding={4} gap={4}>
             {focusContextItems.length > 0 && (
-              <div className={styles.surfaceInfoCard} style={{ padding: '6px 12px', background: 'var(--bthwani-control-panel-surface-inset)', border: '1px solid var(--bthwani-control-panel-border)', borderRadius: '8px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-                  <span className={styles.surfaceInfoCardTitle} style={{ fontSize: '12px', fontWeight: 800 }}>سياق التدخل الحالي</span>
-                  <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              <div className={styles.surfaceFocusContextCard}>
+                <div className={styles.surfaceFocusContextRow}>
+                  <span className={styles.surfaceFocusContextTitle}>سياق التدخل الحالي</span>
+                  <div className={styles.surfaceFocusContextList}>
                     {focusContextItems.map((item) => {
                       const labels: Record<string, string> = {
                         orderId: 'معرّف الطلب',
@@ -314,9 +223,9 @@ export function ControlPanelDshOperationsScreen({
                         callId: 'معرّف المكالمة',
                       };
                       return (
-                        <div key={item.label} style={{ fontSize: '11px', color: 'var(--bthwani-control-panel-text)' }}>
+                        <div key={item.label} className={styles.surfaceFocusContextItem}>
                           <strong>{labels[item.label] ?? item.label}:</strong>{' '}
-                          <span dir="ltr" style={{ color: 'var(--bthwani-control-panel-brand)', display: 'inline-block' }}>
+                          <span dir="ltr" className={styles.surfaceFocusContextValue}>
                             {item.value}
                           </span>
                         </div>
@@ -328,12 +237,12 @@ export function ControlPanelDshOperationsScreen({
             )}
             <React.Suspense
               fallback={
-                <div className={styles.surfaceStatePadding} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '200px' }}>
-                  <span style={{ fontSize: '13px', opacity: 0.5 }}>جارٍ تحميل المشهد...</span>
+                <div className={styles.surfaceLoadingPanel}>
+                  <span className={styles.surfaceLoadingText}>جارٍ تحميل المشهد...</span>
                 </div>
               }
             >
-              <ActiveScreen hubHref={hubHref} subGroup={activeSubGroup} />
+              <ActiveScreen hubHref={hubHref} {...(activeSubGroup ? { subGroup: activeSubGroup } : {})} />
             </React.Suspense>
           </Box>
         </div>

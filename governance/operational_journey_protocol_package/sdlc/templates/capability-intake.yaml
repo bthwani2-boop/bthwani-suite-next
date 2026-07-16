@@ -1,0 +1,14 @@
+capabilityId: DSH-CATALOG-001
+purpose:
+inScope:
+outOfScope:
+riskClass: medium
+affectedServices: []
+affectedSurfaces: []
+dataClassification:
+owners:
+  product:
+  architecture:
+  engineering:
+  qa:
+  security:

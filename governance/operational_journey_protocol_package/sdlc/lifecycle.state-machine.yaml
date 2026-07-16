@@ -1,0 +1,22 @@
+version: 1
+authority: governance/26_SDLC_TEAM_AND_STAGE_GATES.md
+initial_stage: G0_INTAKE
+terminal_stages:
+  - CLOSED_WITH_EVIDENCE
+  - FIX_REQUIRED
+  - HARD_BLOCKED_EXTERNAL_ONLY
+ordered_stages:
+  - G0_INTAKE
+  - G1_REQUIREMENTS_APPROVED
+  - G2_DESIGN_APPROVED
+  - G3_READY_FOR_IMPLEMENTATION
+  - G4_IMPLEMENTATION_VERIFIED
+  - G5_QA_APPROVED
+  - G6_SECURITY_APPROVED
+  - G7_RELEASE_APPROVED
+  - G8_DEPLOYED
+  - G9_PRODUCTION_VERIFIED
+  - CLOSED_WITH_EVIDENCE
+failure_stage: FIX_REQUIRED
+external_block_stage: HARD_BLOCKED_EXTERNAL_ONLY
+rule: stages_must_not_skip_required_evidence_or_approval

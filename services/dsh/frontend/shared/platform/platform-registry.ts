@@ -5,8 +5,14 @@
  * يحدد التبويبات والمؤشرات ونطاقات العمليات والتحقق.
  */
 
-import { PROVIDER_SECRET_POLICIES } from "./platform-provider-secrets.policy";
-import { PLATFORM_PROVIDER_REGISTRY } from "./platform-provider.registry";
+export const PLATFORM_RUNTIME_STATES = {
+  fixRequired: "FIX_REQUIRED",
+  partiallyBound: "PARTIALLY_BOUND",
+  unknownHealth: "UNKNOWN_HEALTH",
+  rollbackUnavailable: "ROLLBACK_UNAVAILABLE",
+  contractRequired: "CONTRACT_REQUIRED",
+  readOnlyBound: "READ_ONLY_BOUND",
+} as const;
 
 // ─── Main Tab Registry ────────────────────────────────────────────────────────
 
@@ -61,18 +67,18 @@ export const PLATFORM_SCOPES: readonly PlatformScopeMeta[] = [
 // ─── KPIs Builder ──────────────────────────────────────────────────────────────
 
 export type PlatformKpiMetrics = {
-  readonly policiesCount: number;
-  readonly providersCount: number;
-  readonly activeReleases: number;
-  readonly alertsCount: number;
+  readonly policiesCount: string;
+  readonly providersCount: string;
+  readonly activeReleases: string;
+  readonly alertsCount: string;
 };
 
 export function buildPlatformKpiMetrics(): PlatformKpiMetrics {
   return {
-    policiesCount: Object.keys(PROVIDER_SECRET_POLICIES).length,
-    providersCount: PLATFORM_PROVIDER_REGISTRY.length,
-    activeReleases: 0,
-    alertsCount: 0,
+    policiesCount: PLATFORM_RUNTIME_STATES.contractRequired,
+    providersCount: PLATFORM_RUNTIME_STATES.partiallyBound,
+    activeReleases: PLATFORM_RUNTIME_STATES.contractRequired,
+    alertsCount: PLATFORM_RUNTIME_STATES.unknownHealth,
   };
 }
 
@@ -86,10 +92,10 @@ export type PlatformOwnershipInfo = {
 };
 
 export const PLATFORM_OWNERSHIP: PlatformOwnershipInfo = {
-  owner: "platform / dsh-platform",
-  ownerPath: "platform",
-  activeServices: "1/1",
-  status: "جاهز",
+  owner: "platform / core-platform-control",
+  ownerPath: "core/platform-control",
+  activeServices: PLATFORM_RUNTIME_STATES.readOnlyBound,
+  status: `${PLATFORM_RUNTIME_STATES.readOnlyBound} / mutations=${PLATFORM_RUNTIME_STATES.contractRequired}`,
 };
 
 // ─── Inner Stats Registry ─────────────────────────────────────────────────────

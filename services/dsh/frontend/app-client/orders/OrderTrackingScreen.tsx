@@ -13,6 +13,8 @@ import {
   lightThemeColors,
   colorRoles,
 } from '@bthwani/ui-kit';
+import { useClientTrackingController } from '../../shared/dispatch/use-dispatch-controller';
+import { DELIVERY_STATUS_LABELS } from '../../shared/dispatch/dispatch.types';
 
 type Props = {
   readonly orderId: string;
@@ -20,6 +22,29 @@ type Props = {
 };
 
 export function OrderTrackingScreen({ orderId, onBack }: Props) {
+  const { state, reload } = useClientTrackingController(orderId);
+
+  if (state.kind === 'idle' || state.kind === 'loading') {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={styles.headerTitle}>جارٍ تحميل حالة الطلب...</Text>
+      </View>
+    );
+  }
+
+  if (state.kind === 'error') {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={[styles.headerTitle, { color: colorRoles.danger }]}>تعذر جلب التتبع: {state.message}</Text>
+        <Button label="إعادة المحاولة" onPress={reload} style={{ marginTop: 16 }} />
+        {onBack && <Button label="العودة" tone="secondary" onPress={onBack} style={{ marginTop: 8 }} />}
+      </View>
+    );
+  }
+
+  const { assignment } = state;
+  const statusLabel = DELIVERY_STATUS_LABELS[assignment.delivery.status as keyof typeof DELIVERY_STATUS_LABELS] ?? 'غير معروف';
+
   return (
     <ScrollScreen>
       <View style={styles.container}>
@@ -27,7 +52,7 @@ export function OrderTrackingScreen({ orderId, onBack }: Props) {
         <View style={styles.header}>
           <Text style={styles.headerTitle}>طلب عونك</Text>
           <View style={styles.greenBanner}>
-            <Text style={styles.greenBannerText}>حالة الطلب: قيد التوصيل</Text>
+            <Text style={styles.greenBannerText}>حالة الطلب: {statusLabel}</Text>
           </View>
         </View>
 
@@ -36,17 +61,17 @@ export function OrderTrackingScreen({ orderId, onBack }: Props) {
           <Text role="titleMd" style={styles.cardTitle}>تفاصيل الطلب الفوري</Text>
           
           <View style={styles.detailRow}>
-            <Text style={styles.detailValue}>ord-17825220038491</Text>
+            <Text style={styles.detailValue}>{assignment.orderId}</Text>
             <Text style={styles.detailLabel}>رقم الطلب</Text>
           </View>
           
           <View style={styles.detailRow}>
-            <Text style={styles.detailValue}>عامر صالح</Text>
+            <Text style={styles.detailValue}>{assignment.captainId}</Text>
             <Text style={styles.detailLabel}>المندوب</Text>
           </View>
           
           <View style={styles.detailRow}>
-            <Text style={styles.detailValue}>777888999</Text>
+            <Text style={styles.detailValue}>غير متوفر</Text>
             <Text style={styles.detailLabel}>الجوال</Text>
           </View>
           
@@ -56,7 +81,7 @@ export function OrderTrackingScreen({ orderId, onBack }: Props) {
           </View>
           
           <View style={styles.detailRow}>
-            <Text style={styles.detailValue}>11:45 ص</Text>
+            <Text style={styles.detailValue}>{new Date(assignment.createdAt).toLocaleTimeString('ar-SA')}</Text>
             <Text style={styles.detailLabel}>وقت الإسناد</Text>
           </View>
         </Card>
@@ -64,7 +89,7 @@ export function OrderTrackingScreen({ orderId, onBack }: Props) {
         {/* Active tracking notice */}
         <Card style={styles.noticeCard}>
           <Text role="body" style={styles.noticeText}>
-            المندوب في طريقه إليك الآن. يمكنك التواصل معه مباشرة عبر رقم الهاتف الموضح أعلاه.
+            المندوب في طريقه إليك الآن. يمكنك التواصل معه مباشرة عبر تطبيق عونك.
           </Text>
         </Card>
 

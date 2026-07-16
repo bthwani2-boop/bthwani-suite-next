@@ -461,7 +461,7 @@ donor_extraction:
 - reason:
 
 files_changed:
-- 
+-
 
 verification:
 - command:

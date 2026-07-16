@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"dsh-api/internal/checkoutfinanceoutbox"
 )
 
 var (
@@ -162,7 +164,19 @@ func GetIntent(db *sql.DB, intentID, clientID string) (*Intent, error) {
 	return intent, err
 }
 
+// CancelIntent cancels a checkout intent that has not yet become an order.
+// If the intent had already reached payment_pending (meaning a WLT payment
+// session exists and may be reference_created/pending_provider/authorized),
+// it enqueues a durable outbox event, in the same transaction as the
+// cancellation, so a background worker tells WLT to expire that session.
+// Without this, cancelling here would leave the WLT session dangling forever.
 func CancelIntent(db *sql.DB, intentID, clientID string) (*Intent, error) {
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
 	const q = `
 		UPDATE dsh_checkout_intents
 		SET state = $1, version = version + 1, updated_at = NOW()
@@ -171,12 +185,30 @@ func CancelIntent(db *sql.DB, intentID, clientID string) (*Intent, error) {
 		RETURNING id, client_id, cart_id::text, store_id::text, fulfillment_mode,
 		          state, payment_method, wlt_payment_session_id,
 		          delivery_address, note, version, created_at, updated_at`
-	row := db.QueryRow(q, string(StateCancelled), intentID, clientID)
+	row := tx.QueryRow(q, string(StateCancelled), intentID, clientID)
 	intent, err := scanIntent(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("%w: not found or already closed", ErrConflict)
 	}
-	return intent, err
+	if err != nil {
+		return nil, err
+	}
+
+	if intent.WltPaymentSessionID != "" {
+		if err := checkoutfinanceoutbox.Enqueue(tx, checkoutfinanceoutbox.EnqueueInput{
+			EventType:        checkoutfinanceoutbox.EventTypeExpireSession,
+			CheckoutIntentID: intent.ID,
+			PaymentSessionID: intent.WltPaymentSessionID,
+			ClientID:         clientID,
+		}); err != nil {
+			return nil, err
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return intent, nil
 }
 
 func ListOperatorIntents(db *sql.DB, stateFilter string, limit int) ([]Intent, error) {

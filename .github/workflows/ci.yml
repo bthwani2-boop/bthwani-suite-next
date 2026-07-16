@@ -12,6 +12,7 @@ on:
       - journy
       - master
       - onebyone
+      - sam
   workflow_dispatch:
     inputs:
       reason:
@@ -262,12 +263,61 @@ jobs:
             psql -h localhost -U wlt_runtime -d wlt_runtime -v ON_ERROR_STOP=1 -f "$f"
           done
 
+      - name: Seed WLT local fixtures (commission policies)
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGPASSWORD: bthwani_runtime_password
+        run: |
+          for f in services/wlt/database/seeds/local/*.sql; do
+            echo "Seeding $f"
+            psql -h localhost -U wlt_runtime -d wlt_runtime -v ON_ERROR_STOP=1 -f "$f"
+          done
+
       - name: Run WLT tests with DB required
         working-directory: services/wlt/backend
         env:
           DATABASE_URL: postgres://wlt_runtime:wlt_runtime_password@localhost:5432/wlt_runtime?sslmode=disable
           WLT_REQUIRE_DB_TESTS: "true"
         run: go test -v ./...
+
+  wlt-migration-ledger-verify:
+    name: WLT Migration Ledger Verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: bthwani_runtime
+          POSTGRES_DB: bthwani_runtime
+          POSTGRES_PASSWORD: bthwani_runtime_password
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install postgresql-client
+        run: |
+          sudo apt-get update && sudo apt-get install -y postgresql-client
+          psql --version
+
+      - name: Run WLT migration-ledger legacy-backfill scenarios (fresh, legacy, partial, second-run, checksum-mismatch)
+        shell: pwsh
+        env:
+          PGHOST: localhost
+          PGPORT: "5432"
+          PGPASSWORD: bthwani_runtime_password
+        run: |
+          pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/test-wlt-migration-ledger.ps1 -PsqlMode native
 
   dsh-go:
     name: DSH Go backend
@@ -438,7 +488,7 @@ jobs:
       - name: Full runtime reset and smoke
         shell: pwsh
         run: |
-          pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action reset -Profiles identity,workforce,dsh,wlt,financial-simulators,mail,media
+          pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action reset -Force -Profiles identity,workforce,dsh,wlt,financial-simulators,mail,media
 
       - name: WireMock financial provider smoke
         run: pnpm run runtime:wiremock:financial:smoke
@@ -498,7 +548,7 @@ jobs:
         env:
           WLT_MUTATIONS_ENABLED: "true"
         run: |
-          pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action reset -Profiles identity,workforce,dsh,wlt,financial-simulators,mail,media
+          pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action reset -Force -Profiles identity,workforce,dsh,wlt,financial-simulators,mail,media
 
       - name: WireMock financial provider smoke
         run: pnpm run runtime:wiremock:financial:smoke

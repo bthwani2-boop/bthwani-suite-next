@@ -260,3 +260,28 @@ operational_protocol_workflow_contract:
   runtime_proof: conditional
   final_job: final-protocol-gate
 ```
+
+## 24) SaaS/Tenancy Verification
+
+When `saas_context.mode` is `SAAS_READY_DEFERRED` or `SAAS_ACTIVE`, affected verification must include the tenant matrices from `05_MATRICES_BACKEND_DATABASE_API_SECURITY.md` and the annex gate.
+
+Minimum required proof:
+
+- tenant context source is trusted
+- tenant-owned data is classified
+- backend queries enforce tenant scope
+- cross-tenant negative cases are covered
+- delegated operator access is audited when present
+- WLT financial references remain tenant-safe when affected
+
+Missing tenant proof in an applicable journey returns `FIX_REQUIRED`.
+
+## 25) SDLC Stage Gate Verification
+
+When a journey requires formal SDLC control, run:
+
+```powershell
+pnpm run guard:sdlc -- --capability <CAPABILITY_ID> --stage <REQUESTED_STAGE> --affected
+```
+
+The command validates SDLC support files and stage vocabulary. It is a gate integrity check, not production evidence and not a substitute for QA, security, runtime, or CI proof.

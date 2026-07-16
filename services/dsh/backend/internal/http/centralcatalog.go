@@ -43,8 +43,19 @@ func (s *protectedStoreServer) writeCentralCatalogError(w http.ResponseWriter, e
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid central catalog input")
 	case errors.Is(err, centralcatalog.ErrForbidden):
 		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "action not permitted by platform policy")
-	case errors.Is(err, centralcatalog.ErrConflict):
-		store.SendError(w, http.StatusConflict, "CONFLICT", "central catalog conflict")
+	
+	var conflictErr *centralcatalog.ConflictError
+	if errors.As(err, &conflictErr) {
+		store.SendJSON(w, http.StatusConflict, map[string]any{
+			"code": "CONFLICT",
+			"message": conflictErr.Message,
+			"entityId": conflictErr.EntityID,
+			"expectedVersion": conflictErr.ExpectedVersion,
+			"currentVersion": conflictErr.CurrentVersion,
+		})
+		return
+	}
+
 	default:
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "central catalog operation failed")
 	}

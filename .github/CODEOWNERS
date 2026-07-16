@@ -8,6 +8,7 @@ services/wlt/**                                     @bthwani
 
 # CI & GitHub Workflows owners
 .github/workflows/**                                @bthwani
+.github/CODEOWNERS                                  @bthwani
 
 # Runtime configuration & script owners
 infra/docker/**                                     @bthwani
@@ -33,7 +34,13 @@ docs/**                                             @bthwani
 
 # Tooling and scripts
 tools/**                                            @bthwani
+tools/guards/sdlc/**                                @bthwani
 
 # Infrastructure
 infra/**                                            @bthwani
 
+# Governance and agent authorities
+governance/**                                       @bthwani
+governance/operational_journey_protocol_package/sdlc/** @bthwani
+.agents/**                                         @bthwani
+.agents/skills/bthwani-sdlc-stage-gate-orchestrator/** @bthwani

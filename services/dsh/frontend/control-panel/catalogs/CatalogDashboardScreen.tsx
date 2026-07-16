@@ -436,7 +436,7 @@ export function CatalogDashboardScreen() {
     <OperationsRoomFrame
       dir="rtl"
       sidePanel={
-        <div style={{ width: 280, borderLeft: "1px solid var(--bth-colors-borderColor, #e5e5e5)", padding: "1rem", height: "100%", overflowY: "auto", backgroundColor: "var(--bth-colors-surfaceBase)" }}>
+        <div style={{ width: 280, borderLeft: "1px solid var(--bth-colors-borderColor)", padding: "1rem", height: "100%", overflowY: "auto", backgroundColor: "var(--bth-colors-surfaceBase)" }}>
           <nav dir="rtl" aria-label="تبويبات الكتالوج المركزي" style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             {TABS.map((t) => (
               <button

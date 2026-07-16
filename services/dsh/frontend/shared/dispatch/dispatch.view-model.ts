@@ -27,12 +27,12 @@ function toDispatchCardViewModel(assignment: DshDispatchAssignment): DshDispatch
     id: assignment.id,
     orderLabel: `طلب #${assignment.orderId.slice(-6).toUpperCase()}`,
     captainLabel: `كابتن #${assignment.captainId.slice(-6)}`,
-    assignmentLabel: ASSIGNMENT_STATUS_LABELS[assignment.status],
-    deliveryLabel: DELIVERY_STATUS_LABELS[assignment.delivery.status],
+    assignmentLabel: ASSIGNMENT_STATUS_LABELS[assignment.status as keyof typeof ASSIGNMENT_STATUS_LABELS] ?? "غير معروف",
+    deliveryLabel: DELIVERY_STATUS_LABELS[assignment.delivery.status as keyof typeof DELIVERY_STATUS_LABELS] ?? "غير معروف",
     nextActionLabel: resolveNextActionLabel(assignment),
     timeline: DELIVERY_SEQUENCE.map((status, index) => ({
       id: status,
-      label: DELIVERY_STATUS_LABELS[status],
+      label: DELIVERY_STATUS_LABELS[status] ?? "غير معروف",
       complete: statusIndex >= index,
     })),
     proofLabel: assignment.delivery.podReference

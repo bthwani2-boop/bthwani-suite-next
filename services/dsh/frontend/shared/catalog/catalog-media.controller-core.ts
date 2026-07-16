@@ -8,6 +8,7 @@
  * matching the existing central-catalog.controller-core.ts pattern.
  */
 import * as catalogMediaApi from "./central-catalog.api";
+import { uploadBinaryToPresignedUrl } from "../media/presigned-upload";
 import type {
   CatalogAsset,
   CatalogAssetLink,
@@ -112,11 +113,7 @@ export async function uploadAndLinkImage(
 
   onProgress?.({ stage: "uploading", percent: 0 });
 
-  const uploadResp = await fetch(intent.uploadUrl, {
-    method: "PUT",
-    body: file,
-    headers: { "Content-Type": file.type },
-  });
+  const uploadResp = await uploadBinaryToPresignedUrl(intent.uploadUrl, file, file.type);
 
   if (!uploadResp.ok) {
     // Best-effort rollback to avoid orphaned objects in storage.
@@ -201,11 +198,7 @@ export async function uploadAndSubmitReel(opts: UploadReelVideoOptions): Promise
 
   onProgress?.({ stage: "uploading", percent: 0 });
 
-  const uploadResp = await fetch(intent.uploadUrl, {
-    method: "PUT",
-    body: file,
-    headers: { "Content-Type": "video/mp4" },
-  });
+  const uploadResp = await uploadBinaryToPresignedUrl(intent.uploadUrl, file, "video/mp4");
 
   if (!uploadResp.ok) {
     try {

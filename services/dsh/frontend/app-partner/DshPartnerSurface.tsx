@@ -1,16 +1,11 @@
 import React from 'react';
-import { BackHandler, Platform, View, Pressable, StyleSheet, I18nManager } from 'react-native';
+import { ActivityIndicator, BackHandler, Platform, View, Pressable, StyleSheet, I18nManager } from 'react-native';
 import { Button, Card, Icon, Text, spacing, colorRoles } from '@bthwani/ui-kit';
 import type { DshPartnerSurfaceProps } from './dsh-partner.types';
-import { storeScopeOptions } from './dsh-partner.navigation-bridge';
 import { useDshPartnerSurfaceModel } from './useDshPartnerSurfaceModel';
 import { PlatformVarsProvider, FeatureFlagProvider, usePlatformVars } from '../shared/platform';
 import { PartnerStoreScopeSheet } from './store/PartnerStoreScopeSheet';
 import { DshPartnerRouteRenderer } from './DshPartnerRouteRenderer';
-import { configureIdentitySession } from '@bthwani/core-identity';
-import { resolveIdentityApiBaseUrl } from '../shared/_kernel/identity-api-base-url';
-
-configureIdentitySession(resolveIdentityApiBaseUrl());
 
 const COLORS = {
   background: colorRoles.surfaceBase,
@@ -35,16 +30,21 @@ export function DshPartnerSurface(props: DshPartnerSurfaceProps) {
 }
 
 function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }: DshPartnerSurfaceProps = {}) {
-  const { dshAuthBearerToken, dshClientId } = usePlatformVars();
+  const { dshClientId } = usePlatformVars();
 
   const {
     state,
     actions,
+    scopes,
     selectedStoreScope,
+    isLoadingScopes,
+    scopesError,
     runtimePartnerProfile,
     partnerOrdersState,
     partnerOrders,
     deliveryOpsSummary,
+    teamMembers,
+    isTeamLoading,
   } = useDshPartnerSurfaceModel(initialRoute, initialOrderId);
 
   const {
@@ -92,6 +92,44 @@ function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }:
     return () => subscription.remove();
   }, [actions]);
 
+  const bottomActiveId = React.useMemo(() => {
+    if (route === 'inbox') return 'orders';
+    if (route === 'home') {
+      if (accountHubSection === 'wallet') return 'wallet';
+      if (accountHubSection === 'operations') return 'operations';
+      if (accountHubSection === 'inventory') return 'inventory';
+      return 'profile';
+    }
+    if (route === 'inventory-management') return 'inventory';
+    if (route === 'support-directory' || route === 'support-screen' || route === 'order-rejection') return 'operations';
+    return '';
+  }, [route, accountHubSection]);
+
+  if (!selectedStoreScope) {
+    if (isLoadingScopes) {
+      return (
+        <View style={styles.shellContainer}>
+          <View style={styles.centerLoading}>
+            <ActivityIndicator color={COLORS.brand} />
+          </View>
+        </View>
+      );
+    }
+    return (
+      <View style={styles.shellContainer}>
+        <View style={styles.emptyStateContainer}>
+          <Icon name="warning-outline" size={48} tone="muted" />
+          <Text role="bodyStrong" style={styles.emptyStateTitle}>
+            {scopesError ? 'حدث خطأ أثناء تحميل الفروع' : 'لا يوجد فروع مسجلة'}
+          </Text>
+          <Text role="body" style={styles.emptyStateDesc}>
+            {scopesError ? 'يرجى المحاولة لاحقاً' : 'يرجى التواصل مع الدعم الفني لإضافة فروع لحسابك'}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
   const isRTL = I18nManager.isRTL;
   const rowDirection = isRTL ? 'row-reverse' : 'row';
 
@@ -102,15 +140,15 @@ function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }:
         <Icon name="person-circle-outline" size={28} tone="brand" />
       </Pressable>
 
-      <Pressable onPress={openStoreScope} style={{ flex: 1, alignItems: isRTL ? 'flex-end' : 'flex-start', gap: 2 }}>
-        <Text role="bodyStrong" style={{ color: COLORS.text }}>{runtimePartnerProfile.storeName}</Text>
-        <View style={{ flexDirection: rowDirection, alignItems: 'center', gap: 4 }}>
-          <Text role="caption" tone="muted">{`${selectedStoreScope.label} · ${runtimePartnerProfile.activeZoneLabel}`}</Text>
+      <Pressable onPress={openStoreScope} style={[styles.storeScopeButton, { alignItems: isRTL ? 'flex-end' : 'flex-start' }]}>
+        <Text role="bodyStrong" style={styles.storeNameText}>{runtimePartnerProfile.storeName}</Text>
+        <View style={[styles.storeScopeDetails, { flexDirection: rowDirection }]}>
+          <Text role="caption" tone="muted">{`${selectedStoreScope.displayName} · ${runtimePartnerProfile.activeZoneLabel}`}</Text>
           <Icon name="chevron-down" size={12} tone="muted" />
         </View>
       </Pressable>
 
-      <View style={{ flexDirection: rowDirection, alignItems: 'center', gap: spacing[3] }}>
+      <View style={[styles.headerActions, { flexDirection: rowDirection }]}>
         <Pressable accessibilityLabel="البحث عن الطلبات" onPress={openOrdersSearch}>
           <Icon name="search-outline" size={24} tone="brand" />
         </Pressable>
@@ -125,25 +163,13 @@ function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }:
     <PartnerStoreScopeSheet
       visible={storeScopeVisible}
       onClose={() => setStoreScopeVisible(false)}
-      options={storeScopeOptions}
-      selectedId={selectedStoreScopeId}
+      options={scopes}
+      selectedId={selectedStoreScopeId ?? ''}
       onSelect={setSelectedStoreScopeId}
     />
   );
 
   const showBottomNav = route !== 'entry';
-  const bottomActiveId = React.useMemo(() => {
-    if (route === 'inbox') return 'orders';
-    if (route === 'home') {
-      if (accountHubSection === 'wallet') return 'wallet';
-      if (accountHubSection === 'operations') return 'operations';
-      if (accountHubSection === 'inventory') return 'inventory';
-      return 'profile';
-    }
-    if (route === 'inventory-management') return 'inventory';
-    if (route === 'support-directory' || route === 'support-screen' || route === 'order-rejection') return 'operations';
-    return '';
-  }, [route, accountHubSection]);
 
   const navItems = [
     { id: 'operations', label: 'العمليات', icon: 'people-outline', activeIcon: 'people' },
@@ -176,11 +202,10 @@ function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }:
             <Icon name={iconName as any} size={20} tone={isActive ? 'brand' : 'muted'} />
             <Text
               role="caption"
-              style={{
-                fontSize: 10,
-                color: isActive ? COLORS.brand : COLORS.textMuted,
-                fontWeight: isActive ? '700' : '400',
-              }}
+              style={[
+                styles.navTabText,
+                isActive ? styles.navTabTextActive : styles.navTabTextInactive
+              ]}
             >
               {item.label}
             </Text>
@@ -227,7 +252,6 @@ function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }:
       selectedStoreScope={selectedStoreScope}
       selectedStoreScopeId={selectedStoreScopeId}
       deliveryOpsSummary={deliveryOpsSummary}
-      dshAuthBearerToken={dshAuthBearerToken ?? undefined}
       dshClientId={dshClientId ?? undefined}
       renderMainShell={renderMainShell}
       renderSurfaceShell={renderSurfaceShell}
@@ -249,8 +273,15 @@ function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }:
       openSupportScreen={openSupportScreen}
       openInventoryManagement={openInventoryManagement}
       openStoreCourier={openStoreCourier}
+      openStoreScope={() => setStoreScopeVisible(true)}
       openSupportCommandFromOperationalFlow={openSupportCommandFromOperationalFlow}
       handleMarkReady={handleMarkReady}
+      refreshOrders={actions.refreshOrders}
+      teamMembers={teamMembers}
+      isTeamLoading={isTeamLoading}
+      onInviteMember={actions.onInviteMember}
+      onMemberAction={actions.onMemberAction}
+      scopes={scopes}
     />
   );
 }
@@ -274,6 +305,42 @@ const styles = StyleSheet.create({
   profileButton: {
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  storeScopeButton: {
+    flex: 1,
+    gap: 2,
+  },
+  storeNameText: {
+    color: COLORS.text,
+  },
+  storeScopeDetails: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  headerActions: {
+    alignItems: 'center',
+    gap: spacing[3],
+  },
+  centerLoading: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyStateContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  emptyStateTitle: {
+    color: COLORS.text,
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  emptyStateDesc: {
+    color: COLORS.textMuted,
+    marginTop: 8,
+    textAlign: 'center',
   },
   mainContentContainer: {
     flex: 1,
@@ -308,6 +375,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: 2,
+  },
+  navTabText: {
+    fontSize: 10,
+  },
+  navTabTextActive: {
+    color: COLORS.brand,
+    fontWeight: '700',
+  },
+  navTabTextInactive: {
+    color: COLORS.textMuted,
+    fontWeight: '400',
   },
 });
 

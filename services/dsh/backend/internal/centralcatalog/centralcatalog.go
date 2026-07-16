@@ -28,15 +28,45 @@ import (
 )
 
 var (
-	ErrNotFound  = errors.New("central catalog entity not found")
-	ErrInvalid   = errors.New("invalid central catalog input")
-	ErrConflict  = errors.New("central catalog conflict")
+	ErrNotFound = errors.New("central catalog entity not found")
+	ErrInvalid  = errors.New("invalid central catalog input")
+	ErrConflict = errors.New("central catalog conflict")
+)
+
+type ConflictError struct {
+	EntityID        string
+	ExpectedVersion *int
+	CurrentVersion  int
+	Message         string
+}
+
+func (e *ConflictError) Error() string { return e.Message }
+
+type DBQuerier interface {
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+}
+
+func NewConflictError(db DBQuerier, ctx context.Context, table, id string, expected *int) error {
+	var current int
+	if err := db.QueryRowContext(ctx, "SELECT version FROM "+table+" WHERE id=$1", id).Scan(&current); err != nil {
+		return ErrNotFound
+	}
+	return &ConflictError{
+		EntityID:        id,
+		ExpectedVersion: expected,
+		CurrentVersion:  current,
+		Message:         "version mismatch",
+	}
+}
+
+var (
 	ErrForbidden = errors.New("action not permitted by platform policy")
 )
 
 // ── L1: BUSINESS_DOMAIN ─────────────────────────────────────────────────────
 
 type Domain struct {
+	Version                int       `json:"version"`
 	ID                     string    `json:"id"`
 	Slug                   string    `json:"slug"`
 	NameAr                 string    `json:"nameAr"`
@@ -64,6 +94,7 @@ type DomainInput struct {
 }
 
 type DomainPatchInput struct {
+	ExpectedVersion        *int    `json:"expectedVersion"`
 	NameAr                 *string `json:"nameAr"`
 	NameEn                 *string `json:"nameEn"`
 	Icon                   *string `json:"icon"`
@@ -75,12 +106,12 @@ type DomainPatchInput struct {
 }
 
 const domainColumns = `id, slug, name_ar, name_en, icon, sort_order, is_active, is_client_visible,
-	requires_product_catalog, is_manual_request, created_at, updated_at`
+	requires_product_catalog, is_manual_request, created_at, updated_at, version`
 
 func scanDomain(scanner interface{ Scan(...any) error }) (Domain, error) {
 	var d Domain
 	err := scanner.Scan(&d.ID, &d.Slug, &d.NameAr, &d.NameEn, &d.Icon, &d.SortOrder, &d.IsActive,
-		&d.IsClientVisible, &d.RequiresProductCatalog, &d.IsManualRequest, &d.CreatedAt, &d.UpdatedAt)
+		&d.IsClientVisible, &d.RequiresProductCatalog, &d.IsManualRequest, &d.CreatedAt, &d.UpdatedAt, &d.Version)
 	if errors.Is(err, sql.ErrNoRows) {
 		return d, ErrNotFound
 	}
@@ -135,12 +166,21 @@ func UpdateDomain(ctx context.Context, db *sql.DB, id string, input DomainPatchI
 		}
 		nameAr = &trimmed
 	}
+	if input.ExpectedVersion != nil {
+		current, err := GetDomain(ctx, db, id)
+		if err != nil {
+			return Domain{}, err
+		}
+		if current.Version != *input.ExpectedVersion {
+			return Domain{}, ErrConflict
+		}
+	}
 	result, err := db.ExecContext(ctx, `UPDATE dsh_catalog_domains SET
 		name_ar=COALESCE($1, name_ar), name_en=COALESCE($2, name_en), icon=COALESCE($3, icon),
 		sort_order=COALESCE($4, sort_order), is_active=COALESCE($5, is_active),
 		is_client_visible=COALESCE($6, is_client_visible),
 		requires_product_catalog=COALESCE($7, requires_product_catalog),
-		is_manual_request=COALESCE($8, is_manual_request), updated_at=now()
+		is_manual_request=COALESCE($8, is_manual_request), updated_at=now(), version = version + 1
 		WHERE id=$9`,
 		nameAr, input.NameEn, input.Icon, input.SortOrder, input.IsActive,
 		input.IsClientVisible, input.RequiresProductCatalog, input.IsManualRequest, id)
@@ -148,7 +188,7 @@ func UpdateDomain(ctx context.Context, db *sql.DB, id string, input DomainPatchI
 		return Domain{}, err
 	}
 	if n, _ := result.RowsAffected(); n != 1 {
-		return Domain{}, ErrNotFound
+		return Domain{}, NewConflictError(db, ctx, "dsh_catalog_domains", id, input.ExpectedVersion)
 	}
 	return GetDomain(ctx, db, id)
 }
@@ -215,14 +255,14 @@ type NodePatchInput struct {
 const nodeColumns = `id, domain_id, parent_id, level, slug, name_ar, name_en, icon, sort_order,
 	is_active, is_client_visible, requires_barcode, allows_product_proposal,
 	allows_store_product_custom_image, requires_catalog_review, requires_product_catalog,
-	version, created_at, updated_at`
+	created_at, updated_at, version`
 
 func scanNode(scanner interface{ Scan(...any) error }) (Node, error) {
 	var n Node
 	err := scanner.Scan(&n.ID, &n.DomainID, &n.ParentID, &n.Level, &n.Slug, &n.NameAr, &n.NameEn, &n.Icon,
 		&n.SortOrder, &n.IsActive, &n.IsClientVisible, &n.RequiresBarcode, &n.AllowsProductProposal,
 		&n.AllowsStoreProductCustomImage, &n.RequiresCatalogReview, &n.RequiresProductCatalog,
-		&n.Version, &n.CreatedAt, &n.UpdatedAt)
+		&n.CreatedAt, &n.UpdatedAt, &n.Version)
 	if errors.Is(err, sql.ErrNoRows) {
 		return n, ErrNotFound
 	}
@@ -287,7 +327,7 @@ func UpdateNode(ctx context.Context, db *sql.DB, id string, input NodePatchInput
 		}
 		nameAr = &trimmed
 	}
-	
+
 	if input.ExpectedVersion != nil {
 		current, err := GetNode(ctx, db, id)
 		if err != nil {
@@ -305,7 +345,7 @@ func UpdateNode(ctx context.Context, db *sql.DB, id string, input NodePatchInput
 		allows_product_proposal=COALESCE($8, allows_product_proposal),
 		allows_store_product_custom_image=COALESCE($9, allows_store_product_custom_image),
 		requires_catalog_review=COALESCE($10, requires_catalog_review),
-		requires_product_catalog=COALESCE($11, requires_product_catalog), updated_at=now(), version=version+1
+		requires_product_catalog=COALESCE($11, requires_product_catalog), updated_at=now(), version = version + 1
 		WHERE id=$12 AND ($13::int IS NULL OR version=$13)`,
 		nameAr, input.NameEn, input.Icon, input.SortOrder, input.IsActive,
 		input.IsClientVisible, input.RequiresBarcode, input.AllowsProductProposal,
@@ -518,7 +558,7 @@ func UpdateMasterProduct(ctx context.Context, db *sql.DB, id string, input Maste
 	if input.ApprovalStatus != nil {
 		newStatus = *input.ApprovalStatus
 	}
-	
+
 	// We might also check client_visible in StoreAssortment since the request mentioned "publication state",
 	// but just in case they meant MasterProduct as well:
 	// A MasterProduct cannot be approved (which makes it eligible for store publication) if it lacks an image.
@@ -533,7 +573,7 @@ func UpdateMasterProduct(ctx context.Context, db *sql.DB, id string, input Maste
 		canonical_name_en=COALESCE($3, canonical_name_en), brand=COALESCE($4, brand),
 		barcode=COALESCE($5, barcode), gtin=COALESCE($6, gtin), sku=COALESCE($7, sku),
 		unit=COALESCE(NULLIF($8::text,''), unit), measurement_type=COALESCE(NULLIF($9::text,''), measurement_type),
-		approval_status=COALESCE($10, approval_status), is_active=COALESCE($11, is_active), updated_at=now(), version=version+1
+		approval_status=COALESCE($10, approval_status), is_active=COALESCE($11, is_active), updated_at=now(), version = version + 1
 		WHERE id=$12 AND ($13::int IS NULL OR version=$13)`,
 		input.CategoryNodeID, canonicalNameAr, input.CanonicalNameEn, input.Brand,
 		input.Barcode, input.GTIN, input.SKU, input.Unit, input.MeasurementType,
@@ -550,6 +590,7 @@ func UpdateMasterProduct(ctx context.Context, db *sql.DB, id string, input Maste
 // ── Product proposals (request-to-add; never a sellable entity) ────────────
 
 type ProductProposal struct {
+	Version                int        `json:"version"`
 	ID                     string     `json:"id"`
 	ProposedNameAr         string     `json:"proposedNameAr"`
 	ProposedNameEn         string     `json:"proposedNameEn"`
@@ -586,7 +627,6 @@ var validProposalStatus = map[string]bool{
 	"catalog-adopted": true, "catalog-approved": true, "client-visible": true, "needs-fix": true, "rejected": true,
 }
 
-
 type ProductProposalPatchInput struct {
 	ProposedNameAr *string `json:"proposedNameAr"`
 	ProposedNameEn *string `json:"proposedNameEn"`
@@ -610,7 +650,7 @@ func UpdateProposal(ctx context.Context, db *sql.DB, id string, actorID string, 
 	result, err := db.ExecContext(ctx, `UPDATE dsh_product_proposals SET
 		proposed_name_ar=COALESCE($1, proposed_name_ar), proposed_name_en=COALESCE($2, proposed_name_en),
 		brand=COALESCE($3, brand), barcode=COALESCE($4, barcode), image_object_key=COALESCE($5, image_object_key),
-		status='partner-proposed', resubmission_count=resubmission_count+1, updated_at=now()
+		status='partner-proposed', resubmission_count=resubmission_count+1, updated_at=now(), version = version + 1
 		WHERE id=$6`,
 		input.ProposedNameAr, input.ProposedNameEn, input.Brand, input.Barcode, input.ImageObjectKey, id)
 	if err != nil {
@@ -636,7 +676,7 @@ type ProductProposalInput struct {
 
 const proposalColumns = `id, proposed_name_ar, proposed_name_en, domain_id, category_node_id, brand, barcode,
 	image_object_key, source_surface, source_actor_id, source_store_id, status, review_note,
-	adopted_master_product_id, created_at, updated_at, review_stage, partner_reviewed_by,
+	adopted_master_product_id, created_at, updated_at, version, review_stage, partner_reviewed_by,
 	marketing_reviewed_by, catalog_adopted_by, catalog_approved_by, client_visible_at,
 	audit_required, blocked_reason, resubmission_count, linked_store_id`
 
@@ -644,7 +684,7 @@ func scanProposal(scanner interface{ Scan(...any) error }) (ProductProposal, err
 	var p ProductProposal
 	err := scanner.Scan(&p.ID, &p.ProposedNameAr, &p.ProposedNameEn, &p.DomainID, &p.CategoryNodeID, &p.Brand,
 		&p.Barcode, &p.ImageObjectKey, &p.SourceSurface, &p.SourceActorID, &p.SourceStoreID, &p.Status,
-		&p.ReviewNote, &p.AdoptedMasterProductID, &p.CreatedAt, &p.UpdatedAt, &p.ReviewStage, &p.PartnerReviewedBy,
+		&p.ReviewNote, &p.AdoptedMasterProductID, &p.CreatedAt, &p.UpdatedAt, &p.Version, &p.ReviewStage, &p.PartnerReviewedBy,
 		&p.MarketingReviewedBy, &p.CatalogAdoptedBy, &p.CatalogApprovedBy, &p.ClientVisibleAt, &p.AuditRequired,
 		&p.BlockedReason, &p.ResubmissionCount, &p.LinkedStoreID)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -719,9 +759,13 @@ func CreateProposal(ctx context.Context, db *sql.DB, actorID string, input Produ
 	// does not itself verify the node's domain, so a mismatched node could
 	// silently borrow another domain's policy (or the wrong node-scoped
 	// policy) unless this is checked here first.
+	var categoryNodeID *string
 	var nodeID string
 	if input.CategoryNodeID != nil {
 		nodeID = strings.TrimSpace(*input.CategoryNodeID)
+		if nodeID != "" {
+			categoryNodeID = &nodeID
+		}
 	}
 	if nodeID != "" {
 		node, err := GetNode(ctx, db, nodeID)
@@ -758,7 +802,7 @@ func CreateProposal(ctx context.Context, db *sql.DB, actorID string, input Produ
 		(id, proposed_name_ar, proposed_name_en, domain_id, category_node_id, brand, barcode, image_object_key,
 		 source_surface, source_actor_id, source_store_id, status)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'partner-proposed')`,
-		id, strings.TrimSpace(input.ProposedNameAr), input.ProposedNameEn, input.DomainID, input.CategoryNodeID,
+		id, strings.TrimSpace(input.ProposedNameAr), input.ProposedNameEn, input.DomainID, categoryNodeID,
 		input.Brand, input.Barcode, input.ImageObjectKey, input.SourceSurface, actorID, input.SourceStoreID)
 	if err != nil {
 		return ProductProposal{}, err
@@ -918,10 +962,10 @@ func UpsertStoreAssortment(ctx context.Context, db *sql.DB, storeID, masterProdu
 		if err != nil {
 			return StoreAssortment{}, err
 		}
-		
+
 		hasCustomImage := input.CustomImageObjectKey != nil && *input.CustomImageObjectKey != ""
 		hasMasterImage := masterImage != nil && *masterImage != ""
-		
+
 		if !hasCustomImage && !hasMasterImage {
 			return StoreAssortment{}, fmt.Errorf("%w: cannot set publication_status to client_visible without an approved image", ErrInvalid)
 		}
@@ -936,7 +980,7 @@ func UpsertStoreAssortment(ctx context.Context, db *sql.DB, storeID, masterProdu
 		  unit_price=EXCLUDED.unit_price, currency=EXCLUDED.currency, available=EXCLUDED.available,
 		  stock_status=EXCLUDED.stock_status, local_note=EXCLUDED.local_note,
 		  custom_image_object_key=EXCLUDED.custom_image_object_key,
-		  publication_status=EXCLUDED.publication_status, updated_at=now(), version=dsh_store_assortments.version+1
+		  publication_status=EXCLUDED.publication_status, updated_at=now(), version = dsh_store_assortments.version + 1
 		WHERE ($12::int IS NULL OR dsh_store_assortments.version=$12)`,
 		id, storeID, masterProductID, input.UnitPrice, currency, input.Available, stockStatus, input.LocalNote,
 		input.CustomImageObjectKey, publicationStatus, actorID, input.ExpectedVersion)
@@ -963,6 +1007,7 @@ func scanInto(dst *StoreAssortment, row *sql.Row) error {
 // ── Platform catalog policy (commission/fee/capability flags per category) ─
 
 type CatalogPolicy struct {
+	Version                                  int       `json:"version"`
 	ID                                       string    `json:"id"`
 	DomainID                                 *string   `json:"domainId"`
 	NodeID                                   *string   `json:"nodeId"`
@@ -998,7 +1043,7 @@ const policyColumns = `id, domain_id, node_id, policy_scope, platform_commission
 	allows_product_proposal, requires_barcode, requires_catalog_review, requires_marketing_review,
 	requires_product_image, requires_category_image, requires_description, requires_brand, requires_unit,
 	product_data_quality_minimum_score, max_gallery_images, manual_request_mode, is_active, effective_from, notes,
-	created_at, updated_at`
+	created_at, updated_at, version`
 
 func scanPolicy(scanner interface{ Scan(...any) error }) (CatalogPolicy, error) {
 	var p CatalogPolicy
@@ -1008,7 +1053,7 @@ func scanPolicy(scanner interface{ Scan(...any) error }) (CatalogPolicy, error) 
 		&p.AllowsProductProposal, &p.RequiresBarcode, &p.RequiresCatalogReview, &p.RequiresMarketingReview,
 		&p.RequiresProductImage, &p.RequiresCategoryImage, &p.RequiresDescription, &p.RequiresBrand, &p.RequiresUnit,
 		&p.ProductDataQualityMinimumScore, &p.MaxGalleryImages, &p.ManualRequestMode, &p.IsActive,
-		&p.EffectiveFrom, &p.Notes, &p.CreatedAt, &p.UpdatedAt)
+		&p.EffectiveFrom, &p.Notes, &p.CreatedAt, &p.UpdatedAt, &p.Version)
 	if errors.Is(err, sql.ErrNoRows) {
 		return p, ErrNotFound
 	}
@@ -1081,7 +1126,7 @@ func UpdateCatalogPolicy(ctx context.Context, db *sql.DB, id string, input Catal
 		manual_request_mode=COALESCE($18, manual_request_mode),
 		is_active=COALESCE($19, is_active),
 		notes=COALESCE($20, notes),
-		updated_at=now()
+		updated_at=now(), version = version + 1
 		WHERE id=$21`,
 		input.PlatformCommissionRate, input.FieldPartnerOnboardingCommissionAmount,
 		input.FieldPartnerOnboardingCommissionCurrency, input.StoreOnboardingFeeAmount,
@@ -1271,7 +1316,7 @@ func GetClientCatalog(ctx context.Context, db *sql.DB, storeID string) ([]Domain
 		if err := rows.Scan(&e.ID, &e.DomainID, &e.CategoryNodeID, &e.CanonicalNameAr, &e.CanonicalNameEn,
 			&e.Brand, &e.Barcode, &e.GTIN, &e.SKU, &e.Unit, &e.MeasurementType, &e.CanonicalImageObjectKey,
 			&e.ApprovalStatus, &e.IsActive, &e.DuplicateGroupID, &e.CreatedSource, &e.CreatedAt, &e.UpdatedAt,
-			&e.assortmentID, &e.UnitPrice, &e.Currency, &e.StockStatus, &e.ImageObjectKey); err != nil {
+			&e.Version, &e.assortmentID, &e.UnitPrice, &e.Currency, &e.StockStatus, &e.ImageObjectKey); err != nil {
 			return nil, nil, nil, nil, nil, err
 		}
 
@@ -1506,7 +1551,7 @@ func TransitionProposal(ctx context.Context, db *sql.DB, actorID, actorRole, id 
 			}
 		}
 
-		updateQuery = `UPDATE dsh_product_proposals SET status=$1, review_note=$2, review_stage='partner-review', partner_reviewed_by=$3, updated_at=now() WHERE id=$4`
+		updateQuery = `UPDATE dsh_product_proposals SET status=$1, review_note=$2, review_stage='partner-review', partner_reviewed_by=$3, updated_at=now(), version = version + 1 WHERE id=$4`
 		args = []any{input.NextStatus, input.Note, actorID, id}
 
 	case "marketing-review":
@@ -1526,7 +1571,7 @@ func TransitionProposal(ctx context.Context, db *sql.DB, actorID, actorRole, id 
 			return ProductProposal{}, fmt.Errorf("%w: brand is required for this category", ErrInvalid)
 		}
 
-		updateQuery = `UPDATE dsh_product_proposals SET status=$1, review_note=$2, review_stage='marketing-review', marketing_reviewed_by=$3, updated_at=now() WHERE id=$4`
+		updateQuery = `UPDATE dsh_product_proposals SET status=$1, review_note=$2, review_stage='marketing-review', marketing_reviewed_by=$3, updated_at=now(), version = version + 1 WHERE id=$4`
 		args = []any{input.NextStatus, input.Note, actorID, id}
 
 	case "catalog-adopted":
@@ -1565,12 +1610,12 @@ func TransitionProposal(ctx context.Context, db *sql.DB, actorID, actorRole, id 
 			}
 		}
 
-		updateQuery = `UPDATE dsh_product_proposals SET status=$1, review_note=$2, review_stage='catalog-adopted', catalog_adopted_by=$3, adopted_master_product_id=$4, updated_at=now() WHERE id=$5`
+		updateQuery = `UPDATE dsh_product_proposals SET status=$1, review_note=$2, review_stage='catalog-adopted', catalog_adopted_by=$3, adopted_master_product_id=$4, updated_at=now(), version = version + 1 WHERE id=$5`
 		args = []any{input.NextStatus, input.Note, actorID, adoptedID, id}
 
 	case "catalog-approved":
 		if proposal.AdoptedMasterProductID != nil {
-			_, err = tx.ExecContext(ctx, `UPDATE dsh_master_products SET approval_status='approved', is_active=true, updated_at=now(), version=version+1 WHERE id=$1`, *proposal.AdoptedMasterProductID)
+			_, err = tx.ExecContext(ctx, `UPDATE dsh_master_products SET approval_status='approved', is_active=true, updated_at=now(), version = version + 1 WHERE id=$1`, *proposal.AdoptedMasterProductID)
 			if err != nil {
 				return ProductProposal{}, err
 			}
@@ -1588,7 +1633,7 @@ func TransitionProposal(ctx context.Context, db *sql.DB, actorID, actorRole, id 
 			}
 		}
 
-		updateQuery = `UPDATE dsh_product_proposals SET status=$1, review_note=$2, review_stage='catalog-approved', catalog_approved_by=$3, updated_at=now() WHERE id=$4`
+		updateQuery = `UPDATE dsh_product_proposals SET status=$1, review_note=$2, review_stage='catalog-approved', catalog_approved_by=$3, updated_at=now(), version = version + 1 WHERE id=$4`
 		args = []any{input.NextStatus, input.Note, actorID, id}
 
 	case "client-visible":
@@ -1652,21 +1697,21 @@ func TransitionProposal(ctx context.Context, db *sql.DB, actorID, actorRole, id 
 			}
 		}
 
-		_, err = tx.ExecContext(ctx, `UPDATE dsh_store_assortments SET publication_status='client_visible', approved_by=$1, updated_at=now(), version=dsh_store_assortments.version+1 WHERE store_id=$2 AND master_product_id=$3`,
+		_, err = tx.ExecContext(ctx, `UPDATE dsh_store_assortments SET publication_status='client_visible', approved_by=$1, updated_at=now(), version = version + 1 WHERE store_id=$2 AND master_product_id=$3`,
 			actorID, *proposal.SourceStoreID, *proposal.AdoptedMasterProductID)
 		if err != nil {
 			return ProductProposal{}, err
 		}
 
-		updateQuery = `UPDATE dsh_product_proposals SET status=$1, review_note=$2, review_stage='client-visible', client_visible_at=now(), updated_at=now() WHERE id=$3`
+		updateQuery = `UPDATE dsh_product_proposals SET status=$1, review_note=$2, review_stage='client-visible', client_visible_at=now(), updated_at=now(), version = version + 1 WHERE id=$3`
 		args = []any{input.NextStatus, input.Note, id}
 
 	case "needs-fix":
-		updateQuery = `UPDATE dsh_product_proposals SET status=$1, review_note=$2, review_stage='needs-fix', blocked_reason=$3, resubmission_count=resubmission_count+1, updated_at=now() WHERE id=$4`
+		updateQuery = `UPDATE dsh_product_proposals SET status=$1, review_note=$2, review_stage='needs-fix', blocked_reason=$3, resubmission_count=resubmission_count+1, updated_at=now(), version = version + 1 WHERE id=$4`
 		args = []any{input.NextStatus, input.Note, input.Note, id}
 
 	default:
-		updateQuery = `UPDATE dsh_product_proposals SET status=$1, review_note=$2, updated_at=now() WHERE id=$3`
+		updateQuery = `UPDATE dsh_product_proposals SET status=$1, review_note=$2, updated_at=now(), version = version + 1 WHERE id=$3`
 		args = []any{input.NextStatus, input.Note, id}
 	}
 
@@ -1695,6 +1740,7 @@ func TransitionProposal(ctx context.Context, db *sql.DB, actorID, actorRole, id 
 // ── Catalog assets (DAM) ─────────────────────────────────────────────────────
 
 type CatalogAsset struct {
+	Version            int       `json:"version"`
 	ID                 string    `json:"id"`
 	ObjectKey          string    `json:"objectKey"`
 	PublicURL          *string   `json:"publicUrl"`
@@ -1798,14 +1844,14 @@ func IsValidStoreImageRole(role string) bool {
 
 const assetColumns = `id, object_key, public_url, original_file_name, mime_type, size_bytes, width, height,
 	checksum_sha256, alt_ar, alt_en, dominant_color, status, source_surface, uploaded_by, reviewed_by,
-	review_note, intended_entity_type, intended_entity_id, intended_role, created_at, updated_at`
+	review_note, intended_entity_type, intended_entity_id, intended_role, created_at, updated_at, version`
 
 func scanAsset(scanner interface{ Scan(...any) error }) (CatalogAsset, error) {
 	var a CatalogAsset
 	err := scanner.Scan(&a.ID, &a.ObjectKey, &a.PublicURL, &a.OriginalFileName, &a.MimeType, &a.SizeBytes,
 		&a.Width, &a.Height, &a.ChecksumSHA256, &a.AltAr, &a.AltEn, &a.DominantColor, &a.Status, &a.SourceSurface,
 		&a.UploadedBy, &a.ReviewedBy, &a.ReviewNote, &a.IntendedEntityType, &a.IntendedEntityID, &a.IntendedRole,
-		&a.CreatedAt, &a.UpdatedAt)
+		&a.CreatedAt, &a.UpdatedAt, &a.Version)
 	if errors.Is(err, sql.ErrNoRows) {
 		return a, ErrNotFound
 	}
@@ -2036,7 +2082,7 @@ func CompleteAssetUpload(ctx context.Context, db *sql.DB, mediaClient *media.Cli
 	}
 	defer tx.Rollback()
 	result, err := tx.ExecContext(ctx, `UPDATE dsh_catalog_assets SET
-		status='uploaded', size_bytes=$1, mime_type=$2, checksum_sha256=$3, width=$4, height=$5, updated_at=now()
+		status='uploaded', size_bytes=$1, mime_type=$2, checksum_sha256=$3, width=$4, height=$5, updated_at=now(), version = version + 1
 		WHERE id=$6 AND status='draft'`,
 		facts.size, facts.contentType, facts.checksum, facts.width, facts.height, id)
 	if err != nil {
@@ -2108,7 +2154,7 @@ type AssetUpdateInput struct {
 func UpdateAsset(ctx context.Context, db *sql.DB, id string, input AssetUpdateInput) (CatalogAsset, error) {
 	result, err := db.ExecContext(ctx, `UPDATE dsh_catalog_assets SET
 		alt_ar=COALESCE($1, alt_ar), alt_en=COALESCE($2, alt_en), dominant_color=COALESCE($3, dominant_color),
-		updated_at=now()
+		updated_at=now(), version = version + 1
 		WHERE id=$4`,
 		input.AltAr, input.AltEn, input.DominantColor, id)
 	if err != nil {
@@ -2121,8 +2167,9 @@ func UpdateAsset(ctx context.Context, db *sql.DB, id string, input AssetUpdateIn
 }
 
 type AssetReviewInput struct {
-	Decision   string `json:"decision"` // approved | rejected | pending_review | archived
-	ReviewNote string `json:"reviewNote"`
+	ExpectedVersion *int   `json:"expectedVersion"`
+	Decision        string `json:"decision"` // approved | rejected | pending_review | archived
+	ReviewNote      string `json:"reviewNote"`
 }
 
 var assetReviewTransitions = map[string]map[string]bool{
@@ -2210,7 +2257,7 @@ func syncProductImageProjection(ctx context.Context, tx *sql.Tx, productID strin
 		key := primaryObjectKey.String
 		objectKey = &key
 	}
-	_, err = tx.ExecContext(ctx, `UPDATE dsh_master_products SET canonical_image_object_key=$1, version=version+1, updated_at=now() WHERE id=$2`, objectKey, productID)
+	_, err = tx.ExecContext(ctx, `UPDATE dsh_master_products SET canonical_image_object_key=$1, updated_at=now(), version = version + 1 WHERE id=$2`, objectKey, productID)
 	return err
 }
 
@@ -2262,17 +2309,17 @@ func ReviewAsset(ctx context.Context, db *sql.DB, actorID, id string, input Asse
 	}
 
 	result, err := tx.ExecContext(ctx, `UPDATE dsh_catalog_assets SET
-		status=$1, reviewed_by=$2, review_note=$3, updated_at=now() WHERE id=$4 AND status=$5`,
+		status=$1, reviewed_by=$2, review_note=$3, updated_at=now(), version = version + 1 WHERE id=$4 AND status=$5`,
 		input.Decision, actorID, input.ReviewNote, id, currentStatus)
 	if err != nil {
 		return CatalogAsset{}, err
 	}
 	if n, _ := result.RowsAffected(); n != 1 {
-		return CatalogAsset{}, ErrConflict
+		return CatalogAsset{}, NewConflictError(tx, ctx, "dsh_catalog_assets", id, input.ExpectedVersion)
 	}
 	if input.Decision == "approved" {
 		if _, err := tx.ExecContext(ctx, `UPDATE dsh_catalog_asset_links SET
-			status='approved', updated_at=now() WHERE asset_id=$1 AND status='pending_review'`, id); err != nil {
+			status='approved', updated_at=now(), version = version + 1 WHERE asset_id=$1 AND status='pending_review'`, id); err != nil {
 			return CatalogAsset{}, err
 		}
 		if err := syncStoreImageProjectionsForAsset(ctx, tx, id); err != nil {
@@ -2283,7 +2330,7 @@ func ReviewAsset(ctx context.Context, db *sql.DB, actorID, id string, input Asse
 		}
 	} else if input.Decision == "rejected" || input.Decision == "archived" {
 		if _, err := tx.ExecContext(ctx, `UPDATE dsh_catalog_asset_links SET
-			status=$1, is_primary=false, updated_at=now() WHERE asset_id=$2 AND status <> 'archived'`, input.Decision, id); err != nil {
+			status=$1, is_primary=false, updated_at=now(), version = version + 1 WHERE asset_id=$2 AND status <> 'archived'`, input.Decision, id); err != nil {
 			return CatalogAsset{}, err
 		}
 		if err := syncStoreImageProjectionsForAsset(ctx, tx, id); err != nil {
@@ -2304,6 +2351,7 @@ func ReviewAsset(ctx context.Context, db *sql.DB, actorID, id string, input Asse
 }
 
 type CatalogAssetLink struct {
+	Version    int       `json:"version"`
 	ID         string    `json:"id"`
 	AssetID    string    `json:"assetId"`
 	EntityType string    `json:"entityType"`
@@ -2316,7 +2364,7 @@ type CatalogAssetLink struct {
 	UpdatedAt  time.Time `json:"updatedAt"`
 }
 
-const assetLinkColumns = `id, asset_id, entity_type, entity_id, role, sort_order, is_primary, status, created_at, updated_at`
+const assetLinkColumns = `id, asset_id, entity_type, entity_id, role, sort_order, is_primary, status, created_at, updated_at, version`
 
 // CatalogAssetLinkWithAsset is what client-facing surfaces need to actually
 // render an image: the bare link plus the asset's object key and a public
@@ -2339,7 +2387,7 @@ func publicMediaPath(assetID string) string {
 func scanAssetLinkWithAsset(scanner interface{ Scan(...any) error }) (CatalogAssetLinkWithAsset, error) {
 	var l CatalogAssetLinkWithAsset
 	err := scanner.Scan(&l.ID, &l.AssetID, &l.EntityType, &l.EntityID, &l.Role, &l.SortOrder, &l.IsPrimary,
-		&l.Status, &l.CreatedAt, &l.UpdatedAt, &l.ObjectKey, &l.AltAr, &l.AltEn, &l.MimeType)
+		&l.Status, &l.CreatedAt, &l.UpdatedAt, &l.Version, &l.ObjectKey, &l.AltAr, &l.AltEn, &l.MimeType)
 	if errors.Is(err, sql.ErrNoRows) {
 		return l, ErrNotFound
 	}
@@ -2353,7 +2401,7 @@ func scanAssetLinkWithAsset(scanner interface{ Scan(...any) error }) (CatalogAss
 func scanAssetLink(scanner interface{ Scan(...any) error }) (CatalogAssetLink, error) {
 	var l CatalogAssetLink
 	err := scanner.Scan(&l.ID, &l.AssetID, &l.EntityType, &l.EntityID, &l.Role, &l.SortOrder, &l.IsPrimary,
-		&l.Status, &l.CreatedAt, &l.UpdatedAt)
+		&l.Status, &l.CreatedAt, &l.UpdatedAt, &l.Version)
 	if errors.Is(err, sql.ErrNoRows) {
 		return l, ErrNotFound
 	}
@@ -2407,7 +2455,7 @@ func LinkAsset(ctx context.Context, db dbtx, input AssetLinkInput) (CatalogAsset
 		(id, asset_id, entity_type, entity_id, role, sort_order, is_primary, status)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
 		ON CONFLICT (entity_type, entity_id, role, asset_id) DO UPDATE SET
-		  sort_order=EXCLUDED.sort_order, is_primary=EXCLUDED.is_primary, status=EXCLUDED.status, updated_at=now()`,
+		  sort_order=EXCLUDED.sort_order, is_primary=EXCLUDED.is_primary, status=EXCLUDED.status, updated_at=now(), version = dsh_catalog_asset_links.version + 1`,
 		id, input.AssetID, input.EntityType, input.EntityID, input.Role, input.SortOrder, false, linkStatus)
 	if err != nil {
 		return CatalogAssetLink{}, err
@@ -2435,7 +2483,7 @@ func ReplacePrimaryAssetLink(ctx context.Context, tx *sql.Tx, input AssetLinkInp
 	if assetStatus != "approved" {
 		return CatalogAssetLink{}, fmt.Errorf("%w: asset is %s and cannot be primary", ErrForbidden, assetStatus)
 	}
-	if _, err := tx.ExecContext(ctx, `UPDATE dsh_catalog_asset_links SET is_primary=false, updated_at=now()
+	if _, err := tx.ExecContext(ctx, `UPDATE dsh_catalog_asset_links SET is_primary=false, updated_at=now(), version = version + 1
 		WHERE entity_type=$1 AND entity_id=$2 AND role=$3 AND is_primary=true AND status <> 'archived'`,
 		input.EntityType, input.EntityID, input.Role); err != nil {
 		return CatalogAssetLink{}, err
@@ -2445,7 +2493,7 @@ func ReplacePrimaryAssetLink(ctx context.Context, tx *sql.Tx, input AssetLinkInp
 		(id, asset_id, entity_type, entity_id, role, sort_order, is_primary, status)
 		VALUES ($1,$2,$3,$4,$5,$6,true,'approved')
 		ON CONFLICT (entity_type, entity_id, role, asset_id) DO UPDATE SET
-		  sort_order=EXCLUDED.sort_order, is_primary=true, status='approved', updated_at=now()`,
+		  sort_order=EXCLUDED.sort_order, is_primary=true, status='approved', updated_at=now(), version = dsh_catalog_asset_links.version + 1`,
 		id, input.AssetID, input.EntityType, input.EntityID, input.Role, input.SortOrder); err != nil {
 		return CatalogAssetLink{}, err
 	}
@@ -2540,7 +2588,7 @@ func DeleteUnlinkedAsset(ctx context.Context, db *sql.DB, mediaClient *media.Cli
 	if attached {
 		return fmt.Errorf("%w: asset is still linked", ErrForbidden)
 	}
-	if _, err := tx.ExecContext(ctx, `UPDATE dsh_catalog_assets SET status='archived', updated_at=now() WHERE id=$1`, id); err != nil {
+	if _, err := tx.ExecContext(ctx, `UPDATE dsh_catalog_assets SET status='archived', updated_at=now(), version = version + 1 WHERE id=$1`, id); err != nil {
 		return err
 	}
 	if err := tx.Commit(); err != nil {

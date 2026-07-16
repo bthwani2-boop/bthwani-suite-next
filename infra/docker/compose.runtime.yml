@@ -165,12 +165,16 @@ services:
       WLT_DSH_SERVICE_TOKEN: "${WLT_DSH_SERVICE_TOKEN:-}"
       DSH_WLT_SERVICE_TOKEN: "${DSH_WLT_SERVICE_TOKEN:-}"
       WLT_DSH_BASE_URL: "${WLT_DSH_BASE_URL:-http://dsh-api:8080}"
-      WLT_MUTATIONS_ENABLED: "${WLT_MUTATIONS_ENABLED:-true}"
+      WLT_MUTATIONS_ENABLED: "${WLT_MUTATIONS_ENABLED:-false}"
+      WLT_PAYOUT_ENCRYPTION_KEY: "${WLT_PAYOUT_ENCRYPTION_KEY:-dev-only-payout-destination-encryption-key}"
     ports:
       - "127.0.0.1:${BTHWANI_WLT_API_HOST_PORT:-58083}:8083"
     depends_on:
       postgres:
         condition: service_healthy
+      wiremock-financial-provider:
+        condition: service_healthy
+        required: false
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8083/wlt/health || exit 1"]
       interval: 10s

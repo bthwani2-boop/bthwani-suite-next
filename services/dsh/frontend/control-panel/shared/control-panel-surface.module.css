@@ -130,6 +130,42 @@
   align-items: center;
 }
 
+.surfaceBreadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+  color: var(--bthwani-control-panel-text-muted);
+  font-size: 11px;
+  user-select: none;
+}
+
+.surfaceBreadcrumbButton,
+.surfaceBreadcrumbCurrent {
+  all: unset;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.surfaceBreadcrumbButton:hover {
+  color: var(--bthwani-control-panel-brand);
+}
+
+.surfaceBreadcrumbCurrent {
+  color: var(--bthwani-control-panel-text);
+  font-weight: 700;
+}
+
+.surfaceBreadcrumbSeparator {
+  font-size: 9px;
+  opacity: 0.5;
+}
+
+.surfaceBreadcrumbLeaf {
+  color: var(--bthwani-control-panel-text);
+  font-weight: 700;
+}
+
 .surfaceMainPanel {
   flex: 1;
   min-height: 0;
@@ -321,11 +357,140 @@
   flex-shrink: 0;
 }
 
+.surfacePanelTitleCompact {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--bthwani-control-panel-text);
+  flex-shrink: 0;
+}
+
 .surfaceStackSmall {
   display: flex;
   flex-direction: column;
   gap: 6px;
   overflow: hidden;
+}
+
+.surfaceSectionTitleCompact {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--bthwani-control-panel-text);
+}
+
+.surfaceSectionSubtitleCompact {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: var(--bthwani-control-panel-text-muted);
+}
+
+.surfaceFocusContextCard {
+  padding: 6px 12px;
+  background: var(--bthwani-control-panel-surface-inset);
+  border: 1px solid var(--bthwani-control-panel-border);
+  border-radius: 8px;
+}
+
+.surfaceFocusContextRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.surfaceFocusContextTitle {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--bthwani-control-panel-text);
+}
+
+.surfaceFocusContextList {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.surfaceFocusContextItem {
+  font-size: 11px;
+  color: var(--bthwani-control-panel-text);
+}
+
+.surfaceFocusContextValue {
+  color: var(--bthwani-control-panel-brand);
+  display: inline-block;
+}
+
+.surfaceLoadingPanel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  padding: 24px;
+}
+
+.surfaceLoadingText {
+  font-size: 13px;
+  opacity: 0.5;
+}
+
+.surfaceFootnoteGrid {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--bthwani-control-panel-border);
+  padding-top: 10px;
+}
+
+.surfaceFootnoteCard {
+  display: flex;
+  flex: 1 1 300px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  background-color: var(--bthwani-control-panel-surface);
+  border: 1px solid var(--bthwani-control-panel-border);
+  border-radius: 10px;
+  gap: 12px;
+}
+
+.surfaceInfoCardTitleCompact {
+  color: var(--bthwani-control-panel-text);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.surfaceInfoCardDescriptionCompact {
+  color: var(--bthwani-control-panel-text-muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.surfaceMetaWrapCompact {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.surfaceMetaChipCompact {
+  color: var(--bthwani-control-panel-text);
+  padding: 2px 6px;
+  background-color: var(--bthwani-control-panel-surface-inset);
+  border: 1px solid var(--bthwani-control-panel-border);
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.surfaceMetaChipButton {
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.surfaceMetaChipButton:hover {
+  background-color: var(--bthwani-control-panel-border);
 }
 
 /* Split grid: full width when no inspector, with-inspector when item is selected */

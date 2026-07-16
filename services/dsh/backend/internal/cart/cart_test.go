@@ -61,3 +61,56 @@ func TestFulfillmentModeConstants(t *testing.T) {
 		t.Fatalf("expected 3 distinct fulfillment modes, got %d", len(modes))
 	}
 }
+
+func availabilityFor(modes []FulfillmentModeAvailability, mode FulfillmentMode) FulfillmentModeAvailability {
+	for _, m := range modes {
+		if m.Mode == mode {
+			return m
+		}
+	}
+	return FulfillmentModeAvailability{}
+}
+
+// A store that never enabled bthwani_delivery/express must never report it
+// available, even when the client is in zone — the mode list must reflect
+// what the store actually turned on, not a static three-mode assumption.
+func TestComputeFulfillmentModeAvailabilityModeNotEnabled(t *testing.T) {
+	result := computeFulfillmentModeAvailability([]string{"delivery", "pickup"}, true)
+	if got := availabilityFor(result, ModeBthwaniDelivery); got.Available || got.UnavailableReasonCode != "mode_not_enabled" {
+		t.Fatalf("expected bthwani_delivery unavailable with mode_not_enabled, got %+v", got)
+	}
+	if got := availabilityFor(result, ModePartnerDelivery); !got.Available {
+		t.Fatalf("expected partner_delivery available, got %+v", got)
+	}
+	if got := availabilityFor(result, ModePickup); !got.Available {
+		t.Fatalf("expected pickup available, got %+v", got)
+	}
+}
+
+// Delivery modes (bthwani_delivery, partner_delivery) require the client to
+// be in the store's serviceable zone; pickup never does, since the customer
+// travels to the store themselves.
+func TestComputeFulfillmentModeAvailabilityOutOfZone(t *testing.T) {
+	result := computeFulfillmentModeAvailability([]string{"delivery", "express", "pickup"}, false)
+	for _, mode := range []FulfillmentMode{ModeBthwaniDelivery, ModePartnerDelivery} {
+		got := availabilityFor(result, mode)
+		if got.Available || got.UnavailableReasonCode != "out_of_area" {
+			t.Fatalf("expected %s unavailable with out_of_area when not in zone, got %+v", mode, got)
+		}
+	}
+	if got := availabilityFor(result, ModePickup); !got.Available {
+		t.Fatalf("expected pickup available even when client is out of the delivery zone, got %+v", got)
+	}
+}
+
+func TestComputeFulfillmentModeAvailabilityAllEnabledInZone(t *testing.T) {
+	result := computeFulfillmentModeAvailability([]string{"delivery", "express", "pickup"}, true)
+	if len(result) != 3 {
+		t.Fatalf("expected exactly 3 mode entries, got %d", len(result))
+	}
+	for _, entry := range result {
+		if !entry.Available {
+			t.Fatalf("expected all modes available when enabled and in zone, got %+v", entry)
+		}
+	}
+}

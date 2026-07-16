@@ -1,51 +1,11 @@
-export type DshAssignmentStatus = "offered" | "accepted" | "declined" | "completed";
+import type { components } from "../../../clients/generated/dsh-api";
 
-export type DshDeliveryStatus =
-  | "assigned"
-  | "driver_assigned"
-  | "driver_arrived_store"
-  | "picked_up"
-  | "arrived_customer"
-  | "delivered";
-
-export type DshDispatchAssignment = {
-  readonly id: string;
-  readonly orderId: string;
-  readonly captainId: string;
-  readonly assignedBy: string;
-  readonly status: DshAssignmentStatus;
-  readonly responseDeadlineAt: string;
-  readonly acceptedAt?: string | null;
-  readonly declinedAt?: string | null;
-  readonly completedAt?: string | null;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-  readonly delivery: DshDelivery;
-};
-
-export type DshDelivery = {
-  readonly id: string;
-  readonly assignmentId: string;
-  readonly orderId: string;
-  readonly captainId: string;
-  readonly status: DshDeliveryStatus;
-  readonly podMethod: string;
-  readonly podReference: string;
-  readonly note: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-export type DshCreateAssignmentInput = {
-  readonly orderId: string;
-  readonly captainId: string;
-};
-
-export type DshSubmitPoDInput = {
-  readonly method: "photo" | "code" | "signature";
-  readonly reference: string;
-  readonly note?: string;
-};
+export type DshDispatchAssignment = components["schemas"]["DshDispatchAssignment"];
+export type DshAssignmentStatus = components["schemas"]["DshAssignmentStatus"];
+export type DshDeliveryStatus = components["schemas"]["DshDeliveryStatus"];
+export type DshDelivery = components["schemas"]["DshDelivery"];
+export type DshCreateAssignmentInput = components["schemas"]["DshCreateAssignmentRequest"];
+export type DshSubmitPoDInput = components["schemas"]["DshSubmitPoDRequest"];
 
 export type DshDispatchListState =
   | { readonly kind: "idle" }

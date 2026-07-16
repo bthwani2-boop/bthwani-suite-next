@@ -22,6 +22,14 @@ type WltLedgerEntryRaw = {
   readonly createdAt: string;
 };
 
+// Minor units -> major units display, matching the conversion already used
+// by the field app (DshFieldFinanceScreen's formatAmount) -- this table
+// previously displayed the raw integer minor-units value with no
+// conversion, so e.g. "150000" instead of "1500.00".
+function formatMinorUnits(minorUnits: number): string {
+  return (minorUnits / 100).toFixed(2);
+}
+
 function mapActorTypeLabel(actorType: string): string {
   switch (actorType) {
     case "client": return "Client";
@@ -42,11 +50,11 @@ function toView(e: WltLedgerEntryRaw): DshWltLedgerEntryView {
     orderId: e.orderId,
     referenceId: e.referenceId,
     referenceType: e.referenceType,
-    amountLabel: String(e.amountMinorUnits),
+    amountLabel: formatMinorUnits(e.amountMinorUnits),
     currency: e.currency,
     debitCreditLabel: e.debitCredit === "debit" ? "Debit" : "Credit",
     debitCreditBadge: e.debitCredit === "debit" ? "error" : "success",
-    balanceAfterLabel: String(e.balanceAfter),
+    balanceAfterLabel: formatMinorUnits(e.balanceAfter),
     description: e.description,
     createdAt: e.createdAt,
   };
@@ -65,12 +73,12 @@ export async function fetchDshWltLedgerEntries(params: DshWltLedgerParams): Prom
     if (params.limit !== undefined) query.set("limit", String(params.limit));
     if (params.cursor) query.set("cursor", params.cursor);
     const qs = query.toString();
-    const body = await wltGet<{ entries: WltLedgerEntryRaw[]; nextCursor?: string }>(
+    const body = await wltGet<{ ledgerEntries: WltLedgerEntryRaw[]; nextCursor?: string }>(
       `/dsh/control-panel/finance/ledger/entries${qs ? `?${qs}` : ""}`,
     );
     return {
       ok: true,
-      entries: body.entries.map(toView),
+      entries: body.ledgerEntries.map(toView),
       nextCursor: body.nextCursor,
     };
   } catch (e) {

@@ -247,7 +247,7 @@ type fakeRows struct {
 }
 
 func (r *fakeRows) Columns() []string {
-	return []string{"id", "username", "password_hash", "tenant_id", "roles", "permissions", "active", "session_id", "expires_at"}
+	return []string{"id", "username", "password_hash", "tenant_id", "phone_e164", "roles", "permissions", "active", "session_id", "expires_at"}
 }
 func (r *fakeRows) Close() error { return nil }
 func (r *fakeRows) Next(dest []driver.Value) error {
@@ -263,11 +263,12 @@ func (r *fakeRows) Next(dest []driver.Value) error {
 	dest[1] = r.row.actor.Username
 	dest[2] = r.row.actor.PasswordHash
 	dest[3] = r.row.actor.TenantID
-	dest[4] = "{" + strings.Join(r.row.actor.Roles, ",") + "}"
-	dest[5] = permissions
-	dest[6] = r.row.actor.Active
-	dest[7] = r.row.sessionID
-	dest[8] = r.row.expiresAt
+	dest[4] = r.row.actor.PhoneE164
+	dest[5] = "{" + strings.Join(r.row.actor.Roles, ",") + "}"
+	dest[6] = permissions
+	dest[7] = r.row.actor.Active
+	dest[8] = r.row.sessionID
+	dest[9] = r.row.expiresAt
 	return nil
 }
 

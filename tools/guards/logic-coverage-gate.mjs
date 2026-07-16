@@ -69,7 +69,9 @@ function isAdapterOrController(f) {
     f.includes("/_kernel/") ||
     f.includes("/http-request") ||
     f.includes("-http-request") ||
-    f.includes("/media/") // media upload uses raw fetch for multipart
+    f.includes("/media/") || // media upload uses raw fetch for multipart
+    f.includes(".media.ts") ||
+    f.includes("media.controller")
   );
 }
 

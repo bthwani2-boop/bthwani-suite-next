@@ -1,0 +1,16 @@
+version: 1
+authority: governance/26_SDLC_TEAM_AND_STAGE_GATES.md
+allowed_exception_decisions:
+  - HARD_BLOCKED_EXTERNAL_ONLY
+  - risk_accepted_non_critical
+risk_acceptance_required_fields:
+  - named_owner
+  - reason
+  - compensating_controls
+  - expiry
+  - remediation_date
+forbidden:
+  - critical_vulnerability_release_exception_without_formal_authority
+  - self_approval
+  - undocumented_scope_expansion
+  - closed_with_missing_required_evidence

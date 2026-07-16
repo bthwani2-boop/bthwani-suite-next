@@ -5,8 +5,10 @@ This package contains the governing, non-bypassable contract and rules for execu
 ## Contents (المحتويات)
 
 - [فهرس الحزمة ومصفوفة عدم إسقاط البنود (Index & Coverage)](file:///C:/bthwani-suite-next/governance/operational_journey_protocol_package/00_INDEX_AND_COVERAGE.md) - The main entrypoint, manifest, coverage matrices, and legacy source trace for the unified protocol package.
+- [SaaS Readiness and Tenancy Gates](annexes/SAAS_READINESS_AND_TENANCY_GATES.md) - Conditional mandatory annex for tenant-owned data, cross-tenant operations, or future SaaS boundaries.
 
 ## Usage (الاستخدام)
 
 All workspace operations, agent plans, and implementations must respect the policies defined in [00_INDEX_AND_COVERAGE.md](file:///C:/bthwani-suite-next/governance/operational_journey_protocol_package/00_INDEX_AND_COVERAGE.md).
 This protocol serves as a final, non-bypassable authority for code-first full-stack slices.
+Apply conditional annexes only when their `applies_when` rules match the journey.

@@ -26,6 +26,14 @@ Create evidence files only for:
 - broad ownership refactor
 - explicit user request
 
+## Stage-gate escalation
+
+Governed SDLC stage gates are defined in [26_SDLC_TEAM_AND_STAGE_GATES.md](26_SDLC_TEAM_AND_STAGE_GATES.md).
+
+Use the stage-gate model when the change affects release approval, security authority, independent QA, cross-surface runtime readiness, tenant isolation, production rollback, or formal risk acceptance.
+
+Lean code-based changes still use the smallest targeted check unless a stage gate applies.
+
 ## Normal output
 
 For regular implementation, report only:
@@ -41,4 +49,4 @@ Do not claim CLOSED, READY, FINAL, DONE, or 100% unless the chosen check level m
 
 ## Acceptance condition
 
-Accepted when the implementation is correct in live code and the check level is proportional to the real task risk.
+Accepted when the implementation is correct in live code, the check level is proportional to the real task risk, and any applicable SDLC or SaaS/Tenancy gate has not been bypassed.

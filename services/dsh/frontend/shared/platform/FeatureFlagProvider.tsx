@@ -21,24 +21,7 @@ export function FeatureFlagProvider({ children }: FeatureFlagProviderProps) {
   });
 
   React.useEffect(() => {
-    const handleOverride = (e: Event) => {
-      const customEvent = e as CustomEvent<{ key: string; enabled: boolean }>;
-      if (customEvent.detail && typeof customEvent.detail.key === 'string') {
-        const { key, enabled } = customEvent.detail;
-        FeatureFlagsRegistry.override({ [key]: enabled });
-        setFlags(FeatureFlagsRegistry.getAll());
-      }
-    };
-
-    if (
-      typeof window !== 'undefined' &&
-      typeof window.addEventListener === 'function'
-    ) {
-      window.addEventListener('dsh-flag-override', handleOverride);
-      return () => {
-        window.removeEventListener('dsh-flag-override', handleOverride);
-      };
-    }
+    setFlags(FeatureFlagsRegistry.getAll());
   }, []);
 
   return (
@@ -48,7 +31,7 @@ export function FeatureFlagProvider({ children }: FeatureFlagProviderProps) {
   );
 }
 
-function useFeatureFlag(flag: string): boolean {
+export function useFeatureFlag(flag: string): boolean {
   const flags = React.useContext(FeatureFlagContext);
   return flags[flag] ?? false;
 }

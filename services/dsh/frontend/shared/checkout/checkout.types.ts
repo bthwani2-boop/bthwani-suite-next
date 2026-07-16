@@ -10,7 +10,10 @@ export type DshIntentState =
   | "payment_failed"
   | "expired";
 
-export type DshFulfillmentMode = "bthwani_delivery" | "partner_delivery" | "pickup";
+import type { DshFulfillmentDeliveryMode } from "../delivery/delivery.contract";
+
+// Canonical source: shared/delivery/delivery.contract.ts (DshFulfillmentDeliveryMode).
+export type DshFulfillmentMode = DshFulfillmentDeliveryMode;
 
 export type DshCheckoutIntent = {
   readonly id: string;

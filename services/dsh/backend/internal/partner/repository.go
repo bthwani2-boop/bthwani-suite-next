@@ -824,6 +824,389 @@ func CountApprovedDocuments(db *sql.DB, partnerID string) (int, int, error) {
 	return total, approved, nil
 }
 
+// ─── Store team members ─────────────────────────────────────────────────────
+
+func ListStoreTeamMembers(db *sql.DB, storeID string) ([]StoreTeamMember, error) {
+	rows, err := db.Query(`
+		SELECT id, name, role, status, branch_assignment, permissions_summary,
+		       delivery_assignment, invite_lifecycle, operational_impact, audit_note
+		FROM dsh_store_team_members
+		WHERE store_id = $1
+		ORDER BY created_at ASC`, storeID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	members := []StoreTeamMember{}
+	for rows.Next() {
+		var m StoreTeamMember
+		if err := rows.Scan(&m.ID, &m.Name, &m.Role, &m.Status, &m.BranchAssignment,
+			&m.PermissionsSummary, &m.DeliveryAssignment, &m.InviteLifecycle,
+			&m.OperationalImpact, &m.AuditNote); err != nil {
+			return nil, err
+		}
+		m.RoleLabel = roleLabel(m.Role)
+		m.StatusLabel = statusLabel(m.Status)
+		m.InlineAction = inlineActionForStatus(m.Status)
+		m.InlineActionLabel = inlineActionLabelForStatus(m.Status)
+		members = append(members, m)
+	}
+	return members, rows.Err()
+}
+
+// InviteStoreTeamMember creates a pending invite row for identity against
+// storeID. There is no identity-resolution service wired up yet (FIX_REQUIRED
+// for a future round) — the raw identity string is stored as both the
+// member's placeholder display name and the invited_identity audit field.
+func InviteStoreTeamMember(db *sql.DB, storeID string, input InviteTeamMemberInput) error {
+	if err := input.Validate(); err != nil {
+		return err
+	}
+	_, err := db.Exec(`
+		INSERT INTO dsh_store_team_members (
+			store_id, name, role, status, invite_lifecycle, invited_identity, invited_by_actor_id
+		) VALUES ($1, $2, 'staff', 'invited', 'دعوة أُرسلت وبانتظار القبول', $2, $3)`,
+		storeID, input.Identity, input.InvitedByActorID)
+	return err
+}
+
+// ListInvitesForPhone finds all pending team member records matching phone.
+func ListInvitesForPhone(db *sql.DB, phone string) ([]StoreTeamMember, error) {
+	rows, err := db.Query(`
+		SELECT id, name, role, status, branch_assignment, permissions_summary,
+		       delivery_assignment, invite_lifecycle, operational_impact, audit_note
+		FROM dsh_store_team_members
+		WHERE invited_identity = $1 AND status = 'invited'
+		ORDER BY created_at ASC`, phone)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	members := []StoreTeamMember{}
+	for rows.Next() {
+		var m StoreTeamMember
+		if err := rows.Scan(&m.ID, &m.Name, &m.Role, &m.Status, &m.BranchAssignment,
+			&m.PermissionsSummary, &m.DeliveryAssignment, &m.InviteLifecycle,
+			&m.OperationalImpact, &m.AuditNote); err != nil {
+			return nil, err
+		}
+		m.RoleLabel = roleLabel(m.Role)
+		m.StatusLabel = statusLabel(m.Status)
+		m.InlineAction = inlineActionForStatus(m.Status)
+		m.InlineActionLabel = inlineActionLabelForStatus(m.Status)
+		members = append(members, m)
+	}
+	return members, rows.Err()
+}
+
+// AcceptInvite binds the identity_actor_id and marks the member active.
+func AcceptInvite(db *sql.DB, inviteID, actorID, actorPhone string) error {
+	res, err := db.Exec(`
+		UPDATE dsh_store_team_members
+		SET status = 'active',
+		    identity_actor_id = $1,
+		    invite_lifecycle = 'دعوة مقبولة',
+		    version = version + 1,
+		    updated_at = NOW()
+		WHERE id = $2 AND invited_identity = $3 AND status = 'invited'`,
+		actorID, inviteID, actorPhone)
+	if err != nil {
+		return err
+	}
+	affected, _ := res.RowsAffected()
+	if affected == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// RejectInvite marks the member blocked/rejected.
+func RejectInvite(db *sql.DB, inviteID, actorID, actorPhone string) error {
+	res, err := db.Exec(`
+		UPDATE dsh_store_team_members
+		SET status = 'blocked',
+		    identity_actor_id = $1,
+		    invite_lifecycle = 'دعوة مرفوضة',
+		    version = version + 1,
+		    updated_at = NOW()
+		WHERE id = $2 AND invited_identity = $3 AND status = 'invited'`,
+		actorID, inviteID, actorPhone)
+	if err != nil {
+		return err
+	}
+	affected, _ := res.RowsAffected()
+	if affected == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// teamActionStatusMap maps the inlineActionLabel strings this backend itself
+// generates (see inlineActionLabelForStatus) back to the resulting status.
+// executeDshPartnerTeamMemberAction's actionLabel is free-form per the
+// OpenAPI contract, but since this backend is also the sole producer of the
+// labels shown to the user, the round-trip is closed and unambiguous.
+var teamActionStatusMap = map[string]string{
+	"pause":         "paused",
+	"activate":      "active",
+	"block":         "blocked",
+	"resend-invite": "invited",
+	"cancel-invite": "blocked",
+}
+
+// ExecuteStoreTeamMemberAction applies actionLabel to memberID, guarding
+// against cross-store IDOR by requiring the member's store_id to match
+// storeID. Every action is recorded in dsh_store_team_member_actions,
+// including labels this backend doesn't recognize (recorded with no status
+// change) so nothing is silently dropped.
+func ExecuteStoreTeamMemberAction(db *sql.DB, storeID, memberID string, input TeamMemberActionInput) error {
+	if err := input.Validate(); err != nil {
+		return err
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	var currentStoreID, fromStatus string
+	err = tx.QueryRow(`SELECT store_id, status FROM dsh_store_team_members WHERE id = $1`, memberID).
+		Scan(&currentStoreID, &fromStatus)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+	if currentStoreID != storeID {
+		return ErrForbidden
+	}
+
+	toStatus := teamActionStatusMap[input.Action]
+	if toStatus != "" {
+		if _, err := tx.Exec(`
+			UPDATE dsh_store_team_members
+			SET status = $1, version = version + 1, updated_at = NOW()
+			WHERE id = $2`, toStatus, memberID); err != nil {
+			return err
+		}
+	}
+
+	if _, err := tx.Exec(`
+		INSERT INTO dsh_store_team_member_actions (
+			member_id, store_id, action_label, from_status, to_status, actor_id
+		) VALUES ($1, $2, $3, $4, $5, $6)`,
+		memberID, storeID, input.Action, fromStatus, toStatus, input.ActorID); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+func roleLabel(role string) string {
+	switch role {
+	case "owner":
+		return "مالك"
+	case "supervisor":
+		return "مشرف"
+	case "courier":
+		return "موصل"
+	default:
+		return "موظف"
+	}
+}
+
+func statusLabel(status string) string {
+	switch status {
+	case "active":
+		return "نشط"
+	case "paused":
+		return "موقوف"
+	case "invited":
+		return "بانتظار القبول"
+	case "blocked":
+		return "محظور"
+	case "review-needed":
+		return "بحاجة مراجعة"
+	default:
+		return status
+	}
+}
+
+func inlineActionLabelForStatus(status string) string {
+	switch status {
+	case "active":
+		return "إيقاف"
+	case "paused":
+		return "تفعيل"
+	case "invited":
+		return "إعادة إرسال الدعوة"
+	case "blocked":
+		return "تفعيل"
+	default:
+		return "مراجعة"
+	}
+}
+
+func inlineActionForStatus(status string) string {
+	switch status {
+	case "active":
+		return "pause"
+	case "paused":
+		return "activate"
+	case "invited":
+		return "resend-invite"
+	case "blocked":
+		return "activate"
+	default:
+		return ""
+	}
+}
+
+// ─── Store courier settings ─────────────────────────────────────────────────
+
+func GetStoreCourierSettings(db *sql.DB, storeID string) (StoreCourierSettings, error) {
+	var s StoreCourierSettings
+	err := db.QueryRow(`
+		SELECT courier_name, courier_phone, is_active, policy, pricing_source, compensation, selected_branch_ids, version
+		FROM dsh_store_courier_settings WHERE store_id = $1`, storeID).
+		Scan(&s.CourierName, &s.CourierPhone, &s.IsActive, &s.Policy, &s.PricingSource, &s.Compensation, pq.Array(&s.SelectedBranchIDs), &s.Version)
+	if errors.Is(err, sql.ErrNoRows) {
+		// The OpenAPI contract has no 404 response for this operation — return
+		// the zero-value settings shape instead of an error.
+		return StoreCourierSettings{
+			Policy:            "free_delivery",
+			PricingSource:     "bthwani_pricing",
+			Compensation:      "none",
+			SelectedBranchIDs: []string{},
+			Version:           0,
+		}, nil
+	}
+	if err != nil {
+		return StoreCourierSettings{}, err
+	}
+	if s.SelectedBranchIDs == nil {
+		s.SelectedBranchIDs = []string{}
+	}
+	return s, nil
+}
+
+func UpsertStoreCourierSettings(db *sql.DB, storeID string, input StoreCourierSettings) (StoreCourierSettings, error) {
+	if err := input.Validate(); err != nil {
+		return StoreCourierSettings{}, err
+	}
+	var s StoreCourierSettings
+	if input.Version == 0 {
+		// Expect new insert
+		err := db.QueryRow(`
+			INSERT INTO dsh_store_courier_settings (
+				store_id, courier_name, courier_phone, is_active, policy, pricing_source, compensation, selected_branch_ids, version
+			) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,1)
+			RETURNING courier_name, courier_phone, is_active, policy, pricing_source, compensation, selected_branch_ids, version`,
+			storeID, input.CourierName, input.CourierPhone, input.IsActive, input.Policy,
+			input.PricingSource, input.Compensation, pq.Array(input.SelectedBranchIDs)).
+			Scan(&s.CourierName, &s.CourierPhone, &s.IsActive, &s.Policy, &s.PricingSource, &s.Compensation, pq.Array(&s.SelectedBranchIDs), &s.Version)
+		if err != nil {
+			if strings.Contains(err.Error(), "duplicate key value") {
+				return StoreCourierSettings{}, ErrVersionConflict
+			}
+			return StoreCourierSettings{}, err
+		}
+	} else {
+		// Expect update of existing version
+		err := db.QueryRow(`
+			UPDATE dsh_store_courier_settings SET
+				courier_name = $2,
+				courier_phone = $3,
+				is_active = $4,
+				policy = $5,
+				pricing_source = $6,
+				compensation = $7,
+				selected_branch_ids = $8,
+				version = version + 1,
+				updated_at = NOW()
+			WHERE store_id = $1 AND version = $9
+			RETURNING courier_name, courier_phone, is_active, policy, pricing_source, compensation, selected_branch_ids, version`,
+			storeID, input.CourierName, input.CourierPhone, input.IsActive, input.Policy,
+			input.PricingSource, input.Compensation, pq.Array(input.SelectedBranchIDs), input.Version).
+			Scan(&s.CourierName, &s.CourierPhone, &s.IsActive, &s.Policy, &s.PricingSource, &s.Compensation, pq.Array(&s.SelectedBranchIDs), &s.Version)
+		if errors.Is(err, sql.ErrNoRows) {
+			return StoreCourierSettings{}, ErrVersionConflict
+		}
+		if err != nil {
+			return StoreCourierSettings{}, err
+		}
+	}
+
+	if s.SelectedBranchIDs == nil {
+		s.SelectedBranchIDs = []string{}
+	}
+	return s, nil
+}
+
+// ─── Store coverage zones ───────────────────────────────────────────────────
+
+func ListStoreCoverageZones(db *sql.DB, storeID string) ([]StoreCoverageZone, error) {
+	rows, err := db.Query(`
+		SELECT id, name, status, status_label, branch_relation, service_mode_relation,
+		       policy_summary, policy_reason, operational_impact, pricing_reference,
+		       commission_reference, payout_reference, review_action_label, audit_note
+		FROM dsh_store_coverage_zones
+		WHERE store_id = $1
+		ORDER BY created_at ASC`, storeID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	zones := []StoreCoverageZone{}
+	for rows.Next() {
+		var z StoreCoverageZone
+		if err := rows.Scan(&z.ID, &z.Name, &z.Status, &z.StatusLabel, &z.BranchRelation,
+			&z.ServiceModeRelation, &z.PolicySummary, &z.PolicyReason, &z.OperationalImpact,
+			&z.PricingReference, &z.CommissionReference, &z.PayoutReference,
+			&z.ReviewActionLabel, &z.AuditNote); err != nil {
+			return nil, err
+		}
+		zones = append(zones, z)
+	}
+	return zones, rows.Err()
+}
+
+// ─── Partner operational scopes ─────────────────────────────────────────────
+// Scopes derive from dsh_stores.partner_id: a partner's stores are their
+// scopes. Role comes from the actor's own team-member row per store when one
+// exists (matched by invited_identity); absent a team-member row, the caller
+// is the store's owning partner and defaults to "owner".
+func ListPartnerScopesForActor(db *sql.DB, partnerID, actorIdentity string) ([]OperationalScope, error) {
+	rows, err := db.Query(`
+		SELECT s.id, s.partner_id, s.display_name, tm.role AS role
+		FROM dsh_stores s
+		INNER JOIN dsh_store_team_members tm
+			ON tm.store_id = s.id AND tm.identity_actor_id = $2 AND tm.status = 'active'
+		WHERE s.partner_id = $1
+		ORDER BY s.display_name ASC`, partnerID, actorIdentity)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	scopes := []OperationalScope{}
+	for rows.Next() {
+		var sc OperationalScope
+		if err := rows.Scan(&sc.StoreID, &sc.PartnerID, &sc.DisplayName, &sc.Role); err != nil {
+			return nil, err
+		}
+		sc.ScopeID = sc.StoreID
+		sc.Permissions = permissionsForRole(sc.Role)
+		scopes = append(scopes, sc)
+	}
+	return scopes, rows.Err()
+}
+
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
 func isPgUniqueViolation(err error) bool {

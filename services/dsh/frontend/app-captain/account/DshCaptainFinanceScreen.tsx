@@ -11,7 +11,6 @@ export type DshCaptainFinanceScreenProps = {
 	state?: DshCaptainFinanceScreenState;
 	onBack?: (() => void) | undefined;
 	onRetry?: (() => void) | undefined;
-	dshAuthBearerToken?: string | null;
 	dshClientId?: string | null;
 };
 
@@ -20,7 +19,6 @@ export function DshCaptainFinanceScreen({
 	state = 'ready',
 	onBack,
 	onRetry,
-	dshAuthBearerToken,
 	dshClientId,
 }: DshCaptainFinanceScreenProps) {
 	if (state !== 'ready') {
@@ -38,7 +36,6 @@ export function DshCaptainFinanceScreen({
 		<WltDshCaptainBridge
 			section={section}
 			{...(onBack ? { onBack } : {})}
-			{...(dshAuthBearerToken !== undefined ? { dshAuthBearerToken } : {})}
 			{...(dshClientId !== undefined ? { dshClientId } : {})}
 		/>
 	);

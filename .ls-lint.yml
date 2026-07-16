@@ -65,3 +65,4 @@ ignore:
   - "services/dsh/frontend/app-partner/Catalog"
   - "services/dsh/frontend/shared/_kernel"
   - "services/wlt/frontend/control-panel/_skeleton-proof"
+  - "apps/control-panel/runtime/src/app/api"

@@ -56,8 +56,8 @@ export async function fetchFieldMeWallet(): Promise<
   | { ok: false; message: string }
 > {
   try {
-    const wallet = await fieldGet<FieldWallet>("/dsh/field/me/finance/wallet");
-    return { ok: true, wallet };
+    const data = await fieldGet<{ wallet: FieldWallet }>("/dsh/field/me/finance/wallet");
+    return { ok: true, wallet: data.wallet };
   } catch (e) {
     const err = e as { status?: number; message?: string };
     return { ok: false, message: err.message ?? `HTTP ${err.status ?? "error"}` };
@@ -69,8 +69,8 @@ export async function fetchFieldMeCommissions(): Promise<
   | { ok: false; message: string }
 > {
   try {
-    const commissions = await fieldGet<FieldCommission[]>("/dsh/field/me/finance/commissions");
-    return { ok: true, commissions };
+    const data = await fieldGet<{ commissions: FieldCommission[] }>("/dsh/field/me/finance/commissions");
+    return { ok: true, commissions: data.commissions };
   } catch (e) {
     const err = e as { status?: number; message?: string };
     return { ok: false, message: err.message ?? `HTTP ${err.status ?? "error"}` };
@@ -82,8 +82,8 @@ export async function fetchFieldMePayoutRequests(): Promise<
   | { ok: false; message: string }
 > {
   try {
-    const payoutRequests = await fieldGet<FieldPayoutRequest[]>("/dsh/field/me/finance/payout-requests");
-    return { ok: true, payoutRequests };
+    const data = await fieldGet<{ payoutRequests: FieldPayoutRequest[] }>("/dsh/field/me/finance/payout-requests");
+    return { ok: true, payoutRequests: data.payoutRequests };
   } catch (e) {
     const err = e as { status?: number; message?: string };
     return { ok: false, message: err.message ?? `HTTP ${err.status ?? "error"}` };
@@ -94,14 +94,17 @@ export async function submitFieldMePayoutRequest(
   amountMinorUnits: number,
   currency: string,
   idempotencyKey: string,
-): Promise<{ ok: true } | { ok: false; message: string }> {
+): Promise<
+  | { ok: true; payoutRequest: FieldPayoutRequest }
+  | { ok: false; message: string }
+> {
   try {
-    await fieldGet<{ status: string }>("/dsh/field/me/finance/payout-requests", {
+    const data = await fieldGet<{ payoutRequest: FieldPayoutRequest }>("/dsh/field/me/finance/payout-requests", {
       method: "POST",
       body: { amountMinorUnits, currency, idempotencyKey },
       idempotencyKey,
     });
-    return { ok: true };
+    return { ok: true, payoutRequest: data.payoutRequest };
   } catch (e) {
     const err = e as { status?: number; message?: string };
     return { ok: false, message: err.message ?? `HTTP ${err.status ?? "error"}` };

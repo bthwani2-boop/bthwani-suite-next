@@ -22,10 +22,7 @@ type BThwaniAppearanceMode = 'lightPremium' | 'darkPremium';
 import { BottomNavBar } from './components/BottomNavBar';
 import { MobileWorkspaceHeader } from './components/MobileWorkspaceHeader';
 import { ModernPremiumHeader } from './components/ModernPremiumHeader';
-import { configureIdentitySession, useIdentitySession } from '@bthwani/core-identity';
-import { resolveIdentityApiBaseUrl } from '../shared/_kernel/identity-api-base-url';
-
-configureIdentitySession(resolveIdentityApiBaseUrl());
+import { useIdentitySession } from '@bthwani/core-identity';
 
 const SurfaceAny = Surface as any;
 
@@ -60,8 +57,10 @@ export function DshCaptainSurface(props: DshCaptainSurfaceProps) {
 function DshCaptainSurfaceInner({ command, captainId, walletBalanceLabel }: DshCaptainSurfaceProps) {
   const identity = useIdentitySession();
   const { theme } = useTheme();
-  const { dshAuthBearerToken, dshClientId } = usePlatformVars();
-  const captainRuntimeId = React.useMemo(() => (captainId ?? dshClientId ?? '').trim(), [captainId, dshClientId]);
+  const { dshClientId } = usePlatformVars();
+  
+  // Enforce Identity Bootstrap: User identity comes from token subject/session, not from props.
+  const captainRuntimeId = identity.state.kind === 'authenticated' ? identity.state.identity.subject || '' : '';
   const { hydrated: appearanceHydrated, mode: appearanceMode, setMode: setAppearanceMode } = useAppCaptainAppearance();
   const insets = useSafeAreaInsets();
 
@@ -207,7 +206,6 @@ function DshCaptainSurfaceInner({ command, captainId, walletBalanceLabel }: DshC
         activeOrderDraft={ui.activeOrderDraft}
         showBottomNav={derived.showBottomNav}
         bottomNavNode={captainBottomNavBar}
-        dshAuthBearerToken={dshAuthBearerToken}
         dshClientId={dshClientId}
         isCaptainAvailable={derived.isCaptainAvailable}
         captainDisplayName=""
@@ -223,7 +221,30 @@ function DshCaptainSurfaceInner({ command, captainId, walletBalanceLabel }: DshC
         onConfirmDelivery={actions.confirmDelivery}
         onConfirmPodSubmission={actions.confirmPodSubmission}
         onReportPodFailure={actions.reportPodFailure}
-        onCapturePhoto={() => { actions.setCaptainPodPhotoUri(undefined); actions.setCaptainPodMediaKey(undefined); actions.setCaptainPodState('retry-required'); }}
+        onCapturePhoto={async () => {
+          try {
+            const ImagePicker = await import('expo-image-picker');
+            const { status } = await ImagePicker.requestCameraPermissionsAsync();
+            if (status !== 'granted') {
+              actions.setCaptainPodState('error');
+              return;
+            }
+            const result = await ImagePicker.launchCameraAsync({
+              quality: 0.5,
+              base64: false,
+            });
+            if (!result.canceled && result.assets[0]) {
+              actions.setCaptainPodPhotoUri(result.assets[0].uri);
+              actions.setCaptainPodMediaKey(`local-pod-${Date.now()}`);
+              actions.setCaptainPodState('success');
+            } else {
+              actions.setCaptainPodState('ready');
+            }
+          } catch (err) {
+            console.warn('PoD capture failed', err);
+            actions.setCaptainPodState('retry-required');
+          }
+        }}
         onRetryPod={() => actions.setCaptainPodState('ready')}
         onBack={actions.goBack}
         onGoToInbox={actions.goToInbox}
