@@ -13,6 +13,7 @@ import { MySpaceScreen, type BThwaniAppearanceMode } from "./account/MySpaceScre
 import { AppearanceHubScreen } from "./account/AppearanceHubScreen";
 import { AddressLocationScreen } from "./account/AddressLocationScreen";
 import { IdentityHubScreen } from "./account/IdentityHubScreen";
+import { BenefitsHubScreen } from "./account/BenefitsHubScreen";
 import { PreferencesHubScreen } from "./account/PreferencesHubScreen";
 import { NotificationCenterScreen } from "./notifications/NotificationCenterScreen";
 import { OrderTrackingScreen } from "./orders/OrderTrackingScreen";
@@ -24,7 +25,7 @@ import { useSpecialRequestsController } from "../shared/special-requests/use-spe
 import { generateSpecialRequestIdempotencyKey } from "../shared/special-requests/special-requests.idempotency";
 
 type ClientTab = "home" | "stores" | "orders" | "profile" | "cart";
-type ProfileRoute = "profile" | "appearance" | "addresses" | "identity" | "preferences" | "support";
+type ProfileRoute = "profile" | "appearance" | "addresses" | "identity" | "benefits" | "preferences" | "support";
 type SpecialRequestRoute = "shein" | "awnak";
 
 const NAV_ITEMS: BottomNavItem[] = [
@@ -202,6 +203,8 @@ export function DshClientSurface() {
           <AddressLocationScreen />
         ) : profileRoute === "identity" ? (
           <IdentityHubScreen />
+        ) : profileRoute === "benefits" ? (
+          <BenefitsHubScreen />
         ) : profileRoute === "preferences" ? (
           <PreferencesHubScreen />
         ) : profileRoute === "support" ? (
@@ -217,6 +220,7 @@ export function DshClientSurface() {
             onOpenOrders={() => setActiveTab("orders")}
             onOpenAddresses={() => setProfileRoute("addresses")}
             onOpenIdentity={() => setProfileRoute("identity")}
+            onOpenBenefits={() => setProfileRoute("benefits")}
             onOpenPreferences={() => setProfileRoute("preferences")}
             onOpenSupport={() => setProfileRoute("support")}
           />
