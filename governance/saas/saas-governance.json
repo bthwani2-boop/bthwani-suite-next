@@ -24,6 +24,8 @@
     "tenantContextPropagationVerified": "NOT_PROVEN",
     "crossTenantNegativeTestsPassed": "NOT_PROVEN",
     "crossTenantDataLeakageZero": "NOT_PROVEN",
+    "criticalVulnerabilitiesZero": "NOT_PROVEN",
+    "unacceptedHighVulnerabilitiesZero": "NOT_PROVEN",
     "tenantBackupRestoreVerified": "NOT_PROVEN",
     "tenantExportDeletionVerified": "NOT_PROVEN",
     "perTenantObservabilityAvailable": "NOT_PROVEN",
