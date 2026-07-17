@@ -140,8 +140,20 @@ jobs:
             psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
           done < <(find services/dsh/database/migrations -maxdepth 1 -type f -name '*.sql' | sort)
       - name: Unit and database integration tests
+        id: dsh-tests
         working-directory: services/dsh/backend
-        run: go test ./... -count=1
+        shell: bash
+        run: |
+          set -o pipefail
+          go test ./... -count=1 2>&1 | tee ../../../dsh-tests.log
+      - name: Upload DSH test diagnostics
+        if: failure() && steps.dsh-tests.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dsh-test-diagnostics
+          path: dsh-tests.log
+          if-no-files-found: error
+          retention-days: 3
 
   wlt-backend-tests:
     runs-on: ubuntu-latest
