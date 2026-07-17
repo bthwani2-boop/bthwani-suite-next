@@ -86,8 +86,8 @@ func NewRouter(db *sql.DB, mutationsEnabled bool) *http.ServeMux {
 	mux.HandleFunc("POST /wlt/reconciliation-cases/{caseId}/resolve", gate(serviceAuth(reconciliation.HandleResolveCase(db))))
 
 	mux.HandleFunc("POST /wlt/payout-requests", gate(serviceAuth(payout.HandleCreatePayoutRequest(db))))
-	mux.HandleFunc("GET /wlt/payout-requests", readGate(payout.HandleListPayoutRequests(db)))
-	mux.HandleFunc("GET /wlt/payout-requests/{payoutId}", readGate(payout.HandleGetPayoutRequest(db)))
+	mux.HandleFunc("GET /wlt/payout-requests", readGate(payout.HandleListPayoutRequestsWithProviderProof(db)))
+	mux.HandleFunc("GET /wlt/payout-requests/{payoutId}", readGate(payout.HandleGetPayoutRequestWithProviderProof(db)))
 	mux.HandleFunc("POST /wlt/payout-requests/{payoutId}/approve", gate(serviceAuth(payout.HandleApprovePayoutRequestSovereign(db))))
 	mux.HandleFunc("POST /wlt/payout-requests/{payoutId}/reject", gate(serviceAuth(payout.HandleRejectPayoutRequestSovereign(db))))
 	mux.HandleFunc("POST /wlt/payout-requests/{payoutId}/process", gate(serviceAuth(payout.HandleProcessPayoutRequestSovereign(db))))
