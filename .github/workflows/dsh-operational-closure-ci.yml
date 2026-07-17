@@ -61,6 +61,23 @@ concurrency:
 jobs:
   backend-contract-and-tests:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: dsh_ci
+          POSTGRES_PASSWORD: dsh_ci_password
+          POSTGRES_DB: dsh_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U dsh_ci -d dsh_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://dsh_ci:dsh_ci_password@localhost:5432/dsh_ci?sslmode=disable
+      DSH_REQUIRE_DB_TESTS: 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -95,8 +112,40 @@ jobs:
       - name: Vet
         working-directory: services/dsh/backend
         run: go vet ./...
-      - name: Unit and integration tests
+      - name: Install PostgreSQL client
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      - name: Apply all DSH migrations to clean PostgreSQL
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r migration; do
+            echo "Applying ${migration}"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
+          done < <(find services/dsh/database/migrations -maxdepth 1 -type f -name '*.sql' | sort)
+      - name: Unit and database integration tests
         working-directory: services/dsh/backend
+        run: go test ./... -count=1
+
+  wlt-backend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/wlt/backend/go.mod
+          cache-dependency-path: services/wlt/backend/go.sum
+      - name: Format gate
+        working-directory: services/wlt/backend
+        shell: bash
+        run: test -z "$(gofmt -l .)"
+      - name: Vet
+        working-directory: services/wlt/backend
+        run: go vet ./...
+      - name: Unit tests
+        working-directory: services/wlt/backend
         run: go test ./... -count=1
 
   fullstack-binding-gates:
