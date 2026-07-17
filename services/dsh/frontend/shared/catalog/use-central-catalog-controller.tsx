@@ -220,8 +220,9 @@ export function useCentralCatalogController(authKind = "unauthenticated") {
 
     updateDomain: async (domainId: string, input: CatalogDomainUpdateInput) => {
       const expectedVersion = requireCatalogVersion(state.domains.items, domainId, "domain");
+      const request = { ...input, expectedVersion };
       return runMutationWithReadback(
-        () => api.updateCatalogDomain(domainId, { ...input, expectedVersion }),
+        () => api.updateCatalogDomain(domainId, request),
         loadDomains,
       );
     },
@@ -231,8 +232,9 @@ export function useCentralCatalogController(authKind = "unauthenticated") {
 
     updateNode: async (nodeId: string, input: CatalogNodeUpdateInput) => {
       const expectedVersion = requireCatalogVersion(state.nodes.items, nodeId, "node");
+      const request = { ...input, expectedVersion };
       return runMutationWithReadback(
-        () => api.updateCatalogNode(nodeId, { ...input, expectedVersion }),
+        () => api.updateCatalogNode(nodeId, request),
         loadNodes,
       );
     },
@@ -242,8 +244,9 @@ export function useCentralCatalogController(authKind = "unauthenticated") {
 
     updateMasterProduct: async (productId: string, input: CatalogMasterProductUpdateInput) => {
       const expectedVersion = requireCatalogVersion(state.masterProducts.items, productId, "master_product");
+      const request = { ...input, expectedVersion };
       return runMutationWithReadback(
-        () => api.updateMasterProduct(productId, { ...input, expectedVersion }),
+        () => api.updateMasterProduct(productId, request),
         loadMasterProducts,
       );
     },
