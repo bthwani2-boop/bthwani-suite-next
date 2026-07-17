@@ -5,7 +5,7 @@
   "required": ["schemaVersion", "entries"],
   "additionalProperties": false,
   "properties": {
-    "schemaVersion": { "const": 1 },
+    "schemaVersion": { "const": 2 },
     "entries": {
       "type": "array",
       "minItems": 1,
@@ -27,7 +27,9 @@
               "SCOPED_REGRESSION",
               "CONFIGURATION_BUDGET",
               "STATIC_SECURITY_AUDIT",
-              "SYNTAX_VALIDATION"
+              "SYNTAX_VALIDATION",
+              "IMMUTABLE_REFERENCE",
+              "RUNTIME_ACCESSIBILITY"
             ]
           },
           "proves": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
