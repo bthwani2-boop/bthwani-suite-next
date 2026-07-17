@@ -23,32 +23,16 @@ import {
   type PlatformControlResource,
   type PlatformMainTabId,
 } from "../../shared/platform";
+import { hasControlPanelPermission } from "../../shared/session/control-panel-permissions";
 import { useControlPanelSession } from "../../shared/session/control-panel-session";
+import { PlatformChangeWorkflowPanel } from "./PlatformChangeWorkflowPanel";
 import { ProviderRegistryPanel } from "./ProviderRegistryPanel";
 
 type ExecutiveTabId = Exclude<PlatformMainTabId, "notifications">;
 
-type SessionIdentity = {
-  readonly permissions?: readonly {
-    readonly service?: string;
-    readonly surface?: string;
-    readonly action?: string;
-    readonly scope?: string;
-  }[];
-};
-
 const EXECUTIVE_TABS = PLATFORM_MAIN_TABS.filter(
   (tab) => tab.id !== "notifications",
 );
-
-function hasPlatformPermission(identity: SessionIdentity, action: string): boolean {
-  return identity.permissions?.some((permission) =>
-    (permission.service === "dsh" || permission.service === "core") &&
-    permission.surface === "control-panel" &&
-    (permission.scope === "all" || permission.scope === "*") &&
-    (permission.action === action || permission.action === "*"),
-  ) ?? false;
-}
 
 function resourceFailure(
   data: PlatformControlReadModel,
@@ -65,8 +49,8 @@ function isRestricted(
 }
 
 function statusTone(status: string): "success" | "warning" | "danger" | "neutral" {
-  if (status === "READ_ONLY_BOUND") return "success";
-  if (status === "PARTIALLY_BOUND" || status === "UNKNOWN_HEALTH") return "warning";
+  if (status === "OPERATIONAL" || status === "READ_ONLY_BOUND") return "success";
+  if (status === "PARTIALLY_BOUND" || status === "UNKNOWN_HEALTH" || status === "CONTRACT_REQUIRED") return "warning";
   if (status === "FIX_REQUIRED" || status === "ROLLBACK_UNAVAILABLE") return "danger";
   return "neutral";
 }
@@ -102,7 +86,7 @@ function OverviewTab({ data }: { readonly data: PlatformControlReadModel }) {
       {effective ? (
         <Card>
           <View style={styles.cardContent}>
-            <Text role="titleSm">الإعداد الفعلي</Text>
+            <Text role="titleSm">الإعداد الفعلي المطبق</Text>
             <Text role="caption">المراجعة: {effective.revision}</Text>
             <Text role="caption">
               stale={String(effective.stale)} / fallback={String(effective.fallbackUsed)}
@@ -138,21 +122,19 @@ function VariablesTab({ data }: { readonly data: PlatformControlReadModel }) {
 
   return (
     <View style={styles.stack}>
-      <Text role="titleSm">المتغيرات السيادية</Text>
+      <Text role="titleSm">المتغيرات السيادية المطبقة</Text>
       {variablesFailure ? (
         <CpStatePanel role="alert" title="تعذر تحميل المتغيرات" code={variablesFailure} />
       ) : data.variables.length === 0 ? (
-        <EmptyRuntimeState
-          title="لا يوجد مخزن متغيرات متصل"
-          state={data.snapshot.variablesState}
-        />
+        <EmptyRuntimeState title="لا توجد متغيرات مطبقة" state={data.snapshot.variablesState} />
       ) : (
-        <CpTable aria-label="المتغيرات السيادية">
+        <CpTable aria-label="المتغيرات السيادية المطبقة">
           <thead>
             <tr>
               <CpTableHeaderCell>المفتاح</CpTableHeaderCell>
               <CpTableHeaderCell>المالك</CpTableHeaderCell>
               <CpTableHeaderCell>النطاق</CpTableHeaderCell>
+              <CpTableHeaderCell>نوع القيمة</CpTableHeaderCell>
               <CpTableHeaderCell>المراجعة</CpTableHeaderCell>
               <CpTableHeaderCell>الحالة</CpTableHeaderCell>
             </tr>
@@ -163,27 +145,26 @@ function VariablesTab({ data }: { readonly data: PlatformControlReadModel }) {
                 <CpTableCell>{variable.key}</CpTableCell>
                 <CpTableCell>{variable.ownerService}</CpTableCell>
                 <CpTableCell>{variable.scopeType}{variable.scopeId ? ` / ${variable.scopeId}` : ""}</CpTableCell>
+                <CpTableCell>{variable.valueType}</CpTableCell>
                 <CpTableCell>{variable.revision}</CpTableCell>
-                <CpTableCell>{variable.status}</CpTableCell>
+                <CpTableCell><Badge label={variable.status} tone={statusTone(variable.status)} /></CpTableCell>
               </tr>
             ))}
           </tbody>
         </CpTable>
       )}
 
-      <Text role="titleSm">أعلام الميزات</Text>
+      <Text role="titleSm">أعلام الميزات المطبقة</Text>
       {flagsFailure ? (
         <CpStatePanel role="alert" title="تعذر تحميل أعلام الميزات" code={flagsFailure} />
       ) : data.featureFlags.length === 0 ? (
-        <EmptyRuntimeState
-          title="لا توجد أعلام ميزات تشغيلية"
-          state={data.snapshot.flagsState}
-        />
+        <EmptyRuntimeState title="لا توجد أعلام ميزات مطبقة" state={data.snapshot.flagsState} />
       ) : (
-        <CpTable aria-label="أعلام الميزات">
+        <CpTable aria-label="أعلام الميزات المطبقة">
           <thead>
             <tr>
               <CpTableHeaderCell>المفتاح</CpTableHeaderCell>
+              <CpTableHeaderCell>المالك</CpTableHeaderCell>
               <CpTableHeaderCell>التفعيل</CpTableHeaderCell>
               <CpTableHeaderCell>المراجعة</CpTableHeaderCell>
               <CpTableHeaderCell>الحالة</CpTableHeaderCell>
@@ -193,9 +174,10 @@ function VariablesTab({ data }: { readonly data: PlatformControlReadModel }) {
             {data.featureFlags.map((flag) => (
               <tr key={flag.key}>
                 <CpTableCell>{flag.key}</CpTableCell>
+                <CpTableCell>{flag.ownerService}</CpTableCell>
                 <CpTableCell>{flag.enabled == null ? "غير محدد" : flag.enabled ? "مفعّل" : "متوقف"}</CpTableCell>
                 <CpTableCell>{flag.revision}</CpTableCell>
-                <CpTableCell>{flag.status}</CpTableCell>
+                <CpTableCell><Badge label={flag.status} tone={statusTone(flag.status)} /></CpTableCell>
               </tr>
             ))}
           </tbody>
@@ -204,9 +186,9 @@ function VariablesTab({ data }: { readonly data: PlatformControlReadModel }) {
 
       <CpStatePanel
         role="status"
-        title="التغييرات محجوبة حتى يكتمل Change Workflow"
-        description="لا اقتراح، ولا اعتماد، ولا تطبيق محلي، ولا تعديل مباشر للمتغيرات أو الأعلام من الواجهة."
-        code="PLATFORM_CHANGE_WORKFLOW_CONTRACT_REQUIRED"
+        title="التغييرات تُدار عبر السجل والتراجع"
+        description="إنشاء المقترح واعتماده وتطبيقه وتراجعه متاح في تبويب السجل والتراجع وفق صلاحيات منفصلة."
+        code={`variables=${data.snapshot.variablesState}; flags=${data.snapshot.flagsState}`}
       />
     </View>
   );
@@ -234,9 +216,7 @@ function ServicesTab({ data }: { readonly data: PlatformControlReadModel }) {
         {data.services.map((service) => (
           <tr key={service.service}>
             <CpTableCell>{service.service}</CpTableCell>
-            <CpTableCell>
-              <Badge label={service.state} tone={statusTone(service.state)} />
-            </CpTableCell>
+            <CpTableCell><Badge label={service.state} tone={statusTone(service.state)} /></CpTableCell>
             <CpTableCell>{service.evidenceSource}</CpTableCell>
           </tr>
         ))}
@@ -247,13 +227,7 @@ function ServicesTab({ data }: { readonly data: PlatformControlReadModel }) {
 
 function HealthTab({ data }: { readonly data: PlatformControlReadModel }) {
   if (isRestricted(data, "health")) {
-    return (
-      <CpStatePanel
-        role="alert"
-        title="صلاحية صحة المنصة مطلوبة"
-        code="PLATFORM_HEALTH_PERMISSION_REQUIRED"
-      />
-    );
+    return <CpStatePanel role="alert" title="صلاحية صحة المنصة مطلوبة" code="PLATFORM_HEALTH_PERMISSION_REQUIRED" />;
   }
   const failure = resourceFailure(data, "health");
   if (failure) {
@@ -268,6 +242,7 @@ function HealthTab({ data }: { readonly data: PlatformControlReadModel }) {
       <CpStatePanel
         role="status"
         title={`حالة الصحة: ${data.health.state}`}
+        description="صحة platform-control وقاعدة بياناته فعلية؛ تجميع صحة بقية الخدمات ما يزال جزئيًا حتى ربط probes مستقلة."
         code={`checkedAt=${data.health.checkedAt}`}
       />
       <ServicesTab data={{ ...data, services: data.health.services }} />
@@ -275,78 +250,62 @@ function HealthTab({ data }: { readonly data: PlatformControlReadModel }) {
   );
 }
 
-function RollbackTab({ data }: { readonly data: PlatformControlReadModel }) {
-  const changeFailure = resourceFailure(data, "change-sets");
-  const auditFailure = resourceFailure(data, "audit-events");
+function AuditTrail({ data }: { readonly data: PlatformControlReadModel }) {
+  if (isRestricted(data, "audit-events")) {
+    return <CpStatePanel role="alert" title="صلاحية سجل التدقيق مطلوبة" code="PLATFORM_AUDIT_PERMISSION_REQUIRED" />;
+  }
+  const failure = resourceFailure(data, "audit-events");
+  if (failure) {
+    return <CpStatePanel role="alert" title="تعذر تحميل سجل التدقيق" code={failure} />;
+  }
+  if (data.auditEvents.length === 0) {
+    return <EmptyRuntimeState title="لا توجد أحداث تدقيق بعد" state={data.snapshot.auditState} />;
+  }
 
+  return (
+    <CpTable aria-label="سجل تدقيق المنصة">
+      <thead>
+        <tr>
+          <CpTableHeaderCell>الإجراء</CpTableHeaderCell>
+          <CpTableHeaderCell>المنفذ</CpTableHeaderCell>
+          <CpTableHeaderCell>الحالة</CpTableHeaderCell>
+          <CpTableHeaderCell>السبب</CpTableHeaderCell>
+          <CpTableHeaderCell>الوقت</CpTableHeaderCell>
+        </tr>
+      </thead>
+      <tbody>
+        {data.auditEvents.map((event) => (
+          <tr key={event.id}>
+            <CpTableCell>{event.action}</CpTableCell>
+            <CpTableCell>{event.actorId}</CpTableCell>
+            <CpTableCell>{event.status}</CpTableCell>
+            <CpTableCell>{event.reason || "—"}</CpTableCell>
+            <CpTableCell>{event.createdAt}</CpTableCell>
+          </tr>
+        ))}
+      </tbody>
+    </CpTable>
+  );
+}
+
+function ChangeAndRollbackTab({
+  data,
+  onChanged,
+}: {
+  readonly data: PlatformControlReadModel;
+  readonly onChanged: () => Promise<void>;
+}) {
   return (
     <View style={styles.stack}>
       <CpStatePanel
         role="status"
         title={`حالة التراجع: ${data.snapshot.rollbackState}`}
-        description="لا يُعرض زر تراجع ما دام سجل التغييرات والتطبيق والتدقيق غير متصلين بمخزن سيادي."
+        description="التطبيق والتراجع يستخدمان معاملات PostgreSQL ومراجعات متوقعة ولقطات قبلية وسجل تدقيق."
         code={`audit=${data.snapshot.auditState}`}
       />
-
-      <Text role="titleSm">طلبات التغيير</Text>
-      {changeFailure ? (
-        <CpStatePanel role="alert" title="تعذر تحميل طلبات التغيير" code={changeFailure} />
-      ) : data.changeSets.length === 0 ? (
-        <EmptyRuntimeState title="لا توجد طلبات تغيير تشغيلية" state={data.snapshot.rollbackState} />
-      ) : (
-        <CpTable aria-label="طلبات تغيير المنصة">
-          <thead>
-            <tr>
-              <CpTableHeaderCell>المعرّف</CpTableHeaderCell>
-              <CpTableHeaderCell>الحالة</CpTableHeaderCell>
-              <CpTableHeaderCell>تاريخ الإنشاء</CpTableHeaderCell>
-            </tr>
-          </thead>
-          <tbody>
-            {data.changeSets.map((changeSet) => (
-              <tr key={changeSet.id}>
-                <CpTableCell>{changeSet.id}</CpTableCell>
-                <CpTableCell>{changeSet.status}</CpTableCell>
-                <CpTableCell>{changeSet.createdAt}</CpTableCell>
-              </tr>
-            ))}
-          </tbody>
-        </CpTable>
-      )}
-
+      <PlatformChangeWorkflowPanel onChanged={onChanged} />
       <Text role="titleSm">سجل التدقيق</Text>
-      {isRestricted(data, "audit-events") ? (
-        <CpStatePanel
-          role="alert"
-          title="صلاحية سجل التدقيق مطلوبة"
-          code="PLATFORM_AUDIT_PERMISSION_REQUIRED"
-        />
-      ) : auditFailure ? (
-        <CpStatePanel role="alert" title="تعذر تحميل سجل التدقيق" code={auditFailure} />
-      ) : data.auditEvents.length === 0 ? (
-        <EmptyRuntimeState title="لا توجد أحداث تدقيق تشغيلية" state={data.snapshot.auditState} />
-      ) : (
-        <CpTable aria-label="سجل تدقيق المنصة">
-          <thead>
-            <tr>
-              <CpTableHeaderCell>الإجراء</CpTableHeaderCell>
-              <CpTableHeaderCell>المنفذ</CpTableHeaderCell>
-              <CpTableHeaderCell>الحالة</CpTableHeaderCell>
-              <CpTableHeaderCell>الوقت</CpTableHeaderCell>
-            </tr>
-          </thead>
-          <tbody>
-            {data.auditEvents.map((event) => (
-              <tr key={event.id}>
-                <CpTableCell>{event.action}</CpTableCell>
-                <CpTableCell>{event.actorId}</CpTableCell>
-                <CpTableCell>{event.status}</CpTableCell>
-                <CpTableCell>{event.createdAt}</CpTableCell>
-              </tr>
-            ))}
-          </tbody>
-        </CpTable>
-      )}
+      <AuditTrail data={data} />
     </View>
   );
 }
@@ -356,7 +315,7 @@ function CanaryTab({ data }: { readonly data: PlatformControlReadModel }) {
     <CpStatePanel
       role="status"
       title="الإطلاق التدريجي غير مفعّل"
-      description="لا توجد واجهة تنفيذ أو محاكاة. التفعيل يتطلب استهدافًا، مقاييس صحة، إيقافًا، إلغاءً، وتراجعًا موثقًا في platform-control."
+      description="لا يتم عرض محاكاة. التفعيل يتطلب استهدافًا، مقاييس صحة، إيقافًا، إلغاءً، وتراجعًا مستقلًا في platform-control."
       code={data.snapshot.rolloutsState}
     />
   );
@@ -365,11 +324,10 @@ function CanaryTab({ data }: { readonly data: PlatformControlReadModel }) {
 export function PlatformDashboardScreen() {
   const [mainTab, setMainTab] = useState<ExecutiveTabId>("overview");
   const { state } = useControlPanelSession();
-
   const identity = state.kind === "authenticated" ? state.identity : null;
-  const canReadPlatform = identity ? hasPlatformPermission(identity, "platform:read") : false;
-  const canReadHealth = identity ? hasPlatformPermission(identity, "platform:health:read") : false;
-  const canReadAudit = identity ? hasPlatformPermission(identity, "platform:audit:read") : false;
+  const canReadPlatform = hasControlPanelPermission(identity, "platform:read");
+  const canReadHealth = hasControlPanelPermission(identity, "platform:health:read");
+  const canReadAudit = hasControlPanelPermission(identity, "platform:audit:read");
 
   const runtime = usePlatformControlRuntimeController({
     enabled: canReadPlatform,
@@ -379,22 +337,21 @@ export function PlatformDashboardScreen() {
 
   const metrics = useMemo(() => {
     if (runtime.state.kind !== "success") {
-      return { variables: "—", flags: "—", services: "—", unavailable: "—" };
+      return { variables: "—", flags: "—", services: "—", pendingChanges: "—" };
     }
     return {
       variables: runtime.state.data.variables.length,
       flags: runtime.state.data.featureFlags.filter((flag) => flag.enabled === true).length,
       services: runtime.state.data.services.length,
-      unavailable: runtime.state.data.unavailable.length,
+      pendingChanges: runtime.state.data.changeSets.filter((changeSet) =>
+        !["rejected", "applied", "rolled_back", "failed"].includes(changeSet.status),
+      ).length,
     };
   }, [runtime.state]);
 
   if (!canReadPlatform) {
     return (
-      <DataTablePageFrame
-        dir="rtl"
-        header={<CpPageHeader title="منصة DSH السيادية" />}
-      >
+      <DataTablePageFrame dir="rtl" header={<CpPageHeader title="منصة DSH السيادية" />}>
         <View style={styles.content}>
           <CpStatePanel
             role="alert"
@@ -413,13 +370,13 @@ export function PlatformDashboardScreen() {
       header={
         <CpPageHeader title="منصة DSH السيادية">
           <Text role="caption">
-            مركز قرار تنفيذي لحالة الخدمات والمتغيرات والأعلام والمزودين والصحة والتغيير الآمن؛ لا يحتوي أعمالًا تشغيلية يومية.
+            مركز قرار تنفيذي للخدمات والمتغيرات والأعلام والمزودين والصحة ودورة التغيير؛ لا يحتوي أعمالًا تشغيلية يومية.
           </Text>
           <CpKpiStrip>
-            <CpKpiCard label="المتغيرات الفعلية" value={metrics.variables} />
+            <CpKpiCard label="المتغيرات المطبقة" value={metrics.variables} />
             <CpKpiCard label="الأعلام المفعّلة" value={metrics.flags} />
             <CpKpiCard label="الخدمات المرصودة" value={metrics.services} />
-            <CpKpiCard label="مصادر غير متاحة" value={metrics.unavailable} />
+            <CpKpiCard label="طلبات قيد المعالجة" value={metrics.pendingChanges} />
           </CpKpiStrip>
         </CpPageHeader>
       }
@@ -456,15 +413,17 @@ export function PlatformDashboardScreen() {
             {mainTab === "providers" ? <ProviderRegistryPanel /> : null}
             {mainTab === "canary" ? <CanaryTab data={runtime.state.data} /> : null}
             {mainTab === "health" ? <HealthTab data={runtime.state.data} /> : null}
-            {mainTab === "rollback" ? <RollbackTab data={runtime.state.data} /> : null}
+            {mainTab === "rollback" ? (
+              <ChangeAndRollbackTab data={runtime.state.data} onChanged={runtime.reload} />
+            ) : null}
           </>
         ) : null}
       </View>
 
       <View style={styles.footer}>
         <Text role="caption">المالك: {PLATFORM_OWNERSHIP.owner}</Text>
-        <Text role="caption">العقد: core/platform-control</Text>
-        <Text role="caption">الوضع الحالي: قراءة سيادية فقط؛ mutations غير مفعّلة</Text>
+        <Text role="caption">العقد: core/platform-control v0.2.0</Text>
+        <Text role="caption">الوضع: P2 governed store active / progressive rollout contract-required</Text>
       </View>
     </DataTablePageFrame>
   );
