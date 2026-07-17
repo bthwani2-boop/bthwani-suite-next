@@ -89,6 +89,37 @@ if (artifact && impact) {
   }
 
   const highRisk = ["high", "critical"].includes(impact.riskClass);
+  const passDecision = artifact.decision === "PASS" || artifact.decision === "CLOSED_WITH_EVIDENCE";
+  const requiredApprovals = new Set(artifact.requiredApprovals ?? []);
+  const approvalByAuthority = new Map();
+
+  for (const approval of artifact.approvals ?? []) {
+    if (approvalByAuthority.has(approval.authority)) {
+      violations.push({ file: artifactPath, message: `DUPLICATE_AUTHORITY_APPROVAL ${approval.authority}` });
+    } else {
+      approvalByAuthority.set(approval.authority, approval);
+    }
+    if (approval.commitSha !== artifact.resolvedCommitSha) {
+      violations.push({ file: artifactPath, message: `STALE_APPROVAL_COMMIT ${approval.authority}` });
+    }
+    const protectedChange = highRisk || impact.impacts.ci === true || impact.impacts.governance === true;
+    if (protectedChange && artifact.changeAuthor && approval.approver === artifact.changeAuthor) {
+      violations.push({ file: artifactPath, message: `PROTECTED_CHANGE_SELF_APPROVAL ${approval.authority}` });
+    }
+  }
+
+  function requireImpactApproval(authority, impactName) {
+    if (!requiredApprovals.has(authority)) {
+      violations.push({ file: artifactPath, message: `${impactName}_REQUIRED_APPROVAL_MISSING ${authority}` });
+      return;
+    }
+    if (!passDecision) return;
+    const approval = approvalByAuthority.get(authority);
+    if (!approval || approval.decision !== "PASS") {
+      violations.push({ file: artifactPath, message: `${impactName}_PASS_WITHOUT_APPROVAL ${authority}` });
+    }
+  }
+
   if (highRisk && impact.impacts.security !== true) {
     violations.push({ file: impactPath, message: "HIGH_RISK_CHANGE_MUST_DECLARE_SECURITY_IMPACT" });
   }
@@ -109,35 +140,41 @@ if (artifact && impact) {
   if (impact.impacts.tenant === true && !(artifact.applicableGates ?? []).some((gate) => /TENANT|ISOLATION/.test(gate))) {
     violations.push({ file: artifactPath, message: "TENANT_IMPACT_WITHOUT_ISOLATION_GATE" });
   }
-  if (impact.impacts.ci === true && !(artifact.applicableGates ?? []).some((gate) => /CI|WORKFLOW|RELEASE/.test(gate))) {
-    violations.push({ file: artifactPath, message: "CI_IMPACT_WITHOUT_CI_OR_RELEASE_GATE" });
+  if (impact.impacts.ci === true) {
+    if (!(artifact.applicableGates ?? []).some((gate) => /CI|WORKFLOW|RELEASE/.test(gate))) {
+      violations.push({ file: artifactPath, message: "CI_IMPACT_WITHOUT_CI_OR_RELEASE_GATE" });
+    }
+    requireImpactApproval("ci_workflow_authority", "CI_IMPACT");
   }
-  if (impact.impacts.governance === true && !(artifact.applicableGates ?? []).some((gate) => /GOVERNANCE|SDLC|PRODUCT/.test(gate))) {
-    violations.push({ file: artifactPath, message: "GOVERNANCE_IMPACT_WITHOUT_GOVERNANCE_GATE" });
+  if (impact.impacts.governance === true) {
+    if (!(artifact.applicableGates ?? []).some((gate) => /GOVERNANCE|SDLC|PRODUCT/.test(gate))) {
+      violations.push({ file: artifactPath, message: "GOVERNANCE_IMPACT_WITHOUT_GOVERNANCE_GATE" });
+    }
+    requireImpactApproval("governance_contract_authority", "GOVERNANCE_IMPACT");
   }
 
-  const passDecision = artifact.decision === "PASS" || artifact.decision === "CLOSED_WITH_EVIDENCE";
+  if (passDecision) {
+    for (const authority of requiredApprovals) {
+      const approval = approvalByAuthority.get(authority);
+      if (!approval || approval.decision !== "PASS") {
+        violations.push({ file: artifactPath, message: `REQUIRED_APPROVAL_NOT_PASSED ${authority}` });
+      }
+    }
+  }
+
   if (passDecision && highRisk) {
-    const required = new Set(artifact.requiredApprovals ?? []);
     for (const authority of ["engineering_reviewer", "independent_quality_authority", "application_security_authority"]) {
-      if (!required.has(authority)) {
+      if (!requiredApprovals.has(authority)) {
         violations.push({ file: artifactPath, message: `HIGH_RISK_REQUIRED_APPROVAL_MISSING ${authority}` });
       }
     }
   }
 
-  const approverNames = new Set();
-  for (const approval of artifact.approvals ?? []) {
-    const key = `${approval.authority}:${approval.approver}`;
-    if (approverNames.has(key)) {
-      violations.push({ file: artifactPath, message: `DUPLICATE_APPROVAL ${key}` });
-    }
-    approverNames.add(key);
-    if (artifact.changeAuthor && approval.approver === artifact.changeAuthor && highRisk) {
-      violations.push({ file: artifactPath, message: `HIGH_RISK_SELF_APPROVAL ${approval.authority}` });
-    }
-    if (approval.commitSha !== artifact.resolvedCommitSha) {
-      violations.push({ file: artifactPath, message: `STALE_APPROVAL_COMMIT ${approval.authority}` });
+  if (impact.impacts.ci === true && impact.impacts.governance === true) {
+    const governanceApproval = approvalByAuthority.get("governance_contract_authority");
+    const ciApproval = approvalByAuthority.get("ci_workflow_authority");
+    if (governanceApproval && ciApproval && governanceApproval.approver === ciApproval.approver) {
+      violations.push({ file: artifactPath, message: "GOVERNANCE_AND_CI_APPROVERS_MUST_BE_SEPARATE" });
     }
   }
 }
