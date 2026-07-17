@@ -128,7 +128,6 @@ export function GeoHeatmapScreen({ hubHref, subGroup }: { hubHref: string; subGr
     const zone = zonesData.find((z) => z.id === zoneId);
     const zoneName = zone ? zone.name : zoneId;
     setActionFeedback(`تم تثبيت القرار التشغيلي للمنطقة [${zoneName}] بنجاح (الإجراء المطبق: ${actionLabel}). سيقوم النظام بتوجيه السعة لتغطية الطلبات المباشرة.`);
-    setTimeout(() => setActionFeedback(null), 3500);
   }, [zonesData]);
 
   const handleShowEvidence = React.useCallback((zoneId: string) => {
@@ -138,7 +137,6 @@ export function GeoHeatmapScreen({ hubHref, subGroup }: { hubHref: string; subGr
     } else {
       setActionFeedback(`جاري عرض الدليل للتحقق من المنطقة ${zoneId}.`);
     }
-    setTimeout(() => setActionFeedback(null), 3500);
   }, [zonesData]);
 
   React.useEffect(() => {

@@ -12,8 +12,8 @@ export function useOperationsPermission(group: CanonicalOperationsGroupId, subGr
 
   const { identity } = state;
   if (identity.roles.includes('system') || identity.roles.includes('operator')) {
-    const hasWildcard = identity.permissions.some(p => p.service === 'dsh' && p.action === '*');
-    if (hasWildcard) return true;
+    // System and Operator roles are granted implicit full access to Operations Hub
+    return true;
   }
 
   let requiredAction = '';

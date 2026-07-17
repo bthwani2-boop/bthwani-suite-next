@@ -204,7 +204,8 @@ export function ExceptionsEscalationsScreen({
       setKpis((prev) => ({ ...prev, escalate: prev.escalate + 1 }));
       setActionStatus('success');
       setActionFeedback(`تم تصعيد الاستثناء ونقل ملكيته إلى (${queueDetails.label}) بنجاح.`);
-      setTimeout(() => { setActionStatus('idle'); setActionFeedback(null); setActiveForm(null); setSelectedEscalationQueue('customer-support'); setHandoffNote(''); }, 1500);
+      // Removed setTimeout for zero-gap digital closing. Let the user acknowledge the success state,
+      // or we just reset the form on subsequent actions.
     };
 
     const exc = exceptions.find((e) => e.id === id);
@@ -241,7 +242,7 @@ export function ExceptionsEscalationsScreen({
       setKpis((prev) => ({ ...prev, open: Math.max(0, prev.open - 1), resolve: prev.resolve + 1, close: prev.close + 1 }));
       setActionStatus('success');
       setActionFeedback('تم حل الاستثناء وإغلاق تذكرته بنجاح وتحويل حالة الـ SLA إلى مستقر.');
-      setTimeout(() => { setActionStatus('idle'); setActionFeedback(null); setActiveForm(null); setResolutionNote(''); }, 1500);
+      // Removed setTimeout for zero-gap digital closing.
     };
 
     const exc = exceptions.find((e) => e.id === id);

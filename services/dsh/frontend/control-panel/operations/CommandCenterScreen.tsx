@@ -90,23 +90,20 @@ export function CommandCenterScreen({ subGroup = 'overview' }: CommandCenterScre
 
   let content = null;
 
-  const [wltOrders, setWltOrders] = React.useState<any[]>([]);
+  const [platformKpis, setPlatformKpis] = React.useState<any>(null);
+  const [orderAnalytics, setOrderAnalytics] = React.useState<any>(null);
 
   React.useEffect(() => {
     let cancelled = false;
-    import('../../shared/operations/dsh-operational-runtime-adapter').then(({ fetchDshRuntimeOrders }) => {
-      // Just fetch recent orders to find ones that might have WLT impact
-      fetchDshRuntimeOrders({ limit: 20, scope: 'operator' }).then((result) => {
-        if (cancelled) return;
-        if (result.kind === 'ok') {
-          // Mocking some financial anomaly state for demonstration of WLT boundaries
-          const anomalies = result.orders.slice(0, 3).map(o => ({
-            ...o,
-            wltAlert: o.status === 'cancelled' ? 'طلب استرداد معلق' : 'تسوية شريك قيد المراجعة'
-          }));
-          setWltOrders(anomalies);
-        }
-      });
+    Promise.all([
+      import('../../shared/analytics/analytics.api').then(m => m.fetchPlatformKpis()),
+      import('../../shared/analytics/analytics.api').then(m => m.fetchOrderAnalytics()),
+    ]).then(([kpisRes, ordersRes]) => {
+      if (cancelled) return;
+      setPlatformKpis(kpisRes);
+      setOrderAnalytics(ordersRes);
+    }).catch(err => {
+      console.error('Failed to fetch analytics:', err);
     });
     return () => { cancelled = true; };
   }, []);
@@ -155,42 +152,37 @@ export function CommandCenterScreen({ subGroup = 'overview' }: CommandCenterScre
           </div>
         </div>
 
-        {/* 6. WLT finance alerts */}
+        {/* 2. Live Analytics Summary */}
         <div className={styles.surfaceCompactPanel}>
-          <h3 className={styles.surfacePanelTitleCompact}>تنبيهات WLT المالية (قراءة فقط)</h3>
-          <Box gap={1} paddingX={1} paddingY={1}>
-            <Text role="caption" tone="muted">
-              لا تعديل مالي أو تسوية داخل DSH؛ المرجعية الكاملة لـ WLT.
-            </Text>
-          </Box>
+          <h3 className={styles.surfacePanelTitleCompact}>نظرة عامة على الطلبات والتنفيذ</h3>
           <div className={styles.surfaceStackSmall}>
-            {wltOrders.length === 0 ? (
-              <Text role="caption" tone="muted">لا يوجد مصدر بيانات حي لتنبيهات WLT المالية حالياً.</Text>
-            ) : (
-              wltOrders.map((o) => (
-                <WebControlPanelDecisionRow
-                  key={o.id}
-                  entityId={o.id}
-                  entityLabel={`العميل: ${o.clientId} · مبلغ: ${o.totalPrice}`}
-                  status={o.wltAlert}
-                  statusTone="danger"
-                  recommendation="انتظار إجراء المحفظة"
-                  reason="مملوك لـ WLT بالكامل"
-                  sla="—"
-                  primaryAction={{
-                    id: `wlt-${o.id}`,
-                    label: 'Managed by WLT',
-                    onAction: () => {},
-                    disabled: true, // Protocol: always disabled
-                  }}
-                  secondaryAction={{
-                    id: `wlt-view-${o.id}`,
-                    label: 'عرض التفاصيل',
-                    onAction: () => router.push(getDshRoute('finance')),
-                  }}
-                />
-              ))
-            )}
+            <WebControlPanelDecisionRow
+              entityId="ORDERS_TOTAL"
+              entityLabel="الطلبات الكلية (اليوم)"
+              status={orderAnalytics ? String(orderAnalytics.totalOrders) : 'جاري التحميل'}
+              statusTone="neutral"
+              recommendation="مراقبة مستمرة"
+              reason="مؤشر تدفق الطلبات"
+              sla="—"
+            />
+            <WebControlPanelDecisionRow
+              entityId="ORDERS_UNASSIGNED"
+              entityLabel="مهام غير مسندة"
+              status={platformKpis ? String(platformKpis.unassignedTasks) : 'جاري التحميل'}
+              statusTone={platformKpis && platformKpis.unassignedTasks > 0 ? 'warning' : 'success'}
+              recommendation={platformKpis && platformKpis.unassignedTasks > 0 ? 'يتطلب تدخل فوري للإسناد' : 'الحالة ممتازة'}
+              reason="الطلبات الجاهزة بانتظار تعيين كابتن"
+              sla="—"
+            />
+            <WebControlPanelDecisionRow
+              entityId="WLT_FAILURES"
+              entityLabel="إخفاقات تسليم WLT (Outbox)"
+              status={platformKpis ? String(platformKpis.wltHandoffFailures) : 'جاري التحميل'}
+              statusTone={platformKpis && platformKpis.wltHandoffFailures > 0 ? 'danger' : 'success'}
+              recommendation={platformKpis && platformKpis.wltHandoffFailures > 0 ? 'تحويل للمالية - اختناق بالشبكة أو عطل' : 'لا توجد تعثرات'}
+              reason="أحداث لم يتم تسليمها لمحفظة WLT بعد المزامنة"
+              sla="—"
+            />
           </div>
         </div>
       </div>
@@ -199,13 +191,25 @@ export function CommandCenterScreen({ subGroup = 'overview' }: CommandCenterScre
     content = (
       <div className={styles.surfaceGridTwoCol}>
         <div className={styles.surfaceCompactPanel}>
-          <h3 className={styles.surfacePanelTitleCompact}>شواذ النظام (Anomalies)</h3>
+          <h3 className={styles.surfacePanelTitleCompact}>شواذ النظام والتصعيد (Anomalies)</h3>
           <div className={styles.surfaceStackSmall}>
-            <WebControlPanelRecommendation
-              title="BLOCKED_NEEDS_RUNTIME_SOURCE"
-              reason="لا يوجد مصدر عمليات حي."
-              confidence="low"
-              auditTag="NEEDS_RUNTIME_EVIDENCE"
+            <WebControlPanelDecisionRow
+              entityId="OPEN_INCIDENTS"
+              entityLabel="حوادث مفتوحة"
+              status={platformKpis ? String(platformKpis.openIncidents) : 'جاري التحميل'}
+              statusTone={platformKpis && platformKpis.openIncidents > 0 ? 'danger' : 'success'}
+              recommendation="مراجعة الحوادث التشغيلية المفتوحة"
+              reason="أعطال أو مشاكل تقنية حية"
+              sla="—"
+            />
+            <WebControlPanelDecisionRow
+              entityId="OPEN_ESCALATIONS"
+              entityLabel="تصعيدات معلقة"
+              status={platformKpis ? String(platformKpis.openEscalations) : 'جاري التحميل'}
+              statusTone={platformKpis && platformKpis.openEscalations > 0 ? 'warning' : 'success'}
+              recommendation="تتطلب متابعة مع المشرف"
+              reason="حالات تجاوزت السقف المسموح للانتظار"
+              sla="—"
             />
           </div>
         </div>
@@ -217,12 +221,29 @@ export function CommandCenterScreen({ subGroup = 'overview' }: CommandCenterScre
         <div className={styles.surfaceCompactPanel}>
           <h3 className={styles.surfacePanelTitleCompact}>توصيات ذكية</h3>
           <div className={styles.surfaceStackSmall}>
-            <WebControlPanelRecommendation
-              title="BLOCKED_NEEDS_RUNTIME_SOURCE"
-              reason="لا يوجد مصدر عمليات حي."
-              confidence="low"
-              auditTag="NEEDS_RUNTIME_EVIDENCE"
-            />
+            {platformKpis && platformKpis.unassignedTasks > 0 ? (
+              <WebControlPanelRecommendation
+                title="توجيه أسطول سريع"
+                reason="يوجد مهام غير مسندة، يوصى بتحريك كباتن أو تفعيل حافز Surge لتلبية الطلب."
+                confidence="high"
+                auditTag="CAPACITY_REDISTRIBUTION"
+              />
+            ) : (
+              <WebControlPanelRecommendation
+                title="استقرار تشغيلي"
+                reason="جميع الطلبات مسندة أو قيد المعالجة بنجاح."
+                confidence="high"
+                auditTag="SYSTEM_STABLE"
+              />
+            )}
+            {platformKpis && platformKpis.wltHandoffFailures > 0 && (
+              <WebControlPanelRecommendation
+                title="أخطاء المزامنة مع WLT"
+                reason="أحداث تسليم مالية متأخرة أو معلقة، قم بإخطار فريق الهندسة فوراً."
+                confidence="high"
+                auditTag="FINANCE_HANDOFF_ALERT"
+              />
+            )}
           </div>
         </div>
       </div>
@@ -234,10 +255,10 @@ export function CommandCenterScreen({ subGroup = 'overview' }: CommandCenterScre
           <h3 className={styles.surfacePanelTitleCompact}>{subGroup}</h3>
           <div className={styles.surfaceStackSmall}>
             <WebControlPanelRecommendation
-              title="BLOCKED_NEEDS_RUNTIME_SOURCE"
-              reason="لا يوجد مصدر عمليات حي."
+              title="لا توجد بيانات إضافية"
+              reason={`لا توجد إحصائيات معتمدة لقسم ${subGroup} حالياً.`}
               confidence="low"
-              auditTag="NEEDS_RUNTIME_EVIDENCE"
+              auditTag="NO_DATA"
             />
           </div>
         </div>
