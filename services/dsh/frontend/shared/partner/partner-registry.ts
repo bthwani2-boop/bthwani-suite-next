@@ -1,11 +1,7 @@
 export type PartnerWorkspaceTabId =
   | 'inbox'
   | 'all_partners'
-  | 'activation'
-  | 'field_readiness'
-  | 'documents_contracts'
-  | 'governance'
-  | 'performance';
+  | 'field_readiness';
 
 export type PartnerSubTabItem = {
   readonly id: string;
@@ -18,52 +14,44 @@ export type PartnerWorkspaceTabItem = {
   readonly active?: boolean;
 };
 
+/**
+ * Only globally backed workspaces are exposed here. Partner documents,
+ * lifecycle activation, stores, visits, readiness, and audit are entity-scoped
+ * and live in PartnerDetailScreen after selecting the sovereign partner id.
+ */
 export const PARTNER_PRIMARY_TABS: readonly PartnerWorkspaceTabItem[] = [
-  { id: 'inbox', label: 'الوارد الجديد' },
+  { id: 'inbox', label: 'طلبات الانضمام' },
   { id: 'all_partners', label: 'كل الشركاء' },
-  { id: 'activation', label: 'تفعيل' },
-  { id: 'field_readiness', label: 'جاهزية الميدان' },
-  { id: 'documents_contracts', label: 'العقود والوثائق' },
-  { id: 'governance', label: 'الحوكمة والتجاوزات' },
-  { id: 'performance', label: 'الأداء والعروض' },
+  { id: 'field_readiness', label: 'تصعيدات الجاهزية' },
 ];
 
-export const PARTNER_SUB_TAB_DEFINITIONS: Readonly<Record<string, readonly PartnerSubTabItem[]>> = {
+export const PARTNER_SUB_TAB_DEFINITIONS: Readonly<Record<PartnerWorkspaceTabId, readonly PartnerSubTabItem[]>> = {
   inbox: [
     { id: 'registration', label: 'طلبات التسجيل' },
-    { id: 'modifications', label: 'تعديل البيانات' },
-    { id: 'complaints', label: 'شكاوى الشراكة' },
   ],
   all_partners: [
     { id: 'partners_list', label: 'قائمة الشركاء' },
   ],
-  activation: [
-    { id: 'partner_activation', label: 'تفعيل شركاء' },
-  ],
   field_readiness: [
-    { id: 'field_readiness_queue', label: 'جاهزية الميدان' },
-    { id: 'readiness_escalations', label: 'تصاعد الجاهزية' },
-    { id: 'readiness_approvals', label: 'اعتمادات الجاهزية' },
-  ],
-  documents_contracts: [
-    { id: 'documents', label: 'وثائق الشراكة' },
-    { id: 'contracts', label: 'إدارة العقود والإحصاءات' },
-  ],
-  governance: [
-    { id: 'overrides', label: 'تجاوزات الكاتالوج' },
-    { id: 'deactivation', label: 'إلغاء التفعيل' },
-  ],
-  performance: [
-    { id: 'performance', label: 'الأداء والإحصاءات' },
-    { id: 'eligibility', label: 'أهلية الترويج' },
-    { id: 'topology', label: 'مستويات الخدمة' },
+    { id: 'field_readiness_queue', label: 'قائمة التصعيدات' },
   ],
 };
+
+export function isPartnerWorkspaceTabId(value: string | null | undefined): value is PartnerWorkspaceTabId {
+  return value === 'inbox' || value === 'all_partners' || value === 'field_readiness';
+}
+
+export function resolvePartnerSubTab(workspace: PartnerWorkspaceTabId, value: string | null | undefined): string {
+  const definitions = PARTNER_SUB_TAB_DEFINITIONS[workspace];
+  if (value && definitions.some((item) => item.id === value)) return value;
+  return definitions[0]?.id ?? '';
+}
 
 export function buildPartnersHref(group: PartnerWorkspaceTabId = 'inbox', options?: { subGroup?: string | undefined }) {
   const searchParams = new URLSearchParams();
   if (group !== 'inbox') searchParams.set('workspace', group);
-  if (options?.subGroup) searchParams.set('subGroup', options.subGroup);
+  const subGroup = resolvePartnerSubTab(group, options?.subGroup);
+  if (subGroup) searchParams.set('subGroup', subGroup);
   const query = searchParams.toString();
   return query ? `/dsh/partners?${query}` : '/dsh/partners';
 }
