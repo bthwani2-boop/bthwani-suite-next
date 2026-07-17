@@ -5,14 +5,13 @@ import type { CanonicalOperationsGroupId } from './operations.types';
 
 export function useOperationsPermission(group: CanonicalOperationsGroupId, subGroup?: string): boolean {
   const { state } = useControlPanelSession();
-  
+
   if (state.kind !== 'authenticated') {
     return false;
   }
 
   const { identity } = state;
-  if (identity.roles.includes('system') || identity.roles.includes('operator')) {
-    // System and Operator roles are granted implicit full access to Operations Hub
+  if (identity.roles.includes('system')) {
     return true;
   }
 
@@ -23,11 +22,9 @@ export function useOperationsPermission(group: CanonicalOperationsGroupId, subGr
   } else if (group === 'dispatch-capacity') {
     requiredAction = 'operations.dispatch.read';
   } else if (group === 'exceptions') {
-    if (subGroup === 'audit') {
-      requiredAction = 'operations.audit.read';
-    } else {
-      requiredAction = 'operations.exceptions.read';
-    }
+    requiredAction = subGroup === 'audit'
+      ? 'operations.audit.read'
+      : 'operations.exceptions.read';
   } else if (group === 'live-orders') {
     if (subGroup === 'partner_delivery') {
       requiredAction = 'operations.partner_delivery.read';
@@ -40,7 +37,9 @@ export function useOperationsPermission(group: CanonicalOperationsGroupId, subGr
     requiredAction = 'operations.general.read';
   }
 
-  return identity.permissions.some(
-    p => p.service === 'dsh' && (p.action === '*' || p.action === requiredAction || p.action.startsWith(requiredAction.replace('.read', '')))
-  );
+  return identity.permissions.some((permission) => {
+    if (permission.service !== 'dsh') return false;
+    if (permission.action === '*') return true;
+    return permission.action === requiredAction;
+  });
 }
