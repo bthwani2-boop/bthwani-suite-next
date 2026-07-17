@@ -2,7 +2,7 @@ name: Swagger API Docs
 
 on:
   push:
-    branches: [implementing, master, onebyone]
+    branches: [bassam, master]
     paths:
       - "contracts/**"
       - "core/**/contracts/**"
@@ -10,7 +10,7 @@ on:
       - "tools/scripts/build-swagger-static.mjs"
       - ".github/workflows/swagger.yml"
   pull_request:
-    branches: [implementing, master, onebyone]
+    branches: [master]
     paths:
       - "contracts/**"
       - "core/**/contracts/**"
@@ -22,36 +22,28 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: swagger-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-docs:
-    name: Build Swagger UI Documentation
+    name: Build Swagger UI documentation
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-
+    timeout-minutes: 20
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup PNPM
-        uses: pnpm/action-setup@v4
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
-          version: 10.34.2
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-          cache: "pnpm"
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
+          persist-credentials: false
+      - name: Setup workspace
+        uses: ./.github/actions/setup-node-workspace
       - name: Build Swagger static files
         run: pnpm run swagger:build
-
-      - name: Upload Swagger UI Artifact
-        uses: actions/upload-artifact@v4
+      - name: Upload Swagger UI artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: swagger-api-docs
           path: dist-swagger
-          retention-days: 30
+          if-no-files-found: error
+          retention-days: 7
