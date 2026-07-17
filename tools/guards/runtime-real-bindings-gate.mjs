@@ -59,6 +59,8 @@ const forbiddenRemovedPaths = [
   "services/dsh/frontend/control-panel/marketing/components/LoyaltyCommandDeck.tsx",
   "services/dsh/frontend/control-panel/marketing/components/SubscriptionsCommandDeck.tsx",
   "services/dsh/frontend/app-client/account/BenefitsHubScreen.tsx",
+  "services/dsh/frontend/shared/marketing/commercial-contract.ts",
+  "services/dsh/frontend/shared/partner/partner-fleet.api.ts",
   ".github/workflows/one-time-partner-detail-closure-bassam.yml",
   ".github/workflows/partner-domain-audit.yml",
 ];
@@ -76,6 +78,18 @@ for (const [pattern, message] of [
 ]) {
   for (const match of clientSurface.matchAll(pattern)) {
     violations.push({ file: clientSurfacePath, line: lineNumber(clientSurface, match.index), message });
+  }
+}
+
+const marketingApiPath = "services/dsh/frontend/shared/marketing/marketing.api.ts";
+const marketingApi = read(marketingApiPath);
+for (const [pattern, message] of [
+  [/\/dsh\/operator\/marketing\/loyalty-tiers/g, "UNREGISTERED_LOYALTY_ROUTE_CLIENT_FORBIDDEN"],
+  [/\/dsh\/operator\/marketing\/subscription-plans/g, "UNREGISTERED_SUBSCRIPTION_ROUTE_CLIENT_FORBIDDEN"],
+  [/\/dsh\/client\/benefits/g, "UNREGISTERED_CLIENT_BENEFITS_ROUTE_FORBIDDEN"],
+]) {
+  for (const match of marketingApi.matchAll(pattern)) {
+    violations.push({ file: marketingApiPath, line: lineNumber(marketingApi, match.index), message });
   }
 }
 
@@ -99,6 +113,17 @@ for (const [pattern, message] of [
 ]) {
   for (const match of visibility.matchAll(pattern)) {
     violations.push({ file: visibilityPath, line: lineNumber(visibility, match.index), message });
+  }
+}
+
+const captainSettingsPath = "services/dsh/frontend/app-captain/account/DshCaptainAccountSettingsContent.tsx";
+const captainSettings = read(captainSettingsPath);
+for (const [pattern, message] of [
+  [/connectCaptainToPartnerFleet|listCaptainPartnerFleetMemberships/g, "UNREGISTERED_CAPTAIN_FLEET_CLIENT_FORBIDDEN"],
+  [/eval\(["']require["']\)|RNSwitch/g, "DYNAMIC_REACT_NATIVE_SWITCH_LOADING_FORBIDDEN"],
+]) {
+  for (const match of captainSettings.matchAll(pattern)) {
+    violations.push({ file: captainSettingsPath, line: lineNumber(captainSettings, match.index), message });
   }
 }
 
