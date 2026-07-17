@@ -22,6 +22,24 @@ export function AreaCapacityScreen({ hubHref: _hubHref, subGroup: _subGroup }: A
 
   // Stateful zones data list
   const [zones, setZones] = React.useState<any[]>([]);
+  const [zonesLoaded, setZonesLoaded] = React.useState(false);
+  const [zonesError, setZonesError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    import('../../shared/platform/platform-policies.api').then(({ fetchZones }) => {
+      fetchZones().then((res) => {
+        if (cancelled) return;
+        setZones(res.zones || []);
+        setZonesLoaded(true);
+      }).catch((err) => {
+        if (cancelled) return;
+        setZonesError(err.message);
+        setZonesLoaded(true);
+      });
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   // Stateful KPIs summary
   const [kpis, setKpis] = React.useState<{ zoneLoad: string; protectedZones: number; freeZones: number; surgeBonus: string }>({
@@ -36,7 +54,7 @@ export function AreaCapacityScreen({ hubHref: _hubHref, subGroup: _subGroup }: A
   const [isChangingPage, setIsChangingPage] = React.useState(false);
   const pageSize = 3;
 
-  const totalPages = Math.ceil(zones.length / pageSize);
+  const totalPages = Math.ceil(zones.length / pageSize) || 1;
   const paginatedZones = React.useMemo(() => {
     return zones.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   }, [zones, currentPage]);
@@ -360,28 +378,37 @@ export function AreaCapacityScreen({ hubHref: _hubHref, subGroup: _subGroup }: A
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {paginatedZones.map((area) => {
-                  const statusTone = DSH_CONTROL_PANEL_TONE_MAP[area.customStatusTone] ?? 'neutral';
-                  return (
-                    <WebControlPanelDecisionRow
-                      key={area.id}
-                      entityId={area.id}
-                      entityLabel={area.zone}
-                      status={area.customZoneLoad}
-                      statusTone={statusTone}
-                      risk={area.customStatusTone === 'danger' ? 'danger' : area.customStatusTone === 'warning' ? 'warning' : 'neutral'}
-                      recommendation={area.customRecommendation}
-                      reason={area.customNote}
-                      sla={`محمية: ${area.customProtectedZones} | حرة: ${area.customFreeZones} | حافز: ${area.customSurgeBonus}`}
-                      onInspect={() => setSelectedZoneId(area.id)}
-                      primaryAction={{
-                        id: `${area.id}-inspect`,
-                        label: 'معاينة وضبط السعة',
-                        onAction: () => setSelectedZoneId(area.id),
-                      }}
-                    />
-                  );
-                })}
+                {!zonesLoaded ? (
+                  <div style={{ padding: '16px', textAlign: 'center' }}><span style={{ fontSize: '11px', color: 'var(--bthwani-control-panel-text-muted)' }}>جارٍ تحميل المناطق...</span></div>
+                ) : zonesError ? (
+                  <div style={{ padding: '16px', textAlign: 'center', color: 'var(--bthwani-control-panel-danger)' }}><span style={{ fontSize: '11px' }}>تعذر تحميل المناطق: {zonesError}</span></div>
+                ) : zones.length === 0 ? (
+                  <div style={{ padding: '16px', textAlign: 'center' }}><span style={{ fontSize: '11px', color: 'var(--bthwani-control-panel-text-muted)' }}>لا توجد مناطق لعرضها.</span></div>
+                ) : (
+                  paginatedZones.map((area) => {
+                    const status = area.isActive ? 'نشط' : 'غير نشط';
+                    const statusTone = area.isActive ? 'success' : 'neutral';
+                    return (
+                      <WebControlPanelDecisionRow
+                        key={area.id}
+                        entityId={area.id}
+                        entityLabel={area.name || area.zone || 'منطقة غير مسماة'}
+                        status={area.customZoneLoad || status}
+                        statusTone={area.customStatusTone || statusTone}
+                        risk={area.customStatusTone === 'danger' ? 'danger' : area.customStatusTone === 'warning' ? 'warning' : 'neutral'}
+                        recommendation={area.customRecommendation || 'مراقبة مستمرة'}
+                        reason={area.customNote || `مدينة: ${area.cityCode}`}
+                        sla={`محمية: ${area.customProtectedZones || 0} | حرة: ${area.customFreeZones || 0} | حافز: ${area.customSurgeBonus || 'غير محدد'}`}
+                        onInspect={() => setSelectedZoneId(area.id)}
+                        primaryAction={{
+                          id: `${area.id}-inspect`,
+                          label: 'معاينة وضبط السعة',
+                          onAction: () => setSelectedZoneId(area.id),
+                        }}
+                      />
+                    );
+                  })
+                )}
               </div>
             )}
 

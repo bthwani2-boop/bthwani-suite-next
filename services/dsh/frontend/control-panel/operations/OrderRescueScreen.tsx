@@ -549,6 +549,56 @@ export function OrderRescueScreen({ hubHref: _hubHref, subGroup: _subGroup }: Or
   const [openRescueId, setOpenRescueId] = React.useState<string | null>(null);
   const [overriddenActions, setOverriddenActions] = React.useState<Record<string, boolean>>({});
   const [submitNotes, setSubmitNotes] = React.useState<Record<string, string | null>>({});
+  const [retryCount, setRetryCount] = React.useState(0);
+  const retry = React.useCallback(() => setRetryCount((n) => n + 1), []);
+  const [runtimeState, setRuntimeState] = React.useState<{ loaded: boolean; offline: boolean; error: string | null }>({ loaded: false, offline: false, error: null });
+
+  React.useEffect(() => {
+    let cancelled = false;
+    // For rescue, we fetch pending orders or orders that might need rescue. 
+    // In DSH, we just fetch recent orders to simulate rescue triggers.
+    import('../../shared/operations/dsh-operational-runtime-adapter').then(({ fetchDshRuntimeOrders }) => {
+      fetchDshRuntimeOrders({ limit: 50, scope: 'operator' }).then((result) => {
+        if (cancelled) return;
+        if (result.kind === 'ok') {
+          // Map to RescueCase
+          const mappedCases: RescueCase[] = result.orders.map(o => ({
+            rescueId: `RESCUE-${o.id}`,
+            orderId: o.id,
+            customerId: o.clientId,
+            customerName: `عميل ${o.clientId.slice(0, 4)}`,
+            blocker: o.status === 'pending' ? 'بانتظار المتجر' : 'تأخير استلام',
+            severity: o.status === 'pending' ? 'warning' : 'danger',
+            issueKind: 'customer_not_reachable',
+            rescueReasonSelector: {
+              selectedReason: 'customer_not_reachable',
+              options: ['customer_not_reachable', 'item_unavailable', 'captain_declined'],
+            },
+            ownerSelection: {
+              selectedOwner: 'support',
+              options: ['support', 'operations', 'partner', 'captain'],
+            },
+            nextActionSelector: {
+              selectedAction: 'wait_customer',
+              options: ['wait_customer', 'replace_item', 'reassign_captain'],
+            },
+            requiredEvidence: { reason: '', affectedEntity: '', operatorNote: '' },
+            forbiddenActions: [],
+            supportHandoff: { ticketLink: `TKT-${o.id.slice(0, 4)}`, sla: '15m', routeHint: '/dsh/support' },
+            wltImpactVisibility: { calculationTruthOwner: 'DSH', paymentVisibility: 'Read-only', refundVisibility: 'Read-only' },
+            crossSurfaceLinks: [],
+          }));
+          setCases(mappedCases);
+          setRuntimeState({ loaded: true, offline: false, error: null });
+        } else if (result.kind === 'offline') {
+          setRuntimeState({ loaded: false, offline: true, error: null });
+        } else {
+          setRuntimeState({ loaded: false, offline: false, error: result.message });
+        }
+      });
+    });
+    return () => { cancelled = true; };
+  }, [retryCount]);
 
   // Deep-link: auto-open if URL contains a rescue/order context
   React.useEffect(() => {

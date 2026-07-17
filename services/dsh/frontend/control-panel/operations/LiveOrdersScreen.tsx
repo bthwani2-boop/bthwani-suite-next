@@ -24,6 +24,8 @@ export type LiveOrdersScreenProps = {
 
 const FULFILLMENT_MODE_IDS: readonly DshFulfillmentOperationalMode[] = ['bthwani_delivery', 'partner_delivery', 'pickup'];
 
+const DshPartnerStoreCourierScreen = React.lazy(() => import('../../app-partner/store/DshPartnerStoreCourierScreen').then(m => ({ default: m.DshPartnerStoreCourierScreen })));
+
 // Live orders is runtime-only: every row comes from the DSH backend orders
 // API. There is intentionally no preview/local fallback path — when the
 // runtime is unreachable the screen says so plainly instead of rendering
@@ -32,6 +34,7 @@ export function LiveOrdersScreen({ state = 'ready', subGroup, onRetry }: LiveOrd
   const router = useRouter();
   const activeMode = FULFILLMENT_MODE_IDS.find((m) => m === subGroup) ?? null;
   const [retryCount, setRuntimeRetryCount] = React.useState(0);
+  const [selectedOrderId, setSelectedOrderId] = React.useState<string | null>(null);
   const retry = React.useCallback(() => setRuntimeRetryCount((n) => n + 1), []);
   const [runtimeState, setRuntimeState] = React.useState<{
     orders: readonly DshRuntimeOrderRow[];
@@ -77,6 +80,7 @@ export function LiveOrdersScreen({ state = 'ready', subGroup, onRetry }: LiveOrd
 
   const runtimeActive = runtimeState.loaded;
   const pendingAcceptanceCount = runtimeState.orders.filter((order) => order.status === 'pending').length;
+  const selectedOrder = runtimeState.orders.find((o) => o.id === selectedOrderId) ?? null;
 
   const summaryKpi = [
     { id: 'live', label: 'الطلبات النشطة', value: runtimeActive ? String(runtimeState.total) : '—', tone: 'neutral' as const },
@@ -105,7 +109,13 @@ export function LiveOrdersScreen({ state = 'ready', subGroup, onRetry }: LiveOrd
                   status={order.status}
                   statusTone={resolveRuntimeOrderStatusTone(order.status)}
                   sla={`تاريخ الإنشاء: ${new Date(order.createdAt).toLocaleString('ar-SA', { hour: '2-digit', minute: '2-digit' })}`}
-                  onInspect={() => router.push(buildOperationsHref('exceptions', { orderId: order.id }))}
+                  onInspect={() => {
+                    if (order.fulfillmentMode === 'partner_delivery') {
+                      setSelectedOrderId(order.id);
+                    } else {
+                      router.push(buildOperationsHref('exceptions', { orderId: order.id }));
+                    }
+                  }}
                   {...(order.status === 'pending' && order.fulfillmentMode === 'bthwani_delivery' ? {
                     primaryAction: {
                       id: `${order.id}-dispatch`,
@@ -129,27 +139,34 @@ export function LiveOrdersScreen({ state = 'ready', subGroup, onRetry }: LiveOrd
             )}
           </WebControlPanelQueue>
 
-          {activeMode && (
-            <WebControlPanelQueue
-              title={DSH_FULFILLMENT_OPERATIONAL_MODE_META[activeMode]?.label || activeMode}
-              meta={DSH_FULFILLMENT_OPERATIONAL_MODE_META[activeMode]?.operationalOwner ?? 'غير محدد'}
-            >
-              <div style={{ padding: '12px' }}>
-                <Text role="bodySm" tone="muted">
-                  قوائم قناة التنفيذ غير مربوطة بمصدر runtime بعد (UI_ONLY_BLOCKED). تُدار الطلبات من قائمة الطلبات المباشرة أعلاه حتى يُنشر مصدر بيانات معتمد لهذه القناة — لا تُعرض صفوف أو إجراءات وهمية هنا.
-                </Text>
-              </div>
-            </WebControlPanelQueue>
-          )}
+
         </Box>
 
         <Box gap={4}>
-          <WebControlPanelRecommendation
-            title="تفاصيل الإجراء والتحكم"
-            reason="افتح أي طلب مباشر من القائمة للانتقال إلى مساحة الاستثناءات، أو استخدم إجراء إسناد الكابتن للطلبات المعلقة — كل الإجراءات هنا تمر عبر مسارات backend حقيقية فقط."
-            confidence="high"
-            auditTag="LIVE_ORDERS_MONITOR"
-          />
+          {selectedOrder ? (
+            <div className={styles.surfaceInspectorShell}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', borderBottom: '1px solid var(--bthwani-control-panel-border)' }}>
+                <span style={{ fontSize: '14px', fontWeight: 800 }}>إعدادات الكابتن الشريك (Partner Courier)</span>
+                <button type="button" onClick={() => setSelectedOrderId(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '16px' }}>✕</button>
+              </div>
+              <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+                <React.Suspense fallback={<div style={{ padding: '24px', textAlign: 'center' }}>جاري التحميل...</div>}>
+                  <DshPartnerStoreCourierScreen
+                    storeId={selectedOrder.storeId}
+                    scopes={[]}
+                    onBack={() => setSelectedOrderId(null)}
+                  />
+                </React.Suspense>
+              </div>
+            </div>
+          ) : (
+            <WebControlPanelRecommendation
+              title="تفاصيل الإجراء والتحكم"
+              reason="افتح أي طلب مباشر من القائمة للانتقال إلى مساحة الاستثناءات، وإذا كان الطلب (توصيل المتجر)، ستظهر إعدادات الكابتن الشريك هنا للمعاينة والتعديل."
+              confidence="high"
+              auditTag="LIVE_ORDERS_MONITOR"
+            />
+          )}
         </Box>
       </div>
     </Box>

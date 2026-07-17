@@ -10,8 +10,7 @@ import {
 import { buildOperationsHref } from '../operations/operations-registry';
 import { DSH_CONTROL_PANEL_TONE_MAP } from '../ControlPanelDshDecisionBoard';
 import { useOperatorSpecialRequestsController } from './use-special-requests-controller';
-import styles from '../../control-panel/shared/control-panel-surface.module.css';
-
+// Removed styles import that violated boundary
 export type OperatorSpecialRequestsWorkbenchProps = {
   requestType: 'SHEIN_ASSISTED_PURCHASE' | 'AWNAK_ERRAND';
   title: string;
@@ -84,8 +83,8 @@ export function OperatorSpecialRequestsWorkbench({
 
   return (
     <Box gap={3}>
-      <div className={styles.surfaceSectionHeader}>
-        <h2 className={styles.surfaceSectionTitle}>{title}</h2>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '16px' }}>
+        <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0 }}>{title}</h2>
       </div>
 
       <WebControlPanelKpiStrip items={summaryKpi} />

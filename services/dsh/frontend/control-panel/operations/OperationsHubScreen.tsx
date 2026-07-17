@@ -14,7 +14,9 @@ import {
   buildOperationsHref,
   resolveOperationsStateCopy,
   useOperationsController,
+  useOperationsPermission,
 } from '../../shared/operations';
+import { useControlPanelSession } from '../../shared/session/control-panel-session';
 // React.lazy — each screen is a separate JS chunk loaded only when its tab is active.
 // Named-export screens use .then(m => ({ default: m.ScreenName })) to satisfy lazy().
 const CommandCenterScreen = React.lazy(() => import('./CommandCenterScreen').then((m) => ({ default: m.CommandCenterScreen })));
@@ -25,14 +27,11 @@ const AssistedOrderDeskScreen = React.lazy(() => import('./AssistedOrderDeskScre
 const OrderRescueScreen = React.lazy(() => import('./OrderRescueScreen').then((m) => ({ default: m.OrderRescueScreen })));
 const DispatchAssignmentScreen = React.lazy(() => import('./DispatchAssignmentScreen').then((m) => ({ default: m.DispatchAssignmentScreen })));
 const GeoHeatmapScreen = React.lazy(() => import('./GeoHeatmapScreen').then((m) => ({ default: m.GeoHeatmapScreen })));
-const ControlPanelDshSheinProxyScreen = React.lazy(() => import('./ControlPanelDshSheinProxyScreen').then((m) => ({ default: m.ControlPanelDshSheinProxyScreen })));
-const AwnakScreen = React.lazy(() => import('./AwnakScreen').then((m) => ({ default: m.AwnakScreen })));
+const SpecialOpsWorkbenchScreen = React.lazy(() => import('./SpecialOpsWorkbenchScreen').then((m) => ({ default: m.SpecialOpsWorkbenchScreen })));
 const PartnerStoresScreen = React.lazy(() => import('./PartnerStoresScreen').then((m) => ({ default: m.PartnerStoresScreen })));
 const AreaCapacityScreen = React.lazy(() => import('./AreaCapacityScreen').then((m) => ({ default: m.AreaCapacityScreen })));
 const ExceptionsEscalationsScreen = React.lazy(() => import('./ExceptionsEscalationsScreen').then((m) => ({ default: m.ExceptionsEscalationsScreen })));
 const AuditSupportSlaScreen = React.lazy(() => import('./AuditSupportSlaScreen').then((m) => ({ default: m.AuditSupportSlaScreen })));
-const PartnerDeliveryWorkbenchScreen = React.lazy(() => import('./PartnerDeliveryWorkbenchScreen').then((m) => ({ default: m.PartnerDeliveryWorkbenchScreen })));
-const PickupWorkbenchScreen = React.lazy(() => import('./PickupWorkbenchScreen').then((m) => ({ default: m.PickupWorkbenchScreen })));
 
 type ScreenProps = { hubHref: string; subGroup?: string; focusParams?: OperationsFocusParams };
 type ScreenComponent = React.ComponentType<ScreenProps>;
@@ -68,8 +67,8 @@ const SCREEN_RENDERERS: Record<CanonicalOperationsGroupId, GroupScreenConfig> = 
     bySubGroup: {
       assisted: AssistedOrderDeskScreen,
       rescue: OrderRescueScreen,
-      partner_delivery: PartnerDeliveryWorkbenchScreen,
-      pickup: PickupWorkbenchScreen,
+      partner_delivery: LiveOrdersScreen,
+      pickup: LiveOrdersScreen,
     },
   },
   'dispatch-capacity': {
@@ -87,9 +86,10 @@ const SCREEN_RENDERERS: Record<CanonicalOperationsGroupId, GroupScreenConfig> = 
     },
   },
   'special-ops': {
-    default: ControlPanelDshSheinProxyScreen,
+    default: SpecialOpsWorkbenchScreen,
     bySubGroup: {
-      awnak: AwnakScreen,
+      shein: SpecialOpsWorkbenchScreen,
+      awnak: SpecialOpsWorkbenchScreen,
     },
   },
 } satisfies Record<CanonicalOperationsGroupId, GroupScreenConfig>;
@@ -124,6 +124,9 @@ export function ControlPanelDshOperationsScreen({
     router,
   });
 
+  const { state: sessionState } = useControlPanelSession();
+  const hasPermission = useOperationsPermission(activeGroup, activeSubGroup);
+
   const screenConfig = SCREEN_RENDERERS[activeGroup] ?? SCREEN_RENDERERS['command-center'];
   const ActiveScreen = ((activeSubGroup && screenConfig.bySubGroup?.[activeSubGroup])
     ?? screenConfig.default) as ScreenComponent;
@@ -136,6 +139,19 @@ export function ControlPanelDshOperationsScreen({
     );
   }
 
+  if (!hasPermission) {
+    return (
+      <div className={styles.surfaceStatePadding}>
+        <StateView 
+          stateId="recoverableError"
+          title="عفواً، لا تملك الصلاحية" 
+          description="لا تملك صلاحية الوصول إلى تفاصيل هذه المجموعة التشغيلية." 
+          actionLabel="العودة" 
+          onActionPress={() => router.push(fallbackHref)} 
+        />
+      </div>
+    );
+  }
 
   return (
     <div className={styles.surfaceCockpit} dir="rtl">

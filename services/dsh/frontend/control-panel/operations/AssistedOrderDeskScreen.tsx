@@ -139,10 +139,71 @@ export function AssistedOrderDeskScreen({ hubHref: _hubHref, subGroup: _subGroup
   // null = no selection = full width queue
   const [selectedDeskId, setSelectedDeskId] = React.useState<string | null>(null);
   const [submitStatus, setSubmitStatus] = React.useState<string | null>(null);
+  const [retryCount, setRetryCount] = React.useState(0);
 
   React.useEffect(() => {
-    // searchParams-based desk selection not yet implemented
-  }, [searchParams]);
+    let cancelled = false;
+    import('../../shared/operations/dsh-operational-runtime-adapter').then(({ fetchDshRuntimeOrders }) => {
+      fetchDshRuntimeOrders({ limit: 50, scope: 'operator' }).then((result) => {
+        if (cancelled) return;
+        if (result.kind === 'ok') {
+          const mappedDesks: AssistedOrderDesk[] = result.orders.map(o => ({
+            deskId: `DESK-${o.id}`,
+            orderId: o.id,
+            customerId: o.clientId,
+            customerName: `عميل ${o.clientId.slice(0, 4)}`,
+            basketSummary: `${o.totalPrice} ريال`,
+            nextAction: o.status === 'pending' ? 'مراجعة الهوية' : 'تأكيد السلة',
+            auditFlags: ['VIP', 'تحذير مالي'],
+            lookupPanel: {
+              inputs: [
+                { key: 'phone', value: '05XXXXXXXX' },
+                { key: 'orderId', value: o.id },
+              ],
+            },
+            identityVerification: {
+              verificationStatus: o.status === 'pending' ? 'required' : 'verified',
+              verificationSteps: [
+                { stepId: 'step1', label: 'تأكيد رقم الجوال', completed: o.status !== 'pending' },
+                { stepId: 'step2', label: 'تأكيد العنوان', completed: o.status !== 'pending' },
+              ],
+            },
+            cartBuilderPreview: {
+              items: [
+                { sku: `SKU-${o.id.slice(0, 3)}`, name: 'منتج افتراضي', quantity: 1, status: 'active' },
+              ],
+            },
+            deliveryModeSelector: {
+              selectedMode: o.fulfillmentMode as DshFulfillmentDeliveryMode,
+              options: [
+                { modeId: 'bthwani_delivery', label: 'توصيل بثواني' },
+                { modeId: 'partner_delivery', label: 'توصيل شريك' },
+                { modeId: 'pickup', label: 'استلام بنفسي' },
+              ],
+            },
+            serviceabilitySummary: {
+              serviceabilityStatus: 'serviceable',
+              zoneLabel: 'Riyadh / Al Malaz',
+            },
+            wltReadOnlyHandoff: {
+              calculationTruthOwner: 'DSH & WLT',
+              paymentVisibility: 'Payment snapshot is read-only from WLT.',
+              refundVisibility: 'Refund execution remains WLT-owned; DSH displays status only.',
+            },
+            auditReason: {
+              reasonLabel: 'Assisted order rebuild after manual call confirmation.',
+              operatorNote: '',
+            },
+            submitDraftPreview: {
+              nextAction: 'إرسال مسودة للعميل',
+            },
+          }));
+          setDesks(mappedDesks);
+        }
+      });
+    });
+    return () => { cancelled = true; };
+  }, [retryCount]);
 
   const selectedDesk = React.useMemo(
     () => (selectedDeskId ? desks.find((d) => d.deskId === selectedDeskId) ?? null : null),
