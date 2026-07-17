@@ -87,3 +87,25 @@ func (i Identity) HasPermission(service, action, scope string) bool {
 	}
 	return false
 }
+
+// HasSurfacePermission enforces the complete permission tuple for sensitive
+// surface-bound capabilities. A permission issued for another application
+// surface must never authorize the control panel, even when its action and
+// scope otherwise match.
+func (i Identity) HasSurfacePermission(service, surface, action, scope string) bool {
+	for _, permission := range i.Permissions {
+		if permission.Service != service {
+			continue
+		}
+		if permission.Surface != surface && permission.Surface != "all" && permission.Surface != "*" {
+			continue
+		}
+		if permission.Action != action && permission.Action != "*" {
+			continue
+		}
+		if permission.Scope == scope || permission.Scope == "all" || permission.Scope == "*" {
+			return true
+		}
+	}
+	return false
+}
