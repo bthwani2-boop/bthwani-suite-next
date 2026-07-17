@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import React, { useState } from "react";
+import { Pressable, StyleSheet, View } from "react-native";
 import {
   Icon,
   MobileScrollView,
@@ -9,9 +9,9 @@ import {
   SegmentedControl,
   colorRoles,
   brandScale,
-} from '@bthwani/ui-kit';
+} from "@bthwani/ui-kit";
 
-export type BThwaniAppearanceMode = 'lightPremium' | 'darkGlass';
+export type BThwaniAppearanceMode = "lightPremium" | "darkGlass";
 
 export type MySpaceScreenProps = {
   appearanceMode?: BThwaniAppearanceMode;
@@ -19,18 +19,20 @@ export type MySpaceScreenProps = {
   onOpenOrders?: () => void;
   onOpenAddresses?: () => void;
   onOpenIdentity?: () => void;
+  onOpenBenefits?: () => void;
   onOpenPreferences?: () => void;
   onOpenSupport?: () => void;
 };
 
 type MySpaceTab =
-  | 'orders'
-  | 'addresses'
-  | 'identity'
-  | 'appearance'
-  | 'language'
-  | 'preferences'
-  | 'support';
+  | "orders"
+  | "addresses"
+  | "identity"
+  | "benefits"
+  | "appearance"
+  | "language"
+  | "preferences"
+  | "support";
 
 type TabConfig = {
   id: MySpaceTab;
@@ -40,13 +42,14 @@ type TabConfig = {
 };
 
 const TABS: TabConfig[] = [
-  { id: 'orders', label: 'طلباتي', summary: 'الطلب والتاريخ والتتبع', iconName: 'bag-outline' },
-  { id: 'addresses', label: 'العناوين والموقع', summary: 'إدارة العناوين وموقع التوصيل', iconName: 'location-outline' },
-  { id: 'identity', label: 'الملف الشخصي', summary: 'البيانات الشخصية والأمان', iconName: 'person-outline' },
-  { id: 'appearance', label: 'المظهر', summary: 'فاتح أبيض أو داكن زجاجي', iconName: 'color-palette-outline' },
-  { id: 'language', label: 'اللغة', summary: 'العربية أو الإنجليزية', iconName: 'globe-outline' },
-  { id: 'preferences', label: 'تفضيلات التوصيل', summary: 'إعدادات خاصة بالتسليم والاستبدال', iconName: 'options-outline' },
-  { id: 'support', label: 'الدعم والمساعدة', summary: 'تذاكر الدعم ومتابعة المشاكل', iconName: 'help-buoy-outline' },
+  { id: "orders", label: "طلباتي", summary: "الطلب والتاريخ والتتبع", iconName: "bag-outline" },
+  { id: "addresses", label: "العناوين والموقع", summary: "إدارة العناوين وموقع التوصيل", iconName: "location-outline" },
+  { id: "identity", label: "الملف الشخصي", summary: "البيانات الشخصية والأمان", iconName: "person-outline" },
+  { id: "benefits", label: "المزايا والولاء", summary: "النقاط والاشتراكات والعروض المعتمدة", iconName: "gift-outline" },
+  { id: "appearance", label: "المظهر", summary: "فاتح أبيض أو داكن زجاجي", iconName: "color-palette-outline" },
+  { id: "language", label: "اللغة", summary: "العربية أو الإنجليزية", iconName: "globe-outline" },
+  { id: "preferences", label: "تفضيلات التوصيل", summary: "إعدادات خاصة بالتسليم والاستبدال", iconName: "options-outline" },
+  { id: "support", label: "الدعم والمساعدة", summary: "تذاكر الدعم ومتابعة المشاكل", iconName: "help-buoy-outline" },
 ];
 
 function MySpaceRow({
@@ -85,23 +88,25 @@ function MySpaceRow({
 }
 
 export function MySpaceScreen({
-  appearanceMode = 'lightPremium',
+  appearanceMode = "lightPremium",
   onAppearanceModeChange,
   onOpenOrders,
   onOpenAddresses,
   onOpenIdentity,
+  onOpenBenefits,
   onOpenPreferences,
   onOpenSupport,
 }: MySpaceScreenProps) {
-  const [lang, setLang] = useState<string>('ar');
+  const [lang, setLang] = useState<string>("ar");
 
   const handleRowPress = (id: MySpaceTab) => {
     switch (id) {
-      case 'orders': return onOpenOrders?.();
-      case 'addresses': return onOpenAddresses?.();
-      case 'identity': return onOpenIdentity?.();
-      case 'preferences': return onOpenPreferences?.();
-      case 'support': return onOpenSupport?.();
+      case "orders": return onOpenOrders?.();
+      case "addresses": return onOpenAddresses?.();
+      case "identity": return onOpenIdentity?.();
+      case "benefits": return onOpenBenefits?.();
+      case "preferences": return onOpenPreferences?.();
+      case "support": return onOpenSupport?.();
       default: return undefined;
     }
   };
@@ -114,25 +119,25 @@ export function MySpaceScreen({
         {TABS.map((tab) => {
           let actionElement: React.ReactNode = undefined;
 
-          if (tab.id === 'appearance') {
+          if (tab.id === "appearance") {
             actionElement = (
               <SegmentedControl
                 items={[
-                  { value: 'lightPremium', label: 'فاتح' },
-                  { value: 'darkGlass', label: 'داكن' },
+                  { value: "lightPremium", label: "فاتح" },
+                  { value: "darkGlass", label: "داكن" },
                 ]}
-                value={appearanceMode === 'darkGlass' ? 'darkGlass' : 'lightPremium'}
+                value={appearanceMode === "darkGlass" ? "darkGlass" : "lightPremium"}
                 onValueChange={(nextValue) => {
                   onAppearanceModeChange?.(nextValue as BThwaniAppearanceMode);
                 }}
               />
             );
-          } else if (tab.id === 'language') {
+          } else if (tab.id === "language") {
             actionElement = (
               <SegmentedControl
                 items={[
-                  { value: 'ar', label: 'عربي' },
-                  { value: 'en', label: 'EN' },
+                  { value: "ar", label: "عربي" },
+                  { value: "en", label: "EN" },
                 ]}
                 value={lang}
                 onValueChange={setLang}
@@ -165,8 +170,8 @@ const styles = StyleSheet.create({
     paddingBottom: spacing[12],
   },
   row: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
+    flexDirection: "row-reverse",
+    alignItems: "center",
     paddingHorizontal: spacing[4],
     paddingVertical: spacing[3],
     borderBottomWidth: 1,
@@ -183,8 +188,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colorRoles.borderSubtle,
     backgroundColor: brandScale.action[50],
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   rowText: {
     flex: 1,
@@ -192,14 +197,14 @@ const styles = StyleSheet.create({
   },
   rowTitle: {
     color: colorRoles.textPrimary,
-    textAlign: 'right',
+    textAlign: "right",
   },
   rowSummary: {
-    textAlign: 'right',
+    textAlign: "right",
   },
   actionWrapper: {
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   chevron: {
     fontSize: 20,
