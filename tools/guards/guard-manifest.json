@@ -12,6 +12,8 @@
     "foundation": [
       "governance-schema",
       "agent-governance",
+      "authority-separation",
+      "saas-governance",
       "guard-registry",
       "sdlc",
       "repo-size",
@@ -25,6 +27,8 @@
     "journey": [
       "governance-schema",
       "agent-governance",
+      "authority-separation",
+      "saas-governance",
       "guard-registry",
       "sdlc",
       "cleanup-policy",
@@ -42,6 +46,8 @@
     "governance": [
       "governance-schema",
       "agent-governance",
+      "authority-separation",
+      "saas-governance",
       "guard-registry",
       "sdlc",
       "cleanup-policy"
