@@ -1,20 +1,20 @@
 ---
 name: bthwani-universal-task-router
-version: 2026.07.17-v2
-summary: Classify repository tasks by mode, risk, authority, skills, tools, scope, and permissible evidence claims.
+version: 2026.07.17-v3
+summary: Classify repository tasks by canonical mode, risk, authority, skills, tools, scope, and permissible evidence claims.
 ---
 
 # bthwani-universal-task-router
 
 ## Purpose
 
-Own initial task classification so repository work uses the correct authority, smallest sufficient skill set, allowed paths, and verification route.
+Own initial task classification so repository work uses the correct authority, smallest sufficient governed skill set, allowed paths, and verification route.
 
 ## Invoke when
 
 - A repository task may read, modify, delete, move, verify, or close code, configuration, governance, agents, skills, guards, workflows, or runtime.
 - The task crosses layers, services, surfaces, authorities, or evidence scopes.
-- Risk, ownership, or allowed final claim is unclear.
+- Risk, ownership, or the strongest permissible claim is unclear.
 
 ## Do not invoke when
 
@@ -23,13 +23,13 @@ Own initial task classification so repository work uses the correct authority, s
 
 ## Authority boundary
 
-This skill owns task-mode and risk routing only. It cannot override repository/ref authority, product scope, architecture, finance ownership, QA, security, release, risk acceptance, or final closure.
+This skill owns task-mode and risk routing only. It cannot override repository/ref authority, product scope, architecture, finance ownership, governance, CI, QA, security, release, risk acceptance, or final closure.
 
 ## Task modes
 
 - `TEXT_ONLY`
 - `CODE_ONLY`
-- `PRODUCT_CAPABILITY`
+- `PRODUCT_MODEL`
 - `API_CONTRACT`
 - `UI_CODE`
 - `UI_VISUAL`
@@ -46,18 +46,21 @@ This skill owns task-mode and risk routing only. It cannot override repository/r
 For each task determine:
 
 1. repository mode, branch, and immutable SHA;
-2. task mode and risk floor;
-3. owning authority and allowed paths;
-4. required and forbidden skills;
-5. smallest sufficient tools and checks;
-6. whether Product Truth, SDLC, independent approval, runtime, or visual evidence applies;
-7. the strongest result that the available evidence may support.
+2. canonical task mode and risk floor;
+3. owning authorities and allowed paths;
+4. active or conditional governed skills required;
+5. retired skills and tools that must not be treated as authorities;
+6. smallest sufficient tools and checks;
+7. whether Product Truth, SDLC, independent approval, runtime, visual, governance, or CI evidence applies;
+8. the strongest result the available evidence may support.
 
-Graphify is selected only for broad or unclear dependency/ownership analysis. It is not a universal first step.
+Graphify and Nx are conditional tools selected by the tool ladder. They are not owner skills or formal authorities.
 
 ## Forbidden
 
+- Using the noncanonical task mode `PRODUCT_CAPABILITY`; use `PRODUCT_MODEL`.
 - Loading every skill or guard by default.
+- Routing work to a `legacy` or `retired` skill.
 - Letting an adapter, tool, or specialist self-assign formal approval.
 - Expanding scope from a local defect to the full workspace without proving a shared pattern and authority.
 - Claiming readiness or closure beyond the selected evidence scopes.
