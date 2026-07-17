@@ -9,13 +9,10 @@ import (
 	"dsh-api/internal/store"
 )
 
-// Permission constants for the pickup domain. No central registry exists in
-// this repo -- constants are declared next to their handler file, mirroring
-// OperationsPermissionRead/Manage in orders.go.
 const (
 	PickupPermissionRead   = "pickup.read"
-	PickupPermissionManage = "pickup.manage" // operator monitoring/extend-window/exception
-	PickupActionPermission = "pickup.act"    // partner-side mark-ready/notify/verify/no-show
+	PickupPermissionManage = "pickup.manage"
+	PickupActionPermission = "pickup.act"
 )
 
 type pickupMutationBody struct {
@@ -81,7 +78,6 @@ func marshalPickupSession(s *pickup.PickupSession) map[string]any {
 	}
 }
 
-// POST /dsh/partner/orders/{orderId}/pickup/mark-ready
 func (s *protectedStoreServer) handlePickupMarkReady(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "partner")
 	if !ok {
@@ -104,17 +100,9 @@ func (s *protectedStoreServer) handlePickupMarkReady(w http.ResponseWriter, r *h
 	store.SendJSON(w, http.StatusOK, map[string]any{"orderId": orderID, "status": "ready_for_pickup"})
 }
 
-// POST /dsh/partner/orders/{orderId}/pickup/notify
-//
-// The route list for this phase has no separate issue-otp endpoint, so
-// notify does double duty: it issues a fresh OTP (pickup.Service.IssueOtp)
-// and marks the ready-for-pickup notification as dispatched
-// (pickup.Service.NotifyCustomer) in one call. The plaintext OTP is never
-// included in this handler's JSON response -- it exists only in the return
-// value of IssueOtp for handoff to a notification channel. No SMS/push
-// provider is wired up in this phase, so the handoff point is
-// deliverPickupOtp, a seam a future notifications integration can fill in;
-// today it only asserts the plaintext is non-empty and drops it.
+// handlePickupNotify issues a fresh OTP, delivers it through the authenticated
+// client notification channel, then records the operational notification marker.
+// The partner response never contains the plaintext OTP.
 func (s *protectedStoreServer) handlePickupNotify(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "partner")
 	if !ok {
@@ -134,7 +122,10 @@ func (s *protectedStoreServer) handlePickupNotify(w http.ResponseWriter, r *http
 	if !ok {
 		return
 	}
-	deliverPickupOtp(orderID, plainOtp)
+	if err := pickup.DeliverOtpNotification(r.Context(), s.db, session, plainOtp); err != nil {
+		store.SendError(w, http.StatusServiceUnavailable, "PICKUP_OTP_DELIVERY_FAILED", "pickup code could not be delivered; retry notification")
+		return
+	}
 
 	svc := pickup.NewService(s.db)
 	if err := svc.NotifyCustomer(r.Context(), orderID, actor.ID, actor.Role, correlationID); err != nil {
@@ -144,15 +135,6 @@ func (s *protectedStoreServer) handlePickupNotify(w http.ResponseWriter, r *http
 	store.SendJSON(w, http.StatusOK, map[string]any{"orderId": orderID, "notified": true, "session": marshalPickupSession(session)})
 }
 
-// deliverPickupOtp is the handoff seam to a notification channel (SMS/push)
-// for the plaintext OTP. No such provider is wired up in this phase; the
-// plaintext is intentionally dropped here rather than logged or returned.
-func deliverPickupOtp(orderID, plainOtp string) {
-	_ = orderID
-	_ = plainOtp
-}
-
-// POST /dsh/partner/orders/{orderId}/pickup/customer-arrived
 func (s *protectedStoreServer) handlePickupCustomerArrived(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "partner")
 	if !ok {
@@ -175,19 +157,6 @@ func (s *protectedStoreServer) handlePickupCustomerArrived(w http.ResponseWriter
 	store.SendJSON(w, http.StatusOK, map[string]any{"orderId": orderID, "customerArrived": true})
 }
 
-// issuePickupOtp is not registered as a route in this phase's HTTP surface
-// spec, but the notify handler above triggers the notification step; OTP
-// issuance is exposed here as its own action so notify and issue can be
-// called independently (e.g. re-issuing a code without re-sending the
-// initial ready notification). Registered as part of the pickup/notify
-// flow's sibling action.
-//
-// POST /dsh/partner/orders/{orderId}/pickup/issue-otp is intentionally
-// folded into handlePickupNotify's caller contract per the route list in
-// the task spec (mark-ready, notify, customer-arrived, verify, no-show) --
-// see handlePickupNotify, which issues and returns the OTP via the
-// notification payload path. Kept here as an internal helper the notify
-// handler can call.
 func (s *protectedStoreServer) issuePickupOtpInternal(w http.ResponseWriter, r *http.Request, orderID, clientID, actorID, actorRole, correlationID string) (string, *pickup.PickupSession, bool) {
 	svc := pickup.NewService(s.db)
 	plainOtp, session, err := svc.IssueOtp(r.Context(), orderID, clientID, actorID, actorRole, correlationID)
@@ -198,7 +167,6 @@ func (s *protectedStoreServer) issuePickupOtpInternal(w http.ResponseWriter, r *
 	return plainOtp, session, true
 }
 
-// POST /dsh/partner/orders/{orderId}/pickup/verify
 func (s *protectedStoreServer) handlePickupVerify(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "partner")
 	if !ok {
@@ -226,7 +194,6 @@ func (s *protectedStoreServer) handlePickupVerify(w http.ResponseWriter, r *http
 	store.SendJSON(w, http.StatusOK, map[string]any{"session": marshalPickupSession(session)})
 }
 
-// POST /dsh/partner/orders/{orderId}/pickup/no-show
 func (s *protectedStoreServer) handlePickupNoShow(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "partner")
 	if !ok {
@@ -250,7 +217,6 @@ func (s *protectedStoreServer) handlePickupNoShow(w http.ResponseWriter, r *http
 	store.SendJSON(w, http.StatusOK, map[string]any{"session": marshalPickupSession(session)})
 }
 
-// GET /dsh/operator/pickups
 func (s *protectedStoreServer) handleListOperatorPickups(w http.ResponseWriter, r *http.Request) {
 	_, ok := s.requirePermission(w, r, "control-panel", PickupPermissionRead, "operator")
 	if !ok {
@@ -273,7 +239,6 @@ func (s *protectedStoreServer) handleListOperatorPickups(w http.ResponseWriter, 
 	store.SendJSON(w, http.StatusOK, map[string]any{"sessions": results})
 }
 
-// GET /dsh/operator/pickups/{orderId}
 func (s *protectedStoreServer) handleGetOperatorPickup(w http.ResponseWriter, r *http.Request) {
 	_, ok := s.requirePermission(w, r, "control-panel", PickupPermissionRead, "operator")
 	if !ok {
@@ -287,11 +252,6 @@ func (s *protectedStoreServer) handleGetOperatorPickup(w http.ResponseWriter, r 
 	store.SendJSON(w, http.StatusOK, map[string]any{"session": marshalPickupSession(session)})
 }
 
-// POST /dsh/operator/pickups/{orderId}/extend-window
-//
-// Manual-override fallback for a session that would otherwise expire.
-// Gated by the manage permission (not the lower-privilege act permission)
-// per the plan's requirement that this action require higher privilege.
 func (s *protectedStoreServer) handleExtendPickupWindow(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requirePermission(w, r, "control-panel", PickupPermissionManage, "operator")
 	if !ok {
