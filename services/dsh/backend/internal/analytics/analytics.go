@@ -5,8 +5,6 @@ import (
 	"time"
 )
 
-// periodFilter returns the SQL cutoff timestamp for a given period string.
-// Period values: "today", "week", "month". Default to today.
 func periodFilter(period string) time.Time {
 	now := time.Now().UTC()
 	switch period {
@@ -20,8 +18,6 @@ func periodFilter(period string) time.Time {
 	}
 }
 
-// ── Platform KPIs ────────────────────────────────────────────────────────────
-
 type PlatformKpis struct {
 	TotalOrders          int       `json:"totalOrders"`
 	DeliveredOrders      int       `json:"deliveredOrders"`
@@ -31,8 +27,6 @@ type PlatformKpis struct {
 	FieldVisitsCompleted int       `json:"fieldVisitsCompleted"`
 	OpenEscalations      int       `json:"openEscalations"`
 	OpenIncidents        int       `json:"openIncidents"`
-	WltHandoffFailures   int       `json:"wltHandoffFailures"`
-	UnassignedTasks      int       `json:"unassignedTasks"`
 	Period               string    `json:"period"`
 	GeneratedAt          time.Time `json:"generatedAt"`
 }
@@ -54,16 +48,14 @@ func GetPlatformKpis(db *sql.DB, period string) (PlatformKpis, error) {
 		{&kpis.FieldVisitsCompleted, `SELECT COUNT(*) FROM dsh_field_visits WHERE status = 'complete' AND created_at >= $1`, []any{since}},
 		{&kpis.OpenEscalations, `SELECT COUNT(*) FROM dsh_readiness_escalations WHERE status = 'open'`, nil},
 		{&kpis.OpenIncidents, `SELECT COUNT(*) FROM dsh_incidents WHERE status != 'resolved'`, nil},
-		{&kpis.WltHandoffFailures, `SELECT COUNT(*) FROM dsh_wlt_outbox_events WHERE attempt_count > 0`, nil},
-		{&kpis.UnassignedTasks, `SELECT COUNT(*) FROM dsh_orders WHERE status = 'ready_for_pickup' AND NOT EXISTS (SELECT 1 FROM dsh_assignments WHERE dsh_assignments.order_id = dsh_orders.id AND dsh_assignments.status IN ('accepted', 'completed'))`, nil},
 	}
 
-	for _, r := range rows {
+	for _, row := range rows {
 		var err error
-		if r.args != nil {
-			err = db.QueryRow(r.q, r.args...).Scan(r.dest)
+		if row.args != nil {
+			err = db.QueryRow(row.q, row.args...).Scan(row.dest)
 		} else {
-			err = db.QueryRow(r.q).Scan(r.dest)
+			err = db.QueryRow(row.q).Scan(row.dest)
 		}
 		if err != nil {
 			return kpis, err
@@ -71,8 +63,6 @@ func GetPlatformKpis(db *sql.DB, period string) (PlatformKpis, error) {
 	}
 	return kpis, nil
 }
-
-// ── Order Analytics ──────────────────────────────────────────────────────────
 
 type OrderStatusCount struct {
 	Status string `json:"status"`
@@ -89,11 +79,9 @@ type OrderAnalytics struct {
 func GetOrderAnalytics(db *sql.DB, period string) (OrderAnalytics, error) {
 	since := periodFilter(period)
 	out := OrderAnalytics{Period: period, GeneratedAt: time.Now().UTC()}
-
 	if err := db.QueryRow(`SELECT COUNT(*) FROM dsh_orders WHERE created_at >= $1`, since).Scan(&out.TotalOrders); err != nil {
 		return out, err
 	}
-
 	rows, err := db.Query(`
 		SELECT status, COUNT(*) FROM dsh_orders
 		WHERE created_at >= $1
@@ -103,19 +91,17 @@ func GetOrderAnalytics(db *sql.DB, period string) (OrderAnalytics, error) {
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var sc OrderStatusCount
-		if err := rows.Scan(&sc.Status, &sc.Count); err != nil {
+		var count OrderStatusCount
+		if err := rows.Scan(&count.Status, &count.Count); err != nil {
 			return out, err
 		}
-		out.ByStatus = append(out.ByStatus, sc)
+		out.ByStatus = append(out.ByStatus, count)
 	}
 	if out.ByStatus == nil {
 		out.ByStatus = []OrderStatusCount{}
 	}
 	return out, rows.Err()
 }
-
-// ── Delivery Analytics ───────────────────────────────────────────────────────
 
 type DeliveryAnalytics struct {
 	TotalAssignments     int       `json:"totalAssignments"`
@@ -129,26 +115,22 @@ type DeliveryAnalytics struct {
 func GetDeliveryAnalytics(db *sql.DB, period string) (DeliveryAnalytics, error) {
 	since := periodFilter(period)
 	out := DeliveryAnalytics{Period: period, GeneratedAt: time.Now().UTC()}
-
 	queries := []struct {
 		dest *int
 		q    string
-		args []any
 	}{
-		{&out.TotalAssignments, `SELECT COUNT(*) FROM dsh_assignments WHERE created_at >= $1`, []any{since}},
-		{&out.AcceptedAssignments, `SELECT COUNT(*) FROM dsh_assignments WHERE status IN ('accepted','completed') AND created_at >= $1`, []any{since}},
-		{&out.CompletedAssignments, `SELECT COUNT(*) FROM dsh_assignments WHERE status = 'completed' AND created_at >= $1`, []any{since}},
-		{&out.DeclinedAssignments, `SELECT COUNT(*) FROM dsh_assignments WHERE status = 'declined' AND created_at >= $1`, []any{since}},
+		{&out.TotalAssignments, `SELECT COUNT(*) FROM dsh_assignments WHERE created_at >= $1`},
+		{&out.AcceptedAssignments, `SELECT COUNT(*) FROM dsh_assignments WHERE status IN ('accepted','completed') AND created_at >= $1`},
+		{&out.CompletedAssignments, `SELECT COUNT(*) FROM dsh_assignments WHERE status = 'completed' AND created_at >= $1`},
+		{&out.DeclinedAssignments, `SELECT COUNT(*) FROM dsh_assignments WHERE status = 'declined' AND created_at >= $1`},
 	}
-	for _, q := range queries {
-		if err := db.QueryRow(q.q, q.args...).Scan(q.dest); err != nil {
+	for _, query := range queries {
+		if err := db.QueryRow(query.q, since).Scan(query.dest); err != nil {
 			return out, err
 		}
 	}
 	return out, nil
 }
-
-// ── Support Analytics ────────────────────────────────────────────────────────
 
 type TicketCategoryCount struct {
 	Category string `json:"category"`
@@ -167,18 +149,16 @@ type SupportAnalytics struct {
 func GetSupportAnalytics(db *sql.DB, period string) (SupportAnalytics, error) {
 	since := periodFilter(period)
 	out := SupportAnalytics{Period: period, GeneratedAt: time.Now().UTC()}
-
 	queries := []struct {
 		dest *int
 		q    string
-		args []any
 	}{
-		{&out.TotalTickets, `SELECT COUNT(*) FROM dsh_support_tickets WHERE created_at >= $1`, []any{since}},
-		{&out.OpenTickets, `SELECT COUNT(*) FROM dsh_support_tickets WHERE status NOT IN ('resolved','closed') AND created_at >= $1`, []any{since}},
-		{&out.ResolvedTickets, `SELECT COUNT(*) FROM dsh_support_tickets WHERE status IN ('resolved','closed') AND created_at >= $1`, []any{since}},
+		{&out.TotalTickets, `SELECT COUNT(*) FROM dsh_support_tickets WHERE created_at >= $1`},
+		{&out.OpenTickets, `SELECT COUNT(*) FROM dsh_support_tickets WHERE status NOT IN ('resolved','closed') AND created_at >= $1`},
+		{&out.ResolvedTickets, `SELECT COUNT(*) FROM dsh_support_tickets WHERE status IN ('resolved','closed') AND created_at >= $1`},
 	}
-	for _, q := range queries {
-		if err := db.QueryRow(q.q, q.args...).Scan(q.dest); err != nil {
+	for _, query := range queries {
+		if err := db.QueryRow(query.q, since).Scan(query.dest); err != nil {
 			return out, err
 		}
 	}
@@ -192,11 +172,11 @@ func GetSupportAnalytics(db *sql.DB, period string) (SupportAnalytics, error) {
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var cc TicketCategoryCount
-		if err := rows.Scan(&cc.Category, &cc.Count); err != nil {
+		var count TicketCategoryCount
+		if err := rows.Scan(&count.Category, &count.Count); err != nil {
 			return out, err
 		}
-		out.ByCategory = append(out.ByCategory, cc)
+		out.ByCategory = append(out.ByCategory, count)
 	}
 	if out.ByCategory == nil {
 		out.ByCategory = []TicketCategoryCount{}
@@ -204,20 +184,17 @@ func GetSupportAnalytics(db *sql.DB, period string) (SupportAnalytics, error) {
 	return out, rows.Err()
 }
 
-// ── Store Analytics ──────────────────────────────────────────────────────────
-
 type StoreAnalytics struct {
-	TotalStores      int       `json:"totalStores"`
-	ActiveStores     int       `json:"activeStores"`
-	SuspendedStores  int       `json:"suspendedStores"`
-	PendingReadiness int       `json:"pendingReadiness"`
-	ReadinessComplete int      `json:"readinessComplete"`
-	GeneratedAt      time.Time `json:"generatedAt"`
+	TotalStores       int       `json:"totalStores"`
+	ActiveStores      int       `json:"activeStores"`
+	SuspendedStores   int       `json:"suspendedStores"`
+	PendingReadiness  int       `json:"pendingReadiness"`
+	ReadinessComplete int       `json:"readinessComplete"`
+	GeneratedAt       time.Time `json:"generatedAt"`
 }
 
 func GetStoreAnalytics(db *sql.DB) (StoreAnalytics, error) {
 	out := StoreAnalytics{GeneratedAt: time.Now().UTC()}
-
 	queries := []struct {
 		dest *int
 		q    string
@@ -232,15 +209,13 @@ func GetStoreAnalytics(db *sql.DB) (StoreAnalytics, error) {
 			SELECT 1 FROM dsh_field_visits fv WHERE fv.store_id = s.id AND fv.status = 'complete'
 		)`},
 	}
-	for _, q := range queries {
-		if err := db.QueryRow(q.q).Scan(q.dest); err != nil {
+	for _, query := range queries {
+		if err := db.QueryRow(query.q).Scan(query.dest); err != nil {
 			return out, err
 		}
 	}
 	return out, nil
 }
-
-// ── Partner Performance ──────────────────────────────────────────────────────
 
 type PartnerPerformance struct {
 	StoreID        string    `json:"storeId"`
@@ -254,7 +229,6 @@ type PartnerPerformance struct {
 func GetPartnerPerformance(db *sql.DB, storeID, period string) (PartnerPerformance, error) {
 	since := periodFilter(period)
 	out := PartnerPerformance{StoreID: storeID, Period: period, GeneratedAt: time.Now().UTC()}
-
 	queries := []struct {
 		dest *int
 		q    string
@@ -263,8 +237,8 @@ func GetPartnerPerformance(db *sql.DB, storeID, period string) (PartnerPerforman
 		{&out.AcceptedOrders, `SELECT COUNT(*) FROM dsh_orders WHERE store_id = $2 AND status != 'cancelled' AND created_at >= $1`},
 		{&out.RejectedOrders, `SELECT COUNT(*) FROM dsh_orders WHERE store_id = $2 AND status = 'cancelled' AND created_at >= $1`},
 	}
-	for _, q := range queries {
-		if err := db.QueryRow(q.q, since, storeID).Scan(q.dest); err != nil {
+	for _, query := range queries {
+		if err := db.QueryRow(query.q, since, storeID).Scan(query.dest); err != nil {
 			return out, err
 		}
 	}
