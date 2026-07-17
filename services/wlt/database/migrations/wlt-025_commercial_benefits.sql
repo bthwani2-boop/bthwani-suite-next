@@ -65,6 +65,10 @@ CREATE TABLE IF NOT EXISTS wlt_loyalty_entries (
 CREATE INDEX IF NOT EXISTS idx_wlt_loyalty_entries_client_created
     ON wlt_loyalty_entries(client_id, created_at DESC);
 
+CREATE UNIQUE INDEX IF NOT EXISTS uq_wlt_loyalty_single_reversal
+    ON wlt_loyalty_entries(reversal_of)
+    WHERE reversal_of IS NOT NULL;
+
 CREATE TABLE IF NOT EXISTS wlt_client_subscriptions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     client_id TEXT NOT NULL,
