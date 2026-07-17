@@ -38,17 +38,8 @@ const LiveOrdersScreen = React.lazy(() =>
 const PickupWorkbenchScreen = React.lazy(() =>
   import('./PickupWorkbenchScreen').then((module) => ({ default: module.PickupWorkbenchScreen })),
 );
-const AssistedOrderDeskScreen = React.lazy(() =>
-  import('./AssistedOrderDeskScreen').then((module) => ({ default: module.AssistedOrderDeskScreen })),
-);
-const OrderRescueScreen = React.lazy(() =>
-  import('./OrderRescueScreen').then((module) => ({ default: module.OrderRescueScreen })),
-);
 const DispatchAssignmentScreen = React.lazy(() =>
   import('./DispatchAssignmentScreen').then((module) => ({ default: module.DispatchAssignmentScreen })),
-);
-const GeoHeatmapScreen = React.lazy(() =>
-  import('./GeoHeatmapScreen').then((module) => ({ default: module.GeoHeatmapScreen })),
 );
 const SpecialOpsWorkbenchScreen = React.lazy(() =>
   import('./SpecialOpsWorkbenchScreen').then((module) => ({ default: module.SpecialOpsWorkbenchScreen })),
@@ -61,9 +52,6 @@ const AreaCapacityScreen = React.lazy(() =>
 );
 const ExceptionsEscalationsScreen = React.lazy(() =>
   import('./ExceptionsEscalationsScreen').then((module) => ({ default: module.ExceptionsEscalationsScreen })),
-);
-const AuditSupportSlaScreen = React.lazy(() =>
-  import('./AuditSupportSlaScreen').then((module) => ({ default: module.AuditSupportSlaScreen })),
 );
 
 type ScreenProps = {
@@ -90,6 +78,11 @@ export type ControlPanelDshOperationsScreenProps = {
   fallbackHref?: string;
 };
 
+/**
+ * Only production-bound workspaces are mounted here. Experimental source files
+ * remain available for later reuse, but cannot be reached through query-string
+ * manipulation or bundled as live Operations surfaces.
+ */
 const SCREEN_RENDERERS: Readonly<Record<CanonicalOperationsGroupId, GroupScreenConfig>> = {
   'command-center': {
     default: CommandCenterScreen,
@@ -101,8 +94,6 @@ const SCREEN_RENDERERS: Readonly<Record<CanonicalOperationsGroupId, GroupScreenC
   'live-orders': {
     default: LiveOrdersScreen,
     bySubGroup: {
-      assisted: AssistedOrderDeskScreen,
-      rescue: OrderRescueScreen,
       partner_delivery: LiveOrdersScreen,
       pickup: PickupWorkbenchScreen,
     },
@@ -112,7 +103,6 @@ const SCREEN_RENDERERS: Readonly<Record<CanonicalOperationsGroupId, GroupScreenC
     bySubGroup: {
       pending: DispatchAssignmentScreen,
       captains: DispatchAssignmentScreen,
-      heatmap: GeoHeatmapScreen,
       zones: AreaCapacityScreen,
     },
   },
@@ -120,7 +110,6 @@ const SCREEN_RENDERERS: Readonly<Record<CanonicalOperationsGroupId, GroupScreenC
     default: ExceptionsEscalationsScreen,
     bySubGroup: {
       active: ExceptionsEscalationsScreen,
-      audit: AuditSupportSlaScreen,
       stores: PartnerStoresScreen,
     },
   },
