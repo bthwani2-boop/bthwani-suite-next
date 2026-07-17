@@ -26,7 +26,6 @@ export {
 export type { MapsProviderPublicConfig } from "./platform-provider-public-config";
 
 export { PLATFORM_PROVIDER_REGISTRY } from "./platform-provider.registry";
-
 export * from './feature-flags';
 export * from './platform-vars';
 export * from './platform-vars.policy';
@@ -34,6 +33,7 @@ export * from './platform-vars.view-model';
 export * from './platform-vars.model';
 export * from './platform-control.api';
 export * from './use-platform-control-runtime-controller';
+export * from './use-provider-registry-controller';
 export * from './FeatureFlagProvider';
 export * from './PlatformVarsProvider';
 export * from './resolve-dsh-color-token';
