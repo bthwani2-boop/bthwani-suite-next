@@ -1,13 +1,10 @@
 name: CI
 
 on:
-  pull_request:
-    branches:
-      - master
   push:
-    branches:
-      - bassam
-      - master
+    branches: [bassam, master]
+  pull_request:
+    branches: [master]
   workflow_dispatch:
 
 permissions:
@@ -21,162 +18,158 @@ jobs:
   governance:
     name: Governance agents guards and SDLC
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Setup PNPM
-        uses: pnpm/action-setup@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
-          version: 10.34.2
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24.17.0
-          cache: pnpm
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Governance schema and semantics
-        run: pnpm run guard:governance-schema
-      - name: Agent and skill governance
-        run: pnpm run guard:agent-governance
-      - name: Guard registry and workflow policy
-        run: pnpm run guard:guard-registry
-      - name: SDLC and Product Truth integration
-        run: pnpm run guard:sdlc
+          persist-credentials: false
+      - name: Setup workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Run governance checks and report every failure
+        shell: bash
+        run: |
+          set +e
+          failures=0
+          run_check() {
+            local name="$1"
+            shift
+            echo "::group::$name"
+            "$@"
+            local result=$?
+            echo "::endgroup::"
+            if [ "$result" -ne 0 ]; then
+              echo "::error title=$name failed::exit=$result"
+              failures=$((failures + 1))
+            fi
+          }
+          run_check governance-schema pnpm run guard:governance-schema
+          run_check agent-governance pnpm run guard:agent-governance
+          run_check guard-registry pnpm run guard:guard-registry
+          run_check sdlc pnpm run guard:sdlc
+          run_check cleanup-policy pnpm run guard:cleanup-policy
+          test "$failures" -eq 0
 
   node-foundation:
-    name: Node foundation and repository gates
+    name: Node foundation and repository checks
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Setup PNPM
-        uses: pnpm/action-setup@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
-          version: 10.34.2
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24.17.0
-          cache: pnpm
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Verify Nx workspace
-        run: pnpm run nx:projects
-      - name: Lint
-        run: pnpm run lint
-      - name: Contract lint
-        run: pnpm run contracts:lint
-      - name: Foundation guards
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Setup workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Verify workspace foundation
+        shell: bash
         run: |
-          pnpm run guard:no-broken-imports
-          pnpm run guard:runtime-config
-          pnpm run guard:cleanup-policy
-          pnpm run guard:repo-size
-          pnpm run guard:heavy-imports
-          pnpm run guard:performance-budget
-      - name: Mobile workspace contracts
-        run: |
-          pnpm run mobile:apps:check
-          pnpm run mobile:expo:verify
+          set +e
+          failures=0
+          run_check() {
+            local name="$1"
+            shift
+            echo "::group::$name"
+            "$@"
+            local result=$?
+            echo "::endgroup::"
+            if [ "$result" -ne 0 ]; then failures=$((failures + 1)); fi
+          }
+          run_check nx-projects pnpm run nx:projects
+          run_check lint pnpm run lint
+          run_check contracts pnpm run contracts:lint
+          run_check repository-size pnpm run guard:repo-size
+          run_check no-broken-imports pnpm run guard:no-broken-imports
+          run_check runtime-config pnpm run guard:runtime-config
+          run_check mobile-app-contracts pnpm run mobile:apps:check
+          run_check mobile-expo-contracts pnpm run mobile:expo:verify
+          test "$failures" -eq 0
 
   binding-and-logic:
-    name: Contract binding logic and UI gates
+    name: Static binding logic UI and architecture checks
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Setup PNPM
-        uses: pnpm/action-setup@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
-          version: 10.34.2
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24.17.0
-          cache: pnpm
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      - name: API and full-stack binding gates
+          persist-credentials: false
+      - name: Setup workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Run static binding and regression checks
+        shell: bash
         run: |
-          pnpm run guard:api-binding
-          pnpm run guard:backend-api-binding
-          pnpm run guard:service-manifest-drift
-          pnpm run guard:frontend-feature-binding
-          pnpm run guard:fullstack-boundary
-          pnpm run guard:wlt-financial-boundary
-          pnpm run guard:runtime-real-bindings
-          pnpm run guard:live-cross-journey-integrity
-      - name: Logic architecture and accessibility gates
-        run: |
-          pnpm run guard:go-routes-ci
-          pnpm run guard:logic-coverage
-          pnpm run guard:a11y
-          pnpm run guard:dependency-graph
-          pnpm run guard:ast-grep-rules
-      - name: UI contract gates
-        run: |
-          pnpm run guard:ui-provider
-          pnpm run guard:ui-kit-boundary
-          pnpm run guard:icon-contract
+          set +e
+          failures=0
+          run_check() {
+            local name="$1"
+            shift
+            echo "::group::$name"
+            "$@"
+            local result=$?
+            echo "::endgroup::"
+            if [ "$result" -ne 0 ]; then failures=$((failures + 1)); fi
+          }
+          run_check api-binding pnpm run guard:api-binding
+          run_check backend-api-binding pnpm run guard:backend-api-binding
+          run_check service-manifest-drift pnpm run guard:service-manifest-drift
+          run_check frontend-static-binding pnpm run guard:frontend-feature-binding
+          run_check fullstack-boundary pnpm run guard:fullstack-boundary
+          run_check wlt-financial-boundary pnpm run guard:wlt-financial-boundary
+          run_check runtime-anti-stub pnpm run guard:runtime-real-bindings
+          run_check cross-journey-regressions pnpm run guard:live-cross-journey-integrity
+          run_check go-route-map pnpm run guard:go-routes-ci
+          run_check static-ui-logic pnpm run guard:logic-coverage
+          run_check accessibility-static pnpm run guard:a11y
+          run_check dependency-graph pnpm run guard:dependency-graph
+          run_check ast-rules pnpm run guard:ast-grep-rules
+          run_check ui-provider pnpm run guard:ui-provider
+          run_check ui-kit-boundary pnpm run guard:ui-kit-boundary
+          run_check icon-contract pnpm run guard:icon-contract
+          test "$failures" -eq 0
 
   generated-clients:
     name: Generated OpenAPI client drift
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Setup PNPM
-        uses: pnpm/action-setup@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
-          version: 10.34.2
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24.17.0
-          cache: pnpm
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Generate clients to temporary files and compare
+          persist-credentials: false
+      - name: Setup workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Generate clients outside the source tree and compare
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p /tmp/bthwani-generated
-          pnpm exec openapi-typescript services/dsh/contracts/dsh.openapi.yaml -o /tmp/bthwani-generated/dsh-api.ts
-          pnpm exec openapi-typescript services/wlt/contracts/wlt.openapi.yaml -o /tmp/bthwani-generated/wlt-api.ts
-          pnpm exec openapi-typescript core/identity/contracts/auth.openapi.yaml -o /tmp/bthwani-generated/identity-api.ts
-          pnpm exec openapi-typescript core/workforce/contracts/workforce.openapi.yaml -o /tmp/bthwani-generated/workforce-api.ts
-          pnpm exec openapi-typescript core/platform-control/contracts/platform-control.openapi.yaml -o /tmp/bthwani-generated/platform-control-api.ts
-          pnpm exec openapi-typescript core/providers/contracts/providers.openapi.yaml -o /tmp/bthwani-generated/providers-api.ts
-          cmp /tmp/bthwani-generated/dsh-api.ts services/dsh/clients/generated/dsh-api.ts
-          cmp /tmp/bthwani-generated/wlt-api.ts services/wlt/clients/generated/wlt-api.ts
-          cmp /tmp/bthwani-generated/identity-api.ts core/identity/clients/generated/identity-api.ts
-          cmp /tmp/bthwani-generated/workforce-api.ts core/workforce/clients/generated/workforce-api.ts
-          cmp /tmp/bthwani-generated/platform-control-api.ts core/platform-control/clients/generated/platform-control-api.ts
-          cmp /tmp/bthwani-generated/providers-api.ts core/providers/clients/generated/providers-api.ts
+          output="$(mktemp -d)"
+          trap 'rm -rf "$output"' EXIT
+          pnpm exec openapi-typescript services/dsh/contracts/dsh.openapi.yaml -o "$output/dsh-api.ts"
+          pnpm exec openapi-typescript services/wlt/contracts/wlt.openapi.yaml -o "$output/wlt-api.ts"
+          pnpm exec openapi-typescript core/identity/contracts/auth.openapi.yaml -o "$output/identity-api.ts"
+          pnpm exec openapi-typescript core/workforce/contracts/workforce.openapi.yaml -o "$output/workforce-api.ts"
+          pnpm exec openapi-typescript core/platform-control/contracts/platform-control.openapi.yaml -o "$output/platform-control-api.ts"
+          pnpm exec openapi-typescript core/providers/contracts/providers.openapi.yaml -o "$output/providers-api.ts"
+          cmp "$output/dsh-api.ts" services/dsh/clients/generated/dsh-api.ts
+          cmp "$output/wlt-api.ts" services/wlt/clients/generated/wlt-api.ts
+          cmp "$output/identity-api.ts" core/identity/clients/generated/identity-api.ts
+          cmp "$output/workforce-api.ts" core/workforce/clients/generated/workforce-api.ts
+          cmp "$output/platform-control-api.ts" core/platform-control/clients/generated/platform-control-api.ts
+          cmp "$output/providers-api.ts" core/providers/clients/generated/providers-api.ts
 
   node-verification:
     name: Typecheck build and tests
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 40
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Setup PNPM
-        uses: pnpm/action-setup@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
-          version: 10.34.2
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24.17.0
-          cache: pnpm
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+          persist-credentials: false
+      - name: Setup workspace
+        uses: ./.github/actions/setup-node-workspace
       - name: Typecheck
         run: pnpm run typecheck
       - name: Build
@@ -185,9 +178,9 @@ jobs:
         run: pnpm run test
 
   go-services:
-    name: Go test and build — ${{ matrix.name }}
+    name: Go static verification — ${{ matrix.name }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
@@ -210,9 +203,11 @@ jobs:
             go_sum: core/workforce/backend/go.sum
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version-file: ${{ matrix.go_mod }}
           cache: true
@@ -237,13 +232,7 @@ jobs:
   ci-result:
     name: CI result
     if: always()
-    needs:
-      - governance
-      - node-foundation
-      - binding-and-logic
-      - generated-clients
-      - node-verification
-      - go-services
+    needs: [governance, node-foundation, binding-and-logic, generated-clients, node-verification, go-services]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -259,6 +248,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          printf 'governance=%s\nfoundation=%s\nbinding=%s\ngenerated=%s\nnode=%s\ngo=%s\n' \
+            "$GOVERNANCE" "$FOUNDATION" "$BINDING" "$GENERATED" "$NODE_VERIFY" "$GO_SERVICES"
           test "$GOVERNANCE" = success
           test "$FOUNDATION" = success
           test "$BINDING" = success
