@@ -183,6 +183,33 @@ if (agentRegistry) {
   } else if (agentById.get(governanceOwner)?.owner === agentById.get(ciOwner)?.owner) {
     violations.push({ file: "governance/agents/agent-registry.json", line: 0, message: "GOVERNANCE_AND_CI_APPROVAL_MUST_HAVE_SEPARATE_OWNERS" });
   }
+
+  const sdlcRolesRelative = "governance/operational_journey_protocol_package/sdlc/roles-and-authority.yaml";
+  const sdlcRolesPath = path.join(repoRoot, sdlcRolesRelative);
+  if (!fs.existsSync(sdlcRolesPath)) {
+    violations.push({ file: sdlcRolesRelative, line: 0, message: "SDLC_ROLES_FILE_MISSING" });
+  } else {
+    const sdlcRoles = fs.readFileSync(sdlcRolesPath, "utf8");
+    const roleMap = new Map([
+      ["product-manager-authority", "product_manager_authority"],
+      ["product-owner-acceptance-authority", "product_owner_acceptance_authority"],
+      ["ux-journey-authority", "ux_journey_authority"],
+      ["architecture-authority", "architecture_authority"],
+      ["governance-contract-authority", "governance_contract_authority"],
+      ["ci-workflow-authority", "ci_workflow_authority"],
+      ["engineering-executor", "engineering"],
+      ["independent-reviewer", "independent_reviewer"],
+      ["independent-quality-authority", "independent_quality_authority"],
+      ["application-security-authority", "application_security_authority"],
+      ["release-authority", "release_authority"],
+    ]);
+    for (const [agentId, authorityId] of roleMap) {
+      if (!agentIds.has(agentId)) continue;
+      if (!new RegExp(`^  ${authorityId}:\\s*$`, "m").test(sdlcRoles)) {
+        violations.push({ file: sdlcRolesRelative, line: 0, message: `AGENT_SDLC_AUTHORITY_DRIFT ${agentId} -> ${authorityId}` });
+      }
+    }
+  }
 }
 
 const agentsMdPath = path.join(repoRoot, "AGENTS.md");
