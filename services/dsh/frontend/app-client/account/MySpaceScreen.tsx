@@ -17,7 +17,6 @@ export type MySpaceScreenProps = {
   appearanceMode?: BThwaniAppearanceMode;
   onAppearanceModeChange?: (mode: BThwaniAppearanceMode) => void;
   onOpenOrders?: () => void;
-  onOpenWallet?: () => void;
   onOpenAddresses?: () => void;
   onOpenIdentity?: () => void;
   onOpenPreferences?: () => void;
@@ -26,7 +25,6 @@ export type MySpaceScreenProps = {
 
 type MySpaceTab =
   | 'orders'
-  | 'wallet'
   | 'addresses'
   | 'identity'
   | 'appearance'
@@ -43,7 +41,6 @@ type TabConfig = {
 
 const TABS: TabConfig[] = [
   { id: 'orders', label: 'طلباتي', summary: 'الطلب والتاريخ والتتبع', iconName: 'bag-outline' },
-  { id: 'wallet', label: 'المحفظة', summary: 'الرصيد، الاسترداد، وطرق الدفع', iconName: 'wallet-outline' },
   { id: 'addresses', label: 'العناوين والموقع', summary: 'إدارة العناوين وموقع التوصيل', iconName: 'location-outline' },
   { id: 'identity', label: 'الملف الشخصي', summary: 'البيانات الشخصية والأمان', iconName: 'person-outline' },
   { id: 'appearance', label: 'المظهر', summary: 'فاتح أبيض أو داكن زجاجي', iconName: 'color-palette-outline' },
@@ -91,7 +88,6 @@ export function MySpaceScreen({
   appearanceMode = 'lightPremium',
   onAppearanceModeChange,
   onOpenOrders,
-  onOpenWallet,
   onOpenAddresses,
   onOpenIdentity,
   onOpenPreferences,
@@ -102,7 +98,6 @@ export function MySpaceScreen({
   const handleRowPress = (id: MySpaceTab) => {
     switch (id) {
       case 'orders': return onOpenOrders?.();
-      case 'wallet': return onOpenWallet?.();
       case 'addresses': return onOpenAddresses?.();
       case 'identity': return onOpenIdentity?.();
       case 'preferences': return onOpenPreferences?.();
