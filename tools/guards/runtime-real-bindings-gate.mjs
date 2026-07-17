@@ -14,6 +14,10 @@ function read(relative) {
   return fs.readFileSync(full, "utf8");
 }
 
+function exists(relative) {
+  return fs.existsSync(path.join(repoRoot, relative));
+}
+
 function walk(relativeRoot, predicate, files = []) {
   const fullRoot = path.join(repoRoot, relativeRoot);
   if (!fs.existsSync(fullRoot)) return files;
@@ -36,6 +40,8 @@ const forbiddenPatterns = [
   { pattern: /return\s+null\s*;/g, message: "RUNTIME_CLIENT_STUB_RETURNS_NULL" },
   { pattern: /Fallback for preview|previewData|demoData|mockSuccess/gi, message: "PREVIEW_OR_DEMO_FALLBACK_IN_RUNTIME_BINDING" },
   { pattern: /Promise\.resolve\(\s*(?:\[|\{|null|undefined)/g, message: "IN_MEMORY_SUCCESS_PRESENTED_AS_RUNTIME_BINDING" },
+  { pattern: /\bSEED_[A-Z0-9_]+\b|Seed data|In-memory store|When the real API is ready/gi, message: "SEEDED_OR_IN_MEMORY_RUNTIME_TRUTH_FORBIDDEN" },
+  { pattern: /^let\s+_[A-Za-z0-9_]+\s*:\s*[^=]+\[\]\s*=/gm, message: "MODULE_LEVEL_MUTABLE_COLLECTION_FORBIDDEN" },
 ];
 
 for (const file of [...new Set(bindingFiles)].sort()) {
@@ -44,6 +50,55 @@ for (const file of [...new Set(bindingFiles)].sort()) {
     for (const match of content.matchAll(check.pattern)) {
       violations.push({ file, line: lineNumber(content, match.index), message: check.message });
     }
+  }
+}
+
+const forbiddenRemovedPaths = [
+  "services/dsh/frontend/shared/marketing/use-loyalty-subscriptions-controller.ts",
+  "services/dsh/frontend/shared/marketing/loyalty-subscriptions.types.ts",
+  "services/dsh/frontend/control-panel/marketing/components/LoyaltyCommandDeck.tsx",
+  "services/dsh/frontend/control-panel/marketing/components/SubscriptionsCommandDeck.tsx",
+  "services/dsh/frontend/app-client/account/BenefitsHubScreen.tsx",
+  ".github/workflows/one-time-partner-detail-closure-bassam.yml",
+  ".github/workflows/partner-domain-audit.yml",
+];
+for (const file of forbiddenRemovedPaths) {
+  if (exists(file)) violations.push({ file, line: 0, message: "RETIRED_FAKE_OR_DUPLICATE_PATH_REINTRODUCED" });
+}
+
+const clientSurfacePath = "services/dsh/frontend/app-client/DshClientSurface.tsx";
+const clientSurface = read(clientSurfacePath);
+for (const [pattern, message] of [
+  [/BenefitsHubScreen|onOpenBenefits|subroute\s*===\s*["']benefits["']/g, "UNBOUND_BENEFITS_ROUTE_REINTRODUCED"],
+  [/description=["'][^"']*(?:ستتوفر قريب|قريباً)/g, "COMING_SOON_ROUTE_PRESENTED_AS_NAVIGATION"],
+  [/tickerMessage=["']مباشر["']|tickerStatusLabel=["']مباشر["']/g, "HARDCODED_LIVE_TICKER_FORBIDDEN"],
+  [/locationLabel=["'][^"']+["']/g, "HARDCODED_CLIENT_LOCATION_FORBIDDEN"],
+]) {
+  for (const match of clientSurface.matchAll(pattern)) {
+    violations.push({ file: clientSurfacePath, line: lineNumber(clientSurface, match.index), message });
+  }
+}
+
+const marketingRegistryPath = "services/dsh/frontend/shared/marketing/marketing-registry.ts";
+const marketingRegistry = read(marketingRegistryPath);
+for (const [pattern, message] of [
+  [/PARTNER_GATE_CARDS/g, "STATIC_PARTNER_GATE_FIXTURE_FORBIDDEN"],
+  [/PRODUCT_GATE_CARDS/g, "STATIC_PRODUCT_GATE_FIXTURE_FORBIDDEN"],
+  [/MARKETING_SECTION_TABS/g, "DEAD_MARKETING_SUBTAB_REGISTRY_FORBIDDEN"],
+]) {
+  for (const match of marketingRegistry.matchAll(pattern)) {
+    violations.push({ file: marketingRegistryPath, line: lineNumber(marketingRegistry, match.index), message });
+  }
+}
+
+const visibilityPath = "services/dsh/frontend/control-panel/marketing/components/VisibilityGatesSection.tsx";
+const visibility = read(visibilityPath);
+for (const [pattern, message] of [
+  [/const\s+isBypassed\s*=\s*false/g, "FAKE_VISIBILITY_BYPASS_STATE_FORBIDDEN"],
+  [/توقعات الظهور التجاري تقتصر على محاكاة/g, "SIMULATED_COMMERCIAL_VISIBILITY_COPY_FORBIDDEN"],
+]) {
+  for (const match of visibility.matchAll(pattern)) {
+    violations.push({ file: visibilityPath, line: lineNumber(visibility, match.index), message });
   }
 }
 
