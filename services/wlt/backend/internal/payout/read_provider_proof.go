@@ -2,6 +2,7 @@ package payout
 
 import (
 	"database/sql"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -49,12 +50,24 @@ func scanPayoutRequestWithProof(rows *sql.Rows) (*PayoutRequest, error) {
 		return nil, err
 	}
 
-	if approvedAt.Valid { payoutRequest.ApprovedAt = &approvedAt.Time }
-	if rejectedAt.Valid { payoutRequest.RejectedAt = &rejectedAt.Time }
-	if processedAt.Valid { payoutRequest.ProcessedAt = &processedAt.Time }
-	if completedAt.Valid { payoutRequest.CompletedAt = &completedAt.Time }
-	if failedAt.Valid { payoutRequest.FailedAt = &failedAt.Time }
-	if providerProcessedAt.Valid { payoutRequest.ProviderProcessedAt = &providerProcessedAt.Time }
+	if approvedAt.Valid {
+		payoutRequest.ApprovedAt = &approvedAt.Time
+	}
+	if rejectedAt.Valid {
+		payoutRequest.RejectedAt = &rejectedAt.Time
+	}
+	if processedAt.Valid {
+		payoutRequest.ProcessedAt = &processedAt.Time
+	}
+	if completedAt.Valid {
+		payoutRequest.CompletedAt = &completedAt.Time
+	}
+	if failedAt.Valid {
+		payoutRequest.FailedAt = &failedAt.Time
+	}
+	if providerProcessedAt.Valid {
+		payoutRequest.ProviderProcessedAt = &providerProcessedAt.Time
+	}
 	payoutRequest.FailureReason = failureReason.String
 	payoutRequest.OperatorID = operatorID.String
 	payoutRequest.ApprovedByOperatorID = approvedBy.String
@@ -87,7 +100,7 @@ func HandleListPayoutRequestsWithProviderProof(db *sql.DB) http.HandlerFunc {
 		}
 		if status != "" {
 			args = append(args, status)
-			where = append(where, "status = $"+string(rune('0'+len(args))))
+			where = append(where, fmt.Sprintf("status = $%d", len(args)))
 		}
 		if len(where) > 0 {
 			query += " WHERE " + strings.Join(where, " AND ")
