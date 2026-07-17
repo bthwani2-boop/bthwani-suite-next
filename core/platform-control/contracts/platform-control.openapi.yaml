@@ -1,14 +1,32 @@
 openapi: 3.1.0
 info:
   title: BThwani Core Platform Control API
-  version: 0.1.0
-  description: Sovereign platform-control read model and blocked mutation workflow contract.
+  version: 0.2.0
+  description: Sovereign platform-control read model and governed maker-checker change workflow.
 
 x-bthwani-owner: core/platform-control
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-scope: platform-runtime-control
 
 paths:
+  /platform/health:
+    get:
+      operationId: getPlatformControlProcessHealth
+      summary: Return process and database liveness.
+      tags: [PlatformRuntime]
+      security: []
+      responses:
+        "200": { $ref: "#/components/responses/PublicHealth" }
+        "503": { $ref: "#/components/responses/PublicHealth" }
+  /platform/readiness:
+    get:
+      operationId: getPlatformControlReadiness
+      summary: Return platform-control readiness.
+      tags: [PlatformRuntime]
+      security: []
+      responses:
+        "200": { $ref: "#/components/responses/PublicHealth" }
+        "503": { $ref: "#/components/responses/PublicHealth" }
   /platform/v1/runtime-config:
     get:
       operationId: getPlatformRuntimeConfig
@@ -19,34 +37,23 @@ paths:
           description: Platform runtime snapshot.
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/PlatformRuntimeSnapshot"
+              schema: { $ref: "#/components/schemas/PlatformRuntimeSnapshot" }
   /platform/v1/runtime-config/effective:
     get:
       operationId: getEffectiveRuntimeConfig
-      summary: Return the effective runtime configuration for the requested scope.
+      summary: Return effective persisted variables and feature flags.
       tags: [PlatformRuntime]
-      parameters:
-        - name: surface
-          in: query
-          schema: { type: string }
-        - name: city
-          in: query
-          schema: { type: string }
-        - name: zone
-          in: query
-          schema: { type: string }
       responses:
         "200":
           description: Effective runtime configuration.
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/PlatformEffectiveRuntimeConfig"
+              schema: { $ref: "#/components/schemas/PlatformEffectiveRuntimeConfig" }
+        "500": { $ref: "#/components/responses/PlatformError" }
   /platform/v1/variables:
     get:
       operationId: listPlatformVariables
-      summary: List platform variables.
+      summary: List persisted platform variables.
       tags: [PlatformVariables]
       responses:
         "200":
@@ -59,29 +66,39 @@ paths:
                 properties:
                   variables:
                     type: array
-                    items:
-                      $ref: "#/components/schemas/PlatformVariable"
+                    items: { $ref: "#/components/schemas/PlatformVariable" }
+        "500": { $ref: "#/components/responses/PlatformError" }
   /platform/v1/variables/{key}:
     get:
       operationId: getPlatformVariable
-      summary: Get a platform variable by key.
+      summary: Get a scoped platform variable.
       tags: [PlatformVariables]
       parameters:
         - name: key
           in: path
           required: true
           schema: { type: string }
+        - name: scopeType
+          in: query
+          schema: { type: string, default: global }
+        - name: scopeId
+          in: query
+          schema: { type: string, default: "" }
       responses:
-        "404":
-          description: Variable is not present until the variable store exists.
+        "200":
+          description: Scoped platform variable.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PlatformApiError"
+                type: object
+                required: [variable]
+                properties:
+                  variable: { $ref: "#/components/schemas/PlatformVariable" }
+        "404": { $ref: "#/components/responses/PlatformError" }
   /platform/v1/feature-flags:
     get:
       operationId: listPlatformFeatureFlags
-      summary: List platform feature flags.
+      summary: List persisted platform feature flags.
       tags: [PlatformFlags]
       responses:
         "200":
@@ -94,8 +111,8 @@ paths:
                 properties:
                   flags:
                     type: array
-                    items:
-                      $ref: "#/components/schemas/PlatformFeatureFlag"
+                    items: { $ref: "#/components/schemas/PlatformFeatureFlag" }
+        "500": { $ref: "#/components/responses/PlatformError" }
   /platform/v1/services:
     get:
       operationId: listPlatformServices
@@ -112,24 +129,22 @@ paths:
                 properties:
                   services:
                     type: array
-                    items:
-                      $ref: "#/components/schemas/PlatformServicePosture"
+                    items: { $ref: "#/components/schemas/PlatformServicePosture" }
   /platform/v1/health:
     get:
       operationId: getPlatformHealth
-      summary: Return platform health posture.
+      summary: Return authorized platform health posture.
       tags: [PlatformHealth]
       responses:
         "200":
           description: Health posture.
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/PlatformHealthSnapshot"
+              schema: { $ref: "#/components/schemas/PlatformHealthSnapshot" }
   /platform/v1/audit-events:
     get:
       operationId: listPlatformAuditEvents
-      summary: List platform audit events.
+      summary: List immutable platform audit events.
       tags: [PlatformAudit]
       responses:
         "200":
@@ -142,12 +157,12 @@ paths:
                 properties:
                   events:
                     type: array
-                    items:
-                      $ref: "#/components/schemas/PlatformAuditEvent"
+                    items: { $ref: "#/components/schemas/PlatformAuditEvent" }
+        "500": { $ref: "#/components/responses/PlatformError" }
   /platform/v1/change-sets:
     get:
       operationId: listPlatformChangeSets
-      summary: List platform change sets.
+      summary: List governed platform change sets.
       tags: [PlatformChangeSets]
       responses:
         "200":
@@ -160,73 +175,90 @@ paths:
                 properties:
                   changeSets:
                     type: array
-                    items:
-                      $ref: "#/components/schemas/PlatformChangeSet"
+                    items: { $ref: "#/components/schemas/PlatformChangeSet" }
+        "500": { $ref: "#/components/responses/PlatformError" }
     post:
       operationId: createPlatformChangeSet
-      summary: Create a platform change set proposal.
+      summary: Create a draft platform change set.
       tags: [PlatformChangeSets]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreatePlatformChangeSetInput" }
       responses:
-        "409":
-          description: Change workflow is not enabled in P1.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlatformApiError"
+        "201": { $ref: "#/components/responses/PlatformChangeSetResponse" }
+        "422": { $ref: "#/components/responses/PlatformError" }
+  /platform/v1/change-sets/{id}:
+    get:
+      operationId: getPlatformChangeSet
+      summary: Get one platform change set with items.
+      tags: [PlatformChangeSets]
+      parameters: [{ $ref: "#/components/parameters/ChangeSetId" }]
+      responses:
+        "200": { $ref: "#/components/responses/PlatformChangeSetResponse" }
+        "404": { $ref: "#/components/responses/PlatformError" }
   /platform/v1/change-sets/{id}/validate:
     post:
       operationId: validatePlatformChangeSet
-      summary: Validate a platform change set.
+      summary: Validate a draft change set.
       tags: [PlatformChangeSets]
-      parameters:
-        - $ref: "#/components/parameters/ChangeSetId"
+      parameters: [{ $ref: "#/components/parameters/ChangeSetId" }]
       responses:
-        "409": { $ref: "#/components/responses/ChangeWorkflowRequired" }
+        "200": { $ref: "#/components/responses/PlatformChangeSetResponse" }
+        "409": { $ref: "#/components/responses/PlatformError" }
+        "422": { $ref: "#/components/responses/PlatformError" }
   /platform/v1/change-sets/{id}/submit:
     post:
       operationId: submitPlatformChangeSet
-      summary: Submit a platform change set for approval.
+      summary: Submit a validated change set for independent approval.
       tags: [PlatformChangeSets]
-      parameters:
-        - $ref: "#/components/parameters/ChangeSetId"
+      parameters: [{ $ref: "#/components/parameters/ChangeSetId" }]
       responses:
-        "409": { $ref: "#/components/responses/ChangeWorkflowRequired" }
+        "200": { $ref: "#/components/responses/PlatformChangeSetResponse" }
+        "409": { $ref: "#/components/responses/PlatformError" }
   /platform/v1/change-sets/{id}/approve:
     post:
       operationId: approvePlatformChangeSet
-      summary: Approve a platform change set.
+      summary: Independently approve a submitted change set.
       tags: [PlatformChangeSets]
-      parameters:
-        - $ref: "#/components/parameters/ChangeSetId"
+      parameters: [{ $ref: "#/components/parameters/ChangeSetId" }]
       responses:
-        "409": { $ref: "#/components/responses/ChangeWorkflowRequired" }
+        "200": { $ref: "#/components/responses/PlatformChangeSetResponse" }
+        "409": { $ref: "#/components/responses/PlatformError" }
   /platform/v1/change-sets/{id}/reject:
     post:
       operationId: rejectPlatformChangeSet
-      summary: Reject a platform change set.
+      summary: Reject a submitted change set with a reason.
       tags: [PlatformChangeSets]
-      parameters:
-        - $ref: "#/components/parameters/ChangeSetId"
+      parameters: [{ $ref: "#/components/parameters/ChangeSetId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RejectPlatformChangeSetInput" }
       responses:
-        "409": { $ref: "#/components/responses/ChangeWorkflowRequired" }
+        "200": { $ref: "#/components/responses/PlatformChangeSetResponse" }
+        "409": { $ref: "#/components/responses/PlatformError" }
+        "422": { $ref: "#/components/responses/PlatformError" }
   /platform/v1/change-sets/{id}/apply:
     post:
       operationId: applyPlatformChangeSet
-      summary: Apply an approved platform change set.
+      summary: Atomically apply an approved change set with revision checks.
       tags: [PlatformChangeSets]
-      parameters:
-        - $ref: "#/components/parameters/ChangeSetId"
+      parameters: [{ $ref: "#/components/parameters/ChangeSetId" }]
       responses:
-        "409": { $ref: "#/components/responses/ChangeWorkflowRequired" }
+        "200": { $ref: "#/components/responses/PlatformChangeSetResponse" }
+        "409": { $ref: "#/components/responses/PlatformError" }
   /platform/v1/change-sets/{id}/rollback:
     post:
       operationId: rollbackPlatformChangeSet
-      summary: Roll back an applied platform change set.
+      summary: Atomically roll back an applied change set from captured snapshots.
       tags: [PlatformChangeSets]
-      parameters:
-        - $ref: "#/components/parameters/ChangeSetId"
+      parameters: [{ $ref: "#/components/parameters/ChangeSetId" }]
       responses:
-        "409": { $ref: "#/components/responses/ChangeWorkflowRequired" }
+        "200": { $ref: "#/components/responses/PlatformChangeSetResponse" }
+        "409": { $ref: "#/components/responses/PlatformError" }
   /platform/v1/rollouts:
     post:
       operationId: createPlatformRollout
@@ -239,8 +271,7 @@ paths:
       operationId: advancePlatformRollout
       summary: Advance a platform rollout.
       tags: [PlatformRollouts]
-      parameters:
-        - $ref: "#/components/parameters/RolloutId"
+      parameters: [{ $ref: "#/components/parameters/RolloutId" }]
       responses:
         "409": { $ref: "#/components/responses/RolloutWorkflowRequired" }
   /platform/v1/rollouts/{id}/pause:
@@ -248,8 +279,7 @@ paths:
       operationId: pausePlatformRollout
       summary: Pause a platform rollout.
       tags: [PlatformRollouts]
-      parameters:
-        - $ref: "#/components/parameters/RolloutId"
+      parameters: [{ $ref: "#/components/parameters/RolloutId" }]
       responses:
         "409": { $ref: "#/components/responses/RolloutWorkflowRequired" }
   /platform/v1/rollouts/{id}/abort:
@@ -257,8 +287,7 @@ paths:
       operationId: abortPlatformRollout
       summary: Abort a platform rollout.
       tags: [PlatformRollouts]
-      parameters:
-        - $ref: "#/components/parameters/RolloutId"
+      parameters: [{ $ref: "#/components/parameters/RolloutId" }]
       responses:
         "409": { $ref: "#/components/responses/RolloutWorkflowRequired" }
   /platform/v1/rollouts/{id}/rollback:
@@ -266,8 +295,7 @@ paths:
       operationId: rollbackPlatformRollout
       summary: Roll back a platform rollout.
       tags: [PlatformRollouts]
-      parameters:
-        - $ref: "#/components/parameters/RolloutId"
+      parameters: [{ $ref: "#/components/parameters/RolloutId" }]
       responses:
         "409": { $ref: "#/components/responses/RolloutWorkflowRequired" }
 
@@ -277,58 +305,70 @@ components:
       name: id
       in: path
       required: true
-      schema: { type: string }
+      schema: { type: string, format: uuid }
     RolloutId:
       name: id
       in: path
       required: true
       schema: { type: string }
   responses:
-    ChangeWorkflowRequired:
-      description: Change workflow is not enabled in P1.
+    PublicHealth:
+      description: Process health or readiness state.
       content:
         application/json:
           schema:
-            $ref: "#/components/schemas/PlatformApiError"
+            type: object
+            required: [status, service]
+            properties:
+              status: { type: string }
+              service: { type: string }
+              reason: { type: string }
+    PlatformError:
+      description: Platform-control error.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/PlatformApiError" }
+    PlatformChangeSetResponse:
+      description: Platform change set readback.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [changeSet]
+            properties:
+              changeSet: { $ref: "#/components/schemas/PlatformChangeSet" }
     RolloutWorkflowRequired:
-      description: Rollout workflow is not enabled in P1.
+      description: Progressive rollout workflow is not enabled yet.
       content:
         application/json:
-          schema:
-            $ref: "#/components/schemas/PlatformApiError"
+          schema: { $ref: "#/components/schemas/PlatformApiError" }
   schemas:
     PlatformControlState:
       type: string
-      enum: [FIX_REQUIRED, PARTIALLY_BOUND, UNKNOWN_HEALTH, ROLLBACK_UNAVAILABLE, CONTRACT_REQUIRED, READ_ONLY_BOUND]
+      enum: [FIX_REQUIRED, PARTIALLY_BOUND, UNKNOWN_HEALTH, ROLLBACK_UNAVAILABLE, CONTRACT_REQUIRED, READ_ONLY_BOUND, OPERATIONAL]
+    PlatformChangeSetStatus:
+      type: string
+      enum: [draft, validated, submitted, approved, rejected, applied, rolled_back, failed]
+    PlatformChangeTargetType:
+      type: string
+      enum: [variable, feature_flag]
     PlatformRuntimeSnapshot:
       type: object
       required: [status, revision, generatedAt, variablesState, flagsState, rolloutsState, healthState, auditState, rollbackState, servicesState, evidence]
       properties:
-        status:
-          $ref: "#/components/schemas/PlatformControlState"
-        revision:
-          type: string
-        generatedAt:
-          type: string
-          format: date-time
-        variablesState:
-          $ref: "#/components/schemas/PlatformControlState"
-        flagsState:
-          $ref: "#/components/schemas/PlatformControlState"
-        rolloutsState:
-          $ref: "#/components/schemas/PlatformControlState"
-        healthState:
-          $ref: "#/components/schemas/PlatformControlState"
-        auditState:
-          $ref: "#/components/schemas/PlatformControlState"
-        rollbackState:
-          $ref: "#/components/schemas/PlatformControlState"
-        servicesState:
-          $ref: "#/components/schemas/PlatformControlState"
+        status: { $ref: "#/components/schemas/PlatformControlState" }
+        revision: { type: string }
+        generatedAt: { type: string, format: date-time }
+        variablesState: { $ref: "#/components/schemas/PlatformControlState" }
+        flagsState: { $ref: "#/components/schemas/PlatformControlState" }
+        rolloutsState: { $ref: "#/components/schemas/PlatformControlState" }
+        healthState: { $ref: "#/components/schemas/PlatformControlState" }
+        auditState: { $ref: "#/components/schemas/PlatformControlState" }
+        rollbackState: { $ref: "#/components/schemas/PlatformControlState" }
+        servicesState: { $ref: "#/components/schemas/PlatformControlState" }
         evidence:
           type: array
-          items:
-            type: string
+          items: { type: string }
     PlatformEffectiveRuntimeConfig:
       type: object
       required: [revision, stale, fallbackUsed, evaluationTrace, values]
@@ -352,68 +392,127 @@ components:
         classification: { type: string }
         scopeType: { type: string }
         scopeId: { type: string }
+        value: {}
         revision: { type: string }
-        status:
-          $ref: "#/components/schemas/PlatformControlState"
-        effectiveFrom:
-          type: string
-          format: date-time
-        expiresAt:
-          type: string
-          format: date-time
+        status: { $ref: "#/components/schemas/PlatformControlState" }
+        effectiveFrom: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time }
     PlatformFeatureFlag:
       type: object
-      required: [key, status, revision]
+      required: [key, ownerService, status, revision]
       properties:
         key: { type: string }
-        status:
-          $ref: "#/components/schemas/PlatformControlState"
+        ownerService: { type: string }
+        status: { $ref: "#/components/schemas/PlatformControlState" }
         revision: { type: string }
-        enabled:
-          type: boolean
+        enabled: { type: boolean }
+        targeting:
+          type: object
+          additionalProperties: true
     PlatformServicePosture:
       type: object
       required: [service, state, evidenceSource]
       properties:
         service: { type: string }
-        state:
-          $ref: "#/components/schemas/PlatformControlState"
+        state: { $ref: "#/components/schemas/PlatformControlState" }
         evidenceSource: { type: string }
     PlatformHealthSnapshot:
       type: object
       required: [state, checkedAt, services]
       properties:
-        state:
-          $ref: "#/components/schemas/PlatformControlState"
-        checkedAt:
-          type: string
-          format: date-time
+        state: { $ref: "#/components/schemas/PlatformControlState" }
+        checkedAt: { type: string, format: date-time }
         services:
           type: array
-          items:
-            $ref: "#/components/schemas/PlatformServicePosture"
+          items: { $ref: "#/components/schemas/PlatformServicePosture" }
     PlatformAuditEvent:
       type: object
       required: [id, action, actorId, createdAt, status]
       properties:
-        id: { type: string }
+        id: { type: string, format: uuid }
+        changeSetId: { type: string, format: uuid }
         action: { type: string }
         actorId: { type: string }
-        createdAt:
-          type: string
-          format: date-time
-        status:
-          $ref: "#/components/schemas/PlatformControlState"
+        actorRoles:
+          type: array
+          items: { type: string }
+        createdAt: { type: string, format: date-time }
+        status: { type: string }
+        reason: { type: string }
+        correlationId: { type: string }
+    PlatformChangeSetItem:
+      type: object
+      required: [id, targetType, targetKey, ownerService, scopeType, valueType, classification, expectedRevision, proposedValue]
+      properties:
+        id: { type: string, format: uuid }
+        targetType: { $ref: "#/components/schemas/PlatformChangeTargetType" }
+        targetKey: { type: string }
+        ownerService: { type: string }
+        scopeType: { type: string }
+        scopeId: { type: string }
+        valueType: { type: string }
+        classification: { type: string }
+        expectedRevision: { type: integer, format: int64, minimum: 0 }
+        beforeValue: {}
+        proposedValue: {}
+        appliedRevision: { type: integer, format: int64 }
     PlatformChangeSet:
       type: object
-      required: [id, status, createdAt]
+      required: [id, title, reason, impactAssessment, rollbackPlan, status, proposerActorId, version, createdAt, updatedAt, items]
       properties:
-        id: { type: string }
-        status:
-          $ref: "#/components/schemas/PlatformControlState"
-        createdAt:
-          type: string
-          format: date-time
+        id: { type: string, format: uuid }
+        title: { type: string }
+        reason: { type: string }
+        impactAssessment: { type: string }
+        rollbackPlan: { type: string }
+        status: { $ref: "#/components/schemas/PlatformChangeSetStatus" }
+        proposerActorId: { type: string }
+        approverActorId: { type: string }
+        appliedByActorId: { type: string }
+        rejectedByActorId: { type: string }
+        rejectionReason: { type: string }
+        version: { type: integer, format: int64 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        validatedAt: { type: string, format: date-time }
+        submittedAt: { type: string, format: date-time }
+        approvedAt: { type: string, format: date-time }
+        rejectedAt: { type: string, format: date-time }
+        appliedAt: { type: string, format: date-time }
+        rolledBackAt: { type: string, format: date-time }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/PlatformChangeSetItem" }
+    CreatePlatformChangeSetItemInput:
+      type: object
+      required: [targetType, targetKey, ownerService, expectedRevision, proposedValue]
+      properties:
+        targetType: { $ref: "#/components/schemas/PlatformChangeTargetType" }
+        targetKey: { type: string, minLength: 1 }
+        ownerService: { type: string, minLength: 1 }
+        scopeType: { type: string, default: global }
+        scopeId: { type: string, default: "" }
+        valueType: { type: string, default: json }
+        classification: { type: string, default: internal }
+        expectedRevision: { type: integer, format: int64, minimum: 0 }
+        proposedValue: {}
+    CreatePlatformChangeSetInput:
+      type: object
+      required: [title, reason, impactAssessment, rollbackPlan, items]
+      properties:
+        title: { type: string, minLength: 1 }
+        reason: { type: string, minLength: 1 }
+        impactAssessment: { type: string, minLength: 1 }
+        rollbackPlan: { type: string, minLength: 1 }
+        items:
+          type: array
+          minItems: 1
+          items: { $ref: "#/components/schemas/CreatePlatformChangeSetItemInput" }
+    RejectPlatformChangeSetInput:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 1 }
     PlatformApiError:
       type: object
       required: [code, message]
