@@ -26,6 +26,13 @@ Product-visible, role-sensitive, cross-surface, commercial, or workflow changes 
 governance/product/PRODUCT_TRUTH_POLICY.md
 ```
 
+SaaS readiness and tenant-governance state are encoded in:
+
+```text
+governance/saas/saas-governance.json
+governance/saas/saas-governance.schema.json
+```
+
 Adapters, skills, protocol templates, matrices, diagnostics, historical phase files, and generated artifacts may not override those sources.
 
 ## Repository truth
@@ -74,7 +81,7 @@ Agents must not:
 - create evidence packs, command logs, screenshot sets, closure reports, or generated diagnostics by default;
 - run full Graphify, full Nx graph, full test, full build, or full guard suites without a proven need;
 - use CI to mutate source, commit, push, merge, or rewrite branches;
-- treat seed, fixture, preview, fallback, or in-memory data as runtime, revenue, subscriber, or commercial proof;
+- treat seed, fixture, preview, fallback, or in-memory data as runtime, revenue, subscriber, tenant-isolation, or commercial proof;
 - claim final closure from static checks alone.
 
 ## Task router
@@ -90,8 +97,8 @@ Choose one primary mode and add only the owner skills required by the actual ris
 | `UI_VISUAL` | visual parity or screenshots explicitly required | code check plus visual evidence |
 | `API_CONTRACT` | OpenAPI, route, generated client, or consumer binding | contract and binding checks |
 | `RUNTIME` | startup, Docker, ports, environment, provider, or runtime behavior | targeted runtime smoke |
-| `DSH_WLT` | money, payment, ledger, settlement, payout, commission, checkout, or financial handoff | paired boundary checks and independent review |
-| `SECURITY_PRIVACY` | auth, RBAC, sessions, secrets, PII, or sensitive configuration | targeted security verification |
+| `DSH_WLT` | money, payment, ledger, settlement, payout, commission, checkout, or financial handoff | paired boundary checks and independent financial review |
+| `SECURITY_PRIVACY` | auth, RBAC, sessions, secrets, PII, isolation, or sensitive configuration | targeted security verification |
 | `AGENT_SYSTEM` | AGENTS, `.agents`, governance registries, skills, guards, gates, or Actions | governance and workflow gates |
 | `DEPENDENCY_CI` | package, lockfile, workflow, CI, release, or toolchain changes | targeted CI and policy checks |
 | `REFACTOR_CLEANUP` | move, merge, delete, deduplicate, or retire code | impact proof and affected checks |
@@ -114,13 +121,18 @@ Graphify is a tool, not an agent. LeanCTX is optional, not a mandatory first ste
 
 ## Agent and skill model
 
-- `MASTER_ADVISORY_SUPERVISOR` coordinates broad work and does not replace formal authorities.
+- `MASTER_ADVISORY_SUPERVISOR` coordinates broad work, remains read/plan/verify only, and does not replace formal authorities.
+- `SDLC_PROGRAM_AUTHORITY` owns stage state, transition legality, and evidence-backed exclusions.
 - `PRODUCT_MANAGER_AUTHORITY` owns the problem, outcome, scope, exclusions, and product-model approval.
-- `PRODUCT_OWNER_ACCEPTANCE_AUTHORITY` owns functional acceptance and product acceptance.
-- `UX_JOURNEY_AUTHORITY` owns journey clarity when human-facing flows change.
-- Engineering implements and performs developer verification.
-- Independent QA, application security, and release authorities own their formal approvals.
-- An executor may not finally approve its own high-risk work.
+- `PRODUCT_OWNER_ACCEPTANCE_AUTHORITY` owns functional readiness and product acceptance and must be distinct from the product manager.
+- `UX_JOURNEY_AUTHORITY` owns journey clarity and accessibility intent when human-facing flows change.
+- `ARCHITECTURE_AUTHORITY` owns boundaries, contracts, data flow, and dependency direction.
+- `GOVERNANCE_CONTRACT_AUTHORITY` and `CI_WORKFLOW_AUTHORITY` are separate approving authorities with separate owner skills and identities.
+- `FINANCIAL_CONTROL_AUTHORITY` owns independent WLT financial truth and handoff approval.
+- `INDEPENDENT_QUALITY_AUTHORITY`, `APPLICATION_SECURITY_AUTHORITY`, and `RELEASE_AUTHORITY` own their formal approvals.
+- `RISK_ACCEPTANCE_AUTHORITY` alone may accept documented residual risk and cannot be the change author.
+- Engineering implements and performs developer verification; the independent reviewer owns G4 implementation verification.
+- An executor, coordinator, adapter, or tool may not finally approve its own protected work.
 
 Use `governance/agents/agent-registry.json` and `governance/skills/skills-registry.json` as machine-readable role and skill contracts.
 
@@ -137,18 +149,21 @@ Typical scoped aliases:
 
 Use `FIX_REQUIRED` when in-scope acceptance fails, `NEEDS_EVIDENCE` when the implementation claim lacks current evidence, `BLOCKED_EXTERNAL` for truly external blockers, and `PROTOCOL_VIOLATION` for authority, scope, safety, or evidence breaches.
 
-`CLOSED_WITH_EVIDENCE` requires all applicable same-commit static, runtime, product, QA, security, release, and production evidence. It cannot be issued by an implementation skill or from documentation-only work unless the governed journey itself is documentation-only.
+`CLOSED_WITH_EVIDENCE` requires every applicable same-commit evidence scope: `static`, `product`, `runtime`, `visual`, `qa`, `security`, `finance`, `isolation`, `governance`, `ci`, `release`, and `production`. It also requires every required independent approval, evidence-backed stage exclusion, no open blocker, and proven GitHub enforcement for protected high-risk closure. It cannot be issued by an implementation skill or inferred from documentation, configuration, schemas, guard names, or prior workflow runs.
+
+SaaS readiness modes and commercial activation states are not decisions. `SAAS_ACTIVE` cannot be declared until its machine-readable activation evidence is fully proven and the applicable SDLC journey reaches `CLOSED_WITH_EVIDENCE`.
 
 ## High-risk escalation
 
 Formal SDLC routing and independent review are required for:
 
 - authentication, authorization, RBAC, and sessions;
-- PII, secrets, and privacy;
+- PII, secrets, privacy, tenant context, and cross-tenant access;
 - payments, WLT, ledger, settlement, payout, reconciliation, and commission;
 - migrations and production data;
-- infrastructure, CI, release, rollback, and signing;
+- governance contracts, CI workflows, infrastructure, release, rollback, and signing;
 - critical or high vulnerabilities;
+- SaaS activation, billing, metering, subscriptions, white-labeling, and custom domains;
 - final release or production closure.
 
 ## Final response contract
