@@ -13,10 +13,12 @@
       "governance-schema",
       "agent-governance",
       "guard-registry",
-      "ui-kit-boundary",
-      "runtime-config",
-      "no-broken-imports",
+      "sdlc",
+      "repo-size",
       "cleanup-policy",
+      "no-broken-imports",
+      "runtime-config",
+      "ui-kit-boundary",
       "api-binding",
       "backend-api-binding"
     ],
@@ -24,18 +26,25 @@
       "governance-schema",
       "agent-governance",
       "guard-registry",
-      "fullstack-boundary",
-      "wlt-financial-boundary",
-      "runtime-config",
+      "sdlc",
+      "cleanup-policy",
       "no-broken-imports",
+      "runtime-config",
       "api-binding",
       "backend-api-binding",
+      "service-manifest-drift",
+      "frontend-feature-binding",
+      "fullstack-boundary",
+      "wlt-financial-boundary",
+      "runtime-real-bindings",
       "live-cross-journey-integrity"
     ],
     "governance": [
       "governance-schema",
       "agent-governance",
-      "guard-registry"
+      "guard-registry",
+      "sdlc",
+      "cleanup-policy"
     ]
   }
 }
