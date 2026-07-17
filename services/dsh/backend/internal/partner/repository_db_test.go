@@ -86,8 +86,21 @@ func TestPartnerLifecycleDBIntegration(t *testing.T) {
 	}
 	for _, next := range chain {
 		if next == StatusClientVisible {
-			if _, err := db.Exec(`UPDATE dsh_stores SET partner_readiness = 'ready', version = version + 1, updated_at = NOW() WHERE id = $1`, storeID); err != nil {
-				t.Fatalf("failed to mark store partner_readiness ready: %v", err)
+			// The client-visible transition must prove every store publication
+			// gate, not merely partner readiness. Seed the same state that the
+			// owning governance sections would produce after independent review.
+			if _, err := db.Exec(`
+				UPDATE dsh_stores
+				SET status = 'active',
+				    is_visible = true,
+				    serviceability_status = 'serviceable',
+				    partner_readiness = 'ready',
+				    catalog_approval_status = 'approved',
+				    marketing_visibility = 'visible',
+				    version = version + 1,
+				    updated_at = NOW()
+				WHERE id = $1`, storeID); err != nil {
+				t.Fatalf("failed to satisfy store publication gates: %v", err)
 			}
 		}
 		p, _, err = TransitionStatus(db, p.ID, TransitionInput{
