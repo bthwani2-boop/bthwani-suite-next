@@ -8,6 +8,7 @@ on:
       - "bassam-platform-*-verify-*"
     paths:
       - "core/platform-control/**"
+      - "core/identity/backend/**"
       - "infra/docker/compose.runtime.yml"
       - "infra/data-plane/postgres/init/001_create_runtime_databases.sh"
       - "tools/scripts/platform-control-runtime.ps1"
@@ -20,6 +21,7 @@ on:
     branches: [master]
     paths:
       - "core/platform-control/**"
+      - "core/identity/backend/**"
       - "infra/docker/compose.runtime.yml"
       - "infra/data-plane/postgres/init/001_create_runtime_databases.sh"
       - "tools/scripts/platform-control-runtime.ps1"
@@ -68,6 +70,35 @@ jobs:
       - name: Test backend without database
         working-directory: core/platform-control/backend
         run: go test ./... -count=1
+
+  identity:
+    name: Identity platform separation verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+      - name: Setup Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: core/identity/backend/go.mod
+          cache: true
+          cache-dependency-path: core/identity/backend/go.sum
+      - name: Verify format
+        working-directory: core/identity/backend
+        shell: bash
+        run: |
+          set -euo pipefail
+          files="$(gofmt -l .)"
+          test -z "$files" || { printf 'Unformatted identity files:\n%s\n' "$files"; exit 1; }
+      - name: Vet, build, and test identity
+        working-directory: core/identity/backend
+        run: |
+          go vet ./...
+          go build ./...
+          go test ./... -count=1
 
   database:
     name: Platform control migration and workflow verification
@@ -145,18 +176,20 @@ jobs:
   result:
     name: Platform control verification result
     if: always()
-    needs: [backend, database, frontend]
+    needs: [backend, identity, database, frontend]
     runs-on: ubuntu-latest
     steps:
       - name: Require every platform-control verification job
         env:
           BACKEND: ${{ needs.backend.result }}
+          IDENTITY: ${{ needs.identity.result }}
           DATABASE: ${{ needs.database.result }}
           FRONTEND: ${{ needs.frontend.result }}
         shell: bash
         run: |
           set -euo pipefail
-          printf 'backend=%s\ndatabase=%s\nfrontend=%s\n' "$BACKEND" "$DATABASE" "$FRONTEND"
+          printf 'backend=%s\nidentity=%s\ndatabase=%s\nfrontend=%s\n' "$BACKEND" "$IDENTITY" "$DATABASE" "$FRONTEND"
           test "$BACKEND" = success
+          test "$IDENTITY" = success
           test "$DATABASE" = success
           test "$FRONTEND" = success
