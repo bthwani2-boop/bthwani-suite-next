@@ -1,0 +1,89 @@
+openapi: 3.1.0
+info:
+  title: BThwani WLT Commercial Benefits Summary API
+  version: 0.1.0
+  description: Internal aggregate read model for WLT-owned loyalty and subscription truth.
+
+x-bthwani-owner: services/wlt
+x-bthwani-parent-contract: services/wlt/contracts/wlt.commercial.openapi.yaml
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-client-generation: ENABLED
+x-bthwani-runtime-dependency: true
+x-bthwani-financial-owner: true
+
+paths:
+  /wlt/commercial/summary:
+    get:
+      operationId: getWltCommercialBenefitsSummary
+      summary: Return WLT-owned loyalty and subscription aggregate metrics.
+      tags: [WltCommercialBenefits]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema: { type: string }
+        - name: X-Service-Caller
+          in: header
+          required: true
+          schema:
+            type: string
+            enum: [dsh]
+      responses:
+        "200":
+          description: Commercial benefits summary.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WltCommercialBenefitsSummaryResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+
+  responses:
+    Unauthenticated:
+      description: Service authentication failed.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/WltErrorResponse" }
+    Forbidden:
+      description: Caller is forbidden.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/WltErrorResponse" }
+
+  schemas:
+    WltErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+
+    WltCommercialBenefitsSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - activeProducts
+        - activeSubscriptions
+        - monthlyRecurringMinorUnits
+        - loyaltyAccounts
+        - pointsIssuedThisMonth
+      properties:
+        activeProducts: { type: integer, format: int64, minimum: 0 }
+        activeSubscriptions: { type: integer, format: int64, minimum: 0 }
+        monthlyRecurringMinorUnits: { type: integer, format: int64, minimum: 0 }
+        loyaltyAccounts: { type: integer, format: int64, minimum: 0 }
+        pointsIssuedThisMonth: { type: integer, format: int64 }
+
+    WltCommercialBenefitsSummaryResponse:
+      type: object
+      additionalProperties: false
+      required: [summary]
+      properties:
+        summary: { $ref: "#/components/schemas/WltCommercialBenefitsSummary" }
