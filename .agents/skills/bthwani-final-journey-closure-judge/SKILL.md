@@ -1,14 +1,14 @@
 ---
 name: bthwani-final-journey-closure-judge
 version: 2026.07.17-v3
-summary: Judge final closure only from same-commit, multi-scope, independently approved evidence within registered assurance boundaries.
+summary: Judge final closure only from same-commit, all-applicable-scope, independently approved evidence within registered assurance boundaries.
 ---
 
 # bthwani-final-journey-closure-judge
 
 ## Purpose
 
-Own the final evidence reconciliation that decides whether a governed journey may be classified as `CLOSED_WITH_EVIDENCE`.
+Own final evidence reconciliation for deciding whether a governed journey may be classified as `CLOSED_WITH_EVIDENCE`.
 
 ## Invoke when
 
@@ -22,7 +22,7 @@ Own the final evidence reconciliation that decides whether a governed journey ma
 
 ## Authority boundary
 
-This skill may reconcile independently produced evidence and issue the final canonical decision. It may not create missing proof, approve its own implementation, replace Product Manager or Product Owner approval, replace governance/CI/QA/security/release authorities, accept residual risk, infer runtime truth from declarations, or expand a guard beyond its registered assurance class.
+This skill reconciles independently produced evidence and issues the canonical final decision. It may not create missing proof, approve its own implementation, replace Product Manager, Product Owner, governance, CI, financial, QA, security, release, production, or residual-risk authorities, infer runtime truth from declarations, or expand a guard beyond its assurance class.
 
 ## Read before
 
@@ -30,53 +30,51 @@ This skill may reconcile independently produced evidence and issue the final can
 - `governance/26_SDLC_TEAM_AND_STAGE_GATES.md`
 - `governance/github/repository-enforcement.json`
 - `governance/guards/guard-assurance.json`
-- the applicable Product Truth contract;
-- the applicable SDLC artifact and change-impact document;
-- same-commit guard, test, runtime, QA, security, release, and production results.
+- applicable Product Truth, SDLC artifact, and change-impact documents;
+- same-commit evidence and approvals for every applicable scope.
 
 ## Required evidence model
 
-Evaluate only applicable scopes:
+Reconcile the exact `applicableEvidenceScopes` declared by impact:
 
-1. Product Truth and functional acceptance.
-2. Contract and architecture integrity.
-3. Backend, data, generated-client, adapter/controller, and surface binding.
-4. Governance-contract approval when governance is affected.
-5. CI-workflow approval and immutable workflow checks when CI is affected.
-6. Negative and cross-surface tests.
-7. Runtime smoke tied to the same commit when runtime is claimed.
-8. Visual flow evidence only when UI closure, release, store, or explicit visual acceptance applies.
-9. Independent QA, security, release, and risk acceptance where required.
-10. GitHub enforcement evidence, including distinct approver identities, required checks, and branch protection when high-risk closure is requested.
-11. Assurance-boundary reconciliation for every guard result used in the decision.
+1. `static`: contracts, architecture, code, data ownership, generated clients, bindings, and targeted checks.
+2. `product`: Product Manager model and Product Owner acceptance.
+3. `runtime`: startup, health, actor request/response, failure path, and persistence readback.
+4. `visual`: rendered flow, state, RTL, and visual acceptance when applicable.
+5. `qa`: independent QA, negative tests, cross-surface consistency, and accessibility acceptance.
+6. `security`: independent security, privacy, authorization, vulnerability, and secret evidence.
+7. `finance`: independent Financial Control approval for WLT financial truth and DSH/WLT handoffs.
+8. `isolation`: independent isolation-security evidence when tenant or isolation impact applies.
+9. `governance`: Governance Contract approval for control-plane changes.
+10. `ci`: CI Workflow approval, immutable action checks, syntax/security analysis, and actual same-commit results.
+11. `release`: release readiness, rollback, monitoring, support ownership, and residual-risk decision.
+12. `production`: deployment, production smoke/readback, telemetry review, and rollback readiness.
 
-A pass in one scope never upgrades another scope. Prior evidence does not override a newer failure or a newer commit.
+Every skipped stage must appear in `notApplicableStages` with matching `stageExclusions` evidence. A scope-specific pass never upgrades another scope, and prior evidence never overrides a newer failure or commit.
 
 ## Guard assurance rule
 
 - Resolve every guard result through `governance/guards/guard-assurance.json`.
-- Treat `proves` as the maximum positive claim supported by that guard.
-- Treat every item in `doesNotProve` as unresolved unless separate same-commit evidence covers it.
-- A guard with `closureEligible: false` cannot independently support `CLOSED_WITH_EVIDENCE`.
-- `STATIC_AST`, `STATIC_BINDING`, `STATIC_HEURISTIC`, `STATIC_ANTI_STUB`, `SCOPED_REGRESSION`, `CONFIGURATION_BUDGET`, `SCHEMA_INTEGRITY`, `POLICY_ALIGNMENT`, `SYNTAX_VALIDATION`, and static security audits remain scope evidence only.
-- A misleading display name such as “runtime,” “live,” “coverage,” or “performance” never expands the machine-readable assurance class.
+- `proves` is the maximum positive claim supported by that guard.
+- Every `doesNotProve` item remains unresolved without separate same-commit evidence.
+- A guard with `closureEligible: false` cannot independently support closure.
+- Static, configuration, schema, regression, syntax, pinning, and bounded runtime checks remain only their declared scope evidence.
 
 ## GitHub enforcement rule
 
-- Read `governance/github/repository-enforcement.json` as a conservative evidence snapshot, then verify it against live GitHub state when issuing closure.
-- If `claims.highRiskClosureAllowed` is `false`, a high-risk journey cannot be `CLOSED_WITH_EVIDENCE`.
-- If `claims.separationOfDutiesProven` is `false`, any journey requiring independent approval must return `NEEDS_EVIDENCE` or the applicable block decision.
-- A single `CODEOWNERS` identity proves routing only; it never proves separation of duties.
-- Unproven branch protection or required checks cannot be silently treated as pass.
+- Verify `governance/github/repository-enforcement.json` against live GitHub state before protected closure.
+- If `highRiskClosureAllowed` is false, a high-risk journey cannot close.
+- If `separationOfDutiesProven` is false, a journey requiring independent approval returns `NEEDS_EVIDENCE` or the applicable block decision.
+- A single CODEOWNERS identity proves routing only.
+- Unproven branch protection, required checks, stale-approval dismissal, or workflow success cannot be treated as pass.
 
 ## Forbidden
 
-- `implemented` or `code check passed` as a synonym for closure.
-- Closure with failed gates, missing evidence, open blockers, unresolved residual risk, or self-approval.
-- Closure based on a merge ref, stale branch SHA, runtime map declaration, seed data, or documentation-only claim.
-- Closure that contradicts GitHub enforcement evidence or Guard Assurance boundaries.
-- Promoting a static/configuration/regression guard pass into runtime, QA, security, release, production, financial, or SaaS proof.
-- Inventing collaborators, teams, branch protection, required checks, approvals, workflow success, or runtime evidence.
+- Using implemented, code checked, guard passed, or workflow configured as a synonym for closure.
+- Closure with failed gates, missing scopes, stage exclusions without evidence, open blockers, unresolved risk, stale evidence, or self-approval.
+- Closure based on a merge ref, another branch, seed, fixture, mock, declaration, or documentation-only claim.
+- Promoting static/configuration/regression evidence into runtime, finance, isolation, QA, security, release, production, or SaaS proof.
+- Inventing collaborators, teams, approvals, GitHub rules, checks, runtime, or production evidence.
 
 ## Required output
 
@@ -85,6 +83,8 @@ resolved_commit_sha:
 applicable_scopes:
 passed_scopes:
 failed_scopes:
+not_applicable_stages:
+stage_exclusion_evidence:
 missing_evidence:
 required_approvals:
 guard_assurance_reconciliation:
@@ -95,4 +95,4 @@ residual_risks:
 decision:
 ```
 
-Allowed decisions: `CLOSED_WITH_EVIDENCE`, `FIX_REQUIRED`, `NEEDS_EVIDENCE`, `QA_BLOCK`, `SECURITY_BLOCK`, `RELEASE_BLOCK`, and `BLOCKED_EXTERNAL`.
+Allowed decisions: `CLOSED_WITH_EVIDENCE`, `FIX_REQUIRED`, `NEEDS_EVIDENCE`, `QA_BLOCK`, `SECURITY_BLOCK`, `RELEASE_BLOCK`, `BLOCKED_EXTERNAL`, and `PROTOCOL_VIOLATION`.
