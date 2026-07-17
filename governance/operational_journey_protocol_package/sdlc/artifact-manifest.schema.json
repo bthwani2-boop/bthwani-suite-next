@@ -2,26 +2,93 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "BThwani SDLC Artifact Manifest",
   "type": "object",
-  "required": ["capabilityId", "branch", "resolvedCommitSha", "currentStage", "requestedStage", "applicableGates", "evidence", "decision"],
+  "required": [
+    "schemaVersion",
+    "capabilityId",
+    "repositoryMode",
+    "branch",
+    "resolvedCommitSha",
+    "currentStage",
+    "requestedStage",
+    "applicableGates",
+    "passedGates",
+    "failedGates",
+    "missingEvidence",
+    "requiredApprovals",
+    "approvals",
+    "separationOfDutiesPass",
+    "openBlockers",
+    "residualRisks",
+    "evidence",
+    "decision"
+  ],
   "additionalProperties": false,
   "properties": {
+    "schemaVersion": { "const": 2 },
     "capabilityId": { "type": "string", "minLength": 1 },
+    "repositoryMode": { "enum": ["REMOTE_ONLY", "LOCAL"] },
     "branch": { "type": "string", "minLength": 1 },
     "resolvedCommitSha": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
-    "currentStage": { "type": "string" },
-    "requestedStage": { "type": "string" },
-    "applicableGates": { "type": "array", "items": { "type": "string" } },
-    "passedGates": { "type": "array", "items": { "type": "string" } },
-    "failedGates": { "type": "array", "items": { "type": "string" } },
-    "missingEvidence": { "type": "array", "items": { "type": "string" } },
-    "requiredApprovals": { "type": "array", "items": { "type": "string" } },
+    "evidenceCommitSha": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "currentStage": { "type": "string", "pattern": "^(G(?:0|1|2|3|4|5|6|7|8|9|10)_[A-Z0-9_]+|CLOSED_WITH_EVIDENCE)$" },
+    "requestedStage": { "type": "string", "pattern": "^(G(?:0|1|2|3|4|5|6|7|8|9|10)_[A-Z0-9_]+|CLOSED_WITH_EVIDENCE)$" },
+    "productTruthContract": { "type": "string", "pattern": "^governance/product/contracts/.+\\.product-truth\\.json$" },
+    "productTruthState": {
+      "enum": ["NOT_APPLICABLE", "DISCOVERY", "PRODUCT_MODEL_APPROVED", "READY_FOR_IMPLEMENTATION", "IMPLEMENTED", "PRODUCT_ACCEPTED", "RETIRED"]
+    },
+    "applicableGates": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "passedGates": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "failedGates": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "missingEvidence": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "requiredApprovals": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "approvals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["authority", "approver", "decision", "commitSha"],
+        "properties": {
+          "authority": { "type": "string", "minLength": 1 },
+          "approver": { "type": "string", "minLength": 1 },
+          "decision": { "enum": ["PASS", "FIX_REQUIRED", "QA_BLOCK", "SECURITY_BLOCK", "RELEASE_BLOCK"] },
+          "commitSha": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+          "evidence": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
+        }
+      }
+    },
+    "changeAuthor": { "type": "string", "minLength": 1 },
     "separationOfDutiesPass": { "type": "boolean" },
-    "openBlockers": { "type": "array", "items": { "type": "string" } },
-    "residualRisks": { "type": "array", "items": { "type": "string" } },
-    "evidence": { "type": "array", "items": { "type": "string" } },
+    "openBlockers": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "residualRisks": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "evidence": { "type": "array", "items": { "type": "string", "minLength": 1 } },
     "decision": {
-      "type": "string",
-      "enum": ["GATE_PASS", "FIX_REQUIRED", "QA_BLOCK", "SECURITY_BLOCK", "RELEASE_BLOCK", "HARD_BLOCKED_EXTERNAL_ONLY", "CLOSED_WITH_EVIDENCE"]
+      "enum": ["PASS", "FIX_REQUIRED", "BLOCKED_EXTERNAL", "NEEDS_EVIDENCE", "QA_BLOCK", "SECURITY_BLOCK", "RELEASE_BLOCK", "CLOSED_WITH_EVIDENCE"]
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "productTruthState": { "not": { "const": "NOT_APPLICABLE" } } }, "required": ["productTruthState"] },
+      "then": { "required": ["productTruthContract"] }
+    },
+    {
+      "if": { "properties": { "decision": { "enum": ["PASS", "CLOSED_WITH_EVIDENCE"] } } },
+      "then": {
+        "properties": {
+          "failedGates": { "maxItems": 0 },
+          "missingEvidence": { "maxItems": 0 },
+          "openBlockers": { "maxItems": 0 },
+          "separationOfDutiesPass": { "const": true }
+        },
+        "required": ["evidenceCommitSha"]
+      }
+    },
+    {
+      "if": { "properties": { "decision": { "const": "CLOSED_WITH_EVIDENCE" } } },
+      "then": {
+        "properties": {
+          "requestedStage": { "const": "CLOSED_WITH_EVIDENCE" }
+        }
+      }
+    }
+  ]
 }
