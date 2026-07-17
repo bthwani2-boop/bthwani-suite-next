@@ -429,7 +429,7 @@ export function PlatformDashboardScreen() {
           <CpButton
             key={tab.id}
             onClick={() => setMainTab(tab.id as ExecutiveTabId)}
-            aria-pressed={mainTab === tab.id}
+            aria-label={`${tab.label}${mainTab === tab.id ? " — التبويب الحالي" : ""}`}
           >
             {mainTab === tab.id ? `● ${tab.label}` : tab.label}
           </CpButton>
