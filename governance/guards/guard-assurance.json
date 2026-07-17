@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "entries": [
     {
       "guardId": "governance-schema",
@@ -11,21 +11,21 @@
     {
       "guardId": "agent-governance",
       "assuranceClass": "POLICY_ALIGNMENT",
-      "proves": ["Agent and skill contracts are registered and internally coherent", "Agent roles map to SDLC authorities"],
+      "proves": ["Active and conditional skills are governed", "Legacy skills are retired", "Agent roles, skill dependencies, routing, and SDLC authorities align"],
       "doesNotProve": ["Real subagent availability", "Human independence", "Execution quality", "Final closure"],
       "closureEligible": false
     },
     {
       "guardId": "guard-registry",
       "assuranceClass": "POLICY_ALIGNMENT",
-      "proves": ["Guards, package scripts, workflows, permissions, immutable action references, and required workflow topology align"],
+      "proves": ["Guards, package scripts, runners, workflows, permissions, immutable action references, and required workflow topology align"],
       "doesNotProve": ["Workflow execution success", "Branch ruleset enforcement", "Runtime behavior", "Final closure"],
       "closureEligible": false
     },
     {
       "guardId": "sdlc",
       "assuranceClass": "LIFECYCLE_INTEGRITY",
-      "proves": ["SDLC schemas and lifecycle rules are structurally valid", "Provided artifacts obey same-commit and approval rules"],
+      "proves": ["SDLC schemas and lifecycle rules are structurally valid", "Provided artifacts obey same-commit, impact, and approval rules"],
       "doesNotProve": ["A stage passed without an artifact", "Missing human approvals", "Runtime behavior", "Final closure"],
       "closureEligible": false
     },
@@ -83,7 +83,15 @@
       "proves": ["Selected static accessibility contracts are present"],
       "doesNotProve": ["Runtime accessibility tree", "Keyboard behavior", "Screen-reader usability", "Visual acceptance"],
       "closureEligible": false,
-      "requiredFollowUpForRuntimeClaim": ["Runtime axe or equivalent checks", "Manual assistive-technology review when required"]
+      "requiredFollowUpForRuntimeClaim": ["Runtime accessibility checks", "Manual assistive-technology review when required"]
+    },
+    {
+      "guardId": "a11y-runtime",
+      "assuranceClass": "RUNTIME_ACCESSIBILITY",
+      "proves": ["The configured Playwright and axe checks executed against the declared runtime target and passed"],
+      "doesNotProve": ["Complete screen-reader usability", "All native mobile surfaces", "Manual accessibility acceptance", "Final closure"],
+      "closureEligible": false,
+      "requiredFollowUpForRuntimeClaim": ["Runtime target identity", "Manual assistive-technology review when required"]
     },
     {
       "guardId": "workflow-lint",
@@ -97,6 +105,13 @@
       "assuranceClass": "STATIC_SECURITY_AUDIT",
       "proves": ["Configured high-confidence high-severity workflow findings are absent"],
       "doesNotProve": ["All workflow vulnerabilities are absent", "External action integrity beyond pinned commit", "Job success", "Repository ruleset enforcement"],
+      "closureEligible": false
+    },
+    {
+      "guardId": "actions-pin",
+      "assuranceClass": "IMMUTABLE_REFERENCE",
+      "proves": ["Configured external GitHub Action references are pinned to immutable commit SHAs"],
+      "doesNotProve": ["The pinned code is trustworthy", "Workflow job success", "Required-check enforcement", "Final closure"],
       "closureEligible": false
     }
   ]
