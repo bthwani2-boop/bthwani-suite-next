@@ -83,9 +83,17 @@ if (governance?.primary_file === ci?.primary_file) violations.push({ file: agent
 if (governance?.allowed_modes?.includes("write")) violations.push({ file: agentPath, line: 0, message: "GOVERNANCE_APPROVER_MUST_NOT_WRITE" });
 if (ci?.allowed_modes?.includes("write")) violations.push({ file: agentPath, line: 0, message: "CI_APPROVER_MUST_NOT_WRITE" });
 
+const reviewer = agentById.get("independent-reviewer");
+if (reviewer?.primary_file === supervisor?.primary_file) violations.push({ file: agentPath, line: 0, message: "INDEPENDENT_REVIEWER_MUST_NOT_SHARE_COORDINATOR_SKILL" });
+for (const forbiddenMode of ["write", "release"]) {
+  if (reviewer?.allowed_modes?.includes(forbiddenMode)) violations.push({ file: agentPath, line: 0, message: `INDEPENDENT_REVIEWER_FORBIDDEN_MODE ${forbiddenMode}` });
+}
+if (reviewer && reviewer.requires_independent_review !== true) violations.push({ file: agentPath, line: 0, message: "INDEPENDENT_REVIEWER_MUST_REQUIRE_INDEPENDENCE" });
+
 const expectedPrimarySkills = new Map([
   ["governance-contract-authority", "bthwani-governance-contract-guardian"],
   ["ci-workflow-authority", "bthwani-ci-workflow-guardian"],
+  ["independent-reviewer", "bthwani-independent-implementation-reviewer"],
 ]);
 for (const [agentId, expectedSkillId] of expectedPrimarySkills) {
   const agent = agentById.get(agentId);
@@ -95,6 +103,11 @@ for (const [agentId, expectedSkillId] of expectedPrimarySkills) {
   if (!skill || skill.contract_level !== "governed" || !["active", "conditional"].includes(skill.status)) violations.push({ file: skillPath, line: 0, message: `AUTHORITY_SKILL_NOT_ACTIVE_GOVERNED ${expectedSkillId}` });
 }
 
+const reviewerSkill = skillById.get("bthwani-independent-implementation-reviewer");
+if (!reviewerSkill?.conflicts_with?.includes("bthwani-cost-aware-subagent-orchestrator")) {
+  violations.push({ file: skillPath, line: 0, message: "INDEPENDENT_REVIEWER_MUST_CONFLICT_WITH_COORDINATOR" });
+}
+
 const mixedSkill = skillById.get("bthwani-governance-ci-guardian");
 if (!mixedSkill || mixedSkill.status !== "retired" || mixedSkill.contract_level !== "legacy") violations.push({ file: skillPath, line: 0, message: "MIXED_GOVERNANCE_CI_SKILL_MUST_BE_RETIRED" });
 if (index.includes("→ `bthwani-governance-ci-guardian`") || /^- `bthwani-governance-ci-guardian`$/m.test(index)) violations.push({ file: indexPath, line: 0, message: "RETIRED_MIXED_SKILL_STILL_ROUTED" });
@@ -102,10 +115,11 @@ if (index.includes("→ `bthwani-governance-ci-guardian`") || /^- `bthwani-gover
 const skillAuthorityMarkers = new Map([
   ["bthwani-governance-contract-guardian", "`GOVERNANCE_CONTRACT_AUTHORITY`"],
   ["bthwani-ci-workflow-guardian", "`CI_WORKFLOW_AUTHORITY`"],
+  ["bthwani-independent-implementation-reviewer", "independent reviewer"],
 ]);
 for (const [requiredSkill, authorityMarker] of skillAuthorityMarkers) {
   if (!index.includes(`\`${requiredSkill}\``)) violations.push({ file: indexPath, line: 0, message: `SEPARATED_SKILL_MISSING_FROM_INDEX ${requiredSkill}` });
-  if (!agentsDoc.includes(authorityMarker)) violations.push({ file: agentsDocPath, line: 0, message: `SEPARATED_AUTHORITY_MISSING_FROM_AGENTS ${authorityMarker}` });
+  if (!agentsDoc.toLowerCase().includes(authorityMarker.toLowerCase())) violations.push({ file: agentsDocPath, line: 0, message: `SEPARATED_AUTHORITY_MISSING_FROM_AGENTS ${authorityMarker}` });
 }
 
 for (const authority of [
