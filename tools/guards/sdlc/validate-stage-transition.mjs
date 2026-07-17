@@ -42,6 +42,9 @@ for (const marker of [
   "product_acceptance_precedes_qa",
   "same_commit_evidence_required",
   "executor_cannot_finally_approve_own_high_risk_work",
+  "governance_change_requires_governance_contract_authority",
+  "ci_change_requires_ci_workflow_authority",
+  "governance_and_ci_approvers_must_be_separate_when_both_apply",
 ]) {
   if (!lifecycle.includes(marker)) {
     violations.push({ file: lifecycleRelative, message: `MISSING_LIFECYCLE_RULE ${marker}` });
