@@ -11,6 +11,7 @@ const services = [
   {
     name: "DSH",
     openapi: "services/dsh/contracts/dsh.openapi.yaml",
+    additionalOpenapi: ["services/dsh/contracts/dsh.marketing-commercial.openapi.yaml"],
     router: "services/dsh/backend/internal/http/server.go",
   },
   {
@@ -42,6 +43,14 @@ const gatedWltMutationRoutes = new Set([
   "POST /wlt/ledger/entries",
 ]);
 
+function contractFiles(service) {
+  return [service.openapi, ...(service.additionalOpenapi ?? [])];
+}
+
+function operationFile(service, operation) {
+  return operation.contractFile ?? service.openapi;
+}
+
 function parseGoStringLiteral(source, quoteIndex) {
   const quote = source[quoteIndex];
   let value = "";
@@ -68,7 +77,6 @@ function extractGoRoutes(file) {
   const fullPath = path.join(repoRoot, file);
   if (!fs.existsSync(fullPath)) return [];
 
-  // Fallback / First Layer: Literal String Scan
   const source = read(file);
   const literalRoutes = [];
   const calls = ["mux.HandleFunc(", "mux.Handle("];
@@ -96,33 +104,28 @@ function extractGoRoutes(file) {
     }
   }
 
-  // Second Layer: Go AST Extractor
   try {
     const extractorPath = path.join(repoRoot, "tools/guards/extract_routes.go");
     const relativeFilePath = path.relative(repoRoot, fullPath).replace(/\\/g, "/");
     const stdout = execSync(`go run "${extractorPath}" "${relativeFilePath}"`, { cwd: repoRoot, stdio: ["ignore", "pipe", "ignore"] });
     const astRoutes = JSON.parse(stdout.toString());
-    
-    // Merge AST routes into literal routes, matching by method/path
-    const literalKeys = new Set(literalRoutes.map(r => `${r.method} ${r.path}`));
-    for (const r of astRoutes) {
-      if (r.method === "" || r.path === "") continue;
-      const key = `${r.method} ${r.path}`;
+    const literalKeys = new Set(literalRoutes.map((route) => `${route.method} ${route.path}`));
+    for (const route of astRoutes) {
+      if (route.method === "" || route.path === "") continue;
+      const key = `${route.method} ${route.path}`;
       if (!literalKeys.has(key)) {
         let line = 1;
         const index = source.indexOf(key);
-        if (index !== -1) {
-          line = lineNumber(source, index);
-        }
+        if (index !== -1) line = lineNumber(source, index);
         literalRoutes.push({
-          method: r.method,
-          path: r.path.replace(/\/$/, ""),
+          method: route.method,
+          path: route.path.replace(/\/$/, ""),
           line,
         });
       }
     }
-  } catch (err) {
-    // Fallback silently if Go execution fails
+  } catch {
+    // Literal scanning remains the fail-safe extraction layer.
   }
 
   return literalRoutes;
@@ -133,7 +136,7 @@ function validateOperationIds(service, operations) {
   for (const operation of operations) {
     if (!operation.operationId) {
       violations.push({
-        file: service.openapi,
+        file: operationFile(service, operation),
         line: operation.line,
         message: `MISSING_OPERATION_ID: ${operationKey(operation)} has no operationId`,
       });
@@ -143,9 +146,9 @@ function validateOperationIds(service, operations) {
     const previous = seen.get(operation.operationId);
     if (previous) {
       violations.push({
-        file: service.openapi,
+        file: operationFile(service, operation),
         line: operation.line,
-        message: `DUPLICATE_OPERATION_ID: "${operation.operationId}" already appears at line ${previous.line}`,
+        message: `DUPLICATE_OPERATION_ID: "${operation.operationId}" already appears in ${operationFile(service, previous)} at line ${previous.line}`,
       });
     }
     seen.set(operation.operationId, operation);
@@ -160,14 +163,14 @@ function validatePathParameters(service, operation) {
   for (const pathParam of operation.pathParams) {
     if (pathParam.wildcard) {
       violations.push({
-        file: service.openapi,
+        file: operationFile(service, operation),
         line: operation.line,
         message: `FORBIDDEN_WILDCARD_CONTRACT: ${operationKey(operation)} uses wildcard path parameter "${pathParam.rawName}"`,
       });
     }
     if (!declaredPathParams.has(pathParam.name)) {
       violations.push({
-        file: service.openapi,
+        file: operationFile(service, operation),
         line: operation.line,
         message: `MISSING_PATH_PARAMETER: ${operationKey(operation)} does not declare path parameter "${pathParam.name}"`,
       });
@@ -189,7 +192,7 @@ function validateInternalServiceRoute(service, operation) {
 
   if (!operation.hasSecurity) {
     violations.push({
-      file: service.openapi,
+      file: operationFile(service, operation),
       line: operation.line,
       message: `MISSING_INTERNAL_SECURITY: ${operationKey(operation)} must define security`,
     });
@@ -197,7 +200,7 @@ function validateInternalServiceRoute(service, operation) {
   for (const header of ["Authorization", "X-Service-Caller"]) {
     if (!hasRequiredHeader(operation, header)) {
       violations.push({
-        file: service.openapi,
+        file: operationFile(service, operation),
         line: operation.line,
         message: `MISSING_INTERNAL_HEADER: ${operationKey(operation)} must require ${header}`,
       });
@@ -226,7 +229,7 @@ function validateWltFinancialReadRoute(service, operation) {
   for (const header of ["Authorization", "X-Service-Caller"]) {
     if (!hasRequiredHeader(operation, header)) {
       violations.push({
-        file: service.openapi,
+        file: operationFile(service, operation),
         line: operation.line,
         message: `MISSING_FINANCIAL_READ_HEADER: WLT financial read route "${key}" is missing required header "${header}"`,
       });
@@ -242,21 +245,21 @@ function validateWltMutationMetadata(service, operation) {
   const defaultEnabled = operation.extensions.get("x-bthwani-default-enabled");
   if (mutationApproved !== false) {
     violations.push({
-      file: service.openapi,
+      file: operationFile(service, operation),
       line: operation.line,
       message: `MISSING_MUTATION_METADATA: ${operationKey(operation)} must set x-bthwani-mutation-approved: false`,
     });
   }
   if (defaultEnabled !== false) {
     violations.push({
-      file: service.openapi,
+      file: operationFile(service, operation),
       line: operation.line,
       message: `MISSING_MUTATION_METADATA: ${operationKey(operation)} must set x-bthwani-default-enabled: false`,
     });
   }
   if (!operation.responses.has("403")) {
     violations.push({
-      file: service.openapi,
+      file: operationFile(service, operation),
       line: operation.line,
       message: `MISSING_FEATURE_GATE_RESPONSE: ${operationKey(operation)} must document 403 FEATURE_NOT_ENABLED`,
     });
@@ -266,7 +269,10 @@ function validateWltMutationMetadata(service, operation) {
 const openApiRoutesByService = new Map();
 
 for (const service of services) {
-  const operations = parseOpenApiContract(service.openapi);
+  const contracts = contractFiles(service);
+  const operations = contracts.flatMap((contractFile) =>
+    parseOpenApiContract(contractFile).map((operation) => ({ ...operation, contractFile })),
+  );
   openApiRoutesByService.set(service.name, operations);
   validateOperationIds(service, operations);
 
@@ -280,7 +286,7 @@ for (const service of services) {
       violations.push({
         file: service.router,
         line: route.line,
-        message: `FORBIDDEN_ROUTE: Route "${key}" is registered in Go router but not documented exactly in ${service.openapi}`,
+        message: `FORBIDDEN_ROUTE: Route "${key}" is registered in Go router but not documented exactly in composed contracts: ${contracts.join(", ")}`,
       });
     }
   }
@@ -294,7 +300,7 @@ for (const service of services) {
 
     if (!goRouteSet.has(key)) {
       violations.push({
-        file: service.openapi,
+        file: operationFile(service, operation),
         line: operation.line,
         message: `MISSING_IMPLEMENTATION: Route "${key}" is documented in OpenAPI but not registered exactly in ${service.router}`,
       });
