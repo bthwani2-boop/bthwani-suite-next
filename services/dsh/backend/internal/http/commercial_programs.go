@@ -3,6 +3,7 @@ package http
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"dsh-api/internal/marketing"
 	"dsh-api/internal/store"
@@ -14,6 +15,14 @@ func writeCommercialProgramError(w http.ResponseWriter, err error, notFoundMessa
 		return
 	}
 	writeMarketingError(w, err, notFoundMessage)
+}
+
+func rejectActiveCommercialMutation(w http.ResponseWriter) {
+	store.SendError(w, http.StatusConflict, "ACTIVE_PROGRAM_IMMUTABLE", "pause the active commercial program before changing its commercial terms")
+}
+
+func rejectCommercialSelfApproval(w http.ResponseWriter) {
+	store.SendError(w, http.StatusConflict, "SEPARATION_OF_DUTIES_REQUIRED", "the actor who created the commercial program cannot approve or activate it")
 }
 
 // GET /dsh/operator/marketing/loyalty-tiers
@@ -88,6 +97,23 @@ func (s *protectedStoreServer) handleUpdateLoyaltyTier(w http.ResponseWriter, r 
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
+
+	current, err := marketing.GetLoyaltyTier(s.db, r.PathValue("tierId"))
+	if err != nil {
+		writeCommercialProgramError(w, err, "loyalty tier not found")
+		return
+	}
+	termsChanged := body.NameAr != nil || body.NameEn != nil || body.MinPoints != nil ||
+		body.DiscountPercent != nil || body.FreeDeliveryThresholdYer != nil || body.Badge != nil
+	if current.Status == "active" && termsChanged {
+		rejectActiveCommercialMutation(w)
+		return
+	}
+	if body.Status != nil && *body.Status == "active" && current.CreatedByActorID == actor.ID {
+		rejectCommercialSelfApproval(w)
+		return
+	}
+
 	tier, err := marketing.UpdateLoyaltyTier(s.db, r.PathValue("tierId"), marketing.UpdateLoyaltyTierInput{
 		NameAr: body.NameAr,
 		NameEn: body.NameEn,
@@ -188,6 +214,34 @@ func (s *protectedStoreServer) handleUpdateSubscriptionPlan(w http.ResponseWrite
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
+
+	current, err := marketing.GetSubscriptionPlan(s.db, r.PathValue("planId"))
+	if err != nil {
+		writeCommercialProgramError(w, err, "subscription plan not found")
+		return
+	}
+	termsChanged := body.NameAr != nil || body.NameEn != nil || body.PriceYer != nil ||
+		body.BillingCycle != nil || body.IncludeFreeDelivery != nil || body.PointsMultiplier != nil ||
+		body.OrderCap != nil || body.Badge != nil || body.WLTProductReference != nil
+	if current.Status == "active" && termsChanged {
+		rejectActiveCommercialMutation(w)
+		return
+	}
+	if body.Status != nil && *body.Status == "active" {
+		if current.CreatedByActorID == actor.ID {
+			rejectCommercialSelfApproval(w)
+			return
+		}
+		effectiveWLTReference := strings.TrimSpace(current.WLTProductReference)
+		if body.WLTProductReference != nil {
+			effectiveWLTReference = strings.TrimSpace(*body.WLTProductReference)
+		}
+		if effectiveWLTReference == "" {
+			store.SendError(w, http.StatusConflict, "WLT_REFERENCE_REQUIRED", "a verified WLT product reference is required before activating a subscription plan")
+			return
+		}
+	}
+
 	plan, err := marketing.UpdateSubscriptionPlan(s.db, r.PathValue("planId"), marketing.UpdateSubscriptionPlanInput{
 		NameAr: body.NameAr,
 		NameEn: body.NameEn,
