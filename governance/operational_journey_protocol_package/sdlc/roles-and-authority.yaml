@@ -41,6 +41,26 @@ authorities:
       - dependency_direction
       - adr_decisions
     may_block: true
+  governance_contract_authority:
+    owns:
+      - authority_precedence
+      - decision_vocabulary
+      - agent_and_skill_contracts
+      - guard_registration
+      - sdlc_control_plane
+    may_block: true
+    must_not_be_implementation_executor: true
+  ci_workflow_authority:
+    owns:
+      - workflow_triggers
+      - workflow_permissions
+      - immutable_action_pinning
+      - verification_only_behavior
+      - fail_late_topology
+      - final_result_aggregation
+    may_block: true
+    must_not_be_implementation_executor: true
+    must_be_separate_from_governance_contract_authority: true
   engineering:
     owns:
       - implementation
@@ -48,6 +68,8 @@ authorities:
     may_final_approve_own_high_risk_change: false
     may_approve_product_model: false
     may_approve_product_acceptance: false
+    may_approve_governance_contract: false
+    may_approve_ci_workflow: false
   independent_quality_authority:
     owns:
       - qa_approval
@@ -75,6 +97,8 @@ authorities:
 separation_of_duties_required_for:
   - product_model_approval
   - product_acceptance
+  - governance_contract_approval
+  - ci_workflow_approval
   - auth_sessions_rbac
   - pii_secrets_security
   - wlt_finance
