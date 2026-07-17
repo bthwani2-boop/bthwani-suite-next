@@ -41,19 +41,14 @@ for (const marker of [
   "product_truth_precedes_implementation",
   "product_acceptance_precedes_qa",
   "same_commit_evidence_required",
+  "all_applicable_evidence_scopes_required_for_closure",
   "executor_cannot_finally_approve_own_high_risk_work",
   "governance_change_requires_governance_contract_authority",
   "ci_change_requires_ci_workflow_authority",
   "governance_and_ci_approvers_must_be_separate_when_both_apply",
-]) {
-  if (!lifecycle.includes(marker)) {
-    violations.push({ file: lifecycleRelative, message: `MISSING_LIFECYCLE_RULE ${marker}` });
-  }
-}
+]) if (!lifecycle.includes(marker)) violations.push({ file: lifecycleRelative, message: `MISSING_LIFECYCLE_RULE ${marker}` });
 
-if (requestedStage && !allowedStages.has(requestedStage)) {
-  violations.push({ file: "<cli>", message: `UNKNOWN_REQUESTED_STAGE ${requestedStage}` });
-}
+if (requestedStage && !allowedStages.has(requestedStage)) violations.push({ file: "<cli>", message: `UNKNOWN_REQUESTED_STAGE ${requestedStage}` });
 
 if (artifactPath) {
   const artifactFullPath = path.join(repoRoot, artifactPath);
@@ -68,67 +63,55 @@ if (artifactPath) {
     }
 
     if (artifact) {
-      if (!allowedStages.has(artifact.currentStage)) {
-        violations.push({ file: artifactPath, message: `UNKNOWN_CURRENT_STAGE ${artifact.currentStage}` });
-      }
-      if (!allowedStages.has(artifact.requestedStage)) {
-        violations.push({ file: artifactPath, message: `UNKNOWN_ARTIFACT_REQUESTED_STAGE ${artifact.requestedStage}` });
-      }
-      if (requestedStage && artifact.requestedStage !== requestedStage) {
-        violations.push({ file: artifactPath, message: `REQUESTED_STAGE_MISMATCH cli=${requestedStage} artifact=${artifact.requestedStage}` });
-      }
-      if (!allowedDecisions.has(artifact.decision)) {
-        violations.push({ file: artifactPath, message: `UNKNOWN_DECISION ${artifact.decision}` });
-      }
+      if (!allowedStages.has(artifact.currentStage)) violations.push({ file: artifactPath, message: `UNKNOWN_CURRENT_STAGE ${artifact.currentStage}` });
+      if (!allowedStages.has(artifact.requestedStage)) violations.push({ file: artifactPath, message: `UNKNOWN_ARTIFACT_REQUESTED_STAGE ${artifact.requestedStage}` });
+      if (requestedStage && artifact.requestedStage !== requestedStage) violations.push({ file: artifactPath, message: `REQUESTED_STAGE_MISMATCH cli=${requestedStage} artifact=${artifact.requestedStage}` });
+      if (!allowedDecisions.has(artifact.decision)) violations.push({ file: artifactPath, message: `UNKNOWN_DECISION ${artifact.decision}` });
 
-      const passDecision = artifact.decision === "PASS" || artifact.decision === "CLOSED_WITH_EVIDENCE";
-      if (requestedStage && !passDecision) {
-        violations.push({ file: artifactPath, message: `REQUESTED_STAGE_NOT_APPROVED decision=${artifact.decision}` });
-      }
+      const passDecision = ["PASS", "CLOSED_WITH_EVIDENCE"].includes(artifact.decision);
+      if (requestedStage && !passDecision) violations.push({ file: artifactPath, message: `REQUESTED_STAGE_NOT_APPROVED decision=${artifact.decision}` });
 
       if (passDecision) {
         const currentIndex = orderedStages.indexOf(artifact.currentStage);
         const requestedIndex = orderedStages.indexOf(artifact.requestedStage);
-        if (currentIndex < 0 || requestedIndex !== currentIndex + 1) {
-          violations.push({ file: artifactPath, message: `ILLEGAL_STAGE_TRANSITION ${artifact.currentStage} -> ${artifact.requestedStage}` });
-        }
-        if (artifact.evidenceCommitSha !== artifact.resolvedCommitSha) {
-          violations.push({ file: artifactPath, message: "EVIDENCE_COMMIT_MUST_MATCH_RESOLVED_COMMIT" });
-        }
-        for (const [field, value] of [
-          ["failedGates", artifact.failedGates],
-          ["missingEvidence", artifact.missingEvidence],
-          ["openBlockers", artifact.openBlockers],
-        ]) {
-          if ((value ?? []).length > 0) {
-            violations.push({ file: artifactPath, message: `PASS_DECISION_WITH_NONEMPTY_${field.toUpperCase()}` });
+        if (currentIndex < 0 || requestedIndex <= currentIndex) {
+          violations.push({ file: artifactPath, message: `NON_FORWARD_STAGE_TRANSITION ${artifact.currentStage} -> ${artifact.requestedStage}` });
+        } else {
+          const skippedStages = orderedStages.slice(currentIndex + 1, requestedIndex);
+          const notApplicable = new Set(artifact.notApplicableStages ?? []);
+          const exclusions = new Map((artifact.stageExclusions ?? []).map((entry) => [entry.stage, entry]));
+          for (const stage of skippedStages) {
+            if (!notApplicable.has(stage)) violations.push({ file: artifactPath, message: `STAGE_SKIP_WITHOUT_NOT_APPLICABLE ${stage}` });
+            const exclusion = exclusions.get(stage);
+            if (!exclusion || !exclusion.reason || !(exclusion.evidence?.length)) violations.push({ file: artifactPath, message: `STAGE_SKIP_WITHOUT_EXCLUSION_EVIDENCE ${stage}` });
           }
-        }
-        const passed = new Set(artifact.passedGates ?? []);
-        for (const gate of artifact.applicableGates ?? []) {
-          if (!passed.has(gate)) {
-            violations.push({ file: artifactPath, message: `APPLICABLE_GATE_NOT_PASSED ${gate}` });
-          }
+          if (notApplicable.has(artifact.currentStage)) violations.push({ file: artifactPath, message: `CURRENT_STAGE_CANNOT_BE_NOT_APPLICABLE ${artifact.currentStage}` });
+          if (notApplicable.has(artifact.requestedStage)) violations.push({ file: artifactPath, message: `REQUESTED_STAGE_CANNOT_BE_NOT_APPLICABLE ${artifact.requestedStage}` });
         }
 
-        const stageIndex = orderedStages.indexOf(artifact.requestedStage);
+        if (artifact.evidenceCommitSha !== artifact.resolvedCommitSha) violations.push({ file: artifactPath, message: "EVIDENCE_COMMIT_MUST_MATCH_RESOLVED_COMMIT" });
+        for (const [field, value] of [["failedGates", artifact.failedGates], ["missingEvidence", artifact.missingEvidence], ["openBlockers", artifact.openBlockers]]) {
+          if ((value ?? []).length > 0) violations.push({ file: artifactPath, message: `PASS_DECISION_WITH_NONEMPTY_${field.toUpperCase()}` });
+        }
+
+        const passedGates = new Set(artifact.passedGates ?? []);
+        if (artifact.decision === "PASS" && !passedGates.has(artifact.requestedStage)) violations.push({ file: artifactPath, message: `REQUESTED_STAGE_GATE_NOT_PASSED ${artifact.requestedStage}` });
+        if (artifact.decision === "CLOSED_WITH_EVIDENCE") {
+          for (const gate of artifact.applicableGates ?? []) if (!passedGates.has(gate)) violations.push({ file: artifactPath, message: `CLOSURE_APPLICABLE_GATE_NOT_PASSED ${gate}` });
+          const passedScopes = new Set(artifact.passedEvidenceScopes ?? []);
+          for (const scope of artifact.applicableEvidenceScopes ?? []) if (!passedScopes.has(scope)) violations.push({ file: artifactPath, message: `CLOSURE_APPLICABLE_SCOPE_NOT_PASSED ${scope}` });
+        }
+
+        const stageIndex = requestedIndex;
         const g3Index = orderedStages.indexOf("G3_READY_FOR_IMPLEMENTATION");
         const g5Index = orderedStages.indexOf("G5_PRODUCT_ACCEPTED");
         const g6Index = orderedStages.indexOf("G6_QA_APPROVED");
         if (stageIndex >= g3Index && artifact.productTruthState !== "NOT_APPLICABLE") {
-          if (!artifact.productTruthContract) {
-            violations.push({ file: artifactPath, message: "PRODUCT_TRUTH_CONTRACT_REQUIRED" });
-          }
-          if (!["READY_FOR_IMPLEMENTATION", "IMPLEMENTED", "PRODUCT_ACCEPTED"].includes(artifact.productTruthState)) {
-            violations.push({ file: artifactPath, message: `PRODUCT_TRUTH_NOT_READY ${artifact.productTruthState}` });
-          }
+          if (!artifact.productTruthContract) violations.push({ file: artifactPath, message: "PRODUCT_TRUTH_CONTRACT_REQUIRED" });
+          if (!["READY_FOR_IMPLEMENTATION", "IMPLEMENTED", "PRODUCT_ACCEPTED"].includes(artifact.productTruthState)) violations.push({ file: artifactPath, message: `PRODUCT_TRUTH_NOT_READY ${artifact.productTruthState}` });
         }
-        if (stageIndex >= g5Index && artifact.productTruthState !== "NOT_APPLICABLE" && artifact.productTruthState !== "PRODUCT_ACCEPTED") {
-          violations.push({ file: artifactPath, message: "PRODUCT_ACCEPTANCE_REQUIRED_BEFORE_G5_OR_LATER" });
-        }
-        if (stageIndex >= g6Index && artifact.separationOfDutiesPass !== true) {
-          violations.push({ file: artifactPath, message: "SEPARATION_OF_DUTIES_NOT_PROVEN" });
-        }
+        if (stageIndex >= g5Index && artifact.productTruthState !== "NOT_APPLICABLE" && artifact.productTruthState !== "PRODUCT_ACCEPTED") violations.push({ file: artifactPath, message: "PRODUCT_ACCEPTANCE_REQUIRED_BEFORE_G5_OR_LATER" });
+        if (stageIndex >= g6Index && artifact.separationOfDutiesPass !== true) violations.push({ file: artifactPath, message: "SEPARATION_OF_DUTIES_NOT_PROVEN" });
 
         const requiredAuthorityByStage = new Map([
           ["G1_PRODUCT_MODEL_APPROVED", "product_manager_authority"],
@@ -145,17 +128,12 @@ if (artifactPath) {
         const requiredAuthority = requiredAuthorityByStage.get(artifact.requestedStage);
         if (requiredAuthority) {
           const approval = (artifact.approvals ?? []).find((item) => item.authority === requiredAuthority && item.decision === "PASS");
-          if (!approval) {
-            violations.push({ file: artifactPath, message: `MISSING_APPROVAL ${requiredAuthority}` });
-          } else if (approval.commitSha !== artifact.resolvedCommitSha) {
-            violations.push({ file: artifactPath, message: `APPROVAL_COMMIT_MISMATCH ${requiredAuthority}` });
-          }
+          if (!approval) violations.push({ file: artifactPath, message: `MISSING_APPROVAL ${requiredAuthority}` });
+          else if (approval.commitSha !== artifact.resolvedCommitSha) violations.push({ file: artifactPath, message: `APPROVAL_COMMIT_MISMATCH ${requiredAuthority}` });
         }
       }
 
-      if (artifact.decision === "CLOSED_WITH_EVIDENCE" && artifact.requestedStage !== "CLOSED_WITH_EVIDENCE") {
-        violations.push({ file: artifactPath, message: "CLOSURE_DECISION_WITHOUT_CLOSURE_STAGE" });
-      }
+      if (artifact.decision === "CLOSED_WITH_EVIDENCE" && artifact.requestedStage !== "CLOSED_WITH_EVIDENCE") violations.push({ file: artifactPath, message: "CLOSURE_DECISION_WITHOUT_CLOSURE_STAGE" });
     }
   }
 }
