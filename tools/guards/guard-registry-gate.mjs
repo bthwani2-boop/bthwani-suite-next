@@ -1,21 +1,11 @@
-/**
- * Guard Registry Integrity Gate
- *
- * Checks:
- * 1. Every registered non-aggregate guard has a matching package script.
- * 2. Every non-aggregate guard:* script in package.json is registered.
- * 3. Every workflow guard:* command uses a registered or aggregate script.
- * 4. Physical source files exist when source_file is declared.
- */
 import fs from "node:fs";
 import path from "node:path";
 import { fail, repoRoot } from "./_guard-utils.mjs";
 
 const guardId = "guard-registry-gate";
 const violations = [];
-
-const registryPath = path.join(repoRoot, "governance/guards/guard-registry.json");
-const packageJsonPath = path.join(repoRoot, "package.json");
+const registryRelative = "governance/guards/guard-registry.json";
+const packageRelative = "package.json";
 const workflowsDir = path.join(repoRoot, ".github/workflows");
 
 const aggregateScripts = new Set([
@@ -25,104 +15,159 @@ const aggregateScripts = new Set([
   "guard:governance-all",
   "guard:tools-v5-all",
   "guard:tools-v5-registry",
-  "guard:tools-v5-ci"
+  "guard:tools-v5-ci",
 ]);
 
-if (!fs.existsSync(registryPath) || !fs.existsSync(packageJsonPath)) {
-  violations.push({
-    file: "governance/guards/guard-registry.json",
-    line: 0,
-    message: "MISSING_FILES: guard-registry.json or package.json missing."
-  });
-  fail(guardId, violations);
-  process.exit(1);
+function readJson(relativePath) {
+  const fullPath = path.join(repoRoot, relativePath);
+  if (!fs.existsSync(fullPath)) {
+    violations.push({ file: relativePath, line: 0, message: "MISSING_REQUIRED_FILE" });
+    return undefined;
+  }
+  try {
+    return JSON.parse(fs.readFileSync(fullPath, "utf8"));
+  } catch (error) {
+    violations.push({ file: relativePath, line: 0, message: `INVALID_JSON ${error.message}` });
+    return undefined;
+  }
 }
 
-const registry = JSON.parse(fs.readFileSync(registryPath, "utf8"));
-const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
-const scripts = packageJson.scripts || {};
-const entries = Array.isArray(registry.entries) ? registry.entries : [];
-const registeredScripts = new Set(entries.map((g) => g.script).filter(Boolean));
+const registry = readJson(registryRelative);
+const packageJson = readJson(packageRelative);
+const entries = Array.isArray(registry?.entries) ? registry.entries : [];
+const scripts = packageJson?.scripts ?? {};
+const registeredScripts = new Set(entries.map((entry) => entry.script).filter(Boolean));
+const registeredSources = new Set(entries.map((entry) => entry.source_file).filter(Boolean));
 const seenIds = new Set();
 const seenScripts = new Set();
 
 for (const entry of entries) {
   if (!entry.id) {
-    violations.push({
-      file: "governance/guards/guard-registry.json",
-      line: 0,
-      message: "MALFORMED_ENTRY: missing id."
-    });
+    violations.push({ file: registryRelative, line: 0, message: "MALFORMED_ENTRY_MISSING_ID" });
     continue;
   }
-
   if (seenIds.has(entry.id)) {
-    violations.push({
-      file: "governance/guards/guard-registry.json",
-      line: 0,
-      message: "DUPLICATE_GUARD_ID: " + entry.id
-    });
+    violations.push({ file: registryRelative, line: 0, message: `DUPLICATE_GUARD_ID ${entry.id}` });
   }
   seenIds.add(entry.id);
 
   if (entry.script) {
     if (seenScripts.has(entry.script)) {
-      violations.push({
-        file: "governance/guards/guard-registry.json",
-        line: 0,
-        message: "DUPLICATE_GUARD_SCRIPT: " + entry.script
-      });
+      violations.push({ file: registryRelative, line: 0, message: `DUPLICATE_GUARD_SCRIPT ${entry.script}` });
     }
     seenScripts.add(entry.script);
+    if (!aggregateScripts.has(entry.script) && !scripts[entry.script]) {
+      violations.push({ file: registryRelative, line: 0, message: `MISSING_PACKAGE_SCRIPT ${entry.id} -> ${entry.script}` });
+    }
   }
 
-  if (entry.script && !aggregateScripts.has(entry.script) && !scripts[entry.script]) {
-    violations.push({
-      file: "governance/guards/guard-registry.json",
-      line: 0,
-      message: "MISSING_PACKAGE_SCRIPT: Guard '" + entry.id + "' is registered but script '" + entry.script + "' is missing from package.json"
-    });
+  if (entry.source_file && !fs.existsSync(path.join(repoRoot, entry.source_file))) {
+    violations.push({ file: registryRelative, line: 0, message: `MISSING_SOURCE_FILE ${entry.id} -> ${entry.source_file}` });
   }
 
-  if (entry.source_file) {
-    const filePath = path.join(repoRoot, entry.source_file);
-    if (!fs.existsSync(filePath)) {
-      violations.push({
-        file: "governance/guards/guard-registry.json",
-        line: 0,
-        message: "MISSING_SOURCE_FILE: Guard '" + entry.id + "' source_file '" + entry.source_file + "' does not exist physically."
-      });
+  if (entry.exit_level === "fail" && entry.script) {
+    const command = scripts[entry.script] ?? "";
+    if (/\b(?:\|\|\s*true|continue-on-error|try\s*\{)/i.test(command)) {
+      violations.push({ file: packageRelative, line: 0, message: `FAIL_GUARD_SCRIPT_SWALLOWS_FAILURE ${entry.script}` });
     }
   }
 }
 
-for (const script of Object.keys(scripts).filter((s) => s.startsWith("guard:"))) {
+for (const script of Object.keys(scripts).filter((name) => name.startsWith("guard:"))) {
   if (aggregateScripts.has(script)) continue;
   if (!registeredScripts.has(script)) {
-    violations.push({
-      file: "package.json",
-      line: 0,
-      message: "UNREGISTERED_GUARD_SCRIPT: Script '" + script + "' is defined in package.json but is not registered in guard-registry.json"
-    });
+    violations.push({ file: packageRelative, line: 0, message: `UNREGISTERED_GUARD_SCRIPT ${script}` });
+  }
+}
+
+const guardsDir = path.join(repoRoot, "tools/guards");
+if (fs.existsSync(guardsDir)) {
+  const sourceFiles = fs.readdirSync(guardsDir)
+    .filter((name) => name.endsWith("-gate.mjs") || name === "no-broken-imports.mjs")
+    .map((name) => `tools/guards/${name}`);
+  for (const source of sourceFiles) {
+    if (!registeredSources.has(source)) {
+      violations.push({ file: source, line: 0, message: "UNREGISTERED_TOP_LEVEL_GUARD_SOURCE" });
+    }
   }
 }
 
 if (fs.existsSync(workflowsDir)) {
-  const workflowFiles = fs.readdirSync(workflowsDir).filter((f) => f.endsWith(".yml") || f.endsWith(".yaml"));
+  const workflowFiles = fs.readdirSync(workflowsDir)
+    .filter((name) => /\.ya?ml$/.test(name))
+    .sort();
 
-  for (const wFile of workflowFiles) {
-    const content = fs.readFileSync(path.join(workflowsDir, wFile), "utf8");
+  for (const fileName of workflowFiles) {
+    const relative = `.github/workflows/${fileName}`;
+    const text = fs.readFileSync(path.join(workflowsDir, fileName), "utf8");
+
     const runGuardRegex = /\b(?:pnpm|npm|yarn)\s+(?:run\s+)?(guard:[A-Za-z0-9:_-]+)\b/g;
-    let match;
-    while ((match = runGuardRegex.exec(content)) !== null) {
-      const scriptName = match[1];
-      if (aggregateScripts.has(scriptName)) continue;
-      if (!registeredScripts.has(scriptName)) {
-        violations.push({
-          file: ".github/workflows/" + wFile,
-          line: 0,
-          message: "UNREGISTERED_WORKFLOW_GUARD: Workflow references unregistered guard script '" + scriptName + "'"
-        });
+    for (const match of text.matchAll(runGuardRegex)) {
+      const script = match[1];
+      if (!aggregateScripts.has(script) && !registeredScripts.has(script)) {
+        violations.push({ file: relative, line: 0, message: `UNREGISTERED_WORKFLOW_GUARD ${script}` });
+      }
+    }
+
+    const directGuardRegex = /node\s+(tools\/guards\/[A-Za-z0-9_./-]+(?:-gate\.mjs|no-broken-imports\.mjs))/g;
+    for (const match of text.matchAll(directGuardRegex)) {
+      if (!registeredSources.has(match[1])) {
+        violations.push({ file: relative, line: 0, message: `UNREGISTERED_DIRECT_WORKFLOW_GUARD ${match[1]}` });
+      }
+    }
+
+    if (!/^permissions:\s*(?:\n|$)/m.test(text) && !/^permissions:\s*\{\s*\}\s*$/m.test(text)) {
+      violations.push({ file: relative, line: 0, message: "WORKFLOW_MUST_DECLARE_EXPLICIT_TOP_LEVEL_PERMISSIONS" });
+    }
+    if (/pull_request_target\s*:/m.test(text)) {
+      violations.push({ file: relative, line: 0, message: "PULL_REQUEST_TARGET_FORBIDDEN" });
+    }
+    if (/contents:\s*write\b/i.test(text) || /write-all\b/i.test(text)) {
+      violations.push({ file: relative, line: 0, message: "SOURCE_CONTENT_WRITE_PERMISSION_FORBIDDEN" });
+    }
+    if (/\b(?:git\s+(?:push|commit|reset\s+--hard)|gh\s+pr\s+merge)\b/i.test(text)) {
+      violations.push({ file: relative, line: 0, message: "CI_SOURCE_OR_BRANCH_MUTATION_FORBIDDEN" });
+    }
+    if (/\b(?:gofmt\s+-w|prettier\s+--write|eslint\s+--fix|sed\s+-i|perl\s+-pi)\b/i.test(text)) {
+      violations.push({ file: relative, line: 0, message: "CI_FIX_OR_SOURCE_REWRITE_COMMAND_FORBIDDEN" });
+    }
+    if (/@latest\b/i.test(text)) {
+      violations.push({ file: relative, line: 0, message: "LATEST_VERSION_FORBIDDEN_IN_REQUIRED_WORKFLOW" });
+    }
+    if (/^\s*ref:\s*(?:reem|sam|onebyone|implementing|master)\s*$/m.test(text)) {
+      violations.push({ file: relative, line: 0, message: "EXPLICIT_FOREIGN_BRANCH_CHECKOUT_FORBIDDEN" });
+    }
+    if (/one-time/i.test(fileName) || /One-time/i.test(text)) {
+      violations.push({ file: relative, line: 0, message: "ONE_TIME_WORKFLOW_FORBIDDEN" });
+    }
+  }
+
+  for (const fileName of ["ci.yml", "security.yml", "governance-audit.yml", "dsh-operational-closure-ci.yml"]) {
+    const fullPath = path.join(workflowsDir, fileName);
+    if (!fs.existsSync(fullPath)) {
+      violations.push({ file: `.github/workflows/${fileName}`, line: 0, message: "REQUIRED_WORKFLOW_MISSING" });
+      continue;
+    }
+    const text = fs.readFileSync(fullPath, "utf8");
+    if (!/(?:branches:\s*\[[^\]]*\bbassam\b|^\s*-\s+bassam\s*$)/m.test(text)) {
+      violations.push({ file: `.github/workflows/${fileName}`, line: 0, message: "ACTIVE_REMOTE_BRANCH_BASSAM_NOT_COVERED" });
+    }
+  }
+
+  const governancePath = path.join(workflowsDir, "governance-audit.yml");
+  if (fs.existsSync(governancePath)) {
+    const text = fs.readFileSync(governancePath, "utf8");
+    for (const marker of [
+      '"AGENTS.md"',
+      '"GEMINI.md"',
+      '".agents/**"',
+      '"governance/**"',
+      '"tools/guards/**"',
+      '"package.json"',
+      '".github/workflows/**"',
+    ]) {
+      if (!text.includes(marker)) {
+        violations.push({ file: ".github/workflows/governance-audit.yml", line: 0, message: `GOVERNANCE_TRIGGER_PATH_MISSING ${marker}` });
       }
     }
   }
