@@ -1,6 +1,6 @@
 # BThwani Skill Catalog
 
-Version: 2026.06.24-v1
+Version: 2026.07.17-v1
 
 ## Active skills
 
@@ -14,6 +14,7 @@ Version: 2026.06.24-v1
 - `bthwani-security-secrets-privacy` — Block secrets, sensitive logs, unsafe config, and privacy leaks.
 - `bthwani-agent-handoff-evidence-pack` — Create or review evidence packs under tools/registry/runs. (Explicit-request-only)
 - `bthwani-agent-skill-integrity` — Validate agent files, catalog sync, skill structure, and adapter thinness.
+- `bthwani-cost-aware-subagent-orchestrator` — Coordinate hierarchical subagents using least-cost capable execution, bounded context, non-overlapping work units, and independent high-risk review.
 - `bthwani-foundation-execution` — Execute foundation journey work against governance, package metadata, and guard baseline.
 - `bthwani-legacy-extraction` — Extract from donor/realtest only after conflict review and rewrite for next.
 - `external-agent-donor-reference` — Use approved external agent repositories as read-only inspiration only; never clone, install, execute, auto-sync, or copy wholesale.

@@ -33,7 +33,7 @@ When a bThwani task needs agent/skill improvement:
 4. Rewrite the idea into bThwani-specific language.
 5. Apply bThwani constraints:
    - GitHub Remote only
-   - current ref = brach-validation unless explicitly changed
+   - current ref = the user-specified branch resolved from GitHub Remote; never use a hardcoded default branch
    - DSH/WLT boundaries
    - backend/frontend/database/runtime closure
    - Graphify/Nx evidence
