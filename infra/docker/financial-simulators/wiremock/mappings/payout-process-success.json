@@ -1,0 +1,42 @@
+{
+  "priority": 10,
+  "request": {
+    "method": "POST",
+    "urlPath": "/financial/payout/process",
+    "headers": {
+      "Idempotency-Key": {
+        "matches": ".+"
+      },
+      "X-Correlation-ID": {
+        "matches": ".+"
+      }
+    },
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": "$.payoutRequestId"
+      },
+      {
+        "matchesJsonPath": "$.beneficiaryActorId"
+      },
+      {
+        "matchesJsonPath": "$.amountMinorUnits"
+      },
+      {
+        "matchesJsonPath": "$.currency"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "providerReference": "sim-payout-{{randomValue length=18 type='ALPHANUMERIC'}}",
+      "status": "processed"
+    },
+    "transformers": [
+      "response-template"
+    ]
+  }
+}
