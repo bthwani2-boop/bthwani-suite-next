@@ -48,10 +48,11 @@ export const OPERATIONS_CANONICAL_GROUPS: readonly OperationsGroupMeta[] = [
   {
     id: 'dispatch-capacity',
     label: 'الإسناد والسعة',
-    description: 'الإسناد، الكباتن، خريطة المناطق، والسعة التشغيلية — مسار واحد.',
+    description: 'الإسناد، الكباتن، خريطة المناطق، والسعة التشغيلية ضمن مسار واحد.',
     badge: 'إسناد',
     subGroups: [
       { id: 'pending', label: 'قيد الإسناد' },
+      { id: 'captains', label: 'الكباتن' },
       { id: 'heatmap', label: 'خريطة المناطق' },
       { id: 'zones', label: 'المناطق والسعة' },
     ],
@@ -79,7 +80,9 @@ export const OPERATIONS_CANONICAL_GROUPS: readonly OperationsGroupMeta[] = [
   },
 ] as const;
 
-export const OPERATIONS_CANONICAL_GROUP_IDS = OPERATIONS_CANONICAL_GROUPS.map((group) => group.id) as readonly CanonicalOperationsGroupId[];
+export const OPERATIONS_CANONICAL_GROUP_IDS = OPERATIONS_CANONICAL_GROUPS.map(
+  (group) => group.id,
+) as readonly CanonicalOperationsGroupId[];
 
 export const NON_OPERATIONS_SECTION_SHORTCUTS: ReadonlyArray<{
   id: NonOperationsSectionRootId;
@@ -92,64 +95,63 @@ export const NON_OPERATIONS_SECTION_SHORTCUTS: ReadonlyArray<{
   { id: 'catalogs', label: 'الكتالوجات', description: 'حوكمة الكتالوج تبقى في قسم الكتالوجات.', href: '/dsh/catalogs' },
   { id: 'marketing', label: 'التسويق', description: 'التسويق والنمو يبقيان في قسم التسويق.', href: '/dsh/marketing' },
   { id: 'partners', label: 'الشركاء', description: 'إدارة الشركاء تبقى في قسم الشركاء.', href: '/dsh/partners' },
-  { id: 'platform', label: 'المنصة', description: 'السياسات والمتغيرات والـ rollouts تبقى في قسم المنصة.', href: '/dsh/platform' },
+  { id: 'platform', label: 'المنصة', description: 'السياسات والمتغيرات تبقى في قسم المنصة.', href: '/dsh/platform' },
   { id: 'administration', label: 'الإدارة', description: 'الأدوار وسلسلة الاعتماد تبقى في قسم الإدارة.', href: '/dsh/administration' },
 ] as const;
 
-type CanonicalMapping = { group: CanonicalOperationsGroupId; subGroup?: string };
-
+type CanonicalMapping = {
+  readonly group: CanonicalOperationsGroupId;
+  readonly subGroup?: string;
+};
 type LegacyOperationalWorkspaceId = Exclude<LegacyOperationsWorkspaceId, LegacySectionRedirectId>;
 
-const LEGACY_OPERATIONAL_TO_CANONICAL_GROUP: Record<LegacyOperationalWorkspaceId | 'orders' | 'overview', CanonicalMapping> = {
-  // command-center
-  overview:              { group: 'command-center' },
-  dashboard:             { group: 'command-center' },
-  // live-orders — queue/filters
-  orders:                { group: 'live-orders', subGroup: 'queue' },
-  'tracking-handoff':    { group: 'live-orders', subGroup: 'queue' },
-  'order-detail':        { group: 'live-orders', subGroup: 'queue' },
-  orderchat:             { group: 'live-orders', subGroup: 'queue' },
-  'live-tracking':       { group: 'live-orders', subGroup: 'queue' },
-  handoff:               { group: 'live-orders', subGroup: 'queue' },
-  'proof-review':        { group: 'live-orders', subGroup: 'proofs' },
-  bell:                  { group: 'live-orders', subGroup: 'queue' },
-  'arrival-bell':        { group: 'live-orders', subGroup: 'queue' },
-  // live-orders — assisted & rescue
+const LEGACY_OPERATIONAL_TO_CANONICAL_GROUP: Record<
+  LegacyOperationalWorkspaceId | 'orders' | 'overview',
+  CanonicalMapping
+> = {
+  overview: { group: 'command-center' },
+  dashboard: { group: 'command-center' },
+  orders: { group: 'live-orders', subGroup: 'queue' },
+  'tracking-handoff': { group: 'live-orders', subGroup: 'queue' },
+  'order-detail': { group: 'live-orders', subGroup: 'queue' },
+  orderchat: { group: 'live-orders', subGroup: 'queue' },
+  'live-tracking': { group: 'live-orders', subGroup: 'queue' },
+  handoff: { group: 'live-orders', subGroup: 'queue' },
+  'proof-review': { group: 'live-orders', subGroup: 'proofs' },
+  bell: { group: 'live-orders', subGroup: 'queue' },
+  'arrival-bell': { group: 'live-orders', subGroup: 'queue' },
   'assisted-order-desk': { group: 'live-orders', subGroup: 'assisted' },
-  'order-rescue':        { group: 'live-orders', subGroup: 'rescue' },
-  // dispatch-capacity
+  'order-rescue': { group: 'live-orders', subGroup: 'rescue' },
   'dispatch-assignment': { group: 'dispatch-capacity', subGroup: 'pending' },
-  dispatch:              { group: 'dispatch-capacity', subGroup: 'pending' },
-  'dispatch-fleet':      { group: 'dispatch-capacity', subGroup: 'pending' },
-  reassign:              { group: 'dispatch-capacity', subGroup: 'pending' },
-  'peak-mode':           { group: 'dispatch-capacity', subGroup: 'pending' },
-  'captain-operations':  { group: 'dispatch-capacity', subGroup: 'captains' },
-  'captain-ops':         { group: 'dispatch-capacity', subGroup: 'captains' },
-  'geo-heatmap':         { group: 'dispatch-capacity', subGroup: 'heatmap' },
-  'live-map-capacity':   { group: 'dispatch-capacity', subGroup: 'heatmap' },
-  'area-capacity':       { group: 'dispatch-capacity', subGroup: 'zones' },
-  capacity:              { group: 'dispatch-capacity', subGroup: 'zones' },
-  'zone-set':            { group: 'dispatch-capacity', subGroup: 'zones' },
-  serviceability:        { group: 'dispatch-capacity', subGroup: 'zones' },
-  // exceptions
+  dispatch: { group: 'dispatch-capacity', subGroup: 'pending' },
+  'dispatch-fleet': { group: 'dispatch-capacity', subGroup: 'captains' },
+  reassign: { group: 'dispatch-capacity', subGroup: 'pending' },
+  'peak-mode': { group: 'dispatch-capacity', subGroup: 'pending' },
+  'captain-operations': { group: 'dispatch-capacity', subGroup: 'captains' },
+  'captain-ops': { group: 'dispatch-capacity', subGroup: 'captains' },
+  'geo-heatmap': { group: 'dispatch-capacity', subGroup: 'heatmap' },
+  'live-map-capacity': { group: 'dispatch-capacity', subGroup: 'heatmap' },
+  'area-capacity': { group: 'dispatch-capacity', subGroup: 'zones' },
+  capacity: { group: 'dispatch-capacity', subGroup: 'zones' },
+  'zone-set': { group: 'dispatch-capacity', subGroup: 'zones' },
+  serviceability: { group: 'dispatch-capacity', subGroup: 'zones' },
   'exceptions-escalations': { group: 'exceptions', subGroup: 'active' },
-  'exceptions-sla':      { group: 'exceptions', subGroup: 'active' },
-  exceptions:            { group: 'exceptions', subGroup: 'active' },
-  issues:                { group: 'exceptions', subGroup: 'active' },
-  'audit-support-sla':   { group: 'exceptions', subGroup: 'audit' },
-  'audit-evidence':      { group: 'exceptions', subGroup: 'audit' },
-  audit:                 { group: 'exceptions', subGroup: 'audit' },
-  'guard-status':        { group: 'exceptions', subGroup: 'audit' },
-  evidence:              { group: 'exceptions', subGroup: 'audit' },
-  sla:                   { group: 'exceptions', subGroup: 'audit' },
-  'partner-stores':      { group: 'exceptions', subGroup: 'stores' },
-  'partner-readiness':   { group: 'exceptions', subGroup: 'stores' },
-  'field-ops':           { group: 'exceptions', subGroup: 'stores' },
-  'partner-prep':        { group: 'exceptions', subGroup: 'stores' },
-  // special-ops
-  sheinproxy:            { group: 'special-ops', subGroup: 'shein' },
-  'awnak-operations':    { group: 'special-ops', subGroup: 'awnak' },
-  'proxy-shein-awnak':   { group: 'special-ops', subGroup: 'awnak' },
+  'exceptions-sla': { group: 'exceptions', subGroup: 'active' },
+  exceptions: { group: 'exceptions', subGroup: 'active' },
+  issues: { group: 'exceptions', subGroup: 'active' },
+  'audit-support-sla': { group: 'exceptions', subGroup: 'audit' },
+  'audit-evidence': { group: 'exceptions', subGroup: 'audit' },
+  audit: { group: 'exceptions', subGroup: 'audit' },
+  'guard-status': { group: 'exceptions', subGroup: 'audit' },
+  evidence: { group: 'exceptions', subGroup: 'audit' },
+  sla: { group: 'exceptions', subGroup: 'audit' },
+  'partner-stores': { group: 'exceptions', subGroup: 'stores' },
+  'partner-readiness': { group: 'exceptions', subGroup: 'stores' },
+  'field-ops': { group: 'exceptions', subGroup: 'stores' },
+  'partner-prep': { group: 'exceptions', subGroup: 'stores' },
+  sheinproxy: { group: 'special-ops', subGroup: 'shein' },
+  'awnak-operations': { group: 'special-ops', subGroup: 'awnak' },
+  'proxy-shein-awnak': { group: 'special-ops', subGroup: 'awnak' },
 };
 
 const LEGACY_SECTION_REDIRECTS: Record<LegacySectionRedirectId, NonOperationsSectionRootId> = {
@@ -172,14 +174,14 @@ const LEGACY_SECTION_REDIRECTS: Record<LegacySectionRedirectId, NonOperationsSec
 
 export function coerceOperationsPanel(panel?: string): OperationsPanelId | undefined {
   if (
-    panel === 'detail' ||
-    panel === 'timeline' ||
-    panel === 'chat' ||
-    panel === 'batches' ||
-    panel === 'proof' ||
-    panel === 'audit' ||
-    panel === 'dispatch' ||
-    panel === 'exception'
+    panel === 'detail'
+    || panel === 'timeline'
+    || panel === 'chat'
+    || panel === 'batches'
+    || panel === 'proof'
+    || panel === 'audit'
+    || panel === 'dispatch'
+    || panel === 'exception'
   ) {
     return panel;
   }
@@ -191,7 +193,6 @@ export function normalizeOperationsLocation(
   panel?: string,
 ): OperationsNormalizationResult {
   const resolvedPanel = coerceOperationsPanel(panel);
-
   if (!workspace || workspace === 'overview') {
     return {
       kind: 'group',
@@ -221,7 +222,9 @@ export function normalizeOperationsLocation(
     };
   }
 
-  const mapped = LEGACY_OPERATIONAL_TO_CANONICAL_GROUP[workspace as LegacyOperationalWorkspaceId | 'orders' | 'overview'];
+  const mapped = LEGACY_OPERATIONAL_TO_CANONICAL_GROUP[
+    workspace as LegacyOperationalWorkspaceId | 'orders' | 'overview'
+  ];
   if (!mapped) {
     return {
       kind: 'group',
@@ -251,87 +254,67 @@ export function buildOperationsHref(
   options?: OperationsFocusParams,
 ) {
   const normalizedLocation = normalizeOperationsLocation(group, options?.panel);
-  
   if (normalizedLocation.kind === 'redirect') {
     return `/dsh/${normalizedLocation.section}`;
   }
 
   const searchParams = new globalThis.URLSearchParams();
-
-  if (normalizedLocation.kind === 'group' && normalizedLocation.group !== 'command-center') {
+  if (normalizedLocation.group !== 'command-center') {
     searchParams.set('workspace', normalizedLocation.group);
   }
+  if (options?.orderId) searchParams.set('orderId', options.orderId);
+  if (options?.customerId) searchParams.set('customerId', options.customerId);
+  if (options?.ticketId) searchParams.set('ticketId', options.ticketId);
+  if (options?.callId) searchParams.set('callId', options.callId);
+  if (options?.requestId) searchParams.set('requestId', options.requestId);
+  if (options?.panel) searchParams.set('panel', options.panel);
 
-  if (options?.orderId) {
-    searchParams.set('orderId', options.orderId);
-  }
-
-  if (options?.customerId) {
-    searchParams.set('customerId', options.customerId);
-  }
-
-  if (options?.ticketId) {
-    searchParams.set('ticketId', options.ticketId);
-  }
-
-  if (options?.callId) {
-    searchParams.set('callId', options.callId);
-  }
-
-  if (options?.requestId) {
-    searchParams.set('requestId', options.requestId);
-  }
-
-  if (options?.panel) {
-    searchParams.set('panel', options.panel);
-  }
-
-  const resolvedSubGroup = options?.subGroup ?? (normalizedLocation.kind === 'group' ? normalizedLocation.subGroup : undefined);
-  if (resolvedSubGroup) {
-    searchParams.set('subGroup', resolvedSubGroup);
-  }
-
+  const resolvedSubGroup = options?.subGroup ?? normalizedLocation.subGroup;
+  if (resolvedSubGroup) searchParams.set('subGroup', resolvedSubGroup);
   const query = searchParams.toString();
   return query ? `/dsh/operations?${query}` : '/dsh/operations';
 }
 
 export function getOperationsGroupMeta(groupId: CanonicalOperationsGroupId): OperationsGroupMeta {
-  return OPERATIONS_CANONICAL_GROUPS.find((group) => group.id === groupId) ?? OPERATIONS_CANONICAL_GROUPS[0]!;
+  return OPERATIONS_CANONICAL_GROUPS.find((group) => group.id === groupId)
+    ?? OPERATIONS_CANONICAL_GROUPS[0]!;
 }
 
 const STATE_COPY: Record<Exclude<OperationsViewState, 'ready'>, StateViewCopy> = {
   loading: {
     stateId: 'loading',
-    title: 'جاري تحميل معاينة العمليات',
-    description: 'تجهّز مساحة المعاينة الحالة التشغيلية التالية.',
+    title: 'جاري تحميل العمليات',
+    description: 'تتم قراءة الحالة التشغيلية من الخدمات المالكة.',
     actionLabel: 'فتح العمليات',
   },
   empty: {
     stateId: 'empty',
-    title: 'لا يوجد محتوى بعد',
-    description: 'لا توجد عينة تشغيلية متاحة لمساحة العمل الحالية.',
+    title: 'لا توجد بيانات تشغيلية',
+    description: 'لم تُرجع الخدمة المالكة بيانات للمساحة الحالية.',
     actionLabel: 'فتح العمليات',
   },
   error: {
     stateId: 'recoverableError',
-    title: 'بيانات المعاينة غير متاحة',
-    description: 'يمكن أن تتعافى مساحة العمل بعد التحديث التالي.',
+    title: 'تعذر تحميل بيانات العمليات',
+    description: 'أعد المحاولة لقراءة الحالة من المصدر التشغيلي.',
     actionLabel: 'فتح العمليات',
   },
   offline: {
     stateId: 'offline',
-    title: 'معاينة العمليات غير متصلة',
-    description: 'أعد الاتصال أو حدّث مساحة العمل للمتابعة.',
+    title: 'خدمة العمليات غير متصلة',
+    description: 'أعد الاتصال أو حدّث الصفحة للمتابعة.',
     actionLabel: 'فتح العمليات',
   },
   disabled: {
     kind: 'warning',
-    title: 'تم تعطيل وضع المعاينة',
-    description: 'تظل المعاينة التشغيلية مخفية حتى تصبح مساحة العمل جاهزة مرة أخرى.',
+    title: 'مساحة العمليات معطلة',
+    description: 'هذه المساحة غير متاحة وفق إعدادات التشغيل الحالية.',
     actionLabel: 'فتح العمليات',
   },
 };
 
-export function resolveOperationsStateCopy(state: Exclude<OperationsViewState, 'ready'>): StateViewCopy {
+export function resolveOperationsStateCopy(
+  state: Exclude<OperationsViewState, 'ready'>,
+): StateViewCopy {
   return STATE_COPY[state];
 }
