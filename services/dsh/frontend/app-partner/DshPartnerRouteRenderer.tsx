@@ -232,6 +232,7 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
   if (route === 'store-courier') return renderSurfaceShell(<DshPartnerStoreCourierScreen storeId={activeStoreIdForStoreScopedScreens} scopes={scopes} onBack={() => openAccountHub('operations')} />) as React.ReactElement;
   if (route === 'team') return renderSurfaceShell(
     <PartnerTeamManagementScreen
+      storeId={activeStoreIdForStoreScopedScreens}
       storeName={runtimePartnerProfile.storeName}
       branchLabel={runtimePartnerProfile.branchLabel}
       members={teamMembers}
