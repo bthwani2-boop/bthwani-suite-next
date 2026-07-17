@@ -1,15 +1,26 @@
 param(
   [switch]$Full,
-  [switch]$Soft,
   [string]$Guard
 )
 
 Set-Location -LiteralPath (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
 $ErrorActionPreference = "Stop"
 
-$manifest = Get-Content -LiteralPath "tools\guards\guard-manifest.json" -Raw | ConvertFrom-Json
-$foundationGuards = @($manifest.guardSets.foundation)
-if ($Guard) { $foundationGuards = @($Guard) }
+$manifestPath = "tools\guards\guard-manifest.json"
+if (-not (Test-Path -LiteralPath $manifestPath)) {
+  throw "Guard manifest is missing: $manifestPath"
+}
+
+$manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+$registeredFoundationGuards = @($manifest.guardSets.foundation)
+$foundationGuards = $registeredFoundationGuards
+
+if ($Guard) {
+  if ($registeredFoundationGuards -notcontains $Guard) {
+    throw "Requested guard is not registered in the foundation set: $Guard"
+  }
+  $foundationGuards = @($Guard)
+}
 
 $results = @()
 
@@ -44,15 +55,14 @@ foreach ($guardName in $foundationGuards) {
 }
 
 $failed = @($results | Where-Object { -not $_.ok })
-$status = if ($failed.Count -eq 0) { "PASS" } else { "FAIL" }
-
-Write-Host ""
-Write-Host "RESULT: $status" -ForegroundColor $(if ($failed.Count -eq 0) { "Green" } else { "Red" })
 if ($failed.Count -gt 0) {
+  Write-Host ""
+  Write-Host "RESULT: FIX_REQUIRED scope=static" -ForegroundColor Red
   Write-Host "Failed steps: $($failed.step -join ', ')" -ForegroundColor Red
-  if ($Soft) {
-    Write-Host "WARNING: -Soft was explicitly supplied; returning exit code 0." -ForegroundColor Yellow
-    exit 0
-  }
-  exit 1
+  throw "Foundation gate failed: $($failed.step -join ', ')"
 }
+
+$mode = if ($Full) { "full-explicit" } else { "targeted-default" }
+Write-Host ""
+Write-Host "RESULT: PASS scope=static mode=$mode" -ForegroundColor Green
+Write-Host "PASS is scoped evidence only and does not imply CLOSED_WITH_EVIDENCE." -ForegroundColor Yellow
