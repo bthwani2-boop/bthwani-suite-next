@@ -1,22 +1,36 @@
-version: 1
+version: 2
 authority: governance/26_SDLC_TEAM_AND_STAGE_GATES.md
+decision_vocabulary: governance/contracts/decision-vocabulary.json
 initial_stage: G0_INTAKE
-terminal_stages:
-  - CLOSED_WITH_EVIDENCE
-  - FIX_REQUIRED
-  - HARD_BLOCKED_EXTERNAL_ONLY
 ordered_stages:
   - G0_INTAKE
-  - G1_REQUIREMENTS_APPROVED
+  - G1_PRODUCT_MODEL_APPROVED
   - G2_DESIGN_APPROVED
   - G3_READY_FOR_IMPLEMENTATION
   - G4_IMPLEMENTATION_VERIFIED
-  - G5_QA_APPROVED
-  - G6_SECURITY_APPROVED
-  - G7_RELEASE_APPROVED
-  - G8_DEPLOYED
-  - G9_PRODUCTION_VERIFIED
+  - G5_PRODUCT_ACCEPTED
+  - G6_QA_APPROVED
+  - G7_SECURITY_APPROVED
+  - G8_RELEASE_APPROVED
+  - G9_DEPLOYED
+  - G10_PRODUCTION_VERIFIED
   - CLOSED_WITH_EVIDENCE
-failure_stage: FIX_REQUIRED
-external_block_stage: HARD_BLOCKED_EXTERNAL_ONLY
-rule: stages_must_not_skip_required_evidence_or_approval
+non_terminal_decisions:
+  - FIX_REQUIRED
+  - BLOCKED_EXTERNAL
+  - NEEDS_EVIDENCE
+  - QA_BLOCK
+  - SECURITY_BLOCK
+  - RELEASE_BLOCK
+terminal_stages:
+  - CLOSED_WITH_EVIDENCE
+failure_decision: FIX_REQUIRED
+external_block_decision: BLOCKED_EXTERNAL
+missing_evidence_decision: NEEDS_EVIDENCE
+rules:
+  - stages_move_forward_only
+  - no_stage_skip_without_explicit_not_applicable_evidence
+  - product_truth_precedes_implementation
+  - product_acceptance_precedes_qa
+  - same_commit_evidence_required
+  - executor_cannot_finally_approve_own_high_risk_work
