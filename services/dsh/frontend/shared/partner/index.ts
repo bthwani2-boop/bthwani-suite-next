@@ -72,5 +72,6 @@ export {
 } from "./partner.api";
 export type { DshPartnerReadinessItem, DshPartnerDocumentType } from "./partner.types";
 export { REQUIRED_DOCUMENT_TYPES, DOCUMENT_TYPE_LABELS } from "./partner.types";
+export * from "./partner-fleet.api";
 export * from "./partner.workflow";
 export * from "./catalog-approval.api";
