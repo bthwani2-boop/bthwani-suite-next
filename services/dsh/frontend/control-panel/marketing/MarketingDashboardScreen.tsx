@@ -2,7 +2,6 @@
 import { colorRoles } from '@bthwani/ui-kit';
 import { useState } from "react";
 import {
-  CpButton,
   CpKpiCard,
   CpKpiStrip,
   CpPageHeader,
@@ -21,8 +20,6 @@ import { TickerCommandDeck } from "./components/TickerCommandDeck";
 import { CampaignsCommandDeck } from "./components/CampaignsCommandDeck";
 import { PartnerOffersCommandDeck } from "./components/PartnerOffersCommandDeck";
 import { SignalsMeasurementCommandDeck } from "./components/SignalsMeasurementCommandDeck";
-import { LoyaltyCommandDeck } from "./components/LoyaltyCommandDeck";
-import { SubscriptionsCommandDeck } from "./components/SubscriptionsCommandDeck";
 
 // Import split dashboard sections
 import { VisibilityGatesSection } from "./components/VisibilityGatesSection";
@@ -76,11 +73,10 @@ export function MarketingDashboardScreen() {
             حوكمة المحتوى التسويقي والنمو الاستراتيجي
           </p>
 
-          {/* ── KPI Strip ─────────────────────────────────────────────── */}
           <CpKpiStrip>
-            <CpKpiCard label="متاجر نشطة"      value={metrics.activeStoresRatio} />
-            <CpKpiCard label="طلبات مكتملة"    value={metrics.deliveredOrders.toLocaleString("ar")} />
-            <CpKpiCard label="تذاكر مفتوحة"    value={metrics.openTickets.toLocaleString("ar")} />
+            <CpKpiCard label="متاجر نشطة" value={metrics.activeStoresRatio} />
+            <CpKpiCard label="طلبات مكتملة" value={metrics.deliveredOrders.toLocaleString("ar")} />
+            <CpKpiCard label="تذاكر مفتوحة" value={metrics.openTickets.toLocaleString("ar")} />
             <CpKpiCard label="تصعيدات مفتوحة" value={metrics.openEscalations.toLocaleString("ar")} />
           </CpKpiStrip>
           {!metrics.isBackedByApi && (
@@ -91,7 +87,6 @@ export function MarketingDashboardScreen() {
         </CpPageHeader>
       }
     >
-      {/* ── Main Tab Navigation (matching underline style) ──────────────── */}
       <nav
         dir="rtl"
         style={{
@@ -103,18 +98,17 @@ export function MarketingDashboardScreen() {
           overflowX: "auto",
         }}
       >
-        {MARKETING_MAIN_TABS.map((t) => (
+        {MARKETING_MAIN_TABS.map((tab) => (
           <MainTabButton
-            key={t.id}
-            active={mainTab === t.id}
-            onClick={() => setMainTab(t.id)}
+            key={tab.id}
+            active={mainTab === tab.id}
+            onClick={() => setMainTab(tab.id)}
           >
-            {t.label}
+            {tab.label}
           </MainTabButton>
         ))}
       </nav>
 
-      {/* ── Main Dashboard Layout ─────────────────────────────────────── */}
       {mainTab === "visibility-gates" && (
         <VisibilityGatesSection
           sectionTab={sectionTab}
@@ -124,29 +118,21 @@ export function MarketingDashboardScreen() {
         />
       )}
 
-      {/* ── Banners Tab ── */}
       {mainTab === "banners-carousel" && (
         <MarketingHomeDiscoveryPanel kind="banners" />
       )}
 
-      {/* ── Promos Tab ── */}
       {mainTab === "homepage-promos" && (
         <MarketingHomeDiscoveryPanel kind="promos" />
       )}
 
-      {/* ─── Smart Bar / Tickers Tab ─── */}
       {mainTab === "smart-bar" && (
         <TickerCommandDeck />
       )}
 
-      {/* ── Remaining Command Deck tabs ── */}
       {mainTab === "campaigns" && <CampaignsCommandDeck />}
       {mainTab === "partner-offers" && <PartnerOffersCommandDeck />}
       {mainTab === "signals-measurement" && <SignalsMeasurementCommandDeck />}
-
-      {/* ── Loyalty & Subscriptions tabs ── */}
-      {mainTab === "loyalty" && <LoyaltyCommandDeck />}
-      {mainTab === "subscriptions" && <SubscriptionsCommandDeck />}
     </DataTablePageFrame>
   );
 }
