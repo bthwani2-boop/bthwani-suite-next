@@ -28,12 +28,14 @@ function readText(relativePath) {
   return fs.readFileSync(fullPath, "utf8");
 }
 
+const agentsDocPath = "AGENTS.md";
 const agentPath = "governance/agents/agent-registry.json";
 const skillPath = "governance/skills/skills-registry.json";
 const indexPath = ".agents/INDEX.md";
 const rolesPath = "governance/operational_journey_protocol_package/sdlc/roles-and-authority.yaml";
 const gatesPath = "governance/operational_journey_protocol_package/sdlc/gate-catalog.yaml";
 
+const agentsDoc = readText(agentsDocPath);
 const agents = readJson(agentPath);
 const skills = readJson(skillPath);
 const index = readText(indexPath);
@@ -98,6 +100,9 @@ if (!mixedSkill || mixedSkill.status !== "retired" || mixedSkill.contract_level 
 if (index.includes("→ `bthwani-governance-ci-guardian`") || /^- `bthwani-governance-ci-guardian`$/m.test(index)) violations.push({ file: indexPath, line: 0, message: "RETIRED_MIXED_SKILL_STILL_ROUTED" });
 for (const requiredSkill of ["bthwani-governance-contract-guardian", "bthwani-ci-workflow-guardian"]) {
   if (!index.includes(`\`${requiredSkill}\``)) violations.push({ file: indexPath, line: 0, message: `SEPARATED_SKILL_MISSING_FROM_INDEX ${requiredSkill}` });
+  if (!agentsDoc.includes(`\`${requiredSkill}\``) && !agentsDoc.includes(requiredSkill.replace("bthwani-", "").toUpperCase().replaceAll("-", "_"))) {
+    violations.push({ file: agentsDocPath, line: 0, message: `SEPARATED_AUTHORITY_MISSING_FROM_AGENTS ${requiredSkill}` });
+  }
 }
 
 for (const authority of [
@@ -117,6 +122,20 @@ for (const authority of [
   "risk_acceptance_authority",
 ]) {
   if (!new RegExp(`^  ${authority}:\\s*$`, "m").test(roles)) violations.push({ file: rolesPath, line: 0, message: `SDLC_AUTHORITY_MISSING ${authority}` });
+}
+
+for (const marker of [
+  "`SDLC_PROGRAM_AUTHORITY`",
+  "`GOVERNANCE_CONTRACT_AUTHORITY`",
+  "`CI_WORKFLOW_AUTHORITY`",
+  "`FINANCIAL_CONTROL_AUTHORITY`",
+  "`RISK_ACCEPTANCE_AUTHORITY`",
+]) {
+  if (!agentsDoc.includes(marker)) violations.push({ file: agentsDocPath, line: 0, message: `AGENTS_AUTHORITY_MARKER_MISSING ${marker}` });
+}
+
+for (const scope of ["static", "product", "runtime", "visual", "qa", "security", "finance", "isolation", "governance", "ci", "release", "production"]) {
+  if (!agentsDoc.includes(`\`${scope}\``)) violations.push({ file: agentsDocPath, line: 0, message: `AGENTS_CLOSURE_SCOPE_MISSING ${scope}` });
 }
 
 if (!/G4_IMPLEMENTATION_VERIFIED:\s*\n\s+owner:\s+independent_reviewer\s*$/m.test(gates)) violations.push({ file: gatesPath, line: 0, message: "G4_MUST_BE_OWNED_BY_INDEPENDENT_REVIEWER" });
