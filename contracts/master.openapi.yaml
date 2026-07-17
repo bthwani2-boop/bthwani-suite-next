@@ -16,4 +16,5 @@ x-bthwani-contracts:
     workforce: ../core/workforce/contracts/workforce.openapi.yaml
   services:
     dsh: ../services/dsh/contracts/dsh.openapi.yaml
+    dshMarketingCommercial: ../services/dsh/contracts/dsh.marketing-commercial.openapi.yaml
     wlt: ../services/wlt/contracts/wlt.openapi.yaml
