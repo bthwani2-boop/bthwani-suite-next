@@ -67,6 +67,13 @@ if (artifactPath) {
       }
 
       const isPassDecision = artifact.decision === "GATE_PASS" || artifact.decision === "CLOSED_WITH_EVIDENCE";
+      if (requestedStage && artifact.requestedStage === requestedStage && !isPassDecision) {
+        violations.push({
+          file: artifactPath,
+          message: `REQUESTED_STAGE_NOT_APPROVED: decision=${artifact.decision}`,
+        });
+      }
+
       if (isPassDecision) {
         const currentIndex = orderedStages.indexOf(artifact.currentStage);
         const nextIndex = orderedStages.indexOf(artifact.requestedStage);
