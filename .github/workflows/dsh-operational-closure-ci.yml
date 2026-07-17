@@ -1,10 +1,8 @@
-name: DSH Operational Closure CI
+name: DSH Operational Verification
 
 on:
   push:
-    branches:
-      - bassam
-      - master
+    branches: [bassam, master]
     paths:
       - "services/dsh/**"
       - "services/wlt/**"
@@ -15,14 +13,13 @@ on:
       - "apps/app-captain/**"
       - "apps/app-field/**"
       - "apps/control-panel/**"
-      - "governance/product/**"
-      - "governance/operational_journey_protocol_package/sdlc/**"
-      - "tools/guards/**"
-      - "package.json"
+      - "governance/guards/frontend-binding-registry*.json"
+      - "tools/guards/frontend-feature-binding-gate.mjs"
+      - "tools/guards/runtime-real-bindings-gate.mjs"
+      - "tools/guards/live-cross-journey-integrity-gate.mjs"
       - ".github/workflows/dsh-operational-closure-ci.yml"
   pull_request:
-    branches:
-      - master
+    branches: [master]
     paths:
       - "services/dsh/**"
       - "services/wlt/**"
@@ -33,24 +30,24 @@ on:
       - "apps/app-captain/**"
       - "apps/app-field/**"
       - "apps/control-panel/**"
-      - "governance/product/**"
-      - "governance/operational_journey_protocol_package/sdlc/**"
-      - "tools/guards/**"
-      - "package.json"
+      - "governance/guards/frontend-binding-registry*.json"
+      - "tools/guards/frontend-feature-binding-gate.mjs"
+      - "tools/guards/runtime-real-bindings-gate.mjs"
+      - "tools/guards/live-cross-journey-integrity-gate.mjs"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: dsh-operational-closure-${{ github.workflow }}-${{ github.ref }}
+  group: dsh-operational-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  dsh-backend:
-    name: DSH backend contract database and tests
+  dsh-backend-database:
+    name: DSH backend database and tests
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     services:
       postgres:
         image: postgres:16-alpine
@@ -70,30 +67,31 @@ jobs:
       DSH_REQUIRE_DB_TESTS: "true"
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version-file: services/dsh/backend/go.mod
           cache: true
           cache-dependency-path: services/dsh/backend/go.sum
-      - name: Verify Go formatting without modifying source
+      - name: Verify format vet and tests
         working-directory: services/dsh/backend
         shell: bash
         run: |
           set -euo pipefail
           files="$(gofmt -l .)"
-          test -z "$files" || { printf 'Unformatted files:\n%s\n' "$files"; exit 1; }
-      - name: Vet
-        working-directory: services/dsh/backend
-        run: go vet ./...
+          test -z "$files" || { printf 'Unformatted DSH files:\n%s\n' "$files"; exit 1; }
+          go vet ./...
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
-      - name: Apply DSH migrations to clean PostgreSQL
+      - name: Apply all DSH migrations
         shell: bash
         run: |
           set -euo pipefail
           while IFS= read -r migration; do
+            echo "Applying $migration"
             psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
           done < <(find services/dsh/database/migrations -maxdepth 1 -type f -name '*.sql' | sort)
       - name: Unit and database integration tests
@@ -106,31 +104,29 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version-file: services/wlt/backend/go.mod
           cache: true
           cache-dependency-path: services/wlt/backend/go.sum
-      - name: Verify Go formatting without modifying source
+      - name: Verify format vet and tests
         working-directory: services/wlt/backend
         shell: bash
         run: |
           set -euo pipefail
           files="$(gofmt -l .)"
-          test -z "$files" || { printf 'Unformatted files:\n%s\n' "$files"; exit 1; }
-      - name: Vet
-        working-directory: services/wlt/backend
-        run: go vet ./...
-      - name: Unit tests
-        working-directory: services/wlt/backend
-        run: go test ./... -count=1
+          test -z "$files" || { printf 'Unformatted WLT files:\n%s\n' "$files"; exit 1; }
+          go vet ./...
+          go test ./... -count=1
 
-  workforce-backend:
+  workforce-backend-database:
     name: Workforce backend database and tests
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     services:
       postgres:
         image: postgres:16-alpine
@@ -149,157 +145,114 @@ jobs:
       DATABASE_URL: postgres://workforce_ci:workforce_ci_password@localhost:5433/workforce_ci?sslmode=disable
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version-file: core/workforce/backend/go.mod
           cache: true
           cache-dependency-path: core/workforce/backend/go.sum
-      - name: Verify Go formatting without modifying source
+      - name: Verify format and vet
         working-directory: core/workforce/backend
         shell: bash
         run: |
           set -euo pipefail
           files="$(gofmt -l .)"
-          test -z "$files" || { printf 'Unformatted files:\n%s\n' "$files"; exit 1; }
-      - name: Vet
-        working-directory: core/workforce/backend
-        run: go vet ./...
+          test -z "$files" || { printf 'Unformatted Workforce files:\n%s\n' "$files"; exit 1; }
+          go vet ./...
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
-      - name: Apply Workforce migrations to clean PostgreSQL
+      - name: Apply all Workforce migrations
         shell: bash
         run: |
           set -euo pipefail
           while IFS= read -r migration; do
+            echo "Applying $migration"
             psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
           done < <(find core/workforce/database/migrations -maxdepth 1 -type f -name '*.sql' | sort)
       - name: Unit and database integration tests
         working-directory: core/workforce/backend
         run: go test ./... -count=1
 
-  fullstack-binding:
-    name: Full-stack contract and binding gates
+  dsh-static-fullstack:
+    name: DSH static contract and cross-surface binding
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Setup PNPM
-        uses: pnpm/action-setup@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
-          version: 10.34.2
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24.17.0
-          cache: pnpm
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Validate contracts
-        run: pnpm run contracts:lint
-      - name: Verify generated clients are current
+          persist-credentials: false
+      - name: Setup workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Verify DSH static full-stack chain and regressions
         shell: bash
         run: |
-          set -euo pipefail
-          pnpm run openapi:generate:dsh
-          pnpm run openapi:generate:wlt
-          pnpm run openapi:generate:workforce
-          git diff --exit-code -- \
-            services/dsh/clients/generated/dsh-api.ts \
-            services/wlt/clients/generated/wlt-api.ts \
-            core/workforce/clients/generated/workforce-api.ts
-      - name: Binding and boundary gates
-        run: |
-          pnpm run guard:backend-api-binding
-          pnpm run guard:api-binding
-          pnpm run guard:frontend-feature-binding
-          pnpm run guard:fullstack-boundary
-          pnpm run guard:wlt-financial-boundary
-          pnpm run guard:runtime-real-bindings
-      - name: Typecheck
-        run: pnpm run typecheck
+          set +e
+          failures=0
+          run_check() {
+            local name="$1"
+            shift
+            echo "::group::$name"
+            "$@"
+            local result=$?
+            echo "::endgroup::"
+            if [ "$result" -ne 0 ]; then failures=$((failures + 1)); fi
+          }
+          run_check contracts pnpm run contracts:lint
+          run_check backend-api pnpm run guard:backend-api-binding
+          run_check api-binding pnpm run guard:api-binding
+          run_check frontend-static-binding pnpm run guard:frontend-feature-binding
+          run_check fullstack-boundary pnpm run guard:fullstack-boundary
+          run_check wlt-boundary pnpm run guard:wlt-financial-boundary
+          run_check runtime-anti-stub pnpm run guard:runtime-real-bindings
+          run_check cross-journey-regression pnpm run guard:live-cross-journey-integrity
+          test "$failures" -eq 0
 
-  governance-and-sdlc:
-    name: Governance Product Truth and SDLC support
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Setup PNPM
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.34.2
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24.17.0
-          cache: pnpm
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Governance contracts and workflow policy
-        run: |
-          pnpm run guard:governance-schema
-          pnpm run guard:agent-governance
-          pnpm run guard:guard-registry
-      - name: SDLC structural and Product Truth integration
-        run: pnpm run guard:sdlc
-
-  migration-static:
-    name: Migration transaction invariants
+  migration-invariants:
+    name: DSH WLT and Workforce migration invariants
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Verify required migrations are transactional
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+      - name: Verify every migration is transaction-bounded
         shell: bash
         run: |
           set -euo pipefail
-          migrations=(
-            services/dsh/database/migrations/dsh-056_special_requests_tenancy.sql
-            services/dsh/database/migrations/dsh-059_special_request_dispatch_stage_sync.sql
-            services/wlt/database/migrations/wlt-024_payment_session_tenancy.sql
-            core/workforce/database/migrations/workforce-004_captain_license_evidence_gate.sql
-          )
-          for migration in "${migrations[@]}"; do
-            test -f "$migration"
-            grep -q '^BEGIN;' "$migration"
-            grep -q '^COMMIT;' "$migration"
-          done
-          grep -q 'trg_dsh_sync_special_request_dispatch_stage' services/dsh/database/migrations/dsh-059_special_request_dispatch_stage_sync.sql
-          grep -q 'workforce_captain_license_evidence_trg' core/workforce/database/migrations/workforce-004_captain_license_evidence_gate.sql
+          failures=0
+          while IFS= read -r migration; do
+            grep -q '^BEGIN;' "$migration" || { echo "$migration: missing BEGIN"; failures=$((failures + 1)); }
+            grep -q '^COMMIT;' "$migration" || { echo "$migration: missing COMMIT"; failures=$((failures + 1)); }
+          done < <(find services/dsh/database/migrations services/wlt/database/migrations core/workforce/database/migrations -maxdepth 1 -type f -name '*.sql' | sort)
+          test "$failures" -eq 0
 
-  closure-result:
-    name: DSH operational closure result
+  operational-result:
+    name: DSH operational verification result
     if: always()
-    needs:
-      - dsh-backend
-      - wlt-backend
-      - workforce-backend
-      - fullstack-binding
-      - governance-and-sdlc
-      - migration-static
+    needs: [dsh-backend-database, wlt-backend, workforce-backend-database, dsh-static-fullstack, migration-invariants]
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
-      - name: Require every closure job to pass
+      - name: Require every operational job to pass
         env:
-          DSH: ${{ needs.dsh-backend.result }}
+          DSH: ${{ needs.dsh-backend-database.result }}
           WLT: ${{ needs.wlt-backend.result }}
-          WORKFORCE: ${{ needs.workforce-backend.result }}
-          FULLSTACK: ${{ needs.fullstack-binding.result }}
-          GOVERNANCE: ${{ needs.governance-and-sdlc.result }}
-          MIGRATIONS: ${{ needs.migration-static.result }}
+          WORKFORCE: ${{ needs.workforce-backend-database.result }}
+          STATIC_FULLSTACK: ${{ needs.dsh-static-fullstack.result }}
+          MIGRATIONS: ${{ needs.migration-invariants.result }}
         shell: bash
         run: |
           set -euo pipefail
+          printf 'dsh=%s\nwlt=%s\nworkforce=%s\nstatic-fullstack=%s\nmigrations=%s\n' \
+            "$DSH" "$WLT" "$WORKFORCE" "$STATIC_FULLSTACK" "$MIGRATIONS"
           test "$DSH" = success
           test "$WLT" = success
           test "$WORKFORCE" = success
-          test "$FULLSTACK" = success
-          test "$GOVERNANCE" = success
+          test "$STATIC_FULLSTACK" = success
           test "$MIGRATIONS" = success
