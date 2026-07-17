@@ -3,42 +3,43 @@
   "title": "BThwani SDLC Artifact Manifest",
   "type": "object",
   "required": [
-    "schemaVersion",
-    "capabilityId",
-    "repositoryMode",
-    "branch",
-    "resolvedCommitSha",
-    "currentStage",
-    "requestedStage",
-    "applicableGates",
-    "passedGates",
-    "failedGates",
-    "missingEvidence",
-    "requiredApprovals",
-    "approvals",
-    "separationOfDutiesPass",
-    "openBlockers",
-    "residualRisks",
-    "evidence",
-    "decision"
+    "schemaVersion", "capabilityId", "repositoryMode", "branch", "resolvedCommitSha",
+    "currentStage", "requestedStage", "applicableGates", "passedGates", "failedGates",
+    "applicableEvidenceScopes", "passedEvidenceScopes", "notApplicableStages", "stageExclusions",
+    "missingEvidence", "requiredApprovals", "approvals", "separationOfDutiesPass",
+    "openBlockers", "residualRisks", "evidence", "decision"
   ],
   "additionalProperties": false,
   "properties": {
-    "schemaVersion": { "const": 2 },
+    "schemaVersion": { "const": 3 },
     "capabilityId": { "type": "string", "minLength": 1 },
     "repositoryMode": { "enum": ["REMOTE_ONLY", "LOCAL"] },
     "branch": { "type": "string", "minLength": 1 },
     "resolvedCommitSha": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
     "evidenceCommitSha": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
-    "currentStage": { "type": "string", "pattern": "^(G(?:0|1|2|3|4|5|6|7|8|9|10)_[A-Z0-9_]+|CLOSED_WITH_EVIDENCE)$" },
-    "requestedStage": { "type": "string", "pattern": "^(G(?:0|1|2|3|4|5|6|7|8|9|10)_[A-Z0-9_]+|CLOSED_WITH_EVIDENCE)$" },
+    "currentStage": { "$ref": "#/definitions/stage" },
+    "requestedStage": { "$ref": "#/definitions/stage" },
     "productTruthContract": { "type": "string", "pattern": "^governance/product/contracts/.+\\.product-truth\\.json$" },
-    "productTruthState": {
-      "enum": ["NOT_APPLICABLE", "DISCOVERY", "PRODUCT_MODEL_APPROVED", "READY_FOR_IMPLEMENTATION", "IMPLEMENTED", "PRODUCT_ACCEPTED", "RETIRED"]
-    },
+    "productTruthState": { "enum": ["NOT_APPLICABLE", "DISCOVERY", "PRODUCT_MODEL_APPROVED", "READY_FOR_IMPLEMENTATION", "IMPLEMENTED", "PRODUCT_ACCEPTED", "RETIRED"] },
     "applicableGates": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
     "passedGates": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
     "failedGates": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "applicableEvidenceScopes": { "type": "array", "minItems": 1, "uniqueItems": true, "contains": { "const": "static" }, "items": { "$ref": "#/definitions/evidenceScope" } },
+    "passedEvidenceScopes": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/definitions/evidenceScope" } },
+    "notApplicableStages": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/definitions/nonTerminalStage" } },
+    "stageExclusions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["stage", "reason", "evidence"],
+        "properties": {
+          "stage": { "$ref": "#/definitions/nonTerminalStage" },
+          "reason": { "type": "string", "minLength": 1 },
+          "evidence": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
+        }
+      }
+    },
     "missingEvidence": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
     "requiredApprovals": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
     "approvals": {
@@ -50,7 +51,7 @@
         "properties": {
           "authority": { "type": "string", "minLength": 1 },
           "approver": { "type": "string", "minLength": 1 },
-          "decision": { "enum": ["PASS", "FIX_REQUIRED", "QA_BLOCK", "SECURITY_BLOCK", "RELEASE_BLOCK"] },
+          "decision": { "enum": ["PASS", "FIX_REQUIRED", "QA_BLOCK", "SECURITY_BLOCK", "RELEASE_BLOCK", "PROTOCOL_VIOLATION"] },
           "commitSha": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
           "evidence": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
         }
@@ -61,34 +62,16 @@
     "openBlockers": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
     "residualRisks": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
     "evidence": { "type": "array", "items": { "type": "string", "minLength": 1 } },
-    "decision": {
-      "enum": ["PASS", "FIX_REQUIRED", "BLOCKED_EXTERNAL", "NEEDS_EVIDENCE", "QA_BLOCK", "SECURITY_BLOCK", "RELEASE_BLOCK", "CLOSED_WITH_EVIDENCE"]
-    }
+    "decision": { "enum": ["PASS", "FIX_REQUIRED", "BLOCKED_EXTERNAL", "NEEDS_EVIDENCE", "QA_BLOCK", "SECURITY_BLOCK", "RELEASE_BLOCK", "PROTOCOL_VIOLATION", "CLOSED_WITH_EVIDENCE"] }
   },
   "allOf": [
-    {
-      "if": { "properties": { "productTruthState": { "not": { "const": "NOT_APPLICABLE" } } }, "required": ["productTruthState"] },
-      "then": { "required": ["productTruthContract"] }
-    },
-    {
-      "if": { "properties": { "decision": { "enum": ["PASS", "CLOSED_WITH_EVIDENCE"] } } },
-      "then": {
-        "properties": {
-          "failedGates": { "maxItems": 0 },
-          "missingEvidence": { "maxItems": 0 },
-          "openBlockers": { "maxItems": 0 },
-          "separationOfDutiesPass": { "const": true }
-        },
-        "required": ["evidenceCommitSha"]
-      }
-    },
-    {
-      "if": { "properties": { "decision": { "const": "CLOSED_WITH_EVIDENCE" } } },
-      "then": {
-        "properties": {
-          "requestedStage": { "const": "CLOSED_WITH_EVIDENCE" }
-        }
-      }
-    }
-  ]
+    {"if":{"properties":{"productTruthState":{"not":{"const":"NOT_APPLICABLE"}}},"required":["productTruthState"]},"then":{"required":["productTruthContract"]}},
+    {"if":{"properties":{"decision":{"enum":["PASS","CLOSED_WITH_EVIDENCE"]}}},"then":{"properties":{"failedGates":{"maxItems":0},"missingEvidence":{"maxItems":0},"openBlockers":{"maxItems":0},"separationOfDutiesPass":{"const":true}},"required":["evidenceCommitSha"]}},
+    {"if":{"properties":{"decision":{"const":"CLOSED_WITH_EVIDENCE"}}},"then":{"properties":{"requestedStage":{"const":"CLOSED_WITH_EVIDENCE"}}}}
+  ],
+  "definitions": {
+    "nonTerminalStage": { "type": "string", "pattern": "^G(?:0|1|2|3|4|5|6|7|8|9|10)_[A-Z0-9_]+$" },
+    "stage": { "type": "string", "pattern": "^(G(?:0|1|2|3|4|5|6|7|8|9|10)_[A-Z0-9_]+|CLOSED_WITH_EVIDENCE)$" },
+    "evidenceScope": { "enum": ["static", "product", "runtime", "visual", "qa", "security", "finance", "isolation", "governance", "ci", "release", "production"] }
+  }
 }
