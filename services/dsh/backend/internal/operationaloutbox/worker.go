@@ -83,8 +83,11 @@ func deliver(ctx context.Context, db *sql.DB, event Event) error {
 
 	title, body := notificationCopy(event.EventType)
 	actionURL := "/orders"
-	if event.EntityType == "pickup_session" {
+	switch event.EntityType {
+	case "pickup_session":
 		actionURL = "/orders/pickup"
+	case "special_request":
+		actionURL = "/special-requests/" + event.EntityID
 	}
 
 	_, err = db.ExecContext(ctx, `
@@ -135,6 +138,16 @@ func resolveClientID(ctx context.Context, db *sql.DB, event Event) (string, erro
 			return "", fmt.Errorf("resolve pickup recipient: %w", err)
 		}
 		return clientID, nil
+	case "special_request":
+		var clientID string
+		err := db.QueryRowContext(ctx, `
+			SELECT client_id::text
+			FROM dsh_special_requests
+			WHERE id = $1::uuid`, event.EntityID).Scan(&clientID)
+		if err != nil {
+			return "", fmt.Errorf("resolve special-request recipient: %w", err)
+		}
+		return clientID, nil
 	default:
 		return "", nil
 	}
@@ -166,6 +179,24 @@ func notificationCopy(eventType string) (string, string) {
 		return "انتهت نافذة الاستلام", "تم تسجيل عدم الحضور ويحتاج الطلب إلى متابعة."
 	case "pickup_window_extended":
 		return "تم تمديد نافذة الاستلام", "يمكنك مراجعة الطلب لمعرفة الموعد المحدّث."
+	case "special_request_created":
+		return "تم استلام طلبك الخاص", "تم تسجيل الطلب وسيبدأ فريق العمليات مراجعته."
+	case "special_request_under_review":
+		return "طلبك قيد المراجعة", "يراجع فريق العمليات تفاصيل الطلب حاليًا."
+	case "special_request_needs_customer_input":
+		return "طلبك يحتاج معلومات إضافية", "افتح الطلب وأكمل المعلومات المطلوبة للمتابعة."
+	case "special_request_approved":
+		return "تمت الموافقة على طلبك", "أصبح الطلب جاهزًا للمرحلة التشغيلية التالية."
+	case "special_request_assigned", "special_request_captain_assignment":
+		return "تم إسناد طلبك", "تم تعيين منفذ للطلب وبدأت مرحلة التنفيذ."
+	case "special_request_in_progress":
+		return "طلبك قيد التنفيذ", "يعمل الفريق على تنفيذ طلبك الآن."
+	case "special_request_completed", "special_request_delivered":
+		return "اكتمل طلبك الخاص", "تم إكمال الطلب وتحديث حالته النهائية."
+	case "special_request_cancelled":
+		return "تم إلغاء الطلب الخاص", "تم تسجيل الإلغاء وإيقاف متابعة الطلب."
+	case "special_request_rejected":
+		return "تعذر قبول الطلب الخاص", "افتح الطلب لمعرفة سبب عدم إمكانية التنفيذ."
 	default:
 		return "تحديث على طلبك", "طرأ تحديث تشغيلي جديد على طلبك."
 	}
