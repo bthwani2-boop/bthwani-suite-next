@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   governance:
-    name: Governance agents guards and SDLC
+    name: Governance agents authorities SaaS guards and SDLC
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -45,6 +45,8 @@ jobs:
           }
           run_check governance-schema pnpm run guard:governance-schema
           run_check agent-governance pnpm run guard:agent-governance
+          run_check authority-separation pnpm run guard:authority-separation
+          run_check saas-governance pnpm run guard:saas-governance
           run_check guard-registry pnpm run guard:guard-registry
           run_check sdlc pnpm run guard:sdlc
           run_check cleanup-policy pnpm run guard:cleanup-policy
