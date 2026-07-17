@@ -30,17 +30,9 @@ export { CommandCenterScreen } from './CommandCenterScreen';
 export { CartActivityScreen } from './CartActivityScreen';
 export { CheckoutActivityScreen } from './CheckoutActivityScreen';
 export { LiveOrdersScreen } from './LiveOrdersScreen';
-export { AssistedOrderDeskScreen } from './AssistedOrderDeskScreen';
-export { OrderRescueScreen } from './OrderRescueScreen';
 export { DispatchAssignmentScreen } from './DispatchAssignmentScreen';
-export { GeoHeatmapScreen } from './GeoHeatmapScreen';
 export { PartnerStoresScreen } from './PartnerStoresScreen';
 export { AreaCapacityScreen } from './AreaCapacityScreen';
 export { ExceptionsEscalationsScreen } from './ExceptionsEscalationsScreen';
-export { AuditSupportSlaScreen } from './AuditSupportSlaScreen';
 export { PartnerDeliveryWorkbenchScreen } from './PartnerDeliveryWorkbenchScreen';
 export { PickupWorkbenchScreen } from './PickupWorkbenchScreen';
-
-// ML-035: Audit trail detail workspace skeleton — BLOCKED_BY_CONTRACT (audit detail API not proven)
-export { AuditTrailDetailWorkspace } from './AuditTrailDetailWorkspace';
-export type { AuditTrailDetailWorkspaceProps } from './AuditTrailDetailWorkspace';
