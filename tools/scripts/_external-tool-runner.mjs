@@ -13,17 +13,9 @@ function readActivation(toolId) {
   }
 }
 
-function classificationForMissingBinary() {
-  return "BLOCKED_NEEDS_TOOL";
-}
-
-function classificationForFailedCommand() {
-  return "FIX_REQUIRED";
-}
-
 export function hasBinary(binary) {
   try {
-    execSync(process.platform === "win32" ? "where.exe " + binary : "which " + binary, { stdio: "ignore" });
+    execSync(process.platform === "win32" ? `where.exe ${binary}` : `which ${binary}`, { stdio: "ignore" });
     return true;
   } catch {
     return false;
@@ -45,7 +37,6 @@ export function quoteRel(file) {
 
 export function walkFiles(rootDirs, predicate) {
   const out = [];
-
   function walk(dir) {
     let entries;
     try {
@@ -53,7 +44,6 @@ export function walkFiles(rootDirs, predicate) {
     } catch {
       return;
     }
-
     for (const entry of entries) {
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) {
@@ -64,61 +54,72 @@ export function walkFiles(rootDirs, predicate) {
       }
     }
   }
-
   for (const root of rootDirs) {
     const full = path.join(repoRoot, root);
     if (fs.existsSync(full)) walk(full);
   }
-
   return out;
 }
 
-export function handleMissingBinary(toolId, binary) {
+function handleMissingBinary(toolId, binary, required) {
   const activation = readActivation(toolId);
   const diagnostic = isDiagnosticMode();
+  const enforce = required && !diagnostic;
+
+  if (enforce) {
+    console.error(`[${toolId.toUpperCase()} FAIL] required binary missing: ${binary} activation=${activation} decision=FIX_REQUIRED`);
+    process.exit(1);
+  }
 
   if (diagnostic || activation === "optional") {
-    console.log(`[${toolId.toUpperCase()} SKIP] '${binary}' is not installed. activation=${activation} classification=${classificationForMissingBinary()}`);
+    console.log(`[${toolId.toUpperCase()} SKIP] '${binary}' is not installed. activation=${activation} decision=NEEDS_EVIDENCE`);
     process.exit(0);
   }
 
   if (activation === "partial") {
-    console.warn(`[${toolId.toUpperCase()} WARN] '${binary}' is not installed. activation=partial classification=${classificationForMissingBinary()}`);
+    console.warn(`[${toolId.toUpperCase()} WARN] '${binary}' is not installed. activation=partial decision=NEEDS_EVIDENCE`);
     process.exit(0);
   }
 
-  console.error(`[${toolId.toUpperCase()} FAIL] Required binary missing: ${binary} classification=${classificationForMissingBinary()}`);
-  console.error("Active tools cannot pass when their binary is missing.");
+  console.error(`[${toolId.toUpperCase()} FAIL] active binary missing: ${binary} decision=FIX_REQUIRED`);
   process.exit(1);
 }
 
-export function runTool({ toolId, binary, command, diagnosticCommand }) {
-  if (!hasBinary(binary)) {
-    handleMissingBinary(toolId, binary);
+function handleCommandFailure(toolId, required) {
+  const activation = readActivation(toolId);
+  const diagnostic = isDiagnosticMode();
+  const enforce = required && !diagnostic;
+
+  if (enforce || activation === "active") {
+    console.error(`[${toolId.toUpperCase()} FAIL] command failed. activation=${activation} decision=FIX_REQUIRED`);
+    process.exit(1);
   }
+
+  if (diagnostic || activation === "partial" || activation === "optional") {
+    console.warn(`[${toolId.toUpperCase()} WARN] command failed. activation=${activation} decision=NEEDS_EVIDENCE`);
+    process.exit(0);
+  }
+
+  process.exit(1);
+}
+
+export function runTool({ toolId, binary, command, diagnosticCommand, required = false }) {
+  if (!hasBinary(binary)) handleMissingBinary(toolId, binary, required);
 
   ensureDir(".diagnostics/security");
   ensureDir(".diagnostics/toolchain");
 
   const cmd = isDiagnosticMode() && diagnosticCommand ? diagnosticCommand : command;
-  console.log("Running: " + cmd);
-
+  console.log(`Running: ${cmd}`);
   try {
     execSync(cmd, { cwd: repoRoot, stdio: "inherit", shell: true });
   } catch {
-    const activation = readActivation(toolId);
-    if (activation === "partial" || isDiagnosticMode()) {
-      console.warn(`[${toolId.toUpperCase()} WARN] Command failed but activation=${activation}. classification=${classificationForFailedCommand()}`);
-      process.exit(0);
-    }
-    process.exit(1);
+    handleCommandFailure(toolId, required);
   }
 }
 
-export function runFilesTool({ toolId, binary, files, makeCommand, noFilesMessage }) {
-  if (!hasBinary(binary)) {
-    handleMissingBinary(toolId, binary);
-  }
+export function runFilesTool({ toolId, binary, files, makeCommand, noFilesMessage, required = false }) {
+  if (!hasBinary(binary)) handleMissingBinary(toolId, binary, required);
 
   if (!files.length) {
     console.log(noFilesMessage || "No files found.");
@@ -126,17 +127,11 @@ export function runFilesTool({ toolId, binary, files, makeCommand, noFilesMessag
   }
 
   const cmd = makeCommand(files);
-  console.log("Running: " + cmd);
-
+  console.log(`Running: ${cmd}`);
   try {
     execSync(cmd, { cwd: repoRoot, stdio: "inherit", shell: true });
   } catch {
-    const activation = readActivation(toolId);
-    if (activation === "partial" || isDiagnosticMode()) {
-      console.warn(`[${toolId.toUpperCase()} WARN] Command failed but activation=${activation}. classification=${classificationForFailedCommand()}`);
-      process.exit(0);
-    }
-    process.exit(1);
+    handleCommandFailure(toolId, required);
   }
 }
 
