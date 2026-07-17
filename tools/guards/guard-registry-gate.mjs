@@ -112,7 +112,19 @@ for (const entry of entries) {
   }
 }
 
-for (const requiredFailId of ["governance-schema", "agent-governance", "guard-registry", "sdlc", "workflow-lint", "workflow-security", "actions-pin", "a11y-runtime"]) {
+const mandatoryFailGuards = [
+  "governance-schema",
+  "agent-governance",
+  "authority-separation",
+  "saas-governance",
+  "guard-registry",
+  "sdlc",
+  "workflow-lint",
+  "workflow-security",
+  "actions-pin",
+  "a11y-runtime",
+];
+for (const requiredFailId of mandatoryFailGuards) {
   if (entryById.get(requiredFailId)?.exit_level !== "fail") violations.push({ file: registryRelative, line: 0, message: `REQUIRED_FAIL_LEVEL_GUARD_DRIFT ${requiredFailId}` });
 }
 
@@ -130,7 +142,15 @@ if (/\s-Full\b/i.test(scripts["journey:gate:runtime"] ?? "")) violations.push({ 
 if (!/\s-Full\b/i.test(scripts["journey:gate:runtime:full"] ?? "") || !/\s-Runtime\b/i.test(scripts["journey:gate:runtime:full"] ?? "")) violations.push({ file: packageRelative, line: 0, message: "EXPLICIT_FULL_RUNTIME_GATE_MISSING" });
 
 const governanceAggregate = scripts["guard:governance-all"] ?? "";
-for (const required of ["guard:governance-schema", "guard:agent-governance", "guard:guard-registry", "guard:sdlc", "guard:cleanup-policy"]) {
+for (const required of [
+  "guard:governance-schema",
+  "guard:agent-governance",
+  "guard:authority-separation",
+  "guard:saas-governance",
+  "guard:guard-registry",
+  "guard:sdlc",
+  "guard:cleanup-policy",
+]) {
   if (!governanceAggregate.includes(required)) violations.push({ file: packageRelative, line: 0, message: `GOVERNANCE_AGGREGATE_MISSING ${required}` });
 }
 
@@ -155,7 +175,7 @@ const manifestGuardIds = new Set([
   ...(manifest?.guardSets?.governance ?? []),
 ]);
 for (const id of manifestGuardIds) if (!entryById.has(id)) violations.push({ file: manifestRelative, line: 0, message: `MANIFEST_REFERENCES_UNKNOWN_GUARD ${id}` });
-for (const required of ["governance-schema", "agent-governance", "guard-registry", "sdlc", "cleanup-policy"]) {
+for (const required of ["governance-schema", "agent-governance", "authority-separation", "saas-governance", "guard-registry", "sdlc", "cleanup-policy"]) {
   if (!(manifest?.guardSets?.governance ?? []).includes(required)) violations.push({ file: manifestRelative, line: 0, message: `GOVERNANCE_SET_MISSING ${required}` });
 }
 
@@ -197,16 +217,34 @@ if (fs.existsSync(workflowsDir)) {
     if (fs.existsSync(path.join(workflowsDir, forbiddenWorkflow))) violations.push({ file: `.github/workflows/${forbiddenWorkflow}`, line: 0, message: "DUPLICATED_OR_SELF_MUTATING_WORKFLOW_FORBIDDEN" });
   }
 
+  const mandatoryGovernanceMarkers = [
+    "guard:governance-schema",
+    "guard:agent-governance",
+    "guard:authority-separation",
+    "guard:saas-governance",
+    "guard:guard-registry",
+    "guard:sdlc",
+    "guard:cleanup-policy",
+  ];
+
   const governancePath = path.join(workflowsDir, "governance-audit.yml");
   if (fs.existsSync(governancePath)) {
     const text = fs.readFileSync(governancePath, "utf8");
     for (const marker of [
       '"AGENTS.md"', '"GEMINI.md"', '".agents/**"', '"governance/**"', '"tools/guards/**"',
       '"package.json"', '".github/actions/**"', '".github/workflows/**"', '".github/CODEOWNERS"',
-      "guard:governance-schema", "guard:agent-governance", "guard:guard-registry", "guard:sdlc",
-      "guard:cleanup-policy", "guard:workflow-lint", "guard:workflow-security", "guard:actions-pin",
+      ...mandatoryGovernanceMarkers,
+      "guard:workflow-lint", "guard:workflow-security", "guard:actions-pin",
     ]) {
       if (!text.includes(marker)) violations.push({ file: ".github/workflows/governance-audit.yml", line: 0, message: `GOVERNANCE_WORKFLOW_MARKER_MISSING ${marker}` });
+    }
+  }
+
+  const ciPath = path.join(workflowsDir, "ci.yml");
+  if (fs.existsSync(ciPath)) {
+    const text = fs.readFileSync(ciPath, "utf8");
+    for (const marker of mandatoryGovernanceMarkers) {
+      if (!text.includes(marker)) violations.push({ file: ".github/workflows/ci.yml", line: 0, message: `CI_GOVERNANCE_MARKER_MISSING ${marker}` });
     }
   }
 }
