@@ -33,11 +33,23 @@ rules:
   - stages_move_forward_only
   - no_stage_skip_without_explicit_not_applicable_evidence
   - product_truth_precedes_implementation
+  - product_manager_and_product_owner_approvals_are_separate
+  - architecture_approval_precedes_ready_for_implementation_when_applicable
+  - independent_reviewer_owns_g4_implementation_verification
+  - reviewer_must_differ_from_author_executor_and_coordinator
   - product_acceptance_precedes_qa
+  - qa_precedes_security_when_both_are_applicable
+  - security_precedes_release_when_applicable
+  - release_precedes_deployment
+  - deployment_precedes_production_verification
   - same_commit_evidence_required
   - all_applicable_evidence_scopes_required_for_closure
   - executor_cannot_finally_approve_own_high_risk_work
   - governance_change_requires_governance_contract_authority
   - ci_change_requires_ci_workflow_authority
   - governance_and_ci_approvers_must_be_separate_when_both_apply
-  - runtime_visual_qa_security_release_and_production_scopes_remain_independent
+  - wlt_finance_change_requires_financial_control_authority
+  - tenant_or_isolation_change_requires_isolation_security_approval
+  - residual_risk_requires_risk_acceptance_authority
+  - saas_activation_requires_explicit_product_security_finance_isolation_release_and_production_evidence
+  - static_product_runtime_visual_qa_security_finance_isolation_governance_ci_release_and_production_scopes_remain_independent
