@@ -33,6 +33,7 @@ export * from './platform-vars.view-model';
 export * from './platform-vars.model';
 export * from './platform-control.api';
 export * from './use-platform-control-runtime-controller';
+export * from './use-platform-change-workflow-controller';
 export * from './use-provider-registry-controller';
 export * from './FeatureFlagProvider';
 export * from './PlatformVarsProvider';
