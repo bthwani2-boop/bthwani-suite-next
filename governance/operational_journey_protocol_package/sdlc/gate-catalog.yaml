@@ -49,6 +49,8 @@ gates:
       - diff_scope
       - no_unauthorized_scope_expansion
       - no_fake_runtime_or_commercial_claim
+      - governance_contract_approval_when_governance_impacted
+      - ci_workflow_approval_when_ci_impacted
   G5_PRODUCT_ACCEPTED:
     owner: product_owner_acceptance_authority
     evidence:
