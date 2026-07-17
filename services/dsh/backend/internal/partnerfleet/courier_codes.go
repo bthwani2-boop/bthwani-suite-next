@@ -14,11 +14,11 @@ import (
 )
 
 var (
-	ErrNotFound       = errors.New("courier connection code not found")
-	ErrInvalid        = errors.New("invalid courier connection request")
-	ErrExpired        = errors.New("courier connection code expired")
-	ErrAlreadyBound   = errors.New("courier identity is already bound")
-	ErrVersionConflict = errors.New("courier connection code version conflict")
+	ErrNotFound          = errors.New("courier connection code not found")
+	ErrInvalid           = errors.New("invalid courier connection request")
+	ErrExpired           = errors.New("courier connection code expired")
+	ErrAlreadyBound      = errors.New("courier identity is already bound")
+	ErrVersionConflict   = errors.New("courier connection code version conflict")
 	ErrCourierIneligible = errors.New("courier team member is ineligible")
 )
 
@@ -45,14 +45,14 @@ type IssuedConnectionCode struct {
 }
 
 type CaptainFleetMembership struct {
-	TeamMemberID string `json:"teamMemberId"`
-	StoreID      string `json:"storeId"`
-	StoreName    string `json:"storeName"`
-	CourierName  string `json:"courierName"`
-	Status       string `json:"status"`
-	BranchAssignment string `json:"branchAssignment"`
+	TeamMemberID       string `json:"teamMemberId"`
+	StoreID            string `json:"storeId"`
+	StoreName          string `json:"storeName"`
+	CourierName        string `json:"courierName"`
+	Status             string `json:"status"`
+	BranchAssignment   string `json:"branchAssignment"`
 	DeliveryAssignment string `json:"deliveryAssignment"`
-	Version      int    `json:"version"`
+	Version            int    `json:"version"`
 }
 
 func normalizeCode(value string) string {
@@ -300,14 +300,14 @@ func RedeemCode(ctx context.Context, db *sql.DB, plainCode, captainActorID strin
 		return CaptainFleetMembership{}, err
 	}
 	return CaptainFleetMembership{
-		TeamMemberID: memberID,
-		StoreID: storeID,
-		StoreName: storeName,
-		CourierName: courierName,
-		Status: "active",
-		BranchAssignment: branchAssignment,
+		TeamMemberID:       memberID,
+		StoreID:            storeID,
+		StoreName:          storeName,
+		CourierName:        courierName,
+		Status:             "active",
+		BranchAssignment:   branchAssignment,
 		DeliveryAssignment: deliveryAssignment,
-		Version: version + 1,
+		Version:            version + 1,
 	}, nil
 }
 

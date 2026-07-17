@@ -37,24 +37,24 @@ type LoyaltyTier struct {
 }
 
 type SubscriptionPlan struct {
-	ID                    string  `json:"id"`
-	NameAr                string  `json:"nameAr"`
-	NameEn                string  `json:"nameEn"`
-	PriceYer              int64   `json:"priceYer"`
-	BillingCycle          string  `json:"billingCycle"`
-	IncludeFreeDelivery   bool    `json:"includeFreeDelivery"`
-	PointsMultiplier      float64 `json:"pointsMultiplier"`
-	OrderCap              int     `json:"orderCap"`
-	Badge                 string  `json:"badge"`
-	Status                string  `json:"status"`
-	SubscriberCount       int64   `json:"subscriberCount"`
-	WLTProductReference   string  `json:"wltProductReference,omitempty"`
-	Version               int     `json:"version"`
-	CreatedByActorID      string  `json:"createdByActorId"`
-	ApprovedByActorID     string  `json:"approvedByActorId,omitempty"`
-	ApprovedAt            *string `json:"approvedAt,omitempty"`
-	CreatedAt             string  `json:"createdAt"`
-	UpdatedAt             string  `json:"updatedAt"`
+	ID                  string  `json:"id"`
+	NameAr              string  `json:"nameAr"`
+	NameEn              string  `json:"nameEn"`
+	PriceYer            int64   `json:"priceYer"`
+	BillingCycle        string  `json:"billingCycle"`
+	IncludeFreeDelivery bool    `json:"includeFreeDelivery"`
+	PointsMultiplier    float64 `json:"pointsMultiplier"`
+	OrderCap            int     `json:"orderCap"`
+	Badge               string  `json:"badge"`
+	Status              string  `json:"status"`
+	SubscriberCount     int64   `json:"subscriberCount"`
+	WLTProductReference string  `json:"wltProductReference,omitempty"`
+	Version             int     `json:"version"`
+	CreatedByActorID    string  `json:"createdByActorId"`
+	ApprovedByActorID   string  `json:"approvedByActorId,omitempty"`
+	ApprovedAt          *string `json:"approvedAt,omitempty"`
+	CreatedAt           string  `json:"createdAt"`
+	UpdatedAt           string  `json:"updatedAt"`
 }
 
 type LoyaltyProgramSummary struct {
@@ -67,8 +67,8 @@ type LoyaltyProgramSummary struct {
 type SubscriptionsSummary struct {
 	ActivePlans            int64 `json:"activePlans"`
 	TotalActiveSubscribers int64 `json:"totalActiveSubscribers"`
-	MRR                     int64 `json:"mrr"`
-	IsBackedByAPI           bool  `json:"isBackedByApi"`
+	MRR                    int64 `json:"mrr"`
+	IsBackedByAPI          bool  `json:"isBackedByApi"`
 }
 
 type ClientLoyaltyAccount struct {
@@ -78,20 +78,20 @@ type ClientLoyaltyAccount struct {
 }
 
 type ClientSubscriptionEntitlement struct {
-	ID                       string            `json:"id"`
-	Status                   string            `json:"status"`
-	WLTSubscriptionReference string            `json:"wltSubscriptionReference,omitempty"`
-	StartsAt                 *string           `json:"startsAt,omitempty"`
-	EndsAt                   *string           `json:"endsAt,omitempty"`
-	Plan                     SubscriptionPlan  `json:"plan"`
+	ID                       string           `json:"id"`
+	Status                   string           `json:"status"`
+	WLTSubscriptionReference string           `json:"wltSubscriptionReference,omitempty"`
+	StartsAt                 *string          `json:"startsAt,omitempty"`
+	EndsAt                   *string          `json:"endsAt,omitempty"`
+	Plan                     SubscriptionPlan `json:"plan"`
 }
 
 type ClientBenefits struct {
-	LoyaltyAccount    *ClientLoyaltyAccount              `json:"loyaltyAccount,omitempty"`
-	AvailableTiers    []LoyaltyTier                      `json:"availableTiers"`
-	AvailablePlans    []SubscriptionPlan                 `json:"availablePlans"`
-	ActiveSubscription *ClientSubscriptionEntitlement   `json:"activeSubscription,omitempty"`
-	Offers            []PartnerOffer                     `json:"offers"`
+	LoyaltyAccount     *ClientLoyaltyAccount          `json:"loyaltyAccount,omitempty"`
+	AvailableTiers     []LoyaltyTier                  `json:"availableTiers"`
+	AvailablePlans     []SubscriptionPlan             `json:"availablePlans"`
+	ActiveSubscription *ClientSubscriptionEntitlement `json:"activeSubscription,omitempty"`
+	Offers             []PartnerOffer                 `json:"offers"`
 }
 
 type CreateLoyaltyTierInput struct {
@@ -119,33 +119,33 @@ type UpdateLoyaltyTierInput struct {
 }
 
 type CreateSubscriptionPlanInput struct {
-	NameAr                string
-	NameEn                string
-	PriceYer              int64
-	BillingCycle          string
-	IncludeFreeDelivery   bool
-	PointsMultiplier      float64
-	OrderCap              int
-	Badge                 string
-	WLTProductReference   string
-	ActorID               string
-	CorrelationID         string
+	NameAr              string
+	NameEn              string
+	PriceYer            int64
+	BillingCycle        string
+	IncludeFreeDelivery bool
+	PointsMultiplier    float64
+	OrderCap            int
+	Badge               string
+	WLTProductReference string
+	ActorID             string
+	CorrelationID       string
 }
 
 type UpdateSubscriptionPlanInput struct {
-	NameAr                *string
-	NameEn                *string
-	PriceYer              *int64
-	BillingCycle          *string
-	IncludeFreeDelivery   *bool
-	PointsMultiplier      *float64
-	OrderCap              *int
-	Badge                 *string
-	Status                *string
-	WLTProductReference   *string
-	ExpectedVersion       int
-	ActorID               string
-	CorrelationID         string
+	NameAr              *string
+	NameEn              *string
+	PriceYer            *int64
+	BillingCycle        *string
+	IncludeFreeDelivery *bool
+	PointsMultiplier    *float64
+	OrderCap            *int
+	Badge               *string
+	Status              *string
+	WLTProductReference *string
+	ExpectedVersion     int
+	ActorID             string
+	CorrelationID       string
 }
 
 const loyaltyTierSelectCols = `id::TEXT, name_ar, name_en, min_points,
@@ -275,20 +275,36 @@ func UpdateLoyaltyTier(db *sql.DB, id string, in UpdateLoyaltyTierInput) (Loyalt
 		return LoyaltyTier{}, ErrCommercialVersionConflict
 	}
 	next := before
-	if in.NameAr != nil { next.NameAr = strings.TrimSpace(*in.NameAr) }
-	if in.NameEn != nil { next.NameEn = strings.TrimSpace(*in.NameEn) }
-	if in.MinPoints != nil { next.MinPoints = *in.MinPoints }
-	if in.DiscountPercent != nil { next.DiscountPercent = *in.DiscountPercent }
-	if in.FreeDeliveryThresholdYer != nil { next.FreeDeliveryThresholdYer = *in.FreeDeliveryThresholdYer }
-	if in.Badge != nil { next.Badge = strings.TrimSpace(*in.Badge) }
+	if in.NameAr != nil {
+		next.NameAr = strings.TrimSpace(*in.NameAr)
+	}
+	if in.NameEn != nil {
+		next.NameEn = strings.TrimSpace(*in.NameEn)
+	}
+	if in.MinPoints != nil {
+		next.MinPoints = *in.MinPoints
+	}
+	if in.DiscountPercent != nil {
+		next.DiscountPercent = *in.DiscountPercent
+	}
+	if in.FreeDeliveryThresholdYer != nil {
+		next.FreeDeliveryThresholdYer = *in.FreeDeliveryThresholdYer
+	}
+	if in.Badge != nil {
+		next.Badge = strings.TrimSpace(*in.Badge)
+	}
 	if in.Status != nil {
-		if !commercialStatuses[*in.Status] { return LoyaltyTier{}, ErrInvalid }
+		if !commercialStatuses[*in.Status] {
+			return LoyaltyTier{}, ErrInvalid
+		}
 		next.Status = *in.Status
 	}
 	if err := validateTier(next.NameAr, next.MinPoints, next.DiscountPercent, next.FreeDeliveryThresholdYer); err != nil {
 		return LoyaltyTier{}, err
 	}
-	if next.NameEn == "" { next.NameEn = next.NameAr }
+	if next.NameEn == "" {
+		next.NameEn = next.NameAr
+	}
 	approvedBy := before.ApprovedByActorID
 	var approvedAt any
 	if next.Status == "active" {
@@ -298,7 +314,9 @@ func UpdateLoyaltyTier(db *sql.DB, id string, in UpdateLoyaltyTierInput) (Loyalt
 		approvedAt = *before.ApprovedAt
 	}
 	var archivedAt any
-	if next.Status == "archived" { archivedAt = time.Now().UTC() }
+	if next.Status == "archived" {
+		archivedAt = time.Now().UTC()
+	}
 	tier, err := scanLoyaltyTier(db.QueryRow(`
 		UPDATE dsh_loyalty_tiers SET
 			name_ar=$2, name_en=$3, min_points=$4, discount_percent=$5,
@@ -310,8 +328,12 @@ func UpdateLoyaltyTier(db *sql.DB, id string, in UpdateLoyaltyTierInput) (Loyalt
 		id, next.NameAr, next.NameEn, next.MinPoints, next.DiscountPercent,
 		next.FreeDeliveryThresholdYer, next.Badge, next.Status, approvedBy,
 		approvedAt, archivedAt, in.ExpectedVersion))
-	if errors.Is(err, sql.ErrNoRows) { return LoyaltyTier{}, ErrCommercialVersionConflict }
-	if err != nil { return LoyaltyTier{}, err }
+	if errors.Is(err, sql.ErrNoRows) {
+		return LoyaltyTier{}, ErrCommercialVersionConflict
+	}
+	if err != nil {
+		return LoyaltyTier{}, err
+	}
 	_ = WriteAuditEvent(db, "loyalty_tier", tier.ID, in.ActorID, "operator", "update", "", in.CorrelationID, commercialJSON(before), commercialJSON(tier))
 	return tier, nil
 }
@@ -331,15 +353,21 @@ func LoyaltySummary(db *sql.DB) (LoyaltyProgramSummary, error) {
 
 func ListSubscriptionPlans(db *sql.DB, activeOnly bool) ([]SubscriptionPlan, error) {
 	query := `SELECT ` + subscriptionPlanSelectCols + ` FROM dsh_subscription_plans p WHERE p.archived_at IS NULL`
-	if activeOnly { query += ` AND p.status = 'active'` }
+	if activeOnly {
+		query += ` AND p.status = 'active'`
+	}
 	query += ` ORDER BY p.price_yer ASC, p.created_at ASC`
 	rows, err := db.Query(query)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 	defer rows.Close()
 	out := []SubscriptionPlan{}
 	for rows.Next() {
 		plan, err := scanSubscriptionPlan(rows)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		out = append(out, plan)
 	}
 	return out, rows.Err()
@@ -348,7 +376,9 @@ func ListSubscriptionPlans(db *sql.DB, activeOnly bool) ([]SubscriptionPlan, err
 func GetSubscriptionPlan(db *sql.DB, id string) (SubscriptionPlan, error) {
 	plan, err := scanSubscriptionPlan(db.QueryRow(`SELECT `+subscriptionPlanSelectCols+`
 		FROM dsh_subscription_plans p WHERE p.id::TEXT=$1 AND p.archived_at IS NULL`, id))
-	if errors.Is(err, sql.ErrNoRows) { return SubscriptionPlan{}, ErrNotFound }
+	if errors.Is(err, sql.ErrNoRows) {
+		return SubscriptionPlan{}, ErrNotFound
+	}
 	return plan, err
 }
 
@@ -356,7 +386,9 @@ func CreateSubscriptionPlan(db *sql.DB, in CreateSubscriptionPlanInput) (Subscri
 	if err := validatePlan(in.NameAr, in.PriceYer, in.BillingCycle, in.PointsMultiplier, in.OrderCap); err != nil {
 		return SubscriptionPlan{}, err
 	}
-	if strings.TrimSpace(in.NameEn) == "" { in.NameEn = in.NameAr }
+	if strings.TrimSpace(in.NameEn) == "" {
+		in.NameEn = in.NameAr
+	}
 	plan, err := scanSubscriptionPlan(db.QueryRow(`
 		INSERT INTO dsh_subscription_plans
 			(name_ar,name_en,price_yer,billing_cycle,include_free_delivery,points_multiplier,order_cap,badge,wlt_product_reference,created_by_actor_id)
@@ -365,33 +397,61 @@ func CreateSubscriptionPlan(db *sql.DB, in CreateSubscriptionPlanInput) (Subscri
 		strings.TrimSpace(in.NameAr), strings.TrimSpace(in.NameEn), in.PriceYer,
 		in.BillingCycle, in.IncludeFreeDelivery, in.PointsMultiplier, in.OrderCap,
 		strings.TrimSpace(in.Badge), strings.TrimSpace(in.WLTProductReference), in.ActorID))
-	if err != nil { return SubscriptionPlan{}, err }
+	if err != nil {
+		return SubscriptionPlan{}, err
+	}
 	_ = WriteAuditEvent(db, "subscription_plan", plan.ID, in.ActorID, "operator", "create", "", in.CorrelationID, nil, commercialJSON(plan))
 	return plan, nil
 }
 
 func UpdateSubscriptionPlan(db *sql.DB, id string, in UpdateSubscriptionPlanInput) (SubscriptionPlan, error) {
 	before, err := GetSubscriptionPlan(db, id)
-	if err != nil { return SubscriptionPlan{}, err }
-	if in.ExpectedVersion <= 0 || in.ExpectedVersion != before.Version { return SubscriptionPlan{}, ErrCommercialVersionConflict }
+	if err != nil {
+		return SubscriptionPlan{}, err
+	}
+	if in.ExpectedVersion <= 0 || in.ExpectedVersion != before.Version {
+		return SubscriptionPlan{}, ErrCommercialVersionConflict
+	}
 	next := before
-	if in.NameAr != nil { next.NameAr = strings.TrimSpace(*in.NameAr) }
-	if in.NameEn != nil { next.NameEn = strings.TrimSpace(*in.NameEn) }
-	if in.PriceYer != nil { next.PriceYer = *in.PriceYer }
-	if in.BillingCycle != nil { next.BillingCycle = *in.BillingCycle }
-	if in.IncludeFreeDelivery != nil { next.IncludeFreeDelivery = *in.IncludeFreeDelivery }
-	if in.PointsMultiplier != nil { next.PointsMultiplier = *in.PointsMultiplier }
-	if in.OrderCap != nil { next.OrderCap = *in.OrderCap }
-	if in.Badge != nil { next.Badge = strings.TrimSpace(*in.Badge) }
-	if in.WLTProductReference != nil { next.WLTProductReference = strings.TrimSpace(*in.WLTProductReference) }
+	if in.NameAr != nil {
+		next.NameAr = strings.TrimSpace(*in.NameAr)
+	}
+	if in.NameEn != nil {
+		next.NameEn = strings.TrimSpace(*in.NameEn)
+	}
+	if in.PriceYer != nil {
+		next.PriceYer = *in.PriceYer
+	}
+	if in.BillingCycle != nil {
+		next.BillingCycle = *in.BillingCycle
+	}
+	if in.IncludeFreeDelivery != nil {
+		next.IncludeFreeDelivery = *in.IncludeFreeDelivery
+	}
+	if in.PointsMultiplier != nil {
+		next.PointsMultiplier = *in.PointsMultiplier
+	}
+	if in.OrderCap != nil {
+		next.OrderCap = *in.OrderCap
+	}
+	if in.Badge != nil {
+		next.Badge = strings.TrimSpace(*in.Badge)
+	}
+	if in.WLTProductReference != nil {
+		next.WLTProductReference = strings.TrimSpace(*in.WLTProductReference)
+	}
 	if in.Status != nil {
-		if !commercialStatuses[*in.Status] { return SubscriptionPlan{}, ErrInvalid }
+		if !commercialStatuses[*in.Status] {
+			return SubscriptionPlan{}, ErrInvalid
+		}
 		next.Status = *in.Status
 	}
 	if err := validatePlan(next.NameAr, next.PriceYer, next.BillingCycle, next.PointsMultiplier, next.OrderCap); err != nil {
 		return SubscriptionPlan{}, err
 	}
-	if next.NameEn == "" { next.NameEn = next.NameAr }
+	if next.NameEn == "" {
+		next.NameEn = next.NameAr
+	}
 	approvedBy := before.ApprovedByActorID
 	var approvedAt any
 	if next.Status == "active" {
@@ -401,7 +461,9 @@ func UpdateSubscriptionPlan(db *sql.DB, id string, in UpdateSubscriptionPlanInpu
 		approvedAt = *before.ApprovedAt
 	}
 	var archivedAt any
-	if next.Status == "archived" { archivedAt = time.Now().UTC() }
+	if next.Status == "archived" {
+		archivedAt = time.Now().UTC()
+	}
 	plan, err := scanSubscriptionPlan(db.QueryRow(`
 		UPDATE dsh_subscription_plans SET
 			name_ar=$2,name_en=$3,price_yer=$4,billing_cycle=$5,
@@ -414,8 +476,12 @@ func UpdateSubscriptionPlan(db *sql.DB, id string, in UpdateSubscriptionPlanInpu
 		next.IncludeFreeDelivery, next.PointsMultiplier, next.OrderCap, next.Badge,
 		next.Status, next.WLTProductReference, approvedBy, approvedAt, archivedAt,
 		in.ExpectedVersion))
-	if errors.Is(err, sql.ErrNoRows) { return SubscriptionPlan{}, ErrCommercialVersionConflict }
-	if err != nil { return SubscriptionPlan{}, err }
+	if errors.Is(err, sql.ErrNoRows) {
+		return SubscriptionPlan{}, ErrCommercialVersionConflict
+	}
+	if err != nil {
+		return SubscriptionPlan{}, err
+	}
 	_ = WriteAuditEvent(db, "subscription_plan", plan.ID, in.ActorID, "operator", "update", "", in.CorrelationID, commercialJSON(before), commercialJSON(plan))
 	return plan, nil
 }
@@ -440,18 +506,22 @@ func SubscriptionSummary(db *sql.DB) (SubscriptionsSummary, error) {
 }
 
 func ListPublishedPartnerOffers(db *sql.DB) ([]PartnerOffer, error) {
-	rows, err := db.Query(`SELECT `+partnerOfferSelectCols+`
+	rows, err := db.Query(`SELECT ` + partnerOfferSelectCols + `
 		FROM dsh_partner_offers
 		WHERE archived_at IS NULL AND status='published'
 		  AND (active_from_date='' OR active_from_date IS NULL OR active_from_date <= CURRENT_DATE::TEXT)
 		  AND (active_to_date='' OR active_to_date IS NULL OR active_to_date >= CURRENT_DATE::TEXT)
 		ORDER BY updated_at DESC`)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 	defer rows.Close()
 	out := []PartnerOffer{}
 	for rows.Next() {
 		offer, err := scanPartnerOffer(rows)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		out = append(out, offer)
 	}
 	return out, rows.Err()
@@ -463,12 +533,20 @@ func getClientLoyaltyAccount(db *sql.DB, actorID string) (*ClientLoyaltyAccount,
 	err := db.QueryRow(`SELECT points_balance,lifetime_points,tier_id::TEXT
 		FROM dsh_client_loyalty_accounts WHERE client_actor_id=$1`, actorID).
 		Scan(&account.PointsBalance, &account.LifetimePoints, &tierID)
-	if errors.Is(err, sql.ErrNoRows) { return nil, nil }
-	if err != nil { return nil, err }
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
 	if tierID.Valid && tierID.String != "" {
 		tier, tierErr := GetLoyaltyTier(db, tierID.String)
-		if tierErr != nil && !errors.Is(tierErr, ErrNotFound) { return nil, tierErr }
-		if tierErr == nil { account.Tier = &tier }
+		if tierErr != nil && !errors.Is(tierErr, ErrNotFound) {
+			return nil, tierErr
+		}
+		if tierErr == nil {
+			account.Tier = &tier
+		}
 	}
 	return &account, nil
 }
@@ -484,32 +562,48 @@ func getActiveClientSubscription(db *sql.DB, actorID string) (*ClientSubscriptio
 		  AND (ends_at IS NULL OR ends_at > NOW())
 		ORDER BY starts_at DESC NULLS LAST LIMIT 1`, actorID).
 		Scan(&entitlement.ID, &entitlement.Status, &entitlement.WLTSubscriptionReference, &startsAt, &endsAt, &planID)
-	if errors.Is(err, sql.ErrNoRows) { return nil, nil }
-	if err != nil { return nil, err }
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
 	entitlement.StartsAt = nullableString(startsAt)
 	entitlement.EndsAt = nullableString(endsAt)
 	plan, err := GetSubscriptionPlan(db, planID)
-	if err != nil { return nil, fmt.Errorf("load active subscription plan: %w", err) }
+	if err != nil {
+		return nil, fmt.Errorf("load active subscription plan: %w", err)
+	}
 	entitlement.Plan = plan
 	return &entitlement, nil
 }
 
 func GetClientBenefits(db *sql.DB, actorID string) (ClientBenefits, error) {
 	tiers, err := ListLoyaltyTiers(db, true)
-	if err != nil { return ClientBenefits{}, err }
+	if err != nil {
+		return ClientBenefits{}, err
+	}
 	plans, err := ListSubscriptionPlans(db, true)
-	if err != nil { return ClientBenefits{}, err }
+	if err != nil {
+		return ClientBenefits{}, err
+	}
 	offers, err := ListPublishedPartnerOffers(db)
-	if err != nil { return ClientBenefits{}, err }
+	if err != nil {
+		return ClientBenefits{}, err
+	}
 	account, err := getClientLoyaltyAccount(db, actorID)
-	if err != nil { return ClientBenefits{}, err }
+	if err != nil {
+		return ClientBenefits{}, err
+	}
 	subscription, err := getActiveClientSubscription(db, actorID)
-	if err != nil { return ClientBenefits{}, err }
+	if err != nil {
+		return ClientBenefits{}, err
+	}
 	return ClientBenefits{
-		LoyaltyAccount: account,
-		AvailableTiers: tiers,
-		AvailablePlans: plans,
+		LoyaltyAccount:     account,
+		AvailableTiers:     tiers,
+		AvailablePlans:     plans,
 		ActiveSubscription: subscription,
-		Offers: offers,
+		Offers:             offers,
 	}, nil
 }
