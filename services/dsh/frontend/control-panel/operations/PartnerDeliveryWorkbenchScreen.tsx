@@ -10,12 +10,7 @@ import {
 } from '@bthwani/ui-kit/web';
 import { Box, KeyValueList, Text } from '@bthwani/ui-kit';
 import styles from '../shared/control-panel-surface.module.css';
-import {
-  fetchOperatorPartnerDeliveries,
-  fetchOperatorPartnerDelivery,
-  raisePartnerDeliveryException,
-  classifyPartnerDeliveryError,
-} from '../../shared/partner-delivery/partner-delivery.api';
+import { useOperatorPartnerDeliveriesController } from '../../shared/partner-delivery/use-partner-delivery-controller';
 import type { DshPartnerDeliveryTask, DshPartnerDeliveryTaskStatus } from '../../shared/partner-delivery/partner-delivery.types';
 import { opsTheme as theme } from '../../shared/operations';
 
@@ -54,48 +49,20 @@ function slaBreachLabel(task: DshPartnerDeliveryTask): string | null {
   return null;
 }
 
-type FetchState<T> = { loaded: boolean; error: string | null; offline: boolean; data: T };
-
 export function PartnerDeliveryWorkbenchScreen({ hubHref: _hubHref, subGroup: _subGroup }: PartnerDeliveryWorkbenchScreenProps) {
-  const [listState, setListState] = React.useState<FetchState<readonly DshPartnerDeliveryTask[]>>({
-    loaded: false, error: null, offline: false, data: [],
-  });
+  const { listState, loadList, detailState, loadDetail, raiseException } = useOperatorPartnerDeliveriesController();
   const [selectedTaskId, setSelectedTaskId] = React.useState<string | null>(null);
-  const [detailState, setDetailState] = React.useState<FetchState<DshPartnerDeliveryTask | null>>({
-    loaded: false, error: null, offline: false, data: null,
-  });
   const [conflict, setConflict] = React.useState(false);
   const [exceptionReason, setExceptionReason] = React.useState('');
   const [actionState, setActionState] = React.useState<'idle' | 'pending' | 'error'>('idle');
   const [actionMessage, setActionMessage] = React.useState<string | null>(null);
-  const [retryCount, setRetryCount] = React.useState(0);
-  const retry = React.useCallback(() => setRetryCount((n) => n + 1), []);
-
-  const loadList = React.useCallback(() => {
-    setListState((s) => ({ ...s, loaded: false }));
-    fetchOperatorPartnerDeliveries({ limit: 100 })
-      .then((resp) => setListState({ loaded: true, error: null, offline: false, data: resp.tasks }))
-      .catch((err: unknown) => {
-        const classified = classifyPartnerDeliveryError(err);
-        setListState({ loaded: false, error: classified.message ?? 'تعذر تحميل مهام توصيل الشريك', offline: classified.kind === 'network', data: [] });
-      });
-  }, []);
-
-  React.useEffect(() => { loadList(); }, [loadList, retryCount]);
-
-  const loadDetail = React.useCallback((taskId: string) => {
-    setDetailState({ loaded: false, error: null, offline: false, data: null });
-    setConflict(false);
-    fetchOperatorPartnerDelivery(taskId)
-      .then((resp) => setDetailState({ loaded: true, error: null, offline: false, data: resp.task }))
-      .catch((err: unknown) => {
-        const classified = classifyPartnerDeliveryError(err);
-        setDetailState({ loaded: false, error: classified.message ?? 'تعذر تحميل تفاصيل المهمة', offline: classified.kind === 'network', data: null });
-      });
-  }, []);
+  const retry = React.useCallback(() => loadList(), [loadList]);
 
   React.useEffect(() => {
-    if (selectedTaskId) loadDetail(selectedTaskId);
+    if (selectedTaskId) {
+      setConflict(false);
+      loadDetail(selectedTaskId);
+    }
     setExceptionReason('');
     setActionState('idle');
     setActionMessage(null);
@@ -114,25 +81,23 @@ export function PartnerDeliveryWorkbenchScreen({ hubHref: _hubHref, subGroup: _s
     if (!task || !exceptionReason.trim()) return;
     setActionState('pending');
     setActionMessage(null);
-    raisePartnerDeliveryException(task.orderId, { expectedVersion: task.version, reason: exceptionReason.trim() })
-      .then((resp) => {
-        setDetailState({ loaded: true, error: null, offline: false, data: resp.task });
+    raiseException(task.orderId, task.version, exceptionReason.trim()).then((result) => {
+      if (result.ok) {
         setActionState('idle');
         setExceptionReason('');
         setActionMessage('تم تسجيل الاستثناء التشغيلي بنجاح.');
         loadList();
-      })
-      .catch((err: unknown) => {
-        const classified = classifyPartnerDeliveryError(err);
-        setActionState('error');
-        if (classified.kind === 'conflict') {
-          setConflict(true);
-          setActionMessage('تغيّر إصدار المهمة (VERSION_CONFLICT) — أعد تحميل التفاصيل قبل المتابعة.');
-        } else {
-          setActionMessage(classified.message ?? 'تعذر تسجيل الاستثناء.');
-        }
-      });
-  }, [task, exceptionReason, loadList]);
+        return;
+      }
+      setActionState('error');
+      if (result.kind === 'conflict') {
+        setConflict(true);
+        setActionMessage('تغيّر إصدار المهمة (VERSION_CONFLICT) — أعد تحميل التفاصيل قبل المتابعة.');
+      } else {
+        setActionMessage(result.message);
+      }
+    });
+  }, [task, exceptionReason, raiseException, loadList]);
 
   let inspectorContent: React.ReactNode = null;
   if (selectedTaskId) {

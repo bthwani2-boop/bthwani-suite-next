@@ -10,13 +10,7 @@ import {
 } from '@bthwani/ui-kit/web';
 import { Box, KeyValueList, Text } from '@bthwani/ui-kit';
 import styles from '../shared/control-panel-surface.module.css';
-import {
-  fetchOperatorPickups,
-  fetchOperatorPickup,
-  extendPickupWindow,
-  notifyPickupCustomer,
-  classifyPickupError,
-} from '../../shared/pickup/pickup.api';
+import { useOperatorPickupsController } from '../../shared/pickup/use-pickup-controller';
 import type { DshPickupSession } from '../../shared/pickup/pickup.types';
 import { opsTheme as theme } from '../../shared/operations';
 
@@ -29,49 +23,21 @@ function resolvePickupStatus(session: DshPickupSession): { label: string; tone: 
   return { label: 'بانتظار الاستلام', tone: 'warning' };
 }
 
-type FetchState<T> = { loaded: boolean; error: string | null; offline: boolean; data: T };
-
 export function PickupWorkbenchScreen({ hubHref: _hubHref, subGroup: _subGroup }: PickupWorkbenchScreenProps) {
-  const [listState, setListState] = React.useState<FetchState<readonly DshPickupSession[]>>({
-    loaded: false, error: null, offline: false, data: [],
-  });
+  const { listState, loadList, detailState, loadDetail, extendWindow, resendNotification } = useOperatorPickupsController();
   const [selectedOrderId, setSelectedOrderId] = React.useState<string | null>(null);
-  const [detailState, setDetailState] = React.useState<FetchState<DshPickupSession | null>>({
-    loaded: false, error: null, offline: false, data: null,
-  });
   const [conflict, setConflict] = React.useState(false);
   const [extendReason, setExtendReason] = React.useState('');
   const [extendMinutes, setExtendMinutes] = React.useState('30');
   const [actionState, setActionState] = React.useState<'idle' | 'pending' | 'error'>('idle');
   const [actionMessage, setActionMessage] = React.useState<string | null>(null);
-  const [retryCount, setRetryCount] = React.useState(0);
-  const retry = React.useCallback(() => setRetryCount((n) => n + 1), []);
-
-  const loadList = React.useCallback(() => {
-    setListState((s) => ({ ...s, loaded: false }));
-    fetchOperatorPickups({ limit: 100 })
-      .then((resp) => setListState({ loaded: true, error: null, offline: false, data: resp.sessions }))
-      .catch((err: unknown) => {
-        const classified = classifyPickupError(err);
-        setListState({ loaded: false, error: classified.message ?? 'تعذر تحميل جلسات الاستلام الذاتي', offline: classified.kind === 'network', data: [] });
-      });
-  }, []);
-
-  React.useEffect(() => { loadList(); }, [loadList, retryCount]);
-
-  const loadDetail = React.useCallback((orderId: string) => {
-    setDetailState({ loaded: false, error: null, offline: false, data: null });
-    setConflict(false);
-    fetchOperatorPickup(orderId)
-      .then((resp) => setDetailState({ loaded: true, error: null, offline: false, data: resp.session }))
-      .catch((err: unknown) => {
-        const classified = classifyPickupError(err);
-        setDetailState({ loaded: false, error: classified.message ?? 'تعذر تحميل تفاصيل جلسة الاستلام', offline: classified.kind === 'network', data: null });
-      });
-  }, []);
+  const retry = React.useCallback(() => loadList(), [loadList]);
 
   React.useEffect(() => {
-    if (selectedOrderId) loadDetail(selectedOrderId);
+    if (selectedOrderId) {
+      setConflict(false);
+      loadDetail(selectedOrderId);
+    }
     setExtendReason('');
     setExtendMinutes('30');
     setActionState('idle');
@@ -94,50 +60,46 @@ export function PickupWorkbenchScreen({ hubHref: _hubHref, subGroup: _subGroup }
     const newExpiry = new Date(Date.now() + minutes * 60000).toISOString();
     setActionState('pending');
     setActionMessage(null);
-    extendPickupWindow(session.orderId, { expectedVersion: session.version, reason: extendReason.trim(), newExpiry })
-      .then((resp) => {
-        setDetailState({ loaded: true, error: null, offline: false, data: resp.session });
+    extendWindow(session.orderId, session.version, extendReason.trim(), newExpiry).then((result) => {
+      if (result.ok) {
         setActionState('idle');
         setExtendReason('');
         setActionMessage('تم تمديد نافذة الاستلام بنجاح.');
         loadList();
-      })
-      .catch((err: unknown) => {
-        const classified = classifyPickupError(err);
-        setActionState('error');
-        if (classified.kind === 'conflict') {
-          setConflict(true);
-          setActionMessage('تغيّر إصدار الجلسة (VERSION_CONFLICT) — أعد تحميل التفاصيل قبل المتابعة.');
-        } else if (classified.code === 'PICKUP_CODE_ALREADY_USED') {
-          setActionMessage('تعذر التمديد: تم استخدام رمز الاستلام بالفعل (PICKUP_CODE_ALREADY_USED).');
-        } else {
-          setActionMessage(classified.message ?? 'تعذر تمديد نافذة الاستلام.');
-        }
-      });
-  }, [session, extendReason, extendMinutes, loadList]);
+        return;
+      }
+      setActionState('error');
+      if (result.kind === 'conflict') {
+        setConflict(true);
+        setActionMessage('تغيّر إصدار الجلسة (VERSION_CONFLICT) — أعد تحميل التفاصيل قبل المتابعة.');
+      } else if (result.code === 'PICKUP_CODE_ALREADY_USED') {
+        setActionMessage('تعذر التمديد: تم استخدام رمز الاستلام بالفعل (PICKUP_CODE_ALREADY_USED).');
+      } else {
+        setActionMessage(result.message);
+      }
+    });
+  }, [session, extendReason, extendMinutes, extendWindow, loadList]);
 
   const submitResendNotification = React.useCallback(() => {
     if (!session) return;
     setActionState('pending');
     setActionMessage(null);
-    notifyPickupCustomer(session.orderId, { expectedVersion: session.version })
-      .then((resp) => {
-        if (resp.session) setDetailState({ loaded: true, error: null, offline: false, data: resp.session });
+    resendNotification(session.orderId, session.version).then((result) => {
+      if (result.ok) {
         setActionState('idle');
         setActionMessage('تم إعادة إرسال إشعار الاستلام للعميل.');
         loadList();
-      })
-      .catch((err: unknown) => {
-        const classified = classifyPickupError(err);
-        setActionState('error');
-        if (classified.kind === 'conflict') {
-          setConflict(true);
-          setActionMessage('تغيّر إصدار الجلسة (VERSION_CONFLICT) — أعد تحميل التفاصيل قبل المتابعة.');
-        } else {
-          setActionMessage(classified.message ?? 'تعذر إعادة إرسال الإشعار.');
-        }
-      });
-  }, [session, loadList]);
+        return;
+      }
+      setActionState('error');
+      if (result.kind === 'conflict') {
+        setConflict(true);
+        setActionMessage('تغيّر إصدار الجلسة (VERSION_CONFLICT) — أعد تحميل التفاصيل قبل المتابعة.');
+      } else {
+        setActionMessage(result.message);
+      }
+    });
+  }, [session, resendNotification, loadList]);
 
   let inspectorContent: React.ReactNode = null;
   if (selectedOrderId) {

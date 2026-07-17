@@ -3,24 +3,8 @@ import { View } from 'react-native';
 import { Badge, Box, Button, Icon, Surface, Text, TextField, spacing, useDirection } from '@bthwani/ui-kit';
 import type { DshFulfillmentDeliveryMode } from '../../shared/delivery/delivery.contract';
 import type { PartnerTeamMember } from '../team/partner-team.types';
-import {
-  assignPartnerDeliveryTask,
-  departPartnerDeliveryTask,
-  arrivePartnerDeliveryTask,
-  submitPartnerDeliveryProof,
-  fetchOperatorPartnerDelivery,
-  classifyPartnerDeliveryError,
-} from '../../shared/partner-delivery/partner-delivery.api';
-import type { DshPartnerDeliveryTask } from '../../shared/partner-delivery/partner-delivery.types';
-import {
-  markPickupReady,
-  notifyPickupCustomer,
-  markPickupCustomerArrived,
-  verifyPickupSession,
-  fetchOperatorPickup,
-  classifyPickupError,
-} from '../../shared/pickup/pickup.api';
-import type { DshPickupSession } from '../../shared/pickup/pickup.types';
+import { usePartnerDeliveryActionsController } from '../../shared/partner-delivery/use-partner-delivery-controller';
+import { usePickupActionsController } from '../../shared/pickup/use-pickup-controller';
 
 export type PartnerFulfillmentActionsPanelProps = {
   readonly orderId: string;
@@ -50,66 +34,35 @@ const PICKUP_ERROR_LABELS: Record<string, string> = {
 function PartnerDeliveryActions({ orderId, teamMembers }: { orderId: string; teamMembers: readonly PartnerTeamMember[] }) {
   const { direction } = useDirection();
   const textAlign = direction === 'rtl' ? 'right' : 'left';
-  const [task, setTask] = React.useState<DshPartnerDeliveryTask | null>(null);
   const [selectedCourierId, setSelectedCourierId] = React.useState('');
-  const [busy, setBusy] = React.useState(false);
-  const [message, setMessage] = React.useState<string | null>(null);
-  const [isError, setIsError] = React.useState(false);
+  const { state, assign, depart, arrive, submitProof, refresh } = usePartnerDeliveryActionsController();
+  const { task, busy, message, isError, errorCode } = state;
+  const displayMessage = isError ? ((errorCode && PARTNER_DELIVERY_ERROR_LABELS[errorCode]) ?? message) : message;
 
   const eligibleCouriers = React.useMemo(
     () => teamMembers.filter((m) => m.role === 'courier' && m.status === 'active'),
     [teamMembers],
   );
 
-  const refreshTask = React.useCallback((taskId: string) => {
-    return fetchOperatorPartnerDelivery(taskId)
-      .then((resp) => setTask(resp.task))
-      .catch(() => { /* keep last-known task state on refresh failure */ });
-  }, []);
-
-  const runAction = React.useCallback(
-    (label: string, action: () => Promise<{ task: DshPartnerDeliveryTask }>) => {
-      setBusy(true);
-      setMessage(null);
-      setIsError(false);
-      action()
-        .then((resp) => {
-          setTask(resp.task);
-          setMessage(label);
-        })
-        .catch((err: unknown) => {
-          const classified = classifyPartnerDeliveryError(err);
-          setIsError(true);
-          setMessage((classified.code && PARTNER_DELIVERY_ERROR_LABELS[classified.code]) ?? classified.message ?? 'تعذر تنفيذ الإجراء.');
-        })
-        .finally(() => setBusy(false));
-    },
-    [],
-  );
-
   const handleAssign = React.useCallback(() => {
     if (!selectedCourierId) return;
-    runAction('تم إسناد موصل الشريك بنجاح.', () =>
-      assignPartnerDeliveryTask(orderId, { storeCourierId: selectedCourierId, expectedVersion: 0 }),
-    );
-  }, [orderId, selectedCourierId, runAction]);
+    void assign(orderId, selectedCourierId);
+  }, [orderId, selectedCourierId, assign]);
 
   const handleDepart = React.useCallback(() => {
     if (!task) return;
-    runAction('تم تسجيل خروج الموصل.', () => departPartnerDeliveryTask(orderId, task.version));
-  }, [orderId, task, runAction]);
+    void depart(orderId, task.version);
+  }, [orderId, task, depart]);
 
   const handleArrive = React.useCallback(() => {
     if (!task) return;
-    runAction('تم تسجيل وصول الموصل.', () => arrivePartnerDeliveryTask(orderId, task.version));
-  }, [orderId, task, runAction]);
+    void arrive(orderId, task.version);
+  }, [orderId, task, arrive]);
 
   const handleProof = React.useCallback(() => {
     if (!task) return;
-    runAction('تم رفع إثبات التسليم وإغلاق المهمة.', () =>
-      submitPartnerDeliveryProof(orderId, { expectedVersion: task.version, proofMethod: 'photo' }),
-    );
-  }, [orderId, task, runAction]);
+    void submitProof(orderId, task.version, 'photo');
+  }, [orderId, task, submitProof]);
 
   const status = task?.status ?? 'unassigned';
 
@@ -175,14 +128,14 @@ function PartnerDeliveryActions({ orderId, teamMembers }: { orderId: string; tea
             size="sm"
             fullWidth={false}
             disabled={!task || busy}
-            onPress={() => task && refreshTask(task.id)}
+            onPress={() => task && refresh(task.id)}
           />
         </Box>
       )}
 
-      {message && (
+      {displayMessage && (
         <Text role="caption" tone={isError ? 'danger' : 'success'} style={{ textAlign }}>
-          {message}
+          {displayMessage}
         </Text>
       )}
     </Surface>
@@ -192,92 +145,27 @@ function PartnerDeliveryActions({ orderId, teamMembers }: { orderId: string; tea
 function PickupActions({ orderId }: { orderId: string }) {
   const { direction } = useDirection();
   const textAlign = direction === 'rtl' ? 'right' : 'left';
-  const [session, setSession] = React.useState<DshPickupSession | null>(null);
-  const [stage, setStage] = React.useState<'not_ready' | 'ready' | 'notified' | 'arrived' | 'verified'>('not_ready');
   const [code, setCode] = React.useState('');
-  const [busy, setBusy] = React.useState(false);
-  const [message, setMessage] = React.useState<string | null>(null);
-  const [isError, setIsError] = React.useState(false);
-
-  const refreshSession = React.useCallback(() => {
-    return fetchOperatorPickup(orderId)
-      .then((resp) => setSession(resp.session))
-      .catch(() => { /* keep last-known session on refresh failure */ });
-  }, [orderId]);
+  const { state, markReady, notify, customerArrived, verify } = usePickupActionsController();
+  const { session, stage, busy, message, isError, errorCode } = state;
+  const displayMessage = isError ? ((errorCode && PICKUP_ERROR_LABELS[errorCode]) ?? message) : message;
 
   const handleMarkReady = React.useCallback(() => {
-    setBusy(true);
-    setMessage(null);
-    setIsError(false);
-    markPickupReady(orderId, session?.version ?? 0)
-      .then(() => {
-        setStage('ready');
-        setMessage('تم تعليم الطلب كجاهز للاستلام.');
-        return refreshSession();
-      })
-      .catch((err: unknown) => {
-        const classified = classifyPickupError(err);
-        setIsError(true);
-        setMessage((classified.code && PICKUP_ERROR_LABELS[classified.code]) ?? classified.message ?? 'تعذر تعليم الطلب كجاهز.');
-      })
-      .finally(() => setBusy(false));
-  }, [orderId, session, refreshSession]);
+    void markReady(orderId, session?.version ?? 0);
+  }, [orderId, session, markReady]);
 
   const handleNotify = React.useCallback(() => {
-    setBusy(true);
-    setMessage(null);
-    setIsError(false);
-    notifyPickupCustomer(orderId, { expectedVersion: session?.version ?? 0 })
-      .then((resp) => {
-        if (resp.session) setSession(resp.session);
-        setStage('notified');
-        setMessage('تم إشعار العميل وإصدار رمز استلام جديد.');
-      })
-      .catch((err: unknown) => {
-        const classified = classifyPickupError(err);
-        setIsError(true);
-        setMessage((classified.code && PICKUP_ERROR_LABELS[classified.code]) ?? classified.message ?? 'تعذر إشعار العميل.');
-      })
-      .finally(() => setBusy(false));
-  }, [orderId, session]);
+    void notify(orderId, session?.version ?? 0);
+  }, [orderId, session, notify]);
 
   const handleCustomerArrived = React.useCallback(() => {
-    setBusy(true);
-    setMessage(null);
-    setIsError(false);
-    markPickupCustomerArrived(orderId, session?.version ?? 0)
-      .then(() => {
-        setStage('arrived');
-        setMessage('تم تسجيل وصول العميل.');
-        return refreshSession();
-      })
-      .catch((err: unknown) => {
-        const classified = classifyPickupError(err);
-        setIsError(true);
-        setMessage((classified.code && PICKUP_ERROR_LABELS[classified.code]) ?? classified.message ?? 'تعذر تسجيل وصول العميل.');
-      })
-      .finally(() => setBusy(false));
-  }, [orderId, session, refreshSession]);
+    void customerArrived(orderId, session?.version ?? 0);
+  }, [orderId, session, customerArrived]);
 
   const handleVerify = React.useCallback(() => {
     if (!code.trim()) return;
-    setBusy(true);
-    setMessage(null);
-    setIsError(false);
-    verifyPickupSession(orderId, { expectedVersion: session?.version ?? 0, code: code.trim() })
-      .then((resp) => {
-        setSession(resp.session);
-        setStage('verified');
-        setMessage('تم التحقق من رمز الاستلام وإتمام تسليم الطلب.');
-        setCode('');
-      })
-      .catch((err: unknown) => {
-        const classified = classifyPickupError(err);
-        setIsError(true);
-        setMessage((classified.code && PICKUP_ERROR_LABELS[classified.code]) ?? classified.message ?? 'تعذر التحقق من رمز الاستلام.');
-      })
-      .finally(() => setBusy(false));
-  }, [orderId, code, session]);
+    void verify(orderId, session?.version ?? 0, code.trim()).then(() => setCode(''));
+  }, [orderId, code, session, verify]);
 
   return (
     <Surface tone="raised" gap={2}>
@@ -308,9 +196,9 @@ function PickupActions({ orderId }: { orderId: string }) {
         </Box>
       )}
 
-      {message && (
+      {displayMessage && (
         <Text role="caption" tone={isError ? 'danger' : 'success'} style={{ textAlign }}>
-          {message}
+          {displayMessage}
         </Text>
       )}
     </Surface>
