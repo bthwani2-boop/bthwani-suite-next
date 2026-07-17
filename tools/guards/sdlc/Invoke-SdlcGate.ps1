@@ -18,10 +18,9 @@ if ($Impact) { $commonArgs += "--impact=$Impact" }
 if ($Affected) { $commonArgs += "--affected" }
 
 $validators = @(
-  @{ Name = "governance-schema"; Path = "tools/guards/governance-schema-gate.mjs"; Args = @() },
-  @{ Name = "authority-precedence"; Path = "tools/guards/authority-precedence-gate.mjs"; Args = @() },
-  @{ Name = "decision-vocabulary"; Path = "tools/guards/decision-vocabulary-gate.mjs"; Args = @() },
-  @{ Name = "product-truth-contracts"; Path = "tools/guards/product-truth-gate.mjs"; Args = @() },
+  @{ Name = "governance-schema-and-semantics"; Path = "tools/guards/governance-schema-gate.mjs"; Args = @() },
+  @{ Name = "agent-governance"; Path = "tools/guards/agent-governance-gate.mjs"; Args = @() },
+  @{ Name = "guard-and-workflow-policy"; Path = "tools/guards/guard-registry-gate.mjs"; Args = @() },
   @{ Name = "sdlc-manifest"; Path = "tools/guards/sdlc/validate-sdlc-manifest.mjs"; Args = $commonArgs },
   @{ Name = "stage-transition"; Path = "tools/guards/sdlc/validate-stage-transition.mjs"; Args = $commonArgs },
   @{ Name = "role-separation"; Path = "tools/guards/sdlc/validate-role-separation.mjs"; Args = $commonArgs },
