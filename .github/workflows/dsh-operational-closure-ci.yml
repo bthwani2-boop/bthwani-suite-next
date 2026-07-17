@@ -130,7 +130,19 @@ jobs:
           pnpm run guard:wlt-financial-boundary
           pnpm run guard:runtime-real-bindings
       - name: Typecheck affected surfaces
-        run: pnpm run typecheck
+        id: typecheck
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm run typecheck 2>&1 | tee typecheck.log
+      - name: Upload TypeScript diagnostics
+        if: failure() && steps.typecheck.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dsh-typescript-diagnostics
+          path: typecheck.log
+          if-no-files-found: error
+          retention-days: 3
 
   sdlc-evidence-gate:
     runs-on: ubuntu-latest
