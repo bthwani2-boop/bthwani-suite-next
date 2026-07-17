@@ -81,8 +81,9 @@ type guardedHandler func(w http.ResponseWriter, r *http.Request, identity auth.I
 
 func (s *server) operatorOnly(action string, next guardedHandler) http.HandlerFunc {
 	return s.withIdentity(func(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
-		if !identity.HasPermission("dsh", action, "all") && !identity.HasPermission("core", action, "all") {
-			sendError(w, http.StatusForbidden, "FORBIDDEN", "platform permission is required")
+		if !identity.HasSurfacePermission("dsh", "control-panel", action, "all") &&
+			!identity.HasSurfacePermission("core", "control-panel", action, "all") {
+			sendError(w, http.StatusForbidden, "FORBIDDEN", "control-panel platform permission is required")
 			return
 		}
 		next(w, r, identity)
