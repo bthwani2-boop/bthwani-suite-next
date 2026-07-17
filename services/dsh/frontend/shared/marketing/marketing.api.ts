@@ -1,6 +1,14 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { createDshRawHttpClient } from "../_kernel/dsh-http-request";
 import type { DshCampaign, MarketingNewsTickerItem } from "./marketing.types";
+import type {
+  ClientBenefitsPayload,
+  LoyaltyProgramSummary,
+  LoyaltyTierRecord,
+  SubscriptionBillingCycle,
+  SubscriptionPlanRecord,
+  SubscriptionsSummary,
+} from "./loyalty-subscriptions.types";
 
 const { req } = createDshRawHttpClient(resolveDshApiBaseUrl(), "mkt");
 
@@ -93,3 +101,71 @@ export const submitPartnerSelfOffer = (body: PartnerOfferSubmitPayload) =>
     "/dsh/partner/marketing/offers",
     { method: "POST", body: JSON.stringify(body) },
   );
+
+export type LoyaltyTierCreatePayload = {
+  readonly nameAr: string;
+  readonly nameEn?: string;
+  readonly minPoints: number;
+  readonly discountPercent: number;
+  readonly freeDeliveryThreshold?: number;
+  readonly badge?: string;
+};
+
+export type LoyaltyTierUpdatePayload = Partial<LoyaltyTierCreatePayload> & {
+  readonly status?: LoyaltyTierRecord["status"];
+  readonly expectedVersion: number;
+};
+
+export const fetchLoyaltyTiers = () =>
+  req<{ tiers: LoyaltyTierRecord[]; summary: LoyaltyProgramSummary }>(
+    "/dsh/operator/marketing/loyalty-tiers",
+  );
+
+export const createLoyaltyTier = (body: LoyaltyTierCreatePayload) =>
+  req<{ tier: LoyaltyTierRecord }>("/dsh/operator/marketing/loyalty-tiers", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
+export const updateLoyaltyTier = (id: string, body: LoyaltyTierUpdatePayload) =>
+  req<{ tier: LoyaltyTierRecord }>(`/dsh/operator/marketing/loyalty-tiers/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+
+export type SubscriptionPlanCreatePayload = {
+  readonly nameAr: string;
+  readonly nameEn?: string;
+  readonly priceYer: number;
+  readonly billingCycle: SubscriptionBillingCycle;
+  readonly includeFreeDelivery?: boolean;
+  readonly pointsMultiplier?: number;
+  readonly orderCap?: number;
+  readonly badge?: string;
+  readonly wltProductReference?: string;
+};
+
+export type SubscriptionPlanUpdatePayload = Partial<SubscriptionPlanCreatePayload> & {
+  readonly status?: SubscriptionPlanRecord["status"];
+  readonly expectedVersion: number;
+};
+
+export const fetchSubscriptionPlans = () =>
+  req<{ plans: SubscriptionPlanRecord[]; summary: SubscriptionsSummary }>(
+    "/dsh/operator/marketing/subscription-plans",
+  );
+
+export const createSubscriptionPlan = (body: SubscriptionPlanCreatePayload) =>
+  req<{ plan: SubscriptionPlanRecord }>("/dsh/operator/marketing/subscription-plans", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
+export const updateSubscriptionPlan = (id: string, body: SubscriptionPlanUpdatePayload) =>
+  req<{ plan: SubscriptionPlanRecord }>(`/dsh/operator/marketing/subscription-plans/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+
+export const fetchClientBenefits = () =>
+  req<{ benefits: ClientBenefitsPayload }>("/dsh/client/benefits");
