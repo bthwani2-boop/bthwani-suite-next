@@ -9,6 +9,55 @@ import type {
   CatalogPlatformPolicy,
 } from "./central-catalog.types";
 
+interface CatalogVersionedEntity {
+  readonly id: string;
+  readonly version?: number;
+}
+
+export type CatalogDomainUpdateInput = Omit<Parameters<typeof api.updateCatalogDomain>[1], "slug">;
+export type CatalogNodeUpdateInput = Omit<
+  Parameters<typeof api.updateCatalogNode>[1],
+  "domainId" | "parentId" | "level" | "slug"
+>;
+export type CatalogMasterProductUpdateInput = Omit<
+  Parameters<typeof api.updateMasterProduct>[1],
+  "domainId" | "canonicalImageObjectKey"
+>;
+
+function requireCatalogVersion(
+  entities: readonly CatalogVersionedEntity[],
+  entityId: string,
+  entityKind: "domain" | "node" | "master_product",
+): number {
+  const entity = entities.find((item) => item.id === entityId);
+  if (!entity) {
+    throw new Error(`CATALOG_${entityKind.toUpperCase()}_NOT_LOADED`);
+  }
+  if (!Number.isInteger(entity.version) || (entity.version ?? 0) < 1) {
+    throw new Error(`CATALOG_${entityKind.toUpperCase()}_VERSION_MISSING`);
+  }
+  return entity.version as number;
+}
+
+async function runMutationWithReadback<T>(
+  mutation: () => Promise<T>,
+  readback: () => Promise<void>,
+): Promise<T> {
+  try {
+    const result = await mutation();
+    await readback();
+    return result;
+  } catch (error) {
+    try {
+      await readback();
+    } catch {
+      // Preserve the original mutation/conflict error while still attempting
+      // to refresh stale catalog state for the next operator action.
+    }
+    throw error;
+  }
+}
+
 export interface CentralCatalogControllerState {
   readonly domains: {
     readonly items: readonly CentralCatalogDomain[];
@@ -137,65 +186,62 @@ export function useCentralCatalogController(authKind = "unauthenticated") {
     reloadPolicies: loadPolicies,
     reloadStoreAssortment: loadStoreAssortment,
 
-    // Mutations for domains
-    createDomain: async (input: Parameters<typeof api.createCatalogDomain>[0]) => {
-      const res = await api.createCatalogDomain(input);
-      void loadDomains();
-      return res;
-    },
+    createDomain: async (input: Parameters<typeof api.createCatalogDomain>[0]) =>
+      runMutationWithReadback(() => api.createCatalogDomain(input), loadDomains),
+
     updateDomain: async (domainId: string, input: Parameters<typeof api.updateCatalogDomain>[1]) => {
-      const res = await api.updateCatalogDomain(domainId, input);
-      void loadDomains();
-      return res;
+      const expectedVersion = requireCatalogVersion(state.domains.items, domainId, "domain");
+      const request = { ...input, expectedVersion };
+      delete request.slug;
+      return runMutationWithReadback(
+        () => api.updateCatalogDomain(domainId, request),
+        loadDomains,
+      );
     },
 
-    // Mutations for nodes
-    createNode: async (input: Parameters<typeof api.createCatalogNode>[0]) => {
-      const res = await api.createCatalogNode(input);
-      void loadNodes();
-      return res;
-    },
+    createNode: async (input: Parameters<typeof api.createCatalogNode>[0]) =>
+      runMutationWithReadback(() => api.createCatalogNode(input), loadNodes),
+
     updateNode: async (nodeId: string, input: Parameters<typeof api.updateCatalogNode>[1]) => {
-      const res = await api.updateCatalogNode(nodeId, input);
-      void loadNodes();
-      return res;
+      const expectedVersion = requireCatalogVersion(state.nodes.items, nodeId, "node");
+      const request = { ...input, expectedVersion };
+      delete request.domainId;
+      delete request.parentId;
+      delete request.level;
+      delete request.slug;
+      return runMutationWithReadback(
+        () => api.updateCatalogNode(nodeId, request),
+        loadNodes,
+      );
     },
 
-    // Mutations for master products
-    createMasterProduct: async (input: Parameters<typeof api.createMasterProduct>[0]) => {
-      const res = await api.createMasterProduct(input);
-      void loadMasterProducts();
-      return res;
-    },
+    createMasterProduct: async (input: Parameters<typeof api.createMasterProduct>[0]) =>
+      runMutationWithReadback(() => api.createMasterProduct(input), loadMasterProducts),
+
     updateMasterProduct: async (productId: string, input: Parameters<typeof api.updateMasterProduct>[1]) => {
-      const res = await api.updateMasterProduct(productId, input);
-      void loadMasterProducts();
-      return res;
+      const expectedVersion = requireCatalogVersion(state.masterProducts.items, productId, "master_product");
+      const request = { ...input, expectedVersion };
+      delete request.domainId;
+      delete request.canonicalImageObjectKey;
+      return runMutationWithReadback(
+        () => api.updateMasterProduct(productId, request),
+        loadMasterProducts,
+      );
     },
 
-    decideProposal: async (proposalId: string, input: Parameters<typeof api.decideProductProposal>[1]) => {
-      const res = await api.decideProductProposal(proposalId, input);
-      void loadProposals();
-      return res;
-    },
-    transitionProposal: async (proposalId: string, input: Parameters<typeof api.transitionProductProposal>[1]) => {
-      const res = await api.transitionProductProposal(proposalId, input);
-      void loadProposals();
-      return res;
-    },
+    decideProposal: async (proposalId: string, input: Parameters<typeof api.decideProductProposal>[1]) =>
+      runMutationWithReadback(() => api.decideProductProposal(proposalId, input), loadProposals),
 
-    // Policies
-    updatePolicy: async (policyId: string, input: Parameters<typeof api.updateCatalogPlatformPolicy>[1]) => {
-      const res = await api.updateCatalogPlatformPolicy(policyId, input);
-      void loadPolicies();
-      return res;
-    },
+    transitionProposal: async (proposalId: string, input: Parameters<typeof api.transitionProductProposal>[1]) =>
+      runMutationWithReadback(() => api.transitionProductProposal(proposalId, input), loadProposals),
 
-    // Assortments
-    upsertAssortment: async (storeId: string, masterProductId: string, input: Parameters<typeof api.upsertOperatorStoreAssortment>[2]) => {
-      const res = await api.upsertOperatorStoreAssortment(storeId, masterProductId, input);
-      void loadStoreAssortment(storeId);
-      return res;
-    },
+    updatePolicy: async (policyId: string, input: Parameters<typeof api.updateCatalogPlatformPolicy>[1]) =>
+      runMutationWithReadback(() => api.updateCatalogPlatformPolicy(policyId, input), loadPolicies),
+
+    upsertAssortment: async (storeId: string, masterProductId: string, input: Parameters<typeof api.upsertOperatorStoreAssortment>[2]) =>
+      runMutationWithReadback(
+        () => api.upsertOperatorStoreAssortment(storeId, masterProductId, input),
+        () => loadStoreAssortment(storeId),
+      ),
   };
 }

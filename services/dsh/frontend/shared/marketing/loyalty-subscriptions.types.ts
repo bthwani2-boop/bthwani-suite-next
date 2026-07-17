@@ -1,22 +1,22 @@
-// Loyalty & Subscriptions types — Control Panel + Client App shared types.
-// Authority: dsh/frontend/shared/marketing — no JSX, no ui-kit.
+// Loyalty, subscriptions and client-benefits contracts shared by the control
+// panel and app-client. Runtime data comes only from DSH APIs; no seed registry
+// or screen fixture is authoritative.
 
-// ─── Loyalty Program ───────────────────────────────────────────────────────
-
-export type LoyaltyTierStatus = 'draft' | 'active' | 'paused' | 'archived';
+export type LoyaltyTierStatus = "draft" | "active" | "paused" | "archived";
 
 export type LoyaltyTierRecord = {
   readonly id: string;
   readonly nameAr: string;
   readonly nameEn: string;
-  /** Minimum points to enter this tier */
   readonly minPoints: number;
-  /** Discount % applied to orders while in this tier */
   readonly discountPercent: number;
-  /** Free delivery threshold override (0 = not offered) */
   readonly freeDeliveryThreshold: number;
   readonly badge: string;
   readonly status: LoyaltyTierStatus;
+  readonly version: number;
+  readonly createdByActorId?: string;
+  readonly approvedByActorId?: string;
+  readonly approvedAt?: string;
   readonly createdAt: string;
   readonly updatedAt: string;
 };
@@ -28,10 +28,8 @@ export type LoyaltyProgramSummary = {
   readonly isBackedByApi: boolean;
 };
 
-// ─── Subscriptions ─────────────────────────────────────────────────────────
-
-export type SubscriptionPlanStatus = 'draft' | 'active' | 'paused' | 'archived';
-export type SubscriptionBillingCycle = 'monthly' | 'quarterly' | 'annual';
+export type SubscriptionPlanStatus = "draft" | "active" | "paused" | "archived";
+export type SubscriptionBillingCycle = "monthly" | "quarterly" | "annual";
 
 export type SubscriptionPlanRecord = {
   readonly id: string;
@@ -39,15 +37,17 @@ export type SubscriptionPlanRecord = {
   readonly nameEn: string;
   readonly priceYer: number;
   readonly billingCycle: SubscriptionBillingCycle;
-  /** Free delivery on every order included */
   readonly includeFreeDelivery: boolean;
-  /** Loyalty points multiplier (1 = standard, 2 = double) */
   readonly pointsMultiplier: number;
-  /** Max orders per billing cycle (0 = unlimited) */
   readonly orderCap: number;
   readonly badge: string;
   readonly status: SubscriptionPlanStatus;
   readonly subscriberCount: number;
+  readonly wltProductReference?: string;
+  readonly version: number;
+  readonly createdByActorId?: string;
+  readonly approvedByActorId?: string;
+  readonly approvedAt?: string;
   readonly createdAt: string;
   readonly updatedAt: string;
 };
@@ -55,18 +55,58 @@ export type SubscriptionPlanRecord = {
 export type SubscriptionsSummary = {
   readonly activePlans: number;
   readonly totalActiveSubscribers: number;
+  /** Monthly-normalized configured revenue for verified active entitlements. */
   readonly mrr: number;
   readonly isBackedByApi: boolean;
 };
 
-// ─── Client App — Benefits Hub view model ──────────────────────────────────
+export type ClientLoyaltyAccount = {
+  readonly pointsBalance: number;
+  readonly lifetimePoints: number;
+  readonly tier?: LoyaltyTierRecord;
+};
+
+export type ClientSubscriptionEntitlement = {
+  readonly id: string;
+  readonly status: "active" | "paused" | "expired" | "cancelled" | "payment_failed" | "pending_payment";
+  readonly wltSubscriptionReference?: string;
+  readonly startsAt?: string;
+  readonly endsAt?: string;
+  readonly plan: SubscriptionPlanRecord;
+};
+
+export type PublishedPartnerOffer = {
+  readonly id: string;
+  readonly title: string;
+  readonly partnerName: string;
+  readonly storeId: string;
+  readonly storeLabel: string;
+  readonly productId?: string;
+  readonly productLabel?: string;
+  readonly category?: string;
+  readonly offerType: "discount" | "free-delivery" | "bundle" | "buy-x-get-y" | "coupon" | string;
+  readonly status: "published";
+  readonly valueLabel: string;
+  readonly eligibility: string;
+  readonly activeFromDate?: string;
+  readonly activeToDate?: string;
+  readonly version: number;
+};
+
+export type ClientBenefitsPayload = {
+  readonly loyaltyAccount?: ClientLoyaltyAccount;
+  readonly availableTiers: readonly LoyaltyTierRecord[];
+  readonly availablePlans: readonly SubscriptionPlanRecord[];
+  readonly activeSubscription?: ClientSubscriptionEntitlement;
+  readonly offers: readonly PublishedPartnerOffer[];
+};
 
 export type ClientBenefitItem = {
   readonly id: string;
   readonly title: string;
   readonly description: string;
   readonly icon: string;
-  readonly kind: 'loyalty' | 'subscription' | 'promo';
+  readonly kind: "loyalty" | "subscription" | "promo";
   readonly badgeLabel?: string;
 };
 
@@ -75,34 +115,33 @@ export function buildClientBenefitItems(
   plans: readonly SubscriptionPlanRecord[],
 ): readonly ClientBenefitItem[] {
   const tierItems: ClientBenefitItem[] = tiers
-    .filter((t) => t.status === 'active')
-    .map((t) => ({
-      id: `tier-${t.id}`,
-      title: t.nameAr,
-      description: `خصم ${t.discountPercent}% على كل طلب — ابدأ من ${t.minPoints.toLocaleString('ar')} نقطة`,
-      icon: t.badge || '⭐',
-      kind: 'loyalty' as const,
-      badgeLabel: 'ولاء',
+    .filter((tier) => tier.status === "active")
+    .map((tier) => ({
+      id: `tier-${tier.id}`,
+      title: tier.nameAr,
+      description: `خصم ${tier.discountPercent}% ابتداءً من ${tier.minPoints.toLocaleString("ar")} نقطة`,
+      icon: tier.badge || "⭐",
+      kind: "loyalty",
+      badgeLabel: "ولاء",
     }));
 
   const planItems: ClientBenefitItem[] = plans
-    .filter((p) => p.status === 'active')
-    .map((p) => ({
-      id: `plan-${p.id}`,
-      title: p.nameAr,
-      description: `${p.priceYer.toLocaleString('ar')} ريال / ${p.billingCycle === 'monthly' ? 'شهر' : p.billingCycle === 'quarterly' ? 'ربع سنة' : 'سنة'}`,
-      icon: p.badge || '🎟',
-      kind: 'subscription' as const,
-      badgeLabel: 'اشتراك',
+    .filter((plan) => plan.status === "active")
+    .map((plan) => ({
+      id: `plan-${plan.id}`,
+      title: plan.nameAr,
+      description: `${plan.priceYer.toLocaleString("ar")} ر.ي / ${
+        plan.billingCycle === "monthly" ? "شهر" : plan.billingCycle === "quarterly" ? "ربع سنة" : "سنة"
+      }`,
+      icon: plan.badge || "🎟",
+      kind: "subscription",
+      badgeLabel: "اشتراك",
     }));
 
   return [...tierItems, ...planItems];
 }
 
-// ─── BenefitRow: client-app display unit ──────────────────────────────────
-// Defined here (not in screen files) so screens contain zero fixture data.
-
-export type BenefitRowTone = 'success' | 'warning' | 'danger' | 'info' | 'action' | 'neutral';
+export type BenefitRowTone = "success" | "warning" | "danger" | "info" | "action" | "neutral";
 
 export type BenefitRow = {
   readonly id: string;
@@ -113,36 +152,3 @@ export type BenefitRow = {
   readonly actionLabel?: string;
   readonly helperText?: string;
 };
-
-// ─── Fallback rows (used when the registry has no active items yet) ───────
-// All fixture/seed data lives HERE — never in screen or component files.
-
-export const FALLBACK_LOYALTY_ROWS: readonly BenefitRow[] = [
-  {
-    id: 'loyalty-balance',
-    title: 'النقاط والمكافآت',
-    subtitle: 'سيتم عرض رصيدك ومستواك بعد إطلاق برنامج الولاء.',
-    badgeLabel: 'قريباً',
-    badgeTone: 'info',
-  },
-];
-
-export const FALLBACK_SUBSCRIPTION_ROWS: readonly BenefitRow[] = [
-  {
-    id: 'sub-placeholder',
-    title: 'خطط الاشتراك',
-    subtitle: 'ستظهر هنا خطط الاشتراك المتاحة بعد الإطلاق.',
-    badgeLabel: 'قريباً',
-    badgeTone: 'neutral',
-  },
-];
-
-export const FALLBACK_OFFERS_ROWS: readonly BenefitRow[] = [
-  {
-    id: 'offers-placeholder',
-    title: 'العروض والكوبونات',
-    subtitle: 'ستظهر هنا عروضك وكوباناتك النشطة بعد الإطلاق.',
-    badgeLabel: 'قريباً',
-    badgeTone: 'neutral',
-  },
-];

@@ -1,23 +1,19 @@
-import React, { useState, useEffect } from "react";
-import { StyleSheet, View, Text, Pressable, BackHandler } from "react-native";
+import React, { useCallback, useEffect, useState } from "react";
+import { BackHandler, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Svg, Circle, Rect, Path } from "react-native-svg";
 import { AppHeader } from "../../../../apps/app-client/runtime/src/shell/AppHeader";
 import { BottomNavBar, type BottomNavItem } from "../../../../apps/app-client/runtime/src/shell/BottomNavBar";
-import { brandScale, colorRoles, StateView } from '@bthwani/ui-kit';
-
-// Import routes/screens
+import { brandScale, colorRoles, Icon, StateView } from "@bthwani/ui-kit";
 import { HomeDiscoveryRoute } from "./home-discovery/HomeDiscoveryRoute";
 import { StoreDiscoveryRoute } from "./store/StoreDiscoveryRoute";
 import { StoreDetailRoute } from "./store/StoreDetailRoute";
 import { ClientCheckoutRoute } from "./checkout/ClientCheckoutRoute";
 import { OrdersListScreen } from "./orders/OrdersListScreen";
-import { MySpaceScreen } from "./account/MySpaceScreen";
+import { MySpaceScreen, type BThwaniAppearanceMode } from "./account/MySpaceScreen";
 import { AppearanceHubScreen } from "./account/AppearanceHubScreen";
 import { AddressLocationScreen } from "./account/AddressLocationScreen";
 import { IdentityHubScreen } from "./account/IdentityHubScreen";
 import { PreferencesHubScreen } from "./account/PreferencesHubScreen";
-import { BenefitsHubScreen } from "./account/BenefitsHubScreen";
 import { NotificationCenterScreen } from "./notifications/NotificationCenterScreen";
 import { OrderTrackingScreen } from "./orders/OrderTrackingScreen";
 import { SupportTicketScreen } from "./support/SupportTicketScreen";
@@ -26,267 +22,140 @@ import { SheinForm } from "../shared/shein/SheinForm";
 import { AwnakForm } from "../shared/awnak/AwnakForm";
 import { useSpecialRequestsController } from "../shared/special-requests/use-special-requests-controller";
 import { generateSpecialRequestIdempotencyKey } from "../shared/special-requests/special-requests.idempotency";
-const ICON_SIZE = 22;
-const ICON_COLOR_ACTIVE = colorRoles.brandAction;
-const ICON_COLOR_INACTIVE = colorRoles.brandStructure;
-const ICON_COLOR_WHITE = colorRoles.surfaceBase;
 
-function OrdersIcon({ active }: { active?: boolean }) {
-  const c = active ? ICON_COLOR_ACTIVE : ICON_COLOR_INACTIVE;
-  return (
-    <Svg width={ICON_SIZE} height={ICON_SIZE} viewBox="0 0 24 24" fill="none">
-      <Rect x="4" y="3" width="16" height="18" rx="2" stroke={c} strokeWidth={active ? 2.2 : 1.8} />
-      <Path d="M8 8h8M8 12h8M8 16h5" stroke={c} strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" />
-    </Svg>
-  );
-}
-
-function WalletIcon({ active }: { active?: boolean }) {
-  const c = active ? ICON_COLOR_ACTIVE : ICON_COLOR_INACTIVE;
-  return (
-    <Svg width={ICON_SIZE} height={ICON_SIZE} viewBox="0 0 24 24" fill="none">
-      <Rect x="2" y="6" width="20" height="14" rx="2" stroke={c} strokeWidth={active ? 2.2 : 1.8} />
-      <Path d="M2 10h20" stroke={c} strokeWidth={active ? 2.2 : 1.8} />
-      <Circle cx="17" cy="15" r="1.5" fill={c} />
-    </Svg>
-  );
-}
-
-function HomeIcon({ active }: { active?: boolean }) {
-  const c = active ? ICON_COLOR_ACTIVE : ICON_COLOR_INACTIVE;
-  return (
-    <Svg width={ICON_SIZE} height={ICON_SIZE} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M3 10.5L12 3l9 7.5V21a1 1 0 01-1 1H5a1 1 0 01-1-1V10.5z"
-        stroke={c}
-        strokeWidth={active ? 2.2 : 1.8}
-        fill={active ? c + "22" : "none"}
-        strokeLinejoin="round"
-      />
-      <Path
-        d="M9 21V12h6v9"
-        stroke={c}
-        strokeWidth={active ? 2.2 : 1.8}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </Svg>
-  );
-}
-
-function ProfileIcon({ active }: { active?: boolean }) {
-  const c = active ? ICON_COLOR_ACTIVE : ICON_COLOR_INACTIVE;
-  return (
-    <Svg width={ICON_SIZE} height={ICON_SIZE} viewBox="0 0 24 24" fill="none">
-      <Circle cx="12" cy="8" r="4" stroke={c} strokeWidth={active ? 2.2 : 1.8} />
-      <Path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke={c} strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" />
-    </Svg>
-  );
-}
-
-function SearchIcon() {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Circle cx="11" cy="11" r="7" stroke={ICON_COLOR_WHITE} strokeWidth={2} />
-      <Path d="M16.5 16.5L21 21" stroke={ICON_COLOR_WHITE} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
-}
-
-// Minimal notification icon
-function NotificationIcon() {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M6 10a6 6 0 1112 0v4l2 2H4l2-2v-4z"
-        stroke={ICON_COLOR_WHITE}
-        strokeWidth={2}
-        strokeLinejoin="round"
-      />
-      <Path d="M10 20a2 2 0 004 0" stroke={ICON_COLOR_WHITE} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
-}
-
-// Minimal cart icon
-function CartIcon() {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke={ICON_COLOR_WHITE} strokeWidth={2} strokeLinejoin="round" />
-      <Path d="M3 6h18M16 10a4 4 0 01-8 0" stroke={ICON_COLOR_WHITE} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
-}
-
-// Minimal grid launcher icon
-function ServicesIcon() {
-  return (
-    <Svg width={26} height={26} viewBox="0 0 24 24" fill="none">
-      <Rect x="3" y="3" width="7" height="7" rx="1.5" fill={ICON_COLOR_WHITE} />
-      <Rect x="14" y="3" width="7" height="7" rx="1.5" fill={ICON_COLOR_WHITE} />
-      <Rect x="3" y="14" width="7" height="7" rx="1.5" fill={ICON_COLOR_WHITE} />
-      <Rect x="14" y="14" width="7" height="7" rx="1.5" fill={ICON_COLOR_WHITE} />
-    </Svg>
-  );
-}
+type ClientTab = "home" | "stores" | "orders" | "profile" | "cart";
+type ProfileRoute = "profile" | "appearance" | "addresses" | "identity" | "preferences" | "support";
+type SpecialRequestRoute = "shein" | "awnak";
 
 const NAV_ITEMS: BottomNavItem[] = [
   {
     id: "profile",
     label: "حسابي",
-    icon: <ProfileIcon />,
-    activeIcon: <ProfileIcon active />,
-  },
-  {
-    id: "wallet",
-    label: "المحفظة",
-    icon: <WalletIcon />,
-    activeIcon: <WalletIcon active />,
+    icon: <Icon name="person-outline" size={22} color={colorRoles.brandStructure} />,
+    activeIcon: <Icon name="person" size={22} color={colorRoles.brandAction} />,
   },
   {
     id: "orders",
     label: "طلباتي",
-    icon: <OrdersIcon />,
-    activeIcon: <OrdersIcon active />,
+    icon: <Icon name="bag-outline" size={22} color={colorRoles.brandStructure} />,
+    activeIcon: <Icon name="bag" size={22} color={colorRoles.brandAction} />,
   },
   {
     id: "home",
     label: "الرئيسية",
-    icon: <HomeIcon />,
-    activeIcon: <HomeIcon active />,
+    icon: <Icon name="home-outline" size={22} color={colorRoles.brandStructure} />,
+    activeIcon: <Icon name="home" size={22} color={colorRoles.brandAction} />,
   },
 ];
 
 export function DshClientSurface() {
   const insets = useSafeAreaInsets();
-  const [activeTab, setActiveTab] = useState<string>("home");
-  const [subroute, setSubroute] = useState<string>("profile");
+  const [activeTab, setActiveTab] = useState<ClientTab>("home");
+  const [profileRoute, setProfileRoute] = useState<ProfileRoute>("profile");
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
   const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
-  const [showNotifications, setShowNotifications] = useState<boolean>(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const [activeTicketId, setActiveTicketId] = useState<string | null>(null);
-  const [appearanceMode, setAppearanceMode] = useState<string>("lightPremium");
-  const [activeSpecialRequest, setActiveSpecialRequest] = useState<'shein' | 'awnak' | null>(null);
+  const [appearanceMode, setAppearanceMode] = useState<BThwaniAppearanceMode>("lightPremium");
+  const [activeSpecialRequest, setActiveSpecialRequest] = useState<SpecialRequestRoute | null>(null);
 
-  const specialReqCtrl = useSpecialRequestsController();
+  const specialRequestController = useSpecialRequestsController();
 
-  const commerceStoreId: string | null = selectedStoreId;
-
-  const goBack = () => {
+  const goBack = useCallback(() => {
     if (showNotifications) {
       setShowNotifications(false);
       return true;
     }
-    if (activeSpecialRequest) {
+    if (activeSpecialRequest !== null) {
       setActiveSpecialRequest(null);
       return true;
     }
-    if (activeOrderId) {
+    if (activeOrderId !== null) {
       setActiveOrderId(null);
       return true;
     }
-    if ((activeTab as string) === "stores" && selectedStoreId !== null) {
-      setSelectedStoreId(null);
-      return true;
-    }
-    if ((activeTab as string) === "stores" && selectedStoreId === null) {
-      setActiveTab("home");
-      return true;
-    }
-    if (activeTicketId) {
+    if (activeTicketId !== null) {
       setActiveTicketId(null);
       return true;
     }
-    if (activeTab === "profile" && subroute !== "profile") {
-      setSubroute("profile");
+    if (activeTab === "stores" && selectedStoreId !== null) {
+      setSelectedStoreId(null);
+      return true;
+    }
+    if (activeTab === "stores") {
+      setActiveTab("home");
+      return true;
+    }
+    if (activeTab === "profile" && profileRoute !== "profile") {
+      setProfileRoute("profile");
       return true;
     }
     if (activeTab !== "home") {
       setActiveTab("home");
       return true;
     }
-    return false; // Exit app
-  };
+    return false;
+  }, [activeOrderId, activeSpecialRequest, activeTab, activeTicketId, profileRoute, selectedStoreId, showNotifications]);
 
   useEffect(() => {
-    const backAction = () => {
-      return goBack();
-    };
+    const subscription = BackHandler.addEventListener("hardwareBackPress", goBack);
+    return () => subscription.remove();
+  }, [goBack]);
 
-    const backHandler = BackHandler.addEventListener(
-      "hardwareBackPress",
-      backAction
-    );
-
-    return () => backHandler.remove();
-  }, [showNotifications, activeOrderId, activeTab, selectedStoreId, subroute, activeTicketId]);
-
-  // Determine header and navigation bar visibility
-  const showHeader = activeTab === "home" && !showNotifications && !activeOrderId;
-  const showBottomNav = activeTab === "home" && !showNotifications && !activeOrderId;
+  const nestedRoute =
+    showNotifications
+    || activeSpecialRequest !== null
+    || activeOrderId !== null
+    || activeTicketId !== null
+    || (activeTab === "stores" && selectedStoreId !== null)
+    || (activeTab === "profile" && profileRoute !== "profile");
+  const showHeader = activeTab === "home" && !nestedRoute;
+  const showBottomNav = !nestedRoute;
 
   return (
     <View style={[styles.root, { paddingTop: showHeader ? 0 : insets.top }]}>
-      {showHeader && (
+      {showHeader ? (
         <AppHeader
           title="بثواني"
-          locationLabel="صنعاء، حي الأصبحي"
           topInset={insets.top}
           direction="rtl"
-          tickerMessage="مباشر"
-          tickerStatusLabel="مباشر"
           actions={[
             {
-              icon: <SearchIcon />,
-              accessibilityLabel: "بحث",
-            },
-            {
-              icon: <NotificationIcon />,
+              icon: <Icon name="notifications-outline" size={20} color={colorRoles.surfaceBase} />,
               accessibilityLabel: "الإشعارات",
-              badgeCount: 0,
               onPress: () => setShowNotifications(true),
             },
             {
-              icon: <CartIcon />,
+              icon: <Icon name="cart-outline" size={20} color={colorRoles.surfaceBase} />,
               accessibilityLabel: "عربة التسوق",
-              badgeCount: 0,
-              onPress: () => {
-                setActiveTab("cart");
-              },
+              onPress: () => setActiveTab("cart"),
             },
           ]}
         />
-      )}
+      ) : null}
 
       <View style={styles.content}>
         {showNotifications ? (
           <NotificationCenterScreen />
-        ) : activeOrderId ? (
-          <OrderTrackingScreen
-            orderId={activeOrderId}
-            onBack={() => setActiveOrderId(null)}
-          />
-        ) : activeSpecialRequest === 'shein' ? (
+        ) : activeOrderId !== null ? (
+          <OrderTrackingScreen orderId={activeOrderId} onBack={() => setActiveOrderId(null)} />
+        ) : activeSpecialRequest === "shein" ? (
           <SheinForm
             onBack={() => setActiveSpecialRequest(null)}
-            onSubmit={async (data) => {
-              return specialReqCtrl.submit({
-                requestType: 'SHEIN_ASSISTED_PURCHASE',
-                idempotencyKey: generateSpecialRequestIdempotencyKey(),
-                ...data,
-              });
-            }}
+            onSubmit={(data) => specialRequestController.submit({
+              requestType: "SHEIN_ASSISTED_PURCHASE",
+              idempotencyKey: generateSpecialRequestIdempotencyKey(),
+              ...data,
+            })}
           />
-        ) : activeSpecialRequest === 'awnak' ? (
+        ) : activeSpecialRequest === "awnak" ? (
           <AwnakForm
             onBack={() => setActiveSpecialRequest(null)}
-            onSubmit={async (data) => {
-              return specialReqCtrl.submit({
-                requestType: 'AWNAK_ERRAND',
-                idempotencyKey: generateSpecialRequestIdempotencyKey(),
-                ...data,
-              });
-            }}
+            onSubmit={(data) => specialRequestController.submit({
+              requestType: "AWNAK_ERRAND",
+              idempotencyKey: generateSpecialRequestIdempotencyKey(),
+              ...data,
+            })}
           />
         ) : activeTab === "home" ? (
           <HomeDiscoveryRoute
@@ -295,8 +164,8 @@ export function DshClientSurface() {
               setActiveTab("stores");
             }}
             onSpecialCategoryPress={(nodeId) => {
-              if (nodeId === 'node-shein') setActiveSpecialRequest('shein');
-              else if (nodeId === 'node-awnak') setActiveSpecialRequest('awnak');
+              if (nodeId === "node-shein") setActiveSpecialRequest("shein");
+              if (nodeId === "node-awnak") setActiveSpecialRequest("awnak");
             }}
           />
         ) : activeTab === "stores" ? (
@@ -310,82 +179,59 @@ export function DshClientSurface() {
             />
           )
         ) : activeTab === "orders" ? (
-          <OrdersListScreen
-            onOpenOrder={setActiveOrderId}
-          />
-        ) : activeTab === "wallet" ? (
-          <StateView
-            title="محفظة بثواني"
-            description="الرصيد وإدارة طرق الدفع ستتوفر قريباً."
-            actionLabel="تصفح المتاجر"
-            onActionPress={() => setActiveTab("stores")}
-          />
+          <OrdersListScreen onOpenOrder={setActiveOrderId} />
         ) : activeTab === "cart" ? (
-          commerceStoreId === null ? (
+          selectedStoreId === null ? (
             <StateView
               title="السلة فارغة"
-              description="يلزم اختيار متجر أولاً لعرض السلة وإتمام الطلب."
+              description="اختر متجرًا لعرض السلة وإتمام الطلب."
               actionLabel="تصفح المتاجر"
               onActionPress={() => setActiveTab("stores")}
             />
           ) : (
             <ClientCheckoutRoute
-              storeId={commerceStoreId}
+              storeId={selectedStoreId}
               serviceAreaCode="sana"
               onBrowseCatalog={() => setActiveTab("stores")}
-              onSuccess={(intentId) => {
-                setActiveOrderId(intentId);
-              }}
+              onSuccess={setActiveOrderId}
             />
           )
-        ) : activeTab === "profile" ? (
-          subroute === "appearance" ? (
-            <AppearanceHubScreen
-              appearanceMode={appearanceMode as any}
-              onAppearanceModeChange={setAppearanceMode}
-            />
-          ) : subroute === "addresses" ? (
-            <AddressLocationScreen />
-          ) : subroute === "identity" ? (
-            <IdentityHubScreen />
-          ) : subroute === "preferences" ? (
-            <PreferencesHubScreen />
-          ) : subroute === "benefits" ? (
-            <BenefitsHubScreen />
-          ) : subroute === "support" ? (
-            activeTicketId ? (
-              <TicketDetailScreen ticketId={activeTicketId} />
-            ) : (
-              <SupportTicketScreen onOpenTicket={setActiveTicketId} />
-            )
+        ) : profileRoute === "appearance" ? (
+          <AppearanceHubScreen appearanceMode={appearanceMode} onAppearanceModeChange={setAppearanceMode} />
+        ) : profileRoute === "addresses" ? (
+          <AddressLocationScreen />
+        ) : profileRoute === "identity" ? (
+          <IdentityHubScreen />
+        ) : profileRoute === "preferences" ? (
+          <PreferencesHubScreen />
+        ) : profileRoute === "support" ? (
+          activeTicketId !== null ? (
+            <TicketDetailScreen ticketId={activeTicketId} />
           ) : (
-            <MySpaceScreen
-              appearanceMode={appearanceMode as any}
-              onAppearanceModeChange={setAppearanceMode}
-              onOpenOrders={() => setActiveTab("orders")}
-              onOpenWallet={() => setActiveTab("wallet")}
-              onOpenBenefits={() => setSubroute("benefits")}
-              onOpenAddresses={() => setSubroute("addresses")}
-              onOpenIdentity={() => setSubroute("identity")}
-              onOpenAppearance={() => setSubroute("appearance")}
-              onOpenPreferences={() => setSubroute("preferences")}
-              onOpenSupport={() => setSubroute("support")}
-            />
+            <SupportTicketScreen onOpenTicket={setActiveTicketId} />
           )
         ) : (
-          <View style={styles.placeholder} />
+          <MySpaceScreen
+            appearanceMode={appearanceMode}
+            onAppearanceModeChange={setAppearanceMode}
+            onOpenOrders={() => setActiveTab("orders")}
+            onOpenAddresses={() => setProfileRoute("addresses")}
+            onOpenIdentity={() => setProfileRoute("identity")}
+            onOpenPreferences={() => setProfileRoute("preferences")}
+            onOpenSupport={() => setProfileRoute("support")}
+          />
         )}
       </View>
 
-      {showBottomNav && (
+      {showBottomNav ? (
         <BottomNavBar
           items={NAV_ITEMS}
           activeId={activeTab}
-          onSelect={setActiveTab}
-          launcherIcon={<ServicesIcon />}
+          onSelect={(id) => setActiveTab(id as ClientTab)}
+          launcherIcon={<Icon name="grid-outline" size={26} color={colorRoles.surfaceBase} />}
           launcherLabel="الخدمات"
           onLauncherPress={() => {
-            if ((activeTab as string) === "stores") {
+            if (activeTab === "stores") {
               setActiveTab("home");
             } else {
               setSelectedStoreId(null);
@@ -395,7 +241,7 @@ export function DshClientSurface() {
           direction="rtl"
           bottomInset={insets.bottom}
         />
-      )}
+      ) : null}
     </View>
   );
 }
@@ -406,9 +252,6 @@ const styles = StyleSheet.create({
     backgroundColor: brandScale.surface[50],
   },
   content: {
-    flex: 1,
-  },
-  placeholder: {
     flex: 1,
   },
 });

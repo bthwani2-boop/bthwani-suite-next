@@ -3,7 +3,6 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import {
   Icon,
   MobileScrollView,
-  Surface,
   Text,
   TopBar,
   spacing,
@@ -19,21 +18,15 @@ export type MySpaceScreenProps = {
   onAppearanceModeChange?: (mode: BThwaniAppearanceMode) => void;
   onOpenOrders?: () => void;
   onOpenWallet?: () => void;
-  onOpenBenefits?: (section?: 'loyalty' | 'subscription' | 'offers') => void;
   onOpenAddresses?: () => void;
   onOpenIdentity?: () => void;
-  onOpenAppearance?: () => void;
   onOpenPreferences?: () => void;
   onOpenSupport?: () => void;
-  onBack?: () => void;
 };
 
 type MySpaceTab =
   | 'orders'
   | 'wallet'
-  | 'loyalty'
-  | 'subscription'
-  | 'offers'
   | 'addresses'
   | 'identity'
   | 'appearance'
@@ -51,9 +44,6 @@ type TabConfig = {
 const TABS: TabConfig[] = [
   { id: 'orders', label: 'طلباتي', summary: 'الطلب والتاريخ والتتبع', iconName: 'bag-outline' },
   { id: 'wallet', label: 'المحفظة', summary: 'الرصيد، الاسترداد، وطرق الدفع', iconName: 'wallet-outline' },
-  { id: 'loyalty', label: 'النقاط والمكافآت', summary: 'الرصيد، المستوى، وأقرب ثلاث مكافآت', iconName: 'star-outline' },
-  { id: 'subscription', label: 'الاشتراك', summary: 'الخطة الحالية والتبديل عند الحاجة فقط', iconName: 'card-outline' },
-  { id: 'offers', label: 'العروض والكوبونات', summary: 'ثلاث فرص قابلة للاستخدام بدل قائمة طويلة', iconName: 'pricetag-outline' },
   { id: 'addresses', label: 'العناوين والموقع', summary: 'إدارة العناوين وموقع التوصيل', iconName: 'location-outline' },
   { id: 'identity', label: 'الملف الشخصي', summary: 'البيانات الشخصية والأمان', iconName: 'person-outline' },
   { id: 'appearance', label: 'المظهر', summary: 'فاتح أبيض أو داكن زجاجي', iconName: 'color-palette-outline' },
@@ -77,7 +67,7 @@ function MySpaceRow({
 }) {
   return (
     <Pressable
-      disabled={!!actionElement}
+      disabled={Boolean(actionElement)}
       onPress={onPress}
       style={({ pressed }) => [styles.row, pressed && !actionElement && styles.rowPressed]}
     >
@@ -102,29 +92,22 @@ export function MySpaceScreen({
   onAppearanceModeChange,
   onOpenOrders,
   onOpenWallet,
-  onOpenBenefits,
   onOpenAddresses,
   onOpenIdentity,
-  onOpenAppearance,
   onOpenPreferences,
   onOpenSupport,
-  onBack,
 }: MySpaceScreenProps) {
-  const [lang, setLang] = useState<string>("ar");
+  const [lang, setLang] = useState<string>('ar');
 
   const handleRowPress = (id: MySpaceTab) => {
     switch (id) {
-      case 'orders':       return onOpenOrders?.();
-      case 'wallet':       return onOpenWallet?.();
-      case 'loyalty':      return onOpenBenefits?.('loyalty');
-      case 'subscription': return onOpenBenefits?.('subscription');
-      case 'offers':       return onOpenBenefits?.('offers');
-      case 'addresses':    return onOpenAddresses?.();
-      case 'identity':     return onOpenIdentity?.();
-      case 'appearance':   return onOpenAppearance?.();
-      case 'preferences':  return onOpenPreferences?.();
-      case 'support':      return onOpenSupport?.();
-      default:             break;
+      case 'orders': return onOpenOrders?.();
+      case 'wallet': return onOpenWallet?.();
+      case 'addresses': return onOpenAddresses?.();
+      case 'identity': return onOpenIdentity?.();
+      case 'preferences': return onOpenPreferences?.();
+      case 'support': return onOpenSupport?.();
+      default: return undefined;
     }
   };
 
@@ -186,13 +169,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: spacing[12],
   },
-  listCard: {
-    backgroundColor: colorRoles.surfaceBase,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colorRoles.borderSubtle,
-    overflow: 'hidden',
-  },
   row: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
@@ -232,9 +208,7 @@ const styles = StyleSheet.create({
   },
   chevron: {
     fontSize: 20,
-    color: colorRoles.surfaceBase,
+    color: colorRoles.brandStructure,
     transform: [{ scaleX: -1 }],
   },
 });
-
-// export default MySpaceScreen; // Unused default export
