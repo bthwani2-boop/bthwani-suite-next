@@ -1,0 +1,30 @@
+name: Setup BThwani Node workspace
+description: Install the repository-pinned PNPM and Node toolchain, then install the frozen workspace.
+
+inputs:
+  node-version:
+    description: Node.js version required by the root package contract.
+    required: false
+    default: "24.17.0"
+  pnpm-version:
+    description: PNPM version required by the root package contract.
+    required: false
+    default: "10.34.2"
+
+runs:
+  using: composite
+  steps:
+    - name: Setup PNPM
+      uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      with:
+        version: ${{ inputs.pnpm-version }}
+
+    - name: Setup Node
+      uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: pnpm
+
+    - name: Install frozen workspace
+      shell: bash
+      run: pnpm install --frozen-lockfile
