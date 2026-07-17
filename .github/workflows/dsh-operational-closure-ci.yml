@@ -6,19 +6,49 @@ on:
     paths:
       - 'services/dsh/backend/**'
       - 'services/dsh/database/migrations/**'
+      - 'services/dsh/contracts/**'
+      - 'services/dsh/clients/generated/**'
+      - 'services/dsh/frontend/app-client/**'
+      - 'services/dsh/frontend/app-partner/**'
+      - 'services/dsh/frontend/app-captain/**'
       - 'services/dsh/frontend/control-panel/operations/**'
       - 'services/dsh/frontend/shared/operations/**'
       - 'services/dsh/frontend/shared/platform/**'
       - 'services/dsh/frontend/shared/special-requests/**'
+      - 'services/dsh/frontend/shared/awnak/**'
+      - 'services/dsh/frontend/shared/shein/**'
+      - 'services/dsh/frontend/shared/partner-delivery/**'
+      - 'services/dsh/frontend/shared/pickup/**'
+      - 'services/wlt/backend/**'
+      - 'services/wlt/database/migrations/**'
+      - 'services/wlt/contracts/**'
+      - 'services/wlt/clients/generated/**'
+      - 'governance/operational_journey_protocol_package/sdlc/evidence/**'
+      - 'tools/guards/sdlc/**'
       - '.github/workflows/dsh-operational-closure-ci.yml'
   pull_request:
     paths:
       - 'services/dsh/backend/**'
       - 'services/dsh/database/migrations/**'
+      - 'services/dsh/contracts/**'
+      - 'services/dsh/clients/generated/**'
+      - 'services/dsh/frontend/app-client/**'
+      - 'services/dsh/frontend/app-partner/**'
+      - 'services/dsh/frontend/app-captain/**'
       - 'services/dsh/frontend/control-panel/operations/**'
       - 'services/dsh/frontend/shared/operations/**'
       - 'services/dsh/frontend/shared/platform/**'
       - 'services/dsh/frontend/shared/special-requests/**'
+      - 'services/dsh/frontend/shared/awnak/**'
+      - 'services/dsh/frontend/shared/shein/**'
+      - 'services/dsh/frontend/shared/partner-delivery/**'
+      - 'services/dsh/frontend/shared/pickup/**'
+      - 'services/wlt/backend/**'
+      - 'services/wlt/database/migrations/**'
+      - 'services/wlt/contracts/**'
+      - 'services/wlt/clients/generated/**'
+      - 'governance/operational_journey_protocol_package/sdlc/evidence/**'
+      - 'tools/guards/sdlc/**'
   workflow_dispatch:
 
 permissions:
@@ -59,20 +89,47 @@ jobs:
           node-version: 24.17.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: DSH contract generation is clean
+      - name: DSH and WLT contract generation is clean
         run: |
           pnpm run contracts:lint
           pnpm run openapi:generate:dsh
-          git diff --exit-code -- services/dsh/contracts/dsh.openapi.yaml services/dsh/clients/generated/dsh-api.ts
+          pnpm run openapi:generate:wlt
+          git diff --exit-code -- \
+            services/dsh/contracts/dsh.openapi.yaml \
+            services/dsh/clients/generated/dsh-api.ts \
+            services/wlt/contracts/wlt.openapi.yaml \
+            services/wlt/clients/generated/wlt-api.ts
       - name: Binding and boundary gates
         run: |
           pnpm run guard:backend-api-binding
           pnpm run guard:api-binding
           pnpm run guard:frontend-feature-binding
           pnpm run guard:fullstack-boundary
+          pnpm run guard:wlt-financial-boundary
           pnpm run guard:runtime-real-bindings
       - name: Typecheck affected surfaces
         run: pnpm run typecheck
+
+  sdlc-evidence-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Validate special-request SDLC evidence and no-skip transition
+        run: >-
+          pnpm run guard:sdlc --
+          --capability DSH-SPECIAL-REQUESTS-001
+          --stage G4_IMPLEMENTATION_VERIFIED
+          --artifact governance/operational_journey_protocol_package/sdlc/evidence/dsh-special-requests-001.artifact.json
+          --impact governance/operational_journey_protocol_package/sdlc/evidence/dsh-special-requests-001.change-impact.json
+          --affected
 
   migration-static-gate:
     runs-on: ubuntu-latest
@@ -82,7 +139,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test -f services/dsh/database/migrations/dsh-059_special_request_dispatch_stage_sync.sql
-          grep -q '^BEGIN;' services/dsh/database/migrations/dsh-059_special_request_dispatch_stage_sync.sql
-          grep -q '^COMMIT;' services/dsh/database/migrations/dsh-059_special_request_dispatch_stage_sync.sql
+          for migration in \
+            services/dsh/database/migrations/dsh-056_special_requests_tenancy.sql \
+            services/dsh/database/migrations/dsh-059_special_request_dispatch_stage_sync.sql \
+            services/wlt/database/migrations/wlt-024_payment_session_tenancy.sql; do
+            test -f "$migration"
+            grep -q '^BEGIN;' "$migration"
+            grep -q '^COMMIT;' "$migration"
+          done
           grep -q 'trg_dsh_sync_special_request_dispatch_stage' services/dsh/database/migrations/dsh-059_special_request_dispatch_stage_sync.sql
