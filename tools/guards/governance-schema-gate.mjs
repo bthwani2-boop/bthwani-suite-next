@@ -80,6 +80,11 @@ const frontendBindings = validateDocument(
   "governance/guards/frontend-binding-registry.schema.json",
   "FRONTEND_BINDING",
 );
+const repositoryEnforcement = validateDocument(
+  "governance/github/repository-enforcement.json",
+  "governance/github/repository-enforcement.schema.json",
+  "GITHUB_ENFORCEMENT",
+);
 
 const productSchemaRelative = "governance/product/product-truth.schema.json";
 const productValidator = compileSchema(productSchemaRelative);
@@ -196,6 +201,41 @@ if (decisions) {
   }
   if (canonicalClass.get(decisions.closureRules.closedDecision) !== "closed") {
     violations.push({ file: "governance/contracts/decision-vocabulary.json", line: 0, message: "INVALID_CLOSED_DECISION" });
+  }
+}
+
+if (repositoryEnforcement) {
+  const codeownersRelative = ".github/CODEOWNERS";
+  const codeownersPath = path.join(repoRoot, codeownersRelative);
+  if (!fs.existsSync(codeownersPath)) {
+    violations.push({ file: codeownersRelative, line: 0, message: "CODEOWNERS_FILE_MISSING" });
+  } else {
+    const codeowners = fs.readFileSync(codeownersPath, "utf8");
+    const actualOwners = [...new Set([...codeowners.matchAll(/@([A-Za-z0-9-]+)/g)].map((match) => match[1]))].sort();
+    const declaredOwners = [...repositoryEnforcement.observed.codeowners].sort();
+    if (JSON.stringify(actualOwners) !== JSON.stringify(declaredOwners)) {
+      violations.push({ file: "governance/github/repository-enforcement.json", line: 0, message: `CODEOWNERS_EVIDENCE_DRIFT declared=${declaredOwners.join(",")} actual=${actualOwners.join(",")}` });
+    }
+    const actualMode = actualOwners.length > 1 ? "MULTI_OWNER_ROUTING" : "SINGLE_OWNER_ROUTING";
+    if (repositoryEnforcement.observed.codeownersMode !== actualMode) {
+      violations.push({ file: "governance/github/repository-enforcement.json", line: 0, message: `CODEOWNERS_MODE_DRIFT declared=${repositoryEnforcement.observed.codeownersMode} actual=${actualMode}` });
+    }
+  }
+
+  const observed = repositoryEnforcement.observed;
+  const claims = repositoryEnforcement.claims;
+  const enforcementProven = observed.branchProtectionState === "PROVEN"
+    && observed.requiredChecksState === "PROVEN"
+    && observed.independentReviewerIdentityState === "PROVEN"
+    && observed.codeownersMode === "MULTI_OWNER_ROUTING";
+  if (claims.separationOfDutiesProven && observed.codeowners.length < 2) {
+    violations.push({ file: "governance/github/repository-enforcement.json", line: 0, message: "SEPARATION_OF_DUTIES_CLAIM_WITH_SINGLE_OWNER" });
+  }
+  if (claims.highRiskClosureAllowed && !enforcementProven) {
+    violations.push({ file: "governance/github/repository-enforcement.json", line: 0, message: "HIGH_RISK_CLOSURE_ALLOWED_WITHOUT_PROVEN_GITHUB_ENFORCEMENT" });
+  }
+  if (repositoryEnforcement.decision === "PASS" && !enforcementProven) {
+    violations.push({ file: "governance/github/repository-enforcement.json", line: 0, message: "GITHUB_ENFORCEMENT_PASS_WITH_UNPROVEN_CONTROLS" });
   }
 }
 
