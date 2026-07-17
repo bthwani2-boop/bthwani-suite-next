@@ -127,6 +127,8 @@ if (agentRegistry) {
     "product-owner-acceptance-authority",
     "ux-journey-authority",
     "architecture-authority",
+    "governance-contract-authority",
+    "ci-workflow-authority",
     "engineering-executor",
     "independent-quality-authority",
     "application-security-authority",
@@ -134,6 +136,7 @@ if (agentRegistry) {
     "independent-reviewer"
   ]);
   const agentIds = new Set();
+  const agentById = new Map();
   const approvalOwners = new Map();
 
   for (const agent of agentRegistry.entries) {
@@ -141,6 +144,7 @@ if (agentRegistry) {
       violations.push({ file: "governance/agents/agent-registry.json", line: 0, message: `DUPLICATE_AGENT_ID ${agent.id}` });
     }
     agentIds.add(agent.id);
+    agentById.set(agent.id, agent);
     if (!fs.existsSync(path.join(repoRoot, agent.primary_file))) {
       violations.push({ file: "governance/agents/agent-registry.json", line: 0, message: `AGENT_PRIMARY_FILE_MISSING ${agent.id}: ${agent.primary_file}` });
     }
@@ -149,6 +153,9 @@ if (agentRegistry) {
     }
     if (agent.kind === "adapter" && (agent.approval_domains?.length ?? 0) > 0) {
       violations.push({ file: "governance/agents/agent-registry.json", line: 0, message: `ADAPTER_MUST_NOT_OWN_APPROVAL ${agent.id}` });
+    }
+    if ((agent.approval_domains?.length ?? 0) > 0 && agent.allowed_modes.includes("write")) {
+      violations.push({ file: "governance/agents/agent-registry.json", line: 0, message: `APPROVAL_AUTHORITY_MUST_NOT_WRITE ${agent.id}` });
     }
     for (const domain of agent.approval_domains ?? []) {
       if (approvalOwners.has(domain)) {
@@ -162,8 +169,19 @@ if (agentRegistry) {
       violations.push({ file: "governance/agents/agent-registry.json", line: 0, message: `MISSING_REQUIRED_LOGICAL_ROLE ${role}` });
     }
   }
-  if (approvalOwners.get("product_model_approval") === approvalOwners.get("product_acceptance")) {
+
+  const productModelOwner = approvalOwners.get("product_model_approval");
+  const productAcceptanceOwner = approvalOwners.get("product_acceptance");
+  if (!productModelOwner || !productAcceptanceOwner || productModelOwner === productAcceptanceOwner) {
     violations.push({ file: "governance/agents/agent-registry.json", line: 0, message: "PRODUCT_MODEL_AND_PRODUCT_ACCEPTANCE_MUST_HAVE_SEPARATE_AUTHORITIES" });
+  }
+
+  const governanceOwner = approvalOwners.get("governance_contract_approval");
+  const ciOwner = approvalOwners.get("ci_workflow_approval");
+  if (!governanceOwner || !ciOwner || governanceOwner === ciOwner) {
+    violations.push({ file: "governance/agents/agent-registry.json", line: 0, message: "GOVERNANCE_AND_CI_APPROVAL_MUST_HAVE_SEPARATE_AUTHORITIES" });
+  } else if (agentById.get(governanceOwner)?.owner === agentById.get(ciOwner)?.owner) {
+    violations.push({ file: "governance/agents/agent-registry.json", line: 0, message: "GOVERNANCE_AND_CI_APPROVAL_MUST_HAVE_SEPARATE_OWNERS" });
   }
 }
 
