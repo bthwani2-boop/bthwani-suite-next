@@ -28,6 +28,7 @@ const dshOperationalRuntimeAdapterMeta = {
 export type DshRuntimeOrderRow = {
   readonly id: string;
   readonly storeId: string;
+  readonly fulfillmentMode: 'bthwani_delivery' | 'partner_delivery' | 'pickup';
   readonly clientId: string;
   readonly status: string;
   readonly captainId: string | null;
@@ -45,6 +46,7 @@ function toRuntimeRow(o: DshOrderRecord): DshRuntimeOrderRow {
   return {
     id: o.id,
     storeId: o.store_id,
+    fulfillmentMode: o.fulfillment_mode,
     clientId: o.client_id,
     status: o.status,
     captainId: o.captain_id ?? null,

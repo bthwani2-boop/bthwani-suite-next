@@ -95,7 +95,9 @@ export function LiveOrdersScreen({ state = 'ready', subGroup, onRetry }: LiveOrd
             meta={runtimeActive ? `${runtimeState.total} طلبات نشطة` : 'runtime غير متاح'}
           >
             {runtimeActive ? (
-              runtimeState.orders.map((order) => (
+              runtimeState.orders
+                .filter((order) => !activeMode || order.fulfillmentMode === activeMode)
+                .map((order) => (
                 <WebControlPanelDecisionRow
                   key={order.id}
                   entityId={order.id}
@@ -104,7 +106,7 @@ export function LiveOrdersScreen({ state = 'ready', subGroup, onRetry }: LiveOrd
                   statusTone={resolveRuntimeOrderStatusTone(order.status)}
                   sla={`تاريخ الإنشاء: ${new Date(order.createdAt).toLocaleString('ar-SA', { hour: '2-digit', minute: '2-digit' })}`}
                   onInspect={() => router.push(buildOperationsHref('exceptions', { orderId: order.id }))}
-                  {...(order.status === 'pending' ? {
+                  {...(order.status === 'pending' && order.fulfillmentMode === 'bthwani_delivery' ? {
                     primaryAction: {
                       id: `${order.id}-dispatch`,
                       label: 'إسناد كابتن',

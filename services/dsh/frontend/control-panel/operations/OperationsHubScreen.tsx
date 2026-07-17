@@ -34,7 +34,7 @@ const AuditSupportSlaScreen = React.lazy(() => import('./AuditSupportSlaScreen')
 const PartnerDeliveryWorkbenchScreen = React.lazy(() => import('./PartnerDeliveryWorkbenchScreen').then((m) => ({ default: m.PartnerDeliveryWorkbenchScreen })));
 const PickupWorkbenchScreen = React.lazy(() => import('./PickupWorkbenchScreen').then((m) => ({ default: m.PickupWorkbenchScreen })));
 
-type ScreenProps = { hubHref: string; subGroup?: string };
+type ScreenProps = { hubHref: string; subGroup?: string; focusParams?: OperationsFocusParams };
 type ScreenComponent = React.ComponentType<ScreenProps>;
 type LazyScreenComponent = React.LazyExoticComponent<ScreenComponent>;
 
@@ -225,6 +225,7 @@ export function ControlPanelDshOperationsScreen({
                         customerId: 'معرّف العميل',
                         ticketId: 'معرّف التذكرة',
                         callId: 'معرّف المكالمة',
+                        requestId: 'معرّف الطلب الخاص',
                       };
                       return (
                         <div key={item.label} className={styles.surfaceFocusContextItem}>
@@ -246,7 +247,7 @@ export function ControlPanelDshOperationsScreen({
                 </div>
               }
             >
-              <ActiveScreen hubHref={hubHref} {...(activeSubGroup ? { subGroup: activeSubGroup } : {})} />
+              <ActiveScreen hubHref={hubHref} focusParams={focusParams} {...(activeSubGroup ? { subGroup: activeSubGroup } : {})} />
             </React.Suspense>
           </Box>
         </div>

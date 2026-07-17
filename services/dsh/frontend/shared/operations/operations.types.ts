@@ -5,7 +5,7 @@ import type { DshFulfillmentDeliveryMode } from '../delivery/delivery.contract';
 import type { CanonicalOperationsGroupId } from './dsh-operational.contract';
 export type { CanonicalOperationsGroupId };
 
-export type OperationsPanelId = 'detail' | 'chat' | 'batches';
+export type OperationsPanelId = 'detail' | 'timeline' | 'chat' | 'batches' | 'proof' | 'audit' | 'dispatch' | 'exception';
 
 export type DshFulfillmentOperationalMode = DshFulfillmentDeliveryMode;
 

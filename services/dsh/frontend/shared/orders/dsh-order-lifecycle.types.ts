@@ -3,6 +3,7 @@ import type { DshOrderStatus } from './orders.types';
 export type DshOrderRecord = {
   readonly id: string;
   readonly store_id: string;
+  readonly fulfillment_mode: 'bthwani_delivery' | 'partner_delivery' | 'pickup';
   readonly client_id: string;
   readonly status: DshOrderStatus;
   readonly total_price: number;
@@ -165,6 +166,8 @@ export type BackendOrder = {
   readonly checkout_intent_id?: string;
   readonly storeId?: string;
   readonly store_id?: string;
+  readonly fulfillmentMode?: 'bthwani_delivery' | 'partner_delivery' | 'pickup';
+  readonly fulfillment_mode?: 'bthwani_delivery' | 'partner_delivery' | 'pickup';
   readonly clientId?: string;
   readonly client_id?: string;
   readonly status?: string;

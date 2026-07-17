@@ -12,10 +12,9 @@ export type StoreCourierStage =
 
 // ─── Delivery Mode Model (Moved from shared/contracts/dsh-delivery-mode.model.ts) ───
 
-export type DshFulfillmentDeliveryMode =
-  | 'bthwani_delivery'
-  | 'partner_delivery'
-  | 'pickup';
+import type { components } from "../../../clients/generated/dsh-api";
+
+export type DshFulfillmentDeliveryMode = NonNullable<components["schemas"]["DshOrder"]["fulfillmentMode"]>;
 
 export type DshDeliveryModeCaptainInvolvement =
   | 'full'   // Assignment + pickup + captain tracking + PoD all required

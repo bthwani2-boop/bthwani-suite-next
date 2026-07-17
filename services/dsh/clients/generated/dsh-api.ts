@@ -5476,7 +5476,8 @@ export interface components {
             id: string;
             clientId: string;
             requestType: string;
-            status: string;
+            /** @enum {string} */
+            status: "submitted" | "under_review" | "needs_customer_input" | "approved" | "assigned" | "in_progress" | "completed" | "cancelled" | "rejected";
             version: number;
             workflowStage?: string | null;
             customerNotes?: string | null;

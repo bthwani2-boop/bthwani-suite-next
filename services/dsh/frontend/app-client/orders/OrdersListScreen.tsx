@@ -38,14 +38,15 @@ function OrderCard({ order, onOpenOrder }: { order: DshOrder; onOpenOrder?: (id:
   const [expanded, setExpanded] = useState(false);
   const label = ORDER_STATUS_LABELS[order.status] ?? order.status;
   const tone = STATUS_TONE[order.status] ?? "neutral";
+  const items = order.items ?? [];
   
   // Calculate total price
-  const totalPrice = order.items.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+  const totalPrice = items.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
   const totalPriceLabel = `${totalPrice.toLocaleString("ar-YE")} ر.ي`;
   
   // Summary text
-  const mainItemName = order.items[0]?.productName ?? "طلب فارغ";
-  const summaryText = order.items.length > 1 ? `${mainItemName} و ${order.items.length - 1} آخرين` : mainItemName;
+  const mainItemName = items[0]?.productName ?? "طلب فارغ";
+  const summaryText = items.length > 1 ? `${mainItemName} و ${items.length - 1} آخرين` : mainItemName;
 
   const orderDate = new Date(order.createdAt).toLocaleDateString("ar-YE", {
     year: "numeric",
@@ -67,7 +68,7 @@ function OrderCard({ order, onOpenOrder }: { order: DshOrder; onOpenOrder?: (id:
           <View style={styles.headerText}>
             <Text role="bodyStrong" style={styles.titleText}>{summaryText}</Text>
             <Text role="caption" tone="muted" style={styles.subtitleText}>
-              {`${totalPriceLabel} • ${order.items.length} منتجات • المتجر: ${order.storeId}`}
+              {`${totalPriceLabel} • ${items.length} منتجات • المتجر: ${order.storeId}`}
             </Text>
           </View>
         </View>
@@ -84,7 +85,7 @@ function OrderCard({ order, onOpenOrder }: { order: DshOrder; onOpenOrder?: (id:
         <View style={styles.expandedContent}>
           <View style={styles.divider} />
           <Text role="bodyStrong" style={styles.sectionTitle}>محتويات الطلب:</Text>
-          {order.items.map((item) => (
+          {items.map((item) => (
             <View key={item.id} style={styles.itemRow}>
               <Text role="body" style={styles.itemName}>{item.productName}</Text>
               <Text role="bodyStrong" style={styles.itemQtyPrice}>

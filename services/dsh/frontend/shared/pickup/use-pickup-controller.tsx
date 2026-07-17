@@ -26,7 +26,7 @@ export type PickupActionState = {
   readonly busy: boolean;
   readonly message: string | null;
   readonly isError: boolean;
-  readonly errorCode?: string;
+  readonly errorCode?: string | undefined;
 };
 
 /**
@@ -112,7 +112,7 @@ export function useOperatorPickupsController(params: UseOperatorPickupsControlle
 
   const loadList = useCallback(() => {
     setListState((s) => ({ ...s, loaded: false }));
-    return fetchOperatorPickups({ storeId, limit })
+    return fetchOperatorPickups({ ...(storeId !== undefined ? { storeId } : {}), limit })
       .then((resp) => setListState({ loaded: true, error: null, offline: false, data: resp.sessions }))
       .catch((err: unknown) => {
         const { message, classified } = classifiedMessage(err, "تعذر تحميل جلسات الاستلام الذاتي");
@@ -134,7 +134,7 @@ export function useOperatorPickupsController(params: UseOperatorPickupsControlle
 
   type MutationResult =
     | { readonly ok: true; readonly session: DshPickupSession }
-    | { readonly ok: false; readonly kind: ClassifiedPickupError["kind"]; readonly code?: string; readonly message: string };
+    | { readonly ok: false; readonly kind: ClassifiedPickupError["kind"]; readonly code?: string | undefined; readonly message: string };
 
   const extendWindow = useCallback(
     (orderId: string, expectedVersion: number, reason: string, newExpiry: string): Promise<MutationResult> => {

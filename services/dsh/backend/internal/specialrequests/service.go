@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"dsh-api/internal/operationaloutbox"
 	"dsh-api/internal/wlt"
 )
 
@@ -287,6 +288,15 @@ func (s *Service) CreateInTenant(ctx context.Context, tenantID string, clientID 
 	if err := WriteAuditEvent(tx, req.ID, clientID, "client", "create", "", correlationID, nil, requestJSON(req)); err != nil {
 		return nil, fmt.Errorf("write audit event: %w", err)
 	}
+	if err := operationaloutbox.Enqueue(tx, operationaloutbox.EnqueueInput{
+		EventType:     "special_request_created",
+		EntityType:    "special_request",
+		EntityID:      req.ID,
+		Payload:       requestJSON(req),
+		CorrelationID: correlationID,
+	}); err != nil {
+		return nil, err
+	}
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
@@ -424,6 +434,15 @@ func (s *Service) CancelForClientInTenant(ctx context.Context, tenantID string, 
 	if err := WriteAuditEvent(tx, id, clientID, "client", "cancel", "", correlationID, requestJSON(current), requestJSON(updated)); err != nil {
 		return nil, fmt.Errorf("write audit event: %w", err)
 	}
+	if err := operationaloutbox.Enqueue(tx, operationaloutbox.EnqueueInput{
+		EventType:     "special_request_cancelled",
+		EntityType:    "special_request",
+		EntityID:      id,
+		Payload:       requestJSON(updated),
+		CorrelationID: correlationID,
+	}); err != nil {
+		return nil, err
+	}
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
@@ -542,6 +561,24 @@ func (s *Service) ApplyOperatorTransitionInTenant(ctx context.Context, tenantID 
 	}
 	if err := WriteAuditEvent(tx, id, "operator", "operator", "transition", "", correlationID, requestJSON(current), requestJSON(updated)); err != nil {
 		return nil, fmt.Errorf("write audit event: %w", err)
+	}
+	
+	eventType := "special_request_updated"
+	if current.Status != updated.Status {
+		eventType = "special_request_" + string(updated.Status)
+	}
+	if current.WorkflowStage != nil && updated.WorkflowStage != nil && *current.WorkflowStage != *updated.WorkflowStage {
+		eventType = "special_request_" + *updated.WorkflowStage
+	}
+
+	if err := operationaloutbox.Enqueue(tx, operationaloutbox.EnqueueInput{
+		EventType:     eventType,
+		EntityType:    "special_request",
+		EntityID:      id,
+		Payload:       requestJSON(updated),
+		CorrelationID: correlationID,
+	}); err != nil {
+		return nil, err
 	}
 	if err := tx.Commit(); err != nil {
 		return nil, err

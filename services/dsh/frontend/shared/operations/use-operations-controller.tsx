@@ -92,6 +92,7 @@ export function useOperationsController({
       customerId: getParam('customerId'),
       ticketId: getParam('ticketId'),
       callId: getParam('callId'),
+      requestId: getParam('requestId'),
       panel: resolvedPanel,
       subGroup: activeSubGroup,
     };
@@ -123,6 +124,7 @@ export function useOperationsController({
       focusParams.customerId ? { label: 'customerId', value: focusParams.customerId } : null,
       focusParams.ticketId ? { label: 'ticketId', value: focusParams.ticketId } : null,
       focusParams.callId ? { label: 'callId', value: focusParams.callId } : null,
+      focusParams.requestId ? { label: 'requestId', value: focusParams.requestId } : null,
     ].filter((item): item is { label: string; value: string } => item !== null);
   }, [focusParams]);
 
@@ -137,6 +139,7 @@ export function useOperationsController({
       customerId: focusParams.customerId,
       ticketId: focusParams.ticketId,
       callId: focusParams.callId,
+      requestId: focusParams.requestId,
       panel: focusParams.panel,
     };
 

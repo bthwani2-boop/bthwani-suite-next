@@ -12,25 +12,8 @@ export type DshUpdateSpecialRequest = components["schemas"]["DshUpdateSpecialReq
  */
 export type SpecialRequestType = DshCreateSpecialRequest["requestType"];
 
-/**
- * `DshSpecialRequestResponse.status` and `DshUpdateSpecialRequest.status`
- * are typed as plain `string`/a partial transition-only union on the
- * generated response schema (the OpenAPI response contract widens `status`
- * to `string`). This hand-declared 9-value union is the deliberate, single
- * source of truth for the frontend's narrower status model — NOT a
- * duplicate of a generated enum, since no such enum exists on the response
- * schema to duplicate.
- */
-export type SpecialRequestStatus =
-  | "submitted"
-  | "under_review"
-  | "needs_customer_input"
-  | "approved"
-  | "assigned"
-  | "in_progress"
-  | "completed"
-  | "cancelled"
-  | "rejected";
+export type SpecialRequestStatus = NonNullable<components["schemas"]["DshSpecialRequestResponse"]["status"]>;
+
 
 export type SpecialRequestErrorKind =
   | "network"

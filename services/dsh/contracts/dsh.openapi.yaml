@@ -8851,7 +8851,7 @@ components:
         id: { type: string }
         clientId: { type: string }
         requestType: { type: string }
-        status: { type: string }
+        status: { type: string, enum: [submitted, under_review, needs_customer_input, approved, assigned, in_progress, completed, cancelled, rejected] }
         version: { type: integer }
         workflowStage: { type: ["string", "null"] }
         customerNotes: { type: ["string", "null"] }

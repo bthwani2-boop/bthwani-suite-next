@@ -143,6 +143,28 @@ export function CommandCenterScreen({ subGroup = 'overview' }: CommandCenterScre
         <p className={styles.surfaceSectionSubtitleCompact}>التدخلات السريعة وتوجيه قرارات الإسناد وحوكمة أسطح DSH</p>
       </div>
 
+      <div className={styles.surfaceGridTwoCol}>
+        <div className={styles.surfaceCompactPanel}>
+          <h3 className={styles.surfacePanelTitleCompact}>السعة المباشرة لمناطق الخدمة (Live Capacity)</h3>
+          <div className={styles.surfaceStackSmall}>
+            <WebControlPanelDecisionRow
+              entityId="ZONES-CAPACITY"
+              entityLabel="مراقبة الأحمال والمناطق"
+              status="غير متصل بالخادم"
+              statusTone="neutral"
+              recommendation="البيانات الحية غير متوفرة"
+              reason="الرجاء التأكد من اتصال خادم الـ Runtime"
+              sla="لا يوجد بيانات"
+              primaryAction={{
+                id: 'go-zones',
+                label: 'عرض فلاتر المناطق (Zone Filters)',
+                onAction: () => router.push(buildOperationsHref('dispatch-capacity', { subGroup: 'zones' })),
+              }}
+            />
+          </div>
+        </div>
+      </div>
+
       {content}
 
       {/* ── Governance Footnote Section ── */}

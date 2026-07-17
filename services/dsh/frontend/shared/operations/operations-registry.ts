@@ -171,7 +171,16 @@ const LEGACY_SECTION_REDIRECTS: Record<LegacySectionRedirectId, NonOperationsSec
 };
 
 export function coerceOperationsPanel(panel?: string): OperationsPanelId | undefined {
-  if (panel === 'detail' || panel === 'chat' || panel === 'batches') {
+  if (
+    panel === 'detail' ||
+    panel === 'timeline' ||
+    panel === 'chat' ||
+    panel === 'batches' ||
+    panel === 'proof' ||
+    panel === 'audit' ||
+    panel === 'dispatch' ||
+    panel === 'exception'
+  ) {
     return panel;
   }
   return undefined;
