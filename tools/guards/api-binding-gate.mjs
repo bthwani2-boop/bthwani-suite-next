@@ -52,20 +52,10 @@ function loadMasterContractReferences() {
   return references;
 }
 
-const forbiddenUnimplementedContracts = [
-  "services/dsh/contracts/dsh.marketing-commercial.openapi.yaml",
-  "services/dsh/contracts/dsh.partner-fleet.openapi.yaml",
-  "services/wlt/contracts/wlt.commercial.openapi.yaml",
-];
-for (const relative of forbiddenUnimplementedContracts) {
-  if (fs.existsSync(path.join(repoRoot, relative))) {
-    violations.push({
-      file: relative,
-      message: "UNIMPLEMENTED_RUNTIME_CONTRACT_REINTRODUCED",
-    });
-  }
-}
-
+// Runtime shards are accepted only through the master index. Router-to-contract
+// parity is enforced separately by backend-api-binding-gate, so maintaining a
+// second hardcoded "unimplemented" blacklist here would become stale and can
+// incorrectly reject already registered and persisted capabilities.
 const masterReferences = loadMasterContractReferences();
 const knownPaths = masterReferences.flatMap((relative) => [...loadOpenApiPaths(relative)]);
 
