@@ -10,6 +10,7 @@ import (
 
 	"dsh-api/internal/operationaloutbox"
 	"dsh-api/internal/orders"
+	"dsh-api/internal/wltoutbox"
 )
 
 type Service struct {
@@ -149,26 +150,70 @@ func (s *Service) AssignCourier(ctx context.Context, orderID, storeCourierID, ac
 	return Get(s.db, updated.ID)
 }
 
-// MarkPickedUp stamps picked_up_at without changing the courier-facing
-// status (still "assigned" -- the table has no distinct picked-up status).
+type orderTransition struct {
+	allowedFrom []orders.OrderStatus
+	to          orders.OrderStatus
+	note        string
+}
+
+// MarkPickedUp records pickup and advances the sovereign order in the same
+// transaction. The task remains assigned until the courier departs, but the
+// client-visible order must no longer remain ready_for_pickup.
 func (s *Service) MarkPickedUp(ctx context.Context, taskID string, expectedVersion int, actorID, actorRole, correlationID string) (*PartnerDeliveryTask, error) {
-	return s.transition(ctx, taskID, expectedVersion, []Status{StatusAssigned}, "", "picked_up_at", "mark_picked_up", "", actorID, actorRole, correlationID)
+	return s.transition(
+		ctx,
+		taskID,
+		expectedVersion,
+		[]Status{StatusAssigned},
+		"",
+		"picked_up_at",
+		"mark_picked_up",
+		"",
+		actorID,
+		actorRole,
+		correlationID,
+		&orderTransition{
+			allowedFrom: []orders.OrderStatus{orders.StatusReadyForPickup},
+			to:          orders.StatusPickedUp,
+			note:        "partner courier picked up order",
+		},
+	)
 }
 
-// MarkDeparted moves the task from assigned to departed.
+// MarkDeparted moves the task from assigned to departed. Pickup must already
+// have been recorded, so the courier cannot skip the pickup acknowledgement.
 func (s *Service) MarkDeparted(ctx context.Context, taskID string, expectedVersion int, actorID, actorRole, correlationID string) (*PartnerDeliveryTask, error) {
-	return s.transition(ctx, taskID, expectedVersion, []Status{StatusAssigned}, StatusDeparted, "departed_at", "mark_departed", "", actorID, actorRole, correlationID)
+	return s.transition(ctx, taskID, expectedVersion, []Status{StatusAssigned}, StatusDeparted, "departed_at", "mark_departed", "", actorID, actorRole, correlationID, nil)
 }
 
-// MarkArrived moves the task from departed to arrived.
+// MarkArrived moves the task from departed to arrived and advances the order
+// to arrived_customer atomically for client tracking.
 func (s *Service) MarkArrived(ctx context.Context, taskID string, expectedVersion int, actorID, actorRole, correlationID string) (*PartnerDeliveryTask, error) {
-	return s.transition(ctx, taskID, expectedVersion, []Status{StatusDeparted}, StatusArrived, "arrived_at", "mark_arrived", "", actorID, actorRole, correlationID)
+	return s.transition(
+		ctx,
+		taskID,
+		expectedVersion,
+		[]Status{StatusDeparted},
+		StatusArrived,
+		"arrived_at",
+		"mark_arrived",
+		"",
+		actorID,
+		actorRole,
+		correlationID,
+		&orderTransition{
+			allowedFrom: []orders.OrderStatus{orders.StatusPickedUp},
+			to:          orders.StatusArrivedCustomer,
+			note:        "partner courier arrived at customer",
+		},
+	)
 }
 
-// SubmitProof records proof of delivery and completes the task.
+// SubmitProof records proof of delivery, completes the task and the source
+// order, and queues the WLT COD completion event inside one transaction.
 func (s *Service) SubmitProof(ctx context.Context, taskID string, expectedVersion int, proofMethod, proofReference, actorID, actorRole, correlationID string) (*PartnerDeliveryTask, error) {
-	if strings.TrimSpace(proofMethod) == "" {
-		return nil, fmt.Errorf("%w: proofMethod is required", ErrInvalid)
+	if strings.TrimSpace(proofMethod) == "" || strings.TrimSpace(proofReference) == "" {
+		return nil, fmt.Errorf("%w: proofMethod and proofReference are required", ErrInvalid)
 	}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -193,12 +238,23 @@ func (s *Service) SubmitProof(ctx context.Context, taskID string, expectedVersio
 		SET status = $1, proof_method = $2, proof_reference = $3, completed_at = NOW(),
 		    version = version + 1, updated_at = NOW()
 		WHERE id = $4 AND version = $5`,
-		string(StatusCompleted), proofMethod, proofReference, taskID, expectedVersion)
+		string(StatusCompleted), strings.TrimSpace(proofMethod), strings.TrimSpace(proofReference), taskID, expectedVersion)
 	if err != nil {
 		return nil, err
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
 		return nil, ErrVersionConflict
+	}
+
+	if _, err := orders.TransitionDispatchOrder(
+		tx,
+		current.OrderID,
+		actorRole,
+		[]orders.OrderStatus{orders.StatusArrivedCustomer},
+		orders.StatusDelivered,
+		"partner delivery proof submitted",
+	); err != nil {
+		return nil, mapOrderError(err)
 	}
 
 	updated, err := scanTask(tx.QueryRow(`SELECT `+taskColumns+` FROM dsh_partner_delivery_tasks WHERE id = $1`, taskID).Scan)
@@ -209,6 +265,9 @@ func (s *Service) SubmitProof(ctx context.Context, taskID string, expectedVersio
 		return nil, err
 	}
 	if err := enqueueEvent(tx, "partner_delivery_completed", updated, correlationID); err != nil {
+		return nil, err
+	}
+	if err := enqueueWltDeliveryCompletedNotification(tx, current.OrderID, current.StoreCourierID); err != nil {
 		return nil, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -225,7 +284,7 @@ func (s *Service) RaiseException(ctx context.Context, taskID string, expectedVer
 	}
 	return s.transition(ctx, taskID, expectedVersion,
 		[]Status{StatusUnassigned, StatusAssigned, StatusDeparted, StatusArrived, StatusProofPending},
-		StatusException, "", "raise_exception", reason, actorID, actorRole, correlationID)
+		StatusException, "", "raise_exception", reason, actorID, actorRole, correlationID, nil)
 }
 
 func containsStatus(list []Status, s Status) bool {
@@ -237,11 +296,10 @@ func containsStatus(list []Status, s Status) bool {
 	return false
 }
 
-// transition is the shared BEGIN -> lock -> validate -> UPDATE -> audit ->
-// outbox -> COMMIT pattern for the single-timestamp transitions above. If
-// toStatus is "", the status column is left unchanged (used by
-// MarkPickedUp, which only stamps a timestamp).
-func (s *Service) transition(ctx context.Context, taskID string, expectedVersion int, allowedFrom []Status, toStatus Status, timestampColumn, action, reason, actorID, actorRole, correlationID string) (*PartnerDeliveryTask, error) {
+// transition is the shared BEGIN -> lock -> validate -> UPDATE -> optional
+// order transition -> audit -> outbox -> COMMIT pattern for timestamp/state
+// transitions. Any order transition is committed or rolled back with the task.
+func (s *Service) transition(ctx context.Context, taskID string, expectedVersion int, allowedFrom []Status, toStatus Status, timestampColumn, action, reason, actorID, actorRole, correlationID string, orderStep *orderTransition) (*PartnerDeliveryTask, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
@@ -257,6 +315,9 @@ func (s *Service) transition(ctx context.Context, taskID string, expectedVersion
 	}
 	if !containsStatus(allowedFrom, current.Status) {
 		return nil, fmt.Errorf("%w: cannot %s from status %s", ErrConflict, action, current.Status)
+	}
+	if action == "mark_departed" && current.PickedUpAt == nil {
+		return nil, fmt.Errorf("%w: pickup must be recorded before departure", ErrConflict)
 	}
 	fromJSON := taskJSON(current)
 
@@ -281,6 +342,19 @@ func (s *Service) transition(ctx context.Context, taskID string, expectedVersion
 		return nil, ErrVersionConflict
 	}
 
+	if orderStep != nil {
+		if _, err := orders.TransitionDispatchOrder(
+			tx,
+			current.OrderID,
+			actorRole,
+			orderStep.allowedFrom,
+			orderStep.to,
+			orderStep.note,
+		); err != nil {
+			return nil, mapOrderError(err)
+		}
+	}
+
 	updated, err := scanTask(tx.QueryRow(`SELECT `+taskColumns+` FROM dsh_partner_delivery_tasks WHERE id = $1`, taskID).Scan)
 	if err != nil {
 		return nil, err
@@ -295,6 +369,35 @@ func (s *Service) transition(ctx context.Context, taskID string, expectedVersion
 		return nil, err
 	}
 	return Get(s.db, updated.ID)
+}
+
+func mapOrderError(err error) error {
+	switch {
+	case errors.Is(err, orders.ErrNotFound):
+		return ErrNotFound
+	case errors.Is(err, orders.ErrConflict):
+		return ErrConflict
+	default:
+		return err
+	}
+}
+
+func enqueueWltDeliveryCompletedNotification(tx *sql.Tx, orderID, courierID string) error {
+	deliveryCtx, err := orders.GetOrderDeliveryContext(tx, orderID)
+	if err != nil {
+		return fmt.Errorf("resolve partner delivery context for wlt outbox: %w", err)
+	}
+	if deliveryCtx.PaymentMethod != "cod" || deliveryCtx.PartnerID == "" {
+		return nil
+	}
+	return wltoutbox.Enqueue(
+		tx,
+		wltoutbox.EventTypeDeliveryCompleted,
+		orderID,
+		courierID,
+		deliveryCtx.PartnerID,
+		deliveryCtx.CheckoutIntentID,
+	)
 }
 
 func enqueueEvent(tx *sql.Tx, eventType string, task *PartnerDeliveryTask, correlationID string) error {
