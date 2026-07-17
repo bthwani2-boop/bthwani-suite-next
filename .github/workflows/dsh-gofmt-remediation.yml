@@ -1,0 +1,42 @@
+name: DSH Gofmt Remediation
+
+on:
+  push:
+    branches: [reem]
+    paths:
+      - '.github/workflows/dsh-gofmt-remediation.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  format-and-commit:
+    if: github.event_name == 'push' && github.ref_name == 'reem'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout reem
+        uses: actions/checkout@v4
+        with:
+          ref: reem
+          fetch-depth: 0
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache: false
+      - name: Apply canonical Go formatting
+        working-directory: services/dsh/backend
+        run: gofmt -w .
+      - name: Commit formatted sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- services/dsh/backend; then
+            echo 'No formatting changes required.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add services/dsh/backend
+          git commit -m 'style(dsh): apply canonical gofmt'
+          git push origin HEAD:reem
