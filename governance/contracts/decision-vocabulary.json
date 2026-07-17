@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "canonicalDecisions": [
+    {
+      "id": "PASS",
+      "class": "pass",
+      "terminal": false,
+      "description": "The explicitly declared evidence scope passed. PASS never implies runtime, release, production, or final closure beyond that scope."
+    },
+    {
+      "id": "FIX_REQUIRED",
+      "class": "fail",
+      "terminal": false,
+      "description": "One or more in-scope acceptance conditions failed and require repository changes."
+    },
+    {
+      "id": "BLOCKED_EXTERNAL",
+      "class": "blocked",
+      "terminal": false,
+      "description": "Completion depends on access, approval, infrastructure, provider behavior, or evidence outside the repository execution boundary."
+    },
+    {
+      "id": "NEEDS_EVIDENCE",
+      "class": "pending",
+      "terminal": false,
+      "description": "The implementation may exist, but the evidence needed for the requested claim is missing or stale."
+    },
+    {
+      "id": "READY_FOR_REVIEW",
+      "class": "pending",
+      "terminal": false,
+      "description": "The implementation and targeted checks are ready for independent review; this is not final approval."
+    },
+    {
+      "id": "QA_BLOCK",
+      "class": "blocked",
+      "terminal": false,
+      "description": "Independent quality acceptance has not passed."
+    },
+    {
+      "id": "SECURITY_BLOCK",
+      "class": "blocked",
+      "terminal": false,
+      "description": "Required application-security acceptance has not passed."
+    },
+    {
+      "id": "RELEASE_BLOCK",
+      "class": "blocked",
+      "terminal": false,
+      "description": "Release, deployment, rollback, or operational readiness has not passed."
+    },
+    {
+      "id": "PROTOCOL_VIOLATION",
+      "class": "fail",
+      "terminal": false,
+      "description": "Execution violated an applicable governance, safety, scope, authority, or evidence contract."
+    },
+    {
+      "id": "CLOSED_WITH_EVIDENCE",
+      "class": "closed",
+      "terminal": true,
+      "description": "Every applicable gate passed on the same immutable commit with required independent approvals and no open blocker.",
+      "requiredEvidenceScopes": ["static", "runtime", "qa", "security", "release"]
+    }
+  ],
+  "aliases": [
+    { "alias": "CODE_CHECK_PASS", "canonical": "PASS", "evidenceScope": "static" },
+    { "alias": "CODE_CHECK_FAIL", "canonical": "FIX_REQUIRED", "evidenceScope": "static" },
+    { "alias": "DSH_WLT_CODE_CLOSURE_PASS", "canonical": "PASS", "evidenceScope": "static" },
+    { "alias": "DSH_WLT_CODE_CLOSURE_FAIL", "canonical": "FIX_REQUIRED", "evidenceScope": "static" },
+    { "alias": "RUNTIME_SMOKE_PASS", "canonical": "PASS", "evidenceScope": "runtime" },
+    { "alias": "RUNTIME_SMOKE_FAIL", "canonical": "FIX_REQUIRED", "evidenceScope": "runtime" },
+    { "alias": "UI_VISUAL_PASS", "canonical": "PASS", "evidenceScope": "visual" },
+    { "alias": "READY_FOR_PR", "canonical": "READY_FOR_REVIEW", "evidenceScope": "static", "deprecated": true },
+    { "alias": "BLOCKED_NEEDS_EVIDENCE", "canonical": "NEEDS_EVIDENCE", "evidenceScope": "none" },
+    { "alias": "NEEDS_RUNTIME_EVIDENCE", "canonical": "NEEDS_EVIDENCE", "evidenceScope": "runtime" },
+    { "alias": "GATE_PASS", "canonical": "PASS", "evidenceScope": "static" },
+    { "alias": "HARD_BLOCKED_EXTERNAL_ONLY", "canonical": "BLOCKED_EXTERNAL", "evidenceScope": "none" },
+    { "alias": "CLOSED", "canonical": "CLOSED_WITH_EVIDENCE", "evidenceScope": "production", "deprecated": true }
+  ],
+  "closureRules": {
+    "closedDecision": "CLOSED_WITH_EVIDENCE",
+    "requiredScopes": ["static", "runtime", "qa", "security", "release"],
+    "forbiddenOpenClasses": ["fail", "blocked", "pending"]
+  }
+}
