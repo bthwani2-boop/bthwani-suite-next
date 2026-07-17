@@ -1,67 +1,102 @@
-version: 1
+version: 2
 authority: governance/26_SDLC_TEAM_AND_STAGE_GATES.md
+decision_vocabulary: governance/contracts/decision-vocabulary.json
 gates:
   G0_INTAKE:
+    owner: sdlc_program_authority
     evidence:
       - capability_id
-      - scope
-      - exclusions
+      - product_truth_contract_or_product_impact_none
+      - problem_and_evidence_state
+      - actors
+      - required_and_excluded_surfaces
       - risk_class
       - owners
-  G1_REQUIREMENTS_APPROVED:
+  G1_PRODUCT_MODEL_APPROVED:
+    owner: product_manager_authority
     evidence:
-      - requirements
+      - product_manager_approval
+      - actor_and_role_model
+      - outcome_and_primary_metric
       - acceptance_criteria
-      - permissions
-      - quality_profile
-      - security_requirements
+      - negative_invariants
+      - fixed_constraints_and_variable_scope
   G2_DESIGN_APPROVED:
+    owner: architecture_authority
     evidence:
       - architecture_decision
       - data_flow
       - api_contract_impact
       - database_impact
+      - ux_journey_when_applicable
+      - threat_model_when_applicable
       - rollback_plan
   G3_READY_FOR_IMPLEMENTATION:
+    owner: product_owner_acceptance_authority
     evidence:
+      - product_owner_approval
+      - functional_behavior
+      - permissions_and_states
       - implementation_tasks
       - dependency_map
       - target_checks
       - ownership_confirmation
   G4_IMPLEMENTATION_VERIFIED:
+    owner: engineering
     evidence:
       - code_review
       - targeted_checks
       - diff_scope
-  G5_QA_APPROVED:
+      - no_unauthorized_scope_expansion
+      - no_fake_runtime_or_commercial_claim
+  G5_PRODUCT_ACCEPTED:
+    owner: product_owner_acceptance_authority
+    evidence:
+      - independent_product_acceptance
+      - required_surfaces_present
+      - excluded_surfaces_absent
+      - actor_actions_and_forbidden_actions_verified
+      - state_and_failure_behavior_accepted
+  G6_QA_APPROVED:
+    owner: independent_quality_authority
+    requires:
+      - G5_PRODUCT_ACCEPTED
     evidence:
       - qa_result
       - negative_tests
       - cross_surface_consistency
-  G6_SECURITY_APPROVED:
+      - accessibility_and_rtl_when_applicable
+  G7_SECURITY_APPROVED:
+    owner: application_security_authority
     evidence:
       - security_result
       - vulnerability_status
       - threat_model_when_applicable
-      - tenant_isolation_when_applicable
-  G7_RELEASE_APPROVED:
+      - isolation_when_applicable
+  G8_RELEASE_APPROVED:
+    owner: release_authority
     evidence:
       - release_readiness
       - rollback_procedure
       - monitoring_owner
       - unresolved_blocker_review
-  G8_DEPLOYED:
+  G9_DEPLOYED:
+    owner: release_authority
     evidence:
       - deployment_result
-  G9_PRODUCTION_VERIFIED:
+      - immutable_commit_match
+  G10_PRODUCTION_VERIFIED:
+    owner: release_authority
     evidence:
       - production_smoke
       - telemetry_review
-decisions:
-  - GATE_PASS
+      - rollback_readiness
+canonical_decisions:
+  - PASS
   - FIX_REQUIRED
+  - BLOCKED_EXTERNAL
+  - NEEDS_EVIDENCE
   - QA_BLOCK
   - SECURITY_BLOCK
   - RELEASE_BLOCK
-  - HARD_BLOCKED_EXTERNAL_ONLY
   - CLOSED_WITH_EVIDENCE
