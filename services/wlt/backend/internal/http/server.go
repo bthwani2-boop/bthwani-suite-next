@@ -96,6 +96,7 @@ func NewRouter(db *sql.DB, mutationsEnabled bool) *http.ServeMux {
 
 	// Sovereign commercial benefits. Reads are internal service-authenticated;
 	// every mutation is additionally fail-closed behind WLT_MUTATIONS_ENABLED.
+	mux.HandleFunc("GET /wlt/commercial/summary", readGate(commercial.HandleGetSummary(db)))
 	mux.HandleFunc("GET /wlt/commercial/products/{productReference}", readGate(commercial.HandleGetProduct(db)))
 	mux.HandleFunc("POST /wlt/commercial/products", gate(serviceAuth(commercial.HandleCreateProduct(db))))
 	mux.HandleFunc("PATCH /wlt/commercial/products/{productReference}", gate(serviceAuth(commercial.HandleUpdateProduct(db))))
