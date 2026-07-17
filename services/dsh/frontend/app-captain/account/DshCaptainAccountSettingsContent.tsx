@@ -3,12 +3,14 @@ import { Pressable, View } from "react-native";
 import {
   Box,
   borders,
+  Card,
   Icon,
   lightThemeColors,
   radius,
   spacing,
   Text,
 } from "@bthwani/ui-kit";
+import { PartnerFleetConnectionCard } from "./PartnerFleetConnectionCard";
 
 type BThwaniAppearanceMode = "lightPremium" | "darkPremium";
 
@@ -33,79 +35,93 @@ type Props = {
 export function DshCaptainAccountSettingsContent({
   appearanceHydrated,
   appearanceMode,
+  isStoreCourierMode,
   onSetAppearanceMode,
+  onToggleStoreCourierMode,
 }: Props) {
   const theme = lightThemeColors;
 
   return (
-    <Box padding={0} gap={0}>
-      <View
-        style={{
-          flexDirection: "row-reverse",
-          alignItems: "center",
-          justifyContent: "space-between",
-          paddingHorizontal: spacing[4],
-          paddingVertical: 14,
-          backgroundColor: theme.surface,
-        }}
-      >
-        <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: spacing[3], flexShrink: 1 }}>
-          <View
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: radius.sm,
-              alignItems: "center",
-              justifyContent: "center",
-              backgroundColor: theme.surfaceInset,
-              borderWidth: borders.hairline,
-              borderColor: theme.borderColor,
-            }}
-          >
-            <Icon name="color-palette-outline" size={17} tone="muted" />
-          </View>
-          <View style={{ flexShrink: 1, gap: 2, alignItems: "flex-end" }}>
-            <Text role="bodyStrong" style={{ textAlign: "right" }}>المظهر</Text>
-            <Text role="bodySm" tone="muted" style={{ textAlign: "right" }}>
-              {appearanceHydrated ? "فاتح أبيض أو داكن" : "جارٍ استعادة الإعداد…"}
-            </Text>
-          </View>
-        </View>
-
+    <Box gap={4}>
+      <Box padding={0} gap={0}>
         <View
           style={{
             flexDirection: "row-reverse",
-            backgroundColor: theme.surfaceInset,
-            borderRadius: radius.sm,
-            padding: 3,
-            borderWidth: borders.hairline,
-            borderColor: theme.borderColor,
-            gap: spacing[1],
+            alignItems: "center",
+            justifyContent: "space-between",
+            paddingHorizontal: spacing[4],
+            paddingVertical: 14,
+            backgroundColor: theme.surface,
           }}
         >
-          {appearanceOptions.map((option) => (
-            <Pressable
-              key={option.mode}
-              accessibilityRole="button"
-              accessibilityState={{ selected: appearanceMode === option.mode }}
-              onPress={() => onSetAppearanceMode(option.mode)}
+          <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: spacing[3], flexShrink: 1 }}>
+            <View
               style={{
-                paddingHorizontal: spacing[3],
-                paddingVertical: 6,
-                borderRadius: 9,
-                backgroundColor: appearanceMode === option.mode ? theme.action : "transparent",
+                width: 36,
+                height: 36,
+                borderRadius: radius.sm,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: theme.surfaceInset,
+                borderWidth: borders.hairline,
+                borderColor: theme.borderColor,
               }}
             >
-              <Text
-                role="bodyStrong"
-                style={{ color: appearanceMode === option.mode ? theme.colorInverse : theme.color }}
-              >
-                {option.title}
+              <Icon name="color-palette-outline" size={17} tone="muted" />
+            </View>
+            <View style={{ flexShrink: 1, gap: 2, alignItems: "flex-end" }}>
+              <Text role="bodyStrong" style={{ textAlign: "right" }}>المظهر</Text>
+              <Text role="bodySm" tone="muted" style={{ textAlign: "right" }}>
+                {appearanceHydrated ? "فاتح أبيض أو داكن" : "جارٍ استعادة الإعداد…"}
               </Text>
-            </Pressable>
-          ))}
+            </View>
+          </View>
+
+          <View
+            style={{
+              flexDirection: "row-reverse",
+              backgroundColor: theme.surfaceInset,
+              borderRadius: radius.sm,
+              padding: 3,
+              borderWidth: borders.hairline,
+              borderColor: theme.borderColor,
+              gap: spacing[1],
+            }}
+          >
+            {appearanceOptions.map((option) => (
+              <Pressable
+                key={option.mode}
+                accessibilityRole="button"
+                accessibilityState={{ selected: appearanceMode === option.mode }}
+                onPress={() => onSetAppearanceMode(option.mode)}
+                style={{
+                  paddingHorizontal: spacing[3],
+                  paddingVertical: 6,
+                  borderRadius: 9,
+                  backgroundColor: appearanceMode === option.mode ? theme.action : "transparent",
+                }}
+              >
+                <Text
+                  role="bodyStrong"
+                  style={{ color: appearanceMode === option.mode ? theme.colorInverse : theme.color }}
+                >
+                  {option.title}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
         </View>
-      </View>
+      </Box>
+
+      <PartnerFleetConnectionCard onConnected={() => onToggleStoreCourierMode(true)} />
+
+      <Card padding={3} tone={isStoreCourierMode ? "success" : "default"}>
+        <Text role="bodySm" align="start">
+          {isStoreCourierMode
+            ? "وضع موصل المتجر مفعّل من عضوية مرتبطة فعليًا."
+            : "وضع موصل المتجر غير مفعّل حتى اكتمال الربط."}
+        </Text>
+      </Card>
     </Box>
   );
 }
