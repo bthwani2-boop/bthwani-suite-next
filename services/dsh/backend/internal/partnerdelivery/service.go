@@ -63,7 +63,7 @@ func (s *Service) AssignCourier(ctx context.Context, orderID, storeCourierID, ac
 	if err != nil {
 		return nil, err
 	}
-	// dsh_orders has no branch_id column in this schema slice (single-branch
+	// dsh_orders has no branch_id column in this schema phase (single-branch
 	// stores); dsh_partner_delivery_tasks.branch_id is NOT NULL, so it is
 	// populated from the order's store_id.
 	branchID := storeID

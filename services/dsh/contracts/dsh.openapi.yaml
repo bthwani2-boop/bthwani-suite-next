@@ -8779,6 +8779,19 @@ components:
         status: { type: string }
         verifiedAt: { type: ["string", "null"], format: date-time }
 
+    DshCaptainAppPersona:
+      type: string
+      enum: [bolisa_captain, partner_seller_courier]
+      description: Distinguishes whether the captain app user is an internal partner courier or a standard Bolisa fleet captain.
+
+    DshCaptainIdentity:
+      type: object
+      required: [captainId, persona, status]
+      properties:
+        captainId: { type: string }
+        persona: { $ref: "#/components/schemas/DshCaptainAppPersona" }
+        status: { type: string }
+
     DshCaptainCredentialsListResponse:
       type: object
       required: [captains, total]

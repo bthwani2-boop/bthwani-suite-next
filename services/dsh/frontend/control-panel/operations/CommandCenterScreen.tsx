@@ -18,24 +18,12 @@ function getDshRoute(section: (typeof DSH_NAV_ITEMS)[number]['section']) {
   return DSH_NAV_ITEMS.find((item) => item.section === section)?.route ?? '/dsh/dashboard';
 }
 
+import { useZonesController } from '../../shared/platform/use-platform-policies-controller';
+
 function LiveZonesStatusRow({ router }: { router: any }) {
-  const [zonesState, setZonesState] = React.useState<{ loaded: boolean, count: number, error: string | null }>({ loaded: false, count: 0, error: null });
+  const { state: zonesState } = useZonesController('authenticated');
 
-  React.useEffect(() => {
-    let cancelled = false;
-    import('../../shared/platform/platform-policies.api').then(({ fetchZones }) => {
-      fetchZones().then((res) => {
-        if (cancelled) return;
-        setZonesState({ loaded: true, count: res.zones?.length || 0, error: null });
-      }).catch((err) => {
-        if (cancelled) return;
-        setZonesState({ loaded: true, count: 0, error: err.message });
-      });
-    });
-    return () => { cancelled = true; };
-  }, []);
-
-  if (!zonesState.loaded) {
+  if (zonesState.kind === 'idle' || zonesState.kind === 'loading') {
     return (
       <WebControlPanelDecisionRow
         entityId="ZONES-CAPACITY"
@@ -49,7 +37,7 @@ function LiveZonesStatusRow({ router }: { router: any }) {
     );
   }
 
-  if (zonesState.error) {
+  if (zonesState.kind === 'error') {
     return (
       <WebControlPanelDecisionRow
         entityId="ZONES-CAPACITY"
@@ -57,11 +45,13 @@ function LiveZonesStatusRow({ router }: { router: any }) {
         status="خطأ في الاتصال"
         statusTone="danger"
         recommendation="لا يمكن جلب البيانات"
-        reason={zonesState.error}
+        reason={zonesState.message}
         sla="—"
       />
     );
   }
+
+  const count = zonesState.data.length;
 
   return (
     <WebControlPanelDecisionRow
@@ -69,9 +59,9 @@ function LiveZonesStatusRow({ router }: { router: any }) {
       entityLabel="مراقبة الأحمال والمناطق"
       status="متصل بالخادم"
       statusTone="success"
-      recommendation={`${zonesState.count} منطقة تعمل الان`}
+      recommendation={`${count} منطقة تعمل الان`}
       reason="جاهز لتوجيه السعة"
-      sla={`مناطق: ${zonesState.count}`}
+      sla={`مناطق: ${count}`}
       primaryAction={{
         id: 'go-zones',
         label: 'عرض فلاتر المناطق (Zone Filters)',

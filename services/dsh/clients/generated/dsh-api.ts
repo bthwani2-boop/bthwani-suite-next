@@ -5425,6 +5425,16 @@ export interface components {
             /** Format: date-time */
             verifiedAt?: string | null;
         };
+        /**
+         * @description Distinguishes whether the captain app user is an internal partner courier or a standard Bolisa fleet captain.
+         * @enum {string}
+         */
+        DshCaptainAppPersona: "bolisa_captain" | "partner_seller_courier";
+        DshCaptainIdentity: {
+            captainId: string;
+            persona: components["schemas"]["DshCaptainAppPersona"];
+            status: string;
+        };
         DshCaptainCredentialsListResponse: {
             captains: components["schemas"]["DshCaptainCredential"][];
             total: number;

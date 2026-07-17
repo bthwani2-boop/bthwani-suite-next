@@ -1,4 +1,4 @@
-import type { DshFulfillmentDeliveryMode } from '../../../../shared/delivery/delivery.contract';
+import type { DshFulfillmentDeliveryMode } from '../../../shared/delivery/delivery.contract';
 
 export const IDENTITY_STATUS_META = {
   verified: { label: 'هوية مؤكدة', tone: 'success' as const, risk: 'neutral' as const },

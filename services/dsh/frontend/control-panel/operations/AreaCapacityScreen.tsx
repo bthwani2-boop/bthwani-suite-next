@@ -15,46 +15,23 @@ import styles from '../shared/control-panel-surface.module.css';
 import { buildOperationsHref } from './operations.registry';
 import { DSH_CONTROL_PANEL_TONE_MAP } from '../shared/ControlPanelDshDecisionBoard';
 
+import { useZonesController } from '../../shared/platform/use-platform-policies-controller';
+
 export type AreaCapacityScreenProps = { hubHref: string; subGroup?: string; };
 
 export function AreaCapacityScreen({ hubHref: _hubHref, subGroup: _subGroup }: AreaCapacityScreenProps) {
   const router = useRouter();
 
-  // Stateful zones data list
-  const [zones, setZones] = React.useState<any[]>([]);
-  const [zonesLoaded, setZonesLoaded] = React.useState(false);
-  const [zonesError, setZonesError] = React.useState<string | null>(null);
+  const { state: zonesState, reload: reloadZones, toggle: toggleZone } = useZonesController('authenticated');
+  
+  const zones = zonesState.kind === 'success' ? zonesState.data : [];
+  const zonesLoaded = zonesState.kind === 'success' || zonesState.kind === 'error';
+  const zonesError = zonesState.kind === 'error' ? zonesState.message : null;
 
-  React.useEffect(() => {
-    let cancelled = false;
-    import('../../shared/platform/platform-policies.api').then(({ fetchZones, updateZone, upsertCapacityConfig }) => {
-      fetchZones().then((res) => {
-        if (cancelled) return;
-        setZones(res.zones || []);
-        setZonesLoaded(true);
-      }).catch((err) => {
-        if (cancelled) return;
-        setZonesError(err.message);
-        setZonesLoaded(true);
-      });
-    });
-    return () => { cancelled = true; };
-  }, []);
-
-  // Stateful KPIs summary (empty until derived)
-  const [kpis, setKpis] = React.useState<{ activeZones: number; totalZones: number }>({
-    activeZones: 0,
-    totalZones: 0,
-  });
-
-  React.useEffect(() => {
-    if (zonesLoaded) {
-      setKpis({
-        activeZones: zones.filter(z => z.isActive).length,
-        totalZones: zones.length,
-      });
-    }
-  }, [zones, zonesLoaded]);
+  const kpis = React.useMemo(() => ({
+    activeZones: zones.filter(z => z.isActive).length,
+    totalZones: zones.length,
+  }), [zones]);
 
   // Pagination states
   const [currentPage, setCurrentPage] = React.useState(1);
@@ -108,16 +85,15 @@ export function AreaCapacityScreen({ hubHref: _hubHref, subGroup: _subGroup }: A
     setActionFeedback(null);
 
     try {
-      const { updateZone, upsertCapacityConfig } = await import('../../shared/platform/platform-policies.api');
-      
       let feedback = '';
       if (actionType === 'activate') {
-        await updateZone(zoneId, { isActive: true });
+        await toggleZone(zoneId, true);
         feedback = 'تم إعادة تفعيل استقبال الطلبات للمنطقة بنجاح.';
       } else if (actionType === 'deactivate') {
-        await updateZone(zoneId, { isActive: false });
+        await toggleZone(zoneId, false);
         feedback = 'تم إيقاف استقبال للمنطقة مؤقتاً لحماية جودة الخدمة.';
       } else if (actionType === 'throttle') {
+        const { upsertCapacityConfig } = await import('../../shared/platform/platform-policies.api');
         await upsertCapacityConfig({
           zoneId,
           maxConcurrentOrders: 50,
@@ -125,15 +101,11 @@ export function AreaCapacityScreen({ hubHref: _hubHref, subGroup: _subGroup }: A
           throttleThreshold: 80,
         });
         feedback = 'تم تحديث سعة المنطقة وحدود الضغط.';
+        await reloadZones(); // ensure UI updates if it derived something from this
       }
 
       setActionFeedback(feedback);
       setActionStatus('success');
-
-      // Reload zones to reflect truth from backend
-      const { fetchZones } = await import('../../shared/platform/platform-policies.api');
-      const res = await fetchZones();
-      setZones(res.zones || []);
 
       // Reset selection after brief delay to show success msg
       setTimeout(() => {
@@ -146,7 +118,7 @@ export function AreaCapacityScreen({ hubHref: _hubHref, subGroup: _subGroup }: A
       setActionFeedback(`فشل الإجراء: ${err.message}`);
       setActionStatus('idle');
     }
-  }, []);
+  }, [toggleZone, reloadZones]);
 
   const summaryKpi = [
     { id: 'total', label: 'إجمالي المناطق', value: String(kpis.totalZones), tone: 'neutral' as const },

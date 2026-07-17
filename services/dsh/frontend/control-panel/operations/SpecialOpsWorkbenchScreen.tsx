@@ -1,94 +1,93 @@
 import React from 'react';
-import { useRouter } from 'next/navigation';
-import {
-  WebControlPanelKpiStrip,
-  WebControlPanelDecisionRow,
-  WebControlPanelQueue,
-} from '@bthwani/ui-kit/web';
-import { Box, Text } from '@bthwani/ui-kit';
-import styles from '../shared/control-panel-surface.module.css';
-import { buildOperationsHref } from '../../shared/operations';
-import { useOperatorSpecialRequestsController } from '../../shared/special-requests/use-special-requests-controller';
-import { opsTheme as theme } from '../../shared/operations/theme';
+import { OperatorSpecialRequestsWorkbench } from '../../shared/special-requests/OperatorSpecialRequestsWorkbench';
 
 export type SpecialOpsWorkbenchScreenProps = {
   state?: 'ready' | 'loading' | 'error' | 'empty';
   subGroup?: string;
-  onRetry?: () => void;
+  hubHref?: string;
+  focusParams?: any;
 };
 
-export function SpecialOpsWorkbenchScreen({ state = 'ready', subGroup, onRetry }: SpecialOpsWorkbenchScreenProps) {
-  const router = useRouter();
-  const provider = subGroup === 'shein' ? 'SHEIN_ASSISTED_PURCHASE' : subGroup === 'awnak' ? 'AWNAK_ERRAND' : undefined;
-  const { requests, total, loadState, reload } = useOperatorSpecialRequestsController({
-    requestType: provider,
-    limit: 100,
-    autoLoad: true,
-  });
+const SHEIN_STAGES = [
+  'intake_review', 'quote_pending', 'customer_approval', 'batch_pending',
+  'purchased', 'inbound', 'sorting', 'ready_for_delivery',
+  'captain_assignment', 'out_for_delivery', 'proof_of_delivery', 'delivered', 'exception'
+];
 
-  const retry = React.useCallback(() => reload(), [reload]);
+const SHEIN_LABELS: Record<string, string> = {
+  intake_review: 'مراجعة أولية',
+  quote_pending: 'تسعير قيد الانتظار',
+  customer_approval: 'موافقة العميل',
+  batch_pending: 'انتظار الشراء',
+  purchased: 'تم الشراء',
+  inbound: 'في المستودع',
+  sorting: 'فرز وتجهيز',
+  ready_for_delivery: 'جاهز للتوصيل',
+  captain_assignment: 'إسناد للكابتن',
+  out_for_delivery: 'في الطريق للتوصيل',
+  proof_of_delivery: 'إثبات التسليم',
+  delivered: 'تم التوصيل',
+  exception: 'استثناء'
+};
 
-  if (state === 'loading') {
+const AWNAK_STAGES = [
+  'intake', 'quote_review', 'customer_approval', 'dispatch_pending',
+  'assigned', 'captain_enroute_to_pickup', 'arrived_at_pickup', 'item_received',
+  'in_progress', 'arrived_at_dropoff', 'proof_review', 'completed', 'escalated', 'cancelled'
+];
+
+const AWNAK_LABELS: Record<string, string> = {
+  intake: 'استلام الطلب',
+  quote_review: 'مراجعة التسعيرة',
+  customer_approval: 'موافقة العميل',
+  dispatch_pending: 'انتظار الإسناد',
+  assigned: 'تم الإسناد',
+  captain_enroute_to_pickup: 'في الطريق للاستلام',
+  arrived_at_pickup: 'وصل لموقع الاستلام',
+  item_received: 'تم استلام الغرض',
+  in_progress: 'في الطريق للتسليم',
+  arrived_at_dropoff: 'وصل لموقع التسليم',
+  proof_review: 'مراجعة الإثبات',
+  completed: 'مكتمل',
+  escalated: 'مصعّد',
+  cancelled: 'ملغى'
+};
+
+export function SpecialOpsWorkbenchScreen({ subGroup, hubHref, focusParams }: SpecialOpsWorkbenchScreenProps) {
+  if (subGroup === 'shein') {
     return (
-      <div className={styles.surfaceInnerScroll} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>
-        <p style={{ color: theme.textMuted, fontSize: '13px' }}>جارٍ تحميل العمليات الخاصة...</p>
-      </div>
+      <OperatorSpecialRequestsWorkbench
+        requestType="SHEIN_ASSISTED_PURCHASE"
+        title="عمليات شي إن (SHEIN Assisted Purchase)"
+        stageOrder={SHEIN_STAGES}
+        stageLabels={SHEIN_LABELS}
+        hubHref={hubHref}
+        subGroup={subGroup}
+        focusParams={focusParams}
+      />
     );
   }
 
-  if (state === 'error' || loadState === 'error') {
+  if (subGroup === 'awnak') {
     return (
-      <div className={styles.surfaceInnerScroll} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>
-        <div style={{ textAlign: 'center', border: `1px solid ${theme.danger}`, padding: '24px', borderRadius: '10px', background: theme.dangerSurface }}>
-          <p style={{ color: theme.dangerText, fontSize: '13px', marginBottom: '12px' }}>تعذر الاتصال بخادم الطلبات الخاصة.</p>
-          <button type="button" onClick={onRetry ?? retry} aria-label="إعادة محاولة" style={{ padding: '6px 18px', background: theme.danger, color: theme.textInverse, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 700, fontSize: '12px' }}>إعادة المحاولة</button>
-        </div>
-      </div>
+      <OperatorSpecialRequestsWorkbench
+        requestType="AWNAK_ERRAND"
+        title="عمليات عونك (AWNAK Errand)"
+        stageOrder={AWNAK_STAGES}
+        stageLabels={AWNAK_LABELS}
+        hubHref={hubHref}
+        subGroup={subGroup}
+        focusParams={focusParams}
+      />
     );
   }
-
-  const activeCount = requests.filter(r => r.status !== 'completed' && r.status !== 'cancelled').length;
-  const isLoaded = loadState !== 'loading';
-
-  const summaryKpi = [
-    { id: 'active', label: 'الطلبات النشطة', value: isLoaded ? String(activeCount) : '—', tone: 'warning' as const },
-    { id: 'total', label: 'إجمالي الطلبات', value: isLoaded ? String(total) : '—', tone: 'neutral' as const },
-    { id: 'source', label: 'مصدر البيانات', value: isLoaded ? 'Runtime' : 'جاري التحميل', tone: isLoaded ? ('success' as const) : ('neutral' as const) },
-  ];
 
   return (
-    <Box gap={3}>
-      <WebControlPanelKpiStrip items={summaryKpi} />
-
-      <div className={styles.surfaceSplitGrid}>
-        <Box gap={3}>
-          <WebControlPanelQueue
-            title={`طلبات ${subGroup === 'shein' ? 'شي إن' : 'عونك'}`}
-            meta={isLoaded ? `${total} طلب` : 'جاري التحميل...'}
-          >
-            {isLoaded ? (
-              requests.map((req) => (
-                <WebControlPanelDecisionRow
-                  key={req.id}
-                  entityId={req.id}
-                  entityLabel={`العميل: ${req.clientId}`}
-                  status={req.status}
-                  statusTone={req.status === 'pending' ? 'warning' : req.status === 'completed' ? 'success' : 'neutral'}
-                  sla={`تاريخ الإنشاء: ${new Date(req.createdAt).toLocaleString('ar-SA', { hour: '2-digit', minute: '2-digit' })}`}
-                  onInspect={() => router.push(buildOperationsHref('special-ops', { requestId: req.id, subGroup }))}
-                />
-              ))
-            ) : null}
-            {isLoaded && requests.length === 0 && (
-              <div style={{ padding: '16px', textAlign: 'center' }}>
-                <Text role="bodySm" tone="muted">لا توجد طلبات خاصة حالياً.</Text>
-              </div>
-            )}
-          </WebControlPanelQueue>
-        </Box>
-      </div>
-    </Box>
+    <div style={{ padding: '24px', textAlign: 'center' }}>
+      <p>الرجاء اختيار الخدمة الخاصة من القائمة.</p>
+    </div>
   );
 }
 
 export default SpecialOpsWorkbenchScreen;
+

@@ -550,7 +550,7 @@ func updateDeliveryProgress(db *sql.DB, assignmentID, captainID string, allowed 
 	}
 	// Intermediate delivery sub-states (arrived_store, picked_up,
 	// arrived_customer) do not map to any special request status change —
-	// the request stays "in_progress" throughout, per this slice's mapping.
+	// the request stays "in_progress" throughout, per this phase's mapping.
 	_, err = tx.Exec(`
 		UPDATE dsh_deliveries
 		SET status = $1, updated_at = NOW()

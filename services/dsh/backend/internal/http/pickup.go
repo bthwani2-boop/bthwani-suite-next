@@ -106,13 +106,13 @@ func (s *protectedStoreServer) handlePickupMarkReady(w http.ResponseWriter, r *h
 
 // POST /dsh/partner/orders/{orderId}/pickup/notify
 //
-// The route list for this slice has no separate issue-otp endpoint, so
+// The route list for this phase has no separate issue-otp endpoint, so
 // notify does double duty: it issues a fresh OTP (pickup.Service.IssueOtp)
 // and marks the ready-for-pickup notification as dispatched
 // (pickup.Service.NotifyCustomer) in one call. The plaintext OTP is never
 // included in this handler's JSON response -- it exists only in the return
 // value of IssueOtp for handoff to a notification channel. No SMS/push
-// provider is wired up in this slice, so the handoff point is
+// provider is wired up in this phase, so the handoff point is
 // deliverPickupOtp, a seam a future notifications integration can fill in;
 // today it only asserts the plaintext is non-empty and drops it.
 func (s *protectedStoreServer) handlePickupNotify(w http.ResponseWriter, r *http.Request) {
@@ -145,7 +145,7 @@ func (s *protectedStoreServer) handlePickupNotify(w http.ResponseWriter, r *http
 }
 
 // deliverPickupOtp is the handoff seam to a notification channel (SMS/push)
-// for the plaintext OTP. No such provider is wired up in this slice; the
+// for the plaintext OTP. No such provider is wired up in this phase; the
 // plaintext is intentionally dropped here rather than logged or returned.
 func deliverPickupOtp(orderID, plainOtp string) {
 	_ = orderID
@@ -175,7 +175,7 @@ func (s *protectedStoreServer) handlePickupCustomerArrived(w http.ResponseWriter
 	store.SendJSON(w, http.StatusOK, map[string]any{"orderId": orderID, "customerArrived": true})
 }
 
-// issuePickupOtp is not registered as a route in this slice's HTTP surface
+// issuePickupOtp is not registered as a route in this phase's HTTP surface
 // spec, but the notify handler above triggers the notification step; OTP
 // issuance is exposed here as its own action so notify and issue can be
 // called independently (e.g. re-issuing a code without re-sending the

@@ -381,9 +381,9 @@ func (r *PostgresRepository) updateWith(ctx context.Context, exec queryRower, te
 // It deliberately does not touch workflow_stage: workflow_stage is owned by
 // the operator PATCH flow (ApplyOperatorTransition / service.go's
 // defaultStageFor-style mapping), which this function's caller (dispatch.go)
-// must not reach into per this slice's scope. Keeping status as the sole
-// source of truth here avoids duplicating or drifting from that mapping;
-// stage sync for dispatch-driven transitions can follow in a later slice.
+// must not reach into per this phase's scope. Keeping status as the sole
+// driver handles the base use case without complex cross-module coupling. Mappings
+// stage sync for dispatch-driven transitions can follow in a later phase.
 func TransitionDispatchStatus(tx *sql.Tx, id string, allowedFrom []RequestStatus, toStatus RequestStatus) error {
 	return TransitionDispatchStatusInTenant(tx, "", id, allowedFrom, toStatus)
 }

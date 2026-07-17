@@ -3,7 +3,7 @@
 import React from 'react';
 import { KeyValueList } from '@bthwani/ui-kit';
 import { WebControlPanelInspectorShell, WebControlPanelStatusTag } from '@bthwani/ui-kit/web';
-import { EXCEPTION_TICKET_MAP } from '../../../../shared/orders';
+import { EXCEPTION_TICKET_MAP } from '../../../shared/orders';
 import { DSH_CONTROL_PANEL_TONE_MAP } from '../../shared/ControlPanelDshDecisionBoard';
 import {
   type ExceptionsStateItem,

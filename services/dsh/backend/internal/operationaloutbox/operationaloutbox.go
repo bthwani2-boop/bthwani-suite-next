@@ -8,7 +8,7 @@
 // Producers (partnerdelivery.Service, pickup.Service) write into this
 // outbox in the SAME database transaction that commits their own state
 // change, via Enqueue(tx, ...). A background worker (not implemented in
-// this slice) would drain pending rows with ClaimBatch and retry with
+// this phase) would drain pending rows with ClaimBatch and retry with
 // exponential backoff via MarkFailed until a consumer acknowledges via
 // MarkSent. This mirrors checkoutfinanceoutbox's shape, targeting
 // dsh_operational_outbox_events (dsh-055) instead.

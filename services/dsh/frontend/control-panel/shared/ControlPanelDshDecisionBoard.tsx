@@ -2,19 +2,9 @@ import React from 'react';
 import { Box, Text } from '@bthwani/ui-kit';
 import styles from './control-panel-surface.module.css';
 
-export type DshControlPanelTone = 'neutral' | 'success' | 'warning' | 'danger';
-
-/**
- * Normalizes data-driven tone labels (from preview/runtime data) to
- * the standard set used by UI components.
- * Used by all operations screens to render status tags and risk badges.
- */
-export const DSH_CONTROL_PANEL_TONE_MAP: Record<string, DshControlPanelTone> = {
-  warning: 'warning',
-  danger: 'danger',
-  best: 'success',
-  brand: 'neutral',
-};
+import { type DshControlPanelTone, DSH_CONTROL_PANEL_TONE_MAP } from '../../shared/operations/operations.types';
+export type { DshControlPanelTone };
+export { DSH_CONTROL_PANEL_TONE_MAP };
 
 export type DshRecommendationSeverity = 'critical' | 'high' | 'medium' | 'low';
 export type DshRecommendationConfidence = 'high' | 'medium' | 'low';

@@ -6,8 +6,8 @@ import { WebControlPanelInspectorShell, WebControlPanelStatusTag } from '@bthwan
 import {
   type DshFlowRegistryEntry,
   getDshFlowPolicySummary,
-} from '../../../../shared/operations/dsh-operational-registry';
-import { findDshControlPanelGovernanceSectionByFlowId } from '../../../../shared/orders/orders.contract';
+} from '../../../shared/operations/dsh-operational-registry';
+import { findDshControlPanelGovernanceSectionByFlowId } from '../../../shared/orders/orders.contract';
 import {
   SURFACE_LABELS,
   DOMAIN_LABELS,

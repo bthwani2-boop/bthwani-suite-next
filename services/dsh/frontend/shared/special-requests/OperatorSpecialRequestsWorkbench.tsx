@@ -8,9 +8,10 @@ import {
   WebControlPanelDecisionRow,
 } from '@bthwani/ui-kit/web';
 import { buildOperationsHref } from '../operations/operations-registry';
-import { DSH_CONTROL_PANEL_TONE_MAP } from '../ControlPanelDshDecisionBoard';
 import { useOperatorSpecialRequestsController } from './use-special-requests-controller';
-// Removed styles import that violated boundary
+
+import { DSH_CONTROL_PANEL_TONE_MAP } from '../operations/operations.types';
+
 export type OperatorSpecialRequestsWorkbenchProps = {
   requestType: 'SHEIN_ASSISTED_PURCHASE' | 'AWNAK_ERRAND';
   title: string;
