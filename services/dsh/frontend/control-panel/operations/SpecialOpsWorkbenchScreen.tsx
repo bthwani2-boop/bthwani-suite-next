@@ -58,7 +58,9 @@ const AWNAK_LABELS: Readonly<Record<string, string>> = {
   cancelled: 'ملغى',
 };
 
-export function SpecialOpsWorkbenchScreen({ subGroup, hubHref, focusParams }: SpecialOpsWorkbenchScreenProps) {
+export function SpecialOpsWorkbenchScreen({ subGroup, focusParams }: SpecialOpsWorkbenchScreenProps) {
+  const focusProps = focusParams ? { focusParams } : {};
+
   if (subGroup === 'shein') {
     return (
       <OperatorSpecialRequestsWorkbench
@@ -66,9 +68,7 @@ export function SpecialOpsWorkbenchScreen({ subGroup, hubHref, focusParams }: Sp
         title="عمليات شي إن"
         stageOrder={SHEIN_STAGES}
         stageLabels={SHEIN_LABELS}
-        hubHref={hubHref}
-        subGroup={subGroup}
-        focusParams={focusParams}
+        {...focusProps}
       />
     );
   }
@@ -80,9 +80,7 @@ export function SpecialOpsWorkbenchScreen({ subGroup, hubHref, focusParams }: Sp
         title="عمليات عونك"
         stageOrder={AWNAK_STAGES}
         stageLabels={AWNAK_LABELS}
-        hubHref={hubHref}
-        subGroup={subGroup}
-        focusParams={focusParams}
+        {...focusProps}
       />
     );
   }
