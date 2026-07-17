@@ -50,6 +50,8 @@ $script:WltMigrationProbes = [ordered]@{
   "wlt-021_reconciliation_resolution.sql"         = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_reconciliation_cases' AND column_name = 'assigned_to_operator_id')"
   "wlt-022_commission_lifecycle.sql"              = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_commissions' AND column_name = 'updated_at')"
   "wlt-023_special_request_payment_sessions.sql"  = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_payment_sessions' AND column_name = 'special_request_id')"
+  "wlt-024_payment_session_tenancy.sql"           = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_payment_sessions' AND column_name = 'tenant_id') AND to_regclass('public.wlt_payment_sessions_tenant_checkout_intent_idx') IS NOT NULL"
+  "wlt-025_ledger_reference_idempotency.sql"      = "to_regclass('public.wlt_ledger_transactions_reference_uq') IS NOT NULL"
 }
 
 function Test-WltMigrationProbeCoverage {
