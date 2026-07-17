@@ -113,6 +113,7 @@ jobs:
           }
           run_check actionlint pnpm run guard:workflow-lint
           run_check zizmor pnpm run guard:workflow-security
+          run_check pinact pnpm run guard:actions-pin
           run_check opa-policy pnpm run guard:opa-policies
           run_check tool-catalog pnpm run guard:tool-catalog-coverage
           run_check toolchain-activation pnpm run guard:toolchain-activation
