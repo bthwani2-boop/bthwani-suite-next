@@ -110,16 +110,11 @@ func (s *protectedStoreServer) handleListPartnerOrders(w http.ResponseWriter, r 
 
 // POST /dsh/partner/orders/{orderId}/accept
 func (s *protectedStoreServer) handleAcceptOrder(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "partner")
+	actor, ownedOrder, ok := s.partnerOrder(w, r)
 	if !ok {
 		return
 	}
-	orderID := r.PathValue("orderId")
-	if orderID == "" {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "orderId is required")
-		return
-	}
-	order, err := orders.AcceptOrder(s.db, orderID, actor.ID)
+	order, err := orders.AcceptOrder(s.db, ownedOrder.ID, actor.ID)
 	if errors.Is(err, orders.ErrNotFound) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "order not found")
 		return
@@ -137,13 +132,8 @@ func (s *protectedStoreServer) handleAcceptOrder(w http.ResponseWriter, r *http.
 
 // POST /dsh/partner/orders/{orderId}/reject
 func (s *protectedStoreServer) handleRejectOrder(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "partner")
+	actor, ownedOrder, ok := s.partnerOrder(w, r)
 	if !ok {
-		return
-	}
-	orderID := r.PathValue("orderId")
-	if orderID == "" {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "orderId is required")
 		return
 	}
 	var body struct {
@@ -156,7 +146,7 @@ func (s *protectedStoreServer) handleRejectOrder(w http.ResponseWriter, r *http.
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "rejection reason is required")
 		return
 	}
-	order, err := orders.RejectOrder(s.db, orderID, actor.ID, body.Reason)
+	order, err := orders.RejectOrder(s.db, ownedOrder.ID, actor.ID, body.Reason)
 	if errors.Is(err, orders.ErrInvalid) {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 		return
@@ -174,16 +164,11 @@ func (s *protectedStoreServer) handleRejectOrder(w http.ResponseWriter, r *http.
 
 // POST /dsh/partner/orders/{orderId}/preparing
 func (s *protectedStoreServer) handleMarkPreparing(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "partner")
+	actor, ownedOrder, ok := s.partnerOrder(w, r)
 	if !ok {
 		return
 	}
-	orderID := r.PathValue("orderId")
-	if orderID == "" {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "orderId is required")
-		return
-	}
-	order, err := orders.MarkPreparing(s.db, orderID, actor.ID)
+	order, err := orders.MarkPreparing(s.db, ownedOrder.ID, actor.ID)
 	if errors.Is(err, orders.ErrNotFound) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "order not found")
 		return
@@ -201,16 +186,11 @@ func (s *protectedStoreServer) handleMarkPreparing(w http.ResponseWriter, r *htt
 
 // POST /dsh/partner/orders/{orderId}/ready
 func (s *protectedStoreServer) handleMarkReadyForPickup(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "partner")
+	actor, ownedOrder, ok := s.partnerOrder(w, r)
 	if !ok {
 		return
 	}
-	orderID := r.PathValue("orderId")
-	if orderID == "" {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "orderId is required")
-		return
-	}
-	order, err := orders.MarkReadyForPickup(s.db, orderID, actor.ID)
+	order, err := orders.MarkReadyForPickup(s.db, ownedOrder.ID, actor.ID)
 	if errors.Is(err, orders.ErrNotFound) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "order not found")
 		return
