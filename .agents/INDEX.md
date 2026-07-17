@@ -14,7 +14,7 @@ Route repository work to the smallest sufficient set of active or conditional go
 | Instant | isolated wording, explanation, or one-line safe fix | no owner skill unless repository truth is claimed |
 | Focused | one module or one owner boundary | workspace authority plus one applicable owner skill |
 | Standard | multi-file or cross-layer work | workspace authority, task router, applicable owner skills, targeted evidence |
-| Escalated | product, finance, security, governance, CI, migration, release, or formal closure | formal authorities, SDLC routing, independent evidence |
+| Escalated | product, finance, security, tenant isolation, governance, CI, SaaS activation, migration, release, or formal closure | formal authorities, SDLC routing, independent evidence |
 
 LeanCTX, Graphify, and Nx are optional tools. They are never mandatory first steps and never own approval.
 
@@ -27,6 +27,7 @@ LeanCTX, Graphify, and Nx are optional tools. They are never mandatory first ste
 - Guard selection or command resolution → `bthwani-guard-command-router`.
 - Governance contracts, authority, agents, skills, guards, SaaS governance, or SDLC control-plane changes → `bthwani-governance-contract-guardian`.
 - GitHub Actions workflows, local actions, workflow permissions, immutable pins, or CI aggregation changes → `bthwani-ci-workflow-guardian`.
+- Protected G4 implementation verification → `bthwani-independent-implementation-reviewer`.
 - User-visible, role-sensitive, cross-surface, commercial, or workflow changes → `bthwani-product-truth-governor`.
 - API, route, generated client, or consumer binding → `bthwani-api-runtime-binding`.
 - Route, screen, state, action, or controller binding → `bthwani-screen-flow-binding`.
@@ -34,12 +35,12 @@ LeanCTX, Graphify, and Nx are optional tools. They are never mandatory first ste
 - DSH/WLT financial truth or handoff → `bthwani-dsh-wlt-finance-boundary`.
 - Runtime configuration or provider posture → `bthwani-platform-runtime-config`.
 - Docker, data-plane, persistence, or live behavior evidence → `bthwani-docker-journey-runtime`.
-- Auth, authorization, sessions, secrets, PII, privacy, CORS, or sensitive configuration → `bthwani-security-secrets-privacy`.
+- Auth, authorization, sessions, secrets, PII, privacy, tenant isolation, CORS, or sensitive configuration → `bthwani-security-secrets-privacy`.
 - Formal G0–G10 lifecycle control → `bthwani-sdlc-stage-gate-orchestrator`.
 - Final multi-scope closure → `bthwani-final-journey-closure-judge`.
 - Two or more independent bounded work units with real subagent capability → `bthwani-cost-aware-subagent-orchestrator`.
 
-Governance-contract and CI-workflow approvals are separate. When both domains change, both skills apply and the approving identities must differ.
+Governance-contract and CI-workflow approvals are separate. When both domains change, both skills apply and the approving identities must differ. Independent implementation review must also remain separate from the author, executor, and coordinator.
 
 ## Product routing order
 
@@ -51,12 +52,13 @@ Problem and evidence
 → Product Manager approval
 → Product Owner implementation-readiness approval
 → architecture and contracts
-→ implementation
+→ implementation and developer verification
+→ independent G4 implementation review
 → product acceptance
-→ independent governance, CI, QA, security, finance, release, risk, and production evidence as applicable
+→ independent governance, CI, QA, security, finance, isolation, release, risk, and production evidence as applicable
 ```
 
-Implementation skills may not bypass Product Truth or formal authorities.
+Implementation skills may not bypass Product Truth, independent review, or formal authorities.
 
 ## Governed skills
 
@@ -72,6 +74,7 @@ Implementation skills may not bypass Product Truth or formal authorities.
 - `bthwani-guard-command-router`
 - `bthwani-governance-contract-guardian`
 - `bthwani-ci-workflow-guardian`
+- `bthwani-independent-implementation-reviewer`
 - `bthwani-product-truth-governor`
 - `bthwani-api-runtime-binding`
 - `bthwani-screen-flow-binding`
@@ -111,6 +114,7 @@ The mixed `bthwani-governance-ci-guardian` skill is retired and must never be ro
 - Load only the active or conditional governed skills required by the task.
 - Owner skills govern only their declared authority domain.
 - Coordinators orchestrate but do not execute implementation work or duplicate specialist policy.
+- The independent reviewer reviews but does not coordinate or implement the reviewed work.
 - Adapters and tools own no approval.
 - Every dependency must resolve to an active or conditional governed skill.
 - Every decision maps through `governance/contracts/decision-vocabulary.json`.
@@ -118,4 +122,4 @@ The mixed `bthwani-governance-ci-guardian` skill is retired and must never be ro
 
 ## Acceptance condition
 
-Accepted only when routing matches the skill registry, all selected skills are governed and non-retired, Product Truth precedes implementation where applicable, G0–G10 terminology is consistent, optional tools remain optional, dependencies resolve without cycles, governance and CI approval remain separate, the strongest supervisor stays advisory, and no adapter, tool, executor, retired skill, or coordinator can self-grant formal approval.
+Accepted only when routing matches the skill registry, all selected skills are governed and non-retired, Product Truth precedes implementation where applicable, G0–G10 terminology is consistent, optional tools remain optional, dependencies resolve without cycles, governance and CI approval remain separate, G4 review is independent from coordination and implementation, the strongest supervisor stays advisory, and no adapter, tool, executor, retired skill, coordinator, or reviewer can self-grant another authority's approval.
