@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"wlt-api/internal/cod"
+	"wlt-api/internal/commercial"
 	"wlt-api/internal/health"
 	"wlt-api/internal/ledger"
 	"wlt-api/internal/payment"
@@ -93,6 +94,15 @@ func NewRouter(db *sql.DB, mutationsEnabled bool) *http.ServeMux {
 	mux.HandleFunc("POST /wlt/payout-requests/{payoutId}/complete", gate(serviceAuth(payout.HandleCompletePayoutRequestSovereign(db))))
 	mux.HandleFunc("POST /wlt/payout-requests/{payoutId}/fail", gate(serviceAuth(payout.HandleFailPayoutRequestSovereign(db))))
 
+	// Sovereign commercial benefits. Reads are internal service-authenticated;
+	// every mutation is additionally fail-closed behind WLT_MUTATIONS_ENABLED.
+	mux.HandleFunc("GET /wlt/commercial/products/{productReference}", readGate(commercial.HandleGetProduct(db)))
+	mux.HandleFunc("POST /wlt/commercial/products", gate(serviceAuth(commercial.HandleCreateProduct(db))))
+	mux.HandleFunc("PATCH /wlt/commercial/products/{productReference}", gate(serviceAuth(commercial.HandleUpdateProduct(db))))
+	mux.HandleFunc("GET /wlt/commercial/clients/{clientId}/benefits", readGate(commercial.HandleGetClientBenefits(db)))
+	mux.HandleFunc("POST /wlt/commercial/loyalty-entries", gate(serviceAuth(commercial.HandleAppendLoyaltyEntry(db))))
+	mux.HandleFunc("POST /wlt/commercial/subscriptions", gate(serviceAuth(commercial.HandleActivateSubscription(db))))
+
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "Route not found")
 	})
@@ -112,7 +122,7 @@ func CorsMiddleware(authMode string, next http.Handler) http.Handler {
 		origin := r.Header.Get("Origin")
 		if localCorsOrigin != "" && origin == localCorsOrigin {
 			w.Header().Set("Access-Control-Allow-Origin", localCorsOrigin)
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, OPTIONS")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Correlation-ID, Idempotency-Key, X-Service-Caller")
 			w.Header().Set("Vary", "Origin")
 		}
