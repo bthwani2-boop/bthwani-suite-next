@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	_ "github.com/lib/pq"
 )
 
@@ -46,7 +47,7 @@ func seedFixture(t *testing.T, db *sql.DB, orderStatus string) fixture {
 	f := fixture{
 		partnerID: "pk-test-partner-" + suffix,
 		storeID:   "pk-test-store-" + suffix,
-		clientID:  "pk-test-client-" + suffix,
+		clientID:  uuid.NewString(),
 	}
 
 	if _, err := db.ExecContext(ctx, `
@@ -106,8 +107,6 @@ func seedFixture(t *testing.T, db *sql.DB, orderStatus string) fixture {
 	return f
 }
 
-// issuedSession issues a fresh OTP for f.orderID (which must already be
-// ready_for_pickup) and returns the plaintext code alongside the session.
 func issuedSession(t *testing.T, svc *Service, f fixture) (string, *PickupSession) {
 	t.Helper()
 	plain, session, err := svc.IssueOtp(context.Background(), f.orderID, f.clientID, "partner-1", "partner", "")
