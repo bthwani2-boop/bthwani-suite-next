@@ -32,6 +32,12 @@
       "description": "The implementation and targeted checks are ready for independent review; this is not final approval."
     },
     {
+      "id": "OUT_OF_SCOPE_FOR_THIS_JOURNEY",
+      "class": "excluded",
+      "terminal": false,
+      "description": "The item is explicitly excluded from the declared journey and must not be counted as passed, failed, implemented, or closed."
+    },
+    {
       "id": "QA_BLOCK",
       "class": "blocked",
       "terminal": false,
