@@ -1,4 +1,4 @@
-version: 2
+version: 3
 authority: governance/26_SDLC_TEAM_AND_STAGE_GATES.md
 decision_vocabulary: governance/contracts/decision-vocabulary.json
 initial_stage: G0_INTAKE
@@ -22,9 +22,11 @@ non_terminal_decisions:
   - QA_BLOCK
   - SECURITY_BLOCK
   - RELEASE_BLOCK
+  - PROTOCOL_VIOLATION
 terminal_stages:
   - CLOSED_WITH_EVIDENCE
 failure_decision: FIX_REQUIRED
+protocol_failure_decision: PROTOCOL_VIOLATION
 external_block_decision: BLOCKED_EXTERNAL
 missing_evidence_decision: NEEDS_EVIDENCE
 rules:
@@ -33,7 +35,9 @@ rules:
   - product_truth_precedes_implementation
   - product_acceptance_precedes_qa
   - same_commit_evidence_required
+  - all_applicable_evidence_scopes_required_for_closure
   - executor_cannot_finally_approve_own_high_risk_work
   - governance_change_requires_governance_contract_authority
   - ci_change_requires_ci_workflow_authority
   - governance_and_ci_approvers_must_be_separate_when_both_apply
+  - runtime_visual_qa_security_release_and_production_scopes_remain_independent
