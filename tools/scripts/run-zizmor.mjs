@@ -7,4 +7,5 @@ runTool({
   binary: "zizmor",
   command,
   diagnosticCommand: command,
+  required: true,
 });
