@@ -1,4 +1,4 @@
-version: 2
+version: 3
 authority: governance/26_SDLC_TEAM_AND_STAGE_GATES.md
 decision_vocabulary: governance/contracts/decision-vocabulary.json
 gates:
@@ -93,6 +93,16 @@ gates:
       - production_smoke
       - telemetry_review
       - rollback_readiness
+  CLOSED_WITH_EVIDENCE:
+    owner: final_closure_judge
+    requires:
+      - G10_PRODUCTION_VERIFIED
+    evidence:
+      - all_applicable_evidence_scopes_passed
+      - all_required_approvals_passed
+      - same_commit_evidence
+      - separation_of_duties_proven
+      - no_open_blocker
 canonical_decisions:
   - PASS
   - FIX_REQUIRED
@@ -101,4 +111,5 @@ canonical_decisions:
   - QA_BLOCK
   - SECURITY_BLOCK
   - RELEASE_BLOCK
+  - PROTOCOL_VIOLATION
   - CLOSED_WITH_EVIDENCE
