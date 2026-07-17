@@ -1,17 +1,14 @@
 // Package operationaloutbox implements a durable outbox for operational
-// (non-financial) events raised by the partner_delivery and pickup closure
-// flows -- e.g. "partner_delivery_assigned", "pickup_otp_verified" -- so
-// downstream consumers (notifications, analytics) can be notified reliably
-// even if they are temporarily unreachable at the moment the state change
+// (non-financial) events raised by special requests, partner delivery, and
+// pickup flows. Downstream in-app notifications can therefore be delivered
+// reliably even when the API process restarts after the source transaction
 // commits.
 //
-// Producers (partnerdelivery.Service, pickup.Service) write into this
-// outbox in the SAME database transaction that commits their own state
-// change, via Enqueue(tx, ...). A background worker (not implemented in
-// this phase) would drain pending rows with ClaimBatch and retry with
-// exponential backoff via MarkFailed until a consumer acknowledges via
-// MarkSent. This mirrors checkoutfinanceoutbox's shape, targeting
-// dsh_operational_outbox_events (dsh-055) instead.
+// Producers write into this outbox in the SAME database transaction that
+// commits their own state change, via Enqueue(tx, ...). RunWorker in worker.go
+// drains pending rows into the canonical notification store. ClaimBatch leases
+// rows with SKIP LOCKED; failures are retried with exponential backoff through
+// MarkFailed until MarkSent records successful consumption.
 package operationaloutbox
 
 import (
@@ -32,8 +29,7 @@ type Event struct {
 }
 
 // EnqueueInput is the set of fields required when writing an operational
-// closure event inside a partner-delivery or pickup state-change
-// transaction.
+// closure event inside a source state-change transaction.
 type EnqueueInput struct {
 	EventType     string
 	EntityType    string
