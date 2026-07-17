@@ -1,111 +1,69 @@
-version: 2
+version: 3
 authority: governance/26_SDLC_TEAM_AND_STAGE_GATES.md
 decision_vocabulary: governance/contracts/decision-vocabulary.json
 product_truth_authority: governance/product/PRODUCT_TRUTH_POLICY.md
 authorities:
   sdlc_program_authority:
-    owns:
-      - stage_state
-      - transition_legality
+    owns: [stage_state, transition_legality]
     may_block: true
   product_manager_authority:
-    owns:
-      - product_problem
-      - actor_segments
-      - product_outcome
-      - product_priority
-      - scope_and_exclusions
-      - product_model_approval
+    owns: [product_problem, actor_segments, product_outcome, product_priority, scope_and_exclusions, product_model_approval]
     may_block: true
     must_not_be_implementation_executor: true
   product_owner_acceptance_authority:
-    owns:
-      - functional_behavior
-      - permissions_and_states
-      - business_rules
-      - cross_surface_acceptance
-      - implementation_readiness
-      - product_acceptance
+    owns: [functional_behavior, permissions_and_states, business_rules, cross_surface_acceptance, implementation_readiness, product_acceptance]
     may_block: true
     must_not_be_implementation_executor: true
   ux_journey_authority:
-    owns:
-      - journey_coherence
-      - actor_state_clarity
-      - accessibility_intent
+    owns: [journey_coherence, actor_state_clarity, accessibility_intent]
     may_block_when_applicable: true
   architecture_authority:
-    owns:
-      - architecture_contracts
-      - data_flow
-      - dependency_direction
-      - adr_decisions
+    owns: [architecture_contracts, data_flow, dependency_direction, adr_decisions]
     may_block: true
   governance_contract_authority:
-    owns:
-      - authority_precedence
-      - decision_vocabulary
-      - agent_and_skill_contracts
-      - guard_registration
-      - sdlc_control_plane
+    owns: [authority_precedence, decision_vocabulary, agent_and_skill_contracts, guard_registration, sdlc_control_plane]
     may_block: true
     must_not_be_implementation_executor: true
   ci_workflow_authority:
-    owns:
-      - workflow_triggers
-      - workflow_permissions
-      - immutable_action_pinning
-      - verification_only_behavior
-      - fail_late_topology
-      - final_result_aggregation
+    owns: [workflow_triggers, workflow_permissions, immutable_action_pinning, verification_only_behavior, fail_late_topology, final_result_aggregation]
     may_block: true
     must_not_be_implementation_executor: true
     must_be_separate_from_governance_contract_authority: true
   engineering:
-    owns:
-      - implementation
-      - developer_verification
+    owns: [implementation, developer_verification]
     may_final_approve_own_high_risk_change: false
     may_approve_product_model: false
     may_approve_product_acceptance: false
     may_approve_governance_contract: false
     may_approve_ci_workflow: false
+    may_approve_finance: false
   independent_reviewer:
-    owns:
-      - independent_code_review
-      - implementation_scope_review
-      - developer_evidence_review
+    owns: [independent_code_review, implementation_scope_review, developer_evidence_review]
     may_block: true
     must_not_be_change_author_when_high_risk: true
   independent_quality_authority:
-    owns:
-      - qa_approval
-      - negative_testing
-      - cross_surface_quality
+    owns: [qa_approval, negative_testing, cross_surface_quality, accessibility_acceptance]
     block_decision: QA_BLOCK
     requires_product_acceptance: true
   application_security_authority:
-    owns:
-      - security_approval
-      - vulnerability_decision
-      - security_negative_testing
+    owns: [security_approval, vulnerability_decision, security_negative_testing, isolation_security_approval]
     block_decision: SECURITY_BLOCK
+  financial_control_authority:
+    owns: [finance_approval, wlt_financial_truth, ledger_integrity, settlement_and_payout_control, reconciliation_approval]
+    may_block: true
+    must_not_be_implementation_executor: true
   release_authority:
-    owns:
-      - release_approval
-      - deploy
-      - rollback
-      - production_verification
+    owns: [release_approval, deploy, rollback, production_verification]
     block_decision: RELEASE_BLOCK
   risk_acceptance_authority:
-    owns:
-      - residual_risk_acceptance
+    owns: [residual_risk_acceptance]
     must_not_be_change_author: true
 separation_of_duties_required_for:
   - product_model_approval
   - product_acceptance
   - governance_contract_approval
   - ci_workflow_approval
+  - finance_approval
   - independent_review_high_risk
   - auth_sessions_rbac
   - pii_secrets_security
