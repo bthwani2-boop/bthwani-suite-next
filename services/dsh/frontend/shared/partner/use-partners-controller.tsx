@@ -1,8 +1,14 @@
 'use client';
 
-import { useCallback, useEffect, useState, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { PartnerWorkspaceTabId, PartnerSubTabItem, PartnerWorkspaceTabItem } from './partner-registry';
-import { PARTNER_PRIMARY_TABS, PARTNER_SUB_TAB_DEFINITIONS, buildPartnersHref } from './partner-registry';
+import {
+  PARTNER_PRIMARY_TABS,
+  PARTNER_SUB_TAB_DEFINITIONS,
+  buildPartnersHref,
+  isPartnerWorkspaceTabId,
+  resolvePartnerSubTab,
+} from './partner-registry';
 import { usePartnerAdminController } from './use-partner-admin-controller';
 
 export type UsePartnersControllerProps = {
@@ -16,36 +22,26 @@ export type UsePartnersControllerProps = {
   readonly authKind: string;
 };
 
+const ACTIVE_PARTNER_STATUSES = new Set(['partner_active', 'client_visible']);
+const CLOSED_PARTNER_STATUSES = new Set(['ops_rejected', 'partner_deactivated']);
+
 export function usePartnersController({
   initialWorkspace = 'inbox',
   searchParams,
   router,
   authKind,
 }: UsePartnersControllerProps) {
-  const workspaceParam = searchParams?.get('workspace') as PartnerWorkspaceTabId | null;
+  const workspaceValue = searchParams?.get('workspace');
+  const workspaceParam = isPartnerWorkspaceTabId(workspaceValue) ? workspaceValue : null;
   const [activeTabState, setActiveTabState] = useState<PartnerWorkspaceTabId>(initialWorkspace);
 
   useEffect(() => {
-    if (workspaceParam) {
-      setActiveTabState(workspaceParam);
-    } else {
-      setActiveTabState(initialWorkspace);
-    }
+    setActiveTabState(workspaceParam ?? initialWorkspace);
   }, [workspaceParam, initialWorkspace]);
 
-  const activeTab = workspaceParam || activeTabState;
-
-  const getParam = useCallback((key: string) => {
-    return searchParams?.get(key) ?? undefined;
-  }, [searchParams]);
-
-  const subTabDefinitions = useMemo(() => {
-    return PARTNER_SUB_TAB_DEFINITIONS[activeTab] ?? [];
-  }, [activeTab]);
-
-  const activeSubTab = useMemo(() => {
-    return getParam('subGroup') || subTabDefinitions[0]?.id || '';
-  }, [subTabDefinitions, getParam]);
+  const activeTab = workspaceParam ?? activeTabState;
+  const subTabDefinitions = PARTNER_SUB_TAB_DEFINITIONS[activeTab];
+  const activeSubTab = resolvePartnerSubTab(activeTab, searchParams?.get('subGroup'));
 
   const tabItems = useMemo<readonly PartnerWorkspaceTabItem[]>(() => {
     return PARTNER_PRIMARY_TABS.map((tab) => ({
@@ -65,26 +61,23 @@ export function usePartnersController({
 
   const activePartnersCount = useMemo(() => {
     if (adminController.listState.kind !== 'success') return 0;
-    return adminController.listState.partners.filter(p => p.activationStatus === 'partner_active').length;
+    return adminController.listState.partners.filter((partner) => ACTIVE_PARTNER_STATUSES.has(partner.activationStatus)).length;
   }, [adminController.listState]);
 
   const pendingCount = useMemo(() => {
     if (adminController.listState.kind !== 'success') return 0;
-    return adminController.listState.partners.filter(p => p.activationStatus === 'submitted').length;
+    return adminController.listState.partners.filter((partner) => (
+      !ACTIVE_PARTNER_STATUSES.has(partner.activationStatus)
+      && !CLOSED_PARTNER_STATUSES.has(partner.activationStatus)
+    )).length;
   }, [adminController.listState]);
 
-  const handleSelectTab = useCallback((id: string) => {
-    const nextTab = id as PartnerWorkspaceTabId;
-    const defaultSub = PARTNER_SUB_TAB_DEFINITIONS[nextTab]?.[0]?.id;
-    if (router) {
-      router.push(buildPartnersHref(nextTab, { subGroup: defaultSub }));
-    }
+  const handleSelectTab = useCallback((id: PartnerWorkspaceTabId) => {
+    if (router) router.push(buildPartnersHref(id));
   }, [router]);
 
   const handleSelectSubTab = useCallback((subId: string) => {
-    if (router) {
-      router.push(buildPartnersHref(activeTab, { subGroup: subId }));
-    }
+    if (router) router.push(buildPartnersHref(activeTab, { subGroup: subId }));
   }, [router, activeTab]);
 
   return {
