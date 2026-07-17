@@ -19,11 +19,19 @@ func NewService(repositories ...*Repository) *Service {
 	return &Service{repository: repository, now: time.Now}
 }
 
-func (s *Service) Ready(ctx context.Context) error {
+func (s *Service) requireRepository() (*Repository, error) {
 	if s.repository == nil {
-		return fmt.Errorf("platform repository is not configured")
+		return nil, fmt.Errorf("platform repository is not configured")
 	}
-	return s.repository.Ready(ctx)
+	return s.repository, nil
+}
+
+func (s *Service) Ready(ctx context.Context) error {
+	repository, err := s.requireRepository()
+	if err != nil {
+		return err
+	}
+	return repository.Ready(ctx)
 }
 
 func (s *Service) RuntimeSnapshot(ctx context.Context) RuntimeSnapshot {
@@ -66,24 +74,35 @@ func (s *Service) RuntimeSnapshot(ctx context.Context) RuntimeSnapshot {
 }
 
 func (s *Service) EffectiveRuntimeConfig(ctx context.Context) (EffectiveRuntimeConfig, error) {
-	if s.repository == nil {
-		return EffectiveRuntimeConfig{}, fmt.Errorf("platform repository is not configured")
+	repository, err := s.requireRepository()
+	if err != nil {
+		return EffectiveRuntimeConfig{}, err
 	}
-	return s.repository.EffectiveRuntimeConfig(ctx)
+	return repository.EffectiveRuntimeConfig(ctx)
 }
 
 func (s *Service) Variables(ctx context.Context) ([]Variable, error) {
-	if s.repository == nil {
-		return nil, fmt.Errorf("platform repository is not configured")
+	repository, err := s.requireRepository()
+	if err != nil {
+		return nil, err
 	}
-	return s.repository.Variables(ctx)
+	return repository.Variables(ctx)
+}
+
+func (s *Service) GetVariable(ctx context.Context, key, scopeType, scopeID string) (Variable, error) {
+	repository, err := s.requireRepository()
+	if err != nil {
+		return Variable{}, err
+	}
+	return repository.GetVariable(ctx, key, scopeType, scopeID)
 }
 
 func (s *Service) FeatureFlags(ctx context.Context) ([]FeatureFlag, error) {
-	if s.repository == nil {
-		return nil, fmt.Errorf("platform repository is not configured")
+	repository, err := s.requireRepository()
+	if err != nil {
+		return nil, err
 	}
-	return s.repository.FeatureFlags(ctx)
+	return repository.FeatureFlags(ctx)
 }
 
 func (s *Service) Services(ctx context.Context) []ServicePosture {
@@ -97,7 +116,7 @@ func (s *Service) Services(ctx context.Context) []ServicePosture {
 		{Service: "platform-control", State: platformState, EvidenceSource: platformEvidence},
 		{Service: "dsh", State: StatePartiallyBound, EvidenceSource: "services/dsh/service.manifest.ts"},
 		{Service: "wlt", State: StatePartiallyBound, EvidenceSource: "services/wlt/service.manifest.ts"},
-		{Service: "identity", State: StatePartiallyBound, EvidenceSource: "identity session dependency is active; health aggregation pending"},
+		{Service: "identity", State: StatePartiallyBound, EvidenceSource: "identity session dependency active; health aggregation pending"},
 		{Service: "providers", State: StateReadOnlyBound, EvidenceSource: "core/providers read endpoints"},
 	}
 }
@@ -115,62 +134,84 @@ func (s *Service) Health(ctx context.Context) HealthSnapshot {
 }
 
 func (s *Service) AuditEvents(ctx context.Context) ([]AuditEvent, error) {
-	if s.repository == nil {
-		return nil, fmt.Errorf("platform repository is not configured")
+	repository, err := s.requireRepository()
+	if err != nil {
+		return nil, err
 	}
-	return s.repository.AuditEvents(ctx)
+	return repository.AuditEvents(ctx)
 }
 
 func (s *Service) ChangeSets(ctx context.Context) ([]ChangeSet, error) {
-	if s.repository == nil {
-		return nil, fmt.Errorf("platform repository is not configured")
+	repository, err := s.requireRepository()
+	if err != nil {
+		return nil, err
 	}
-	return s.repository.ChangeSets(ctx)
+	return repository.ChangeSets(ctx)
 }
 
 func (s *Service) GetChangeSet(ctx context.Context, id string) (ChangeSet, error) {
-	if s.repository == nil {
-		return ChangeSet{}, fmt.Errorf("platform repository is not configured")
+	repository, err := s.requireRepository()
+	if err != nil {
+		return ChangeSet{}, err
 	}
-	return s.repository.GetChangeSet(ctx, id)
+	return repository.GetChangeSet(ctx, id)
 }
 
-func (s *Service) CreateChangeSet(
-	ctx context.Context,
-	actorID string,
-	roles []string,
-	correlationID string,
-	input CreateChangeSetInput,
-) (ChangeSet, error) {
+func (s *Service) CreateChangeSet(ctx context.Context, actorID string, roles []string, correlationID string, input CreateChangeSetInput) (ChangeSet, error) {
 	if err := validateCreateInput(input); err != nil {
 		return ChangeSet{}, err
 	}
-	if s.repository == nil {
-		return ChangeSet{}, fmt.Errorf("platform repository is not configured")
+	repository, err := s.requireRepository()
+	if err != nil {
+		return ChangeSet{}, err
 	}
-	return s.repository.CreateChangeSet(ctx, actorID, roles, correlationID, input)
+	return repository.CreateChangeSet(ctx, actorID, roles, correlationID, input)
 }
 
 func (s *Service) ValidateChangeSet(ctx context.Context, id, actorID string, roles []string, correlationID string) (ChangeSet, error) {
-	return s.repository.ValidateChangeSet(ctx, id, actorID, roles, correlationID)
+	repository, err := s.requireRepository()
+	if err != nil {
+		return ChangeSet{}, err
+	}
+	return repository.ValidateChangeSet(ctx, id, actorID, roles, correlationID)
 }
 
 func (s *Service) SubmitChangeSet(ctx context.Context, id, actorID string, roles []string, correlationID string) (ChangeSet, error) {
-	return s.repository.SubmitChangeSet(ctx, id, actorID, roles, correlationID)
+	repository, err := s.requireRepository()
+	if err != nil {
+		return ChangeSet{}, err
+	}
+	return repository.SubmitChangeSet(ctx, id, actorID, roles, correlationID)
 }
 
 func (s *Service) ApproveChangeSet(ctx context.Context, id, actorID string, roles []string, correlationID string) (ChangeSet, error) {
-	return s.repository.ApproveChangeSet(ctx, id, actorID, roles, correlationID)
+	repository, err := s.requireRepository()
+	if err != nil {
+		return ChangeSet{}, err
+	}
+	return repository.ApproveChangeSet(ctx, id, actorID, roles, correlationID)
 }
 
 func (s *Service) RejectChangeSet(ctx context.Context, id, actorID string, roles []string, correlationID, reason string) (ChangeSet, error) {
-	return s.repository.RejectChangeSet(ctx, id, actorID, roles, correlationID, reason)
+	repository, err := s.requireRepository()
+	if err != nil {
+		return ChangeSet{}, err
+	}
+	return repository.RejectChangeSet(ctx, id, actorID, roles, correlationID, reason)
 }
 
 func (s *Service) ApplyChangeSet(ctx context.Context, id, actorID string, roles []string, correlationID string) (ChangeSet, error) {
-	return s.repository.ApplyChangeSet(ctx, id, actorID, roles, correlationID)
+	repository, err := s.requireRepository()
+	if err != nil {
+		return ChangeSet{}, err
+	}
+	return repository.ApplyChangeSet(ctx, id, actorID, roles, correlationID)
 }
 
 func (s *Service) RollbackChangeSet(ctx context.Context, id, actorID string, roles []string, correlationID string) (ChangeSet, error) {
-	return s.repository.RollbackChangeSet(ctx, id, actorID, roles, correlationID)
+	repository, err := s.requireRepository()
+	if err != nil {
+		return ChangeSet{}, err
+	}
+	return repository.RollbackChangeSet(ctx, id, actorID, roles, correlationID)
 }
