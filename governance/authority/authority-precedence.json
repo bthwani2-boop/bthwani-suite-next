@@ -2,256 +2,58 @@
   "schemaVersion": 1,
   "rootAuthority": "governance/authority/authority-precedence.json",
   "precedence": [
-    {
-      "rank": 1,
-      "id": "CURRENT_USER_INSTRUCTION",
-      "description": "The explicit current-task instruction controls scope and requested actions, subject to platform safety and repository permissions."
-    },
-    {
-      "rank": 2,
-      "id": "AUTHORITY_PRECEDENCE_REGISTRY",
-      "description": "This registry is the single repository source for resolving governance authority conflicts."
-    },
-    {
-      "rank": 3,
-      "id": "AGENT_EXECUTION_POLICY",
-      "description": "AGENTS.md governs repository-agent execution behavior without overriding domain ownership or formal stage approvals."
-    },
-    {
-      "rank": 4,
-      "id": "ACTIVE_CANONICAL_GOVERNANCE",
-      "description": "Active canonical governance owns durable repository, service, security, evidence, product, and SDLC rules."
-    },
-    {
-      "rank": 5,
-      "id": "CONDITIONAL_CANONICAL_ANNEX",
-      "description": "Conditional annexes apply only when their declared applicability condition is true."
-    },
-    {
-      "rank": 6,
-      "id": "MACHINE_READABLE_CONTRACT",
-      "description": "Schemas, registries, manifests, and contract files encode active governance for automated validation."
-    },
-    {
-      "rank": 7,
-      "id": "OWNER_SKILL_CONTRACT",
-      "description": "A skill may govern only its declared owner scope and may not override higher authority."
-    },
-    {
-      "rank": 8,
-      "id": "TOOL_ADAPTER",
-      "description": "Adapters translate higher policy to a tool and may not add conflicting policy."
-    },
-    {
-      "rank": 9,
-      "id": "DERIVED_SUPPORT_ARTIFACT",
-      "description": "Derived templates and support artifacts assist execution but never override their source authority."
-    },
-    {
-      "rank": 10,
-      "id": "HISTORICAL_REFERENCE",
-      "description": "Historical phase records and extraction ledgers are evidence only; live manifests, contracts, and code own current state."
-    }
+    {"rank":1,"id":"CURRENT_USER_INSTRUCTION","description":"The explicit current-task instruction controls scope and requested actions, subject to platform safety and repository permissions."},
+    {"rank":2,"id":"AUTHORITY_PRECEDENCE_REGISTRY","description":"This registry is the single repository source for resolving governance authority conflicts."},
+    {"rank":3,"id":"AGENT_EXECUTION_POLICY","description":"AGENTS.md governs repository-agent execution behavior without replacing domain ownership or formal approval."},
+    {"rank":4,"id":"ACTIVE_CANONICAL_GOVERNANCE","description":"Active canonical governance owns durable repository, service, product, security, evidence, and SDLC rules."},
+    {"rank":5,"id":"CONDITIONAL_CANONICAL_ANNEX","description":"Conditional annexes apply only when their declared applicability condition is true."},
+    {"rank":6,"id":"MACHINE_READABLE_CONTRACT","description":"Schemas, registries, manifests, vocabularies, and guard sets encode active governance for automated validation."},
+    {"rank":7,"id":"OWNER_SKILL_CONTRACT","description":"An active or conditional governed skill may own only its declared domain and never override higher authority."},
+    {"rank":8,"id":"TOOL_ADAPTER","description":"Adapters translate higher policy to a tool and may not create policy or own approval."},
+    {"rank":9,"id":"DERIVED_SUPPORT_ARTIFACT","description":"Derived templates, schemas, snapshots, and support artifacts assist execution but never override source authority or live external state."},
+    {"rank":10,"id":"HISTORICAL_REFERENCE","description":"Historical records and retired phase artifacts are evidence only and never current implementation truth."}
   ],
   "documents": [
-    {
-      "path": "governance/authority/authority-precedence.json",
-      "classification": "ROOT_AUTHORITY",
-      "precedenceId": "AUTHORITY_PRECEDENCE_REGISTRY",
-      "authorityDomains": ["authority_resolution", "classification"]
-    },
-    {
-      "path": "AGENTS.md",
-      "classification": "ACTIVE_CANONICAL",
-      "precedenceId": "AGENT_EXECUTION_POLICY",
-      "authorityDomains": ["agent_execution", "scope_control", "claim_safety"]
-    },
-    {
-      "path": "governance/00_DECISION_INDEX.md",
-      "classification": "ACTIVE_CANONICAL",
-      "precedenceId": "ACTIVE_CANONICAL_GOVERNANCE",
-      "authorityDomains": ["governance_index"]
-    },
-    {
-      "path": "governance/LEAN_CODE_BASED_CHECK.md",
-      "classification": "ACTIVE_CANONICAL",
-      "precedenceId": "ACTIVE_CANONICAL_GOVERNANCE",
-      "authorityDomains": ["lean_verification"],
-      "scopeLimit": "Verification scope only; it cannot override formal risk, security, financial, product, or release gates."
-    },
-    {
-      "path": "governance/01_REPO_BOUNDARIES.md",
-      "classification": "ACTIVE_CANONICAL",
-      "precedenceId": "ACTIVE_CANONICAL_GOVERNANCE",
-      "authorityDomains": ["repository_boundaries"]
-    },
-    {
-      "path": "governance/02_SERVICES_AND_SURFACES.md",
-      "classification": "ACTIVE_CANONICAL",
-      "precedenceId": "ACTIVE_CANONICAL_GOVERNANCE",
-      "authorityDomains": ["services", "surfaces"]
-    },
-    {
-      "path": "governance/03_UI_KIT_AND_BRAND_LOCK.md",
-      "classification": "ACTIVE_CANONICAL",
-      "precedenceId": "ACTIVE_CANONICAL_GOVERNANCE",
-      "authorityDomains": ["ui_kit", "brand"]
-    },
-    {
-      "path": "governance/04_API_RUNTIME_BINDING.md",
-      "classification": "ACTIVE_CANONICAL",
-      "precedenceId": "ACTIVE_CANONICAL_GOVERNANCE",
-      "authorityDomains": ["api_binding"]
-    },
-    {
-      "path": "governance/05_DOCKER_AND_DATA_PLANE.md",
-      "classification": "ACTIVE_CANONICAL",
-      "precedenceId": "ACTIVE_CANONICAL_GOVERNANCE",
-      "authorityDomains": ["runtime", "data_plane"]
-    },
-    {
-      "path": "governance/06_EVIDENCE_AND_GATES.md",
-      "classification": "ACTIVE_CANONICAL",
-      "precedenceId": "ACTIVE_CANONICAL_GOVERNANCE",
-      "authorityDomains": ["evidence", "gates"]
-    },
-    {
-      "path": "governance/07_SECURITY_AND_SECRETS.md",
-      "classification": "ACTIVE_CANONICAL",
-      "precedenceId": "ACTIVE_CANONICAL_GOVERNANCE",
-      "authorityDomains": ["security", "secrets"]
-    },
-    {
-      "path": "governance/08_CLEANUP_AND_DEPRECATION.md",
-      "classification": "ACTIVE_CANONICAL",
-      "precedenceId": "ACTIVE_CANONICAL_GOVERNANCE",
-      "authorityDomains": ["cleanup", "deprecation"]
-    },
-    {
-      "path": "governance/09_JOURNEY_OPERATING_MODEL.md",
-      "classification": "ACTIVE_CANONICAL",
-      "precedenceId": "ACTIVE_CANONICAL_GOVERNANCE",
-      "authorityDomains": ["journey_execution"]
-    },
-    {
-      "path": "governance/10_TOOLCHAIN_VERSION_LOCK.md",
-      "classification": "ACTIVE_CANONICAL",
-      "precedenceId": "ACTIVE_CANONICAL_GOVERNANCE",
-      "authorityDomains": ["toolchain_versions"],
-      "scopeLimit": "Version-selection policy only; live package manifests and lockfiles own installed state."
-    },
-    {
-      "path": "governance/17_PERFORMANCE_AND_RUNTIME_BASELINE.md",
-      "classification": "ACTIVE_CANONICAL",
-      "precedenceId": "ACTIVE_CANONICAL_GOVERNANCE",
-      "authorityDomains": ["performance", "runtime_baseline"]
-    },
-    {
-      "path": "governance/26_SDLC_TEAM_AND_STAGE_GATES.md",
-      "classification": "ACTIVE_CANONICAL",
-      "precedenceId": "ACTIVE_CANONICAL_GOVERNANCE",
-      "authorityDomains": ["sdlc", "stage_gates", "separation_of_duties"]
-    },
-    {
-      "path": "governance/product/PRODUCT_TRUTH_POLICY.md",
-      "classification": "ACTIVE_CANONICAL",
-      "precedenceId": "ACTIVE_CANONICAL_GOVERNANCE",
-      "authorityDomains": ["product_problem", "product_scope", "product_acceptance"]
-    },
-    {
-      "path": "governance/operational_journey_protocol_package/annexes/SAAS_READINESS_AND_TENANCY_GATES.md",
-      "classification": "CONDITIONAL_CANONICAL",
-      "precedenceId": "CONDITIONAL_CANONICAL_ANNEX",
-      "authorityDomains": ["saas_readiness", "tenancy"],
-      "appliesWhen": "A task explicitly changes tenant ownership, tenant isolation, SaaS activation, tenant billing, metering, entitlement, or tenant data lifecycle.",
-      "scopeLimit": "No SaaS implementation is authorized merely by this registration."
-    },
-    {
-      "path": "governance/agents/agent-registry.json",
-      "classification": "ACTIVE_CANONICAL",
-      "precedenceId": "MACHINE_READABLE_CONTRACT",
-      "authorityDomains": ["agent_roles"]
-    },
-    {
-      "path": "governance/skills/skills-registry.json",
-      "classification": "ACTIVE_CANONICAL",
-      "precedenceId": "MACHINE_READABLE_CONTRACT",
-      "authorityDomains": ["skill_registry"]
-    },
-    {
-      "path": "governance/guards/guard-registry.json",
-      "classification": "ACTIVE_CANONICAL",
-      "precedenceId": "MACHINE_READABLE_CONTRACT",
-      "authorityDomains": ["guard_registry"]
-    },
-    {
-      "path": ".agents/skills",
-      "classification": "OWNER_CONTRACT",
-      "precedenceId": "OWNER_SKILL_CONTRACT",
-      "authorityDomains": ["declared_skill_scope"]
-    },
-    {
-      "path": "GEMINI.md",
-      "classification": "ADAPTER",
-      "precedenceId": "TOOL_ADAPTER",
-      "authorityDomains": ["gemini_cli_adapter"]
-    },
-    {
-      "path": "governance/operational_journey_protocol_package",
-      "classification": "DERIVED_SUPPORT",
-      "precedenceId": "DERIVED_SUPPORT_ARTIFACT",
-      "authorityDomains": ["operational_templates", "sdlc_support"],
-      "scopeLimit": "Package files may not claim self-contained authority over active canonical governance.",
-      "supersedesStatusClaims": true
-    },
-    {
-      "path": "governance/11_INTERFACE_BLUEPRINTS.md",
-      "classification": "HISTORICAL_REFERENCE",
-      "precedenceId": "HISTORICAL_REFERENCE",
-      "authorityDomains": ["historical_interface_phase"],
-      "supersedesStatusClaims": true
-    },
-    {
-      "path": "governance/13_DSH_SERVICE_ACTIVATION.md",
-      "classification": "HISTORICAL_REFERENCE",
-      "precedenceId": "HISTORICAL_REFERENCE",
-      "authorityDomains": ["historical_dsh_activation"],
-      "supersedesStatusClaims": true
-    },
-    {
-      "path": "governance/14_EXTRACTION_AND_SCREEN_INVENTORY.md",
-      "classification": "HISTORICAL_REFERENCE",
-      "precedenceId": "HISTORICAL_REFERENCE",
-      "authorityDomains": ["historical_extraction"],
-      "supersedesStatusClaims": true
-    },
-    {
-      "path": "governance/14_MASTER_EXTRACTION_LOGIC_UX_COVERAGE.md",
-      "classification": "HISTORICAL_REFERENCE",
-      "precedenceId": "HISTORICAL_REFERENCE",
-      "authorityDomains": ["historical_ux_coverage"],
-      "supersedesStatusClaims": true
-    },
-    {
-      "path": "governance/15_MATRIX_NORMALIZATION_RULES.md",
-      "classification": "DERIVED_SUPPORT",
-      "precedenceId": "DERIVED_SUPPORT_ARTIFACT",
-      "authorityDomains": ["matrix_normalization"],
-      "scopeLimit": "Normalization rules cannot override live service manifests, contracts, or Product Truth contracts."
-    },
-    {
-      "path": "governance/16_MASTER_MATRIX_V3_BUSINESS_RULES.md",
-      "classification": "DERIVED_SUPPORT",
-      "precedenceId": "DERIVED_SUPPORT_ARTIFACT",
-      "authorityDomains": ["business_rule_reference"],
-      "scopeLimit": "Durable business invariants remain useful; historical phase and readiness claims are non-authoritative."
-    },
-    {
-      "path": "governance/99_LEGACY_EXTRACTION_LEDGER.md",
-      "classification": "HISTORICAL_REFERENCE",
-      "precedenceId": "HISTORICAL_REFERENCE",
-      "authorityDomains": ["legacy_evidence"],
-      "supersedesStatusClaims": true
-    }
+    {"path":"governance/authority/authority-precedence.json","classification":"ROOT_AUTHORITY","precedenceId":"AUTHORITY_PRECEDENCE_REGISTRY","authorityDomains":["authority_resolution","classification"]},
+    {"path":"AGENTS.md","classification":"ACTIVE_CANONICAL","precedenceId":"AGENT_EXECUTION_POLICY","authorityDomains":["agent_execution","scope_control","claim_safety"]},
+    {"path":"governance/00_DECISION_INDEX.md","classification":"ACTIVE_CANONICAL","precedenceId":"ACTIVE_CANONICAL_GOVERNANCE","authorityDomains":["governance_index"]},
+    {"path":"governance/LEAN_CODE_BASED_CHECK.md","classification":"ACTIVE_CANONICAL","precedenceId":"ACTIVE_CANONICAL_GOVERNANCE","authorityDomains":["lean_verification"],"scopeLimit":"Verification scope only; it cannot override formal product, security, financial, governance, CI, QA, release, or production gates."},
+    {"path":"governance/01_REPO_BOUNDARIES.md","classification":"ACTIVE_CANONICAL","precedenceId":"ACTIVE_CANONICAL_GOVERNANCE","authorityDomains":["repository_boundaries"]},
+    {"path":"governance/02_SERVICES_AND_SURFACES.md","classification":"ACTIVE_CANONICAL","precedenceId":"ACTIVE_CANONICAL_GOVERNANCE","authorityDomains":["services","surfaces"]},
+    {"path":"governance/03_UI_KIT_AND_BRAND_LOCK.md","classification":"ACTIVE_CANONICAL","precedenceId":"ACTIVE_CANONICAL_GOVERNANCE","authorityDomains":["ui_kit","brand"]},
+    {"path":"governance/04_API_RUNTIME_BINDING.md","classification":"ACTIVE_CANONICAL","precedenceId":"ACTIVE_CANONICAL_GOVERNANCE","authorityDomains":["api_binding"]},
+    {"path":"governance/05_DOCKER_AND_DATA_PLANE.md","classification":"ACTIVE_CANONICAL","precedenceId":"ACTIVE_CANONICAL_GOVERNANCE","authorityDomains":["runtime","data_plane"]},
+    {"path":"governance/06_EVIDENCE_AND_GATES.md","classification":"ACTIVE_CANONICAL","precedenceId":"ACTIVE_CANONICAL_GOVERNANCE","authorityDomains":["evidence","gates"]},
+    {"path":"governance/07_SECURITY_AND_SECRETS.md","classification":"ACTIVE_CANONICAL","precedenceId":"ACTIVE_CANONICAL_GOVERNANCE","authorityDomains":["security","secrets"]},
+    {"path":"governance/08_CLEANUP_AND_DEPRECATION.md","classification":"ACTIVE_CANONICAL","precedenceId":"ACTIVE_CANONICAL_GOVERNANCE","authorityDomains":["cleanup","deprecation"]},
+    {"path":"governance/09_JOURNEY_OPERATING_MODEL.md","classification":"ACTIVE_CANONICAL","precedenceId":"ACTIVE_CANONICAL_GOVERNANCE","authorityDomains":["journey_execution"]},
+    {"path":"governance/10_TOOLCHAIN_VERSION_LOCK.md","classification":"ACTIVE_CANONICAL","precedenceId":"ACTIVE_CANONICAL_GOVERNANCE","authorityDomains":["toolchain_versions"],"scopeLimit":"Version-selection policy only; live package manifests and lockfiles own installed state."},
+    {"path":"governance/17_PERFORMANCE_AND_RUNTIME_BASELINE.md","classification":"ACTIVE_CANONICAL","precedenceId":"ACTIVE_CANONICAL_GOVERNANCE","authorityDomains":["performance","runtime_baseline"]},
+    {"path":"governance/26_SDLC_TEAM_AND_STAGE_GATES.md","classification":"ACTIVE_CANONICAL","precedenceId":"ACTIVE_CANONICAL_GOVERNANCE","authorityDomains":["sdlc","stage_gates","separation_of_duties"]},
+    {"path":"governance/product/PRODUCT_TRUTH_POLICY.md","classification":"ACTIVE_CANONICAL","precedenceId":"ACTIVE_CANONICAL_GOVERNANCE","authorityDomains":["product_problem","product_scope","product_acceptance"]},
+
+    {"path":"governance/contracts","classification":"ACTIVE_CANONICAL","precedenceId":"MACHINE_READABLE_CONTRACT","authorityDomains":["decision_vocabulary","shared_contract_schemas"]},
+    {"path":"governance/agents","classification":"ACTIVE_CANONICAL","precedenceId":"MACHINE_READABLE_CONTRACT","authorityDomains":["agent_roles","approval_domains"]},
+    {"path":"governance/skills","classification":"ACTIVE_CANONICAL","precedenceId":"MACHINE_READABLE_CONTRACT","authorityDomains":["skill_lifecycle","skill_dependencies","skill_routing"]},
+    {"path":"governance/guards","classification":"ACTIVE_CANONICAL","precedenceId":"MACHINE_READABLE_CONTRACT","authorityDomains":["guard_registry","guard_assurance","static_binding_registry"]},
+    {"path":"governance/product/product-truth.schema.json","classification":"ACTIVE_CANONICAL","precedenceId":"MACHINE_READABLE_CONTRACT","authorityDomains":["product_truth_schema"]},
+    {"path":"tools/guards/guard-manifest.json","classification":"ACTIVE_CANONICAL","precedenceId":"MACHINE_READABLE_CONTRACT","authorityDomains":["guard_sets","guard_execution_policy"]},
+
+    {"path":"governance/operational_journey_protocol_package/annexes/SAAS_READINESS_AND_TENANCY_GATES.md","classification":"CONDITIONAL_CANONICAL","precedenceId":"CONDITIONAL_CANONICAL_ANNEX","authorityDomains":["saas_readiness","tenancy"],"appliesWhen":"A task explicitly changes tenant ownership, tenant isolation, SaaS activation, tenant billing, metering, entitlement, or tenant data lifecycle.","scopeLimit":"Registration does not authorize SaaS implementation or commercial activation."},
+
+    {"path":".agents/skills","classification":"OWNER_CONTRACT","precedenceId":"OWNER_SKILL_CONTRACT","authorityDomains":["declared_active_skill_scope"],"scopeLimit":"Only active or conditional governed skills in the skill registry may be invoked or own authority."},
+    {"path":"GEMINI.md","classification":"ADAPTER","precedenceId":"TOOL_ADAPTER","authorityDomains":["gemini_cli_adapter"]},
+
+    {"path":"governance/github/repository-enforcement.json","classification":"DERIVED_SUPPORT","precedenceId":"DERIVED_SUPPORT_ARTIFACT","authorityDomains":["github_enforcement_snapshot"],"scopeLimit":"A conservative evidence snapshot that cannot prove live branch protection, required checks, or independent identities without GitHub verification."},
+    {"path":"governance/product/contracts","classification":"DERIVED_SUPPORT","precedenceId":"DERIVED_SUPPORT_ARTIFACT","authorityDomains":["product_truth_instances"],"scopeLimit":"Individual contracts are capability evidence and cannot override the product policy or schema."},
+    {"path":"governance/operational_journey_protocol_package","classification":"DERIVED_SUPPORT","precedenceId":"DERIVED_SUPPORT_ARTIFACT","authorityDomains":["operational_templates","sdlc_support"],"scopeLimit":"Package files may not claim self-contained authority over active canonical governance.","supersedesStatusClaims":true},
+    {"path":"governance/15_MATRIX_NORMALIZATION_RULES.md","classification":"DERIVED_SUPPORT","precedenceId":"DERIVED_SUPPORT_ARTIFACT","authorityDomains":["matrix_normalization"],"scopeLimit":"Normalization rules cannot override live manifests, contracts, Product Truth, or source code."},
+    {"path":"governance/16_MASTER_MATRIX_V3_BUSINESS_RULES.md","classification":"DERIVED_SUPPORT","precedenceId":"DERIVED_SUPPORT_ARTIFACT","authorityDomains":["business_rule_reference"],"scopeLimit":"Durable invariants remain useful; historical readiness claims are non-authoritative."},
+
+    {"path":"governance/11_INTERFACE_BLUEPRINTS.md","classification":"HISTORICAL_REFERENCE","precedenceId":"HISTORICAL_REFERENCE","authorityDomains":["historical_interface_phase"],"supersedesStatusClaims":true},
+    {"path":"governance/13_DSH_SERVICE_ACTIVATION.md","classification":"HISTORICAL_REFERENCE","precedenceId":"HISTORICAL_REFERENCE","authorityDomains":["historical_dsh_activation"],"supersedesStatusClaims":true},
+    {"path":"governance/14_EXTRACTION_AND_SCREEN_INVENTORY.md","classification":"HISTORICAL_REFERENCE","precedenceId":"HISTORICAL_REFERENCE","authorityDomains":["historical_extraction"],"supersedesStatusClaims":true},
+    {"path":"governance/14_MASTER_EXTRACTION_LOGIC_UX_COVERAGE.md","classification":"HISTORICAL_REFERENCE","precedenceId":"HISTORICAL_REFERENCE","authorityDomains":["historical_ux_coverage"],"supersedesStatusClaims":true},
+    {"path":"governance/99_LEGACY_EXTRACTION_LEDGER.md","classification":"HISTORICAL_REFERENCE","precedenceId":"HISTORICAL_REFERENCE","authorityDomains":["legacy_evidence"],"supersedesStatusClaims":true}
   ]
 }
