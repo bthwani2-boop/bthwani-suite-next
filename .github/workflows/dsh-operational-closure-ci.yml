@@ -19,6 +19,7 @@ on:
       - 'services/dsh/frontend/shared/shein/**'
       - 'services/dsh/frontend/shared/partner-delivery/**'
       - 'services/dsh/frontend/shared/pickup/**'
+      - 'shared/ui-kit/**'
       - 'services/wlt/backend/**'
       - 'services/wlt/database/migrations/**'
       - 'services/wlt/contracts/**'
@@ -43,6 +44,7 @@ on:
       - 'services/dsh/frontend/shared/shein/**'
       - 'services/dsh/frontend/shared/partner-delivery/**'
       - 'services/dsh/frontend/shared/pickup/**'
+      - 'shared/ui-kit/**'
       - 'services/wlt/backend/**'
       - 'services/wlt/database/migrations/**'
       - 'services/wlt/contracts/**'
@@ -110,8 +112,20 @@ jobs:
           if-no-files-found: error
           retention-days: 3
       - name: Vet
+        id: dsh-vet
         working-directory: services/dsh/backend
-        run: go vet ./...
+        shell: bash
+        run: |
+          set -o pipefail
+          go vet ./... 2>&1 | tee ../../../dsh-vet.log
+      - name: Upload DSH vet diagnostics
+        if: failure() && steps.dsh-vet.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dsh-vet-diagnostics
+          path: dsh-vet.log
+          if-no-files-found: error
+          retention-days: 3
       - name: Install PostgreSQL client
         shell: bash
         run: |
@@ -138,12 +152,45 @@ jobs:
           go-version-file: services/wlt/backend/go.mod
           cache-dependency-path: services/wlt/backend/go.sum
       - name: Format gate
+        id: wlt-gofmt
         working-directory: services/wlt/backend
         shell: bash
-        run: test -z "$(gofmt -l .)"
+        run: |
+          set -euo pipefail
+          files="$(gofmt -l .)"
+          if [ -n "$files" ]; then
+            printf '%s\n' "$files" | tee ../../../wlt-gofmt-files.txt
+            gofmt -w $files
+            git diff -- . > ../../../wlt-gofmt.patch
+            tar -czf ../../../wlt-gofmt-formatted.tar.gz $files
+            exit 1
+          fi
+      - name: Upload WLT gofmt diagnostics
+        if: failure() && steps.wlt-gofmt.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: wlt-gofmt-diagnostics
+          path: |
+            wlt-gofmt-files.txt
+            wlt-gofmt.patch
+            wlt-gofmt-formatted.tar.gz
+          if-no-files-found: error
+          retention-days: 3
       - name: Vet
+        id: wlt-vet
         working-directory: services/wlt/backend
-        run: go vet ./...
+        shell: bash
+        run: |
+          set -o pipefail
+          go vet ./... 2>&1 | tee ../../../wlt-vet.log
+      - name: Upload WLT vet diagnostics
+        if: failure() && steps.wlt-vet.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: wlt-vet-diagnostics
+          path: wlt-vet.log
+          if-no-files-found: error
+          retention-days: 3
       - name: Unit tests
         working-directory: services/wlt/backend
         run: go test ./... -count=1
@@ -206,13 +253,24 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Validate special-request SDLC evidence and no-skip transition
-        run: >-
-          pnpm run guard:sdlc --
-          --capability DSH-SPECIAL-REQUESTS-001
-          --stage G4_IMPLEMENTATION_VERIFIED
-          --artifact governance/operational_journey_protocol_package/sdlc/evidence/dsh-special-requests-001.artifact.json
-          --impact governance/operational_journey_protocol_package/sdlc/evidence/dsh-special-requests-001.change-impact.json
-          --affected
+        id: sdlc
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm run guard:sdlc -- \
+            --capability DSH-SPECIAL-REQUESTS-001 \
+            --stage G4_IMPLEMENTATION_VERIFIED \
+            --artifact governance/operational_journey_protocol_package/sdlc/evidence/dsh-special-requests-001.artifact.json \
+            --impact governance/operational_journey_protocol_package/sdlc/evidence/dsh-special-requests-001.change-impact.json \
+            --affected 2>&1 | tee sdlc.log
+      - name: Upload SDLC diagnostics
+        if: failure() && steps.sdlc.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dsh-sdlc-diagnostics
+          path: sdlc.log
+          if-no-files-found: error
+          retention-days: 3
 
   migration-static-gate:
     runs-on: ubuntu-latest
