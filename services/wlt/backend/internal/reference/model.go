@@ -43,4 +43,3 @@ type FieldCommissionRef struct {
 	CreatedAt        string  `json:"createdAt"`
 	UpdatedAt        string  `json:"updatedAt"`
 }
-

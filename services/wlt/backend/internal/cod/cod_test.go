@@ -154,5 +154,3 @@ func TestMarkCodRemittedRequiresCodRecordId(t *testing.T) {
 		t.Fatalf("expected error for missing codRecordId")
 	}
 }
-
-

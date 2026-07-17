@@ -62,7 +62,7 @@ type CreateCommissionInput struct {
 	Currency             string  `json:"currency"`
 	IdempotencyKey       string  `json:"idempotencyKey"`
 	// CheckoutIntentID can still be passed for order commissions
-	CheckoutIntentID     string  `json:"checkoutIntentId"`
+	CheckoutIntentID string `json:"checkoutIntentId"`
 }
 
 type CreateCodRecordInput struct {
@@ -74,7 +74,6 @@ type CreateCodRecordInput struct {
 	// trusting a caller-supplied amount.
 	CheckoutIntentID string `json:"checkoutIntentId"`
 }
-
 
 const codCols = `id, order_id, captain_id, partner_id, amount_minor_units, currency,
 	status, collected_at, remitted_at, created_at, updated_at`

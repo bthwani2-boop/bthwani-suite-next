@@ -11,47 +11,47 @@ import (
 )
 
 type LedgerEntry struct {
-	ID                  string  `json:"id"`
-	EntryType           string  `json:"entryType"`
-	ActorID             string  `json:"actorId"`
-	ActorType           string  `json:"actorType"`
-	SourceType          string  `json:"sourceType"`
-	SourceID            string  `json:"sourceId"`
-	OrderID             *string `json:"orderId"`
-	VisitID             *string `json:"visitId"`
-	StoreID             *string `json:"storeId"`
-	PartnerID           *string `json:"partnerId"`
-	CommissionEventID   *string `json:"commissionEventId"`
-	ReferenceID         string  `json:"referenceId"`
-	ReferenceType       string  `json:"referenceType"`
-	AmountMinorUnits    int64   `json:"amountMinorUnits"`
-	Currency            string  `json:"currency"`
-	DebitCredit         string  `json:"debitCredit"`
-	BalanceAfter        int64   `json:"balanceAfter"`
-	Description         string  `json:"description"`
-	IdempotencyKey      *string `json:"idempotencyKey"`
-	CreatedAt           string  `json:"createdAt"`
+	ID                string  `json:"id"`
+	EntryType         string  `json:"entryType"`
+	ActorID           string  `json:"actorId"`
+	ActorType         string  `json:"actorType"`
+	SourceType        string  `json:"sourceType"`
+	SourceID          string  `json:"sourceId"`
+	OrderID           *string `json:"orderId"`
+	VisitID           *string `json:"visitId"`
+	StoreID           *string `json:"storeId"`
+	PartnerID         *string `json:"partnerId"`
+	CommissionEventID *string `json:"commissionEventId"`
+	ReferenceID       string  `json:"referenceId"`
+	ReferenceType     string  `json:"referenceType"`
+	AmountMinorUnits  int64   `json:"amountMinorUnits"`
+	Currency          string  `json:"currency"`
+	DebitCredit       string  `json:"debitCredit"`
+	BalanceAfter      int64   `json:"balanceAfter"`
+	Description       string  `json:"description"`
+	IdempotencyKey    *string `json:"idempotencyKey"`
+	CreatedAt         string  `json:"createdAt"`
 }
 
 type CreateLedgerEntryInput struct {
-	EntryType           string  `json:"entryType"`
-	ActorID             string  `json:"actorId"`
-	ActorType           string  `json:"actorType"`
-	SourceType          string  `json:"sourceType"`
-	SourceID            string  `json:"sourceId"`
-	OrderID             *string `json:"orderId"`
-	VisitID             *string `json:"visitId"`
-	StoreID             *string `json:"storeId"`
-	PartnerID           *string `json:"partnerId"`
-	CommissionEventID   *string `json:"commissionEventId"`
-	ReferenceID         string  `json:"referenceId"`
-	ReferenceType       string  `json:"referenceType"`
-	AmountMinorUnits    int64   `json:"amountMinorUnits"`
-	Currency            string  `json:"currency"`
-	DebitCredit         string  `json:"debitCredit"`
-	BalanceAfter        int64   `json:"balanceAfter"`
-	Description         string  `json:"description"`
-	IdempotencyKey      *string `json:"idempotencyKey"`
+	EntryType         string  `json:"entryType"`
+	ActorID           string  `json:"actorId"`
+	ActorType         string  `json:"actorType"`
+	SourceType        string  `json:"sourceType"`
+	SourceID          string  `json:"sourceId"`
+	OrderID           *string `json:"orderId"`
+	VisitID           *string `json:"visitId"`
+	StoreID           *string `json:"storeId"`
+	PartnerID         *string `json:"partnerId"`
+	CommissionEventID *string `json:"commissionEventId"`
+	ReferenceID       string  `json:"referenceId"`
+	ReferenceType     string  `json:"referenceType"`
+	AmountMinorUnits  int64   `json:"amountMinorUnits"`
+	Currency          string  `json:"currency"`
+	DebitCredit       string  `json:"debitCredit"`
+	BalanceAfter      int64   `json:"balanceAfter"`
+	Description       string  `json:"description"`
+	IdempotencyKey    *string `json:"idempotencyKey"`
 }
 
 const ledgerCols = `id, entry_type, actor_id, actor_type, source_type, source_id, order_id, visit_id, store_id, partner_id, commission_event_id, reference_id,
