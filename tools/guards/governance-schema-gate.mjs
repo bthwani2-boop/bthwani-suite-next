@@ -75,6 +75,11 @@ const guards = validateDocument(
   "governance/guards/guard-schema.json",
   "GUARD",
 );
+const guardAssurance = validateDocument(
+  "governance/guards/guard-assurance.json",
+  "governance/guards/guard-assurance.schema.json",
+  "GUARD_ASSURANCE",
+);
 const frontendBindings = validateDocument(
   "governance/guards/frontend-binding-registry.json",
   "governance/guards/frontend-binding-registry.schema.json",
@@ -201,6 +206,42 @@ if (decisions) {
   }
   if (canonicalClass.get(decisions.closureRules.closedDecision) !== "closed") {
     violations.push({ file: "governance/contracts/decision-vocabulary.json", line: 0, message: "INVALID_CLOSED_DECISION" });
+  }
+}
+
+if (guards && guardAssurance) {
+  const registeredGuardIds = new Set(guards.entries.map((entry) => entry.id));
+  const assuranceIds = new Set();
+  for (const entry of guardAssurance.entries) {
+    if (assuranceIds.has(entry.guardId)) {
+      violations.push({ file: "governance/guards/guard-assurance.json", line: 0, message: `DUPLICATE_GUARD_ASSURANCE ${entry.guardId}` });
+    }
+    assuranceIds.add(entry.guardId);
+    if (!registeredGuardIds.has(entry.guardId)) {
+      violations.push({ file: "governance/guards/guard-assurance.json", line: 0, message: `ASSURANCE_REFERENCES_UNKNOWN_GUARD ${entry.guardId}` });
+    }
+    if (entry.closureEligible !== false) {
+      violations.push({ file: "governance/guards/guard-assurance.json", line: 0, message: `SCOPE_GUARD_MUST_NOT_BE_CLOSURE_ELIGIBLE ${entry.guardId}` });
+    }
+  }
+  for (const requiredId of [
+    "governance-schema",
+    "agent-governance",
+    "guard-registry",
+    "sdlc",
+    "go-routes-ci",
+    "frontend-feature-binding",
+    "logic-coverage",
+    "runtime-real-bindings",
+    "live-cross-journey-integrity",
+    "performance-budget",
+    "a11y",
+    "workflow-lint",
+    "workflow-security",
+  ]) {
+    if (!assuranceIds.has(requiredId)) {
+      violations.push({ file: "governance/guards/guard-assurance.json", line: 0, message: `REQUIRED_GUARD_ASSURANCE_MISSING ${requiredId}` });
+    }
   }
 }
 
