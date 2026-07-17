@@ -1,147 +1,171 @@
-/**
- * tools/guards/agent-governance-gate.mjs
- *
- * BTHWANI_GOVERNANCE_AS_CODE_GATE — Agent & Skills Integrity Gate
- *
- * Checks:
- *   1. Coherence: Every folder in .agents/skills/ is registered in skills-registry.json and vice-versa.
- *   2. Schema Structure: Every registered skill folder has a SKILL.md.
- *   3. Markdown Headers: Every skill's SKILL.md has a "## Purpose" section.
- *   4. Agent Consistency: Compares AGENTS.md and GEMINI.md to ensure no contradictions
- *      on key policies (ports, command safety, authority limits).
- *
- * FAIL: missing skills, unregistered skills, missing mandatory md headers, policy contradictions.
- */
-
 import fs from "node:fs";
 import path from "node:path";
 import { fail, repoRoot, toPosix } from "./_guard-utils.mjs";
 
 const guardId = "agent-governance-gate";
 const violations = [];
-const warnings = [];
 
-// ── 1. Registry vs Workspace Skills Coherence ───────────────────────────────
-const skillsRegistryPath = path.join(repoRoot, "governance/skills/skills-registry.json");
+function readJson(relativePath) {
+  const fullPath = path.join(repoRoot, relativePath);
+  if (!fs.existsSync(fullPath)) {
+    violations.push({ file: relativePath, line: 0, message: "MISSING_REQUIRED_REGISTRY" });
+    return null;
+  }
+  try {
+    return JSON.parse(fs.readFileSync(fullPath, "utf8"));
+  } catch (error) {
+    violations.push({ file: relativePath, line: 0, message: `INVALID_JSON ${error.message}` });
+    return null;
+  }
+}
+
+const skillsRegistry = readJson("governance/skills/skills-registry.json");
+const agentRegistry = readJson("governance/agents/agent-registry.json");
 const skillsDir = path.join(repoRoot, ".agents/skills");
 
-if (fs.existsSync(skillsRegistryPath) && fs.existsSync(skillsDir)) {
-  const registryData = JSON.parse(fs.readFileSync(skillsRegistryPath, "utf8"));
-  const registeredSkillIds = new Set(registryData.entries.map((e) => e.id));
-
-  const workspaceSkillDirs = fs
-    .readdirSync(skillsDir, { withFileTypes: true })
-    .filter((d) => d.isDirectory())
-    .map((d) => d.name);
-
-  // Checks: Registered but missing from workspace
-  for (const regId of registeredSkillIds) {
-    const expectedDir = path.join(skillsDir, regId);
-    if (!fs.existsSync(expectedDir)) {
-      violations.push({
-        file: "governance/skills/skills-registry.json",
-        line: 0,
-        message: `MISSING_SKILL_WORKSPACE: Skill '${regId}' is registered but directory does not exist at '${toPosix(path.relative(repoRoot, expectedDir))}'`,
-      });
+if (skillsRegistry && fs.existsSync(skillsDir)) {
+  const skillById = new Map();
+  for (const skill of skillsRegistry.entries) {
+    if (skillById.has(skill.id)) {
+      violations.push({ file: "governance/skills/skills-registry.json", line: 0, message: `DUPLICATE_SKILL_ID ${skill.id}` });
     }
-  }
+    skillById.set(skill.id, skill);
 
-  // Checks: In workspace but missing from registry
-  for (const dirName of workspaceSkillDirs) {
-    if (!registeredSkillIds.has(dirName)) {
-      violations.push({
-        file: `governance/skills/skills-registry.json`,
-        line: 0,
-        message: `UNREGISTERED_SKILL: Skill directory '.agents/skills/${dirName}' exists but is not registered in skills-registry.json`,
-      });
+    const expectedPath = `.agents/skills/${skill.id}`;
+    if (toPosix(skill.path) !== expectedPath) {
+      violations.push({ file: "governance/skills/skills-registry.json", line: 0, message: `SKILL_PATH_MISMATCH ${skill.id}: ${skill.path}` });
+    }
+    const skillDir = path.join(repoRoot, skill.path);
+    const skillMdPath = path.join(skillDir, "SKILL.md");
+    if (!fs.existsSync(skillDir)) {
+      violations.push({ file: skill.path, line: 0, message: `MISSING_SKILL_DIRECTORY ${skill.id}` });
+      continue;
+    }
+    if (!fs.existsSync(skillMdPath)) {
+      violations.push({ file: `${skill.path}/SKILL.md`, line: 0, message: `MISSING_SKILL_MD ${skill.id}` });
+      continue;
     }
 
-    // ── 2. SKILL.md Verification ───────────────────────────────────────────
-    const skillMd = path.join(skillsDir, dirName, "SKILL.md");
-    if (!fs.existsSync(skillMd)) {
-      violations.push({
-        file: `.agents/skills/${dirName}/SKILL.md`,
-        line: 0,
-        message: `MISSING_SKILL_MD: SKILL.md file is missing for skill '${dirName}'`,
-      });
-    } else {
-      const content = fs.readFileSync(skillMd, "utf8");
-      // ── 3. Mandatory Headers check ───────────────────────────────────────
-      if (!/^\s*##\s*Purpose\b/mi.test(content)) {
-        warnings.push({
-          file: `.agents/skills/${dirName}/SKILL.md`,
-          line: 0,
-          message: `MISSING_PURPOSE_SECTION: SKILL.md must contain a '## Purpose' section.`,
-        });
+    const content = fs.readFileSync(skillMdPath, "utf8");
+    const frontmatterName = content.match(/^---[\s\S]*?\nname:\s*([^\n]+)[\s\S]*?---/m)?.[1]?.trim();
+    if (frontmatterName !== skill.id) {
+      violations.push({ file: `${skill.path}/SKILL.md`, line: 0, message: `FRONTMATTER_NAME_MISMATCH expected ${skill.id}, found ${frontmatterName ?? "none"}` });
+    }
+    if (!/^##\s+Purpose\b/mi.test(content)) {
+      violations.push({ file: `${skill.path}/SKILL.md`, line: 0, message: "MISSING_PURPOSE_SECTION" });
+    }
+    if (skill.contract_level === "governed") {
+      for (const section of ["Invoke when", "Do not invoke when", "Authority boundary", "Required output"]) {
+        if (!new RegExp(`^##\\s+${section}\\b`, "mi").test(content)) {
+          violations.push({ file: `${skill.path}/SKILL.md`, line: 0, message: `GOVERNED_SKILL_MISSING_SECTION ${section}` });
+        }
       }
     }
   }
+
+  const workspaceSkillDirs = fs.readdirSync(skillsDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name);
+  for (const directory of workspaceSkillDirs) {
+    if (!skillById.has(directory)) {
+      violations.push({ file: `governance/skills/skills-registry.json`, line: 0, message: `UNREGISTERED_SKILL ${directory}` });
+    }
+  }
+
+  for (const skill of skillsRegistry.entries) {
+    for (const dependency of skill.depends_on ?? []) {
+      if (dependency === skill.id) {
+        violations.push({ file: "governance/skills/skills-registry.json", line: 0, message: `SELF_DEPENDENCY ${skill.id}` });
+      } else if (!skillById.has(dependency)) {
+        violations.push({ file: "governance/skills/skills-registry.json", line: 0, message: `UNKNOWN_SKILL_DEPENDENCY ${skill.id} -> ${dependency}` });
+      }
+    }
+    for (const conflict of skill.conflicts_with ?? []) {
+      const target = skillById.get(conflict);
+      if (!target) {
+        violations.push({ file: "governance/skills/skills-registry.json", line: 0, message: `UNKNOWN_SKILL_CONFLICT ${skill.id} -> ${conflict}` });
+      } else if (!(target.conflicts_with ?? []).includes(skill.id)) {
+        violations.push({ file: "governance/skills/skills-registry.json", line: 0, message: `ASYMMETRIC_SKILL_CONFLICT ${skill.id} <-> ${conflict}` });
+      }
+    }
+  }
+
+  const visiting = new Set();
+  const visited = new Set();
+  function visit(skillId, stack = []) {
+    if (visiting.has(skillId)) {
+      violations.push({ file: "governance/skills/skills-registry.json", line: 0, message: `SKILL_DEPENDENCY_CYCLE ${[...stack, skillId].join(" -> ")}` });
+      return;
+    }
+    if (visited.has(skillId)) return;
+    visiting.add(skillId);
+    for (const dependency of skillById.get(skillId)?.depends_on ?? []) visit(dependency, [...stack, skillId]);
+    visiting.delete(skillId);
+    visited.add(skillId);
+  }
+  for (const skillId of skillById.keys()) visit(skillId);
 }
 
-// ── 4. Policy Consistency (AGENTS.md vs GEMINI.md) ───────────────────────────
+if (agentRegistry) {
+  const requiredRoles = new Set([
+    "master-advisory-supervisor",
+    "product-manager-authority",
+    "product-owner-acceptance-authority",
+    "ux-journey-authority",
+    "architecture-authority",
+    "engineering-executor",
+    "independent-quality-authority",
+    "application-security-authority",
+    "release-authority",
+    "independent-reviewer"
+  ]);
+  const agentIds = new Set();
+  const approvalOwners = new Map();
+
+  for (const agent of agentRegistry.entries) {
+    if (agentIds.has(agent.id)) {
+      violations.push({ file: "governance/agents/agent-registry.json", line: 0, message: `DUPLICATE_AGENT_ID ${agent.id}` });
+    }
+    agentIds.add(agent.id);
+    if (!fs.existsSync(path.join(repoRoot, agent.primary_file))) {
+      violations.push({ file: "governance/agents/agent-registry.json", line: 0, message: `AGENT_PRIMARY_FILE_MISSING ${agent.id}: ${agent.primary_file}` });
+    }
+    if (agent.may_final_approve_own_work) {
+      violations.push({ file: "governance/agents/agent-registry.json", line: 0, message: `SELF_APPROVAL_FORBIDDEN ${agent.id}` });
+    }
+    if (agent.kind === "adapter" && (agent.approval_domains?.length ?? 0) > 0) {
+      violations.push({ file: "governance/agents/agent-registry.json", line: 0, message: `ADAPTER_MUST_NOT_OWN_APPROVAL ${agent.id}` });
+    }
+    for (const domain of agent.approval_domains ?? []) {
+      if (approvalOwners.has(domain)) {
+        violations.push({ file: "governance/agents/agent-registry.json", line: 0, message: `DUPLICATE_APPROVAL_AUTHORITY ${domain}: ${approvalOwners.get(domain)} and ${agent.id}` });
+      }
+      approvalOwners.set(domain, agent.id);
+    }
+  }
+  for (const role of requiredRoles) {
+    if (!agentIds.has(role)) {
+      violations.push({ file: "governance/agents/agent-registry.json", line: 0, message: `MISSING_REQUIRED_LOGICAL_ROLE ${role}` });
+    }
+  }
+  if (approvalOwners.get("product_model_approval") === approvalOwners.get("product_acceptance")) {
+    violations.push({ file: "governance/agents/agent-registry.json", line: 0, message: "PRODUCT_MODEL_AND_PRODUCT_ACCEPTANCE_MUST_HAVE_SEPARATE_AUTHORITIES" });
+  }
+}
+
 const agentsMdPath = path.join(repoRoot, "AGENTS.md");
 const geminiMdPath = path.join(repoRoot, "GEMINI.md");
-
 if (fs.existsSync(agentsMdPath) && fs.existsSync(geminiMdPath)) {
-  const agentsContent = fs.readFileSync(agentsMdPath, "utf8");
-  const geminiContent = fs.readFileSync(geminiMdPath, "utf8");
-
-  // Check 4a: Command Safety references
-  const agentsHasSafety = /Command Safety Policy/i.test(agentsContent);
-  const geminiHasSafety = /Command Safety Policy/i.test(geminiContent);
-
-  if (agentsHasSafety !== geminiHasSafety) {
-    violations.push({
-      file: "GEMINI.md",
-      line: 0,
-      message: `POLICY_CONTRADICTION: 'Command Safety Policy' is referenced in AGENTS.md but missing/different in GEMINI.md`,
-    });
+  const agents = fs.readFileSync(agentsMdPath, "utf8");
+  const gemini = fs.readFileSync(geminiMdPath, "utf8");
+  if (!agents.includes("governance/authority/authority-precedence.json")) {
+    violations.push({ file: "AGENTS.md", line: 0, message: "AGENTS_MISSING_AUTHORITY_PRECEDENCE_REFERENCE" });
   }
-
-  // Check 4b: Smart Execution Model tables
-  const agentsHasSmartExec = /Smart Execution Model/i.test(agentsContent);
-  const geminiHasSmartExec = /Smart Execution Model/i.test(geminiContent);
-
-  if (agentsHasSmartExec !== geminiHasSmartExec) {
-    violations.push({
-      file: "GEMINI.md",
-      line: 0,
-      message: `POLICY_CONTRADICTION: 'Smart Execution Model' config mismatch between AGENTS.md and GEMINI.md`,
-    });
+  if (!gemini.includes("AGENTS.md") || !gemini.includes("authority-precedence.json")) {
+    violations.push({ file: "GEMINI.md", line: 0, message: "GEMINI_ADAPTER_MISSING_HIGHER_AUTHORITY_REFERENCE" });
   }
-
-  // Check 4c: Port rules (YAGNI/Ponytail check)
-  const agentsPorts = extractPorts(agentsContent);
-  const geminiPorts = extractPorts(geminiContent);
-
-  // Since GEMINI.md is a thin adapter, if it defines ports, they must match AGENTS.md
-  if (agentsPorts.size > 0 && geminiPorts.size > 0) {
-    for (const port of geminiPorts) {
-      if (!agentsPorts.has(port)) {
-        violations.push({
-          file: "GEMINI.md",
-          line: 0,
-          message: `PORT_POLICY_CONTRADICTION: Port '${port}' referenced in GEMINI.md is not allowed by AGENTS.md policy`,
-        });
-      }
-    }
-  }
-}
-
-function extractPorts(text) {
-  const portRegex = /\b(58080|18101|18102|18103|18104|13000|8080|8081|8082|8083|8084|3000)\b/g;
-  const matches = new Set();
-  let m;
-  while ((m = portRegex.exec(text)) !== null) {
-    matches.add(m[1]);
-  }
-  return matches;
-}
-
-if (warnings.length > 0) {
-  console.log(`\n${guardId} WARNINGS (${warnings.length}):`);
-  for (const w of warnings) {
-    console.log(`  - ${w.file}:${w.line} ${w.message}`);
+  if (/use Graphify first/i.test(gemini)) {
+    violations.push({ file: "GEMINI.md", line: 0, message: "GEMINI_GRAPHIFY_FIRST_CONTRADICTS_SCOPED_TOOL_LADDER" });
   }
 }
 
