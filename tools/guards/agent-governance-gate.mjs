@@ -134,10 +134,11 @@ if (/\bPRODUCT_CAPABILITY\b/.test(index)) violations.push({ file: indexRelative,
 
 if (agentRegistry) {
   const requiredRoles = new Set([
-    "master-advisory-supervisor", "product-manager-authority", "product-owner-acceptance-authority",
-    "ux-journey-authority", "architecture-authority", "governance-contract-authority",
-    "ci-workflow-authority", "engineering-executor", "independent-quality-authority",
-    "application-security-authority", "release-authority", "independent-reviewer",
+    "master-advisory-supervisor", "sdlc-program-authority", "product-manager-authority",
+    "product-owner-acceptance-authority", "ux-journey-authority", "architecture-authority",
+    "governance-contract-authority", "ci-workflow-authority", "engineering-executor",
+    "independent-reviewer", "independent-quality-authority", "application-security-authority",
+    "financial-control-authority", "release-authority", "risk-acceptance-authority",
   ]);
   const agentIds = new Set();
   const agentById = new Map();
@@ -169,6 +170,9 @@ if (agentRegistry) {
   const ciOwner = approvalOwners.get("ci_workflow_approval");
   if (!governanceOwner || !ciOwner || governanceOwner === ciOwner) violations.push({ file: agentRegistryRelative, line: 0, message: "GOVERNANCE_AND_CI_APPROVAL_MUST_HAVE_SEPARATE_AUTHORITIES" });
   else if (agentById.get(governanceOwner)?.owner === agentById.get(ciOwner)?.owner) violations.push({ file: agentRegistryRelative, line: 0, message: "GOVERNANCE_AND_CI_APPROVAL_MUST_HAVE_SEPARATE_OWNERS" });
+  if (!approvalOwners.get("implementation_review")) violations.push({ file: agentRegistryRelative, line: 0, message: "INDEPENDENT_IMPLEMENTATION_REVIEW_AUTHORITY_MISSING" });
+  if (!approvalOwners.get("finance_approval")) violations.push({ file: agentRegistryRelative, line: 0, message: "FINANCIAL_CONTROL_AUTHORITY_MISSING" });
+  if (!approvalOwners.get("residual_risk_acceptance")) violations.push({ file: agentRegistryRelative, line: 0, message: "RISK_ACCEPTANCE_AUTHORITY_MISSING" });
 
   const sdlcRolesRelative = "governance/operational_journey_protocol_package/sdlc/roles-and-authority.yaml";
   const sdlcRolesPath = path.join(repoRoot, sdlcRolesRelative);
@@ -176,6 +180,7 @@ if (agentRegistry) {
   else {
     const sdlcRoles = fs.readFileSync(sdlcRolesPath, "utf8");
     const roleMap = new Map([
+      ["sdlc-program-authority", "sdlc_program_authority"],
       ["product-manager-authority", "product_manager_authority"],
       ["product-owner-acceptance-authority", "product_owner_acceptance_authority"],
       ["ux-journey-authority", "ux_journey_authority"],
@@ -186,7 +191,9 @@ if (agentRegistry) {
       ["independent-reviewer", "independent_reviewer"],
       ["independent-quality-authority", "independent_quality_authority"],
       ["application-security-authority", "application_security_authority"],
+      ["financial-control-authority", "financial_control_authority"],
       ["release-authority", "release_authority"],
+      ["risk-acceptance-authority", "risk_acceptance_authority"],
     ]);
     for (const [agentId, authorityId] of roleMap) if (agentIds.has(agentId) && !new RegExp(`^  ${authorityId}:\\s*$`, "m").test(sdlcRoles)) violations.push({ file: sdlcRolesRelative, line: 0, message: `AGENT_SDLC_AUTHORITY_DRIFT ${agentId} -> ${authorityId}` });
   }
