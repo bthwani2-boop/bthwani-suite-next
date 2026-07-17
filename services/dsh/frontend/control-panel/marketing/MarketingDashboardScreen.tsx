@@ -17,8 +17,6 @@ import {
 import { TickerCommandDeck } from "./components/TickerCommandDeck";
 import { CampaignsCommandDeck } from "./components/CampaignsCommandDeck";
 import { PartnerOffersCommandDeck } from "./components/PartnerOffersCommandDeck";
-import { LoyaltyCommandDeck } from "./components/LoyaltyCommandDeck";
-import { SubscriptionsCommandDeck } from "./components/SubscriptionsCommandDeck";
 import { SignalsMeasurementCommandDeck } from "./components/SignalsMeasurementCommandDeck";
 import { VisibilityGatesSection } from "./components/VisibilityGatesSection";
 import { MarketingHomeDiscoveryPanel } from "./components/MarketingHomeDiscoveryPanel";
@@ -64,7 +62,7 @@ export function MarketingDashboardScreen() {
       header={
         <CpPageHeader title="تسويق DSH">
           <p style={{ margin: "0 0 0.75rem", opacity: 0.65, fontSize: "0.875rem" }}>
-            إدارة المحتوى والحملات والعروض والبرامج التجارية المرتبطة بعقود DSH الفعلية
+            إدارة المحتوى والحملات والعروض المرتبطة بعقود DSH الفعلية
           </p>
 
           <CpKpiStrip>
@@ -111,8 +109,6 @@ export function MarketingDashboardScreen() {
       {mainTab === "smart-bar" ? <TickerCommandDeck /> : null}
       {mainTab === "campaigns" ? <CampaignsCommandDeck /> : null}
       {mainTab === "partner-offers" ? <PartnerOffersCommandDeck /> : null}
-      {mainTab === "loyalty" ? <LoyaltyCommandDeck /> : null}
-      {mainTab === "subscriptions" ? <SubscriptionsCommandDeck /> : null}
       {mainTab === "signals-measurement" ? <SignalsMeasurementCommandDeck /> : null}
     </DataTablePageFrame>
   );
