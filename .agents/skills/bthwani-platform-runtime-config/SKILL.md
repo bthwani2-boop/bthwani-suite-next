@@ -1,45 +1,65 @@
 ---
 name: bthwani-platform-runtime-config
-version: 2026.06.19-clean
-summary: Control environment, providers, service slots, and runtime configuration boundaries.
+version: 2026.07.17-v1
+summary: Govern environment, provider, service-slot, base-URL, CORS, and sensitive runtime configuration ownership.
 ---
 
 # bthwani-platform-runtime-config
 
+## Purpose
+
+Own verification of runtime configuration boundaries so environment, provider, service-slot, base-URL, CORS, feature posture, and sensitive settings remain centralized and truthful.
+
 ## Invoke when
 
-- env/config/provider/service slot/base URL/runtime map files change
-- a screen or service needs runtime configuration
-- provider control plane is touched
+- Environment, provider, service-slot, base-URL, runtime-map, CORS, or sensitive configuration changes.
+- A service or surface needs a new runtime configuration value or provider binding.
+
+## Do not invoke when
+
+- No runtime configuration, provider boundary, or sensitive setting is affected.
+- The task is only static UI presentation with no configuration dependency.
 
 ## Read before
 
-`governance/04_API_RUNTIME_BINDING.md`, `governance/05_DOCKER_AND_DATA_PLANE.md`, `shared/app-shell`, provider/core config files
+- `governance/04_API_RUNTIME_BINDING.md`
+- `governance/05_DOCKER_AND_DATA_PLANE.md`
+- `governance/07_SECURITY_AND_SECRETS.md`
+- applicable shared configuration owners, runtime manifests, and consumers
 
-## Execution contract
+## Authority boundary
 
-Keep configuration centralized and owner-specific. Service slots must point to declared service owners. Runtime URLs must come from approved config surfaces, not screen-local constants.
+This skill owns configuration-boundary verification only. It cannot approve application security, provider production activation, release, runtime success, or final closure. Sensitive findings are routed to the independent security authority.
+
+## Required invariants
+
+1. Configuration has one declared owner and typed consumers.
+2. Screens and leaf components do not own base URLs, provider secrets, CORS policy, or service slots.
+3. Production provider activation is explicit and fail-closed.
+4. Defaults do not broaden CORS, bypass authentication, expose credentials, or present mock posture as production.
+5. Runtime behavior claims require same-commit runtime evidence.
 
 ## Forbidden
 
-- no screen-local runtime config
-- no preview/demo/mock runtime data in live paths
-- no provider mutation hidden in frontend
-- no broad CORS or unsafe default config
+- Screen-local runtime configuration.
+- Preview, demo, fixture, or mock state presented as live runtime truth.
+- Provider mutation hidden in frontend code.
+- Broad CORS or unsafe production defaults.
+- Returning the noncanonical decision `BLOCKED_SECURITY_RISK`; use `SECURITY_BLOCK`.
 
-## Required evidence
+## Required output
 
-- config owner path
-- consumer path
-- runtime evidence when behavior changes
-- security review when sensitive values are involved
+```text
+resolved_commit_sha:
+configuration_owner:
+consumers:
+provider_posture:
+sensitive_data_review:
+static_checks:
+runtime_evidence_required:
+missing_evidence:
+decision:
+remaining_risk:
+```
 
-## Failure decision
-
-- hardcoded runtime path in screen -> `FIX_REQUIRED`
-- config owner unclear -> `NEEDS_EVIDENCE`
-- sensitive config leaked -> `BLOCKED_SECURITY_RISK`
-
-## Notes
-
-No extra notes.
+Allowed decisions: `PASS`, `FIX_REQUIRED`, `NEEDS_EVIDENCE`, `SECURITY_BLOCK`, `BLOCKED_EXTERNAL`, and `PROTOCOL_VIOLATION`.
