@@ -121,9 +121,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("GET /dsh/operator/pickups/{orderId}", protected.handleGetOperatorPickup)
 	mux.HandleFunc("POST /dsh/operator/pickups/{orderId}/extend-window", protected.handleExtendPickupWindow)
 
-	// Governed read-only finance proxy — WLT internal financial reads are
-	// service-authenticated; DSH surfaces must consume them through these
-	// actor-authenticated routes, never directly from the browser.
+	// Governed finance proxy — WLT remains the sole owner of financial truth.
 	mux.HandleFunc("GET /dsh/control-panel/finance/settlements", protected.handleFinanceSettlements)
 	mux.HandleFunc("GET /dsh/control-panel/finance/settlements/summary", protected.handleFinanceSettlementSummary)
 	mux.HandleFunc("GET /dsh/partner/me/finance/settlements", protected.handlePartnerFinanceSettlements)
@@ -137,6 +135,9 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("GET /dsh/control-panel/finance/payout-requests", protected.handleFinancePayoutRequests)
 	mux.HandleFunc("POST /dsh/control-panel/finance/payout-requests/{payoutId}/approve", protected.handleApproveFinancePayoutRequest)
 	mux.HandleFunc("POST /dsh/control-panel/finance/payout-requests/{payoutId}/reject", protected.handleRejectFinancePayoutRequest)
+	mux.HandleFunc("POST /dsh/control-panel/finance/payout-requests/{payoutId}/process", protected.handleProcessFinancePayoutRequest)
+	mux.HandleFunc("POST /dsh/control-panel/finance/payout-requests/{payoutId}/complete", protected.handleCompleteFinancePayoutRequest)
+	mux.HandleFunc("POST /dsh/control-panel/finance/payout-requests/{payoutId}/fail", protected.handleFailFinancePayoutRequest)
 	mux.HandleFunc("GET /dsh/control-panel/finance/reconciliation-cases", protected.handleFinanceReconciliationCases)
 	mux.HandleFunc("GET /dsh/control-panel/finance/reconciliation-cases/{caseId}", protected.handleFinanceReconciliationCaseDetail)
 	mux.HandleFunc("POST /dsh/control-panel/finance/reconciliation-cases/{caseId}/assign", protected.handleAssignFinanceReconciliationCase)
