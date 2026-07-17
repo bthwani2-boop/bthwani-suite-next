@@ -163,7 +163,7 @@ if (artifact && impact) {
   }
 
   if (passDecision && highRisk) {
-    for (const authority of ["engineering_reviewer", "independent_quality_authority", "application_security_authority"]) {
+    for (const authority of ["independent_reviewer", "independent_quality_authority", "application_security_authority"]) {
       if (!requiredApprovals.has(authority)) {
         violations.push({ file: artifactPath, message: `HIGH_RISK_REQUIRED_APPROVAL_MISSING ${authority}` });
       }
