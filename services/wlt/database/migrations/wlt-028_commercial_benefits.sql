@@ -74,7 +74,7 @@ CREATE TABLE IF NOT EXISTS wlt_client_subscriptions (
     client_id TEXT NOT NULL,
     product_reference TEXT NOT NULL REFERENCES wlt_commercial_products(reference),
     status TEXT NOT NULL CHECK (status IN ('active', 'paused', 'cancelled', 'expired')),
-    payment_session_id UUID REFERENCES wlt_payment_sessions(id),
+    payment_session_id TEXT REFERENCES wlt_payment_sessions(id),
     starts_at TIMESTAMPTZ NOT NULL,
     ends_at TIMESTAMPTZ,
     cancelled_at TIMESTAMPTZ,
