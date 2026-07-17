@@ -22,6 +22,9 @@ type PayoutRequest struct {
 	ProcessedByOperatorID string     `json:"processedByOperatorId"`
 	CompletedByOperatorID string     `json:"completedByOperatorId"`
 	FailedByOperatorID    string     `json:"failedByOperatorId"`
+	ProviderReference     string     `json:"providerReference"`
+	ProviderStatus        string     `json:"providerStatus"`
+	ProviderProcessedAt   *time.Time `json:"providerProcessedAt"`
 	IdempotencyKey        string     `json:"idempotencyKey"`
 }
 
