@@ -16,9 +16,7 @@ export type MarketingMainTabId =
   | "homepage-promos"
   | "campaigns"
   | "partner-offers"
-  | "signals-measurement"
-  | "loyalty"
-  | "subscriptions";
+  | "signals-measurement";
 
 export type MarketingMainTabMeta = {
   readonly id: MarketingMainTabId;
@@ -33,8 +31,6 @@ export const MARKETING_MAIN_TABS: readonly MarketingMainTabMeta[] = [
   { id: "campaigns",              label: "الحملات" },
   { id: "partner-offers",         label: "عروض الشركاء" },
   { id: "signals-measurement",    label: "الإشارات والقياس" },
-  { id: "loyalty",                label: "الولاء" },
-  { id: "subscriptions",          label: "الاشتراكات" },
 ] as const;
 
 // ─── Section Tab Registry ─────────────────────────────────────────────────────
@@ -116,7 +112,7 @@ export const PARTNER_GATE_CARDS: readonly PartnerGateCardViewModel[] = [
     surface: "تطبيق الشريك",
     auditNote: "بدون تدقيق إضافي",
     description: "بوابة تفعيل الشركاء تتحقق من جاهزية المتجر قبل إطلاق أي عروض تسويقية.",
-    statusColor: colorRoles.brandAction, // Yellow
+    statusColor: colorRoles.brandAction,
     primaryActionLabel: "فتح الإشارات",
   },
   {
@@ -128,7 +124,7 @@ export const PARTNER_GATE_CARDS: readonly PartnerGateCardViewModel[] = [
     surface: "لوحة التحكم",
     auditNote: "بدون تدقيق إضافي",
     description: "بوابة نشر المنتجات تضمن سلامة مواصفات وصور المنتج قبل النشر.",
-    statusColor: colorRoles.brandAction, // Orange
+    statusColor: colorRoles.brandAction,
     primaryActionLabel: "فتح إشارات التسليم",
   },
   {
@@ -140,7 +136,7 @@ export const PARTNER_GATE_CARDS: readonly PartnerGateCardViewModel[] = [
     surface: "تطبيق العميل",
     auditNote: "بدون تدقيق إضافي",
     description: "توقعات الظهور التجاري تقتصر على محاكاة العناصر المرئية للعملاء.",
-    statusColor: colorRoles.brandStructure, // Green
+    statusColor: colorRoles.brandStructure,
     primaryActionLabel: "فتح الحملات",
   },
 ] as const;
