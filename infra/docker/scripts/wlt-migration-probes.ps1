@@ -23,9 +23,7 @@
 # DEFAULT 'YER' at CREATE TABLE time (wlt-002..wlt-006), so there is no
 # schema state that distinguishes "wlt-007 ran" from "it didn't". Rather than
 # guess, it is always left to genuinely (re-)run via the normal apply loop,
-# which is safe because its SQL is idempotent (ALTER COLUMN SET DEFAULT and
-# an UPDATE ... WHERE currency = 'SAR' that matches zero rows if already
-# clean).
+# which is safe because its SQL is idempotent.
 $script:WltMigrationProbes = [ordered]@{
   "wlt-000_financial_references.sql"             = "to_regclass('public.wlt_field_commission_refs') IS NOT NULL"
   "wlt-001_payment_sessions.sql"                  = "to_regclass('public.wlt_payment_sessions') IS NOT NULL"
@@ -51,14 +49,36 @@ $script:WltMigrationProbes = [ordered]@{
   "wlt-022_commission_lifecycle.sql"              = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_commissions' AND column_name = 'updated_at')"
   "wlt-023_special_request_payment_sessions.sql"  = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_payment_sessions' AND column_name = 'special_request_id')"
   "wlt-024_payment_session_tenancy.sql"           = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_payment_sessions' AND column_name = 'tenant_id') AND to_regclass('public.wlt_payment_sessions_tenant_checkout_intent_idx') IS NOT NULL"
-  "wlt-025_ledger_reference_idempotency.sql"      = "to_regclass('public.wlt_ledger_transactions_reference_uq') IS NOT NULL"
+  "wlt-025_ledger_integrity.sql"                  = "to_regclass('public.wlt_ledger_transactions_source_uq') IS NOT NULL"
+  "wlt-026_cash_in_transit_account.sql"           = "EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'wlt_ledger_accounts_type_chk' AND pg_get_constraintdef(oid) LIKE '%cash_in_transit%')"
+  "wlt-027_payout_provider_proof.sql"             = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_payout_requests' AND column_name = 'provider_reference') AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_payout_requests' AND column_name = 'provider_status')"
+  "wlt-028_commercial_benefits.sql"               = "to_regclass('public.wlt_commercial_products') IS NOT NULL AND to_regclass('public.wlt_loyalty_accounts') IS NOT NULL AND to_regclass('public.wlt_client_subscriptions') IS NOT NULL"
 }
 
 function Test-WltMigrationProbeCoverage {
   param([System.IO.FileInfo[]]$MigrationFiles)
+
+  $numbers = @{}
+  $fileNames = @{}
   foreach ($f in $MigrationFiles) {
+    $fileNames[$f.Name] = $true
+    if ($f.Name -notmatch '^wlt-(\d{3})_[a-z0-9_]+\.sql$') {
+      throw "Invalid WLT migration filename: $($f.Name). Expected wlt-NNN_snake_case.sql."
+    }
+    $number = $Matches[1]
+    if ($numbers.ContainsKey($number)) {
+      throw "Duplicate WLT migration number $number: $($numbers[$number]) and $($f.Name)."
+    }
+    $numbers[$number] = $f.Name
+
     if (-not $script:WltMigrationProbes.Contains($f.Name)) {
       throw "No legacy-detection probe registered for $($f.Name) in `$script:WltMigrationProbes (infra/docker/scripts/wlt-migration-probes.ps1). Add one before merging a new WLT migration."
+    }
+  }
+
+  foreach ($registeredName in $script:WltMigrationProbes.Keys) {
+    if (-not $fileNames.ContainsKey($registeredName)) {
+      throw "Stale WLT migration probe registered for missing file $registeredName."
     }
   }
 }
