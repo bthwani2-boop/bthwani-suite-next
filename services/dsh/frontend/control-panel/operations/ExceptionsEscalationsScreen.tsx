@@ -34,88 +34,19 @@ import { DSH_CONTROL_PANEL_TONE_MAP } from '../shared/ControlPanelDshDecisionBoa
 
 export type ExceptionsEscalationsScreenProps = { hubHref: string; subGroup?: string; };
 
-type WorkspaceFilterId = 'all' | 'mobile-owned' | 'finance-preview' | 'hidden-compat' | 'control-policy';
-type SelectedItem =
-  | { type: 'exception'; id: string }
-  | { type: 'flow'; id: string }
-  | { type: 'rescue'; id: string }
-  | { type: 'playbook'; id: string }
-  | null;
-
-type ExceptionsStateItem = {
-  id: string;
-  type: string;
-  lifecycleState: string;
-  affectedSurface: string;
-  ownerQueue: string;
-  severity: string;
-  currentOwner: string;
-  startTime: string;
-  lastAction: string;
-  suggestedAction: string;
-  resolutionPath: string;
-  routeHint: string;
-  evidenceNeeded: boolean;
-  onDemandDetailPolicy: string;
-  note: string;
-  statusTone: string;
-  customOwner: string;
-  customQueue: string;
-  customSlaState: 'نشط' | 'مصعّد' | 'محلول';
-  customNote: string;
-  customStatusTone: 'warning' | 'danger' | 'best' | 'brand';
-  realId?: string;
-};
-
-const WORKSPACE_FILTERS: ReadonlyArray<{ id: WorkspaceFilterId; label: string }> = [
-  { id: 'all', label: 'الكل' },
-  { id: 'mobile-owned', label: 'مُلاك الجوال' },
-  { id: 'finance-preview', label: 'معاينة مالية' },
-  { id: 'hidden-compat', label: 'توافقي مخفي' },
-  { id: 'control-policy', label: 'سياسة التحكم' },
-];
-
-const SURFACE_LABELS: Record<string, string> = {
-  'app-client': 'العميل',
-  'app-partner': 'الشريك',
-  'app-captain': 'الكابتن',
-  'app-field': 'الميداني',
-  'control-panel': 'لوحة التحكم',
-  'wlt-finance': 'WLT المالية',
-};
-
-const DOMAIN_LABELS: Record<string, string> = {
-  'order-lifecycle': 'دورة الطلب',
-  'cart-checkout': 'السلة والدفع',
-  tracking: 'التتبع',
-  'delivery-mode': 'وضع التنفيذ',
-  'partner-operations': 'تشغيل الشريك',
-  'captain-operations': 'تشغيل الكابتن',
-  'field-onboarding': 'ضم المتاجر',
-  'catalog-inventory': 'الكتالوج والمخزون',
-  'support-escalation': 'الدعم والتصعيد',
-  'chat-conversation': 'المحادثات',
-  'cancellation-rejection': 'الإلغاء والرفض',
-  'finance-preview': 'مالي للقراءة فقط',
-  'control-policy': 'سياسة التحكم',
-};
-
-const VISIBILITY_LABELS: Record<string, string> = {
-  primary: 'أساسي',
-  contextual: 'سياقي',
-  'escalation-only': 'تصعيد فقط',
-  'hidden-compat': 'توافقي مخفي',
-  internal: 'داخلي',
-  disabled: 'معطل',
-};
-
-const POLICY_LABELS: Record<string, string> = {
-  'summary-only': 'ملخص أولًا',
-  'detail-on-open': 'تفاصيل عند الفتح',
-  'evidence-on-open': 'أدلة عند الفتح',
-  'chat-on-open': 'دردشة عند الفتح',
-  'finance-preview-only': 'مالي للقراءة فقط',
-};
+import {
+  type ExceptionsStateItem,
+  type WorkspaceFilterId,
+  type SelectedItem,
+  WORKSPACE_FILTERS,
+  SURFACE_LABELS,
+  DOMAIN_LABELS,
+  VISIBILITY_LABELS,
+  POLICY_LABELS,
+  QUEUE_LABELS,
+} from './components/ExceptionsEscalations.types';
+import { ExceptionsExceptionInspector } from './components/ExceptionsExceptionInspector';
+import { ExceptionsFlowInspector } from './components/ExceptionsFlowInspector';
 
 function mapReadinessEscalationToException(item: DshReadinessEscalation): ExceptionsStateItem {
   const isResolved = item.status === 'resolved';

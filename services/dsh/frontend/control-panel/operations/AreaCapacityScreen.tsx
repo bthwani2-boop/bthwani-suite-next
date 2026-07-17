@@ -27,7 +27,7 @@ export function AreaCapacityScreen({ hubHref: _hubHref, subGroup: _subGroup }: A
 
   React.useEffect(() => {
     let cancelled = false;
-    import('../../shared/platform/platform-policies.api').then(({ fetchZones }) => {
+    import('../../shared/platform/platform-policies.api').then(({ fetchZones, updateZone, upsertCapacityConfig }) => {
       fetchZones().then((res) => {
         if (cancelled) return;
         setZones(res.zones || []);
@@ -61,10 +61,8 @@ export function AreaCapacityScreen({ hubHref: _hubHref, subGroup: _subGroup }: A
 
   const handlePageChange = React.useCallback((page: number) => {
     setIsChangingPage(true);
-    setTimeout(() => {
-      setCurrentPage(page);
-      setIsChangingPage(false);
-    }, 300);
+    setCurrentPage(page);
+    setIsChangingPage(false);
   }, []);
 
   // Selection states
@@ -81,102 +79,50 @@ export function AreaCapacityScreen({ hubHref: _hubHref, subGroup: _subGroup }: A
     return zones.find((z) => z.id === selectedZoneId) || null;
   }, [zones, selectedZoneId]);
 
-  const handleTriggerAction = React.useCallback((zoneId: string, actionType: 'surge' | 'radius' | 'stop') => {
+  const handleTriggerAction = React.useCallback(async (zoneId: string, actionType: 'activate' | 'deactivate' | 'throttle') => {
     setActionStatus('pending');
     setActionFeedback(null);
 
-    setTimeout(() => {
-      setActionStatus('success');
-
+    try {
+      const { updateZone, upsertCapacityConfig } = await import('../../shared/platform/platform-policies.api');
+      
       let feedback = '';
-      let loadUpdate = '';
-      let statusToneUpdate: 'warning' | 'danger' | 'best' | 'brand' = 'brand';
-      let surgeUpdate = '';
-      let protectedUpdate = '';
-      let freeUpdate = '';
-      let recommendationUpdate = '';
-      let noteUpdate = '';
-
-      if (actionType === 'surge') {
-        const isCurrentActive = zones.find((z) => z.id === zoneId)?.customSurgeBonus === 'حافز مفعل';
-        if (isCurrentActive) {
-          feedback = 'تم إلغاء تفعيل حافز المنطقة بنجاح وعودة التسعير القياسي.';
-          surgeUpdate = 'لا حاجة';
-          loadUpdate = 'متوازن';
-          statusToneUpdate = 'best';
-          recommendationUpdate = 'لا تدخل مطلوب';
-          noteUpdate = 'تم إلغاء الحافز وعادت السعة للتوازن القياسي.';
-        } else {
-          feedback = 'تم تفعيل حافز المنطقة (+20% Surge) لزيادة توفر الكباتن.';
-          surgeUpdate = 'حافز مفعل';
-          loadUpdate = 'متوازن';
-          statusToneUpdate = 'best';
-          recommendationUpdate = 'مراقبة تطور الأحمال';
-          noteUpdate = 'حافز السرج نشط وجاري استقطاب سعة إضافية.';
-        }
-      } else if (actionType === 'radius') {
-        feedback = 'تم تقليص نصف قطر تغطية الطلبات للمنطقة للحد من تراكم الأحمال.';
-        surgeUpdate = 'حافز جزئي';
-        loadUpdate = 'متوازن';
-        statusToneUpdate = 'best';
-        recommendationUpdate = 'لا تدخل مطلوب';
-        noteUpdate = 'تم تقليص نصف القطر وحماية التزام الـ SLA بنجاح.';
-      } else if (actionType === 'stop') {
-        feedback = 'تم إيقاف الاستقبال للمنطقة مؤقتاً لحماية جودة الخدمة.';
-        surgeUpdate = 'غير مطلوب';
-        loadUpdate = 'موقوف مؤقتاً';
-        statusToneUpdate = 'danger';
-        recommendationUpdate = 'إعادة تنشيط الاستقبال لاحقاً';
-        noteUpdate = 'المنطقة موقوفة مؤقتاً لتخفيف تراكم الطلبات.';
+      if (actionType === 'activate') {
+        await updateZone(zoneId, { isActive: true });
+        feedback = 'تم إعادة تفعيل استقبال الطلبات للمنطقة بنجاح.';
+      } else if (actionType === 'deactivate') {
+        await updateZone(zoneId, { isActive: false });
+        feedback = 'تم إيقاف استقبال للمنطقة مؤقتاً لحماية جودة الخدمة.';
+      } else if (actionType === 'throttle') {
+        await upsertCapacityConfig({
+          zoneId,
+          maxConcurrentOrders: 50,
+          maxCaptainsOnline: 20,
+          throttleThreshold: 80,
+        });
+        feedback = 'تم تحديث سعة المنطقة وحدود الضغط.';
       }
 
       setActionFeedback(feedback);
+      setActionStatus('success');
 
+      // Reload zones to reflect truth from backend
+      const { fetchZones } = await import('../../shared/platform/platform-policies.api');
+      const res = await fetchZones();
+      setZones(res.zones || []);
+
+      // Reset selection after brief delay to show success msg
       setTimeout(() => {
-        setZones((prev) =>
-          prev.map((z) =>
-            z.id === zoneId
-              ? {
-                  ...z,
-                  customZoneLoad: loadUpdate || z.customZoneLoad,
-                  customStatusTone: statusToneUpdate || z.customStatusTone,
-                  customSurgeBonus: surgeUpdate || z.customSurgeBonus,
-                  customProtectedZones: protectedUpdate || z.customProtectedZones,
-                  customFreeZones: freeUpdate || z.customFreeZones,
-                  customRecommendation: recommendationUpdate || z.customRecommendation,
-                  customNote: z.customNote ? `${z.customNote} | ${noteUpdate}` : noteUpdate,
-                }
-              : z
-          )
-        );
-
-        // Update KPIs summary
-        if (actionType === 'surge') {
-          setKpis((prev) => ({
-            ...prev,
-            zoneLoad: 'أحمال متوازنة',
-            surgeBonus: 'مفعل نشط',
-          }));
-        } else if (actionType === 'radius') {
-          setKpis((prev) => ({
-            ...prev,
-            zoneLoad: 'أحمال مستقرة',
-            freeZones: prev.freeZones + 1,
-          }));
-        } else if (actionType === 'stop') {
-          setKpis((prev) => ({
-            ...prev,
-            zoneLoad: 'أحمال موقوفة',
-            protectedZones: Math.max(0, prev.protectedZones - 1),
-          }));
-        }
-
         setActionStatus('idle');
         setActionFeedback(null);
         setSelectedZoneId(null);
-      }, 1200);
-    }, 1000);
-  }, [zones]);
+      }, 1500);
+
+    } catch (err: any) {
+      setActionFeedback(`فشل الإجراء: ${err.message}`);
+      setActionStatus('idle');
+    }
+  }, []);
 
   const summaryKpi = [
     { id: 'load', label: 'حِمل المنطقة', value: kpis.zoneLoad, tone: 'danger' as const },
@@ -254,25 +200,25 @@ export function AreaCapacityScreen({ hubHref: _hubHref, subGroup: _subGroup }: A
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: 'auto' }}>
               <button
                 type="button"
-                onClick={() => handleTriggerAction(activeZone.id, 'surge')}
+                onClick={() => handleTriggerAction(activeZone.id, activeZone.isActive ? 'deactivate' : 'activate')}
                 style={{
                   width: '100%',
                   padding: '10px',
-                  background: activeZone.customSurgeBonus === 'حافز مفعل' ? 'var(--bthwani-control-panel-surface)' : 'var(--bthwani-control-panel-success)',
-                  color: activeZone.customSurgeBonus === 'حافز مفعل' ? 'var(--bthwani-control-panel-text)' : 'var(--bthwani-brand-contrast)',
-                  border: activeZone.customSurgeBonus === 'حافز مفعل' ? '1px solid var(--bthwani-control-panel-border)' : 'none',
+                  background: activeZone.isActive ? 'var(--bthwani-control-panel-danger)' : 'var(--bthwani-control-panel-success)',
+                  color: 'var(--bthwani-brand-contrast)',
+                  border: 'none',
                   borderRadius: '8px',
                   cursor: 'pointer',
                   fontWeight: 700,
                   fontSize: '12px',
                 }}
               >
-                {activeZone.customSurgeBonus === 'حافز مفعل' ? 'إلغاء تفعيل حافز المنطقة' : 'تفعيل حافز المنطقة (+20% Surge)'}
+                {activeZone.isActive ? 'إيقاف استقبال طلبات مؤقت للمنطقة' : 'تفعيل استقبال الطلبات للمنطقة'}
               </button>
 
               <button
                 type="button"
-                onClick={() => handleTriggerAction(activeZone.id, 'radius')}
+                onClick={() => handleTriggerAction(activeZone.id, 'throttle')}
                 style={{
                   width: '100%',
                   padding: '10px',
@@ -285,25 +231,7 @@ export function AreaCapacityScreen({ hubHref: _hubHref, subGroup: _subGroup }: A
                   fontSize: '12px',
                 }}
               >
-                تقليص نطاق التغطية
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleTriggerAction(activeZone.id, 'stop')}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  background: 'var(--bthwani-control-panel-danger)',
-                  color: 'var(--bthwani-brand-contrast)',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontWeight: 700,
-                  fontSize: '12px',
-                }}
-              >
-                إيقاف استقبال طلبات مؤقت للمنطقة
+                تحديث حدود السعة (Throttle Threshold)
               </button>
 
               <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
