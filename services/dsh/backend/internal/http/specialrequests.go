@@ -29,7 +29,7 @@ import (
 const (
 	OperationsSpecialRequestsPermissionRead       = "operations.special_requests.read"
 	OperationsSpecialRequestsPermissionTransition = "operations.special_requests.transition" // operator PATCH: review/quote/stage transitions
-	OperationsSpecialRequestsPermissionDispatch   = "operations.special_requests.dispatch"    // assign a special request to a captain
+	OperationsSpecialRequestsPermissionDispatch   = "operations.special_requests.dispatch"   // assign a special request to a captain
 )
 
 func parseLimitOffset(r *http.Request) (int, int) {

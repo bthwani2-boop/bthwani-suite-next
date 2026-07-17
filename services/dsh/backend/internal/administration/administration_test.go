@@ -41,10 +41,10 @@ func TestValidActivationTransitionsHaveNoSelfLoops(t *testing.T) {
 
 func TestValidActivationTransitionsOnlyReferenceKnownStatuses(t *testing.T) {
 	known := map[string]bool{
-		"submitted":       true,
-		"ops_approved":    true,
-		"partner_active":  true,
-		"blocked":         true,
+		"submitted":      true,
+		"ops_approved":   true,
+		"partner_active": true,
+		"blocked":        true,
 	}
 	for from, targets := range validActivationTransitions {
 		if !known[from] {

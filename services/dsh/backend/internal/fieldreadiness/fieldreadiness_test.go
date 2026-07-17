@@ -72,7 +72,6 @@ func TestCreateVisitRequiresGPS(t *testing.T) {
 	}
 }
 
-
 func TestCreateEscalationRequiresStoreRaisedByAndDescription(t *testing.T) {
 	cases := []CreateEscalationInput{
 		{RaisedBy: "agent-1", Description: "issue"},

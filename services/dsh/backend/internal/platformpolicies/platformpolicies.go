@@ -320,10 +320,10 @@ func UpsertStoreOnboardingFeePolicy(db *sql.DB, input StoreOnboardingFeePolicyIn
 // ── Serviceability check ──────────────────────────────────────────────────────
 
 type ZoneServiceabilityResult struct {
-	ZoneID      string `json:"zoneId"`
-	IsActive    bool   `json:"isActive"`
-	ActiveStores int   `json:"activeStores"`
-	SlaAvailable bool  `json:"slaAvailable"`
+	ZoneID       string `json:"zoneId"`
+	IsActive     bool   `json:"isActive"`
+	ActiveStores int    `json:"activeStores"`
+	SlaAvailable bool   `json:"slaAvailable"`
 }
 
 func GetZoneServiceability(db *sql.DB, zoneID string) (ZoneServiceabilityResult, error) {

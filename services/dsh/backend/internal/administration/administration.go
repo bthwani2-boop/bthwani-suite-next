@@ -7,9 +7,9 @@ import (
 )
 
 var (
-	ErrNotFound    = errors.New("not found")
-	ErrInvalid     = errors.New("invalid input")
-	ErrForbidden   = errors.New("transition not allowed")
+	ErrNotFound  = errors.New("not found")
+	ErrInvalid   = errors.New("invalid input")
+	ErrForbidden = errors.New("transition not allowed")
 )
 
 // ── Roles ─────────────────────────────────────────────────────────────────────
@@ -62,11 +62,11 @@ func CreateRole(db *sql.DB, name, description string) (Role, error) {
 // ── Staff ─────────────────────────────────────────────────────────────────────
 
 type StaffMember struct {
-	ID        string    `json:"id"`
-	ActorID   string    `json:"actorId"`
-	RoleID    string    `json:"roleId"`
-	RoleName  string    `json:"roleName"`
-	AssignedBy string   `json:"assignedBy"`
+	ID         string    `json:"id"`
+	ActorID    string    `json:"actorId"`
+	RoleID     string    `json:"roleId"`
+	RoleName   string    `json:"roleName"`
+	AssignedBy string    `json:"assignedBy"`
 	AssignedAt time.Time `json:"assignedAt"`
 }
 
@@ -115,20 +115,20 @@ func AssignStaffRole(db *sql.DB, actorID, roleID, assignedBy string) (StaffMembe
 // ── Partner Activation ────────────────────────────────────────────────────────
 
 type PartnerActivation struct {
-	ID         string     `json:"id"`
-	PartnerID  string     `json:"partnerId"`
-	Status     string     `json:"status"`
-	ReviewedBy string     `json:"reviewedBy"`
-	Notes      string     `json:"notes"`
-	CreatedAt  time.Time  `json:"createdAt"`
-	UpdatedAt  time.Time  `json:"updatedAt"`
+	ID         string    `json:"id"`
+	PartnerID  string    `json:"partnerId"`
+	Status     string    `json:"status"`
+	ReviewedBy string    `json:"reviewedBy"`
+	Notes      string    `json:"notes"`
+	CreatedAt  time.Time `json:"createdAt"`
+	UpdatedAt  time.Time `json:"updatedAt"`
 }
 
 var validActivationTransitions = map[string][]string{
-	"submitted":    {"ops_approved", "blocked"},
-	"ops_approved": {"partner_active", "blocked"},
+	"submitted":      {"ops_approved", "blocked"},
+	"ops_approved":   {"partner_active", "blocked"},
 	"partner_active": {"blocked"},
-	"blocked":      {"submitted"},
+	"blocked":        {"submitted"},
 }
 
 func ListPartnerActivations(db *sql.DB, status string) ([]PartnerActivation, error) {

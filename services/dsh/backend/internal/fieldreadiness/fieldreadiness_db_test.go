@@ -96,7 +96,7 @@ func testValidLocation() *LocationEvidence {
 	return &LocationEvidence{
 		Latitude:       15.3694, // Sanaa, Yemen
 		Longitude:      44.1910,
-		AccuracyMeters: 5.0, // well within MinStartAccuracyMeters=50
+		AccuracyMeters: 5.0,        // well within MinStartAccuracyMeters=50
 		CapturedAt:     time.Now(), // fresh
 		Provider:       "gps",
 		IsMocked:       false,

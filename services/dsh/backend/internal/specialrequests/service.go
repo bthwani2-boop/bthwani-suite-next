@@ -562,7 +562,7 @@ func (s *Service) ApplyOperatorTransitionInTenant(ctx context.Context, tenantID 
 	if err := WriteAuditEvent(tx, id, "operator", "operator", "transition", "", correlationID, requestJSON(current), requestJSON(updated)); err != nil {
 		return nil, fmt.Errorf("write audit event: %w", err)
 	}
-	
+
 	eventType := "special_request_updated"
 	if current.Status != updated.Status {
 		eventType = "special_request_" + string(updated.Status)

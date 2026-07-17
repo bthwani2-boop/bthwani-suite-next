@@ -75,7 +75,7 @@ func TestPartnerScopeAuthorizationDB(t *testing.T) {
 	// 1. Explicit owner sees all explicitly owned stores (must be assigned to both)
 	insertMember(storeA1, "actor-owner-a", "owner", "active")
 	insertMember(storeA2, "actor-owner-a", "owner", "active")
-	
+
 	// 2. Member of store A cannot see store B
 	insertMember(storeA1, "actor-staff-a1", "staff", "active")
 
@@ -150,11 +150,11 @@ func TestPartnerScopeAuthorizationDB(t *testing.T) {
 			if err != nil {
 				t.Fatalf("ListPartnerScopesForActor failed: %v", err)
 			}
-			
+
 			if len(scopes) != len(tc.wantStores) {
 				t.Fatalf("got %d scopes, want %d", len(scopes), len(tc.wantStores))
 			}
-			
+
 			// Verify exact stores returned
 			gotStoreMap := make(map[string]bool)
 			for _, sc := range scopes {

@@ -76,7 +76,7 @@ func (s *protectedStoreServer) handleSubmitFieldMePayoutRequest(w http.ResponseW
 	if !ok {
 		return
 	}
-	
+
 	type requestBody struct {
 		AmountMinorUnits int64  `json:"amountMinorUnits"`
 		Currency         string `json:"currency"`

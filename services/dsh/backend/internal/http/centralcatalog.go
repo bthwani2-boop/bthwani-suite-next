@@ -43,18 +43,18 @@ func (s *protectedStoreServer) writeCentralCatalogError(w http.ResponseWriter, e
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid central catalog input")
 	case errors.Is(err, centralcatalog.ErrForbidden):
 		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "action not permitted by platform policy")
-	
-	var conflictErr *centralcatalog.ConflictError
-	if errors.As(err, &conflictErr) {
-		store.SendJSON(w, http.StatusConflict, map[string]any{
-			"code": "CONFLICT",
-			"message": conflictErr.Message,
-			"entityId": conflictErr.EntityID,
-			"expectedVersion": conflictErr.ExpectedVersion,
-			"currentVersion": conflictErr.CurrentVersion,
-		})
-		return
-	}
+
+		var conflictErr *centralcatalog.ConflictError
+		if errors.As(err, &conflictErr) {
+			store.SendJSON(w, http.StatusConflict, map[string]any{
+				"code":            "CONFLICT",
+				"message":         conflictErr.Message,
+				"entityId":        conflictErr.EntityID,
+				"expectedVersion": conflictErr.ExpectedVersion,
+				"currentVersion":  conflictErr.CurrentVersion,
+			})
+			return
+		}
 
 	default:
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "central catalog operation failed")
@@ -360,7 +360,6 @@ func (s *protectedStoreServer) createProductProposal(w http.ResponseWriter, r *h
 	}
 	store.SendJSON(w, http.StatusCreated, map[string]any{"proposal": p})
 }
-
 
 func (s *protectedStoreServer) handleUpdatePartnerProductProposal(w http.ResponseWriter, r *http.Request) {
 	actor, _, ok := s.partnerStore(w, r)

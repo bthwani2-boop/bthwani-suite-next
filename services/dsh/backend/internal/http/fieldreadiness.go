@@ -16,10 +16,10 @@ func (s *protectedStoreServer) handleCreateFieldVisit(w http.ResponseWriter, r *
 	}
 	storeID := r.PathValue("storeId")
 	var body struct {
-		VisitType      string                       `json:"visitType"`
+		VisitType      string                           `json:"visitType"`
 		StartLocation  *fieldreadiness.LocationEvidence `json:"startLocation"`
-		StoreLatitude  *float64                     `json:"storeLatitude"`
-		StoreLongitude *float64                     `json:"storeLongitude"`
+		StoreLatitude  *float64                         `json:"storeLatitude"`
+		StoreLongitude *float64                         `json:"storeLongitude"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
