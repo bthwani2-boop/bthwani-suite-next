@@ -1,7 +1,6 @@
 param(
   [switch]$Full,
   [switch]$Runtime,
-  [switch]$Soft,
   [string]$Guard,
   [string]$Journey = "UNSPECIFIED_JOURNEY"
 )
@@ -9,9 +8,21 @@ param(
 Set-Location -LiteralPath (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
 $ErrorActionPreference = "Stop"
 
-$manifest = Get-Content -LiteralPath "tools\guards\guard-manifest.json" -Raw | ConvertFrom-Json
-$journeyGuards = @($manifest.guardSets.journey)
-if ($Guard) { $journeyGuards = @($Guard) }
+$manifestPath = "tools\guards\guard-manifest.json"
+if (-not (Test-Path -LiteralPath $manifestPath)) {
+  throw "Guard manifest is missing: $manifestPath"
+}
+
+$manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+$registeredJourneyGuards = @($manifest.guardSets.journey)
+$journeyGuards = $registeredJourneyGuards
+
+if ($Guard) {
+  if ($registeredJourneyGuards -notcontains $Guard) {
+    throw "Requested guard is not registered in the journey set: $Guard"
+  }
+  $journeyGuards = @($Guard)
+}
 
 $results = @()
 
@@ -65,18 +76,15 @@ if ($Runtime) {
 }
 
 $failed = @($results | Where-Object { -not $_.ok })
-if ($failed.Count -eq 0) {
-  $status = if ($Runtime) { "LOCAL_RUNTIME_VERIFIED_AWAITING_REMOTE_CI" } elseif ($Full) { "LOCAL_FULL_VERIFIED_AWAITING_REMOTE_CI" } else { "LOCAL_TARGETED_VERIFIED_AWAITING_REMOTE_CI" }
+if ($failed.Count -gt 0) {
   Write-Host ""
-  Write-Host "RESULT: $status journey=$Journey" -ForegroundColor Green
-  return
+  Write-Host "RESULT: FIX_REQUIRED journey=$Journey" -ForegroundColor Red
+  Write-Host "Failed steps: $($failed.step -join ', ')" -ForegroundColor Red
+  throw "Journey gate failed: $($failed.step -join ', ')"
 }
 
+$scope = if ($Runtime) { "runtime" } else { "static" }
+$mode = if ($Full) { "full-explicit" } else { "targeted-default" }
 Write-Host ""
-Write-Host "RESULT: FAIL journey=$Journey" -ForegroundColor Red
-Write-Host "Failed steps: $($failed.step -join ', ')" -ForegroundColor Red
-if ($Soft) {
-  Write-Host "WARNING: -Soft was explicitly supplied; returning without throwing." -ForegroundColor Yellow
-  return
-}
-throw "Journey gate failed: $($failed.step -join ', ')"
+Write-Host "RESULT: PASS scope=$scope mode=$mode journey=$Journey" -ForegroundColor Green
+Write-Host "PASS is scoped evidence only and does not imply CLOSED_WITH_EVIDENCE." -ForegroundColor Yellow
