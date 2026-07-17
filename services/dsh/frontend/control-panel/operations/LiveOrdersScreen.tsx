@@ -207,47 +207,48 @@ export function LiveOrdersScreen({
               onActionPress={retry}
             />
           ) : (
-            visibleOrders.map((order) => (
-              <WebControlPanelDecisionRow
-                key={order.id}
-                entityId={order.id}
-                entityLabel={`متجر: ${order.storeId} — عميل: ${order.clientId}`}
-                status={order.status}
-                statusTone={resolveRuntimeOrderStatusTone(order.status)}
-                reason={order.deliveryFailureReason ?? `نمط التنفيذ: ${order.fulfillmentMode}`}
-                sla={`آخر تحديث: ${new Date(order.updatedAt).toLocaleString('ar-SA')}`}
-                onInspect={() => setSelectedOrderId(order.id)}
-                primaryAction={
-                  order.fulfillmentMode === 'bthwani_delivery' && !order.captainId
-                    ? {
-                        id: `${order.id}-dispatch`,
-                        label: 'إسناد كابتن',
-                        onAction: () => router.push(
-                          buildOperationsHref('dispatch-capacity', {
-                            orderId: order.id,
-                            subGroup: 'pending',
-                          }),
-                        ),
-                      }
-                    : undefined
-                }
-                secondaryAction={
-                  order.deliveryFailureReason
-                    ? {
-                        id: `${order.id}-exception`,
-                        label: 'فتح الاستثناء',
-                        onAction: () => router.push(
-                          buildOperationsHref('exceptions', {
-                            orderId: order.id,
-                            subGroup: 'active',
-                            panel: 'exception',
-                          }),
-                        ),
-                      }
-                    : undefined
-                }
-              />
-            ))
+            visibleOrders.map((order) => {
+              const dispatchAction = order.fulfillmentMode === 'bthwani_delivery' && !order.captainId
+                ? {
+                    id: `${order.id}-dispatch`,
+                    label: 'إسناد كابتن',
+                    onAction: () => router.push(
+                      buildOperationsHref('dispatch-capacity', {
+                        orderId: order.id,
+                        subGroup: 'pending',
+                      }),
+                    ),
+                  }
+                : undefined;
+              const exceptionAction = order.deliveryFailureReason
+                ? {
+                    id: `${order.id}-exception`,
+                    label: 'فتح الاستثناء',
+                    onAction: () => router.push(
+                      buildOperationsHref('exceptions', {
+                        orderId: order.id,
+                        subGroup: 'active',
+                        panel: 'exception',
+                      }),
+                    ),
+                  }
+                : undefined;
+
+              return (
+                <WebControlPanelDecisionRow
+                  key={order.id}
+                  entityId={order.id}
+                  entityLabel={`متجر: ${order.storeId} — عميل: ${order.clientId}`}
+                  status={order.status}
+                  statusTone={resolveRuntimeOrderStatusTone(order.status)}
+                  reason={order.deliveryFailureReason ?? `نمط التنفيذ: ${order.fulfillmentMode}`}
+                  sla={`آخر تحديث: ${new Date(order.updatedAt).toLocaleString('ar-SA')}`}
+                  onInspect={() => setSelectedOrderId(order.id)}
+                  {...(dispatchAction ? { primaryAction: dispatchAction } : {})}
+                  {...(exceptionAction ? { secondaryAction: exceptionAction } : {})}
+                />
+              );
+            })
           )}
         </WebControlPanelQueue>
 
