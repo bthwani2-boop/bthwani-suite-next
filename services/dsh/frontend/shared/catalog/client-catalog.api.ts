@@ -1,4 +1,4 @@
-﻿import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
+import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import type { CatalogMedia } from "./catalog.types";
 import type { CatalogCategory, CatalogProduct, CatalogState, ClientStoreCatalog } from "./client-catalog.types";
 import { resolveCatalogError } from "./catalog.controller-core";
@@ -21,7 +21,7 @@ export async function fetchPublishedCatalog(storeId: string): Promise<CatalogSta
         description: node.slug,
         sortOrder: node.sortOrder,
         isActive: node.isActive,
-        version: 1,
+        version: node.version,
       }));
     const domainCategories: CatalogCategory[] = response.domains
       .filter((domain) => usedDomainIds.has(domain.id))
@@ -32,24 +32,27 @@ export async function fetchPublishedCatalog(storeId: string): Promise<CatalogSta
         description: domain.slug,
         sortOrder: domain.sortOrder,
         isActive: domain.isActive,
-        version: 1,
+        version: domain.version,
       }));
     const categories = [...nodeCategories, ...domainCategories].sort((a, b) => a.sortOrder - b.sortOrder);
     const products: CatalogProduct[] = response.products.map((product) => {
       // Use server-resolved effectiveImage (DAM-gated, review-approved).
       // Priority: store-assortment partner_custom > master-product canonical > null.
       // Never reconstruct URLs from objectKey; never use /dsh/media?mediaRef= fallback.
+      const effectiveMediaLink = product.effectiveImage
+        ? response.media.find((link) => link.publicUrl === product.effectiveImage?.url)
+        : undefined;
       const media: CatalogMedia[] = product.effectiveImage
         ? [{
-            id: `${product.id}-effective`,
+            id: effectiveMediaLink?.id ?? `${product.id}-effective`,
             productId: product.id,
-            objectKey: "",
-            contentType: "image/webp",
+            objectKey: effectiveMediaLink?.objectKey ?? "",
+            contentType: effectiveMediaLink?.mimeType ?? "image/webp",
             state: "complete",
             publicUrl: product.effectiveImage.url.startsWith("http")
               ? product.effectiveImage.url
               : `${baseUrl}${product.effectiveImage.url}`,
-            version: 1,
+            version: effectiveMediaLink?.version ?? product.version,
           }]
         : [];
       return {
@@ -63,7 +66,7 @@ export async function fetchPublishedCatalog(storeId: string): Promise<CatalogSta
         unitLabel: product.unit,
         stockStatus: product.stockStatus as CatalogProduct["stockStatus"],
         isActive: product.isActive,
-        version: 1,
+        version: product.version,
         media,
       };
     });
