@@ -5,7 +5,15 @@ import type { WltDshFinanceRuntimeResult, WltFinancialSummaryRaw } from "@bthwan
 const { request: financeRequest } = createDshHttpClient(resolveDshApiBaseUrl(), "finance-hub");
 
 type RuntimeData = Extract<WltDshFinanceRuntimeResult, { readonly state: "runtime" }>["data"];
-export type FinancePayoutRequest = RuntimeData["payoutRequests"][number];
+export type FinancePayoutRequest = RuntimeData["payoutRequests"][number] & {
+  readonly providerReference?: string;
+  readonly providerStatus?: string;
+  readonly providerProcessedAt?: string | null;
+  readonly approvedByOperatorId?: string;
+  readonly processedByOperatorId?: string;
+  readonly completedByOperatorId?: string;
+  readonly failureReason?: string;
+};
 type FinanceLedgerEntry = RuntimeData["ledgerEntries"][number];
 type FinanceRefund = RuntimeData["refunds"][number];
 type FinanceOverview = RuntimeData["overview"];
