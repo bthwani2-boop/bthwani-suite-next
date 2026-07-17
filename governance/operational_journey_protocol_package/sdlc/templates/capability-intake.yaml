@@ -1,14 +1,34 @@
-capabilityId: DSH-CATALOG-001
-purpose:
-inScope:
-outOfScope:
+schemaVersion: 2
+capabilityId:
+repositoryMode: REMOTE_ONLY
+branch:
+baseCommitSha:
+productImpact: UNKNOWN
+productTruthContract:
+problem:
+  statement:
+  evidenceState: UNPROVEN
+  evidenceReferences: []
+actors: []
+requiredSurfaces: []
+excludedSurfaces: []
+expectedOutcome:
+primaryMetric:
+inScope: []
+outOfScope: []
 riskClass: medium
-affectedServices: []
-affectedSurfaces: []
 dataClassification:
+affectedServices: []
+fixedConstraints: []
+variableScope: []
+appetite:
 owners:
-  product:
-  architecture:
+  sdlcProgramAuthority:
+  productManagerAuthority:
+  productOwnerAcceptanceAuthority:
+  uxJourneyAuthority:
+  architectureAuthority:
   engineering:
-  qa:
-  security:
+  independentQualityAuthority:
+  applicationSecurityAuthority:
+  releaseAuthority:
