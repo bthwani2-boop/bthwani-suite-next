@@ -4,7 +4,7 @@ import { Button, Input, Screen, StateView, Typography, colorRoles, spacing } fro
 
 type Props = {
   onBack: () => void;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: any) => Promise<void>;
 };
 
 export function SheinForm({ onBack, onSubmit }: Props) {
@@ -14,6 +14,7 @@ export function SheinForm({ onBack, onSubmit }: Props) {
   const [quantity, setQuantity] = useState('1');
   const [notes, setNotes] = useState('');
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
   if (submitted) {
@@ -79,11 +80,18 @@ export function SheinForm({ onBack, onSubmit }: Props) {
           <Button
             title="إرسال الطلب"
             variant="primary"
-            onPress={() => {
-              onSubmit({ productUrl, size, color, quantity: parseInt(quantity, 10), notes });
-              setSubmitted(true);
+            onPress={async () => {
+              setIsSubmitting(true);
+              try {
+                await onSubmit({ productUrl, size, color, quantity: parseInt(quantity, 10), notes });
+                setSubmitted(true);
+              } catch (e) {
+                // handle error
+              } finally {
+                setIsSubmitting(false);
+              }
             }}
-            disabled={!productUrl}
+            disabled={!productUrl || isSubmitting}
             style={styles.actionButton}
           />
         </View>

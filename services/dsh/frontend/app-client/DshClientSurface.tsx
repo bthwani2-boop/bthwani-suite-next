@@ -24,6 +24,7 @@ import { SupportTicketScreen } from "./support/SupportTicketScreen";
 import { TicketDetailScreen } from "./support/TicketDetailScreen";
 import { SheinForm } from "../shared/shein/SheinForm";
 import { AwnakForm } from "../shared/awnak/AwnakForm";
+import { useSpecialRequestsController } from "../shared/special-requests/use-special-requests-controller";
 const ICON_SIZE = 22;
 const ICON_COLOR_ACTIVE = colorRoles.brandAction;
 const ICON_COLOR_INACTIVE = colorRoles.brandStructure;
@@ -166,6 +167,15 @@ export function DshClientSurface() {
   const [appearanceMode, setAppearanceMode] = useState<string>("lightPremium");
   const [activeSpecialRequest, setActiveSpecialRequest] = useState<'shein' | 'awnak' | null>(null);
 
+  const specialReqCtrl = useSpecialRequestsController();
+
+  useEffect(() => {
+    if (specialReqCtrl.state.kind === 'success') {
+      // The form will show the success message because it uses its own state, but we can also handle it here.
+      // For now, let the forms handle their own success UI or we pass it down.
+    }
+  }, [specialReqCtrl.state.kind]);
+
   const commerceStoreId: string | null = selectedStoreId;
 
   const goBack = () => {
@@ -265,17 +275,15 @@ export function DshClientSurface() {
         ) : activeSpecialRequest === 'shein' ? (
           <SheinForm
             onBack={() => setActiveSpecialRequest(null)}
-            onSubmit={(data) => {
-              // Integrate with backend API here later
-              console.log('Shein submission', data);
+            onSubmit={async (data) => {
+              await specialReqCtrl.submit({ requestType: 'SHEIN_ASSISTED_PURCHASE', idempotencyKey: Date.now().toString(), ...data });
             }}
           />
         ) : activeSpecialRequest === 'awnak' ? (
           <AwnakForm
             onBack={() => setActiveSpecialRequest(null)}
-            onSubmit={(data) => {
-              // Integrate with backend API here later
-              console.log('Awnak submission', data);
+            onSubmit={async (data) => {
+              await specialReqCtrl.submit({ requestType: 'AWNAK_ERRAND', idempotencyKey: Date.now().toString(), ...data });
             }}
           />
         ) : activeTab === "home" ? (

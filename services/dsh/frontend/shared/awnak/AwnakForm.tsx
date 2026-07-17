@@ -4,7 +4,7 @@ import { Button, Input, Screen, StateView, Typography, colorRoles, spacing } fro
 
 type Props = {
   onBack: () => void;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: any) => Promise<void>;
 };
 
 export function AwnakForm({ onBack, onSubmit }: Props) {
@@ -13,6 +13,7 @@ export function AwnakForm({ onBack, onSubmit }: Props) {
   const [dropoffAddress, setDropoffAddress] = useState('');
   const [notes, setNotes] = useState('');
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
   if (submitted) {
@@ -71,11 +72,18 @@ export function AwnakForm({ onBack, onSubmit }: Props) {
           <Button
             title="إرسال الطلب"
             variant="primary"
-            onPress={() => {
-              onSubmit({ itemType, pickupAddress, dropoffAddress, notes });
-              setSubmitted(true);
+            onPress={async () => {
+              setIsSubmitting(true);
+              try {
+                await onSubmit({ itemType, pickupAddress, dropoffAddress, notes });
+                setSubmitted(true);
+              } catch (e) {
+                // handle error
+              } finally {
+                setIsSubmitting(false);
+              }
             }}
-            disabled={!itemType || !pickupAddress || !dropoffAddress}
+            disabled={!itemType || !pickupAddress || !dropoffAddress || isSubmitting}
             style={styles.actionButton}
           />
         </View>

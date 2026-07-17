@@ -5241,6 +5241,32 @@ export interface components {
             completedAt?: string | null;
             /** Format: date-time */
             cancelledAt?: string | null;
+            /** Format: date-time */
+            quotePreparedAt?: string | null;
+            /** Format: date-time */
+            customerApprovedAt?: string | null;
+            purchaseBatchId?: string | null;
+            /** Format: date-time */
+            purchasedAt?: string | null;
+            inboundReference?: string | null;
+            /** Format: date-time */
+            inboundReceivedAt?: string | null;
+            /** Format: date-time */
+            sortingStartedAt?: string | null;
+            /** Format: date-time */
+            sortingCompletedAt?: string | null;
+            /** Format: date-time */
+            fulfillmentPreparedAt?: string | null;
+            /** Format: date-time */
+            readyForDeliveryAt?: string | null;
+            /** Format: date-time */
+            captainAssignedAt?: string | null;
+            /** Format: date-time */
+            pickedUpAt?: string | null;
+            /** Format: date-time */
+            deliveredAt?: string | null;
+            allowedActions?: string[];
+            blockingReasons?: string[];
         };
         DshSpecialRequestListResponse: {
             requests: components["schemas"]["DshSpecialRequestResponse"][];
@@ -5257,6 +5283,30 @@ export interface components {
             estimatedAmountMinorUnits?: number | null;
             wltPaymentSessionId?: string | null;
             currency?: string | null;
+            /** Format: date-time */
+            quotePreparedAt?: string | null;
+            /** Format: date-time */
+            customerApprovedAt?: string | null;
+            purchaseBatchId?: string | null;
+            /** Format: date-time */
+            purchasedAt?: string | null;
+            inboundReference?: string | null;
+            /** Format: date-time */
+            inboundReceivedAt?: string | null;
+            /** Format: date-time */
+            sortingStartedAt?: string | null;
+            /** Format: date-time */
+            sortingCompletedAt?: string | null;
+            /** Format: date-time */
+            fulfillmentPreparedAt?: string | null;
+            /** Format: date-time */
+            readyForDeliveryAt?: string | null;
+            /** Format: date-time */
+            captainAssignedAt?: string | null;
+            /** Format: date-time */
+            pickedUpAt?: string | null;
+            /** Format: date-time */
+            deliveredAt?: string | null;
         };
     };
     responses: {

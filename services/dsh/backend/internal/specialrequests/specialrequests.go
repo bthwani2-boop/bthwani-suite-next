@@ -71,6 +71,19 @@ type SpecialRequest struct {
 	UpdatedAt                 time.Time
 	CompletedAt               *time.Time
 	CancelledAt               *time.Time
+	QuotePreparedAt           *time.Time
+	CustomerApprovedAt        *time.Time
+	PurchaseBatchID           *string
+	PurchasedAt               *time.Time
+	InboundReference          *string
+	InboundReceivedAt         *time.Time
+	SortingStartedAt          *time.Time
+	SortingCompletedAt        *time.Time
+	FulfillmentPreparedAt     *time.Time
+	ReadyForDeliveryAt        *time.Time
+	CaptainAssignedAt         *time.Time
+	PickedUpAt                *time.Time
+	DeliveredAt               *time.Time
 }
 
 type CreateInput struct {
@@ -106,6 +119,20 @@ type UpdateInput struct {
 	EstimatedAmountMinorUnits *int64
 	Currency                  *string
 	WltPaymentSessionID       *string
+
+	QuotePreparedAt           *time.Time
+	CustomerApprovedAt        *time.Time
+	PurchaseBatchID           *string
+	PurchasedAt               *time.Time
+	InboundReference          *string
+	InboundReceivedAt         *time.Time
+	SortingStartedAt          *time.Time
+	SortingCompletedAt        *time.Time
+	FulfillmentPreparedAt     *time.Time
+	ReadyForDeliveryAt        *time.Time
+	CaptainAssignedAt         *time.Time
+	PickedUpAt                *time.Time
+	DeliveredAt               *time.Time
 
 	// setCompletedAt / setCancelledAt are computed by the service layer from
 	// the requested status transition; the repository only ever reads them,
@@ -154,7 +181,10 @@ const specialRequestColumns = `
 	product_url, quantity, size, color, variant_notes, delivery_address_reference,
 	pickup_address_reference, dropoff_address_reference, pickup_location, dropoff_location, item_type, schedule_mode, scheduled_at, handling_requirements,
 	assigned_operator_id, dispatch_assignment_id, rejection_reason,
-	created_at, updated_at, completed_at, cancelled_at
+	created_at, updated_at, completed_at, cancelled_at,
+	quote_prepared_at, customer_approved_at, purchase_batch_id, purchased_at,
+	inbound_reference, inbound_received_at, sorting_started_at, sorting_completed_at,
+	fulfillment_prepared_at, ready_for_delivery_at, captain_assigned_at, picked_up_at, delivered_at
 `
 
 func scanSpecialRequest(scan func(...any) error) (*SpecialRequest, error) {
@@ -166,6 +196,9 @@ func scanSpecialRequest(scan func(...any) error) (*SpecialRequest, error) {
 		&req.PickupAddressReference, &req.DropoffAddressReference, &req.PickupLocation, &req.DropoffLocation, &req.ItemType, &req.ScheduleMode, &req.ScheduledAt, &req.HandlingRequirements,
 		&req.AssignedOperatorID, &req.DispatchAssignmentID, &req.RejectionReason,
 		&req.CreatedAt, &req.UpdatedAt, &req.CompletedAt, &req.CancelledAt,
+		&req.QuotePreparedAt, &req.CustomerApprovedAt, &req.PurchaseBatchID, &req.PurchasedAt,
+		&req.InboundReference, &req.InboundReceivedAt, &req.SortingStartedAt, &req.SortingCompletedAt,
+		&req.FulfillmentPreparedAt, &req.ReadyForDeliveryAt, &req.CaptainAssignedAt, &req.PickedUpAt, &req.DeliveredAt,
 	)
 	if err != nil {
 		return nil, err
@@ -223,6 +256,19 @@ func (r *PostgresRepository) Update(ctx context.Context, id string, expectedVers
 			estimated_amount_minor_units = COALESCE($7, estimated_amount_minor_units),
 			currency = COALESCE($8, currency),
 			wlt_payment_session_id = COALESCE($9, wlt_payment_session_id),
+			quote_prepared_at = COALESCE($12, quote_prepared_at),
+			customer_approved_at = COALESCE($13, customer_approved_at),
+			purchase_batch_id = COALESCE($14, purchase_batch_id),
+			purchased_at = COALESCE($15, purchased_at),
+			inbound_reference = COALESCE($16, inbound_reference),
+			inbound_received_at = COALESCE($17, inbound_received_at),
+			sorting_started_at = COALESCE($18, sorting_started_at),
+			sorting_completed_at = COALESCE($19, sorting_completed_at),
+			fulfillment_prepared_at = COALESCE($20, fulfillment_prepared_at),
+			ready_for_delivery_at = COALESCE($21, ready_for_delivery_at),
+			captain_assigned_at = COALESCE($22, captain_assigned_at),
+			picked_up_at = COALESCE($23, picked_up_at),
+			delivered_at = COALESCE($24, delivered_at),
 			version = version + 1,
 			updated_at = now(),
 			completed_at = CASE WHEN $10 THEN now() ELSE completed_at END,
@@ -234,6 +280,9 @@ func (r *PostgresRepository) Update(ctx context.Context, id string, expectedVers
 		id, expectedVersion, input.Status, input.WorkflowStage, input.AssignedOperatorID, input.RejectionReason,
 		input.EstimatedAmountMinorUnits, input.Currency, input.WltPaymentSessionID,
 		input.setCompletedAt, input.setCancelledAt,
+		input.QuotePreparedAt, input.CustomerApprovedAt, input.PurchaseBatchID, input.PurchasedAt,
+		input.InboundReference, input.InboundReceivedAt, input.SortingStartedAt, input.SortingCompletedAt,
+		input.FulfillmentPreparedAt, input.ReadyForDeliveryAt, input.CaptainAssignedAt, input.PickedUpAt, input.DeliveredAt,
 	)
 	req, err := scanSpecialRequest(row.Scan)
 	if err == sql.ErrNoRows {

@@ -8335,6 +8335,25 @@ components:
         updatedAt: { type: string, format: date-time }
         completedAt: { type: ["string", "null"], format: date-time }
         cancelledAt: { type: ["string", "null"], format: date-time }
+        quotePreparedAt: { type: ["string", "null"], format: date-time }
+        customerApprovedAt: { type: ["string", "null"], format: date-time }
+        purchaseBatchId: { type: ["string", "null"] }
+        purchasedAt: { type: ["string", "null"], format: date-time }
+        inboundReference: { type: ["string", "null"] }
+        inboundReceivedAt: { type: ["string", "null"], format: date-time }
+        sortingStartedAt: { type: ["string", "null"], format: date-time }
+        sortingCompletedAt: { type: ["string", "null"], format: date-time }
+        fulfillmentPreparedAt: { type: ["string", "null"], format: date-time }
+        readyForDeliveryAt: { type: ["string", "null"], format: date-time }
+        captainAssignedAt: { type: ["string", "null"], format: date-time }
+        pickedUpAt: { type: ["string", "null"], format: date-time }
+        deliveredAt: { type: ["string", "null"], format: date-time }
+        allowedActions:
+          type: array
+          items: { type: string }
+        blockingReasons:
+          type: array
+          items: { type: string }
 
     DshSpecialRequestListResponse:
       type: object
@@ -8357,3 +8376,16 @@ components:
         estimatedAmountMinorUnits: { type: ["integer", "null"], format: int64 }
         wltPaymentSessionId: { type: ["string", "null"] }
         currency: { type: ["string", "null"] }
+        quotePreparedAt: { type: ["string", "null"], format: date-time }
+        customerApprovedAt: { type: ["string", "null"], format: date-time }
+        purchaseBatchId: { type: ["string", "null"] }
+        purchasedAt: { type: ["string", "null"], format: date-time }
+        inboundReference: { type: ["string", "null"] }
+        inboundReceivedAt: { type: ["string", "null"], format: date-time }
+        sortingStartedAt: { type: ["string", "null"], format: date-time }
+        sortingCompletedAt: { type: ["string", "null"], format: date-time }
+        fulfillmentPreparedAt: { type: ["string", "null"], format: date-time }
+        readyForDeliveryAt: { type: ["string", "null"], format: date-time }
+        captainAssignedAt: { type: ["string", "null"], format: date-time }
+        pickedUpAt: { type: ["string", "null"], format: date-time }
+        deliveredAt: { type: ["string", "null"], format: date-time }

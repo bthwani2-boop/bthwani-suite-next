@@ -443,6 +443,19 @@ func (s *Service) ApplyOperatorTransition(ctx context.Context, id string, expect
 		EstimatedAmountMinorUnits: in.EstimatedAmountMinorUnits,
 		Currency:                  in.Currency,
 		WltPaymentSessionID:       in.WltPaymentSessionID,
+		QuotePreparedAt:           in.QuotePreparedAt,
+		CustomerApprovedAt:        in.CustomerApprovedAt,
+		PurchaseBatchID:           in.PurchaseBatchID,
+		PurchasedAt:               in.PurchasedAt,
+		InboundReference:          in.InboundReference,
+		InboundReceivedAt:         in.InboundReceivedAt,
+		SortingStartedAt:          in.SortingStartedAt,
+		SortingCompletedAt:        in.SortingCompletedAt,
+		FulfillmentPreparedAt:     in.FulfillmentPreparedAt,
+		ReadyForDeliveryAt:        in.ReadyForDeliveryAt,
+		CaptainAssignedAt:         in.CaptainAssignedAt,
+		PickedUpAt:                in.PickedUpAt,
+		DeliveredAt:               in.DeliveredAt,
 	}
 	if in.Status != nil {
 		update.Status = in.Status
