@@ -1,55 +1,107 @@
 {
   "schemaVersion": 1,
-  "capabilityId": "PLATFORM_EXECUTIVE_READ_MODEL",
+  "capabilityId": "PLATFORM_SOVEREIGN_CONTROL_PLANE",
   "state": "PRODUCT_MODEL_APPROVED",
   "problem": {
-    "statement": "The sovereign Platform section mixes routine DSH policies with platform control concerns and displays static or unbound states instead of the live platform-control read model.",
+    "statement": "The sovereign Platform section previously mixed routine DSH operations with platform control, exposed static states, and lacked a persistent maker-checker workflow for variables and feature flags.",
     "affectedActors": [
-      "executive-platform-governor",
+      "platform-governor",
+      "platform-operator",
+      "platform-approver",
+      "platform-applier",
       "platform-auditor"
     ],
-    "currentWorkaround": "Operators inspect separate source files and service endpoints and cannot trust the control-panel summary as a complete executive read model.",
+    "currentWorkaround": "No workaround is acceptable; sovereign changes must use platform-control and fail closed when persistence, authorization, audit, or rollback is unavailable.",
     "frequency": "continuous",
     "severity": "critical",
     "evidenceState": "VALIDATED",
     "evidenceReferences": [
-      "services/dsh/frontend/control-panel/platform/PlatformDashboardScreen.tsx",
-      "services/dsh/frontend/shared/platform/platform-registry.ts",
-      "services/dsh/frontend/shared/platform/platform-vars.model.ts",
+      "core/platform-control/contracts/platform-control.openapi.yaml",
+      "core/platform-control/database/migrations/platform-001_control_plane_store.sql",
+      "core/platform-control/backend/internal/platformcontrol/repository.go",
       "core/platform-control/backend/internal/http/server.go",
-      "core/platform-control/backend/internal/platformcontrol/service.go"
+      "services/dsh/frontend/control-panel/platform/PlatformDashboardScreen.tsx",
+      "services/dsh/frontend/control-panel/platform/PlatformChangeWorkflowPanel.tsx",
+      "tools/scripts/platform-control-runtime.ps1"
     ]
   },
   "actors": [
     {
-      "id": "executive-platform-governor",
-      "role": "Highest administrative authority with explicit platform read permissions.",
+      "id": "platform-governor",
+      "role": "Highest administrative authority that reads the complete control-plane posture and governs role assignment through Administration.",
       "permittedActions": [
         "Read runtime posture",
-        "Read effective configuration metadata",
+        "Read effective configuration",
         "Read variables and feature flags",
-        "Read service posture",
-        "Read provider posture",
-        "Read health when separately authorized",
-        "Read audit events when separately authorized"
+        "Read service and provider posture",
+        "Read health and audit when separately authorized"
       ],
       "forbiddenActions": [
-        "Perform routine catalog, marketing, support, zone, SLA, HR, or partner operations",
-        "Mutate variables, feature flags, providers, rollouts, or services without the governed change workflow",
-        "View provider secrets"
+        "Perform routine catalog marketing support zone SLA HR partner or order operations",
+        "Bypass the governed change workflow",
+        "View provider secrets",
+        "Self-approve a proposed change"
+      ]
+    },
+    {
+      "id": "platform-operator",
+      "role": "Maker that drafts validates and submits sovereign changes.",
+      "permittedActions": [
+        "Create change set",
+        "Validate own or assigned draft",
+        "Submit validated change set",
+        "Read workflow readback"
+      ],
+      "forbiddenActions": [
+        "Approve own change",
+        "Apply or roll back without dedicated permission",
+        "Write variables or flags directly",
+        "Mutate provider secrets"
+      ]
+    },
+    {
+      "id": "platform-approver",
+      "role": "Independent checker that approves or rejects submitted changes.",
+      "permittedActions": [
+        "Read submitted change context",
+        "Approve a change proposed by another actor",
+        "Reject a submitted change with a reason",
+        "Read audit evidence"
+      ],
+      "forbiddenActions": [
+        "Approve own proposal",
+        "Apply approved changes",
+        "Modify proposed values during approval",
+        "Bypass impact and rollback requirements"
+      ]
+    },
+    {
+      "id": "platform-applier",
+      "role": "Dedicated executor that atomically applies or rolls back independently approved change sets.",
+      "permittedActions": [
+        "Apply approved change set",
+        "Roll back applied change set",
+        "Read affected state after mutation"
+      ],
+      "forbiddenActions": [
+        "Approve changes",
+        "Apply a non-approved change",
+        "Overwrite a newer revision during apply or rollback",
+        "Write outside platform-control transactions"
       ]
     },
     {
       "id": "platform-auditor",
-      "role": "Independent reader of platform posture and audit evidence.",
+      "role": "Independent reader of immutable workflow and runtime evidence.",
       "permittedActions": [
         "Read platform posture",
+        "Read change-set history",
         "Read audit events when authorized"
       ],
       "forbiddenActions": [
-        "Approve or apply own changes",
-        "Mutate platform state",
-        "View provider secrets"
+        "Propose approve apply reject or roll back changes",
+        "View provider secrets",
+        "Alter audit records"
       ]
     }
   ],
@@ -58,12 +110,16 @@
       "id": "control-panel",
       "required": true,
       "actors": [
-        "executive-platform-governor",
+        "platform-governor",
+        "platform-operator",
+        "platform-approver",
+        "platform-applier",
         "platform-auditor"
       ],
       "routesOrScreens": [
         "/dsh/platform",
-        "PlatformDashboardScreen"
+        "PlatformDashboardScreen",
+        "PlatformChangeWorkflowPanel"
       ],
       "states": [
         "loading",
@@ -71,22 +127,39 @@
         "partial-read",
         "permission-denied",
         "unavailable",
-        "read-only-contract-required"
+        "draft",
+        "validated",
+        "submitted",
+        "approved",
+        "rejected",
+        "applied",
+        "rolled_back",
+        "version-conflict"
       ],
       "actions": [
         "reload",
-        "switch executive read tabs"
+        "switch executive tabs",
+        "create change set when authorized",
+        "validate and submit when authorized",
+        "approve or reject when independently authorized",
+        "apply or rollback when independently authorized"
       ]
     },
     {
       "id": "shared",
       "required": true,
       "actors": [
-        "executive-platform-governor",
+        "platform-governor",
+        "platform-operator",
+        "platform-approver",
+        "platform-applier",
         "platform-auditor"
       ],
       "routesOrScreens": [
-        "usePlatformControlRuntimeController"
+        "usePlatformControlRuntimeController",
+        "usePlatformChangeWorkflowController",
+        "useProviderRegistryController",
+        "platform-control.api"
       ],
       "states": [
         "idle",
@@ -94,157 +167,212 @@
         "success",
         "error",
         "restricted-resource",
-        "unavailable-resource"
+        "unavailable-resource",
+        "mutation-loading",
+        "mutation-success",
+        "mutation-error"
       ],
       "actions": [
-        "aggregate authorized platform-control reads"
+        "aggregate authorized reads",
+        "invoke generated contract operations",
+        "read back workflow and effective state after mutation"
       ]
     },
     {
       "id": "backend",
       "required": true,
       "actors": [
-        "executive-platform-governor",
+        "platform-governor",
+        "platform-operator",
+        "platform-approver",
+        "platform-applier",
         "platform-auditor"
       ],
       "operationIds": [
+        "getPlatformControlProcessHealth",
+        "getPlatformControlReadiness",
         "getPlatformRuntimeConfig",
         "getEffectiveRuntimeConfig",
         "listPlatformVariables",
+        "getPlatformVariable",
         "listPlatformFeatureFlags",
         "listPlatformServices",
         "getPlatformHealth",
         "listPlatformAuditEvents",
-        "listPlatformChangeSets"
+        "listPlatformChangeSets",
+        "getPlatformChangeSet",
+        "createPlatformChangeSet",
+        "validatePlatformChangeSet",
+        "submitPlatformChangeSet",
+        "approvePlatformChangeSet",
+        "rejectPlatformChangeSet",
+        "applyPlatformChangeSet",
+        "rollbackPlatformChangeSet"
       ],
       "states": [
-        "READ_ONLY_BOUND",
+        "OPERATIONAL",
         "PARTIALLY_BOUND",
         "CONTRACT_REQUIRED",
-        "UNKNOWN_HEALTH",
-        "ROLLBACK_UNAVAILABLE"
+        "FIX_REQUIRED",
+        "draft",
+        "validated",
+        "submitted",
+        "approved",
+        "rejected",
+        "applied",
+        "rolled_back",
+        "failed"
       ],
       "actions": [
-        "authorize and return platform read models",
-        "deny unauthorized reads"
+        "enforce control-panel surface permission",
+        "enforce maker-checker separation",
+        "validate transition legality",
+        "apply optimistic revision checks",
+        "atomically persist changes and audit",
+        "read back effective state",
+        "roll back from captured snapshots"
       ]
     },
     {
       "id": "database",
-      "required": false,
-      "exclusionReason": "The current P1 capability is explicitly read-only and the platform variable, rollout, audit, and rollback stores are not attached; no mutation claim is made.",
+      "required": true,
       "actors": [
-        "executive-platform-governor"
+        "platform-operator",
+        "platform-approver",
+        "platform-applier",
+        "platform-auditor"
+      ],
+      "routesOrScreens": [
+        "platform_variables",
+        "platform_feature_flags",
+        "platform_change_sets",
+        "platform_change_set_items",
+        "platform_audit_events"
       ],
       "states": [
-        "not-attached"
+        "persistent",
+        "transactional",
+        "revisioned",
+        "audited",
+        "rollback-capable"
       ],
-      "actions": []
+      "actions": [
+        "store effective variables and flags",
+        "store change workflow state",
+        "capture pre-apply snapshot",
+        "record immutable audit event",
+        "reject stale apply or rollback"
+      ]
     },
     {
       "id": "app-client",
       "required": false,
-      "exclusionReason": "Customer users must never access the sovereign control plane.",
-      "actors": [
-        "customer"
-      ],
-      "states": [
-        "excluded"
-      ],
+      "exclusionReason": "Customers consume effective outcomes only and must never access sovereign controls.",
+      "actors": ["customer"],
+      "states": ["excluded"],
       "actions": []
     },
     {
       "id": "app-partner",
       "required": false,
-      "exclusionReason": "Partners consume effective outcomes only and must not access sovereign platform controls.",
-      "actors": [
-        "partner"
-      ],
-      "states": [
-        "excluded"
-      ],
+      "exclusionReason": "Partners consume effective outcomes only and must never access sovereign controls.",
+      "actors": ["partner"],
+      "states": ["excluded"],
       "actions": []
     },
     {
       "id": "app-captain",
       "required": false,
-      "exclusionReason": "Captains consume effective outcomes only and must not access sovereign platform controls.",
-      "actors": [
-        "captain"
-      ],
-      "states": [
-        "excluded"
-      ],
+      "exclusionReason": "Captains consume effective outcomes only and must never access sovereign controls.",
+      "actors": ["captain"],
+      "states": ["excluded"],
       "actions": []
     },
     {
       "id": "app-field",
       "required": false,
       "exclusionReason": "Field staff may not view or mutate sovereign platform controls.",
-      "actors": [
-        "field-agent"
-      ],
-      "states": [
-        "excluded"
-      ],
+      "actors": ["field-agent"],
+      "states": ["excluded"],
       "actions": []
     }
   ],
   "outcome": {
-    "statement": "Authorized executives see one accurate read-only platform cockpit backed by platform-control, while routine operational domains and unsupported mutations are excluded.",
-    "primaryMetric": "unbound_or_static_platform_panels",
+    "statement": "Authorized executive actors use one persistent platform-control plane with truthful reads, separated duties, audited changes, effective readback, and conflict-safe rollback while routine domains remain outside Platform.",
+    "primaryMetric": "governed_platform_changes_with_complete_readback",
     "guardrailMetrics": [
       "unauthorized_platform_data_exposure",
+      "self_approved_platform_changes",
+      "direct_variable_or_flag_writes",
+      "stale_revision_overwrites",
+      "missing_audit_events",
+      "rollback_without_snapshot",
       "routine_domain_controls_inside_platform",
-      "fake_or_local_platform_mutations",
-      "hidden_partial_read_failures"
+      "fake_or_local_platform_truth"
     ],
-    "baselineState": "Multiple tabs are static, locally modeled, mislabeled, or mapped to routine DSH policy screens.",
-    "targetState": "Every active executive tab either renders a live authorized read model or an explicit contract-required/restricted state.",
-    "observationWindow": "Per request and every platform-control read refresh."
+    "baselineState": "Platform was a partially bound read-only view with local/static models and no persistent governed mutation workflow.",
+    "targetState": "Every active read comes from platform-control; every supported variable or flag mutation passes proposal validation independent approval atomic apply audit readback and rollback.",
+    "observationWindow": "Every platform-control request, workflow transition, runtime smoke, and release verification."
   },
   "acceptance": {
     "criteria": [
-      "The default tab is an executive overview sourced from getPlatformRuntimeConfig.",
-      "Variables, feature flags, services, health, audit events, and change sets use generated platform-control types and live API reads.",
-      "Health and audit reads are independently permission-gated.",
-      "Routine zone, SLA, onboarding-fee, and notification configuration screens are not rendered by the Platform route.",
-      "Unsupported mutations and rollouts remain visibly blocked and no local simulation is offered.",
-      "Partial resource failures are visible without discarding successful reads."
+      "Platform navigation and every backend route require a control-panel platform permission.",
+      "Variables feature flags services health providers audit and change sets use live APIs and shared controllers.",
+      "Operator approver and applier permissions are separated and an actor cannot approve its own proposal.",
+      "A valid change passes draft validated submitted approved applied and rolled_back states with persisted readback.",
+      "Apply and rollback reject stale revisions and execute in serializable PostgreSQL transactions.",
+      "Every workflow transition creates a persisted audit event with actor roles status and correlation id.",
+      "Routine zone SLA onboarding-fee notification catalog marketing support HR and partner controls are absent from Platform.",
+      "Unsupported progressive rollout actions remain explicitly CONTRACT_REQUIRED with no simulation.",
+      "Partial read failures remain visible without discarding successful reads.",
+      "The Docker runtime starts identity PostgreSQL and platform-control and the smoke journey passes with separated actors."
     ],
     "failureStates": [
-      "A static registry count is shown as a live KPI.",
+      "A static registry value is presented as live platform truth.",
       "A routine operational screen is rendered in Platform.",
-      "A user without platform:read sees platform data.",
-      "A health or audit endpoint is called without its dedicated permission.",
-      "A failed optional read makes all successful read models disappear.",
-      "A mutation appears enabled while the backend returns CONTRACT_REQUIRED."
+      "A user without platform:read sees platform data or navigation.",
+      "A permission issued for another surface authorizes platform-control.",
+      "The proposer can approve its own change.",
+      "A mutation writes outside platform-control or without a transaction.",
+      "Apply or rollback overwrites a newer revision.",
+      "A successful mutation lacks audit or affected-state readback.",
+      "A rollout action appears active while the rollout backend is not implemented.",
+      "Runtime health or readiness claims success while the platform database is unavailable."
     ],
     "requiredChecks": [
+      "go test ./... in core/platform-control/backend",
+      "go test ./internal/platformcontrol -run TestGovernedChangeSetApplyAndRollback with PostgreSQL",
+      "go test ./... in core/identity/backend",
+      "pnpm run contracts:lint",
       "pnpm run guard:no-broken-imports",
       "pnpm run guard:frontend-feature-binding",
       "pnpm run guard:ui-kit-boundary",
       "pnpm run typecheck",
       "pnpm run foundation:gate",
-      "pnpm run journey:gate"
+      "pnpm run journey:gate",
+      "pwsh tools/scripts/platform-control-runtime.ps1 -Action smoke"
     ],
     "runtimeEvidenceRequired": true,
     "visualEvidenceRequired": true
   },
   "invariants": {
     "business": [
-      "Platform is a sovereign executive control plane, not a daily operations workspace.",
-      "Administration owns role assignment; Platform consumes permissions.",
+      "Platform is a sovereign executive control plane and never a daily operations workspace.",
+      "Administration owns role assignment while platform-control enforces permissions and separation of duties.",
       "WLT remains the only owner of financial truth.",
       "Provider secrets remain backend-only and masked.",
-      "Every displayed state comes from platform-control or is labeled unavailable, restricted, or contract-required."
+      "Every displayed state comes from a live owner API or is labelled unavailable restricted or contract-required.",
+      "Every supported mutation has proposal validation independent approval apply audit readback and rollback."
     ],
     "negative": [
-      "No customer, partner, captain, or field surface exposes Platform controls.",
-      "No local React state, fixture, seed, fallback, or registry constant is presented as live platform truth.",
-      "No platform mutation bypasses proposal, validation, independent approval, apply, audit, readback, and rollback.",
-      "No zone, SLA, catalog, marketing, support, HR, or partner routine operation is owned by Platform.",
-      "No health or audit data is fetched without the matching dedicated permission."
+      "No customer partner captain or field surface exposes Platform controls.",
+      "No local React state fixture seed fallback or registry constant is presented as live platform truth.",
+      "No actor approves its own proposal.",
+      "No platform mutation bypasses platform-control PostgreSQL transactions.",
+      "No rollback executes without a captured before-state and matching applied revision.",
+      "No zone SLA catalog marketing support HR partner order or financial routine operation is owned by Platform.",
+      "No health or audit data is fetched without its dedicated permission.",
+      "No progressive rollout is claimed operational until targeting health gates pause abort and rollback are implemented and proven."
     ]
   },
   "owners": {
@@ -257,33 +385,38 @@
     "productAcceptanceDecision": "PENDING"
   },
   "execution": {
-    "appetite": "Bounded corrective implementation of the existing read-only platform-control capability.",
+    "appetite": "Full-stack governed implementation of the sovereign control plane without activating unimplemented progressive delivery or production release claims.",
     "fixedConstraints": [
-      "Use GitHub Remote branch bassam only.",
-      "Do not activate unsupported mutations.",
+      "Use GitHub Remote branch bassam as implementation truth.",
       "Do not expose secrets.",
       "Do not create a second platform truth source.",
       "Keep financial truth in WLT.",
       "Keep routine operations outside Platform.",
-      "Maximum three committed files for this execution."
+      "Require separated maker checker and applier authority.",
+      "Require runtime and visual evidence before closure."
     ],
     "variableScope": [
-      "Executive tab ordering and labels",
+      "Executive tab composition and labels",
+      "Change form presentation",
       "Read-model presentation",
-      "Partial failure presentation"
+      "Health aggregation implementation",
+      "Progressive rollout implementation after its own governed model"
     ],
     "forbiddenScope": [
-      "Database-backed mutation workflow without migrations and independent approvals",
       "SaaS commercial activation",
-      "Production release or closure claim",
+      "Provider secret exposure",
+      "Financial ledger ownership outside WLT",
+      "Production release or final closure without independent approvals",
       "Local demo mutation or fake runtime data"
     ],
-    "forecastRange": "One bounded repository change set.",
+    "forecastRange": "Multi-commit full-stack closure journey on branch bassam.",
     "confidence": "high",
     "unknowns": [
       "Independent product-owner acceptance",
-      "Independent QA and security evidence",
-      "Live runtime and visual evidence in the operator environment"
+      "Independent QA and application-security approval",
+      "Live visual evidence from the operator environment",
+      "Production release and rollback approval",
+      "Progressive rollout provider selection and operational acceptance"
     ]
   }
 }
