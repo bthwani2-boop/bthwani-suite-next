@@ -2,9 +2,7 @@ name: Governance As Code Audit
 
 on:
   push:
-    branches:
-      - bassam
-      - master
+    branches: [bassam, master]
     paths:
       - "AGENTS.md"
       - "GEMINI.md"
@@ -12,13 +10,16 @@ on:
       - "governance/**"
       - "tools/guards/**"
       - "tools/scripts/run-*.mjs"
+      - "tools/scripts/run-*.ps1"
       - "tools/scripts/install-oss-toolchain-binaries.sh"
       - "package.json"
       - "pnpm-lock.yaml"
+      - ".github/actions/**"
       - ".github/workflows/**"
+      - ".github/CODEOWNERS"
+      - ".zizmor.yml"
   pull_request:
-    branches:
-      - master
+    branches: [master]
     paths:
       - "AGENTS.md"
       - "GEMINI.md"
@@ -26,15 +27,18 @@ on:
       - "governance/**"
       - "tools/guards/**"
       - "tools/scripts/run-*.mjs"
+      - "tools/scripts/run-*.ps1"
       - "tools/scripts/install-oss-toolchain-binaries.sh"
       - "package.json"
       - "pnpm-lock.yaml"
+      - ".github/actions/**"
       - ".github/workflows/**"
+      - ".github/CODEOWNERS"
+      - ".zizmor.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
-  actions: read
 
 concurrency:
   group: governance-audit-${{ github.workflow }}-${{ github.ref }}
@@ -44,106 +48,107 @@ jobs:
   governance-contracts:
     name: Governance contracts and semantics
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Setup PNPM
-        uses: pnpm/action-setup@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
-          version: 10.34.2
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24.17.0
-          cache: pnpm
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Governance schema and semantic gate
-        run: pnpm run guard:governance-schema
-      - name: Agent and skill governance gate
-        run: pnpm run guard:agent-governance
-      - name: Guard registry and workflow policy gate
-        run: pnpm run guard:guard-registry
-      - name: SDLC support and Product Truth gate
-        run: pnpm run guard:sdlc
+          persist-credentials: false
+      - name: Setup workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Validate all governance contracts
+        shell: bash
+        run: |
+          set +e
+          failures=0
+          run_check() {
+            local name="$1"
+            shift
+            echo "::group::$name"
+            "$@"
+            local result=$?
+            echo "::endgroup::"
+            if [ "$result" -ne 0 ]; then
+              echo "::error title=$name failed::exit=$result"
+              failures=$((failures + 1))
+            fi
+          }
+          run_check governance-schema pnpm run guard:governance-schema
+          run_check agent-governance pnpm run guard:agent-governance
+          run_check guard-registry pnpm run guard:guard-registry
+          run_check sdlc pnpm run guard:sdlc
+          run_check cleanup-policy pnpm run guard:cleanup-policy
+          test "$failures" -eq 0
 
   workflow-static-analysis:
     name: Workflow syntax security and policy
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
+          persist-credentials: false
           fetch-depth: 0
-      - name: Setup PNPM
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.34.2
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24.17.0
-          cache: pnpm
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Install governance toolchain
+      - name: Setup workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Install locked governance toolchain
         run: bash tools/scripts/install-oss-toolchain-binaries.sh governance
-      - name: Actionlint
-        run: pnpm run guard:workflow-lint
-      - name: Zizmor workflow security
-        run: pnpm run guard:workflow-security
-      - name: OPA policy validation
-        run: pnpm run guard:opa-policies
-      - name: Tool catalog coverage
-        run: pnpm run guard:tool-catalog-coverage
-      - name: Toolchain activation
-        run: pnpm run guard:toolchain-activation
-      - name: OSS toolchain policy
-        run: pnpm run guard:oss-toolchain-policy
+      - name: Run every workflow and policy analyzer
+        shell: bash
+        run: |
+          set +e
+          failures=0
+          run_check() {
+            local name="$1"
+            shift
+            echo "::group::$name"
+            "$@"
+            local result=$?
+            echo "::endgroup::"
+            if [ "$result" -ne 0 ]; then
+              echo "::error title=$name failed::exit=$result"
+              failures=$((failures + 1))
+            fi
+          }
+          run_check actionlint pnpm run guard:workflow-lint
+          run_check zizmor pnpm run guard:workflow-security
+          run_check opa-policy pnpm run guard:opa-policies
+          run_check tool-catalog pnpm run guard:tool-catalog-coverage
+          run_check toolchain-activation pnpm run guard:toolchain-activation
+          run_check oss-toolchain-policy pnpm run guard:oss-toolchain-policy
+          test "$failures" -eq 0
 
   repository-hygiene:
     name: Governance repository hygiene
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
+          persist-credentials: false
           fetch-depth: 0
-      - name: Setup PNPM
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.34.2
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24.17.0
-          cache: pnpm
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Repository size gate
-        run: pnpm run guard:repo-size
-      - name: Cleanup policy gate
-        run: pnpm run guard:cleanup-policy
-      - name: No tracked diagnostics or execution logs
+      - name: Setup workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Verify repository hygiene
         shell: bash
         run: |
-          set -euo pipefail
+          set +e
+          failures=0
+          pnpm run guard:repo-size || failures=$((failures + 1))
+          pnpm run guard:cleanup-policy || failures=$((failures + 1))
           forbidden="$(git ls-files '.diagnostics/**' 'tools/registry/runs/**')"
           if [ -n "$forbidden" ]; then
             printf 'Tracked transient outputs are forbidden:\n%s\n' "$forbidden"
-            exit 1
+            failures=$((failures + 1))
           fi
+          test "$failures" -eq 0
 
   governance-result:
     name: Governance audit result
     if: always()
-    needs:
-      - governance-contracts
-      - workflow-static-analysis
-      - repository-hygiene
+    needs: [governance-contracts, workflow-static-analysis, repository-hygiene]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -156,9 +161,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          printf 'governance-contracts=%s\n' "$CONTRACTS_RESULT"
-          printf 'workflow-static-analysis=%s\n' "$WORKFLOW_RESULT"
-          printf 'repository-hygiene=%s\n' "$HYGIENE_RESULT"
+          printf 'governance-contracts=%s\nworkflow-static-analysis=%s\nrepository-hygiene=%s\n' \
+            "$CONTRACTS_RESULT" "$WORKFLOW_RESULT" "$HYGIENE_RESULT"
           test "$CONTRACTS_RESULT" = success
           test "$WORKFLOW_RESULT" = success
           test "$HYGIENE_RESULT" = success
