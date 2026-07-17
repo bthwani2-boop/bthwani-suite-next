@@ -22,6 +22,8 @@ for (const marker of [
   "release_authority:",
   "risk_acceptance_authority:",
   "must_not_be_change_author: true",
+  "must_not_be_change_author_when_high_risk: true",
+  "must_not_be_work_coordinator: true",
   "may_final_approve_own_high_risk_change: false",
   "may_approve_product_model: false",
   "may_approve_product_acceptance: false",
