@@ -2,15 +2,25 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "BThwani GitHub Repository Enforcement Evidence",
   "type": "object",
-  "required": ["schemaVersion", "repository", "targetBranch", "observed", "claims", "requiredRemediation", "decision"],
+  "required": ["schemaVersion", "repository", "targetBranch", "observedAt", "observed", "claims", "requiredRemediation", "decision"],
   "additionalProperties": false,
   "properties": {
-    "schemaVersion": { "const": 1 },
+    "schemaVersion": { "const": 2 },
     "repository": { "const": "bthwani2-boop/bthwani-suite-next" },
     "targetBranch": { "const": "bassam" },
+    "observedAt": { "type": "string", "format": "date-time" },
     "observed": {
       "type": "object",
-      "required": ["authenticatedUser", "organizationMembershipCount", "codeowners", "codeownersMode", "branchProtectionState", "requiredChecksState", "independentReviewerIdentityState"],
+      "required": [
+        "authenticatedUser",
+        "organizationMembershipCount",
+        "codeowners",
+        "codeownersMode",
+        "branchProtectionState",
+        "requiredChecksState",
+        "independentReviewerIdentityState",
+        "sameCommitWorkflowRunsState"
+      ],
       "additionalProperties": false,
       "properties": {
         "authenticatedUser": { "type": "string", "minLength": 1 },
@@ -19,16 +29,18 @@
         "codeownersMode": { "enum": ["SINGLE_OWNER_ROUTING", "MULTI_OWNER_ROUTING"] },
         "branchProtectionState": { "enum": ["PROVEN", "NOT_PROVEN"] },
         "requiredChecksState": { "enum": ["PROVEN", "NOT_PROVEN"] },
-        "independentReviewerIdentityState": { "enum": ["PROVEN", "NOT_PROVEN"] }
+        "independentReviewerIdentityState": { "enum": ["PROVEN", "NOT_PROVEN"] },
+        "sameCommitWorkflowRunsState": { "enum": ["PROVEN_PASS", "PROVEN_FAIL", "NOT_PROVEN"] }
       }
     },
     "claims": {
       "type": "object",
-      "required": ["routingConfigured", "separationOfDutiesProven", "highRiskClosureAllowed"],
+      "required": ["routingConfigured", "separationOfDutiesProven", "sameCommitCiProven", "highRiskClosureAllowed"],
       "additionalProperties": false,
       "properties": {
         "routingConfigured": { "type": "boolean" },
         "separationOfDutiesProven": { "type": "boolean" },
+        "sameCommitCiProven": { "type": "boolean" },
         "highRiskClosureAllowed": { "type": "boolean" }
       }
     },
@@ -47,6 +59,20 @@
             }
           },
           "decision": { "const": "NEEDS_EVIDENCE" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "observed": { "properties": { "sameCommitWorkflowRunsState": { "not": { "const": "PROVEN_PASS" } } } } } },
+      "then": {
+        "properties": {
+          "claims": {
+            "properties": {
+              "sameCommitCiProven": { "const": false },
+              "highRiskClosureAllowed": { "const": false }
+            }
+          },
+          "decision": { "enum": ["NEEDS_EVIDENCE", "FIX_REQUIRED", "BLOCKED_EXTERNAL"] }
         }
       }
     },
