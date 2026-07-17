@@ -10,35 +10,27 @@ import (
 	"wlt-api/internal/shared"
 )
 
-// accountTypeMeta assigns each fixed wlt_ledger_accounts.account_type its
-// accounting category and normal balance side. This is deliberately kept
-// separate from the persisted wlt_ledger_accounts.balance_minor_units column
-// (see wlt-017_ledger_kernel.sql), which applies a single "debit adds,
-// credit subtracts" rule to every account regardless of type -- correct for
-// asset accounts, backwards for liability/revenue accounts. This map lets
-// BuildFinancialSummary derive correct signed balances straight from
-// wlt_ledger_lines without depending on (or fixing) that column.
+// accountTypeMeta assigns each fixed WLT account type its accounting category
+// and normal balance side. Financial summaries derive signed balances from
+// immutable journal lines rather than trusting projection counters.
 type accountTypeMeta struct {
-	Category          string // "asset" | "liability" | "revenue"
-	NormalBalanceSide string // "debit" | "credit"
+	Category          string // asset | liability | revenue | expense
+	NormalBalanceSide string // debit | credit
 }
 
 var accountTypeMetadata = map[string]accountTypeMeta{
 	"provider_clearing":              {Category: "asset", NormalBalanceSide: "debit"},
+	"cash_in_transit":                 {Category: "asset", NormalBalanceSide: "debit"},
 	"platform_commission_receivable": {Category: "asset", NormalBalanceSide: "debit"},
 	"wallet":                         {Category: "liability", NormalBalanceSide: "credit"},
 	"platform_payable":               {Category: "liability", NormalBalanceSide: "credit"},
 	"platform_revenue":               {Category: "revenue", NormalBalanceSide: "credit"},
 }
 
-// knownDataGaps documents financial events that do not yet post to this
-// kernel, so a summary built from it is known-incomplete for those events
-// rather than silently presented as the whole truth. Update this list as
-// each gap is closed.
-var knownDataGaps = []string{
-	"payment_capture_not_posted",
-	"cod_collect_remit_not_posted",
-}
+// Capture and COD collection/remittance are posted by the sovereign live
+// handlers. Keep this list empty unless a concrete financial event remains
+// outside the ledger kernel.
+var knownDataGaps = []string{}
 
 type AccountBalance struct {
 	AccountType       string `json:"accountType"`
@@ -63,11 +55,8 @@ type FinancialSummary struct {
 	DataCompleteness []string          `json:"dataCompleteness"`
 }
 
-// BuildFinancialSummary aggregates wlt_ledger_lines per (account_type,
-// currency) directly -- not via the persisted balance_minor_units column --
-// and applies each account type's normal balance side to produce correctly
-// signed balances and per-currency Assets/Liabilities/Revenue/Expense
-// totals and net position.
+// BuildFinancialSummary aggregates immutable ledger lines per account type and
+// currency, applies each account's normal side and never mixes currencies.
 func BuildFinancialSummary(ctx context.Context, db *sql.DB) (*FinancialSummary, error) {
 	const q = `
 		SELECT a.account_type, a.currency,
@@ -96,11 +85,9 @@ func BuildFinancialSummary(ctx context.Context, db *sql.DB) (*FinancialSummary, 
 			return nil, fmt.Errorf("no accounting metadata registered for account_type %q", accountType)
 		}
 
-		var balance int64
+		balance := creditTotal - debitTotal
 		if meta.NormalBalanceSide == "debit" {
 			balance = debitTotal - creditTotal
-		} else {
-			balance = creditTotal - debitTotal
 		}
 
 		cs, ok := byCurrency[currency]
