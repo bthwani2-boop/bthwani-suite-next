@@ -51,6 +51,7 @@ The following paths encode enforceable governance and are validated by registere
 - `governance/skills/**` — skill lifecycle, dependencies, authority, and routing;
 - `governance/guards/**` — guard registry, assurance boundaries, and static binding registry;
 - `governance/product/product-truth.schema.json` — Product Truth schema;
+- `governance/saas/**` — SaaS readiness state, tenant-governance constraints, activation evidence, and commercial activation policy;
 - `tools/guards/guard-manifest.json` — guard sets and execution policy.
 
 A machine-readable contract does not prove that its associated guard, workflow, runtime, or human approval executed.
@@ -61,11 +62,14 @@ The following annex applies only when its registered condition matches the task:
 
 - `governance/operational_journey_protocol_package/annexes/SAAS_READINESS_AND_TENANCY_GATES.md`
 
-Registration does not authorize SaaS implementation, tenant activation, billing, metering, or commercial launch. SaaS remains outside the current execution scope.
+The annex and `governance/saas/**` govern readiness and tenancy claims. They do not by themselves authorize tenant activation, billing, metering, subscription launch, white-labeling, custom domains, or commercial SaaS activation.
 
 ## Owner contracts and adapters
 
 - `.agents/skills/**` may own only the scope of an `active` or `conditional` `governed` entry in `governance/skills/skills-registry.json`.
+- Governance-contract approval routes through `bthwani-governance-contract-guardian` and `GOVERNANCE_CONTRACT_AUTHORITY`.
+- CI-workflow approval routes through `bthwani-ci-workflow-guardian` and `CI_WORKFLOW_AUTHORITY`.
+- The governance and CI authorities must remain separate from each other and from the executor.
 - `legacy` skills are `retired`; they may remain historical references but cannot be routed, depended on, or treated as authorities.
 - `GEMINI.md` is an adapter and may not override `AGENTS.md`, canonical governance, or owner contracts.
 - Graphify, Nx, LeanCTX, and similar utilities are tools, not owner skills or approval authorities.
@@ -109,10 +113,11 @@ governance/contracts/decision-vocabulary.json
 - `PASS` is limited to its declared evidence scope.
 - `READY_FOR_REVIEW` is not approval or closure.
 - `CLOSED_WITH_EVIDENCE` requires every scope applicable to the declared impact on the same immutable commit.
+- SaaS readiness modes and activation states are state values, not decisions.
 - Deprecated aliases may be read for migration only and must not be introduced in active outputs.
 
 Allowed unresolved decisions include `FIX_REQUIRED`, `BLOCKED_EXTERNAL`, `NEEDS_EVIDENCE`, `QA_BLOCK`, `SECURITY_BLOCK`, `RELEASE_BLOCK`, `PROTOCOL_VIOLATION`, and `OUT_OF_SCOPE_FOR_THIS_JOURNEY`.
 
 ## Acceptance condition
 
-Accepted only when this index matches the authority registry, every active source is classified once, active skills are governed, legacy skills are retired, machine contracts and guard sets are registered, all decisions map to the canonical vocabulary, assurance boundaries prevent overclaiming, and no applicable Product Truth, governance, CI, SDLC, security, finance, QA, release, runtime, or production requirement is bypassed.
+Accepted only when this index matches the authority registry, every active source is classified once, active skills are governed, legacy skills are retired, governance and CI approvals remain separated, machine contracts and guard sets are registered, SaaS state is machine-validated, all decisions map to the canonical vocabulary, assurance boundaries prevent overclaiming, and no applicable Product Truth, governance, CI, SDLC, security, finance, isolation, QA, release, runtime, or production requirement is bypassed.
