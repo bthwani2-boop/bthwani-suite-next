@@ -104,6 +104,13 @@ export function PickupWorkbenchScreen() {
           listState.data.map((session) => {
             const expired = new Date(session.expiresAt).getTime() < Date.now();
             const pending = actionPendingFor === session.orderId;
+            const action = session.usedAt
+              ? undefined
+              : {
+                  id: `extend-${session.id}`,
+                  label: pending ? 'جارٍ التمديد...' : 'تمديد ساعتين',
+                  onAction: () => void handleExtend(session.orderId, session.version),
+                };
             return (
               <WebControlPanelDecisionRow
                 key={session.id}
@@ -113,11 +120,7 @@ export function PickupWorkbenchScreen() {
                 statusTone={session.usedAt ? 'success' : expired ? 'danger' : 'warning'}
                 reason={`المحاولات: ${session.attemptCount}/${session.maxAttempts}`}
                 sla={`ينتهي: ${new Date(session.expiresAt).toLocaleString('ar-SA')}`}
-                primaryAction={session.usedAt ? undefined : {
-                  id: `extend-${session.id}`,
-                  label: pending ? 'جارٍ التمديد...' : 'تمديد ساعتين',
-                  onAction: () => void handleExtend(session.orderId, session.version),
-                }}
+                {...(action ? { primaryAction: action } : {})}
               />
             );
           })
