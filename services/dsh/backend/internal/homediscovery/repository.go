@@ -8,12 +8,47 @@ import (
 	"github.com/lib/pq"
 )
 
+const clientEligibleStorePredicate = `
+	s.is_visible = true
+	AND s.status = 'active'
+	AND s.serviceability_status IN ('serviceable','limited')
+	AND s.partner_readiness = 'ready'
+	AND s.catalog_approval_status = 'approved'
+	AND s.marketing_visibility = 'visible'
+	AND EXISTS (
+		SELECT 1 FROM dsh_partners p
+		WHERE p.id = s.partner_id
+		  AND p.activation_status = 'client_visible'
+		  AND p.archived_at IS NULL
+	)`
+
 func ListBanners(db *sql.DB) ([]HomeBanner, error) {
 	rows, err := db.Query(`
-		SELECT id, title, COALESCE(subtitle,''), image_url, action_type, action_target
-		FROM dsh_home_banners
-		WHERE is_active = true
-		ORDER BY sort_order ASC`)
+		SELECT b.id, b.title, COALESCE(b.subtitle,''), b.image_url, b.action_type, b.action_target
+		FROM dsh_home_banners b
+		WHERE b.is_active = true
+		  AND b.publication_status = 'published'
+		  AND b.approved_at IS NOT NULL
+		  AND (b.publish_from IS NULL OR b.publish_from <= NOW())
+		  AND (b.publish_until IS NULL OR b.publish_until > NOW())
+		  AND (
+			b.action_type <> 'store'
+			OR EXISTS (
+				SELECT 1 FROM dsh_stores s
+				WHERE s.id = b.action_target
+				  AND ` + clientEligibleStorePredicate + `
+			)
+		  )
+		  AND (
+			b.action_type <> 'category'
+			OR EXISTS (
+				SELECT 1 FROM dsh_catalog_domains d
+				WHERE d.id = b.action_target
+				  AND d.is_active = true
+				  AND d.is_client_visible = true
+			)
+		  )
+		ORDER BY b.sort_order ASC`)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query banners: %w", err)
 	}
@@ -35,10 +70,31 @@ func ListBanners(db *sql.DB) ([]HomeBanner, error) {
 
 func ListPromos(db *sql.DB) ([]HomePromo, error) {
 	rows, err := db.Query(`
-		SELECT id, title, COALESCE(subtitle,''), COALESCE(badge_label,''), image_url, action_type, action_target
-		FROM dsh_home_promos
-		WHERE is_active = true
-		ORDER BY sort_order ASC`)
+		SELECT p.id, p.title, COALESCE(p.subtitle,''), COALESCE(p.badge_label,''), p.image_url, p.action_type, p.action_target
+		FROM dsh_home_promos p
+		WHERE p.is_active = true
+		  AND p.publication_status = 'published'
+		  AND p.approved_at IS NOT NULL
+		  AND (p.publish_from IS NULL OR p.publish_from <= NOW())
+		  AND (p.publish_until IS NULL OR p.publish_until > NOW())
+		  AND (
+			p.action_type <> 'store'
+			OR EXISTS (
+				SELECT 1 FROM dsh_stores s
+				WHERE s.id = p.action_target
+				  AND ` + clientEligibleStorePredicate + `
+			)
+		  )
+		  AND (
+			p.action_type <> 'category'
+			OR EXISTS (
+				SELECT 1 FROM dsh_catalog_domains d
+				WHERE d.id = p.action_target
+				  AND d.is_active = true
+				  AND d.is_client_visible = true
+			)
+		  )
+		ORDER BY p.sort_order ASC`)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query promos: %w", err)
 	}
@@ -92,14 +148,7 @@ func ListCategories(db *sql.DB) ([]HomeCategory, error) {
 }
 
 func ListHomeStores(db *sql.DB, query HomeDiscoveryQuery) ([]HomeStore, int, error) {
-	conditions := []string{
-		"s.is_visible = true",
-		"s.status = 'active'",
-		"s.serviceability_status IN ('serviceable','limited')",
-		"s.partner_readiness = 'ready'",
-		"s.catalog_approval_status = 'approved'",
-		"s.marketing_visibility = 'visible'",
-	}
+	conditions := []string{clientEligibleStorePredicate}
 	params := []any{}
 	idx := 1
 
@@ -116,11 +165,11 @@ func ListHomeStores(db *sql.DB, query HomeDiscoveryQuery) ([]HomeStore, int, err
 	}
 
 	whereClause := "WHERE "
-	for i, c := range conditions {
+	for i, condition := range conditions {
 		if i > 0 {
 			whereClause += " AND "
 		}
-		whereClause += c
+		whereClause += condition
 	}
 
 	var total int
@@ -182,10 +231,9 @@ func ListHomeStores(db *sql.DB, query HomeDiscoveryQuery) ([]HomeStore, int, err
 			&id, &slug, &displayName, &status, &cityCode, &serviceAreaCode,
 			&serviceabilityStatus, &ratingAverage, &ratingCount, &deliveryEtaMin,
 			&deliveryEtaMax, &isVisible, &heroImageURL, &logoURL, &category,
-			&categoryLabel,
-			pq.Array(&deliveryModes), &isFreeDelivery, &distanceKm, &followerCount,
-			&hasProBadge, &hasCouponBadge, &pointsMultiplier, &isPopular,
-			&createdAt, &updatedAt,
+			&categoryLabel, pq.Array(&deliveryModes), &isFreeDelivery, &distanceKm,
+			&followerCount, &hasProBadge, &hasCouponBadge, &pointsMultiplier,
+			&isPopular, &createdAt, &updatedAt,
 		); err != nil {
 			return nil, 0, fmt.Errorf("failed to scan home store row: %w", err)
 		}
