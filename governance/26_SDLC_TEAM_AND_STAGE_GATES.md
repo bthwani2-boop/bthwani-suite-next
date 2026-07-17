@@ -43,7 +43,7 @@ A stage transition is valid only when all required inputs, same-commit evidence,
 - `GOVERNANCE_CONTRACT_AUTHORITY` owns authority precedence, decision vocabulary, agent and skill contracts, guard registration, and SDLC control-plane integrity.
 - `CI_WORKFLOW_AUTHORITY` owns workflow triggers, permissions, immutable action references, verification-only behavior, fail-late topology, and result aggregation.
 - `ENGINEERING` owns implementation and developer verification.
-- `ENGINEERING_REVIEWER` owns independent code, scope, and developer-evidence review for G4.
+- `INDEPENDENT_REVIEWER` owns independent code, scope, and developer-evidence review for G4.
 - `INDEPENDENT_QUALITY_AUTHORITY` owns QA approval and may issue `QA_BLOCK`.
 - `APPLICATION_SECURITY_AUTHORITY` owns security approval and may issue `SECURITY_BLOCK`.
 - `RELEASE_AUTHORITY` owns release, deployment, rollback, and production verification and may issue `RELEASE_BLOCK`.
@@ -58,7 +58,7 @@ The author or executor of a protected change cannot be its approving authority f
 - product-model and product-acceptance decisions;
 - governance contracts and authority precedence;
 - GitHub Actions, CI permissions, action pinning, and required-check topology;
-- independent engineering review for high-risk implementation;
+- independent implementation review for high-risk changes;
 - authentication, authorization, RBAC, and sessions;
 - PII, secrets, privacy, payments, WLT, ledger, settlement, payout, or reconciliation;
 - migrations and production data;
@@ -109,7 +109,7 @@ When one change affects both governance and CI, `GOVERNANCE_CONTRACT_AUTHORITY` 
 
 ### G4 — Implementation verified
 
-- `ENGINEERING_REVIEWER` approval on the immutable commit;
+- `INDEPENDENT_REVIEWER` approval on the immutable commit;
 - targeted type, test, build, contract, migration, or guard results;
 - no unauthorized scope expansion;
 - no fake runtime, commercial, or closure claims;
