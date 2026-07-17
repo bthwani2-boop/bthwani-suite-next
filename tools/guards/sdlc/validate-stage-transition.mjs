@@ -134,7 +134,7 @@ if (artifactPath) {
           ["G1_PRODUCT_MODEL_APPROVED", "product_manager_authority"],
           ["G2_DESIGN_APPROVED", "architecture_authority"],
           ["G3_READY_FOR_IMPLEMENTATION", "product_owner_acceptance_authority"],
-          ["G4_IMPLEMENTATION_VERIFIED", "engineering_reviewer"],
+          ["G4_IMPLEMENTATION_VERIFIED", "independent_reviewer"],
           ["G5_PRODUCT_ACCEPTED", "product_owner_acceptance_authority"],
           ["G6_QA_APPROVED", "independent_quality_authority"],
           ["G7_SECURITY_APPROVED", "application_security_authority"],
