@@ -22,6 +22,7 @@ $validators = @(
   @{ Name = "agent-governance"; Path = "tools/guards/agent-governance-gate.mjs"; Args = @() },
   @{ Name = "guard-and-workflow-policy"; Path = "tools/guards/guard-registry-gate.mjs"; Args = @() },
   @{ Name = "sdlc-manifest"; Path = "tools/guards/sdlc/validate-sdlc-manifest.mjs"; Args = $commonArgs },
+  @{ Name = "financial-and-evidence-scopes"; Path = "tools/guards/sdlc/validate-financial-and-evidence-scopes.mjs"; Args = $commonArgs },
   @{ Name = "stage-transition"; Path = "tools/guards/sdlc/validate-stage-transition.mjs"; Args = $commonArgs },
   @{ Name = "role-separation"; Path = "tools/guards/sdlc/validate-role-separation.mjs"; Args = $commonArgs },
   @{ Name = "product-truth-linkage"; Path = "tools/guards/sdlc/validate-product-truth.mjs"; Args = $commonArgs },
@@ -37,22 +38,16 @@ foreach ($validator in $validators) {
   & node $validator.Path @($validator.Args)
   $code = if ($null -eq $LASTEXITCODE) { 1 } else { $LASTEXITCODE }
   $ok = $code -eq 0
-  $results += [pscustomobject]@{
-    name = $validator.Name
-    ok = $ok
-    exitCode = $code
-  }
-  if ($ok) {
-    Write-Host "[ OK  ] $($validator.Name)" -ForegroundColor Green
-  } else {
-    Write-Host "[ FAIL] $($validator.Name) (exit $code)" -ForegroundColor Red
-  }
+  $results += [pscustomobject]@{ name = $validator.Name; ok = $ok; exitCode = $code }
+  if ($ok) { Write-Host "[ OK  ] $($validator.Name)" -ForegroundColor Green }
+  else { Write-Host "[ FAIL] $($validator.Name) (exit $code)" -ForegroundColor Red }
 }
 
 $failed = @($results | Where-Object { -not $_.ok })
 Write-Host ""
 if ($failed.Count -eq 0) {
-  Write-Host "sdlc-gate: PASS" -ForegroundColor Green
+  Write-Host "sdlc-gate: PASS scope=structural" -ForegroundColor Green
+  Write-Host "PASS does not approve a stage or imply CLOSED_WITH_EVIDENCE without artifact and impact evidence." -ForegroundColor Yellow
   exit 0
 }
 
