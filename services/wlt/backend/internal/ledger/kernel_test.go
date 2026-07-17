@@ -3,6 +3,7 @@ package ledger
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"sync"
@@ -57,13 +58,13 @@ func TestPostLedgerTransaction_RejectsUnbalanced(t *testing.T) {
 		{AccountType: "wallet", ActorType: "client", ActorID: actorID, DebitCredit: "debit", AmountMinorUnits: 1000, Currency: "YER"},
 		{AccountType: "platform_revenue", DebitCredit: "credit", AmountMinorUnits: 999, Currency: "YER"},
 	}
-	_, err = PostLedgerTransaction(ctx, tx, "test_capture", "test", "ref-1", lines, Actor{ID: "system", Type: "system"})
-	if err == nil {
-		t.Fatalf("expected unbalanced transaction to be rejected")
+	_, err = PostLedgerTransaction(ctx, tx, "test_capture", "test", uniqueActorID("ref"), lines, Actor{ID: "system", Type: "system"})
+	if !errors.Is(err, ErrUnbalancedTransaction) {
+		t.Fatalf("expected ErrUnbalancedTransaction, got %v", err)
 	}
 }
 
-func TestPostLedgerTransaction_RejectsWrongLineCount(t *testing.T) {
+func TestPostLedgerTransaction_RejectsTooFewLines(t *testing.T) {
 	db := getTestDB(t)
 	if db == nil {
 		return
@@ -79,13 +80,44 @@ func TestPostLedgerTransaction_RejectsWrongLineCount(t *testing.T) {
 	lines := []LedgerLine{
 		{AccountType: "wallet", ActorType: "client", ActorID: actorID, DebitCredit: "debit", AmountMinorUnits: 1000, Currency: "YER"},
 	}
-	_, err = PostLedgerTransaction(ctx, tx, "test_capture", "test", "ref-2", lines, Actor{ID: "system", Type: "system"})
-	if err == nil {
-		t.Fatalf("expected single-line transaction to be rejected")
+	if _, err := PostLedgerTransaction(ctx, tx, "test_capture", "test", uniqueActorID("ref"), lines, Actor{ID: "system", Type: "system"}); err == nil {
+		t.Fatal("expected single-line transaction to be rejected")
 	}
 }
 
-func TestPostLedgerTransaction_BalancedTransactionUpdatesAccountBalances(t *testing.T) {
+func TestPostLedgerTransaction_BalancedMultiLineTransaction(t *testing.T) {
+	db := getTestDB(t)
+	if db == nil {
+		return
+	}
+	ctx := context.Background()
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatalf("begin tx: %v", err)
+	}
+	defer tx.Rollback()
+
+	partnerID := uniqueActorID("partner")
+	lines := []LedgerLine{
+		{AccountType: "provider_clearing", DebitCredit: "debit", AmountMinorUnits: 5000, Currency: "YER"},
+		{AccountType: "wallet", ActorType: "partner", ActorID: partnerID, DebitCredit: "credit", AmountMinorUnits: 4000, Currency: "YER"},
+		{AccountType: "platform_revenue", DebitCredit: "credit", AmountMinorUnits: 1000, Currency: "YER"},
+	}
+	txnID, err := PostLedgerTransaction(ctx, tx, "test_capture", "payment_session", uniqueActorID("session"), lines, Actor{ID: "system", Type: "system"})
+	if err != nil {
+		t.Fatalf("expected balanced multi-line transaction to succeed: %v", err)
+	}
+
+	var lineCount int
+	if err := tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM wlt_ledger_lines WHERE ledger_transaction_id = $1", txnID).Scan(&lineCount); err != nil {
+		t.Fatalf("count lines: %v", err)
+	}
+	if lineCount != 3 {
+		t.Fatalf("expected 3 ledger lines, got %d", lineCount)
+	}
+}
+
+func TestPostLedgerTransaction_IdempotentRetryDoesNotMoveBalanceTwice(t *testing.T) {
 	db := getTestDB(t)
 	if db == nil {
 		return
@@ -98,42 +130,65 @@ func TestPostLedgerTransaction_BalancedTransactionUpdatesAccountBalances(t *test
 	defer tx.Rollback()
 
 	actorID := uniqueActorID("client")
+	referenceID := uniqueActorID("payment")
 	lines := []LedgerLine{
 		{AccountType: "wallet", ActorType: "client", ActorID: actorID, DebitCredit: "debit", AmountMinorUnits: 5000, Currency: "YER"},
 		{AccountType: "platform_revenue", DebitCredit: "credit", AmountMinorUnits: 5000, Currency: "YER"},
 	}
-	txnID, err := PostLedgerTransaction(ctx, tx, "test_capture", "test", "ref-3", lines, Actor{ID: "system", Type: "system"})
+	firstID, err := PostLedgerTransaction(ctx, tx, "test_idempotent", "payment_session", referenceID, lines, Actor{ID: "system", Type: "system"})
 	if err != nil {
-		t.Fatalf("expected balanced transaction to succeed: %v", err)
+		t.Fatalf("first post failed: %v", err)
 	}
-	if txnID == "" {
-		t.Fatalf("expected a non-empty transaction id")
+	secondID, err := PostLedgerTransaction(ctx, tx, "test_idempotent", "payment_session", referenceID, lines, Actor{ID: "system", Type: "system"})
+	if err != nil {
+		t.Fatalf("identical retry failed: %v", err)
 	}
-
-	var lineCount int
-	if err := tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM wlt_ledger_lines WHERE ledger_transaction_id = $1", txnID).Scan(&lineCount); err != nil {
-		t.Fatalf("count lines: %v", err)
-	}
-	if lineCount != 2 {
-		t.Fatalf("expected 2 ledger lines, got %d", lineCount)
+	if firstID != secondID {
+		t.Fatalf("expected retry to return original transaction ID: first=%s second=%s", firstID, secondID)
 	}
 
 	var walletBalance int64
-	err = tx.QueryRowContext(ctx, "SELECT balance_minor_units FROM wlt_ledger_accounts WHERE account_type = 'wallet' AND actor_type = 'client' AND actor_id = $1", actorID).Scan(&walletBalance)
-	if err != nil {
-		t.Fatalf("read wallet account balance: %v", err)
+	if err := tx.QueryRowContext(ctx, "SELECT balance_minor_units FROM wlt_ledger_accounts WHERE account_type = 'wallet' AND actor_type = 'client' AND actor_id = $1", actorID).Scan(&walletBalance); err != nil {
+		t.Fatalf("read wallet balance: %v", err)
 	}
 	if walletBalance != 5000 {
-		t.Fatalf("expected wallet account balance 5000, got %d", walletBalance)
+		t.Fatalf("expected one posting only, wallet balance=%d", walletBalance)
+	}
+}
+
+func TestPostLedgerTransaction_RejectsChangedRetryPayload(t *testing.T) {
+	db := getTestDB(t)
+	if db == nil {
+		return
+	}
+	ctx := context.Background()
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatalf("begin tx: %v", err)
+	}
+	defer tx.Rollback()
+
+	actorID := uniqueActorID("client")
+	referenceID := uniqueActorID("payment")
+	original := []LedgerLine{
+		{AccountType: "wallet", ActorType: "client", ActorID: actorID, DebitCredit: "debit", AmountMinorUnits: 5000, Currency: "YER"},
+		{AccountType: "platform_revenue", DebitCredit: "credit", AmountMinorUnits: 5000, Currency: "YER"},
+	}
+	if _, err := PostLedgerTransaction(ctx, tx, "test_conflict", "payment_session", referenceID, original, Actor{ID: "system", Type: "system"}); err != nil {
+		t.Fatalf("first post failed: %v", err)
+	}
+	changed := []LedgerLine{
+		{AccountType: "wallet", ActorType: "client", ActorID: actorID, DebitCredit: "debit", AmountMinorUnits: 4900, Currency: "YER"},
+		{AccountType: "platform_revenue", DebitCredit: "credit", AmountMinorUnits: 4900, Currency: "YER"},
+	}
+	if _, err := PostLedgerTransaction(ctx, tx, "test_conflict", "payment_session", referenceID, changed, Actor{ID: "system", Type: "system"}); !errors.Is(err, ErrLedgerReferenceConflict) {
+		t.Fatalf("expected ErrLedgerReferenceConflict, got %v", err)
 	}
 }
 
 // TestPostLedgerTransaction_ConcurrentPostsDontLoseUpdates fires many
-// concurrent balanced transactions against the same wallet account (each in
-// its own connection/transaction, committed independently) and asserts the
-// final balance is the sum of every transaction, not a last-write-wins
-// result -- proving the atomic UPDATE ... RETURNING pattern doesn't drop
-// concurrent updates the way a read-then-write would.
+// concurrent balanced transactions against the same wallet account and proves
+// the atomic UPDATE ... RETURNING pattern does not lose updates.
 func TestPostLedgerTransaction_ConcurrentPostsDontLoseUpdates(t *testing.T) {
 	db := getTestDB(t)
 	if db == nil {
@@ -162,7 +217,7 @@ func TestPostLedgerTransaction_ConcurrentPostsDontLoseUpdates(t *testing.T) {
 					{AccountType: "wallet", ActorType: "captain", ActorID: actorID, DebitCredit: "debit", AmountMinorUnits: 100, Currency: "YER"},
 					{AccountType: "platform_revenue", DebitCredit: "credit", AmountMinorUnits: 100, Currency: "YER"},
 				}
-				_, err = PostLedgerTransaction(ctx, tx, "test_concurrent", "test", fmt.Sprintf("ref-%d-%d", idx, i), lines, Actor{ID: "system", Type: "system"})
+				_, err = PostLedgerTransaction(ctx, tx, "test_concurrent", "test", fmt.Sprintf("ref-%d-%d-%d", time.Now().UnixNano(), idx, i), lines, Actor{ID: "system", Type: "system"})
 				if err != nil {
 					tx.Rollback()
 					errs <- err
@@ -181,8 +236,7 @@ func TestPostLedgerTransaction_ConcurrentPostsDontLoseUpdates(t *testing.T) {
 	}
 
 	var finalBalance int64
-	err := db.QueryRowContext(ctx, "SELECT balance_minor_units FROM wlt_ledger_accounts WHERE account_type = 'wallet' AND actor_type = 'captain' AND actor_id = $1", actorID).Scan(&finalBalance)
-	if err != nil {
+	if err := db.QueryRowContext(ctx, "SELECT balance_minor_units FROM wlt_ledger_accounts WHERE account_type = 'wallet' AND actor_type = 'captain' AND actor_id = $1", actorID).Scan(&finalBalance); err != nil {
 		t.Fatalf("read final balance: %v", err)
 	}
 	expected := int64(goroutines * perGoroutine * 100)
