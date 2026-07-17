@@ -36,7 +36,7 @@ function resolveCatalogError(error: unknown, fallback: string): string {
 function requireCatalogVersion(
   entities: readonly CatalogVersionedEntity[],
   entityId: string,
-  entityKind: "domain" | "node" | "master_product",
+  entityKind: "domain" | "node" | "master_product" | "policy",
 ): number {
   const entity = entities.find((item) => item.id === entityId);
   if (!entity) throw new Error(`CATALOG_${entityKind.toUpperCase()}_NOT_LOADED`);
@@ -254,8 +254,13 @@ export function useCentralCatalogController(authKind = "unauthenticated") {
     transitionProposal: async (proposalId: string, input: Parameters<typeof api.transitionProductProposal>[1]) =>
       runMutationWithReadback(() => api.transitionProductProposal(proposalId, input), loadProposals),
 
-    updatePolicy: async (policyId: string, input: Parameters<typeof api.updateCatalogPlatformPolicy>[1]) =>
-      runMutationWithReadback(() => api.updateCatalogPlatformPolicy(policyId, input), loadPolicies),
+    updatePolicy: async (policyId: string, input: Parameters<typeof api.updateCatalogPlatformPolicy>[1]) => {
+      const expectedVersion = requireCatalogVersion(state.policies.items, policyId, "policy");
+      return runMutationWithReadback(
+        () => api.updateCatalogPlatformPolicy(policyId, { ...input, expectedVersion }),
+        loadPolicies,
+      );
+    },
 
     upsertAssortment: async (
       storeId: string,
