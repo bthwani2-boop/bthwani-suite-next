@@ -11,7 +11,10 @@ const services = [
   {
     name: "DSH",
     openapi: "services/dsh/contracts/dsh.openapi.yaml",
-    additionalOpenapi: ["services/dsh/contracts/dsh.marketing-commercial.openapi.yaml"],
+    additionalOpenapi: [
+      "services/dsh/contracts/dsh.marketing-commercial.openapi.yaml",
+      "services/dsh/contracts/dsh.partner-fleet.openapi.yaml",
+    ],
     router: "services/dsh/backend/internal/http/server.go",
   },
   {

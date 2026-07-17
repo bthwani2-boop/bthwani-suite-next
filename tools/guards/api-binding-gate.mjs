@@ -32,6 +32,7 @@ function loadOpenApiPaths(relPath) {
 
 const dshPaths = loadOpenApiPaths("services/dsh/contracts/dsh.openapi.yaml");
 const dshCommercialPaths = loadOpenApiPaths("services/dsh/contracts/dsh.marketing-commercial.openapi.yaml");
+const dshPartnerFleetPaths = loadOpenApiPaths("services/dsh/contracts/dsh.partner-fleet.openapi.yaml");
 const wltPaths = loadOpenApiPaths("services/wlt/contracts/wlt.openapi.yaml");
 const identityPaths = loadOpenApiPaths("core/identity/contracts/auth.openapi.yaml");
 const providersPaths = loadOpenApiPaths("core/providers/contracts/providers.openapi.yaml");
@@ -39,6 +40,7 @@ const providersPaths = loadOpenApiPaths("core/providers/contracts/providers.open
 const knownPaths = [
   ...dshPaths,
   ...dshCommercialPaths,
+  ...dshPartnerFleetPaths,
   ...wltPaths,
   ...identityPaths,
   ...providersPaths,
