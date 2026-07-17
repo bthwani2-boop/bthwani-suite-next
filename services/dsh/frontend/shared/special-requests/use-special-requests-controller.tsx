@@ -125,8 +125,11 @@ export function useOperatorSpecialRequestsController(
       setTotal(result.total ?? 0);
       setOffset(nextOffset);
       setLoadState(specialRequestListLoadState(nextRequests));
-    } catch {
-      setLoadState("error");
+    } catch (error: any) {
+      if (error?.status === 403) setLoadState("forbidden");
+      else if (error?.status === 409) setLoadState("conflict");
+      else if (!globalThis.navigator?.onLine || error?.message?.includes('Network')) setLoadState("offline");
+      else setLoadState("error");
     }
   }, [limit, requestType, status, workflowStage]);
 

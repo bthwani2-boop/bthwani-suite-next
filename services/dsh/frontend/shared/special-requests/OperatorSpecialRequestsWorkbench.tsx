@@ -30,7 +30,7 @@ export function OperatorSpecialRequestsWorkbench({
 }: OperatorSpecialRequestsWorkbenchProps) {
   const router = useRouter();
   
-  const { requests, loadState, getOne } = useOperatorSpecialRequestsController({
+  const { requests, loadState, getOne, reload } = useOperatorSpecialRequestsController({
     requestType,
     autoLoad: true,
   });
@@ -70,13 +70,21 @@ export function OperatorSpecialRequestsWorkbench({
     };
   });
 
-  if (loadState === 'error') {
+  if (loadState === 'error' || loadState === 'offline' || loadState === 'forbidden' || loadState === 'conflict') {
+    const errorMap = {
+      error: { title: 'خطأ في تحميل الطلبات', description: 'تعذر تحميل طلبات هذه الخدمة.', stateId: 'recoverableError' },
+      offline: { title: 'غير متصل', description: 'تأكد من اتصالك بالإنترنت.', stateId: 'offline' },
+      forbidden: { title: 'مرفوض', description: 'لا تملك الصلاحية للوصول.', stateId: 'recoverableError' },
+      conflict: { title: 'تعارض', description: 'حدث تعارض في البيانات.', stateId: 'recoverableError' },
+    } as const;
+    const err = errorMap[loadState];
     return (
       <StateView
-        stateId="recoverableError"
-        title="خطأ في تحميل الطلبات"
-        description="تعذر تحميل طلبات هذه الخدمة."
+        stateId={err.stateId}
+        title={err.title}
+        description={err.description}
         actionLabel="إعادة المحاولة"
+        onActionPress={() => reload()}
       />
     );
   }

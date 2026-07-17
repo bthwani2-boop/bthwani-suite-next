@@ -9,7 +9,7 @@ export type DshSpecialRequestState =
   | { readonly kind: "offline" }
   | { readonly kind: "conflict"; readonly message: string };
 
-export type DshSpecialRequestListLoadState = "loading" | "success" | "empty" | "error";
+export type DshSpecialRequestListLoadState = "loading" | "success" | "empty" | "error" | "offline" | "forbidden" | "conflict";
 
 export function specialRequestIdleState(): DshSpecialRequestState {
   return { kind: "idle" };

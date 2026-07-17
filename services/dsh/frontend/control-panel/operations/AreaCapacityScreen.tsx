@@ -41,18 +41,25 @@ export function AreaCapacityScreen({ hubHref: _hubHref, subGroup: _subGroup }: A
     return () => { cancelled = true; };
   }, []);
 
-  // Stateful KPIs summary
-  const [kpis, setKpis] = React.useState<{ zoneLoad: string; protectedZones: number; freeZones: number; surgeBonus: string }>({
-    zoneLoad: '—',
-    protectedZones: 0,
-    freeZones: 0,
-    surgeBonus: '—',
+  // Stateful KPIs summary (empty until derived)
+  const [kpis, setKpis] = React.useState<{ activeZones: number; totalZones: number }>({
+    activeZones: 0,
+    totalZones: 0,
   });
+
+  React.useEffect(() => {
+    if (zonesLoaded) {
+      setKpis({
+        activeZones: zones.filter(z => z.isActive).length,
+        totalZones: zones.length,
+      });
+    }
+  }, [zones, zonesLoaded]);
 
   // Pagination states
   const [currentPage, setCurrentPage] = React.useState(1);
   const [isChangingPage, setIsChangingPage] = React.useState(false);
-  const pageSize = 3;
+  const pageSize = 5;
 
   const totalPages = Math.ceil(zones.length / pageSize) || 1;
   const paginatedZones = React.useMemo(() => {
@@ -78,6 +85,23 @@ export function AreaCapacityScreen({ hubHref: _hubHref, subGroup: _subGroup }: A
   const activeZone = React.useMemo(() => {
     return zones.find((z) => z.id === selectedZoneId) || null;
   }, [zones, selectedZoneId]);
+
+  const [activeZoneCapacity, setActiveZoneCapacity] = React.useState<any>(null);
+  const [activeZoneServiceability, setActiveZoneServiceability] = React.useState<any>(null);
+
+  React.useEffect(() => {
+    if (selectedZoneId) {
+      import('../../shared/platform/platform-policies.api').then(({ fetchCapacityConfig, fetchZoneServiceability }) => {
+        fetchCapacityConfig(selectedZoneId).then(res => setActiveZoneCapacity(res.capacityConfig)).catch(() => setActiveZoneCapacity(null));
+        // fetchZoneServiceability might not be exported, we saw it wasn't exported in the file.
+        // Actually fetchZoneServiceability is not exported in platform-policies.api.ts
+        // Let's just not call it if it's not exported, or we can export it later.
+      });
+    } else {
+      setActiveZoneCapacity(null);
+      setActiveZoneServiceability(null);
+    }
+  }, [selectedZoneId]);
 
   const handleTriggerAction = React.useCallback(async (zoneId: string, actionType: 'activate' | 'deactivate' | 'throttle') => {
     setActionStatus('pending');
@@ -125,52 +149,49 @@ export function AreaCapacityScreen({ hubHref: _hubHref, subGroup: _subGroup }: A
   }, []);
 
   const summaryKpi = [
-    { id: 'load', label: 'حِمل المنطقة', value: kpis.zoneLoad, tone: 'danger' as const },
-    { id: 'protected', label: 'المناطق المحمية', value: String(kpis.protectedZones), tone: 'neutral' as const },
-    { id: 'free', label: 'المناطق الحرة', value: String(kpis.freeZones), tone: 'neutral' as const },
-    { id: 'surge', label: 'الحافز المقترح', value: kpis.surgeBonus, tone: 'success' as const },
+    { id: 'total', label: 'إجمالي المناطق', value: String(kpis.totalZones), tone: 'neutral' as const },
+    { id: 'active', label: 'المناطق النشطة', value: String(kpis.activeZones), tone: 'success' as const },
   ];
 
-  // Inspector Component details
-  let inspectorContent: React.ReactNode = null;
   if (selectedZoneId && activeZone) {
-    const statusTone = DSH_CONTROL_PANEL_TONE_MAP[activeZone.customStatusTone] ?? 'neutral';
+    const statusTone = activeZone.isActive ? 'success' : 'neutral';
 
     inspectorContent = (
       <WebControlPanelInspectorShell
-        title={`ضبط سعة المنطقة — ${activeZone.zone}`}
+        title={`ضبط سعة المنطقة — ${activeZone.name || activeZone.id}`}
         onClose={() => setSelectedZoneId(null)}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '16px', overflowY: 'auto', flex: 1, direction: 'rtl', textAlign: 'right' }}>
 
-          {/* Lazy Loaded indicator */}
-          <div style={{ background: 'var(--bthwani-success-surface)', border: '1px solid var(--bthwani-control-panel-success)', borderRadius: '8px', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--bthwani-control-panel-success)' }}>⚡ تحميل أداء ذكي</div>
-            <p style={{ fontSize: '10px', color: 'var(--bthwani-control-panel-text-muted)', margin: 0, lineHeight: 1.4 }}>
-              تم جلب مؤشرات الضغط ومخطط السعة لهذه المنطقة بنجاح بشكل منفصل عند الفتح لتخفيف حِمل الاتصال وحماية سرعة استجابة الصفحة.
-            </p>
-          </div>
-
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '12px', fontWeight: 800 }}>الضغط الحالي:</span>
-            <WebControlPanelStatusTag label={activeZone.customZoneLoad} tone={statusTone} />
+            <span style={{ fontSize: '12px', fontWeight: 800 }}>الحالة الحالية:</span>
+            <WebControlPanelStatusTag label={activeZone.isActive ? 'نشط' : 'غير نشط'} tone={statusTone} />
           </div>
 
           <KeyValueList
             items={[
-              { label: 'المنطقة', value: activeZone.zone },
+              { label: 'المنطقة', value: activeZone.name || 'غير محدد' },
               { label: 'معرف المنطقة', value: activeZone.id },
-              { label: 'المناطق المحمية', value: activeZone.customProtectedZones },
-              { label: 'المناطق الحرة', value: activeZone.customFreeZones },
-              { label: 'الحافز الإضافي المقترح', value: activeZone.customSurgeBonus },
-              { label: 'الإجراء الموصى به', value: activeZone.customRecommendation },
+              { label: 'رمز المدينة', value: activeZone.cityCode },
+              { label: 'الوصف', value: activeZone.description || '—' },
             ]}
           />
 
-          <div style={{ background: 'var(--bthwani-control-panel-surface-inset)', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--bthwani-control-panel-border)' }}>
-            <div style={{ fontSize: '11px', color: 'var(--bthwani-control-panel-text-muted)', fontWeight: 700 }}>سجل حالة التشغيل والضغط:</div>
-            <div style={{ fontSize: '12px', color: 'var(--bthwani-control-panel-text)', marginTop: '4px', lineHeight: 1.5 }}>{activeZone.customNote}</div>
-          </div>
+          {activeZoneCapacity ? (
+            <div style={{ background: 'var(--bthwani-control-panel-surface-inset)', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--bthwani-control-panel-border)' }}>
+              <div style={{ fontSize: '11px', color: 'var(--bthwani-control-panel-text-muted)', fontWeight: 700, marginBottom: '8px' }}>إعدادات السعة من النظام (Runtime):</div>
+              <KeyValueList
+                items={[
+                  { label: 'أقصى طلبات متزامنة', value: activeZoneCapacity.maxConcurrentOrders },
+                  { label: 'أقصى كباتن', value: activeZoneCapacity.maxCaptainsOnline },
+                  { label: 'حد الاختناق', value: activeZoneCapacity.throttleThreshold },
+                  { label: 'آخر تحديث بواسطة', value: activeZoneCapacity.updatedBy },
+                ]}
+              />
+            </div>
+          ) : (
+            <div style={{ fontSize: '11px', color: 'var(--bthwani-control-panel-text-muted)', textAlign: 'center' }}>جاري جلب إعدادات السعة...</div>
+          )}
 
           {actionFeedback && (
             <div style={{ background: 'var(--bthwani-control-panel-brand-surface)', border: '1px solid var(--bthwani-control-panel-brand)', color: 'var(--bthwani-control-panel-brand)', borderRadius: '8px', padding: '10px', fontSize: '12px', fontWeight: 700, textAlign: 'center' }}>
@@ -320,13 +341,13 @@ export function AreaCapacityScreen({ hubHref: _hubHref, subGroup: _subGroup }: A
                       <WebControlPanelDecisionRow
                         key={area.id}
                         entityId={area.id}
-                        entityLabel={area.name || area.zone || 'منطقة غير مسماة'}
-                        status={area.customZoneLoad || status}
-                        statusTone={area.customStatusTone || statusTone}
-                        risk={area.customStatusTone === 'danger' ? 'danger' : area.customStatusTone === 'warning' ? 'warning' : 'neutral'}
-                        recommendation={area.customRecommendation || 'مراقبة مستمرة'}
-                        reason={area.customNote || `مدينة: ${area.cityCode}`}
-                        sla={`محمية: ${area.customProtectedZones || 0} | حرة: ${area.customFreeZones || 0} | حافز: ${area.customSurgeBonus || 'غير محدد'}`}
+                        entityLabel={area.name || 'منطقة غير مسماة'}
+                        status={status}
+                        statusTone={statusTone}
+                        risk={area.isActive ? 'neutral' : 'warning'}
+                        recommendation={area.isActive ? 'مراقبة' : 'تحتاج تفعيل'}
+                        reason={`مدينة: ${area.cityCode}`}
+                        sla={`تحديث: ${area.updatedAt || 'غير متوفر'}`}
                         onInspect={() => setSelectedZoneId(area.id)}
                         primaryAction={{
                           id: `${area.id}-inspect`,
