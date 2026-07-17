@@ -45,18 +45,36 @@ func (c *Client) Configured() bool {
 	return c != nil && c.baseURL != "" && c.serviceToken != ""
 }
 
-// Notify reports a terminal payment-session status for a checkout intent to
-// DSH. Callers (see internal/dshoutbox) are responsible for retrying on
-// error; this call does not retry or swallow failures itself.
-func (c *Client) Notify(ctx context.Context, checkoutIntentID, paymentSessionID, status string) error {
+// Notify reports a terminal payment-session status to DSH, for either a
+// checkout intent or a special request -- exactly one of
+// checkoutIntentID/specialRequestID must be non-nil/non-empty, matching the
+// session's own source identity (see internal/dshoutbox.Event). The payload
+// carries whichever one is set; the other key is omitted entirely rather
+// than sent as an empty string, since DSH's inbound handler treats an empty
+// checkoutIntentId as invalid. Callers (see internal/dshoutbox) are
+// responsible for retrying on error; this call does not retry or swallow
+// failures itself.
+func (c *Client) Notify(ctx context.Context, tenantID string, checkoutIntentID, specialRequestID *string, paymentSessionID, status string) error {
 	if !c.Configured() {
 		return ErrNotConfigured
 	}
-	body, err := json.Marshal(map[string]string{
-		"checkoutIntentId": checkoutIntentID,
+	payload := map[string]string{
 		"paymentSessionId": paymentSessionID,
 		"status":           status,
-	})
+	}
+	if tenantID != "" {
+		payload["tenantId"] = tenantID
+	}
+	correlationID := paymentSessionID
+	switch {
+	case checkoutIntentID != nil && *checkoutIntentID != "":
+		payload["checkoutIntentId"] = *checkoutIntentID
+		correlationID = *checkoutIntentID
+	case specialRequestID != nil && *specialRequestID != "":
+		payload["specialRequestId"] = *specialRequestID
+		correlationID = *specialRequestID
+	}
+	body, err := json.Marshal(payload)
 	if err != nil {
 		return err
 	}
@@ -67,7 +85,7 @@ func (c *Client) Notify(ctx context.Context, checkoutIntentID, paymentSessionID,
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "wlt")
-	req.Header.Set("X-Correlation-ID", checkoutIntentID)
+	req.Header.Set("X-Correlation-ID", correlationID)
 
 	resp, err := c.http.Do(req)
 	if err != nil {

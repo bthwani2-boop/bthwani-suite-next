@@ -1,0 +1,31 @@
+{
+  "capabilityId": "DSH-SPECIAL-REQUESTS-001",
+  "taskMode": "implementation_or_closure",
+  "affectedPaths": [
+    ".github/workflows/operational-protocol-ci.yml",
+    "governance/operational_journey_protocol_package/sdlc/evidence/dsh-special-requests-001.artifact.json",
+    "governance/operational_journey_protocol_package/sdlc/evidence/dsh-special-requests-001.change-impact.json",
+    "services/dsh/backend/internal/http/specialrequests.go",
+    "services/dsh/backend/internal/http/wlt_events.go",
+    "services/dsh/backend/internal/specialrequests",
+    "services/dsh/database/migrations/dsh-056_special_requests_tenancy.sql",
+    "services/dsh/frontend/shared/awnak/AwnakForm.tsx",
+    "services/dsh/frontend/shared/shein/SheinForm.tsx",
+    "services/wlt/backend/internal/reference/payment_session.go",
+    "services/wlt/backend/internal/payment/payment.go",
+    "services/wlt/database/migrations/wlt-024_payment_session_tenancy.sql",
+    "tools/guards/sdlc/Invoke-SdlcGate.ps1",
+    "tools/guards/_guard-utils.mjs"
+  ],
+  "riskClass": "high",
+  "impacts": {
+    "backend": true,
+    "frontend": true,
+    "apiContract": true,
+    "database": true,
+    "security": true,
+    "runtime": true,
+    "wltFinance": true,
+    "tenant": true
+  }
+}

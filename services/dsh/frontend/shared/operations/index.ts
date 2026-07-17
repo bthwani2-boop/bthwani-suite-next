@@ -6,3 +6,4 @@ export * from './operations-registry';
 export * from './use-operations-controller';
 export * from './geo-heatmap.helpers';
 export * from './theme';
+export * from './use-operations-permission';

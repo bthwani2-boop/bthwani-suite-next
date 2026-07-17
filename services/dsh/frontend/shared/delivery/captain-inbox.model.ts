@@ -9,18 +9,39 @@ import {
 } from '../dispatch/dispatch.api';
 import { ASSIGNMENT_STATUS_LABELS, DELIVERY_STATUS_LABELS } from '../dispatch/dispatch.types';
 import type { DshDispatchAssignment } from '../dispatch/dispatch.types';
-import type { DshCaptainOrderBellItem, DshCaptainOrdersScreenState } from '../orders';
+import type { DshCaptainOrderBellItem, DshCaptainOrderServiceType, DshCaptainOrdersScreenState } from '../orders';
 
 export type CaptainInboxFetchState = Extract<DshCaptainOrdersScreenState, 'ready' | 'loading' | 'empty' | 'error'>;
 
-function toBellItem(assignment: DshDispatchAssignment): DshCaptainOrderBellItem {
+export function resolveServiceType(assignment: DshDispatchAssignment): DshCaptainOrderServiceType {
+  if (!assignment.specialRequestId) return 'standard';
+  if (assignment.requestType === 'AWNAK_ERRAND') return 'awnak';
+  if (assignment.requestType === 'SHEIN_ASSISTED_PURCHASE') return 'shein-final-mile';
+  return 'standard';
+}
+
+function resolveBellTitle(assignment: DshDispatchAssignment, serviceType: DshCaptainOrderServiceType): string {
+  if (serviceType === 'awnak') return `عونك #${assignment.specialRequestId}`;
+  if (serviceType === 'shein-final-mile') return `SHEIN #${assignment.specialRequestId}`;
+  return `طلب #${assignment.orderId}`;
+}
+
+// Exported for the app-captain fulfillment-exclusion regression test
+// (services/dsh/tests/captain-inbox-exclusion.test.mjs): this is the real
+// structural boundary where any incoming assignment-shaped object is turned
+// into a captain bell item. `fulfillmentMode` below is a hardcoded literal,
+// never read off the input `assignment` -- so a caller cannot smuggle a
+// `partner_delivery`/`pickup` fulfillmentMode through this mapper even if
+// the input object carries one (see the regression test for proof).
+export function toBellItem(assignment: DshDispatchAssignment): DshCaptainOrderBellItem {
+  const serviceType = resolveServiceType(assignment);
   return {
     id: assignment.id,
     orderId: assignment.orderId,
     kind: assignment.status === 'offered' ? 'incoming-offer' : 'active',
-    serviceType: 'standard',
+    serviceType,
     fulfillmentMode: 'bthwani_delivery',
-    title: `طلب #${assignment.orderId}`,
+    title: resolveBellTitle(assignment, serviceType),
     subtitle: DELIVERY_STATUS_LABELS[assignment.delivery.status] ?? assignment.delivery.status,
     meta: ASSIGNMENT_STATUS_LABELS[assignment.status] ?? assignment.status,
   };

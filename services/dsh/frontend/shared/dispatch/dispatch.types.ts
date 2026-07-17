@@ -1,6 +1,9 @@
 import type { components } from "../../../clients/generated/dsh-api";
 
-export type DshDispatchAssignment = components["schemas"]["DshDispatchAssignment"];
+export type DshDispatchAssignment = components["schemas"]["DshDispatchAssignment"] & {
+  specialRequestId?: string;
+  requestType?: string;
+};
 export type DshAssignmentStatus = components["schemas"]["DshAssignmentStatus"];
 export type DshDeliveryStatus = components["schemas"]["DshDeliveryStatus"];
 export type DshDelivery = components["schemas"]["DshDelivery"];

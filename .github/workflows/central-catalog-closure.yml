@@ -20,6 +20,7 @@ on:
       - 'shared/ui-kit/**'
   push:
     branches:
+      - reem
       - onebyone
       - master
       - fix/onebyone-central-catalog-final-closure
@@ -78,13 +79,27 @@ jobs:
           sh infra/data-plane/postgres/init/001_create_runtime_databases.sh
 
       - name: Migration closure test (fresh + legacy fixtures + double-run)
+        id: migration-closure
         shell: pwsh
         env:
           PGHOST: localhost
           PGPORT: "5432"
           PGPASSWORD: bthwani_runtime_password
         run: |
-          pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/test-central-catalog-migration.ps1 -PsqlMode native
+          $ErrorActionPreference = 'Continue'
+          & ./tools/scripts/test-central-catalog-migration.ps1 -PsqlMode native *>&1 |
+            Tee-Object -FilePath central-catalog-migration.log
+          $exitCode = $LASTEXITCODE
+          if ($exitCode -ne 0) { exit $exitCode }
+
+      - name: Upload migration closure diagnostics
+        if: failure() && steps.migration-closure.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: central-catalog-migration-diagnostics
+          path: central-catalog-migration.log
+          if-no-files-found: error
+          retention-days: 3
 
       - name: Apply DSH migrations to dsh_runtime (first run)
         env:
@@ -134,10 +149,36 @@ jobs:
           node-version: 24.17.0
 
       - name: Legacy local-catalog reference scan (INVALID must be 0)
-        run: node tools/scripts/scan-legacy-catalog-references.mjs
+        id: legacy-scan
+        shell: bash
+        run: |
+          set -o pipefail
+          node tools/scripts/scan-legacy-catalog-references.mjs 2>&1 | tee legacy-catalog-scan.log
+
+      - name: Upload legacy scan diagnostics
+        if: failure() && steps.legacy-scan.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: central-catalog-legacy-reference-diagnostics
+          path: legacy-catalog-scan.log
+          if-no-files-found: error
+          retention-days: 3
 
       - name: Central catalog closure static tests
-        run: node --test services/dsh/tests/central-catalog-closure.test.mjs
+        id: closure-static-tests
+        shell: bash
+        run: |
+          set -o pipefail
+          node --test services/dsh/tests/central-catalog-closure.test.mjs 2>&1 | tee central-catalog-static-tests.log
+
+      - name: Upload central catalog static-test diagnostics
+        if: failure() && steps.closure-static-tests.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: central-catalog-static-test-diagnostics
+          path: central-catalog-static-tests.log
+          if-no-files-found: error
+          retention-days: 3
 
   dsh-backend:
     name: DSH Go backend tests

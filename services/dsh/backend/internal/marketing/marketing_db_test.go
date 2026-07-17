@@ -60,8 +60,6 @@ func TestMarketingCampaignLifecycleDBIntegration(t *testing.T) {
 		t.Fatalf("expected active status, got %q", updated.Status)
 	}
 
-	// Archive must be a soft archive: status flips to cancelled and
-	// archived_at is set, the row must NOT be physically deleted.
 	if err := ArchiveCampaign(db, c.ID, "operator-local-001", "corr-"+suffix); err != nil {
 		t.Fatalf("ArchiveCampaign: %v", err)
 	}
@@ -76,8 +74,6 @@ func TestMarketingCampaignLifecycleDBIntegration(t *testing.T) {
 		t.Fatal("expected archived_at to be set after archive")
 	}
 
-	// Archiving twice must be idempotent-safe (not found on second archive
-	// of an already-archived row, since archived_at IS NULL guard excludes it).
 	if err := ArchiveCampaign(db, c.ID, "operator-local-001", "corr-"+suffix); err != ErrNotFound {
 		t.Fatalf("expected ErrNotFound re-archiving already-archived campaign, got %v", err)
 	}
@@ -143,23 +139,38 @@ func TestMarketingTickerLifecycleDBIntegration(t *testing.T) {
 func TestMarketingTargetVisibilityGateDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
+	storeID := "marketing-gate-store-" + suffix
 
-	// store-test-grocery is seeded as fully client_visible-eligible.
+	_, err := db.Exec(`
+		INSERT INTO dsh_stores (
+			id, slug, display_name, status, city_code, service_area_code,
+			serviceability_status, is_visible, partner_readiness,
+			catalog_approval_status, marketing_visibility
+		) VALUES ($1, $1, 'Marketing Gate Store', 'active', 'SAN', 'SAN-1',
+			'serviceable', true, 'ready', 'approved', 'visible')`, storeID)
+	if err != nil {
+		t.Fatalf("seed eligible marketing target store: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = db.Exec(`DELETE FROM dsh_marketing_target_bindings WHERE target_type='store' AND target_id=$1`, storeID)
+		_, _ = db.Exec(`DELETE FROM dsh_marketing_visibility_gates WHERE target_type='store' AND target_id=$1`, storeID)
+		_, _ = db.Exec(`DELETE FROM dsh_stores WHERE id=$1`, storeID)
+	})
+
 	c, err := CreateCampaign(db, CreateCampaignInput{
 		Title:         "Gate Pass Campaign " + suffix,
 		TargetType:    "store",
-		TargetID:      "store-test-grocery",
+		TargetID:      storeID,
 		CreatedBy:     "operator-local-001",
 		CorrelationID: "corr-" + suffix,
 	})
 	if err != nil {
 		t.Fatalf("CreateCampaign with eligible store target: %v", err)
 	}
-	if c.TargetType != "store" || c.TargetID != "store-test-grocery" {
+	if c.TargetType != "store" || c.TargetID != storeID {
 		t.Fatalf("expected target to persist, got type=%q id=%q", c.TargetType, c.TargetID)
 	}
 
-	// A non-existent store id must fail the gate.
 	if _, err := CreateCampaign(db, CreateCampaignInput{
 		Title:      "Gate Fail Campaign " + suffix,
 		TargetType: "store",
@@ -169,7 +180,6 @@ func TestMarketingTargetVisibilityGateDBIntegration(t *testing.T) {
 		t.Fatalf("expected ErrTargetGateFailed for nonexistent store target, got %v", err)
 	}
 
-	// offer targeting has no backend table yet — must be rejected, not silently allowed.
 	if _, err := CreateCampaign(db, CreateCampaignInput{
 		Title:      "Gate Offer Campaign " + suffix,
 		TargetType: "offer",

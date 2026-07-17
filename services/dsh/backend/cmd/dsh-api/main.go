@@ -17,6 +17,7 @@ import (
 	"dsh-api/internal/fieldcommissionoutbox"
 	dshHttp "dsh-api/internal/http"
 	"dsh-api/internal/media"
+	"dsh-api/internal/operationaloutbox"
 	"dsh-api/internal/wlt"
 	"dsh-api/internal/wltoutbox"
 )
@@ -46,7 +47,6 @@ func main() {
 	db.SetMaxOpenConns(10)
 	db.SetConnMaxIdleTime(30 * time.Second)
 
-	// Validate DB connection on start
 	if err := db.Ping(); err != nil {
 		log.Fatalf("[dsh-api] failed to ping database: %v", err)
 	}
@@ -58,10 +58,11 @@ func main() {
 	router := dshHttp.NewRouter(db, auth.NewClient(identityBaseURL), wltClient, mediaProvider)
 	handler := dshHttp.CorsMiddleware(authMode, router)
 
-	var cancelOutbox context.CancelFunc = func() {}
+	outboxCtx, cancelOutbox := context.WithCancel(context.Background())
+	go operationaloutbox.RunWorker(outboxCtx, db, 5*time.Second)
+	log.Println("[dsh-api] operational outbox worker enabled")
+
 	if wltClient.Configured() {
-		outboxCtx, stopOutbox := context.WithCancel(context.Background())
-		cancelOutbox = stopOutbox
 		go wltoutbox.RunWorker(outboxCtx, db, wltClient, 15*time.Second)
 		go fieldcommissionoutbox.RunWorker(outboxCtx, db, wltClient, 15*time.Second)
 		go checkoutfinanceoutbox.RunWorker(outboxCtx, db, wltClient, 15*time.Second)
@@ -83,7 +84,6 @@ func main() {
 		}
 	}()
 
-	// Graceful shutdown setup
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
 
@@ -106,9 +106,6 @@ func main() {
 	log.Println("[dsh-api] shutdown complete")
 }
 
-// newMediaProvider connects to MinIO if DSH_MINIO_ENDPOINT is configured.
-// A missing or temporarily unreachable media store leaves upload/download
-// routes at 503 while the provider retries in the background.
 func newMediaProvider(ctx context.Context) *media.Provider {
 	endpoint := os.Getenv("DSH_MINIO_ENDPOINT")
 	if endpoint == "" {
@@ -122,9 +119,6 @@ func newMediaProvider(ctx context.Context) *media.Provider {
 		bucket = "dsh-media"
 	}
 	useSSL := os.Getenv("DSH_MINIO_USE_SSL") == "true"
-	// Presigned URLs are handed to browsers/apps outside the backend's own
-	// network, so they must be built from a reachable public endpoint, not
-	// necessarily the internal one dsh-api itself uses to reach MinIO.
 	publicEndpoint := os.Getenv("DSH_MINIO_PUBLIC_ENDPOINT")
 	publicUseSSL := os.Getenv("DSH_MINIO_PUBLIC_USE_SSL") == "true"
 

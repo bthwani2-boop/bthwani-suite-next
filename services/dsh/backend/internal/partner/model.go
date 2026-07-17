@@ -522,7 +522,6 @@ func (i TeamMemberActionInput) Validate() error {
 	default:
 		return ErrInvalid
 	}
-	return nil
 }
 
 // ─── Store courier settings ─────────────────────────────────────────────────

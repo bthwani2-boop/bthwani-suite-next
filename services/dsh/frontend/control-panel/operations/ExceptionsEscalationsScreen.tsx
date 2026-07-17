@@ -34,88 +34,19 @@ import { DSH_CONTROL_PANEL_TONE_MAP } from '../shared/ControlPanelDshDecisionBoa
 
 export type ExceptionsEscalationsScreenProps = { hubHref: string; subGroup?: string; };
 
-type WorkspaceFilterId = 'all' | 'mobile-owned' | 'finance-preview' | 'hidden-compat' | 'control-policy';
-type SelectedItem =
-  | { type: 'exception'; id: string }
-  | { type: 'flow'; id: string }
-  | { type: 'rescue'; id: string }
-  | { type: 'playbook'; id: string }
-  | null;
-
-type ExceptionsStateItem = {
-  id: string;
-  type: string;
-  lifecycleState: string;
-  affectedSurface: string;
-  ownerQueue: string;
-  severity: string;
-  currentOwner: string;
-  startTime: string;
-  lastAction: string;
-  suggestedAction: string;
-  resolutionPath: string;
-  routeHint: string;
-  evidenceNeeded: boolean;
-  onDemandDetailPolicy: string;
-  note: string;
-  statusTone: string;
-  customOwner: string;
-  customQueue: string;
-  customSlaState: 'نشط' | 'مصعّد' | 'محلول';
-  customNote: string;
-  customStatusTone: 'warning' | 'danger' | 'best' | 'brand';
-  realId?: string;
-};
-
-const WORKSPACE_FILTERS: ReadonlyArray<{ id: WorkspaceFilterId; label: string }> = [
-  { id: 'all', label: 'الكل' },
-  { id: 'mobile-owned', label: 'مُلاك الجوال' },
-  { id: 'finance-preview', label: 'معاينة مالية' },
-  { id: 'hidden-compat', label: 'توافقي مخفي' },
-  { id: 'control-policy', label: 'سياسة التحكم' },
-];
-
-const SURFACE_LABELS: Record<string, string> = {
-  'app-client': 'العميل',
-  'app-partner': 'الشريك',
-  'app-captain': 'الكابتن',
-  'app-field': 'الميداني',
-  'control-panel': 'لوحة التحكم',
-  'wlt-finance': 'WLT المالية',
-};
-
-const DOMAIN_LABELS: Record<string, string> = {
-  'order-lifecycle': 'دورة الطلب',
-  'cart-checkout': 'السلة والدفع',
-  tracking: 'التتبع',
-  'delivery-mode': 'وضع التنفيذ',
-  'partner-operations': 'تشغيل الشريك',
-  'captain-operations': 'تشغيل الكابتن',
-  'field-onboarding': 'ضم المتاجر',
-  'catalog-inventory': 'الكتالوج والمخزون',
-  'support-escalation': 'الدعم والتصعيد',
-  'chat-conversation': 'المحادثات',
-  'cancellation-rejection': 'الإلغاء والرفض',
-  'finance-preview': 'مالي للقراءة فقط',
-  'control-policy': 'سياسة التحكم',
-};
-
-const VISIBILITY_LABELS: Record<string, string> = {
-  primary: 'أساسي',
-  contextual: 'سياقي',
-  'escalation-only': 'تصعيد فقط',
-  'hidden-compat': 'توافقي مخفي',
-  internal: 'داخلي',
-  disabled: 'معطل',
-};
-
-const POLICY_LABELS: Record<string, string> = {
-  'summary-only': 'ملخص أولًا',
-  'detail-on-open': 'تفاصيل عند الفتح',
-  'evidence-on-open': 'أدلة عند الفتح',
-  'chat-on-open': 'دردشة عند الفتح',
-  'finance-preview-only': 'مالي للقراءة فقط',
-};
+import {
+  type ExceptionsStateItem,
+  type WorkspaceFilterId,
+  type SelectedItem,
+  WORKSPACE_FILTERS,
+  SURFACE_LABELS,
+  DOMAIN_LABELS,
+  VISIBILITY_LABELS,
+  POLICY_LABELS,
+  QUEUE_LABELS,
+} from './components/ExceptionsEscalations.types';
+import { ExceptionsExceptionInspector } from './components/ExceptionsExceptionInspector';
+import { ExceptionsFlowInspector } from './components/ExceptionsFlowInspector';
 
 function mapReadinessEscalationToException(item: DshReadinessEscalation): ExceptionsStateItem {
   const isResolved = item.status === 'resolved';
@@ -172,6 +103,7 @@ export function ExceptionsEscalationsScreen({
 }: ExceptionsEscalationsScreenProps) {
   const router = useRouter();
   const [filterId, setFilterId] = React.useState<WorkspaceFilterId>('all');
+  const [showRegistry, setShowRegistry] = React.useState(false);
   const [selectedItemId, setSelectedItemId] = React.useState<SelectedItem>(null);
 
   // Friendly queue names and simulated default owners
@@ -273,7 +205,8 @@ export function ExceptionsEscalationsScreen({
       setKpis((prev) => ({ ...prev, escalate: prev.escalate + 1 }));
       setActionStatus('success');
       setActionFeedback(`تم تصعيد الاستثناء ونقل ملكيته إلى (${queueDetails.label}) بنجاح.`);
-      setTimeout(() => { setActionStatus('idle'); setActionFeedback(null); setActiveForm(null); setSelectedEscalationQueue('customer-support'); setHandoffNote(''); }, 1500);
+      // Removed setTimeout for zero-gap digital closing. Let the user acknowledge the success state,
+      // or we just reset the form on subsequent actions.
     };
 
     const exc = exceptions.find((e) => e.id === id);
@@ -310,7 +243,7 @@ export function ExceptionsEscalationsScreen({
       setKpis((prev) => ({ ...prev, open: Math.max(0, prev.open - 1), resolve: prev.resolve + 1, close: prev.close + 1 }));
       setActionStatus('success');
       setActionFeedback('تم حل الاستثناء وإغلاق تذكرته بنجاح وتحويل حالة الـ SLA إلى مستقر.');
-      setTimeout(() => { setActionStatus('idle'); setActionFeedback(null); setActiveForm(null); setResolutionNote(''); }, 1500);
+      // Removed setTimeout for zero-gap digital closing.
     };
 
     const exc = exceptions.find((e) => e.id === id);
@@ -816,66 +749,78 @@ export function ExceptionsEscalationsScreen({
             })}
           </WebControlPanelQueue>
 
-          {/* 2. Playbooks & Rescue Queue */}
-          <WebControlPanelQueue title="دليل العمل وإنقاذ الطلب" meta="توجيه الإجراء السريع">
-            {/* rescue and playbook rows: no live data — populated via API */}
-          </WebControlPanelQueue>
+
 
           {/* 3. Central Registry display */}
-          <WebControlPanelQueue title="أثر السجل المركزي للتصعيد والسياسات" meta={`${filteredFlows.length} تدفقًا`}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div className={`${styles.filterDock} ${styles.filterDockTint}`} style={{ padding: '6px 10px', borderRadius: '6px' }}>
-                {WORKSPACE_FILTERS.map((filter) => (
-                  <button
-                    key={filter.id}
-                    type="button"
-                    className={`${styles.surfaceTab} ${filterId === filter.id ? styles.surfaceTabActive : ''}`}
-                    style={{ padding: '4px 10px', fontSize: '11px' }}
-                    onClick={() => setFilterId(filter.id)}
+          <WebControlPanelQueue 
+            title={
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>أثر السجل المركزي للتصعيد والسياسات</span>
+                <button 
+                  onClick={() => setShowRegistry(prev => !prev)} 
+                  style={{ all: 'unset', cursor: 'pointer', fontSize: '10px', color: 'var(--bthwani-control-panel-brand)', textDecoration: 'underline' }}
+                >
+                  {showRegistry ? 'إخفاء' : 'إظهار'}
+                </button>
+              </div>
+            }
+            meta={`${filteredFlows.length} تدفقًا`}
+          >
+            {showRegistry && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '350px', overflowY: 'auto', paddingInlineEnd: '4px' }}>
+                <div className={`${styles.filterDock} ${styles.filterDockTint}`} style={{ padding: '6px 10px', borderRadius: '6px' }}>
+                  {WORKSPACE_FILTERS.map((filter) => (
+                    <button
+                      key={filter.id}
+                      type="button"
+                      className={`${styles.surfaceTab} ${filterId === filter.id ? styles.surfaceTabActive : ''}`}
+                      style={{ padding: '4px 10px', fontSize: '11px' }}
+                      onClick={() => setFilterId(filter.id)}
+                    >
+                      {filter.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className={styles.escalationCatalogRow} style={{ fontWeight: 800, background: 'var(--bthwani-control-panel-surface-inset)', border: 0 }}>
+                  <span className={styles.escalationCatalogId}>معرف تقني</span>
+                  <span className={styles.escalationCatalogMeta}>السطح المالك</span>
+                  <span className={styles.escalationCatalogDomain}>المجال</span>
+                  <span className={styles.escalationCatalogVisibility}>الظهور</span>
+                  <span className={styles.escalationCatalogPolicy}>سياسة الطلب</span>
+                  <span style={{ minWidth: '40px' }} />
+                </div>
+                {filteredFlows.map((flow) => (
+                  <div
+                    key={flow.id}
+                    className={styles.escalationCatalogRow}
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => setSelectedItemId({ type: 'flow', id: flow.id })}
                   >
-                    {filter.label}
-                  </button>
+                    <span className={styles.escalationCatalogId}>{flow.id}</span>
+                    <span className={styles.escalationCatalogMeta}>{SURFACE_LABELS[flow.ownerSurface] ?? flow.ownerSurface}</span>
+                    <span className={styles.escalationCatalogDomain}>{DOMAIN_LABELS[flow.domain] ?? flow.domain}</span>
+                    <span className={styles.escalationCatalogVisibility}>{VISIBILITY_LABELS[flow.visibility] ?? flow.visibility}</span>
+                    <span className={styles.escalationCatalogPolicy}>{POLICY_LABELS[flow.onDemandPolicy] ?? flow.onDemandPolicy}</span>
+                    {flow.financialImpact === true && (
+                      <span className={styles.escalationCatalogBadgeFinance} style={{ marginInlineEnd: '4px' }}>مالي</span>
+                    )}
+                    <button
+                      type="button"
+                      className={styles.rescueSecondaryBtn}
+                      style={{ padding: '3px 8px', fontSize: '10px', marginInlineStart: 'auto', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedItemId({ type: 'flow', id: flow.id });
+                      }}
+                      aria-label="فتح التفاصيل"
+                    >
+                      ←
+                    </button>
+                  </div>
                 ))}
               </div>
-
-              <div className={styles.escalationCatalogRow} style={{ fontWeight: 800, background: 'var(--bthwani-control-panel-surface-inset)', border: 0 }}>
-                <span className={styles.escalationCatalogId}>معرف تقني</span>
-                <span className={styles.escalationCatalogMeta}>السطح المالك</span>
-                <span className={styles.escalationCatalogDomain}>المجال</span>
-                <span className={styles.escalationCatalogVisibility}>الظهور</span>
-                <span className={styles.escalationCatalogPolicy}>سياسة الطلب</span>
-                <span style={{ minWidth: '40px' }} />
-              </div>
-              {filteredFlows.map((flow) => (
-                <div
-                  key={flow.id}
-                  className={styles.escalationCatalogRow}
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => setSelectedItemId({ type: 'flow', id: flow.id })}
-                >
-                  <span className={styles.escalationCatalogId}>{flow.id}</span>
-                  <span className={styles.escalationCatalogMeta}>{SURFACE_LABELS[flow.ownerSurface] ?? flow.ownerSurface}</span>
-                  <span className={styles.escalationCatalogDomain}>{DOMAIN_LABELS[flow.domain] ?? flow.domain}</span>
-                  <span className={styles.escalationCatalogVisibility}>{VISIBILITY_LABELS[flow.visibility] ?? flow.visibility}</span>
-                  <span className={styles.escalationCatalogPolicy}>{POLICY_LABELS[flow.onDemandPolicy] ?? flow.onDemandPolicy}</span>
-                  {flow.financialImpact === true && (
-                    <span className={styles.escalationCatalogBadgeFinance} style={{ marginInlineEnd: '4px' }}>مالي</span>
-                  )}
-                  <button
-                    type="button"
-                    className={styles.rescueSecondaryBtn}
-                    style={{ padding: '3px 8px', fontSize: '10px', marginInlineStart: 'auto', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedItemId({ type: 'flow', id: flow.id });
-                    }}
-                    aria-label="فتح التفاصيل"
-                  >
-                    ←
-                  </button>
-                </div>
-              ))}
-            </div>
+            )}
           </WebControlPanelQueue>
         </Box>
 

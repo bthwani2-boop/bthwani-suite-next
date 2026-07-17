@@ -65,6 +65,12 @@ func ListCategories(db *sql.DB) ([]HomeCategory, error) {
 		WHERE is_active = true
 		  AND is_client_visible = true
 		  AND is_manual_request = false
+		UNION ALL
+		SELECT n.id, n.name_ar, COALESCE(n.icon,''), n.sort_order
+		FROM dsh_catalog_nodes n
+		JOIN dsh_catalog_domains d ON n.domain_id = d.id
+		WHERE d.is_manual_request = true
+		  AND n.is_active = true
 		ORDER BY sort_order ASC`)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query categories: %w", err)

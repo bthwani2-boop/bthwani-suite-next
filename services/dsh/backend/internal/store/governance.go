@@ -21,6 +21,7 @@ var (
 type StoreActor struct {
 	ID        string
 	Role      string
+	TenantID  string
 	PhoneE164 string
 }
 

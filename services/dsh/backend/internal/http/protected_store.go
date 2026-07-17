@@ -623,7 +623,7 @@ func (s *protectedStoreServer) requireActor(
 	}
 	for _, role := range allowedRoles {
 		if identity.HasRole(role) {
-			return store.StoreActor{ID: identity.Subject, Role: role, PhoneE164: identity.PhoneE164}, true
+			return store.StoreActor{ID: identity.Subject, Role: role, TenantID: identity.TenantID, PhoneE164: identity.PhoneE164}, true
 		}
 	}
 	store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor role cannot perform this action")
@@ -658,12 +658,12 @@ func (s *protectedStoreServer) requirePermission(
 	}
 	for _, role := range fallbackRoles {
 		if identity.HasRole(role) {
-			return store.StoreActor{ID: identity.Subject, Role: role}, true
+			return store.StoreActor{ID: identity.Subject, Role: role, TenantID: identity.TenantID, PhoneE164: identity.PhoneE164}, true
 		}
 	}
 	for _, p := range identity.Permissions {
 		if p.Service == "dsh" && p.Surface == surface && p.Action == action {
-			return store.StoreActor{ID: identity.Subject, Role: "permission:" + action}, true
+			return store.StoreActor{ID: identity.Subject, Role: "permission:" + action, TenantID: identity.TenantID, PhoneE164: identity.PhoneE164}, true
 		}
 	}
 	store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor role cannot perform this action")

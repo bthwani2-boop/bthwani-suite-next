@@ -12,6 +12,8 @@ export type { WebControlActionButtonProps, WebControlActionCardProps, WebControl
 // Use for: staff operations, admin dashboards, control rooms only.
 export { WebCommandCenterFrame, WebCommandStrip, WebRailServiceList, WebSegmentedTabs, WebControlPanelFrame, WebControlPanelKpiStrip, WebControlPanelWorkspaceTabs, WebControlPanelSubTabs } from './command-center';
 export type { WebCommandCenterFilter, WebCommandCenterFrameProps, WebCommandCenterNavItem, WebCommandStripFilter, WebCommandStripProps, WebRailServiceItem, WebRailServiceListProps, WebSearchItem, WebSegmentedTabItem, WebSegmentedTabsProps, WebControlPanelFrameProps, WebControlPanelKpiItem, WebControlPanelKpiStripProps, WebControlPanelKpiTone, WebControlPanelWorkspaceTabItem, WebControlPanelWorkspaceTabsProps, WebControlPanelSubTabItem, WebControlPanelSubTabsProps } from './command-center';
+export { WebControlPanelQueue } from './control-panel-queue';
+export type { WebControlPanelQueueProps } from './control-panel-queue';
 export {
 	WebControlPanelViewport,
 	WebControlPanelWorkbench,
@@ -23,7 +25,6 @@ export {
 	WebControlPanelRouteLine,
 	WebControlPanelLaneTabs,
 	WebControlPanelTertiaryFilters,
-	WebControlPanelQueue,
 	WebControlPanelCompactPager,
 	WebControlPanelStatusTag,
 	WebControlPanelActionCluster,
@@ -46,7 +47,6 @@ export type {
 	WebControlPanelLaneTabsProps,
 	WebControlPanelTertiaryFilterItem,
 	WebControlPanelTertiaryFiltersProps,
-	WebControlPanelQueueProps,
 	WebControlPanelCompactPagerProps,
 	WebControlPanelStatusTone,
 	WebControlPanelStatusTagProps,

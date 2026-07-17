@@ -72,6 +72,7 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 
 	paymentSession, err := s.wlt.CreatePaymentSession(r.Context(), wlt.CreatePaymentSessionInput{
 		CheckoutIntentID: intent.ID,
+		TenantID:         actor.TenantID,
 		ClientID:         actor.ID,
 		StoreID:          intent.StoreID,
 		PaymentMethod:    string(intent.PaymentMethod),

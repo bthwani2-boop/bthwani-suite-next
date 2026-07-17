@@ -986,7 +986,12 @@ export interface components {
         };
         WltPaymentSession: {
             id: string;
-            checkoutIntentId: string;
+            /** @description Set when this session originated from a DSH checkout-intent handoff. Mutually exclusive with specialRequestId -- exactly one of the two is always non-null. */
+            checkoutIntentId?: string | null;
+            /** @description Set when this session originated from a DSH special-request (Shein/Awnak) quote approval. Mutually exclusive with checkoutIntentId -- exactly one of the two is always non-null. */
+            specialRequestId?: string | null;
+            /** @description Trusted tenant context propagated from Identity through DSH. */
+            tenantId: string;
             clientId: string;
             storeId: string;
             /** @enum {string} */
@@ -1006,7 +1011,12 @@ export interface components {
             updatedAt: string;
         };
         WltCreatePaymentSessionRequest: {
-            checkoutIntentId: string;
+            /** @description Exactly one of checkoutIntentId or specialRequestId must be provided. */
+            checkoutIntentId?: string;
+            /** @description Exactly one of checkoutIntentId or specialRequestId must be provided. */
+            specialRequestId?: string;
+            /** @description Trusted tenant context propagated by DSH; not selected by client UI. */
+            tenantId: string;
             clientId: string;
             storeId: string;
             /** @enum {string} */

@@ -1,14 +1,19 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   fetchZones, createZone, updateZone, fetchSlaRules, upsertSlaRule,
+  fetchCapacityConfig, upsertCapacityConfig, fetchZoneServiceability,
   fetchStoreOnboardingFeePolicy, upsertStoreOnboardingFeePolicy, fetchStoreOnboardingFeeReference,
 } from "./platform-policies.api";
-import type { DshZone, DshSlaRule, DshPlatformState, DshStoreOnboardingFeePolicy, DshStoreOnboardingFeePolicyInput } from "./platform-policies.types";
+import type {
+  DshZone, DshSlaRule, DshCapacityConfig, DshZoneServiceability,
+  DshPlatformState, DshStoreOnboardingFeePolicy, DshStoreOnboardingFeePolicyInput,
+} from "./platform-policies.types";
 
 function resolveMsg(err: unknown): string {
   const e = err as { kind?: string; status?: number } | undefined;
   if (e?.kind === "network") return "لا يوجد اتصال";
   if (e?.status === 401) return "الجلسة منتهية";
+  if (e?.status === 403) return "لا تملك الصلاحية";
   return "تعذّر تحميل البيانات";
 }
 
@@ -27,7 +32,7 @@ export function useZonesController(authKind: string) {
 
   useEffect(() => {
     if (authKind !== "authenticated") { setState({ kind: "idle" }); return; }
-    load();
+    void load();
   }, [authKind, load]);
 
   return {
@@ -37,6 +42,46 @@ export function useZonesController(authKind: string) {
     },
     toggle: async (id: string, isActive: boolean) => { await updateZone(id, { isActive }); await load(); },
   };
+}
+
+export type DshAreaCapacityRuntime = {
+  readonly capacityConfig: DshCapacityConfig;
+  readonly serviceability: DshZoneServiceability;
+};
+
+export function useAreaCapacityController(authKind: string, zoneId?: string) {
+  const [state, setState] = useState<DshPlatformState<DshAreaCapacityRuntime>>({ kind: "idle" });
+
+  const load = useCallback(async () => {
+    if (authKind !== "authenticated" || !zoneId) {
+      setState({ kind: "idle" });
+      return;
+    }
+    setState({ kind: "loading" });
+    try {
+      const [{ capacityConfig }, serviceability] = await Promise.all([
+        fetchCapacityConfig(zoneId),
+        fetchZoneServiceability(zoneId),
+      ]);
+      setState({ kind: "success", data: { capacityConfig, serviceability } });
+    } catch (err) {
+      setState({ kind: "error", message: resolveMsg(err) });
+    }
+  }, [authKind, zoneId]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const save = useCallback(async (input: {
+    maxConcurrentOrders: number;
+    maxCaptainsOnline: number;
+    throttleThreshold: number;
+  }) => {
+    if (!zoneId) throw new Error("zoneId is required");
+    await upsertCapacityConfig({ zoneId, ...input });
+    await load();
+  }, [zoneId, load]);
+
+  return { state, reload: load, save };
 }
 
 export function useSlaRulesController(authKind: string, zoneId?: string) {
@@ -54,8 +99,8 @@ export function useSlaRulesController(authKind: string, zoneId?: string) {
 
   useEffect(() => {
     if (authKind !== "authenticated") { setState({ kind: "idle" }); return; }
-    load();
-  }, [authKind, zoneId, load]);
+    void load();
+  }, [authKind, load]);
 
   return {
     state, reload: load,
@@ -65,7 +110,6 @@ export function useSlaRulesController(authKind: string, zoneId?: string) {
   };
 }
 
-// ── Store onboarding fee policy: operator edit view ─────────────────────────
 export function useStoreOnboardingFeePolicyController(authKind: string) {
   const [state, setState] = useState<DshPlatformState<DshStoreOnboardingFeePolicy>>({ kind: "idle" });
 
@@ -81,7 +125,7 @@ export function useStoreOnboardingFeePolicyController(authKind: string) {
 
   useEffect(() => {
     if (authKind !== "authenticated") { setState({ kind: "idle" }); return; }
-    load();
+    void load();
   }, [authKind, load]);
 
   return {
@@ -92,7 +136,6 @@ export function useStoreOnboardingFeePolicyController(authKind: string) {
   };
 }
 
-// ── Store onboarding fee reference: read-only for app-field / app-partner ──
 export function useStoreOnboardingFeeReferenceController(authKind: string) {
   const [state, setState] = useState<DshPlatformState<DshStoreOnboardingFeePolicy>>({ kind: "idle" });
 

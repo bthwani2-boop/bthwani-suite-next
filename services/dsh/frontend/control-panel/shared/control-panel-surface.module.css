@@ -298,6 +298,98 @@
   color: var(--bthwani-warning);
 }
 
+/* Premium KPI grid used by operation workbenches (Shein, Awnak, etc.) */
+.surfacePremiumKpiGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.surfacePremiumKpiGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.surfacePremiumKpiGroupTitle {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--bthwani-control-panel-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.surfacePremiumKpiCard {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: linear-gradient(180deg, var(--bthwani-control-panel-surface) 0%, var(--bthwani-control-panel-surface-raised) 100%);
+  border: 1px solid var(--bthwani-control-panel-border);
+  border-radius: 12px;
+  border-right: 3px solid var(--bthwani-control-panel-border);
+  box-shadow: 0 4px 12px var(--bthwani-overlay-soft);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  cursor: default;
+}
+
+.surfacePremiumKpiCard:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px var(--bthwani-overlay-soft);
+  border-color: var(--bthwani-control-panel-border-strong);
+}
+
+.surfacePremiumKpiCard--neutral { border-right-color: var(--bthwani-control-panel-text-muted); }
+.surfacePremiumKpiCard--info { border-right-color: var(--bthwani-info); }
+.surfacePremiumKpiCard--warning { border-right-color: var(--bthwani-warning); }
+.surfacePremiumKpiCard--danger { border-right-color: var(--bthwani-danger); }
+.surfacePremiumKpiCard--success { border-right-color: var(--bthwani-success); }
+
+.surfacePremiumKpiIcon {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: var(--bthwani-control-panel-surface-inset);
+  color: var(--bthwani-control-panel-brand);
+}
+
+.surfacePremiumKpiCard--neutral .surfacePremiumKpiIcon { color: var(--bthwani-control-panel-text-muted); }
+.surfacePremiumKpiCard--info .surfacePremiumKpiIcon { color: var(--bthwani-info); background: var(--bthwani-info-surface, color-mix(in srgb, var(--bthwani-info) 12%, transparent)); }
+.surfacePremiumKpiCard--warning .surfacePremiumKpiIcon { color: var(--bthwani-warning); background: var(--bthwani-warning-surface, color-mix(in srgb, var(--bthwani-warning) 12%, transparent)); }
+.surfacePremiumKpiCard--danger .surfacePremiumKpiIcon { color: var(--bthwani-danger); background: var(--bthwani-danger-surface, color-mix(in srgb, var(--bthwani-danger) 12%, transparent)); }
+.surfacePremiumKpiCard--success .surfacePremiumKpiIcon { color: var(--bthwani-success); background: var(--bthwani-success-surface, color-mix(in srgb, var(--bthwani-success) 12%, transparent)); }
+
+.surfacePremiumKpiText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.surfacePremiumKpiLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--bthwani-control-panel-text-muted);
+}
+
+.surfacePremiumKpiValue {
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--bthwani-control-panel-text);
+  line-height: 1;
+}
+
+.surfacePremiumKpiCard--neutral .surfacePremiumKpiValue { color: var(--bthwani-control-panel-text); }
+.surfacePremiumKpiCard--info .surfacePremiumKpiValue { color: var(--bthwani-info); }
+.surfacePremiumKpiCard--warning .surfacePremiumKpiValue { color: var(--bthwani-warning); }
+.surfacePremiumKpiCard--danger .surfacePremiumKpiValue { color: var(--bthwani-danger); }
+.surfacePremiumKpiCard--success .surfacePremiumKpiValue { color: var(--bthwani-success); }
+
 .surfacePulseCompact {
   display: flex;
   gap: 8px;

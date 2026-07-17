@@ -1,0 +1,4 @@
+interface:
+  display_name: "BThwani Cost-Aware Subagent Orchestrator"
+  short_description: "Coordinate hierarchical subagents with capability-aware, cost-aware, context-minimized execution."
+  default_prompt: "Decompose this BThwani task into non-overlapping work units, assign the least-cost capable executor to each unit, preserve the strongest available agent as advisory supervisor, and independently verify high-risk results."

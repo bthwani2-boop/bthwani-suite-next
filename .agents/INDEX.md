@@ -61,6 +61,8 @@ Do not load skills merely because they exist. Load only what the task mode requi
 - Review local diff/patch (Escalation-only / PR review) → `bthwani-patch-review-evidence`
 - Create evidence packs only when explicitly requested. (Explicit-request-only) → `bthwani-agent-handoff-evidence-pack`
 - Updating or auditing agent files → `bthwani-agent-skill-integrity`
+- Explicit subagents, two or more independent work units, model/cost routing, or hierarchical delegation → `bthwani-cost-aware-subagent-orchestrator`
+- Do not invoke the orchestrator for tiny single-scope tasks when delegation overhead exceeds execution cost.
 
 ### Safety and quality
 - Duplication/dead code/refactor risk → `bthwani-clean-code-guard`

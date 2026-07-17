@@ -1,14 +1,9 @@
 /**
  * DSH Operations Runtime Adapter
  *
- * runtimeTruth: true  — when DSH backend is reachable
- * runtimeTruth: false — fallback: no API URL, network offline, or explicit demo mode
- *
- * WLT boundary: this adapter is read-only for operations.
- * Mutation endpoints (assign-captain, status transitions) go through
- * createDshOrderLifecycleHttpClient directly from the screen.
+ * Read-only adapter from the generated order lifecycle contract into the
+ * control-panel operations view model. No demo or local fallback is allowed.
  */
-
 import {
   resolveDshOrderApiBaseUrl,
   createDshOrderLifecycleHttpClient,
@@ -16,41 +11,53 @@ import {
   type DshListOrdersQuery,
 } from '../orders/dsh-order-lifecycle-client';
 
-const dshOperationalRuntimeAdapterMeta = {
+export const dshOperationalRuntimeAdapterMeta = {
   dataKind: 'RUNTIME_ADAPTER',
   runtimeTruth: true,
   backendSource: true,
   bindingSource: true,
-  sourceDataOwner: 'dsh/backend/internal/http/orders_handler.go',
-  adapterOwner: 'dsh/frontend/shared/dsh-operational-runtime-adapter.ts',
+  sourceDataOwner: 'dsh/backend/internal/http/orders.go',
+  adapterOwner: 'dsh/frontend/shared/operations/dsh-operational-runtime-adapter.ts',
 } as const;
 
 export type DshRuntimeOrderRow = {
   readonly id: string;
   readonly storeId: string;
+  readonly fulfillmentMode: 'bthwani_delivery' | 'partner_delivery' | 'pickup';
   readonly clientId: string;
   readonly status: string;
   readonly captainId: string | null;
+  readonly captainLifecycleStatus: string | null;
+  readonly podMediaKey: string | null;
+  readonly deliveryFailureReason: string | null;
   readonly totalPrice: number;
   readonly createdAt: string;
   readonly updatedAt: string;
 };
 
 export type DshRuntimeOrdersResult =
-  | { readonly kind: 'ok'; readonly orders: readonly DshRuntimeOrderRow[]; readonly total: number }
+  | {
+      readonly kind: 'ok';
+      readonly orders: readonly DshRuntimeOrderRow[];
+      readonly total: number;
+    }
   | { readonly kind: 'offline' }
   | { readonly kind: 'error'; readonly message: string };
 
-function toRuntimeRow(o: DshOrderRecord): DshRuntimeOrderRow {
+function toRuntimeRow(order: DshOrderRecord): DshRuntimeOrderRow {
   return {
-    id: o.id,
-    storeId: o.store_id,
-    clientId: o.client_id,
-    status: o.status,
-    captainId: o.captain_id ?? null,
-    totalPrice: o.total_price,
-    createdAt: o.created_at,
-    updatedAt: o.updated_at,
+    id: order.id,
+    storeId: order.store_id,
+    fulfillmentMode: order.fulfillment_mode,
+    clientId: order.client_id,
+    status: order.status,
+    captainId: order.captain_id ?? null,
+    captainLifecycleStatus: order.captain_lifecycle_status ?? null,
+    podMediaKey: order.pod_media_key ?? null,
+    deliveryFailureReason: order.delivery_failure_reason ?? null,
+    totalPrice: order.total_price,
+    createdAt: order.created_at,
+    updatedAt: order.updated_at,
   };
 }
 
@@ -63,30 +70,34 @@ export async function fetchDshRuntimeOrders(
   if (!baseUrl) {
     return { kind: 'offline' };
   }
+
   const client = createDshOrderLifecycleHttpClient(baseUrl, globalThis.fetch, {
     ...(clientId ? { clientId } : {}),
     scope,
   });
+
   try {
-    const resp = await client.listOrders({ ...query, scope });
+    const response = await client.listOrders({ ...query, scope });
     return {
       kind: 'ok',
-      orders: resp.orders.map(toRuntimeRow),
-      total: resp.total,
+      orders: response.orders.map(toRuntimeRow),
+      total: response.total,
     };
-  } catch (err: unknown) {
-    if (typeof err === 'object' && err !== null && (err as { kind?: unknown }).kind === 'offline') {
+  } catch (error: unknown) {
+    if (
+      typeof error === 'object'
+      && error !== null
+      && (error as { kind?: unknown }).kind === 'offline'
+    ) {
       return { kind: 'offline' };
     }
-    const msg = err instanceof Error ? err.message : String(err);
-    return { kind: 'error', message: msg };
+    return {
+      kind: 'error',
+      message: error instanceof Error ? error.message : String(error),
+    };
   }
 }
 
-/**
- * Resolve whether runtime is available.
- * Returns true when NEXT_PUBLIC_DSH_API_BASE_URL or EXPO_PUBLIC_DSH_API_BASE_URL is set.
- */
-function isDshRuntimeAvailable(): boolean {
+export function isDshRuntimeAvailable(): boolean {
   return resolveDshOrderApiBaseUrl() !== null;
 }

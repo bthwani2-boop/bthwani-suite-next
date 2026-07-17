@@ -18,12 +18,12 @@ export const fetchSlaRules = (zoneId?: string) =>
 export const upsertSlaRule = (body: { zoneId: string; category: string; maxPrepMins: number; maxDeliveryMins: number }) =>
   req<{ slaRule: DshSlaRule }>("/dsh/operator/platform/sla-rules", { method: "PUT", body: JSON.stringify(body) });
 
-const fetchCapacityConfig = (zoneId: string) =>
+export const fetchCapacityConfig = (zoneId: string) =>
   req<{ capacityConfig: DshCapacityConfig }>(`/dsh/operator/platform/capacity?zoneId=${zoneId}`);
-const upsertCapacityConfig = (body: { zoneId: string; maxConcurrentOrders: number; maxCaptainsOnline: number; throttleThreshold: number }) =>
+export const upsertCapacityConfig = (body: { zoneId: string; maxConcurrentOrders: number; maxCaptainsOnline: number; throttleThreshold: number }) =>
   req<{ capacityConfig: DshCapacityConfig }>("/dsh/operator/platform/capacity", { method: "PUT", body: JSON.stringify(body) });
 
-const fetchZoneServiceability = (zoneId: string) =>
+export const fetchZoneServiceability = (zoneId: string) =>
   req<DshZoneServiceability>(`/dsh/operator/platform/serviceability/${zoneId}`);
 
 // ── Store onboarding fee policy ──────────────────────────────────────────────

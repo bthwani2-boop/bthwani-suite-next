@@ -2,43 +2,68 @@
 
 import React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Box, StateView } from '@bthwani/ui-kit';
+import { Box, StateView, Text } from '@bthwani/ui-kit';
 import {
   WebControlPanelLaneTabs,
   WebControlPanelSubTabs,
 } from '@bthwani/ui-kit/web';
-import type { CanonicalOperationsGroupId, OperationsPanelId, OperationsViewState } from './operations.types';
+import type {
+  CanonicalOperationsGroupId,
+  OperationsFocusParams,
+  OperationsPanelId,
+  OperationsViewState,
+} from './operations.types';
 import { DSH_NAV_ITEMS } from '@bthwani/control-panel/shell';
 import styles from '../shared/control-panel-surface.module.css';
 import {
   buildOperationsHref,
   resolveOperationsStateCopy,
   useOperationsController,
+  useOperationsPermission,
 } from '../../shared/operations';
-// React.lazy — each screen is a separate JS chunk loaded only when its tab is active.
-// Named-export screens use .then(m => ({ default: m.ScreenName })) to satisfy lazy().
-const CommandCenterScreen = React.lazy(() => import('./CommandCenterScreen').then((m) => ({ default: m.CommandCenterScreen })));
-const CartActivityScreen = React.lazy(() => import('./CartActivityScreen').then((m) => ({ default: m.CartActivityScreen })));
-const CheckoutActivityScreen = React.lazy(() => import('./CheckoutActivityScreen').then((m) => ({ default: m.CheckoutActivityScreen })));
-const LiveOrdersScreen = React.lazy(() => import('./LiveOrdersScreen').then((m) => ({ default: m.LiveOrdersScreen })));
-const AssistedOrderDeskScreen = React.lazy(() => import('./AssistedOrderDeskScreen').then((m) => ({ default: m.AssistedOrderDeskScreen })));
-const OrderRescueScreen = React.lazy(() => import('./OrderRescueScreen').then((m) => ({ default: m.OrderRescueScreen })));
-const DispatchAssignmentScreen = React.lazy(() => import('./DispatchAssignmentScreen').then((m) => ({ default: m.DispatchAssignmentScreen })));
-const GeoHeatmapScreen = React.lazy(() => import('./GeoHeatmapScreen').then((m) => ({ default: m.GeoHeatmapScreen })));
-const ControlPanelDshSheinProxyScreen = React.lazy(() => import('./ControlPanelDshSheinProxyScreen').then((m) => ({ default: m.ControlPanelDshSheinProxyScreen })));
-const AwnakScreen = React.lazy(() => import('./AwnakScreen').then((m) => ({ default: m.AwnakScreen })));
-const PartnerStoresScreen = React.lazy(() => import('./PartnerStoresScreen').then((m) => ({ default: m.PartnerStoresScreen })));
-const AreaCapacityScreen = React.lazy(() => import('./AreaCapacityScreen').then((m) => ({ default: m.AreaCapacityScreen })));
-const ExceptionsEscalationsScreen = React.lazy(() => import('./ExceptionsEscalationsScreen').then((m) => ({ default: m.ExceptionsEscalationsScreen })));
-const AuditSupportSlaScreen = React.lazy(() => import('./AuditSupportSlaScreen').then((m) => ({ default: m.AuditSupportSlaScreen })));
+import { useControlPanelSession } from '../../shared/session/control-panel-session';
 
-type ScreenProps = { hubHref: string; subGroup?: string };
+const CommandCenterScreen = React.lazy(() =>
+  import('./CommandCenterScreen').then((module) => ({ default: module.CommandCenterScreen })),
+);
+const CartActivityScreen = React.lazy(() =>
+  import('./CartActivityScreen').then((module) => ({ default: module.CartActivityScreen })),
+);
+const CheckoutActivityScreen = React.lazy(() =>
+  import('./CheckoutActivityScreen').then((module) => ({ default: module.CheckoutActivityScreen })),
+);
+const LiveOrdersScreen = React.lazy(() =>
+  import('./LiveOrdersScreen').then((module) => ({ default: module.LiveOrdersScreen })),
+);
+const PickupWorkbenchScreen = React.lazy(() =>
+  import('./PickupWorkbenchScreen').then((module) => ({ default: module.PickupWorkbenchScreen })),
+);
+const DispatchAssignmentScreen = React.lazy(() =>
+  import('./DispatchAssignmentScreen').then((module) => ({ default: module.DispatchAssignmentScreen })),
+);
+const SpecialOpsWorkbenchScreen = React.lazy(() =>
+  import('./SpecialOpsWorkbenchScreen').then((module) => ({ default: module.SpecialOpsWorkbenchScreen })),
+);
+const PartnerStoresScreen = React.lazy(() =>
+  import('./PartnerStoresScreen').then((module) => ({ default: module.PartnerStoresScreen })),
+);
+const AreaCapacityScreen = React.lazy(() =>
+  import('./AreaCapacityScreen').then((module) => ({ default: module.AreaCapacityScreen })),
+);
+const ExceptionsEscalationsScreen = React.lazy(() =>
+  import('./ExceptionsEscalationsScreen').then((module) => ({ default: module.ExceptionsEscalationsScreen })),
+);
+
+type ScreenProps = {
+  hubHref: string;
+  subGroup?: string;
+  focusParams?: OperationsFocusParams;
+};
 type ScreenComponent = React.ComponentType<ScreenProps>;
 type LazyScreenComponent = React.LazyExoticComponent<ScreenComponent>;
-
 type GroupScreenConfig = {
   default: ScreenComponent | LazyScreenComponent;
-  bySubGroup?: Record<string, ScreenComponent | LazyScreenComponent>;
+  bySubGroup?: Readonly<Record<string, ScreenComponent | LazyScreenComponent>>;
 };
 
 function getDshRoute(section: (typeof DSH_NAV_ITEMS)[number]['section']) {
@@ -53,7 +78,12 @@ export type ControlPanelDshOperationsScreenProps = {
   fallbackHref?: string;
 };
 
-const SCREEN_RENDERERS: Record<CanonicalOperationsGroupId, GroupScreenConfig> = {
+/**
+ * Only production-bound workspaces are mounted here. Experimental source files
+ * remain available for later reuse, but cannot be reached through query-string
+ * manipulation or bundled as live Operations surfaces.
+ */
+const SCREEN_RENDERERS: Readonly<Record<CanonicalOperationsGroupId, GroupScreenConfig>> = {
   'command-center': {
     default: CommandCenterScreen,
     bySubGroup: {
@@ -64,31 +94,33 @@ const SCREEN_RENDERERS: Record<CanonicalOperationsGroupId, GroupScreenConfig> = 
   'live-orders': {
     default: LiveOrdersScreen,
     bySubGroup: {
-      assisted: AssistedOrderDeskScreen,
-      rescue: OrderRescueScreen,
+      partner_delivery: LiveOrdersScreen,
+      pickup: PickupWorkbenchScreen,
     },
   },
   'dispatch-capacity': {
     default: DispatchAssignmentScreen,
     bySubGroup: {
-      heatmap: GeoHeatmapScreen,
+      pending: DispatchAssignmentScreen,
+      captains: DispatchAssignmentScreen,
       zones: AreaCapacityScreen,
     },
   },
   exceptions: {
     default: ExceptionsEscalationsScreen,
     bySubGroup: {
-      audit: AuditSupportSlaScreen,
+      active: ExceptionsEscalationsScreen,
       stores: PartnerStoresScreen,
     },
   },
   'special-ops': {
-    default: ControlPanelDshSheinProxyScreen,
+    default: SpecialOpsWorkbenchScreen,
     bySubGroup: {
-      awnak: AwnakScreen,
+      shein: SpecialOpsWorkbenchScreen,
+      awnak: SpecialOpsWorkbenchScreen,
     },
   },
-} satisfies Record<CanonicalOperationsGroupId, GroupScreenConfig>;
+};
 
 export function ControlPanelDshOperationsScreen({
   group = 'command-center',
@@ -120,18 +152,62 @@ export function ControlPanelDshOperationsScreen({
     router,
   });
 
-  const screenConfig = SCREEN_RENDERERS[activeGroup] ?? SCREEN_RENDERERS['command-center'];
+  const { state: sessionState } = useControlPanelSession();
+  const hasPermission = useOperationsPermission(activeGroup, activeSubGroup);
+  const screenConfig = SCREEN_RENDERERS[activeGroup];
   const ActiveScreen = ((activeSubGroup && screenConfig.bySubGroup?.[activeSubGroup])
     ?? screenConfig.default) as ScreenComponent;
 
   if (state !== 'ready') {
     return (
       <div className={styles.surfaceStatePadding}>
-        <StateView {...resolveOperationsStateCopy(state)} onActionPress={() => router.push(fallbackHref)} />
+        <StateView
+          {...resolveOperationsStateCopy(state)}
+          onActionPress={() => router.push(fallbackHref)}
+        />
       </div>
     );
   }
 
+  if (sessionState.kind === 'restoring' || sessionState.kind === 'authenticating') {
+    return (
+      <div className={styles.surfaceStatePadding}>
+        <StateView
+          stateId="loading"
+          title="جاري التحقق من جلسة لوحة التحكم"
+          description="يتم استعادة هوية المشغّل وصلاحياته من خدمة الهوية."
+        />
+      </div>
+    );
+  }
+
+  if (sessionState.kind !== 'authenticated') {
+    return (
+      <div className={styles.surfaceStatePadding}>
+        <StateView
+          stateId="recoverableError"
+          title="الجلسة غير متاحة"
+          description="سجّل الدخول بحساب لوحة التحكم للوصول إلى العمليات."
+          actionLabel="العودة"
+          onActionPress={() => router.push(fallbackHref)}
+        />
+      </div>
+    );
+  }
+
+  if (!hasPermission) {
+    return (
+      <div className={styles.surfaceStatePadding}>
+        <StateView
+          stateId="recoverableError"
+          title="لا تملك صلاحية هذه المساحة"
+          description={`تحتاج صلاحية قراءة متوافقة مع مجموعة ${activeGroupMeta.label}.`}
+          actionLabel="العودة إلى مركز القيادة"
+          onActionPress={() => router.push('/dsh/operations')}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className={styles.surfaceCockpit} dir="rtl">
@@ -142,8 +218,7 @@ export function ControlPanelDshOperationsScreen({
               <div className={styles.surfaceHeaderGlyphMinus} />
             </div>
           </div>
-          <Box gap={0}>
-            {/* Breadcrumb Navigation */}
+          <Box gap={1}>
             <div className={styles.surfaceBreadcrumb}>
               <button
                 type="button"
@@ -152,7 +227,7 @@ export function ControlPanelDshOperationsScreen({
               >
                 الرئيسية
               </button>
-              <span className={styles.surfaceBreadcrumbSeparator}>◀</span>
+              <span className={styles.surfaceBreadcrumbSeparator}>/</span>
               <button
                 type="button"
                 className={styles.surfaceBreadcrumbButton}
@@ -160,89 +235,86 @@ export function ControlPanelDshOperationsScreen({
               >
                 العمليات
               </button>
-              <span className={styles.surfaceBreadcrumbSeparator}>◀</span>
+              <span className={styles.surfaceBreadcrumbSeparator}>/</span>
               <button
                 type="button"
-                className={activeSubGroupMeta ? styles.surfaceBreadcrumbButton : styles.surfaceBreadcrumbCurrent}
+                className={activeSubGroupMeta
+                  ? styles.surfaceBreadcrumbButton
+                  : styles.surfaceBreadcrumbCurrent}
                 onClick={() => router.push(buildOperationsHref(activeGroup))}
               >
                 {activeGroupMeta.label}
               </button>
-              {activeSubGroupMeta && (
+              {activeSubGroupMeta ? (
                 <>
-                  <span className={styles.surfaceBreadcrumbSeparator}>◀</span>
+                  <span className={styles.surfaceBreadcrumbSeparator}>/</span>
                   <span className={styles.surfaceBreadcrumbLeaf}>
                     {activeSubGroupMeta.label}
                   </span>
                 </>
-              )}
+              ) : null}
             </div>
 
             <div className={styles.surfaceHeaderTextRow}>
-              <h1 className={styles.surfaceHeaderTitle}>العمليات</h1>
-              <Box paddingX={1} paddingY={0} background="brandSurface" radiusToken="xs">
-                <span className={styles.surfaceHeaderBadgeText}>غرفة قيادة</span>
+              <h1 className={styles.surfaceHeaderTitle}>إدارة العمليات</h1>
+              <Box paddingX={2} paddingY={1} background="brandSurface" radiusToken="sm">
+                <Text role="caption">جلسة مشغّل موثقة</Text>
               </Box>
             </div>
-            <p className={styles.surfaceHeaderSubtitle}>ملخص أولاً، التفاصيل عند الطلب، وتدخلات تشغيلية بلا قرارات مالية داخل DSH.</p>
+            <p className={styles.surfaceHeaderSubtitle}>
+              بيانات تشغيلية حية وتدخلات محكومة دون امتلاك قرارات WLT المالية.
+            </p>
           </Box>
-        </div>
-        <div className={styles.surfaceHeaderActions}>
-          <div className={styles.surfacePulseCompact}>
-          </div>
         </div>
       </header>
 
-      <nav className={styles.navigationDock}>
+      <nav className={styles.navigationDock} aria-label="مجموعات العمليات">
         <WebControlPanelLaneTabs items={tabItems} onSelect={handleSelectTab} />
       </nav>
 
       <div className={styles.filterDock}>
-        {subTabItems && subTabItems.length > 0 && (
+        {subTabItems.length > 0 ? (
           <WebControlPanelSubTabs
             items={subTabItems}
-            ariaLabel="تصفية فرعية"
+            ariaLabel="تصفية مجموعة العمليات"
             onSelect={handleSelectSubTab}
           />
-        )}
+        ) : null}
       </div>
 
       <main className={styles.surfaceMainPanel}>
         <div className={styles.surfaceInnerScroll}>
           <Box padding={4} gap={4}>
-            {focusContextItems.length > 0 && (
+            {focusContextItems.length > 0 ? (
               <div className={styles.surfaceFocusContextCard}>
                 <div className={styles.surfaceFocusContextRow}>
                   <span className={styles.surfaceFocusContextTitle}>سياق التدخل الحالي</span>
                   <div className={styles.surfaceFocusContextList}>
-                    {focusContextItems.map((item) => {
-                      const labels: Record<string, string> = {
-                        orderId: 'معرّف الطلب',
-                        customerId: 'معرّف العميل',
-                        ticketId: 'معرّف التذكرة',
-                        callId: 'معرّف المكالمة',
-                      };
-                      return (
-                        <div key={item.label} className={styles.surfaceFocusContextItem}>
-                          <strong>{labels[item.label] ?? item.label}:</strong>{' '}
-                          <span dir="ltr" className={styles.surfaceFocusContextValue}>
-                            {item.value}
-                          </span>
-                        </div>
-                      );
-                    })}
+                    {focusContextItems.map((item) => (
+                      <div key={item.label} className={styles.surfaceFocusContextItem}>
+                        <strong>{item.label}:</strong>{' '}
+                        <span dir="ltr" className={styles.surfaceFocusContextValue}>
+                          {item.value}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
-            )}
+            ) : null}
+
             <React.Suspense
               fallback={
                 <div className={styles.surfaceLoadingPanel}>
-                  <span className={styles.surfaceLoadingText}>جارٍ تحميل المشهد...</span>
+                  <span className={styles.surfaceLoadingText}>جارٍ تحميل مساحة العمليات...</span>
                 </div>
               }
             >
-              <ActiveScreen hubHref={hubHref} {...(activeSubGroup ? { subGroup: activeSubGroup } : {})} />
+              <ActiveScreen
+                hubHref={hubHref}
+                focusParams={focusParams}
+                {...(activeSubGroup ? { subGroup: activeSubGroup } : {})}
+              />
             </React.Suspense>
           </Box>
         </div>

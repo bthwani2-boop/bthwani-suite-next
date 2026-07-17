@@ -260,4 +260,3 @@ func scanRecord(s rowScanner) (Record, error) {
 func scanRecordRow(rows *sql.Rows) (Record, error) {
 	return scanRecord(rows)
 }
-

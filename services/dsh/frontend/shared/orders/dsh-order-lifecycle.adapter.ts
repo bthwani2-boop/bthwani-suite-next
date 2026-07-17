@@ -97,9 +97,17 @@ export function normalizeOrder(raw: BackendOrder): DshOrderRecord {
   const checkoutIntentId = raw.checkout_intent_id ?? raw.checkoutIntentId;
   const wltPaymentRefId = raw.wlt_payment_ref_id ?? raw.wltPaymentRefId;
   const captainId = raw.captain_id ?? raw.captainId;
+  const fulfillmentMode = raw.fulfillment_mode ?? raw.fulfillmentMode;
+  if (fulfillmentMode === undefined) {
+    throw {
+      kind: 'contract',
+      message: `missing fulfillment_mode for DSH order "${orderId}" — backend/frontend contract drift must be fixed, not defaulted`,
+    } as DshOrderApiContractError;
+  }
   return {
     id: orderId,
     store_id: String(raw.store_id ?? raw.storeId ?? ''),
+    fulfillment_mode: fulfillmentMode,
     client_id: String(raw.client_id ?? raw.clientId ?? ''),
     status: normalizeDshOrderStatus(raw.status),
     total_price: deriveTotalPrice(raw),
@@ -143,6 +151,7 @@ export function normalizeDispatchAssignmentAsOrder(raw: BackendDispatchAssignmen
   return {
     id: String(raw.orderId ?? ''),
     store_id: '',
+    fulfillment_mode: 'bthwani_delivery',
     client_id: '',
     status: normalizeDshOrderStatus(status),
     total_price: 0,

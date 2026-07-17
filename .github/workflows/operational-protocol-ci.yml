@@ -92,8 +92,8 @@ jobs:
           cache: 'pnpm'
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: SDLC Stage Gate
-        run: pnpm run guard:sdlc -- --stage G4_IMPLEMENTATION_VERIFIED --affected
+      - name: SDLC Support Package Gate
+        run: pnpm run guard:sdlc
 
   scope-and-surface-coverage:
     runs-on: ubuntu-latest
@@ -233,7 +233,6 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Authorization State Integrity Gate
         run: pnpm run guard:live-cross-journey-integrity
-
 
   organization-and-performance:
     if: >-
@@ -377,13 +376,12 @@ jobs:
     steps:
       - name: Final Protocol Check
         run: |
-          # NOTE: 'skipped' is intentionally excluded from the failure condition.
-          # Heavy guard-suite jobs and the runtime-proof job are conditionally
-          # skipped based on workflow_dispatch inputs.mode (affected/full/runtime);
-          # a skip in that case is expected, not a protocol failure.
           if [ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}" == "true" ]; then
             echo "OPERATIONAL_PROTOCOL_FAIL"
             exit 1
+          elif [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ "${{ inputs.mode }}" == "runtime" ]; then
+            echo "OPERATIONAL_PROTOCOL_RUNTIME_PASS"
           else
-            echo "OPERATIONAL_PROTOCOL_PASS"
+            echo "OPERATIONAL_PROTOCOL_STATIC_PASS"
+            echo "Runtime was not proven in this run; this result is not CLOSED_WITH_EVIDENCE."
           fi

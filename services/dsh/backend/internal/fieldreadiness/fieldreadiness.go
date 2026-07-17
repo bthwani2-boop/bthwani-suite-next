@@ -120,26 +120,26 @@ type Visit struct {
 	UpdatedAt    time.Time
 
 	// GPS evidence
-	StartLatitude                   *float64
-	StartLongitude                  *float64
-	StartAccuracyMeters             *float64
-	StartCapturedAt                 *time.Time
-	StartProvider                   *string
-	StartDeviceReference            *string
-	StartIsMocked                   bool
-	CompletionLatitude              *float64
-	CompletionLongitude             *float64
-	CompletionAccuracyMeters        *float64
-	CompletionCapturedAt            *time.Time
-	CompletionProvider              *string
-	CompletionIsMocked              *bool
-	StoreLatitude                   *float64
-	StoreLongitude                  *float64
-	GeofenceRadiusMeters            float64
-	StartDistanceFromStoreMeters    *float64
+	StartLatitude                     *float64
+	StartLongitude                    *float64
+	StartAccuracyMeters               *float64
+	StartCapturedAt                   *time.Time
+	StartProvider                     *string
+	StartDeviceReference              *string
+	StartIsMocked                     bool
+	CompletionLatitude                *float64
+	CompletionLongitude               *float64
+	CompletionAccuracyMeters          *float64
+	CompletionCapturedAt              *time.Time
+	CompletionProvider                *string
+	CompletionIsMocked                *bool
+	StoreLatitude                     *float64
+	StoreLongitude                    *float64
+	GeofenceRadiusMeters              float64
+	StartDistanceFromStoreMeters      *float64
 	CompletionDistanceFromStoreMeters *float64
-	StartGeofenceStatus             *string
-	CompletionGeofenceStatus        *string
+	StartGeofenceStatus               *string
+	CompletionGeofenceStatus          *string
 }
 
 type ReadinessCheck struct {
@@ -172,12 +172,12 @@ type Escalation struct {
 }
 
 type CreateVisitInput struct {
-	StoreID         string
-	FieldAgentID    string
-	VisitType       VisitType
-	StartLocation   *LocationEvidence // required; validated on creation
-	StoreLatitude   *float64
-	StoreLongitude  *float64
+	StoreID        string
+	FieldAgentID   string
+	VisitType      VisitType
+	StartLocation  *LocationEvidence // required; validated on creation
+	StoreLatitude  *float64
+	StoreLongitude *float64
 }
 
 // validateStartLocation checks GPS evidence before a visit can be started.

@@ -22,7 +22,10 @@ import { NotificationCenterScreen } from "./notifications/NotificationCenterScre
 import { OrderTrackingScreen } from "./orders/OrderTrackingScreen";
 import { SupportTicketScreen } from "./support/SupportTicketScreen";
 import { TicketDetailScreen } from "./support/TicketDetailScreen";
-
+import { SheinForm } from "../shared/shein/SheinForm";
+import { AwnakForm } from "../shared/awnak/AwnakForm";
+import { useSpecialRequestsController } from "../shared/special-requests/use-special-requests-controller";
+import { generateSpecialRequestIdempotencyKey } from "../shared/special-requests/special-requests.idempotency";
 const ICON_SIZE = 22;
 const ICON_COLOR_ACTIVE = colorRoles.brandAction;
 const ICON_COLOR_INACTIVE = colorRoles.brandStructure;
@@ -163,12 +166,19 @@ export function DshClientSurface() {
   const [showNotifications, setShowNotifications] = useState<boolean>(false);
   const [activeTicketId, setActiveTicketId] = useState<string | null>(null);
   const [appearanceMode, setAppearanceMode] = useState<string>("lightPremium");
+  const [activeSpecialRequest, setActiveSpecialRequest] = useState<'shein' | 'awnak' | null>(null);
+
+  const specialReqCtrl = useSpecialRequestsController();
 
   const commerceStoreId: string | null = selectedStoreId;
 
   const goBack = () => {
     if (showNotifications) {
       setShowNotifications(false);
+      return true;
+    }
+    if (activeSpecialRequest) {
+      setActiveSpecialRequest(null);
       return true;
     }
     if (activeOrderId) {
@@ -256,11 +266,37 @@ export function DshClientSurface() {
             orderId={activeOrderId}
             onBack={() => setActiveOrderId(null)}
           />
+        ) : activeSpecialRequest === 'shein' ? (
+          <SheinForm
+            onBack={() => setActiveSpecialRequest(null)}
+            onSubmit={async (data) => {
+              return specialReqCtrl.submit({
+                requestType: 'SHEIN_ASSISTED_PURCHASE',
+                idempotencyKey: generateSpecialRequestIdempotencyKey(),
+                ...data,
+              });
+            }}
+          />
+        ) : activeSpecialRequest === 'awnak' ? (
+          <AwnakForm
+            onBack={() => setActiveSpecialRequest(null)}
+            onSubmit={async (data) => {
+              return specialReqCtrl.submit({
+                requestType: 'AWNAK_ERRAND',
+                idempotencyKey: generateSpecialRequestIdempotencyKey(),
+                ...data,
+              });
+            }}
+          />
         ) : activeTab === "home" ? (
           <HomeDiscoveryRoute
             onStorePress={(storeId) => {
               setSelectedStoreId(storeId);
               setActiveTab("stores");
+            }}
+            onSpecialCategoryPress={(nodeId) => {
+              if (nodeId === 'node-shein') setActiveSpecialRequest('shein');
+              else if (nodeId === 'node-awnak') setActiveSpecialRequest('awnak');
             }}
           />
         ) : activeTab === "stores" ? (

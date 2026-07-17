@@ -5264,6 +5264,774 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/DshAdminAuditListResponse" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
+  /dsh/client/special-requests:
+    post:
+      operationId: createDshClientSpecialRequest
+      summary: Create a special request
+      tags:
+        - DshClientSpecialRequests
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshCreateSpecialRequest" }
+      responses:
+        "200":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshSpecialRequestResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    get:
+      operationId: listDshClientSpecialRequests
+      summary: List special requests for the client
+      tags:
+        - DshClientSpecialRequests
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+      responses:
+        "200":
+          description: List
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshSpecialRequestListResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/client/special-requests/{requestId}:
+    get:
+      operationId: getDshClientSpecialRequest
+      summary: Get special request
+      tags:
+        - DshClientSpecialRequests
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshSpecialRequestResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/client/special-requests/{requestId}/cancel:
+    post:
+      operationId: cancelDshClientSpecialRequest
+      summary: Cancel special request
+      tags:
+        - DshClientSpecialRequests
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshSpecialRequestResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/client/special-requests/{requestId}/approve-quote:
+    post:
+      operationId: approveDshSpecialRequestQuote
+      summary: Approve an operator-set quote and hand off to WLT for a payment session
+      tags:
+        - DshClientSpecialRequests
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshSpecialRequestResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "503": { description: WLT payment-session handoff is unavailable. }
+
+  /dsh/operator/special-requests:
+    get:
+      operationId: listDshOperatorSpecialRequests
+      summary: List special requests for operators
+      tags:
+        - DshOperatorSpecialRequests
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: requestType
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshSpecialRequestListResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /dsh/operator/special-requests/{requestId}:
+    get:
+      operationId: getDshOperatorSpecialRequest
+      summary: Get special request
+      tags:
+        - DshOperatorSpecialRequests
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshSpecialRequestResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      operationId: updateDshOperatorSpecialRequest
+      summary: Update special request
+      tags:
+        - DshOperatorSpecialRequests
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshUpdateSpecialRequest" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshSpecialRequestResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/operator/special-requests/{requestId}/dispatch:
+    post:
+      operationId: assignDshSpecialRequestDispatch
+      summary: Dispatch an approved special request to a captain
+      tags:
+        - DshOperatorSpecialRequests
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [captainId]
+              properties:
+                captainId: { type: string }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshDispatchAssignmentResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/partner/orders/{orderId}/partner-delivery/assign:
+    post:
+      operationId: assignDshPartnerDeliveryTask
+      summary: Assign a store courier to a partner_delivery order
+      tags:
+        - DshPartnerDelivery
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshAssignPartnerDeliveryTaskRequest" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartnerDeliveryTaskResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Version conflict, or the order already has an active dispatch assignment or partner delivery task (VERSION_CONFLICT, PARTNER_DELIVERY_ALREADY_ASSIGNED).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshErrorResponse" }
+        "422":
+          description: Order is not ready for partner delivery assignment, or the store courier is not eligible (PARTNER_DELIVERY_NOT_READY, COURIER_INELIGIBLE).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshErrorResponse" }
+
+  /dsh/partner/orders/{orderId}/partner-delivery/pickup:
+    post:
+      operationId: markDshPartnerDeliveryPickedUp
+      summary: Store courier marks a partner_delivery task picked up
+      tags:
+        - DshPartnerDelivery
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshPartnerDeliveryMutationRequest" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartnerDeliveryTaskResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Partner delivery task version changed; reload before retrying (VERSION_CONFLICT).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshErrorResponse" }
+        "422":
+          description: Task is not in a status that allows this transition (PARTNER_DELIVERY_INVALID_TRANSITION).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshErrorResponse" }
+
+  /dsh/partner/orders/{orderId}/partner-delivery/depart:
+    post:
+      operationId: departDshPartnerDeliveryTask
+      summary: Store courier marks a partner_delivery task departed
+      tags:
+        - DshPartnerDelivery
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshPartnerDeliveryMutationRequest" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartnerDeliveryTaskResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Partner delivery task version changed; reload before retrying (VERSION_CONFLICT).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshErrorResponse" }
+        "422":
+          description: Task is not in a status that allows this transition (PARTNER_DELIVERY_INVALID_TRANSITION).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshErrorResponse" }
+
+  /dsh/partner/orders/{orderId}/partner-delivery/arrive:
+    post:
+      operationId: arriveDshPartnerDeliveryTask
+      summary: Store courier marks a partner_delivery task arrived
+      tags:
+        - DshPartnerDelivery
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshPartnerDeliveryMutationRequest" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartnerDeliveryTaskResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Partner delivery task version changed; reload before retrying (VERSION_CONFLICT).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshErrorResponse" }
+        "422":
+          description: Task is not in a status that allows this transition (PARTNER_DELIVERY_INVALID_TRANSITION).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshErrorResponse" }
+
+  /dsh/partner/orders/{orderId}/partner-delivery/proof:
+    post:
+      operationId: submitDshPartnerDeliveryProof
+      summary: Store courier submits proof of delivery, completing the partner_delivery task
+      tags:
+        - DshPartnerDelivery
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshSubmitPartnerDeliveryProofRequest" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartnerDeliveryTaskResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Partner delivery task version changed; reload before retrying (VERSION_CONFLICT).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshErrorResponse" }
+        "422":
+          description: Task is not in a status that allows proof submission (PARTNER_DELIVERY_INVALID_TRANSITION).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshErrorResponse" }
+
+  /dsh/partner/orders/{orderId}/partner-delivery/exception:
+    post:
+      operationId: raiseDshPartnerDeliveryException
+      summary: Operator raises an exception on a partner_delivery task
+      tags:
+        - DshOperatorPartnerDelivery
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshRaisePartnerDeliveryExceptionRequest" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartnerDeliveryTaskResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Partner delivery task version changed; reload before retrying (VERSION_CONFLICT).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshErrorResponse" }
+        "422":
+          description: Task is not in a status that allows this transition (PARTNER_DELIVERY_INVALID_TRANSITION).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshErrorResponse" }
+
+  /dsh/operator/partner-deliveries:
+    get:
+      operationId: listDshOperatorPartnerDeliveries
+      summary: List partner_delivery tasks for operators
+      tags:
+        - DshOperatorPartnerDelivery
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: storeId
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          schema: { $ref: "#/components/schemas/DshPartnerDeliveryTaskStatus" }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartnerDeliveryTaskListResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /dsh/operator/partner-deliveries/{taskId}:
+    get:
+      operationId: getDshOperatorPartnerDelivery
+      summary: Get a partner_delivery task by id
+      tags:
+        - DshOperatorPartnerDelivery
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartnerDeliveryTaskResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/partner/orders/{orderId}/pickup/mark-ready:
+    post:
+      operationId: markDshPickupReady
+      summary: Store marks a pickup order ready for pickup
+      tags:
+        - DshPickup
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshPickupMutationRequest" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPickupMarkReadyResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422":
+          description: Order is not a pickup-mode order in a preparing state (PICKUP_INVALID_TRANSITION).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshErrorResponse" }
+
+  /dsh/partner/orders/{orderId}/pickup/notify:
+    post:
+      operationId: notifyDshPickupCustomer
+      summary: Issue a fresh pickup OTP and notify the customer the order is ready
+      tags:
+        - DshPickup
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshIssuePickupOtpRequest" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPickupNotifyResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Pickup session version changed; reload before retrying (VERSION_CONFLICT).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshErrorResponse" }
+        "422":
+          description: Order is not a pickup-mode order in the ready-for-pickup state (PICKUP_INVALID_TRANSITION).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshErrorResponse" }
+
+  /dsh/partner/orders/{orderId}/pickup/customer-arrived:
+    post:
+      operationId: markDshPickupCustomerArrived
+      summary: Record that the customer has arrived to collect a pickup order
+      tags:
+        - DshPickup
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshPickupMutationRequest" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPickupCustomerArrivedResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422":
+          description: Order is not a pickup-mode order (PICKUP_INVALID_TRANSITION).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshErrorResponse" }
+
+  /dsh/partner/orders/{orderId}/pickup/verify:
+    post:
+      operationId: verifyDshPickupSession
+      summary: Verify a customer-submitted pickup OTP and complete the pickup
+      tags:
+        - DshPickup
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshVerifyPickupOtpRequest" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPickupSessionResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Pickup session version changed; reload before retrying (VERSION_CONFLICT).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshErrorResponse" }
+        "422":
+          description: Code already used, expired, attempts exceeded, or invalid (PICKUP_CODE_ALREADY_USED, PICKUP_CODE_EXPIRED, PICKUP_CODE_ATTEMPTS_EXCEEDED, PICKUP_CODE_INVALID, PICKUP_INVALID_TRANSITION).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshErrorResponse" }
+
+  /dsh/partner/orders/{orderId}/pickup/no-show:
+    post:
+      operationId: markDshPickupNoShow
+      summary: Mark an issued-but-unused pickup session as a no-show
+      tags:
+        - DshPickup
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshPickupNoShowRequest" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPickupSessionResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Pickup session version changed; reload before retrying (VERSION_CONFLICT).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshErrorResponse" }
+        "422":
+          description: Pickup session was already used (PICKUP_CODE_ALREADY_USED).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshErrorResponse" }
+
+  /dsh/operator/pickups:
+    get:
+      operationId: listDshOperatorPickups
+      summary: List pickup sessions for operators
+      tags:
+        - DshOperatorPickup
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: storeId
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPickupSessionListResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /dsh/operator/pickups/{orderId}:
+    get:
+      operationId: getDshOperatorPickup
+      summary: Get a pickup session by order id
+      tags:
+        - DshOperatorPickup
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPickupSessionResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/operator/pickups/{orderId}/extend-window:
+    post:
+      operationId: extendDshPickupWindow
+      summary: Manually extend a pickup session's expiry window
+      tags:
+        - DshOperatorPickup
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshExtendPickupWindowRequest" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPickupSessionResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Pickup session version changed; reload before retrying (VERSION_CONFLICT).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshErrorResponse" }
+        "422":
+          description: Pickup session was already used (PICKUP_CODE_ALREADY_USED).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshErrorResponse" }
 
 components:
   securitySchemes:
@@ -6567,10 +7335,12 @@ components:
 
     DshDispatchAssignment:
       type: object
-      required: [id, orderId, captainId, assignedBy, status, responseDeadlineAt, createdAt, updatedAt, delivery]
+      required: [id, orderId, specialRequestId, requestType, captainId, assignedBy, status, responseDeadlineAt, createdAt, updatedAt, delivery]
       properties:
         id: { type: string }
         orderId: { type: string }
+        specialRequestId: { type: string }
+        requestType: { type: string }
         captainId: { type: string }
         assignedBy: { type: string }
         status: { $ref: "#/components/schemas/DshAssignmentStatus" }
@@ -7080,9 +7850,13 @@ components:
 
     WltPaymentCallbackEnvelope:
       type: object
-      required: [checkoutIntentId, paymentSessionId, status]
+      required: [paymentSessionId, status]
       properties:
         checkoutIntentId: { type: string }
+        specialRequestId: { type: string }
+        tenantId:
+          type: string
+          description: Trusted tenant context for special-request sourced payment sessions.
         paymentSessionId: { type: string }
         status:
           type: string
@@ -8005,6 +8779,19 @@ components:
         status: { type: string }
         verifiedAt: { type: ["string", "null"], format: date-time }
 
+    DshCaptainAppPersona:
+      type: string
+      enum: [bolisa_captain, partner_seller_courier]
+      description: Distinguishes whether the captain app user is an internal partner courier or a standard Bolisa fleet captain.
+
+    DshCaptainIdentity:
+      type: object
+      required: [captainId, persona, status]
+      properties:
+        captainId: { type: string }
+        persona: { $ref: "#/components/schemas/DshCaptainAppPersona" }
+        status: { type: string }
+
     DshCaptainCredentialsListResponse:
       type: object
       required: [captains, total]
@@ -8043,3 +8830,323 @@ components:
           type: array
           items: { $ref: "#/components/schemas/DshAdminAuditEntry" }
         total: { type: integer }
+
+    DshCreateSpecialRequest:
+      type: object
+      required: [requestType, idempotencyKey]
+      properties:
+        requestType: { type: string, enum: [SHEIN_ASSISTED_PURCHASE, AWNAK_ERRAND] }
+        idempotencyKey: { type: string }
+        customerNotes: { type: string }
+        productUrl: { type: string }
+        quantity: { type: integer }
+        size: { type: string }
+        color: { type: string }
+        variantNotes: { type: string }
+        deliveryAddressReference: { type: string }
+        pickupAddressReference: { type: string }
+        dropoffAddressReference: { type: string }
+        itemType: { type: string }
+        scheduleMode: { type: string }
+        scheduledAt: { type: string, format: date-time }
+        handlingRequirements: { type: string }
+        pickupLocation:
+          type: ["object", "null"]
+          description: Raw JSON passthrough, e.g. `{lat, lng}`-shaped. Stored as-is by the backend.
+        dropoffLocation:
+          type: ["object", "null"]
+          description: Raw JSON passthrough, e.g. `{lat, lng}`-shaped. Stored as-is by the backend.
+
+    DshSpecialRequestResponse:
+      type: object
+      required: [id, clientId, requestType, status, version, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        clientId: { type: string }
+        requestType: { type: string }
+        status: { type: string, enum: [submitted, under_review, needs_customer_input, approved, assigned, in_progress, completed, cancelled, rejected] }
+        version: { type: integer }
+        workflowStage: { type: ["string", "null"] }
+        customerNotes: { type: ["string", "null"] }
+        currency: { type: ["string", "null"] }
+        estimatedAmountReference:
+          type: ["string", "null"]
+          description: "Deprecated: use estimatedAmountMinorUnits/currency."
+          deprecated: true
+        estimatedAmountMinorUnits: { type: ["integer", "null"], format: int64 }
+        wltPaymentSessionId: { type: ["string", "null"] }
+        correlationId: { type: ["string", "null"] }
+        productUrl: { type: ["string", "null"] }
+        quantity: { type: ["integer", "null"] }
+        size: { type: ["string", "null"] }
+        color: { type: ["string", "null"] }
+        variantNotes: { type: ["string", "null"] }
+        deliveryAddressReference: { type: ["string", "null"] }
+        pickupAddressReference: { type: ["string", "null"] }
+        dropoffAddressReference: { type: ["string", "null"] }
+        pickupLocation: { type: ["object", "null"] }
+        dropoffLocation: { type: ["object", "null"] }
+        itemType: { type: ["string", "null"] }
+        scheduleMode: { type: ["string", "null"] }
+        scheduledAt: { type: ["string", "null"], format: date-time }
+        handlingRequirements: { type: ["string", "null"] }
+        assignedOperatorId: { type: ["string", "null"] }
+        dispatchAssignmentId: { type: ["string", "null"] }
+        rejectionReason: { type: ["string", "null"] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        completedAt: { type: ["string", "null"], format: date-time }
+        cancelledAt: { type: ["string", "null"], format: date-time }
+        quotePreparedAt: { type: ["string", "null"], format: date-time }
+        customerApprovedAt: { type: ["string", "null"], format: date-time }
+        purchaseBatchId: { type: ["string", "null"] }
+        purchasedAt: { type: ["string", "null"], format: date-time }
+        inboundReference: { type: ["string", "null"] }
+        inboundReceivedAt: { type: ["string", "null"], format: date-time }
+        sortingStartedAt: { type: ["string", "null"], format: date-time }
+        sortingCompletedAt: { type: ["string", "null"], format: date-time }
+        fulfillmentPreparedAt: { type: ["string", "null"], format: date-time }
+        readyForDeliveryAt: { type: ["string", "null"], format: date-time }
+        captainAssignedAt: { type: ["string", "null"], format: date-time }
+        pickedUpAt: { type: ["string", "null"], format: date-time }
+        deliveredAt: { type: ["string", "null"], format: date-time }
+        allowedActions:
+          type: array
+          items: { type: string }
+        blockingReasons:
+          type: array
+          items: { type: string }
+
+    DshSpecialRequestListResponse:
+      type: object
+      required: [requests, total]
+      properties:
+        requests:
+          type: array
+          items: { $ref: "#/components/schemas/DshSpecialRequestResponse" }
+        total: { type: integer }
+
+    DshUpdateSpecialRequest:
+      type: object
+      required: [expectedVersion]
+      properties:
+        expectedVersion: { type: integer }
+        status: { type: string, enum: [under_review, needs_customer_input, approved, assigned, in_progress, completed, cancelled, rejected] }
+        workflowStage: { type: ["string", "null"] }
+        assignedOperatorId: { type: ["string", "null"] }
+        rejectionReason: { type: ["string", "null"] }
+        estimatedAmountMinorUnits: { type: ["integer", "null"], format: int64 }
+        wltPaymentSessionId: { type: ["string", "null"] }
+        currency: { type: ["string", "null"] }
+        quotePreparedAt: { type: ["string", "null"], format: date-time }
+        customerApprovedAt: { type: ["string", "null"], format: date-time }
+        purchaseBatchId: { type: ["string", "null"] }
+        purchasedAt: { type: ["string", "null"], format: date-time }
+        inboundReference: { type: ["string", "null"] }
+        inboundReceivedAt: { type: ["string", "null"], format: date-time }
+        sortingStartedAt: { type: ["string", "null"], format: date-time }
+        sortingCompletedAt: { type: ["string", "null"], format: date-time }
+        fulfillmentPreparedAt: { type: ["string", "null"], format: date-time }
+        readyForDeliveryAt: { type: ["string", "null"], format: date-time }
+        captainAssignedAt: { type: ["string", "null"], format: date-time }
+        pickedUpAt: { type: ["string", "null"], format: date-time }
+        deliveredAt: { type: ["string", "null"], format: date-time }
+
+    DshPartnerDeliveryTaskStatus:
+      type: string
+      enum:
+        - unassigned
+        - assigned
+        - departed
+        - arrived
+        - proof_pending
+        - completed
+        - cancelled
+        - exception
+
+    DshPartnerDeliveryTask:
+      type: object
+      required:
+        - id
+        - orderId
+        - storeId
+        - branchId
+        - storeCourierId
+        - status
+        - version
+        - createdAt
+        - updatedAt
+      properties:
+        id: { type: string }
+        orderId: { type: string }
+        storeId: { type: string }
+        branchId: { type: string }
+        storeCourierId: { type: string }
+        status:
+          $ref: "#/components/schemas/DshPartnerDeliveryTaskStatus"
+        assignedAt: { type: ["string", "null"], format: date-time }
+        pickedUpAt: { type: ["string", "null"], format: date-time }
+        departedAt: { type: ["string", "null"], format: date-time }
+        arrivedAt: { type: ["string", "null"], format: date-time }
+        proofMethod: { type: ["string", "null"] }
+        proofReference: { type: ["string", "null"] }
+        completedAt: { type: ["string", "null"], format: date-time }
+        version: { type: integer }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    DshPartnerDeliveryTaskResponse:
+      type: object
+      required: [task]
+      properties:
+        task:
+          $ref: "#/components/schemas/DshPartnerDeliveryTask"
+
+    DshPartnerDeliveryTaskListResponse:
+      type: object
+      required: [tasks]
+      properties:
+        tasks:
+          type: array
+          items:
+            $ref: "#/components/schemas/DshPartnerDeliveryTask"
+
+    DshPartnerDeliveryMutationRequest:
+      type: object
+      required: [expectedVersion, commandId]
+      properties:
+        expectedVersion: { type: integer }
+        commandId: { type: string }
+        correlationId: { type: string }
+        reason: { type: string }
+
+    DshAssignPartnerDeliveryTaskRequest:
+      allOf:
+        - $ref: "#/components/schemas/DshPartnerDeliveryMutationRequest"
+        - type: object
+          required: [storeCourierId]
+          properties:
+            storeCourierId: { type: string }
+
+    DshSubmitPartnerDeliveryProofRequest:
+      allOf:
+        - $ref: "#/components/schemas/DshPartnerDeliveryMutationRequest"
+        - type: object
+          required: [proofMethod]
+          properties:
+            proofMethod: { type: string }
+            proofReference: { type: string }
+
+    DshRaisePartnerDeliveryExceptionRequest:
+      allOf:
+        - $ref: "#/components/schemas/DshPartnerDeliveryMutationRequest"
+        - type: object
+          required: [reason]
+          properties:
+            reason: { type: string }
+
+    DshPickupSession:
+      type: object
+      required:
+        - id
+        - orderId
+        - storeId
+        - clientId
+        - expiresAt
+        - attemptCount
+        - maxAttempts
+        - version
+        - createdAt
+        - updatedAt
+      properties:
+        id: { type: string }
+        orderId: { type: string }
+        storeId: { type: string }
+        clientId: { type: string }
+        expiresAt: { type: string, format: date-time }
+        attemptCount: { type: integer }
+        maxAttempts: { type: integer }
+        usedAt: { type: ["string", "null"], format: date-time }
+        verifiedByActorId: { type: ["string", "null"] }
+        verificationMethod:
+          type: ["string", "null"]
+          description: "Known values: otp, no_show."
+        version: { type: integer }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    DshPickupSessionResponse:
+      type: object
+      required: [session]
+      properties:
+        session:
+          $ref: "#/components/schemas/DshPickupSession"
+
+    DshPickupSessionListResponse:
+      type: object
+      required: [sessions]
+      properties:
+        sessions:
+          type: array
+          items:
+            $ref: "#/components/schemas/DshPickupSession"
+
+    DshPickupMutationRequest:
+      type: object
+      required: [expectedVersion, commandId]
+      properties:
+        expectedVersion: { type: integer }
+        commandId: { type: string }
+        correlationId: { type: string }
+        reason: { type: string }
+
+    DshIssuePickupOtpRequest:
+      allOf:
+        - $ref: "#/components/schemas/DshPickupMutationRequest"
+        - type: object
+          properties:
+            clientId: { type: string }
+
+    DshVerifyPickupOtpRequest:
+      allOf:
+        - $ref: "#/components/schemas/DshPickupMutationRequest"
+        - type: object
+          required: [code]
+          properties:
+            code: { type: string }
+
+    DshPickupNoShowRequest:
+      allOf:
+        - $ref: "#/components/schemas/DshPickupMutationRequest"
+
+    DshExtendPickupWindowRequest:
+      allOf:
+        - $ref: "#/components/schemas/DshPickupMutationRequest"
+        - type: object
+          required: [reason, newExpiry]
+          properties:
+            reason: { type: string }
+            newExpiry: { type: string, format: date-time }
+
+    DshPickupMarkReadyResponse:
+      type: object
+      required: [orderId, status]
+      properties:
+        orderId: { type: string }
+        status: { type: string, enum: [ready_for_pickup] }
+
+    DshPickupCustomerArrivedResponse:
+      type: object
+      required: [orderId, customerArrived]
+      properties:
+        orderId: { type: string }
+        customerArrived: { type: boolean }
+
+    DshPickupNotifyResponse:
+      type: object
+      required: [orderId, notified]
+      properties:
+        orderId: { type: string }
+        notified: { type: boolean }
+        session:
+          $ref: "#/components/schemas/DshPickupSession"

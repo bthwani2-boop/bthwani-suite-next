@@ -30,9 +30,10 @@ func TestAuthorizeProviderCallsFinancialProvider(t *testing.T) {
 	client := &recordingProvider{
 		res: provider.ProviderResult{ProviderReference: "card-auth-001", Status: "authorized"},
 	}
+	checkoutIntentID := "checkout_1"
 	session := &PaymentSession{
 		ID:               "wps_1",
-		CheckoutIntentID: "checkout_1",
+		CheckoutIntentID: &checkoutIntentID,
 		ClientID:         "client_1",
 		StoreID:          "store_1",
 		PaymentMethod:    "official_wallet",

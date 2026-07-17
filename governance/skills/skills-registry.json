@@ -49,6 +49,14 @@
       "evidence_required": false
     },
     {
+      "id": "bthwani-cost-aware-subagent-orchestrator",
+      "name": "Cost-Aware Subagent Orchestrator",
+      "path": ".agents/skills/bthwani-cost-aware-subagent-orchestrator",
+      "owner": "BThwani Platform Team",
+      "scope": "platform",
+      "evidence_required": false
+    },
+    {
       "id": "bthwani-current-workspace-authority",
       "name": "Current Workspace Authority",
       "path": ".agents/skills/bthwani-current-workspace-authority",

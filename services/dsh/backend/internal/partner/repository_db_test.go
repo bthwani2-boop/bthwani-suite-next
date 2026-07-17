@@ -31,18 +31,17 @@ func openRequiredDB(t *testing.T) *sql.DB {
 	return db
 }
 
-func TestPartnerLifecycleDBIntegration(t *testing.T) {
-	db := openRequiredDB(t)
+func createPartnerFixture(t *testing.T, db *sql.DB, prefix string) Partner {
+	t.Helper()
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
-
 	p, err := CreatePartner(db, CreatePartnerInput{
-		LegalNameAr:         "مؤسسة اختبار الشريك " + suffix,
-		LegalNameEn:         "Partner Smoke " + suffix,
-		DisplayName:         "شريك اختبار " + suffix,
+		LegalNameAr:         "مؤسسة اختبار " + prefix + " " + suffix,
+		LegalNameEn:         prefix + " Smoke " + suffix,
+		DisplayName:         "شريك اختبار " + prefix + " " + suffix,
 		LegalIdentityType:   "commercial_register",
-		LegalIdentityNumber: "YE-IT-" + suffix,
+		LegalIdentityNumber: "YE-" + prefix + "-" + suffix,
 		OwnerName:           "مالك اختبار",
-		PrimaryPhone:        "+967771" + suffix[len(suffix)-6:],
+		PrimaryPhone:        "+96777" + suffix[len(suffix)-7:],
 		Category:            "grocery",
 		CreatedByActorID:    "field-local-001",
 		CreatedBySurface:    "app-field",
@@ -50,15 +49,31 @@ func TestPartnerLifecycleDBIntegration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	return p
+}
 
-	stores, err := LinkPartnerStore(db, p.ID, "store-1002", "operator-local-001")
+func partnerStoreID(t *testing.T, db *sql.DB, partnerID string) string {
+	t.Helper()
+	var storeID string
+	if err := db.QueryRow(`SELECT id FROM dsh_stores WHERE partner_id = $1 ORDER BY created_at LIMIT 1`, partnerID).Scan(&storeID); err != nil {
+		t.Fatalf("failed to resolve partner draft store: %v", err)
+	}
+	return storeID
+}
+
+func TestPartnerLifecycleDBIntegration(t *testing.T) {
+	db := openRequiredDB(t)
+	p := createPartnerFixture(t, db, "IT")
+	storeID := partnerStoreID(t, db, p.ID)
+
+	stores, err := LinkPartnerStore(db, p.ID, storeID, "operator-local-001")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(stores) == 0 {
 		t.Fatal("expected linked partner store")
 	}
-	assertStoreReadiness(t, db, "store-1002", "pending")
+	assertStoreReadiness(t, db, storeID, "pending")
 
 	chain := []ActivationStatus{
 		StatusSubmitted,
@@ -71,11 +86,21 @@ func TestPartnerLifecycleDBIntegration(t *testing.T) {
 	}
 	for _, next := range chain {
 		if next == StatusClientVisible {
-			// Mirrors the operator "partner-readiness" governance action
-			// (internal/store/governance.go) that must run before a store
-			// can pass the client_visible publication gate.
-			if _, err := db.Exec(`UPDATE dsh_stores SET partner_readiness = 'ready', version = version + 1, updated_at = NOW() WHERE id = $1`, "store-1002"); err != nil {
-				t.Fatalf("failed to mark store partner_readiness ready: %v", err)
+			// The client-visible transition must prove every store publication
+			// gate, not merely partner readiness. Seed the same state that the
+			// owning governance sections would produce after independent review.
+			if _, err := db.Exec(`
+				UPDATE dsh_stores
+				SET status = 'active',
+				    is_visible = true,
+				    serviceability_status = 'serviceable',
+				    partner_readiness = 'ready',
+				    catalog_approval_status = 'approved',
+				    marketing_visibility = 'visible',
+				    version = version + 1,
+				    updated_at = NOW()
+				WHERE id = $1`, storeID); err != nil {
+				t.Fatalf("failed to satisfy store publication gates: %v", err)
 			}
 		}
 		p, _, err = TransitionStatus(db, p.ID, TransitionInput{
@@ -88,7 +113,7 @@ func TestPartnerLifecycleDBIntegration(t *testing.T) {
 			t.Fatalf("transition to %s failed: %v", next, err)
 		}
 	}
-	assertStoreReadiness(t, db, "store-1002", "ready")
+	assertStoreReadiness(t, db, storeID, "ready")
 
 	var surface string
 	if err := db.QueryRow(`
@@ -107,7 +132,7 @@ func TestPartnerLifecycleDBIntegration(t *testing.T) {
 	lon := 44.2075
 	visit, err := CreateFieldVisit(db, CreateFieldVisitInput{
 		PartnerID:         p.ID,
-		StoreID:           "store-1002",
+		StoreID:           storeID,
 		VisitNotes:        "db integration visit",
 		LocationLatitude:  &lat,
 		LocationLongitude: &lon,
@@ -123,31 +148,13 @@ func TestPartnerLifecycleDBIntegration(t *testing.T) {
 
 func TestCreateFieldVisitRejectsStoreNotOwnedByPartner(t *testing.T) {
 	db := openRequiredDB(t)
-	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
+	p1 := createPartnerFixture(t, db, "OWN-A")
+	p2 := createPartnerFixture(t, db, "OWN-B")
+	otherStoreID := partnerStoreID(t, db, p2.ID)
 
-	p1, err := CreatePartner(db, CreatePartnerInput{
-		LegalNameAr:         "مؤسسة اختبار الملكية " + suffix,
-		LegalNameEn:         "Ownership Smoke " + suffix,
-		DisplayName:         "شريك اختبار الملكية " + suffix,
-		LegalIdentityType:   "commercial_register",
-		LegalIdentityNumber: "YE-OWN-" + suffix,
-		OwnerName:           "مالك اختبار",
-		PrimaryPhone:        "+967772" + suffix[len(suffix)-6:],
-		Category:            "grocery",
-		CreatedByActorID:    "field-local-001",
-		CreatedBySurface:    "app-field",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// store-1002 is already linked to a different partner by
-	// TestPartnerLifecycleDBIntegration (and/or seed data) in this suite;
-	// p1 above is deliberately never linked to it, so CreateFieldVisit must
-	// reject the cross-partner store reference.
-	_, err = CreateFieldVisit(db, CreateFieldVisitInput{
+	_, err := CreateFieldVisit(db, CreateFieldVisitInput{
 		PartnerID:    p1.ID,
-		StoreID:      "store-1002",
+		StoreID:      otherStoreID,
 		VisitNotes:   "should be rejected",
 		FieldActorID: "field-local-001",
 	})

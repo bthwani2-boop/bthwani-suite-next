@@ -2,8 +2,8 @@
 
 import React, { useState } from "react";
 import { Box, Button, Card, ScrollScreen, Text, TextField, spacing, colorRoles, alpha } from "@bthwani/ui-kit";
-import { useCaptainCreateController } from "../../shared/workforce";
-import type { Captain, LicenseStatus, SupervisorCandidate } from "../../shared/workforce";
+import { useCaptainCreateAndActivationController } from "../../shared/workforce";
+import type { Captain, SupervisorCandidate } from "../../shared/workforce";
 import { SupervisorPicker } from "./SupervisorPicker";
 import { ZonePicker } from "./ZonePicker";
 
@@ -13,14 +13,12 @@ const VEHICLE_TYPES: Array<{ label: string; value: string }> = [
   { label: "أخرى", value: "other" },
 ];
 
-import { issueCaptainActivationCode } from "../../shared/workforce";
-
 export function CaptainCreateView(props: {
   readonly onBack?: () => void;
   readonly onCreated: (captain: Captain) => void;
   readonly inline?: boolean;
 }) {
-  const { state, submit } = useCaptainCreateController();
+  const { state, submit, reset } = useCaptainCreateAndActivationController();
   const [fullNameAr, setFullNameAr] = useState("");
   const [phone, setPhone] = useState("");
   const [zoneId, setZoneId] = useState("");
@@ -28,10 +26,12 @@ export function CaptainCreateView(props: {
   const [vehicleIdentifier, setVehicleIdentifier] = useState("");
   const [licenseExpiresAt, setLicenseExpiresAt] = useState("");
   const [supervisor, setSupervisor] = useState<SupervisorCandidate | null>(null);
-  const [createdCaptain, setCreatedCaptain] = useState<Captain | null>(null);
   const [autoActivate, setAutoActivate] = useState(true);
-  const [issuedCode, setIssuedCode] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+
+  const createdCaptain = state.kind === "created" ? state.provider : null;
+  const issuedCode = state.kind === "created" ? state.activation?.code ?? null : null;
+  const activationError = state.kind === "created" ? state.activationError : null;
 
   const canSubmit =
     fullNameAr.trim().length > 0 &&
@@ -40,32 +40,34 @@ export function CaptainCreateView(props: {
     vehicleType !== "" &&
     vehicleIdentifier.trim().length > 0 &&
     state.kind !== "submitting" &&
-    !createdCaptain;
+    state.kind !== "created";
 
   const handleSubmit = async () => {
-    const licenseStatus: LicenseStatus = autoActivate ? "valid" : "pending_review";
-    const captain = await submit({
+    await submit({
       fullNameAr: fullNameAr.trim(),
       phoneE164: phone.trim(),
       engagementType: "independent_contractor",
       vehicleType,
       vehicleIdentifier: vehicleIdentifier.trim(),
-      licenseStatus,
+      // Account activation must never self-approve a driving licence.
+      licenseStatus: "pending_review",
       licenseExpiresAt: licenseExpiresAt.trim() || undefined,
       serviceZoneId: zoneId,
-      supervisorActorId: supervisor?.actorId ?? undefined,
-    });
-    if (captain) {
-      setCreatedCaptain(captain);
-      if (autoActivate) {
-        try {
-          const res = await issueCaptainActivationCode(captain.actorId, captain.version);
-          setIssuedCode(res.code);
-        } catch (err) {
-          console.error("Auto activation failed", err);
-        }
-      }
-    }
+      supervisorActorId: supervisor?.actorId,
+    }, { issueActivationCode: autoActivate });
+  };
+
+  const resetForm = () => {
+    reset();
+    setFullNameAr("");
+    setPhone("");
+    setZoneId("");
+    setVehicleType("");
+    setVehicleIdentifier("");
+    setLicenseExpiresAt("");
+    setSupervisor(null);
+    setAutoActivate(true);
+    setCopied(false);
   };
 
   const content = (
@@ -84,16 +86,14 @@ export function CaptainCreateView(props: {
       </Text>
 
       <Text role="bodySm" style={{ textAlign: "right", fontWeight: "bold" }}>البيانات الأساسية</Text>
-      <TextField label="الاسم الكامل *" value={fullNameAr} onChangeText={setFullNameAr} placeholder="أحمد محمد" disabled={!!createdCaptain} />
-      <TextField label="رقم الهاتف *" value={phone} onChangeText={setPhone} placeholder="مثال: 777123456" disabled={!!createdCaptain} />
+      <TextField label="الاسم الكامل *" value={fullNameAr} onChangeText={setFullNameAr} placeholder="أحمد محمد" disabled={Boolean(createdCaptain)} />
+      <TextField label="رقم الهاتف *" value={phone} onChangeText={setPhone} placeholder="مثال: 777123456" disabled={Boolean(createdCaptain)} />
 
       <Text role="bodySm" style={{ textAlign: "right", fontWeight: "bold" }}>التشغيل والنطاق</Text>
       <ZonePicker
         value={zoneId}
-        disabled={!!createdCaptain}
-        onChange={(zone) => {
-          setZoneId(zone?.id ?? "");
-        }}
+        disabled={Boolean(createdCaptain)}
+        onChange={(zone) => setZoneId(zone?.id ?? "")}
       />
 
       <Text role="bodySm" style={{ textAlign: "right", fontWeight: "bold" }}>المركبة</Text>
@@ -103,7 +103,7 @@ export function CaptainCreateView(props: {
             key={option.value}
             label={option.label}
             tone={vehicleType === option.value ? "primary" : "ghost"}
-            disabled={!!createdCaptain}
+            disabled={Boolean(createdCaptain)}
             onPress={() => setVehicleType(option.value === vehicleType ? "" : option.value)}
           />
         ))}
@@ -113,30 +113,30 @@ export function CaptainCreateView(props: {
         value={vehicleIdentifier}
         onChangeText={setVehicleIdentifier}
         placeholder="مثال: صنعاء 12345"
-        disabled={!!createdCaptain}
+        disabled={Boolean(createdCaptain)}
       />
       <TextField
         label="تاريخ انتهاء الرخصة"
         value={licenseExpiresAt}
         onChangeText={setLicenseExpiresAt}
         placeholder="YYYY-MM-DD"
-        disabled={!!createdCaptain}
+        disabled={Boolean(createdCaptain)}
       />
       <Text role="caption" tone="muted" style={{ textAlign: "right" }}>
-        حالة الرخصة الأولية: بانتظار المراجعة. يمكن رفع وثائق المركبة والرخصة من ملف مقدم
-        الخدمة بعد إنشائه.
+        حالة الرخصة الأولية دائمًا «بانتظار المراجعة». إصدار كود الدخول لا يثبت صلاحية الرخصة ولا
+        يتجاوز مراجعة الوثائق.
       </Text>
 
       <Text role="bodySm" style={{ textAlign: "right", fontWeight: "bold" }}>الإشراف</Text>
-      <SupervisorPicker kind="captain" selected={supervisor} onSelect={setSupervisor} disabled={!!createdCaptain} />
+      <SupervisorPicker kind="captain" selected={supervisor} onSelect={setSupervisor} disabled={Boolean(createdCaptain)} />
 
-      <Text role="bodySm" style={{ textAlign: "right", fontWeight: "bold" }}>التفعيل *</Text>
+      <Text role="bodySm" style={{ textAlign: "right", fontWeight: "bold" }}>تفعيل حساب الدخول</Text>
       <Box style={{ flexDirection: "row-reverse", gap: spacing[2], alignItems: "center" }}>
         <Button
-          label={autoActivate ? "تفعيل الحساب فورًا وإصدار كود الدخول ✓" : "إنشاء بدون تفعيل"}
+          label={autoActivate ? "إصدار كود دخول بعد الإنشاء ✓" : "إنشاء بدون كود دخول"}
           tone={autoActivate ? "primary" : "ghost"}
-          disabled={!!createdCaptain}
-          onPress={() => setAutoActivate(!autoActivate)}
+          disabled={Boolean(createdCaptain)}
+          onPress={() => setAutoActivate((value) => !value)}
         />
       </Box>
 
@@ -147,11 +147,12 @@ export function CaptainCreateView(props: {
       {createdCaptain ? (
         <Box style={{ gap: spacing[3], marginTop: spacing[3], padding: spacing[3], backgroundColor: alpha(colorRoles.success, 0.08), border: `1px solid ${alpha(colorRoles.success, 0.3)}`, borderRadius: 8 }}>
           <Text role="bodyStrong" tone="success" style={{ textAlign: "right" }}>
-            تم إنشاء حساب مقدم الخدمة بنجاح!
+            تم إنشاء الكابتن وتأكيده من Workforce، والرخصة ما تزال بانتظار المراجعة.
           </Text>
+
           {issuedCode ? (
             <Box style={{ gap: spacing[2] }}>
-              <Text role="bodySm" style={{ textAlign: "right" }}>كود التفعيل لتطبيق الهواتف:</Text>
+              <Text role="bodySm" style={{ textAlign: "right" }}>كود التفعيل الصادر من خدمة الهوية:</Text>
               <Box style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", backgroundColor: colorRoles.surfaceBase, padding: spacing[2], borderRadius: 4, border: `1px solid ${colorRoles.borderSubtle}` }}>
                 <Text role="titleMd" style={{ color: colorRoles.success, letterSpacing: 2, fontWeight: "bold" }}>{issuedCode}</Text>
                 <Button
@@ -167,27 +168,26 @@ export function CaptainCreateView(props: {
                 />
               </Box>
             </Box>
+          ) : activationError ? (
+            <Text role="bodySm" tone="danger" style={{ textAlign: "right" }}>
+              تم إنشاء الكابتن، لكن تعذر إصدار كود الدخول: {activationError}
+            </Text>
           ) : (
             <Text role="bodySm" tone="warning" style={{ textAlign: "right" }}>
-              لم يتم تفعيل الحساب بعد. يمكنك توليد كود التفعيل لاحقًا من شاشة إدارة التفعيل.
+              تم الإنشاء بدون تفعيل حساب الدخول. يمكن إصدار الكود من ملف الكابتن.
             </Text>
           )}
-          <Box style={{ flexDirection: "row-reverse", marginTop: spacing[2] }}>
+
+          <Box style={{ flexDirection: "row-reverse", gap: spacing[2], flexWrap: "wrap" }}>
+            <Button
+              label="فتح ملف الكابتن"
+              tone="primary"
+              onPress={() => props.onCreated(createdCaptain)}
+            />
             <Button
               label="إضافة كابتن جديد"
               tone="secondary"
-              onPress={() => {
-                setCreatedCaptain(null);
-                setIssuedCode(null);
-                setFullNameAr("");
-                setPhone("");
-                setZoneId("");
-                setVehicleType("");
-                setVehicleIdentifier("");
-                setLicenseExpiresAt("");
-                setSupervisor(null);
-                setAutoActivate(true);
-              }}
+              onPress={resetForm}
             />
           </Box>
         </Box>
@@ -205,15 +205,9 @@ export function CaptainCreateView(props: {
     </Card>
   );
 
-  if (props.inline) {
-    return content;
-  }
+  if (props.inline) return content;
 
-  return (
-    <ScrollScreen>
-      {content}
-    </ScrollScreen>
-  );
+  return <ScrollScreen>{content}</ScrollScreen>;
 }
 
 export default CaptainCreateView;

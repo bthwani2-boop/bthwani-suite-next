@@ -8,6 +8,7 @@ import {
   PROVIDER_KIND_LABEL_AR,
   useCaptainDetailController,
   useFieldAgentDetailController,
+  useServiceZoneReference,
   useWorkforceReferenceData,
 } from "../../shared/workforce";
 import type { ProviderKind, LicenseStatus } from "../../shared/workforce";
@@ -31,13 +32,23 @@ const LICENSE_STATUS_LABEL_AR: LicenseStatusLabelAr = {
   rejected: "مرفوضة",
 };
 
+function isCurrentOrFutureDate(value?: string): boolean {
+  if (!value) return false;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  date.setHours(0, 0, 0, 0);
+  return date >= today;
+}
+
 function FieldAgentDetailBody(props: { readonly actorId: string; readonly onBack: () => void }) {
   const controller = useFieldAgentDetailController(props.actorId);
   const reference = useWorkforceReferenceData();
+  const zones = useServiceZoneReference();
 
-  if (controller.state.kind === "loading") {
-    return <LoadingScreen />;
-  }
+  if (controller.state.kind === "loading") return <LoadingScreen />;
+
   if (controller.state.kind === "error") {
     return (
       <ScrollScreen>
@@ -61,7 +72,8 @@ function FieldAgentDetailBody(props: { readonly actorId: string; readonly onBack
     ["الهاتف", agent.phoneMasked ?? "—"],
     ["نوع الارتباط", ENGAGEMENT_TYPE_LABEL_AR[agent.engagementType]],
     ["تاريخ البداية", agent.engagementStartDate || "—"],
-    ["نطاق الخدمة", reference.cityLabel(agent.fieldProfile?.cityCode)],
+    ["منطقة الخدمة السيادية", zones.zoneLabel(agent.fieldProfile?.serviceZoneId)],
+    ["مدينة التشغيل المشتقة", reference.cityLabel(agent.fieldProfile?.cityCode)],
     ["الوردية", reference.shiftLabel(agent.fieldProfile?.shiftCode)],
     ["المشرف", agent.fieldProfile?.supervisorActorId || "—"],
     ["حالة الارتباط", ENGAGEMENT_STATUS_LABEL_AR[agent.engagementStatus]],
@@ -80,6 +92,11 @@ function FieldAgentDetailBody(props: { readonly actorId: string; readonly onBack
             <Text role="bodyStrong">{value}</Text>
           </Box>
         ))}
+        {(reference.error || zones.error) && (
+          <Text role="caption" tone="warning" style={{ textAlign: "right" }}>
+            تعذر تحميل بعض المسميات المرجعية؛ المعرفات المعروضة تبقى من البيانات السيادية نفسها.
+          </Text>
+        )}
       </Card>
 
       <ProviderActivationWorkspace
@@ -94,13 +111,12 @@ function FieldAgentDetailBody(props: { readonly actorId: string; readonly onBack
 function CaptainDetailBody(props: { readonly actorId: string; readonly onBack: () => void }) {
   const controller = useCaptainDetailController(props.actorId);
   const reference = useWorkforceReferenceData();
+  const zones = useServiceZoneReference();
   const [uploadBusy, setUploadBusy] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [updatingLicense, setUpdatingLicense] = useState(false);
 
-  if (controller.state.kind === "loading") {
-    return <LoadingScreen />;
-  }
+  if (controller.state.kind === "loading") return <LoadingScreen />;
+
   if (controller.state.kind === "error") {
     return (
       <ScrollScreen>
@@ -118,12 +134,21 @@ function CaptainDetailBody(props: { readonly actorId: string; readonly onBack: (
 
   const captain = controller.state.captain;
   const profile = captain.captainProfile;
+  const documentCount = profile?.documentMediaRefs.length ?? 0;
+  const hasValidExpiry = isCurrentOrFutureDate(profile?.licenseExpiresAt);
+  const licenceApprovalBlockers = [
+    ...(documentCount > 0 ? [] : ["يجب رفع وثيقة رخصة أو إثبات واحد على الأقل"]),
+    ...(hasValidExpiry ? [] : ["يجب إدخال تاريخ انتهاء صالح وغير منتهٍ"]),
+  ];
+  const canApproveLicence = licenceApprovalBlockers.length === 0;
+
   const rows: Array<[string, string]> = [
     ["الاسم", captain.fullNameAr],
     ["رقم مقدم الخدمة", captain.workforceCode],
     ["النوع", PROVIDER_KIND_LABEL_AR[captain.workforceKind]],
     ["الهاتف", captain.phoneMasked ?? "—"],
-    ["نطاق الخدمة", reference.cityLabel(profile?.operatingCityCode)],
+    ["منطقة الخدمة السيادية", zones.zoneLabel(profile?.serviceZoneId)],
+    ["مدينة التشغيل المشتقة", reference.cityLabel(profile?.operatingCityCode)],
     ["نوع المركبة", profile?.vehicleType || "—"],
     ["رقم المركبة", profile?.vehicleIdentifier || "—"],
     ["حالة الرخصة", LICENSE_STATUS_LABEL_AR[profile?.licenseStatus ?? "missing"]],
@@ -133,15 +158,7 @@ function CaptainDetailBody(props: { readonly actorId: string; readonly onBack: (
   ];
 
   const handleUpdateLicense = async (status: LicenseStatus) => {
-    setUpdatingLicense(true);
-    try {
-      await controller.update({
-        expectedVersion: captain.version,
-        licenseStatus: status,
-      });
-    } finally {
-      setUpdatingLicense(false);
-    }
+    await controller.update({ expectedVersion: captain.version, licenseStatus: status });
   };
 
   const pickAndUpload = async () => {
@@ -154,25 +171,25 @@ function CaptainDetailBody(props: { readonly actorId: string; readonly onBack: (
       if (!file) return;
       setUploadError(null);
       setUploadBusy(true);
+      const objectUrl = URL.createObjectURL(file);
       try {
-        const objectUrl = URL.createObjectURL(file);
         await uploadProviderMedia(props.actorId, "captain", {
           uri: objectUrl,
           name: file.name,
           mimeType: file.type || "application/octet-stream",
         });
-        URL.revokeObjectURL(objectUrl);
         await controller.reload();
       } catch {
         setUploadError("تعذر رفع الملف — حاول مجددًا");
       } finally {
+        URL.revokeObjectURL(objectUrl);
         setUploadBusy(false);
       }
     };
     input.click();
   };
 
-  const isBusy = updatingLicense || controller.actionBusy;
+  const isBusy = controller.actionBusy || uploadBusy;
 
   return (
     <ScrollScreen>
@@ -187,20 +204,21 @@ function CaptainDetailBody(props: { readonly actorId: string; readonly onBack: (
             <Text role="bodyStrong">{value}</Text>
           </Box>
         ))}
+        {(reference.error || zones.error) && (
+          <Text role="caption" tone="warning" style={{ textAlign: "right" }}>
+            تعذر تحميل بعض المسميات المرجعية؛ المعرفات المعروضة تبقى من البيانات السيادية نفسها.
+          </Text>
+        )}
       </Card>
 
       <Card style={{ padding: spacing[4], gap: spacing[2] }}>
         <Text role="titleSm" style={{ textAlign: "right", fontWeight: "bold" }}>الوثائق المرفوعة</Text>
-        {uploadError && (
-          <Text role="caption" tone="danger" style={{ textAlign: "right" }}>{uploadError}</Text>
-        )}
+        {uploadError && <Text role="caption" tone="danger" style={{ textAlign: "right" }}>{uploadError}</Text>}
         <Text role="caption" tone="muted" style={{ textAlign: "right" }}>
-          {(profile?.documentMediaRefs.length ?? 0) > 0
-            ? `${profile?.documentMediaRefs.length} ملف مرفوع`
-            : "لا توجد ملفات مرفوعة بعد"}
+          {documentCount > 0 ? `${documentCount} ملف مرفوع` : "لا توجد ملفات مرفوعة بعد"}
         </Text>
         <Box style={{ alignItems: "flex-end" }}>
-          <Button label="رفع وثيقة" tone="secondary" loading={uploadBusy} disabled={uploadBusy} onPress={() => void pickAndUpload()} />
+          <Button label="رفع وثيقة" tone="secondary" loading={uploadBusy} disabled={isBusy} onPress={() => void pickAndUpload()} />
         </Box>
       </Card>
 
@@ -211,27 +229,40 @@ function CaptainDetailBody(props: { readonly actorId: string; readonly onBack: (
             الحالة الحالية: {LICENSE_STATUS_LABEL_AR[profile?.licenseStatus ?? "missing"]}
           </Text>
           <Text role="caption" tone="muted" style={{ textAlign: "right" }}>
-            يرجى مراجعة الوثائق المرفوعة للتأكد من صلاحية الرخصة والبيانات قبل تفعيل الحساب.
+            اعتماد الرخصة لا يتاح إلا بعد وجود وثيقة وتاريخ انتهاء صالح. قاعدة Workforce تفرض الشرط نفسه حتى عند استدعاء API مباشرة.
           </Text>
-          <Box style={{ flexDirection: "row-reverse", gap: spacing[2], marginTop: spacing[1] }}>
+
+          {!canApproveLicence && (
+            <Box style={{ gap: spacing[1] }}>
+              {licenceApprovalBlockers.map((reason) => (
+                <Text key={reason} role="caption" tone="warning" style={{ textAlign: "right" }}>• {reason}</Text>
+              ))}
+            </Box>
+          )}
+
+          {controller.actionError && (
+            <Text role="caption" tone="danger" style={{ textAlign: "right" }}>{controller.actionError}</Text>
+          )}
+
+          <Box style={{ flexDirection: "row-reverse", gap: spacing[2], marginTop: spacing[1], flexWrap: "wrap" }}>
             <Button
               label="اعتماد الرخصة (صالحة)"
               tone="primary"
-              loading={isBusy}
-              disabled={isBusy}
+              loading={controller.actionBusy}
+              disabled={isBusy || !canApproveLicence}
               onPress={() => void handleUpdateLicense("valid")}
             />
             <Button
               label="رفض الرخصة"
               tone="danger"
-              loading={isBusy}
+              loading={controller.actionBusy}
               disabled={isBusy}
               onPress={() => void handleUpdateLicense("rejected")}
             />
             <Button
               label="طلب استكمال"
               tone="secondary"
-              loading={isBusy}
+              loading={controller.actionBusy}
               disabled={isBusy}
               onPress={() => void handleUpdateLicense("missing")}
             />

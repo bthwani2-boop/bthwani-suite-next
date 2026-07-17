@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"dsh-api/internal/checkout"
+	"dsh-api/internal/specialrequests"
 	"dsh-api/internal/store"
 )
 
@@ -22,6 +23,8 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 	}
 	var body struct {
 		CheckoutIntentID string `json:"checkoutIntentId"`
+		SpecialRequestID string `json:"specialRequestId"`
+		TenantID         string `json:"tenantId"`
 		PaymentSessionID string `json:"paymentSessionId"`
 		Status           string `json:"status"`
 	}
@@ -31,8 +34,34 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
 		return
 	}
-	if body.CheckoutIntentID == "" || body.PaymentSessionID == "" || body.Status == "" {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "checkoutIntentId, paymentSessionId, and status are required")
+	if body.PaymentSessionID == "" || body.Status == "" || (body.CheckoutIntentID == "" && body.SpecialRequestID == "") || (body.CheckoutIntentID != "" && body.SpecialRequestID != "") {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "exactly one of checkoutIntentId or specialRequestId, plus paymentSessionId and status, are required")
+		return
+	}
+
+	if body.SpecialRequestID != "" {
+		req, err := specialrequests.ApplyWltPaymentEvent(s.db, body.TenantID, body.SpecialRequestID, body.PaymentSessionID, body.Status)
+		if errors.Is(err, specialrequests.ErrNotFound) {
+			store.SendError(w, http.StatusNotFound, "NOT_FOUND", "special request not found")
+			return
+		}
+		if errors.Is(err, specialrequests.ErrPaymentSessionMismatch) {
+			store.SendError(w, http.StatusConflict, "PAYMENT_SESSION_MISMATCH", "paymentSessionId does not match special request")
+			return
+		}
+		if errors.Is(err, specialrequests.ErrInvalid) {
+			store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+			return
+		}
+		if errors.Is(err, specialrequests.ErrConflict) || errors.Is(err, specialrequests.ErrVersionConflict) {
+			store.SendError(w, http.StatusConflict, "CONFLICT", err.Error())
+			return
+		}
+		if err != nil {
+			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to apply WLT payment event")
+			return
+		}
+		store.SendJSON(w, http.StatusOK, map[string]any{"specialRequest": marshalSpecialRequest(req)})
 		return
 	}
 

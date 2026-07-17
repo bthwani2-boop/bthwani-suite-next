@@ -1,36 +1,8 @@
-export type DshOrderStatus =
-  | "pending"
-  | "store_accepted"
-  | "preparing"
-  | "ready_for_pickup"
-  | "driver_assigned"
-  | "driver_arrived_store"
-  | "picked_up"
-  | "arrived_customer"
-  | "delivered"
-  | "cancelled";
+import type { components } from "../../../clients/generated/dsh-api";
 
-export type DshOrderItem = {
-  readonly id: string;
-  readonly productId: string;
-  readonly productName: string;
-  readonly quantity: number;
-  readonly unitPrice: number;
-};
-
-export type DshOrder = {
-  readonly id: string;
-  readonly checkoutIntentId: string;
-  readonly storeId: string;
-  readonly clientId: string;
-  readonly status: DshOrderStatus;
-  readonly rejectionReason: string;
-  /** Opaque WLT payment reference. DSH never mutates financial truth. */
-  readonly wltPaymentRefId: string;
-  readonly items: readonly DshOrderItem[];
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
+export type DshOrderStatus = components["schemas"]["DshOrderStatus"];
+export type DshOrderItem = components["schemas"]["DshOrderItem"];
+export type DshOrder = components["schemas"]["DshOrder"];
 
 export type DshCreateOrderInput = {
   readonly checkoutIntentId: string;

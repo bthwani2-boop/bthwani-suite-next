@@ -14,26 +14,26 @@ var ErrInvalidTransition = errors.New("invalid status transition")
 // ── Tickers ──────────────────────────────────────────────────────────────────
 
 type Ticker struct {
-	ID               string  `json:"id"`
-	Message          string  `json:"message"`
-	Kind             string  `json:"kind"`
-	Status           string  `json:"status"`
-	Source           string  `json:"source"`
-	Audience         string  `json:"audience"`
-	DeliveryMode     string  `json:"deliveryMode"`
-	Priority         string  `json:"priority"`
-	Pinned           bool    `json:"pinned"`
-	ActionType       string  `json:"actionType"`
-	ActionTarget     string  `json:"actionTarget"`
-	Clicks           int     `json:"clicks"`
-	Impressions      int     `json:"impressions"`
-	OpenHour         *int    `json:"openHour,omitempty"`
-	CloseHour        *int    `json:"closeHour,omitempty"`
-	CooldownMinutes  *int    `json:"cooldownMinutes,omitempty"`
-	RepeatGapMinutes *int    `json:"repeatGapMinutes,omitempty"`
-	CreatedBy        string  `json:"createdBy"`
-	CreatedAt        string  `json:"createdAt"`
-	UpdatedAt        string  `json:"updatedAt"`
+	ID               string `json:"id"`
+	Message          string `json:"message"`
+	Kind             string `json:"kind"`
+	Status           string `json:"status"`
+	Source           string `json:"source"`
+	Audience         string `json:"audience"`
+	DeliveryMode     string `json:"deliveryMode"`
+	Priority         string `json:"priority"`
+	Pinned           bool   `json:"pinned"`
+	ActionType       string `json:"actionType"`
+	ActionTarget     string `json:"actionTarget"`
+	Clicks           int    `json:"clicks"`
+	Impressions      int    `json:"impressions"`
+	OpenHour         *int   `json:"openHour,omitempty"`
+	CloseHour        *int   `json:"closeHour,omitempty"`
+	CooldownMinutes  *int   `json:"cooldownMinutes,omitempty"`
+	RepeatGapMinutes *int   `json:"repeatGapMinutes,omitempty"`
+	CreatedBy        string `json:"createdBy"`
+	CreatedAt        string `json:"createdAt"`
+	UpdatedAt        string `json:"updatedAt"`
 }
 
 func tickerJSON(t Ticker) []byte {
@@ -48,7 +48,7 @@ var tickerAudiences = map[string]bool{"all": true, "client": true, "partner": tr
 var tickerDeliveryModes = map[string]bool{"scroll": true, "toast": true, "overlay": true}
 var tickerPriorities = map[string]bool{"low": true, "normal": true, "high": true, "critical": true}
 
-func validHour(h *int) bool      { return h == nil || (*h >= 0 && *h <= 23) }
+func validHour(h *int) bool        { return h == nil || (*h >= 0 && *h <= 23) }
 func validNonNegative(m *int) bool { return m == nil || *m >= 0 }
 
 var tickerSelectCols = `id, message, kind, status, source, audience, delivery_mode, priority,

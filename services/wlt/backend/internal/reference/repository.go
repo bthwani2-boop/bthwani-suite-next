@@ -120,4 +120,3 @@ func GetFieldCommissionRef(db *sql.DB, partnerID string) (*FieldCommissionRef, e
 	}
 	return &ref, nil
 }
-

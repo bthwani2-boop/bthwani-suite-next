@@ -281,11 +281,31 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
       'items-upsert': <InventoryActionScreen activeFlowId="items-upsert" onBack={returnToSupportDirectory} onOpenScreen={openSupportScreen} onSecondaryAction={returnToSupportDirectory} />,
       'order-accept': <OrderActionScreen activeFlowId="order-accept" onBack={returnToSupportDirectory} onOpenScreen={openSupportScreen} onSecondaryAction={() => openSupportScreen('order-get')} />,
       'order-get': <OrderActionScreen activeFlowId="order-get" onBack={returnToSupportDirectory} onOpenScreen={openSupportScreen} onSecondaryAction={() => openSupportScreen('order-handoff')} />,
-      'order-handoff': <OrderActionScreen activeFlowId="order-handoff" onBack={returnToSupportDirectory} onOpenScreen={openSupportScreen} onSecondaryAction={returnToSupportDirectory} />,
+      'order-handoff': (
+        <OrderActionScreen
+          activeFlowId="order-handoff"
+          orderId={activePartnerOrder?.id ?? activeOrderId}
+          {...(activePartnerOrder?.orderMode ? { fulfillmentMode: activePartnerOrder.orderMode } : {})}
+          teamMembers={teamMembers}
+          onBack={returnToSupportDirectory}
+          onOpenScreen={openSupportScreen}
+          onSecondaryAction={returnToSupportDirectory}
+        />
+      ),
       'order-issue-queue': <OrderIssueScreen activeFlowId="order-issue-queue" selectedCategoryId={catId} onBack={returnToSupportDirectory} onOpenScreen={openSupportScreen} onSecondaryAction={returnToSupportDirectory} />,
       'order-out-for-delivery': <OrderActionScreen activeFlowId="order-out-for-delivery" onBack={returnToSupportDirectory} onOpenScreen={openSupportScreen} onSecondaryAction={returnToSupportDirectory} />,
       'order-prepare': <OrderActionScreen activeFlowId="order-prepare" onBack={returnToSupportDirectory} onOpenScreen={openSupportScreen} onSecondaryAction={returnToSupportDirectory} />,
-      'order-ready': <OrderActionScreen activeFlowId="order-ready" onBack={returnToSupportDirectory} onOpenScreen={openSupportScreen} onSecondaryAction={returnToSupportDirectory} />,
+      'order-ready': (
+        <OrderActionScreen
+          activeFlowId="order-ready"
+          orderId={activePartnerOrder?.id ?? activeOrderId}
+          {...(activePartnerOrder?.orderMode ? { fulfillmentMode: activePartnerOrder.orderMode } : {})}
+          teamMembers={teamMembers}
+          onBack={returnToSupportDirectory}
+          onOpenScreen={openSupportScreen}
+          onSecondaryAction={returnToSupportDirectory}
+        />
+      ),
       'order-reject': <OrderIssueScreen activeFlowId="order-reject" selectedCategoryId={catId} onBack={returnToSupportDirectory} onOpenScreen={openSupportScreen} onSecondaryAction={returnToSupportDirectory} />,
       'order-store-delivered': <OrderActionScreen activeFlowId="order-store-delivered" onBack={returnToSupportDirectory} onOpenScreen={openSupportScreen} onSecondaryAction={returnToSupportDirectory} />,
       'quick-reply-config': <ConversationScreen activeFlowId="quick-reply-config" onBack={returnToSupportDirectory} onOpenScreen={openSupportScreen} onSecondaryAction={() => openSupportScreen('quick-reply-settings')} />,

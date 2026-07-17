@@ -1,46 +1,6 @@
-{
+﻿{
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "entry": [
-    "apps/*/runtime/src/App.tsx",
-    "apps/*/runtime/src/index.{ts,tsx}",
-    "apps/*/runtime/src/main.{ts,tsx}",
-    "services/dsh/frontend/app-*/index.{ts,tsx}",
-    "services/dsh/frontend/app-*/**/*Surface.tsx",
-    "services/dsh/frontend/app-*/**/*Screen.tsx",
-    "services/dsh/frontend/app-*/**/*Panel.tsx",
-    "services/dsh/frontend/app-*/**/*Sheet.tsx",
-    "services/dsh/frontend/control-panel/**/*Screen.tsx",
-    "services/dsh/frontend/control-panel/**/*Panel.tsx",
-    "services/dsh/frontend/shared/**/index.{ts,tsx}",
-    "services/dsh/frontend/shared/**/*.registry.ts",
-    "services/dsh/frontend/shared/**/*.routes.ts",
-    "services/dsh/frontend/shared/**/*.contract.ts",
-    "services/dsh/frontend/shared/**/*.policy.ts",
-    "services/dsh/frontend/shared/**/*.view-model.ts",
-    "services/dsh/frontend/shared/**/*.adapter.ts",
-    "services/dsh/frontend/shared/**/*.transport.ts",
-    "services/dsh/frontend/shared/**/*.state-machine.ts",
-    "services/dsh/frontend/shared/**/*.states.ts",
-    "services/dsh/frontend/shared/**/*.types.ts",
-    "services/dsh/frontend/shared/**/*.model.ts",
-    "services/dsh/frontend/shared/**/*.api.ts",
-    "services/dsh/frontend/shared/**/*.client.ts",
-    "services/dsh/frontend/shared/**/*.map.ts",
-    "services/wlt/frontend/shared/**/*.ts",
-    "shared/ui-kit/src/**/*.{ts,tsx}",
-    "apps/control-panel/runtime/src/**/*.{ts,tsx}"
-  ],
   "ignore": [
-    "node_modules/**",
-    ".pnpm-store/**",
-    ".next/**",
-    ".expo/**",
-    "dist/**",
-    "build/**",
-    "coverage/**",
-    "graphify-out/**",
-    ".yagni-out/**",
-    ".nx/**",
     ".cache/**",
     ".gocache*/**",
     ".gomodcache*/**",
@@ -50,12 +10,6 @@
     "infra/**",
     "governance/**",
     ".github/**"
-  ],
-  "ignoreFiles": [
-    "**/*.generated.ts",
-    "**/*.generated.tsx",
-    "**/*.gen.ts",
-    "**/__generated__/**"
   ],
   "ignoreDependencies": [
     "@react-native-async-storage/async-storage",
@@ -75,7 +29,6 @@
     "react-native-worklets",
     "react-native-web",
     "@bthwani/app-shell",
-    "@bthwani/core-identity",
     "@expo/vector-icons",
     "@types/react",
     "@ast-grep/cli",
@@ -83,11 +36,79 @@
     "autocannon",
     "babel-plugin-react-compiler",
     "dependency-cruiser",
-    "jscpd",
-    "madge",
     "markdownlint-cli2",
     "sherif",
     "size-limit"
   ],
-  "ignoreExportsUsedInFile": true
+  "ignoreBinaries": [
+    "dev",
+    "go",
+    "pwsh",
+    "graphify",
+    "k6",
+    "gitleaks"
+  ],
+  "ignoreExportsUsedInFile": true,
+  "rules": {
+    "duplicates": "off"
+  },
+  "workspaces": {
+    "apps/*/runtime": {
+      "entry": [
+        "src/App.tsx",
+        "src/index.{ts,tsx}",
+        "src/main.{ts,tsx}",
+        "src/app/**/index.{ts,tsx}",
+        "src/app/**/*Screen.{ts,tsx}"
+      ]
+    },
+    "services/dsh": {
+      "entry": [
+        "frontend/app-*/index.{ts,tsx}",
+        "frontend/app-*/**/*Surface.tsx",
+        "frontend/app-*/**/*Screen.tsx",
+        "frontend/app-*/**/*Panel.tsx",
+        "frontend/app-*/**/*Sheet.tsx",
+        "frontend/control-panel/**/*Screen.tsx",
+        "frontend/control-panel/**/*Panel.tsx",
+        "frontend/shared/**/index.{ts,tsx}",
+        "frontend/shared/**/*.registry.ts",
+        "frontend/shared/**/*.routes.ts",
+        "frontend/shared/**/*.contract.ts",
+        "frontend/shared/**/*.policy.ts",
+        "frontend/shared/**/*.view-model.ts",
+        "frontend/shared/**/*.adapter.ts",
+        "frontend/shared/**/*.transport.ts",
+        "frontend/shared/**/*.state-machine.ts",
+        "frontend/shared/**/*.states.ts",
+        "frontend/shared/**/*.types.ts",
+        "frontend/shared/**/*.model.ts",
+        "frontend/shared/**/*.api.ts",
+        "frontend/shared/**/*.client.ts",
+        "frontend/shared/**/*.map.ts"
+      ]
+    },
+    "services/wlt": {
+      "entry": [
+        "frontend/shared/**/*.ts"
+      ]
+    },
+    "shared/ui-kit": {
+      "entry": [
+        "src/**/*.{ts,tsx}"
+      ]
+    },
+    "core/identity": {
+      "entry": ["clients/index.ts", "clients/index.js", "clients/use-identity-session.js"]
+    },
+    "core/platform-control": {
+      "entry": ["service.manifest.ts"]
+    },
+    "core/providers": {
+      "entry": ["service.manifest.ts"]
+    },
+    "core/workforce": {
+      "entry": ["service.manifest.ts"]
+    }
+  }
 }

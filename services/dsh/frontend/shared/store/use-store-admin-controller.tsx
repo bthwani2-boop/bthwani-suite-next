@@ -41,6 +41,7 @@ export type StoreAdminController = {
   readonly nextPage: () => void;
   readonly prevPage: () => void;
   readonly retry: () => void;
+  readonly reload: () => void;
   readonly actionState: StoreActionState;
   readonly govern: (storeId: string, input: OperatorStoreGovernanceRequest) => Promise<void>;
 };
@@ -105,6 +106,7 @@ export function useStoreAdminController(authKind = "unauthenticated"): StoreAdmi
     nextPage,
     prevPage,
     retry,
+    reload: retry,
     actionState,
     govern,
   };

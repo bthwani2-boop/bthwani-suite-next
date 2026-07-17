@@ -5,7 +5,27 @@ import type { DshFulfillmentDeliveryMode } from '../delivery/delivery.contract';
 import type { CanonicalOperationsGroupId } from './dsh-operational.contract';
 export type { CanonicalOperationsGroupId };
 
-export type OperationsPanelId = 'detail' | 'chat' | 'batches';
+export type OperationsPanelId = 'detail' | 'timeline' | 'chat' | 'batches' | 'proof' | 'audit' | 'dispatch' | 'exception';
+
+export type DshControlPanelTone = 'neutral' | 'success' | 'warning' | 'danger';
+
+/**
+ * Normalizes data-driven tone labels (from preview/runtime data) to
+ * the standard set used by UI components.
+ * Used by all operations screens to render status tags and risk badges.
+ */
+export const DSH_CONTROL_PANEL_TONE_MAP: Record<string, DshControlPanelTone> = {
+  warning: 'warning',
+  danger: 'danger',
+  best: 'success',
+  brand: 'neutral',
+  success: 'success',
+  neutral: 'neutral',
+  completed: 'success',
+  delivered: 'success',
+  cancelled: 'danger',
+  pending: 'warning',
+};
 
 export type DshFulfillmentOperationalMode = DshFulfillmentDeliveryMode;
 
