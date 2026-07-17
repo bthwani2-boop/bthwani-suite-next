@@ -65,14 +65,14 @@ jobs:
       - name: Build backend
         working-directory: core/platform-control/backend
         run: go build ./...
-      - name: Test backend
+      - name: Test backend without database
         working-directory: core/platform-control/backend
         run: go test ./... -count=1
 
   database:
-    name: Platform control migration verification
+    name: Platform control migration and workflow verification
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     services:
       postgres:
         image: postgres:16-alpine
@@ -94,6 +94,11 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           persist-credentials: false
+      - name: Setup Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: core/platform-control/backend/go.mod
+          cache: true
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
       - name: Apply every platform-control migration
@@ -111,6 +116,9 @@ jobs:
           for table in platform_variables platform_feature_flags platform_change_sets platform_change_set_items platform_audit_events; do
             test "$(psql "$DATABASE_URL" -tAc "SELECT to_regclass('public.$table') IS NOT NULL")" = t
           done
+      - name: Prove maker-checker apply readback and rollback
+        working-directory: core/platform-control/backend
+        run: go test ./internal/platformcontrol -count=1 -run TestGovernedChangeSetApplyAndRollback -v
 
   frontend:
     name: Platform control frontend contracts and types
