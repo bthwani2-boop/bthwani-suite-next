@@ -1,46 +1,63 @@
 ---
 name: bthwani-evidence-gate-router
-version: 2026.06.19-clean
-summary: Choose the smallest sufficient verification gate for the task.
+version: 2026.07.17-v1
+summary: Select the smallest sufficient evidence scopes and checks without granting approval or closure.
 ---
 
 # bthwani-evidence-gate-router
 
+## Purpose
+
+Classify the evidence needed for a claim and select the smallest sufficient static, contract, test, runtime, visual, QA, security, release, or production checks.
+
 ## Invoke when
 
-- user asks for closure/readiness/verification level
-- task is high-risk
-- agent is unsure whether escalation is required
+- A task requests verification, readiness, closure, or a decision whose evidence scope is unclear.
+- A high-risk change requires independent or multi-scope evidence.
+- Another skill needs a precise verification route.
 
-## Read before
+## Do not invoke when
 
-`AGENTS.md`, `.agents/EVIDENCE_GATE_ROUTER.md`, relevant `package.json` scripts
+- The task is text-only and makes no implementation, readiness, or closure claim.
+- A specialist skill already defines the exact targeted check and no broader decision is requested.
 
-## Execution contract
+## Authority boundary
 
-Prefer CODE_BASED_LEAN. Select the smallest useful code-based check. Escalate only when risk requires it.
+This skill owns evidence-scope routing only. It cannot approve its own evidence, change stage state, accept residual risk, approve release, or declare final closure.
+
+## Evidence scopes
+
+- `STATIC_CODE`
+- `SCHEMA_CONTRACT`
+- `UNIT_TEST`
+- `INTEGRATION_TEST`
+- `RUNTIME_SMOKE`
+- `VISUAL_FLOW`
+- `INDEPENDENT_QA`
+- `SECURITY_REVIEW`
+- `RELEASE_READINESS`
+- `PRODUCTION_VERIFICATION`
+
+Use `CODE_BASED_LEAN` for ordinary work. Escalate only when the claim, risk, or requested stage requires it. Evidence must be tied to the same commit for any readiness or closure decision.
 
 ## Forbidden
 
-- do not run broad verification for text-only changes
-- do not claim closure from a tool summary
-- do not require visual evidence or screenshots for UI changes unless escalation rules, final visual closure, release/store requirements, or explicit user requests apply
-- do not require long output blocks for normal execution
+- Requiring broad builds, screenshots, or evidence packs for every small change.
+- Treating a generated report, declaration, runtime map, or prior run as proof for a newer commit.
+- Mapping a scope-specific pass directly to `CLOSED_WITH_EVIDENCE`.
+- Producing or committing transient evidence by default.
 
 ## Required output
 
-- selected mode: CODE_BASED_LEAN or ESCALATED
-- targeted check if used
-- remaining risk
+```text
+evidence_mode:
+claim:
+required_scopes:
+selected_checks:
+same_commit_required:
+independent_approvals:
+missing_evidence:
+decision:
+```
 
-Evidence files are required only when escalation applies, following the canonical policy in [LEAN_CODE_BASED_CHECK.md](../../../governance/LEAN_CODE_BASED_CHECK.md).
-
-## Failure decision
-
-- insufficient evidence -> `NEEDS_EVIDENCE`
-- visual evidence missing (only when escalation/release/explicit request applies) -> `NEEDS_VISUAL_EVIDENCE`
-- failed gate -> `FIX_REQUIRED`
-
-## Notes
-
-All operations and scans must obey the token-drain exclusions specified in [LEAN_CODE_BASED_CHECK.md](../../../governance/LEAN_CODE_BASED_CHECK.md).
+Allowed decisions: `PASS`, `FIX_REQUIRED`, `NEEDS_EVIDENCE`, `BLOCKED_EXTERNAL`, and `OUT_OF_SCOPE_FOR_THIS_JOURNEY`.
