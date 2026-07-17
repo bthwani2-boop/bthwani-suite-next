@@ -76,7 +76,9 @@ jobs:
           files="$(gofmt -l .)"
           if [ -n "$files" ]; then
             printf '%s\n' "$files" | tee ../../../gofmt-files.txt
-            gofmt -d . > ../../../gofmt.patch
+            gofmt -w $files
+            git diff -- . > ../../../gofmt.patch
+            tar -czf ../../../gofmt-formatted.tar.gz $files
             exit 1
           fi
       - name: Upload gofmt diagnostics
@@ -87,6 +89,7 @@ jobs:
           path: |
             gofmt-files.txt
             gofmt.patch
+            gofmt-formatted.tar.gz
           if-no-files-found: error
           retention-days: 3
       - name: Vet
