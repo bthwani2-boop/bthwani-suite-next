@@ -5,7 +5,6 @@
     {"id":"external-agent-donor-reference","name":"External Agent Donor Reference","path":".agents/skills/external-agent-donor-reference","owner":"BThwani Platform Team","scope":"platform","evidence_required":false,"contract_level":"legacy"},
     {"id":"bthwani-agent-handoff-evidence-pack","name":"Handoff Evidence Pack","path":".agents/skills/bthwani-agent-handoff-evidence-pack","owner":"BThwani Platform Team","scope":"platform","evidence_required":false,"contract_level":"legacy"},
     {"id":"bthwani-agent-skill-integrity","name":"Agent Skill Integrity","path":".agents/skills/bthwani-agent-skill-integrity","owner":"BThwani Platform Team","scope":"platform","evidence_required":false,"contract_level":"legacy"},
-
     {
       "id":"bthwani-api-runtime-binding","name":"API Runtime Binding","path":".agents/skills/bthwani-api-runtime-binding","owner":"BThwani Platform Team","scope":"backend","evidence_required":true,
       "contract_level":"governed","version":"2026.07.17-v1","authority":["api_contract_binding"],"depends_on":["bthwani-current-workspace-authority"],"conflicts_with":[],"invoke_when":["A public API contract, generated client, backend route, or frontend API binding changes."],"do_not_invoke_when":["No API or runtime binding is affected."],"risk_floor":"T2_SPECIALIST","output_contract":"API contract, route, generated-client, consumer, checks, decision, remaining risk."
@@ -31,6 +30,10 @@
     },
     {"id":"bthwani-foundation-execution","name":"Foundation Execution","path":".agents/skills/bthwani-foundation-execution","owner":"BThwani Platform Team","scope":"shared","evidence_required":false,"contract_level":"legacy"},
     {"id":"bthwani-frontend-design-excellence","name":"Frontend Design Excellence","path":".agents/skills/bthwani-frontend-design-excellence","owner":"BThwani UI Team","scope":"frontend","evidence_required":true,"contract_level":"legacy"},
+    {
+      "id":"bthwani-governance-ci-guardian","name":"Governance and CI Guardian","path":".agents/skills/bthwani-governance-ci-guardian","owner":"BThwani Governance Team","scope":"platform","evidence_required":true,
+      "contract_level":"governed","version":"2026.07.17-v1","authority":["governance_contract_integrity","ci_workflow_policy"],"depends_on":["bthwani-current-workspace-authority","bthwani-evidence-gate-router"],"conflicts_with":[],"invoke_when":["Governance, agents, skills, guards, stage gates, local actions, or GitHub workflows change."],"do_not_invoke_when":["No governance control-plane or CI policy is affected."],"risk_floor":"T3_ADVISORY_MAX","output_contract":"Pinned ref, governance changes, CI changes, authority decisions, checks, decision, remaining risks."
+    },
     {"id":"bthwani-guard-command-router","name":"Guard Command Router","path":".agents/skills/bthwani-guard-command-router","owner":"BThwani Platform Team","scope":"platform","evidence_required":false,"contract_level":"legacy"},
     {"id":"bthwani-legacy-extraction","name":"Legacy Extraction","path":".agents/skills/bthwani-legacy-extraction","owner":"BThwani Migration Team","scope":"shared","evidence_required":false,"contract_level":"legacy"},
     {"id":"bthwani-machine-readable-matrix-governor","name":"Machine Readable Matrix Governor","path":".agents/skills/bthwani-machine-readable-matrix-governor","owner":"BThwani Platform Team","scope":"shared","evidence_required":false,"contract_level":"legacy"},
