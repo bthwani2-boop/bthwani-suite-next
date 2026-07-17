@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "platformMode": "BTHWANI_NATIVE_PLATFORM",
+  "saasReadinessMode": "SAAS_READY_DEFERRED",
+  "commercialActivationState": "BLOCKED_BY_POLICY",
+  "tenantDefinition": "A tenant is the platform operator or organization that owns an isolated operating context; it is not automatically a partner, store, user, city, or service.",
+  "trustedTenantContextRequired": true,
+  "clientSuppliedTenantTrusted": false,
+  "deferredCommercialFeatures": [
+    "automated invoicing",
+    "commercial subscription billing",
+    "complex usage metering",
+    "custom domains",
+    "database per tenant",
+    "marketplace extensions",
+    "multi-region tenant placement",
+    "paid plan matrix",
+    "per-tenant deployment",
+    "self-service tenant signup",
+    "white-label customization"
+  ],
+  "activationEvidence": {
+    "tenantOwnedEntitiesClassified": "NOT_PROVEN",
+    "tenantContextPropagationVerified": "NOT_PROVEN",
+    "crossTenantNegativeTestsPassed": "NOT_PROVEN",
+    "crossTenantDataLeakageZero": "NOT_PROVEN",
+    "tenantBackupRestoreVerified": "NOT_PROVEN",
+    "tenantExportDeletionVerified": "NOT_PROVEN",
+    "perTenantObservabilityAvailable": "NOT_PROVEN",
+    "quotaIsolationVerified": "NOT_PROVEN",
+    "wltTenantFinancialIsolationVerified": "NOT_PROVEN",
+    "independentSecurityReviewPassed": "NOT_PROVEN",
+    "incidentRollbackRunbooksVerified": "NOT_PROVEN",
+    "legalPrivacyCommercialModelApproved": "NOT_PROVEN"
+  },
+  "canonicalDecision": "NEEDS_EVIDENCE",
+  "decisionVocabulary": "governance/contracts/decision-vocabulary.json"
+}
