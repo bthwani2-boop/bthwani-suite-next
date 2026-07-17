@@ -1,7 +1,8 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "repository": "bthwani2-boop/bthwani-suite-next",
   "targetBranch": "bassam",
+  "observedAt": "2026-07-17T22:24:42Z",
   "observed": {
     "authenticatedUser": "bthwani2-boop",
     "organizationMembershipCount": 0,
@@ -9,18 +10,21 @@
     "codeownersMode": "SINGLE_OWNER_ROUTING",
     "branchProtectionState": "NOT_PROVEN",
     "requiredChecksState": "NOT_PROVEN",
-    "independentReviewerIdentityState": "NOT_PROVEN"
+    "independentReviewerIdentityState": "NOT_PROVEN",
+    "sameCommitWorkflowRunsState": "NOT_PROVEN"
   },
   "claims": {
     "routingConfigured": true,
     "separationOfDutiesProven": false,
+    "sameCommitCiProven": false,
     "highRiskClosureAllowed": false
   },
   "requiredRemediation": [
     "Add at least one distinct collaborator or organization team that can provide independent governed approvals.",
     "Configure and verify branch protection or a repository ruleset for the protected integration branch.",
     "Configure and verify required status checks and stale-approval dismissal before high-risk closure.",
-    "Map governance, CI, quality, security, and release approvals to real identities or teams without self-approval."
+    "Map governance, CI, quality, security, finance, release, risk, and independent implementation review to real identities or teams without self-approval.",
+    "Obtain completed successful GitHub Actions results for the same immutable commit used by the closure claim."
   ],
   "decision": "NEEDS_EVIDENCE"
 }
