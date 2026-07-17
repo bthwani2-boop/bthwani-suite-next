@@ -1,7 +1,9 @@
 # Automated Execution and Governance Policy
 
-Status: OWNER_CONTRACT
-Authority: `governance/authority/authority-precedence.json`
+Status: DERIVED_SUPPORT
+Authority: `AGENTS.md` and `governance/authority/authority-precedence.json`
+
+This file supports deterministic execution. It is not an owner skill, approval authority, or independent policy source and cannot override `AGENTS.md`, active canonical governance, or machine-readable contracts.
 
 ## Purpose
 
