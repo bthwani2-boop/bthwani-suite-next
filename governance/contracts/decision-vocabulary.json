@@ -1,10 +1,11 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "canonicalDecisions": [
     {
       "id": "PASS",
       "class": "pass",
       "terminal": false,
+      "scopePolicy": "DECLARED_SCOPE",
       "description": "The explicitly declared evidence scope passed. PASS never implies runtime, release, production, or final closure beyond that scope."
     },
     {
@@ -65,28 +66,30 @@
       "id": "CLOSED_WITH_EVIDENCE",
       "class": "closed",
       "terminal": true,
-      "description": "Every applicable gate passed on the same immutable commit with required independent approvals and no open blocker.",
-      "requiredEvidenceScopes": ["static", "runtime", "qa", "security", "release"]
+      "scopePolicy": "ALL_APPLICABLE",
+      "description": "Every evidence scope applicable to the declared impact passed on the same immutable commit with required independent approvals and no open blocker."
     }
   ],
   "aliases": [
     { "alias": "CODE_CHECK_PASS", "canonical": "PASS", "evidenceScope": "static" },
     { "alias": "CODE_CHECK_FAIL", "canonical": "FIX_REQUIRED", "evidenceScope": "static" },
-    { "alias": "DSH_WLT_CODE_CLOSURE_PASS", "canonical": "PASS", "evidenceScope": "static" },
-    { "alias": "DSH_WLT_CODE_CLOSURE_FAIL", "canonical": "FIX_REQUIRED", "evidenceScope": "static" },
+    { "alias": "DSH_WLT_CODE_CLOSURE_PASS", "canonical": "PASS", "evidenceScope": "static", "deprecated": true },
+    { "alias": "DSH_WLT_CODE_CLOSURE_FAIL", "canonical": "FIX_REQUIRED", "evidenceScope": "static", "deprecated": true },
     { "alias": "RUNTIME_SMOKE_PASS", "canonical": "PASS", "evidenceScope": "runtime" },
     { "alias": "RUNTIME_SMOKE_FAIL", "canonical": "FIX_REQUIRED", "evidenceScope": "runtime" },
     { "alias": "UI_VISUAL_PASS", "canonical": "PASS", "evidenceScope": "visual" },
     { "alias": "READY_FOR_PR", "canonical": "READY_FOR_REVIEW", "evidenceScope": "static", "deprecated": true },
-    { "alias": "BLOCKED_NEEDS_EVIDENCE", "canonical": "NEEDS_EVIDENCE", "evidenceScope": "none" },
-    { "alias": "NEEDS_RUNTIME_EVIDENCE", "canonical": "NEEDS_EVIDENCE", "evidenceScope": "runtime" },
-    { "alias": "GATE_PASS", "canonical": "PASS", "evidenceScope": "static" },
-    { "alias": "HARD_BLOCKED_EXTERNAL_ONLY", "canonical": "BLOCKED_EXTERNAL", "evidenceScope": "none" },
+    { "alias": "BLOCKED_NEEDS_EVIDENCE", "canonical": "NEEDS_EVIDENCE", "evidenceScope": "none", "deprecated": true },
+    { "alias": "NEEDS_RUNTIME_EVIDENCE", "canonical": "NEEDS_EVIDENCE", "evidenceScope": "runtime", "deprecated": true },
+    { "alias": "GATE_PASS", "canonical": "PASS", "evidenceScope": "static", "deprecated": true },
+    { "alias": "HARD_BLOCKED_EXTERNAL_ONLY", "canonical": "BLOCKED_EXTERNAL", "evidenceScope": "none", "deprecated": true },
     { "alias": "CLOSED", "canonical": "CLOSED_WITH_EVIDENCE", "evidenceScope": "production", "deprecated": true }
   ],
   "closureRules": {
     "closedDecision": "CLOSED_WITH_EVIDENCE",
-    "requiredScopes": ["static", "runtime", "qa", "security", "release"],
+    "scopePolicy": "ALL_APPLICABLE",
+    "baseRequiredScopes": ["static"],
+    "conditionalRequiredScopes": ["product", "runtime", "visual", "qa", "security", "governance", "ci", "release", "production"],
     "forbiddenOpenClasses": ["fail", "blocked", "pending"]
   }
 }
