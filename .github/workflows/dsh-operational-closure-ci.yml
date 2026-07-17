@@ -1,0 +1,88 @@
+name: DSH Operational Closure CI
+
+on:
+  push:
+    branches: [reem]
+    paths:
+      - 'services/dsh/backend/**'
+      - 'services/dsh/database/migrations/**'
+      - 'services/dsh/frontend/control-panel/operations/**'
+      - 'services/dsh/frontend/shared/operations/**'
+      - 'services/dsh/frontend/shared/platform/**'
+      - 'services/dsh/frontend/shared/special-requests/**'
+      - '.github/workflows/dsh-operational-closure-ci.yml'
+  pull_request:
+    paths:
+      - 'services/dsh/backend/**'
+      - 'services/dsh/database/migrations/**'
+      - 'services/dsh/frontend/control-panel/operations/**'
+      - 'services/dsh/frontend/shared/operations/**'
+      - 'services/dsh/frontend/shared/platform/**'
+      - 'services/dsh/frontend/shared/special-requests/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dsh-operational-closure-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-contract-and-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: services/dsh/backend/go.sum
+      - name: Format gate
+        working-directory: services/dsh/backend
+        run: test -z "$(gofmt -l .)"
+      - name: Vet
+        working-directory: services/dsh/backend
+        run: go vet ./...
+      - name: Unit and integration tests
+        working-directory: services/dsh/backend
+        run: go test ./... -count=1
+
+  fullstack-binding-gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: DSH contract generation is clean
+        run: |
+          pnpm run contracts:lint
+          pnpm run openapi:generate:dsh
+          git diff --exit-code -- services/dsh/contracts/dsh.openapi.yaml services/dsh/clients/generated/dsh-api.ts
+      - name: Binding and boundary gates
+        run: |
+          pnpm run guard:backend-api-binding
+          pnpm run guard:api-binding
+          pnpm run guard:frontend-feature-binding
+          pnpm run guard:fullstack-boundary
+          pnpm run guard:runtime-real-bindings
+      - name: Typecheck affected surfaces
+        run: pnpm run typecheck
+
+  migration-static-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Migration sequence and transaction checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f services/dsh/database/migrations/dsh-059_special_request_dispatch_stage_sync.sql
+          grep -q '^BEGIN;' services/dsh/database/migrations/dsh-059_special_request_dispatch_stage_sync.sql
+          grep -q '^COMMIT;' services/dsh/database/migrations/dsh-059_special_request_dispatch_stage_sync.sql
+          grep -q 'trg_dsh_sync_special_request_dispatch_stage' services/dsh/database/migrations/dsh-059_special_request_dispatch_stage_sync.sql
