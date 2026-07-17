@@ -98,11 +98,14 @@ for (const [agentId, expectedSkillId] of expectedPrimarySkills) {
 const mixedSkill = skillById.get("bthwani-governance-ci-guardian");
 if (!mixedSkill || mixedSkill.status !== "retired" || mixedSkill.contract_level !== "legacy") violations.push({ file: skillPath, line: 0, message: "MIXED_GOVERNANCE_CI_SKILL_MUST_BE_RETIRED" });
 if (index.includes("→ `bthwani-governance-ci-guardian`") || /^- `bthwani-governance-ci-guardian`$/m.test(index)) violations.push({ file: indexPath, line: 0, message: "RETIRED_MIXED_SKILL_STILL_ROUTED" });
-for (const requiredSkill of ["bthwani-governance-contract-guardian", "bthwani-ci-workflow-guardian"]) {
+
+const skillAuthorityMarkers = new Map([
+  ["bthwani-governance-contract-guardian", "`GOVERNANCE_CONTRACT_AUTHORITY`"],
+  ["bthwani-ci-workflow-guardian", "`CI_WORKFLOW_AUTHORITY`"],
+]);
+for (const [requiredSkill, authorityMarker] of skillAuthorityMarkers) {
   if (!index.includes(`\`${requiredSkill}\``)) violations.push({ file: indexPath, line: 0, message: `SEPARATED_SKILL_MISSING_FROM_INDEX ${requiredSkill}` });
-  if (!agentsDoc.includes(`\`${requiredSkill}\``) && !agentsDoc.includes(requiredSkill.replace("bthwani-", "").toUpperCase().replaceAll("-", "_"))) {
-    violations.push({ file: agentsDocPath, line: 0, message: `SEPARATED_AUTHORITY_MISSING_FROM_AGENTS ${requiredSkill}` });
-  }
+  if (!agentsDoc.includes(authorityMarker)) violations.push({ file: agentsDocPath, line: 0, message: `SEPARATED_AUTHORITY_MISSING_FROM_AGENTS ${authorityMarker}` });
 }
 
 for (const authority of [
