@@ -4,20 +4,13 @@ on:
   pull_request:
     branches:
       - master
-      - onebyone
   push:
     branches:
+      - bassam
       - master
-      - implementing
-      - onebyone
   schedule:
-    - cron: '0 3 * * 1'
+    - cron: "0 3 * * 1"
   workflow_dispatch:
-    inputs:
-      reason:
-        description: 'Manual trigger reason'
-        required: false
-        default: 'manual security scan'
 
 permissions:
   contents: read
@@ -25,211 +18,162 @@ permissions:
   pull-requests: read
 
 concurrency:
-  group: security-${{ github.ref }}
+  group: security-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   dependency-review:
-    name: Dependency review (PR only)
+    name: Dependency review
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    if: github.event_name == 'pull_request'
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
       - name: Dependency review
         uses: actions/dependency-review-action@v4
         with:
           fail-on-severity: high
           deny-licenses: GPL-2.0, AGPL-3.0
 
-  govulncheck-wlt:
-    name: govulncheck — WLT backend
+  govulncheck:
+    name: Govulncheck — ${{ matrix.name }}
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: DSH
+            directory: services/dsh/backend
+            go_mod: services/dsh/backend/go.mod
+            go_sum: services/dsh/backend/go.sum
+          - name: WLT
+            directory: services/wlt/backend
+            go_mod: services/wlt/backend/go.mod
+            go_sum: services/wlt/backend/go.sum
+          - name: Identity
+            directory: core/identity/backend
+            go_mod: core/identity/backend/go.mod
+            go_sum: core/identity/backend/go.sum
+          - name: Workforce
+            directory: core/workforce/backend
+            go_mod: core/workforce/backend/go.mod
+            go_sum: core/workforce/backend/go.sum
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
-
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: services/wlt/backend/go.mod
+          go-version-file: ${{ matrix.go_mod }}
           cache: true
-          cache-dependency-path: services/wlt/backend/go.sum
-
-      - name: Install govulncheck
-        run: go install golang.org/x/vuln/cmd/govulncheck@latest
-
+          cache-dependency-path: ${{ matrix.go_sum }}
+      - name: Install version-locked govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@v1.6.0
       - name: Run govulncheck
-        working-directory: services/wlt/backend
+        working-directory: ${{ matrix.directory }}
         run: govulncheck ./...
 
-  govulncheck-dsh:
-    name: govulncheck — DSH backend
+  node-security:
+    name: Node dependency security
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-
+    timeout-minutes: 15
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: services/dsh/backend/go.mod
-          cache: true
-          cache-dependency-path: services/dsh/backend/go.sum
-
-      - name: Install govulncheck
-        run: go install golang.org/x/vuln/cmd/govulncheck@latest
-
-      - name: Run govulncheck
-        working-directory: services/dsh/backend
-        run: govulncheck ./...
-
-  govulncheck-identity:
-    name: govulncheck — Identity backend
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: core/identity/backend/go.mod
-          cache: true
-          cache-dependency-path: core/identity/backend/go.sum
-
-      - name: Install govulncheck
-        run: go install golang.org/x/vuln/cmd/govulncheck@latest
-
-      - name: Run govulncheck
-        working-directory: core/identity/backend
-        run: govulncheck ./...
-
-  govulncheck-workforce:
-    name: govulncheck — Workforce backend
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: core/workforce/backend/go.mod
-          cache: true
-          cache-dependency-path: core/workforce/backend/go.sum
-
-      - name: Install govulncheck
-        run: go install golang.org/x/vuln/cmd/govulncheck@latest
-
-      - name: Run govulncheck
-        working-directory: core/workforce/backend
-        run: govulncheck ./...
-
-  pnpm-audit:
-    name: pnpm audit
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
       - name: Setup PNPM
         uses: pnpm/action-setup@v4
         with:
           version: 10.34.2
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 24.17.0
-          cache: 'pnpm'
-
+          cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
-      - name: pnpm audit (high severity)
+      - name: Audit high severity dependencies
         run: pnpm audit --audit-level=high
 
-  workflow-permissions-audit:
-    name: Workflow permissions audit
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Check all workflows declare explicit permissions
-        run: |
-          echo "Auditing workflow permissions..."
-          VIOLATIONS=""
-          for f in .github/workflows/*.yml; do
-            if ! grep -q "^permissions:" "$f"; then
-              VIOLATIONS="$VIOLATIONS\n  MISSING permissions block: $f"
-            fi
-            if grep -qE "^\s+write-all" "$f"; then
-              VIOLATIONS="$VIOLATIONS\n  FORBIDDEN write-all: $f"
-            fi
-          done
-          if [ -n "$VIOLATIONS" ]; then
-            echo -e "ERROR: Workflow permission violations found:$VIOLATIONS"
-            exit 1
-          fi
-          echo "OK: All workflows have explicit permissions blocks."
-
   oss-security-scans:
-    name: OSS Security & SCA Audits
+    name: OSS filesystem dependency and secrets scans
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-
+    timeout-minutes: 20
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
       - name: Setup PNPM
         uses: pnpm/action-setup@v4
         with:
           version: 10.34.2
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 24.17.0
-          cache: 'pnpm'
-
+          cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: services/dsh/backend/go.mod
-          cache: true
-          cache-dependency-path: services/dsh/backend/go.sum
-
-      - name: Install OSS security scan binaries
+      - name: Install version-locked OSS security tools
         run: bash tools/scripts/install-oss-toolchain-binaries.sh security
-
       - name: Trivy filesystem scan
         run: pnpm run security:trivy
-
       - name: OSV dependency scan
         run: pnpm run security:osv
-
       - name: Gitleaks secrets scan
         run: pnpm run guard:secrets
+
+  workflow-policy:
+    name: Workflow permissions and mutation policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.2
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Guard registry and workflow policy
+        run: pnpm run guard:guard-registry
+
+  security-result:
+    name: Security result
+    if: always()
+    needs:
+      - dependency-review
+      - govulncheck
+      - node-security
+      - oss-security-scans
+      - workflow-policy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Require every applicable security job to pass
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          DEPENDENCY_REVIEW: ${{ needs.dependency-review.result }}
+          GOVULNCHECK: ${{ needs.govulncheck.result }}
+          NODE_SECURITY: ${{ needs.node-security.result }}
+          OSS_SCANS: ${{ needs.oss-security-scans.result }}
+          WORKFLOW_POLICY: ${{ needs.workflow-policy.result }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = pull_request ]; then
+            test "$DEPENDENCY_REVIEW" = success
+          else
+            test "$DEPENDENCY_REVIEW" = skipped
+          fi
+          test "$GOVULNCHECK" = success
+          test "$NODE_SECURITY" = success
+          test "$OSS_SCANS" = success
+          test "$WORKFLOW_POLICY" = success
