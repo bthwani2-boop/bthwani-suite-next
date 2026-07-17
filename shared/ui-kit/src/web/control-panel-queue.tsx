@@ -14,10 +14,9 @@ export type WebControlPanelQueueProps = Omit<BaseWebControlPanelQueueProps, 'tit
  * allowing a rich heading where a queue owns a local disclosure control.
  */
 export function WebControlPanelQueue({ title, ...props }: WebControlPanelQueueProps) {
-  return (
-    <BaseWebControlPanelQueue
-      {...props}
-      title={title as unknown as string | undefined}
-    />
-  );
+  const baseProps: BaseWebControlPanelQueueProps = title === undefined
+    ? props
+    : { ...props, title: title as unknown as string };
+
+  return <BaseWebControlPanelQueue {...baseProps} />;
 }
