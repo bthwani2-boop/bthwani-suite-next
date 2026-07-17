@@ -1,6 +1,9 @@
 package platformcontrol
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 type PlatformControlState string
 
@@ -11,6 +14,27 @@ const (
 	StateRollbackUnavailable PlatformControlState = "ROLLBACK_UNAVAILABLE"
 	StateContractRequired    PlatformControlState = "CONTRACT_REQUIRED"
 	StateReadOnlyBound       PlatformControlState = "READ_ONLY_BOUND"
+	StateOperational         PlatformControlState = "OPERATIONAL"
+)
+
+type ChangeSetStatus string
+
+const (
+	ChangeSetDraft      ChangeSetStatus = "draft"
+	ChangeSetValidated  ChangeSetStatus = "validated"
+	ChangeSetSubmitted  ChangeSetStatus = "submitted"
+	ChangeSetApproved   ChangeSetStatus = "approved"
+	ChangeSetRejected   ChangeSetStatus = "rejected"
+	ChangeSetApplied    ChangeSetStatus = "applied"
+	ChangeSetRolledBack ChangeSetStatus = "rolled_back"
+	ChangeSetFailed     ChangeSetStatus = "failed"
+)
+
+type ChangeTargetType string
+
+const (
+	ChangeTargetVariable    ChangeTargetType = "variable"
+	ChangeTargetFeatureFlag ChangeTargetType = "feature_flag"
 )
 
 type RuntimeSnapshot struct {
@@ -42,6 +66,7 @@ type Variable struct {
 	Classification string               `json:"classification"`
 	ScopeType      string               `json:"scopeType"`
 	ScopeID        string               `json:"scopeId,omitempty"`
+	Value          any                  `json:"value,omitempty"`
 	Revision       string               `json:"revision"`
 	Status         PlatformControlState `json:"status"`
 	EffectiveFrom  *time.Time           `json:"effectiveFrom,omitempty"`
@@ -49,10 +74,12 @@ type Variable struct {
 }
 
 type FeatureFlag struct {
-	Key      string               `json:"key"`
-	Status   PlatformControlState `json:"status"`
-	Revision string               `json:"revision"`
-	Enabled  *bool                `json:"enabled,omitempty"`
+	Key       string               `json:"key"`
+	Owner     string               `json:"ownerService"`
+	Status    PlatformControlState `json:"status"`
+	Revision  string               `json:"revision"`
+	Enabled   *bool                `json:"enabled,omitempty"`
+	Targeting map[string]any       `json:"targeting,omitempty"`
 }
 
 type ServicePosture struct {
@@ -68,17 +95,78 @@ type HealthSnapshot struct {
 }
 
 type AuditEvent struct {
-	ID        string               `json:"id"`
-	Action    string               `json:"action"`
-	ActorID   string               `json:"actorId"`
-	CreatedAt time.Time            `json:"createdAt"`
-	Status    PlatformControlState `json:"status"`
+	ID            string          `json:"id"`
+	ChangeSetID   string          `json:"changeSetId,omitempty"`
+	Action        string          `json:"action"`
+	ActorID       string          `json:"actorId"`
+	ActorRoles    []string        `json:"actorRoles,omitempty"`
+	CreatedAt     time.Time       `json:"createdAt"`
+	Status        string          `json:"status"`
+	Reason        string          `json:"reason,omitempty"`
+	CorrelationID string          `json:"correlationId,omitempty"`
+}
+
+type ChangeSetItem struct {
+	ID                  string           `json:"id"`
+	TargetType          ChangeTargetType `json:"targetType"`
+	TargetKey           string           `json:"targetKey"`
+	OwnerService        string           `json:"ownerService"`
+	ScopeType           string           `json:"scopeType"`
+	ScopeID             string           `json:"scopeId,omitempty"`
+	ValueType           string           `json:"valueType"`
+	Classification      string           `json:"classification"`
+	ExpectedRevision    int64            `json:"expectedRevision"`
+	BeforeValue         any              `json:"beforeValue,omitempty"`
+	ProposedValue       any              `json:"proposedValue"`
+	AppliedRevision     *int64           `json:"appliedRevision,omitempty"`
 }
 
 type ChangeSet struct {
-	ID        string               `json:"id"`
-	Status    PlatformControlState `json:"status"`
-	CreatedAt time.Time            `json:"createdAt"`
+	ID                 string           `json:"id"`
+	Title              string           `json:"title"`
+	Reason             string           `json:"reason"`
+	ImpactAssessment   string           `json:"impactAssessment"`
+	RollbackPlan       string           `json:"rollbackPlan"`
+	Status             ChangeSetStatus  `json:"status"`
+	ProposerActorID    string           `json:"proposerActorId"`
+	ApproverActorID    string           `json:"approverActorId,omitempty"`
+	AppliedByActorID   string           `json:"appliedByActorId,omitempty"`
+	RejectedByActorID  string           `json:"rejectedByActorId,omitempty"`
+	RejectionReason    string           `json:"rejectionReason,omitempty"`
+	Version            int64            `json:"version"`
+	CreatedAt          time.Time        `json:"createdAt"`
+	UpdatedAt          time.Time        `json:"updatedAt"`
+	ValidatedAt        *time.Time       `json:"validatedAt,omitempty"`
+	SubmittedAt        *time.Time       `json:"submittedAt,omitempty"`
+	ApprovedAt         *time.Time       `json:"approvedAt,omitempty"`
+	RejectedAt         *time.Time       `json:"rejectedAt,omitempty"`
+	AppliedAt          *time.Time       `json:"appliedAt,omitempty"`
+	RolledBackAt       *time.Time       `json:"rolledBackAt,omitempty"`
+	Items              []ChangeSetItem  `json:"items"`
+}
+
+type CreateChangeSetItemInput struct {
+	TargetType       ChangeTargetType `json:"targetType"`
+	TargetKey        string           `json:"targetKey"`
+	OwnerService     string           `json:"ownerService"`
+	ScopeType        string           `json:"scopeType"`
+	ScopeID          string           `json:"scopeId,omitempty"`
+	ValueType        string           `json:"valueType"`
+	Classification   string           `json:"classification"`
+	ExpectedRevision int64            `json:"expectedRevision"`
+	ProposedValue    json.RawMessage  `json:"proposedValue"`
+}
+
+type CreateChangeSetInput struct {
+	Title            string                     `json:"title"`
+	Reason           string                     `json:"reason"`
+	ImpactAssessment string                     `json:"impactAssessment"`
+	RollbackPlan     string                     `json:"rollbackPlan"`
+	Items            []CreateChangeSetItemInput `json:"items"`
+}
+
+type RejectChangeSetInput struct {
+	Reason string `json:"reason"`
 }
 
 type ApiError struct {
