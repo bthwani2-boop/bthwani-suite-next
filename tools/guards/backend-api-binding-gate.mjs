@@ -20,6 +20,7 @@ const services = [
   {
     name: "WLT",
     openapi: "services/wlt/contracts/wlt.openapi.yaml",
+    additionalOpenapi: ["services/wlt/contracts/wlt.commercial.openapi.yaml"],
     router: "services/wlt/backend/internal/http/server.go",
   },
   {
@@ -44,6 +45,10 @@ const gatedWltMutationRoutes = new Set([
   "POST /wlt/cod-records/{codRecordId}/remit",
   "POST /wlt/commissions",
   "POST /wlt/ledger/entries",
+  "POST /wlt/commercial/products",
+  "PATCH /wlt/commercial/products/{productReference}",
+  "POST /wlt/commercial/loyalty-entries",
+  "POST /wlt/commercial/subscriptions",
 ]);
 
 function contractFiles(service) {
@@ -222,6 +227,8 @@ const wltFinancialReadRoutes = new Set([
   "GET /wlt/commissions",
   "GET /wlt/ledger/entries",
   "GET /wlt/ledger/entries/{entryId}",
+  "GET /wlt/commercial/products/{productReference}",
+  "GET /wlt/commercial/clients/{clientId}/benefits",
 ]);
 
 function validateWltFinancialReadRoute(service, operation) {
@@ -357,6 +364,7 @@ function scanOutboundLiterals(file, targetService, prefix) {
 }
 
 scanOutboundLiterals("services/dsh/backend/internal/wlt/client.go", "WLT", "/wlt/");
+scanOutboundLiterals("services/dsh/backend/internal/wlt/commercial.go", "WLT", "/wlt/");
 scanOutboundLiterals("services/wlt/backend/internal/dshnotify/client.go", "DSH", "/dsh/");
 
 fail(guardId, violations);
