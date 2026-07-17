@@ -10,6 +10,7 @@ const roles = fs.readFileSync(path.join(repoRoot, rolesFile), "utf8");
 const agentRegistry = JSON.parse(fs.readFileSync(path.join(repoRoot, agentRegistryFile), "utf8"));
 
 for (const marker of [
+  "sdlc_program_authority:",
   "product_manager_authority:",
   "product_owner_acceptance_authority:",
   "governance_contract_authority:",
@@ -34,11 +35,13 @@ for (const marker of [
   "- governance_contract_approval",
   "- ci_workflow_approval",
   "- finance_approval",
+  "- independent_review_high_risk",
   "- final_closure",
 ]) if (!roles.includes(marker)) violations.push({ file: rolesFile, message: `MISSING_ROLE_SEPARATION_RULE ${marker}` });
 
 const agents = new Map(agentRegistry.entries.map((entry) => [entry.id, entry]));
 for (const requiredId of [
+  "sdlc-program-authority",
   "product-manager-authority",
   "product-owner-acceptance-authority",
   "governance-contract-authority",
@@ -49,18 +52,24 @@ for (const requiredId of [
   "application-security-authority",
   "financial-control-authority",
   "release-authority",
+  "risk-acceptance-authority",
 ]) if (!agents.has(requiredId)) violations.push({ file: agentRegistryFile, message: `MISSING_REQUIRED_AUTHORITY_AGENT ${requiredId}` });
 
+const supervisor = agents.get("master-advisory-supervisor");
 const productManager = agents.get("product-manager-authority");
 const productOwner = agents.get("product-owner-acceptance-authority");
 const governance = agents.get("governance-contract-authority");
 const ci = agents.get("ci-workflow-authority");
+const reviewer = agents.get("independent-reviewer");
 const finance = agents.get("financial-control-authority");
+const risk = agents.get("risk-acceptance-authority");
 
-if (productManager && productOwner && productManager.id === productOwner.id) violations.push({ file: agentRegistryFile, message: "PRODUCT_MANAGER_AND_PRODUCT_OWNER_MUST_BE_DISTINCT" });
+if (productManager?.owner === productOwner?.owner) violations.push({ file: agentRegistryFile, message: "PRODUCT_MANAGER_AND_PRODUCT_OWNER_OWNERS_MUST_BE_DISTINCT" });
 if (productManager?.owner === "BThwani Engineering Team" || productOwner?.owner === "BThwani Engineering Team") violations.push({ file: agentRegistryFile, message: "ENGINEERING_MUST_NOT_OWN_PRODUCT_APPROVAL_AUTHORITY" });
-if (governance && ci && governance.owner === ci.owner) violations.push({ file: agentRegistryFile, message: "GOVERNANCE_AND_CI_APPROVAL_OWNERS_MUST_BE_DISTINCT" });
+if (governance?.owner === ci?.owner) violations.push({ file: agentRegistryFile, message: "GOVERNANCE_AND_CI_APPROVAL_OWNERS_MUST_BE_DISTINCT" });
+if (reviewer?.primary_file === supervisor?.primary_file) violations.push({ file: agentRegistryFile, message: "REVIEWER_MUST_NOT_SHARE_COORDINATOR_SKILL" });
 if (finance?.owner === "BThwani Engineering Team") violations.push({ file: agentRegistryFile, message: "ENGINEERING_MUST_NOT_OWN_FINANCIAL_APPROVAL_AUTHORITY" });
+if (risk?.owner === "BThwani Engineering Team") violations.push({ file: agentRegistryFile, message: "ENGINEERING_MUST_NOT_OWN_RISK_ACCEPTANCE_AUTHORITY" });
 
 const approvalOwner = new Map();
 for (const agent of agentRegistry.entries) {
@@ -77,10 +86,14 @@ for (const [domain, expected] of [
   ["product_acceptance", "product-owner-acceptance-authority"],
   ["governance_contract_approval", "governance-contract-authority"],
   ["ci_workflow_approval", "ci-workflow-authority"],
+  ["implementation_review", "independent-reviewer"],
   ["finance_approval", "financial-control-authority"],
   ["qa_approval", "independent-quality-authority"],
   ["security_approval", "application-security-authority"],
+  ["isolation_security_approval", "application-security-authority"],
   ["release_approval", "release-authority"],
+  ["production_verification", "release-authority"],
+  ["residual_risk_acceptance", "risk-acceptance-authority"],
 ]) if (approvalOwner.get(domain) !== expected) violations.push({ file: agentRegistryFile, message: `APPROVAL_DOMAIN_OWNER_DRIFT ${domain}: expected=${expected} actual=${approvalOwner.get(domain) ?? "missing"}` });
 
 fail(guardId, violations);
