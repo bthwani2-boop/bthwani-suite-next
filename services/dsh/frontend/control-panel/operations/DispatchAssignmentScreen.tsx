@@ -24,7 +24,11 @@ import {
   getSurfaceRoleSummaryForMode,
 } from '../../shared/identity-access/surface-visibility.policy';
 
-export type DispatchAssignmentScreenProps = { hubHref: string; subGroup?: string };
+export type DispatchAssignmentScreenProps = {
+  hubHref: string;
+  subGroup?: string;
+  focusParams?: { orderId?: string | undefined } | undefined;
+};
 
 // SSoT: resolved once at module level — bthwani_delivery is the only mode
 // that enters the captain dispatch queue.
@@ -69,10 +73,10 @@ function buildRuntimeDispatchRow(o: DshRuntimeOrderRow): DispatchRowState {
   };
 }
 
-export function DispatchAssignmentScreen({ subGroup }: DispatchAssignmentScreenProps) {
+export function DispatchAssignmentScreen({ subGroup, focusParams }: DispatchAssignmentScreenProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const urlOrderId = searchParams.get('orderId') ?? null;
+  const urlOrderId = focusParams?.orderId ?? searchParams.get('orderId') ?? null;
   const [selectedRowId, setSelectedRowId] = React.useState<string | null>(null);
   const [runtimeLoaded, setRuntimeLoaded] = React.useState(false);
   const [runtimeOffline, setRuntimeOffline] = React.useState(false);

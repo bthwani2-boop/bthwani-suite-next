@@ -7,7 +7,7 @@ import {
   WebControlPanelLaneTabs,
   WebControlPanelSubTabs,
 } from '@bthwani/ui-kit/web';
-import type { CanonicalOperationsGroupId, OperationsPanelId, OperationsViewState } from './operations.types';
+import type { CanonicalOperationsGroupId, OperationsFocusParams, OperationsPanelId, OperationsViewState } from './operations.types';
 import { DSH_NAV_ITEMS } from '@bthwani/control-panel/shell';
 import styles from '../shared/control-panel-surface.module.css';
 import {
@@ -164,15 +164,15 @@ export function ControlPanelDshOperationsScreen({
           </div>
           <Box gap={0}>
             {/* Breadcrumb Navigation */}
-            <div className={styles.surfaceBreadcrumb}>
+            <div className={styles.surfaceBreadcrumb} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
               <button
                 type="button"
                 className={styles.surfaceBreadcrumbButton}
                 onClick={() => router.push(getDshRoute('dashboard'))}
               >
-                الرئيسية
+                🏠 الرئيسية
               </button>
-              <span className={styles.surfaceBreadcrumbSeparator}>◀</span>
+              <span className={styles.surfaceBreadcrumbSeparator}>/</span>
               <button
                 type="button"
                 className={styles.surfaceBreadcrumbButton}
@@ -180,18 +180,19 @@ export function ControlPanelDshOperationsScreen({
               >
                 العمليات
               </button>
-              <span className={styles.surfaceBreadcrumbSeparator}>◀</span>
+              <span className={styles.surfaceBreadcrumbSeparator}>/</span>
               <button
                 type="button"
                 className={activeSubGroupMeta ? styles.surfaceBreadcrumbButton : styles.surfaceBreadcrumbCurrent}
                 onClick={() => router.push(buildOperationsHref(activeGroup))}
+                style={{ fontWeight: 800 }}
               >
                 {activeGroupMeta.label}
               </button>
               {activeSubGroupMeta && (
                 <>
-                  <span className={styles.surfaceBreadcrumbSeparator}>◀</span>
-                  <span className={styles.surfaceBreadcrumbLeaf}>
+                  <span className={styles.surfaceBreadcrumbSeparator}>/</span>
+                  <span className={styles.surfaceBreadcrumbLeaf} style={{ color: 'var(--bthwani-control-panel-brand)' }}>
                     {activeSubGroupMeta.label}
                   </span>
                 </>
@@ -199,16 +200,18 @@ export function ControlPanelDshOperationsScreen({
             </div>
 
             <div className={styles.surfaceHeaderTextRow}>
-              <h1 className={styles.surfaceHeaderTitle}>العمليات</h1>
-              <Box paddingX={1} paddingY={0} background="brandSurface" radiusToken="xs">
-                <span className={styles.surfaceHeaderBadgeText}>غرفة قيادة</span>
+              <h1 className={styles.surfaceHeaderTitle}>إدارة العمليات</h1>
+              <Box paddingX={2} paddingY={1} background="brandSurface" radiusToken="sm" style={{ border: '1px solid color-mix(in srgb, var(--bthwani-control-panel-brand) 30%, transparent)' }}>
+                <span className={styles.surfaceHeaderBadgeText}>غرفة قيادة مميزة ✨</span>
               </Box>
             </div>
-            <p className={styles.surfaceHeaderSubtitle}>ملخص أولاً، التفاصيل عند الطلب، وتدخلات تشغيلية بلا قرارات مالية داخل DSH.</p>
+            <p className={styles.surfaceHeaderSubtitle} style={{ marginTop: '4px' }}>ملخص أولاً، التفاصيل عند الطلب، وتدخلات تشغيلية بلا قرارات مالية داخل DSH.</p>
           </Box>
         </div>
         <div className={styles.surfaceHeaderActions}>
           <div className={styles.surfacePulseCompact}>
+            <span style={{ fontSize: '10px', color: 'var(--bthwani-control-panel-text-muted)', fontWeight: 700 }}>الأنظمة متصلة</span>
+            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--bthwani-success)', boxShadow: '0 0 8px var(--bthwani-success)' }} />
           </div>
         </div>
       </header>

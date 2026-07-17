@@ -14,7 +14,11 @@ import styles from '../shared/control-panel-surface.module.css';
 import { buildOperationsHref } from './operations.registry';
 import { useStoreAdminController, type DshStoreAdminTableRow } from '../../shared/store';
 
-export type PartnerStoresScreenProps = { hubHref: string; subGroup?: string; };
+export type PartnerStoresScreenProps = {
+  hubHref: string;
+  subGroup?: string;
+  focusParams?: { orderId?: string | undefined } | undefined;
+};
 
 type CpStoreRow = {
   id: string;
@@ -59,10 +63,10 @@ function mapAdminRowToCpRow(row: DshStoreAdminTableRow): CpStoreRow {
   };
 }
 
-export function PartnerStoresScreen({ hubHref: _hubHref, subGroup: _subGroup }: PartnerStoresScreenProps) {
+export function PartnerStoresScreen({ hubHref: _hubHref, subGroup: _subGroup, focusParams }: PartnerStoresScreenProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const urlStoreId = searchParams.get('orderId') ?? null;
+  const urlStoreId = focusParams?.orderId ?? searchParams.get('orderId') ?? null;
   const { state: identity } = useControlPanelSession();
   const c = useStoreAdminController(identity.kind);
 

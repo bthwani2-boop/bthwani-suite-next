@@ -141,6 +141,7 @@ export function useOperationsController({
       callId: focusParams.callId,
       requestId: focusParams.requestId,
       panel: focusParams.panel,
+      subGroup: focusParams.subGroup,
     };
 
     if (router) {
