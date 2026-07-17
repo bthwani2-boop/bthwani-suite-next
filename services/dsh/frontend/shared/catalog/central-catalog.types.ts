@@ -144,6 +144,7 @@ export interface ProductProposal {
   readonly marketingReviewedBy?: string | null;
   readonly catalogAdoptedBy?: string | null;
   readonly catalogApprovedBy?: string | null;
+  readonly catalogApprovedBy?: string | null;
   readonly clientVisibleAt?: string | null;
   readonly auditRequired?: boolean;
   readonly blockedReason?: string | null;
@@ -209,6 +210,7 @@ export interface EffectiveImage {
 
 export interface ClientVisibleCatalogEntry {
   readonly id: string;
+  readonly version: number;
   readonly domainId: string;
   readonly categoryNodeId: string | null;
   readonly canonicalNameAr: string;
