@@ -5,13 +5,13 @@
   "required": ["schemaVersion", "entries"],
   "additionalProperties": false,
   "properties": {
-    "schemaVersion": { "const": 2 },
+    "schemaVersion": { "const": 3 },
     "entries": {
       "type": "array",
       "minItems": 1,
       "items": {
         "type": "object",
-        "required": ["id", "name", "path", "owner", "scope", "evidence_required"],
+        "required": ["id", "name", "path", "owner", "scope", "evidence_required", "contract_level", "status"],
         "additionalProperties": false,
         "properties": {
           "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
@@ -22,6 +22,8 @@
           "evidence_required": { "type": "boolean" },
           "evidence_path_pattern": { "type": "string" },
           "contract_level": { "enum": ["legacy", "governed"] },
+          "status": { "enum": ["active", "conditional", "retired"] },
+          "retirement_reason": { "type": "string", "minLength": 1 },
           "version": { "type": "string", "minLength": 1 },
           "authority": {
             "type": "array",
@@ -53,18 +55,17 @@
         },
         "allOf": [
           {
-            "if": { "properties": { "contract_level": { "const": "governed" } }, "required": ["contract_level"] },
+            "if": { "properties": { "status": { "enum": ["active", "conditional"] } }, "required": ["status"] },
             "then": {
-              "required": [
-                "version",
-                "authority",
-                "depends_on",
-                "conflicts_with",
-                "invoke_when",
-                "do_not_invoke_when",
-                "risk_floor",
-                "output_contract"
-              ]
+              "properties": { "contract_level": { "const": "governed" } },
+              "required": ["version", "authority", "depends_on", "conflicts_with", "invoke_when", "do_not_invoke_when", "risk_floor", "output_contract"]
+            }
+          },
+          {
+            "if": { "properties": { "contract_level": { "const": "legacy" } }, "required": ["contract_level"] },
+            "then": {
+              "properties": { "status": { "const": "retired" } },
+              "required": ["retirement_reason"]
             }
           }
         ]
