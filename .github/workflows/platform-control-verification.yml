@@ -43,16 +43,22 @@ jobs:
         with:
           go-version-file: core/platform-control/backend/go.mod
           cache: true
-      - name: Verify format, vet, build, and tests
+      - name: Verify format
         working-directory: core/platform-control/backend
         shell: bash
         run: |
           set -euo pipefail
           files="$(gofmt -l .)"
           test -z "$files" || { printf 'Unformatted platform-control files:\n%s\n' "$files"; exit 1; }
-          go vet ./...
-          go build ./...
-          go test ./... -count=1
+      - name: Vet backend
+        working-directory: core/platform-control/backend
+        run: go vet ./...
+      - name: Build backend
+        working-directory: core/platform-control/backend
+        run: go build ./...
+      - name: Test backend
+        working-directory: core/platform-control/backend
+        run: go test ./... -count=1
 
   frontend:
     name: Platform control frontend contracts and types
@@ -65,15 +71,16 @@ jobs:
           persist-credentials: false
       - name: Setup workspace
         uses: ./.github/actions/setup-node-workspace
-      - name: Verify generated contracts and platform bindings
-        shell: bash
-        run: |
-          set -euo pipefail
-          pnpm run contracts:lint
-          pnpm run guard:no-broken-imports
-          pnpm run guard:ui-kit-boundary
-          pnpm run guard:frontend-feature-binding
-          pnpm run typecheck
+      - name: Contract lint
+        run: pnpm run contracts:lint
+      - name: Broken import guard
+        run: pnpm run guard:no-broken-imports
+      - name: UI kit boundary guard
+        run: pnpm run guard:ui-kit-boundary
+      - name: Frontend feature binding guard
+        run: pnpm run guard:frontend-feature-binding
+      - name: Workspace typecheck
+        run: pnpm run typecheck
 
   result:
     name: Platform control verification result
