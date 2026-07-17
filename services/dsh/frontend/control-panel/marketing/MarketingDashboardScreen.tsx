@@ -1,5 +1,6 @@
 "use client";
-import { colorRoles } from '@bthwani/ui-kit';
+
+import { colorRoles } from "@bthwani/ui-kit";
 import { useState } from "react";
 import {
   CpKpiCard,
@@ -12,20 +13,13 @@ import {
   useMarketingKpiMetricsController,
   useMarketingDeliverySignalsController,
   type MarketingMainTabId,
-  type MarketingSectionTabId,
 } from "../../shared/marketing";
-
-// Import split command decks
 import { TickerCommandDeck } from "./components/TickerCommandDeck";
 import { CampaignsCommandDeck } from "./components/CampaignsCommandDeck";
 import { PartnerOffersCommandDeck } from "./components/PartnerOffersCommandDeck";
 import { SignalsMeasurementCommandDeck } from "./components/SignalsMeasurementCommandDeck";
-
-// Import split dashboard sections
 import { VisibilityGatesSection } from "./components/VisibilityGatesSection";
 import { MarketingHomeDiscoveryPanel } from "./components/MarketingHomeDiscoveryPanel";
-
-// ─── Main Tab button (underline style) ─────────────────────────────────────
 
 function MainTabButton({
   active,
@@ -50,7 +44,6 @@ function MainTabButton({
         fontSize: "0.875rem",
         cursor: "pointer",
         whiteSpace: "nowrap",
-        transition: "all 0.15s",
       }}
     >
       {children}
@@ -60,8 +53,7 @@ function MainTabButton({
 
 export function MarketingDashboardScreen() {
   const [mainTab, setMainTab] = useState<MarketingMainTabId>("visibility-gates");
-  const [sectionTab, setSectionTab] = useState<MarketingSectionTabId>("eligibility");
-  const { metrics } = useMarketingKpiMetricsController();
+  const { metrics, reload: reloadMetrics } = useMarketingKpiMetricsController();
   const deliverySignals = useMarketingDeliverySignalsController();
 
   return (
@@ -70,7 +62,7 @@ export function MarketingDashboardScreen() {
       header={
         <CpPageHeader title="تسويق DSH">
           <p style={{ margin: "0 0 0.75rem", opacity: 0.65, fontSize: "0.875rem" }}>
-            حوكمة المحتوى التسويقي والنمو الاستراتيجي
+            إدارة المحتوى والحملات والعروض المرتبطة بعقود DSH الفعلية
           </p>
 
           <CpKpiStrip>
@@ -79,19 +71,15 @@ export function MarketingDashboardScreen() {
             <CpKpiCard label="تذاكر مفتوحة" value={metrics.openTickets.toLocaleString("ar")} />
             <CpKpiCard label="تصعيدات مفتوحة" value={metrics.openEscalations.toLocaleString("ar")} />
           </CpKpiStrip>
-          {!metrics.isBackedByApi && (
-            <p role="status" style={{ margin: "0.5rem 0 0", fontSize: "0.75rem", color: colorRoles.brandAction, opacity: 0.85 }}>
-              ⚠️ {metrics.disclosureReason}
-            </p>
-          )}
         </CpPageHeader>
       }
     >
       <nav
+        aria-label="أقسام التسويق"
         dir="rtl"
         style={{
           display: "flex",
-          borderBottom: "1px solid color-mix(in srgb, currentColor 12%, transparent)",
+          borderBottom: `1px solid ${colorRoles.borderSubtle}`,
           padding: "0 1rem",
           gap: "0.25rem",
           marginBottom: "0.75rem",
@@ -109,30 +97,19 @@ export function MarketingDashboardScreen() {
         ))}
       </nav>
 
-      {mainTab === "visibility-gates" && (
+      {mainTab === "visibility-gates" ? (
         <VisibilityGatesSection
-          sectionTab={sectionTab}
-          setSectionTab={setSectionTab}
           metrics={metrics}
+          reloadMetrics={reloadMetrics}
           deliverySignals={deliverySignals}
         />
-      )}
-
-      {mainTab === "banners-carousel" && (
-        <MarketingHomeDiscoveryPanel kind="banners" />
-      )}
-
-      {mainTab === "homepage-promos" && (
-        <MarketingHomeDiscoveryPanel kind="promos" />
-      )}
-
-      {mainTab === "smart-bar" && (
-        <TickerCommandDeck />
-      )}
-
-      {mainTab === "campaigns" && <CampaignsCommandDeck />}
-      {mainTab === "partner-offers" && <PartnerOffersCommandDeck />}
-      {mainTab === "signals-measurement" && <SignalsMeasurementCommandDeck />}
+      ) : null}
+      {mainTab === "banners-carousel" ? <MarketingHomeDiscoveryPanel kind="banners" /> : null}
+      {mainTab === "homepage-promos" ? <MarketingHomeDiscoveryPanel kind="promos" /> : null}
+      {mainTab === "smart-bar" ? <TickerCommandDeck /> : null}
+      {mainTab === "campaigns" ? <CampaignsCommandDeck /> : null}
+      {mainTab === "partner-offers" ? <PartnerOffersCommandDeck /> : null}
+      {mainTab === "signals-measurement" ? <SignalsMeasurementCommandDeck /> : null}
     </DataTablePageFrame>
   );
 }
