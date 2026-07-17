@@ -1,0 +1,220 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "BThwaniProductTruthContract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "capabilityId",
+    "state",
+    "problem",
+    "actors",
+    "surfaces",
+    "outcome",
+    "acceptance",
+    "invariants",
+    "owners",
+    "execution"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "capabilityId": { "type": "string", "pattern": "^[A-Z0-9][A-Z0-9_-]+$" },
+    "state": {
+      "enum": [
+        "DISCOVERY",
+        "PRODUCT_MODEL_APPROVED",
+        "READY_FOR_IMPLEMENTATION",
+        "IMPLEMENTED",
+        "PRODUCT_ACCEPTED",
+        "RETIRED"
+      ]
+    },
+    "problem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["statement", "affectedActors", "currentWorkaround", "evidenceState"],
+      "properties": {
+        "statement": { "type": "string", "minLength": 10 },
+        "affectedActors": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "currentWorkaround": { "type": "string", "minLength": 1 },
+        "frequency": { "enum": ["unknown", "rare", "occasional", "frequent", "continuous"] },
+        "severity": { "enum": ["unknown", "low", "medium", "high", "critical"] },
+        "evidenceState": { "enum": ["UNPROVEN", "QUALITATIVE", "QUANTITATIVE", "VALIDATED"] },
+        "evidenceReferences": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "actors": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "role", "permittedActions", "forbiddenActions"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+          "role": { "type": "string", "minLength": 1 },
+          "permittedActions": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+          "forbiddenActions": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
+        }
+      }
+    },
+    "surfaces": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "required", "actors", "states", "actions"],
+        "properties": {
+          "id": {
+            "enum": ["app-client", "app-partner", "app-captain", "app-field", "control-panel", "backend", "database", "shared"]
+          },
+          "required": { "type": "boolean" },
+          "exclusionReason": { "type": "string", "minLength": 1 },
+          "actors": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+          "routesOrScreens": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+          "operationIds": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+          "states": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+          "actions": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
+        },
+        "allOf": [
+          {
+            "if": { "properties": { "required": { "const": false } } },
+            "then": { "required": ["exclusionReason"] }
+          }
+        ]
+      }
+    },
+    "outcome": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["statement", "primaryMetric", "baselineState", "targetState"],
+      "properties": {
+        "statement": { "type": "string", "minLength": 10 },
+        "primaryMetric": { "type": "string", "minLength": 1 },
+        "guardrailMetrics": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "baselineState": { "type": "string", "minLength": 1 },
+        "targetState": { "type": "string", "minLength": 1 },
+        "observationWindow": { "type": "string", "minLength": 1 }
+      }
+    },
+    "acceptance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["criteria", "failureStates", "requiredChecks"],
+      "properties": {
+        "criteria": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "failureStates": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "requiredChecks": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "runtimeEvidenceRequired": { "type": "boolean" },
+        "visualEvidenceRequired": { "type": "boolean" }
+      }
+    },
+    "invariants": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["business", "negative"],
+      "properties": {
+        "business": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "negative": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "owners": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["productManager", "productOwner", "engineeringOwner"],
+      "properties": {
+        "productManager": { "type": "string", "minLength": 1 },
+        "productOwner": { "type": "string", "minLength": 1 },
+        "uxJourneyOwner": { "type": "string", "minLength": 1 },
+        "engineeringOwner": { "type": "string", "minLength": 1 },
+        "productManagerApproval": { "enum": ["PENDING", "APPROVED", "REJECTED"] },
+        "productOwnerApproval": { "enum": ["PENDING", "APPROVED", "REJECTED"] },
+        "productAcceptanceDecision": { "enum": ["PENDING", "PASS", "FIX_REQUIRED"] }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["appetite", "fixedConstraints", "variableScope", "forbiddenScope"],
+      "properties": {
+        "appetite": { "type": "string", "minLength": 1 },
+        "fixedConstraints": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "variableScope": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "forbiddenScope": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "forecastRange": { "type": "string", "minLength": 1 },
+        "confidence": { "enum": ["low", "medium", "high"] },
+        "unknowns": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "enum": ["PRODUCT_MODEL_APPROVED", "READY_FOR_IMPLEMENTATION", "IMPLEMENTED", "PRODUCT_ACCEPTED"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "problem": {
+            "properties": {
+              "evidenceState": { "enum": ["QUALITATIVE", "QUANTITATIVE", "VALIDATED"] },
+              "evidenceReferences": { "minItems": 1 }
+            },
+            "required": ["evidenceReferences"]
+          },
+          "owners": {
+            "properties": {
+              "productManagerApproval": { "const": "APPROVED" }
+            },
+            "required": ["productManagerApproval"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "enum": ["READY_FOR_IMPLEMENTATION", "IMPLEMENTED", "PRODUCT_ACCEPTED"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "owners": {
+            "properties": {
+              "productOwnerApproval": { "const": "APPROVED" }
+            },
+            "required": ["productOwnerApproval"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "state": { "const": "PRODUCT_ACCEPTED" } } },
+      "then": {
+        "properties": {
+          "owners": {
+            "properties": {
+              "productAcceptanceDecision": { "const": "PASS" }
+            },
+            "required": ["productAcceptanceDecision"]
+          }
+        }
+      }
+    }
+  ]
+}
