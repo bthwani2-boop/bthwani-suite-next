@@ -37,6 +37,7 @@
     {"path":"governance/skills","classification":"ACTIVE_CANONICAL","precedenceId":"MACHINE_READABLE_CONTRACT","authorityDomains":["skill_lifecycle","skill_dependencies","skill_routing"]},
     {"path":"governance/guards","classification":"ACTIVE_CANONICAL","precedenceId":"MACHINE_READABLE_CONTRACT","authorityDomains":["guard_registry","guard_assurance","static_binding_registry"]},
     {"path":"governance/product/product-truth.schema.json","classification":"ACTIVE_CANONICAL","precedenceId":"MACHINE_READABLE_CONTRACT","authorityDomains":["product_truth_schema"]},
+    {"path":"governance/saas","classification":"ACTIVE_CANONICAL","precedenceId":"MACHINE_READABLE_CONTRACT","authorityDomains":["saas_readiness_state","tenant_governance","commercial_activation_policy"]},
     {"path":"tools/guards/guard-manifest.json","classification":"ACTIVE_CANONICAL","precedenceId":"MACHINE_READABLE_CONTRACT","authorityDomains":["guard_sets","guard_execution_policy"]},
 
     {"path":"governance/operational_journey_protocol_package/annexes/SAAS_READINESS_AND_TENANCY_GATES.md","classification":"CONDITIONAL_CANONICAL","precedenceId":"CONDITIONAL_CANONICAL_ANNEX","authorityDomains":["saas_readiness","tenancy"],"appliesWhen":"A task explicitly changes tenant ownership, tenant isolation, SaaS activation, tenant billing, metering, entitlement, or tenant data lifecycle.","scopeLimit":"Registration does not authorize SaaS implementation or commercial activation."},
