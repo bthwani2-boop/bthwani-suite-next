@@ -36,15 +36,14 @@ function resolveCanonicalOperationsGroup(
   return isCanonicalOperationsGroupId(value) ? value : undefined;
 }
 
+const UNSUPPORTED_LIVE_ORDER_SUBGROUPS = new Set(['delayed', 'assisted', 'rescue']);
+
 function visibleSubGroups(groupMeta: OperationsGroupMeta) {
   const groups = groupMeta.subGroups ?? [];
-  if (groupMeta.id === 'live-orders') {
-    // Delay classification is intentionally not exposed until the order list
-    // contract returns an SLA-backed delayed flag. A local age heuristic would
-    // create a second source of operational truth.
-    return groups.filter((subGroup) => subGroup.id !== 'delayed');
-  }
-  return groups;
+  if (groupMeta.id !== 'live-orders') return groups;
+  // These workflows are withheld until their sovereign contracts exist:
+  // delayed needs an SLA-backed flag; assisted/rescue need real mutation APIs.
+  return groups.filter((subGroup) => !UNSUPPORTED_LIVE_ORDER_SUBGROUPS.has(subGroup.id));
 }
 
 function resolveSubGroupForGroup(
@@ -71,24 +70,17 @@ export function useOperationsController({
   );
 
   useEffect(() => {
-    if (!hasUrlState) {
-      setActiveGroupState(groupProp ?? 'command-center');
-    }
+    if (!hasUrlState) setActiveGroupState(groupProp ?? 'command-center');
   }, [groupProp, hasUrlState]);
 
   const activeGroup = hasUrlState
     ? workspaceParam ?? groupProp ?? 'command-center'
     : activeGroupState;
-  const activeGroupMeta = useMemo(
-    () => getOperationsGroupMeta(activeGroup),
-    [activeGroup],
-  );
-
+  const activeGroupMeta = useMemo(() => getOperationsGroupMeta(activeGroup), [activeGroup]);
   const getParam = useCallback(
     (key: string) => searchParams?.get(key) ?? undefined,
     [searchParams],
   );
-
   const activeSubGroup = useMemo(
     () => resolveSubGroupForGroup(activeGroupMeta, getParam('subGroup')),
     [activeGroupMeta, getParam],
@@ -112,7 +104,6 @@ export function useOperationsController({
     () => buildOperationsHref(activeGroup, focusParams),
     [activeGroup, focusParams],
   );
-
   const tabItems = useMemo(
     () => OPERATIONS_CANONICAL_GROUPS.map((item) => ({
       id: item.id,
@@ -121,7 +112,6 @@ export function useOperationsController({
     })),
     [activeGroup],
   );
-
   const subTabItems = useMemo(
     () => visibleSubGroups(activeGroupMeta).map((subGroup) => ({
       id: subGroup.id,
@@ -130,7 +120,6 @@ export function useOperationsController({
     })),
     [activeGroupMeta, activeSubGroup],
   );
-
   const focusContextItems = useMemo(
     () => [
       focusParams.orderId ? { label: 'orderId', value: focusParams.orderId } : null,
@@ -145,9 +134,7 @@ export function useOperationsController({
   const handleSelectTab = useCallback((id: string) => {
     const groupId = resolveCanonicalOperationsGroup(id);
     if (!groupId) return;
-
-    const targetGroupMeta = getOperationsGroupMeta(groupId);
-    const targetSubGroup = resolveSubGroupForGroup(targetGroupMeta, undefined);
+    const targetSubGroup = resolveSubGroupForGroup(getOperationsGroupMeta(groupId), undefined);
     const nextParams: OperationsFocusParams = {
       orderId: focusParams.orderId,
       customerId: focusParams.customerId,
@@ -157,21 +144,14 @@ export function useOperationsController({
       panel: focusParams.panel,
       subGroup: targetSubGroup,
     };
-
-    if (router) {
-      router.push(buildOperationsHref(groupId, nextParams));
-    } else {
-      setActiveGroupState(groupId);
-    }
+    if (router) router.push(buildOperationsHref(groupId, nextParams));
+    else setActiveGroupState(groupId);
   }, [focusParams, router]);
 
   const handleSelectSubTab = useCallback((id: string) => {
     const nextSubGroup = resolveSubGroupForGroup(activeGroupMeta, id);
     if (nextSubGroup !== id || !router) return;
-    router.push(buildOperationsHref(activeGroup, {
-      ...focusParams,
-      subGroup: nextSubGroup,
-    }));
+    router.push(buildOperationsHref(activeGroup, { ...focusParams, subGroup: nextSubGroup }));
   }, [activeGroup, activeGroupMeta, focusParams, router]);
 
   return {
