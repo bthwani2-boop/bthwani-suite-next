@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { Box, StateView, Text } from '@bthwani/ui-kit';
+import { Box, StateView, Text, type StateTone } from '@bthwani/ui-kit';
 import { WebControlPanelKpiStrip, WebControlPanelDecisionRow } from '@bthwani/ui-kit/web';
 import { buildOperationsHref } from '../operations/operations-registry';
 import type { OperationsFocusParams } from '../operations/operations.types';
@@ -18,6 +18,35 @@ export type OperatorSpecialRequestsWorkbenchProps = {
   hubHref?: string;
   subGroup?: string;
   focusParams?: OperationsFocusParams;
+};
+
+type FailureCopy = {
+  title: string;
+  description: string;
+  tone: StateTone;
+};
+
+const FAILURE_COPY: Readonly<Record<'error' | 'offline' | 'forbidden' | 'conflict', FailureCopy>> = {
+  error: {
+    title: 'خطأ في تحميل الطلبات',
+    description: 'تعذر تحميل طلبات هذه الخدمة.',
+    tone: 'danger',
+  },
+  offline: {
+    title: 'غير متصل',
+    description: 'تأكد من اتصالك بالإنترنت.',
+    tone: 'warning',
+  },
+  forbidden: {
+    title: 'الوصول مرفوض',
+    description: 'لا تملك الصلاحية اللازمة.',
+    tone: 'danger',
+  },
+  conflict: {
+    title: 'تعارض في البيانات',
+    description: 'أعد القراءة قبل متابعة الإجراء.',
+    tone: 'warning',
+  },
 };
 
 export function OperatorSpecialRequestsWorkbench({ requestType, title, stageLabels, stageOrder, focusParams }: OperatorSpecialRequestsWorkbenchProps) {
@@ -67,14 +96,16 @@ export function OperatorSpecialRequestsWorkbench({ requestType, title, stageLabe
   });
 
   if (loadState === 'error' || loadState === 'offline' || loadState === 'forbidden' || loadState === 'conflict') {
-    const errorMap = {
-      error: { title: 'خطأ في تحميل الطلبات', description: 'تعذر تحميل طلبات هذه الخدمة.', stateId: 'recoverableError' },
-      offline: { title: 'غير متصل', description: 'تأكد من اتصالك بالإنترنت.', stateId: 'offline' },
-      forbidden: { title: 'الوصول مرفوض', description: 'لا تملك الصلاحية اللازمة.', stateId: 'recoverableError' },
-      conflict: { title: 'تعارض في البيانات', description: 'أعد القراءة قبل متابعة الإجراء.', stateId: 'recoverableError' },
-    } as const;
-    const errorState = errorMap[loadState];
-    return <StateView stateId={errorState.stateId} title={errorState.title} description={errorState.description} actionLabel="إعادة المحاولة" onActionPress={reload} />;
+    const errorState = FAILURE_COPY[loadState];
+    return (
+      <StateView
+        title={errorState.title}
+        description={errorState.description}
+        tone={errorState.tone}
+        actionLabel="إعادة المحاولة"
+        onActionPress={reload}
+      />
+    );
   }
 
   return (
@@ -87,9 +118,19 @@ export function OperatorSpecialRequestsWorkbench({ requestType, title, stageLabe
       <WebControlPanelKpiStrip items={summaryKpi} />
 
       {loadState === 'loading' && requests.length === 0 ? (
-        <StateView stateId="loading" title="جاري تحميل الطلبات" description="تتم قراءة قائمة الطلبات الخاصة من DSH." />
+        <StateView
+          title="جاري تحميل الطلبات"
+          description="تتم قراءة قائمة الطلبات الخاصة من DSH."
+          tone="info"
+          loading
+        />
       ) : requests.length === 0 ? (
-        <StateView stateId="empty" title="لا توجد طلبات" description="لا توجد طلبات خاصة في هذا القسم حاليًا." actionLabel="تحديث" onActionPress={reload} />
+        <StateView
+          title="لا توجد طلبات"
+          description="لا توجد طلبات خاصة في هذا القسم حاليًا."
+          actionLabel="تحديث"
+          onActionPress={reload}
+        />
       ) : (
         <Box gap={2}>
           {rows.map((item) => (
