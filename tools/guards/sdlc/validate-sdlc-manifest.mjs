@@ -31,7 +31,10 @@ const schemaFiles = [
   "governance/agents/agent-schema.json",
   "governance/skills/skills-schema.json",
   "governance/guards/guard-schema.json",
+  "governance/guards/guard-assurance.schema.json",
+  "governance/github/repository-enforcement.schema.json",
   "governance/product/product-truth.schema.json",
+  "governance/saas/saas-governance.schema.json",
   "governance/operational_journey_protocol_package/sdlc/artifact-manifest.schema.json",
   "governance/operational_journey_protocol_package/sdlc/change-impact.schema.json",
 ];
@@ -50,25 +53,29 @@ for (const relative of schemaFiles) {
 }
 
 const semanticMarkers = new Map([
-  ["README.md", ["G6_QA_APPROVED", "notApplicableStages", "applicableEvidenceScopes", "finance", "isolation"]],
+  ["README.md", ["G6_QA_APPROVED", "notApplicableStages", "applicableEvidenceScopes", "finance", "isolation", "governance", "ci"]],
   ["lifecycle.state-machine.yaml", [
-    "version: 3", "G1_PRODUCT_MODEL_APPROVED", "G5_PRODUCT_ACCEPTED", "G10_PRODUCTION_VERIFIED",
+    "version: 3", "G1_PRODUCT_MODEL_APPROVED", "G4_IMPLEMENTATION_VERIFIED", "G5_PRODUCT_ACCEPTED", "G10_PRODUCTION_VERIFIED",
     "PROTOCOL_VIOLATION", "all_applicable_evidence_scopes_required_for_closure",
+    "independent_reviewer_owns_g4_implementation_verification", "reviewer_must_differ_from_author_executor_and_coordinator",
     "governance_change_requires_governance_contract_authority", "ci_change_requires_ci_workflow_authority",
+    "wlt_finance_change_requires_financial_control_authority", "tenant_or_isolation_change_requires_isolation_security_approval",
+    "residual_risk_requires_risk_acceptance_authority", "saas_activation_requires_explicit_product_security_finance_isolation_release_and_production_evidence",
   ]],
   ["roles-and-authority.yaml", [
-    "version: 3", "product_manager_authority:", "product_owner_acceptance_authority:",
-    "governance_contract_authority:", "ci_workflow_authority:", "financial_control_authority:",
-    "independent_quality_authority:", "application_security_authority:", "release_authority:",
-    "may_approve_finance: false", "- finance_approval",
+    "version: 3", "sdlc_program_authority:", "product_manager_authority:", "product_owner_acceptance_authority:",
+    "governance_contract_authority:", "ci_workflow_authority:", "financial_control_authority:", "independent_reviewer:",
+    "independent_quality_authority:", "application_security_authority:", "release_authority:", "risk_acceptance_authority:",
+    "may_approve_finance: false", "- finance_approval", "- independent_review_high_risk", "- final_closure",
   ]],
   ["gate-catalog.yaml", [
-    "version: 3", "G1_PRODUCT_MODEL_APPROVED:", "G5_PRODUCT_ACCEPTED:", "G10_PRODUCTION_VERIFIED:",
-    "CLOSED_WITH_EVIDENCE:", "latest_applicable_stage_passed", "PROTOCOL_VIOLATION",
+    "version: 3", "G1_PRODUCT_MODEL_APPROVED:", "G4_IMPLEMENTATION_VERIFIED:", "owner: independent_reviewer",
+    "G5_PRODUCT_ACCEPTED:", "G10_PRODUCTION_VERIFIED:", "CLOSED_WITH_EVIDENCE:",
+    "latest_applicable_stage_passed", "all_applicable_evidence_scopes_passed", "PROTOCOL_VIOLATION",
   ]],
   ["artifact-manifest.schema.json", [
     '"schemaVersion": { "const": 3 }', '"applicableEvidenceScopes"', '"passedEvidenceScopes"',
-    '"notApplicableStages"', '"stageExclusions"', '"finance"', '"isolation"', '"PROTOCOL_VIOLATION"',
+    '"notApplicableStages"', '"stageExclusions"', '"finance"', '"isolation"', '"governance"', '"ci"', '"PROTOCOL_VIOLATION"',
   ]],
   ["change-impact.schema.json", [
     '"schemaVersion": { "const": 3 }', '"visual"', '"qa"', '"wltFinance"', '"tenant"',
@@ -92,7 +99,10 @@ for (const requiredAuthority of [
   "governance/agents/agent-registry.json",
   "governance/skills/skills-registry.json",
   "governance/guards/guard-registry.json",
+  "governance/guards/guard-assurance.json",
+  "governance/github/repository-enforcement.json",
   "governance/product/PRODUCT_TRUTH_POLICY.md",
+  "governance/saas/saas-governance.json",
   "governance/26_SDLC_TEAM_AND_STAGE_GATES.md",
 ]) if (!fs.existsSync(path.join(repoRoot, requiredAuthority))) violations.push({ file: requiredAuthority, message: "MISSING_ACTIVE_SDLC_AUTHORITY" });
 
