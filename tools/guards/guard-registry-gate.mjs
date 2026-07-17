@@ -148,14 +148,15 @@ if (fs.existsSync(workflowsDir)) {
     if (/^\s*ref:\s*(?:reem|sam|onebyone|implementing|master)\s*$/m.test(text)) violations.push({ file: relative, line: 0, message: "EXPLICIT_FOREIGN_BRANCH_CHECKOUT_FORBIDDEN" });
     if (/one-time/i.test(fileName) || /One-time/i.test(text)) violations.push({ file: relative, line: 0, message: "ONE_TIME_WORKFLOW_FORBIDDEN" });
 
+    verifyPinnedUses(relative, text);
+    verifyCheckoutCredentials(relative, text);
+
     if (criticalWorkflows.has(fileName)) {
       if (!/(?:branches:\s*\[[^\]]*\bbassam\b|^\s*-\s+bassam\s*$)/m.test(text)) {
         violations.push({ file: relative, line: 0, message: "ACTIVE_REMOTE_BRANCH_BASSAM_NOT_COVERED" });
       }
       if (!/if:\s*always\(\)/.test(text)) violations.push({ file: relative, line: 0, message: "CRITICAL_WORKFLOW_FINAL_AGGREGATOR_MISSING" });
       if (/continue-on-error:\s*true\b/.test(text)) violations.push({ file: relative, line: 0, message: "CRITICAL_WORKFLOW_FAILURE_SUPPRESSION_FORBIDDEN" });
-      verifyPinnedUses(relative, text);
-      verifyCheckoutCredentials(relative, text);
     }
   }
 
