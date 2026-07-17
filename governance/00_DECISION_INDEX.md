@@ -22,7 +22,7 @@ The machine-readable registry overrides historical `Status: CANONICAL`, `self-co
 - `CONDITIONAL_CANONICAL`: active only when its `appliesWhen` condition matches the task.
 - `OWNER_CONTRACT`: a skill or owner contract limited to its declared scope.
 - `ADAPTER`: a tool adapter that may not add or override policy.
-- `DERIVED_SUPPORT`: schema, template, matrix, protocol support, or current evidence snapshot that cannot override its source authority or live external state.
+- `DERIVED_SUPPORT`: schema, template, matrix, protocol support, assurance boundary, or current evidence snapshot that cannot override its source authority or live external state.
 - `HISTORICAL_REFERENCE`: evidence of a previous phase only; never current implementation truth.
 
 ## Active canonical governance
@@ -59,7 +59,7 @@ Registration of a conditional annex does not authorize implementation. SaaS rema
 
 ## Derived support and current evidence
 
-These artifacts assist execution or record a bounded observation. They cannot override active canonical governance, live contracts, source code, GitHub settings, or same-commit evidence.
+These artifacts assist execution, define bounded assurance, or record a bounded observation. They cannot override active canonical governance, live contracts, source code, GitHub settings, or same-commit evidence.
 
 Key derived references include:
 
@@ -68,11 +68,15 @@ Key derived references include:
 - `governance/16_MASTER_MATRIX_V3_BUSINESS_RULES.md`
 - `governance/github/repository-enforcement.json`
 - `governance/github/repository-enforcement.schema.json`
+- `governance/guards/guard-assurance.json`
+- `governance/guards/guard-assurance.schema.json`
 - `governance/guards/frontend-binding-registry.json`
 - `governance/guards/frontend-binding-registry.schema.json`
 - `governance/product/contracts/**`
 
 `governance/github/repository-enforcement.json` is an evidence snapshot. It must remain conservative and must never claim branch protection, required checks, independent reviewer identity, or separation of duties unless those controls are verified from GitHub itself.
+
+`governance/guards/guard-assurance.json` defines the maximum claim each scope guard can support. A guard marked `closureEligible: false` cannot independently support `CLOSED_WITH_EVIDENCE`, regardless of its display name or pass result.
 
 Durable business invariants inside a derived document remain useful only when they do not conflict with higher authority or current live contracts.
 
@@ -86,7 +90,7 @@ The following files remain available as historical evidence but do not own curre
 - `governance/14_MASTER_EXTRACTION_LOGIC_UX_COVERAGE.md`
 - `governance/99_LEGACY_EXTRACTION_LEDGER.md`
 
-Current state must come from the resolved remote commit, live service manifests, OpenAPI contracts, routes, database migrations, generated clients, bound surfaces, tests, GitHub enforcement state, and same-commit runtime evidence.
+Current state must come from the resolved remote commit, live service manifests, OpenAPI contracts, routes, database migrations, generated clients, bound surfaces, tests, GitHub enforcement state, guard-assurance boundaries, and same-commit runtime evidence.
 
 ## Decision vocabulary
 
@@ -110,4 +114,4 @@ Aliases such as `CODE_CHECK_PASS`, `GATE_PASS`, `STATIC_BINDING`, or `RUNTIME_SM
 
 ## Acceptance condition
 
-Accepted only when the authority-precedence registry validates, active and conditional sources are classified without duplicate authority, historical readiness claims cannot override live state, every decision term maps to the canonical vocabulary, GitHub enforcement evidence cannot overclaim actual controls, and no governed journey reaches implementation readiness without applicable Product Truth and stage-gate approval.
+Accepted only when the authority-precedence registry validates, active and conditional sources are classified without duplicate authority, historical readiness claims cannot override live state, every decision term maps to the canonical vocabulary, GitHub enforcement evidence cannot overclaim actual controls, scope guards cannot exceed their registered assurance boundary, and no governed journey reaches implementation readiness without applicable Product Truth and stage-gate approval.
