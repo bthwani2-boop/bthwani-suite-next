@@ -1,0 +1,482 @@
+openapi: 3.1.0
+info:
+  title: BThwani DSH Marketing Commercial Programs API
+  version: 0.1.0
+  description: >
+    Active DSH contract shard for governed loyalty tier definitions,
+    subscription plan definitions, and read-only client benefits projection.
+    DSH owns marketing definitions and approval workflow; WLT remains the
+    financial owner of subscription products, payments, and financial truth.
+
+x-bthwani-owner: services/dsh
+x-bthwani-parent-contract: services/dsh/contracts/dsh.openapi.yaml
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-client-generation: ENABLED
+x-bthwani-runtime-dependency: true
+x-bthwani-financial-mutation-owner: services/wlt
+
+paths:
+  /dsh/operator/marketing/loyalty-tiers:
+    get:
+      operationId: listDshMarketingLoyaltyTiers
+      summary: List governed loyalty tiers and live aggregate summary.
+      tags: [DshMarketingCommercial]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Loyalty tiers and summary.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshLoyaltyTierListResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      operationId: createDshMarketingLoyaltyTier
+      summary: Create a loyalty tier draft. The creator cannot activate it.
+      tags: [DshMarketingCommercial]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshCreateLoyaltyTierRequest" }
+      responses:
+        "201":
+          description: Loyalty tier draft created.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshLoyaltyTierResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /dsh/operator/marketing/loyalty-tiers/{tierId}:
+    patch:
+      operationId: updateDshMarketingLoyaltyTier
+      summary: >
+        Update a loyalty tier using optimistic concurrency. Activating requires
+        an actor different from the creator; active commercial terms are immutable.
+      tags: [DshMarketingCommercial]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: tierId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshUpdateLoyaltyTierRequest" }
+      responses:
+        "200":
+          description: Loyalty tier updated.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshLoyaltyTierResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Version conflict, self-approval attempt, or active terms mutation.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshErrorResponse" }
+
+  /dsh/operator/marketing/subscription-plans:
+    get:
+      operationId: listDshMarketingSubscriptionPlans
+      summary: List governed subscription plan definitions and live aggregate summary.
+      tags: [DshMarketingCommercial]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Subscription plans and summary.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshSubscriptionPlanListResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      operationId: createDshMarketingSubscriptionPlan
+      summary: Create a subscription plan draft. DSH never creates a payment or invoice.
+      tags: [DshMarketingCommercial]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshCreateSubscriptionPlanRequest" }
+      responses:
+        "201":
+          description: Subscription plan draft created.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshSubscriptionPlanResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /dsh/operator/marketing/subscription-plans/{planId}:
+    patch:
+      operationId: updateDshMarketingSubscriptionPlan
+      summary: >
+        Update a subscription plan using optimistic concurrency. Activation
+        requires independent approval and a WLT product reference.
+      tags: [DshMarketingCommercial]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: planId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshUpdateSubscriptionPlanRequest" }
+      responses:
+        "200":
+          description: Subscription plan updated.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshSubscriptionPlanResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Version conflict, self-approval, missing WLT reference, or active terms mutation.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshErrorResponse" }
+
+  /dsh/client/benefits:
+    get:
+      operationId: getDshClientBenefits
+      summary: >
+        Return only active and approved loyalty tiers, subscription plan
+        definitions, the authenticated client's persisted benefits, and
+        currently published partner offers.
+      tags: [DshMarketingCommercial]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Client benefits projection.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshClientBenefitsResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+
+  responses:
+    InvalidRequest:
+      description: Validation failed.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/DshErrorResponse" }
+    Unauthenticated:
+      description: Bearer session is missing, invalid, or expired.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/DshErrorResponse" }
+    Forbidden:
+      description: Actor role or permission cannot perform this operation.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/DshErrorResponse" }
+    NotFound:
+      description: Commercial program was not found.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/DshErrorResponse" }
+
+  schemas:
+    DshErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+
+    DshCommercialProgramStatus:
+      type: string
+      enum: [draft, active, paused, archived]
+
+    DshLoyaltyTier:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - nameAr
+        - nameEn
+        - minPoints
+        - discountPercent
+        - freeDeliveryThreshold
+        - badge
+        - status
+        - version
+        - createdByActorId
+        - createdAt
+        - updatedAt
+      properties:
+        id: { type: string }
+        nameAr: { type: string }
+        nameEn: { type: string }
+        minPoints: { type: integer, format: int64, minimum: 0 }
+        discountPercent: { type: number, minimum: 0, maximum: 100 }
+        freeDeliveryThreshold: { type: integer, format: int64, minimum: 0 }
+        badge: { type: string }
+        status: { $ref: "#/components/schemas/DshCommercialProgramStatus" }
+        version: { type: integer, minimum: 1 }
+        createdByActorId: { type: string }
+        approvedByActorId: { type: string }
+        approvedAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    DshLoyaltyProgramSummary:
+      type: object
+      additionalProperties: false
+      required: [activeTiers, totalEnrolledClients, pointsIssuedThisMonth, isBackedByApi]
+      properties:
+        activeTiers: { type: integer, format: int64, minimum: 0 }
+        totalEnrolledClients: { type: integer, format: int64, minimum: 0 }
+        pointsIssuedThisMonth: { type: integer, format: int64, minimum: 0 }
+        isBackedByApi: { type: boolean }
+
+    DshLoyaltyTierListResponse:
+      type: object
+      additionalProperties: false
+      required: [tiers, summary]
+      properties:
+        tiers:
+          type: array
+          items: { $ref: "#/components/schemas/DshLoyaltyTier" }
+        summary: { $ref: "#/components/schemas/DshLoyaltyProgramSummary" }
+
+    DshLoyaltyTierResponse:
+      type: object
+      additionalProperties: false
+      required: [tier]
+      properties:
+        tier: { $ref: "#/components/schemas/DshLoyaltyTier" }
+
+    DshCreateLoyaltyTierRequest:
+      type: object
+      additionalProperties: false
+      required: [nameAr, minPoints, discountPercent]
+      properties:
+        nameAr: { type: string, minLength: 1 }
+        nameEn: { type: string }
+        minPoints: { type: integer, format: int64, minimum: 0 }
+        discountPercent: { type: number, minimum: 0, maximum: 100 }
+        freeDeliveryThreshold: { type: integer, format: int64, minimum: 0 }
+        badge: { type: string }
+
+    DshUpdateLoyaltyTierRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion]
+      properties:
+        nameAr: { type: string, minLength: 1 }
+        nameEn: { type: string }
+        minPoints: { type: integer, format: int64, minimum: 0 }
+        discountPercent: { type: number, minimum: 0, maximum: 100 }
+        freeDeliveryThreshold: { type: integer, format: int64, minimum: 0 }
+        badge: { type: string }
+        status: { $ref: "#/components/schemas/DshCommercialProgramStatus" }
+        expectedVersion: { type: integer, minimum: 1 }
+
+    DshSubscriptionBillingCycle:
+      type: string
+      enum: [monthly, quarterly, annual]
+
+    DshSubscriptionPlan:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - nameAr
+        - nameEn
+        - priceYer
+        - billingCycle
+        - includeFreeDelivery
+        - pointsMultiplier
+        - orderCap
+        - badge
+        - status
+        - subscriberCount
+        - version
+        - createdByActorId
+        - createdAt
+        - updatedAt
+      properties:
+        id: { type: string }
+        nameAr: { type: string }
+        nameEn: { type: string }
+        priceYer: { type: integer, format: int64, minimum: 1 }
+        billingCycle: { $ref: "#/components/schemas/DshSubscriptionBillingCycle" }
+        includeFreeDelivery: { type: boolean }
+        pointsMultiplier: { type: number, minimum: 1 }
+        orderCap: { type: integer, minimum: 0 }
+        badge: { type: string }
+        status: { $ref: "#/components/schemas/DshCommercialProgramStatus" }
+        subscriberCount: { type: integer, format: int64, minimum: 0 }
+        wltProductReference: { type: string }
+        version: { type: integer, minimum: 1 }
+        createdByActorId: { type: string }
+        approvedByActorId: { type: string }
+        approvedAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    DshSubscriptionsSummary:
+      type: object
+      additionalProperties: false
+      required: [activePlans, totalActiveSubscribers, mrr, isBackedByApi]
+      properties:
+        activePlans: { type: integer, format: int64, minimum: 0 }
+        totalActiveSubscribers: { type: integer, format: int64, minimum: 0 }
+        mrr: { type: integer, format: int64, minimum: 0 }
+        isBackedByApi: { type: boolean }
+
+    DshSubscriptionPlanListResponse:
+      type: object
+      additionalProperties: false
+      required: [plans, summary]
+      properties:
+        plans:
+          type: array
+          items: { $ref: "#/components/schemas/DshSubscriptionPlan" }
+        summary: { $ref: "#/components/schemas/DshSubscriptionsSummary" }
+
+    DshSubscriptionPlanResponse:
+      type: object
+      additionalProperties: false
+      required: [plan]
+      properties:
+        plan: { $ref: "#/components/schemas/DshSubscriptionPlan" }
+
+    DshCreateSubscriptionPlanRequest:
+      type: object
+      additionalProperties: false
+      required: [nameAr, priceYer, billingCycle]
+      properties:
+        nameAr: { type: string, minLength: 1 }
+        nameEn: { type: string }
+        priceYer: { type: integer, format: int64, minimum: 1 }
+        billingCycle: { $ref: "#/components/schemas/DshSubscriptionBillingCycle" }
+        includeFreeDelivery: { type: boolean }
+        pointsMultiplier: { type: number, minimum: 1 }
+        orderCap: { type: integer, minimum: 0 }
+        badge: { type: string }
+        wltProductReference: { type: string }
+
+    DshUpdateSubscriptionPlanRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion]
+      properties:
+        nameAr: { type: string, minLength: 1 }
+        nameEn: { type: string }
+        priceYer: { type: integer, format: int64, minimum: 1 }
+        billingCycle: { $ref: "#/components/schemas/DshSubscriptionBillingCycle" }
+        includeFreeDelivery: { type: boolean }
+        pointsMultiplier: { type: number, minimum: 1 }
+        orderCap: { type: integer, minimum: 0 }
+        badge: { type: string }
+        status: { $ref: "#/components/schemas/DshCommercialProgramStatus" }
+        wltProductReference: { type: string }
+        expectedVersion: { type: integer, minimum: 1 }
+
+    DshClientLoyaltyAccount:
+      type: object
+      additionalProperties: false
+      required: [pointsBalance, lifetimePoints]
+      properties:
+        pointsBalance: { type: integer, format: int64, minimum: 0 }
+        lifetimePoints: { type: integer, format: int64, minimum: 0 }
+        tier: { $ref: "#/components/schemas/DshLoyaltyTier" }
+
+    DshClientSubscriptionEntitlement:
+      type: object
+      additionalProperties: false
+      required: [id, status, plan]
+      properties:
+        id: { type: string }
+        status: { type: string }
+        wltSubscriptionReference: { type: string }
+        startsAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time }
+        plan: { $ref: "#/components/schemas/DshSubscriptionPlan" }
+
+    DshPublishedPartnerOffer:
+      type: object
+      additionalProperties: true
+      required:
+        - id
+        - title
+        - partnerName
+        - storeLabel
+        - storeId
+        - offerType
+        - status
+        - source
+        - valueLabel
+        - eligibility
+        - version
+        - createdAt
+        - updatedAt
+      properties:
+        id: { type: string }
+        title: { type: string }
+        partnerName: { type: string }
+        storeLabel: { type: string }
+        storeId: { type: string }
+        productId: { type: string }
+        productLabel: { type: string }
+        category: { type: string }
+        offerType: { type: string, enum: [discount, free-delivery, bundle, buy-x-get-y, coupon] }
+        status: { type: string, enum: [published] }
+        source: { type: string, enum: [partner, control-panel] }
+        valueLabel: { type: string }
+        eligibility: { type: string }
+        activeFromDate: { type: string }
+        activeToDate: { type: string }
+        version: { type: integer, minimum: 1 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        linkedCampaignId: { type: string }
+
+    DshClientBenefits:
+      type: object
+      additionalProperties: false
+      required: [availableTiers, availablePlans, offers]
+      properties:
+        loyaltyAccount: { $ref: "#/components/schemas/DshClientLoyaltyAccount" }
+        availableTiers:
+          type: array
+          items: { $ref: "#/components/schemas/DshLoyaltyTier" }
+        availablePlans:
+          type: array
+          items: { $ref: "#/components/schemas/DshSubscriptionPlan" }
+        activeSubscription: { $ref: "#/components/schemas/DshClientSubscriptionEntitlement" }
+        offers:
+          type: array
+          items: { $ref: "#/components/schemas/DshPublishedPartnerOffer" }
+
+    DshClientBenefitsResponse:
+      type: object
+      additionalProperties: false
+      required: [benefits]
+      properties:
+        benefits: { $ref: "#/components/schemas/DshClientBenefits" }
