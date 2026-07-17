@@ -1,0 +1,81 @@
+name: Partner Domain Verification
+
+on:
+  push:
+    branches: [bassam]
+    paths:
+      - '.github/workflows/partner-domain-verification.yml'
+      - 'services/dsh/backend/**'
+      - 'services/dsh/database/**'
+      - 'services/dsh/contracts/**'
+      - 'services/dsh/frontend/**partner**'
+      - 'services/dsh/frontend/app-client/account/BenefitsHubScreen.tsx'
+      - 'services/dsh/frontend/app-captain/account/**'
+      - 'services/dsh/frontend/control-panel/partners/**'
+      - 'tools/guards/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: partner-domain-verification-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: services/dsh/backend/go.sum
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: pnpm
+
+      - name: Install workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Go format check
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=$(gofmt -l services/dsh/backend/internal/marketing services/dsh/backend/internal/partnerfleet services/dsh/backend/internal/http)
+          if [ -n "$files" ]; then
+            printf 'Unformatted Go files:\n%s\n' "$files"
+            exit 1
+          fi
+
+      - name: DSH backend tests
+        working-directory: services/dsh/backend
+        run: go test ./...
+
+      - name: Contract lint
+        run: pnpm run contracts:lint
+
+      - name: Backend route binding
+        run: pnpm run guard:backend-api-binding
+
+      - name: Frontend API binding
+        run: pnpm run guard:api-binding
+
+      - name: Frontend feature binding
+        run: pnpm run guard:frontend-feature-binding
+
+      - name: Broken import guard
+        run: pnpm run guard:no-broken-imports
+
+      - name: Workspace typecheck
+        run: pnpm run typecheck
