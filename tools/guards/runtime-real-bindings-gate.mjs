@@ -55,6 +55,7 @@ for (const file of [...new Set(bindingFiles)].sort()) {
 
 const forbiddenRemovedPaths = [
   "services/dsh/frontend/shared/marketing/use-loyalty-subscriptions-controller.ts",
+  "services/dsh/frontend/shared/marketing/use-commercial-programs-controller.ts",
   "services/dsh/frontend/shared/marketing/loyalty-subscriptions.types.ts",
   "services/dsh/frontend/control-panel/marketing/components/LoyaltyCommandDeck.tsx",
   "services/dsh/frontend/control-panel/marketing/components/SubscriptionsCommandDeck.tsx",
@@ -63,9 +64,21 @@ const forbiddenRemovedPaths = [
   "services/dsh/frontend/shared/partner/partner-fleet.api.ts",
   ".github/workflows/one-time-partner-detail-closure-bassam.yml",
   ".github/workflows/partner-domain-audit.yml",
+  ".github/workflows/one-time-finance-workflow-toolchain-fix.yml",
+  ".github/workflows/one-time-finance-accounting-closure.yml",
 ];
 for (const file of forbiddenRemovedPaths) {
   if (exists(file)) violations.push({ file, line: 0, message: "RETIRED_FAKE_OR_DUPLICATE_PATH_REINTRODUCED" });
+}
+
+for (const workflowFile of walk(".github/workflows", (file) => /\.ya?ml$/.test(file))) {
+  const content = fs.readFileSync(path.join(repoRoot, workflowFile), "utf8");
+  if (/one-time/i.test(path.basename(workflowFile)) || /name:\s*one-time/i.test(content)) {
+    violations.push({ file: workflowFile, line: 0, message: "ONE_TIME_WORKFLOW_FORBIDDEN" });
+  }
+  if (/\bcontents:\s*write\b|\bgit\s+(?:push|commit|rebase)\b/i.test(content)) {
+    violations.push({ file: workflowFile, line: 0, message: "SOURCE_MUTATING_WORKFLOW_FORBIDDEN" });
+  }
 }
 
 const clientSurfacePath = "services/dsh/frontend/app-client/DshClientSurface.tsx";
@@ -99,6 +112,8 @@ for (const [pattern, message] of [
   [/PARTNER_GATE_CARDS/g, "STATIC_PARTNER_GATE_FIXTURE_FORBIDDEN"],
   [/PRODUCT_GATE_CARDS/g, "STATIC_PRODUCT_GATE_FIXTURE_FORBIDDEN"],
   [/MARKETING_SECTION_TABS/g, "DEAD_MARKETING_SUBTAB_REGISTRY_FORBIDDEN"],
+  [/["']loyalty["']/g, "UNBOUND_LOYALTY_TAB_FORBIDDEN"],
+  [/["']subscriptions["']/g, "UNBOUND_SUBSCRIPTION_TAB_FORBIDDEN"],
 ]) {
   for (const match of marketingRegistry.matchAll(pattern)) {
     violations.push({ file: marketingRegistryPath, line: lineNumber(marketingRegistry, match.index), message });
