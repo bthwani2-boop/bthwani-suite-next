@@ -34,11 +34,15 @@ func main() {
 	}
 
 	repository := identity.NewRepository(db)
-	if err := repository.BootstrapLocalActors(context.Background(), identity.LocalBootstrap{
+	localBootstrap := identity.LocalBootstrap{
 		Enabled:  os.Getenv("IDENTITY_LOCAL_BOOTSTRAP") == "true",
 		Password: os.Getenv("IDENTITY_LOCAL_BOOTSTRAP_PASSWORD"),
-	}); err != nil {
+	}
+	if err := repository.BootstrapLocalActors(context.Background(), localBootstrap); err != nil {
 		log.Fatalf("[identity-api] local bootstrap: %v", err)
+	}
+	if err := repository.BootstrapLocalPlatformActors(context.Background(), localBootstrap); err != nil {
+		log.Fatalf("[identity-api] local platform separation bootstrap: %v", err)
 	}
 
 	server := &http.Server{
