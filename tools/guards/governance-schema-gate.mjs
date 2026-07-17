@@ -64,6 +64,7 @@ const guardRelative = "governance/guards/guard-registry.json";
 const assuranceRelative = "governance/guards/guard-assurance.json";
 const bindingRelative = "governance/guards/frontend-binding-registry.json";
 const enforcementRelative = "governance/github/repository-enforcement.json";
+const saasRelative = "governance/saas/saas-governance.json";
 const decisionIndexRelative = "governance/00_DECISION_INDEX.md";
 
 const authority = validateDocument(authorityRelative, "governance/authority/authority-precedence.schema.json", "AUTHORITY");
@@ -74,6 +75,7 @@ const guards = validateDocument(guardRelative, "governance/guards/guard-schema.j
 const guardAssurance = validateDocument(assuranceRelative, "governance/guards/guard-assurance.schema.json", "GUARD_ASSURANCE");
 const frontendBindings = validateDocument(bindingRelative, "governance/guards/frontend-binding-registry.schema.json", "FRONTEND_BINDING");
 const repositoryEnforcement = validateDocument(enforcementRelative, "governance/github/repository-enforcement.schema.json", "GITHUB_ENFORCEMENT");
+const saasGovernance = validateDocument(saasRelative, "governance/saas/saas-governance.schema.json", "SAAS_GOVERNANCE");
 readJson("tools/guards/guard-manifest.json", "GUARD_MANIFEST");
 
 const productSchemaRelative = "governance/product/product-truth.schema.json";
@@ -164,6 +166,7 @@ if (authority) {
     "governance/skills",
     "governance/guards",
     "governance/product/product-truth.schema.json",
+    "governance/saas",
     "tools/guards/guard-manifest.json",
   ]) {
     if (!documentPaths.has(requiredPath)) violations.push({ file: authorityRelative, line: 0, message: `MACHINE_AUTHORITY_NOT_REGISTERED ${requiredPath}` });
@@ -196,10 +199,16 @@ if (decisions) {
   const baseScopes = new Set(decisions.closureRules.baseRequiredScopes ?? []);
   if (!baseScopes.has("static")) violations.push({ file: decisionRelative, line: 0, message: "CLOSURE_BASE_STATIC_SCOPE_MISSING" });
   const conditionalScopes = new Set(decisions.closureRules.conditionalRequiredScopes ?? []);
-  for (const scope of ["product", "runtime", "visual", "qa", "security", "governance", "ci", "release", "production"]) {
+  for (const scope of ["product", "runtime", "visual", "qa", "security", "finance", "isolation", "governance", "ci", "release", "production"]) {
     if (!conditionalScopes.has(scope)) violations.push({ file: decisionRelative, line: 0, message: `CLOSURE_CONDITIONAL_SCOPE_MISSING ${scope}` });
   }
   for (const classId of ["fail", "blocked", "pending"]) if (!(decisions.closureRules.forbiddenOpenClasses ?? []).includes(classId)) violations.push({ file: decisionRelative, line: 0, message: `CLOSURE_FORBIDDEN_OPEN_CLASS_MISSING ${classId}` });
+}
+
+if (saasGovernance && decisions) {
+  const canonicalIds = new Set(decisions.canonicalDecisions.map((entry) => entry.id));
+  if (!canonicalIds.has(saasGovernance.canonicalDecision)) violations.push({ file: saasRelative, line: 0, message: `SAAS_DECISION_NOT_CANONICAL ${saasGovernance.canonicalDecision}` });
+  if (saasGovernance.commercialActivationState === "BLOCKED_BY_POLICY" && ["PASS", "CLOSED_WITH_EVIDENCE"].includes(saasGovernance.canonicalDecision)) violations.push({ file: saasRelative, line: 0, message: "SAAS_BLOCKED_STATE_CANNOT_PASS_OR_CLOSE" });
 }
 
 if (guards && guardAssurance) {
@@ -212,7 +221,7 @@ if (guards && guardAssurance) {
     if (entry.closureEligible !== false) violations.push({ file: assuranceRelative, line: 0, message: `SCOPE_GUARD_MUST_NOT_BE_CLOSURE_ELIGIBLE ${entry.guardId}` });
   }
   for (const requiredId of [
-    "governance-schema", "agent-governance", "guard-registry", "sdlc", "go-routes-ci",
+    "governance-schema", "agent-governance", "authority-separation", "saas-governance", "guard-registry", "sdlc", "go-routes-ci",
     "frontend-feature-binding", "logic-coverage", "runtime-real-bindings", "live-cross-journey-integrity",
     "performance-budget", "a11y", "a11y-runtime", "workflow-lint", "workflow-security", "actions-pin",
   ]) {
@@ -238,9 +247,12 @@ if (repositoryEnforcement) {
   const claims = repositoryEnforcement.claims;
   const independentlyProven = observed.independentReviewerIdentityState === "PROVEN" && observed.codeownersMode === "MULTI_OWNER_ROUTING";
   if (claims.separationOfDutiesProven !== independentlyProven) violations.push({ file: enforcementRelative, line: 0, message: "SEPARATION_OF_DUTIES_CLAIM_DOES_NOT_MATCH_EVIDENCE" });
-  const highRiskAllowed = independentlyProven && observed.branchProtectionState === "PROVEN" && observed.requiredChecksState === "PROVEN";
+  const sameCommitCiProven = observed.sameCommitWorkflowRunsState === "PROVEN_PASS";
+  if (claims.sameCommitCiProven !== sameCommitCiProven) violations.push({ file: enforcementRelative, line: 0, message: "SAME_COMMIT_CI_CLAIM_DOES_NOT_MATCH_EVIDENCE" });
+  const highRiskAllowed = independentlyProven && sameCommitCiProven && observed.branchProtectionState === "PROVEN" && observed.requiredChecksState === "PROVEN";
   if (claims.highRiskClosureAllowed !== highRiskAllowed) violations.push({ file: enforcementRelative, line: 0, message: "HIGH_RISK_CLOSURE_CLAIM_DOES_NOT_MATCH_EVIDENCE" });
   if (!claims.separationOfDutiesProven && repositoryEnforcement.decision === "CLOSED_WITH_EVIDENCE") violations.push({ file: enforcementRelative, line: 0, message: "CLOSURE_FORBIDDEN_WITHOUT_GITHUB_DUTY_SEPARATION" });
+  if (!claims.sameCommitCiProven && repositoryEnforcement.decision === "PASS") violations.push({ file: enforcementRelative, line: 0, message: "PASS_FORBIDDEN_WITHOUT_SAME_COMMIT_CI" });
 }
 
 for (const [label, registry] of [["AGENT", agents], ["SKILL", skills], ["GUARD", guards], ["FRONTEND_BINDING", frontendBindings]]) {
