@@ -5,7 +5,7 @@
   "additionalProperties": false,
   "required": ["schemaVersion", "canonicalDecisions", "aliases", "closureRules"],
   "properties": {
-    "schemaVersion": { "const": 2 },
+    "schemaVersion": { "const": 3 },
     "canonicalDecisions": {
       "type": "array",
       "minItems": 4,
@@ -77,7 +77,7 @@
   },
   "definitions": {
     "evidenceScope": {
-      "enum": ["static", "product", "runtime", "visual", "qa", "security", "governance", "ci", "release", "production"]
+      "enum": ["static", "product", "runtime", "visual", "qa", "security", "finance", "isolation", "governance", "ci", "release", "production"]
     }
   }
 }
