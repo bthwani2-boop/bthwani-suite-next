@@ -1,62 +1,63 @@
 ---
 name: bthwani-final-journey-closure-judge
-description: Judge if a journey is fully closed and ready by verifying multi-dimensional evidence before claiming closure.
-version: 2026.06.24-v1
+version: 2026.07.17-v2
+summary: Judge final closure only from same-commit, multi-scope, independently approved evidence.
 ---
 
 # bthwani-final-journey-closure-judge
 
-Do not invoke during normal implementation.
-Invoke only when the user explicitly asks for CLOSED, READY, final closure, PR readiness, merge readiness, or release readiness.
-
 ## Purpose
 
-Enforce strict multi-dimensional evidence requirements before any journey is declared `CLOSED` or `READY`. No journey can be marked closed based on assumption or single-source evidence.
+Own the final evidence reconciliation that decides whether a governed journey may be classified as `CLOSED_WITH_EVIDENCE`.
 
-## Mandatory Evidence Rules
+## Invoke when
 
-Mandatory only for final closure or escalated review.
-Not required for normal implementation.
+- The user explicitly requests final closure, merge readiness, release readiness, production readiness, or a complete no-gap judgment.
+- All applicable implementation and verification work is complete and evidence must be reconciled.
 
-1. **API / Contracts**: Requires contract proof (e.g., OpenAPI lint check or schema compliance).
-2. **Backend Logic**: Requires backend/domain proof (e.g., unit tests or local integration execution).
-3. **Frontend Binding**: Requires generated/typed client proof (e.g., verifying compiled clients or views).
-4. **Service Adapters**: Requires service adapter/view-model proof.
-5. **UI / Screen Flow**: Requires screen state proof and visual evidence (screenshot/recording).
-6. **Runtime Smoke**: Requires runtime evidence from integration/live-like smoke tests.
-7. **Architectural Routing**: Requires Graphify/Nx evidence when project routing is touched.
-8. **CI System**: Requires CI evidence ONLY if CI is intentionally configured and active. If not active, explicitly document as an exception (do not claim CI pass).
+## Do not invoke when
 
-## Disallowed Actions
-- No "almost ready" or "implemented technically = closed".
-- No old PASS over a newer FAIL.
-- No single file of evidence (e.g., just a text report) to claim complete closure.
+- Work is still in discovery, implementation, or partial verification.
+- The request asks only for a code check, diagnostic, draft, or one evidence scope.
 
-## Allowed Judgments
-- `CLOSED`
-- `FIX_REQUIRED`
-- `BLOCKED`
-- `NEEDS_VISUAL_EVIDENCE`
-- `NEEDS_RUNTIME_EVIDENCE`
-- `NEEDS_CONTRACT_EVIDENCE`
-- `NEEDS_BACKEND_EVIDENCE`
-- `NEEDS_FRONTEND_EVIDENCE`
-- `NEEDS_CI_EVIDENCE`
+## Authority boundary
 
-## Output Format
+This skill may reconcile independently produced evidence and issue the final canonical decision. It may not create missing proof, approve its own implementation, replace Product Manager or Product Owner approval, replace QA/security/release authorities, accept residual risk, or infer runtime truth from declarations.
 
-Use this full output only during final closure review.
-For normal implementation, do not output this block.
+## Required evidence model
+
+Evaluate only applicable scopes:
+
+1. Product Truth and functional acceptance.
+2. Contract and architecture integrity.
+3. Backend, data, generated-client, adapter/controller, and surface binding.
+4. Negative and cross-surface tests.
+5. Runtime smoke tied to the same commit when runtime is claimed.
+6. Visual flow evidence only when UI closure, release, store, or explicit visual acceptance applies.
+7. Independent QA, security, release, and risk acceptance where required.
+8. CI results for the same immutable commit when CI is configured and applicable.
+
+A pass in one scope never upgrades another scope. Prior evidence does not override a newer failure or a newer commit.
+
+## Forbidden
+
+- `implemented` or `code check passed` as a synonym for closure.
+- Closure with failed gates, missing evidence, open blockers, unresolved residual risk, or self-approval.
+- Closure based on a merge ref, stale branch SHA, runtime map declaration, seed data, or documentation-only claim.
+
+## Required output
 
 ```text
-skill: bthwani-final-journey-closure-judge
-journey_touched: <path/component>
-evidence_checked:
-  - contract: <path or none>
-  - backend: <test output or none>
-  - frontend: <compilation or none>
-  - visual: <image path or none>
-  - runtime: <smoke output or none>
-judgment: <judgment>
-rationale: <why>
+resolved_commit_sha:
+applicable_scopes:
+passed_scopes:
+failed_scopes:
+missing_evidence:
+required_approvals:
+separation_of_duties:
+open_blockers:
+residual_risks:
+decision:
 ```
+
+Allowed decisions: `CLOSED_WITH_EVIDENCE`, `FIX_REQUIRED`, `NEEDS_EVIDENCE`, `QA_BLOCK`, `SECURITY_BLOCK`, `RELEASE_BLOCK`, and `BLOCKED_EXTERNAL`.
