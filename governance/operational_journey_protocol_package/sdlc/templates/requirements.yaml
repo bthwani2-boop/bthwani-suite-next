@@ -1,9 +1,22 @@
+schemaVersion: 2
 capabilityId:
+productTruthContract:
+productManagerApproval: PENDING
+productOwnerApproval: PENDING
+actors: []
+requiredSurfaces: []
+excludedSurfaces: []
 functionalRequirements: []
 nonFunctionalRequirements: []
+permissions: []
+forbiddenActions: []
+businessInvariants: []
+negativeInvariants: []
 acceptanceCriteria: []
 failureStates: []
-permissions: []
+requiredChecks: []
+runtimeEvidenceRequired: false
+visualEvidenceRequired: false
 auditRequirements: []
 qualityProfile: []
 securityRequirements: []
