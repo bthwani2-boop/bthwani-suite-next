@@ -2,55 +2,54 @@
 
 import React, { useState } from "react";
 import { Box, Button, Card, ScrollScreen, Text, TextField, spacing, colorRoles, alpha } from "@bthwani/ui-kit";
-import { useFieldAgentCreateController } from "../../shared/workforce";
+import { useFieldAgentCreateAndActivationController } from "../../shared/workforce";
 import type { FieldAgent, SupervisorCandidate } from "../../shared/workforce";
 import { SupervisorPicker } from "./SupervisorPicker";
 import { ZonePicker } from "./ZonePicker";
-
-import { issueFieldAgentActivationCode } from "../../shared/workforce";
 
 export function FieldAgentCreateView(props: {
   readonly onBack?: () => void;
   readonly onCreated: (agent: FieldAgent) => void;
   readonly inline?: boolean;
 }) {
-  const { state, submit } = useFieldAgentCreateController();
+  const { state, submit, reset } = useFieldAgentCreateAndActivationController();
   const [fullNameAr, setFullNameAr] = useState("");
   const [phone, setPhone] = useState("");
   const [zoneId, setZoneId] = useState("");
   const [supervisor, setSupervisor] = useState<SupervisorCandidate | null>(null);
-  const [createdAgent, setCreatedAgent] = useState<FieldAgent | null>(null);
   const [autoActivate, setAutoActivate] = useState(true);
-  const [issuedCode, setIssuedCode] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+
+  const createdAgent = state.kind === "created" ? state.provider : null;
+  const issuedCode = state.kind === "created" ? state.activation?.code ?? null : null;
+  const activationError = state.kind === "created" ? state.activationError : null;
 
   const canSubmit =
     fullNameAr.trim().length > 0 &&
     phone.trim().length >= 9 &&
     zoneId !== "" &&
     state.kind !== "submitting" &&
-    !createdAgent;
+    state.kind !== "created";
 
   const handleSubmit = async () => {
-    const agent = await submit({
+    await submit({
       fullNameAr: fullNameAr.trim(),
       phoneE164: phone.trim(),
       engagementType: "independent_contractor",
       serviceZoneId: zoneId,
       shiftCode: "full_day",
-      supervisorActorId: supervisor?.actorId ?? undefined,
-    });
-    if (agent) {
-      setCreatedAgent(agent);
-      if (autoActivate) {
-        try {
-          const res = await issueFieldAgentActivationCode(agent.actorId, agent.version);
-          setIssuedCode(res.code);
-        } catch (err) {
-          console.error("Auto activation failed", err);
-        }
-      }
-    }
+      supervisorActorId: supervisor?.actorId,
+    }, { issueActivationCode: autoActivate });
+  };
+
+  const resetForm = () => {
+    reset();
+    setFullNameAr("");
+    setPhone("");
+    setZoneId("");
+    setSupervisor(null);
+    setAutoActivate(true);
+    setCopied(false);
   };
 
   const content = (
@@ -68,28 +67,26 @@ export function FieldAgentCreateView(props: {
         يُخزَّن في Workforce.
       </Text>
 
-      <TextField label="الاسم الكامل *" value={fullNameAr} onChangeText={setFullNameAr} placeholder="أحمد محمد" disabled={!!createdAgent} />
-      <TextField label="رقم الهاتف *" value={phone} onChangeText={setPhone} placeholder="مثال: 777123456" disabled={!!createdAgent} />
+      <TextField label="الاسم الكامل *" value={fullNameAr} onChangeText={setFullNameAr} placeholder="أحمد محمد" disabled={Boolean(createdAgent)} />
+      <TextField label="رقم الهاتف *" value={phone} onChangeText={setPhone} placeholder="مثال: 777123456" disabled={Boolean(createdAgent)} />
 
       <Text role="bodySm" style={{ textAlign: "right", fontWeight: "bold" }}>التشغيل والنطاق</Text>
       <ZonePicker
         value={zoneId}
-        disabled={!!createdAgent}
-        onChange={(zone) => {
-          setZoneId(zone?.id ?? "");
-        }}
+        disabled={Boolean(createdAgent)}
+        onChange={(zone) => setZoneId(zone?.id ?? "")}
       />
 
       <Text role="bodySm" style={{ textAlign: "right", fontWeight: "bold" }}>الإشراف</Text>
-      <SupervisorPicker kind="field" selected={supervisor} onSelect={setSupervisor} disabled={!!createdAgent} />
+      <SupervisorPicker kind="field" selected={supervisor} onSelect={setSupervisor} disabled={Boolean(createdAgent)} />
 
-      <Text role="bodySm" style={{ textAlign: "right", fontWeight: "bold" }}>التفعيل *</Text>
+      <Text role="bodySm" style={{ textAlign: "right", fontWeight: "bold" }}>تفعيل حساب الدخول</Text>
       <Box style={{ flexDirection: "row-reverse", gap: spacing[2], alignItems: "center" }}>
         <Button
-          label={autoActivate ? "تفعيل الحساب فورًا وإصدار كود الدخول ✓" : "إنشاء بدون تفعيل"}
+          label={autoActivate ? "إصدار كود دخول بعد الإنشاء ✓" : "إنشاء بدون كود دخول"}
           tone={autoActivate ? "primary" : "ghost"}
-          disabled={!!createdAgent}
-          onPress={() => setAutoActivate(!autoActivate)}
+          disabled={Boolean(createdAgent)}
+          onPress={() => setAutoActivate((value) => !value)}
         />
       </Box>
 
@@ -100,11 +97,12 @@ export function FieldAgentCreateView(props: {
       {createdAgent ? (
         <Box style={{ gap: spacing[3], marginTop: spacing[3], padding: spacing[3], backgroundColor: alpha(colorRoles.success, 0.08), border: `1px solid ${alpha(colorRoles.success, 0.3)}`, borderRadius: 8 }}>
           <Text role="bodyStrong" tone="success" style={{ textAlign: "right" }}>
-            تم إنشاء حساب مقدم الخدمة بنجاح!
+            تم إنشاء مقدم الخدمة وتأكيده من Workforce.
           </Text>
+
           {issuedCode ? (
             <Box style={{ gap: spacing[2] }}>
-              <Text role="bodySm" style={{ textAlign: "right" }}>كود التفعيل لتطبيق الهواتف:</Text>
+              <Text role="bodySm" style={{ textAlign: "right" }}>كود التفعيل الصادر من خدمة الهوية:</Text>
               <Box style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", backgroundColor: colorRoles.surfaceBase, padding: spacing[2], borderRadius: 4, border: `1px solid ${colorRoles.borderSubtle}` }}>
                 <Text role="titleMd" style={{ color: colorRoles.success, letterSpacing: 2, fontWeight: "bold" }}>{issuedCode}</Text>
                 <Button
@@ -120,24 +118,26 @@ export function FieldAgentCreateView(props: {
                 />
               </Box>
             </Box>
+          ) : activationError ? (
+            <Text role="bodySm" tone="danger" style={{ textAlign: "right" }}>
+              تم إنشاء مقدم الخدمة، لكن تعذر إصدار كود الدخول: {activationError}
+            </Text>
           ) : (
             <Text role="bodySm" tone="warning" style={{ textAlign: "right" }}>
-              لم يتم تفعيل الحساب بعد. يمكنك توليد كود التفعيل لاحقًا من ملف مقدم الخدمة.
+              تم الإنشاء بدون تفعيل حساب الدخول. يمكن إصدار الكود من ملف مقدم الخدمة.
             </Text>
           )}
-          <Box style={{ flexDirection: "row-reverse", marginTop: spacing[2] }}>
+
+          <Box style={{ flexDirection: "row-reverse", gap: spacing[2], flexWrap: "wrap" }}>
+            <Button
+              label="فتح ملف مقدم الخدمة"
+              tone="primary"
+              onPress={() => props.onCreated(createdAgent)}
+            />
             <Button
               label="إضافة مقدم خدمة جديد"
               tone="secondary"
-              onPress={() => {
-                setCreatedAgent(null);
-                setIssuedCode(null);
-                setFullNameAr("");
-                setPhone("");
-                setZoneId("");
-                setSupervisor(null);
-                setAutoActivate(true);
-              }}
+              onPress={resetForm}
             />
           </Box>
         </Box>
@@ -155,15 +155,9 @@ export function FieldAgentCreateView(props: {
     </Card>
   );
 
-  if (props.inline) {
-    return content;
-  }
+  if (props.inline) return content;
 
-  return (
-    <ScrollScreen>
-      {content}
-    </ScrollScreen>
-  );
+  return <ScrollScreen>{content}</ScrollScreen>;
 }
 
 export default FieldAgentCreateView;
