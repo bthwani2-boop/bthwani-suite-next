@@ -14,44 +14,15 @@ interface CatalogVersionedEntity {
   readonly version?: number;
 }
 
-export interface CatalogDomainUpdateInput {
-  readonly nameAr?: string;
-  readonly nameEn?: string;
-  readonly icon?: string;
-  readonly sortOrder?: number;
-  readonly isActive?: boolean;
-  readonly isClientVisible?: boolean;
-  readonly requiresProductCatalog?: boolean;
-  readonly isManualRequest?: boolean;
-}
-
-export interface CatalogNodeUpdateInput {
-  readonly nameAr?: string;
-  readonly nameEn?: string;
-  readonly icon?: string;
-  readonly sortOrder?: number;
-  readonly isActive?: boolean;
-  readonly isClientVisible?: boolean;
-  readonly requiresBarcode?: boolean;
-  readonly allowsProductProposal?: boolean;
-  readonly allowsStoreProductCustomImage?: boolean;
-  readonly requiresCatalogReview?: boolean;
-  readonly requiresProductCatalog?: boolean;
-}
-
-export interface CatalogMasterProductUpdateInput {
-  readonly categoryNodeId?: string | null;
-  readonly canonicalNameAr?: string;
-  readonly canonicalNameEn?: string;
-  readonly brand?: string;
-  readonly barcode?: string | null;
-  readonly gtin?: string | null;
-  readonly sku?: string | null;
-  readonly unit?: string;
-  readonly measurementType?: string;
-  readonly approvalStatus?: "draft" | "pending_review" | "approved" | "rejected" | "archived";
-  readonly isActive?: boolean;
-}
+export type CatalogDomainUpdateInput = Omit<Parameters<typeof api.updateCatalogDomain>[1], "slug">;
+export type CatalogNodeUpdateInput = Omit<
+  Parameters<typeof api.updateCatalogNode>[1],
+  "domainId" | "parentId" | "level" | "slug"
+>;
+export type CatalogMasterProductUpdateInput = Omit<
+  Parameters<typeof api.updateMasterProduct>[1],
+  "domainId" | "canonicalImageObjectKey"
+>;
 
 function requireCatalogVersion(
   entities: readonly CatalogVersionedEntity[],
@@ -218,9 +189,10 @@ export function useCentralCatalogController(authKind = "unauthenticated") {
     createDomain: async (input: Parameters<typeof api.createCatalogDomain>[0]) =>
       runMutationWithReadback(() => api.createCatalogDomain(input), loadDomains),
 
-    updateDomain: async (domainId: string, input: CatalogDomainUpdateInput) => {
+    updateDomain: async (domainId: string, input: Parameters<typeof api.updateCatalogDomain>[1]) => {
       const expectedVersion = requireCatalogVersion(state.domains.items, domainId, "domain");
       const request = { ...input, expectedVersion };
+      delete request.slug;
       return runMutationWithReadback(
         () => api.updateCatalogDomain(domainId, request),
         loadDomains,
@@ -230,9 +202,13 @@ export function useCentralCatalogController(authKind = "unauthenticated") {
     createNode: async (input: Parameters<typeof api.createCatalogNode>[0]) =>
       runMutationWithReadback(() => api.createCatalogNode(input), loadNodes),
 
-    updateNode: async (nodeId: string, input: CatalogNodeUpdateInput) => {
+    updateNode: async (nodeId: string, input: Parameters<typeof api.updateCatalogNode>[1]) => {
       const expectedVersion = requireCatalogVersion(state.nodes.items, nodeId, "node");
       const request = { ...input, expectedVersion };
+      delete request.domainId;
+      delete request.parentId;
+      delete request.level;
+      delete request.slug;
       return runMutationWithReadback(
         () => api.updateCatalogNode(nodeId, request),
         loadNodes,
@@ -242,9 +218,11 @@ export function useCentralCatalogController(authKind = "unauthenticated") {
     createMasterProduct: async (input: Parameters<typeof api.createMasterProduct>[0]) =>
       runMutationWithReadback(() => api.createMasterProduct(input), loadMasterProducts),
 
-    updateMasterProduct: async (productId: string, input: CatalogMasterProductUpdateInput) => {
+    updateMasterProduct: async (productId: string, input: Parameters<typeof api.updateMasterProduct>[1]) => {
       const expectedVersion = requireCatalogVersion(state.masterProducts.items, productId, "master_product");
       const request = { ...input, expectedVersion };
+      delete request.domainId;
+      delete request.canonicalImageObjectKey;
       return runMutationWithReadback(
         () => api.updateMasterProduct(productId, request),
         loadMasterProducts,
