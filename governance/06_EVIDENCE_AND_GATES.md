@@ -1,52 +1,62 @@
 # 06 — Evidence and Gates
 
-Status: CANONICAL
+Status: ACTIVE_CANONICAL
 
 ## Default rule
 
-Normal implementation uses CODE_BASED_LEAN, in accordance with the canonical policy in [LEAN_CODE_BASED_CHECK.md](LEAN_CODE_BASED_CHECK.md).
+Normal implementation uses `CODE_BASED_LEAN` according to [LEAN_CODE_BASED_CHECK.md](LEAN_CODE_BASED_CHECK.md).
 
-The agent should inspect relevant live code, make the smallest correct change, and run only the most targeted useful code-based check.
+Inspect relevant live code, make the smallest correct change, and run the smallest sufficient targeted check. A check proves only its declared assurance scope.
 
-Evidence files and screenshots are not required for normal implementation. All file operations and scans must obey the token-drain exclusions specified in the canonical policy.
+Evidence files and screenshots are not required for normal implementation. Scans must obey the token-drain exclusions unless an excluded path is actually affected.
 
 ## Evidence escalation
 
-Create evidence files only for:
-- explicit final closure / CLOSED / READY request
-- PR readiness
-- merge readiness
-- release readiness
-- finance/WLT
-- security/auth/privacy/secrets
-- database mutation or migrations
-- runtime/docker/live API behavior
-- public OpenAPI/contract change
-- dependency upgrades
-- broad ownership refactor
-- explicit user request
+Additional same-commit evidence is required when applicable to:
+
+- Product Truth, product-model approval, or product acceptance;
+- independent governance-contract or CI-workflow approval;
+- final `CLOSED_WITH_EVIDENCE` judgment;
+- independent review, QA, security, release, deployment, or production verification;
+- WLT or financial truth;
+- authentication, authorization, privacy, secrets, or sensitive data;
+- database mutations, migrations, or production data;
+- runtime, Docker, provider, persistence, or live API behavior;
+- public OpenAPI or contract changes;
+- dependency and toolchain upgrades;
+- broad ownership refactors or destructive cleanup;
+- explicit user requests.
+
+Evidence is not valid when stale, branch-mismatched, merge-ref-only, generated from declarations, or detached from the resolved commit.
 
 ## Stage-gate escalation
 
-Governed SDLC stage gates are defined in [26_SDLC_TEAM_AND_STAGE_GATES.md](26_SDLC_TEAM_AND_STAGE_GATES.md).
+Governed SDLC stages are defined in [26_SDLC_TEAM_AND_STAGE_GATES.md](26_SDLC_TEAM_AND_STAGE_GATES.md).
 
-Use the stage-gate model when the change affects release approval, security authority, independent QA, cross-surface runtime readiness, tenant isolation, production rollback, or formal risk acceptance.
+Use formal stage routing when impact requires product, architecture, governance, CI, independent QA, security, finance, release, rollback, production, tenant-isolation, or residual-risk decisions.
 
-Lean code-based changes still use the smallest targeted check unless a stage gate applies.
+Lean code-based changes still use targeted checks unless a formal stage or broader assurance scope applies.
 
 ## Normal output
 
-For regular implementation, report only:
-- changed paths
-- targeted code-based check used, if any
-- remaining risk or blocker, if any
+For regular implementation report:
 
-Do not create command logs, handoff ZIPs, screenshot sets, repeated git status files, diff-check artifacts, or long closure reports unless escalation applies.
+- resolved repository branch and commit when repository truth is claimed;
+- changed paths;
+- targeted checks and their assurance scopes;
+- decision mapped through the canonical vocabulary;
+- remaining risk or missing evidence.
+
+Do not create duplicated command logs, handoff archives, screenshot sets, or long closure reports unless an applicable evidence scope requires them.
 
 ## Closure claims
 
-Do not claim CLOSED, READY, FINAL, DONE, or 100% unless the chosen check level matches the task risk and required escalated evidence exists.
+- `PASS` means only the explicitly declared scope passed.
+- `READY_FOR_REVIEW` means independent review is still required.
+- `NEEDS_EVIDENCE` means the required proof is missing or stale.
+- `CLOSED_WITH_EVIDENCE` requires every applicable evidence scope, approval, and stage on the same immutable commit with no open blocker.
+- Deprecated aliases such as `CLOSED`, `READY_FOR_PR`, `GATE_PASS`, and `BLOCKED_NEEDS_EVIDENCE` must not be introduced in active artifacts.
 
 ## Acceptance condition
 
-Accepted when the implementation is correct in live code, the check level is proportional to the real task risk, and any applicable SDLC or SaaS/Tenancy gate has not been bypassed.
+Accepted only when evidence scope is proportional to actual risk, every result maps to the canonical decision vocabulary, static checks are not upgraded into runtime or closure proof, and no applicable Product Truth, governance, CI, SDLC, security, finance, release, or production gate is bypassed.
