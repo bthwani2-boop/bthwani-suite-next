@@ -1,0 +1,93 @@
+name: Platform Control Verification
+
+on:
+  push:
+    branches: [bassam, master]
+    paths:
+      - "core/platform-control/**"
+      - "services/dsh/frontend/shared/platform/**"
+      - "services/dsh/frontend/shared/session/control-panel-permissions.ts"
+      - "services/dsh/frontend/control-panel/platform/**"
+      - "apps/control-panel/runtime/src/shell/useDshNavigation.ts"
+      - ".github/workflows/platform-control-verification.yml"
+  pull_request:
+    branches: [master]
+    paths:
+      - "core/platform-control/**"
+      - "services/dsh/frontend/shared/platform/**"
+      - "services/dsh/frontend/shared/session/control-panel-permissions.ts"
+      - "services/dsh/frontend/control-panel/platform/**"
+      - "apps/control-panel/runtime/src/shell/useDshNavigation.ts"
+      - ".github/workflows/platform-control-verification.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: platform-control-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Platform control Go verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+      - name: Setup Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: core/platform-control/backend/go.mod
+          cache: true
+      - name: Verify format, vet, build, and tests
+        working-directory: core/platform-control/backend
+        shell: bash
+        run: |
+          set -euo pipefail
+          files="$(gofmt -l .)"
+          test -z "$files" || { printf 'Unformatted platform-control files:\n%s\n' "$files"; exit 1; }
+          go vet ./...
+          go build ./...
+          go test ./... -count=1
+
+  frontend:
+    name: Platform control frontend contracts and types
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+      - name: Setup workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Verify generated contracts and platform bindings
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm run contracts:lint
+          pnpm run guard:no-broken-imports
+          pnpm run guard:ui-kit-boundary
+          pnpm run guard:frontend-feature-binding
+          pnpm run typecheck
+
+  result:
+    name: Platform control verification result
+    if: always()
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require backend and frontend verification
+        env:
+          BACKEND: ${{ needs.backend.result }}
+          FRONTEND: ${{ needs.frontend.result }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'backend=%s\nfrontend=%s\n' "$BACKEND" "$FRONTEND"
+          test "$BACKEND" = success
+          test "$FRONTEND" = success
