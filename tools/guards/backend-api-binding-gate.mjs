@@ -20,7 +20,10 @@ const services = [
   {
     name: "WLT",
     openapi: "services/wlt/contracts/wlt.openapi.yaml",
-    additionalOpenapi: ["services/wlt/contracts/wlt.commercial.openapi.yaml"],
+    additionalOpenapi: [
+      "services/wlt/contracts/wlt.commercial.openapi.yaml",
+      "services/wlt/contracts/wlt.commercial-summary.openapi.yaml",
+    ],
     router: "services/wlt/backend/internal/http/server.go",
   },
   {
@@ -227,6 +230,7 @@ const wltFinancialReadRoutes = new Set([
   "GET /wlt/commissions",
   "GET /wlt/ledger/entries",
   "GET /wlt/ledger/entries/{entryId}",
+  "GET /wlt/commercial/summary",
   "GET /wlt/commercial/products/{productReference}",
   "GET /wlt/commercial/clients/{clientId}/benefits",
 ]);
