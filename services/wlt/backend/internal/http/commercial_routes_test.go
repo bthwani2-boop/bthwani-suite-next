@@ -12,6 +12,7 @@ func TestCommercialBenefitRoutesRegistered(t *testing.T) {
 		path    string
 		pattern string
 	}{
+		{method: "GET", path: "/wlt/commercial/summary", pattern: "GET /wlt/commercial/summary"},
 		{method: "GET", path: "/wlt/commercial/products/sub-basic", pattern: "GET /wlt/commercial/products/{productReference}"},
 		{method: "POST", path: "/wlt/commercial/products", pattern: "POST /wlt/commercial/products"},
 		{method: "PATCH", path: "/wlt/commercial/products/sub-basic", pattern: "PATCH /wlt/commercial/products/{productReference}"},
