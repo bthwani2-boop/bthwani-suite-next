@@ -1,6 +1,7 @@
 "use client";
 
 import { colorRoles } from "@bthwani/ui-kit";
+import type { CSSProperties } from "react";
 import {
   GOVERNANCE_BRIDGES,
   type DeliverySignalCardViewModel,
@@ -109,7 +110,7 @@ export function VisibilityGatesSection({
   );
 }
 
-const styles: Record<string, React.CSSProperties> = {
+const styles: Record<string, CSSProperties> = {
   card: {
     background: colorRoles.surfaceBase,
     border: `1px solid ${colorRoles.borderSubtle}`,
