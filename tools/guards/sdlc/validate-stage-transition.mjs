@@ -39,6 +39,9 @@ const allowedDecisions = new Set([...nonTerminalDecisions, "PASS", "CLOSED_WITH_
 
 for (const marker of [
   "product_truth_precedes_implementation",
+  "product_manager_and_product_owner_approvals_are_separate",
+  "independent_reviewer_owns_g4_implementation_verification",
+  "reviewer_must_differ_from_author_executor_and_coordinator",
   "product_acceptance_precedes_qa",
   "same_commit_evidence_required",
   "all_applicable_evidence_scopes_required_for_closure",
@@ -46,6 +49,11 @@ for (const marker of [
   "governance_change_requires_governance_contract_authority",
   "ci_change_requires_ci_workflow_authority",
   "governance_and_ci_approvers_must_be_separate_when_both_apply",
+  "wlt_finance_change_requires_financial_control_authority",
+  "tenant_or_isolation_change_requires_isolation_security_approval",
+  "residual_risk_requires_risk_acceptance_authority",
+  "saas_activation_requires_explicit_product_security_finance_isolation_release_and_production_evidence",
+  "static_product_runtime_visual_qa_security_finance_isolation_governance_ci_release_and_production_scopes_remain_independent",
 ]) if (!lifecycle.includes(marker)) violations.push({ file: lifecycleRelative, message: `MISSING_LIFECYCLE_RULE ${marker}` });
 
 if (requestedStage && !allowedStages.has(requestedStage)) violations.push({ file: "<cli>", message: `UNKNOWN_REQUESTED_STAGE ${requestedStage}` });
