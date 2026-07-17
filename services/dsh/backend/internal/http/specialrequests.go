@@ -19,6 +19,19 @@ import (
 	"github.com/google/uuid"
 )
 
+// Permission constants for the special-requests (SHEIN/Awnak) operator
+// domain. Operator endpoints here previously reused SupportPermissionRead/
+// SupportPermissionManage -- special requests are an Operations decision
+// (dispatch, transition, monitoring), not a Support-ticket decision, so
+// gating them on the Support permission set let a support-only actor hold
+// authority over an Operations capability it does not own. These constants
+// (mirroring OperationsPermissionRead/Manage in orders.go) correct that.
+const (
+	OperationsSpecialRequestsPermissionRead       = "operations.special_requests.read"
+	OperationsSpecialRequestsPermissionTransition = "operations.special_requests.transition" // operator PATCH: review/quote/stage transitions
+	OperationsSpecialRequestsPermissionDispatch   = "operations.special_requests.dispatch"    // assign a special request to a captain
+)
+
 func parseLimitOffset(r *http.Request) (int, int) {
 	limit := 50
 	offset := 0
@@ -324,7 +337,7 @@ func (s *protectedStoreServer) handleApproveSpecialRequestQuote(w http.ResponseW
 
 // GET /dsh/operator/special-requests
 func (s *protectedStoreServer) handleListOperatorSpecialRequests(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", OperationsSpecialRequestsPermissionRead, "operator")
 	if !ok {
 		return
 	}
@@ -362,7 +375,7 @@ func (s *protectedStoreServer) handleListOperatorSpecialRequests(w http.Response
 
 // GET /dsh/operator/special-requests/{requestId}
 func (s *protectedStoreServer) handleGetOperatorSpecialRequest(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", OperationsSpecialRequestsPermissionRead, "operator")
 	if !ok {
 		return
 	}
@@ -402,7 +415,7 @@ type updateSpecialRequestBody struct {
 
 // PATCH /dsh/operator/special-requests/{requestId}
 func (s *protectedStoreServer) handleUpdateOperatorSpecialRequest(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionManage, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", OperationsSpecialRequestsPermissionTransition, "operator")
 	if !ok {
 		return
 	}
@@ -460,7 +473,7 @@ type assignSpecialRequestDispatchBody struct {
 // as handleUpdateOperatorSpecialRequest since this is also an operator-only
 // mutation of a special request's dispatch state.
 func (s *protectedStoreServer) handleAssignSpecialRequestDispatch(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionManage, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", OperationsSpecialRequestsPermissionDispatch, "operator")
 	if !ok {
 		return
 	}
@@ -476,7 +489,16 @@ func (s *protectedStoreServer) handleAssignSpecialRequestDispatch(w http.Respons
 		ActorID:          actor.ID,
 	})
 	if err != nil {
+		var notReady *specialrequests.ErrDispatchNotReady
 		switch {
+		case errors.As(err, &notReady):
+			store.SendJSON(w, http.StatusConflict, map[string]any{
+				"code":            "SPECIAL_REQUEST_NOT_READY_FOR_DISPATCH",
+				"message":         notReady.Error(),
+				"currentStage":    notReady.Readiness.CurrentStage,
+				"requiredStage":   notReady.Readiness.RequiredStage,
+				"blockingReasons": notReady.Readiness.BlockingReasons,
+			})
 		case errors.Is(err, dispatch.ErrNotFound):
 			store.SendError(w, http.StatusNotFound, "NOT_FOUND", "special request not found")
 		case errors.Is(err, dispatch.ErrConflict):

@@ -183,6 +183,17 @@ func CreateAssignmentForSpecialRequest(db *sql.DB, input CreateAssignmentInput) 
 	}
 	defer tx.Rollback()
 
+	// StatusApproved alone is not a sufficient readiness signal for SHEIN:
+	// status stays "approved" across five different workflow stages
+	// (batch_pending through ready_for_delivery). CheckSheinDispatchReadiness
+	// enforces the actual SHEIN dispatch-readiness gate (workflow_stage must
+	// be ready_for_delivery with every fulfillment timestamp populated) before
+	// the status transition below is even attempted; it is a no-op for
+	// AWNAK_ERRAND, whose single "approved" stage is already unambiguous.
+	if err = specialrequests.CheckSheinDispatchReadiness(tx, input.TenantID, input.SpecialRequestID); err != nil {
+		return nil, mapSpecialRequestError(err)
+	}
+
 	if err = specialrequests.TransitionDispatchStatusInTenant(tx, input.TenantID, input.SpecialRequestID,
 		[]specialrequests.RequestStatus{specialrequests.StatusApproved}, specialrequests.StatusAssigned); err != nil {
 		return nil, mapSpecialRequestError(err)

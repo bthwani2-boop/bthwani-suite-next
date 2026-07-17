@@ -269,17 +269,27 @@ func (s *Service) CreateInTenant(ctx context.Context, tenantID string, clientID 
 	in.ClientID = clientID
 	in.workflowStage = firstStageFor(in.RequestType)
 
-	req, err := s.repo.Create(ctx, in)
+	tx, err := s.repo.DB().Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	req, err := s.repo.CreateTx(ctx, tx, in)
 	if err != nil {
 		return nil, err
 	}
 
-	// Record audit event for successful creation (best-effort).
 	correlationID := ""
 	if in.CorrelationID != nil {
 		correlationID = *in.CorrelationID
 	}
-	_ = WriteAuditEvent(ctx, s.repo.DB(), req.ID, clientID, "client", "create", "", correlationID, nil, requestJSON(req))
+	if err := WriteAuditEvent(tx, req.ID, clientID, "client", "create", "", correlationID, nil, requestJSON(req)); err != nil {
+		return nil, fmt.Errorf("write audit event: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
 
 	return req, nil
 }
@@ -395,17 +405,28 @@ func (s *Service) CancelForClientInTenant(ctx context.Context, tenantID string, 
 		Status:         &status,
 		setCancelledAt: true,
 	}
-	updated, err := s.repo.UpdateInTenant(ctx, tenantID, id, version, update)
+
+	tx, err := s.repo.DB().Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	updated, err := s.repo.UpdateInTenantTx(ctx, tx, tenantID, id, version, update)
 	if err != nil {
 		return nil, err
 	}
 
-	// Record audit event for successful cancellation (best-effort).
 	correlationID := ""
 	if current.CorrelationID != nil {
 		correlationID = *current.CorrelationID
 	}
-	_ = WriteAuditEvent(ctx, s.repo.DB(), id, clientID, "client", "cancel", "", correlationID, requestJSON(current), requestJSON(updated))
+	if err := WriteAuditEvent(tx, id, clientID, "client", "cancel", "", correlationID, requestJSON(current), requestJSON(updated)); err != nil {
+		return nil, fmt.Errorf("write audit event: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
 
 	// Best-effort: if a WLT payment session was attached, ask WLT to expire
 	// it so it doesn't dangle forever. This is a synchronous, lower-durability
@@ -504,17 +525,27 @@ func (s *Service) ApplyOperatorTransitionInTenant(ctx context.Context, tenantID 
 		update.setCancelledAt = newStatus == StatusCancelled && current.Status != StatusCancelled
 	}
 
-	updated, err := s.repo.UpdateInTenant(ctx, tenantID, id, expectedVersion, update)
+	tx, err := s.repo.DB().Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	updated, err := s.repo.UpdateInTenantTx(ctx, tx, tenantID, id, expectedVersion, update)
 	if err != nil {
 		return nil, err
 	}
 
-	// Record audit event for successful transition (best-effort).
 	correlationID := ""
 	if current.CorrelationID != nil {
 		correlationID = *current.CorrelationID
 	}
-	_ = WriteAuditEvent(ctx, s.repo.DB(), id, "operator", "operator", "transition", "", correlationID, requestJSON(current), requestJSON(updated))
+	if err := WriteAuditEvent(tx, id, "operator", "operator", "transition", "", correlationID, requestJSON(current), requestJSON(updated)); err != nil {
+		return nil, fmt.Errorf("write audit event: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
 
 	return updated, nil
 }

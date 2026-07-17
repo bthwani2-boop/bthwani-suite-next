@@ -240,6 +240,102 @@ func TestSpecialRequestsCreateDBIntegration(t *testing.T) {
 	})
 }
 
+// TestSpecialRequestsAuditAtomicityDBIntegration is a regression guard for
+// the resolved gap where WriteAuditEvent wrote via a pooled *sql.DB
+// connection after the mutation it described had already committed, making
+// the audit event best-effort. WriteAuditEvent now takes the caller's *sql.Tx
+// directly (mirroring partnerdelivery/pickup), so it is exercised here at the
+// same level service.go calls it: within a transaction that also performed
+// the row update, proving a failed audit write rolls the update back with it.
+func TestSpecialRequestsAuditAtomicityDBIntegration(t *testing.T) {
+	db := openRequiredDB(t)
+	repo := NewPostgresRepository(db)
+	ctx := context.Background()
+
+	t.Run("a failed audit write rolls back the update in the same transaction", func(t *testing.T) {
+		clientID := newClientID(t)
+		in := validSheinInput(clientID)
+		in.workflowStage = firstStageFor(in.RequestType)
+		req, err := repo.Create(ctx, in)
+		if err != nil {
+			t.Fatalf("seed create failed: %v", err)
+		}
+		cleanupRequest(t, db, req.ID)
+
+		tx, err := db.Begin()
+		if err != nil {
+			t.Fatalf("begin failed: %v", err)
+		}
+		status := StatusUnderReview
+		if _, err := repo.UpdateInTenantTx(ctx, tx, "", req.ID, req.Version, UpdateInput{Status: &status}); err != nil {
+			_ = tx.Rollback()
+			t.Fatalf("UpdateInTenantTx failed: %v", err)
+		}
+		// entity_id is UUID NOT NULL (dsh-054): a malformed value forces
+		// exactly the kind of audit-write failure service.go now guards
+		// against by checking WriteAuditEvent's error before committing.
+		if err := WriteAuditEvent(tx, "not-a-uuid", "operator", "operator", "transition", "", "", nil, nil); err == nil {
+			_ = tx.Rollback()
+			t.Fatal("expected WriteAuditEvent with a malformed entity_id to fail")
+		}
+		if err := tx.Rollback(); err != nil {
+			t.Fatalf("rollback failed: %v", err)
+		}
+
+		current, err := repo.Get(ctx, req.ID)
+		if err != nil {
+			t.Fatalf("readback failed: %v", err)
+		}
+		if current.Status != StatusSubmitted {
+			t.Fatalf("expected status to remain submitted after rollback, got %s", current.Status)
+		}
+		if current.Version != req.Version {
+			t.Fatalf("expected version to remain %d after rollback, got %d", req.Version, current.Version)
+		}
+	})
+
+	t.Run("a successful update and its audit event commit together", func(t *testing.T) {
+		clientID := newClientID(t)
+		in := validSheinInput(clientID)
+		in.workflowStage = firstStageFor(in.RequestType)
+		req, err := repo.Create(ctx, in)
+		if err != nil {
+			t.Fatalf("seed create failed: %v", err)
+		}
+		cleanupRequest(t, db, req.ID)
+
+		tx, err := db.Begin()
+		if err != nil {
+			t.Fatalf("begin failed: %v", err)
+		}
+		status := StatusUnderReview
+		updated, err := repo.UpdateInTenantTx(ctx, tx, "", req.ID, req.Version, UpdateInput{Status: &status})
+		if err != nil {
+			_ = tx.Rollback()
+			t.Fatalf("UpdateInTenantTx failed: %v", err)
+		}
+		if err := WriteAuditEvent(tx, req.ID, "operator", "operator", "transition", "", "", nil, nil); err != nil {
+			_ = tx.Rollback()
+			t.Fatalf("WriteAuditEvent failed: %v", err)
+		}
+		if err := tx.Commit(); err != nil {
+			t.Fatalf("commit failed: %v", err)
+		}
+
+		current, err := repo.Get(ctx, req.ID)
+		if err != nil {
+			t.Fatalf("readback failed: %v", err)
+		}
+		if current.Status != StatusUnderReview {
+			t.Fatalf("expected status under_review after commit, got %s", current.Status)
+		}
+		if current.Version != updated.Version {
+			t.Fatalf("expected version %d after commit, got %d", updated.Version, current.Version)
+		}
+		assertAuditEventExists(t, db, req.ID, "transition")
+	})
+}
+
 func TestSpecialRequestsListAndGetOwnershipDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	svc, _ := newTestService(db)

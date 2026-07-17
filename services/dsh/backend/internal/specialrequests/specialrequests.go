@@ -214,7 +214,25 @@ func scanSpecialRequest(scan func(...any) error) (*SpecialRequest, error) {
 	return &req, nil
 }
 
+// queryRower is satisfied by both *sql.DB and *sql.Tx, letting Create/update
+// run against either a pooled connection or a caller-owned transaction. The
+// Tx variants exist so a mutation and the audit event describing it (see
+// service.go's Create/ApplyOperatorTransitionInTenant/
+// CancelForClientInTenant) commit or roll back together.
+type queryRower interface {
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+}
+
 func (r *PostgresRepository) Create(ctx context.Context, input CreateInput) (*SpecialRequest, error) {
+	return r.createWith(ctx, r.db, input)
+}
+
+// CreateTx is Create's transactional counterpart.
+func (r *PostgresRepository) CreateTx(ctx context.Context, tx *sql.Tx, input CreateInput) (*SpecialRequest, error) {
+	return r.createWith(ctx, tx, input)
+}
+
+func (r *PostgresRepository) createWith(ctx context.Context, exec queryRower, input CreateInput) (*SpecialRequest, error) {
 	if input.TenantID == "" {
 		input.TenantID = DefaultTenantID
 	}
@@ -233,7 +251,7 @@ func (r *PostgresRepository) Create(ctx context.Context, input CreateInput) (*Sp
 		DO UPDATE SET updated_at = now()
 		RETURNING ` + specialRequestColumns
 
-	row := r.db.QueryRowContext(ctx, query,
+	row := exec.QueryRowContext(ctx, query,
 		id, input.TenantID, input.ClientID, input.RequestType, StatusSubmitted, input.IdempotencyKey, input.workflowStage, input.CorrelationID,
 		input.CustomerNotes, input.ProductUrl, input.Quantity, input.Size, input.Color, input.VariantNotes, input.DeliveryAddressReference,
 		input.PickupAddressReference, input.DropoffAddressReference, nullableJSON(input.PickupLocation), nullableJSON(input.DropoffLocation), input.ItemType, input.ScheduleMode, input.ScheduledAt, input.HandlingRequirements,
@@ -272,14 +290,19 @@ func (r *PostgresRepository) GetInTenant(ctx context.Context, tenantID string, i
 }
 
 func (r *PostgresRepository) Update(ctx context.Context, id string, expectedVersion int, input UpdateInput) (*SpecialRequest, error) {
-	return r.update(ctx, "", id, expectedVersion, input)
+	return r.updateWith(ctx, r.db, "", id, expectedVersion, input)
 }
 
 func (r *PostgresRepository) UpdateInTenant(ctx context.Context, tenantID string, id string, expectedVersion int, input UpdateInput) (*SpecialRequest, error) {
-	return r.update(ctx, tenantID, id, expectedVersion, input)
+	return r.updateWith(ctx, r.db, tenantID, id, expectedVersion, input)
 }
 
-func (r *PostgresRepository) update(ctx context.Context, tenantID string, id string, expectedVersion int, input UpdateInput) (*SpecialRequest, error) {
+// UpdateInTenantTx is UpdateInTenant's transactional counterpart.
+func (r *PostgresRepository) UpdateInTenantTx(ctx context.Context, tx *sql.Tx, tenantID string, id string, expectedVersion int, input UpdateInput) (*SpecialRequest, error) {
+	return r.updateWith(ctx, tx, tenantID, id, expectedVersion, input)
+}
+
+func (r *PostgresRepository) updateWith(ctx context.Context, exec queryRower, tenantID string, id string, expectedVersion int, input UpdateInput) (*SpecialRequest, error) {
 	where := "id = $1 AND version = $2"
 	args := []any{
 		id, expectedVersion, input.Status, input.WorkflowStage, input.AssignedOperatorID, input.RejectionReason,
@@ -323,7 +346,7 @@ func (r *PostgresRepository) update(ctx context.Context, tenantID string, id str
 		WHERE ` + where + `
 		RETURNING ` + specialRequestColumns
 
-	row := r.db.QueryRowContext(ctx, query, args...)
+	row := exec.QueryRowContext(ctx, query, args...)
 	req, err := scanSpecialRequest(row.Scan)
 	if err == sql.ErrNoRows {
 		var currentVersion int
@@ -333,7 +356,7 @@ func (r *PostgresRepository) update(ctx context.Context, tenantID string, id str
 			versionQuery = `SELECT version FROM dsh_special_requests WHERE tenant_id = $1 AND id = $2`
 			versionArgs = []any{tenantID, id}
 		}
-		verErr := r.db.QueryRowContext(ctx, versionQuery, versionArgs...).Scan(&currentVersion)
+		verErr := exec.QueryRowContext(ctx, versionQuery, versionArgs...).Scan(&currentVersion)
 		if verErr == sql.ErrNoRows {
 			return nil, ErrNotFound
 		}
@@ -409,6 +432,128 @@ func TransitionDispatchStatusInTenant(tx *sql.Tx, tenantID string, id string, al
 	}
 	_, err = tx.Exec(updateQuery, updateArgs...)
 	return err
+}
+
+// ErrNotReadyForDispatch is the sentinel a caller can match against (via
+// errors.As) to recover the structured DispatchReadiness detail from
+// CheckSheinDispatchReadiness's rejection.
+var ErrNotReadyForDispatch = errors.New("special request is not ready for dispatch")
+
+// DispatchReadiness explains why a SHEIN_ASSISTED_PURCHASE special request
+// cannot yet be dispatched to a captain, mirroring the
+// SPECIAL_REQUEST_NOT_READY_FOR_DISPATCH error shape the governing operational
+// journey protocol requires (governance/operational_journey_protocol_package,
+// SHEIN dispatch-readiness gate).
+type DispatchReadiness struct {
+	CurrentStage    string
+	RequiredStage   string
+	BlockingReasons []string
+}
+
+// ErrDispatchNotReady wraps ErrNotReadyForDispatch with the structured detail
+// HTTP handlers need to shape a SPECIAL_REQUEST_NOT_READY_FOR_DISPATCH
+// response (currentStage/requiredStage/blockingReasons).
+type ErrDispatchNotReady struct {
+	Readiness DispatchReadiness
+}
+
+func (e *ErrDispatchNotReady) Error() string {
+	return fmt.Sprintf("%v: current stage %q, requires %q", ErrNotReadyForDispatch, e.Readiness.CurrentStage, e.Readiness.RequiredStage)
+}
+
+func (e *ErrDispatchNotReady) Unwrap() error { return ErrNotReadyForDispatch }
+
+// CheckSheinDispatchReadiness locks and validates that a SHEIN_ASSISTED_PURCHASE
+// special request has actually reached workflow_stage "ready_for_delivery"
+// with every prerequisite fulfillment timestamp populated, before it may be
+// dispatched to a captain.
+//
+// This exists because RequestStatus alone is not a sufficient readiness
+// signal for SHEIN: per sheinStageRules, status stays "approved" across five
+// different stages (batch_pending, purchased, inbound, sorting,
+// ready_for_delivery). A caller that only checks status == approved (as
+// dispatch.CreateAssignmentForSpecialRequest did before this function was
+// introduced) can dispatch a captain to a request that has not even been
+// purchased yet. AWNAK_ERRAND does not have this gap -- only dispatch_pending
+// maps to StatusApproved for that request type -- so this check is a no-op
+// for it.
+//
+// It must be called inside the same transaction that will perform the
+// dispatch assignment (immediately before TransitionDispatchStatusInTenant),
+// so the readiness check and the resulting status transition are atomic
+// together: locking here and re-locking in TransitionDispatchStatusInTenant
+// within the same tx is safe (Postgres row locks are reentrant within a
+// transaction).
+func CheckSheinDispatchReadiness(tx *sql.Tx, tenantID, id string) error {
+	query := `SELECT request_type, workflow_stage, purchased_at, inbound_received_at,
+		sorting_completed_at, fulfillment_prepared_at, ready_for_delivery_at
+		FROM dsh_special_requests WHERE id = $1 FOR UPDATE`
+	args := []any{id}
+	if tenantID != "" {
+		query = `SELECT request_type, workflow_stage, purchased_at, inbound_received_at,
+			sorting_completed_at, fulfillment_prepared_at, ready_for_delivery_at
+			FROM dsh_special_requests WHERE tenant_id = $1 AND id = $2 FOR UPDATE`
+		args = []any{tenantID, id}
+	}
+
+	var (
+		requestType           RequestType
+		workflowStage         *string
+		purchasedAt           *time.Time
+		inboundReceivedAt     *time.Time
+		sortingCompletedAt    *time.Time
+		fulfillmentPreparedAt *time.Time
+		readyForDeliveryAt    *time.Time
+	)
+	err := tx.QueryRow(query, args...).Scan(&requestType, &workflowStage, &purchasedAt, &inboundReceivedAt,
+		&sortingCompletedAt, &fulfillmentPreparedAt, &readyForDeliveryAt)
+	if err == sql.ErrNoRows {
+		return ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+
+	if requestType != TypeSheinAssistedPurchase {
+		return nil
+	}
+
+	stage := ""
+	if workflowStage != nil {
+		stage = *workflowStage
+	}
+	if stage == "ready_for_delivery" {
+		return nil
+	}
+
+	var reasons []string
+	if purchasedAt == nil {
+		reasons = append(reasons, "NOT_PURCHASED")
+	}
+	if inboundReceivedAt == nil {
+		reasons = append(reasons, "INBOUND_NOT_RECEIVED")
+	}
+	if sortingCompletedAt == nil {
+		reasons = append(reasons, "SORTING_NOT_COMPLETED")
+	}
+	if fulfillmentPreparedAt == nil {
+		reasons = append(reasons, "FULFILLMENT_NOT_PREPARED")
+	}
+	if readyForDeliveryAt == nil {
+		reasons = append(reasons, "NOT_READY_FOR_DELIVERY")
+	}
+	if len(reasons) == 0 {
+		// Every readiness timestamp is set but workflow_stage still isn't
+		// "ready_for_delivery" -- treat the stage mismatch itself as the
+		// blocking reason so this can never silently pass.
+		reasons = append(reasons, "WORKFLOW_STAGE_NOT_READY_FOR_DELIVERY")
+	}
+
+	return &ErrDispatchNotReady{Readiness: DispatchReadiness{
+		CurrentStage:    stage,
+		RequiredStage:   "ready_for_delivery",
+		BlockingReasons: reasons,
+	}}
 }
 
 func (r *PostgresRepository) ListByClient(ctx context.Context, clientID string, limit, offset int) ([]SpecialRequest, int, error) {

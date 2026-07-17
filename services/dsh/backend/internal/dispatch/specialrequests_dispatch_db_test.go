@@ -60,6 +60,159 @@ func newApprovedSpecialRequestFixture(t *testing.T, db *sql.DB) (id, clientID st
 	return id, clientID
 }
 
+// newSheinFixtureAtStage drives a SHEIN_ASSISTED_PURCHASE special request
+// through the real operator stage-transition chain (svc.ApplyOperatorTransition,
+// not a direct SQL seed) up to and including targetStage, stamping the same
+// readiness timestamps an operator would set along the way (purchasedAt at
+// "purchased", inboundReceivedAt at "inbound", sortingCompletedAt at
+// "sorting", fulfillmentPreparedAt/readyForDeliveryAt at "ready_for_delivery").
+// It stops exactly at targetStage, which is what lets the dispatch-readiness
+// tests below prove CheckSheinDispatchReadiness rejects every earlier stage.
+func newSheinFixtureAtStage(t *testing.T, db *sql.DB, targetStage string) (id string) {
+	t.Helper()
+	ctx := context.Background()
+	clientID := uuid.New().String()
+	repo := specialrequests.NewPostgresRepository(db)
+	svc := specialrequests.NewService(repo)
+
+	url := "https://www.shein.com/item/dispatch-readiness-" + strconv.FormatInt(time.Now().UnixNano(), 10)
+	qty := 1
+	req, err := svc.Create(ctx, clientID, specialrequests.CreateInput{
+		ClientID: clientID, RequestType: specialrequests.TypeSheinAssistedPurchase,
+		ProductUrl: &url, Quantity: &qty,
+	})
+	if err != nil {
+		t.Fatalf("failed to create shein fixture: %v", err)
+	}
+	id = req.ID
+	t.Cleanup(func() {
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_special_requests_audit_events WHERE entity_id = $1::uuid`, id)
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_special_requests WHERE id = $1::uuid`, id)
+	})
+
+	underReview := specialrequests.StatusUnderReview
+	needsInput := specialrequests.StatusNeedsCustomerInput
+	approved := specialrequests.StatusApproved
+	now := func() *time.Time { t := time.Now(); return &t }
+
+	type step struct {
+		stage  string
+		status *specialrequests.RequestStatus
+		mutate func(*specialrequests.UpdateInput)
+	}
+	steps := []step{
+		{stage: "intake_review", status: &underReview},
+		{stage: "quote_pending"},
+		{stage: "customer_approval", status: &needsInput},
+		{stage: "batch_pending", status: &approved},
+		{stage: "purchased", mutate: func(u *specialrequests.UpdateInput) { u.PurchasedAt = now() }},
+		{stage: "inbound", mutate: func(u *specialrequests.UpdateInput) { u.InboundReceivedAt = now() }},
+		{stage: "sorting", mutate: func(u *specialrequests.UpdateInput) { u.SortingCompletedAt = now() }},
+		{stage: "ready_for_delivery", mutate: func(u *specialrequests.UpdateInput) {
+			u.FulfillmentPreparedAt = now()
+			u.ReadyForDeliveryAt = now()
+		}},
+	}
+
+	current := req
+	for _, st := range steps {
+		stage := st.stage
+		update := specialrequests.UpdateInput{WorkflowStage: &stage}
+		if st.status != nil {
+			update.Status = st.status
+		}
+		if st.mutate != nil {
+			st.mutate(&update)
+		}
+		updated, err := svc.ApplyOperatorTransition(ctx, current.ID, current.Version, update)
+		if err != nil {
+			t.Fatalf("failed to transition shein fixture to stage %s: %v", stage, err)
+		}
+		current = updated
+		if stage == targetStage {
+			return id
+		}
+	}
+	t.Fatalf("newSheinFixtureAtStage: unknown target stage %q", targetStage)
+	return ""
+}
+
+// TestSheinDispatchReadinessGateDBIntegration is the regression guard for the
+// resolved P0 gap: CreateAssignmentForSpecialRequest used to check only
+// RequestStatus == approved, but status stays "approved" across five SHEIN
+// stages (batch_pending, purchased, inbound, sorting, ready_for_delivery), so
+// a captain could be dispatched to a request that had not even been
+// purchased yet. This proves the governing protocol's dispatch-readiness gate
+// (SPECIAL_REQUEST_NOT_READY_FOR_DISPATCH) now rejects every stage before
+// ready_for_delivery and only that exact stage succeeds.
+func TestSheinDispatchReadinessGateDBIntegration(t *testing.T) {
+	db := openRequiredDB(t)
+
+	for _, stage := range []string{"batch_pending", "purchased", "inbound", "sorting"} {
+		stage := stage
+		t.Run("dispatch rejected at "+stage, func(t *testing.T) {
+			id := newSheinFixtureAtStage(t, db, stage)
+			captainID, actorID := newCaptainAndActor()
+			_, err := CreateAssignmentForSpecialRequest(db, CreateAssignmentInput{
+				SpecialRequestID: id, CaptainID: captainID, ActorID: actorID,
+			})
+			var notReady *specialrequests.ErrDispatchNotReady
+			if !errors.As(err, &notReady) {
+				t.Fatalf("expected ErrDispatchNotReady at stage %s, got %v", stage, err)
+			}
+			if notReady.Readiness.CurrentStage != stage {
+				t.Fatalf("expected currentStage %s, got %s", stage, notReady.Readiness.CurrentStage)
+			}
+			if notReady.Readiness.RequiredStage != "ready_for_delivery" {
+				t.Fatalf("expected requiredStage ready_for_delivery, got %s", notReady.Readiness.RequiredStage)
+			}
+			if len(notReady.Readiness.BlockingReasons) == 0 {
+				t.Fatalf("expected non-empty blockingReasons at stage %s", stage)
+			}
+
+			req := getSpecialRequest(t, db, id)
+			if req.Status != specialrequests.StatusApproved {
+				t.Fatalf("expected status to remain approved after rejected dispatch at %s, got %s", stage, req.Status)
+			}
+			if req.DispatchAssignmentID != nil {
+				t.Fatalf("expected no dispatch_assignment_id after rejected dispatch at %s", stage)
+			}
+		})
+	}
+
+	t.Run("dispatch succeeds at ready_for_delivery", func(t *testing.T) {
+		id := newSheinFixtureAtStage(t, db, "ready_for_delivery")
+		captainID, actorID := newCaptainAndActor()
+		assignment, err := CreateAssignmentForSpecialRequest(db, CreateAssignmentInput{
+			SpecialRequestID: id, CaptainID: captainID, ActorID: actorID,
+		})
+		if err != nil {
+			t.Fatalf("expected dispatch to succeed at ready_for_delivery, got %v", err)
+		}
+		if assignment.SpecialRequestID != id {
+			t.Fatalf("expected assignment.SpecialRequestID %s, got %s", id, assignment.SpecialRequestID)
+		}
+		req := getSpecialRequest(t, db, id)
+		if req.Status != specialrequests.StatusAssigned {
+			t.Fatalf("expected status assigned after successful dispatch, got %s", req.Status)
+		}
+	})
+
+	// AWNAK_ERRAND has no equivalent gap (only dispatch_pending maps to
+	// StatusApproved for that request type), so CheckSheinDispatchReadiness
+	// must be a no-op for it -- this proves the existing AWNAK dispatch path
+	// (newApprovedSpecialRequestFixture) still works unmodified.
+	t.Run("AWNAK dispatch from approved is unaffected by the SHEIN-specific gate", func(t *testing.T) {
+		id, _ := newApprovedSpecialRequestFixture(t, db)
+		captainID, actorID := newCaptainAndActor()
+		if _, err := CreateAssignmentForSpecialRequest(db, CreateAssignmentInput{
+			SpecialRequestID: id, CaptainID: captainID, ActorID: actorID,
+		}); err != nil {
+			t.Fatalf("expected AWNAK dispatch from approved to still succeed, got %v", err)
+		}
+	})
+}
+
 func getSpecialRequest(t *testing.T, db *sql.DB, id string) *specialrequests.SpecialRequest {
 	t.Helper()
 	repo := specialrequests.NewPostgresRepository(db)

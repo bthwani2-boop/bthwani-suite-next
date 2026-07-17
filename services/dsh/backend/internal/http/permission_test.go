@@ -238,6 +238,70 @@ func TestFinanceApproveReject_RequireManageNotRead(t *testing.T) {
 	}
 }
 
+// TestSpecialRequestsPermission_SupportGrantInsufficient is a regression
+// guard for the resolved wrong-owner gap where special-requests operator
+// endpoints (list/get/transition/dispatch) were gated on support.read/
+// support.manage instead of their own operations.special_requests.*
+// permissions -- an actor granted only support.manage must not be able to
+// dispatch a special request, since dispatch is an Operations decision, not
+// a Support-ticket decision.
+func TestSpecialRequestsPermission_SupportGrantInsufficient(t *testing.T) {
+	s := fakeIdentityServer(t, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(auth.Identity{
+			Subject:   "support-agent-1",
+			TenantID:  "dsh",
+			Roles:     []string{"field"},
+			AuthState: "authenticated",
+			Permissions: []auth.Permission{
+				{Service: "dsh", Surface: "control-panel", Action: SupportPermissionManage, Scope: "all"},
+			},
+		})
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/dsh/operator/special-requests/req-1/dispatch", nil)
+	req.Header.Set("Authorization", "Bearer valid-support-token")
+	rec := httptest.NewRecorder()
+
+	_, ok := s.requirePermission(rec, req, "control-panel", OperationsSpecialRequestsPermissionDispatch, "operator")
+	if ok {
+		t.Fatal("expected an actor with only support.manage to be rejected from operations.special_requests.dispatch")
+	}
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d", rec.Code)
+	}
+}
+
+// TestSpecialRequestsPermission_OperationsGrantSucceeds is the positive
+// counterpart: an actor holding the correct operations.special_requests.*
+// grant must be able to reach the endpoint.
+func TestSpecialRequestsPermission_OperationsGrantSucceeds(t *testing.T) {
+	s := fakeIdentityServer(t, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(auth.Identity{
+			Subject:   "ops-agent-1",
+			TenantID:  "dsh",
+			Roles:     []string{"field"},
+			AuthState: "authenticated",
+			Permissions: []auth.Permission{
+				{Service: "dsh", Surface: "control-panel", Action: OperationsSpecialRequestsPermissionDispatch, Scope: "all"},
+			},
+		})
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/dsh/operator/special-requests/req-1/dispatch", nil)
+	req.Header.Set("Authorization", "Bearer valid-ops-token")
+	rec := httptest.NewRecorder()
+
+	actor, ok := s.requirePermission(rec, req, "control-panel", OperationsSpecialRequestsPermissionDispatch, "operator")
+	if !ok {
+		t.Fatalf("expected operations.special_requests.dispatch grant to succeed, got status %d", rec.Code)
+	}
+	if actor.ID != "ops-agent-1" {
+		t.Fatalf("unexpected actor id: %q", actor.ID)
+	}
+}
+
 func TestRequireCatalogPermissionRejectsStaleCentralCatalogSurface(t *testing.T) {
 	// Regression guard for the resolved surface mismatch: a permission still
 	// tagged with the old, non-contract "central-catalog" surface must not
