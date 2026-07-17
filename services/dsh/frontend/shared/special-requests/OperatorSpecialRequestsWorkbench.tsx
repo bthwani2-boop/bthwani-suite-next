@@ -3,15 +3,12 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Box, StateView, Text } from '@bthwani/ui-kit';
-import {
-  WebControlPanelKpiStrip,
-  WebControlPanelDecisionRow,
-} from '@bthwani/ui-kit/web';
+import { WebControlPanelKpiStrip, WebControlPanelDecisionRow } from '@bthwani/ui-kit/web';
 import { buildOperationsHref } from '../operations/operations-registry';
 import type { OperationsFocusParams } from '../operations/operations.types';
+import { DSH_CONTROL_PANEL_TONE_MAP } from '../operations/operations.types';
 import { useOperatorSpecialRequestsController } from './use-special-requests-controller';
 import type { DshSpecialRequestResponse } from './special-requests.types';
-import { DSH_CONTROL_PANEL_TONE_MAP } from '../operations/operations.types';
 
 export type OperatorSpecialRequestsWorkbenchProps = {
   requestType: 'SHEIN_ASSISTED_PURCHASE' | 'AWNAK_ERRAND';
@@ -23,18 +20,9 @@ export type OperatorSpecialRequestsWorkbenchProps = {
   focusParams?: OperationsFocusParams;
 };
 
-export function OperatorSpecialRequestsWorkbench({
-  requestType,
-  title,
-  stageLabels,
-  stageOrder,
-  focusParams,
-}: OperatorSpecialRequestsWorkbenchProps) {
+export function OperatorSpecialRequestsWorkbench({ requestType, title, stageLabels, stageOrder, focusParams }: OperatorSpecialRequestsWorkbenchProps) {
   const router = useRouter();
-  const { requests, loadState, getOne, reload } = useOperatorSpecialRequestsController({
-    requestType,
-    autoLoad: true,
-  });
+  const { requests, loadState, getOne, reload } = useOperatorSpecialRequestsController({ requestType, autoLoad: true });
   const [selectedRequest, setSelectedRequest] = React.useState<DshSpecialRequestResponse | null>(null);
 
   React.useEffect(() => {
@@ -86,40 +74,22 @@ export function OperatorSpecialRequestsWorkbench({
       conflict: { title: 'تعارض في البيانات', description: 'أعد القراءة قبل متابعة الإجراء.', stateId: 'recoverableError' },
     } as const;
     const errorState = errorMap[loadState];
-    return (
-      <StateView
-        stateId={errorState.stateId}
-        title={errorState.title}
-        description={errorState.description}
-        actionLabel="إعادة المحاولة"
-        onActionPress={reload}
-      />
-    );
+    return <StateView stateId={errorState.stateId} title={errorState.title} description={errorState.description} actionLabel="إعادة المحاولة" onActionPress={reload} />;
   }
 
   return (
     <Box gap={3}>
       <Box gap={1}>
-        <Text variant="titleMedium">{title}</Text>
-        <Text variant="bodySmall">البيانات والحالات مقروءة من خدمة الطلبات الخاصة السيادية.</Text>
+        <Text role="titleMd">{title}</Text>
+        <Text role="bodySm" tone="secondary">البيانات والحالات مقروءة من خدمة الطلبات الخاصة السيادية.</Text>
       </Box>
 
       <WebControlPanelKpiStrip items={summaryKpi} />
 
       {loadState === 'loading' && requests.length === 0 ? (
-        <StateView
-          stateId="loading"
-          title="جاري تحميل الطلبات"
-          description="تتم قراءة قائمة الطلبات الخاصة من DSH."
-        />
+        <StateView stateId="loading" title="جاري تحميل الطلبات" description="تتم قراءة قائمة الطلبات الخاصة من DSH." />
       ) : requests.length === 0 ? (
-        <StateView
-          stateId="empty"
-          title="لا توجد طلبات"
-          description="لا توجد طلبات خاصة في هذا القسم حاليًا."
-          actionLabel="تحديث"
-          onActionPress={reload}
-        />
+        <StateView stateId="empty" title="لا توجد طلبات" description="لا توجد طلبات خاصة في هذا القسم حاليًا." actionLabel="تحديث" onActionPress={reload} />
       ) : (
         <Box gap={2}>
           {rows.map((item) => (
@@ -148,32 +118,32 @@ export function OperatorSpecialRequestsWorkbench({
 
       {selectedRequest && focusParams?.panel === 'detail' ? (
         <Box gap={2} padding={4} background="brandSurface" radiusToken="md">
-          <Text variant="titleSmall">المفتش: {selectedRequest.id}</Text>
-          <Text variant="bodySmall">العميل: {selectedRequest.clientId}</Text>
-          <Text variant="bodySmall">مرجع WLT: {selectedRequest.wltPaymentSessionId || 'غير متوفر'}</Text>
-          <Text variant="bodySmall">الحالة: {stageLabels[selectedRequest.workflowStage || ''] ?? selectedRequest.workflowStage ?? selectedRequest.status}</Text>
-          <Text variant="bodySmall">الإسناد: {selectedRequest.dispatchAssignmentId || 'غير مسند'}</Text>
-          <Text variant="bodySmall">النسخة: {selectedRequest.version}</Text>
+          <Text role="titleSm">المفتش: {selectedRequest.id}</Text>
+          <Text role="bodySm">العميل: {selectedRequest.clientId}</Text>
+          <Text role="bodySm">مرجع WLT: {selectedRequest.wltPaymentSessionId || 'غير متوفر'}</Text>
+          <Text role="bodySm">الحالة: {stageLabels[selectedRequest.workflowStage || ''] ?? selectedRequest.workflowStage ?? selectedRequest.status}</Text>
+          <Text role="bodySm">الإسناد: {selectedRequest.dispatchAssignmentId || 'غير مسند'}</Text>
+          <Text role="bodySm">النسخة: {selectedRequest.version}</Text>
 
           {requestType === 'SHEIN_ASSISTED_PURCHASE' ? (
             <Box gap={1}>
-              <Text variant="bodySmall">رابط المنتج: {selectedRequest.productUrl || '—'}</Text>
-              <Text variant="bodySmall">الكمية: {selectedRequest.quantity || '—'} | المقاس: {selectedRequest.size || '—'} | اللون: {selectedRequest.color || '—'}</Text>
-              <Text variant="bodySmall">دليل الشراء: {selectedRequest.purchaseBatchId || '—'}</Text>
-              <Text variant="bodySmall">مرجع الاستلام: {selectedRequest.inboundReference || '—'}</Text>
+              <Text role="bodySm">رابط المنتج: {selectedRequest.productUrl || '—'}</Text>
+              <Text role="bodySm">الكمية: {selectedRequest.quantity || '—'} | المقاس: {selectedRequest.size || '—'} | اللون: {selectedRequest.color || '—'}</Text>
+              <Text role="bodySm">دليل الشراء: {selectedRequest.purchaseBatchId || '—'}</Text>
+              <Text role="bodySm">مرجع الاستلام: {selectedRequest.inboundReference || '—'}</Text>
             </Box>
           ) : (
             <Box gap={1}>
-              <Text variant="bodySmall">النوع: {selectedRequest.itemType || '—'}</Text>
-              <Text variant="bodySmall">مرجع الاستلام: {selectedRequest.pickupAddressReference || '—'}</Text>
-              <Text variant="bodySmall">مرجع التسليم: {selectedRequest.dropoffAddressReference || '—'}</Text>
-              <Text variant="bodySmall">متطلبات المناولة: {selectedRequest.handlingRequirements || '—'}</Text>
+              <Text role="bodySm">النوع: {selectedRequest.itemType || '—'}</Text>
+              <Text role="bodySm">مرجع الاستلام: {selectedRequest.pickupAddressReference || '—'}</Text>
+              <Text role="bodySm">مرجع التسليم: {selectedRequest.dropoffAddressReference || '—'}</Text>
+              <Text role="bodySm">متطلبات المناولة: {selectedRequest.handlingRequirements || '—'}</Text>
             </Box>
           )}
 
-          <Text variant="bodySmall">الإجراءات المتاحة: {selectedRequest.allowedActions?.join('، ') || 'لا يوجد'}</Text>
-          <Text variant="bodySmall">أسباب الحظر: {selectedRequest.blockingReasons?.join('، ') || 'لا يوجد'}</Text>
-          <Text variant="bodySmall">الاستثناء: {selectedRequest.rejectionReason || 'لا يوجد'}</Text>
+          <Text role="bodySm">الإجراءات المتاحة: {selectedRequest.allowedActions?.join('، ') || 'لا يوجد'}</Text>
+          <Text role="bodySm">أسباب الحظر: {selectedRequest.blockingReasons?.join('، ') || 'لا يوجد'}</Text>
+          <Text role="bodySm">الاستثناء: {selectedRequest.rejectionReason || 'لا يوجد'}</Text>
         </Box>
       ) : null}
     </Box>
