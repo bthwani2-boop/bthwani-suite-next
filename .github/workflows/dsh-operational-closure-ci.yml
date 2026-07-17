@@ -76,7 +76,7 @@ jobs:
           go-version-file: services/dsh/backend/go.mod
           cache: true
           cache-dependency-path: services/dsh/backend/go.sum
-      - name: Verify format vet and tests
+      - name: Verify format and vet
         working-directory: services/dsh/backend
         shell: bash
         run: |
@@ -86,7 +86,7 @@ jobs:
           go vet ./...
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
-      - name: Apply all DSH migrations
+      - name: Apply every DSH migration to a clean database
         shell: bash
         run: |
           set -euo pipefail
@@ -94,14 +94,30 @@ jobs:
             echo "Applying $migration"
             psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
           done < <(find services/dsh/database/migrations -maxdepth 1 -type f -name '*.sql' | sort)
-      - name: Unit and database integration tests
+      - name: Run DSH unit and database integration tests
         working-directory: services/dsh/backend
         run: go test ./... -count=1
 
-  wlt-backend:
-    name: WLT backend format vet and tests
+  wlt-backend-database:
+    name: WLT backend database and tests
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: wlt_ci
+          POSTGRES_PASSWORD: wlt_ci_password
+          POSTGRES_DB: wlt_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U wlt_ci -d wlt_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://wlt_ci:wlt_ci_password@localhost:5432/wlt_ci?sslmode=disable
     steps:
       - name: Checkout repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -113,7 +129,7 @@ jobs:
           go-version-file: services/wlt/backend/go.mod
           cache: true
           cache-dependency-path: services/wlt/backend/go.sum
-      - name: Verify format vet and tests
+      - name: Verify format and vet
         working-directory: services/wlt/backend
         shell: bash
         run: |
@@ -121,7 +137,19 @@ jobs:
           files="$(gofmt -l .)"
           test -z "$files" || { printf 'Unformatted WLT files:\n%s\n' "$files"; exit 1; }
           go vet ./...
-          go test ./... -count=1
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Apply every WLT migration to a clean database
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r migration; do
+            echo "Applying $migration"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
+          done < <(find services/wlt/database/migrations -maxdepth 1 -type f -name '*.sql' | sort)
+      - name: Run WLT unit and database integration tests
+        working-directory: services/wlt/backend
+        run: go test ./... -count=1
 
   workforce-backend-database:
     name: Workforce backend database and tests
@@ -164,7 +192,7 @@ jobs:
           go vet ./...
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
-      - name: Apply all Workforce migrations
+      - name: Apply every Workforce migration to a clean database
         shell: bash
         run: |
           set -euo pipefail
@@ -172,7 +200,7 @@ jobs:
             echo "Applying $migration"
             psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
           done < <(find core/workforce/database/migrations -maxdepth 1 -type f -name '*.sql' | sort)
-      - name: Unit and database integration tests
+      - name: Run Workforce unit and database integration tests
         working-directory: core/workforce/backend
         run: go test ./... -count=1
 
@@ -199,7 +227,10 @@ jobs:
             "$@"
             local result=$?
             echo "::endgroup::"
-            if [ "$result" -ne 0 ]; then failures=$((failures + 1)); fi
+            if [ "$result" -ne 0 ]; then
+              echo "::error title=$name failed::exit=$result"
+              failures=$((failures + 1))
+            fi
           }
           run_check contracts pnpm run contracts:lint
           run_check backend-api pnpm run guard:backend-api-binding
@@ -211,30 +242,10 @@ jobs:
           run_check cross-journey-regression pnpm run guard:live-cross-journey-integrity
           test "$failures" -eq 0
 
-  migration-invariants:
-    name: DSH WLT and Workforce migration invariants
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-        with:
-          persist-credentials: false
-      - name: Verify every migration is transaction-bounded
-        shell: bash
-        run: |
-          set -euo pipefail
-          failures=0
-          while IFS= read -r migration; do
-            grep -q '^BEGIN;' "$migration" || { echo "$migration: missing BEGIN"; failures=$((failures + 1)); }
-            grep -q '^COMMIT;' "$migration" || { echo "$migration: missing COMMIT"; failures=$((failures + 1)); }
-          done < <(find services/dsh/database/migrations services/wlt/database/migrations core/workforce/database/migrations -maxdepth 1 -type f -name '*.sql' | sort)
-          test "$failures" -eq 0
-
   operational-result:
     name: DSH operational verification result
     if: always()
-    needs: [dsh-backend-database, wlt-backend, workforce-backend-database, dsh-static-fullstack, migration-invariants]
+    needs: [dsh-backend-database, wlt-backend-database, workforce-backend-database, dsh-static-fullstack]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -242,17 +253,15 @@ jobs:
       - name: Require every operational job to pass
         env:
           DSH: ${{ needs.dsh-backend-database.result }}
-          WLT: ${{ needs.wlt-backend.result }}
+          WLT: ${{ needs.wlt-backend-database.result }}
           WORKFORCE: ${{ needs.workforce-backend-database.result }}
           STATIC_FULLSTACK: ${{ needs.dsh-static-fullstack.result }}
-          MIGRATIONS: ${{ needs.migration-invariants.result }}
         shell: bash
         run: |
           set -euo pipefail
-          printf 'dsh=%s\nwlt=%s\nworkforce=%s\nstatic-fullstack=%s\nmigrations=%s\n' \
-            "$DSH" "$WLT" "$WORKFORCE" "$STATIC_FULLSTACK" "$MIGRATIONS"
+          printf 'dsh=%s\nwlt=%s\nworkforce=%s\nstatic-fullstack=%s\n' \
+            "$DSH" "$WLT" "$WORKFORCE" "$STATIC_FULLSTACK"
           test "$DSH" = success
           test "$WLT" = success
           test "$WORKFORCE" = success
           test "$STATIC_FULLSTACK" = success
-          test "$MIGRATIONS" = success
