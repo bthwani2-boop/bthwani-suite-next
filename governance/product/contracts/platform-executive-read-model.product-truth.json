@@ -1,0 +1,289 @@
+{
+  "schemaVersion": 1,
+  "capabilityId": "PLATFORM_EXECUTIVE_READ_MODEL",
+  "state": "PRODUCT_MODEL_APPROVED",
+  "problem": {
+    "statement": "The sovereign Platform section mixes routine DSH policies with platform control concerns and displays static or unbound states instead of the live platform-control read model.",
+    "affectedActors": [
+      "executive-platform-governor",
+      "platform-auditor"
+    ],
+    "currentWorkaround": "Operators inspect separate source files and service endpoints and cannot trust the control-panel summary as a complete executive read model.",
+    "frequency": "continuous",
+    "severity": "critical",
+    "evidenceState": "VALIDATED",
+    "evidenceReferences": [
+      "services/dsh/frontend/control-panel/platform/PlatformDashboardScreen.tsx",
+      "services/dsh/frontend/shared/platform/platform-registry.ts",
+      "services/dsh/frontend/shared/platform/platform-vars.model.ts",
+      "core/platform-control/backend/internal/http/server.go",
+      "core/platform-control/backend/internal/platformcontrol/service.go"
+    ]
+  },
+  "actors": [
+    {
+      "id": "executive-platform-governor",
+      "role": "Highest administrative authority with explicit platform read permissions.",
+      "permittedActions": [
+        "Read runtime posture",
+        "Read effective configuration metadata",
+        "Read variables and feature flags",
+        "Read service posture",
+        "Read provider posture",
+        "Read health when separately authorized",
+        "Read audit events when separately authorized"
+      ],
+      "forbiddenActions": [
+        "Perform routine catalog, marketing, support, zone, SLA, HR, or partner operations",
+        "Mutate variables, feature flags, providers, rollouts, or services without the governed change workflow",
+        "View provider secrets"
+      ]
+    },
+    {
+      "id": "platform-auditor",
+      "role": "Independent reader of platform posture and audit evidence.",
+      "permittedActions": [
+        "Read platform posture",
+        "Read audit events when authorized"
+      ],
+      "forbiddenActions": [
+        "Approve or apply own changes",
+        "Mutate platform state",
+        "View provider secrets"
+      ]
+    }
+  ],
+  "surfaces": [
+    {
+      "id": "control-panel",
+      "required": true,
+      "actors": [
+        "executive-platform-governor",
+        "platform-auditor"
+      ],
+      "routesOrScreens": [
+        "/dsh/platform",
+        "PlatformDashboardScreen"
+      ],
+      "states": [
+        "loading",
+        "success",
+        "partial-read",
+        "permission-denied",
+        "unavailable",
+        "read-only-contract-required"
+      ],
+      "actions": [
+        "reload",
+        "switch executive read tabs"
+      ]
+    },
+    {
+      "id": "shared",
+      "required": true,
+      "actors": [
+        "executive-platform-governor",
+        "platform-auditor"
+      ],
+      "routesOrScreens": [
+        "usePlatformControlRuntimeController"
+      ],
+      "states": [
+        "idle",
+        "loading",
+        "success",
+        "error",
+        "restricted-resource",
+        "unavailable-resource"
+      ],
+      "actions": [
+        "aggregate authorized platform-control reads"
+      ]
+    },
+    {
+      "id": "backend",
+      "required": true,
+      "actors": [
+        "executive-platform-governor",
+        "platform-auditor"
+      ],
+      "operationIds": [
+        "getPlatformRuntimeConfig",
+        "getEffectiveRuntimeConfig",
+        "listPlatformVariables",
+        "listPlatformFeatureFlags",
+        "listPlatformServices",
+        "getPlatformHealth",
+        "listPlatformAuditEvents",
+        "listPlatformChangeSets"
+      ],
+      "states": [
+        "READ_ONLY_BOUND",
+        "PARTIALLY_BOUND",
+        "CONTRACT_REQUIRED",
+        "UNKNOWN_HEALTH",
+        "ROLLBACK_UNAVAILABLE"
+      ],
+      "actions": [
+        "authorize and return platform read models",
+        "deny unauthorized reads"
+      ]
+    },
+    {
+      "id": "database",
+      "required": false,
+      "exclusionReason": "The current P1 capability is explicitly read-only and the platform variable, rollout, audit, and rollback stores are not attached; no mutation claim is made.",
+      "actors": [
+        "executive-platform-governor"
+      ],
+      "states": [
+        "not-attached"
+      ],
+      "actions": []
+    },
+    {
+      "id": "app-client",
+      "required": false,
+      "exclusionReason": "Customer users must never access the sovereign control plane.",
+      "actors": [
+        "customer"
+      ],
+      "states": [
+        "excluded"
+      ],
+      "actions": []
+    },
+    {
+      "id": "app-partner",
+      "required": false,
+      "exclusionReason": "Partners consume effective outcomes only and must not access sovereign platform controls.",
+      "actors": [
+        "partner"
+      ],
+      "states": [
+        "excluded"
+      ],
+      "actions": []
+    },
+    {
+      "id": "app-captain",
+      "required": false,
+      "exclusionReason": "Captains consume effective outcomes only and must not access sovereign platform controls.",
+      "actors": [
+        "captain"
+      ],
+      "states": [
+        "excluded"
+      ],
+      "actions": []
+    },
+    {
+      "id": "app-field",
+      "required": false,
+      "exclusionReason": "Field staff may not view or mutate sovereign platform controls.",
+      "actors": [
+        "field-agent"
+      ],
+      "states": [
+        "excluded"
+      ],
+      "actions": []
+    }
+  ],
+  "outcome": {
+    "statement": "Authorized executives see one accurate read-only platform cockpit backed by platform-control, while routine operational domains and unsupported mutations are excluded.",
+    "primaryMetric": "unbound_or_static_platform_panels",
+    "guardrailMetrics": [
+      "unauthorized_platform_data_exposure",
+      "routine_domain_controls_inside_platform",
+      "fake_or_local_platform_mutations",
+      "hidden_partial_read_failures"
+    ],
+    "baselineState": "Multiple tabs are static, locally modeled, mislabeled, or mapped to routine DSH policy screens.",
+    "targetState": "Every active executive tab either renders a live authorized read model or an explicit contract-required/restricted state.",
+    "observationWindow": "Per request and every platform-control read refresh."
+  },
+  "acceptance": {
+    "criteria": [
+      "The default tab is an executive overview sourced from getPlatformRuntimeConfig.",
+      "Variables, feature flags, services, health, audit events, and change sets use generated platform-control types and live API reads.",
+      "Health and audit reads are independently permission-gated.",
+      "Routine zone, SLA, onboarding-fee, and notification configuration screens are not rendered by the Platform route.",
+      "Unsupported mutations and rollouts remain visibly blocked and no local simulation is offered.",
+      "Partial resource failures are visible without discarding successful reads."
+    ],
+    "failureStates": [
+      "A static registry count is shown as a live KPI.",
+      "A routine operational screen is rendered in Platform.",
+      "A user without platform:read sees platform data.",
+      "A health or audit endpoint is called without its dedicated permission.",
+      "A failed optional read makes all successful read models disappear.",
+      "A mutation appears enabled while the backend returns CONTRACT_REQUIRED."
+    ],
+    "requiredChecks": [
+      "pnpm run guard:no-broken-imports",
+      "pnpm run guard:frontend-feature-binding",
+      "pnpm run guard:ui-kit-boundary",
+      "pnpm run typecheck",
+      "pnpm run foundation:gate",
+      "pnpm run journey:gate"
+    ],
+    "runtimeEvidenceRequired": true,
+    "visualEvidenceRequired": true
+  },
+  "invariants": {
+    "business": [
+      "Platform is a sovereign executive control plane, not a daily operations workspace.",
+      "Administration owns role assignment; Platform consumes permissions.",
+      "WLT remains the only owner of financial truth.",
+      "Provider secrets remain backend-only and masked.",
+      "Every displayed state comes from platform-control or is labeled unavailable, restricted, or contract-required."
+    ],
+    "negative": [
+      "No customer, partner, captain, or field surface exposes Platform controls.",
+      "No local React state, fixture, seed, fallback, or registry constant is presented as live platform truth.",
+      "No platform mutation bypasses proposal, validation, independent approval, apply, audit, readback, and rollback.",
+      "No zone, SLA, catalog, marketing, support, HR, or partner routine operation is owned by Platform.",
+      "No health or audit data is fetched without the matching dedicated permission."
+    ]
+  },
+  "owners": {
+    "productManager": "CURRENT_USER_INSTRUCTION",
+    "productOwner": "PRODUCT_OWNER_ACCEPTANCE_AUTHORITY",
+    "uxJourneyOwner": "UX_JOURNEY_AUTHORITY",
+    "engineeringOwner": "core/platform-control and services/dsh/frontend/shared/platform",
+    "productManagerApproval": "APPROVED",
+    "productOwnerApproval": "PENDING",
+    "productAcceptanceDecision": "PENDING"
+  },
+  "execution": {
+    "appetite": "Bounded corrective implementation of the existing read-only platform-control capability.",
+    "fixedConstraints": [
+      "Use GitHub Remote branch bassam only.",
+      "Do not activate unsupported mutations.",
+      "Do not expose secrets.",
+      "Do not create a second platform truth source.",
+      "Keep financial truth in WLT.",
+      "Keep routine operations outside Platform.",
+      "Maximum three committed files for this execution."
+    ],
+    "variableScope": [
+      "Executive tab ordering and labels",
+      "Read-model presentation",
+      "Partial failure presentation"
+    ],
+    "forbiddenScope": [
+      "Database-backed mutation workflow without migrations and independent approvals",
+      "SaaS commercial activation",
+      "Production release or closure claim",
+      "Local demo mutation or fake runtime data"
+    ],
+    "forecastRange": "One bounded repository change set.",
+    "confidence": "high",
+    "unknowns": [
+      "Independent product-owner acceptance",
+      "Independent QA and security evidence",
+      "Live runtime and visual evidence in the operator environment"
+    ]
+  }
+}
