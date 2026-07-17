@@ -9,31 +9,63 @@ import (
 	"time"
 )
 
-var ErrAdminContentNotFound = errors.New("home discovery content not found")
+var (
+	ErrAdminContentNotFound        = errors.New("home discovery content not found")
+	ErrAdminContentVersionConflict = errors.New("home discovery content version conflict")
+)
+
+const adminContentSelectColumns = `id, title, COALESCE(subtitle,''), %s,
+	image_url, action_type, action_target, sort_order, is_active,
+	publication_status, publish_from::TEXT, publish_until::TEXT,
+	created_by_actor_id, approved_by_actor_id, approved_at::TEXT, version`
+
+func nullableAdminString(value sql.NullString) *string {
+	if !value.Valid || strings.TrimSpace(value.String) == "" {
+		return nil
+	}
+	result := value.String
+	return &result
+}
+
+func adminSelectColumns(kind string) string {
+	badgeColumn := "''"
+	if kind == "promos" {
+		badgeColumn = "COALESCE(badge_label,'')"
+	}
+	return fmt.Sprintf(adminContentSelectColumns, badgeColumn)
+}
+
+func scanAdminContent(row interface{ Scan(dest ...any) error }, kind string) (AdminContentItem, error) {
+	var item AdminContentItem
+	var publishFrom, publishUntil, approvedAt sql.NullString
+	item.Kind = kind
+	err := row.Scan(
+		&item.ID, &item.Title, &item.Subtitle, &item.BadgeLabel, &item.ImageURL,
+		&item.ActionType, &item.ActionTarget, &item.SortOrder, &item.IsActive,
+		&item.PublicationStatus, &publishFrom, &publishUntil,
+		&item.CreatedByActorID, &item.ApprovedByActorID, &approvedAt, &item.Version,
+	)
+	item.PublishFrom = nullableAdminString(publishFrom)
+	item.PublishUntil = nullableAdminString(publishUntil)
+	item.ApprovedAt = nullableAdminString(approvedAt)
+	return item, err
+}
 
 func ListAdminContent(ctx context.Context, db *sql.DB, kind string) ([]AdminContentItem, error) {
 	table, err := adminTable(kind)
 	if err != nil {
 		return nil, err
 	}
-	selectColumns := "id, title, COALESCE(subtitle,''), '', image_url, action_type, action_target, sort_order, is_active"
-	if kind == "promos" {
-		selectColumns = "id, title, COALESCE(subtitle,''), COALESCE(badge_label,''), image_url, action_type, action_target, sort_order, is_active"
-	}
-	rows, err := db.QueryContext(ctx, "SELECT "+selectColumns+" FROM "+table+" ORDER BY sort_order ASC, id ASC")
+	rows, err := db.QueryContext(ctx, "SELECT "+adminSelectColumns(kind)+" FROM "+table+" ORDER BY sort_order ASC, id ASC")
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	items := []AdminContentItem{}
 	for rows.Next() {
-		var item AdminContentItem
-		item.Kind = kind
-		if err := rows.Scan(
-			&item.ID, &item.Title, &item.Subtitle, &item.BadgeLabel, &item.ImageURL,
-			&item.ActionType, &item.ActionTarget, &item.SortOrder, &item.IsActive,
-		); err != nil {
-			return nil, err
+		item, scanErr := scanAdminContent(rows, kind)
+		if scanErr != nil {
+			return nil, scanErr
 		}
 		items = append(items, item)
 	}
@@ -80,6 +112,17 @@ func DeleteAdminContent(ctx context.Context, db *sql.DB, kind, id, actorID, corr
 	return tx.Commit()
 }
 
+func resolvePublicationStatus(input AdminContentInput) string {
+	status := strings.TrimSpace(input.PublicationStatus)
+	if status != "" {
+		return status
+	}
+	if input.IsActive {
+		return "published"
+	}
+	return "paused"
+}
+
 func writeAdminContent(
 	ctx context.Context,
 	db *sql.DB,
@@ -91,31 +134,79 @@ func writeAdminContent(
 	if err != nil {
 		return AdminContentItem{}, err
 	}
+	status := resolvePublicationStatus(input)
+	isActive := status == "published"
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return AdminContentItem{}, err
 	}
 	defer tx.Rollback()
-	var result sql.Result
-	if kind == "promos" {
-		if create {
-			result, err = tx.ExecContext(ctx, "INSERT INTO "+table+" (id,title,subtitle,badge_label,image_url,action_type,action_target,sort_order,is_active) VALUES ($1,$2,NULLIF($3,''),NULLIF($4,''),$5,$6,$7,$8,$9)", id, input.Title, input.Subtitle, input.BadgeLabel, input.ImageURL, input.ActionType, input.ActionTarget, input.SortOrder, input.IsActive)
+
+	if create {
+		if kind == "promos" {
+			_, err = tx.ExecContext(ctx, `INSERT INTO `+table+`
+				(id,title,subtitle,badge_label,image_url,action_type,action_target,sort_order,is_active,
+				 publication_status,publish_from,publish_until,created_by_actor_id,approved_by_actor_id,approved_at)
+				VALUES ($1,$2,NULLIF($3,''),NULLIF($4,''),$5,$6,$7,$8,$9,$10,$11,$12,$13,
+				 CASE WHEN $10='published' THEN $13 ELSE '' END,
+				 CASE WHEN $10='published' THEN NOW() ELSE NULL END)`,
+				id, input.Title, input.Subtitle, input.BadgeLabel, input.ImageURL, input.ActionType,
+				input.ActionTarget, input.SortOrder, isActive, status, input.PublishFrom, input.PublishUntil, actorID)
 		} else {
-			result, err = tx.ExecContext(ctx, "UPDATE "+table+" SET title=$1,subtitle=NULLIF($2,''),badge_label=NULLIF($3,''),image_url=$4,action_type=$5,action_target=$6,sort_order=$7,is_active=$8,updated_at=now() WHERE id=$9", input.Title, input.Subtitle, input.BadgeLabel, input.ImageURL, input.ActionType, input.ActionTarget, input.SortOrder, input.IsActive, id)
+			_, err = tx.ExecContext(ctx, `INSERT INTO `+table+`
+				(id,title,subtitle,image_url,action_type,action_target,sort_order,is_active,
+				 publication_status,publish_from,publish_until,created_by_actor_id,approved_by_actor_id,approved_at)
+				VALUES ($1,$2,NULLIF($3,''),$4,$5,$6,$7,$8,$9,$10,$11,$12,
+				 CASE WHEN $9='published' THEN $12 ELSE '' END,
+				 CASE WHEN $9='published' THEN NOW() ELSE NULL END)`,
+				id, input.Title, input.Subtitle, input.ImageURL, input.ActionType, input.ActionTarget,
+				input.SortOrder, isActive, status, input.PublishFrom, input.PublishUntil, actorID)
 		}
 	} else {
-		if create {
-			result, err = tx.ExecContext(ctx, "INSERT INTO "+table+" (id,title,subtitle,image_url,action_type,action_target,sort_order,is_active) VALUES ($1,$2,NULLIF($3,''),$4,$5,$6,$7,$8)", id, input.Title, input.Subtitle, input.ImageURL, input.ActionType, input.ActionTarget, input.SortOrder, input.IsActive)
+		var currentVersion int
+		if err = tx.QueryRowContext(ctx, "SELECT version FROM "+table+" WHERE id=$1 FOR UPDATE", id).Scan(&currentVersion); errors.Is(err, sql.ErrNoRows) {
+			return AdminContentItem{}, ErrAdminContentNotFound
+		} else if err != nil {
+			return AdminContentItem{}, err
+		}
+		expectedVersion := input.ExpectedVersion
+		if expectedVersion <= 0 {
+			expectedVersion = currentVersion
+		}
+		var result sql.Result
+		if kind == "promos" {
+			result, err = tx.ExecContext(ctx, `UPDATE `+table+` SET
+				title=$1,subtitle=NULLIF($2,''),badge_label=NULLIF($3,''),image_url=$4,
+				action_type=$5,action_target=$6,sort_order=$7,is_active=$8,
+				publication_status=$9,publish_from=$10,publish_until=$11,
+				approved_by_actor_id=CASE WHEN $9='published' THEN $12 ELSE approved_by_actor_id END,
+				approved_at=CASE WHEN $9='published' THEN NOW() ELSE approved_at END,
+				version=version+1,updated_at=NOW()
+				WHERE id=$13 AND version=$14`,
+				input.Title, input.Subtitle, input.BadgeLabel, input.ImageURL, input.ActionType,
+				input.ActionTarget, input.SortOrder, isActive, status, input.PublishFrom,
+				input.PublishUntil, actorID, id, expectedVersion)
 		} else {
-			result, err = tx.ExecContext(ctx, "UPDATE "+table+" SET title=$1,subtitle=NULLIF($2,''),image_url=$3,action_type=$4,action_target=$5,sort_order=$6,is_active=$7,updated_at=now() WHERE id=$8", input.Title, input.Subtitle, input.ImageURL, input.ActionType, input.ActionTarget, input.SortOrder, input.IsActive, id)
+			result, err = tx.ExecContext(ctx, `UPDATE `+table+` SET
+				title=$1,subtitle=NULLIF($2,''),image_url=$3,action_type=$4,action_target=$5,
+				sort_order=$6,is_active=$7,publication_status=$8,publish_from=$9,publish_until=$10,
+				approved_by_actor_id=CASE WHEN $8='published' THEN $11 ELSE approved_by_actor_id END,
+				approved_at=CASE WHEN $8='published' THEN NOW() ELSE approved_at END,
+				version=version+1,updated_at=NOW()
+				WHERE id=$12 AND version=$13`,
+				input.Title, input.Subtitle, input.ImageURL, input.ActionType, input.ActionTarget,
+				input.SortOrder, isActive, status, input.PublishFrom, input.PublishUntil,
+				actorID, id, expectedVersion)
+		}
+		if err == nil {
+			affected, _ := result.RowsAffected()
+			if affected != 1 {
+				return AdminContentItem{}, ErrAdminContentVersionConflict
+			}
 		}
 	}
 	if err != nil {
 		return AdminContentItem{}, err
-	}
-	affected, _ := result.RowsAffected()
-	if !create && affected != 1 {
-		return AdminContentItem{}, ErrAdminContentNotFound
 	}
 	if err := insertContentAudit(ctx, tx, actorID, kind, id, action, correlationID); err != nil {
 		return AdminContentItem{}, err
@@ -123,16 +214,12 @@ func writeAdminContent(
 	if err := tx.Commit(); err != nil {
 		return AdminContentItem{}, err
 	}
-	items, err := ListAdminContent(ctx, db, kind)
-	if err != nil {
-		return AdminContentItem{}, err
+
+	item, err := scanAdminContent(db.QueryRowContext(ctx, "SELECT "+adminSelectColumns(kind)+" FROM "+table+" WHERE id=$1", id), kind)
+	if errors.Is(err, sql.ErrNoRows) {
+		return AdminContentItem{}, ErrAdminContentNotFound
 	}
-	for _, item := range items {
-		if item.ID == id {
-			return item, nil
-		}
-	}
-	return AdminContentItem{}, ErrAdminContentNotFound
+	return item, err
 }
 
 func insertContentAudit(ctx context.Context, tx *sql.Tx, actorID, kind, itemID, action, correlationID string) error {
@@ -172,6 +259,22 @@ func validateAdminInput(kind string, input AdminContentInput) error {
 	case "store", "category", "external", "none":
 	default:
 		return fmt.Errorf("invalid action type")
+	}
+	status := resolvePublicationStatus(input)
+	switch status {
+	case "draft", "published", "paused", "archived":
+	default:
+		return fmt.Errorf("invalid publication status")
+	}
+	if input.PublishFrom != nil && strings.TrimSpace(*input.PublishFrom) != "" {
+		if _, err := time.Parse(time.RFC3339, *input.PublishFrom); err != nil {
+			return fmt.Errorf("invalid publishFrom")
+		}
+	}
+	if input.PublishUntil != nil && strings.TrimSpace(*input.PublishUntil) != "" {
+		if _, err := time.Parse(time.RFC3339, *input.PublishUntil); err != nil {
+			return fmt.Errorf("invalid publishUntil")
+		}
 	}
 	return nil
 }
