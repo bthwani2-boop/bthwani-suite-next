@@ -1,41 +1,73 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "BthwaniSkillSchema",
-  "description": "Schema for verifying skill definitions in skills-registry.json",
+  "title": "BthwaniSkillRegistrySchema",
   "type": "object",
-  "required": ["entries"],
+  "required": ["schemaVersion", "entries"],
   "additionalProperties": false,
   "properties": {
+    "schemaVersion": { "const": 2 },
     "entries": {
       "type": "array",
+      "minItems": 1,
       "items": {
         "type": "object",
         "required": ["id", "name", "path", "owner", "scope", "evidence_required"],
         "additionalProperties": false,
         "properties": {
-          "id": {
-            "type": "string",
-            "pattern": "^[a-z0-9-]+$"
+          "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+          "name": { "type": "string", "minLength": 1 },
+          "path": { "type": "string", "minLength": 1 },
+          "owner": { "type": "string", "minLength": 1 },
+          "scope": { "type": "string", "minLength": 1 },
+          "evidence_required": { "type": "boolean" },
+          "evidence_path_pattern": { "type": "string" },
+          "contract_level": { "enum": ["legacy", "governed"] },
+          "version": { "type": "string", "minLength": 1 },
+          "authority": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "type": "string", "pattern": "^[a-z0-9_]+$" }
           },
-          "name": {
-            "type": "string"
+          "depends_on": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "type": "string", "pattern": "^[a-z0-9-]+$" }
           },
-          "path": {
-            "type": "string"
+          "conflicts_with": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "type": "string", "pattern": "^[a-z0-9-]+$" }
           },
-          "owner": {
-            "type": "string"
+          "invoke_when": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 }
           },
-          "scope": {
-            "type": "string"
+          "do_not_invoke_when": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 }
           },
-          "evidence_required": {
-            "type": "boolean"
-          },
-          "evidence_path_pattern": {
-            "type": "string"
+          "risk_floor": { "enum": ["T0_MINIMAL", "T1_BALANCED", "T2_SPECIALIST", "T3_ADVISORY_MAX"] },
+          "output_contract": { "type": "string", "minLength": 1 }
+        },
+        "allOf": [
+          {
+            "if": { "properties": { "contract_level": { "const": "governed" } }, "required": ["contract_level"] },
+            "then": {
+              "required": [
+                "version",
+                "authority",
+                "depends_on",
+                "conflicts_with",
+                "invoke_when",
+                "do_not_invoke_when",
+                "risk_floor",
+                "output_contract"
+              ]
+            }
           }
-        }
+        ]
       }
     }
   }
