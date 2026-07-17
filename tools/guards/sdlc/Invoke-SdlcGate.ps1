@@ -20,6 +20,8 @@ if ($Affected) { $commonArgs += "--affected" }
 $validators = @(
   @{ Name = "governance-schema-and-semantics"; Path = "tools/guards/governance-schema-gate.mjs"; Args = @() },
   @{ Name = "agent-governance"; Path = "tools/guards/agent-governance-gate.mjs"; Args = @() },
+  @{ Name = "authority-separation"; Path = "tools/guards/authority-separation-gate.mjs"; Args = @() },
+  @{ Name = "saas-governance"; Path = "tools/guards/saas-governance-gate.mjs"; Args = @() },
   @{ Name = "guard-and-workflow-policy"; Path = "tools/guards/guard-registry-gate.mjs"; Args = @() },
   @{ Name = "sdlc-manifest"; Path = "tools/guards/sdlc/validate-sdlc-manifest.mjs"; Args = $commonArgs },
   @{ Name = "financial-and-evidence-scopes"; Path = "tools/guards/sdlc/validate-financial-and-evidence-scopes.mjs"; Args = $commonArgs },
