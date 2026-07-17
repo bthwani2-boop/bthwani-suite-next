@@ -16,6 +16,21 @@
       "closureEligible": false
     },
     {
+      "guardId": "authority-separation",
+      "assuranceClass": "POLICY_ALIGNMENT",
+      "proves": ["Required logical authorities are registered", "The master supervisor is advisory-only", "Governance and CI use separate active skills and owners", "G4 and later SDLC stage ownership is ordered"],
+      "doesNotProve": ["Real people or teams exist", "GitHub approvals are independent", "A stage passed", "Final closure"],
+      "closureEligible": false
+    },
+    {
+      "guardId": "saas-governance",
+      "assuranceClass": "SCHEMA_INTEGRITY",
+      "proves": ["The SaaS governance state validates against its schema", "Readiness states are separated from canonical decisions", "Deferred commercial activation and required evidence boundaries are internally consistent"],
+      "doesNotProve": ["Platform-wide tenant isolation", "Cross-tenant runtime tests", "WLT tenant financial isolation", "Commercial SaaS readiness or activation"],
+      "closureEligible": false,
+      "requiredFollowUpForRuntimeClaim": ["Same-commit tenant-context propagation evidence", "Cross-tenant negative runtime tests", "Independent isolation-security and financial-control approval"]
+    },
+    {
       "guardId": "guard-registry",
       "assuranceClass": "POLICY_ALIGNMENT",
       "proves": ["Guards, package scripts, runners, workflows, permissions, immutable action references, and required workflow topology align"],
