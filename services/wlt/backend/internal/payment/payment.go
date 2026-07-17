@@ -43,6 +43,7 @@ type PaymentSession struct {
 	ID                string  `json:"id"`
 	CheckoutIntentID  *string `json:"checkoutIntentId"`
 	SpecialRequestID  *string `json:"specialRequestId"`
+	TenantID          string  `json:"tenantId"`
 	ClientID          string  `json:"clientId"`
 	StoreID           string  `json:"storeId"`
 	PaymentMethod     string  `json:"paymentMethod"`
@@ -77,6 +78,7 @@ func scanSession(row *sql.Row) (*PaymentSession, error) {
 		&s.ID,
 		&s.CheckoutIntentID,
 		&s.SpecialRequestID,
+		&s.TenantID,
 		&s.ClientID,
 		&s.StoreID,
 		&s.PaymentMethod,
@@ -107,7 +109,9 @@ func getSession(db *sql.DB, sessionID string) (*PaymentSession, error) {
 }
 
 const selectCols = `
-	SELECT id, checkout_intent_id, special_request_id, client_id, store_id, payment_method,
+	SELECT id, checkout_intent_id, special_request_id,
+	       COALESCE(to_jsonb(wlt_payment_sessions)->>'tenant_id', 'tenant-dev-001'),
+	       client_id, store_id, payment_method,
 	       status, provider_reference, amount_minor_units, currency,
 	       captured_at, created_at, updated_at
 	FROM wlt_payment_sessions
@@ -161,7 +165,6 @@ func claimSession(db *sql.DB, sessionID string, allowedFrom []string, pendingSta
 	s.Status = pendingStatus
 	return s, nil
 }
-
 
 func AuthorizeSession(db *sql.DB, sessionID string) (*PaymentSession, error) {
 	client, err := provider.NewDefaultPaymentProvider()
@@ -221,7 +224,9 @@ func AuthorizeSessionWithProvider(ctx context.Context, db *sql.DB, client financ
 		UPDATE wlt_payment_sessions
 		SET status = 'authorized', provider_reference = $2, updated_at = NOW()
 		WHERE id = $1 AND status = 'authorization_pending'
-		RETURNING id, checkout_intent_id, special_request_id, client_id, store_id, payment_method,
+		RETURNING id, checkout_intent_id, special_request_id,
+		          COALESCE(to_jsonb(wlt_payment_sessions)->>'tenant_id', 'tenant-dev-001'),
+		          client_id, store_id, payment_method,
 		          status, provider_reference, amount_minor_units, currency,
 		          captured_at, created_at, updated_at`
 	row := tx.QueryRow(q, sessionID, result.ProviderReference)
@@ -347,7 +352,7 @@ func markSessionFailedAndNotify(db *sql.DB, session *PaymentSession, expectedSta
 	if affected, _ := res.RowsAffected(); affected == 0 {
 		return fmt.Errorf("session %s was no longer %s when marking failed", session.ID, expectedStatus)
 	}
-	if err := dshoutbox.Enqueue(tx, dshoutbox.EventTypeFailed, session.ID, session.CheckoutIntentID, session.SpecialRequestID); err != nil {
+	if err := dshoutbox.Enqueue(tx, dshoutbox.EventTypeFailed, session.ID, session.TenantID, session.CheckoutIntentID, session.SpecialRequestID); err != nil {
 		return err
 	}
 	return tx.Commit()
@@ -409,7 +414,9 @@ func captureSessionAndNotify(db *sql.DB, sessionID, providerReference string) (*
 		UPDATE wlt_payment_sessions
 		SET status = 'captured', provider_reference = $2, captured_at = NOW(), updated_at = NOW()
 		WHERE id = $1 AND status = 'capture_pending'
-		RETURNING id, checkout_intent_id, special_request_id, client_id, store_id, payment_method,
+		RETURNING id, checkout_intent_id, special_request_id,
+		          COALESCE(to_jsonb(wlt_payment_sessions)->>'tenant_id', 'tenant-dev-001'),
+		          client_id, store_id, payment_method,
 		          status, provider_reference, amount_minor_units, currency,
 		          captured_at, created_at, updated_at`
 	row := tx.QueryRow(q, sessionID, providerReference)
@@ -420,7 +427,7 @@ func captureSessionAndNotify(db *sql.DB, sessionID, providerReference string) (*
 	if err != nil {
 		return nil, err
 	}
-	if err := dshoutbox.Enqueue(tx, dshoutbox.EventTypeCaptured, s.ID, s.CheckoutIntentID, s.SpecialRequestID); err != nil {
+	if err := dshoutbox.Enqueue(tx, dshoutbox.EventTypeCaptured, s.ID, s.TenantID, s.CheckoutIntentID, s.SpecialRequestID); err != nil {
 		return nil, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -439,7 +446,9 @@ func MarkCodPending(db *sql.DB, sessionID string) (*PaymentSession, error) {
 		UPDATE wlt_payment_sessions
 		SET status = 'cod_pending', updated_at = NOW()
 		WHERE id = $1
-		RETURNING id, checkout_intent_id, special_request_id, client_id, store_id, payment_method,
+		RETURNING id, checkout_intent_id, special_request_id,
+		          COALESCE(to_jsonb(wlt_payment_sessions)->>'tenant_id', 'tenant-dev-001'),
+		          client_id, store_id, payment_method,
 		          status, provider_reference, amount_minor_units, currency,
 		          captured_at, created_at, updated_at`
 	row := db.QueryRow(q, sessionID)
@@ -458,7 +467,9 @@ func MarkCodCollected(db *sql.DB, sessionID string) (*PaymentSession, error) {
 		UPDATE wlt_payment_sessions
 		SET status = 'cod_collected', captured_at = NOW(), updated_at = NOW()
 		WHERE id = $1
-		RETURNING id, checkout_intent_id, special_request_id, client_id, store_id, payment_method,
+		RETURNING id, checkout_intent_id, special_request_id,
+		          COALESCE(to_jsonb(wlt_payment_sessions)->>'tenant_id', 'tenant-dev-001'),
+		          client_id, store_id, payment_method,
 		          status, provider_reference, amount_minor_units, currency,
 		          captured_at, created_at, updated_at`
 	row := db.QueryRow(q, sessionID)
@@ -516,7 +527,9 @@ func expireSessionTx(tx *sql.Tx, sessionID string) (*PaymentSession, error) {
 		UPDATE wlt_payment_sessions
 		SET status = 'expired', updated_at = NOW()
 		WHERE id = $1
-		RETURNING id, checkout_intent_id, special_request_id, client_id, store_id, payment_method,
+		RETURNING id, checkout_intent_id, special_request_id,
+		          COALESCE(to_jsonb(wlt_payment_sessions)->>'tenant_id', 'tenant-dev-001'),
+		          client_id, store_id, payment_method,
 		          status, provider_reference, amount_minor_units, currency,
 		          captured_at, created_at, updated_at`
 	row := tx.QueryRow(q, sessionID)
@@ -527,7 +540,7 @@ func expireSessionTx(tx *sql.Tx, sessionID string) (*PaymentSession, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := dshoutbox.Enqueue(tx, dshoutbox.EventTypeExpired, s.ID, s.CheckoutIntentID, s.SpecialRequestID); err != nil {
+	if err := dshoutbox.Enqueue(tx, dshoutbox.EventTypeExpired, s.ID, s.TenantID, s.CheckoutIntentID, s.SpecialRequestID); err != nil {
 		return nil, err
 	}
 	return s, nil

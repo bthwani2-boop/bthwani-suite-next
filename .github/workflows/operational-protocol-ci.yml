@@ -93,7 +93,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: SDLC Stage Gate
-        run: pnpm run guard:sdlc -- --stage G4_IMPLEMENTATION_VERIFIED --affected
+        run: pnpm run guard:sdlc -- --capability DSH-SPECIAL-REQUESTS-001 --stage G4_IMPLEMENTATION_VERIFIED --affected --artifact governance/operational_journey_protocol_package/sdlc/evidence/dsh-special-requests-001.artifact.json --impact governance/operational_journey_protocol_package/sdlc/evidence/dsh-special-requests-001.change-impact.json
 
   scope-and-surface-coverage:
     runs-on: ubuntu-latest

@@ -29,6 +29,10 @@ $validators = @(
 
 foreach ($validator in $validators) {
   node (Join-Path "tools/guards/sdlc" $validator) @commonArgs
+  if ($LASTEXITCODE -ne 0) {
+    Write-Host "sdlc-gate: FAIL"
+    exit $LASTEXITCODE
+  }
 }
 
 Write-Host "sdlc-gate: PASS"

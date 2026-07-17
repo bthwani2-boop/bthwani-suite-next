@@ -17,6 +17,28 @@ const artifactPath = getArg("--artifact");
 const impactPath = getArg("--impact");
 const violations = [];
 const ajv = new Ajv({ allErrors: true, strict: false });
+const affectedMode = args.includes("--affected");
+
+if (affectedMode && !artifactPath) {
+  violations.push({
+    file: "<cli>",
+    message: "MISSING_REQUIRED_ARTIFACT_FOR_AFFECTED_SDLC_GATE"
+  });
+}
+
+if (affectedMode && !impactPath) {
+  violations.push({
+    file: "<cli>",
+    message: "MISSING_REQUIRED_IMPACT_FOR_AFFECTED_SDLC_GATE"
+  });
+}
+
+if ((artifactPath && !impactPath) || (!artifactPath && impactPath)) {
+  violations.push({
+    file: "<cli>",
+    message: "SDLC_ARTIFACT_AND_IMPACT_MUST_BE_PROVIDED_TOGETHER"
+  });
+}
 
 function validateJsonAgainstSchema(inputRel, schemaRel) {
   const inputFull = path.join(repoRoot, inputRel);

@@ -21,6 +21,7 @@ type Client struct {
 type CreatePaymentSessionInput struct {
 	CheckoutIntentID string `json:"checkoutIntentId,omitempty"`
 	SpecialRequestID string `json:"specialRequestId,omitempty"`
+	TenantID         string `json:"tenantId,omitempty"`
 	ClientID         string `json:"clientId"`
 	StoreID          string `json:"storeId"`
 	PaymentMethod    string `json:"paymentMethod"`
@@ -35,6 +36,7 @@ type PaymentSession struct {
 	ID                string `json:"id"`
 	CheckoutIntentID  string `json:"checkoutIntentId"`
 	SpecialRequestID  string `json:"specialRequestId"`
+	TenantID          string `json:"tenantId"`
 	ClientID          string `json:"clientId"`
 	StoreID           string `json:"storeId"`
 	PaymentMethod     string `json:"paymentMethod"`

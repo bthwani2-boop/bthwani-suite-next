@@ -54,13 +54,16 @@ func (c *Client) Configured() bool {
 // checkoutIntentId as invalid. Callers (see internal/dshoutbox) are
 // responsible for retrying on error; this call does not retry or swallow
 // failures itself.
-func (c *Client) Notify(ctx context.Context, checkoutIntentID, specialRequestID *string, paymentSessionID, status string) error {
+func (c *Client) Notify(ctx context.Context, tenantID string, checkoutIntentID, specialRequestID *string, paymentSessionID, status string) error {
 	if !c.Configured() {
 		return ErrNotConfigured
 	}
 	payload := map[string]string{
 		"paymentSessionId": paymentSessionID,
 		"status":           status,
+	}
+	if tenantID != "" {
+		payload["tenantId"] = tenantID
 	}
 	correlationID := paymentSessionID
 	switch {

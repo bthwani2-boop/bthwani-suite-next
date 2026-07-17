@@ -24,6 +24,7 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 	var body struct {
 		CheckoutIntentID string `json:"checkoutIntentId"`
 		SpecialRequestID string `json:"specialRequestId"`
+		TenantID         string `json:"tenantId"`
 		PaymentSessionID string `json:"paymentSessionId"`
 		Status           string `json:"status"`
 	}
@@ -39,7 +40,7 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 	}
 
 	if body.SpecialRequestID != "" {
-		req, err := specialrequests.ApplyWltPaymentEvent(s.db, body.SpecialRequestID, body.PaymentSessionID, body.Status)
+		req, err := specialrequests.ApplyWltPaymentEvent(s.db, body.TenantID, body.SpecialRequestID, body.PaymentSessionID, body.Status)
 		if errors.Is(err, specialrequests.ErrNotFound) {
 			store.SendError(w, http.StatusNotFound, "NOT_FOUND", "special request not found")
 			return

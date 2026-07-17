@@ -46,6 +46,8 @@ export function isExcluded(relPath, isDir, name) {
   if (isDir) {
     if (EXCLUDED_DIRS.has(name)) return true;
     if (relPath === "tools/diagnostics") return true;
+    if (name === "_donor") return true;
+    if (name === ".graphify") return true;
   }
 
   if (relPath.startsWith("tools/registry/runs")) {
@@ -236,4 +238,3 @@ export function assertActiveOrWarn(toolId, binaryName) {
   console.log(`\n[${toolId.toUpperCase()} SKIP] '${binaryName}' binary not installed. Tool is optional.\n`);
   process.exit(0);
 }
-

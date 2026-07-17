@@ -7,15 +7,25 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/lib/pq"
+
 	"wlt-api/internal/shared"
 )
 
 var ErrIdempotencyConflict = errors.New("payment session idempotency conflict")
 
+const defaultTenantID = "tenant-dev-001"
+
+const paymentSessionCols = `id, checkout_intent_id, special_request_id,
+	COALESCE(to_jsonb(wlt_payment_sessions)->>'tenant_id', 'tenant-dev-001'),
+	client_id, store_id, payment_method, status, provider_reference, amount_minor_units,
+	currency, captured_at, created_at, updated_at`
+
 type PaymentSession struct {
 	ID                string  `json:"id"`
 	CheckoutIntentID  *string `json:"checkoutIntentId"`
 	SpecialRequestID  *string `json:"specialRequestId"`
+	TenantID          string  `json:"tenantId"`
 	ClientID          string  `json:"clientId"`
 	StoreID           string  `json:"storeId"`
 	PaymentMethod     string  `json:"paymentMethod"`
@@ -35,6 +45,7 @@ type PaymentSession struct {
 type CreatePaymentSessionInput struct {
 	CheckoutIntentID string `json:"checkoutIntentId"`
 	SpecialRequestID string `json:"specialRequestId"`
+	TenantID         string `json:"tenantId"`
 	ClientID         string `json:"clientId"`
 	StoreID          string `json:"storeId"`
 	PaymentMethod    string `json:"paymentMethod"`
@@ -51,8 +62,8 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 	if hasCheckoutIntent == hasSpecialRequest {
 		return nil, fmt.Errorf("exactly one of checkoutIntentId or specialRequestId is required")
 	}
-	if input.ClientID == "" || input.StoreID == "" {
-		return nil, fmt.Errorf("clientId and storeId are required")
+	if input.TenantID == "" || input.ClientID == "" || input.StoreID == "" {
+		return nil, fmt.Errorf("tenantId, clientId and storeId are required")
 	}
 	if input.PaymentMethod == "" {
 		input.PaymentMethod = "cod"
@@ -72,15 +83,16 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 	var existing *PaymentSession
 	var err error
 	if hasCheckoutIntent {
-		existing, err = getPaymentSessionByCheckoutIntent(db, input.CheckoutIntentID)
+		existing, err = getPaymentSessionByCheckoutIntent(db, input.TenantID, input.CheckoutIntentID)
 	} else {
-		existing, err = getPaymentSessionBySpecialRequest(db, input.SpecialRequestID)
+		existing, err = getPaymentSessionBySpecialRequest(db, input.TenantID, input.SpecialRequestID)
 	}
 	if err != nil {
 		return nil, err
 	}
 	if existing != nil {
 		if existing.ClientID != input.ClientID ||
+			existing.TenantID != input.TenantID ||
 			existing.StoreID != input.StoreID ||
 			existing.PaymentMethod != input.PaymentMethod ||
 			existing.AmountMinorUnits != input.AmountMinorUnits ||
@@ -92,15 +104,15 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 
 	const q = `
 		INSERT INTO wlt_payment_sessions
-			(checkout_intent_id, special_request_id, client_id, store_id, payment_method, status,
+			(checkout_intent_id, special_request_id, tenant_id, client_id, store_id, payment_method, status,
 			 amount_minor_units, currency, cart_snapshot_hash, idempotency_key, correlation_id)
-		VALUES (NULLIF($1, ''), NULLIF($2, ''), $3, $4, $5, 'reference_created', $6, $7, $8, $9, $10)
-		RETURNING id, checkout_intent_id, special_request_id, client_id, store_id, payment_method,
-		          status, provider_reference, amount_minor_units, currency, captured_at, created_at, updated_at`
+		VALUES (NULLIF($1, ''), NULLIF($2, ''), $3, $4, $5, $6, 'reference_created', $7, $8, $9, $10, $11)
+		RETURNING ` + paymentSessionCols
 
 	row := db.QueryRow(q,
 		input.CheckoutIntentID,
 		input.SpecialRequestID,
+		input.TenantID,
 		input.ClientID,
 		input.StoreID,
 		input.PaymentMethod,
@@ -110,7 +122,29 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 		input.IdempotencyKey,
 		input.CorrelationID,
 	)
-	return scanPaymentSession(row)
+	session, err := scanPaymentSession(row)
+	if isUndefinedColumn(err) {
+		const legacyQ = `
+			INSERT INTO wlt_payment_sessions
+				(checkout_intent_id, special_request_id, client_id, store_id, payment_method, status,
+				 amount_minor_units, currency, cart_snapshot_hash, idempotency_key, correlation_id)
+			VALUES (NULLIF($1, ''), NULLIF($2, ''), $3, $4, $5, 'reference_created', $6, $7, $8, $9, $10)
+			RETURNING ` + paymentSessionCols
+		row = db.QueryRow(legacyQ,
+			input.CheckoutIntentID,
+			input.SpecialRequestID,
+			input.ClientID,
+			input.StoreID,
+			input.PaymentMethod,
+			input.AmountMinorUnits,
+			input.Currency,
+			input.CartSnapshotHash,
+			input.IdempotencyKey,
+			input.CorrelationID,
+		)
+		return scanPaymentSession(row)
+	}
+	return session, err
 }
 
 func GetPaymentSession(db *sql.DB, sessionID string) (*PaymentSession, error) {
@@ -118,8 +152,7 @@ func GetPaymentSession(db *sql.DB, sessionID string) (*PaymentSession, error) {
 		return nil, fmt.Errorf("paymentSessionId is required")
 	}
 	const q = `
-		SELECT id, checkout_intent_id, special_request_id, client_id, store_id, payment_method,
-		       status, provider_reference, amount_minor_units, currency, captured_at, created_at, updated_at
+		SELECT ` + paymentSessionCols + `
 		FROM wlt_payment_sessions
 		WHERE id = $1`
 	row := db.QueryRow(q, sessionID)
@@ -167,16 +200,23 @@ func HandleCreatePaymentSession(db *sql.DB) http.HandlerFunc {
 // need the authoritative amount/currency/payment-method for that checkout,
 // since WLT -- not the caller -- is the source of truth for those fields.
 func GetPaymentSessionByCheckoutIntent(db *sql.DB, checkoutIntentID string) (*PaymentSession, error) {
-	return getPaymentSessionByCheckoutIntent(db, checkoutIntentID)
+	return getPaymentSessionByCheckoutIntent(db, "", checkoutIntentID)
 }
 
-func getPaymentSessionByCheckoutIntent(db *sql.DB, checkoutIntentID string) (*PaymentSession, error) {
-	const q = `
-		SELECT id, checkout_intent_id, special_request_id, client_id, store_id, payment_method,
-		       status, provider_reference, amount_minor_units, currency, captured_at, created_at, updated_at
+func getPaymentSessionByCheckoutIntent(db *sql.DB, tenantID string, checkoutIntentID string) (*PaymentSession, error) {
+	q := `
+		SELECT ` + paymentSessionCols + `
 		FROM wlt_payment_sessions
 		WHERE checkout_intent_id = $1`
-	session, err := scanPaymentSession(db.QueryRow(q, checkoutIntentID))
+	args := []any{checkoutIntentID}
+	if tenantID != "" {
+		q += ` AND tenant_id = $2`
+		args = append(args, tenantID)
+	}
+	session, err := scanPaymentSession(db.QueryRow(q, args...))
+	if isUndefinedColumn(err) && tenantID != "" {
+		return nil, nil
+	}
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
@@ -187,13 +227,20 @@ func getPaymentSessionByCheckoutIntent(db *sql.DB, checkoutIntentID string) (*Pa
 // of getPaymentSessionByCheckoutIntent, used by CreatePaymentSession's
 // idempotency check when the caller supplies specialRequestId instead of
 // checkoutIntentId.
-func getPaymentSessionBySpecialRequest(db *sql.DB, specialRequestID string) (*PaymentSession, error) {
-	const q = `
-		SELECT id, checkout_intent_id, special_request_id, client_id, store_id, payment_method,
-		       status, provider_reference, amount_minor_units, currency, captured_at, created_at, updated_at
+func getPaymentSessionBySpecialRequest(db *sql.DB, tenantID string, specialRequestID string) (*PaymentSession, error) {
+	q := `
+		SELECT ` + paymentSessionCols + `
 		FROM wlt_payment_sessions
 		WHERE special_request_id = $1`
-	session, err := scanPaymentSession(db.QueryRow(q, specialRequestID))
+	args := []any{specialRequestID}
+	if tenantID != "" {
+		q += ` AND tenant_id = $2`
+		args = append(args, tenantID)
+	}
+	session, err := scanPaymentSession(db.QueryRow(q, args...))
+	if isUndefinedColumn(err) && tenantID != "" {
+		return nil, nil
+	}
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
@@ -225,6 +272,7 @@ func scanPaymentSession(row *sql.Row) (*PaymentSession, error) {
 		&session.ID,
 		&session.CheckoutIntentID,
 		&session.SpecialRequestID,
+		&session.TenantID,
 		&session.ClientID,
 		&session.StoreID,
 		&session.PaymentMethod,
@@ -240,6 +288,14 @@ func scanPaymentSession(row *sql.Row) (*PaymentSession, error) {
 		return nil, err
 	}
 	return &session, nil
+}
+
+func isUndefinedColumn(err error) bool {
+	var pqErr *pq.Error
+	if errors.As(err, &pqErr) {
+		return string(pqErr.Code) == "42703"
+	}
+	return false
 }
 
 func decodeJSON(w http.ResponseWriter, r *http.Request, target any) bool {

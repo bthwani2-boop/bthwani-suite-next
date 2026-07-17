@@ -97,6 +97,25 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("PATCH /dsh/operator/special-requests/{requestId}", protected.handleUpdateOperatorSpecialRequest)
 	mux.HandleFunc("POST /dsh/operator/special-requests/{requestId}/dispatch", protected.handleAssignSpecialRequestDispatch)
 
+	// Partner Delivery & Pickup Operational Closure
+	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/partner-delivery/assign", protected.handleAssignPartnerDelivery)
+	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/partner-delivery/pickup", protected.handlePartnerDeliveryPickup)
+	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/partner-delivery/depart", protected.handlePartnerDeliveryDepart)
+	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/partner-delivery/arrive", protected.handlePartnerDeliveryArrive)
+	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/partner-delivery/proof", protected.handlePartnerDeliveryProof)
+	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/partner-delivery/exception", protected.handlePartnerDeliveryException)
+	mux.HandleFunc("GET /dsh/operator/partner-deliveries", protected.handleListOperatorPartnerDeliveries)
+	mux.HandleFunc("GET /dsh/operator/partner-deliveries/{taskId}", protected.handleGetOperatorPartnerDelivery)
+
+	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/pickup/mark-ready", protected.handlePickupMarkReady)
+	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/pickup/notify", protected.handlePickupNotify)
+	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/pickup/customer-arrived", protected.handlePickupCustomerArrived)
+	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/pickup/verify", protected.handlePickupVerify)
+	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/pickup/no-show", protected.handlePickupNoShow)
+	mux.HandleFunc("GET /dsh/operator/pickups", protected.handleListOperatorPickups)
+	mux.HandleFunc("GET /dsh/operator/pickups/{orderId}", protected.handleGetOperatorPickup)
+	mux.HandleFunc("POST /dsh/operator/pickups/{orderId}/extend-window", protected.handleExtendPickupWindow)
+
 	// Governed read-only finance proxy — WLT internal financial reads are
 	// service-authenticated; DSH surfaces must consume them through these
 	// actor-authenticated routes, never directly from the browser.

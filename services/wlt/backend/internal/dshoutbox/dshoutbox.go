@@ -26,6 +26,7 @@ type Event struct {
 	ID               string
 	EventType        string
 	PaymentSessionID string
+	TenantID         string
 	CheckoutIntentID *string
 	SpecialRequestID *string
 	AttemptCount     int
@@ -40,15 +41,30 @@ type Event struct {
 // the session's own source identity -- callers pass the session's
 // CheckoutIntentID/SpecialRequestID fields straight through, so this is
 // enforced transitively by wlt_payment_sessions_source_xor_chk.
-func Enqueue(tx *sql.Tx, eventType, sessionID string, checkoutIntentID, specialRequestID *string) error {
-	_, err := tx.Exec(`
-		INSERT INTO wlt_dsh_outbox_events (event_type, payment_session_id, checkout_intent_id, special_request_id)
-		VALUES ($1, $2, $3, $4)
-		ON CONFLICT (payment_session_id, event_type) DO NOTHING`,
-		eventType, sessionID, checkoutIntentID, specialRequestID,
-	)
+func Enqueue(tx *sql.Tx, eventType, sessionID string, tenantID string, checkoutIntentID, specialRequestID *string) error {
+	hasTenantColumn, err := hasOutboxTenantColumn(tx)
 	if err != nil {
-		return fmt.Errorf("enqueue dsh outbox event: %w", err)
+		return fmt.Errorf("inspect dsh outbox tenancy column: %w", err)
+	}
+
+	var execErr error
+	if hasTenantColumn {
+		_, execErr = tx.Exec(`
+			INSERT INTO wlt_dsh_outbox_events (event_type, payment_session_id, tenant_id, checkout_intent_id, special_request_id)
+			VALUES ($1, $2, $3, $4, $5)
+			ON CONFLICT (payment_session_id, event_type) DO NOTHING`,
+			eventType, sessionID, tenantID, checkoutIntentID, specialRequestID,
+		)
+	} else {
+		_, execErr = tx.Exec(`
+			INSERT INTO wlt_dsh_outbox_events (event_type, payment_session_id, checkout_intent_id, special_request_id)
+			VALUES ($1, $2, $3, $4)
+			ON CONFLICT (payment_session_id, event_type) DO NOTHING`,
+			eventType, sessionID, checkoutIntentID, specialRequestID,
+		)
+	}
+	if execErr != nil {
+		return fmt.Errorf("enqueue dsh outbox event: %w", execErr)
 	}
 	return nil
 }
@@ -65,7 +81,9 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 	defer tx.Rollback()
 
 	rows, err := tx.Query(`
-		SELECT id, event_type, payment_session_id, checkout_intent_id, special_request_id, attempt_count
+		SELECT id, event_type, payment_session_id,
+		       COALESCE(to_jsonb(wlt_dsh_outbox_events)->>'tenant_id', 'tenant-dev-001'),
+		       checkout_intent_id, special_request_id, attempt_count
 		FROM wlt_dsh_outbox_events
 		WHERE status = 'pending' AND next_retry_at <= NOW()
 		ORDER BY created_at
@@ -79,7 +97,7 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 	var events []Event
 	for rows.Next() {
 		var e Event
-		if err := rows.Scan(&e.ID, &e.EventType, &e.PaymentSessionID, &e.CheckoutIntentID, &e.SpecialRequestID, &e.AttemptCount); err != nil {
+		if err := rows.Scan(&e.ID, &e.EventType, &e.PaymentSessionID, &e.TenantID, &e.CheckoutIntentID, &e.SpecialRequestID, &e.AttemptCount); err != nil {
 			rows.Close()
 			return nil, fmt.Errorf("scan dsh outbox event: %w", err)
 		}
@@ -146,6 +164,18 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+func hasOutboxTenantColumn(tx *sql.Tx) (bool, error) {
+	var exists bool
+	err := tx.QueryRow(`
+		SELECT EXISTS (
+			SELECT 1
+			FROM information_schema.columns
+			WHERE table_name = 'wlt_dsh_outbox_events'
+			  AND column_name = 'tenant_id'
+		)`).Scan(&exists)
+	return exists, err
 }
 
 // pqStringArray formats a []string as a Postgres array literal, e.g.

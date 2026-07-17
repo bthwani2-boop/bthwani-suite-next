@@ -291,6 +291,28 @@ func TestSpecialRequestsListAndGetOwnershipDBIntegration(t *testing.T) {
 			t.Fatalf("expected id %s, got %s", reqA.ID, got.ID)
 		}
 	})
+
+	t.Run("tenant scope masks same-client request from another tenant", func(t *testing.T) {
+		tenantA := "tenant-a-" + testSuffix()
+		tenantB := "tenant-b-" + testSuffix()
+		clientID := newClientID(t)
+		req, err := svc.CreateInTenant(ctx, tenantA, clientID, validSheinInput(clientID))
+		if err != nil {
+			t.Fatalf("create for tenant A failed: %v", err)
+		}
+		cleanupRequest(t, db, req.ID)
+
+		if _, err := svc.GetForClientInTenant(ctx, tenantB, req.ID, clientID); !errors.Is(err, ErrNotFound) {
+			t.Fatalf("expected cross-tenant GetForClientInTenant to mask as ErrNotFound, got %v", err)
+		}
+		items, total, err := svc.ListForClientInTenant(ctx, tenantB, clientID, 50, 0)
+		if err != nil {
+			t.Fatalf("cross-tenant ListForClientInTenant failed: %v", err)
+		}
+		if total != 0 || len(items) != 0 {
+			t.Fatalf("expected tenant B list to be empty, got total=%d len=%d", total, len(items))
+		}
+	})
 }
 
 func TestSpecialRequestsCancelForClientDBIntegration(t *testing.T) {
@@ -732,7 +754,7 @@ func TestSpecialRequestsWltPaymentDBIntegration(t *testing.T) {
 		sessionID := "wlt-session-" + testSuffix()
 		quoteAndAttach(t, req, sessionID)
 
-		_, err := ApplyWltPaymentEvent(db, req.ID, "wrong-session-id", "captured")
+		_, err := ApplyWltPaymentEvent(db, DefaultTenantID, req.ID, "wrong-session-id", "captured")
 		if !errors.Is(err, ErrPaymentSessionMismatch) {
 			t.Fatalf("expected ErrPaymentSessionMismatch, got %v", err)
 		}
@@ -743,7 +765,7 @@ func TestSpecialRequestsWltPaymentDBIntegration(t *testing.T) {
 		sessionID := "wlt-session-" + testSuffix()
 		quoteAndAttach(t, req, sessionID)
 
-		updated, err := ApplyWltPaymentEvent(db, req.ID, sessionID, "captured")
+		updated, err := ApplyWltPaymentEvent(db, DefaultTenantID, req.ID, sessionID, "captured")
 		if err != nil {
 			t.Fatalf("ApplyWltPaymentEvent(captured) failed: %v", err)
 		}
@@ -757,7 +779,7 @@ func TestSpecialRequestsWltPaymentDBIntegration(t *testing.T) {
 		sessionID := "wlt-session-" + testSuffix()
 		attached := quoteAndAttach(t, req, sessionID)
 
-		result, err := ApplyWltPaymentEvent(db, req.ID, sessionID, "failed")
+		result, err := ApplyWltPaymentEvent(db, DefaultTenantID, req.ID, sessionID, "failed")
 		if err != nil {
 			t.Fatalf("ApplyWltPaymentEvent(failed) should be a no-op success, got error %v", err)
 		}
@@ -779,7 +801,7 @@ func TestSpecialRequestsWltPaymentDBIntegration(t *testing.T) {
 		sessionID := "wlt-session-" + testSuffix()
 		quoteAndAttach(t, req, sessionID)
 
-		approved, err := ApplyWltPaymentEvent(db, req.ID, sessionID, "captured")
+		approved, err := ApplyWltPaymentEvent(db, DefaultTenantID, req.ID, sessionID, "captured")
 		if err != nil {
 			t.Fatalf("first captured event failed: %v", err)
 		}
@@ -796,7 +818,7 @@ func TestSpecialRequestsWltPaymentDBIntegration(t *testing.T) {
 			t.Fatalf("transition to assigned failed: %v", err)
 		}
 
-		replayed, err := ApplyWltPaymentEvent(db, req.ID, sessionID, "captured")
+		replayed, err := ApplyWltPaymentEvent(db, DefaultTenantID, req.ID, sessionID, "captured")
 		if err != nil {
 			t.Fatalf("replayed captured event should be a no-op success, got error %v", err)
 		}

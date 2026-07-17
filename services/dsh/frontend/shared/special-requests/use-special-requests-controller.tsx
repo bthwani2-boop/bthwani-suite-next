@@ -33,17 +33,19 @@ import type { DshSpecialRequestState, DshSpecialRequestListLoadState } from "./s
 export function useSpecialRequestsController() {
   const [state, setState] = useState<DshSpecialRequestState>(specialRequestIdleState());
 
-  const submit = useCallback(async (input: DshCreateSpecialRequest) => {
+  const submit = useCallback(async (input: DshCreateSpecialRequest): Promise<boolean> => {
     // Guard against double-submit: bail out before making any API call.
-    if (state.kind === "submitting") return;
+    if (state.kind === "submitting") return false;
     setState(beginSubmit());
     try {
       const request = await createSpecialRequest(input, {
         idempotencyKey: input.idempotencyKey,
       });
       setState(resolveSubmitSuccess(request));
+      return true;
     } catch (error) {
       setState(resolveSubmitError(classifySpecialRequestError(error)));
+      return false;
     }
   }, [state.kind]);
 

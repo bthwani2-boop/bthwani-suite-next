@@ -1953,6 +1953,7 @@ components:
       type: object
       required:
         - id
+        - tenantId
         - clientId
         - storeId
         - paymentMethod
@@ -1977,6 +1978,9 @@ components:
             Set when this session originated from a DSH special-request
             (Shein/Awnak) quote approval. Mutually exclusive with
             checkoutIntentId -- exactly one of the two is always non-null.
+        tenantId:
+          type: string
+          description: Trusted tenant context propagated from Identity through DSH.
         clientId:
           type: string
         storeId:
@@ -2022,6 +2026,7 @@ components:
     WltCreatePaymentSessionRequest:
       type: object
       required:
+        - tenantId
         - clientId
         - storeId
         - amountMinorUnits
@@ -2037,6 +2042,9 @@ components:
           description: >-
             Exactly one of checkoutIntentId or specialRequestId must be
             provided.
+        tenantId:
+          type: string
+          description: Trusted tenant context propagated by DSH; not selected by client UI.
         clientId:
           type: string
         storeId:

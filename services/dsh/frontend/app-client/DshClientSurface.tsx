@@ -25,6 +25,7 @@ import { TicketDetailScreen } from "./support/TicketDetailScreen";
 import { SheinForm } from "../shared/shein/SheinForm";
 import { AwnakForm } from "../shared/awnak/AwnakForm";
 import { useSpecialRequestsController } from "../shared/special-requests/use-special-requests-controller";
+import { generateSpecialRequestIdempotencyKey } from "../shared/special-requests/special-requests.idempotency";
 const ICON_SIZE = 22;
 const ICON_COLOR_ACTIVE = colorRoles.brandAction;
 const ICON_COLOR_INACTIVE = colorRoles.brandStructure;
@@ -169,13 +170,6 @@ export function DshClientSurface() {
 
   const specialReqCtrl = useSpecialRequestsController();
 
-  useEffect(() => {
-    if (specialReqCtrl.state.kind === 'success') {
-      // The form will show the success message because it uses its own state, but we can also handle it here.
-      // For now, let the forms handle their own success UI or we pass it down.
-    }
-  }, [specialReqCtrl.state.kind]);
-
   const commerceStoreId: string | null = selectedStoreId;
 
   const goBack = () => {
@@ -276,14 +270,22 @@ export function DshClientSurface() {
           <SheinForm
             onBack={() => setActiveSpecialRequest(null)}
             onSubmit={async (data) => {
-              await specialReqCtrl.submit({ requestType: 'SHEIN_ASSISTED_PURCHASE', idempotencyKey: Date.now().toString(), ...data });
+              return specialReqCtrl.submit({
+                requestType: 'SHEIN_ASSISTED_PURCHASE',
+                idempotencyKey: generateSpecialRequestIdempotencyKey(),
+                ...data,
+              });
             }}
           />
         ) : activeSpecialRequest === 'awnak' ? (
           <AwnakForm
             onBack={() => setActiveSpecialRequest(null)}
             onSubmit={async (data) => {
-              await specialReqCtrl.submit({ requestType: 'AWNAK_ERRAND', idempotencyKey: Date.now().toString(), ...data });
+              return specialReqCtrl.submit({
+                requestType: 'AWNAK_ERRAND',
+                idempotencyKey: generateSpecialRequestIdempotencyKey(),
+                ...data,
+              });
             }}
           />
         ) : activeTab === "home" ? (

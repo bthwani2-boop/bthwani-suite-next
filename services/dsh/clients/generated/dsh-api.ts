@@ -3436,6 +3436,278 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dsh/partner/orders/{orderId}/partner-delivery/assign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Assign a store courier to a partner_delivery order */
+        post: operations["assignDshPartnerDeliveryTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/orders/{orderId}/partner-delivery/pickup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Store courier marks a partner_delivery task picked up */
+        post: operations["markDshPartnerDeliveryPickedUp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/orders/{orderId}/partner-delivery/depart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Store courier marks a partner_delivery task departed */
+        post: operations["departDshPartnerDeliveryTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/orders/{orderId}/partner-delivery/arrive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Store courier marks a partner_delivery task arrived */
+        post: operations["arriveDshPartnerDeliveryTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/orders/{orderId}/partner-delivery/proof": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Store courier submits proof of delivery, completing the partner_delivery task */
+        post: operations["submitDshPartnerDeliveryProof"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/orders/{orderId}/partner-delivery/exception": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Operator raises an exception on a partner_delivery task */
+        post: operations["raiseDshPartnerDeliveryException"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/partner-deliveries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List partner_delivery tasks for operators */
+        get: operations["listDshOperatorPartnerDeliveries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/partner-deliveries/{taskId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a partner_delivery task by id */
+        get: operations["getDshOperatorPartnerDelivery"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/orders/{orderId}/pickup/mark-ready": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Store marks a pickup order ready for pickup */
+        post: operations["markDshPickupReady"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/orders/{orderId}/pickup/notify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Issue a fresh pickup OTP and notify the customer the order is ready */
+        post: operations["notifyDshPickupCustomer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/orders/{orderId}/pickup/customer-arrived": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record that the customer has arrived to collect a pickup order */
+        post: operations["markDshPickupCustomerArrived"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/orders/{orderId}/pickup/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify a customer-submitted pickup OTP and complete the pickup */
+        post: operations["verifyDshPickupSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/orders/{orderId}/pickup/no-show": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark an issued-but-unused pickup session as a no-show */
+        post: operations["markDshPickupNoShow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/pickups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List pickup sessions for operators */
+        get: operations["listDshOperatorPickups"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/pickups/{orderId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a pickup session by order id */
+        get: operations["getDshOperatorPickup"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/pickups/{orderId}/extend-window": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Manually extend a pickup session's expiry window */
+        post: operations["extendDshPickupWindow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -4469,7 +4741,10 @@ export interface components {
         };
         /** @description Contains opaque WLT references only. No amount, ledger, refund, settlement, or signature verification logic belongs to DSH. Fields are DisallowUnknownFields-strict on the DSH side: this schema must always match services/dsh/backend/internal/http/wlt_events.go exactly. */
         WltPaymentCallbackEnvelope: {
-            checkoutIntentId: string;
+            checkoutIntentId?: string;
+            specialRequestId?: string;
+            /** @description Trusted tenant context for special-request sourced payment sessions. */
+            tenantId?: string;
             paymentSessionId: string;
             /** @enum {string} */
             status: "reference_created" | "cod_pending" | "authorized" | "captured" | "cod_collected" | "failed" | "expired";
@@ -5307,6 +5582,113 @@ export interface components {
             pickedUpAt?: string | null;
             /** Format: date-time */
             deliveredAt?: string | null;
+        };
+        /** @enum {string} */
+        DshPartnerDeliveryTaskStatus: "unassigned" | "assigned" | "departed" | "arrived" | "proof_pending" | "completed" | "cancelled" | "exception";
+        DshPartnerDeliveryTask: {
+            id: string;
+            orderId: string;
+            storeId: string;
+            branchId: string;
+            storeCourierId: string;
+            status: components["schemas"]["DshPartnerDeliveryTaskStatus"];
+            /** Format: date-time */
+            assignedAt?: string | null;
+            /** Format: date-time */
+            pickedUpAt?: string | null;
+            /** Format: date-time */
+            departedAt?: string | null;
+            /** Format: date-time */
+            arrivedAt?: string | null;
+            proofMethod?: string | null;
+            proofReference?: string | null;
+            /** Format: date-time */
+            completedAt?: string | null;
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshPartnerDeliveryTaskResponse: {
+            task: components["schemas"]["DshPartnerDeliveryTask"];
+        };
+        DshPartnerDeliveryTaskListResponse: {
+            tasks: components["schemas"]["DshPartnerDeliveryTask"][];
+        };
+        DshPartnerDeliveryMutationRequest: {
+            expectedVersion: number;
+            commandId: string;
+            correlationId?: string;
+            reason?: string;
+        };
+        DshAssignPartnerDeliveryTaskRequest: components["schemas"]["DshPartnerDeliveryMutationRequest"] & {
+            storeCourierId: string;
+        };
+        DshSubmitPartnerDeliveryProofRequest: components["schemas"]["DshPartnerDeliveryMutationRequest"] & {
+            proofMethod: string;
+            proofReference?: string;
+        };
+        DshRaisePartnerDeliveryExceptionRequest: components["schemas"]["DshPartnerDeliveryMutationRequest"] & {
+            reason: string;
+        };
+        DshPickupSession: {
+            id: string;
+            orderId: string;
+            storeId: string;
+            clientId: string;
+            /** Format: date-time */
+            expiresAt: string;
+            attemptCount: number;
+            maxAttempts: number;
+            /** Format: date-time */
+            usedAt?: string | null;
+            verifiedByActorId?: string | null;
+            /** @description Known values: otp, no_show. */
+            verificationMethod?: string | null;
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshPickupSessionResponse: {
+            session: components["schemas"]["DshPickupSession"];
+        };
+        DshPickupSessionListResponse: {
+            sessions: components["schemas"]["DshPickupSession"][];
+        };
+        DshPickupMutationRequest: {
+            expectedVersion: number;
+            commandId: string;
+            correlationId?: string;
+            reason?: string;
+        };
+        DshIssuePickupOtpRequest: components["schemas"]["DshPickupMutationRequest"] & {
+            clientId?: string;
+        };
+        DshVerifyPickupOtpRequest: components["schemas"]["DshPickupMutationRequest"] & {
+            code: string;
+        };
+        DshPickupNoShowRequest: components["schemas"]["DshPickupMutationRequest"];
+        DshExtendPickupWindowRequest: components["schemas"]["DshPickupMutationRequest"] & {
+            reason: string;
+            /** Format: date-time */
+            newExpiry: string;
+        };
+        DshPickupMarkReadyResponse: {
+            orderId: string;
+            /** @enum {string} */
+            status: "ready_for_pickup";
+        };
+        DshPickupCustomerArrivedResponse: {
+            orderId: string;
+            customerArrived: boolean;
+        };
+        DshPickupNotifyResponse: {
+            orderId: string;
+            notified: boolean;
+            session?: components["schemas"]["DshPickupSession"];
         };
     };
     responses: {
@@ -11739,6 +12121,667 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    assignDshPartnerDeliveryTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshAssignPartnerDeliveryTaskRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerDeliveryTaskResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Version conflict, or the order already has an active dispatch assignment or partner delivery task (VERSION_CONFLICT, PARTNER_DELIVERY_ALREADY_ASSIGNED). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+            /** @description Order is not ready for partner delivery assignment, or the store courier is not eligible (PARTNER_DELIVERY_NOT_READY, COURIER_INELIGIBLE). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+        };
+    };
+    markDshPartnerDeliveryPickedUp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshPartnerDeliveryMutationRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerDeliveryTaskResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Partner delivery task version changed; reload before retrying (VERSION_CONFLICT). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+            /** @description Task is not in a status that allows this transition (PARTNER_DELIVERY_INVALID_TRANSITION). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+        };
+    };
+    departDshPartnerDeliveryTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshPartnerDeliveryMutationRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerDeliveryTaskResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Partner delivery task version changed; reload before retrying (VERSION_CONFLICT). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+            /** @description Task is not in a status that allows this transition (PARTNER_DELIVERY_INVALID_TRANSITION). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+        };
+    };
+    arriveDshPartnerDeliveryTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshPartnerDeliveryMutationRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerDeliveryTaskResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Partner delivery task version changed; reload before retrying (VERSION_CONFLICT). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+            /** @description Task is not in a status that allows this transition (PARTNER_DELIVERY_INVALID_TRANSITION). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+        };
+    };
+    submitDshPartnerDeliveryProof: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshSubmitPartnerDeliveryProofRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerDeliveryTaskResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Partner delivery task version changed; reload before retrying (VERSION_CONFLICT). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+            /** @description Task is not in a status that allows proof submission (PARTNER_DELIVERY_INVALID_TRANSITION). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+        };
+    };
+    raiseDshPartnerDeliveryException: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshRaisePartnerDeliveryExceptionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerDeliveryTaskResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Partner delivery task version changed; reload before retrying (VERSION_CONFLICT). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+            /** @description Task is not in a status that allows this transition (PARTNER_DELIVERY_INVALID_TRANSITION). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+        };
+    };
+    listDshOperatorPartnerDeliveries: {
+        parameters: {
+            query?: {
+                storeId?: string;
+                status?: components["schemas"]["DshPartnerDeliveryTaskStatus"];
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerDeliveryTaskListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getDshOperatorPartnerDelivery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerDeliveryTaskResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    markDshPickupReady: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshPickupMutationRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPickupMarkReadyResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Order is not a pickup-mode order in a preparing state (PICKUP_INVALID_TRANSITION). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+        };
+    };
+    notifyDshPickupCustomer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshIssuePickupOtpRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPickupNotifyResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Pickup session version changed; reload before retrying (VERSION_CONFLICT). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+            /** @description Order is not a pickup-mode order in the ready-for-pickup state (PICKUP_INVALID_TRANSITION). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+        };
+    };
+    markDshPickupCustomerArrived: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshPickupMutationRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPickupCustomerArrivedResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Order is not a pickup-mode order (PICKUP_INVALID_TRANSITION). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+        };
+    };
+    verifyDshPickupSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshVerifyPickupOtpRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPickupSessionResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Pickup session version changed; reload before retrying (VERSION_CONFLICT). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+            /** @description Code already used, expired, attempts exceeded, or invalid (PICKUP_CODE_ALREADY_USED, PICKUP_CODE_EXPIRED, PICKUP_CODE_ATTEMPTS_EXCEEDED, PICKUP_CODE_INVALID, PICKUP_INVALID_TRANSITION). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+        };
+    };
+    markDshPickupNoShow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshPickupNoShowRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPickupSessionResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Pickup session version changed; reload before retrying (VERSION_CONFLICT). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+            /** @description Pickup session was already used (PICKUP_CODE_ALREADY_USED). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+        };
+    };
+    listDshOperatorPickups: {
+        parameters: {
+            query?: {
+                storeId?: string;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPickupSessionListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getDshOperatorPickup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPickupSessionResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    extendDshPickupWindow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshExtendPickupWindowRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPickupSessionResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Pickup session version changed; reload before retrying (VERSION_CONFLICT). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+            /** @description Pickup session was already used (PICKUP_CODE_ALREADY_USED). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
         };
     };
 }

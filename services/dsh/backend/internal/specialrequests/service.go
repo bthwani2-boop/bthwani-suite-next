@@ -182,7 +182,23 @@ const (
 	maxAddressLength = 500
 )
 
+const DefaultTenantID = "tenant-dev-001"
+
+func tenantOrDefault(tenantID string) string {
+	if strings.TrimSpace(tenantID) == "" {
+		return DefaultTenantID
+	}
+	return strings.TrimSpace(tenantID)
+}
+
 func (s *Service) Create(ctx context.Context, clientID string, in CreateInput) (*SpecialRequest, error) {
+	return s.CreateInTenant(ctx, tenantOrDefault(in.TenantID), clientID, in)
+}
+
+func (s *Service) CreateInTenant(ctx context.Context, tenantID string, clientID string, in CreateInput) (*SpecialRequest, error) {
+	if tenantID == "" {
+		return nil, fmt.Errorf("%w: tenant is required", ErrInvalid)
+	}
 	if clientID == "" {
 		return nil, fmt.Errorf("%w: client is required", ErrInvalid)
 	}
@@ -249,6 +265,7 @@ func (s *Service) Create(ctx context.Context, clientID string, in CreateInput) (
 		}
 	}
 
+	in.TenantID = tenantID
 	in.ClientID = clientID
 	in.workflowStage = firstStageFor(in.RequestType)
 
@@ -293,7 +310,11 @@ func validateTextField(field string, value *string, maxLen int) error {
 }
 
 func (s *Service) GetForClient(ctx context.Context, id, clientID string) (*SpecialRequest, error) {
-	req, err := s.repo.Get(ctx, id)
+	return s.GetForClientInTenant(ctx, DefaultTenantID, id, clientID)
+}
+
+func (s *Service) GetForClientInTenant(ctx context.Context, tenantID string, id, clientID string) (*SpecialRequest, error) {
+	req, err := s.repo.GetInTenant(ctx, tenantID, id)
 	if err != nil {
 		return nil, err
 	}
@@ -304,14 +325,26 @@ func (s *Service) GetForClient(ctx context.Context, id, clientID string) (*Speci
 }
 
 func (s *Service) ListForClient(ctx context.Context, clientID string, limit, offset int) ([]SpecialRequest, int, error) {
-	return s.repo.ListByClient(ctx, clientID, limit, offset)
+	return s.ListForClientInTenant(ctx, DefaultTenantID, clientID, limit, offset)
+}
+
+func (s *Service) ListForClientInTenant(ctx context.Context, tenantID string, clientID string, limit, offset int) ([]SpecialRequest, int, error) {
+	return s.repo.ListByClientInTenant(ctx, tenantID, clientID, limit, offset)
 }
 
 func (s *Service) GetForOperator(ctx context.Context, id string) (*SpecialRequest, error) {
-	return s.repo.Get(ctx, id)
+	return s.GetForOperatorInTenant(ctx, DefaultTenantID, id)
+}
+
+func (s *Service) GetForOperatorInTenant(ctx context.Context, tenantID string, id string) (*SpecialRequest, error) {
+	return s.repo.GetInTenant(ctx, tenantID, id)
 }
 
 func (s *Service) ListForOperator(ctx context.Context, reqType, status, workflowStage *string, limit, offset int) ([]SpecialRequest, int, error) {
+	return s.ListForOperatorInTenant(ctx, DefaultTenantID, reqType, status, workflowStage, limit, offset)
+}
+
+func (s *Service) ListForOperatorInTenant(ctx context.Context, tenantID string, reqType, status, workflowStage *string, limit, offset int) ([]SpecialRequest, int, error) {
 	if reqType != nil && *reqType != "" {
 		rt := RequestType(*reqType)
 		if rt != TypeSheinAssistedPurchase && rt != TypeAwnakErrand {
@@ -323,7 +356,7 @@ func (s *Service) ListForOperator(ctx context.Context, reqType, status, workflow
 			return nil, 0, fmt.Errorf("%w: status is invalid", ErrInvalid)
 		}
 	}
-	return s.repo.ListForOperator(ctx, reqType, status, workflowStage, limit, offset)
+	return s.repo.ListForOperatorInTenant(ctx, tenantID, reqType, status, workflowStage, limit, offset)
 }
 
 func isValidStatus(status RequestStatus) bool {
@@ -337,7 +370,11 @@ func isValidStatus(status RequestStatus) bool {
 }
 
 func (s *Service) CancelForClient(ctx context.Context, id, clientID string, expectedVersion *int) (*SpecialRequest, error) {
-	current, err := s.repo.Get(ctx, id)
+	return s.CancelForClientInTenant(ctx, DefaultTenantID, id, clientID, expectedVersion)
+}
+
+func (s *Service) CancelForClientInTenant(ctx context.Context, tenantID string, id, clientID string, expectedVersion *int) (*SpecialRequest, error) {
+	current, err := s.repo.GetInTenant(ctx, tenantID, id)
 	if err != nil {
 		return nil, err
 	}
@@ -358,7 +395,7 @@ func (s *Service) CancelForClient(ctx context.Context, id, clientID string, expe
 		Status:         &status,
 		setCancelledAt: true,
 	}
-	updated, err := s.repo.Update(ctx, id, version, update)
+	updated, err := s.repo.UpdateInTenant(ctx, tenantID, id, version, update)
 	if err != nil {
 		return nil, err
 	}
@@ -384,7 +421,11 @@ func (s *Service) CancelForClient(ctx context.Context, id, clientID string, expe
 }
 
 func (s *Service) ApplyOperatorTransition(ctx context.Context, id string, expectedVersion int, in UpdateInput) (*SpecialRequest, error) {
-	current, err := s.repo.Get(ctx, id)
+	return s.ApplyOperatorTransitionInTenant(ctx, DefaultTenantID, id, expectedVersion, in)
+}
+
+func (s *Service) ApplyOperatorTransitionInTenant(ctx context.Context, tenantID string, id string, expectedVersion int, in UpdateInput) (*SpecialRequest, error) {
+	current, err := s.repo.GetInTenant(ctx, tenantID, id)
 	if err != nil {
 		return nil, err
 	}
@@ -463,7 +504,7 @@ func (s *Service) ApplyOperatorTransition(ctx context.Context, id string, expect
 		update.setCancelledAt = newStatus == StatusCancelled && current.Status != StatusCancelled
 	}
 
-	updated, err := s.repo.Update(ctx, id, expectedVersion, update)
+	updated, err := s.repo.UpdateInTenant(ctx, tenantID, id, expectedVersion, update)
 	if err != nil {
 		return nil, err
 	}
