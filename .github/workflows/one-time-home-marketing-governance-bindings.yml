@@ -1,0 +1,126 @@
+name: One-time Home Marketing Governance Bindings
+
+on:
+  push:
+    branches: [bassam]
+    paths:
+      - '.github/workflows/one-time-home-marketing-governance-bindings.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: one-time-home-marketing-governance-bindings
+  cancel-in-progress: false
+
+jobs:
+  bind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: bassam
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+
+      - name: Compose contract and map OCC conflict
+        shell: bash
+        run: |
+          set -euo pipefail
+          git pull --rebase origin bassam
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          shard = 'services/dsh/contracts/dsh.home-marketing-governance.openapi.yaml'
+
+          backend = Path('tools/guards/backend-api-binding-gate.mjs')
+          text = backend.read_text(encoding='utf-8')
+          block = re.search(r'(service:\s*"dsh"[\s\S]*?additionalOpenapi:\s*\[)([\s\S]*?)(\])', text)
+          if not block:
+              raise SystemExit('DSH additionalOpenapi block not found')
+          if shard not in block.group(2):
+              body = block.group(2).rstrip()
+              if body and not body.rstrip().endswith(','):
+                  body += ','
+              body += f'\n      "{shard}",\n    '
+              text = text[:block.start(2)] + body + text[block.end(2):]
+          backend.write_text(text, encoding='utf-8')
+
+          frontend = Path('tools/guards/api-binding-gate.mjs')
+          text = frontend.read_text(encoding='utf-8')
+          decl = 'const dshHomeMarketingPaths = loadOpenApiPaths("services/dsh/contracts/dsh.home-marketing-governance.openapi.yaml");'
+          if decl not in text:
+              anchor = 'const dshPartnerFleetPaths = loadOpenApiPaths("services/dsh/contracts/dsh.partner-fleet.openapi.yaml");'
+              if anchor not in text:
+                  raise SystemExit('frontend contract declaration anchor not found')
+              text = text.replace(anchor, anchor + '\n' + decl, 1)
+          spread = '  ...dshHomeMarketingPaths,'
+          if spread not in text:
+              anchor = '  ...dshPartnerFleetPaths,'
+              if anchor not in text:
+                  raise SystemExit('frontend contract spread anchor not found')
+              text = text.replace(anchor, anchor + '\n' + spread, 1)
+          frontend.write_text(text, encoding='utf-8')
+
+          handler = Path('services/dsh/backend/internal/http/protected_store.go')
+          text = handler.read_text(encoding='utf-8')
+          match = re.search(r'func writeHomeDiscoveryMutationResult\(w http\.ResponseWriter, err error\) \{', text)
+          if not match:
+              raise SystemExit('home discovery mutation writer not found')
+          check = '''
+\tif errors.Is(err, homediscovery.ErrAdminContentVersionConflict) {
+\t\tstore.SendError(w, http.StatusConflict, "VERSION_CONFLICT", "home marketing content changed; reload before retrying")
+\t\treturn
+\t}
+'''
+          function_tail = text[match.end():]
+          function_end = function_tail.find('\n}')
+          if function_end < 0:
+              raise SystemExit('home discovery mutation writer end not found')
+          function_body = function_tail[:function_end]
+          if 'ErrAdminContentVersionConflict' not in function_body:
+              text = text[:match.end()] + check + text[match.end():]
+          handler.write_text(text, encoding='utf-8')
+          PY
+
+          gofmt -w \
+            services/dsh/backend/internal/homediscovery/admin.go \
+            services/dsh/backend/internal/homediscovery/model.go \
+            services/dsh/backend/internal/homediscovery/repository.go \
+            services/dsh/backend/internal/http/protected_store.go
+          git diff --check
+
+      - name: Commit bindings
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            tools/guards/backend-api-binding-gate.mjs \
+            tools/guards/api-binding-gate.mjs \
+            services/dsh/backend/internal/http/protected_store.go \
+            services/dsh/backend/internal/homediscovery
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m 'fix(marketing): bind governed home publication runtime'
+          git pull --rebase origin bassam
+          git push origin HEAD:bassam
+
+      - name: Verify backend and guards
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd services/dsh/backend && go test ./...)
+          corepack enable
+          pnpm install --frozen-lockfile
+          pnpm run contracts:lint
+          pnpm run guard:backend-api-binding
+          pnpm run guard:api-binding
