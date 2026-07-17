@@ -2,7 +2,8 @@ import React from 'react';
 import { Badge, Box, Button, ListItem, SectionHeader, Surface, Text } from '@bthwani/ui-kit';
 import type { DshPartnerPreparationStage } from '../../shared/orders';
 import type { DshFulfillmentDeliveryMode } from '../../shared/delivery';
-import { getSurfaceModeCapability } from '../../shared/identity-access';
+import { PartnerFulfillmentActionsPanel } from './PartnerFulfillmentActionsPanel';
+import type { PartnerTeamMember } from '../team/partner-team.types';
 
 type PartnerFulfillmentMode = DshFulfillmentDeliveryMode;
 
@@ -43,10 +44,13 @@ const ORDER_ACTION_ITEMS: Array<DshPartnerPreparationStage & { id: PartnerOrderA
 export type DshPartnerOrderActionPanelProps = {
   activeFlowId?: PartnerOrderActionFlowId;
   fulfillmentMode?: PartnerFulfillmentMode;
+  /** Real order id — required to wire partner_delivery/pickup actions to the backend. */
+  orderId?: string;
+  teamMembers?: readonly PartnerTeamMember[];
   onSelectFlow?: (flowId: PartnerOrderActionFlowId) => void;
 };
 
-export function DshPartnerOrderActionPanel({ activeFlowId, fulfillmentMode, onSelectFlow }: DshPartnerOrderActionPanelProps) {
+export function DshPartnerOrderActionPanel({ activeFlowId, fulfillmentMode, orderId, teamMembers, onSelectFlow }: DshPartnerOrderActionPanelProps) {
   const resolvedMode: PartnerFulfillmentMode = fulfillmentMode ?? 'bthwani_delivery';
   const modeInfo = FULFILLMENT_MODE_INSTRUCTIONS[resolvedMode];
 
@@ -62,30 +66,22 @@ export function DshPartnerOrderActionPanel({ activeFlowId, fulfillmentMode, onSe
         <Text role="bodySm" tone="muted">{modeInfo?.instruction}</Text>
       </Surface>
 
-      {getSurfaceModeCapability(resolvedMode).partner.manageCourier ? (
-        <Surface tone="raised" gap={2}>
-          <SectionHeader
-            title="موصل الشريك"
-            subtitle="تعيين الموصل يتم عبر إعدادات الفريق لاحقًا."
-          />
-          <ListItem
-            title="اسم الموصل"
-            subtitle="لم يُعيَّن بعد — أضف موصل الشريك من إعدادات الفريق."
-            trailing={<Badge label="معلّق" tone="neutral" />}
-          />
-          <ListItem
-            title="حالة التعيين"
-            subtitle="في انتظار التعيين من مشرف الفرع."
-            trailing={<Badge label="لم يُعيَّن" tone="neutral" />}
-          />
-          <Box gap={2}>
-            <Button label="جاهز للخروج" size="sm" tone="secondary" fullWidth={false} />
-            <Button label="تم التسليم من طرف الشريك" size="sm" fullWidth={false} />
-          </Box>
-          <Text role="bodySm" tone="muted">
-            موصل الشريك مسؤول عن التوصيل — لا كابتن بثواني في هذا الطلب.
-          </Text>
-        </Surface>
+      {(resolvedMode === 'partner_delivery' || resolvedMode === 'pickup') ? (
+        orderId ? (
+          <PartnerFulfillmentActionsPanel orderId={orderId} fulfillmentMode={resolvedMode} {...(teamMembers ? { teamMembers } : {})} />
+        ) : (
+          <Surface tone="raised" gap={2}>
+            <SectionHeader
+              title={resolvedMode === 'partner_delivery' ? 'موصل الشريك' : 'استلام العميل الذاتي'}
+              subtitle="تعذر تحديد رقم الطلب — لا يمكن عرض الإجراءات الحقيقية بدونه."
+            />
+            <ListItem
+              title="بانتظار سياق الطلب"
+              subtitle="افتح هذا المسار من داخل تفاصيل طلب فعلي لتفعيل الإجراءات."
+              trailing={<Badge label="معلّق" tone="neutral" />}
+            />
+          </Surface>
+        )
       ) : null}
 
       <Box gap={2}>

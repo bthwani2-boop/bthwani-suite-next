@@ -31,6 +31,8 @@ const PartnerStoresScreen = React.lazy(() => import('./PartnerStoresScreen').the
 const AreaCapacityScreen = React.lazy(() => import('./AreaCapacityScreen').then((m) => ({ default: m.AreaCapacityScreen })));
 const ExceptionsEscalationsScreen = React.lazy(() => import('./ExceptionsEscalationsScreen').then((m) => ({ default: m.ExceptionsEscalationsScreen })));
 const AuditSupportSlaScreen = React.lazy(() => import('./AuditSupportSlaScreen').then((m) => ({ default: m.AuditSupportSlaScreen })));
+const PartnerDeliveryWorkbenchScreen = React.lazy(() => import('./PartnerDeliveryWorkbenchScreen').then((m) => ({ default: m.PartnerDeliveryWorkbenchScreen })));
+const PickupWorkbenchScreen = React.lazy(() => import('./PickupWorkbenchScreen').then((m) => ({ default: m.PickupWorkbenchScreen })));
 
 type ScreenProps = { hubHref: string; subGroup?: string };
 type ScreenComponent = React.ComponentType<ScreenProps>;
@@ -66,6 +68,8 @@ const SCREEN_RENDERERS: Record<CanonicalOperationsGroupId, GroupScreenConfig> = 
     bySubGroup: {
       assisted: AssistedOrderDeskScreen,
       rescue: OrderRescueScreen,
+      partner_delivery: PartnerDeliveryWorkbenchScreen,
+      pickup: PickupWorkbenchScreen,
     },
   },
   'dispatch-capacity': {

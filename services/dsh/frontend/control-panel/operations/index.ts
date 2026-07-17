@@ -38,6 +38,8 @@ export { PartnerStoresScreen } from './PartnerStoresScreen';
 export { AreaCapacityScreen } from './AreaCapacityScreen';
 export { ExceptionsEscalationsScreen } from './ExceptionsEscalationsScreen';
 export { AuditSupportSlaScreen } from './AuditSupportSlaScreen';
+export { PartnerDeliveryWorkbenchScreen } from './PartnerDeliveryWorkbenchScreen';
+export { PickupWorkbenchScreen } from './PickupWorkbenchScreen';
 
 // ML-035: Audit trail detail workspace skeleton — BLOCKED_BY_CONTRACT (audit detail API not proven)
 export { AuditTrailDetailWorkspace } from './AuditTrailDetailWorkspace';

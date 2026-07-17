@@ -13,7 +13,7 @@ import type { DshCaptainOrderBellItem, DshCaptainOrderServiceType, DshCaptainOrd
 
 export type CaptainInboxFetchState = Extract<DshCaptainOrdersScreenState, 'ready' | 'loading' | 'empty' | 'error'>;
 
-function resolveServiceType(assignment: DshDispatchAssignment): DshCaptainOrderServiceType {
+export function resolveServiceType(assignment: DshDispatchAssignment): DshCaptainOrderServiceType {
   if (!assignment.specialRequestId) return 'standard';
   if (assignment.requestType === 'AWNAK_ERRAND') return 'awnak';
   if (assignment.requestType === 'SHEIN_ASSISTED_PURCHASE') return 'shein-final-mile';
@@ -26,7 +26,14 @@ function resolveBellTitle(assignment: DshDispatchAssignment, serviceType: DshCap
   return `طلب #${assignment.orderId}`;
 }
 
-function toBellItem(assignment: DshDispatchAssignment): DshCaptainOrderBellItem {
+// Exported for the app-captain fulfillment-exclusion regression test
+// (services/dsh/tests/captain-inbox-exclusion.test.mjs): this is the real
+// structural boundary where any incoming assignment-shaped object is turned
+// into a captain bell item. `fulfillmentMode` below is a hardcoded literal,
+// never read off the input `assignment` -- so a caller cannot smuggle a
+// `partner_delivery`/`pickup` fulfillmentMode through this mapper even if
+// the input object carries one (see the regression test for proof).
+export function toBellItem(assignment: DshDispatchAssignment): DshCaptainOrderBellItem {
   const serviceType = resolveServiceType(assignment);
   return {
     id: assignment.id,

@@ -3,9 +3,15 @@ import { Box, Button, Surface, Text } from '@bthwani/ui-kit';
 import { OperationHeader } from '../account/OperationHeader';
 import { DSH_ORDER_LIFECYCLE_HANDOFFS, getSurfaceObservation } from '../../shared/orders';
 import { DshPartnerOrderActionPanel, type PartnerOrderActionFlowId } from './PartnerOrderActionPanel';
+import type { DshFulfillmentDeliveryMode } from '../../shared/delivery/delivery.contract';
+import type { PartnerTeamMember } from '../team/partner-team.types';
 
 export type OrderActionScreenProps = {
   activeFlowId?: PartnerOrderActionFlowId;
+  /** Real order id + fulfillment mode — enables real partner_delivery/pickup actions. */
+  orderId?: string;
+  fulfillmentMode?: DshFulfillmentDeliveryMode;
+  teamMembers?: readonly PartnerTeamMember[];
   onBack?: () => void;
   onOpenScreen?: (screenId: PartnerOrderActionFlowId) => void;
   onSecondaryAction?: () => void;
@@ -49,7 +55,7 @@ const orderActionFlowCopy: Record<PartnerOrderActionFlowId, { title: string; sub
   },
 };
 
-export function OrderActionScreen({ activeFlowId = 'order-accept', onBack, onOpenScreen, onSecondaryAction }: OrderActionScreenProps) {
+export function OrderActionScreen({ activeFlowId = 'order-accept', orderId, fulfillmentMode, teamMembers, onBack, onOpenScreen, onSecondaryAction }: OrderActionScreenProps) {
   const activeCopy = orderActionFlowCopy[activeFlowId];
 
   // SSoT Handoff lookup dynamically matching the flow state
@@ -94,6 +100,9 @@ export function OrderActionScreen({ activeFlowId = 'order-accept', onBack, onOpe
 
       <DshPartnerOrderActionPanel
         activeFlowId={activeFlowId}
+        {...(orderId ? { orderId } : {})}
+        {...(fulfillmentMode ? { fulfillmentMode } : {})}
+        {...(teamMembers ? { teamMembers } : {})}
         onSelectFlow={(flowId) => {
           if (flowId === activeFlowId) {
             onSecondaryAction?.();
