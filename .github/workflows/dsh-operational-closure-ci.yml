@@ -68,8 +68,27 @@ jobs:
           go-version-file: services/dsh/backend/go.mod
           cache-dependency-path: services/dsh/backend/go.sum
       - name: Format gate
+        id: gofmt
         working-directory: services/dsh/backend
-        run: test -z "$(gofmt -l .)"
+        shell: bash
+        run: |
+          set -euo pipefail
+          files="$(gofmt -l .)"
+          if [ -n "$files" ]; then
+            printf '%s\n' "$files" | tee ../../../gofmt-files.txt
+            gofmt -d . > ../../../gofmt.patch
+            exit 1
+          fi
+      - name: Upload gofmt diagnostics
+        if: failure() && steps.gofmt.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dsh-gofmt-diagnostics
+          path: |
+            gofmt-files.txt
+            gofmt.patch
+          if-no-files-found: error
+          retention-days: 3
       - name: Vet
         working-directory: services/dsh/backend
         run: go vet ./...
