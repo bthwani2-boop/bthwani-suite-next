@@ -19,6 +19,11 @@ function readJson(relativePath) {
   }
 }
 
+function frontmatterValue(content, key) {
+  const frontmatter = content.match(/^---\s*\n([\s\S]*?)\n---/m)?.[1] ?? "";
+  return frontmatter.match(new RegExp(`^${key}:\\s*([^\\n]+)$`, "m"))?.[1]?.trim();
+}
+
 const skillsRegistry = readJson("governance/skills/skills-registry.json");
 const agentRegistry = readJson("governance/agents/agent-registry.json");
 const skillsDir = path.join(repoRoot, ".agents/skills");
@@ -35,6 +40,7 @@ if (skillsRegistry && fs.existsSync(skillsDir)) {
     if (toPosix(skill.path) !== expectedPath) {
       violations.push({ file: "governance/skills/skills-registry.json", line: 0, message: `SKILL_PATH_MISMATCH ${skill.id}: ${skill.path}` });
     }
+
     const skillDir = path.join(repoRoot, skill.path);
     const skillMdPath = path.join(skillDir, "SKILL.md");
     if (!fs.existsSync(skillDir)) {
@@ -47,12 +53,16 @@ if (skillsRegistry && fs.existsSync(skillsDir)) {
     }
 
     const content = fs.readFileSync(skillMdPath, "utf8");
-    const frontmatterName = content.match(/^---[\s\S]*?\nname:\s*([^\n]+)[\s\S]*?---/m)?.[1]?.trim();
+    const frontmatterName = frontmatterValue(content, "name");
+    const frontmatterVersion = frontmatterValue(content, "version");
     const contractLevel = skill.contract_level ?? "legacy";
 
     if (contractLevel === "governed") {
       if (frontmatterName !== skill.id) {
         violations.push({ file: `${skill.path}/SKILL.md`, line: 0, message: `FRONTMATTER_NAME_MISMATCH expected ${skill.id}, found ${frontmatterName ?? "none"}` });
+      }
+      if (frontmatterVersion !== skill.version) {
+        violations.push({ file: `${skill.path}/SKILL.md`, line: 0, message: `GOVERNED_SKILL_VERSION_DRIFT registry=${skill.version ?? "none"} file=${frontmatterVersion ?? "none"}` });
       }
       for (const section of ["Purpose", "Invoke when", "Do not invoke when", "Authority boundary", "Required output"]) {
         if (!new RegExp(`^##\\s+${section}\\b`, "mi").test(content)) {
@@ -62,10 +72,8 @@ if (skillsRegistry && fs.existsSync(skillsDir)) {
       if (!skill.version || !skill.output_contract || !(skill.invoke_when?.length) || !(skill.do_not_invoke_when?.length)) {
         violations.push({ file: "governance/skills/skills-registry.json", line: 0, message: `GOVERNED_SKILL_CONTRACT_INCOMPLETE ${skill.id}` });
       }
-    } else {
-      if (frontmatterName && frontmatterName !== skill.id) {
-        violations.push({ file: `${skill.path}/SKILL.md`, line: 0, message: `LEGACY_FRONTMATTER_NAME_MISMATCH expected ${skill.id}, found ${frontmatterName}` });
-      }
+    } else if (frontmatterName && frontmatterName !== skill.id) {
+      violations.push({ file: `${skill.path}/SKILL.md`, line: 0, message: `LEGACY_FRONTMATTER_NAME_MISMATCH expected ${skill.id}, found ${frontmatterName}` });
     }
   }
 
