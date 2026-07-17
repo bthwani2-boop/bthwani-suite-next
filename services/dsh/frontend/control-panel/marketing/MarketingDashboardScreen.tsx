@@ -1,7 +1,7 @@
 "use client";
 
 import { colorRoles } from "@bthwani/ui-kit";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
   CpKpiCard,
   CpKpiStrip,
@@ -28,7 +28,7 @@ function MainTabButton({
 }: {
   readonly active: boolean;
   readonly onClick: () => void;
-  readonly children: React.ReactNode;
+  readonly children: ReactNode;
 }) {
   return (
     <button
