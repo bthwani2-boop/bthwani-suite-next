@@ -4,5 +4,6 @@ runTool({
   toolId: "actionlint",
   binary: "actionlint",
   command: "actionlint",
-  diagnosticCommand: "actionlint"
+  diagnosticCommand: "actionlint",
+  required: true,
 });
