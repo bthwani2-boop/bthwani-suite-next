@@ -54,7 +54,7 @@ Prevent technically valid implementation of the wrong product, wrong actor permi
 9. Require product-manager approval before `PRODUCT_MODEL_APPROVED`.
 10. Require product-owner approval before `READY_FOR_IMPLEMENTATION`.
 11. Require independent product acceptance before QA approval.
-12. Run `pnpm run guard:product-truth` after changing Product Truth contracts or policy.
+12. Run `pnpm run guard:sdlc` after changing Product Truth contracts or policy; the SDLC gate includes the Product Truth validator.
 
 ## Forbidden behavior
 
