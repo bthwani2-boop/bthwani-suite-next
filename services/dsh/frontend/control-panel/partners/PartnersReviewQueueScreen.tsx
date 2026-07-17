@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Badge,
@@ -12,7 +11,7 @@ import {
   lightThemeColors,
   colorPalette,
   alpha,
-} from '@bthwani/ui-kit';
+} from "@bthwani/ui-kit";
 import { usePartnersController } from "../../shared/partner";
 import { PartnerListScreen } from "./PartnerListScreen";
 import { FieldReadinessQueueScreen } from "./field-readiness/FieldReadinessQueueScreen";
@@ -24,17 +23,8 @@ type Props = {
 export function PartnersReviewQueueScreen({ onOpenPartner }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
-
-  const controller = usePartnersController({
-    initialWorkspace: 'inbox',
-    searchParams: searchParams ?? undefined,
-    router: router ?? undefined,
-    authKind: "authenticated",
-  });
-
   const {
     activeTab,
-    activeSubTab,
     tabItems,
     subTabItems,
     activePartnersCount,
@@ -42,197 +32,165 @@ export function PartnersReviewQueueScreen({ onOpenPartner }: Props) {
     adminController,
     handleSelectTab,
     handleSelectSubTab,
-  } = controller;
+  } = usePartnersController({
+    initialWorkspace: "inbox",
+    searchParams: searchParams ?? undefined,
+    router: router ?? undefined,
+    authKind: "authenticated",
+  });
 
-  const activeTabMeta = useMemo(() => {
-    return tabItems.find(t => t.id === activeTab);
-  }, [tabItems, activeTab]);
-
-  const activeSubTabMeta = useMemo(() => {
-    return subTabItems.find(s => s.id === activeSubTab);
-  }, [subTabItems, activeSubTab]);
-
-  const renderInboxContent = () => {
-    if (activeSubTab === 'registration') {
-      if (adminController.listState.kind === 'loading' || adminController.listState.kind === 'idle') {
-        return (
-          <Card style={{ padding: '2rem', alignItems: 'center', justifyContent: 'center' }}>
-            <Text role="body" tone="muted">جارٍ تحميل ملفات الانضمام…</Text>
-          </Card>
-        );
-      }
-
-      if (adminController.listState.kind === 'error') {
-        return (
-          <StateView
-            title="تعذر تحميل ملفات الانضمام"
-            description={adminController.listState.message}
-          />
-        );
-      }
-
-      if (adminController.listState.kind === 'empty' || adminController.rows.length === 0) {
-        return (
-          <Card style={{ padding: '2rem', alignItems: 'center', justifyContent: 'center' }}>
-            <Text role="body" tone="muted">لا توجد ملفات انضمام حالياً.</Text>
-          </Card>
-        );
-      }
-
+  const renderRegistrationQueue = () => {
+    if (adminController.listState.kind === "loading" || adminController.listState.kind === "idle") {
       return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <Card style={{ padding: '1rem' }}>
-            <Text role="titleMd" style={{ marginBottom: '1rem' }}>قائمة الشركاء والمقدمين</Text>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right' }}>
-                <thead>
-                  <tr style={{ borderBottom: `2px solid ${lightThemeColors.borderColor}` }}>
-                    <th style={{ padding: '0.75rem' }}>اسم الشريك</th>
-                    <th style={{ padding: '0.75rem' }}>رقم الجوال</th>
-                    <th style={{ padding: '0.75rem' }}>الحالة</th>
-                    <th style={{ padding: '0.75rem' }}>الإجراء</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {adminController.rows.map((row) => {
-                    const originalPartner = adminController.listState.kind === 'success'
-                      ? adminController.listState.partners.find(p => p.id === row.id)
-                      : null;
-                    const phone = originalPartner?.primaryPhone || '—';
-                    return (
-                      <tr key={row.id} style={{ borderBottom: `1px solid ${lightThemeColors.borderColor}` }}>
-                        <td style={{ padding: '0.75rem' }}>
-                          <Text style={{ fontWeight: 'bold' }}>{row.displayName}</Text>
-                        </td>
-                        <td style={{ padding: '0.75rem' }}>{phone}</td>
-                        <td style={{ padding: '0.75rem' }}>
-                          <Badge
-                            label={row.statusLabel}
-                            tone={
-                              row.statusTone === 'muted' ? 'neutral' :
-                              row.statusTone === 'success' ? 'success' :
-                              row.statusTone === 'warning' ? 'warning' :
-                              row.statusTone === 'danger' ? 'danger' : 'info'
-                            }
-                          />
-                        </td>
-                        <td style={{ padding: '0.75rem' }}>
-                          <Button
-                            label="فتح"
-                            tone="secondary"
-                            onPress={() => onOpenPartner && onOpenPartner(row.id)}
-                          />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        </div>
+        <StateView
+          stateId="loading"
+          title="جاري تحميل ملفات الانضمام"
+          description="تتم قراءة الشركاء من DSH Runtime."
+        />
+      );
+    }
+
+    if (adminController.listState.kind === "error") {
+      return (
+        <StateView
+          stateId="recoverableError"
+          title="تعذر تحميل ملفات الانضمام"
+          description={adminController.listState.message}
+          actionLabel="إعادة المحاولة"
+          onActionPress={adminController.retry}
+        />
+      );
+    }
+
+    if (adminController.listState.kind === "empty" || adminController.rows.length === 0) {
+      return (
+        <StateView
+          stateId="empty"
+          title="لا توجد ملفات انضمام"
+          description="لا توجد طلبات شراكة مطابقة للحالة الحالية."
+          actionLabel="تحديث"
+          onActionPress={adminController.retry}
+        />
       );
     }
 
     return (
-      <Card style={{ padding: '2rem', alignItems: 'center', justifyContent: 'center' }}>
-        <Text role="body" tone="muted">
-          تبويب {activeSubTabMeta?.label || activeSubTab} غير متاح حالياً.
-        </Text>
+      <Card style={{ padding: "1rem" }}>
+        <Text role="titleMd" style={{ marginBottom: "1rem" }}>طلبات الشركاء والمقدمين</Text>
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "right" }}>
+            <thead>
+              <tr style={{ borderBottom: `2px solid ${lightThemeColors.borderColor}` }}>
+                <th style={{ padding: "0.75rem" }}>اسم الشريك</th>
+                <th style={{ padding: "0.75rem" }}>رقم الجوال</th>
+                <th style={{ padding: "0.75rem" }}>الحالة</th>
+                <th style={{ padding: "0.75rem" }}>الإجراء</th>
+              </tr>
+            </thead>
+            <tbody>
+              {adminController.rows.map((row) => {
+                const originalPartner = adminController.listState.kind === "success"
+                  ? adminController.listState.partners.find((partner) => partner.id === row.id)
+                  : undefined;
+                return (
+                  <tr key={row.id} style={{ borderBottom: `1px solid ${lightThemeColors.borderColor}` }}>
+                    <td style={{ padding: "0.75rem" }}>
+                      <Text style={{ fontWeight: "bold" }}>{row.displayName}</Text>
+                    </td>
+                    <td style={{ padding: "0.75rem" }}>{originalPartner?.primaryPhone || "—"}</td>
+                    <td style={{ padding: "0.75rem" }}>
+                      <Badge
+                        label={row.statusLabel}
+                        tone={
+                          row.statusTone === "muted" ? "neutral" :
+                          row.statusTone === "success" ? "success" :
+                          row.statusTone === "warning" ? "warning" :
+                          row.statusTone === "danger" ? "danger" : "info"
+                        }
+                      />
+                    </td>
+                    <td style={{ padding: "0.75rem" }}>
+                      {onOpenPartner ? (
+                        <Button
+                          label="فتح ملف الشريك"
+                          tone="secondary"
+                          onPress={() => onOpenPartner(row.id)}
+                        />
+                      ) : (
+                        <Text role="caption" tone="muted">مسار التفاصيل غير متاح</Text>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </Card>
     );
   };
 
   const renderContent = () => {
-    if (activeTab === 'inbox') {
-      return renderInboxContent();
-    }
-
-    if (activeTab === 'all_partners') {
-      if (activeSubTab === 'partners_list') {
-        return (
-          <PartnerListScreen
-            {...(onOpenPartner ? { onSelectPartner: onOpenPartner } : {})}
-          />
-        );
-      }
-    }
-
-
-    if (activeTab === 'field_readiness') {
-      if (activeSubTab === 'field_readiness_queue' || activeSubTab === 'readiness_escalations') {
+    switch (activeTab) {
+      case "inbox":
+        return renderRegistrationQueue();
+      case "all_partners":
+        return <PartnerListScreen {...(onOpenPartner ? { onSelectPartner: onOpenPartner } : {})} />;
+      case "field_readiness":
         return <FieldReadinessQueueScreen />;
-      }
     }
-
-    return (
-      <Card style={{ padding: '2rem', alignItems: 'center', justifyContent: 'center' }}>
-        <Text role="body" tone="muted">
-          تبويب {activeSubTabMeta?.label || activeSubTab || activeTabMeta?.label || activeTab} غير متاح حالياً.
-        </Text>
-      </Card>
-    );
   };
 
   return (
     <ScrollScreen>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1rem' }}>
-        {/* Header Block */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', borderBottom: `1px solid ${lightThemeColors.borderColor}`, paddingBottom: '1rem' }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "1rem", padding: "1rem" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem", borderBottom: `1px solid ${lightThemeColors.borderColor}`, paddingBottom: "1rem" }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
               <Text role="titleMd">شركاء DSH</Text>
-              <Badge label="مراجعة الشريك" tone="action" />
+              <Badge label="حقيقة تشغيلية" tone="action" />
             </div>
-            <Text role="body" tone="muted" style={{ fontSize: '12px', marginTop: '0.25rem' }}>
-              حوكمة الشركاء، التغطية، وأهلية مسار المزايا والعروض
+            <Text role="body" tone="muted" style={{ fontSize: "12px", marginTop: "0.25rem" }}>
+              طلبات الانضمام، ملفات الشركاء، وتصعيدات الجاهزية المرتبطة بخدمات DSH الفعلية
             </Text>
           </div>
-          <div>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <Card style={{ padding: '0.5rem 0.75rem', alignItems: 'center' }}>
-                <Text role="caption" tone="muted">شركاء نشطون</Text>
-                <Text role="titleMd" style={{ fontWeight: 'bold', marginTop: '0.25rem' }}>{activePartnersCount}</Text>
-              </Card>
-              <Card style={{ padding: '0.5rem 0.75rem', alignItems: 'center' }}>
-                <Text role="caption" tone="muted">طلبات معلقة</Text>
-                <Text role="titleMd" style={{ fontWeight: 'bold', color: lightThemeColors.warning, marginTop: '0.25rem' }}>{pendingCount}</Text>
-              </Card>
-            </div>
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <Card style={{ padding: "0.5rem 0.75rem", alignItems: "center" }}>
+              <Text role="caption" tone="muted">نشطون أو ظاهرون</Text>
+              <Text role="titleMd" style={{ fontWeight: "bold", marginTop: "0.25rem" }}>{activePartnersCount}</Text>
+            </Card>
+            <Card style={{ padding: "0.5rem 0.75rem", alignItems: "center" }}>
+              <Text role="caption" tone="muted">قيد المعالجة</Text>
+              <Text role="titleMd" style={{ fontWeight: "bold", color: lightThemeColors.warning, marginTop: "0.25rem" }}>{pendingCount}</Text>
+            </Card>
           </div>
         </div>
 
-        {/* Navigation Tabs */}
-        <div style={{ display: 'flex', gap: '0.5rem', padding: '0.5rem 0', flexWrap: 'wrap' }}>
-          {tabItems.map((tab: any) => (
+        <div style={{ display: "flex", gap: "0.5rem", padding: "0.5rem 0", flexWrap: "wrap" }}>
+          {tabItems.map((tab) => (
             <Button
               key={tab.id}
               label={tab.label}
-              tone={tab.active ? 'primary' : 'secondary'}
+              tone={tab.active ? "primary" : "secondary"}
               onPress={() => handleSelectTab(tab.id)}
             />
           ))}
         </div>
 
-        {/* Sub tabs (filters) */}
-        {subTabItems && subTabItems.length > 0 && (
-          <div style={{ display: 'flex', gap: '0.5rem', padding: '0.5rem 0', flexWrap: 'wrap', background: alpha(colorPalette.black, 0.02), borderRadius: '4px', paddingLeft: '0.5rem' }}>
-            {subTabItems.map((subTab: any) => (
+        {subTabItems.length > 1 && (
+          <div style={{ display: "flex", gap: "0.5rem", padding: "0.5rem", flexWrap: "wrap", background: alpha(colorPalette.black, 0.02), borderRadius: "4px" }}>
+            {subTabItems.map((subTab) => (
               <Button
                 key={subTab.id}
                 label={subTab.label}
-                tone={subTab.active ? 'success' : 'secondary'}
-                style={{ padding: '0.25rem 0.75rem', fontSize: '12px' }}
+                tone={subTab.active ? "success" : "secondary"}
                 onPress={() => handleSelectSubTab(subTab.id)}
               />
             ))}
           </div>
         )}
 
-        {/* Content Area */}
-        <div style={{ marginTop: '0.5rem' }}>
-          {renderContent()}
-        </div>
+        <div style={{ marginTop: "0.5rem" }}>{renderContent()}</div>
       </div>
     </ScrollScreen>
   );
