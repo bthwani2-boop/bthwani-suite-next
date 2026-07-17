@@ -2,6 +2,7 @@ package settlement
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"testing"
@@ -11,6 +12,7 @@ import (
 )
 
 func getTestDB(t *testing.T) *sql.DB {
+	t.Helper()
 	dbURL := os.Getenv("DATABASE_URL")
 	requireDB := os.Getenv("WLT_REQUIRE_DB_TESTS") == "true"
 	if dbURL == "" {
@@ -25,6 +27,7 @@ func getTestDB(t *testing.T) *sql.DB {
 		return nil
 	}
 	if err := db.Ping(); err != nil {
+		_ = db.Close()
 		if requireDB {
 			t.Fatalf("failed to ping DB: %v", err)
 		}
@@ -34,19 +37,35 @@ func getTestDB(t *testing.T) *sql.DB {
 	return db
 }
 
-// TestPostSettlement_DoublePost_Conflict verifies that posting an
-// already-settled settlement a second time is rejected with
-// ErrAlreadySettled instead of silently re-applying settled_at.
-func TestPostSettlement_DoublePost_Conflict(t *testing.T) {
-	db := getTestDB(t)
-	if db == nil {
-		return
-	}
-	defer db.Close()
-
+func insertPendingSettlement(
+	t *testing.T,
+	db *sql.DB,
+	grossAmount int64,
+	platformFee int64,
+	netAmount int64,
+) *Settlement {
+	t.Helper()
 	partnerID := fmt.Sprintf("partner-%d", time.Now().UnixNano())
-	s, err := CreateSettlement(db, CreateSettlementInput{
-		PartnerID:   partnerID,
+	row := db.QueryRow(`
+		INSERT INTO wlt_settlements
+			(partner_id, period_start, period_end, gross_amount, platform_fee, net_amount, currency, order_count, status)
+		VALUES ($1, '2026-01-01', '2026-01-31', $2, $3, $4, 'YER', 1, 'pending')
+		RETURNING `+settlementCols,
+		partnerID,
+		grossAmount,
+		platformFee,
+		netAmount,
+	)
+	settlement, err := scanSettlement(row)
+	if err != nil {
+		t.Fatalf("failed to insert pending settlement fixture: %v", err)
+	}
+	return settlement
+}
+
+func TestCreateSettlement_FailsClosedWithoutGovernedSource(t *testing.T) {
+	settlement, err := CreateSettlement(nil, CreateSettlementInput{
+		PartnerID:   "partner-untrusted",
 		PeriodStart: "2026-01-01",
 		PeriodEnd:   "2026-01-31",
 		GrossAmount: 1000,
@@ -55,81 +74,100 @@ func TestPostSettlement_DoublePost_Conflict(t *testing.T) {
 		Currency:    "YER",
 		OrderCount:  1,
 	})
-	if err != nil {
-		t.Fatalf("failed to create settlement: %v", err)
+	if settlement != nil {
+		t.Fatalf("expected no settlement from untrusted caller-supplied amounts")
 	}
+	if !errors.Is(err, ErrSettlementCalculationSourceRequired) {
+		t.Fatalf("expected ErrSettlementCalculationSourceRequired, got %v", err)
+	}
+}
 
-	if _, err := PostSettlement(db, s.ID); err != nil {
+func TestPostSettlement_DoublePostConflict(t *testing.T) {
+	db := getTestDB(t)
+	if db == nil {
+		return
+	}
+	defer db.Close()
+
+	settlement := insertPendingSettlement(t, db, 1000, 100, 900)
+	if _, err := PostSettlement(db, settlement.ID); err != nil {
 		t.Fatalf("first PostSettlement should succeed, got error: %v", err)
 	}
-	if _, err := PostSettlement(db, s.ID); err != ErrAlreadySettled {
+	if _, err := PostSettlement(db, settlement.ID); !errors.Is(err, ErrAlreadySettled) {
 		t.Fatalf("expected ErrAlreadySettled on double-post, got %v", err)
 	}
 }
 
-// TestCreateSettlement_InconsistentAmounts_Rejected verifies that
-// netAmount must equal grossAmount - platformFee.
-func TestCreateSettlement_InconsistentAmounts_Rejected(t *testing.T) {
+func TestPostSettlement_PostsBalancedGrossJournal(t *testing.T) {
 	db := getTestDB(t)
 	if db == nil {
 		return
 	}
 	defer db.Close()
 
-	partnerID := fmt.Sprintf("partner-%d", time.Now().UnixNano())
-	_, err := CreateSettlement(db, CreateSettlementInput{
-		PartnerID:   partnerID,
-		PeriodStart: "2026-02-01",
-		PeriodEnd:   "2026-02-28",
-		GrossAmount: 1000,
-		PlatformFee: 100,
-		NetAmount:   999, // should be 900
-		Currency:    "YER",
-		OrderCount:  1,
-	})
-	if err != ErrSettlementAmountsInconsistent {
-		t.Fatalf("expected ErrSettlementAmountsInconsistent, got %v", err)
-	}
-}
-
-// TestCreateSettlement_PostsBalancedLedgerTransaction verifies that creating
-// a settlement with a positive net amount posts a balanced ledger
-// transaction referencing the settlement.
-func TestCreateSettlement_PostsBalancedLedgerTransaction(t *testing.T) {
-	db := getTestDB(t)
-	if db == nil {
-		return
-	}
-	defer db.Close()
-
-	partnerID := fmt.Sprintf("partner-%d", time.Now().UnixNano())
-	s, err := CreateSettlement(db, CreateSettlementInput{
-		PartnerID:   partnerID,
-		PeriodStart: "2026-03-01",
-		PeriodEnd:   "2026-03-31",
-		GrossAmount: 2000,
-		PlatformFee: 200,
-		NetAmount:   1800,
-		Currency:    "YER",
-		OrderCount:  3,
-	})
+	settlement := insertPendingSettlement(t, db, 2000, 200, 1800)
+	posted, err := PostSettlement(db, settlement.ID)
 	if err != nil {
-		t.Fatalf("failed to create settlement: %v", err)
+		t.Fatalf("failed to post settlement: %v", err)
+	}
+	if posted.Status != "settled" {
+		t.Fatalf("expected settled status, got %s", posted.Status)
 	}
 
-	var txnID string
-	if err := db.QueryRow("SELECT id FROM wlt_ledger_transactions WHERE reference_type = 'settlement' AND reference_id = $1", s.ID).Scan(&txnID); err != nil {
+	var transactionID string
+	if err := db.QueryRow(
+		"SELECT id FROM wlt_ledger_transactions WHERE reference_type = 'settlement' AND reference_id = $1",
+		settlement.ID,
+	).Scan(&transactionID); err != nil {
 		t.Fatalf("expected a ledger transaction referencing this settlement: %v", err)
 	}
 
 	var debitTotal, creditTotal int64
-	if err := db.QueryRow("SELECT COALESCE(SUM(amount_minor_units),0) FROM wlt_ledger_lines WHERE ledger_transaction_id = $1 AND debit_credit = 'debit'", txnID).Scan(&debitTotal); err != nil {
+	if err := db.QueryRow(
+		"SELECT COALESCE(SUM(amount_minor_units),0) FROM wlt_ledger_lines WHERE ledger_transaction_id = $1 AND debit_credit = 'debit'",
+		transactionID,
+	).Scan(&debitTotal); err != nil {
 		t.Fatalf("failed to sum debit lines: %v", err)
 	}
-	if err := db.QueryRow("SELECT COALESCE(SUM(amount_minor_units),0) FROM wlt_ledger_lines WHERE ledger_transaction_id = $1 AND debit_credit = 'credit'", txnID).Scan(&creditTotal); err != nil {
+	if err := db.QueryRow(
+		"SELECT COALESCE(SUM(amount_minor_units),0) FROM wlt_ledger_lines WHERE ledger_transaction_id = $1 AND debit_credit = 'credit'",
+		transactionID,
+	).Scan(&creditTotal); err != nil {
 		t.Fatalf("failed to sum credit lines: %v", err)
 	}
-	if debitTotal != 1800 || creditTotal != 1800 {
-		t.Fatalf("expected balanced 1800/1800 debit/credit, got debit=%d credit=%d", debitTotal, creditTotal)
+	if debitTotal != 2000 || creditTotal != 2000 {
+		t.Fatalf("expected balanced 2000/2000 debit/credit, got debit=%d credit=%d", debitTotal, creditTotal)
+	}
+}
+
+func TestPostSettlement_InconsistentAmountsRollback(t *testing.T) {
+	db := getTestDB(t)
+	if db == nil {
+		return
+	}
+	defer db.Close()
+
+	settlement := insertPendingSettlement(t, db, 1000, 100, 999)
+	if _, err := PostSettlement(db, settlement.ID); !errors.Is(err, ErrSettlementAmountsInconsistent) {
+		t.Fatalf("expected ErrSettlementAmountsInconsistent, got %v", err)
+	}
+
+	var status string
+	if err := db.QueryRow(`SELECT status FROM wlt_settlements WHERE id = $1`, settlement.ID).Scan(&status); err != nil {
+		t.Fatalf("failed to read settlement status: %v", err)
+	}
+	if status != "pending" {
+		t.Fatalf("expected rollback to preserve pending status, got %s", status)
+	}
+
+	var ledgerCount int
+	if err := db.QueryRow(
+		`SELECT COUNT(*) FROM wlt_ledger_transactions WHERE reference_type = 'settlement' AND reference_id = $1`,
+		settlement.ID,
+	).Scan(&ledgerCount); err != nil {
+		t.Fatalf("failed to count settlement journals: %v", err)
+	}
+	if ledgerCount != 0 {
+		t.Fatalf("expected no journal for inconsistent settlement, found %d", ledgerCount)
 	}
 }
