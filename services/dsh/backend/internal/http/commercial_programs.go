@@ -62,14 +62,14 @@ func (s *protectedStoreServer) handleCreateLoyaltyTier(w http.ResponseWriter, r 
 		return
 	}
 	tier, err := marketing.CreateLoyaltyTier(s.db, marketing.CreateLoyaltyTierInput{
-		NameAr: body.NameAr,
-		NameEn: body.NameEn,
-		MinPoints: body.MinPoints,
-		DiscountPercent: body.DiscountPercent,
+		NameAr:                   body.NameAr,
+		NameEn:                   body.NameEn,
+		MinPoints:                body.MinPoints,
+		DiscountPercent:          body.DiscountPercent,
 		FreeDeliveryThresholdYer: body.FreeDeliveryThresholdYer,
-		Badge: body.Badge,
-		ActorID: actor.ID,
-		CorrelationID: marketingCorrelationID(r),
+		Badge:                    body.Badge,
+		ActorID:                  actor.ID,
+		CorrelationID:            marketingCorrelationID(r),
 	})
 	if err != nil {
 		writeCommercialProgramError(w, err, "loyalty tier not found")
@@ -115,16 +115,16 @@ func (s *protectedStoreServer) handleUpdateLoyaltyTier(w http.ResponseWriter, r 
 	}
 
 	tier, err := marketing.UpdateLoyaltyTier(s.db, r.PathValue("tierId"), marketing.UpdateLoyaltyTierInput{
-		NameAr: body.NameAr,
-		NameEn: body.NameEn,
-		MinPoints: body.MinPoints,
-		DiscountPercent: body.DiscountPercent,
+		NameAr:                   body.NameAr,
+		NameEn:                   body.NameEn,
+		MinPoints:                body.MinPoints,
+		DiscountPercent:          body.DiscountPercent,
 		FreeDeliveryThresholdYer: body.FreeDeliveryThresholdYer,
-		Badge: body.Badge,
-		Status: body.Status,
-		ExpectedVersion: body.ExpectedVersion,
-		ActorID: actor.ID,
-		CorrelationID: marketingCorrelationID(r),
+		Badge:                    body.Badge,
+		Status:                   body.Status,
+		ExpectedVersion:          body.ExpectedVersion,
+		ActorID:                  actor.ID,
+		CorrelationID:            marketingCorrelationID(r),
 	})
 	if err != nil {
 		writeCommercialProgramError(w, err, "loyalty tier not found")
@@ -172,18 +172,18 @@ func (s *protectedStoreServer) handleCreateSubscriptionPlan(w http.ResponseWrite
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	plan, err := marketing.CreateSubscriptionPlan(s.db, marketing.CreateSubscriptionPlanInput{
-		NameAr: body.NameAr,
-		NameEn: body.NameEn,
-		PriceYer: body.PriceYer,
-		BillingCycle: body.BillingCycle,
+	plan, err := marketing.CreateSubscriptionPlanSafe(s.db, marketing.CreateSubscriptionPlanInput{
+		NameAr:              body.NameAr,
+		NameEn:              body.NameEn,
+		PriceYer:            body.PriceYer,
+		BillingCycle:        body.BillingCycle,
 		IncludeFreeDelivery: body.IncludeFreeDelivery,
-		PointsMultiplier: body.PointsMultiplier,
-		OrderCap: body.OrderCap,
-		Badge: body.Badge,
+		PointsMultiplier:    body.PointsMultiplier,
+		OrderCap:            body.OrderCap,
+		Badge:               body.Badge,
 		WLTProductReference: body.WLTProductReference,
-		ActorID: actor.ID,
-		CorrelationID: marketingCorrelationID(r),
+		ActorID:             actor.ID,
+		CorrelationID:       marketingCorrelationID(r),
 	})
 	if err != nil {
 		writeCommercialProgramError(w, err, "subscription plan not found")
@@ -243,19 +243,19 @@ func (s *protectedStoreServer) handleUpdateSubscriptionPlan(w http.ResponseWrite
 	}
 
 	plan, err := marketing.UpdateSubscriptionPlan(s.db, r.PathValue("planId"), marketing.UpdateSubscriptionPlanInput{
-		NameAr: body.NameAr,
-		NameEn: body.NameEn,
-		PriceYer: body.PriceYer,
-		BillingCycle: body.BillingCycle,
+		NameAr:              body.NameAr,
+		NameEn:              body.NameEn,
+		PriceYer:            body.PriceYer,
+		BillingCycle:        body.BillingCycle,
 		IncludeFreeDelivery: body.IncludeFreeDelivery,
-		PointsMultiplier: body.PointsMultiplier,
-		OrderCap: body.OrderCap,
-		Badge: body.Badge,
-		Status: body.Status,
+		PointsMultiplier:    body.PointsMultiplier,
+		OrderCap:            body.OrderCap,
+		Badge:               body.Badge,
+		Status:              body.Status,
 		WLTProductReference: body.WLTProductReference,
-		ExpectedVersion: body.ExpectedVersion,
-		ActorID: actor.ID,
-		CorrelationID: marketingCorrelationID(r),
+		ExpectedVersion:     body.ExpectedVersion,
+		ActorID:             actor.ID,
+		CorrelationID:       marketingCorrelationID(r),
 	})
 	if err != nil {
 		writeCommercialProgramError(w, err, "subscription plan not found")
