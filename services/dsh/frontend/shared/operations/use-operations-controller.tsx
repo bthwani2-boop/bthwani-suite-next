@@ -36,14 +36,25 @@ function resolveCanonicalOperationsGroup(
   return isCanonicalOperationsGroupId(value) ? value : undefined;
 }
 
-const UNSUPPORTED_LIVE_ORDER_SUBGROUPS = new Set(['delayed', 'assisted', 'rescue']);
+/**
+ * Workspaces remain in source control for reuse, but are withheld from the
+ * production navigation until a sovereign read model, mutation contract,
+ * tenant authorization, audit trail, and readback are all present.
+ *
+ * Keeping this policy next to route resolution prevents a crafted query
+ * string from bypassing the navigation gate and mounting an unbound surface.
+ */
+const UNBOUND_SUBGROUPS: Partial<Record<CanonicalOperationsGroupId, ReadonlySet<string>>> = {
+  'live-orders': new Set(['delayed', 'assisted', 'rescue']),
+  'dispatch-capacity': new Set(['heatmap']),
+  exceptions: new Set(['audit']),
+};
 
 function visibleSubGroups(groupMeta: OperationsGroupMeta) {
   const groups = groupMeta.subGroups ?? [];
-  if (groupMeta.id !== 'live-orders') return groups;
-  // These workflows are withheld until their sovereign contracts exist:
-  // delayed needs an SLA-backed flag; assisted/rescue need real mutation APIs.
-  return groups.filter((subGroup) => !UNSUPPORTED_LIVE_ORDER_SUBGROUPS.has(subGroup.id));
+  const blocked = UNBOUND_SUBGROUPS[groupMeta.id];
+  if (!blocked) return groups;
+  return groups.filter((subGroup) => !blocked.has(subGroup.id));
 }
 
 function resolveSubGroupForGroup(
