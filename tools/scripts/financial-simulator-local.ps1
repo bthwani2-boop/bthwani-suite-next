@@ -15,6 +15,7 @@ $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $RuntimeScript = Join-Path $RepoRoot 'infra\docker\scripts\runtime.ps1'
 $WireMockSmoke = Join-Path $RepoRoot 'tools\scripts\smoke-wiremock-financial-provider.ps1'
 $WltProviderSmoke = Join-Path $RepoRoot 'tools\scripts\smoke-wlt-provider-through-wlt.ps1'
+$WltPayoutSmoke = Join-Path $RepoRoot 'tools\scripts\smoke-wlt-payout-provider.ps1'
 
 function Assert-Command {
   param([Parameter(Mandatory = $true)][string]$Name)
@@ -44,6 +45,18 @@ function Invoke-Runtime {
   & pwsh -NoProfile -ExecutionPolicy Bypass -File $RuntimeScript -Action $RuntimeAction -Profiles $Profiles
 }
 
+function Invoke-FinancialJourneys {
+  Invoke-Step 'WireMock provider smoke' {
+    & pwsh -NoProfile -ExecutionPolicy Bypass -File $WireMockSmoke
+  }
+  Invoke-Step 'Card authorize/capture through WLT' {
+    & pwsh -NoProfile -ExecutionPolicy Bypass -File $WltProviderSmoke
+  }
+  Invoke-Step 'Provider-backed payout through WLT' {
+    & pwsh -NoProfile -ExecutionPolicy Bypass -File $WltPayoutSmoke
+  }
+}
+
 Assert-Command 'docker'
 Assert-Command 'pwsh'
 
@@ -69,12 +82,7 @@ try {
       Invoke-Step 'WLT runtime smoke' {
         Invoke-Runtime -RuntimeAction 'smoke' -Profiles 'wlt'
       }
-      Invoke-Step 'WireMock provider smoke' {
-        & pwsh -NoProfile -ExecutionPolicy Bypass -File $WireMockSmoke
-      }
-      Invoke-Step 'WLT-to-provider end-to-end smoke' {
-        & pwsh -NoProfile -ExecutionPolicy Bypass -File $WltProviderSmoke
-      }
+      Invoke-FinancialJourneys
       Write-Host "`nFinancial simulator is ready." -ForegroundColor Green
       Write-Host 'WLT API: http://localhost:58083'
       Write-Host 'WireMock financial provider: http://localhost:58090'
@@ -101,12 +109,7 @@ try {
       Invoke-Step 'WLT runtime smoke after reset' {
         Invoke-Runtime -RuntimeAction 'smoke' -Profiles 'wlt'
       }
-      Invoke-Step 'WireMock provider smoke after reset' {
-        & pwsh -NoProfile -ExecutionPolicy Bypass -File $WireMockSmoke
-      }
-      Invoke-Step 'WLT-to-provider smoke after reset' {
-        & pwsh -NoProfile -ExecutionPolicy Bypass -File $WltProviderSmoke
-      }
+      Invoke-FinancialJourneys
     }
 
     'status' {
@@ -119,12 +122,7 @@ try {
       Invoke-Step 'WLT runtime smoke' {
         Invoke-Runtime -RuntimeAction 'smoke' -Profiles 'wlt'
       }
-      Invoke-Step 'WireMock provider smoke' {
-        & pwsh -NoProfile -ExecutionPolicy Bypass -File $WireMockSmoke
-      }
-      Invoke-Step 'WLT-to-provider end-to-end smoke' {
-        & pwsh -NoProfile -ExecutionPolicy Bypass -File $WltProviderSmoke
-      }
+      Invoke-FinancialJourneys
     }
   }
 }
