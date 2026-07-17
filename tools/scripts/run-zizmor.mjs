@@ -1,8 +1,10 @@
 import { runTool } from "./_external-tool-runner.mjs";
 
+const command = "zizmor --no-config --min-severity high --min-confidence high .github/workflows";
+
 runTool({
   toolId: "zizmor",
   binary: "zizmor",
-  command: "zizmor .github/workflows --config .zizmor.yml",
-  diagnosticCommand: "zizmor .github/workflows --config .zizmor.yml"
+  command,
+  diagnosticCommand: command,
 });
