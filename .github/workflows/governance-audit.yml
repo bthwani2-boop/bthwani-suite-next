@@ -2,110 +2,163 @@ name: Governance As Code Audit
 
 on:
   push:
-    branches: [implementing, master]
+    branches:
+      - bassam
+      - master
     paths:
+      - "AGENTS.md"
+      - "GEMINI.md"
+      - ".agents/**"
       - "governance/**"
+      - "tools/guards/**"
+      - "tools/scripts/run-*.mjs"
+      - "tools/scripts/install-oss-toolchain-binaries.sh"
+      - "package.json"
+      - "pnpm-lock.yaml"
       - ".github/workflows/**"
-      - "tools/guards/*-gate.mjs"
-      - "tools/guards/governance-schema-gate.mjs"
-      - "tools/guards/agent-governance-gate.mjs"
-      - "tools/guards/guard-registry-gate.mjs"
   pull_request:
-    branches: [implementing, master]
+    branches:
+      - master
+    paths:
+      - "AGENTS.md"
+      - "GEMINI.md"
+      - ".agents/**"
+      - "governance/**"
+      - "tools/guards/**"
+      - "tools/scripts/run-*.mjs"
+      - "tools/scripts/install-oss-toolchain-binaries.sh"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/**"
   workflow_dispatch:
 
 permissions:
   contents: read
   actions: read
 
+concurrency:
+  group: governance-audit-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  governance-audit:
-    name: Governance Compliance Verification
+  governance-contracts:
+    name: Governance contracts and semantics
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.2
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Governance schema and semantic gate
+        run: pnpm run guard:governance-schema
+      - name: Agent and skill governance gate
+        run: pnpm run guard:agent-governance
+      - name: Guard registry and workflow policy gate
+        run: pnpm run guard:guard-registry
+      - name: SDLC support and Product Truth gate
+        run: pnpm run guard:sdlc
 
+  workflow-static-analysis:
+    name: Workflow syntax security and policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # needed for gitleaks history checks
-
-      # ── 1. Setup Node & Run Custom Schema / Coherence Gates ────────────────
-      - uses: pnpm/action-setup@v4
+          fetch-depth: 0
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
         with:
           version: 10.34.2
-
-      - uses: actions/setup-node@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          node-version: "24"
-          cache: "pnpm"
-
+          node-version: 24.17.0
+          cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
-      - name: Install OSS toolchain binaries
+      - name: Install governance toolchain
         run: bash tools/scripts/install-oss-toolchain-binaries.sh governance
-
-      - name: Guard — Tool catalog coverage (FAIL)
+      - name: Actionlint
+        run: pnpm run guard:workflow-lint
+      - name: Zizmor workflow security
+        run: pnpm run guard:workflow-security
+      - name: OPA policy validation
+        run: pnpm run guard:opa-policies
+      - name: Tool catalog coverage
         run: pnpm run guard:tool-catalog-coverage
-
-      - name: Guard — Toolchain activation (FAIL)
+      - name: Toolchain activation
         run: pnpm run guard:toolchain-activation
-
-      - name: Guard — OSS toolchain policy (FAIL)
+      - name: OSS toolchain policy
         run: pnpm run guard:oss-toolchain-policy
 
-      - name: Guard — Governance registry schema validation (Ajv)
-        run: pnpm run guard:governance-schema
-
-      - name: Guard — Agent and skills consistency
-        run: pnpm run guard:agent-governance
-
-      - name: Guard — Guard registry alignment
-        run: pnpm run guard:guard-registry
-
-      # ── 2. GitHub Actions Workflows Static Analysis ────────────────────────
-      - name: actionlint (FAIL on invalid Actions syntax)
-        uses: reviewdog/action-actionlint@v1
+  repository-hygiene:
+    name: Governance repository hygiene
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
-          fail_level: error
+          fetch-depth: 0
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.2
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Repository size gate
+        run: pnpm run guard:repo-size
+      - name: Cleanup policy gate
+        run: pnpm run guard:cleanup-policy
+      - name: No tracked diagnostics or execution logs
+        shell: bash
+        run: |
+          set -euo pipefail
+          forbidden="$(git ls-files '.diagnostics/**' 'tools/registry/runs/**')"
+          if [ -n "$forbidden" ]; then
+            printf 'Tracked transient outputs are forbidden:\n%s\n' "$forbidden"
+            exit 1
+          fi
 
-      - name: Guard — Actions security vulnerabilities (zizmor)
-        run: pnpm run guard:workflow-security
-
-      - name: Guard — OPA policies validation (Conftest)
-        run: pnpm run guard:opa-policies
-
-      # ── 3. OPA/Conftest Validation (FAIL on policy violations) ─────────────
-      - name: Guard — Rego policy lint (FAIL)
-        run: pnpm run guard:rego-lint
-        continue-on-error: true
-
-      - name: Guard — Actions version pinning check
-        run: pnpm run guard:actions-pin
-        continue-on-error: true
-
-      - name: Guard — Shell scripts lint check
-        run: pnpm run guard:shellcheck
-        continue-on-error: true
-
-      - name: Guard — Dockerfile security lint check
-        run: pnpm run guard:dockerfile-lint
-        continue-on-error: true
-
-      - name: Guard — YAML formatting structure check
-        run: pnpm run guard:yaml-lint
-        continue-on-error: true
-
-      - name: Guard — Repository naming structure (ls-lint)
-        run: pnpm run guard:ls-lint
-        continue-on-error: true
-
-      - name: Guard — Markdown governance formatting (WARN)
-        run: pnpm run guard:markdown-governance
-        continue-on-error: true
-
-      # ── 4. Gitleaks Secrets Scanning ────────────────────────────────────────
-      - name: Diagnostics â€” Gitleaks scan (security.yml is authoritative)
-        run: pnpm run guard:secrets
-        continue-on-error: true
+  governance-result:
+    name: Governance audit result
+    if: always()
+    needs:
+      - governance-contracts
+      - workflow-static-analysis
+      - repository-hygiene
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Require every governance job to pass
+        env:
+          CONTRACTS_RESULT: ${{ needs.governance-contracts.result }}
+          WORKFLOW_RESULT: ${{ needs.workflow-static-analysis.result }}
+          HYGIENE_RESULT: ${{ needs.repository-hygiene.result }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'governance-contracts=%s\n' "$CONTRACTS_RESULT"
+          printf 'workflow-static-analysis=%s\n' "$WORKFLOW_RESULT"
+          printf 'repository-hygiene=%s\n' "$HYGIENE_RESULT"
+          test "$CONTRACTS_RESULT" = success
+          test "$WORKFLOW_RESULT" = success
+          test "$HYGIENE_RESULT" = success
