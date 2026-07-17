@@ -21,7 +21,7 @@ authorities:
     owns: [architecture_contracts, data_flow, dependency_direction, adr_decisions]
     may_block: true
   governance_contract_authority:
-    owns: [authority_precedence, decision_vocabulary, agent_and_skill_contracts, guard_registration, sdlc_control_plane]
+    owns: [authority_precedence, decision_vocabulary, agent_and_skill_contracts, guard_registration, sdlc_control_plane, saas_governance]
     may_block: true
     must_not_be_implementation_executor: true
   ci_workflow_authority:
@@ -41,6 +41,8 @@ authorities:
     owns: [independent_code_review, implementation_scope_review, developer_evidence_review]
     may_block: true
     must_not_be_change_author_when_high_risk: true
+    must_not_be_implementation_executor: true
+    must_not_be_work_coordinator: true
   independent_quality_authority:
     owns: [qa_approval, negative_testing, cross_surface_quality, accessibility_acceptance]
     block_decision: QA_BLOCK
@@ -58,6 +60,7 @@ authorities:
   risk_acceptance_authority:
     owns: [residual_risk_acceptance]
     must_not_be_change_author: true
+    must_not_be_implementation_executor: true
 separation_of_duties_required_for:
   - product_model_approval
   - product_acceptance
