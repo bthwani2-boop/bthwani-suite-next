@@ -40,6 +40,9 @@ export function DshCaptainAccountSettingsContent({
   onToggleStoreCourierMode,
 }: Props) {
   const theme = lightThemeColors;
+  const handlePartnerFleetConnected = React.useCallback(() => {
+    onToggleStoreCourierMode(true);
+  }, [onToggleStoreCourierMode]);
 
   return (
     <Box gap={4}>
@@ -113,7 +116,7 @@ export function DshCaptainAccountSettingsContent({
         </View>
       </Box>
 
-      <PartnerFleetConnectionCard onConnected={() => onToggleStoreCourierMode(true)} />
+      <PartnerFleetConnectionCard onConnected={handlePartnerFleetConnected} />
 
       <Card padding={3} tone={isStoreCourierMode ? "success" : "default"}>
         <Text role="bodySm" align="start">
