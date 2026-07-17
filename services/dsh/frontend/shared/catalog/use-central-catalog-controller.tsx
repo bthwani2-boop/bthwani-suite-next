@@ -256,8 +256,9 @@ export function useCentralCatalogController(authKind = "unauthenticated") {
 
     updatePolicy: async (policyId: string, input: Parameters<typeof api.updateCatalogPlatformPolicy>[1]) => {
       const expectedVersion = requireCatalogVersion(state.policies.items, policyId, "policy");
+      const request = { ...input, expectedVersion };
       return runMutationWithReadback(
-        () => api.updateCatalogPlatformPolicy(policyId, { ...input, expectedVersion }),
+        () => api.updateCatalogPlatformPolicy(policyId, request),
         loadPolicies,
       );
     },
