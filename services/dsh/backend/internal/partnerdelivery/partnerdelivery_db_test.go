@@ -120,6 +120,15 @@ func seedFixture(t *testing.T, db *sql.DB, orderStatus string) fixture {
 	return f
 }
 
+func readOrderStatus(t *testing.T, db *sql.DB, orderID string) string {
+	t.Helper()
+	var status string
+	if err := db.QueryRow(`SELECT status FROM dsh_orders WHERE id = $1::uuid`, orderID).Scan(&status); err != nil {
+		t.Fatalf("failed to read order status: %v", err)
+	}
+	return status
+}
+
 func TestAssignCourierBeforeReadyRejectedDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	f := seedFixture(t, db, "preparing")
@@ -208,5 +217,68 @@ func TestAssignCourierVersionConflictOnConcurrentUpdateDBIntegration(t *testing.
 
 	if _, err := svc.MarkDeparted(ctx, task.ID, task.Version, "courier-1", "partner", ""); !errors.Is(err, ErrVersionConflict) {
 		t.Fatalf("expected ErrVersionConflict, got %v", err)
+	}
+}
+
+func TestPartnerDeliveryDepartureRequiresPickupDBIntegration(t *testing.T) {
+	db := openRequiredDB(t)
+	f := seedFixture(t, db, "ready_for_pickup")
+	svc := NewService(db)
+	ctx := context.Background()
+
+	task, err := svc.AssignCourier(ctx, f.orderID, f.courierID, "operator-1", "operator", "corr-departure")
+	if err != nil {
+		t.Fatalf("AssignCourier failed: %v", err)
+	}
+	if _, err := svc.MarkDeparted(ctx, task.ID, task.Version, f.courierID, "partner", "corr-departure"); !errors.Is(err, ErrConflict) {
+		t.Fatalf("expected ErrConflict when departing before pickup, got %v", err)
+	}
+	if got := readOrderStatus(t, db, f.orderID); got != "ready_for_pickup" {
+		t.Fatalf("order status changed despite rejected departure: %s", got)
+	}
+}
+
+func TestPartnerDeliveryCompletesTaskAndOrderAtomicallyDBIntegration(t *testing.T) {
+	db := openRequiredDB(t)
+	f := seedFixture(t, db, "ready_for_pickup")
+	svc := NewService(db)
+	ctx := context.Background()
+
+	task, err := svc.AssignCourier(ctx, f.orderID, f.courierID, "operator-1", "operator", "corr-complete")
+	if err != nil {
+		t.Fatalf("AssignCourier failed: %v", err)
+	}
+	pickedUp, err := svc.MarkPickedUp(ctx, task.ID, task.Version, f.courierID, "partner", "corr-complete")
+	if err != nil {
+		t.Fatalf("MarkPickedUp failed: %v", err)
+	}
+	if pickedUp.PickedUpAt == nil {
+		t.Fatal("expected picked_up_at to be recorded")
+	}
+	if got := readOrderStatus(t, db, f.orderID); got != "picked_up" {
+		t.Fatalf("expected order status picked_up, got %s", got)
+	}
+
+	departed, err := svc.MarkDeparted(ctx, pickedUp.ID, pickedUp.Version, f.courierID, "partner", "corr-complete")
+	if err != nil {
+		t.Fatalf("MarkDeparted failed: %v", err)
+	}
+	arrived, err := svc.MarkArrived(ctx, departed.ID, departed.Version, f.courierID, "partner", "corr-complete")
+	if err != nil {
+		t.Fatalf("MarkArrived failed: %v", err)
+	}
+	if got := readOrderStatus(t, db, f.orderID); got != "arrived_customer" {
+		t.Fatalf("expected order status arrived_customer, got %s", got)
+	}
+
+	completed, err := svc.SubmitProof(ctx, arrived.ID, arrived.Version, "photo", "proof://partner-delivery", f.courierID, "partner", "corr-complete")
+	if err != nil {
+		t.Fatalf("SubmitProof failed: %v", err)
+	}
+	if completed.Status != StatusCompleted || completed.CompletedAt == nil {
+		t.Fatalf("expected completed task with timestamp, got status=%s completedAt=%v", completed.Status, completed.CompletedAt)
+	}
+	if got := readOrderStatus(t, db, f.orderID); got != "delivered" {
+		t.Fatalf("expected order status delivered, got %s", got)
 	}
 }
