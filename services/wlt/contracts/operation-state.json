@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "service": "wlt",
+  "operations": [
+    {
+      "operationId": "createWltSettlement",
+      "method": "POST",
+      "path": "/wlt/settlements",
+      "state": "BLOCKED_UNTIL_GOVERNED_SOURCE",
+      "runtimeStatus": 409,
+      "runtimeCode": "SETTLEMENT_SOURCE_REQUIRED",
+      "reason": "WLT does not yet receive an immutable DSH order-derived settlement calculation covering all payment methods. Caller-supplied gross, fee, net, and order-count values are forbidden as financial truth.",
+      "requiredBeforeEnablement": [
+        "immutable DSH settlement source reference",
+        "server-derived gross amount",
+        "server-derived platform fee",
+        "server-derived partner net amount",
+        "server-derived order count",
+        "same-transaction balanced WLT journal",
+        "idempotency and duplicate-period enforcement",
+        "independent financial-control approval",
+        "same-commit integration and negative tests"
+      ]
+    }
+  ]
+}
