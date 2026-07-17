@@ -25,7 +25,8 @@ LeanCTX, Graphify, and Nx are optional tools. They are never mandatory first ste
 - Evidence-scope selection → `bthwani-evidence-gate-router`.
 - Agent, skill, adapter, registry, or routing changes → `bthwani-agent-skill-integrity`.
 - Guard selection or command resolution → `bthwani-guard-command-router`.
-- Governance, gate, local action, or GitHub workflow changes → `bthwani-governance-ci-guardian`.
+- Governance contracts, authority, agents, skills, guards, SaaS governance, or SDLC control-plane changes → `bthwani-governance-contract-guardian`.
+- GitHub Actions workflows, local actions, workflow permissions, immutable pins, or CI aggregation changes → `bthwani-ci-workflow-guardian`.
 - User-visible, role-sensitive, cross-surface, commercial, or workflow changes → `bthwani-product-truth-governor`.
 - API, route, generated client, or consumer binding → `bthwani-api-runtime-binding`.
 - Route, screen, state, action, or controller binding → `bthwani-screen-flow-binding`.
@@ -37,6 +38,8 @@ LeanCTX, Graphify, and Nx are optional tools. They are never mandatory first ste
 - Formal G0–G10 lifecycle control → `bthwani-sdlc-stage-gate-orchestrator`.
 - Final multi-scope closure → `bthwani-final-journey-closure-judge`.
 - Two or more independent bounded work units with real subagent capability → `bthwani-cost-aware-subagent-orchestrator`.
+
+Governance-contract and CI-workflow approvals are separate. When both domains change, both skills apply and the approving identities must differ.
 
 ## Product routing order
 
@@ -50,7 +53,7 @@ Problem and evidence
 → architecture and contracts
 → implementation
 → product acceptance
-→ independent governance, CI, QA, security, release, and production evidence as applicable
+→ independent governance, CI, QA, security, finance, release, risk, and production evidence as applicable
 ```
 
 Implementation skills may not bypass Product Truth or formal authorities.
@@ -67,7 +70,8 @@ Implementation skills may not bypass Product Truth or formal authorities.
 
 - `bthwani-agent-skill-integrity`
 - `bthwani-guard-command-router`
-- `bthwani-governance-ci-guardian`
+- `bthwani-governance-contract-guardian`
+- `bthwani-ci-workflow-guardian`
 - `bthwani-product-truth-governor`
 - `bthwani-api-runtime-binding`
 - `bthwani-screen-flow-binding`
@@ -90,6 +94,8 @@ The canonical retired set exists only in `governance/skills/skills-registry.json
 - may not be dependencies of active or conditional skills;
 - may not be described as active, default, mandatory, or current truth.
 
+The mixed `bthwani-governance-ci-guardian` skill is retired and must never be routed.
+
 ## Tool ladder
 
 1. Direct scoped repository inspection.
@@ -104,7 +110,7 @@ The canonical retired set exists only in `governance/skills/skills-registry.json
 
 - Load only the active or conditional governed skills required by the task.
 - Owner skills govern only their declared authority domain.
-- Coordinators orchestrate but do not duplicate specialist policy or formal approval.
+- Coordinators orchestrate but do not execute implementation work or duplicate specialist policy.
 - Adapters and tools own no approval.
 - Every dependency must resolve to an active or conditional governed skill.
 - Every decision maps through `governance/contracts/decision-vocabulary.json`.
@@ -112,4 +118,4 @@ The canonical retired set exists only in `governance/skills/skills-registry.json
 
 ## Acceptance condition
 
-Accepted only when routing matches the skill registry, all selected skills are governed and non-retired, Product Truth precedes implementation where applicable, G0–G10 terminology is consistent, optional tools remain optional, dependencies resolve without cycles, and no adapter, tool, executor, or retired skill can self-grant formal approval.
+Accepted only when routing matches the skill registry, all selected skills are governed and non-retired, Product Truth precedes implementation where applicable, G0–G10 terminology is consistent, optional tools remain optional, dependencies resolve without cycles, governance and CI approval remain separate, the strongest supervisor stays advisory, and no adapter, tool, executor, retired skill, or coordinator can self-grant formal approval.
