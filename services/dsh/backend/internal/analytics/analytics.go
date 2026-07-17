@@ -31,6 +31,8 @@ type PlatformKpis struct {
 	FieldVisitsCompleted int       `json:"fieldVisitsCompleted"`
 	OpenEscalations      int       `json:"openEscalations"`
 	OpenIncidents        int       `json:"openIncidents"`
+	WltHandoffFailures   int       `json:"wltHandoffFailures"`
+	UnassignedTasks      int       `json:"unassignedTasks"`
 	Period               string    `json:"period"`
 	GeneratedAt          time.Time `json:"generatedAt"`
 }
@@ -52,6 +54,8 @@ func GetPlatformKpis(db *sql.DB, period string) (PlatformKpis, error) {
 		{&kpis.FieldVisitsCompleted, `SELECT COUNT(*) FROM dsh_field_visits WHERE status = 'complete' AND created_at >= $1`, []any{since}},
 		{&kpis.OpenEscalations, `SELECT COUNT(*) FROM dsh_readiness_escalations WHERE status = 'open'`, nil},
 		{&kpis.OpenIncidents, `SELECT COUNT(*) FROM dsh_incidents WHERE status != 'resolved'`, nil},
+		{&kpis.WltHandoffFailures, `SELECT COUNT(*) FROM dsh_wlt_outbox_events WHERE attempt_count > 0`, nil},
+		{&kpis.UnassignedTasks, `SELECT COUNT(*) FROM dsh_orders WHERE status = 'ready_for_pickup' AND NOT EXISTS (SELECT 1 FROM dsh_assignments WHERE dsh_assignments.order_id = dsh_orders.id AND dsh_assignments.status IN ('accepted', 'completed'))`, nil},
 	}
 
 	for _, r := range rows {

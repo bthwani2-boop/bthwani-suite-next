@@ -372,6 +372,7 @@ export function AssistedOrderDeskScreen({ hubHref: _hubHref, subGroup: _subGroup
         </div>
 
         {/* ── Inspector — only when desk is selected ── */}
+        {hasInspector && selectedDesk ? (
           <AssistedOrderDeskInspector
             desk={selectedDesk}
             onClose={() => setSelectedDeskId(null)}
