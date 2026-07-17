@@ -48,17 +48,23 @@ if (skillsRegistry && fs.existsSync(skillsDir)) {
 
     const content = fs.readFileSync(skillMdPath, "utf8");
     const frontmatterName = content.match(/^---[\s\S]*?\nname:\s*([^\n]+)[\s\S]*?---/m)?.[1]?.trim();
-    if (frontmatterName !== skill.id) {
-      violations.push({ file: `${skill.path}/SKILL.md`, line: 0, message: `FRONTMATTER_NAME_MISMATCH expected ${skill.id}, found ${frontmatterName ?? "none"}` });
-    }
-    if (!/^##\s+Purpose\b/mi.test(content)) {
-      violations.push({ file: `${skill.path}/SKILL.md`, line: 0, message: "MISSING_PURPOSE_SECTION" });
-    }
-    if (skill.contract_level === "governed") {
-      for (const section of ["Invoke when", "Do not invoke when", "Authority boundary", "Required output"]) {
+    const contractLevel = skill.contract_level ?? "legacy";
+
+    if (contractLevel === "governed") {
+      if (frontmatterName !== skill.id) {
+        violations.push({ file: `${skill.path}/SKILL.md`, line: 0, message: `FRONTMATTER_NAME_MISMATCH expected ${skill.id}, found ${frontmatterName ?? "none"}` });
+      }
+      for (const section of ["Purpose", "Invoke when", "Do not invoke when", "Authority boundary", "Required output"]) {
         if (!new RegExp(`^##\\s+${section}\\b`, "mi").test(content)) {
           violations.push({ file: `${skill.path}/SKILL.md`, line: 0, message: `GOVERNED_SKILL_MISSING_SECTION ${section}` });
         }
+      }
+      if (!skill.version || !skill.output_contract || !(skill.invoke_when?.length) || !(skill.do_not_invoke_when?.length)) {
+        violations.push({ file: "governance/skills/skills-registry.json", line: 0, message: `GOVERNED_SKILL_CONTRACT_INCOMPLETE ${skill.id}` });
+      }
+    } else {
+      if (frontmatterName && frontmatterName !== skill.id) {
+        violations.push({ file: `${skill.path}/SKILL.md`, line: 0, message: `LEGACY_FRONTMATTER_NAME_MISMATCH expected ${skill.id}, found ${frontmatterName}` });
       }
     }
   }
@@ -68,7 +74,7 @@ if (skillsRegistry && fs.existsSync(skillsDir)) {
     .map((entry) => entry.name);
   for (const directory of workspaceSkillDirs) {
     if (!skillById.has(directory)) {
-      violations.push({ file: `governance/skills/skills-registry.json`, line: 0, message: `UNREGISTERED_SKILL ${directory}` });
+      violations.push({ file: "governance/skills/skills-registry.json", line: 0, message: `UNREGISTERED_SKILL ${directory}` });
     }
   }
 
