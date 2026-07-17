@@ -2,9 +2,15 @@ name: Platform Control Verification
 
 on:
   push:
-    branches: [bassam, master]
+    branches:
+      - bassam
+      - master
+      - "bassam-platform-*-verify-*"
     paths:
       - "core/platform-control/**"
+      - "infra/docker/compose.runtime.yml"
+      - "infra/data-plane/postgres/init/001_create_runtime_databases.sh"
+      - "tools/scripts/platform-control-runtime.ps1"
       - "services/dsh/frontend/shared/platform/**"
       - "services/dsh/frontend/shared/session/control-panel-permissions.ts"
       - "services/dsh/frontend/control-panel/platform/**"
@@ -14,6 +20,9 @@ on:
     branches: [master]
     paths:
       - "core/platform-control/**"
+      - "infra/docker/compose.runtime.yml"
+      - "infra/data-plane/postgres/init/001_create_runtime_databases.sh"
+      - "tools/scripts/platform-control-runtime.ps1"
       - "services/dsh/frontend/shared/platform/**"
       - "services/dsh/frontend/shared/session/control-panel-permissions.ts"
       - "services/dsh/frontend/control-panel/platform/**"
@@ -60,6 +69,49 @@ jobs:
         working-directory: core/platform-control/backend
         run: go test ./... -count=1
 
+  database:
+    name: Platform control migration verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: platform_control_ci
+          POSTGRES_PASSWORD: platform_control_ci_password
+          POSTGRES_DB: platform_control_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U platform_control_ci -d platform_control_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://platform_control_ci:platform_control_ci_password@localhost:5432/platform_control_ci?sslmode=disable
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Apply every platform-control migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r migration; do
+            echo "Applying $migration"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
+          done < <(find core/platform-control/database/migrations -maxdepth 1 -type f -name '*.sql' | sort)
+      - name: Verify sovereign tables
+        shell: bash
+        run: |
+          set -euo pipefail
+          for table in platform_variables platform_feature_flags platform_change_sets platform_change_set_items platform_audit_events; do
+            test "$(psql "$DATABASE_URL" -tAc "SELECT to_regclass('public.$table') IS NOT NULL")" = t
+          done
+
   frontend:
     name: Platform control frontend contracts and types
     runs-on: ubuntu-latest
@@ -85,16 +137,18 @@ jobs:
   result:
     name: Platform control verification result
     if: always()
-    needs: [backend, frontend]
+    needs: [backend, database, frontend]
     runs-on: ubuntu-latest
     steps:
-      - name: Require backend and frontend verification
+      - name: Require every platform-control verification job
         env:
           BACKEND: ${{ needs.backend.result }}
+          DATABASE: ${{ needs.database.result }}
           FRONTEND: ${{ needs.frontend.result }}
         shell: bash
         run: |
           set -euo pipefail
-          printf 'backend=%s\nfrontend=%s\n' "$BACKEND" "$FRONTEND"
+          printf 'backend=%s\ndatabase=%s\nfrontend=%s\n' "$BACKEND" "$DATABASE" "$FRONTEND"
           test "$BACKEND" = success
+          test "$DATABASE" = success
           test "$FRONTEND" = success
