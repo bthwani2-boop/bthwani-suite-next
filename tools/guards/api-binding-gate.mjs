@@ -1,22 +1,21 @@
 /**
  * api-binding-gate.mjs
  *
- * Verifies that frontend API adapters respect the OpenAPI-first binding chain:
- *   OpenAPI contract → generated client/types → shared HTTP client → *.api.ts
+ * Verifies the OpenAPI-first binding chain:
+ *   Master contract index → active contract → generated/shared client → API adapter.
  *
- * Checks:
- *   1. No raw fetch() calls in *.api.ts outside the approved HTTP clients
- *   2. No mock/fallback success patterns (Promise.resolve with hardcoded data)
- *   3. All /dsh/* and /wlt/* path literals in *.api.ts exist in the composed OpenAPI contracts
- *   4. No hardcoded non-localhost URLs in *.api.ts
+ * Side contracts that are not present in contracts/master.openapi.yaml are not
+ * accepted as runtime truth. This prevents contract-only features from making
+ * frontend adapters appear bound while no router, repository, or migration exists.
  */
 
 import fs from "node:fs";
 import path from "node:path";
-import { fail, listCodeFiles, read, repoRoot } from "./_guard-utils.mjs";
+import { fail, listCodeFiles, read, repoRoot, toPosix } from "./_guard-utils.mjs";
 
 const guardId = "api-binding-gate";
 const violations = [];
+const masterContractPath = "contracts/master.openapi.yaml";
 
 function loadOpenApiPaths(relPath) {
   const fullPath = path.join(repoRoot, relPath);
@@ -30,26 +29,51 @@ function loadOpenApiPaths(relPath) {
   return paths;
 }
 
-const dshPaths = loadOpenApiPaths("services/dsh/contracts/dsh.openapi.yaml");
-const dshCommercialPaths = loadOpenApiPaths("services/dsh/contracts/dsh.marketing-commercial.openapi.yaml");
-const dshPartnerFleetPaths = loadOpenApiPaths("services/dsh/contracts/dsh.partner-fleet.openapi.yaml");
-const wltPaths = loadOpenApiPaths("services/wlt/contracts/wlt.openapi.yaml");
-const wltCommercialPaths = loadOpenApiPaths("services/wlt/contracts/wlt.commercial.openapi.yaml");
-const identityPaths = loadOpenApiPaths("core/identity/contracts/auth.openapi.yaml");
-const providersPaths = loadOpenApiPaths("core/providers/contracts/providers.openapi.yaml");
+function loadMasterContractReferences() {
+  const master = read(masterContractPath);
+  const references = [];
+  for (const line of master.split(/\r?\n/)) {
+    const match = line.match(/^\s+[A-Za-z0-9_-]+:\s+(\.\.\/[^\s]+\.openapi\.yaml)\s*$/);
+    if (!match) continue;
+    const absolute = path.resolve(repoRoot, "contracts", match[1]);
+    const relative = toPosix(path.relative(repoRoot, absolute));
+    if (!fs.existsSync(absolute)) {
+      violations.push({
+        file: masterContractPath,
+        message: `MASTER_CONTRACT_REFERENCE_MISSING ${relative}`,
+      });
+      continue;
+    }
+    references.push(relative);
+  }
+  if (references.length === 0) {
+    violations.push({ file: masterContractPath, message: "MASTER_CONTRACT_INDEX_EMPTY" });
+  }
+  return references;
+}
 
-const knownPaths = [
-  ...dshPaths,
-  ...dshCommercialPaths,
-  ...dshPartnerFleetPaths,
-  ...wltPaths,
-  ...wltCommercialPaths,
-  ...identityPaths,
-  ...providersPaths,
+const forbiddenUnimplementedContracts = [
+  "services/dsh/contracts/dsh.marketing-commercial.openapi.yaml",
+  "services/dsh/contracts/dsh.partner-fleet.openapi.yaml",
+  "services/wlt/contracts/wlt.commercial.openapi.yaml",
 ];
+for (const relative of forbiddenUnimplementedContracts) {
+  if (fs.existsSync(path.join(repoRoot, relative))) {
+    violations.push({
+      file: relative,
+      message: "UNIMPLEMENTED_RUNTIME_CONTRACT_REINTRODUCED",
+    });
+  }
+}
+
+const masterReferences = loadMasterContractReferences();
+const knownPaths = masterReferences.flatMap((relative) => [...loadOpenApiPaths(relative)]);
 
 function isKnownPath(rawPath) {
-  const normalized = rawPath.replace(/\?.*$/, "").replace(/\$\{[^}]+\}/g, "{param}").replace(/`/g, "");
+  const normalized = rawPath
+    .replace(/\?.*$/, "")
+    .replace(/\$\{[^}]+\}/g, "{param}")
+    .replace(/`/g, "");
   for (const known of knownPaths) {
     const knownNorm = known.replace(/\{[^}]+\}/g, "{param}");
     if (knownNorm === normalized || known === rawPath) return true;
@@ -67,18 +91,21 @@ const API_PATH_LITERAL = /[`'"](\/(?:dsh|wlt|identity|providers)\/[^`'"?\s]*)/g;
 
 const apiFiles = listCodeFiles().filter((file) => {
   if (file.endsWith("-registry.ts")) return false;
-  if (file.endsWith(".api.ts") || file.endsWith(".client.ts") || file.endsWith("api-client.ts") || file.endsWith("runtime-adapter.ts")) {
+  if (
+    file.endsWith(".api.ts") ||
+    file.endsWith(".client.ts") ||
+    file.endsWith("api-client.ts") ||
+    file.endsWith("runtime-adapter.ts")
+  ) {
     return true;
   }
   const isSharedFile = /^services\/[^/]+\/frontend\/shared\//.test(file);
   if (isSharedFile) {
     try {
       const content = fs.readFileSync(path.join(repoRoot, file), "utf8");
-      if (content.includes("/dsh/") || content.includes("/wlt/") || content.includes("/identity/")) {
-        return true;
-      }
+      return content.includes("/dsh/") || content.includes("/wlt/") || content.includes("/identity/");
     } catch {
-      // Ignore unreadable candidates; other repository gates report missing files.
+      return false;
     }
   }
   return false;
@@ -97,13 +124,13 @@ for (const file of apiFiles) {
   }
 
   const lines = content.split(/\r?\n/);
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
     if (/^\s*(\/\/|\/\*|\*)/.test(line)) continue;
     if (HARDCODED_URL_PATTERN.test(line)) {
       violations.push({
         file,
-        line: i + 1,
+        line: index + 1,
         message: `FORBIDDEN: hardcoded runtime URL in adapter: "${line.trim()}"`,
       });
     }
@@ -123,15 +150,15 @@ for (const file of apiFiles) {
   }
 
   if (isDshAdapter || isWltAdapter) {
-    let match;
     API_PATH_LITERAL.lastIndex = 0;
+    let match;
     while ((match = API_PATH_LITERAL.exec(content)) !== null) {
       const rawPath = match[1];
       if (/^\/(?:dsh|wlt|identity|providers)\/\$\{/.test(rawPath)) continue;
       if (!isKnownPath(rawPath)) {
         violations.push({
           file,
-          message: `UNREGISTERED PATH: "${rawPath}" not found in composed OpenAPI contracts — ensure endpoint is documented`,
+          message: `UNREGISTERED PATH: "${rawPath}" not found in master-indexed OpenAPI contracts`,
         });
       }
     }
