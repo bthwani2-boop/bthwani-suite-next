@@ -4,5 +4,6 @@ runTool({
   toolId: "pinact",
   binary: "pinact",
   command: "pinact verify",
-  diagnosticCommand: "pinact list"
+  diagnosticCommand: "pinact list",
+  required: true,
 });
