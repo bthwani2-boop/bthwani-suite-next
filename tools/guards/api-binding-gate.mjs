@@ -34,6 +34,7 @@ const dshPaths = loadOpenApiPaths("services/dsh/contracts/dsh.openapi.yaml");
 const dshCommercialPaths = loadOpenApiPaths("services/dsh/contracts/dsh.marketing-commercial.openapi.yaml");
 const dshPartnerFleetPaths = loadOpenApiPaths("services/dsh/contracts/dsh.partner-fleet.openapi.yaml");
 const wltPaths = loadOpenApiPaths("services/wlt/contracts/wlt.openapi.yaml");
+const wltCommercialPaths = loadOpenApiPaths("services/wlt/contracts/wlt.commercial.openapi.yaml");
 const identityPaths = loadOpenApiPaths("core/identity/contracts/auth.openapi.yaml");
 const providersPaths = loadOpenApiPaths("core/providers/contracts/providers.openapi.yaml");
 
@@ -42,6 +43,7 @@ const knownPaths = [
   ...dshCommercialPaths,
   ...dshPartnerFleetPaths,
   ...wltPaths,
+  ...wltCommercialPaths,
   ...identityPaths,
   ...providersPaths,
 ];
