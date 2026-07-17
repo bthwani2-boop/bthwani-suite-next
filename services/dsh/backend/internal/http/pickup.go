@@ -79,11 +79,10 @@ func marshalPickupSession(s *pickup.PickupSession) map[string]any {
 }
 
 func (s *protectedStoreServer) handlePickupMarkReady(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "partner")
+	actor, ownedOrder, ok := s.partnerOrder(w, r)
 	if !ok {
 		return
 	}
-	orderID := r.PathValue("orderId")
 	var body pickupMutationBody
 	if !decodeProtectedJSON(w, r, &body) {
 		return
@@ -93,22 +92,21 @@ func (s *protectedStoreServer) handlePickupMarkReady(w http.ResponseWriter, r *h
 		return
 	}
 	svc := pickup.NewService(s.db)
-	if err := svc.MarkReady(r.Context(), orderID, actor.ID, actor.Role, operationalCorrelationID(r, body.CorrelationID)); err != nil {
+	if err := svc.MarkReady(r.Context(), ownedOrder.ID, actor.ID, actor.Role, operationalCorrelationID(r, body.CorrelationID)); err != nil {
 		writePickupError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"orderId": orderID, "status": "ready_for_pickup"})
+	store.SendJSON(w, http.StatusOK, map[string]any{"orderId": ownedOrder.ID, "status": "ready_for_pickup"})
 }
 
 // handlePickupNotify issues a fresh OTP, delivers it through the authenticated
 // client notification channel, then records the operational notification marker.
 // The partner response never contains the plaintext OTP.
 func (s *protectedStoreServer) handlePickupNotify(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "partner")
+	actor, ownedOrder, ok := s.partnerOrder(w, r)
 	if !ok {
 		return
 	}
-	orderID := r.PathValue("orderId")
 	var body issuePickupOtpBody
 	if !decodeProtectedJSON(w, r, &body) {
 		return
@@ -117,9 +115,23 @@ func (s *protectedStoreServer) handlePickupNotify(w http.ResponseWriter, r *http
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "commandId is required")
 		return
 	}
+	// The client identity comes from the sovereign order. A body-supplied value
+	// may only repeat it; it can never redirect an OTP to another client.
+	if body.ClientID != "" && body.ClientID != ownedOrder.ClientID {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "clientId does not match the order")
+		return
+	}
 	correlationID := operationalCorrelationID(r, body.CorrelationID)
-	plainOtp, session, ok := s.issuePickupOtpInternal(w, r, orderID, body.ClientID, actor.ID, actor.Role, correlationID)
-	if !ok {
+	plainOtp, session, issued := s.issuePickupOtpInternal(
+		w,
+		r,
+		ownedOrder.ID,
+		ownedOrder.ClientID,
+		actor.ID,
+		actor.Role,
+		correlationID,
+	)
+	if !issued {
 		return
 	}
 	if err := pickup.DeliverOtpNotification(r.Context(), s.db, session, plainOtp); err != nil {
@@ -128,19 +140,18 @@ func (s *protectedStoreServer) handlePickupNotify(w http.ResponseWriter, r *http
 	}
 
 	svc := pickup.NewService(s.db)
-	if err := svc.NotifyCustomer(r.Context(), orderID, actor.ID, actor.Role, correlationID); err != nil {
+	if err := svc.NotifyCustomer(r.Context(), ownedOrder.ID, actor.ID, actor.Role, correlationID); err != nil {
 		writePickupError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"orderId": orderID, "notified": true, "session": marshalPickupSession(session)})
+	store.SendJSON(w, http.StatusOK, map[string]any{"orderId": ownedOrder.ID, "notified": true, "session": marshalPickupSession(session)})
 }
 
 func (s *protectedStoreServer) handlePickupCustomerArrived(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "partner")
+	actor, ownedOrder, ok := s.partnerOrder(w, r)
 	if !ok {
 		return
 	}
-	orderID := r.PathValue("orderId")
 	var body pickupMutationBody
 	if !decodeProtectedJSON(w, r, &body) {
 		return
@@ -150,11 +161,11 @@ func (s *protectedStoreServer) handlePickupCustomerArrived(w http.ResponseWriter
 		return
 	}
 	svc := pickup.NewService(s.db)
-	if err := svc.CustomerArrived(r.Context(), orderID, actor.ID, actor.Role, operationalCorrelationID(r, body.CorrelationID)); err != nil {
+	if err := svc.CustomerArrived(r.Context(), ownedOrder.ID, actor.ID, actor.Role, operationalCorrelationID(r, body.CorrelationID)); err != nil {
 		writePickupError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"orderId": orderID, "customerArrived": true})
+	store.SendJSON(w, http.StatusOK, map[string]any{"orderId": ownedOrder.ID, "customerArrived": true})
 }
 
 func (s *protectedStoreServer) issuePickupOtpInternal(w http.ResponseWriter, r *http.Request, orderID, clientID, actorID, actorRole, correlationID string) (string, *pickup.PickupSession, bool) {
@@ -168,11 +179,10 @@ func (s *protectedStoreServer) issuePickupOtpInternal(w http.ResponseWriter, r *
 }
 
 func (s *protectedStoreServer) handlePickupVerify(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "partner")
+	actor, ownedOrder, ok := s.partnerOrder(w, r)
 	if !ok {
 		return
 	}
-	orderID := r.PathValue("orderId")
 	var body verifyPickupOtpBody
 	if !decodeProtectedJSON(w, r, &body) {
 		return
@@ -186,7 +196,7 @@ func (s *protectedStoreServer) handlePickupVerify(w http.ResponseWriter, r *http
 		return
 	}
 	svc := pickup.NewService(s.db)
-	session, err := svc.VerifyOtp(r.Context(), orderID, body.Code, actor.ID, actor.Role, operationalCorrelationID(r, body.CorrelationID))
+	session, err := svc.VerifyOtp(r.Context(), ownedOrder.ID, body.Code, actor.ID, actor.Role, operationalCorrelationID(r, body.CorrelationID))
 	if err != nil {
 		writePickupError(w, err)
 		return
@@ -195,11 +205,10 @@ func (s *protectedStoreServer) handlePickupVerify(w http.ResponseWriter, r *http
 }
 
 func (s *protectedStoreServer) handlePickupNoShow(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "partner")
+	actor, ownedOrder, ok := s.partnerOrder(w, r)
 	if !ok {
 		return
 	}
-	orderID := r.PathValue("orderId")
 	var body pickupMutationBody
 	if !decodeProtectedJSON(w, r, &body) {
 		return
@@ -209,7 +218,7 @@ func (s *protectedStoreServer) handlePickupNoShow(w http.ResponseWriter, r *http
 		return
 	}
 	svc := pickup.NewService(s.db)
-	session, err := svc.NoShow(r.Context(), orderID, actor.ID, actor.Role, body.Reason, operationalCorrelationID(r, body.CorrelationID))
+	session, err := svc.NoShow(r.Context(), ownedOrder.ID, actor.ID, actor.Role, body.Reason, operationalCorrelationID(r, body.CorrelationID))
 	if err != nil {
 		writePickupError(w, err)
 		return
