@@ -1,13 +1,18 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "policy": {
     "noAllGuardsByDefault": true,
     "noFullLintByDefault": true,
     "noZipByDefault": true,
-    "guardsVerifyOnly": true
+    "guardsVerifyOnly": true,
+    "ciSourceMutationForbidden": true,
+    "sameCommitEvidenceRequired": true
   },
   "guardSets": {
     "foundation": [
+      "governance-schema",
+      "agent-governance",
+      "guard-registry",
       "ui-kit-boundary",
       "runtime-config",
       "no-broken-imports",
@@ -16,6 +21,9 @@
       "backend-api-binding"
     ],
     "journey": [
+      "governance-schema",
+      "agent-governance",
+      "guard-registry",
       "fullstack-boundary",
       "wlt-financial-boundary",
       "runtime-config",
@@ -23,6 +31,11 @@
       "api-binding",
       "backend-api-binding",
       "live-cross-journey-integrity"
+    ],
+    "governance": [
+      "governance-schema",
+      "agent-governance",
+      "guard-registry"
     ]
   }
 }
