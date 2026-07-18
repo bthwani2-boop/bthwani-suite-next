@@ -61,6 +61,10 @@ func (c *Client) promotionFundingRequest(
 	if !c.Configured() {
 		return nil, fmt.Errorf("WLT promotion funding is not configured")
 	}
+	tenantID = strings.TrimSpace(tenantID)
+	if tenantID == "" {
+		return nil, fmt.Errorf("WLT promotion funding tenant id is required")
+	}
 	encoded, err := json.Marshal(input)
 	if err != nil {
 		return nil, fmt.Errorf("encode WLT promotion funding request: %w", err)
@@ -73,9 +77,10 @@ func (c *Client) promotionFundingRequest(
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
-	req.Header.Set("X-Tenant-ID", strings.TrimSpace(tenantID))
-	req.Header.Set("Idempotency-Key", strings.TrimSpace(idempotencyKey))
-	req.Header.Set("X-Correlation-ID", strings.TrimSpace(correlationID))
+	req.Header.Set("X-Tenant-ID", tenantID)
+	if err := setRequiredMutationHeaders(req, correlationID, idempotencyKey); err != nil {
+		return nil, fmt.Errorf("prepare WLT promotion funding mutation: %w", err)
+	}
 
 	response, err := c.http.Do(req)
 	if err != nil {
@@ -112,6 +117,12 @@ func (c *Client) ReservePromotionFunding(
 	idempotencyKey string,
 	correlationID string,
 ) (*PromotionFundingReservation, error) {
+	if strings.TrimSpace(idempotencyKey) == "" {
+		idempotencyKey = deterministicMutationKey("promotion-funding-reserve", input.ExternalReference, input.CheckoutIntentID, input.CouponRedemptionID)
+	}
+	if strings.TrimSpace(correlationID) == "" {
+		correlationID = strings.TrimSpace(input.CheckoutIntentID)
+	}
 	return c.promotionFundingRequest(
 		ctx,
 		http.MethodPost,
@@ -131,10 +142,20 @@ func (c *Client) transitionPromotionFunding(
 	idempotencyKey string,
 	correlationID string,
 ) (*PromotionFundingReservation, error) {
+	reservationID = strings.TrimSpace(reservationID)
+	if reservationID == "" {
+		return nil, fmt.Errorf("promotion funding reservation id is required")
+	}
+	if strings.TrimSpace(idempotencyKey) == "" {
+		idempotencyKey = deterministicMutationKey("promotion-funding-"+action, reservationID, input.OrderID)
+	}
+	if strings.TrimSpace(correlationID) == "" {
+		correlationID = reservationID
+	}
 	return c.promotionFundingRequest(
 		ctx,
 		http.MethodPost,
-		"/wlt/promotion-funding/reservations/"+url.PathEscape(strings.TrimSpace(reservationID))+"/"+action,
+		"/wlt/promotion-funding/reservations/"+url.PathEscape(reservationID)+"/"+action,
 		input.TenantID,
 		idempotencyKey,
 		correlationID,
