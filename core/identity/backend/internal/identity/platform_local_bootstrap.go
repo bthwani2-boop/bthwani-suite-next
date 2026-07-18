@@ -14,6 +14,7 @@ var platformPrivilegedActions = map[string]struct{}{
 	"platform:variables:approve":  {},
 	"platform:variables:apply":    {},
 	"platform:variables:rollback": {},
+	"platform:rollouts:manage":    {},
 }
 
 // BootstrapLocalPlatformActors applies separation of duties to the local
@@ -64,6 +65,18 @@ func (r *Repository) BootstrapLocalPlatformActors(ctx context.Context, input Loc
 				{Service: "dsh", Surface: "control-panel", Action: "platform:audit:read", Scope: "all"},
 				{Service: "dsh", Surface: "control-panel", Action: "platform:variables:apply", Scope: "all"},
 				{Service: "dsh", Surface: "control-panel", Action: "platform:variables:rollback", Scope: "all"},
+			},
+		},
+		{
+			id:       "platform-rollout-manager-local-001",
+			username: "platform-rollout-manager",
+			role:     "platform-rollout-manager",
+			phone:    "+967770000103",
+			permissions: []Permission{
+				{Service: "dsh", Surface: "control-panel", Action: "platform:read", Scope: "all"},
+				{Service: "dsh", Surface: "control-panel", Action: "platform:health:read", Scope: "all"},
+				{Service: "dsh", Surface: "control-panel", Action: "platform:audit:read", Scope: "all"},
+				{Service: "dsh", Surface: "control-panel", Action: "platform:rollouts:manage", Scope: "all"},
 			},
 		},
 	}
