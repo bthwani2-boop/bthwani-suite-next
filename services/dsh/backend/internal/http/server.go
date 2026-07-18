@@ -204,21 +204,21 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("POST /dsh/client/marketing/subscriptions/{purchaseId}/activate", protected.handleActivateClientSubscription)
 	mux.HandleFunc("GET /dsh/client/benefits", protected.handleClientBenefits)
 
-	// Central Catalog
+	// Central Catalog compatibility surface.
 	mux.HandleFunc("GET /dsh/catalog/domains", protected.handleListCatalogDomains)
 	mux.HandleFunc("POST /dsh/catalog/domains", protected.handleCreateCatalogDomain)
-	mux.HandleFunc("PATCH /dsh/catalog/domains/{domainId}", protected.handleUpdateCatalogDomain)
+	mux.HandleFunc("PATCH /dsh/catalog/domains/{domainId}", protected.handleUpdateCatalogDomainAtomic)
 	mux.HandleFunc("GET /dsh/catalog/nodes", protected.handleListCatalogNodes)
 	mux.HandleFunc("POST /dsh/catalog/nodes", protected.handleCreateCatalogNode)
-	mux.HandleFunc("PATCH /dsh/catalog/nodes/{nodeId}", protected.handleUpdateCatalogNode)
+	mux.HandleFunc("PATCH /dsh/catalog/nodes/{nodeId}", protected.handleUpdateCatalogNodeAtomic)
 	mux.HandleFunc("GET /dsh/catalog/master-products", protected.handleListCatalogMasterProducts)
 	mux.HandleFunc("POST /dsh/catalog/master-products", protected.handleCreateCatalogMasterProduct)
-	mux.HandleFunc("PATCH /dsh/catalog/master-products/{productId}", protected.handleUpdateCatalogMasterProduct)
+	mux.HandleFunc("PATCH /dsh/catalog/master-products/{productId}", protected.handleUpdateCatalogMasterProductAtomic)
 	mux.HandleFunc("GET /dsh/catalog/proposals", protected.handleListCatalogProposals)
 	mux.HandleFunc("POST /dsh/catalog/proposals/{proposalId}/decision", protected.handleDecideCatalogProposal)
 	mux.HandleFunc("POST /dsh/catalog/proposals/{proposalId}/transitions", protected.handleTransitionCatalogProposal)
 	mux.HandleFunc("GET /dsh/catalog/policies", protected.handleListCatalogPlatformPolicies)
-	mux.HandleFunc("PATCH /dsh/catalog/policies/{policyId}", protected.handleUpdateCatalogPlatformPolicy)
+	mux.HandleFunc("PATCH /dsh/catalog/policies/{policyId}", protected.handleUpdateCatalogPlatformPolicyAtomic)
 	mux.HandleFunc("GET /dsh/catalog/stores/{storeId}/assortment", protected.handleGetOperatorStoreAssortment)
 	mux.HandleFunc("PUT /dsh/catalog/stores/{storeId}/assortment/{masterProductId}", protected.handleUpsertOperatorStoreAssortment)
 	mux.HandleFunc("GET /dsh/field/catalog/domains", protected.handleListFieldCatalogDomains)
@@ -234,5 +234,6 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("GET /dsh/partner/catalog/assortment", protected.handleGetPartnerStoreAssortment)
 	mux.HandleFunc("PUT /dsh/partner/catalog/assortment/{masterProductId}", protected.handleUpsertPartnerStoreAssortment)
 
+	registerUnifiedCatalogRoutes(mux, protected)
 	return mux
 }
