@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS dsh_coupon_redemptions (
     coupon_id                    UUID NOT NULL REFERENCES dsh_coupons(id) ON DELETE RESTRICT,
     client_actor_id              TEXT NOT NULL,
     cart_id                      UUID NOT NULL REFERENCES dsh_carts(id) ON DELETE RESTRICT,
-    checkout_intent_id           UUID NOT NULL REFERENCES dsh_checkout_intents(id) ON DELETE RESTRICT,
+    checkout_intent_id           UUID NOT NULL,
     order_id                     UUID REFERENCES dsh_orders(id) ON DELETE RESTRICT,
     status                       TEXT NOT NULL DEFAULT 'reserved'
                                  CHECK (status IN ('reserved','committed','released','reversed')),
@@ -69,6 +69,11 @@ CREATE TABLE IF NOT EXISTS dsh_coupon_redemptions (
     release_reason               TEXT NOT NULL DEFAULT '',
     created_at                   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at                   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT fk_dsh_coupon_redemption_checkout_intent
+        FOREIGN KEY (checkout_intent_id)
+        REFERENCES dsh_checkout_intents(id)
+        ON DELETE RESTRICT
+        DEFERRABLE INITIALLY DEFERRED,
     UNIQUE (checkout_intent_id),
     UNIQUE (order_id)
 );
