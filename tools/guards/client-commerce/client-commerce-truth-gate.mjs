@@ -10,9 +10,31 @@ const checks = [
       [/\blocalStorage\b/g, "LOCAL_ADDRESS_TRUTH_FORBIDDEN"],
       [/\bSEED_ADDRESSES\b|\bMAP_PRESETS\b/g, "SEEDED_ADDRESS_OR_MAP_FORBIDDEN"],
       [/Math\.random\s*\(/g, "RANDOM_LOCATION_SUCCESS_FORBIDDEN"],
-      [/تم التقاط الإحداثيات بنجاح/g, "FAKE_LOCATION_SUCCESS_COPY_FORBIDDEN"],
+      [/دفتر العناوين غير مفعّل/g, "ADDRESS_PLACEHOLDER_FORBIDDEN"],
+      [/onPress=\{\(\)\s*=>\s*\{\s*\}\}/g, "DEAD_ADDRESS_ACTION_FORBIDDEN"],
     ],
-    required: ["دفتر العناوين غير مفعّل", "داخل السلة", "DSH"],
+    required: [
+      "useClientAddressController",
+      "createAddress",
+      "updateAddress",
+      "deleteAddress",
+      "makeDefault",
+      "Location.getCurrentPositionAsync",
+      "position.mocked === true",
+    ],
+  },
+  {
+    file: "services/dsh/frontend/shared/client-address/client-address.api.ts",
+    forbidden: [
+      [/\blocalStorage\b|\bsessionStorage\b/g, "LOCAL_ADDRESS_PERSISTENCE_FORBIDDEN"],
+      [/deliveryAddress:\s*/g, "CLIENT_SUPPLIED_ADDRESS_SNAPSHOT_FORBIDDEN"],
+    ],
+    required: [
+      '"Idempotency-Key"',
+      '"X-Correlation-ID"',
+      '"If-Match-Version"',
+      "/dsh/client/addresses",
+    ],
   },
   {
     file: "services/dsh/frontend/app-client/DshClientSurface.tsx",
@@ -20,7 +42,14 @@ const checks = [
       [/serviceAreaCode=["']sana["']/g, "HARDCODED_CHECKOUT_AREA_FORBIDDEN"],
       [/\bas\s+ClientTab\b/g, "UNSAFE_CLIENT_TAB_CAST_FORBIDDEN"],
     ],
-    required: ["isClientTab", "ClientCheckoutRoute", "openOrderTracking"],
+    required: [
+      "isClientTab",
+      "ClientCheckoutRoute",
+      "openOrderTracking",
+      "openAddressBookFromCart",
+      "returnFromAddressBookToCart",
+      "onManageAddresses={openAddressBookFromCart}",
+    ],
   },
   {
     file: "services/dsh/frontend/app-client/cart/CartScreen.tsx",
@@ -31,14 +60,18 @@ const checks = [
       [/\bfindClosestCartLandmark\b|\bmapPositionToCartCoordinates\b/g, "SIMULATED_CART_MAP_FORBIDDEN"],
       [/15\.3520|44\.1780|حي الأصبحي/g, "HARDCODED_CLIENT_LOCATION_FORBIDDEN"],
       [/\bany\b/g, "UNSAFE_CART_ANY_FORBIDDEN"],
-      [/serviceAreaCode\s*=\s*["'][^"']+["']/g, "DEFAULT_SERVICE_AREA_FORBIDDEN"],
+      [/setAddress\s*\(|setAreaCode\s*\(|latitudeText|longitudeText/g, "DUPLICATE_CART_ADDRESS_TRUTH_FORBIDDEN"],
+      [/parseCoordinates/g, "MANUAL_CART_COORDINATE_PARSE_FORBIDDEN"],
     ],
     required: [
       "useServiceabilityController",
-      "serviceabilityController.check",
-      "parseCoordinates",
+      "selectedAddress.serviceAreaCode",
+      "selectedAddress.latitude",
+      "selectedAddress.longitude",
+      "selectedAddress?.id",
+      "onManageAddresses",
       "useWltDshPaymentController",
-      "onProceedToCheckout",
+      "deliveryAddressId",
     ],
   },
   {
@@ -47,14 +80,94 @@ const checks = [
       [/serviceAreaCode\s*=\s*["'][^"']+["']/g, "DEFAULT_CHECKOUT_AREA_FORBIDDEN"],
       [/\bwantsCheckout\b/g, "DEFERRED_AUTH_GATE_CAN_TRAP_CART_FORBIDDEN"],
       [/authKind=\{[^}]*unauthenticated/g, "UNAUTHENTICATED_CART_LOAD_FORBIDDEN"],
+      [/deliveryAddress:\s*/g, "CLIENT_CHECKOUT_ADDRESS_SNAPSHOT_FORBIDDEN"],
     ],
     required: [
       "useStoreDetailController",
-      "store.serviceAreaCode",
+      "useClientAddressController",
+      "selectedAddress={addressController.selectedAddress}",
       "identity.state.kind !== \"authenticated\"",
       'authKind="authenticated"',
-      "couponCode",
+      "deliveryAddressId",
     ],
+  },
+  {
+    file: "services/dsh/frontend/app-client/checkout/GovernedCheckoutScreen.tsx",
+    forbidden: [[/deliveryAddress\s*=/g, "RAW_ADDRESS_PROP_FORBIDDEN"]],
+    required: [
+      "deliveryAddressId",
+      "DshCreateIntentInput",
+      "intent.deliveryAddress",
+    ],
+  },
+  {
+    file: "services/dsh/backend/internal/http/checkout.go",
+    forbidden: [
+      [/DeliveryAddress\s+string\s+`json:"deliveryAddress"`/g, "CLIENT_ADDRESS_SNAPSHOT_INPUT_FORBIDDEN"],
+      [/DeliveryAddress:\s*body\./g, "UNTRUSTED_ADDRESS_SNAPSHOT_FORBIDDEN"],
+    ],
+    required: [
+      "DeliveryAddressID string `json:\"deliveryAddressId\"`",
+      "clientaddress.GetOwned",
+      "cart.CheckServiceability",
+      "address.CheckoutSnapshot()",
+      "CreatePricedIntentWithAddressTx",
+    ],
+  },
+  {
+    file: "services/dsh/backend/internal/http/client_addresses.go",
+    forbidden: [[/r\.URL\.Query\(\)\.Get\(["']clientId["']\)/g, "ENUMERABLE_CLIENT_ADDRESS_OWNER_FORBIDDEN"]],
+    required: [
+      'requireActor(w, r, "client")',
+      'r.Header.Get("Idempotency-Key")',
+      'r.Header.Get("If-Match-Version")',
+      "clientaddress.Create",
+      "clientaddress.Update",
+      "clientaddress.Delete",
+      "clientaddress.SetDefault",
+    ],
+  },
+  {
+    file: "services/dsh/backend/internal/clientaddress/address.go",
+    required: [
+      "WHERE id = $1 AND client_id = $2 AND deleted_at IS NULL",
+      "UNIQUE",
+      "CheckoutSnapshot",
+      "pg_advisory_xact_lock",
+      "ErrConflict",
+    ],
+    forbidden: [],
+  },
+  {
+    file: "services/dsh/database/migrations/dsh-056_client_addresses.sql",
+    required: [
+      "dsh_client_addresses",
+      "uq_dsh_client_addresses_single_default",
+      "UNIQUE (client_id, create_idempotency_key)",
+      "dsh_client_address_events",
+    ],
+    forbidden: [],
+  },
+  {
+    file: "services/dsh/database/migrations/dsh-057_checkout_address_reference.sql",
+    required: [
+      "delivery_address_id",
+      "fk_dsh_checkout_intents_delivery_address",
+      "REFERENCES dsh_client_addresses(id)",
+    ],
+    forbidden: [],
+  },
+  {
+    file: "services/dsh/contracts/dsh.client-address.openapi.yaml",
+    required: [
+      "listDshClientAddresses",
+      "createDshClientAddress",
+      "updateDshClientAddress",
+      "deleteDshClientAddress",
+      "setDshClientDefaultAddress",
+      "x-bthwani-client-binding: MANUAL_TYPED_ADAPTER",
+    ],
+    forbidden: [],
   },
   {
     file: "services/dsh/frontend/app-client/store/StoreMeasurementSheet.tsx",
@@ -64,12 +177,7 @@ const checks = [
       [/parseFloat\s*\(/g, "LOCAL_PRODUCT_PRICE_PARSE_FORBIDDEN"],
       [/basePrice\s*\*/g, "LOCAL_PRODUCT_PRICE_CALCULATION_FORBIDDEN"],
     ],
-    required: [
-      "Quantity-only product sheet",
-      "server resolves",
-      "isSubmitting",
-      "errorMessage",
-    ],
+    required: ["Quantity-only product sheet", "server resolves", "isSubmitting", "errorMessage"],
   },
   {
     file: "services/dsh/frontend/app-client/store/StoreDetailShell.tsx",
@@ -104,11 +212,7 @@ const checks = [
       [/grandTotal/g, "LOCAL_WLT_TOTAL_INPUT_FORBIDDEN"],
       [/amountRows/g, "LOCAL_WLT_AMOUNT_BREAKDOWN_FORBIDDEN"],
     ],
-    required: [
-      "never calculates totals",
-      'useState<PaymentMethodKey>("cod")',
-      "مزود WLT الحقيقي",
-    ],
+    required: ["never calculates totals", 'useState<PaymentMethodKey>("cod")', "مزود WLT الحقيقي"],
   },
 ];
 
@@ -116,11 +220,7 @@ for (const check of checks) {
   const content = read(check.file);
   for (const [pattern, message] of check.forbidden) {
     for (const match of content.matchAll(pattern)) {
-      violations.push({
-        file: check.file,
-        line: lineNumber(content, match.index),
-        message,
-      });
+      violations.push({ file: check.file, line: lineNumber(content, match.index), message });
     }
   }
   for (const marker of check.required) {
