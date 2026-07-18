@@ -75,7 +75,6 @@ export function PartnerFleetConnectionCard({ onMembershipStateChange }: Props) {
           placeholder="مثال: ABCDE-23456"
           value={connectionCode}
           onChangeText={setConnectionCode}
-          autoCapitalize="characters"
         />
         <View style={{ flexDirection: "row-reverse", gap: spacing[2], flexWrap: "wrap" }}>
           <Button
@@ -87,7 +86,7 @@ export function PartnerFleetConnectionCard({ onMembershipStateChange }: Props) {
           />
           <Button
             label="تحديث العضويات"
-            tone="neutral"
+            tone="secondary"
             fullWidth={false}
             disabled={loading}
             onPress={() => void loadMemberships()}
