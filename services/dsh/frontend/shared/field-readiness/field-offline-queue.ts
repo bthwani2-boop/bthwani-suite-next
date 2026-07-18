@@ -9,6 +9,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export type FieldOfflineOperationType =
+  | "create_visit"
   | "complete_visit"
   | "upsert_readiness_check"
   | "create_escalation"
