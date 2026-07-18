@@ -57,7 +57,7 @@ function actionsForStatus(status: string): readonly PayoutAction[] {
 function formatMoney(amountMinorUnits: number, currency: string): string {
   try {
     const formatter = new Intl.NumberFormat("ar-YE", { style: "currency", currency });
-    const fractionDigits = formatter.resolvedOptions().maximumFractionDigits;
+    const fractionDigits = formatter.resolvedOptions().maximumFractionDigits ?? 0;
     return formatter.format(amountMinorUnits / (10 ** fractionDigits));
   } catch {
     return `${amountMinorUnits.toLocaleString("ar-YE")} ${currency}`;

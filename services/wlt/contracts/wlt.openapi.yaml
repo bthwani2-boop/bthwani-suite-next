@@ -948,11 +948,12 @@ paths:
   /wlt/settlements:
     post:
       operationId: createWltSettlement
-      summary: Create a partner settlement record.
+      summary: Create a partner settlement from immutable delivered-order sources.
       description: >-
-        Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless
-        WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
-      x-bthwani-mutation-approved: false
+        DSH supplies server-derived delivered order identities, immutable gross snapshots and delivery timestamps.
+        WLT owns the active fee policy and computes gross, platform fee, partner net and order count.
+        Caller-supplied financial totals are forbidden. The mutation remains disabled unless WLT_MUTATIONS_ENABLED=true.
+      x-bthwani-mutation-approved: true
       x-bthwani-default-enabled: false
       tags:
         - WltSettlements
@@ -964,7 +965,7 @@ paths:
               $ref: "#/components/schemas/WltCreateSettlementRequest"
       responses:
         "201":
-          description: Settlement created.
+          description: Governed settlement created.
           content:
             application/json:
               schema:
@@ -973,6 +974,8 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
     get:
       operationId: listWltSettlements
       summary: List settlements by partnerId.
@@ -1112,6 +1115,35 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+
+  /wlt/settlement-policies/{partnerId}:
+    put:
+      operationId: upsertWltSettlementPolicy
+      summary: Upsert a partner settlement fee policy owned by WLT.
+      description: Mutation-gated and service-authenticated.
+      x-bthwani-mutation-approved: true
+      x-bthwani-default-enabled: false
+      tags: [WltSettlements]
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WltSettlementPolicyRequest"
+      responses:
+        "200":
+          description: Settlement policy persisted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WltSettlementPolicyResponse"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
   /wlt/cod-records:
     post:
@@ -2451,37 +2483,56 @@ components:
 
     WltCreateSettlementRequest:
       type: object
-      required:
-        - partnerId
-        - periodStart
-        - periodEnd
-        - grossAmount
-        - platformFee
-        - netAmount
+      additionalProperties: false
+      required: [partnerId, periodStart, periodEnd, orderSources, operatorId]
       properties:
-        partnerId:
-          type: string
-        periodStart:
-          type: string
-          format: date
-        periodEnd:
-          type: string
-          format: date
-        grossAmount:
-          type: integer
-          format: int64
-        platformFee:
-          type: integer
-          format: int64
-        netAmount:
-          type: integer
-          format: int64
-        currency:
-          type: string
-          default: YER
-        orderCount:
-          type: integer
-          default: 0
+        partnerId: { type: string, minLength: 1 }
+        periodStart: { type: string, format: date }
+        periodEnd: { type: string, format: date }
+        operatorId: { type: string, minLength: 1 }
+        orderSources:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/WltDeliveredOrderSettlementSource"
+
+    WltDeliveredOrderSettlementSource:
+      type: object
+      additionalProperties: false
+      required: [orderId, grossAmountMinorUnits, currency, deliveredAt]
+      properties:
+        orderId: { type: string, minLength: 1 }
+        grossAmountMinorUnits: { type: integer, format: int64, minimum: 1 }
+        currency: { type: string, minLength: 1 }
+        deliveredAt: { type: string, format: date-time }
+
+    WltSettlementPolicyRequest:
+      type: object
+      additionalProperties: false
+      required: [feeBasisPoints, operatorId]
+      properties:
+        feeBasisPoints: { type: integer, minimum: 0, maximum: 10000 }
+        currency: { type: string, default: YER }
+        status: { type: string, enum: [active, inactive], default: active }
+        operatorId: { type: string, minLength: 1 }
+
+    WltSettlementPolicy:
+      type: object
+      required: [partnerId, feeBasisPoints, currency, status, updatedByOperatorId, updatedAt]
+      properties:
+        partnerId: { type: string }
+        feeBasisPoints: { type: integer }
+        currency: { type: string }
+        status: { type: string, enum: [active, inactive] }
+        updatedByOperatorId: { type: string }
+        updatedAt: { type: string, format: date-time }
+
+    WltSettlementPolicyResponse:
+      type: object
+      required: [settlementPolicy]
+      properties:
+        settlementPolicy:
+          $ref: "#/components/schemas/WltSettlementPolicy"
 
     WltSettlementResponse:
       type: object

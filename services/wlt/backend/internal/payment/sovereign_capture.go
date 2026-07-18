@@ -52,7 +52,7 @@ func CaptureSessionWithProviderSovereign(ctx context.Context, db *sql.DB, client
 		SET status = 'captured', provider_reference = $2, captured_at = NOW(), updated_at = NOW()
 		WHERE id = $1 AND status = 'capture_pending'
 		RETURNING id, checkout_intent_id, special_request_id,
-		          COALESCE(to_jsonb(wlt_payment_sessions)->>'tenant_id', 'tenant-dev-001'),
+		          tenant_id,
 		          client_id, store_id, payment_method,
 		          status, provider_reference, amount_minor_units, currency,
 		          captured_at, created_at, updated_at`

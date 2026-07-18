@@ -79,6 +79,9 @@ func (c *Client) CreatePaymentSession(ctx context.Context, input CreatePaymentSe
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
+	if input.TenantID != "" {
+		req.Header.Set("X-Tenant-ID", input.TenantID)
+	}
 	if input.CorrelationID != "" {
 		req.Header.Set("X-Correlation-ID", input.CorrelationID)
 	} else if input.SpecialRequestID != "" {

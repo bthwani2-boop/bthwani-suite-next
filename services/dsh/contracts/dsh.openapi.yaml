@@ -2823,6 +2823,69 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /dsh/control-panel/finance/settlements/from-delivered-orders:
+    post:
+      operationId: createDshGovernedSettlementFromDeliveredOrders
+      summary: Derive eligible delivered-order sources in DSH and ask WLT to calculate the settlement.
+      tags: [DshFinanceProxy]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [partnerId, periodStart, periodEnd]
+              properties:
+                partnerId: { type: string, minLength: 1 }
+                periodStart: { type: string, format: date }
+                periodEnd: { type: string, format: date }
+                currency: { type: string, default: YER }
+      responses:
+        "201":
+          description: Governed WLT settlement created from DSH-owned delivered-order sources.
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/control-panel/finance/settlement-policies/{partnerId}:
+    put:
+      operationId: upsertDshSettlementPolicy
+      summary: Upsert the WLT-owned partner settlement fee policy.
+      tags: [DshFinanceProxy]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [feeBasisPoints]
+              properties:
+                feeBasisPoints: { type: integer, minimum: 0, maximum: 10000 }
+                currency: { type: string, default: YER }
+                status: { type: string, enum: [active, inactive], default: active }
+      responses:
+        "200":
+          description: Settlement policy persisted by WLT.
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /dsh/control-panel/finance/reconciliation-cases:
     get:
       operationId: listDshControlPanelFinanceReconciliationCases

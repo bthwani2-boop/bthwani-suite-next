@@ -560,8 +560,8 @@ export interface paths {
         get: operations["listWltSettlements"];
         put?: never;
         /**
-         * Create a partner settlement record.
-         * @description Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
+         * Create a partner settlement from immutable delivered-order sources.
+         * @description DSH supplies server-derived delivered order identities, immutable gross snapshots and delivery timestamps. WLT owns the active fee policy and computes gross, platform fee, partner net and order count. Caller-supplied financial totals are forbidden. The mutation remains disabled unless WLT_MUTATIONS_ENABLED=true.
          */
         post: operations["createWltSettlement"];
         delete?: never;
@@ -618,6 +618,26 @@ export interface paths {
          * @description Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
          */
         post: operations["postWltSettlement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/settlement-policies/{partnerId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Upsert a partner settlement fee policy owned by WLT.
+         * @description Mutation-gated and service-authenticated.
+         */
+        put: operations["upsertWltSettlementPolicy"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1201,16 +1221,40 @@ export interface components {
             periodStart: string;
             /** Format: date */
             periodEnd: string;
+            operatorId: string;
+            orderSources: components["schemas"]["WltDeliveredOrderSettlementSource"][];
+        };
+        WltDeliveredOrderSettlementSource: {
+            orderId: string;
             /** Format: int64 */
-            grossAmount: number;
-            /** Format: int64 */
-            platformFee: number;
-            /** Format: int64 */
-            netAmount: number;
+            grossAmountMinorUnits: number;
+            currency: string;
+            /** Format: date-time */
+            deliveredAt: string;
+        };
+        WltSettlementPolicyRequest: {
+            feeBasisPoints: number;
             /** @default YER */
             currency: string;
-            /** @default 0 */
-            orderCount: number;
+            /**
+             * @default active
+             * @enum {string}
+             */
+            status: "active" | "inactive";
+            operatorId: string;
+        };
+        WltSettlementPolicy: {
+            partnerId: string;
+            feeBasisPoints: number;
+            currency: string;
+            /** @enum {string} */
+            status: "active" | "inactive";
+            updatedByOperatorId: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        WltSettlementPolicyResponse: {
+            settlementPolicy: components["schemas"]["WltSettlementPolicy"];
         };
         WltSettlementResponse: {
             settlement: components["schemas"]["WltSettlement"];
@@ -2376,7 +2420,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Settlement created. */
+            /** @description Governed settlement created. */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -2387,6 +2431,7 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
         };
     };
     getWltSettlementSummary: {
@@ -2468,6 +2513,34 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    upsertWltSettlementPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WltSettlementPolicyRequest"];
+            };
+        };
+        responses: {
+            /** @description Settlement policy persisted. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WltSettlementPolicyResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
         };
     };
     listWltCodRecords: {
