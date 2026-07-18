@@ -17,15 +17,17 @@ func writeCouponError(w http.ResponseWriter, err error) {
 	case errors.Is(err, coupons.ErrVersionConflict):
 		store.SendError(w, http.StatusConflict, "VERSION_CONFLICT", "coupon changed; reload before retrying")
 	case errors.Is(err, coupons.ErrConflict):
-		store.SendError(w, http.StatusConflict, "COUPON_CONFLICT", "coupon state conflicts with this action")
+		store.SendError(w, http.StatusConflict, "COUPON_CONFLICT", "coupon state or approval conflicts with this action")
 	case errors.Is(err, coupons.ErrInactive):
 		store.SendError(w, http.StatusConflict, "COUPON_INACTIVE", "coupon is inactive")
 	case errors.Is(err, coupons.ErrNotEligible):
 		store.SendError(w, http.StatusUnprocessableEntity, "COUPON_NOT_ELIGIBLE", "coupon is not eligible")
 	case errors.Is(err, coupons.ErrUsageLimit):
 		store.SendError(w, http.StatusConflict, "COUPON_USAGE_LIMIT", "coupon usage limit reached")
-	case errors.Is(err, coupons.ErrFundingPolicy), errors.Is(err, coupons.ErrInvalid):
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "coupon input or funding policy is invalid")
+	case errors.Is(err, coupons.ErrFundingPolicy):
+		store.SendError(w, http.StatusBadRequest, "INVALID_FUNDING_POLICY", "coupon funding shares or sponsor are invalid")
+	case errors.Is(err, coupons.ErrInvalid):
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "coupon input is invalid")
 	default:
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "coupon action failed")
 	}
@@ -37,13 +39,6 @@ func couponStringPointer(value string) *string {
 		return nil
 	}
 	return &value
-}
-
-func couponOptionalString(value *string) *string {
-	if value == nil {
-		return nil
-	}
-	return couponStringPointer(*value)
 }
 
 func couponNullableStringUpdate(value *string) **string {
@@ -66,24 +61,42 @@ func couponTime(value string) (*time.Time, error) {
 	return &parsed, nil
 }
 
+func resolvedFundingCreate(source string, platformShare, partnerShare int, sponsorID, fundingPartnerID string) (string, int, int, *string) {
+	source = strings.TrimSpace(source)
+	if source == "" {
+		source = "platform"
+	}
+	if platformShare == 0 && partnerShare == 0 {
+		switch source {
+		case "platform":
+			platformShare = 10000
+		case "partner":
+			partnerShare = 10000
+		}
+	}
+	if partnerShare == 0 && platformShare > 0 && platformShare < 10000 {
+		partnerShare = 10000 - platformShare
+	}
+	if platformShare == 0 && partnerShare > 0 && partnerShare < 10000 {
+		platformShare = 10000 - partnerShare
+	}
+	sponsor := couponStringPointer(sponsorID)
+	if sponsor == nil {
+		sponsor = couponStringPointer(fundingPartnerID)
+	}
+	return source, platformShare, partnerShare, sponsor
+}
+
 func (s *protectedStoreServer) handleListCoupons(w http.ResponseWriter, r *http.Request) {
 	if _, ok := s.requirePermission(w, r, "control-panel", MarketingPermissionRead, "operator"); !ok {
 		return
 	}
-	items, err := coupons.List(s.db)
+	items, err := coupons.ListGoverned(s.db)
 	if err != nil {
 		writeCouponError(w, err)
 		return
 	}
-	fundingPolicies, err := coupons.ListFundingPolicies(r.Context(), s.db)
-	if err != nil {
-		writeCouponError(w, err)
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{
-		"coupons":         items,
-		"fundingPolicies": fundingPolicies,
-	})
+	store.SendJSON(w, http.StatusOK, map[string]any{"coupons": items})
 }
 
 func (s *protectedStoreServer) handleCreateCoupon(w http.ResponseWriter, r *http.Request) {
@@ -95,7 +108,7 @@ func (s *protectedStoreServer) handleCreateCoupon(w http.ResponseWriter, r *http
 		NameAr                   string   `json:"nameAr"`
 		Description              string   `json:"description"`
 		Code                     string   `json:"code"`
-		StoreID                  *string  `json:"storeId"`
+		StoreID                  string   `json:"storeId"`
 		DiscountType             string   `json:"discountType"`
 		DiscountPercent          float64  `json:"discountPercent"`
 		FixedDiscountMinorUnits  int64    `json:"fixedDiscountMinorUnits"`
@@ -105,8 +118,10 @@ func (s *protectedStoreServer) handleCreateCoupon(w http.ResponseWriter, r *http
 		PerClientUsageLimit      int      `json:"perClientUsageLimit"`
 		EligibleFulfillmentModes []string `json:"eligibleFulfillmentModes"`
 		FundingSource            string   `json:"fundingSource"`
-		PlatformShareBPS         int      `json:"platformShareBps"`
-		FundingPartnerID         *string  `json:"fundingPartnerId"`
+		PlatformShareBps         int      `json:"platformShareBps"`
+		PartnerShareBps          int      `json:"partnerShareBps"`
+		SponsorID                string   `json:"sponsorId"`
+		FundingPartnerID         string   `json:"fundingPartnerId"`
 		StartsAt                 string   `json:"startsAt"`
 		EndsAt                   string   `json:"endsAt"`
 	}
@@ -123,36 +138,27 @@ func (s *protectedStoreServer) handleCreateCoupon(w http.ResponseWriter, r *http
 		writeCouponError(w, err)
 		return
 	}
-	issued, fundingPolicy, err := coupons.CreateGoverned(r.Context(), s.db, coupons.GovernedCreateInput{
+	fundingSource, platformShare, partnerShare, sponsorID := resolvedFundingCreate(
+		body.FundingSource, body.PlatformShareBps, body.PartnerShareBps, body.SponsorID, body.FundingPartnerID,
+	)
+	issued, err := coupons.CreateGoverned(r.Context(), s.db, coupons.GovernedCreateInput{
 		CreateInput: coupons.CreateInput{
-			NameAr:                   body.NameAr,
-			Description:              body.Description,
-			Code:                     body.Code,
-			StoreID:                  couponOptionalString(body.StoreID),
-			DiscountType:             body.DiscountType,
-			DiscountPercent:          body.DiscountPercent,
-			FixedDiscountMinorUnits:  body.FixedDiscountMinorUnits,
-			MaxDiscountMinorUnits:    body.MaxDiscountMinorUnits,
-			MinSubtotalMinorUnits:    body.MinSubtotalMinorUnits,
-			GlobalUsageLimit:         body.GlobalUsageLimit,
-			PerClientUsageLimit:      body.PerClientUsageLimit,
+			NameAr: body.NameAr, Description: body.Description, Code: body.Code,
+			StoreID: couponStringPointer(body.StoreID), DiscountType: body.DiscountType,
+			DiscountPercent: body.DiscountPercent, FixedDiscountMinorUnits: body.FixedDiscountMinorUnits,
+			MaxDiscountMinorUnits: body.MaxDiscountMinorUnits, MinSubtotalMinorUnits: body.MinSubtotalMinorUnits,
+			GlobalUsageLimit: body.GlobalUsageLimit, PerClientUsageLimit: body.PerClientUsageLimit,
 			EligibleFulfillmentModes: body.EligibleFulfillmentModes,
-			StartsAt:                 startsAt,
-			EndsAt:                   endsAt,
-			ActorID:                  actor.ID,
+			StartsAt: startsAt, EndsAt: endsAt, ActorID: actor.ID,
 		},
-		FundingSource:    body.FundingSource,
-		PlatformShareBPS: body.PlatformShareBPS,
-		FundingPartnerID: couponOptionalString(body.FundingPartnerID),
+		FundingSource: fundingSource, PlatformShareBps: platformShare,
+		PartnerShareBps: partnerShare, SponsorID: sponsorID,
 	})
 	if err != nil {
 		writeCouponError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusCreated, map[string]any{
-		"issued":        issued,
-		"fundingPolicy": fundingPolicy,
-	})
+	store.SendJSON(w, http.StatusCreated, map[string]any{"issued": issued})
 }
 
 func (s *protectedStoreServer) handleUpdateCoupon(w http.ResponseWriter, r *http.Request) {
@@ -173,7 +179,9 @@ func (s *protectedStoreServer) handleUpdateCoupon(w http.ResponseWriter, r *http
 		PerClientUsageLimit      *int      `json:"perClientUsageLimit"`
 		EligibleFulfillmentModes *[]string `json:"eligibleFulfillmentModes"`
 		FundingSource            *string   `json:"fundingSource"`
-		PlatformShareBPS         *int      `json:"platformShareBps"`
+		PlatformShareBps         *int      `json:"platformShareBps"`
+		PartnerShareBps          *int      `json:"partnerShareBps"`
+		SponsorID                *string   `json:"sponsorId"`
 		FundingPartnerID         *string   `json:"fundingPartnerId"`
 		StartsAt                 *string   `json:"startsAt"`
 		EndsAt                   *string   `json:"endsAt"`
@@ -183,25 +191,11 @@ func (s *protectedStoreServer) handleUpdateCoupon(w http.ResponseWriter, r *http
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	current, err := coupons.Get(s.db, r.PathValue("couponId"))
+	current, err := coupons.GetGoverned(s.db, r.PathValue("couponId"))
 	if err != nil {
 		writeCouponError(w, err)
 		return
 	}
-	termsChanged := body.NameAr != nil || body.Description != nil || body.StoreID != nil ||
-		body.DiscountType != nil || body.DiscountPercent != nil || body.FixedDiscountMinorUnits != nil ||
-		body.MaxDiscountMinorUnits != nil || body.MinSubtotalMinorUnits != nil || body.GlobalUsageLimit != nil ||
-		body.PerClientUsageLimit != nil || body.EligibleFulfillmentModes != nil || body.FundingSource != nil ||
-		body.PlatformShareBPS != nil || body.FundingPartnerID != nil || body.StartsAt != nil || body.EndsAt != nil
-	if current.Status == "active" && termsChanged {
-		store.SendError(w, http.StatusConflict, "ACTIVE_COUPON_IMMUTABLE", "pause the active coupon before changing its terms")
-		return
-	}
-	if body.Status != nil && *body.Status == "active" && current.CreatedByActorID == actor.ID {
-		store.SendError(w, http.StatusConflict, "SEPARATION_OF_DUTIES_REQUIRED", "coupon creator cannot approve the same coupon")
-		return
-	}
-
 	var startsAt **time.Time
 	if body.StartsAt != nil {
 		value, parseErr := couponTime(*body.StartsAt)
@@ -220,36 +214,28 @@ func (s *protectedStoreServer) handleUpdateCoupon(w http.ResponseWriter, r *http
 		}
 		endsAt = &value
 	}
-
-	updated, fundingPolicy, err := coupons.UpdateGoverned(r.Context(), s.db, current.ID, coupons.GovernedUpdateInput{
+	var sponsorID **string
+	if body.SponsorID != nil {
+		sponsorID = couponNullableStringUpdate(body.SponsorID)
+	} else if body.FundingPartnerID != nil {
+		sponsorID = couponNullableStringUpdate(body.FundingPartnerID)
+	}
+	updated, err := coupons.UpdateGoverned(r.Context(), s.db, current.ID, coupons.GovernedUpdateInput{
 		UpdateInput: coupons.UpdateInput{
-			NameAr:                   body.NameAr,
-			Description:              body.Description,
-			StoreID:                  couponNullableStringUpdate(body.StoreID),
-			DiscountType:             body.DiscountType,
-			DiscountPercent:          body.DiscountPercent,
-			FixedDiscountMinorUnits:  body.FixedDiscountMinorUnits,
-			MaxDiscountMinorUnits:    body.MaxDiscountMinorUnits,
-			MinSubtotalMinorUnits:    body.MinSubtotalMinorUnits,
-			GlobalUsageLimit:         body.GlobalUsageLimit,
-			PerClientUsageLimit:      body.PerClientUsageLimit,
-			EligibleFulfillmentModes: body.EligibleFulfillmentModes,
-			StartsAt:                 startsAt,
-			EndsAt:                   endsAt,
-			Status:                   body.Status,
-			ExpectedVersion:          body.ExpectedVersion,
-			ActorID:                  actor.ID,
+			NameAr: body.NameAr, Description: body.Description, StoreID: couponNullableStringUpdate(body.StoreID),
+			DiscountType: body.DiscountType, DiscountPercent: body.DiscountPercent,
+			FixedDiscountMinorUnits: body.FixedDiscountMinorUnits, MaxDiscountMinorUnits: body.MaxDiscountMinorUnits,
+			MinSubtotalMinorUnits: body.MinSubtotalMinorUnits, GlobalUsageLimit: body.GlobalUsageLimit,
+			PerClientUsageLimit: body.PerClientUsageLimit, EligibleFulfillmentModes: body.EligibleFulfillmentModes,
+			StartsAt: startsAt, EndsAt: endsAt, Status: body.Status,
+			ExpectedVersion: body.ExpectedVersion, ActorID: actor.ID,
 		},
-		FundingSource:    body.FundingSource,
-		PlatformShareBPS: body.PlatformShareBPS,
-		FundingPartnerID: couponNullableStringUpdate(body.FundingPartnerID),
+		FundingSource: body.FundingSource, PlatformShareBps: body.PlatformShareBps,
+		PartnerShareBps: body.PartnerShareBps, SponsorID: sponsorID,
 	})
 	if err != nil {
 		writeCouponError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{
-		"coupon":        updated,
-		"fundingPolicy": fundingPolicy,
-	})
+	store.SendJSON(w, http.StatusOK, map[string]any{"coupon": updated})
 }
