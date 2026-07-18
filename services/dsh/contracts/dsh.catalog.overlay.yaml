@@ -1,0 +1,38 @@
+overlay: 1.0.0
+info:
+  title: DSH catalog PATCH semantics overlay
+  version: 1.0.0
+actions:
+  - target: $.components.schemas.UpdateNodeRequest
+    description: Replace create-style allOf with a real partial OCC patch schema.
+    update:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+      properties:
+        expectedVersion:
+          $ref: "#/components/schemas/PositiveVersion"
+        nameAr:
+          type: string
+          minLength: 1
+        nameEn:
+          type: string
+        icon:
+          type: string
+        sortOrder:
+          type: integer
+        isActive:
+          type: boolean
+        isClientVisible:
+          type: boolean
+        requiresBarcode:
+          type: boolean
+        allowsProductProposal:
+          type: boolean
+        allowsStoreProductCustomImage:
+          type: boolean
+        requiresCatalogReview:
+          type: boolean
+        requiresProductCatalog:
+          type: boolean
