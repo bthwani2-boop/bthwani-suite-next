@@ -2,6 +2,7 @@ import { createDshHttpClient } from "../_kernel/dsh-http-request";
 import { resolvePlatformControlApiBaseUrl } from "../_kernel/platform-control-api-base-url";
 import type { components } from "@bthwani/core-platform-control";
 
+export type PlatformControlState = components["schemas"]["PlatformControlState"];
 export type PlatformRuntimeSnapshot = components["schemas"]["PlatformRuntimeSnapshot"];
 export type PlatformEffectiveRuntimeConfig = components["schemas"]["PlatformEffectiveRuntimeConfig"];
 export type PlatformVariable = components["schemas"]["PlatformVariable"];
@@ -10,8 +11,10 @@ export type PlatformServicePosture = components["schemas"]["PlatformServicePostu
 export type PlatformHealthSnapshot = components["schemas"]["PlatformHealthSnapshot"];
 export type PlatformAuditEvent = components["schemas"]["PlatformAuditEvent"];
 export type PlatformChangeSet = components["schemas"]["PlatformChangeSet"];
+export type PlatformRollout = components["schemas"]["PlatformRollout"];
 export type CreatePlatformChangeSetInput = components["schemas"]["CreatePlatformChangeSetInput"];
 export type RejectPlatformChangeSetInput = components["schemas"]["RejectPlatformChangeSetInput"];
+export type CreatePlatformRolloutInput = components["schemas"]["CreatePlatformRolloutInput"];
 
 const { request } = createDshHttpClient(resolvePlatformControlApiBaseUrl(), "platform-control", 10000);
 
@@ -101,4 +104,42 @@ export function rejectPlatformChangeSet(
     `/platform/v1/change-sets/${encodeURIComponent(id)}/reject`,
     { method: "POST", body: input },
   );
+}
+
+export function fetchPlatformRollouts(): Promise<{ rollouts: PlatformRollout[] }> {
+  return request<{ rollouts: PlatformRollout[] }>("/platform/v1/rollouts", { method: "GET" });
+}
+
+export function fetchPlatformRollout(id: string): Promise<{ rollout: PlatformRollout }> {
+  return request<{ rollout: PlatformRollout }>(`/platform/v1/rollouts/${encodeURIComponent(id)}`, { method: "GET" });
+}
+
+export function createPlatformRollout(input: CreatePlatformRolloutInput): Promise<{ rollout: PlatformRollout }> {
+  return request<{ rollout: PlatformRollout }>("/platform/v1/rollouts", { method: "POST", body: input });
+}
+
+function transitionPlatformRollout(
+  id: string,
+  transition: "advance" | "pause" | "abort" | "rollback",
+): Promise<{ rollout: PlatformRollout }> {
+  return request<{ rollout: PlatformRollout }>(
+    `/platform/v1/rollouts/${encodeURIComponent(id)}/${transition}`,
+    { method: "POST" },
+  );
+}
+
+export function advancePlatformRollout(id: string): Promise<{ rollout: PlatformRollout }> {
+  return transitionPlatformRollout(id, "advance");
+}
+
+export function pausePlatformRollout(id: string): Promise<{ rollout: PlatformRollout }> {
+  return transitionPlatformRollout(id, "pause");
+}
+
+export function abortPlatformRollout(id: string): Promise<{ rollout: PlatformRollout }> {
+  return transitionPlatformRollout(id, "abort");
+}
+
+export function rollbackPlatformRollout(id: string): Promise<{ rollout: PlatformRollout }> {
+  return transitionPlatformRollout(id, "rollback");
 }
