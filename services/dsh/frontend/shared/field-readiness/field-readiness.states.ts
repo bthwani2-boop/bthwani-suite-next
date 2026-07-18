@@ -17,7 +17,7 @@ export type DshVisitActionState =
 export type DshChecklistState =
   | { readonly kind: "idle" }
   | { readonly kind: "loading" }
-  | { readonly kind: "success"; readonly checks: readonly DshReadinessCheck[] }
+  | { readonly kind: "success"; readonly visit: DshFieldVisit; readonly checks: readonly DshReadinessCheck[] }
   | { readonly kind: "error"; readonly message: string };
 
 export type DshCheckActionState =
@@ -61,7 +61,7 @@ export function visitActionErrorState(message: string): DshVisitActionState { re
 
 export function checklistIdleState(): DshChecklistState { return { kind: "idle" }; }
 export function checklistLoadingState(): DshChecklistState { return { kind: "loading" }; }
-export function checklistSuccessState(checks: readonly DshReadinessCheck[]): DshChecklistState { return { kind: "success", checks }; }
+export function checklistSuccessState(visit: DshFieldVisit, checks: readonly DshReadinessCheck[]): DshChecklistState { return { kind: "success", visit, checks }; }
 export function checklistErrorState(message: string): DshChecklistState { return { kind: "error", message }; }
 
 export function checkActionIdleState(): DshCheckActionState { return { kind: "idle" }; }
