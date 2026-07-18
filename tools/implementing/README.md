@@ -16,8 +16,9 @@ These files coordinate implementation; they never override live code, service ma
 
 ## Files
 
-- `lian-execution-state.json`: current pinned execution state, active phase, loops, and declared evidence limits.
-- `lian-gap-ledger.json`: prioritized actionable gaps and closure conditions.
+- `lian-execution-state.json`: historical mutable execution state, active phase, loops, and declared evidence limits.
+- `lian-gap-ledger.json`: historical prioritized gap ledger; entries must be reconciled against the current branch before execution.
+- `lian-closure-diagnosis-2026-07-19.md`: current remote diagnosis pinned from the live `lian` branch, correcting stale claims and defining the remaining closure gates.
 
 ## Update rules
 
@@ -28,6 +29,7 @@ These files coordinate implementation; they never override live code, service ma
 5. Use `NEEDS_EVIDENCE` only when implementation may exist but current proof is missing.
 6. Use `BLOCKED_EXTERNAL` only for a real external access, environment, provider, approval, or infrastructure blocker.
 7. Final closure is only `CLOSED_WITH_EVIDENCE`, subject to every applicable same-commit evidence scope and independent approval.
+8. When historical control files contradict live contracts, migrations, handlers, consumers, or tests, live implementation wins and the control files must be corrected before further execution.
 
 ## Execution order
 
