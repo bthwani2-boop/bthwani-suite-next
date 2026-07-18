@@ -3,9 +3,11 @@ package http
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"dsh-api/internal/cart"
 	"dsh-api/internal/checkout"
+	"dsh-api/internal/clientaddress"
 	"dsh-api/internal/coupons"
 	"dsh-api/internal/store"
 	"dsh-api/internal/wlt"
@@ -18,13 +20,13 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 		return
 	}
 	var body struct {
-		CartID          string `json:"cartId"`
-		StoreID         string `json:"storeId"`
-		FulfillmentMode string `json:"fulfillmentMode"`
-		PaymentMethod   string `json:"paymentMethod"`
-		DeliveryAddress string `json:"deliveryAddress"`
-		Note            string `json:"note"`
-		CouponCode      string `json:"couponCode"`
+		CartID            string `json:"cartId"`
+		StoreID           string `json:"storeId"`
+		FulfillmentMode   string `json:"fulfillmentMode"`
+		PaymentMethod     string `json:"paymentMethod"`
+		DeliveryAddressID string `json:"deliveryAddressId"`
+		Note              string `json:"note"`
+		CouponCode        string `json:"couponCode"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
@@ -34,14 +36,48 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 		return
 	}
 
+	fulfillmentMode := strings.TrimSpace(body.FulfillmentMode)
+	if fulfillmentMode == "" {
+		fulfillmentMode = string(checkout.ModeBthwaniDelivery)
+	}
+	if fulfillmentMode != string(checkout.ModeBthwaniDelivery) &&
+		fulfillmentMode != string(checkout.ModePartnerDelivery) &&
+		fulfillmentMode != string(checkout.ModePickup) {
+		store.SendError(w, http.StatusBadRequest, "INVALID_FULFILLMENT_MODE", "fulfillment mode is invalid")
+		return
+	}
+
+	deliveryAddressID := ""
+	deliveryAddressSnapshot := ""
+	if fulfillmentMode != string(checkout.ModePickup) {
+		deliveryAddressID = strings.TrimSpace(body.DeliveryAddressID)
+		if deliveryAddressID == "" {
+			store.SendError(w, http.StatusBadRequest, "DELIVERY_ADDRESS_REQUIRED", "deliveryAddressId is required for delivery checkout")
+			return
+		}
+		address, err := clientaddress.GetOwned(r.Context(), s.db, actor.ID, deliveryAddressID)
+		if errors.Is(err, clientaddress.ErrNotFound) {
+			store.SendError(w, http.StatusNotFound, "ADDRESS_NOT_FOUND", "delivery address is not owned by the authenticated client")
+			return
+		}
+		if err != nil {
+			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to resolve delivery address")
+			return
+		}
+		serviceability := cart.CheckServiceability(
+			r.Context(), s.db, body.StoreID, address.ServiceAreaCode, address.Latitude, address.Longitude,
+		)
+		if !serviceability.Serviceable {
+			store.SendError(w, http.StatusUnprocessableEntity, "OUT_OF_AREA", serviceability.Reason)
+			return
+		}
+		deliveryAddressSnapshot = address.CheckoutSnapshot()
+	}
+
 	intentID, err := checkout.NewIntentID(s.db)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to allocate checkout intent")
 		return
-	}
-	fulfillmentMode := body.FulfillmentMode
-	if fulfillmentMode == "" {
-		fulfillmentMode = string(checkout.ModeBthwaniDelivery)
 	}
 
 	tx, err := s.db.BeginTx(r.Context(), nil)
@@ -130,12 +166,12 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 		pricing.DeliveryFeeMinorUnits, pricing.DiscountMinorUnits, pricing.TotalMinorUnits,
 	)
 
-	intent, err := checkout.CreatePricedIntentTx(r.Context(), tx, checkout.CreateIntentInput{
+	intent, err := checkout.CreatePricedIntentWithAddressTx(r.Context(), tx, checkout.CreateIntentInput{
 		ID: intentID, TenantID: actor.TenantID, ClientID: actor.ID, CartID: body.CartID, StoreID: body.StoreID,
 		FulfillmentMode: checkout.FulfillmentMode(fulfillmentMode),
 		PaymentMethod:   checkout.PaymentMethod(body.PaymentMethod),
-		DeliveryAddress: body.DeliveryAddress, Note: body.Note,
-	}, pricing)
+		DeliveryAddress: deliveryAddressSnapshot, Note: body.Note,
+	}, pricing, deliveryAddressID)
 	if errors.Is(err, checkout.ErrInvalid) {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 		return
