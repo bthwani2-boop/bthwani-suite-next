@@ -96,10 +96,9 @@ func (s *protectedStoreServer) handleUpdateCatalogPlatformPolicyAtomic(w http.Re
 	store.SendJSON(w, http.StatusOK, map[string]any{"policy": policy})
 }
 
-// registerUnifiedCatalogRoutes binds the paths consumed by the shared
+// registerUnifiedCatalogRoutes binds the exact paths consumed by the shared
 // multi-surface client. The shorter /dsh/catalog paths remain available as a
-// compatibility surface in server.go; these aliases eliminate frontend/backend
-// path drift without duplicating business logic.
+// compatibility surface in server.go.
 func registerUnifiedCatalogRoutes(mux *http.ServeMux, s *protectedStoreServer) {
 	// Operator taxonomy, products, proposals, policies and assortment.
 	mux.HandleFunc("GET /dsh/operator/catalog/domains", s.handleListCatalogDomains)
@@ -118,25 +117,27 @@ func registerUnifiedCatalogRoutes(mux *http.ServeMux, s *protectedStoreServer) {
 	mux.HandleFunc("PATCH /dsh/operator/catalog/platform-policies/{policyId}", s.handleUpdateCatalogPlatformPolicyAtomic)
 	mux.HandleFunc("PUT /dsh/operator/catalog/platform-policies/{policyId}", s.handleUpdateCatalogPlatformPolicyAtomic)
 	mux.HandleFunc("GET /dsh/operator/stores/{storeId}/assortment", s.handleGetOperatorStoreAssortment)
-	mux.HandleFunc("PUT /dsh/operator/stores/{storeId}/assortment/{masterProductId}", s.handleUpsertOperatorStoreAssortment)
+	mux.HandleFunc("PUT /dsh/operator/stores/{storeId}/assortment/{masterProductId}", s.handleOperatorUpsertStoreAssortmentAtomic)
 
 	// Partner and field taxonomy and store-scoped catalog operations.
 	mux.HandleFunc("GET /dsh/partner/catalog/taxonomy", s.handleCatalogTaxonomy)
 	mux.HandleFunc("POST /dsh/partner/catalog/product-proposals", s.handlePartnerCreateProductProposal)
+	mux.HandleFunc("PATCH /dsh/partner/catalog/product-proposals/{proposalId}", s.handleUpdatePartnerProductProposalAtomic)
 	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/assortment", s.handlePartnerGetStoreAssortment)
-	mux.HandleFunc("PUT /dsh/partner/stores/{storeId}/assortment/{masterProductId}", s.handlePartnerUpsertStoreAssortment)
+	mux.HandleFunc("PUT /dsh/partner/stores/{storeId}/assortment/{masterProductId}", s.handlePartnerUpsertStoreAssortmentAtomic)
 	mux.HandleFunc("GET /dsh/field/catalog/taxonomy", s.handleCatalogTaxonomy)
 	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/catalog/product-proposals", s.handleFieldCreateProductProposal)
+	mux.HandleFunc("PATCH /dsh/field/partners/{partnerId}/catalog/product-proposals/{proposalId}", s.handleUpdateFieldProductProposalAtomic)
 	mux.HandleFunc("GET /dsh/field/partners/{partnerId}/assortment", s.handleFieldGetStoreAssortment)
-	mux.HandleFunc("PUT /dsh/field/partners/{partnerId}/stores/{storeId}/assortment/{masterProductId}", s.handleFieldUpsertStoreAssortment)
+	mux.HandleFunc("PUT /dsh/field/partners/{partnerId}/stores/{storeId}/assortment/{masterProductId}", s.handleFieldUpsertStoreAssortmentAtomic)
 
 	// Seed diagnostics and digital-asset management.
 	mux.HandleFunc("GET /dsh/operator/catalog/seed-status", s.handleCatalogSeedStatus)
 	mux.HandleFunc("GET /dsh/operator/catalog/assets", s.handleListCatalogAssets)
 	mux.HandleFunc("POST /dsh/operator/catalog/assets/upload-intents", s.handleCreateAssetUploadIntent)
 	mux.HandleFunc("POST /dsh/operator/catalog/assets/{assetId}/complete", s.handleCompleteAssetUpload)
-	mux.HandleFunc("PATCH /dsh/operator/catalog/assets/{assetId}", s.handleUpdateCatalogAsset)
-	mux.HandleFunc("POST /dsh/operator/catalog/assets/{assetId}/review", s.handleReviewCatalogAsset)
+	mux.HandleFunc("PATCH /dsh/operator/catalog/assets/{assetId}", s.handleUpdateCatalogAssetAtomic)
+	mux.HandleFunc("POST /dsh/operator/catalog/assets/{assetId}/review", s.handleReviewCatalogAssetExpected)
 	mux.HandleFunc("DELETE /dsh/operator/catalog/assets/{assetId}", s.handleDeleteCatalogAsset)
 	mux.HandleFunc("POST /dsh/operator/catalog/assets/{assetId}/link", s.handleLinkCatalogAsset)
 	mux.HandleFunc("DELETE /dsh/operator/catalog/assets/{assetId}/links/{linkId}", s.handleUnlinkCatalogAsset)
