@@ -26,6 +26,8 @@ func NewRouter(db *sql.DB, service *providers.Service, repo *providers.Repositor
 	mux.HandleFunc("GET /providers", s.operatorOnly("provider:read", s.listProviders))
 	mux.HandleFunc("GET /providers/{providerId}", s.operatorOnly("provider:read", s.getProvider))
 	mux.HandleFunc("PATCH /providers/{providerId}", s.operatorOnly("provider:update", s.updateProvider))
+	mux.HandleFunc("POST /providers/maps/search", s.mapConsumer(s.searchMaps))
+	mux.HandleFunc("POST /providers/maps/reverse", s.mapConsumer(s.reverseMap))
 	return mux
 }
 
@@ -81,6 +83,18 @@ func (s *server) operatorOnly(action string, next guardedHandler) http.HandlerFu
 	return s.withIdentity(func(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
 		if !identity.HasPermission("workforce", action, "all") && !identity.HasPermission("providers", action, "all") {
 			sendError(w, http.StatusForbidden, "FORBIDDEN", "provider permission is required")
+			return
+		}
+		next(w, r, identity)
+	})
+}
+
+func (s *server) mapConsumer(next guardedHandler) http.HandlerFunc {
+	return s.withIdentity(func(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+		allowedRole := identity.HasRole("client") || identity.HasRole("partner") || identity.HasRole("captain") || identity.HasRole("field") || identity.HasRole("operator") || identity.HasRole("admin")
+		allowedPermission := identity.HasPermission("providers", "maps:invoke", "all") || identity.HasPermission("providers", "maps:invoke", "self")
+		if !allowedRole && !allowedPermission {
+			sendError(w, http.StatusForbidden, "FORBIDDEN", "map-provider invocation is outside the actor scope")
 			return
 		}
 		next(w, r, identity)
