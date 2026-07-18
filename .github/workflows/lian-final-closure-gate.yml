@@ -1,0 +1,307 @@
+name: Lian Final Same-Commit Closure Gate
+
+on:
+  push:
+    branches: [lian]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lian-final-closure-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  repository-truth:
+    name: Governance, contracts, surfaces, security, build, and tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Setup governed workspace
+        uses: ./.github/actions/setup-node-workspace
+
+      - name: Verify governance and authority
+        run: pnpm run guard:governance-all
+
+      - name: Verify foundation
+        run: pnpm run foundation:gate
+
+      - name: Verify boundaries, bindings, and journeys
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm run guard:api-binding
+          pnpm run guard:backend-api-binding
+          pnpm run guard:service-manifest-drift
+          pnpm run guard:frontend-feature-binding
+          pnpm run guard:fullstack-boundary
+          pnpm run guard:wlt-financial-boundary
+          pnpm run guard:runtime-real-bindings
+          pnpm run guard:live-cross-journey-integrity
+          pnpm run guard:no-broken-imports
+          node tools/guards/client-commerce/client-commerce-truth-gate.mjs
+          node tools/guards/partner/partner-surface-truth-gate.mjs
+          node tools/guards/maps/map-platform-truth-gate.mjs
+          node tools/guards/platform/operational-policy-ui-truth-gate.mjs
+          node tools/guards/privacy/client-address-privacy-truth-gate.mjs
+
+      - name: Verify UI contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm run guard:ui-kit-boundary
+          pnpm run guard:ui-provider
+          pnpm run guard:icon-contract
+          pnpm run guard:design-tokens
+          pnpm run guard:a11y
+
+      - name: Verify workflow integrity
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm run guard:workflow-lint
+          pnpm run guard:workflow-security
+          pnpm run guard:actions-pin
+
+      - name: Verify generated clients
+        shell: bash
+        run: |
+          set -euo pipefail
+          output="$(mktemp -d)"
+          trap 'rm -rf "$output"' EXIT
+          pnpm exec openapi-typescript services/dsh/contracts/dsh.openapi.yaml -o "$output/dsh-api.ts"
+          pnpm exec openapi-typescript services/wlt/contracts/wlt.openapi.yaml -o "$output/wlt-api.ts"
+          pnpm exec openapi-typescript core/identity/contracts/auth.openapi.yaml -o "$output/identity-api.ts"
+          pnpm exec openapi-typescript core/workforce/contracts/workforce.openapi.yaml -o "$output/workforce-api.ts"
+          pnpm exec openapi-typescript core/platform-control/contracts/platform-control.openapi.yaml -o "$output/platform-control-api.ts"
+          pnpm exec openapi-typescript core/providers/contracts/providers.openapi.yaml -o "$output/providers-api.ts"
+          cmp "$output/dsh-api.ts" services/dsh/clients/generated/dsh-api.ts
+          cmp "$output/wlt-api.ts" services/wlt/clients/generated/wlt-api.ts
+          cmp "$output/identity-api.ts" core/identity/clients/generated/identity-api.ts
+          cmp "$output/workforce-api.ts" core/workforce/clients/generated/workforce-api.ts
+          cmp "$output/platform-control-api.ts" core/platform-control/clients/generated/platform-control-api.ts
+          cmp "$output/providers-api.ts" core/providers/clients/generated/providers-api.ts
+          node tools/scripts/generate-dsh-catalog-client.mjs --check
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Test
+        run: pnpm run test
+
+  go-services:
+    name: Go verification — ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: DSH
+            directory: services/dsh/backend
+            go_mod: services/dsh/backend/go.mod
+            go_sum: services/dsh/backend/go.sum
+          - name: WLT
+            directory: services/wlt/backend
+            go_mod: services/wlt/backend/go.mod
+            go_sum: services/wlt/backend/go.sum
+          - name: Identity
+            directory: core/identity/backend
+            go_mod: core/identity/backend/go.mod
+            go_sum: core/identity/backend/go.sum
+          - name: Workforce
+            directory: core/workforce/backend
+            go_mod: core/workforce/backend/go.mod
+            go_sum: core/workforce/backend/go.sum
+          - name: Platform Control
+            directory: core/platform-control/backend
+            go_mod: core/platform-control/backend/go.mod
+            go_sum: core/platform-control/backend/go.sum
+          - name: Providers
+            directory: core/providers/backend
+            go_mod: core/providers/backend/go.mod
+            go_sum: core/providers/backend/go.sum
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+
+      - name: Setup Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: ${{ matrix.go_mod }}
+          cache: true
+          cache-dependency-path: ${{ matrix.go_sum }}
+
+      - name: Verify formatting
+        working-directory: ${{ matrix.directory }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          files="$(gofmt -l .)"
+          test -z "$files" || {
+            printf 'Unformatted files:\n%s\n' "$files"
+            exit 1
+          }
+
+      - name: Vet
+        working-directory: ${{ matrix.directory }}
+        run: go vet ./...
+
+      - name: Test
+        working-directory: ${{ matrix.directory }}
+        run: go test ./... -count=1
+
+      - name: Build
+        working-directory: ${{ matrix.directory }}
+        run: go build ./...
+
+  dsh-database:
+    name: DSH clean database, invariants, and migration replay
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: dsh_closure
+          POSTGRES_PASSWORD: dsh_closure_password
+          POSTGRES_DB: dsh_closure
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd="pg_isready -U dsh_closure -d dsh_closure"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      DATABASE_URL: postgres://dsh_closure:dsh_closure_password@localhost:55432/dsh_closure?sslmode=disable
+      PGPASSWORD: dsh_closure_password
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Apply all DSH migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t migrations < <(find services/dsh/database/migrations -maxdepth 1 -type f -name 'dsh-*.sql' | sort)
+          test "${#migrations[@]}" -gt 0
+          for migration in "${migrations[@]}"; do
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
+          done
+
+      - name: Run all DSH SQL invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t tests < <(find services/dsh/database/tests -maxdepth 1 -type f -name '*.sql' | sort)
+          test "${#tests[@]}" -gt 0
+          for test_file in "${tests[@]}"; do
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$test_file"
+          done
+
+      - name: Replay all DSH migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t migrations < <(find services/dsh/database/migrations -maxdepth 1 -type f -name 'dsh-*.sql' | sort)
+          for migration in "${migrations[@]}"; do
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
+          done
+
+  wlt-database:
+    name: WLT clean database, invariants, and migration replay
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: wlt_closure
+          POSTGRES_PASSWORD: wlt_closure_password
+          POSTGRES_DB: wlt_closure
+        ports:
+          - 55433:5432
+        options: >-
+          --health-cmd="pg_isready -U wlt_closure -d wlt_closure"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      DATABASE_URL: postgres://wlt_closure:wlt_closure_password@localhost:55433/wlt_closure?sslmode=disable
+      PGPASSWORD: wlt_closure_password
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Apply all WLT migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t migrations < <(find services/wlt/database/migrations -maxdepth 1 -type f -name '*.sql' | sort)
+          test "${#migrations[@]}" -gt 0
+          for migration in "${migrations[@]}"; do
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
+          done
+
+      - name: Run all WLT SQL invariants when present
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -d services/wlt/database/tests ]; then
+            while IFS= read -r test_file; do
+              psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$test_file"
+            done < <(find services/wlt/database/tests -maxdepth 1 -type f -name '*.sql' | sort)
+          fi
+
+      - name: Replay all WLT migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t migrations < <(find services/wlt/database/migrations -maxdepth 1 -type f -name '*.sql' | sort)
+          for migration in "${migrations[@]}"; do
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
+          done
+
+  result:
+    name: Lian Final Same-Commit Closure result
+    if: always()
+    needs: [repository-truth, go-services, dsh-database, wlt-database]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every closure domain to pass
+        env:
+          REPOSITORY_RESULT: ${{ needs.repository-truth.result }}
+          GO_RESULT: ${{ needs.go-services.result }}
+          DSH_DATABASE_RESULT: ${{ needs.dsh-database.result }}
+          WLT_DATABASE_RESULT: ${{ needs.wlt-database.result }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'repository=%s\ngo=%s\ndsh_database=%s\nwlt_database=%s\n' \
+            "$REPOSITORY_RESULT" \
+            "$GO_RESULT" \
+            "$DSH_DATABASE_RESULT" \
+            "$WLT_DATABASE_RESULT"
+          test "$REPOSITORY_RESULT" = success
+          test "$GO_RESULT" = success
+          test "$DSH_DATABASE_RESULT" = success
+          test "$WLT_DATABASE_RESULT" = success
