@@ -1,0 +1,205 @@
+name: One-time Coupon Runtime Bindings
+
+on:
+  push:
+    branches: [bassam]
+    paths:
+      - '.github/workflows/one-time-coupon-runtime-bindings.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: one-time-coupon-runtime-bindings
+  cancel-in-progress: false
+
+jobs:
+  bind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: bassam
+          fetch-depth: 0
+
+      - name: Patch guarded runtime bindings
+        shell: bash
+        run: |
+          set -euo pipefail
+          git pull --rebase origin bassam
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(text: str, old: str, new: str, label: str) -> str:
+              if new in text:
+                  return text
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected one anchor, found {count}')
+              return text.replace(old, new, 1)
+
+          cart = Path('services/dsh/frontend/app-client/cart/CartScreen.tsx')
+          text = cart.read_text(encoding='utf-8')
+          text = replace_once(
+              text,
+              'readonly onProceedToCheckout?: (cart: DshCart, deliveryAddress: string, note: string, paymentMethod: DshPaymentMethod) => void;',
+              'readonly onProceedToCheckout?: (cart: DshCart, deliveryAddress: string, note: string, paymentMethod: DshPaymentMethod, couponCode: string) => void;',
+              'cart callback contract',
+          )
+          text = replace_once(text, 'const wltPayment = useWltDshPaymentController(grandTotal);', 'const wltPayment = useWltDshPaymentController(subtotal);', 'payment decision estimate')
+          text = replace_once(
+              text,
+              '''        wltPayment.paymentMethod
+      );''',
+              '''        wltPayment.paymentMethod,
+        couponCode.trim()
+      );''',
+              'cart checkout coupon handoff',
+          )
+          text = replace_once(
+              text,
+              '''              <Text role="bodyStrong" style={styles.invoiceValue}>{deliveryFee} د.ي</Text>''',
+              '''              <Text role="bodyStrong" style={styles.invoiceValue}>يُحتسب عند التأكيد</Text>''',
+              'delivery fee display',
+          )
+          text = replace_once(
+              text,
+              '''            {discount > 0 && (
+              <View style={styles.invoiceRow}>
+                <Text role="bodySm" style={styles.invoiceLabelSuccess}>الخصم (قسيمة: {couponCode})</Text>
+                <Text role="bodyStrong" style={styles.invoiceValueSuccess}>-{discount} د.ي</Text>
+              </View>
+            )}''',
+              '''            {couponCode ? (
+              <View style={styles.invoiceRow}>
+                <Text role="bodySm" style={styles.invoiceLabelSuccess}>القسيمة: {couponCode}</Text>
+                <Text role="bodyStrong" style={styles.invoiceValueSuccess}>يتم التحقق في DSH</Text>
+              </View>
+            ) : null}''',
+              'coupon display',
+          )
+          text = replace_once(
+              text,
+              '''              <Text role="titleMd" weight="black" style={styles.totalValue}>{grandTotal} د.ي</Text>''',
+              '''              <Text role="titleMd" weight="black" style={styles.totalValue}>يُحتسب من الخادم</Text>''',
+              'grand total display',
+          )
+          cart.write_text(text, encoding='utf-8')
+
+          checkout = Path('services/dsh/frontend/app-client/checkout/CheckoutScreen.tsx')
+          text = checkout.read_text(encoding='utf-8')
+          text = replace_once(
+              text,
+              '''  readonly paymentMethod: DshPaymentMethod;
+  readonly onSuccess?:''',
+              '''  readonly paymentMethod: DshPaymentMethod;
+  readonly couponCode?: string;
+  readonly onSuccess?:''',
+              'checkout props',
+          )
+          text = replace_once(
+              text,
+              '''export function CheckoutScreen({ cart, deliveryAddress = "", note = "", paymentMethod, onSuccess, onCancel }: Props) {''',
+              '''export function CheckoutScreen({ cart, deliveryAddress = "", note = "", paymentMethod, couponCode = "", onSuccess, onCancel }: Props) {''',
+              'checkout destructure',
+          )
+          text = replace_once(
+              text,
+              '''    ...(note ? { note } : {}),
+  };''',
+              '''    ...(note ? { note } : {}),
+    ...(couponCode.trim() ? { couponCode: couponCode.trim() } : {}),
+  };''',
+              'checkout input coupon',
+          )
+          text = replace_once(
+              text,
+              '''          <StateView
+            title="في انتظار مرجع الدفع WLT"
+            description="أنشأ DSH نية checkout فقط. المتابعة المالية قيد المعالجة من WLT."
+            tone="warning"
+          />''',
+              '''          <StateView
+            title="في انتظار مرجع الدفع WLT"
+            description="تم تثبيت تسعير DSH وإرسال الإجمالي السيادي إلى WLT."
+            tone="warning"
+          />
+          <KeyValueList
+            items={[
+              { label: "إجمالي المنتجات", value: `${(intent.subtotalMinorUnits / 100).toLocaleString("ar")} ر.ي` },
+              { label: "رسوم التوصيل", value: `${(intent.deliveryFeeMinorUnits / 100).toLocaleString("ar")} ر.ي` },
+              { label: "الخصم", value: `${(intent.discountMinorUnits / 100).toLocaleString("ar")} ر.ي` },
+              { label: "الإجمالي إلى WLT", value: `${(intent.totalMinorUnits / 100).toLocaleString("ar")} ر.ي` },
+            ]}
+          />''',
+              'checkout pricing display',
+          )
+          checkout.write_text(text, encoding='utf-8')
+
+          server = Path('services/dsh/backend/internal/http/server.go')
+          text = server.read_text(encoding='utf-8')
+          anchor = '''\tmux.HandleFunc("PATCH /dsh/operator/marketing/partner-offers/{offerId}", protected.handleUpdatePartnerOffer)'''
+          replacement = anchor + '''
+\tmux.HandleFunc("GET /dsh/operator/marketing/coupons", protected.handleListCoupons)
+\tmux.HandleFunc("POST /dsh/operator/marketing/coupons", protected.handleCreateCoupon)
+\tmux.HandleFunc("PATCH /dsh/operator/marketing/coupons/{couponId}", protected.handleUpdateCoupon)'''
+          text = replace_once(text, anchor, replacement, 'coupon routes')
+          server.write_text(text, encoding='utf-8')
+
+          marketing = Path('services/dsh/backend/internal/http/marketing.go')
+          text = marketing.read_text(encoding='utf-8')
+          text = replace_once(
+              text,
+              '''func writePartnerOfferError(w http.ResponseWriter, err error) {
+\tif errors.Is(err, marketing.ErrRejectionReasonRequired) {''',
+              '''func writePartnerOfferError(w http.ResponseWriter, err error) {
+\tif errors.Is(err, marketing.ErrCouponLinkRequired) {
+\t\tstore.SendError(w, http.StatusConflict, "ACTIVE_COUPON_LINK_REQUIRED", "published coupon offer requires an active checkout coupon")
+\t\treturn
+\t}
+\tif errors.Is(err, marketing.ErrCommercialVersionConflict) {
+\t\tstore.SendError(w, http.StatusConflict, "VERSION_CONFLICT", "partner offer changed; reload before retrying")
+\t\treturn
+\t}
+\tif errors.Is(err, marketing.ErrRejectionReasonRequired) {''',
+              'partner offer errors',
+          )
+          text = replace_once(
+              text,
+              '''\t\tMarginRiskNote  *string `json:"marginRiskNote"`
+\t}''',
+              '''\t\tMarginRiskNote  *string `json:"marginRiskNote"`
+\t\tCouponID        *string `json:"couponId"`
+\t\tExpectedVersion int     `json:"expectedVersion"`
+\t}''',
+              'partner offer request fields',
+          )
+          text = replace_once(
+              text,
+              '''\t\tMarginRiskNote:  body.MarginRiskNote,
+\t\tActorID:''',
+              '''\t\tMarginRiskNote:  body.MarginRiskNote,
+\t\tCouponID:        body.CouponID,
+\t\tExpectedVersion: body.ExpectedVersion,
+\t\tActorID:''',
+              'partner offer input mapping',
+          )
+          marketing.write_text(text, encoding='utf-8')
+          PY
+
+          gofmt -w services/dsh/backend/internal/http/server.go services/dsh/backend/internal/http/marketing.go services/dsh/backend/internal/http/coupons.go services/dsh/backend/internal/http/checkout.go services/dsh/backend/internal/coupons services/dsh/backend/internal/checkout services/dsh/backend/internal/cart/checkout_snapshot_scoped.go services/dsh/backend/internal/marketing/partner_offers.go
+          git diff --check
+
+      - name: Commit bindings
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add services/dsh/backend services/dsh/frontend/app-client/cart/CartScreen.tsx services/dsh/frontend/app-client/checkout/CheckoutScreen.tsx
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'fix(checkout): bind coupon and delivery pricing runtime'
+          git pull --rebase origin bassam
+          git push origin HEAD:bassam
