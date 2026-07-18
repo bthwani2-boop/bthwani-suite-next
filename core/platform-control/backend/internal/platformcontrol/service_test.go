@@ -18,8 +18,11 @@ func TestRuntimeSnapshotFailsClosedWithoutRepository(t *testing.T) {
 	if snapshot.VariablesState != StateFixRequired || snapshot.AuditState != StateFixRequired {
 		t.Fatalf("expected persistent capabilities to fail closed, got variables=%s audit=%s", snapshot.VariablesState, snapshot.AuditState)
 	}
-	if snapshot.RolloutsState != StateContractRequired {
-		t.Fatalf("expected rollouts to remain CONTRACT_REQUIRED, got %s", snapshot.RolloutsState)
+	if snapshot.RolloutsState != StateFixRequired {
+		t.Fatalf("expected live rollout capability to fail closed without persistence, got %s", snapshot.RolloutsState)
+	}
+	if snapshot.HealthState != StateFixRequired || snapshot.ServicesState != StateFixRequired {
+		t.Fatalf("expected health and service posture to fail closed, got health=%s services=%s", snapshot.HealthState, snapshot.ServicesState)
 	}
 	if len(snapshot.Evidence) == 0 {
 		t.Fatal("expected evidence notes")
@@ -37,5 +40,8 @@ func TestRepositoryBackedReadsRejectMissingRepository(t *testing.T) {
 	}
 	if _, err := service.ChangeSets(context.Background()); err == nil {
 		t.Fatal("expected change-set read to reject a missing repository")
+	}
+	if _, err := service.Rollouts(context.Background()); err == nil {
+		t.Fatal("expected rollout read to reject a missing repository")
 	}
 }
