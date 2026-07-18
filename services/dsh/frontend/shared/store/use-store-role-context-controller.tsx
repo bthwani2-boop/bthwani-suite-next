@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   fetchStoreRoleContext,
   submitStoreRoleAction,
 } from "./store-role.api";
+import { type StoreRoleAction } from "./store-discovery.types";
 import {
-  type StoreRoleAction,
-} from "./store-discovery.types";
+  resolveStoreRoleMutationAttempt,
+  type StoreRoleMutationAttempt,
+} from "./store-role-mutation";
 import {
   loadStoreRoleContext,
   toStoreRoleExperience,
@@ -39,6 +41,7 @@ export function useStoreRoleContextController(
 ): StoreRoleContextController {
   const [state, setState] = useState<StoreRoleContextState>({ kind: "loading" });
   const [actionState, setActionState] = useState<StoreActionState>({ kind: "idle" });
+  const mutationAttemptRef = useRef<StoreRoleMutationAttempt | null>(null);
 
   const load = useCallback(async () => {
     await loadStoreRoleContext(() => fetchStoreRoleContext(storeId), setState, expectedRole);
@@ -50,19 +53,25 @@ export function useStoreRoleContextController(
 
   const submit = useCallback(async (action: StoreRoleAction) => {
     setActionState({ kind: "submitting", actionKind: action.kind });
+    const attempt = resolveStoreRoleMutationAttempt(mutationAttemptRef.current, action);
+    mutationAttemptRef.current = attempt;
     try {
-      const response = await submitStoreRoleAction(action);
+      const response = await submitStoreRoleAction(action, attempt.auth);
+      mutationAttemptRef.current = null;
       setActionState({ kind: "success", replayed: response.replayed });
       await load();
     } catch (error) {
       const typed = error as { kind?: string; status?: number };
       if (typed.kind === "http" && typed.status === 409) {
+        mutationAttemptRef.current = null;
         setActionState({ kind: "conflict", message: "تغيّرت بيانات المتجر. أعد التحميل ثم حاول مجددًا." });
       } else if (typed.kind === "http" && (typed.status === 401 || typed.status === 403)) {
+        mutationAttemptRef.current = null;
         setActionState({ kind: "error", message: "لا تملك صلاحية تنفيذ هذا الإجراء على المتجر." });
       } else if (typed.kind === "network" || (typed.kind === "http" && typed.status === 503)) {
-        setActionState({ kind: "error", message: "خدمة المتاجر غير متاحة حاليًا. حاول مرة أخرى." });
+        setActionState({ kind: "error", message: "خدمة المتاجر غير متاحة حاليًا. إعادة الإجراء نفسه ستستخدم مفتاحه السابق." });
       } else {
+        mutationAttemptRef.current = null;
         setActionState({ kind: "error", message: "تعذر حفظ الإجراء." });
       }
     }
