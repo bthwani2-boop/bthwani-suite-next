@@ -17,6 +17,7 @@ import (
 
 var ErrSettlementPolicyMissing = errors.New("active WLT settlement policy is required for this partner")
 var ErrSettlementOrderAlreadyUsed = errors.New("one or more delivered orders were already included in another settlement")
+var ErrSettlementAmountOverflow = errors.New("settlement amount exceeds supported integer range")
 
 type DeliveredOrderSource struct {
 	OrderID               string    `json:"orderId"`
@@ -86,6 +87,28 @@ func UpsertSettlementPolicy(ctx context.Context, db *sql.DB, partnerID string, i
 	return &policy, nil
 }
 
+func addPositiveMinorUnits(total, value int64) (int64, error) {
+	const maxInt64 = int64(1<<63 - 1)
+	if value <= 0 || total < 0 || value > maxInt64-total {
+		return 0, ErrSettlementAmountOverflow
+	}
+	return total + value, nil
+}
+
+func settlementFeeFromBasisPoints(grossAmount int64, feeBasisPoints int) (int64, error) {
+	if grossAmount <= 0 || feeBasisPoints < 0 || feeBasisPoints > 10000 {
+		return 0, fmt.Errorf("invalid settlement fee inputs")
+	}
+	basisPoints := int64(feeBasisPoints)
+	whole := (grossAmount / 10000) * basisPoints
+	remainder := ((grossAmount%10000)*basisPoints + 5000) / 10000
+	fee := whole + remainder
+	if fee < 0 || fee > grossAmount {
+		return 0, ErrSettlementAmountOverflow
+	}
+	return fee, nil
+}
+
 func CreateSettlementFromDeliveredOrders(ctx context.Context, db *sql.DB, input CreateFromDeliveredOrdersInput) (*Settlement, error) {
 	input.PartnerID = strings.TrimSpace(input.PartnerID)
 	input.OperatorID = strings.TrimSpace(input.OperatorID)
@@ -113,6 +136,9 @@ func CreateSettlementFromDeliveredOrders(ctx context.Context, db *sql.DB, input 
 	if err != nil {
 		return nil, err
 	}
+	if feeBasisPoints < 0 || feeBasisPoints > 10000 || strings.TrimSpace(policyCurrency) == "" {
+		return nil, fmt.Errorf("active settlement policy is invalid")
+	}
 
 	seen := make(map[string]struct{}, len(input.OrderSources))
 	var grossAmount int64
@@ -132,13 +158,16 @@ func CreateSettlementFromDeliveredOrders(ctx context.Context, db *sql.DB, input 
 			return nil, fmt.Errorf("duplicate orderId %s in request", source.OrderID)
 		}
 		seen[source.OrderID] = struct{}{}
-		grossAmount += source.GrossAmountMinorUnits
+		grossAmount, err = addPositiveMinorUnits(grossAmount, source.GrossAmountMinorUnits)
+		if err != nil {
+			return nil, fmt.Errorf("orderSources[%d]: %w", index, err)
+		}
 		input.OrderSources[index] = source
 	}
-	if grossAmount <= 0 {
-		return nil, fmt.Errorf("settlement gross amount must be positive")
+	platformFee, err := settlementFeeFromBasisPoints(grossAmount, feeBasisPoints)
+	if err != nil {
+		return nil, err
 	}
-	platformFee := (grossAmount*int64(feeBasisPoints) + 5000) / 10000
 	netAmount := grossAmount - platformFee
 
 	tx, err := db.BeginTx(ctx, nil)
@@ -212,6 +241,9 @@ func HandleCreateSettlementFromDeliveredOrders(db *sql.DB) http.HandlerFunc {
 			return
 		case errors.Is(err, ErrSettlementOrderAlreadyUsed):
 			shared.SendError(w, http.StatusConflict, "ORDER_ALREADY_SETTLED", err.Error())
+			return
+		case errors.Is(err, ErrSettlementAmountOverflow):
+			shared.SendError(w, http.StatusUnprocessableEntity, "SETTLEMENT_AMOUNT_OVERFLOW", err.Error())
 			return
 		case err != nil:
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
