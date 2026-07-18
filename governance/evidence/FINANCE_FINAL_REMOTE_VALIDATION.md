@@ -1,8 +1,8 @@
 # Finance Final Remote Validation
 
 - Branch: `bassam`
-- Source SHA: `a87e8e3c26dc63f9b4afb9459d76d635e9b34f78`
-- Executed at: `2026-07-18T01:14:00Z`
+- Source SHA: `7fb176c146ca6d79d2acb2d3b2206358a4accb24`
+- Executed at: `2026-07-18T01:18:09Z`
 
 ## Finance source drift patcher
 
@@ -64,16 +64,16 @@ Progress: resolved 33, reused 30, downloaded 3, added 33, done
 ✨ openapi-typescript 7.13.0
  ✘  Can't resolve $ref at #/paths/~1dsh~1control-panel~1finance~1settlements~1from-delivered-orders/post/responses/400
  ✘  Can't resolve $ref at #/paths/~1dsh~1control-panel~1finance~1settlement-policies~1{partnerId}/put/responses/400
-file:///home/runner/.cache/pnpm/dlx/140c15d98aff76c652861295ffa050e74ddb4d24b5f22c757b487705a2b44acd/19f72c99435-9d1/node_modules/.pnpm/openapi-typescript@7.13.0_typescript@5.9.3/node_modules/openapi-typescript/dist/lib/redoc.mjs:74
+file:///home/runner/.cache/pnpm/dlx/140c15d98aff76c652861295ffa050e74ddb4d24b5f22c757b487705a2b44acd/19f72cd6134-9bc/node_modules/.pnpm/openapi-typescript@7.13.0_typescript@5.9.3/node_modules/openapi-typescript/dist/lib/redoc.mjs:74
       throw new Error(errorMessage);
             ^
 
 Error: Can't resolve $ref at #/paths/~1dsh~1control-panel~1finance~1settlement-policies~1{partnerId}/put/responses/400
-    at _processProblems (file:///home/runner/.cache/pnpm/dlx/140c15d98aff76c652861295ffa050e74ddb4d24b5f22c757b487705a2b44acd/19f72c99435-9d1/node_modules/.pnpm/openapi-typescript@7.13.0_typescript@5.9.3/node_modules/openapi-typescript/dist/lib/redoc.mjs:74:13)
-    at validateAndBundle (file:///home/runner/.cache/pnpm/dlx/140c15d98aff76c652861295ffa050e74ddb4d24b5f22c757b487705a2b44acd/19f72c99435-9d1/node_modules/.pnpm/openapi-typescript@7.13.0_typescript@5.9.3/node_modules/openapi-typescript/dist/lib/redoc.mjs:116:3)
-    at async openapiTS (file:///home/runner/.cache/pnpm/dlx/140c15d98aff76c652861295ffa050e74ddb4d24b5f22c757b487705a2b44acd/19f72c99435-9d1/node_modules/.pnpm/openapi-typescript@7.13.0_typescript@5.9.3/node_modules/openapi-typescript/dist/index.mjs:40:18)
-    at async generateSchema (file:///home/runner/.cache/pnpm/dlx/140c15d98aff76c652861295ffa050e74ddb4d24b5f22c757b487705a2b44acd/19f72c99435-9d1/node_modules/.pnpm/openapi-typescript@7.13.0_typescript@5.9.3/node_modules/openapi-typescript/bin/cli.js:143:5)
-    at async main (file:///home/runner/.cache/pnpm/dlx/140c15d98aff76c652861295ffa050e74ddb4d24b5f22c757b487705a2b44acd/19f72c99435-9d1/node_modules/.pnpm/openapi-typescript@7.13.0_typescript@5.9.3/node_modules/openapi-typescript/bin/cli.js:280:20)
+    at _processProblems (file:///home/runner/.cache/pnpm/dlx/140c15d98aff76c652861295ffa050e74ddb4d24b5f22c757b487705a2b44acd/19f72cd6134-9bc/node_modules/.pnpm/openapi-typescript@7.13.0_typescript@5.9.3/node_modules/openapi-typescript/dist/lib/redoc.mjs:74:13)
+    at validateAndBundle (file:///home/runner/.cache/pnpm/dlx/140c15d98aff76c652861295ffa050e74ddb4d24b5f22c757b487705a2b44acd/19f72cd6134-9bc/node_modules/.pnpm/openapi-typescript@7.13.0_typescript@5.9.3/node_modules/openapi-typescript/dist/lib/redoc.mjs:116:3)
+    at async openapiTS (file:///home/runner/.cache/pnpm/dlx/140c15d98aff76c652861295ffa050e74ddb4d24b5f22c757b487705a2b44acd/19f72cd6134-9bc/node_modules/.pnpm/openapi-typescript@7.13.0_typescript@5.9.3/node_modules/openapi-typescript/dist/index.mjs:40:18)
+    at async generateSchema (file:///home/runner/.cache/pnpm/dlx/140c15d98aff76c652861295ffa050e74ddb4d24b5f22c757b487705a2b44acd/19f72cd6134-9bc/node_modules/.pnpm/openapi-typescript@7.13.0_typescript@5.9.3/node_modules/openapi-typescript/bin/cli.js:143:5)
+    at async main (file:///home/runner/.cache/pnpm/dlx/140c15d98aff76c652861295ffa050e74ddb4d24b5f22c757b487705a2b44acd/19f72cd6134-9bc/node_modules/.pnpm/openapi-typescript@7.13.0_typescript@5.9.3/node_modules/openapi-typescript/bin/cli.js:280:20)
 
 Node.js v24.17.0
  ELIFECYCLE  Command failed with exit code 1.
@@ -90,7 +90,7 @@ Node.js v24.17.0
 > pnpm dlx openapi-typescript@7.13.0 services/wlt/contracts/wlt.openapi.yaml -o services/wlt/clients/generated/wlt-api.ts
 
 ✨ openapi-typescript 7.13.0
-🚀 services/wlt/contracts/wlt.openapi.yaml → services/wlt/clients/generated/wlt-api.ts [151.6ms]
+🚀 services/wlt/contracts/wlt.openapi.yaml → services/wlt/clients/generated/wlt-api.ts [132.6ms]
 
 ```
 
@@ -125,21 +125,21 @@ Node.js v24.17.0
 ```text
 go: downloading github.com/lib/pq v1.12.3
 ?   	wlt-api/cmd/wlt-api	[no test files]
-ok  	wlt-api/internal/cod	0.015s
-ok  	wlt-api/internal/commercial	0.005s
-ok  	wlt-api/internal/dshnotify	0.006s
+ok  	wlt-api/internal/cod	0.014s
+ok  	wlt-api/internal/commercial	0.010s
+ok  	wlt-api/internal/dshnotify	0.010s
 ?   	wlt-api/internal/dshoutbox	[no test files]
 ?   	wlt-api/internal/health	[no test files]
-ok  	wlt-api/internal/http	0.013s
-ok  	wlt-api/internal/ledger	0.013s
+ok  	wlt-api/internal/http	0.018s
+ok  	wlt-api/internal/ledger	0.009s
 ok  	wlt-api/internal/payment	0.011s
-ok  	wlt-api/internal/payout	0.011s
+ok  	wlt-api/internal/payout	0.016s
 ?   	wlt-api/internal/promotionfunding	[no test files]
-ok  	wlt-api/internal/provider	0.007s
-ok  	wlt-api/internal/reconciliation	0.006s
-ok  	wlt-api/internal/reference	0.009s
+ok  	wlt-api/internal/provider	0.011s
+ok  	wlt-api/internal/reconciliation	0.008s
+ok  	wlt-api/internal/reference	0.006s
 ok  	wlt-api/internal/refund	0.007s
-ok  	wlt-api/internal/settlement	0.004s
+ok  	wlt-api/internal/settlement	0.005s
 ?   	wlt-api/internal/shared	[no test files]
 ?   	wlt-api/internal/wallet	[no test files]
 
@@ -179,14 +179,27 @@ go: downloading github.com/tinylib/msgp v1.6.1
 go: downloading github.com/philhofer/fwd v1.2.0
 go: downloading golang.org/x/text v0.40.0
 # dsh-api/internal/orders
-internal/orders/orders.go:9:2: "dsh-api/internal/checkoutfinanceoutbox" imported and not used
-internal/orders/orders.go:225:16: undefined: scanOrderRow
-internal/orders/orders.go:236:16: undefined: listOrderItems
-internal/orders/orders.go:245:16: undefined: scanOrderRow
-internal/orders/orders.go:256:16: undefined: listOrderItems
-internal/orders/orders.go:279:9: undefined: scanOrders
-internal/orders/orders.go:300:9: undefined: scanOrders
-internal/orders/orders.go:331:9: undefined: scanOrders
+internal/orders/orders.go:334:6: AcceptOrder redeclared in this block
+	internal/orders/lifecycle.go:11:6: other declaration of AcceptOrder
+internal/orders/orders.go:339:6: RejectOrder redeclared in this block
+	internal/orders/lifecycle.go:16:6: other declaration of RejectOrder
+internal/orders/orders.go:383:6: enqueueOrderFinancialClosure redeclared in this block
+	internal/orders/lifecycle.go:59:6: other declaration of enqueueOrderFinancialClosure
+internal/orders/orders.go:398:6: CancelOrderByOperator redeclared in this block
+	internal/orders/lifecycle.go:74:6: other declaration of CancelOrderByOperator
+internal/orders/orders.go:406:6: MarkPreparing redeclared in this block
+	internal/orders/lifecycle.go:82:6: other declaration of MarkPreparing
+internal/orders/orders.go:411:6: MarkReadyForPickup redeclared in this block
+	internal/orders/lifecycle.go:87:6: other declaration of MarkReadyForPickup
+internal/orders/orders.go:416:6: TransitionDispatchOrder redeclared in this block
+	internal/orders/lifecycle.go:92:6: other declaration of TransitionDispatchOrder
+internal/orders/orders.go:420:6: transitionOrder redeclared in this block
+	internal/orders/lifecycle.go:96:6: other declaration of transitionOrder
+internal/orders/orders.go:454:6: transitionOrderTx redeclared in this block
+	internal/orders/lifecycle.go:117:6: other declaration of transitionOrderTx
+internal/orders/orders.go:504:6: listOrderItems redeclared in this block
+	internal/orders/lifecycle.go:168:6: other declaration of listOrderItems
+internal/orders/orders.go:504:6: too many errors
 # dsh-api/internal/partnerfleet
 internal/partnerfleet/courier_codes.go:10:2: "fmt" imported and not used
 FAIL	dsh-api/cmd/dsh-api [build failed]
@@ -195,30 +208,30 @@ ok  	dsh-api/internal/analytics	0.003s
 ok  	dsh-api/internal/auth	0.008s
 ok  	dsh-api/internal/cart	0.006s
 ?   	dsh-api/internal/catalogapproval	[no test files]
-ok  	dsh-api/internal/centralcatalog	0.005s
-ok  	dsh-api/internal/checkout	0.006s
-ok  	dsh-api/internal/checkoutfinanceoutbox	0.006s
+ok  	dsh-api/internal/centralcatalog	0.007s
+ok  	dsh-api/internal/checkout	0.010s
+ok  	dsh-api/internal/checkoutfinanceoutbox	0.004s
 ?   	dsh-api/internal/coupons	[no test files]
 FAIL	dsh-api/internal/dispatch [build failed]
-ok  	dsh-api/internal/fieldcommissionoutbox	0.019s
-ok  	dsh-api/internal/fieldreadiness	0.007s
-ok  	dsh-api/internal/health	0.006s
-ok  	dsh-api/internal/homediscovery	0.005s
+ok  	dsh-api/internal/fieldcommissionoutbox	0.009s
+ok  	dsh-api/internal/fieldreadiness	0.006s
+ok  	dsh-api/internal/health	0.005s
+ok  	dsh-api/internal/homediscovery	0.004s
 FAIL	dsh-api/internal/http [build failed]
-ok  	dsh-api/internal/marketing	0.005s
-ok  	dsh-api/internal/media	0.012s
-ok  	dsh-api/internal/notifications	0.009s
-ok  	dsh-api/internal/operationaloutbox	0.008s
+ok  	dsh-api/internal/marketing	0.007s
+ok  	dsh-api/internal/media	0.006s
+ok  	dsh-api/internal/notifications	0.007s
+ok  	dsh-api/internal/operationaloutbox	0.005s
 FAIL	dsh-api/internal/orders [build failed]
-ok  	dsh-api/internal/partner	0.005s
+ok  	dsh-api/internal/partner	0.007s
 FAIL	dsh-api/internal/partnerdelivery [build failed]
 FAIL	dsh-api/internal/partnerfleet [build failed]
 FAIL	dsh-api/internal/pickup [build failed]
-ok  	dsh-api/internal/platformpolicies	0.005s
+ok  	dsh-api/internal/platformpolicies	0.004s
 ?   	dsh-api/internal/promotionfundingoutbox	[no test files]
-ok  	dsh-api/internal/specialrequests	0.006s
-ok  	dsh-api/internal/store	0.009s
-ok  	dsh-api/internal/support	0.006s
+ok  	dsh-api/internal/specialrequests	0.005s
+ok  	dsh-api/internal/store	0.011s
+ok  	dsh-api/internal/support	0.005s
 ok  	dsh-api/internal/wlt	0.011s
 ok  	dsh-api/internal/wltoutbox	0.004s
 FAIL
@@ -233,18 +246,31 @@ FAIL
 # dsh-api/internal/partnerfleet
 internal/partnerfleet/courier_codes.go:10:2: "fmt" imported and not used
 # dsh-api/internal/orders
-internal/orders/orders.go:9:2: "dsh-api/internal/checkoutfinanceoutbox" imported and not used
-internal/orders/orders.go:225:16: undefined: scanOrderRow
-internal/orders/orders.go:236:16: undefined: listOrderItems
-internal/orders/orders.go:245:16: undefined: scanOrderRow
-internal/orders/orders.go:256:16: undefined: listOrderItems
-internal/orders/orders.go:279:9: undefined: scanOrders
-internal/orders/orders.go:300:9: undefined: scanOrders
-internal/orders/orders.go:331:9: undefined: scanOrders
+internal/orders/orders.go:334:6: AcceptOrder redeclared in this block
+	internal/orders/lifecycle.go:11:6: other declaration of AcceptOrder
+internal/orders/orders.go:339:6: RejectOrder redeclared in this block
+	internal/orders/lifecycle.go:16:6: other declaration of RejectOrder
+internal/orders/orders.go:383:6: enqueueOrderFinancialClosure redeclared in this block
+	internal/orders/lifecycle.go:59:6: other declaration of enqueueOrderFinancialClosure
+internal/orders/orders.go:398:6: CancelOrderByOperator redeclared in this block
+	internal/orders/lifecycle.go:74:6: other declaration of CancelOrderByOperator
+internal/orders/orders.go:406:6: MarkPreparing redeclared in this block
+	internal/orders/lifecycle.go:82:6: other declaration of MarkPreparing
+internal/orders/orders.go:411:6: MarkReadyForPickup redeclared in this block
+	internal/orders/lifecycle.go:87:6: other declaration of MarkReadyForPickup
+internal/orders/orders.go:416:6: TransitionDispatchOrder redeclared in this block
+	internal/orders/lifecycle.go:92:6: other declaration of TransitionDispatchOrder
+internal/orders/orders.go:420:6: transitionOrder redeclared in this block
+	internal/orders/lifecycle.go:96:6: other declaration of transitionOrder
+internal/orders/orders.go:454:6: transitionOrderTx redeclared in this block
+	internal/orders/lifecycle.go:117:6: other declaration of transitionOrderTx
+internal/orders/orders.go:504:6: listOrderItems redeclared in this block
+	internal/orders/lifecycle.go:168:6: other declaration of listOrderItems
+internal/orders/orders.go:504:6: too many errors
 
 ```
 
-## OpenAPI contracts lint
+## Contracts lint
 
 - Result: **PASS**
 
@@ -257,7 +283,7 @@ contracts-foundation: PASS
 
 ```
 
-## WLT TypeScript typecheck
+## WLT TypeScript
 
 - Result: **PASS**
 
@@ -269,7 +295,7 @@ contracts-foundation: PASS
 
 ```
 
-## Control-panel TypeScript typecheck
+## Control-panel TypeScript
 
 - Result: **PASS**
 
@@ -281,7 +307,7 @@ contracts-foundation: PASS
 
 ```
 
-## WLT financial boundary guard
+## WLT financial boundary
 
 - Result: **FAIL** (exit `1`)
 
@@ -297,16 +323,7 @@ wlt-financial-boundary-gate: FAIL
 
 ```
 
-## Finance route and contract reachability
-
-- Result: **FAIL** (exit `1`)
-
-```text
-missing DSH router route: POST /dsh/control-panel/finance/settlements/from-delivered-orders
-
-```
-
-## Go route extraction guard
+## Go routes extraction
 
 - Result: **PASS**
 
@@ -324,7 +341,7 @@ GO_ROUTES_CI: PASS services=4 routes=316
 
 ```
 
-## Broken imports guard
+## Broken imports
 
 - Result: **PASS**
 
@@ -334,6 +351,15 @@ GO_ROUTES_CI: PASS services=4 routes=316
 > node tools/guards/no-broken-imports.mjs
 
 no-broken-imports: PASS
+
+```
+
+## Finance route-contract matrix
+
+- Result: **FAIL** (exit `1`)
+
+```text
+missing router: POST /dsh/control-panel/finance/settlements/from-delivered-orders
 
 ```
 
@@ -364,4 +390,4 @@ Docker engine availability: PASS
 
 ## Final verdict
 
-**FAIL — one or more finance closure gates failed; see sections above.**
+**FAIL — one or more finance closure gates failed; see the exact evidence above.**
