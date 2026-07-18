@@ -94,11 +94,7 @@ const checks = [
   {
     file: "services/dsh/frontend/app-client/checkout/GovernedCheckoutScreen.tsx",
     forbidden: [[/deliveryAddress\s*=/g, "RAW_ADDRESS_PROP_FORBIDDEN"]],
-    required: [
-      "deliveryAddressId",
-      "DshCreateIntentInput",
-      "intent.deliveryAddress",
-    ],
+    required: ["deliveryAddressId", "DshCreateIntentInput", "intent.deliveryAddress"],
   },
   {
     file: "services/dsh/backend/internal/http/checkout.go",
@@ -131,7 +127,7 @@ const checks = [
     file: "services/dsh/backend/internal/clientaddress/address.go",
     required: [
       "WHERE id = $1 AND client_id = $2 AND deleted_at IS NULL",
-      "UNIQUE",
+      "client_id = $1 AND create_idempotency_key = $2",
       "CheckoutSnapshot",
       "pg_advisory_xact_lock",
       "ErrConflict",
@@ -225,11 +221,7 @@ for (const check of checks) {
   }
   for (const marker of check.required) {
     if (!content.includes(marker)) {
-      violations.push({
-        file: check.file,
-        line: 0,
-        message: `REQUIRED_CLIENT_COMMERCE_MARKER_MISSING ${marker}`,
-      });
+      violations.push({ file: check.file, line: 0, message: `REQUIRED_CLIENT_COMMERCE_MARKER_MISSING ${marker}` });
     }
   }
 }
