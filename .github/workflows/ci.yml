@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [bassam, master]
+    branches: [lian, bassam, master]
   pull_request:
     branches: [master]
   workflow_dispatch:
@@ -49,6 +49,7 @@ jobs:
           run_check saas-governance pnpm run guard:saas-governance
           run_check guard-registry pnpm run guard:guard-registry
           run_check sdlc pnpm run guard:sdlc
+          run_check required-command-integrity pnpm run guard:required-command-integrity
           run_check cleanup-policy pnpm run guard:cleanup-policy
           test "$failures" -eq 0
 
@@ -160,6 +161,7 @@ jobs:
           cmp "$output/workforce-api.ts" core/workforce/clients/generated/workforce-api.ts
           cmp "$output/platform-control-api.ts" core/platform-control/clients/generated/platform-control-api.ts
           cmp "$output/providers-api.ts" core/providers/clients/generated/providers-api.ts
+          node tools/scripts/generate-dsh-catalog-client.mjs --check
 
   node-verification:
     name: Typecheck build and tests
@@ -203,6 +205,14 @@ jobs:
             directory: core/workforce/backend
             go_mod: core/workforce/backend/go.mod
             go_sum: core/workforce/backend/go.sum
+          - name: Platform Control
+            directory: core/platform-control/backend
+            go_mod: core/platform-control/backend/go.mod
+            go_sum: core/platform-control/backend/go.sum
+          - name: Providers
+            directory: core/providers/backend
+            go_mod: core/providers/backend/go.mod
+            go_sum: core/providers/backend/go.sum
     steps:
       - name: Checkout repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
