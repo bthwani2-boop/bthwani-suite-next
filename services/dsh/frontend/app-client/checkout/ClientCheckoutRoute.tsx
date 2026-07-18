@@ -16,9 +16,17 @@ type Props = {
   readonly onSuccess?: (intentId: string) => void;
 };
 
+type CheckoutData = {
+  readonly cart: DshCart;
+  readonly deliveryAddress: string;
+  readonly note: string;
+  readonly paymentMethod: DshPaymentMethod;
+  readonly couponCode: string;
+};
+
 export function ClientCheckoutRoute({ storeId, serviceAreaCode = "sana", onBrowseCatalog, onBack, onSuccess }: Props) {
   const identity = useIdentitySession();
-  const [checkoutData, setCheckoutData] = React.useState<{ cart: DshCart; deliveryAddress: string; note: string; paymentMethod: DshPaymentMethod } | null>(null);
+  const [checkoutData, setCheckoutData] = React.useState<CheckoutData | null>(null);
   const [wantsCheckout, setWantsCheckout] = React.useState(false);
 
   if (wantsCheckout && identity.state.kind !== "authenticated") {
@@ -45,6 +53,7 @@ export function ClientCheckoutRoute({ storeId, serviceAreaCode = "sana", onBrows
         deliveryAddress={checkoutData.deliveryAddress}
         note={checkoutData.note}
         paymentMethod={checkoutData.paymentMethod}
+        couponCode={checkoutData.couponCode}
         onCancel={() => {
           setCheckoutData(null);
           setWantsCheckout(false);
@@ -59,8 +68,8 @@ export function ClientCheckoutRoute({ storeId, serviceAreaCode = "sana", onBrows
       storeId={storeId}
       serviceAreaCode={serviceAreaCode}
       authKind={identity.state.kind === "authenticated" ? "authenticated" : "unauthenticated"}
-      onProceedToCheckout={(cart, deliveryAddress, note, paymentMethod) => {
-        setCheckoutData({ cart, deliveryAddress, note, paymentMethod });
+      onProceedToCheckout={(cart, deliveryAddress, note, paymentMethod, couponCode) => {
+        setCheckoutData({ cart, deliveryAddress, note, paymentMethod, couponCode });
         if (identity.state.kind !== "authenticated") {
           setWantsCheckout(true);
         }
@@ -70,4 +79,3 @@ export function ClientCheckoutRoute({ storeId, serviceAreaCode = "sana", onBrows
     />
   );
 }
-
