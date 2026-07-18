@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "repositoryMode": "REMOTE_ONLY",
+  "repository": "bthwani2-boop/bthwani-suite-next",
+  "targetBranch": "lian",
+  "initialObservedCommitSha": "dd771bff58e119b4b764df0045a9304930c60225",
+  "controlDirectoryEstablishedCommitSha": "057ce14c9bfe529f6d2145bdaa730c8894796301",
+  "mode": "CODE_BASED_LEAN_HIGH_RISK_MULTI_SURFACE",
+  "canonicalDecision": "FIX_REQUIRED",
+  "activePhase": "P0_TRUTH_AND_CI_RECONCILIATION",
+  "closureTarget": "CLOSED_WITH_EVIDENCE",
+  "scope": {
+    "primaryServices": ["dsh", "wlt"],
+    "surfaces": ["app-client", "app-partner", "app-captain", "app-field", "control-panel"],
+    "conditionalDependencies": ["identity", "workforce", "platform-control", "providers", "media", "postgres", "github-actions"]
+  },
+  "executionLoops": [
+    "PIN_REMOTE_TRUTH",
+    "DISCOVER_AND_CLASSIFY",
+    "RECONCILE_OWNER_AND_CONTRACT",
+    "IMPLEMENT_SMALLEST_SAFE_FIX",
+    "VERIFY_AFFECTED_SCOPE",
+    "RUN_RUNTIME_WHEN_CLAIMED",
+    "READ_BACK_ACROSS_SURFACES",
+    "REPIN_AND_RECLASSIFY"
+  ],
+  "currentFacts": {
+    "dshManifestState": "FIX_REQUIRED",
+    "dshRuntimeState": "PARTIALLY_BOUND",
+    "dshScreensReady": false,
+    "dshTechnicalRuntimeReady": false,
+    "dshRealExperienceReady": false,
+    "wltJourneyRuntimeVerified": false,
+    "wltProductionMutationsReady": false,
+    "sameCommitCiProven": false,
+    "independentApprovalsProven": false,
+    "branchProtectionProven": false
+  },
+  "nextActions": [
+    "Enable authoritative CI execution for lian without stale bassam-only trigger assumptions",
+    "Remove false-success wrappers from required checks and correct host/runtime port confusion",
+    "Reconcile DSH manifest, surface map, runtime map, live contracts, routes, consumers, and evidence",
+    "Verify every active OpenAPI fragment is generated, drift-checked, and consumed",
+    "Run same-commit affected checks and runtime journeys before changing readiness claims"
+  ],
+  "claimLimits": {
+    "staticDoesNotProveRuntime": true,
+    "simulatorDoesNotProveProductionFinance": true,
+    "documentationDoesNotProveImplementation": true,
+    "implementationAuthorCannotSelfApproveProtectedStages": true
+  }
+}
