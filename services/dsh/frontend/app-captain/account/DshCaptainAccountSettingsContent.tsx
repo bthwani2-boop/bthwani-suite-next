@@ -40,9 +40,6 @@ export function DshCaptainAccountSettingsContent({
   onToggleStoreCourierMode,
 }: Props) {
   const theme = lightThemeColors;
-  const handlePartnerFleetConnected = React.useCallback(() => {
-    onToggleStoreCourierMode(true);
-  }, [onToggleStoreCourierMode]);
 
   return (
     <Box gap={4}>
@@ -116,13 +113,13 @@ export function DshCaptainAccountSettingsContent({
         </View>
       </Box>
 
-      <PartnerFleetConnectionCard onConnected={handlePartnerFleetConnected} />
+      <PartnerFleetConnectionCard onMembershipStateChange={onToggleStoreCourierMode} />
 
       <Card padding={3} tone={isStoreCourierMode ? "success" : "default"}>
         <Text role="bodySm" align="start">
           {isStoreCourierMode
-            ? "وضع موصل المتجر مفعّل من عضوية مرتبطة فعليًا."
-            : "وضع موصل المتجر غير مفعّل حتى اكتمال الربط."}
+            ? "وضع موصل المتجر مفعّل من عضوية DSH نشطة ومتحقق منها."
+            : "وضع موصل المتجر غير مفعّل لعدم وجود عضوية DSH نشطة."}
         </Text>
       </Card>
     </Box>
