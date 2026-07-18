@@ -114,6 +114,8 @@ for (const [pattern, message] of [
   [/fee_basis_points/, "SETTLEMENT_FEE_POLICY_MISSING"],
   [/wlt_settlement_source_orders/, "SETTLEMENT_SOURCE_ORDER_LOCK_MISSING"],
   [/duplicate orderId|ErrSettlementOrderAlreadyUsed/, "SETTLEMENT_DUPLICATE_ORDER_PROTECTION_MISSING"],
+  [/addPositiveMinorUnits[\s\S]*ErrSettlementAmountOverflow/, "SETTLEMENT_GROSS_OVERFLOW_PROTECTION_MISSING"],
+  [/settlementFeeFromBasisPoints[\s\S]*grossAmount\s*\/\s*10000/, "SETTLEMENT_FEE_OVERFLOW_PROTECTION_MISSING"],
   [/grossAmount[\s\S]*platformFee[\s\S]*netAmount/, "SETTLEMENT_SERVER_ARITHMETIC_MISSING"],
   [/BeginTx[\s\S]*INSERT INTO wlt_settlements[\s\S]*INSERT INTO wlt_settlement_source_orders[\s\S]*tx\.Commit/, "SETTLEMENT_SOURCE_AND_RECORD_NOT_ATOMIC"],
 ]) {
@@ -138,8 +140,10 @@ const dshSourceFile = "services/dsh/backend/internal/http/finance_settlement_sou
 const dshSource = read(dshSourceFile);
 for (const [pattern, message] of [
   [/o\.status = 'delivered'/, "DSH_SETTLEMENT_MUST_USE_DELIVERED_ORDERS"],
-  [/dsh_order_items/, "DSH_SETTLEMENT_ORDER_ITEM_SOURCE_MISSING"],
-  [/SUM\(oi\.unit_price \* oi\.quantity\)/, "DSH_SETTLEMENT_GROSS_DERIVATION_MISSING"],
+  [/dsh_order_status_events/, "DSH_SETTLEMENT_DELIVERED_EVENT_SOURCE_MISSING"],
+  [/o\.subtotal_minor_units/, "DSH_SETTLEMENT_IMMUTABLE_SUBTOTAL_SOURCE_MISSING"],
+  [/o\.currency/, "DSH_SETTLEMENT_ORDER_CURRENCY_SOURCE_MISSING"],
+  [/o\.pricing_snapshot_hash/, "DSH_SETTLEMENT_PRICING_SNAPSHOT_GATE_MISSING"],
   [/orderSources/, "DSH_SETTLEMENT_SOURCE_PAYLOAD_MISSING"],
   [/FinanceWriteSettlement/, "DSH_SETTLEMENT_WLT_BOUNDARY_MISSING"],
 ]) {
@@ -147,8 +151,15 @@ for (const [pattern, message] of [
     violations.push({ file: dshSourceFile, line: 0, message });
   }
 }
-if (/grossAmount|platformFee|netAmount|orderCount/.test(dshSource.slice(0, dshSource.indexOf("func (s *protectedStoreServer) handleCreateFinanceSettlementFromDeliveredOrders")))) {
-  violations.push({ file: dshSourceFile, line: 0, message: "CONTROL_PANEL_SETTLEMENT_INPUT_MUST_NOT_ACCEPT_FINANCIAL_TOTALS" });
+if (/dsh_order_items|SUM\s*\(\s*oi\.unit_price/i.test(dshSource)) {
+  violations.push({ file: dshSourceFile, line: 0, message: "DSH_SETTLEMENT_MUST_NOT_RECOMPUTE_ORDER_PRICING" });
+}
+const settlementRequestMatch = dshSource.match(/type createGovernedSettlementRequest struct \{([\s\S]*?)\n\}/);
+const settlementRequest = settlementRequestMatch?.[1] ?? "";
+for (const forbidden of ["Currency", "GrossAmount", "PlatformFee", "NetAmount", "OrderCount", "OrderSources"]) {
+  if (settlementRequest.includes(forbidden)) {
+    violations.push({ file: dshSourceFile, line: 0, message: `CONTROL_PANEL_SETTLEMENT_INPUT_FORBIDDEN_FIELD ${forbidden}` });
+  }
 }
 
 const dshClientFile = "services/dsh/backend/internal/wlt/settlement_client.go";
