@@ -1,342 +1,309 @@
-import React from 'react';
-import { BackHandler, Platform, View } from 'react-native';
-
-let useSafeAreaInsets: () => { top: number; bottom: number; left: number; right: number } = () => ({ top: 0, bottom: 0, left: 0, right: 0 });
-try {
-  // eslint-disable-next-line no-eval
-  const r: any = eval('require');
-  const safe = r('react-native-safe-area-context');
-  if (safe && typeof safe.useSafeAreaInsets === 'function') {
-    useSafeAreaInsets = safe.useSafeAreaInsets;
-  }
-} catch (err) {
-  void err;
-}
-
+import React from "react";
+import { StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useIdentitySession } from "@bthwani/core-identity";
 import {
-  Box, colorPalette, Icon, MobileScrollView,
-  StateView, Surface, useTheme,
-} from '@bthwani/ui-kit';
-type BThwaniAppearanceMode = 'lightPremium' | 'darkPremium';
+  AppHeader,
+  BottomNavBar,
+  Icon,
+  StateView,
+  Surface,
+  Text,
+  colorRoles,
+  spacing,
+} from "@bthwani/ui-kit";
+import type { IconName } from "@bthwani/ui-kit";
+import { DshCaptainRouteRenderer } from "./DshCaptainRouteRenderer";
+import { useDshCaptainSurfaceModel } from "./useDshCaptainSurfaceModel";
+import type { DshCaptainRoute } from "./dsh-captain.types";
+import { useCameraPhotoCapture } from "../shared/media/useCameraPhotoCapture";
 
-import { BottomNavBar } from './components/BottomNavBar';
-import { MobileWorkspaceHeader } from './components/MobileWorkspaceHeader';
-import { ModernPremiumHeader } from './components/ModernPremiumHeader';
-import { useIdentitySession } from '@bthwani/core-identity';
+export type DshCaptainSurfaceProps = {
+  readonly captainId?: string;
+};
 
-const SurfaceAny = Surface as any;
+const BOTTOM_NAV_ITEMS: ReadonlyArray<{
+  readonly id: DshCaptainRoute;
+  readonly label: string;
+  readonly icon: IconName;
+}> = [
+  { id: "account", label: "الحساب", icon: "person-outline" },
+  { id: "inbox", label: "الطلبات", icon: "bag-outline" },
+  { id: "entry", label: "الرئيسية", icon: "home-outline" },
+];
 
-function useAppCaptainAppearance() {
-  const [mode, setMode] = React.useState<BThwaniAppearanceMode>('lightPremium');
-  return { hydrated: true, mode, setMode };
-}
-
-import { wltDshCaptainUiCopy, buildWltDshCaptainTopBarLocationLabel } from '../shared/finance-wlt-link/wlt/generated/wlt_frontend_dsh_app_captain_wlt_dsh_captain_ui_copy.facade';
-import { DshCaptainStoreCourierHomeContent } from './store/DshCaptainStoreCourierHomeContent';
-import { DshCaptainMapLayer } from './orders/DshCaptainMapLayer';
-import { DshCaptainHomeOrderPanel } from './orders/DshCaptainHomeOrderPanel';
-import { DshCaptainRouteRenderer } from './DshCaptainRouteRenderer';
-import type { DshCaptainRoute, DshCaptainSurfaceProps } from './dsh-captain.types';
-import { useDshCaptainSurfaceModel } from './useDshCaptainSurfaceModel';
-import { PlatformVarsProvider, FeatureFlagProvider, usePlatformVars } from '../shared';
-import { useNotificationsController } from '../shared/notifications';
-import type { DshCaptainOrdersScreen } from './orders/DshCaptainOrdersScreen';
-
-type CaptainOrderDetailSummary = React.ComponentProps<typeof DshCaptainOrdersScreen>['summary'];
-
-export function DshCaptainSurface(props: DshCaptainSurfaceProps) {
-  return (
-    <PlatformVarsProvider>
-      <FeatureFlagProvider>
-        <DshCaptainSurfaceInner {...props} />
-      </FeatureFlagProvider>
-    </PlatformVarsProvider>
-  );
-}
-
-function DshCaptainSurfaceInner({ command, captainId, walletBalanceLabel }: DshCaptainSurfaceProps) {
-  const identity = useIdentitySession();
-  const { theme } = useTheme();
-  const { dshClientId } = usePlatformVars();
-  
-  // Enforce Identity Bootstrap: User identity comes from token subject/session, not from props.
-  const captainRuntimeId = identity.state.kind === 'authenticated' ? identity.state.identity.subject || '' : '';
-  const { hydrated: appearanceHydrated, mode: appearanceMode, setMode: setAppearanceMode } = useAppCaptainAppearance();
+function AuthenticatedCaptainSurface({ captainId }: { readonly captainId: string }) {
   const insets = useSafeAreaInsets();
+  const model = useDshCaptainSurfaceModel(captainId);
+  const camera = useCameraPhotoCapture();
+  const [cameraError, setCameraError] = React.useState<string | null>(null);
 
-  const { state: ui, actions, derived } = useDshCaptainSurfaceModel(command, captainRuntimeId);
-  const notifications = useNotificationsController(identity.state.kind);
-  const notificationBadgeCount = notifications.state.kind === 'success' ? notifications.state.unreadCount : 0;
+  const {
+    path,
+    inbox,
+    availability,
+    gps,
+    pod,
+    finance,
+    decline,
+    derived,
+    appearanceHydrated,
+    appearanceMode,
+    setAppearanceMode,
+    actions,
+  } = model;
 
-  React.useEffect(() => {
-    if (Platform.OS !== 'android') return undefined;
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => actions.goBack());
-    return () => sub.remove();
-  }, [actions.goBack]);
+  const accountItems = React.useMemo(
+    () => [
+      {
+        id: "profile",
+        title: "بيانات الكابتن",
+        subtitle: "الهوية والحالة التشغيلية المثبتة",
+        badgeLabel: "هوية",
+        icon: "person-outline" as IconName,
+      },
+      {
+        id: "orders",
+        title: "المهمة الحالية",
+        subtitle: "العرض أو التكليف النشط من DSH",
+        badgeLabel: derived.activeSummary ? "نشطة" : "لا توجد",
+        icon: "bag-outline" as IconName,
+      },
+      {
+        id: "finance",
+        title: "المالية",
+        subtitle: "المحفظة وCOD والمستحقات من WLT",
+        badgeLabel: finance.walletBalanceLabel ? "WLT" : "غير متاح",
+        icon: "wallet-outline" as IconName,
+      },
+      {
+        id: "docs",
+        title: "الوثائق والتقييم",
+        subtitle: "يتطلب ربط Workforce موثقًا",
+        badgeLabel: "غير مربوط",
+        icon: "document-text-outline" as IconName,
+      },
+      {
+        id: "shifts",
+        title: "الدوام والإجازات",
+        subtitle: "يتطلب ربط Workforce موثقًا",
+        badgeLabel: "غير مربوط",
+        icon: "calendar-outline" as IconName,
+      },
+      {
+        id: "support",
+        title: "الإعدادات",
+        subtitle: "المظهر وخيارات السطح غير التشغيلية",
+        badgeLabel: "إعدادات",
+        icon: "settings-outline" as IconName,
+      },
+    ],
+    [derived.activeSummary, finance.walletBalanceLabel],
+  );
 
-  // ── UI-only: account nav menu items (display strings + route callbacks) ────
-  const captainAccountNavItems = React.useMemo(() => [
-    { title: 'بيانات الكابتن',                   subtitle: 'الهوية، النوع، والحالة الحالية.',      badgeLabel: 'مباشر',                          icon: 'person-outline',       onPress: () => actions.openCaptainAccountSection('account-profile') },
-    { title: wltDshCaptainUiCopy.financeTitle,    subtitle: wltDshCaptainUiCopy.financeSubtitle,    badgeLabel: wltDshCaptainUiCopy.badgeLabel, icon: 'wallet-outline',    onPress: () => actions.openCaptainAccountSection('account-finance') },
-    { title: 'الطلبات',                          subtitle: 'الطلب النشط والسجل المختصر.',          badgeLabel: 'نشط',                             icon: 'receipt-outline',      onPress: () => actions.openCaptainAccountSection('account-orders') },
-    { title: 'الوثائق والتقييم',                 subtitle: 'الملفات، التقييم، والمستوى.',          badgeLabel: 'جاهز',                            icon: 'document-text-outline', onPress: () => actions.openCaptainAccountSection('account-docs') },
-    { title: 'الدوام / الإجازات',                subtitle: 'الحضور وجدول اليوم.',                  badgeLabel: 'اليوم',                           icon: 'calendar-outline',     onPress: () => actions.openCaptainAccountSection('account-shifts') },
-    { title: 'الإعدادات',                        subtitle: 'المظهر ووضع التطبيق.',                 badgeLabel: 'محلي',                            icon: 'settings-outline',     onPress: () => actions.openCaptainAccountSection('account-support') },
-    { title: 'الدعم',                             subtitle: 'دليل مسارات DSH.',                    badgeLabel: 'مفتوح',                           icon: 'help-circle-outline',  onPress: actions.openSupportDirectory },
-  ] as const, [actions.openCaptainAccountSection, actions.openSupportDirectory]);
+  const accountNavItems = React.useMemo(
+    () =>
+      accountItems.map((item) => ({
+        title: item.title,
+        subtitle: item.subtitle,
+        badgeLabel: item.badgeLabel,
+        icon: item.icon,
+        onPress: () => actions.handleAccountItemPress(item.id),
+      })),
+    [accountItems, actions],
+  );
 
-  // ── UI-only: bottom nav bar JSX (pure visual composition) ─────────────────
-  const captainBottomNavBar = derived.isStoreCourierMode ? (
+  const bottomNav = (
     <BottomNavBar
-      activeId={derived.captainBottomActiveId}
+      items={BOTTOM_NAV_ITEMS.map((item) => ({
+        id: item.id,
+        label: item.label,
+        icon: <Icon name={item.icon} size={22} tone="muted" />,
+        activeIcon: <Icon name={item.icon} size={22} tone="brand" />,
+      }))}
+      activeId={path.route}
+      onSelect={(id) => path.setRoute(id as DshCaptainRoute)}
+      launcherIcon={<Icon name="grid-outline" size={24} tone="inverted" />}
+      launcherLabel="الدعم"
+      onLauncherPress={actions.openSupportDirectory}
       direction="rtl"
-      launcherLabel="طلباتي"
-      launcherIcon="receipt-outline"
-      launcherActive={ui.route === 'home'}
-      onLauncherPress={() => actions.setRoute('home')}
-      onSelect={(id: string) => {
-        if (id === 'history') actions.openCaptainAccountSection('account-orders');
-        if (id === 'earnings') actions.openCaptainAccountSection('account-finance');
-        if (id === 'support') actions.openSupportDirectory();
-        if (id === 'profile') actions.openCaptainAccount();
-      }}
-      items={[
-        { id: 'history',  label: 'السجل',   icon: 'time-outline',        activeIcon: 'time' },
-        { id: 'support',  label: 'الدعم',    icon: 'help-circle-outline', activeIcon: 'help-circle' },
-        { id: 'earnings', label: 'مستحقاتي', icon: 'cash-outline',        activeIcon: 'cash' },
-        { id: 'profile',  label: 'حسابي',    icon: 'person-outline',      activeIcon: 'person' },
-      ]}
-    />
-  ) : (
-    <BottomNavBar
-      activeId={derived.captainBottomActiveId}
-      direction="rtl"
-      launcherLabel="الخريطة"
-      launcherIcon="map-outline"
-      launcherActive={ui.route === 'home' || ui.route === 'map'}
-      onLauncherPress={() => actions.setRoute('home')}
-      onSelect={(id: string) => {
-        if (id === 'orders') actions.setRoute('inbox');
-        if (id === 'wallet') actions.openCaptainAccountSection('account-finance');
-        if (id === 'support') actions.openSupportDirectory();
-        if (id === 'profile') actions.openCaptainAccount();
-      }}
-      items={[
-        { id: 'orders',  label: 'الطلبات', icon: 'receipt-outline',    activeIcon: 'receipt' },
-        { id: 'wallet',  label: 'المحفظة', icon: 'wallet-outline',      activeIcon: 'wallet' },
-        { id: 'support', label: 'الدعم',   icon: 'help-circle-outline', activeIcon: 'help-circle' },
-        { id: 'profile', label: 'حسابي',   icon: 'person-outline',      activeIcon: 'person' },
-      ]}
+      bottomInset={insets.bottom}
     />
   );
 
-  // ── AMN mode: early UI-only return ─────────────────────────────────────────
-  if (ui.activeServiceType === 'amn') {
-    return (
-      <Box style={{ flex: 1 }} background="background">
-        <MobileWorkspaceHeader
-          title="AMN — قيد الربط"
-          description="هذا المسار غير نشط داخل DSH حاليًا."
-          icon="alert-circle-outline"
-          backLabel="العودة إلى DSH"
-          onBack={() => actions.handleSelectServiceType('dsh')}
+  const showBottomNav =
+    path.route === "entry" ||
+    path.route === "inbox" ||
+    path.route === "account";
+
+  return (
+    <View style={styles.root}>
+      <AppHeader
+        title="بثواني كابتن"
+        subtitle={availability.currentAvailabilityMeta.label}
+        topInset={insets.top}
+        direction="rtl"
+        actions={[
+          {
+            icon: (
+              <Icon
+                name="notifications-outline"
+                size={20}
+                color={colorRoles.surfaceBase}
+              />
+            ),
+            accessibilityLabel: "إشعارات الكابتن",
+            onPress: () => path.setRoute("bell"),
+          },
+        ]}
+      />
+
+      <Surface tone="raised" padding={3} style={styles.statusStrip}>
+        <View style={styles.statusRow}>
+          <Text role="caption" tone="muted">
+            التوفر: {availability.currentAvailabilityMeta.label}
+          </Text>
+          <Text role="caption" tone="muted">
+            GPS: {gps.currentGpsStatusMeta.label}
+          </Text>
+        </View>
+        {!availability.availabilityMutationReady ? (
+          <Text role="caption" tone="warning" align="start">
+            تعديل التوفر محجوب حتى يكتمل عقد DSH وحفظ الحالة.
+          </Text>
+        ) : null}
+      </Surface>
+
+      {cameraError ? (
+        <StateView
+          title="تعذر التقاط الصورة"
+          description={cameraError}
+          tone="danger"
+          actionLabel="إغلاق"
+          onActionPress={() => setCameraError(null)}
         />
-        <SurfaceAny tone="raised" padding={0} gap={0} radiusToken="none" border={false} style={{ flex: 1, marginTop: -2, borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: 'hidden' }}>
-          <MobileScrollView fill padding={4} gap={4}>
-            <StateView tone="warning" title="AMN غير نشط داخل هذا السطح" description="DSH هو السياق التنفيذي النشط." actionLabel="العودة إلى DSH" onActionPress={() => actions.handleSelectServiceType('dsh')} />
-          </MobileScrollView>
-        </SurfaceAny>
-      </Box>
-    );
-  }
+      ) : null}
 
-  // ── Top bar (pure UI) ──────────────────────────────────────────────────────
-  const topBar = (
-    <ModernPremiumHeader
-      title={derived.isStoreCourierMode ? 'موصل المتجر' : ''}
-      locationLabel={derived.isStoreCourierMode ? 'وضع موصل المتجر — طلبات المتجر فقط' : buildWltDshCaptainTopBarLocationLabel(walletBalanceLabel)}
-      actions={[
-        { id: 'account',       icon: <Icon name="person-outline"       size={20} color={colorPalette.white} />, accessibilityLabel: 'الحساب',    onPress: actions.openCaptainAccount },
-        { id: 'search',        icon: <Icon name="search-outline"        size={20} color={colorPalette.white} />, accessibilityLabel: 'البحث',     onPress: actions.openSupportDirectory },
-        { id: 'notifications', icon: <Icon name="notifications-outline" size={20} color={colorPalette.white} />, badgeCount: notificationBadgeCount, accessibilityLabel: 'الإشعارات', onPress: () => actions.setRoute('bell') },
-        ...(derived.isStoreCourierMode ? [] : [{
-          id: 'wallet',
-          icon: <Icon name="wallet-outline" size={20} color={colorPalette.white} />,
-          accessibilityLabel: wltDshCaptainUiCopy.walletAccessibilityLabel,
-          onPress: () => actions.openCaptainSupportScreen('cod-liability'),
-        }]),
-      ]}
-      tickerStatus={derived.isStoreCourierMode ? 'موصل المتجر' : derived.homeTicker.statusLabel}
-      tickerMessage={derived.isStoreCourierMode ? 'انتظر تعيين الطلب التالي.' : derived.homeTicker.message}
-      onTickerPress={derived.isStoreCourierMode ? undefined : derived.homeTicker.onPress}
-      direction="rtl"
-    />
-  );
-
-  // ── Non-home routes → RouteRenderer handles ALL rendering ─────────────────
-  if (ui.route !== 'home') {
-    const activeSummary = derived.activeSummary as NonNullable<CaptainOrderDetailSummary>;
-    const activeOrderDisplayId = derived.activeOrderDisplayId;
-    const orderChatState = ui.inboxState === 'delivered' ? 'readOnly' : 'active';
-
-    return (
-      <DshCaptainRouteRenderer
-        route={ui.route}
-        activeAssignmentId={ui.activeAssignmentId}
-        activeOrderId={ui.activeOrderId}
-        activeOrderDisplayId={activeOrderDisplayId}
-        activeSummary={activeSummary}
-        inboxItems={ui.inboxItems}
-        inboxState={ui.inboxState}
-        orderChatState={orderChatState}
-        captainRuntimeId={captainRuntimeId}
-        captainPodRequired={derived.captainPodRequired}
-        captainCollectsCod={derived.captainCollectsCod}
-        isStoreCourierMode={derived.isStoreCourierMode}
-        selectedSupportScreen={ui.selectedSupportScreen}
-        isPickupSheetVisible={ui.isPickupSheetVisible}
-        isDeliverySheetVisible={ui.isDeliverySheetVisible}
-        isDeclineSheetVisible={ui.isDeclineSheetVisible}
-        declineOrderId={ui.declineOrderId}
-        declineSheetState={ui.declineSheetState}
-        pickupSheetState={ui.pickupSheetState}
-        captainPodState={ui.captainPodState}
-        captainPodPhotoUri={ui.captainPodPhotoUri}
-        activeOrderMessages={ui.activeOrderMessages}
-        activeOrderDraft={ui.activeOrderDraft}
-        showBottomNav={derived.showBottomNav}
-        bottomNavNode={captainBottomNavBar}
-        dshClientId={dshClientId}
-        isCaptainAvailable={derived.isCaptainAvailable}
-        captainDisplayName=""
-        currentAvailabilityMeta={derived.currentAvailabilityMeta}
-        captainAccountNavItems={captainAccountNavItems}
-        walletBalanceLabel={walletBalanceLabel || null}
-        appearanceHydrated={appearanceHydrated}
-        appearanceMode={appearanceMode}
-        wltSummaryLabel={wltDshCaptainUiCopy.summaryLabel}
-        onOpenOrder={actions.openOrderDetail}
-        onRetryInbox={actions.refreshInbox}
-        onConfirmPickup={actions.confirmPickup}
-        onConfirmDelivery={actions.confirmDelivery}
-        onConfirmPodSubmission={actions.confirmPodSubmission}
-        onReportPodFailure={actions.reportPodFailure}
-        onCapturePhoto={async () => {
-          try {
-            const ImagePicker = await import('expo-image-picker');
-            const { status } = await ImagePicker.requestCameraPermissionsAsync();
-            if (status !== 'granted') {
-              actions.setCaptainPodState('error');
-              return;
-            }
-            const result = await ImagePicker.launchCameraAsync({
-              quality: 0.5,
-              base64: false,
-            });
-            if (!result.canceled && result.assets[0]) {
-              actions.setCaptainPodPhotoUri(result.assets[0].uri);
-              actions.setCaptainPodMediaKey(`local-pod-${Date.now()}`);
-              actions.setCaptainPodState('success');
-            } else {
-              actions.setCaptainPodState('ready');
-            }
-          } catch (err) {
-            console.warn('PoD capture failed', err);
-            actions.setCaptainPodState('retry-required');
+      <View style={styles.content}>
+        <DshCaptainRouteRenderer
+          route={path.route}
+          activeAssignmentId={derived.activeAssignmentId}
+          activeOrderId={path.activeOrderId}
+          activeOrderDisplayId={derived.activeOrderDisplayId}
+          activeSummary={derived.activeSummary ?? null}
+          inboxItems={inbox.inboxItems}
+          inboxState={inbox.inboxState}
+          captainRuntimeId={captainId}
+          captainPodRequired={derived.captainPodRequired}
+          captainCollectsCod={derived.captainCollectsCod}
+          isStoreCourierMode={path.isStoreCourierMode}
+          selectedSupportScreen={path.selectedSupportScreen}
+          isPickupSheetVisible={path.isPickupSheetVisible}
+          isDeliverySheetVisible={path.isDeliverySheetVisible}
+          isDeclineSheetVisible={inbox.decline.isDeclineSheetVisible}
+          declineOrderId={inbox.decline.declineOrderId}
+          declineSheetState={decline.declineSheetState}
+          pickupSheetState={path.pickupSheetState}
+          captainPodState={pod.podState}
+          captainPodPhotoUri={pod.podPhotoUri}
+          showBottomNav={showBottomNav}
+          bottomNavNode={bottomNav}
+          dshClientId={captainId}
+          captainDisplayName={captainId}
+          currentAvailabilityMeta={availability.currentAvailabilityMeta}
+          captainAccountNavItems={accountNavItems}
+          walletBalanceLabel={finance.walletBalanceLabel}
+          appearanceHydrated={appearanceHydrated}
+          appearanceMode={appearanceMode}
+          wltSummaryLabel="الرصيد من WLT"
+          onOpenOrder={path.openOrder}
+          onRetryInbox={actions.retryInbox}
+          onConfirmPickup={path.confirmPickup}
+          onConfirmDelivery={path.confirmDelivery}
+          onConfirmPodSubmission={pod.confirmSubmission}
+          onReportPodFailure={pod.reportFailure}
+          onCapturePhoto={() => {
+            void camera
+              .captureFromCamera()
+              .then((asset) => {
+                if (asset) pod.setPodPhotoUri(asset.uri);
+              })
+              .catch((error: unknown) => {
+                setCameraError(
+                  error instanceof Error
+                    ? error.message
+                    : "تعذر الوصول إلى الكاميرا.",
+                );
+              });
+          }}
+          onRetryPod={pod.retry}
+          onBack={path.goBack}
+          onGoToInbox={path.goToInbox}
+          onGoToAccount={path.goToAccount}
+          onClosePickupSheet={path.closePickupSheet}
+          onCloseDeliverySheet={path.closeDeliverySheet}
+          onCloseDeclineSheet={inbox.decline.closeDecline}
+          onConfirmDecline={actions.confirmDecline}
+          onAcceptTask={actions.acceptTask}
+          onDeclineTask={actions.declineTask}
+          onOpenSupportScreen={actions.openSupportScreen}
+          onOpenSupportDirectory={actions.openSupportDirectory}
+          onOpenCaptainAccountSection={actions.openCaptainAccountSection}
+          onSetAppearanceMode={setAppearanceMode}
+          onToggleStoreCourierMode={path.setStoreCourierMode}
+          onPushLocation={(push) =>
+            actions.pushLocation(push, captainId, gps.gpsStatus)
           }
-        }}
-        onRetryPod={() => actions.setCaptainPodState('ready')}
-        onBack={actions.goBack}
-        onGoToInbox={actions.goToInbox}
-        onGoToAccount={actions.openCaptainAccount}
-        onClosePickupSheet={() => { actions.setIsPickupSheetVisible(false); actions.setPickupSheetState('ready'); }}
-        onCloseDeliverySheet={() => actions.setIsDeliverySheetVisible(false)}
-        onCloseDeclineSheet={() => actions.setIsDeclineSheetVisible(false)}
-        onConfirmDecline={actions.handleDeclineConfirm}
-        onAcceptTask={actions.handleAcceptTask}
-        onDeclineTask={(id) => { actions.setDeclineOrderId(id); actions.setIsDeclineSheetVisible(true); }}
-        onOpenSupportScreen={actions.openCaptainSupportScreen}
-        onOpenSupportDirectory={actions.openSupportDirectory}
-        onOpenCaptainAccountSection={actions.openCaptainAccountSection}
-        onToggleCaptainAvailability={() => actions.setCaptainAvailabilityStatus((c: any) => c === 'available' ? 'unavailable' : 'available')}
-        onSetAppearanceMode={setAppearanceMode}
-        onToggleStoreCourierMode={actions.toggleStoreCourierMode}
-        onPushLocation={actions.pushLocation}
-        onRingBell={() => {}}
+        />
+      </View>
+    </View>
+  );
+}
+
+export function DshCaptainSurface({ captainId }: DshCaptainSurfaceProps) {
+  const identity = useIdentitySession();
+
+  if (identity.state.kind !== "authenticated") {
+    return (
+      <StateView
+        title="تسجيل دخول الكابتن مطلوب"
+        description="لا يمكن تحميل صندوق المهام أو المالية أو الموقع دون جلسة كابتن صالحة."
+        tone="warning"
       />
     );
   }
 
-  // ── Home screen (route === 'home') ─────────────────────────────────────────
-  const activeSummary = derived.activeSummary as NonNullable<CaptainOrderDetailSummary>;
+  const resolvedCaptainId = identity.state.subject.trim() || captainId?.trim() || "";
+  if (!resolvedCaptainId) {
+    return (
+      <StateView
+        title="هوية الكابتن غير مكتملة"
+        description="الجلسة لا تحتوي معرف actor صالحًا لربط DSH وWLT."
+        tone="danger"
+      />
+    );
+  }
 
-  const orderPanelNode = (
-    <DshCaptainHomeOrderPanel
-      isAvailable={derived.isCaptainAvailable}
-      availabilityLabel={derived.currentAvailabilityMeta.label}
-      availabilityDescription={derived.currentAvailabilityMeta.description}
-      availabilityChipTone={derived.currentAvailabilityMeta.chipTone}
-      orderBadgeLabel={derived.currentAvailabilityMeta.orderBadgeLabel}
-      inboxState={ui.inboxState as Parameters<typeof DshCaptainHomeOrderPanel>[0]['inboxState']}
-      activeOrderDisplayId={derived.activeOrderDisplayId}
-      activeSummary={activeSummary as any}
-      activeOrderPhase={ui.activeOrderPhase}
-      activeOrderExpanded={ui.activeOrderExpanded}
-      activeOrderMessages={ui.activeOrderMessages}
-      activeOrderDraft={ui.activeOrderDraft}
-      onSetActiveOrderDraft={actions.setActiveOrderDraft}
-      onCycleAvailability={() => actions.setCaptainAvailabilityStatus((c: any) => c === 'available' ? 'unavailable' : 'available')}
-      onOpenInbox={actions.goToInbox}
-      onRetryInbox={actions.resetInboxState}
-      onExpandOrder={() => actions.setActiveOrderExpanded(true)}
-      onCollapseOrder={() => actions.setActiveOrderExpanded(false)}
-      onConfirmPickup={actions.confirmPickup}
-      onConfirmDelivery={actions.confirmDelivery}
-      onOpenMap={() => actions.setRoute('map')}
-      onSendMessage={actions.sendQuickMessage}
-    />
-  );
-
-  return (
-    <Box style={{ flex: 1, position: 'relative' }} background="background">
-      {topBar}
-      <Box background="background" padding={0} gap={0} radiusToken="none" border={false} style={{ flex: 1, marginTop: -2, borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: 'hidden', paddingBottom: derived.showBottomNav ? (Platform.OS === 'android' ? 112 : 80) : 0 }}>
-        {derived.isStoreCourierMode ? (
-          <DshCaptainStoreCourierHomeContent
-            courierStage={ui.storeCourierStage}
-            showBottomNav={derived.showBottomNav}
-            isAndroid={Platform.OS === 'android'}
-            safeAreaBottom={insets.bottom}
-            onMarkPickedUp={() => { actions.setStoreCourierStage('picked_up'); actions.setActiveOrderPhase('delivery'); }}
-            onMarkOutForDelivery={() => { actions.setStoreCourierStage('out_for_delivery'); actions.setActiveOrderPhase('delivery'); }}
-            onOpenProof={actions.openStoreCourierProof}
-            onMarkDeliveryFailed={() => { actions.setStoreCourierStage('delivery_failed'); actions.openSupportDirectory(); }}
-            onRetryDelivery={() => actions.setStoreCourierStage(ui.storeCourierStage === 'picked_up' ? 'ready_for_pickup' : 'out_for_delivery')}
-            onOpenSupport={actions.openSupportDirectory}
-            onOpenOrders={() => actions.openCaptainAccountSection('account-orders')}
-            bottomNavNode={captainBottomNavBar}
-          />
-        ) : (
-          <DshCaptainMapLayer
-            isAvailable={derived.isCaptainAvailable}
-            availabilityLabel={derived.currentAvailabilityMeta.label}
-            isGpsEnabled={derived.isGpsEnabled}
-            onToggleAvailability={(v) => actions.setCaptainAvailabilityStatus(v ? 'available' : 'unavailable')}
-            onToggleGps={(v) => actions.setGpsStatus(v ? 'ready' : 'disabled')}
-            orderPanelNode={orderPanelNode}
-            bottomNavOffset={derived.showBottomNav ? (Platform.OS === 'android' ? 112 : 80) : 0}
-            safeAreaBottom={insets.bottom}
-            showBottomNav={derived.showBottomNav}
-          />
-        )}
-      </Box>
-      {derived.showBottomNav && (
-        <View style={{ position: 'absolute', bottom: 50, left: 16, right: 16, zIndex: 1000 }}>
-          {captainBottomNavBar}
-        </View>
-      )}
-    </Box>
-  );
+  return <AuthenticatedCaptainSurface captainId={resolvedCaptainId} />;
 }
 
-// export default DshCaptainSurface; // Unused default export
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: colorRoles.surfaceBase,
+  },
+  statusStrip: {
+    marginHorizontal: spacing[3],
+    marginTop: spacing[2],
+    gap: spacing[2],
+  },
+  statusRow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing[2],
+  },
+  content: {
+    flex: 1,
+  },
+});
