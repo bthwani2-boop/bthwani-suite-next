@@ -4,7 +4,7 @@ import { useIdentitySession } from "@bthwani/core-identity";
 import { TopBar, ScrollScreen } from "@bthwani/ui-kit";
 import { AuthLoginCard } from "../../shared/auth/AuthLoginCard";
 import { CartScreen } from "../cart";
-import { CheckoutScreen } from "./CheckoutScreen";
+import { GovernedCheckoutScreen as CheckoutScreen } from "./GovernedCheckoutScreen";
 import type { DshCart } from "../../shared/cart";
 import type { DshPaymentMethod } from "../../shared/checkout";
 
@@ -13,7 +13,7 @@ type Props = {
   readonly serviceAreaCode?: string;
   readonly onBrowseCatalog?: () => void;
   readonly onBack?: () => void;
-  readonly onSuccess?: (intentId: string) => void;
+  readonly onSuccess?: (orderId: string) => void;
 };
 
 type CheckoutData = {
