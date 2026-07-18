@@ -20,6 +20,8 @@ import {
   completePayoutRequest,
   failPayoutRequest,
   transitionPayoutRequest,
+  upsertSettlementPolicy,
+  createSettlementFromDeliveredOrders,
   assignReconciliationCase,
   loadOpenReconciliationCases,
   resolveReconciliationCase,
@@ -27,8 +29,11 @@ import {
 import type {
   FinanceActionResult,
   FinancePayoutRequest,
+  GovernedSettlementInput,
   PayoutTransition,
   ReconciliationCase,
+  SettlementActionResult,
+  SettlementPolicyInput,
 } from './finance-hub-runtime.api';
 import type {
   WltDshFinanceRuntimeResult,
@@ -150,6 +155,8 @@ export {
   completePayoutRequest,
   failPayoutRequest,
   transitionPayoutRequest,
+  upsertSettlementPolicy,
+  createSettlementFromDeliveredOrders,
   assignReconciliationCase,
   loadOpenReconciliationCases,
   resolveReconciliationCase,
@@ -157,6 +164,9 @@ export {
 export type {
   FinanceActionResult,
   FinancePayoutRequest,
+  GovernedSettlementInput,
   PayoutTransition,
   ReconciliationCase,
+  SettlementActionResult,
+  SettlementPolicyInput,
 };
