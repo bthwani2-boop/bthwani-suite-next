@@ -1,0 +1,100 @@
+name: Platform Control Deep Diagnostics
+
+on:
+  pull_request:
+    branches:
+      - "bassam-platform-verification-base-*"
+    paths:
+      - "core/platform-control/**"
+      - "core/identity/backend/**"
+      - "services/dsh/frontend/shared/platform/**"
+      - "services/dsh/frontend/control-panel/platform/**"
+      - "tools/scripts/platform-control-runtime.ps1"
+      - "tools/scripts/platform-control-runtime/**"
+      - ".github/workflows/platform-control-deep-diagnostics.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend-diagnostics:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: core/platform-control/backend/go.mod
+          cache: true
+      - name: Capture Go diagnostics
+        working-directory: core/platform-control/backend
+        shell: bash
+        run: |
+          set +e
+          go vet ./... > /tmp/platform-vet.txt 2>&1
+          vet_status=$?
+          go build ./... > /tmp/platform-build.txt 2>&1
+          build_status=$?
+          go test ./... -count=1 > /tmp/platform-test.txt 2>&1
+          test_status=$?
+          printf 'vet=%s\nbuild=%s\ntest=%s\n' "$vet_status" "$build_status" "$test_status" | tee /tmp/platform-go-status.txt
+          exit 0
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: platform-go-deep-diagnostics
+          path: /tmp/platform-*.txt
+          if-no-files-found: error
+          retention-days: 3
+
+  frontend-diagnostics:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-node-workspace
+      - name: Capture each guard and typecheck
+        shell: bash
+        run: |
+          set +e
+          commands=(
+            "guard:no-broken-imports"
+            "guard:ui-kit-boundary"
+            "guard:frontend-feature-binding"
+            "guard:api-binding"
+            "guard:backend-api-binding"
+            "guard:service-manifest-drift"
+            "guard:fullstack-boundary"
+            "guard:runtime-config"
+            "typecheck"
+          )
+          : > /tmp/platform-frontend-status.txt
+          for command in "${commands[@]}"; do
+            safe="${command//[:\/]/-}"
+            pnpm run "$command" > "/tmp/$safe.txt" 2>&1
+            status=$?
+            printf '%s=%s\n' "$command" "$status" | tee -a /tmp/platform-frontend-status.txt
+          done
+          exit 0
+      - name: Parse every platform runtime PowerShell file
+        shell: pwsh
+        run: |
+          $allErrors = @()
+          Get-ChildItem tools/scripts -Filter "platform-control-runtime*.ps1" -File -Recurse | ForEach-Object {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$errors) | Out-Null
+            foreach ($error in $errors) {
+              $allErrors += "$($_.FullName): $($error.Message)"
+            }
+          }
+          $allErrors | Set-Content /tmp/platform-powershell.txt
+          if ($allErrors.Count -eq 0) { "PowerShell parse: PASS" | Set-Content /tmp/platform-powershell.txt }
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: platform-frontend-deep-diagnostics
+          path: /tmp/*.txt
+          if-no-files-found: error
+          retention-days: 3
