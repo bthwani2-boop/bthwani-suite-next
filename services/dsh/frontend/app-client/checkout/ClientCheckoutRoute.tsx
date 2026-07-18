@@ -38,7 +38,6 @@ export function ClientCheckoutRoute({
   const identity = useIdentitySession();
   const storeController = useStoreDetailController(storeId);
   const [checkoutData, setCheckoutData] = React.useState<CheckoutData | null>(null);
-  const [wantsCheckout, setWantsCheckout] = React.useState(false);
 
   if (storeController.state.kind === "loading") {
     return <LoadingState title="جاري تحميل نطاق خدمة المتجر…" />;
@@ -77,10 +76,14 @@ export function ClientCheckoutRoute({
     );
   }
 
-  if (wantsCheckout && identity.state.kind !== "authenticated") {
+  if (identity.state.kind !== "authenticated") {
     return (
       <View style={{ flex: 1 }}>
-        <TopBar title="إتمام الطلب" subtitle="سجّل الدخول للمتابعة" />
+        <TopBar
+          title="السلة وإتمام الطلب"
+          subtitle="سجّل الدخول للوصول إلى سلة DSH"
+          {...(onBack ? { onBack } : {})}
+        />
         <ScrollScreen>
           <AuthLoginCard
             title="دخول العميل"
@@ -106,10 +109,7 @@ export function ClientCheckoutRoute({
         note={checkoutData.note}
         paymentMethod={checkoutData.paymentMethod}
         couponCode={checkoutData.couponCode}
-        onCancel={() => {
-          setCheckoutData(null);
-          setWantsCheckout(false);
-        }}
+        onCancel={() => setCheckoutData(null)}
         onSuccess={onSuccess}
       />
     );
@@ -119,29 +119,22 @@ export function ClientCheckoutRoute({
     <CartScreen
       storeId={storeId}
       serviceAreaCode={storeController.state.store.serviceAreaCode}
-      authKind={
-        identity.state.kind === "authenticated"
-          ? "authenticated"
-          : "unauthenticated"
-      }
+      authKind="authenticated"
       onProceedToCheckout={(
         cart,
         deliveryAddress,
         note,
         paymentMethod,
         couponCode,
-      ) => {
+      ) =>
         setCheckoutData({
           cart,
           deliveryAddress,
           note,
           paymentMethod,
           couponCode,
-        });
-        if (identity.state.kind !== "authenticated") {
-          setWantsCheckout(true);
-        }
-      }}
+        })
+      }
       {...(onBrowseCatalog ? { onBrowseCatalog } : {})}
       {...(onBack ? { onBack } : {})}
     />
