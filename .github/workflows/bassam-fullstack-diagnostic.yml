@@ -5,6 +5,9 @@ on:
     branches: [bassam]
     paths:
       - .github/workflows/bassam-fullstack-diagnostic.yml
+  pull_request:
+    paths:
+      - .github/workflows/bassam-fullstack-diagnostic.yml
 
 permissions:
   contents: read
