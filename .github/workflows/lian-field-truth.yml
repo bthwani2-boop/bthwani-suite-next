@@ -6,9 +6,10 @@ on:
     paths:
       - "services/dsh/frontend/app-field/**"
       - "apps/app-field/runtime/**"
-      - "services/dsh/frontend/shared/field/**"
+      - "services/dsh/frontend/shared/field-readiness/**"
+      - "services/dsh/frontend/shared/field-onboarding/**"
       - "services/dsh/frontend/shared/catalog/**"
-      - "services/dsh/frontend/shared/finance/**"
+      - "services/dsh/frontend/shared/finance-wlt-link/field-finance/**"
       - "tools/guards/field/**"
       - ".github/workflows/lian-field-truth.yml"
   workflow_dispatch:
