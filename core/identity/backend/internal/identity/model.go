@@ -108,4 +108,3 @@ type SessionInfo struct {
 	CreatedAt         time.Time `json:"createdAt"`
 	ExpiresAt         time.Time `json:"expiresAt"`
 }
-
