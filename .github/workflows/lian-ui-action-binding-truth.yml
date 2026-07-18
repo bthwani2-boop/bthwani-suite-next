@@ -1,0 +1,57 @@
+name: Lian UI Action Binding Truth
+
+on:
+  push:
+    branches: [lian]
+    paths:
+      - "services/dsh/frontend/**"
+      - "services/wlt/frontend/shared/dsh/**"
+      - "apps/control-panel/runtime/src/**"
+      - "tools/guards/ui-actions/ui-action-binding-gate.mjs"
+      - ".github/workflows/lian-ui-action-binding-truth.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lian-ui-action-binding-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify every interactive element is bound
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Setup governed workspace
+        uses: ./.github/actions/setup-node-workspace
+
+      - name: Build and enforce UI interaction inventory
+        run: node tools/guards/ui-actions/ui-action-binding-gate.mjs
+
+      - name: Verify frontend feature bindings
+        run: pnpm run guard:frontend-feature-binding
+
+      - name: Typecheck all surfaces
+        run: pnpm run typecheck
+
+      - name: Build all surfaces
+        run: pnpm run build
+
+  result:
+    name: Lian UI Action Binding Truth result
+    if: always()
+    needs: [verify]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require action binding truth to pass
+        env:
+          RESULT: ${{ needs.verify.result }}
+        run: test "$RESULT" = success
