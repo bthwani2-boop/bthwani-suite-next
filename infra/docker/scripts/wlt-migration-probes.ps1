@@ -56,6 +56,7 @@ $script:WltMigrationProbes = [ordered]@{
   "wlt-029_payment_session_tenant_lock.sql"       = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_payment_sessions' AND column_name = 'tenant_id' AND is_nullable = 'NO') AND to_regclass('public.wlt_payment_sessions_tenant_checkout_uq') IS NOT NULL"
   "wlt-030_subscription_payment_source.sql"       = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_payment_sessions' AND column_name = 'subscription_purchase_id') AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_payment_sessions' AND column_name = 'commercial_product_reference') AND to_regclass('public.uq_wlt_client_subscription_purchase') IS NOT NULL"
   "wlt-031_governed_settlement_sources.sql"       = "to_regclass('public.wlt_settlement_policies') IS NOT NULL AND to_regclass('public.wlt_settlement_source_orders') IS NOT NULL"
+  "wlt-032_promotion_funding_ledger.sql"          = "to_regclass('public.wlt_promotion_funding_reservations') IS NOT NULL AND to_regclass('public.wlt_promotion_funding_events') IS NOT NULL"
 }
 
 function Test-WltMigrationProbeCoverage {
