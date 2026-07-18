@@ -3,7 +3,6 @@ package http
 import (
 	"errors"
 	"net/http"
-	"strings"
 
 	"dsh-api/internal/cart"
 	"dsh-api/internal/checkout"
@@ -12,70 +11,26 @@ import (
 	"dsh-api/internal/wlt"
 )
 
-type createCheckoutIntentRequest struct {
-	CartID              string `json:"cartId"`
-	StoreID             string `json:"storeId"`
-	FulfillmentMode     string `json:"fulfillmentMode"`
-	PaymentMethod       string `json:"paymentMethod"`
-	DeliveryAddress     string `json:"deliveryAddress"`
-	Note                string `json:"note"`
-	CouponCode          string `json:"couponCode"`
-	ExpectedCartVersion int    `json:"expectedCartVersion"`
-}
-
+// POST /dsh/client/checkout-intents
 func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "client")
 	if !ok {
 		return
 	}
-	var body createCheckoutIntentRequest
+	var body struct {
+		CartID          string `json:"cartId"`
+		StoreID         string `json:"storeId"`
+		FulfillmentMode string `json:"fulfillmentMode"`
+		PaymentMethod   string `json:"paymentMethod"`
+		DeliveryAddress string `json:"deliveryAddress"`
+		Note            string `json:"note"`
+		CouponCode      string `json:"couponCode"`
+	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	body.CartID = strings.TrimSpace(body.CartID)
-	body.StoreID = strings.TrimSpace(body.StoreID)
-	body.FulfillmentMode = strings.TrimSpace(body.FulfillmentMode)
-	body.PaymentMethod = strings.TrimSpace(body.PaymentMethod)
-	body.CouponCode = strings.TrimSpace(body.CouponCode)
 	if body.CartID == "" || body.StoreID == "" || actor.TenantID == "" {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "cartId, storeId and authenticated tenant are required")
-		return
-	}
-
-	fulfillmentMode := body.FulfillmentMode
-	if fulfillmentMode == "" {
-		fulfillmentMode = string(checkout.ModeBthwaniDelivery)
-	}
-	if body.PaymentMethod == "" {
-		body.PaymentMethod = string(checkout.MethodCOD)
-	}
-
-	tx, err := s.db.BeginTx(r.Context(), nil)
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to start checkout transaction")
-		return
-	}
-	defer tx.Rollback()
-
-	snapshot, err := cart.ComputeCheckoutSnapshotTx(r.Context(), tx, actor.ID, body.CartID, body.StoreID, body.ExpectedCartVersion)
-	if errors.Is(err, cart.ErrNotFound) {
-		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "cart not found")
-		return
-	}
-	if errors.Is(err, cart.ErrConflict) {
-		store.SendError(w, http.StatusConflict, "CART_VERSION_CONFLICT", err.Error())
-		return
-	}
-	if errors.Is(err, cart.ErrInvalid) {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-		return
-	}
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to compute checkout snapshot")
-		return
-	}
-	if snapshot.ItemCount == 0 {
-		store.SendError(w, http.StatusConflict, "EMPTY_CART", "cart has no items")
 		return
 	}
 
@@ -84,39 +39,84 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to allocate checkout intent")
 		return
 	}
-	pricing := checkout.PricingSnapshot{
-		CheckoutIntentID:      intentID,
-		SubtotalMinorUnits:    snapshot.SubtotalMinorUnits,
-		DeliveryFeeMinorUnits: 0,
-		DiscountMinorUnits:    0,
-		TotalMinorUnits:       snapshot.SubtotalMinorUnits,
-		Currency:              snapshot.Currency,
+	fulfillmentMode := body.FulfillmentMode
+	if fulfillmentMode == "" {
+		fulfillmentMode = string(checkout.ModeBthwaniDelivery)
 	}
 
-	var reservation *coupons.Reservation
-	if body.CouponCode != "" {
-		reservation, err = coupons.ReserveForCheckoutTx(r.Context(), tx, coupons.ReserveInput{
-			TenantID:           actor.TenantID,
-			ClientID:           actor.ID,
-			StoreID:            body.StoreID,
-			CheckoutIntentID:   intentID,
-			CouponCode:         body.CouponCode,
-			SubtotalMinorUnits: pricing.SubtotalMinorUnits,
-			DeliveryMinorUnits: pricing.DeliveryFeeMinorUnits,
-			Currency:           pricing.Currency,
-		})
-		if errors.Is(err, coupons.ErrNotFound) {
-			store.SendError(w, http.StatusNotFound, "COUPON_NOT_FOUND", "coupon not found")
-			return
-		}
-		if errors.Is(err, coupons.ErrConflict) {
-			store.SendError(w, http.StatusConflict, "COUPON_NOT_ELIGIBLE", err.Error())
-			return
-		}
-		if err != nil {
-			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to reserve coupon")
-			return
-		}
+	tx, err := s.db.BeginTx(r.Context(), nil)
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to begin checkout")
+		return
+	}
+	defer tx.Rollback()
+
+	snapshot, err := cart.ComputeCheckoutSnapshotForClientTx(r.Context(), tx, body.CartID, actor.ID, body.StoreID)
+	if errors.Is(err, cart.ErrCartItemMissingPrice) {
+		store.SendError(w, http.StatusConflict, "CART_ITEM_MISSING_PRICE", "one or more cart items are missing a price snapshot")
+		return
+	}
+	if errors.Is(err, cart.ErrNotFound) {
+		store.SendError(w, http.StatusNotFound, "CART_NOT_FOUND", "active cart does not belong to the authenticated client and store")
+		return
+	}
+	if errors.Is(err, cart.ErrInvalid) {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		return
+	}
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to compute cart snapshot")
+		return
+	}
+
+	deliveryPolicy, err := checkout.ResolveDeliveryPricingTx(r.Context(), tx, body.StoreID, fulfillmentMode)
+	if errors.Is(err, checkout.ErrDeliveryPricingUnavailable) {
+		store.SendError(w, http.StatusConflict, "DELIVERY_PRICING_UNAVAILABLE", "no approved delivery pricing policy exists for this store and fulfillment mode")
+		return
+	}
+	if errors.Is(err, checkout.ErrInvalid) {
+		store.SendError(w, http.StatusBadRequest, "INVALID_FULFILLMENT_MODE", "fulfillment mode is invalid")
+		return
+	}
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to resolve delivery pricing")
+		return
+	}
+	if deliveryPolicy.Currency != snapshot.Currency {
+		store.SendError(w, http.StatusConflict, "PRICING_CURRENCY_MISMATCH", "cart and delivery pricing currencies do not match")
+		return
+	}
+
+	reservation, err := coupons.ReservePricedTx(r.Context(), tx, coupons.ReservePricedInput{
+		Code: body.CouponCode, ClientActorID: actor.ID, CartID: body.CartID,
+		CheckoutIntentID: intentID, StoreID: body.StoreID,
+		FulfillmentMode:       fulfillmentMode,
+		SubtotalMinorUnits:    snapshot.AmountMinorUnits,
+		DeliveryFeeMinorUnits: deliveryPolicy.FeeMinorUnits,
+		Currency:              snapshot.Currency,
+	})
+	if errors.Is(err, coupons.ErrUsageLimit) {
+		store.SendError(w, http.StatusConflict, "COUPON_USAGE_LIMIT", "coupon usage limit has been reached")
+		return
+	}
+	if errors.Is(err, coupons.ErrNotFound) || errors.Is(err, coupons.ErrInactive) || errors.Is(err, coupons.ErrNotEligible) {
+		store.SendError(w, http.StatusUnprocessableEntity, "COUPON_INVALID_OR_INELIGIBLE", "coupon is invalid or not eligible for this checkout")
+		return
+	}
+	if errors.Is(err, coupons.ErrInvalid) {
+		store.SendError(w, http.StatusBadRequest, "INVALID_COUPON", "coupon code format is invalid")
+		return
+	}
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to reserve coupon")
+		return
+	}
+
+	pricing := checkout.PricingSnapshot{
+		SubtotalMinorUnits:    snapshot.AmountMinorUnits,
+		DeliveryFeeMinorUnits: deliveryPolicy.FeeMinorUnits,
+		TotalMinorUnits:       snapshot.AmountMinorUnits + deliveryPolicy.FeeMinorUnits,
+		Currency:              snapshot.Currency,
 	}
 	if reservation != nil {
 		pricing.DiscountMinorUnits = reservation.DiscountMinorUnits
@@ -159,7 +159,10 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 			if markErr == nil {
 				store.SendJSON(w, http.StatusServiceUnavailable, map[string]any{
 					"intent": marshalIntentWithPricing(failedIntent, pricing),
-					"error":  map[string]any{"code": "WLT_PROMOTION_FUNDING_UNAVAILABLE", "message": "promotion funding reservation is unavailable"},
+					"error": map[string]any{
+						"code":    "WLT_PROMOTION_FUNDING_UNAVAILABLE",
+						"message": "promotion funding reservation is unavailable",
+					},
 				})
 				return
 			}
