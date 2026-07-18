@@ -1,29 +1,29 @@
 # Finance Current Compile
 
-- Source SHA: `09c771c0d6967b847000809f2fff30e03322f165`
+- Source SHA: `a3eec6f8bcd3e8b612550cf517ab004bb081a145`
 - Drift patcher exit: `0`
 - DSH exit: `1`
 - PowerShell parser exit: `0`
 
 ## DSH
 ```text
-# dsh-api/internal/http
-internal/http/subscription_purchases.go:157:31: cannot use actor (variable of struct type store.StoreActor) as auth.Identity value in argument to tenantIDForActor
-internal/http/subscription_purchases.go:216:31: cannot use actor (variable of struct type store.StoreActor) as auth.Identity value in argument to tenantIDForActor
-internal/http/subscription_purchases.go:249:31: cannot use actor (variable of struct type store.StoreActor) as auth.Identity value in argument to tenantIDForActor
+# dsh-api/cmd/dsh-api
+cmd/dsh-api/main.go:60:21: undefined: dshHttp.CorsMiddleware
 FAIL	dsh-api/cmd/dsh-api [build failed]
 ok  	dsh-api/internal/administration	(cached)
 ok  	dsh-api/internal/analytics	(cached)
 ok  	dsh-api/internal/auth	(cached)
-ok  	dsh-api/internal/cart	0.006s
+ok  	dsh-api/internal/cart	0.009s
 ?   	dsh-api/internal/catalogapproval	[no test files]
-ok  	dsh-api/internal/centralcatalog	0.006s
+ok  	dsh-api/internal/centralcatalog	0.009s
 ok  	dsh-api/internal/checkout	0.004s
 ok  	dsh-api/internal/checkoutfinanceoutbox	0.004s
-ok  	dsh-api/internal/coupons	0.005s
+ok  	dsh-api/internal/coupons	0.003s
 ok  	dsh-api/internal/dispatch	0.007s
-ok  	dsh-api/internal/fieldcommissionoutbox	0.004s
-ok  	dsh-api/internal/fieldreadiness	0.005s
+ok  	dsh-api/internal/fieldcommissionoutbox	0.009s
+# dsh-api/internal/http [dsh-api/internal/http.test]
+internal/http/server_test.go:11:13: undefined: CorsMiddleware
+ok  	dsh-api/internal/fieldreadiness	0.006s
 ok  	dsh-api/internal/health	(cached)
 ok  	dsh-api/internal/homediscovery	(cached)
 FAIL	dsh-api/internal/http [build failed]
@@ -31,18 +31,18 @@ ok  	dsh-api/internal/marketing	0.005s
 ok  	dsh-api/internal/media	(cached)
 ok  	dsh-api/internal/notifications	(cached)
 ok  	dsh-api/internal/operationaloutbox	(cached)
-ok  	dsh-api/internal/orders	0.009s
+ok  	dsh-api/internal/orders	0.008s
 ok  	dsh-api/internal/partner	(cached)
-ok  	dsh-api/internal/partnerdelivery	0.011s
+ok  	dsh-api/internal/partnerdelivery	0.005s
 ok  	dsh-api/internal/partnerfleet	(cached)
-ok  	dsh-api/internal/pickup	0.011s
+ok  	dsh-api/internal/pickup	0.009s
 ok  	dsh-api/internal/platformpolicies	(cached)
 ?   	dsh-api/internal/promotionfundingoutbox	[no test files]
-ok  	dsh-api/internal/specialrequests	0.006s
+ok  	dsh-api/internal/specialrequests	0.004s
 ok  	dsh-api/internal/store	(cached)
 ok  	dsh-api/internal/support	(cached)
 ok  	dsh-api/internal/wlt	0.011s
-ok  	dsh-api/internal/wltoutbox	0.004s
+ok  	dsh-api/internal/wltoutbox	0.003s
 FAIL
 ```
 
