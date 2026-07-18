@@ -1,18 +1,32 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "repositoryMode": "REMOTE_ONLY",
   "repository": "bthwani2-boop/bthwani-suite-next",
   "targetBranch": "lian",
   "initialObservedCommitSha": "dd771bff58e119b4b764df0045a9304930c60225",
-  "controlDirectoryEstablishedCommitSha": "057ce14c9bfe529f6d2145bdaa730c8894796301",
+  "lastPinnedCommitSha": "017cc3b4aba7e2b41b07fc0077b942670f579c60",
   "mode": "CODE_BASED_LEAN_HIGH_RISK_MULTI_SURFACE",
   "canonicalDecision": "FIX_REQUIRED",
-  "activePhase": "P0_TRUTH_AND_CI_RECONCILIATION",
+  "activePhase": "P1_CLIENT_COMMERCE_AND_FINANCIAL_HANDOFF",
   "closureTarget": "CLOSED_WITH_EVIDENCE",
   "scope": {
     "primaryServices": ["dsh", "wlt"],
-    "surfaces": ["app-client", "app-partner", "app-captain", "app-field", "control-panel"],
-    "conditionalDependencies": ["identity", "workforce", "platform-control", "providers", "media", "postgres", "github-actions"]
+    "surfaces": [
+      "app-client",
+      "app-partner",
+      "app-captain",
+      "app-field",
+      "control-panel"
+    ],
+    "conditionalDependencies": [
+      "identity",
+      "workforce",
+      "platform-control",
+      "providers",
+      "media",
+      "postgres",
+      "github-actions"
+    ]
   },
   "executionLoops": [
     "PIN_REMOTE_TRUTH",
@@ -24,6 +38,51 @@
     "READ_BACK_ACROSS_SURFACES",
     "REPIN_AND_RECLASSIFY"
   ],
+  "completedRepositoryWaves": [
+    {
+      "id": "P0-CI-TRUTH",
+      "state": "IMPLEMENTED_NEEDS_SAME_COMMIT_EVIDENCE",
+      "outcomes": [
+        "Added lian push coverage to central, security, governance, DSH operational, and dedicated full-stack workflows",
+        "Added fail-closed required-command integrity checks",
+        "Corrected host DSH health target to port 58080",
+        "Kept branch protection, required checks, and independent approval as NOT_PROVEN"
+      ]
+    },
+    {
+      "id": "P0-DSH-REGISTRY",
+      "state": "IMPLEMENTED_NEEDS_CI_AND_RUNTIME_EVIDENCE",
+      "outcomes": [
+        "Established canonical merged DSH capability registry",
+        "Derived manifest capabilities, operations, surfaces, and runtime posture from explicit owners",
+        "Marked historical runtime evidence as not valid for the current commit",
+        "Established active DSH contract registry and contract/client drift guard"
+      ]
+    },
+    {
+      "id": "P1-CLIENT-COMMERCE",
+      "state": "IMPLEMENTED_NEEDS_TYPECHECK_BUILD_TEST_RUNTIME",
+      "outcomes": [
+        "Removed heuristic product units and local price multiplication",
+        "Removed dead store banner, image, search, share, and cart actions",
+        "Removed unsafe fulfillment casts",
+        "Rebuilt cart around DSH cart and serviceability controllers",
+        "Removed seeded addresses, localStorage persistence, random map coordinates, fake subscription success, local cart total calculation, and hardcoded checkout area",
+        "Derived checkout service area from live store data",
+        "Kept only WLT-supported COD available and removed local payment amount claims",
+        "Added client-commerce anti-regression journey guard to lian CI"
+      ]
+    },
+    {
+      "id": "P1-WLT-READINESS",
+      "state": "TRUTH_RECONCILED_FIX_REQUIRED",
+      "outcomes": [
+        "Separated implementation readiness from same-commit runtime evidence",
+        "Kept production provider mutations fail-closed",
+        "Removed unsupported claims that mutation journeys were approved"
+      ]
+    }
+  ],
   "currentFacts": {
     "dshManifestState": "FIX_REQUIRED",
     "dshRuntimeState": "PARTIALLY_BOUND",
@@ -34,19 +93,25 @@
     "wltProductionMutationsReady": false,
     "sameCommitCiProven": false,
     "independentApprovalsProven": false,
-    "branchProtectionProven": false
+    "branchProtectionProven": false,
+    "clientAddressPersistenceImplemented": false,
+    "clientMapProviderIntegrated": false,
+    "dshWltMutationIdempotencyFullyVerified": false
   },
   "nextActions": [
-    "Enable authoritative CI execution for lian without stale bassam-only trigger assumptions",
-    "Remove false-success wrappers from required checks and correct host/runtime port confusion",
-    "Reconcile DSH manifest, surface map, runtime map, live contracts, routes, consumers, and evidence",
-    "Verify every active OpenAPI fragment is generated, drift-checked, and consumed",
-    "Run same-commit affected checks and runtime journeys before changing readiness claims"
+    "Obtain and inspect same-commit GitHub Actions jobs and logs for the current lian SHA",
+    "Fix any typecheck, build, contract, guard, Go, database, or runtime failures reported by those jobs",
+    "Add a governed authenticated client-address contract and map-provider boundary before re-enabling address persistence",
+    "Close and test idempotency headers for every DSH-to-WLT financial mutation",
+    "Run DSH PostgreSQL migrations and WLT migrations from clean databases and supported upgrade baselines",
+    "Verify checkout, COD, order, partner acceptance, dispatch, delivery, refund, commission, settlement, payout, and reconciliation journeys across required surfaces",
+    "Continue surface-by-surface removal of dead controls, local truth, placeholders, and unverified runtime claims"
   ],
   "claimLimits": {
     "staticDoesNotProveRuntime": true,
     "simulatorDoesNotProveProductionFinance": true,
     "documentationDoesNotProveImplementation": true,
-    "implementationAuthorCannotSelfApproveProtectedStages": true
+    "implementationAuthorCannotSelfApproveProtectedStages": true,
+    "emptyCommitStatusesDoNotProveCiSuccess": true
   }
 }
