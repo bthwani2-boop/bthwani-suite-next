@@ -1,0 +1,67 @@
+name: Lian Captain Truth
+
+on:
+  push:
+    branches: [lian]
+    paths:
+      - "services/dsh/frontend/app-captain/**"
+      - "services/dsh/frontend/shared/delivery/**"
+      - "apps/app-captain/runtime/**"
+      - "tools/guards/captain/**"
+      - ".github/workflows/lian-captain-truth.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lian-captain-truth-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  captain-truth:
+    name: Captain static truth and type safety
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Setup governed workspace
+        uses: ./.github/actions/setup-node-workspace
+
+      - name: Verify captain truth
+        run: node tools/guards/captain/captain-surface-truth-gate.mjs
+
+      - name: Verify DSH boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm run guard:api-binding
+          pnpm run guard:frontend-feature-binding
+          pnpm run guard:fullstack-boundary
+          pnpm run guard:wlt-financial-boundary
+          pnpm run guard:no-broken-imports
+
+      - name: Typecheck workspace
+        run: pnpm run typecheck
+
+      - name: Test workspace
+        run: pnpm run test
+
+  result:
+    name: Lian Captain Truth result
+    if: always()
+    needs: [captain-truth]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require captain truth to pass
+        env:
+          RESULT: ${{ needs.captain-truth.result }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$RESULT" = success
