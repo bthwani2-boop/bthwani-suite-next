@@ -16,6 +16,16 @@ func fundingCorrelation(correlationID, fallback string) string {
 	return strings.TrimSpace(fallback)
 }
 
+func fundingTenant(requested string, projection *coupons.FundingProjection) string {
+	if value := strings.TrimSpace(requested); value != "" {
+		return value
+	}
+	if projection == nil {
+		return ""
+	}
+	return strings.TrimSpace(projection.TenantID)
+}
+
 func (s *protectedStoreServer) reserveCouponFunding(
 	ctx context.Context,
 	tenantID string,
@@ -26,7 +36,14 @@ func (s *protectedStoreServer) reserveCouponFunding(
 	if err != nil || projection == nil {
 		return projection, err
 	}
+	tenantID = fundingTenant(tenantID, projection)
+	if tenantID == "" {
+		return nil, fmt.Errorf("coupon funding tenant is required")
+	}
 	if projection.Status == "reserved" && projection.WLTReservationID != "" {
+		if projection.TenantID != "" && projection.TenantID != tenantID {
+			return nil, fmt.Errorf("coupon funding tenant mismatch")
+		}
 		return projection, nil
 	}
 	correlationID = fundingCorrelation(correlationID, checkoutIntentID)
@@ -47,7 +64,8 @@ func (s *protectedStoreServer) reserveCouponFunding(
 		_ = coupons.MarkFundingFailed(ctx, s.db, projection.RedemptionID, "wlt_reserve_failed")
 		return nil, err
 	}
-	if reservation.CheckoutIntentID != projection.CheckoutIntentID ||
+	if reservation.TenantID != tenantID ||
+		reservation.CheckoutIntentID != projection.CheckoutIntentID ||
 		reservation.CouponRedemptionID != projection.RedemptionID ||
 		reservation.CouponID != projection.CouponID ||
 		reservation.ClientID != projection.ClientActorID ||
@@ -58,7 +76,7 @@ func (s *protectedStoreServer) reserveCouponFunding(
 		_ = coupons.MarkFundingFailed(ctx, s.db, projection.RedemptionID, "wlt_reserve_mismatch")
 		return nil, fmt.Errorf("WLT promotion funding response does not match DSH reservation")
 	}
-	if err := coupons.AttachWLTReservation(ctx, s.db, projection.RedemptionID, reservation.ID); err != nil {
+	if err := coupons.AttachWLTReservation(ctx, s.db, projection.RedemptionID, reservation.ID, tenantID); err != nil {
 		_, _ = s.wlt.ReleasePromotionFunding(ctx, reservation.ID, wltclient.PromotionFundingTransitionInput{
 			TenantID: tenantID,
 			Reason:   "dsh_projection_attach_failed",
@@ -66,6 +84,7 @@ func (s *protectedStoreServer) reserveCouponFunding(
 		_ = coupons.MarkFundingFailed(ctx, s.db, projection.RedemptionID, "dsh_projection_attach_failed")
 		return nil, err
 	}
+	projection.TenantID = tenantID
 	projection.WLTReservationID = reservation.ID
 	projection.Status = "reserved"
 	return projection, nil
@@ -82,8 +101,12 @@ func (s *protectedStoreServer) releaseCouponFunding(
 	if err != nil || projection == nil {
 		return err
 	}
+	tenantID = fundingTenant(tenantID, projection)
 	if projection.WLTReservationID == "" || projection.Status == "released" || projection.Status == "reversed" {
 		return nil
+	}
+	if tenantID == "" {
+		return fmt.Errorf("coupon funding tenant is missing")
 	}
 	if projection.Status == "committed" {
 		return fmt.Errorf("committed coupon funding cannot be released")
@@ -96,8 +119,8 @@ func (s *protectedStoreServer) releaseCouponFunding(
 	if err != nil {
 		return err
 	}
-	if reservation.Status != "released" {
-		return fmt.Errorf("WLT promotion funding release returned %s", reservation.Status)
+	if reservation.Status != "released" || reservation.TenantID != tenantID {
+		return fmt.Errorf("WLT promotion funding release response is invalid")
 	}
 	return coupons.MarkFundingProjection(ctx, s.db, projection.WLTReservationID, "released")
 }
@@ -113,8 +136,9 @@ func (s *protectedStoreServer) commitCouponFunding(
 	if err != nil || projection == nil {
 		return err
 	}
-	if projection.WLTReservationID == "" {
-		return fmt.Errorf("coupon funding reservation is missing")
+	tenantID = fundingTenant(tenantID, projection)
+	if projection.WLTReservationID == "" || tenantID == "" {
+		return fmt.Errorf("coupon funding reservation or tenant is missing")
 	}
 	if projection.Status == "committed" {
 		return nil
@@ -127,7 +151,7 @@ func (s *protectedStoreServer) commitCouponFunding(
 	if err != nil {
 		return err
 	}
-	if reservation.Status != "committed" || reservation.OrderID == nil || *reservation.OrderID != orderID {
+	if reservation.Status != "committed" || reservation.TenantID != tenantID || reservation.OrderID == nil || *reservation.OrderID != orderID {
 		return fmt.Errorf("WLT promotion funding commit response is invalid")
 	}
 	return coupons.MarkFundingProjection(ctx, s.db, projection.WLTReservationID, "committed")
@@ -145,8 +169,12 @@ func (s *protectedStoreServer) reverseCouponFunding(
 	if err != nil || projection == nil {
 		return err
 	}
+	tenantID = fundingTenant(tenantID, projection)
 	if projection.WLTReservationID == "" || projection.Status == "reversed" {
 		return nil
+	}
+	if tenantID == "" {
+		return fmt.Errorf("coupon funding tenant is missing")
 	}
 	if projection.Status != "committed" {
 		return fmt.Errorf("only committed coupon funding can be reversed")
@@ -160,8 +188,8 @@ func (s *protectedStoreServer) reverseCouponFunding(
 	if err != nil {
 		return err
 	}
-	if reservation.Status != "reversed" {
-		return fmt.Errorf("WLT promotion funding reversal returned %s", reservation.Status)
+	if reservation.Status != "reversed" || reservation.TenantID != tenantID {
+		return fmt.Errorf("WLT promotion funding reversal response is invalid")
 	}
 	return coupons.MarkFundingProjection(ctx, s.db, projection.WLTReservationID, "reversed")
 }
