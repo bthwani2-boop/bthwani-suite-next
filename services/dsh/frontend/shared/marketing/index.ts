@@ -6,3 +6,4 @@ export * from "./marketing.api";
 export * from "./loyalty-subscriptions.types";
 export * from "./use-commercial-programs-controller";
 export * from "./coupons.types";
+export * from "./use-coupons-controller";
