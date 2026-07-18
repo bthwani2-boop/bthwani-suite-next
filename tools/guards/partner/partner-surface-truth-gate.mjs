@@ -81,7 +81,7 @@ const checks = [
       [/Promise\.resolve\s*\(/g, "VOID_TEAM_MUTATION_SUCCESS_FORBIDDEN"],
       [/Promise<PartnerTeamMutationResult>\s*\|\s*void/g, "OPTIONAL_TEAM_MUTATION_RESULT_FORBIDDEN"],
       [/\bas\s+any\b/g, "UNSAFE_PARTNER_TEAM_ANY_FORBIDDEN"],
-      [/action === ["']audit-log["']/g, "AUDIT_LOG_AS_MUTATION_FORBIDDEN"],
+      [/onMemberAction\([^\n]*["']audit-log["']/g, "AUDIT_LOG_API_SUBMISSION_FORBIDDEN"],
     ],
     required: [
       "Promise<PartnerTeamMutationResult>",
