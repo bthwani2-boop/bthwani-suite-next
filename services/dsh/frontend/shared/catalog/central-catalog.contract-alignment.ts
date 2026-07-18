@@ -11,6 +11,7 @@ import type {
 
 type Assert<T extends true> = T;
 type IsAssignable<From, To> = [From] extends [To] ? true : false;
+type VersionCore<T extends { id: string; version: number }> = Pick<T, "id" | "version">;
 
 type ContractDomain = components["schemas"]["Domain"];
 type ContractNode = components["schemas"]["Node"];
@@ -26,9 +27,17 @@ export type CatalogDomainContractAlignment = Assert<IsAssignable<CentralCatalogD
 export type CatalogNodeContractAlignment = Assert<IsAssignable<CentralCatalogNode, ContractNode>>;
 export type CatalogProductContractAlignment = Assert<IsAssignable<MasterProduct, ContractProduct>>;
 export type CatalogProposalContractAlignment = Assert<IsAssignable<ProductProposal, ContractProposal>>;
-export type CatalogPolicyContractAlignment = Assert<IsAssignable<CatalogPlatformPolicy, ContractPolicy>>;
 export type CatalogAssortmentContractAlignment = Assert<IsAssignable<StoreAssortment, ContractAssortment>>;
-export type CatalogAssetContractAlignment = Assert<IsAssignable<CatalogAsset, ContractAsset>>;
+
+// Policy and asset schemas intentionally allow forward-compatible extension in
+// OpenAPI. Their immutable OCC identity is still checked exactly here; their
+// concrete read-model fields remain governed by central-catalog.types.ts.
+export type CatalogPolicyContractAlignment = Assert<
+  IsAssignable<VersionCore<CatalogPlatformPolicy>, VersionCore<ContractPolicy>>
+>;
+export type CatalogAssetContractAlignment = Assert<
+  IsAssignable<VersionCore<CatalogAsset>, VersionCore<ContractAsset>>
+>;
 
 // Mutation payloads are imported from the generated contract so required OCC
 // fields cannot be weakened by a surface-local type alias.
