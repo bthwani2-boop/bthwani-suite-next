@@ -56,7 +56,12 @@ const checks = [
       [/parseFloat\s*\(/g, "LOCAL_PRODUCT_PRICE_PARSE_FORBIDDEN"],
       [/basePrice\s*\*/g, "LOCAL_PRODUCT_PRICE_CALCULATION_FORBIDDEN"],
     ],
-    required: ["Quantity-only product sheet", "server resolves", "setQuantity"],
+    required: [
+      "Quantity-only product sheet",
+      "server resolves",
+      "isSubmitting",
+      "errorMessage",
+    ],
   },
   {
     file: "services/dsh/frontend/app-client/store/StoreDetailShell.tsx",
@@ -71,7 +76,8 @@ const checks = [
       "DshFulfillmentDeliveryMode",
       "handleOpenProduct",
       "onCartPress={onGoToCart}",
-      "onAddToCart(selectedProduct, quantity, selectedMode)",
+      "const accepted = await onAddToCart(",
+      "if (accepted)",
     ],
   },
   {
@@ -81,6 +87,7 @@ const checks = [
       "isClientEligible",
       "availableFulfillmentModes.length === 0",
       "fulfillmentMode: mode",
+      "cartActionError={cartCtrl.actionError}",
     ],
   },
   {
