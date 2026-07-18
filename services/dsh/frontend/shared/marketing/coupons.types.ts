@@ -1,6 +1,16 @@
 export type CouponStatus = "draft" | "active" | "paused" | "archived";
 export type CouponDiscountType = "percent" | "fixed";
 export type CouponFulfillmentMode = "bthwani_delivery" | "partner_delivery" | "pickup";
+export type CouponFundingSource = "platform" | "partner" | "shared";
+
+export type CouponFundingPolicy = {
+  readonly couponId: string;
+  readonly fundingSource: CouponFundingSource;
+  readonly platformShareBps: number;
+  readonly fundingPartnerId?: string;
+  readonly version: number;
+  readonly updatedAt: string;
+};
 
 export type CouponRecord = {
   readonly id: string;
@@ -33,6 +43,10 @@ export type CouponCreatePayload = {
   /** Returned once by the server; the backend stores only a digest and last four. */
   readonly code: string;
   readonly storeId?: string;
+  readonly fundingSource?: CouponFundingSource;
+  /** 10,000 basis points = 100%. Required for shared funding. */
+  readonly platformShareBps?: number;
+  readonly fundingPartnerId?: string;
   readonly discountType: CouponDiscountType;
   readonly discountPercent?: number;
   readonly fixedDiscountMinorUnits?: number;
@@ -53,4 +67,9 @@ export type CouponUpdatePayload = Omit<Partial<CouponCreatePayload>, "code"> & {
 export type IssuedCoupon = {
   readonly coupon: CouponRecord;
   readonly code: string;
+};
+
+export type CouponListResponse = {
+  readonly coupons: readonly CouponRecord[];
+  readonly fundingPolicies: Readonly<Record<string, CouponFundingPolicy>>;
 };
