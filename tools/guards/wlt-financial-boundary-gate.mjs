@@ -39,6 +39,8 @@ const allowedPrefixes = [
   "tools/guards/live-cross-journey-integrity-gate.mjs",
   "tools/scripts/smoke-wiremock-financial-provider.ps1",
   "tools/scripts/smoke-wlt-provider-through-wlt.ps1",
+  "tools/scripts/smoke-wlt-payout-provider.ps1",
+  "tools/scripts/financial-simulator-local.ps1",
   ".github/workflows/",
 ];
 
@@ -71,7 +73,7 @@ for (const file of listFiles()) {
   }
 }
 
-// 3. settlement creation remains fail-closed until a governed DSH source exists.
+// 3. governed settlement creation must stay fully source-derived and WLT-owned.
 const operationStateFile = "services/wlt/contracts/operation-state.json";
 let operationState;
 try {
@@ -93,67 +95,86 @@ if (!settlementOperation) {
   if (settlementOperation.method !== "POST" || settlementOperation.path !== "/wlt/settlements") {
     violations.push({ file: operationStateFile, line: 0, message: "CREATE_SETTLEMENT_OPERATION_ROUTE_DRIFT" });
   }
-  if (settlementOperation.state !== "BLOCKED_UNTIL_GOVERNED_SOURCE") {
-    violations.push({ file: operationStateFile, line: 0, message: "CREATE_SETTLEMENT_MUST_REMAIN_BLOCKED" });
+  if (settlementOperation.state !== "CONTRACT_ACTIVE") {
+    violations.push({ file: operationStateFile, line: 0, message: "CREATE_SETTLEMENT_MUST_BE_CONTRACT_ACTIVE" });
   }
-  if (settlementOperation.runtimeStatus !== 409 || settlementOperation.runtimeCode !== "SETTLEMENT_SOURCE_REQUIRED") {
-    violations.push({ file: operationStateFile, line: 0, message: "CREATE_SETTLEMENT_FAIL_CLOSED_RESPONSE_DRIFT" });
+  if (settlementOperation.runtimeStatus !== 201 || settlementOperation.runtimeCode !== "SETTLEMENT_CREATED") {
+    violations.push({ file: operationStateFile, line: 0, message: "CREATE_SETTLEMENT_ACTIVE_RESPONSE_DRIFT" });
   }
-  if (!Array.isArray(settlementOperation.requiredBeforeEnablement) || settlementOperation.requiredBeforeEnablement.length < 8) {
-    violations.push({ file: operationStateFile, line: 0, message: "CREATE_SETTLEMENT_ENABLEMENT_EVIDENCE_INCOMPLETE" });
+  if (!Array.isArray(settlementOperation.activationEvidence) || settlementOperation.activationEvidence.length < 8) {
+    violations.push({ file: operationStateFile, line: 0, message: "CREATE_SETTLEMENT_ACTIVATION_EVIDENCE_INCOMPLETE" });
   }
 }
 
-const settlementFile = "services/wlt/backend/internal/settlement/settlement.go";
-const settlementSource = read(settlementFile);
+const settlementSourceFile = "services/wlt/backend/internal/settlement/governed_source.go";
+const settlementSource = read(settlementSourceFile);
 for (const [pattern, message] of [
-  [/func CreateSettlement[\s\S]*?return nil, ErrSettlementCalculationSourceRequired/, "CREATE_SETTLEMENT_NOT_FAIL_CLOSED"],
-  [/SETTLEMENT_SOURCE_REQUIRED/, "CREATE_SETTLEMENT_RUNTIME_CODE_MISSING"],
+  [/func CreateSettlementFromDeliveredOrders/, "GOVERNED_SETTLEMENT_CREATOR_MISSING"],
+  [/wlt_settlement_policies/, "SETTLEMENT_POLICY_SOURCE_MISSING"],
+  [/fee_basis_points/, "SETTLEMENT_FEE_POLICY_MISSING"],
+  [/wlt_settlement_source_orders/, "SETTLEMENT_SOURCE_ORDER_LOCK_MISSING"],
+  [/duplicate orderId|ErrSettlementOrderAlreadyUsed/, "SETTLEMENT_DUPLICATE_ORDER_PROTECTION_MISSING"],
+  [/grossAmount[\s\S]*platformFee[\s\S]*netAmount/, "SETTLEMENT_SERVER_ARITHMETIC_MISSING"],
+  [/BeginTx[\s\S]*INSERT INTO wlt_settlements[\s\S]*INSERT INTO wlt_settlement_source_orders[\s\S]*tx\.Commit/, "SETTLEMENT_SOURCE_AND_RECORD_NOT_ATOMIC"],
+]) {
+  if (!pattern.test(settlementSource)) {
+    violations.push({ file: settlementSourceFile, line: 0, message });
+  }
+}
+
+const settlementPostingFile = "services/wlt/backend/internal/settlement/settlement.go";
+const settlementPosting = read(settlementPostingFile);
+for (const [pattern, message] of [
   [/WHERE id = \$1 AND status = 'pending'/, "SETTLEMENT_POST_MUST_REQUIRE_PENDING_STATE"],
   [/platform_payable[\s\S]*wallet[\s\S]*platform_revenue/, "SETTLEMENT_BALANCED_ACCOUNTING_LINES_MISSING"],
   [/BeginTx[\s\S]*PostLedgerTransaction[\s\S]*tx\.Commit/, "SETTLEMENT_STATE_AND_JOURNAL_NOT_ATOMIC"],
 ]) {
-  if (!pattern.test(settlementSource)) {
-    violations.push({ file: settlementFile, line: 0, message });
+  if (!pattern.test(settlementPosting)) {
+    violations.push({ file: settlementPostingFile, line: 0, message });
   }
 }
-if (/INSERT INTO wlt_settlements/.test(settlementSource)) {
-  violations.push({ file: settlementFile, line: 0, message: "CALLER_SUPPLIED_SETTLEMENT_INSERT_FORBIDDEN" });
-}
 
-const allFiles = new Set(listFiles());
-for (const duplicatePath of [
-  "services/wlt/backend/internal/settlement/sovereign_settlement.go",
-  "services/dsh/backend/internal/wlt/settlement_client.go",
+const dshSourceFile = "services/dsh/backend/internal/http/finance_settlement_sources.go";
+const dshSource = read(dshSourceFile);
+for (const [pattern, message] of [
+  [/o\.status = 'delivered'/, "DSH_SETTLEMENT_MUST_USE_DELIVERED_ORDERS"],
+  [/dsh_order_items/, "DSH_SETTLEMENT_ORDER_ITEM_SOURCE_MISSING"],
+  [/SUM\(oi\.unit_price \* oi\.quantity\)/, "DSH_SETTLEMENT_GROSS_DERIVATION_MISSING"],
+  [/orderSources/, "DSH_SETTLEMENT_SOURCE_PAYLOAD_MISSING"],
+  [/FinanceWriteSettlement/, "DSH_SETTLEMENT_WLT_BOUNDARY_MISSING"],
 ]) {
-  if (allFiles.has(duplicatePath)) {
-    violations.push({
-      file: duplicatePath,
-      line: 0,
-      message: duplicatePath.includes("settlement_client")
-        ? "DSH_SETTLEMENT_WRITE_CLIENT_FORBIDDEN_WHILE_SOURCE_BLOCKED"
-        : "DUPLICATE_SETTLEMENT_IMPLEMENTATION_FORBIDDEN",
-    });
+  if (!pattern.test(dshSource)) {
+    violations.push({ file: dshSourceFile, line: 0, message });
   }
 }
+if (/grossAmount|platformFee|netAmount|orderCount/.test(dshSource.slice(0, dshSource.indexOf("func (s *protectedStoreServer) handleCreateFinanceSettlementFromDeliveredOrders")))) {
+  violations.push({ file: dshSourceFile, line: 0, message: "CONTROL_PANEL_SETTLEMENT_INPUT_MUST_NOT_ACCEPT_FINANCIAL_TOTALS" });
+}
 
-for (const file of listCodeFiles()) {
-  if (!file.startsWith("services/dsh/backend/")) continue;
-  const content = read(file);
-  const match = /FinanceWriteSettlement|["`]\/wlt\/settlements["`][\s\S]{0,160}(?:POST|MethodPost)/.exec(content);
-  if (match) {
-    violations.push({
-      file,
-      line: lineNumber(content, match.index),
-      message: "DSH_SETTLEMENT_CREATE_CALL_FORBIDDEN_WHILE_OPERATION_BLOCKED",
-    });
-  }
+const dshClientFile = "services/dsh/backend/internal/wlt/settlement_client.go";
+const dshClient = read(dshClientFile);
+if (!/method == http\.MethodPost && path == "\/wlt\/settlements"/.test(dshClient)) {
+  violations.push({ file: dshClientFile, line: 0, message: "DSH_SETTLEMENT_WRITE_ALLOWLIST_MISSING" });
 }
 
 const wltServerFile = "services/wlt/backend/internal/http/server.go";
 const wltServer = read(wltServerFile);
-if (!/POST \/wlt\/settlements["`],\s*gate\(serviceAuth\(settlement\.HandleCreateSettlement\(db\)\)\)/.test(wltServer)) {
-  violations.push({ file: wltServerFile, line: 0, message: "WLT_SETTLEMENT_ROUTE_BINDING_DRIFT" });
+if (!/POST \/wlt\/settlements["`],\s*gate\(serviceAuth\(settlement\.HandleCreateSettlementFromDeliveredOrders\(db\)\)\)/.test(wltServer)) {
+  violations.push({ file: wltServerFile, line: 0, message: "WLT_GOVERNED_SETTLEMENT_ROUTE_BINDING_DRIFT" });
+}
+if (!/PUT \/wlt\/settlement-policies\/\{partnerId\}/.test(wltServer)) {
+  violations.push({ file: wltServerFile, line: 0, message: "WLT_SETTLEMENT_POLICY_ROUTE_MISSING" });
+}
+
+const dshServerFile = "services/dsh/backend/internal/http/server.go";
+const dshServer = read(dshServerFile);
+for (const marker of [
+  "POST /dsh/control-panel/finance/settlements/from-delivered-orders",
+  "PUT /dsh/control-panel/finance/settlement-policies/{partnerId}",
+]) {
+  if (!dshServer.includes(marker)) {
+    violations.push({ file: dshServerFile, line: 0, message: `DSH_SETTLEMENT_ROUTE_MISSING ${marker}` });
+  }
 }
 
 const openApiFile = "services/wlt/contracts/wlt.openapi.yaml";
@@ -165,18 +186,27 @@ const settlementContract = settlementPathStart >= 0
   : "";
 for (const marker of [
   "operationId: createWltSettlement",
-  "x-bthwani-mutation-approved: false",
+  "x-bthwani-mutation-approved: true",
   "x-bthwani-default-enabled: false",
 ]) {
   if (!settlementContract.includes(marker)) {
-    violations.push({ file: openApiFile, line: 0, message: `SETTLEMENT_OPENAPI_FAIL_CLOSED_MARKER_MISSING ${marker}` });
+    violations.push({ file: openApiFile, line: 0, message: `SETTLEMENT_OPENAPI_ACTIVE_MARKER_MISSING ${marker}` });
   }
 }
-
-const financeProxyFile = "services/dsh/backend/internal/http/financeproxy.go";
-const financeProxy = read(financeProxyFile);
-if (/FinanceWrite[\s\S]{0,300}["`]\/wlt\/settlements["`]/.test(financeProxy)) {
-  violations.push({ file: financeProxyFile, line: 0, message: "DSH_SETTLEMENT_CREATE_PROXY_FORBIDDEN_WHILE_OPERATION_BLOCKED" });
+const settlementSchemaStart = openApi.indexOf("    WltCreateSettlementRequest:");
+const settlementSchemaEnd = openApi.indexOf("\n    WltSettlementResponse:", settlementSchemaStart);
+const settlementSchema = settlementSchemaStart >= 0
+  ? openApi.slice(settlementSchemaStart, settlementSchemaEnd > settlementSchemaStart ? settlementSchemaEnd : undefined)
+  : "";
+for (const marker of ["orderSources", "orderId", "grossAmountMinorUnits", "deliveredAt", "operatorId"]) {
+  if (!settlementSchema.includes(marker)) {
+    violations.push({ file: openApiFile, line: 0, message: `SETTLEMENT_SOURCE_SCHEMA_MISSING ${marker}` });
+  }
+}
+for (const forbidden of ["grossAmount:", "platformFee:", "netAmount:", "orderCount:"]) {
+  if (settlementSchema.includes(forbidden)) {
+    violations.push({ file: openApiFile, line: 0, message: `CALLER_SUPPLIED_SETTLEMENT_FIELD_FORBIDDEN ${forbidden}` });
+  }
 }
 
 fail(guardId, violations);
