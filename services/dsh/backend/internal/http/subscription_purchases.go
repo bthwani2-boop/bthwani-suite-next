@@ -154,7 +154,11 @@ func (s *protectedStoreServer) handleCreateSubscriptionPurchase(w http.ResponseW
 		return
 	}
 
-	tenantID := tenantIDForActor(actor)
+	tenantID := strings.TrimSpace(actor.TenantID)
+	if tenantID == "" {
+		store.SendError(w, http.StatusForbidden, "TENANT_REQUIRED", "authenticated client tenant is required")
+		return
+	}
 	existing, err := s.getSubscriptionPurchaseByIdempotency(tenantID, actor.ID, idempotencyKey)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to resolve subscription purchase idempotency")
@@ -213,7 +217,11 @@ func (s *protectedStoreServer) handleGetSubscriptionPurchase(w http.ResponseWrit
 	if !ok || !s.requireWLTCommercial(w) {
 		return
 	}
-	tenantID := tenantIDForActor(actor)
+	tenantID := strings.TrimSpace(actor.TenantID)
+	if tenantID == "" {
+		store.SendError(w, http.StatusForbidden, "TENANT_REQUIRED", "authenticated client tenant is required")
+		return
+	}
 	purchase, err := s.getSubscriptionPurchase(tenantID, actor.ID, r.PathValue("purchaseId"))
 	if err != nil {
 		writeSubscriptionPurchaseError(w, err)
@@ -246,7 +254,11 @@ func (s *protectedStoreServer) handleActivateSubscriptionPurchase(w http.Respons
 	if !ok || !s.requireWLTCommercial(w) {
 		return
 	}
-	tenantID := tenantIDForActor(actor)
+	tenantID := strings.TrimSpace(actor.TenantID)
+	if tenantID == "" {
+		store.SendError(w, http.StatusForbidden, "TENANT_REQUIRED", "authenticated client tenant is required")
+		return
+	}
 	purchase, err := s.getSubscriptionPurchase(tenantID, actor.ID, r.PathValue("purchaseId"))
 	if err != nil {
 		writeSubscriptionPurchaseError(w, err)
