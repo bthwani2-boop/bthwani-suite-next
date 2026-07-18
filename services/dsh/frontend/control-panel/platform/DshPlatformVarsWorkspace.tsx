@@ -1,21 +1,14 @@
 "use client";
-import { colorRoles } from '@bthwani/ui-kit';
 
 import React, { useState } from "react";
-
+import { colorRoles } from '@bthwani/ui-kit';
 import { usePlatformVarsModel } from "../../shared/platform/platform-vars.model";
 import { VarsDomainId } from "../../shared/platform/platform-vars.view-model";
-import { usePlatformAuditStateHook } from "../../shared/platform/platform-audit-state";
-import { CpButton, CpTextInput, CpTable, CpTableCell, CpTableHeaderCell } from "@bthwani/control-panel/components";
+import { CpButton, CpTextInput } from "@bthwani/control-panel/components";
 
 export function DshPlatformVarsWorkspace() {
   const [activeDomain, setActiveDomain] = useState<VarsDomainId>("dsh");
-  const { addAuditEvent } = usePlatformAuditStateHook();
-
-  const model = usePlatformVarsModel({
-    activeDomain,
-    addAuditEvent,
-  });
+  const model = usePlatformVarsModel({ activeDomain });
   const mutationUnavailableReason = "يتطلب حفظ المقترحات عقد platform-control فعلياً مع تحقق واعتماد وتدقيق وتراجع.";
 
   return (
@@ -27,66 +20,68 @@ export function DshPlatformVarsWorkspace() {
         padding: "1rem",
         background: colorRoles.surfaceBase,
         borderRadius: "0.75rem",
-        border: `1px solid ${colorRoles.surfaceBase}`,
+        border: `1px solid ${colorRoles.borderSubtle}`,
       }}
       dir="rtl"
     >
-      {/* Right Column: Variable list */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "1rem", borderLeft: `1px solid ${colorRoles.surfaceBase}`, paddingLeft: "1rem" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "1rem", borderLeft: `1px solid ${colorRoles.borderSubtle}`, paddingLeft: "1rem" }}>
         <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: colorRoles.brandAction }}>مجالات المتغيرات</h3>
         <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap" }}>
-          {(["dsh", "wlt", "provider", "design"] as const).map((dom) => (
+          {(["dsh", "wlt", "provider", "design"] as const).map((domain) => (
             <button
-              key={dom}
-              onClick={() => setActiveDomain(dom)}
+              key={domain}
+              type="button"
+              onClick={() => setActiveDomain(domain)}
               style={{
                 padding: "4px 10px",
                 borderRadius: "4px",
                 fontSize: "10px",
                 fontWeight: 700,
-                border: activeDomain === dom ? "none" : `1px solid ${colorRoles.surfaceBase}`,
-                backgroundColor: activeDomain === dom ? colorRoles.brandAction : "transparent",
-                color: activeDomain === dom ? colorRoles.surfaceBase : colorRoles.brandStructure,
+                border: activeDomain === domain ? "none" : `1px solid ${colorRoles.borderSubtle}`,
+                backgroundColor: activeDomain === domain ? colorRoles.brandAction : "transparent",
+                color: activeDomain === domain ? colorRoles.surfaceBase : colorRoles.brandStructure,
                 cursor: "pointer",
               }}
             >
-              {dom === "dsh" ? "عمليات DSH" : dom === "wlt" ? "جسر WLT" : dom === "provider" ? "المزودين" : "سياسات الهوية"}
+              {domain === "dsh" ? "عمليات DSH" : domain === "wlt" ? "جسر WLT" : domain === "provider" ? "المزودون" : "سياسات الهوية"}
             </button>
           ))}
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "0.5rem" }}>
           <label style={{ fontSize: "11px", fontWeight: 700 }}>تصفية النطاق:</label>
-          <div style={{ display: "flex", gap: "0.25rem" }}>
+          <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap" }}>
             <button
+              type="button"
               onClick={() => model.setActiveScope("all")}
               style={{
                 padding: "2px 6px",
                 fontSize: "10px",
                 border: "none",
                 borderRadius: "3px",
-                background: model.activeScope === "all" ? colorRoles.surfaceBase : "transparent",
+                background: model.activeScope === "all" ? colorRoles.surfaceMuted : "transparent",
                 color: model.activeScope === "all" ? colorRoles.brandAction : colorRoles.brandStructure,
                 cursor: "pointer",
               }}
             >
               الكل
             </button>
-            {model.orderedScopes.map((sc) => (
+            {model.orderedScopes.map((scope) => (
               <button
-                key={sc}
-                onClick={() => model.setActiveScope(sc)}
+                key={scope}
+                type="button"
+                onClick={() => model.setActiveScope(scope)}
                 style={{
                   padding: "2px 6px",
                   fontSize: "10px",
                   border: "none",
                   borderRadius: "3px",
-                  background: model.activeScope === sc ? colorRoles.surfaceBase : "transparent",
-                  color: model.activeScope === sc ? colorRoles.brandAction : colorRoles.brandStructure,
+                  background: model.activeScope === scope ? colorRoles.surfaceMuted : "transparent",
+                  color: model.activeScope === scope ? colorRoles.brandAction : colorRoles.brandStructure,
                   cursor: "pointer",
                 }}
               >
-                {sc}
+                {scope}
               </button>
             ))}
           </div>
@@ -94,63 +89,64 @@ export function DshPlatformVarsWorkspace() {
 
         <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "1rem", overflowY: "auto", maxHeight: "30rem" }}>
           {model.filteredRecords.length === 0 ? (
-            <div style={{ padding: "1rem", textAlign: "center", color: colorRoles.brandStructure, fontSize: "0.8rem" }}>لا توجد متغيرات حالياً في هذا المجال.</div>
+            <div style={{ padding: "1rem", textAlign: "center", color: colorRoles.textMuted, fontSize: "0.8rem" }}>لا توجد متغيرات في هذا المجال.</div>
           ) : (
-            model.filteredRecords.map((rec) => (
-              <div
-                key={rec.id}
-                onClick={() => model.setSelectedId(rec.id)}
+            model.filteredRecords.map((record) => (
+              <button
+                key={record.id}
+                type="button"
+                onClick={() => model.setSelectedId(record.id)}
                 style={{
                   padding: "0.75rem",
                   borderRadius: "0.5rem",
-                  border: `1px solid ${model.selectedId === rec.id ? colorRoles.brandAction : colorRoles.surfaceBase}`,
-                  background: model.selectedId === rec.id ? colorRoles.surfaceBase : "white",
+                  border: `1px solid ${model.selectedId === record.id ? colorRoles.brandAction : colorRoles.borderSubtle}`,
+                  background: model.selectedId === record.id ? colorRoles.surfaceMuted : colorRoles.surfaceBase,
                   cursor: "pointer",
-                  transition: "all 0.15s",
+                  textAlign: "right",
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <strong style={{ fontSize: "12px", color: colorRoles.brandStructure }}>{rec.label}</strong>
-                  <span style={{ fontSize: "9px", background: colorRoles.surfaceBase, padding: "1px 4px", borderRadius: "3px" }}>{rec.scope}</span>
+                  <strong style={{ fontSize: "12px", color: colorRoles.brandStructure }}>{record.label}</strong>
+                  <span style={{ fontSize: "9px", background: colorRoles.surfaceMuted, padding: "1px 4px", borderRadius: "3px" }}>{record.scope}</span>
                 </div>
-                <div style={{ fontSize: "10px", color: colorRoles.brandStructure, marginTop: "0.25rem" }}>
-                  القيمة: {rec.currentValue || "—"}
+                <div style={{ fontSize: "10px", color: colorRoles.textMuted, marginTop: "0.25rem" }}>
+                  القيمة المعلنة: {record.currentValue || "—"}
                 </div>
-              </div>
+              </button>
             ))
           )}
         </div>
       </div>
 
-      {/* Left Column: Details & Edit */}
       <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
         {model.selectedVar ? (
           <>
-            <div style={{ borderBottom: `1px solid ${colorRoles.surfaceBase}`, paddingBottom: "0.5rem" }}>
+            <div style={{ borderBottom: `1px solid ${colorRoles.borderSubtle}`, paddingBottom: "0.5rem" }}>
               <h4 style={{ margin: 0, fontSize: "1.1rem" }}>{model.selectedVar.label}</h4>
-              <p style={{ margin: "0.25rem 0 0", fontSize: "0.8rem", color: colorRoles.brandStructure }}>مفتاح الإعداد: {model.selectedVar.key}</p>
+              <p style={{ margin: "0.25rem 0 0", fontSize: "0.8rem", color: colorRoles.textMuted }}>مفتاح الإعداد: {model.selectedVar.key}</p>
             </div>
 
-            <div style={{ background: colorRoles.surfaceBase, padding: "1rem", borderRadius: "0.5rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            <div style={{ background: colorRoles.surfaceMuted, padding: "1rem", borderRadius: "0.5rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span>القيمة الحالية:</span>
+                <span>القيمة المعلنة:</span>
                 <strong>{model.selectedVar.currentValue || "—"}</strong>
               </div>
-              {model.selectedVar.proposedValue && (
+              {model.selectedVar.proposedValue ? (
                 <div style={{ display: "flex", justifyContent: "space-between", color: colorRoles.brandAction }}>
-                  <span>القيمة المقترحة بانتظار الاعتماد:</span>
+                  <span>قيمة مقترحة في البيانات المرجعية:</span>
                   <strong>{model.selectedVar.proposedValue}</strong>
                 </div>
-              )}
+              ) : null}
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
               <label style={{ fontSize: "12px", fontWeight: 700 }}>اقتراح قيمة جديدة:</label>
               {model.isDesignVar ? (
-                <div style={{ display: "flex", gap: "0.5rem" }}>
+                <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                   {model.quickPicks.map((pick) => (
                     <button
                       key={pick}
+                      type="button"
                       disabled
                       aria-disabled="true"
                       title={mutationUnavailableReason}
@@ -158,8 +154,8 @@ export function DshPlatformVarsWorkspace() {
                         padding: "4px 8px",
                         borderRadius: "4px",
                         fontSize: "11px",
-                        border: model.editVal === pick ? `1px solid ${colorRoles.brandAction}` : `1px solid ${colorRoles.surfaceBase}`,
-                        background: model.editVal === pick ? colorRoles.surfaceBase : "white",
+                        border: `1px solid ${colorRoles.borderSubtle}`,
+                        background: colorRoles.surfaceBase,
                         cursor: "not-allowed",
                         opacity: 0.55,
                       }}
@@ -169,14 +165,14 @@ export function DshPlatformVarsWorkspace() {
                   ))}
                 </div>
               ) : (
-                <CpTextInput value={model.editVal} onChange={model.setEditVal} placeholder="عقد التغيير غير متاح حالياً" aria-label="القيمة الجديدة" disabled />
+                <CpTextInput value={model.editVal} onChange={model.setEditVal} placeholder="عقد التغيير غير متاح حاليًا" aria-label="القيمة الجديدة" disabled />
               )}
 
               <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
-                <CpButton disabled aria-label="حفظ الاقتراح غير متاح" style={{ background: colorRoles.surfaceBase, color: colorRoles.textMuted, border: `1px solid ${colorRoles.surfaceBase}`, cursor: "not-allowed" }}>
+                <CpButton disabled aria-label="حفظ الاقتراح غير متاح" style={{ cursor: "not-allowed", opacity: 0.55 }}>
                   حفظ الاقتراح
                 </CpButton>
-                <CpButton disabled aria-label="إلغاء الاقتراح غير متاح" style={{ background: "transparent", border: `1px solid ${colorRoles.surfaceBase}`, color: colorRoles.textMuted, cursor: "not-allowed" }}>
+                <CpButton disabled aria-label="إلغاء الاقتراح غير متاح" style={{ cursor: "not-allowed", opacity: 0.55 }}>
                   إلغاء
                 </CpButton>
               </div>
@@ -185,20 +181,20 @@ export function DshPlatformVarsWorkspace() {
               </div>
             </div>
 
-            {model.linkedScenarios.length > 0 && (
+            {model.linkedScenarios.length > 0 ? (
               <div style={{ marginTop: "1rem" }}>
-                <h5 style={{ margin: "0 0 0.5rem" }}>سيناريوهات وقواعد مرتبطة:</h5>
-                {model.linkedScenarios.map((sc) => (
-                  <div key={sc.id} style={{ padding: "0.5rem", border: `1px solid ${colorRoles.surfaceBase}`, borderRadius: "0.25rem", fontSize: "11px", marginBottom: "0.25rem" }}>
-                    <strong>{sc.title}</strong>
-                    <div style={{ color: colorRoles.brandStructure }}>الأولوية: {sc.priority}</div>
+                <h5 style={{ margin: "0 0 0.5rem" }}>سيناريوهات وقواعد مرجعية:</h5>
+                {model.linkedScenarios.map((scenario) => (
+                  <div key={scenario.id} style={{ padding: "0.5rem", border: `1px solid ${colorRoles.borderSubtle}`, borderRadius: "0.25rem", fontSize: "11px", marginBottom: "0.25rem" }}>
+                    <strong>{scenario.title}</strong>
+                    <div style={{ color: colorRoles.textMuted }}>الأولوية: {scenario.priority}</div>
                   </div>
                 ))}
               </div>
-            )}
+            ) : null}
           </>
         ) : (
-          <div style={{ padding: "3rem", textAlign: "center", color: colorRoles.brandStructure }}>اختر متغيراً من القائمة الجانبية لعرض وتعديل إعداداته.</div>
+          <div style={{ padding: "3rem", textAlign: "center", color: colorRoles.textMuted }}>اختر متغيرًا من القائمة لعرض حالته المرجعية.</div>
         )}
       </div>
     </div>
