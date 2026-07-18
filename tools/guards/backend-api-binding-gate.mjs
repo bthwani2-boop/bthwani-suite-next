@@ -7,25 +7,34 @@ import { operationKey, parseOpenApiContract } from "./_openapi-utils.mjs";
 const guardId = "backend-api-binding-gate";
 const violations = [];
 
-function registeredDshContractFiles() {
+const runtimeContractStrategies = new Set([
+  "PRIMARY_GENERATED",
+  "MANUAL_TYPED_ADAPTER",
+  "STANDALONE_MANUAL_TYPED_ADAPTER",
+]);
+
+function registeredDshRuntimeContracts() {
   const registryFile = "services/dsh/contracts/contract-registry.ts";
   const source = read(registryFile);
-  const paths = [];
-  const pattern = /path:\s*["'](contracts\/[^"']+\.openapi\.yaml)["']/g;
-  for (const match of source.matchAll(pattern)) {
-    paths.push(`services/dsh/${match[1]}`);
+  const files = [];
+  const entryPattern = /\{[\s\S]*?path:\s*["'](contracts\/[^"']+\.openapi\.yaml)["'][\s\S]*?clientStrategy:\s*["']([^"']+)["'][\s\S]*?\n\s*\},/g;
+  for (const match of source.matchAll(entryPattern)) {
+    const strategy = match[2];
+    if (runtimeContractStrategies.has(strategy)) {
+      files.push(`services/dsh/${match[1]}`);
+    }
   }
-  if (paths.length === 0) {
+  if (files.length === 0) {
     violations.push({
       file: registryFile,
       line: 0,
-      message: "DSH_CONTRACT_REGISTRY_EMPTY: no active DSH OpenAPI paths were discovered",
+      message: "DSH_RUNTIME_CONTRACT_REGISTRY_EMPTY: no runtime-owned DSH contracts were discovered",
     });
   }
-  return [...new Set(paths)];
+  return [...new Set(files)];
 }
 
-const dshContracts = registeredDshContractFiles();
+const dshContracts = registeredDshRuntimeContracts();
 const dshPrimary = "services/dsh/contracts/dsh.openapi.yaml";
 
 const services = [
