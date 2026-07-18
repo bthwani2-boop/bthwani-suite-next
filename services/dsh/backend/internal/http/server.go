@@ -59,8 +59,10 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("POST /dsh/operator/home-discovery/{kind}", protected.handleHomeDiscoveryAdminCreate)
 	mux.HandleFunc("PATCH /dsh/operator/home-discovery/{kind}/{itemId}", protected.handleHomeDiscoveryAdminUpdate)
 	mux.HandleFunc("DELETE /dsh/operator/home-discovery/{kind}/{itemId}", protected.handleHomeDiscoveryAdminDelete)
+	mux.HandleFunc("GET /dsh/operator/platform/service-areas", protected.handleOperatorListServiceAreas)
+	mux.HandleFunc("PUT /dsh/operator/platform/service-areas/{serviceAreaCode}", protected.handleOperatorUpsertServiceArea)
 
-	// Cart, client address book, and serviceability.
+	// Cart, client address book, governed maps, and serviceability.
 	mux.HandleFunc("GET /dsh/client/cart", protected.handleGetCart)
 	mux.HandleFunc("POST /dsh/client/cart/items", protected.handleUpsertCartItem)
 	mux.HandleFunc("DELETE /dsh/client/cart/items/{itemId}", protected.handleRemoveCartItem)
@@ -71,6 +73,8 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("PATCH /dsh/client/addresses/{addressId}", protected.handleUpdateClientAddress)
 	mux.HandleFunc("DELETE /dsh/client/addresses/{addressId}", protected.handleDeleteClientAddress)
 	mux.HandleFunc("POST /dsh/client/addresses/{addressId}/default", protected.handleSetClientDefaultAddress)
+	mux.HandleFunc("POST /dsh/client/maps/search", protected.handleClientMapSearch)
+	mux.HandleFunc("POST /dsh/client/maps/reverse", protected.handleClientMapReverse)
 	mux.HandleFunc("GET /dsh/operator/carts", protected.handleOperatorCarts)
 
 	// Checkout Intent & WLT Handoff
