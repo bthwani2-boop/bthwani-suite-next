@@ -141,6 +141,13 @@ export function ServiceAreaGovernanceSection() {
     }
   }, [controller, form, reset]);
 
+  const tableRows =
+    controller.state.kind === "success"
+      ? (controller.state.data as unknown as (
+          DshServiceArea & Record<string, unknown>
+        )[])
+      : [];
+
   return (
     <View style={styles.section}>
       <View style={styles.headerRow}>
@@ -210,12 +217,7 @@ export function ServiceAreaGovernanceSection() {
                 render: (row) => String(row.version),
               },
             ]}
-            rows={
-              controller.state.data as (
-                | DshServiceArea
-                | Record<string, unknown>
-              )[]
-            }
+            rows={tableRows}
             getRowKey={(row) => row.serviceAreaCode}
             onRowPress={edit}
           />
