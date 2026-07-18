@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "repository": "bthwani2-boop/bthwani-suite-next",
+  "targetBranch": "lian",
+  "decision": "FIX_REQUIRED",
+  "items": [
+    {
+      "id": "P0-CI-001",
+      "priority": "P0",
+      "domain": "github-actions",
+      "status": "FIX_REQUIRED",
+      "problem": "The primary CI push trigger names bassam and master but not lian, so lian head commits have no authoritative same-commit CI execution.",
+      "rootCause": "Branch-specific workflow configuration was not reconciled when execution moved to lian.",
+      "affectedPaths": [".github/workflows/ci.yml"],
+      "acceptance": ["CI triggers on push to lian", "Required jobs retain fail-closed aggregation", "A run is produced for the same immutable lian commit"]
+    },
+    {
+      "id": "P0-TRUTH-001",
+      "priority": "P0",
+      "domain": "service-truth",
+      "status": "FIX_REQUIRED",
+      "problem": "DSH service.manifest declares PARTIALLY_BOUND/FIX_REQUIRED and global screen/runtime readiness false while surface-map and runtime-map declare broad runtime verification.",
+      "rootCause": "Readiness is duplicated across registries with different evidence semantics and no enforced reconciliation invariant.",
+      "affectedPaths": ["services/dsh/service.manifest.ts", "services/dsh/surface-map.ts", "services/dsh/runtime-map.ts", "tools/guards/service-manifest-drift-gate.mjs"],
+      "acceptance": ["One explicit readiness model and precedence rule", "No contradictory capability or surface claim", "Every runtime claim references same-commit executable evidence", "Guard fails on future contradiction"]
+    },
+    {
+      "id": "P0-GUARD-001",
+      "priority": "P0",
+      "domain": "verification-integrity",
+      "status": "FIX_REQUIRED",
+      "problem": "Several required-looking scripts catch failures and return success, allowing false green results; a performance smoke targets host localhost:8080 instead of the governed DSH host port.",
+      "rootCause": "Diagnostic wrappers and enforceable gates are not consistently separated, and host/container port contexts are mixed.",
+      "affectedPaths": ["package.json"],
+      "acceptance": ["Required test/guard/performance scripts propagate non-zero exits", "Optional diagnostics are explicitly named diagnostics", "Host DSH smoke defaults to http://localhost:58080"]
+    },
+    {
+      "id": "P0-GITHUB-001",
+      "priority": "P0",
+      "domain": "repository-enforcement",
+      "status": "NEEDS_EVIDENCE",
+      "problem": "The committed enforcement snapshot targets bassam and does not prove lian protection, required checks, same-commit CI, or independent reviewers.",
+      "rootCause": "A historical branch-scoped snapshot is present without live lian verification.",
+      "affectedPaths": ["governance/github/repository-enforcement.json"],
+      "acceptance": ["Snapshot targets lian and is refreshed only from live GitHub facts", "Unproven fields remain NOT_PROVEN", "No high-risk closure without independent identities and required checks"]
+    },
+    {
+      "id": "P1-CONTRACT-001",
+      "priority": "P1",
+      "domain": "api-contracts",
+      "status": "FIX_REQUIRED",
+      "problem": "DSH declares multiple active OpenAPI fragments, while central generation and CI drift comparison visibly cover only the main DSH contract plus separately handled catalog output.",
+      "rootCause": "Contract activation, generated-client registration, and CI drift coverage evolved independently.",
+      "affectedPaths": ["services/dsh/service.manifest.ts", "services/dsh/contracts", "services/dsh/clients/generated", "package.json", ".github/workflows/ci.yml"],
+      "acceptance": ["Every active contract has an owned generated output or explicit composition rule", "Every output is drift-checked", "Routes and consumers are binding-checked", "No unstable or malformed operation identifiers remain"]
+    },
+    {
+      "id": "P1-WLT-001",
+      "priority": "P1",
+      "domain": "finance",
+      "status": "NEEDS_EVIDENCE",
+      "problem": "WLT implementation reports active local/staging mutation support but journey runtime and production mutations are not verified.",
+      "rootCause": "Code readiness, simulator evidence, provider-lab evidence, and production financial authorization are separate scopes.",
+      "affectedPaths": ["services/wlt", "services/dsh/backend/internal/wlt", "infra/docker/financial-simulators"],
+      "acceptance": ["DSH holds references only", "Local/staging journeys pass with idempotency and reconciliation", "Production remains fail-closed without real provider configuration and independent financial/release evidence"]
+    },
+    {
+      "id": "P1-SURFACE-001",
+      "priority": "P1",
+      "domain": "multi-surface",
+      "status": "FIX_REQUIRED",
+      "problem": "Broad screen and surface readiness claims are not yet reconciled with navigation reachability, actor permissions, backend mutation, persistence, readback, and cross-surface refresh evidence.",
+      "rootCause": "Static binding and historical evidence paths were promoted to runtime-level language.",
+      "affectedPaths": ["apps", "services/dsh/frontend", "services/wlt/frontend/shared/dsh", "governance/guards/frontend-binding-registry.json"],
+      "acceptance": ["Every required UI control has an end-to-end binding", "Every excluded surface has a Product Truth reason", "Negative and permission paths pass", "No local commercial or financial truth"]
+    }
+  ]
+}
