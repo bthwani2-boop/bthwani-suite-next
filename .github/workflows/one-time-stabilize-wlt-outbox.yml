@@ -1,0 +1,308 @@
+name: One-time Stabilize WLT Outbox
+
+on:
+  push:
+    branches: [bassam]
+    paths:
+      - '.github/workflows/one-time-stabilize-wlt-outbox.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: one-time-stabilize-wlt-outbox
+  cancel-in-progress: false
+
+jobs:
+  stabilize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: bassam
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+
+      - name: Write unified outbox implementation
+        shell: bash
+        run: |
+          set -euo pipefail
+          git pull --rebase origin bassam
+          cat > services/dsh/backend/internal/wltoutbox/wltoutbox.go <<'GO'
+          package wltoutbox
+
+          import (
+            "database/sql"
+            "encoding/json"
+            "errors"
+            "fmt"
+            "time"
+          )
+
+          const (
+            EventTypeDeliveryCompleted      = "delivery_completed"
+            EventTypeLoyaltyEarned           = "loyalty_earned"
+            EventTypeLoyaltyReversed         = "loyalty_reversed"
+            EventTypePromotionFundingCommit  = "promotion_funding_commit"
+            EventTypePromotionFundingRelease = "promotion_funding_release"
+            EventTypePromotionFundingReverse = "promotion_funding_reverse"
+          )
+
+          type Event struct {
+            ID                  string
+            EventType           string
+            OrderID             string
+            CaptainID           string
+            PartnerID           string
+            CheckoutIntentID    string
+            ClientID            string
+            TenantID            string
+            Points              int64
+            ReversalOfReference string
+            ExternalReference   string
+            Payload             map[string]any
+            ReversalRequested   bool
+            AttemptCount        int
+          }
+
+          func Enqueue(tx *sql.Tx, eventType, orderID, captainID, partnerID, checkoutIntentID string) error {
+            _, err := tx.Exec(`
+              INSERT INTO dsh_wlt_outbox_events
+                (event_type,order_id,captain_id,partner_id,checkout_intent_id)
+              VALUES ($1,NULLIF($2,'')::uuid,$3,$4,NULLIF($5,'')::uuid)
+              ON CONFLICT DO NOTHING`, eventType, orderID, captainID, partnerID, checkoutIntentID)
+            if err != nil {
+              return fmt.Errorf("enqueue wlt outbox event: %w", err)
+            }
+            return nil
+          }
+
+          func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
+            tx, err := db.Begin()
+            if err != nil { return nil, err }
+            defer tx.Rollback()
+
+            if _, err := tx.Exec(`
+              UPDATE dsh_wlt_outbox_events
+              SET status='cancelled',last_error='cancelled after loyalty lease expired with refund requested',updated_at=NOW()
+              WHERE status='processing' AND next_retry_at<=NOW()
+                AND event_type='loyalty_earned' AND reversal_requested=TRUE`); err != nil {
+              return nil, fmt.Errorf("cancel refunded expired loyalty leases: %w", err)
+            }
+
+            rows, err := tx.Query(`
+              SELECT id,event_type,COALESCE(order_id::text,''),COALESCE(captain_id,''),
+                     COALESCE(partner_id,''),COALESCE(checkout_intent_id::text,''),
+                     client_id,tenant_id,points,reversal_of_reference,
+                     external_reference,payload,reversal_requested,attempt_count
+              FROM dsh_wlt_outbox_events
+              WHERE status IN ('pending','processing') AND next_retry_at<=NOW()
+                AND NOT (event_type='loyalty_earned' AND reversal_requested=TRUE)
+              ORDER BY created_at
+              LIMIT $1
+              FOR UPDATE SKIP LOCKED`, limit)
+            if err != nil { return nil, fmt.Errorf("claim wlt outbox batch: %w", err) }
+            var events []Event
+            for rows.Next() {
+              var event Event
+              var payload []byte
+              if err := rows.Scan(
+                &event.ID,&event.EventType,&event.OrderID,&event.CaptainID,&event.PartnerID,
+                &event.CheckoutIntentID,&event.ClientID,&event.TenantID,&event.Points,
+                &event.ReversalOfReference,&event.ExternalReference,&payload,
+                &event.ReversalRequested,&event.AttemptCount,
+              ); err != nil {
+                rows.Close()
+                return nil, fmt.Errorf("scan wlt outbox event: %w", err)
+              }
+              event.Payload=map[string]any{}
+              if len(payload)>0 { _=json.Unmarshal(payload,&event.Payload) }
+              events=append(events,event)
+            }
+            if err:=rows.Err(); err!=nil { return nil,err }
+            rows.Close()
+
+            if len(events)>0 {
+              ids:=make([]string,len(events))
+              for i,event:=range events { ids[i]=event.ID }
+              if _,err:=tx.Exec(`
+                UPDATE dsh_wlt_outbox_events
+                SET status='processing',next_retry_at=NOW()+$2::interval,updated_at=NOW()
+                WHERE id=ANY($1::uuid[])`,pqStringArray(ids),lease.String()); err!=nil {
+                return nil,fmt.Errorf("lease wlt outbox batch: %w",err)
+              }
+            }
+            if err:=tx.Commit(); err!=nil { return nil,err }
+            return events,nil
+          }
+
+          func MarkSent(db *sql.DB,id string) error { return MarkSentWithReference(db,id,"") }
+
+          func MarkSentWithReference(db *sql.DB,id,externalReference string) error {
+            tx,err:=db.Begin()
+            if err!=nil { return err }
+            defer tx.Rollback()
+
+            var eventType,orderID,partnerID,checkoutIntentID,clientID string
+            var points int64
+            var reversalRequested bool
+            var payload []byte
+            err=tx.QueryRow(`
+              SELECT event_type,COALESCE(order_id::text,''),COALESCE(partner_id,''),
+                     COALESCE(checkout_intent_id::text,''),client_id,points,
+                     reversal_requested,payload
+              FROM dsh_wlt_outbox_events
+              WHERE id=$1::uuid AND status='processing'
+              FOR UPDATE`,id).Scan(
+                &eventType,&orderID,&partnerID,&checkoutIntentID,&clientID,
+                &points,&reversalRequested,&payload,
+              )
+            if errors.Is(err,sql.ErrNoRows) { return nil }
+            if err!=nil { return err }
+            if eventType==EventTypeLoyaltyEarned && externalReference=="" {
+              return fmt.Errorf("loyalty earn event requires WLT entry reference")
+            }
+            if _,err:=tx.Exec(`
+              UPDATE dsh_wlt_outbox_events
+              SET status='sent',external_reference=CASE WHEN $2='' THEN external_reference ELSE $2 END,
+                  updated_at=NOW()
+              WHERE id=$1::uuid AND status='processing'`,id,externalReference); err!=nil { return err }
+
+            if eventType==EventTypeLoyaltyEarned && reversalRequested {
+              metadata:=map[string]any{}
+              _=json.Unmarshal(payload,&metadata)
+              metadata["reason"]="confirmed refund arrived while loyalty earn was processing"
+              reversalPayload,marshalErr:=json.Marshal(metadata)
+              if marshalErr!=nil { return marshalErr }
+              if _,err:=tx.Exec(`
+                INSERT INTO dsh_wlt_outbox_events
+                  (event_type,order_id,captain_id,partner_id,checkout_intent_id,
+                   client_id,points,reversal_of_reference,payload)
+                VALUES ('loyalty_reversed',$1::uuid,'',$2,NULLIF($3,'')::uuid,$4,$5,$6,$7)
+                ON CONFLICT DO NOTHING`,orderID,partnerID,checkoutIntentID,clientID,points,externalReference,reversalPayload); err!=nil { return err }
+            }
+
+            if eventType==EventTypePromotionFundingCommit || eventType==EventTypePromotionFundingRelease || eventType==EventTypePromotionFundingReverse {
+              redemptionID,_:=payloadString(payload,"couponRedemptionId")
+              target:=map[string]string{
+                EventTypePromotionFundingCommit:"committed",
+                EventTypePromotionFundingRelease:"released",
+                EventTypePromotionFundingReverse:"reversed",
+              }[eventType]
+              if redemptionID=="" { return fmt.Errorf("promotion funding event lacks couponRedemptionId") }
+              if _,err:=tx.Exec(`UPDATE dsh_coupon_redemptions SET funding_status=$2,updated_at=NOW() WHERE id=$1::uuid`,redemptionID,target); err!=nil { return err }
+            }
+            return tx.Commit()
+          }
+
+          func MarkFailed(db *sql.DB,id string,attemptCount int,cause error) error {
+            nextAttempt:=attemptCount+1
+            backoff:=time.Duration(1<<uint(min(nextAttempt,10)))*time.Second
+            if backoff>30*time.Minute { backoff=30*time.Minute }
+            _,err:=db.Exec(`
+              UPDATE dsh_wlt_outbox_events
+              SET status=CASE
+                    WHEN event_type='loyalty_earned' AND reversal_requested=TRUE THEN 'cancelled'
+                    ELSE 'pending'
+                  END,
+                  attempt_count=$2,last_error=$3,next_retry_at=NOW()+$4::interval,updated_at=NOW()
+              WHERE id=$1::uuid AND status='processing'`,id,nextAttempt,cause.Error(),backoff.String())
+            return err
+          }
+
+          func payloadString(payload []byte,key string)(string,error){
+            values:=map[string]any{}
+            if err:=json.Unmarshal(payload,&values); err!=nil { return "",err }
+            value,ok:=values[key].(string)
+            if !ok { return "",nil }
+            return value,nil
+          }
+
+          func min(a,b int)int{if a<b{return a};return b}
+          func pqStringArray(values []string)string{out:="{";for i,value:=range values{if i>0{out+=","};out+=`"`+value+`"`};return out+"}"}
+          GO
+
+          cat > services/dsh/backend/internal/wltoutbox/worker.go <<'GO'
+          package wltoutbox
+
+          import (
+            "context"
+            "database/sql"
+            "fmt"
+            "log"
+            "time"
+
+            "dsh-api/internal/wlt"
+          )
+
+          const(batchSize=20;claimLease=2*time.Minute;notifyTimeout=10*time.Second)
+
+          func RunWorker(ctx context.Context,db *sql.DB,client *wlt.Client,interval time.Duration){
+            ticker:=time.NewTicker(interval);defer ticker.Stop()
+            for{select{case<-ctx.Done():return;case<-ticker.C:if err:=ProcessOnce(ctx,db,client);err!=nil{log.Printf("[wlt-outbox] batch processing error: %v",err)}}}
+          }
+
+          func ProcessOnce(ctx context.Context,db *sql.DB,client *wlt.Client)error{
+            events,err:=ClaimBatch(db,batchSize,claimLease);if err!=nil{return err}
+            for _,event:=range events{
+              notifyCtx,cancel:=context.WithTimeout(ctx,notifyTimeout)
+              externalReference,deliverErr:=deliverEvent(notifyCtx,client,event)
+              cancel()
+              if deliverErr!=nil{
+                log.Printf("[wlt-outbox] event %s/%s failed (attempt %d): %v",event.ID,event.EventType,event.AttemptCount+1,deliverErr)
+                if markErr:=MarkFailed(db,event.ID,event.AttemptCount,deliverErr);markErr!=nil{log.Printf("[wlt-outbox] retry state failed for %s: %v",event.ID,markErr)}
+                continue
+              }
+              if markErr:=MarkSentWithReference(db,event.ID,externalReference);markErr!=nil{log.Printf("[wlt-outbox] mark sent failed for %s: %v",event.ID,markErr)}
+            }
+            return nil
+          }
+
+          func deliverEvent(ctx context.Context,client *wlt.Client,event Event)(string,error){
+            switch event.EventType{
+            case EventTypeDeliveryCompleted:
+              return "",client.NotifyDeliveryCompleted(ctx,wlt.NotifyDeliveryCompletedInput{OrderID:event.OrderID,CaptainID:event.CaptainID,PartnerID:event.PartnerID,CheckoutIntentID:event.CheckoutIntentID})
+            case EventTypeLoyaltyEarned:
+              if event.ClientID==""||event.Points<=0{return "",fmt.Errorf("invalid loyalty-earned payload")}
+              entry,err:=client.AppendLoyaltyEntry(ctx,wlt.AppendLoyaltyEntryInput{ClientID:event.ClientID,Direction:"earn",Points:event.Points,SourceType:"order",SourceID:event.OrderID,IdempotencyKey:"order:"+event.OrderID+":loyalty:earn",CorrelationID:"dsh-order-"+event.OrderID,Metadata:event.Payload})
+              if err!=nil{return "",err};return entry.ID,nil
+            case EventTypeLoyaltyReversed:
+              if event.ClientID==""||event.Points<=0||event.ReversalOfReference==""{return "",fmt.Errorf("invalid loyalty-reversal payload")}
+              entry,err:=client.AppendLoyaltyEntry(ctx,wlt.AppendLoyaltyEntryInput{ClientID:event.ClientID,Direction:"reverse",Points:event.Points,SourceType:"order_refund",SourceID:event.OrderID,ReversalOf:event.ReversalOfReference,IdempotencyKey:"order:"+event.OrderID+":loyalty:reverse",CorrelationID:"dsh-order-refund-"+event.OrderID,Metadata:event.Payload})
+              if err!=nil{return "",err};return entry.ID,nil
+            case EventTypePromotionFundingCommit,EventTypePromotionFundingRelease,EventTypePromotionFundingReverse:
+              reservationID,ok:=event.Payload["fundingReservationId"].(string);if !ok||reservationID==""{return "",fmt.Errorf("promotion funding event lacks reservation id")}
+              redemptionID,_:=event.Payload["couponRedemptionId"].(string)
+              reason,_:=event.Payload["reason"].(string)
+              orderID,_:=event.Payload["orderId"].(string)
+              transition:=map[string]string{EventTypePromotionFundingCommit:"commit",EventTypePromotionFundingRelease:"release",EventTypePromotionFundingReverse:"reverse"}[event.EventType]
+              result,err:=client.TransitionPromotionFundingFromOutbox(ctx,reservationID,transition,wlt.PromotionFundingOutboxInput{TenantID:event.TenantID,OrderID:orderID,Reason:reason,IdempotencyKey:"coupon-redemption:"+redemptionID+":funding:"+transition,CorrelationID:"dsh-promotion-funding-"+redemptionID})
+              if err!=nil{return "",err};return result.ID,nil
+            default:return "",fmt.Errorf("unsupported WLT outbox event type %q",event.EventType)
+            }
+          }
+          GO
+
+          gofmt -w services/dsh/backend/internal/wltoutbox/wltoutbox.go services/dsh/backend/internal/wltoutbox/worker.go services/dsh/backend/internal/wlt/promotion_funding_outbox.go
+          git diff --check
+
+      - name: Commit stable worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add services/dsh/backend/internal/wltoutbox services/dsh/backend/internal/wlt/promotion_funding_outbox.go
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'fix(finance): unify durable WLT commercial outbox'
+          git pull --rebase origin bassam
+          git push origin HEAD:bassam
+
+      - name: Compile DSH
+        working-directory: services/dsh/backend
+        run: go test ./...
