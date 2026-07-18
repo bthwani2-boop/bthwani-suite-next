@@ -1,0 +1,63 @@
+name: Platform Control Materialized Evidence
+
+on:
+  pull_request:
+    branches:
+      - "bassam-platform-verification-base-*"
+    paths:
+      - "core/platform-control/**"
+      - "core/identity/backend/**"
+      - ".github/workflows/platform-control-materialized-evidence.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  identity-formatted:
+    name: Materialize formatted Identity files
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+      - name: Materialize gofmt output
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=/tmp/identity-formatted
+          mkdir -p "$root/internal/http" "$root/internal/identity"
+          cp core/identity/backend/internal/http/server.go "$root/internal/http/server.go"
+          cp core/identity/backend/internal/identity/model.go "$root/internal/identity/model.go"
+          cp core/identity/backend/internal/identity/repository_test.go "$root/internal/identity/repository_test.go"
+          gofmt -w "$root/internal/http/server.go" "$root/internal/identity/model.go" "$root/internal/identity/repository_test.go"
+      - name: Upload formatted Identity files
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: identity-formatted-files
+          path: /tmp/identity-formatted
+          if-no-files-found: error
+          retention-days: 3
+
+  platform-generated-client:
+    name: Materialize generated platform-control client
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+      - name: Setup workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Validate and generate
+        run: |
+          pnpm run contracts:lint
+          pnpm run openapi:generate:platform-control
+      - name: Upload generated client
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: platform-control-generated-client-exact
+          path: core/platform-control/clients/generated/platform-control-api.ts
+          if-no-files-found: error
+          retention-days: 3
