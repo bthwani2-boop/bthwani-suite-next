@@ -69,15 +69,31 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 		return
 	}
 
-	reservation, err := coupons.ReserveTx(r.Context(), tx, coupons.ReserveInput{
-		Code:               body.CouponCode,
-		ClientActorID:      actor.ID,
-		CartID:             body.CartID,
-		CheckoutIntentID:   intentID,
-		StoreID:            body.StoreID,
-		FulfillmentMode:    fulfillmentMode,
+	deliveryPolicy, err := checkout.ResolveDeliveryPricingTx(r.Context(), tx, body.StoreID, fulfillmentMode)
+	if errors.Is(err, checkout.ErrDeliveryPricingUnavailable) {
+		store.SendError(w, http.StatusConflict, "DELIVERY_PRICING_UNAVAILABLE", "no approved delivery pricing policy exists for this store and fulfillment mode")
+		return
+	}
+	if errors.Is(err, checkout.ErrInvalid) {
+		store.SendError(w, http.StatusBadRequest, "INVALID_FULFILLMENT_MODE", "fulfillment mode is invalid")
+		return
+	}
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to resolve delivery pricing")
+		return
+	}
+	if deliveryPolicy.Currency != snapshot.Currency {
+		store.SendError(w, http.StatusConflict, "PRICING_CURRENCY_MISMATCH", "cart and delivery pricing currencies do not match")
+		return
+	}
+
+	reservation, err := coupons.ReservePricedTx(r.Context(), tx, coupons.ReservePricedInput{
+		Code: body.CouponCode, ClientActorID: actor.ID, CartID: body.CartID,
+		CheckoutIntentID: intentID, StoreID: body.StoreID,
+		FulfillmentMode: fulfillmentMode,
 		SubtotalMinorUnits: snapshot.AmountMinorUnits,
-		Currency:           snapshot.Currency,
+		DeliveryFeeMinorUnits: deliveryPolicy.FeeMinorUnits,
+		Currency: snapshot.Currency,
 	})
 	if errors.Is(err, coupons.ErrUsageLimit) {
 		store.SendError(w, http.StatusConflict, "COUPON_USAGE_LIMIT", "coupon usage limit has been reached")
@@ -98,8 +114,9 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 
 	pricing := checkout.PricingSnapshot{
 		SubtotalMinorUnits: snapshot.AmountMinorUnits,
-		TotalMinorUnits:    snapshot.AmountMinorUnits,
-		Currency:           snapshot.Currency,
+		DeliveryFeeMinorUnits: deliveryPolicy.FeeMinorUnits,
+		TotalMinorUnits: snapshot.AmountMinorUnits + deliveryPolicy.FeeMinorUnits,
+		Currency: snapshot.Currency,
 	}
 	if reservation != nil {
 		pricing.DiscountMinorUnits = reservation.DiscountMinorUnits
@@ -109,22 +126,15 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 		pricing.CouponCodeLast4 = reservation.CouponCodeLast4
 	}
 	pricing.SnapshotHash = checkout.BuildPricingSnapshotHash(
-		snapshot.SnapshotHash,
-		pricing.CouponID,
-		pricing.SubtotalMinorUnits,
-		pricing.DiscountMinorUnits,
-		pricing.TotalMinorUnits,
+		snapshot.SnapshotHash, pricing.CouponID, pricing.SubtotalMinorUnits,
+		pricing.DeliveryFeeMinorUnits, pricing.DiscountMinorUnits, pricing.TotalMinorUnits,
 	)
 
 	intent, err := checkout.CreatePricedIntentTx(r.Context(), tx, checkout.CreateIntentInput{
-		ID:              intentID,
-		ClientID:        actor.ID,
-		CartID:          body.CartID,
-		StoreID:         body.StoreID,
+		ID: intentID, ClientID: actor.ID, CartID: body.CartID, StoreID: body.StoreID,
 		FulfillmentMode: checkout.FulfillmentMode(fulfillmentMode),
-		PaymentMethod:   checkout.PaymentMethod(body.PaymentMethod),
-		DeliveryAddress: body.DeliveryAddress,
-		Note:            body.Note,
+		PaymentMethod: checkout.PaymentMethod(body.PaymentMethod),
+		DeliveryAddress: body.DeliveryAddress, Note: body.Note,
 	}, pricing)
 	if errors.Is(err, checkout.ErrInvalid) {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
@@ -140,26 +150,19 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 	}
 
 	paymentSession, err := s.wlt.CreatePaymentSession(r.Context(), wlt.CreatePaymentSessionInput{
-		CheckoutIntentID: intent.ID,
-		TenantID:         actor.TenantID,
-		ClientID:         actor.ID,
-		StoreID:          intent.StoreID,
-		PaymentMethod:    string(intent.PaymentMethod),
-		AmountMinorUnits: pricing.TotalMinorUnits,
-		Currency:         pricing.Currency,
+		CheckoutIntentID: intent.ID, TenantID: actor.TenantID, ClientID: actor.ID,
+		StoreID: intent.StoreID, PaymentMethod: string(intent.PaymentMethod),
+		AmountMinorUnits: pricing.TotalMinorUnits, Currency: pricing.Currency,
 		CartSnapshotHash: pricing.SnapshotHash,
-		CorrelationID:    r.Header.Get("X-Correlation-ID"),
-		IdempotencyKey:   "dsh-checkout-intent:" + intent.ID,
+		CorrelationID: r.Header.Get("X-Correlation-ID"),
+		IdempotencyKey: "dsh-checkout-intent:" + intent.ID,
 	})
 	if err != nil {
 		_ = coupons.ReleaseByIntent(s.db, intent.ID, "wlt_handoff_failed")
 		if failedIntent, markErr := checkout.MarkWltHandoffFailed(s.db, intent.ID, actor.ID); markErr == nil {
 			store.SendJSON(w, http.StatusServiceUnavailable, map[string]any{
 				"intent": marshalIntentWithPricing(failedIntent, pricing),
-				"error": map[string]any{
-					"code":    "WLT_HANDOFF_UNAVAILABLE",
-					"message": "WLT payment-session handoff is unavailable",
-				},
+				"error": map[string]any{"code": "WLT_HANDOFF_UNAVAILABLE", "message": "WLT payment-session handoff is unavailable"},
 			})
 			return
 		}
@@ -180,24 +183,17 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to attach WLT payment session")
 		return
 	}
-
-	store.SendJSON(w, http.StatusCreated, map[string]any{
-		"intent": marshalIntentWithPricing(intent, pricing),
-	})
+	store.SendJSON(w, http.StatusCreated, map[string]any{"intent": marshalIntentWithPricing(intent, pricing)})
 }
 
-// GET /dsh/client/checkout-intents/{intentId}
 func (s *protectedStoreServer) handleGetCheckoutIntent(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "client")
-	if !ok {
-		return
-	}
+	if !ok { return }
 	intentID := r.PathValue("intentId")
 	if intentID == "" {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "intentId is required")
 		return
 	}
-
 	intent, err := checkout.GetIntent(s.db, intentID, actor.ID)
 	if errors.Is(err, checkout.ErrNotFound) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "checkout intent not found")
@@ -212,24 +208,17 @@ func (s *protectedStoreServer) handleGetCheckoutIntent(w http.ResponseWriter, r 
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to get checkout pricing")
 		return
 	}
-
-	store.SendJSON(w, http.StatusOK, map[string]any{
-		"intent": marshalIntentWithPricing(intent, pricing),
-	})
+	store.SendJSON(w, http.StatusOK, map[string]any{"intent": marshalIntentWithPricing(intent, pricing)})
 }
 
-// POST /dsh/client/checkout-intents/{intentId}/cancel
 func (s *protectedStoreServer) handleCancelCheckoutIntent(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "client")
-	if !ok {
-		return
-	}
+	if !ok { return }
 	intentID := r.PathValue("intentId")
 	if intentID == "" {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "intentId is required")
 		return
 	}
-
 	intent, err := checkout.CancelIntent(s.db, intentID, actor.ID)
 	if errors.Is(err, checkout.ErrConflict) {
 		store.SendError(w, http.StatusConflict, "CONFLICT", "intent not found or already closed")
@@ -248,19 +237,12 @@ func (s *protectedStoreServer) handleCancelCheckoutIntent(w http.ResponseWriter,
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to get checkout pricing")
 		return
 	}
-
-	store.SendJSON(w, http.StatusOK, map[string]any{
-		"intent": marshalIntentWithPricing(intent, pricing),
-	})
+	store.SendJSON(w, http.StatusOK, map[string]any{"intent": marshalIntentWithPricing(intent, pricing)})
 }
 
-// GET /dsh/operator/checkout-intents
 func (s *protectedStoreServer) handleOperatorCheckoutIntents(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead, "operator"); !ok {
-		return
-	}
-	stateFilter := r.URL.Query().Get("state")
-	intents, err := checkout.ListOperatorIntents(s.db, stateFilter, 50)
+	if _, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead, "operator"); !ok { return }
+	intents, err := checkout.ListOperatorIntents(s.db, r.URL.Query().Get("state"), 50)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list checkout intents")
 		return
@@ -274,32 +256,23 @@ func (s *protectedStoreServer) handleOperatorCheckoutIntents(w http.ResponseWrit
 		}
 		out = append(out, marshalIntentWithPricing(&intents[i], pricing))
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{
-		"intents": out,
-	})
+	store.SendJSON(w, http.StatusOK, map[string]any{"intents": out})
 }
 
 func marshalIntent(i *checkout.Intent) map[string]any {
 	return map[string]any{
-		"id":                  i.ID,
-		"clientId":            i.ClientID,
-		"cartId":              i.CartID,
-		"storeId":             i.StoreID,
-		"fulfillmentMode":     string(i.FulfillmentMode),
-		"state":               string(i.State),
-		"paymentMethod":       string(i.PaymentMethod),
-		"wltPaymentSessionId": i.WltPaymentSessionID,
-		"deliveryAddress":     i.DeliveryAddress,
-		"note":                i.Note,
-		"version":             i.Version,
-		"createdAt":           i.CreatedAt,
-		"updatedAt":           i.UpdatedAt,
+		"id": i.ID, "clientId": i.ClientID, "cartId": i.CartID, "storeId": i.StoreID,
+		"fulfillmentMode": string(i.FulfillmentMode), "state": string(i.State),
+		"paymentMethod": string(i.PaymentMethod), "wltPaymentSessionId": i.WltPaymentSessionID,
+		"deliveryAddress": i.DeliveryAddress, "note": i.Note, "version": i.Version,
+		"createdAt": i.CreatedAt, "updatedAt": i.UpdatedAt,
 	}
 }
 
 func marshalIntentWithPricing(i *checkout.Intent, pricing checkout.PricingSnapshot) map[string]any {
 	result := marshalIntent(i)
 	result["subtotalMinorUnits"] = pricing.SubtotalMinorUnits
+	result["deliveryFeeMinorUnits"] = pricing.DeliveryFeeMinorUnits
 	result["discountMinorUnits"] = pricing.DiscountMinorUnits
 	result["totalMinorUnits"] = pricing.TotalMinorUnits
 	result["currency"] = pricing.Currency
