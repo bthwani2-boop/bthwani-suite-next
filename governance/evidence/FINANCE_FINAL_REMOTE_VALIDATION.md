@@ -1,8 +1,8 @@
 # Finance Final Remote Validation
 
 - Branch: `bassam`
-- Source SHA: `6bc3346e367b15b8d789ab9c3aafb02647f29c97`
-- Executed at: `2026-07-18T02:15:38Z`
+- Source SHA: `737c750fa41c7ffc81beb74e3fcaf66a5355edea`
+- Executed at: `2026-07-18T02:28:09Z`
 
 ## Order tenant call-site patcher
 
@@ -54,7 +54,7 @@ Packages: +33
 +++++++++++++++++++++++++++++++++
 Progress: resolved 33, reused 30, downloaded 3, added 33, done
 ✨ openapi-typescript 7.13.0
-🚀 services/dsh/contracts/dsh.openapi.yaml → services/dsh/clients/generated/dsh-api.ts [385.9ms]
+🚀 services/dsh/contracts/dsh.openapi.yaml → services/dsh/clients/generated/dsh-api.ts [361.1ms]
 
 ```
 
@@ -69,16 +69,16 @@ Progress: resolved 33, reused 30, downloaded 3, added 33, done
 
 ✨ openapi-typescript 7.13.0
  ✘  Can't resolve $ref at #/paths/~1wlt~1settlements/post/responses/400
-file:///home/runner/.cache/pnpm/dlx/140c15d98aff76c652861295ffa050e74ddb4d24b5f22c757b487705a2b44acd/19f7302031b-a5b/node_modules/.pnpm/openapi-typescript@7.13.0_typescript@5.9.3/node_modules/openapi-typescript/dist/lib/redoc.mjs:74
+file:///home/runner/.cache/pnpm/dlx/140c15d98aff76c652861295ffa050e74ddb4d24b5f22c757b487705a2b44acd/19f730d7918-98a/node_modules/.pnpm/openapi-typescript@7.13.0_typescript@5.9.3/node_modules/openapi-typescript/dist/lib/redoc.mjs:74
       throw new Error(errorMessage);
             ^
 
 Error: Can't resolve $ref at #/paths/~1wlt~1settlements/post/responses/400
-    at _processProblems (file:///home/runner/.cache/pnpm/dlx/140c15d98aff76c652861295ffa050e74ddb4d24b5f22c757b487705a2b44acd/19f7302031b-a5b/node_modules/.pnpm/openapi-typescript@7.13.0_typescript@5.9.3/node_modules/openapi-typescript/dist/lib/redoc.mjs:74:13)
-    at validateAndBundle (file:///home/runner/.cache/pnpm/dlx/140c15d98aff76c652861295ffa050e74ddb4d24b5f22c757b487705a2b44acd/19f7302031b-a5b/node_modules/.pnpm/openapi-typescript@7.13.0_typescript@5.9.3/node_modules/openapi-typescript/dist/lib/redoc.mjs:116:3)
-    at async openapiTS (file:///home/runner/.cache/pnpm/dlx/140c15d98aff76c652861295ffa050e74ddb4d24b5f22c757b487705a2b44acd/19f7302031b-a5b/node_modules/.pnpm/openapi-typescript@7.13.0_typescript@5.9.3/node_modules/openapi-typescript/dist/index.mjs:40:18)
-    at async generateSchema (file:///home/runner/.cache/pnpm/dlx/140c15d98aff76c652861295ffa050e74ddb4d24b5f22c757b487705a2b44acd/19f7302031b-a5b/node_modules/.pnpm/openapi-typescript@7.13.0_typescript@5.9.3/node_modules/openapi-typescript/bin/cli.js:143:5)
-    at async main (file:///home/runner/.cache/pnpm/dlx/140c15d98aff76c652861295ffa050e74ddb4d24b5f22c757b487705a2b44acd/19f7302031b-a5b/node_modules/.pnpm/openapi-typescript@7.13.0_typescript@5.9.3/node_modules/openapi-typescript/bin/cli.js:280:20)
+    at _processProblems (file:///home/runner/.cache/pnpm/dlx/140c15d98aff76c652861295ffa050e74ddb4d24b5f22c757b487705a2b44acd/19f730d7918-98a/node_modules/.pnpm/openapi-typescript@7.13.0_typescript@5.9.3/node_modules/openapi-typescript/dist/lib/redoc.mjs:74:13)
+    at validateAndBundle (file:///home/runner/.cache/pnpm/dlx/140c15d98aff76c652861295ffa050e74ddb4d24b5f22c757b487705a2b44acd/19f730d7918-98a/node_modules/.pnpm/openapi-typescript@7.13.0_typescript@5.9.3/node_modules/openapi-typescript/dist/lib/redoc.mjs:116:3)
+    at async openapiTS (file:///home/runner/.cache/pnpm/dlx/140c15d98aff76c652861295ffa050e74ddb4d24b5f22c757b487705a2b44acd/19f730d7918-98a/node_modules/.pnpm/openapi-typescript@7.13.0_typescript@5.9.3/node_modules/openapi-typescript/dist/index.mjs:40:18)
+    at async generateSchema (file:///home/runner/.cache/pnpm/dlx/140c15d98aff76c652861295ffa050e74ddb4d24b5f22c757b487705a2b44acd/19f730d7918-98a/node_modules/.pnpm/openapi-typescript@7.13.0_typescript@5.9.3/node_modules/openapi-typescript/bin/cli.js:143:5)
+    at async main (file:///home/runner/.cache/pnpm/dlx/140c15d98aff76c652861295ffa050e74ddb4d24b5f22c757b487705a2b44acd/19f730d7918-98a/node_modules/.pnpm/openapi-typescript@7.13.0_typescript@5.9.3/node_modules/openapi-typescript/bin/cli.js:280:20)
 
 Node.js v24.17.0
  ELIFECYCLE  Command failed with exit code 1.
@@ -116,20 +116,20 @@ Node.js v24.17.0
 ```text
 go: downloading github.com/lib/pq v1.12.3
 ?   	wlt-api/cmd/wlt-api	[no test files]
-ok  	wlt-api/internal/cod	0.012s
+ok  	wlt-api/internal/cod	0.008s
 ok  	wlt-api/internal/commercial	0.004s
-ok  	wlt-api/internal/dshnotify	0.019s
+ok  	wlt-api/internal/dshnotify	0.013s
 ?   	wlt-api/internal/dshoutbox	[no test files]
 ?   	wlt-api/internal/health	[no test files]
-ok  	wlt-api/internal/http	0.024s
+ok  	wlt-api/internal/http	0.010s
 ok  	wlt-api/internal/ledger	0.008s
-ok  	wlt-api/internal/payment	0.014s
-ok  	wlt-api/internal/payout	0.007s
-ok  	wlt-api/internal/promotionfunding	0.004s
-ok  	wlt-api/internal/provider	0.007s
-ok  	wlt-api/internal/reconciliation	0.006s
-ok  	wlt-api/internal/reference	0.006s
-ok  	wlt-api/internal/refund	0.007s
+ok  	wlt-api/internal/payment	0.010s
+ok  	wlt-api/internal/payout	0.011s
+ok  	wlt-api/internal/promotionfunding	0.006s
+ok  	wlt-api/internal/provider	0.008s
+ok  	wlt-api/internal/reconciliation	0.005s
+ok  	wlt-api/internal/reference	0.004s
+ok  	wlt-api/internal/refund	0.006s
 ok  	wlt-api/internal/settlement	0.004s
 ?   	wlt-api/internal/shared	[no test files]
 ?   	wlt-api/internal/wallet	[no test files]
@@ -162,50 +162,50 @@ go: downloading github.com/zeebo/xxh3 v1.1.0
 go: downloading go.yaml.in/yaml/v3 v3.0.4
 go: downloading golang.org/x/net v0.53.0
 go: downloading gopkg.in/ini.v1 v1.67.2
-go: downloading github.com/klauspost/cpuid/v2 v2.2.11
 go: downloading golang.org/x/sys v0.44.0
+go: downloading github.com/klauspost/cpuid/v2 v2.2.11
 go: downloading golang.org/x/crypto v0.51.0
 go: downloading github.com/rs/xid v1.6.0
 go: downloading github.com/tinylib/msgp v1.6.1
 go: downloading github.com/philhofer/fwd v1.2.0
 go: downloading golang.org/x/text v0.40.0
-# dsh-api/internal/wlt
-internal/wlt/subscription_payment_generic.go:26:40: input.CommercialProductReference undefined (type CreateSubscriptionPaymentSessionInput has no field or method CommercialProductReference)
-internal/wlt/subscription_payment_generic.go:31:40: input.AmountMinorUnits undefined (type CreateSubscriptionPaymentSessionInput has no field or method AmountMinorUnits)
-internal/wlt/subscription_payment_generic.go:32:40: input.Currency undefined (type CreateSubscriptionPaymentSessionInput has no field or method Currency)
-internal/wlt/subscription_payment_generic.go:33:58: input.CommercialProductReference undefined (type CreateSubscriptionPaymentSessionInput has no field or method CommercialProductReference)
+# dsh-api/internal/coupons
+internal/coupons/governed_lookup.go:10:5: ErrFundingPolicy redeclared in this block
+	internal/coupons/funding.go:11:5: other declaration of ErrFundingPolicy
+internal/coupons/governed_read.go:8:6: GetGoverned redeclared in this block
+	internal/coupons/governed_lookup.go:13:6: other declaration of GetGoverned
 FAIL	dsh-api/cmd/dsh-api [build failed]
-ok  	dsh-api/internal/administration	0.004s
-ok  	dsh-api/internal/analytics	0.003s
-ok  	dsh-api/internal/auth	0.013s
-ok  	dsh-api/internal/cart	0.005s
+ok  	dsh-api/internal/administration	0.005s
+ok  	dsh-api/internal/analytics	0.011s
+ok  	dsh-api/internal/auth	0.012s
+ok  	dsh-api/internal/cart	0.004s
 ?   	dsh-api/internal/catalogapproval	[no test files]
-ok  	dsh-api/internal/centralcatalog	0.009s
-FAIL	dsh-api/internal/checkout [build failed]
-FAIL	dsh-api/internal/checkoutfinanceoutbox [build failed]
-ok  	dsh-api/internal/coupons	0.003s
-FAIL	dsh-api/internal/dispatch [build failed]
-FAIL	dsh-api/internal/fieldcommissionoutbox [build failed]
-FAIL	dsh-api/internal/fieldreadiness [build failed]
-ok  	dsh-api/internal/health	0.005s
-ok  	dsh-api/internal/homediscovery	0.007s
+ok  	dsh-api/internal/centralcatalog	0.006s
+ok  	dsh-api/internal/checkout	0.007s
+ok  	dsh-api/internal/checkoutfinanceoutbox	0.005s
+FAIL	dsh-api/internal/coupons [build failed]
+ok  	dsh-api/internal/dispatch	0.005s
+ok  	dsh-api/internal/fieldcommissionoutbox	0.004s
+ok  	dsh-api/internal/fieldreadiness	0.004s
+ok  	dsh-api/internal/health	0.006s
+ok  	dsh-api/internal/homediscovery	0.004s
 FAIL	dsh-api/internal/http [build failed]
-ok  	dsh-api/internal/marketing	0.010s
-ok  	dsh-api/internal/media	0.009s
-ok  	dsh-api/internal/notifications	0.003s
-ok  	dsh-api/internal/operationaloutbox	0.003s
-FAIL	dsh-api/internal/orders [build failed]
-ok  	dsh-api/internal/partner	0.008s
-FAIL	dsh-api/internal/partnerdelivery [build failed]
+FAIL	dsh-api/internal/marketing [build failed]
+ok  	dsh-api/internal/media	0.011s
+ok  	dsh-api/internal/notifications	0.006s
+ok  	dsh-api/internal/operationaloutbox	0.006s
+ok  	dsh-api/internal/orders	0.016s
+ok  	dsh-api/internal/partner	0.006s
+ok  	dsh-api/internal/partnerdelivery	0.008s
 ok  	dsh-api/internal/partnerfleet	0.005s
-FAIL	dsh-api/internal/pickup [build failed]
-ok  	dsh-api/internal/platformpolicies	0.002s
+ok  	dsh-api/internal/pickup	0.006s
+ok  	dsh-api/internal/platformpolicies	0.004s
 FAIL	dsh-api/internal/promotionfundingoutbox [build failed]
-FAIL	dsh-api/internal/specialrequests [build failed]
-ok  	dsh-api/internal/store	0.004s
-ok  	dsh-api/internal/support	0.002s
-FAIL	dsh-api/internal/wlt [build failed]
-FAIL	dsh-api/internal/wltoutbox [build failed]
+ok  	dsh-api/internal/specialrequests	0.016s
+ok  	dsh-api/internal/store	0.003s
+ok  	dsh-api/internal/support	0.004s
+ok  	dsh-api/internal/wlt	0.010s
+ok  	dsh-api/internal/wltoutbox	0.003s
 FAIL
 
 ```
@@ -215,11 +215,11 @@ FAIL
 - Result: **FAIL** (exit `1`)
 
 ```text
-# dsh-api/internal/wlt
-internal/wlt/subscription_payment_generic.go:26:40: input.CommercialProductReference undefined (type CreateSubscriptionPaymentSessionInput has no field or method CommercialProductReference)
-internal/wlt/subscription_payment_generic.go:31:40: input.AmountMinorUnits undefined (type CreateSubscriptionPaymentSessionInput has no field or method AmountMinorUnits)
-internal/wlt/subscription_payment_generic.go:32:40: input.Currency undefined (type CreateSubscriptionPaymentSessionInput has no field or method Currency)
-internal/wlt/subscription_payment_generic.go:33:58: input.CommercialProductReference undefined (type CreateSubscriptionPaymentSessionInput has no field or method CommercialProductReference)
+# dsh-api/internal/coupons
+internal/coupons/governed_lookup.go:10:5: ErrFundingPolicy redeclared in this block
+	internal/coupons/funding.go:11:5: other declaration of ErrFundingPolicy
+internal/coupons/governed_read.go:8:6: GetGoverned redeclared in this block
+	internal/coupons/governed_lookup.go:13:6: other declaration of GetGoverned
 
 ```
 
@@ -524,49 +524,24 @@ frontend-feature-binding-gate: checked 25 STATIC_BINDING entries
 frontend-feature-binding-gate: proves static dependency and contract reachability only; runtime requires same-commit runtime evidence
 frontend-feature-binding-gate: FAIL
 - services/dsh/frontend/app-client/checkout/CheckoutScreen.tsx SCREEN_MISSING client.checkout
-- services/dsh/service.manifest.ts SERVICE_MANIFEST_CAPABILITY_MISSING client.checkout -> dsh.client.checkout
-- services/dsh/service.manifest.ts SERVICE_MANIFEST_CAPABILITY_MISSING client.orders-list -> dsh.client.orders
 - services/dsh/frontend/app-client/orders/OrderTrackingScreen.tsx SCREEN_CONTROLLER_DEPENDENCY_UNREACHABLE client.order-tracking -> services/dsh/frontend/shared/orders/orders.controller-core.ts
-- services/dsh/service.manifest.ts SERVICE_MANIFEST_CAPABILITY_MISSING client.order-tracking -> dsh.client.orders
-- services/dsh/service.manifest.ts SERVICE_MANIFEST_CAPABILITY_MISSING partner.orders-inbox -> dsh.client.orders
 - services/dsh/backend/internal/http/server.go BACKEND_ROUTE_MISSING partner.catalog-workspace -> GET /dsh/partner/catalog/taxonomy
-- services/dsh/service.manifest.ts SERVICE_MANIFEST_CAPABILITY_MISSING partner.catalog-workspace -> dsh.client.catalog
 - services/dsh/backend/internal/http/server.go BACKEND_ROUTE_MISSING partner.product-proposal -> POST /dsh/partner/catalog/product-proposals
-- services/dsh/service.manifest.ts SERVICE_MANIFEST_CAPABILITY_MISSING partner.product-proposal -> dsh.client.catalog
 - services/dsh/backend/internal/http/server.go BACKEND_ROUTE_MISSING partner.taxonomy-browse -> GET /dsh/partner/catalog/taxonomy
-- services/dsh/service.manifest.ts SERVICE_MANIFEST_CAPABILITY_MISSING partner.taxonomy-browse -> dsh.client.catalog
 - services/dsh/frontend/app-partner/store/StoreProfileScreen.tsx SCREEN_CONTROLLER_DEPENDENCY_UNREACHABLE partner.store-settings -> services/dsh/frontend/shared/store/store-admin.controller-core.ts
-- services/dsh/service.manifest.ts SERVICE_MANIFEST_CAPABILITY_MISSING partner.store-settings -> dsh.store.discovery
-- services/dsh/service.manifest.ts SERVICE_MANIFEST_CAPABILITY_MISSING captain.assignments -> dsh.client.dispatch
-- services/dsh/service.manifest.ts SERVICE_MANIFEST_CAPABILITY_MISSING captain.delivery-map -> dsh.client.dispatch
-- services/dsh/service.manifest.ts SERVICE_MANIFEST_CAPABILITY_MISSING captain.pickup-dropoff -> dsh.client.dispatch
-- services/dsh/service.manifest.ts SERVICE_MANIFEST_CAPABILITY_MISSING captain.pod -> dsh.client.dispatch
 - services/dsh/backend/internal/http/server.go BACKEND_ROUTE_MISSING field.partner-onboarding -> POST /dsh/field/partners/{partnerId}/submit
-- services/dsh/service.manifest.ts SERVICE_MANIFEST_CAPABILITY_MISSING field.partner-onboarding -> dsh.field.readiness
 - services/dsh/frontend/app-field/stores/DshFieldStoreVerificationScreen.tsx SCREEN_CONTROLLER_DEPENDENCY_UNREACHABLE field.store-verification -> services/dsh/frontend/shared/field-readiness/field-readiness.controller-core.ts
-- services/dsh/service.manifest.ts SERVICE_MANIFEST_CAPABILITY_MISSING field.store-verification -> dsh.field.readiness
 - services/dsh/frontend/app-field/escalation/DshFieldVisitScreen.tsx SCREEN_CONTROLLER_DEPENDENCY_UNREACHABLE field.media-upload -> services/dsh/frontend/shared/field-readiness/field-readiness.controller-core.ts
-- services/dsh/service.manifest.ts SERVICE_MANIFEST_CAPABILITY_MISSING field.media-upload -> dsh.field.readiness
 - services/dsh/frontend/app-field/stores/DshFieldStoresHistoryScreen.tsx SCREEN_CONTROLLER_DEPENDENCY_UNREACHABLE field.visit-history -> services/dsh/frontend/shared/field-readiness/field-readiness.controller-core.ts
 - services/dsh/backend/internal/http/server.go BACKEND_ROUTE_MISSING field.visit-history -> GET /dsh/field/stores/{storeId}/visits
-- services/dsh/service.manifest.ts SERVICE_MANIFEST_CAPABILITY_MISSING field.visit-history -> dsh.field.readiness
-- services/dsh/service.manifest.ts SERVICE_MANIFEST_CAPABILITY_MISSING control.operations-hub -> dsh.client.orders
-- services/dsh/service.manifest.ts SERVICE_MANIFEST_CAPABILITY_MISSING control.live-orders -> dsh.client.orders
 - services/dsh/frontend/control-panel/operations/CartActivityScreen.tsx SCREEN_CONTROLLER_DEPENDENCY_UNREACHABLE control.cart-activity -> services/dsh/frontend/shared/operations/use-operations-controller.tsx
-- services/dsh/service.manifest.ts SERVICE_MANIFEST_CAPABILITY_MISSING control.cart-activity -> dsh.client.cart
 - services/dsh/frontend/control-panel/operations/CheckoutActivityScreen.tsx SCREEN_CONTROLLER_DEPENDENCY_UNREACHABLE control.checkout-activity -> services/dsh/frontend/shared/operations/use-operations-controller.tsx
-- services/dsh/service.manifest.ts SERVICE_MANIFEST_CAPABILITY_MISSING control.checkout-activity -> dsh.client.checkout
 - services/dsh/backend/internal/http/server.go BACKEND_ROUTE_MISSING control.analytics -> GET /dsh/operator/analytics/platform
-- services/dsh/service.manifest.ts SERVICE_MANIFEST_CAPABILITY_MISSING control.analytics -> dsh.operator.analytics
 - services/dsh/frontend/control-panel/catalogs/CatalogApprovalScreen.tsx SCREEN_CONTROLLER_DEPENDENCY_UNREACHABLE control.catalog-approvals -> services/dsh/frontend/shared/partner/use-partners-controller.tsx
 - services/dsh/backend/internal/http/server.go BACKEND_ROUTE_MISSING control.catalog-approvals -> GET /dsh/catalog-approvals
-- services/dsh/service.manifest.ts SERVICE_MANIFEST_CAPABILITY_MISSING control.catalog-approvals -> dsh.admin
 - services/dsh/backend/internal/http/server.go BACKEND_ROUTE_MISSING control.partner-activation -> GET /dsh/operator/partners
-- services/dsh/service.manifest.ts SERVICE_MANIFEST_CAPABILITY_MISSING control.partner-activation -> dsh.partner.activation
-- services/dsh/service.manifest.ts SERVICE_MANIFEST_CAPABILITY_MISSING control.support-tickets -> dsh.support.hub
 - services/dsh/frontend/control-panel/support/PlatformNotificationConfigScreen.tsx SCREEN_CONTROLLER_DEPENDENCY_UNREACHABLE control.notification-config -> services/dsh/frontend/shared/support/use-support-controller.tsx
 - services/dsh/backend/internal/http/server.go BACKEND_ROUTE_MISSING control.notification-config -> GET /dsh/operator/notifications/config
-- services/dsh/service.manifest.ts SERVICE_MANIFEST_CAPABILITY_MISSING control.notification-config -> dsh.notifications
  ELIFECYCLE  Command failed with exit code 1.
 
 ```
