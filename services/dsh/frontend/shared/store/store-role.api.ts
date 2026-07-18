@@ -1,6 +1,8 @@
 import { getIdentityAccessToken } from "@bthwani/core-identity";
-import { createDshFlexibleHttpClient } from "../_kernel/dsh-http-request";
-
+import {
+  createDshFlexibleHttpClient,
+  type DshMutationAuth,
+} from "../_kernel/dsh-http-request";
 import { resolveDshApiBaseUrl, validateDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import {
   type StoreRoleAction,
@@ -39,37 +41,39 @@ export async function fetchStoreRoleContext(storeId?: string): Promise<StoreRole
   }
 }
 
-
-export async function submitStoreRoleAction(action: StoreRoleAction): Promise<StoreActionResponse> {
+export async function submitStoreRoleAction(
+  action: StoreRoleAction,
+  auth: DshMutationAuth,
+): Promise<StoreActionResponse> {
   const accessToken = isBffMode ? undefined : getIdentityAccessToken();
   if ((!isBffMode && accessToken === null) || httpClient === null) {
     throw { kind: "http", status: 401 };
   }
-  const auth = {
+  const governedAuth: DshMutationAuth = {
     ...(accessToken ? { accessToken } : {}),
-    idempotencyKey: createRequestId("idem"),
-    correlationId: createRequestId("corr"),
+    idempotencyKey: auth.idempotencyKey,
+    correlationId: auth.correlationId,
   };
   switch (action.kind) {
     case "partner":
       return httpClient.request<StoreActionResponse>(
         `/dsh/partner/stores/${encodeURIComponent(action.storeId)}/settings`,
-        { method: "PATCH", body: action.input, auth },
+        { method: "PATCH", body: action.input, auth: governedAuth },
       );
     case "field":
       return httpClient.request<StoreActionResponse>(
         `/dsh/field/stores/${encodeURIComponent(action.storeId)}/verifications`,
-        { method: "POST", body: action.input, auth },
+        { method: "POST", body: action.input, auth: governedAuth },
       );
     case "captain":
       return httpClient.request<StoreActionResponse>(
         `/dsh/captain/stores/${encodeURIComponent(action.storeId)}/pickup-readiness`,
-        { method: "POST", body: action.input, auth },
+        { method: "POST", body: action.input, auth: governedAuth },
       );
     case "operator":
       return httpClient.request<StoreActionResponse>(
         `/dsh/operator/stores/${encodeURIComponent(action.storeId)}/governance`,
-        { method: "POST", body: action.input, auth },
+        { method: "POST", body: action.input, auth: governedAuth },
       );
   }
 }
@@ -90,9 +94,4 @@ export function classifyRoleError(error: unknown): StoreRoleContextState {
     }
   }
   return { kind: "error", message: error instanceof Error ? error.message : "UNKNOWN_ERROR" };
-}
-
-function createRequestId(prefix: string): string {
-  const random = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
-  return `${prefix}-${random}`;
 }
