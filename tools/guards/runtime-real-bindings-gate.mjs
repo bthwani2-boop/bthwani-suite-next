@@ -146,11 +146,11 @@ requireMarkers("services/dsh/backend/internal/http/server.go", [
   '"POST /dsh/operator/marketing/subscription-plans"',
   '"GET /dsh/client/benefits"',
 ]);
-requireMarkers("services/dsh/database/migrations/dsh-058_marketing_commercial_programs.sql", [
+requireMarkers("services/dsh/database/migrations/dsh-058_partner_commercial_programs.sql", [
   "dsh_loyalty_tiers",
   "dsh_subscription_plans",
 ]);
-requireMarkers("services/dsh/database/migrations/dsh-061_marketing_commercial_program_guards.sql", [
+requireMarkers("services/dsh/database/migrations/dsh-063_marketing_commercial_program_guards.sql", [
   "dsh_guard_loyalty_tier_governance",
   "dsh_guard_subscription_plan_governance",
 ]);
@@ -191,7 +191,7 @@ requireMarkers("services/dsh/backend/internal/http/server.go", [
   '"POST /dsh/captain/partner-fleet/connect"',
   '"GET /dsh/captain/partner-fleet/memberships"',
 ]);
-requireMarkers("services/dsh/database/migrations/dsh-059_partner_fleet_connections.sql", [
+requireMarkers("services/dsh/database/migrations/dsh-059_partner_courier_connection_codes.sql", [
   "dsh_partner_courier_connections",
 ]);
 
