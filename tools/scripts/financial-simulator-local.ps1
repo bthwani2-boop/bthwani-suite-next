@@ -15,6 +15,8 @@ $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $RuntimeScript = Join-Path $RepoRoot 'infra\docker\scripts\runtime.ps1'
 $WireMockSmoke = Join-Path $RepoRoot 'tools\scripts\smoke-wiremock-financial-provider.ps1'
 $WltProviderSmoke = Join-Path $RepoRoot 'tools\scripts\smoke-wlt-provider-through-wlt.ps1'
+$WltCodSmoke = Join-Path $RepoRoot 'tools\scripts\smoke-wlt-cod-ledger.ps1'
+$WltSettlementSmoke = Join-Path $RepoRoot 'tools\scripts\smoke-wlt-governed-settlement.ps1'
 $WltPayoutSmoke = Join-Path $RepoRoot 'tools\scripts\smoke-wlt-payout-provider.ps1'
 
 function Assert-Command {
@@ -49,8 +51,14 @@ function Invoke-FinancialJourneys {
   Invoke-Step 'WireMock provider smoke' {
     & pwsh -NoProfile -ExecutionPolicy Bypass -File $WireMockSmoke
   }
-  Invoke-Step 'Card authorize/capture through WLT' {
+  Invoke-Step 'Card capture and provider refund through WLT' {
     & pwsh -NoProfile -ExecutionPolicy Bypass -File $WltProviderSmoke
+  }
+  Invoke-Step 'COD collection and remittance ledger journey' {
+    & pwsh -NoProfile -ExecutionPolicy Bypass -File $WltCodSmoke
+  }
+  Invoke-Step 'Governed order-source settlement journey' {
+    & pwsh -NoProfile -ExecutionPolicy Bypass -File $WltSettlementSmoke
   }
   Invoke-Step 'Provider-backed payout through WLT' {
     & pwsh -NoProfile -ExecutionPolicy Bypass -File $WltPayoutSmoke
