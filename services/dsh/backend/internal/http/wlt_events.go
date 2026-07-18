@@ -36,15 +36,16 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
 		return
 	}
+	body.TenantID = strings.TrimSpace(body.TenantID)
 	body.Status = strings.TrimSpace(body.Status)
 	if body.Status == "refunded" {
 		handleConfirmedRefundEffect(w, s, strings.TrimSpace(body.OrderID), strings.TrimSpace(body.RefundReference), strings.TrimSpace(body.Reason))
 		return
 	}
-	if body.PaymentSessionID == "" || body.Status == "" ||
+	if body.TenantID == "" || body.PaymentSessionID == "" || body.Status == "" ||
 		(body.CheckoutIntentID == "" && body.SpecialRequestID == "") ||
 		(body.CheckoutIntentID != "" && body.SpecialRequestID != "") {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "exactly one of checkoutIntentId or specialRequestId, plus paymentSessionId and status, are required")
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "tenantId, exactly one payment source, paymentSessionId and status are required")
 		return
 	}
 
@@ -74,7 +75,7 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 		return
 	}
 
-	intent, err := checkout.ApplyWltPaymentEvent(s.db, body.CheckoutIntentID, body.PaymentSessionID, body.Status)
+	intent, err := checkout.ApplyWltPaymentEvent(s.db, body.TenantID, body.CheckoutIntentID, body.PaymentSessionID, body.Status)
 	if errors.Is(err, checkout.ErrNotFound) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "checkout intent not found")
 		return
