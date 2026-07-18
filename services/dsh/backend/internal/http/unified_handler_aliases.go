@@ -67,11 +67,11 @@ func (s *protectedStoreServer) handleUpdateMarketingSubscriptionPlan(w http.Resp
 }
 
 func (s *protectedStoreServer) handleCreateClientSubscriptionPurchase(w http.ResponseWriter, r *http.Request) {
-	s.handlePurchaseSubscription(w, r)
+	s.handleCreateSubscriptionPurchase(w, r)
 }
 
 func (s *protectedStoreServer) handleActivateClientSubscription(w http.ResponseWriter, r *http.Request) {
-	s.handleActivateSubscription(w, r)
+	s.handleActivateSubscriptionPurchase(w, r)
 }
 
 func (s *protectedStoreServer) handleClientBenefits(w http.ResponseWriter, r *http.Request) {
