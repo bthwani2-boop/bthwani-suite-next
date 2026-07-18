@@ -10,12 +10,17 @@ import (
 	"github.com/lib/pq"
 )
 
+var (
+	ErrConflict      = errors.New("coupon state conflict")
+	ErrFundingPolicy = errors.New("coupon funding policy is invalid")
+)
+
 type GovernedCoupon struct {
 	Coupon
 	FundingSource    string  `json:"fundingSource"`
 	PlatformShareBps int     `json:"platformShareBps"`
 	PartnerShareBps  int     `json:"partnerShareBps"`
-	SponsorID         *string `json:"sponsorId,omitempty"`
+	SponsorID        *string `json:"sponsorId,omitempty"`
 }
 
 type IssuedGovernedCoupon struct {
@@ -25,18 +30,18 @@ type IssuedGovernedCoupon struct {
 
 type GovernedCreateInput struct {
 	CreateInput
-	FundingSource     string
+	FundingSource    string
 	PlatformShareBps int
 	PartnerShareBps  int
-	SponsorID          *string
+	SponsorID        *string
 }
 
 type GovernedUpdateInput struct {
 	UpdateInput
-	FundingSource     *string
+	FundingSource    *string
 	PlatformShareBps *int
 	PartnerShareBps  *int
-	SponsorID          **string
+	SponsorID        **string
 }
 
 const governedCouponSelectColumns = couponSelectColumns + `,
@@ -123,6 +128,15 @@ func ListGoverned(db *sql.DB) ([]GovernedCoupon, error) {
 	return result, rows.Err()
 }
 
+func GetGoverned(db *sql.DB, id string) (GovernedCoupon, error) {
+	coupon, err := scanGovernedCoupon(db.QueryRow(`SELECT `+governedCouponSelectColumns+`
+		FROM dsh_coupons WHERE id::text=$1 AND archived_at IS NULL`, id))
+	if errors.Is(err, sql.ErrNoRows) {
+		return GovernedCoupon{}, ErrNotFound
+	}
+	return coupon, err
+}
+
 func CreateGoverned(ctx context.Context, db *sql.DB, input GovernedCreateInput) (IssuedGovernedCoupon, error) {
 	code, err := validateCode(input.Code)
 	if err != nil {
@@ -185,6 +199,37 @@ func getGovernedForUpdate(ctx context.Context, tx *sql.Tx, id string) (GovernedC
 	return coupon, err
 }
 
+func governedTermsChanged(current, next GovernedCoupon) bool {
+	return current.NameAr != next.NameAr || current.Description != next.Description ||
+		!equalOptionalString(current.StoreID, next.StoreID) ||
+		current.DiscountType != next.DiscountType || current.DiscountPercent != next.DiscountPercent ||
+		current.FixedDiscountMinorUnits != next.FixedDiscountMinorUnits || current.MaxDiscountMinorUnits != next.MaxDiscountMinorUnits ||
+		current.MinSubtotalMinorUnits != next.MinSubtotalMinorUnits || current.GlobalUsageLimit != next.GlobalUsageLimit ||
+		current.PerClientUsageLimit != next.PerClientUsageLimit || !equalStrings(current.EligibleFulfillmentModes, next.EligibleFulfillmentModes) ||
+		!equalOptionalString(current.StartsAt, next.StartsAt) || !equalOptionalString(current.EndsAt, next.EndsAt) ||
+		current.FundingSource != next.FundingSource || current.PlatformShareBps != next.PlatformShareBps ||
+		current.PartnerShareBps != next.PartnerShareBps || !equalOptionalString(current.SponsorID, next.SponsorID)
+}
+
+func equalOptionalString(left, right *string) bool {
+	if left == nil || right == nil {
+		return left == nil && right == nil
+	}
+	return *left == *right
+}
+
+func equalStrings(left, right []string) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for index := range left {
+		if left[index] != right[index] {
+			return false
+		}
+	}
+	return true
+}
+
 func UpdateGoverned(ctx context.Context, db *sql.DB, id string, input GovernedUpdateInput) (GovernedCoupon, error) {
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
@@ -199,24 +244,59 @@ func UpdateGoverned(ctx context.Context, db *sql.DB, id string, input GovernedUp
 		return GovernedCoupon{}, ErrVersionConflict
 	}
 	next := current
-	if input.NameAr != nil { next.NameAr = strings.TrimSpace(*input.NameAr) }
-	if input.Description != nil { next.Description = strings.TrimSpace(*input.Description) }
-	if input.StoreID != nil { next.StoreID = *input.StoreID }
-	if input.DiscountType != nil { next.DiscountType = *input.DiscountType }
-	if input.DiscountPercent != nil { next.DiscountPercent = *input.DiscountPercent }
-	if input.FixedDiscountMinorUnits != nil { next.FixedDiscountMinorUnits = *input.FixedDiscountMinorUnits }
-	if input.MaxDiscountMinorUnits != nil { next.MaxDiscountMinorUnits = *input.MaxDiscountMinorUnits }
-	if input.MinSubtotalMinorUnits != nil { next.MinSubtotalMinorUnits = *input.MinSubtotalMinorUnits }
-	if input.GlobalUsageLimit != nil { next.GlobalUsageLimit = *input.GlobalUsageLimit }
-	if input.PerClientUsageLimit != nil { next.PerClientUsageLimit = *input.PerClientUsageLimit }
-	if input.EligibleFulfillmentModes != nil { next.EligibleFulfillmentModes = *input.EligibleFulfillmentModes }
-	if input.Status != nil { next.Status = *input.Status }
-	if input.FundingSource != nil { next.FundingSource = strings.TrimSpace(*input.FundingSource) }
-	if input.PlatformShareBps != nil { next.PlatformShareBps = *input.PlatformShareBps }
-	if input.PartnerShareBps != nil { next.PartnerShareBps = *input.PartnerShareBps }
-	if input.SponsorID != nil { next.SponsorID = *input.SponsorID }
+	if input.NameAr != nil {
+		next.NameAr = strings.TrimSpace(*input.NameAr)
+	}
+	if input.Description != nil {
+		next.Description = strings.TrimSpace(*input.Description)
+	}
+	if input.StoreID != nil {
+		next.StoreID = *input.StoreID
+	}
+	if input.DiscountType != nil {
+		next.DiscountType = *input.DiscountType
+	}
+	if input.DiscountPercent != nil {
+		next.DiscountPercent = *input.DiscountPercent
+	}
+	if input.FixedDiscountMinorUnits != nil {
+		next.FixedDiscountMinorUnits = *input.FixedDiscountMinorUnits
+	}
+	if input.MaxDiscountMinorUnits != nil {
+		next.MaxDiscountMinorUnits = *input.MaxDiscountMinorUnits
+	}
+	if input.MinSubtotalMinorUnits != nil {
+		next.MinSubtotalMinorUnits = *input.MinSubtotalMinorUnits
+	}
+	if input.GlobalUsageLimit != nil {
+		next.GlobalUsageLimit = *input.GlobalUsageLimit
+	}
+	if input.PerClientUsageLimit != nil {
+		next.PerClientUsageLimit = *input.PerClientUsageLimit
+	}
+	if input.EligibleFulfillmentModes != nil {
+		next.EligibleFulfillmentModes = *input.EligibleFulfillmentModes
+	}
+	if input.Status != nil {
+		next.Status = *input.Status
+	}
+	if input.FundingSource != nil {
+		next.FundingSource = strings.TrimSpace(*input.FundingSource)
+	}
+	if input.PlatformShareBps != nil {
+		next.PlatformShareBps = *input.PlatformShareBps
+	}
+	if input.PartnerShareBps != nil {
+		next.PartnerShareBps = *input.PartnerShareBps
+	}
+	if input.SponsorID != nil {
+		next.SponsorID = *input.SponsorID
+	}
 	if strings.TrimSpace(next.NameAr) == "" || strings.TrimSpace(input.ActorID) == "" {
 		return GovernedCoupon{}, ErrInvalid
+	}
+	if current.Status == "active" && next.Status == "active" && governedTermsChanged(current, next) {
+		return GovernedCoupon{}, ErrConflict
 	}
 	if err := validateTerms(next.DiscountType, next.DiscountPercent, next.FixedDiscountMinorUnits, next.MaxDiscountMinorUnits, next.MinSubtotalMinorUnits, next.GlobalUsageLimit, next.PerClientUsageLimit, next.EligibleFulfillmentModes); err != nil {
 		return GovernedCoupon{}, err
@@ -228,16 +308,25 @@ func UpdateGoverned(ctx context.Context, db *sql.DB, id string, input GovernedUp
 	next.FundingSource, next.PlatformShareBps, next.PartnerShareBps, next.SponsorID = fundingSource, platformShare, partnerShare, sponsorID
 
 	var startsAt, endsAt any = current.StartsAt, current.EndsAt
-	if input.StartsAt != nil { startsAt = *input.StartsAt }
-	if input.EndsAt != nil { endsAt = *input.EndsAt }
+	if input.StartsAt != nil {
+		startsAt = *input.StartsAt
+	}
+	if input.EndsAt != nil {
+		endsAt = *input.EndsAt
+	}
 	approvedBy := current.ApprovedByActorID
 	var approvedAt any = current.ApprovedAt
 	var archivedAt any
-	if next.Status == "active" {
+	if next.Status == "active" && current.Status != "active" {
+		if input.ActorID == current.CreatedByActorID {
+			return GovernedCoupon{}, ErrConflict
+		}
 		approvedBy = input.ActorID
 		approvedAt = time.Now().UTC()
 	}
-	if next.Status == "archived" { archivedAt = time.Now().UTC() }
+	if next.Status == "archived" {
+		archivedAt = time.Now().UTC()
+	}
 
 	coupon, err := scanGovernedCoupon(tx.QueryRowContext(ctx, `
 		UPDATE dsh_coupons SET
