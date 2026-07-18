@@ -102,7 +102,7 @@ func (s *protectedStoreServer) putEntityImageSafe(
 	defer tx.Rollback()
 
 	link, err := centralcatalog.ReplacePrimaryAssetLink(r.Context(), tx, centralcatalog.AssetLinkInput{
-		AssetID:   input.AssetID,
+		AssetID:    input.AssetID,
 		EntityType: entityType,
 		EntityID:   entityID,
 		Role:       role,
