@@ -1,7 +1,8 @@
 /**
  * Canonical navigation and ownership metadata for the sovereign Platform
  * control plane. Live metrics and workflow states must come from
- * core/platform-control; this registry never manufactures runtime truth.
+ * core/platform-control or the explicitly owned DSH operational policy APIs;
+ * this registry never manufactures runtime truth.
  */
 
 export const PLATFORM_RUNTIME_STATES = {
@@ -19,6 +20,7 @@ export type PlatformMainTabId =
   | "variables"
   | "services"
   | "providers"
+  | "policies"
   | "health"
   | "rollback"
   | "canary";
@@ -33,6 +35,7 @@ export const PLATFORM_MAIN_TABS: readonly PlatformMainTabMeta[] = [
   { id: "variables", label: "المتغيرات والأعلام" },
   { id: "services", label: "الخدمات" },
   { id: "providers", label: "المزودون" },
+  { id: "policies", label: "السياسات ومناطق الخدمة" },
   { id: "health", label: "الصحة والأداء" },
   { id: "rollback", label: "دورة التغيير والتراجع" },
   { id: "canary", label: "الإطلاق التدريجي" },
@@ -46,8 +49,8 @@ export type PlatformOwnershipInfo = {
 };
 
 export const PLATFORM_OWNERSHIP: PlatformOwnershipInfo = {
-  owner: "platform / core-platform-control",
-  ownerPath: "core/platform-control",
-  runtimeOwner: "platform-control PostgreSQL governed store",
+  owner: "platform / core-platform-control / DSH operational policy owners",
+  ownerPath: "core/platform-control + services/dsh/backend/internal/platformpolicies",
+  runtimeOwner: "platform-control and DSH PostgreSQL governed stores",
   financialBoundary: "WLT remains the exclusive financial truth owner",
 };
