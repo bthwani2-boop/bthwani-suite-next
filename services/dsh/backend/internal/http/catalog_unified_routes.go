@@ -96,9 +96,9 @@ func (s *protectedStoreServer) handleUpdateCatalogPlatformPolicyAtomic(w http.Re
 	store.SendJSON(w, http.StatusOK, map[string]any{"policy": policy})
 }
 
-// registerUnifiedCatalogRoutes binds the exact paths consumed by the shared
-// multi-surface clients. It also restores the historically declared platform
-// policy routes so that the capability registry cannot claim disconnected APIs.
+// registerUnifiedCatalogRoutes binds exact paths consumed by the shared
+// multi-surface clients and restores the platform policy routes declared by
+// the capability registry.
 func registerUnifiedCatalogRoutes(mux *http.ServeMux, s *protectedStoreServer) {
 	// Sovereign operational policy truth.
 	mux.HandleFunc("GET /dsh/operator/platform/zones", s.handleListPlatformZones)
@@ -109,6 +109,9 @@ func registerUnifiedCatalogRoutes(mux *http.ServeMux, s *protectedStoreServer) {
 	mux.HandleFunc("GET /dsh/operator/platform/capacity", s.handleGetPlatformCapacity)
 	mux.HandleFunc("PUT /dsh/operator/platform/capacity", s.handleUpsertPlatformCapacity)
 	mux.HandleFunc("GET /dsh/operator/platform/serviceability/{zoneId}", s.handleGetPlatformZoneServiceability)
+	mux.HandleFunc("GET /dsh/operator/platform/store-onboarding-fee", s.handleGetStoreOnboardingFeePolicy)
+	mux.HandleFunc("PUT /dsh/operator/platform/store-onboarding-fee", s.handleUpsertStoreOnboardingFeePolicy)
+	mux.HandleFunc("GET /dsh/platform/store-onboarding-fee", s.handleGetStoreOnboardingFeeReference)
 
 	// Operator taxonomy, products, proposals, policies and assortment.
 	mux.HandleFunc("GET /dsh/operator/catalog/domains", s.handleListCatalogDomains)
