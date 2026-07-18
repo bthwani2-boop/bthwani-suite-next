@@ -24,8 +24,14 @@ import type {
   DshServiceabilityState,
 } from "./cart.types";
 
+type CartMutationError = {
+  readonly kind?: string;
+  readonly status?: number;
+};
+
 function mutationErrorMessage(error: unknown): string {
-  const typed = error as { kind?: string; status?: number };
+  const typed: CartMutationError =
+    typeof error === "object" && error !== null ? error : {};
   if (typed.kind === "http" && (typed.status === 401 || typed.status === 403)) {
     return "سجّل الدخول بحساب العميل لتنفيذ عملية السلة.";
   }
@@ -53,7 +59,9 @@ export function useCartController(
       const cart = await fetchCart(storeId);
       setState(resolveCartLoadState(cart));
     } catch (error) {
-      setState(resolveCartLoadError(error as { kind?: string; status?: number }));
+      const typed: CartMutationError =
+        typeof error === "object" && error !== null ? error : {};
+      setState(resolveCartLoadError(typed));
     }
   }, [storeId]);
 
@@ -74,8 +82,8 @@ export function useCartController(
       setActionError(null);
       try {
         await upsertCartItem({ storeId, ...input });
-        setAction("success");
         await load();
+        setAction("success");
         return true;
       } catch (error) {
         setAction("error");
@@ -84,6 +92,24 @@ export function useCartController(
       }
     },
     [storeId, load],
+  );
+
+  const removeItem = useCallback(
+    async (cartId: string, itemId: string): Promise<boolean> => {
+      setAction("submitting");
+      setActionError(null);
+      try {
+        await removeCartItem(cartId, itemId);
+        await load();
+        setAction("success");
+        return true;
+      } catch (error) {
+        setAction("error");
+        setActionError(mutationErrorMessage(error));
+        return false;
+      }
+    },
+    [load],
   );
 
   const updateItemQuantity = useCallback(
@@ -119,8 +145,8 @@ export function useCartController(
           quantity,
           ...(priceReference !== undefined ? { priceReference } : {}),
         });
-        setAction("success");
         await load();
+        setAction("success");
         return true;
       } catch (error) {
         setAction("error");
@@ -128,25 +154,7 @@ export function useCartController(
         return false;
       }
     },
-    [storeId, state, load],
-  );
-
-  const removeItem = useCallback(
-    async (cartId: string, itemId: string): Promise<boolean> => {
-      setAction("submitting");
-      setActionError(null);
-      try {
-        await removeCartItem(cartId, itemId);
-        setAction("success");
-        await load();
-        return true;
-      } catch (error) {
-        setAction("error");
-        setActionError(mutationErrorMessage(error));
-        return false;
-      }
-    },
-    [load],
+    [storeId, state, load, removeItem],
   );
 
   const clear = useCallback(async (cart: DshCart): Promise<boolean> => {
@@ -154,8 +162,8 @@ export function useCartController(
     setActionError(null);
     try {
       await clearCart(cart.id);
-      setAction("success");
       setState({ kind: "empty" });
+      setAction("success");
       return true;
     } catch (error) {
       setAction("error");
