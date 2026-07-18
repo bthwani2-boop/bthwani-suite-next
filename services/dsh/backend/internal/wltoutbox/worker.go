@@ -3,6 +3,7 @@ package wltoutbox
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
 	"time"
 
@@ -15,10 +16,6 @@ const (
 	notifyTimeout = 10 * time.Second
 )
 
-// RunWorker polls for pending WLT outbox events until ctx is cancelled. It is
-// meant to run as a single background goroutine per dsh-api process; ClaimBatch's
-// row-level locking makes it safe to run more than one instance concurrently
-// too, but a single poller is enough at current volume.
 func RunWorker(ctx context.Context, db *sql.DB, client *wlt.Client, interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
@@ -34,31 +31,77 @@ func RunWorker(ctx context.Context, db *sql.DB, client *wlt.Client, interval tim
 	}
 }
 
-// ProcessOnce claims and attempts delivery of one batch of pending events.
 func ProcessOnce(ctx context.Context, db *sql.DB, client *wlt.Client) error {
 	events, err := ClaimBatch(db, batchSize, claimLease)
 	if err != nil {
 		return err
 	}
-	for _, e := range events {
+	for _, event := range events {
 		notifyCtx, cancel := context.WithTimeout(ctx, notifyTimeout)
-		err := client.NotifyDeliveryCompleted(notifyCtx, wlt.NotifyDeliveryCompletedInput{
-			OrderID:          e.OrderID,
-			CaptainID:        e.CaptainID,
-			PartnerID:        e.PartnerID,
-			CheckoutIntentID: e.CheckoutIntentID,
-		})
+		externalReference, deliverErr := deliverEvent(notifyCtx, client, event)
 		cancel()
-		if err != nil {
-			log.Printf("[wlt-outbox] delivery-completed notify failed for order %s (attempt %d): %v", e.OrderID, e.AttemptCount+1, err)
-			if markErr := MarkFailed(db, e.ID, e.AttemptCount, err); markErr != nil {
-				log.Printf("[wlt-outbox] failed to record retry state for event %s: %v", e.ID, markErr)
+		if deliverErr != nil {
+			log.Printf("[wlt-outbox] event %s/%s failed for order %s (attempt %d): %v", event.ID, event.EventType, event.OrderID, event.AttemptCount+1, deliverErr)
+			if markErr := MarkFailed(db, event.ID, event.AttemptCount, deliverErr); markErr != nil {
+				log.Printf("[wlt-outbox] failed to record retry state for event %s: %v", event.ID, markErr)
 			}
 			continue
 		}
-		if markErr := MarkSent(db, e.ID); markErr != nil {
-			log.Printf("[wlt-outbox] failed to mark event %s sent after successful notify: %v", e.ID, markErr)
+		if markErr := MarkSentWithReference(db, event.ID, externalReference); markErr != nil {
+			log.Printf("[wlt-outbox] failed to mark event %s sent: %v", event.ID, markErr)
 		}
 	}
 	return nil
+}
+
+func deliverEvent(ctx context.Context, client *wlt.Client, event Event) (string, error) {
+	switch event.EventType {
+	case EventTypeDeliveryCompleted:
+		err := client.NotifyDeliveryCompleted(ctx, wlt.NotifyDeliveryCompletedInput{
+			OrderID:          event.OrderID,
+			CaptainID:        event.CaptainID,
+			PartnerID:        event.PartnerID,
+			CheckoutIntentID: event.CheckoutIntentID,
+		})
+		return "", err
+	case EventTypeLoyaltyEarned:
+		if event.ClientID == "" || event.Points <= 0 {
+			return "", fmt.Errorf("invalid loyalty-earned outbox payload")
+		}
+		entry, err := client.AppendLoyaltyEntry(ctx, wlt.AppendLoyaltyEntryInput{
+			ClientID:       event.ClientID,
+			Direction:      "earn",
+			Points:         event.Points,
+			SourceType:     "order",
+			SourceID:       event.OrderID,
+			IdempotencyKey: "order:" + event.OrderID + ":loyalty:earn",
+			CorrelationID:  "dsh-order-" + event.OrderID,
+			Metadata:       event.Payload,
+		})
+		if err != nil {
+			return "", err
+		}
+		return entry.ID, nil
+	case EventTypeLoyaltyReversed:
+		if event.ClientID == "" || event.Points <= 0 || event.ReversalOfReference == "" {
+			return "", fmt.Errorf("invalid loyalty-reversal outbox payload")
+		}
+		entry, err := client.AppendLoyaltyEntry(ctx, wlt.AppendLoyaltyEntryInput{
+			ClientID:       event.ClientID,
+			Direction:      "reverse",
+			Points:         event.Points,
+			SourceType:     "order_refund",
+			SourceID:       event.OrderID,
+			ReversalOf:     event.ReversalOfReference,
+			IdempotencyKey: "order:" + event.OrderID + ":loyalty:reverse",
+			CorrelationID:  "dsh-order-refund-" + event.OrderID,
+			Metadata:       event.Payload,
+		})
+		if err != nil {
+			return "", err
+		}
+		return entry.ID, nil
+	default:
+		return "", fmt.Errorf("unsupported WLT outbox event type %q", event.EventType)
+	}
 }
