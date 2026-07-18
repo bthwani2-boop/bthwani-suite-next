@@ -92,7 +92,7 @@ const checks = [
     required: [
       "never calculates totals",
       'useState<PaymentMethodKey>("cod")',
-      "production provider",
+      "مزود WLT الحقيقي",
     ],
   },
 ];
