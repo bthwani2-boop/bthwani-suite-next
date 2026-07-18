@@ -11,7 +11,7 @@ permissions:
 
 concurrency:
   group: bassam-governed-fullstack-repair
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   repair:
@@ -36,62 +36,54 @@ jobs:
           set -euo pipefail
           git fetch origin master
 
-          python - <<'PY'
-          from pathlib import Path
-          import subprocess
-          import yaml
+          node --input-type=module <<'NODE'
+          import fs from "node:fs";
+          import { execFileSync } from "node:child_process";
+          import YAML from "yaml";
 
-          root = Path('.')
+          const wltPath = "services/wlt/contracts/wlt.openapi.yaml";
+          let wlt = fs.readFileSync(wltPath, "utf8");
+          const invalidRef = '$ref: "#/components/responses/InvalidRequest"';
+          const occurrences = wlt.split(invalidRef).length - 1;
+          if (occurrences !== 1) throw new Error(`expected one InvalidRequest reference, found ${occurrences}`);
+          wlt = wlt.replace(invalidRef, '$ref: "#/components/responses/BadRequest"');
+          fs.writeFileSync(wltPath, wlt);
 
-          # WLT: repair the single broken response component reference.
-          wlt = root / 'services/wlt/contracts/wlt.openapi.yaml'
-          text = wlt.read_text()
-          old = '$ref: "#/components/responses/InvalidRequest"'
-          if text.count(old) != 1:
-              raise SystemExit(f'expected one InvalidRequest reference, found {text.count(old)}')
-          wlt.write_text(text.replace(old, '$ref: "#/components/responses/BadRequest"'))
+          const dshPath = "services/dsh/contracts/dsh.openapi.yaml";
+          const current = YAML.parse(fs.readFileSync(dshPath, "utf8"));
+          const donor = YAML.parse(execFileSync("git", ["show", "origin/master:services/dsh/contracts/dsh.openapi.yaml"], { encoding: "utf8" }));
+          current.paths ??= {};
+          for (const [path, value] of Object.entries(donor.paths ?? {})) {
+            if (!(path in current.paths)) current.paths[path] = value;
+          }
+          current.components ??= {};
+          for (const [section, values] of Object.entries(donor.components ?? {})) {
+            if (!values || typeof values !== "object" || Array.isArray(values)) continue;
+            current.components[section] ??= {};
+            for (const [name, value] of Object.entries(values)) {
+              if (!(name in current.components[section])) current.components[section][name] = value;
+            }
+          }
+          fs.writeFileSync(dshPath, YAML.stringify(current, { lineWidth: 120 }));
 
-          # DSH: retain every branch-owned path/component and add only absent
-          # contract material from master so live routes are not undocumented.
-          dsh = root / 'services/dsh/contracts/dsh.openapi.yaml'
-          current = yaml.safe_load(dsh.read_text())
-          donor_text = subprocess.check_output(
-              ['git', 'show', 'origin/master:services/dsh/contracts/dsh.openapi.yaml'],
-              text=True,
-          )
-          donor = yaml.safe_load(donor_text)
-          current.setdefault('paths', {})
-          for path, value in donor.get('paths', {}).items():
-              current['paths'].setdefault(path, value)
-          current.setdefault('components', {})
-          for section, values in donor.get('components', {}).items():
-              if not isinstance(values, dict):
-                  continue
-              current['components'].setdefault(section, {})
-              for name, value in values.items():
-                  current['components'][section].setdefault(name, value)
-          dsh.write_text(yaml.safe_dump(current, sort_keys=False, allow_unicode=True, width=120))
-
-          # Coupon updates: funding policy and commercial/status changes are
-          # separate governed commands, matching the OpenAPI contract.
-          governed = root / 'services/dsh/backend/internal/coupons/governed.go'
-          source = governed.read_text()
-          old_block = '''\tbaseTermsChanged := input.NameAr != nil || input.Description != nil || input.StoreID != nil || input.DiscountType != nil || input.DiscountPercent != nil || input.FixedDiscountMinorUnits != nil || input.MaxDiscountMinorUnits != nil || input.MinSubtotalMinorUnits != nil || input.GlobalUsageLimit != nil || input.PerClientUsageLimit != nil || input.EligibleFulfillmentModes != nil || input.StartsAt != nil || input.EndsAt != nil
+          const governedPath = "services/dsh/backend/internal/coupons/governed.go";
+          let governed = fs.readFileSync(governedPath, "utf8");
+          const oldBlock = `\tbaseTermsChanged := input.NameAr != nil || input.Description != nil || input.StoreID != nil || input.DiscountType != nil || input.DiscountPercent != nil || input.FixedDiscountMinorUnits != nil || input.MaxDiscountMinorUnits != nil || input.MinSubtotalMinorUnits != nil || input.GlobalUsageLimit != nil || input.PerClientUsageLimit != nil || input.EligibleFulfillmentModes != nil || input.StartsAt != nil || input.EndsAt != nil
 \tfundingChanged := input.FundingSource != nil || input.PlatformShareBPS != nil || input.FundingPartnerID != nil
 \tif current.Status == "active" && (baseTermsChanged || fundingChanged) {
-'''
-          new_block = '''\tbaseTermsChanged := input.NameAr != nil || input.Description != nil || input.StoreID != nil || input.DiscountType != nil || input.DiscountPercent != nil || input.FixedDiscountMinorUnits != nil || input.MaxDiscountMinorUnits != nil || input.MinSubtotalMinorUnits != nil || input.GlobalUsageLimit != nil || input.PerClientUsageLimit != nil || input.EligibleFulfillmentModes != nil || input.StartsAt != nil || input.EndsAt != nil
+`;
+          const newBlock = `\tbaseTermsChanged := input.NameAr != nil || input.Description != nil || input.StoreID != nil || input.DiscountType != nil || input.DiscountPercent != nil || input.FixedDiscountMinorUnits != nil || input.MaxDiscountMinorUnits != nil || input.MinSubtotalMinorUnits != nil || input.GlobalUsageLimit != nil || input.PerClientUsageLimit != nil || input.EligibleFulfillmentModes != nil || input.StartsAt != nil || input.EndsAt != nil
 \tcommercialChanged := baseTermsChanged || input.Status != nil
 \tfundingChanged := input.FundingSource != nil || input.PlatformShareBPS != nil || input.FundingPartnerID != nil
 \tif commercialChanged && fundingChanged {
 \t\treturn GovernedCoupon{}, ErrInvalid
 \t}
 \tif current.Status == "active" && (commercialChanged || fundingChanged) {
-'''
-          if old_block not in source:
-              raise SystemExit('governed coupon update block not found exactly')
-          governed.write_text(source.replace(old_block, new_block, 1))
-          PY
+`;
+          if (!governed.includes(oldBlock)) throw new Error("governed coupon update block not found exactly");
+          governed = governed.replace(oldBlock, newBlock);
+          fs.writeFileSync(governedPath, governed);
+          NODE
 
           find services/dsh/backend services/workforce/backend -name '*.go' -type f -print0 | xargs -0 gofmt -w
           pnpm run openapi:generate:dsh
