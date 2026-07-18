@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: BThwani WLT Commercial Benefits API
-  version: 0.2.0
+  version: 0.3.0
   description: WLT-owned contract for commercial products, paid subscriptions, loyalty entries, and client benefit truth.
 x-bthwani-owner: services/wlt
 x-bthwani-parent-contract: services/wlt/contracts/wlt.openapi.yaml
@@ -115,6 +115,10 @@ paths:
       x-bthwani-default-enabled: false
       parameters:
         - $ref: '#/components/parameters/ServiceCallerHeader'
+        - name: X-Correlation-ID
+          in: header
+          required: true
+          schema: { type: string, minLength: 1 }
       requestBody:
         required: true
         content:
@@ -177,8 +181,12 @@ components:
     SubscriptionActivation:
       type: object
       additionalProperties: false
-      required: [clientId, productReference, paymentSessionId]
+      required: [clientId, productReference, paymentSessionId, subscriptionPurchaseId]
       properties:
         clientId: { type: string, minLength: 1 }
         productReference: { type: string, minLength: 1 }
-        paymentSessionId: { type: string, format: uuid }
+        paymentSessionId:
+          type: string
+          minLength: 1
+          pattern: '^wps_'
+        subscriptionPurchaseId: { type: string, minLength: 1 }
