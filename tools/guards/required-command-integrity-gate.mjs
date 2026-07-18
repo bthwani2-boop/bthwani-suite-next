@@ -3,7 +3,9 @@ import { fail, read } from "./_guard-utils.mjs";
 const guardId = "required-command-integrity-gate";
 const violations = [];
 const packageFile = "package.json";
+const enforcementFile = "governance/github/repository-enforcement.json";
 const packageJson = JSON.parse(read(packageFile));
+const enforcement = JSON.parse(read(enforcementFile));
 const scripts = packageJson.scripts ?? {};
 
 const requiredFailClosedScripts = [
@@ -69,6 +71,37 @@ for (const [scriptName, command] of Object.entries(scripts)) {
       message:
         "DEPRECATED_DECISION_ALIAS: executable scripts must use canonical decisions and must not convert a failed check into BLOCKED_NEEDS_RUNTIME text",
     });
+  }
+}
+
+const targetBranch = enforcement.targetBranch;
+if (typeof targetBranch !== "string" || targetBranch.length === 0) {
+  violations.push({
+    file: enforcementFile,
+    message: "TARGET_BRANCH_MISSING: repository enforcement must declare the active target branch",
+  });
+} else {
+  const criticalWorkflows = [
+    ".github/workflows/ci.yml",
+    ".github/workflows/security.yml",
+    ".github/workflows/governance-audit.yml",
+    ".github/workflows/dsh-operational-closure-ci.yml",
+    ".github/workflows/lian-fullstack-ci.yml",
+  ];
+
+  for (const workflowFile of criticalWorkflows) {
+    const workflow = read(workflowFile);
+    const escapedBranch = targetBranch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const branchArray = new RegExp(`branches:\\s*\\[[^\\]]*\\b${escapedBranch}\\b[^\\]]*\\]`, "m");
+    const branchList = new RegExp(`branches:\\s*\\n(?:\\s*-\\s*[^\\n]+\\n)*\\s*-\\s*${escapedBranch}\\s*$`, "m");
+
+    if (!branchArray.test(workflow) && !branchList.test(workflow)) {
+      violations.push({
+        file: workflowFile,
+        targetBranch,
+        message: `ACTIVE_BRANCH_NOT_COVERED: critical workflow does not trigger for ${targetBranch}`,
+      });
+    }
   }
 }
 
