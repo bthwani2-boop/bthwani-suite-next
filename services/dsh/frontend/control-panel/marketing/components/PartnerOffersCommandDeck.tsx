@@ -11,7 +11,7 @@ import {
   CpTableHeaderCell,
   CpEmptyTableMessage,
 } from "@bthwani/control-panel/components";
-import { useCouponsController, usePartnerOffersController } from "../../../shared/marketing";
+import { useCouponsController, useGovernedPartnerOffersController } from "../../../shared/marketing";
 import type { PartnerOfferRecord } from "../../../shared/partner/dsh-partner-offer-types";
 
 const STATUS_LABEL: Record<PartnerOfferRecord["status"], string> = {
@@ -27,7 +27,7 @@ const STATUS_LABEL: Record<PartnerOfferRecord["status"], string> = {
 };
 
 export function PartnerOffersCommandDeck() {
-  const controller = usePartnerOffersController("authenticated");
+  const controller = useGovernedPartnerOffersController("authenticated");
   const couponsController = useCouponsController("authenticated");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const activeCoupons = couponsController.state.kind === "success"
@@ -150,7 +150,7 @@ export function PartnerOffersCommandDeck() {
               ) : null}
 
               <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
-                <CpButton onClick={handleSave} style={{ background: colorRoles.brandAction, color: "white", flex: 1 }}>حفظ القرار</CpButton>
+                <CpButton disabled={controller.loading} onClick={handleSave} style={{ background: colorRoles.brandAction, color: "white", flex: 1 }}>حفظ القرار</CpButton>
                 <CpButton onClick={() => controller.select(null)} style={{ flex: 1 }}>إلغاء</CpButton>
               </div>
             </div>
