@@ -12,8 +12,10 @@ import { DshFieldActivationCard } from './DshFieldActivationCard';
 import { useFieldPartnerOnboardingController } from '../../shared/field-onboarding';
 import {
   useFieldOfflineSync,
+  createFieldVisit,
   completeFieldVisit,
   upsertReadinessCheck,
+  createReadinessEscalation,
 } from '../../shared/field-readiness';
 
 function useAndroidBackHandler(onBackPress: () => boolean) {
@@ -130,33 +132,45 @@ export function DshFieldSurface({ command, onExit }: DshFieldSurfaceProps = {}) 
   const offlineSync = useFieldOfflineSync(
     identity.state.kind === 'authenticated'
       ? {
+          create_visit: async (operation) => {
+            const payload = operation.payload as {
+              storeId: string;
+              input: Parameters<typeof createFieldVisit>[1];
+            };
+            await createFieldVisit(payload.storeId, payload.input, {
+              correlationId: operation.correlationId,
+              idempotencyKey: operation.idempotencyKey,
+            });
+          },
           complete_visit: async (operation) => {
             const payload = operation.payload as {
               visitId: string;
-              completionLocation: Parameters<typeof completeFieldVisit>[1];
+              input: Parameters<typeof completeFieldVisit>[1];
             };
-            await completeFieldVisit(
-              payload.visitId,
-              payload.completionLocation,
-              {
-                correlationId: operation.correlationId,
-                idempotencyKey: operation.idempotencyKey,
-              },
-            );
+            await completeFieldVisit(payload.visitId, payload.input, {
+              correlationId: operation.correlationId,
+              idempotencyKey: operation.idempotencyKey,
+            });
           },
           upsert_readiness_check: async (operation) => {
             const payload = operation.payload as {
               visitId: string;
               input: Parameters<typeof upsertReadinessCheck>[1];
             };
-            await upsertReadinessCheck(
-              payload.visitId,
-              payload.input,
-              {
-                correlationId: operation.correlationId,
-                idempotencyKey: operation.idempotencyKey,
-              },
-            );
+            await upsertReadinessCheck(payload.visitId, payload.input, {
+              correlationId: operation.correlationId,
+              idempotencyKey: operation.idempotencyKey,
+            });
+          },
+          create_escalation: async (operation) => {
+            const payload = operation.payload as {
+              storeId: string;
+              input: Parameters<typeof createReadinessEscalation>[1];
+            };
+            await createReadinessEscalation(payload.storeId, payload.input, {
+              correlationId: operation.correlationId,
+              idempotencyKey: operation.idempotencyKey,
+            });
           },
         }
       : undefined,
