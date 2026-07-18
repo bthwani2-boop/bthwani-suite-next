@@ -53,6 +53,9 @@ $script:WltMigrationProbes = [ordered]@{
   "wlt-026_cash_in_transit_account.sql"           = "EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'wlt_ledger_accounts_type_chk' AND pg_get_constraintdef(oid) LIKE '%cash_in_transit%')"
   "wlt-027_payout_provider_proof.sql"             = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_payout_requests' AND column_name = 'provider_reference') AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_payout_requests' AND column_name = 'provider_status')"
   "wlt-028_commercial_benefits.sql"               = "to_regclass('public.wlt_commercial_products') IS NOT NULL AND to_regclass('public.wlt_loyalty_accounts') IS NOT NULL AND to_regclass('public.wlt_client_subscriptions') IS NOT NULL"
+  "wlt-029_payment_session_tenant_lock.sql"       = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_payment_sessions' AND column_name = 'tenant_id' AND is_nullable = 'NO') AND to_regclass('public.wlt_payment_sessions_tenant_checkout_uq') IS NOT NULL"
+  "wlt-030_subscription_payment_source.sql"       = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_payment_sessions' AND column_name = 'subscription_purchase_id') AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_payment_sessions' AND column_name = 'commercial_product_reference') AND to_regclass('public.uq_wlt_client_subscription_purchase') IS NOT NULL"
+  "wlt-031_governed_settlement_sources.sql"       = "to_regclass('public.wlt_settlement_policies') IS NOT NULL AND to_regclass('public.wlt_settlement_source_orders') IS NOT NULL"
 }
 
 function Test-WltMigrationProbeCoverage {
