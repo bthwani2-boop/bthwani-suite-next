@@ -40,11 +40,14 @@ func NewRouter(service *platformcontrol.Service, authClient *auth.Client) http.H
 	mux.HandleFunc("POST /platform/v1/change-sets/{id}/reject", s.operatorOnly("platform:variables:approve", s.rejectChangeSet))
 	mux.HandleFunc("POST /platform/v1/change-sets/{id}/apply", s.operatorOnly("platform:variables:apply", s.applyChangeSet))
 	mux.HandleFunc("POST /platform/v1/change-sets/{id}/rollback", s.operatorOnly("platform:variables:rollback", s.rollbackChangeSet))
-	mux.HandleFunc("POST /platform/v1/rollouts", s.operatorOnly("platform:rollouts:manage", s.rolloutWorkflowBlocked))
-	mux.HandleFunc("POST /platform/v1/rollouts/{id}/advance", s.operatorOnly("platform:rollouts:manage", s.rolloutWorkflowBlocked))
-	mux.HandleFunc("POST /platform/v1/rollouts/{id}/pause", s.operatorOnly("platform:rollouts:manage", s.rolloutWorkflowBlocked))
-	mux.HandleFunc("POST /platform/v1/rollouts/{id}/abort", s.operatorOnly("platform:rollouts:manage", s.rolloutWorkflowBlocked))
-	mux.HandleFunc("POST /platform/v1/rollouts/{id}/rollback", s.operatorOnly("platform:rollouts:manage", s.rolloutWorkflowBlocked))
+
+	mux.HandleFunc("GET /platform/v1/rollouts", s.operatorOnly("platform:read", s.listRollouts))
+	mux.HandleFunc("GET /platform/v1/rollouts/{id}", s.operatorOnly("platform:read", s.getRollout))
+	mux.HandleFunc("POST /platform/v1/rollouts", s.operatorOnly("platform:rollouts:manage", s.createRollout))
+	mux.HandleFunc("POST /platform/v1/rollouts/{id}/advance", s.operatorOnly("platform:rollouts:manage", s.advanceRollout))
+	mux.HandleFunc("POST /platform/v1/rollouts/{id}/pause", s.operatorOnly("platform:rollouts:manage", s.pauseRollout))
+	mux.HandleFunc("POST /platform/v1/rollouts/{id}/abort", s.operatorOnly("platform:rollouts:manage", s.abortRollout))
+	mux.HandleFunc("POST /platform/v1/rollouts/{id}/rollback", s.operatorOnly("platform:rollouts:manage", s.rollbackRollout))
 	return mux
 }
 
@@ -188,12 +191,6 @@ func (s *server) changeSets(w http.ResponseWriter, r *http.Request, identity aut
 		return
 	}
 	sendJSON(w, http.StatusOK, map[string]any{"changeSets": changeSets})
-}
-
-func (s *server) rolloutWorkflowBlocked(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
-	_ = identity
-	_ = r.PathValue("id")
-	sendError(w, http.StatusConflict, "PLATFORM_ROLLOUT_WORKFLOW_CONTRACT_REQUIRED", "platform rollout workflow is not enabled until targeting, canary, health gates, pause, abort, and rollback are implemented")
 }
 
 func sendJSON(w http.ResponseWriter, status int, body any) {
