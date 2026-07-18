@@ -29,7 +29,7 @@ function stableHash(value: string): string {
   return (hash >>> 0).toString(36);
 }
 
-function mutationContext(
+export function buildFieldMutationContext(
   operation: string,
   identityParts: readonly unknown[],
   supplied?: FieldMutationContext,
@@ -64,7 +64,7 @@ export async function createFieldVisit(
   input: DshCreateVisitInput,
   supplied?: FieldMutationContext,
 ): Promise<DshFieldVisit> {
-  const headers = mutationContext(
+  const headers = buildFieldMutationContext(
     "create-visit",
     [storeId, input.visitType ?? "onboarding", input.startLocation.capturedAt],
     supplied,
@@ -88,7 +88,7 @@ export async function completeFieldVisit(
   input: DshCompleteVisitInput,
   supplied?: FieldMutationContext,
 ): Promise<DshFieldVisit> {
-  const headers = mutationContext("complete-visit", [visitId], supplied);
+  const headers = buildFieldMutationContext("complete-visit", [visitId], supplied);
   const data = await request<{ visit: DshFieldVisit }>(
     `/dsh/field/visits/${encodeURIComponent(visitId)}/complete`,
     { method: "POST", body: input, ...headers },
@@ -101,7 +101,7 @@ export async function upsertReadinessCheck(
   input: DshUpsertCheckInput,
   supplied?: FieldMutationContext,
 ): Promise<DshReadinessCheck> {
-  const headers = mutationContext(
+  const headers = buildFieldMutationContext(
     "upsert-check",
     [visitId, input.checkType, input.status, input.evidenceUrl ?? "", input.notes ?? ""],
     supplied,
@@ -125,7 +125,7 @@ export async function createReadinessEscalation(
   input: DshCreateEscalationInput,
   supplied?: FieldMutationContext,
 ): Promise<DshReadinessEscalation> {
-  const headers = mutationContext(
+  const headers = buildFieldMutationContext(
     "create-escalation",
     [storeId, input.visitId ?? "", input.severity, input.category, input.description],
     supplied,
@@ -150,7 +150,7 @@ export async function updateEscalation(
   input: DshUpdateEscalationInput,
   supplied?: FieldMutationContext,
 ): Promise<DshReadinessEscalation> {
-  const headers = mutationContext(
+  const headers = buildFieldMutationContext(
     "update-escalation",
     [escalationId, input.status, input.resolutionNote ?? ""],
     supplied,
