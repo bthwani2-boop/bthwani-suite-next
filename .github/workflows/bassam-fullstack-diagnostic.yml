@@ -1,6 +1,10 @@
 name: Bassam Compile Repair Materializer
 
 on:
+  push:
+    branches: [bassam]
+    paths:
+      - .github/workflows/bassam-fullstack-diagnostic.yml
   pull_request:
     paths:
       - .github/workflows/bassam-fullstack-diagnostic.yml
