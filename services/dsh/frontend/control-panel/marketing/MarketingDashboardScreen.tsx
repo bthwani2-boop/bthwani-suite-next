@@ -18,6 +18,7 @@ import { VisibilityGatesSection } from "./components/VisibilityGatesSection";
 import { MarketingHomeDiscoveryPanel } from "./components/MarketingHomeDiscoveryPanel";
 import { LoyaltyCommandDeck } from "./components/LoyaltyCommandDeck";
 import { SubscriptionsCommandDeck } from "./components/SubscriptionsCommandDeck";
+import { CouponsCommandDeck } from "./components/CouponsCommandDeck";
 
 function MainTabButton({ active, onClick, children }: { readonly active: boolean; readonly onClick: () => void; readonly children: ReactNode }) {
   return (
@@ -37,7 +38,7 @@ export function MarketingDashboardScreen() {
       dir="rtl"
       header={
         <CpPageHeader title="تسويق DSH">
-          <p style={{ margin: "0 0 0.75rem", opacity: 0.65, fontSize: "0.875rem" }}>إدارة المحتوى والحملات والعروض والبرامج التجارية المرتبطة بعقود DSH وWLT الفعلية</p>
+          <p style={{ margin: "0 0 0.75rem", opacity: 0.65, fontSize: "0.875rem" }}>إدارة المحتوى والحملات والعروض والكوبونات والبرامج التجارية المرتبطة بعقود DSH وWLT الفعلية</p>
           <CpKpiStrip>
             <CpKpiCard label="متاجر نشطة" value={metrics.activeStoresRatio} />
             <CpKpiCard label="طلبات مكتملة" value={metrics.deliveredOrders.toLocaleString("ar")} />
@@ -57,6 +58,7 @@ export function MarketingDashboardScreen() {
       {mainTab === "smart-bar" ? <TickerCommandDeck /> : null}
       {mainTab === "campaigns" ? <CampaignsCommandDeck /> : null}
       {mainTab === "partner-offers" ? <PartnerOffersCommandDeck /> : null}
+      {mainTab === "coupons" ? <CouponsCommandDeck /> : null}
       {mainTab === "loyalty" ? <LoyaltyCommandDeck /> : null}
       {mainTab === "subscriptions" ? <SubscriptionsCommandDeck /> : null}
       {mainTab === "signals-measurement" ? <SignalsMeasurementCommandDeck /> : null}
