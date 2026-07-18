@@ -27,13 +27,24 @@ const checks = [
     file: "services/dsh/frontend/shared/client-address/client-address.api.ts",
     forbidden: [
       [/\blocalStorage\b|\bsessionStorage\b/g, "LOCAL_ADDRESS_PERSISTENCE_FORBIDDEN"],
+      [/\bfetch\s*\(/g, "RAW_ADDRESS_FETCH_FORBIDDEN"],
       [/deliveryAddress:\s*/g, "CLIENT_SUPPLIED_ADDRESS_SNAPSHOT_FORBIDDEN"],
     ],
     required: [
-      '"Idempotency-Key"',
-      '"X-Correlation-ID"',
-      '"If-Match-Version"',
+      "createDshHttpClient",
+      "idempotencyKey:",
+      "correlationId:",
+      "expectedVersion,",
       "/dsh/client/addresses",
+    ],
+  },
+  {
+    file: "services/dsh/frontend/shared/_kernel/dsh-http-request.ts",
+    forbidden: [[/Math\.random\s*\(/g, "RANDOM_CORRELATION_FALLBACK_FORBIDDEN"]],
+    required: [
+      "readonly expectedVersion?: number",
+      '"If-Match-Version": String(options.expectedVersion)',
+      "correlationFallbackSequence",
     ],
   },
   {
@@ -163,6 +174,16 @@ const checks = [
       "setDshClientDefaultAddress",
       "x-bthwani-client-binding: MANUAL_TYPED_ADAPTER",
     ],
+    forbidden: [],
+  },
+  {
+    file: "contracts/master.openapi.yaml",
+    required: ["dshClientAddress: ../services/dsh/contracts/dsh.client-address.openapi.yaml"],
+    forbidden: [],
+  },
+  {
+    file: "tools/guards/backend-api-binding-gate.mjs",
+    required: ['"services/dsh/contracts/dsh.client-address.openapi.yaml"'],
     forbidden: [],
   },
   {
