@@ -60,7 +60,7 @@ func (s *protectedStoreServer) handleListClientOrders(w http.ResponseWriter, r *
 	if !ok {
 		return
 	}
-	list, err := orders.ListClientOrders(s.db, actor.ID, 50)
+	list, err := orders.ListClientOrders(s.db, actor.TenantID, actor.ID, 50)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list orders")
 		return
@@ -79,7 +79,7 @@ func (s *protectedStoreServer) handleGetClientOrder(w http.ResponseWriter, r *ht
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "orderId is required")
 		return
 	}
-	order, err := orders.GetClientOrder(s.db, orderID, actor.ID)
+	order, err := orders.GetClientOrder(s.db, orderID, actor.TenantID, actor.ID)
 	if errors.Is(err, orders.ErrNotFound) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "order not found")
 		return
