@@ -21,3 +21,4 @@ x-bthwani-contracts:
     wlt: ../services/wlt/contracts/wlt.openapi.yaml
     wltCommercialBenefits: ../services/wlt/contracts/wlt.commercial.openapi.yaml
     wltCommercialBenefitsSummary: ../services/wlt/contracts/wlt.commercial-summary.openapi.yaml
+    wltPromotionFunding: ../services/wlt/contracts/wlt.promotion-funding.openapi.yaml
