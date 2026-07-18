@@ -25,10 +25,6 @@ function mergeCapabilityExtension(
     runtimeBound: capability.runtimeBound && extension.runtimeBound,
     closureState: extension.closureState,
     topic: extension.topic ?? capability.topic,
-    topicScope: unique([
-      ...(capability.topicScope ?? []),
-      ...extension.topicScope,
-    ]) as DshCapability["topicScope"],
   };
 }
 
