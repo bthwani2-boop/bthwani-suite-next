@@ -3,6 +3,7 @@ package wlt
 import (
 	"context"
 	"net/http"
+	"strings"
 )
 
 type BoundSubscriptionPaymentInput struct {
@@ -23,6 +24,12 @@ func (c *Client) CreateBoundSubscriptionPaymentSession(
 ) (*SubscriptionPaymentSession, error) {
 	var envelope struct {
 		PaymentSession SubscriptionPaymentSession `json:"paymentSession"`
+	}
+	if strings.TrimSpace(idempotencyKey) == "" {
+		idempotencyKey = deterministicMutationKey("bound-subscription-payment", input.SubscriptionPurchaseID, input.ProductReference, input.ClientID)
+	}
+	if strings.TrimSpace(correlationID) == "" {
+		correlationID = strings.TrimSpace(input.SubscriptionPurchaseID)
 	}
 	if err := c.commercialMutationRequest(
 		ctx,
