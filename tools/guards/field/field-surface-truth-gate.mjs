@@ -7,6 +7,9 @@ const violations = [];
 const roots = [
   "services/dsh/frontend/app-field",
   "apps/app-field/runtime/src",
+  "services/dsh/frontend/shared/field-readiness",
+  "services/dsh/frontend/shared/field-onboarding",
+  "services/dsh/frontend/shared/finance-wlt-link/field-finance",
 ];
 
 const forbidden = [
@@ -26,7 +29,7 @@ const forbidden = [
 function walk(root) {
   const absolute = path.join(repoRoot, root);
   if (!fs.existsSync(absolute)) {
-    violations.push({ file: root, line: 0, message: "MISSING_FIELD_SURFACE_ROOT" });
+    violations.push({ file: root, line: 0, message: "MISSING_FIELD_TRUTH_ROOT" });
     return [];
   }
   const files = [];
@@ -52,6 +55,35 @@ for (const absolute of roots.flatMap(walk)) {
         line: lineNumber(content, match.index),
         message,
       });
+    }
+  }
+}
+
+const requiredMarkers = [
+  [
+    "services/dsh/frontend/shared/field-readiness/field-offline-queue.ts",
+    ["recoverCorruptFieldOfflineQueue", "field-op:", "field-correlation:"],
+  ],
+  [
+    "services/dsh/frontend/shared/finance-wlt-link/field-finance/field-payout-attempt.ts",
+    ["getOrCreateFieldPayoutAttempt", "clearFieldPayoutAttempt"],
+  ],
+  [
+    "services/dsh/frontend/shared/finance-wlt-link/field-finance/use-field-finance-controller.ts",
+    ["amountMinorUnits > state.wallet.availableBalanceMinorUnits", "submittingRef.current"],
+  ],
+];
+
+for (const [relative, markers] of requiredMarkers) {
+  const absolute = path.join(repoRoot, relative);
+  if (!fs.existsSync(absolute)) {
+    violations.push({ file: relative, line: 0, message: "MISSING_FIELD_REQUIRED_TRUTH_FILE" });
+    continue;
+  }
+  const content = fs.readFileSync(absolute, "utf8");
+  for (const marker of markers) {
+    if (!content.includes(marker)) {
+      violations.push({ file: relative, line: 0, message: `MISSING_FIELD_TRUTH_MARKER:${marker}` });
     }
   }
 }
