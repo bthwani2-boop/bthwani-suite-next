@@ -190,12 +190,13 @@ type Rollout struct {
 	FeatureFlagKey    string         `json:"featureFlagKey"`
 	Status            RolloutStatus  `json:"status"`
 	TargetScope       map[string]any `json:"targetScope"`
-	Steps             []int          `json:"steps"`
+	Steps             []int64        `json:"steps"`
 	CurrentStepIndex  int            `json:"currentStepIndex"`
-	CurrentPercentage int            `json:"currentPercentage"`
+	CurrentPercentage int64          `json:"currentPercentage"`
 	HealthGate        map[string]any `json:"healthGate"`
 	BaselineEnabled   bool           `json:"baselineEnabled"`
 	BaselineTargeting map[string]any `json:"baselineTargeting"`
+	FlagRevision      int64          `json:"flagRevision"`
 	CreatedByActorID  string         `json:"createdByActorId"`
 	UpdatedByActorID  string         `json:"updatedByActorId"`
 	Version           int64          `json:"version"`
@@ -212,7 +213,7 @@ type CreateRolloutInput struct {
 	ChangeSetID    string         `json:"changeSetId"`
 	FeatureFlagKey string         `json:"featureFlagKey"`
 	TargetScope    map[string]any `json:"targetScope"`
-	Steps          []int          `json:"steps"`
+	Steps          []int64        `json:"steps"`
 	HealthGate     map[string]any `json:"healthGate"`
 }
 
