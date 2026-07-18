@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS dsh_coupon_redemptions (
                                  CHECK (status IN ('reserved','committed','released','reversed')),
     subtotal_minor_units         BIGINT NOT NULL CHECK (subtotal_minor_units > 0),
     discount_minor_units         BIGINT NOT NULL CHECK (discount_minor_units > 0),
-    total_minor_units            BIGINT NOT NULL CHECK (total_minor_units >= 0),
+    total_minor_units            BIGINT NOT NULL CHECK (total_minor_units > 0),
     currency                     TEXT NOT NULL DEFAULT 'YER',
     idempotency_key              TEXT NOT NULL UNIQUE,
     reserved_until               TIMESTAMPTZ NOT NULL,
@@ -196,14 +196,104 @@ BEFORE UPDATE ON dsh_orders
 FOR EACH ROW
 EXECUTE FUNCTION dsh_protect_order_pricing_snapshot();
 
--- DSH-061 deliberately blocked coupon publication while no engine existed.
--- The authoritative reservation/commit engine above now replaces that gate.
+-- Connect marketing presentation to a real checkout coupon. A coupon offer may
+-- exist in review without a link, but publication is impossible until a
+-- currently active coupon is linked and scoped to the same store (or global).
+ALTER TABLE dsh_partner_offers
+    ADD COLUMN IF NOT EXISTS coupon_id UUID REFERENCES dsh_coupons(id) ON DELETE RESTRICT;
 ALTER TABLE dsh_partner_offers
     DROP CONSTRAINT IF EXISTS dsh_partner_offers_coupon_publish_requires_engine_chk;
 ALTER TABLE dsh_stores
     DROP CONSTRAINT IF EXISTS dsh_stores_coupon_badge_requires_engine_chk;
 
+CREATE OR REPLACE FUNCTION dsh_validate_published_coupon_offer()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    linked_coupon RECORD;
+BEGIN
+    IF NEW.offer_type='coupon' AND NEW.status='published' AND NEW.archived_at IS NULL THEN
+        IF NEW.coupon_id IS NULL THEN
+            RAISE EXCEPTION 'published coupon offer requires coupon_id';
+        END IF;
+        SELECT id,store_id,status,approved_at,starts_at,ends_at,archived_at
+        INTO linked_coupon
+        FROM dsh_coupons
+        WHERE id=NEW.coupon_id;
+        IF NOT FOUND OR linked_coupon.status<>'active' OR linked_coupon.approved_at IS NULL
+           OR linked_coupon.archived_at IS NOT NULL
+           OR (linked_coupon.store_id IS NOT NULL AND linked_coupon.store_id<>NEW.store_id)
+           OR (linked_coupon.starts_at IS NOT NULL AND linked_coupon.starts_at>NOW())
+           OR (linked_coupon.ends_at IS NOT NULL AND linked_coupon.ends_at<=NOW()) THEN
+            RAISE EXCEPTION 'linked coupon is not active or not eligible for offer store';
+        END IF;
+    END IF;
+    IF NEW.offer_type<>'coupon' AND NEW.coupon_id IS NOT NULL THEN
+        RAISE EXCEPTION 'coupon_id is only valid for coupon offers';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_dsh_validate_published_coupon_offer ON dsh_partner_offers;
+CREATE TRIGGER trg_dsh_validate_published_coupon_offer
+BEFORE INSERT OR UPDATE OF offer_type,status,coupon_id,store_id,archived_at
+ON dsh_partner_offers
+FOR EACH ROW
+EXECUTE FUNCTION dsh_validate_published_coupon_offer();
+
+CREATE OR REPLACE FUNCTION dsh_sync_store_coupon_badge()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    affected_store TEXT;
+BEGIN
+    affected_store := COALESCE(NEW.store_id,OLD.store_id);
+    IF affected_store IS NOT NULL THEN
+        UPDATE dsh_stores s
+        SET has_coupon_badge=EXISTS (
+            SELECT 1
+            FROM dsh_partner_offers o
+            JOIN dsh_coupons c ON c.id=o.coupon_id
+            WHERE o.store_id=s.id
+              AND o.offer_type='coupon'
+              AND o.status='published'
+              AND o.archived_at IS NULL
+              AND c.status='active'
+              AND c.approved_at IS NOT NULL
+              AND c.archived_at IS NULL
+              AND (c.starts_at IS NULL OR c.starts_at<=NOW())
+              AND (c.ends_at IS NULL OR c.ends_at>NOW())
+        ), updated_at=NOW()
+        WHERE s.id=affected_store;
+    END IF;
+    IF TG_OP='UPDATE' AND OLD.store_id IS DISTINCT FROM NEW.store_id THEN
+        UPDATE dsh_stores s
+        SET has_coupon_badge=EXISTS (
+            SELECT 1 FROM dsh_partner_offers o
+            JOIN dsh_coupons c ON c.id=o.coupon_id
+            WHERE o.store_id=s.id AND o.offer_type='coupon' AND o.status='published'
+              AND o.archived_at IS NULL AND c.status='active' AND c.approved_at IS NOT NULL
+              AND c.archived_at IS NULL AND (c.starts_at IS NULL OR c.starts_at<=NOW())
+              AND (c.ends_at IS NULL OR c.ends_at>NOW())
+        ), updated_at=NOW()
+        WHERE s.id=OLD.store_id;
+    END IF;
+    RETURN COALESCE(NEW,OLD);
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_dsh_sync_store_coupon_badge ON dsh_partner_offers;
+CREATE TRIGGER trg_dsh_sync_store_coupon_badge
+AFTER INSERT OR UPDATE OR DELETE ON dsh_partner_offers
+FOR EACH ROW
+EXECUTE FUNCTION dsh_sync_store_coupon_badge();
+
 COMMENT ON TABLE dsh_coupon_redemptions IS
     'Authoritative idempotent coupon lifecycle: reserve before WLT, commit on order, release on failure/cancel, reverse on refund.';
 COMMENT ON COLUMN dsh_checkout_intents.pricing_snapshot_hash IS
     'Hash of cart price snapshot plus applied commercial effects; sent to WLT with total_minor_units.';
+COMMENT ON COLUMN dsh_partner_offers.coupon_id IS
+    'Required for published coupon offers; links marketing presentation to the checkout coupon rule.';
