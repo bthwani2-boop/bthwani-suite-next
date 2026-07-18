@@ -38,10 +38,16 @@ type StoreOnboardingFeePolicyInput struct {
 }
 
 var validAppliesTo = map[string]bool{
-	"first_store": true, "additional_store": true, "all_stores": true,
+	"first_store":     true,
+	"additional_store": true,
+	"all_stores":      true,
 }
+
 var validChargeTiming = map[string]bool{
-	"on_approval": true, "on_publication": true, "on_first_order": true, "manual": true,
+	"on_approval":    true,
+	"on_publication": true,
+	"on_first_order": true,
+	"manual":         true,
 }
 
 func deriveFeePolicyReadiness(policy *StoreOnboardingFeePolicy) {
@@ -58,11 +64,16 @@ func deriveFeePolicyReadiness(policy *StoreOnboardingFeePolicy) {
 	policy.IsConfigured = true
 }
 
-func GetStoreOnboardingFeePolicy(ctx context.Context, db *sql.DB) (StoreOnboardingFeePolicy, error) {
-	return getStoreOnboardingFeePolicy(ctx, db.QueryRowContext(ctx, `
-		SELECT enabled, amount, currency, applies_to, charge_timing, actor_charged,
-		       effective_from, notes, COALESCE(updated_by,''), updated_at, version
-		FROM dsh_platform_store_onboarding_fee_policy WHERE id = 1`))
+func GetStoreOnboardingFeePolicy(
+	ctx context.Context,
+	db *sql.DB,
+) (StoreOnboardingFeePolicy, error) {
+	return scanStoreOnboardingFeePolicy(db.QueryRowContext(ctx, `
+		SELECT enabled, amount, currency, applies_to, charge_timing,
+		       actor_charged, effective_from, notes, COALESCE(updated_by, ''),
+		       updated_at, version
+		FROM dsh_platform_store_onboarding_fee_policy
+		WHERE id = 1`))
 }
 
 func UpsertStoreOnboardingFeePolicy(
@@ -75,64 +86,141 @@ func UpsertStoreOnboardingFeePolicy(
 	input.AppliesTo = strings.TrimSpace(input.AppliesTo)
 	input.ChargeTiming = strings.TrimSpace(input.ChargeTiming)
 	input.Notes = strings.TrimSpace(input.Notes)
-	if input.AppliesTo == "" { input.AppliesTo = "first_store" }
-	if input.ChargeTiming == "" { input.ChargeTiming = "on_approval" }
-	if !validAppliesTo[input.AppliesTo] || !validChargeTiming[input.ChargeTiming] || input.Amount < 0 || len(input.Currency) != 3 || len(input.Notes) > 1000 || input.ExpectedVersion < 1 || !validMutation(mutation) {
+	if input.AppliesTo == "" {
+		input.AppliesTo = "first_store"
+	}
+	if input.ChargeTiming == "" {
+		input.ChargeTiming = "on_approval"
+	}
+	if !validAppliesTo[input.AppliesTo] ||
+		!validChargeTiming[input.ChargeTiming] ||
+		input.Amount < 0 ||
+		len(input.Currency) != 3 ||
+		len(input.Notes) > 1000 ||
+		input.ExpectedVersion < 1 ||
+		!validMutation(mutation) {
 		return StoreOnboardingFeePolicy{}, ErrInvalid
 	}
 
-	return withIdempotency(ctx, db, mutation, "upsert-store-onboarding-fee", input, func(tx *sql.Tx) (StoreOnboardingFeePolicy, error) {
-		before, err := getStoreOnboardingFeePolicy(ctx, tx.QueryRowContext(ctx, `
-			SELECT enabled, amount, currency, applies_to, charge_timing, actor_charged,
-			       effective_from, notes, COALESCE(updated_by,''), updated_at, version
-			FROM dsh_platform_store_onboarding_fee_policy WHERE id = 1 FOR UPDATE`))
-		if errors.Is(err, ErrNotFound) {
-			return StoreOnboardingFeePolicy{}, ErrNotFound
-		}
-		if err != nil { return StoreOnboardingFeePolicy{}, err }
-		if before.Version != input.ExpectedVersion { return StoreOnboardingFeePolicy{}, ErrVersionConflict }
+	return withIdempotency(
+		ctx,
+		db,
+		mutation,
+		"upsert-store-onboarding-fee",
+		input,
+		func(tx *sql.Tx) (StoreOnboardingFeePolicy, error) {
+			before, err := scanStoreOnboardingFeePolicy(tx.QueryRowContext(ctx, `
+				SELECT enabled, amount, currency, applies_to, charge_timing,
+				       actor_charged, effective_from, notes,
+				       COALESCE(updated_by, ''), updated_at, version
+				FROM dsh_platform_store_onboarding_fee_policy
+				WHERE id = 1
+				FOR UPDATE`))
+			if errors.Is(err, ErrNotFound) {
+				return StoreOnboardingFeePolicy{}, ErrNotFound
+			}
+			if err != nil {
+				return StoreOnboardingFeePolicy{}, err
+			}
+			if before.Version != input.ExpectedVersion {
+				return StoreOnboardingFeePolicy{}, ErrVersionConflict
+			}
 
-		var result StoreOnboardingFeePolicy
-		var effectiveFrom sql.NullTime
-		err = tx.QueryRowContext(ctx, `
-			UPDATE dsh_platform_store_onboarding_fee_policy
-			SET enabled=$1, amount=$2, currency=$3, applies_to=$4, charge_timing=$5,
-			    effective_from=$6, notes=$7, updated_by=$8, updated_at=NOW(), version=version+1
-			WHERE id=1
-			RETURNING enabled, amount, currency, applies_to, charge_timing, actor_charged,
-			          effective_from, notes, COALESCE(updated_by,''), updated_at, version`,
-			input.Enabled, input.Amount, input.Currency, input.AppliesTo, input.ChargeTiming,
-			input.EffectiveFrom, input.Notes, mutation.ActorID,
-		).Scan(
-			&result.Enabled, &result.Amount, &result.Currency, &result.AppliesTo,
-			&result.ChargeTiming, &result.ActorCharged, &effectiveFrom, &result.Notes,
-			&result.UpdatedBy, &result.UpdatedAt, &result.Version,
-		)
-		if err != nil { return StoreOnboardingFeePolicy{}, err }
-		if effectiveFrom.Valid { result.EffectiveFrom = &effectiveFrom.Time }
-		deriveFeePolicyReadiness(&result)
-		if err := insertEvent(ctx, tx, "store_onboarding_fee", "singleton", "updated", mutation, before.Version, result.Version, result); err != nil {
-			return StoreOnboardingFeePolicy{}, err
-		}
-		return result, nil
-	})
+			var result StoreOnboardingFeePolicy
+			var effectiveFrom sql.NullTime
+			err = tx.QueryRowContext(ctx, `
+				UPDATE dsh_platform_store_onboarding_fee_policy
+				SET enabled = $1,
+				    amount = $2,
+				    currency = $3,
+				    applies_to = $4,
+				    charge_timing = $5,
+				    effective_from = $6,
+				    notes = $7,
+				    updated_by = $8,
+				    updated_at = NOW(),
+				    version = version + 1
+				WHERE id = 1
+				RETURNING enabled, amount, currency, applies_to, charge_timing,
+				          actor_charged, effective_from, notes,
+				          COALESCE(updated_by, ''), updated_at, version`,
+				input.Enabled,
+				input.Amount,
+				input.Currency,
+				input.AppliesTo,
+				input.ChargeTiming,
+				input.EffectiveFrom,
+				input.Notes,
+				mutation.ActorID,
+			).Scan(
+				&result.Enabled,
+				&result.Amount,
+				&result.Currency,
+				&result.AppliesTo,
+				&result.ChargeTiming,
+				&result.ActorCharged,
+				&effectiveFrom,
+				&result.Notes,
+				&result.UpdatedBy,
+				&result.UpdatedAt,
+				&result.Version,
+			)
+			if err != nil {
+				return StoreOnboardingFeePolicy{}, err
+			}
+			if effectiveFrom.Valid {
+				result.EffectiveFrom = &effectiveFrom.Time
+			}
+			deriveFeePolicyReadiness(&result)
+			if err := insertEvent(
+				ctx,
+				tx,
+				"store_onboarding_fee",
+				"singleton",
+				"updated",
+				mutation,
+				before.Version,
+				result.Version,
+				result,
+			); err != nil {
+				return StoreOnboardingFeePolicy{}, err
+			}
+			return result, nil
+		},
+	)
 }
 
-type feePolicyScanner interface { Scan(dest ...any) error }
+type feePolicyScanner interface {
+	Scan(dest ...any) error
+}
 
-func getStoreOnboardingFeePolicy(ctx context.Context, row feePolicyScanner) (StoreOnboardingFeePolicy, error) {
+func scanStoreOnboardingFeePolicy(
+	row feePolicyScanner,
+) (StoreOnboardingFeePolicy, error) {
 	var policy StoreOnboardingFeePolicy
 	var effectiveFrom sql.NullTime
-	if err := row.Scan(
-		&policy.Enabled, &policy.Amount, &policy.Currency, &policy.AppliesTo,
-		&policy.ChargeTiming, &policy.ActorCharged, &effectiveFrom, &policy.Notes,
-		&policy.UpdatedBy, &policy.UpdatedAt, &policy.Version,
-	); errors.Is(err, sql.ErrNoRows) {
+	err := row.Scan(
+		&policy.Enabled,
+		&policy.Amount,
+		&policy.Currency,
+		&policy.AppliesTo,
+		&policy.ChargeTiming,
+		&policy.ActorCharged,
+		&effectiveFrom,
+		&policy.Notes,
+		&policy.UpdatedBy,
+		&policy.UpdatedAt,
+		&policy.Version,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
 		return policy, ErrNotFound
-	} else if err != nil {
+	}
+	if err != nil {
 		return policy, err
 	}
-	if effectiveFrom.Valid { policy.EffectiveFrom = &effectiveFrom.Time }
+	if effectiveFrom.Valid {
+		policy.EffectiveFrom = &effectiveFrom.Time
+	}
 	deriveFeePolicyReadiness(&policy)
 	return policy, nil
 }
