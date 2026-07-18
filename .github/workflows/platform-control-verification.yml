@@ -18,7 +18,10 @@ on:
       - "apps/control-panel/runtime/src/shell/useDshNavigation.ts"
       - ".github/workflows/platform-control-verification.yml"
   pull_request:
-    branches: [master]
+    branches:
+      - master
+      - bassam
+      - "bassam-platform-verification-base-*"
     paths:
       - "core/platform-control/**"
       - "core/identity/backend/**"
