@@ -5,9 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"time"
-
-	"dsh-api/internal/checkoutfinanceoutbox"
-	"dsh-api/internal/promotionfundingoutbox"
 )
 
 var (
@@ -183,36 +180,6 @@ func CreateOrder(db *sql.DB, input CreateOrderInput) (*Order, error) {
 		WHERE id = $1::uuid`, cartID,
 	); err != nil {
 		return nil, err
-	}
-
-	var redemptionID, fundingReservationID string
-	fundingErr := tx.QueryRow(`SELECT id::TEXT,wlt_funding_reservation_id
-		FROM dsh_coupon_redemptions
-		WHERE checkout_intent_id=$1::uuid
-		  AND status='committed'
-		  AND funding_status='reserved'
-		  AND wlt_funding_reservation_id IS NOT NULL`, input.CheckoutIntentID).
-		Scan(&redemptionID, &fundingReservationID)
-	if fundingErr != nil && !errors.Is(fundingErr, sql.ErrNoRows) {
-		return nil, fundingErr
-	}
-	if fundingErr == nil {
-		if input.TenantID == "" {
-			return nil, fmt.Errorf("%w: tenantId is required for coupon funding commit", ErrInvalid)
-		}
-		orderID := order.ID
-		if err := promotionfundingoutbox.Enqueue(tx, promotionfundingoutbox.EnqueueInput{
-			EventType:          promotionfundingoutbox.EventCommit,
-			TenantID:          input.TenantID,
-			CheckoutIntentID:  input.CheckoutIntentID,
-			CouponRedemptionID: redemptionID,
-			WLTReservationID:  fundingReservationID,
-			OrderID:           &orderID,
-			IdempotencyKey:    "dsh-promotion-funding-commit:" + redemptionID,
-			CorrelationID:     order.ID,
-		}); err != nil {
-			return nil, err
-		}
 	}
 
 	if err = tx.Commit(); err != nil {
