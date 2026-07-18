@@ -6,19 +6,17 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-
-	"github.com/lib/pq"
+	"strings"
 
 	"wlt-api/internal/shared"
 )
 
 var ErrIdempotencyConflict = errors.New("payment session idempotency conflict")
-
-const defaultTenantID = "tenant-dev-001"
+var ErrTenantMismatch = errors.New("payment session tenant does not match trusted DSH tenant")
 
 const paymentSessionCols = `id, checkout_intent_id, special_request_id,
 	 subscription_purchase_id, commercial_product_reference,
-	 COALESCE(to_jsonb(wlt_payment_sessions)->>'tenant_id', 'tenant-dev-001'),
+	 tenant_id,
 	 client_id, store_id, payment_method, status, provider_reference, amount_minor_units,
 	 currency, captured_at, created_at, updated_at`
 
@@ -84,6 +82,7 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 	if input.SubscriptionPurchaseID == "" && input.CommercialProductReference != "" {
 		return nil, fmt.Errorf("commercialProductReference is only valid for a subscription purchase")
 	}
+	input.TenantID = strings.TrimSpace(input.TenantID)
 	if input.TenantID == "" || input.ClientID == "" || input.StoreID == "" {
 		return nil, fmt.Errorf("tenantId, clientId and storeId are required")
 	}
@@ -191,6 +190,16 @@ func HandleCreatePaymentSession(db *sql.DB) http.HandlerFunc {
 		if !decodeJSON(w, r, &input) {
 			return
 		}
+		trustedTenantID := strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
+		if trustedTenantID == "" {
+			shared.SendError(w, http.StatusBadRequest, "MISSING_TENANT_ID", "X-Tenant-ID is required for payment-session creation")
+			return
+		}
+		if trustedTenantID != strings.TrimSpace(input.TenantID) {
+			shared.SendError(w, http.StatusForbidden, "TENANT_MISMATCH", ErrTenantMismatch.Error())
+			return
+		}
+		input.TenantID = trustedTenantID
 		input.IdempotencyKey = r.Header.Get("Idempotency-Key")
 		input.CorrelationID = r.Header.Get("X-Correlation-ID")
 		if input.IdempotencyKey == "" {
@@ -215,7 +224,9 @@ func HandleCreatePaymentSession(db *sql.DB) http.HandlerFunc {
 }
 
 // GetPaymentSessionByCheckoutIntent looks up the payment session WLT created
-// for a given DSH checkout intent.
+// for a given DSH checkout intent. This service-only compatibility read is safe
+// in the current single-tenant deployment; tenant-scoped creation and source
+// uniqueness remain mandatory.
 func GetPaymentSessionByCheckoutIntent(db *sql.DB, checkoutIntentID string) (*PaymentSession, error) {
 	return getPaymentSessionByCheckoutIntent(db, "", checkoutIntentID)
 }
@@ -228,9 +239,6 @@ func getPaymentSessionByCheckoutIntent(db *sql.DB, tenantID string, checkoutInte
 		args = append(args, tenantID)
 	}
 	session, err := scanPaymentSession(db.QueryRow(q, args...))
-	if isUndefinedColumn(err) && tenantID != "" {
-		return nil, nil
-	}
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
@@ -245,9 +253,6 @@ func getPaymentSessionBySpecialRequest(db *sql.DB, tenantID string, specialReque
 		args = append(args, tenantID)
 	}
 	session, err := scanPaymentSession(db.QueryRow(q, args...))
-	if isUndefinedColumn(err) && tenantID != "" {
-		return nil, nil
-	}
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
@@ -311,14 +316,6 @@ func scanPaymentSession(row *sql.Row) (*PaymentSession, error) {
 		return nil, err
 	}
 	return &session, nil
-}
-
-func isUndefinedColumn(err error) bool {
-	var pqErr *pq.Error
-	if errors.As(err, &pqErr) {
-		return string(pqErr.Code) == "42703"
-	}
-	return false
 }
 
 func decodeJSON(w http.ResponseWriter, r *http.Request, target any) bool {
