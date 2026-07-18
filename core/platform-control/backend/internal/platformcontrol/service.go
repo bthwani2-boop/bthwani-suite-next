@@ -3,12 +3,15 @@ package platformcontrol
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"time"
 )
 
 type Service struct {
-	repository *Repository
-	now        func() time.Time
+	repository   *Repository
+	now          func() time.Time
+	dependencies []ServiceDependency
+	healthClient *http.Client
 }
 
 func NewService(repositories ...*Repository) *Service {
@@ -16,7 +19,11 @@ func NewService(repositories ...*Repository) *Service {
 	if len(repositories) > 0 {
 		repository = repositories[0]
 	}
-	return &Service{repository: repository, now: time.Now}
+	return &Service{
+		repository:   repository,
+		now:          time.Now,
+		healthClient: &http.Client{Timeout: 4 * time.Second},
+	}
 }
 
 func (s *Service) requireRepository() (*Repository, error) {
@@ -35,40 +42,57 @@ func (s *Service) Ready(ctx context.Context) error {
 }
 
 func (s *Service) RuntimeSnapshot(ctx context.Context) RuntimeSnapshot {
+	generatedAt := s.now().UTC()
 	if err := s.Ready(ctx); err != nil {
 		return RuntimeSnapshot{
 			Status:         StateFixRequired,
 			Revision:       "platform-control-store-unavailable",
-			GeneratedAt:    s.now().UTC(),
+			GeneratedAt:    generatedAt,
 			VariablesState: StateFixRequired,
 			FlagsState:     StateFixRequired,
-			RolloutsState:  StateContractRequired,
-			HealthState:    StateUnknownHealth,
+			RolloutsState:  StateFixRequired,
+			HealthState:    StateFixRequired,
 			AuditState:     StateFixRequired,
 			RollbackState:  StateFixRequired,
-			ServicesState:  StatePartiallyBound,
+			ServicesState:  StateFixRequired,
 			Evidence: []string{
 				"platform-control PostgreSQL store is unavailable",
-				"no mutation is accepted without persistent audit and rollback state",
+				"no mutation or rollout is accepted without persistence, audit, health gates and rollback state",
 			},
 		}
 	}
 
+	services := s.Services(ctx)
+	healthState := aggregateHealthState(services)
+	rolloutsState := StateOperational
+	rolloutEvidence := "progressive rollout persistence and state machine are active"
+	if _, err := s.Rollouts(ctx); err != nil {
+		rolloutsState = StateFixRequired
+		rolloutEvidence = "progressive rollout store is unavailable"
+	}
+
+	status := StateOperational
+	if healthState == StateFixRequired || rolloutsState == StateFixRequired {
+		status = StateFixRequired
+	} else if healthState != StateOperational {
+		status = StatePartiallyBound
+	}
 	return RuntimeSnapshot{
-		Status:         StateOperational,
-		Revision:       "platform-control-p2-governed-store",
-		GeneratedAt:    s.now().UTC(),
+		Status:         status,
+		Revision:       "platform-control-p3-progressive-delivery",
+		GeneratedAt:    generatedAt,
 		VariablesState: StateOperational,
 		FlagsState:     StateOperational,
-		RolloutsState:  StateContractRequired,
-		HealthState:    StatePartiallyBound,
+		RolloutsState:  rolloutsState,
+		HealthState:    healthState,
 		AuditState:     StateOperational,
 		RollbackState:  StateOperational,
-		ServicesState:  StatePartiallyBound,
+		ServicesState:  healthState,
 		Evidence: []string{
 			"platform-control PostgreSQL store attached",
 			"maker-checker change sets, optimistic concurrency, audit, apply and rollback are active",
-			"progressive rollout orchestration remains contract-required",
+			"service posture is computed from live health probes",
+			rolloutEvidence,
 		},
 	}
 }
@@ -103,34 +127,6 @@ func (s *Service) FeatureFlags(ctx context.Context) ([]FeatureFlag, error) {
 		return nil, err
 	}
 	return repository.FeatureFlags(ctx)
-}
-
-func (s *Service) Services(ctx context.Context) []ServicePosture {
-	platformState := StateOperational
-	platformEvidence := "core/platform-control PostgreSQL and governed workflow"
-	if err := s.Ready(ctx); err != nil {
-		platformState = StateFixRequired
-		platformEvidence = "core/platform-control database unavailable"
-	}
-	return []ServicePosture{
-		{Service: "platform-control", State: platformState, EvidenceSource: platformEvidence},
-		{Service: "dsh", State: StatePartiallyBound, EvidenceSource: "services/dsh/service.manifest.ts"},
-		{Service: "wlt", State: StatePartiallyBound, EvidenceSource: "services/wlt/service.manifest.ts"},
-		{Service: "identity", State: StatePartiallyBound, EvidenceSource: "identity session dependency active; health aggregation pending"},
-		{Service: "providers", State: StateReadOnlyBound, EvidenceSource: "core/providers read endpoints"},
-	}
-}
-
-func (s *Service) Health(ctx context.Context) HealthSnapshot {
-	state := StatePartiallyBound
-	if err := s.Ready(ctx); err != nil {
-		state = StateFixRequired
-	}
-	return HealthSnapshot{
-		State:     state,
-		CheckedAt: s.now().UTC(),
-		Services:  s.Services(ctx),
-	}
 }
 
 func (s *Service) AuditEvents(ctx context.Context) ([]AuditEvent, error) {
