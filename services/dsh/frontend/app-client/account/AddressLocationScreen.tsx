@@ -17,6 +17,10 @@ import {
   type DshClientAddress,
   type DshClientAddressDraft,
 } from "../../shared/client-address";
+import {
+  useClientMapController,
+  type DshVerifiedMapLocation,
+} from "../../shared/client-map";
 
 export type AddressLocationScreenProps = {
   readonly onBack?: () => void;
@@ -94,14 +98,15 @@ function validateDraft(draft: EditableDraft): string | null {
   if (draft.label.trim().length < 1) return "اكتب اسمًا مختصرًا للعنوان.";
   if (draft.recipientName.trim().length < 2) return "اكتب اسم المستلم.";
   if (!/^\+[1-9][0-9]{7,14}$/.test(draft.phoneE164.trim())) return "رقم الهاتف يجب أن يكون بصيغة دولية صحيحة.";
-  if (draft.addressLine.trim().length < 5) return "اكتب وصفًا أوضح لموقع التسليم.";
-  if (draft.serviceAreaCode.trim().length < 1) return "رمز منطقة الخدمة مطلوب.";
+  if (draft.addressLine.trim().length < 5) return "اختر موقعًا محكومًا أو اكتب وصفًا أوضح للتسليم.";
+  if (draft.serviceAreaCode.trim().length < 1) return "الموقع المختار خارج مناطق الخدمة المعتمدة.";
   if ((draft.latitude === null) !== (draft.longitude === null)) return "يجب حفظ خط العرض والطول معًا.";
   return null;
 }
 
 export function AddressLocationScreen({ onBack, onOpenCheckout }: AddressLocationScreenProps) {
   const controller = useClientAddressController();
+  const mapController = useClientMapController();
   const [editing, setEditing] = React.useState<DshClientAddress | null>(null);
   const [draft, setDraft] = React.useState<EditableDraft>(EMPTY_DRAFT);
   const [showForm, setShowForm] = React.useState(false);
@@ -109,12 +114,19 @@ export function AddressLocationScreen({ onBack, onOpenCheckout }: AddressLocatio
   const [locationError, setLocationError] = React.useState<string | null>(null);
   const [capturingLocation, setCapturingLocation] = React.useState(false);
   const [pendingDeleteId, setPendingDeleteId] = React.useState<string | null>(null);
+  const [mapQuery, setMapQuery] = React.useState("");
+
+  const resetMap = React.useCallback(() => {
+    setMapQuery("");
+    mapController.clear();
+  }, [mapController]);
 
   const beginCreate = () => {
     setEditing(null);
     setDraft({ ...EMPTY_DRAFT, makeDefault: controller.addresses.length === 0 });
     setFormError(null);
     setLocationError(null);
+    resetMap();
     setShowForm(true);
   };
 
@@ -123,7 +135,25 @@ export function AddressLocationScreen({ onBack, onOpenCheckout }: AddressLocatio
     setDraft(draftFromAddress(address));
     setFormError(null);
     setLocationError(null);
+    resetMap();
     setShowForm(true);
+  };
+
+  const applyMapLocation = (location: DshVerifiedMapLocation): boolean => {
+    if (!location.serviceAreaVerified || !location.serviceAreaCode) {
+      setLocationError("الموقع موجود على الخريطة لكنه خارج مناطق الخدمة المعتمدة في DSH.");
+      return false;
+    }
+    setDraft((current) => ({
+      ...current,
+      addressLine: location.displayName,
+      serviceAreaCode: location.serviceAreaCode ?? "",
+      latitude: location.latitude,
+      longitude: location.longitude,
+    }));
+    setLocationError(null);
+    setMapQuery(location.displayName);
+    return true;
   };
 
   const captureLocation = async () => {
@@ -144,16 +174,25 @@ export function AddressLocationScreen({ onBack, onOpenCheckout }: AddressLocatio
         setLocationError("لم يُرجع الجهاز إحداثيات صالحة.");
         return;
       }
-      setDraft((current) => ({
-        ...current,
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-      }));
+      const resolved = await mapController.reverse(
+        position.coords.latitude,
+        position.coords.longitude,
+      );
+      if (!resolved) {
+        setLocationError("تعذر التحقق من الإحداثيات عبر مزود الخرائط المحكوم.");
+        return;
+      }
+      applyMapLocation(resolved);
     } catch (error) {
       setLocationError(error instanceof Error ? error.message : "تعذر التقاط الموقع.");
     } finally {
       setCapturingLocation(false);
     }
+  };
+
+  const searchLocation = async () => {
+    setLocationError(null);
+    await mapController.search(mapQuery);
   };
 
   const save = async () => {
@@ -171,6 +210,7 @@ export function AddressLocationScreen({ onBack, onOpenCheckout }: AddressLocatio
       setEditing(null);
       setDraft(EMPTY_DRAFT);
       setShowForm(false);
+      resetMap();
     }
   };
 
@@ -227,7 +267,7 @@ export function AddressLocationScreen({ onBack, onOpenCheckout }: AddressLocatio
               <View style={styles.addressTitleRow}>
                 <View style={styles.badges}>
                   {address.isDefault ? <Badge label="الافتراضي" tone="success" /> : null}
-                  {address.latitude !== null ? <Badge label="موقع جهاز" tone="info" /> : null}
+                  {address.latitude !== null ? <Badge label="موقع معتمد" tone="info" /> : null}
                 </View>
                 <Text role="titleSm" style={styles.rtl}>{address.label}</Text>
               </View>
@@ -280,20 +320,63 @@ export function AddressLocationScreen({ onBack, onOpenCheckout }: AddressLocatio
             <TextField label="اسم العنوان" value={draft.label} onChangeText={(value) => setDraft((current) => ({ ...current, label: value }))} placeholder="المنزل، العمل…" />
             <TextField label="اسم المستلم" value={draft.recipientName} onChangeText={(value) => setDraft((current) => ({ ...current, recipientName: value }))} />
             <TextField label="الهاتف الدولي" value={draft.phoneE164} onChangeText={(value) => setDraft((current) => ({ ...current, phoneE164: value }))} keyboardType="phone-pad" />
+
+            <Text role="bodyStrong" style={styles.rtl}>الموقع المحكوم</Text>
+            <TextField
+              label="ابحث عن موقع أو معلم"
+              value={mapQuery}
+              onChangeText={setMapQuery}
+              placeholder="مثال: جامعة صنعاء"
+            />
+            <View style={styles.actions}>
+              <Button
+                label={mapController.state.kind === "loading" ? "جارٍ البحث…" : "بحث"}
+                tone="secondary"
+                disabled={mapController.state.kind === "loading" || controller.mutating}
+                onPress={() => void searchLocation()}
+              />
+              <Button
+                label={capturingLocation ? "جارٍ التحقق…" : "استخدام موقع الجهاز"}
+                tone="secondary"
+                disabled={capturingLocation || mapController.state.kind === "loading" || controller.mutating}
+                onPress={() => void captureLocation()}
+              />
+            </View>
+            {mapController.state.kind === "empty" ? (
+              <Text role="caption" tone="muted" style={styles.rtl}>لم يُعثر على موقع مطابق.</Text>
+            ) : null}
+            {mapController.state.kind === "error" ? (
+              <Text tone="danger" style={styles.rtl}>{mapController.state.message}</Text>
+            ) : null}
+            {mapController.locations.map((location) => (
+              <Card key={`${location.providerCode}:${location.providerPlaceId}`} style={styles.mapResult}>
+                <Text role="bodyStrong" style={styles.rtl}>{location.displayName}</Text>
+                <View style={styles.badges}>
+                  <Badge
+                    label={location.serviceAreaVerified ? `ضمن ${location.serviceAreaName ?? location.serviceAreaCode}` : "خارج التغطية"}
+                    tone={location.serviceAreaVerified ? "success" : "warning"}
+                  />
+                </View>
+                <Button
+                  label="اختيار الموقع"
+                  tone="primary"
+                  size="sm"
+                  disabled={!location.serviceAreaVerified}
+                  onPress={() => applyMapLocation(location)}
+                />
+              </Card>
+            ))}
+
             <TextField label="وصف العنوان" value={draft.addressLine} onChangeText={(value) => setDraft((current) => ({ ...current, addressLine: value }))} multiline />
-            <TextField label="رمز منطقة الخدمة" value={draft.serviceAreaCode} onChangeText={(value) => setDraft((current) => ({ ...current, serviceAreaCode: value }))} />
+            {draft.serviceAreaCode ? (
+              <Text role="caption" tone="muted" style={styles.rtl}>منطقة الخدمة المعتمدة: {draft.serviceAreaCode}</Text>
+            ) : null}
             <View style={styles.inlineFields}>
               <TextField label="المبنى" value={draft.building} onChangeText={(value) => setDraft((current) => ({ ...current, building: value }))} />
               <TextField label="الدور" value={draft.floor} onChangeText={(value) => setDraft((current) => ({ ...current, floor: value }))} />
               <TextField label="الشقة" value={draft.unit} onChangeText={(value) => setDraft((current) => ({ ...current, unit: value }))} />
             </View>
             <TextField label="تعليمات التسليم" value={draft.deliveryInstructions} onChangeText={(value) => setDraft((current) => ({ ...current, deliveryInstructions: value }))} multiline />
-            <Button
-              label={capturingLocation ? "جارٍ التقاط الموقع…" : "التقاط إحداثيات الجهاز"}
-              tone="secondary"
-              disabled={capturingLocation || controller.mutating}
-              onPress={() => void captureLocation()}
-            />
             {draft.latitude !== null && draft.longitude !== null ? (
               <Text role="caption" tone="muted" style={styles.rtl}>
                 {draft.latitude.toFixed(6)}, {draft.longitude.toFixed(6)}
@@ -303,7 +386,7 @@ export function AddressLocationScreen({ onBack, onOpenCheckout }: AddressLocatio
             {formError ? <Text tone="danger" style={styles.rtl}>{formError}</Text> : null}
             <View style={styles.actions}>
               <Button label={controller.mutating ? "جارٍ الحفظ…" : "حفظ"} tone="primary" disabled={controller.mutating} onPress={() => void save()} />
-              <Button label="إلغاء" tone="ghost" disabled={controller.mutating} onPress={() => { setShowForm(false); setEditing(null); setFormError(null); }} />
+              <Button label="إلغاء" tone="ghost" disabled={controller.mutating} onPress={() => { setShowForm(false); setEditing(null); setFormError(null); resetMap(); }} />
             </View>
           </Card>
         ) : null}
@@ -319,9 +402,10 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" },
   addressCard: { padding: spacing[4], gap: spacing[2] },
   addressTitleRow: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", gap: spacing[2] },
-  badges: { flexDirection: "row-reverse", gap: spacing[1] },
+  badges: { flexDirection: "row-reverse", flexWrap: "wrap", gap: spacing[1] },
   actions: { flexDirection: "row-reverse", flexWrap: "wrap", gap: spacing[2] },
   formCard: { padding: spacing[4], gap: spacing[3] },
+  mapResult: { padding: spacing[3], gap: spacing[2] },
   errorCard: { padding: spacing[3], gap: spacing[2], borderColor: colorRoles.danger, borderWidth: 1 },
   inlineFields: { gap: spacing[2] },
 });
