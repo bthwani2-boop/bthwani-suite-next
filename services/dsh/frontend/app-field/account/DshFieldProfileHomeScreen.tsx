@@ -1,19 +1,19 @@
 // app-field — DshFieldProfileHomeScreen
-// Profile menu screen that displays the agent's identity, active tasks status, and sub-screen navigation links.
+// Profile menu driven only by the authenticated Workforce profile.
 import React from 'react';
 import { Pressable, View, ScrollView } from 'react-native';
 import {
   Badge,
   Button,
+  StateView,
   Text,
   Header,
   spacing,
-  radius,
-  borders,
   colorRoles,
   Icon,
 } from '@bthwani/ui-kit';
-import { useWorkforceMeOrNull } from '../../shared/workforce/use-workforce-profile';
+import { useWorkforceProfile } from '../../shared/workforce/use-workforce-profile';
+import { ENGAGEMENT_STATUS_LABEL_AR } from '../../shared/workforce/workforce.types';
 
 type DshFieldProfileHomeScreenProps = {
   readonly onBack: () => void;
@@ -32,94 +32,144 @@ export function DshFieldProfileHomeScreen({
   onOpenVerification,
   onLogout,
 }: DshFieldProfileHomeScreenProps) {
-  const me = useWorkforceMeOrNull();
-  const username = me ? me.fullNameAr : 'ميداني';
-  const roleName = me ? (me.workforceKind === 'captain' ? 'كابتن' : 'موظف ميداني') : 'عضو فريق الميدان';
+  const workforce = useWorkforceProfile();
+
+  if (workforce.state.kind === 'loading') {
+    return <StateView loading title="جارٍ تحميل الملف التشغيلي…" />;
+  }
+
+  if (workforce.state.kind === 'not_provisioned') {
+    return (
+      <StateView
+        tone="warning"
+        title="الملف التشغيلي غير منشأ"
+        description="تم تسجيل الهوية، لكن Workforce لم ينشئ ملف الموظف الميداني بعد. لا يمكن فتح المهام أو المالية قبل إنشائه."
+        actionLabel="إعادة المحاولة"
+        onActionPress={() => void workforce.reload()}
+      />
+    );
+  }
+
+  if (workforce.state.kind === 'suspended') {
+    return (
+      <View style={styles.blockedRoot}>
+        <StateView
+          tone="danger"
+          title="الحساب الميداني معلّق"
+          description="تم إيقاف الملف التشغيلي من Workforce. لا يمكن تنفيذ زيارات أو عمليات مالية حتى إعادة التفعيل."
+          actionLabel="تحديث الحالة"
+          onActionPress={() => void workforce.reload()}
+        />
+        <Button label="تسجيل الخروج" tone="secondary" onPress={onLogout} />
+      </View>
+    );
+  }
+
+  if (workforce.state.kind === 'error') {
+    return (
+      <StateView
+        tone="danger"
+        title="تعذر تحميل الملف التشغيلي"
+        description={workforce.state.message}
+        actionLabel="إعادة المحاولة"
+        onActionPress={() => void workforce.reload()}
+      />
+    );
+  }
+
+  const me = workforce.state.me;
+  const isFieldActor = me.workforceKind === 'field';
+  if (!isFieldActor) {
+    return (
+      <StateView
+        tone="danger"
+        title="نوع الحساب غير متوافق"
+        description="الجلسة الحالية لا تملك ملف موظف ميداني. افتح السطح المتوافق مع نوع Workforce المسجل."
+        actionLabel="رجوع"
+        onActionPress={onBack}
+      />
+    );
+  }
+
+  const operationallyActive = me.engagementStatus === 'active';
 
   return (
-    <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
-      <View style={{ paddingHorizontal: spacing[4] }}>
-        <Header
-          title="ملف الميداني"
-          subtitle="صفحة الهوية والملف التشغيلي للميدان"
-        />
+    <View style={styles.root}>
+      <View style={styles.headerContainer}>
+        <Button label="رجوع" tone="ghost" size="sm" fullWidth={false} onPress={onBack} />
+        <Header title="ملف الميداني" subtitle="الهوية والملف التشغيلي من Workforce" />
       </View>
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ padding: spacing[4], gap: spacing[4], paddingBottom: 96 }}
+        contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <View style={{ gap: spacing[3], paddingVertical: spacing[2] }}>
-          <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: spacing[2] }}>
+        <View style={styles.identityBlock}>
+          <View style={styles.badges}>
             <Badge label="DSH" tone="success" />
-            <Badge label={roleName} tone="action" />
+            <Badge label="موظف ميداني" tone="action" />
+            <Badge
+              label={ENGAGEMENT_STATUS_LABEL_AR[me.engagementStatus]}
+              tone={operationallyActive ? 'success' : 'warning'}
+            />
           </View>
-          <Text role="titleMd" style={{ textAlign: 'right' }}>
-            {username}
+          <Text role="titleMd" style={styles.rtl}>{me.fullNameAr}</Text>
+          <Text role="bodySm" tone="muted" style={styles.rtl}>
+            رقم مقدم الخدمة: {me.workforceCode}
           </Text>
-          <Text role="bodySm" tone="muted" style={{ textAlign: 'right' }}>
-            الملف التشغيلي يبقى عند الميداني حتى اكتمال الملف والمراجعة والمالية المرتبطة به.
-          </Text>
+          {!operationallyActive ? (
+            <Text role="bodySm" tone="warning" style={styles.rtl}>
+              الملف غير نشط تشغيليًا؛ الصفحات أدناه للقراءة فقط حتى تفعيل الارتباط.
+            </Text>
+          ) : null}
         </View>
 
-        <View style={{ height: 1, backgroundColor: colorRoles.borderSubtle }} />
+        <View style={styles.divider} />
 
         <View style={{ gap: 0 }}>
-          <Pressable onPress={onOpenProfile}>
-            <View style={{ paddingVertical: spacing[3], borderBottomWidth: 1, borderBottomColor: colorRoles.borderSubtle }}>
-              <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between' }}>
-                <View style={{ flex: 1, alignItems: 'flex-end', gap: 2 }}>
-                  <Text role="bodyStrong">بيانات الميداني</Text>
-                  <Text role="bodySm" tone="muted">الهوية، التغطية، والوردية الحالية.</Text>
-                </View>
-                <Icon name="chevron-back" size={20} tone="muted" mirrored />
-              </View>
-            </View>
-          </Pressable>
-
-          <Pressable onPress={onOpenHistory}>
-            <View style={{ paddingVertical: spacing[3], borderBottomWidth: 1, borderBottomColor: colorRoles.borderSubtle }}>
-              <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between' }}>
-                <View style={{ flex: 1, alignItems: 'flex-end', gap: 2 }}>
-                  <Text role="bodyStrong">السجل</Text>
-                  <Text role="bodySm" tone="muted">آخر حالة لكل متجر والتقدم المرتبط به.</Text>
-                </View>
-                <Icon name="chevron-back" size={20} tone="muted" mirrored />
-              </View>
-            </View>
-          </Pressable>
-
-          <Pressable onPress={onOpenFinance}>
-            <View style={{ paddingVertical: spacing[3], borderBottomWidth: 1, borderBottomColor: colorRoles.borderSubtle }}>
-              <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between' }}>
-                <View style={{ flex: 1, alignItems: 'flex-end', gap: 2 }}>
-                  <Text role="bodyStrong">المالية</Text>
-                  <Text role="bodySm" tone="muted">المستحقات والملخص المالي بعد اكتمال الاعتماد.</Text>
-                </View>
-                <Icon name="chevron-back" size={20} tone="muted" mirrored />
-              </View>
-            </View>
-          </Pressable>
-
-          <Pressable onPress={onOpenVerification}>
-            <View style={{ paddingVertical: spacing[3], borderBottomWidth: 1, borderBottomColor: colorRoles.borderSubtle }}>
-              <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between' }}>
-                <View style={{ flex: 1, alignItems: 'flex-end', gap: 2 }}>
-                  <Text role="bodyStrong">مهام التحقق الميداني</Text>
-                  <Text role="bodySm" tone="muted">افتح الزيارة المحددة ثم ارفع نتيجتها بعد الإكمال.</Text>
-                </View>
-                <Icon name="chevron-back" size={20} tone="muted" mirrored />
-              </View>
-            </View>
-          </Pressable>
+          <MenuRow title="بيانات الميداني" subtitle="الهوية، التغطية، والوردية الحالية." onPress={onOpenProfile} />
+          <MenuRow title="السجل" subtitle="آخر حالة لكل متجر والتقدم المرتبط به." onPress={onOpenHistory} />
+          <MenuRow title="المالية" subtitle="المحفظة والعمولات وطلبات الصرف من WLT." onPress={onOpenFinance} />
+          <MenuRow title="مهام التحقق الميداني" subtitle="الزيارات والتصعيدات المخصصة لهذا الحساب." onPress={onOpenVerification} />
         </View>
 
-        <View style={{ height: 1, backgroundColor: colorRoles.borderSubtle }} />
-
+        <View style={styles.divider} />
         <Button label="تسجيل الخروج" tone="secondary" onPress={onLogout} />
       </ScrollView>
     </View>
   );
 }
 
-// export default DshFieldProfileHomeScreen; // Unused default export
+function MenuRow({ title, subtitle, onPress }: { title: string; subtitle: string; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress}>
+      <View style={styles.menuRow}>
+        <View style={styles.menuText}>
+          <Text role="bodyStrong">{title}</Text>
+          <Text role="bodySm" tone="muted">{subtitle}</Text>
+        </View>
+        <Icon name="chevron-back" size={20} tone="muted" mirrored />
+      </View>
+    </Pressable>
+  );
+}
+
+const styles = {
+  root: { flex: 1, backgroundColor: colorRoles.surfaceBase },
+  blockedRoot: { flex: 1, backgroundColor: colorRoles.surfaceBase, justifyContent: 'center' as const, padding: spacing[4], gap: spacing[3] },
+  headerContainer: { paddingHorizontal: spacing[4], paddingTop: spacing[2] },
+  content: { padding: spacing[4], gap: spacing[4], paddingBottom: 96 },
+  identityBlock: { gap: spacing[3], paddingVertical: spacing[2] },
+  badges: { flexDirection: 'row-reverse' as const, flexWrap: 'wrap' as const, gap: spacing[2] },
+  rtl: { textAlign: 'right' as const },
+  divider: { height: 1, backgroundColor: colorRoles.borderSubtle },
+  menuRow: {
+    paddingVertical: spacing[3],
+    borderBottomWidth: 1,
+    borderBottomColor: colorRoles.borderSubtle,
+    flexDirection: 'row-reverse' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
+  },
+  menuText: { flex: 1, alignItems: 'flex-end' as const, gap: 2 },
+};
