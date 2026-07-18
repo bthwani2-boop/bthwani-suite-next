@@ -26,6 +26,7 @@ export type DshCheckoutIntent = {
   readonly deliveryAddress: string;
   readonly note: string;
   readonly subtotalMinorUnits: number;
+  readonly deliveryFeeMinorUnits: number;
   readonly discountMinorUnits: number;
   readonly totalMinorUnits: number;
   readonly currency: string;
