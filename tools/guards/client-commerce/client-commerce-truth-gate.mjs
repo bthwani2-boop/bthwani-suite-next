@@ -45,8 +45,16 @@ const checks = [
     file: "services/dsh/frontend/app-client/checkout/ClientCheckoutRoute.tsx",
     forbidden: [
       [/serviceAreaCode\s*=\s*["'][^"']+["']/g, "DEFAULT_CHECKOUT_AREA_FORBIDDEN"],
+      [/\bwantsCheckout\b/g, "DEFERRED_AUTH_GATE_CAN_TRAP_CART_FORBIDDEN"],
+      [/authKind=\{[^}]*unauthenticated/g, "UNAUTHENTICATED_CART_LOAD_FORBIDDEN"],
     ],
-    required: ["useStoreDetailController", "store.serviceAreaCode", "couponCode"],
+    required: [
+      "useStoreDetailController",
+      "store.serviceAreaCode",
+      "identity.state.kind !== \"authenticated\"",
+      'authKind="authenticated"',
+      "couponCode",
+    ],
   },
   {
     file: "services/dsh/frontend/app-client/store/StoreMeasurementSheet.tsx",
