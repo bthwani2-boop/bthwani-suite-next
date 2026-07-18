@@ -54,10 +54,11 @@ func NewRouter(db *sql.DB, mutationsEnabled bool) *http.ServeMux {
 	mux.HandleFunc("POST /wlt/refunds/{refundId}/reject", gate(serviceAuth(refund.HandleRejectRefund(db))))
 
 	mux.HandleFunc("GET /wlt/settlements/summary", readGate(settlement.HandleGetSettlementSummary(db)))
-	mux.HandleFunc("POST /wlt/settlements", gate(serviceAuth(settlement.HandleCreateSettlement(db))))
+	mux.HandleFunc("POST /wlt/settlements", gate(serviceAuth(settlement.HandleCreateSettlementFromDeliveredOrders(db))))
 	mux.HandleFunc("GET /wlt/settlements/{settlementId}", readGate(settlement.HandleGetSettlement(db)))
 	mux.HandleFunc("GET /wlt/settlements", readGate(settlement.HandleListSettlements(db)))
 	mux.HandleFunc("POST /wlt/settlements/{settlementId}/post", gate(serviceAuth(settlement.HandlePostSettlement(db))))
+	mux.HandleFunc("PUT /wlt/settlement-policies/{partnerId}", gate(serviceAuth(settlement.HandleUpsertSettlementPolicy(db))))
 
 	mux.HandleFunc("POST /wlt/cod-records", gate(serviceAuth(cod.HandleCreateCodRecord(db))))
 	mux.HandleFunc("GET /wlt/cod-records/{codRecordId}", readGate(cod.HandleGetCodRecord(db)))
@@ -124,7 +125,7 @@ func CorsMiddleware(authMode string, next http.Handler) http.Handler {
 		if localCorsOrigin != "" && origin == localCorsOrigin {
 			w.Header().Set("Access-Control-Allow-Origin", localCorsOrigin)
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Correlation-ID, Idempotency-Key, X-Service-Caller")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Correlation-ID, Idempotency-Key, X-Service-Caller, X-Tenant-ID")
 			w.Header().Set("Vary", "Origin")
 		}
 
