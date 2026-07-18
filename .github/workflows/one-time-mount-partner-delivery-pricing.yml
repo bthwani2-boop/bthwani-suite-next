@@ -1,0 +1,72 @@
+name: One-time Mount Partner Delivery Pricing
+
+on:
+  push:
+    branches: [bassam]
+    paths:
+      - '.github/workflows/one-time-mount-partner-delivery-pricing.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: one-time-mount-partner-delivery-pricing
+  cancel-in-progress: false
+
+jobs:
+  mount:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: bassam
+          fetch-depth: 0
+
+      - name: Patch barrel and screen
+        shell: bash
+        run: |
+          set -euo pipefail
+          git pull --rebase origin bassam
+          python3 - <<'PY'
+          from pathlib import Path
+
+          barrel = Path('services/dsh/frontend/shared/partner/index.ts')
+          text = barrel.read_text(encoding='utf-8')
+          export_line = 'export * from "./partner-delivery-pricing.api";\nexport * from "./use-delivery-pricing-controller";\n'
+          if './partner-delivery-pricing.api' not in text:
+              text = text.rstrip() + '\n' + export_line
+          barrel.write_text(text, encoding='utf-8')
+
+          screen = Path('services/dsh/frontend/app-partner/store/DshPartnerStoreCourierScreen.tsx')
+          text = screen.read_text(encoding='utf-8')
+          import_line = 'import { PartnerDeliveryPricingCard } from "./PartnerDeliveryPricingCard";\n'
+          if import_line not in text:
+              lines = text.splitlines(keepends=True)
+              insert_at = 0
+              for i, line in enumerate(lines):
+                  if line.startswith('import '):
+                      insert_at = i + 1
+              lines.insert(insert_at, import_line)
+              text = ''.join(lines)
+          marker = '<PartnerDeliveryPricingCard storeId={storeId} />'
+          if marker not in text:
+              closing = text.rfind('</ScrollView>')
+              if closing < 0:
+                  raise SystemExit('DshPartnerStoreCourierScreen has no ScrollView closing tag')
+              text = text[:closing] + '        ' + marker + '\n      ' + text[closing:]
+          screen.write_text(text, encoding='utf-8')
+          PY
+          git diff --check
+
+      - name: Commit mount
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add services/dsh/frontend/shared/partner/index.ts services/dsh/frontend/app-partner/store/DshPartnerStoreCourierScreen.tsx
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'fix(partner-app): mount governed store delivery pricing'
+          git pull --rebase origin bassam
+          git push origin HEAD:bassam
