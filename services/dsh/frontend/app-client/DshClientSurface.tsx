@@ -62,6 +62,11 @@ export function DshClientSurface() {
 
   const specialRequestController = useSpecialRequestsController();
 
+  const openOrderTracking = useCallback((orderId: string) => {
+    setActiveTab("orders");
+    setActiveOrderId(orderId);
+  }, []);
+
   const goBack = useCallback(() => {
     if (showNotifications) {
       setShowNotifications(false);
@@ -180,7 +185,7 @@ export function DshClientSurface() {
             />
           )
         ) : activeTab === "orders" ? (
-          <OrdersListScreen onOpenOrder={setActiveOrderId} />
+          <OrdersListScreen onOpenOrder={openOrderTracking} />
         ) : activeTab === "cart" ? (
           selectedStoreId === null ? (
             <StateView
@@ -194,7 +199,7 @@ export function DshClientSurface() {
               storeId={selectedStoreId}
               serviceAreaCode="sana"
               onBrowseCatalog={() => setActiveTab("stores")}
-              onSuccess={setActiveOrderId}
+              onSuccess={openOrderTracking}
             />
           )
         ) : profileRoute === "appearance" ? (
@@ -238,7 +243,6 @@ export function DshClientSurface() {
             if (activeTab === "stores") {
               setActiveTab("home");
             } else {
-              setSelectedStoreId(null);
               setActiveTab("stores");
             }
           }}
