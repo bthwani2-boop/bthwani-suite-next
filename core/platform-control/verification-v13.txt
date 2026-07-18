@@ -1,0 +1,1 @@
+Fixed verification and deep diagnostics trigger for platform-control P3 snapshot v13.
