@@ -55,13 +55,13 @@ func (s *protectedStoreServer) handleCreateLoyaltyEarningPolicy(w http.ResponseW
 		return
 	}
 	policy, err := marketing.CreateLoyaltyEarningPolicy(s.db, marketing.CreateLoyaltyEarningPolicyInput{
-		NameAr: body.NameAr,
-		PointsNumerator: body.PointsNumerator,
+		NameAr:                        body.NameAr,
+		PointsNumerator:               body.PointsNumerator,
 		EligibleMinorUnitsDenominator: body.EligibleMinorUnitsDenominator,
-		MinimumPoints: body.MinimumPoints,
-		MaximumPointsPerOrder: body.MaximumPointsPerOrder,
-		ActorID: actor.ID,
-		CorrelationID: marketingCorrelationID(r),
+		MinimumPoints:                 body.MinimumPoints,
+		MaximumPointsPerOrder:         body.MaximumPointsPerOrder,
+		ActorID:                       actor.ID,
+		CorrelationID:                 marketingCorrelationID(r),
 	})
 	if err != nil {
 		writeLoyaltyPolicyError(w, err)
@@ -89,15 +89,15 @@ func (s *protectedStoreServer) handleUpdateLoyaltyEarningPolicy(w http.ResponseW
 		return
 	}
 	policy, err := marketing.UpdateLoyaltyEarningPolicy(s.db, r.PathValue("policyId"), marketing.UpdateLoyaltyEarningPolicyInput{
-		NameAr: body.NameAr,
-		PointsNumerator: body.PointsNumerator,
+		NameAr:                        body.NameAr,
+		PointsNumerator:               body.PointsNumerator,
 		EligibleMinorUnitsDenominator: body.EligibleMinorUnitsDenominator,
-		MinimumPoints: body.MinimumPoints,
-		MaximumPointsPerOrder: body.MaximumPointsPerOrder,
-		Status: body.Status,
-		ExpectedVersion: body.ExpectedVersion,
-		ActorID: actor.ID,
-		CorrelationID: marketingCorrelationID(r),
+		MinimumPoints:                 body.MinimumPoints,
+		MaximumPointsPerOrder:         body.MaximumPointsPerOrder,
+		Status:                        body.Status,
+		ExpectedVersion:               body.ExpectedVersion,
+		ActorID:                       actor.ID,
+		CorrelationID:                 marketingCorrelationID(r),
 	})
 	if err != nil {
 		writeLoyaltyPolicyError(w, err)

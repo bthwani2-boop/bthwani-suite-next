@@ -8,3 +8,5 @@ export * from "./use-commercial-programs-controller";
 export * from "./coupons.types";
 export * from "./use-coupons-controller";
 export * from "./use-governed-partner-offers-controller";
+export * from "./loyalty-policy.api";
+export * from "./use-loyalty-policy-controller";
