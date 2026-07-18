@@ -32,19 +32,18 @@ export function StoreDetailScreen({ storeId, onBack, onGoToCart }: Props) {
   }, [storeCtrl, catalogCtrl, cartCtrl]);
 
   const handleAddToCart = useCallback(
-    (
+    async (
       product: CatalogProduct,
       quantity: number,
       mode: DshFulfillmentDeliveryMode,
-    ) => {
-      void cartCtrl.addItem({
+    ): Promise<boolean> =>
+      cartCtrl.addItem({
         masterProductId: product.id,
         productName: product.name,
         priceReference: product.priceReference,
         quantity,
         fulfillmentMode: mode,
-      });
-    },
+      }),
     [cartCtrl],
   );
 
@@ -151,6 +150,7 @@ export function StoreDetailScreen({ storeId, onBack, onGoToCart }: Props) {
       favoriteIds={storeCtrl.favoriteIds}
       onToggleFavorite={storeCtrl.toggleFavorite}
       onAddToCart={handleAddToCart}
+      cartActionError={cartCtrl.actionError}
       onBack={onBack}
       onGoToCart={onGoToCart}
     />
