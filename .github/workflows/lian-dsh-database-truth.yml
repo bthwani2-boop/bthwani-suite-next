@@ -9,6 +9,8 @@ on:
       - "services/dsh/backend/internal/clientaddress/**"
       - "services/dsh/backend/internal/partner/**"
       - "services/dsh/backend/internal/checkout/**"
+      - "services/dsh/backend/internal/servicearea/**"
+      - "services/dsh/backend/internal/platformpolicies/**"
       - ".github/workflows/lian-dsh-database-truth.yml"
   workflow_dispatch:
 
@@ -64,6 +66,9 @@ jobs:
 
       - name: Verify partner team idempotency invariants
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/dsh/database/tests/dsh-058_partner_team_idempotency.sql
+
+      - name: Verify map and platform policy invariants
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/dsh/database/tests/dsh-076_077_map_policy_invariants.sql
 
       - name: Verify migrations are replay-safe
         shell: bash
