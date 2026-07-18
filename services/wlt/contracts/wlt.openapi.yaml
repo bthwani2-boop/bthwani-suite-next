@@ -332,6 +332,11 @@ paths:
         - name: beneficiaryActorType
           in: query
           schema: { type: string }
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, approved, rejected, provider_pending, processing, provider_result_unknown, completed, failed]
       responses:
         "200":
           description: List of payout requests.
@@ -376,6 +381,12 @@ paths:
           in: path
           required: true
           schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WltPayoutOperatorRequest"
       responses:
         "200":
           description: Approved.
@@ -395,6 +406,12 @@ paths:
           in: path
           required: true
           schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WltPayoutOperatorRequest"
       responses:
         "200":
           description: Rejected.
@@ -414,6 +431,12 @@ paths:
           in: path
           required: true
           schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WltPayoutOperatorRequest"
       responses:
         "200":
           description: Processing.
@@ -433,6 +456,12 @@ paths:
           in: path
           required: true
           schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WltPayoutOperatorRequest"
       responses:
         "200":
           description: Completed.
@@ -452,6 +481,12 @@ paths:
           in: path
           required: true
           schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WltPayoutOperatorRequest"
       responses:
         "200":
           description: Failed.
@@ -2138,6 +2173,16 @@ components:
         currency: { type: string }
         idempotencyKey: { type: string }
 
+    WltPayoutOperatorRequest:
+      type: object
+      required: [operatorId]
+      additionalProperties: false
+      properties:
+        operatorId:
+          type: string
+          minLength: 1
+          description: Authenticated DSH operator identity. Maker/checker separation is enforced by WLT.
+
     WltPayoutRequestResponse:
       type: object
       required: [payoutRequest]
@@ -2171,14 +2216,30 @@ components:
         beneficiaryActorType: { type: string }
         amountMinorUnits: { type: integer, format: int64 }
         currency: { type: string }
-        status: { type: string }
+        status:
+          type: string
+          enum: [pending, approved, rejected, provider_pending, processing, provider_result_unknown, completed, failed]
         requestedAt: { type: string, format: date-time }
-        approvedAt: { type: string, format: date-time }
-        rejectedAt: { type: string, format: date-time }
-        processedAt: { type: string, format: date-time }
-        completedAt: { type: string, format: date-time }
-        failedAt: { type: string, format: date-time }
+        approvedAt: { type: [string, 'null'], format: date-time }
+        rejectedAt: { type: [string, 'null'], format: date-time }
+        processedAt: { type: [string, 'null'], format: date-time }
+        completedAt: { type: [string, 'null'], format: date-time }
+        failedAt: { type: [string, 'null'], format: date-time }
         failureReason: { type: string }
+        operatorId: { type: string }
+        approvedByOperatorId: { type: string }
+        rejectedByOperatorId: { type: string }
+        processedByOperatorId: { type: string }
+        completedByOperatorId: { type: string }
+        failedByOperatorId: { type: string }
+        providerReference:
+          type: string
+          description: Persisted provider or simulator transaction reference required before completion.
+        providerStatus:
+          type: string
+          enum: ['', unknown, declined, processed, succeeded]
+        providerProcessedAt: { type: [string, 'null'], format: date-time }
+        idempotencyKey: { type: string }
 
     WltWalletStatusRefResponse:
       type: object
@@ -2804,6 +2865,7 @@ components:
             - platform_revenue
             - platform_payable
             - provider_clearing
+            - cash_in_transit
             - platform_commission_receivable
         category:
           type: string

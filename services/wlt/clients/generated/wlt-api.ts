@@ -1070,6 +1070,10 @@ export interface components {
             currency: string;
             idempotencyKey: string;
         };
+        WltPayoutOperatorRequest: {
+            /** @description Authenticated DSH operator identity. Maker/checker separation is enforced by WLT. */
+            operatorId: string;
+        };
         WltPayoutRequestResponse: {
             payoutRequest: components["schemas"]["WltPayoutRequest"];
         };
@@ -1084,20 +1088,34 @@ export interface components {
             /** Format: int64 */
             amountMinorUnits: number;
             currency: string;
-            status: string;
+            /** @enum {string} */
+            status: "pending" | "approved" | "rejected" | "provider_pending" | "processing" | "provider_result_unknown" | "completed" | "failed";
             /** Format: date-time */
             requestedAt: string;
             /** Format: date-time */
-            approvedAt?: string;
+            approvedAt?: string | null;
             /** Format: date-time */
-            rejectedAt?: string;
+            rejectedAt?: string | null;
             /** Format: date-time */
-            processedAt?: string;
+            processedAt?: string | null;
             /** Format: date-time */
-            completedAt?: string;
+            completedAt?: string | null;
             /** Format: date-time */
-            failedAt?: string;
+            failedAt?: string | null;
             failureReason?: string;
+            operatorId?: string;
+            approvedByOperatorId?: string;
+            rejectedByOperatorId?: string;
+            processedByOperatorId?: string;
+            completedByOperatorId?: string;
+            failedByOperatorId?: string;
+            /** @description Persisted provider or simulator transaction reference required before completion. */
+            providerReference?: string;
+            /** @enum {string} */
+            providerStatus?: "" | "unknown" | "declined" | "processed" | "succeeded";
+            /** Format: date-time */
+            providerProcessedAt?: string | null;
+            idempotencyKey?: string;
         };
         WltWalletStatusRefResponse: {
             reference: components["schemas"]["WltWalletStatusRef"];
@@ -1341,7 +1359,7 @@ export interface components {
         };
         WltLedgerAccountBalance: {
             /** @enum {string} */
-            accountType: "wallet" | "platform_revenue" | "platform_payable" | "provider_clearing" | "platform_commission_receivable";
+            accountType: "wallet" | "platform_revenue" | "platform_payable" | "provider_clearing" | "cash_in_transit" | "platform_commission_receivable";
             /** @enum {string} */
             category: "asset" | "liability" | "revenue" | "expense";
             /** @enum {string} */
@@ -1769,6 +1787,7 @@ export interface operations {
             query?: {
                 beneficiaryActorId?: string;
                 beneficiaryActorType?: string;
+                status?: "pending" | "approved" | "rejected" | "provider_pending" | "processing" | "provider_result_unknown" | "completed" | "failed";
             };
             header?: never;
             path?: never;
@@ -1848,7 +1867,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WltPayoutOperatorRequest"];
+            };
+        };
         responses: {
             /** @description Approved. */
             200: {
@@ -1870,7 +1893,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WltPayoutOperatorRequest"];
+            };
+        };
         responses: {
             /** @description Rejected. */
             200: {
@@ -1892,7 +1919,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WltPayoutOperatorRequest"];
+            };
+        };
         responses: {
             /** @description Processing. */
             200: {
@@ -1914,7 +1945,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WltPayoutOperatorRequest"];
+            };
+        };
         responses: {
             /** @description Completed. */
             200: {
@@ -1936,7 +1971,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WltPayoutOperatorRequest"];
+            };
+        };
         responses: {
             /** @description Failed. */
             200: {

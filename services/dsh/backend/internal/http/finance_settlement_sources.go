@@ -123,11 +123,11 @@ func (s *protectedStoreServer) handleCreateFinanceSettlementFromDeliveredOrders(
 	}
 
 	payload, err := json.Marshal(map[string]any{
-		"partnerId":   input.PartnerID,
-		"periodStart": input.PeriodStart,
-		"periodEnd":   input.PeriodEnd,
+		"partnerId":    input.PartnerID,
+		"periodStart":  input.PeriodStart,
+		"periodEnd":    input.PeriodEnd,
 		"orderSources": orderSources,
-		"operatorId":  actor.ID,
+		"operatorId":   actor.ID,
 	})
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to encode governed settlement")

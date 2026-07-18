@@ -2762,6 +2762,67 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /dsh/control-panel/finance/payout-requests/{payoutId}/process:
+    post:
+      operationId: processDshControlPanelFinancePayoutRequest
+      summary: Operator sends an approved governed payout request to the configured WLT financial provider.
+      tags: [DshFinanceProxy]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: payoutId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: WLT provider processing result with persisted provider proof (verbatim passthrough).
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/control-panel/finance/payout-requests/{payoutId}/complete:
+    post:
+      operationId: completeDshControlPanelFinancePayoutRequest
+      summary: A checker distinct from approver and processor completes a provider-proven payout and posts its WLT journal.
+      tags: [DshFinanceProxy]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: payoutId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: WLT payout completion and ledger result (verbatim passthrough).
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/control-panel/finance/payout-requests/{payoutId}/fail:
+    post:
+      operationId: failDshControlPanelFinancePayoutRequest
+      summary: Route an unresolved provider payout to WLT reconciliation; it never invents a failed financial outcome.
+      tags: [DshFinanceProxy]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: payoutId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "409": { $ref: "#/components/responses/Conflict" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /dsh/control-panel/finance/reconciliation-cases:
     get:
       operationId: listDshControlPanelFinanceReconciliationCases

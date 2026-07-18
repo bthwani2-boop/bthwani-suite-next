@@ -1794,6 +1794,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dsh/control-panel/finance/payout-requests/{payoutId}/process": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Operator sends an approved governed payout request to the configured WLT financial provider. */
+        post: operations["processDshControlPanelFinancePayoutRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/control-panel/finance/payout-requests/{payoutId}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** A checker distinct from approver and processor completes a provider-proven payout and posts its WLT journal. */
+        post: operations["completeDshControlPanelFinancePayoutRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/control-panel/finance/payout-requests/{payoutId}/fail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Route an unresolved provider payout to WLT reconciliation; it never invents a failed financial outcome. */
+        post: operations["failDshControlPanelFinancePayoutRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/dsh/control-panel/finance/reconciliation-cases": {
         parameters: {
             query?: never;
@@ -8940,6 +8991,79 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    processDshControlPanelFinancePayoutRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payoutId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description WLT provider processing result with persisted provider proof (verbatim passthrough). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    completeDshControlPanelFinancePayoutRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payoutId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description WLT payout completion and ledger result (verbatim passthrough). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    failDshControlPanelFinancePayoutRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payoutId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     listDshControlPanelFinanceReconciliationCases: {

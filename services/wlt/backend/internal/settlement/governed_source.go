@@ -26,11 +26,11 @@ type DeliveredOrderSource struct {
 }
 
 type CreateFromDeliveredOrdersInput struct {
-	PartnerID   string                 `json:"partnerId"`
-	PeriodStart string                 `json:"periodStart"`
-	PeriodEnd   string                 `json:"periodEnd"`
+	PartnerID    string                 `json:"partnerId"`
+	PeriodStart  string                 `json:"periodStart"`
+	PeriodEnd    string                 `json:"periodEnd"`
 	OrderSources []DeliveredOrderSource `json:"orderSources"`
-	OperatorID  string                 `json:"operatorId"`
+	OperatorID   string                 `json:"operatorId"`
 }
 
 type UpsertSettlementPolicyInput struct {
@@ -41,12 +41,12 @@ type UpsertSettlementPolicyInput struct {
 }
 
 type SettlementPolicy struct {
-	PartnerID       string    `json:"partnerId"`
-	FeeBasisPoints  int       `json:"feeBasisPoints"`
-	Currency        string    `json:"currency"`
-	Status          string    `json:"status"`
-	UpdatedBy       string    `json:"updatedByOperatorId"`
-	UpdatedAt       time.Time `json:"updatedAt"`
+	PartnerID      string    `json:"partnerId"`
+	FeeBasisPoints int       `json:"feeBasisPoints"`
+	Currency       string    `json:"currency"`
+	Status         string    `json:"status"`
+	UpdatedBy      string    `json:"updatedByOperatorId"`
+	UpdatedAt      time.Time `json:"updatedAt"`
 }
 
 func UpsertSettlementPolicy(ctx context.Context, db *sql.DB, partnerID string, input UpsertSettlementPolicyInput) (*SettlementPolicy, error) {

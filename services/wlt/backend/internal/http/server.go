@@ -133,19 +133,25 @@ func CorsMiddleware(authMode string, next http.Handler) http.Handler {
 
 func requireInternalFinancialRead(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if !shared.RequireServiceCaller(w, r, "WLT_DSH_SERVICE_TOKEN", "dsh") { return }
+		if !shared.RequireServiceCaller(w, r, "WLT_DSH_SERVICE_TOKEN", "dsh") {
+			return
+		}
 		next(w, r)
 	}
 }
 func requireMutationServiceAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if !shared.RequireServiceCaller(w, r, "WLT_DSH_SERVICE_TOKEN", "dsh") { return }
+		if !shared.RequireServiceCaller(w, r, "WLT_DSH_SERVICE_TOKEN", "dsh") {
+			return
+		}
 		next(w, r)
 	}
 }
 func newMutationGate(mutationsEnabled bool) func(http.HandlerFunc) http.HandlerFunc {
 	return func(next http.HandlerFunc) http.HandlerFunc {
-		if mutationsEnabled { return next }
+		if mutationsEnabled {
+			return next
+		}
 		return func(w http.ResponseWriter, r *http.Request) {
 			shared.SendError(w, http.StatusForbidden, "FEATURE_NOT_ENABLED", "this financial mutation route is not enabled (WLT_MUTATIONS_ENABLED is not true)")
 		}

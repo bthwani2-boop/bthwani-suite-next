@@ -250,11 +250,11 @@ func HandleProcessPayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 		}
 
 		providerResult, providerErr := client.Post(r.Context(), "/financial/payout/process", map[string]any{
-			"payoutRequestId":     req.ID,
-			"beneficiaryActorId":  req.BeneficiaryActorID,
+			"payoutRequestId":      req.ID,
+			"beneficiaryActorId":   req.BeneficiaryActorID,
 			"beneficiaryActorType": req.BeneficiaryActorType,
-			"amountMinorUnits":    req.AmountMinorUnits,
-			"currency":            req.Currency,
+			"amountMinorUnits":     req.AmountMinorUnits,
+			"currency":             req.Currency,
 		}, provider.RequestMetaFromHTTP(r, "wlt-payout"))
 		if providerErr != nil {
 			var cleanDecline provider.Error
