@@ -3,6 +3,7 @@ export const DSH_CONTRACT_CLIENT_STRATEGIES = [
   "SECONDARY_GENERATED_SUBSET",
   "PARENT_GENERATED_SUBSET",
   "MANUAL_TYPED_ADAPTER",
+  "STANDALONE_MANUAL_TYPED_ADAPTER",
 ] as const;
 
 export type DshContractClientStrategy =
@@ -15,7 +16,8 @@ export type DshContractRegistration = {
     | "dsh-marketing-commercial"
     | "dsh-partner-commercial"
     | "dsh-partner-fleet"
-    | "dsh-home-marketing-governance";
+    | "dsh-home-marketing-governance"
+    | "dsh-client-address";
   readonly path: string;
   readonly state: "CONTRACT_ACTIVE";
   readonly runtimeDependency: boolean;
@@ -31,6 +33,9 @@ export type DshContractRegistration = {
  * primary contract. A secondary generated subset may additionally own a
  * specialized generated type surface. Manual adapters are allowed only when
  * the contract declares generation disabled and names the adapter explicitly.
+ * A standalone manual adapter owns operations that are intentionally not part
+ * of the primary generated client; those operations are still included in the
+ * canonical capability-ownership and drift checks.
  */
 export const DSH_CONTRACT_REGISTRY = [
   {
@@ -80,5 +85,13 @@ export const DSH_CONTRACT_REGISTRY = [
     runtimeDependency: true,
     clientStrategy: "PARENT_GENERATED_SUBSET",
     generatedClient: "clients/generated/dsh-api.ts",
+  },
+  {
+    id: "dsh-client-address",
+    path: "contracts/dsh.client-address.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/client-address",
   },
 ] as const satisfies readonly DshContractRegistration[];
