@@ -16,7 +16,7 @@ func (s *protectedStoreServer) handleDecideCatalogProposalExpected(w http.Respon
 	if !ok {
 		return
 	}
-	proposal, err := centralcatalog.DecideProposalExpected(
+	proposal, err := centralcatalog.DecideProposalAtomicExpected(
 		r.Context(), s.db, actor.ID, actor.Role, r.PathValue("proposalId"), input,
 	)
 	if err != nil {
@@ -35,7 +35,7 @@ func (s *protectedStoreServer) handleTransitionCatalogProposalExpected(w http.Re
 	if !ok {
 		return
 	}
-	proposal, err := centralcatalog.TransitionProposalExpected(
+	proposal, err := centralcatalog.TransitionProposalAtomicExpected(
 		r.Context(), s.db, actor.ID, actor.Role, r.PathValue("proposalId"), input,
 	)
 	if err != nil {
