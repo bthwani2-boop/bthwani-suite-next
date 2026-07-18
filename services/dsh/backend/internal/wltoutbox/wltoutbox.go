@@ -1,6 +1,3 @@
-// Package wltoutbox implements durable DSH -> WLT events. Operational and
-// financial facts are committed with their outbox row, then retried until WLT
-// accepts them idempotently.
 package wltoutbox
 
 import (
@@ -12,9 +9,12 @@ import (
 )
 
 const (
-	EventTypeDeliveryCompleted = "delivery_completed"
-	EventTypeLoyaltyEarned     = "loyalty_earned"
-	EventTypeLoyaltyReversed   = "loyalty_reversed"
+	EventTypeDeliveryCompleted       = "delivery_completed"
+	EventTypeLoyaltyEarned           = "loyalty_earned"
+	EventTypeLoyaltyReversed         = "loyalty_reversed"
+	EventTypePromotionFundingCommit  = "promotion_funding_commit"
+	EventTypePromotionFundingRelease = "promotion_funding_release"
+	EventTypePromotionFundingReverse = "promotion_funding_reverse"
 )
 
 type Event struct {
@@ -25,6 +25,7 @@ type Event struct {
 	PartnerID           string
 	CheckoutIntentID    string
 	ClientID            string
+	TenantID            string
 	Points              int64
 	ReversalOfReference string
 	ExternalReference   string
@@ -35,12 +36,10 @@ type Event struct {
 
 func Enqueue(tx *sql.Tx, eventType, orderID, captainID, partnerID, checkoutIntentID string) error {
 	_, err := tx.Exec(`
-		INSERT INTO dsh_wlt_outbox_events
-			(event_type,order_id,captain_id,partner_id,checkout_intent_id)
-		VALUES ($1,$2::uuid,$3,$4,$5::uuid)
-		ON CONFLICT (order_id,event_type) DO NOTHING`,
-		eventType, orderID, captainID, partnerID, checkoutIntentID,
-	)
+    INSERT INTO dsh_wlt_outbox_events
+      (event_type,order_id,captain_id,partner_id,checkout_intent_id)
+    VALUES ($1,NULLIF($2,'')::uuid,$3,$4,NULLIF($5,'')::uuid)
+    ON CONFLICT DO NOTHING`, eventType, orderID, captainID, partnerID, checkoutIntentID)
 	if err != nil {
 		return fmt.Errorf("enqueue wlt outbox event: %w", err)
 	}
@@ -54,27 +53,25 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 	}
 	defer tx.Rollback()
 
-	// If a worker died while an earn was processing and a refund requested its
-	// reversal, WLT was never confirmed. Cancel it rather than earning then
-	// reversing on a later lease.
 	if _, err := tx.Exec(`
-		UPDATE dsh_wlt_outbox_events
-		SET status='cancelled',last_error='cancelled after processing lease expired with refund requested',updated_at=NOW()
-		WHERE status='processing' AND next_retry_at<=NOW()
-		  AND event_type='loyalty_earned' AND reversal_requested=TRUE`); err != nil {
+    UPDATE dsh_wlt_outbox_events
+    SET status='cancelled',last_error='cancelled after loyalty lease expired with refund requested',updated_at=NOW()
+    WHERE status='processing' AND next_retry_at<=NOW()
+      AND event_type='loyalty_earned' AND reversal_requested=TRUE`); err != nil {
 		return nil, fmt.Errorf("cancel refunded expired loyalty leases: %w", err)
 	}
 
 	rows, err := tx.Query(`
-		SELECT id,event_type,order_id::text,COALESCE(captain_id,''),COALESCE(partner_id,''),
-		       checkout_intent_id::text,client_id,points,reversal_of_reference,
-		       external_reference,payload,reversal_requested,attempt_count
-		FROM dsh_wlt_outbox_events
-		WHERE status IN ('pending','processing') AND next_retry_at<=NOW()
-		  AND NOT (event_type='loyalty_earned' AND reversal_requested=TRUE)
-		ORDER BY created_at
-		LIMIT $1
-		FOR UPDATE SKIP LOCKED`, limit)
+    SELECT id,event_type,COALESCE(order_id::text,''),COALESCE(captain_id,''),
+           COALESCE(partner_id,''),COALESCE(checkout_intent_id::text,''),
+           client_id,tenant_id,points,reversal_of_reference,
+           external_reference,payload,reversal_requested,attempt_count
+    FROM dsh_wlt_outbox_events
+    WHERE status IN ('pending','processing') AND next_retry_at<=NOW()
+      AND NOT (event_type='loyalty_earned' AND reversal_requested=TRUE)
+    ORDER BY created_at
+    LIMIT $1
+    FOR UPDATE SKIP LOCKED`, limit)
 	if err != nil {
 		return nil, fmt.Errorf("claim wlt outbox batch: %w", err)
 	}
@@ -83,10 +80,10 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 		var event Event
 		var payload []byte
 		if err := rows.Scan(
-			&event.ID, &event.EventType, &event.OrderID, &event.CaptainID,
-			&event.PartnerID, &event.CheckoutIntentID, &event.ClientID,
-			&event.Points, &event.ReversalOfReference, &event.ExternalReference,
-			&payload, &event.ReversalRequested, &event.AttemptCount,
+			&event.ID, &event.EventType, &event.OrderID, &event.CaptainID, &event.PartnerID,
+			&event.CheckoutIntentID, &event.ClientID, &event.TenantID, &event.Points,
+			&event.ReversalOfReference, &event.ExternalReference, &payload,
+			&event.ReversalRequested, &event.AttemptCount,
 		); err != nil {
 			rows.Close()
 			return nil, fmt.Errorf("scan wlt outbox event: %w", err)
@@ -108,9 +105,9 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 			ids[i] = event.ID
 		}
 		if _, err := tx.Exec(`
-			UPDATE dsh_wlt_outbox_events
-			SET status='processing',next_retry_at=NOW()+$2::interval,updated_at=NOW()
-			WHERE id=ANY($1::uuid[])`, pqStringArray(ids), lease.String()); err != nil {
+      UPDATE dsh_wlt_outbox_events
+      SET status='processing',next_retry_at=NOW()+$2::interval,updated_at=NOW()
+      WHERE id=ANY($1::uuid[])`, pqStringArray(ids), lease.String()); err != nil {
 			return nil, fmt.Errorf("lease wlt outbox batch: %w", err)
 		}
 	}
@@ -120,9 +117,7 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 	return events, nil
 }
 
-func MarkSent(db *sql.DB, id string) error {
-	return MarkSentWithReference(db, id, "")
-}
+func MarkSent(db *sql.DB, id string) error { return MarkSentWithReference(db, id, "") }
 
 func MarkSentWithReference(db *sql.DB, id, externalReference string) error {
 	tx, err := db.Begin()
@@ -136,13 +131,14 @@ func MarkSentWithReference(db *sql.DB, id, externalReference string) error {
 	var reversalRequested bool
 	var payload []byte
 	err = tx.QueryRow(`
-		SELECT event_type,order_id::text,COALESCE(partner_id,''),checkout_intent_id::text,
-		       client_id,points,reversal_requested,payload
-		FROM dsh_wlt_outbox_events
-		WHERE id=$1::uuid AND status='processing'
-		FOR UPDATE`, id).Scan(
-		&eventType, &orderID, &partnerID, &checkoutIntentID,
-		&clientID, &points, &reversalRequested, &payload,
+    SELECT event_type,COALESCE(order_id::text,''),COALESCE(partner_id,''),
+           COALESCE(checkout_intent_id::text,''),client_id,points,
+           reversal_requested,payload
+    FROM dsh_wlt_outbox_events
+    WHERE id=$1::uuid AND status='processing'
+    FOR UPDATE`, id).Scan(
+		&eventType, &orderID, &partnerID, &checkoutIntentID, &clientID,
+		&points, &reversalRequested, &payload,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil
@@ -153,12 +149,11 @@ func MarkSentWithReference(db *sql.DB, id, externalReference string) error {
 	if eventType == EventTypeLoyaltyEarned && externalReference == "" {
 		return fmt.Errorf("loyalty earn event requires WLT entry reference")
 	}
-
 	if _, err := tx.Exec(`
-		UPDATE dsh_wlt_outbox_events
-		SET status='sent',external_reference=CASE WHEN $2='' THEN external_reference ELSE $2 END,
-		    updated_at=NOW()
-		WHERE id=$1::uuid AND status='processing'`, id, externalReference); err != nil {
+    UPDATE dsh_wlt_outbox_events
+    SET status='sent',external_reference=CASE WHEN $2='' THEN external_reference ELSE $2 END,
+        updated_at=NOW()
+    WHERE id=$1::uuid AND status='processing'`, id, externalReference); err != nil {
 		return err
 	}
 
@@ -171,14 +166,26 @@ func MarkSentWithReference(db *sql.DB, id, externalReference string) error {
 			return marshalErr
 		}
 		if _, err := tx.Exec(`
-			INSERT INTO dsh_wlt_outbox_events
-				(event_type,order_id,captain_id,partner_id,checkout_intent_id,
-				 client_id,points,reversal_of_reference,payload)
-			VALUES ('loyalty_reversed',$1::uuid,'',$2,$3::uuid,$4,$5,$6,$7)
-			ON CONFLICT (order_id,event_type) DO NOTHING`,
-			orderID, partnerID, checkoutIntentID, clientID, points,
-			externalReference, reversalPayload,
-		); err != nil {
+      INSERT INTO dsh_wlt_outbox_events
+        (event_type,order_id,captain_id,partner_id,checkout_intent_id,
+         client_id,points,reversal_of_reference,payload)
+      VALUES ('loyalty_reversed',$1::uuid,'',$2,NULLIF($3,'')::uuid,$4,$5,$6,$7)
+      ON CONFLICT DO NOTHING`, orderID, partnerID, checkoutIntentID, clientID, points, externalReference, reversalPayload); err != nil {
+			return err
+		}
+	}
+
+	if eventType == EventTypePromotionFundingCommit || eventType == EventTypePromotionFundingRelease || eventType == EventTypePromotionFundingReverse {
+		redemptionID, _ := payloadString(payload, "couponRedemptionId")
+		target := map[string]string{
+			EventTypePromotionFundingCommit:  "committed",
+			EventTypePromotionFundingRelease: "released",
+			EventTypePromotionFundingReverse: "reversed",
+		}[eventType]
+		if redemptionID == "" {
+			return fmt.Errorf("promotion funding event lacks couponRedemptionId")
+		}
+		if _, err := tx.Exec(`UPDATE dsh_coupon_redemptions SET funding_status=$2,updated_at=NOW() WHERE id=$1::uuid`, redemptionID, target); err != nil {
 			return err
 		}
 	}
@@ -192,14 +199,26 @@ func MarkFailed(db *sql.DB, id string, attemptCount int, cause error) error {
 		backoff = 30 * time.Minute
 	}
 	_, err := db.Exec(`
-		UPDATE dsh_wlt_outbox_events
-		SET status=CASE
-		        WHEN event_type='loyalty_earned' AND reversal_requested=TRUE THEN 'cancelled'
-		        ELSE 'pending'
-		    END,
-		    attempt_count=$2,last_error=$3,next_retry_at=NOW()+$4::interval,updated_at=NOW()
-		WHERE id=$1::uuid AND status='processing'`, id, nextAttempt, cause.Error(), backoff.String())
+    UPDATE dsh_wlt_outbox_events
+    SET status=CASE
+          WHEN event_type='loyalty_earned' AND reversal_requested=TRUE THEN 'cancelled'
+          ELSE 'pending'
+        END,
+        attempt_count=$2,last_error=$3,next_retry_at=NOW()+$4::interval,updated_at=NOW()
+    WHERE id=$1::uuid AND status='processing'`, id, nextAttempt, cause.Error(), backoff.String())
 	return err
+}
+
+func payloadString(payload []byte, key string) (string, error) {
+	values := map[string]any{}
+	if err := json.Unmarshal(payload, &values); err != nil {
+		return "", err
+	}
+	value, ok := values[key].(string)
+	if !ok {
+		return "", nil
+	}
+	return value, nil
 }
 
 func min(a, b int) int {
@@ -208,7 +227,6 @@ func min(a, b int) int {
 	}
 	return b
 }
-
 func pqStringArray(values []string) string {
 	out := "{"
 	for i, value := range values {
