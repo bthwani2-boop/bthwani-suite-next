@@ -83,6 +83,7 @@ jobs:
           cmp "$output/workforce-api.ts" core/workforce/clients/generated/workforce-api.ts
           cmp "$output/platform-control-api.ts" core/platform-control/clients/generated/platform-control-api.ts
           cmp "$output/providers-api.ts" core/providers/clients/generated/providers-api.ts
+          node tools/scripts/generate-dsh-catalog-client.mjs --check
 
       - name: Typecheck
         run: pnpm run typecheck
