@@ -29,6 +29,7 @@ jobs:
           cache-dependency-path: |
             services/dsh/backend/go.sum
             services/wlt/backend/go.sum
+            core/workforce/backend/go.sum
       - name: Apply exact corrections
         shell: bash
         run: |
@@ -74,7 +75,7 @@ jobs:
               raise SystemExit('catalog review signature not found')
           PY
 
-          find services/dsh/backend -name '*.go' -type f -print0 | xargs -0 gofmt -w
+          find services/dsh/backend core/workforce/backend -name '*.go' -type f -print0 | xargs -0 gofmt -w
           pnpm run openapi:generate:wlt
 
       - name: Verify and record
@@ -100,6 +101,10 @@ jobs:
           check 'DSH vet' bash -lc 'cd services/dsh/backend && go vet ./...'
           check 'DSH tests' bash -lc 'cd services/dsh/backend && go test ./...'
           check 'DSH build' bash -lc 'cd services/dsh/backend && go build ./...'
+          check 'Workforce format' bash -lc 'cd core/workforce/backend && test -z "$(gofmt -l .)"'
+          check 'Workforce vet' bash -lc 'cd core/workforce/backend && go vet ./...'
+          check 'Workforce tests' bash -lc 'cd core/workforce/backend && go test ./...'
+          check 'Workforce build' bash -lc 'cd core/workforce/backend && go build ./...'
           check 'WLT client generation' pnpm run openapi:generate:wlt
           check 'Control panel typecheck' pnpm --dir apps/control-panel/runtime typecheck
           check 'Contracts lint' pnpm run contracts:lint
