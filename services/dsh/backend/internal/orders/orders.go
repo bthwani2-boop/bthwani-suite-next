@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -65,7 +66,8 @@ type CreateOrderItemInput struct {
 }
 
 func CreateOrder(db *sql.DB, input CreateOrderInput) (*Order, error) {
-	if input.CheckoutIntentID == "" || input.ClientID == "" {
+	input.TenantID = strings.TrimSpace(input.TenantID)
+	if input.CheckoutIntentID == "" || input.ClientID == "" || input.TenantID == "" {
 		return nil, ErrInvalid
 	}
 
@@ -81,15 +83,17 @@ func CreateOrder(db *sql.DB, input CreateOrderInput) (*Order, error) {
 		FROM dsh_checkout_intents
 		WHERE id = $1::uuid
 		  AND client_id = $2
+		  AND tenant_id = $3
 		  AND wlt_payment_session_id <> ''
 		  AND (
 		        (state = 'payment_pending' AND payment_method = 'cod')
 		        OR state = 'payment_confirmed'
-		      )`,
-		input.CheckoutIntentID, input.ClientID,
+		      )
+		FOR UPDATE`,
+		input.CheckoutIntentID, input.ClientID, input.TenantID,
 	).Scan(&cartID, &storeID, &wltPaymentSessionID)
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, fmt.Errorf("%w: checkout intent is not ready for order creation", ErrConflict)
+		return nil, fmt.Errorf("%w: checkout intent is not ready for order creation in tenant", ErrConflict)
 	}
 	if err != nil {
 		return nil, err
@@ -103,22 +107,25 @@ func CreateOrder(db *sql.DB, input CreateOrderInput) (*Order, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
 	var items []CreateOrderItemInput
 	for rows.Next() {
 		var item CreateOrderItemInput
 		if err := rows.Scan(&item.ProductID, &item.ProductName, &item.UnitPrice, &item.Quantity); err != nil {
+			rows.Close()
 			return nil, err
 		}
-		if item.UnitPrice <= 0 {
+		if item.UnitPrice <= 0 || item.Quantity <= 0 {
+			rows.Close()
 			return nil, fmt.Errorf("%w: cart item is missing a price snapshot", ErrInvalid)
 		}
 		items = append(items, item)
 	}
 	if err := rows.Err(); err != nil {
+		rows.Close()
 		return nil, err
 	}
+	rows.Close()
 	if len(items) == 0 {
 		return nil, fmt.Errorf("%w: checkout cart has no items", ErrInvalid)
 	}
@@ -126,10 +133,10 @@ func CreateOrder(db *sql.DB, input CreateOrderInput) (*Order, error) {
 	var order Order
 	err = tx.QueryRow(`
 		INSERT INTO dsh_orders (checkout_intent_id, store_id, fulfillment_mode, client_id, status, wlt_payment_ref_id)
-		VALUES ($1::uuid, $2, (SELECT fulfillment_mode FROM dsh_checkout_intents WHERE id = $1::uuid), $3, $4, $5)
+		VALUES ($1::uuid, $2, (SELECT fulfillment_mode FROM dsh_checkout_intents WHERE id = $1::uuid AND tenant_id=$3), $4, $5, $6)
 		RETURNING id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status,
 		          COALESCE(rejection_reason, ''), wlt_payment_ref_id, created_at, updated_at`,
-		input.CheckoutIntentID, storeID, input.ClientID, string(StatusPending), wltPaymentSessionID,
+		input.CheckoutIntentID, storeID, input.TenantID, input.ClientID, string(StatusPending), wltPaymentSessionID,
 	).Scan(
 		&order.ID, &order.CheckoutIntentID, &order.StoreID, &order.FulfillmentMode, &order.ClientID,
 		&order.Status, &order.RejectionReason, &order.WltPaymentRefID,
@@ -156,28 +163,32 @@ func CreateOrder(db *sql.DB, input CreateOrderInput) (*Order, error) {
 		order.Items = append(order.Items, orderItem)
 	}
 
-	_, err = tx.Exec(`
+	if _, err = tx.Exec(`
 		INSERT INTO dsh_order_status_events (order_id, actor_role, from_status, to_status, note)
 		VALUES ($1::uuid, $2, $3, $4, $5)`,
 		order.ID, "system", "", string(StatusPending), "order created",
+	); err != nil {
+		return nil, err
+	}
+
+	result, err := tx.Exec(`
+		UPDATE dsh_checkout_intents
+		SET state = 'confirmed', version = version + 1, updated_at = NOW()
+		WHERE id = $1::uuid AND tenant_id=$2 AND client_id = $3
+		  AND state IN ('payment_pending','payment_confirmed')`,
+		input.CheckoutIntentID, input.TenantID, input.ClientID,
 	)
 	if err != nil {
 		return nil, err
 	}
-
-	if _, err = tx.Exec(`
-		UPDATE dsh_checkout_intents
-		SET state = 'confirmed', version = version + 1, updated_at = NOW()
-		WHERE id = $1::uuid AND client_id = $2`,
-		input.CheckoutIntentID, input.ClientID,
-	); err != nil {
-		return nil, err
+	if affected, _ := result.RowsAffected(); affected != 1 {
+		return nil, fmt.Errorf("%w: checkout state changed concurrently", ErrConflict)
 	}
 
 	if _, err = tx.Exec(`
 		UPDATE dsh_carts
 		SET state = 'checked_out', version = version + 1, updated_at = NOW()
-		WHERE id = $1::uuid`, cartID,
+		WHERE id = $1::uuid AND state='active'`, cartID,
 	); err != nil {
 		return nil, err
 	}
@@ -208,12 +219,12 @@ func GetOrder(db *sql.DB, orderID string) (*Order, error) {
 	return order, nil
 }
 
-func GetClientOrder(db *sql.DB, orderID, clientID string) (*Order, error) {
+func GetClientOrder(db *sql.DB, orderID, tenantID, clientID string) (*Order, error) {
 	order, err := scanOrderRow(db.QueryRow(`
 		SELECT id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status,
 		       COALESCE(rejection_reason, ''), wlt_payment_ref_id, created_at, updated_at
 		FROM dsh_orders
-		WHERE id = $1::uuid AND client_id = $2`, orderID, clientID))
+		WHERE id = $1::uuid AND tenant_id=$2 AND client_id = $3`, orderID, tenantID, clientID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -228,7 +239,10 @@ func GetClientOrder(db *sql.DB, orderID, clientID string) (*Order, error) {
 	return order, nil
 }
 
-func ListClientOrders(db *sql.DB, clientID string, limit int) ([]Order, error) {
+func ListClientOrders(db *sql.DB, tenantID, clientID string, limit int) ([]Order, error) {
+	if strings.TrimSpace(tenantID) == "" || clientID == "" {
+		return nil, ErrInvalid
+	}
 	if limit <= 0 || limit > 200 {
 		limit = 50
 	}
@@ -236,9 +250,9 @@ func ListClientOrders(db *sql.DB, clientID string, limit int) ([]Order, error) {
 		SELECT id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status,
 		       COALESCE(rejection_reason, ''), wlt_payment_ref_id, created_at, updated_at
 		FROM dsh_orders
-		WHERE client_id = $1
+		WHERE tenant_id=$1 AND client_id = $2
 		ORDER BY created_at DESC
-		LIMIT $2`, clientID, limit)
+		LIMIT $3`, tenantID, clientID, limit)
 	if err != nil {
 		return nil, err
 	}
