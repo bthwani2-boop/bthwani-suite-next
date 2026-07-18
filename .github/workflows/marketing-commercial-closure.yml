@@ -1,4 +1,5 @@
 name: Marketing Commercial Closure
+run-name: Marketing Commercial Closure @ ${{ github.sha }}
 
 on:
   push:
