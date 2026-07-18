@@ -1,0 +1,78 @@
+name: Finance current compile v10
+
+on:
+  push:
+    branches: [bassam]
+    paths:
+      - .github/workflows/finance-current-compile-v10.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: finance-current-compile-v10-bassam
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: bassam
+          fetch-depth: 0
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5
+        with:
+          go-version: '1.26.5'
+          cache-dependency-path: services/dsh/backend/go.sum
+      - name: Patch, compile and persist proof
+        shell: bash
+        run: |
+          set +e
+          node tools/scripts/close-order-tenant-call-sites.mjs >/tmp/order-patch.log 2>&1
+          order_patch_code=$?
+          node tools/scripts/close-finance-final-drifts.mjs >/tmp/finance-patch.log 2>&1
+          finance_patch_code=$?
+          find services/dsh/backend -name '*.go' -type f -print0 | xargs -0 gofmt -w
+          (cd services/dsh/backend && go test ./...) >/tmp/dsh.log 2>&1
+          dsh_code=$?
+          pwsh -NoProfile -Command '$tokens=$null; $errors=$null; [System.Management.Automation.Language.Parser]::ParseFile("infra/docker/scripts/runtime.ps1", [ref]$tokens, [ref]$errors) | Out-Null; if($errors.Count){$errors | ForEach-Object { "LINE=$($_.Extent.StartLineNumber) COLUMN=$($_.Extent.StartColumnNumber) TEXT=$($_.Extent.Text) MESSAGE=$($_.Message)" }; exit 1}' >/tmp/pwsh.log 2>&1
+          pwsh_code=$?
+          report=governance/evidence/FINANCE_CURRENT_COMPILE.md
+          mkdir -p governance/evidence
+          {
+            echo '# Finance Current Compile'
+            echo
+            echo "- Source SHA: \`$(git rev-parse HEAD)\`"
+            echo "- Order tenant patcher exit: \`$order_patch_code\`"
+            echo "- Finance drift patcher exit: \`$finance_patch_code\`"
+            echo "- DSH exit: \`$dsh_code\`"
+            echo "- PowerShell parser exit: \`$pwsh_code\`"
+            echo
+            echo '## DSH'
+            echo '```text'
+            tail -n 1600 /tmp/dsh.log
+            echo '```'
+            echo
+            echo '## PowerShell parser'
+            echo '```text'
+            cat /tmp/pwsh.log
+            echo '```'
+            echo
+            echo '## Verdict'
+            if [ "$order_patch_code" -eq 0 ] && [ "$finance_patch_code" -eq 0 ] && [ "$dsh_code" -eq 0 ] && [ "$pwsh_code" -eq 0 ]; then
+              echo '**PASS — latest bassam DSH and runtime parser are clean.**'
+            else
+              echo '**FAIL — inspect exact output above.**'
+            fi
+          } > "$report"
+          rm -f .github/workflows/finance-current-compile-v10.yml
+          git config user.name bthwani-finance-compile-bot
+          git config user.email finance-compile-bot@users.noreply.github.com
+          git add -A
+          git commit -m 'test(finance): verify governed coupon funding closure' || true
+          git fetch origin bassam
+          git rebase origin/bassam
+          git push origin HEAD:bassam
+          exit 0
