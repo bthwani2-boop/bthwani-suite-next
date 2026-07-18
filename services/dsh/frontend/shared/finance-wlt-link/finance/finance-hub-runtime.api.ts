@@ -23,6 +23,24 @@ export type FinanceActionResult =
   | { readonly ok: true }
   | { readonly ok: false; readonly code: string; readonly message: string };
 
+export type SettlementPolicyInput = {
+  readonly partnerId: string;
+  readonly feeBasisPoints: number;
+  readonly currency: string;
+  readonly status: "active" | "inactive";
+};
+
+export type GovernedSettlementInput = {
+  readonly partnerId: string;
+  readonly periodStart: string;
+  readonly periodEnd: string;
+  readonly currency: string;
+};
+
+export type SettlementActionResult =
+  | { readonly ok: true; readonly data: unknown }
+  | { readonly ok: false; readonly code: string; readonly message: string };
+
 type ErrorShape = {
   readonly kind?: string;
   readonly status?: number;
@@ -147,6 +165,47 @@ export function completePayoutRequest(payoutId: string): Promise<FinanceActionRe
 
 export function failPayoutRequest(payoutId: string): Promise<FinanceActionResult> {
   return transitionPayoutRequest(payoutId, "fail");
+}
+
+export async function upsertSettlementPolicy(input: SettlementPolicyInput): Promise<SettlementActionResult> {
+  try {
+    const data = await financeRequest<unknown>(
+      `/dsh/control-panel/finance/settlement-policies/${encodeURIComponent(input.partnerId)}`,
+      {
+        method: "PUT",
+        body: {
+          feeBasisPoints: input.feeBasisPoints,
+          currency: input.currency,
+          status: input.status,
+        },
+      },
+    );
+    return { ok: true, data };
+  } catch (error) {
+    const err = error as ErrorShape;
+    return {
+      ok: false,
+      code: classifyFinanceRuntimeError(err),
+      message: err.message ?? "تعذر حفظ سياسة التسوية.",
+    };
+  }
+}
+
+export async function createSettlementFromDeliveredOrders(input: GovernedSettlementInput): Promise<SettlementActionResult> {
+  try {
+    const data = await financeRequest<unknown>("/dsh/control-panel/finance/settlements/from-delivered-orders", {
+      method: "POST",
+      body: input,
+    });
+    return { ok: true, data };
+  } catch (error) {
+    const err = error as ErrorShape;
+    return {
+      ok: false,
+      code: classifyFinanceRuntimeError(err),
+      message: err.message ?? "تعذر إنشاء التسوية من الأوامر المسلمة.",
+    };
+  }
 }
 
 export type ReconciliationCase = {
