@@ -3,6 +3,7 @@ package wlt
 import (
 	"context"
 	"net/http"
+	"strings"
 )
 
 type AppendLoyaltyEntryInput struct {
@@ -35,7 +36,21 @@ func (c *Client) AppendLoyaltyEntry(ctx context.Context, input AppendLoyaltyEntr
 	var envelope struct {
 		Entry LoyaltyEntry `json:"entry"`
 	}
-	if err := c.commercialRequest(ctx, http.MethodPost, "/wlt/commercial/loyalty-entries", input, &envelope); err != nil {
+	if strings.TrimSpace(input.IdempotencyKey) == "" {
+		input.IdempotencyKey = deterministicMutationKey("loyalty-entry", input.ClientID, input.SourceType, input.SourceID, input.Direction)
+	}
+	if strings.TrimSpace(input.CorrelationID) == "" {
+		input.CorrelationID = strings.TrimSpace(input.SourceID)
+	}
+	if err := c.commercialMutationRequest(
+		ctx,
+		http.MethodPost,
+		"/wlt/commercial/loyalty-entries",
+		input,
+		input.IdempotencyKey,
+		input.CorrelationID,
+		&envelope,
+	); err != nil {
 		return nil, err
 	}
 	return &envelope.Entry, nil
