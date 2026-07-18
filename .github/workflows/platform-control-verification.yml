@@ -16,6 +16,7 @@ on:
       - "services/dsh/frontend/shared/session/control-panel-permissions.ts"
       - "services/dsh/frontend/control-panel/platform/**"
       - "apps/control-panel/runtime/src/shell/useDshNavigation.ts"
+      - "governance/product/contracts/platform-executive-read-model.product-truth.json"
       - ".github/workflows/platform-control-verification.yml"
   pull_request:
     branches:
@@ -32,6 +33,7 @@ on:
       - "services/dsh/frontend/shared/session/control-panel-permissions.ts"
       - "services/dsh/frontend/control-panel/platform/**"
       - "apps/control-panel/runtime/src/shell/useDshNavigation.ts"
+      - "governance/product/contracts/platform-executive-read-model.product-truth.json"
       - ".github/workflows/platform-control-verification.yml"
   workflow_dispatch:
 
@@ -46,7 +48,7 @@ jobs:
   backend:
     name: Platform control Go verification
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Checkout repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -57,27 +59,32 @@ jobs:
         with:
           go-version-file: core/platform-control/backend/go.mod
           cache: true
-      - name: Verify format
+      - name: Generate format report
         working-directory: core/platform-control/backend
         shell: bash
+        run: gofmt -l . | tee /tmp/platform-control-gofmt.txt
+      - name: Upload format report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: platform-control-gofmt-report
+          path: /tmp/platform-control-gofmt.txt
+          if-no-files-found: error
+          retention-days: 3
+      - name: Require formatted backend
+        shell: bash
+        run: test ! -s /tmp/platform-control-gofmt.txt
+      - name: Vet build and test backend
+        working-directory: core/platform-control/backend
         run: |
-          set -euo pipefail
-          files="$(gofmt -l .)"
-          test -z "$files" || { printf 'Unformatted platform-control files:\n%s\n' "$files"; exit 1; }
-      - name: Vet backend
-        working-directory: core/platform-control/backend
-        run: go vet ./...
-      - name: Build backend
-        working-directory: core/platform-control/backend
-        run: go build ./...
-      - name: Test backend without database
-        working-directory: core/platform-control/backend
-        run: go test ./... -count=1
+          go vet ./...
+          go build ./...
+          go test ./... -count=1
 
   identity:
     name: Identity platform separation verification
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Checkout repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -89,14 +96,22 @@ jobs:
           go-version-file: core/identity/backend/go.mod
           cache: true
           cache-dependency-path: core/identity/backend/go.sum
-      - name: Verify format
+      - name: Generate format report
         working-directory: core/identity/backend
         shell: bash
-        run: |
-          set -euo pipefail
-          files="$(gofmt -l .)"
-          test -z "$files" || { printf 'Unformatted identity files:\n%s\n' "$files"; exit 1; }
-      - name: Vet, build, and test identity
+        run: gofmt -l . | tee /tmp/identity-gofmt.txt
+      - name: Upload format report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: identity-gofmt-report
+          path: /tmp/identity-gofmt.txt
+          if-no-files-found: error
+          retention-days: 3
+      - name: Require formatted identity
+        shell: bash
+        run: test ! -s /tmp/identity-gofmt.txt
+      - name: Vet build and test identity
         working-directory: core/identity/backend
         run: |
           go vet ./...
@@ -104,9 +119,9 @@ jobs:
           go test ./... -count=1
 
   database:
-    name: Platform control migration and workflow verification
+    name: Platform control PostgreSQL workflows
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     services:
       postgres:
         image: postgres:16-alpine
@@ -135,29 +150,31 @@ jobs:
           cache: true
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
-      - name: Apply every platform-control migration
+      - name: Apply every migration twice
         shell: bash
         run: |
           set -euo pipefail
-          while IFS= read -r migration; do
-            echo "Applying $migration"
-            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
-          done < <(find core/platform-control/database/migrations -maxdepth 1 -type f -name '*.sql' | sort)
+          for pass in 1 2; do
+            while IFS= read -r migration; do
+              echo "pass=$pass migration=$migration"
+              psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
+            done < <(find core/platform-control/database/migrations -maxdepth 1 -type f -name '*.sql' | sort)
+          done
       - name: Verify sovereign tables
         shell: bash
         run: |
           set -euo pipefail
-          for table in platform_variables platform_feature_flags platform_change_sets platform_change_set_items platform_audit_events; do
+          for table in platform_variables platform_feature_flags platform_change_sets platform_change_set_items platform_audit_events platform_rollouts; do
             test "$(psql "$DATABASE_URL" -tAc "SELECT to_regclass('public.$table') IS NOT NULL")" = t
           done
-      - name: Prove maker-checker apply readback and rollback
+      - name: Prove all PostgreSQL workflows
         working-directory: core/platform-control/backend
-        run: go test ./internal/platformcontrol -count=1 -run TestGovernedChangeSetApplyAndRollback -v
+        run: go test ./internal/platformcontrol -count=1 -v
 
   frontend:
-    name: Platform control frontend contracts and types
+    name: Platform control contracts clients and types
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     steps:
       - name: Checkout repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -167,32 +184,112 @@ jobs:
         uses: ./.github/actions/setup-node-workspace
       - name: Contract lint
         run: pnpm run contracts:lint
-      - name: Broken import guard
-        run: pnpm run guard:no-broken-imports
-      - name: UI kit boundary guard
-        run: pnpm run guard:ui-kit-boundary
-      - name: Frontend feature binding guard
-        run: pnpm run guard:frontend-feature-binding
+      - name: Regenerate platform-control client
+        run: pnpm run openapi:generate:platform-control
+      - name: Capture generated client diff
+        if: always()
+        shell: bash
+        run: git diff -- core/platform-control/clients/generated/platform-control-api.ts > /tmp/platform-control-client.diff
+      - name: Upload generated client evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: platform-control-generated-client
+          path: |
+            core/platform-control/clients/generated/platform-control-api.ts
+            /tmp/platform-control-client.diff
+          if-no-files-found: error
+          retention-days: 3
+      - name: Require zero generated-client drift
+        run: git diff --exit-code -- core/platform-control/clients/generated/platform-control-api.ts
+      - name: Platform guards
+        run: |
+          pnpm run guard:no-broken-imports
+          pnpm run guard:ui-kit-boundary
+          pnpm run guard:frontend-feature-binding
+          pnpm run guard:api-binding
+          pnpm run guard:backend-api-binding
+          pnpm run guard:service-manifest-drift
+          pnpm run guard:fullstack-boundary
+          pnpm run guard:runtime-config
       - name: Workspace typecheck
         run: pnpm run typecheck
+      - name: Parse runtime PowerShell
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path "tools/scripts/platform-control-runtime.ps1"),
+            [ref]$tokens,
+            [ref]$errors
+          ) | Out-Null
+          if ($errors.Count -gt 0) {
+            $errors | ForEach-Object { Write-Error $_.Message }
+            exit 1
+          }
+
+  runtime:
+    name: Platform control P3 Docker runtime journey
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+      - name: Run governed multi-service smoke
+        shell: pwsh
+        run: ./tools/scripts/platform-control-runtime.ps1 -Action smoke
+      - name: Capture runtime logs on failure
+        if: failure()
+        shell: pwsh
+        run: ./tools/scripts/platform-control-runtime.ps1 -Action logs
+      - name: Stop runtime
+        if: always()
+        shell: pwsh
+        run: ./tools/scripts/platform-control-runtime.ps1 -Action down
+
+  governance:
+    name: Platform control foundation and journey gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+      - name: Setup workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Validate product truth JSON
+        shell: pwsh
+        run: Get-Content governance/product/contracts/platform-executive-read-model.product-truth.json -Raw | ConvertFrom-Json | Out-Null
+      - name: Foundation gate
+        run: pnpm run foundation:gate
+      - name: Journey gate
+        run: pnpm run journey:gate
 
   result:
     name: Platform control verification result
     if: always()
-    needs: [backend, identity, database, frontend]
+    needs: [backend, identity, database, frontend, runtime, governance]
     runs-on: ubuntu-latest
     steps:
-      - name: Require every platform-control verification job
+      - name: Require every verification job
         env:
           BACKEND: ${{ needs.backend.result }}
           IDENTITY: ${{ needs.identity.result }}
           DATABASE: ${{ needs.database.result }}
           FRONTEND: ${{ needs.frontend.result }}
+          RUNTIME: ${{ needs.runtime.result }}
+          GOVERNANCE: ${{ needs.governance.result }}
         shell: bash
         run: |
           set -euo pipefail
-          printf 'backend=%s\nidentity=%s\ndatabase=%s\nfrontend=%s\n' "$BACKEND" "$IDENTITY" "$DATABASE" "$FRONTEND"
+          printf 'backend=%s\nidentity=%s\ndatabase=%s\nfrontend=%s\nruntime=%s\ngovernance=%s\n' "$BACKEND" "$IDENTITY" "$DATABASE" "$FRONTEND" "$RUNTIME" "$GOVERNANCE"
           test "$BACKEND" = success
           test "$IDENTITY" = success
           test "$DATABASE" = success
           test "$FRONTEND" = success
+          test "$RUNTIME" = success
+          test "$GOVERNANCE" = success
