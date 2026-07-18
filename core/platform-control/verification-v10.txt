@@ -1,0 +1,1 @@
+Fixed materialization and verification trigger for platform-control P3 snapshot v10.
