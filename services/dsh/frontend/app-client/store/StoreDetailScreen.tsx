@@ -1,11 +1,15 @@
-import React, { useCallback } from 'react';
-import { LoadingState, StateView } from '@bthwani/ui-kit';
-import { useStoreDetailController } from '../../shared/store';
-import { usePublishedCatalogController } from '../../shared/catalog';
-import type { CatalogCategory, CatalogProduct } from '../../shared/catalog/client-catalog.types';
-import { StoreDetailShell } from './StoreDetailShell';
-import { useIdentitySession } from '@bthwani/core-identity';
-import { useCartController } from '../../shared/cart';
+import React, { useCallback } from "react";
+import { LoadingState, StateView } from "@bthwani/ui-kit";
+import { useStoreDetailController } from "../../shared/store";
+import { usePublishedCatalogController } from "../../shared/catalog";
+import type {
+  CatalogCategory,
+  CatalogProduct,
+} from "../../shared/catalog/client-catalog.types";
+import type { DshFulfillmentDeliveryMode } from "../../shared/delivery/delivery.contract";
+import { StoreDetailShell } from "./StoreDetailShell";
+import { useIdentitySession } from "@bthwani/core-identity";
+import { useCartController } from "../../shared/cart";
 
 type Props = Readonly<{
   storeId: string;
@@ -15,7 +19,8 @@ type Props = Readonly<{
 
 export function StoreDetailScreen({ storeId, onBack, onGoToCart }: Props) {
   const identity = useIdentitySession();
-  const authKind = identity.state.kind === 'authenticated' ? 'authenticated' : 'unauthenticated';
+  const authKind =
+    identity.state.kind === "authenticated" ? "authenticated" : "unauthenticated";
   const storeCtrl = useStoreDetailController(storeId);
   const catalogCtrl = usePublishedCatalogController(storeId);
   const cartCtrl = useCartController(storeId, authKind);
@@ -26,21 +31,28 @@ export function StoreDetailScreen({ storeId, onBack, onGoToCart }: Props) {
     cartCtrl.retry();
   }, [storeCtrl, catalogCtrl, cartCtrl]);
 
-  const handleAddToCart = useCallback((product: CatalogProduct, quantity: number, mode: string) => {
-    void cartCtrl.addItem({
-      masterProductId: product.id,
-      productName: product.name,
-      priceReference: product.priceReference,
-      quantity,
-      fulfillmentMode: mode as any,
-    });
-  }, [cartCtrl]);
+  const handleAddToCart = useCallback(
+    (
+      product: CatalogProduct,
+      quantity: number,
+      mode: DshFulfillmentDeliveryMode,
+    ) => {
+      void cartCtrl.addItem({
+        masterProductId: product.id,
+        productName: product.name,
+        priceReference: product.priceReference,
+        quantity,
+        fulfillmentMode: mode,
+      });
+    },
+    [cartCtrl],
+  );
 
-  if (storeCtrl.state.kind === 'loading' || catalogCtrl.state.kind === 'loading') {
+  if (storeCtrl.state.kind === "loading" || catalogCtrl.state.kind === "loading") {
     return <LoadingState title="جاري تحميل واجهة المتجر…" />;
   }
 
-  if (storeCtrl.state.kind === 'service_unavailable') {
+  if (storeCtrl.state.kind === "service_unavailable") {
     return (
       <StateView
         title="الخدمة غير متاحة"
@@ -51,7 +63,7 @@ export function StoreDetailScreen({ storeId, onBack, onGoToCart }: Props) {
     );
   }
 
-  if (storeCtrl.state.kind === 'error') {
+  if (storeCtrl.state.kind === "error") {
     return (
       <StateView
         title="تعذر تحميل المتجر"
@@ -62,29 +74,46 @@ export function StoreDetailScreen({ storeId, onBack, onGoToCart }: Props) {
     );
   }
 
-  if (catalogCtrl.state.kind === 'error' || catalogCtrl.state.kind === 'permission_denied') {
-    const msg =
-      catalogCtrl.state.kind === 'error'
+  if (
+    catalogCtrl.state.kind === "error" ||
+    catalogCtrl.state.kind === "permission_denied"
+  ) {
+    const message =
+      catalogCtrl.state.kind === "error"
         ? catalogCtrl.state.message
-        : 'لا توجد صلاحيات لعرض كتالوج هذا المتجر.';
+        : "لا توجد صلاحيات لعرض كتالوج هذا المتجر.";
     return (
       <StateView
         title="تعذر تحميل المنتجات"
-        description={msg}
+        description={message}
         actionLabel="إعادة المحاولة"
         onActionPress={handleRetry}
       />
     );
   }
 
-  if (storeCtrl.state.kind !== 'success' || catalogCtrl.state.kind !== 'success') {
-    return null;
+  if (
+    storeCtrl.state.kind !== "success" ||
+    catalogCtrl.state.kind !== "success"
+  ) {
+    return (
+      <StateView
+        title="تعذر عرض المتجر"
+        description="لم تعد بيانات المتجر أو الكتالوج في حالة قابلة للعرض."
+        actionLabel="إعادة المحاولة"
+        onActionPress={handleRetry}
+      />
+    );
   }
 
   const store = storeCtrl.state.store;
   const catalog = catalogCtrl.state.catalog;
-  const categories = catalog.categories.filter((c: CatalogCategory) => c.isActive);
-  const products = catalog.products.filter((p: CatalogProduct) => p.isActive);
+  const categories = catalog.categories.filter(
+    (category: CatalogCategory) => category.isActive,
+  );
+  const products = catalog.products.filter(
+    (product: CatalogProduct) => product.isActive,
+  );
 
   return (
     <StoreDetailShell
