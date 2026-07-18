@@ -2,13 +2,14 @@ name: Governance As Code Audit
 
 on:
   push:
-    branches: [bassam, master]
+    branches: [lian, bassam, master]
     paths:
       - "AGENTS.md"
       - "GEMINI.md"
       - ".agents/**"
       - "governance/**"
       - "tools/guards/**"
+      - "tools/implementing/**"
       - "tools/scripts/run-*.mjs"
       - "tools/scripts/run-*.ps1"
       - "tools/scripts/install-oss-toolchain-binaries.sh"
@@ -25,6 +26,7 @@ on:
       - ".agents/**"
       - "governance/**"
       - "tools/guards/**"
+      - "tools/implementing/**"
       - "tools/scripts/run-*.mjs"
       - "tools/scripts/run-*.ps1"
       - "tools/scripts/install-oss-toolchain-binaries.sh"
@@ -77,6 +79,7 @@ jobs:
           run_check saas-governance pnpm run guard:saas-governance
           run_check guard-registry pnpm run guard:guard-registry
           run_check sdlc pnpm run guard:sdlc
+          run_check required-command-integrity pnpm run guard:required-command-integrity
           run_check cleanup-policy pnpm run guard:cleanup-policy
           test "$failures" -eq 0
 
