@@ -110,6 +110,13 @@ function parseStoreSettings(raw: unknown): PartnerStoreSettingsPayload {
   };
 }
 
+function hasMode(
+  backendModes: readonly string[],
+  ...acceptedIds: readonly string[]
+): boolean {
+  return acceptedIds.some((id) => backendModes.includes(id));
+}
+
 function mapServiceModes(
   backendModes: readonly string[],
 ): readonly PartnerOperationalMode[] {
@@ -119,28 +126,28 @@ function mapServiceModes(
       title: "استلم بنفسك",
       subtitle: "استلام من الفرع مباشرة.",
       commission: getWltDshPartnerOperationalModeCommission("pickup"),
-      enabled: backendModes.includes("pickup"),
+      enabled: hasMode(backendModes, "pickup"),
     },
     {
       id: "partner_delivery",
       title: "توصيل المتجر",
       subtitle: "توصيل داخلي يديره الشريك.",
       commission: getWltDshPartnerOperationalModeCommission("partner_delivery"),
-      enabled: backendModes.includes("partner_delivery"),
+      enabled: hasMode(backendModes, "partner_delivery", "delivery"),
     },
     {
       id: "bthwani_delivery",
       title: "توصيل بثواني",
       subtitle: "توصيل عبر كابتن بثواني.",
       commission: getWltDshPartnerOperationalModeCommission("bthwani_delivery"),
-      enabled: backendModes.includes("bthwani_delivery"),
+      enabled: hasMode(backendModes, "bthwani_delivery", "express"),
     },
   ];
 }
 
 export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
   const {
-    state = "loading",
+    state,
     section,
     onSectionChange,
     storeName,
@@ -148,8 +155,6 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
     cityLabel,
     managerLabel,
     todayHoursLabel,
-    storeOpen = false,
-    listingEnabled = false,
     activeZoneLabel,
     activeOrdersCount = 0,
     onOpenOrdersBoard,
@@ -196,6 +201,7 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
     kind: "idle",
   });
 
+  const resolvedSurfaceState = state ?? (canonicalStoreId ? "ready" : "error");
   const activeSection = section ?? internalSection;
   const updateSection = onSectionChange ?? setInternalSection;
   const activeHubNavigationItems = React.useMemo(
@@ -280,14 +286,16 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
     else onOpenOrdersBoard?.();
   }, [onOpenOrdersBoard, onOpenOrdersSearch]);
 
-  if (state !== "ready") {
+  if (resolvedSurfaceState !== "ready") {
     return (
       <StateView
-        loading={state === "loading"}
+        loading={resolvedSurfaceState === "loading"}
         tone={
-          state === "offline" || state === "disabled"
+          resolvedSurfaceState === "offline" ||
+          resolvedSurfaceState === "disabled"
             ? "warning"
-            : state === "empty" || state === "loading"
+            : resolvedSurfaceState === "empty" ||
+                resolvedSurfaceState === "loading"
               ? "neutral"
               : "danger"
         }
