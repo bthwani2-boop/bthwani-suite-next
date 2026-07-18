@@ -6,6 +6,7 @@ package wltoutbox
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 )
@@ -28,6 +29,7 @@ type Event struct {
 	ReversalOfReference string
 	ExternalReference   string
 	Payload             map[string]any
+	ReversalRequested   bool
 	AttemptCount        int
 }
 
@@ -52,12 +54,24 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 	}
 	defer tx.Rollback()
 
+	// If a worker died while an earn was processing and a refund requested its
+	// reversal, WLT was never confirmed. Cancel it rather than earning then
+	// reversing on a later lease.
+	if _, err := tx.Exec(`
+		UPDATE dsh_wlt_outbox_events
+		SET status='cancelled',last_error='cancelled after processing lease expired with refund requested',updated_at=NOW()
+		WHERE status='processing' AND next_retry_at<=NOW()
+		  AND event_type='loyalty_earned' AND reversal_requested=TRUE`); err != nil {
+		return nil, fmt.Errorf("cancel refunded expired loyalty leases: %w", err)
+	}
+
 	rows, err := tx.Query(`
 		SELECT id,event_type,order_id::text,COALESCE(captain_id,''),COALESCE(partner_id,''),
 		       checkout_intent_id::text,client_id,points,reversal_of_reference,
-		       external_reference,payload,attempt_count
+		       external_reference,payload,reversal_requested,attempt_count
 		FROM dsh_wlt_outbox_events
-		WHERE status='pending' AND next_retry_at<=NOW()
+		WHERE status IN ('pending','processing') AND next_retry_at<=NOW()
+		  AND NOT (event_type='loyalty_earned' AND reversal_requested=TRUE)
 		ORDER BY created_at
 		LIMIT $1
 		FOR UPDATE SKIP LOCKED`, limit)
@@ -72,7 +86,7 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 			&event.ID, &event.EventType, &event.OrderID, &event.CaptainID,
 			&event.PartnerID, &event.CheckoutIntentID, &event.ClientID,
 			&event.Points, &event.ReversalOfReference, &event.ExternalReference,
-			&payload, &event.AttemptCount,
+			&payload, &event.ReversalRequested, &event.AttemptCount,
 		); err != nil {
 			rows.Close()
 			return nil, fmt.Errorf("scan wlt outbox event: %w", err)
@@ -95,7 +109,7 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 		}
 		if _, err := tx.Exec(`
 			UPDATE dsh_wlt_outbox_events
-			SET next_retry_at=NOW()+$2::interval,updated_at=NOW()
+			SET status='processing',next_retry_at=NOW()+$2::interval,updated_at=NOW()
 			WHERE id=ANY($1::uuid[])`, pqStringArray(ids), lease.String()); err != nil {
 			return nil, fmt.Errorf("lease wlt outbox batch: %w", err)
 		}
@@ -111,12 +125,64 @@ func MarkSent(db *sql.DB, id string) error {
 }
 
 func MarkSentWithReference(db *sql.DB, id, externalReference string) error {
-	_, err := db.Exec(`
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	var eventType, orderID, partnerID, checkoutIntentID, clientID string
+	var points int64
+	var reversalRequested bool
+	var payload []byte
+	err = tx.QueryRow(`
+		SELECT event_type,order_id::text,COALESCE(partner_id,''),checkout_intent_id::text,
+		       client_id,points,reversal_requested,payload
+		FROM dsh_wlt_outbox_events
+		WHERE id=$1::uuid AND status='processing'
+		FOR UPDATE`, id).Scan(
+		&eventType, &orderID, &partnerID, &checkoutIntentID,
+		&clientID, &points, &reversalRequested, &payload,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if eventType == EventTypeLoyaltyEarned && externalReference == "" {
+		return fmt.Errorf("loyalty earn event requires WLT entry reference")
+	}
+
+	if _, err := tx.Exec(`
 		UPDATE dsh_wlt_outbox_events
 		SET status='sent',external_reference=CASE WHEN $2='' THEN external_reference ELSE $2 END,
 		    updated_at=NOW()
-		WHERE id=$1::uuid`, id, externalReference)
-	return err
+		WHERE id=$1::uuid AND status='processing'`, id, externalReference); err != nil {
+		return err
+	}
+
+	if eventType == EventTypeLoyaltyEarned && reversalRequested {
+		metadata := map[string]any{}
+		_ = json.Unmarshal(payload, &metadata)
+		metadata["reason"] = "confirmed refund arrived while loyalty earn was processing"
+		reversalPayload, marshalErr := json.Marshal(metadata)
+		if marshalErr != nil {
+			return marshalErr
+		}
+		if _, err := tx.Exec(`
+			INSERT INTO dsh_wlt_outbox_events
+				(event_type,order_id,captain_id,partner_id,checkout_intent_id,
+				 client_id,points,reversal_of_reference,payload)
+			VALUES ('loyalty_reversed',$1::uuid,'',$2,$3::uuid,$4,$5,$6,$7)
+			ON CONFLICT (order_id,event_type) DO NOTHING`,
+			orderID, partnerID, checkoutIntentID, clientID, points,
+			externalReference, reversalPayload,
+		); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }
 
 func MarkFailed(db *sql.DB, id string, attemptCount int, cause error) error {
@@ -127,8 +193,12 @@ func MarkFailed(db *sql.DB, id string, attemptCount int, cause error) error {
 	}
 	_, err := db.Exec(`
 		UPDATE dsh_wlt_outbox_events
-		SET attempt_count=$2,last_error=$3,next_retry_at=NOW()+$4::interval,updated_at=NOW()
-		WHERE id=$1::uuid`, id, nextAttempt, cause.Error(), backoff.String())
+		SET status=CASE
+		        WHEN event_type='loyalty_earned' AND reversal_requested=TRUE THEN 'cancelled'
+		        ELSE 'pending'
+		    END,
+		    attempt_count=$2,last_error=$3,next_retry_at=NOW()+$4::interval,updated_at=NOW()
+		WHERE id=$1::uuid AND status='processing'`, id, nextAttempt, cause.Error(), backoff.String())
 	return err
 }
 
