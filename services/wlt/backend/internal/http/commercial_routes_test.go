@@ -16,6 +16,7 @@ func TestCommercialBenefitRoutesRegistered(t *testing.T) {
 		{method: "GET", path: "/wlt/commercial/products/sub-basic", pattern: "GET /wlt/commercial/products/{productReference}"},
 		{method: "POST", path: "/wlt/commercial/products", pattern: "POST /wlt/commercial/products"},
 		{method: "PATCH", path: "/wlt/commercial/products/sub-basic", pattern: "PATCH /wlt/commercial/products/{productReference}"},
+		{method: "POST", path: "/wlt/commercial/payment-sessions", pattern: "POST /wlt/commercial/payment-sessions"},
 		{method: "GET", path: "/wlt/commercial/clients/client-1/benefits", pattern: "GET /wlt/commercial/clients/{clientId}/benefits"},
 		{method: "POST", path: "/wlt/commercial/loyalty-entries", pattern: "POST /wlt/commercial/loyalty-entries"},
 		{method: "POST", path: "/wlt/commercial/subscriptions", pattern: "POST /wlt/commercial/subscriptions"},
