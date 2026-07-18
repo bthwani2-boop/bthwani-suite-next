@@ -112,7 +112,7 @@ func (s *protectedStoreServer) handleCaptainConnectPartnerFleet(w http.ResponseW
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	membership, err := partnerfleet.RedeemCode(r.Context(), s.db, body.Code, actor.ID)
+	membership, err := partnerfleet.RedeemCode(r.Context(), s.db, actor.ID, body.Code)
 	if err != nil {
 		writePartnerFleetError(w, err)
 		return
