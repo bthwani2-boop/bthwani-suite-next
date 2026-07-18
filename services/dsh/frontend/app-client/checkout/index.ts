@@ -1,1 +1,1 @@
-export { CheckoutScreen } from "./CheckoutScreen";
+export { GovernedCheckoutScreen as CheckoutScreen } from "./GovernedCheckoutScreen";
