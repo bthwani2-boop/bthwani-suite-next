@@ -25,7 +25,6 @@ import { StoreMeasurementSheet } from "./StoreMeasurementSheet";
 const CARD_HEIGHT = 126;
 const CARD_GAP = 2;
 const SNAP_INTERVAL = CARD_HEIGHT + CARD_GAP;
-
 const FALLBACK_FULFILLMENT_MODE: DshFulfillmentDeliveryMode = "pickup";
 
 type Props = Readonly<{
@@ -38,10 +37,25 @@ type Props = Readonly<{
     product: CatalogProduct,
     quantity: number,
     mode: DshFulfillmentDeliveryMode,
-  ) => void;
+  ) => Promise<boolean>;
+  cartActionError?: string | null;
   onBack?: (() => void) | undefined;
   onGoToCart?: (() => void) | undefined;
 }>;
+
+function canOrderProduct(product: CatalogProduct): boolean {
+  return product.isActive && product.stockStatus !== "out_of_stock";
+}
+
+function toProductCardPrice(priceReference: string) {
+  const numeric = Number(priceReference);
+  if (Number.isFinite(numeric) && numeric >= 0) {
+    return { value: numeric, currency: "د.ي" } as const;
+  }
+  return {
+    label: priceReference.trim() || "يُثبت السعر عند الإضافة",
+  } as const;
+}
 
 export function StoreDetailShell({
   store,
@@ -50,6 +64,7 @@ export function StoreDetailShell({
   favoriteIds,
   onToggleFavorite,
   onAddToCart,
+  cartActionError,
   onBack,
   onGoToCart,
 }: Props) {
@@ -61,6 +76,8 @@ export function StoreDetailShell({
   const [selectedProduct, setSelectedProduct] = useState<CatalogProduct | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [isAddedToCart, setIsAddedToCart] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [mutationError, setMutationError] = useState<string | null>(null);
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const changeCategory = useCallback(
@@ -83,38 +100,71 @@ export function StoreDetailShell({
     return products.filter((product) => product.categoryId === selectedCategoryId);
   }, [products, selectedCategoryId, favoriteIds]);
 
+  const closeProduct = useCallback(() => {
+    if (isSubmitting) return;
+    setSelectedProduct(null);
+    setIsAddedToCart(false);
+    setMutationError(null);
+  }, [isSubmitting]);
+
   const handleOpenProduct = useCallback((product: CatalogProduct) => {
+    if (!canOrderProduct(product)) return;
     setSelectedProduct(product);
     setQuantity(1);
     setIsAddedToCart(false);
+    setMutationError(null);
   }, []);
 
   const bannerItems = useMemo(
     () =>
-      products.slice(0, 12).map((product) => {
-        const media = product.media.find(
-          (item: CatalogMedia) => item.state === "complete" && item.publicUrl != null,
-        );
-        return {
-          id: product.id,
-          title: product.name,
-          subtitle: product.description,
-          badge:
-            categories.find((category) => category.id === product.categoryId)?.name ??
-            "عام",
-          image: media?.publicUrl ? { uri: media.publicUrl } : null,
-          cta: "عرض المنتج",
-          onPress: () => handleOpenProduct(product),
-        };
-      }),
+      products
+        .filter(canOrderProduct)
+        .slice(0, 12)
+        .map((product) => {
+          const media = product.media.find(
+            (item: CatalogMedia) =>
+              item.state === "complete" && item.publicUrl != null,
+          );
+          return {
+            id: product.id,
+            title: product.name,
+            subtitle: product.description,
+            badge:
+              categories.find((category) => category.id === product.categoryId)
+                ?.name ?? "عام",
+            image: media?.publicUrl ? { uri: media.publicUrl } : null,
+            cta: "عرض المنتج",
+            onPress: () => handleOpenProduct(product),
+          };
+        }),
     [products, categories, handleOpenProduct],
   );
 
-  const handleAddToCartConfirm = useCallback(() => {
-    if (!selectedProduct) return;
-    onAddToCart(selectedProduct, quantity, selectedMode);
-    setIsAddedToCart(true);
-  }, [selectedProduct, quantity, selectedMode, onAddToCart]);
+  const handleAddToCartConfirm = useCallback(async () => {
+    if (!selectedProduct || isSubmitting) return;
+    setIsSubmitting(true);
+    setMutationError(null);
+    const accepted = await onAddToCart(
+      selectedProduct,
+      quantity,
+      selectedMode,
+    );
+    setIsSubmitting(false);
+    if (accepted) {
+      setIsAddedToCart(true);
+    } else {
+      setMutationError(
+        cartActionError ?? "لم يقبل DSH إضافة المنتج. أعد المحاولة بعد التحقق من تسجيل الدخول والتوافر.",
+      );
+    }
+  }, [
+    selectedProduct,
+    isSubmitting,
+    onAddToCart,
+    quantity,
+    selectedMode,
+    cartActionError,
+  ]);
 
   const listHeader = useMemo(
     () => (
@@ -176,12 +226,12 @@ export function StoreDetailShell({
         outputRange: [0.9, 1, 0.9],
         extrapolate: "clamp",
       });
-
       const media = item.media.find(
         (entry: CatalogMedia) =>
           entry.state === "complete" && entry.publicUrl != null,
       );
       const imageSource = media?.publicUrl ? { uri: media.publicUrl } : null;
+      const orderable = canOrderProduct(item);
 
       return (
         <Animated.View
@@ -196,20 +246,25 @@ export function StoreDetailShell({
           <ProductCard
             id={item.id}
             title={item.name}
-            subtitle={item.description}
+            subtitle={
+              orderable
+                ? item.description
+                : `${item.description ? `${item.description} · ` : ""}غير متوفر حاليًا`
+            }
             imageSource={imageSource}
             categoryLabel={
               categories.find((category) => category.id === item.categoryId)?.name ??
               "عام"
             }
-            price={{
-              value: Number.parseFloat(item.priceReference || "0"),
-              currency: "د.ي",
-            }}
+            price={toProductCardPrice(item.priceReference)}
             isFavorited={favoriteIds.has(item.id)}
             onFavorite={() => onToggleFavorite(item.id)}
-            onAdd={() => handleOpenProduct(item)}
-            onImagePress={() => handleOpenProduct(item)}
+            {...(orderable
+              ? {
+                  onAdd: () => handleOpenProduct(item),
+                  onImagePress: () => handleOpenProduct(item),
+                }
+              : {})}
           />
         </Animated.View>
       );
@@ -253,12 +308,14 @@ export function StoreDetailShell({
         quantity={quantity}
         setQuantity={setQuantity}
         isAddedToCart={isAddedToCart}
-        onAddToCart={handleAddToCartConfirm}
+        isSubmitting={isSubmitting}
+        errorMessage={mutationError ?? cartActionError}
+        onAddToCart={() => void handleAddToCartConfirm()}
         onGoToCart={() => {
           setSelectedProduct(null);
           onGoToCart?.();
         }}
-        onClose={() => setSelectedProduct(null)}
+        onClose={closeProduct}
       />
     </View>
   );
