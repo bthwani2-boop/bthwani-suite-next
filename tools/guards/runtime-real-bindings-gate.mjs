@@ -5,6 +5,10 @@ import { fail, lineNumber, repoRoot, toPosix } from "./_guard-utils.mjs";
 const guardId = "runtime-real-bindings-gate";
 const violations = [];
 
+function exists(relative) {
+  return fs.existsSync(path.join(repoRoot, relative));
+}
+
 function read(relative) {
   const full = path.join(repoRoot, relative);
   if (!fs.existsSync(full)) {
@@ -12,10 +16,6 @@ function read(relative) {
     return "";
   }
   return fs.readFileSync(full, "utf8");
-}
-
-function exists(relative) {
-  return fs.existsSync(path.join(repoRoot, relative));
 }
 
 function walk(relativeRoot, predicate, files = []) {
@@ -29,6 +29,35 @@ function walk(relativeRoot, predicate, files = []) {
     else if (predicate(relative)) files.push(relative);
   }
   return files;
+}
+
+function requireMarkers(relative, markers) {
+  const content = read(relative);
+  for (const marker of markers) {
+    if (!content.includes(marker)) {
+      violations.push({ file: relative, line: 0, message: `REQUIRED_RUNTIME_BINDING_MARKER_MISSING ${marker}` });
+    }
+  }
+  return content;
+}
+
+function verifyUniqueMigrationNumbers(relativeRoot, prefix) {
+  const files = walk(relativeRoot, (file) => file.endsWith(".sql"));
+  const byNumber = new Map();
+  for (const file of files) {
+    const name = path.basename(file);
+    const match = name.match(new RegExp(`^${prefix}-(\\d{3})_[a-z0-9_]+\\.sql$`));
+    if (!match) {
+      violations.push({ file, line: 0, message: `INVALID_MIGRATION_FILENAME expected=${prefix}-NNN_snake_case.sql` });
+      continue;
+    }
+    const previous = byNumber.get(match[1]);
+    if (previous) {
+      violations.push({ file, line: 0, message: `DUPLICATE_MIGRATION_NUMBER ${match[1]} previous=${previous}` });
+    } else {
+      byNumber.set(match[1], file);
+    }
+  }
 }
 
 const bindingFiles = [
@@ -53,21 +82,16 @@ for (const file of [...new Set(bindingFiles)].sort()) {
   }
 }
 
-const forbiddenRemovedPaths = [
+const retiredFakePaths = [
   "services/dsh/frontend/shared/marketing/use-loyalty-subscriptions-controller.ts",
-  "services/dsh/frontend/shared/marketing/use-commercial-programs-controller.ts",
-  "services/dsh/frontend/shared/marketing/loyalty-subscriptions.types.ts",
-  "services/dsh/frontend/control-panel/marketing/components/LoyaltyCommandDeck.tsx",
-  "services/dsh/frontend/control-panel/marketing/components/SubscriptionsCommandDeck.tsx",
-  "services/dsh/frontend/app-client/account/BenefitsHubScreen.tsx",
   "services/dsh/frontend/shared/marketing/commercial-contract.ts",
-  "services/dsh/frontend/shared/partner/partner-fleet.api.ts",
   ".github/workflows/one-time-partner-detail-closure-bassam.yml",
   ".github/workflows/partner-domain-audit.yml",
   ".github/workflows/one-time-finance-workflow-toolchain-fix.yml",
   ".github/workflows/one-time-finance-accounting-closure.yml",
+  "services/wlt/backend/internal/settlement/sovereign_settlement.go",
 ];
-for (const file of forbiddenRemovedPaths) {
+for (const file of retiredFakePaths) {
   if (exists(file)) violations.push({ file, line: 0, message: "RETIRED_FAKE_OR_DUPLICATE_PATH_REINTRODUCED" });
 }
 
@@ -81,10 +105,12 @@ for (const workflowFile of walk(".github/workflows", (file) => /\.ya?ml$/.test(f
   }
 }
 
+verifyUniqueMigrationNumbers("services/dsh/database/migrations", "dsh");
+verifyUniqueMigrationNumbers("services/wlt/database/migrations", "wlt");
+
 const clientSurfacePath = "services/dsh/frontend/app-client/DshClientSurface.tsx";
 const clientSurface = read(clientSurfacePath);
 for (const [pattern, message] of [
-  [/BenefitsHubScreen|onOpenBenefits|subroute\s*===\s*["']benefits["']/g, "UNBOUND_BENEFITS_ROUTE_REINTRODUCED"],
   [/description=["'][^"']*(?:ستتوفر قريب|قريباً)/g, "COMING_SOON_ROUTE_PRESENTED_AS_NAVIGATION"],
   [/tickerMessage=["']مباشر["']|tickerStatusLabel=["']مباشر["']/g, "HARDCODED_LIVE_TICKER_FORBIDDEN"],
   [/locationLabel=["'][^"']+["']/g, "HARDCODED_CLIENT_LOCATION_FORBIDDEN"],
@@ -94,17 +120,80 @@ for (const [pattern, message] of [
   }
 }
 
-const marketingApiPath = "services/dsh/frontend/shared/marketing/marketing.api.ts";
-const marketingApi = read(marketingApiPath);
-for (const [pattern, message] of [
-  [/\/dsh\/operator\/marketing\/loyalty-tiers/g, "UNREGISTERED_LOYALTY_ROUTE_CLIENT_FORBIDDEN"],
-  [/\/dsh\/operator\/marketing\/subscription-plans/g, "UNREGISTERED_SUBSCRIPTION_ROUTE_CLIENT_FORBIDDEN"],
-  [/\/dsh\/client\/benefits/g, "UNREGISTERED_CLIENT_BENEFITS_ROUTE_FORBIDDEN"],
-]) {
-  for (const match of marketingApi.matchAll(pattern)) {
-    violations.push({ file: marketingApiPath, line: lineNumber(marketingApi, match.index), message });
-  }
-}
+requireMarkers(clientSurfacePath, ["BenefitsHubScreen", "onOpenBenefits", 'profileRoute === "benefits"']);
+requireMarkers("services/dsh/frontend/app-client/account/BenefitsHubScreen.tsx", ["useClientBenefitsController", "controller.reload"]);
+requireMarkers("services/dsh/frontend/shared/marketing/marketing.api.ts", [
+  "/dsh/operator/marketing/loyalty-tiers",
+  "/dsh/operator/marketing/subscription-plans",
+  "/dsh/client/benefits",
+]);
+requireMarkers("services/dsh/frontend/shared/marketing/use-commercial-programs-controller.tsx", [
+  "useLoyaltyTiersController",
+  "useSubscriptionPlansController",
+  "useClientBenefitsController",
+]);
+requireMarkers("services/dsh/frontend/control-panel/marketing/MarketingDashboardScreen.tsx", [
+  "LoyaltyCommandDeck",
+  "SubscriptionsCommandDeck",
+]);
+requireMarkers("services/dsh/contracts/dsh.marketing-commercial.openapi.yaml", [
+  "/dsh/operator/marketing/loyalty-tiers:",
+  "/dsh/operator/marketing/subscription-plans:",
+  "/dsh/client/benefits:",
+]);
+requireMarkers("services/dsh/backend/internal/http/server.go", [
+  '"GET /dsh/operator/marketing/loyalty-tiers"',
+  '"POST /dsh/operator/marketing/subscription-plans"',
+  '"GET /dsh/client/benefits"',
+]);
+requireMarkers("services/dsh/database/migrations/dsh-058_marketing_commercial_programs.sql", [
+  "dsh_loyalty_tiers",
+  "dsh_subscription_plans",
+]);
+requireMarkers("services/dsh/database/migrations/dsh-061_marketing_commercial_program_guards.sql", [
+  "dsh_guard_loyalty_tier_governance",
+  "dsh_guard_subscription_plan_governance",
+]);
+
+requireMarkers("services/wlt/contracts/wlt.commercial.openapi.yaml", [
+  "/wlt/commercial/products:",
+  "/wlt/commercial/loyalty-entries:",
+  "/wlt/commercial/subscriptions:",
+]);
+requireMarkers("services/wlt/backend/internal/http/server.go", [
+  '"POST /wlt/commercial/products"',
+  '"POST /wlt/commercial/loyalty-entries"',
+  '"POST /wlt/commercial/subscriptions"',
+]);
+requireMarkers("services/wlt/database/migrations/wlt-028_commercial_benefits.sql", [
+  "wlt_commercial_products",
+  "wlt_loyalty_entries",
+  "wlt_client_subscriptions",
+]);
+
+requireMarkers("services/dsh/frontend/shared/partner/partner-fleet.api.ts", [
+  "/dsh/partner/stores/${storeId}/couriers/${memberId}/connection-code",
+  "/dsh/captain/partner-fleet/connect",
+  "/dsh/captain/partner-fleet/memberships",
+]);
+requireMarkers("services/dsh/frontend/app-captain/account/PartnerFleetConnectionCard.tsx", [
+  "listCaptainPartnerFleetMemberships",
+  "connectCaptainToPartnerFleet",
+  "onMembershipStateChange",
+]);
+requireMarkers("services/dsh/contracts/dsh.partner-fleet.openapi.yaml", [
+  "/dsh/partner/stores/{storeId}/couriers/{memberId}/connection-code:",
+  "/dsh/captain/partner-fleet/connect:",
+  "/dsh/captain/partner-fleet/memberships:",
+]);
+requireMarkers("services/dsh/backend/internal/http/server.go", [
+  '"POST /dsh/partner/stores/{storeId}/couriers/{memberId}/connection-code"',
+  '"POST /dsh/captain/partner-fleet/connect"',
+  '"GET /dsh/captain/partner-fleet/memberships"',
+]);
+requireMarkers("services/dsh/database/migrations/dsh-059_partner_fleet_connections.sql", [
+  "dsh_partner_courier_connections",
+]);
 
 const marketingRegistryPath = "services/dsh/frontend/shared/marketing/marketing-registry.ts";
 const marketingRegistry = read(marketingRegistryPath);
@@ -112,8 +201,6 @@ for (const [pattern, message] of [
   [/PARTNER_GATE_CARDS/g, "STATIC_PARTNER_GATE_FIXTURE_FORBIDDEN"],
   [/PRODUCT_GATE_CARDS/g, "STATIC_PRODUCT_GATE_FIXTURE_FORBIDDEN"],
   [/MARKETING_SECTION_TABS/g, "DEAD_MARKETING_SUBTAB_REGISTRY_FORBIDDEN"],
-  [/["']loyalty["']/g, "UNBOUND_LOYALTY_TAB_FORBIDDEN"],
-  [/["']subscriptions["']/g, "UNBOUND_SUBSCRIPTION_TAB_FORBIDDEN"],
 ]) {
   for (const match of marketingRegistry.matchAll(pattern)) {
     violations.push({ file: marketingRegistryPath, line: lineNumber(marketingRegistry, match.index), message });
@@ -134,8 +221,8 @@ for (const [pattern, message] of [
 const captainSettingsPath = "services/dsh/frontend/app-captain/account/DshCaptainAccountSettingsContent.tsx";
 const captainSettings = read(captainSettingsPath);
 for (const [pattern, message] of [
-  [/connectCaptainToPartnerFleet|listCaptainPartnerFleetMemberships/g, "UNREGISTERED_CAPTAIN_FLEET_CLIENT_FORBIDDEN"],
   [/eval\(["']require["']\)|RNSwitch/g, "DYNAMIC_REACT_NATIVE_SWITCH_LOADING_FORBIDDEN"],
+  [/onMembershipStateChange=\{onToggleStoreCourierMode\}/g, "CAPTAIN_FLEET_MODE_NOT_DERIVED_FROM_MEMBERSHIP"],
 ]) {
   for (const match of captainSettings.matchAll(pattern)) {
     violations.push({ file: captainSettingsPath, line: lineNumber(captainSettings, match.index), message });
