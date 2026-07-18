@@ -1,20 +1,12 @@
 /**
  * Field Offline Queue
  *
- * A durable client-side queue for field agent operations that must survive
- * network interruptions. Operations are persisted in AsyncStorage and retried
- * with exponential backoff whenever connectivity is restored.
- *
- * Design constraints:
- * - Each operation carries a stable idempotencyKey so re-sending is safe
- * - A correlationId links client logs to backend traces
- * - Retry count is bounded to prevent infinite loops on unrecoverable errors
- * - Queue state is reactive — UI can display pending/failed items
+ * Durable queue for authenticated field operations during network loss.
+ * The caller supplies the business idempotency key; queue identity and
+ * correlation are derived from it so retries remain stable across restarts.
  */
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
 
 export type FieldOfflineOperationType =
   | "complete_visit"
@@ -35,27 +27,61 @@ export type FieldOfflineOperation<P = unknown> = {
   readonly payload: P;
   readonly idempotencyKey: string;
   readonly correlationId: string;
-  readonly createdAt: string; // ISO 8601
+  readonly createdAt: string;
   readonly attemptCount: number;
-  readonly nextRetryAt: string; // ISO 8601
+  readonly nextRetryAt: string;
   readonly status: FieldOfflineOperationStatus;
   readonly lastError?: string;
 };
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
 const STORAGE_KEY = "@bthwani/field-offline-queue:v1";
+const CORRUPT_STORAGE_KEY = "@bthwani/field-offline-queue:corrupt:v1";
 const MAX_ATTEMPTS = 10;
 
-// ─── Persistence ─────────────────────────────────────────────────────────────
+function stableHash(value: string): string {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(36);
+}
+
+function requireIdempotencyKey(value: string): string {
+  const normalized = value.trim();
+  if (!normalized) throw new Error("field offline operation idempotency key is required");
+  return normalized;
+}
+
+function isOperation(value: unknown): value is FieldOfflineOperation {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<FieldOfflineOperation>;
+  return (
+    typeof candidate.operationId === "string" &&
+    typeof candidate.operationType === "string" &&
+    typeof candidate.idempotencyKey === "string" &&
+    typeof candidate.correlationId === "string" &&
+    typeof candidate.createdAt === "string" &&
+    typeof candidate.attemptCount === "number" &&
+    typeof candidate.nextRetryAt === "string" &&
+    typeof candidate.status === "string"
+  );
+}
 
 async function readQueue(): Promise<FieldOfflineOperation[]> {
+  const raw = await AsyncStorage.getItem(STORAGE_KEY);
+  if (!raw) return [];
   try {
-    const raw = await AsyncStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    return JSON.parse(raw) as FieldOfflineOperation[];
-  } catch {
-    return [];
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed) || !parsed.every(isOperation)) {
+      throw new Error("stored queue does not match the field offline operation schema");
+    }
+    return parsed;
+  } catch (error) {
+    await AsyncStorage.setItem(CORRUPT_STORAGE_KEY, raw);
+    throw new Error(
+      `field offline queue is corrupt and was preserved for recovery: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
 }
 
@@ -63,99 +89,82 @@ async function writeQueue(queue: FieldOfflineOperation[]): Promise<void> {
   await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(queue));
 }
 
-// ─── Enqueue ─────────────────────────────────────────────────────────────────
-
 export async function enqueueFieldOperation<P>(
   operationType: FieldOfflineOperationType,
   payload: P,
   idempotencyKey: string,
 ): Promise<FieldOfflineOperation<P>> {
+  const normalizedKey = requireIdempotencyKey(idempotencyKey);
   const queue = await readQueue();
-
-  // Deduplicate by idempotency key — re-enqueue is a no-op.
-  const existing = queue.find((op) => op.idempotencyKey === idempotencyKey);
+  const existing = queue.find((op) => op.idempotencyKey === normalizedKey);
   if (existing) return existing as FieldOfflineOperation<P>;
 
-  const op: FieldOfflineOperation<P> = {
-    operationId: `${operationType}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+  const fingerprint = stableHash(`${operationType}|${normalizedKey}`);
+  const now = new Date().toISOString();
+  const operation: FieldOfflineOperation<P> = {
+    operationId: `field-op:${operationType}:${fingerprint}`,
     operationType,
     payload,
-    idempotencyKey,
-    correlationId: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}`,
-    createdAt: new Date().toISOString(),
+    idempotencyKey: normalizedKey,
+    correlationId: `field-correlation:${operationType}:${fingerprint}`,
+    createdAt: now,
     attemptCount: 0,
-    nextRetryAt: new Date().toISOString(),
+    nextRetryAt: now,
     status: "pending",
   };
 
-  await writeQueue([...queue, op]);
-  return op;
+  await writeQueue([...queue, operation]);
+  return operation;
 }
-
-// ─── Mark synced ─────────────────────────────────────────────────────────────
 
 export async function markOperationSynced(operationId: string): Promise<void> {
   const queue = await readQueue();
-  const updated = queue.map((op) =>
-    op.operationId === operationId ? { ...op, status: "synced" as const } : op,
+  await writeQueue(
+    queue.map((operation) =>
+      operation.operationId === operationId ? { ...operation, status: "synced" as const } : operation,
+    ),
   );
-  await writeQueue(updated);
 }
 
-// ─── Mark failed (with backoff) ───────────────────────────────────────────────
-
-export async function markOperationFailed(
-  operationId: string,
-  error: string,
-): Promise<void> {
+export async function markOperationFailed(operationId: string, error: string): Promise<void> {
   const queue = await readQueue();
-  const updated = queue.map((op) => {
-    if (op.operationId !== operationId) return op;
-    const nextCount = op.attemptCount + 1;
-    const isPermanent = nextCount >= MAX_ATTEMPTS;
-    // Exponential backoff capped at 30 minutes.
-    const backoffMs = Math.min(Math.pow(2, nextCount) * 1000, 30 * 60 * 1000);
-    const nextRetry = new Date(Date.now() + backoffMs).toISOString();
+  const updated = queue.map((operation) => {
+    if (operation.operationId !== operationId) return operation;
+    const nextCount = operation.attemptCount + 1;
+    const permanent = nextCount >= MAX_ATTEMPTS;
+    const backoffMs = Math.min(2 ** nextCount * 1000, 30 * 60 * 1000);
     return {
-      ...op,
+      ...operation,
       attemptCount: nextCount,
       lastError: error,
-      nextRetryAt: nextRetry,
-      status: isPermanent ? ("failed_permanent" as const) : ("retrying" as const),
+      nextRetryAt: new Date(Date.now() + backoffMs).toISOString(),
+      status: permanent ? ("failed_permanent" as const) : ("retrying" as const),
     };
   });
   await writeQueue(updated);
 }
 
-// ─── Get due operations ───────────────────────────────────────────────────────
-
 export async function getDueOperations(): Promise<FieldOfflineOperation[]> {
   const queue = await readQueue();
   const now = new Date().toISOString();
   return queue.filter(
-    (op) =>
-      (op.status === "pending" || op.status === "retrying") &&
-      op.nextRetryAt <= now,
+    (operation) =>
+      (operation.status === "pending" || operation.status === "retrying") &&
+      operation.nextRetryAt <= now,
   );
 }
-
-// ─── Get pending count (for UI badge) ────────────────────────────────────────
 
 export async function getPendingCount(): Promise<number> {
   const queue = await readQueue();
   return queue.filter(
-    (op) => op.status === "pending" || op.status === "retrying",
+    (operation) => operation.status === "pending" || operation.status === "retrying",
   ).length;
 }
 
-// ─── Purge synced entries ─────────────────────────────────────────────────────
-
 export async function purgeSyncedOperations(): Promise<void> {
   const queue = await readQueue();
-  await writeQueue(queue.filter((op) => op.status !== "synced"));
+  await writeQueue(queue.filter((operation) => operation.status !== "synced"));
 }
-
-// ─── Full queue snapshot (for UI) ────────────────────────────────────────────
 
 export async function getAllOperations(): Promise<FieldOfflineOperation[]> {
   return readQueue();
