@@ -1,0 +1,265 @@
+openapi: 3.1.0
+info:
+  title: BThwani DSH Governed Client Map and Service Area API
+  version: 0.1.0
+  description: Map-provider results normalized through Providers and verified only against DSH-owned service-area geofences.
+x-bthwani-owner: services/dsh
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-client-generation: DISABLED
+x-bthwani-client-binding: MANUAL_TYPED_ADAPTER
+x-bthwani-runtime-dependency: true
+
+paths:
+  /dsh/client/maps/search:
+    post:
+      operationId: searchDshClientMapLocations
+      tags: [DshClientMap]
+      summary: Search external places and verify every result against DSH service-area geofences.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshMapSearchInput" }
+      responses:
+        "200":
+          description: Normalized and DSH-verified search results.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [locations]
+                properties:
+                  locations:
+                    type: array
+                    items: { $ref: "#/components/schemas/DshVerifiedMapLocation" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "502": { $ref: "#/components/responses/MapUnavailable" }
+        "503": { $ref: "#/components/responses/MapNotConfigured" }
+
+  /dsh/client/maps/reverse:
+    post:
+      operationId: reverseDshClientMapLocation
+      tags: [DshClientMap]
+      summary: Reverse-geocode coordinates and verify them against DSH service-area geofences.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshMapReverseInput" }
+      responses:
+        "200":
+          description: Normalized and DSH-verified location.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [location]
+                properties:
+                  location: { $ref: "#/components/schemas/DshVerifiedMapLocation" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "502": { $ref: "#/components/responses/MapUnavailable" }
+        "503": { $ref: "#/components/responses/MapNotConfigured" }
+
+  /dsh/operator/platform/service-areas:
+    get:
+      operationId: listDshOperatorServiceAreas
+      tags: [DshServiceAreaGovernance]
+      summary: List governed DSH service-area geofences.
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Service areas returned.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [serviceAreas]
+                properties:
+                  serviceAreas:
+                    type: array
+                    items: { $ref: "#/components/schemas/DshServiceArea" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /dsh/operator/platform/service-areas/{serviceAreaCode}:
+    put:
+      operationId: upsertDshOperatorServiceArea
+      tags: [DshServiceAreaGovernance]
+      summary: Create or version-update a governed DSH service-area geofence.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: serviceAreaCode
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^[a-z0-9][a-z0-9_-]{1,79}$"
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, minLength: 8, maxLength: 200 }
+        - name: X-Correlation-ID
+          in: header
+          required: false
+          schema: { type: string, maxLength: 200 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshServiceAreaUpsertInput" }
+      responses:
+        "200":
+          description: Service area created, updated, or replayed idempotently.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [serviceArea]
+                properties:
+                  serviceArea: { $ref: "#/components/schemas/DshServiceArea" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    DshMapSearchInput:
+      type: object
+      additionalProperties: false
+      required: [query]
+      properties:
+        query: { type: string, minLength: 2, maxLength: 240 }
+        limit: { type: integer, minimum: 1, maximum: 10, default: 6 }
+        language: { type: string, maxLength: 32 }
+        countryCodes:
+          type: array
+          maxItems: 8
+          items: { type: string, minLength: 2, maxLength: 2 }
+
+    DshMapReverseInput:
+      type: object
+      additionalProperties: false
+      required: [latitude, longitude]
+      properties:
+        latitude: { type: number, format: double, minimum: -90, maximum: 90 }
+        longitude: { type: number, format: double, minimum: -180, maximum: 180 }
+        language: { type: string, maxLength: 32 }
+
+    DshVerifiedMapLocation:
+      type: object
+      required:
+        - providerCode
+        - providerPlaceId
+        - displayName
+        - latitude
+        - longitude
+        - serviceAreaVerified
+      properties:
+        providerCode: { type: string }
+        providerPlaceId: { type: string }
+        displayName: { type: string }
+        latitude: { type: number, format: double }
+        longitude: { type: number, format: double }
+        countryCode: { type: string }
+        administrativeArea: { type: string }
+        locality: { type: string }
+        postalCode: { type: string }
+        confidence: { type: number, format: double }
+        serviceAreaCode: { type: string }
+        serviceAreaName: { type: string }
+        serviceAreaVersion: { type: integer, minimum: 1 }
+        serviceAreaVerified: { type: boolean }
+
+    DshPolygonPoint:
+      type: array
+      minItems: 2
+      maxItems: 2
+      prefixItems:
+        - { type: number, format: double, minimum: -180, maximum: 180 }
+        - { type: number, format: double, minimum: -90, maximum: 90 }
+
+    DshServiceArea:
+      type: object
+      required: [serviceAreaCode, displayName, polygon, active, priority, version, createdAt, updatedAt]
+      properties:
+        serviceAreaCode: { type: string }
+        displayName: { type: string }
+        polygon:
+          type: array
+          minItems: 3
+          maxItems: 10000
+          items: { $ref: "#/components/schemas/DshPolygonPoint" }
+        active: { type: boolean }
+        priority: { type: integer, minimum: 0, maximum: 100000 }
+        version: { type: integer, minimum: 1 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    DshServiceAreaUpsertInput:
+      type: object
+      additionalProperties: false
+      required: [displayName, polygon, active, priority, expectedVersion, reason]
+      properties:
+        displayName: { type: string, minLength: 2, maxLength: 160 }
+        polygon:
+          type: array
+          minItems: 3
+          maxItems: 10000
+          items: { $ref: "#/components/schemas/DshPolygonPoint" }
+        active: { type: boolean }
+        priority: { type: integer, minimum: 0, maximum: 100000 }
+        expectedVersion:
+          type: integer
+          minimum: 0
+          description: Use zero only when creating a code that does not exist.
+        reason: { type: string, minLength: 3, maxLength: 500 }
+
+    DshError:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+
+  responses:
+    InvalidRequest:
+      description: Request validation failed.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/DshError" }
+    Unauthenticated:
+      description: Authentication is required.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/DshError" }
+    Forbidden:
+      description: Permission is required.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/DshError" }
+    Conflict:
+      description: Version or idempotency conflict.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/DshError" }
+    MapUnavailable:
+      description: All configured governed map providers failed.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/DshError" }
+    MapNotConfigured:
+      description: No governed map provider is configured.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/DshError" }
