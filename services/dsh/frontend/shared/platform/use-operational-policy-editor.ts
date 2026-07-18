@@ -58,7 +58,16 @@ export function useOperationalPolicyEditor(onCommitted: () => Promise<void>) {
       },
     ) => {
       if (!zone) {
-        return run(() => createZone(input));
+        const createInput: DshCreateZoneInput = {
+          ...(input.id ? { id: input.id } : {}),
+          name: input.name,
+          cityCode: input.cityCode,
+          ...(input.description !== undefined
+            ? { description: input.description }
+            : {}),
+          reason: input.reason,
+        };
+        return run(() => createZone(createInput));
       }
       const update: DshUpdateZoneInput = {
         name: input.name,
