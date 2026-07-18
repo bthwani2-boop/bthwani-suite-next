@@ -46,6 +46,7 @@ jobs:
           pnpm run guard:runtime-real-bindings
           pnpm run guard:live-cross-journey-integrity
           pnpm run guard:no-broken-imports
+          node tools/guards/client-commerce/client-commerce-truth-gate.mjs
 
       - name: Verify UI contracts
         shell: bash
