@@ -6,6 +6,7 @@ import (
 
 	"dsh-api/internal/cart"
 	"dsh-api/internal/checkout"
+	"dsh-api/internal/coupons"
 	"dsh-api/internal/store"
 	"dsh-api/internal/wlt"
 )
@@ -23,6 +24,7 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 		PaymentMethod   string `json:"paymentMethod"`
 		DeliveryAddress string `json:"deliveryAddress"`
 		Note            string `json:"note"`
+		CouponCode      string `json:"couponCode"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
@@ -32,9 +34,30 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 		return
 	}
 
-	snapshot, err := cart.ComputeCheckoutSnapshot(r.Context(), s.db, body.CartID)
+	intentID, err := checkout.NewIntentID(s.db)
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to allocate checkout intent")
+		return
+	}
+	fulfillmentMode := body.FulfillmentMode
+	if fulfillmentMode == "" {
+		fulfillmentMode = string(checkout.ModeBthwaniDelivery)
+	}
+
+	tx, err := s.db.BeginTx(r.Context(), nil)
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to begin checkout")
+		return
+	}
+	defer tx.Rollback()
+
+	snapshot, err := cart.ComputeCheckoutSnapshotForClientTx(r.Context(), tx, body.CartID, actor.ID, body.StoreID)
 	if errors.Is(err, cart.ErrCartItemMissingPrice) {
 		store.SendError(w, http.StatusConflict, "CART_ITEM_MISSING_PRICE", "one or more cart items are missing a price snapshot")
+		return
+	}
+	if errors.Is(err, cart.ErrNotFound) {
+		store.SendError(w, http.StatusNotFound, "CART_NOT_FOUND", "active cart does not belong to the authenticated client and store")
 		return
 	}
 	if errors.Is(err, cart.ErrInvalid) {
@@ -46,27 +69,73 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 		return
 	}
 
-	intentID, err := checkout.NewIntentID(s.db)
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to allocate checkout intent")
+	reservation, err := coupons.ReserveTx(r.Context(), tx, coupons.ReserveInput{
+		Code:               body.CouponCode,
+		ClientActorID:      actor.ID,
+		CartID:             body.CartID,
+		CheckoutIntentID:   intentID,
+		StoreID:            body.StoreID,
+		FulfillmentMode:    fulfillmentMode,
+		SubtotalMinorUnits: snapshot.AmountMinorUnits,
+		Currency:           snapshot.Currency,
+	})
+	if errors.Is(err, coupons.ErrUsageLimit) {
+		store.SendError(w, http.StatusConflict, "COUPON_USAGE_LIMIT", "coupon usage limit has been reached")
 		return
 	}
-	intent, err := checkout.CreateIntent(s.db, checkout.CreateIntentInput{
+	if errors.Is(err, coupons.ErrNotFound) || errors.Is(err, coupons.ErrInactive) || errors.Is(err, coupons.ErrNotEligible) {
+		store.SendError(w, http.StatusUnprocessableEntity, "COUPON_INVALID_OR_INELIGIBLE", "coupon is invalid or not eligible for this checkout")
+		return
+	}
+	if errors.Is(err, coupons.ErrInvalid) {
+		store.SendError(w, http.StatusBadRequest, "INVALID_COUPON", "coupon code format is invalid")
+		return
+	}
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to reserve coupon")
+		return
+	}
+
+	pricing := checkout.PricingSnapshot{
+		SubtotalMinorUnits: snapshot.AmountMinorUnits,
+		TotalMinorUnits:    snapshot.AmountMinorUnits,
+		Currency:           snapshot.Currency,
+	}
+	if reservation != nil {
+		pricing.DiscountMinorUnits = reservation.DiscountMinorUnits
+		pricing.TotalMinorUnits = reservation.TotalMinorUnits
+		pricing.CouponID = reservation.CouponID
+		pricing.CouponRedemptionID = reservation.ID
+		pricing.CouponCodeLast4 = reservation.CouponCodeLast4
+	}
+	pricing.SnapshotHash = checkout.BuildPricingSnapshotHash(
+		snapshot.SnapshotHash,
+		pricing.CouponID,
+		pricing.SubtotalMinorUnits,
+		pricing.DiscountMinorUnits,
+		pricing.TotalMinorUnits,
+	)
+
+	intent, err := checkout.CreatePricedIntentTx(r.Context(), tx, checkout.CreateIntentInput{
 		ID:              intentID,
 		ClientID:        actor.ID,
 		CartID:          body.CartID,
 		StoreID:         body.StoreID,
-		FulfillmentMode: checkout.FulfillmentMode(body.FulfillmentMode),
+		FulfillmentMode: checkout.FulfillmentMode(fulfillmentMode),
 		PaymentMethod:   checkout.PaymentMethod(body.PaymentMethod),
 		DeliveryAddress: body.DeliveryAddress,
 		Note:            body.Note,
-	})
+	}, pricing)
 	if errors.Is(err, checkout.ErrInvalid) {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 		return
 	}
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to create checkout intent")
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to commit checkout intent")
 		return
 	}
 
@@ -76,16 +145,17 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 		ClientID:         actor.ID,
 		StoreID:          intent.StoreID,
 		PaymentMethod:    string(intent.PaymentMethod),
-		AmountMinorUnits: snapshot.AmountMinorUnits,
-		Currency:         snapshot.Currency,
-		CartSnapshotHash: snapshot.SnapshotHash,
+		AmountMinorUnits: pricing.TotalMinorUnits,
+		Currency:         pricing.Currency,
+		CartSnapshotHash: pricing.SnapshotHash,
 		CorrelationID:    r.Header.Get("X-Correlation-ID"),
 		IdempotencyKey:   "dsh-checkout-intent:" + intent.ID,
 	})
 	if err != nil {
+		_ = coupons.ReleaseByIntent(s.db, intent.ID, "wlt_handoff_failed")
 		if failedIntent, markErr := checkout.MarkWltHandoffFailed(s.db, intent.ID, actor.ID); markErr == nil {
 			store.SendJSON(w, http.StatusServiceUnavailable, map[string]any{
-				"intent": marshalIntent(failedIntent),
+				"intent": marshalIntentWithPricing(failedIntent, pricing),
 				"error": map[string]any{
 					"code":    "WLT_HANDOFF_UNAVAILABLE",
 					"message": "WLT payment-session handoff is unavailable",
@@ -112,7 +182,7 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 	}
 
 	store.SendJSON(w, http.StatusCreated, map[string]any{
-		"intent": marshalIntent(intent),
+		"intent": marshalIntentWithPricing(intent, pricing),
 	})
 }
 
@@ -137,9 +207,14 @@ func (s *protectedStoreServer) handleGetCheckoutIntent(w http.ResponseWriter, r 
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to get checkout intent")
 		return
 	}
+	pricing, err := checkout.GetPricing(s.db, intent.ID)
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to get checkout pricing")
+		return
+	}
 
 	store.SendJSON(w, http.StatusOK, map[string]any{
-		"intent": marshalIntent(intent),
+		"intent": marshalIntentWithPricing(intent, pricing),
 	})
 }
 
@@ -164,9 +239,18 @@ func (s *protectedStoreServer) handleCancelCheckoutIntent(w http.ResponseWriter,
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to cancel checkout intent")
 		return
 	}
+	if err := coupons.ReleaseByIntent(s.db, intent.ID, "client_cancelled"); err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "checkout cancelled but coupon release failed")
+		return
+	}
+	pricing, err := checkout.GetPricing(s.db, intent.ID)
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to get checkout pricing")
+		return
+	}
 
 	store.SendJSON(w, http.StatusOK, map[string]any{
-		"intent": marshalIntent(intent),
+		"intent": marshalIntentWithPricing(intent, pricing),
 	})
 }
 
@@ -181,9 +265,14 @@ func (s *protectedStoreServer) handleOperatorCheckoutIntents(w http.ResponseWrit
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list checkout intents")
 		return
 	}
-	out := make([]map[string]any, len(intents))
-	for i, intent := range intents {
-		out[i] = marshalIntent(&intent)
+	out := make([]map[string]any, 0, len(intents))
+	for i := range intents {
+		pricing, pricingErr := checkout.GetPricing(s.db, intents[i].ID)
+		if pricingErr != nil {
+			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load checkout pricing")
+			return
+		}
+		out = append(out, marshalIntentWithPricing(&intents[i], pricing))
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{
 		"intents": out,
@@ -206,4 +295,17 @@ func marshalIntent(i *checkout.Intent) map[string]any {
 		"createdAt":           i.CreatedAt,
 		"updatedAt":           i.UpdatedAt,
 	}
+}
+
+func marshalIntentWithPricing(i *checkout.Intent, pricing checkout.PricingSnapshot) map[string]any {
+	result := marshalIntent(i)
+	result["subtotalMinorUnits"] = pricing.SubtotalMinorUnits
+	result["discountMinorUnits"] = pricing.DiscountMinorUnits
+	result["totalMinorUnits"] = pricing.TotalMinorUnits
+	result["currency"] = pricing.Currency
+	result["pricingSnapshotHash"] = pricing.SnapshotHash
+	result["couponId"] = pricing.CouponID
+	result["couponRedemptionId"] = pricing.CouponRedemptionID
+	result["couponCodeLast4"] = pricing.CouponCodeLast4
+	return result
 }
