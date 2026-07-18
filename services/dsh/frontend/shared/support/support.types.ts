@@ -42,6 +42,17 @@ export type DshSupportMessage = {
   readonly createdAt: string;
 };
 
+export type DshSupportTicketEvent = {
+  readonly id: string;
+  readonly ticketId: string;
+  readonly reporterId: string;
+  readonly actorId: string;
+  readonly actorRole: DshSenderRole;
+  readonly eventType: "created" | "message_added" | "status_changed" | "escalated" | "closed";
+  readonly correlationId: string;
+  readonly createdAt: string;
+};
+
 export type DshIncident = {
   readonly id: string;
   readonly title: string;
@@ -72,6 +83,7 @@ export type DshAddMessageInput = {
 };
 
 export type DshUpdateTicketInput = {
+  readonly expectedStatus?: DshTicketStatus | undefined;
   readonly status: DshTicketStatus;
   readonly assignedTo?: string | undefined;
 };
@@ -88,7 +100,7 @@ export type DshUpdateIncidentInput = {
   readonly postmortemUrl?: string | undefined;
 };
 
-const TICKET_STATUS_LABELS: Record<DshTicketStatus, string> = {
+export const TICKET_STATUS_LABELS: Record<DshTicketStatus, string> = {
   open: "مفتوحة",
   in_review: "قيد المراجعة",
   pending_user: "بانتظار المستخدم",
@@ -96,7 +108,7 @@ const TICKET_STATUS_LABELS: Record<DshTicketStatus, string> = {
   closed: "مغلقة",
 };
 
-const TICKET_PRIORITY_LABELS: Record<DshTicketPriority, string> = {
+export const TICKET_PRIORITY_LABELS: Record<DshTicketPriority, string> = {
   low: "منخفضة",
   normal: "عادية",
   high: "مرتفعة",
@@ -113,20 +125,20 @@ export const TICKET_CATEGORY_LABELS: Record<DshTicketCategory, string> = {
   other: "أخرى",
 };
 
-const INCIDENT_SEVERITY_LABELS: Record<DshIncidentSeverity, string> = {
+export const INCIDENT_SEVERITY_LABELS: Record<DshIncidentSeverity, string> = {
   low: "منخفض",
   medium: "متوسط",
   high: "مرتفع",
   critical: "حرج",
 };
 
-const INCIDENT_STATUS_LABELS: Record<DshIncidentStatus, string> = {
+export const INCIDENT_STATUS_LABELS: Record<DshIncidentStatus, string> = {
   open: "مفتوح",
   monitoring: "قيد المراقبة",
   resolved: "محلول",
 };
 
-const INCIDENT_SCOPE_LABELS: Record<DshIncidentScope, string> = {
+export const INCIDENT_SCOPE_LABELS: Record<DshIncidentScope, string> = {
   delivery: "التوصيل",
   stores: "المتاجر",
   payments: "المدفوعات",
