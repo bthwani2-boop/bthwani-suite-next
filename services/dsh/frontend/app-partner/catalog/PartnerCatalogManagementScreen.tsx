@@ -16,7 +16,7 @@ import {
   fetchPartnerMasterProducts,
   fetchPartnerStoreAssortment,
   fetchPartnerTaxonomy,
-  upsertPartnerStoreAssortment,
+  upsertPartnerStoreAssortmentOCC,
 } from "../../shared/catalog";
 import type {
   CentralCatalogDomain,
@@ -90,7 +90,7 @@ export function PartnerCatalogManagementScreen() {
     setSaving(true);
     setError(null);
     try {
-      const saved = await upsertPartnerStoreAssortment(storeId, selectedProductId, {
+      const saved = await upsertPartnerStoreAssortmentOCC(storeId, selectedProductId, {
         unitPrice,
         currency: "YER",
         available: current?.available ?? true,
@@ -98,6 +98,7 @@ export function PartnerCatalogManagementScreen() {
         localNote: note.trim(),
         customImageObjectKey: current?.customImageObjectKey ?? null,
         publicationStatus: current?.publicationStatus ?? "draft",
+        expectedVersion: current?.version,
       });
       setAssortment((items) => [...items.filter((item) => item.masterProductId !== saved.masterProductId), saved]);
       setSelectedProductId("");
@@ -105,6 +106,7 @@ export function PartnerCatalogManagementScreen() {
       setNote("");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "تعذر حفظ تشكيلة المتجر.");
+      await loadData();
     } finally {
       setSaving(false);
     }
