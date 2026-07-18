@@ -47,6 +47,8 @@ type CreateCommercialProductInput struct {
 	Currency         string `json:"currency"`
 	BillingCycle     string `json:"billingCycle"`
 	CreatedByActorID string `json:"createdByActorId"`
+	CorrelationID    string `json:"-"`
+	IdempotencyKey   string `json:"-"`
 }
 
 type UpdateCommercialProductInput struct {
@@ -57,6 +59,8 @@ type UpdateCommercialProductInput struct {
 	Status          *string `json:"status,omitempty"`
 	ExpectedVersion int     `json:"expectedVersion"`
 	ActorID         string  `json:"actorId"`
+	CorrelationID   string  `json:"-"`
+	IdempotencyKey  string  `json:"-"`
 }
 
 type CommercialLoyaltyAccount struct {
@@ -167,7 +171,15 @@ func (c *Client) CreateCommercialProduct(ctx context.Context, input CreateCommer
 	var envelope struct {
 		Product CommercialProduct `json:"product"`
 	}
-	if err := c.commercialRequest(ctx, http.MethodPost, "/wlt/commercial/products", input, &envelope); err != nil {
+	correlationID := strings.TrimSpace(input.CorrelationID)
+	if correlationID == "" {
+		correlationID = strings.TrimSpace(input.Reference)
+	}
+	idempotencyKey := strings.TrimSpace(input.IdempotencyKey)
+	if idempotencyKey == "" {
+		idempotencyKey = deterministicMutationKey("commercial-product-create", input.Reference)
+	}
+	if err := c.commercialMutationRequest(ctx, http.MethodPost, "/wlt/commercial/products", input, idempotencyKey, correlationID, &envelope); err != nil {
 		return nil, err
 	}
 	return &envelope.Product, nil
@@ -181,11 +193,21 @@ func (c *Client) UpdateCommercialProduct(
 	var envelope struct {
 		Product CommercialProduct `json:"product"`
 	}
-	err := c.commercialRequest(
+	correlationID := strings.TrimSpace(input.CorrelationID)
+	if correlationID == "" {
+		correlationID = strings.TrimSpace(reference)
+	}
+	idempotencyKey := strings.TrimSpace(input.IdempotencyKey)
+	if idempotencyKey == "" {
+		idempotencyKey = deterministicMutationKey("commercial-product-update", reference, fmt.Sprintf("v%d", input.ExpectedVersion))
+	}
+	err := c.commercialMutationRequest(
 		ctx,
 		http.MethodPatch,
 		"/wlt/commercial/products/"+url.PathEscape(strings.TrimSpace(reference)),
 		input,
+		idempotencyKey,
+		correlationID,
 		&envelope,
 	)
 	if err != nil {
