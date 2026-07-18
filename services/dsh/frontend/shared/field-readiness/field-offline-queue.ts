@@ -89,6 +89,12 @@ async function writeQueue(queue: FieldOfflineOperation[]): Promise<void> {
   await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(queue));
 }
 
+export async function recoverCorruptFieldOfflineQueue(): Promise<void> {
+  const raw = await AsyncStorage.getItem(STORAGE_KEY);
+  if (raw) await AsyncStorage.setItem(CORRUPT_STORAGE_KEY, raw);
+  await AsyncStorage.removeItem(STORAGE_KEY);
+}
+
 export async function enqueueFieldOperation<P>(
   operationType: FieldOfflineOperationType,
   payload: P,
