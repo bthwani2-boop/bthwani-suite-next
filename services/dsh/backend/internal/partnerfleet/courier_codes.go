@@ -22,7 +22,7 @@ var (
 	ErrCourierIneligible = errors.New("courier team member is ineligible")
 )
 
-const codeAlphabet = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"
+const codeAlphabet = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"
 
 type ConnectionCode struct {
 	ID                       string  `json:"id"`
@@ -180,25 +180,39 @@ func RevokeCode(ctx context.Context, db *sql.DB, storeID, codeID, actorID string
 	if storeID == "" || codeID == "" || actorID == "" || expectedVersion <= 0 {
 		return ConnectionCode{}, ErrInvalid
 	}
-	connection, err := scanConnection(db.QueryRowContext(ctx, `
+	var result ConnectionCode
+	var redeemedAt sql.NullString
+	err := db.QueryRowContext(ctx, `
 		UPDATE dsh_partner_courier_connection_codes
 		SET status='revoked',revoked_at=NOW(),version=version+1,updated_at=NOW()
-		WHERE id::TEXT=$1 AND store_id=$2 AND status='pending' AND version=$3
-		RETURNING `+connectionSelectCols, codeID, storeID, expectedVersion))
+		WHERE id=$1 AND store_id=$2 AND status='pending' AND version=$3
+		RETURNING `+connectionSelectCols, codeID, storeID, expectedVersion).Scan(
+		&result.ID, &result.StoreID, &result.TeamMemberID, &result.CodeLast4,
+		&result.Status, &result.ExpiresAt, &result.CreatedByActorID,
+		&result.RedeemedByCaptainActorID, &redeemedAt, &result.Version,
+		&result.CreatedAt, &result.UpdatedAt,
+	)
 	if errors.Is(err, sql.ErrNoRows) {
-		var exists int
-		checkErr := db.QueryRowContext(ctx, `SELECT 1 FROM dsh_partner_courier_connection_codes WHERE id::TEXT=$1 AND store_id=$2`, codeID, storeID).Scan(&exists)
-		if errors.Is(checkErr, sql.ErrNoRows) {
-			return ConnectionCode{}, ErrNotFound
-		}
 		return ConnectionCode{}, ErrVersionConflict
 	}
-	return connection, err
+	if err != nil {
+		return ConnectionCode{}, err
+	}
+	result.RedeemedAt = nullableString(redeemedAt)
+	return result, nil
 }
 
-func RedeemCode(ctx context.Context, db *sql.DB, plainCode, captainActorID string) (CaptainFleetMembership, error) {
-	plainCode = normalizeCode(plainCode)
-	if len(plainCode) < 8 || captainActorID == "" {
+func FormatCodeForDisplay(code string) string {
+	normalized := normalizeCode(code)
+	if len(normalized) <= 5 {
+		return normalized
+	}
+	return normalized[:len(normalized)-5] + "-" + normalized[len(normalized)-5:]
+}
+
+func RedeemCode(ctx context.Context, db *sql.DB, captainActorID, plainCode string) (CaptainFleetMembership, error) {
+	normalized := normalizeCode(plainCode)
+	if strings.TrimSpace(captainActorID) == "" || len(normalized) < 8 {
 		return CaptainFleetMembership{}, ErrInvalid
 	}
 	tx, err := db.BeginTx(ctx, nil)
@@ -207,13 +221,13 @@ func RedeemCode(ctx context.Context, db *sql.DB, plainCode, captainActorID strin
 	}
 	defer tx.Rollback()
 
-	var codeID, storeID, memberID, status string
+	var connectionID, storeID, memberID, status string
 	var expiresAt time.Time
 	err = tx.QueryRowContext(ctx, `
 		SELECT id::TEXT,store_id,team_member_id,status,expires_at
 		FROM dsh_partner_courier_connection_codes
 		WHERE code_hash=$1
-		FOR UPDATE`, hashCode(plainCode)).Scan(&codeID, &storeID, &memberID, &status, &expiresAt)
+		FOR UPDATE`, hashCode(normalized)).Scan(&connectionID, &storeID, &memberID, &status, &expiresAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return CaptainFleetMembership{}, ErrNotFound
 	}
@@ -223,22 +237,16 @@ func RedeemCode(ctx context.Context, db *sql.DB, plainCode, captainActorID strin
 	if status != "pending" {
 		return CaptainFleetMembership{}, ErrInvalid
 	}
-	if !expiresAt.After(time.Now().UTC()) {
-		if _, updateErr := tx.ExecContext(ctx, `UPDATE dsh_partner_courier_connection_codes SET status='expired',version=version+1,updated_at=NOW() WHERE id::TEXT=$1`, codeID); updateErr != nil {
-			return CaptainFleetMembership{}, updateErr
-		}
-		if commitErr := tx.Commit(); commitErr != nil {
-			return CaptainFleetMembership{}, commitErr
-		}
+	if time.Now().UTC().After(expiresAt) {
 		return CaptainFleetMembership{}, ErrExpired
 	}
 
-	var courierName, role, memberStatus, identityActorID, branchAssignment, deliveryAssignment string
-	var version int
+	var role, memberStatus, existingActor, courierName, branch, deliveryAssignment string
 	err = tx.QueryRowContext(ctx, `
-		SELECT name,role,status,identity_actor_id,branch_assignment,delivery_assignment,version
-		FROM dsh_store_team_members WHERE id=$1 AND store_id=$2 FOR UPDATE`, memberID, storeID).
-		Scan(&courierName, &role, &memberStatus, &identityActorID, &branchAssignment, &deliveryAssignment, &version)
+		SELECT role,status,identity_actor_id,name,branch_assignment,delivery_assignment
+		FROM dsh_store_team_members
+		WHERE id=$1 AND store_id=$2
+		FOR UPDATE`, memberID, storeID).Scan(&role, &memberStatus, &existingActor, &courierName, &branch, &deliveryAssignment)
 	if errors.Is(err, sql.ErrNoRows) {
 		return CaptainFleetMembership{}, ErrNotFound
 	}
@@ -248,55 +256,34 @@ func RedeemCode(ctx context.Context, db *sql.DB, plainCode, captainActorID strin
 	if role != "courier" || memberStatus == "blocked" || memberStatus == "review-needed" {
 		return CaptainFleetMembership{}, ErrCourierIneligible
 	}
-	if identityActorID != "" && identityActorID != captainActorID {
+	if existingActor != "" && existingActor != captainActorID {
 		return CaptainFleetMembership{}, ErrAlreadyBound
-	}
-	var otherMemberID string
-	err = tx.QueryRowContext(ctx, `
-		SELECT id FROM dsh_store_team_members
-		WHERE identity_actor_id=$1 AND id<>$2 LIMIT 1`, captainActorID, memberID).Scan(&otherMemberID)
-	if err == nil {
-		return CaptainFleetMembership{}, ErrAlreadyBound
-	}
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return CaptainFleetMembership{}, err
 	}
 
-	res, err := tx.ExecContext(ctx, `
+	if _, err := tx.ExecContext(ctx, `
 		UPDATE dsh_store_team_members
-		SET identity_actor_id=$1,status='active',invite_lifecycle='captain_code_redeemed',
-			version=version+1,updated_at=NOW()
-		WHERE id=$2 AND version=$3`, captainActorID, memberID, version)
-	if err != nil {
-		return CaptainFleetMembership{}, err
-	}
-	if affected, _ := res.RowsAffected(); affected == 0 {
-		return CaptainFleetMembership{}, ErrVersionConflict
-	}
-	if _, err := tx.ExecContext(ctx, `
-		UPDATE dsh_partner_courier_connection_codes
-		SET status='redeemed',redeemed_by_captain_actor_id=$1,redeemed_at=NOW(),
-			version=version+1,updated_at=NOW()
-		WHERE id::TEXT=$2 AND status='pending'`, captainActorID, codeID); err != nil {
+		SET identity_actor_id=$1,status='active',version=version+1,updated_at=NOW()
+		WHERE id=$2 AND store_id=$3`, captainActorID, memberID, storeID); err != nil {
 		return CaptainFleetMembership{}, err
 	}
 	if _, err := tx.ExecContext(ctx, `
 		UPDATE dsh_partner_courier_connection_codes
-		SET status='revoked',revoked_at=NOW(),version=version+1,updated_at=NOW()
-		WHERE team_member_id=$1 AND id::TEXT<>$2 AND status='pending'`, memberID, codeID); err != nil {
+		SET status='redeemed',redeemed_by_captain_actor_id=$1,redeemed_at=NOW(),version=version+1,updated_at=NOW()
+		WHERE id=$2`, captainActorID, connectionID); err != nil {
 		return CaptainFleetMembership{}, err
 	}
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO dsh_store_team_member_actions
 			(member_id,store_id,action_label,from_status,to_status,actor_id)
-		VALUES ($1,$2,'redeem_captain_connection_code',$3,'active',$4)`, memberID, storeID, memberStatus, captainActorID); err != nil {
-		return CaptainFleetMembership{}, err
-	}
-	var storeName string
-	if err := tx.QueryRowContext(ctx, `SELECT name FROM dsh_stores WHERE id=$1`, storeID).Scan(&storeName); err != nil {
+		VALUES ($1,$2,'captain_connect',$3,'active',$4)`, memberID, storeID, memberStatus, captainActorID); err != nil {
 		return CaptainFleetMembership{}, err
 	}
 	if err := tx.Commit(); err != nil {
+		return CaptainFleetMembership{}, err
+	}
+
+	var storeName string
+	if err := db.QueryRowContext(ctx, `SELECT name FROM dsh_stores WHERE id=$1`, storeID).Scan(&storeName); err != nil {
 		return CaptainFleetMembership{}, err
 	}
 	return CaptainFleetMembership{
@@ -305,73 +292,7 @@ func RedeemCode(ctx context.Context, db *sql.DB, plainCode, captainActorID strin
 		StoreName:          storeName,
 		CourierName:        courierName,
 		Status:             "active",
-		BranchAssignment:   branchAssignment,
+		BranchAssignment:   branch,
 		DeliveryAssignment: deliveryAssignment,
-		Version:            version + 1,
 	}, nil
-}
-
-func ListStoreConnections(ctx context.Context, db *sql.DB, storeID string) ([]ConnectionCode, error) {
-	if storeID == "" {
-		return nil, ErrInvalid
-	}
-	if _, err := db.ExecContext(ctx, `
-		UPDATE dsh_partner_courier_connection_codes
-		SET status='expired',version=version+1,updated_at=NOW()
-		WHERE store_id=$1 AND status='pending' AND expires_at<=NOW()`, storeID); err != nil {
-		return nil, err
-	}
-	rows, err := db.QueryContext(ctx, `SELECT `+connectionSelectCols+`
-		FROM dsh_partner_courier_connection_codes
-		WHERE store_id=$1 ORDER BY created_at DESC`, storeID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []ConnectionCode{}
-	for rows.Next() {
-		connection, err := scanConnection(rows)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, connection)
-	}
-	return out, rows.Err()
-}
-
-func ListCaptainMemberships(ctx context.Context, db *sql.DB, captainActorID string) ([]CaptainFleetMembership, error) {
-	if captainActorID == "" {
-		return nil, ErrInvalid
-	}
-	rows, err := db.QueryContext(ctx, `
-		SELECT m.id,m.store_id,s.name,m.name,m.status,m.branch_assignment,m.delivery_assignment,m.version
-		FROM dsh_store_team_members m
-		JOIN dsh_stores s ON s.id=m.store_id
-		WHERE m.identity_actor_id=$1 AND m.role='courier'
-		ORDER BY m.updated_at DESC`, captainActorID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []CaptainFleetMembership{}
-	for rows.Next() {
-		var membership CaptainFleetMembership
-		if err := rows.Scan(
-			&membership.TeamMemberID, &membership.StoreID, &membership.StoreName,
-			&membership.CourierName, &membership.Status, &membership.BranchAssignment,
-			&membership.DeliveryAssignment, &membership.Version,
-		); err != nil {
-			return nil, err
-		}
-		out = append(out, membership)
-	}
-	return out, rows.Err()
-}
-
-func FormatCodeForDisplay(code string) string {
-	code = normalizeCode(code)
-	if len(code) <= 5 {
-		return code
-	}
-	return fmt.Sprintf("%s-%s", code[:5], code[5:])
 }
