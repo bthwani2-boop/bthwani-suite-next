@@ -35,7 +35,44 @@ func TestDependencyHealthProbeAndAggregation(t *testing.T) {
 	}
 }
 
-func TestAdvanceRolloutFailsClosedWhenHealthIsNotOperational(t *testing.T) {
+func TestConfiguredRolloutHealthGate(t *testing.T) {
+	gate := map[string]any{
+		"requiredState":    "OPERATIONAL",
+		"requiredServices": []any{"identity", "dsh"},
+		"maxLatencyMs":     float64(250),
+	}
+	snapshot := HealthSnapshot{
+		State: StateOperational,
+		Services: []ServicePosture{
+			{Service: "identity", State: StateOperational, LatencyMS: 20},
+			{Service: "dsh", State: StateOperational, LatencyMS: 40},
+		},
+	}
+	if err := evaluateHealthGate(snapshot, gate); err != nil {
+		t.Fatalf("expected health gate to pass, got %v", err)
+	}
+
+	degraded := snapshot
+	degraded.Services = append([]ServicePosture(nil), snapshot.Services...)
+	degraded.Services[1].State = StateFixRequired
+	if err := evaluateHealthGate(degraded, gate); !errors.Is(err, ErrHealthGate) {
+		t.Fatalf("expected service-state health gate failure, got %v", err)
+	}
+
+	slow := snapshot
+	slow.Services = append([]ServicePosture(nil), snapshot.Services...)
+	slow.Services[0].LatencyMS = 500
+	if err := evaluateHealthGate(slow, gate); !errors.Is(err, ErrHealthGate) {
+		t.Fatalf("expected latency health gate failure, got %v", err)
+	}
+
+	invalid := map[string]any{"requiredState": "PARTIALLY_BOUND"}
+	if err := validateHealthGate(invalid); !errors.Is(err, ErrValidation) {
+		t.Fatalf("expected invalid gate validation error, got %v", err)
+	}
+}
+
+func TestAdvanceRolloutFailsClosedWithoutRepository(t *testing.T) {
 	service := NewService()
 	_, err := service.AdvanceRollout(
 		context.Background(),
@@ -44,7 +81,7 @@ func TestAdvanceRolloutFailsClosedWhenHealthIsNotOperational(t *testing.T) {
 		[]string{"platform-rollout-manager"},
 		"health-gate-test",
 	)
-	if !errors.Is(err, ErrHealthGate) {
-		t.Fatalf("expected ErrHealthGate, got %v", err)
+	if err == nil {
+		t.Fatal("expected rollout advance to fail closed without repository")
 	}
 }
