@@ -107,6 +107,34 @@ export function StoreDetailScreen({ storeId, onBack, onGoToCart }: Props) {
   }
 
   const store = storeCtrl.state.store;
+  if (!store.isClientEligible) {
+    return (
+      <StateView
+        title="المتجر غير منشور"
+        description="لم يجتز المتجر بوابة النشر للعميل."
+        {...(onBack ? { actionLabel: "العودة", onActionPress: onBack } : {})}
+      />
+    );
+  }
+  if (!store.isOpen) {
+    return (
+      <StateView
+        title="المتجر مغلق"
+        description="لا يمكن إضافة منتجات أو بدء طلب جديد حتى يعود المتجر إلى الحالة النشطة."
+        {...(onBack ? { actionLabel: "العودة", onActionPress: onBack } : {})}
+      />
+    );
+  }
+  if (store.availableFulfillmentModes.length === 0) {
+    return (
+      <StateView
+        title="لا توجد وسيلة استلام"
+        description="لم يفعّل المتجر أي مسار fulfillment صالح للعميل."
+        {...(onBack ? { actionLabel: "العودة", onActionPress: onBack } : {})}
+      />
+    );
+  }
+
   const catalog = catalogCtrl.state.catalog;
   const categories = catalog.categories.filter(
     (category: CatalogCategory) => category.isActive,
