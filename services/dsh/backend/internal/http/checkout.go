@@ -149,20 +149,55 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 		return
 	}
 
+	correlationID := fundingCorrelation(r.Header.Get("X-Correlation-ID"), intent.ID)
+	var fundingProjection *coupons.FundingProjection
+	if reservation != nil {
+		fundingProjection, err = s.reserveCouponFunding(r.Context(), actor.TenantID, intent.ID, correlationID)
+		if err != nil {
+			_ = coupons.ReleaseByIntent(s.db, intent.ID, "wlt_funding_reserve_failed")
+			failedIntent, markErr := checkout.MarkWltHandoffFailed(s.db, intent.ID, actor.ID)
+			if markErr == nil {
+				store.SendJSON(w, http.StatusServiceUnavailable, map[string]any{
+					"intent": marshalIntentWithPricing(failedIntent, pricing),
+					"error": map[string]any{
+						"code": "WLT_PROMOTION_FUNDING_UNAVAILABLE",
+						"message": "promotion funding reservation is unavailable",
+					},
+				})
+				return
+			}
+			store.SendError(w, http.StatusServiceUnavailable, "WLT_PROMOTION_FUNDING_UNAVAILABLE", "promotion funding reservation is unavailable")
+			return
+		}
+	}
+
 	paymentSession, err := s.wlt.CreatePaymentSession(r.Context(), wlt.CreatePaymentSessionInput{
 		CheckoutIntentID: intent.ID, TenantID: actor.TenantID, ClientID: actor.ID,
 		StoreID: intent.StoreID, PaymentMethod: string(intent.PaymentMethod),
 		AmountMinorUnits: pricing.TotalMinorUnits, Currency: pricing.Currency,
 		CartSnapshotHash: pricing.SnapshotHash,
-		CorrelationID: r.Header.Get("X-Correlation-ID"),
+		CorrelationID: correlationID,
 		IdempotencyKey: "dsh-checkout-intent:" + intent.ID,
 	})
 	if err != nil {
+		fundingReleaseFailed := false
+		if fundingProjection != nil {
+			if releaseErr := s.releaseCouponFunding(r.Context(), actor.TenantID, intent.ID, "payment_session_handoff_failed", correlationID); releaseErr != nil {
+				fundingReleaseFailed = true
+				_ = coupons.MarkFundingFailed(r.Context(), s.db, fundingProjection.RedemptionID, "wlt_release_after_payment_handoff_failed")
+			}
+		}
 		_ = coupons.ReleaseByIntent(s.db, intent.ID, "wlt_handoff_failed")
 		if failedIntent, markErr := checkout.MarkWltHandoffFailed(s.db, intent.ID, actor.ID); markErr == nil {
+			code := "WLT_HANDOFF_UNAVAILABLE"
+			message := "WLT payment-session handoff is unavailable"
+			if fundingReleaseFailed {
+				code = "WLT_HANDOFF_AND_FUNDING_COMPENSATION_FAILED"
+				message = "payment handoff failed and promotion funding compensation requires reconciliation"
+			}
 			store.SendJSON(w, http.StatusServiceUnavailable, map[string]any{
 				"intent": marshalIntentWithPricing(failedIntent, pricing),
-				"error": map[string]any{"code": "WLT_HANDOFF_UNAVAILABLE", "message": "WLT payment-session handoff is unavailable"},
+				"error": map[string]any{"code": code, "message": message},
 			})
 			return
 		}
@@ -171,15 +206,23 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 	}
 
 	intent, err = checkout.AttachWltPaymentSession(s.db, intent.ID, actor.ID, paymentSession.ID)
-	if errors.Is(err, checkout.ErrInvalid) {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-		return
-	}
-	if errors.Is(err, checkout.ErrConflict) {
-		store.SendError(w, http.StatusConflict, "CONFLICT", "checkout intent is not ready for WLT handoff")
-		return
-	}
 	if err != nil {
+		_ = s.wlt.ExpireSession(r.Context(), paymentSession.ID, correlationID)
+		if fundingProjection != nil {
+			if releaseErr := s.releaseCouponFunding(r.Context(), actor.TenantID, intent.ID, "payment_session_attach_failed", correlationID); releaseErr != nil {
+				_ = coupons.MarkFundingFailed(r.Context(), s.db, fundingProjection.RedemptionID, "wlt_release_after_attach_failed")
+			}
+		}
+		_ = coupons.ReleaseByIntent(s.db, intent.ID, "payment_session_attach_failed")
+		_, _ = checkout.MarkWltHandoffFailed(s.db, intent.ID, actor.ID)
+		if errors.Is(err, checkout.ErrInvalid) {
+			store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+			return
+		}
+		if errors.Is(err, checkout.ErrConflict) {
+			store.SendError(w, http.StatusConflict, "CONFLICT", "checkout intent is not ready for WLT handoff")
+			return
+		}
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to attach WLT payment session")
 		return
 	}
@@ -226,6 +269,11 @@ func (s *protectedStoreServer) handleCancelCheckoutIntent(w http.ResponseWriter,
 	}
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to cancel checkout intent")
+		return
+	}
+	correlationID := fundingCorrelation(r.Header.Get("X-Correlation-ID"), intent.ID)
+	if err := s.releaseCouponFunding(r.Context(), actor.TenantID, intent.ID, "client_cancelled", correlationID); err != nil {
+		store.SendError(w, http.StatusServiceUnavailable, "WLT_PROMOTION_FUNDING_RELEASE_FAILED", "checkout was cancelled but promotion funding release requires reconciliation")
 		return
 	}
 	if err := coupons.ReleaseByIntent(s.db, intent.ID, "client_cancelled"); err != nil {
