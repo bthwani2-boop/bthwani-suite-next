@@ -3,13 +3,11 @@
 import React from 'react';
 import { BackHandler, Platform, Pressable, View, StatusBar } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Text, spacing, colorRoles, Icon } from '@bthwani/ui-kit';
+import { Text, spacing, colorRoles, Icon, StateView } from '@bthwani/ui-kit';
 import { useDshFieldSurfaceModel } from '../field.surface-model';
 import type { DshFieldSurfaceProps } from '../dsh-field.routes';
 import { DshFieldRouteRenderer } from './DshFieldRouteRenderer';
-import {
-  useIdentitySession,
-} from '@bthwani/core-identity';
+import { useIdentitySession } from '@bthwani/core-identity';
 import { DshFieldActivationCard } from './DshFieldActivationCard';
 import { useFieldPartnerOnboardingController } from '../../shared/field-onboarding';
 import {
@@ -26,10 +24,6 @@ function useAndroidBackHandler(onBackPress: () => boolean) {
   }, [onBackPress]);
 }
 
-// ─── Bottom Navigation (exact donor replica) ────────────────────────────────
-// RTL order visible on screen (left→right): حسابي | المالية | [FAB] | السجل | المهام
-// In the items array (RTL render = reversed visual): [tasks, history, FAB, finance, profile]
-// We split left/right around the FAB manually for correct positioning.
 function FieldBottomNavBar({
   activeId,
   onSelect,
@@ -40,15 +34,13 @@ function FieldBottomNavBar({
   onLauncherPress: () => void;
 }) {
   const insets = useSafeAreaInsets();
-  // Right-side items (visually rightmost in RTL): المهام, السجل
   const rightItems = [
-    { id: 'tasks',   label: 'المهام',  icon: 'list-outline',  activeIcon: 'list'  },
-    { id: 'history', label: 'السجل',   icon: 'time-outline',  activeIcon: 'time'  },
+    { id: 'tasks', label: 'المهام', icon: 'list-outline', activeIcon: 'list' },
+    { id: 'history', label: 'السجل', icon: 'time-outline', activeIcon: 'time' },
   ];
-  // Left-side items (visually leftmost in RTL): المالية, حسابي
   const leftItems = [
-    { id: 'finance', label: 'المالية', icon: 'cash-outline',   activeIcon: 'cash'   },
-    { id: 'profile', label: 'حسابي',  icon: 'person-outline', activeIcon: 'person' },
+    { id: 'finance', label: 'المالية', icon: 'cash-outline', activeIcon: 'cash' },
+    { id: 'profile', label: 'حسابي', icon: 'person-outline', activeIcon: 'person' },
   ];
 
   const NavItem = ({ id, label, icon, activeIcon }: typeof rightItems[0]) => {
@@ -95,12 +87,8 @@ function FieldBottomNavBar({
         elevation: 12,
       }}
     >
-      {/* Left items: حسابي | المالية */}
-      {leftItems.map((item) => (
-        <NavItem key={item.id} {...item} />
-      ))}
+      {leftItems.map((item) => <NavItem key={item.id} {...item} />)}
 
-      {/* Center FAB: إضافة — raised orange circle */}
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
         <Pressable
           onPress={onLauncherPress}
@@ -111,7 +99,7 @@ function FieldBottomNavBar({
             backgroundColor: colorRoles.brandAction,
             alignItems: 'center',
             justifyContent: 'center',
-            marginBottom: 24,           // raised above the bar
+            marginBottom: 24,
             opacity: pressed ? 0.88 : 1,
             shadowColor: colorRoles.brandAction,
             shadowOffset: { width: 0, height: 4 },
@@ -123,45 +111,37 @@ function FieldBottomNavBar({
         >
           <Icon name="add" size={30} color={colorRoles.surfaceBase} />
         </Pressable>
-        <Text
-          style={{
-            fontSize: 10,
-            color: colorRoles.textMuted,
-            marginTop: -18,             // pull label up under FAB
-          }}
-        >
+        <Text style={{ fontSize: 10, color: colorRoles.textMuted, marginTop: -18 }}>
           إضافة
         </Text>
       </View>
 
-      {/* Right items: السجل | المهام */}
-      {rightItems.map((item) => (
-        <NavItem key={item.id} {...item} />
-      ))}
+      {rightItems.map((item) => <NavItem key={item.id} {...item} />)}
     </View>
   );
 }
 
-// ─── Surface ─────────────────────────────────────────────────────────────────
 export function DshFieldSurface({ command, onExit }: DshFieldSurfaceProps = {}) {
   const fieldSurface = useDshFieldSurfaceModel(command);
-  // Owned here (not inside a route screen) so the draft survives across
-  // wizard groups and re-entry into the onboarding screen.
   const onboardingController = useFieldPartnerOnboardingController();
-
   const identity = useIdentitySession();
   const insets = useSafeAreaInsets();
 
-  // Drain offline queue when connectivity is restored.
-  useFieldOfflineSync(
+  const offlineSync = useFieldOfflineSync(
     identity.state.kind === 'authenticated'
       ? {
-          complete_visit: async (op) => {
-            const payload = op.payload as { visitId: string; completionLocation: Parameters<typeof completeFieldVisit>[1] };
+          complete_visit: async (operation) => {
+            const payload = operation.payload as {
+              visitId: string;
+              completionLocation: Parameters<typeof completeFieldVisit>[1];
+            };
             await completeFieldVisit(payload.visitId, payload.completionLocation);
           },
-          upsert_readiness_check: async (op) => {
-            const payload = op.payload as { visitId: string; input: Parameters<typeof upsertReadinessCheck>[1] };
+          upsert_readiness_check: async (operation) => {
+            const payload = operation.payload as {
+              visitId: string;
+              input: Parameters<typeof upsertReadinessCheck>[1];
+            };
             await upsertReadinessCheck(payload.visitId, payload.input);
           },
         }
@@ -179,32 +159,21 @@ export function DshFieldSurface({ command, onExit }: DshFieldSurfaceProps = {}) 
         return true;
       }
       return false;
-    }, [fieldSurface.actions, fieldSurface.model.routeStackDepth, onExit])
+    }, [fieldSurface.actions, fieldSurface.model.routeStackDepth, onExit]),
   );
 
-  // Session is being restored from storage (SecureStore/localStorage) — show
-  // a blank brand splash rather than flashing the login card.
   if (identity.state.kind === 'restoring' || identity.state.kind === 'unconfigured') {
     return (
       <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
-        <StatusBar
-          backgroundColor={colorRoles.brandAction}
-          barStyle="light-content"
-          translucent={false}
-        />
+        <StatusBar backgroundColor={colorRoles.brandAction} barStyle="light-content" translucent={false} />
       </View>
     );
   }
 
-  // Root authentication guard — prompt for login immediately upon opening
   if (identity.state.kind !== 'authenticated') {
     return (
       <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
-        <StatusBar
-          backgroundColor={colorRoles.brandAction}
-          barStyle="light-content"
-          translucent={false}
-        />
+        <StatusBar backgroundColor={colorRoles.brandAction} barStyle="light-content" translucent={false} />
         <View style={{ flex: 1, justifyContent: 'center', padding: spacing[4] }}>
           <DshFieldActivationCard
             loading={identity.state.kind === 'authenticating'}
@@ -216,20 +185,30 @@ export function DshFieldSurface({ command, onExit }: DshFieldSurfaceProps = {}) 
     );
   }
 
+  if (offlineSync.state.kind === 'error') {
+    const corrupt = offlineSync.state.message.includes('field offline queue is corrupt');
+    return (
+      <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase, justifyContent: 'center', padding: spacing[4] }}>
+        <StatusBar backgroundColor={colorRoles.brandAction} barStyle="light-content" translucent={false} />
+        <StateView
+          tone="danger"
+          title="تعذر ضمان مزامنة العمل الميداني"
+          description={offlineSync.state.message}
+          actionLabel={corrupt ? 'حفظ النسخة التالفة واستعادة الطابور' : 'إعادة المحاولة'}
+          onActionPress={corrupt ? offlineSync.recover : offlineSync.retry}
+        />
+      </View>
+    );
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
-      {/* Global orange status bar for all screens */}
-      <StatusBar
-        backgroundColor={colorRoles.brandAction}
-        barStyle="light-content"
-        translucent={false}
-      />
+      <StatusBar backgroundColor={colorRoles.brandAction} barStyle="light-content" translucent={false} />
 
-      {/* Screen content */}
       <View
         style={{
           flex: 1,
-          paddingBottom: fieldSurface.model.bottomNav.visible ? (72 + insets.bottom) : 0,
+          paddingBottom: fieldSurface.model.bottomNav.visible ? 72 + insets.bottom : 0,
         }}
       >
         <DshFieldRouteRenderer
@@ -240,19 +219,13 @@ export function DshFieldSurface({ command, onExit }: DshFieldSurfaceProps = {}) 
         />
       </View>
 
-      {/* Bottom nav — pinned to bottom */}
       {fieldSurface.model.bottomNav.visible && (
         <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 1000 }}>
           <FieldBottomNavBar
             activeId={fieldSurface.model.bottomNav.activeId}
-            onLauncherPress={() => {
-              // No explicit reset here: DshFieldOnboardingScreen's
-              // switchDraft(partnerId) effect resets to a blank draft when
-              // it receives an undefined partnerId (this route).
-              fieldSurface.actions.pushRoute({ kind: 'onboarding' });
-            }}
+            onLauncherPress={() => fieldSurface.actions.pushRoute({ kind: 'onboarding' })}
             onSelect={(id: string) => {
-              if (id === 'tasks')   fieldSurface.actions.resetToStores();
+              if (id === 'tasks') fieldSurface.actions.resetToStores();
               if (id === 'history') fieldSurface.actions.pushRoute({ kind: 'history' });
               if (id === 'finance') fieldSurface.actions.pushRoute({ kind: 'finance' });
               if (id === 'profile') fieldSurface.actions.pushRoute({ kind: 'account' });
@@ -263,5 +236,3 @@ export function DshFieldSurface({ command, onExit }: DshFieldSurfaceProps = {}) 
     </View>
   );
 }
-
-// export default DshFieldSurface; // Unused default export
