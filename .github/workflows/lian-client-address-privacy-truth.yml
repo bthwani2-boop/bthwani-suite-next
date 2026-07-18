@@ -1,0 +1,134 @@
+name: Lian Client Address Privacy Truth
+
+on:
+  push:
+    branches: [lian]
+    paths:
+      - "services/dsh/database/migrations/dsh-078_client_address_pii_governance.sql"
+      - "services/dsh/database/migrations/dsh-079_privacy_crypto_prerequisite.sql"
+      - "services/dsh/database/tests/dsh-078_client_address_pii_invariants.sql"
+      - "services/dsh/backend/internal/clientaddress/privacy.go"
+      - "services/dsh/backend/internal/clientaddress/privacy_anonymize_idempotent.go"
+      - "services/dsh/backend/cmd/dsh-address-privacy/**"
+      - "tools/guards/privacy/client-address-privacy-truth-gate.mjs"
+      - ".github/workflows/lian-client-address-privacy-truth.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lian-client-address-privacy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  privacy-database-truth:
+    name: Privacy migration and anonymization invariants
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: dsh_privacy
+          POSTGRES_PASSWORD: dsh_privacy_password
+          POSTGRES_DB: dsh_privacy
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd="pg_isready -U dsh_privacy -d dsh_privacy"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      DATABASE_URL: postgres://dsh_privacy:dsh_privacy_password@localhost:55432/dsh_privacy?sslmode=disable
+      PGPASSWORD: dsh_privacy_password
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Apply DSH migrations in canonical order
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t migrations < <(find services/dsh/database/migrations -maxdepth 1 -type f -name 'dsh-*.sql' | sort)
+          test "${#migrations[@]}" -gt 0
+          for migration in "${migrations[@]}"; do
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
+          done
+
+      - name: Verify PII retention and irreversible anonymization
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/dsh/database/tests/dsh-078_client_address_pii_invariants.sql
+
+      - name: Verify privacy migrations are replay-safe
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/dsh/database/migrations/dsh-078_client_address_pii_governance.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/dsh/database/migrations/dsh-079_privacy_crypto_prerequisite.sql
+
+  privacy-code-truth:
+    name: Privacy guard and Go verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Setup governed workspace
+        uses: ./.github/actions/setup-node-workspace
+
+      - name: Verify privacy truth guard
+        run: node tools/guards/privacy/client-address-privacy-truth-gate.mjs
+
+      - name: Setup Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache: true
+          cache-dependency-path: services/dsh/backend/go.sum
+
+      - name: Verify formatting
+        working-directory: services/dsh/backend
+        shell: bash
+        run: |
+          set -euo pipefail
+          files="$(gofmt -l .)"
+          test -z "$files" || {
+            printf 'Unformatted files:\n%s\n' "$files"
+            exit 1
+          }
+
+      - name: Vet
+        working-directory: services/dsh/backend
+        run: go vet ./...
+
+      - name: Test
+        working-directory: services/dsh/backend
+        run: go test ./... -count=1
+
+      - name: Build privacy worker
+        working-directory: services/dsh/backend
+        run: go build ./cmd/dsh-address-privacy
+
+  result:
+    name: Lian Client Address Privacy Truth result
+    if: always()
+    needs: [privacy-database-truth, privacy-code-truth]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require all privacy closure jobs to pass
+        env:
+          DATABASE_RESULT: ${{ needs.privacy-database-truth.result }}
+          CODE_RESULT: ${{ needs.privacy-code-truth.result }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$DATABASE_RESULT" = success
+          test "$CODE_RESULT" = success
