@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { colorRoles } from "@bthwani/ui-kit";
 import { useLoyaltyTiersController, type LoyaltyTierRecord } from "../../../shared/marketing";
 
@@ -85,7 +85,7 @@ export function LoyaltyCommandDeck() {
   );
 }
 
-const styles: Record<string, React.CSSProperties> = {
+const styles: Record<string, CSSProperties> = {
   root: { display: "grid", gap: "1rem", padding: "1rem" },
   header: { display: "flex", justifyContent: "space-between", gap: "1rem", alignItems: "flex-start" },
   title: { margin: 0, color: colorRoles.brandStructure },
