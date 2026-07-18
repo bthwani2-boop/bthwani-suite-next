@@ -1,0 +1,85 @@
+name: Lian Client Address Truth
+
+on:
+  push:
+    branches: [lian]
+    paths:
+      - "services/dsh/contracts/dsh.client-address.openapi.yaml"
+      - "services/dsh/database/migrations/dsh-056_client_addresses.sql"
+      - "services/dsh/database/migrations/dsh-057_checkout_address_reference.sql"
+      - "services/dsh/database/tests/dsh-056_057_client_address_invariants.sql"
+      - "services/dsh/backend/internal/clientaddress/**"
+      - "services/dsh/backend/internal/checkout/**"
+      - "services/dsh/backend/internal/http/client_addresses.go"
+      - "services/dsh/backend/internal/http/checkout.go"
+      - "services/dsh/frontend/shared/client-address/**"
+      - "services/dsh/frontend/app-client/account/AddressLocationScreen.tsx"
+      - "services/dsh/frontend/app-client/cart/CartScreen.tsx"
+      - "services/dsh/frontend/app-client/checkout/**"
+      - "tools/guards/client-commerce/**"
+      - ".github/workflows/lian-client-address-truth.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lian-client-address-truth-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  address-truth:
+    name: Address contract, idempotency, and type safety
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Setup governed workspace
+        uses: ./.github/actions/setup-node-workspace
+
+      - name: Verify client commerce and address retry truth
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/guards/client-commerce/client-commerce-truth-gate.mjs
+          node tools/guards/client-commerce/client-address-retry-truth-gate.mjs
+
+      - name: Verify API and full-stack boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm run guard:api-binding
+          pnpm run guard:backend-api-binding
+          pnpm run guard:frontend-feature-binding
+          pnpm run guard:fullstack-boundary
+          pnpm run guard:no-broken-imports
+
+      - name: Typecheck workspace
+        run: pnpm run typecheck
+
+      - name: Test DSH backend
+        working-directory: services/dsh/backend
+        run: go test ./... -count=1
+
+      - name: Build DSH backend
+        working-directory: services/dsh/backend
+        run: go build ./...
+
+  result:
+    name: Lian Client Address Truth result
+    if: always()
+    needs: [address-truth]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require client address truth to pass
+        env:
+          RESULT: ${{ needs.address-truth.result }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$RESULT" = success
