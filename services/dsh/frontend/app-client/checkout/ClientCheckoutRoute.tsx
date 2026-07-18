@@ -9,6 +9,7 @@ import {
 } from "@bthwani/ui-kit";
 import { AuthLoginCard } from "../../shared/auth/AuthLoginCard";
 import { useStoreDetailController } from "../../shared/store";
+import { useClientAddressController } from "../../shared/client-address";
 import { CartScreen } from "../cart";
 import { GovernedCheckoutScreen as CheckoutScreen } from "./GovernedCheckoutScreen";
 import type { DshCart } from "../../shared/cart";
@@ -17,32 +18,80 @@ import type { DshPaymentMethod } from "../../shared/checkout";
 type Props = {
   readonly storeId: string;
   readonly onBrowseCatalog?: () => void;
+  readonly onManageAddresses?: () => void;
   readonly onBack?: () => void;
   readonly onSuccess?: (orderId: string) => void;
 };
 
 type CheckoutData = {
   readonly cart: DshCart;
-  readonly deliveryAddress: string;
+  readonly deliveryAddressId: string;
   readonly note: string;
   readonly paymentMethod: DshPaymentMethod;
   readonly couponCode: string;
 };
 
-export function ClientCheckoutRoute({
+function AuthenticatedCheckout({
   storeId,
   onBrowseCatalog,
+  onManageAddresses,
   onBack,
   onSuccess,
 }: Props) {
-  const identity = useIdentitySession();
-  const storeController = useStoreDetailController(storeId);
+  const addressController = useClientAddressController();
   const [checkoutData, setCheckoutData] = React.useState<CheckoutData | null>(null);
+
+  if (addressController.state.kind === "loading") {
+    return <LoadingState title="جاري تحميل عنوان التسليم الافتراضي…" />;
+  }
+  if (addressController.state.kind === "error") {
+    return (
+      <StateView
+        tone="danger"
+        title="تعذر تحميل دفتر العناوين"
+        description={addressController.state.message}
+        actionLabel="إعادة المحاولة"
+        onActionPress={addressController.reload}
+      />
+    );
+  }
+
+  if (checkoutData) {
+    return (
+      <CheckoutScreen
+        cart={checkoutData.cart}
+        deliveryAddressId={checkoutData.deliveryAddressId}
+        note={checkoutData.note}
+        paymentMethod={checkoutData.paymentMethod}
+        couponCode={checkoutData.couponCode}
+        onCancel={() => setCheckoutData(null)}
+        onSuccess={onSuccess}
+      />
+    );
+  }
+
+  return (
+    <CartScreen
+      storeId={storeId}
+      selectedAddress={addressController.selectedAddress}
+      authKind="authenticated"
+      onProceedToCheckout={(cart, deliveryAddressId, note, paymentMethod, couponCode) =>
+        setCheckoutData({ cart, deliveryAddressId, note, paymentMethod, couponCode })
+      }
+      {...(onManageAddresses ? { onManageAddresses } : {})}
+      {...(onBrowseCatalog ? { onBrowseCatalog } : {})}
+      {...(onBack ? { onBack } : {})}
+    />
+  );
+}
+
+export function ClientCheckoutRoute(props: Props) {
+  const identity = useIdentitySession();
+  const storeController = useStoreDetailController(props.storeId);
 
   if (storeController.state.kind === "loading") {
     return <LoadingState title="جاري تحميل نطاق خدمة المتجر…" />;
   }
-
   if (storeController.state.kind === "service_unavailable") {
     return (
       <StateView
@@ -53,7 +102,6 @@ export function ClientCheckoutRoute({
       />
     );
   }
-
   if (storeController.state.kind === "error") {
     return (
       <StateView
@@ -64,7 +112,6 @@ export function ClientCheckoutRoute({
       />
     );
   }
-
   if (storeController.state.kind !== "success") {
     return (
       <StateView
@@ -82,61 +129,20 @@ export function ClientCheckoutRoute({
         <TopBar
           title="السلة وإتمام الطلب"
           subtitle="سجّل الدخول للوصول إلى سلة DSH"
-          {...(onBack ? { onBack } : {})}
+          {...(props.onBack ? { onBack: props.onBack } : {})}
         />
         <ScrollScreen>
           <AuthLoginCard
             title="دخول العميل"
             subtitle="استخدم حساب العميل للوصول إلى السلة وبدء checkout."
             loading={identity.state.kind === "authenticating"}
-            {...(identity.state.kind === "error"
-              ? { error: identity.state.message }
-              : {})}
-            onSubmit={(username, password) =>
-              void identity.login(username, password)
-            }
+            {...(identity.state.kind === "error" ? { error: identity.state.message } : {})}
+            onSubmit={(username, password) => void identity.login(username, password)}
           />
         </ScrollScreen>
       </View>
     );
   }
 
-  if (checkoutData) {
-    return (
-      <CheckoutScreen
-        cart={checkoutData.cart}
-        deliveryAddress={checkoutData.deliveryAddress}
-        note={checkoutData.note}
-        paymentMethod={checkoutData.paymentMethod}
-        couponCode={checkoutData.couponCode}
-        onCancel={() => setCheckoutData(null)}
-        onSuccess={onSuccess}
-      />
-    );
-  }
-
-  return (
-    <CartScreen
-      storeId={storeId}
-      serviceAreaCode={storeController.state.store.serviceAreaCode}
-      authKind="authenticated"
-      onProceedToCheckout={(
-        cart,
-        deliveryAddress,
-        note,
-        paymentMethod,
-        couponCode,
-      ) =>
-        setCheckoutData({
-          cart,
-          deliveryAddress,
-          note,
-          paymentMethod,
-          couponCode,
-        })
-      }
-      {...(onBrowseCatalog ? { onBrowseCatalog } : {})}
-      {...(onBack ? { onBack } : {})}
-    />
-  );
+  return <AuthenticatedCheckout {...props} />;
 }
