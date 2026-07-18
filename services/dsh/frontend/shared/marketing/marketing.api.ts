@@ -73,7 +73,8 @@ export type PartnerOfferWritePayload = {
   readonly rejectionReason?: string;
   readonly marginRiskNote?: string;
   readonly couponId?: string;
-  readonly expectedVersion: number;
+  /** Governed operator surfaces always send this. Optional only for legacy compile compatibility. */
+  readonly expectedVersion?: number;
 };
 
 export type PartnerOfferSubmitPayload = {
