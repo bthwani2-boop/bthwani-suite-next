@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: BThwani DSH Marketing Commercial Programs API
-  version: 0.2.0
-  description: DSH-owned marketing definitions and read-only client projection; WLT remains financial truth owner.
+  version: 0.3.0
+  description: DSH-owned marketing definitions and governed client purchase workflow; WLT remains the financial truth owner.
 x-bthwani-owner: services/dsh
 x-bthwani-parent-contract: services/dsh/contracts/dsh.openapi.yaml
 x-bthwani-contract-state: CONTRACT_ACTIVE
@@ -101,6 +101,56 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '404': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/client/marketing/subscriptions/purchase:
+    post:
+      operationId: createDshClientSubscriptionPurchase
+      tags: [DshMarketingCommercial]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, minLength: 1 }
+        - name: X-Correlation-ID
+          in: header
+          required: true
+          schema: { type: string, minLength: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SubscriptionPurchaseWrite' }
+      responses:
+        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '201': { $ref: '#/components/responses/ObjectResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '503': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/client/marketing/subscriptions/{purchaseId}/activate:
+    post:
+      operationId: activateDshClientSubscriptionPurchase
+      tags: [DshMarketingCommercial]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: purchaseId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+        - name: X-Correlation-ID
+          in: header
+          required: true
+          schema: { type: string, minLength: 1 }
+      responses:
+        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '404': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '502': { $ref: '#/components/responses/ErrorResponse' }
+        '503': { $ref: '#/components/responses/ErrorResponse' }
   /dsh/client/benefits:
     get:
       operationId: getDshClientBenefits
@@ -110,6 +160,7 @@ paths:
         '200': { $ref: '#/components/responses/ObjectResponse' }
         '401': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
+        '503': { $ref: '#/components/responses/ErrorResponse' }
 components:
   securitySchemes:
     bearerAuth: { type: http, scheme: bearer }
@@ -142,3 +193,12 @@ components:
       required: [expectedVersion]
       properties:
         expectedVersion: { type: integer, minimum: 1 }
+    SubscriptionPurchaseWrite:
+      type: object
+      additionalProperties: false
+      required: [planId, paymentMethod]
+      properties:
+        planId: { type: string, minLength: 1 }
+        paymentMethod:
+          type: string
+          enum: [wallet, mixed, official_wallet]
