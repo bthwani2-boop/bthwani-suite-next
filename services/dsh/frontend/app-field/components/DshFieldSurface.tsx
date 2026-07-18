@@ -135,14 +135,28 @@ export function DshFieldSurface({ command, onExit }: DshFieldSurfaceProps = {}) 
               visitId: string;
               completionLocation: Parameters<typeof completeFieldVisit>[1];
             };
-            await completeFieldVisit(payload.visitId, payload.completionLocation);
+            await completeFieldVisit(
+              payload.visitId,
+              payload.completionLocation,
+              {
+                correlationId: operation.correlationId,
+                idempotencyKey: operation.idempotencyKey,
+              },
+            );
           },
           upsert_readiness_check: async (operation) => {
             const payload = operation.payload as {
               visitId: string;
               input: Parameters<typeof upsertReadinessCheck>[1];
             };
-            await upsertReadinessCheck(payload.visitId, payload.input);
+            await upsertReadinessCheck(
+              payload.visitId,
+              payload.input,
+              {
+                correlationId: operation.correlationId,
+                idempotencyKey: operation.idempotencyKey,
+              },
+            );
           },
         }
       : undefined,
