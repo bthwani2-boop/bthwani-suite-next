@@ -13,13 +13,13 @@ import (
 )
 
 type createCheckoutIntentRequest struct {
-	CartID             string `json:"cartId"`
-	StoreID            string `json:"storeId"`
-	FulfillmentMode    string `json:"fulfillmentMode"`
-	PaymentMethod      string `json:"paymentMethod"`
-	DeliveryAddress    string `json:"deliveryAddress"`
-	Note               string `json:"note"`
-	CouponCode         string `json:"couponCode"`
+	CartID              string `json:"cartId"`
+	StoreID             string `json:"storeId"`
+	FulfillmentMode     string `json:"fulfillmentMode"`
+	PaymentMethod       string `json:"paymentMethod"`
+	DeliveryAddress     string `json:"deliveryAddress"`
+	Note                string `json:"note"`
+	CouponCode          string `json:"couponCode"`
 	ExpectedCartVersion int    `json:"expectedCartVersion"`
 }
 
@@ -85,25 +85,25 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 		return
 	}
 	pricing := checkout.PricingSnapshot{
-		CheckoutIntentID:     intentID,
-		SubtotalMinorUnits:   snapshot.SubtotalMinorUnits,
+		CheckoutIntentID:      intentID,
+		SubtotalMinorUnits:    snapshot.SubtotalMinorUnits,
 		DeliveryFeeMinorUnits: 0,
-		DiscountMinorUnits:   0,
-		TotalMinorUnits:      snapshot.SubtotalMinorUnits,
-		Currency:             snapshot.Currency,
+		DiscountMinorUnits:    0,
+		TotalMinorUnits:       snapshot.SubtotalMinorUnits,
+		Currency:              snapshot.Currency,
 	}
 
 	var reservation *coupons.Reservation
 	if body.CouponCode != "" {
 		reservation, err = coupons.ReserveForCheckoutTx(r.Context(), tx, coupons.ReserveInput{
-			TenantID:            actor.TenantID,
-			ClientID:            actor.ID,
-			StoreID:             body.StoreID,
-			CheckoutIntentID:    intentID,
-			CouponCode:          body.CouponCode,
-			SubtotalMinorUnits:  pricing.SubtotalMinorUnits,
-			DeliveryMinorUnits:  pricing.DeliveryFeeMinorUnits,
-			Currency:            pricing.Currency,
+			TenantID:           actor.TenantID,
+			ClientID:           actor.ID,
+			StoreID:            body.StoreID,
+			CheckoutIntentID:   intentID,
+			CouponCode:         body.CouponCode,
+			SubtotalMinorUnits: pricing.SubtotalMinorUnits,
+			DeliveryMinorUnits: pricing.DeliveryFeeMinorUnits,
+			Currency:           pricing.Currency,
 		})
 		if errors.Is(err, coupons.ErrNotFound) {
 			store.SendError(w, http.StatusNotFound, "COUPON_NOT_FOUND", "coupon not found")
@@ -159,7 +159,7 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 			if markErr == nil {
 				store.SendJSON(w, http.StatusServiceUnavailable, map[string]any{
 					"intent": marshalIntentWithPricing(failedIntent, pricing),
-					"error": map[string]any{"code": "WLT_PROMOTION_FUNDING_UNAVAILABLE", "message": "promotion funding reservation is unavailable"},
+					"error":  map[string]any{"code": "WLT_PROMOTION_FUNDING_UNAVAILABLE", "message": "promotion funding reservation is unavailable"},
 				})
 				return
 			}

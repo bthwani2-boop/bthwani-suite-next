@@ -6,10 +6,10 @@ func TestSplitFunding(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name        string
-		discount    int64
-		source      string
-		shareBPS    int
+		name         string
+		discount     int64
+		source       string
+		shareBPS     int
 		wantPlatform int64
 		wantPartner  int64
 		wantErr      bool
@@ -57,7 +57,7 @@ func TestNormalizeFundingPolicy(t *testing.T) {
 
 	blank := "   "
 	policy = normalizeFundingPolicy(UpdateFundingPolicyInput{
-		FundingSource: "platform",
+		FundingSource:    "platform",
 		FundingPartnerID: &blank,
 	})
 	if policy.FundingPartnerID != nil {
