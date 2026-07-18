@@ -129,7 +129,7 @@ export function useFieldCatalogController(partnerId: string) {
           localNote: input.localNote,
           customImageObjectKey: null,
           publicationStatus: existing?.publicationStatus ?? "draft",
-          expectedVersion: existing?.version,
+          ...(existing ? { expectedVersion: existing.version } : {}),
         });
         setAssortmentItems((prev) => {
           const withoutExisting = prev.filter((a) => a.masterProductId !== masterProductId);
