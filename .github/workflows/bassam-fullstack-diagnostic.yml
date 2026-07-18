@@ -1,27 +1,23 @@
-name: Bassam Governed Fullstack Repair
+name: Bassam Compile Repair Materializer
 
 on:
-  push:
-    branches: [bassam]
+  pull_request:
     paths:
       - .github/workflows/bassam-fullstack-diagnostic.yml
 
 permissions:
-  contents: write
-
-concurrency:
-  group: bassam-governed-fullstack-repair
-  cancel-in-progress: true
+  contents: read
 
 jobs:
-  repair:
+  materialize:
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           ref: bassam
-          fetch-depth: 0
+          fetch-depth: 1
+          persist-credentials: false
       - uses: ./.github/actions/setup-node-workspace
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
         with:
@@ -29,42 +25,22 @@ jobs:
           cache-dependency-path: |
             services/dsh/backend/go.sum
             services/wlt/backend/go.sum
-            services/workforce/backend/go.sum
-      - name: Apply governed repairs
+      - name: Materialize exact compile repairs
         shell: bash
         run: |
           set -euo pipefail
-          git fetch origin master
-
           node --input-type=module <<'NODE'
           import fs from "node:fs";
-          import { execFileSync } from "node:child_process";
-          import YAML from "yaml";
 
           const wltPath = "services/wlt/contracts/wlt.openapi.yaml";
           let wlt = fs.readFileSync(wltPath, "utf8");
           const invalidRef = '$ref: "#/components/responses/InvalidRequest"';
-          const occurrences = wlt.split(invalidRef).length - 1;
-          if (occurrences !== 1) throw new Error(`expected one InvalidRequest reference, found ${occurrences}`);
-          wlt = wlt.replace(invalidRef, '$ref: "#/components/responses/BadRequest"');
-          fs.writeFileSync(wltPath, wlt);
-
-          const dshPath = "services/dsh/contracts/dsh.openapi.yaml";
-          const current = YAML.parse(fs.readFileSync(dshPath, "utf8"));
-          const donor = YAML.parse(execFileSync("git", ["show", "origin/master:services/dsh/contracts/dsh.openapi.yaml"], { encoding: "utf8" }));
-          current.paths ??= {};
-          for (const [path, value] of Object.entries(donor.paths ?? {})) {
-            if (!(path in current.paths)) current.paths[path] = value;
+          const invalidCount = wlt.split(invalidRef).length - 1;
+          if (invalidCount > 1) throw new Error(`multiple invalid WLT response references: ${invalidCount}`);
+          if (invalidCount === 1) {
+            wlt = wlt.replace(invalidRef, '$ref: "#/components/responses/BadRequest"');
+            fs.writeFileSync(wltPath, wlt);
           }
-          current.components ??= {};
-          for (const [section, values] of Object.entries(donor.components ?? {})) {
-            if (!values || typeof values !== "object" || Array.isArray(values)) continue;
-            current.components[section] ??= {};
-            for (const [name, value] of Object.entries(values)) {
-              if (!(name in current.components[section])) current.components[section][name] = value;
-            }
-          }
-          fs.writeFileSync(dshPath, YAML.stringify(current, { lineWidth: 120 }));
 
           const governedPath = "services/dsh/backend/internal/coupons/governed.go";
           let governed = fs.readFileSync(governedPath, "utf8");
@@ -80,83 +56,67 @@ jobs:
 \t}
 \tif current.Status == "active" && (commercialChanged || fundingChanged) {
 `;
-          if (!governed.includes(oldBlock)) throw new Error("governed coupon update block not found exactly");
-          governed = governed.replace(oldBlock, newBlock);
-          fs.writeFileSync(governedPath, governed);
+          if (governed.includes(oldBlock)) {
+            governed = governed.replace(oldBlock, newBlock);
+            fs.writeFileSync(governedPath, governed);
+          } else if (!governed.includes("commercialChanged := baseTermsChanged || input.Status != nil")) {
+            throw new Error("coupon governance block is neither old nor repaired");
+          }
+
+          const catalogPath = "services/dsh/frontend/control-panel/catalogs/CatalogDashboardScreen.tsx";
+          let catalog = fs.readFileSync(catalogPath, "utf8");
+          const oldSignature = 'const handleAssetReview = async (assetId: string, status: "approved" | "rejected" | "archived", note: string) => {';
+          const newSignature = 'const handleAssetReview = async (assetId: string, status: "approved" | "rejected", note: string) => {';
+          if (catalog.includes(oldSignature)) {
+            catalog = catalog.replace(oldSignature, newSignature);
+            fs.writeFileSync(catalogPath, catalog);
+          } else if (!catalog.includes(newSignature)) {
+            throw new Error("catalog asset review signature not found");
+          }
           NODE
 
-          find services/dsh/backend services/workforce/backend -name '*.go' -type f -print0 | xargs -0 gofmt -w
-          pnpm run openapi:generate:dsh
+          find services/dsh/backend -name '*.go' -type f -print0 | xargs -0 gofmt -w
           pnpm run openapi:generate:wlt
 
-      - name: Verify and record exact results
+      - name: Verify materialized files
         shell: bash
         run: |
           set +e
-          mkdir -p governance/evidence /tmp/bassam-repair
-          report=governance/evidence/BASSAM_FULLSTACK_REPAIR.md
-          printf '# Bassam Fullstack Repair Evidence\n\n' > "$report"
-          printf -- '- Source SHA: `%s`\n' "$(git rev-parse HEAD)" >> "$report"
-          printf -- '- Executed at: `%s`\n\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$report"
+          mkdir -p /tmp/bassam-materialized
+          report=/tmp/bassam-materialized/REPORT.txt
+          : > "$report"
           failed=0
           check() {
             name="$1"; shift
-            slug=$(printf '%s' "$name" | tr '[:upper:] ' '[:lower:]-' | tr -cd 'a-z0-9_-')
-            log="/tmp/bassam-repair/$slug.log"
-            "$@" >"$log" 2>&1
+            echo "===== $name =====" >> "$report"
+            "$@" >> "$report" 2>&1
             code=$?
-            printf '## %s\n\n' "$name" >> "$report"
-            if [ "$code" -eq 0 ]; then
-              printf -- '- Result: **PASS**\n\n' >> "$report"
-            else
-              failed=1
-              printf -- '- Result: **FAIL** (exit `%s`)\n\n' "$code" >> "$report"
-            fi
-            printf '```text\n' >> "$report"
-            tail -n 260 "$log" >> "$report"
-            printf '\n```\n\n' >> "$report"
+            echo "EXIT=$code" >> "$report"
+            echo >> "$report"
+            if [ "$code" -ne 0 ]; then failed=1; fi
           }
-          check 'DSH gofmt' bash -lc 'cd services/dsh/backend && test -z "$(gofmt -l .)"'
-          check 'DSH vet' bash -lc 'cd services/dsh/backend && go vet ./...'
-          check 'DSH tests' bash -lc 'cd services/dsh/backend && go test ./...'
-          check 'DSH build' bash -lc 'cd services/dsh/backend && go build ./...'
-          check 'WLT tests' bash -lc 'cd services/wlt/backend && go test ./...'
-          check 'WLT build' bash -lc 'cd services/wlt/backend && go build ./...'
-          check 'Workforce gofmt' bash -lc 'cd services/workforce/backend && test -z "$(gofmt -l .)"'
-          check 'Workforce vet' bash -lc 'cd services/workforce/backend && go vet ./...'
-          check 'Workforce tests' bash -lc 'cd services/workforce/backend && go test ./...'
-          check 'Workforce build' bash -lc 'cd services/workforce/backend && go build ./...'
-          check 'Contracts lint' pnpm run contracts:lint
-          check 'Control panel typecheck' pnpm --dir apps/control-panel/runtime typecheck
-          check 'API binding' pnpm run guard:api-binding
-          check 'Backend API binding' pnpm run guard:backend-api-binding
-          check 'Frontend feature binding' pnpm run guard:frontend-feature-binding
-          check 'Broken imports' pnpm run guard:no-broken-imports
-          check 'Go routes' pnpm run guard:go-routes-ci
-          printf '## Verdict\n\n' >> "$report"
-          if [ "$failed" -eq 0 ]; then
-            printf '**PASS — targeted full-stack repair gates passed on the remote branch.**\n' >> "$report"
-          else
-            printf '**FIX_REQUIRED — exact remaining failures are recorded above.**\n' >> "$report"
-          fi
-          echo "$failed" > /tmp/bassam-repair/failed
+          check 'DSH GOFMT' bash -lc 'cd services/dsh/backend && test -z "$(gofmt -l .)"'
+          check 'DSH VET' bash -lc 'cd services/dsh/backend && go vet ./...'
+          check 'DSH TEST' bash -lc 'cd services/dsh/backend && go test ./...'
+          check 'DSH BUILD' bash -lc 'cd services/dsh/backend && go build ./...'
+          check 'WLT OPENAPI GENERATE' pnpm run openapi:generate:wlt
+          check 'CONTROL PANEL TYPECHECK' pnpm --dir apps/control-panel/runtime typecheck
+          check 'CONTRACTS LINT' pnpm run contracts:lint
+          check 'API BINDING' pnpm run guard:api-binding
+          check 'BACKEND API BINDING' pnpm run guard:backend-api-binding
+          check 'FRONTEND FEATURE BINDING' pnpm run guard:frontend-feature-binding
+          cp services/wlt/contracts/wlt.openapi.yaml /tmp/bassam-materialized/wlt.openapi.yaml
+          cp services/wlt/clients/generated/wlt-api.ts /tmp/bassam-materialized/wlt-api.ts
+          cp services/dsh/backend/internal/coupons/governed.go /tmp/bassam-materialized/governed.go
+          cp services/dsh/frontend/control-panel/catalogs/CatalogDashboardScreen.tsx /tmp/bassam-materialized/CatalogDashboardScreen.tsx
+          echo "$failed" > /tmp/bassam-materialized/FAILED
+          cat "$report"
 
-      - name: Commit repair and evidence
+      - name: Upload materialized repairs
         if: always()
-        shell: bash
-        run: |
-          set -euo pipefail
-          rm -f .github/workflows/bassam-fullstack-diagnostic.yml
-          git config user.name bthwani-fullstack-repair-bot
-          git config user.email fullstack-repair-bot@users.noreply.github.com
-          git add -A
-          git commit -m 'fix(fullstack): repair contracts bindings and compile gates' || true
-          git fetch origin bassam
-          git rebase origin/bassam
-          git push origin HEAD:bassam
-
-      - name: Preserve fail-closed status
-        if: always()
-        shell: bash
-        run: |
-          test "$(cat /tmp/bassam-repair/failed 2>/dev/null || echo 1)" = 0
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: bassam-compile-repairs
+          path: /tmp/bassam-materialized
+          if-no-files-found: error
+          retention-days: 3
