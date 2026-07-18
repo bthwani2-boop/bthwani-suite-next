@@ -73,11 +73,8 @@ func (c *Client) commercialMutationRequest(
 	if input != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
-	if strings.TrimSpace(idempotencyKey) != "" {
-		req.Header.Set("Idempotency-Key", strings.TrimSpace(idempotencyKey))
-	}
-	if strings.TrimSpace(correlationID) != "" {
-		req.Header.Set("X-Correlation-ID", strings.TrimSpace(correlationID))
+	if err := setRequiredMutationHeaders(req, correlationID, idempotencyKey); err != nil {
+		return fmt.Errorf("prepare WLT commercial mutation: %w", err)
 	}
 	response, err := c.http.Do(req)
 	if err != nil {
@@ -109,6 +106,12 @@ func (c *Client) CreateSubscriptionPaymentSession(
 ) (*SubscriptionPaymentSession, error) {
 	var envelope struct {
 		PaymentSession SubscriptionPaymentSession `json:"paymentSession"`
+	}
+	if strings.TrimSpace(idempotencyKey) == "" {
+		idempotencyKey = deterministicMutationKey("subscription-payment-session", input.SubscriptionPurchaseID, input.ProductReference, input.ClientID)
+	}
+	if strings.TrimSpace(correlationID) == "" {
+		correlationID = strings.TrimSpace(input.SubscriptionPurchaseID)
 	}
 	if err := c.commercialMutationRequest(
 		ctx,
@@ -151,12 +154,15 @@ func (c *Client) ActivateCommercialSubscription(
 	var envelope struct {
 		Subscription CommercialSubscription `json:"subscription"`
 	}
+	if strings.TrimSpace(correlationID) == "" {
+		correlationID = strings.TrimSpace(input.SubscriptionPurchaseID)
+	}
 	if err := c.commercialMutationRequest(
 		ctx,
 		http.MethodPost,
 		"/wlt/commercial/subscriptions",
 		input,
-		"subscription-activate:"+strings.TrimSpace(input.SubscriptionPurchaseID),
+		deterministicMutationKey("subscription-activate", input.SubscriptionPurchaseID, input.PaymentSessionID),
 		correlationID,
 		&envelope,
 	); err != nil {
