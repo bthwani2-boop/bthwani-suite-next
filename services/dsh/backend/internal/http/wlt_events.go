@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"dsh-api/internal/checkout"
+	"dsh-api/internal/coupons"
 	"dsh-api/internal/specialrequests"
 	"dsh-api/internal/store"
 )
@@ -86,8 +87,17 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to apply WLT payment event")
 		return
 	}
+	if err := coupons.ApplyPaymentOutcome(s.db, body.CheckoutIntentID, body.Status); err != nil {
+		store.SendError(w, http.StatusInternalServerError, "COUPON_RECONCILIATION_FAILED", "payment state changed but coupon reconciliation failed")
+		return
+	}
+	pricing, err := checkout.GetPricing(s.db, intent.ID)
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load checkout pricing")
+		return
+	}
 
-	store.SendJSON(w, http.StatusOK, map[string]any{"intent": marshalIntent(intent)})
+	store.SendJSON(w, http.StatusOK, map[string]any{"intent": marshalIntentWithPricing(intent, pricing)})
 }
 
 // requireWltServiceCaller enforces that only the WLT service — never an
