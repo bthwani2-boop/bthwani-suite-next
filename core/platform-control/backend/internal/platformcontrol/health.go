@@ -75,6 +75,15 @@ func (s *Service) Services(ctx context.Context) []ServicePosture {
 	return append(services, ordered...)
 }
 
+func (s *Service) Health(ctx context.Context) HealthSnapshot {
+	services := s.Services(ctx)
+	return HealthSnapshot{
+		State:     aggregateHealthState(services),
+		CheckedAt: s.now().UTC(),
+		Services:  services,
+	}
+}
+
 func (s *Service) probeDependency(ctx context.Context, dependency ServiceDependency) ServicePosture {
 	started := time.Now()
 	checkedAt := s.now().UTC()
