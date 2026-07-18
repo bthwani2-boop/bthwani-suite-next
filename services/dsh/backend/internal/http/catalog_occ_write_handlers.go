@@ -161,7 +161,7 @@ func (s *protectedStoreServer) handleReviewCatalogAssetExpected(w http.ResponseW
 	if !decodeProtectedJSON(w, r, &input) {
 		return
 	}
-	asset, err := centralcatalog.ReviewAssetExpected(r.Context(), s.db, actor.ID, r.PathValue("assetId"), input)
+	asset, err := centralcatalog.ReviewAssetAtomicExpected(r.Context(), s.db, actor.ID, r.PathValue("assetId"), input)
 	if err != nil {
 		s.writeCatalogMutationError(w, err)
 		return
