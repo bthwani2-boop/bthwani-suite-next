@@ -1,4 +1,5 @@
 import type { DshCapability } from "./capability-map";
+import { getDshCapabilitiesForSurface } from "./capabilities";
 
 export type DshSurface =
   | "app-client"
@@ -20,16 +21,27 @@ export type DshSurfaceDefinition = {
   readonly firstExecutableJourneys?: readonly string[];
 };
 
+function capabilityIdsFor(surface: DshSurface): readonly DshCapability["id"][] {
+  return getDshCapabilitiesForSurface(surface).map((capability) => capability.id);
+}
+
+/**
+ * Surface coverage is derived from canonical capability ownership. A surface
+ * remains `fix-required` until actor-specific navigation, permissions, network
+ * execution, persistence, readback, and negative paths are verified on the same
+ * immutable commit. Static imports or historical evidence cannot promote it to
+ * `runtime-verified`.
+ */
 export const DSH_SURFACE_MAP = [
   {
     surface: "app-client",
-    capabilityIds: ["dsh.store.discovery", "dsh.client.home-discovery", "dsh.client.catalog", "dsh.client.cart", "dsh.client.checkout", "dsh.client.orders", "dsh.client.dispatch", "dsh.notifications"],
-    implementationState: "runtime-verified",
+    capabilityIds: capabilityIdsFor("app-client"),
+    implementationState: "fix-required",
   },
   {
     surface: "app-partner",
-    capabilityIds: ["dsh.store.discovery", "dsh.client.catalog", "dsh.client.orders", "dsh.field.readiness", "dsh.support.hub", "dsh.operator.analytics", "dsh.notifications"],
-    implementationState: "runtime-verified",
+    capabilityIds: capabilityIdsFor("app-partner"),
+    implementationState: "fix-required",
     dependencyRole: "downstream",
     dependencyNotes: [
       "Partner manages own-store catalog; catalog readiness affects store publication eligibility.",
@@ -39,29 +51,29 @@ export const DSH_SURFACE_MAP = [
   },
   {
     surface: "app-captain",
-    capabilityIds: ["dsh.store.discovery", "dsh.client.dispatch", "dsh.notifications"],
-    implementationState: "runtime-verified",
+    capabilityIds: capabilityIdsFor("app-captain"),
+    implementationState: "fix-required",
     dependencyRole: "none-for-store-discovery",
     dependencyNotes: [
-      "Captain interaction starts with assignment, pickup, and delivery.",
-      "Store Discovery requires pickup-point readiness reporting; delivery lifecycle remains excluded.",
+      "Captain interaction starts with assignment, pickup, delivery, COD, and payout-reference journeys.",
+      "Store Discovery owns pickup context; WLT remains the only owner of financial truth.",
     ],
-    firstExecutableJourneys: ["dispatch", "notifications"],
+    firstExecutableJourneys: ["dispatch", "field-finance", "notifications"],
   },
   {
     surface: "app-field",
-    capabilityIds: ["dsh.store.discovery", "dsh.field.readiness", "dsh.notifications"],
-    implementationState: "runtime-verified",
+    capabilityIds: capabilityIdsFor("app-field"),
+    implementationState: "fix-required",
     dependencyRole: "upstream",
     dependencyNotes: [
       "Field onboarding and visit evidence can qualify stores for approval.",
-      "Store Discovery requires assigned-store verification submission; broader field workflow remains excluded.",
+      "Field finance is reference-only through the DSH/WLT boundary and cannot own wallet truth.",
     ],
-    firstExecutableJourneys: ["field-readiness", "notifications"],
+    firstExecutableJourneys: ["field-readiness", "field-finance", "notifications"],
   },
   {
     surface: "control-panel",
-    capabilityIds: ["dsh.store.discovery", "dsh.client.home-discovery", "dsh.client.catalog", "dsh.client.cart", "dsh.client.checkout", "dsh.client.orders", "dsh.client.dispatch", "dsh.field.readiness", "dsh.support.hub", "dsh.operator.analytics", "dsh.notifications"],
-    implementationState: "runtime-verified",
+    capabilityIds: capabilityIdsFor("control-panel"),
+    implementationState: "fix-required",
   },
 ] as const satisfies readonly DshSurfaceDefinition[];
