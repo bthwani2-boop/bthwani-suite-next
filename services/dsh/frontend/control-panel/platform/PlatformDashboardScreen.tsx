@@ -28,11 +28,9 @@ import { useControlPanelSession } from "../../shared/session/control-panel-sessi
 import { PlatformChangeWorkflowPanel } from "./PlatformChangeWorkflowPanel";
 import { ProviderRegistryPanel } from "./ProviderRegistryPanel";
 
-type ExecutiveTabId = Exclude<PlatformMainTabId, "notifications">;
+type ExecutiveTabId = PlatformMainTabId;
 
-const EXECUTIVE_TABS = PLATFORM_MAIN_TABS.filter(
-  (tab) => tab.id !== "notifications",
-);
+const EXECUTIVE_TABS = PLATFORM_MAIN_TABS;
 
 function resourceFailure(
   data: PlatformControlReadModel,
@@ -385,7 +383,7 @@ export function PlatformDashboardScreen() {
         {EXECUTIVE_TABS.map((tab) => (
           <CpButton
             key={tab.id}
-            onClick={() => setMainTab(tab.id as ExecutiveTabId)}
+            onClick={() => setMainTab(tab.id)}
             aria-label={`${tab.label}${mainTab === tab.id ? " — التبويب الحالي" : ""}`}
           >
             {mainTab === tab.id ? `● ${tab.label}` : tab.label}
