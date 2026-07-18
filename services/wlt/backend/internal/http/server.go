@@ -100,13 +100,11 @@ func NewRouter(db *sql.DB, mutationsEnabled bool) *http.ServeMux {
 	mux.HandleFunc("GET /wlt/commercial/products/{productReference}", readGate(commercial.HandleGetProduct(db)))
 	mux.HandleFunc("POST /wlt/commercial/products", gate(serviceAuth(commercial.HandleCreateProduct(db))))
 	mux.HandleFunc("PATCH /wlt/commercial/products/{productReference}", gate(serviceAuth(commercial.HandleUpdateProductGoverned(db))))
+	mux.HandleFunc("POST /wlt/commercial/payment-sessions", gate(serviceAuth(commercial.HandleCreateSubscriptionPaymentSession(db))))
 	mux.HandleFunc("GET /wlt/commercial/clients/{clientId}/benefits", readGate(commercial.HandleGetClientBenefits(db)))
 	mux.HandleFunc("POST /wlt/commercial/loyalty-entries", gate(serviceAuth(commercial.HandleAppendLoyaltyEntryGoverned(db))))
 	mux.HandleFunc("POST /wlt/commercial/subscriptions", gate(serviceAuth(commercial.HandleActivateSubscriptionGoverned(db))))
 
-	// Promotion funding is WLT financial truth. DSH supplies the authoritative
-	// discount calculation and funding split, while WLT owns reserve/commit/
-	// release/reversal and the immutable funding event trail.
 	mux.HandleFunc("POST /wlt/promotion-funding/reservations", gate(serviceAuth(promotionfunding.HandleReserve(db))))
 	mux.HandleFunc("GET /wlt/promotion-funding/reservations/{reservationId}", readGate(promotionfunding.HandleGet(db)))
 	mux.HandleFunc("POST /wlt/promotion-funding/reservations/{reservationId}/commit", gate(serviceAuth(promotionfunding.HandleCommit(db))))
