@@ -28,7 +28,7 @@ export function AssistedOrderDeskScreen(_props: AssistedOrderDeskScreenProps) {
   return (
     <Box gap={4}>
       <StateView
-        kind="warning"
+        tone="warning"
         title="الطلبات المساعدة غير مفعلة"
         description="لا يوجد حاليًا عقد سيادي يسمح ببحث العميل أو تعديل سلته أو تقديم مسودة باسمه. تم حجب الواجهة المحلية التي كانت تعرض هوية ومنتجات وقابلية خدمة ونجاحًا غير صادر من DSH."
       />
