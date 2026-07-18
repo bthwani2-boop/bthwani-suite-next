@@ -99,10 +99,10 @@ func NewRouter(db *sql.DB, mutationsEnabled bool) *http.ServeMux {
 	mux.HandleFunc("GET /wlt/commercial/summary", readGate(commercial.HandleGetSummary(db)))
 	mux.HandleFunc("GET /wlt/commercial/products/{productReference}", readGate(commercial.HandleGetProduct(db)))
 	mux.HandleFunc("POST /wlt/commercial/products", gate(serviceAuth(commercial.HandleCreateProduct(db))))
-	mux.HandleFunc("PATCH /wlt/commercial/products/{productReference}", gate(serviceAuth(commercial.HandleUpdateProduct(db))))
+	mux.HandleFunc("PATCH /wlt/commercial/products/{productReference}", gate(serviceAuth(commercial.HandleUpdateProductGoverned(db))))
 	mux.HandleFunc("GET /wlt/commercial/clients/{clientId}/benefits", readGate(commercial.HandleGetClientBenefits(db)))
-	mux.HandleFunc("POST /wlt/commercial/loyalty-entries", gate(serviceAuth(commercial.HandleAppendLoyaltyEntry(db))))
-	mux.HandleFunc("POST /wlt/commercial/subscriptions", gate(serviceAuth(commercial.HandleActivateSubscription(db))))
+	mux.HandleFunc("POST /wlt/commercial/loyalty-entries", gate(serviceAuth(commercial.HandleAppendLoyaltyEntryGoverned(db))))
+	mux.HandleFunc("POST /wlt/commercial/subscriptions", gate(serviceAuth(commercial.HandleActivateSubscriptionGoverned(db))))
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "Route not found")
