@@ -44,7 +44,8 @@ export type DshCreateIntentInput = {
   readonly storeId: string;
   readonly fulfillmentMode?: DshFulfillmentMode;
   readonly paymentMethod?: DshPaymentMethod;
-  readonly deliveryAddress?: string;
+  /** Required for delivery; the backend resolves ownership and snapshots it. */
+  readonly deliveryAddressId?: string;
   readonly note?: string;
   readonly couponCode?: string;
 };
