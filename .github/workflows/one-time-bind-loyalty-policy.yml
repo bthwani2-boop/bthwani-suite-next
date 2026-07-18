@@ -1,0 +1,98 @@
+name: One-time Bind Loyalty Policy
+
+on:
+  push:
+    branches: [bassam]
+    paths:
+      - '.github/workflows/one-time-bind-loyalty-policy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: one-time-bind-loyalty-policy
+  cancel-in-progress: false
+
+jobs:
+  bind:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: bassam
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+
+      - name: Bind routes and surfaces
+        shell: bash
+        run: |
+          set -euo pipefail
+          git pull --rebase origin bassam
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def insert_after(text, anchor, addition, label):
+              if addition.strip() in text:
+                  return text
+              count = text.count(anchor)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected one anchor, found {count}')
+              return text.replace(anchor, anchor + '\n' + addition, 1)
+
+          server = Path('services/dsh/backend/internal/http/server.go')
+          text = server.read_text(encoding='utf-8')
+          text = insert_after(
+              text,
+              '\tmux.HandleFunc("PATCH /dsh/operator/marketing/loyalty-tiers/{tierId}", protected.handleUpdateMarketingLoyaltyTier)',
+              '\tmux.HandleFunc("GET /dsh/operator/marketing/loyalty-earning-policies", protected.handleListLoyaltyEarningPolicies)\n\tmux.HandleFunc("POST /dsh/operator/marketing/loyalty-earning-policies", protected.handleCreateLoyaltyEarningPolicy)\n\tmux.HandleFunc("PATCH /dsh/operator/marketing/loyalty-earning-policies/{policyId}", protected.handleUpdateLoyaltyEarningPolicy)',
+              'loyalty policy routes',
+          )
+          server.write_text(text, encoding='utf-8')
+
+          barrel = Path('services/dsh/frontend/shared/marketing/index.ts')
+          text = barrel.read_text(encoding='utf-8')
+          if './loyalty-policy.api' not in text:
+              text = text.rstrip() + '\nexport * from "./loyalty-policy.api";\nexport * from "./use-loyalty-policy-controller";\n'
+          barrel.write_text(text, encoding='utf-8')
+
+          dashboard = Path('services/dsh/frontend/control-panel/marketing/MarketingDashboardScreen.tsx')
+          text = dashboard.read_text(encoding='utf-8')
+          import_line = 'import { LoyaltyPolicyPanel } from "./components/LoyaltyPolicyPanel";\n'
+          if import_line not in text:
+              lines = text.splitlines(keepends=True)
+              insert_at = 0
+              for i, line in enumerate(lines):
+                  if line.startswith('import '):
+                      insert_at = i + 1
+              lines.insert(insert_at, import_line)
+              text = ''.join(lines)
+          old = '{mainTab === "loyalty" ? <LoyaltyCommandDeck /> : null}'
+          new = '{mainTab === "loyalty" ? <><LoyaltyCommandDeck /><LoyaltyPolicyPanel /></> : null}'
+          if new not in text:
+              if text.count(old) != 1:
+                  raise SystemExit('loyalty dashboard mount anchor mismatch')
+              text = text.replace(old, new, 1)
+          dashboard.write_text(text, encoding='utf-8')
+          PY
+          gofmt -w services/dsh/backend/internal/marketing/loyalty_policy.go services/dsh/backend/internal/http/loyalty_policy.go services/dsh/backend/internal/http/server.go
+          git diff --check
+
+      - name: Commit bindings
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add services/dsh/backend/internal/marketing/loyalty_policy.go services/dsh/backend/internal/http/loyalty_policy.go services/dsh/backend/internal/http/server.go services/dsh/frontend/shared/marketing/index.ts services/dsh/frontend/control-panel/marketing/MarketingDashboardScreen.tsx
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'fix(loyalty): bind earning policy governance'
+          git pull --rebase origin bassam
+          git push origin HEAD:bassam
+
+      - name: Compile backend
+        working-directory: services/dsh/backend
+        run: go test ./...
