@@ -16,6 +16,8 @@ export type StoreMeasurementSheetProps = {
   readonly quantity: number;
   readonly setQuantity: (quantity: number | ((current: number) => number)) => void;
   readonly isAddedToCart: boolean;
+  readonly isSubmitting: boolean;
+  readonly errorMessage?: string | null;
   readonly onAddToCart: () => void;
   readonly onGoToCart: () => void;
   readonly onClose: () => void;
@@ -34,6 +36,8 @@ export const StoreMeasurementSheet = React.memo(function StoreMeasurementSheet({
   quantity,
   setQuantity,
   isAddedToCart,
+  isSubmitting,
+  errorMessage,
   onAddToCart,
   onGoToCart,
   onClose,
@@ -43,13 +47,8 @@ export const StoreMeasurementSheet = React.memo(function StoreMeasurementSheet({
   if (!product) return null;
 
   return (
-    <Modal
-      visible
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <Pressable style={styles.overlay} onPress={onClose}>
+    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={styles.overlay} onPress={isSubmitting ? undefined : onClose}>
         <Pressable style={styles.popoverCard} accessibilityRole="none">
           {isAddedToCart ? (
             <View style={styles.confirmContainer}>
@@ -100,17 +99,23 @@ export const StoreMeasurementSheet = React.memo(function StoreMeasurementSheet({
               </View>
 
               <Text style={styles.priceNotice}>
-                يُثبت السعر والتوافر من الكتالوج المركزي عند إضافة المنتج للسلة.
+                يُثبت السعر والتوافر من الكتالوج المركزي عند قبول DSH لعملية
+                السلة.
               </Text>
 
               <View style={styles.qtyRow}>
                 <TouchableOpacity
                   accessibilityRole="button"
                   accessibilityLabel="تقليل الكمية"
-                  disabled={quantity <= 1}
-                  style={[styles.qtyGhostBtn, quantity <= 1 && styles.disabledButton]}
+                  disabled={quantity <= 1 || isSubmitting}
+                  style={[
+                    styles.qtyGhostBtn,
+                    (quantity <= 1 || isSubmitting) && styles.disabledButton,
+                  ]}
                   activeOpacity={0.85}
-                  onPress={() => setQuantity((current) => Math.max(1, current - 1))}
+                  onPress={() =>
+                    setQuantity((current) => Math.max(1, current - 1))
+                  }
                 >
                   <Text style={styles.qtyBtnText}>−</Text>
                 </TouchableOpacity>
@@ -122,22 +127,41 @@ export const StoreMeasurementSheet = React.memo(function StoreMeasurementSheet({
                 <TouchableOpacity
                   accessibilityRole="button"
                   accessibilityLabel="زيادة الكمية"
-                  style={styles.qtyPrimaryBtn}
+                  disabled={isSubmitting}
+                  style={[
+                    styles.qtyPrimaryBtn,
+                    isSubmitting && styles.disabledButton,
+                  ]}
                   activeOpacity={0.9}
-                  onPress={() => setQuantity((current) => Math.min(99, current + 1))}
+                  onPress={() =>
+                    setQuantity((current) => Math.min(99, current + 1))
+                  }
                 >
                   <Text style={styles.qtyBtnTextWhite}>+</Text>
                 </TouchableOpacity>
               </View>
 
+              {errorMessage ? (
+                <Text accessibilityRole="alert" style={styles.errorText}>
+                  {errorMessage}
+                </Text>
+              ) : null}
+
               <TouchableOpacity
                 accessibilityRole="button"
                 accessibilityLabel="إضافة المنتج إلى السلة"
-                style={styles.confirmBtn}
+                accessibilityState={{ busy: isSubmitting, disabled: isSubmitting }}
+                disabled={isSubmitting}
+                style={[
+                  styles.confirmBtn,
+                  isSubmitting && styles.disabledButton,
+                ]}
                 activeOpacity={0.9}
                 onPress={onAddToCart}
               >
-                <Text style={styles.confirmBtnText}>أضف للسلة</Text>
+                <Text style={styles.confirmBtnText}>
+                  {isSubmitting ? "جاري الإضافة…" : "أضف للسلة"}
+                </Text>
               </TouchableOpacity>
             </View>
           )}
@@ -216,7 +240,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  disabledButton: { opacity: 0.4 },
+  disabledButton: { opacity: 0.45 },
   qtyPill: {
     minWidth: 64,
     height: 42,
@@ -240,6 +264,12 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "900",
     color: colorRoles.brandStructure,
+  },
+  errorText: {
+    color: colorRoles.danger,
+    fontSize: 12,
+    lineHeight: 19,
+    textAlign: "right",
   },
   confirmBtn: {
     minHeight: 46,
