@@ -1,0 +1,1 @@
+Fixed verification trigger for platform-control P3 snapshot v7.
