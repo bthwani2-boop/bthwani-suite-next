@@ -5,7 +5,10 @@ import type {
   DshStoreDetailViewModel,
   StoreHeroFulfillmentMode,
 } from "../../shared/store";
-import type { DshFulfillmentDeliveryMode } from "../../shared/delivery/delivery.contract";
+import {
+  isDshFulfillmentDeliveryMode,
+  type DshFulfillmentDeliveryMode,
+} from "../../shared/delivery/delivery.contract";
 
 const DELIVERY_MODE_PRESENTATION: Record<
   DshFulfillmentDeliveryMode,
@@ -65,9 +68,9 @@ export function StoreDetailHeroSection({
       scrollY={scrollY}
       deliveryModes={visibleModes}
       selectedMode={selectedMode}
-      onModeChange={(mode) =>
-        onModeChange(mode as DshFulfillmentDeliveryMode)
-      }
+      onModeChange={(mode) => {
+        if (isDshFulfillmentDeliveryMode(mode)) onModeChange(mode);
+      }}
     />
   );
 }
