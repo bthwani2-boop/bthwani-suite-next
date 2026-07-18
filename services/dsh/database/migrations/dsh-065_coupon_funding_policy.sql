@@ -24,6 +24,7 @@ ALTER TABLE dsh_coupons
     );
 
 ALTER TABLE dsh_coupon_redemptions
+    ADD COLUMN IF NOT EXISTS funding_tenant_id TEXT,
     ADD COLUMN IF NOT EXISTS platform_funded_minor_units BIGINT NOT NULL DEFAULT 0
         CHECK (platform_funded_minor_units >= 0),
     ADD COLUMN IF NOT EXISTS partner_funded_minor_units BIGINT NOT NULL DEFAULT 0
@@ -61,7 +62,12 @@ ALTER TABLE dsh_coupon_redemptions
 ALTER TABLE dsh_coupon_redemptions
     ADD CONSTRAINT dsh_coupon_redemptions_wlt_reference_chk CHECK (
         funding_status NOT IN ('reserved', 'committed', 'released', 'reversed')
-        OR (wlt_funding_reservation_id IS NOT NULL AND btrim(wlt_funding_reservation_id) <> '')
+        OR (
+            funding_tenant_id IS NOT NULL
+            AND btrim(funding_tenant_id) <> ''
+            AND wlt_funding_reservation_id IS NOT NULL
+            AND btrim(wlt_funding_reservation_id) <> ''
+        )
     );
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_dsh_coupon_redemption_wlt_funding
@@ -76,15 +82,27 @@ RETURNS TRIGGER
 LANGUAGE plpgsql
 AS $$
 BEGIN
-    IF OLD.funding_status IN ('committed', 'released', 'reversed')
+    IF OLD.funding_status IN ('released', 'reversed')
        AND NEW.funding_status <> OLD.funding_status THEN
         RAISE EXCEPTION 'terminal coupon funding projection cannot transition'
+            USING ERRCODE = '23514';
+    END IF;
+
+    IF OLD.funding_status = 'committed'
+       AND NEW.funding_status NOT IN ('committed', 'reversed') THEN
+        RAISE EXCEPTION 'committed coupon funding can only be reversed'
             USING ERRCODE = '23514';
     END IF;
 
     IF OLD.wlt_funding_reservation_id IS NOT NULL
        AND NEW.wlt_funding_reservation_id IS DISTINCT FROM OLD.wlt_funding_reservation_id THEN
         RAISE EXCEPTION 'WLT funding reservation reference is immutable'
+            USING ERRCODE = '23514';
+    END IF;
+
+    IF OLD.funding_tenant_id IS NOT NULL
+       AND NEW.funding_tenant_id IS DISTINCT FROM OLD.funding_tenant_id THEN
+        RAISE EXCEPTION 'coupon funding tenant is immutable'
             USING ERRCODE = '23514';
     END IF;
 
@@ -110,7 +128,8 @@ $$;
 DROP TRIGGER IF EXISTS trg_dsh_guard_coupon_funding_projection
     ON dsh_coupon_redemptions;
 CREATE TRIGGER trg_dsh_guard_coupon_funding_projection
-BEFORE UPDATE OF platform_funded_minor_units, partner_funded_minor_units,
-    funding_partner_id, funding_status, wlt_funding_reservation_id
+BEFORE UPDATE OF funding_tenant_id, platform_funded_minor_units,
+    partner_funded_minor_units, funding_partner_id, funding_status,
+    wlt_funding_reservation_id
 ON dsh_coupon_redemptions
 FOR EACH ROW EXECUTE FUNCTION dsh_guard_coupon_funding_projection();
