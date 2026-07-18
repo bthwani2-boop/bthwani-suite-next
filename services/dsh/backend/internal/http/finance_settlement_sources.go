@@ -23,7 +23,6 @@ type createGovernedSettlementRequest struct {
 	PartnerID   string `json:"partnerId"`
 	PeriodStart string `json:"periodStart"`
 	PeriodEnd   string `json:"periodEnd"`
-	Currency    string `json:"currency"`
 }
 
 type upsertSettlementPolicyRequest struct {
@@ -45,8 +44,10 @@ func decodeStrictFinanceJSON(w http.ResponseWriter, r *http.Request, target any)
 // POST /dsh/control-panel/finance/settlements/from-delivered-orders
 //
 // DSH derives immutable order sources from its own delivered-order truth. It
-// never accepts gross, fee, net or orderCount from the control-panel request.
-// WLT owns the active fee policy, arithmetic and duplicate-order prevention.
+// never accepts currency, gross, fee, net or orderCount from the control-panel
+// request. Only orders with an authoritative pricing snapshot and a recorded
+// delivered transition are eligible. WLT owns the active fee policy, arithmetic
+// and duplicate-order prevention.
 func (s *protectedStoreServer) handleCreateFinanceSettlementFromDeliveredOrders(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage, "operator")
 	if !ok {
@@ -64,10 +65,6 @@ func (s *protectedStoreServer) handleCreateFinanceSettlementFromDeliveredOrders(
 	input.PartnerID = strings.TrimSpace(input.PartnerID)
 	input.PeriodStart = strings.TrimSpace(input.PeriodStart)
 	input.PeriodEnd = strings.TrimSpace(input.PeriodEnd)
-	input.Currency = strings.TrimSpace(input.Currency)
-	if input.Currency == "" {
-		input.Currency = "YER"
-	}
 	if input.PartnerID == "" || input.PeriodStart == "" || input.PeriodEnd == "" {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "partnerId, periodStart and periodEnd are required")
 		return
@@ -85,18 +82,25 @@ func (s *protectedStoreServer) handleCreateFinanceSettlementFromDeliveredOrders(
 
 	rows, err := s.db.QueryContext(r.Context(), `
 		SELECT o.id::text,
-		       ROUND(SUM(oi.unit_price * oi.quantity) * 100)::bigint AS gross_minor_units,
-		       o.updated_at
+		       o.subtotal_minor_units,
+		       o.currency,
+		       delivered.delivered_at
 		FROM dsh_orders o
-		JOIN dsh_order_items oi ON oi.order_id = o.id
-		JOIN dsh_stores st ON st.id::text = o.store_id
+		JOIN dsh_stores st ON st.id = o.store_id
+		JOIN LATERAL (
+			SELECT MAX(event.created_at) AS delivered_at
+			FROM dsh_order_status_events event
+			WHERE event.order_id = o.id
+			  AND event.to_status = 'delivered'
+		) delivered ON delivered.delivered_at IS NOT NULL
 		WHERE st.partner_id::text = $1
 		  AND o.status = 'delivered'
-		  AND o.updated_at >= $2::date
-		  AND o.updated_at < ($3::date + INTERVAL '1 day')
-		GROUP BY o.id, o.updated_at
-		HAVING ROUND(SUM(oi.unit_price * oi.quantity) * 100)::bigint > 0
-		ORDER BY o.updated_at, o.id`, input.PartnerID, input.PeriodStart, input.PeriodEnd)
+		  AND delivered.delivered_at >= $2::date
+		  AND delivered.delivered_at < ($3::date + INTERVAL '1 day')
+		  AND o.subtotal_minor_units > 0
+		  AND btrim(o.currency) <> ''
+		  AND btrim(o.pricing_snapshot_hash) <> ''
+		ORDER BY delivered.delivered_at, o.id`, input.PartnerID, input.PeriodStart, input.PeriodEnd)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to derive delivered order sources")
 		return
@@ -106,11 +110,10 @@ func (s *protectedStoreServer) handleCreateFinanceSettlementFromDeliveredOrders(
 	orderSources := make([]financeSettlementOrderSource, 0)
 	for rows.Next() {
 		var source financeSettlementOrderSource
-		if err := rows.Scan(&source.OrderID, &source.GrossAmountMinorUnits, &source.DeliveredAt); err != nil {
+		if err := rows.Scan(&source.OrderID, &source.GrossAmountMinorUnits, &source.Currency, &source.DeliveredAt); err != nil {
 			store.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to decode delivered order source")
 			return
 		}
-		source.Currency = input.Currency
 		orderSources = append(orderSources, source)
 	}
 	if err := rows.Err(); err != nil {
@@ -118,7 +121,7 @@ func (s *protectedStoreServer) handleCreateFinanceSettlementFromDeliveredOrders(
 		return
 	}
 	if len(orderSources) == 0 {
-		store.SendError(w, http.StatusConflict, "NO_ELIGIBLE_DELIVERED_ORDERS", "no delivered orders are eligible for this partner and period")
+		store.SendError(w, http.StatusConflict, "NO_ELIGIBLE_DELIVERED_ORDERS", "no delivered orders with an authoritative pricing snapshot are eligible for this partner and period")
 		return
 	}
 
