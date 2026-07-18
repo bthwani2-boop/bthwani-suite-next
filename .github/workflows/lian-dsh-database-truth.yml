@@ -1,0 +1,90 @@
+name: Lian DSH Database Truth
+
+on:
+  push:
+    branches: [lian]
+    paths:
+      - "services/dsh/database/migrations/**"
+      - "services/dsh/database/tests/**"
+      - "services/dsh/backend/internal/clientaddress/**"
+      - "services/dsh/backend/internal/partner/**"
+      - "services/dsh/backend/internal/checkout/**"
+      - ".github/workflows/lian-dsh-database-truth.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lian-dsh-database-truth-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fresh-database:
+    name: Fresh PostgreSQL migration and invariant tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: dsh_test
+          POSTGRES_PASSWORD: dsh_test_password
+          POSTGRES_DB: dsh_test
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd="pg_isready -U dsh_test -d dsh_test"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      DATABASE_URL: postgres://dsh_test:dsh_test_password@localhost:55432/dsh_test?sslmode=disable
+      PGPASSWORD: dsh_test_password
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Apply DSH migrations in canonical order
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t migrations < <(find services/dsh/database/migrations -maxdepth 1 -type f -name 'dsh-*.sql' | sort)
+          test "${#migrations[@]}" -gt 0
+          for migration in "${migrations[@]}"; do
+            echo "Applying $migration"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
+          done
+
+      - name: Verify client address and checkout invariants
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/dsh/database/tests/dsh-056_057_client_address_invariants.sql
+
+      - name: Verify partner team idempotency invariants
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/dsh/database/tests/dsh-058_partner_team_idempotency.sql
+
+      - name: Verify migrations are replay-safe
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t migrations < <(find services/dsh/database/migrations -maxdepth 1 -type f -name 'dsh-*.sql' | sort)
+          for migration in "${migrations[@]}"; do
+            echo "Replaying $migration"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
+          done
+
+  result:
+    name: Lian DSH Database Truth result
+    if: always()
+    needs: [fresh-database]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require database truth to pass
+        env:
+          RESULT: ${{ needs.fresh-database.result }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$RESULT" = success
