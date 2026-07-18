@@ -1,0 +1,1 @@
+Fixed same-commit verification trigger for platform-control and DSH manifest synchronization v14.
