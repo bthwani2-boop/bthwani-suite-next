@@ -36,7 +36,7 @@ function resolveCatalogError(error: unknown, fallback: string): string {
 function requireCatalogVersion(
   entities: readonly CatalogVersionedEntity[],
   entityId: string,
-  entityKind: "domain" | "node" | "master_product" | "policy",
+  entityKind: "domain" | "node" | "master_product" | "proposal" | "policy",
 ): number {
   const entity = entities.find((item) => item.id === entityId);
   if (!entity) throw new Error(`CATALOG_${entityKind.toUpperCase()}_NOT_LOADED`);
@@ -248,11 +248,17 @@ export function useCentralCatalogController(authKind = "unauthenticated") {
       return runMutationWithReadback(() => api.updateMasterProduct(productId, request), loadMasterProducts);
     },
 
-    decideProposal: async (proposalId: string, input: Parameters<typeof api.decideProductProposal>[1]) =>
-      runMutationWithReadback(() => api.decideProductProposal(proposalId, input), loadProposals),
+    decideProposal: async (proposalId: string, input: Parameters<typeof api.decideProductProposal>[1]) => {
+      const expectedVersion = requireCatalogVersion(state.proposals.items, proposalId, "proposal");
+      const request = { ...input, expectedVersion };
+      return runMutationWithReadback(() => api.decideProductProposal(proposalId, request), loadProposals);
+    },
 
-    transitionProposal: async (proposalId: string, input: Parameters<typeof api.transitionProductProposal>[1]) =>
-      runMutationWithReadback(() => api.transitionProductProposal(proposalId, input), loadProposals),
+    transitionProposal: async (proposalId: string, input: Parameters<typeof api.transitionProductProposal>[1]) => {
+      const expectedVersion = requireCatalogVersion(state.proposals.items, proposalId, "proposal");
+      const request = { ...input, expectedVersion };
+      return runMutationWithReadback(() => api.transitionProductProposal(proposalId, request), loadProposals);
+    },
 
     updatePolicy: async (policyId: string, input: Parameters<typeof api.updateCatalogPlatformPolicy>[1]) => {
       const expectedVersion = requireCatalogVersion(state.policies.items, policyId, "policy");
