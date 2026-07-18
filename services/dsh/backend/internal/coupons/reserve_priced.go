@@ -9,15 +9,37 @@ import (
 )
 
 type ReservePricedInput struct {
-	Code                   string
-	ClientActorID          string
-	CartID                 string
-	CheckoutIntentID       string
-	StoreID                string
-	FulfillmentMode        string
-	SubtotalMinorUnits     int64
-	DeliveryFeeMinorUnits  int64
-	Currency               string
+	Code                  string
+	ClientActorID         string
+	CartID                string
+	CheckoutIntentID      string
+	StoreID               string
+	FulfillmentMode       string
+	SubtotalMinorUnits    int64
+	DeliveryFeeMinorUnits int64
+	Currency              string
+}
+
+func percentageBasisPoints(percent float64) (int64, error) {
+	if math.IsNaN(percent) || math.IsInf(percent, 0) || percent <= 0 || percent > 100 {
+		return 0, ErrInvalid
+	}
+	basisPoints := int64(math.Round(percent * 100))
+	if basisPoints <= 0 || basisPoints > 10000 {
+		return 0, ErrInvalid
+	}
+	return basisPoints, nil
+}
+
+func percentageDiscountMinorUnits(subtotalMinorUnits, basisPoints int64) (int64, error) {
+	const maxInt64 = int64(1<<63 - 1)
+	if subtotalMinorUnits <= 0 || basisPoints <= 0 || basisPoints > 10000 {
+		return 0, ErrInvalid
+	}
+	if subtotalMinorUnits > (maxInt64-5000)/basisPoints {
+		return 0, ErrInvalid
+	}
+	return (subtotalMinorUnits*basisPoints + 5000) / 10000, nil
 }
 
 func ReservePricedTx(ctx context.Context, tx *sql.Tx, input ReservePricedInput) (*Reservation, error) {
@@ -87,7 +109,14 @@ func ReservePricedTx(ctx context.Context, tx *sql.Tx, input ReservePricedInput) 
 
 	var discount int64
 	if coupon.DiscountType == "percent" {
-		discount = int64(math.Round(float64(input.SubtotalMinorUnits) * coupon.DiscountPercent / 100))
+		basisPoints, basisPointErr := percentageBasisPoints(coupon.DiscountPercent)
+		if basisPointErr != nil {
+			return nil, basisPointErr
+		}
+		discount, err = percentageDiscountMinorUnits(input.SubtotalMinorUnits, basisPoints)
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		discount = coupon.FixedDiscountMinorUnits
 	}
