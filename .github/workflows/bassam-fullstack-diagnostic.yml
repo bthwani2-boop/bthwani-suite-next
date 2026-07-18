@@ -1,0 +1,66 @@
+name: Bassam Fullstack Diagnostic
+
+on:
+  push:
+    branches: [bassam]
+    paths:
+      - .github/workflows/bassam-fullstack-diagnostic.yml
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          ref: bassam
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: ./.github/actions/setup-node-workspace
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version: '1.26.5'
+          cache-dependency-path: |
+            services/dsh/backend/go.sum
+            services/wlt/backend/go.sum
+            services/workforce/backend/go.sum
+      - name: Capture complete diagnostics
+        shell: bash
+        run: |
+          set +e
+          mkdir -p /tmp/bassam-diagnostic
+          report=/tmp/bassam-diagnostic/report.txt
+          : > "$report"
+          run_check() {
+            name="$1"
+            shift
+            echo "===== $name =====" | tee -a "$report"
+            "$@" >>"$report" 2>&1
+            code=$?
+            echo "EXIT=$code" | tee -a "$report"
+            echo | tee -a "$report"
+          }
+          run_check "DSH GOFMT" bash -lc 'cd services/dsh/backend && files=$(gofmt -l .); test -z "$files" || { echo "$files"; exit 1; }'
+          run_check "DSH VET" bash -lc 'cd services/dsh/backend && go vet ./...'
+          run_check "DSH TEST" bash -lc 'cd services/dsh/backend && go test ./...'
+          run_check "DSH BUILD" bash -lc 'cd services/dsh/backend && go build ./...'
+          run_check "WLT OPENAPI GENERATE" pnpm run openapi:generate:wlt
+          run_check "CONTROL PANEL TYPECHECK" pnpm --dir apps/control-panel/runtime typecheck
+          run_check "WORKFORCE GOFMT" bash -lc 'cd services/workforce/backend && files=$(gofmt -l .); test -z "$files" || { echo "$files"; exit 1; }'
+          run_check "API BINDING" pnpm run guard:api-binding
+          run_check "BACKEND API BINDING" pnpm run guard:backend-api-binding
+          run_check "FRONTEND FEATURE BINDING" pnpm run guard:frontend-feature-binding
+          run_check "CONTRACTS LINT" pnpm run contracts:lint
+          run_check "GOVERNANCE AUDIT" pnpm run guard:governance-schema
+          cat "$report"
+      - name: Upload diagnostic report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: bassam-fullstack-diagnostic
+          path: /tmp/bassam-diagnostic/report.txt
+          if-no-files-found: error
+          retention-days: 3
