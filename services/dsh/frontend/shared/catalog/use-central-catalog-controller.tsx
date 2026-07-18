@@ -267,9 +267,13 @@ export function useCentralCatalogController(authKind = "unauthenticated") {
       storeId: string,
       masterProductId: string,
       input: Parameters<typeof api.upsertOperatorStoreAssortment>[2],
-    ) => runMutationWithReadback(
-      () => api.upsertOperatorStoreAssortment(storeId, masterProductId, input),
-      () => loadStoreAssortment(storeId),
-    ),
+    ) => {
+      const current = assortment.items.find((item) => item.masterProductId === masterProductId);
+      const request = { ...input, expectedVersion: current?.version };
+      return runMutationWithReadback(
+        () => api.upsertOperatorStoreAssortment(storeId, masterProductId, request),
+        () => loadStoreAssortment(storeId),
+      );
+    },
   };
 }
