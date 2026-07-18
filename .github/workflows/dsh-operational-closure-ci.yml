@@ -2,7 +2,7 @@ name: DSH Operational Verification
 
 on:
   push:
-    branches: [bassam, master]
+    branches: [lian, bassam, master]
     paths:
       - "services/dsh/**"
       - "services/wlt/**"
@@ -15,8 +15,11 @@ on:
       - "apps/control-panel/**"
       - "governance/guards/frontend-binding-registry*.json"
       - "tools/guards/frontend-feature-binding-gate.mjs"
+      - "tools/guards/service-manifest-drift-gate.mjs"
       - "tools/guards/runtime-real-bindings-gate.mjs"
       - "tools/guards/live-cross-journey-integrity-gate.mjs"
+      - "tools/scripts/generate-dsh-catalog-client.mjs"
+      - "package.json"
       - ".github/workflows/dsh-operational-closure-ci.yml"
   pull_request:
     branches: [master]
@@ -32,8 +35,11 @@ on:
       - "apps/control-panel/**"
       - "governance/guards/frontend-binding-registry*.json"
       - "tools/guards/frontend-feature-binding-gate.mjs"
+      - "tools/guards/service-manifest-drift-gate.mjs"
       - "tools/guards/runtime-real-bindings-gate.mjs"
       - "tools/guards/live-cross-journey-integrity-gate.mjs"
+      - "tools/scripts/generate-dsh-catalog-client.mjs"
+      - "package.json"
   workflow_dispatch:
 
 permissions:
@@ -235,6 +241,8 @@ jobs:
           run_check contracts pnpm run contracts:lint
           run_check backend-api pnpm run guard:backend-api-binding
           run_check api-binding pnpm run guard:api-binding
+          run_check manifest-truth pnpm run guard:service-manifest-drift
+          run_check catalog-client-drift node tools/scripts/generate-dsh-catalog-client.mjs --check
           run_check frontend-static-binding pnpm run guard:frontend-feature-binding
           run_check fullstack-boundary pnpm run guard:fullstack-boundary
           run_check wlt-boundary pnpm run guard:wlt-financial-boundary
