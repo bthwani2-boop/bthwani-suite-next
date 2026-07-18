@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS dsh_coupon_redemptions (
     client_actor_id              TEXT NOT NULL,
     cart_id                      UUID NOT NULL REFERENCES dsh_carts(id) ON DELETE RESTRICT,
     checkout_intent_id           UUID NOT NULL,
-    order_id                     UUID REFERENCES dsh_orders(id) ON DELETE RESTRICT,
+    order_id                     UUID,
     status                       TEXT NOT NULL DEFAULT 'reserved'
                                  CHECK (status IN ('reserved','committed','released','reversed')),
     subtotal_minor_units         BIGINT NOT NULL CHECK (subtotal_minor_units > 0),
@@ -72,6 +72,11 @@ CREATE TABLE IF NOT EXISTS dsh_coupon_redemptions (
     CONSTRAINT fk_dsh_coupon_redemption_checkout_intent
         FOREIGN KEY (checkout_intent_id)
         REFERENCES dsh_checkout_intents(id)
+        ON DELETE RESTRICT
+        DEFERRABLE INITIALLY DEFERRED,
+    CONSTRAINT fk_dsh_coupon_redemption_order
+        FOREIGN KEY (order_id)
+        REFERENCES dsh_orders(id)
         ON DELETE RESTRICT
         DEFERRABLE INITIALLY DEFERRED,
     UNIQUE (checkout_intent_id),
@@ -114,6 +119,82 @@ ALTER TABLE dsh_orders
 ALTER TABLE dsh_orders
     ADD CONSTRAINT dsh_orders_pricing_totals_chk
     CHECK (total_minor_units = GREATEST(subtotal_minor_units - discount_minor_units, 0));
+
+CREATE OR REPLACE FUNCTION dsh_apply_checkout_pricing_to_order()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    checkout_pricing RECORD;
+    committed_rows INTEGER;
+BEGIN
+    SELECT subtotal_minor_units, discount_minor_units, total_minor_units, currency,
+           pricing_snapshot_hash, coupon_id, coupon_redemption_id, coupon_code_last4
+    INTO checkout_pricing
+    FROM dsh_checkout_intents
+    WHERE id = NEW.checkout_intent_id
+    FOR UPDATE;
+
+    IF NOT FOUND OR checkout_pricing.subtotal_minor_units <= 0
+       OR checkout_pricing.total_minor_units <= 0
+       OR checkout_pricing.total_minor_units <> checkout_pricing.subtotal_minor_units - checkout_pricing.discount_minor_units
+       OR checkout_pricing.pricing_snapshot_hash = '' THEN
+        RAISE EXCEPTION 'checkout pricing snapshot is missing or invalid';
+    END IF;
+
+    NEW.subtotal_minor_units := checkout_pricing.subtotal_minor_units;
+    NEW.discount_minor_units := checkout_pricing.discount_minor_units;
+    NEW.total_minor_units := checkout_pricing.total_minor_units;
+    NEW.currency := checkout_pricing.currency;
+    NEW.pricing_snapshot_hash := checkout_pricing.pricing_snapshot_hash;
+    NEW.coupon_id := checkout_pricing.coupon_id;
+    NEW.coupon_redemption_id := checkout_pricing.coupon_redemption_id;
+    NEW.coupon_code_last4 := checkout_pricing.coupon_code_last4;
+
+    IF checkout_pricing.coupon_id IS NOT NULL THEN
+        UPDATE dsh_coupon_redemptions
+        SET status='committed', order_id=NEW.id, committed_at=NOW(), updated_at=NOW()
+        WHERE id=checkout_pricing.coupon_redemption_id
+          AND checkout_intent_id=NEW.checkout_intent_id
+          AND status='reserved'
+          AND reserved_until>NOW();
+        GET DIAGNOSTICS committed_rows = ROW_COUNT;
+        IF committed_rows <> 1 THEN
+            RAISE EXCEPTION 'coupon reservation is missing, expired, or already consumed';
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_dsh_apply_checkout_pricing_to_order ON dsh_orders;
+CREATE TRIGGER trg_dsh_apply_checkout_pricing_to_order
+BEFORE INSERT ON dsh_orders
+FOR EACH ROW
+EXECUTE FUNCTION dsh_apply_checkout_pricing_to_order();
+
+CREATE OR REPLACE FUNCTION dsh_protect_order_pricing_snapshot()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF ROW(NEW.subtotal_minor_units,NEW.discount_minor_units,NEW.total_minor_units,NEW.currency,
+           NEW.pricing_snapshot_hash,NEW.coupon_id,NEW.coupon_redemption_id,NEW.coupon_code_last4)
+       IS DISTINCT FROM
+       ROW(OLD.subtotal_minor_units,OLD.discount_minor_units,OLD.total_minor_units,OLD.currency,
+           OLD.pricing_snapshot_hash,OLD.coupon_id,OLD.coupon_redemption_id,OLD.coupon_code_last4) THEN
+        RAISE EXCEPTION 'order pricing snapshot is immutable';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_dsh_protect_order_pricing_snapshot ON dsh_orders;
+CREATE TRIGGER trg_dsh_protect_order_pricing_snapshot
+BEFORE UPDATE ON dsh_orders
+FOR EACH ROW
+EXECUTE FUNCTION dsh_protect_order_pricing_snapshot();
 
 -- DSH-061 deliberately blocked coupon publication while no engine existed.
 -- The authoritative reservation/commit engine above now replaces that gate.
