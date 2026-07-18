@@ -1,27 +1,27 @@
-name: Bassam Compile Repair Commit
+name: Bassam Exact Repair Materializer
 
 on:
   push:
     branches: [bassam]
     paths:
       - .github/workflows/bassam-fullstack-diagnostic.yml
+  pull_request:
+    paths:
+      - .github/workflows/bassam-fullstack-diagnostic.yml
 
 permissions:
-  contents: write
-
-concurrency:
-  group: bassam-compile-repair-commit
-  cancel-in-progress: true
+  contents: read
 
 jobs:
-  repair:
+  materialize:
     runs-on: ubuntu-24.04
-    timeout-minutes: 75
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           ref: bassam
-          fetch-depth: 0
+          fetch-depth: 1
+          persist-credentials: false
       - uses: ./.github/actions/setup-node-workspace
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
         with:
@@ -30,7 +30,8 @@ jobs:
             services/dsh/backend/go.sum
             services/wlt/backend/go.sum
             core/workforce/backend/go.sum
-      - name: Apply exact corrections
+
+      - name: Materialize conservative repairs
         shell: bash
         run: |
           set -euo pipefail
@@ -39,12 +40,30 @@ jobs:
 
           wlt_path = Path('services/wlt/contracts/wlt.openapi.yaml')
           wlt = wlt_path.read_text()
-          old_ref = '$ref: "#/components/responses/InvalidRequest"'
-          count = wlt.count(old_ref)
-          if count > 1:
-              raise SystemExit(f'multiple invalid WLT response references: {count}')
-          if count == 1:
-              wlt_path.write_text(wlt.replace(old_ref, '$ref: "#/components/responses/BadRequest"', 1))
+          replacements = {
+              '$ref: "#/components/responses/InvalidRequest"': '$ref: "#/components/responses/BadRequest"',
+          }
+          for old, new in replacements.items():
+              count = wlt.count(old)
+              if count > 1:
+                  raise SystemExit(f'multiple occurrences for {old}: {count}')
+              if count == 1:
+                  wlt = wlt.replace(old, new, 1)
+          settlement_marker = '''      operationId: createWltSettlement
+      summary: Create a partner settlement from immutable delivered-order sources.'''
+          settlement_start = wlt.find(settlement_marker)
+          if settlement_start < 0:
+              raise SystemExit('settlement operation not found')
+          settlement_end = wlt.find('\n    get:', settlement_start)
+          if settlement_end < 0:
+              raise SystemExit('settlement operation end not found')
+          settlement = wlt[settlement_start:settlement_end]
+          if 'x-bthwani-mutation-approved: true' in settlement:
+              settlement = settlement.replace('x-bthwani-mutation-approved: true', 'x-bthwani-mutation-approved: false', 1)
+              wlt = wlt[:settlement_start] + settlement + wlt[settlement_end:]
+          elif 'x-bthwani-mutation-approved: false' not in settlement:
+              raise SystemExit('settlement mutation metadata missing')
+          wlt_path.write_text(wlt)
 
           governed_path = Path('services/dsh/backend/internal/coupons/governed.go')
           governed = governed_path.read_text()
@@ -78,54 +97,58 @@ jobs:
           find services/dsh/backend core/workforce/backend -name '*.go' -type f -print0 | xargs -0 gofmt -w
           pnpm run openapi:generate:wlt
 
-      - name: Verify and record
-        id: verify
+      - name: Verify exact branch state
         shell: bash
         run: |
           set +e
-          mkdir -p governance/evidence /tmp/bassam-compile
-          report=governance/evidence/BASSAM_COMPILE_REPAIR.md
-          printf '# Bassam Compile Repair\n\n' > "$report"
-          printf -- '- Source SHA: `%s`\n\n' "$(git rev-parse HEAD)" >> "$report"
+          out=/tmp/bassam-exact-repair
+          mkdir -p "$out/files"
+          report="$out/report.txt"
+          : > "$report"
           failed=0
           check() {
             name="$1"; shift
-            log="/tmp/bassam-compile/$(printf '%s' "$name" | tr '[:upper:] ' '[:lower:]-' | tr -cd 'a-z0-9_-').log"
-            "$@" >"$log" 2>&1
+            echo "===== $name =====" >> "$report"
+            "$@" >> "$report" 2>&1
             code=$?
-            printf '## %s\n\n' "$name" >> "$report"
-            if [ "$code" -eq 0 ]; then printf -- '- Result: **PASS**\n\n' >> "$report"; else failed=1; printf -- '- Result: **FAIL** (exit `%s`)\n\n' "$code" >> "$report"; fi
-            printf '```text\n' >> "$report"; tail -n 320 "$log" >> "$report"; printf '\n```\n\n' >> "$report"
+            echo "EXIT=$code" >> "$report"
+            echo >> "$report"
+            if [ "$code" -ne 0 ]; then failed=1; fi
           }
-          check 'DSH format' bash -lc 'cd services/dsh/backend && test -z "$(gofmt -l .)"'
-          check 'DSH vet' bash -lc 'cd services/dsh/backend && go vet ./...'
-          check 'DSH tests' bash -lc 'cd services/dsh/backend && go test ./...'
-          check 'DSH build' bash -lc 'cd services/dsh/backend && go build ./...'
-          check 'Workforce format' bash -lc 'cd core/workforce/backend && test -z "$(gofmt -l .)"'
-          check 'Workforce vet' bash -lc 'cd core/workforce/backend && go vet ./...'
-          check 'Workforce tests' bash -lc 'cd core/workforce/backend && go test ./...'
-          check 'Workforce build' bash -lc 'cd core/workforce/backend && go build ./...'
-          check 'WLT client generation' pnpm run openapi:generate:wlt
-          check 'Control panel typecheck' pnpm --dir apps/control-panel/runtime typecheck
-          check 'Contracts lint' pnpm run contracts:lint
-          check 'Governance schema' pnpm run guard:governance-schema
-          if [ "$failed" -eq 0 ]; then printf '**PASS — compile repair checks passed.**\n' >> "$report"; else printf '**FIX_REQUIRED — remaining exact failures are above.**\n' >> "$report"; fi
-          echo "failed=$failed" >> "$GITHUB_OUTPUT"
+          check 'DSH FORMAT' bash -lc 'cd services/dsh/backend && test -z "$(gofmt -l .)"'
+          check 'DSH VET' bash -lc 'cd services/dsh/backend && go vet ./...'
+          check 'DSH TEST' bash -lc 'cd services/dsh/backend && go test ./... -count=1'
+          check 'DSH BUILD' bash -lc 'cd services/dsh/backend && go build ./...'
+          check 'WORKFORCE FORMAT' bash -lc 'cd core/workforce/backend && test -z "$(gofmt -l .)"'
+          check 'WORKFORCE VET' bash -lc 'cd core/workforce/backend && go vet ./...'
+          check 'WORKFORCE TEST' bash -lc 'cd core/workforce/backend && go test ./... -count=1'
+          check 'WORKFORCE BUILD' bash -lc 'cd core/workforce/backend && go build ./...'
+          check 'WLT TEST' bash -lc 'cd services/wlt/backend && go test ./... -count=1'
+          check 'WLT BUILD' bash -lc 'cd services/wlt/backend && go build ./...'
+          check 'WLT CLIENT GENERATION' pnpm run openapi:generate:wlt
+          check 'CONTROL PANEL TYPECHECK' pnpm --dir apps/control-panel/runtime typecheck
+          check 'CONTRACTS LINT' pnpm run contracts:lint
+          check 'API BINDING' pnpm run guard:api-binding
+          check 'BACKEND API BINDING' pnpm run guard:backend-api-binding
+          check 'FRONTEND FEATURE BINDING' pnpm run guard:frontend-feature-binding
+          check 'GOVERNANCE SCHEMA' pnpm run guard:governance-schema
+          git diff --check >> "$report" 2>&1
+          echo "GIT_DIFF_CHECK_EXIT=$?" >> "$report"
+          git diff --binary > "$out/repair.patch"
+          git diff --name-only > "$out/changed-files.txt"
+          while IFS= read -r file; do
+            [ -f "$file" ] || continue
+            mkdir -p "$out/files/$(dirname "$file")"
+            cp "$file" "$out/files/$file"
+          done < "$out/changed-files.txt"
+          echo "$failed" > "$out/FAILED"
+          cat "$report"
 
-      - name: Commit corrections and evidence
+      - name: Upload exact repair set
         if: always()
-        shell: bash
-        run: |
-          set -euo pipefail
-          rm -f .github/workflows/bassam-fullstack-diagnostic.yml
-          git config user.name bthwani-compile-repair-bot
-          git config user.email compile-repair-bot@users.noreply.github.com
-          git add -A
-          git commit -m 'fix(fullstack): close compile and contract blockers' || true
-          git fetch origin bassam
-          git rebase origin/bassam
-          git push origin HEAD:bassam
-
-      - name: Preserve fail-closed result
-        if: steps.verify.outputs.failed == '1'
-        run: exit 1
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: bassam-exact-repair-set
+          path: /tmp/bassam-exact-repair
+          if-no-files-found: error
+          retention-days: 3
