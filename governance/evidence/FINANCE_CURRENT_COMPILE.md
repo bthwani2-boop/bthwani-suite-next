@@ -1,6 +1,6 @@
 # Finance Current Compile
 
-- Source SHA: `8032f779c9c32849006bfce10060c5c323da6803`
+- Source SHA: `f4012b69fbe3b3dc2c9749e6150006dfa5a64034`
 - Order tenant patcher exit: `0`
 - Finance drift patcher exit: `0`
 - DSH exit: `1`
@@ -36,9 +36,9 @@ FAIL	dsh-api/cmd/dsh-api [build failed]
 ok  	dsh-api/internal/administration	(cached)
 ok  	dsh-api/internal/analytics	(cached)
 ok  	dsh-api/internal/auth	(cached)
-ok  	dsh-api/internal/cart	0.003s
+ok  	dsh-api/internal/cart	0.006s
 ?   	dsh-api/internal/catalogapproval	[no test files]
-ok  	dsh-api/internal/centralcatalog	0.004s
+ok  	dsh-api/internal/centralcatalog	0.005s
 FAIL	dsh-api/internal/checkout [build failed]
 FAIL	dsh-api/internal/checkoutfinanceoutbox [build failed]
 FAIL	dsh-api/internal/coupons [build failed]
