@@ -18,6 +18,7 @@ export type DshContractRegistration = {
     | "dsh-partner-fleet"
     | "dsh-home-marketing-governance"
     | "dsh-client-address"
+    | "dsh-client-map"
     | "dsh-partner-support"
     | "dsh-support-governance";
   readonly path: string;
@@ -95,6 +96,14 @@ export const DSH_CONTRACT_REGISTRY = [
     runtimeDependency: true,
     clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
     adapterOwner: "frontend/shared/client-address",
+  },
+  {
+    id: "dsh-client-map",
+    path: "contracts/dsh.client-map.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/client-map",
   },
   {
     id: "dsh-partner-support",
