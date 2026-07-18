@@ -3,6 +3,7 @@ package http
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"dsh-api/internal/cart"
 	"dsh-api/internal/checkout"
@@ -11,26 +12,70 @@ import (
 	"dsh-api/internal/wlt"
 )
 
-// POST /dsh/client/checkout-intents
+type createCheckoutIntentRequest struct {
+	CartID             string `json:"cartId"`
+	StoreID            string `json:"storeId"`
+	FulfillmentMode    string `json:"fulfillmentMode"`
+	PaymentMethod      string `json:"paymentMethod"`
+	DeliveryAddress    string `json:"deliveryAddress"`
+	Note               string `json:"note"`
+	CouponCode         string `json:"couponCode"`
+	ExpectedCartVersion int    `json:"expectedCartVersion"`
+}
+
 func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "client")
 	if !ok {
 		return
 	}
-	var body struct {
-		CartID          string `json:"cartId"`
-		StoreID         string `json:"storeId"`
-		FulfillmentMode string `json:"fulfillmentMode"`
-		PaymentMethod   string `json:"paymentMethod"`
-		DeliveryAddress string `json:"deliveryAddress"`
-		Note            string `json:"note"`
-		CouponCode      string `json:"couponCode"`
-	}
+	var body createCheckoutIntentRequest
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	if body.CartID == "" || body.StoreID == "" {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "cartId and storeId are required")
+	body.CartID = strings.TrimSpace(body.CartID)
+	body.StoreID = strings.TrimSpace(body.StoreID)
+	body.FulfillmentMode = strings.TrimSpace(body.FulfillmentMode)
+	body.PaymentMethod = strings.TrimSpace(body.PaymentMethod)
+	body.CouponCode = strings.TrimSpace(body.CouponCode)
+	if body.CartID == "" || body.StoreID == "" || actor.TenantID == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "cartId, storeId and authenticated tenant are required")
+		return
+	}
+
+	fulfillmentMode := body.FulfillmentMode
+	if fulfillmentMode == "" {
+		fulfillmentMode = string(checkout.ModeBthwaniDelivery)
+	}
+	if body.PaymentMethod == "" {
+		body.PaymentMethod = string(checkout.MethodCOD)
+	}
+
+	tx, err := s.db.BeginTx(r.Context(), nil)
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to start checkout transaction")
+		return
+	}
+	defer tx.Rollback()
+
+	snapshot, err := cart.ComputeCheckoutSnapshotTx(r.Context(), tx, actor.ID, body.CartID, body.StoreID, body.ExpectedCartVersion)
+	if errors.Is(err, cart.ErrNotFound) {
+		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "cart not found")
+		return
+	}
+	if errors.Is(err, cart.ErrConflict) {
+		store.SendError(w, http.StatusConflict, "CART_VERSION_CONFLICT", err.Error())
+		return
+	}
+	if errors.Is(err, cart.ErrInvalid) {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		return
+	}
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to compute checkout snapshot")
+		return
+	}
+	if snapshot.ItemCount == 0 {
+		store.SendError(w, http.StatusConflict, "EMPTY_CART", "cart has no items")
 		return
 	}
 
@@ -39,84 +84,39 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to allocate checkout intent")
 		return
 	}
-	fulfillmentMode := body.FulfillmentMode
-	if fulfillmentMode == "" {
-		fulfillmentMode = string(checkout.ModeBthwaniDelivery)
-	}
-
-	tx, err := s.db.BeginTx(r.Context(), nil)
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to begin checkout")
-		return
-	}
-	defer tx.Rollback()
-
-	snapshot, err := cart.ComputeCheckoutSnapshotForClientTx(r.Context(), tx, body.CartID, actor.ID, body.StoreID)
-	if errors.Is(err, cart.ErrCartItemMissingPrice) {
-		store.SendError(w, http.StatusConflict, "CART_ITEM_MISSING_PRICE", "one or more cart items are missing a price snapshot")
-		return
-	}
-	if errors.Is(err, cart.ErrNotFound) {
-		store.SendError(w, http.StatusNotFound, "CART_NOT_FOUND", "active cart does not belong to the authenticated client and store")
-		return
-	}
-	if errors.Is(err, cart.ErrInvalid) {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-		return
-	}
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to compute cart snapshot")
-		return
-	}
-
-	deliveryPolicy, err := checkout.ResolveDeliveryPricingTx(r.Context(), tx, body.StoreID, fulfillmentMode)
-	if errors.Is(err, checkout.ErrDeliveryPricingUnavailable) {
-		store.SendError(w, http.StatusConflict, "DELIVERY_PRICING_UNAVAILABLE", "no approved delivery pricing policy exists for this store and fulfillment mode")
-		return
-	}
-	if errors.Is(err, checkout.ErrInvalid) {
-		store.SendError(w, http.StatusBadRequest, "INVALID_FULFILLMENT_MODE", "fulfillment mode is invalid")
-		return
-	}
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to resolve delivery pricing")
-		return
-	}
-	if deliveryPolicy.Currency != snapshot.Currency {
-		store.SendError(w, http.StatusConflict, "PRICING_CURRENCY_MISMATCH", "cart and delivery pricing currencies do not match")
-		return
-	}
-
-	reservation, err := coupons.ReservePricedTx(r.Context(), tx, coupons.ReservePricedInput{
-		Code: body.CouponCode, ClientActorID: actor.ID, CartID: body.CartID,
-		CheckoutIntentID: intentID, StoreID: body.StoreID,
-		FulfillmentMode:       fulfillmentMode,
-		SubtotalMinorUnits:    snapshot.AmountMinorUnits,
-		DeliveryFeeMinorUnits: deliveryPolicy.FeeMinorUnits,
-		Currency:              snapshot.Currency,
-	})
-	if errors.Is(err, coupons.ErrUsageLimit) {
-		store.SendError(w, http.StatusConflict, "COUPON_USAGE_LIMIT", "coupon usage limit has been reached")
-		return
-	}
-	if errors.Is(err, coupons.ErrNotFound) || errors.Is(err, coupons.ErrInactive) || errors.Is(err, coupons.ErrNotEligible) {
-		store.SendError(w, http.StatusUnprocessableEntity, "COUPON_INVALID_OR_INELIGIBLE", "coupon is invalid or not eligible for this checkout")
-		return
-	}
-	if errors.Is(err, coupons.ErrInvalid) {
-		store.SendError(w, http.StatusBadRequest, "INVALID_COUPON", "coupon code format is invalid")
-		return
-	}
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to reserve coupon")
-		return
-	}
-
 	pricing := checkout.PricingSnapshot{
-		SubtotalMinorUnits:    snapshot.AmountMinorUnits,
-		DeliveryFeeMinorUnits: deliveryPolicy.FeeMinorUnits,
-		TotalMinorUnits:       snapshot.AmountMinorUnits + deliveryPolicy.FeeMinorUnits,
-		Currency:              snapshot.Currency,
+		CheckoutIntentID:     intentID,
+		SubtotalMinorUnits:   snapshot.SubtotalMinorUnits,
+		DeliveryFeeMinorUnits: 0,
+		DiscountMinorUnits:   0,
+		TotalMinorUnits:      snapshot.SubtotalMinorUnits,
+		Currency:             snapshot.Currency,
+	}
+
+	var reservation *coupons.Reservation
+	if body.CouponCode != "" {
+		reservation, err = coupons.ReserveForCheckoutTx(r.Context(), tx, coupons.ReserveInput{
+			TenantID:            actor.TenantID,
+			ClientID:            actor.ID,
+			StoreID:             body.StoreID,
+			CheckoutIntentID:    intentID,
+			CouponCode:          body.CouponCode,
+			SubtotalMinorUnits:  pricing.SubtotalMinorUnits,
+			DeliveryMinorUnits:  pricing.DeliveryFeeMinorUnits,
+			Currency:            pricing.Currency,
+		})
+		if errors.Is(err, coupons.ErrNotFound) {
+			store.SendError(w, http.StatusNotFound, "COUPON_NOT_FOUND", "coupon not found")
+			return
+		}
+		if errors.Is(err, coupons.ErrConflict) {
+			store.SendError(w, http.StatusConflict, "COUPON_NOT_ELIGIBLE", err.Error())
+			return
+		}
+		if err != nil {
+			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to reserve coupon")
+			return
+		}
 	}
 	if reservation != nil {
 		pricing.DiscountMinorUnits = reservation.DiscountMinorUnits
@@ -131,7 +131,7 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 	)
 
 	intent, err := checkout.CreatePricedIntentTx(r.Context(), tx, checkout.CreateIntentInput{
-		ID: intentID, ClientID: actor.ID, CartID: body.CartID, StoreID: body.StoreID,
+		ID: intentID, TenantID: actor.TenantID, ClientID: actor.ID, CartID: body.CartID, StoreID: body.StoreID,
 		FulfillmentMode: checkout.FulfillmentMode(fulfillmentMode),
 		PaymentMethod:   checkout.PaymentMethod(body.PaymentMethod),
 		DeliveryAddress: body.DeliveryAddress, Note: body.Note,
@@ -155,14 +155,11 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 		fundingProjection, err = s.reserveCouponFunding(r.Context(), actor.TenantID, intent.ID, correlationID)
 		if err != nil {
 			_ = coupons.ReleaseByIntent(s.db, intent.ID, "wlt_funding_reserve_failed")
-			failedIntent, markErr := checkout.MarkWltHandoffFailed(s.db, intent.ID, actor.ID)
+			failedIntent, markErr := checkout.MarkWltHandoffFailed(s.db, intent.ID, actor.TenantID, actor.ID)
 			if markErr == nil {
 				store.SendJSON(w, http.StatusServiceUnavailable, map[string]any{
 					"intent": marshalIntentWithPricing(failedIntent, pricing),
-					"error": map[string]any{
-						"code":    "WLT_PROMOTION_FUNDING_UNAVAILABLE",
-						"message": "promotion funding reservation is unavailable",
-					},
+					"error": map[string]any{"code": "WLT_PROMOTION_FUNDING_UNAVAILABLE", "message": "promotion funding reservation is unavailable"},
 				})
 				return
 			}
@@ -188,7 +185,7 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 			}
 		}
 		_ = coupons.ReleaseByIntent(s.db, intent.ID, "wlt_handoff_failed")
-		if failedIntent, markErr := checkout.MarkWltHandoffFailed(s.db, intent.ID, actor.ID); markErr == nil {
+		if failedIntent, markErr := checkout.MarkWltHandoffFailed(s.db, intent.ID, actor.TenantID, actor.ID); markErr == nil {
 			code := "WLT_HANDOFF_UNAVAILABLE"
 			message := "WLT payment-session handoff is unavailable"
 			if fundingReleaseFailed {
@@ -205,7 +202,7 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 		return
 	}
 
-	intent, err = checkout.AttachWltPaymentSession(s.db, intent.ID, actor.ID, paymentSession.ID)
+	intent, err = checkout.AttachWltPaymentSession(s.db, intent.ID, actor.TenantID, actor.ID, paymentSession.ID)
 	if err != nil {
 		_ = s.wlt.ExpireSession(r.Context(), paymentSession.ID, correlationID)
 		if fundingProjection != nil {
@@ -214,7 +211,7 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 			}
 		}
 		_ = coupons.ReleaseByIntent(s.db, intent.ID, "payment_session_attach_failed")
-		_, _ = checkout.MarkWltHandoffFailed(s.db, intent.ID, actor.ID)
+		_, _ = checkout.MarkWltHandoffFailed(s.db, intent.ID, actor.TenantID, actor.ID)
 		if errors.Is(err, checkout.ErrInvalid) {
 			store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 			return
@@ -239,7 +236,7 @@ func (s *protectedStoreServer) handleGetCheckoutIntent(w http.ResponseWriter, r 
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "intentId is required")
 		return
 	}
-	intent, err := checkout.GetIntent(s.db, intentID, actor.ID)
+	intent, err := checkout.GetIntent(s.db, intentID, actor.TenantID, actor.ID)
 	if errors.Is(err, checkout.ErrNotFound) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "checkout intent not found")
 		return
@@ -266,7 +263,7 @@ func (s *protectedStoreServer) handleCancelCheckoutIntent(w http.ResponseWriter,
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "intentId is required")
 		return
 	}
-	intent, err := checkout.CancelIntent(s.db, intentID, actor.ID)
+	intent, err := checkout.CancelIntent(s.db, intentID, actor.TenantID, actor.ID)
 	if errors.Is(err, checkout.ErrConflict) {
 		store.SendError(w, http.StatusConflict, "CONFLICT", "intent not found or already closed")
 		return
@@ -315,7 +312,7 @@ func (s *protectedStoreServer) handleOperatorCheckoutIntents(w http.ResponseWrit
 
 func marshalIntent(i *checkout.Intent) map[string]any {
 	return map[string]any{
-		"id": i.ID, "clientId": i.ClientID, "cartId": i.CartID, "storeId": i.StoreID,
+		"id": i.ID, "tenantId": i.TenantID, "clientId": i.ClientID, "cartId": i.CartID, "storeId": i.StoreID,
 		"fulfillmentMode": string(i.FulfillmentMode), "state": string(i.State),
 		"paymentMethod": string(i.PaymentMethod), "wltPaymentSessionId": i.WltPaymentSessionID,
 		"deliveryAddress": i.DeliveryAddress, "note": i.Note, "version": i.Version,
