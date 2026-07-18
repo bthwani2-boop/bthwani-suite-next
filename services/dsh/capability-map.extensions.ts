@@ -2,10 +2,7 @@ import type { DshCapability } from "./capability-map";
 
 /**
  * Adds operations and surface coverage to an existing canonical DSH capability.
- *
- * Extension entries are not standalone capabilities and must not be interpreted
- * as a second owner for the capability id. The canonical capability identity,
- * lifecycle, and Product Truth remain owned by `capability-map.ts`.
+ * Extension entries are never standalone owners.
  */
 export type DshCapabilityExtension = {
   readonly id: DshCapability["id"];
@@ -46,7 +43,12 @@ export const DSH_CAPABILITY_MAP_EXTENSIONS = [
     runtimeBound: true,
     closureState: "FIX_REQUIRED",
     topic: "field-ops",
-    topicScope: ["field-finance", "captain-finance", "settlements", "payout-processing"],
+    topicScope: [
+      "field-finance",
+      "captain-finance",
+      "settlements",
+      "payout-processing",
+    ],
   },
   {
     id: "dsh.support.hub",
@@ -130,11 +132,35 @@ export const DSH_CAPABILITY_MAP_EXTENSIONS = [
       "updateDshClientAddress",
       "deleteDshClientAddress",
       "setDshClientDefaultAddress",
+      "searchDshClientMapLocations",
+      "reverseDshClientMapLocation",
     ],
     surfaces: ["app-client"],
     runtimeBound: false,
     closureState: "FIX_REQUIRED",
     topic: "commerce",
-    topicScope: ["client-address-book", "serviceability-address", "checkout-address"],
+    topicScope: [
+      "client-address-book",
+      "governed-map-search",
+      "reverse-geocoding",
+      "serviceability-address",
+      "checkout-address",
+    ],
+  },
+  {
+    id: "dsh.policies",
+    status: "experience-fix-required",
+    contractOperations: [
+      "listDshOperatorServiceAreas",
+      "upsertDshOperatorServiceArea",
+    ],
+    surfaces: ["control-panel"],
+    runtimeBound: false,
+    closureState: "FIX_REQUIRED",
+    topicScope: [
+      "service-area-geofences",
+      "coordinate-to-service-area",
+      "map-provider-boundary",
+    ],
   },
 ] as const satisfies readonly DshCapabilityExtension[];
