@@ -15,30 +15,30 @@ var (
 )
 
 type DeliveryPricingRecord struct {
-	StoreID            string  `json:"storeId"`
-	FulfillmentMode    string  `json:"fulfillmentMode"`
-	FeeMinorUnits      int64   `json:"feeMinorUnits"`
-	Currency           string  `json:"currency"`
-	Status             string  `json:"status"`
-	PricingSource      string  `json:"pricingSource"`
-	CreatedByActorID   string  `json:"createdByActorId"`
-	ApprovedByActorID  string  `json:"approvedByActorId,omitempty"`
-	ApprovedAt         *string `json:"approvedAt,omitempty"`
-	Version            int     `json:"version"`
-	CreatedAt          string  `json:"createdAt"`
-	UpdatedAt          string  `json:"updatedAt"`
+	StoreID           string  `json:"storeId"`
+	FulfillmentMode   string  `json:"fulfillmentMode"`
+	FeeMinorUnits     int64   `json:"feeMinorUnits"`
+	Currency          string  `json:"currency"`
+	Status            string  `json:"status"`
+	PricingSource     string  `json:"pricingSource"`
+	CreatedByActorID  string  `json:"createdByActorId"`
+	ApprovedByActorID string  `json:"approvedByActorId,omitempty"`
+	ApprovedAt        *string `json:"approvedAt,omitempty"`
+	Version           int     `json:"version"`
+	CreatedAt         string  `json:"createdAt"`
+	UpdatedAt         string  `json:"updatedAt"`
 }
 
 type UpsertDeliveryPricingInput struct {
-	FeeMinorUnits  int64
-	Currency       string
-	Status         string
-	PricingSource  string
+	FeeMinorUnits   int64
+	Currency        string
+	Status          string
+	PricingSource   string
 	ExpectedVersion int
-	ActorID        string
-	ActorSurface   string
-	Reason         string
-	CorrelationID  string
+	ActorID         string
+	ActorSurface    string
+	Reason          string
+	CorrelationID   string
 }
 
 const deliveryPricingColumns = `store_id,fulfillment_mode,fee_minor_units,currency,status,

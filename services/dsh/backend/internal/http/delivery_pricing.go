@@ -23,17 +23,17 @@ func writeDeliveryPricingError(w http.ResponseWriter, err error) {
 }
 
 func decodeDeliveryPricingMutation(w http.ResponseWriter, r *http.Request) (struct {
-	FeeMinorUnits  int64  `json:"feeMinorUnits"`
-	Currency       string `json:"currency"`
-	Status         string `json:"status"`
-	ExpectedVersion int   `json:"expectedVersion"`
+	FeeMinorUnits   int64  `json:"feeMinorUnits"`
+	Currency        string `json:"currency"`
+	Status          string `json:"status"`
+	ExpectedVersion int    `json:"expectedVersion"`
 	Reason          string `json:"reason"`
 }, bool) {
 	var body struct {
-		FeeMinorUnits  int64  `json:"feeMinorUnits"`
-		Currency       string `json:"currency"`
-		Status         string `json:"status"`
-		ExpectedVersion int   `json:"expectedVersion"`
+		FeeMinorUnits   int64  `json:"feeMinorUnits"`
+		Currency        string `json:"currency"`
+		Status          string `json:"status"`
+		ExpectedVersion int    `json:"expectedVersion"`
 		Reason          string `json:"reason"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
@@ -71,15 +71,15 @@ func (s *protectedStoreServer) handleOperatorUpsertDeliveryPricing(w http.Respon
 		return
 	}
 	record, err := checkout.UpsertDeliveryPricing(r.Context(), s.db, r.PathValue("storeId"), r.PathValue("fulfillmentMode"), checkout.UpsertDeliveryPricingInput{
-		FeeMinorUnits: body.FeeMinorUnits,
-		Currency: body.Currency,
-		Status: body.Status,
-		PricingSource: "control_panel",
+		FeeMinorUnits:   body.FeeMinorUnits,
+		Currency:        body.Currency,
+		Status:          body.Status,
+		PricingSource:   "control_panel",
 		ExpectedVersion: body.ExpectedVersion,
-		ActorID: actor.ID,
-		ActorSurface: "control-panel",
-		Reason: body.Reason,
-		CorrelationID: r.Header.Get("X-Correlation-ID"),
+		ActorID:         actor.ID,
+		ActorSurface:    "control-panel",
+		Reason:          body.Reason,
+		CorrelationID:   r.Header.Get("X-Correlation-ID"),
 	})
 	if err != nil {
 		writeDeliveryPricingError(w, err)
@@ -125,15 +125,15 @@ func (s *protectedStoreServer) handlePartnerUpsertDeliveryPricing(w http.Respons
 		return
 	}
 	record, err := checkout.UpsertDeliveryPricing(r.Context(), s.db, storeID, "partner_delivery", checkout.UpsertDeliveryPricingInput{
-		FeeMinorUnits: body.FeeMinorUnits,
-		Currency: body.Currency,
-		Status: body.Status,
-		PricingSource: "partner_store",
+		FeeMinorUnits:   body.FeeMinorUnits,
+		Currency:        body.Currency,
+		Status:          body.Status,
+		PricingSource:   "partner_store",
 		ExpectedVersion: body.ExpectedVersion,
-		ActorID: actor.ID,
-		ActorSurface: "app-partner",
-		Reason: body.Reason,
-		CorrelationID: r.Header.Get("X-Correlation-ID"),
+		ActorID:         actor.ID,
+		ActorSurface:    "app-partner",
+		Reason:          body.Reason,
+		CorrelationID:   r.Header.Get("X-Correlation-ID"),
 	})
 	if err != nil {
 		writeDeliveryPricingError(w, err)
