@@ -37,7 +37,7 @@ func NewRouter(db *sql.DB, mutationsEnabled bool) *http.ServeMux {
 	mux.HandleFunc("GET /wlt/references/wallet-status", reference.HandleGetWalletStatus(db))
 
 	mux.HandleFunc("GET /wlt/wallets/{actorType}/{actorId}", readGate(wallet.HandleGetWallet(db)))
-	mux.HandleFunc("POST /wlt/payment-sessions", gate(serviceAuth(reference.HandleCreatePaymentSession(db))))
+	mux.HandleFunc("POST /wlt/payment-sessions", gate(serviceAuth(reference.HandleCreatePaymentSessionTrustedDsh(db))))
 	mux.HandleFunc("GET /wlt/payment-sessions/{paymentSessionId}", readGate(reference.HandleGetPaymentSession(db)))
 
 	mux.HandleFunc("POST /wlt/payment-sessions/{paymentSessionId}/authorize", gate(serviceAuth(payment.HandleAuthorizeSession(db))))
@@ -95,8 +95,6 @@ func NewRouter(db *sql.DB, mutationsEnabled bool) *http.ServeMux {
 	mux.HandleFunc("POST /wlt/payout-requests/{payoutId}/complete", gate(serviceAuth(payout.HandleCompletePayoutRequestSovereign(db))))
 	mux.HandleFunc("POST /wlt/payout-requests/{payoutId}/fail", gate(serviceAuth(payout.HandleFailPayoutRequestSovereign(db))))
 
-	// Sovereign commercial benefits. Reads are internal service-authenticated;
-	// every mutation is additionally fail-closed behind WLT_MUTATIONS_ENABLED.
 	mux.HandleFunc("GET /wlt/commercial/summary", readGate(commercial.HandleGetSummary(db)))
 	mux.HandleFunc("GET /wlt/commercial/products/{productReference}", readGate(commercial.HandleGetProduct(db)))
 	mux.HandleFunc("POST /wlt/commercial/products", gate(serviceAuth(commercial.HandleCreateProduct(db))))
@@ -108,7 +106,6 @@ func NewRouter(db *sql.DB, mutationsEnabled bool) *http.ServeMux {
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "Route not found")
 	})
-
 	return mux
 }
 
@@ -117,10 +114,8 @@ func CorsMiddleware(authMode string, next http.Handler) http.Handler {
 	if authMode != "" {
 		localCorsOrigin = "http://localhost:13000"
 	}
-
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Service", "wlt")
-
 		origin := r.Header.Get("Origin")
 		if localCorsOrigin != "" && origin == localCorsOrigin {
 			w.Header().Set("Access-Control-Allow-Origin", localCorsOrigin)
@@ -128,42 +123,31 @@ func CorsMiddleware(authMode string, next http.Handler) http.Handler {
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Correlation-ID, Idempotency-Key, X-Service-Caller, X-Tenant-ID")
 			w.Header().Set("Vary", "Origin")
 		}
-
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
-
 		next.ServeHTTP(w, r)
 	})
 }
 
 func requireInternalFinancialRead(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if !shared.RequireServiceCaller(w, r, "WLT_DSH_SERVICE_TOKEN", "dsh") {
-			return
-		}
+		if !shared.RequireServiceCaller(w, r, "WLT_DSH_SERVICE_TOKEN", "dsh") { return }
 		next(w, r)
 	}
 }
-
 func requireMutationServiceAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if !shared.RequireServiceCaller(w, r, "WLT_DSH_SERVICE_TOKEN", "dsh") {
-			return
-		}
+		if !shared.RequireServiceCaller(w, r, "WLT_DSH_SERVICE_TOKEN", "dsh") { return }
 		next(w, r)
 	}
 }
-
 func newMutationGate(mutationsEnabled bool) func(http.HandlerFunc) http.HandlerFunc {
 	return func(next http.HandlerFunc) http.HandlerFunc {
-		if mutationsEnabled {
-			return next
-		}
+		if mutationsEnabled { return next }
 		return func(w http.ResponseWriter, r *http.Request) {
-			shared.SendError(w, http.StatusForbidden, "FEATURE_NOT_ENABLED",
-				"this financial mutation route is not enabled (WLT_MUTATIONS_ENABLED is not true)")
+			shared.SendError(w, http.StatusForbidden, "FEATURE_NOT_ENABLED", "this financial mutation route is not enabled (WLT_MUTATIONS_ENABLED is not true)")
 		}
 	}
 }
