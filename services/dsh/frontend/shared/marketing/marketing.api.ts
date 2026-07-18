@@ -11,6 +11,8 @@ import type {
 } from "./loyalty-subscriptions.types";
 import type {
   CouponCreatePayload,
+  CouponFundingPolicy,
+  CouponListResponse,
   CouponRecord,
   CouponUpdatePayload,
   IssuedCoupon,
@@ -112,14 +114,14 @@ export const submitPartnerSelfOffer = (body: PartnerOfferSubmitPayload) =>
   );
 
 export const fetchCoupons = () =>
-  req<{ coupons: CouponRecord[] }>("/dsh/operator/marketing/coupons");
+  req<CouponListResponse>("/dsh/operator/marketing/coupons");
 export const createCoupon = (body: CouponCreatePayload) =>
-  req<{ issued: IssuedCoupon }>("/dsh/operator/marketing/coupons", {
+  req<{ issued: IssuedCoupon; fundingPolicy: CouponFundingPolicy }>("/dsh/operator/marketing/coupons", {
     method: "POST",
     body: JSON.stringify(body),
   });
 export const updateCoupon = (id: string, body: CouponUpdatePayload) =>
-  req<{ coupon: CouponRecord }>(`/dsh/operator/marketing/coupons/${id}`, {
+  req<{ coupon: CouponRecord; fundingPolicy: CouponFundingPolicy }>(`/dsh/operator/marketing/coupons/${id}`, {
     method: "PATCH",
     body: JSON.stringify(body),
   });
