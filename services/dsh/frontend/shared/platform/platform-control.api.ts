@@ -14,7 +14,10 @@ export type PlatformChangeSet = components["schemas"]["PlatformChangeSet"];
 export type PlatformRollout = components["schemas"]["PlatformRollout"];
 export type CreatePlatformChangeSetInput = components["schemas"]["CreatePlatformChangeSetInput"];
 export type RejectPlatformChangeSetInput = components["schemas"]["RejectPlatformChangeSetInput"];
-export type CreatePlatformRolloutInput = components["schemas"]["CreatePlatformRolloutInput"];
+type GeneratedCreatePlatformRolloutInput = components["schemas"]["CreatePlatformRolloutInput"];
+export type CreatePlatformRolloutInput = Omit<GeneratedCreatePlatformRolloutInput, "healthGate"> & {
+  healthGate: Record<string, unknown>;
+};
 
 const { request } = createDshHttpClient(resolvePlatformControlApiBaseUrl(), "platform-control", 10000);
 
@@ -114,8 +117,21 @@ export function fetchPlatformRollout(id: string): Promise<{ rollout: PlatformRol
   return request<{ rollout: PlatformRollout }>(`/platform/v1/rollouts/${encodeURIComponent(id)}`, { method: "GET" });
 }
 
+function toGeneratedRolloutInput(input: CreatePlatformRolloutInput): GeneratedCreatePlatformRolloutInput {
+  if (input.healthGate.requiredState !== "OPERATIONAL") {
+    throw new Error("PLATFORM_ROLLOUT_HEALTH_GATE_REQUIRED_STATE_INVALID");
+  }
+  return {
+    ...input,
+    healthGate: input.healthGate as GeneratedCreatePlatformRolloutInput["healthGate"],
+  };
+}
+
 export function createPlatformRollout(input: CreatePlatformRolloutInput): Promise<{ rollout: PlatformRollout }> {
-  return request<{ rollout: PlatformRollout }>("/platform/v1/rollouts", { method: "POST", body: input });
+  return request<{ rollout: PlatformRollout }>("/platform/v1/rollouts", {
+    method: "POST",
+    body: toGeneratedRolloutInput(input),
+  });
 }
 
 function transitionPlatformRollout(
