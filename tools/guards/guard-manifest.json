@@ -16,6 +16,7 @@
       "saas-governance",
       "guard-registry",
       "sdlc",
+      "required-command-integrity",
       "repo-size",
       "cleanup-policy",
       "no-broken-imports",
@@ -31,6 +32,7 @@
       "saas-governance",
       "guard-registry",
       "sdlc",
+      "required-command-integrity",
       "cleanup-policy",
       "no-broken-imports",
       "runtime-config",
@@ -50,6 +52,7 @@
       "saas-governance",
       "guard-registry",
       "sdlc",
+      "required-command-integrity",
       "cleanup-policy"
     ]
   }
