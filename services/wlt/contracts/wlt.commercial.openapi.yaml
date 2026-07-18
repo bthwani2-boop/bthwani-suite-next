@@ -1,8 +1,12 @@
 openapi: 3.1.0
 info:
   title: BThwani WLT Commercial Benefits API
-  version: 0.3.0
-  description: WLT-owned contract for commercial products, paid subscriptions, loyalty entries, and client benefit truth.
+  version: 1.0.0
+  description: >
+    Approved WLT-owned contract for commercial products, paid subscriptions,
+    loyalty ledger entries and client benefit truth. Mutations are authorized
+    only for the DSH service caller, remain deployment-gated by
+    WLT_MUTATIONS_ENABLED, and require idempotency or correlation identifiers.
 x-bthwani-owner: services/wlt
 x-bthwani-parent-contract: services/wlt/contracts/wlt.openapi.yaml
 x-bthwani-contract-state: CONTRACT_ACTIVE
@@ -10,13 +14,15 @@ x-bthwani-client-generation: DISABLED
 x-bthwani-client-binding: MANUAL_TYPED_ADAPTER
 x-bthwani-runtime-dependency: true
 x-bthwani-financial-owner: true
+x-bthwani-mutation-scope-approved: true
+x-bthwani-deployment-gate: WLT_MUTATIONS_ENABLED
 paths:
   /wlt/commercial/products:
     post:
       operationId: createWltCommercialProduct
       tags: [WltCommercialBenefits]
       security: [{ bearerAuth: [] }]
-      x-bthwani-mutation-approved: false
+      x-bthwani-mutation-approved: true
       x-bthwani-default-enabled: false
       parameters:
         - $ref: '#/components/parameters/ServiceCallerHeader'
@@ -48,7 +54,7 @@ paths:
       operationId: updateWltCommercialProduct
       tags: [WltCommercialBenefits]
       security: [{ bearerAuth: [] }]
-      x-bthwani-mutation-approved: false
+      x-bthwani-mutation-approved: true
       x-bthwani-default-enabled: false
       parameters:
         - $ref: '#/components/parameters/ServiceCallerHeader'
@@ -86,7 +92,7 @@ paths:
       operationId: appendWltLoyaltyEntry
       tags: [WltCommercialBenefits]
       security: [{ bearerAuth: [] }]
-      x-bthwani-mutation-approved: false
+      x-bthwani-mutation-approved: true
       x-bthwani-default-enabled: false
       parameters:
         - $ref: '#/components/parameters/ServiceCallerHeader'
@@ -111,7 +117,7 @@ paths:
       operationId: activateWltCommercialSubscription
       tags: [WltCommercialBenefits]
       security: [{ bearerAuth: [] }]
-      x-bthwani-mutation-approved: false
+      x-bthwani-mutation-approved: true
       x-bthwani-default-enabled: false
       parameters:
         - $ref: '#/components/parameters/ServiceCallerHeader'
@@ -178,6 +184,10 @@ components:
         points: { type: integer, format: int64, minimum: 1 }
         sourceType: { type: string, minLength: 1 }
         sourceId: { type: string, minLength: 1 }
+        reversalOf: { type: string, minLength: 1 }
+        idempotencyKey: { type: string, minLength: 1 }
+        correlationId: { type: string, minLength: 1 }
+        metadata: { type: object, additionalProperties: true }
     SubscriptionActivation:
       type: object
       additionalProperties: false
