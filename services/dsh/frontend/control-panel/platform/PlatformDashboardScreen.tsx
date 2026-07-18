@@ -26,6 +26,7 @@ import {
 import { hasControlPanelPermission } from "../../shared/session/control-panel-permissions";
 import { useControlPanelSession } from "../../shared/session/control-panel-session";
 import { PlatformChangeWorkflowPanel } from "./PlatformChangeWorkflowPanel";
+import { PlatformRolloutPanel } from "./PlatformRolloutPanel";
 import { ProviderRegistryPanel } from "./ProviderRegistryPanel";
 
 type ExecutiveTabId = PlatformMainTabId;
@@ -184,8 +185,8 @@ function VariablesTab({ data }: { readonly data: PlatformControlReadModel }) {
 
       <CpStatePanel
         role="status"
-        title="التغييرات تُدار عبر السجل والتراجع"
-        description="إنشاء المقترح واعتماده وتطبيقه وتراجعه متاح في تبويب السجل والتراجع وفق صلاحيات منفصلة."
+        title="التغييرات تُدار عبر دورة التغيير والتراجع"
+        description="إنشاء المقترح واعتماده وتطبيقه وتراجعه متاح وفق صلاحيات مستقلة. الإطلاق التدريجي يُدار من تبويب الإطلاق."
         code={`variables=${data.snapshot.variablesState}; flags=${data.snapshot.flagsState}`}
       />
     </View>
@@ -207,7 +208,9 @@ function ServicesTab({ data }: { readonly data: PlatformControlReadModel }) {
         <tr>
           <CpTableHeaderCell>الخدمة</CpTableHeaderCell>
           <CpTableHeaderCell>الحالة</CpTableHeaderCell>
+          <CpTableHeaderCell>زمن الاستجابة</CpTableHeaderCell>
           <CpTableHeaderCell>مصدر الدليل</CpTableHeaderCell>
+          <CpTableHeaderCell>الرسالة</CpTableHeaderCell>
         </tr>
       </thead>
       <tbody>
@@ -215,7 +218,9 @@ function ServicesTab({ data }: { readonly data: PlatformControlReadModel }) {
           <tr key={service.service}>
             <CpTableCell>{service.service}</CpTableCell>
             <CpTableCell><Badge label={service.state} tone={statusTone(service.state)} /></CpTableCell>
+            <CpTableCell>{service.latencyMs == null ? "—" : `${service.latencyMs} ms`}</CpTableCell>
             <CpTableCell>{service.evidenceSource}</CpTableCell>
+            <CpTableCell>{service.message || "—"}</CpTableCell>
           </tr>
         ))}
       </tbody>
@@ -238,9 +243,9 @@ function HealthTab({ data }: { readonly data: PlatformControlReadModel }) {
   return (
     <View style={styles.stack}>
       <CpStatePanel
-        role="status"
-        title={`حالة الصحة: ${data.health.state}`}
-        description="صحة platform-control وقاعدة بياناته فعلية؛ تجميع صحة بقية الخدمات ما يزال جزئيًا حتى ربط probes مستقلة."
+        role={data.health.state === "OPERATIONAL" ? "status" : "alert"}
+        title={`حالة الصحة المجمعة: ${data.health.state}`}
+        description="تُفحص platform-control وIdentity وProviders وWLT وDSH فعليًا مع مهلة وزمن استجابة؛ لا توجد حالة خضراء ثابتة."
         code={`checkedAt=${data.health.checkedAt}`}
       />
       <ServicesTab data={{ ...data, services: data.health.services }} />
@@ -308,17 +313,6 @@ function ChangeAndRollbackTab({
   );
 }
 
-function CanaryTab({ data }: { readonly data: PlatformControlReadModel }) {
-  return (
-    <CpStatePanel
-      role="status"
-      title="الإطلاق التدريجي غير مفعّل"
-      description="لا يتم عرض محاكاة. التفعيل يتطلب استهدافًا، مقاييس صحة، إيقافًا، إلغاءً، وتراجعًا مستقلًا في platform-control."
-      code={data.snapshot.rolloutsState}
-    />
-  );
-}
-
 export function PlatformDashboardScreen() {
   const [mainTab, setMainTab] = useState<ExecutiveTabId>("overview");
   const { state } = useControlPanelSession();
@@ -368,7 +362,7 @@ export function PlatformDashboardScreen() {
       header={
         <CpPageHeader title="منصة DSH السيادية">
           <Text role="caption">
-            مركز قرار تنفيذي للخدمات والمتغيرات والأعلام والمزودين والصحة ودورة التغيير؛ لا يحتوي أعمالًا تشغيلية يومية.
+            مركز قرار تنفيذي للخدمات والمتغيرات والأعلام والمزودين والصحة ودورة التغيير والإطلاق التدريجي؛ لا يحتوي أعمالًا تشغيلية يومية.
           </Text>
           <CpKpiStrip>
             <CpKpiCard label="المتغيرات المطبقة" value={metrics.variables} />
@@ -409,7 +403,13 @@ export function PlatformDashboardScreen() {
             {mainTab === "variables" ? <VariablesTab data={runtime.state.data} /> : null}
             {mainTab === "services" ? <ServicesTab data={runtime.state.data} /> : null}
             {mainTab === "providers" ? <ProviderRegistryPanel /> : null}
-            {mainTab === "canary" ? <CanaryTab data={runtime.state.data} /> : null}
+            {mainTab === "canary" ? (
+              <PlatformRolloutPanel
+                changeSets={runtime.state.data.changeSets}
+                healthState={runtime.state.data.health?.state ?? runtime.state.data.snapshot.healthState}
+                onChanged={runtime.reload}
+              />
+            ) : null}
             {mainTab === "health" ? <HealthTab data={runtime.state.data} /> : null}
             {mainTab === "rollback" ? (
               <ChangeAndRollbackTab data={runtime.state.data} onChanged={runtime.reload} />
@@ -420,8 +420,8 @@ export function PlatformDashboardScreen() {
 
       <View style={styles.footer}>
         <Text role="caption">المالك: {PLATFORM_OWNERSHIP.owner}</Text>
-        <Text role="caption">العقد: core/platform-control v0.2.0</Text>
-        <Text role="caption">الوضع: P2 governed store active / progressive rollout contract-required</Text>
+        <Text role="caption">العقد: core/platform-control v0.3.0</Text>
+        <Text role="caption">الوضع: P3 governed changes, health-gated progressive delivery, audit and rollback active</Text>
       </View>
     </DataTablePageFrame>
   );
