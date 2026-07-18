@@ -97,9 +97,19 @@ func (s *protectedStoreServer) handleUpdateCatalogPlatformPolicyAtomic(w http.Re
 }
 
 // registerUnifiedCatalogRoutes binds the exact paths consumed by the shared
-// multi-surface client. The shorter /dsh/catalog paths remain available as a
-// compatibility surface in server.go.
+// multi-surface clients. It also restores the historically declared platform
+// policy routes so that the capability registry cannot claim disconnected APIs.
 func registerUnifiedCatalogRoutes(mux *http.ServeMux, s *protectedStoreServer) {
+	// Sovereign operational policy truth.
+	mux.HandleFunc("GET /dsh/operator/platform/zones", s.handleListPlatformZones)
+	mux.HandleFunc("POST /dsh/operator/platform/zones", s.handleCreatePlatformZone)
+	mux.HandleFunc("PATCH /dsh/operator/platform/zones/{zoneId}", s.handleUpdatePlatformZone)
+	mux.HandleFunc("GET /dsh/operator/platform/sla-rules", s.handleListPlatformSlaRules)
+	mux.HandleFunc("PUT /dsh/operator/platform/sla-rules", s.handleUpsertPlatformSlaRule)
+	mux.HandleFunc("GET /dsh/operator/platform/capacity", s.handleGetPlatformCapacity)
+	mux.HandleFunc("PUT /dsh/operator/platform/capacity", s.handleUpsertPlatformCapacity)
+	mux.HandleFunc("GET /dsh/operator/platform/serviceability/{zoneId}", s.handleGetPlatformZoneServiceability)
+
 	// Operator taxonomy, products, proposals, policies and assortment.
 	mux.HandleFunc("GET /dsh/operator/catalog/domains", s.handleListCatalogDomains)
 	mux.HandleFunc("POST /dsh/operator/catalog/domains", s.handleCreateCatalogDomain)
