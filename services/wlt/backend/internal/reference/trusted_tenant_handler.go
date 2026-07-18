@@ -10,9 +10,10 @@ import (
 )
 
 // HandleCreatePaymentSessionTrustedDsh accepts tenant identity only from an
-// authenticated DSH service request. Current DSH callers carry tenantId in the
-// server-generated payload; X-Tenant-ID is an additional assertion when
-// present and must match exactly.
+// authenticated DSH service request. The generic payment-session route is
+// intentionally restricted to checkout and special-request sources because
+// that is the source union documented by wlt.openapi.yaml. Subscription
+// purchases use the dedicated /wlt/commercial/payment-sessions route.
 func HandleCreatePaymentSessionTrustedDsh(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !requireDshServiceCaller(w, r) {
@@ -20,6 +21,10 @@ func HandleCreatePaymentSessionTrustedDsh(db *sql.DB) http.HandlerFunc {
 		}
 		var input CreatePaymentSessionInput
 		if !decodeJSON(w, r, &input) {
+			return
+		}
+		if strings.TrimSpace(input.SubscriptionPurchaseID) != "" || strings.TrimSpace(input.CommercialProductReference) != "" {
+			shared.SendError(w, http.StatusBadRequest, "INVALID_PAYMENT_SOURCE", "subscription purchases must use /wlt/commercial/payment-sessions")
 			return
 		}
 		payloadTenantID := strings.TrimSpace(input.TenantID)
