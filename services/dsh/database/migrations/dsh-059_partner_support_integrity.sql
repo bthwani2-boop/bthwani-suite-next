@@ -25,15 +25,18 @@ CREATE INDEX IF NOT EXISTS idx_dsh_support_tickets_reporter_role_created
 
 CREATE TABLE IF NOT EXISTS dsh_support_ticket_events (
   id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-  ticket_id       TEXT        NOT NULL,
+  ticket_id       UUID        NOT NULL REFERENCES dsh_support_tickets(id) ON DELETE CASCADE,
   reporter_id     TEXT        NOT NULL,
   actor_id        TEXT        NOT NULL,
-  actor_role      TEXT        NOT NULL,
+  actor_role      TEXT        NOT NULL CHECK (actor_role IN ('client', 'partner', 'captain', 'operator', 'system')),
   event_type      TEXT        NOT NULL CHECK (event_type IN ('created', 'message_added', 'status_changed', 'escalated', 'closed')),
   correlation_id  TEXT        NOT NULL,
   metadata        JSONB       NOT NULL DEFAULT '{}'::jsonb,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_dsh_support_ticket_event_correlation
+  ON dsh_support_ticket_events(ticket_id, event_type, correlation_id);
 
 CREATE INDEX IF NOT EXISTS idx_dsh_support_ticket_events_ticket_created
   ON dsh_support_ticket_events(ticket_id, created_at ASC);
