@@ -4,6 +4,10 @@ import {
   type DshCapabilityExtension,
 } from "./capability-map.extensions";
 
+export type DshMergedCapability = Omit<DshCapability, "topicScope"> & {
+  readonly topicScope?: readonly string[];
+};
+
 function unique<T>(values: readonly T[]): readonly T[] {
   return [...new Set(values)];
 }
@@ -11,7 +15,7 @@ function unique<T>(values: readonly T[]): readonly T[] {
 function mergeCapabilityExtension(
   capability: DshCapability,
   extension: DshCapabilityExtension | undefined,
-): DshCapability {
+): DshMergedCapability {
   if (!extension) return capability;
 
   return {
@@ -25,6 +29,10 @@ function mergeCapabilityExtension(
     runtimeBound: capability.runtimeBound && extension.runtimeBound,
     closureState: extension.closureState,
     topic: extension.topic ?? capability.topic,
+    topicScope: unique([
+      ...(capability.topicScope ?? []),
+      ...extension.topicScope,
+    ]),
   };
 }
 
@@ -45,9 +53,10 @@ for (const extension of DSH_CAPABILITY_MAP_EXTENSIONS) {
   extensionByCapabilityId.set(extension.id, extension);
 }
 
-export const DSH_CAPABILITIES = DSH_CAPABILITY_MAP.map((capability) =>
-  mergeCapabilityExtension(capability, extensionByCapabilityId.get(capability.id)),
-);
+export const DSH_CAPABILITIES: readonly DshMergedCapability[] =
+  DSH_CAPABILITY_MAP.map((capability) =>
+    mergeCapabilityExtension(capability, extensionByCapabilityId.get(capability.id)),
+  );
 
 export const DSH_CAPABILITY_IDS = DSH_CAPABILITIES.map((capability) => capability.id);
 
