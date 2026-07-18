@@ -11,17 +11,18 @@ import (
 var ErrFundingPolicy = errors.New("invalid coupon funding policy")
 
 type FundingProjection struct {
-	RedemptionID              string
-	CouponID                  string
-	CheckoutIntentID          string
-	ClientActorID             string
-	PartnerID                 string
-	PlatformFundedMinorUnits  int64
-	PartnerFundedMinorUnits   int64
-	TotalDiscountMinorUnits   int64
-	Currency                  string
-	WLTReservationID          string
-	Status                    string
+	RedemptionID             string
+	CouponID                 string
+	CheckoutIntentID         string
+	ClientActorID            string
+	TenantID                 string
+	PartnerID                string
+	PlatformFundedMinorUnits int64
+	PartnerFundedMinorUnits  int64
+	TotalDiscountMinorUnits  int64
+	Currency                 string
+	WLTReservationID         string
+	Status                   string
 }
 
 func splitFunding(discount int64, source string, platformShareBps int) (int64, int64, error) {
@@ -40,7 +41,7 @@ func splitFunding(discount int64, source string, platformShareBps int) (int64, i
 		}
 		return 0, discount, nil
 	case "shared":
-		if platformShareBps <= 0 || platformShareBps >= 10000 {
+		if platformShareBps <= 0 || platformShareBps >= 10000 || discount < 2 {
 			return 0, 0, ErrFundingPolicy
 		}
 		platform := (discount*int64(platformShareBps) + 5000) / 10000
@@ -69,21 +70,22 @@ func PrepareFundingForIntent(ctx context.Context, db *sql.DB, checkoutIntentID s
 	err := db.QueryRowContext(ctx, `
 		SELECT r.id::TEXT,r.coupon_id::TEXT,r.checkout_intent_id::TEXT,
 		       r.client_actor_id,r.discount_minor_units,r.currency,
-		       r.funding_status,COALESCE(r.wlt_funding_reservation_id,''),
+		       COALESCE(r.funding_tenant_id,''),r.funding_status,
+		       COALESCE(r.wlt_funding_reservation_id,''),
 		       c.funding_source,c.platform_share_bps,c.funding_partner_id,
 		       s.partner_id
 		FROM dsh_coupon_redemptions r
 		JOIN dsh_coupons c ON c.id=r.coupon_id
 		JOIN dsh_checkout_intents i ON i.id=r.checkout_intent_id
 		JOIN dsh_stores s ON s.id=i.store_id
-		WHERE r.checkout_intent_id=$1::uuid
-		FOR UPDATE OF r`, checkoutIntentID).Scan(
+		WHERE r.checkout_intent_id=$1::uuid`, checkoutIntentID).Scan(
 		&projection.RedemptionID,
 		&projection.CouponID,
 		&projection.CheckoutIntentID,
 		&projection.ClientActorID,
 		&projection.TotalDiscountMinorUnits,
 		&projection.Currency,
+		&projection.TenantID,
 		&projection.Status,
 		&projection.WLTReservationID,
 		&fundingSource,
@@ -158,16 +160,17 @@ func PrepareFundingForIntent(ctx context.Context, db *sql.DB, checkoutIntentID s
 	return &projection, nil
 }
 
-func AttachWLTReservation(ctx context.Context, db *sql.DB, redemptionID, reservationID string) error {
+func AttachWLTReservation(ctx context.Context, db *sql.DB, redemptionID, reservationID, tenantID string) error {
 	redemptionID = strings.TrimSpace(redemptionID)
 	reservationID = strings.TrimSpace(reservationID)
-	if db == nil || redemptionID == "" || reservationID == "" {
+	tenantID = strings.TrimSpace(tenantID)
+	if db == nil || redemptionID == "" || reservationID == "" || tenantID == "" {
 		return ErrInvalid
 	}
 	result, err := db.ExecContext(ctx, `UPDATE dsh_coupon_redemptions
-		SET funding_status='reserved',wlt_funding_reservation_id=$2,
+		SET funding_status='reserved',funding_tenant_id=$3,wlt_funding_reservation_id=$2,
 		    funding_failure_code='',funding_updated_at=NOW(),updated_at=NOW()
-		WHERE id=$1::uuid AND funding_status='pending'`, redemptionID, reservationID)
+		WHERE id=$1::uuid AND funding_status='pending'`, redemptionID, reservationID, tenantID)
 	if err != nil {
 		return err
 	}
@@ -201,25 +204,43 @@ func MarkFundingProjection(ctx context.Context, db *sql.DB, reservationID, statu
 	if !allowed[status] {
 		return ErrInvalid
 	}
-	_, err := db.ExecContext(ctx, `UPDATE dsh_coupon_redemptions
+	result, err := db.ExecContext(ctx, `UPDATE dsh_coupon_redemptions
 		SET funding_status=$2,funding_failure_code='',funding_updated_at=NOW(),updated_at=NOW()
 		WHERE wlt_funding_reservation_id=$1 AND funding_status<>$2`,
 		strings.TrimSpace(reservationID), status)
-	return err
+	if err != nil {
+		return err
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		var current string
+		if err := db.QueryRowContext(ctx, `SELECT funding_status FROM dsh_coupon_redemptions
+			WHERE wlt_funding_reservation_id=$1`, strings.TrimSpace(reservationID)).Scan(&current); err != nil {
+			return err
+		}
+		if current != status {
+			return ErrFundingPolicy
+		}
+	}
+	return nil
 }
 
 func FundingByIntent(ctx context.Context, db *sql.DB, checkoutIntentID string) (*FundingProjection, error) {
 	var projection FundingProjection
 	var partner sql.NullString
 	err := db.QueryRowContext(ctx, `SELECT id::TEXT,coupon_id::TEXT,checkout_intent_id::TEXT,
-		client_actor_id,COALESCE(funding_partner_id,''),platform_funded_minor_units,
-		partner_funded_minor_units,discount_minor_units,currency,
-		COALESCE(wlt_funding_reservation_id,''),funding_status
+		client_actor_id,COALESCE(funding_tenant_id,''),funding_partner_id,
+		platform_funded_minor_units,partner_funded_minor_units,
+		discount_minor_units,currency,COALESCE(wlt_funding_reservation_id,''),funding_status
 		FROM dsh_coupon_redemptions WHERE checkout_intent_id=$1::uuid`, checkoutIntentID).Scan(
 		&projection.RedemptionID,
 		&projection.CouponID,
 		&projection.CheckoutIntentID,
 		&projection.ClientActorID,
+		&projection.TenantID,
 		&partner,
 		&projection.PlatformFundedMinorUnits,
 		&projection.PartnerFundedMinorUnits,
