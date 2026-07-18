@@ -64,6 +64,14 @@ func (s *protectedStoreServer) handlePartnerUpsertStoreAssortmentAtomic(w http.R
 	s.upsertStoreAssortmentAtomic(w, r, actor.ID, actor.Role, storeID)
 }
 
+func (s *protectedStoreServer) handleLegacyPartnerUpsertStoreAssortmentAtomic(w http.ResponseWriter, r *http.Request) {
+	actor, storeID, ok := s.partnerStore(w, r)
+	if !ok {
+		return
+	}
+	s.upsertStoreAssortmentAtomic(w, r, actor.ID, actor.Role, storeID)
+}
+
 func (s *protectedStoreServer) handleFieldUpsertStoreAssortmentAtomic(w http.ResponseWriter, r *http.Request) {
 	actorID, storeID, ok := s.fieldPartnerStore(w, r)
 	if !ok {
@@ -74,6 +82,19 @@ func (s *protectedStoreServer) handleFieldUpsertStoreAssortmentAtomic(w http.Res
 		return
 	}
 	s.upsertStoreAssortmentAtomic(w, r, actorID, "field", storeID)
+}
+
+func (s *protectedStoreServer) handleLegacyFieldUpsertStoreAssortmentAtomic(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "field")
+	if !ok {
+		return
+	}
+	storeID := r.PathValue("storeId")
+	if _, _, err := store.ResolveActorStoreForID(r.Context(), s.db, actor, storeID); err != nil {
+		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "this store is outside the field actor scope")
+		return
+	}
+	s.upsertStoreAssortmentAtomic(w, r, actor.ID, actor.Role, storeID)
 }
 
 func (s *protectedStoreServer) handleUpdatePartnerProductProposalAtomic(w http.ResponseWriter, r *http.Request) {
