@@ -147,6 +147,30 @@ func List(ctx context.Context, db *sql.DB, clientID string) ([]Address, error) {
 	return addresses, rows.Err()
 }
 
+func GetOwned(ctx context.Context, db *sql.DB, clientID, addressID string) (*Address, error) {
+	address, err := scanAddress(db.QueryRowContext(ctx, `SELECT `+addressColumns+`
+		FROM dsh_client_addresses
+		WHERE id = $1 AND client_id = $2 AND deleted_at IS NULL`, strings.TrimSpace(addressID), strings.TrimSpace(clientID)))
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	return address, err
+}
+
+func (address Address) CheckoutSnapshot() string {
+	parts := []string{address.AddressLine}
+	for _, value := range []*string{address.Building, address.Floor, address.Unit} {
+		if value != nil && strings.TrimSpace(*value) != "" {
+			parts = append(parts, strings.TrimSpace(*value))
+		}
+	}
+	parts = append(parts, address.ServiceAreaCode, address.RecipientName, address.PhoneE164)
+	if address.DeliveryInstructions != nil && strings.TrimSpace(*address.DeliveryInstructions) != "" {
+		parts = append(parts, "instructions: "+strings.TrimSpace(*address.DeliveryInstructions))
+	}
+	return strings.Join(parts, " | ")
+}
+
 func lockClient(ctx context.Context, tx *sql.Tx, clientID string) error {
 	_, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtext($1))`, "dsh-client-address:"+clientID)
 	return err
@@ -283,12 +307,19 @@ func SetDefault(ctx context.Context, db *sql.DB, clientID, addressID, correlatio
 	if err := lockClient(ctx, tx, clientID); err != nil {
 		return nil, err
 	}
-	var exists bool
-	if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM dsh_client_addresses WHERE id=$1 AND client_id=$2 AND deleted_at IS NULL)`, addressID, clientID).Scan(&exists); err != nil {
+	current, err := scanAddress(tx.QueryRowContext(ctx, `SELECT `+addressColumns+` FROM dsh_client_addresses
+		WHERE id=$1 AND client_id=$2 AND deleted_at IS NULL FOR UPDATE`, addressID, clientID))
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	if err != nil {
 		return nil, err
 	}
-	if !exists {
-		return nil, ErrNotFound
+	if current.IsDefault {
+		if err := tx.Commit(); err != nil {
+			return nil, err
+		}
+		return current, nil
 	}
 	if _, err := tx.ExecContext(ctx, `UPDATE dsh_client_addresses SET is_default=FALSE, version=version+1, updated_at=NOW()
 		WHERE client_id=$1 AND id<>$2 AND deleted_at IS NULL AND is_default=TRUE`, clientID, addressID); err != nil {
