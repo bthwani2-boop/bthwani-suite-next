@@ -10,6 +10,8 @@ import (
 	"math"
 )
 
+var ErrVersionConflict = errors.New("cart version conflict")
+
 // GovernedCheckoutSnapshot is the OCC-locked, server-priced cart snapshot used
 // by checkout. Amounts are minor units and never originate from client input.
 type GovernedCheckoutSnapshot struct {
@@ -47,7 +49,7 @@ func ComputeCheckoutSnapshotTx(
 		return nil, err
 	}
 	if currentVersion != expectedVersion {
-		return nil, fmt.Errorf("%w: expected cart version %d, current version %d", ErrConflict, expectedVersion, currentVersion)
+		return nil, fmt.Errorf("%w: expected cart version %d, current version %d", ErrVersionConflict, expectedVersion, currentVersion)
 	}
 
 	rows, err := tx.QueryContext(ctx, `
