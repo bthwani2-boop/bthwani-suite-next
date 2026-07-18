@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 func (c *Client) actorFinanceRequest(ctx context.Context, method, path string, body []byte, correlationID string) (int, []byte, error) {
@@ -27,8 +28,17 @@ func (c *Client) actorFinanceRequest(ctx context.Context, method, path string, b
 	if len(body) > 0 {
 		req.Header.Set("Content-Type", "application/json")
 	}
-	if correlationID != "" {
-		req.Header.Set("X-Correlation-ID", correlationID)
+	correlationID = strings.TrimSpace(correlationID)
+	if method == http.MethodGet || method == http.MethodHead {
+		if correlationID != "" {
+			req.Header.Set("X-Correlation-ID", correlationID)
+		}
+	} else if err := setRequiredMutationHeaders(
+		req,
+		correlationID,
+		deterministicMutationKey("actor-finance", method, path, correlationID),
+	); err != nil {
+		return 0, nil, fmt.Errorf("prepare WLT actor finance mutation: %w", err)
 	}
 	response, err := c.http.Do(req)
 	if err != nil {
