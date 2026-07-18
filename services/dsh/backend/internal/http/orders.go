@@ -36,6 +36,7 @@ func (s *protectedStoreServer) handleCreateOrder(w http.ResponseWriter, r *http.
 	order, err := orders.CreateOrder(s.db, orders.CreateOrderInput{
 		CheckoutIntentID: body.CheckoutIntentID,
 		ClientID:         actor.ID,
+		TenantID:         actor.TenantID,
 	})
 	if errors.Is(err, orders.ErrInvalid) {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
