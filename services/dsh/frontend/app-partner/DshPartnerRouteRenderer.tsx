@@ -215,6 +215,8 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
 
   const activeStoreRuntimeId =
     selectedStoreScopeId === "all" ? undefined : selectedStoreScopeId;
+  const scopedStoreId = activeStoreRuntimeId ?? "";
+  const scopedProductId = editingProductId ?? "";
   const activePartnerOrder = React.useMemo(
     () =>
       partnerOrders.find((order) => order.id === activeOrderId) ??
@@ -234,7 +236,7 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
     );
   }
 
-  if (STORE_SCOPED_ROUTES.has(route) && !activeStoreRuntimeId) {
+  if (STORE_SCOPED_ROUTES.has(route) && !scopedStoreId) {
     return renderSurfaceShell(
       <StateView
         title="اختر متجرًا محددًا"
@@ -246,7 +248,7 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
     );
   }
 
-  if (PRODUCT_SCOPED_ROUTES.has(route) && !editingProductId) {
+  if (PRODUCT_SCOPED_ROUTES.has(route) && !scopedProductId) {
     return renderSurfaceShell(
       <StateView
         title="اختر منتجًا"
@@ -304,17 +306,9 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
   }
 
   if (route === "entry") {
-    const entryState =
-      partnerOrdersState === "loading"
-        ? "loading"
-        : partnerOrdersState === "offline"
-          ? "offline"
-          : partnerOrdersState === "error"
-            ? "error"
-            : "ready";
     return renderSurfaceShell(
       <PartnerEntryScreen
-        state={entryState}
+        state={partnerOrdersState}
         onOpenOrdersBoardPress={openOrdersBoard}
         onOpenOrderDetailPress={openOrdersBoard}
         onOpenMaintenancePress={() => openAccountHub("profile")}
@@ -360,15 +354,15 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
 
   if (route === "inventory-management") {
     return renderSurfaceShell(
-      <PartnerCatalogManagementScreen storeId={activeStoreRuntimeId} />,
+      <PartnerCatalogManagementScreen storeId={scopedStoreId} />,
     );
   }
 
   if (route === "product-edit") {
     return renderSurfaceShell(
       <ProductEditScreen
-        storeId={activeStoreRuntimeId}
-        productId={editingProductId}
+        storeId={scopedStoreId}
+        productId={scopedProductId}
         onBack={() => setRoute("inventory-management")}
         onSaved={() => {
           setEditingProductId(undefined);
@@ -381,7 +375,7 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
   if (route === "category-management") {
     return renderSurfaceShell(
       <CategoryManagementScreen
-        storeId={activeStoreRuntimeId}
+        storeId={scopedStoreId}
         onBack={() => setRoute("inventory-management")}
       />,
     );
@@ -390,8 +384,8 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
   if (route === "product-media") {
     return renderSurfaceShell(
       <ProductMediaScreen
-        productId={editingProductId}
-        storeId={activeStoreRuntimeId}
+        productId={scopedProductId}
+        storeId={scopedStoreId}
         onBack={() => setRoute("inventory-management")}
       />,
     );
@@ -400,8 +394,8 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
   if (route === "product-overrides") {
     return renderSurfaceShell(
       <ProductOverridesScreen
-        storeId={activeStoreRuntimeId}
-        productId={editingProductId}
+        storeId={scopedStoreId}
+        productId={scopedProductId}
         onBack={() => setRoute("inventory-management")}
       />,
     );
@@ -410,7 +404,7 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
   if (route === "store-courier") {
     return renderSurfaceShell(
       <DshPartnerStoreCourierScreen
-        storeId={activeStoreRuntimeId}
+        storeId={scopedStoreId}
         scopes={scopes}
         onBack={() => openAccountHub("operations")}
       />,
@@ -420,7 +414,7 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
   if (route === "team") {
     return renderSurfaceShell(
       <PartnerTeamManagementScreen
-        storeId={activeStoreRuntimeId}
+        storeId={scopedStoreId}
         storeName={runtimePartnerProfile.storeName}
         branchLabel={runtimePartnerProfile.branchLabel}
         members={teamMembers}
