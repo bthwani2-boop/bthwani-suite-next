@@ -1,0 +1,127 @@
+name: Lian Full Runtime Evidence
+
+on:
+  push:
+    branches: [lian]
+    paths:
+      - "core/**"
+      - "services/dsh/**"
+      - "services/wlt/**"
+      - "infra/docker/**"
+      - "infra/data-plane/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/lian-full-runtime-evidence.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lian-full-runtime-evidence-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  full-runtime-smoke:
+    name: Full service runtime bootstrap and smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Setup governed workspace
+        uses: ./.github/actions/setup-node-workspace
+
+      - name: Verify Docker runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker version
+          docker compose version
+
+      - name: Reset full runtime
+        shell: pwsh
+        run: pnpm run runtime:full:reset
+
+      - name: Start full runtime
+        shell: pwsh
+        run: pnpm run runtime:full:up
+
+      - name: Bootstrap governed development actors and data
+        shell: pwsh
+        run: pnpm run runtime:full:bootstrap-dev
+
+      - name: Run repository full-runtime smoke
+        shell: pwsh
+        run: pnpm run runtime:full:smoke
+
+      - name: Verify canonical service ports and health
+        shell: bash
+        run: |
+          set -euo pipefail
+          check() {
+            local name="$1"
+            local url="$2"
+            printf 'checking %s at %s\n' "$name" "$url"
+            for attempt in $(seq 1 30); do
+              if curl --fail --silent --show-error --max-time 5 "$url"; then
+                printf '\n%s healthy\n' "$name"
+                return 0
+              fi
+              sleep 2
+            done
+            printf '%s did not become healthy\n' "$name" >&2
+            return 1
+          }
+          check dsh http://127.0.0.1:58080/dsh/health
+          check identity http://127.0.0.1:58082/health
+          check wlt http://127.0.0.1:58083/health
+          check workforce http://127.0.0.1:58086/health
+          check providers http://127.0.0.1:58087/health
+          check platform-control http://127.0.0.1:58088/health
+
+      - name: Verify protected map and platform routes are mounted
+        shell: bash
+        run: |
+          set -euo pipefail
+          require_protected() {
+            local method="$1"
+            local url="$2"
+            local body="${3:-}"
+            local status
+            if [ -n "$body" ]; then
+              status="$(curl --silent --output /tmp/route-body --write-out '%{http_code}' \
+                --request "$method" \
+                --header 'Content-Type: application/json' \
+                --data "$body" \
+                "$url")"
+            else
+              status="$(curl --silent --output /tmp/route-body --write-out '%{http_code}' \
+                --request "$method" \
+                "$url")"
+            fi
+            printf '%s %s -> %s\n' "$method" "$url" "$status"
+            test "$status" = 401 || test "$status" = 403
+          }
+          require_protected POST http://127.0.0.1:58080/dsh/client/maps/search '{"query":"Sanaa"}'
+          require_protected POST http://127.0.0.1:58080/dsh/client/maps/reverse '{"latitude":15.35,"longitude":44.20}'
+          require_protected GET http://127.0.0.1:58080/dsh/operator/platform/service-areas
+          require_protected GET http://127.0.0.1:58080/dsh/operator/platform/zones
+          require_protected GET http://127.0.0.1:58080/dsh/operator/platform/store-onboarding-fee
+
+      - name: Print runtime diagnostics on failure
+        if: failure()
+        shell: bash
+        run: |
+          set +e
+          docker compose -f infra/docker/compose.runtime.yml ps
+          docker compose -f infra/docker/compose.runtime.yml logs --no-color --tail=300
+
+      - name: Stop full runtime
+        if: always()
+        shell: pwsh
+        run: pnpm run runtime:full:down
