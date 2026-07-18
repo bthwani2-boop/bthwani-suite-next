@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: BThwani Core Platform Control API
-  version: 0.2.0
-  description: Sovereign platform-control read model and governed maker-checker change workflow.
+  version: 0.3.0
+  description: Sovereign platform-control read model, governed maker-checker changes, live health aggregation, and progressive feature-flag delivery.
 
 x-bthwani-owner: core/platform-control
 x-bthwani-contract-state: CONTRACT_ACTIVE
@@ -116,7 +116,7 @@ paths:
   /platform/v1/services:
     get:
       operationId: listPlatformServices
-      summary: List platform service posture.
+      summary: List live platform service posture.
       tags: [PlatformServices]
       responses:
         "200":
@@ -133,7 +133,7 @@ paths:
   /platform/v1/health:
     get:
       operationId: getPlatformHealth
-      summary: Return authorized platform health posture.
+      summary: Return authorized aggregated platform health posture.
       tags: [PlatformHealth]
       responses:
         "200":
@@ -260,44 +260,81 @@ paths:
         "200": { $ref: "#/components/responses/PlatformChangeSetResponse" }
         "409": { $ref: "#/components/responses/PlatformError" }
   /platform/v1/rollouts:
-    post:
-      operationId: createPlatformRollout
-      summary: Create a platform rollout.
+    get:
+      operationId: listPlatformRollouts
+      summary: List progressive feature-flag rollouts.
       tags: [PlatformRollouts]
       responses:
-        "409": { $ref: "#/components/responses/RolloutWorkflowRequired" }
+        "200":
+          description: Progressive rollouts.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [rollouts]
+                properties:
+                  rollouts:
+                    type: array
+                    items: { $ref: "#/components/schemas/PlatformRollout" }
+        "500": { $ref: "#/components/responses/PlatformError" }
+    post:
+      operationId: createPlatformRollout
+      summary: Create a health-gated rollout for an applied disabled feature flag.
+      tags: [PlatformRollouts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreatePlatformRolloutInput" }
+      responses:
+        "201": { $ref: "#/components/responses/PlatformRolloutResponse" }
+        "409": { $ref: "#/components/responses/PlatformError" }
+        "422": { $ref: "#/components/responses/PlatformError" }
+  /platform/v1/rollouts/{id}:
+    get:
+      operationId: getPlatformRollout
+      summary: Get one progressive rollout.
+      tags: [PlatformRollouts]
+      parameters: [{ $ref: "#/components/parameters/RolloutId" }]
+      responses:
+        "200": { $ref: "#/components/responses/PlatformRolloutResponse" }
+        "404": { $ref: "#/components/responses/PlatformError" }
   /platform/v1/rollouts/{id}/advance:
     post:
       operationId: advancePlatformRollout
-      summary: Advance a platform rollout.
+      summary: Advance a rollout after evaluating its configured health gate.
       tags: [PlatformRollouts]
       parameters: [{ $ref: "#/components/parameters/RolloutId" }]
       responses:
-        "409": { $ref: "#/components/responses/RolloutWorkflowRequired" }
+        "200": { $ref: "#/components/responses/PlatformRolloutResponse" }
+        "409": { $ref: "#/components/responses/PlatformError" }
   /platform/v1/rollouts/{id}/pause:
     post:
       operationId: pausePlatformRollout
-      summary: Pause a platform rollout.
+      summary: Pause a running rollout.
       tags: [PlatformRollouts]
       parameters: [{ $ref: "#/components/parameters/RolloutId" }]
       responses:
-        "409": { $ref: "#/components/responses/RolloutWorkflowRequired" }
+        "200": { $ref: "#/components/responses/PlatformRolloutResponse" }
+        "409": { $ref: "#/components/responses/PlatformError" }
   /platform/v1/rollouts/{id}/abort:
     post:
       operationId: abortPlatformRollout
-      summary: Abort a platform rollout.
+      summary: Abort an active rollout and restore its captured baseline.
       tags: [PlatformRollouts]
       parameters: [{ $ref: "#/components/parameters/RolloutId" }]
       responses:
-        "409": { $ref: "#/components/responses/RolloutWorkflowRequired" }
+        "200": { $ref: "#/components/responses/PlatformRolloutResponse" }
+        "409": { $ref: "#/components/responses/PlatformError" }
   /platform/v1/rollouts/{id}/rollback:
     post:
       operationId: rollbackPlatformRollout
-      summary: Roll back a platform rollout.
+      summary: Roll back a completed rollout and restore its captured baseline.
       tags: [PlatformRollouts]
       parameters: [{ $ref: "#/components/parameters/RolloutId" }]
       responses:
-        "409": { $ref: "#/components/responses/RolloutWorkflowRequired" }
+        "200": { $ref: "#/components/responses/PlatformRolloutResponse" }
+        "409": { $ref: "#/components/responses/PlatformError" }
 
 components:
   parameters:
@@ -310,7 +347,7 @@ components:
       name: id
       in: path
       required: true
-      schema: { type: string }
+      schema: { type: string, format: uuid }
   responses:
     PublicHealth:
       description: Process health or readiness state.
@@ -337,11 +374,15 @@ components:
             required: [changeSet]
             properties:
               changeSet: { $ref: "#/components/schemas/PlatformChangeSet" }
-    RolloutWorkflowRequired:
-      description: Progressive rollout workflow is not enabled yet.
+    PlatformRolloutResponse:
+      description: Progressive rollout readback.
       content:
         application/json:
-          schema: { $ref: "#/components/schemas/PlatformApiError" }
+          schema:
+            type: object
+            required: [rollout]
+            properties:
+              rollout: { $ref: "#/components/schemas/PlatformRollout" }
   schemas:
     PlatformControlState:
       type: string
@@ -352,6 +393,9 @@ components:
     PlatformChangeTargetType:
       type: string
       enum: [variable, feature_flag]
+    PlatformRolloutStatus:
+      type: string
+      enum: [running, paused, completed, aborted, rolled_back, failed]
     PlatformRuntimeSnapshot:
       type: object
       required: [status, revision, generatedAt, variablesState, flagsState, rolloutsState, healthState, auditState, rollbackState, servicesState, evidence]
@@ -416,6 +460,10 @@ components:
         service: { type: string }
         state: { $ref: "#/components/schemas/PlatformControlState" }
         evidenceSource: { type: string }
+        endpoint: { type: string, format: uri }
+        checkedAt: { type: string, format: date-time }
+        latencyMs: { type: integer, format: int64, minimum: 0 }
+        message: { type: string }
     PlatformHealthSnapshot:
       type: object
       required: [state, checkedAt, services]
@@ -483,6 +531,41 @@ components:
         items:
           type: array
           items: { $ref: "#/components/schemas/PlatformChangeSetItem" }
+    PlatformRollout:
+      type: object
+      required: [id, changeSetId, featureFlagKey, status, targetScope, steps, currentStepIndex, currentPercentage, healthGate, baselineEnabled, baselineTargeting, flagRevision, createdByActorId, updatedByActorId, version, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        changeSetId: { type: string, format: uuid }
+        featureFlagKey: { type: string }
+        status: { $ref: "#/components/schemas/PlatformRolloutStatus" }
+        targetScope:
+          type: object
+          additionalProperties: true
+        steps:
+          type: array
+          minItems: 1
+          items: { type: integer, format: int64, minimum: 1, maximum: 100 }
+        currentStepIndex: { type: integer, minimum: -1 }
+        currentPercentage: { type: integer, format: int64, minimum: 0, maximum: 100 }
+        healthGate:
+          type: object
+          additionalProperties: true
+        baselineEnabled: { type: boolean }
+        baselineTargeting:
+          type: object
+          additionalProperties: true
+        flagRevision: { type: integer, format: int64, minimum: 1 }
+        createdByActorId: { type: string }
+        updatedByActorId: { type: string }
+        version: { type: integer, format: int64, minimum: 1 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        startedAt: { type: string, format: date-time }
+        pausedAt: { type: string, format: date-time }
+        completedAt: { type: string, format: date-time }
+        abortedAt: { type: string, format: date-time }
+        rolledBackAt: { type: string, format: date-time }
     CreatePlatformChangeSetItemInput:
       type: object
       required: [targetType, targetKey, ownerService, expectedRevision, proposedValue]
@@ -513,6 +596,32 @@ components:
       required: [reason]
       properties:
         reason: { type: string, minLength: 1 }
+    CreatePlatformRolloutInput:
+      type: object
+      required: [changeSetId, featureFlagKey, targetScope, steps, healthGate]
+      properties:
+        changeSetId: { type: string, format: uuid }
+        featureFlagKey: { type: string, minLength: 1 }
+        targetScope:
+          type: object
+          additionalProperties: true
+        steps:
+          type: array
+          minItems: 1
+          items: { type: integer, format: int64, minimum: 1, maximum: 100 }
+        healthGate:
+          type: object
+          required: [requiredState]
+          properties:
+            requiredState:
+              type: string
+              enum: [OPERATIONAL]
+            requiredServices:
+              type: array
+              minItems: 1
+              items: { type: string, minLength: 1 }
+            maxLatencyMs: { type: integer, format: int64, minimum: 1 }
+          additionalProperties: false
     PlatformApiError:
       type: object
       required: [code, message]
