@@ -17,7 +17,7 @@ import type { DshCreateIntentInput, DshPaymentMethod } from "../../shared/checko
 
 type Props = {
   readonly cart: DshCart;
-  readonly deliveryAddress?: string;
+  readonly deliveryAddressId?: string;
   readonly note?: string;
   readonly paymentMethod: DshPaymentMethod;
   readonly couponCode?: string;
@@ -32,7 +32,7 @@ function formatMinorUnits(value: number, currency: string): string {
 
 export function GovernedCheckoutScreen({
   cart,
-  deliveryAddress = "",
+  deliveryAddressId = "",
   note = "",
   paymentMethod,
   couponCode = "",
@@ -44,14 +44,14 @@ export function GovernedCheckoutScreen({
     storeId: cart.storeId,
     fulfillmentMode: cart.fulfillmentMode,
     paymentMethod,
-    ...(deliveryAddress ? { deliveryAddress } : {}),
+    ...(deliveryAddressId ? { deliveryAddressId } : {}),
     ...(note ? { note } : {}),
     ...(couponCode.trim() ? { couponCode: couponCode.trim().toUpperCase() } : {}),
   };
   const { state, cancel } = useCheckoutToOrderFlow(input);
 
   if (state.kind === "loading") {
-    return <LoadingState title="جاري تثبيت الأسعار والتحقق من الكوبون…" />;
+    return <LoadingState title="جاري تثبيت العنوان والأسعار والتحقق من الكوبون…" />;
   }
   if (state.kind === "creating_order") {
     return <LoadingState title="تمت الموافقة المالية، جاري إنشاء الطلب من snapshot ثابت…" />;
@@ -68,7 +68,7 @@ export function GovernedCheckoutScreen({
     return (
       <View style={{ flex: 1 }}>
         <TopBar title="خارج النطاق" {...(onCancel ? { onBack: onCancel } : {})} />
-        <ScrollScreen><StateView title="الموقع غير قابل للخدمة" description="عدّل طريقة التنفيذ أو العنوان ثم أعد المحاولة." tone="danger" /></ScrollScreen>
+        <ScrollScreen><StateView title="العنوان غير قابل للخدمة" description="غيّر العنوان الافتراضي أو طريقة التنفيذ ثم أعد المحاولة." tone="danger" /></ScrollScreen>
       </View>
     );
   }
@@ -88,9 +88,10 @@ export function GovernedCheckoutScreen({
         <TopBar title="في انتظار WLT" {...(onCancel ? { onBack: onCancel } : {})} />
         <ScrollScreen>
           <View style={{ gap: spacing[3] }}>
-            <StateView title="تم تثبيت تسعير DSH" description="الإجمالي أدناه هو نفس المبلغ المرسل إلى WLT. حجز الكوبون مؤقت حتى نجاح الدفع وإنشاء الطلب." tone="warning" />
+            <StateView title="تم تثبيت عنوان وتسعير DSH" description="العنوان أدناه snapshot من دفتر العناوين المملوك لحسابك، والإجمالي هو نفس المبلغ المرسل إلى WLT." tone="warning" />
             <Card padding={3} gap={2}>
               <KeyValueList items={[
+                { label: "عنوان التسليم", value: intent.deliveryAddress || "استلام ذاتي" },
                 { label: "إجمالي المنتجات", value: formatMinorUnits(intent.subtotalMinorUnits, intent.currency) },
                 { label: "رسوم التوصيل", value: formatMinorUnits(intent.deliveryFeeMinorUnits, intent.currency) },
                 { label: "الخصم", value: formatMinorUnits(intent.discountMinorUnits, intent.currency) },
@@ -112,10 +113,11 @@ export function GovernedCheckoutScreen({
         <TopBar title="تم إنشاء الطلب" />
         <ScrollScreen>
           <View style={{ gap: spacing[3] }}>
-            <StateView title="تم تثبيت الطلب ماليًا وتشغيليًا" description="أصبح snapshot التسعير غير قابل للتعديل، وتم تثبيت استرداد الكوبون داخل معاملة إنشاء الطلب." tone="success" />
+            <StateView title="تم تثبيت الطلب ماليًا وتشغيليًا" description="أصبح snapshot العنوان والتسعير غير قابلين للتعديل، وتم تثبيت استرداد الكوبون داخل معاملة إنشاء الطلب." tone="success" />
             <Card padding={3} gap={2}>
               <Text role="bodyStrong" align="start">رقم الطلب: {state.orderId}</Text>
               <KeyValueList items={[
+                { label: "عنوان التسليم", value: state.intent.deliveryAddress || "استلام ذاتي" },
                 { label: "إجمالي المنتجات", value: formatMinorUnits(state.intent.subtotalMinorUnits, state.intent.currency) },
                 { label: "رسوم التوصيل", value: formatMinorUnits(state.intent.deliveryFeeMinorUnits, state.intent.currency) },
                 { label: "الخصم", value: formatMinorUnits(state.intent.discountMinorUnits, state.intent.currency) },
