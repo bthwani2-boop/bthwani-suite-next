@@ -3,9 +3,9 @@ package http
 import (
 	"strings"
 
-	"dsh-api/internal/auth"
+	"dsh-api/internal/store"
 )
 
-func tenantIDForActor(actor auth.Identity) string {
+func tenantIDForActor(actor store.StoreActor) string {
 	return strings.TrimSpace(actor.TenantID)
 }
