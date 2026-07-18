@@ -32,7 +32,10 @@ func (c *Client) TransitionPromotionFundingFromOutbox(
 ) (*PromotionFundingOutboxResult, error) {
 	reservationID = strings.TrimSpace(reservationID)
 	transition = strings.TrimSpace(transition)
-	if reservationID == "" || input.TenantID == "" || input.IdempotencyKey == "" {
+	input.TenantID = strings.TrimSpace(input.TenantID)
+	input.IdempotencyKey = strings.TrimSpace(input.IdempotencyKey)
+	input.CorrelationID = strings.TrimSpace(input.CorrelationID)
+	if reservationID == "" || input.TenantID == "" || input.IdempotencyKey == "" || input.CorrelationID == "" {
 		return nil, fmt.Errorf("invalid promotion funding outbox request")
 	}
 	if transition != "commit" && transition != "release" && transition != "reverse" {
@@ -59,9 +62,8 @@ func (c *Client) TransitionPromotionFundingFromOutbox(
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
 	req.Header.Set("X-Tenant-ID", input.TenantID)
-	req.Header.Set("Idempotency-Key", input.IdempotencyKey)
-	if input.CorrelationID != "" {
-		req.Header.Set("X-Correlation-ID", input.CorrelationID)
+	if err := setRequiredMutationHeaders(req, input.CorrelationID, input.IdempotencyKey); err != nil {
+		return nil, fmt.Errorf("prepare WLT promotion funding outbox mutation: %w", err)
 	}
 	response, err := c.http.Do(req)
 	if err != nil {
