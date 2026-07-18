@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/url"
 
-	"dsh-api/internal/auth"
 	"dsh-api/internal/store"
 )
 
@@ -20,7 +19,7 @@ func writeWltActorFinanceResponse(w http.ResponseWriter, status int, body []byte
 	_, _ = w.Write(body)
 }
 
-func (s *protectedStoreServer) requireCodOwner(w http.ResponseWriter, r *http.Request, actor auth.Actor, recordID string) bool {
+func (s *protectedStoreServer) requireCodOwner(w http.ResponseWriter, r *http.Request, actorID, recordID string) bool {
 	status, body, err := s.wlt.FinanceReadCodRecord(r.Context(), recordID, r.Header.Get("X-Correlation-ID"))
 	if err != nil {
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", err.Error())
@@ -41,7 +40,7 @@ func (s *protectedStoreServer) requireCodOwner(w http.ResponseWriter, r *http.Re
 		store.SendError(w, http.StatusBadGateway, "WLT_INVALID_RESPONSE", "WLT COD record response is invalid")
 		return false
 	}
-	if envelope.CodRecord.CaptainID != actor.ID {
+	if envelope.CodRecord.CaptainID != actorID {
 		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "captain cannot mutate another captain's COD record")
 		return false
 	}
@@ -58,7 +57,7 @@ func (s *protectedStoreServer) handleCaptainCollectCod(w http.ResponseWriter, r 
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "recordId is required")
 		return
 	}
-	if !s.requireCodOwner(w, r, actor, recordID) {
+	if !s.requireCodOwner(w, r, actor.ID, recordID) {
 		return
 	}
 	status, body, err := s.wlt.FinanceWriteCodRecord(r.Context(), recordID, "collect", r.Header.Get("X-Correlation-ID"))
@@ -75,7 +74,7 @@ func (s *protectedStoreServer) handleCaptainRemitCod(w http.ResponseWriter, r *h
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "recordId is required")
 		return
 	}
-	if !s.requireCodOwner(w, r, actor, recordID) {
+	if !s.requireCodOwner(w, r, actor.ID, recordID) {
 		return
 	}
 	status, body, err := s.wlt.FinanceWriteCodRecord(r.Context(), recordID, "remit", r.Header.Get("X-Correlation-ID"))
@@ -108,7 +107,7 @@ type actorPayoutRequestBody struct {
 	IdempotencyKey   string `json:"idempotencyKey"`
 }
 
-func (s *protectedStoreServer) createActorPayout(w http.ResponseWriter, r *http.Request, actor auth.Actor, actorType string) {
+func (s *protectedStoreServer) createActorPayout(w http.ResponseWriter, r *http.Request, actorID, actorType string) {
 	var input actorPayoutRequestBody
 	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64*1024))
 	decoder.DisallowUnknownFields()
@@ -117,7 +116,7 @@ func (s *protectedStoreServer) createActorPayout(w http.ResponseWriter, r *http.
 		return
 	}
 	payload, err := json.Marshal(map[string]any{
-		"beneficiaryActorId":   actor.ID,
+		"beneficiaryActorId":   actorID,
 		"beneficiaryActorType": actorType,
 		"amountMinorUnits":     input.AmountMinorUnits,
 		"currency":             input.Currency,
@@ -136,11 +135,9 @@ func (s *protectedStoreServer) handleCaptainCreatePayout(w http.ResponseWriter, 
 	if !ok {
 		return
 	}
-	s.createActorPayout(w, r, actor, "captain")
+	s.createActorPayout(w, r, actor.ID, "captain")
 }
 
-// Field aliases preserve the canonical actor-scoped implementation while
-// matching the route names used by the unified router.
 func (s *protectedStoreServer) handleFieldFinanceCommissions(w http.ResponseWriter, r *http.Request) {
 	s.handleFieldMeCommissions(w, r)
 }
