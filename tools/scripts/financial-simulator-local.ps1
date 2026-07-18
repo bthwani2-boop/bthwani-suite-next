@@ -34,7 +34,7 @@ function Invoke-Step {
   if ($LASTEXITCODE -ne 0) {
     throw "$Name failed with exit code $LASTEXITCODE"
   }
-  Write-Host "$Name: PASS" -ForegroundColor Green
+  Write-Host "${Name}: PASS" -ForegroundColor Green
 }
 
 function Invoke-Runtime {
