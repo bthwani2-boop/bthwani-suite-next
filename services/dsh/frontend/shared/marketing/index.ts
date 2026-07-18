@@ -3,3 +3,5 @@ export * from "./use-marketing-controller";
 export * from "./dsh-signal-layer.model";
 export * from "./marketing-registry";
 export * from "./marketing.api";
+export * from "./loyalty-subscriptions.types";
+export * from "./use-commercial-programs-controller";
