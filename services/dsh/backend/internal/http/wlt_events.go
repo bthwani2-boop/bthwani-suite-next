@@ -1,6 +1,7 @@
 package http
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -13,9 +14,8 @@ import (
 )
 
 // POST /dsh/internal/wlt/payment-session-events
-// WLT is the payment and refund authority. Checkout outcomes reconcile intent
-// and coupon reservation state; completed refund events reverse coupon and
-// loyalty effects idempotently for the referenced order.
+// WLT is the payment and refund authority. Every event is tenant-scoped before
+// DSH changes checkout, order, coupon, loyalty, or promotion-funding state.
 func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWriter, r *http.Request) {
 	if !requireWltServiceCaller(w, r) {
 		return
@@ -38,11 +38,22 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 	}
 	body.TenantID = strings.TrimSpace(body.TenantID)
 	body.Status = strings.TrimSpace(body.Status)
-	if body.Status == "refunded" {
-		handleConfirmedRefundEffect(w, s, strings.TrimSpace(body.OrderID), strings.TrimSpace(body.RefundReference), strings.TrimSpace(body.Reason))
+	if body.TenantID == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "tenantId is required")
 		return
 	}
-	if body.TenantID == "" || body.PaymentSessionID == "" || body.Status == "" ||
+	if body.Status == "refunded" {
+		handleConfirmedRefundEffect(
+			w,
+			s,
+			body.TenantID,
+			strings.TrimSpace(body.OrderID),
+			strings.TrimSpace(body.RefundReference),
+			strings.TrimSpace(body.Reason),
+		)
+		return
+	}
+	if body.PaymentSessionID == "" || body.Status == "" ||
 		(body.CheckoutIntentID == "" && body.SpecialRequestID == "") ||
 		(body.CheckoutIntentID != "" && body.SpecialRequestID != "") {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "tenantId, exactly one payment source, paymentSessionId and status are required")
@@ -77,7 +88,7 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 
 	intent, err := checkout.ApplyWltPaymentEvent(s.db, body.TenantID, body.CheckoutIntentID, body.PaymentSessionID, body.Status)
 	if errors.Is(err, checkout.ErrNotFound) {
-		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "checkout intent not found")
+		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "checkout intent not found in tenant")
 		return
 	}
 	if errors.Is(err, checkout.ErrPaymentSessionMismatch) {
@@ -108,17 +119,33 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 	store.SendJSON(w, http.StatusOK, map[string]any{"intent": marshalIntentWithPricing(intent, pricing)})
 }
 
-func handleConfirmedRefundEffect(w http.ResponseWriter, s *protectedStoreServer, orderID, refundReference, reason string) {
-	if orderID == "" || refundReference == "" {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "orderId and refundReference are required for refunded status")
+func handleConfirmedRefundEffect(w http.ResponseWriter, s *protectedStoreServer, tenantID, orderID, refundReference, reason string) {
+	if tenantID == "" || orderID == "" || refundReference == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "tenantId, orderId and refundReference are required for refunded status")
 		return
 	}
-	var couponReversed, loyaltyQueued bool
+	var exists bool
+	if err := s.db.QueryRow(`SELECT EXISTS(
+		SELECT 1 FROM dsh_orders WHERE id=$1::uuid AND tenant_id=$2
+	)`, orderID, tenantID).Scan(&exists); err != nil {
+		store.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to verify refund order tenant")
+		return
+	}
+	if !exists {
+		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "order not found in tenant")
+		return
+	}
+
+	var couponReversed, loyaltyQueued, fundingQueued bool
 	err := s.db.QueryRow(`
-		SELECT coupon_reversed,loyalty_reversal_queued
+		SELECT coupon_reversed,loyalty_reversal_queued,funding_reversal_queued
 		FROM dsh_apply_confirmed_refund_effects($1::uuid,$2,$3)`,
 		orderID, refundReference, reason,
-	).Scan(&couponReversed, &loyaltyQueued)
+	).Scan(&couponReversed, &loyaltyQueued, &fundingQueued)
+	if errors.Is(err, sql.ErrNoRows) {
+		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "refund effect target not found")
+		return
+	}
 	if err != nil {
 		store.SendError(w, http.StatusConflict, "REFUND_EFFECT_CONFLICT", err.Error())
 		return
@@ -128,6 +155,7 @@ func handleConfirmedRefundEffect(w http.ResponseWriter, s *protectedStoreServer,
 		"refundReference":       refundReference,
 		"couponReversed":        couponReversed,
 		"loyaltyReversalQueued": loyaltyQueued,
+		"fundingReversalQueued": fundingQueued,
 	})
 }
 
