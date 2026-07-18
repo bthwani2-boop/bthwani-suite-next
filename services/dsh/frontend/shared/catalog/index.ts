@@ -8,6 +8,7 @@ export * from "./use-catalog-approval-controller";
 export * from "./catalog-registry";
 export * from "./central-catalog.types";
 export * from "./central-catalog.api";
+export * from "./central-catalog-occ.api";
 export * from "./use-central-catalog-controller";
 export * from "./central-catalog-product-pipeline";
 export * from "./central-catalog.controller-core";
