@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [master]
   push:
-    branches: [bassam, master]
+    branches: [lian, bassam, master]
   schedule:
     - cron: "0 3 * * 1"
   workflow_dispatch:
@@ -56,6 +56,14 @@ jobs:
             directory: core/workforce/backend
             go_mod: core/workforce/backend/go.mod
             go_sum: core/workforce/backend/go.sum
+          - name: Platform Control
+            directory: core/platform-control/backend
+            go_mod: core/platform-control/backend/go.mod
+            go_sum: core/platform-control/backend/go.sum
+          - name: Providers
+            directory: core/providers/backend
+            go_mod: core/providers/backend/go.mod
+            go_sum: core/providers/backend/go.sum
     steps:
       - name: Checkout repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
