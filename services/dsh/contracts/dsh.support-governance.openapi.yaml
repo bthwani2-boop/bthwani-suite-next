@@ -1,0 +1,290 @@
+openapi: 3.1.0
+info:
+  title: DSH Governed Support API
+  version: 1.0.0
+  description: Owner-scoped client support and permission-scoped operator support, messages, state transitions, and audit readback.
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-runtime-dependency: true
+x-bthwani-generation: DISABLED
+x-bthwani-client-binding: MANUAL_TYPED_ADAPTER
+servers:
+  - url: http://localhost:58080
+security:
+  - bearerAuth: []
+paths:
+  /dsh/client/support/tickets:
+    get:
+      operationId: listDshClientSupportTickets
+      responses:
+        '200': { $ref: '#/components/responses/TicketList' }
+    post:
+      operationId: createDshClientSupportTicket
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateTicketInput' }
+      responses:
+        '201': { $ref: '#/components/responses/Ticket' }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /dsh/client/support/tickets/{ticketId}:
+    parameters:
+      - $ref: '#/components/parameters/TicketId'
+    get:
+      operationId: getDshClientSupportTicket
+      responses:
+        '200': { $ref: '#/components/responses/Ticket' }
+        '404': { $ref: '#/components/responses/Error' }
+  /dsh/client/support/tickets/{ticketId}/messages:
+    parameters:
+      - $ref: '#/components/parameters/TicketId'
+    get:
+      operationId: listDshClientSupportMessages
+      responses:
+        '200': { $ref: '#/components/responses/MessageList' }
+        '404': { $ref: '#/components/responses/Error' }
+    post:
+      operationId: addDshClientSupportMessage
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AddMessageInput' }
+      responses:
+        '201': { $ref: '#/components/responses/Message' }
+        '400': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /dsh/operator/support/tickets:
+    get:
+      operationId: listDshOperatorSupportTickets
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/TicketStatus' }
+      responses:
+        '200': { $ref: '#/components/responses/TicketList' }
+        '403': { $ref: '#/components/responses/Error' }
+  /dsh/operator/support/tickets/{ticketId}:
+    parameters:
+      - $ref: '#/components/parameters/TicketId'
+    get:
+      operationId: getDshOperatorSupportTicket
+      responses:
+        '200': { $ref: '#/components/responses/Ticket' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      operationId: updateDshOperatorSupportTicket
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateTicketInput' }
+      responses:
+        '200': { $ref: '#/components/responses/Ticket' }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /dsh/operator/support/tickets/{ticketId}/messages:
+    parameters:
+      - $ref: '#/components/parameters/TicketId'
+    get:
+      operationId: listDshOperatorSupportMessages
+      responses:
+        '200': { $ref: '#/components/responses/MessageList' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    post:
+      operationId: addDshOperatorSupportMessage
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AddMessageInput' }
+      responses:
+        '201': { $ref: '#/components/responses/Message' }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /dsh/operator/support/tickets/{ticketId}/events:
+    parameters:
+      - $ref: '#/components/parameters/TicketId'
+    get:
+      operationId: listDshOperatorSupportEvents
+      responses:
+        '200':
+          description: Append-only ticket audit events.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [events]
+                properties:
+                  events:
+                    type: array
+                    items: { $ref: '#/components/schemas/TicketEvent' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    TicketId:
+      name: ticketId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 200 }
+    CorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: false
+      schema: { type: string, minLength: 1, maxLength: 200 }
+  schemas:
+    TicketStatus:
+      type: string
+      enum: [open, in_review, pending_user, resolved, closed]
+    TicketPriority:
+      type: string
+      enum: [low, normal, high, urgent]
+    TicketCategory:
+      type: string
+      enum: [order_issue, delivery_issue, store_quality, payment_reference, account_access, app_bug, other]
+    CreateTicketInput:
+      type: object
+      required: [subject, description, category]
+      properties:
+        storeId: { type: string }
+        orderId: { type: string }
+        subject: { type: string, minLength: 3, maxLength: 160 }
+        description: { type: string, minLength: 5, maxLength: 4000 }
+        category: { $ref: '#/components/schemas/TicketCategory' }
+        priority: { $ref: '#/components/schemas/TicketPriority' }
+    AddMessageInput:
+      type: object
+      required: [body]
+      properties:
+        body: { type: string, minLength: 1, maxLength: 4000 }
+        isInternal: { type: boolean, default: false }
+    UpdateTicketInput:
+      type: object
+      required: [status]
+      properties:
+        expectedStatus: { $ref: '#/components/schemas/TicketStatus' }
+        status: { $ref: '#/components/schemas/TicketStatus' }
+        assignedTo: { type: string }
+    Ticket:
+      type: object
+      required: [id, reporterId, reporterRole, subject, description, category, priority, status, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        storeId: { type: string }
+        reporterId: { type: string }
+        reporterRole: { type: string }
+        subject: { type: string }
+        description: { type: string }
+        category: { $ref: '#/components/schemas/TicketCategory' }
+        priority: { $ref: '#/components/schemas/TicketPriority' }
+        status: { $ref: '#/components/schemas/TicketStatus' }
+        assignedTo: { type: string }
+        orderId: { type: string }
+        resolvedAt: { type: [string, 'null'], format: date-time }
+        closedAt: { type: [string, 'null'], format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    Message:
+      type: object
+      required: [id, ticketId, senderId, senderRole, body, isInternal, createdAt]
+      properties:
+        id: { type: string }
+        ticketId: { type: string }
+        senderId: { type: string }
+        senderRole: { type: string }
+        body: { type: string }
+        isInternal: { type: boolean }
+        createdAt: { type: string, format: date-time }
+    TicketEvent:
+      type: object
+      required: [id, ticketId, reporterId, actorId, actorRole, eventType, correlationId, createdAt]
+      properties:
+        id: { type: string }
+        ticketId: { type: string }
+        reporterId: { type: string }
+        actorId: { type: string }
+        actorRole: { type: string }
+        eventType: { type: string, enum: [created, message_added, status_changed, escalated, closed] }
+        correlationId: { type: string }
+        createdAt: { type: string, format: date-time }
+  responses:
+    Ticket:
+      description: Support ticket.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [ticket]
+            properties:
+              ticket: { $ref: '#/components/schemas/Ticket' }
+    TicketList:
+      description: Support tickets.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [tickets]
+            properties:
+              tickets:
+                type: array
+                items: { $ref: '#/components/schemas/Ticket' }
+    Message:
+      description: Support message.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [message]
+            properties:
+              message: { $ref: '#/components/schemas/Message' }
+    MessageList:
+      description: Support messages.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [messages]
+            properties:
+              messages:
+                type: array
+                items: { $ref: '#/components/schemas/Message' }
+    Error:
+      description: Governed error response.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [code, message]
+            properties:
+              code: { type: string }
+              message: { type: string }
