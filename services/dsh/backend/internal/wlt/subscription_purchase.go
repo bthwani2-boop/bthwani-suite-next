@@ -29,15 +29,11 @@ type SubscriptionPaymentSession struct {
 }
 
 type CreateSubscriptionPaymentSessionInput struct {
-	SubscriptionPurchaseID     string `json:"subscriptionPurchaseId"`
-	CommercialProductReference string `json:"commercialProductReference"`
-	TenantID                   string `json:"tenantId"`
-	ClientID                   string `json:"clientId"`
-	StoreID                    string `json:"storeId"`
-	PaymentMethod              string `json:"paymentMethod"`
-	AmountMinorUnits           int64  `json:"amountMinorUnits"`
-	Currency                   string `json:"currency"`
-	CartSnapshotHash           string `json:"cartSnapshotHash"`
+	SubscriptionPurchaseID string `json:"subscriptionPurchaseId"`
+	ProductReference       string `json:"productReference"`
+	TenantID               string `json:"tenantId"`
+	ClientID               string `json:"clientId"`
+	PaymentMethod          string `json:"paymentMethod"`
 }
 
 type ActivateCommercialSubscriptionInput struct {
@@ -117,7 +113,7 @@ func (c *Client) CreateSubscriptionPaymentSession(
 	if err := c.commercialMutationRequest(
 		ctx,
 		http.MethodPost,
-		"/wlt/payment-sessions",
+		"/wlt/commercial/payment-sessions",
 		input,
 		idempotencyKey,
 		correlationID,
