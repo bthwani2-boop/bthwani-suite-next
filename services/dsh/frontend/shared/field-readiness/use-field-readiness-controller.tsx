@@ -105,7 +105,7 @@ export function useFieldVisitController(storeId: string, authKind = "unauthentic
     }
   }, [storeId, load]);
 
-  const completeVisit = useCallback(async (visitId: string, input: DshCompleteVisitInput) => {
+  const completeVisitAction = useCallback(async (visitId: string, input: DshCompleteVisitInput) => {
     setActionState(visitActionSubmittingState());
     const context = buildFieldMutationContext("complete-visit", [visitId]);
     try {
@@ -129,28 +129,44 @@ export function useFieldVisitController(storeId: string, authKind = "unauthentic
 
   const resetAction = useCallback(() => setActionState(visitActionIdleState()), []);
 
-  return { listState, actionState, reload: load, startVisit, completeVisit, resetAction };
+  return { listState, actionState, reload: load, startVisit, completeVisit: completeVisitAction, resetAction };
 }
 
-export function useFieldChecklistController(visitId: string, authKind = "unauthenticated") {
+export function useFieldChecklistController(
+  storeId: string,
+  visitId: string,
+  authKind = "unauthenticated",
+) {
   const [checklistState, setChecklistState] = useState(checklistIdleState());
   const [checkActionState, setCheckActionState] = useState(checkActionIdleState());
 
   const load = useCallback(async () => {
     setChecklistState(checklistLoadingState());
     try {
-      const checks = await fetchVisitChecks(visitId);
-      setChecklistState(checklistSuccessState(checks));
+      const [visits, checks] = await Promise.all([
+        fetchFieldVisits(storeId),
+        fetchVisitChecks(visitId),
+      ]);
+      const visit = visits.find((candidate) => candidate.id === visitId);
+      if (!visit) {
+        setChecklistState(checklistErrorState("لم يتم إيجاد الزيارة المحددة ضمن المتجر."));
+        return;
+      }
+      setChecklistState(checklistSuccessState(visit, checks));
     } catch (error) {
       setChecklistState(checklistErrorState(resolveMessage(error)));
     }
-  }, [visitId]);
+  }, [storeId, visitId]);
 
   useEffect(() => {
     if (isAuthenticated(authKind)) void load();
   }, [authKind, load]);
 
   const submitCheck = useCallback(async (input: DshUpsertCheckInput) => {
+    if (checklistState.kind !== "success" || checklistState.visit.status !== "in_progress") {
+      setCheckActionState(checkActionErrorState("لا يمكن تعديل قائمة التحقق بعد إغلاق الزيارة أو قبل تحميلها."));
+      return false;
+    }
     setCheckActionState(checkActionSubmittingState());
     const context = buildFieldMutationContext(
       "upsert-check",
@@ -175,7 +191,7 @@ export function useFieldChecklistController(visitId: string, authKind = "unauthe
       setCheckActionState(checkActionErrorState(resolveMessage(error)));
       return false;
     }
-  }, [visitId, load]);
+  }, [checklistState, visitId, load]);
 
   const resetCheckAction = useCallback(() => setCheckActionState(checkActionIdleState()), []);
 
