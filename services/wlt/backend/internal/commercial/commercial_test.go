@@ -48,11 +48,11 @@ func TestCycleEnd(t *testing.T) {
 
 func TestValidateProductInput(t *testing.T) {
 	valid := CreateProductInput{
-		Reference: "sub-basic",
-		DisplayName: "الخطة الأساسية",
-		PriceMinorUnits: 1000,
-		Currency: "YER",
-		BillingCycle: "monthly",
+		Reference:        "sub-basic",
+		DisplayName:      "الخطة الأساسية",
+		PriceMinorUnits:  1000,
+		Currency:         "YER",
+		BillingCycle:     "monthly",
 		CreatedByActorID: "operator-1",
 	}
 	if err := validateProductInput(valid); err != nil {

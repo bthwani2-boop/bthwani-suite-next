@@ -10,13 +10,13 @@ import (
 var ErrDeliveryPricingUnavailable = errors.New("delivery pricing unavailable")
 
 type DeliveryPricingPolicy struct {
-	StoreID          string `json:"storeId"`
-	FulfillmentMode  string `json:"fulfillmentMode"`
-	FeeMinorUnits    int64  `json:"feeMinorUnits"`
-	Currency         string `json:"currency"`
-	Status           string `json:"status"`
-	PricingSource    string `json:"pricingSource"`
-	Version          int    `json:"version"`
+	StoreID         string `json:"storeId"`
+	FulfillmentMode string `json:"fulfillmentMode"`
+	FeeMinorUnits   int64  `json:"feeMinorUnits"`
+	Currency        string `json:"currency"`
+	Status          string `json:"status"`
+	PricingSource   string `json:"pricingSource"`
+	Version         int    `json:"version"`
 }
 
 func ResolveDeliveryPricingTx(

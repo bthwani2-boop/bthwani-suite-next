@@ -173,11 +173,11 @@ func (s *protectedStoreServer) handleCreateSubscriptionPurchase(w http.ResponseW
 	session, err := s.wlt.CreateBoundSubscriptionPaymentSession(r.Context(), wltclient.BoundSubscriptionPaymentInput{
 		SubscriptionPurchaseID: purchaseID,
 		ProductReference:       product.Reference,
-		TenantID:              tenantID,
-		ClientID:              actor.ID,
-		PaymentMethod:         paymentMethod,
-		AmountMinorUnits:      product.PriceMinorUnits,
-		Currency:              product.Currency,
+		TenantID:               tenantID,
+		ClientID:               actor.ID,
+		PaymentMethod:          paymentMethod,
+		AmountMinorUnits:       product.PriceMinorUnits,
+		Currency:               product.Currency,
 	}, idempotencyKey, correlationID)
 	if err != nil {
 		writeWLTCommercialError(w, err, "create WLT subscription payment session")

@@ -2848,7 +2848,7 @@ paths:
           content:
             application/json:
               schema: { type: object, additionalProperties: true }
-        "400": { $ref: "#/components/responses/BadRequest" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "409": { $ref: "#/components/responses/Conflict" }
@@ -2882,9 +2882,239 @@ paths:
           content:
             application/json:
               schema: { type: object, additionalProperties: true }
-        "400": { $ref: "#/components/responses/BadRequest" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
+
+  /dsh/captain/finance/cod-records/{recordId}/collect:
+    post:
+      operationId: POSTDshCaptainFinanceCodRecordsRecordIdCollect
+      summary: Governed finance operation owned by DSH/WLT.
+      tags: [DshCaptainFinance]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: recordId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        "201": { description: Governed finance object created, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/captain/finance/cod-records/{recordId}/remit:
+    post:
+      operationId: POSTDshCaptainFinanceCodRecordsRecordIdRemit
+      summary: Governed finance operation owned by DSH/WLT.
+      tags: [DshCaptainFinance]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: recordId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        "201": { description: Governed finance object created, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/captain/finance/commissions:
+    get:
+      operationId: GETDshCaptainFinanceCommissions
+      summary: Governed finance operation owned by DSH/WLT.
+      tags: [DshCaptainFinance]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/captain/finance/payouts:
+    get:
+      operationId: GETDshCaptainFinancePayouts
+      summary: Governed finance operation owned by DSH/WLT.
+      tags: [DshCaptainFinance]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+    post:
+      operationId: POSTDshCaptainFinancePayouts
+      summary: Governed finance operation owned by DSH/WLT.
+      tags: [DshCaptainFinance]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        "201": { description: Governed finance object created, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/field/finance/commissions:
+    get:
+      operationId: GETDshFieldFinanceCommissions
+      summary: Governed finance operation owned by DSH/WLT.
+      tags: [DshFieldFinance]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/field/finance/wallet:
+    get:
+      operationId: GETDshFieldFinanceWallet
+      summary: Governed finance operation owned by DSH/WLT.
+      tags: [DshFieldFinance]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/field/finance/payouts:
+    get:
+      operationId: GETDshFieldFinancePayouts
+      summary: Governed finance operation owned by DSH/WLT.
+      tags: [DshFieldFinance]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+    post:
+      operationId: POSTDshFieldFinancePayouts
+      summary: Governed finance operation owned by DSH/WLT.
+      tags: [DshFieldFinance]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        "201": { description: Governed finance object created, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/field/finance/payout-destinations:
+    get:
+      operationId: GETDshFieldFinancePayoutDestinations
+      summary: Governed finance operation owned by DSH/WLT.
+      tags: [DshFieldFinance]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+    post:
+      operationId: POSTDshFieldFinancePayoutDestinations
+      summary: Governed finance operation owned by DSH/WLT.
+      tags: [DshFieldFinance]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        "201": { description: Governed finance object created, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/field/finance/payout-destinations/{destinationId}:
+    patch:
+      operationId: PATCHDshFieldFinancePayoutDestinationsDestinationId
+      summary: Governed finance operation owned by DSH/WLT.
+      tags: [DshFieldFinance]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: destinationId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+    delete:
+      operationId: DELETEDshFieldFinancePayoutDestinationsDestinationId
+      summary: Governed finance operation owned by DSH/WLT.
+      tags: [DshFieldFinance]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: destinationId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        "204": { description: Governed finance object deleted }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
 
   /dsh/control-panel/finance/reconciliation-cases:
     get:

@@ -243,28 +243,28 @@ func postSettlement(ctx context.Context, db *sql.DB, settlementID string) (*Sett
 	if settlement.GrossAmount > 0 {
 		lines := []ledger.LedgerLine{
 			{
-				AccountType: "platform_payable",
-				DebitCredit: "debit",
+				AccountType:      "platform_payable",
+				DebitCredit:      "debit",
 				AmountMinorUnits: settlement.GrossAmount,
-				Currency: settlement.Currency,
+				Currency:         settlement.Currency,
 			},
 		}
 		if settlement.NetAmount > 0 {
 			lines = append(lines, ledger.LedgerLine{
-				AccountType: "wallet",
-				ActorType: "partner",
-				ActorID: settlement.PartnerID,
-				DebitCredit: "credit",
+				AccountType:      "wallet",
+				ActorType:        "partner",
+				ActorID:          settlement.PartnerID,
+				DebitCredit:      "credit",
 				AmountMinorUnits: settlement.NetAmount,
-				Currency: settlement.Currency,
+				Currency:         settlement.Currency,
 			})
 		}
 		if settlement.PlatformFee > 0 {
 			lines = append(lines, ledger.LedgerLine{
-				AccountType: "platform_revenue",
-				DebitCredit: "credit",
+				AccountType:      "platform_revenue",
+				DebitCredit:      "credit",
 				AmountMinorUnits: settlement.PlatformFee,
-				Currency: settlement.Currency,
+				Currency:         settlement.Currency,
 			})
 		}
 		if _, err := ledger.PostLedgerTransaction(

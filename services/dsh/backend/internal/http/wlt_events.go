@@ -123,9 +123,9 @@ func handleConfirmedRefundEffect(w http.ResponseWriter, s *protectedStoreServer,
 		return
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{
-		"orderId": orderID,
-		"refundReference": refundReference,
-		"couponReversed": couponReversed,
+		"orderId":               orderID,
+		"refundReference":       refundReference,
+		"couponReversed":        couponReversed,
 		"loyaltyReversalQueued": loyaltyQueued,
 	})
 }

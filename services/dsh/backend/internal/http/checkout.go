@@ -90,10 +90,10 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 	reservation, err := coupons.ReservePricedTx(r.Context(), tx, coupons.ReservePricedInput{
 		Code: body.CouponCode, ClientActorID: actor.ID, CartID: body.CartID,
 		CheckoutIntentID: intentID, StoreID: body.StoreID,
-		FulfillmentMode: fulfillmentMode,
-		SubtotalMinorUnits: snapshot.AmountMinorUnits,
+		FulfillmentMode:       fulfillmentMode,
+		SubtotalMinorUnits:    snapshot.AmountMinorUnits,
 		DeliveryFeeMinorUnits: deliveryPolicy.FeeMinorUnits,
-		Currency: snapshot.Currency,
+		Currency:              snapshot.Currency,
 	})
 	if errors.Is(err, coupons.ErrUsageLimit) {
 		store.SendError(w, http.StatusConflict, "COUPON_USAGE_LIMIT", "coupon usage limit has been reached")
@@ -113,10 +113,10 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 	}
 
 	pricing := checkout.PricingSnapshot{
-		SubtotalMinorUnits: snapshot.AmountMinorUnits,
+		SubtotalMinorUnits:    snapshot.AmountMinorUnits,
 		DeliveryFeeMinorUnits: deliveryPolicy.FeeMinorUnits,
-		TotalMinorUnits: snapshot.AmountMinorUnits + deliveryPolicy.FeeMinorUnits,
-		Currency: snapshot.Currency,
+		TotalMinorUnits:       snapshot.AmountMinorUnits + deliveryPolicy.FeeMinorUnits,
+		Currency:              snapshot.Currency,
 	}
 	if reservation != nil {
 		pricing.DiscountMinorUnits = reservation.DiscountMinorUnits
@@ -133,7 +133,7 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 	intent, err := checkout.CreatePricedIntentTx(r.Context(), tx, checkout.CreateIntentInput{
 		ID: intentID, ClientID: actor.ID, CartID: body.CartID, StoreID: body.StoreID,
 		FulfillmentMode: checkout.FulfillmentMode(fulfillmentMode),
-		PaymentMethod: checkout.PaymentMethod(body.PaymentMethod),
+		PaymentMethod:   checkout.PaymentMethod(body.PaymentMethod),
 		DeliveryAddress: body.DeliveryAddress, Note: body.Note,
 	}, pricing)
 	if errors.Is(err, checkout.ErrInvalid) {
@@ -160,7 +160,7 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 				store.SendJSON(w, http.StatusServiceUnavailable, map[string]any{
 					"intent": marshalIntentWithPricing(failedIntent, pricing),
 					"error": map[string]any{
-						"code": "WLT_PROMOTION_FUNDING_UNAVAILABLE",
+						"code":    "WLT_PROMOTION_FUNDING_UNAVAILABLE",
 						"message": "promotion funding reservation is unavailable",
 					},
 				})
@@ -176,8 +176,8 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 		StoreID: intent.StoreID, PaymentMethod: string(intent.PaymentMethod),
 		AmountMinorUnits: pricing.TotalMinorUnits, Currency: pricing.Currency,
 		CartSnapshotHash: pricing.SnapshotHash,
-		CorrelationID: correlationID,
-		IdempotencyKey: "dsh-checkout-intent:" + intent.ID,
+		CorrelationID:    correlationID,
+		IdempotencyKey:   "dsh-checkout-intent:" + intent.ID,
 	})
 	if err != nil {
 		fundingReleaseFailed := false
@@ -197,7 +197,7 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 			}
 			store.SendJSON(w, http.StatusServiceUnavailable, map[string]any{
 				"intent": marshalIntentWithPricing(failedIntent, pricing),
-				"error": map[string]any{"code": code, "message": message},
+				"error":  map[string]any{"code": code, "message": message},
 			})
 			return
 		}
@@ -231,7 +231,9 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 
 func (s *protectedStoreServer) handleGetCheckoutIntent(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "client")
-	if !ok { return }
+	if !ok {
+		return
+	}
 	intentID := r.PathValue("intentId")
 	if intentID == "" {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "intentId is required")
@@ -256,7 +258,9 @@ func (s *protectedStoreServer) handleGetCheckoutIntent(w http.ResponseWriter, r 
 
 func (s *protectedStoreServer) handleCancelCheckoutIntent(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "client")
-	if !ok { return }
+	if !ok {
+		return
+	}
 	intentID := r.PathValue("intentId")
 	if intentID == "" {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "intentId is required")
@@ -289,7 +293,9 @@ func (s *protectedStoreServer) handleCancelCheckoutIntent(w http.ResponseWriter,
 }
 
 func (s *protectedStoreServer) handleOperatorCheckoutIntents(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead, "operator"); !ok { return }
+	if _, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead, "operator"); !ok {
+		return
+	}
 	intents, err := checkout.ListOperatorIntents(s.db, r.URL.Query().Get("state"), 50)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list checkout intents")

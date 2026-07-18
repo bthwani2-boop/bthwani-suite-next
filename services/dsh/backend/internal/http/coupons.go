@@ -79,14 +79,14 @@ func (s *protectedStoreServer) handleCreateCoupon(w http.ResponseWriter, r *http
 	issued, err := coupons.Create(s.db, coupons.CreateInput{
 		NameAr: body.NameAr, Description: body.Description, Code: body.Code,
 		StoreID: storeID, DiscountType: body.DiscountType,
-		DiscountPercent: body.DiscountPercent,
-		FixedDiscountMinorUnits: body.FixedDiscountMinorUnits,
-		MaxDiscountMinorUnits: body.MaxDiscountMinorUnits,
-		MinSubtotalMinorUnits: body.MinSubtotalMinorUnits,
-		GlobalUsageLimit: body.GlobalUsageLimit,
-		PerClientUsageLimit: body.PerClientUsageLimit,
+		DiscountPercent:          body.DiscountPercent,
+		FixedDiscountMinorUnits:  body.FixedDiscountMinorUnits,
+		MaxDiscountMinorUnits:    body.MaxDiscountMinorUnits,
+		MinSubtotalMinorUnits:    body.MinSubtotalMinorUnits,
+		GlobalUsageLimit:         body.GlobalUsageLimit,
+		PerClientUsageLimit:      body.PerClientUsageLimit,
 		EligibleFulfillmentModes: body.EligibleFulfillmentModes,
-		StartsAt: startsAt, EndsAt: endsAt, ActorID: actor.ID,
+		StartsAt:                 startsAt, EndsAt: endsAt, ActorID: actor.ID,
 	})
 	if err != nil {
 		writeCouponError(w, err)
@@ -162,11 +162,11 @@ func (s *protectedStoreServer) handleUpdateCoupon(w http.ResponseWriter, r *http
 		NameAr: body.NameAr, Description: body.Description, StoreID: storeID,
 		DiscountType: body.DiscountType, DiscountPercent: body.DiscountPercent,
 		FixedDiscountMinorUnits: body.FixedDiscountMinorUnits,
-		MaxDiscountMinorUnits: body.MaxDiscountMinorUnits,
-		MinSubtotalMinorUnits: body.MinSubtotalMinorUnits,
-		GlobalUsageLimit: body.GlobalUsageLimit, PerClientUsageLimit: body.PerClientUsageLimit,
+		MaxDiscountMinorUnits:   body.MaxDiscountMinorUnits,
+		MinSubtotalMinorUnits:   body.MinSubtotalMinorUnits,
+		GlobalUsageLimit:        body.GlobalUsageLimit, PerClientUsageLimit: body.PerClientUsageLimit,
 		EligibleFulfillmentModes: body.EligibleFulfillmentModes,
-		StartsAt: startsAt, EndsAt: endsAt, Status: body.Status,
+		StartsAt:                 startsAt, EndsAt: endsAt, Status: body.Status,
 		ExpectedVersion: body.ExpectedVersion, ActorID: actor.ID,
 	})
 	if err != nil {

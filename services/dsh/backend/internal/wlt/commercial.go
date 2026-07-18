@@ -50,13 +50,13 @@ type CreateCommercialProductInput struct {
 }
 
 type UpdateCommercialProductInput struct {
-	DisplayName      *string `json:"displayName,omitempty"`
-	PriceMinorUnits  *int64  `json:"priceMinorUnits,omitempty"`
-	Currency         *string `json:"currency,omitempty"`
-	BillingCycle     *string `json:"billingCycle,omitempty"`
-	Status           *string `json:"status,omitempty"`
-	ExpectedVersion  int     `json:"expectedVersion"`
-	ActorID          string  `json:"actorId"`
+	DisplayName     *string `json:"displayName,omitempty"`
+	PriceMinorUnits *int64  `json:"priceMinorUnits,omitempty"`
+	Currency        *string `json:"currency,omitempty"`
+	BillingCycle    *string `json:"billingCycle,omitempty"`
+	Status          *string `json:"status,omitempty"`
+	ExpectedVersion int     `json:"expectedVersion"`
+	ActorID         string  `json:"actorId"`
 }
 
 type CommercialLoyaltyAccount struct {
@@ -85,11 +85,11 @@ type ClientCommercialBenefits struct {
 }
 
 type CommercialSummary struct {
-	ActiveProducts              int64 `json:"activeProducts"`
-	ActiveSubscriptions         int64 `json:"activeSubscriptions"`
-	MonthlyRecurringMinorUnits  int64 `json:"monthlyRecurringMinorUnits"`
-	LoyaltyAccounts             int64 `json:"loyaltyAccounts"`
-	PointsIssuedThisMonth       int64 `json:"pointsIssuedThisMonth"`
+	ActiveProducts             int64 `json:"activeProducts"`
+	ActiveSubscriptions        int64 `json:"activeSubscriptions"`
+	MonthlyRecurringMinorUnits int64 `json:"monthlyRecurringMinorUnits"`
+	LoyaltyAccounts            int64 `json:"loyaltyAccounts"`
+	PointsIssuedThisMonth      int64 `json:"pointsIssuedThisMonth"`
 }
 
 func (c *Client) commercialRequest(
@@ -132,8 +132,8 @@ func (c *Client) commercialRequest(
 		}
 		_ = json.NewDecoder(response.Body).Decode(&apiError)
 		return &CommercialHTTPError{
-			Status: response.StatusCode,
-			Code: apiError.Code,
+			Status:  response.StatusCode,
+			Code:    apiError.Code,
 			Message: strings.TrimSpace(apiError.Message),
 		}
 	}

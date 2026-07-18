@@ -13,17 +13,17 @@ import (
 )
 
 var (
-	ErrNotFound              = errors.New("commercial record not found")
-	ErrInvalid               = errors.New("invalid commercial input")
-	ErrConflict              = errors.New("commercial record conflict")
-	ErrVersionConflict       = errors.New("commercial product version conflict")
-	ErrInvalidTransition     = errors.New("invalid commercial product transition")
-	ErrSeparationOfDuties    = errors.New("independent commercial product approval required")
-	ErrInsufficientPoints    = errors.New("insufficient loyalty points")
-	ErrAlreadyReversed       = errors.New("loyalty entry already reversed")
-	ErrPaymentNotCaptured    = errors.New("subscription payment is not captured")
-	ErrPaymentMismatch       = errors.New("subscription payment does not match product")
-	ErrActiveSubscription    = errors.New("client already has an active subscription")
+	ErrNotFound           = errors.New("commercial record not found")
+	ErrInvalid            = errors.New("invalid commercial input")
+	ErrConflict           = errors.New("commercial record conflict")
+	ErrVersionConflict    = errors.New("commercial product version conflict")
+	ErrInvalidTransition  = errors.New("invalid commercial product transition")
+	ErrSeparationOfDuties = errors.New("independent commercial product approval required")
+	ErrInsufficientPoints = errors.New("insufficient loyalty points")
+	ErrAlreadyReversed    = errors.New("loyalty entry already reversed")
+	ErrPaymentNotCaptured = errors.New("subscription payment is not captured")
+	ErrPaymentMismatch    = errors.New("subscription payment does not match product")
+	ErrActiveSubscription = errors.New("client already has an active subscription")
 )
 
 var productStatuses = map[string]bool{
@@ -182,13 +182,13 @@ func CreateProduct(db *sql.DB, input CreateProductInput) (*Product, error) {
 }
 
 type UpdateProductInput struct {
-	DisplayName      *string `json:"displayName"`
-	PriceMinorUnits  *int64  `json:"priceMinorUnits"`
-	Currency         *string `json:"currency"`
-	BillingCycle     *string `json:"billingCycle"`
-	Status           *string `json:"status"`
-	ExpectedVersion  int     `json:"expectedVersion"`
-	ActorID          string  `json:"actorId"`
+	DisplayName     *string `json:"displayName"`
+	PriceMinorUnits *int64  `json:"priceMinorUnits"`
+	Currency        *string `json:"currency"`
+	BillingCycle    *string `json:"billingCycle"`
+	Status          *string `json:"status"`
+	ExpectedVersion int     `json:"expectedVersion"`
+	ActorID         string  `json:"actorId"`
 }
 
 func UpdateProduct(db *sql.DB, reference string, input UpdateProductInput) (*Product, error) {
@@ -480,15 +480,15 @@ func AppendLoyaltyEntry(db *sql.DB, input AppendLoyaltyEntryInput) (*LoyaltyEntr
 }
 
 type Subscription struct {
-	ID                 string   `json:"id"`
-	ClientID           string   `json:"clientId"`
-	ProductReference   string   `json:"productReference"`
-	Status             string   `json:"status"`
-	PaymentSessionID   *string  `json:"paymentSessionId,omitempty"`
-	StartsAt           string   `json:"startsAt"`
-	EndsAt             *string  `json:"endsAt,omitempty"`
-	CreatedAt          string   `json:"createdAt"`
-	UpdatedAt          string   `json:"updatedAt"`
+	ID               string  `json:"id"`
+	ClientID         string  `json:"clientId"`
+	ProductReference string  `json:"productReference"`
+	Status           string  `json:"status"`
+	PaymentSessionID *string `json:"paymentSessionId,omitempty"`
+	StartsAt         string  `json:"startsAt"`
+	EndsAt           *string `json:"endsAt,omitempty"`
+	CreatedAt        string  `json:"createdAt"`
+	UpdatedAt        string  `json:"updatedAt"`
 }
 
 const subscriptionSelectCols = `id::TEXT, client_id, product_reference, status,
@@ -610,7 +610,7 @@ func ActivateSubscription(db *sql.DB, input ActivateSubscriptionInput) (*Subscri
 }
 
 type ClientBenefits struct {
-	LoyaltyAccount    *LoyaltyAccount `json:"loyaltyAccount,omitempty"`
+	LoyaltyAccount     *LoyaltyAccount `json:"loyaltyAccount,omitempty"`
 	ActiveSubscription *Subscription   `json:"activeSubscription,omitempty"`
 }
 

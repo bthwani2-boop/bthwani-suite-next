@@ -14,29 +14,29 @@ const (
 )
 
 type Event struct {
-	ID                      string
-	EventType               string
-	TenantID                string
-	CheckoutIntentID        string
-	CouponRedemptionID      string
-	WLTReservationID        string
-	OrderID                 string
-	Reason                  string
-	IdempotencyKey          string
-	CorrelationID           string
-	AttemptCount            int
+	ID                 string
+	EventType          string
+	TenantID           string
+	CheckoutIntentID   string
+	CouponRedemptionID string
+	WLTReservationID   string
+	OrderID            string
+	Reason             string
+	IdempotencyKey     string
+	CorrelationID      string
+	AttemptCount       int
 }
 
 type EnqueueInput struct {
-	EventType               string
-	TenantID                string
-	CheckoutIntentID        string
-	CouponRedemptionID      string
-	WLTReservationID        string
-	OrderID                 *string
-	Reason                  string
-	IdempotencyKey          string
-	CorrelationID           string
+	EventType          string
+	TenantID           string
+	CheckoutIntentID   string
+	CouponRedemptionID string
+	WLTReservationID   string
+	OrderID            *string
+	Reason             string
+	IdempotencyKey     string
+	CorrelationID      string
 }
 
 func Enqueue(tx *sql.Tx, input EnqueueInput) error {

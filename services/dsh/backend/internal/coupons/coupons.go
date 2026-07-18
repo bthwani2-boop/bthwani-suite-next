@@ -91,30 +91,30 @@ type UpdateInput struct {
 }
 
 type Reservation struct {
-	ID                   string `json:"id"`
-	CouponID             string `json:"couponId"`
-	ClientActorID        string `json:"clientActorId"`
-	CartID               string `json:"cartId"`
-	CheckoutIntentID     string `json:"checkoutIntentId"`
-	OrderID              string `json:"orderId,omitempty"`
-	Status               string `json:"status"`
-	SubtotalMinorUnits   int64  `json:"subtotalMinorUnits"`
-	DiscountMinorUnits   int64  `json:"discountMinorUnits"`
-	TotalMinorUnits      int64  `json:"totalMinorUnits"`
-	Currency             string `json:"currency"`
-	ReservedUntil        string `json:"reservedUntil"`
-	CouponCodeLast4      string `json:"couponCodeLast4"`
+	ID                 string `json:"id"`
+	CouponID           string `json:"couponId"`
+	ClientActorID      string `json:"clientActorId"`
+	CartID             string `json:"cartId"`
+	CheckoutIntentID   string `json:"checkoutIntentId"`
+	OrderID            string `json:"orderId,omitempty"`
+	Status             string `json:"status"`
+	SubtotalMinorUnits int64  `json:"subtotalMinorUnits"`
+	DiscountMinorUnits int64  `json:"discountMinorUnits"`
+	TotalMinorUnits    int64  `json:"totalMinorUnits"`
+	Currency           string `json:"currency"`
+	ReservedUntil      string `json:"reservedUntil"`
+	CouponCodeLast4    string `json:"couponCodeLast4"`
 }
 
 type ReserveInput struct {
-	Code              string
-	ClientActorID     string
-	CartID            string
-	CheckoutIntentID  string
-	StoreID           string
-	FulfillmentMode   string
+	Code               string
+	ClientActorID      string
+	CartID             string
+	CheckoutIntentID   string
+	StoreID            string
+	FulfillmentMode    string
 	SubtotalMinorUnits int64
-	Currency          string
+	Currency           string
 }
 
 const couponSelectColumns = `id::text,name_ar,description,code_last4,store_id,
@@ -272,18 +272,42 @@ func Update(db *sql.DB, id string, input UpdateInput) (Coupon, error) {
 		return Coupon{}, ErrVersionConflict
 	}
 	next := current
-	if input.NameAr != nil { next.NameAr = strings.TrimSpace(*input.NameAr) }
-	if input.Description != nil { next.Description = strings.TrimSpace(*input.Description) }
-	if input.StoreID != nil { next.StoreID = *input.StoreID }
-	if input.DiscountType != nil { next.DiscountType = *input.DiscountType }
-	if input.DiscountPercent != nil { next.DiscountPercent = *input.DiscountPercent }
-	if input.FixedDiscountMinorUnits != nil { next.FixedDiscountMinorUnits = *input.FixedDiscountMinorUnits }
-	if input.MaxDiscountMinorUnits != nil { next.MaxDiscountMinorUnits = *input.MaxDiscountMinorUnits }
-	if input.MinSubtotalMinorUnits != nil { next.MinSubtotalMinorUnits = *input.MinSubtotalMinorUnits }
-	if input.GlobalUsageLimit != nil { next.GlobalUsageLimit = *input.GlobalUsageLimit }
-	if input.PerClientUsageLimit != nil { next.PerClientUsageLimit = *input.PerClientUsageLimit }
-	if input.EligibleFulfillmentModes != nil { next.EligibleFulfillmentModes = *input.EligibleFulfillmentModes }
-	if input.Status != nil { next.Status = *input.Status }
+	if input.NameAr != nil {
+		next.NameAr = strings.TrimSpace(*input.NameAr)
+	}
+	if input.Description != nil {
+		next.Description = strings.TrimSpace(*input.Description)
+	}
+	if input.StoreID != nil {
+		next.StoreID = *input.StoreID
+	}
+	if input.DiscountType != nil {
+		next.DiscountType = *input.DiscountType
+	}
+	if input.DiscountPercent != nil {
+		next.DiscountPercent = *input.DiscountPercent
+	}
+	if input.FixedDiscountMinorUnits != nil {
+		next.FixedDiscountMinorUnits = *input.FixedDiscountMinorUnits
+	}
+	if input.MaxDiscountMinorUnits != nil {
+		next.MaxDiscountMinorUnits = *input.MaxDiscountMinorUnits
+	}
+	if input.MinSubtotalMinorUnits != nil {
+		next.MinSubtotalMinorUnits = *input.MinSubtotalMinorUnits
+	}
+	if input.GlobalUsageLimit != nil {
+		next.GlobalUsageLimit = *input.GlobalUsageLimit
+	}
+	if input.PerClientUsageLimit != nil {
+		next.PerClientUsageLimit = *input.PerClientUsageLimit
+	}
+	if input.EligibleFulfillmentModes != nil {
+		next.EligibleFulfillmentModes = *input.EligibleFulfillmentModes
+	}
+	if input.Status != nil {
+		next.Status = *input.Status
+	}
 	if strings.TrimSpace(next.NameAr) == "" {
 		return Coupon{}, ErrInvalid
 	}
@@ -291,8 +315,12 @@ func Update(db *sql.DB, id string, input UpdateInput) (Coupon, error) {
 		return Coupon{}, err
 	}
 	var startsAt, endsAt any = current.StartsAt, current.EndsAt
-	if input.StartsAt != nil { startsAt = *input.StartsAt }
-	if input.EndsAt != nil { endsAt = *input.EndsAt }
+	if input.StartsAt != nil {
+		startsAt = *input.StartsAt
+	}
+	if input.EndsAt != nil {
+		endsAt = *input.EndsAt
+	}
 	approvedBy := current.ApprovedByActorID
 	var approvedAt any = current.ApprovedAt
 	var archivedAt any
@@ -367,18 +395,25 @@ func ReserveTx(ctx context.Context, tx *sql.Tx, input ReserveInput) (*Reservatio
 	}
 	if coupon.StartsAt != nil {
 		start, parseErr := time.Parse(time.RFC3339, *coupon.StartsAt)
-		if parseErr != nil || now.Before(start) { return nil, ErrInactive }
+		if parseErr != nil || now.Before(start) {
+			return nil, ErrInactive
+		}
 	}
 	if coupon.EndsAt != nil {
 		end, parseErr := time.Parse(time.RFC3339, *coupon.EndsAt)
-		if parseErr != nil || !now.Before(end) { return nil, ErrInactive }
+		if parseErr != nil || !now.Before(end) {
+			return nil, ErrInactive
+		}
 	}
 	if coupon.StoreID != nil && *coupon.StoreID != input.StoreID {
 		return nil, ErrNotEligible
 	}
 	eligibleMode := false
 	for _, mode := range coupon.EligibleFulfillmentModes {
-		if mode == input.FulfillmentMode { eligibleMode = true; break }
+		if mode == input.FulfillmentMode {
+			eligibleMode = true
+			break
+		}
 	}
 	if !eligibleMode || input.SubtotalMinorUnits < coupon.MinSubtotalMinorUnits {
 		return nil, ErrNotEligible

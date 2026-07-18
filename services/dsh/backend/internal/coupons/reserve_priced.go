@@ -135,7 +135,7 @@ func ReservePricedTx(ctx context.Context, tx *sql.Tx, input ReservePricedInput) 
 		CheckoutIntentID: input.CheckoutIntentID, Status: "reserved",
 		SubtotalMinorUnits: input.SubtotalMinorUnits, DiscountMinorUnits: discount,
 		TotalMinorUnits: input.SubtotalMinorUnits + input.DeliveryFeeMinorUnits - discount,
-		Currency: input.Currency, CouponCodeLast4: coupon.CodeLast4,
+		Currency:        input.Currency, CouponCodeLast4: coupon.CodeLast4,
 	}
 	reservedUntil := now.Add(30 * time.Minute)
 	err = tx.QueryRowContext(ctx, `INSERT INTO dsh_coupon_redemptions

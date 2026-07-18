@@ -13,8 +13,8 @@ import (
 
 const (
 	EventTypeDeliveryCompleted = "delivery_completed"
-	EventTypeLoyaltyEarned      = "loyalty_earned"
-	EventTypeLoyaltyReversed    = "loyalty_reversed"
+	EventTypeLoyaltyEarned     = "loyalty_earned"
+	EventTypeLoyaltyReversed   = "loyalty_reversed"
 )
 
 type Event struct {

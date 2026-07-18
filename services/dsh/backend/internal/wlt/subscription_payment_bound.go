@@ -8,11 +8,11 @@ import (
 type BoundSubscriptionPaymentInput struct {
 	SubscriptionPurchaseID string
 	ProductReference       string
-	TenantID              string
-	ClientID              string
-	PaymentMethod         string
-	AmountMinorUnits      int64
-	Currency              string
+	TenantID               string
+	ClientID               string
+	PaymentMethod          string
+	AmountMinorUnits       int64
+	Currency               string
 }
 
 func (c *Client) CreateBoundSubscriptionPaymentSession(

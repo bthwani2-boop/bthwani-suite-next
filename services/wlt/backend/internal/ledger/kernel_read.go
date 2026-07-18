@@ -20,7 +20,7 @@ type accountTypeMeta struct {
 
 var accountTypeMetadata = map[string]accountTypeMeta{
 	"provider_clearing":              {Category: "asset", NormalBalanceSide: "debit"},
-	"cash_in_transit":                 {Category: "asset", NormalBalanceSide: "debit"},
+	"cash_in_transit":                {Category: "asset", NormalBalanceSide: "debit"},
 	"platform_commission_receivable": {Category: "asset", NormalBalanceSide: "debit"},
 	"wallet":                         {Category: "liability", NormalBalanceSide: "credit"},
 	"platform_payable":               {Category: "liability", NormalBalanceSide: "credit"},

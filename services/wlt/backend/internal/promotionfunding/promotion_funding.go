@@ -14,37 +14,37 @@ import (
 )
 
 var (
-	ErrInvalid             = errors.New("invalid promotion funding input")
-	ErrNotFound            = errors.New("promotion funding reservation not found")
-	ErrConflict            = errors.New("promotion funding conflict")
-	ErrInvalidTransition   = errors.New("invalid promotion funding transition")
-	ErrTenantMismatch      = errors.New("promotion funding tenant mismatch")
+	ErrInvalid           = errors.New("invalid promotion funding input")
+	ErrNotFound          = errors.New("promotion funding reservation not found")
+	ErrConflict          = errors.New("promotion funding conflict")
+	ErrInvalidTransition = errors.New("invalid promotion funding transition")
+	ErrTenantMismatch    = errors.New("promotion funding tenant mismatch")
 )
 
 type Reservation struct {
-	ID                         string  `json:"id"`
-	TenantID                   string  `json:"tenantId"`
-	ExternalReference          string  `json:"externalReference"`
-	CheckoutIntentID           string  `json:"checkoutIntentId"`
-	CouponRedemptionID         string  `json:"couponRedemptionId"`
-	CouponID                   string  `json:"couponId"`
-	ClientID                   string  `json:"clientId"`
-	PartnerID                  *string `json:"partnerId,omitempty"`
-	PlatformFundedMinorUnits   int64   `json:"platformFundedMinorUnits"`
-	PartnerFundedMinorUnits    int64   `json:"partnerFundedMinorUnits"`
-	TotalDiscountMinorUnits    int64   `json:"totalDiscountMinorUnits"`
-	Currency                   string  `json:"currency"`
-	Status                     string  `json:"status"`
-	OrderID                    *string `json:"orderId,omitempty"`
-	IdempotencyKey             string  `json:"idempotencyKey"`
-	CorrelationID              string  `json:"correlationId"`
-	CommittedAt                *string `json:"committedAt,omitempty"`
-	ReleasedAt                 *string `json:"releasedAt,omitempty"`
-	ReversedAt                 *string `json:"reversedAt,omitempty"`
-	ReleaseReason              string  `json:"releaseReason"`
-	ReversalReason             string  `json:"reversalReason"`
-	CreatedAt                  string  `json:"createdAt"`
-	UpdatedAt                  string  `json:"updatedAt"`
+	ID                       string  `json:"id"`
+	TenantID                 string  `json:"tenantId"`
+	ExternalReference        string  `json:"externalReference"`
+	CheckoutIntentID         string  `json:"checkoutIntentId"`
+	CouponRedemptionID       string  `json:"couponRedemptionId"`
+	CouponID                 string  `json:"couponId"`
+	ClientID                 string  `json:"clientId"`
+	PartnerID                *string `json:"partnerId,omitempty"`
+	PlatformFundedMinorUnits int64   `json:"platformFundedMinorUnits"`
+	PartnerFundedMinorUnits  int64   `json:"partnerFundedMinorUnits"`
+	TotalDiscountMinorUnits  int64   `json:"totalDiscountMinorUnits"`
+	Currency                 string  `json:"currency"`
+	Status                   string  `json:"status"`
+	OrderID                  *string `json:"orderId,omitempty"`
+	IdempotencyKey           string  `json:"idempotencyKey"`
+	CorrelationID            string  `json:"correlationId"`
+	CommittedAt              *string `json:"committedAt,omitempty"`
+	ReleasedAt               *string `json:"releasedAt,omitempty"`
+	ReversedAt               *string `json:"reversedAt,omitempty"`
+	ReleaseReason            string  `json:"releaseReason"`
+	ReversalReason           string  `json:"reversalReason"`
+	CreatedAt                string  `json:"createdAt"`
+	UpdatedAt                string  `json:"updatedAt"`
 }
 
 const reservationColumns = `id,tenant_id,external_reference,checkout_intent_id,
@@ -467,7 +467,7 @@ func transitionHandler(db *sql.DB, target string) http.HandlerFunc {
 	}
 }
 
-func HandleCommit(db *sql.DB) http.HandlerFunc { return transitionHandler(db, "committed") }
+func HandleCommit(db *sql.DB) http.HandlerFunc  { return transitionHandler(db, "committed") }
 func HandleRelease(db *sql.DB) http.HandlerFunc { return transitionHandler(db, "released") }
 func HandleReverse(db *sql.DB) http.HandlerFunc { return transitionHandler(db, "reversed") }
 

@@ -25,6 +25,7 @@ paths:
       x-bthwani-mutation-approved: true
       x-bthwani-default-enabled: false
       parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
         - $ref: '#/components/parameters/ServiceCallerHeader'
       requestBody:
         required: true
@@ -43,6 +44,7 @@ paths:
       tags: [WltCommercialBenefits]
       security: [{ bearerAuth: [] }]
       parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
         - $ref: '#/components/parameters/ServiceCallerHeader'
         - $ref: '#/components/parameters/ProductReference'
       responses:
@@ -57,6 +59,7 @@ paths:
       x-bthwani-mutation-approved: true
       x-bthwani-default-enabled: false
       parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
         - $ref: '#/components/parameters/ServiceCallerHeader'
         - $ref: '#/components/parameters/ProductReference'
       requestBody:
@@ -77,6 +80,7 @@ paths:
       tags: [WltCommercialBenefits]
       security: [{ bearerAuth: [] }]
       parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
         - $ref: '#/components/parameters/ServiceCallerHeader'
         - name: clientId
           in: path
@@ -95,6 +99,7 @@ paths:
       x-bthwani-mutation-approved: true
       x-bthwani-default-enabled: false
       parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
         - $ref: '#/components/parameters/ServiceCallerHeader'
         - name: Idempotency-Key
           in: header
@@ -120,6 +125,7 @@ paths:
       x-bthwani-mutation-approved: true
       x-bthwani-default-enabled: false
       parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
         - $ref: '#/components/parameters/ServiceCallerHeader'
         - name: X-Correlation-ID
           in: header

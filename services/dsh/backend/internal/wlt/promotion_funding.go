@@ -11,22 +11,22 @@ import (
 )
 
 type PromotionFundingReservation struct {
-	ID                        string  `json:"id"`
-	TenantID                  string  `json:"tenantId"`
-	ExternalReference         string  `json:"externalReference"`
-	CheckoutIntentID          string  `json:"checkoutIntentId"`
-	CouponRedemptionID        string  `json:"couponRedemptionId"`
-	CouponID                  string  `json:"couponId"`
-	ClientID                  string  `json:"clientId"`
-	PartnerID                 *string `json:"partnerId,omitempty"`
-	PlatformFundedMinorUnits  int64   `json:"platformFundedMinorUnits"`
-	PartnerFundedMinorUnits   int64   `json:"partnerFundedMinorUnits"`
-	TotalDiscountMinorUnits   int64   `json:"totalDiscountMinorUnits"`
-	Currency                  string  `json:"currency"`
-	Status                    string  `json:"status"`
-	OrderID                   *string `json:"orderId,omitempty"`
-	CreatedAt                 string  `json:"createdAt"`
-	UpdatedAt                 string  `json:"updatedAt"`
+	ID                       string  `json:"id"`
+	TenantID                 string  `json:"tenantId"`
+	ExternalReference        string  `json:"externalReference"`
+	CheckoutIntentID         string  `json:"checkoutIntentId"`
+	CouponRedemptionID       string  `json:"couponRedemptionId"`
+	CouponID                 string  `json:"couponId"`
+	ClientID                 string  `json:"clientId"`
+	PartnerID                *string `json:"partnerId,omitempty"`
+	PlatformFundedMinorUnits int64   `json:"platformFundedMinorUnits"`
+	PartnerFundedMinorUnits  int64   `json:"partnerFundedMinorUnits"`
+	TotalDiscountMinorUnits  int64   `json:"totalDiscountMinorUnits"`
+	Currency                 string  `json:"currency"`
+	Status                   string  `json:"status"`
+	OrderID                  *string `json:"orderId,omitempty"`
+	CreatedAt                string  `json:"createdAt"`
+	UpdatedAt                string  `json:"updatedAt"`
 }
 
 type ReservePromotionFundingInput struct {

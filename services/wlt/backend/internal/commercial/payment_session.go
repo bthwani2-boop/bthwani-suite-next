@@ -12,9 +12,9 @@ import (
 type CreateSubscriptionPaymentSessionInput struct {
 	SubscriptionPurchaseID string `json:"subscriptionPurchaseId"`
 	ProductReference       string `json:"productReference"`
-	TenantID              string `json:"tenantId"`
-	ClientID              string `json:"clientId"`
-	PaymentMethod         string `json:"paymentMethod"`
+	TenantID               string `json:"tenantId"`
+	ClientID               string `json:"clientId"`
+	PaymentMethod          string `json:"paymentMethod"`
 }
 
 func CreateSubscriptionPaymentSession(
