@@ -29,7 +29,7 @@ func validateRolloutInput(input CreateRolloutInput) error {
 	if len(input.Steps) == 0 {
 		return ErrValidation
 	}
-	previous := 0
+	var previous int64
 	for _, step := range input.Steps {
 		if step <= previous || step < 1 || step > 100 {
 			return ErrValidation
@@ -48,6 +48,7 @@ func (r *Repository) Rollouts(ctx context.Context) ([]Rollout, error) {
 		return nil, err
 	}
 	defer rows.Close()
+
 	rollouts := make([]Rollout, 0)
 	for rows.Next() {
 		rollout, scanErr := scanRollout(rows)
@@ -83,7 +84,7 @@ func scanRollout(row rowScanner) (Rollout, error) {
 		&healthGateRaw,
 		&rollout.BaselineEnabled,
 		&baselineTargetingRaw,
-		&rollout.Version,
+		&rollout.FlagRevision,
 		&rollout.CreatedByActorID,
 		&rollout.UpdatedByActorID,
 		&rollout.Version,
@@ -117,8 +118,17 @@ func (r *Repository) CreateRollout(
 	correlationID string,
 	input CreateRolloutInput,
 ) (Rollout, error) {
+	if strings.TrimSpace(actorID) == "" {
+		return Rollout{}, ErrValidation
+	}
 	if err := validateRolloutInput(input); err != nil {
 		return Rollout{}, err
+	}
+	if input.TargetScope == nil {
+		input.TargetScope = map[string]any{}
+	}
+	if input.HealthGate == nil {
+		return Rollout{}, ErrValidation
 	}
 	targetScopeRaw, err := json.Marshal(input.TargetScope)
 	if err != nil {
@@ -135,22 +145,29 @@ func (r *Repository) CreateRollout(
 	}
 	defer tx.Rollback()
 
-	var changeSetStatus string
+	var changeSetStatus, proposerActorID, approverActorID, appliedByActorID string
 	var itemCount int
 	if err := tx.QueryRowContext(ctx, `
-SELECT cs.status, COUNT(csi.id)
+SELECT cs.status, cs.proposer_actor_id,
+       COALESCE(cs.approver_actor_id, ''), COALESCE(cs.applied_by_actor_id, ''),
+       COUNT(csi.id)
 FROM platform_change_sets cs
 JOIN platform_change_set_items csi ON csi.change_set_id = cs.id
 WHERE cs.id = $1::uuid
   AND csi.target_type = 'feature_flag'
   AND csi.target_key = $2
-GROUP BY cs.id, cs.status`, input.ChangeSetID, input.FeatureFlagKey).Scan(&changeSetStatus, &itemCount); errors.Is(err, sql.ErrNoRows) {
+GROUP BY cs.id, cs.status, cs.proposer_actor_id, cs.approver_actor_id, cs.applied_by_actor_id`,
+		input.ChangeSetID, input.FeatureFlagKey,
+	).Scan(&changeSetStatus, &proposerActorID, &approverActorID, &appliedByActorID, &itemCount); errors.Is(err, sql.ErrNoRows) {
 		return Rollout{}, ErrValidation
 	} else if err != nil {
 		return Rollout{}, err
 	}
 	if ChangeSetStatus(changeSetStatus) != ChangeSetApplied || itemCount == 0 {
 		return Rollout{}, ErrInvalidTransition
+	}
+	if actorID == proposerActorID || actorID == approverActorID || actorID == appliedByActorID {
+		return Rollout{}, ErrMakerChecker
 	}
 
 	var baselineEnabled bool
@@ -164,6 +181,9 @@ FOR UPDATE`, input.FeatureFlagKey).Scan(&baselineEnabled, &baselineTargetingRaw,
 		return Rollout{}, ErrNotFound
 	} else if err != nil {
 		return Rollout{}, err
+	}
+	if baselineEnabled {
+		return Rollout{}, ErrInvalidTransition
 	}
 
 	var id string
@@ -234,14 +254,14 @@ func (r *Repository) AdvanceRollout(
 	result, err := tx.ExecContext(ctx, `
 UPDATE platform_feature_flags
 SET enabled = true, targeting_json = $2::jsonb, revision = revision + 1, updated_at = NOW()
-WHERE flag_key = $1 AND revision = $3`, rollout.FeatureFlagKey, nextTargetingRaw, rollout.Version)
+WHERE flag_key = $1 AND revision = $3`, rollout.FeatureFlagKey, nextTargetingRaw, rollout.FlagRevision)
 	if err != nil {
 		return Rollout{}, err
 	}
 	if err := requireOneRow(result, nil); err != nil {
 		return Rollout{}, ErrVersionConflict
 	}
-	nextFlagRevision := rollout.Version + 1
+	nextFlagRevision := rollout.FlagRevision + 1
 	nextStatus := RolloutRunning
 	completedExpression := "NULL"
 	if nextIndex == len(rollout.Steps)-1 {
@@ -258,7 +278,8 @@ WHERE id = $1::uuid`, completedExpression)
 		return Rollout{}, err
 	}
 	if err := insertAudit(ctx, tx, rollout.ChangeSetID, "rollout_advanced", actorID, actorRoles, string(nextStatus), id, correlationID,
-		map[string]any{"percentage": rollout.CurrentPercentage}, map[string]any{"percentage": nextPercentage}); err != nil {
+		map[string]any{"percentage": rollout.CurrentPercentage, "flagRevision": rollout.FlagRevision},
+		map[string]any{"percentage": nextPercentage, "flagRevision": nextFlagRevision}); err != nil {
 		return Rollout{}, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -346,24 +367,29 @@ func (r *Repository) restoreRolloutBaseline(
 	result, err := tx.ExecContext(ctx, `
 UPDATE platform_feature_flags
 SET enabled = $2, targeting_json = $3::jsonb, revision = revision + 1, updated_at = NOW()
-WHERE flag_key = $1 AND revision = $4`, rollout.FeatureFlagKey, rollout.BaselineEnabled, baselineTargetingRaw, rollout.Version)
+WHERE flag_key = $1 AND revision = $4`, rollout.FeatureFlagKey, rollout.BaselineEnabled, baselineTargetingRaw, rollout.FlagRevision)
 	if err != nil {
 		return Rollout{}, err
 	}
 	if err := requireOneRow(result, nil); err != nil {
 		return Rollout{}, ErrVersionConflict
 	}
-	nextFlagRevision := rollout.Version + 1
+	nextFlagRevision := rollout.FlagRevision + 1
 	query := fmt.Sprintf(`
 UPDATE platform_rollouts
 SET status = $2, %s = NOW(), flag_revision = $3,
     updated_by_actor_id = $4, updated_at = NOW(), version = version + 1
 WHERE id = $1::uuid`, timestampColumn)
 	if _, err := tx.ExecContext(ctx, query, id, next, nextFlagRevision, actorID); err != nil {
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) && pqErr.Code == "40001" {
+			return Rollout{}, ErrVersionConflict
+		}
 		return Rollout{}, err
 	}
 	if err := insertAudit(ctx, tx, rollout.ChangeSetID, action, actorID, actorRoles, string(next), id, correlationID,
-		map[string]any{"percentage": rollout.CurrentPercentage}, map[string]any{"percentage": 0}); err != nil {
+		map[string]any{"percentage": rollout.CurrentPercentage, "flagRevision": rollout.FlagRevision},
+		map[string]any{"percentage": 0, "flagRevision": nextFlagRevision}); err != nil {
 		return Rollout{}, err
 	}
 	if err := tx.Commit(); err != nil {
