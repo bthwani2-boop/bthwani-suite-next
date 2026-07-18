@@ -46,13 +46,7 @@ const checks = [
   {
     file: "services/dsh/frontend/app-partner/account/PartnerEntryScreen.tsx",
     forbidden: [[/state\s*=\s*["']ready["']/g, "DEFAULT_ENTRY_READY_FORBIDDEN"]],
-    required: [
-      '"offline"',
-      '"error"',
-      '"disabled"',
-      '"partial"',
-      "تعديل حالة المتجر غير مربوط",
-    ],
+    required: ['"offline"', '"error"', '"disabled"', '"partial"', "تعديل حالة المتجر غير مربوط"],
   },
   {
     file: "services/dsh/frontend/app-partner/catalog/PartnerCatalogManagementScreen.tsx",
@@ -107,6 +101,20 @@ const checks = [
     forbidden: [[/Promise\.resolve\s*\(/g, "PROMISE_RESOLVE_NAV_INTENT_FORBIDDEN"]],
     required: ["queueMicrotask"],
   },
+  {
+    file: "services/dsh/frontend/app-partner/account/PartnerSupportScreen.tsx",
+    forbidden: [
+      [/ORD-4401|ORD-4388|ORD-4375/g, "STATIC_PARTNER_SUPPORT_CASE_FORBIDDEN"],
+      [/applyLifecycleAction/g, "LOCAL_PARTNER_SUPPORT_LIFECYCLE_FORBIDDEN"],
+      [/setLifecycleOverrides/g, "LOCAL_PARTNER_SUPPORT_STATE_FORBIDDEN"],
+      [/runtimePartnerSupportCases/g, "EMPTY_RUNTIME_SUPPORT_ARRAY_FORBIDDEN"],
+    ],
+    required: [
+      "Partner support is intentionally fail-closed",
+      "لا يوجد عقد DSH حالي",
+      "تم حذف الحالات الثابتة والإجراءات المحلية",
+    ],
+  },
 ];
 
 for (const check of checks) {
@@ -118,11 +126,7 @@ for (const check of checks) {
   }
   for (const marker of check.required) {
     if (!content.includes(marker)) {
-      violations.push({
-        file: check.file,
-        line: 0,
-        message: `REQUIRED_PARTNER_SURFACE_MARKER_MISSING ${marker}`,
-      });
+      violations.push({ file: check.file, line: 0, message: `REQUIRED_PARTNER_SURFACE_MARKER_MISSING ${marker}` });
     }
   }
 }
