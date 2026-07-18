@@ -10,6 +10,7 @@ import (
 	"wlt-api/internal/ledger"
 	"wlt-api/internal/payment"
 	"wlt-api/internal/payout"
+	"wlt-api/internal/promotionfunding"
 	"wlt-api/internal/reconciliation"
 	"wlt-api/internal/reference"
 	"wlt-api/internal/refund"
@@ -102,6 +103,15 @@ func NewRouter(db *sql.DB, mutationsEnabled bool) *http.ServeMux {
 	mux.HandleFunc("GET /wlt/commercial/clients/{clientId}/benefits", readGate(commercial.HandleGetClientBenefits(db)))
 	mux.HandleFunc("POST /wlt/commercial/loyalty-entries", gate(serviceAuth(commercial.HandleAppendLoyaltyEntryGoverned(db))))
 	mux.HandleFunc("POST /wlt/commercial/subscriptions", gate(serviceAuth(commercial.HandleActivateSubscriptionGoverned(db))))
+
+	// Promotion funding is WLT financial truth. DSH supplies the authoritative
+	// discount calculation and funding split, while WLT owns reserve/commit/
+	// release/reversal and the immutable funding event trail.
+	mux.HandleFunc("POST /wlt/promotion-funding/reservations", gate(serviceAuth(promotionfunding.HandleReserve(db))))
+	mux.HandleFunc("GET /wlt/promotion-funding/reservations/{reservationId}", readGate(promotionfunding.HandleGet(db)))
+	mux.HandleFunc("POST /wlt/promotion-funding/reservations/{reservationId}/commit", gate(serviceAuth(promotionfunding.HandleCommit(db))))
+	mux.HandleFunc("POST /wlt/promotion-funding/reservations/{reservationId}/release", gate(serviceAuth(promotionfunding.HandleRelease(db))))
+	mux.HandleFunc("POST /wlt/promotion-funding/reservations/{reservationId}/reverse", gate(serviceAuth(promotionfunding.HandleReverse(db))))
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "Route not found")
