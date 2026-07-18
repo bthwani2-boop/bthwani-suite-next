@@ -5,305 +5,136 @@ import { parseOpenApiContract } from "./_openapi-utils.mjs";
 
 const guardId = "service-manifest-drift-gate";
 const violations = [];
-
 const serviceRoot = "services/dsh";
 const manifestFile = `${serviceRoot}/service.manifest.ts`;
-const contractRegistryFile = `${serviceRoot}/contracts/contract-registry.ts`;
-const baseCapabilityMapFile = `${serviceRoot}/capability-map.ts`;
-const extensionCapabilityMapFile = `${serviceRoot}/capability-map.extensions.ts`;
-const capabilityMapFiles = [baseCapabilityMapFile, extensionCapabilityMapFile];
-
+const registryFile = `${serviceRoot}/contracts/contract-registry.ts`;
+const capabilityFiles = [`${serviceRoot}/capability-map.ts`, `${serviceRoot}/capability-map.extensions.ts`];
 const manifest = read(manifestFile);
-const registrySource = read(contractRegistryFile);
+const registrySource = read(registryFile);
 
-if (!manifest.includes("capabilities: DSH_CAPABILITIES")) {
-  violations.push({
-    file: manifestFile,
-    message:
-      "MANIFEST_CAPABILITY_DRIFT: dshServiceManifest must expose the merged DSH_CAPABILITIES collection",
-  });
-}
-if (!manifest.includes("contracts: DSH_CONTRACT_REGISTRY.map")) {
-  violations.push({
-    file: manifestFile,
-    message:
-      "MANIFEST_CONTRACT_DRIFT: active contracts must be derived from DSH_CONTRACT_REGISTRY",
-  });
-}
-if (!manifest.includes("contractOperations: DSH_CONTRACT_OPERATIONS")) {
-  violations.push({
-    file: manifestFile,
-    message:
-      "MANIFEST_OPERATION_DRIFT: currentTruth.contractOperations must be derived from merged capability ownership",
-  });
+for (const [marker, message] of [
+  ["capabilities: DSH_CAPABILITIES", "MANIFEST_CAPABILITY_DRIFT"],
+  ["contracts: DSH_CONTRACT_REGISTRY.map", "MANIFEST_CONTRACT_DRIFT"],
+  ["contractOperations: DSH_CONTRACT_OPERATIONS", "MANIFEST_OPERATION_DRIFT"],
+]) {
+  if (!manifest.includes(marker)) violations.push({ file: manifestFile, message });
 }
 
-function parseContractRegistry(source) {
-  const blocks = source.match(/\{\s*id:\s*"[^"]+"[\s\S]*?\n\s*\}/g) ?? [];
-  return blocks.map((block) => ({
+function registrations(source) {
+  return (source.match(/\{\s*id:\s*"[^"]+"[\s\S]*?\n\s*\}/g) ?? []).map((block) => ({
     id: block.match(/id:\s*"([^"]+)"/)?.[1] ?? "",
     path: block.match(/path:\s*"([^"]+)"/)?.[1] ?? "",
     state: block.match(/state:\s*"([^"]+)"/)?.[1] ?? "",
-    clientStrategy: block.match(/clientStrategy:\s*"([^"]+)"/)?.[1] ?? "",
-    generatedClient: block.match(/generatedClient:\s*"([^"]+)"/)?.[1] ?? null,
-    adapterOwner: block.match(/adapterOwner:\s*"([^"]+)"/)?.[1] ?? null,
+    strategy: block.match(/clientStrategy:\s*"([^"]+)"/)?.[1] ?? "",
+    generatedClient: block.match(/generatedClient:\s*"([^"]+)"/)?.[1] ?? "",
+    adapterOwner: block.match(/adapterOwner:\s*"([^"]+)"/)?.[1] ?? "",
   }));
 }
 
-const contractRegistry = parseContractRegistry(registrySource);
-const contractIds = new Set();
-const registeredContractPaths = new Set();
-
-for (const contract of contractRegistry) {
-  if (!contract.id || !contract.path || !contract.clientStrategy) {
-    violations.push({
-      file: contractRegistryFile,
-      message: "MALFORMED_CONTRACT_REGISTRATION: id, path, and clientStrategy are required",
-    });
+const registry = registrations(registrySource);
+const ids = new Set();
+const paths = new Set();
+for (const item of registry) {
+  if (!item.id || !item.path || !item.strategy) {
+    violations.push({ file: registryFile, message: "MALFORMED_CONTRACT_REGISTRATION" });
     continue;
   }
-  if (contractIds.has(contract.id)) {
-    violations.push({
-      file: contractRegistryFile,
-      contractId: contract.id,
-      message: `DUPLICATE_CONTRACT_ID: ${contract.id}`,
-    });
-  }
-  contractIds.add(contract.id);
+  if (ids.has(item.id)) violations.push({ file: registryFile, message: `DUPLICATE_CONTRACT_ID:${item.id}` });
+  ids.add(item.id);
+  const relative = toPosix(path.join(serviceRoot, item.path));
+  if (paths.has(relative)) violations.push({ file: registryFile, message: `DUPLICATE_CONTRACT_PATH:${relative}` });
+  paths.add(relative);
+  if (!fs.existsSync(path.join(repoRoot, relative))) violations.push({ file: registryFile, message: `REGISTERED_CONTRACT_MISSING:${relative}` });
+  if (item.state !== "CONTRACT_ACTIVE") violations.push({ file: registryFile, message: `NON_CANONICAL_CONTRACT_STATE:${item.state}` });
+}
 
-  const contractPath = toPosix(path.join(serviceRoot, contract.path));
-  if (registeredContractPaths.has(contractPath)) {
-    violations.push({
-      file: contractRegistryFile,
-      contractPath,
-      message: `DUPLICATE_CONTRACT_PATH: ${contractPath}`,
-    });
-  }
-  registeredContractPaths.add(contractPath);
-
-  if (!fs.existsSync(path.join(repoRoot, contractPath))) {
-    violations.push({
-      file: contractRegistryFile,
-      contractPath,
-      message: `REGISTERED_CONTRACT_MISSING: ${contractPath}`,
-    });
-  }
-  if (contract.state !== "CONTRACT_ACTIVE") {
-    violations.push({
-      file: contractRegistryFile,
-      contractId: contract.id,
-      message: `NON_CANONICAL_CONTRACT_STATE: ${contract.state}`,
-    });
+const contractsDir = path.join(repoRoot, serviceRoot, "contracts");
+for (const name of fs.readdirSync(contractsDir).filter((entry) => entry.endsWith(".openapi.yaml"))) {
+  const relative = toPosix(path.join(serviceRoot, "contracts", name));
+  if (/x-bthwani-contract-state:\s*CONTRACT_ACTIVE\b/.test(read(relative)) && !paths.has(relative)) {
+    violations.push({ file: relative, message: "ACTIVE_CONTRACT_NOT_REGISTERED" });
   }
 }
 
-const contractsDirectory = path.join(repoRoot, serviceRoot, "contracts");
-for (const fileName of fs.readdirSync(contractsDirectory).filter((name) => name.endsWith(".openapi.yaml"))) {
-  const relative = toPosix(path.join(serviceRoot, "contracts", fileName));
-  const content = read(relative);
-  if (/x-bthwani-contract-state:\s*CONTRACT_ACTIVE\b/.test(content) && !registeredContractPaths.has(relative)) {
-    violations.push({
-      file: relative,
-      message: "ACTIVE_CONTRACT_NOT_REGISTERED",
-    });
-  }
-}
-
-const primaryContracts = contractRegistry.filter(
-  (contract) => contract.clientStrategy === "PRIMARY_GENERATED",
-);
-if (primaryContracts.length !== 1) {
-  violations.push({
-    file: contractRegistryFile,
-    message: `PRIMARY_CONTRACT_COUNT_INVALID: expected 1, found ${primaryContracts.length}`,
-  });
-}
-
-const primary = primaryContracts[0];
-const primaryPath = primary ? toPosix(path.join(serviceRoot, primary.path)) : null;
-const primaryOperations = primaryPath
-  ? parseOpenApiContract(primaryPath).map((operation) => operation.operationId).filter(Boolean).sort()
+const primaryItems = registry.filter((item) => item.strategy === "PRIMARY_GENERATED");
+if (primaryItems.length !== 1) violations.push({ file: registryFile, message: `PRIMARY_CONTRACT_COUNT_INVALID:${primaryItems.length}` });
+const primaryPath = primaryItems[0] ? toPosix(path.join(serviceRoot, primaryItems[0].path)) : "";
+const primaryOps = primaryPath && fs.existsSync(path.join(repoRoot, primaryPath))
+  ? parseOpenApiContract(primaryPath).map((operation) => operation.operationId).filter(Boolean)
   : [];
-const primaryOperationSet = new Set(primaryOperations);
+const primarySet = new Set(primaryOps);
+const canonicalOps = new Set(primaryOps);
+const subsetStrategies = new Set(["SECONDARY_GENERATED_SUBSET", "PARENT_GENERATED_SUBSET", "MANUAL_TYPED_ADAPTER"]);
+const generatedStrategies = new Set(["PRIMARY_GENERATED", "SECONDARY_GENERATED_SUBSET", "PARENT_GENERATED_SUBSET"]);
+const manualStrategies = new Set(["MANUAL_TYPED_ADAPTER", "STANDALONE_MANUAL_TYPED_ADAPTER"]);
 
-for (const contract of contractRegistry) {
-  const contractPath = toPosix(path.join(serviceRoot, contract.path));
-  if (!fs.existsSync(path.join(repoRoot, contractPath))) continue;
-  const contractSource = read(contractPath);
-  const contractOperations = parseOpenApiContract(contractPath)
-    .map((operation) => operation.operationId)
-    .filter(Boolean)
-    .sort();
+for (const item of registry) {
+  const relative = toPosix(path.join(serviceRoot, item.path));
+  if (!fs.existsSync(path.join(repoRoot, relative))) continue;
+  const source = read(relative);
+  const operations = parseOpenApiContract(relative).map((operation) => operation.operationId).filter(Boolean);
+  if (!/x-bthwani-contract-state:\s*CONTRACT_ACTIVE\b/.test(source)) violations.push({ file: relative, message: "REGISTERED_ACTIVE_CONTRACT_METADATA_MISMATCH" });
 
-  if (!/x-bthwani-contract-state:\s*CONTRACT_ACTIVE\b/.test(contractSource)) {
-    violations.push({
-      file: contractPath,
-      message: "REGISTERED_ACTIVE_CONTRACT_METADATA_MISMATCH",
-    });
+  if (subsetStrategies.has(item.strategy)) {
+    for (const operationId of operations) if (!primarySet.has(operationId)) violations.push({ file: relative, message: `CONTRACT_SHARD_OPERATION_NOT_IN_PRIMARY:${operationId}` });
   }
-
-  if (contract.clientStrategy !== "PRIMARY_GENERATED") {
-    for (const operationId of contractOperations) {
-      if (!primaryOperationSet.has(operationId)) {
-        violations.push({
-          file: contractPath,
-          operationId,
-          message: `CONTRACT_SHARD_OPERATION_NOT_IN_PRIMARY: ${operationId}`,
-        });
+  if (item.strategy === "STANDALONE_MANUAL_TYPED_ADAPTER") {
+    for (const operationId of operations) {
+      if (primarySet.has(operationId)) violations.push({ file: relative, message: `STANDALONE_OPERATION_DUPLICATES_PRIMARY:${operationId}` });
+      canonicalOps.add(operationId);
+    }
+  }
+  if (generatedStrategies.has(item.strategy)) {
+    if (!item.generatedClient) {
+      violations.push({ file: registryFile, message: `GENERATED_CLIENT_PATH_REQUIRED:${item.id}` });
+    } else {
+      const clientPath = toPosix(path.join(serviceRoot, item.generatedClient));
+      if (!fs.existsSync(path.join(repoRoot, clientPath))) {
+        violations.push({ file: registryFile, message: `GENERATED_CLIENT_MISSING:${clientPath}` });
+      } else {
+        const client = read(clientPath);
+        for (const operationId of operations) if (!client.includes(operationId)) violations.push({ file: clientPath, message: `GENERATED_CLIENT_OPERATION_MISSING:${operationId}` });
       }
     }
   }
-
-  if (
-    contract.clientStrategy === "PRIMARY_GENERATED" ||
-    contract.clientStrategy === "SECONDARY_GENERATED_SUBSET" ||
-    contract.clientStrategy === "PARENT_GENERATED_SUBSET"
-  ) {
-    if (!contract.generatedClient) {
-      violations.push({
-        file: contractRegistryFile,
-        contractId: contract.id,
-        message: "GENERATED_CLIENT_PATH_REQUIRED",
-      });
-      continue;
-    }
-    const generatedClientPath = toPosix(path.join(serviceRoot, contract.generatedClient));
-    if (!fs.existsSync(path.join(repoRoot, generatedClientPath))) {
-      violations.push({
-        file: contractRegistryFile,
-        contractId: contract.id,
-        message: `GENERATED_CLIENT_MISSING: ${generatedClientPath}`,
-      });
-      continue;
-    }
-    const generatedClient = read(generatedClientPath);
-    for (const operationId of contractOperations) {
-      if (!generatedClient.includes(operationId)) {
-        violations.push({
-          file: generatedClientPath,
-          operationId,
-          message: `GENERATED_CLIENT_OPERATION_MISSING: ${operationId}`,
-        });
-      }
-    }
-  }
-
-  if (contract.clientStrategy === "MANUAL_TYPED_ADAPTER") {
-    if (!contract.adapterOwner) {
-      violations.push({
-        file: contractRegistryFile,
-        contractId: contract.id,
-        message: "MANUAL_ADAPTER_OWNER_REQUIRED",
-      });
-    }
-    if (!/x-bthwani-client-generation:\s*DISABLED\b/.test(contractSource)) {
-      violations.push({
-        file: contractPath,
-        message: "MANUAL_ADAPTER_REQUIRES_DISABLED_GENERATION_METADATA",
-      });
-    }
-    if (!/x-bthwani-client-binding:\s*MANUAL_TYPED_ADAPTER\b/.test(contractSource)) {
-      violations.push({
-        file: contractPath,
-        message: "MANUAL_ADAPTER_BINDING_METADATA_MISSING",
-      });
-    }
+  if (manualStrategies.has(item.strategy)) {
+    if (!item.adapterOwner) violations.push({ file: registryFile, message: `MANUAL_ADAPTER_OWNER_REQUIRED:${item.id}` });
+    else if (!fs.existsSync(path.join(repoRoot, serviceRoot, item.adapterOwner))) violations.push({ file: registryFile, message: `MANUAL_ADAPTER_OWNER_MISSING:${item.adapterOwner}` });
+    if (!/x-bthwani-client-generation:\s*DISABLED\b/.test(source)) violations.push({ file: relative, message: "MANUAL_ADAPTER_REQUIRES_DISABLED_GENERATION_METADATA" });
+    if (!/x-bthwani-client-binding:\s*MANUAL_TYPED_ADAPTER\b/.test(source)) violations.push({ file: relative, message: "MANUAL_ADAPTER_BINDING_METADATA_MISSING" });
   }
 }
 
-function parseCapabilities(file) {
-  const content = read(file);
-  const blocks =
-    content.match(/\{\s*id:\s*"([^"]+)"[\s\S]*?contractOperations:\s*\[([\s\S]*?)\]/g) || [];
-
-  return blocks.map((block) => {
-    const idMatch = block.match(/id:\s*"([^"]+)"/);
-    const operationsMatch = block.match(/contractOperations:\s*\[([\s\S]*?)\]/);
-    return {
-      id: idMatch?.[1] ?? "",
-      operations: operationsMatch
-        ? [...operationsMatch[1].matchAll(/"([^"]+)"/g)].map((match) => match[1])
-        : [],
-      file,
-    };
-  });
+function capabilities(file) {
+  return (read(file).match(/\{\s*id:\s*"([^"]+)"[\s\S]*?contractOperations:\s*\[([\s\S]*?)\]/g) ?? []).map((block) => ({
+    id: block.match(/id:\s*"([^"]+)"/)?.[1] ?? "",
+    operations: [...(block.match(/contractOperations:\s*\[([\s\S]*?)\]/)?.[1] ?? "").matchAll(/"([^"]+)"/g)].map((match) => match[1]),
+    file,
+  }));
 }
 
-const baseCapabilities = parseCapabilities(baseCapabilityMapFile);
-const extensionCapabilities = parseCapabilities(extensionCapabilityMapFile);
-const baseCapabilityIds = new Set(baseCapabilities.map((capability) => capability.id));
+const base = capabilities(capabilityFiles[0]);
+const extensions = capabilities(capabilityFiles[1]);
+const baseIds = new Set(base.map((item) => item.id));
 const extensionIds = new Set();
-
-for (const extension of extensionCapabilities) {
-  if (!baseCapabilityIds.has(extension.id)) {
-    violations.push({
-      file: extension.file,
-      capabilityId: extension.id,
-      message: `ORPHAN_CAPABILITY_EXTENSION: "${extension.id}" has no canonical capability`,
-    });
-  }
-  if (extensionIds.has(extension.id)) {
-    violations.push({
-      file: extension.file,
-      capabilityId: extension.id,
-      message: `DUPLICATE_CAPABILITY_EXTENSION: "${extension.id}" is extended more than once`,
-    });
-  }
-  extensionIds.add(extension.id);
+for (const item of extensions) {
+  if (!baseIds.has(item.id)) violations.push({ file: item.file, message: `ORPHAN_CAPABILITY_EXTENSION:${item.id}` });
+  if (extensionIds.has(item.id)) violations.push({ file: item.file, message: `DUPLICATE_CAPABILITY_EXTENSION:${item.id}` });
+  extensionIds.add(item.id);
 }
 
-const operationsByCapability = new Map();
-for (const capability of [...baseCapabilities, ...extensionCapabilities]) {
-  if (!operationsByCapability.has(capability.id)) operationsByCapability.set(capability.id, new Set());
-  const ownedOperations = operationsByCapability.get(capability.id);
-  for (const operationId of capability.operations) {
-    if (ownedOperations.has(operationId)) {
-      violations.push({
-        file: capability.file,
-        capabilityId: capability.id,
-        operationId,
-        message: `DUPLICATE_CAPABILITY_OPERATION: "${operationId}"`,
-      });
-    }
-    ownedOperations.add(operationId);
+const owners = new Map();
+for (const item of [...base, ...extensions]) {
+  const local = new Set();
+  for (const operationId of item.operations) {
+    if (local.has(operationId)) violations.push({ file: item.file, message: `DUPLICATE_CAPABILITY_OPERATION:${operationId}` });
+    local.add(operationId);
+    if (!canonicalOps.has(operationId)) violations.push({ file: item.file, message: `STALE_CAPABILITY_OPERATION:${operationId}` });
+    if (!owners.has(operationId)) owners.set(operationId, new Set());
+    owners.get(operationId).add(item.id);
   }
 }
-
-const ownersByOperation = new Map();
-for (const [capabilityId, operations] of operationsByCapability.entries()) {
-  for (const operationId of operations) {
-    if (!ownersByOperation.has(operationId)) ownersByOperation.set(operationId, new Set());
-    ownersByOperation.get(operationId).add(capabilityId);
-    if (!primaryOperationSet.has(operationId)) {
-      violations.push({
-        file: capabilityMapFiles.join(", "),
-        capabilityId,
-        operationId,
-        message: `STALE_CAPABILITY_OPERATION: "${operationId}" is absent from the primary contract`,
-      });
-    }
-  }
-}
-
-for (const [operationId, owners] of ownersByOperation.entries()) {
-  if (owners.size > 1) {
-    violations.push({
-      file: capabilityMapFiles.join(", "),
-      operationId,
-      currentOwner: [...owners].join(", "),
-      message: `DUPLICATE_OPERATION_OWNERSHIP: "${operationId}"`,
-    });
-  }
-}
-
-for (const operationId of primaryOperations) {
-  if (!ownersByOperation.has(operationId)) {
-    violations.push({
-      file: capabilityMapFiles.join(", "),
-      operationId,
-      message: `UNOWNED_OPERATION: "${operationId}" has no canonical DSH capability owner`,
-    });
-  }
-}
+for (const [operationId, operationOwners] of owners) if (operationOwners.size > 1) violations.push({ file: capabilityFiles.join(","), message: `DUPLICATE_OPERATION_OWNERSHIP:${operationId}` });
+for (const operationId of canonicalOps) if (!owners.has(operationId)) violations.push({ file: capabilityFiles.join(","), message: `UNOWNED_OPERATION:${operationId}` });
 
 fail(guardId, violations);
