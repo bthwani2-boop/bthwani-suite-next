@@ -11,7 +11,9 @@ import type {
 
 type Assert<T extends true> = T;
 type IsAssignable<From, To> = [From] extends [To] ? true : false;
-type VersionCore<T extends { id: string; version: number }> = Pick<T, "id" | "version">;
+type VersionCore<T> = T extends { id: infer ID; version: infer Version }
+  ? { id: ID; version: Version }
+  : never;
 
 type ContractDomain = components["schemas"]["Domain"];
 type ContractNode = components["schemas"]["Node"];
