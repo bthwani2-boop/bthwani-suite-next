@@ -2,6 +2,10 @@ name: Finance closure executor
 
 on:
   workflow_dispatch:
+  push:
+    branches: [bassam]
+    paths:
+      - .github/workflows/finance-closure-executor.yml
 
 permissions:
   contents: write
