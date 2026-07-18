@@ -6,6 +6,7 @@ on:
     paths:
       - "services/dsh/contracts/dsh.partner-support.openapi.yaml"
       - "services/dsh/contracts/contract-registry.ts"
+      - "services/dsh/capability-map.extensions.ts"
       - "contracts/master.openapi.yaml"
       - "services/dsh/database/migrations/dsh-059_partner_support_integrity.sql"
       - "services/dsh/database/tests/dsh-059_partner_support_invariants.sql"
@@ -14,6 +15,7 @@ on:
       - "services/dsh/backend/internal/http/server.go"
       - "services/dsh/frontend/shared/support/**"
       - "services/dsh/frontend/app-partner/account/PartnerSupportScreen.tsx"
+      - "tools/guards/backend-api-binding-gate.mjs"
       - "tools/guards/partner/partner-support-truth-gate.mjs"
       - ".github/workflows/lian-partner-support-truth.yml"
   workflow_dispatch:
@@ -72,6 +74,7 @@ jobs:
         run: |
           set -euo pipefail
           pnpm run guard:api-binding
+          pnpm run guard:backend-api-binding
           pnpm run guard:frontend-feature-binding
           pnpm run guard:fullstack-boundary
           pnpm run guard:no-broken-imports
