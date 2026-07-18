@@ -59,16 +59,20 @@ jobs:
         with:
           go-version-file: core/platform-control/backend/go.mod
           cache: true
-      - name: Generate format report
+      - name: Generate format evidence
         working-directory: core/platform-control/backend
         shell: bash
-        run: gofmt -l . | tee /tmp/platform-control-gofmt.txt
-      - name: Upload format report
+        run: |
+          gofmt -l . | tee /tmp/platform-control-gofmt.txt
+          gofmt -d . > /tmp/platform-control-gofmt.diff
+      - name: Upload format evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: platform-control-gofmt-report
-          path: /tmp/platform-control-gofmt.txt
+          name: platform-control-gofmt-evidence
+          path: |
+            /tmp/platform-control-gofmt.txt
+            /tmp/platform-control-gofmt.diff
           if-no-files-found: error
           retention-days: 3
       - name: Require formatted backend
@@ -96,16 +100,20 @@ jobs:
           go-version-file: core/identity/backend/go.mod
           cache: true
           cache-dependency-path: core/identity/backend/go.sum
-      - name: Generate format report
+      - name: Generate format evidence
         working-directory: core/identity/backend
         shell: bash
-        run: gofmt -l . | tee /tmp/identity-gofmt.txt
-      - name: Upload format report
+        run: |
+          gofmt -l . | tee /tmp/identity-gofmt.txt
+          gofmt -d . > /tmp/identity-gofmt.diff
+      - name: Upload format evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: identity-gofmt-report
-          path: /tmp/identity-gofmt.txt
+          name: identity-gofmt-evidence
+          path: |
+            /tmp/identity-gofmt.txt
+            /tmp/identity-gofmt.diff
           if-no-files-found: error
           retention-days: 3
       - name: Require formatted identity
@@ -169,7 +177,18 @@ jobs:
           done
       - name: Prove all PostgreSQL workflows
         working-directory: core/platform-control/backend
-        run: go test ./internal/platformcontrol -count=1 -v
+        shell: bash
+        run: |
+          set -o pipefail
+          go test ./internal/platformcontrol -count=1 -v 2>&1 | tee /tmp/platform-control-db-tests.txt
+      - name: Upload PostgreSQL test evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: platform-control-db-test-evidence
+          path: /tmp/platform-control-db-tests.txt
+          if-no-files-found: error
+          retention-days: 3
 
   frontend:
     name: Platform control contracts clients and types
@@ -183,7 +202,18 @@ jobs:
       - name: Setup workspace
         uses: ./.github/actions/setup-node-workspace
       - name: Contract lint
-        run: pnpm run contracts:lint
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm run contracts:lint 2>&1 | tee /tmp/platform-contract-lint.txt
+      - name: Upload contract lint evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: platform-contract-lint-evidence
+          path: /tmp/platform-contract-lint.txt
+          if-no-files-found: error
+          retention-days: 3
       - name: Regenerate platform-control client
         run: pnpm run openapi:generate:platform-control
       - name: Capture generated client diff
