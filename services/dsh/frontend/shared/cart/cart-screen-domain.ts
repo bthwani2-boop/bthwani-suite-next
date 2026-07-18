@@ -15,8 +15,8 @@ export const QUICK_ACTION_META: Readonly<Record<QuickActionKey, QuickActionMeta>
   coupon: {
     title: "إضافة قسيمة تخفيض",
     placeholder: "أدخل رمز التخفيض هنا",
-    helper: "سيتم تطبيق خصم فوري بقيمة 500 د.ي عند إدخال قسيمة صالحة.",
-    saveLabel: "حفظ وتطبيق القسيمة",
+    helper: "سيتم التحقق من صلاحية القسيمة وحساب الخصم من خادم DSH عند تأكيد checkout. لا يُحتسب أي خصم محلياً.",
+    saveLabel: "حفظ القسيمة",
     icon: "pricetag-outline",
   },
   address: {
@@ -89,10 +89,6 @@ export function buildExecutionScheduleOptions(referenceDate = new Date()): Execu
   return { dateOptions, timeOptions };
 }
 
-// removed fixture recommendations — derive from central catalog when data is in scope (WP5)
-
-// removed hardcoded store-location fixtures — derive from GET /dsh/stores when data is in scope, otherwise hide the map pins (WP5)
-
 export type CartMapPosition = {
   readonly x: number;
   readonly y: number;
@@ -113,7 +109,6 @@ export type CartLandmark = {
   readonly y: number;
 };
 
-// UI heuristic for address entry — not catalog data (closure decision WP5)
 export const LANDMARKS: readonly CartLandmark[] = [
   { lat: 15.3560, lng: 44.1800, latitude: 15.3560, longitude: 44.1800, name: "صنعاء، المدينة القديمة، باب اليمن", x: 160, y: 120 },
   { lat: 15.3400, lng: 44.1900, latitude: 15.3400, longitude: 44.1900, name: "صنعاء، حي حدة، شارع بيروت", x: 220, y: 190 },
@@ -124,9 +119,9 @@ export const LANDMARKS: readonly CartLandmark[] = [
 
 export type CartPriceSummary = {
   readonly subtotal: number;
-  readonly deliveryFee: number;
-  readonly discount: number;
-  readonly grandTotal: number;
+  readonly deliveryFee: null;
+  readonly discount: null;
+  readonly grandTotal: null;
 };
 
 function readCartItemPrice(item: DshCartItem) {
@@ -134,17 +129,18 @@ function readCartItemPrice(item: DshCartItem) {
   return Number.parseFloat(priceStr) || 0;
 }
 
+/**
+ * This function is presentation-only. Delivery fees, coupons and final total
+ * are resolved by the DSH checkout pricing engine and must never be invented in
+ * app-client.
+ */
 export function buildCartPriceSummary(
   items: readonly DshCartItem[],
-  fulfillmentMode: DshFulfillmentMode,
-  couponCode: string
+  _fulfillmentMode: DshFulfillmentMode,
+  _couponCode: string,
 ): CartPriceSummary {
   const subtotal = items.reduce((acc, item) => acc + readCartItemPrice(item) * item.quantity, 0);
-  const deliveryFee = fulfillmentMode === "pickup" ? 0 : 950;
-  const discount = couponCode ? 500 : 0;
-  const grandTotal = Math.max(subtotal + deliveryFee - discount, 0);
-
-  return { subtotal, deliveryFee, discount, grandTotal };
+  return { subtotal, deliveryFee: null, discount: null, grandTotal: null };
 }
 
 function clampMapX(value: number) {
@@ -156,10 +152,7 @@ function clampMapY(value: number) {
 }
 
 export function normalizeCartMapPosition(position: CartMapPosition): CartMapPosition {
-  return {
-    x: clampMapX(position.x),
-    y: clampMapY(position.y),
-  };
+  return { x: clampMapX(position.x), y: clampMapY(position.y) };
 }
 
 export function mapPositionToCartCoordinates(position: CartMapPosition): CartCoordinates {
@@ -191,6 +184,5 @@ export function findClosestCartLandmark(position: CartMapPosition): CartLandmark
       closestLandmark = landmark;
     }
   }
-
   return closestLandmark;
 }
