@@ -2,14 +2,20 @@ import React, { useCallback, useEffect, useState } from "react";
 import { BackHandler, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppHeader } from "../../../../apps/app-client/runtime/src/shell/AppHeader";
-import { BottomNavBar, type BottomNavItem } from "../../../../apps/app-client/runtime/src/shell/BottomNavBar";
+import {
+  BottomNavBar,
+  type BottomNavItem,
+} from "../../../../apps/app-client/runtime/src/shell/BottomNavBar";
 import { brandScale, colorRoles, Icon, StateView } from "@bthwani/ui-kit";
 import { HomeDiscoveryRoute } from "./home-discovery/HomeDiscoveryRoute";
 import { StoreDiscoveryRoute } from "./store/StoreDiscoveryRoute";
 import { StoreDetailRoute } from "./store/StoreDetailRoute";
 import { ClientCheckoutRoute } from "./checkout/ClientCheckoutRoute";
 import { OrdersListScreen } from "./orders/OrdersListScreen";
-import { MySpaceScreen, type BThwaniAppearanceMode } from "./account/MySpaceScreen";
+import {
+  MySpaceScreen,
+  type BThwaniAppearanceMode,
+} from "./account/MySpaceScreen";
 import { AppearanceHubScreen } from "./account/AppearanceHubScreen";
 import { AddressLocationScreen } from "./account/AddressLocationScreen";
 import { IdentityHubScreen } from "./account/IdentityHubScreen";
@@ -25,15 +31,26 @@ import { useSpecialRequestsController } from "../shared/special-requests/use-spe
 import { generateSpecialRequestIdempotencyKey } from "../shared/special-requests/special-requests.idempotency";
 
 type ClientTab = "home" | "stores" | "orders" | "profile" | "cart";
-type ProfileRoute = "profile" | "appearance" | "addresses" | "identity" | "benefits" | "preferences" | "support";
+type ProfileRoute =
+  | "profile"
+  | "appearance"
+  | "addresses"
+  | "identity"
+  | "benefits"
+  | "preferences"
+  | "support";
 type SpecialRequestRoute = "shein" | "awnak";
 
 const NAV_ITEMS: BottomNavItem[] = [
   {
     id: "profile",
     label: "حسابي",
-    icon: <Icon name="person-outline" size={22} color={colorRoles.brandStructure} />,
-    activeIcon: <Icon name="person" size={22} color={colorRoles.brandAction} />,
+    icon: (
+      <Icon name="person-outline" size={22} color={colorRoles.brandStructure} />
+    ),
+    activeIcon: (
+      <Icon name="person" size={22} color={colorRoles.brandAction} />
+    ),
   },
   {
     id: "orders",
@@ -49,6 +66,16 @@ const NAV_ITEMS: BottomNavItem[] = [
   },
 ];
 
+function isClientTab(value: string): value is ClientTab {
+  return (
+    value === "home" ||
+    value === "stores" ||
+    value === "orders" ||
+    value === "profile" ||
+    value === "cart"
+  );
+}
+
 export function DshClientSurface() {
   const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<ClientTab>("home");
@@ -57,8 +84,10 @@ export function DshClientSurface() {
   const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
   const [showNotifications, setShowNotifications] = useState(false);
   const [activeTicketId, setActiveTicketId] = useState<string | null>(null);
-  const [appearanceMode, setAppearanceMode] = useState<BThwaniAppearanceMode>("lightPremium");
-  const [activeSpecialRequest, setActiveSpecialRequest] = useState<SpecialRequestRoute | null>(null);
+  const [appearanceMode, setAppearanceMode] =
+    useState<BThwaniAppearanceMode>("lightPremium");
+  const [activeSpecialRequest, setActiveSpecialRequest] =
+    useState<SpecialRequestRoute | null>(null);
 
   const specialRequestController = useSpecialRequestsController();
 
@@ -101,7 +130,15 @@ export function DshClientSurface() {
       return true;
     }
     return false;
-  }, [activeOrderId, activeSpecialRequest, activeTab, activeTicketId, profileRoute, selectedStoreId, showNotifications]);
+  }, [
+    activeOrderId,
+    activeSpecialRequest,
+    activeTab,
+    activeTicketId,
+    profileRoute,
+    selectedStoreId,
+    showNotifications,
+  ]);
 
   useEffect(() => {
     const subscription = BackHandler.addEventListener("hardwareBackPress", goBack);
@@ -109,12 +146,12 @@ export function DshClientSurface() {
   }, [goBack]);
 
   const nestedRoute =
-    showNotifications
-    || activeSpecialRequest !== null
-    || activeOrderId !== null
-    || activeTicketId !== null
-    || (activeTab === "stores" && selectedStoreId !== null)
-    || (activeTab === "profile" && profileRoute !== "profile");
+    showNotifications ||
+    activeSpecialRequest !== null ||
+    activeOrderId !== null ||
+    activeTicketId !== null ||
+    (activeTab === "stores" && selectedStoreId !== null) ||
+    (activeTab === "profile" && profileRoute !== "profile");
   const showHeader = activeTab === "home" && !nestedRoute;
   const showBottomNav = !nestedRoute;
 
@@ -127,12 +164,24 @@ export function DshClientSurface() {
           direction="rtl"
           actions={[
             {
-              icon: <Icon name="notifications-outline" size={20} color={colorRoles.surfaceBase} />,
+              icon: (
+                <Icon
+                  name="notifications-outline"
+                  size={20}
+                  color={colorRoles.surfaceBase}
+                />
+              ),
               accessibilityLabel: "الإشعارات",
               onPress: () => setShowNotifications(true),
             },
             {
-              icon: <Icon name="cart-outline" size={20} color={colorRoles.surfaceBase} />,
+              icon: (
+                <Icon
+                  name="cart-outline"
+                  size={20}
+                  color={colorRoles.surfaceBase}
+                />
+              ),
               accessibilityLabel: "عربة التسوق",
               onPress: () => setActiveTab("cart"),
             },
@@ -144,24 +193,31 @@ export function DshClientSurface() {
         {showNotifications ? (
           <NotificationCenterScreen />
         ) : activeOrderId !== null ? (
-          <OrderTrackingScreen orderId={activeOrderId} onBack={() => setActiveOrderId(null)} />
+          <OrderTrackingScreen
+            orderId={activeOrderId}
+            onBack={() => setActiveOrderId(null)}
+          />
         ) : activeSpecialRequest === "shein" ? (
           <SheinForm
             onBack={() => setActiveSpecialRequest(null)}
-            onSubmit={(data) => specialRequestController.submit({
-              requestType: "SHEIN_ASSISTED_PURCHASE",
-              idempotencyKey: generateSpecialRequestIdempotencyKey(),
-              ...data,
-            })}
+            onSubmit={(data) =>
+              specialRequestController.submit({
+                requestType: "SHEIN_ASSISTED_PURCHASE",
+                idempotencyKey: generateSpecialRequestIdempotencyKey(),
+                ...data,
+              })
+            }
           />
         ) : activeSpecialRequest === "awnak" ? (
           <AwnakForm
             onBack={() => setActiveSpecialRequest(null)}
-            onSubmit={(data) => specialRequestController.submit({
-              requestType: "AWNAK_ERRAND",
-              idempotencyKey: generateSpecialRequestIdempotencyKey(),
-              ...data,
-            })}
+            onSubmit={(data) =>
+              specialRequestController.submit({
+                requestType: "AWNAK_ERRAND",
+                idempotencyKey: generateSpecialRequestIdempotencyKey(),
+                ...data,
+              })
+            }
           />
         ) : activeTab === "home" ? (
           <HomeDiscoveryRoute
@@ -189,23 +245,28 @@ export function DshClientSurface() {
         ) : activeTab === "cart" ? (
           selectedStoreId === null ? (
             <StateView
-              title="السلة فارغة"
-              description="اختر متجرًا لعرض السلة وإتمام الطلب."
+              title="السلة غير محددة"
+              description="اختر متجرًا للوصول إلى سلته المحفوظة في DSH."
               actionLabel="تصفح المتاجر"
               onActionPress={() => setActiveTab("stores")}
             />
           ) : (
             <ClientCheckoutRoute
               storeId={selectedStoreId}
-              serviceAreaCode="sana"
               onBrowseCatalog={() => setActiveTab("stores")}
               onSuccess={openOrderTracking}
             />
           )
         ) : profileRoute === "appearance" ? (
-          <AppearanceHubScreen appearanceMode={appearanceMode} onAppearanceModeChange={setAppearanceMode} />
+          <AppearanceHubScreen
+            appearanceMode={appearanceMode}
+            onAppearanceModeChange={setAppearanceMode}
+          />
         ) : profileRoute === "addresses" ? (
-          <AddressLocationScreen />
+          <AddressLocationScreen
+            onBack={() => setProfileRoute("profile")}
+            onOpenCheckout={() => setActiveTab("cart")}
+          />
         ) : profileRoute === "identity" ? (
           <IdentityHubScreen />
         ) : profileRoute === "benefits" ? (
@@ -236,15 +297,15 @@ export function DshClientSurface() {
         <BottomNavBar
           items={NAV_ITEMS}
           activeId={activeTab}
-          onSelect={(id) => setActiveTab(id as ClientTab)}
-          launcherIcon={<Icon name="grid-outline" size={26} color={colorRoles.surfaceBase} />}
+          onSelect={(id) => {
+            if (isClientTab(id)) setActiveTab(id);
+          }}
+          launcherIcon={
+            <Icon name="grid-outline" size={26} color={colorRoles.surfaceBase} />
+          }
           launcherLabel="الخدمات"
           onLauncherPress={() => {
-            if (activeTab === "stores") {
-              setActiveTab("home");
-            } else {
-              setActiveTab("stores");
-            }
+            setActiveTab(activeTab === "stores" ? "home" : "stores");
           }}
           direction="rtl"
           bottomInset={insets.bottom}
