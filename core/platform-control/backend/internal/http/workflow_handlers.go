@@ -26,9 +26,9 @@ func (s *server) publicHealth(w http.ResponseWriter, r *http.Request) {
 func (s *server) publicReadiness(w http.ResponseWriter, r *http.Request) {
 	if err := s.service.Ready(r.Context()); err != nil {
 		sendJSON(w, http.StatusServiceUnavailable, map[string]any{
-			"status": "not_ready",
+			"status":  "not_ready",
 			"service": "platform-control",
-			"reason": "database_unavailable",
+			"reason":  "database_unavailable",
 		})
 		return
 	}
@@ -65,7 +65,13 @@ func (s *server) createChangeSet(w http.ResponseWriter, r *http.Request, identit
 }
 
 func (s *server) validateChangeSet(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
-	changeSet, err := s.service.ValidateChangeSet(r.Context(), r.PathValue("id"), identity.Subject, identity.Roles, correlationID(r))
+	changeSet, err := s.service.ValidateChangeSet(
+		r.Context(),
+		r.PathValue("id"),
+		identity.Subject,
+		identity.Roles,
+		correlationID(r),
+	)
 	if err != nil {
 		sendPlatformError(w, err)
 		return
@@ -74,7 +80,13 @@ func (s *server) validateChangeSet(w http.ResponseWriter, r *http.Request, ident
 }
 
 func (s *server) submitChangeSet(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
-	changeSet, err := s.service.SubmitChangeSet(r.Context(), r.PathValue("id"), identity.Subject, identity.Roles, correlationID(r))
+	changeSet, err := s.service.SubmitChangeSet(
+		r.Context(),
+		r.PathValue("id"),
+		identity.Subject,
+		identity.Roles,
+		correlationID(r),
+	)
 	if err != nil {
 		sendPlatformError(w, err)
 		return
@@ -83,7 +95,13 @@ func (s *server) submitChangeSet(w http.ResponseWriter, r *http.Request, identit
 }
 
 func (s *server) approveChangeSet(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
-	changeSet, err := s.service.ApproveChangeSet(r.Context(), r.PathValue("id"), identity.Subject, identity.Roles, correlationID(r))
+	changeSet, err := s.service.ApproveChangeSet(
+		r.Context(),
+		r.PathValue("id"),
+		identity.Subject,
+		identity.Roles,
+		correlationID(r),
+	)
 	if err != nil {
 		sendPlatformError(w, err)
 		return
@@ -112,7 +130,13 @@ func (s *server) rejectChangeSet(w http.ResponseWriter, r *http.Request, identit
 }
 
 func (s *server) applyChangeSet(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
-	changeSet, err := s.service.ApplyChangeSet(r.Context(), r.PathValue("id"), identity.Subject, identity.Roles, correlationID(r))
+	changeSet, err := s.service.ApplyChangeSet(
+		r.Context(),
+		r.PathValue("id"),
+		identity.Subject,
+		identity.Roles,
+		correlationID(r),
+	)
 	if err != nil {
 		sendPlatformError(w, err)
 		return
@@ -121,7 +145,13 @@ func (s *server) applyChangeSet(w http.ResponseWriter, r *http.Request, identity
 }
 
 func (s *server) rollbackChangeSet(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
-	changeSet, err := s.service.RollbackChangeSet(r.Context(), r.PathValue("id"), identity.Subject, identity.Roles, correlationID(r))
+	changeSet, err := s.service.RollbackChangeSet(
+		r.Context(),
+		r.PathValue("id"),
+		identity.Subject,
+		identity.Roles,
+		correlationID(r),
+	)
 	if err != nil {
 		sendPlatformError(w, err)
 		return
@@ -164,6 +194,8 @@ func sendPlatformError(w http.ResponseWriter, err error) {
 		sendError(w, http.StatusConflict, "PLATFORM_VERSION_CONFLICT", err.Error())
 	case errors.Is(err, platformcontrol.ErrMakerChecker):
 		sendError(w, http.StatusConflict, "PLATFORM_MAKER_CHECKER_VIOLATION", err.Error())
+	case errors.Is(err, platformcontrol.ErrHealthGate):
+		sendError(w, http.StatusConflict, "PLATFORM_ROLLOUT_HEALTH_GATE_FAILED", err.Error())
 	default:
 		sendError(w, http.StatusInternalServerError, "PLATFORM_INTERNAL_ERROR", "platform-control operation failed")
 	}
