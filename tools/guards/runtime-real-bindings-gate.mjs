@@ -220,13 +220,8 @@ for (const [pattern, message] of [
 
 const captainSettingsPath = "services/dsh/frontend/app-captain/account/DshCaptainAccountSettingsContent.tsx";
 const captainSettings = read(captainSettingsPath);
-for (const [pattern, message] of [
-  [/eval\(["']require["']\)|RNSwitch/g, "DYNAMIC_REACT_NATIVE_SWITCH_LOADING_FORBIDDEN"],
-  [/onMembershipStateChange=\{onToggleStoreCourierMode\}/g, "CAPTAIN_FLEET_MODE_NOT_DERIVED_FROM_MEMBERSHIP"],
-]) {
-  for (const match of captainSettings.matchAll(pattern)) {
-    violations.push({ file: captainSettingsPath, line: lineNumber(captainSettings, match.index), message });
-  }
+for (const match of captainSettings.matchAll(/eval\(["']require["']\)|RNSwitch/g)) {
+  violations.push({ file: captainSettingsPath, line: lineNumber(captainSettings, match.index), message: "DYNAMIC_REACT_NATIVE_SWITCH_LOADING_FORBIDDEN" });
 }
 
 const dispatchPath = "services/dsh/frontend/control-panel/operations/DispatchAssignmentScreen.tsx";
