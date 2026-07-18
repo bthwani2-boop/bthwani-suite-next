@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { createCoupon, fetchCoupons, updateCoupon } from "./marketing.api";
 import type {
   CouponCreatePayload,
+  CouponFundingPolicy,
   CouponRecord,
   CouponStatus,
   CouponUpdatePayload,
@@ -12,8 +13,12 @@ import type {
 
 export type CouponsControllerState =
   | { readonly kind: "loading" }
-  | { readonly kind: "empty" }
-  | { readonly kind: "success"; readonly coupons: readonly CouponRecord[] }
+  | { readonly kind: "empty"; readonly fundingPolicies: Readonly<Record<string, CouponFundingPolicy>> }
+  | {
+      readonly kind: "success";
+      readonly coupons: readonly CouponRecord[];
+      readonly fundingPolicies: Readonly<Record<string, CouponFundingPolicy>>;
+    }
   | { readonly kind: "error"; readonly message: string };
 
 function errorMessage(error: unknown): string {
@@ -38,8 +43,12 @@ export function useCouponsController(authKind: string) {
     try {
       const response = await fetchCoupons();
       setState(response.coupons.length
-        ? { kind: "success", coupons: response.coupons }
-        : { kind: "empty" });
+        ? {
+            kind: "success",
+            coupons: response.coupons,
+            fundingPolicies: response.fundingPolicies,
+          }
+        : { kind: "empty", fundingPolicies: response.fundingPolicies });
       return true;
     } catch (error) {
       setState({ kind: "error", message: errorMessage(error) });
@@ -68,7 +77,10 @@ export function useCouponsController(authKind: string) {
     }
   }, [load]);
 
-  const update = useCallback(async (coupon: CouponRecord, payload: Omit<CouponUpdatePayload, "expectedVersion">) => {
+  const update = useCallback(async (
+    coupon: CouponRecord,
+    payload: Omit<CouponUpdatePayload, "expectedVersion">,
+  ) => {
     setMutationLoading(true);
     setMutationError(null);
     try {
