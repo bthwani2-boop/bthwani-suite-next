@@ -170,7 +170,14 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("PATCH /dsh/field/finance/payout-destinations/{destinationId}", protected.handleFieldUpdatePayoutDestination)
 	mux.HandleFunc("DELETE /dsh/field/finance/payout-destinations/{destinationId}", protected.handleFieldDeletePayoutDestination)
 
-	// Support Tickets & Operational Escalation — actor ownership is enforced by dedicated handlers.
+	// Primary-contract compatibility routes remain actor-owned and retry-safe.
+	mux.HandleFunc("POST /dsh/support/tickets", protected.handleCreateActorSupportTicket)
+	mux.HandleFunc("GET /dsh/support/tickets", protected.handleListActorSupportTickets)
+	mux.HandleFunc("GET /dsh/support/tickets/{ticketId}", protected.handleGetActorSupportTicket)
+	mux.HandleFunc("GET /dsh/support/tickets/{ticketId}/messages", protected.handleListActorSupportMessages)
+	mux.HandleFunc("POST /dsh/support/tickets/{ticketId}/messages", protected.handleAddActorSupportMessage)
+
+	// Actor-specific support routes provide stronger role-specific contracts.
 	mux.HandleFunc("POST /dsh/client/support/tickets", protected.handleCreateGovernedClientSupportTicket)
 	mux.HandleFunc("GET /dsh/client/support/tickets", protected.handleListGovernedClientSupportTickets)
 	mux.HandleFunc("GET /dsh/client/support/tickets/{ticketId}", protected.handleGetGovernedClientSupportTicket)
