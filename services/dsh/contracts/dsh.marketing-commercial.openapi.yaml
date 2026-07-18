@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: BThwani DSH Marketing Commercial Programs API
-  version: 0.4.0
+  version: 0.4.1
   description: DSH-owned marketing definitions, coupon policy, and governed client purchase workflow; WLT remains the financial truth owner.
 x-bthwani-owner: services/dsh
 x-bthwani-parent-contract: services/dsh/contracts/dsh.openapi.yaml
@@ -269,13 +269,34 @@ components:
         startsAt: { type: string, format: date-time }
         endsAt: { type: string, format: date-time }
     CouponUpdateWrite:
-      allOf:
-        - $ref: '#/components/schemas/CouponCreateWrite'
-        - type: object
-          required: [expectedVersion]
-          properties:
-            expectedVersion: { type: integer, minimum: 1 }
-            status: { type: string, enum: [draft, active, paused, archived] }
+      type: object
+      additionalProperties: false
+      required: [expectedVersion]
+      minProperties: 2
+      description: Update either funding policy alone, or commercial terms/status. Funding fields must not be mixed with other changes.
+      properties:
+        nameAr: { type: string, minLength: 1 }
+        description: { type: string }
+        storeId: { type: string }
+        fundingSource: { $ref: '#/components/schemas/CouponFundingSource' }
+        platformShareBps: { type: integer, minimum: 0, maximum: 10000 }
+        fundingPartnerId: { type: string }
+        discountType: { type: string, enum: [percent, fixed] }
+        discountPercent: { type: number, exclusiveMinimum: 0, maximum: 100 }
+        fixedDiscountMinorUnits: { type: integer, format: int64, minimum: 0 }
+        maxDiscountMinorUnits: { type: integer, format: int64, minimum: 0 }
+        minSubtotalMinorUnits: { type: integer, format: int64, minimum: 0 }
+        globalUsageLimit: { type: integer, minimum: 0 }
+        perClientUsageLimit: { type: integer, minimum: 1 }
+        eligibleFulfillmentModes:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items: { type: string, enum: [bthwani_delivery, partner_delivery, pickup] }
+        startsAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time }
+        status: { type: string, enum: [draft, active, paused, archived] }
+        expectedVersion: { type: integer, minimum: 1 }
     SubscriptionPurchaseWrite:
       type: object
       additionalProperties: false
