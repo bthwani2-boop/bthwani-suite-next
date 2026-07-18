@@ -50,7 +50,7 @@ export type DshServiceabilityResult = {
   readonly serviceable: boolean;
   readonly code: DshServiceabilityCode;
   readonly reason?: string;
-  readonly availableModes: readonly DshFulfillmentModeAvailability[];
+  readonly availableModes?: readonly DshFulfillmentModeAvailability[];
 };
 
 export type DshCartState =
