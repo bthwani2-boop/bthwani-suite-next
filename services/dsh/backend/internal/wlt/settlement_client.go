@@ -36,8 +36,13 @@ func (c *Client) FinanceWriteSettlement(ctx context.Context, method, path string
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
-	if correlationID != "" {
-		req.Header.Set("X-Correlation-ID", correlationID)
+	correlationID = strings.TrimSpace(correlationID)
+	if err := setRequiredMutationHeaders(
+		req,
+		correlationID,
+		deterministicMutationKey("settlement", method, path, correlationID),
+	); err != nil {
+		return 0, nil, fmt.Errorf("prepare WLT settlement mutation: %w", err)
 	}
 
 	response, err := c.http.Do(req)
