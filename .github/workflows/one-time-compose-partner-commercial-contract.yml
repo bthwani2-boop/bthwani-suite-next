@@ -1,0 +1,78 @@
+name: One-time Compose Partner Commercial Contract
+
+on:
+  push:
+    branches: [bassam]
+    paths:
+      - '.github/workflows/one-time-compose-partner-commercial-contract.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: one-time-compose-partner-commercial-contract
+  cancel-in-progress: false
+
+jobs:
+  compose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: bassam
+          fetch-depth: 0
+
+      - name: Compose shard in both binding guards
+        shell: bash
+        run: |
+          set -euo pipefail
+          git pull --rebase origin bassam
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          shard = 'services/dsh/contracts/dsh.partner-commercial-closure.openapi.yaml'
+
+          backend = Path('tools/guards/backend-api-binding-gate.mjs')
+          text = backend.read_text(encoding='utf-8')
+          match = re.search(r'(service:\s*"dsh"[\s\S]*?additionalOpenapi:\s*\[)([\s\S]*?)(\])', text)
+          if not match:
+              raise SystemExit('DSH additionalOpenapi array not found')
+          if shard not in match.group(2):
+              body = match.group(2).rstrip()
+              if body and not body.endswith(','):
+                  body += ','
+              body += f'\n      "{shard}",\n    '
+              text = text[:match.start(2)] + body + text[match.end(2):]
+          backend.write_text(text, encoding='utf-8')
+
+          frontend = Path('tools/guards/api-binding-gate.mjs')
+          text = frontend.read_text(encoding='utf-8')
+          declaration = 'const dshPartnerCommercialPaths = loadOpenApiPaths("services/dsh/contracts/dsh.partner-commercial-closure.openapi.yaml");'
+          if declaration not in text:
+              anchor = 'const dshHomeMarketingPaths = loadOpenApiPaths("services/dsh/contracts/dsh.home-marketing-governance.openapi.yaml");'
+              if anchor not in text:
+                  anchor = 'const dshPartnerFleetPaths = loadOpenApiPaths("services/dsh/contracts/dsh.partner-fleet.openapi.yaml");'
+              if anchor not in text:
+                  raise SystemExit('frontend contract declaration anchor not found')
+              text = text.replace(anchor, anchor + '\n' + declaration, 1)
+          spread = '  ...dshPartnerCommercialPaths,'
+          if spread not in text:
+              anchor = '  ...dshHomeMarketingPaths,' if '  ...dshHomeMarketingPaths,' in text else '  ...dshPartnerFleetPaths,'
+              text = text.replace(anchor, anchor + '\n' + spread, 1)
+          frontend.write_text(text, encoding='utf-8')
+          PY
+          git diff --check
+
+      - name: Commit composition
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add tools/guards/backend-api-binding-gate.mjs tools/guards/api-binding-gate.mjs
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'fix(contracts): compose partner commercial closure shard'
+          git pull --rebase origin bassam
+          git push origin HEAD:bassam
