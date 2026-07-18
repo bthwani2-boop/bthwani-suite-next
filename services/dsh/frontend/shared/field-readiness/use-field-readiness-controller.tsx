@@ -1,17 +1,27 @@
 import { useCallback, useEffect, useState } from "react";
 import {
-  createFieldVisit, fetchFieldVisits, completeFieldVisit,
-  upsertReadinessCheck, fetchVisitChecks,
-  createReadinessEscalation, fetchOperatorEscalations, updateEscalation,
-  fetchPartnerOnboardingStatus, fetchFieldWorkQueue, classifyFieldReadinessError,
+  buildFieldMutationContext,
+  createFieldVisit,
+  fetchFieldVisits,
+  completeFieldVisit,
+  upsertReadinessCheck,
+  fetchVisitChecks,
+  createReadinessEscalation,
+  fetchOperatorEscalations,
+  updateEscalation,
+  fetchPartnerOnboardingStatus,
+  fetchFieldWorkQueue,
+  classifyFieldReadinessError,
+  type FieldMutationContext,
 } from "./field-readiness.api";
+import { enqueueFieldOperation, type FieldOfflineOperationType } from "./field-offline-queue";
 import {
   visitIdleState, visitLoadingState, visitSuccessState, visitEmptyState, visitErrorState,
-  visitActionIdleState, visitActionSubmittingState, visitActionSuccessState, visitActionErrorState,
+  visitActionIdleState, visitActionSubmittingState, visitActionSuccessState, visitActionQueuedState, visitActionErrorState,
   checklistIdleState, checklistLoadingState, checklistSuccessState, checklistErrorState,
-  checkActionIdleState, checkActionSubmittingState, checkActionSuccessState, checkActionErrorState,
+  checkActionIdleState, checkActionSubmittingState, checkActionSuccessState, checkActionQueuedState, checkActionErrorState,
   escalationIdleState, escalationLoadingState, escalationSuccessState, escalationEmptyState, escalationErrorState,
-  escalationActionIdleState, escalationActionSubmittingState, escalationActionSuccessState, escalationActionErrorState,
+  escalationActionIdleState, escalationActionSubmittingState, escalationActionSuccessState, escalationActionQueuedState, escalationActionErrorState,
   onboardingStatusIdleState, onboardingStatusLoadingState, onboardingStatusSuccessState, onboardingStatusErrorState,
   workQueueIdleState, workQueueLoadingState, workQueueSuccessState, workQueueErrorState,
 } from "./field-readiness.states";
@@ -25,16 +35,31 @@ import type {
   DshReadinessCheck,
 } from "./field-readiness.types";
 
-function resolveMessage(err: unknown): string {
-  const c = classifyFieldReadinessError(err);
-  if (c.kind === "permission_denied") return "غير مصرح لك بهذه العملية";
-  if (c.kind === "offline") return "لا يوجد اتصال بالإنترنت";
-  if (c.kind === "not_found") return "لم يتم إيجاد السجل";
-  return "حدث خطأ، يرجى المحاولة مجدداً";
+function resolveMessage(error: unknown): string {
+  const classification = classifyFieldReadinessError(error);
+  if (classification.kind === "permission_denied") return "غير مصرح لك بهذه العملية";
+  if (classification.kind === "offline") return "لا يوجد اتصال بالإنترنت";
+  if (classification.kind === "not_found") return "لم يتم إيجاد السجل";
+  return error instanceof Error && error.message ? error.message : "حدث خطأ، يرجى المحاولة مجدداً";
 }
 
 function isAuthenticated(authKind: string) {
   return authKind === "authenticated";
+}
+
+async function enqueueIfOffline<P>(
+  error: unknown,
+  operationType: FieldOfflineOperationType,
+  payload: P,
+  context: FieldMutationContext,
+) {
+  if (classifyFieldReadinessError(error).kind !== "offline") return null;
+  return enqueueFieldOperation(
+    operationType,
+    payload,
+    context.idempotencyKey,
+    context.correlationId,
+  );
 }
 
 export function useFieldVisitController(storeId: string, authKind = "unauthenticated") {
@@ -46,8 +71,8 @@ export function useFieldVisitController(storeId: string, authKind = "unauthentic
     try {
       const visits = await fetchFieldVisits(storeId);
       setListState(visits.length === 0 ? visitEmptyState() : visitSuccessState(visits));
-    } catch (err) {
-      setListState(visitErrorState(resolveMessage(err)));
+    } catch (error) {
+      setListState(visitErrorState(resolveMessage(error)));
     }
   }, [storeId]);
 
@@ -57,23 +82,48 @@ export function useFieldVisitController(storeId: string, authKind = "unauthentic
 
   const startVisit = useCallback(async (input: DshCreateVisitInput) => {
     setActionState(visitActionSubmittingState());
+    const context = buildFieldMutationContext(
+      "create-visit",
+      [storeId, input.visitType ?? "onboarding", input.startLocation.capturedAt],
+    );
     try {
-      const visit = await createFieldVisit(storeId, input);
+      const visit = await createFieldVisit(storeId, input, context);
       setActionState(visitActionSuccessState(visit));
       await load();
-    } catch (err) {
-      setActionState(visitActionErrorState(resolveMessage(err)));
+    } catch (error) {
+      try {
+        const queued = await enqueueIfOffline(error, "create_visit", { storeId, input }, context);
+        if (queued) {
+          setActionState(visitActionQueuedState(queued.operationId, "تم حفظ بدء الزيارة للمزامنة عند عودة الاتصال."));
+          return;
+        }
+      } catch (queueError) {
+        setActionState(visitActionErrorState(resolveMessage(queueError)));
+        return;
+      }
+      setActionState(visitActionErrorState(resolveMessage(error)));
     }
   }, [storeId, load]);
 
   const completeVisit = useCallback(async (visitId: string, input: DshCompleteVisitInput) => {
     setActionState(visitActionSubmittingState());
+    const context = buildFieldMutationContext("complete-visit", [visitId]);
     try {
-      const visit = await completeFieldVisit(visitId, input);
+      const visit = await completeFieldVisit(visitId, input, context);
       setActionState(visitActionSuccessState(visit));
       await load();
-    } catch (err) {
-      setActionState(visitActionErrorState(resolveMessage(err)));
+    } catch (error) {
+      try {
+        const queued = await enqueueIfOffline(error, "complete_visit", { visitId, input }, context);
+        if (queued) {
+          setActionState(visitActionQueuedState(queued.operationId, "تم حفظ إتمام الزيارة للمزامنة عند عودة الاتصال."));
+          return;
+        }
+      } catch (queueError) {
+        setActionState(visitActionErrorState(resolveMessage(queueError)));
+        return;
+      }
+      setActionState(visitActionErrorState(resolveMessage(error)));
     }
   }, [load]);
 
@@ -91,8 +141,8 @@ export function useFieldChecklistController(visitId: string, authKind = "unauthe
     try {
       const checks = await fetchVisitChecks(visitId);
       setChecklistState(checklistSuccessState(checks));
-    } catch (err) {
-      setChecklistState(checklistErrorState(resolveMessage(err)));
+    } catch (error) {
+      setChecklistState(checklistErrorState(resolveMessage(error)));
     }
   }, [visitId]);
 
@@ -102,13 +152,27 @@ export function useFieldChecklistController(visitId: string, authKind = "unauthe
 
   const submitCheck = useCallback(async (input: DshUpsertCheckInput) => {
     setCheckActionState(checkActionSubmittingState());
+    const context = buildFieldMutationContext(
+      "upsert-check",
+      [visitId, input.checkType, input.status, input.evidenceUrl ?? "", input.notes ?? ""],
+    );
     try {
-      const check = await upsertReadinessCheck(visitId, input);
+      const check = await upsertReadinessCheck(visitId, input, context);
       setCheckActionState(checkActionSuccessState(check));
       await load();
       return true;
-    } catch (err) {
-      setCheckActionState(checkActionErrorState(resolveMessage(err)));
+    } catch (error) {
+      try {
+        const queued = await enqueueIfOffline(error, "upsert_readiness_check", { visitId, input }, context);
+        if (queued) {
+          setCheckActionState(checkActionQueuedState(queued.operationId, "تم حفظ نتيجة التحقق للمزامنة عند عودة الاتصال."));
+          return true;
+        }
+      } catch (queueError) {
+        setCheckActionState(checkActionErrorState(resolveMessage(queueError)));
+        return false;
+      }
+      setCheckActionState(checkActionErrorState(resolveMessage(error)));
       return false;
     }
   }, [visitId, load]);
@@ -127,8 +191,8 @@ export function useFieldEscalationController(authKind = "unauthenticated") {
     try {
       const escalations = await fetchOperatorEscalations(statusFilter);
       setListState(escalations.length === 0 ? escalationEmptyState() : escalationSuccessState(escalations));
-    } catch (err) {
-      setListState(escalationErrorState(resolveMessage(err)));
+    } catch (error) {
+      setListState(escalationErrorState(resolveMessage(error)));
     }
   }, []);
 
@@ -138,12 +202,26 @@ export function useFieldEscalationController(authKind = "unauthenticated") {
 
   const raiseEscalation = useCallback(async (storeId: string, input: DshCreateEscalationInput) => {
     setActionState(escalationActionSubmittingState());
+    const context = buildFieldMutationContext(
+      "create-escalation",
+      [storeId, input.visitId ?? "", input.severity, input.category, input.description],
+    );
     try {
-      const escalation = await createReadinessEscalation(storeId, input);
+      const escalation = await createReadinessEscalation(storeId, input, context);
       setActionState(escalationActionSuccessState(escalation));
       return true;
-    } catch (err) {
-      setActionState(escalationActionErrorState(resolveMessage(err)));
+    } catch (error) {
+      try {
+        const queued = await enqueueIfOffline(error, "create_escalation", { storeId, input }, context);
+        if (queued) {
+          setActionState(escalationActionQueuedState(queued.operationId, "تم حفظ التصعيد للمزامنة عند عودة الاتصال."));
+          return true;
+        }
+      } catch (queueError) {
+        setActionState(escalationActionErrorState(resolveMessage(queueError)));
+        return false;
+      }
+      setActionState(escalationActionErrorState(resolveMessage(error)));
       return false;
     }
   }, []);
@@ -153,8 +231,8 @@ export function useFieldEscalationController(authKind = "unauthenticated") {
     try {
       const escalation = await updateEscalation(escalationId, input);
       setActionState(escalationActionSuccessState(escalation));
-    } catch (err) {
-      setActionState(escalationActionErrorState(resolveMessage(err)));
+    } catch (error) {
+      setActionState(escalationActionErrorState(resolveMessage(error)));
     }
   }, []);
 
@@ -171,8 +249,8 @@ function usePartnerOnboardingStatusController(storeId: string, authKind = "unaut
     try {
       const status = await fetchPartnerOnboardingStatus(storeId);
       setState(onboardingStatusSuccessState(status));
-    } catch (err) {
-      setState(onboardingStatusErrorState(resolveMessage(err)));
+    } catch (error) {
+      setState(onboardingStatusErrorState(resolveMessage(error)));
     }
   }, [storeId]);
 
@@ -191,8 +269,8 @@ export function useFieldWorkQueueController(authKind = "unauthenticated") {
     try {
       const queue = await fetchFieldWorkQueue();
       setState(workQueueSuccessState(queue));
-    } catch (err) {
-      setState(workQueueErrorState(resolveMessage(err)));
+    } catch (error) {
+      setState(workQueueErrorState(resolveMessage(error)));
     }
   }, []);
 
@@ -233,10 +311,9 @@ export function useFieldVerificationController(
         setState({ kind: "error", message: "لم يتم إيجاد الزيارة المحددة" });
         return;
       }
-      const canVerify = visit.status === "complete";
-      setState({ kind: "success", visit, checks, canVerify });
-    } catch (err) {
-      setState({ kind: "error", message: resolveMessage(err) });
+      setState({ kind: "success", visit, checks, canVerify: visit.status === "complete" });
+    } catch (error) {
+      setState({ kind: "error", message: resolveMessage(error) });
     }
   }, [storeId, visitId]);
 
