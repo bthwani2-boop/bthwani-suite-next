@@ -7,6 +7,7 @@ export type MarketingMainTabId =
   | "homepage-promos"
   | "campaigns"
   | "partner-offers"
+  | "coupons"
   | "loyalty"
   | "subscriptions"
   | "signals-measurement";
@@ -23,6 +24,7 @@ export const MARKETING_MAIN_TABS: readonly MarketingMainTabMeta[] = [
   { id: "homepage-promos", label: "بروموهات الرئيسية" },
   { id: "campaigns", label: "الحملات" },
   { id: "partner-offers", label: "عروض الشركاء" },
+  { id: "coupons", label: "الكوبونات" },
   { id: "loyalty", label: "الولاء" },
   { id: "subscriptions", label: "الاشتراكات" },
   { id: "signals-measurement", label: "الإشارات والقياس" },
