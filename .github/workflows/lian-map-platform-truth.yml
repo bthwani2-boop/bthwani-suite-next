@@ -1,0 +1,144 @@
+name: Lian Governed Map and Platform Policy Truth
+
+on:
+  push:
+    branches: [lian]
+    paths:
+      - "core/providers/backend/**"
+      - "core/providers/contracts/**"
+      - "core/providers/clients/**"
+      - "services/dsh/backend/internal/mapproviders/**"
+      - "services/dsh/backend/internal/servicearea/**"
+      - "services/dsh/backend/internal/platformpolicies/**"
+      - "services/dsh/backend/internal/http/client_maps.go"
+      - "services/dsh/backend/internal/http/platform_operational_policies.go"
+      - "services/dsh/backend/internal/http/platformpolicies.go"
+      - "services/dsh/backend/internal/http/catalog_unified_routes.go"
+      - "services/dsh/contracts/dsh.client-map.openapi.yaml"
+      - "services/dsh/contracts/dsh.platform-policies.openapi.yaml"
+      - "services/dsh/contracts/contract-registry.ts"
+      - "services/dsh/capability-map.extensions.ts"
+      - "services/dsh/frontend/shared/client-map/**"
+      - "services/dsh/frontend/shared/platform/**"
+      - "services/dsh/frontend/app-client/account/AddressLocationScreen.tsx"
+      - "services/dsh/frontend/control-panel/platform/**"
+      - "apps/control-panel/runtime/src/app/dsh/platform/**"
+      - "apps/control-panel/runtime/src/shell/useDshNavigation.ts"
+      - "contracts/master.openapi.yaml"
+      - "tools/guards/maps/map-platform-truth-gate.mjs"
+      - "tools/guards/backend-api-binding-gate.mjs"
+      - "tools/guards/extract_routes.go"
+      - ".github/workflows/lian-map-platform-truth.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lian-map-platform-truth-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract-and-surface-truth:
+    name: Contracts, routes, clients, and surface truth
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Setup governed workspace
+        uses: ./.github/actions/setup-node-workspace
+
+      - name: Verify governed map and platform markers
+        run: node tools/guards/maps/map-platform-truth-gate.mjs
+
+      - name: Verify backend contract and route congruence
+        run: pnpm run guard:backend-api-binding
+
+      - name: Verify DSH capability and manifest congruence
+        run: pnpm run guard:service-manifest-drift
+
+      - name: Verify Providers generated client drift
+        shell: bash
+        run: |
+          set -euo pipefail
+          output="$(mktemp)"
+          trap 'rm -f "$output"' EXIT
+          pnpm exec openapi-typescript core/providers/contracts/providers.openapi.yaml -o "$output"
+          cmp "$output" core/providers/clients/generated/providers-api.ts
+
+      - name: Typecheck affected workspace
+        run: pnpm run typecheck
+
+  go-verification:
+    name: Go verification — ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Providers
+            directory: core/providers/backend
+            go_mod: core/providers/backend/go.mod
+            go_sum: core/providers/backend/go.sum
+          - name: DSH
+            directory: services/dsh/backend
+            go_mod: services/dsh/backend/go.mod
+            go_sum: services/dsh/backend/go.sum
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: ${{ matrix.go_mod }}
+          cache: true
+          cache-dependency-path: ${{ matrix.go_sum }}
+
+      - name: Verify formatting
+        working-directory: ${{ matrix.directory }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          files="$(gofmt -l .)"
+          test -z "$files" || {
+            printf 'Unformatted files:\n%s\n' "$files"
+            exit 1
+          }
+
+      - name: Vet
+        working-directory: ${{ matrix.directory }}
+        run: go vet ./...
+
+      - name: Test
+        working-directory: ${{ matrix.directory }}
+        run: go test ./... -count=1
+
+      - name: Build
+        working-directory: ${{ matrix.directory }}
+        run: go build ./...
+
+  result:
+    name: Lian Governed Map and Platform Policy Truth result
+    if: always()
+    needs: [contract-and-surface-truth, go-verification]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every closure job to pass
+        env:
+          CONTRACT_RESULT: ${{ needs.contract-and-surface-truth.result }}
+          GO_RESULT: ${{ needs.go-verification.result }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$CONTRACT_RESULT" = success
+          test "$GO_RESULT" = success
