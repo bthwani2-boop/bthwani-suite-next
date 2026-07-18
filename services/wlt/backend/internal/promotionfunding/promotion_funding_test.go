@@ -21,7 +21,7 @@ func TestValidateReserve(t *testing.T) {
 	}
 
 	tests := []struct {
-		name  string
+		name   string
 		mutate func(*ReserveInput)
 	}{
 		{name: "split mismatch", mutate: func(input *ReserveInput) { input.TotalDiscountMinorUnits = 999 }},

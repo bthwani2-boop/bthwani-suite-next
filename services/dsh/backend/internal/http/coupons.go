@@ -137,7 +137,7 @@ func (s *protectedStoreServer) handleCreateCoupon(w http.ResponseWriter, r *http
 			MaxDiscountMinorUnits: body.MaxDiscountMinorUnits, MinSubtotalMinorUnits: body.MinSubtotalMinorUnits,
 			GlobalUsageLimit: body.GlobalUsageLimit, PerClientUsageLimit: body.PerClientUsageLimit,
 			EligibleFulfillmentModes: body.EligibleFulfillmentModes,
-			StartsAt: startsAt, EndsAt: endsAt, ActorID: actor.ID,
+			StartsAt:                 startsAt, EndsAt: endsAt, ActorID: actor.ID,
 		},
 		FundingSource: body.FundingSource, PlatformShareBPS: body.PlatformShareBPS,
 		FundingPartnerID: couponOptionalString(body.FundingPartnerID),
