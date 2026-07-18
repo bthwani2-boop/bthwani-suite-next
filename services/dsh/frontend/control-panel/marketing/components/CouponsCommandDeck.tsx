@@ -1,12 +1,93 @@
 "use client";
 
-import { useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { colorRoles } from "@bthwani/ui-kit";
 import {
   useCouponsController,
   type CouponDiscountType,
+  type CouponFundingPolicy,
+  type CouponFundingSource,
   type CouponRecord,
 } from "../../../shared/marketing";
+
+type FundingEditorProps = {
+  readonly coupon: CouponRecord;
+  readonly policy?: CouponFundingPolicy;
+  readonly loading: boolean;
+  readonly onSave: (
+    coupon: CouponRecord,
+    payload: {
+      readonly fundingSource: CouponFundingSource;
+      readonly platformShareBps: number;
+      readonly fundingPartnerId?: string;
+    },
+  ) => Promise<boolean>;
+};
+
+function CouponFundingEditor({ coupon, policy, loading, onSave }: FundingEditorProps) {
+  const [source, setSource] = useState<CouponFundingSource>(policy?.fundingSource ?? "platform");
+  const [platformPercent, setPlatformPercent] = useState(
+    String(Math.round((policy?.platformShareBps ?? 10000) / 100)),
+  );
+  const [partnerId, setPartnerId] = useState(policy?.fundingPartnerId ?? "");
+
+  useEffect(() => {
+    setSource(policy?.fundingSource ?? "platform");
+    setPlatformPercent(String(Math.round((policy?.platformShareBps ?? 10000) / 100)));
+    setPartnerId(policy?.fundingPartnerId ?? "");
+  }, [policy]);
+
+  const save = async () => {
+    const percent = source === "platform" ? 100 : source === "partner" ? 0 : Number(platformPercent);
+    if (!Number.isFinite(percent) || percent < 0 || percent > 100) return;
+    if ((source === "partner" || source === "shared") && (!coupon.storeId || !partnerId.trim())) return;
+    await onSave(coupon, {
+      fundingSource: source,
+      platformShareBps: Math.round(percent * 100),
+      ...(source === "platform" ? {} : { fundingPartnerId: partnerId.trim() }),
+    });
+  };
+
+  const disabled = loading || coupon.status === "active" || coupon.status === "archived";
+  return (
+    <div style={styles.fundingEditor}>
+      <strong style={styles.fundingTitle}>تمويل الخصم</strong>
+      <select
+        value={source}
+        disabled={disabled}
+        onChange={(event) => setSource(event.target.value as CouponFundingSource)}
+        style={styles.input}
+      >
+        <option value="platform">المنصة 100%</option>
+        <option value="partner">الشريك 100%</option>
+        <option value="shared">تمويل مشترك</option>
+      </select>
+      {source === "shared" ? (
+        <input
+          value={platformPercent}
+          disabled={disabled}
+          onChange={(event) => setPlatformPercent(event.target.value)}
+          inputMode="decimal"
+          placeholder="نسبة المنصة %"
+          style={styles.input}
+        />
+      ) : null}
+      {source !== "platform" ? (
+        <input
+          value={partnerId}
+          disabled={disabled}
+          onChange={(event) => setPartnerId(event.target.value)}
+          placeholder="معرف الشريك الممول"
+          style={styles.input}
+        />
+      ) : null}
+      <button type="button" disabled={disabled} onClick={() => void save()} style={styles.secondary}>
+        حفظ التمويل
+      </button>
+      {coupon.status === "active" ? <small style={styles.muted}>أوقف الكوبون قبل تغيير التمويل.</small> : null}
+    </div>
+  );
+}
 
 export function CouponsCommandDeck() {
   const controller = useCouponsController("authenticated");
@@ -19,6 +100,9 @@ export function CouponsCommandDeck() {
   const [maxDiscountYer, setMaxDiscountYer] = useState("0");
   const [globalLimit, setGlobalLimit] = useState("0");
   const [clientLimit, setClientLimit] = useState("1");
+  const [fundingSource, setFundingSource] = useState<CouponFundingSource>("platform");
+  const [platformSharePercent, setPlatformSharePercent] = useState("50");
+  const [fundingPartnerId, setFundingPartnerId] = useState("");
 
   const createDraft = async () => {
     const discount = Number(discountValue);
@@ -26,14 +110,24 @@ export function CouponsCommandDeck() {
     const maxDiscount = Number(maxDiscountYer);
     const totalLimit = Number(globalLimit);
     const perClient = Number(clientLimit);
+    const platformPercent = fundingSource === "platform"
+      ? 100
+      : fundingSource === "partner"
+        ? 0
+        : Number(platformSharePercent);
     if (!nameAr.trim() || !code.trim() || !Number.isFinite(discount) || discount <= 0 ||
         !Number.isFinite(minSubtotal) || minSubtotal < 0 || !Number.isFinite(maxDiscount) || maxDiscount < 0 ||
-        !Number.isInteger(totalLimit) || totalLimit < 0 || !Number.isInteger(perClient) || perClient <= 0) return;
+        !Number.isInteger(totalLimit) || totalLimit < 0 || !Number.isInteger(perClient) || perClient <= 0 ||
+        !Number.isFinite(platformPercent) || platformPercent < 0 || platformPercent > 100 ||
+        ((fundingSource === "partner" || fundingSource === "shared") && (!storeId.trim() || !fundingPartnerId.trim()))) return;
 
     const succeeded = await controller.create({
       nameAr: nameAr.trim(),
       code: code.trim(),
       ...(storeId.trim() ? { storeId: storeId.trim() } : {}),
+      fundingSource,
+      platformShareBps: Math.round(platformPercent * 100),
+      ...(fundingSource === "platform" ? {} : { fundingPartnerId: fundingPartnerId.trim() }),
       discountType,
       ...(discountType === "percent"
         ? { discountPercent: discount, fixedDiscountMinorUnits: 0 }
@@ -48,6 +142,9 @@ export function CouponsCommandDeck() {
       setNameAr("");
       setCode("");
       setStoreId("");
+      setFundingSource("platform");
+      setPlatformSharePercent("50");
+      setFundingPartnerId("");
     }
   };
 
@@ -56,13 +153,16 @@ export function CouponsCommandDeck() {
   };
 
   const coupons = controller.state.kind === "success" ? controller.state.coupons : [];
+  const fundingPolicies = controller.state.kind === "success" || controller.state.kind === "empty"
+    ? controller.state.fundingPolicies
+    : {};
 
   return (
     <section dir="rtl" style={styles.root}>
       <div style={styles.header}>
         <div>
           <h3 style={styles.title}>الكوبونات التشغيلية</h3>
-          <p style={styles.muted}>الكود يُخزن كملخص مشفر، ويُطبق على المبلغ السيادي داخل checkout قبل WLT.</p>
+          <p style={styles.muted}>الكود مشفر، والخصم يُحسب داخل checkout، وتمويله يُحجز ويُلتزم ويُعكس في WLT.</p>
         </div>
         <button type="button" onClick={() => void controller.reload()} style={styles.secondary}>إعادة التحميل</button>
       </div>
@@ -71,6 +171,17 @@ export function CouponsCommandDeck() {
         <input value={nameAr} onChange={(event) => setNameAr(event.target.value)} placeholder="اسم الكوبون" style={styles.input} />
         <input value={code} onChange={(event) => setCode(event.target.value.toUpperCase())} placeholder="الكود — يظهر مرة واحدة" style={styles.input} />
         <input value={storeId} onChange={(event) => setStoreId(event.target.value)} placeholder="معرف المتجر — فارغ = عام" style={styles.input} />
+        <select value={fundingSource} onChange={(event) => setFundingSource(event.target.value as CouponFundingSource)} style={styles.input}>
+          <option value="platform">تمويل المنصة</option>
+          <option value="partner">تمويل الشريك</option>
+          <option value="shared">تمويل مشترك</option>
+        </select>
+        {fundingSource === "shared" ? (
+          <input value={platformSharePercent} onChange={(event) => setPlatformSharePercent(event.target.value)} inputMode="decimal" placeholder="نسبة المنصة %" style={styles.input} />
+        ) : null}
+        {fundingSource !== "platform" ? (
+          <input value={fundingPartnerId} onChange={(event) => setFundingPartnerId(event.target.value)} placeholder="معرف الشريك الممول" style={styles.input} />
+        ) : null}
         <select value={discountType} onChange={(event) => setDiscountType(event.target.value as CouponDiscountType)} style={styles.input}>
           <option value="percent">نسبة مئوية</option>
           <option value="fixed">مبلغ ثابت</option>
@@ -96,32 +207,46 @@ export function CouponsCommandDeck() {
       {controller.state.kind === "empty" ? <p style={styles.muted}>لا توجد كوبونات حتى الآن.</p> : null}
 
       <div style={styles.list}>
-        {coupons.map((coupon) => (
-          <article key={coupon.id} style={styles.card}>
-            <div>
-              <strong>{coupon.nameAr}</strong>
-              <p style={styles.muted}>آخر أربعة: {coupon.codeLast4} · الحالة: {coupon.status} · الإصدار: {coupon.version}</p>
-              <p style={styles.muted}>
-                {coupon.discountType === "percent"
-                  ? `خصم ${coupon.discountPercent}%`
-                  : `خصم ${(coupon.fixedDiscountMinorUnits / 100).toLocaleString("ar")} ر.ي`}
-                {coupon.storeId ? ` · متجر ${coupon.storeId}` : " · عام"}
-              </p>
-              <p style={styles.muted}>حد العميل: {coupon.perClientUsageLimit} · الحد الإجمالي: {coupon.globalUsageLimit || "غير محدود"}</p>
-            </div>
-            <div style={styles.actions}>
-              {coupon.status === "draft" || coupon.status === "paused" ? (
-                <button type="button" disabled={controller.mutationLoading} onClick={() => void setStatus(coupon, "active")} style={styles.primary}>اعتماد وتفعيل</button>
-              ) : null}
-              {coupon.status === "active" ? (
-                <button type="button" disabled={controller.mutationLoading} onClick={() => void setStatus(coupon, "paused")} style={styles.secondary}>إيقاف</button>
-              ) : null}
-              {coupon.status !== "archived" ? (
-                <button type="button" disabled={controller.mutationLoading} onClick={() => void setStatus(coupon, "archived")} style={styles.secondary}>أرشفة</button>
-              ) : null}
-            </div>
-          </article>
-        ))}
+        {coupons.map((coupon) => {
+          const policy = fundingPolicies[coupon.id];
+          return (
+            <article key={coupon.id} style={styles.card}>
+              <div style={styles.details}>
+                <strong>{coupon.nameAr}</strong>
+                <p style={styles.muted}>آخر أربعة: {coupon.codeLast4} · الحالة: {coupon.status} · الإصدار: {coupon.version}</p>
+                <p style={styles.muted}>
+                  {coupon.discountType === "percent"
+                    ? `خصم ${coupon.discountPercent}%`
+                    : `خصم ${(coupon.fixedDiscountMinorUnits / 100).toLocaleString("ar")} ر.ي`}
+                  {coupon.storeId ? ` · متجر ${coupon.storeId}` : " · عام"}
+                </p>
+                <p style={styles.muted}>حد العميل: {coupon.perClientUsageLimit} · الحد الإجمالي: {coupon.globalUsageLimit || "غير محدود"}</p>
+                <p style={styles.muted}>
+                  التمويل: {policy?.fundingSource ?? "غير محمّل"}
+                  {policy ? ` · المنصة ${(policy.platformShareBps / 100).toLocaleString("ar")}%` : ""}
+                  {policy?.fundingPartnerId ? ` · الشريك ${policy.fundingPartnerId}` : ""}
+                </p>
+                <CouponFundingEditor
+                  coupon={coupon}
+                  policy={policy}
+                  loading={controller.mutationLoading}
+                  onSave={controller.update}
+                />
+              </div>
+              <div style={styles.actions}>
+                {coupon.status === "draft" || coupon.status === "paused" ? (
+                  <button type="button" disabled={controller.mutationLoading} onClick={() => void setStatus(coupon, "active")} style={styles.primary}>اعتماد وتفعيل</button>
+                ) : null}
+                {coupon.status === "active" ? (
+                  <button type="button" disabled={controller.mutationLoading} onClick={() => void setStatus(coupon, "paused")} style={styles.secondary}>إيقاف</button>
+                ) : null}
+                {coupon.status !== "archived" ? (
+                  <button type="button" disabled={controller.mutationLoading} onClick={() => void setStatus(coupon, "archived")} style={styles.secondary}>أرشفة</button>
+                ) : null}
+              </div>
+            </article>
+          );
+        })}
       </div>
     </section>
   );
@@ -141,5 +266,8 @@ const styles: Record<string, CSSProperties> = {
   code: { fontSize: "1.1rem", fontWeight: 800, letterSpacing: "0.12rem" },
   list: { display: "grid", gap: "0.6rem" },
   card: { display: "flex", justifyContent: "space-between", gap: "1rem", padding: "0.9rem", border: `1px solid ${colorRoles.borderSubtle}`, borderRadius: "0.7rem", background: colorRoles.surfaceBase },
+  details: { flex: 1, minWidth: 0 },
   actions: { display: "flex", flexWrap: "wrap", gap: "0.45rem", alignItems: "center" },
+  fundingEditor: { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))", gap: "0.45rem", alignItems: "center", marginTop: "0.65rem" },
+  fundingTitle: { gridColumn: "1 / -1", fontSize: "0.82rem" },
 };
