@@ -1,0 +1,71 @@
+name: Lian Operational Policy UI Truth
+
+on:
+  push:
+    branches: [lian]
+    paths:
+      - "services/dsh/frontend/control-panel/platform/PlatformPoliciesScreen.tsx"
+      - "services/dsh/frontend/control-panel/platform/OperationalPolicyGovernanceSection.tsx"
+      - "services/dsh/frontend/control-panel/platform/ServiceAreaGovernanceSection.tsx"
+      - "services/dsh/frontend/control-panel/platform/StoreOnboardingFeePolicySection.tsx"
+      - "services/dsh/frontend/shared/platform/**"
+      - "services/dsh/frontend/shared/client-map/**"
+      - "apps/control-panel/runtime/src/app/dsh/platform/policies/page.tsx"
+      - "apps/control-panel/runtime/src/shell/useDshNavigation.ts"
+      - "tools/guards/platform/operational-policy-ui-truth-gate.mjs"
+      - ".github/workflows/lian-operational-policy-ui-truth.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lian-operational-policy-ui-truth-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify operational policy UI truth
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Setup governed workspace
+        uses: ./.github/actions/setup-node-workspace
+
+      - name: Run operational policy UI guard
+        run: node tools/guards/platform/operational-policy-ui-truth-gate.mjs
+
+      - name: Verify frontend feature binding
+        run: pnpm run guard:frontend-feature-binding
+
+      - name: Verify UI Kit and accessibility contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm run guard:ui-kit-boundary
+          pnpm run guard:ui-provider
+          pnpm run guard:icon-contract
+          pnpm run guard:a11y
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: Build control panel
+        run: pnpm --dir apps/control-panel/runtime build
+
+  result:
+    name: Lian Operational Policy UI Truth result
+    if: always()
+    needs: [verify]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require operational policy UI to pass
+        env:
+          RESULT: ${{ needs.verify.result }}
+        run: test "$RESULT" = success
