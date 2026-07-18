@@ -1,13 +1,13 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "repositoryMode": "REMOTE_ONLY",
   "repository": "bthwani2-boop/bthwani-suite-next",
   "targetBranch": "lian",
   "initialObservedCommitSha": "dd771bff58e119b4b764df0045a9304930c60225",
-  "lastPinnedCommitSha": "017cc3b4aba7e2b41b07fc0077b942670f579c60",
+  "lastPinnedCommitSha": "ebfc5eceb92d96c6c24d498e295fed7cdb9ad5d2",
   "mode": "CODE_BASED_LEAN_HIGH_RISK_MULTI_SURFACE",
   "canonicalDecision": "FIX_REQUIRED",
-  "activePhase": "P1_CLIENT_COMMERCE_AND_FINANCIAL_HANDOFF",
+  "activePhase": "P2_SAME_COMMIT_RUNTIME_AND_MULTI_SURFACE_CLOSURE",
   "closureTarget": "CLOSED_WITH_EVIDENCE",
   "scope": {
     "primaryServices": ["dsh", "wlt"],
@@ -74,12 +74,45 @@
       ]
     },
     {
-      "id": "P1-WLT-READINESS",
-      "state": "TRUTH_RECONCILED_FIX_REQUIRED",
+      "id": "P1-CLIENT-ADDRESS",
+      "state": "IMPLEMENTED_NEEDS_MAP_GOVERNANCE_AND_SAME_COMMIT_RUNTIME",
       "outcomes": [
-        "Separated implementation readiness from same-commit runtime evidence",
-        "Kept production provider mutations fail-closed",
-        "Removed unsupported claims that mutation journeys were approved"
+        "Added authenticated client-address OpenAPI contract",
+        "Added PostgreSQL ownership, default uniqueness, soft deletion, optimistic concurrency, idempotency, and audit events",
+        "Added protected CRUD and default-address handlers",
+        "Bound address selection to serviceability and checkout",
+        "Added address and checkout database tests and workflow"
+      ]
+    },
+    {
+      "id": "P1-WLT-MUTATION-IDEMPOTENCY",
+      "state": "IMPLEMENTED_NEEDS_GO_TESTS_AND_INTEGRATED_JOURNEYS",
+      "outcomes": [
+        "Added fail-closed shared mutation headers",
+        "Added deterministic idempotency-key generation",
+        "Added tests for delivery, field commission, actor finance, settlement, commercial, promotion-funding, and subscription mutations",
+        "Kept production provider mutations fail-closed"
+      ]
+    },
+    {
+      "id": "P1-FIELD-OFFLINE-AND-PAYOUT",
+      "state": "IMPLEMENTED_NEEDS_DEVICE_RUNTIME_AND_READBACK",
+      "outcomes": [
+        "Activated the field offline queue for visits, checks, completion, and escalations",
+        "Reused mutation correlation and idempotency context during synchronization",
+        "Removed synthetic visits and invalid location success",
+        "Persisted payout attempts across restart and blocked requests above balance",
+        "Bound account gates to Workforce states"
+      ]
+    },
+    {
+      "id": "P1-GOVERNED-SUPPORT",
+      "state": "IMPLEMENTED_NEEDS_CONTRACT_DATABASE_RUNTIME_AND_MEDIA_SLA_EVIDENCE",
+      "outcomes": [
+        "Registered governed client, partner, captain, and operator support operations",
+        "Added ownership, permission, ticket-message, transition, idempotency, correlation, and event-audit paths",
+        "Bound partner support navigation to a real support surface",
+        "Kept Media evidence and governed SLA policy outside the closure claim"
       ]
     }
   ],
@@ -89,29 +122,42 @@
     "dshScreensReady": false,
     "dshTechnicalRuntimeReady": false,
     "dshRealExperienceReady": false,
+    "generatedClientSameCommitVerified": false,
     "wltJourneyRuntimeVerified": false,
     "wltProductionMutationsReady": false,
     "sameCommitCiProven": false,
     "independentApprovalsProven": false,
     "branchProtectionProven": false,
-    "clientAddressPersistenceImplemented": false,
+    "clientAddressContractImplemented": true,
+    "clientAddressPersistenceImplemented": true,
+    "clientAddressCheckoutBindingImplemented": true,
     "clientMapProviderIntegrated": false,
-    "dshWltMutationIdempotencyFullyVerified": false
+    "clientAddressPiiGovernanceClosed": false,
+    "dshWltMutationIdempotencyImplemented": true,
+    "dshWltMutationIdempotencyFullyVerified": false,
+    "governedSupportImplemented": true,
+    "governedSupportRuntimeVerified": false,
+    "allSurfaceActionsAudited": false
   },
   "nextActions": [
-    "Obtain and inspect same-commit GitHub Actions jobs and logs for the current lian SHA",
-    "Fix any typecheck, build, contract, guard, Go, database, or runtime failures reported by those jobs",
-    "Add a governed authenticated client-address contract and map-provider boundary before re-enabling address persistence",
-    "Close and test idempotency headers for every DSH-to-WLT financial mutation",
-    "Run DSH PostgreSQL migrations and WLT migrations from clean databases and supported upgrade baselines",
-    "Verify checkout, COD, order, partner acceptance, dispatch, delivery, refund, commission, settlement, payout, and reconciliation journeys across required surfaces",
-    "Continue surface-by-surface removal of dead controls, local truth, placeholders, and unverified runtime claims"
+    "Obtain and inspect same-commit GitHub Actions job IDs and logs for the current lian SHA and fix every failure",
+    "Run DSH, WLT, Platform Control, Identity, and Workforce migrations from clean databases and supported upgrade baselines",
+    "Execute generated-client, shard-subset, manual-adapter, route, handler, and consumer congruence checks",
+    "Integrate governed map search, reverse geocoding, coordinate-to-service-area validation, provider fallback, secret management, and address PII retention/deletion",
+    "Verify address CRUD, ownership isolation, retry, timeout, restart, serviceability, checkout, and order-snapshot readback",
+    "Verify duplicate, replay, retry, timeout, out-of-order, and partial-failure behavior for every DSH-to-WLT mutation",
+    "Run client, partner, captain, field, support, notifications, special-request, and finance journeys across all required surfaces",
+    "Complete the UI action inventory and eliminate every dead control, local truth, placeholder, premature success, and permission mismatch",
+    "Verify live branch protection, required checks, stale approval dismissal, and independent reviewers",
+    "Re-pin one final immutable SHA and generate the final same-commit evidence bundle"
   ],
   "claimLimits": {
     "staticDoesNotProveRuntime": true,
     "simulatorDoesNotProveProductionFinance": true,
     "documentationDoesNotProveImplementation": true,
     "implementationAuthorCannotSelfApproveProtectedStages": true,
-    "emptyCommitStatusesDoNotProveCiSuccess": true
+    "emptyCommitStatusesDoNotProveCiSuccess": true,
+    "connectorPullRequestRunsDoNotProvePushWorkflowAbsence": true,
+    "allCapabilitiesRemainFixRequiredUntilEvidencePromotion": true
   }
 }
