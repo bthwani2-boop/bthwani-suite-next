@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
-  title: BThwani WLT Commercial Benefits API
-  version: 0.3.0
-  description: WLT-owned contract for commercial products, paid subscriptions, loyalty entries, and client benefit truth.
+  title: BThwani WLT Commercial Benefits and Funding API
+  version: 0.4.0
+  description: WLT-owned contract for commercial products, subscriptions, loyalty truth, and promotion funding lifecycle.
 x-bthwani-owner: services/wlt
 x-bthwani-parent-contract: services/wlt/contracts/wlt.openapi.yaml
 x-bthwani-contract-state: CONTRACT_ACTIVE
@@ -90,10 +90,7 @@ paths:
       x-bthwani-default-enabled: false
       parameters:
         - $ref: '#/components/parameters/ServiceCallerHeader'
-        - name: Idempotency-Key
-          in: header
-          required: true
-          schema: { type: string, minLength: 1 }
+        - $ref: '#/components/parameters/IdempotencyHeader'
       requestBody:
         required: true
         content:
@@ -115,10 +112,7 @@ paths:
       x-bthwani-default-enabled: false
       parameters:
         - $ref: '#/components/parameters/ServiceCallerHeader'
-        - name: X-Correlation-ID
-          in: header
-          required: true
-          schema: { type: string, minLength: 1 }
+        - $ref: '#/components/parameters/CorrelationHeader'
       requestBody:
         required: true
         content:
@@ -131,20 +125,163 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '404': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
+  /wlt/promotion-funding/reservations:
+    post:
+      operationId: reserveWltPromotionFunding
+      tags: [WltPromotionFunding]
+      security: [{ bearerAuth: [] }]
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/ServiceCallerHeader'
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/IdempotencyHeader'
+        - $ref: '#/components/parameters/CorrelationHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PromotionFundingReserve' }
+      responses:
+        '201': { $ref: '#/components/responses/ObjectResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+  /wlt/promotion-funding/reservations/{reservationId}:
+    get:
+      operationId: getWltPromotionFundingReservation
+      tags: [WltPromotionFunding]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/ServiceCallerHeader'
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/ReservationId'
+      responses:
+        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '404': { $ref: '#/components/responses/ErrorResponse' }
+  /wlt/promotion-funding/reservations/{reservationId}/commit:
+    post:
+      operationId: commitWltPromotionFunding
+      tags: [WltPromotionFunding]
+      security: [{ bearerAuth: [] }]
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/ServiceCallerHeader'
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/ReservationId'
+        - $ref: '#/components/parameters/IdempotencyHeader'
+        - $ref: '#/components/parameters/CorrelationHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PromotionFundingCommit' }
+      responses:
+        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '404': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+  /wlt/promotion-funding/reservations/{reservationId}/release:
+    post:
+      operationId: releaseWltPromotionFunding
+      tags: [WltPromotionFunding]
+      security: [{ bearerAuth: [] }]
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/ServiceCallerHeader'
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/ReservationId'
+        - $ref: '#/components/parameters/IdempotencyHeader'
+        - $ref: '#/components/parameters/CorrelationHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PromotionFundingRelease' }
+      responses:
+        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '404': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+  /wlt/promotion-funding/reservations/{reservationId}/reverse:
+    post:
+      operationId: reverseWltPromotionFunding
+      tags: [WltPromotionFunding]
+      security: [{ bearerAuth: [] }]
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/ServiceCallerHeader'
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/ReservationId'
+        - $ref: '#/components/parameters/IdempotencyHeader'
+        - $ref: '#/components/parameters/CorrelationHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PromotionFundingReverse' }
+      responses:
+        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '404': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
 components:
   securitySchemes:
     bearerAuth: { type: http, scheme: bearer }
   parameters:
+    AuthorizationHeader:
+      name: Authorization
+      in: header
+      required: true
+      schema: { type: string, minLength: 1 }
     ServiceCallerHeader:
       name: X-Service-Caller
       in: header
       required: true
       schema: { type: string, enum: [dsh] }
+    TenantHeader:
+      name: X-Tenant-ID
+      in: header
+      required: true
+      schema: { type: string, minLength: 1 }
+    IdempotencyHeader:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 1 }
+    CorrelationHeader:
+      name: X-Correlation-ID
+      in: header
+      required: true
+      schema: { type: string, minLength: 1 }
     ProductReference:
       name: productReference
       in: path
       required: true
       schema: { type: string, minLength: 1 }
+    ReservationId:
+      name: reservationId
+      in: path
+      required: true
+      schema: { type: string, pattern: '^pfr_' }
   responses:
     ObjectResponse:
       description: Governed WLT commercial object.
@@ -185,8 +322,53 @@ components:
       properties:
         clientId: { type: string, minLength: 1 }
         productReference: { type: string, minLength: 1 }
-        paymentSessionId:
-          type: string
-          minLength: 1
-          pattern: '^wps_'
+        paymentSessionId: { type: string, minLength: 1, pattern: '^wps_' }
         subscriptionPurchaseId: { type: string, minLength: 1 }
+    PromotionFundingReserve:
+      type: object
+      additionalProperties: false
+      required:
+        - tenantId
+        - externalReference
+        - checkoutIntentId
+        - couponRedemptionId
+        - couponId
+        - clientId
+        - platformFundedMinorUnits
+        - partnerFundedMinorUnits
+        - totalDiscountMinorUnits
+        - currency
+      properties:
+        tenantId: { type: string, minLength: 1 }
+        externalReference: { type: string, minLength: 1 }
+        checkoutIntentId: { type: string, minLength: 1 }
+        couponRedemptionId: { type: string, minLength: 1 }
+        couponId: { type: string, minLength: 1 }
+        clientId: { type: string, minLength: 1 }
+        partnerId: { type: string, minLength: 1 }
+        platformFundedMinorUnits: { type: integer, format: int64, minimum: 0 }
+        partnerFundedMinorUnits: { type: integer, format: int64, minimum: 0 }
+        totalDiscountMinorUnits: { type: integer, format: int64, minimum: 1 }
+        currency: { type: string, minLength: 1 }
+    PromotionFundingCommit:
+      type: object
+      additionalProperties: false
+      required: [tenantId, orderId]
+      properties:
+        tenantId: { type: string, minLength: 1 }
+        orderId: { type: string, minLength: 1 }
+    PromotionFundingRelease:
+      type: object
+      additionalProperties: false
+      required: [tenantId, reason]
+      properties:
+        tenantId: { type: string, minLength: 1 }
+        reason: { type: string, minLength: 1 }
+    PromotionFundingReverse:
+      type: object
+      additionalProperties: false
+      required: [tenantId, orderId, reason]
+      properties:
+        tenantId: { type: string, minLength: 1 }
+        orderId: { type: string, minLength: 1 }
+        reason: { type: string, minLength: 1 }
