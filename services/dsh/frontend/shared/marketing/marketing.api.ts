@@ -9,6 +9,12 @@ import type {
   SubscriptionPlanRecord,
   SubscriptionsSummary,
 } from "./loyalty-subscriptions.types";
+import type {
+  CouponCreatePayload,
+  CouponRecord,
+  CouponUpdatePayload,
+  IssuedCoupon,
+} from "./coupons.types";
 
 const { req } = createDshRawHttpClient(resolveDshApiBaseUrl(), "mkt");
 
@@ -58,26 +64,28 @@ export const deleteTicker = (id: string) =>
   req<{ deleted: boolean }>(`/dsh/operator/marketing/tickers/${id}`, { method: "DELETE" });
 
 export type PartnerOfferWritePayload = {
-  status?: string;
-  title?: string;
-  valueLabel?: string;
-  eligibility?: string;
-  activeFromDate?: string;
-  activeToDate?: string;
-  rejectionReason?: string;
-  marginRiskNote?: string;
+  readonly status?: string;
+  readonly title?: string;
+  readonly valueLabel?: string;
+  readonly eligibility?: string;
+  readonly activeFromDate?: string;
+  readonly activeToDate?: string;
+  readonly rejectionReason?: string;
+  readonly marginRiskNote?: string;
+  readonly couponId?: string;
+  readonly expectedVersion: number;
 };
 
 export type PartnerOfferSubmitPayload = {
-  title: string;
-  partnerName?: string;
-  storeLabel?: string;
-  productId?: string;
-  productLabel?: string;
-  category?: string;
-  offerType?: string;
-  valueLabel: string;
-  eligibility?: string;
+  readonly title: string;
+  readonly partnerName?: string;
+  readonly storeLabel?: string;
+  readonly productId?: string;
+  readonly productLabel?: string;
+  readonly category?: string;
+  readonly offerType?: string;
+  readonly valueLabel: string;
+  readonly eligibility?: string;
 };
 
 export const fetchPartnerOffers = () =>
@@ -102,6 +110,19 @@ export const submitPartnerSelfOffer = (body: PartnerOfferSubmitPayload) =>
     { method: "POST", body: JSON.stringify(body) },
   );
 
+export const fetchCoupons = () =>
+  req<{ coupons: CouponRecord[] }>("/dsh/operator/marketing/coupons");
+export const createCoupon = (body: CouponCreatePayload) =>
+  req<{ issued: IssuedCoupon }>("/dsh/operator/marketing/coupons", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+export const updateCoupon = (id: string, body: CouponUpdatePayload) =>
+  req<{ coupon: CouponRecord }>(`/dsh/operator/marketing/coupons/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+
 export type LoyaltyTierCreatePayload = {
   readonly nameAr: string;
   readonly nameEn?: string;
@@ -120,13 +141,11 @@ export const fetchLoyaltyTiers = () =>
   req<{ tiers: LoyaltyTierRecord[]; summary: LoyaltyProgramSummary }>(
     "/dsh/operator/marketing/loyalty-tiers",
   );
-
 export const createLoyaltyTier = (body: LoyaltyTierCreatePayload) =>
   req<{ tier: LoyaltyTierRecord }>("/dsh/operator/marketing/loyalty-tiers", {
     method: "POST",
     body: JSON.stringify(body),
   });
-
 export const updateLoyaltyTier = (id: string, body: LoyaltyTierUpdatePayload) =>
   req<{ tier: LoyaltyTierRecord }>(`/dsh/operator/marketing/loyalty-tiers/${id}`, {
     method: "PATCH",
@@ -154,13 +173,11 @@ export const fetchSubscriptionPlans = () =>
   req<{ plans: SubscriptionPlanRecord[]; summary: SubscriptionsSummary }>(
     "/dsh/operator/marketing/subscription-plans",
   );
-
 export const createSubscriptionPlan = (body: SubscriptionPlanCreatePayload) =>
   req<{ plan: SubscriptionPlanRecord }>("/dsh/operator/marketing/subscription-plans", {
     method: "POST",
     body: JSON.stringify(body),
   });
-
 export const updateSubscriptionPlan = (id: string, body: SubscriptionPlanUpdatePayload) =>
   req<{ plan: SubscriptionPlanRecord }>(`/dsh/operator/marketing/subscription-plans/${id}`, {
     method: "PATCH",
