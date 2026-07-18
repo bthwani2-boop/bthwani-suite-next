@@ -45,9 +45,7 @@ const checks = [
   },
   {
     file: "services/dsh/frontend/app-partner/account/PartnerEntryScreen.tsx",
-    forbidden: [
-      [/state\s*=\s*["']ready["']/g, "DEFAULT_ENTRY_READY_FORBIDDEN"],
-    ],
+    forbidden: [[/state\s*=\s*["']ready["']/g, "DEFAULT_ENTRY_READY_FORBIDDEN"]],
     required: [
       '"offline"',
       '"error"',
@@ -77,17 +75,45 @@ const checks = [
     forbidden: [[/\bas\s+any\b|:\s*any\b/g, "UNSAFE_ONBOARDING_ANY_FORBIDDEN"]],
     required: ["readinessItems.map((item)"],
   },
+  {
+    file: "services/dsh/frontend/app-partner/team/PartnerTeamManagementScreen.tsx",
+    forbidden: [
+      [/Promise\.resolve\s*\(/g, "VOID_TEAM_MUTATION_SUCCESS_FORBIDDEN"],
+      [/Promise<PartnerTeamMutationResult>\s*\|\s*void/g, "OPTIONAL_TEAM_MUTATION_RESULT_FORBIDDEN"],
+      [/\bas\s+any\b/g, "UNSAFE_PARTNER_TEAM_ANY_FORBIDDEN"],
+      [/action === ["']audit-log["']/g, "AUDIT_LOG_AS_MUTATION_FORBIDDEN"],
+    ],
+    required: [
+      "Promise<PartnerTeamMutationResult>",
+      "const result = await onInviteMember(identity)",
+      "const result = await onMemberAction(member, action)",
+      "if (!result.ok)",
+      "action === \"audit-log\"",
+    ],
+  },
+  {
+    file: "services/dsh/database/migrations/dsh-058_partner_team_idempotency.sql",
+    forbidden: [],
+    required: [
+      "dsh_guard_duplicate_pending_team_invite",
+      "pg_advisory_xact_lock",
+      "dsh_guard_team_member_noop_status_update",
+      "dsh_guard_team_member_action_audit",
+      "RETURN NULL",
+    ],
+  },
+  {
+    file: "services/dsh/frontend/shared/support/partner-support.model.ts",
+    forbidden: [[/Promise\.resolve\s*\(/g, "PROMISE_RESOLVE_NAV_INTENT_FORBIDDEN"]],
+    required: ["queueMicrotask"],
+  },
 ];
 
 for (const check of checks) {
   const content = read(check.file);
   for (const [pattern, message] of check.forbidden) {
     for (const match of content.matchAll(pattern)) {
-      violations.push({
-        file: check.file,
-        line: lineNumber(content, match.index),
-        message,
-      });
+      violations.push({ file: check.file, line: lineNumber(content, match.index), message });
     }
   }
   for (const marker of check.required) {
