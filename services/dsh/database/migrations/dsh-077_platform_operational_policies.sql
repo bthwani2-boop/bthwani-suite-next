@@ -1,6 +1,6 @@
 -- dsh-077_platform_operational_policies.sql
--- Restores the DSH-owned operational policy truth consumed by the sovereign
--- control-panel surface. WLT remains the exclusive financial truth owner.
+-- Restores and upgrades the DSH-owned operational policy truth consumed by the
+-- sovereign control-panel surface. WLT remains the exclusive financial owner.
 
 BEGIN;
 
@@ -14,6 +14,9 @@ CREATE TABLE IF NOT EXISTS dsh_platform_zones (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+ALTER TABLE dsh_platform_zones ADD COLUMN IF NOT EXISTS version INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE dsh_platform_zones ADD CONSTRAINT dsh_platform_zones_version_positive CHECK (version >= 1) NOT VALID;
+ALTER TABLE dsh_platform_zones VALIDATE CONSTRAINT dsh_platform_zones_version_positive;
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_dsh_platform_zones_city_name
     ON dsh_platform_zones(lower(city_code), lower(name));
@@ -32,6 +35,9 @@ CREATE TABLE IF NOT EXISTS dsh_platform_sla_rules (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE (zone_id, category)
 );
+ALTER TABLE dsh_platform_sla_rules ADD COLUMN IF NOT EXISTS version INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE dsh_platform_sla_rules ADD CONSTRAINT dsh_platform_sla_rules_version_positive CHECK (version >= 1) NOT VALID;
+ALTER TABLE dsh_platform_sla_rules VALIDATE CONSTRAINT dsh_platform_sla_rules_version_positive;
 
 CREATE INDEX IF NOT EXISTS idx_dsh_platform_sla_rules_zone
     ON dsh_platform_sla_rules(zone_id, category);
@@ -48,9 +54,16 @@ CREATE TABLE IF NOT EXISTS dsh_platform_capacity_configs (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+ALTER TABLE dsh_platform_store_onboarding_fee_policy
+    ADD COLUMN IF NOT EXISTS version INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE dsh_platform_store_onboarding_fee_policy
+    ADD CONSTRAINT dsh_platform_store_onboarding_fee_version_positive CHECK (version >= 1) NOT VALID;
+ALTER TABLE dsh_platform_store_onboarding_fee_policy
+    VALIDATE CONSTRAINT dsh_platform_store_onboarding_fee_version_positive;
+
 CREATE TABLE IF NOT EXISTS dsh_platform_policy_events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    aggregate_type TEXT NOT NULL CHECK (aggregate_type IN ('zone', 'sla_rule', 'capacity_config')),
+    aggregate_type TEXT NOT NULL CHECK (aggregate_type IN ('zone', 'sla_rule', 'capacity_config', 'store_onboarding_fee')),
     aggregate_id TEXT NOT NULL,
     action TEXT NOT NULL CHECK (action IN ('created', 'updated', 'activated', 'deactivated')),
     actor_id TEXT NOT NULL,
