@@ -122,12 +122,32 @@ if (/INSERT INTO wlt_settlements/.test(settlementSource)) {
 }
 
 const allFiles = new Set(listFiles());
-if (allFiles.has("services/wlt/backend/internal/settlement/sovereign_settlement.go")) {
-  violations.push({
-    file: "services/wlt/backend/internal/settlement/sovereign_settlement.go",
-    line: 0,
-    message: "DUPLICATE_SETTLEMENT_IMPLEMENTATION_FORBIDDEN",
-  });
+for (const duplicatePath of [
+  "services/wlt/backend/internal/settlement/sovereign_settlement.go",
+  "services/dsh/backend/internal/wlt/settlement_client.go",
+]) {
+  if (allFiles.has(duplicatePath)) {
+    violations.push({
+      file: duplicatePath,
+      line: 0,
+      message: duplicatePath.includes("settlement_client")
+        ? "DSH_SETTLEMENT_WRITE_CLIENT_FORBIDDEN_WHILE_SOURCE_BLOCKED"
+        : "DUPLICATE_SETTLEMENT_IMPLEMENTATION_FORBIDDEN",
+    });
+  }
+}
+
+for (const file of listCodeFiles()) {
+  if (!file.startsWith("services/dsh/backend/")) continue;
+  const content = read(file);
+  const match = /FinanceWriteSettlement|["`]\/wlt\/settlements["`][\s\S]{0,160}(?:POST|MethodPost)/.exec(content);
+  if (match) {
+    violations.push({
+      file,
+      line: lineNumber(content, match.index),
+      message: "DSH_SETTLEMENT_CREATE_CALL_FORBIDDEN_WHILE_OPERATION_BLOCKED",
+    });
+  }
 }
 
 const wltServerFile = "services/wlt/backend/internal/http/server.go";
