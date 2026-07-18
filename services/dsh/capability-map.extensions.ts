@@ -1,5 +1,23 @@
 import type { DshCapability } from "./capability-map";
 
+/**
+ * Adds operations and surface coverage to an existing canonical DSH capability.
+ *
+ * Extension entries are not standalone capabilities and must not be interpreted
+ * as a second owner for the capability id. The canonical capability identity,
+ * lifecycle, and Product Truth remain owned by `capability-map.ts`.
+ */
+export type DshCapabilityExtension = {
+  readonly id: DshCapability["id"];
+  readonly status: DshCapability["status"];
+  readonly contractOperations: readonly string[];
+  readonly surfaces: readonly string[];
+  readonly runtimeBound: boolean;
+  readonly closureState: DshCapability["closureState"];
+  readonly topic?: DshCapability["topic"];
+  readonly topicScope: readonly string[];
+};
+
 export const DSH_CAPABILITY_MAP_EXTENSIONS = [
   {
     id: "dsh.field.finance",
@@ -77,4 +95,4 @@ export const DSH_CAPABILITY_MAP_EXTENSIONS = [
     topic: "commerce",
     topicScope: ["partner-delivery", "pickup", "proof", "exceptions"],
   },
-] as const satisfies readonly DshCapability[];
+] as const satisfies readonly DshCapabilityExtension[];
