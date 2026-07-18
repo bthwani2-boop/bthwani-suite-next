@@ -95,4 +95,20 @@ export const DSH_CAPABILITY_MAP_EXTENSIONS = [
     topic: "commerce",
     topicScope: ["partner-delivery", "pickup", "proof", "exceptions"],
   },
+  {
+    id: "dsh.client.checkout",
+    status: "experience-fix-required",
+    contractOperations: [
+      "listDshClientAddresses",
+      "createDshClientAddress",
+      "updateDshClientAddress",
+      "deleteDshClientAddress",
+      "setDshClientDefaultAddress",
+    ],
+    surfaces: ["app-client"],
+    runtimeBound: false,
+    closureState: "FIX_REQUIRED",
+    topic: "commerce",
+    topicScope: ["client-address-book", "serviceability-address", "checkout-address"],
+  },
 ] as const satisfies readonly DshCapabilityExtension[];
