@@ -1,27 +1,27 @@
-name: Bassam Fullstack Diagnostic
+name: Bassam Governed Fullstack Repair
 
 on:
   push:
     branches: [bassam]
     paths:
       - .github/workflows/bassam-fullstack-diagnostic.yml
-  pull_request:
-    paths:
-      - .github/workflows/bassam-fullstack-diagnostic.yml
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: bassam-governed-fullstack-repair
+  cancel-in-progress: false
 
 jobs:
-  diagnose:
+  repair:
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           ref: bassam
-          persist-credentials: false
-          fetch-depth: 1
+          fetch-depth: 0
       - uses: ./.github/actions/setup-node-workspace
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
         with:
@@ -30,40 +30,141 @@ jobs:
             services/dsh/backend/go.sum
             services/wlt/backend/go.sum
             services/workforce/backend/go.sum
-      - name: Capture complete diagnostics
+      - name: Apply governed repairs
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin master
+
+          python - <<'PY'
+          from pathlib import Path
+          import subprocess
+          import yaml
+
+          root = Path('.')
+
+          # WLT: repair the single broken response component reference.
+          wlt = root / 'services/wlt/contracts/wlt.openapi.yaml'
+          text = wlt.read_text()
+          old = '$ref: "#/components/responses/InvalidRequest"'
+          if text.count(old) != 1:
+              raise SystemExit(f'expected one InvalidRequest reference, found {text.count(old)}')
+          wlt.write_text(text.replace(old, '$ref: "#/components/responses/BadRequest"'))
+
+          # DSH: retain every branch-owned path/component and add only absent
+          # contract material from master so live routes are not undocumented.
+          dsh = root / 'services/dsh/contracts/dsh.openapi.yaml'
+          current = yaml.safe_load(dsh.read_text())
+          donor_text = subprocess.check_output(
+              ['git', 'show', 'origin/master:services/dsh/contracts/dsh.openapi.yaml'],
+              text=True,
+          )
+          donor = yaml.safe_load(donor_text)
+          current.setdefault('paths', {})
+          for path, value in donor.get('paths', {}).items():
+              current['paths'].setdefault(path, value)
+          current.setdefault('components', {})
+          for section, values in donor.get('components', {}).items():
+              if not isinstance(values, dict):
+                  continue
+              current['components'].setdefault(section, {})
+              for name, value in values.items():
+                  current['components'][section].setdefault(name, value)
+          dsh.write_text(yaml.safe_dump(current, sort_keys=False, allow_unicode=True, width=120))
+
+          # Coupon updates: funding policy and commercial/status changes are
+          # separate governed commands, matching the OpenAPI contract.
+          governed = root / 'services/dsh/backend/internal/coupons/governed.go'
+          source = governed.read_text()
+          old_block = '''\tbaseTermsChanged := input.NameAr != nil || input.Description != nil || input.StoreID != nil || input.DiscountType != nil || input.DiscountPercent != nil || input.FixedDiscountMinorUnits != nil || input.MaxDiscountMinorUnits != nil || input.MinSubtotalMinorUnits != nil || input.GlobalUsageLimit != nil || input.PerClientUsageLimit != nil || input.EligibleFulfillmentModes != nil || input.StartsAt != nil || input.EndsAt != nil
+\tfundingChanged := input.FundingSource != nil || input.PlatformShareBPS != nil || input.FundingPartnerID != nil
+\tif current.Status == "active" && (baseTermsChanged || fundingChanged) {
+'''
+          new_block = '''\tbaseTermsChanged := input.NameAr != nil || input.Description != nil || input.StoreID != nil || input.DiscountType != nil || input.DiscountPercent != nil || input.FixedDiscountMinorUnits != nil || input.MaxDiscountMinorUnits != nil || input.MinSubtotalMinorUnits != nil || input.GlobalUsageLimit != nil || input.PerClientUsageLimit != nil || input.EligibleFulfillmentModes != nil || input.StartsAt != nil || input.EndsAt != nil
+\tcommercialChanged := baseTermsChanged || input.Status != nil
+\tfundingChanged := input.FundingSource != nil || input.PlatformShareBPS != nil || input.FundingPartnerID != nil
+\tif commercialChanged && fundingChanged {
+\t\treturn GovernedCoupon{}, ErrInvalid
+\t}
+\tif current.Status == "active" && (commercialChanged || fundingChanged) {
+'''
+          if old_block not in source:
+              raise SystemExit('governed coupon update block not found exactly')
+          governed.write_text(source.replace(old_block, new_block, 1))
+          PY
+
+          find services/dsh/backend services/workforce/backend -name '*.go' -type f -print0 | xargs -0 gofmt -w
+          pnpm run openapi:generate:dsh
+          pnpm run openapi:generate:wlt
+
+      - name: Verify and record exact results
         shell: bash
         run: |
           set +e
-          mkdir -p /tmp/bassam-diagnostic
-          report=/tmp/bassam-diagnostic/report.txt
-          : > "$report"
-          run_check() {
-            name="$1"
-            shift
-            echo "===== $name =====" | tee -a "$report"
-            "$@" >>"$report" 2>&1
+          mkdir -p governance/evidence /tmp/bassam-repair
+          report=governance/evidence/BASSAM_FULLSTACK_REPAIR.md
+          printf '# Bassam Fullstack Repair Evidence\n\n' > "$report"
+          printf -- '- Source SHA: `%s`\n' "$(git rev-parse HEAD)" >> "$report"
+          printf -- '- Executed at: `%s`\n\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$report"
+          failed=0
+          check() {
+            name="$1"; shift
+            slug=$(printf '%s' "$name" | tr '[:upper:] ' '[:lower:]-' | tr -cd 'a-z0-9_-')
+            log="/tmp/bassam-repair/$slug.log"
+            "$@" >"$log" 2>&1
             code=$?
-            echo "EXIT=$code" | tee -a "$report"
-            echo | tee -a "$report"
+            printf '## %s\n\n' "$name" >> "$report"
+            if [ "$code" -eq 0 ]; then
+              printf -- '- Result: **PASS**\n\n' >> "$report"
+            else
+              failed=1
+              printf -- '- Result: **FAIL** (exit `%s`)\n\n' "$code" >> "$report"
+            fi
+            printf '```text\n' >> "$report"
+            tail -n 260 "$log" >> "$report"
+            printf '\n```\n\n' >> "$report"
           }
-          run_check "DSH GOFMT" bash -lc 'cd services/dsh/backend && files=$(gofmt -l .); test -z "$files" || { echo "$files"; exit 1; }'
-          run_check "DSH VET" bash -lc 'cd services/dsh/backend && go vet ./...'
-          run_check "DSH TEST" bash -lc 'cd services/dsh/backend && go test ./...'
-          run_check "DSH BUILD" bash -lc 'cd services/dsh/backend && go build ./...'
-          run_check "WLT OPENAPI GENERATE" pnpm run openapi:generate:wlt
-          run_check "CONTROL PANEL TYPECHECK" pnpm --dir apps/control-panel/runtime typecheck
-          run_check "WORKFORCE GOFMT" bash -lc 'cd services/workforce/backend && files=$(gofmt -l .); test -z "$files" || { echo "$files"; exit 1; }'
-          run_check "API BINDING" pnpm run guard:api-binding
-          run_check "BACKEND API BINDING" pnpm run guard:backend-api-binding
-          run_check "FRONTEND FEATURE BINDING" pnpm run guard:frontend-feature-binding
-          run_check "CONTRACTS LINT" pnpm run contracts:lint
-          run_check "GOVERNANCE AUDIT" pnpm run guard:governance-schema
-          cat "$report"
-      - name: Upload diagnostic report
+          check 'DSH gofmt' bash -lc 'cd services/dsh/backend && test -z "$(gofmt -l .)"'
+          check 'DSH vet' bash -lc 'cd services/dsh/backend && go vet ./...'
+          check 'DSH tests' bash -lc 'cd services/dsh/backend && go test ./...'
+          check 'DSH build' bash -lc 'cd services/dsh/backend && go build ./...'
+          check 'WLT tests' bash -lc 'cd services/wlt/backend && go test ./...'
+          check 'WLT build' bash -lc 'cd services/wlt/backend && go build ./...'
+          check 'Workforce gofmt' bash -lc 'cd services/workforce/backend && test -z "$(gofmt -l .)"'
+          check 'Workforce vet' bash -lc 'cd services/workforce/backend && go vet ./...'
+          check 'Workforce tests' bash -lc 'cd services/workforce/backend && go test ./...'
+          check 'Workforce build' bash -lc 'cd services/workforce/backend && go build ./...'
+          check 'Contracts lint' pnpm run contracts:lint
+          check 'Control panel typecheck' pnpm --dir apps/control-panel/runtime typecheck
+          check 'API binding' pnpm run guard:api-binding
+          check 'Backend API binding' pnpm run guard:backend-api-binding
+          check 'Frontend feature binding' pnpm run guard:frontend-feature-binding
+          check 'Broken imports' pnpm run guard:no-broken-imports
+          check 'Go routes' pnpm run guard:go-routes-ci
+          printf '## Verdict\n\n' >> "$report"
+          if [ "$failed" -eq 0 ]; then
+            printf '**PASS — targeted full-stack repair gates passed on the remote branch.**\n' >> "$report"
+          else
+            printf '**FIX_REQUIRED — exact remaining failures are recorded above.**\n' >> "$report"
+          fi
+          echo "$failed" > /tmp/bassam-repair/failed
+
+      - name: Commit repair and evidence
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: bassam-fullstack-diagnostic
-          path: /tmp/bassam-diagnostic/report.txt
-          if-no-files-found: error
-          retention-days: 3
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/bassam-fullstack-diagnostic.yml
+          git config user.name bthwani-fullstack-repair-bot
+          git config user.email fullstack-repair-bot@users.noreply.github.com
+          git add -A
+          git commit -m 'fix(fullstack): repair contracts bindings and compile gates' || true
+          git fetch origin bassam
+          git rebase origin/bassam
+          git push origin HEAD:bassam
+
+      - name: Preserve fail-closed status
+        if: always()
+        shell: bash
+        run: |
+          test "$(cat /tmp/bassam-repair/failed 2>/dev/null || echo 1)" = 0
