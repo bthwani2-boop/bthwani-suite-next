@@ -2,8 +2,8 @@
  * Field Offline Queue
  *
  * Durable queue for authenticated field operations during network loss.
- * The caller supplies the business idempotency key; queue identity and
- * correlation are derived from it so retries remain stable across restarts.
+ * The caller supplies the business idempotency key; queue identity is derived
+ * from it and the original correlation is retained across every replay.
  */
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -48,9 +48,9 @@ function stableHash(value: string): string {
   return (hash >>> 0).toString(36);
 }
 
-function requireIdempotencyKey(value: string): string {
+function requireNonEmpty(value: string, label: string): string {
   const normalized = value.trim();
-  if (!normalized) throw new Error("field offline operation idempotency key is required");
+  if (!normalized) throw new Error(`${label} is required`);
   return normalized;
 }
 
@@ -100,10 +100,11 @@ export async function enqueueFieldOperation<P>(
   operationType: FieldOfflineOperationType,
   payload: P,
   idempotencyKey: string,
+  correlationId?: string,
 ): Promise<FieldOfflineOperation<P>> {
-  const normalizedKey = requireIdempotencyKey(idempotencyKey);
+  const normalizedKey = requireNonEmpty(idempotencyKey, "field offline operation idempotency key");
   const queue = await readQueue();
-  const existing = queue.find((op) => op.idempotencyKey === normalizedKey);
+  const existing = queue.find((operation) => operation.idempotencyKey === normalizedKey);
   if (existing) return existing as FieldOfflineOperation<P>;
 
   const fingerprint = stableHash(`${operationType}|${normalizedKey}`);
@@ -113,7 +114,7 @@ export async function enqueueFieldOperation<P>(
     operationType,
     payload,
     idempotencyKey: normalizedKey,
-    correlationId: `field-correlation:${operationType}:${fingerprint}`,
+    correlationId: correlationId?.trim() || `field-correlation:${operationType}:${fingerprint}`,
     createdAt: now,
     attemptCount: 0,
     nextRetryAt: now,
