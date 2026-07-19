@@ -5,6 +5,20 @@ const violations = [];
 
 const checks = [
   {
+    file: "services/dsh/frontend/app-partner/DshPartnerSurface.tsx",
+    forbidden: [
+      [/configureIdentitySession/g, "SURFACE_IDENTITY_SESSION_RECONFIGURATION_FORBIDDEN"],
+      [/\bas\s+any\b/g, "UNSAFE_PARTNER_SURFACE_ANY_FORBIDDEN"],
+    ],
+    required: [
+      "useDshPartnerSurfaceModel",
+      "selectedStoreScope",
+      "runtimePartnerProfile",
+      "onInviteMember={actions.onInviteMember}",
+      "onMemberAction={actions.onMemberAction}",
+    ],
+  },
+  {
     file: "services/dsh/frontend/app-partner/account/PartnerHubScreen.tsx",
     forbidden: [
       [/state\s*=\s*["']ready["']/g, "DEFAULT_PARTNER_READY_FORBIDDEN"],
@@ -16,6 +30,12 @@ const checks = [
       [/\bas\s+any\b/g, "UNSAFE_PARTNER_HUB_ANY_FORBIDDEN"],
       [/catch\s*\{\s*\}/g, "SWALLOWED_PARTNER_HUB_ERROR_FORBIDDEN"],
       [/متجر الشريك|الفرع الرئيسي|مدير المتجر/g, "SEEDED_PARTNER_PROFILE_FORBIDDEN"],
+      [/storeScopeOptions|fakhama-1|fakhama-2|fakhama-3|yasmin|nada/g, "SEEDED_STORE_SCOPE_FORBIDDEN"],
+      [/selectedStoreScopeId\s*===\s*["']all["']\s*\?\s*["']["']/g, "SILENT_ALL_STORE_SCOPE_FALLBACK_FORBIDDEN"],
+      [/onOpenStoreScope=\{\(\)\s*=>\s*\{\}\}/g, "DEAD_STORE_SCOPE_ACTION_FORBIDDEN"],
+      [/تم الحفظ محليًا|يحتاج تفعيل backend لاحقًا|ربط WLT قيد التنفيذ|دعوة محلية/g, "LOCAL_OR_PENDING_RUNTIME_COPY_FORBIDDEN"],
+      [/runtimePartnerTeamMembers|runtimePartnerCoverageZones|runtimePartnerAnalytics/g, "LOCAL_PARTNER_RUNTIME_COLLECTION_FORBIDDEN"],
+      [/preview\/seed data only in runtime UI|local financial calculation|WLT bridge with no finance query/g, "RUNTIME_PREVIEW_OR_LOCAL_FINANCE_FORBIDDEN"],
     ],
     required: [
       "parseStoreSettings",
@@ -33,6 +53,7 @@ const checks = [
       [/return\s+renderSurfaceShell\([\s\S]{0,120}<DshPartnerHubSurface\s*\/>/g, "UNKNOWN_ROUTE_HUB_FALLBACK_FORBIDDEN"],
       [/console\.warn\([^)]*binding contract/g, "WARNING_ONLY_BINDING_FAILURE_FORBIDDEN"],
       [/\bas\s+any\b/g, "UNSAFE_PARTNER_ROUTE_ANY_FORBIDDEN"],
+      [/team-management[\s\S]{0,240}PartnerStoreScreen/g, "TEAM_ROUTE_BOUND_TO_STORE_SCREEN_FORBIDDEN"],
     ],
     required: [
       "hasRouteBindingContract",
@@ -41,7 +62,17 @@ const checks = [
       "اختر متجرًا محددًا",
       "مسار شريك غير معروف",
       "state={partnerOrdersState}",
+      "PartnerTeamManagementScreen",
     ],
+  },
+  {
+    file: "services/dsh/frontend/app-partner/orders/usePartnerOrdersRuntime.ts",
+    forbidden: [
+      [/local_only_order_success/g, "LOCAL_ORDER_SUCCESS_FORBIDDEN"],
+      [/setOrders\(localOptimisticFinalState\)/g, "LOCAL_OPTIMISTIC_FINAL_ORDER_STATE_FORBIDDEN"],
+      [/mutation success without read-after-write/g, "ORDER_MUTATION_WITHOUT_READBACK_FORBIDDEN"],
+    ],
+    required: ["read-after-write", "refresh"],
   },
   {
     file: "services/dsh/frontend/app-partner/account/PartnerEntryScreen.tsx",
