@@ -28,8 +28,8 @@ jobs:
           old = "'{state,context,description,target_url}'"
           new = "'{state:$state,context:$context,description:$description,target_url:$target_url}'"
           count = text.count(old)
-          if count != 11:
-              raise SystemExit(f'expected 11 status payloads, found {count}')
+          if count != 6:
+              raise SystemExit(f'expected 6 status payloads, found {count}')
           target.write_text(text.replace(old, new), encoding='utf-8')
           Path('.github/workflows/lian-fix-phase-status-json.yml').unlink()
       - name: Commit repair
