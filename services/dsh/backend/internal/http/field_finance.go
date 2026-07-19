@@ -90,7 +90,7 @@ func (s *protectedStoreServer) handleSubmitFieldMePayoutRequest(w http.ResponseW
 	}
 	request.Currency = strings.TrimSpace(request.Currency)
 	request.IdempotencyKey = strings.TrimSpace(request.IdempotencyKey)
-	if request.AmountMinorUnits <= 0 || request.Currency == "" || len(request.IdempotencyKey) < 8 {
+	if request.AmountMinorUnits <= 0 || request.Currency == "" || request.IdempotencyKey == "" {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "positive amount, currency, and idempotencyKey are required")
 		return
 	}
