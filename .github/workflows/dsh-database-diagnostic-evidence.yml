@@ -95,7 +95,9 @@ jobs:
           pnpm run guard:actions-pin 2>&1 | tee artifacts/partner-journey-closure/actions-pin.log
           pnpm run swagger:build 2>&1 | tee artifacts/partner-journey-closure/swagger.log
           pnpm run guard:backend-api-binding 2>&1 | tee artifacts/partner-journey-closure/backend-api-binding.log
-          pnpm run typecheck 2>&1 | tee artifacts/partner-journey-closure/typecheck.log
+          pnpm --dir apps/app-partner/runtime typecheck 2>&1 | tee artifacts/partner-journey-closure/typecheck-app-partner.log
+          pnpm --dir apps/app-field/runtime typecheck 2>&1 | tee artifacts/partner-journey-closure/typecheck-app-field.log
+          pnpm --dir apps/control-panel/runtime typecheck 2>&1 | tee artifacts/partner-journey-closure/typecheck-control-panel.log
           rm -rf dist-swagger
 
       - name: Upload partner journey evidence
