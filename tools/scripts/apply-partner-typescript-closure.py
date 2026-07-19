@@ -23,6 +23,16 @@ def replace_once(relative: str, old: str, new: str, *, allow_new: bool = True) -
     raise RuntimeError(f"missing anchor in {relative}: {old[:120]!r}")
 
 
+def replace_all(relative: str, old: str, new: str, *, allow_new: bool = True) -> None:
+    text = read(relative)
+    if old in text:
+        write(relative, text.replace(old, new))
+        return
+    if allow_new and new in text:
+        return
+    raise RuntimeError(f"missing repeated anchor in {relative}: {old[:120]!r}")
+
+
 def close_team_surface_types() -> None:
     relative = "services/dsh/frontend/app-partner/team/PartnerTeamManagementScreen.tsx"
     replace_once(
@@ -35,9 +45,21 @@ def close_team_surface_types() -> None:
   }
 }''',
     )
-    replace_once(relative, 'setMutation({ kind: "error", message: result.message });', 'setMutation({ kind: "error", message: result.error });')
-    replace_once(relative, 'setMutation({ kind: "success", message: result.message || "تم إرسال الدعوة من DSH." });', 'setMutation({ kind: "success", message: "تم إرسال الدعوة من DSH." });')
-    replace_once(relative, 'setMutation({ kind: "success", message: result.message || "تم تنفيذ الإجراء في DSH." });', 'setMutation({ kind: "success", message: "تم تنفيذ الإجراء في DSH." });')
+    replace_all(
+        relative,
+        'setMutation({ kind: "error", message: result.message });',
+        'setMutation({ kind: "error", message: result.error });',
+    )
+    replace_once(
+        relative,
+        'setMutation({ kind: "success", message: result.message || "تم إرسال الدعوة من DSH." });',
+        'setMutation({ kind: "success", message: "تم إرسال الدعوة من DSH." });',
+    )
+    replace_once(
+        relative,
+        'setMutation({ kind: "success", message: result.message || "تم تنفيذ الإجراء في DSH." });',
+        'setMutation({ kind: "success", message: "تم تنفيذ الإجراء في DSH." });',
+    )
 
     relative = "services/dsh/frontend/app-partner/DshPartnerRouteRenderer.tsx"
     replace_once(
@@ -176,28 +198,42 @@ def close_partner_offer_payloads() -> None:
     )
 
 
-def close_transitive_shared_types() -> None:
-    relative = "services/dsh/frontend/shared/checkout/use-checkout-to-order-flow.tsx"
-    replace_once(relative, "    input.deliveryAddress,", "    input.deliveryAddressId,")
-
-    relative = "services/dsh/frontend/shared/delivery/captain-availability.model.ts"
-    replace_once(
-        relative,
-        '''  return {
-    captainAvailabilityStatus,
-    availabilityMutationReady: false,
-  } as const;''',
-        '''  const unavailableMutation = () => {
-    throw new Error("Captain availability mutation is not wired to DSH and remains fail-closed.");
-  };
-
-  return {
-    captainAvailabilityStatus,
-    availabilityMutationReady: false,
-    toggleAvailability: unavailableMutation,
-    setCaptainAvailabilityStatus: (_next: CaptainAvailabilityStatus) => unavailableMutation(),
-  } as const;''',
-    )
+def isolate_partner_order_contracts() -> None:
+    replacements = {
+        "services/dsh/frontend/app-partner/useDshPartnerSurfaceModel.ts": [
+            ("from '../shared/orders';", "from '../shared/orders/orders.contract';"),
+        ],
+        "services/dsh/frontend/app-partner/orders/OrderActionScreen.tsx": [
+            ("from '../../shared/orders';", "from '../../shared/orders/orders.contract';"),
+        ],
+        "services/dsh/frontend/app-partner/orders/OrdersInboxScreen.tsx": [
+            ("from '../../shared/orders';", "from '../../shared/orders/orders.contract';"),
+        ],
+        "services/dsh/frontend/app-partner/orders/PartnerOrderConversationPanel.tsx": [
+            ("from '../../shared/orders';", "from '../../shared/orders/orders.contract';"),
+        ],
+        "services/dsh/frontend/app-partner/orders/PartnerOrderActionPanel.tsx": [
+            ("from '../../shared/orders';", "from '../../shared/orders/orders.contract';"),
+        ],
+        "services/dsh/frontend/app-partner/orders/PartnerOrderAlertsPanel.tsx": [
+            ("from '../../shared/orders';", "from '../../shared/orders/orders.contract';"),
+        ],
+        "services/dsh/frontend/app-partner/store/DshPartnerStoreCourierScreen.tsx": [
+            ("from '../../shared/orders';", "from '../../shared/orders/orders.contract';"),
+        ],
+        "services/dsh/frontend/app-partner/account/PromotionsScreen.tsx": [
+            ("from '../../shared/orders';", "from '../../shared/orders/orders.contract';"),
+        ],
+    }
+    for relative, pairs in replacements.items():
+        text = read(relative)
+        changed = False
+        for old, new in pairs:
+            if old in text:
+                text = text.replace(old, new)
+                changed = True
+        if changed:
+            write(relative, text)
 
 
 def remove_self() -> None:
@@ -210,5 +246,5 @@ close_team_surface_types()
 close_hub_types()
 close_assortment_occ_types()
 close_partner_offer_payloads()
-close_transitive_shared_types()
+isolate_partner_order_contracts()
 remove_self()
