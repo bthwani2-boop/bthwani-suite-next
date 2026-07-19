@@ -38,12 +38,15 @@ CREATE TABLE IF NOT EXISTS dsh_client_addresses (
     CONSTRAINT dsh_client_addresses_unit_length
       CHECK (unit IS NULL OR char_length(unit) <= 40),
     CONSTRAINT dsh_client_addresses_instructions_length
-      CHECK (delivery_instructions IS NULL OR char_length(delivery_instructions) <= 500),
-    UNIQUE (client_id, create_idempotency_key)
+      CHECK (delivery_instructions IS NULL OR char_length(delivery_instructions) <= 500)
 );
 
 CREATE INDEX IF NOT EXISTS idx_dsh_client_addresses_client_active
   ON dsh_client_addresses(client_id, updated_at DESC)
+  WHERE deleted_at IS NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_dsh_client_addresses_active_idempotency
+  ON dsh_client_addresses(client_id, create_idempotency_key)
   WHERE deleted_at IS NULL;
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_dsh_client_addresses_single_default
