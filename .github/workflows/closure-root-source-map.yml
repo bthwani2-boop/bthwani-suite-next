@@ -55,7 +55,7 @@ jobs:
             Select-Object -First 1
           if ($catalogTest) {
             $relative = $catalogTest.Path.Replace((Get-Location).Path + [IO.Path]::DirectorySeparatorChar, '')
-            Publish "Root catalog overlay test $relative:$($catalogTest.LineNumber)"
+            Publish "Root catalog overlay test ${relative}:$($catalogTest.LineNumber)"
           } else {
             Publish "Root catalog overlay test NONE" "failure"
           }
@@ -65,12 +65,23 @@ jobs:
             Select-Object -First 6)
           foreach ($ref in $overlayRefs) {
             $relative = $ref.Path.Replace((Get-Location).Path + [IO.Path]::DirectorySeparatorChar, '')
-            Publish "Root overlay ref $relative:$($ref.LineNumber) $($ref.Line.Trim())"
+            Publish "Root overlay ref ${relative}:$($ref.LineNumber) $($ref.Line.Trim())"
           }
 
-          $pgx = Get-ChildItem services/dsh/backend -Recurse -Filter *.go | Select-String -SimpleMatch 'github.com/jackc/pgx/v5/stdlib' | Select-Object -First 1
-          if ($pgx) { Publish "Root DSH pgx $($pgx.Path.Replace((Get-Location).Path + [IO.Path]::DirectorySeparatorChar, '')):$($pgx.LineNumber)" }
-          else { Publish "Root DSH pgx NONE" }
+          $invariantFiles = @(Get-ChildItem services/dsh/database/tests -Filter '*.sql' -File | Where-Object {
+            $_.Name -like '*056*057*' -or $_.Name -like '*client*addr*'
+          } | Sort-Object Name)
+          foreach ($invariant in $invariantFiles) {
+            Publish "Root DSH invariant $($invariant.Name)"
+          }
+
+          $pgx = Get-ChildItem services/dsh/backend -Recurse -Filter '*.go' | Select-String -SimpleMatch 'github.com/jackc/pgx/v5/stdlib' | Select-Object -First 1
+          if ($pgx) {
+            $relative = $pgx.Path.Replace((Get-Location).Path + [IO.Path]::DirectorySeparatorChar, '')
+            Publish "Root DSH pgx ${relative}:$($pgx.LineNumber)"
+          } else {
+            Publish "Root DSH pgx NONE"
+          }
 
           $policyDirectory = 'services/dsh/backend/internal/platformpolicies'
           $policyFiles = @(Get-ChildItem -LiteralPath $policyDirectory -Filter '*.go' -File | Sort-Object Name)
