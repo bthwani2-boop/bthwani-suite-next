@@ -5,7 +5,7 @@ BEGIN;
 DO $$
 DECLARE
   v_suffix text := replace(gen_random_uuid()::text, '-', '');
-  v_zone_id text := 'zone_test_' || v_suffix;
+  v_zone_id uuid := gen_random_uuid();
   v_area_code text := 'area_' || v_suffix;
   v_duplicate boolean := false;
   v_invalid_polygon boolean := false;
@@ -115,7 +115,7 @@ BEGIN
     payload
   ) VALUES (
     'zone',
-    v_zone_id,
+    v_zone_id::text,
     'created',
     'test-operator',
     'control-panel',
@@ -133,7 +133,7 @@ BEGIN
     response_body
   ) VALUES (
     'test-operator',
-    'update-zone:' || v_zone_id,
+    'update-zone:' || v_zone_id::text,
     'test-idempotency-key',
     'hash-a',
     jsonb_build_object('zoneId', v_zone_id)
@@ -149,7 +149,7 @@ BEGIN
       response_body
     ) VALUES (
       'test-operator',
-      'update-zone:' || v_zone_id,
+      'update-zone:' || v_zone_id::text,
       'test-idempotency-key',
       'hash-b',
       '{}'::jsonb
@@ -178,7 +178,7 @@ BEGIN
   SELECT count(*) INTO v_count
   FROM dsh_platform_policy_events
   WHERE aggregate_type = 'zone'
-    AND aggregate_id = v_zone_id
+    AND aggregate_id = v_zone_id::text
     AND actor_id = 'test-operator';
   IF v_count <> 1 THEN
     RAISE EXCEPTION 'platform policy audit event was not persisted';
