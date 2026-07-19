@@ -288,22 +288,23 @@ def close_runtime_matrix_collection_semantics() -> None:
 
 
 def retire_materialized_outbox_repair() -> None:
-    source = read("services/dsh/backend/internal/wltoutbox/wltoutbox.go")
-    closed_signature = "func Enqueue(tx *sql.Tx, eventType, tenantID, orderID, captainID, partnerID, checkoutIntentID string) error"
-    if closed_signature not in source:
-        return
-
     relative = "tools/scripts/apply-partner-team-audit-closure.py"
     text = read(relative)
-    start_marker = "# Durable DSH -> WLT events carry the tenant through enqueue, claim, retry,\n"
-    end_marker = "# Central catalog bootstrap must use sovereign IDs, truthful media types, and\n"
+    start_marker = "# Durable DSH -> WLT events carry the tenant through enqueue"
+    end_marker = "# Central catalog bootstrap must use sovereign IDs"
     start = text.find(start_marker)
-    if start < 0:
-        return
-    end = text.find(end_marker, start)
-    if end < 0:
-        raise RuntimeError("central catalog bootstrap marker missing after materialized outbox block")
-    write(relative, text[:start] + text[end:])
+    if start >= 0:
+        end = text.find(end_marker, start)
+        if end < 0:
+            raise RuntimeError("obsolete WLT repair block has no catalog-boundary marker")
+        text = text[:start] + text[end:]
+        write(relative, text)
+
+    repaired = read(relative)
+    if "func Enqueue(tx *sql.Tx, eventType, orderID, captainID, partnerID, checkoutIntentID string) error" in repaired:
+        raise RuntimeError("obsolete non-tenant WLT Enqueue repair remains in partner repair script")
+    if start_marker in repaired:
+        raise RuntimeError("obsolete WLT repair block was not retired")
 
 
 def remove_self() -> None:
