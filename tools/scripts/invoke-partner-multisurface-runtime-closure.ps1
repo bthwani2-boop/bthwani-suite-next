@@ -12,7 +12,7 @@ Set-Location -LiteralPath $RepoRoot
 New-Item -ItemType Directory -Path $ArtifactDirectory -Force | Out-Null
 
 $RuntimeScript = Join-Path $RepoRoot "infra/docker/scripts/runtime.ps1"
-$MatrixScript = Join-Path $RepoRoot "tools/scripts/test-dsh-multisurface-runtime-matrix.ps1"
+$PartnerMatrixScript = Join-Path $RepoRoot "tools/scripts/test-partner-multisurface-runtime-journey.ps1"
 
 function Invoke-LoggedScript {
   param(
@@ -63,8 +63,11 @@ Invoke-LoggedScript -Name "readiness" -Action {
   Write-Host "Partner runtime dependencies: PASS"
 }
 
-Invoke-LoggedScript -Name "multisurface" -Action {
-  & $MatrixScript
+Invoke-LoggedScript -Name "partner-multisurface" -Action {
+  & pwsh -NoProfile -ExecutionPolicy Bypass -File $PartnerMatrixScript
+  if ($LASTEXITCODE -ne 0) {
+    throw "Focused partner multi-surface journey failed with exit code $LASTEXITCODE"
+  }
 }
 
 Write-Host "Partner multi-surface live runtime closure: PASS"
