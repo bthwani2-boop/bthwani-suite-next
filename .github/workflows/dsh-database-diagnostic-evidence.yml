@@ -59,8 +59,14 @@ jobs:
           pnpm run openapi:generate:wlt
 
       - name: Verify partner journey backend
-        working-directory: services/dsh/backend
-        run: go test ./...
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/partner-journey-closure
+          (
+            cd services/dsh/backend
+            go test ./...
+          ) 2>&1 | tee artifacts/partner-journey-closure/backend-go-test.log
 
       - name: Verify partner journey full stack
         shell: bash
