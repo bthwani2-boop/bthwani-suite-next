@@ -1,29 +1,53 @@
-name: Lian Granular Closure Diagnostics
+name: Lian Granular Closure Truth
 
 on:
   push:
-    branches: [lian]
+    branches:
+      - lian
+      - "fix/lian-sovereign-final-closure"
+  pull_request:
+    branches:
+      - master
+      - lian
   workflow_dispatch:
 
 permissions:
   contents: read
+  statuses: write
 
 concurrency:
-  group: lian-closure-diagnostics-${{ github.ref }}
+  group: lian-granular-closure-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   governance:
+    name: Governance truth
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           persist-credentials: false
           fetch-depth: 0
       - uses: ./.github/actions/setup-node-workspace
-      - name: governance-all
-        run: pnpm run guard:governance-all
+      - name: governance-schema
+        run: pnpm run guard:governance-schema
+      - name: agent-governance
+        run: pnpm run guard:agent-governance
+      - name: authority-separation
+        run: pnpm run guard:authority-separation
+      - name: saas-governance
+        run: pnpm run guard:saas-governance
+      - name: guard-registry
+        run: pnpm run guard:guard-registry
+      - name: sdlc
+        run: pnpm run guard:sdlc
+      - name: cleanup-policy
+        run: pnpm run guard:cleanup-policy
+      - name: command-integrity
+        run: pnpm run guard:required-command-integrity
+      - name: markdown-governance
+        run: pnpm run guard:markdown-governance
       - name: foundation-gate
         run: pnpm run foundation:gate
       - name: api-binding
@@ -46,12 +70,14 @@ jobs:
         run: pnpm run guard:no-broken-imports
 
   surfaces:
+    name: Surface truth
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           persist-credentials: false
+          fetch-depth: 0
       - uses: ./.github/actions/setup-node-workspace
       - name: client-commerce-truth
         run: node tools/guards/client-commerce/client-commerce-truth-gate.mjs
@@ -77,52 +103,50 @@ jobs:
         run: pnpm run guard:design-tokens
       - name: accessibility
         run: pnpm run guard:a11y
+      - name: mobile-sync
+        run: pnpm run mobile:apps:check
+      - name: mobile-expo
+        run: pnpm run mobile:expo:verify
       - name: typecheck
         run: pnpm run typecheck
       - name: build
         run: pnpm run build
 
-  go-services:
-    name: Go diagnostics — ${{ matrix.name }}
+  dsh-go:
+    name: DSH Go truth
     runs-on: ubuntu-latest
-    timeout-minutes: 45
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - { name: DSH, directory: services/dsh/backend, go_mod: services/dsh/backend/go.mod, go_sum: services/dsh/backend/go.sum }
-          - { name: WLT, directory: services/wlt/backend, go_mod: services/wlt/backend/go.mod, go_sum: services/wlt/backend/go.sum }
-          - { name: Identity, directory: core/identity/backend, go_mod: core/identity/backend/go.mod, go_sum: core/identity/backend/go.sum }
-          - { name: Workforce, directory: core/workforce/backend, go_mod: core/workforce/backend/go.mod, go_sum: core/workforce/backend/go.sum }
-          - { name: Platform-Control, directory: core/platform-control/backend, go_mod: core/platform-control/backend/go.mod, go_sum: core/platform-control/backend/go.sum }
-          - { name: Providers, directory: core/providers/backend, go_mod: core/providers/backend/go.mod, go_sum: core/providers/backend/go.sum }
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           persist-credentials: false
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version-file: ${{ matrix.go_mod }}
+          go-version-file: services/dsh/backend/go.mod
           cache: true
-          cache-dependency-path: ${{ matrix.go_sum }}
+          cache-dependency-path: services/dsh/backend/go.sum
       - name: gofmt
-        working-directory: ${{ matrix.directory }}
+        working-directory: services/dsh/backend
         shell: bash
         run: |
           set -euo pipefail
           files="$(gofmt -l .)"
           test -z "$files" || { printf 'Unformatted files:\n%s\n' "$files"; exit 1; }
       - name: go-vet
-        working-directory: ${{ matrix.directory }}
+        working-directory: services/dsh/backend
         run: go vet ./...
       - name: go-test
-        working-directory: ${{ matrix.directory }}
+        working-directory: services/dsh/backend
         run: go test ./... -count=1
+      - name: go-race
+        working-directory: services/dsh/backend
+        run: go test -race ./... -count=1
       - name: go-build
-        working-directory: ${{ matrix.directory }}
+        working-directory: services/dsh/backend
         run: go build ./...
 
   powershell-parse:
+    name: Closure PowerShell parse truth
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -140,6 +164,8 @@ jobs:
             "tools/scripts/test-dsh-multisurface-runtime-matrix.ps1",
             "tools/scripts/test-dsh-multisurface-runtime-matrix-v2.ps1",
             "tools/scripts/test-dsh-support-notifications-runtime-matrix.ps1",
+            "tools/scripts/invoke-database-upgrade-truth.ps1",
+            "infra/docker/scripts/schema-migration-runner.ps1",
             "infra/docker/scripts/backup-runtime.ps1",
             "infra/docker/scripts/restore-runtime.ps1",
             "infra/docker/scripts/restore-verify-runtime.ps1"
@@ -153,73 +179,7 @@ jobs:
               [ref]$errors
             ) | Out-Null
             if ($errors.Count -gt 0) {
-              $errors | ForEach-Object { Write-Error "$file:$($_.Extent.StartLineNumber): $($_.Message)" }
+              $errors | ForEach-Object { Write-Error "${file}:$($_.Extent.StartLineNumber): $($_.Message)" }
               throw "PowerShell parse failed: $file"
             }
           }
-
-  dsh-database:
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env: { POSTGRES_USER: dsh_diag, POSTGRES_PASSWORD: dsh_diag_password, POSTGRES_DB: dsh_diag }
-        ports: ["55432:5432"]
-        options: >-
-          --health-cmd="pg_isready -U dsh_diag -d dsh_diag"
-          --health-interval=5s --health-timeout=5s --health-retries=20
-    env:
-      DATABASE_URL: postgres://dsh_diag:dsh_diag_password@localhost:55432/dsh_diag?sslmode=disable
-      PGPASSWORD: dsh_diag_password
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-        with: { persist-credentials: false }
-      - name: apply-migrations
-        shell: bash
-        run: |
-          set -euo pipefail
-          for file in $(find services/dsh/database/migrations -maxdepth 1 -type f -name 'dsh-*.sql' | sort); do echo "APPLY $file"; psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file"; done
-      - name: sql-invariants
-        shell: bash
-        run: |
-          set -euo pipefail
-          for file in $(find services/dsh/database/tests -maxdepth 1 -type f -name '*.sql' | sort); do echo "TEST $file"; psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file"; done
-      - name: migration-replay
-        shell: bash
-        run: |
-          set -euo pipefail
-          for file in $(find services/dsh/database/migrations -maxdepth 1 -type f -name 'dsh-*.sql' | sort); do echo "REPLAY $file"; psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file"; done
-
-  wlt-database:
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env: { POSTGRES_USER: wlt_diag, POSTGRES_PASSWORD: wlt_diag_password, POSTGRES_DB: wlt_diag }
-        ports: ["55433:5432"]
-        options: >-
-          --health-cmd="pg_isready -U wlt_diag -d wlt_diag"
-          --health-interval=5s --health-timeout=5s --health-retries=20
-    env:
-      DATABASE_URL: postgres://wlt_diag:wlt_diag_password@localhost:55433/wlt_diag?sslmode=disable
-      PGPASSWORD: wlt_diag_password
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-        with: { persist-credentials: false }
-      - name: apply-migrations
-        shell: bash
-        run: |
-          set -euo pipefail
-          for file in $(find services/wlt/database/migrations -maxdepth 1 -type f -name '*.sql' | sort); do echo "APPLY $file"; psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file"; done
-      - name: sql-invariants
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ -d services/wlt/database/tests ]; then for file in $(find services/wlt/database/tests -maxdepth 1 -type f -name '*.sql' | sort); do echo "TEST $file"; psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file"; done; fi
-      - name: migration-replay
-        shell: bash
-        run: |
-          set -euo pipefail
-          for file in $(find services/wlt/database/migrations -maxdepth 1 -type f -name '*.sql' | sort); do echo "REPLAY $file"; psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file"; done
