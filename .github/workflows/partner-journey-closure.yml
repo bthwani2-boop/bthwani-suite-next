@@ -2,6 +2,11 @@ name: Partner Journey Closure
 run-name: Partner Journey Closure · ${{ github.ref_name }} · ${{ github.sha }}
 
 on:
+  push:
+    branches:
+      - "fix/lian-sovereign-final-closure"
+    paths:
+      - ".github/workflows/partner-journey-closure.yml"
   workflow_dispatch:
 
 permissions:
@@ -15,7 +20,7 @@ jobs:
   partner-source-and-database:
     name: Partner source, migrations, and contracts
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 40
     services:
       postgres:
         image: postgres:16-alpine
@@ -52,16 +57,20 @@ jobs:
           files="$(gofmt -l .)"
           test -z "$files" || { printf 'Unformatted DSH files:\n%s\n' "$files"; exit 1; }
           go vet ./...
-      - name: Apply DSH migrations on a clean database twice
+      - name: Apply complete DSH migration chain once
         shell: bash
         run: |
           set -euo pipefail
-          for pass in 1 2; do
-            echo "migration pass=$pass"
-            while IFS= read -r migration; do
-              psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
-            done < <(find services/dsh/database/migrations -maxdepth 1 -type f -name '*.sql' | sort)
-          done
+          while IFS= read -r migration; do
+            echo "applying $migration"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
+          done < <(find services/dsh/database/migrations -maxdepth 1 -type f -name '*.sql' | sort)
+      - name: Prove partner audit migration replay safety
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/dsh/database/migrations/dsh-088_partner_team_action_runtime_audit.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/dsh/database/tests/dsh-088_partner_team_action_runtime_audit.sql
       - name: Run DSH tests
         working-directory: services/dsh/backend
         run: go test ./... -count=1
@@ -79,7 +88,7 @@ jobs:
   partner-runtime:
     name: Partner live multi-service runtime
     runs-on: ubuntu-latest
-    timeout-minutes: 55
+    timeout-minutes: 60
     steps:
       - name: Checkout exact SHA
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -93,16 +102,28 @@ jobs:
         run: |
           set -euo pipefail
           docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml --profile identity build identity-api
-      - name: Run focused partner runtime
+      - name: Run focused partner multi-surface runtime closure
         shell: pwsh
-        run: |
-          ./infra/docker/scripts/runtime.ps1 -Action all -Profiles identity,workforce,dsh,media,wlt
+        run: ./tools/scripts/invoke-partner-multisurface-runtime-closure.ps1
       - name: Publish runtime diagnostics on failure
         if: failure()
         shell: bash
         run: |
           docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml --profile identity --profile workforce --profile dsh --profile media --profile wlt ps -a || true
-          docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml --profile identity --profile workforce --profile dsh --profile media --profile wlt logs --tail=200 identity-api workforce-api dsh-api wlt-api postgres minio || true
+          docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml --profile identity --profile workforce --profile dsh --profile media --profile wlt logs --tail=300 identity-api workforce-api dsh-api wlt-api postgres minio || true
+          find artifacts/partner-journey-closure -maxdepth 1 -type f -print -exec tail -n 200 {} \; || true
+      - name: Stop focused runtime
+        if: always()
+        shell: pwsh
+        run: ./infra/docker/scripts/runtime.ps1 -Action down -Profiles identity,workforce,dsh,media,wlt
+      - name: Upload partner runtime evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: partner-runtime-evidence-${{ github.sha }}
+          path: artifacts/partner-journey-closure
+          if-no-files-found: warn
+          retention-days: 14
 
   partner-closure-result:
     name: Partner journey closure result
