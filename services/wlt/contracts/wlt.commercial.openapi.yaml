@@ -91,6 +91,36 @@ paths:
         '400': { $ref: '#/components/responses/ErrorResponse' }
         '401': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
+  /wlt/commercial/payment-sessions:
+    post:
+      operationId: createWltSubscriptionPaymentSession
+      tags: [WltCommercialBenefits]
+      security: [{ bearerAuth: [] }]
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/ServiceCallerHeader'
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, minLength: 1 }
+        - name: X-Correlation-ID
+          in: header
+          required: true
+          schema: { type: string, minLength: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SubscriptionPaymentSessionCreate' }
+      responses:
+        '201': { $ref: '#/components/responses/ObjectResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '404': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
   /wlt/commercial/loyalty-entries:
     post:
       operationId: appendWltLoyaltyEntry
@@ -199,6 +229,16 @@ components:
         idempotencyKey: { type: string, minLength: 1 }
         correlationId: { type: string, minLength: 1 }
         metadata: { type: object, additionalProperties: true }
+    SubscriptionPaymentSessionCreate:
+      type: object
+      additionalProperties: false
+      required: [subscriptionPurchaseId, productReference, tenantId, clientId]
+      properties:
+        subscriptionPurchaseId: { type: string, minLength: 1 }
+        productReference: { type: string, minLength: 1 }
+        tenantId: { type: string, minLength: 1 }
+        clientId: { type: string, minLength: 1 }
+        paymentMethod: { type: string, enum: [official_wallet] }
     SubscriptionActivation:
       type: object
       additionalProperties: false

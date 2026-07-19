@@ -107,7 +107,7 @@ func TestCreatePaymentSessionNonSuccessStatus(t *testing.T) {
 	defer server.Close()
 
 	c := NewClient(server.URL, "test-service-token")
-	_, err := c.CreatePaymentSession(context.Background(), CreatePaymentSessionInput{})
+	_, err := c.CreatePaymentSession(context.Background(), CreatePaymentSessionInput{CheckoutIntentID: "intent-1"})
 	if err == nil {
 		t.Fatalf("expected error for HTTP 500 response")
 	}
@@ -125,7 +125,7 @@ func TestCreatePaymentSessionMalformedBody(t *testing.T) {
 	defer server.Close()
 
 	c := NewClient(server.URL, "test-service-token")
-	_, err := c.CreatePaymentSession(context.Background(), CreatePaymentSessionInput{})
+	_, err := c.CreatePaymentSession(context.Background(), CreatePaymentSessionInput{CheckoutIntentID: "intent-1"})
 	if err == nil {
 		t.Fatalf("expected error for malformed JSON response")
 	}
@@ -147,7 +147,7 @@ func TestCreatePaymentSessionMissingID(t *testing.T) {
 	defer server.Close()
 
 	c := NewClient(server.URL, "test-service-token")
-	_, err := c.CreatePaymentSession(context.Background(), CreatePaymentSessionInput{})
+	_, err := c.CreatePaymentSession(context.Background(), CreatePaymentSessionInput{CheckoutIntentID: "intent-1"})
 	if err == nil {
 		t.Fatalf("expected error when response is missing paymentSession.id")
 	}

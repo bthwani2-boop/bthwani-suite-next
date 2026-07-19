@@ -13,15 +13,28 @@ import {
   spacing,
 } from "@bthwani/ui-kit";
 import type {
-  PartnerTeamInlineAction,
   PartnerTeamMember,
-  PartnerTeamMutationResult,
 } from "./partner-team.types";
-import {
-  isPartnerTeamSectionSelected,
-  selectPartnerTeamSection,
-  type PartnerTeamSection,
-} from "./partner-team.model";
+import type { PartnerTeamMutationResult } from "./usePartnerTeamModel";
+
+export type PartnerTeamSection = "members" | "invites" | "couriers";
+
+export type PartnerTeamInlineAction =
+  | "pause"
+  | "activate"
+  | "block"
+  | "resend-invite"
+  | "cancel-invite"
+  | "audit-log"
+  | string;
+
+export function isPartnerTeamSectionSelected(current: PartnerTeamSection, target: PartnerTeamSection): boolean {
+  return current === target;
+}
+
+export function selectPartnerTeamSection(id: PartnerTeamSection): PartnerTeamSection {
+  return id;
+}
 
 type PartnerTeamManagementScreenProps = {
   readonly storeId: string;

@@ -28,7 +28,7 @@ export function Text({
   return (
     <StyledText
       textAlign={resolveTextAlign(align, direction)}
-      writingDirection={direction}
+      dir={direction}
       {...props}
     />
   );

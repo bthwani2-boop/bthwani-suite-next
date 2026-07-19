@@ -21,16 +21,17 @@ func RegisterPlatformPolicyRoutes(
 	wltClient *wlt.Client,
 	mediaProvider *media.Provider,
 ) {
-	protected := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
-	mux.HandleFunc("GET /dsh/operator/platform/zones", protected.handleListZones)
-	mux.HandleFunc("POST /dsh/operator/platform/zones", protected.handleCreateZone)
-	mux.HandleFunc("PATCH /dsh/operator/platform/zones/{zoneId}", protected.handleUpdateZone)
-	mux.HandleFunc("GET /dsh/operator/platform/sla-rules", protected.handleListSlaRules)
-	mux.HandleFunc("PUT /dsh/operator/platform/sla-rules", protected.handleUpsertSlaRules)
-	mux.HandleFunc("GET /dsh/operator/platform/capacity", protected.handleGetCapacityConfig)
-	mux.HandleFunc("PUT /dsh/operator/platform/capacity", protected.handleUpsertCapacityConfig)
-	mux.HandleFunc("GET /dsh/operator/platform/serviceability/{zoneId}", protected.handleGetZoneServiceability)
-	mux.HandleFunc("GET /dsh/operator/platform/store-onboarding-fee", protected.handleGetStoreOnboardingFeePolicy)
-	mux.HandleFunc("PUT /dsh/operator/platform/store-onboarding-fee", protected.handleUpsertStoreOnboardingFeePolicy)
-	mux.HandleFunc("GET /dsh/platform/store-onboarding-fee", protected.handleGetStoreOnboardingFeeReference)
+	// protected := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
+	// The following routes are now registered via registerUnifiedCatalogRoutes in catalog_unified_routes.go
+	// mux.HandleFunc("GET /dsh/operator/platform/zones", protected.handleListZones)
+	// mux.HandleFunc("POST /dsh/operator/platform/zones", protected.handleCreateZone)
+	// mux.HandleFunc("PATCH /dsh/operator/platform/zones/{zoneId}", protected.handleUpdateZone)
+	// mux.HandleFunc("GET /dsh/operator/platform/sla-rules", protected.handleListSlaRules)
+	// mux.HandleFunc("PUT /dsh/operator/platform/sla-rules", protected.handleUpsertSlaRules)
+	// mux.HandleFunc("GET /dsh/operator/platform/capacity", protected.handleGetCapacityConfig)
+	// mux.HandleFunc("PUT /dsh/operator/platform/capacity", protected.handleUpsertCapacityConfig)
+	// mux.HandleFunc("GET /dsh/operator/platform/serviceability/{zoneId}", protected.handleGetZoneServiceability)
+	// mux.HandleFunc("GET /dsh/operator/platform/store-onboarding-fee", protected.handleGetStoreOnboardingFeePolicy)
+	// mux.HandleFunc("PUT /dsh/operator/platform/store-onboarding-fee", protected.handleUpsertStoreOnboardingFeePolicy)
+	// mux.HandleFunc("GET /dsh/platform/store-onboarding-fee", protected.handleGetStoreOnboardingFeeReference)
 }

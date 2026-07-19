@@ -223,7 +223,7 @@ func (c *Client) GetClientCommercialBenefits(ctx context.Context, clientID strin
 	err := c.commercialRequest(
 		ctx,
 		http.MethodGet,
-		"/wlt/commercial/clients/"+url.PathEscape(strings.TrimSpace(clientID))+"/benefits",
+		strings.Replace("/wlt/commercial/clients/{clientId}/benefits", "{clientId}", url.PathEscape(strings.TrimSpace(clientID)), 1),
 		nil,
 		&envelope,
 	)

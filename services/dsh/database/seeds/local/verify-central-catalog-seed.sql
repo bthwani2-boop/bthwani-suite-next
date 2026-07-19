@@ -11,7 +11,7 @@ UNION ALL
 SELECT 'domain_manual_request_exists', EXISTS (SELECT 1 FROM dsh_catalog_domains WHERE id = 'domain-manual-request')
 UNION ALL
 -- provenance: migration dsh-030
-SELECT 'node_shay_in_exists', EXISTS (SELECT 1 FROM dsh_catalog_nodes WHERE id = 'node-shay-in')
+SELECT 'node_shein_exists', EXISTS (SELECT 1 FROM dsh_catalog_nodes WHERE id = 'node-shein')
 UNION ALL
 -- provenance: seed dsh-032_central_catalog_seed.local.sql
 SELECT 'node_awnak_exists', EXISTS (SELECT 1 FROM dsh_catalog_nodes WHERE id = 'node-awnak')

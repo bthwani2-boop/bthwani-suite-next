@@ -591,6 +591,7 @@ function Invoke-WltSmoke {
   if ([string]::IsNullOrWhiteSpace($wltDshServiceToken)) { throw "WLT_DSH_SERVICE_TOKEN is required for WLT smoke" }
 
   $sessionBody = @{
+    tenantId = "tenant-yemen"
     checkoutIntentId = "checkout-smoke-0001"
     clientId = "client-local-001"
     storeId = "store-test-grocery"
@@ -608,7 +609,7 @@ function Invoke-WltSmoke {
   $session = Invoke-RestMethod "http://localhost:58083/wlt/payment-sessions" -Method Post -Headers $wltServiceHeaders -ContentType "application/json" -Body $sessionBody -TimeoutSec 10 -ErrorAction Stop
   Write-Host "  /wlt/payment-sessions POST: $($session.paymentSession.id)"
   if ([string]::IsNullOrWhiteSpace($session.paymentSession.id)) { throw "/wlt/payment-sessions did not return id" }
-  $sessionRead = Invoke-RestMethod "http://localhost:58083/wlt/payment-sessions/$($session.paymentSession.id)" -TimeoutSec 10 -ErrorAction Stop
+  $sessionRead = Invoke-RestMethod "http://localhost:58083/wlt/payment-sessions/$($session.paymentSession.id)" -Headers $wltServiceHeaders -TimeoutSec 10 -ErrorAction Stop
   Write-Host "  /wlt/payment-sessions GET: $($sessionRead.paymentSession.status)"
   if ($sessionRead.paymentSession.status -ne "reference_created") { throw "/wlt/payment-sessions wrong status" }
 

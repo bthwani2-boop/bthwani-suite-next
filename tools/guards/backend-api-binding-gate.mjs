@@ -37,12 +37,24 @@ function registeredDshRuntimeContracts() {
 const dshContracts = registeredDshRuntimeContracts();
 const dshPrimary = "services/dsh/contracts/dsh.openapi.yaml";
 
+const dshClientAddressContract = "services/dsh/contracts/dsh.client-address.openapi.yaml";
+if (!dshContracts.includes(dshClientAddressContract)) {
+  violations.push({
+    file: "services/dsh/contracts/contract-registry.ts",
+    line: 0,
+    message: `DSH_CLIENT_ADDRESS_CONTRACT_UNREGISTERED: ${dshClientAddressContract} must stay registered as a runtime-owned DSH contract`,
+  });
+}
+
 const services = [
   {
     name: "DSH",
     openapi: dshPrimary,
     additionalOpenapi: dshContracts.filter((file) => file !== dshPrimary),
     router: "services/dsh/backend/internal/http/server.go",
+    // DSH registers routes on the shared mux across the whole package, not
+    // only in server.go; every non-test file must stay visible to the gate.
+    routerDir: "services/dsh/backend/internal/http",
   },
   {
     name: "WLT",
@@ -82,6 +94,11 @@ const gatedWltMutationRoutes = new Set([
   "POST /wlt/commercial/loyalty-entries",
   "POST /wlt/commercial/subscriptions",
 ]);
+
+// Mutation scopes whose approval was explicitly granted by governance
+// (wlt-financial-boundary-gate enforces the same truth); every other gated
+// mutation must stay x-bthwani-mutation-approved: false.
+const approvedWltMutationScopes = new Set(["POST /wlt/settlements"]);
 
 const wltFinancialReadRoutes = new Set([
   "GET /wlt/refunds",
@@ -187,6 +204,31 @@ function extractGoRoutes(file) {
   return routes;
 }
 
+function serviceGoRoutes(service) {
+  const files = [service.router];
+  if (service.routerDir) {
+    const dirPath = path.join(repoRoot, service.routerDir);
+    if (fs.existsSync(dirPath)) {
+      for (const entry of fs.readdirSync(dirPath)) {
+        if (!entry.endsWith(".go") || entry.endsWith("_test.go")) continue;
+        const relative = `${service.routerDir}/${entry}`;
+        if (!files.includes(relative)) files.push(relative);
+      }
+    }
+  }
+  const routes = [];
+  const keys = new Set();
+  for (const file of files) {
+    for (const route of extractGoRoutes(file)) {
+      const key = `${route.method} ${route.path}`;
+      if (keys.has(key)) continue;
+      keys.add(key);
+      routes.push({ ...route, file });
+    }
+  }
+  return routes;
+}
+
 function hasRequiredHeader(operation, headerName) {
   return operation.parameters.some(
     (parameter) =>
@@ -278,11 +320,12 @@ function validateWltOperation(service, operation) {
     }
   }
   if (!gatedWltMutationRoutes.has(key)) return;
-  if (operation.extensions.get("x-bthwani-mutation-approved") !== false) {
+  const expectedApproved = approvedWltMutationScopes.has(key);
+  if (operation.extensions.get("x-bthwani-mutation-approved") !== expectedApproved) {
     violations.push({
       file: operationFile(service, operation),
       line: operation.line,
-      message: `MISSING_MUTATION_METADATA: ${key} must set x-bthwani-mutation-approved: false`,
+      message: `MISSING_MUTATION_METADATA: ${key} must set x-bthwani-mutation-approved: ${expectedApproved}`,
     });
   }
   if (operation.extensions.get("x-bthwani-default-enabled") !== false) {
@@ -319,14 +362,14 @@ for (const service of services) {
   validateOperationIds(service, operations);
 
   const openApiRouteSet = new Set(operations.map(operationKey));
-  const goRoutes = extractGoRoutes(service.router);
+  const goRoutes = serviceGoRoutes(service);
   const goRouteSet = new Set(goRoutes.map((route) => `${route.method} ${route.path}`));
 
   for (const route of goRoutes) {
     const key = `${route.method} ${route.path}`;
     if (!openApiRouteSet.has(key)) {
       violations.push({
-        file: service.router,
+        file: route.file,
         line: route.line,
         message: `FORBIDDEN_ROUTE: Route "${key}" is registered in Go but not documented in: ${contracts.join(", ")}`,
       });

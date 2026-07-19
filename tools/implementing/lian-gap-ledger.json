@@ -203,7 +203,8 @@
         "WLT remains the only financial truth owner",
         "Runtime and production mutation claims reset to false",
         "Production provider remains fail-closed",
-        "Client UI no longer calculates WLT amounts"
+        "Client UI no longer calculates WLT amounts",
+        "Unit-layer duplicate, replay, timeout, out-of-order, and partial-failure coverage passes in services/dsh/backend/internal/wlt/client_resilience_test.go; runtime simulator journeys remain unverified"
       ],
       "acceptance": [
         "Every DSH-to-WLT mutation has correlation and idempotency keys",

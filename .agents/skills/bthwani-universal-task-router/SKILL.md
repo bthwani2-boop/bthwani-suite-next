@@ -58,7 +58,7 @@ Graphify and Nx are conditional tools selected by the tool ladder. They are not 
 
 ## Forbidden
 
-- Using the noncanonical task mode `PRODUCT_CAPABILITY`; use `PRODUCT_MODEL`.
+- Using any noncanonical product task mode; the only canonical product task mode is `PRODUCT_MODEL`.
 - Loading every skill or guard by default.
 - Routing work to a `legacy` or `retired` skill.
 - Letting an adapter, tool, or specialist self-assign formal approval.
