@@ -128,3 +128,6 @@ credentials.local.*
 infra/data-plane/backups/
 **/*.env
 !**/*.env.example
+
+# Generated same-commit runtime evidence
+/artifacts/
