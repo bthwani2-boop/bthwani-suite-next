@@ -1,10 +1,6 @@
 package wlt
 
-import (
-	"context"
-	"net/http"
-	"strings"
-)
+import "context"
 
 type BoundSubscriptionPaymentInput struct {
 	SubscriptionPurchaseID string
@@ -16,41 +12,26 @@ type BoundSubscriptionPaymentInput struct {
 	Currency               string
 }
 
+// CreateBoundSubscriptionPaymentSession delegates to the single commercial
+// payment-session contract. WLT derives and validates the commercial amount;
+// DSH must never create subscription sessions through the generic payment path
+// or assert independent financial truth from AmountMinorUnits/Currency.
 func (c *Client) CreateBoundSubscriptionPaymentSession(
 	ctx context.Context,
 	input BoundSubscriptionPaymentInput,
 	idempotencyKey string,
 	correlationID string,
 ) (*SubscriptionPaymentSession, error) {
-	var envelope struct {
-		PaymentSession SubscriptionPaymentSession `json:"paymentSession"`
-	}
-	if strings.TrimSpace(idempotencyKey) == "" {
-		idempotencyKey = deterministicMutationKey("bound-subscription-payment", input.SubscriptionPurchaseID, input.ProductReference, input.ClientID)
-	}
-	if strings.TrimSpace(correlationID) == "" {
-		correlationID = strings.TrimSpace(input.SubscriptionPurchaseID)
-	}
-	if err := c.commercialMutationRequest(
+	return c.CreateSubscriptionPaymentSession(
 		ctx,
-		http.MethodPost,
-		"/wlt/payment-sessions",
-		map[string]any{
-			"subscriptionPurchaseId":     input.SubscriptionPurchaseID,
-			"commercialProductReference": input.ProductReference,
-			"tenantId":                   input.TenantID,
-			"clientId":                   input.ClientID,
-			"storeId":                    "platform-subscriptions",
-			"paymentMethod":              input.PaymentMethod,
-			"amountMinorUnits":           input.AmountMinorUnits,
-			"currency":                   input.Currency,
-			"cartSnapshotHash":           "subscription:" + input.ProductReference,
+		CreateSubscriptionPaymentSessionInput{
+			SubscriptionPurchaseID: input.SubscriptionPurchaseID,
+			ProductReference:       input.ProductReference,
+			TenantID:               input.TenantID,
+			ClientID:               input.ClientID,
+			PaymentMethod:          input.PaymentMethod,
 		},
 		idempotencyKey,
 		correlationID,
-		&envelope,
-	); err != nil {
-		return nil, err
-	}
-	return &envelope.PaymentSession, nil
+	)
 }
