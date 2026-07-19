@@ -20,7 +20,7 @@ on:
           - "false"
           - "true"
   push:
-    branches: [implementing, journy, master, sam]
+    branches: [implementing, journy, master, sam, "fix/lian-sovereign-final-closure"]
     paths:
       - "tools/performance/**"
       - "tools/guards/heavy-import-gate.mjs"
@@ -30,6 +30,7 @@ on:
       - "apps/control-panel/**"
       - "infra/docker/scripts/runtime.ps1"
       - "services/wlt/database/migrations/**"
+      - ".github/workflows/performance.yml"
   schedule:
     - cron: "0 4 * * 1"
 
@@ -37,20 +38,20 @@ permissions:
   contents: read
 
 jobs:
-  # ── Static performance gates (always run) ──────────────────────────────────
   static-perf-gates:
     name: Static Performance Gates
     runs-on: ubuntu-latest
     timeout-minutes: 10
-
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           version: 10.34.2
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "24"
           cache: "pnpm"
@@ -58,13 +59,13 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Guard — Performance budget config (FAIL)
+      - name: Guard — Performance budget config
         run: pnpm run guard:performance-budget
 
-      - name: Guard — Heavy imports (FAIL)
+      - name: Guard — Heavy imports
         run: pnpm run guard:heavy-imports
 
-      - name: Guard — Bundle budget analysis (WARN)
+      - name: Guard — Bundle budget analysis
         run: pnpm run guard:bundle-budget
         continue-on-error: true
 
@@ -72,23 +73,23 @@ jobs:
         run: pnpm run diagnostics:performance
 
       - name: Upload performance report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: performance-report
           path: .diagnostics/performance/performance-summary.md
           retention-days: 30
 
-  # ── Go benchmarks (always run — for baseline tracking) ─────────────────────
   go-benchmarks:
     name: Go Benchmarks
     runs-on: ubuntu-latest
     timeout-minutes: 20
-
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version-file: "services/dsh/backend/go.mod"
           cache: true
@@ -96,52 +97,52 @@ jobs:
       - name: Go benchmarks — DSH
         run: |
           cd services/dsh/backend
-          go test -bench=. -benchmem -benchtime=2s -count=1 ./... 2>&1 | tee /tmp/dsh-benchmarks.txt || true
+          go test -bench=. -benchmem -benchtime=2s -count=1 ./... 2>&1 | tee /tmp/dsh-benchmarks.txt
 
       - name: Go benchmarks — WLT
         run: |
           cd services/wlt/backend
-          go test -bench=. -benchmem -benchtime=2s -count=1 ./... 2>&1 | tee /tmp/wlt-benchmarks.txt || true
+          go test -bench=. -benchmem -benchtime=2s -count=1 ./... 2>&1 | tee /tmp/wlt-benchmarks.txt
 
       - name: Upload benchmark results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: go-benchmarks
           path: /tmp/*-benchmarks.txt
           retention-days: 30
 
-  # ── k6 API load tests (manual only — requires runtime) ────────────────────
   k6-api-smoke:
     name: k6 API Smoke Tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
     if: github.event.inputs.run_k6 == 'true'
-
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
 
       - name: Setup PNPM
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           version: 10.34.2
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24.17.0
-          cache: 'pnpm'
+          cache: pnpm
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Start runtime (identity, workforce, DSH, WLT, financial simulators)
+      - name: Start runtime
         shell: pwsh
         run: |
           pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action reset -Force -Profiles identity,workforce,dsh,wlt,financial-simulators
 
       - name: Setup k6
-        uses: grafana/setup-k6-action@v1
+        uses: grafana/setup-k6-action@85119162329017cffa5e1450d8caef5780543201
 
       - name: k6 — DSH API smoke
         run: k6 run tools/performance/k6/dsh-smoke.js
@@ -156,7 +157,7 @@ jobs:
       - name: k6 — Identity smoke
         run: k6 run tools/performance/k6/identity-smoke.js
         env:
-          BASE_URL: http://localhost:58000
+          BASE_URL: http://localhost:58082
 
       - name: Docker compose logs on failure
         if: failure()
@@ -164,7 +165,7 @@ jobs:
 
       - name: Upload docker logs artifact
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: k6-docker-logs-${{ github.run_id }}
           path: /tmp/docker-logs.txt
@@ -174,21 +175,21 @@ jobs:
         if: always()
         run: docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml -f infra/docker/compose.financial-simulators.yml down -v --remove-orphans
 
-  # ── Lighthouse CI (manual only — requires Next.js build) ──────────────────
   lighthouse-ci:
     name: Lighthouse CI — Control Panel
     runs-on: ubuntu-latest
     timeout-minutes: 20
     if: github.event.inputs.run_lighthouse == 'true'
-
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           version: 10.34.2
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "24"
           cache: "pnpm"
@@ -208,12 +209,9 @@ jobs:
           LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
 
       - name: Upload Lighthouse report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: lighthouse-report
           path: .lighthouseci/
           retention-days: 14
-
-
-
