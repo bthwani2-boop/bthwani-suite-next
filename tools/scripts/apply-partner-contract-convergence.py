@@ -78,27 +78,31 @@ func TestLegacyCatalogWriteRoutesAreRetired(t *testing.T) {
 
 \tmux := NewRouter(nil, nil, nil, nil)
 \tcases := []struct {
-\t\tmethod string
-\t\tpath   string
+\t\tmethod       string
+\t\tpath         string
+\t\twantedStatus int
 \t}{
-\t\t{http.MethodPut, "/dsh/catalog/stores/store-1/assortment/product-1"},
-\t\t{http.MethodPut, "/dsh/field/catalog/stores/store-1/assortment/product-1"},
-\t\t{http.MethodPut, "/dsh/partner/catalog/assortment/product-1"},
-\t\t{http.MethodPatch, "/dsh/partner/catalog/product-proposals/proposal-1"},
-\t\t{http.MethodPatch, "/dsh/field/partners/partner-1/catalog/product-proposals/proposal-1"},
+\t\t{http.MethodPut, "/dsh/catalog/stores/store-1/assortment/product-1", http.StatusNotFound},
+\t\t{http.MethodPut, "/dsh/field/catalog/stores/store-1/assortment/product-1", http.StatusNotFound},
+\t\t{http.MethodPut, "/dsh/partner/catalog/assortment/product-1", http.StatusNotFound},
+\t\t{http.MethodPatch, "/dsh/partner/catalog/product-proposals/proposal-1", http.StatusMethodNotAllowed},
+\t\t{http.MethodPatch, "/dsh/field/partners/partner-1/catalog/product-proposals/proposal-1", http.StatusMethodNotAllowed},
 \t}
 
 \tfor _, tc := range cases {
 \t\tt.Run(tc.method+" "+tc.path, func(t *testing.T) {
 \t\t\treq := httptest.NewRequest(tc.method, tc.path, nil)
 \t\t\thandler, pattern := mux.Handler(req)
-\t\t\tif pattern != "" && pattern != "/" {
+\t\t\tif tc.wantedStatus == http.StatusNotFound && pattern != "" && pattern != "/" {
 \t\t\t\tt.Fatalf("legacy route remains registered: got %q", pattern)
+\t\t\t}
+\t\t\tif tc.wantedStatus == http.StatusMethodNotAllowed && pattern != "" {
+\t\t\t\tt.Fatalf("retired method unexpectedly matched route pattern %q", pattern)
 \t\t\t}
 \t\t\trecorder := httptest.NewRecorder()
 \t\t\thandler.ServeHTTP(recorder, req)
-\t\t\tif recorder.Code != http.StatusNotFound {
-\t\t\t\tt.Fatalf("legacy route must return 404: got %d", recorder.Code)
+\t\t\tif recorder.Code != tc.wantedStatus {
+\t\t\t\tt.Fatalf("retired route returned status %d, want %d", recorder.Code, tc.wantedStatus)
 \t\t\t}
 \t\t})
 \t}
