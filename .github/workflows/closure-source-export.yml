@@ -37,12 +37,17 @@ jobs:
           services/wlt/contracts/wlt.openapi.yaml
           services/dsh/contracts/dsh.openapi.yaml
           services/dsh/backend/internal/http/server.go
+          services/dsh/backend/internal/partner/model.go
+          services/dsh/backend/internal/partner/handler.go
+          services/dsh/backend/internal/partner/repository.go
+          services/dsh/database/tests/dsh-058_partner_team_idempotency.sql
           services/dsh/frontend/app-partner/orders/usePartnerOrdersRuntime.ts
           services/dsh/frontend/app-partner/orders/usePartnerOrdersModel.ts
           services/dsh/frontend/app-partner/orders/OrdersInboxScreen.tsx
           services/dsh/frontend/app-partner/useDshPartnerSurfaceModel.ts
           services/dsh/frontend/app-partner/DshPartnerSurface.tsx
           services/dsh/frontend/app-partner/DshPartnerRouteRenderer.tsx
+          tools/scripts/apply-partner-team-audit-closure.py
           tools/scripts/apply-partner-order-actions-closure.py
           tools/guards/partner/partner-surface-truth-gate.mjs
           tools/guards/backend-api-binding-gate.mjs
