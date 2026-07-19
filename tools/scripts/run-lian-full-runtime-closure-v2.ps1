@@ -80,8 +80,27 @@ function Invoke-Compose([string[]]$Arguments, [switch]$Financial) {
 function Invoke-Runtime([string]$Action, [string]$Profiles, [switch]$Force) {
   $Arguments = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $RuntimeScript, "-Action", $Action, "-Profiles", $Profiles)
   if ($Force) { $Arguments += "-Force" }
-  & pwsh @Arguments
-  if ($LASTEXITCODE -ne 0) { throw "runtime:$Action failed for profiles $Profiles" }
+  $Output = @(& pwsh @Arguments 2>&1)
+  $ExitCode = $LASTEXITCODE
+  $Output | ForEach-Object { Write-Host $_ }
+  if ($ExitCode -ne 0) {
+    $Actionable = @(
+      $Output |
+        ForEach-Object { [string]$_ } |
+        Where-Object {
+          $_ -match '(?i)(error|failed|failure|fatal|missing|invalid|conflict|refused|unhealthy|did not become|cannot|not found|checksum|dirty)'
+        }
+    )
+    $Detail = if ($Actionable.Count -gt 0) {
+      ($Actionable | Select-Object -Last 3) -join " | "
+    } elseif ($Output.Count -gt 0) {
+      ($Output | Select-Object -Last 3) -join " | "
+    } else {
+      "no child output"
+    }
+    $Detail = ($Detail -replace '\s+', ' ').Trim()
+    throw "runtime:$Action failed for profiles $Profiles (exit $ExitCode): $Detail"
+  }
 }
 
 function Wait-Database([string]$DatabaseName) {
