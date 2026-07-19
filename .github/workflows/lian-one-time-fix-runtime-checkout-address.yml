@@ -1,0 +1,84 @@
+name: Lian One-Time Governed Checkout Address Fix
+
+on:
+  push:
+    branches: [lian]
+    paths:
+      - ".github/workflows/lian-one-time-fix-runtime-checkout-address.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: lian-one-time-checkout-address-fix
+  cancel-in-progress: false
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout lian
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: lian
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Replace legacy checkout address with governed address ownership
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("infra/docker/scripts/runtime.ps1")
+          text = path.read_text(encoding="utf-8")
+
+          anchor = '''    $cartBody = @{
+              storeId = "store-test-grocery"'''
+          if anchor not in text:
+              raise SystemExit("runtime cart anchor not found; refusing non-deterministic patch")
+
+          replacement = '''    $existingCart = Invoke-RestMethod "http://localhost:58080/dsh/client/cart?storeId=store-test-grocery" -Headers $clientHeaders -TimeoutSec 10
+              if ($null -ne $existingCart.cart) {
+                Invoke-RestMethod "http://localhost:58080/dsh/client/cart?storeId=store-test-grocery" -Method Delete -Headers $clientHeaders -TimeoutSec 10 | Out-Null
+              }
+              $addressHeaders = @{}
+              foreach ($key in $clientHeaders.Keys) { $addressHeaders[$key] = $clientHeaders[$key] }
+              $addressHeaders["Idempotency-Key"] = "smoke-address-$([guid]::NewGuid())"
+              $addressBody = @{
+                label = "runtime-smoke"
+                recipientName = "Runtime Client"
+                phoneE164 = "+967711111111"
+                addressLine = "Sanaa runtime smoke checkout address"
+                serviceAreaCode = "sanaa"
+                latitude = 15.35
+                longitude = 44.20
+                makeDefault = $true
+              } | ConvertTo-Json
+              $runtimeAddress = Invoke-RestMethod "http://localhost:58080/dsh/client/addresses" -Method Post -Headers $addressHeaders -ContentType "application/json" -Body $addressBody -TimeoutSec 10
+              if ([string]::IsNullOrWhiteSpace($runtimeAddress.address.id)) { throw "runtime address did not return id" }
+              $cartBody = @{
+                storeId = "store-test-grocery"'''
+          text = text.replace(anchor, replacement, 1)
+
+          legacy = '      deliveryAddress = "runtime smoke checkout address"'
+          governed = '      deliveryAddressId = $runtimeAddress.address.id'
+          if legacy not in text:
+              raise SystemExit("legacy deliveryAddress line not found; refusing patch")
+          text = text.replace(legacy, governed, 1)
+
+          path.write_text(text, encoding="utf-8")
+
+      - name: Commit deterministic fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- infra/docker/scripts/runtime.ps1; then
+            echo "No patch required"
+            exit 0
+          fi
+          git config user.name "bthwani-governance-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add infra/docker/scripts/runtime.ps1
+          git commit -m "fix(runtime): bind checkout smoke to governed client address"
+          git push origin HEAD:lian
