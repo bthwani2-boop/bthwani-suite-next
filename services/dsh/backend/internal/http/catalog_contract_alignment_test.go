@@ -35,12 +35,16 @@ func requireVersionedSchema(t *testing.T, contract, schema string) {
 	if start < 0 {
 		t.Fatalf("missing schema %s", schema)
 	}
-	tail := contract[start:]
-	end := strings.Index(tail[4:], "\n    ")
-	if end >= 0 {
-		tail = tail[:end+4]
+
+	lines := strings.Split(contract[start:], "\n")
+	block := make([]string, 0, len(lines))
+	for index, line := range lines {
+		if index > 0 && strings.HasPrefix(line, "    ") && len(line) > 4 && line[4] != ' ' && line[4] != '\t' {
+			break
+		}
+		block = append(block, line)
 	}
-	if !strings.Contains(tail, "expectedVersion") {
+	if !strings.Contains(strings.Join(block, "\n"), "expectedVersion") {
 		t.Fatalf("schema %s must expose expectedVersion for optimistic concurrency", schema)
 	}
 }
