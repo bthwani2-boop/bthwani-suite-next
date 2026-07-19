@@ -35,7 +35,7 @@ BEGIN
   );
 
   INSERT INTO dsh_store_team_members (
-    store_id, invited_identity, display_name, role, status, invited_by_actor_id
+    store_id, invited_identity, name, role, status, invited_by_actor_id
   ) VALUES (
     v_test_store_id, '+967700000001', 'عضو اختبار', 'staff', 'invited', v_actor_id
   ) RETURNING id INTO v_member_id;
@@ -47,7 +47,7 @@ BEGIN
     AND team_member.status = 'invited';
 
   INSERT INTO dsh_store_team_members (
-    store_id, invited_identity, display_name, role, status, invited_by_actor_id
+    store_id, invited_identity, name, role, status, invited_by_actor_id
   ) VALUES (
     v_test_store_id, '+967700000001', 'عضو اختبار', 'staff', 'invited', v_actor_id
   );
