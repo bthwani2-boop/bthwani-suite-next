@@ -38,6 +38,12 @@ jobs:
           services/dsh/contracts/dsh.openapi.yaml
           services/dsh/backend/internal/http/server.go
           services/dsh/frontend/app-partner/orders/usePartnerOrdersRuntime.ts
+          services/dsh/frontend/app-partner/orders/usePartnerOrdersModel.ts
+          services/dsh/frontend/app-partner/orders/OrdersInboxScreen.tsx
+          services/dsh/frontend/app-partner/useDshPartnerSurfaceModel.ts
+          services/dsh/frontend/app-partner/DshPartnerSurface.tsx
+          services/dsh/frontend/app-partner/DshPartnerRouteRenderer.tsx
+          tools/scripts/apply-partner-order-actions-closure.py
           tools/guards/partner/partner-surface-truth-gate.mjs
           tools/guards/backend-api-binding-gate.mjs
           tools/guards/extract_routes.go
