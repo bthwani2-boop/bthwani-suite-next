@@ -1,0 +1,213 @@
+name: Lian Root Error Probe
+
+on:
+  push:
+    branches: [lian]
+    paths:
+      - ".github/workflows/lian-root-error-probe.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  statuses: write
+
+jobs:
+  dsh-go:
+    name: Root DSH Go — ${{ matrix.phase }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - phase: vet
+            command: go vet ./...
+          - phase: test
+            command: go test ./... -count=1
+          - phase: build
+            command: go build ./...
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache: true
+          cache-dependency-path: services/dsh/backend/go.sum
+      - name: Run phase and publish error in context
+        working-directory: services/dsh/backend
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMMAND: ${{ matrix.command }}
+          PHASE: ${{ matrix.phase }}
+          SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set +e
+          bash -o pipefail -c "$COMMAND" >/tmp/out.log 2>&1
+          code=$?
+          cat /tmp/out.log
+          state=success
+          snippet=PASS
+          if [ $code -ne 0 ]; then
+            state=failure
+            snippet="$(grep -Eai 'undefined|cannot use|not enough|too many|FAIL|error' /tmp/out.log | head -n1)"
+            [ -n "$snippet" ] || snippet="$(tail -n1 /tmp/out.log)"
+            snippet="$(printf '%s' "$snippet" | tr '\n\r/' '   ' | sed -E 's/[[:space:]]+/ /g' | cut -c1-52)"
+          fi
+          context="Root DSH-$PHASE $snippet"
+          context="$(printf '%s' "$context" | cut -c1-90)"
+          jq -n --arg state "$state" --arg context "$context" --arg description "$snippet" --arg target_url "$RUN_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/status.json
+          curl --fail-with-body --silent --show-error -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "https://api.github.com/repos/$REPOSITORY/statuses/$SHA" -d @/tmp/status.json
+          exit $code
+
+  governance:
+    name: Root governance — ${{ matrix.phase }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - phase: schema
+            command: pnpm run guard:governance-schema
+          - phase: agent
+            command: pnpm run guard:agent-governance
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-node-workspace
+      - name: Run phase and publish error in context
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMMAND: ${{ matrix.command }}
+          PHASE: ${{ matrix.phase }}
+          SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set +e
+          bash -o pipefail -c "$COMMAND" >/tmp/out.log 2>&1
+          code=$?
+          cat /tmp/out.log
+          state=success
+          snippet=PASS
+          if [ $code -ne 0 ]; then
+            state=failure
+            snippet="$(grep -Eai 'error|failed|failure|missing|invalid|expected|mismatch' /tmp/out.log | tail -n1)"
+            [ -n "$snippet" ] || snippet="$(tail -n1 /tmp/out.log)"
+            snippet="$(printf '%s' "$snippet" | tr '\n\r/' '   ' | sed -E 's/[[:space:]]+/ /g' | cut -c1-52)"
+          fi
+          context="Root Governance-$PHASE $snippet"
+          context="$(printf '%s' "$context" | cut -c1-90)"
+          jq -n --arg state "$state" --arg context "$context" --arg description "$snippet" --arg target_url "$RUN_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/status.json
+          curl --fail-with-body --silent --show-error -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "https://api.github.com/repos/$REPOSITORY/statuses/$SHA" -d @/tmp/status.json
+          exit $code
+
+  dsh-db:
+    name: Root DSH migration error
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: dsh_root
+          POSTGRES_PASSWORD: dsh_root_password
+          POSTGRES_DB: dsh_root
+        ports:
+          - "55432:5432"
+        options: >-
+          --health-cmd="pg_isready -U dsh_root -d dsh_root"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      DATABASE_URL: postgres://dsh_root:dsh_root_password@localhost:55432/dsh_root?sslmode=disable
+      PGPASSWORD: dsh_root_password
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+      - name: Apply and publish exact migration
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set +e
+          state=success
+          current=PASS
+          err=PASS
+          while IFS= read -r file; do
+            current="$(basename "$file")"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file" >/tmp/db.log 2>&1
+            code=$?
+            if [ $code -ne 0 ]; then
+              state=failure
+              err="$(grep -Eai 'ERROR|FATAL' /tmp/db.log | tail -n1 | sed -E 's/[[:space:]]+/ /g' | cut -c1-42)"
+              break
+            fi
+          done < <(find services/dsh/database/migrations -maxdepth 1 -type f -name 'dsh-*.sql' | sort)
+          context="Root DSH-DB $current $err"
+          context="$(printf '%s' "$context" | cut -c1-90)"
+          jq -n --arg state "$state" --arg context "$context" --arg description "$current $err" --arg target_url "$RUN_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/status.json
+          curl --fail-with-body --silent --show-error -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "https://api.github.com/repos/$REPOSITORY/statuses/$SHA" -d @/tmp/status.json
+          [ "$state" = success ]
+
+  wlt-db:
+    name: Root WLT migration error
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: wlt_root
+          POSTGRES_PASSWORD: wlt_root_password
+          POSTGRES_DB: wlt_root
+        ports:
+          - "55433:5432"
+        options: >-
+          --health-cmd="pg_isready -U wlt_root -d wlt_root"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      DATABASE_URL: postgres://wlt_root:wlt_root_password@localhost:55433/wlt_root?sslmode=disable
+      PGPASSWORD: wlt_root_password
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+      - name: Apply and publish exact migration
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set +e
+          state=success
+          current=PASS
+          err=PASS
+          while IFS= read -r file; do
+            current="$(basename "$file")"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file" >/tmp/db.log 2>&1
+            code=$?
+            if [ $code -ne 0 ]; then
+              state=failure
+              err="$(grep -Eai 'ERROR|FATAL' /tmp/db.log | tail -n1 | sed -E 's/[[:space:]]+/ /g' | cut -c1-42)"
+              break
+            fi
+          done < <(find services/wlt/database/migrations -maxdepth 1 -type f -name '*.sql' | sort)
+          context="Root WLT-DB $current $err"
+          context="$(printf '%s' "$context" | cut -c1-90)"
+          jq -n --arg state "$state" --arg context "$context" --arg description "$current $err" --arg target_url "$RUN_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/status.json
+          curl --fail-with-body --silent --show-error -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "https://api.github.com/repos/$REPOSITORY/statuses/$SHA" -d @/tmp/status.json
+          [ "$state" = success ]
