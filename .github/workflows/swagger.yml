@@ -2,7 +2,10 @@ name: Swagger API Docs
 
 on:
   push:
-    branches: [bassam, master]
+    branches:
+      - bassam
+      - master
+      - "fix/lian-sovereign-final-closure"
     paths:
       - "contracts/**"
       - "core/**/contracts/**"
@@ -30,20 +33,41 @@ jobs:
   build-docs:
     name: Build Swagger UI documentation
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
-      - name: Checkout repository
+      - name: Checkout immutable source
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           persist-credentials: false
-      - name: Setup workspace
+          fetch-depth: 0
+
+      - name: Setup governed workspace
         uses: ./.github/actions/setup-node-workspace
+
       - name: Build Swagger static files
-        run: pnpm run swagger:build
-      - name: Upload Swagger UI artifact
+        id: build
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          mkdir -p artifacts
+          pnpm run swagger:build 2>&1 | tee artifacts/swagger-build.log
+          code=${PIPESTATUS[0]}
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit "$code"
+
+      - name: Upload Swagger diagnostics
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: swagger-api-docs
-          path: dist-swagger
-          if-no-files-found: error
+          name: swagger-build-${{ github.sha }}
+          path: |
+            artifacts/swagger-build.log
+            dist-swagger
+          if-no-files-found: warn
           retention-days: 7
+
+      - name: Enforce Swagger build
+        if: steps.build.outcome != 'success'
+        shell: bash
+        run: exit 1
