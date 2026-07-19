@@ -120,6 +120,35 @@ function Wait-JsonHealth {
   throw "$Name did not report status '$ExpectedStatus' at $Url"
 }
 
+function Wait-ProvidersHealth {
+  param([Parameter(Mandatory = $true)][string]$Url)
+
+  for ($Attempt = 1; $Attempt -le 30; $Attempt++) {
+    try {
+      $Response = Invoke-RestMethod $Url -TimeoutSec 5 -ErrorAction Stop
+      $Items = @($Response.providers)
+      $Kinds = @($Items | ForEach-Object { $_.kind })
+      $RequiredKinds = @("sms", "maps", "payment", "push", "email", "storage", "search", "fraud")
+      $MissingKinds = @($RequiredKinds | Where-Object { $Kinds -notcontains $_ })
+      $InvalidStates = @($Items | Where-Object { $_.status -notin @("healthy", "degraded", "down", "not_configured") })
+      if ($Items.Count -ge $RequiredKinds.Count -and $MissingKinds.Count -eq 0 -and $InvalidStates.Count -eq 0) {
+        $MapState = @($Items | Where-Object { $_.kind -eq "maps" } | Select-Object -First 1)
+        $Evidence.services["providers"] = [ordered]@{
+          url = $Url
+          status = "reachable"
+          providerKinds = $Kinds
+          mapsStatus = if ($MapState.Count -gt 0) { $MapState[0].status } else { "missing" }
+          state = "PASS"
+        }
+        return
+      }
+    } catch { }
+    Start-Sleep -Seconds 2
+  }
+
+  throw "providers health did not return the governed provider-kind matrix at $Url"
+}
+
 function Assert-ProtectedRoute {
   param(
     [Parameter(Mandatory = $true)][string]$Name,
@@ -180,7 +209,7 @@ try {
   Wait-JsonHealth -Name "identity" -Url "http://127.0.0.1:58082/identity/health"
   Wait-JsonHealth -Name "wlt" -Url "http://127.0.0.1:58083/wlt/health"
   Wait-JsonHealth -Name "workforce" -Url "http://127.0.0.1:58086/workforce/health"
-  Wait-JsonHealth -Name "providers" -Url "http://127.0.0.1:58087/providers/health"
+  Wait-ProvidersHealth -Url "http://127.0.0.1:58087/providers/health"
   Wait-JsonHealth -Name "platform-control" -Url "http://127.0.0.1:58088/platform/health"
   Wait-JsonHealth -Name "platform-control-readiness" -Url "http://127.0.0.1:58088/platform/readiness" -ExpectedStatus "ready"
 
