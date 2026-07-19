@@ -30,9 +30,9 @@ func TestSearchWithMapProviderUsesGovernedNominatimConfiguration(t *testing.T) {
 	defer server.Close()
 
 	parameters, _ := json.Marshal(map[string]any{
-		"protocol": "nominatim",
-		"baseUrl": server.URL,
-		"userAgent": "bthwani-map-tests/1.0",
+		"protocol":     "nominatim",
+		"baseUrl":      server.URL,
+		"userAgent":    "bthwani-map-tests/1.0",
 		"countryCodes": []string{"YE"},
 	})
 	provider := ExternalProvider{Code: "nominatim-primary", Active: true, Parameters: parameters}

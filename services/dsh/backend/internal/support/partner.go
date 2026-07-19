@@ -9,23 +9,23 @@ import (
 const maxPartnerSupportMessageLength = 4000
 
 type PartnerCreateTicketInput struct {
-	ActorID         string
-	StoreID         string
-	OrderID         string
-	Subject         string
-	Description     string
-	Category        TicketCategory
-	Priority        TicketPriority
-	IdempotencyKey  string
-	CorrelationID   string
+	ActorID        string
+	StoreID        string
+	OrderID        string
+	Subject        string
+	Description    string
+	Category       TicketCategory
+	Priority       TicketPriority
+	IdempotencyKey string
+	CorrelationID  string
 }
 
 type PartnerAddMessageInput struct {
-	ActorID         string
-	TicketID        string
-	Body            string
-	IdempotencyKey  string
-	CorrelationID   string
+	ActorID        string
+	TicketID       string
+	Body           string
+	IdempotencyKey string
+	CorrelationID  string
 }
 
 func validTicketCategory(value TicketCategory) bool {

@@ -14,9 +14,9 @@ import (
 )
 
 var (
-	ErrInvalid            = errors.New("invalid service area")
-	ErrNotFound           = errors.New("service area not found")
-	ErrVersionConflict    = errors.New("service area version conflict")
+	ErrInvalid             = errors.New("invalid service area")
+	ErrNotFound            = errors.New("service area not found")
+	ErrVersionConflict     = errors.New("service area version conflict")
 	ErrIdempotencyConflict = errors.New("service area idempotency conflict")
 )
 

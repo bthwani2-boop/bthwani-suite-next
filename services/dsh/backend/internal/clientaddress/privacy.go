@@ -185,12 +185,12 @@ func UpdatePrivacyPolicy(
 	}
 
 	metadata, err := json.Marshal(map[string]any{
-		"reason":            input.Reason,
-		"fromVersion":       before.Version,
-		"toVersion":         result.Version,
-		"enabled":           result.Enabled,
-		"retentionDays":     result.RetentionDays,
-		"batchLimit":        result.BatchLimit,
+		"reason":        input.Reason,
+		"fromVersion":   before.Version,
+		"toVersion":     result.Version,
+		"enabled":       result.Enabled,
+		"retentionDays": result.RetentionDays,
+		"batchLimit":    result.BatchLimit,
 	})
 	if err != nil {
 		return PrivacyPolicy{}, err

@@ -44,9 +44,9 @@ type Location struct {
 	Longitude          float64 `json:"longitude"`
 	CountryCode        string  `json:"countryCode,omitempty"`
 	AdministrativeArea string  `json:"administrativeArea,omitempty"`
-	Locality            string  `json:"locality,omitempty"`
-	PostalCode          string  `json:"postalCode,omitempty"`
-	Confidence          float64 `json:"confidence,omitempty"`
+	Locality           string  `json:"locality,omitempty"`
+	PostalCode         string  `json:"postalCode,omitempty"`
+	Confidence         float64 `json:"confidence,omitempty"`
 }
 
 type SearchResponse struct {

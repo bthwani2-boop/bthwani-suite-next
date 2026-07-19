@@ -15,8 +15,8 @@ import (
 )
 
 var (
-	ErrInvalidMapRequest     = errors.New("invalid map request")
-	ErrMapProviderUnavailable = errors.New("map provider unavailable")
+	ErrInvalidMapRequest        = errors.New("invalid map request")
+	ErrMapProviderUnavailable   = errors.New("map provider unavailable")
 	ErrMapProviderNotConfigured = errors.New("map provider not configured")
 )
 
@@ -41,9 +41,9 @@ type MapLocation struct {
 	Longitude          float64 `json:"longitude"`
 	CountryCode        string  `json:"countryCode,omitempty"`
 	AdministrativeArea string  `json:"administrativeArea,omitempty"`
-	Locality            string  `json:"locality,omitempty"`
-	PostalCode          string  `json:"postalCode,omitempty"`
-	Confidence          float64 `json:"confidence,omitempty"`
+	Locality           string  `json:"locality,omitempty"`
+	PostalCode         string  `json:"postalCode,omitempty"`
+	Confidence         float64 `json:"confidence,omitempty"`
 }
 
 type MapSearchResponse struct {
@@ -73,14 +73,14 @@ type mapProviderCredentials struct {
 }
 
 type nominatimAddress struct {
-	CountryCode string `json:"country_code"`
-	State       string `json:"state"`
+	CountryCode   string `json:"country_code"`
+	State         string `json:"state"`
 	StateDistrict string `json:"state_district"`
-	City        string `json:"city"`
-	Town        string `json:"town"`
-	Village     string `json:"village"`
-	County      string `json:"county"`
-	Postcode    string `json:"postcode"`
+	City          string `json:"city"`
+	Town          string `json:"town"`
+	Village       string `json:"village"`
+	County        string `json:"county"`
+	Postcode      string `json:"postcode"`
 }
 
 type nominatimLocation struct {
@@ -358,9 +358,9 @@ func normalizeNominatimLocation(providerCode string, item nominatimLocation) (Ma
 		Longitude:          longitude,
 		CountryCode:        strings.ToUpper(strings.TrimSpace(item.Address.CountryCode)),
 		AdministrativeArea: strings.TrimSpace(administrativeArea),
-		Locality:            strings.TrimSpace(locality),
-		PostalCode:          strings.TrimSpace(item.Address.Postcode),
-		Confidence:          item.Importance,
+		Locality:           strings.TrimSpace(locality),
+		PostalCode:         strings.TrimSpace(item.Address.Postcode),
+		Confidence:         item.Importance,
 	}, nil
 }
 

@@ -13,10 +13,10 @@ import (
 
 type verifiedMapLocation struct {
 	mapproviders.Location
-	ServiceAreaCode    string `json:"serviceAreaCode,omitempty"`
-	ServiceAreaName    string `json:"serviceAreaName,omitempty"`
-	ServiceAreaVersion int    `json:"serviceAreaVersion,omitempty"`
-	ServiceAreaVerified bool  `json:"serviceAreaVerified"`
+	ServiceAreaCode     string `json:"serviceAreaCode,omitempty"`
+	ServiceAreaName     string `json:"serviceAreaName,omitempty"`
+	ServiceAreaVersion  int    `json:"serviceAreaVersion,omitempty"`
+	ServiceAreaVerified bool   `json:"serviceAreaVerified"`
 }
 
 func writeClientMapError(w http.ResponseWriter, err error) {
@@ -90,11 +90,11 @@ func (s *protectedStoreServer) verifyMapLocation(r *http.Request, location mappr
 		return verifiedMapLocation{}, err
 	}
 	return verifiedMapLocation{
-		Location:             location,
-		ServiceAreaCode:      resolution.ServiceAreaCode,
-		ServiceAreaName:      resolution.DisplayName,
-		ServiceAreaVersion:   resolution.Version,
-		ServiceAreaVerified:  resolution.Verified,
+		Location:            location,
+		ServiceAreaCode:     resolution.ServiceAreaCode,
+		ServiceAreaName:     resolution.DisplayName,
+		ServiceAreaVersion:  resolution.Version,
+		ServiceAreaVerified: resolution.Verified,
 	}, nil
 }
 

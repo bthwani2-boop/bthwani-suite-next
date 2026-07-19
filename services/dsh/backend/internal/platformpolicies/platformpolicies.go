@@ -38,9 +38,9 @@ type StoreOnboardingFeePolicyInput struct {
 }
 
 var validAppliesTo = map[string]bool{
-	"first_store":     true,
+	"first_store":      true,
 	"additional_store": true,
-	"all_stores":      true,
+	"all_stores":       true,
 }
 
 var validChargeTiming = map[string]bool{

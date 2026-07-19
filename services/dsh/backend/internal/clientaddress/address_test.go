@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func str(value string) *string { return &value }
+func str(value string) *string      { return &value }
 func number(value float64) *float64 { return &value }
 
 func validInput() CreateInput {
