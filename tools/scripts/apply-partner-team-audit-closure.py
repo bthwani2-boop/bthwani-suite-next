@@ -23,7 +23,6 @@ def replace_once(relative: str, old: str, new: str) -> None:
     raise RuntimeError(f"missing anchor in {relative}: {old[:160]!r}")
 
 
-# Backend input carries request metadata without widening the public JSON body.
 replace_once(
     "services/dsh/backend/internal/partner/model.go",
     '''type TeamMemberActionInput struct {
@@ -39,7 +38,6 @@ replace_once(
 }''',
 )
 
-# Handler derives an auditable reason and propagates transport governance headers.
 replace_once(
     "services/dsh/backend/internal/partner/handler.go",
     '''\t\tinput.ActorID = actorID
@@ -51,8 +49,6 @@ replace_once(
 \t\terr := ExecuteStoreTeamMemberAction(db, r.PathValue("storeId"), r.PathValue("memberId"), input)''',
 )
 
-# Repository replays duplicate idempotency keys before any state transition and
-# persists the complete audit context in the same transaction as the mutation.
 replace_once(
     "services/dsh/backend/internal/partner/repository.go",
     '''\tdefer tx.Rollback()
@@ -93,7 +89,6 @@ replace_once(
 \t\tinput.Reason, input.CorrelationID, input.IdempotencyKey); err != nil {''',
 )
 
-# The invariant now proves the whole audit context is accepted by the schema.
 replace_once(
     "services/dsh/database/tests/dsh-058_partner_team_idempotency.sql",
     '''    member_id, store_id, action_label, from_status, to_status, actor_id, reason
@@ -106,6 +101,18 @@ replace_once(
     v_member_id, v_test_store_id, 'activate', 'active', 'active', v_actor_id,
     'retry', 'test-correlation', 'test-idempotency'
   );''',
+)
+
+replace_once(
+    "infra/docker/scripts/runtime.ps1",
+    '''  $ExpectedFiles = $Manifest.media | Select-Object -ExpandProperty relativeSourcePath
+
+  $MediaDirectory = (Resolve-Path "services/dsh/database/seeds/local/media").Path
+  $Missing = $ExpectedFiles | Where-Object { -not (Test-Path (Join-Path $MediaDirectory $_)) }''',
+    '''  $ExpectedFiles = @($Manifest.media | Select-Object -ExpandProperty relativeSourcePath)
+
+  $MediaDirectory = (Resolve-Path "services/dsh/database/seeds/local/media").Path
+  $Missing = @($ExpectedFiles | Where-Object { -not (Test-Path (Join-Path $MediaDirectory $_)) })''',
 )
 
 Path(__file__).unlink()
