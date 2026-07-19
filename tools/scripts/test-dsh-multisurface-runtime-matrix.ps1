@@ -14,6 +14,10 @@ $Matrices = @(
   [ordered]@{
     name = "support ownership and notifications journey"
     path = Join-Path $PSScriptRoot "test-dsh-support-notifications-runtime-matrix.ps1"
+  },
+  [ordered]@{
+    name = "focused partner multi-surface journey"
+    path = Join-Path $PSScriptRoot "test-partner-multisurface-runtime-journey.ps1"
   }
 )
 
@@ -31,4 +35,4 @@ foreach ($Matrix in $Matrices) {
   }
 }
 
-Write-Host "DSH sovereign commerce, field, support, and notifications matrix: PASS"
+Write-Host "DSH sovereign commerce, field, support, notifications, and focused partner matrix: PASS"
