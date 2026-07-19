@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -34,12 +35,16 @@ type Event struct {
 	AttemptCount        int
 }
 
-func Enqueue(tx *sql.Tx, eventType, orderID, captainID, partnerID, checkoutIntentID string) error {
+func Enqueue(tx *sql.Tx, eventType, tenantID, orderID, captainID, partnerID, checkoutIntentID string) error {
+	tenantID = strings.TrimSpace(tenantID)
+	if tx == nil || tenantID == "" {
+		return fmt.Errorf("enqueue wlt outbox event: tenant context is required")
+	}
 	_, err := tx.Exec(`
     INSERT INTO dsh_wlt_outbox_events
-      (event_type,order_id,captain_id,partner_id,checkout_intent_id)
-    VALUES ($1,NULLIF($2,'')::uuid,$3,$4,NULLIF($5,'')::uuid)
-    ON CONFLICT DO NOTHING`, eventType, orderID, captainID, partnerID, checkoutIntentID)
+      (event_type,tenant_id,order_id,captain_id,partner_id,checkout_intent_id)
+    VALUES ($1,$2,NULLIF($3,'')::uuid,$4,$5,NULLIF($6,'')::uuid)
+    ON CONFLICT DO NOTHING`, eventType, tenantID, orderID, captainID, partnerID, checkoutIntentID)
 	if err != nil {
 		return fmt.Errorf("enqueue wlt outbox event: %w", err)
 	}
@@ -64,8 +69,8 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 	rows, err := tx.Query(`
     SELECT id,event_type,COALESCE(order_id::text,''),COALESCE(captain_id,''),
            COALESCE(partner_id,''),COALESCE(checkout_intent_id::text,''),
-           client_id,tenant_id,points,reversal_of_reference,
-           external_reference,payload,reversal_requested,attempt_count
+           COALESCE(client_id,''),tenant_id,COALESCE(points,0),COALESCE(reversal_of_reference,''),
+           COALESCE(external_reference,''),COALESCE(payload,'{}'::jsonb),COALESCE(reversal_requested,FALSE),attempt_count
     FROM dsh_wlt_outbox_events
     WHERE status IN ('pending','processing') AND next_retry_at<=NOW()
       AND NOT (event_type='loyalty_earned' AND reversal_requested=TRUE)
@@ -126,18 +131,18 @@ func MarkSentWithReference(db *sql.DB, id, externalReference string) error {
 	}
 	defer tx.Rollback()
 
-	var eventType, orderID, partnerID, checkoutIntentID, clientID string
+	var eventType, tenantID, orderID, partnerID, checkoutIntentID, clientID string
 	var points int64
 	var reversalRequested bool
 	var payload []byte
 	err = tx.QueryRow(`
-    SELECT event_type,COALESCE(order_id::text,''),COALESCE(partner_id,''),
-           COALESCE(checkout_intent_id::text,''),client_id,points,
-           reversal_requested,payload
+    SELECT event_type,tenant_id,COALESCE(order_id::text,''),COALESCE(partner_id,''),
+           COALESCE(checkout_intent_id::text,''),COALESCE(client_id,''),COALESCE(points,0),
+           COALESCE(reversal_requested,FALSE),COALESCE(payload,'{}'::jsonb)
     FROM dsh_wlt_outbox_events
     WHERE id=$1::uuid AND status='processing'
     FOR UPDATE`, id).Scan(
-		&eventType, &orderID, &partnerID, &checkoutIntentID, &clientID,
+		&eventType, &tenantID, &orderID, &partnerID, &checkoutIntentID, &clientID,
 		&points, &reversalRequested, &payload,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -167,10 +172,10 @@ func MarkSentWithReference(db *sql.DB, id, externalReference string) error {
 		}
 		if _, err := tx.Exec(`
       INSERT INTO dsh_wlt_outbox_events
-        (event_type,order_id,captain_id,partner_id,checkout_intent_id,
+        (event_type,tenant_id,order_id,captain_id,partner_id,checkout_intent_id,
          client_id,points,reversal_of_reference,payload)
-      VALUES ('loyalty_reversed',$1::uuid,'',$2,NULLIF($3,'')::uuid,$4,$5,$6,$7)
-      ON CONFLICT DO NOTHING`, orderID, partnerID, checkoutIntentID, clientID, points, externalReference, reversalPayload); err != nil {
+      VALUES ('loyalty_reversed',$1,$2::uuid,'',$3,NULLIF($4,'')::uuid,$5,$6,$7,$8)
+      ON CONFLICT DO NOTHING`, tenantID, orderID, partnerID, checkoutIntentID, clientID, points, externalReference, reversalPayload); err != nil {
 			return err
 		}
 	}
