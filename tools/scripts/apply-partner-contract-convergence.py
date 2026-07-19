@@ -217,6 +217,63 @@ def close_wltoutbox_callers() -> None:
         raise RuntimeError("WLT outbox DB test enqueue anchor missing")
 
 
+def close_partner_order_read_after_write() -> None:
+    replace_once(
+        "services/dsh/backend/internal/orders/orders.go",
+        '''func ListPartnerOrders(db *sql.DB, storeID, statusFilter string, limit int) ([]Order, error) {
+\tif limit <= 0 || limit > 200 {
+\t\tlimit = 50
+\t}
+\tif statusFilter == "" {
+\t\tstatusFilter = string(StatusPending)
+\t}
+\trows, err := db.Query(`
+\t\tSELECT id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status,
+\t\t       COALESCE(rejection_reason, ''), wlt_payment_ref_id, created_at, updated_at
+\t\tFROM dsh_orders
+\t\tWHERE store_id = $1 AND status = $2
+\t\tORDER BY created_at ASC
+\t\tLIMIT $3`, storeID, statusFilter, limit)
+\tif err != nil {
+\t\treturn nil, err
+\t}
+\tdefer rows.Close()
+\treturn scanOrders(rows)
+}''',
+        '''func ListPartnerOrders(db *sql.DB, storeID, statusFilter string, limit int) ([]Order, error) {
+\tif limit <= 0 || limit > 200 {
+\t\tlimit = 50
+\t}
+\tvar (
+\t\trows *sql.Rows
+\t\terr  error
+\t)
+\tif statusFilter != "" {
+\t\trows, err = db.Query(`
+\t\t\tSELECT id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status,
+\t\t\t       COALESCE(rejection_reason, ''), wlt_payment_ref_id, created_at, updated_at
+\t\t\tFROM dsh_orders
+\t\t\tWHERE store_id = $1 AND status = $2
+\t\t\tORDER BY created_at DESC
+\t\t\tLIMIT $3`, storeID, statusFilter, limit)
+\t} else {
+\t\trows, err = db.Query(`
+\t\t\tSELECT id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status,
+\t\t\t       COALESCE(rejection_reason, ''), wlt_payment_ref_id, created_at, updated_at
+\t\t\tFROM dsh_orders
+\t\t\tWHERE store_id = $1
+\t\t\tORDER BY created_at DESC
+\t\t\tLIMIT $2`, storeID, limit)
+\t}
+\tif err != nil {
+\t\treturn nil, err
+\t}
+\tdefer rows.Close()
+\treturn scanOrders(rows)
+}''',
+    )
+
+
 def close_runtime_matrix_collection_semantics() -> None:
     replace_once(
         "tools/scripts/test-dsh-multisurface-runtime-matrix-v2.ps1",
@@ -259,6 +316,7 @@ retire_legacy_catalog_routes()
 converge_catalog_route_methods()
 rewrite_route_tests()
 close_wltoutbox_callers()
+close_partner_order_read_after_write()
 close_runtime_matrix_collection_semantics()
 retire_materialized_outbox_repair()
 remove_self()
