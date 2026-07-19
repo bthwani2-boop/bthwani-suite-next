@@ -36,7 +36,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("PATCH /dsh/partner/stores/{storeId}/settings", protected.handlePartnerSettings)
 	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/team", protected.handlePartnerStoreTeam)
 	mux.HandleFunc("POST /dsh/partner/stores/{storeId}/team/invites", protected.handlePartnerInviteTeamMember)
-	mux.HandleFunc("POST /dsh/partner/stores/{storeId}/team/members/{memberId}/action", protected.handlePartnerTeamMemberAction)
+	mux.HandleFunc("POST /dsh/partner/stores/{storeId}/team/members/{memberId}/action", protected.handlePartnerTeamMemberActionAudited)
 	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/courier-settings", protected.handlePartnerGetCourierSettings)
 	mux.HandleFunc("PUT /dsh/partner/stores/{storeId}/courier-settings", protected.handlePartnerUpdateCourierSettings)
 	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/coverage-zones", protected.handlePartnerCoverageZones)
