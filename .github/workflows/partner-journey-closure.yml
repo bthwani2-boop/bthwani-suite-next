@@ -2,11 +2,25 @@ name: Partner Journey Closure
 run-name: Partner Journey Closure · ${{ github.ref_name }} · ${{ github.sha }}
 
 on:
-  push:
+  pull_request:
     branches:
-      - "fix/lian-sovereign-final-closure"
+      - "tmp/partner-closure-base"
     paths:
+      - ".github/partner-closure-trigger"
       - ".github/workflows/partner-journey-closure.yml"
+      - "core/identity/**"
+      - "core/workforce/**"
+      - "services/dsh/backend/**"
+      - "services/dsh/database/**"
+      - "services/dsh/contracts/**"
+      - "services/dsh/frontend/app-partner/**"
+      - "services/dsh/frontend/app-field/**"
+      - "services/dsh/frontend/control-panel/**"
+      - "services/wlt/**"
+      - "infra/docker/**"
+      - "tools/guards/partner/**"
+      - "tools/scripts/invoke-partner-multisurface-runtime-closure.ps1"
+      - "tools/scripts/test-dsh-multisurface-runtime-matrix.ps1"
   workflow_dispatch:
 
 permissions:
