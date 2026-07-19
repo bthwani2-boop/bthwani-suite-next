@@ -178,7 +178,7 @@ export async function updatePartnerProductProposalOCC(
 ): Promise<ProductProposal> {
   const response = await request<{ proposal: ProductProposal }>(
     `/dsh/partner/catalog/product-proposals/${encodeURIComponent(proposalId)}`,
-    { method: "PATCH", body: input },
+    { method: "PUT", body: input },
   );
   return response.proposal;
 }
@@ -190,7 +190,7 @@ export async function updateFieldProductProposalOCC(
 ): Promise<ProductProposal> {
   const response = await request<{ proposal: ProductProposal }>(
     `/dsh/field/partners/${encodeURIComponent(partnerId)}/catalog/product-proposals/${encodeURIComponent(proposalId)}`,
-    { method: "PATCH", body: input },
+    { method: "PUT", body: input },
   );
   return response.proposal;
 }
