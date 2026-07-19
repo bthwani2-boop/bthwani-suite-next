@@ -29,10 +29,27 @@ func requireContractSnippet(t *testing.T, content, snippet string) {
 	}
 }
 
+func requireVersionedSchema(t *testing.T, contract, schema string) {
+	t.Helper()
+	start := strings.Index(contract, "    "+schema)
+	if start < 0 {
+		t.Fatalf("missing schema %s", schema)
+	}
+	tail := contract[start:]
+	end := strings.Index(tail[4:], "\n    ")
+	if end >= 0 {
+		tail = tail[:end+4]
+	}
+	if !strings.Contains(tail, "expectedVersion") {
+		t.Fatalf("schema %s must require expectedVersion", schema)
+	}
+}
+
 func TestCatalogContractMatchesRuntimeOCCSurface(t *testing.T) {
 	t.Parallel()
 
 	contract := readCatalogContractFixture(t, "../../../contracts/dsh.catalog.openapi.yaml")
+	overlay := readCatalogContractFixture(t, "../../../contracts/dsh.catalog.overlay.yaml")
 	manifest := readCatalogContractFixture(t, "../../../service.manifest.ts")
 
 	requiredPaths := []string{
@@ -73,7 +90,6 @@ func TestCatalogContractMatchesRuntimeOCCSurface(t *testing.T) {
 
 	for _, schema := range []string{
 		"UpdateDomainRequest:",
-		"UpdateNodeRequest:",
 		"UpdateMasterProductRequest:",
 		"ProposalDecisionRequest:",
 		"ProposalTransitionRequest:",
@@ -83,17 +99,21 @@ func TestCatalogContractMatchesRuntimeOCCSurface(t *testing.T) {
 		"UpdateAssetRequest:",
 		"ReviewAssetRequest:",
 	} {
-		start := strings.Index(contract, "    "+schema)
-		if start < 0 {
-			t.Fatalf("missing schema %s", schema)
-		}
-		tail := contract[start:]
-		end := strings.Index(tail[4:], "\n    ")
-		if end >= 0 {
-			tail = tail[:end+4]
-		}
-		if !strings.Contains(tail, "expectedVersion") {
-			t.Fatalf("schema %s must require expectedVersion", schema)
+		requireVersionedSchema(t, contract, schema)
+	}
+
+	for _, snippet := range []string{
+		"target: $.components.schemas.UpdateNodeRequest",
+		"additionalProperties: false",
+		"required:",
+		"- expectedVersion",
+		"#/components/schemas/PositiveVersion",
+	} {
+		requireContractSnippet(t, overlay, snippet)
+	}
+	for _, immutable := range []string{"domainId:", "parentId:", "level:", "slug:"} {
+		if strings.Contains(overlay, immutable) {
+			t.Fatalf("UpdateNodeRequest overlay exposes immutable field %s", strings.TrimSuffix(immutable, ":"))
 		}
 	}
 
