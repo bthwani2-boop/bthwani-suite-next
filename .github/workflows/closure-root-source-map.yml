@@ -45,6 +45,15 @@ jobs:
           if ($pgx) { Publish "Root DSH pgx $($pgx.Path.Replace((Get-Location).Path + [IO.Path]::DirectorySeparatorChar, '')):$($pgx.LineNumber)" }
           else { Publish "Root DSH pgx NONE" }
 
+          $policyDirectory = 'services/dsh/backend/internal/platformpolicies'
+          $policyFiles = @(Get-ChildItem -LiteralPath $policyDirectory -Filter '*.go' -File | Sort-Object Name)
+          Publish "Root platformpolicies files $((@($policyFiles.Name) -join ','))"
+          foreach ($symbol in @('type MutationContext', 'func validMutation', 'func withIdempotency', 'func insertEvent', 'ErrVersionConflict')) {
+            $match = $policyFiles | Select-String -SimpleMatch $symbol | Select-Object -First 1
+            if ($match) { Publish "Root policy symbol $symbol $($match.Path | Split-Path -Leaf):$($match.LineNumber)" }
+            else { Publish "Root policy symbol $symbol NONE" }
+          }
+
           foreach ($item in @(
             @{ Service = 'dsh'; Directory = 'services/dsh/database/migrations' },
             @{ Service = 'wlt'; Directory = 'services/wlt/database/migrations' },
