@@ -1,0 +1,145 @@
+name: Closure Atomic Repair
+
+on:
+  push:
+    branches:
+      - "fix/lian-sovereign-final-closure"
+    paths:
+      - ".github/workflows/closure-atomic-repair.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: closure-atomic-repair
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    name: Apply verified atomic closure repair
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout exact closure branch
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: fix/lian-sovereign-final-closure
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup governed workspace
+        uses: ./.github/actions/setup-node-workspace
+
+      - name: Apply atomic source repair
+        shell: python
+        run: |
+          from pathlib import Path
+          import json
+
+          root = Path.cwd()
+
+          wlt = root / "services/wlt/contracts/wlt.openapi.yaml"
+          text = wlt.read_text(encoding="utf-8")
+          old_ref = "#/components/responses/InvalidRequest"
+          if text.count(old_ref) != 1:
+              raise SystemExit(f"expected one broken WLT response ref, found {text.count(old_ref)}")
+          wlt.write_text(text.replace(old_ref, "#/components/responses/BadRequest"), encoding="utf-8")
+
+          orders = root / "services/dsh/frontend/app-partner/orders/usePartnerOrdersRuntime.ts"
+          text = orders.read_text(encoding="utf-8")
+          old = "// Read-after-write for conflict resolution"
+          new = "// read-after-write: reload server truth before accepting the final UI state"
+          if old not in text:
+              raise SystemExit("partner order read-after-write marker is missing")
+          orders.write_text(text.replace(old, new), encoding="utf-8")
+
+          partner_guard = root / "tools/guards/partner/partner-surface-truth-gate.mjs"
+          text = partner_guard.read_text(encoding="utf-8")
+          old = '''    required: [
+                "Partner support is intentionally fail-closed",
+                "لا يوجد عقد DSH حالي",
+                "تم حذف الحالات الثابتة والإجراءات المحلية",
+              ],'''
+          new = '''    required: [
+                "usePartnerSupportController",
+                "controller.createTicket(input)",
+                "controller.sendMessage(messageBody)",
+                "controller.reload",
+                "controller.reloadDetail",
+                "كل تذكرة ومحادثة مرتبطة بهوية الشريك",
+              ],'''
+          if old not in text:
+              raise SystemExit("obsolete partner support guard block was not found")
+          partner_guard.write_text(text.replace(old, new), encoding="utf-8")
+
+          guards = [
+              ("captain-surface-truth", "Captain Surface Truth Gate", "tools/guards/captain/captain-surface-truth-gate.mjs", "Validates the captain surface against governed runtime, assignment, location, proof-of-delivery, and finance bindings."),
+              ("client-address-retry-truth", "Client Address Retry Truth Gate", "tools/guards/client-commerce/client-address-retry-truth-gate.mjs", "Validates client-address idempotency, retry, ownership, and checkout readback invariants."),
+              ("client-commerce-truth", "Client Commerce Truth Gate", "tools/guards/client-commerce/client-commerce-truth-gate.mjs", "Validates the client commerce surface from discovery through cart, checkout, order creation, and tracking."),
+              ("control-panel-runtime-truth", "Control Panel Runtime Truth Gate", "tools/guards/control-panel/control-panel-runtime-truth-gate.mjs", "Validates control-panel routes, actions, permissions, and runtime-backed read models."),
+              ("field-surface-truth", "Field Surface Truth Gate", "tools/guards/field/field-surface-truth-gate.mjs", "Validates field workforce gates, visits, offline synchronization, media, finance, and readback bindings."),
+              ("dsh-wlt-mutation-idempotency", "DSH WLT Mutation Idempotency Gate", "tools/guards/finance/dsh-wlt-mutation-idempotency-gate.mjs", "Validates deterministic mutation identity and replay safety across the DSH-to-WLT financial boundary."),
+              ("map-platform-truth", "Map Platform Truth Gate", "tools/guards/maps/map-platform-truth-gate.mjs", "Validates governed map provider, reverse-geocoding, service-area, fallback, and secret boundaries."),
+              ("partner-support-truth", "Partner Support Truth Gate", "tools/guards/partner/partner-support-truth-gate.mjs", "Validates partner support ownership, ticket, message, authorization, and lifecycle bindings."),
+              ("partner-surface-truth", "Partner Surface Truth Gate", "tools/guards/partner/partner-surface-truth-gate.mjs", "Validates partner store scope, orders, catalog, team, support, wallet references, and fail-closed states."),
+              ("operational-policy-ui-truth", "Operational Policy UI Truth Gate", "tools/guards/platform/operational-policy-ui-truth-gate.mjs", "Validates platform operational-policy UI bindings, optimistic concurrency, audit, and readback behavior."),
+              ("client-address-privacy-integration", "Client Address Privacy Integration Gate", "tools/guards/privacy/client-address-privacy-integration-gate.mjs", "Validates address privacy policy integration across storage, API, serviceability, checkout, and deletion paths."),
+              ("client-address-privacy-truth", "Client Address Privacy Truth Gate", "tools/guards/privacy/client-address-privacy-truth-gate.mjs", "Validates client-address PII ownership, retention, encryption, anonymization, and authorization contracts."),
+              ("ui-action-binding", "UI Action Binding Gate", "tools/guards/ui-actions/ui-action-binding-gate.mjs", "Validates that governed interactive controls bind to real actions, permissions, errors, and readback paths."),
+          ]
+
+          package_path = root / "package.json"
+          package = json.loads(package_path.read_text(encoding="utf-8"))
+          for guard_id, _, source, _ in guards:
+              package["scripts"][f"guard:{guard_id}"] = f"node {source}"
+          package_path.write_text(json.dumps(package, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+          registry_path = root / "governance/guards/guard-registry.json"
+          registry = json.loads(registry_path.read_text(encoding="utf-8"))
+          ids = {entry["id"] for entry in registry["entries"]}
+          for guard_id, name, source, description in guards:
+              if guard_id not in ids:
+                  registry["entries"].append({
+                      "id": guard_id,
+                      "name": name,
+                      "script": f"guard:{guard_id}",
+                      "exit_level": "fail",
+                      "description": description,
+                      "source_file": source,
+                  })
+          registry_path.write_text(json.dumps(registry, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+          for transient in [
+              ".github/workflows/closure-source-export.yml",
+              ".github/workflows/dsh-database-diagnostic-evidence.yml",
+              ".github/workflows/closure-atomic-repair.yml",
+          ]:
+              target = root / transient
+              if target.exists():
+                  target.unlink()
+
+      - name: Regenerate WLT client
+        shell: bash
+        run: pnpm run openapi:generate:wlt
+
+      - name: Verify repaired source contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm run guard:partner-surface-truth
+          pnpm run guard:guard-registry
+          pnpm run guard:wlt-financial-boundary
+          pnpm run guard:api-binding
+          pnpm run swagger:build
+          rm -rf dist-swagger
+
+      - name: Commit verified repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "bthwani-closure-executor"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "fix(closure): repair WLT contract and governed surface registry"
+          git push origin HEAD:fix/lian-sovereign-final-closure
