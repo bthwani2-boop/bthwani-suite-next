@@ -18,7 +18,7 @@ permissions:
 
 concurrency:
   group: partner-journey-closure-runner
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   repair:
