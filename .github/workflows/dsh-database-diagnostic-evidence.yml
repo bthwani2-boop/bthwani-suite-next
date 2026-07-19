@@ -199,13 +199,9 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
-          $profiles = "identity,workforce,dsh,wlt,media"
-          pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action down -Profiles $profiles
-          pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action up -Profiles $profiles
-          pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action seed -Profiles $profiles
-          pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action bootstrap-dev -Profiles dsh,media -Force
-          pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/test-dsh-multisurface-runtime-matrix.ps1 *>&1 |
-            Tee-Object -FilePath artifacts/partner-journey-closure/runtime-multisurface.log
+          & ./tools/scripts/invoke-partner-multisurface-runtime-closure.ps1 `
+            -Profiles "identity,workforce,dsh,wlt,media" `
+            -ArtifactDirectory "artifacts/partner-journey-closure"
 
       - name: Capture partner runtime diagnostics
         if: failure()
@@ -224,9 +220,13 @@ jobs:
         if: always()
         shell: pwsh
         run: |
-          pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 `
-            -Action down `
-            -Profiles identity,workforce,dsh,wlt,media
+          try {
+            & ./infra/docker/scripts/runtime.ps1 `
+              -Action down `
+              -Profiles "identity,workforce,dsh,wlt,media"
+          } catch {
+            Write-Warning "Runtime cleanup failed: $($_.Exception.Message)"
+          }
 
       - name: Upload partner journey evidence
         if: always()
