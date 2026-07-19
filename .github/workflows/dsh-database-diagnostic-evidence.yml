@@ -45,6 +45,9 @@ jobs:
       - name: Apply partner multi-surface backend journey closure
         run: python3 tools/scripts/apply-partner-journey-closure.py
 
+      - name: Converge partner catalog routes with sovereign contracts
+        run: python3 tools/scripts/apply-partner-contract-convergence.py
+
       - name: Apply truthful partner frontend journey closure
         shell: bash
         run: |
@@ -58,7 +61,9 @@ jobs:
             tools/guards/extract_routes.go \
             services/dsh/backend/internal/http/server.go \
             services/dsh/backend/internal/http/catalog_unified_routes.go \
-            services/dsh/backend/internal/wlt/subscription_payment_bound.go
+            services/dsh/backend/internal/wlt/subscription_payment_bound.go \
+            services/dsh/backend/internal/http/catalog_legacy_occ_routes_test.go \
+            services/dsh/backend/internal/http/catalog_unified_routes_test.go
 
       - name: Regenerate governed clients
         run: |
