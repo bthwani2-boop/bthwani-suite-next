@@ -78,12 +78,36 @@ jobs:
         continue-on-error: true
         shell: pwsh
         run: |
-          ./tools/scripts/invoke-database-upgrade-truth.ps1 `
-            -ServiceName "${{ matrix.service }}" `
-            -MigrationDirectory "${{ matrix.migrations }}" `
-            -TestsDirectory "${{ matrix.tests }}" `
-            -DatabaseUrl $env:DATABASE_URL `
-            -SourceCommitSha $env:GITHUB_SHA
+          $ErrorActionPreference = "Stop"
+          $logPath = Join-Path $env:RUNNER_TEMP "database-${{ matrix.service }}.log"
+          $captured = @()
+          try {
+            $captured = @(
+              ./tools/scripts/invoke-database-upgrade-truth.ps1 `
+                -ServiceName "${{ matrix.service }}" `
+                -MigrationDirectory "${{ matrix.migrations }}" `
+                -TestsDirectory "${{ matrix.tests }}" `
+                -DatabaseUrl $env:DATABASE_URL `
+                -SourceCommitSha $env:GITHUB_SHA 2>&1 |
+                Tee-Object -FilePath $logPath
+            )
+            "detail=PASS" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          } catch {
+            $captured += $_
+            $lines = @($captured | ForEach-Object { $_.ToString().Trim() } | Where-Object { $_ -ne "" })
+            $candidate = @($lines | Where-Object {
+              $_ -match '(?i)(ERROR|FATAL|exception|failed|invalid|migration|transaction|checksum|dirty)'
+            } | Select-Object -Last 1)
+            if ($candidate.Count -eq 0) {
+              $candidate = @($lines | Select-Object -Last 1)
+            }
+            $detail = if ($candidate.Count -gt 0) { $candidate[0] } else { $_.Exception.Message }
+            $detail = (($detail -replace '[\r\n/]', ' ') -replace '\s+', ' ').Trim()
+            if ($detail.Length -gt 120) { $detail = $detail.Substring(0, 120) }
+            "detail=$detail" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+            Write-Error $detail
+            exit 1
+          }
 
       - name: Publish exact database result
         if: always()
@@ -94,6 +118,7 @@ jobs:
           SHA: ${{ github.sha }}
           SERVICE: ${{ matrix.service }}
           OUTCOME: ${{ steps.upgrade.outcome }}
+          STEP_DETAIL: ${{ steps.upgrade.outputs.detail }}
           RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
@@ -101,9 +126,10 @@ jobs:
           detail=PASS
           if [ "$OUTCOME" != success ]; then
             state=failure
-            detail="$(psql "$DATABASE_URL" -X -qAt -c "SELECT COALESCE(migration_id || ':' || COALESCE(error_code,'DIRTY'), 'NO_LEDGER') FROM schema_migrations WHERE service_name = '$SERVICE' AND (dirty OR NOT success) ORDER BY applied_at DESC LIMIT 1;" 2>/dev/null || true)"
-            [ -n "$detail" ] || detail=PRE_LEDGER_FAILURE
+            ledger_detail="$(psql "$DATABASE_URL" -X -qAt -c "SELECT COALESCE(migration_id || ':' || COALESCE(error_code,'DIRTY'), 'NO_LEDGER') FROM schema_migrations WHERE service_name = '$SERVICE' AND (dirty OR NOT success) ORDER BY applied_at DESC LIMIT 1;" 2>/dev/null || true)"
+            detail="${ledger_detail:-${STEP_DETAIL:-PRE_LEDGER_FAILURE}}"
           fi
+          detail="$(printf '%s' "$detail" | tr '\n\r/' '   ' | sed -E 's/[[:space:]]+/ /g' | cut -c1-120)"
           fixed_context="Database Upgrade Truth / $SERVICE"
           diagnostic_context="DB Error / $SERVICE / $(printf '%s' "$detail" | cut -c1-60)"
           jq -n --arg state "$state" --arg context "$fixed_context" --arg description "$detail" --arg target_url "$RUN_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/fixed.json
