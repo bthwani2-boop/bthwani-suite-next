@@ -39,12 +39,12 @@ This skill owns SDLC routing and stage-state validation only. It does not approv
 
 ## Forbidden
 
-- Using G0-G9 as the complete lifecycle; the active lifecycle is G0-G10 plus `CLOSED_WITH_EVIDENCE`.
+- Treating any lifecycle that ends before G10 as complete; the active lifecycle is G0-G10 plus `CLOSED_WITH_EVIDENCE`.
 - Assuming local mode when GitHub Remote is named.
 - Mutating stage state from a validator.
 - Passing an affected transition without artifact, impact, Product Truth when applicable, and required approvals.
 - Using stale SHA, another branch, merge ref, or documentation-only evidence as current proof.
-- Returning deprecated `GATE_PASS`; use `PASS` with the declared scope.
+- Emitting deprecated gate-decision aliases; use scoped `PASS`.
 - Claiming `CLOSED_WITH_EVIDENCE` from `guard:sdlc` alone.
 
 ## Required output
