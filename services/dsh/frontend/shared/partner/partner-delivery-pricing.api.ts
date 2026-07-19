@@ -37,7 +37,8 @@ export function updatePartnerDeliveryPricing(
   storeId: string,
   input: DeliveryPricingMutation,
 ): Promise<{ pricing: DeliveryPricingRecord }> {
-  return client.request(`/dsh/partner/stores/${storeId}/delivery-pricing/partner_delivery`, {
+  const fulfillmentMode: DeliveryPricingMode = "partner_delivery";
+  return client.request(`/dsh/partner/stores/${storeId}/delivery-pricing/${fulfillmentMode}`, {
     method: "PUT",
     body: input,
   });
@@ -49,10 +50,10 @@ export function listOperatorDeliveryPricing(storeId: string): Promise<{ pricing:
 
 export function updateOperatorDeliveryPricing(
   storeId: string,
-  mode: DeliveryPricingMode,
+  fulfillmentMode: DeliveryPricingMode,
   input: DeliveryPricingMutation,
 ): Promise<{ pricing: DeliveryPricingRecord }> {
-  return client.request(`/dsh/operator/stores/${storeId}/delivery-pricing/${mode}`, {
+  return client.request(`/dsh/operator/stores/${storeId}/delivery-pricing/${fulfillmentMode}`, {
     method: "PUT",
     body: input,
   });
