@@ -25,7 +25,7 @@ export function useCheckoutToOrderFlow(input: DshCreateIntentInput) {
     input.storeId,
     input.fulfillmentMode,
     input.paymentMethod,
-    input.deliveryAddress,
+    input.deliveryAddressId,
     input.note,
     input.couponCode,
   ]);
