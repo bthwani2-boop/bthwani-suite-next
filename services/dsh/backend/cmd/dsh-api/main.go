@@ -133,8 +133,8 @@ func newMediaProvider(ctx context.Context) *media.Provider {
 		PublicEndpoint: publicEndpoint,
 		AccessKey:      accessKey,
 		SecretKey:      secretKey,
-		Bucket:          bucket,
-		UseSSL:          useSSL,
-		PublicUseSSL:    publicUseSSL,
+		Bucket:         bucket,
+		UseSSL:         useSSL,
+		PublicUseSSL:   publicUseSSL,
 	}, 15*time.Second)
 }
