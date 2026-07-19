@@ -202,9 +202,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      wiremock-financial-provider:
-        condition: service_healthy
-        required: false
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8083/wlt/health || exit 1"]
       interval: 10s
