@@ -60,6 +60,19 @@ function Invoke-ScalarQuery {
   return (($result -join "`n").Trim())
 }
 
+function Get-MeaningfulPsqlFailure {
+  param([object[]]$Output, [string]$Fallback)
+  $lines = @($Output | ForEach-Object { $_.ToString().Trim() } | Where-Object { $_ -ne "" })
+  $candidate = @($lines | Where-Object {
+    $_ -match '(?i)(ERROR:|FATAL:|DETAIL:|CONTEXT:|assert|violation|mismatch|expected|missing|failed)'
+  } | Select-Object -First 1)
+  if ($candidate.Count -eq 0) {
+    $candidate = @($lines | Select-Object -Last 1)
+  }
+  $detail = if ($candidate.Count -gt 0) { $candidate[0] } else { $Fallback }
+  return ((($detail -replace '[\r\n/]', ' ') -replace '\s+', ' ').Trim())
+}
+
 Write-Host "--- $ServiceName clean migration install ---"
 Invoke-BthwaniGovernedMigrations `
   -ServiceName $ServiceName `
@@ -106,9 +119,12 @@ if (-not [string]::IsNullOrWhiteSpace($TestsDirectory) -and (Test-Path -LiteralP
   $testFiles = @(Get-ChildItem -LiteralPath $TestsDirectory -Filter "*.sql" -File | Sort-Object Name)
   foreach ($testFile in $testFiles) {
     Write-Host "INVARIANT $($testFile.Name)"
-    & psql $DatabaseUrl -X -v ON_ERROR_STOP=1 -f $testFile.FullName
-    if ($LASTEXITCODE -ne 0) {
-      throw "Database invariant failed for '$ServiceName': $($testFile.Name)."
+    $output = @(& psql $DatabaseUrl -X -v ON_ERROR_STOP=1 -f $testFile.FullName 2>&1)
+    $exitCode = $LASTEXITCODE
+    $output | ForEach-Object { Write-Host $_ }
+    if ($exitCode -ne 0) {
+      $detail = Get-MeaningfulPsqlFailure -Output $output -Fallback "psql exit code $exitCode"
+      throw "Database invariant failed for '$ServiceName': $($testFile.Name): $detail"
     }
   }
 }
