@@ -71,7 +71,7 @@ function Test-WltMigrationProbeCoverage {
     }
     $number = $Matches[1]
     if ($numbers.ContainsKey($number)) {
-      throw "Duplicate WLT migration number $number: $($numbers[$number]) and $($f.Name)."
+      throw "Duplicate WLT migration number ${number}: $($numbers[$number]) and $($f.Name)."
     }
     $numbers[$number] = $f.Name
 
