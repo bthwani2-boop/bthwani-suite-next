@@ -1,0 +1,185 @@
+name: Lian Exact Error Detail Probe
+
+on:
+  push:
+    branches: [lian]
+    paths:
+      - ".github/workflows/lian-error-detail-probe.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  node-command:
+    name: Exact error — ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: governance-schema
+            command: pnpm run guard:governance-schema
+          - name: agent-governance
+            command: pnpm run guard:agent-governance
+          - name: client-commerce
+            command: node tools/guards/client-commerce/client-commerce-truth-gate.mjs
+          - name: partner-surface
+            command: node tools/guards/partner/partner-surface-truth-gate.mjs
+          - name: maps
+            command: node tools/guards/maps/map-platform-truth-gate.mjs
+          - name: operational-policy-ui
+            command: node tools/guards/platform/operational-policy-ui-truth-gate.mjs
+          - name: privacy-integration
+            command: node tools/guards/privacy/client-address-privacy-integration-gate.mjs
+          - name: ui-actions
+            command: node tools/guards/ui-actions/ui-action-binding-gate.mjs
+          - name: frontend-binding
+            command: pnpm run guard:frontend-feature-binding
+          - name: backend-binding
+            command: pnpm run guard:backend-api-binding
+          - name: manifest
+            command: pnpm run guard:service-manifest-drift
+          - name: typecheck
+            command: pnpm run typecheck
+          - name: build
+            command: pnpm run build
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-node-workspace
+      - name: Run exact command
+        shell: bash
+        run: ${{ matrix.command }}
+
+  dsh-go:
+    name: Exact DSH Go error — ${{ matrix.phase }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - phase: vet
+            command: go vet ./...
+          - phase: test
+            command: go test ./... -count=1
+          - phase: build
+            command: go build ./...
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache: true
+          cache-dependency-path: services/dsh/backend/go.sum
+      - name: Run exact DSH Go phase
+        working-directory: services/dsh/backend
+        shell: bash
+        run: ${{ matrix.command }}
+
+  dsh-database-apply:
+    name: Exact DSH migration apply error
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: dsh_exact
+          POSTGRES_PASSWORD: dsh_exact_password
+          POSTGRES_DB: dsh_exact
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd="pg_isready -U dsh_exact -d dsh_exact"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      DATABASE_URL: postgres://dsh_exact:dsh_exact_password@localhost:55432/dsh_exact?sslmode=disable
+      PGPASSWORD: dsh_exact_password
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+      - name: Apply DSH migrations with exact filename
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r file; do
+            echo "CURRENT_DSH_MIGRATION=$file"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file"
+          done < <(find services/dsh/database/migrations -maxdepth 1 -type f -name 'dsh-*.sql' | sort)
+
+  wlt-database-apply:
+    name: Exact WLT migration apply error
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: wlt_exact
+          POSTGRES_PASSWORD: wlt_exact_password
+          POSTGRES_DB: wlt_exact
+        ports:
+          - 55433:5432
+        options: >-
+          --health-cmd="pg_isready -U wlt_exact -d wlt_exact"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      DATABASE_URL: postgres://wlt_exact:wlt_exact_password@localhost:55433/wlt_exact?sslmode=disable
+      PGPASSWORD: wlt_exact_password
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+      - name: Apply WLT migrations with exact filename
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r file; do
+            echo "CURRENT_WLT_MIGRATION=$file"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file"
+          done < <(find services/wlt/database/migrations -maxdepth 1 -type f -name '*.sql' | sort)
+
+  powershell-parse:
+    name: Exact PowerShell parse errors
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+      - name: Parse closure scripts
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $files = @(
+            "tools/scripts/run-lian-full-runtime-closure.ps1",
+            "tools/scripts/run-lian-full-runtime-closure-v2.ps1",
+            "tools/scripts/test-wlt-runtime-failure-matrix.ps1",
+            "tools/scripts/test-runtime-backup-restore.ps1",
+            "tools/scripts/test-dsh-multisurface-runtime-matrix.ps1",
+            "tools/scripts/test-dsh-multisurface-runtime-matrix-v2.ps1",
+            "tools/scripts/test-dsh-support-notifications-runtime-matrix.ps1",
+            "infra/docker/scripts/backup-runtime.ps1",
+            "infra/docker/scripts/restore-runtime.ps1",
+            "infra/docker/scripts/restore-verify-runtime.ps1"
+          )
+          foreach ($file in $files) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $file), [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) {
+              $errors | ForEach-Object { Write-Error "$file:$($_.Extent.StartLineNumber):$($_.Extent.StartColumnNumber) $($_.Message)" }
+              throw "PowerShell parse failed: $file"
+            }
+          }
