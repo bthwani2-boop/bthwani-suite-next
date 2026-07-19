@@ -2,7 +2,13 @@ name: Lian Final Same-Commit Closure Gate
 
 on:
   push:
-    branches: [lian]
+    branches:
+      - lian
+      - "fix/lian-sovereign-final-closure"
+  pull_request:
+    branches:
+      - master
+      - lian
   workflow_dispatch:
 
 permissions:
@@ -17,7 +23,7 @@ jobs:
   repository-truth:
     name: Governance, contracts, surfaces, security, build, and tests
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 150
     steps:
       - name: Checkout immutable source
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -56,7 +62,7 @@ jobs:
           node tools/guards/privacy/client-address-privacy-integration-gate.mjs
           node tools/guards/ui-actions/ui-action-binding-gate.mjs
 
-      - name: Verify UI, accessibility, and workflow integrity
+      - name: Verify UI, accessibility, mobile, and workflow integrity
         shell: bash
         run: |
           set -euo pipefail
@@ -65,6 +71,8 @@ jobs:
           pnpm run guard:icon-contract
           pnpm run guard:design-tokens
           pnpm run guard:a11y
+          pnpm run mobile:apps:check
+          pnpm run mobile:expo:verify
           pnpm run guard:workflow-lint
           pnpm run guard:workflow-security
           pnpm run guard:actions-pin
@@ -100,7 +108,7 @@ jobs:
   surface-integration:
     name: Every surface action and full-stack integration
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - name: Checkout immutable source
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -129,7 +137,7 @@ jobs:
   go-services:
     name: Go verification — ${{ matrix.name }}
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -171,7 +179,7 @@ jobs:
           cache: true
           cache-dependency-path: ${{ matrix.go_sum }}
 
-      - name: Format, vet, test, and build
+      - name: Format, vet, test, race, and build
         working-directory: ${{ matrix.directory }}
         shell: bash
         run: |
@@ -180,29 +188,40 @@ jobs:
           test -z "$files" || { printf 'Unformatted files:\n%s\n' "$files"; exit 1; }
           go vet ./...
           go test ./... -count=1
+          go test -race ./... -count=1
           go build ./...
 
-  dsh-database:
-    name: DSH clean database, invariants, and migration replay
+  database-truth:
+    name: Governed database truth — ${{ matrix.service }}
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: dsh
+            migrations: services/dsh/database/migrations
+            tests: services/dsh/database/tests
+          - service: wlt
+            migrations: services/wlt/database/migrations
+            tests: services/wlt/database/tests
     services:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER: dsh_closure
-          POSTGRES_PASSWORD: dsh_closure_password
-          POSTGRES_DB: dsh_closure
+          POSTGRES_USER: closure
+          POSTGRES_PASSWORD: closure_password
+          POSTGRES_DB: closure
         ports:
-          - 55432:5432
+          - 5432:5432
         options: >-
-          --health-cmd="pg_isready -U dsh_closure -d dsh_closure"
+          --health-cmd="pg_isready -U closure -d closure"
           --health-interval=5s
           --health-timeout=5s
           --health-retries=20
     env:
-      DATABASE_URL: postgres://dsh_closure:dsh_closure_password@localhost:55432/dsh_closure?sslmode=disable
-      PGPASSWORD: dsh_closure_password
+      DATABASE_URL: postgres://closure:closure_password@localhost:5432/closure?sslmode=disable
+      PGPASSWORD: closure_password
     steps:
       - name: Checkout immutable source
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -210,57 +229,15 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
-      - name: Apply, verify, and replay all DSH migrations
-        shell: bash
+      - name: Apply clean install, invariants, ledger, checksum, and idempotency truth
+        shell: pwsh
         run: |
-          set -euo pipefail
-          mapfile -t migrations < <(find services/dsh/database/migrations -maxdepth 1 -type f -name 'dsh-*.sql' | sort)
-          mapfile -t tests < <(find services/dsh/database/tests -maxdepth 1 -type f -name '*.sql' | sort)
-          test "${#migrations[@]}" -gt 0
-          test "${#tests[@]}" -gt 0
-          for migration in "${migrations[@]}"; do psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"; done
-          for test_file in "${tests[@]}"; do psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$test_file"; done
-          for migration in "${migrations[@]}"; do psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"; done
-
-  wlt-database:
-    name: WLT clean database, invariants, and migration replay
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: wlt_closure
-          POSTGRES_PASSWORD: wlt_closure_password
-          POSTGRES_DB: wlt_closure
-        ports:
-          - 55433:5432
-        options: >-
-          --health-cmd="pg_isready -U wlt_closure -d wlt_closure"
-          --health-interval=5s
-          --health-timeout=5s
-          --health-retries=20
-    env:
-      DATABASE_URL: postgres://wlt_closure:wlt_closure_password@localhost:55433/wlt_closure?sslmode=disable
-      PGPASSWORD: wlt_closure_password
-    steps:
-      - name: Checkout immutable source
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-        with:
-          persist-credentials: false
-          fetch-depth: 0
-
-      - name: Apply, verify, and replay all WLT migrations
-        shell: bash
-        run: |
-          set -euo pipefail
-          mapfile -t migrations < <(find services/wlt/database/migrations -maxdepth 1 -type f -name '*.sql' | sort)
-          test "${#migrations[@]}" -gt 0
-          for migration in "${migrations[@]}"; do psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"; done
-          if [ -d services/wlt/database/tests ]; then
-            while IFS= read -r test_file; do psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$test_file"; done < <(find services/wlt/database/tests -maxdepth 1 -type f -name '*.sql' | sort)
-          fi
-          for migration in "${migrations[@]}"; do psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"; done
+          ./tools/scripts/invoke-database-upgrade-truth.ps1 `
+            -ServiceName "${{ matrix.service }}" `
+            -MigrationDirectory "${{ matrix.migrations }}" `
+            -TestsDirectory "${{ matrix.tests }}" `
+            -DatabaseUrl $env:DATABASE_URL `
+            -SourceCommitSha $env:GITHUB_SHA
 
   full-runtime:
     name: Sovereign six-service runtime and journeys
@@ -280,20 +257,30 @@ jobs:
         shell: pwsh
         run: ./tools/scripts/run-lian-full-runtime-closure.ps1
 
-      - name: Require complete evidence for this exact commit
+      - name: Require complete evidence for this exact ref and commit
         shell: pwsh
         run: |
           $evidence = Get-Content artifacts/lian-runtime-closure-evidence.json -Raw | ConvertFrom-Json
-          if ($evidence.schemaVersion -lt 3) { throw "runtime evidence schema is stale" }
+          if ($evidence.schemaVersion -lt 4) { throw "runtime evidence schema is stale" }
           if ($evidence.bootstrapMode -ne "CLEAN_UP_SEED_BOOTSTRAP_WITHOUT_LEGACY_SMOKE") { throw "ungoverned runtime bootstrap" }
+          if ($evidence.migrationMode -ne "GOVERNED_LEDGER_CHECKSUM_IDEMPOTENT") { throw "ungoverned runtime migrations" }
           if ($evidence.state -ne "PASS") { throw "runtime evidence failed" }
           if ($evidence.commitSha -ne $env:GITHUB_SHA) { throw "runtime evidence belongs to another commit" }
+          $expectedBranch = if ($env:GITHUB_EVENT_NAME -eq "pull_request") { $env:GITHUB_HEAD_REF } else { $env:GITHUB_REF_NAME }
+          if ($evidence.branch -ne $expectedBranch) { throw "runtime evidence belongs to another ref" }
           if ($evidence.services.PSObject.Properties.Count -lt 7) { throw "runtime evidence is incomplete" }
+          foreach ($migration in @("providers", "platform-control")) {
+            $entry = $evidence.migrations.$migration
+            if ($entry.state -ne "PASS" -or $entry.dirtyRows -ne 0 -or $entry.sourceCommitSha -ne $env:GITHUB_SHA) {
+              throw "governed runtime migration evidence failed: $migration"
+            }
+          }
           if ($evidence.financialMatrix.state -ne "PASS") { throw "financial matrix failed" }
           if ($evidence.disasterRecovery.state -ne "PASS") { throw "disaster recovery failed" }
           if ($evidence.multiSurfaceJourney.state -ne "PASS") { throw "multi-surface journeys failed" }
           if ($evidence.multiSurfaceJourney.output -notmatch "DSH five-surface governed runtime matrix v2: PASS") { throw "five-surface journey output missing" }
-          if ($evidence.multiSurfaceJourney.output -notmatch "DSH support ownership and notification runtime matrix: PASS") { throw "support/notification output missing" }
+          if ($evidence.multiSurfaceJourney.output -notmatch "DSH support ownership and notification runtime matrix: PASS") { throw "support journey output missing" }
+          if ($evidence.multiSurfaceJourney.output -notmatch "DSH sovereign commerce, field, support, and notifications matrix: PASS") { throw "sovereign journey output missing" }
           if ($evidence.protectedRoutes.PSObject.Properties.Count -lt 5) { throw "protected route evidence is incomplete" }
 
       - name: Runtime diagnostics on failure
@@ -328,7 +315,7 @@ jobs:
   result:
     name: Lian Final Same-Commit Closure result
     if: always()
-    needs: [repository-truth, surface-integration, go-services, dsh-database, wlt-database, full-runtime]
+    needs: [repository-truth, surface-integration, go-services, database-truth, full-runtime]
     runs-on: ubuntu-latest
     steps:
       - name: Require every closure domain to pass
@@ -336,20 +323,18 @@ jobs:
           REPOSITORY_RESULT: ${{ needs.repository-truth.result }}
           SURFACE_RESULT: ${{ needs.surface-integration.result }}
           GO_RESULT: ${{ needs.go-services.result }}
-          DSH_DATABASE_RESULT: ${{ needs.dsh-database.result }}
-          WLT_DATABASE_RESULT: ${{ needs.wlt-database.result }}
+          DATABASE_RESULT: ${{ needs.database-truth.result }}
           RUNTIME_RESULT: ${{ needs.full-runtime.result }}
         shell: bash
         run: |
           set -euo pipefail
-          printf 'repository=%s\nsurfaces=%s\ngo=%s\ndsh_database=%s\nwlt_database=%s\nruntime=%s\n' \
+          printf 'repository=%s\nsurfaces=%s\ngo=%s\ndatabase=%s\nruntime=%s\n' \
             "$REPOSITORY_RESULT" "$SURFACE_RESULT" "$GO_RESULT" \
-            "$DSH_DATABASE_RESULT" "$WLT_DATABASE_RESULT" "$RUNTIME_RESULT"
+            "$DATABASE_RESULT" "$RUNTIME_RESULT"
           test "$REPOSITORY_RESULT" = success
           test "$SURFACE_RESULT" = success
           test "$GO_RESULT" = success
-          test "$DSH_DATABASE_RESULT" = success
-          test "$WLT_DATABASE_RESULT" = success
+          test "$DATABASE_RESULT" = success
           test "$RUNTIME_RESULT" = success
 
       - name: Publish exact-SHA final closure status
@@ -371,7 +356,7 @@ jobs:
           payload="$(jq -n \
             --arg state "$state" \
             --arg context 'Lian Final Same-Commit Closure result' \
-            --arg description "repository, surfaces, Go, databases, runtime, finance, DR and journeys: $JOB_STATUS" \
+            --arg description "repository, surfaces, Go, governed databases, runtime, finance, DR and journeys: $JOB_STATUS" \
             --arg target_url "$RUN_URL" \
             '{state:$state,context:$context,description:$description,target_url:$target_url}')"
           curl --fail-with-body --silent --show-error \
