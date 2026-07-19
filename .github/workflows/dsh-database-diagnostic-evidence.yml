@@ -69,18 +69,26 @@ jobs:
       - name: Converge partner catalog routes with sovereign contracts
         run: python3 tools/scripts/apply-partner-contract-convergence.py
 
-      - name: Apply truthful partner frontend journey closure
+      - name: Apply and log truthful partner surface repairs
         shell: bash
         run: |
           set -euo pipefail
-          python3 tools/scripts/apply-partner-frontend-journey-closure.py
-          python3 tools/scripts/apply-partner-typescript-closure.py
-          python3 tools/scripts/apply-partner-binding-composition-closure.py
-          python3 tools/scripts/apply-partner-import-isolation-closure.py
-          python3 tools/scripts/apply-partner-control-panel-closure.py
-          python3 tools/scripts/apply-partner-settings-truth-closure.py
-          python3 tools/scripts/apply-partner-order-actions-closure.py
-          rm -f tools/scripts/apply-partner-ui-binding-closure.py
+          mkdir -p artifacts/partner-journey-closure
+          log="artifacts/partner-journey-closure/python-repairs.log"
+          scripts=(
+            tools/scripts/apply-partner-team-audit-closure.py
+            tools/scripts/apply-partner-frontend-journey-closure.py
+            tools/scripts/apply-partner-typescript-closure.py
+            tools/scripts/apply-partner-binding-composition-closure.py
+            tools/scripts/apply-partner-import-isolation-closure.py
+            tools/scripts/apply-partner-control-panel-closure.py
+            tools/scripts/apply-partner-settings-truth-closure.py
+          )
+          for script in "${scripts[@]}"; do
+            echo "=== APPLY $script ===" | tee -a "$log"
+            python3 "$script" 2>&1 | tee -a "$log"
+          done
+          rm -f tools/scripts/apply-partner-ui-binding-closure.py tools/scripts/sitecustomize.py
 
       - name: Format changed Go source
         run: |
@@ -92,6 +100,9 @@ jobs:
             services/dsh/backend/internal/notifications/notifications.go \
             services/dsh/backend/internal/notifications/notifications_test.go \
             services/dsh/backend/internal/wlt/subscription_payment_bound.go \
+            services/dsh/backend/internal/partner/model.go \
+            services/dsh/backend/internal/partner/handler.go \
+            services/dsh/backend/internal/partner/repository.go \
             services/dsh/backend/internal/http/catalog_legacy_occ_routes_test.go \
             services/dsh/backend/internal/http/catalog_unified_routes_test.go
 
