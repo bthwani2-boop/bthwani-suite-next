@@ -1,4 +1,4 @@
-name: Final Closure Repair Runner
+name: Partner Journey Closure Runner
 
 on:
   push:
@@ -17,12 +17,12 @@ permissions:
   contents: write
 
 concurrency:
-  group: final-closure-repair-runner
+  group: partner-journey-closure-runner
   cancel-in-progress: false
 
 jobs:
   repair:
-    name: Apply verify and commit deterministic repair
+    name: Apply verify and commit partner journey closure
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
@@ -36,45 +36,60 @@ jobs:
       - name: Setup governed workspace
         uses: ./.github/actions/setup-node-workspace
 
-      - name: Apply deterministic repair
+      - name: Apply baseline deterministic repair
         run: python3 tools/scripts/apply-final-closure-repair.py
 
-      - name: Apply actionlint closure repair
+      - name: Apply workflow syntax closure
         run: python3 tools/scripts/apply-actionlint-closure.py
 
-      - name: Format Go source
-        run: gofmt -w tools/guards/extract_routes.go services/dsh/backend/internal/http/server.go services/dsh/backend/internal/wlt/subscription_payment_bound.go
+      - name: Apply partner multi-surface journey closure
+        run: python3 tools/scripts/apply-partner-journey-closure.py
+
+      - name: Format changed Go source
+        run: |
+          gofmt -w \
+            tools/guards/extract_routes.go \
+            services/dsh/backend/internal/http/server.go \
+            services/dsh/backend/internal/http/catalog_unified_routes.go \
+            services/dsh/backend/internal/wlt/subscription_payment_bound.go
 
       - name: Regenerate governed clients
         run: |
           pnpm run openapi:generate:dsh
           pnpm run openapi:generate:wlt
 
-      - name: Verify repaired contracts and governance
+      - name: Verify partner journey backend
+        working-directory: services/dsh/backend
+        run: go test ./...
+
+      - name: Verify partner journey full stack
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p artifacts/final-closure-repair
-          pnpm run guard:partner-surface-truth 2>&1 | tee artifacts/final-closure-repair/partner-surface.log
-          pnpm run guard:guard-registry 2>&1 | tee artifacts/final-closure-repair/guard-registry.log
-          pnpm run guard:wlt-financial-boundary 2>&1 | tee artifacts/final-closure-repair/wlt-boundary.log
-          pnpm run guard:api-binding 2>&1 | tee artifacts/final-closure-repair/api-binding.log
-          pnpm run guard:workflow-lint 2>&1 | tee artifacts/final-closure-repair/workflow-lint.log
-          pnpm run guard:actions-pin 2>&1 | tee artifacts/final-closure-repair/actions-pin.log
-          pnpm run swagger:build 2>&1 | tee artifacts/final-closure-repair/swagger.log
-          pnpm run guard:backend-api-binding 2>&1 | tee artifacts/final-closure-repair/backend-api-binding.log
+          mkdir -p artifacts/partner-journey-closure
+          pnpm run guard:partner-surface-truth 2>&1 | tee artifacts/partner-journey-closure/partner-surface.log
+          pnpm run guard:partner-support-truth 2>&1 | tee artifacts/partner-journey-closure/partner-support.log
+          pnpm run guard:guard-registry 2>&1 | tee artifacts/partner-journey-closure/guard-registry.log
+          pnpm run guard:wlt-financial-boundary 2>&1 | tee artifacts/partner-journey-closure/wlt-boundary.log
+          pnpm run guard:api-binding 2>&1 | tee artifacts/partner-journey-closure/api-binding.log
+          pnpm run guard:frontend-feature-binding 2>&1 | tee artifacts/partner-journey-closure/frontend-feature-binding.log
+          pnpm run guard:workflow-lint 2>&1 | tee artifacts/partner-journey-closure/workflow-lint.log
+          pnpm run guard:actions-pin 2>&1 | tee artifacts/partner-journey-closure/actions-pin.log
+          pnpm run swagger:build 2>&1 | tee artifacts/partner-journey-closure/swagger.log
+          pnpm run guard:backend-api-binding 2>&1 | tee artifacts/partner-journey-closure/backend-api-binding.log
+          pnpm run typecheck 2>&1 | tee artifacts/partner-journey-closure/typecheck.log
           rm -rf dist-swagger
 
-      - name: Upload verification logs
+      - name: Upload partner journey evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: final-closure-repair-${{ github.sha }}
-          path: artifacts/final-closure-repair
+          name: partner-journey-closure-${{ github.sha }}
+          path: artifacts/partner-journey-closure
           if-no-files-found: warn
           retention-days: 3
 
-      - name: Commit verified repair
+      - name: Commit verified partner journey closure
         shell: bash
         run: |
           set -euo pipefail
@@ -82,5 +97,5 @@ jobs:
           git config user.email "actions@users.noreply.github.com"
           git add -A
           git diff --cached --check
-          git commit -m "fix(closure): converge contracts routes and governance"
+          git commit -m "fix(partner): close multi-surface partner journey"
           git push origin HEAD:fix/lian-sovereign-final-closure
