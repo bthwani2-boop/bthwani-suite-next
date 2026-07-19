@@ -49,6 +49,11 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Resolve tested branch source
+        id: source
+        shell: bash
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
       - name: Setup governed workspace
         uses: ./.github/actions/setup-node-workspace
 
@@ -105,25 +110,46 @@ jobs:
           WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'wlt_partner_closure')\gexec
           SQL
 
-      - name: Verify governed DSH and WLT database upgrades
+      - name: Verify governed DSH database upgrade
         shell: pwsh
+        env:
+          TESTED_SOURCE_SHA: ${{ steps.source.outputs.sha }}
         run: |
           $ErrorActionPreference = "Stop"
-          New-Item -ItemType Directory -Path artifacts/partner-journey-closure -Force | Out-Null
-          ./tools/scripts/invoke-database-upgrade-truth.ps1 `
-            -ServiceName dsh `
-            -MigrationDirectory services/dsh/database/migrations `
-            -TestsDirectory services/dsh/database/tests `
-            -DatabaseUrl $env:DSH_DATABASE_URL `
-            -SourceCommitSha $env:GITHUB_SHA 2>&1 |
-            Tee-Object -FilePath artifacts/partner-journey-closure/database-dsh.log
-          ./tools/scripts/invoke-database-upgrade-truth.ps1 `
-            -ServiceName wlt `
-            -MigrationDirectory services/wlt/database/migrations `
-            -TestsDirectory services/wlt/database/tests `
-            -DatabaseUrl $env:WLT_DATABASE_URL `
-            -SourceCommitSha $env:GITHUB_SHA 2>&1 |
-            Tee-Object -FilePath artifacts/partner-journey-closure/database-wlt.log
+          $log = "artifacts/partner-journey-closure/database-dsh.log"
+          New-Item -ItemType Directory -Path (Split-Path $log) -Force | Out-Null
+          try {
+            & ./tools/scripts/invoke-database-upgrade-truth.ps1 `
+              -ServiceName dsh `
+              -MigrationDirectory services/dsh/database/migrations `
+              -TestsDirectory services/dsh/database/tests `
+              -DatabaseUrl $env:DSH_DATABASE_URL `
+              -SourceCommitSha $env:TESTED_SOURCE_SHA *>&1 |
+              Tee-Object -FilePath $log
+          } catch {
+            ($_ | Format-List * -Force | Out-String) | Tee-Object -FilePath $log -Append
+            throw
+          }
+
+      - name: Verify governed WLT database upgrade
+        shell: pwsh
+        env:
+          TESTED_SOURCE_SHA: ${{ steps.source.outputs.sha }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $log = "artifacts/partner-journey-closure/database-wlt.log"
+          try {
+            & ./tools/scripts/invoke-database-upgrade-truth.ps1 `
+              -ServiceName wlt `
+              -MigrationDirectory services/wlt/database/migrations `
+              -TestsDirectory services/wlt/database/tests `
+              -DatabaseUrl $env:WLT_DATABASE_URL `
+              -SourceCommitSha $env:TESTED_SOURCE_SHA *>&1 |
+              Tee-Object -FilePath $log
+          } catch {
+            ($_ | Format-List * -Force | Out-String) | Tee-Object -FilePath $log -Append
+            throw
+          }
 
       - name: Verify partner journey backend against PostgreSQL
         shell: bash
@@ -166,7 +192,7 @@ jobs:
           pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action up -Profiles $profiles
           pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action seed -Profiles $profiles
           pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action bootstrap-dev -Profiles dsh,media -Force
-          pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/test-dsh-multisurface-runtime-matrix.ps1 2>&1 |
+          pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/test-dsh-multisurface-runtime-matrix.ps1 *>&1 |
             Tee-Object -FilePath artifacts/partner-journey-closure/runtime-multisurface.log
 
       - name: Capture partner runtime diagnostics
@@ -194,7 +220,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: partner-journey-closure-${{ github.sha }}
+          name: partner-journey-closure-${{ steps.source.outputs.sha }}
           path: artifacts/partner-journey-closure
           if-no-files-found: warn
           retention-days: 14
@@ -236,7 +262,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           JOB_STATUS: ${{ job.status }}
           REPOSITORY: ${{ github.repository }}
-          TARGET_SHA: ${{ steps.finalize.outputs.sha || github.sha }}
+          TARGET_SHA: ${{ steps.finalize.outputs.sha || steps.source.outputs.sha }}
           RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
