@@ -1,0 +1,110 @@
+name: Lian One-Time Support Ownership Fix
+
+on:
+  push:
+    branches: [lian]
+    paths:
+      - ".github/workflows/lian-one-time-support-ownership-fix.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout lian
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: lian
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Enforce reporter ownership in support handlers
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("services/dsh/backend/internal/http/support.go")
+          text = path.read_text(encoding="utf-8")
+
+          old_get = '''func (s *protectedStoreServer) handleGetTicket(w http.ResponseWriter, r *http.Request) {
+	_, ok := s.requireActor(w, r, "client", "partner", "captain", "operator")
+	if !ok {
+		return
+	}
+	ticketID := r.PathValue("ticketId")
+	ticket, err := support.GetTicket(s.db, ticketID)
+	if errors.Is(err, support.ErrNotFound) {
+		store.SendError(w, http.StatusNotFound, "NOT_FOUND", errTicketNotFound)
+		return
+	}
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to get ticket")
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"ticket": marshalTicket(ticket)})
+}
+'''
+          new_get = '''func (s *protectedStoreServer) handleGetTicket(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "operator")
+	if !ok {
+		return
+	}
+	ticketID := r.PathValue("ticketId")
+	ticket, ok := s.requireSupportTicketAccess(w, actor, ticketID)
+	if !ok {
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"ticket": marshalTicket(ticket)})
+}
+'''
+          if old_get not in text:
+              raise SystemExit("support get-ticket anchor not found")
+          text = text.replace(old_get, new_get, 1)
+
+          add_anchor = '''	ticketID := r.PathValue("ticketId")
+	var body struct {
+		Body       string `json:"body"`
+'''
+          add_replacement = '''	ticketID := r.PathValue("ticketId")
+	if _, authorized := s.requireSupportTicketAccess(w, actor, ticketID); !authorized {
+		return
+	}
+	var body struct {
+		Body       string `json:"body"`
+'''
+          if add_anchor not in text:
+              raise SystemExit("support add-message anchor not found")
+          text = text.replace(add_anchor, add_replacement, 1)
+
+          list_anchor = '''	ticketID := r.PathValue("ticketId")
+	includeInternal := actor.Role == "operator"
+'''
+          list_replacement = '''	ticketID := r.PathValue("ticketId")
+	if _, authorized := s.requireSupportTicketAccess(w, actor, ticketID); !authorized {
+		return
+	}
+	includeInternal := actor.Role == "operator"
+'''
+          if list_anchor not in text:
+              raise SystemExit("support list-message anchor not found")
+          text = text.replace(list_anchor, list_replacement, 1)
+
+          path.write_text(text, encoding="utf-8")
+
+      - name: Format and commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          gofmt -w services/dsh/backend/internal/http/support.go services/dsh/backend/internal/http/support_authorization.go
+          if git diff --quiet -- services/dsh/backend/internal/http/support.go services/dsh/backend/internal/http/support_authorization.go; then
+            echo "No patch required"
+            exit 0
+          fi
+          git config user.name "bthwani-governance-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add services/dsh/backend/internal/http/support.go services/dsh/backend/internal/http/support_authorization.go
+          git commit -m "fix(support): enforce reporter ownership for ticket access"
+          git push origin HEAD:lian
