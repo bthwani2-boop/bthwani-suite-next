@@ -45,7 +45,7 @@ This skill owns configuration-boundary verification only. It cannot approve appl
 - Preview, demo, fixture, or mock state presented as live runtime truth.
 - Provider mutation hidden in frontend code.
 - Broad CORS or unsafe production defaults.
-- Returning the noncanonical decision `BLOCKED_SECURITY_RISK`; use `SECURITY_BLOCK`.
+- Emitting deprecated security decision aliases; use the canonical `SECURITY_BLOCK` decision.
 
 ## Required output
 
