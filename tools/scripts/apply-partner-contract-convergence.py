@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -139,6 +140,18 @@ func TestLegacyCatalogWriteRoutesAreRetired(t *testing.T) {
     write(unified_relative, text)
 
 
+def normalize_outbox_repair_anchor() -> None:
+    relative = "services/dsh/backend/internal/wltoutbox/wltoutbox.go"
+    text = read(relative)
+    text = re.sub(
+        r"\n\s+client_id,tenant_id,points,reversal_of_reference,\n\s+external_reference,payload,reversal_requested,attempt_count",
+        "\n           client_id,tenant_id,points,reversal_of_reference,\n            external_reference,payload,reversal_requested,attempt_count",
+        text,
+        count=1,
+    )
+    write(relative, text)
+
+
 def remove_self() -> None:
     path = ROOT / "tools/scripts/apply-partner-contract-convergence.py"
     if path.exists():
@@ -148,4 +161,5 @@ def remove_self() -> None:
 retire_legacy_catalog_routes()
 converge_catalog_route_methods()
 rewrite_route_tests()
+normalize_outbox_repair_anchor()
 remove_self()
