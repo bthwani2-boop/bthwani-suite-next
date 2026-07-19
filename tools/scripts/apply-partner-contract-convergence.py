@@ -13,6 +13,16 @@ def write(relative: str, content: str) -> None:
     (ROOT / relative).write_text(content, encoding="utf-8")
 
 
+def replace_once(relative: str, old: str, new: str) -> None:
+    text = read(relative)
+    if old in text:
+        write(relative, text.replace(old, new, 1))
+        return
+    if new in text:
+        return
+    raise RuntimeError(f"missing convergence anchor in {relative}: {old[:160]!r}")
+
+
 def retire_legacy_catalog_routes() -> None:
     relative = "services/dsh/backend/internal/http/server.go"
     text = read(relative)
@@ -139,6 +149,74 @@ func TestLegacyCatalogWriteRoutesAreRetired(t *testing.T) {
     write(unified_relative, text)
 
 
+def close_wltoutbox_callers() -> None:
+    replace_once(
+        "services/dsh/backend/internal/orders/lifecycle.go",
+        '''type DeliveryCompletionContext struct {
+\tCheckoutIntentID string
+\tPaymentMethod    string
+\tPartnerID        string
+}''',
+        '''type DeliveryCompletionContext struct {
+\tTenantID         string
+\tCheckoutIntentID string
+\tPaymentMethod    string
+\tPartnerID        string
+}''',
+    )
+    replace_once(
+        "services/dsh/backend/internal/orders/lifecycle.go",
+        '''\t\tSELECT o.checkout_intent_id::text, ci.payment_method, s.partner_id''',
+        '''\t\tSELECT ci.tenant_id, o.checkout_intent_id::text, ci.payment_method, s.partner_id''',
+    )
+    replace_once(
+        "services/dsh/backend/internal/orders/lifecycle.go",
+        '''\t).Scan(&context.CheckoutIntentID, &context.PaymentMethod, &partnerID)''',
+        '''\t).Scan(&context.TenantID, &context.CheckoutIntentID, &context.PaymentMethod, &partnerID)''',
+    )
+    replace_once(
+        "services/dsh/backend/internal/dispatch/dispatch.go",
+        '''return wltoutbox.Enqueue(tx, wltoutbox.EventTypeDeliveryCompleted, orderID, captainID, deliveryCtx.PartnerID, deliveryCtx.CheckoutIntentID)''',
+        '''return wltoutbox.Enqueue(tx, wltoutbox.EventTypeDeliveryCompleted, deliveryCtx.TenantID, orderID, captainID, deliveryCtx.PartnerID, deliveryCtx.CheckoutIntentID)''',
+    )
+    replace_once(
+        "services/dsh/backend/internal/partnerdelivery/service.go",
+        '''\t\twltoutbox.EventTypeDeliveryCompleted,
+\t\torderID,''',
+        '''\t\twltoutbox.EventTypeDeliveryCompleted,
+\t\tdeliveryCtx.TenantID,
+\t\torderID,''',
+    )
+
+    test_relative = "services/dsh/backend/internal/wltoutbox/wltoutbox_db_test.go"
+    replace_once(
+        test_relative,
+        '''\tclientID := "wlt-outbox-test-client-" + suffix''',
+        '''\ttenantID := "tenant-wlt-outbox-test"
+\tclientID := "wlt-outbox-test-client-" + suffix''',
+    )
+    replace_once(
+        test_relative,
+        '''\t\tINSERT INTO dsh_checkout_intents (client_id, cart_id, store_id, state, payment_method, wlt_payment_session_id)
+\t\tVALUES ($1, $2::uuid, $3, 'payment_pending', 'cod', $4)''',
+        '''\t\tINSERT INTO dsh_checkout_intents (tenant_id, client_id, cart_id, store_id, state, payment_method, wlt_payment_session_id)
+\t\tVALUES ($1, $2, $3::uuid, $4, 'payment_pending', 'cod', $5)''',
+    )
+    replace_once(
+        test_relative,
+        '''\t\tclientID, cartID, storeID, "wlt-ps-"+suffix,''',
+        '''\t\ttenantID, clientID, cartID, storeID, "wlt-ps-"+suffix,''',
+    )
+    text = read(test_relative)
+    old_call = 'Enqueue(tx, EventTypeDeliveryCompleted, orderID, "captain-1", "partner-1", checkoutIntentID)'
+    new_call = 'Enqueue(tx, EventTypeDeliveryCompleted, "tenant-wlt-outbox-test", orderID, "captain-1", "partner-1", checkoutIntentID)'
+    if old_call in text:
+        text = text.replace(old_call, new_call)
+        write(test_relative, text)
+    elif new_call not in text:
+        raise RuntimeError("WLT outbox DB test enqueue anchor missing")
+
+
 def retire_materialized_outbox_repair() -> None:
     source = read("services/dsh/backend/internal/wltoutbox/wltoutbox.go")
     closed_signature = "func Enqueue(tx *sql.Tx, eventType, tenantID, orderID, captainID, partnerID, checkoutIntentID string) error"
@@ -167,5 +245,6 @@ def remove_self() -> None:
 retire_legacy_catalog_routes()
 converge_catalog_route_methods()
 rewrite_route_tests()
+close_wltoutbox_callers()
 retire_materialized_outbox_repair()
 remove_self()
