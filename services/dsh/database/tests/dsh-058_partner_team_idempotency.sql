@@ -15,15 +15,27 @@ DECLARE
   v_audit_after integer;
 BEGIN
   INSERT INTO dsh_stores (
-    id, name_ar, name_en, vertical, city_code, city_name_ar, zone_code,
-    logo_url, cover_url, rating, minimum_order_amount, eta_min_minutes,
-    eta_max_minutes, is_open, is_accepting_orders, delivery_modes, categories,
-    status, publication_status, client_visibility_status
+    id,
+    slug,
+    display_name,
+    status,
+    city_code,
+    service_area_code,
+    serviceability_status,
+    category,
+    delivery_modes,
+    is_visible
   ) VALUES (
-    v_test_store_id, 'متجر اختبار', 'Idempotency Test Store', 'restaurant',
-    'sanaa', 'صنعاء', 'test-zone', '', '', 0, 0, 10, 20,
-    false, false, ARRAY['pickup']::text[], ARRAY[]::text[],
-    'active', 'draft', 'hidden'
+    v_test_store_id,
+    v_test_store_id,
+    'Idempotency Test Store',
+    'active',
+    'sanaa',
+    'sanaa',
+    'serviceable',
+    'restaurant',
+    ARRAY['pickup']::text[],
+    false
   );
 
   INSERT INTO dsh_store_team_members (
