@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "repository": "bthwani2-boop/bthwani-suite-next",
   "targetBranch": "lian",
   "observedAt": "2026-07-19T00:00:00Z",
@@ -16,6 +16,8 @@
   "requiredCheckNames": [
     "Lian Final Same-Commit Closure result",
     "Lian Full Runtime Evidence / Full service runtime bootstrap and smoke",
+    "Lian UI Action Binding Truth result",
+    "Lian Client Address Privacy Integration result",
     "Lian Governed Map and Platform Policy Truth result",
     "Lian Client Address Privacy Truth result",
     "Lian Operational Policy UI Truth result",
@@ -35,6 +37,9 @@
   "claims": {
     "routingConfigured": true,
     "requiredCheckNamesDefined": true,
+    "finalGateIncludesRuntime": true,
+    "finalGateIncludesSurfaceActionInventory": true,
+    "finalGateIncludesPrivacyIntegration": true,
     "separationOfDutiesProven": false,
     "sameCommitCiProven": false,
     "highRiskClosureAllowed": false
