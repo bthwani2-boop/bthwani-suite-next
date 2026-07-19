@@ -16,6 +16,10 @@ on:
       - "pnpm-lock.yaml"
       - ".github/actions/**"
       - ".github/workflows/repository-static-truth.yml"
+  pull_request:
+    branches:
+      - master
+      - lian
   workflow_dispatch:
 
 permissions:
@@ -199,9 +203,12 @@ jobs:
             code=$?
             cat /tmp/workspace-phase.log
             if [ $code -ne 0 ]; then
-              detail="$(grep -Eai 'error|failed|failure|missing|drift|invalid|expected|mismatch|forbidden' /tmp/workspace-phase.log | tail -n1)"
+              detail="$(grep -E '^- ' /tmp/workspace-phase.log | head -n1)"
+              if [ -z "$detail" ]; then
+                detail="$(grep -Eai 'error|failed|failure|missing|drift|invalid|expected|mismatch|forbidden' /tmp/workspace-phase.log | head -n1)"
+              fi
               [ -n "$detail" ] || detail="$(tail -n1 /tmp/workspace-phase.log)"
-              detail="$(printf '%s' "$detail" | tr '\n\r/' '   ' | sed -E 's/[[:space:]]+/ /g' | cut -c1-70)"
+              detail="$(printf '%s' "$detail" | tr '\n\r/' '   ' | sed -E 's/[[:space:]]+/ /g' | cut -c1-120)"
               printf 'phase=%s\ndetail=%s\n' "$phase" "$detail" >> "$GITHUB_OUTPUT"
               exit $code
             fi
