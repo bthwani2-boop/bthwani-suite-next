@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: write
+  statuses: write
 
 concurrency:
   group: partner-journey-closure-runner
@@ -21,7 +22,25 @@ jobs:
   repair:
     name: Apply verify and commit partner journey closure
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 150
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: closure
+          POSTGRES_PASSWORD: closure_password
+          POSTGRES_DB: closure
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U closure -d closure"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      PGPASSWORD: closure_password
+      DSH_DATABASE_URL: postgres://closure:closure_password@localhost:5432/dsh_partner_closure?sslmode=disable
+      WLT_DATABASE_URL: postgres://closure:closure_password@localhost:5432/wlt_partner_closure?sslmode=disable
     steps:
       - name: Checkout exact closure branch
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -75,8 +94,41 @@ jobs:
           pnpm run openapi:generate:dsh
           pnpm run openapi:generate:wlt
 
-      - name: Verify partner journey backend
+      - name: Create isolated partner journey databases
         shell: bash
+        run: |
+          set -euo pipefail
+          psql "postgres://closure:closure_password@localhost:5432/postgres?sslmode=disable" -v ON_ERROR_STOP=1 <<'SQL'
+          SELECT 'CREATE DATABASE dsh_partner_closure'
+          WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'dsh_partner_closure')\gexec
+          SELECT 'CREATE DATABASE wlt_partner_closure'
+          WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'wlt_partner_closure')\gexec
+          SQL
+
+      - name: Verify governed DSH and WLT database upgrades
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          New-Item -ItemType Directory -Path artifacts/partner-journey-closure -Force | Out-Null
+          ./tools/scripts/invoke-database-upgrade-truth.ps1 `
+            -ServiceName dsh `
+            -MigrationDirectory services/dsh/database/migrations `
+            -TestsDirectory services/dsh/database/tests `
+            -DatabaseUrl $env:DSH_DATABASE_URL `
+            -SourceCommitSha $env:GITHUB_SHA 2>&1 |
+            Tee-Object -FilePath artifacts/partner-journey-closure/database-dsh.log
+          ./tools/scripts/invoke-database-upgrade-truth.ps1 `
+            -ServiceName wlt `
+            -MigrationDirectory services/wlt/database/migrations `
+            -TestsDirectory services/wlt/database/tests `
+            -DatabaseUrl $env:WLT_DATABASE_URL `
+            -SourceCommitSha $env:GITHUB_SHA 2>&1 |
+            Tee-Object -FilePath artifacts/partner-journey-closure/database-wlt.log
+
+      - name: Verify partner journey backend against PostgreSQL
+        shell: bash
+        env:
+          DATABASE_URL: ${{ env.DSH_DATABASE_URL }}
         run: |
           set -euo pipefail
           mkdir -p artifacts/partner-journey-closure
@@ -85,7 +137,7 @@ jobs:
             go test ./...
           ) 2>&1 | tee artifacts/partner-journey-closure/backend-go-test.log
 
-      - name: Verify partner journey full stack
+      - name: Verify partner journey contracts and surfaces
         shell: bash
         run: |
           set -euo pipefail
@@ -105,6 +157,39 @@ jobs:
           pnpm --dir apps/control-panel/runtime exec tsc --noEmit -p tsconfig.partner-journey.json 2>&1 | tee artifacts/partner-journey-closure/typecheck-control-panel.log
           rm -rf dist-swagger
 
+      - name: Verify live multi-surface partner runtime journey
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $profiles = "identity,workforce,dsh,wlt,media"
+          pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action down -Profiles $profiles
+          pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action up -Profiles $profiles
+          pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action seed -Profiles $profiles
+          pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action bootstrap-dev -Profiles dsh,media -Force
+          pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/test-dsh-multisurface-runtime-matrix.ps1 2>&1 |
+            Tee-Object -FilePath artifacts/partner-journey-closure/runtime-multisurface.log
+
+      - name: Capture partner runtime diagnostics
+        if: failure()
+        shell: bash
+        run: |
+          set +e
+          mkdir -p artifacts/partner-journey-closure
+          docker ps -a > artifacts/partner-journey-closure/docker-ps.log 2>&1
+          docker compose \
+            --env-file infra/docker/env/runtime.env.example \
+            -f infra/docker/compose.runtime.yml \
+            --profile identity --profile workforce --profile dsh --profile wlt --profile media \
+            logs --no-color --tail=1500 > artifacts/partner-journey-closure/runtime-compose.log 2>&1
+
+      - name: Stop partner journey runtime
+        if: always()
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 `
+            -Action down `
+            -Profiles identity,workforce,dsh,wlt,media
+
       - name: Upload partner journey evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -112,15 +197,65 @@ jobs:
           name: partner-journey-closure-${{ github.sha }}
           path: artifacts/partner-journey-closure
           if-no-files-found: warn
-          retention-days: 3
+          retention-days: 14
 
-      - name: Commit verified partner journey closure
+      - name: Commit tested partner journey tree
+        id: finalize
         shell: bash
         run: |
           set -euo pipefail
+          branch="fix/lian-sovereign-final-closure"
           git config user.name "bthwani-closure-executor"
           git config user.email "actions@users.noreply.github.com"
           git add -A
           git diff --cached --check
-          git commit -m "fix(partner): close multi-surface partner journey"
-          git push origin HEAD:fix/lian-sovereign-final-closure
+          if ! git diff --cached --quiet; then
+            git commit -m "fix(partner): close multi-surface partner journey"
+          fi
+          for attempt in 1 2 3; do
+            git fetch origin "$branch"
+            remote_sha="$(git rev-parse "origin/$branch")"
+            if ! git merge-base --is-ancestor "$remote_sha" HEAD; then
+              git rebase "origin/$branch"
+            fi
+            if git push origin "HEAD:$branch"; then
+              break
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "failed to push tested partner journey tree after three attempts" >&2
+              exit 1
+            fi
+          done
+          final_sha="$(git rev-parse HEAD)"
+          echo "sha=$final_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Publish exact partner journey result
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          JOB_STATUS: ${{ job.status }}
+          REPOSITORY: ${{ github.repository }}
+          TARGET_SHA: ${{ steps.finalize.outputs.sha || github.sha }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          case "$JOB_STATUS" in
+            success) state=success ;;
+            cancelled) state=error ;;
+            *) state=failure ;;
+          esac
+          description="partner source, DSH/WLT DB, three surfaces, and live runtime: $JOB_STATUS"
+          payload="$(jq -n \
+            --arg state "$state" \
+            --arg context 'Partner Journey Closure / Full-stack multi-surface' \
+            --arg description "$description" \
+            --arg target_url "$RUN_URL" \
+            '{state:$state,context:$context,description:$description,target_url:$target_url}')"
+          curl --fail-with-body --silent --show-error \
+            -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$REPOSITORY/statuses/$TARGET_SHA" \
+            -d "$payload"
