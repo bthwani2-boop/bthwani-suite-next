@@ -45,7 +45,7 @@ This skill detects, sanitizes, and routes findings. It does not replace `APPLICA
 - Pasting or committing real secrets or private data.
 - Converting placeholders into live credentials.
 - Hiding a security finding as a warning or generic code failure.
-- Returning the noncanonical decision `BLOCKED_SECURITY_RISK`; use `SECURITY_BLOCK`.
+- Emitting deprecated security decision aliases; use the canonical `SECURITY_BLOCK` decision.
 - Self-approving security remediation or residual risk.
 
 ## Required output
