@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "policy": {
+    "default": "IMMUTABLE_AFTER_APPLY",
+    "amendmentRule": "A migration may be corrected in place only when the repository has no successful same-commit runtime evidence for it, clean installation proves the file cannot apply, and the governed runner will reject any environment that already recorded the previous checksum.",
+    "appliedChecksumMismatchAction": "HARD_FAIL_AND_REQUIRE_EXPLICIT_FORWARD_RECOVERY"
+  },
+  "amendments": [
+    {
+      "service": "dsh",
+      "migrationId": "dsh-077_platform_operational_policies.sql",
+      "originalBlobSha": "636a7217a376873cb8fbfafae1461ff37219805c",
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "The migration declared TEXT foreign keys against the UUID zone identity created by dsh-013 and introduced a second capacity table instead of upgrading the legacy capacity source.",
+      "evidence": {
+        "cleanInstallCommitSha": "6a12e031284a7f9100b88597aeee8a2d3b4c4c56",
+        "cleanInstallResult": "FAILED_AT_THIS_MIGRATION",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Preserve UUID zone identity, migrate legacy capacity rows into the governed capacity-config table, and remove the duplicate legacy table only after successful copy."
+    },
+    {
+      "service": "wlt",
+      "migrationId": "wlt-031_governed_settlement_sources.sql",
+      "originalBlobSha": "1e0f8491fb415226872cd4d88b14917a84e57b58",
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "The migration declared settlement_id UUID while the sovereign wlt_settlements primary key has always been TEXT with a wset_ prefix.",
+      "evidence": {
+        "cleanInstallCommitSha": "6a12e031284a7f9100b88597aeee8a2d3b4c4c56",
+        "cleanInstallResult": "FAILED_AT_THIS_MIGRATION",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Use the exact sovereign settlement identifier type and retain the existing restrictive foreign key."
+    }
+  ]
+}
