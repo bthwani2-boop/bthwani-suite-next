@@ -88,6 +88,7 @@ SELECT md5(COALESCE(string_agg(migration_id || ':' || checksum_sha256 || ':' || 
 FROM schema_migrations
 WHERE service_name = $serviceLiteral AND success AND NOT dirty;
 "@
+Write-Host "LEDGER_FIRST service=$ServiceName expected=$($migrationFiles.Count) rows=$firstCount fingerprint=$firstFingerprint"
 if ($firstCount -ne $migrationFiles.Count) {
   throw "Ledger coverage mismatch for '$ServiceName': expected $($migrationFiles.Count), recorded $firstCount."
 }
@@ -107,16 +108,18 @@ FROM schema_migrations
 WHERE service_name = $serviceLiteral AND success AND NOT dirty;
 "@
 $dirtyCount = [int](Invoke-ScalarQuery "SELECT COUNT(*) FROM schema_migrations WHERE service_name = $serviceLiteral AND (dirty OR NOT success);")
+Write-Host "LEDGER_SECOND service=$ServiceName rows=$secondCount dirty=$dirtyCount fingerprint=$secondFingerprint"
 
 if ($secondCount -ne $firstCount -or $secondFingerprint -ne $firstFingerprint) {
-  throw "Idempotent runner changed the governed migration ledger for '$ServiceName'."
+  throw "Idempotent runner changed the governed migration ledger for '$ServiceName': firstRows=$firstCount secondRows=$secondCount firstFingerprint=$firstFingerprint secondFingerprint=$secondFingerprint."
 }
 if ($dirtyCount -ne 0) {
-  throw "Dirty migration rows remain for '$ServiceName'."
+  throw "Dirty migration rows remain for '$ServiceName': dirtyRows=$dirtyCount."
 }
 
 if (-not [string]::IsNullOrWhiteSpace($TestsDirectory) -and (Test-Path -LiteralPath $TestsDirectory)) {
   $testFiles = @(Get-ChildItem -LiteralPath $TestsDirectory -Filter "*.sql" -File | Sort-Object Name)
+  Write-Host "INVARIANT_SET service=$ServiceName files=$($testFiles.Count) directory=$TestsDirectory"
   foreach ($testFile in $testFiles) {
     Write-Host "INVARIANT $($testFile.Name)"
     $output = @(& psql $DatabaseUrl -X -v ON_ERROR_STOP=1 -f $testFile.FullName 2>&1)
