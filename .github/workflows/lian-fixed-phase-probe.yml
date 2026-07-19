@@ -1,0 +1,316 @@
+name: Lian Fixed Closure Phase Probe
+
+on:
+  push:
+    branches: [lian]
+    paths:
+      - ".github/workflows/lian-fixed-phase-probe.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  statuses: write
+
+jobs:
+  dsh-go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with: { persist-credentials: false }
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache: true
+          cache-dependency-path: services/dsh/backend/go.sum
+      - id: gofmt
+        continue-on-error: true
+        working-directory: services/dsh/backend
+        shell: bash
+        run: test -z "$(gofmt -l .)"
+      - id: vet
+        continue-on-error: true
+        working-directory: services/dsh/backend
+        run: go vet ./...
+      - id: test
+        continue-on-error: true
+        working-directory: services/dsh/backend
+        run: go test ./... -count=1
+      - id: build
+        continue-on-error: true
+        working-directory: services/dsh/backend
+        run: go build ./...
+      - name: Publish DSH Go fixed phases
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          GOFMT: ${{ steps.gofmt.outcome }}
+          VET: ${{ steps.vet.outcome }}
+          TEST: ${{ steps.test.outcome }}
+          BUILD: ${{ steps.build.outcome }}
+        run: |
+          set -euo pipefail
+          publish(){ phase="$1"; outcome="$2"; state=success; [ "$outcome" = success ] || state=failure; jq -n --arg state "$state" --arg context "Lian Fixed / DSH Go / $phase" --arg description "$outcome" --arg target_url "$RUN_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/status.json; curl --fail-with-body --silent --show-error -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "https://api.github.com/repos/$REPOSITORY/statuses/$SHA" -d @/tmp/status.json; }
+          publish gofmt "$GOFMT"
+          publish vet "$VET"
+          publish test "$TEST"
+          publish build "$BUILD"
+
+  governance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with: { persist-credentials: false, fetch-depth: 0 }
+      - uses: ./.github/actions/setup-node-workspace
+      - id: schema
+        continue-on-error: true
+        run: pnpm run guard:governance-schema
+      - id: agent
+        continue-on-error: true
+        run: pnpm run guard:agent-governance
+      - id: authority
+        continue-on-error: true
+        run: pnpm run guard:authority-separation
+      - id: saas
+        continue-on-error: true
+        run: pnpm run guard:saas-governance
+      - id: registry
+        continue-on-error: true
+        run: pnpm run guard:guard-registry
+      - id: sdlc
+        continue-on-error: true
+        run: pnpm run guard:sdlc
+      - id: cleanup
+        continue-on-error: true
+        run: pnpm run guard:cleanup-policy
+      - id: commands
+        continue-on-error: true
+        run: pnpm run guard:required-command-integrity
+      - id: markdown
+        continue-on-error: true
+        run: pnpm run guard:markdown-governance
+      - id: foundation
+        continue-on-error: true
+        run: pnpm run foundation:gate
+      - name: Publish governance fixed phases
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SCHEMA: ${{ steps.schema.outcome }}
+          AGENT: ${{ steps.agent.outcome }}
+          AUTHORITY: ${{ steps.authority.outcome }}
+          SAAS: ${{ steps.saas.outcome }}
+          REGISTRY: ${{ steps.registry.outcome }}
+          SDLC: ${{ steps.sdlc.outcome }}
+          CLEANUP: ${{ steps.cleanup.outcome }}
+          COMMANDS: ${{ steps.commands.outcome }}
+          MARKDOWN: ${{ steps.markdown.outcome }}
+          FOUNDATION: ${{ steps.foundation.outcome }}
+        run: |
+          set -euo pipefail
+          publish(){ phase="$1"; outcome="$2"; state=success; [ "$outcome" = success ] || state=failure; jq -n --arg state "$state" --arg context "Lian Fixed / Governance / $phase" --arg description "$outcome" --arg target_url "$RUN_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/status.json; curl --fail-with-body --silent --show-error -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "https://api.github.com/repos/$REPOSITORY/statuses/$SHA" -d @/tmp/status.json; }
+          publish schema "$SCHEMA"
+          publish agent "$AGENT"
+          publish authority "$AUTHORITY"
+          publish saas "$SAAS"
+          publish registry "$REGISTRY"
+          publish sdlc "$SDLC"
+          publish cleanup "$CLEANUP"
+          publish commands "$COMMANDS"
+          publish markdown "$MARKDOWN"
+          publish foundation "$FOUNDATION"
+
+  surfaces:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with: { persist-credentials: false }
+      - uses: ./.github/actions/setup-node-workspace
+      - id: client
+        continue-on-error: true
+        run: node tools/guards/client-commerce/client-commerce-truth-gate.mjs
+      - id: partner
+        continue-on-error: true
+        run: node tools/guards/partner/partner-surface-truth-gate.mjs
+      - id: maps
+        continue-on-error: true
+        run: node tools/guards/maps/map-platform-truth-gate.mjs
+      - id: policy
+        continue-on-error: true
+        run: node tools/guards/platform/operational-policy-ui-truth-gate.mjs
+      - id: privacy
+        continue-on-error: true
+        run: node tools/guards/privacy/client-address-privacy-truth-gate.mjs
+      - id: privacyintegration
+        continue-on-error: true
+        run: node tools/guards/privacy/client-address-privacy-integration-gate.mjs
+      - id: uiactions
+        continue-on-error: true
+        run: node tools/guards/ui-actions/ui-action-binding-gate.mjs
+      - id: frontend
+        continue-on-error: true
+        run: pnpm run guard:frontend-feature-binding
+      - id: backend
+        continue-on-error: true
+        run: pnpm run guard:backend-api-binding
+      - id: manifest
+        continue-on-error: true
+        run: pnpm run guard:service-manifest-drift
+      - id: typecheck
+        continue-on-error: true
+        run: pnpm run typecheck
+      - id: build
+        continue-on-error: true
+        run: pnpm run build
+      - name: Publish surface fixed phases
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          CLIENT: ${{ steps.client.outcome }}
+          PARTNER: ${{ steps.partner.outcome }}
+          MAPS: ${{ steps.maps.outcome }}
+          POLICY: ${{ steps.policy.outcome }}
+          PRIVACY: ${{ steps.privacy.outcome }}
+          PRIVACY_INTEGRATION: ${{ steps.privacyintegration.outcome }}
+          UI_ACTIONS: ${{ steps.uiactions.outcome }}
+          FRONTEND: ${{ steps.frontend.outcome }}
+          BACKEND: ${{ steps.backend.outcome }}
+          MANIFEST: ${{ steps.manifest.outcome }}
+          TYPECHECK: ${{ steps.typecheck.outcome }}
+          BUILD: ${{ steps.build.outcome }}
+        run: |
+          set -euo pipefail
+          publish(){ phase="$1"; outcome="$2"; state=success; [ "$outcome" = success ] || state=failure; jq -n --arg state "$state" --arg context "Lian Fixed / Surfaces / $phase" --arg description "$outcome" --arg target_url "$RUN_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/status.json; curl --fail-with-body --silent --show-error -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "https://api.github.com/repos/$REPOSITORY/statuses/$SHA" -d @/tmp/status.json; }
+          publish client "$CLIENT"
+          publish partner "$PARTNER"
+          publish maps "$MAPS"
+          publish policy "$POLICY"
+          publish privacy "$PRIVACY"
+          publish privacy-integration "$PRIVACY_INTEGRATION"
+          publish ui-actions "$UI_ACTIONS"
+          publish frontend-binding "$FRONTEND"
+          publish backend-binding "$BACKEND"
+          publish manifest "$MANIFEST"
+          publish typecheck "$TYPECHECK"
+          publish build "$BUILD"
+
+  dsh-database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env: { POSTGRES_USER: dsh_fixed, POSTGRES_PASSWORD: dsh_fixed_password, POSTGRES_DB: dsh_fixed }
+        ports: ["55432:5432"]
+        options: >-
+          --health-cmd="pg_isready -U dsh_fixed -d dsh_fixed" --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      DATABASE_URL: postgres://dsh_fixed:dsh_fixed_password@localhost:55432/dsh_fixed?sslmode=disable
+      PGPASSWORD: dsh_fixed_password
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with: { persist-credentials: false }
+      - id: apply
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in $(find services/dsh/database/migrations -maxdepth 1 -type f -name 'dsh-*.sql' | sort); do echo "APPLY $file"; psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file"; done
+      - id: invariants
+        if: steps.apply.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in $(find services/dsh/database/tests -maxdepth 1 -type f -name '*.sql' | sort); do echo "TEST $file"; psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file"; done
+      - id: replay
+        if: steps.apply.outcome == 'success' && steps.invariants.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in $(find services/dsh/database/migrations -maxdepth 1 -type f -name 'dsh-*.sql' | sort); do echo "REPLAY $file"; psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file"; done
+      - name: Publish DSH database fixed phases
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          APPLY: ${{ steps.apply.outcome }}
+          INVARIANTS: ${{ steps.invariants.outcome }}
+          REPLAY: ${{ steps.replay.outcome }}
+        run: |
+          set -euo pipefail
+          publish(){ phase="$1"; outcome="$2"; state=success; [ "$outcome" = success ] || state=failure; jq -n --arg state "$state" --arg context "Lian Fixed / DSH DB / $phase" --arg description "$outcome" --arg target_url "$RUN_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/status.json; curl --fail-with-body --silent --show-error -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "https://api.github.com/repos/$REPOSITORY/statuses/$SHA" -d @/tmp/status.json; }
+          publish apply "$APPLY"
+          publish invariants "$INVARIANTS"
+          publish replay "$REPLAY"
+
+  wlt-database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env: { POSTGRES_USER: wlt_fixed, POSTGRES_PASSWORD: wlt_fixed_password, POSTGRES_DB: wlt_fixed }
+        ports: ["55433:5432"]
+        options: >-
+          --health-cmd="pg_isready -U wlt_fixed -d wlt_fixed" --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      DATABASE_URL: postgres://wlt_fixed:wlt_fixed_password@localhost:55433/wlt_fixed?sslmode=disable
+      PGPASSWORD: wlt_fixed_password
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with: { persist-credentials: false }
+      - id: apply
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in $(find services/wlt/database/migrations -maxdepth 1 -type f -name '*.sql' | sort); do echo "APPLY $file"; psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file"; done
+      - id: invariants
+        if: steps.apply.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -d services/wlt/database/tests ]; then for file in $(find services/wlt/database/tests -maxdepth 1 -type f -name '*.sql' | sort); do echo "TEST $file"; psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file"; done; fi
+      - id: replay
+        if: steps.apply.outcome == 'success' && steps.invariants.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in $(find services/wlt/database/migrations -maxdepth 1 -type f -name '*.sql' | sort); do echo "REPLAY $file"; psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file"; done
+      - name: Publish WLT database fixed phases
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          APPLY: ${{ steps.apply.outcome }}
+          INVARIANTS: ${{ steps.invariants.outcome }}
+          REPLAY: ${{ steps.replay.outcome }}
+        run: |
+          set -euo pipefail
+          publish(){ phase="$1"; outcome="$2"; state=success; [ "$outcome" = success ] || state=failure; jq -n --arg state "$state" --arg context "Lian Fixed / WLT DB / $phase" --arg description "$outcome" --arg target_url "$RUN_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/status.json; curl --fail-with-body --silent --show-error -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "https://api.github.com/repos/$REPOSITORY/statuses/$SHA" -d @/tmp/status.json; }
+          publish apply "$APPLY"
+          publish invariants "$INVARIANTS"
+          publish replay "$REPLAY"
