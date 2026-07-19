@@ -2,30 +2,36 @@ name: Central Catalog Verification
 
 on:
   push:
-    branches: [bassam, master]
+    branches:
+      - bassam
+      - master
+      - "fix/lian-sovereign-final-closure"
     paths:
       - "services/dsh/database/**"
-      - "services/dsh/backend/internal/catalog/**"
+      - "services/dsh/backend/internal/centralcatalog/**"
       - "services/dsh/backend/internal/http/catalog*.go"
       - "services/dsh/contracts/**"
       - "services/dsh/frontend/shared/catalog/**"
       - "services/dsh/tests/central-catalog-closure.test.mjs"
       - "infra/data-plane/postgres/init/001_create_runtime_databases.sh"
-      - "tools/scripts/test-central-catalog-migration.ps1"
+      - "infra/docker/scripts/schema-migration-runner.ps1"
+      - "tools/scripts/invoke-database-upgrade-truth.ps1"
       - "tools/scripts/scan-legacy-catalog-references.mjs"
       - ".github/workflows/central-catalog-closure.yml"
   pull_request:
     branches: [master]
     paths:
       - "services/dsh/database/**"
-      - "services/dsh/backend/internal/catalog/**"
+      - "services/dsh/backend/internal/centralcatalog/**"
       - "services/dsh/backend/internal/http/catalog*.go"
       - "services/dsh/contracts/**"
       - "services/dsh/frontend/shared/catalog/**"
       - "services/dsh/tests/central-catalog-closure.test.mjs"
       - "infra/data-plane/postgres/init/001_create_runtime_databases.sh"
-      - "tools/scripts/test-central-catalog-migration.ps1"
+      - "infra/docker/scripts/schema-migration-runner.ps1"
+      - "tools/scripts/invoke-database-upgrade-truth.ps1"
       - "tools/scripts/scan-legacy-catalog-references.mjs"
+      - ".github/workflows/central-catalog-closure.yml"
   workflow_dispatch:
 
 permissions:
@@ -37,9 +43,9 @@ concurrency:
 
 jobs:
   migration-closure:
-    name: Central catalog migration fresh legacy and double-run
+    name: Central catalog governed database truth
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 45
     services:
       postgres:
         image: postgres:16-alpine
@@ -55,70 +61,72 @@ jobs:
           --health-timeout 5s
           --health-retries 20
     steps:
-      - name: Checkout repository
+      - name: Checkout immutable source
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           persist-credentials: false
+          fetch-depth: 0
+
       - name: Install PostgreSQL client
+        shell: bash
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
-      - name: Initialize runtime databases
+
+      - name: Initialize governed runtime databases
         env:
           PGHOST: localhost
           PGPORT: "5432"
           PGPASSWORD: bthwani_runtime_password
           POSTGRES_USER: bthwani_runtime
           POSTGRES_DB: bthwani_runtime
-        run: sh infra/data-plane/postgres/init/001_create_runtime_databases.sh
-      - name: Run catalog migration closure test
-        shell: pwsh
-        env:
-          PGHOST: localhost
-          PGPORT: "5432"
-          PGPASSWORD: bthwani_runtime_password
-        run: ./tools/scripts/test-central-catalog-migration.ps1 -PsqlMode native
-      - name: Apply all DSH migrations twice
-        env:
-          PGHOST: localhost
-          PGPORT: "5432"
-          PGPASSWORD: bthwani_runtime_password
         shell: bash
+        run: sh infra/data-plane/postgres/init/001_create_runtime_databases.sh
+
+      - name: Run DSH clean install invariants and idempotent ledger
+        env:
+          DATABASE_URL: postgres://dsh_runtime:bthwani_runtime_password@localhost:5432/dsh_runtime?sslmode=disable
+          PGPASSWORD: bthwani_runtime_password
+        shell: pwsh
         run: |
-          set -euo pipefail
-          for pass in 1 2; do
-            echo "Migration pass $pass"
-            while IFS= read -r migration; do
-              psql -h localhost -U dsh_runtime -d dsh_runtime -v ON_ERROR_STOP=1 -f "$migration"
-            done < <(find services/dsh/database/migrations -maxdepth 1 -type f -name '*.sql' | sort)
-          done
+          ./tools/scripts/invoke-database-upgrade-truth.ps1 `
+            -ServiceName dsh `
+            -MigrationDirectory services/dsh/database/migrations `
+            -TestsDirectory services/dsh/database/tests `
+            -DatabaseUrl $env:DATABASE_URL `
+            -SourceCommitSha $env:GITHUB_SHA
+
       - name: Apply central catalog local verification seeds
         env:
-          PGHOST: localhost
-          PGPORT: "5432"
           PGPASSWORD: bthwani_runtime_password
+          DATABASE_URL: postgres://dsh_runtime:bthwani_runtime_password@localhost:5432/dsh_runtime?sslmode=disable
         shell: bash
         run: |
           set -euo pipefail
           while IFS= read -r seed; do
-            psql -h localhost -U dsh_runtime -d dsh_runtime -v ON_ERROR_STOP=1 -f "$seed"
+            psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f "$seed"
           done < <(find services/dsh/database/seeds/local -maxdepth 1 -type f -name '*.sql' | sort)
 
   legacy-and-static:
     name: Legacy reference scan and central catalog static tests
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
-      - name: Checkout repository
+      - name: Checkout immutable source
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           persist-credentials: false
-      - name: Setup Node
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: 24.17.0
+          fetch-depth: 0
+
+      - name: Setup governed workspace
+        uses: ./.github/actions/setup-node-workspace
+
       - name: Scan legacy local-catalog references
         run: node tools/scripts/scan-legacy-catalog-references.mjs
+
       - name: Run central catalog static tests
         run: node --test services/dsh/tests/central-catalog-closure.test.mjs
+
+      - name: Verify sovereign overlay and generated facade
+        run: node tools/scripts/generate-dsh-catalog-client.mjs --check
 
   catalog-result:
     name: Central catalog verification result
@@ -128,7 +136,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Require both catalog jobs to pass
+      - name: Require every catalog domain to pass
         env:
           MIGRATION: ${{ needs.migration-closure.result }}
           STATIC: ${{ needs.legacy-and-static.result }}
