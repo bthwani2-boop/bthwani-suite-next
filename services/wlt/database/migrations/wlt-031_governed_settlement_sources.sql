@@ -3,6 +3,10 @@
 -- DSH supplies delivered order identities and immutable gross snapshots. WLT
 -- owns the active fee policy, computes gross/fee/net itself and prevents any
 -- order from being included in more than one settlement.
+--
+-- PRE-RELEASE AMENDMENT: wlt_settlements.id is a governed TEXT identifier with
+-- a wset_ prefix. This migration previously declared UUID and could not apply
+-- to a clean sovereign WLT schema. See governance/database/migration-amendments.json.
 
 CREATE TABLE IF NOT EXISTS wlt_settlement_policies (
   partner_id text PRIMARY KEY,
@@ -16,7 +20,7 @@ CREATE TABLE IF NOT EXISTS wlt_settlement_policies (
 
 CREATE TABLE IF NOT EXISTS wlt_settlement_source_orders (
   order_id text PRIMARY KEY,
-  settlement_id uuid NOT NULL REFERENCES wlt_settlements(id) ON DELETE RESTRICT,
+  settlement_id text NOT NULL REFERENCES wlt_settlements(id) ON DELETE RESTRICT,
   partner_id text NOT NULL,
   gross_amount_minor_units bigint NOT NULL CHECK (gross_amount_minor_units > 0),
   currency text NOT NULL CHECK (btrim(currency) <> ''),
