@@ -2,12 +2,23 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "BThwani GitHub Repository Enforcement Evidence",
   "type": "object",
-  "required": ["schemaVersion", "repository", "targetBranch", "observedAt", "observed", "claims", "requiredRemediation", "decision"],
+  "required": [
+    "schemaVersion",
+    "repository",
+    "targetBranch",
+    "observedAt",
+    "observed",
+    "requiredCheckNames",
+    "requiredPullRequestPolicy",
+    "claims",
+    "requiredRemediation",
+    "decision"
+  ],
   "additionalProperties": false,
   "properties": {
-    "schemaVersion": { "const": 2 },
+    "schemaVersion": { "const": 4 },
     "repository": { "const": "bthwani2-boop/bthwani-suite-next" },
-    "targetBranch": { "const": "bassam" },
+    "targetBranch": { "const": "lian" },
     "observedAt": { "type": "string", "format": "date-time" },
     "observed": {
       "type": "object",
@@ -25,7 +36,12 @@
       "properties": {
         "authenticatedUser": { "type": "string", "minLength": 1 },
         "organizationMembershipCount": { "type": "integer", "minimum": 0 },
-        "codeowners": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "pattern": "^[A-Za-z0-9-]+$" } },
+        "codeowners": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[A-Za-z0-9-]+$" }
+        },
         "codeownersMode": { "enum": ["SINGLE_OWNER_ROUTING", "MULTI_OWNER_ROUTING"] },
         "branchProtectionState": { "enum": ["PROVEN", "NOT_PROVEN"] },
         "requiredChecksState": { "enum": ["PROVEN", "NOT_PROVEN"] },
@@ -33,23 +49,74 @@
         "sameCommitWorkflowRunsState": { "enum": ["PROVEN_PASS", "PROVEN_FAIL", "NOT_PROVEN"] }
       }
     },
+    "requiredCheckNames": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "requiredPullRequestPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requiredApprovingReviewCount",
+        "dismissStaleApprovals",
+        "requireCodeOwnerReview",
+        "requireConversationResolution",
+        "requireLastPushApprovalByDifferentActor",
+        "allowForcePushes",
+        "allowDeletions",
+        "requireLinearHistory"
+      ],
+      "properties": {
+        "requiredApprovingReviewCount": { "type": "integer", "minimum": 1 },
+        "dismissStaleApprovals": { "const": true },
+        "requireCodeOwnerReview": { "const": true },
+        "requireConversationResolution": { "const": true },
+        "requireLastPushApprovalByDifferentActor": { "const": true },
+        "allowForcePushes": { "const": false },
+        "allowDeletions": { "const": false },
+        "requireLinearHistory": { "type": "boolean" }
+      }
+    },
     "claims": {
       "type": "object",
-      "required": ["routingConfigured", "separationOfDutiesProven", "sameCommitCiProven", "highRiskClosureAllowed"],
+      "required": [
+        "routingConfigured",
+        "requiredCheckNamesDefined",
+        "finalGateIncludesRuntime",
+        "finalGateIncludesSurfaceActionInventory",
+        "finalGateIncludesPrivacyIntegration",
+        "separationOfDutiesProven",
+        "sameCommitCiProven",
+        "highRiskClosureAllowed"
+      ],
       "additionalProperties": false,
       "properties": {
         "routingConfigured": { "type": "boolean" },
+        "requiredCheckNamesDefined": { "type": "boolean" },
+        "finalGateIncludesRuntime": { "type": "boolean" },
+        "finalGateIncludesSurfaceActionInventory": { "type": "boolean" },
+        "finalGateIncludesPrivacyIntegration": { "type": "boolean" },
         "separationOfDutiesProven": { "type": "boolean" },
         "sameCommitCiProven": { "type": "boolean" },
         "highRiskClosureAllowed": { "type": "boolean" }
       }
     },
-    "requiredRemediation": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "requiredRemediation": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
     "decision": { "enum": ["PASS", "NEEDS_EVIDENCE", "FIX_REQUIRED", "BLOCKED_EXTERNAL"] }
   },
   "allOf": [
     {
-      "if": { "properties": { "observed": { "properties": { "codeownersMode": { "const": "SINGLE_OWNER_ROUTING" } } } } },
+      "if": {
+        "properties": {
+          "observed": { "properties": { "codeownersMode": { "const": "SINGLE_OWNER_ROUTING" } } }
+        }
+      },
       "then": {
         "properties": {
           "claims": {
@@ -63,7 +130,15 @@
       }
     },
     {
-      "if": { "properties": { "observed": { "properties": { "sameCommitWorkflowRunsState": { "not": { "const": "PROVEN_PASS" } } } } } },
+      "if": {
+        "properties": {
+          "observed": {
+            "properties": {
+              "sameCommitWorkflowRunsState": { "not": { "const": "PROVEN_PASS" } }
+            }
+          }
+        }
+      },
       "then": {
         "properties": {
           "claims": {
