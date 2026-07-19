@@ -95,34 +95,44 @@ jobs:
             throw "protected route evidence is incomplete"
           }
 
-      - name: Print runtime diagnostics on failure
+      - name: Capture runtime diagnostics on failure
         if: failure()
         shell: bash
         run: |
           set +e
-          docker compose \
-            --env-file infra/docker/env/runtime.env.example \
-            -f infra/docker/compose.runtime.yml \
-            -f infra/docker/compose.financial-simulators.yml \
-            --profile identity --profile workforce --profile dsh --profile wlt \
-            --profile media --profile providers --profile platform \
-            --profile financial-simulators --profile mail ps
-          docker compose \
-            --env-file infra/docker/env/runtime.env.example \
-            -f infra/docker/compose.runtime.yml \
-            -f infra/docker/compose.financial-simulators.yml \
-            --profile identity --profile workforce --profile dsh --profile wlt \
-            --profile media --profile providers --profile platform \
-            --profile financial-simulators --profile mail \
-            logs --no-color --tail=500
-          test -f artifacts/lian-runtime-closure-evidence.json && cat artifacts/lian-runtime-closure-evidence.json || true
+          mkdir -p artifacts
+          {
+            echo '=== docker ps -a ==='
+            docker ps -a
+            echo '=== compose state ==='
+            docker compose \
+              --env-file infra/docker/env/runtime.env.example \
+              -f infra/docker/compose.runtime.yml \
+              -f infra/docker/compose.financial-simulators.yml \
+              --profile identity --profile workforce --profile dsh --profile wlt \
+              --profile media --profile providers --profile platform \
+              --profile financial-simulators --profile mail ps
+            echo '=== compose logs ==='
+            docker compose \
+              --env-file infra/docker/env/runtime.env.example \
+              -f infra/docker/compose.runtime.yml \
+              -f infra/docker/compose.financial-simulators.yml \
+              --profile identity --profile workforce --profile dsh --profile wlt \
+              --profile media --profile providers --profile platform \
+              --profile financial-simulators --profile mail \
+              logs --no-color --tail=2000
+            echo '=== immutable evidence ==='
+            test -f artifacts/lian-runtime-closure-evidence.json && cat artifacts/lian-runtime-closure-evidence.json || true
+          } 2>&1 | tee artifacts/runtime-diagnostics.log
 
       - name: Upload immutable runtime evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: lian-runtime-evidence-${{ github.sha }}
-          path: artifacts/lian-runtime-closure-evidence.json
+          path: |
+            artifacts/lian-runtime-closure-evidence.json
+            artifacts/runtime-diagnostics.log
           if-no-files-found: warn
           retention-days: 14
 
