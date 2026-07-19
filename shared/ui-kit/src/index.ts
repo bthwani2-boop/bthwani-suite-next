@@ -24,6 +24,7 @@ export {
   bthwaniAppearanceComponentTokensByMode,
   getBThwaniGlassRecipe,
 } from "./appearance";
+export type { BThwaniAppearanceMode } from "./appearance";
 
 // Foundation token exports — design system primitives
 export {
