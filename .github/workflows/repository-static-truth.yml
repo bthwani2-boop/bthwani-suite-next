@@ -141,7 +141,7 @@ jobs:
   workspace:
     name: Source truth — contracts, governance, TypeScript, and tests
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 150
     steps:
       - name: Checkout immutable source
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -158,13 +158,39 @@ jobs:
         shell: bash
         run: |
           set +e
-          phases=(governance foundation bindings generated typecheck build test)
+          phases=(
+            governance-schema
+            agent-governance
+            authority-separation
+            saas-governance
+            guard-registry
+            sdlc
+            cleanup-policy
+            command-integrity
+            markdown-governance
+            foundation
+            bindings
+            generated
+            typecheck
+            build
+            test
+          )
           for phase in "${phases[@]}"; do
             case "$phase" in
-              governance) command=(pnpm run guard:governance-all) ;;
+              governance-schema) command=(pnpm run guard:governance-schema) ;;
+              agent-governance) command=(pnpm run guard:agent-governance) ;;
+              authority-separation) command=(pnpm run guard:authority-separation) ;;
+              saas-governance) command=(pnpm run guard:saas-governance) ;;
+              guard-registry) command=(pnpm run guard:guard-registry) ;;
+              sdlc) command=(pnpm run guard:sdlc) ;;
+              cleanup-policy) command=(pnpm run guard:cleanup-policy) ;;
+              command-integrity) command=(pnpm run guard:required-command-integrity) ;;
+              markdown-governance) command=(pnpm run guard:markdown-governance) ;;
               foundation) command=(pnpm run foundation:gate) ;;
               bindings) command=(pnpm run guard:api-binding) ;;
-              generated) command=(pnpm run guard:generated-clients) ;;
+              generated)
+                command=(bash -o pipefail -c 'pnpm run openapi:generate && node tools/scripts/generate-dsh-catalog-client.mjs --check && git diff --exit-code -- core/identity/clients/generated core/workforce/clients/generated core/platform-control/clients/generated core/providers/clients/generated services/wlt/clients/generated services/dsh/clients/generated')
+                ;;
               typecheck) command=(pnpm run typecheck) ;;
               build) command=(pnpm run build) ;;
               test) command=(pnpm run test) ;;
@@ -173,7 +199,7 @@ jobs:
             code=$?
             cat /tmp/workspace-phase.log
             if [ $code -ne 0 ]; then
-              detail="$(grep -Eai 'error|failed|failure|missing|drift|invalid|expected|mismatch' /tmp/workspace-phase.log | tail -n1)"
+              detail="$(grep -Eai 'error|failed|failure|missing|drift|invalid|expected|mismatch|forbidden' /tmp/workspace-phase.log | tail -n1)"
               [ -n "$detail" ] || detail="$(tail -n1 /tmp/workspace-phase.log)"
               detail="$(printf '%s' "$detail" | tr '\n\r/' '   ' | sed -E 's/[[:space:]]+/ /g' | cut -c1-70)"
               printf 'phase=%s\ndetail=%s\n' "$phase" "$detail" >> "$GITHUB_OUTPUT"
