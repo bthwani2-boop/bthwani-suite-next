@@ -40,7 +40,6 @@ jobs:
           import json
 
           root = Path.cwd()
-
           wlt = root / "services/wlt/contracts/wlt.openapi.yaml"
           text = wlt.read_text(encoding="utf-8")
           old_ref = "#/components/responses/InvalidRequest"
@@ -53,21 +52,16 @@ jobs:
           old_marker = "// Read-after-write for conflict resolution"
           if old_marker not in text:
               raise SystemExit("partner order read-after-write marker is missing")
-          orders.write_text(
-              text.replace(old_marker, "// read-after-write: reload server truth before accepting the final UI state"),
-              encoding="utf-8",
-          )
+          orders.write_text(text.replace(old_marker, "// read-after-write: reload server truth before accepting the final UI state"), encoding="utf-8")
 
           partner_guard = root / "tools/guards/partner/partner-surface-truth-gate.mjs"
           text = partner_guard.read_text(encoding="utf-8")
           anchor = 'file: "services/dsh/frontend/app-partner/account/PartnerSupportScreen.tsx"'
           anchor_index = text.find(anchor)
-          if anchor_index < 0:
-              raise SystemExit("partner support guard anchor is missing")
           required_start = text.find("    required: [", anchor_index)
           required_end = text.find("    ],", required_start)
-          if required_start < 0 or required_end < 0:
-              raise SystemExit("partner support required block is missing")
+          if anchor_index < 0 or required_start < 0 or required_end < 0:
+              raise SystemExit("partner support guard block is missing")
           required_end += len("    ],")
           required_block = '''    required: [
                 "usePartnerSupportController",
@@ -77,8 +71,7 @@ jobs:
                 "controller.reloadDetail",
                 "كل تذكرة ومحادثة مرتبطة بهوية الشريك",
               ],'''
-          text = text[:required_start] + required_block + text[required_end:]
-          partner_guard.write_text(text, encoding="utf-8")
+          partner_guard.write_text(text[:required_start] + required_block + text[required_end:], encoding="utf-8")
 
           guards = [
               ("captain-surface-truth", "Captain Surface Truth Gate", "tools/guards/captain/captain-surface-truth-gate.mjs", "Validates the captain surface against governed runtime, assignment, location, proof-of-delivery, and finance bindings."),
@@ -95,7 +88,6 @@ jobs:
               ("client-address-privacy-truth", "Client Address Privacy Truth Gate", "tools/guards/privacy/client-address-privacy-truth-gate.mjs", "Validates client-address PII ownership, retention, encryption, anonymization, and authorization contracts."),
               ("ui-action-binding", "UI Action Binding Gate", "tools/guards/ui-actions/ui-action-binding-gate.mjs", "Validates that governed interactive controls bind to real actions, permissions, errors, and readback paths."),
           ]
-
           package_path = root / "package.json"
           package = json.loads(package_path.read_text(encoding="utf-8"))
           for guard_id, _, source, _ in guards:
@@ -107,21 +99,10 @@ jobs:
           ids = {entry["id"] for entry in registry["entries"]}
           for guard_id, name, source, description in guards:
               if guard_id not in ids:
-                  registry["entries"].append({
-                      "id": guard_id,
-                      "name": name,
-                      "script": f"guard:{guard_id}",
-                      "exit_level": "fail",
-                      "description": description,
-                      "source_file": source,
-                  })
+                  registry["entries"].append({"id": guard_id, "name": name, "script": f"guard:{guard_id}", "exit_level": "fail", "description": description, "source_file": source})
           registry_path.write_text(json.dumps(registry, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
-          for transient in [
-              ".github/workflows/closure-source-export.yml",
-              ".github/workflows/dsh-database-diagnostic-evidence.yml",
-              ".github/workflows/closure-atomic-repair.yml",
-          ]:
+          for transient in [".github/workflows/closure-source-export.yml", ".github/workflows/dsh-database-diagnostic-evidence.yml", ".github/workflows/closure-atomic-repair.yml"]:
               target = root / transient
               if target.exists():
                   target.unlink()
@@ -132,18 +113,42 @@ jobs:
         run: pnpm run openapi:generate:wlt
 
       - name: Verify repaired source contracts
+        id: verify
+        continue-on-error: true
         shell: bash
         run: |
-          set -euo pipefail
-          pnpm run guard:partner-surface-truth
-          pnpm run guard:guard-registry
-          pnpm run guard:wlt-financial-boundary
-          pnpm run guard:api-binding
-          pnpm run swagger:build
+          set +e
+          mkdir -p artifacts/atomic-repair
+          failed=""
+          run_check() {
+            name="$1"
+            shift
+            "$@" >"artifacts/atomic-repair/$name.log" 2>&1
+            code=$?
+            cat "artifacts/atomic-repair/$name.log"
+            if [ $code -ne 0 ] && [ -z "$failed" ]; then failed="$name"; fi
+          }
+          run_check partner-surface pnpm run guard:partner-surface-truth
+          run_check guard-registry pnpm run guard:guard-registry
+          run_check wlt-boundary pnpm run guard:wlt-financial-boundary
+          run_check api-binding pnpm run guard:api-binding
+          run_check swagger pnpm run swagger:build
           rm -rf dist-swagger
+          echo "failed_check=$failed" >> "$GITHUB_OUTPUT"
+          [ -z "$failed" ]
+
+      - name: Upload atomic verification logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: closure-atomic-repair-${{ github.sha }}
+          path: artifacts/atomic-repair
+          if-no-files-found: warn
+          retention-days: 3
 
       - name: Commit verified repair
         id: commit
+        if: steps.verify.outcome == 'success'
         continue-on-error: true
         shell: bash
         run: |
@@ -163,26 +168,24 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           SHA: ${{ github.sha }}
           RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          VERIFY_OUTCOME: ${{ steps.verify.outcome }}
+          FAILED_CHECK: ${{ steps.verify.outputs.failed_check }}
           COMMIT_OUTCOME: ${{ steps.commit.outcome }}
-          JOB_STATUS: ${{ job.status }}
         run: |
           set -euo pipefail
           state=success
           description="atomic closure repair committed"
-          if [ "$JOB_STATUS" != success ] || [ "$COMMIT_OUTCOME" != success ]; then
+          if [ "$VERIFY_OUTCOME" != success ]; then
             state=failure
-            description="atomic closure repair failed before verified push"
+            description="atomic verification failed: ${FAILED_CHECK:-unknown}"
+          elif [ "$COMMIT_OUTCOME" != success ]; then
+            state=failure
+            description="atomic repair verified but push failed"
           fi
           payload="$(jq -n --arg state "$state" --arg context 'Closure Atomic Repair' --arg description "$description" --arg target_url "$RUN_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}')"
-          curl --fail-with-body --silent --show-error \
-            -X POST \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/$REPOSITORY/statuses/$SHA" \
-            -d "$payload"
+          curl --fail-with-body --silent --show-error -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" "https://api.github.com/repos/$REPOSITORY/statuses/$SHA" -d "$payload"
 
-      - name: Enforce verified push
-        if: steps.commit.outcome != 'success'
+      - name: Enforce verified repair
+        if: steps.verify.outcome != 'success' || steps.commit.outcome != 'success'
         shell: bash
         run: exit 1
