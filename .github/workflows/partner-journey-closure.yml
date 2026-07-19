@@ -1,9 +1,10 @@
 name: Partner Journey Closure
+run-name: Partner Journey Closure · ${{ github.ref_name }} · ${{ github.sha }}
 
 on:
   push:
     branches:
-      - fix/lian-sovereign-final-closure
+      - "fix/lian-sovereign-final-closure"
     paths:
       - "core/identity/**"
       - "core/workforce/**"
