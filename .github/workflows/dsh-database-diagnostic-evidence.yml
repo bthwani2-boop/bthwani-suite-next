@@ -45,6 +45,9 @@ jobs:
       - name: Apply partner multi-surface journey closure
         run: python3 tools/scripts/apply-partner-journey-closure.py
 
+      - name: Apply partner UI and binding closure
+        run: python3 tools/scripts/apply-partner-ui-binding-closure.py
+
       - name: Format changed Go source
         run: |
           gofmt -w \
@@ -70,6 +73,8 @@ jobs:
 
       - name: Verify partner journey full stack
         shell: bash
+        env:
+          FRONTEND_BINDING_IDS: partner.orders-inbox,partner.catalog-workspace,partner.product-proposal,partner.taxonomy-browse,partner.store-settings,field.partner-onboarding,control.catalog-approvals,control.partner-activation
         run: |
           set -euo pipefail
           mkdir -p artifacts/partner-journey-closure
