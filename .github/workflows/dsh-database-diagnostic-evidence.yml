@@ -79,6 +79,7 @@ jobs:
           python3 tools/scripts/apply-partner-import-isolation-closure.py
           python3 tools/scripts/apply-partner-control-panel-closure.py
           python3 tools/scripts/apply-partner-settings-truth-closure.py
+          python3 tools/scripts/apply-partner-order-actions-closure.py
           rm -f tools/scripts/apply-partner-ui-binding-closure.py
 
       - name: Format changed Go source
