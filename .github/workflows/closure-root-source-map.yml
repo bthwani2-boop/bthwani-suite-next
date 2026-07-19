@@ -50,6 +50,24 @@ jobs:
           if ($governanceExit -eq 0) { Publish "Root governance-schema PASS" }
           else { Publish "Root governance-schema $($firstViolation[0])" "failure" }
 
+          $catalogTest = Get-ChildItem services/dsh/backend -Recurse -Filter '*_test.go' |
+            Select-String -SimpleMatch 'TestCatalogGenerationUsesSovereignOverlay' |
+            Select-Object -First 1
+          if ($catalogTest) {
+            $relative = $catalogTest.Path.Replace((Get-Location).Path + [IO.Path]::DirectorySeparatorChar, '')
+            Publish "Root catalog overlay test $relative:$($catalogTest.LineNumber)"
+          } else {
+            Publish "Root catalog overlay test NONE" "failure"
+          }
+
+          $overlayRefs = @(Get-ChildItem services/dsh/backend -Recurse -Filter '*.go' |
+            Select-String -Pattern 'sovereign|overlay' -CaseSensitive:$false |
+            Select-Object -First 6)
+          foreach ($ref in $overlayRefs) {
+            $relative = $ref.Path.Replace((Get-Location).Path + [IO.Path]::DirectorySeparatorChar, '')
+            Publish "Root overlay ref $relative:$($ref.LineNumber) $($ref.Line.Trim())"
+          }
+
           $pgx = Get-ChildItem services/dsh/backend -Recurse -Filter *.go | Select-String -SimpleMatch 'github.com/jackc/pgx/v5/stdlib' | Select-Object -First 1
           if ($pgx) { Publish "Root DSH pgx $($pgx.Path.Replace((Get-Location).Path + [IO.Path]::DirectorySeparatorChar, '')):$($pgx.LineNumber)" }
           else { Publish "Root DSH pgx NONE" }
