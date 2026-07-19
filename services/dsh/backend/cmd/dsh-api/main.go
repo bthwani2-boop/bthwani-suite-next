@@ -55,8 +55,10 @@ func main() {
 
 	appCtx, cancelApp := context.WithCancel(context.Background())
 	mediaProvider := newMediaProvider(appCtx)
+	identityClient := auth.NewClient(identityBaseURL)
 	wltClient := wlt.NewClient(wltBaseURL, wltServiceToken)
-	router := dshHttp.NewRouter(db, auth.NewClient(identityBaseURL), wltClient, mediaProvider)
+	router := dshHttp.NewRouter(db, identityClient, wltClient, mediaProvider)
+	dshHttp.RegisterPlatformPolicyRoutes(router, db, identityClient, wltClient, mediaProvider)
 	handler := dshHttp.CorsMiddleware(authMode, router)
 
 	outboxCtx, cancelOutbox := context.WithCancel(context.Background())
@@ -131,8 +133,8 @@ func newMediaProvider(ctx context.Context) *media.Provider {
 		PublicEndpoint: publicEndpoint,
 		AccessKey:      accessKey,
 		SecretKey:      secretKey,
-		Bucket:         bucket,
-		UseSSL:         useSSL,
-		PublicUseSSL:   publicUseSSL,
+		Bucket:          bucket,
+		UseSSL:          useSSL,
+		PublicUseSSL:    publicUseSSL,
 	}, 15*time.Second)
 }
