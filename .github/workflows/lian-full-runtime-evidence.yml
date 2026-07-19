@@ -14,6 +14,7 @@ on:
       - "tools/scripts/test-runtime-backup-restore.ps1"
       - "tools/scripts/test-dsh-multisurface-runtime-matrix.ps1"
       - "tools/scripts/test-dsh-multisurface-runtime-matrix-v2.ps1"
+      - "tools/scripts/test-dsh-support-notifications-runtime-matrix.ps1"
       - "package.json"
       - "pnpm-lock.yaml"
       - ".github/workflows/lian-full-runtime-evidence.yml"
@@ -80,6 +81,12 @@ jobs:
           if ($evidence.multiSurfaceJourney.output -notmatch 'DSH five-surface governed runtime matrix v2: PASS') {
             throw "five-surface evidence output is incomplete"
           }
+          if ($evidence.multiSurfaceJourney.output -notmatch 'DSH support ownership and notification runtime matrix: PASS') {
+            throw "support and notification evidence output is incomplete"
+          }
+          if ($evidence.multiSurfaceJourney.output -notmatch 'DSH sovereign commerce, field, support, and notifications matrix: PASS') {
+            throw "sovereign DSH matrix did not complete"
+          }
           if ($evidence.protectedRoutes.PSObject.Properties.Count -lt 5) {
             throw "protected route evidence is incomplete"
           }
@@ -138,7 +145,7 @@ jobs:
           payload="$(jq -n \
             --arg state "$state" \
             --arg context 'Lian Full Runtime Evidence / Full service runtime bootstrap and smoke' \
-            --arg description "six-service runtime, finance, DR, and five-surface journey: $JOB_STATUS" \
+            --arg description "six-service runtime, finance, DR, and governed DSH journeys: $JOB_STATUS" \
             --arg target_url "$RUN_URL" \
             '{state:$state,context:$context,description:$description,target_url:$target_url}')"
           curl --fail-with-body --silent --show-error \
