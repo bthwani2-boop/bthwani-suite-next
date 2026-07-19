@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -140,21 +139,23 @@ func TestLegacyCatalogWriteRoutesAreRetired(t *testing.T) {
     write(unified_relative, text)
 
 
-def normalize_outbox_repair_anchor() -> None:
-    relative = "services/dsh/backend/internal/wltoutbox/wltoutbox.go"
+def retire_materialized_outbox_repair() -> None:
+    source = read("services/dsh/backend/internal/wltoutbox/wltoutbox.go")
+    closed_signature = "func Enqueue(tx *sql.Tx, eventType, tenantID, orderID, captainID, partnerID, checkoutIntentID string) error"
+    if closed_signature not in source:
+        return
+
+    relative = "tools/scripts/apply-partner-team-audit-closure.py"
     text = read(relative)
-    text = re.sub(
-        r"\n\s+client_id,tenant_id,points,reversal_of_reference,\n\s+external_reference,payload,reversal_requested,attempt_count",
-        "\n           client_id,tenant_id,points,reversal_of_reference,\n            external_reference,payload,reversal_requested,attempt_count",
-        text,
-        count=1,
-    )
-    text = text.replace(
-        "    FOR UPDATE`, id).Scan(\n",
-        "    FOR UPDATE`, id\n\t).Scan(\n",
-        1,
-    )
-    write(relative, text)
+    start_marker = "# Durable DSH -> WLT events carry the tenant through enqueue, claim, retry,\n"
+    end_marker = "# Central catalog bootstrap must use sovereign IDs, truthful media types, and\n"
+    start = text.find(start_marker)
+    if start < 0:
+        return
+    end = text.find(end_marker, start)
+    if end < 0:
+        raise RuntimeError("central catalog bootstrap marker missing after materialized outbox block")
+    write(relative, text[:start] + text[end:])
 
 
 def remove_self() -> None:
@@ -166,5 +167,5 @@ def remove_self() -> None:
 retire_legacy_catalog_routes()
 converge_catalog_route_methods()
 rewrite_route_tests()
-normalize_outbox_repair_anchor()
+retire_materialized_outbox_repair()
 remove_self()
