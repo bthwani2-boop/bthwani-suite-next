@@ -57,6 +57,7 @@ jobs:
           python3 tools/scripts/apply-partner-binding-composition-closure.py
           python3 tools/scripts/apply-partner-import-isolation-closure.py
           python3 tools/scripts/apply-partner-control-panel-closure.py
+          python3 tools/scripts/apply-partner-settings-truth-closure.py
           rm -f tools/scripts/apply-partner-ui-binding-closure.py
 
       - name: Format changed Go source
@@ -65,6 +66,9 @@ jobs:
             tools/guards/extract_routes.go \
             services/dsh/backend/internal/http/server.go \
             services/dsh/backend/internal/http/catalog_unified_routes.go \
+            services/dsh/backend/internal/http/notifications.go \
+            services/dsh/backend/internal/notifications/notifications.go \
+            services/dsh/backend/internal/notifications/notifications_test.go \
             services/dsh/backend/internal/wlt/subscription_payment_bound.go \
             services/dsh/backend/internal/http/catalog_legacy_occ_routes_test.go \
             services/dsh/backend/internal/http/catalog_unified_routes_test.go
