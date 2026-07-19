@@ -10,6 +10,7 @@ on:
       - "infra/docker/**"
       - "infra/data-plane/**"
       - "tools/scripts/run-lian-full-runtime-closure.ps1"
+      - "tools/scripts/test-wlt-runtime-failure-matrix.ps1"
       - "package.json"
       - "pnpm-lock.yaml"
       - ".github/workflows/lian-full-runtime-evidence.yml"
@@ -61,6 +62,12 @@ jobs:
           }
           foreach ($migration in @("providers", "platform-control")) {
             if ($evidence.migrations.$migration.state -ne "PASS") { throw "missing migration evidence: $migration" }
+          }
+          if ($evidence.financialMatrix.state -ne "PASS") {
+            throw "WLT duplicate/replay/order/provider matrix did not pass"
+          }
+          if ($evidence.protectedRoutes.PSObject.Properties.Count -lt 5) {
+            throw "protected route evidence is incomplete"
           }
 
       - name: Print runtime diagnostics on failure
