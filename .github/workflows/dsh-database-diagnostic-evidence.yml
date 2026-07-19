@@ -45,22 +45,20 @@ jobs:
 
       - name: Run exact governed DSH database truth
         id: database
-        shell: pwsh
+        shell: bash
         continue-on-error: true
         run: |
-          New-Item -ItemType Directory -Path artifacts -Force | Out-Null
-          $output = @(
-            ./tools/scripts/invoke-database-upgrade-truth.ps1 `
-              -ServiceName dsh `
-              -MigrationDirectory services/dsh/database/migrations `
-              -TestsDirectory services/dsh/database/tests `
-              -DatabaseUrl $env:DATABASE_URL `
-              -SourceCommitSha $env:GITHUB_SHA 2>&1
-          )
-          $exitCode = $LASTEXITCODE
-          $output | Tee-Object -FilePath artifacts/dsh-database-diagnostic.log
-          "exit_code=$exitCode" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-          if ($exitCode -ne 0) { exit $exitCode }
+          set +e
+          mkdir -p artifacts
+          pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-database-upgrade-truth.ps1 \
+            -ServiceName dsh \
+            -MigrationDirectory services/dsh/database/migrations \
+            -TestsDirectory services/dsh/database/tests \
+            -DatabaseUrl "$DATABASE_URL" \
+            -SourceCommitSha "$GITHUB_SHA" 2>&1 | tee artifacts/dsh-database-diagnostic.log
+          code=${PIPESTATUS[0]}
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit "$code"
 
       - name: Upload exact database log
         if: always()
@@ -104,9 +102,9 @@ jobs:
         run: exit 1
 
   dsh-source-diagnostic:
-    name: DSH exact partner and catalog source log
+    name: DSH exact source boundary and Swagger log
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - name: Checkout immutable source
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -125,15 +123,20 @@ jobs:
           set +e
           mkdir -p artifacts
           final=0
+          run_check() {
+            name="$1"
+            shift
+            echo "=== $name ==="
+            "$@"
+            code=$?
+            echo "EXIT=$code"
+            [ $code -eq 0 ] || final=$code
+          }
           {
-            echo '=== partner-surface-truth ==='
-            node tools/guards/partner/partner-surface-truth-gate.mjs
-            code=$?
-            [ $code -eq 0 ] || final=$code
-            echo '=== guard-registry ==='
-            node tools/guards/guard-registry-gate.mjs
-            code=$?
-            [ $code -eq 0 ] || final=$code
+            run_check partner-surface-truth node tools/guards/partner/partner-surface-truth-gate.mjs
+            run_check guard-registry node tools/guards/guard-registry-gate.mjs
+            run_check fullstack-boundary node tools/guards/fullstack-boundary-gate.mjs
+            run_check swagger-build pnpm run swagger:build
             echo '=== partner proposal handler source ==='
             grep -R -n -E 'func .*handlePartnerCreateProductProposal|CreateProductProposal|CreateProposal' \
               services/dsh/backend/internal/http services/dsh/backend/internal/centralcatalog || true
@@ -141,15 +144,17 @@ jobs:
             grep -R -n -E 'dsh_product_proposals|product_proposals' services/dsh/database/migrations | tail -n 80 || true
           } 2>&1 | tee artifacts/dsh-source-diagnostic.log
           echo "exit_code=$final" >> "$GITHUB_OUTPUT"
-          exit $final
+          exit "$final"
 
       - name: Upload exact source log
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: dsh-source-diagnostic-${{ github.sha }}
-          path: artifacts/dsh-source-diagnostic.log
-          if-no-files-found: error
+          path: |
+            artifacts/dsh-source-diagnostic.log
+            dist-swagger
+          if-no-files-found: warn
           retention-days: 7
 
       - name: Publish exact source status
@@ -164,11 +169,11 @@ jobs:
         run: |
           set -euo pipefail
           state=success
-          description="DSH partner/catalog source diagnostics: PASS"
+          description="DSH source boundaries and Swagger: PASS"
           if [ "$OUTCOME" != success ]; then
             state=failure
-            description="$(grep -E '^-' artifacts/dsh-source-diagnostic.log | head -n1 | tr '\n\r/' '   ' | sed -E 's/[[:space:]]+/ /g' | cut -c1-135)"
-            [ -n "$description" ] || description="DSH partner/catalog source diagnostic failed"
+            description="$(grep -Eai '^[- ]|error|failed|forbidden|missing|invalid|mismatch' artifacts/dsh-source-diagnostic.log | tail -n1 | tr '\n\r/' '   ' | sed -E 's/[[:space:]]+/ /g' | cut -c1-135)"
+            [ -n "$description" ] || description="DSH source diagnostic failed"
           fi
           payload="$(jq -n --arg state "$state" --arg context 'DSH Source Diagnostic Evidence' --arg description "$description" --arg target_url "$RUN_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}')"
           curl --fail-with-body --silent --show-error \
