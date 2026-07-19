@@ -2,23 +2,13 @@ name: Lian Full Runtime Evidence
 
 on:
   push:
-    branches: [lian]
-    paths:
-      - "core/**"
-      - "services/dsh/**"
-      - "services/wlt/**"
-      - "infra/docker/**"
-      - "infra/data-plane/**"
-      - "tools/scripts/run-lian-full-runtime-closure.ps1"
-      - "tools/scripts/run-lian-full-runtime-closure-v2.ps1"
-      - "tools/scripts/test-wlt-runtime-failure-matrix.ps1"
-      - "tools/scripts/test-runtime-backup-restore.ps1"
-      - "tools/scripts/test-dsh-multisurface-runtime-matrix.ps1"
-      - "tools/scripts/test-dsh-multisurface-runtime-matrix-v2.ps1"
-      - "tools/scripts/test-dsh-support-notifications-runtime-matrix.ps1"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - ".github/workflows/lian-full-runtime-evidence.yml"
+    branches:
+      - lian
+      - "fix/lian-sovereign-final-closure"
+  pull_request:
+    branches:
+      - master
+      - lian
   workflow_dispatch:
 
 permissions:
@@ -55,23 +45,33 @@ jobs:
         shell: pwsh
         run: ./tools/scripts/run-lian-full-runtime-closure.ps1
 
-      - name: Verify immutable evidence belongs to this commit
+      - name: Verify immutable evidence belongs to this ref and commit
         shell: pwsh
         run: |
           $evidence = Get-Content artifacts/lian-runtime-closure-evidence.json -Raw | ConvertFrom-Json
-          if ($evidence.schemaVersion -lt 3) { throw "runtime evidence schema is stale" }
+          if ($evidence.schemaVersion -lt 4) { throw "runtime evidence schema is stale" }
           if ($evidence.bootstrapMode -ne "CLEAN_UP_SEED_BOOTSTRAP_WITHOUT_LEGACY_SMOKE") {
             throw "runtime evidence used an ungoverned bootstrap mode"
+          }
+          if ($evidence.migrationMode -ne "GOVERNED_LEDGER_CHECKSUM_IDEMPOTENT") {
+            throw "runtime evidence used a non-sovereign migration path"
           }
           if ($evidence.state -ne "PASS") { throw "runtime evidence did not pass" }
           if ($evidence.commitSha -ne $env:GITHUB_SHA) {
             throw "runtime evidence SHA $($evidence.commitSha) does not match $env:GITHUB_SHA"
           }
+          $expectedBranch = if ($env:GITHUB_EVENT_NAME -eq "pull_request") { $env:GITHUB_HEAD_REF } else { $env:GITHUB_REF_NAME }
+          if ($evidence.branch -ne $expectedBranch) {
+            throw "runtime evidence branch $($evidence.branch) does not match $expectedBranch"
+          }
           foreach ($service in @("dsh", "identity", "wlt", "workforce", "providers", "platform-control", "platform-control-readiness")) {
             if ($evidence.services.$service.state -ne "PASS") { throw "missing service evidence: $service" }
           }
           foreach ($migration in @("providers", "platform-control")) {
-            if ($evidence.migrations.$migration.state -ne "PASS") { throw "missing migration evidence: $migration" }
+            $entry = $evidence.migrations.$migration
+            if ($entry.state -ne "PASS") { throw "missing migration evidence: $migration" }
+            if ($entry.dirtyRows -ne 0) { throw "dirty migration evidence: $migration" }
+            if ($entry.sourceCommitSha -ne $env:GITHUB_SHA) { throw "migration evidence SHA mismatch: $migration" }
           }
           if ($evidence.financialMatrix.state -ne "PASS") {
             throw "WLT duplicate/replay/order/provider matrix did not pass"
