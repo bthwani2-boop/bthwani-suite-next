@@ -2,42 +2,6 @@ name: Partner Journey Closure
 run-name: Partner Journey Closure · ${{ github.ref_name }} · ${{ github.sha }}
 
 on:
-  push:
-    branches:
-      - "fix/lian-sovereign-final-closure"
-    paths:
-      - "core/identity/**"
-      - "core/workforce/**"
-      - "services/dsh/backend/**"
-      - "services/dsh/database/**"
-      - "services/dsh/contracts/**"
-      - "services/dsh/frontend/app-partner/**"
-      - "services/dsh/frontend/app-field/**"
-      - "services/dsh/frontend/control-panel/**"
-      - "services/wlt/**"
-      - "infra/docker/compose.runtime.yml"
-      - "infra/docker/scripts/runtime.ps1"
-      - "tools/guards/partner/**"
-      - "tools/scripts/test-dsh-multisurface-runtime-matrix-v2.ps1"
-      - ".github/workflows/partner-journey-closure.yml"
-  pull_request:
-    branches:
-      - master
-    paths:
-      - "core/identity/**"
-      - "core/workforce/**"
-      - "services/dsh/backend/**"
-      - "services/dsh/database/**"
-      - "services/dsh/contracts/**"
-      - "services/dsh/frontend/app-partner/**"
-      - "services/dsh/frontend/app-field/**"
-      - "services/dsh/frontend/control-panel/**"
-      - "services/wlt/**"
-      - "infra/docker/compose.runtime.yml"
-      - "infra/docker/scripts/runtime.ps1"
-      - "tools/guards/partner/**"
-      - "tools/scripts/test-dsh-multisurface-runtime-matrix-v2.ps1"
-      - ".github/workflows/partner-journey-closure.yml"
   workflow_dispatch:
 
 permissions:
