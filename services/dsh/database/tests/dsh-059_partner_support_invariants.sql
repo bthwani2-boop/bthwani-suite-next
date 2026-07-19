@@ -5,9 +5,9 @@ BEGIN;
 DO $$
 DECLARE
   reporter text := 'partner-support-test-' || replace(gen_random_uuid()::text, '-', '');
-  ticket_id_value text;
+  ticket_id_value uuid;
   duplicate_ticket_blocked boolean := false;
-  message_id_value text;
+  message_id_value uuid;
   duplicate_message_blocked boolean := false;
   event_count integer;
 BEGIN
@@ -17,7 +17,7 @@ BEGIN
   ) VALUES (
     reporter, 'partner', 'اختبار دعم', 'تفاصيل تذكرة دعم اختبارية', 'other', 'normal',
     'ticket-idem-1', 'ticket-corr-1'
-  ) RETURNING id::text INTO ticket_id_value;
+  ) RETURNING id INTO ticket_id_value;
 
   BEGIN
     INSERT INTO dsh_support_tickets (
@@ -41,7 +41,7 @@ BEGIN
   ) VALUES (
     ticket_id_value, reporter, 'partner', 'رسالة اختبار', FALSE,
     'message-idem-1', 'message-corr-1'
-  ) RETURNING id::text INTO message_id_value;
+  ) RETURNING id INTO message_id_value;
 
   BEGIN
     INSERT INTO dsh_support_messages (
