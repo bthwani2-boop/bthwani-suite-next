@@ -91,9 +91,14 @@ func TestLegacyCatalogWriteRoutesAreRetired(t *testing.T) {
 \tfor _, tc := range cases {
 \t\tt.Run(tc.method+" "+tc.path, func(t *testing.T) {
 \t\t\treq := httptest.NewRequest(tc.method, tc.path, nil)
-\t\t\t_, pattern := mux.Handler(req)
-\t\t\tif pattern != "/" {
+\t\t\thandler, pattern := mux.Handler(req)
+\t\t\tif pattern != "" && pattern != "/" {
 \t\t\t\tt.Fatalf("legacy route remains registered: got %q", pattern)
+\t\t\t}
+\t\t\trecorder := httptest.NewRecorder()
+\t\t\thandler.ServeHTTP(recorder, req)
+\t\t\tif recorder.Code != http.StatusNotFound {
+\t\t\t\tt.Fatalf("legacy route must return 404: got %d", recorder.Code)
 \t\t\t}
 \t\t})
 \t}
