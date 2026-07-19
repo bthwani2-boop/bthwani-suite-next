@@ -42,11 +42,15 @@ jobs:
       - name: Apply workflow syntax closure
         run: python3 tools/scripts/apply-actionlint-closure.py
 
-      - name: Apply partner multi-surface journey closure
+      - name: Apply partner multi-surface backend journey closure
         run: python3 tools/scripts/apply-partner-journey-closure.py
 
-      - name: Apply partner UI and binding closure
-        run: python3 tools/scripts/apply-partner-ui-binding-closure.py
+      - name: Apply truthful partner frontend journey closure
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/scripts/apply-partner-frontend-journey-closure.py
+          rm -f tools/scripts/apply-partner-ui-binding-closure.py
 
       - name: Format changed Go source
         run: |
@@ -73,17 +77,15 @@ jobs:
 
       - name: Verify partner journey full stack
         shell: bash
-        env:
-          FRONTEND_BINDING_IDS: partner.orders-inbox,partner.catalog-workspace,partner.product-proposal,partner.taxonomy-browse,partner.store-settings,field.partner-onboarding,control.catalog-approvals,control.partner-activation
         run: |
           set -euo pipefail
           mkdir -p artifacts/partner-journey-closure
           pnpm run guard:partner-surface-truth 2>&1 | tee artifacts/partner-journey-closure/partner-surface.log
           pnpm run guard:partner-support-truth 2>&1 | tee artifacts/partner-journey-closure/partner-support.log
+          node tools/guards/frontend-feature-binding-gate.mjs --scope=partner-journey 2>&1 | tee artifacts/partner-journey-closure/frontend-feature-binding.log
           pnpm run guard:guard-registry 2>&1 | tee artifacts/partner-journey-closure/guard-registry.log
           pnpm run guard:wlt-financial-boundary 2>&1 | tee artifacts/partner-journey-closure/wlt-boundary.log
           pnpm run guard:api-binding 2>&1 | tee artifacts/partner-journey-closure/api-binding.log
-          pnpm run guard:frontend-feature-binding 2>&1 | tee artifacts/partner-journey-closure/frontend-feature-binding.log
           pnpm run guard:workflow-lint 2>&1 | tee artifacts/partner-journey-closure/workflow-lint.log
           pnpm run guard:actions-pin 2>&1 | tee artifacts/partner-journey-closure/actions-pin.log
           pnpm run swagger:build 2>&1 | tee artifacts/partner-journey-closure/swagger.log
