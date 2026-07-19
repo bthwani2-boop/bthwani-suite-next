@@ -35,7 +35,7 @@ type Event struct {
 	AttemptCount        int
 }
 
-// Enqueue accepts both the canonical tenant-aware shape and the transitional
+// Enqueue accepts the canonical tenant-aware shape and the transitional
 // delivery-completion shape used by older callers. Transitional calls resolve
 // tenant ownership from the checkout intent inside the same transaction, so no
 // event can be persisted without governed tenant context.
@@ -46,15 +46,10 @@ func Enqueue(tx *sql.Tx, eventType string, values ...string) error {
 
 	var tenantID, orderID, captainID, partnerID, checkoutIntentID string
 	switch len(values) {
-	case 6:
-		tenantID, orderID, captainID, partnerID, checkoutIntentID = values[0], values[1], values[2], values[3], values[4]
-		// values[5] is intentionally rejected below through the exact arity guard;
-		// this branch is retained only for source compatibility with the canonical
-		// signature encoded as eventType + six values.
-		checkoutIntentID = values[5]
 	case 5:
+		tenantID, orderID, captainID, partnerID, checkoutIntentID = values[0], values[1], values[2], values[3], values[4]
+	case 4:
 		orderID, captainID, partnerID, checkoutIntentID = values[0], values[1], values[2], values[3]
-		checkoutIntentID = values[4]
 		if strings.TrimSpace(checkoutIntentID) == "" {
 			return fmt.Errorf("enqueue wlt outbox event: checkout intent is required to resolve tenant context")
 		}
