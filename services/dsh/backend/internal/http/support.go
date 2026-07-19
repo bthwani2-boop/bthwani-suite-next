@@ -75,18 +75,13 @@ func (s *protectedStoreServer) handleListMyTickets(w http.ResponseWriter, r *htt
 
 // GET /dsh/support/tickets/{ticketId}
 func (s *protectedStoreServer) handleGetTicket(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireActor(w, r, "client", "partner", "captain", "operator")
+	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "operator")
 	if !ok {
 		return
 	}
 	ticketID := r.PathValue("ticketId")
-	ticket, err := support.GetTicket(s.db, ticketID)
-	if errors.Is(err, support.ErrNotFound) {
-		store.SendError(w, http.StatusNotFound, "NOT_FOUND", errTicketNotFound)
-		return
-	}
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to get ticket")
+	ticket, ok := s.requireSupportTicketAccess(w, actor, ticketID)
+	if !ok {
 		return
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"ticket": marshalTicket(ticket)})
@@ -99,6 +94,9 @@ func (s *protectedStoreServer) handleAddTicketMessage(w http.ResponseWriter, r *
 		return
 	}
 	ticketID := r.PathValue("ticketId")
+	if _, authorized := s.requireSupportTicketAccess(w, actor, ticketID); !authorized {
+		return
+	}
 	var body struct {
 		Body       string `json:"body"`
 		IsInternal bool   `json:"isInternal"`
@@ -134,6 +132,9 @@ func (s *protectedStoreServer) handleListTicketMessages(w http.ResponseWriter, r
 		return
 	}
 	ticketID := r.PathValue("ticketId")
+	if _, authorized := s.requireSupportTicketAccess(w, actor, ticketID); !authorized {
+		return
+	}
 	includeInternal := actor.Role == "operator"
 	messages, err := support.ListTicketMessages(s.db, ticketID, includeInternal)
 	if err != nil {
