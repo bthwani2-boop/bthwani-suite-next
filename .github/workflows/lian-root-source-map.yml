@@ -1,0 +1,50 @@
+name: Lian Root Source Map
+
+on:
+  push:
+    branches: [lian]
+    paths:
+      - ".github/workflows/lian-root-source-map.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  statuses: write
+
+jobs:
+  map:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Publish source dependency map
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          publish(){ context="$1"; context="$(printf '%s' "$context" | tr '\n\r/' '   ' | cut -c1-95)"; jq -n --arg state success --arg context "$context" --arg description "$context" --arg target_url "$RUN_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/status.json; curl --fail-with-body --silent --show-error -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "https://api.github.com/repos/$REPOSITORY/statuses/$SHA" -d @/tmp/status.json; }
+
+          constructors="$(grep -RhoE '^func[[:space:]]+(New[A-Za-z0-9_]*Provider[A-Za-z0-9_]*|New[A-Za-z0-9_]*Health[A-Za-z0-9_]*)\(' services/dsh/backend/internal/http --include='*.go' | sed -E 's/^func[[:space:]]+//; s/\($//' | sort -u | paste -sd, -)"
+          [ -n "$constructors" ] || constructors=NONE
+          publish "Map DSH constructors $constructors"
+
+          wlt_files="$(grep -RilE 'CREATE[[:space:]]+TABLE([^;]*[[:space:]])?provider_accounts|CREATE[[:space:]]+TABLE([^;]*[[:space:]])?wlt_provider_accounts' services/wlt/database/migrations --include='*.sql' | xargs -r -n1 basename | sort -u | paste -sd, -)"
+          [ -n "$wlt_files" ] || wlt_files=NONE
+          publish "Map WLT provider_accounts creator $wlt_files"
+
+          dsh_file='services/dsh/database/migrations/dsh-011_partner_commission_schemes.sql'
+          create_line="$(grep -nEi 'CREATE[[:space:]]+TABLE.*dsh_partner_commission_schemes' "$dsh_file" | head -n1 | cut -d: -f1)"
+          first_ref="$(grep -nE 'dsh_partner_commission_schemes' "$dsh_file" | head -n1 | cut -d: -f1)"
+          [ -n "$create_line" ] || create_line=NONE
+          [ -n "$first_ref" ] || first_ref=NONE
+          publish "Map DSH011 create=$create_line firstref=$first_ref"
+
+          dsh_dependencies="$(grep -oE 'REFERENCES[[:space:]]+[A-Za-z0-9_]+' "$dsh_file" | sed -E 's/REFERENCES[[:space:]]+//' | sort -u | paste -sd, -)"
+          [ -n "$dsh_dependencies" ] || dsh_dependencies=NONE
+          publish "Map DSH011 references $dsh_dependencies"
