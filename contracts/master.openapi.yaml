@@ -17,6 +17,7 @@ x-bthwani-contracts:
   services:
     dsh: ../services/dsh/contracts/dsh.openapi.yaml
     dshCatalog: ../services/dsh/contracts/dsh.catalog.openapi.yaml
+    dshCatalogOverlay: ../services/dsh/contracts/dsh.catalog.overlay.yaml
     dshClientAddress: ../services/dsh/contracts/dsh.client-address.openapi.yaml
     dshClientMap: ../services/dsh/contracts/dsh.client-map.openapi.yaml
     dshPlatformPolicies: ../services/dsh/contracts/dsh.platform-policies.openapi.yaml
