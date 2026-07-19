@@ -13,14 +13,41 @@ $EnvFile = Join-Path $RepoRoot "infra/docker/env/runtime.env.example"
 $EvidenceDirectory = Join-Path $RepoRoot "artifacts"
 $EvidencePath = Join-Path $EvidenceDirectory "lian-runtime-closure-evidence.json"
 $CoreProfiles = "identity,workforce,dsh,wlt,financial-simulators,mail,media"
+$MigrationRunner = Join-Path $RepoRoot "infra/docker/scripts/schema-migration-runner.ps1"
 New-Item -ItemType Directory -Path $EvidenceDirectory -Force | Out-Null
 
+if (-not (Test-Path -LiteralPath $MigrationRunner)) {
+  throw "Governed migration runner is missing: $MigrationRunner"
+}
+. $MigrationRunner
+
+$ResolvedCommitSha = if (-not [string]::IsNullOrWhiteSpace($env:GITHUB_SHA)) {
+  $env:GITHUB_SHA.Trim()
+} else {
+  (& git rev-parse HEAD).Trim()
+}
+if ($LASTEXITCODE -ne 0 -or $ResolvedCommitSha -notmatch '^[0-9a-f]{40}$') {
+  throw "Runtime closure requires an exact immutable commit SHA."
+}
+
+$ResolvedBranch = if (-not [string]::IsNullOrWhiteSpace($env:GITHUB_HEAD_REF)) {
+  $env:GITHUB_HEAD_REF.Trim()
+} elseif (-not [string]::IsNullOrWhiteSpace($env:GITHUB_REF_NAME)) {
+  $env:GITHUB_REF_NAME.Trim()
+} else {
+  (& git branch --show-current).Trim()
+}
+if ([string]::IsNullOrWhiteSpace($ResolvedBranch)) {
+  throw "Runtime closure requires a resolved branch or ref name."
+}
+
 $Evidence = [ordered]@{
-  schemaVersion = 3
-  branch = "lian"
-  commitSha = if ($env:GITHUB_SHA) { $env:GITHUB_SHA } else { "LOCAL_UNPINNED" }
+  schemaVersion = 4
+  branch = $ResolvedBranch
+  commitSha = $ResolvedCommitSha
   startedAt = [DateTimeOffset]::UtcNow.ToString("o")
   bootstrapMode = "CLEAN_UP_SEED_BOOTSTRAP_WITHOUT_LEGACY_SMOKE"
+  migrationMode = "GOVERNED_LEDGER_CHECKSUM_IDEMPOTENT"
   state = "RUNNING"
   services = [ordered]@{}
   migrations = [ordered]@{}
@@ -62,14 +89,39 @@ function Wait-Database([string]$DatabaseName) {
 }
 
 function Invoke-Migrations([string]$Name, [string]$Directory, [string]$User, [string]$Database) {
-  $Files = @(Get-ChildItem -LiteralPath $Directory -Filter "*.sql" | Sort-Object Name)
+  $Files = @(Get-ChildItem -LiteralPath $Directory -Filter "*.sql" -File | Sort-Object Name)
   if ($Files.Count -eq 0) { throw "$Name has no migrations." }
-  foreach ($File in $Files) {
-    Get-Content -LiteralPath $File.FullName -Raw | docker compose --env-file $EnvFile -f $ComposeFile exec -T postgres `
-      psql -U $User -d $Database -v ON_ERROR_STOP=1
-    if ($LASTEXITCODE -ne 0) { throw "$Name migration failed: $($File.Name)" }
+
+  $Batch = New-BthwaniGovernedMigrationBatch `
+    -ServiceName $Name `
+    -MigrationFiles $Files `
+    -SourceCommitSha $ResolvedCommitSha
+
+  $Batch | docker compose --env-file $EnvFile -f $ComposeFile exec -T postgres `
+    psql -U $User -d $Database -X -v ON_ERROR_STOP=1
+  if ($LASTEXITCODE -ne 0) {
+    throw "$Name governed migration batch failed."
   }
-  $Evidence.migrations[$Name] = [ordered]@{ database = $Database; filesApplied = $Files.Count; state = "PASS" }
+
+  $Ledger = docker compose --env-file $EnvFile -f $ComposeFile exec -T postgres `
+    psql -U $User -d $Database -X -qAt -v ON_ERROR_STOP=1 -c `
+    "SELECT COUNT(*) || ':' || COUNT(*) FILTER (WHERE dirty OR NOT success) FROM schema_migrations WHERE service_name = '$Name';"
+  if ($LASTEXITCODE -ne 0) {
+    throw "$Name governed migration ledger readback failed."
+  }
+  $LedgerParts = (($Ledger -join "").Trim()).Split(":")
+  if ($LedgerParts.Count -ne 2 -or [int]$LedgerParts[0] -ne $Files.Count -or [int]$LedgerParts[1] -ne 0) {
+    throw "$Name governed migration ledger mismatch: $($Ledger -join '')"
+  }
+
+  $Evidence.migrations[$Name] = [ordered]@{
+    database = $Database
+    filesApplied = $Files.Count
+    ledgerRows = [int]$LedgerParts[0]
+    dirtyRows = [int]$LedgerParts[1]
+    sourceCommitSha = $ResolvedCommitSha
+    state = "PASS"
+  }
 }
 
 function Wait-Status([string]$Name, [string]$Url, [string]$Expected = "healthy") {
@@ -133,7 +185,6 @@ function Verify-AllServices {
 }
 
 try {
-  # Destructive clean bootstrap without invoking the obsolete Invoke-DshSmoke.
   Invoke-Compose @("down", "-v", "--remove-orphans") -Financial
   Invoke-Runtime "up" $CoreProfiles
   Invoke-Runtime "seed" $CoreProfiles
@@ -161,7 +212,7 @@ try {
   Assert-Protected "address-privacy-policy" "GET" "http://127.0.0.1:58080/dsh/operator/platform/client-address-privacy"
 
   Save-Evidence "PASS"
-  Write-Host "Lian sovereign full-runtime closure v2: PASS"
+  Write-Host "Sovereign full-runtime closure v2: PASS"
 } catch {
   Save-Evidence "FAIL" $_.Exception.Message
   throw
