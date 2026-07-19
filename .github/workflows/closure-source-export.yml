@@ -35,10 +35,16 @@ jobs:
           package.json
           governance/guards/guard-registry.json
           services/wlt/contracts/wlt.openapi.yaml
+          services/dsh/contracts/dsh.openapi.yaml
+          services/dsh/backend/internal/http/server.go
           services/dsh/frontend/app-partner/orders/usePartnerOrdersRuntime.ts
-          services/dsh/frontend/app-partner/account/PartnerSupportScreen.tsx
           tools/guards/partner/partner-surface-truth-gate.mjs
+          tools/guards/backend-api-binding-gate.mjs
+          tools/guards/extract_routes.go
           .github/workflows/dsh-database-diagnostic-evidence.yml
+          .github/workflows/closure-atomic-repair.yml
+          .github/workflows/closure-atomic-repair-v2.yml
+          .github/workflows/closure-atomic-repair-v3.yml
           FILES
 
       - name: Upload immutable sources
@@ -63,10 +69,4 @@ jobs:
           state=success
           [ "$JOB_STATUS" = success ] || state=failure
           payload="$(jq -n --arg state "$state" --arg context 'Closure Source Export' --arg description "immutable source export: $JOB_STATUS" --arg target_url "$RUN_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}')"
-          curl --fail-with-body --silent --show-error \
-            -X POST \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/$REPOSITORY/statuses/$SHA" \
-            -d "$payload"
+          curl --fail-with-body --silent --show-error -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" "https://api.github.com/repos/$REPOSITORY/statuses/$SHA" -d "$payload"
