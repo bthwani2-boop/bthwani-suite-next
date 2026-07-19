@@ -39,6 +39,9 @@ jobs:
       - name: Apply deterministic repair
         run: python3 tools/scripts/apply-final-closure-repair.py
 
+      - name: Apply actionlint closure repair
+        run: python3 tools/scripts/apply-actionlint-closure.py
+
       - name: Format Go source
         run: gofmt -w tools/guards/extract_routes.go services/dsh/backend/internal/http/server.go services/dsh/backend/internal/wlt/subscription_payment_bound.go
 
