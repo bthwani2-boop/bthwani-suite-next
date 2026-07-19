@@ -97,9 +97,18 @@ END
     }
 
     $transactionOff = $content -match '(?mi)^\s*--\s*bthwani:transaction=off\s*$'
-    if (-not $transactionOff -and $content -match '(?mi)^\s*(BEGIN|START\s+TRANSACTION|COMMIT|ROLLBACK)\s*;') {
-      throw "Migration '$($file.Name)' contains explicit transaction control. Remove it or declare '-- bthwani:transaction=off'."
+    $containsTransactionControl = $content -match '(?mi)^\s*(BEGIN|START\s+TRANSACTION|COMMIT|ROLLBACK)\s*;'
+    $startsWithTransaction = $content -match '(?is)^\s*(?:(?:--[^\r\n]*(?:\r?\n|$))|(?:/\*.*?\*/\s*))*BEGIN\s*;'
+    $endsWithCommit = $content -match '(?is)COMMIT\s*;\s*$'
+    $fileManagedTransaction = $startsWithTransaction -and $endsWithCommit
+
+    if ($transactionOff -and $containsTransactionControl) {
+      throw "Migration '$($file.Name)' declares transaction=off but also contains transaction control."
     }
+    if ($containsTransactionControl -and -not $fileManagedTransaction) {
+      throw "Migration '$($file.Name)' contains partial or non-envelope transaction control. A file-managed transaction must begin with BEGIN and end with COMMIT."
+    }
+    $runnerManagedTransaction = -not $transactionOff -and -not $fileManagedTransaction
 
     $checksum = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
     $migrationLiteral = ConvertTo-BthwaniSqlLiteral $file.Name
@@ -145,7 +154,7 @@ INSERT INTO schema_migrations (
 );
 "@)
 
-    if (-not $transactionOff) {
+    if ($runnerManagedTransaction) {
       [void]$builder.AppendLine('BEGIN;')
     }
 
@@ -153,7 +162,7 @@ INSERT INTO schema_migrations (
     [void]$builder.AppendLine($content.TrimEnd())
     [void]$builder.AppendLine("-- END GOVERNED MIGRATION: $($file.Name)")
 
-    if (-not $transactionOff) {
+    if ($runnerManagedTransaction) {
       [void]$builder.AppendLine('COMMIT;')
     }
 
