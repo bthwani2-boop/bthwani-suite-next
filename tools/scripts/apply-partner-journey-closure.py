@@ -184,12 +184,28 @@ def close_partner_router() -> None:
     )
 
 
-def remove_self() -> None:
-    path = ROOT / "tools/scripts/apply-partner-journey-closure.py"
-    if path.exists():
-        path.unlink()
+def fix_partner_support_guard() -> None:
+    relative = "tools/guards/partner/partner-support-truth-gate.mjs"
+    text = read(relative)
+    old = 'from "../../_guard-utils.mjs";'
+    new = 'from "../_guard-utils.mjs";'
+    if old in text:
+        write(relative, text.replace(old, new, 1))
+    elif new not in text:
+        raise RuntimeError("partner support guard import anchor is missing")
+
+
+def remove_transient_journey_tools() -> None:
+    for relative in [
+        "tools/scripts/apply-partner-journey-closure.py",
+        "tools/scripts/apply-partner-support-guard-fix.py",
+    ]:
+        path = ROOT / relative
+        if path.exists():
+            path.unlink()
 
 
 close_catalog_routes()
 close_partner_router()
-remove_self()
+fix_partner_support_guard()
+remove_transient_journey_tools()
