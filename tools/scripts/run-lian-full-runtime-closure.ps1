@@ -26,6 +26,7 @@ $Evidence = [ordered]@{
   services = [ordered]@{}
   protectedRoutes = [ordered]@{}
   migrations = [ordered]@{}
+  financialMatrix = [ordered]@{ state = "NOT_RUN" }
 }
 
 function Save-Evidence {
@@ -212,6 +213,14 @@ try {
   Wait-ProvidersHealth -Url "http://127.0.0.1:58087/providers/health"
   Wait-JsonHealth -Name "platform-control" -Url "http://127.0.0.1:58088/platform/health"
   Wait-JsonHealth -Name "platform-control-readiness" -Url "http://127.0.0.1:58088/platform/readiness" -ExpectedStatus "ready"
+
+  $FinancialMatrixOutput = & pwsh -NoProfile -ExecutionPolicy Bypass `
+    -File (Join-Path $RepoRoot "tools/scripts/test-wlt-runtime-failure-matrix.ps1") 2>&1
+  if ($LASTEXITCODE -ne 0) { throw "WLT runtime failure matrix failed with exit code $LASTEXITCODE" }
+  $Evidence.financialMatrix = [ordered]@{
+    state = "PASS"
+    output = ($FinancialMatrixOutput -join "`n")
+  }
 
   Assert-ProtectedRoute -Name "client-map-search" -Method "POST" `
     -Url "http://127.0.0.1:58080/dsh/client/maps/search" -Body '{"query":"Sanaa"}'
