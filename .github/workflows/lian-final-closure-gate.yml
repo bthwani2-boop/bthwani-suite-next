@@ -51,6 +51,8 @@ jobs:
           node tools/guards/maps/map-platform-truth-gate.mjs
           node tools/guards/platform/operational-policy-ui-truth-gate.mjs
           node tools/guards/privacy/client-address-privacy-truth-gate.mjs
+          node tools/guards/privacy/client-address-privacy-integration-gate.mjs
+          node tools/guards/ui-actions/ui-action-binding-gate.mjs
 
       - name: Verify UI contracts
         shell: bash
@@ -98,6 +100,49 @@ jobs:
 
       - name: Test
         run: pnpm run test
+
+  surface-integration:
+    name: Every surface action and privacy integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Setup governed workspace
+        uses: ./.github/actions/setup-node-workspace
+
+      - name: Enforce every interactive binding
+        run: node tools/guards/ui-actions/ui-action-binding-gate.mjs
+
+      - name: Enforce client-address privacy full-stack integration
+        run: node tools/guards/privacy/client-address-privacy-integration-gate.mjs
+
+      - name: Enforce map and platform policy integration
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/guards/maps/map-platform-truth-gate.mjs
+          node tools/guards/platform/operational-policy-ui-truth-gate.mjs
+          node tools/guards/privacy/client-address-privacy-truth-gate.mjs
+
+      - name: Enforce frontend and backend congruence
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm run guard:frontend-feature-binding
+          pnpm run guard:backend-api-binding
+          pnpm run guard:service-manifest-drift
+
+      - name: Typecheck and build every surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm run typecheck
+          pnpm run build
 
   go-services:
     name: Go verification — ${{ matrix.name }}
@@ -281,27 +326,89 @@ jobs:
             psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
           done
 
+  full-runtime:
+    name: Sovereign six-service runtime and journeys
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Setup governed workspace
+        uses: ./.github/actions/setup-node-workspace
+
+      - name: Run immutable runtime closure
+        shell: pwsh
+        run: ./tools/scripts/run-lian-full-runtime-closure.ps1
+
+      - name: Require evidence for this exact commit
+        shell: pwsh
+        run: |
+          $evidence = Get-Content artifacts/lian-runtime-closure-evidence.json -Raw | ConvertFrom-Json
+          if ($evidence.state -ne "PASS") { throw "runtime evidence failed" }
+          if ($evidence.commitSha -ne $env:GITHUB_SHA) { throw "runtime evidence belongs to another commit" }
+          if ($evidence.services.PSObject.Properties.Count -lt 7) { throw "runtime evidence is incomplete" }
+          if ($evidence.protectedRoutes.PSObject.Properties.Count -lt 5) { throw "protected route evidence is incomplete" }
+
+      - name: Runtime diagnostics on failure
+        if: failure()
+        shell: bash
+        run: |
+          set +e
+          docker ps -a
+          docker compose \
+            --env-file infra/docker/env/runtime.env.example \
+            -f infra/docker/compose.runtime.yml \
+            -f infra/docker/compose.financial-simulators.yml \
+            --profile identity --profile workforce --profile dsh --profile wlt \
+            --profile media --profile providers --profile platform \
+            --profile financial-simulators --profile mail \
+            logs --no-color --tail=400
+          test -f artifacts/lian-runtime-closure-evidence.json && cat artifacts/lian-runtime-closure-evidence.json || true
+
+      - name: Stop runtime
+        if: always()
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 `
+            -Action down `
+            -Profiles identity,workforce,dsh,wlt,financial-simulators,mail,media
+          docker compose `
+            --env-file infra/docker/env/runtime.env.example `
+            -f infra/docker/compose.runtime.yml `
+            --profile providers --profile platform `
+            down --remove-orphans
+
   result:
     name: Lian Final Same-Commit Closure result
     if: always()
-    needs: [repository-truth, go-services, dsh-database, wlt-database]
+    needs: [repository-truth, surface-integration, go-services, dsh-database, wlt-database, full-runtime]
     runs-on: ubuntu-latest
     steps:
       - name: Require every closure domain to pass
         env:
           REPOSITORY_RESULT: ${{ needs.repository-truth.result }}
+          SURFACE_RESULT: ${{ needs.surface-integration.result }}
           GO_RESULT: ${{ needs.go-services.result }}
           DSH_DATABASE_RESULT: ${{ needs.dsh-database.result }}
           WLT_DATABASE_RESULT: ${{ needs.wlt-database.result }}
+          RUNTIME_RESULT: ${{ needs.full-runtime.result }}
         shell: bash
         run: |
           set -euo pipefail
-          printf 'repository=%s\ngo=%s\ndsh_database=%s\nwlt_database=%s\n' \
+          printf 'repository=%s\nsurfaces=%s\ngo=%s\ndsh_database=%s\nwlt_database=%s\nruntime=%s\n' \
             "$REPOSITORY_RESULT" \
+            "$SURFACE_RESULT" \
             "$GO_RESULT" \
             "$DSH_DATABASE_RESULT" \
-            "$WLT_DATABASE_RESULT"
+            "$WLT_DATABASE_RESULT" \
+            "$RUNTIME_RESULT"
           test "$REPOSITORY_RESULT" = success
+          test "$SURFACE_RESULT" = success
           test "$GO_RESULT" = success
           test "$DSH_DATABASE_RESULT" = success
           test "$WLT_DATABASE_RESULT" = success
+          test "$RUNTIME_RESULT" = success
