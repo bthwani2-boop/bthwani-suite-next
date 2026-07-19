@@ -2,6 +2,8 @@ package wlt
 
 import "context"
 
+const boundSubscriptionPaymentRoute = "/wlt/commercial/payment-sessions"
+
 type BoundSubscriptionPaymentInput struct {
 	SubscriptionPurchaseID string
 	ProductReference       string
@@ -13,9 +15,10 @@ type BoundSubscriptionPaymentInput struct {
 }
 
 // CreateBoundSubscriptionPaymentSession delegates to the single commercial
-// payment-session contract. WLT derives and validates the commercial amount;
-// DSH must never create subscription sessions through the generic payment path
-// or assert independent financial truth from AmountMinorUnits/Currency.
+// payment-session contract declared by boundSubscriptionPaymentRoute. WLT
+// derives and validates the commercial amount; DSH must never create
+// subscription sessions through the generic payment path or assert independent
+// financial truth from AmountMinorUnits/Currency.
 func (c *Client) CreateBoundSubscriptionPaymentSession(
 	ctx context.Context,
 	input BoundSubscriptionPaymentInput,
