@@ -55,6 +55,7 @@ jobs:
           python3 tools/scripts/apply-partner-frontend-journey-closure.py
           python3 tools/scripts/apply-partner-typescript-closure.py
           python3 tools/scripts/apply-partner-binding-composition-closure.py
+          python3 tools/scripts/apply-partner-import-isolation-closure.py
           rm -f tools/scripts/apply-partner-ui-binding-closure.py
 
       - name: Format changed Go source
