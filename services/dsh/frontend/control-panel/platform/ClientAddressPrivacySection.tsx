@@ -8,6 +8,7 @@ import {
   StateView,
   Text,
   TextField,
+  colorRoles,
   spacing,
 } from "@bthwani/ui-kit";
 import {
@@ -200,5 +201,5 @@ const styles = StyleSheet.create({
   section: { margin: spacing[4], gap: spacing[3] },
   card: { padding: spacing[4], gap: spacing[3] },
   badges: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
-  divider: { height: 1, backgroundColor: "rgba(128,128,128,0.25)" },
+  divider: { height: 1, backgroundColor: colorRoles.borderSubtle },
 });
