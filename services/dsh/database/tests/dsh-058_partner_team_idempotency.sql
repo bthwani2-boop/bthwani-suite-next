@@ -22,8 +22,6 @@ BEGIN
     city_code,
     service_area_code,
     serviceability_status,
-    category,
-    delivery_modes,
     is_visible
   ) VALUES (
     v_test_store_id,
@@ -33,8 +31,6 @@ BEGIN
     'sanaa',
     'sanaa',
     'serviceable',
-    'restaurant',
-    ARRAY['pickup']::text[],
     false
   );
 
