@@ -148,7 +148,7 @@ jobs:
 
       - name: Commit verified repair
         id: commit
-        if: steps.verify.outcome == 'success'
+        if: ${{ steps.verify.outcome == 'success' }}
         continue-on-error: true
         shell: bash
         run: |
@@ -186,6 +186,6 @@ jobs:
           curl --fail-with-body --silent --show-error -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" "https://api.github.com/repos/$REPOSITORY/statuses/$SHA" -d "$payload"
 
       - name: Enforce verified repair
-        if: steps.verify.outcome != 'success' || steps.commit.outcome != 'success'
+        if: ${{ steps.verify.outcome != 'success' || steps.commit.outcome != 'success' }}
         shell: bash
         run: exit 1
