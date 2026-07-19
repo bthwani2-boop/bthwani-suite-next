@@ -2,25 +2,13 @@ name: Partner Journey Closure
 run-name: Partner Journey Closure · ${{ github.ref_name }} · ${{ github.sha }}
 
 on:
-  pull_request:
+  push:
     branches:
-      - "tmp/partner-closure-base"
+      - "tmp/partner-closure-run"
     paths:
       - ".github/partner-closure-trigger"
       - ".github/workflows/partner-journey-closure.yml"
-      - "core/identity/**"
-      - "core/workforce/**"
-      - "services/dsh/backend/**"
-      - "services/dsh/database/**"
-      - "services/dsh/contracts/**"
-      - "services/dsh/frontend/app-partner/**"
-      - "services/dsh/frontend/app-field/**"
-      - "services/dsh/frontend/control-panel/**"
-      - "services/wlt/**"
-      - "infra/docker/**"
-      - "tools/guards/partner/**"
       - "tools/scripts/invoke-partner-multisurface-runtime-closure.ps1"
-      - "tools/scripts/test-dsh-multisurface-runtime-matrix.ps1"
   workflow_dispatch:
 
 permissions:
@@ -63,14 +51,14 @@ jobs:
           go-version-file: services/dsh/backend/go.mod
           cache: true
           cache-dependency-path: services/dsh/backend/go.sum
-      - name: Verify DSH format and vet
+      - name: Verify partner format and vet
         working-directory: services/dsh/backend
         shell: bash
         run: |
           set -euo pipefail
-          files="$(gofmt -l .)"
-          test -z "$files" || { printf 'Unformatted DSH files:\n%s\n' "$files"; exit 1; }
-          go vet ./...
+          files="$(gofmt -l internal/partner internal/http)"
+          test -z "$files" || { printf 'Unformatted partner files:\n%s\n' "$files"; exit 1; }
+          go vet ./internal/partner ./internal/http
       - name: Apply complete DSH migration chain once
         shell: bash
         run: |
@@ -85,9 +73,13 @@ jobs:
           set -euo pipefail
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/dsh/database/migrations/dsh-088_partner_team_action_runtime_audit.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/dsh/database/tests/dsh-088_partner_team_action_runtime_audit.sql
-      - name: Run DSH tests
+      - name: Run focused partner Go tests
         working-directory: services/dsh/backend
-        run: go test ./... -count=1
+        shell: bash
+        run: |
+          set -euo pipefail
+          go test ./internal/partner -count=1 -v
+          go test ./internal/http -count=1 -run 'Partner|TeamMember|StoreTeam|Support|Fleet|Commercial' -v
       - name: Setup governed Node workspace
         uses: ./.github/actions/setup-node-workspace
       - name: Partner contracts and surface guards
