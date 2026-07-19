@@ -217,6 +217,19 @@ def close_wltoutbox_callers() -> None:
         raise RuntimeError("WLT outbox DB test enqueue anchor missing")
 
 
+def close_runtime_matrix_collection_semantics() -> None:
+    replace_once(
+        "tools/scripts/test-dsh-multisurface-runtime-matrix-v2.ps1",
+        '''function Find-Id([object[]]$Items, [string]$Id) {
+  return @($Items | Where-Object { "$(Get-Value $_ 'id')" -eq $Id })
+}''',
+        '''function Find-Id([object[]]$Items, [string]$Id) {
+  $FoundItems = @($Items | Where-Object { "$(Get-Value $_ 'id')" -eq $Id })
+  Write-Output -NoEnumerate $FoundItems
+}''',
+    )
+
+
 def retire_materialized_outbox_repair() -> None:
     source = read("services/dsh/backend/internal/wltoutbox/wltoutbox.go")
     closed_signature = "func Enqueue(tx *sql.Tx, eventType, tenantID, orderID, captainID, partnerID, checkoutIntentID string) error"
@@ -246,5 +259,6 @@ retire_legacy_catalog_routes()
 converge_catalog_route_methods()
 rewrite_route_tests()
 close_wltoutbox_callers()
+close_runtime_matrix_collection_semantics()
 retire_materialized_outbox_repair()
 remove_self()
