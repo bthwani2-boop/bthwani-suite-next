@@ -1,0 +1,49 @@
+name: Closure Source Export
+
+on:
+  push:
+    branches:
+      - "fix/lian-sovereign-final-closure"
+    paths:
+      - ".github/workflows/closure-source-export.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    name: Export immutable closure sources
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Stage exact sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p closure-source
+          while IFS= read -r file; do
+            mkdir -p "closure-source/$(dirname "$file")"
+            cp "$file" "closure-source/$file"
+          done <<'FILES'
+          package.json
+          governance/guards/guard-registry.json
+          services/wlt/contracts/wlt.openapi.yaml
+          services/dsh/frontend/app-partner/orders/usePartnerOrdersRuntime.ts
+          services/dsh/frontend/app-partner/account/PartnerSupportScreen.tsx
+          tools/guards/partner/partner-surface-truth-gate.mjs
+          .github/workflows/dsh-database-diagnostic-evidence.yml
+          FILES
+
+      - name: Upload immutable sources
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: closure-source-${{ github.sha }}
+          path: closure-source
+          if-no-files-found: error
+          retention-days: 1
