@@ -25,7 +25,7 @@ func readCatalogContractFixture(t *testing.T, relative string) string {
 func requireContractSnippet(t *testing.T, content, snippet string) {
 	t.Helper()
 	if !strings.Contains(content, snippet) {
-		t.Fatalf("catalog contract is missing required snippet %q", snippet)
+		t.Fatalf("catalog ownership chain is missing required snippet %q", snippet)
 	}
 }
 
@@ -41,7 +41,7 @@ func requireVersionedSchema(t *testing.T, contract, schema string) {
 		tail = tail[:end+4]
 	}
 	if !strings.Contains(tail, "expectedVersion") {
-		t.Fatalf("schema %s must require expectedVersion", schema)
+		t.Fatalf("schema %s must expose expectedVersion for optimistic concurrency", schema)
 	}
 }
 
@@ -50,6 +50,7 @@ func TestCatalogContractMatchesRuntimeOCCSurface(t *testing.T) {
 
 	contract := readCatalogContractFixture(t, "../../../contracts/dsh.catalog.openapi.yaml")
 	overlay := readCatalogContractFixture(t, "../../../contracts/dsh.catalog.overlay.yaml")
+	registry := readCatalogContractFixture(t, "../../../contracts/contract-registry.ts")
 	manifest := readCatalogContractFixture(t, "../../../service.manifest.ts")
 
 	requiredPaths := []string{
@@ -123,9 +124,15 @@ func TestCatalogContractMatchesRuntimeOCCSurface(t *testing.T) {
 	if strings.Contains(contract, "/dsh/field/partners/{partnerId}/catalog/product-proposals/{proposalId}:\n    put:") {
 		t.Fatal("field proposal update must be PATCH, not stale PUT")
 	}
+	requireContractSnippet(t, contract, "control for every mutation of an existing versioned entity")
 	requireContractSnippet(t, contract, "ConflictResponse:")
 	requireContractSnippet(t, contract, "code: { const: CONFLICT }")
 	requireContractSnippet(t, contract, "\"409\": { $ref: \"#/components/responses/Conflict\" }")
-	requireContractSnippet(t, manifest, "contracts/dsh.catalog.openapi.yaml")
-	requireContractSnippet(t, manifest, "optimisticConcurrency: \"REQUIRED\"")
+
+	requireContractSnippet(t, registry, "id: \"dsh-catalog\"")
+	requireContractSnippet(t, registry, "path: \"contracts/dsh.catalog.openapi.yaml\"")
+	requireContractSnippet(t, registry, "clientStrategy: \"SECONDARY_GENERATED_SUBSET\"")
+	requireContractSnippet(t, registry, "generatedClient: \"clients/generated/dsh-catalog-api.ts\"")
+	requireContractSnippet(t, manifest, "DSH_CONTRACT_REGISTRY")
+	requireContractSnippet(t, manifest, "contracts: DSH_CONTRACT_REGISTRY.map((contract) => contract.path)")
 }
