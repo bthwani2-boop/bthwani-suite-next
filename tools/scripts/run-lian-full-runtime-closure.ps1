@@ -18,7 +18,7 @@ $CoreProfiles = "identity,workforce,dsh,wlt,financial-simulators,mail,media"
 New-Item -ItemType Directory -Path $EvidenceDirectory -Force | Out-Null
 
 $Evidence = [ordered]@{
-  schemaVersion = 1
+  schemaVersion = 2
   branch = "lian"
   commitSha = if ($env:GITHUB_SHA) { $env:GITHUB_SHA } else { "LOCAL_UNPINNED" }
   startedAt = [DateTimeOffset]::UtcNow.ToString("o")
@@ -27,6 +27,7 @@ $Evidence = [ordered]@{
   protectedRoutes = [ordered]@{}
   migrations = [ordered]@{}
   financialMatrix = [ordered]@{ state = "NOT_RUN" }
+  disasterRecovery = [ordered]@{ state = "NOT_RUN" }
 }
 
 function Save-Evidence {
@@ -221,6 +222,23 @@ try {
     state = "PASS"
     output = ($FinancialMatrixOutput -join "`n")
   }
+
+  $DisasterRecoveryOutput = & pwsh -NoProfile -ExecutionPolicy Bypass `
+    -File (Join-Path $RepoRoot "tools/scripts/test-runtime-backup-restore.ps1") `
+    -EnvFile $EnvFile 2>&1
+  if ($LASTEXITCODE -ne 0) { throw "Runtime backup/restore round trip failed with exit code $LASTEXITCODE" }
+  $Evidence.disasterRecovery = [ordered]@{
+    state = "PASS"
+    output = ($DisasterRecoveryOutput -join "`n")
+  }
+
+  Wait-JsonHealth -Name "dsh" -Url "http://127.0.0.1:58080/dsh/health"
+  Wait-JsonHealth -Name "identity" -Url "http://127.0.0.1:58082/identity/health"
+  Wait-JsonHealth -Name "wlt" -Url "http://127.0.0.1:58083/wlt/health"
+  Wait-JsonHealth -Name "workforce" -Url "http://127.0.0.1:58086/workforce/health"
+  Wait-ProvidersHealth -Url "http://127.0.0.1:58087/providers/health"
+  Wait-JsonHealth -Name "platform-control" -Url "http://127.0.0.1:58088/platform/health"
+  Wait-JsonHealth -Name "platform-control-readiness" -Url "http://127.0.0.1:58088/platform/readiness" -ExpectedStatus "ready"
 
   Assert-ProtectedRoute -Name "client-map-search" -Method "POST" `
     -Url "http://127.0.0.1:58080/dsh/client/maps/search" -Body '{"query":"Sanaa"}'
