@@ -71,12 +71,12 @@ Assert-SafeIdentifier -Value $PostgresUser -Label "PostgreSQL administrator"
 
 if ($ConsistencyMode -eq "Quiesced") {
   $WriterContainers = @(
-    Get-EnvOrDefault "BTHWANI_IDENTITY_API_CONTAINER" "bthwani-identity-api-runtime",
-    Get-EnvOrDefault "BTHWANI_WORKFORCE_API_CONTAINER" "bthwani-workforce-api-runtime",
-    Get-EnvOrDefault "BTHWANI_DSH_API_CONTAINER" "bthwani-dsh-api-runtime",
-    Get-EnvOrDefault "BTHWANI_WLT_API_CONTAINER" "bthwani-wlt-api-runtime",
-    Get-EnvOrDefault "BTHWANI_PROVIDERS_API_CONTAINER" "bthwani-providers-api-runtime",
-    Get-EnvOrDefault "BTHWANI_PLATFORM_CONTROL_API_CONTAINER" "bthwani-platform-control-api-runtime"
+    (Get-EnvOrDefault "BTHWANI_IDENTITY_API_CONTAINER" "bthwani-identity-api-runtime"),
+    (Get-EnvOrDefault "BTHWANI_WORKFORCE_API_CONTAINER" "bthwani-workforce-api-runtime"),
+    (Get-EnvOrDefault "BTHWANI_DSH_API_CONTAINER" "bthwani-dsh-api-runtime"),
+    (Get-EnvOrDefault "BTHWANI_WLT_API_CONTAINER" "bthwani-wlt-api-runtime"),
+    (Get-EnvOrDefault "BTHWANI_PROVIDERS_API_CONTAINER" "bthwani-providers-api-runtime"),
+    (Get-EnvOrDefault "BTHWANI_PLATFORM_CONTROL_API_CONTAINER" "bthwani-platform-control-api-runtime")
   )
   $StillRunning = @()
   foreach ($Container in $WriterContainers) {
