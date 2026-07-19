@@ -1,0 +1,141 @@
+name: Partner Journey Closure
+
+on:
+  push:
+    branches:
+      - fix/lian-sovereign-final-closure
+    paths:
+      - "core/identity/**"
+      - "core/workforce/**"
+      - "services/dsh/backend/**"
+      - "services/dsh/database/**"
+      - "services/dsh/contracts/**"
+      - "services/dsh/frontend/app-partner/**"
+      - "services/dsh/frontend/app-field/**"
+      - "services/dsh/frontend/control-panel/**"
+      - "services/wlt/**"
+      - "infra/docker/compose.runtime.yml"
+      - "infra/docker/scripts/runtime.ps1"
+      - "tools/guards/partner/**"
+      - "tools/scripts/test-dsh-multisurface-runtime-matrix-v2.ps1"
+      - ".github/workflows/partner-journey-closure.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: partner-journey-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  partner-source-and-database:
+    name: Partner source, migrations, and contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: dsh_ci
+          POSTGRES_PASSWORD: dsh_ci_password
+          POSTGRES_DB: dsh_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U dsh_ci -d dsh_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://dsh_ci:dsh_ci_password@localhost:5432/dsh_ci?sslmode=disable
+      DSH_REQUIRE_DB_TESTS: "true"
+    steps:
+      - name: Checkout exact SHA
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - name: Setup Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache: true
+          cache-dependency-path: services/dsh/backend/go.sum
+      - name: Verify DSH format and vet
+        working-directory: services/dsh/backend
+        shell: bash
+        run: |
+          set -euo pipefail
+          files="$(gofmt -l .)"
+          test -z "$files" || { printf 'Unformatted DSH files:\n%s\n' "$files"; exit 1; }
+          go vet ./...
+      - name: Apply DSH migrations on a clean database twice
+        shell: bash
+        run: |
+          set -euo pipefail
+          for pass in 1 2; do
+            echo "migration pass=$pass"
+            while IFS= read -r migration; do
+              psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
+            done < <(find services/dsh/database/migrations -maxdepth 1 -type f -name '*.sql' | sort)
+          done
+      - name: Run DSH tests
+        working-directory: services/dsh/backend
+        run: go test ./... -count=1
+      - name: Setup governed Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Partner contracts and surface guards
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm run contracts:lint
+          pnpm run guard:partner-surface-truth
+          pnpm run guard:partner-support-truth
+          pnpm run guard:wlt-financial-boundary
+
+  partner-runtime:
+    name: Partner live multi-service runtime
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - name: Checkout exact SHA
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - name: Setup PowerShell
+        shell: bash
+        run: pwsh --version
+      - name: Build Identity explicitly
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml --profile identity build identity-api
+      - name: Run focused partner runtime
+        shell: pwsh
+        run: |
+          ./infra/docker/scripts/runtime.ps1 -Action all -Profiles identity,workforce,dsh,media,wlt
+      - name: Publish runtime diagnostics on failure
+        if: failure()
+        shell: bash
+        run: |
+          docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml --profile identity --profile workforce --profile dsh --profile media --profile wlt ps -a || true
+          docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml --profile identity --profile workforce --profile dsh --profile media --profile wlt logs --tail=200 identity-api workforce-api dsh-api wlt-api postgres minio || true
+
+  partner-closure-result:
+    name: Partner journey closure result
+    if: always()
+    needs:
+      - partner-source-and-database
+      - partner-runtime
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require all partner jobs to pass on one SHA
+        env:
+          SOURCE: ${{ needs.partner-source-and-database.result }}
+          RUNTIME: ${{ needs.partner-runtime.result }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'source=%s\nruntime=%s\nsha=%s\n' "$SOURCE" "$RUNTIME" "$GITHUB_SHA"
+          test "$SOURCE" = success
+          test "$RUNTIME" = success
