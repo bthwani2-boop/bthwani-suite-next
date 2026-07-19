@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"dsh-api/internal/clientaddress"
-	_ "github.com/jackc/pgx/v5/stdlib"
+	_ "github.com/lib/pq"
 )
 
 func main() {
@@ -39,7 +39,7 @@ func run() error {
 		limit = parsed
 	}
 
-	db, err := sql.Open("pgx", databaseURL)
+	db, err := sql.Open("postgres", databaseURL)
 	if err != nil {
 		return fmt.Errorf("open database: %w", err)
 	}
