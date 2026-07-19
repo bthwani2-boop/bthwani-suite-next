@@ -1,6 +1,6 @@
 import React from 'react';
 import { Badge, Box, Button, ListItem, SectionHeader, Surface, Text } from '@bthwani/ui-kit';
-import type { DshPartnerPreparationStage } from '../../shared/orders';
+import type { DshPartnerPreparationStage } from '../../shared/orders/orders.state-machine';
 import type { DshFulfillmentDeliveryMode } from '../../shared/delivery';
 import { PartnerFulfillmentActionsPanel } from './PartnerFulfillmentActionsPanel';
 import type { PartnerTeamMember } from '../team/partner-team.types';
