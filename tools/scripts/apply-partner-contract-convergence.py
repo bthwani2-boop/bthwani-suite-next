@@ -149,6 +149,11 @@ def normalize_outbox_repair_anchor() -> None:
         text,
         count=1,
     )
+    text = text.replace(
+        "    FOR UPDATE`, id).Scan(\n",
+        "    FOR UPDATE`, id\n\t).Scan(\n",
+        1,
+    )
     write(relative, text)
 
 
