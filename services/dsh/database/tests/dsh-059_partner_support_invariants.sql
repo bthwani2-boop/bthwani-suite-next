@@ -5,9 +5,9 @@ BEGIN;
 DO $$
 DECLARE
   reporter text := 'partner-support-test-' || replace(gen_random_uuid()::text, '-', '');
-  ticket_id_value uuid;
+  ticket_id_value dsh_support_tickets.id%TYPE;
   duplicate_ticket_blocked boolean := false;
-  message_id_value uuid;
+  message_id_value dsh_support_messages.id%TYPE;
   duplicate_message_blocked boolean := false;
   event_count integer;
 BEGIN
