@@ -5,6 +5,32 @@ function ConvertTo-BthwaniSqlLiteral {
   return "'" + $Value.Replace("'", "''") + "'"
 }
 
+function Remove-BthwaniLeadingSqlTrivia {
+  param([Parameter(Mandatory = $true)][AllowEmptyString()][string]$Sql)
+
+  $remaining = $Sql.TrimStart([char]0xFEFF)
+  while ($true) {
+    $remaining = $remaining.TrimStart()
+    if ($remaining.StartsWith("--", [System.StringComparison]::Ordinal)) {
+      $newline = $remaining.IndexOf("`n", [System.StringComparison]::Ordinal)
+      if ($newline -lt 0) {
+        return ""
+      }
+      $remaining = $remaining.Substring($newline + 1)
+      continue
+    }
+    if ($remaining.StartsWith("/*", [System.StringComparison]::Ordinal)) {
+      $commentEnd = $remaining.IndexOf("*/", 2, [System.StringComparison]::Ordinal)
+      if ($commentEnd -lt 0) {
+        throw "Unterminated SQL block comment before the first statement."
+      }
+      $remaining = $remaining.Substring($commentEnd + 2)
+      continue
+    }
+    return $remaining
+  }
+}
+
 function New-BthwaniGovernedMigrationBatch {
   [CmdletBinding()]
   param(
@@ -98,15 +124,17 @@ END
 
     $transactionOff = $content -match '(?mi)^\s*--\s*bthwani:transaction=off\s*$'
     $containsTransactionControl = $content -match '(?mi)^\s*(BEGIN|START\s+TRANSACTION|COMMIT|ROLLBACK)\s*;'
-    $startsWithTransaction = $content -match '(?is)^\s*(?:(?:--[^\r\n]*(?:\r?\n|$))|(?:/\*.*?\*/\s*))*BEGIN\s*;'
-    $endsWithCommit = $content -match '(?is)COMMIT\s*;\s*$'
+    $statementSql = Remove-BthwaniLeadingSqlTrivia $content
+    $startsWithTransaction = $statementSql -match '(?is)^\s*(BEGIN|START\s+TRANSACTION)\s*;'
+    $endsWithCommit = $content.TrimEnd().TrimEnd([char]0xFEFF) -match '(?is)COMMIT\s*;\s*$'
     $fileManagedTransaction = $startsWithTransaction -and $endsWithCommit
 
     if ($transactionOff -and $containsTransactionControl) {
       throw "Migration '$($file.Name)' declares transaction=off but also contains transaction control."
     }
     if ($containsTransactionControl -and -not $fileManagedTransaction) {
-      throw "Migration '$($file.Name)' contains partial or non-envelope transaction control. A file-managed transaction must begin with BEGIN and end with COMMIT."
+      $shape = "startsWithTransaction=$startsWithTransaction endsWithCommit=$endsWithCommit"
+      throw "Migration '$($file.Name)' contains partial or non-envelope transaction control ($shape). A file-managed transaction must begin with BEGIN and end with COMMIT."
     }
     $runnerManagedTransaction = -not $transactionOff -and -not $fileManagedTransaction
 
