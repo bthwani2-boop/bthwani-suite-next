@@ -117,6 +117,15 @@ jobs:
             logs --no-color --tail=500
           test -f artifacts/lian-runtime-closure-evidence.json && cat artifacts/lian-runtime-closure-evidence.json || true
 
+      - name: Upload immutable runtime evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: lian-runtime-evidence-${{ github.sha }}
+          path: artifacts/lian-runtime-closure-evidence.json
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Stop full runtime
         if: always()
         shell: pwsh
@@ -146,10 +155,17 @@ jobs:
             cancelled) state=error ;;
             *) state=failure ;;
           esac
+          description="six-service runtime, finance, DR, and governed DSH journeys: $JOB_STATUS"
+          if [ -f artifacts/lian-runtime-closure-evidence.json ]; then
+            evidence_failure="$(jq -r '.failure // empty' artifacts/lian-runtime-closure-evidence.json)"
+            if [ -n "$evidence_failure" ]; then
+              description="$(printf '%s' "$evidence_failure" | tr '\n\r' '  ' | sed -E 's/[[:space:]]+/ /g' | cut -c1-135)"
+            fi
+          fi
           payload="$(jq -n \
             --arg state "$state" \
             --arg context 'Lian Full Runtime Evidence / Full service runtime bootstrap and smoke' \
-            --arg description "six-service runtime, finance, DR, and governed DSH journeys: $JOB_STATUS" \
+            --arg description "$description" \
             --arg target_url "$RUN_URL" \
             '{state:$state,context:$context,description:$description,target_url:$target_url}')"
           curl --fail-with-body --silent --show-error \
