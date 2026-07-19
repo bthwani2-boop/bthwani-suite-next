@@ -21,21 +21,27 @@ if (-not (Test-Path -LiteralPath $MigrationRunner)) {
 }
 . $MigrationRunner
 
-$ResolvedCommitSha = if (-not [string]::IsNullOrWhiteSpace($env:GITHUB_SHA)) {
-  $env:GITHUB_SHA.Trim()
+if (-not [string]::IsNullOrWhiteSpace($env:GITHUB_SHA)) {
+  $ResolvedCommitSha = $env:GITHUB_SHA.Trim()
 } else {
-  (& git rev-parse HEAD).Trim()
+  $ResolvedCommitSha = (& git rev-parse HEAD).Trim()
+  if ($LASTEXITCODE -ne 0) {
+    throw "Unable to resolve the runtime closure commit SHA from Git."
+  }
 }
-if ($LASTEXITCODE -ne 0 -or $ResolvedCommitSha -notmatch '^[0-9a-f]{40}$') {
+if ($ResolvedCommitSha -notmatch '^[0-9a-f]{40}$') {
   throw "Runtime closure requires an exact immutable commit SHA."
 }
 
-$ResolvedBranch = if (-not [string]::IsNullOrWhiteSpace($env:GITHUB_HEAD_REF)) {
-  $env:GITHUB_HEAD_REF.Trim()
+if (-not [string]::IsNullOrWhiteSpace($env:GITHUB_HEAD_REF)) {
+  $ResolvedBranch = $env:GITHUB_HEAD_REF.Trim()
 } elseif (-not [string]::IsNullOrWhiteSpace($env:GITHUB_REF_NAME)) {
-  $env:GITHUB_REF_NAME.Trim()
+  $ResolvedBranch = $env:GITHUB_REF_NAME.Trim()
 } else {
-  (& git branch --show-current).Trim()
+  $ResolvedBranch = (& git branch --show-current).Trim()
+  if ($LASTEXITCODE -ne 0) {
+    throw "Unable to resolve the runtime closure ref from Git."
+  }
 }
 if ([string]::IsNullOrWhiteSpace($ResolvedBranch)) {
   throw "Runtime closure requires a resolved branch or ref name."
