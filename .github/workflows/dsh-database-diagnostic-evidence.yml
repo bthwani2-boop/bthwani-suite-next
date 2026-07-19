@@ -56,6 +56,7 @@ jobs:
           python3 tools/scripts/apply-partner-typescript-closure.py
           python3 tools/scripts/apply-partner-binding-composition-closure.py
           python3 tools/scripts/apply-partner-import-isolation-closure.py
+          python3 tools/scripts/apply-partner-control-panel-closure.py
           rm -f tools/scripts/apply-partner-ui-binding-closure.py
 
       - name: Format changed Go source
@@ -100,7 +101,7 @@ jobs:
           pnpm run guard:backend-api-binding 2>&1 | tee artifacts/partner-journey-closure/backend-api-binding.log
           pnpm --dir apps/app-partner/runtime typecheck 2>&1 | tee artifacts/partner-journey-closure/typecheck-app-partner.log
           pnpm --dir apps/app-field/runtime typecheck 2>&1 | tee artifacts/partner-journey-closure/typecheck-app-field.log
-          pnpm --dir apps/control-panel/runtime typecheck 2>&1 | tee artifacts/partner-journey-closure/typecheck-control-panel.log
+          pnpm --dir apps/control-panel/runtime exec tsc --noEmit -p tsconfig.partner-journey.json 2>&1 | tee artifacts/partner-journey-closure/typecheck-control-panel.log
           rm -rf dist-swagger
 
       - name: Upload partner journey evidence
