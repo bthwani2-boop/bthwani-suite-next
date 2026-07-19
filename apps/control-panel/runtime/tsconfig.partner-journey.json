@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "next-env.d.ts",
+    "../../../services/dsh/frontend/control-panel/catalogs/CatalogDashboardScreen.tsx",
+    "../../../services/dsh/frontend/control-panel/catalogs/CatalogApprovalScreen.tsx",
+    "../../../services/dsh/frontend/control-panel/partners/PartnerListScreen.tsx",
+    "../../../services/dsh/frontend/control-panel/support/SupportDashboardScreen.tsx",
+    "../../../services/dsh/frontend/control-panel/support/PlatformNotificationConfigScreen.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    ".next",
+    "dist",
+    "build"
+  ]
+}
