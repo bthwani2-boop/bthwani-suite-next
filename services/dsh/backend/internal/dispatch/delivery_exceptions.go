@@ -35,29 +35,31 @@ const (
 )
 
 type DeliveryException struct {
-	ID                     string
-	TenantID               string
-	AssignmentID           string
-	OrderID                string
-	CaptainID              string
-	ReasonCode             DeliveryExceptionReasonCode
-	Note                   string
-	DeliveryStatusAtReport DeliveryStatus
-	Severity               DeliveryExceptionSeverity
-	Status                 DeliveryExceptionStatus
-	CorrelationID          string
-	ReportedLatitude       *float64
-	ReportedLongitude      *float64
-	ReportedAt             time.Time
-	AcknowledgedAt         *time.Time
-	AcknowledgedByActorID  *string
-	ResolvedAt             *time.Time
-	ResolvedByActorID      *string
-	ResolutionAction       *string
-	ResolutionNote         *string
-	Version                int
-	CreatedAt              time.Time
-	UpdatedAt              time.Time
+	ID                      string
+	TenantID                string
+	AssignmentID            string
+	OrderID                 string
+	CaptainID               string
+	ReasonCode              DeliveryExceptionReasonCode
+	Note                    string
+	DeliveryStatusAtReport  DeliveryStatus
+	Severity                DeliveryExceptionSeverity
+	Status                  DeliveryExceptionStatus
+	CorrelationID           string
+	ReportedLatitude        *float64
+	ReportedLongitude       *float64
+	ReportedAt              time.Time
+	AcknowledgedAt          *time.Time
+	AcknowledgedByActorID   *string
+	ResolvedAt              *time.Time
+	ResolvedByActorID       *string
+	ResolutionAction        *string
+	ResolutionNote          *string
+	ReplacementAssignmentID *string
+	ReplacementCaptainID    *string
+	Version                 int
+	CreatedAt               time.Time
+	UpdatedAt               time.Time
 }
 
 type ReportDeliveryExceptionInput struct {
@@ -316,6 +318,119 @@ func ResolveDeliveryExceptionRetrySameCaptain(db *sql.DB, id string, expectedVer
 	return GetDeliveryException(db, id)
 }
 
+func ResolveDeliveryExceptionReassignCaptain(db *sql.DB, id string, expectedVersion int, newCaptainID, note, actorID string) (*DeliveryException, error) {
+	newCaptainID = strings.TrimSpace(newCaptainID)
+	note = strings.TrimSpace(note)
+	actorID = strings.TrimSpace(actorID)
+	if strings.TrimSpace(id) == "" || expectedVersion <= 0 || newCaptainID == "" || actorID == "" || len(note) < 5 {
+		return nil, fmt.Errorf("%w: id, expectedVersion, replacement captain, actor, and note are required", ErrInvalid)
+	}
+	if len(note) > 1000 {
+		return nil, fmt.Errorf("%w: resolution note must not exceed 1000 characters", ErrInvalid)
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	current, err := getDeliveryExceptionForUpdate(tx, id)
+	if err != nil {
+		return nil, err
+	}
+	if current.Status == DeliveryExceptionResolved {
+		if current.ResolutionAction != nil && *current.ResolutionAction == "reassign_captain" &&
+			current.ReplacementCaptainID != nil && *current.ReplacementCaptainID == newCaptainID &&
+			current.ResolutionNote != nil && *current.ResolutionNote == note {
+			return current, nil
+		}
+		return nil, fmt.Errorf("%w: delivery exception was already resolved differently", ErrConflict)
+	}
+	if current.Version != expectedVersion {
+		return nil, fmt.Errorf("%w: delivery exception version changed", ErrConflict)
+	}
+	if newCaptainID == current.CaptainID {
+		return nil, fmt.Errorf("%w: replacement captain must differ from current captain", ErrInvalid)
+	}
+
+	var assignmentStatus AssignmentStatus
+	var deliveryStatus DeliveryStatus
+	var orderStatus string
+	if err := tx.QueryRow(`
+		SELECT a.status, d.status, o.status
+		FROM dsh_assignments a
+		JOIN dsh_deliveries d ON d.assignment_id=a.id
+		JOIN dsh_orders o ON o.id=a.order_id
+		WHERE a.id=$1::uuid AND a.captain_id=$2 AND o.id=$3::uuid
+		FOR UPDATE OF a, d, o`, current.AssignmentID, current.CaptainID, current.OrderID).
+		Scan(&assignmentStatus, &deliveryStatus, &orderStatus); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	if assignmentStatus != AssignmentAccepted || (deliveryStatus != DeliveryDriverAssigned && deliveryStatus != DeliveryArrivedStore) {
+		return nil, fmt.Errorf("%w: reassignment is allowed only before pickup", ErrConflict)
+	}
+
+	if _, err := tx.Exec(`
+		UPDATE dsh_assignments
+		SET status='cancelled', updated_at=NOW()
+		WHERE id=$1::uuid AND status='accepted'`, current.AssignmentID); err != nil {
+		return nil, err
+	}
+	if _, err := tx.Exec(`
+		UPDATE dsh_deliveries
+		SET status='cancelled', note=COALESCE(NULLIF(note,''), 'reassigned after delivery exception'), updated_at=NOW()
+		WHERE assignment_id=$1::uuid AND status IN ('driver_assigned','driver_arrived_store')`, current.AssignmentID); err != nil {
+		return nil, err
+	}
+
+	if orderStatus != "driver_assigned" {
+		if _, err := tx.Exec(`UPDATE dsh_orders SET status='driver_assigned', updated_at=NOW() WHERE id=$1::uuid`, current.OrderID); err != nil {
+			return nil, err
+		}
+		if _, err := tx.Exec(`
+			INSERT INTO dsh_order_status_events(order_id,actor_role,from_status,to_status,note)
+			VALUES($1::uuid,'operator',$2,'driver_assigned',$3)`, current.OrderID, orderStatus, "delivery exception reassigned to another captain"); err != nil {
+			return nil, err
+		}
+	}
+
+	var replacementAssignmentID string
+	if err := tx.QueryRow(`
+		INSERT INTO dsh_assignments(order_id,captain_id,assigned_by,status,response_deadline_at)
+		VALUES($1::uuid,$2,$3,'offered',NOW()+INTERVAL '90 seconds')
+		RETURNING id::text`, current.OrderID, newCaptainID, actorID).Scan(&replacementAssignmentID); err != nil {
+		return nil, err
+	}
+	if _, err := tx.Exec(`
+		INSERT INTO dsh_deliveries(assignment_id,order_id,captain_id,status,note)
+		VALUES($1::uuid,$2::uuid,$3,'assigned','replacement assignment after governed delivery exception')`,
+		replacementAssignmentID, current.OrderID, newCaptainID); err != nil {
+		return nil, err
+	}
+
+	res, err := tx.Exec(`
+		UPDATE dsh_delivery_exceptions
+		SET status='resolved', resolved_at=NOW(), resolved_by_actor_id=$1,
+		    resolution_action='reassign_captain', resolution_note=$2,
+		    replacement_assignment_id=$3::uuid, replacement_captain_id=$4,
+		    version=version+1, updated_at=NOW()
+		WHERE id=$5::uuid AND version=$6 AND status IN ('open','acknowledged')`,
+		actorID, note, replacementAssignmentID, newCaptainID, id, expectedVersion)
+	if err != nil {
+		return nil, err
+	}
+	if n, _ := res.RowsAffected(); n != 1 {
+		return nil, fmt.Errorf("%w: delivery exception version changed", ErrConflict)
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return GetDeliveryException(db, id)
+}
+
 func getDeliveryExceptionForUpdate(tx *sql.Tx, id string) (*DeliveryException, error) {
 	row := tx.QueryRow(`SELECT `+deliveryExceptionColumns+` FROM dsh_delivery_exceptions e WHERE e.id=$1::uuid FOR UPDATE`, id)
 	item, err := scanDeliveryException(row.Scan)
@@ -399,7 +514,7 @@ const deliveryExceptionColumns = `
 	e.reason_code, e.note, e.delivery_status_at_report, e.severity, e.status,
 	e.correlation_id, e.reported_latitude, e.reported_longitude, e.reported_at,
 	e.acknowledged_at, e.acknowledged_by_actor_id, e.resolved_at, e.resolved_by_actor_id, e.resolution_action,
-	e.resolution_note, e.version, e.created_at, e.updated_at`
+	e.resolution_note, e.replacement_assignment_id::text, e.replacement_captain_id, e.version, e.created_at, e.updated_at`
 
 type deliveryExceptionScanner func(dest ...any) error
 
@@ -410,7 +525,7 @@ func scanDeliveryException(scan deliveryExceptionScanner) (*DeliveryException, e
 		&item.ReasonCode, &item.Note, &item.DeliveryStatusAtReport, &item.Severity, &item.Status,
 		&item.CorrelationID, &item.ReportedLatitude, &item.ReportedLongitude, &item.ReportedAt,
 		&item.AcknowledgedAt, &item.AcknowledgedByActorID, &item.ResolvedAt, &item.ResolvedByActorID, &item.ResolutionAction,
-		&item.ResolutionNote, &item.Version, &item.CreatedAt, &item.UpdatedAt,
+		&item.ResolutionNote, &item.ReplacementAssignmentID, &item.ReplacementCaptainID, &item.Version, &item.CreatedAt, &item.UpdatedAt,
 	)
 	return &item, err
 }

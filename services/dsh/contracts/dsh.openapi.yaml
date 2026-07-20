@@ -6797,8 +6797,12 @@ components:
         expectedVersion: { type: integer, minimum: 1 }
         action:
           type: string
-          enum: [retry_same_captain]
+          enum: [retry_same_captain, reassign_captain]
         note: { type: string, minLength: 5, maxLength: 1000 }
+        newCaptainId:
+          type: string
+          minLength: 1
+          description: Required only when action is reassign_captain.
 
     DshDeliveryExceptionReasonCode:
       type: string
@@ -6877,6 +6881,8 @@ components:
           enum: [retry_same_captain, reassign_captain, return_to_store, cancel_order]
           nullable: true
         resolutionNote: { type: string, nullable: true }
+        replacementAssignmentId: { type: string, format: uuid, nullable: true }
+        replacementCaptainId: { type: string, nullable: true }
         version: { type: integer, minimum: 1 }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }

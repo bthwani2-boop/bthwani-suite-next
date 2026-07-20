@@ -276,15 +276,22 @@ func (s *protectedStoreServer) handleResolveDeliveryException(w http.ResponseWri
 		ExpectedVersion int    `json:"expectedVersion"`
 		Action          string `json:"action"`
 		Note            string `json:"note"`
+		NewCaptainID    string `json:"newCaptainId"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	if body.Action != "retry_same_captain" {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "only retry_same_captain is enabled in this journey slice")
+	var item *dispatch.DeliveryException
+	var err error
+	switch body.Action {
+	case "retry_same_captain":
+		item, err = dispatch.ResolveDeliveryExceptionRetrySameCaptain(s.db, r.PathValue("exceptionId"), body.ExpectedVersion, body.Note, actor.ID)
+	case "reassign_captain":
+		item, err = dispatch.ResolveDeliveryExceptionReassignCaptain(s.db, r.PathValue("exceptionId"), body.ExpectedVersion, body.NewCaptainID, body.Note, actor.ID)
+	default:
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "unsupported delivery exception resolution action")
 		return
 	}
-	item, err := dispatch.ResolveDeliveryExceptionRetrySameCaptain(s.db, r.PathValue("exceptionId"), body.ExpectedVersion, body.Note, actor.ID)
 	if err != nil {
 		writeDeliveryExceptionError(w, err)
 		return

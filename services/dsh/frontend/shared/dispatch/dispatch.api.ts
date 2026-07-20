@@ -103,6 +103,19 @@ export async function resolveDeliveryExceptionRetrySameCaptain(
   return data.exception;
 }
 
+export async function resolveDeliveryExceptionReassignCaptain(
+  id: string,
+  expectedVersion: number,
+  newCaptainId: string,
+  note: string,
+): Promise<DshDeliveryException> {
+  const data = await request<{ exception: DshDeliveryException }>(
+    `/dsh/operator/delivery-exceptions/${encodeURIComponent(id)}/resolve`,
+    { method: "POST", body: { expectedVersion, action: "reassign_captain", newCaptainId, note } },
+  );
+  return data.exception;
+}
+
 export async function fetchClientOrderTracking(orderId: string): Promise<DshDispatchAssignment> {
   const data = await request<{ assignment: DshDispatchAssignment }>(
     `/dsh/client/orders/${encodeURIComponent(orderId)}/tracking`,

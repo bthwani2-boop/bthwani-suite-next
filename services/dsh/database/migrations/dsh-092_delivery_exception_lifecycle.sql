@@ -72,6 +72,43 @@ CREATE TABLE IF NOT EXISTS dsh_delivery_exceptions (
 ALTER TABLE dsh_delivery_exceptions
     ADD COLUMN IF NOT EXISTS acknowledged_by_actor_id TEXT;
 
+
+ALTER TABLE dsh_delivery_exceptions
+    ADD COLUMN IF NOT EXISTS replacement_assignment_id UUID REFERENCES dsh_assignments(id) ON DELETE SET NULL,
+    ADD COLUMN IF NOT EXISTS replacement_captain_id TEXT;
+
+ALTER TABLE dsh_delivery_exceptions
+    DROP CONSTRAINT IF EXISTS dsh_delivery_exceptions_resolution_shape_check;
+ALTER TABLE dsh_delivery_exceptions
+    ADD CONSTRAINT dsh_delivery_exceptions_resolution_shape_check CHECK (
+        (
+            status = 'resolved'
+            AND resolved_at IS NOT NULL
+            AND resolved_by_actor_id IS NOT NULL
+            AND resolution_action IS NOT NULL
+            AND NULLIF(BTRIM(resolution_note), '') IS NOT NULL
+            AND (
+                (resolution_action = 'reassign_captain'
+                 AND replacement_assignment_id IS NOT NULL
+                 AND NULLIF(BTRIM(replacement_captain_id), '') IS NOT NULL)
+                OR
+                (resolution_action <> 'reassign_captain'
+                 AND replacement_assignment_id IS NULL
+                 AND replacement_captain_id IS NULL)
+            )
+        )
+        OR
+        (
+            status <> 'resolved'
+            AND resolved_at IS NULL
+            AND resolved_by_actor_id IS NULL
+            AND resolution_action IS NULL
+            AND resolution_note IS NULL
+            AND replacement_assignment_id IS NULL
+            AND replacement_captain_id IS NULL
+        )
+    );
+
 CREATE UNIQUE INDEX IF NOT EXISTS uq_dsh_delivery_exceptions_active_assignment
     ON dsh_delivery_exceptions(assignment_id)
     WHERE status IN ('open', 'acknowledged');

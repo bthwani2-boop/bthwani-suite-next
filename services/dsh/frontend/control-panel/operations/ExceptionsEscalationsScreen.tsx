@@ -13,9 +13,12 @@ import {
 import {
   acknowledgeDeliveryException,
   fetchOperatorDeliveryExceptions,
+  resolveDeliveryExceptionReassignCaptain,
   resolveDeliveryExceptionRetrySameCaptain,
 } from '../../shared/dispatch/dispatch.api';
 import type { DshDeliveryException } from '../../shared/dispatch/dispatch.types';
+import { listCaptains } from '../../shared/workforce/workforce.api';
+import type { Captain } from '../../shared/workforce/workforce.types';
 import { buildOperationsHref } from './operations.registry';
 
 export type ExceptionsEscalationsScreenProps = { readonly hubHref: string; readonly subGroup?: string };
@@ -50,11 +53,29 @@ function exceptionTone(severity: DshDeliveryException['severity']): 'danger' | '
   return 'neutral';
 }
 
+function isEligibleCaptain(captain: Captain): boolean {
+  const profile = captain.captainProfile;
+  return captain.workforceKind === 'captain'
+    && captain.engagementStatus === 'active'
+    && profile?.licenseStatus === 'valid'
+    && Boolean(profile.vehicleType?.trim())
+    && Boolean(profile.vehicleIdentifier?.trim())
+    && Boolean(profile.serviceZoneId?.trim());
+}
+
+function canReassign(item: DshDeliveryException): boolean {
+  return item.deliveryStatusAtReport === 'driver_assigned' || item.deliveryStatusAtReport === 'driver_arrived_store';
+}
+
 export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsScreenProps) {
   const router = useRouter();
   const [state, setState] = React.useState<WorkspaceState>({ kind: 'loading' });
+  const [captains, setCaptains] = React.useState<readonly Captain[]>([]);
+  const [captainsState, setCaptainsState] = React.useState<'loading' | 'ready' | 'error'>('loading');
+  const [captainsError, setCaptainsError] = React.useState('');
   const [selectedReadinessId, setSelectedReadinessId] = React.useState<string | null>(null);
   const [selectedDeliveryId, setSelectedDeliveryId] = React.useState<string | null>(null);
+  const [selectedReplacementCaptainId, setSelectedReplacementCaptainId] = React.useState('');
   const [note, setNote] = React.useState('');
   const [actionState, setActionState] = React.useState<ActionState>({ kind: 'idle' });
 
@@ -72,8 +93,26 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
     }
   }, []);
 
-  React.useEffect(() => { void load(); }, [load]);
-  React.useEffect(() => { setNote(''); setActionState({ kind: 'idle' }); }, [selectedReadinessId, selectedDeliveryId]);
+  const loadCaptains = React.useCallback(async () => {
+    setCaptainsState('loading');
+    setCaptainsError('');
+    try {
+      const result = await listCaptains({ status: 'active', limit: 200 });
+      setCaptains(result.filter(isEligibleCaptain));
+      setCaptainsState('ready');
+    } catch (error) {
+      setCaptains([]);
+      setCaptainsState('error');
+      setCaptainsError(error instanceof Error ? error.message : 'تعذر تحميل الكباتن المؤهلين من Workforce.');
+    }
+  }, []);
+
+  React.useEffect(() => { void load(); void loadCaptains(); }, [load, loadCaptains]);
+  React.useEffect(() => {
+    setNote('');
+    setSelectedReplacementCaptainId('');
+    setActionState({ kind: 'idle' });
+  }, [selectedReadinessId, selectedDeliveryId]);
 
   const acknowledge = React.useCallback(async (item: DshDeliveryException) => {
     setActionState({ kind: 'submitting', id: item.id });
@@ -101,6 +140,21 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
     }
   }, [load, note]);
 
+  const resolveReassign = React.useCallback(async (item: DshDeliveryException) => {
+    if (!selectedReplacementCaptainId || note.trim().length < 5) {
+      setActionState({ kind: 'error', id: item.id, message: 'اختر كابتنًا مؤهلًا واكتب قرارًا تشغيليًا واضحًا.' });
+      return;
+    }
+    setActionState({ kind: 'submitting', id: item.id });
+    try {
+      await resolveDeliveryExceptionReassignCaptain(item.id, item.version, selectedReplacementCaptainId, note.trim());
+      setSelectedDeliveryId(null);
+      await load();
+    } catch (error) {
+      setActionState({ kind: 'error', id: item.id, message: error instanceof Error ? error.message : 'تعذر إعادة إسناد المهمة.' });
+    }
+  }, [load, note, selectedReplacementCaptainId]);
+
   const resolveReadiness = React.useCallback(async (item: DshReadinessEscalation, status: 'acknowledged' | 'resolved') => {
     if (status === 'resolved' && note.trim().length < 5) {
       setActionState({ kind: 'error', id: item.id, message: 'اكتب نتيجة حل واضحة من خمسة أحرف على الأقل.' });
@@ -121,22 +175,26 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
 
   const selectedDelivery = state.delivery.find((item) => item.id === selectedDeliveryId) ?? null;
   const selectedReadiness = state.readiness.find((item) => item.id === selectedReadinessId) ?? null;
+  const replacementCaptains = selectedDelivery ? captains.filter((captain) => captain.actorId !== selectedDelivery.captainId) : [];
 
   return (
     <Box gap={4}>
       <Box gap={2} style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
         <Box gap={1}>
           <Text role="titleMd" align="start">الاستثناءات والتصعيدات</Text>
-          <Text role="caption" tone="muted" align="start">طابور حقيقي من DSH؛ لا توجد طلبات ملغاة أو بيانات محلية بديلة داخل هذه الشاشة.</Text>
+          <Text role="caption" tone="muted" align="start">طابور حقيقي من DSH، والكباتن البدلاء من Workforce فقط.</Text>
         </Box>
         <Box gap={2} style={{ flexDirection: 'row' }}>
-          <Button label="تحديث" tone="secondary" onPress={() => void load()} />
+          <Button label="تحديث" tone="secondary" onPress={() => { void load(); void loadCaptains(); }} />
           <Button label="العودة لمركز العمليات" tone="ghost" onPress={() => router.push(hubHref)} />
         </Box>
       </Box>
 
+      {captainsState === 'error' ? <StateView tone="warning" title="تعذر تحميل الكباتن البدلاء" description={captainsError} actionLabel="إعادة المحاولة" onActionPress={loadCaptains} /> : null}
+
       <Box gap={2} style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
         <Badge label={`استثناءات توصيل نشطة: ${state.delivery.length}`} tone={state.delivery.length ? 'warning' : 'success'} />
+        <Badge label={`كباتن مؤهلون: ${captainsState === 'ready' ? captains.length : '—'}`} tone={captains.length ? 'success' : 'warning'} />
         <Badge label={`تصعيدات جاهزية: ${state.readiness.filter((item) => item.status !== 'resolved').length}`} tone="neutral" />
       </Box>
 
@@ -181,12 +239,30 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
       {selectedDelivery ? (
         <Card padding={4} gap={3}>
           <Text role="titleSm" align="start">قرار استثناء التوصيل {selectedDelivery.id}</Text>
-          <Text role="bodySm" align="start">يبقى الطلب في مرحلته الحالية. حل «إعادة المحاولة» يرفع الحظر فقط ولا ينشئ نجاحًا محليًا.</Text>
-          <TextField label="قرار العمليات" value={note} onChangeText={setNote} placeholder="سجل سبب السماح بإعادة المحاولة" multiline />
+          <Text role="bodySm" align="start">إعادة المحاولة ترفع الحظر فقط. إعادة الإسناد متاحة قبل الاستلام وتلغي الإسناد القديم ذريًا.</Text>
+          <TextField label="قرار العمليات" value={note} onChangeText={setNote} placeholder="سجل سبب القرار وخطوات التحقق" multiline />
+          {canReassign(selectedDelivery) ? (
+            <>
+              <label htmlFor="replacement-captain-select" style={{ fontWeight: 700 }}>الكابتن البديل المؤهل</label>
+              <select
+                id="replacement-captain-select"
+                value={selectedReplacementCaptainId}
+                onChange={(event) => setSelectedReplacementCaptainId(event.target.value)}
+                disabled={captainsState !== 'ready' || actionState.kind === 'submitting'}
+                style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--bthwani-control-panel-border)', borderRadius: 8, background: 'var(--bthwani-control-panel-surface-base)' }}
+              >
+                <option value="">اختر كابتنًا بديلًا</option>
+                {replacementCaptains.map((captain) => (
+                  <option key={captain.actorId} value={captain.actorId}>{`${captain.fullNameAr} · ${captain.captainProfile?.vehicleType ?? ''} · ${captain.captainProfile?.serviceZoneId ?? ''}`}</option>
+                ))}
+              </select>
+            </>
+          ) : <Text role="caption" tone="muted">بعد استلام الطلب لا يُسمح بإعادة الإسناد؛ استخدم رحلة الإرجاع أو الإلغاء الحاكمة.</Text>}
           {actionState.kind === 'error' && actionState.id === selectedDelivery.id ? <Text role="caption" tone="danger">{actionState.message}</Text> : null}
           <Box gap={2} style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
             {selectedDelivery.status === 'open' ? <Button label="اعتماد وبدء المراجعة" tone="secondary" disabled={actionState.kind === 'submitting'} onPress={() => void acknowledge(selectedDelivery)} /> : null}
             <Button label="حل: إعادة المحاولة مع الكابتن نفسه" tone="primary" disabled={actionState.kind === 'submitting'} onPress={() => void resolveRetry(selectedDelivery)} />
+            {canReassign(selectedDelivery) ? <Button label="حل: إعادة الإسناد للكابتن البديل" tone="secondary" disabled={!selectedReplacementCaptainId || actionState.kind === 'submitting'} onPress={() => void resolveReassign(selectedDelivery)} /> : null}
             <Button label="إغلاق التفاصيل" tone="ghost" onPress={() => setSelectedDeliveryId(null)} />
           </Box>
         </Card>

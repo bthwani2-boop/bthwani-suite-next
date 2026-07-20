@@ -4144,8 +4144,10 @@ export interface components {
         DshResolveDeliveryExceptionRequest: {
             expectedVersion: number;
             /** @enum {string} */
-            action: "retry_same_captain";
+            action: "retry_same_captain" | "reassign_captain";
             note: string;
+            /** @description Required only when action is reassign_captain. */
+            newCaptainId?: string;
         };
         /** @enum {string} */
         DshDeliveryExceptionReasonCode: "customer_unreachable" | "recipient_refused" | "wrong_address" | "unsafe_location" | "vehicle_breakdown" | "accident" | "damaged_order" | "cash_collection_issue" | "weather_or_road_block" | "proof_unavailable" | "other";
@@ -4192,6 +4194,9 @@ export interface components {
             /** @enum {string|null} */
             resolutionAction?: "retry_same_captain" | "reassign_captain" | "return_to_store" | "cancel_order" | null;
             resolutionNote?: string | null;
+            /** Format: uuid */
+            replacementAssignmentId?: string | null;
+            replacementCaptainId?: string | null;
             version: number;
             /** Format: date-time */
             createdAt: string;

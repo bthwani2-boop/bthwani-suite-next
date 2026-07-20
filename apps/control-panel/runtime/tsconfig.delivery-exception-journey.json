@@ -6,6 +6,7 @@
     "../../../services/dsh/frontend/control-panel/operations/operations.registry.ts",
     "../../../services/dsh/frontend/shared/dispatch/**/*.ts",
     "../../../services/dsh/frontend/shared/field-readiness/**/*.ts",
+    "../../../services/dsh/frontend/shared/workforce/**/*.ts",
     "../../../services/dsh/frontend/shared/_kernel/**/*.ts",
     "../../../services/dsh/clients/**/*.ts"
   ],
