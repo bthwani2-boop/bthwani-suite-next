@@ -45,22 +45,40 @@ jobs:
           cache-dependency-path: |
             services/dsh/backend/go.sum
             services/wlt/backend/go.sum
+      - name: Prepare diagnostics
+        shell: bash
+        run: mkdir -p artifacts/order-journey-source
       - name: Compile DSH order journey packages
         working-directory: services/dsh/backend
         shell: bash
         run: |
-          set -euo pipefail
-          files="$(gofmt -l internal/orders internal/pickup internal/partnerdelivery internal/wlt internal/wltoutbox internal/http)"
-          test -z "$files" || { printf 'Unformatted DSH files:\n%s\n' "$files"; exit 1; }
-          go test ./internal/orders ./internal/pickup ./internal/partnerdelivery ./internal/wlt ./internal/wltoutbox ./internal/http -run '^$' -count=1
+          set -o pipefail
+          {
+            files="$(gofmt -l internal/orders internal/pickup internal/partnerdelivery internal/wlt internal/wltoutbox internal/http)"
+            test -z "$files" || { printf 'Unformatted DSH files:\n%s\n' "$files"; exit 1; }
+            go test ./internal/orders ./internal/pickup ./internal/partnerdelivery ./internal/wlt ./internal/wltoutbox ./internal/http -run '^$' -count=1
+          } 2>&1 | tee ../../../artifacts/order-journey-source/go-dsh.log
+          exit ${PIPESTATUS[0]}
       - name: Compile WLT delivery collection packages
+        if: always()
         working-directory: services/wlt/backend
         shell: bash
         run: |
-          set -euo pipefail
-          files="$(gofmt -l internal/cod internal/http cmd/wlt-api)"
-          test -z "$files" || { printf 'Unformatted WLT files:\n%s\n' "$files"; exit 1; }
-          go test ./internal/cod ./internal/http -run '^$' -count=1
+          set -o pipefail
+          {
+            files="$(gofmt -l internal/cod internal/http cmd/wlt-api)"
+            test -z "$files" || { printf 'Unformatted WLT files:\n%s\n' "$files"; exit 1; }
+            go test ./internal/cod ./internal/http -run '^$' -count=1
+          } 2>&1 | tee ../../../artifacts/order-journey-source/go-wlt.log
+          exit ${PIPESTATUS[0]}
+      - name: Upload Go diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: order-journey-go-${{ github.sha }}
+          path: artifacts/order-journey-source
+          if-no-files-found: error
+          retention-days: 7
 
   typescript-surfaces:
     runs-on: ubuntu-latest
@@ -83,9 +101,23 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-node-workspace
+      - name: Prepare diagnostics
+        shell: bash
+        run: mkdir -p artifacts/order-journey-source
       - name: Typecheck journey surface
         shell: bash
-        run: pnpm exec tsc -p "${{ matrix.project }}" --noEmit --pretty false
+        run: |
+          set -o pipefail
+          pnpm exec tsc -p "${{ matrix.project }}" --noEmit --pretty false 2>&1 | tee "artifacts/order-journey-source/typescript-${{ matrix.name }}.log"
+          exit ${PIPESTATUS[0]}
+      - name: Upload TypeScript diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: order-journey-typescript-${{ matrix.name }}-${{ github.sha }}
+          path: artifacts/order-journey-source
+          if-no-files-found: error
+          retention-days: 7
 
   publish:
     if: always()
