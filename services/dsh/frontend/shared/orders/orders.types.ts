@@ -17,6 +17,12 @@ export type DshOrder = Omit<GeneratedDshOrder, "status"> & {
   readonly financialClosureReference?: string | null;
 };
 
+export type DshPartnerOrderAction = "accept" | "reject" | "prepare" | "ready" | "handoff";
+
+export type DshPartnerOrder = DshOrder & {
+  readonly allowedActions: readonly DshPartnerOrderAction[];
+};
+
 export type DshFinancialClosureStatus =
   | "not_required"
   | "pending"
