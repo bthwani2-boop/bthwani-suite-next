@@ -26,10 +26,23 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-node-workspace
+      - name: Prepare contract diagnostics
+        run: mkdir -p artifacts/partner-contracts
       - name: Contracts foundation
         run: pnpm run contracts:lint
       - name: Partner app typecheck
-        run: pnpm --dir apps/app-partner/runtime typecheck
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm --dir apps/app-partner/runtime typecheck -- --pretty false 2>&1 | tee artifacts/partner-contracts/app-partner-typecheck.log
+      - name: Upload partner contract diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: partner-contracts-${{ github.sha }}
+          path: artifacts/partner-contracts
+          if-no-files-found: warn
+          retention-days: 7
       - name: Field app partner-surface typecheck
         run: pnpm --dir apps/app-field/runtime typecheck
       - name: Control panel partner-surface typecheck
