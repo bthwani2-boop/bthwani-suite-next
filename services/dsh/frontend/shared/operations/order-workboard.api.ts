@@ -1,4 +1,10 @@
 import { createDshHttpClient } from '../_kernel/dsh-http-request';
+import { cancelOrder } from '../orders/order-cancellation.api';
+import type {
+  CancelOrderResponse,
+  OperatorCancellationReasonCode,
+} from '../orders/order-cancellation.types';
+import type { DshFinancialClosureStatus } from '../orders/orders.types';
 
 const { request } = createDshHttpClient('/api/dsh', 'operator-order-workboard', 15000);
 
@@ -12,6 +18,13 @@ export type OperatorOrderWorkboardRow = {
   readonly captainLifecycleStatus: string | null;
   readonly podMediaKey: string | null;
   readonly deliveryFailureReason: string | null;
+  readonly cancellationReasonCode: string | null;
+  readonly cancellationNote: string | null;
+  readonly cancelledByRole: 'client' | 'partner' | 'operator' | 'system' | null;
+  readonly cancelledAt: string | null;
+  readonly financialClosureStatus: DshFinancialClosureStatus;
+  readonly financialClosureReference: string | null;
+  readonly financialClosureFailure: string | null;
   readonly totalPrice: number;
   readonly createdAt: string;
   readonly updatedAt: string;
@@ -31,13 +44,13 @@ export async function fetchOperatorOrderWorkboard(
   return { orders, total: result.total ?? orders.length };
 }
 
-export async function cancelOperatorOrder(orderId: string, reason: string): Promise<void> {
+export async function cancelOperatorOrder(
+  orderId: string,
+  reasonCode: OperatorCancellationReasonCode,
+  reasonNote = '',
+): Promise<CancelOrderResponse> {
   if (!orderId.trim()) throw { kind: 'invalid_request', message: 'orderId is required' };
-  if (!reason.trim()) throw { kind: 'invalid_request', message: 'cancellation reason is required' };
-  await request(`/dsh/operator/orders/${encodeURIComponent(orderId)}/cancel`, {
-    method: 'POST',
-    body: { reason: reason.trim() },
-  });
+  return cancelOrder('operator', orderId, { reasonCode, reasonNote });
 }
 
 export function operatorOrderWorkboardErrorMessage(error: unknown): string {
