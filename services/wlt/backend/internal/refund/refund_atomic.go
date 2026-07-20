@@ -2,11 +2,14 @@ package refund
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"wlt-api/internal/reference"
+	"wlt-api/internal/shared"
 )
 
 var ErrRefundReferenceConflict = errors.New("refund references do not match the payment session")
@@ -85,4 +88,39 @@ func CreateRefundAtomic(db *sql.DB, input CreateRefundInput) (*Refund, bool, err
 		return nil, false, err
 	}
 	return existing, false, nil
+}
+
+// HandleCreateRefundAtomic is the compatibility HTTP surface for
+// POST /wlt/refunds. It preserves the established route while enforcing the
+// same atomic and reference-safe implementation used by order cancellation.
+func HandleCreateRefundAtomic(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var input CreateRefundInput
+		decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64*1024))
+		if err := decoder.Decode(&input); err != nil {
+			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
+			return
+		}
+		created, wasCreated, err := CreateRefundAtomic(db, input)
+		if errors.Is(err, ErrRefundReferenceConflict) {
+			shared.SendError(w, http.StatusConflict, "REFUND_REFERENCE_CONFLICT", err.Error())
+			return
+		}
+		if errors.Is(err, ErrSessionNotRefundable) {
+			shared.SendError(w, http.StatusConflict, "PAYMENT_SESSION_NOT_REFUNDABLE", err.Error())
+			return
+		}
+		if err != nil {
+			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+			return
+		}
+		status := http.StatusOK
+		if wasCreated {
+			status = http.StatusCreated
+		}
+		shared.SendJSON(w, status, map[string]any{
+			"refund":   created,
+			"replayed": !wasCreated,
+		})
+	}
 }
