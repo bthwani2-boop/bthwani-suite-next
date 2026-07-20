@@ -13,7 +13,6 @@ import type {
 } from '../shared/partner/partner.types';
 import type { PartnerOrderItem } from '../shared/orders';
 
-// Topic models
 import { usePartnerProfileModel } from './account/usePartnerProfileModel';
 import { useStoreScopeModel } from '../shared/partner/store-scope.model';
 import { usePartnerOrdersModel } from './orders/usePartnerOrdersModel';
@@ -62,7 +61,7 @@ export type DshPartnerSurfaceActions = {
   handleMarkReady: (orderId: string) => void;
   refreshOrders: () => void;
   onInviteMember: (identity: string) => Promise<PartnerTeamMutationResult>;
-  onMemberAction: (memberId: string, actionLabel: string) => Promise<PartnerTeamMutationResult>;
+  onMemberAction: (member: PartnerTeamMember, actionLabel: string) => Promise<PartnerTeamMutationResult>;
   handleHardwareBackPress: () => boolean;
 };
 
@@ -94,7 +93,6 @@ export function useDshPartnerSurfaceModel(
   initialRoute: DshPartnerRoute = 'inbox',
   initialOrderId: string = '',
 ): DshPartnerSurfaceModel {
-  // ── Sub-hooks ──────────────────────────────────────────────────────────────
   const profile = usePartnerProfileModel(initialRoute);
   const storeScope = useStoreScopeModel();
   const orders = usePartnerOrdersModel({
@@ -112,14 +110,12 @@ export function useDshPartnerSurfaceModel(
     selectedStoreScopeId: storeScope.selectedStoreScopeId ?? 'all',
   });
 
-  // ── Sync order search mode when route changes ─────────────────────────────
   React.useEffect(() => {
     if (profile.route !== 'inbox' && orders.ordersSearchMode) {
       orders.setOrdersSearchMode(false);
     }
   }, [profile.route, orders]);
 
-  // ── Orchestrated back press ───────────────────────────────────────────────
   const handleHardwareBackPress = React.useCallback(() => {
     if (storeScope.storeScopeVisible) {
       storeScope.setStoreScopeVisible(false);
