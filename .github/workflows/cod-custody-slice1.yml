@@ -60,7 +60,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          mkdir -p artifacts/cod-custody-slice1-apply
+          mkdir -p artifacts/cod-custody-slice1
           {
             set -euo pipefail
             python tools/scripts/patch-cod-custody-slice1.py
@@ -71,96 +71,81 @@ jobs:
               services/dsh/backend/internal/wltoutbox/worker.go \
               services/wlt/backend/internal/cod/cod.go \
               services/wlt/backend/internal/cod/cod_db_test.go
-          } 2>&1 | tee artifacts/cod-custody-slice1-apply/apply.log
+          } 2>&1 | tee artifacts/cod-custody-slice1/apply.log
           exit ${PIPESTATUS[0]}
-
-      - name: Upload apply diagnostic
-        if: steps.apply.outcome == 'failure'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: cod-custody-slice1-apply-${{ github.sha }}
-          path: artifacts/cod-custody-slice1-apply/apply.log
-          if-no-files-found: error
-          retention-days: 2
-
-      - name: Stop on apply failure
-        if: steps.apply.outcome == 'failure'
-        run: exit 1
 
       - name: Generate WLT client and prove contract
         id: contract
+        if: steps.apply.outcome == 'success'
         continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          {
+            set -euo pipefail
+            pnpm run openapi:generate:wlt
+            grep -F 'collectorType' services/wlt/contracts/wlt.openapi.yaml
+            grep -F 'collectorId' services/wlt/contracts/wlt.openapi.yaml
+            grep -F 'collectorType' services/wlt/clients/generated/wlt-api.ts
+            grep -F 'collectorId' services/wlt/clients/generated/wlt-api.ts
+            ! grep -A35 'WltCreateCodRecordRequest:' services/wlt/contracts/wlt.openapi.yaml | grep -F 'amountMinorUnits'
+          } 2>&1 | tee artifacts/cod-custody-slice1/contract.log
+          exit ${PIPESTATUS[0]}
+
+      - name: Commit implemented slice before verification
+        if: steps.apply.outcome == 'success' && steps.contract.outcome == 'success'
         shell: bash
         run: |
           set -euo pipefail
-          pnpm run openapi:generate:wlt
-          grep -F 'collectorType' services/wlt/contracts/wlt.openapi.yaml
-          grep -F 'collectorId' services/wlt/contracts/wlt.openapi.yaml
-          grep -F 'collectorType' services/wlt/clients/generated/wlt-api.ts
-          grep -F 'collectorId' services/wlt/clients/generated/wlt-api.ts
-          ! grep -A35 'WltCreateCodRecordRequest:' services/wlt/contracts/wlt.openapi.yaml | grep -F 'amountMinorUnits'
-
-      - name: Stop on contract failure
-        if: steps.contract.outcome == 'failure'
-        run: exit 1
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            services/dsh/backend/internal/wlt/client.go \
+            services/dsh/backend/internal/wlt/client_test.go \
+            services/dsh/backend/internal/wltoutbox/worker.go \
+            services/wlt/backend/internal/cod/cod.go \
+            services/wlt/backend/internal/cod/cod_db_test.go \
+            services/wlt/database/migrations/wlt-025_cod_collector_identity.sql \
+            services/wlt/contracts/wlt.openapi.yaml \
+            services/wlt/clients/generated/wlt-api.ts \
+            services/wlt/frontend/shared/dsh/wlt-dsh-boundary.types.ts \
+            services/dsh/frontend/shared/finance-wlt-link/wlt/generated/WltDshCaptainBridge.tsx
+          if ! git diff --cached --quiet; then
+            git commit -m "feat(cod-custody): implement governed collector identity and live captain truth [skip ci]"
+            git push origin HEAD:journey/cod-cash-custody-settlement-closure
+          fi
 
       - name: Compile DSH and WLT COD boundaries
         id: compile
+        if: steps.contract.outcome == 'success'
         continue-on-error: true
         shell: bash
         run: |
           set -o pipefail
-          mkdir -p artifacts/cod-custody-slice1-compile
           {
             (cd services/dsh/backend && go test ./internal/wlt ./internal/wltoutbox ./internal/dispatch ./internal/partnerdelivery -run '^$' -count=1)
             (cd services/wlt/backend && go test ./internal/cod ./internal/http ./cmd/wlt-api -run '^$' -count=1)
-          } 2>&1 | tee artifacts/cod-custody-slice1-compile/compile.log
+          } 2>&1 | tee artifacts/cod-custody-slice1/compile.log
           exit ${PIPESTATUS[0]}
-
-      - name: Upload compilation diagnostic
-        if: steps.compile.outcome == 'failure'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: cod-custody-slice1-compile-${{ github.sha }}
-          path: artifacts/cod-custody-slice1-compile/compile.log
-          if-no-files-found: error
-          retention-days: 2
-
-      - name: Stop on compilation failure
-        if: steps.compile.outcome == 'failure'
-        run: exit 1
 
       - name: Typecheck captain COD custody surface
         id: typecheck
+        if: steps.compile.outcome == 'success'
         continue-on-error: true
         shell: bash
         run: |
           set -o pipefail
-          mkdir -p artifacts/cod-custody-slice1-typecheck
           pnpm exec tsc -p apps/app-captain/runtime/tsconfig.cod-custody-journey.json --noEmit --pretty false \
-            2>&1 | tee artifacts/cod-custody-slice1-typecheck/typecheck.log
+            2>&1 | tee artifacts/cod-custody-slice1/typecheck.log
           exit ${PIPESTATUS[0]}
-
-      - name: Upload TypeScript diagnostic
-        if: steps.typecheck.outcome == 'failure'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: cod-custody-slice1-typecheck-${{ github.sha }}
-          path: artifacts/cod-custody-slice1-typecheck/typecheck.log
-          if-no-files-found: error
-          retention-days: 2
-
-      - name: Stop on TypeScript failure
-        if: steps.typecheck.outcome == 'failure'
-        run: exit 1
 
       - name: Apply clean WLT migrations and prove custody identity
         id: database
+        if: steps.typecheck.outcome == 'success'
         continue-on-error: true
         shell: bash
         run: |
           set -o pipefail
-          mkdir -p artifacts/cod-custody-slice1-db
           {
             for file in $(find services/wlt/database/migrations -maxdepth 1 -type f -name '*.sql' | sort); do
               psql "$WLT_DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file" >/dev/null
@@ -170,68 +155,67 @@ jobs:
               go test ./internal/cod \
                 -run '^TestCreateCodRecord(UsesWltSessionAndCollectorIdentity|RejectsNonCodSession)$' \
                 -count=1 -v
-          } 2>&1 | tee artifacts/cod-custody-slice1-db/database.log
+          } 2>&1 | tee artifacts/cod-custody-slice1/database.log
           exit ${PIPESTATUS[0]}
-
-      - name: Upload database diagnostic
-        if: steps.database.outcome == 'failure'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: cod-custody-slice1-db-${{ github.sha }}
-          path: artifacts/cod-custody-slice1-db/database.log
-          if-no-files-found: error
-          retention-days: 2
-
-      - name: Stop on database failure
-        if: steps.database.outcome == 'failure'
-        run: exit 1
 
       - name: Prove no local captain finance fiction
         id: invariants
+        if: steps.database.outcome == 'success'
         continue-on-error: true
         shell: bash
         run: |
-          set -euo pipefail
-          screen=services/dsh/frontend/shared/finance-wlt-link/wlt/generated/WltDshCaptainBridge.tsx
-          client=services/dsh/backend/internal/wlt/client.go
-          client_test=services/dsh/backend/internal/wlt/client_test.go
-          cod=services/wlt/backend/internal/cod/cod.go
-          grep -F 'NotifyDeliveryCollection' "$client"
-          grep -F 'CollectorType' "$cod"
-          grep -F 'CollectorID' "$cod"
-          grep -F 'CollectorType:    "captain"' "$client_test"
-          grep -F 'codPendingCollectionCount' "$screen"
-          grep -F 'codCollectedOutstandingCount' "$screen"
-          grep -F 'عهدة النقد عند الاستلام' "$screen"
-          ! grep -F 'eligibilityBalance' "$screen"
-          ! grep -F 'isEligible' "$screen"
-          ! grep -F '2,000 ر.ي' "$screen"
-          ! grep -F 'أسبوعية - كل خميس' "$screen"
-          ! grep -F 'paymentMethods' "$screen"
-          ! grep -Ei '(mock|fixture|demo)[A-Za-z0-9_]*[[:space:]]*=' "$screen"
+          set -o pipefail
+          {
+            set -euo pipefail
+            screen=services/dsh/frontend/shared/finance-wlt-link/wlt/generated/WltDshCaptainBridge.tsx
+            client=services/dsh/backend/internal/wlt/client.go
+            client_test=services/dsh/backend/internal/wlt/client_test.go
+            cod=services/wlt/backend/internal/cod/cod.go
+            grep -F 'NotifyDeliveryCollection' "$client"
+            grep -F 'CollectorType' "$cod"
+            grep -F 'CollectorID' "$cod"
+            grep -F 'CollectorType:    "captain"' "$client_test"
+            grep -F 'codPendingCollectionCount' "$screen"
+            grep -F 'codCollectedOutstandingCount' "$screen"
+            grep -F 'عهدة النقد عند الاستلام' "$screen"
+            grep -F "section = 'cod-liability'" "$screen"
+            ! grep -F 'eligibilityBalance' "$screen"
+            ! grep -F 'isEligible' "$screen"
+            ! grep -F '2,000 ر.ي' "$screen"
+            ! grep -F 'أسبوعية - كل خميس' "$screen"
+            ! grep -F 'paymentMethods' "$screen"
+            ! grep -Ei '(mock|fixture|demo)[A-Za-z0-9_]*[[:space:]]*=' "$screen"
+          } 2>&1 | tee artifacts/cod-custody-slice1/invariants.log
+          exit ${PIPESTATUS[0]}
 
-      - name: Stop on invariant failure
-        if: steps.invariants.outcome == 'failure'
-        run: exit 1
-
-      - name: Commit focused failure marker
-        if: failure()
+      - name: Commit focused failure evidence
+        if: always() && (steps.apply.outcome == 'failure' || steps.contract.outcome == 'failure' || steps.compile.outcome == 'failure' || steps.typecheck.outcome == 'failure' || steps.database.outcome == 'failure' || steps.invariants.outcome == 'failure')
         shell: bash
         run: |
           set -euo pipefail
-          printf 'apply=%s\ncontract=%s\ncompile=%s\ntypecheck=%s\ndatabase=%s\ninvariants=%s\nsource_sha=%s\n' \
-            '${{ steps.apply.outcome }}' '${{ steps.contract.outcome }}' '${{ steps.compile.outcome }}' \
-            '${{ steps.typecheck.outcome }}' '${{ steps.database.outcome }}' '${{ steps.invariants.outcome }}' \
-            '${{ github.sha }}' > .github/cod-custody-slice1-failure
+          {
+            printf 'apply=%s\ncontract=%s\ncompile=%s\ntypecheck=%s\ndatabase=%s\ninvariants=%s\nsource_sha=%s\n' \
+              '${{ steps.apply.outcome }}' '${{ steps.contract.outcome }}' '${{ steps.compile.outcome }}' \
+              '${{ steps.typecheck.outcome }}' '${{ steps.database.outcome }}' '${{ steps.invariants.outcome }}' \
+              '${{ github.sha }}'
+            for log in artifacts/cod-custody-slice1/*.log; do
+              [ -f "$log" ] || continue
+              printf '\n=== %s ===\n' "$log"
+              tail -n 80 "$log"
+            done
+          } > .github/cod-custody-slice1-failure
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .github/cod-custody-slice1-failure
           git commit -m "ci(cod-custody): record focused slice one failure [skip ci]"
-          git pull --rebase origin journey/cod-cash-custody-settlement-closure
           git push origin HEAD:journey/cod-cash-custody-settlement-closure
 
+      - name: Fail focused slice after evidence
+        if: always() && (steps.apply.outcome == 'failure' || steps.contract.outcome == 'failure' || steps.compile.outcome == 'failure' || steps.typecheck.outcome == 'failure' || steps.database.outcome == 'failure' || steps.invariants.outcome == 'failure')
+        run: exit 1
+
       - name: Remove temporary machinery and commit verified slice
-        if: success()
+        if: steps.apply.outcome == 'success' && steps.contract.outcome == 'success' && steps.compile.outcome == 'success' && steps.typecheck.outcome == 'success' && steps.database.outcome == 'success' && steps.invariants.outcome == 'success'
         shell: bash
         run: |
           set -euo pipefail
@@ -244,5 +228,5 @@ jobs:
             tools/scripts/patch-cod-custody-slice1-corrections.py \
             apps/app-captain/runtime/tsconfig.cod-custody-journey.json
           git add -A
-          git commit -m "feat(cod-custody): establish governed collector identity and live captain truth [skip ci]"
+          git commit -m "feat(cod-custody): verify and clean governed collector truth [skip ci]"
           git push origin HEAD:journey/cod-cash-custody-settlement-closure
