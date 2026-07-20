@@ -1,0 +1,75 @@
+name: Cancellation Remaining Surfaces Diagnostic
+run-name: Cancellation Remaining Surfaces · ${{ github.sha }}
+
+on:
+  push:
+    branches: ["journey/cancellation-refund-reconciliation-closure"]
+    paths:
+      - ".github/cancellation-remaining-surfaces-trigger"
+      - ".github/workflows/cancellation-remaining-surfaces-diagnostic.yml"
+
+permissions:
+  contents: read
+  statuses: write
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - surface: app-partner
+            project: apps/app-partner/runtime/tsconfig.cancellation-journey.json
+          - surface: app-captain
+            project: apps/app-captain/runtime/tsconfig.order-journey.json
+          - surface: control-panel
+            project: apps/control-panel/runtime/tsconfig.cancellation-journey.json
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-node-workspace
+      - name: Patch and generate DSH contract
+        shell: bash
+        run: |
+          python tools/scripts/patch-cancellation-journey-final.py
+          pnpm run openapi:generate:dsh
+      - name: Typecheck ${{ matrix.surface }}
+        id: typecheck
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/${{ matrix.surface }}
+          pnpm exec tsc -p "${{ matrix.project }}" --noEmit --pretty false 2>&1 | tee artifacts/${{ matrix.surface }}/typecheck.log
+          exit ${PIPESTATUS[0]}
+      - name: Upload ${{ matrix.surface }} diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: cancellation-${{ matrix.surface }}-${{ github.sha }}
+          path: artifacts/${{ matrix.surface }}/typecheck.log
+          if-no-files-found: error
+          retention-days: 3
+      - name: Publish ${{ matrix.surface }} status
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          RESULT: ${{ steps.typecheck.outcome }}
+          SURFACE: ${{ matrix.surface }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        shell: bash
+        run: |
+          state=failure
+          [ "$RESULT" = success ] && state=success
+          jq -n --arg state "$state" --arg context "Cancellation $SURFACE Typecheck" --arg description "$SURFACE cancellation typecheck: $RESULT" --arg target_url "$RUN_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' > status.json
+          curl --fail-with-body --silent --show-error -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$REPOSITORY/statuses/$SHA" \
+            -d @status.json
