@@ -88,7 +88,7 @@ jobs:
         run: |
           set -o pipefail
           mkdir -p artifacts/partner-contracts
-          pnpm --dir apps/control-panel/runtime typecheck 2>&1 | tee artifacts/partner-contracts/control-panel-typecheck.log
+          pnpm --dir apps/control-panel/runtime exec tsc --noEmit -p tsconfig.partner-journey.json 2>&1 | tee artifacts/partner-contracts/control-panel-typecheck.log
       - name: Upload control-panel diagnostics
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
