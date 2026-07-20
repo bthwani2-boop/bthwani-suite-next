@@ -30,6 +30,10 @@ def main() -> None:
     if wlt_routes_patch.exists():
         runpy.run_path(str(wlt_routes_patch), run_name="__main__")
 
+    pickup_operations_patch = Path("tools/scripts/patch-cancellation-pickup-operations-ui.py")
+    if pickup_operations_patch.exists():
+        runpy.run_path(str(pickup_operations_patch), run_name="__main__")
+
     text = CONTRACT.read_text(encoding="utf-8")
 
     if "  /dsh/partner/orders/{orderId}/pickup:\n" not in text:
@@ -90,7 +94,7 @@ def main() -> None:
 
     CONTRACT.write_text(text, encoding="utf-8")
     Path("tools/scripts/patch-cancellation-pickup-contract.py").unlink(missing_ok=True)
-    print("Cancellation journey contract, tenancy, pricing, fixtures, and governed WLT routes patched.")
+    print("Cancellation journey contract, tenancy, pricing, WLT, pickup resume, and operations UI patched.")
 
 
 if __name__ == "__main__":
