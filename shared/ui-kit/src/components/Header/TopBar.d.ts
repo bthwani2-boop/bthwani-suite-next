@@ -1,9 +1,9 @@
 import React from 'react';
 export type TopBarProps = {
     title: string;
-    subtitle?: string;
-    variant?: 'primary' | 'secondary';
-    onBack?: () => void;
+    subtitle?: string | undefined;
+    variant?: 'primary' | 'secondary' | undefined;
+    onBack?: (() => void) | undefined;
     style?: any;
 };
 export declare function TopBar({ title, subtitle, variant, onBack, style }: TopBarProps): React.JSX.Element;
