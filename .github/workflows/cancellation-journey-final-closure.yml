@@ -116,8 +116,28 @@ jobs:
           grep -F 'cancelled' services/dsh/clients/generated/dsh-api.ts
 
       - name: Generate WLT client
+        id: generate_wlt
+        continue-on-error: true
         shell: bash
-        run: pnpm run openapi:generate:wlt
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/cancellation-wlt-openapi
+          pnpm run openapi:generate:wlt 2>&1 | tee artifacts/cancellation-wlt-openapi/generator.log
+          exit ${PIPESTATUS[0]}
+
+      - name: Upload WLT generator diagnostic
+        if: steps.generate_wlt.outcome == 'failure'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: cancellation-wlt-openapi-${{ github.sha }}
+          path: artifacts/cancellation-wlt-openapi/generator.log
+          if-no-files-found: error
+          retention-days: 2
+
+      - name: Stop on WLT generator failure
+        if: steps.generate_wlt.outcome == 'failure'
+        shell: bash
+        run: exit 1
 
       - name: Validate governed WLT cancellation contract
         shell: bash
