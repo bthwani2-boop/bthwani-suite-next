@@ -57,7 +57,19 @@ func ProcessOnce(ctx context.Context, db *sql.DB, client *wlt.Client) error {
 func deliverEvent(ctx context.Context, client *wlt.Client, event Event) (string, error) {
 	switch event.EventType {
 	case EventTypeDeliveryCompleted:
-		return "", client.NotifyDeliveryCompleted(ctx, wlt.NotifyDeliveryCompletedInput{OrderID: event.OrderID, CaptainID: event.CaptainID, PartnerID: event.PartnerID, CheckoutIntentID: event.CheckoutIntentID})
+		collectorType := event.CollectorType
+		collectorID := event.CollectorID
+		if collectorType == "" && event.CaptainID != "" {
+			collectorType = CollectorCaptain
+			collectorID = event.CaptainID
+		}
+		return "", client.NotifyDeliveryCollection(ctx, wlt.NotifyDeliveryCollectionInput{
+			OrderID:          event.OrderID,
+			CollectorType:    collectorType,
+			CollectorID:      collectorID,
+			PartnerID:        event.PartnerID,
+			CheckoutIntentID: event.CheckoutIntentID,
+		})
 	case EventTypeLoyaltyEarned:
 		if event.ClientID == "" || event.Points <= 0 {
 			return "", fmt.Errorf("invalid loyalty-earned payload")
