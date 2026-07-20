@@ -46,6 +46,7 @@ server_path.write_text(server, encoding="utf-8")
 
 refund_path = Path("services/wlt/backend/internal/refund/refund.go")
 refund = refund_path.read_text(encoding="utf-8")
+refund = refund.replace('\n\t"encoding/json"', "", 1)
 refund = refund.replace('\n\t"wlt-api/internal/reference"', "", 1)
 comment_start = refund.index("// CreateRefund creates a refund")
 function_start = refund.index("func CreateRefund(db *sql.DB, input CreateRefundInput) (*Refund, error) {", comment_start)
@@ -72,6 +73,7 @@ refund_path.write_text(refund, encoding="utf-8")
 
 payment_path = Path("services/wlt/backend/internal/payment/payment.go")
 payment = payment_path.read_text(encoding="utf-8")
+payment = payment.replace('\n\t"encoding/json"', "", 1)
 cancel_start = payment.index("func CancelSessionForOrder(db *sql.DB, sessionID, orderID, clientID, reason string) (*CancelForOrderResult, error) {")
 cancel_end = payment.index("// HTTP handlers", cancel_start)
 payment = payment[:cancel_start] + '''func CancelSessionForOrder(db *sql.DB, sessionID, orderID, clientID, reason string) (*CancelForOrderResult, error) {
