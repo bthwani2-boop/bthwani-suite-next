@@ -1,0 +1,61 @@
+name: Cancellation WLT Contract Diagnostic
+run-name: Cancellation WLT Contract · ${{ github.sha }}
+
+on:
+  push:
+    branches: ["journey/cancellation-refund-reconciliation-closure"]
+    paths:
+      - ".github/cancellation-wlt-contract-trigger"
+      - ".github/workflows/cancellation-wlt-contract-diagnostic.yml"
+
+permissions:
+  contents: read
+  statuses: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-node-workspace
+      - name: Patch only governed contracts
+        shell: bash
+        run: python tools/scripts/patch-cancellation-journey-final.py
+      - name: Generate WLT client with complete diagnostics
+        id: generate
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/cancellation-wlt-contract
+          pnpm run openapi:generate:wlt 2>&1 | tee artifacts/cancellation-wlt-contract/generation.log
+          exit ${PIPESTATUS[0]}
+      - name: Upload WLT generation diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: cancellation-wlt-contract-${{ github.sha }}
+          path: artifacts/cancellation-wlt-contract/generation.log
+          if-no-files-found: error
+          retention-days: 3
+      - name: Publish diagnostic status
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          RESULT: ${{ steps.generate.outcome }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        shell: bash
+        run: |
+          state=failure
+          [ "$RESULT" = success ] && state=success
+          jq -n --arg state "$state" --arg context "Cancellation WLT Contract Diagnostic" --arg description "wlt contract generation: $RESULT" --arg target_url "$RUN_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' > status.json
+          curl --fail-with-body --silent --show-error -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$REPOSITORY/statuses/$SHA" \
+            -d @status.json
