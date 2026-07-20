@@ -2,6 +2,7 @@ import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { createDshHttpClient, corrId } from "../_kernel/dsh-http-request";
 import type {
   ClassifiedPartnerDeliveryError,
+  DshPartnerDeliveryTask,
   DshPartnerDeliveryTaskListResponse,
   DshPartnerDeliveryTaskResponse,
   PartnerDeliveryErrorCode,
@@ -9,9 +10,20 @@ import type {
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "partner-delivery");
 
+export type DshPartnerDeliveryStateResponse = {
+  readonly task: DshPartnerDeliveryTask | null;
+  readonly stage: string;
+};
+
 // --- Partner (store courier) side ------------------------------------------
-// Endpoints registered on partnerdelivery.go — real backend calls only, no
-// local-success fallback.
+
+export async function fetchPartnerDeliveryTask(
+  orderId: string,
+): Promise<DshPartnerDeliveryStateResponse> {
+  return request<DshPartnerDeliveryStateResponse>(
+    `/dsh/partner/orders/${encodeURIComponent(orderId)}/partner-delivery`,
+  );
+}
 
 export async function assignPartnerDeliveryTask(
   orderId: string,
@@ -58,7 +70,7 @@ export async function arrivePartnerDeliveryTask(
 
 export async function submitPartnerDeliveryProof(
   orderId: string,
-  input: { readonly expectedVersion: number; readonly proofMethod: string; readonly proofReference?: string },
+  input: { readonly expectedVersion: number; readonly proofMethod: string; readonly proofReference: string },
 ): Promise<DshPartnerDeliveryTaskResponse> {
   return request<DshPartnerDeliveryTaskResponse>(
     `/dsh/partner/orders/${encodeURIComponent(orderId)}/partner-delivery/proof`,
@@ -66,7 +78,7 @@ export async function submitPartnerDeliveryProof(
   );
 }
 
-// --- Operator side -----------------------------------------------------------
+// --- Operator side ---------------------------------------------------------
 
 export async function fetchOperatorPartnerDeliveries(params: {
   readonly storeId?: string;
@@ -87,11 +99,6 @@ export async function fetchOperatorPartnerDelivery(taskId: string): Promise<DshP
   return request<DshPartnerDeliveryTaskResponse>(`/dsh/operator/partner-deliveries/${encodeURIComponent(taskId)}`);
 }
 
-/**
- * Operator-only monitoring action: raise an exception on a partner_delivery
- * task. This is the sole mutating action the operator surface may call for
- * this domain — no captain assignment / WLT mutation is exposed here.
- */
 export async function raisePartnerDeliveryException(
   orderId: string,
   input: { readonly expectedVersion: number; readonly reason: string },
@@ -101,8 +108,6 @@ export async function raisePartnerDeliveryException(
     { method: "POST", body: { ...input, commandId: corrId("pd-exception") } },
   );
 }
-
-// --- Error classification ---------------------------------------------------
 
 function classified(
   kind: ClassifiedPartnerDeliveryError["kind"],
@@ -114,9 +119,7 @@ function classified(
 
 export function classifyPartnerDeliveryError(error: unknown): ClassifiedPartnerDeliveryError {
   const typed = error as { kind?: string; status?: number; code?: string; message?: string };
-  if (typed?.kind === "network") {
-    return classified("network", undefined, typed.message);
-  }
+  if (typed?.kind === "network") return classified("network", undefined, typed.message);
   if (typed?.kind === "http") {
     const code = typed.code as PartnerDeliveryErrorCode | undefined;
     if (typed.status === 409) return classified("conflict", code ?? "VERSION_CONFLICT", typed.message);
