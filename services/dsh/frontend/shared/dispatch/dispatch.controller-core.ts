@@ -11,6 +11,7 @@ import {
   dispatchLoadingState,
   dispatchSuccessState,
   trackingActiveState,
+  trackingCancelledState,
   trackingDeliveredState,
   trackingErrorState,
   trackingLoadingState,
@@ -37,6 +38,9 @@ export function beginTrackingLoad(): DshTrackingState {
 }
 
 export function resolveTrackingSuccess(assignment: DshDispatchAssignment): DshTrackingState {
+  if (assignment.status === "cancelled" || assignment.delivery.status === "cancelled") {
+    return trackingCancelledState(assignment);
+  }
   return assignment.delivery.status === "delivered"
     ? trackingDeliveredState(assignment)
     : trackingActiveState(assignment);
@@ -50,8 +54,8 @@ export function resolveTrackingError(error: { readonly kind: DispatchErrorKind }
 }
 
 export function resolveDispatchActionError(error: { readonly kind: DispatchErrorKind }, action: "assign" | "accept" | "decline" | "status" | "pod") {
-  if (error.kind === "conflict") return { kind: "error" as const, message: "الحالة الحالية لا تسمح بهذا الانتقال." };
-  if (error.kind === "not_found") return { kind: "error" as const, message: "لم يتم العثور على المهمة." };
+  if (error.kind === "conflict") return { kind: "error" as const, message: "ألغيت المهمة أو تغيّرت حالتها؛ أغلقت الإجراءات غير الصالحة." };
+  if (error.kind === "not_found") return { kind: "error" as const, message: "المهمة غير موجودة أو لم تعد نشطة." };
   if (error.kind === "permission_denied") return { kind: "error" as const, message: "لا تملك صلاحية تنفيذ هذا الإجراء." };
   const fallback: Record<typeof action, string> = {
     assign: "تعذر إنشاء مهمة الكابتن.",
