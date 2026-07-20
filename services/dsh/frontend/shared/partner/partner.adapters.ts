@@ -3,24 +3,17 @@
 
 import type { DshRuntimeOrderRow } from '../operations/dsh-operational-runtime-adapter';
 import { getSurfaceModeCapability } from '../identity-access';
-import type { DshOrderLifecycleHandoff } from '../orders/dsh-order-lifecycle-handoffs';
+import type { DshOrder } from '../orders/orders.types';
+import type {
+  DshOrderLifecycleHandoff,
+} from '../orders/dsh-order-lifecycle-handoffs';
+import type {
+  PartnerOrderItem,
+  PartnerOrderStatus,
+} from '../orders/orders.contract';
 import type { DshPartnerOperationalScope, PartnerRuntimeProfile } from './partner.types';
 
 // ── Partner order item adapter ─────────────────────────────────────────────
-
-type PartnerOrderStatus =
-  | 'new'
-  | 'needs_accept'
-  | 'preparation_started'
-  | 'preparing'
-  | 'items_ready'
-  | 'ready'
-  | 'handoff'
-  | 'captain_assigned'
-  | 'captain_arriving'
-  | 'delivering'
-  | 'completed'
-  | 'cancelled';
 
 const statusMap: Record<string, PartnerOrderStatus> = {
   pending: 'needs_accept',
@@ -52,33 +45,135 @@ const nextActionMap: Record<PartnerOrderStatus, string> = {
   new: 'قبول الطلب',
   needs_accept: 'قبول الطلب',
   preparation_started: 'بدء التحضير',
-  preparing: 'جاري التحضير',
-  items_ready: 'جاهز',
-  ready: 'جاهز للاستلام',
-  handoff: 'تم التسليم للكابتن',
-  captain_assigned: 'الكابتن في الطريق',
-  captain_arriving: 'الكابتن يقترب',
-  delivering: 'قيد التوصيل',
-  completed: 'مكتمل',
-  cancelled: 'ملغي',
+  preparing: 'تأكيد جاهزية الطلب',
+  items_ready: 'تأكيد جاهزية الطلب',
+  ready: 'فتح مسار التسليم',
+  handoff: 'متابعة التسليم',
+  captain_assigned: 'متابعة وصول الكابتن',
+  captain_arriving: 'تأكيد التسليم للكابتن',
+  delivering: 'متابعة التوصيل',
+  completed: 'عرض التفاصيل',
+  cancelled: 'عرض سبب الإلغاء',
 };
 
-export function mapRuntimeRowToPartnerOrderItem(row: DshRuntimeOrderRow) {
-  const partnerStatus = statusMap[row.status] ?? statusMap[row.status.toLowerCase()] ?? 'needs_accept';
+type CanonicalOrderShape = {
+  readonly id?: string;
+  readonly storeId?: string;
+  readonly fulfillmentMode?: 'bthwani_delivery' | 'partner_delivery' | 'pickup';
+  readonly status?: string;
+  readonly wltPaymentRefId?: string;
+  readonly rejectionReason?: string;
+  readonly createdAt?: string;
+  readonly updatedAt?: string;
+  readonly items?: readonly {
+    readonly productName?: string;
+    readonly quantity?: number;
+    readonly unitPrice?: number;
+  }[];
+};
+
+function resolvePartnerStatus(status: unknown): PartnerOrderStatus {
+  const value = String(status ?? '').trim();
+  return statusMap[value] ?? statusMap[value.toLowerCase()] ?? 'needs_accept';
+}
+
+function resolveOrderTypeLabel(
+  mode: CanonicalOrderShape['fulfillmentMode'],
+): PartnerOrderItem['orderTypeLabel'] {
+  if (mode === 'pickup') return 'استلم بنفسك';
+  if (mode === 'partner_delivery') return 'توصيل المتجر';
+  return 'توصيل بثواني';
+}
+
+function resolveOrderMode(
+  orderId: string,
+  mode: CanonicalOrderShape['fulfillmentMode'],
+): PartnerOrderItem['orderMode'] {
+  if (mode === 'pickup' || mode === 'partner_delivery' || mode === 'bthwani_delivery') {
+    return mode;
+  }
+  throw new Error(`missing fulfillmentMode for partner order ${orderId}`);
+}
+
+function formatElapsed(createdAt: Date): { label: string; minutes: number } {
+  const minutes = Math.max(0, Math.floor((Date.now() - createdAt.getTime()) / 60000));
+  return {
+    minutes,
+    label: minutes < 60 ? `${minutes} د` : `${Math.floor(minutes / 60)} س`,
+  };
+}
+
+/**
+ * Canonical partner adapter. It consumes the actor-scoped `/dsh/partner/orders`
+ * contract directly and deliberately rejects missing fulfillment mode instead
+ * of silently inventing one.
+ */
+export function mapDshOrderToPartnerOrderItem(order: DshOrder): PartnerOrderItem {
+  const raw = order as unknown as CanonicalOrderShape;
+  const orderId = String(raw.id ?? '');
+  if (!orderId) throw new Error('partner order response is missing id');
+
+  const status = resolvePartnerStatus(raw.status);
+  const orderMode = resolveOrderMode(orderId, raw.fulfillmentMode);
+  const createdAt = new Date(raw.createdAt ?? raw.updatedAt ?? 0);
+  if (Number.isNaN(createdAt.getTime())) {
+    throw new Error(`partner order ${orderId} has an invalid createdAt`);
+  }
+
+  const items = raw.items ?? [];
+  const itemCount = items.reduce((sum, item) => sum + Math.max(0, Number(item.quantity ?? 0)), 0);
+  const total = items.reduce(
+    (sum, item) => sum + Math.max(0, Number(item.quantity ?? 0)) * Math.max(0, Number(item.unitPrice ?? 0)),
+    0,
+  );
+  const itemNames = items
+    .map((item) => String(item.productName ?? '').trim())
+    .filter(Boolean)
+    .slice(0, 3);
+  const elapsed = formatElapsed(createdAt);
+  const acceptanceRisk = status === 'needs_accept' && elapsed.minutes >= 10;
+
+  return {
+    id: orderId,
+    orderCode: `#${orderId.slice(-6).toUpperCase()}`,
+    branchLabel: String(raw.storeId ?? 'الفرع المرتبط بالحساب'),
+    status,
+    priority: acceptanceRisk ? 'high' : 'normal',
+    orderTypeLabel: resolveOrderTypeLabel(orderMode),
+    orderMode,
+    itemsCountLabel: itemCount > 0 ? `${itemCount} عنصر` : 'العناصر عند فتح التفاصيل',
+    amountLabel: total > 0 ? `${total.toLocaleString('ar-YE')} ر.ي` : '—',
+    createdAtLabel: createdAt.toLocaleTimeString('ar-YE', { hour: '2-digit', minute: '2-digit' }),
+    elapsedLabel: elapsed.label,
+    nextActionLabel: nextActionMap[status],
+    ...(acceptanceRisk ? { urgent: true, slaRisk: true, slaLabel: 'تجاوز مهلة القبول' } : {}),
+    ...(status === 'needs_accept' ? { unread: true } : {}),
+    ...(itemNames.length > 0 ? { itemsSummaryLabel: itemNames.join('، ') } : {}),
+    ...(raw.wltPaymentRefId ? { paymentLabel: 'مرجع مالي مرتبط' } : {}),
+    ...(status === 'cancelled' && raw.rejectionReason ? { issueRequired: true } : {}),
+  };
+}
+
+/**
+ * @deprecated Compatibility adapter for the legacy broad operations read-model.
+ * New partner surfaces must use mapDshOrderToPartnerOrderItem.
+ */
+export function mapRuntimeRowToPartnerOrderItem(row: DshRuntimeOrderRow): PartnerOrderItem {
+  const partnerStatus = resolvePartnerStatus(row.status);
   const created = new Date(row.createdAt);
-  const elapsed = Math.max(0, Math.floor((Date.now() - created.getTime()) / 60000));
+  const elapsed = formatElapsed(created);
   return {
     id: row.id,
     orderCode: `#${row.id.slice(-6).toUpperCase()}`,
     branchLabel: row.storeId,
     status: partnerStatus,
-    priority: 'normal' as const,
+    priority: 'normal',
     orderTypeLabel: 'توصيل بثواني',
-    orderMode: 'bthwani_delivery' as const,
+    orderMode: 'bthwani_delivery',
     itemsCountLabel: '—',
-    amountLabel: `${row.totalPrice.toFixed(2)} ر.س`,
-    createdAtLabel: created.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }),
-    elapsedLabel: elapsed < 60 ? `${elapsed} د` : `${Math.floor(elapsed / 60)} س`,
+    amountLabel: `${row.totalPrice.toFixed(2)} ر.ي`,
+    createdAtLabel: created.toLocaleTimeString('ar-YE', { hour: '2-digit', minute: '2-digit' }),
+    elapsedLabel: elapsed.label,
     nextActionLabel: nextActionMap[partnerStatus],
   };
 }
