@@ -104,17 +104,28 @@ jobs:
             services/wlt/backend/internal/payment/order_cancellation.go \
             services/wlt/backend/internal/refund/refund_atomic.go
 
-      - name: Generate and validate governed contracts
+      - name: Generate DSH client
+        shell: bash
+        run: pnpm run openapi:generate:dsh
+
+      - name: Validate DSH cancellation and pickup contract
         shell: bash
         run: |
           set -euo pipefail
-          pnpm run openapi:generate:dsh
-          pnpm run openapi:generate:wlt
+          grep -F 'cancellationReason' services/dsh/contracts/dsh.openapi.yaml
+          grep -F 'cancelled' services/dsh/clients/generated/dsh-api.ts
+
+      - name: Generate WLT client
+        shell: bash
+        run: pnpm run openapi:generate:wlt
+
+      - name: Validate governed WLT cancellation contract
+        shell: bash
+        run: |
+          set -euo pipefail
           grep -F '/wlt/order-cancellations:' services/wlt/contracts/wlt.openapi.yaml
           grep -F 'WltGovernedOrderCancellationResponse' services/wlt/contracts/wlt.openapi.yaml
           grep -F 'WltGovernedOrderCancellationResponse' services/wlt/clients/generated/wlt-api.ts
-          grep -F 'cancellationReason' services/dsh/contracts/dsh.openapi.yaml
-          grep -F 'cancelled' services/dsh/clients/generated/dsh-api.ts
 
       - name: Compile targeted source boundaries
         shell: bash
