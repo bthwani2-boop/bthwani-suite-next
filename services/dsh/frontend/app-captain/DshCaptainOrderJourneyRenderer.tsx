@@ -17,21 +17,12 @@ export function DshCaptainOrderJourneyRenderer(
     return <DshCaptainRouteRenderer {...props} />;
   }
 
-  if (!props.activeAssignmentId || !props.activeOrderId || !props.activeSummary) {
-    return (
-      <DshCaptainRouteRenderer
-        {...props}
-        route="map"
-      />
-    );
-  }
-
   return (
     <OperationalCaptainExecutionScreen
       assignmentId={props.activeAssignmentId}
       orderId={props.activeOrderId}
       captainId={props.captainRuntimeId}
-      currentStageLabel={props.activeSummary.currentStageLabel}
+      currentStageLabel={props.activeSummary?.currentStageLabel ?? 'لا توجد مهمة نشطة'}
       podRequired={props.captainPodRequired}
       onBack={props.onBack}
       onConfirmPickup={props.onConfirmPickup}
