@@ -47,6 +47,29 @@ if "end = text.index('\\n  /', start + len(old_route_start))" in patch:
 if "components_boundary = text.find('\\ncomponents:'" not in patch:
     raise RuntimeError("deterministic OpenAPI return boundary was not installed")
 
+# Install the return custody fields directly in the real Go struct. The legacy
+# patch matched only the field name and could leave the old type suffix behind.
+domain_path = ROOT / "services/dsh/backend/internal/dispatch/delivery_exceptions.go"
+domain = domain_path.read_text(encoding="utf-8")
+if "ReturnArrivedAt" not in domain:
+    domain_lines = domain.splitlines()
+    started_index = next(
+        (index for index, line in enumerate(domain_lines) if line.strip().startswith("ReturnStartedAt")),
+        None,
+    )
+    if started_index is None or started_index + 1 >= len(domain_lines):
+        raise RuntimeError("return custody struct anchor not found")
+    if not domain_lines[started_index + 1].strip().startswith("ReturnedAt"):
+        raise RuntimeError("ReturnedAt is not adjacent to ReturnStartedAt")
+    domain_lines[started_index : started_index + 2] = [
+        "\tReturnStartedAt         *time.Time",
+        "\tReturnArrivedAt         *time.Time",
+        "\tReturnedAt              *time.Time",
+        "\tReturnAcceptedByActorID *string",
+    ]
+    domain = "\n".join(domain_lines) + "\n"
+    domain_path.write_text(domain, encoding="utf-8")
+
 # The old test patch matched formatting rather than behavior. Replace the test
 # directly using semantic start/end boundaries, then disable only that obsolete
 # patch function in the main script.
@@ -101,4 +124,4 @@ function_start = patch.index("def patch_db_test() -> None:")
 function_end = patch.index("\ndef main() -> None:", function_start)
 patch = patch[:function_start] + "def patch_db_test() -> None:\n    return\n" + patch[function_end:]
 patch_path.write_text(patch, encoding="utf-8")
-print("Aligned slice7 patch with current routes, deterministic OpenAPI boundary, ownership, and return test behavior.")
+print("Aligned slice7 patch with current routes, deterministic OpenAPI and struct boundaries, ownership, and return test behavior.")
