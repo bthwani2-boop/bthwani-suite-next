@@ -13,7 +13,7 @@ import {
   spacing,
 } from "@bthwani/ui-kit";
 import type { IconName } from "@bthwani/ui-kit";
-import { DshCaptainRouteRenderer } from "./DshCaptainRouteRenderer";
+import { DshCaptainOrderJourneyRenderer } from "./DshCaptainOrderJourneyRenderer";
 import { useDshCaptainSurfaceModel } from "./useDshCaptainSurfaceModel";
 import type { DshCaptainRoute } from "./dsh-captain.types";
 import { useCameraPhotoCapture } from "../shared/media/useCameraPhotoCapture";
@@ -185,8 +185,9 @@ function AuthenticatedCaptainSurface({ captainId }: { readonly captainId: string
       ) : null}
 
       <View style={styles.content}>
-        <DshCaptainRouteRenderer
+        <DshCaptainOrderJourneyRenderer
           route={path.route}
+          setRoute={path.setRoute}
           activeAssignmentId={derived.activeAssignmentId}
           activeOrderId={path.activeOrderId}
           activeOrderDisplayId={derived.activeOrderDisplayId}
