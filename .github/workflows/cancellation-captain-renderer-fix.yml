@@ -1,0 +1,36 @@
+name: Cancellation Captain Renderer Fix
+run-name: Cancellation Captain Renderer Fix · ${{ github.sha }}
+
+on:
+  push:
+    branches: ["journey/cancellation-refund-reconciliation-closure"]
+    paths:
+      - ".github/cancellation-captain-renderer-trigger"
+      - ".github/workflows/cancellation-captain-renderer-fix.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: true
+          fetch-depth: 0
+      - name: Repair captain route renderer types
+        shell: bash
+        run: python tools/scripts/fix-captain-route-renderer-types.py
+      - name: Commit renderer repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add services/dsh/frontend/app-captain/DshCaptainRouteRenderer.tsx
+          git commit -m "fix(cancellation-journey): align captain renderer types"
+          git reset --hard HEAD
+          git pull --rebase origin journey/cancellation-refund-reconciliation-closure
+          git push origin HEAD:journey/cancellation-refund-reconciliation-closure
