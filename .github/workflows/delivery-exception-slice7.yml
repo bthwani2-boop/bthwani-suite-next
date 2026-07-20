@@ -1,5 +1,6 @@
 name: Delivery Exception Final Closure
 run-name: Delivery Exception Final Closure · ${{ github.sha }}
+# final-trigger=2
 
 on:
   push:
