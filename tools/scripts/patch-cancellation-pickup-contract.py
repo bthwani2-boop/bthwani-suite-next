@@ -18,6 +18,10 @@ def main() -> None:
     if outbox_patch.exists():
         runpy.run_path(str(outbox_patch), run_name="__main__")
 
+    outbox_contract_patch = Path("tools/scripts/patch-cancellation-outbox-contract-test.py")
+    if outbox_contract_patch.exists():
+        runpy.run_path(str(outbox_contract_patch), run_name="__main__")
+
     pricing_patch = Path("tools/scripts/patch-cancellation-pricing-db-fixtures.py")
     if pricing_patch.exists():
         runpy.run_path(str(pricing_patch), run_name="__main__")
@@ -98,7 +102,7 @@ def main() -> None:
 
     CONTRACT.write_text(text, encoding="utf-8")
     Path("tools/scripts/patch-cancellation-pickup-contract.py").unlink(missing_ok=True)
-    print("Cancellation journey contract, tenancy, pricing, assignment actor, WLT, pickup resume, and operations UI patched.")
+    print("Cancellation journey contract, tenancy, pricing, assignment actor, canonical outbox, WLT, pickup resume, and operations UI patched.")
 
 
 if __name__ == "__main__":
