@@ -50,6 +50,7 @@ func main() {
 
 	mutationsEnabled := os.Getenv("WLT_MUTATIONS_ENABLED") == "true"
 	router := wltHttp.NewRouter(db, mutationsEnabled)
+	wltHttp.RegisterDeliveryCollectionRoutes(router, db, mutationsEnabled)
 	handler := wltHttp.CorsMiddleware(authMode, router)
 
 	var cancelOutbox context.CancelFunc = func() {}
