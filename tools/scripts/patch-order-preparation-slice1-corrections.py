@@ -1,3 +1,4 @@
+# Temporary slice-one synchronizer; removed after focused verification.
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
