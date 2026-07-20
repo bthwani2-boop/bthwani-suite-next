@@ -4,10 +4,13 @@ import {
   notifyPickupCustomer,
   markPickupCustomerArrived,
   verifyPickupSession,
+  markPickupNoShow,
+  fetchPartnerPickupState,
   fetchOperatorPickups,
   fetchOperatorPickup,
   extendPickupWindow,
   classifyPickupError,
+  type PartnerPickupStage,
 } from "./pickup.api";
 import type { ClassifiedPickupError, DshPickupSession } from "./pickup.types";
 
@@ -26,100 +29,117 @@ function classifiedMessage(
   return { message: classified.message ?? fallback, classified };
 }
 
-export type PickupActionStage = "not_ready" | "ready" | "notified" | "arrived" | "verified";
+export type PickupActionStage = PartnerPickupStage;
 
 export type PickupActionState = {
   readonly session: DshPickupSession | null;
   readonly stage: PickupActionStage;
+  readonly loaded: boolean;
   readonly busy: boolean;
   readonly message: string | null;
   readonly isError: boolean;
   readonly errorCode?: string | undefined;
 };
 
-/** Partner-owned pickup handoff controller. */
-export function usePickupActionsController() {
+/** Partner-owned pickup handoff controller backed by the resumable stage read. */
+export function usePickupActionsController(orderId: string) {
   const [state, setState] = useState<PickupActionState>({
     session: null,
     stage: "not_ready",
+    loaded: false,
     busy: false,
     message: null,
     isError: false,
   });
 
-  const refresh = useCallback((orderId: string) => {
-    return fetchOperatorPickup(orderId)
-      .then((resp) => setState((current) => ({ ...current, session: resp.session })))
-      .catch(() => undefined);
-  }, []);
+  const load = useCallback(async () => {
+    if (!orderId) return;
+    try {
+      const response = await fetchPartnerPickupState(orderId);
+      setState((current) => ({
+        ...current,
+        session: response.session,
+        stage: response.stage,
+        loaded: true,
+        busy: false,
+        isError: false,
+      }));
+    } catch (error) {
+      const { message, classified } = classifiedMessage(error, "تعذر تحميل جلسة الاستلام الذاتي.");
+      setState((current) => ({
+        ...current,
+        loaded: true,
+        busy: false,
+        isError: true,
+        message,
+        errorCode: classified.code,
+      }));
+    }
+  }, [orderId]);
 
-  const runAction = useCallback(
-    (
-      nextStage: PickupActionStage | null,
-      successMessage: string,
-      action: () => Promise<{ session?: DshPickupSession }>,
-    ) => {
-      setState((current) => ({ ...current, busy: true, message: null, isError: false }));
-      return action()
-        .then((resp) => {
-          setState((current) => ({
-            ...current,
-            busy: false,
-            message: successMessage,
-            isError: false,
-            stage: nextStage ?? current.stage,
-            session: resp.session ?? current.session,
-          }));
-        })
-        .catch((error: unknown) => {
-          const { message, classified } = classifiedMessage(error, "تعذر تنفيذ الإجراء.");
-          setState((current) => ({
-            ...current,
-            busy: false,
-            isError: true,
-            message,
-            errorCode: classified.code,
-          }));
-        });
-    },
-    [],
-  );
+  useEffect(() => {
+    void load();
+  }, [load]);
 
-  const markReady = useCallback(
-    (orderId: string, expectedVersion: number) =>
-      runAction("ready", "تم تعليم الطلب كجاهز للاستلام.", async () => {
-        await markPickupReady(orderId, expectedVersion);
-        return fetchOperatorPickup(orderId);
-      }),
-    [runAction],
-  );
+  const runAction = useCallback(async (
+    successMessage: string,
+    action: () => Promise<unknown>,
+  ) => {
+    setState((current) => ({ ...current, busy: true, message: null, isError: false }));
+    try {
+      await action();
+      const response = await fetchPartnerPickupState(orderId);
+      setState({
+        session: response.session,
+        stage: response.stage,
+        loaded: true,
+        busy: false,
+        message: successMessage,
+        isError: false,
+      });
+      return true;
+    } catch (error) {
+      const { message, classified } = classifiedMessage(error, "تعذر تنفيذ الإجراء.");
+      setState((current) => ({
+        ...current,
+        busy: false,
+        isError: true,
+        message,
+        errorCode: classified.code,
+      }));
+      return false;
+    }
+  }, [orderId]);
 
-  const notify = useCallback(
-    (orderId: string, expectedVersion: number) =>
-      runAction("notified", "تم إشعار العميل وإصدار رمز استلام جديد.", () =>
-        notifyPickupCustomer(orderId, { expectedVersion }),
-      ),
-    [runAction],
-  );
+  const markReady = useCallback(() =>
+    runAction("تم تعليم الطلب كجاهز للاستلام.", () =>
+      markPickupReady(orderId, state.session?.version ?? 0)),
+  [orderId, runAction, state.session?.version]);
 
-  const customerArrived = useCallback(
-    (orderId: string, expectedVersion: number) =>
-      runAction("arrived", "تم تسجيل وصول العميل.", async () => {
-        await markPickupCustomerArrived(orderId, expectedVersion);
-        return fetchOperatorPickup(orderId);
-      }),
-    [runAction],
-  );
+  const notify = useCallback(() =>
+    runAction("تم إشعار العميل وإصدار رمز استلام جديد.", () =>
+      notifyPickupCustomer(orderId, { expectedVersion: state.session?.version ?? 0 })),
+  [orderId, runAction, state.session?.version]);
 
-  const verify = useCallback(
-    (orderId: string, expectedVersion: number, code: string) =>
-      runAction("verified", "تم التحقق من رمز الاستلام وإتمام تسليم الطلب.", () =>
-        verifyPickupSession(orderId, { expectedVersion, code }),
-      ),
-    [runAction],
-  );
+  const customerArrived = useCallback(() =>
+    runAction("تم تسجيل وصول العميل.", () =>
+      markPickupCustomerArrived(orderId, state.session?.version ?? 0)),
+  [orderId, runAction, state.session?.version]);
 
-  return { state, markReady, notify, customerArrived, verify, refresh };
+  const verify = useCallback((code: string) =>
+    runAction("تم التحقق من رمز الاستلام وإتمام الطلب.", () =>
+      verifyPickupSession(orderId, { expectedVersion: state.session?.version ?? 0, code })),
+  [orderId, runAction, state.session?.version]);
+
+  const noShow = useCallback((reason: string) =>
+    runAction("تم تسجيل عدم حضور العميل وإغلاق جلسة الرمز.", () =>
+      markPickupNoShow(orderId, {
+        expectedVersion: state.session?.version ?? 0,
+        reason: reason.trim(),
+      })),
+  [orderId, runAction, state.session?.version]);
+
+  return { state, markReady, notify, customerArrived, verify, noShow, refresh: load } as const;
 }
 
 export type UseOperatorPickupsControllerParams = {
@@ -137,11 +157,7 @@ type OperatorPickupMutationResult =
       readonly message: string;
     };
 
-/**
- * Operator-owned pickup controller. The operator API exposes read/list and
- * extend-window only. Ready/notify/arrival/verify remain partner actions and
- * are intentionally absent here.
- */
+/** Operator-owned pickup monitoring controller. */
 export function useOperatorPickupsController(
   params: UseOperatorPickupsControllerParams = {},
 ) {
@@ -161,24 +177,13 @@ export function useOperatorPickupsController(
 
   const loadList = useCallback(() => {
     setListState((current) => ({ ...current, loaded: false, error: null }));
-    return fetchOperatorPickups({
-      ...(storeId !== undefined ? { storeId } : {}),
-      limit,
-    })
-      .then((resp) =>
-        setListState({ loaded: true, error: null, offline: false, data: resp.sessions }),
+    return fetchOperatorPickups({ ...(storeId !== undefined ? { storeId } : {}), limit })
+      .then((response) =>
+        setListState({ loaded: true, error: null, offline: false, data: response.sessions }),
       )
       .catch((error: unknown) => {
-        const { message, classified } = classifiedMessage(
-          error,
-          "تعذر تحميل جلسات الاستلام الذاتي",
-        );
-        setListState({
-          loaded: false,
-          error: message,
-          offline: classified.kind === "network",
-          data: [],
-        });
+        const { message, classified } = classifiedMessage(error, "تعذر تحميل جلسات الاستلام الذاتي");
+        setListState({ loaded: false, error: message, offline: classified.kind === "network", data: [] });
       });
   }, [storeId, limit]);
 
@@ -186,43 +191,32 @@ export function useOperatorPickupsController(
     if (autoLoad) void loadList();
   }, [autoLoad, loadList]);
 
-  const loadDetail = useCallback((orderId: string) => {
+  const loadDetail = useCallback((orderIdValue: string) => {
     setDetailState({ loaded: false, error: null, offline: false, data: null });
-    return fetchOperatorPickup(orderId)
-      .then((resp) =>
-        setDetailState({ loaded: true, error: null, offline: false, data: resp.session }),
+    return fetchOperatorPickup(orderIdValue)
+      .then((response) =>
+        setDetailState({ loaded: true, error: null, offline: false, data: response.session }),
       )
       .catch((error: unknown) => {
-        const { message, classified } = classifiedMessage(
-          error,
-          "تعذر تحميل تفاصيل جلسة الاستلام",
-        );
-        setDetailState({
-          loaded: false,
-          error: message,
-          offline: classified.kind === "network",
-          data: null,
-        });
+        const { message, classified } = classifiedMessage(error, "تعذر تحميل تفاصيل جلسة الاستلام");
+        setDetailState({ loaded: false, error: message, offline: classified.kind === "network", data: null });
       });
   }, []);
 
   const extendWindow = useCallback(
     (
-      orderId: string,
+      orderIdValue: string,
       expectedVersion: number,
       reason: string,
       newExpiry: string,
     ): Promise<OperatorPickupMutationResult> => {
-      return extendPickupWindow(orderId, { expectedVersion, reason, newExpiry })
-        .then((resp) => {
-          setDetailState({ loaded: true, error: null, offline: false, data: resp.session });
-          return { ok: true as const, session: resp.session };
+      return extendPickupWindow(orderIdValue, { expectedVersion, reason, newExpiry })
+        .then((response) => {
+          setDetailState({ loaded: true, error: null, offline: false, data: response.session });
+          return { ok: true as const, session: response.session };
         })
         .catch((error: unknown) => {
-          const { message, classified } = classifiedMessage(
-            error,
-            "تعذر تمديد نافذة الاستلام.",
-          );
+          const { message, classified } = classifiedMessage(error, "تعذر تمديد نافذة الاستلام.");
           return {
             ok: false as const,
             kind: classified.kind,
