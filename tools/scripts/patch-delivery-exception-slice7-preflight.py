@@ -66,7 +66,7 @@ if "CaptainArriveReturnToStore(db, assignmentID, captainID)" not in test:
 \tif returned.ReturnedAt == nil || returned.ReturnAcceptedByActorID == nil {
 \t\tt.Fatalf("partner receipt was not recorded: %+v", returned)
 \t}
-\tif err := db.QueryRow(`SELECT o.status,d.status,a.status FROM dsh_orders o JOIN dsh_assignments a ON a.order_id=o.id JOIN dsh_deliveries d ON d.assignment_id=a.id WHERE a.id=$1::uuid`, orderID).Scan(&orderStatus, &deliveryStatus, &assignmentStatus); err != nil {
+\tif err := db.QueryRow(`SELECT o.status,d.status,a.status FROM dsh_orders o JOIN dsh_assignments a ON a.order_id=o.id JOIN dsh_deliveries d ON d.assignment_id=a.id WHERE a.id=$1::uuid`, assignmentID).Scan(&orderStatus, &deliveryStatus, &assignmentStatus); err != nil {
 \t\tt.Fatal(err)
 \t}
 \tif orderStatus != "returned_to_store" || deliveryStatus != "returned_to_store" || assignmentStatus != "completed" {
