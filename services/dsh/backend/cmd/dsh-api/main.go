@@ -59,6 +59,7 @@ func main() {
 	wltClient := wlt.NewClient(wltBaseURL, wltServiceToken)
 	router := dshHttp.NewRouter(db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterPartnerSelfRoutes(router, db, identityClient, wltClient, mediaProvider)
+	dshHttp.RegisterActorNotificationRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterPlatformPolicyRoutes(router, db, identityClient, wltClient, mediaProvider)
 	handler := dshHttp.CorsMiddleware(authMode, router)
 
