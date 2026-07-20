@@ -51,6 +51,17 @@ export function useCaptainDeliveryController() {
     }
   }, []);
 
+  const handleActionError = useCallback(async (
+    error: unknown,
+    action: "accept" | "decline" | "status" | "pod",
+  ) => {
+    const classified = classifyDispatchError(error);
+    setActionState(resolveDispatchActionError(classified, action));
+    if (classified.kind === "conflict" || classified.kind === "not_found") {
+      await load();
+    }
+  }, [load]);
+
   const accept = useCallback(async (assignmentId: string) => {
     setActionState(dispatchActionSubmittingState());
     try {
@@ -58,9 +69,9 @@ export function useCaptainDeliveryController() {
       setActionState(dispatchActionSuccessState(assignment));
       await load();
     } catch (error) {
-      setActionState(resolveDispatchActionError(classifyDispatchError(error), "accept"));
+      await handleActionError(error, "accept");
     }
-  }, [load]);
+  }, [handleActionError, load]);
 
   const decline = useCallback(async (assignmentId: string, reason: string) => {
     setActionState(dispatchActionSubmittingState());
@@ -69,9 +80,9 @@ export function useCaptainDeliveryController() {
       setActionState(dispatchActionSuccessState(assignment));
       await load();
     } catch (error) {
-      setActionState(resolveDispatchActionError(classifyDispatchError(error), "decline"));
+      await handleActionError(error, "decline");
     }
-  }, [load]);
+  }, [handleActionError, load]);
 
   const advance = useCallback(async (assignmentId: string, currentStatus: Parameters<typeof nextDeliveryStatus>[0]) => {
     const next = nextDeliveryStatus(currentStatus);
@@ -85,9 +96,9 @@ export function useCaptainDeliveryController() {
       setActionState(dispatchActionSuccessState(assignment));
       await load();
     } catch (error) {
-      setActionState(resolveDispatchActionError(classifyDispatchError(error), "status"));
+      await handleActionError(error, "status");
     }
-  }, [load]);
+  }, [handleActionError, load]);
 
   const submitProof = useCallback(async (assignmentId: string, input: DshSubmitPoDInput) => {
     const validation = resolvePoDValidation(input);
@@ -101,11 +112,11 @@ export function useCaptainDeliveryController() {
       setActionState(dispatchActionSuccessState(assignment));
       await load();
     } catch (error) {
-      setActionState(resolveDispatchActionError(classifyDispatchError(error), "pod"));
+      await handleActionError(error, "pod");
     }
-  }, [load]);
+  }, [handleActionError, load]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { void load(); }, [load]);
 
   return { state, actionState, reload: load, accept, decline, advance, submitProof };
 }
@@ -135,7 +146,7 @@ export function useOperatorDispatchController() {
     }
   }, [load]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { void load(); }, [load]);
 
   return { state, actionState, reload: load, assign };
 }
@@ -157,7 +168,7 @@ export function useClientTrackingController(orderId: string) {
     }
   }, [orderId]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { void load(); }, [load]);
 
   return { state, reload: load };
 }
