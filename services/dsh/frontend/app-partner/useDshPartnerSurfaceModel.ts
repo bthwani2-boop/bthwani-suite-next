@@ -11,7 +11,7 @@ import type {
   PartnerHubSection,
   DshPartnerOperationalScope,
 } from '../shared/partner/partner.types';
-import type { PartnerOrderItem } from '../shared/orders';
+import type { GovernedPartnerOrderItem } from '../shared/partner/partner.adapters';
 
 import { usePartnerProfileModel } from './account/usePartnerProfileModel';
 import { useStoreScopeModel } from '../shared/partner/store-scope.model';
@@ -58,8 +58,7 @@ export type DshPartnerSurfaceActions = {
   openWalletHub: () => void;
   openStoreScope: () => void;
   openSupportScreen: (screenId: DshPartnerSupportRouteId, source?: DshPartnerSupportCommandContext['source']) => void;
-  handleMarkReady: (orderId: string) => void;
-  refreshOrders: () => void;
+  refreshOrders: () => void | Promise<void>;
   onInviteMember: (identity: string) => Promise<PartnerTeamMutationResult>;
   onMemberAction: (memberId: string, action: string) => Promise<PartnerTeamMutationResult>;
   handleHardwareBackPress: () => boolean;
@@ -81,7 +80,7 @@ export type DshPartnerSurfaceModel = {
     activeZoneLabel: string;
   };
   partnerOrdersState: 'ready' | 'loading' | 'empty' | 'error' | 'offline' | 'disabled' | 'partial';
-  partnerOrders: readonly PartnerOrderItem[];
+  partnerOrders: readonly GovernedPartnerOrderItem[];
   deliveryOpsSummary: PartnerDeliveryOpsSummary;
   isCommandCenterInline: boolean;
   teamMembers: readonly PartnerTeamMember[];
@@ -171,7 +170,6 @@ export function useDshPartnerSurfaceModel(
     openWalletHub: profile.openWalletHub,
     openStoreScope: storeScope.openStoreScope,
     openSupportScreen: support.openSupportScreen,
-    handleMarkReady: orders.handleMarkReady,
     refreshOrders: orders.refresh,
     onInviteMember: team.onInviteMember,
     onMemberAction: team.onMemberAction,
