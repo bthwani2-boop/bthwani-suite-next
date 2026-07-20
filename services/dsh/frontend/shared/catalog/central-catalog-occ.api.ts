@@ -25,10 +25,7 @@ type ProposalMutationInput = components["schemas"]["UpdateProposalRequest"];
 type AssetMutationInput = components["schemas"]["UpdateAssetRequest"];
 type AssetReviewInput = components["schemas"]["ReviewAssetRequest"];
 
-export async function updateCatalogDomainOCC(
-  domainId: string,
-  input: DomainMutationInput,
-): Promise<CentralCatalogDomain> {
+export async function updateCatalogDomainOCC(domainId: string, input: DomainMutationInput): Promise<CentralCatalogDomain> {
   const response = await request<{ domain: CentralCatalogDomain }>(
     `/dsh/operator/catalog/domains/${encodeURIComponent(domainId)}`,
     { method: "PATCH", body: input },
@@ -36,10 +33,7 @@ export async function updateCatalogDomainOCC(
   return response.domain;
 }
 
-export async function updateCatalogNodeOCC(
-  nodeId: string,
-  input: NodeMutationInput,
-): Promise<CentralCatalogNode> {
+export async function updateCatalogNodeOCC(nodeId: string, input: NodeMutationInput): Promise<CentralCatalogNode> {
   const response = await request<{ node: CentralCatalogNode }>(
     `/dsh/operator/catalog/nodes/${encodeURIComponent(nodeId)}`,
     { method: "PATCH", body: input },
@@ -47,10 +41,7 @@ export async function updateCatalogNodeOCC(
   return response.node;
 }
 
-export async function updateMasterProductOCC(
-  productId: string,
-  input: ProductMutationInput,
-): Promise<MasterProduct> {
+export async function updateMasterProductOCC(productId: string, input: ProductMutationInput): Promise<MasterProduct> {
   const response = await request<{ masterProduct: MasterProduct }>(
     `/dsh/operator/catalog/master-products/${encodeURIComponent(productId)}`,
     { method: "PATCH", body: input },
@@ -58,10 +49,7 @@ export async function updateMasterProductOCC(
   return response.masterProduct;
 }
 
-export async function decideProductProposalOCC(
-  proposalId: string,
-  input: ProposalDecisionInput,
-): Promise<ProductProposal> {
+export async function decideProductProposalOCC(proposalId: string, input: ProposalDecisionInput): Promise<ProductProposal> {
   const response = await request<{ proposal: ProductProposal }>(
     `/dsh/operator/catalog/product-proposals/${encodeURIComponent(proposalId)}/decision`,
     { method: "POST", body: input },
@@ -69,9 +57,17 @@ export async function decideProductProposalOCC(
   return response.proposal;
 }
 
+export type ProductProposalTransitionOCCInput = Omit<
+  ProposalTransitionInput,
+  "adoptedMasterProductId" | "createMasterProduct"
+> & {
+  readonly adoptedMasterProductId?: string | null | undefined;
+  readonly createMasterProduct?: boolean | undefined;
+};
+
 export async function transitionProductProposalOCC(
   proposalId: string,
-  input: ProposalTransitionInput,
+  input: ProductProposalTransitionOCCInput,
 ): Promise<ProductProposal> {
   const response = await request<{ proposal: ProductProposal }>(
     `/dsh/operator/catalog/product-proposals/${encodeURIComponent(proposalId)}/transition`,
@@ -80,10 +76,7 @@ export async function transitionProductProposalOCC(
   return response.proposal;
 }
 
-export async function updateCatalogPlatformPolicyOCC(
-  policyId: string,
-  input: PolicyMutationInput,
-): Promise<CatalogPlatformPolicy> {
+export async function updateCatalogPlatformPolicyOCC(policyId: string, input: PolicyMutationInput): Promise<CatalogPlatformPolicy> {
   const response = await request<{ policy: CatalogPlatformPolicy }>(
     `/dsh/operator/catalog/platform-policies/${encodeURIComponent(policyId)}`,
     { method: "PATCH", body: input },
@@ -91,7 +84,9 @@ export async function updateCatalogPlatformPolicyOCC(
   return response.policy;
 }
 
-export type StoreAssortmentOCCInput = AssortmentMutationInput;
+export type StoreAssortmentOCCInput = Omit<AssortmentMutationInput, "expectedVersion"> & {
+  readonly expectedVersion?: number | undefined;
+};
 
 export async function upsertOperatorStoreAssortmentOCC(
   storeId: string,
