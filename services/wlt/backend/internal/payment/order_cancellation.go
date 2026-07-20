@@ -83,6 +83,29 @@ func CancelOrderFinancially(db *sql.DB, input GovernedOrderCancellationInput) (*
 	}
 }
 
+func writeGovernedCancellationResult(w http.ResponseWriter, result *CancelForOrderResult, err error) {
+	if errors.Is(err, refund.ErrRefundReferenceConflict) {
+		shared.SendError(w, http.StatusConflict, "REFUND_REFERENCE_CONFLICT", "cancellation references do not match payment session ownership")
+		return
+	}
+	if err != nil {
+		shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		return
+	}
+	if result == nil {
+		shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "payment session not found")
+		return
+	}
+	switch result.Action {
+	case "expired":
+		shared.SendJSON(w, http.StatusOK, map[string]any{"action": "expired", "paymentSession": result.PaymentSession})
+	case "refund_requested":
+		shared.SendJSON(w, http.StatusOK, map[string]any{"action": "refund_requested", "refund": result.Refund})
+	default:
+		shared.SendJSON(w, http.StatusOK, map[string]any{"action": "none", "sessionStatus": result.SessionStatus})
+	}
+}
+
 func HandleGovernedOrderCancellation(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var input GovernedOrderCancellationInput
@@ -92,25 +115,31 @@ func HandleGovernedOrderCancellation(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		result, err := CancelOrderFinancially(db, input)
-		if errors.Is(err, refund.ErrRefundReferenceConflict) {
-			shared.SendError(w, http.StatusConflict, "REFUND_REFERENCE_CONFLICT", "cancellation references do not match payment session ownership")
+		writeGovernedCancellationResult(w, result, err)
+	}
+}
+
+// HandleGovernedSessionCancellation preserves the established
+// /payment-sessions/{id}/cancel-for-order route while applying the same
+// ownership checks and atomic refund logic as /wlt/order-cancellations.
+func HandleGovernedSessionCancellation(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			OrderID  string `json:"orderId"`
+			ClientID string `json:"clientId"`
+			Reason   string `json:"reason"`
+		}
+		decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64*1024))
+		if err := decoder.Decode(&body); err != nil {
+			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
 			return
 		}
-		if err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-			return
-		}
-		if result == nil {
-			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "payment session not found")
-			return
-		}
-		switch result.Action {
-		case "expired":
-			shared.SendJSON(w, http.StatusOK, map[string]any{"action": "expired", "paymentSession": result.PaymentSession})
-		case "refund_requested":
-			shared.SendJSON(w, http.StatusOK, map[string]any{"action": "refund_requested", "refund": result.Refund})
-		default:
-			shared.SendJSON(w, http.StatusOK, map[string]any{"action": "none", "sessionStatus": result.SessionStatus})
-		}
+		result, err := CancelOrderFinancially(db, GovernedOrderCancellationInput{
+			PaymentSessionID: r.PathValue("paymentSessionId"),
+			OrderID:          body.OrderID,
+			ClientID:         body.ClientID,
+			Reason:           body.Reason,
+		})
+		writeGovernedCancellationResult(w, result, err)
 	}
 }
