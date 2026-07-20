@@ -1,43 +1,54 @@
-name: Delivery Exception Slice Seven
-run-name: Delivery Exception Slice Seven · ${{ github.sha }}
+name: Delivery Exception Final Closure
+run-name: Delivery Exception Final Closure · ${{ github.sha }}
 
 on:
   push:
     branches: ["journey/delivery-exception-redelivery-closure"]
     paths:
       - ".github/workflows/delivery-exception-slice7.yml"
-      - "tools/scripts/patch-delivery-exception-slice7.py"
-      - "tools/scripts/patch-delivery-exception-slice7-corrections.py"
   workflow_dispatch:
 
 permissions:
   contents: write
-  statuses: write
 
 concurrency:
   group: delivery-exception-slice7-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  implement-verify-clean:
+  close-verify-clean:
     if: ${{ !contains(github.event.head_commit.message || '', '[skip ci]') }}
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     services:
-      postgres:
+      dsh-postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_DB: dsh_return_receipt
-          POSTGRES_USER: dsh_return_receipt
-          POSTGRES_PASSWORD: dsh_return_receipt
+          POSTGRES_DB: dsh_delivery_exception_final
+          POSTGRES_USER: dsh_delivery_exception_final
+          POSTGRES_PASSWORD: dsh_delivery_exception_final
         ports: ["55432:5432"]
         options: >-
-          --health-cmd "pg_isready -U dsh_return_receipt -d dsh_return_receipt"
+          --health-cmd "pg_isready -U dsh_delivery_exception_final -d dsh_delivery_exception_final"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+      wlt-postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: wlt_delivery_exception_final
+          POSTGRES_USER: wlt_delivery_exception_final
+          POSTGRES_PASSWORD: wlt_delivery_exception_final
+        ports: ["55433:5432"]
+        options: >-
+          --health-cmd "pg_isready -U wlt_delivery_exception_final -d wlt_delivery_exception_final"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20
     env:
-      DSH_DATABASE_URL: postgres://dsh_return_receipt:dsh_return_receipt@localhost:55432/dsh_return_receipt?sslmode=disable
+      DSH_DATABASE_URL: postgres://dsh_delivery_exception_final:dsh_delivery_exception_final@localhost:55432/dsh_delivery_exception_final?sslmode=disable
+      WLT_DATABASE_URL: postgres://wlt_delivery_exception_final:wlt_delivery_exception_final@localhost:55433/wlt_delivery_exception_final?sslmode=disable
+
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
@@ -50,176 +61,195 @@ jobs:
         with:
           go-version-file: services/dsh/backend/go.mod
           cache: true
-          cache-dependency-path: services/dsh/backend/go.sum
+          cache-dependency-path: |
+            services/dsh/backend/go.sum
+            services/wlt/backend/go.sum
 
-      - name: Apply dual return receipt handshake
-        shell: bash
+      - name: Apply partner return-receipt handshake
         run: |
           set -euo pipefail
           python tools/scripts/patch-delivery-exception-slice7.py
           python tools/scripts/patch-delivery-exception-slice7-corrections.py
-          gofmt -w \
-            services/dsh/backend/internal/orders/orders.go \
-            services/dsh/backend/internal/dispatch/dispatch.go \
-            services/dsh/backend/internal/dispatch/delivery_exceptions.go \
-            services/dsh/backend/internal/dispatch/delivery_return_db_test.go \
-            services/dsh/backend/internal/http/dispatch.go \
-            services/dsh/backend/internal/http/partner_delivery.go \
-            services/dsh/backend/internal/http/server.go
+          gofmt -w services/dsh/backend/internal/orders/orders.go services/dsh/backend/internal/orders/runtime.go services/dsh/backend/internal/dispatch/dispatch.go services/dsh/backend/internal/dispatch/delivery_exceptions.go services/dsh/backend/internal/dispatch/delivery_exceptions_db_test.go services/dsh/backend/internal/dispatch/delivery_reassignment_db_test.go services/dsh/backend/internal/dispatch/delivery_return_db_test.go services/dsh/backend/internal/http/dispatch.go services/dsh/backend/internal/http/partner_delivery.go services/dsh/backend/internal/http/server.go
 
-      - name: Generate and prove DSH contract
-        shell: bash
+      - name: Generate governed clients and prove contracts
         run: |
           set -euo pipefail
           pnpm run openapi:generate:dsh
-          grep -F 'return_arrived_store' services/dsh/contracts/dsh.openapi.yaml
-          grep -F '/dsh/captain/dispatch/assignments/{assignmentId}/return-to-store/arrive:' services/dsh/contracts/dsh.openapi.yaml
-          grep -F '/dsh/partner/orders/{orderId}/return-to-store:' services/dsh/contracts/dsh.openapi.yaml
-          grep -F '/dsh/partner/orders/{orderId}/return-to-store/accept:' services/dsh/contracts/dsh.openapi.yaml
-          grep -F 'arriveDshCaptainReturnToStore' services/dsh/clients/generated/dsh-api.ts
-          grep -F 'acceptDshPartnerReturnToStore' services/dsh/clients/generated/dsh-api.ts
-          grep -F 'returnArrivedAt' services/dsh/clients/generated/dsh-api.ts
-          grep -F 'returnAcceptedByActorId' services/dsh/clients/generated/dsh-api.ts
-          ! grep -F '/return-to-store/complete' services/dsh/contracts/dsh.openapi.yaml
+          pnpm run openapi:generate:wlt
+          dsh=services/dsh/contracts/dsh.openapi.yaml
+          generated=services/dsh/clients/generated/dsh-api.ts
+          grep -F '/dsh/captain/dispatch/assignments/{assignmentId}/exceptions:' "$dsh"
+          grep -F '/dsh/operator/delivery-exceptions/{exceptionId}/acknowledge:' "$dsh"
+          grep -F '/dsh/operator/delivery-exceptions/{exceptionId}/resolve:' "$dsh"
+          grep -F '/dsh/captain/dispatch/assignments/{assignmentId}/return-to-store/arrive:' "$dsh"
+          grep -F '/dsh/partner/orders/{orderId}/return-to-store:' "$dsh"
+          grep -F '/dsh/partner/orders/{orderId}/return-to-store/accept:' "$dsh"
+          grep -F 'return_arrived_store' "$dsh"
+          grep -F 'arriveDshCaptainReturnToStore' "$generated"
+          grep -F 'acceptDshPartnerReturnToStore' "$generated"
+          grep -F 'returnAcceptedByActorId' "$generated"
+          grep -F '/wlt/order-cancellations:' services/wlt/contracts/wlt.openapi.yaml
+          ! grep -F '/return-to-store/complete' "$dsh"
 
       - name: Compile focused backend boundaries
-        shell: bash
-        run: |
-          set -euo pipefail
-          cd services/dsh/backend
-          go test ./internal/orders ./internal/dispatch ./internal/http ./cmd/dsh-api -run '^$' -count=1
-
-      - name: Typecheck every affected surface
-        id: surfaces_typecheck
+        id: backend
         continue-on-error: true
-        shell: bash
         run: |
           set -o pipefail
-          mkdir -p artifacts/delivery-exception-slice7-typecheck
+          mkdir -p artifacts/backend
+          {
+            (cd services/dsh/backend && go test ./internal/orders ./internal/dispatch ./internal/checkoutfinanceoutbox ./internal/wlt ./internal/http ./cmd/dsh-api -run '^$' -count=1)
+            (cd services/wlt/backend && go test ./internal/payment ./internal/refund ./internal/http ./cmd/wlt-api -run '^$' -count=1)
+          } 2>&1 | tee artifacts/backend/compile.log
+          exit ${PIPESTATUS[0]}
+
+      - name: Upload backend diagnostic
+        if: steps.backend.outcome == 'failure'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: delivery-exception-final-backend-${{ github.sha }}
+          path: artifacts/backend/compile.log
+          retention-days: 2
+
+      - name: Typecheck all affected surfaces
+        id: typecheck
+        if: steps.backend.outcome == 'success'
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/typecheck
           {
             status=0
-            for config in \
-              apps/app-client/runtime/tsconfig.cancellation-journey.json \
-              apps/app-partner/runtime/tsconfig.cancellation-journey.json \
-              apps/app-captain/runtime/tsconfig.order-journey.json \
-              apps/control-panel/runtime/tsconfig.delivery-exception-journey.json
-            do
+            for config in apps/app-client/runtime/tsconfig.cancellation-journey.json apps/app-partner/runtime/tsconfig.cancellation-journey.json apps/app-captain/runtime/tsconfig.order-journey.json apps/control-panel/runtime/tsconfig.delivery-exception-journey.json; do
               echo "=== TYPECHECK $config ==="
               pnpm exec tsc -p "$config" --noEmit --pretty false || status=1
             done
             exit "$status"
-          } 2>&1 | tee artifacts/delivery-exception-slice7-typecheck/typecheck.log
+          } 2>&1 | tee artifacts/typecheck/typecheck.log
           exit ${PIPESTATUS[0]}
 
-      - name: Upload surface typecheck diagnostic
-        if: steps.surfaces_typecheck.outcome == 'failure'
+      - name: Upload typecheck diagnostic
+        if: steps.typecheck.outcome == 'failure'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: delivery-exception-slice7-typecheck-${{ github.sha }}
-          path: artifacts/delivery-exception-slice7-typecheck/typecheck.log
-          if-no-files-found: error
+          name: delivery-exception-final-typecheck-${{ github.sha }}
+          path: artifacts/typecheck/typecheck.log
           retention-days: 2
 
-      - name: Stop on surface typecheck failure
-        if: steps.surfaces_typecheck.outcome == 'failure'
-        shell: bash
-        run: exit 1
-
-      - name: Apply migrations and prove custody handshake
-        id: return_receipt_db
+      - name: Apply clean DSH and WLT migrations
+        id: migrations
+        if: steps.backend.outcome == 'success' && steps.typecheck.outcome == 'success'
         continue-on-error: true
-        shell: bash
-        run: |
-          set -o pipefail
-          mkdir -p artifacts/delivery-exception-slice7-db
-          for file in $(find services/dsh/database/migrations -maxdepth 1 -type f -name '*.sql' | sort); do
-            psql "$DSH_DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file" >/dev/null || exit 1
-          done
-          psql "$DSH_DATABASE_URL" -v ON_ERROR_STOP=1 -f services/dsh/database/migrations/dsh-094_delivery_return_partner_receipt.sql >/dev/null || exit 1
-          (
-            cd services/dsh/backend
-            DSH_REQUIRE_DB_TESTS=true DATABASE_URL="$DSH_DATABASE_URL" \
-              go test ./internal/dispatch -run '^TestDeliveryExceptionReturnToStoreLifecycleDBIntegration$' -count=1 -v
-          ) 2>&1 | tee artifacts/delivery-exception-slice7-db/return-receipt.log
-          exit ${PIPESTATUS[0]}
-
-      - name: Upload return receipt DB diagnostic
-        if: steps.return_receipt_db.outcome == 'failure'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: delivery-exception-slice7-db-${{ github.sha }}
-          path: artifacts/delivery-exception-slice7-db/return-receipt.log
-          if-no-files-found: error
-          retention-days: 2
-
-      - name: Stop on return receipt DB failure
-        if: steps.return_receipt_db.outcome == 'failure'
-        shell: bash
-        run: exit 1
-
-      - name: Prove authorization boundary and runtime projection
-        shell: bash
         run: |
           set -euo pipefail
-          http="services/dsh/backend/internal/http/partner_delivery.go"
-          marshal="services/dsh/backend/internal/http/dispatch.go"
-          captain="services/dsh/frontend/app-captain/orders/DshCaptainPoDSubmissionScreen.tsx"
-          partner="services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx"
-          client="services/dsh/frontend/app-client/orders/OrderTrackingScreen.tsx"
-          operations="services/dsh/frontend/control-panel/operations/ExceptionsEscalationsScreen.tsx"
-          grep -F 's.partnerOrder' "$http"
-          grep -F 'AcceptReturnToStoreByPartner' "$http"
-          grep -F 'returnArrivedAt' "$marshal"
-          grep -F 'returnAcceptedByActorId' "$marshal"
+          for file in $(find services/dsh/database/migrations -maxdepth 1 -type f -name '*.sql' | sort); do psql "$DSH_DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file" >/dev/null; done
+          for file in $(find services/wlt/database/migrations -maxdepth 1 -type f -name '*.sql' | sort); do psql "$WLT_DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file" >/dev/null; done
+          psql "$DSH_DATABASE_URL" -v ON_ERROR_STOP=1 -f services/dsh/database/migrations/dsh-092_delivery_exception_lifecycle.sql >/dev/null
+          psql "$DSH_DATABASE_URL" -v ON_ERROR_STOP=1 -f services/dsh/database/migrations/dsh-093_delivery_return_lifecycle.sql >/dev/null
+          psql "$DSH_DATABASE_URL" -v ON_ERROR_STOP=1 -f services/dsh/database/migrations/dsh-094_delivery_return_partner_receipt.sql >/dev/null
+
+      - name: Prove DSH journey invariants
+        id: dshdb
+        if: steps.migrations.outcome == 'success'
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/dsh-db
+          {
+            cd services/dsh/backend
+            DSH_REQUIRE_DB_TESTS=true DATABASE_URL="$DSH_DATABASE_URL" go test ./internal/dispatch -run '^TestDeliveryException(BlocksProgressButAllowsLocation|ReassignsBeforePickupAtomically|RejectsReassignmentAfterPickup|ReturnToStoreLifecycle)DBIntegration$' -count=1 -v
+            DSH_REQUIRE_DB_TESTS=true DATABASE_URL="$DSH_DATABASE_URL" go test ./internal/orders -run '^TestReturnedOrderCancellation(CreatesOneGovernedFinancialHandoff|RemainsForbiddenForClientAndPartner)DBIntegration$' -count=1 -v
+            DSH_REQUIRE_DB_TESTS=true DATABASE_URL="$DSH_DATABASE_URL" go test ./internal/checkoutfinanceoutbox -count=1 -v
+          } 2>&1 | tee artifacts/dsh-db/dsh-db.log
+          exit ${PIPESTATUS[0]}
+
+      - name: Upload DSH database diagnostic
+        if: steps.dshdb.outcome == 'failure'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: delivery-exception-final-dsh-db-${{ github.sha }}
+          path: artifacts/dsh-db/dsh-db.log
+          retention-days: 2
+
+      - name: Prove WLT cancellation and refund invariants
+        id: wltdb
+        if: steps.dshdb.outcome == 'success'
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/wlt-db
+          {
+            cd services/wlt/backend
+            WLT_REQUIRE_DB_TESTS=true DATABASE_URL="$WLT_DATABASE_URL" go test ./internal/payment -count=1 -v
+            WLT_REQUIRE_DB_TESTS=true DATABASE_URL="$WLT_DATABASE_URL" go test ./internal/refund -count=1 -v
+          } 2>&1 | tee artifacts/wlt-db/wlt-db.log
+          exit ${PIPESTATUS[0]}
+
+      - name: Upload WLT database diagnostic
+        if: steps.wltdb.outcome == 'failure'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: delivery-exception-final-wlt-db-${{ github.sha }}
+          path: artifacts/wlt-db/wlt-db.log
+          retention-days: 2
+
+      - name: Prove multi-surface runtime truth
+        id: runtime
+        if: steps.wltdb.outcome == 'success'
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          captain=services/dsh/frontend/app-captain/orders/DshCaptainPoDSubmissionScreen.tsx
+          partner=services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx
+          client=services/dsh/frontend/app-client/orders/OrderTrackingScreen.tsx
+          operations=services/dsh/frontend/control-panel/operations/ExceptionsEscalationsScreen.tsx
+          grep -F 'fetchCaptainDeliveryException' "$captain"
           grep -F 'arriveCaptainReturnToStore' "$captain"
           grep -F 'بانتظار تأكيد استلام المتجر' "$captain"
           grep -F 'acceptPartnerReturnToStore' "$partner"
           grep -F 'تأكيد استلام المرتجع من الكابتن' "$partner"
           grep -F 'return_arrived_store' "$client"
-          grep -F 'بانتظار المتجر' "$operations"
-          ! grep -F 'completeCaptainReturnToStore' "$captain"
+          grep -F 'listCaptains' "$operations"
+          grep -F 'resolveDeliveryExceptionReassignCaptain' "$operations"
+          grep -F 'resolveDeliveryExceptionReturnToStore' "$operations"
+          grep -F "cancelOrder('operator'" "$operations"
+          grep -F 'FINANCIAL_CLOSURE_LABELS' "$operations"
+          grep -F 'returnAcceptedByActorId' services/dsh/backend/internal/http/dispatch.go
+          grep -F 's.partnerOrder' services/dsh/backend/internal/http/partner_delivery.go
+          ! grep -F "orderId = 'ORD-9021'" "$captain"
+          ! grep -F 'cancelledOrders' "$operations"
+          ! grep -F 'fetchDshRuntimeOrders' "$operations"
           ! grep -F 'handleCompleteReturnToStore' services/dsh/backend/internal/http/*.go
           ! grep -Ei '(mock|fixture|demo)[A-Za-z0-9_]*[[:space:]]*=' "$captain" "$partner" "$client" "$operations"
 
-      - name: Remove temporary files and commit verified slice
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPOSITORY: ${{ github.repository }}
-          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        shell: bash
+      - name: Commit focused failure marker
+        if: always() && (steps.backend.outcome == 'failure' || steps.typecheck.outcome == 'failure' || steps.migrations.outcome == 'failure' || steps.dshdb.outcome == 'failure' || steps.wltdb.outcome == 'failure' || steps.runtime.outcome == 'failure')
+        run: |
+          set -euo pipefail
+          printf 'backend=%s\ntypecheck=%s\nmigrations=%s\ndshdb=%s\nwltdb=%s\nruntime=%s\nsource_sha=%s\n' '${{ steps.backend.outcome }}' '${{ steps.typecheck.outcome }}' '${{ steps.migrations.outcome }}' '${{ steps.dshdb.outcome }}' '${{ steps.wltdb.outcome }}' '${{ steps.runtime.outcome }}' '${{ github.sha }}' > .github/delivery-exception-final-failure
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/delivery-exception-final-failure
+          git commit -m "ci(delivery-exception): record focused final closure failure [skip ci]"
+          git pull --rebase origin journey/delivery-exception-redelivery-closure
+          git push origin HEAD:journey/delivery-exception-redelivery-closure
+
+      - name: Remove all temporary machinery and commit final closure
+        if: steps.backend.outcome == 'success' && steps.typecheck.outcome == 'success' && steps.migrations.outcome == 'success' && steps.dshdb.outcome == 'success' && steps.wltdb.outcome == 'success' && steps.runtime.outcome == 'success'
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm \
-            .github/workflows/delivery-exception-slice7.yml \
-            tools/scripts/patch-delivery-exception-slice7.py \
-            tools/scripts/patch-delivery-exception-slice7-corrections.py
+          rm -f .github/workflows/delivery-exception-final-closure.yml
+          rm -f tools/scripts/patch-delivery-exception-slice*.py tools/scripts/inspect-governed-cancel-source.py
+          rm -f apps/control-panel/runtime/tsconfig.delivery-exception-journey.json .github/delivery-exception-final-failure
+          git rm .github/workflows/delivery-exception-slice7.yml
           git add -A
-          git commit -m "feat(delivery-exception): require partner receipt for returned custody [skip ci]"
+          git commit -m "feat(delivery-exception): close governed exception redelivery and return journey [skip ci]"
           git pull --rebase origin journey/delivery-exception-redelivery-closure
           git push origin HEAD:journey/delivery-exception-redelivery-closure
-          final_sha="$(git rev-parse HEAD)"
-          jq -n --arg state success --arg context "Delivery Exception Slice Seven" --arg description "captain arrival and partner return receipt handshake verified" --arg target_url "$RUN_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' > status.json
-          curl --fail-with-body --silent --show-error -X POST \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/$REPOSITORY/statuses/$final_sha" \
-            -d @status.json
 
-      - name: Publish focused failure status
-        if: failure()
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPOSITORY: ${{ github.repository }}
-          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        shell: bash
-        run: |
-          jq -n --arg state failure --arg context "Delivery Exception Slice Seven" --arg description "dual return receipt handshake failed" --arg target_url "$RUN_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' > status.json
-          curl --fail-with-body --silent --show-error -X POST \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/$REPOSITORY/statuses/${{ github.sha }}" \
-            -d @status.json
+      - name: Fail when any focused gate failed
+        if: always() && (steps.backend.outcome == 'failure' || steps.typecheck.outcome == 'failure' || steps.migrations.outcome == 'failure' || steps.dshdb.outcome == 'failure' || steps.wltdb.outcome == 'failure' || steps.runtime.outcome == 'failure')
+        run: exit 1
