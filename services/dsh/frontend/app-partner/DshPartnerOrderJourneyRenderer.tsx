@@ -1,14 +1,29 @@
 import React from 'react';
 import { DshPartnerRouteRenderer } from './DshPartnerRouteRenderer';
+import { OperationalOrderDecisionScreen } from './orders/OperationalOrderDecisionScreen';
 import { OperationalOrdersInboxScreen } from './orders/OperationalOrdersInboxScreen';
 
 type Props = React.ComponentProps<typeof DshPartnerRouteRenderer>;
 
 /**
- * Journey-specific renderer that replaces only the partner order inbox. All
+ * Journey-specific renderer that replaces only operational order routes. All
  * unrelated partner routes continue through the established renderer.
  */
 export function DshPartnerOrderJourneyRenderer(props: Props): React.ReactElement {
+  const activeOrder = props.partnerOrders.find((order) => order.id === props.activeOrderId)
+    ?? props.partnerOrders[0];
+
+  if (props.route === 'order-rejection') {
+    return props.renderSurfaceShell(
+      <OperationalOrderDecisionScreen
+        order={activeOrder}
+        orderId={activeOrder?.id ?? props.activeOrderId ?? props.initialOrderId}
+        refreshOrders={props.refreshOrders}
+        onBack={props.openOrdersBoard}
+      />,
+    );
+  }
+
   if (props.route !== 'inbox') {
     return <DshPartnerRouteRenderer {...props} />;
   }
@@ -22,6 +37,10 @@ export function DshPartnerOrderJourneyRenderer(props: Props): React.ReactElement
       onRetry={props.refreshOrders}
       onNavigateAction={(actionId, orderId) => {
         props.setActiveOrderId(orderId);
+        if (actionId === 'reject') {
+          props.setRoute('order-rejection');
+          return;
+        }
         if (actionId === 'issue') {
           props.openSupportCommandFromOperationalFlow('order-issue-queue', 'orders');
           return;
