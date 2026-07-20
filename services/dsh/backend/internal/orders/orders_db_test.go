@@ -37,6 +37,7 @@ func TestCreateOrderStoresRealPriceSnapshotDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	ctx := context.Background()
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
+	tenantID := "tenant-order-price-" + suffix
 	storeID := "order-price-test-store-" + suffix
 	clientID := "order-price-test-client-" + suffix
 
@@ -67,10 +68,10 @@ func TestCreateOrderStoresRealPriceSnapshotDBIntegration(t *testing.T) {
 
 	var intentID string
 	if err := db.QueryRowContext(ctx, `
-		INSERT INTO dsh_checkout_intents (client_id, cart_id, store_id, state, payment_method, wlt_payment_session_id)
-		VALUES ($1, $2::uuid, $3, 'payment_pending', 'cod', $4)
+		INSERT INTO dsh_checkout_intents (tenant_id, client_id, cart_id, store_id, state, payment_method, wlt_payment_session_id)
+		VALUES ($1, $2, $3::uuid, $4, 'payment_pending', 'cod', $5)
 		RETURNING id::text`,
-		clientID, cartID, storeID, "wlt-ps-"+suffix,
+		tenantID, clientID, cartID, storeID, "wlt-ps-"+suffix,
 	).Scan(&intentID); err != nil {
 		t.Fatalf("failed to insert test checkout intent: %v", err)
 	}
@@ -103,6 +104,7 @@ func seedOrderFixture(t *testing.T, db *sql.DB, status string) (order *Order, pa
 	t.Helper()
 	ctx := context.Background()
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
+	tenantID := "tenant-order-outbox-" + suffix
 	storeID := "order-outbox-test-store-" + suffix
 	clientID := "order-outbox-test-client-" + suffix
 	paymentSessionID = "order-outbox-test-ps-" + suffix
@@ -117,21 +119,21 @@ func seedOrderFixture(t *testing.T, db *sql.DB, status string) (order *Order, pa
 
 	var intentID string
 	if err := db.QueryRowContext(ctx, `
-		INSERT INTO dsh_checkout_intents (client_id, cart_id, store_id, state, payment_method, wlt_payment_session_id)
-		VALUES ($1, gen_random_uuid(), $2, 'confirmed', 'wallet', $3)
+		INSERT INTO dsh_checkout_intents (tenant_id, client_id, cart_id, store_id, state, payment_method, wlt_payment_session_id)
+		VALUES ($1, $2, gen_random_uuid(), $3, 'confirmed', 'wallet', $4)
 		RETURNING id::text`,
-		clientID, storeID, paymentSessionID,
+		tenantID, clientID, storeID, paymentSessionID,
 	).Scan(&intentID); err != nil {
 		t.Fatalf("failed to insert test checkout intent: %v", err)
 	}
 
 	var o Order
 	if err := db.QueryRowContext(ctx, `
-		INSERT INTO dsh_orders (checkout_intent_id, store_id, client_id, status, wlt_payment_ref_id)
-		VALUES ($1::uuid, $2, $3, $4, $5)
+		INSERT INTO dsh_orders (tenant_id, checkout_intent_id, store_id, client_id, status, wlt_payment_ref_id)
+		VALUES ($1, $2::uuid, $3, $4, $5, $6)
 		RETURNING id::text, checkout_intent_id::text, store_id, client_id, status,
 		          COALESCE(rejection_reason, ''), wlt_payment_ref_id, created_at, updated_at`,
-		intentID, storeID, clientID, status, paymentSessionID,
+		tenantID, intentID, storeID, clientID, status, paymentSessionID,
 	).Scan(
 		&o.ID, &o.CheckoutIntentID, &o.StoreID, &o.ClientID,
 		&o.Status, &o.RejectionReason, &o.WltPaymentRefID,
