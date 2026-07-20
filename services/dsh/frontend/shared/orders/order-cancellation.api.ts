@@ -85,6 +85,14 @@ export type ClassifiedCancellationError = {
   readonly message: string;
 };
 
+function classified(
+  kind: ClassifiedCancellationError["kind"],
+  message: string,
+  code?: string,
+): ClassifiedCancellationError {
+  return code === undefined ? { kind, message } : { kind, code, message };
+}
+
 export function classifyCancellationError(error: unknown): ClassifiedCancellationError {
   const typed = error as {
     kind?: string;
@@ -93,40 +101,40 @@ export function classifyCancellationError(error: unknown): ClassifiedCancellatio
     message?: string;
   };
   if (typed.kind === "network") {
-    return { kind: "offline", message: "تعذر الاتصال بخدمة الطلبات." };
+    return classified("offline", "تعذر الاتصال بخدمة الطلبات.");
   }
   if (typed.kind === "http") {
     if (typed.code === "CANCELLATION_REQUIRES_REVIEW") {
-      return {
-        kind: "requires_review",
-        code: typed.code,
-        message: typed.message ?? "بدأ تجهيز الطلب ويتطلب الإلغاء مراجعة العمليات.",
-      };
+      return classified(
+        "requires_review",
+        typed.message ?? "بدأ تجهيز الطلب ويتطلب الإلغاء مراجعة العمليات.",
+        typed.code,
+      );
     }
     if (typed.status === 401 || typed.status === 403) {
-      return { kind: "permission_denied", code: typed.code, message: "لا تملك صلاحية إلغاء هذا الطلب." };
+      return classified("permission_denied", "لا تملك صلاحية إلغاء هذا الطلب.", typed.code);
     }
     if (typed.status === 404) {
-      return { kind: "not_found", code: typed.code, message: "الطلب غير موجود ضمن نطاقك." };
+      return classified("not_found", "الطلب غير موجود ضمن نطاقك.", typed.code);
     }
     if (typed.status === 409) {
-      return {
-        kind: "conflict",
-        code: typed.code,
-        message: typed.message ?? "تغيّرت حالة الطلب ولا تسمح بالإلغاء الآن.",
-      };
+      return classified(
+        "conflict",
+        typed.message ?? "تغيّرت حالة الطلب ولا تسمح بالإلغاء الآن.",
+        typed.code,
+      );
     }
     if (typed.status === 400 || typed.status === 422) {
-      return {
-        kind: "invalid",
-        code: typed.code,
-        message: typed.message ?? "بيانات الإلغاء غير مكتملة.",
-      };
+      return classified(
+        "invalid",
+        typed.message ?? "بيانات الإلغاء غير مكتملة.",
+        typed.code,
+      );
     }
   }
-  return {
-    kind: "error",
-    code: typed.code,
-    message: typed.message ?? "تعذر تنفيذ إلغاء الطلب.",
-  };
+  return classified(
+    "error",
+    typed.message ?? "تعذر تنفيذ إلغاء الطلب.",
+    typed.code,
+  );
 }
