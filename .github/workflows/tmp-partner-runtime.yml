@@ -35,33 +35,72 @@ jobs:
       - name: Build Identity
         shell: bash
         run: docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml --profile identity build identity-api
-      - name: Start focused runtime
+      - name: Start Postgres and MinIO
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml \
+            --profile identity --profile workforce --profile dsh --profile media --profile wlt \
+            up -d postgres minio
+      - name: Migrate Identity
         shell: pwsh
         run: |
-          & ./infra/docker/scripts/runtime.ps1 -Action up -Profiles identity,workforce,dsh,media,wlt *>&1 | Tee-Object -FilePath artifacts/partner-journey-closure/runtime-up.log
-      - name: Seed focused runtime
+          & ./infra/docker/scripts/runtime.ps1 -Action migrate -Profiles identity *>&1 | Tee-Object -FilePath artifacts/partner-journey-closure/migrate-identity.log
+      - name: Migrate Workforce
         shell: pwsh
         run: |
-          & ./infra/docker/scripts/runtime.ps1 -Action seed -Profiles identity,workforce,dsh,media,wlt *>&1 | Tee-Object -FilePath artifacts/partner-journey-closure/runtime-seed.log
+          & ./infra/docker/scripts/runtime.ps1 -Action migrate -Profiles workforce *>&1 | Tee-Object -FilePath artifacts/partner-journey-closure/migrate-workforce.log
+      - name: Migrate WLT
+        shell: pwsh
+        run: |
+          & ./infra/docker/scripts/runtime.ps1 -Action migrate -Profiles wlt *>&1 | Tee-Object -FilePath artifacts/partner-journey-closure/migrate-wlt.log
+      - name: Migrate DSH
+        shell: pwsh
+        run: |
+          & ./infra/docker/scripts/runtime.ps1 -Action migrate -Profiles dsh *>&1 | Tee-Object -FilePath artifacts/partner-journey-closure/migrate-dsh.log
+      - name: Start focused APIs
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml \
+            --profile identity --profile workforce --profile dsh --profile media --profile wlt \
+            up -d --build identity-api workforce-api wlt-api dsh-api minio
       - name: Verify service readiness
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
           $targets = @(
-            @{ Name = "Identity"; Uri = "http://127.0.0.1:58082/identity/health" },
-            @{ Name = "Workforce"; Uri = "http://127.0.0.1:58086/workforce/health" },
-            @{ Name = "DSH"; Uri = "http://127.0.0.1:58080/dsh/health" },
-            @{ Name = "WLT"; Uri = "http://127.0.0.1:58083/wlt/health" }
+            @{ Name = "Identity"; Uri = "http://127.0.0.1:58082/identity/health"; Expected = "healthy" },
+            @{ Name = "Workforce"; Uri = "http://127.0.0.1:58086/workforce/health"; Expected = "healthy" },
+            @{ Name = "DSH"; Uri = "http://127.0.0.1:58080/dsh/health"; Expected = "healthy" },
+            @{ Name = "WLT"; Uri = "http://127.0.0.1:58083/wlt/health"; Expected = "healthy" }
           )
           foreach ($target in $targets) {
-            $response = Invoke-RestMethod -Uri $target.Uri -TimeoutSec 15
-            if ([string]$response.status -notin @("healthy", "ok", "ready")) {
-              throw "$($target.Name) readiness returned '$($response.status)'"
+            $ready = $false
+            for ($attempt = 1; $attempt -le 25; $attempt++) {
+              try {
+                $response = Invoke-RestMethod -Uri $target.Uri -TimeoutSec 8
+                if ([string]$response.status -eq $target.Expected) { $ready = $true; break }
+              } catch { }
+              Start-Sleep -Seconds 3
             }
+            if (-not $ready) { throw "$($target.Name) did not become ready" }
             "$($target.Name)=PASS" | Tee-Object -FilePath artifacts/partner-journey-closure/runtime-readiness.log -Append
           }
           Invoke-WebRequest -Uri "http://127.0.0.1:59000/minio/health/ready" -TimeoutSec 15 -UseBasicParsing | Out-Null
           "MinIO=PASS" | Tee-Object -FilePath artifacts/partner-journey-closure/runtime-readiness.log -Append
+      - name: Seed Identity actors
+        shell: pwsh
+        run: |
+          & ./infra/docker/scripts/runtime.ps1 -Action seed -Profiles identity *>&1 | Tee-Object -FilePath artifacts/partner-journey-closure/seed-identity.log
+      - name: Seed WLT
+        shell: pwsh
+        run: |
+          & ./infra/docker/scripts/runtime.ps1 -Action seed -Profiles wlt *>&1 | Tee-Object -FilePath artifacts/partner-journey-closure/seed-wlt.log
+      - name: Seed DSH
+        shell: pwsh
+        run: |
+          & ./infra/docker/scripts/runtime.ps1 -Action seed -Profiles dsh *>&1 | Tee-Object -FilePath artifacts/partner-journey-closure/seed-dsh.log
       - name: Run focused partner multi-surface journey
         shell: pwsh
         run: |
