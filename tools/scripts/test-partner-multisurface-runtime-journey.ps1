@@ -146,10 +146,23 @@ Require-Status $Taxonomy @(200) "partner catalog taxonomy"
 $Domains = @((Get-Value $Taxonomy.Json 'domains'))
 $Nodes = @((Get-Value $Taxonomy.Json 'nodes'))
 Require ($Domains.Count -gt 0) "partner taxonomy returned no domains"
-$DomainId = "$(Get-Value $Domains[0] 'id')"
-Require (-not [string]::IsNullOrWhiteSpace($DomainId)) "partner taxonomy domain has no id"
-$CategoryNodeId = $null
-if ($Nodes.Count -gt 0) { $CategoryNodeId = "$(Get-Value $Nodes[0] 'id')" }
+Require ($Nodes.Count -gt 0) "partner taxonomy returned no category nodes"
+
+# The taxonomy arrays are independently ordered. Selecting domains[0] and
+# nodes[0] can pair entities from different domains and violates the sovereign
+# catalog contract. Select a node that explicitly permits proposals and derive
+# its domain from that same node.
+$ProposalNode = $Nodes |
+  Where-Object { [bool](Get-Value $_ 'allowsProductProposal') } |
+  Select-Object -First 1
+Require ($null -ne $ProposalNode) "partner taxonomy has no node that allows product proposals"
+$CategoryNodeId = "$(Get-Value $ProposalNode 'id')"
+$DomainId = "$(Get-Value $ProposalNode 'domainId')"
+Require (-not [string]::IsNullOrWhiteSpace($CategoryNodeId)) "eligible partner taxonomy node has no id"
+Require (-not [string]::IsNullOrWhiteSpace($DomainId)) "eligible partner taxonomy node has no domain id"
+$MatchingDomain = $Domains | Where-Object { "$(Get-Value $_ 'id')" -eq $DomainId } | Select-Object -First 1
+Require ($null -ne $MatchingDomain) "eligible partner taxonomy node references a domain not returned to the partner"
+$RequiresBarcode = [bool](Get-Value $ProposalNode 'requiresBarcode')
 
 $MasterProducts = Invoke-Api GET "$DshBaseUrl/dsh/partner/catalog/master-products?limit=20" (Headers $Partner "catalog-products" -ReadOnly)
 Require-Status $MasterProducts @(200) "partner master products"
@@ -157,16 +170,19 @@ Require ($MasterProducts.Content -match 'masterProducts') "partner master-produc
 $Assortment = Invoke-Api GET "$DshBaseUrl/dsh/partner/stores/$StoreId/assortment" (Headers $Partner "catalog-assortment" -ReadOnly)
 Require-Status $Assortment @(200) "partner store assortment"
 
-$Proposal = Invoke-Api POST "$DshBaseUrl/dsh/partner/catalog/product-proposals" (Headers $Partner "catalog-proposal") @{
+$ProposalBody = @{
   proposedNameAr = "منتج رحلة الشريك $RunId"
   proposedNameEn = "Partner journey product $RunId"
   domainId = $DomainId
   categoryNodeId = $CategoryNodeId
   brand = "BThwani Runtime"
-  barcode = $null
   imageObjectKey = $null
   sourceSurface = "app-partner"
 }
+if ($RequiresBarcode) {
+  $ProposalBody.barcode = "628$($RunId.ToString().PadLeft(10, '0').Substring(0, 10))"
+}
+$Proposal = Invoke-Api POST "$DshBaseUrl/dsh/partner/catalog/product-proposals" (Headers $Partner "catalog-proposal") $ProposalBody
 Require-Status $Proposal @(200, 201) "partner product proposal"
 $ProposalRecord = Get-Value $Proposal.Json 'proposal'
 $ProposalId = "$(Get-Value $ProposalRecord 'id')"
