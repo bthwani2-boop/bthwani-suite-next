@@ -3,6 +3,7 @@ package http
 import (
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"dsh-api/internal/pickup"
@@ -191,6 +192,7 @@ func (s *protectedStoreServer) handlePickupVerify(w http.ResponseWriter, r *http
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "commandId is required")
 		return
 	}
+	body.Code = strings.TrimSpace(body.Code)
 	if body.Code == "" {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "code is required")
 		return
@@ -215,6 +217,11 @@ func (s *protectedStoreServer) handlePickupNoShow(w http.ResponseWriter, r *http
 	}
 	if body.CommandID == "" {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "commandId is required")
+		return
+	}
+	body.Reason = strings.TrimSpace(body.Reason)
+	if body.Reason == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "no-show reason is required")
 		return
 	}
 	svc := pickup.NewService(s.db)
@@ -275,6 +282,7 @@ func (s *protectedStoreServer) handleExtendPickupWindow(w http.ResponseWriter, r
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "commandId is required")
 		return
 	}
+	body.Reason = strings.TrimSpace(body.Reason)
 	if body.Reason == "" {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "reason is required")
 		return
