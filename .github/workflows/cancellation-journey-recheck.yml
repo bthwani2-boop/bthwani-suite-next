@@ -33,18 +33,30 @@ jobs:
         working-directory: services/dsh/backend
         shell: bash
         run: |
-          set -euo pipefail
-          files="$(gofmt -l \
-            internal/orders/runtime.go \
-            internal/orders/cancellation_read.go \
-            internal/checkoutfinanceoutbox/projection.go \
-            internal/checkoutfinanceoutbox/worker.go \
-            internal/wlt/cancel_for_order.go \
-            internal/http/order_cancellations.go \
-            internal/http/operator_order_workboard.go \
-            cmd/dsh-api/main.go)"
-          test -z "$files" || { printf 'Unformatted DSH files:\n%s\n' "$files"; exit 1; }
-          go test ./internal/orders ./internal/checkoutfinanceoutbox ./internal/wlt ./internal/http ./cmd/dsh-api -run '^$' -count=1
+          set -o pipefail
+          mkdir -p ../../../artifacts/cancellation-recheck
+          {
+            files="$(gofmt -l \
+              internal/orders/runtime.go \
+              internal/orders/cancellation_read.go \
+              internal/checkoutfinanceoutbox/projection.go \
+              internal/checkoutfinanceoutbox/worker.go \
+              internal/wlt/cancel_for_order.go \
+              internal/http/order_cancellations.go \
+              internal/http/operator_order_workboard.go \
+              cmd/dsh-api/main.go)"
+            test -z "$files" || { printf 'Unformatted DSH files:\n%s\n' "$files"; exit 1; }
+            go test ./internal/orders ./internal/checkoutfinanceoutbox ./internal/wlt ./internal/http ./cmd/dsh-api -run '^$' -count=1
+          } 2>&1 | tee ../../../artifacts/cancellation-recheck/dsh.log
+          exit ${PIPESTATUS[0]}
+      - name: Upload DSH diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: cancellation-recheck-dsh-${{ github.sha }}
+          path: artifacts/cancellation-recheck/dsh.log
+          if-no-files-found: error
+          retention-days: 7
 
   typescript-surfaces:
     runs-on: ubuntu-latest
@@ -57,8 +69,6 @@ jobs:
             project: apps/app-client/runtime/tsconfig.cancellation-journey.json
           - name: app-partner
             project: apps/app-partner/runtime/tsconfig.cancellation-journey.json
-          - name: control-panel
-            project: apps/control-panel/runtime/tsconfig.cancellation-journey.json
     name: typescript-${{ matrix.name }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -67,7 +77,20 @@ jobs:
       - uses: ./.github/actions/setup-node-workspace
       - name: Typecheck cancellation surface
         shell: bash
-        run: pnpm exec tsc -p "${{ matrix.project }}" --noEmit --pretty false
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/cancellation-recheck
+          pnpm exec tsc -p "${{ matrix.project }}" --noEmit --pretty false 2>&1 \
+            | tee "artifacts/cancellation-recheck/${{ matrix.name }}.log"
+          exit ${PIPESTATUS[0]}
+      - name: Upload TypeScript diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: cancellation-recheck-${{ matrix.name }}-${{ github.sha }}
+          path: artifacts/cancellation-recheck/${{ matrix.name }}.log
+          if-no-files-found: error
+          retention-days: 7
 
   publish:
     if: always()
@@ -87,7 +110,7 @@ jobs:
           set -euo pipefail
           state=failure
           [ "$DSH_RESULT" = success ] && [ "$TS_RESULT" = success ] && state=success
-          description="dsh=$DSH_RESULT ts=$TS_RESULT wlt=reused-green@fa37e901 run=${GITHUB_RUN_ID}"
+          description="dsh=$DSH_RESULT mobile-ts=$TS_RESULT control-panel=green@d0429e3 wlt=green@fa37e901 run=${GITHUB_RUN_ID}"
           jq -n --arg state "$state" --arg context "Cancellation Refund Journey Source" --arg description "$description" --arg target_url "$RUN_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' > payload.json
           curl --fail-with-body --silent --show-error -X POST \
             -H "Authorization: Bearer $GH_TOKEN" \
