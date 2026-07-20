@@ -16,11 +16,6 @@ const (
 	notifyTimeout = 10 * time.Second
 )
 
-// RunWorker polls for pending checkout financial closure outbox events until
-// ctx is cancelled. It is meant to run as a single background goroutine per
-// dsh-api process; ClaimBatch's row-level locking makes it safe to run more
-// than one instance concurrently too, but a single poller is enough at
-// current volume.
 func RunWorker(ctx context.Context, db *sql.DB, client *wlt.Client, interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
@@ -36,43 +31,65 @@ func RunWorker(ctx context.Context, db *sql.DB, client *wlt.Client, interval tim
 	}
 }
 
-// ProcessOnce claims and attempts delivery of one batch of pending events.
 func ProcessOnce(ctx context.Context, db *sql.DB, client *wlt.Client) error {
 	events, err := ClaimBatch(db, batchSize, claimLease)
 	if err != nil {
 		return err
 	}
-	for _, e := range events {
+	for _, event := range events {
 		deliverCtx, cancel := context.WithTimeout(ctx, notifyTimeout)
-		err := dispatch(deliverCtx, client, e)
+		result, deliverErr := dispatch(deliverCtx, client, event)
 		cancel()
-		if err != nil {
-			log.Printf("[checkout-finance-outbox] delivery failed for payment session %s event %s (attempt %d): %v",
-				e.PaymentSessionID, e.EventType, e.AttemptCount+1, err)
-			if markErr := MarkFailed(db, e.ID, e.AttemptCount, err); markErr != nil {
-				log.Printf("[checkout-finance-outbox] failed to record retry state for event %s: %v", e.ID, markErr)
+		if deliverErr != nil {
+			log.Printf(
+				"[checkout-finance-outbox] delivery failed for payment session %s event %s (attempt %d): %v",
+				event.PaymentSessionID,
+				event.EventType,
+				event.AttemptCount+1,
+				deliverErr,
+			)
+			if markErr := MarkFailedWithProjection(db, event.ID, event.AttemptCount, deliverErr); markErr != nil {
+				log.Printf("[checkout-finance-outbox] failed to record retry state for event %s: %v", event.ID, markErr)
 			}
 			continue
 		}
-		if markErr := MarkSent(db, e.ID); markErr != nil {
-			log.Printf("[checkout-finance-outbox] failed to mark event %s sent after successful delivery: %v", e.ID, markErr)
+		if markErr := MarkSentWithResult(db, event.ID, result); markErr != nil {
+			log.Printf("[checkout-finance-outbox] failed to project successful event %s: %v", event.ID, markErr)
 		}
 	}
 	return nil
 }
 
-// dispatch routes a claimed event to the correct WLT client call.
-func dispatch(ctx context.Context, client *wlt.Client, e Event) error {
-	switch e.EventType {
+func dispatch(ctx context.Context, client *wlt.Client, event Event) (DeliveryResult, error) {
+	switch event.EventType {
 	case EventTypeExpireSession:
-		return client.ExpireSession(ctx, e.PaymentSessionID, e.CheckoutIntentID)
+		if err := client.ExpireSession(ctx, event.PaymentSessionID, event.CheckoutIntentID); err != nil {
+			return DeliveryResult{}, err
+		}
+		return DeliveryResult{
+			Action:           "expired",
+			PaymentSessionID: event.PaymentSessionID,
+		}, nil
 	case EventTypeCancelForOrder:
-		return client.CancelSessionForOrder(ctx, e.PaymentSessionID, wlt.CancelSessionForOrderInput{
-			OrderID:  e.OrderID,
-			ClientID: e.ClientID,
-			Reason:   e.Reason,
+		result, err := client.CancelSessionForOrder(ctx, event.PaymentSessionID, wlt.CancelSessionForOrderInput{
+			OrderID:       event.OrderID,
+			ClientID:      event.ClientID,
+			Reason:        event.Reason,
+			CorrelationID: "order-cancellation-" + event.OrderID,
 		})
+		if err != nil {
+			return DeliveryResult{}, err
+		}
+		if result == nil {
+			return DeliveryResult{}, fmt.Errorf("WLT cancel-for-order returned no result")
+		}
+		return DeliveryResult{
+			Action:           result.Action,
+			SessionStatus:    result.SessionStatus,
+			RefundID:         result.RefundID,
+			PaymentSessionID: result.PaymentSessionID,
+		}, nil
 	default:
-		return fmt.Errorf("unknown checkout finance outbox event type %q", e.EventType)
+		return DeliveryResult{}, fmt.Errorf("unknown checkout finance outbox event type %q", event.EventType)
 	}
 }
