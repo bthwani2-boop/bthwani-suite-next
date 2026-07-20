@@ -8,6 +8,7 @@ on:
       - ".github/workflows/delivery-exception-slice3.yml"
       - "tools/scripts/patch-delivery-exception-slice3.py"
       - "tools/scripts/patch-delivery-exception-slice3-types.py"
+      - "tools/scripts/patch-delivery-exception-slice3-bindings.py"
   workflow_dispatch:
 
 permissions:
@@ -37,6 +38,7 @@ jobs:
           set -euo pipefail
           python tools/scripts/patch-delivery-exception-slice3.py
           python tools/scripts/patch-delivery-exception-slice3-types.py
+          python tools/scripts/patch-delivery-exception-slice3-bindings.py
 
       - name: Typecheck complete captain journey
         id: captain_typecheck
@@ -70,6 +72,8 @@ jobs:
           screen="services/dsh/frontend/app-captain/orders/DshCaptainPoDSubmissionScreen.tsx"
           runtime="services/dsh/frontend/shared/delivery/use-captain-order-runtime.ts"
           actions="services/dsh/frontend/shared/delivery/delivery.actions.ts"
+          surface="services/dsh/frontend/app-captain/DshCaptainSurface.tsx"
+          state_types="services/dsh/frontend/shared/delivery/captain.surface.types.ts"
           grep -F 'fetchCaptainDeliveryException' "$screen"
           grep -F 'DELIVERY_EXCEPTION_REASONS' "$screen"
           grep -F 'const item = await onReportFailure' "$screen"
@@ -77,9 +81,11 @@ jobs:
           grep -F 'draft: CaptainDeliveryExceptionDraft' "$runtime"
           grep -F 'DshDeliveryExceptionReasonCode' services/dsh/frontend/shared/dispatch/dispatch.types.ts
           grep -F "setCaptainPodState('ready')" "$actions"
+          grep -F 'onReportPodFailure={(draft) => actions.reportPodFailure(draft)}' "$surface"
           ! grep -F "orderId = 'ORD-9021'" "$screen"
           ! grep -F 'refused proof: rejected proof' "$screen"
           ! grep -F "setCaptainPodState('retry-required')" "$actions"
+          ! grep -F "'retry-required'" "$state_types"
           ! grep -Ei '(mock|fixture|demo)[A-Za-z0-9_]*[[:space:]]*=' "$screen"
 
       - name: Remove temporary files and commit verified slice
@@ -95,7 +101,8 @@ jobs:
           git rm \
             .github/workflows/delivery-exception-slice3.yml \
             tools/scripts/patch-delivery-exception-slice3.py \
-            tools/scripts/patch-delivery-exception-slice3-types.py
+            tools/scripts/patch-delivery-exception-slice3-types.py \
+            tools/scripts/patch-delivery-exception-slice3-bindings.py
           git add -A
           git commit -m "feat(delivery-exception): add categorized captain reporting surface [skip ci]"
           git pull --rebase origin journey/delivery-exception-redelivery-closure
