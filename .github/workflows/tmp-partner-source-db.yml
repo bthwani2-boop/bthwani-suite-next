@@ -46,16 +46,25 @@ jobs:
           go-version-file: services/dsh/backend/go.mod
           cache: true
           cache-dependency-path: services/dsh/backend/go.sum
-      - name: Verify partner Go source
+      - name: Verify partner formatting
         working-directory: services/dsh/backend
         shell: bash
         run: |
           set -euo pipefail
           files="$(gofmt -l internal/partner internal/http/partner_team_audit.go internal/http/partner_fleet.go internal/http/partner_support.go)"
           test -z "$files" || { printf 'Unformatted files:\n%s\n' "$files"; exit 1; }
-          go vet ./internal/partner
-          go test ./internal/partner -count=1 -v
-          go test ./internal/http -run '^$'
+      - name: Vet partner package
+        working-directory: services/dsh/backend
+        shell: bash
+        run: go vet ./internal/partner
+      - name: Compile HTTP package
+        working-directory: services/dsh/backend
+        shell: bash
+        run: go test ./internal/http -run '^$' -count=1
+      - name: Run partner unit tests
+        working-directory: services/dsh/backend
+        shell: bash
+        run: go test ./internal/partner -count=1 -v
       - name: Apply DSH migration chain
         shell: bash
         run: |
