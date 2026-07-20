@@ -35,10 +35,6 @@ jobs:
       - name: Build Identity
         shell: bash
         run: docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml --profile identity build identity-api
-      - name: Reset focused runtime
-        shell: pwsh
-        run: |
-          & ./infra/docker/scripts/runtime.ps1 -Action down -Profiles identity,workforce,dsh,media,wlt *>&1 | Tee-Object -FilePath artifacts/partner-journey-closure/runtime-down.log
       - name: Start focused runtime
         shell: pwsh
         run: |
