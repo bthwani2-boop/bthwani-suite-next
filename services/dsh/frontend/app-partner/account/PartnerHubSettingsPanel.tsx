@@ -208,11 +208,11 @@ export function PartnerHubSettingsPanel({
             title={item.title}
             subtitle={item.subtitle}
             value={item.value}
-            onToggle={() => updateNotificationPreference(item.id, !item.value)}
+            onValueChange={(nextValue) => updateNotificationPreference(item.id, nextValue)}
           />
         ))}
         <Pressable onPress={() => setShowAdvancedNotifications(!showAdvancedNotifications)}>
-          <Text role="bodyStrong" tone="brand">
+          <Text role="bodyStrong" tone="action">
             {showAdvancedNotifications ? 'إخفاء الإعدادات المتقدمة' : 'عرض الإعدادات المتقدمة'}
           </Text>
         </Pressable>
@@ -224,7 +224,7 @@ export function PartnerHubSettingsPanel({
                 title={item.title}
                 subtitle={item.subtitle}
                 value={item.value}
-                onToggle={() => updateNotificationPreference(item.id, !item.value)}
+                onValueChange={(nextValue) => updateNotificationPreference(item.id, nextValue)}
               />
             ))
           : null}
