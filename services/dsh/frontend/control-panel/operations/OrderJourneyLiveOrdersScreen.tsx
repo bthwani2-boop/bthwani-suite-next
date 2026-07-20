@@ -114,9 +114,9 @@ export function OrderJourneyLiveOrdersScreen({
       <WebControlPanelKpiStrip items={[
         { id: 'visible', label: 'المعروض', value: String(visible.length), tone: 'neutral' },
         { id: 'unassigned', label: 'جاهزة بلا كابتن', value: String(unassigned), tone: unassigned > 0 ? 'warning' : 'success' },
-        { id: 'active', label: 'قيد التوصيل', value: String(active), tone: 'info' },
+        { id: 'active', label: 'قيد التوصيل', value: String(active), tone: 'neutral' },
         { id: 'financial-pending', label: 'إغلاق مالي جارٍ', value: String(pendingFinancial), tone: pendingFinancial > 0 ? 'warning' : 'success' },
-        { id: 'refunds', label: 'استردادات مطلوبة', value: String(requestedRefunds), tone: requestedRefunds > 0 ? 'info' : 'neutral' },
+        { id: 'refunds', label: 'استردادات مطلوبة', value: String(requestedRefunds), tone: requestedRefunds > 0 ? 'warning' : 'neutral' },
         { id: 'financial-failures', label: 'تعثر مالي', value: String(financialFailures), tone: financialFailures > 0 ? 'danger' : 'success' },
       ]} />
 
