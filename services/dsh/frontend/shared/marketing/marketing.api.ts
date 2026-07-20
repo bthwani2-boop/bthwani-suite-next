@@ -66,17 +66,16 @@ export const deleteTicker = (id: string) =>
   req<{ deleted: boolean }>(`/dsh/operator/marketing/tickers/${id}`, { method: "DELETE" });
 
 export type PartnerOfferWritePayload = {
-  readonly status?: string;
-  readonly title?: string;
-  readonly valueLabel?: string;
-  readonly eligibility?: string;
-  readonly activeFromDate?: string;
-  readonly activeToDate?: string;
-  readonly rejectionReason?: string;
-  readonly marginRiskNote?: string;
-  readonly couponId?: string;
-  /** Governed operator surfaces always send this. Optional only for legacy compile compatibility. */
-  readonly expectedVersion?: number;
+  readonly status?: string | undefined;
+  readonly title?: string | undefined;
+  readonly valueLabel?: string | undefined;
+  readonly eligibility?: string | undefined;
+  readonly activeFromDate?: string | undefined;
+  readonly activeToDate?: string | undefined;
+  readonly rejectionReason?: string | undefined;
+  readonly marginRiskNote?: string | undefined;
+  readonly couponId?: string | undefined;
+  readonly expectedVersion?: number | undefined;
 };
 
 export type PartnerOfferSubmitPayload = {
@@ -113,8 +112,7 @@ export const submitPartnerSelfOffer = (body: PartnerOfferSubmitPayload) =>
     { method: "POST", body: JSON.stringify(body) },
   );
 
-export const fetchCoupons = () =>
-  req<CouponListResponse>("/dsh/operator/marketing/coupons");
+export const fetchCoupons = () => req<CouponListResponse>("/dsh/operator/marketing/coupons");
 export const createCoupon = (body: CouponCreatePayload) =>
   req<{ issued: IssuedCoupon; fundingPolicy: CouponFundingPolicy }>("/dsh/operator/marketing/coupons", {
     method: "POST",
