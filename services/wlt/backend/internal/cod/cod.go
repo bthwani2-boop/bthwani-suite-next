@@ -146,7 +146,7 @@ func scanCommissionRow(rows *sql.Rows) (*Commission, error) {
 	return &c, nil
 }
 
-func normalizeCollector(input CreateCodRecordInput) (string, string, string, error) {
+func normalizeCodRecordCollector(input CreateCodRecordInput) (string, string, string, error) {
 	collectorType := strings.TrimSpace(input.CollectorType)
 	collectorID := strings.TrimSpace(input.CollectorID)
 	captainID := strings.TrimSpace(input.CaptainID)
@@ -180,7 +180,7 @@ func CreateCodRecord(db *sql.DB, input CreateCodRecordInput) (*CodRecord, error)
 	if input.OrderID == "" || input.PartnerID == "" || input.CheckoutIntentID == "" {
 		return nil, fmt.Errorf("orderId, partnerId, and checkoutIntentId are required")
 	}
-	collectorType, collectorID, captainID, err := normalizeCollector(input)
+	collectorType, collectorID, captainID, err := normalizeCodRecordCollector(input)
 	if err != nil {
 		return nil, err
 	}

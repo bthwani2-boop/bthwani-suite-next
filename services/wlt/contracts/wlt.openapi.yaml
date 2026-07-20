@@ -1200,6 +1200,63 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /wlt/delivery-collections:
+    post:
+      operationId: createWltDeliveryCollectionHandoff
+      summary: Accept a governed DSH delivery-completion handoff.
+      description: >-
+        DSH sends delivery and collector identities only. WLT resolves the payment
+        session, returns applicable=false for prepaid orders, and creates one COD
+        custody record for COD orders without trusting caller-supplied money.
+      tags: [WltCod]
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema: { type: string }
+        - name: X-Service-Caller
+          in: header
+          required: true
+          schema:
+            type: string
+            enum: [dsh]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WltCreateCodRecordRequest"
+      responses:
+        "200":
+          description: Handoff replayed or not applicable to a prepaid order.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [applicable, replayed]
+                properties:
+                  codRecord:
+                    anyOf:
+                      - $ref: "#/components/schemas/WltCodRecord"
+                      - type: "null"
+                  applicable: { type: boolean }
+                  replayed: { type: boolean }
+        "201":
+          description: COD custody record created from WLT payment-session truth.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [codRecord, applicable, replayed]
+                properties:
+                  codRecord: { $ref: "#/components/schemas/WltCodRecord" }
+                  applicable: { type: boolean, const: true }
+                  replayed: { type: boolean, const: false }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
   /wlt/cod-records:
     post:
       operationId: createWltCodRecord

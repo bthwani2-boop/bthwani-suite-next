@@ -664,6 +664,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/wlt/delivery-collections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept a governed DSH delivery-completion handoff.
+         * @description DSH sends delivery and collector identities only. WLT resolves the payment session, returns applicable=false for prepaid orders, and creates one COD custody record for COD orders without trusting caller-supplied money.
+         */
+        post: operations["createWltDeliveryCollectionHandoff"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/wlt/cod-records": {
         parameters: {
             query?: never;
@@ -2626,6 +2646,56 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    createWltDeliveryCollectionHandoff: {
+        parameters: {
+            query?: never;
+            header: {
+                Authorization: string;
+                "X-Service-Caller": "dsh";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WltCreateCodRecordRequest"];
+            };
+        };
+        responses: {
+            /** @description Handoff replayed or not applicable to a prepaid order. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        codRecord?: components["schemas"]["WltCodRecord"] | null;
+                        applicable: boolean;
+                        replayed: boolean;
+                    };
+                };
+            };
+            /** @description COD custody record created from WLT payment-session truth. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        codRecord: components["schemas"]["WltCodRecord"];
+                        /** @constant */
+                        applicable: true;
+                        /** @constant */
+                        replayed: false;
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
         };
     };
     listWltCodRecords: {

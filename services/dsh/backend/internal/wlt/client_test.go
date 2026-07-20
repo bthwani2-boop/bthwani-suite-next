@@ -165,8 +165,8 @@ func TestNewClientTrimsTrailingSlash(t *testing.T) {
 
 func TestNotifyDeliveryCollectionSendsGovernedCollectorHeaders(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/wlt/cod-records" {
-			t.Fatalf("expected /wlt/cod-records, got %s", r.URL.Path)
+		if r.URL.Path != "/wlt/delivery-collections" {
+			t.Fatalf("expected /wlt/delivery-collections, got %s", r.URL.Path)
 		}
 		if r.Header.Get("X-Service-Caller") != "dsh" {
 			t.Fatalf("expected X-Service-Caller=dsh, got %q", r.Header.Get("X-Service-Caller"))

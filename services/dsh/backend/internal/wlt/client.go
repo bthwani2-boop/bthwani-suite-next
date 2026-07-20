@@ -150,7 +150,7 @@ func (c *Client) NotifyDeliveryCollection(ctx context.Context, input NotifyDeliv
 	if err != nil {
 		return fmt.Errorf("encode WLT COD custody request: %w", err)
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/wlt/cod-records", bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/wlt/delivery-collections", bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("build WLT COD custody request: %w", err)
 	}
@@ -164,7 +164,7 @@ func (c *Client) NotifyDeliveryCollection(ctx context.Context, input NotifyDeliv
 	}
 	idempotencyKey := strings.TrimSpace(input.IdempotencyKey)
 	if idempotencyKey == "" {
-		idempotencyKey = deterministicMutationKey("cod-custody-create", input.OrderID, input.CheckoutIntentID, input.CollectorType, input.CollectorID)
+		idempotencyKey = deterministicMutationKey("delivery-collection-handoff", input.OrderID, input.CheckoutIntentID, input.CollectorType, input.CollectorID)
 	}
 	if err := setRequiredMutationHeaders(req, correlationID, idempotencyKey); err != nil {
 		return fmt.Errorf("prepare WLT COD custody request: %w", err)
@@ -175,7 +175,7 @@ func (c *Client) NotifyDeliveryCollection(ctx context.Context, input NotifyDeliv
 	}
 	defer response.Body.Close()
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return fmt.Errorf("WLT COD custody returned HTTP %d", response.StatusCode)
+		return fmt.Errorf("WLT delivery collection handoff returned HTTP %d", response.StatusCode)
 	}
 	return nil
 }
