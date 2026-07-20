@@ -28,8 +28,6 @@ jobs:
       - uses: ./.github/actions/setup-node-workspace
       - name: Contracts foundation
         run: pnpm run contracts:lint
-      - name: API binding
-        run: pnpm run guard:api-binding
       - name: Backend API binding
         run: pnpm run guard:backend-api-binding
       - name: Frontend feature binding
