@@ -81,10 +81,34 @@ jobs:
           go test ./internal/dispatch ./internal/http ./cmd/dsh-api -run '^$' -count=1
 
       - name: Typecheck affected control-panel surface
+        id: control_panel_typecheck
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/delivery-exception-slice2-typecheck
+          pnpm exec tsc -p apps/control-panel/runtime/tsconfig.delivery-exception-journey.json --noEmit --pretty false 2>&1 \
+            | tee artifacts/delivery-exception-slice2-typecheck/typecheck.log
+          exit ${PIPESTATUS[0]}
+
+      - name: Upload control-panel typecheck diagnostic
+        if: steps.control_panel_typecheck.outcome == 'failure'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: delivery-exception-slice2-typecheck-${{ github.sha }}
+          path: artifacts/delivery-exception-slice2-typecheck/typecheck.log
+          if-no-files-found: error
+          retention-days: 2
+
+      - name: Stop on control-panel typecheck failure
+        if: steps.control_panel_typecheck.outcome == 'failure'
+        shell: bash
+        run: exit 1
+
+      - name: Prove fixture-free live operations screen
         shell: bash
         run: |
           set -euo pipefail
-          pnpm exec tsc -p apps/control-panel/runtime/tsconfig.delivery-exception-journey.json --noEmit --pretty false
           ! grep -F 'fetchDshRuntimeOrders' services/dsh/frontend/control-panel/operations/ExceptionsEscalationsScreen.tsx
           ! grep -F 'cancelledOrders' services/dsh/frontend/control-panel/operations/ExceptionsEscalationsScreen.tsx
           ! grep -Ei '(mock|fixture|demo)[A-Za-z0-9_]*[[:space:]]*=' services/dsh/frontend/control-panel/operations/ExceptionsEscalationsScreen.tsx
