@@ -1,6 +1,7 @@
 package http
 
 import (
+	"errors"
 	"net/http"
 
 	"dsh-api/internal/partnerdelivery"
@@ -19,11 +20,15 @@ func (s *protectedStoreServer) handleGetPartnerDeliveryTask(w http.ResponseWrite
 		return
 	}
 	task, err := partnerdelivery.GetByOrderID(s.db, ownedOrder.ID)
+	if errors.Is(err, partnerdelivery.ErrNotFound) {
+		store.SendJSON(w, http.StatusOK, map[string]any{"task": nil, "stage": "unassigned"})
+		return
+	}
 	if err != nil {
 		writePartnerDeliveryError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"task": marshalPartnerDeliveryTask(task)})
+	store.SendJSON(w, http.StatusOK, map[string]any{"task": marshalPartnerDeliveryTask(task), "stage": task.Status})
 }
 
 // GET /dsh/partner/orders/{orderId}/pickup
@@ -36,10 +41,22 @@ func (s *protectedStoreServer) handleGetPartnerPickupSession(w http.ResponseWrit
 		store.SendError(w, http.StatusUnprocessableEntity, "PICKUP_NOT_APPLICABLE", "order is not pickup")
 		return
 	}
+
 	session, err := pickup.GetByOrderID(s.db, ownedOrder.ID)
+	if errors.Is(err, pickup.ErrNotFound) {
+		session = nil
+	} else if err != nil {
+		writePickupError(w, err)
+		return
+	}
+	stage, err := pickup.ResolveStage(s.db, ownedOrder.ID, session)
 	if err != nil {
 		writePickupError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"session": marshalPickupSession(session)})
+	var responseSession any
+	if session != nil {
+		responseSession = marshalPickupSession(session)
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"session": responseSession, "stage": stage})
 }
