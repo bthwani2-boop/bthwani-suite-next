@@ -23,4 +23,5 @@ func RegisterPartnerSelfRoutes(
 	mux.HandleFunc("GET /dsh/partner/activation/status", protected.handlePartnerActivationStatus)
 	mux.HandleFunc("GET /dsh/partner/activation/readiness", protected.handlePartnerActivationReadiness)
 	mux.HandleFunc("GET /dsh/partner/analytics/performance", protected.handlePartnerPerformance)
+	mux.HandleFunc("GET /dsh/partner/order-workboard", protected.handlePartnerOrderWorkboard)
 }
