@@ -1,8 +1,5 @@
 {
   "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "types": ["node"]
-  },
   "include": [
     "../../../services/dsh/frontend/app-partner/orders/OperationalOrderDecisionScreen.tsx",
     "../../../services/dsh/frontend/app-partner/orders/DshPartnerOrderRejectionScreen.tsx",
