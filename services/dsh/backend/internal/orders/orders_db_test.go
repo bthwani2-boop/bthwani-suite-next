@@ -160,10 +160,8 @@ func fetchFinancialClosureOutboxRow(t *testing.T, db *sql.DB, paymentSessionID s
 }
 
 // TestRejectOrderEnqueuesCancelForOrderWhenPaymentRefExistsDBIntegration
-// proves rejecting a pending order that already has a WLT payment session
-// reference enqueues a durable cancel_for_order outbox event in the same
-// transaction as the rejection — closing the gap where order rejection never
-// triggered any WLT financial action.
+// proves the legacy partner-reject entry point delegates to the governed store
+// cancellation state and enqueues the same durable WLT closure event.
 func TestRejectOrderEnqueuesCancelForOrderWhenPaymentRefExistsDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	order, paymentSessionID := seedOrderFixture(t, db, string(StatusPending))
@@ -175,8 +173,8 @@ func TestRejectOrderEnqueuesCancelForOrderWhenPaymentRefExistsDBIntegration(t *t
 	if err != nil {
 		t.Fatalf("RejectOrder failed: %v", err)
 	}
-	if rejected.Status != StatusCancelled {
-		t.Fatalf("expected status cancelled, got %s", rejected.Status)
+	if rejected.Status != StatusCancelledByStore {
+		t.Fatalf("expected status %s, got %s", StatusCancelledByStore, rejected.Status)
 	}
 
 	eventType, orderID, reason, found := fetchFinancialClosureOutboxRow(t, db, paymentSessionID)
@@ -189,14 +187,13 @@ func TestRejectOrderEnqueuesCancelForOrderWhenPaymentRefExistsDBIntegration(t *t
 	if !orderID.Valid || orderID.String != order.ID {
 		t.Fatalf("expected order_id=%q, got %+v", order.ID, orderID)
 	}
-	if reason != "out of stock" {
-		t.Fatalf("expected reason='out of stock', got %q", reason)
+	if reason != "other: out of stock" {
+		t.Fatalf("expected governed reason, got %q", reason)
 	}
 }
 
-// TestCancelOrderByOperatorEnqueuesCancelForOrderDBIntegration proves an
-// operator-initiated cancellation also enqueues the cancel_for_order outbox
-// event, going through the shared transitionOrder/transitionOrderTx path.
+// TestCancelOrderByOperatorEnqueuesCancelForOrderDBIntegration proves the
+// compatibility operator entry point delegates to the governed explicit state.
 func TestCancelOrderByOperatorEnqueuesCancelForOrderDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	order, paymentSessionID := seedOrderFixture(t, db, string(StatusPending))
@@ -208,8 +205,8 @@ func TestCancelOrderByOperatorEnqueuesCancelForOrderDBIntegration(t *testing.T) 
 	if err != nil {
 		t.Fatalf("CancelOrderByOperator failed: %v", err)
 	}
-	if cancelled.Status != StatusCancelled {
-		t.Fatalf("expected status cancelled, got %s", cancelled.Status)
+	if cancelled.Status != StatusCancelledByOperator {
+		t.Fatalf("expected status %s, got %s", StatusCancelledByOperator, cancelled.Status)
 	}
 
 	eventType, orderID, reason, found := fetchFinancialClosureOutboxRow(t, db, paymentSessionID)
@@ -222,14 +219,13 @@ func TestCancelOrderByOperatorEnqueuesCancelForOrderDBIntegration(t *testing.T) 
 	if !orderID.Valid || orderID.String != order.ID {
 		t.Fatalf("expected order_id=%q, got %+v", order.ID, orderID)
 	}
-	if reason != "store unresponsive" {
-		t.Fatalf("expected reason='store unresponsive', got %q", reason)
+	if reason != "other: store unresponsive" {
+		t.Fatalf("expected governed reason, got %q", reason)
 	}
 }
 
 // TestAcceptOrderEnqueuesNothingDBIntegration proves a non-cancelling
-// transition (accept) through the same shared transitionOrder/
-// transitionOrderTx helper does not write a financial closure outbox event.
+// transition does not write a financial closure event.
 func TestAcceptOrderEnqueuesNothingDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	order, paymentSessionID := seedOrderFixture(t, db, string(StatusPending))
