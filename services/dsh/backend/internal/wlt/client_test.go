@@ -512,7 +512,7 @@ func TestNotifyDeliveryCollectionNonSuccessStatus(t *testing.T) {
 	defer server.Close()
 
 	c := NewClient(server.URL, "test-service-token")
-	err := c.NotifyDeliveryCollection(context.Background(), NotifyDeliveryCollectionInput{OrderID: "order-1"})
+	err := c.NotifyDeliveryCollection(context.Background(), NotifyDeliveryCollectionInput{OrderID: "order-1", CollectorType: "captain", CollectorID: "captain-1", PartnerID: "partner-1", CheckoutIntentID: "intent-1"})
 	if err == nil || !strings.Contains(err.Error(), "500") {
 		t.Fatalf("expected error mentioning status 500, got: %v", err)
 	}
