@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src/App.tsx",
+    "../../../services/dsh/frontend/app-partner/DshPartnerSurface.tsx",
+    "../../../services/dsh/frontend/app-partner/DshPartnerOrderJourneyRenderer.tsx",
+    "../../../services/dsh/frontend/app-partner/DshPartnerRouteRenderer.tsx",
+    "../../../services/dsh/frontend/app-partner/orders/**/*.ts",
+    "../../../services/dsh/frontend/app-partner/orders/**/*.tsx",
+    "../../../services/dsh/frontend/app-partner/team/**/*.ts",
+    "../../../services/dsh/frontend/shared/orders/**/*.ts",
+    "../../../services/dsh/frontend/shared/partner/**/*.ts",
+    "../../../services/dsh/frontend/shared/partner-delivery/**/*.ts",
+    "../../../services/dsh/frontend/shared/partner-delivery/**/*.tsx",
+    "../../../services/dsh/frontend/shared/pickup/**/*.ts",
+    "../../../services/dsh/frontend/shared/pickup/**/*.tsx",
+    "../../../services/dsh/frontend/shared/_kernel/**/*.ts"
+  ]
+}
