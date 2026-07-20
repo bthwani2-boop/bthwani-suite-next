@@ -1,3 +1,4 @@
+import subprocess
 from pathlib import Path
 
 
@@ -174,5 +175,16 @@ if post_response_governed not in contract:
     contract = replace_once(contract, post_response, post_response_governed, "refund replay response")
 contract_path.write_text(contract, encoding="utf-8")
 
+subprocess.run(
+    [
+        "gofmt",
+        "-w",
+        str(server_path),
+        str(payment_path),
+        str(refund_path),
+        str(test_path),
+    ],
+    check=True,
+)
 Path("tools/scripts/patch-cancellation-wlt-governed-routes.py").unlink(missing_ok=True)
-print("WLT cancellation/refund runtime, compatibility functions, and create/replay contract share one governed atomic implementation.")
+print("WLT cancellation/refund runtime, compatibility functions, contract, and formatting share one governed atomic implementation.")
