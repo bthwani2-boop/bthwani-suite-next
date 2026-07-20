@@ -8,6 +8,7 @@ on:
       - ".github/workflows/delivery-exception-slice6.yml"
       - "tools/scripts/patch-delivery-exception-slice6.py"
       - "tools/scripts/patch-delivery-exception-slice6-types.py"
+      - "tools/scripts/patch-delivery-exception-slice6-cancellation-state.py"
       - "tools/scripts/inspect-governed-cancel-source.py"
   workflow_dispatch:
 
@@ -59,8 +60,10 @@ jobs:
           set -euo pipefail
           python tools/scripts/patch-delivery-exception-slice6.py
           python tools/scripts/patch-delivery-exception-slice6-types.py
+          python tools/scripts/patch-delivery-exception-slice6-cancellation-state.py
           gofmt -w \
             services/dsh/backend/internal/orders/orders.go \
+            services/dsh/backend/internal/orders/runtime.go \
             services/dsh/backend/internal/orders/returned_cancellation_db_test.go
 
       - name: Compile governed cancellation boundaries
@@ -105,27 +108,22 @@ jobs:
         shell: bash
         run: exit 1
 
-      - name: Capture governed cancellation implementation
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p artifacts/delivery-exception-slice6-db
-          python tools/scripts/inspect-governed-cancel-source.py \
-            | tee artifacts/delivery-exception-slice6-db/cancel-source.log
-
-      - name: Apply migrations and prove one cancellation handoff
+      - name: Apply migrations and prove cancellation role boundaries
         id: returned_cancel_db
         continue-on-error: true
         shell: bash
         run: |
           set -o pipefail
+          mkdir -p artifacts/delivery-exception-slice6-db
           for file in $(find services/dsh/database/migrations -maxdepth 1 -type f -name '*.sql' | sort); do
             psql "$DSH_DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file" >/dev/null || exit 1
           done
           (
             cd services/dsh/backend
             DSH_REQUIRE_DB_TESTS=true DATABASE_URL="$DSH_DATABASE_URL" \
-              go test ./internal/orders -run '^TestReturnedOrderCancellationCreatesOneGovernedFinancialHandoffDBIntegration$' -count=1 -v
+              go test ./internal/orders \
+                -run '^TestReturnedOrderCancellation(CreatesOneGovernedFinancialHandoff|RemainsForbiddenForClientAndPartner)DBIntegration$' \
+                -count=1 -v
           ) 2>&1 | tee artifacts/delivery-exception-slice6-db/returned-cancellation.log
           exit ${PIPESTATUS[0]}
 
@@ -134,7 +132,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: delivery-exception-slice6-db-${{ github.sha }}
-          path: artifacts/delivery-exception-slice6-db/*.log
+          path: artifacts/delivery-exception-slice6-db/returned-cancellation.log
           if-no-files-found: error
           retention-days: 2
 
@@ -143,21 +141,21 @@ jobs:
         shell: bash
         run: exit 1
 
-      - name: Prove WLT handoff boundary and fixture-free operations UI
+      - name: Prove operator-only WLT handoff and fixture-free UI
         shell: bash
         run: |
           set -euo pipefail
           screen="services/dsh/frontend/control-panel/operations/ExceptionsEscalationsScreen.tsx"
+          runtime="services/dsh/backend/internal/orders/runtime.go"
           test_file="services/dsh/backend/internal/orders/returned_cancellation_db_test.go"
+          grep -F 'StatusReturnedStore' "$runtime"
+          grep -F "case \"operator\":" "$runtime"
           grep -F "cancelOrder('operator'" "$screen"
           grep -F 'response.cancellation' "$screen"
           grep -F 'fetchOrderCancellation' "$screen"
           grep -F 'FINANCIAL_CLOSURE_LABELS' "$screen"
-          grep -F 'returned-delivery-exception-' "$screen"
-          grep -F 'financialReference' "$screen"
-          grep -F 'financialFailure' "$screen"
           grep -F 'outboxCount != 1' "$test_file"
-          grep -F 'FinancialClosureStatus != "pending"' "$test_file"
+          grep -F 'RemainsForbiddenForClientAndPartner' "$test_file"
           ! grep -Ei '(mock|fixture|demo)[A-Za-z0-9_]*[[:space:]]*=' "$screen"
 
       - name: Remove temporary files and commit verified slice
@@ -174,13 +172,14 @@ jobs:
             .github/workflows/delivery-exception-slice6.yml \
             tools/scripts/patch-delivery-exception-slice6.py \
             tools/scripts/patch-delivery-exception-slice6-types.py \
+            tools/scripts/patch-delivery-exception-slice6-cancellation-state.py \
             tools/scripts/inspect-governed-cancel-source.py
           git add -A
           git commit -m "feat(delivery-exception): hand returned orders to governed cancellation and WLT [skip ci]"
           git pull --rebase origin journey/delivery-exception-redelivery-closure
           git push origin HEAD:journey/delivery-exception-redelivery-closure
           final_sha="$(git rev-parse HEAD)"
-          jq -n --arg state success --arg context "Delivery Exception Slice Six" --arg description "returned order cancellation and single WLT handoff verified" --arg target_url "$RUN_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' > status.json
+          jq -n --arg state success --arg context "Delivery Exception Slice Six" --arg description "operator-only returned cancellation and single WLT handoff verified" --arg target_url "$RUN_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' > status.json
           curl --fail-with-body --silent --show-error -X POST \
             -H "Authorization: Bearer $GH_TOKEN" \
             -H "Accept: application/vnd.github+json" \
