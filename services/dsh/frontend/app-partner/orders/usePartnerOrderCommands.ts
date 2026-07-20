@@ -5,7 +5,7 @@ import {
   markOrderPreparing,
   markOrderReady,
 } from '../../shared/orders/orders.api';
-import type { PartnerOrderItem } from '../../shared/orders/orders.contract';
+import type { DshPartnerOrderAction } from '../../shared/orders/orders.types';
 
 export type PartnerOrderMutationCommand = 'accept' | 'prepare' | 'ready';
 
@@ -17,12 +17,13 @@ export type PartnerOrderCommandState =
 
 export function resolvePartnerOrderMutation(
   actionId: string,
-  status: PartnerOrderItem['status'],
+  allowedActions: readonly DshPartnerOrderAction[],
 ): PartnerOrderMutationCommand | null {
-  if (actionId === 'accept') return 'accept';
-  if (actionId === 'ready') return 'ready';
+  if (actionId === 'accept' && allowedActions.includes('accept')) return 'accept';
+  if (actionId === 'ready' && allowedActions.includes('ready')) return 'ready';
   if (actionId === 'prepare') {
-    return status === 'preparation_started' ? 'prepare' : 'ready';
+    if (allowedActions.includes('prepare')) return 'prepare';
+    if (allowedActions.includes('ready')) return 'ready';
   }
   return null;
 }
