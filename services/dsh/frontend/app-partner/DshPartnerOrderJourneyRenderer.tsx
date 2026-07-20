@@ -32,6 +32,7 @@ export function DshPartnerOrderJourneyRenderer(props: Props): React.ReactElement
     <OperationalOrdersInboxScreen
       state={props.partnerOrdersState}
       items={props.partnerOrders}
+      teamMembers={props.teamMembers}
       searchMode={props.ordersSearchMode}
       onCloseSearch={() => props.setOrdersSearchMode(false)}
       onRetry={props.refreshOrders}
@@ -46,6 +47,8 @@ export function DshPartnerOrderJourneyRenderer(props: Props): React.ReactElement
           return;
         }
         if (actionId === 'handoff') {
+          // Only Bthwani-delivery reaches this branch. Partner-delivery and
+          // pickup are executed inline by the governed fulfillment panel.
           props.openSupportCommandFromOperationalFlow('order-handoff', 'orders');
           return;
         }
