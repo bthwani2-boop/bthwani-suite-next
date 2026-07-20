@@ -15,6 +15,7 @@ import {
 import type { PartnerTeamMember } from "./partner-team.types";
 import type { PartnerTeamMutationResult } from "./usePartnerTeamModel";
 
+export type { PartnerTeamMember } from "./partner-team.types";
 export type PartnerTeamSection = "members" | "invites" | "couriers";
 
 export type PartnerTeamInlineAction =
