@@ -7,6 +7,7 @@ on:
     paths:
       - ".github/workflows/delivery-exception-slice6.yml"
       - "tools/scripts/patch-delivery-exception-slice6.py"
+      - "tools/scripts/patch-delivery-exception-slice6-types.py"
   workflow_dispatch:
 
 permissions:
@@ -56,6 +57,7 @@ jobs:
         run: |
           set -euo pipefail
           python tools/scripts/patch-delivery-exception-slice6.py
+          python tools/scripts/patch-delivery-exception-slice6-types.py
           gofmt -w \
             services/dsh/backend/internal/orders/orders.go \
             services/dsh/backend/internal/orders/returned_cancellation_db_test.go
@@ -140,6 +142,7 @@ jobs:
           screen="services/dsh/frontend/control-panel/operations/ExceptionsEscalationsScreen.tsx"
           test_file="services/dsh/backend/internal/orders/returned_cancellation_db_test.go"
           grep -F "cancelOrder('operator'" "$screen"
+          grep -F 'response.cancellation' "$screen"
           grep -F 'fetchOrderCancellation' "$screen"
           grep -F 'FINANCIAL_CLOSURE_LABELS' "$screen"
           grep -F 'returned-delivery-exception-' "$screen"
@@ -161,7 +164,8 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm \
             .github/workflows/delivery-exception-slice6.yml \
-            tools/scripts/patch-delivery-exception-slice6.py
+            tools/scripts/patch-delivery-exception-slice6.py \
+            tools/scripts/patch-delivery-exception-slice6-types.py
           git add -A
           git commit -m "feat(delivery-exception): hand returned orders to governed cancellation and WLT [skip ci]"
           git pull --rebase origin journey/delivery-exception-redelivery-closure
