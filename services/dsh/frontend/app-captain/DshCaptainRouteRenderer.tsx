@@ -19,6 +19,7 @@ import type {
   CaptainSupportRoute,
   CaptainAvailabilityMeta,
   DshCaptainLocationPush,
+  CaptainDeliveryExceptionDraft,
 } from "../shared/delivery";
 import { DshEntryScreen } from "./account/DshCaptainEntryScreen";
 import {
@@ -38,6 +39,7 @@ import { CaptainStorePickupContextScreen } from "./store/CaptainStorePickupConte
 import { OfferDeclineSheet } from "./orders/OfferDeclineSheet";
 import { CaptainSupportScreenRouter } from "./account/CaptainSupportScreenRouter";
 import type { DshCaptainOrderBellItem, DshCaptainOrdersScreenState } from "../shared/orders";
+import type { DshDeliveryException } from "../shared/dispatch/dispatch.types";
 import { ActorNotificationsPanel } from "../shared/notifications";
 
 type BThwaniAppearanceMode = "lightPremium" | "darkPremium";
@@ -90,7 +92,7 @@ export type DshCaptainRouteRendererProps = {
   readonly onConfirmPickup: () => void;
   readonly onConfirmDelivery: () => void;
   readonly onConfirmPodSubmission: () => void;
-  readonly onReportPodFailure: () => void;
+  readonly onReportPodFailure: (draft: CaptainDeliveryExceptionDraft) => Promise<DshDeliveryException | undefined>;
   readonly onCapturePhoto: () => void;
   readonly onRetryPod: () => void;
   readonly onBack: () => void;
@@ -351,7 +353,9 @@ export function DshCaptainRouteRenderer(
       return (
         <DshCaptainPoDSubmissionScreen
           state={captainPodState}
+          assignmentId={activeAssignmentId}
           orderId={activeOrderId}
+          exceptionReportingEnabled={!isStoreCourierMode}
           onCapturePhoto={onCapturePhoto}
           onConfirm={onConfirmPodSubmission}
           onReportFailure={onReportPodFailure}

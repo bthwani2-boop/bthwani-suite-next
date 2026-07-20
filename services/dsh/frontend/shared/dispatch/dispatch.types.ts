@@ -10,6 +10,7 @@ export type DshDelivery = components["schemas"]["DshDelivery"];
 export type DshCreateAssignmentInput = components["schemas"]["DshCreateAssignmentRequest"];
 export type DshSubmitPoDInput = components["schemas"]["DshSubmitPoDRequest"];
 export type DshDeliveryException = components["schemas"]["DshDeliveryException"];
+export type DshDeliveryExceptionReasonCode = components["schemas"]["DshDeliveryExceptionReasonCode"];
 export type DshReportDeliveryExceptionInput = components["schemas"]["DshReportDeliveryExceptionRequest"];
 
 export type DshDispatchListState =

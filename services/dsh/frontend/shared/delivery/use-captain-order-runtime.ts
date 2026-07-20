@@ -9,6 +9,12 @@ import {
   updateDeliveryStatus,
 } from '../dispatch/dispatch.api';
 import { updateForegroundDispatchLocation } from '../dispatch/dispatch-location.api';
+import type { DshDeliveryException, DshDeliveryExceptionReasonCode } from '../dispatch/dispatch.types';
+
+export type CaptainDeliveryExceptionDraft = {
+  readonly reasonCode: DshDeliveryExceptionReasonCode;
+  readonly note: string;
+};
 
 export type DshCaptainLocationPush = {
   readonly assignmentId: string;
@@ -107,11 +113,20 @@ export function useCaptainOrderRuntime() {
   );
 
   const failDelivery = React.useCallback(
-    (assignmentId: string, _captainId: string) => reportDeliveryException(assignmentId, {
-      reasonCode: 'proof_unavailable',
-      note: 'تعذر إكمال إثبات التسليم؛ تم تحويل المهمة إلى مراجعة العمليات.',
-      correlationId: `${assignmentId}-${Date.now()}-${Math.random().toString(36).slice(2)}` ,
-    }),
+    async (assignmentId: string, _captainId: string, draft: CaptainDeliveryExceptionDraft): Promise<DshDeliveryException> => {
+      let coordinates: DshCaptainCoordinates | undefined;
+      try {
+        coordinates = await readCaptainForegroundLocation();
+      } catch {
+        // Location is valuable evidence but must not block safety or incident reporting.
+      }
+      return reportDeliveryException(assignmentId, {
+        reasonCode: draft.reasonCode,
+        note: draft.note.trim(),
+        correlationId: `${assignmentId}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        ...(coordinates ? { latitude: coordinates.latitude, longitude: coordinates.longitude } : {}),
+      });
+    },
     [],
   );
 

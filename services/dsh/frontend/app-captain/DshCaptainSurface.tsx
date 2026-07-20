@@ -176,7 +176,7 @@ function AuthenticatedCaptainSurface({
           onConfirmPickup={() => void actions.confirmPickup()}
           onConfirmDelivery={() => void actions.confirmDelivery()}
           onConfirmPodSubmission={() => void actions.confirmPodSubmission()}
-          onReportPodFailure={() => void actions.reportPodFailure()}
+          onReportPodFailure={(draft) => actions.reportPodFailure(draft)}
           onCapturePhoto={() => {
             void camera.captureFromCamera().then((asset) => {
               if (asset) actions.setCaptainPodPhotoUri(asset.uri);

@@ -5,7 +5,7 @@
 import React from 'react';
 import type { CompactOrderChatMessage, CaptainAppMode } from './captain.contract';
 import type { StoreCourierStage, ActiveOrderPhase } from './delivery.contract';
-import { useCaptainOrderRuntime } from './use-captain-order-runtime';
+import { useCaptainOrderRuntime, type CaptainDeliveryExceptionDraft } from './use-captain-order-runtime';
 import { DSH_CAPTAIN_CONTRACT_CAPABILITIES } from '../orders/dsh-order-lifecycle-client';
 
 export type DeliveryActionsDeps = {
@@ -139,21 +139,26 @@ export function useCaptainDeliveryActions(deps: DeliveryActionsDeps) {
     }
   }, [activeAssignmentId, captainAppMode, captainOrderRuntime, captainRuntimeId, captainPodMediaKey, captainPodPhotoUri, refreshInbox, setCaptainPodState, setStoreCourierStage, setInboxState]);
 
-  const reportPodFailure = React.useCallback(async () => {
-    if (!captainRuntimeId || !activeAssignmentId) return void setCaptainPodState('error');
-    if (!DSH_CAPTAIN_CONTRACT_CAPABILITIES.failDelivery) {
+  const reportPodFailure = React.useCallback(async (draft: CaptainDeliveryExceptionDraft) => {
+    if (!captainRuntimeId || !activeAssignmentId) {
       setCaptainPodState('error');
-      return;
+      return undefined;
     }
+    if (!DSH_CAPTAIN_CONTRACT_CAPABILITIES.failDelivery || captainAppMode === 'store_courier_mode') {
+      setCaptainPodState('error');
+      return undefined;
+    }
+    setCaptainPodState('loading');
     try {
-      await captainOrderRuntime.failDelivery(activeAssignmentId, captainRuntimeId);
-      setCaptainPodState('retry-required');
-      if (captainAppMode === 'store_courier_mode') setStoreCourierStage('delivery_failed' as StoreCourierStage);
+      const exception = await captainOrderRuntime.failDelivery(activeAssignmentId, captainRuntimeId, draft);
+      setCaptainPodState('ready');
+      return exception;
     } catch (err) {
-      console.error('[captain:pod-fail]', err);
+      console.error('[captain:delivery-exception]', err);
       setCaptainPodState('error');
+      return undefined;
     }
-  }, [activeAssignmentId, captainOrderRuntime, captainRuntimeId, captainAppMode, setCaptainPodState, setStoreCourierStage]);
+  }, [activeAssignmentId, captainOrderRuntime, captainRuntimeId, captainAppMode, setCaptainPodState]);
 
   return { handleAcceptTask, handleDeclineConfirm, confirmPickup, confirmDelivery, confirmPodSubmission, reportPodFailure };
 }

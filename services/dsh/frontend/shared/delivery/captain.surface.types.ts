@@ -27,7 +27,7 @@ export type DshCaptainSurfaceState = {
   activeOrderDraft: string;
   activeOrderMessages: CompactOrderChatMessage[];
   storeCourierStage: StoreCourierStage;
-  captainPodState: 'ready' | 'loading' | 'success' | 'error' | 'retry-required';
+  captainPodState: 'ready' | 'loading' | 'success' | 'error';
   captainPodPhotoUri: string | undefined;
   captainPodMediaKey: string | undefined;
   isDeclineSheetVisible: boolean;
