@@ -4,11 +4,11 @@ ROOT = Path(__file__).resolve().parents[2]
 patch_path = ROOT / "tools/scripts/patch-delivery-exception-slice7.py"
 patch = patch_path.read_text(encoding="utf-8")
 
-old_anchor = '\tmux.HandleFunc("POST /dsh/partner/orders/{orderId}/delivery/exception", protected.handlePartnerDeliveryException)\n'
-new_anchor = '\tmux.HandleFunc("POST /dsh/partner/orders/{orderId}/partner-delivery/exception", protected.handlePartnerDeliveryException)\n'
-if old_anchor not in patch and new_anchor not in patch:
+old_route = "/dsh/partner/orders/{orderId}/delivery/exception"
+new_route = "/dsh/partner/orders/{orderId}/partner-delivery/exception"
+if old_route not in patch and new_route not in patch:
     raise RuntimeError("current partner-delivery exception route anchor not found")
-patch = patch.replace(old_anchor, new_anchor)
+patch = patch.replace(old_route, new_route)
 patch = patch.replace(
     'order, _, ok := s.partnerOrder(w, r, r.PathValue("orderId"))',
     '_, order, ok := s.partnerOrder(w, r)',
