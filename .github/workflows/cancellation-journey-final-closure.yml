@@ -8,9 +8,12 @@ on:
       - ".github/workflows/cancellation-journey-final-closure.yml"
       - ".github/cancellation-journey-final-trigger"
       - "tools/scripts/patch-cancellation-journey-final.py"
+      - "tools/scripts/patch-cancellation-pickup-resume.py"
+      - "tools/scripts/close-cancellation-refund-reconciliation.py"
       - "services/dsh/backend/internal/dispatch/**"
       - "services/dsh/backend/internal/pickup/**"
       - "services/dsh/backend/internal/http/pickup.go"
+      - "services/dsh/backend/internal/http/server.go"
       - "services/dsh/backend/internal/orders/**"
       - "services/dsh/backend/internal/checkoutfinanceoutbox/**"
       - "services/dsh/backend/internal/wlt/cancel_for_order.go"
@@ -22,6 +25,11 @@ on:
       - "services/dsh/frontend/shared/dispatch/**"
       - "services/dsh/frontend/shared/delivery/captain-inbox.model.ts"
       - "services/dsh/frontend/shared/delivery/captain.surface-model.ts"
+      - "services/dsh/frontend/shared/pickup/**"
+      - "services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx"
+      - "services/dsh/frontend/control-panel/operations/PickupWorkbenchScreen.tsx"
+      - "apps/app-partner/runtime/tsconfig.cancellation-journey.json"
+      - "apps/control-panel/runtime/tsconfig.cancellation-journey.json"
       - "services/wlt/backend/internal/payment/**"
       - "services/wlt/backend/internal/refund/**"
       - "services/wlt/backend/internal/http/order_cancellation_routes.go"
@@ -85,9 +93,12 @@ jobs:
             services/dsh/backend/go.sum
             services/wlt/backend/go.sum
 
-      - name: Apply deterministic remaining journey fixes
+      - name: Apply remaining journey fixes
         shell: bash
-        run: python tools/scripts/patch-cancellation-journey-final.py
+        run: |
+          set -euo pipefail
+          python tools/scripts/patch-cancellation-pickup-resume.py
+          python tools/scripts/patch-cancellation-journey-final.py
 
       - name: Format affected Go sources
         shell: bash
@@ -97,55 +108,31 @@ jobs:
             services/dsh/backend/internal/dispatch/dispatch.go \
             services/dsh/backend/internal/dispatch/dispatch_helpers.go \
             services/dsh/backend/internal/dispatch/cancellation_db_test.go \
-            services/dsh/backend/internal/pickup/pickup.go \
-            services/dsh/backend/internal/pickup/service.go \
-            services/dsh/backend/internal/pickup/pickup_cancellation_db_test.go \
+            services/dsh/backend/internal/pickup/*.go \
             services/dsh/backend/internal/http/pickup.go \
+            services/dsh/backend/internal/http/server.go \
             services/wlt/backend/internal/payment/order_cancellation.go \
             services/wlt/backend/internal/refund/refund_atomic.go
 
-      - name: Generate DSH client
-        shell: bash
-        run: pnpm run openapi:generate:dsh
-
-      - name: Validate DSH cancellation and pickup contract
+      - name: Generate governed clients
         shell: bash
         run: |
           set -euo pipefail
-          grep -F 'cancellationReason' services/dsh/contracts/dsh.openapi.yaml
-          grep -F 'cancelled' services/dsh/clients/generated/dsh-api.ts
+          pnpm run openapi:generate:dsh
+          pnpm run openapi:generate:wlt
 
-      - name: Generate WLT client
-        id: generate_wlt
-        continue-on-error: true
-        shell: bash
-        run: |
-          set -o pipefail
-          mkdir -p artifacts/cancellation-wlt-openapi
-          pnpm run openapi:generate:wlt 2>&1 | tee artifacts/cancellation-wlt-openapi/generator.log
-          exit ${PIPESTATUS[0]}
-
-      - name: Upload WLT generator diagnostic
-        if: steps.generate_wlt.outcome == 'failure'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: cancellation-wlt-openapi-${{ github.sha }}
-          path: artifacts/cancellation-wlt-openapi/generator.log
-          if-no-files-found: error
-          retention-days: 2
-
-      - name: Stop on WLT generator failure
-        if: steps.generate_wlt.outcome == 'failure'
-        shell: bash
-        run: exit 1
-
-      - name: Validate governed WLT cancellation contract
+      - name: Validate governed contracts and routes
         shell: bash
         run: |
           set -euo pipefail
           grep -F '/wlt/order-cancellations:' services/wlt/contracts/wlt.openapi.yaml
           grep -F 'WltGovernedOrderCancellationResponse' services/wlt/contracts/wlt.openapi.yaml
           grep -F 'WltGovernedOrderCancellationResponse' services/wlt/clients/generated/wlt-api.ts
+          grep -F 'cancellationReason' services/dsh/contracts/dsh.openapi.yaml
+          grep -F 'enum: [not_ready, ready, notified, customer_arrived, verified, no_show, cancelled]' services/dsh/contracts/dsh.openapi.yaml
+          grep -F 'GET /dsh/partner/orders/{orderId}/pickup' services/dsh/backend/internal/http/server.go
+          grep -F 'handleGetPartnerPickupState' services/dsh/backend/internal/http/pickup.go
+          grep -F 'PartnerStageCancelled' services/dsh/backend/internal/pickup/partner_state.go
 
       - name: Compile targeted source boundaries
         shell: bash
@@ -160,42 +147,14 @@ jobs:
             go test ./internal/payment ./internal/refund ./internal/http ./cmd/wlt-api -run '^$' -count=1
           )
 
-      - name: Typecheck app-client cancellation surface
-        id: typecheck_client
-        continue-on-error: true
+      - name: Typecheck affected multi-surface frontends
         shell: bash
         run: |
-          set -o pipefail
-          mkdir -p artifacts/cancellation-app-client
-          pnpm exec tsc -p apps/app-client/runtime/tsconfig.cancellation-journey.json --noEmit --pretty false 2>&1 \
-            | tee artifacts/cancellation-app-client/typecheck.log
-          exit ${PIPESTATUS[0]}
-
-      - name: Upload app-client typecheck diagnostic
-        if: steps.typecheck_client.outcome == 'failure'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: cancellation-app-client-${{ github.sha }}
-          path: artifacts/cancellation-app-client/typecheck.log
-          if-no-files-found: error
-          retention-days: 2
-
-      - name: Stop on app-client typecheck failure
-        if: steps.typecheck_client.outcome == 'failure'
-        shell: bash
-        run: exit 1
-
-      - name: Typecheck app-partner cancellation surface
-        shell: bash
-        run: pnpm exec tsc -p apps/app-partner/runtime/tsconfig.cancellation-journey.json --noEmit --pretty false
-
-      - name: Typecheck app-captain cancellation surface
-        shell: bash
-        run: pnpm exec tsc -p apps/app-captain/runtime/tsconfig.order-journey.json --noEmit --pretty false
-
-      - name: Typecheck control-panel cancellation surface
-        shell: bash
-        run: pnpm exec tsc -p apps/control-panel/runtime/tsconfig.cancellation-journey.json --noEmit --pretty false
+          set -euo pipefail
+          pnpm exec tsc -p apps/app-client/runtime/tsconfig.cancellation-journey.json --noEmit --pretty false
+          pnpm exec tsc -p apps/app-partner/runtime/tsconfig.cancellation-journey.json --noEmit --pretty false
+          pnpm exec tsc -p apps/app-captain/runtime/tsconfig.order-journey.json --noEmit --pretty false
+          pnpm exec tsc -p apps/control-panel/runtime/tsconfig.cancellation-journey.json --noEmit --pretty false
 
       - name: Apply clean migrations and replay journey migrations
         shell: bash
@@ -226,7 +185,7 @@ jobs:
               go test ./internal/payment ./internal/refund -count=1
           )
 
-      - name: Prove terminal-state invariants
+      - name: Prove journey terminal invariants
         shell: bash
         run: |
           set -euo pipefail
@@ -249,17 +208,27 @@ jobs:
           grep -F "a.status IN ('offered','accepted')" services/dsh/backend/internal/dispatch/dispatch.go
           grep -F 'ErrCancelled' services/dsh/backend/internal/pickup/service.go
           grep -F 'PICKUP_CANCELLED' services/dsh/backend/internal/http/pickup.go
+          grep -F 'PICKUP_CANCELLED' services/dsh/frontend/shared/pickup/pickup.types.ts
+          grep -F "stage === 'cancelled'" services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx
           grep -F 'trackingCancelledState' services/dsh/frontend/shared/dispatch/dispatch.controller-core.ts
           grep -F 'isCaptainAssignmentActionable' services/dsh/frontend/shared/delivery/captain-inbox.model.ts
 
       - name: Remove temporary journey machinery
         shell: bash
         run: |
+          set -euo pipefail
           python - <<'PY'
           import runpy
           namespace = runpy.run_path('tools/scripts/close-cancellation-refund-reconciliation.py')
           namespace['cleanup_temporary_files']()
           PY
+          rm -f \
+            .github/workflows/cancellation-client-typecheck-diagnostic.yml \
+            .github/cancellation-client-typecheck-trigger \
+            .github/workflows/cancellation-wlt-contract-fix.yml \
+            .github/cancellation-wlt-contract-fix-trigger \
+            tools/scripts/fix-wlt-invalid-response-refs.py \
+            tools/scripts/patch-cancellation-pickup-resume.py
 
       - name: Commit verified closure changes
         shell: bash
@@ -273,6 +242,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           git commit -m "fix(cancellation-journey): close and clean cancellation refund journey"
+          git pull --rebase origin journey/cancellation-refund-reconciliation-closure
           git push origin HEAD:journey/cancellation-refund-reconciliation-closure
 
       - name: Publish focused final status
