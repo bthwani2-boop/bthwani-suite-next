@@ -14,7 +14,6 @@ import {
   TopBar,
   spacing,
 } from "@bthwani/ui-kit";
-import type { IconName } from "@bthwani/ui-kit";
 import type { DshCaptainRoute } from "./dsh-captain.types";
 import type {
   CaptainSupportRoute,
@@ -38,19 +37,16 @@ import { CaptainAccountNavRow } from "./account/CaptainAccountNavRow";
 import { CaptainStorePickupContextScreen } from "./store/CaptainStorePickupContextScreen";
 import { OfferDeclineSheet } from "./orders/OfferDeclineSheet";
 import { CaptainSupportScreenRouter } from "./account/CaptainSupportScreenRouter";
-import type { DshCaptainOrderBellItem } from "../shared/orders";
+import type { DshCaptainOrderBellItem, DshCaptainOrdersScreenState } from "../shared/orders";
 import { ActorNotificationsPanel } from "../shared/notifications";
 
 type BThwaniAppearanceMode = "lightPremium" | "darkPremium";
 type CaptainOrderDetailSummary = React.ComponentProps<
   typeof CaptainOrderDetailScreen
 >["summary"];
-type CaptainOrdersInboxScreenState = NonNullable<
-  React.ComponentProps<typeof CaptainOrdersInboxScreen>["state"]
->;
-type PodScreenState = NonNullable<
-  React.ComponentProps<typeof DshCaptainPoDSubmissionScreen>["state"]
->;
+type CaptainOrdersInboxScreenState = DshCaptainOrdersScreenState;
+type PodScreenState = NonNullable<React.ComponentProps<typeof DshCaptainPoDSubmissionScreen>["state"]>;
+type IconName = React.ComponentProps<typeof Icon>["name"];
 
 export type DshCaptainRouteRendererProps = {
   readonly route: DshCaptainRoute;
