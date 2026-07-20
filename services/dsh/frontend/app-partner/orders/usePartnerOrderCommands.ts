@@ -4,11 +4,10 @@ import {
   classifyOrderError,
   markOrderPreparing,
   markOrderReady,
-  rejectOrder,
 } from '../../shared/orders/orders.api';
 import type { PartnerOrderItem } from '../../shared/orders/orders.contract';
 
-export type PartnerOrderMutationCommand = 'accept' | 'prepare' | 'ready' | 'reject';
+export type PartnerOrderMutationCommand = 'accept' | 'prepare' | 'ready';
 
 export type PartnerOrderCommandState =
   | { readonly kind: 'idle' }
@@ -43,20 +42,14 @@ export function usePartnerOrderCommands(refreshOrders: () => void | Promise<void
   const execute = React.useCallback(async (
     command: PartnerOrderMutationCommand,
     orderId: string,
-    reason?: string,
   ): Promise<boolean> => {
     if (!orderId) return false;
-    if (command === 'reject' && !reason?.trim()) {
-      setState({ kind: 'error', command, orderId, message: 'سبب رفض الطلب مطلوب.' });
-      return false;
-    }
 
     setState({ kind: 'submitting', command, orderId });
     try {
       if (command === 'accept') await acceptOrder(orderId);
       else if (command === 'prepare') await markOrderPreparing(orderId);
-      else if (command === 'ready') await markOrderReady(orderId);
-      else await rejectOrder(orderId, { reason: reason!.trim() });
+      else await markOrderReady(orderId);
 
       await refreshOrders();
       setState({ kind: 'success', command, orderId });
