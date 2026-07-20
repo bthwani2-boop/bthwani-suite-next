@@ -1,0 +1,225 @@
+name: Delivery Exception Slice Seven
+run-name: Delivery Exception Slice Seven · ${{ github.sha }}
+
+on:
+  push:
+    branches: ["journey/delivery-exception-redelivery-closure"]
+    paths:
+      - ".github/workflows/delivery-exception-slice7.yml"
+      - "tools/scripts/patch-delivery-exception-slice7.py"
+      - "tools/scripts/patch-delivery-exception-slice7-corrections.py"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  statuses: write
+
+concurrency:
+  group: delivery-exception-slice7-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  implement-verify-clean:
+    if: ${{ !contains(github.event.head_commit.message || '', '[skip ci]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: dsh_return_receipt
+          POSTGRES_USER: dsh_return_receipt
+          POSTGRES_PASSWORD: dsh_return_receipt
+        ports: ["55432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U dsh_return_receipt -d dsh_return_receipt"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DSH_DATABASE_URL: postgres://dsh_return_receipt:dsh_return_receipt@localhost:55432/dsh_return_receipt?sslmode=disable
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: true
+          fetch-depth: 0
+
+      - uses: ./.github/actions/setup-node-workspace
+
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache: true
+          cache-dependency-path: services/dsh/backend/go.sum
+
+      - name: Apply dual return receipt handshake
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/scripts/patch-delivery-exception-slice7.py
+          python tools/scripts/patch-delivery-exception-slice7-corrections.py
+          gofmt -w \
+            services/dsh/backend/internal/orders/orders.go \
+            services/dsh/backend/internal/dispatch/dispatch.go \
+            services/dsh/backend/internal/dispatch/delivery_exceptions.go \
+            services/dsh/backend/internal/dispatch/delivery_return_db_test.go \
+            services/dsh/backend/internal/http/dispatch.go \
+            services/dsh/backend/internal/http/partner_delivery.go \
+            services/dsh/backend/internal/http/server.go
+
+      - name: Generate and prove DSH contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm run openapi:generate:dsh
+          grep -F 'return_arrived_store' services/dsh/contracts/dsh.openapi.yaml
+          grep -F '/dsh/captain/dispatch/assignments/{assignmentId}/return-to-store/arrive:' services/dsh/contracts/dsh.openapi.yaml
+          grep -F '/dsh/partner/orders/{orderId}/return-to-store:' services/dsh/contracts/dsh.openapi.yaml
+          grep -F '/dsh/partner/orders/{orderId}/return-to-store/accept:' services/dsh/contracts/dsh.openapi.yaml
+          grep -F 'arriveDshCaptainReturnToStore' services/dsh/clients/generated/dsh-api.ts
+          grep -F 'acceptDshPartnerReturnToStore' services/dsh/clients/generated/dsh-api.ts
+          grep -F 'returnArrivedAt' services/dsh/clients/generated/dsh-api.ts
+          grep -F 'returnAcceptedByActorId' services/dsh/clients/generated/dsh-api.ts
+          ! grep -F '/return-to-store/complete' services/dsh/contracts/dsh.openapi.yaml
+
+      - name: Compile focused backend boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd services/dsh/backend
+          go test ./internal/orders ./internal/dispatch ./internal/http ./cmd/dsh-api -run '^$' -count=1
+
+      - name: Typecheck every affected surface
+        id: surfaces_typecheck
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/delivery-exception-slice7-typecheck
+          {
+            status=0
+            for config in \
+              apps/app-client/runtime/tsconfig.cancellation-journey.json \
+              apps/app-partner/runtime/tsconfig.cancellation-journey.json \
+              apps/app-captain/runtime/tsconfig.order-journey.json \
+              apps/control-panel/runtime/tsconfig.delivery-exception-journey.json
+            do
+              echo "=== TYPECHECK $config ==="
+              pnpm exec tsc -p "$config" --noEmit --pretty false || status=1
+            done
+            exit "$status"
+          } 2>&1 | tee artifacts/delivery-exception-slice7-typecheck/typecheck.log
+          exit ${PIPESTATUS[0]}
+
+      - name: Upload surface typecheck diagnostic
+        if: steps.surfaces_typecheck.outcome == 'failure'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: delivery-exception-slice7-typecheck-${{ github.sha }}
+          path: artifacts/delivery-exception-slice7-typecheck/typecheck.log
+          if-no-files-found: error
+          retention-days: 2
+
+      - name: Stop on surface typecheck failure
+        if: steps.surfaces_typecheck.outcome == 'failure'
+        shell: bash
+        run: exit 1
+
+      - name: Apply migrations and prove custody handshake
+        id: return_receipt_db
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/delivery-exception-slice7-db
+          for file in $(find services/dsh/database/migrations -maxdepth 1 -type f -name '*.sql' | sort); do
+            psql "$DSH_DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file" >/dev/null || exit 1
+          done
+          psql "$DSH_DATABASE_URL" -v ON_ERROR_STOP=1 -f services/dsh/database/migrations/dsh-094_delivery_return_partner_receipt.sql >/dev/null || exit 1
+          (
+            cd services/dsh/backend
+            DSH_REQUIRE_DB_TESTS=true DATABASE_URL="$DSH_DATABASE_URL" \
+              go test ./internal/dispatch -run '^TestDeliveryExceptionReturnToStoreLifecycleDBIntegration$' -count=1 -v
+          ) 2>&1 | tee artifacts/delivery-exception-slice7-db/return-receipt.log
+          exit ${PIPESTATUS[0]}
+
+      - name: Upload return receipt DB diagnostic
+        if: steps.return_receipt_db.outcome == 'failure'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: delivery-exception-slice7-db-${{ github.sha }}
+          path: artifacts/delivery-exception-slice7-db/return-receipt.log
+          if-no-files-found: error
+          retention-days: 2
+
+      - name: Stop on return receipt DB failure
+        if: steps.return_receipt_db.outcome == 'failure'
+        shell: bash
+        run: exit 1
+
+      - name: Prove authorization boundary and runtime projection
+        shell: bash
+        run: |
+          set -euo pipefail
+          http="services/dsh/backend/internal/http/partner_delivery.go"
+          marshal="services/dsh/backend/internal/http/dispatch.go"
+          captain="services/dsh/frontend/app-captain/orders/DshCaptainPoDSubmissionScreen.tsx"
+          partner="services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx"
+          client="services/dsh/frontend/app-client/orders/OrderTrackingScreen.tsx"
+          operations="services/dsh/frontend/control-panel/operations/ExceptionsEscalationsScreen.tsx"
+          grep -F 's.partnerOrder' "$http"
+          grep -F 'AcceptReturnToStoreByPartner' "$http"
+          grep -F 'returnArrivedAt' "$marshal"
+          grep -F 'returnAcceptedByActorId' "$marshal"
+          grep -F 'arriveCaptainReturnToStore' "$captain"
+          grep -F 'بانتظار تأكيد استلام المتجر' "$captain"
+          grep -F 'acceptPartnerReturnToStore' "$partner"
+          grep -F 'تأكيد استلام المرتجع من الكابتن' "$partner"
+          grep -F 'return_arrived_store' "$client"
+          grep -F 'بانتظار المتجر' "$operations"
+          ! grep -F 'completeCaptainReturnToStore' "$captain"
+          ! grep -F 'handleCompleteReturnToStore' services/dsh/backend/internal/http/*.go
+          ! grep -Ei '(mock|fixture|demo)[A-Za-z0-9_]*[[:space:]]*=' "$captain" "$partner" "$client" "$operations"
+
+      - name: Remove temporary files and commit verified slice
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm \
+            .github/workflows/delivery-exception-slice7.yml \
+            tools/scripts/patch-delivery-exception-slice7.py \
+            tools/scripts/patch-delivery-exception-slice7-corrections.py
+          git add -A
+          git commit -m "feat(delivery-exception): require partner receipt for returned custody [skip ci]"
+          git pull --rebase origin journey/delivery-exception-redelivery-closure
+          git push origin HEAD:journey/delivery-exception-redelivery-closure
+          final_sha="$(git rev-parse HEAD)"
+          jq -n --arg state success --arg context "Delivery Exception Slice Seven" --arg description "captain arrival and partner return receipt handshake verified" --arg target_url "$RUN_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' > status.json
+          curl --fail-with-body --silent --show-error -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$REPOSITORY/statuses/$final_sha" \
+            -d @status.json
+
+      - name: Publish focused failure status
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        shell: bash
+        run: |
+          jq -n --arg state failure --arg context "Delivery Exception Slice Seven" --arg description "dual return receipt handshake failed" --arg target_url "$RUN_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' > status.json
+          curl --fail-with-body --silent --show-error -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$REPOSITORY/statuses/${{ github.sha }}" \
+            -d @status.json
