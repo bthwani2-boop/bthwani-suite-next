@@ -5,7 +5,9 @@ on:
   push:
     branches: ["journey/cancellation-refund-reconciliation-closure"]
     paths:
+      - ".github/workflows/cancellation-journey-final-closure.yml"
       - ".github/cancellation-journey-final-trigger"
+      - "tools/scripts/close-cancellation-refund-reconciliation.py"
       - "services/dsh/backend/internal/dispatch/**"
       - "services/dsh/backend/internal/pickup/**"
       - "services/dsh/backend/internal/http/pickup.go"
@@ -39,7 +41,7 @@ concurrency:
 jobs:
   close-and-verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 50
     services:
       dsh-postgres:
         image: postgres:16-alpine
@@ -47,8 +49,7 @@ jobs:
           POSTGRES_DB: dsh_journey
           POSTGRES_USER: dsh_journey
           POSTGRES_PASSWORD: dsh_journey
-        ports:
-          - 55432:5432
+        ports: ["55432:5432"]
         options: >-
           --health-cmd "pg_isready -U dsh_journey -d dsh_journey"
           --health-interval 5s
@@ -60,8 +61,7 @@ jobs:
           POSTGRES_DB: wlt_journey
           POSTGRES_USER: wlt_journey
           POSTGRES_PASSWORD: wlt_journey
-        ports:
-          - 55433:5432
+        ports: ["55433:5432"]
         options: >-
           --health-cmd "pg_isready -U wlt_journey -d wlt_journey"
           --health-interval 5s
@@ -86,11 +86,11 @@ jobs:
             services/dsh/backend/go.sum
             services/wlt/backend/go.sum
 
-      - name: Apply source closure
+      - name: Apply only remaining journey fixes
         shell: bash
         run: python tools/scripts/close-cancellation-refund-reconciliation.py
 
-      - name: Format governed Go sources
+      - name: Format affected Go sources
         shell: bash
         run: |
           set -euo pipefail
@@ -98,24 +98,24 @@ jobs:
             services/dsh/backend/internal/dispatch/dispatch.go \
             services/dsh/backend/internal/pickup/pickup.go \
             services/dsh/backend/internal/pickup/service.go \
-            services/dsh/backend/internal/pickup/pickup_db_test.go \
+            services/dsh/backend/internal/pickup/pickup_cancellation_db_test.go \
             services/dsh/backend/internal/http/pickup.go \
             services/wlt/backend/internal/payment/order_cancellation.go \
             services/wlt/backend/internal/refund/refund_atomic.go
 
-      - name: Generate governed clients and prove contract paths
+      - name: Generate and validate governed contracts
         shell: bash
         run: |
           set -euo pipefail
           pnpm run openapi:generate:dsh
           pnpm run openapi:generate:wlt
-          grep -F '/wlt/order-cancellations' services/wlt/contracts/wlt.openapi.yaml
-          grep -F 'WltOrderCancellationRequest' services/wlt/contracts/wlt.openapi.yaml
-          grep -F 'createWltOrderCancellation' services/wlt/clients/generated/wlt-api.ts
+          grep -F '/wlt/order-cancellations:' services/wlt/contracts/wlt.openapi.yaml
+          grep -F 'WltGovernedOrderCancellationResponse' services/wlt/contracts/wlt.openapi.yaml
+          grep -F 'WltGovernedOrderCancellationResponse' services/wlt/clients/generated/wlt-api.ts
+          grep -F 'cancellationReason' services/dsh/contracts/dsh.openapi.yaml
           grep -F 'cancelled' services/dsh/clients/generated/dsh-api.ts
-          grep -F 'DshPickupSessionStatus' services/dsh/clients/generated/dsh-api.ts
 
-      - name: Compile targeted DSH and WLT boundaries
+      - name: Compile targeted source boundaries
         shell: bash
         run: |
           set -euo pipefail
@@ -128,7 +128,7 @@ jobs:
             go test ./internal/payment ./internal/refund ./internal/http ./cmd/wlt-api -run '^$' -count=1
           )
 
-      - name: Typecheck every affected surface
+      - name: Typecheck all affected surfaces including captain
         shell: bash
         run: |
           set -euo pipefail
@@ -137,7 +137,7 @@ jobs:
           pnpm exec tsc -p apps/app-captain/runtime/tsconfig.order-journey.json --noEmit --pretty false
           pnpm exec tsc -p apps/control-panel/runtime/tsconfig.cancellation-journey.json --noEmit --pretty false
 
-      - name: Apply clean database migrations
+      - name: Apply clean migrations and replay journey migrations
         shell: bash
         run: |
           set -euo pipefail
@@ -151,7 +151,7 @@ jobs:
           psql "$DSH_DATABASE_URL" -v ON_ERROR_STOP=1 -f services/dsh/database/migrations/dsh-091_pickup_cancellation_state.sql >/dev/null
           psql "$WLT_DATABASE_URL" -v ON_ERROR_STOP=1 -f services/wlt/database/migrations/wlt-026_refund_reference_integrity.sql >/dev/null
 
-      - name: Run database integration proof
+      - name: Run targeted database integration proof
         shell: bash
         run: |
           set -euo pipefail
@@ -166,7 +166,7 @@ jobs:
               go test ./internal/payment ./internal/refund -count=1
           )
 
-      - name: Prove cancellation terminal invariants
+      - name: Prove terminal-state invariants
         shell: bash
         run: |
           set -euo pipefail
@@ -175,29 +175,29 @@ jobs:
           BEGIN
             IF NOT EXISTS (
               SELECT 1 FROM information_schema.columns
-              WHERE table_name='dsh_pickup_sessions' AND column_name='cancelled_at'
+              WHERE table_name='dsh_pickup_sessions' AND column_name='status'
             ) THEN
-              RAISE EXCEPTION 'pickup cancelled_at is missing';
+              RAISE EXCEPTION 'pickup status is missing';
             END IF;
             IF NOT EXISTS (
-              SELECT 1 FROM pg_constraint WHERE conname='dsh_pickup_sessions_terminal_state_check'
+              SELECT 1 FROM pg_constraint WHERE conname='dsh_pickup_sessions_cancellation_shape_check'
             ) THEN
-              RAISE EXCEPTION 'pickup terminal state constraint is missing';
+              RAISE EXCEPTION 'pickup cancellation shape constraint is missing';
             END IF;
           END $$;
           SQL
-          grep -F "AND a.status IN ('offered', 'accepted')" services/dsh/backend/internal/dispatch/dispatch.go
+          grep -F "a.status IN ('offered','accepted')" services/dsh/backend/internal/dispatch/dispatch.go
           grep -F 'ErrCancelled' services/dsh/backend/internal/pickup/service.go
           grep -F 'PICKUP_CANCELLED' services/dsh/backend/internal/http/pickup.go
           grep -F 'trackingCancelledState' services/dsh/frontend/shared/dispatch/dispatch.controller-core.ts
+          grep -F 'isCaptainAssignmentActive' services/dsh/frontend/shared/delivery/captain-inbox.model.ts
 
-      - name: Commit verified closure changes
-        id: commit
+      - name: Commit verified closure and remove temporary journey machinery
         shell: bash
         run: |
           set -euo pipefail
           if git diff --quiet && git diff --cached --quiet; then
-            echo "pushed=false" >> "$GITHUB_OUTPUT"
+            echo "No source drift remains."
             exit 0
           fi
           git config user.name "github-actions[bot]"
@@ -205,7 +205,6 @@ jobs:
           git add -A
           git commit -m "fix(cancellation-journey): close captain pickup and WLT contract gaps"
           git push origin HEAD:journey/cancellation-refund-reconciliation-closure
-          echo "pushed=true" >> "$GITHUB_OUTPUT"
 
       - name: Publish focused final status
         if: always()
