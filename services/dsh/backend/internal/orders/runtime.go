@@ -184,11 +184,10 @@ func CancelOrder(db *sql.DB, input CancellationInput) (*Order, error) {
 		}
 	}
 	if !allowed {
-		if input.ActorRole == "client" && (
-			current == StatusPreparing ||
-				current == StatusReadyForPickup ||
-				current == StatusDriverAssigned ||
-				current == StatusArrivedStore) {
+		if input.ActorRole == "client" && (current == StatusPreparing ||
+			current == StatusReadyForPickup ||
+			current == StatusDriverAssigned ||
+			current == StatusArrivedStore) {
 			return nil, ErrCancellationRequiresReview
 		}
 		return nil, ErrConflict
