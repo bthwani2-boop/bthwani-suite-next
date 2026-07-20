@@ -162,6 +162,8 @@ jobs:
         run: exit 1
 
       - name: Prove runtime truth and remove stale local inference
+        id: runtime
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
@@ -191,17 +193,42 @@ jobs:
             services/dsh/frontend/app-partner/orders/OperationalOrderDecisionScreen.tsx \
             services/dsh/frontend/app-partner/orders/DshPartnerOrderRejectionScreen.tsx
 
+      - name: Stop on runtime truth failure
+        if: steps.runtime.outcome == 'failure'
+        run: exit 1
+
       - name: Remove temporary slice machinery and commit implementation
+        if: steps.apply.outcome == 'success' && steps.contract.outcome == 'success' && steps.backend.outcome == 'success' && steps.typecheck.outcome == 'success' && steps.runtime.outcome == 'success'
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f .github/order-preparation-slice1-failure
           git rm -f \
             .github/workflows/order-preparation-slice1.yml \
             tools/scripts/patch-order-preparation-slice1.py \
             tools/scripts/patch-order-preparation-slice1-corrections.py
           git add -A
           git commit -m "feat(order-preparation): enforce server-authoritative partner actions [skip ci]"
+          git pull --rebase origin journey/order-preparation-handoff-closure
+          git push origin HEAD:journey/order-preparation-handoff-closure
+
+      - name: Record focused failure stage
+        if: failure()
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'apply=%s\ncontract=%s\nbackend=%s\ntypecheck=%s\nruntime=%s\nsource_sha=%s\n' \
+            '${{ steps.apply.outcome }}' \
+            '${{ steps.contract.outcome }}' \
+            '${{ steps.backend.outcome }}' \
+            '${{ steps.typecheck.outcome }}' \
+            '${{ steps.runtime.outcome }}' \
+            '${{ github.sha }}' > .github/order-preparation-slice1-failure
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/order-preparation-slice1-failure
+          git commit -m "ci(order-preparation): record focused slice-one failure [skip ci]"
           git pull --rebase origin journey/order-preparation-handoff-closure
           git push origin HEAD:journey/order-preparation-handoff-closure
