@@ -7,7 +7,6 @@ on:
     paths:
       - ".github/partner-runtime-trigger"
       - ".github/workflows/tmp-partner-runtime.yml"
-      - "tools/scripts/invoke-partner-multisurface-runtime-closure.ps1"
       - "tools/scripts/test-partner-multisurface-runtime-journey.ps1"
   workflow_dispatch:
 
@@ -30,21 +29,58 @@ jobs:
       - name: Verify PowerShell
         shell: bash
         run: pwsh --version
+      - name: Prepare runtime evidence
+        shell: pwsh
+        run: New-Item -ItemType Directory -Path artifacts/partner-journey-closure -Force | Out-Null
       - name: Build Identity
         shell: bash
         run: docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml --profile identity build identity-api
-      - name: Run focused partner runtime
+      - name: Reset focused runtime
         shell: pwsh
-        run: ./tools/scripts/invoke-partner-multisurface-runtime-closure.ps1
+        run: |
+          & ./infra/docker/scripts/runtime.ps1 -Action down -Profiles identity,workforce,dsh,media,wlt *>&1 | Tee-Object -FilePath artifacts/partner-journey-closure/runtime-down.log
+      - name: Start focused runtime
+        shell: pwsh
+        run: |
+          & ./infra/docker/scripts/runtime.ps1 -Action up -Profiles identity,workforce,dsh,media,wlt *>&1 | Tee-Object -FilePath artifacts/partner-journey-closure/runtime-up.log
+      - name: Seed focused runtime
+        shell: pwsh
+        run: |
+          & ./infra/docker/scripts/runtime.ps1 -Action seed -Profiles identity,workforce,dsh,media,wlt *>&1 | Tee-Object -FilePath artifacts/partner-journey-closure/runtime-seed.log
+      - name: Verify service readiness
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $targets = @(
+            @{ Name = "Identity"; Uri = "http://127.0.0.1:58082/identity/health" },
+            @{ Name = "Workforce"; Uri = "http://127.0.0.1:58086/workforce/health" },
+            @{ Name = "DSH"; Uri = "http://127.0.0.1:58080/dsh/health" },
+            @{ Name = "WLT"; Uri = "http://127.0.0.1:58083/wlt/health" }
+          )
+          foreach ($target in $targets) {
+            $response = Invoke-RestMethod -Uri $target.Uri -TimeoutSec 15
+            if ([string]$response.status -notin @("healthy", "ok", "ready")) {
+              throw "$($target.Name) readiness returned '$($response.status)'"
+            }
+            "$($target.Name)=PASS" | Tee-Object -FilePath artifacts/partner-journey-closure/runtime-readiness.log -Append
+          }
+          Invoke-WebRequest -Uri "http://127.0.0.1:59000/minio/health/ready" -TimeoutSec 15 -UseBasicParsing | Out-Null
+          "MinIO=PASS" | Tee-Object -FilePath artifacts/partner-journey-closure/runtime-readiness.log -Append
+      - name: Run focused partner multi-surface journey
+        shell: pwsh
+        run: |
+          & pwsh -NoProfile -ExecutionPolicy Bypass -File ./tools/scripts/test-partner-multisurface-runtime-journey.ps1 *>&1 | Tee-Object -FilePath artifacts/partner-journey-closure/runtime-partner-journey.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Diagnostics
         if: failure()
         shell: bash
         run: |
           docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml --profile identity --profile workforce --profile dsh --profile media --profile wlt ps -a || true
-          docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml --profile identity --profile workforce --profile dsh --profile media --profile wlt logs --tail=400 identity-api workforce-api dsh-api wlt-api postgres minio || true
-          find artifacts/partner-journey-closure -maxdepth 1 -type f -print -exec tail -n 300 {} \; || true
-      - name: Stop runtime
+          docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml --profile identity --profile workforce --profile dsh --profile media --profile wlt logs --tail=500 identity-api workforce-api dsh-api wlt-api postgres minio || true
+          find artifacts/partner-journey-closure -maxdepth 1 -type f -print -exec tail -n 400 {} \; || true
+      - name: Stop focused runtime
         if: always()
+        continue-on-error: true
         shell: pwsh
         run: ./infra/docker/scripts/runtime.ps1 -Action down -Profiles identity,workforce,dsh,media,wlt
       - name: Upload runtime evidence
@@ -70,7 +106,16 @@ jobs:
           RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
         shell: bash
         run: |
+          set -euo pipefail
           state=failure; [ "$RESULT" = success ] && state=success
           jq -n --arg state "$state" --arg context "Partner Runtime" --arg description "result=$RESULT run=${GITHUB_RUN_ID}" --arg target_url "$RUN_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' > payload.json
-          curl --fail-with-body --silent --show-error -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" "https://api.github.com/repos/$REPOSITORY/statuses/$SHA" -d @payload.json
+          for attempt in 1 2 3 4 5 6 7 8; do
+            if curl --fail-with-body --silent --show-error -X POST \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/$REPOSITORY/statuses/$SHA" \
+              -d @payload.json; then break; fi
+            sleep $((attempt * 3))
+          done
           test "$state" = success
