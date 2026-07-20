@@ -30,14 +30,33 @@ type partnerOrderWorkboardOrder struct {
 	TotalPrice       float64                     `json:"totalPrice"`
 	Items            []partnerOrderWorkboardItem `json:"items"`
 	CreatedAt        time.Time                   `json:"createdAt"`
+	AllowedActions   []string                    `json:"allowedActions"`
 	UpdatedAt        time.Time                   `json:"updatedAt"`
+}
+
+func partnerOrderAllowedActions(status, fulfillmentMode string) []string {
+	switch strings.TrimSpace(status) {
+	case "pending":
+		return []string{"accept", "reject"}
+	case "store_accepted":
+		return []string{"prepare"}
+	case "preparing":
+		return []string{"ready"}
+	case "ready_for_pickup":
+		if fulfillmentMode == "partner_delivery" || fulfillmentMode == "pickup" {
+			return []string{"handoff"}
+		}
+	}
+	return []string{}
 }
 
 // GET /dsh/partner/order-workboard?status=...
 //
 // The store scope is resolved from the authenticated partner actor. The
 // workboard deliberately returns all lifecycle states when status is omitted;
-// inbox tabs must not be backed by a hidden pending-only default.
+// inbox tabs must not be backed by a hidden pending-only default. Executable
+// actions are derived here so every partner surface follows the same governed
+// transition rules instead of inferring permissions locally.
 func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter, r *http.Request) {
 	_, storeID, ok := s.partnerStore(w, r)
 	if !ok {
@@ -137,6 +156,7 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 		if order.Items == nil {
 			order.Items = []partnerOrderWorkboardItem{}
 		}
+		order.AllowedActions = partnerOrderAllowedActions(order.Status, order.FulfillmentMode)
 		orders = append(orders, order)
 	}
 	if err := rows.Err(); err != nil {
