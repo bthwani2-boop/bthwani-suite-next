@@ -16,13 +16,34 @@ permissions:
 
 concurrency:
   group: tmp-partner-runtime-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   runtime:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
+      - name: Publish pending runtime status
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -n --arg state pending --arg context "Partner Runtime" --arg description "focused runtime started run=${GITHUB_RUN_ID}" --arg target_url "$RUN_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' > pending.json
+          posted=false
+          for attempt in 1 2 3 4 5 6 7 8; do
+            if curl --fail-with-body --silent --show-error -X POST \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/$REPOSITORY/statuses/$SHA" \
+              -d @pending.json; then posted=true; break; fi
+            sleep $((attempt * 3))
+          done
+          test "$posted" = true
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           persist-credentials: false
@@ -153,13 +174,15 @@ jobs:
           set -euo pipefail
           state=failure; [ "$RESULT" = success ] && state=success
           jq -n --arg state "$state" --arg context "Partner Runtime" --arg description "result=$RESULT run=${GITHUB_RUN_ID}" --arg target_url "$RUN_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' > payload.json
+          posted=false
           for attempt in 1 2 3 4 5 6 7 8; do
             if curl --fail-with-body --silent --show-error -X POST \
               -H "Authorization: Bearer $GH_TOKEN" \
               -H "Accept: application/vnd.github+json" \
               -H "X-GitHub-Api-Version: 2022-11-28" \
               "https://api.github.com/repos/$REPOSITORY/statuses/$SHA" \
-              -d @payload.json; then break; fi
+              -d @payload.json; then posted=true; break; fi
             sleep $((attempt * 3))
           done
+          test "$posted" = true
           test "$state" = success
