@@ -2,20 +2,21 @@ import React from 'react';
 import {
   classifyOrderError,
   fetchPartnerOrders,
-  markOrderReady,
 } from '../../shared/orders/orders.api';
-import { mapDshOrderToPartnerOrderItem } from '../../shared/partner/partner.adapters';
-import type { PartnerOrderItem } from '../../shared/orders/orders.contract';
+import {
+  mapDshOrderToPartnerOrderItem,
+  type GovernedPartnerOrderItem,
+} from '../../shared/partner/partner.adapters';
 
 type PartnerOrdersState = 'ready' | 'loading' | 'empty' | 'error' | 'offline' | 'disabled' | 'partial';
 
 /**
- * Partner orders runtime bound only to the authenticated partner API surface.
- * It intentionally does not consume the broad operations read model and does
- * not accept a UI-supplied store id.
+ * Actor-scoped partner workboard. It owns reads only; all mutations are
+ * centralized in usePartnerOrderCommands so every button uses the same
+ * server-authoritative action set and read-after-write refresh.
  */
 export function usePartnerOrdersRuntime(route: string) {
-  const [orders, setOrders] = React.useState<readonly PartnerOrderItem[]>([]);
+  const [orders, setOrders] = React.useState<readonly GovernedPartnerOrderItem[]>([]);
   const [state, setState] = React.useState<PartnerOrdersState>(
     route === 'inbox' ? 'loading' : 'disabled',
   );
@@ -41,24 +42,9 @@ export function usePartnerOrdersRuntime(route: string) {
     void fetchOrders();
   }, [route, fetchOrders]);
 
-  const markReady = React.useCallback(
-    async (orderId: string) => {
-      try {
-        await markOrderReady(orderId);
-        await fetchOrders();
-      } catch (error) {
-        const classified = classifyOrderError(error);
-        setState(classified.kind === 'offline' ? 'offline' : 'error');
-        await fetchOrders();
-      }
-    },
-    [fetchOrders],
-  );
-
   return {
     orders,
     state,
-    markReady,
     refresh: fetchOrders,
   } as const;
 }
