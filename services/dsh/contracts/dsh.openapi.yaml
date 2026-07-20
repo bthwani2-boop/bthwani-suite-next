@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: BThwani DSH Service API
-  version: 0.6.0
+  version: 0.7.0
   description: >
     Delivery and shopping hub service contract. Core capabilities include Store Discovery,
     Home Discovery, Catalog Management, Cart & Serviceability, Checkout & WLT Handoff,
@@ -6575,6 +6575,75 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/DshErrorResponse" }
 
+  /dsh/captain/dispatch/assignments/{assignmentId}/exceptions:
+    parameters:
+      - name: assignmentId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      operationId: getDshCaptainDeliveryException
+      summary: Return the captain's active governed delivery exception.
+      tags: [DshDispatch]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Active delivery exception returned.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshDeliveryExceptionResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: reportDshCaptainDeliveryException
+      summary: Report one idempotent delivery exception for an active accepted assignment.
+      description: >-
+        Creates an operational overlay without changing the order status or financial truth.
+        Delivery progression and proof are blocked until operations resolves the exception;
+        foreground location pushes remain allowed for safety and response coordination.
+      tags: [DshDispatch]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshReportDeliveryExceptionRequest" }
+      responses:
+        "201":
+          description: Delivery exception recorded or idempotently replayed.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshDeliveryExceptionResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Assignment is not active or already has an unresolved exception.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshErrorResponse" }
+
+  /dsh/operator/delivery-exceptions:
+    get:
+      operationId: listDshOperatorDeliveryExceptions
+      summary: List the governed delivery-exception operations queue.
+      tags: [DshDispatch]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema: { $ref: "#/components/schemas/DshDeliveryExceptionStatus" }
+      responses:
+        "200":
+          description: Delivery-exception queue returned.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshDeliveryExceptionListResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -6649,6 +6718,102 @@ components:
           schema:
             $ref: "#/components/schemas/DshErrorResponse"
   schemas:
+    DshDeliveryExceptionReasonCode:
+      type: string
+      enum:
+        - customer_unreachable
+        - recipient_refused
+        - wrong_address
+        - unsafe_location
+        - vehicle_breakdown
+        - accident
+        - damaged_order
+        - cash_collection_issue
+        - weather_or_road_block
+        - proof_unavailable
+        - other
+
+    DshDeliveryExceptionStatus:
+      type: string
+      enum: [open, acknowledged, resolved]
+
+    DshDeliveryExceptionSeverity:
+      type: string
+      enum: [medium, high, critical]
+
+    DshReportDeliveryExceptionRequest:
+      type: object
+      additionalProperties: false
+      required: [reasonCode, correlationId]
+      properties:
+        reasonCode: { $ref: "#/components/schemas/DshDeliveryExceptionReasonCode" }
+        note: { type: string, maxLength: 1000 }
+        correlationId: { type: string, minLength: 1, maxLength: 200 }
+        latitude: { type: number, format: double, minimum: -90, maximum: 90, nullable: true }
+        longitude: { type: number, format: double, minimum: -180, maximum: 180, nullable: true }
+
+    DshDeliveryException:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - tenantId
+        - assignmentId
+        - orderId
+        - captainId
+        - reasonCode
+        - note
+        - deliveryStatusAtReport
+        - severity
+        - status
+        - correlationId
+        - reportedAt
+        - version
+        - createdAt
+        - updatedAt
+      properties:
+        id: { type: string, format: uuid }
+        tenantId: { type: string }
+        assignmentId: { type: string, format: uuid }
+        orderId: { type: string, format: uuid }
+        captainId: { type: string }
+        reasonCode: { $ref: "#/components/schemas/DshDeliveryExceptionReasonCode" }
+        note: { type: string }
+        deliveryStatusAtReport: { $ref: "#/components/schemas/DshDeliveryStatus" }
+        severity: { $ref: "#/components/schemas/DshDeliveryExceptionSeverity" }
+        status: { $ref: "#/components/schemas/DshDeliveryExceptionStatus" }
+        correlationId: { type: string }
+        reportedLatitude: { type: number, format: double, nullable: true }
+        reportedLongitude: { type: number, format: double, nullable: true }
+        reportedAt: { type: string, format: date-time }
+        acknowledgedAt: { type: string, format: date-time, nullable: true }
+        resolvedAt: { type: string, format: date-time, nullable: true }
+        resolvedByActorId: { type: string, nullable: true }
+        resolutionAction:
+          type: string
+          enum: [retry_same_captain, reassign_captain, return_to_store, cancel_order]
+          nullable: true
+        resolutionNote: { type: string, nullable: true }
+        version: { type: integer, minimum: 1 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    DshDeliveryExceptionResponse:
+      type: object
+      additionalProperties: false
+      required: [exception]
+      properties:
+        exception: { $ref: "#/components/schemas/DshDeliveryException" }
+
+    DshDeliveryExceptionListResponse:
+      type: object
+      additionalProperties: false
+      required: [exceptions]
+      properties:
+        exceptions:
+          type: array
+          items: { $ref: "#/components/schemas/DshDeliveryException" }
+
     DshStoreStatus:
       type: string
       enum:

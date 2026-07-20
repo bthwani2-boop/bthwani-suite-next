@@ -347,6 +347,9 @@ func SubmitPoD(db *sql.DB, assignmentID, captainID string, input PoDInput) (*Ass
 	if current.Status == AssignmentCancelled || current.Delivery.Status == DeliveryCancelled {
 		return nil, fmt.Errorf("%w: assignment was cancelled with the order", ErrConflict)
 	}
+	if err = ensureNoOpenDeliveryException(tx, assignmentID); err != nil {
+		return nil, err
+	}
 	if current.Delivery.Status != DeliveryArrivedCustomer {
 		return nil, fmt.Errorf("%w: proof requires arrived_customer state", ErrConflict)
 	}
@@ -486,6 +489,9 @@ func updateDeliveryProgress(db *sql.DB, assignmentID, captainID string, allowed 
 	}
 	if current.Status == AssignmentCancelled || current.Delivery.Status == DeliveryCancelled {
 		return nil, fmt.Errorf("%w: assignment was cancelled with the order", ErrConflict)
+	}
+	if err = ensureNoOpenDeliveryException(tx, assignmentID); err != nil {
+		return nil, err
 	}
 	if current.Status != AssignmentAccepted {
 		return nil, fmt.Errorf("%w: assignment is not accepted", ErrConflict)

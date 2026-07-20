@@ -4056,10 +4056,106 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dsh/captain/dispatch/assignments/{assignmentId}/exceptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignmentId: string;
+            };
+            cookie?: never;
+        };
+        /** Return the captain's active governed delivery exception. */
+        get: operations["getDshCaptainDeliveryException"];
+        put?: never;
+        /**
+         * Report one idempotent delivery exception for an active accepted assignment.
+         * @description Creates an operational overlay without changing the order status or financial truth. Delivery progression and proof are blocked until operations resolves the exception; foreground location pushes remain allowed for safety and response coordination.
+         */
+        post: operations["reportDshCaptainDeliveryException"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/delivery-exceptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the governed delivery-exception operations queue. */
+        get: operations["listDshOperatorDeliveryExceptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @enum {string} */
+        DshDeliveryExceptionReasonCode: "customer_unreachable" | "recipient_refused" | "wrong_address" | "unsafe_location" | "vehicle_breakdown" | "accident" | "damaged_order" | "cash_collection_issue" | "weather_or_road_block" | "proof_unavailable" | "other";
+        /** @enum {string} */
+        DshDeliveryExceptionStatus: "open" | "acknowledged" | "resolved";
+        /** @enum {string} */
+        DshDeliveryExceptionSeverity: "medium" | "high" | "critical";
+        DshReportDeliveryExceptionRequest: {
+            reasonCode: components["schemas"]["DshDeliveryExceptionReasonCode"];
+            note?: string;
+            correlationId: string;
+            /** Format: double */
+            latitude?: number | null;
+            /** Format: double */
+            longitude?: number | null;
+        };
+        DshDeliveryException: {
+            /** Format: uuid */
+            id: string;
+            tenantId: string;
+            /** Format: uuid */
+            assignmentId: string;
+            /** Format: uuid */
+            orderId: string;
+            captainId: string;
+            reasonCode: components["schemas"]["DshDeliveryExceptionReasonCode"];
+            note: string;
+            deliveryStatusAtReport: components["schemas"]["DshDeliveryStatus"];
+            severity: components["schemas"]["DshDeliveryExceptionSeverity"];
+            status: components["schemas"]["DshDeliveryExceptionStatus"];
+            correlationId: string;
+            /** Format: double */
+            reportedLatitude?: number | null;
+            /** Format: double */
+            reportedLongitude?: number | null;
+            /** Format: date-time */
+            reportedAt: string;
+            /** Format: date-time */
+            acknowledgedAt?: string | null;
+            /** Format: date-time */
+            resolvedAt?: string | null;
+            resolvedByActorId?: string | null;
+            /** @enum {string|null} */
+            resolutionAction?: "retry_same_captain" | "reassign_captain" | "return_to_store" | "cancel_order" | null;
+            resolutionNote?: string | null;
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshDeliveryExceptionResponse: {
+            exception: components["schemas"]["DshDeliveryException"];
+        };
+        DshDeliveryExceptionListResponse: {
+            exceptions: components["schemas"]["DshDeliveryException"][];
+        };
         /** @enum {string} */
         DshStoreStatus: "active" | "inactive" | "temporarily_closed" | "unavailable";
         /** @enum {string} */
@@ -14044,6 +14140,93 @@ export interface operations {
                     "application/json": components["schemas"]["DshErrorResponse"];
                 };
             };
+        };
+    };
+    getDshCaptainDeliveryException: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Active delivery exception returned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshDeliveryExceptionResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    reportDshCaptainDeliveryException: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshReportDeliveryExceptionRequest"];
+            };
+        };
+        responses: {
+            /** @description Delivery exception recorded or idempotently replayed. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshDeliveryExceptionResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            /** @description Assignment is not active or already has an unresolved exception. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+        };
+    };
+    listDshOperatorDeliveryExceptions: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["DshDeliveryExceptionStatus"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Delivery-exception queue returned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshDeliveryExceptionListResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
 }

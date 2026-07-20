@@ -2,9 +2,11 @@ import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { createDshHttpClient } from "../_kernel/dsh-http-request";
 import type {
   DshCreateAssignmentInput,
+  DshDeliveryException,
   DshDeliveryStatus,
   DshDispatchAssignment,
   DshSubmitPoDInput,
+  DshReportDeliveryExceptionInput,
 } from "./dispatch.types";
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "dispatch");
@@ -57,6 +59,21 @@ export async function submitPoD(assignmentId: string, input: DshSubmitPoDInput):
     { method: "POST", body: input },
   );
   return data.assignment;
+}
+
+export async function reportDeliveryException(assignmentId: string, input: DshReportDeliveryExceptionInput): Promise<DshDeliveryException> {
+  const data = await request<{ exception: DshDeliveryException }>(
+    `/dsh/captain/dispatch/assignments/${encodeURIComponent(assignmentId)}/exceptions`,
+    { method: "POST", body: input },
+  );
+  return data.exception;
+}
+
+export async function fetchCaptainDeliveryException(assignmentId: string): Promise<DshDeliveryException> {
+  const data = await request<{ exception: DshDeliveryException }>(
+    `/dsh/captain/dispatch/assignments/${encodeURIComponent(assignmentId)}/exceptions`,
+  );
+  return data.exception;
 }
 
 export async function fetchClientOrderTracking(orderId: string): Promise<DshDispatchAssignment> {

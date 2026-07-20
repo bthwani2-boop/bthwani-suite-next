@@ -5,6 +5,6 @@
  */
 export const DSH_CAPTAIN_CONTRACT_CAPABILITIES = {
   locationPush: true,
-  failDelivery: false,
+  failDelivery: true,
   confirmReturn: false,
 } as const;

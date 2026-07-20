@@ -4,6 +4,7 @@ import { DSH_CAPTAIN_CONTRACT_CAPABILITIES } from '../orders/dsh-order-lifecycle
 import {
   acceptDispatchAssignment,
   declineDispatchAssignment,
+  reportDeliveryException,
   submitPoD,
   updateDeliveryStatus,
 } from '../dispatch/dispatch.api';
@@ -106,12 +107,11 @@ export function useCaptainOrderRuntime() {
   );
 
   const failDelivery = React.useCallback(
-    async (_assignmentId: string, _captainId: string) => {
-      throw {
-        kind: 'unsupported_transition',
-        message: 'failed delivery requires the governed dispatch exception endpoint',
-      };
-    },
+    (assignmentId: string, _captainId: string) => reportDeliveryException(assignmentId, {
+      reasonCode: 'proof_unavailable',
+      note: 'تعذر إكمال إثبات التسليم؛ تم تحويل المهمة إلى مراجعة العمليات.',
+      correlationId: globalThis.crypto?.randomUUID?.() ?? `${assignmentId}-${Date.now()}`,
+    }),
     [],
   );
 
