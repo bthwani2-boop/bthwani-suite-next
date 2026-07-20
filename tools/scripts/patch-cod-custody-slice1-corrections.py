@@ -6,6 +6,49 @@ stale_client_path = ROOT / "services/dsh/backend/internal/wlt/delivery_collectio
 if stale_client_path.exists():
     stale_client_path.unlink()
 
+
+def align_delivery_collection_tests(path: Path) -> None:
+    text = path.read_text(encoding="utf-8")
+    text = text.replace("NotifyDeliveryCompletedInput", "NotifyDeliveryCollectionInput")
+    text = text.replace("NotifyDeliveryCompleted", "NotifyDeliveryCollection")
+    text = text.replace(
+        '''\t\tOrderID:          orderID,
+\t\tCheckoutIntentID: checkoutIntentID,
+\t}''',
+        '''\t\tOrderID:          orderID,
+\t\tCollectorType:    "captain",
+\t\tCollectorID:      "captain-ooo-1",
+\t\tPartnerID:        "partner-ooo-1",
+\t\tCheckoutIntentID: checkoutIntentID,
+\t}''',
+    )
+    text = text.replace(
+        '''\t\tOrderID:          "order-partial-1",
+\t\tCheckoutIntentID: "intent-partial-1",
+\t}''',
+        '''\t\tOrderID:          "order-partial-1",
+\t\tCollectorType:    "captain",
+\t\tCollectorID:      "captain-partial-1",
+\t\tPartnerID:        "partner-partial-1",
+\t\tCheckoutIntentID: "intent-partial-1",
+\t}''',
+    )
+    text = text.replace(
+        '''\t\tOrderID:          "order-1",
+\t\tCheckoutIntentID: "checkout-1",
+\t}''',
+        '''\t\tOrderID:          "order-1",
+\t\tCollectorType:    "captain",
+\t\tCollectorID:      "captain-1",
+\t\tPartnerID:        "partner-1",
+\t\tCheckoutIntentID: "checkout-1",
+\t}''',
+    )
+    if "NotifyDeliveryCompleted" in text:
+        raise RuntimeError(f"stale NotifyDeliveryCompleted reference remains in {path}")
+    path.write_text(text, encoding="utf-8")
+
+
 client_test_path = ROOT / "services/dsh/backend/internal/wlt/client_test.go"
 text = client_test_path.read_text(encoding="utf-8")
 text = text.replace("TestNotifyDeliveryCompletedSendsServiceHeaders", "TestNotifyDeliveryCollectionSendsGovernedCollectorHeaders")
@@ -41,6 +84,9 @@ for stale in [
     if stale in text:
         raise RuntimeError(f"stale DSH WLT COD client test reference remains: {stale}")
 client_test_path.write_text(text, encoding="utf-8")
+
+align_delivery_collection_tests(ROOT / "services/dsh/backend/internal/wlt/client_resilience_test.go")
+align_delivery_collection_tests(ROOT / "services/dsh/backend/internal/wlt/mutation_headers_test.go")
 
 client_path = ROOT / "services/dsh/backend/internal/wlt/client.go"
 client = client_path.read_text(encoding="utf-8")
@@ -119,4 +165,4 @@ if "INSERT INTO wlt_payment_sessions(checkout_intent_id,client_id" in cod_test:
     raise RuntimeError("ungoverned payment-session fixture remains in COD DB tests")
 cod_test_path.write_text(cod_test, encoding="utf-8")
 
-print("Removed stale COD client, aligned client tests, imports, captain section, and governed WLT fixtures.")
+print("Aligned all DSH COD client tests, imports, captain section, and governed WLT fixtures.")
