@@ -1323,7 +1323,11 @@ export interface components {
         WltCodRecord: {
             id: string;
             orderId: string;
-            captainId: string;
+            /** @description Compatibility projection, present only when collectorType is captain. */
+            captainId?: string;
+            /** @enum {string} */
+            collectorType: "captain" | "store_courier" | "partner_store";
+            collectorId: string;
             partnerId: string;
             /** Format: int64 */
             amountMinorUnits: number;
@@ -1339,16 +1343,16 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
         };
+        /** @description Internal DSH-only custody handoff. Monetary values are forbidden in the request and are always derived from WLT's payment session. */
         WltCreateCodRecordRequest: {
             orderId: string;
-            captainId: string;
+            /** @enum {string} */
+            collectorType: "captain" | "store_courier" | "partner_store";
+            collectorId: string;
+            /** @description Deprecated compatibility input for captain collectors. */
+            captainId?: string;
             partnerId: string;
-            /** @description When set, WLT derives amountMinorUnits/currency from its own payment session for this checkout intent instead of trusting the caller; amountMinorUnits/currency in the request are ignored in that case. */
-            checkoutIntentId?: string;
-            /** Format: int64 */
-            amountMinorUnits?: number;
-            /** @default YER */
-            currency: string;
+            checkoutIntentId: string;
         };
         WltCodRecordResponse: {
             codRecord: components["schemas"]["WltCodRecord"];
