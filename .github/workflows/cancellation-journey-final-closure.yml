@@ -161,8 +161,29 @@ jobs:
           )
 
       - name: Typecheck app-client cancellation surface
+        id: typecheck_client
+        continue-on-error: true
         shell: bash
-        run: pnpm exec tsc -p apps/app-client/runtime/tsconfig.cancellation-journey.json --noEmit --pretty false
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/cancellation-app-client
+          pnpm exec tsc -p apps/app-client/runtime/tsconfig.cancellation-journey.json --noEmit --pretty false 2>&1 \
+            | tee artifacts/cancellation-app-client/typecheck.log
+          exit ${PIPESTATUS[0]}
+
+      - name: Upload app-client typecheck diagnostic
+        if: steps.typecheck_client.outcome == 'failure'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: cancellation-app-client-${{ github.sha }}
+          path: artifacts/cancellation-app-client/typecheck.log
+          if-no-files-found: error
+          retention-days: 2
+
+      - name: Stop on app-client typecheck failure
+        if: steps.typecheck_client.outcome == 'failure'
+        shell: bash
+        run: exit 1
 
       - name: Typecheck app-partner cancellation surface
         shell: bash
