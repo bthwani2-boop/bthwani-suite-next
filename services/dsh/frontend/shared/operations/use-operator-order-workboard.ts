@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  cancelOperatorOrder,
   fetchOperatorOrderWorkboard,
   operatorOrderWorkboardErrorMessage,
   type OperatorOrderWorkboardRow,
@@ -42,10 +41,12 @@ export function useOperatorOrderWorkboard(status?: string) {
     void refresh();
   }, [refresh]);
 
-  const cancelOrder = React.useCallback(async (orderId: string, reason: string) => {
-    await cancelOperatorOrder(orderId, reason);
-    await refresh();
-  }, [refresh]);
+  React.useEffect(() => {
+    if (state.kind !== 'ready') return undefined;
+    if (!state.orders.some((order) => order.financialClosureStatus === 'pending')) return undefined;
+    const interval = setInterval(() => void refresh(), 5000);
+    return () => clearInterval(interval);
+  }, [refresh, state]);
 
-  return { state, refresh, cancelOrder } as const;
+  return { state, refresh } as const;
 }
