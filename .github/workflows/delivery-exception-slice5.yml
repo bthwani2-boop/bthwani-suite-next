@@ -7,6 +7,7 @@ on:
     paths:
       - ".github/workflows/delivery-exception-slice5.yml"
       - "tools/scripts/patch-delivery-exception-slice5.py"
+      - "tools/scripts/patch-delivery-exception-slice5-labels.py"
   workflow_dispatch:
 
 permissions:
@@ -42,9 +43,7 @@ jobs:
         with:
           persist-credentials: true
           fetch-depth: 0
-
       - uses: ./.github/actions/setup-node-workspace
-
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
         with:
           go-version-file: services/dsh/backend/go.mod
@@ -56,6 +55,7 @@ jobs:
         run: |
           set -euo pipefail
           python tools/scripts/patch-delivery-exception-slice5.py
+          python tools/scripts/patch-delivery-exception-slice5-labels.py
           gofmt -w \
             services/dsh/backend/internal/orders/orders.go \
             services/dsh/backend/internal/dispatch/dispatch.go \
@@ -140,10 +140,13 @@ jobs:
           captain="services/dsh/frontend/app-captain/orders/DshCaptainPoDSubmissionScreen.tsx"
           client="services/dsh/frontend/app-client/orders/OrderTrackingScreen.tsx"
           operations="services/dsh/frontend/control-panel/operations/ExceptionsEscalationsScreen.tsx"
+          labels="services/dsh/frontend/shared/dispatch/dispatch.types.ts"
           grep -F 'completeCaptainReturnToStore' "$captain"
           grep -F 'returning_to_store' "$client"
           grep -F 'رحلات الإرجاع إلى المتجر' "$operations"
           grep -F 'resolveDeliveryExceptionReturnToStore' "$operations"
+          grep -F 'returning_to_store: "في طريق العودة إلى المتجر"' "$labels"
+          grep -F 'returned_to_store: "أعيد إلى المتجر"' "$labels"
           ! grep -Ei '(mock|fixture|demo)[A-Za-z0-9_]*[[:space:]]*=' "$captain" "$client" "$operations"
 
       - name: Remove temporary files and commit verified slice
@@ -158,7 +161,8 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm \
             .github/workflows/delivery-exception-slice5.yml \
-            tools/scripts/patch-delivery-exception-slice5.py
+            tools/scripts/patch-delivery-exception-slice5.py \
+            tools/scripts/patch-delivery-exception-slice5-labels.py
           git add -A
           git commit -m "feat(delivery-exception): add explicit return-to-store lifecycle [skip ci]"
           git pull --rebase origin journey/delivery-exception-redelivery-closure
