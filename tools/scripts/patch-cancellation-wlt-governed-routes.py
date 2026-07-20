@@ -14,6 +14,8 @@ def patch_schema_block(text: str, marker: str, next_marker: str) -> str:
     start = text.index(marker)
     end = text.index(next_marker, start)
     block = text[start:end]
+    if "      additionalProperties: false\n" not in block:
+        block = block.replace("      type: object\n", "      type: object\n      additionalProperties: false\n", 1)
     if "        - reason\n      properties:" not in block:
         block = block.replace(
             "        - clientId\n      properties:",
@@ -125,21 +127,27 @@ contract = patch_schema_block(
     "    WltCancelPaymentSessionForOrderRequest:\n",
     "    WltCancelPaymentSessionForOrderResponse:\n",
 )
-refund_response_start = contract.index("    WltRefundResponse:\n")
-refund_response_end = contract.index("    WltRefundListResponse:\n", refund_response_start)
-refund_response = contract[refund_response_start:refund_response_end]
-if "        - replayed\n" not in refund_response:
-    refund_response = refund_response.replace(
-        "      required:\n        - refund\n",
-        "      required:\n        - refund\n        - replayed\n",
-        1,
+if "    WltCreateRefundResponse:\n" not in contract:
+    create_response = '''    WltCreateRefundResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - refund
+        - replayed
+      properties:
+        refund:
+          $ref: "#/components/schemas/WltRefund"
+        replayed:
+          type: boolean
+          description: True when the existing active refund was returned idempotently.
+
+'''
+    contract = replace_once(
+        contract,
+        "    WltRefundResponse:\n",
+        create_response + "    WltRefundResponse:\n",
+        "refund create response schema",
     )
-    refund_response = refund_response.replace(
-        '        refund:\n          $ref: "#/components/schemas/WltRefund"\n',
-        '        refund:\n          $ref: "#/components/schemas/WltRefund"\n        replayed:\n          type: boolean\n          description: True when the existing active refund was returned idempotently.\n',
-        1,
-    )
-contract = contract[:refund_response_start] + refund_response + contract[refund_response_end:]
 post_response = '''      responses:
         "201":
           description: Refund created.
@@ -154,17 +162,17 @@ post_response_governed = '''      responses:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/WltRefundResponse"
+                $ref: "#/components/schemas/WltCreateRefundResponse"
         "201":
           description: Refund created.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/WltRefundResponse"
+                $ref: "#/components/schemas/WltCreateRefundResponse"
 '''
 if post_response_governed not in contract:
     contract = replace_once(contract, post_response, post_response_governed, "refund replay response")
 contract_path.write_text(contract, encoding="utf-8")
 
 Path("tools/scripts/patch-cancellation-wlt-governed-routes.py").unlink(missing_ok=True)
-print("WLT cancellation/refund runtime, compatibility functions, and contract now share one governed atomic implementation.")
+print("WLT cancellation/refund runtime, compatibility functions, and create/replay contract share one governed atomic implementation.")
