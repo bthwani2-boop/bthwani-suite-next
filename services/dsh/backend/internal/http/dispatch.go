@@ -246,6 +246,52 @@ func marshalDeliveryException(item *dispatch.DeliveryException) map[string]any {
 	}
 }
 
+// POST /dsh/operator/delivery-exceptions/{exceptionId}/acknowledge
+func (s *protectedStoreServer) handleAcknowledgeDeliveryException(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage, "operator")
+	if !ok {
+		return
+	}
+	var body struct {
+		ExpectedVersion int `json:"expectedVersion"`
+	}
+	if !decodeProtectedJSON(w, r, &body) {
+		return
+	}
+	item, err := dispatch.AcknowledgeDeliveryException(s.db, r.PathValue("exceptionId"), body.ExpectedVersion, actor.ID)
+	if err != nil {
+		writeDeliveryExceptionError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"exception": marshalDeliveryException(item)})
+}
+
+// POST /dsh/operator/delivery-exceptions/{exceptionId}/resolve
+func (s *protectedStoreServer) handleResolveDeliveryException(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage, "operator")
+	if !ok {
+		return
+	}
+	var body struct {
+		ExpectedVersion int    `json:"expectedVersion"`
+		Action          string `json:"action"`
+		Note            string `json:"note"`
+	}
+	if !decodeProtectedJSON(w, r, &body) {
+		return
+	}
+	if body.Action != "retry_same_captain" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "only retry_same_captain is enabled in this journey slice")
+		return
+	}
+	item, err := dispatch.ResolveDeliveryExceptionRetrySameCaptain(s.db, r.PathValue("exceptionId"), body.ExpectedVersion, body.Note, actor.ID)
+	if err != nil {
+		writeDeliveryExceptionError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"exception": marshalDeliveryException(item)})
+}
+
 // GET /dsh/client/orders/{orderId}/tracking
 func (s *protectedStoreServer) handleGetClientTracking(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "client")

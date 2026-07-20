@@ -108,6 +108,8 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("POST /dsh/captain/dispatch/assignments/{assignmentId}/exceptions", protected.handleReportDeliveryException)
 	mux.HandleFunc("GET /dsh/captain/dispatch/assignments/{assignmentId}/exceptions", protected.handleGetCaptainDeliveryException)
 	mux.HandleFunc("GET /dsh/operator/delivery-exceptions", protected.handleListOperatorDeliveryExceptions)
+	mux.HandleFunc("POST /dsh/operator/delivery-exceptions/{exceptionId}/acknowledge", protected.handleAcknowledgeDeliveryException)
+	mux.HandleFunc("POST /dsh/operator/delivery-exceptions/{exceptionId}/resolve", protected.handleResolveDeliveryException)
 	mux.HandleFunc("GET /dsh/client/orders/{orderId}/tracking", protected.handleGetClientTracking)
 
 	// Special Requests (Shein, Awnak)

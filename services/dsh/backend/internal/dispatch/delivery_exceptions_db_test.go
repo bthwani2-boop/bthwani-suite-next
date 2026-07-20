@@ -104,4 +104,33 @@ func TestDeliveryExceptionBlocksProgressButAllowsLocationDBIntegration(t *testin
 	if !found {
 		t.Fatalf("reported exception missing from operator queue")
 	}
+
+	acknowledged, err := AcknowledgeDeliveryException(db, item.ID, item.Version, "operator-1")
+	if err != nil {
+		t.Fatalf("acknowledge delivery exception: %v", err)
+	}
+	if acknowledged.Status != DeliveryExceptionAcknowledged || acknowledged.AcknowledgedByActorID == nil {
+		t.Fatalf("unexpected acknowledged state: %+v", acknowledged)
+	}
+
+	resolved, err := ResolveDeliveryExceptionRetrySameCaptain(db, item.ID, acknowledged.Version, "تم التواصل مع العميل والسماح بإعادة المحاولة", "operator-1")
+	if err != nil {
+		t.Fatalf("resolve delivery exception: %v", err)
+	}
+	if resolved.Status != DeliveryExceptionResolved || resolved.ResolutionAction == nil || *resolved.ResolutionAction != "retry_same_captain" {
+		t.Fatalf("unexpected resolved state: %+v", resolved)
+	}
+
+	if _, err := SubmitPoD(db, assignmentID, captainID, PoDInput{Method: "photo", Reference: "retry-proof"}); err != nil {
+		t.Fatalf("proof must reopen after operations resolution: %v", err)
+	}
+
+	replayedAfterResolution, err := ReportDeliveryException(db, assignmentID, captainID, ReportDeliveryExceptionInput{
+		ReasonCode:    ExceptionCustomerUnreachable,
+		Note:          "اتصل الكابتن عدة مرات دون استجابة",
+		CorrelationID: correlationID,
+	})
+	if err != nil || replayedAfterResolution.ID != item.ID || replayedAfterResolution.Status != DeliveryExceptionResolved {
+		t.Fatalf("expected state-independent idempotent replay, got %+v err=%v", replayedAfterResolution, err)
+	}
 }

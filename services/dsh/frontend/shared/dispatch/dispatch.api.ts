@@ -76,6 +76,33 @@ export async function fetchCaptainDeliveryException(assignmentId: string): Promi
   return data.exception;
 }
 
+export async function fetchOperatorDeliveryExceptions(status: "open" | "acknowledged" | "resolved"): Promise<readonly DshDeliveryException[]> {
+  const data = await request<{ exceptions: DshDeliveryException[] }>(
+    `/dsh/operator/delivery-exceptions?status=${encodeURIComponent(status)}`,
+  );
+  return data.exceptions ?? [];
+}
+
+export async function acknowledgeDeliveryException(id: string, expectedVersion: number): Promise<DshDeliveryException> {
+  const data = await request<{ exception: DshDeliveryException }>(
+    `/dsh/operator/delivery-exceptions/${encodeURIComponent(id)}/acknowledge`,
+    { method: "POST", body: { expectedVersion } },
+  );
+  return data.exception;
+}
+
+export async function resolveDeliveryExceptionRetrySameCaptain(
+  id: string,
+  expectedVersion: number,
+  note: string,
+): Promise<DshDeliveryException> {
+  const data = await request<{ exception: DshDeliveryException }>(
+    `/dsh/operator/delivery-exceptions/${encodeURIComponent(id)}/resolve`,
+    { method: "POST", body: { expectedVersion, action: "retry_same_captain", note } },
+  );
+  return data.exception;
+}
+
 export async function fetchClientOrderTracking(orderId: string): Promise<DshDispatchAssignment> {
   const data = await request<{ assignment: DshDispatchAssignment }>(
     `/dsh/client/orders/${encodeURIComponent(orderId)}/tracking`,

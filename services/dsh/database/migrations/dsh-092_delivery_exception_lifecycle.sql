@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS dsh_delivery_exceptions (
     reported_longitude DOUBLE PRECISION,
     reported_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     acknowledged_at TIMESTAMPTZ,
+    acknowledged_by_actor_id TEXT,
     resolved_at TIMESTAMPTZ,
     resolved_by_actor_id TEXT,
     resolution_action TEXT CHECK (resolution_action IS NULL OR resolution_action IN (
@@ -66,6 +67,10 @@ CREATE TABLE IF NOT EXISTS dsh_delivery_exceptions (
     ),
     CONSTRAINT dsh_delivery_exceptions_correlation_unique UNIQUE (tenant_id, correlation_id)
 );
+
+
+ALTER TABLE dsh_delivery_exceptions
+    ADD COLUMN IF NOT EXISTS acknowledged_by_actor_id TEXT;
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_dsh_delivery_exceptions_active_assignment
     ON dsh_delivery_exceptions(assignment_id)

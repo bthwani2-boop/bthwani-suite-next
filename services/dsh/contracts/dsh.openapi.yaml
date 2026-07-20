@@ -6644,6 +6644,70 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /dsh/operator/delivery-exceptions/{exceptionId}/acknowledge:
+    parameters:
+      - name: exceptionId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      operationId: acknowledgeDshOperatorDeliveryException
+      summary: Acknowledge an open delivery exception for operations review.
+      tags: [DshDispatch]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshAcknowledgeDeliveryExceptionRequest" }
+      responses:
+        "200":
+          description: Exception acknowledged.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshDeliveryExceptionResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Version or lifecycle conflict.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshErrorResponse" }
+
+  /dsh/operator/delivery-exceptions/{exceptionId}/resolve:
+    parameters:
+      - name: exceptionId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      operationId: resolveDshOperatorDeliveryException
+      summary: Resolve an exception by allowing the same captain to retry from the preserved stage.
+      tags: [DshDispatch]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshResolveDeliveryExceptionRequest" }
+      responses:
+        "200":
+          description: Exception resolved and delivery progression reopened.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshDeliveryExceptionResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Version conflict or assignment no longer eligible for retry.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshErrorResponse" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -6718,6 +6782,24 @@ components:
           schema:
             $ref: "#/components/schemas/DshErrorResponse"
   schemas:
+    DshAcknowledgeDeliveryExceptionRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion]
+      properties:
+        expectedVersion: { type: integer, minimum: 1 }
+
+    DshResolveDeliveryExceptionRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, action, note]
+      properties:
+        expectedVersion: { type: integer, minimum: 1 }
+        action:
+          type: string
+          enum: [retry_same_captain]
+        note: { type: string, minLength: 5, maxLength: 1000 }
+
     DshDeliveryExceptionReasonCode:
       type: string
       enum:
@@ -6787,6 +6869,7 @@ components:
         reportedLongitude: { type: number, format: double, nullable: true }
         reportedAt: { type: string, format: date-time }
         acknowledgedAt: { type: string, format: date-time, nullable: true }
+        acknowledgedByActorId: { type: string, nullable: true }
         resolvedAt: { type: string, format: date-time, nullable: true }
         resolvedByActorId: { type: string, nullable: true }
         resolutionAction:

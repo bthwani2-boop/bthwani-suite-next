@@ -2,15 +2,7 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  Badge,
-  Box,
-  Button,
-  Card,
-  StateView,
-  Text,
-  TextField,
-} from '@bthwani/ui-kit';
+import { Badge, Box, Button, Card, StateView, Text, TextField } from '@bthwani/ui-kit';
 import {
   ESCALATION_CATEGORY_LABELS,
   ESCALATION_SEVERITY_LABELS,
@@ -19,283 +11,196 @@ import {
   type DshReadinessEscalation,
 } from '../../shared/field-readiness';
 import {
-  fetchDshRuntimeOrders,
-  type DshRuntimeOrderRow,
-} from '../../shared/operations/dsh-operational-runtime-adapter';
+  acknowledgeDeliveryException,
+  fetchOperatorDeliveryExceptions,
+  resolveDeliveryExceptionRetrySameCaptain,
+} from '../../shared/dispatch/dispatch.api';
+import type { DshDeliveryException } from '../../shared/dispatch/dispatch.types';
 import { buildOperationsHref } from './operations.registry';
 
-export type ExceptionsEscalationsScreenProps = {
-  readonly hubHref: string;
-  readonly subGroup?: string;
-};
+export type ExceptionsEscalationsScreenProps = { readonly hubHref: string; readonly subGroup?: string };
 
 type WorkspaceState =
   | { readonly kind: 'loading' }
   | { readonly kind: 'error'; readonly message: string }
-  | {
-      readonly kind: 'ready';
-      readonly escalations: readonly DshReadinessEscalation[];
-      readonly cancelledOrders: readonly DshRuntimeOrderRow[];
-      readonly cancelledOrdersWarning: string | null;
-    };
+  | { readonly kind: 'ready'; readonly readiness: readonly DshReadinessEscalation[]; readonly delivery: readonly DshDeliveryException[] };
 
 type ActionState =
   | { readonly kind: 'idle' }
-  | { readonly kind: 'submitting'; readonly escalationId: string }
-  | { readonly kind: 'error'; readonly escalationId: string; readonly message: string };
+  | { readonly kind: 'submitting'; readonly id: string }
+  | { readonly kind: 'error'; readonly id: string; readonly message: string };
 
-function statusLabel(status: DshReadinessEscalation['status']): string {
-  switch (status) {
-    case 'open': return 'مفتوح';
-    case 'acknowledged': return 'قيد المراجعة';
-    case 'resolved': return 'محلول';
-    case 'escalated_further': return 'مصعّد';
-  }
-}
+const DELIVERY_EXCEPTION_REASON_LABELS: Record<DshDeliveryException['reasonCode'], string> = {
+  customer_unreachable: 'تعذر الوصول إلى العميل',
+  recipient_refused: 'رفض المستلم',
+  wrong_address: 'العنوان غير صحيح',
+  unsafe_location: 'الموقع غير آمن',
+  vehicle_breakdown: 'عطل المركبة',
+  accident: 'حادث',
+  damaged_order: 'تضرر الطلب',
+  cash_collection_issue: 'تعذر تحصيل النقد',
+  weather_or_road_block: 'طقس أو طريق مغلق',
+  proof_unavailable: 'تعذر إثبات التسليم',
+  other: 'سبب آخر',
+};
 
-function statusTone(status: DshReadinessEscalation['status']): 'danger' | 'warning' | 'success' | 'info' {
-  if (status === 'resolved') return 'success';
-  if (status === 'open') return 'danger';
-  if (status === 'escalated_further') return 'warning';
-  return 'info';
-}
-
-function severityTone(severity: DshReadinessEscalation['severity']): 'danger' | 'warning' | 'neutral' {
-  if (severity === 'critical' || severity === 'high') return 'danger';
-  if (severity === 'medium') return 'warning';
+function exceptionTone(severity: DshDeliveryException['severity']): 'danger' | 'warning' | 'neutral' {
+  if (severity === 'critical') return 'danger';
+  if (severity === 'high') return 'warning';
   return 'neutral';
 }
 
 export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsScreenProps) {
   const router = useRouter();
   const [state, setState] = React.useState<WorkspaceState>({ kind: 'loading' });
-  const [selectedEscalationId, setSelectedEscalationId] = React.useState<string | null>(null);
-  const [resolutionNote, setResolutionNote] = React.useState('');
+  const [selectedReadinessId, setSelectedReadinessId] = React.useState<string | null>(null);
+  const [selectedDeliveryId, setSelectedDeliveryId] = React.useState<string | null>(null);
+  const [note, setNote] = React.useState('');
   const [actionState, setActionState] = React.useState<ActionState>({ kind: 'idle' });
 
   const load = React.useCallback(async () => {
     setState({ kind: 'loading' });
     try {
-      const [escalations, ordersResult] = await Promise.all([
+      const [readiness, open, acknowledged] = await Promise.all([
         fetchOperatorEscalations(),
-        fetchDshRuntimeOrders({ status: 'cancelled', limit: 50, scope: 'operator' }),
+        fetchOperatorDeliveryExceptions('open'),
+        fetchOperatorDeliveryExceptions('acknowledged'),
       ]);
-      if (ordersResult.kind === 'ok') {
-        setState({
-          kind: 'ready',
-          escalations,
-          cancelledOrders: ordersResult.orders,
-          cancelledOrdersWarning: null,
-        });
-      } else {
-        setState({
-          kind: 'ready',
-          escalations,
-          cancelledOrders: [],
-          cancelledOrdersWarning:
-            ordersResult.kind === 'offline'
-              ? 'DSH Runtime غير متاح لقراءة الطلبات الملغاة.'
-              : ordersResult.message,
-        });
-      }
+      setState({ kind: 'ready', readiness, delivery: [...open, ...acknowledged] });
     } catch (error) {
-      setState({
-        kind: 'error',
-        message: error instanceof Error ? error.message : 'تعذر تحميل تصعيدات DSH.',
-      });
+      setState({ kind: 'error', message: error instanceof Error ? error.message : 'تعذر تحميل الاستثناءات الحية من DSH.' });
     }
   }, []);
 
-  React.useEffect(() => {
-    void load();
-  }, [load]);
+  React.useEffect(() => { void load(); }, [load]);
+  React.useEffect(() => { setNote(''); setActionState({ kind: 'idle' }); }, [selectedReadinessId, selectedDeliveryId]);
 
-  React.useEffect(() => {
-    setResolutionNote('');
-    setActionState({ kind: 'idle' });
-  }, [selectedEscalationId]);
-
-  const mutateEscalation = React.useCallback(async (
-    escalation: DshReadinessEscalation,
-    status: 'acknowledged' | 'resolved',
-  ) => {
-    if (status === 'resolved' && resolutionNote.trim().length < 5) {
-      setActionState({
-        kind: 'error',
-        escalationId: escalation.id,
-        message: 'اكتب نتيجة حل واضحة من خمسة أحرف على الأقل.',
-      });
-      return;
-    }
-    setActionState({ kind: 'submitting', escalationId: escalation.id });
+  const acknowledge = React.useCallback(async (item: DshDeliveryException) => {
+    setActionState({ kind: 'submitting', id: item.id });
     try {
-      await updateEscalation(escalation.id, {
-        status,
-        resolutionNote:
-          status === 'resolved'
-            ? resolutionNote.trim()
-            : resolutionNote.trim() || 'تم استلام التصعيد وبدء المراجعة التشغيلية.',
-      });
-      setSelectedEscalationId(null);
+      await acknowledgeDeliveryException(item.id, item.version);
+      setSelectedDeliveryId(null);
       await load();
     } catch (error) {
-      setActionState({
-        kind: 'error',
-        escalationId: escalation.id,
-        message: error instanceof Error ? error.message : 'تعذر حفظ الإجراء في DSH Runtime.',
-      });
+      setActionState({ kind: 'error', id: item.id, message: error instanceof Error ? error.message : 'تعذر اعتماد الاستثناء.' });
     }
-  }, [load, resolutionNote]);
+  }, [load]);
 
-  if (state.kind === 'loading') {
-    return <StateView loading title="جارٍ تحميل الاستثناءات والتصعيدات من DSH" />;
-  }
+  const resolveRetry = React.useCallback(async (item: DshDeliveryException) => {
+    if (note.trim().length < 5) {
+      setActionState({ kind: 'error', id: item.id, message: 'اكتب قرارًا تشغيليًا واضحًا من خمسة أحرف على الأقل.' });
+      return;
+    }
+    setActionState({ kind: 'submitting', id: item.id });
+    try {
+      await resolveDeliveryExceptionRetrySameCaptain(item.id, item.version, note.trim());
+      setSelectedDeliveryId(null);
+      await load();
+    } catch (error) {
+      setActionState({ kind: 'error', id: item.id, message: error instanceof Error ? error.message : 'تعذر حل الاستثناء.' });
+    }
+  }, [load, note]);
 
-  if (state.kind === 'error') {
-    return (
-      <StateView
-        tone="danger"
-        title="تعذر تحميل مساحة الاستثناءات"
-        description={state.message}
-        actionLabel="إعادة المحاولة"
-        onActionPress={load}
-      />
-    );
-  }
+  const resolveReadiness = React.useCallback(async (item: DshReadinessEscalation, status: 'acknowledged' | 'resolved') => {
+    if (status === 'resolved' && note.trim().length < 5) {
+      setActionState({ kind: 'error', id: item.id, message: 'اكتب نتيجة حل واضحة من خمسة أحرف على الأقل.' });
+      return;
+    }
+    setActionState({ kind: 'submitting', id: item.id });
+    try {
+      await updateEscalation(item.id, { status, resolutionNote: note.trim() || 'تم استلام التصعيد وبدء المراجعة التشغيلية.' });
+      setSelectedReadinessId(null);
+      await load();
+    } catch (error) {
+      setActionState({ kind: 'error', id: item.id, message: error instanceof Error ? error.message : 'تعذر حفظ التصعيد.' });
+    }
+  }, [load, note]);
 
-  const selected = state.escalations.find((item) => item.id === selectedEscalationId) ?? null;
-  const openCount = state.escalations.filter((item) => item.status !== 'resolved').length;
-  const resolvedCount = state.escalations.length - openCount;
+  if (state.kind === 'loading') return <StateView loading title="جارٍ تحميل الاستثناءات الحية من DSH" />;
+  if (state.kind === 'error') return <StateView tone="danger" title="تعذر تحميل مساحة الاستثناءات" description={state.message} actionLabel="إعادة المحاولة" onActionPress={load} />;
+
+  const selectedDelivery = state.delivery.find((item) => item.id === selectedDeliveryId) ?? null;
+  const selectedReadiness = state.readiness.find((item) => item.id === selectedReadinessId) ?? null;
 
   return (
     <Box gap={4}>
-      <Box flexDirection="row" gap={2} flexWrap="wrap" justifyContent="space-between">
+      <Box gap={2} style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
         <Box gap={1}>
           <Text role="titleMd" align="start">الاستثناءات والتصعيدات</Text>
-          <Text role="caption" tone="muted" align="start">
-            التعديلات متاحة فقط لتصعيدات الجاهزية ذات معرف DSH حقيقي. الطلبات الملغاة للقراءة والتنقل فقط.
-          </Text>
+          <Text role="caption" tone="muted" align="start">طابور حقيقي من DSH؛ لا توجد طلبات ملغاة أو بيانات محلية بديلة داخل هذه الشاشة.</Text>
         </Box>
-        <Box flexDirection="row" gap={2} flexWrap="wrap">
+        <Box gap={2} style={{ flexDirection: 'row' }}>
           <Button label="تحديث" tone="secondary" onPress={() => void load()} />
           <Button label="العودة لمركز العمليات" tone="ghost" onPress={() => router.push(hubHref)} />
         </Box>
       </Box>
 
-      <Box flexDirection="row" gap={2} flexWrap="wrap">
-        <Badge label={`مفتوحة: ${openCount}`} tone={openCount > 0 ? 'warning' : 'success'} />
-        <Badge label={`محلولة: ${resolvedCount}`} tone="success" />
-        <Badge label={`طلبات ملغاة: ${state.cancelledOrders.length}`} tone="neutral" />
+      <Box gap={2} style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+        <Badge label={`استثناءات توصيل نشطة: ${state.delivery.length}`} tone={state.delivery.length ? 'warning' : 'success'} />
+        <Badge label={`تصعيدات جاهزية: ${state.readiness.filter((item) => item.status !== 'resolved').length}`} tone="neutral" />
       </Box>
 
-      {state.cancelledOrdersWarning ? (
-        <StateView tone="warning" title="قراءة الطلبات الملغاة غير مكتملة" description={state.cancelledOrdersWarning} />
+      <Box gap={4} style={{ flexDirection: 'row', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+        <Box gap={3} style={{ flex: 1, minWidth: 340 }}>
+          <Text role="titleSm" align="start">استثناءات التوصيل الحاكمة</Text>
+          {state.delivery.length === 0 ? <StateView tone="success" title="لا توجد استثناءات توصيل نشطة" /> : state.delivery.map((item) => (
+            <Card key={item.id} padding={4} gap={2}>
+              <Box gap={2} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box gap={1} style={{ flex: 1 }}>
+                  <Text role="bodyStrong" align="start">{DELIVERY_EXCEPTION_REASON_LABELS[item.reasonCode]}</Text>
+                  <Text role="caption" tone="muted" align="start">الطلب: {item.orderId} · الكابتن: {item.captainId}</Text>
+                  <Text role="caption" tone="muted" align="start">المرحلة المحفوظة: {item.deliveryStatusAtReport}</Text>
+                  {item.note ? <Text role="bodySm" align="start">{item.note}</Text> : null}
+                </Box>
+                <Box gap={1} style={{ alignItems: 'flex-end' }}>
+                  <Badge label={item.severity} tone={exceptionTone(item.severity)} />
+                  <Badge label={item.status === 'open' ? 'جديد' : 'قيد المراجعة'} tone={item.status === 'open' ? 'danger' : 'warning'} />
+                </Box>
+              </Box>
+              <Box gap={2} style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                <Button label="فتح القرار" tone="secondary" size="sm" onPress={() => { setSelectedReadinessId(null); setSelectedDeliveryId(item.id); }} />
+                <Button label="فتح الطلب الحي" tone="ghost" size="sm" onPress={() => router.push(buildOperationsHref('live-orders', { subGroup: 'queue', orderId: item.orderId }))} />
+              </Box>
+            </Card>
+          ))}
+        </Box>
+
+        <Box gap={3} style={{ flex: 1, minWidth: 340 }}>
+          <Text role="titleSm" align="start">تصعيدات الجاهزية</Text>
+          {state.readiness.length === 0 ? <StateView tone="neutral" title="لا توجد تصعيدات جاهزية" /> : state.readiness.map((item) => (
+            <Card key={item.id} padding={4} gap={2}>
+              <Text role="bodyStrong" align="start">{ESCALATION_CATEGORY_LABELS[item.category] ?? item.category}</Text>
+              <Text role="caption" tone="muted" align="start">{item.description}</Text>
+              <Badge label={ESCALATION_SEVERITY_LABELS[item.severity] ?? item.severity} tone={item.severity === 'critical' || item.severity === 'high' ? 'danger' : 'neutral'} />
+              {item.status !== 'resolved' ? <Button label="فتح التصعيد" tone="secondary" size="sm" onPress={() => { setSelectedDeliveryId(null); setSelectedReadinessId(item.id); }} /> : null}
+            </Card>
+          ))}
+        </Box>
+      </Box>
+
+      {selectedDelivery ? (
+        <Card padding={4} gap={3}>
+          <Text role="titleSm" align="start">قرار استثناء التوصيل {selectedDelivery.id}</Text>
+          <Text role="bodySm" align="start">يبقى الطلب في مرحلته الحالية. حل «إعادة المحاولة» يرفع الحظر فقط ولا ينشئ نجاحًا محليًا.</Text>
+          <TextField label="قرار العمليات" value={note} onChangeText={setNote} placeholder="سجل سبب السماح بإعادة المحاولة" multiline />
+          {actionState.kind === 'error' && actionState.id === selectedDelivery.id ? <Text role="caption" tone="danger">{actionState.message}</Text> : null}
+          <Box gap={2} style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+            {selectedDelivery.status === 'open' ? <Button label="اعتماد وبدء المراجعة" tone="secondary" disabled={actionState.kind === 'submitting'} onPress={() => void acknowledge(selectedDelivery)} /> : null}
+            <Button label="حل: إعادة المحاولة مع الكابتن نفسه" tone="primary" disabled={actionState.kind === 'submitting'} onPress={() => void resolveRetry(selectedDelivery)} />
+            <Button label="إغلاق التفاصيل" tone="ghost" onPress={() => setSelectedDeliveryId(null)} />
+          </Box>
+        </Card>
       ) : null}
 
-      <Box flexDirection="row" gap={4} alignItems="flex-start" flexWrap="wrap">
-        <Box flex={1} minWidth={320} gap={3}>
-          <Text role="titleSm" align="start">تصعيدات الجاهزية</Text>
-          {state.escalations.length === 0 ? (
-            <StateView tone="neutral" title="لا توجد تصعيدات مسجلة" />
-          ) : (
-            state.escalations.map((item) => (
-              <Card key={item.id} padding={4} gap={2}>
-                <Box flexDirection="row" justifyContent="space-between" alignItems="center" gap={2}>
-                  <Box gap={1} flex={1}>
-                    <Text role="bodyStrong" align="start">
-                      {ESCALATION_CATEGORY_LABELS[item.category] ?? item.category}
-                    </Text>
-                    <Text role="caption" tone="muted" align="start">{item.description}</Text>
-                    <Text role="caption" tone="muted" align="start">
-                      المتجر: {item.storeId} · الزيارة: {item.visitId || 'غير مرتبطة'}
-                    </Text>
-                  </Box>
-                  <Box gap={1} alignItems="flex-end">
-                    <Badge label={ESCALATION_SEVERITY_LABELS[item.severity] ?? item.severity} tone={severityTone(item.severity)} />
-                    <Badge label={statusLabel(item.status)} tone={statusTone(item.status)} />
-                  </Box>
-                </Box>
-                <Box flexDirection="row" gap={2} flexWrap="wrap">
-                  <Button
-                    label="فتح التفاصيل"
-                    tone="secondary"
-                    size="sm"
-                    onPress={() => setSelectedEscalationId(item.id)}
-                  />
-                  <Button
-                    label="فتح المتجر"
-                    tone="ghost"
-                    size="sm"
-                    onPress={() => router.push(buildOperationsHref('partner-stores', { orderId: item.storeId }))}
-                  />
-                </Box>
-              </Card>
-            ))
-          )}
-        </Box>
-
-        <Box flex={1} minWidth={320} gap={3}>
-          <Text role="titleSm" align="start">طلبات ملغاة من Runtime</Text>
-          {state.cancelledOrders.length === 0 ? (
-            <StateView tone="neutral" title="لا توجد طلبات ملغاة في النطاق المقروء" />
-          ) : (
-            state.cancelledOrders.map((order) => (
-              <Card key={order.id} padding={4} gap={2}>
-                <Text role="bodyStrong" align="start">الطلب {order.id}</Text>
-                <Text role="caption" tone="muted" align="start">
-                  المتجر: {order.storeId} · العميل: {order.clientId}
-                </Text>
-                <Text role="caption" tone="muted" align="start">
-                  سبب فشل التسليم: {order.deliveryFailureReason || 'غير مسجل'}
-                </Text>
-                <Button
-                  label="فتح الطلب في الصف الحي"
-                  tone="secondary"
-                  size="sm"
-                  onPress={() => router.push(buildOperationsHref('live-orders', { subGroup: 'queue', orderId: order.id }))}
-                />
-              </Card>
-            ))
-          )}
-        </Box>
-      </Box>
-
-      {selected ? (
+      {selectedReadiness ? (
         <Card padding={4} gap={3}>
-          <Box flexDirection="row" justifyContent="space-between" alignItems="center" gap={2}>
-            <Text role="titleSm" align="start">إجراء على التصعيد {selected.id}</Text>
-            <Button label="إغلاق التفاصيل" tone="ghost" size="sm" onPress={() => setSelectedEscalationId(null)} />
-          </Box>
-          <Text role="bodySm" align="start">{selected.description}</Text>
-          <TextField
-            label="ملاحظات المراجعة أو الحل"
-            value={resolutionNote}
-            onChangeText={setResolutionNote}
-            placeholder="اكتب نتيجة تشغيلية قابلة للتدقيق"
-            multiline
-          />
-          {actionState.kind === 'error' && actionState.escalationId === selected.id ? (
-            <Text role="caption" tone="danger" align="start">{actionState.message}</Text>
-          ) : null}
-          <Box flexDirection="row" gap={2} flexWrap="wrap">
-            {selected.status === 'open' ? (
-              <Button
-                label="تأكيد الاستلام والمراجعة"
-                tone="secondary"
-                disabled={actionState.kind === 'submitting'}
-                onPress={() => void mutateEscalation(selected, 'acknowledged')}
-              />
-            ) : null}
-            {selected.status !== 'resolved' ? (
-              <Button
-                label="حل وإغلاق في DSH"
-                tone="primary"
-                disabled={actionState.kind === 'submitting'}
-                onPress={() => void mutateEscalation(selected, 'resolved')}
-              />
-            ) : (
-              <StateView tone="success" title="هذا التصعيد مغلق في DSH" description={selected.resolutionNote || undefined} />
-            )}
+          <Text role="titleSm" align="start">إجراء على تصعيد الجاهزية {selectedReadiness.id}</Text>
+          <TextField label="ملاحظات المراجعة أو الحل" value={note} onChangeText={setNote} placeholder="اكتب نتيجة تشغيلية قابلة للتدقيق" multiline />
+          {actionState.kind === 'error' && actionState.id === selectedReadiness.id ? <Text role="caption" tone="danger">{actionState.message}</Text> : null}
+          <Box gap={2} style={{ flexDirection: 'row' }}>
+            {selectedReadiness.status === 'open' ? <Button label="تأكيد الاستلام" tone="secondary" onPress={() => void resolveReadiness(selectedReadiness, 'acknowledged')} /> : null}
+            <Button label="حل وإغلاق" tone="primary" onPress={() => void resolveReadiness(selectedReadiness, 'resolved')} />
+            <Button label="إغلاق التفاصيل" tone="ghost" onPress={() => setSelectedReadinessId(null)} />
           </Box>
         </Card>
       ) : null}

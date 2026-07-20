@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "next-env.d.ts",
+    "../../../services/dsh/frontend/control-panel/operations/ExceptionsEscalationsScreen.tsx",
+    "../../../services/dsh/frontend/control-panel/operations/operations.registry.ts",
+    "../../../services/dsh/frontend/shared/dispatch/**/*.ts",
+    "../../../services/dsh/frontend/shared/field-readiness/**/*.ts",
+    "../../../services/dsh/frontend/shared/_kernel/**/*.ts",
+    "../../../services/dsh/clients/**/*.ts"
+  ],
+  "exclude": ["node_modules", ".next", "dist", "build"]
+}

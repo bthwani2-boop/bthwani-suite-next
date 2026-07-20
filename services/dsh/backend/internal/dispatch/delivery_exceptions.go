@@ -50,6 +50,7 @@ type DeliveryException struct {
 	ReportedLongitude      *float64
 	ReportedAt             time.Time
 	AcknowledgedAt         *time.Time
+	AcknowledgedByActorID  *string
 	ResolvedAt             *time.Time
 	ResolvedByActorID      *string
 	ResolutionAction       *string
@@ -210,6 +211,120 @@ func ReportDeliveryException(db *sql.DB, assignmentID, captainID string, input R
 	return GetDeliveryException(db, id)
 }
 
+func AcknowledgeDeliveryException(db *sql.DB, id string, expectedVersion int, actorID string) (*DeliveryException, error) {
+	if strings.TrimSpace(id) == "" || strings.TrimSpace(actorID) == "" || expectedVersion <= 0 {
+		return nil, fmt.Errorf("%w: id, expectedVersion, and actor are required", ErrInvalid)
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	current, err := getDeliveryExceptionForUpdate(tx, id)
+	if err != nil {
+		return nil, err
+	}
+	if current.Status == DeliveryExceptionAcknowledged {
+		return current, nil
+	}
+	if current.Status != DeliveryExceptionOpen {
+		return nil, fmt.Errorf("%w: only an open exception can be acknowledged", ErrConflict)
+	}
+	if current.Version != expectedVersion {
+		return nil, fmt.Errorf("%w: delivery exception version changed", ErrConflict)
+	}
+
+	res, err := tx.Exec(`
+		UPDATE dsh_delivery_exceptions
+		SET status='acknowledged', acknowledged_at=NOW(), acknowledged_by_actor_id=$1,
+		    version=version+1, updated_at=NOW()
+		WHERE id=$2::uuid AND version=$3 AND status='open'`, actorID, id, expectedVersion)
+	if err != nil {
+		return nil, err
+	}
+	if n, _ := res.RowsAffected(); n != 1 {
+		return nil, fmt.Errorf("%w: delivery exception version changed", ErrConflict)
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return GetDeliveryException(db, id)
+}
+
+func ResolveDeliveryExceptionRetrySameCaptain(db *sql.DB, id string, expectedVersion int, note, actorID string) (*DeliveryException, error) {
+	note = strings.TrimSpace(note)
+	if strings.TrimSpace(id) == "" || strings.TrimSpace(actorID) == "" || expectedVersion <= 0 || len(note) < 5 {
+		return nil, fmt.Errorf("%w: id, expectedVersion, actor, and a resolution note are required", ErrInvalid)
+	}
+	if len(note) > 1000 {
+		return nil, fmt.Errorf("%w: resolution note must not exceed 1000 characters", ErrInvalid)
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	current, err := getDeliveryExceptionForUpdate(tx, id)
+	if err != nil {
+		return nil, err
+	}
+	if current.Status == DeliveryExceptionResolved {
+		if current.ResolutionAction != nil && *current.ResolutionAction == "retry_same_captain" && current.ResolutionNote != nil && *current.ResolutionNote == note {
+			return current, nil
+		}
+		return nil, fmt.Errorf("%w: delivery exception was already resolved differently", ErrConflict)
+	}
+	if current.Version != expectedVersion {
+		return nil, fmt.Errorf("%w: delivery exception version changed", ErrConflict)
+	}
+
+	var assignmentStatus AssignmentStatus
+	var deliveryStatus DeliveryStatus
+	if err := tx.QueryRow(`
+		SELECT a.status, d.status
+		FROM dsh_assignments a
+		JOIN dsh_deliveries d ON d.assignment_id=a.id
+		WHERE a.id=$1::uuid AND a.captain_id=$2
+		FOR UPDATE OF a, d`, current.AssignmentID, current.CaptainID).Scan(&assignmentStatus, &deliveryStatus); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	if assignmentStatus != AssignmentAccepted || !reportableDeliveryStatuses[deliveryStatus] {
+		return nil, fmt.Errorf("%w: assignment is no longer eligible for same-captain retry", ErrConflict)
+	}
+
+	res, err := tx.Exec(`
+		UPDATE dsh_delivery_exceptions
+		SET status='resolved', resolved_at=NOW(), resolved_by_actor_id=$1,
+		    resolution_action='retry_same_captain', resolution_note=$2,
+		    version=version+1, updated_at=NOW()
+		WHERE id=$3::uuid AND version=$4 AND status IN ('open','acknowledged')`,
+		actorID, note, id, expectedVersion)
+	if err != nil {
+		return nil, err
+	}
+	if n, _ := res.RowsAffected(); n != 1 {
+		return nil, fmt.Errorf("%w: delivery exception version changed", ErrConflict)
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return GetDeliveryException(db, id)
+}
+
+func getDeliveryExceptionForUpdate(tx *sql.Tx, id string) (*DeliveryException, error) {
+	row := tx.QueryRow(`SELECT `+deliveryExceptionColumns+` FROM dsh_delivery_exceptions e WHERE e.id=$1::uuid FOR UPDATE`, id)
+	item, err := scanDeliveryException(row.Scan)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	return item, err
+}
+
 func ensureNoOpenDeliveryException(tx *sql.Tx, assignmentID string) error {
 	var exists bool
 	if err := tx.QueryRow(`
@@ -283,7 +398,7 @@ const deliveryExceptionColumns = `
 	e.id::text, e.tenant_id, e.assignment_id::text, e.order_id::text, e.captain_id,
 	e.reason_code, e.note, e.delivery_status_at_report, e.severity, e.status,
 	e.correlation_id, e.reported_latitude, e.reported_longitude, e.reported_at,
-	e.acknowledged_at, e.resolved_at, e.resolved_by_actor_id, e.resolution_action,
+	e.acknowledged_at, e.acknowledged_by_actor_id, e.resolved_at, e.resolved_by_actor_id, e.resolution_action,
 	e.resolution_note, e.version, e.created_at, e.updated_at`
 
 type deliveryExceptionScanner func(dest ...any) error
@@ -294,7 +409,7 @@ func scanDeliveryException(scan deliveryExceptionScanner) (*DeliveryException, e
 		&item.ID, &item.TenantID, &item.AssignmentID, &item.OrderID, &item.CaptainID,
 		&item.ReasonCode, &item.Note, &item.DeliveryStatusAtReport, &item.Severity, &item.Status,
 		&item.CorrelationID, &item.ReportedLatitude, &item.ReportedLongitude, &item.ReportedAt,
-		&item.AcknowledgedAt, &item.ResolvedAt, &item.ResolvedByActorID, &item.ResolutionAction,
+		&item.AcknowledgedAt, &item.AcknowledgedByActorID, &item.ResolvedAt, &item.ResolvedByActorID, &item.ResolutionAction,
 		&item.ResolutionNote, &item.Version, &item.CreatedAt, &item.UpdatedAt,
 	)
 	return &item, err

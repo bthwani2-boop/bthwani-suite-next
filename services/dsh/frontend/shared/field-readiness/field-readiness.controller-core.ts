@@ -81,11 +81,11 @@ export function makeFieldChecklistController(
   state: FieldChecklistControllerState,
   setState: (s: FieldChecklistControllerState) => void,
 ) {
-  async function loadChecks(visitId: string): Promise<void> {
+  async function loadChecks(visit: import("./field-readiness.types").DshFieldVisit): Promise<void> {
     setState({ ...state, checklistState: checklistLoadingState() });
     try {
-      const checks = await fetchVisitChecks(visitId);
-      setState({ ...state, checklistState: checklistSuccessState(checks) });
+      const checks = await fetchVisitChecks(visit.id);
+      setState({ ...state, checklistState: checklistSuccessState(visit, checks) });
     } catch (err) {
       setState({ ...state, checklistState: checklistErrorState(resolveMessage(err)) });
     }

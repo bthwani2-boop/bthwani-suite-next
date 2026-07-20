@@ -4096,10 +4096,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dsh/operator/delivery-exceptions/{exceptionId}/acknowledge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                exceptionId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Acknowledge an open delivery exception for operations review. */
+        post: operations["acknowledgeDshOperatorDeliveryException"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/delivery-exceptions/{exceptionId}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                exceptionId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resolve an exception by allowing the same captain to retry from the preserved stage. */
+        post: operations["resolveDshOperatorDeliveryException"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        DshAcknowledgeDeliveryExceptionRequest: {
+            expectedVersion: number;
+        };
+        DshResolveDeliveryExceptionRequest: {
+            expectedVersion: number;
+            /** @enum {string} */
+            action: "retry_same_captain";
+            note: string;
+        };
         /** @enum {string} */
         DshDeliveryExceptionReasonCode: "customer_unreachable" | "recipient_refused" | "wrong_address" | "unsafe_location" | "vehicle_breakdown" | "accident" | "damaged_order" | "cash_collection_issue" | "weather_or_road_block" | "proof_unavailable" | "other";
         /** @enum {string} */
@@ -4138,6 +4185,7 @@ export interface components {
             reportedAt: string;
             /** Format: date-time */
             acknowledgedAt?: string | null;
+            acknowledgedByActorId?: string | null;
             /** Format: date-time */
             resolvedAt?: string | null;
             resolvedByActorId?: string | null;
@@ -14227,6 +14275,84 @@ export interface operations {
             400: components["responses"]["InvalidRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    acknowledgeDshOperatorDeliveryException: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                exceptionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshAcknowledgeDeliveryExceptionRequest"];
+            };
+        };
+        responses: {
+            /** @description Exception acknowledged. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshDeliveryExceptionResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Version or lifecycle conflict. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+        };
+    };
+    resolveDshOperatorDeliveryException: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                exceptionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshResolveDeliveryExceptionRequest"];
+            };
+        };
+        responses: {
+            /** @description Exception resolved and delivery progression reopened. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshDeliveryExceptionResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Version conflict or assignment no longer eligible for retry. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
         };
     };
 }
