@@ -55,6 +55,13 @@ export function useOrderCancellationController({
     if (autoLoad) void load();
   }, [autoLoad, load]);
 
+  useEffect(() => {
+    if (state.kind !== "ready") return undefined;
+    if (state.cancellation.financialClosureStatus !== "pending") return undefined;
+    const interval = setInterval(() => void load(), 5000);
+    return () => clearInterval(interval);
+  }, [load, state]);
+
   const submit = useCallback(async (input: CancelOrderInput) => {
     const previousCancellation: DshOrderCancellation | undefined =
       state.kind === "ready" ? state.cancellation : undefined;
