@@ -306,8 +306,10 @@ export function DshCaptainRouteRenderer(
       if (!hasActiveAssignment) return <MissingAssignment onGoToInbox={onGoToInbox} />;
       return (
         <DshCaptainMapScreen
+          assignmentId={activeAssignmentId}
           orderId={activeOrderId}
           captainId={captainRuntimeId}
+          currentStageLabel={activeSummary?.currentStageLabel ?? "مهمة نشطة"}
           onBack={onBack}
           onPushLocation={onPushLocation}
         />
