@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "../../../services/dsh/frontend/app-client/orders/OrderTrackingScreen.tsx",
+    "../../../services/dsh/frontend/app-client/orders/useClientOrderJourneyController.ts",
+    "../../../services/dsh/frontend/shared/orders/**/*.ts",
+    "../../../services/dsh/frontend/shared/orders/**/*.tsx",
+    "../../../services/dsh/frontend/shared/dispatch/**/*.ts",
+    "../../../services/dsh/frontend/shared/_kernel/**/*.ts",
+    "../../../services/dsh/clients/**/*.ts"
+  ]
+}
