@@ -61,7 +61,7 @@ export type DshPartnerSurfaceActions = {
   handleMarkReady: (orderId: string) => void;
   refreshOrders: () => void;
   onInviteMember: (identity: string) => Promise<PartnerTeamMutationResult>;
-  onMemberAction: (member: PartnerTeamMember, actionLabel: string) => Promise<PartnerTeamMutationResult>;
+  onMemberAction: (memberId: string, action: string) => Promise<PartnerTeamMutationResult>;
   handleHardwareBackPress: () => boolean;
 };
 
