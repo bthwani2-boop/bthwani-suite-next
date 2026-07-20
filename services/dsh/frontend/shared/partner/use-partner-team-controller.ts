@@ -62,11 +62,11 @@ export function usePartnerTeamController({
     });
   }, [activeStoreId, loadTeam]);
 
-  const onMemberAction = React.useCallback(async (memberId: string, action: string): Promise<PartnerTeamMutationResult> => {
+  const onMemberAction = React.useCallback(async (member: PartnerTeamMember, action: string): Promise<PartnerTeamMutationResult> => {
     if (!activeStoreId) {
       return { ok: false, error: 'لا يوجد فرع محدد لتنفيذ الإجراء.' };
     }
-    return executePartnerTeamMemberAction(activeStoreId, memberId, action).then((): PartnerTeamMutationResult => {
+    return executePartnerTeamMemberAction(activeStoreId, member.id, action).then((): PartnerTeamMutationResult => {
       loadTeam();
       return { ok: true };
     }).catch((err: unknown): PartnerTeamMutationResult => {
