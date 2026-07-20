@@ -46,7 +46,7 @@ type PartnerTeamManagementScreenProps = {
   readonly onRetry?: () => void;
   readonly onInviteMember: (identity: string) => Promise<PartnerTeamMutationResult>;
   readonly onMemberAction: (
-    member: PartnerTeamMember,
+    memberId: string,
     action: PartnerTeamInlineAction,
   ) => Promise<PartnerTeamMutationResult>;
   readonly onIssueCourierConnectionCode?: (member: PartnerTeamMember) => Promise<string | null>;
@@ -125,7 +125,7 @@ export function PartnerTeamManagementScreen({
   const submitAction = async (member: PartnerTeamMember, action: PartnerTeamInlineAction) => {
     if (busy || action === "audit-log") return;
     setMutation({ kind: "submitting", target: member.id });
-    const result = await onMemberAction(member, action);
+    const result = await onMemberAction(member.id, action);
     if (!result.ok) {
       setMutation({ kind: "error", message: result.error });
       return;
