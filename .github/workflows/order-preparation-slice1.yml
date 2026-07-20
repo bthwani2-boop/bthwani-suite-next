@@ -8,6 +8,12 @@ on:
       - ".github/workflows/order-preparation-slice1.yml"
       - "tools/scripts/patch-order-preparation-slice1.py"
       - "tools/scripts/patch-order-preparation-slice1-corrections.py"
+  pull_request:
+    branches: ["journey/order-preparation-handoff-gate-base"]
+    paths:
+      - ".github/workflows/order-preparation-slice1.yml"
+      - "tools/scripts/patch-order-preparation-slice1.py"
+      - "tools/scripts/patch-order-preparation-slice1-corrections.py"
   workflow_dispatch:
 
 permissions:
@@ -27,6 +33,7 @@ jobs:
         with:
           persist-credentials: true
           fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - uses: ./.github/actions/setup-node-workspace
 
@@ -225,7 +232,7 @@ jobs:
             '${{ steps.backend.outcome }}' \
             '${{ steps.typecheck.outcome }}' \
             '${{ steps.runtime.outcome }}' \
-            '${{ github.sha }}' > .github/order-preparation-slice1-failure
+            '${{ github.event.pull_request.head.sha || github.sha }}' > .github/order-preparation-slice1-failure
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .github/order-preparation-slice1-failure
