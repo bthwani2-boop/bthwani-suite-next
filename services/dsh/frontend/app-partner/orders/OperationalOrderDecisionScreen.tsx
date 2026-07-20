@@ -1,5 +1,5 @@
 import React from 'react';
-import type { PartnerOrderItem } from '../../shared/orders/orders.contract';
+import type { GovernedPartnerOrderItem } from '../../shared/partner/partner.adapters';
 import {
   PARTNER_CANCELLATION_REASONS,
   useOrderCancellationController,
@@ -9,7 +9,7 @@ import { DshPartnerOrderRejectionScreen } from './DshPartnerOrderRejectionScreen
 import { usePartnerOrderCommands } from './usePartnerOrderCommands';
 
 export type OperationalOrderDecisionScreenProps = {
-  readonly order: PartnerOrderItem | undefined;
+  readonly order: GovernedPartnerOrderItem | undefined;
   readonly orderId: string;
   readonly refreshOrders: () => void | Promise<void>;
   readonly onBack: () => void;
@@ -27,6 +27,8 @@ export function OperationalOrderDecisionScreen({
     orderId,
     onCancelled: refreshOrders,
   });
+  const canAccept = Boolean(order?.allowedActions.includes('accept'));
+  const canReject = Boolean(order?.allowedActions.includes('reject'));
 
   const state = commands.state.kind === 'submitting' || cancellation.state.kind === 'submitting'
     ? 'loading'
@@ -60,12 +62,16 @@ export function OperationalOrderDecisionScreen({
         description: reason.description,
         requiresNote: reason.code === 'other',
       }))}
+      canAccept={canAccept}
+      canReject={canReject}
       onAccept={() => {
+        if (!canAccept) return;
         void commands.execute('accept', orderId).then((ok) => {
           if (ok) onBack();
         });
       }}
       onReject={(reasonId, reasonNote) => {
+        if (!canReject) return;
         void cancellation.submit({
           reasonCode: reasonId as PartnerCancellationReasonCode,
           reasonNote,
