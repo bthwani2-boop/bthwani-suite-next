@@ -7,6 +7,7 @@ on:
     paths:
       - ".github/workflows/order-preparation-slice1.yml"
       - "tools/scripts/patch-order-preparation-slice1.py"
+      - "tools/scripts/patch-order-preparation-slice1-corrections.py"
   workflow_dispatch:
 
 permissions:
@@ -44,8 +45,10 @@ jobs:
           mkdir -p artifacts/order-preparation-slice1-apply
           {
             set -euo pipefail
+            python tools/scripts/patch-order-preparation-slice1-corrections.py
             python tools/scripts/patch-order-preparation-slice1.py
             gofmt -w \
+              services/dsh/backend/internal/http/server.go \
               services/dsh/backend/internal/http/partner_order_workboard.go \
               services/dsh/backend/internal/http/partner_order_workboard_test.go
           } 2>&1 | tee artifacts/order-preparation-slice1-apply/apply.log
@@ -162,11 +165,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          server=services/dsh/backend/internal/http/server.go
           workboard=services/dsh/backend/internal/http/partner_order_workboard.go
           adapter=services/dsh/frontend/shared/partner/partner.adapters.ts
           commands=services/dsh/frontend/app-partner/orders/usePartnerOrderCommands.ts
           operational=services/dsh/frontend/app-partner/orders/OperationalOrdersInboxScreen.tsx
           decision=services/dsh/frontend/app-partner/orders/OperationalOrderDecisionScreen.tsx
+          grep -F 'GET /dsh/partner/order-workboard' "$server"
           grep -F 'partnerOrderAllowedActions' "$workboard"
           grep -F 'order.AllowedActions' "$workboard"
           grep -F 'missing server allowedActions' "$adapter"
@@ -194,7 +199,8 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm -f \
             .github/workflows/order-preparation-slice1.yml \
-            tools/scripts/patch-order-preparation-slice1.py
+            tools/scripts/patch-order-preparation-slice1.py \
+            tools/scripts/patch-order-preparation-slice1-corrections.py
           git add -A
           git commit -m "feat(order-preparation): enforce server-authoritative partner actions [skip ci]"
           git pull --rebase origin journey/order-preparation-handoff-closure
