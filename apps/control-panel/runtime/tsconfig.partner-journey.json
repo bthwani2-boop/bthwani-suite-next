@@ -2,9 +2,15 @@
   "extends": "./tsconfig.json",
   "include": [
     "next-env.d.ts",
+    "src/app/dsh/partners/**/*.ts",
+    "src/app/dsh/partners/**/*.tsx",
+    "../../../services/dsh/frontend/control-panel/partners/**/*.ts",
+    "../../../services/dsh/frontend/control-panel/partners/**/*.tsx",
+    "../../../services/dsh/frontend/control-panel/operations/PartnerStoresScreen.tsx",
+    "../../../services/dsh/frontend/control-panel/operations/PartnerDeliveryWorkbenchScreen.tsx",
+    "../../../services/dsh/frontend/control-panel/marketing/components/PartnerOffersCommandDeck.tsx",
     "../../../services/dsh/frontend/control-panel/catalogs/CatalogDashboardScreen.tsx",
     "../../../services/dsh/frontend/control-panel/catalogs/CatalogApprovalScreen.tsx",
-    "../../../services/dsh/frontend/control-panel/partners/PartnerListScreen.tsx",
     "../../../services/dsh/frontend/control-panel/support/SupportDashboardScreen.tsx",
     "../../../services/dsh/frontend/control-panel/support/PlatformNotificationConfigScreen.tsx"
   ],
