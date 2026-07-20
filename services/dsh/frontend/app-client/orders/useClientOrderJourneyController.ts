@@ -1,6 +1,9 @@
 import React from 'react';
 import { fetchClientOrder, classifyOrderError } from '../../shared/orders/orders.api';
-import type { DshOrder } from '../../shared/orders/orders.types';
+import {
+  isOrderCancellationStatus,
+  type DshOrder,
+} from '../../shared/orders/orders.types';
 import { fetchClientOrderTracking, classifyDispatchError } from '../../shared/dispatch/dispatch.api';
 import type { DshDispatchAssignment } from '../../shared/dispatch/dispatch.types';
 
@@ -48,7 +51,6 @@ export function useClientOrderJourneyController(orderId: string) {
             return;
           }
           if (classified.kind === 'offline') {
-            // The order remains useful even when the optional live projection is unavailable.
             assignment = null;
           }
         }
@@ -66,7 +68,9 @@ export function useClientOrderJourneyController(orderId: string) {
 
   React.useEffect(() => {
     if (state.kind !== 'ready') return undefined;
-    if (state.order.status === 'delivered' || state.order.status === 'cancelled') return undefined;
+    if (state.order.status === 'delivered' || isOrderCancellationStatus(state.order.status)) {
+      return undefined;
+    }
     const interval = setInterval(() => void load(), 15000);
     return () => clearInterval(interval);
   }, [load, state]);
