@@ -431,6 +431,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/wlt/order-cancellations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resolve the WLT-owned financial consequence of a governed DSH order cancellation.
+         * @description Internal DSH-only mutation. WLT derives all monetary values from the referenced payment session. It expires an uncollected session, creates one idempotent refund for captured or COD-collected money, or returns no action for an already terminal session.
+         */
+        post: operations["closeWltOrderCancellation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/wlt/payment-sessions/{paymentSessionId}/cod-collect": {
         parameters: {
             query?: never;
@@ -1172,6 +1192,20 @@ export interface components {
             orderId: string;
             clientId: string;
             reason?: string;
+        };
+        WltGovernedOrderCancellationRequest: {
+            paymentSessionId: string;
+            orderId: string;
+            clientId: string;
+            reason: string;
+        };
+        /** @enum {string} */
+        WltGovernedOrderCancellationAction: "expired" | "refund_requested" | "none";
+        WltGovernedOrderCancellationResponse: {
+            action: components["schemas"]["WltGovernedOrderCancellationAction"];
+            paymentSession?: components["schemas"]["WltPaymentSession"];
+            refund?: components["schemas"]["WltRefund"];
+            sessionStatus?: string;
         };
         WltCancelPaymentSessionForOrderRequest: {
             orderId: string;
@@ -2197,6 +2231,39 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    closeWltOrderCancellation: {
+        parameters: {
+            query?: never;
+            header: {
+                Authorization: string;
+                "X-Service-Caller": "dsh";
+                "Idempotency-Key": string;
+                "X-Correlation-ID": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WltGovernedOrderCancellationRequest"];
+            };
+        };
+        responses: {
+            /** @description Financial cancellation decision returned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WltGovernedOrderCancellationResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     markWltCodCollected: {

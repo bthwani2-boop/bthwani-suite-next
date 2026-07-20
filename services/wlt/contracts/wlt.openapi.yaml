@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: BThwani WLT Service API
-  version: 0.2.0
+  version: 0.3.0
   description: WLT owns wallet and financial mutation endpoints. DSH and frontend surfaces must not call external financial providers directly.
 
 x-bthwani-owner: services/wlt
@@ -721,6 +721,55 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+
+  /wlt/order-cancellations:
+    post:
+      operationId: closeWltOrderCancellation
+      summary: Resolve the WLT-owned financial consequence of a governed DSH order cancellation.
+      description: >-
+        Internal DSH-only mutation. WLT derives all monetary values from the referenced payment session.
+        It expires an uncollected session, creates one idempotent refund for captured or COD-collected money,
+        or returns no action for an already terminal session.
+      tags: [WltPaymentSessions]
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema: { type: string, minLength: 1 }
+        - name: X-Service-Caller
+          in: header
+          required: true
+          schema: { type: string, enum: [dsh] }
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, minLength: 1 }
+        - name: X-Correlation-ID
+          in: header
+          required: true
+          schema: { type: string, minLength: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WltGovernedOrderCancellationRequest"
+      responses:
+        "200":
+          description: Financial cancellation decision returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WltGovernedOrderCancellationResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
   /wlt/payment-sessions/{paymentSessionId}/cod-collect:
     post:
       operationId: markWltCodCollected
@@ -971,7 +1020,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/WltSettlementResponse"
         "400":
-          $ref: "#/components/responses/InvalidRequest"
+          $ref: "#/components/responses/BadRequest"
         "403":
           $ref: "#/components/responses/Forbidden"
         "409":
@@ -2373,6 +2422,35 @@ components:
         clientId:
           type: string
         reason:
+          type: string
+
+
+    WltGovernedOrderCancellationRequest:
+      type: object
+      additionalProperties: false
+      required: [paymentSessionId, orderId, clientId, reason]
+      properties:
+        paymentSessionId: { type: string, minLength: 1 }
+        orderId: { type: string, minLength: 1 }
+        clientId: { type: string, minLength: 1 }
+        reason: { type: string, minLength: 1, maxLength: 1000 }
+
+    WltGovernedOrderCancellationAction:
+      type: string
+      enum: [expired, refund_requested, none]
+
+    WltGovernedOrderCancellationResponse:
+      type: object
+      additionalProperties: false
+      required: [action]
+      properties:
+        action:
+          $ref: "#/components/schemas/WltGovernedOrderCancellationAction"
+        paymentSession:
+          $ref: "#/components/schemas/WltPaymentSession"
+        refund:
+          $ref: "#/components/schemas/WltRefund"
+        sessionStatus:
           type: string
 
     WltCancelPaymentSessionForOrderRequest:
