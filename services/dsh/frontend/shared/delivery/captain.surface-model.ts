@@ -1,9 +1,3 @@
-// Canonical location: dsh/frontend/shared/delivery/captain/captain.surface-model.ts
-// Authority: dsh/frontend/shared/delivery/captain — captain surface presenter model.
-// Wires topic models (navigation, chat, service-mode, pod, delivery) around shared state.
-// Composition-only: no local React state or side-effects.
-// No JSX. No ui-kit. No Tamagui.
-
 import React from 'react';
 import type {
   DshCaptainRoute,
@@ -43,12 +37,10 @@ export type {
 export type DshCaptainSurfaceSharedProps = {
   command: DshCaptainNavigationCommand;
   captainRuntimeId: string;
-
   route: DshCaptainRoute;
   setRoute: React.Dispatch<React.SetStateAction<DshCaptainRoute>>;
   selectedSupportScreen: CaptainSupportRoute;
   setSelectedSupportScreen: React.Dispatch<React.SetStateAction<CaptainSupportRoute>>;
-
   availabilityModel: ReturnType<typeof useCaptainAvailabilityModel>;
   gpsModel: ReturnType<typeof useCaptainGpsModel>;
   profileModel: ReturnType<typeof useCaptainProfileModel>;
@@ -84,8 +76,27 @@ export function useDshCaptainSurfaceModel({
 
   React.useEffect(() => {
     lifecycle.setInboxState(inboxModel.fetchState);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inboxModel.fetchState]);
+  }, [inboxModel.fetchState, lifecycle]);
+
+  React.useEffect(() => {
+    if (!orderModel.activeAssignmentId) return;
+    if (inboxModel.fetchState !== 'ready' && inboxModel.fetchState !== 'empty') return;
+    if (activeAssignment) return;
+
+    orderModel.clearActiveAssignment('ألغيت المهمة بسبب إلغاء الطلب أو إغلاقها من العمليات.');
+    lifecycle.setIsPickupSheetVisible(false);
+    lifecycle.setIsDeliverySheetVisible(false);
+    lifecycle.setIsDeclineSheetVisible(false);
+    podUpload.resetPodFields();
+    setRoute('inbox');
+  }, [
+    activeAssignment,
+    inboxModel.fetchState,
+    lifecycle,
+    orderModel,
+    podUpload,
+    setRoute,
+  ]);
 
   const state: DshCaptainSurfaceState = {
     activeServiceType: profileModel.activeServiceType,
@@ -127,7 +138,6 @@ export function useDshCaptainSurfaceModel({
   );
 
   const actions = {
-    // Navigation
     goBack: navModel.goBack,
     openOrderDetail: navModel.openOrderDetail,
     openCaptainAccount: navModel.openCaptainAccount,
@@ -135,21 +145,13 @@ export function useDshCaptainSurfaceModel({
     openSupportDirectory: navModel.openSupportDirectory,
     openCaptainSupportScreen: navModel.openCaptainSupportScreen,
     goToInbox: navModel.goToInbox,
-
-    // Route
     setRoute,
-
-    // Inbox
     setInboxState: lifecycle.setInboxState,
     resetInboxState: () => lifecycle.setInboxState('ready' as const),
     refreshInbox: inboxModel.refresh,
     setActiveOrderExpanded: orderModel.setActiveOrderExpanded,
-
-    // Availability
     setCaptainAvailabilityStatus: availabilityModel.setCaptainAvailabilityStatus,
     setGpsStatus: gpsModel.setGpsStatus,
-
-    // Lifecycle sheets
     setIsPickupSheetVisible: lifecycle.setIsPickupSheetVisible,
     setPickupSheetState: lifecycle.setPickupSheetState,
     setIsDeliverySheetVisible: lifecycle.setIsDeliverySheetVisible,
@@ -157,27 +159,23 @@ export function useDshCaptainSurfaceModel({
     setDeclineOrderId: lifecycle.setDeclineOrderId,
     setStoreCourierStage: lifecycle.setStoreCourierStage,
     setActiveOrderPhase: lifecycle.setActiveOrderPhase,
-
-    // Pod upload
     setCaptainPodPhotoUri: podUpload.setCaptainPodPhotoUri,
     setCaptainPodMediaKey: podUpload.setCaptainPodMediaKey,
     setCaptainPodState: podUpload.setCaptainPodState,
-
-    // Chat
     sendQuickMessage: chatModel.sendQuickMessage,
     setActiveOrderDraft: chatModel.setActiveOrderDraft,
-
-    // Service mode
     handleSelectServiceType: serviceModeModel.handleSelectServiceType,
     toggleStoreCourierMode: serviceModeModel.toggleStoreCourierMode,
     openStoreCourierProof: () => podUpload.openStoreCourierProof(profileModel.captainAppMode, setRoute),
-
-    // Location
     pushLocation,
-
-    // Delivery lifecycle actions
+    dismissAssignmentClosureNotice: () => orderModel.setAssignmentClosureNotice(null),
     ...deliveryActions,
   };
 
-  return { state, actions, derived };
+  return {
+    state,
+    actions,
+    derived,
+    assignmentClosureNotice: orderModel.assignmentClosureNotice,
+  };
 }
