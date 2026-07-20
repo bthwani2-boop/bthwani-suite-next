@@ -20,18 +20,32 @@ patch = patch.replace(
 if 's.partnerOrder(w, r, r.PathValue("orderId"))' in patch:
     raise RuntimeError("stale partnerOrder signature remains in slice7 patch")
 
-# The return-complete path is currently the final OpenAPI path before components.
-# Replace the formatting assumption with an explicit next-path/components boundary.
-old_contract_boundary = "        end = text.index('\\n  /', start + len(old_route_start))"
-new_contract_boundary = """        next_route = text.find('\\n  /', start + len(old_route_start))
-        components_boundary = text.find('\\ncomponents:', start + len(old_route_start))
-        candidates = [value for value in (next_route, components_boundary) if value != -1]
-        if not candidates:
-            raise RuntimeError('return route end boundary not found')
-        end = min(candidates)"""
-if old_contract_boundary not in patch and "components_boundary = text.find('\\ncomponents:'" not in patch:
-    raise RuntimeError("OpenAPI return route boundary anchor not found")
-patch = patch.replace(old_contract_boundary, new_contract_boundary, 1)
+# The legacy return-complete path may be the final path before components.
+# Replace the brittle next-route-only lookup by editing the source line itself.
+lines = patch.splitlines()
+boundary_index = next(
+    (
+        index
+        for index, line in enumerate(lines)
+        if "end = text.index('\\n  /', start + len(old_route_start))" in line
+    ),
+    None,
+)
+if boundary_index is not None:
+    indent = lines[boundary_index][: len(lines[boundary_index]) - len(lines[boundary_index].lstrip())]
+    lines[boundary_index : boundary_index + 1] = [
+        indent + "next_route = text.find('\\n  /', start + len(old_route_start))",
+        indent + "components_boundary = text.find('\\ncomponents:', start + len(old_route_start))",
+        indent + "candidates = [value for value in (next_route, components_boundary) if value != -1]",
+        indent + "if not candidates:",
+        indent + "    raise RuntimeError('return route end boundary not found')",
+        indent + "end = min(candidates)",
+    ]
+    patch = "\n".join(lines) + "\n"
+if "end = text.index('\\n  /', start + len(old_route_start))" in patch:
+    raise RuntimeError("stale OpenAPI return boundary remains")
+if "components_boundary = text.find('\\ncomponents:'" not in patch:
+    raise RuntimeError("deterministic OpenAPI return boundary was not installed")
 
 # The old test patch matched formatting rather than behavior. Replace the test
 # directly using semantic start/end boundaries, then disable only that obsolete
@@ -87,4 +101,4 @@ function_start = patch.index("def patch_db_test() -> None:")
 function_end = patch.index("\ndef main() -> None:", function_start)
 patch = patch[:function_start] + "def patch_db_test() -> None:\n    return\n" + patch[function_end:]
 patch_path.write_text(patch, encoding="utf-8")
-print("Aligned slice7 patch with current routes, OpenAPI boundary, ownership, and return test behavior.")
+print("Aligned slice7 patch with current routes, deterministic OpenAPI boundary, ownership, and return test behavior.")
