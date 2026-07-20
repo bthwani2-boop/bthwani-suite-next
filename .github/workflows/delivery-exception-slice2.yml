@@ -7,6 +7,7 @@ on:
     paths:
       - ".github/workflows/delivery-exception-slice2.yml"
       - "tools/scripts/patch-delivery-exception-slice2.py"
+      - "tools/scripts/patch-delivery-exception-slice2-typecheck.py"
   workflow_dispatch:
 
 permissions:
@@ -56,6 +57,7 @@ jobs:
         run: |
           set -euo pipefail
           python tools/scripts/patch-delivery-exception-slice2.py
+          python tools/scripts/patch-delivery-exception-slice2-typecheck.py
           gofmt -w \
             services/dsh/backend/internal/dispatch/delivery_exceptions.go \
             services/dsh/backend/internal/dispatch/delivery_exceptions_db_test.go \
@@ -139,7 +141,8 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm \
             .github/workflows/delivery-exception-slice2.yml \
-            tools/scripts/patch-delivery-exception-slice2.py
+            tools/scripts/patch-delivery-exception-slice2.py \
+            tools/scripts/patch-delivery-exception-slice2-typecheck.py
           git add -A
           git commit -m "feat(delivery-exception): add operator acknowledge and retry resolution [skip ci]"
           git pull --rebase origin journey/delivery-exception-redelivery-closure
