@@ -1,34 +1,26 @@
 apply=success
 contract=success
-compile=failure
-typecheck=skipped
-database=skipped
+compile=success
+typecheck=success
+database=failure
 invariants=skipped
-source_sha=38b55e4233d6a71ff2ecf9c75988bf41e616d3e6
+source_sha=3ada9ef20b07a15a93acb9b06945c68229267ed9
 
 === artifacts/cod-custody-slice1/apply.log ===
-Verified permanent COD custody implementation and prepared focused TypeScript config.
-Aligned all DSH COD client tests, imports, captain section, and governed WLT fixtures.
+Verified permanent COD custody models and prepared focused TypeScript config.
+Wired governed delivery-collection handoff and aligned COD record management.
 
 === artifacts/cod-custody-slice1/compile.log ===
 go: downloading github.com/google/uuid v1.6.0
 go: downloading github.com/lib/pq v1.12.3
-ok  	dsh-api/internal/wlt	0.004s [no tests to run]
-ok  	dsh-api/internal/wltoutbox	0.007s [no tests to run]
-ok  	dsh-api/internal/dispatch	0.003s [no tests to run]
+ok  	dsh-api/internal/wlt	0.005s [no tests to run]
+ok  	dsh-api/internal/wltoutbox	0.004s [no tests to run]
+ok  	dsh-api/internal/dispatch	0.004s [no tests to run]
 ok  	dsh-api/internal/partnerdelivery	0.003s [no tests to run]
 go: downloading go1.26.5 (linux/amd64)
-# wlt-api/internal/cod
-internal/cod/cod_collector.go:65:6: normalizeCollector redeclared in this block
-	internal/cod/cod.go:149:6: other declaration of normalizeCollector
-internal/cod/cod_collector.go:97:16: assignment mismatch: 2 variables but normalizeCollector returns 4 values
-internal/cod/cod_collector.go:97:35: cannot use input (variable of struct type CreateDeliveryCollectionInput) as CreateCodRecordInput value in argument to normalizeCollector
-internal/cod/delivery_collection_handoff.go:27:22: assignment mismatch: 2 variables but normalizeCollector returns 4 values
-internal/cod/delivery_collection_handoff.go:27:41: cannot use input (variable of struct type CreateDeliveryCollectionInput) as CreateCodRecordInput value in argument to normalizeCollector
-FAIL	wlt-api/internal/cod [build failed]
-FAIL	wlt-api/internal/http [build failed]
-FAIL	wlt-api/cmd/wlt-api [build failed]
-FAIL
+ok  	wlt-api/internal/cod	0.003s [no tests to run]
+ok  	wlt-api/internal/http	0.003s [no tests to run]
+?   	wlt-api/cmd/wlt-api	[no test files]
 
 === artifacts/cod-custody-slice1/contract.log ===
 
@@ -40,7 +32,7 @@ Packages: +33
 +++++++++++++++++++++++++++++++++
 Progress: resolved 33, reused 30, downloaded 3, added 33, done
 ✨ openapi-typescript 7.13.0
-🚀 services/wlt/contracts/wlt.openapi.yaml → services/wlt/clients/generated/wlt-api.ts [136.4ms]
+🚀 services/wlt/contracts/wlt.openapi.yaml → services/wlt/clients/generated/wlt-api.ts [151.4ms]
         - collectorType
           description: Compatibility projection, present only when collectorType is captain.
         collectorType:
@@ -55,3 +47,41 @@ Progress: resolved 33, reused 30, downloaded 3, added 33, done
             collectorType: "captain" | "store_courier" | "partner_store";
             collectorId: string;
             collectorId: string;
+
+=== artifacts/cod-custody-slice1/database.log ===
+psql:services/wlt/database/migrations/wlt-021_reconciliation_resolution.sql:18: NOTICE:  constraint "wlt_reconciliation_cases_resolution_action_chk" of relation "wlt_reconciliation_cases" does not exist, skipping
+psql:services/wlt/database/migrations/wlt-022_commission_lifecycle.sql:15: NOTICE:  column "rejected_at" of relation "wlt_commissions" already exists, skipping
+psql:services/wlt/database/migrations/wlt-022_commission_lifecycle.sql:15: NOTICE:  column "reversed_at" of relation "wlt_commissions" already exists, skipping
+psql:services/wlt/database/migrations/wlt-023_special_request_payment_sessions.sql:39: NOTICE:  constraint "wlt_payment_sessions_source_xor_chk" of relation "wlt_payment_sessions" does not exist, skipping
+psql:services/wlt/database/migrations/wlt-023_special_request_payment_sessions.sql:52: NOTICE:  constraint "wlt_dsh_outbox_events_source_xor_chk" of relation "wlt_dsh_outbox_events" does not exist, skipping
+psql:services/wlt/database/migrations/wlt-025_cod_collector_actor.sql:52: NOTICE:  trigger "trg_wlt_normalize_delivery_collection_actor" for relation "wlt_cod_records" does not exist, skipping
+psql:services/wlt/database/migrations/wlt-025_cod_collector_actor.sql:66: NOTICE:  constraint "wlt_cod_records_collector_type_check" of relation "wlt_cod_records" does not exist, skipping
+psql:services/wlt/database/migrations/wlt-025_cod_collector_identity.sql:6: NOTICE:  column "collector_type" of relation "wlt_cod_records" already exists, skipping
+psql:services/wlt/database/migrations/wlt-025_cod_collector_identity.sql:6: NOTICE:  column "collector_id" of relation "wlt_cod_records" already exists, skipping
+psql:services/wlt/database/migrations/wlt-025_cod_collector_identity.sql:19: NOTICE:  constraint "wlt_cod_records_collector_type_chk" of relation "wlt_cod_records" does not exist, skipping
+psql:services/wlt/database/migrations/wlt-025_cod_collector_identity.sql:25: NOTICE:  constraint "wlt_cod_records_captain_projection_chk" of relation "wlt_cod_records" does not exist, skipping
+psql:services/wlt/database/migrations/wlt-026_refund_reference_integrity.sql:17: NOTICE:  constraint "wlt_refunds_reason_required_check" of relation "wlt_refunds" does not exist, skipping
+psql:services/wlt/database/migrations/wlt-026_refund_reference_integrity.sql:21: NOTICE:  constraint "wlt_refunds_request_source_check" of relation "wlt_refunds" does not exist, skipping
+psql:services/wlt/database/migrations/wlt-026_refund_reference_integrity.sql:59: NOTICE:  trigger "trg_wlt_validate_refund_payment_reference" for relation "wlt_refunds" does not exist, skipping
+psql:services/wlt/database/migrations/wlt-028_commercial_benefits.sql:8: NOTICE:  extension "pgcrypto" already exists, skipping
+psql:services/wlt/database/migrations/wlt-028_commercial_benefits.sql:110: NOTICE:  trigger "trg_wlt_loyalty_entries_no_update" for relation "wlt_loyalty_entries" does not exist, skipping
+psql:services/wlt/database/migrations/wlt-028_commercial_benefits.sql:115: NOTICE:  trigger "trg_wlt_loyalty_entries_no_delete" for relation "wlt_loyalty_entries" does not exist, skipping
+psql:services/wlt/database/migrations/wlt-028_commercial_benefits.sql:155: NOTICE:  trigger "trg_wlt_guard_commercial_product_update" for relation "wlt_commercial_products" does not exist, skipping
+psql:services/wlt/database/migrations/wlt-029_payment_session_tenant_lock.sql:8: NOTICE:  column "tenant_id" of relation "wlt_payment_sessions" already exists, skipping
+psql:services/wlt/database/migrations/wlt-029_payment_session_tenant_lock.sql:18: NOTICE:  constraint "wlt_payment_sessions_tenant_id_chk" of relation "wlt_payment_sessions" does not exist, skipping
+psql:services/wlt/database/migrations/wlt-030_subscription_payment_source.sql:15: NOTICE:  index "wlt_payment_sessions_subscription_purchase_idx" does not exist, skipping
+psql:services/wlt/database/migrations/wlt-030_subscription_payment_source.sql:29: NOTICE:  constraint "wlt_payment_sessions_subscription_product_chk" of relation "wlt_payment_sessions" does not exist, skipping
+psql:services/wlt/database/migrations/wlt-032_promotion_funding_ledger.sql:8: NOTICE:  extension "pgcrypto" already exists, skipping
+psql:services/wlt/database/migrations/wlt-032_promotion_funding_ledger.sql:145: NOTICE:  trigger "trg_wlt_guard_promotion_funding_update" for relation "wlt_promotion_funding_reservations" does not exist, skipping
+psql:services/wlt/database/migrations/wlt-032_promotion_funding_ledger.sql:161: NOTICE:  trigger "trg_wlt_promotion_funding_events_no_update" for relation "wlt_promotion_funding_events" does not exist, skipping
+psql:services/wlt/database/migrations/wlt-032_promotion_funding_ledger.sql:167: NOTICE:  trigger "trg_wlt_promotion_funding_events_no_delete" for relation "wlt_promotion_funding_events" does not exist, skipping
+=== RUN   TestCreateCodRecordUsesWltSessionAndCollectorIdentity
+    cod_db_test.go:380: create COD custody: pq: new row for relation "wlt_cod_records" violates check constraint "wlt_cod_records_captain_projection_chk" (23514)
+--- FAIL: TestCreateCodRecordUsesWltSessionAndCollectorIdentity (0.01s)
+=== RUN   TestCreateCodRecordRejectsNonCodSession
+--- PASS: TestCreateCodRecordRejectsNonCodSession (0.01s)
+FAIL
+FAIL	wlt-api/internal/cod	0.029s
+FAIL
+
+=== artifacts/cod-custody-slice1/typecheck.log ===
