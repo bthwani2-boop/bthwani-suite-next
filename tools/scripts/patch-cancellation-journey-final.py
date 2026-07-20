@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from pathlib import Path
 import re
+from pathlib import Path
 
 DSH_CONTRACT = Path("services/dsh/contracts/dsh.openapi.yaml")
 WLT_CONTRACT = Path("services/wlt/contracts/wlt.openapi.yaml")
@@ -23,8 +23,7 @@ def transform_function(text: str, signature: str, transform) -> str:
     end = text.find("\nfunc ", start + len(signature))
     if end < 0:
         end = len(text)
-    block = text[start:end]
-    return text[:start] + transform(block) + text[end:]
+    return text[:start] + transform(text[start:end]) + text[end:]
 
 
 def guard_active_session(block: str, return_value: str) -> str:
@@ -47,12 +46,13 @@ def guard_active_session(block: str, return_value: str) -> str:
     if anchor not in block:
         raise RuntimeError("pickup session lock anchor not found")
     block = block.replace(anchor, replacement, 1)
-    duplicate = (
+    return block.replace(
         "\tif current.UsedAt != nil {\n"
         f"\t\treturn {return_value}, ErrAlreadyUsed\n"
-        "\t}\n"
+        "\t}\n",
+        "",
+        1,
     )
-    return block.replace(duplicate, "", 1)
 
 
 def patch_pickup_service() -> None:
@@ -128,23 +128,37 @@ def patch_pickup_http() -> None:
     if "PICKUP_CANCELLED" not in text:
         text = replace_once(
             text,
-            "\tcase errors.Is(err, pickup.ErrAlreadyUsed):\n\t\tstore.SendError(w, http.StatusUnprocessableEntity, \"PICKUP_CODE_ALREADY_USED\", err.Error())",
-            "\tcase errors.Is(err, pickup.ErrCancelled):\n\t\tstore.SendError(w, http.StatusConflict, \"PICKUP_CANCELLED\", \"pickup session was cancelled with the order\")\n\tcase errors.Is(err, pickup.ErrAlreadyUsed):\n\t\tstore.SendError(w, http.StatusUnprocessableEntity, \"PICKUP_CODE_ALREADY_USED\", err.Error())",
+            "\tcase errors.Is(err, pickup.ErrAlreadyUsed):\n"
+            "\t\tstore.SendError(w, http.StatusUnprocessableEntity, \"PICKUP_CODE_ALREADY_USED\", err.Error())",
+            "\tcase errors.Is(err, pickup.ErrCancelled):\n"
+            "\t\tstore.SendError(w, http.StatusConflict, \"PICKUP_CANCELLED\", \"pickup session was cancelled with the order\")\n"
+            "\tcase errors.Is(err, pickup.ErrAlreadyUsed):\n"
+            "\t\tstore.SendError(w, http.StatusUnprocessableEntity, \"PICKUP_CODE_ALREADY_USED\", err.Error())",
             "pickup cancelled error",
         )
-    segment = text[text.index("func marshalPickupSession"):text.index("func (s *protectedStoreServer) handlePickupMarkReady")]
+    segment = text[
+        text.index("func marshalPickupSession") : text.index(
+            "func (s *protectedStoreServer) handlePickupMarkReady"
+        )
+    ]
     if '"status":' not in segment:
         text = replace_once(
             text,
             '\t\t"verificationMethod": s.VerificationMethod,\n\t\t"version":            s.Version,',
-            '\t\t"verificationMethod": s.VerificationMethod,\n\t\t"status":             s.Status,\n\t\t"cancelledAt":        s.CancelledAt,\n\t\t"cancellationReason": s.CancellationReason,\n\t\t"version":            s.Version,',
+            '\t\t"verificationMethod": s.VerificationMethod,\n'
+            '\t\t"status":             s.Status,\n'
+            '\t\t"cancelledAt":        s.CancelledAt,\n'
+            '\t\t"cancellationReason": s.CancellationReason,\n'
+            '\t\t"version":            s.Version,',
             "pickup response state",
         )
     if 'Status: pickup.SessionStatus(r.URL.Query().Get("status"))' not in text:
         text = replace_once(
             text,
-            "\t\tStoreID: r.URL.Query().Get(\"storeId\"),\n\t\tLimit:   limit,",
-            "\t\tStoreID: r.URL.Query().Get(\"storeId\"),\n\t\tStatus:  pickup.SessionStatus(r.URL.Query().Get(\"status\")),\n\t\tLimit:   limit,",
+            '\t\tStoreID: r.URL.Query().Get("storeId"),\n\t\tLimit:   limit,',
+            '\t\tStoreID: r.URL.Query().Get("storeId"),\n'
+            '\t\tStatus:  pickup.SessionStatus(r.URL.Query().Get("status")),\n'
+            '\t\tLimit:   limit,',
             "pickup list status",
         )
     PICKUP_HTTP.write_text(text, encoding="utf-8")
@@ -156,7 +170,7 @@ def patch_dsh_contract() -> None:
     start = text.find(marker)
     if start < 0:
         raise RuntimeError("DshPickupSession schema not found")
-    next_schema = re.search(r"\n    [A-Za-z0-9_]+:\n", text[start + len(marker):])
+    next_schema = re.search(r"\n    [A-Za-z0-9_]+:\n", text[start + len(marker) :])
     if not next_schema:
         raise RuntimeError("DshPickupSession schema end not found")
     end = start + len(marker) + next_schema.start()
@@ -168,8 +182,8 @@ def patch_dsh_contract() -> None:
             "        status:\n"
             "          type: string\n"
             "          enum: [active, verified, no_show, consumed, cancelled]\n"
-            "        cancelledAt: { type: [string, \"null\"], format: date-time }\n"
-            "        cancellationReason: { type: [string, \"null\"] }\n"
+            '        cancelledAt: { type: [string, "null"], format: date-time }\n'
+            '        cancellationReason: { type: [string, "null"] }\n'
             "        verificationMethod:",
             "pickup contract lifecycle",
         )
@@ -181,6 +195,7 @@ def patch_wlt_contract() -> None:
     text = WLT_CONTRACT.read_text(encoding="utf-8")
     if "  version: 0.2.0\n" in text:
         text = text.replace("  version: 0.2.0\n", "  version: 0.3.0\n", 1)
+
     if "/wlt/order-cancellations:" not in text:
         path_block = r'''
   /wlt/order-cancellations:
@@ -189,11 +204,14 @@ def patch_wlt_contract() -> None:
       summary: Resolve the WLT-owned financial consequence of a governed DSH order cancellation.
       description: >-
         Internal DSH-only mutation. WLT derives all monetary values from the referenced payment session.
-        It expires an uncollected session, creates one idempotent refund for captured/COD-collected money,
+        It expires an uncollected session, creates one idempotent refund for captured or COD-collected money,
         or returns no action for an already terminal session.
-      tags: [WltOrderCancellation]
-      security: [{ bearerAuth: [] }]
+      tags: [WltPaymentSessions]
       parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema: { type: string, minLength: 1 }
         - name: X-Service-Caller
           in: header
           required: true
@@ -210,17 +228,23 @@ def patch_wlt_contract() -> None:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/WltGovernedOrderCancellationRequest" }
+            schema:
+              $ref: "#/components/schemas/WltGovernedOrderCancellationRequest"
       responses:
         "200":
           description: Financial cancellation decision returned.
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/WltGovernedOrderCancellationResponse" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-        "409": { $ref: "#/components/responses/Conflict" }
+              schema:
+                $ref: "#/components/schemas/WltGovernedOrderCancellationResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
 
 '''
         text = replace_once(
@@ -229,6 +253,7 @@ def patch_wlt_contract() -> None:
             path_block + "  /wlt/payment-sessions/{paymentSessionId}/cod-collect:\n",
             "WLT cancellation path",
         )
+
     if "    WltGovernedOrderCancellationRequest:\n" not in text:
         schemas = r'''
     WltGovernedOrderCancellationRequest:
@@ -247,12 +272,17 @@ def patch_wlt_contract() -> None:
 
     WltGovernedOrderCancellationResponse:
       type: object
+      additionalProperties: false
       required: [action]
       properties:
-        action: { $ref: "#/components/schemas/WltGovernedOrderCancellationAction" }
-        paymentSession: { $ref: "#/components/schemas/WltPaymentSession" }
-        refund: { $ref: "#/components/schemas/WltRefund" }
-        sessionStatus: { type: string }
+        action:
+          $ref: "#/components/schemas/WltGovernedOrderCancellationAction"
+        paymentSession:
+          $ref: "#/components/schemas/WltPaymentSession"
+        refund:
+          $ref: "#/components/schemas/WltRefund"
+        sessionStatus:
+          type: string
 
 '''
         text = replace_once(
@@ -261,6 +291,7 @@ def patch_wlt_contract() -> None:
             schemas + "    WltCancelPaymentSessionForOrderRequest:\n",
             "WLT cancellation schemas",
         )
+
     WLT_CONTRACT.write_text(text, encoding="utf-8")
 
 
