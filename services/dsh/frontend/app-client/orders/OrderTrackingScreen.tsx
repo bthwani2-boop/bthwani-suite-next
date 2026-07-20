@@ -233,15 +233,16 @@ export function OrderTrackingScreen({ orderId, onBack }: Props) {
 
   if (state.kind === 'error') {
     return (
-      <StateView
-        tone="danger"
-        title="تعذر فتح رحلة الطلب"
-        description={state.message}
-        actionLabel="إعادة المحاولة"
-        onActionPress={reload}
-        secondaryActionLabel={onBack ? 'العودة للطلبات' : undefined}
-        onSecondaryActionPress={onBack}
-      />
+      <View style={styles.errorRoot}>
+        <StateView
+          tone="danger"
+          title="تعذر فتح رحلة الطلب"
+          description={state.message}
+          actionLabel="إعادة المحاولة"
+          onActionPress={() => void reload()}
+        />
+        {onBack ? <Button label="العودة للطلبات" tone="secondary" onPress={onBack} /> : null}
+      </View>
     );
   }
 
@@ -255,7 +256,7 @@ export function OrderTrackingScreen({ orderId, onBack }: Props) {
 
   return (
     <View style={styles.root}>
-      <TopBar title="رحلة الطلب" onBackPress={onBack} />
+      <TopBar title="رحلة الطلب" onBack={onBack} />
       <MobileScrollView fill padding={4} gap={4} contentContainerStyle={styles.content}>
         <Surface tone="action" gap={3}>
           <View style={styles.summaryHeader}>
@@ -315,7 +316,7 @@ export function OrderTrackingScreen({ orderId, onBack }: Props) {
           ))}
         </Surface>
 
-        <Button label="تحديث الحالة" tone="secondary" onPress={reload} />
+        <Button label="تحديث الحالة" tone="secondary" onPress={() => void reload()} />
         {onBack ? <Button label="العودة للطلبات" tone="ghost" onPress={onBack} /> : null}
       </MobileScrollView>
     </View>
@@ -325,6 +326,13 @@ export function OrderTrackingScreen({ orderId, onBack }: Props) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+    backgroundColor: colorRoles.surfaceWarm,
+  },
+  errorRoot: {
+    flex: 1,
+    justifyContent: 'center',
+    gap: spacing[3],
+    padding: spacing[4],
     backgroundColor: colorRoles.surfaceWarm,
   },
   content: {
