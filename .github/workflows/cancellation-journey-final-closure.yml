@@ -49,7 +49,7 @@ concurrency:
 jobs:
   close-and-verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 55
     services:
       dsh-postgres:
         image: postgres:16-alpine
@@ -174,20 +174,41 @@ jobs:
           psql "$DSH_DATABASE_URL" -v ON_ERROR_STOP=1 -f services/dsh/database/migrations/dsh-091_pickup_cancellation_state.sql >/dev/null
           psql "$WLT_DATABASE_URL" -v ON_ERROR_STOP=1 -f services/wlt/database/migrations/wlt-026_refund_reference_integrity.sql >/dev/null
 
-      - name: Run targeted database integration proof
+      - name: DB proof — DSH orders cancellation
         shell: bash
         run: |
-          set -euo pipefail
-          (
-            cd services/dsh/backend
-            DSH_REQUIRE_DB_TESTS=true DATABASE_URL="$DSH_DATABASE_URL" \
-              go test ./internal/orders ./internal/checkoutfinanceoutbox ./internal/dispatch ./internal/pickup -count=1
-          )
-          (
-            cd services/wlt/backend
-            WLT_REQUIRE_DB_TESTS=true DATABASE_URL="$WLT_DATABASE_URL" \
-              go test ./internal/payment ./internal/refund -count=1
-          )
+          cd services/dsh/backend
+          DSH_REQUIRE_DB_TESTS=true DATABASE_URL="$DSH_DATABASE_URL" go test ./internal/orders -count=1 -v
+
+      - name: DB proof — DSH financial outbox
+        shell: bash
+        run: |
+          cd services/dsh/backend
+          DSH_REQUIRE_DB_TESTS=true DATABASE_URL="$DSH_DATABASE_URL" go test ./internal/checkoutfinanceoutbox -count=1 -v
+
+      - name: DB proof — DSH dispatch cancellation
+        shell: bash
+        run: |
+          cd services/dsh/backend
+          DSH_REQUIRE_DB_TESTS=true DATABASE_URL="$DSH_DATABASE_URL" go test ./internal/dispatch -count=1 -v
+
+      - name: DB proof — DSH pickup cancellation
+        shell: bash
+        run: |
+          cd services/dsh/backend
+          DSH_REQUIRE_DB_TESTS=true DATABASE_URL="$DSH_DATABASE_URL" go test ./internal/pickup -count=1 -v
+
+      - name: DB proof — WLT payment cancellation
+        shell: bash
+        run: |
+          cd services/wlt/backend
+          WLT_REQUIRE_DB_TESTS=true DATABASE_URL="$WLT_DATABASE_URL" go test ./internal/payment -count=1 -v
+
+      - name: DB proof — WLT refund integrity
+        shell: bash
+        run: |
+          cd services/wlt/backend
+          WLT_REQUIRE_DB_TESTS=true DATABASE_URL="$WLT_DATABASE_URL" go test ./internal/refund -count=1 -v
 
       - name: Prove journey terminal invariants
         shell: bash
@@ -229,8 +250,13 @@ jobs:
           rm -f \
             .github/workflows/cancellation-client-typecheck-diagnostic.yml \
             .github/cancellation-client-typecheck-trigger \
+            .github/workflows/cancellation-captain-typecheck-diagnostic.yml \
+            .github/cancellation-captain-typecheck-trigger \
+            .github/workflows/cancellation-captain-renderer-fix.yml \
+            .github/cancellation-captain-renderer-trigger \
             .github/workflows/cancellation-wlt-contract-fix.yml \
             .github/cancellation-wlt-contract-fix-trigger \
+            tools/scripts/fix-captain-route-renderer-types.py \
             tools/scripts/fix-wlt-invalid-response-refs.py \
             tools/scripts/patch-cancellation-pickup-resume.py \
             tools/scripts/patch-cancellation-pickup-contract.py
