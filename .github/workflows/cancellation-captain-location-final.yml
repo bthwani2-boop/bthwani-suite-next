@@ -54,10 +54,29 @@ jobs:
           ! grep -Ei '(mock|fixture|demo)[A-Za-z0-9_]*[[:space:]]*=' "$screen"
 
       - name: Typecheck captain journey surface
+        id: captain_typecheck
+        continue-on-error: true
         shell: bash
         run: |
-          set -euo pipefail
-          pnpm exec tsc -p apps/app-captain/runtime/tsconfig.order-journey.json --noEmit --pretty false
+          set -o pipefail
+          mkdir -p artifacts/captain-location-typecheck
+          pnpm exec tsc -p apps/app-captain/runtime/tsconfig.order-journey.json --noEmit --pretty false 2>&1 \
+            | tee artifacts/captain-location-typecheck/typecheck.log
+          exit ${PIPESTATUS[0]}
+
+      - name: Upload captain location typecheck diagnostic
+        if: steps.captain_typecheck.outcome == 'failure'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: cancellation-captain-location-typecheck-${{ github.sha }}
+          path: artifacts/captain-location-typecheck/typecheck.log
+          if-no-files-found: error
+          retention-days: 2
+
+      - name: Stop on captain location typecheck failure
+        if: steps.captain_typecheck.outcome == 'failure'
+        shell: bash
+        run: exit 1
 
       - name: Remove temporary workflow and publish final head
         env:
