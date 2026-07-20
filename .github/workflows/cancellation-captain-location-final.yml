@@ -6,7 +6,10 @@ on:
     branches: ["journey/cancellation-refund-reconciliation-closure"]
     paths:
       - ".github/workflows/cancellation-captain-location-final.yml"
+      - "tools/scripts/patch-cancellation-captain-location-route.py"
       - "services/dsh/frontend/shared/delivery/use-captain-order-runtime.ts"
+      - "services/dsh/frontend/app-captain/DshCaptainRouteRenderer.tsx"
+      - "services/dsh/frontend/app-captain/orders/DshCaptainMapScreen.tsx"
       - "services/dsh/frontend/app-captain/orders/OperationalCaptainExecutionScreen.tsx"
   workflow_dispatch:
 
@@ -31,12 +34,20 @@ jobs:
 
       - uses: ./.github/actions/setup-node-workspace
 
-      - name: Prove captain location contract
+      - name: Apply captain route closure
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/scripts/patch-cancellation-captain-location-route.py
+
+      - name: Prove captain location contract and screens
         shell: bash
         run: |
           set -euo pipefail
           runtime="services/dsh/frontend/shared/delivery/use-captain-order-runtime.ts"
-          screen="services/dsh/frontend/app-captain/orders/OperationalCaptainExecutionScreen.tsx"
+          execution="services/dsh/frontend/app-captain/orders/OperationalCaptainExecutionScreen.tsx"
+          map="services/dsh/frontend/app-captain/orders/DshCaptainMapScreen.tsx"
+          renderer="services/dsh/frontend/app-captain/DshCaptainRouteRenderer.tsx"
           package="apps/app-captain/runtime/package.json"
 
           grep -F 'readonly assignmentId: string;' "$runtime"
@@ -44,14 +55,23 @@ jobs:
           grep -F 'readCaptainForegroundLocation' "$runtime"
           grep -F "await import('expo-location')" "$runtime"
           grep -F '"expo-location"' "$package"
-          grep -F 'const point = await readCaptainForegroundLocation();' "$screen"
-          grep -F 'assignmentId,' "$screen"
+          grep -F 'const point = await readCaptainForegroundLocation();' "$execution"
+          grep -F 'assignmentId={activeAssignmentId}' "$renderer"
+          grep -F 'currentStageLabel={activeSummary?.currentStageLabel' "$renderer"
+          grep -F 'readonly assignmentId: string;' "$map"
+          grep -F 'const point = await readCaptainForegroundLocation();' "$map"
+          grep -F 'GPS فعلي' "$map"
 
           ! grep -F 'Kept as orderId temporarily' "$runtime"
           ! grep -F 'updateForegroundDispatchLocation(push.orderId' "$runtime"
           ! grep -F 'orderId: activeAssignmentId' "$runtime"
-          ! grep -F 'navigator.geolocation' "$screen"
-          ! grep -Ei '(mock|fixture|demo)[A-Za-z0-9_]*[[:space:]]*=' "$screen"
+          ! grep -F 'navigator.geolocation' "$execution"
+          ! grep -F 'STAGE_COORDINATES' "$map"
+          ! grep -F 'CAPTAIN_POSITIONS' "$map"
+          ! grep -F "captainId = 'captain-1'" "$map"
+          ! grep -F 'DshCaptainLifecycleStatus' "$map"
+          ! grep -F 'handleStageSelect' "$map"
+          ! grep -Ei '(mock|fixture|demo)[A-Za-z0-9_]*[[:space:]]*=' "$execution" "$map"
 
       - name: Typecheck captain journey surface
         id: captain_typecheck
@@ -88,8 +108,11 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm .github/workflows/cancellation-captain-location-final.yml
-          git commit -m "chore(cancellation-journey): remove temporary captain location gate [skip ci]"
+          git rm \
+            .github/workflows/cancellation-captain-location-final.yml \
+            tools/scripts/patch-cancellation-captain-location-route.py
+          git add -A
+          git commit -m "fix(cancellation-journey): close real captain location surface [skip ci]"
           git pull --rebase origin journey/cancellation-refund-reconciliation-closure
           git push origin HEAD:journey/cancellation-refund-reconciliation-closure
 
@@ -97,7 +120,7 @@ jobs:
           jq -n \
             --arg state success \
             --arg context "Cancellation Captain Location Final" \
-            --arg description "captain foreground location contract and surface verified" \
+            --arg description "real captain GPS contract and fixture-free map verified" \
             --arg target_url "$RUN_URL" \
             '{state:$state,context:$context,description:$description,target_url:$target_url}' > status.json
           curl --fail-with-body --silent --show-error -X POST \
