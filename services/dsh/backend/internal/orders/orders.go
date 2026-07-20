@@ -261,19 +261,48 @@ func ListClientOrders(db *sql.DB, tenantID, clientID string, limit int) ([]Order
 }
 
 func ListPartnerOrders(db *sql.DB, storeID, statusFilter string, limit int) ([]Order, error) {
+	if strings.TrimSpace(storeID) == "" {
+		return nil, ErrInvalid
+	}
 	if limit <= 0 || limit > 200 {
 		limit = 50
 	}
-	if statusFilter == "" {
-		statusFilter = string(StatusPending)
+
+	var (
+		rows *sql.Rows
+		err  error
+	)
+	if strings.TrimSpace(statusFilter) != "" {
+		rows, err = db.Query(`
+			SELECT id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status,
+			       COALESCE(rejection_reason, ''), wlt_payment_ref_id, created_at, updated_at
+			FROM dsh_orders
+			WHERE store_id = $1 AND status = $2
+			ORDER BY created_at ASC
+			LIMIT $3`, storeID, statusFilter, limit)
+	} else {
+		rows, err = db.Query(`
+			SELECT id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status,
+			       COALESCE(rejection_reason, ''), wlt_payment_ref_id, created_at, updated_at
+			FROM dsh_orders
+			WHERE store_id = $1
+			ORDER BY
+				CASE status
+					WHEN 'pending' THEN 1
+					WHEN 'store_accepted' THEN 2
+					WHEN 'preparing' THEN 3
+					WHEN 'ready_for_pickup' THEN 4
+					WHEN 'driver_assigned' THEN 5
+					WHEN 'driver_arrived_store' THEN 6
+					WHEN 'picked_up' THEN 7
+					WHEN 'arrived_customer' THEN 8
+					WHEN 'delivered' THEN 9
+					WHEN 'cancelled' THEN 10
+					ELSE 99
+				END,
+				created_at ASC
+			LIMIT $2`, storeID, limit)
 	}
-	rows, err := db.Query(`
-		SELECT id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status,
-		       COALESCE(rejection_reason, ''), wlt_payment_ref_id, created_at, updated_at
-		FROM dsh_orders
-		WHERE store_id = $1 AND status = $2
-		ORDER BY created_at ASC
-		LIMIT $3`, storeID, statusFilter, limit)
 	if err != nil {
 		return nil, err
 	}
