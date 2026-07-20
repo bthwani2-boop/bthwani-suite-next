@@ -1,1 +1,3 @@
-partner-runtime-attempt=2
+partner-runtime-attempt=3
+source-db-success-sha=6cded20ef6459383c5972808bd44ef9609f2b9ee
+contracts-trigger-sha=e2828b076c5340494837786ac533559bc69bbcad
