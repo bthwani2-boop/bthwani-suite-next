@@ -18,6 +18,12 @@ import {
   resolveDeliveryExceptionReturnToStore,
 } from '../../shared/dispatch/dispatch.api';
 import type { DshDeliveryException } from '../../shared/dispatch/dispatch.types';
+import {
+  FINANCIAL_CLOSURE_LABELS,
+  cancelOrder,
+  fetchOrderCancellation,
+  type DshOrderCancellation,
+} from '../../shared/orders';
 import { listCaptains } from '../../shared/workforce/workforce.api';
 import type { Captain } from '../../shared/workforce/workforce.types';
 import { buildOperationsHref } from './operations.registry';
@@ -54,6 +60,19 @@ function exceptionTone(severity: DshDeliveryException['severity']): 'danger' | '
   return 'neutral';
 }
 
+function financialTone(status: DshOrderCancellation['financialClosureStatus']): 'danger' | 'warning' | 'success' | 'neutral' | 'info' {
+  if (status === 'failed') return 'danger';
+  if (status === 'pending') return 'warning';
+  if (status === 'refund_requested') return 'info';
+  if (status === 'session_expired' || status === 'refund_completed' || status === 'no_action') return 'success';
+  return 'neutral';
+}
+
+function isNotFound(error: unknown): boolean {
+  const typed = error as { status?: number; body?: { code?: string } };
+  return typed.status === 404 || typed.body?.code === 'NOT_FOUND';
+}
+
 function isEligibleCaptain(captain: Captain): boolean {
   const profile = captain.captainProfile;
   return captain.workforceKind === 'captain'
@@ -76,6 +95,8 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
   const [captainsError, setCaptainsError] = React.useState('');
   const [selectedReadinessId, setSelectedReadinessId] = React.useState<string | null>(null);
   const [selectedDeliveryId, setSelectedDeliveryId] = React.useState<string | null>(null);
+  const [selectedReturnId, setSelectedReturnId] = React.useState<string | null>(null);
+  const [returnCancellations, setReturnCancellations] = React.useState<Readonly<Record<string, DshOrderCancellation | null>>>({});
   const [selectedReplacementCaptainId, setSelectedReplacementCaptainId] = React.useState('');
   const [note, setNote] = React.useState('');
   const [actionState, setActionState] = React.useState<ActionState>({ kind: 'idle' });
@@ -89,11 +110,21 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
         fetchOperatorDeliveryExceptions('acknowledged'),
         fetchOperatorDeliveryExceptions('resolved'),
       ]);
+      const returns = resolved.filter((item) => item.resolutionAction === 'return_to_store');
+      const cancellationEntries = await Promise.all(returns.map(async (item) => {
+        try {
+          return [item.orderId, await fetchOrderCancellation('operator', item.orderId)] as const;
+        } catch (error) {
+          if (isNotFound(error)) return [item.orderId, null] as const;
+          throw error;
+        }
+      }));
+      setReturnCancellations(Object.fromEntries(cancellationEntries));
       setState({
         kind: 'ready',
         readiness,
         delivery: [...open, ...acknowledged],
-        returns: resolved.filter((item) => item.resolutionAction === 'return_to_store'),
+        returns,
       });
     } catch (error) {
       setState({ kind: 'error', message: error instanceof Error ? error.message : 'تعذر تحميل الاستثناءات الحية من DSH.' });
@@ -119,7 +150,7 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
     setNote('');
     setSelectedReplacementCaptainId('');
     setActionState({ kind: 'idle' });
-  }, [selectedReadinessId, selectedDeliveryId]);
+  }, [selectedReadinessId, selectedDeliveryId, selectedReturnId]);
 
   const acknowledge = React.useCallback(async (item: DshDeliveryException) => {
     setActionState({ kind: 'submitting', id: item.id });
@@ -177,6 +208,29 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
     }
   }, [load, note]);
 
+  const cancelReturnedOrder = React.useCallback(async (item: DshDeliveryException) => {
+    if (!item.returnedAt) {
+      setActionState({ kind: 'error', id: item.id, message: 'لا يمكن الإلغاء المالي قبل استلام المتجر للمرتجع.' });
+      return;
+    }
+    if (note.trim().length < 5) {
+      setActionState({ kind: 'error', id: item.id, message: 'اكتب سبب الإلغاء المالي بعد فحص المرتجع.' });
+      return;
+    }
+    setActionState({ kind: 'submitting', id: item.id });
+    try {
+      const response = await cancelOrder('operator', item.orderId, {
+        reasonCode: 'operational_failure',
+        reasonNote: `إلغاء بعد استلام المرتجع: ${note.trim()}`,
+        correlationId: `returned-delivery-exception-${item.id}`,
+      });
+      setReturnCancellations((current) => ({ ...current, [item.orderId]: response.cancellation }));
+      await load();
+    } catch (error) {
+      setActionState({ kind: 'error', id: item.id, message: error instanceof Error ? error.message : 'تعذر تنفيذ الإلغاء المالي الحاكم.' });
+    }
+  }, [load, note]);
+
   const resolveReadiness = React.useCallback(async (item: DshReadinessEscalation, status: 'acknowledged' | 'resolved') => {
     if (status === 'resolved' && note.trim().length < 5) {
       setActionState({ kind: 'error', id: item.id, message: 'اكتب نتيجة حل واضحة من خمسة أحرف على الأقل.' });
@@ -197,6 +251,7 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
 
   const selectedDelivery = state.delivery.find((item) => item.id === selectedDeliveryId) ?? null;
   const selectedReadiness = state.readiness.find((item) => item.id === selectedReadinessId) ?? null;
+  const selectedReturn = state.returns.find((item) => item.id === selectedReturnId) ?? null;
   const replacementCaptains = selectedDelivery ? captains.filter((captain) => captain.actorId !== selectedDelivery.captainId) : [];
 
   return (
@@ -264,16 +319,61 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
         <Text role="titleSm" align="start">رحلات الإرجاع إلى المتجر</Text>
         {state.returns.length === 0 ? (
           <StateView tone="neutral" title="لا توجد رحلات إرجاع" />
-        ) : state.returns.map((item) => (
-          <Card key={`return-${item.id}`} padding={4} gap={2}>
-            <Text role="bodyStrong" align="start">الطلب: {item.orderId}</Text>
-            <Text role="caption" tone="muted" align="start">الكابتن: {item.captainId}</Text>
-            <Badge label={item.returnedAt ? 'استلم المتجر المرتجع' : 'في طريق العودة إلى المتجر'} tone={item.returnedAt ? 'success' : 'warning'} />
-            <Text role="bodySm" align="start">{item.resolutionNote}</Text>
-            <Button label="فتح الطلب الحي" tone="ghost" size="sm" fullWidth={false} onPress={() => router.push(buildOperationsHref('live-orders', { subGroup: 'queue', orderId: item.orderId }))} />
-          </Card>
-        ))}
+        ) : state.returns.map((item) => {
+          const cancellation = returnCancellations[item.orderId];
+          return (
+            <Card key={`return-${item.id}`} padding={4} gap={2}>
+              <Text role="bodyStrong" align="start">الطلب: {item.orderId}</Text>
+              <Text role="caption" tone="muted" align="start">الكابتن: {item.captainId}</Text>
+              <Badge label={item.returnedAt ? 'استلم المتجر المرتجع' : 'في طريق العودة إلى المتجر'} tone={item.returnedAt ? 'success' : 'warning'} />
+              <Text role="bodySm" align="start">{item.resolutionNote}</Text>
+              {cancellation ? (
+                <>
+                  <Badge label={FINANCIAL_CLOSURE_LABELS[cancellation.financialClosureStatus]} tone={financialTone(cancellation.financialClosureStatus)} />
+                  {cancellation.financialReference ? <Text role="caption" align="start">المرجع المالي: {cancellation.financialReference}</Text> : null}
+                  {cancellation.financialFailure ? <Text role="caption" tone="danger" align="start">{cancellation.financialFailure}</Text> : null}
+                </>
+              ) : item.returnedAt ? (
+                <Badge label="بانتظار قرار الإلغاء المالي" tone="warning" />
+              ) : null}
+              <Box gap={2} style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                {item.returnedAt ? <Button label={cancellation ? 'فتح الإغلاق المالي' : 'بدء الإغلاق المالي'} tone="secondary" size="sm" onPress={() => { setSelectedDeliveryId(null); setSelectedReadinessId(null); setSelectedReturnId(item.id); }} /> : null}
+                <Button label="فتح الطلب الحي" tone="ghost" size="sm" onPress={() => router.push(buildOperationsHref('live-orders', { subGroup: 'queue', orderId: item.orderId }))} />
+              </Box>
+            </Card>
+          );
+        })}
       </Box>
+
+      {selectedReturn ? (
+        <Card padding={4} gap={3}>
+          <Text role="titleSm" align="start">إغلاق المرتجع ماليًا</Text>
+          <Text role="bodySm" align="start">الطلب: {selectedReturn.orderId}</Text>
+          {returnCancellations[selectedReturn.orderId] ? (
+            <>
+              <Badge
+                label={FINANCIAL_CLOSURE_LABELS[returnCancellations[selectedReturn.orderId]!.financialClosureStatus]}
+                tone={financialTone(returnCancellations[selectedReturn.orderId]!.financialClosureStatus)}
+              />
+              {returnCancellations[selectedReturn.orderId]!.financialReference ? (
+                <Text role="caption">المرجع المالي: {returnCancellations[selectedReturn.orderId]!.financialReference}</Text>
+              ) : null}
+              {returnCancellations[selectedReturn.orderId]!.financialFailure ? (
+                <Text role="caption" tone="danger">{returnCancellations[selectedReturn.orderId]!.financialFailure}</Text>
+              ) : null}
+              <Button label="تحديث نتيجة WLT" tone="secondary" onPress={() => void load()} />
+            </>
+          ) : (
+            <>
+              <Text role="bodySm" tone="muted">لن ينشئ DSH استردادًا مباشرًا. سيُنشئ أمر الإلغاء سجلًا واحدًا وOutbox واحدًا، ثم يقرر WLT تحرير الجلسة أو طلب الاسترداد.</Text>
+              <TextField label="سبب الإلغاء بعد فحص المرتجع" value={note} onChangeText={setNote} placeholder="سجل حالة المرتجع وسبب عدم إعادة التنفيذ" multiline />
+              {actionState.kind === 'error' && actionState.id === selectedReturn.id ? <Text role="caption" tone="danger">{actionState.message}</Text> : null}
+              <Button label="إلغاء الطلب وبدء الإغلاق المالي" tone="danger" disabled={actionState.kind === 'submitting' || note.trim().length < 5} onPress={() => void cancelReturnedOrder(selectedReturn)} />
+            </>
+          )}
+          <Button label="إغلاق التفاصيل" tone="ghost" onPress={() => setSelectedReturnId(null)} />
+        </Card>
+      ) : null}
 
       {selectedDelivery ? (
         <Card padding={4} gap={3}>

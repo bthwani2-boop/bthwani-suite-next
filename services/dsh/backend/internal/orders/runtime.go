@@ -89,7 +89,17 @@ func cancellableStatuses(role string) []OrderStatus {
 		return []OrderStatus{StatusPending, StatusStoreAccepted}
 	case "partner":
 		return []OrderStatus{StatusPending, StatusStoreAccepted, StatusPreparing}
-	case "operator", "system":
+	case "operator":
+		return []OrderStatus{
+			StatusPending,
+			StatusStoreAccepted,
+			StatusPreparing,
+			StatusReadyForPickup,
+			StatusDriverAssigned,
+			StatusArrivedStore,
+			StatusReturnedStore,
+		}
+	case "system":
 		return []OrderStatus{
 			StatusPending,
 			StatusStoreAccepted,

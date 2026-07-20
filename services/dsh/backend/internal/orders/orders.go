@@ -298,8 +298,15 @@ func ListPartnerOrders(db *sql.DB, storeID, statusFilter string, limit int) ([]O
 					WHEN 'driver_arrived_store' THEN 6
 					WHEN 'picked_up' THEN 7
 					WHEN 'arrived_customer' THEN 8
-					WHEN 'delivered' THEN 9
-					WHEN 'cancelled' THEN 10
+					WHEN 'returning_to_store' THEN 9
+					WHEN 'returned_to_store' THEN 10
+					WHEN 'delivered' THEN 11
+					WHEN 'cancelled_by_client' THEN 12
+					WHEN 'cancelled_by_store' THEN 13
+					WHEN 'cancelled_by_operator' THEN 14
+					WHEN 'cancelled_no_driver' THEN 15
+					WHEN 'failed_payment' THEN 16
+					WHEN 'failed_dispatch' THEN 17
 					ELSE 99
 				END,
 				created_at ASC
