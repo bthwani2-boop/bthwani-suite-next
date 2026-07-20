@@ -14,16 +14,16 @@ require(
     "type NotifyDeliveryCollectionInput struct",
 )
 require(
-    "services/dsh/backend/internal/wlt/client.go",
-    'c.baseURL+"/wlt/cod-records"',
-)
-require(
     "services/wlt/backend/internal/cod/cod.go",
     "CollectorType",
 )
 require(
-    "services/wlt/backend/internal/cod/cod.go",
-    "CollectorID",
+    "services/wlt/backend/internal/cod/cod_collector.go",
+    "CreateDeliveryCollection",
+)
+require(
+    "services/wlt/backend/internal/cod/delivery_collection_handoff.go",
+    "HandleCreateDeliveryCollectionHandoff",
 )
 require(
     "services/wlt/database/migrations/wlt-025_cod_collector_identity.sql",
@@ -65,4 +65,4 @@ config.write_text(
     encoding="utf-8",
 )
 
-print("Verified permanent COD custody implementation and prepared focused TypeScript config.")
+print("Verified permanent COD custody models and prepared focused TypeScript config.")
