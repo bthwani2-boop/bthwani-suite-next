@@ -89,6 +89,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("GET /dsh/client/orders", protected.handleListClientOrders)
 	mux.HandleFunc("GET /dsh/client/orders/{orderId}", protected.handleGetClientOrder)
 	mux.HandleFunc("GET /dsh/partner/orders", protected.handleListPartnerOrders)
+	mux.HandleFunc("GET /dsh/partner/order-workboard", protected.handlePartnerOrderWorkboard)
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/accept", protected.handleAcceptOrder)
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/reject", protected.handleRejectOrder)
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/preparing", protected.handleMarkPreparing)
