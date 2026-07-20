@@ -9,6 +9,7 @@ on:
       - ".github/cancellation-journey-final-trigger"
       - "tools/scripts/patch-cancellation-journey-final.py"
       - "tools/scripts/patch-cancellation-pickup-resume.py"
+      - "tools/scripts/patch-cancellation-pickup-contract.py"
       - "tools/scripts/close-cancellation-refund-reconciliation.py"
       - "services/dsh/backend/internal/dispatch/**"
       - "services/dsh/backend/internal/pickup/**"
@@ -98,6 +99,7 @@ jobs:
         run: |
           set -euo pipefail
           python tools/scripts/patch-cancellation-pickup-resume.py
+          python tools/scripts/patch-cancellation-pickup-contract.py
           python tools/scripts/patch-cancellation-journey-final.py
 
       - name: Format affected Go sources
@@ -129,7 +131,9 @@ jobs:
           grep -F 'WltGovernedOrderCancellationResponse' services/wlt/contracts/wlt.openapi.yaml
           grep -F 'WltGovernedOrderCancellationResponse' services/wlt/clients/generated/wlt-api.ts
           grep -F 'cancellationReason' services/dsh/contracts/dsh.openapi.yaml
+          grep -F '/dsh/partner/orders/{orderId}/pickup:' services/dsh/contracts/dsh.openapi.yaml
           grep -F 'enum: [not_ready, ready, notified, customer_arrived, verified, no_show, cancelled]' services/dsh/contracts/dsh.openapi.yaml
+          grep -F 'getDshPartnerPickupState' services/dsh/clients/generated/dsh-api.ts
           grep -F 'GET /dsh/partner/orders/{orderId}/pickup' services/dsh/backend/internal/http/server.go
           grep -F 'handleGetPartnerPickupState' services/dsh/backend/internal/http/pickup.go
           grep -F 'PartnerStageCancelled' services/dsh/backend/internal/pickup/partner_state.go
@@ -228,7 +232,8 @@ jobs:
             .github/workflows/cancellation-wlt-contract-fix.yml \
             .github/cancellation-wlt-contract-fix-trigger \
             tools/scripts/fix-wlt-invalid-response-refs.py \
-            tools/scripts/patch-cancellation-pickup-resume.py
+            tools/scripts/patch-cancellation-pickup-resume.py \
+            tools/scripts/patch-cancellation-pickup-contract.py
 
       - name: Commit verified closure changes
         shell: bash
