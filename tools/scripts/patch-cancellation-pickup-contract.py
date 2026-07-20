@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import runpy
 from pathlib import Path
 
 CONTRACT = Path("services/dsh/contracts/dsh.openapi.yaml")
@@ -13,6 +14,10 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
 
 
 def main() -> None:
+    outbox_patch = Path("tools/scripts/patch-cancellation-outbox-db-fixtures.py")
+    if outbox_patch.exists():
+        runpy.run_path(str(outbox_patch), run_name="__main__")
+
     text = CONTRACT.read_text(encoding="utf-8")
 
     if "  /dsh/partner/orders/{orderId}/pickup:\n" not in text:
@@ -73,7 +78,7 @@ def main() -> None:
 
     CONTRACT.write_text(text, encoding="utf-8")
     Path("tools/scripts/patch-cancellation-pickup-contract.py").unlink(missing_ok=True)
-    print("Partner pickup resumable GET contract and explicit cancelled stage added.")
+    print("Partner pickup contract and tenant-valid outbox fixtures patched.")
 
 
 if __name__ == "__main__":
