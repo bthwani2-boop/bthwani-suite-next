@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Button, Divider, Text } from '@bthwani/ui-kit';
-import type { PartnerOrderItem } from '../../shared/orders/orders.contract';
+import type { GovernedPartnerOrderItem } from '../../shared/partner/partner.adapters';
 import type { PartnerTeamMember } from '../team/partner-team.types';
 import {
   DshPartnerOrdersScreen,
@@ -16,7 +16,7 @@ type OrderHubAction = 'accept' | 'reject' | 'details' | 'prepare' | 'ready' | 'h
 
 export type OperationalOrdersInboxScreenProps = {
   readonly state: PartnerOrdersHomeScreenState;
-  readonly items: readonly PartnerOrderItem[];
+  readonly items: readonly GovernedPartnerOrderItem[];
   readonly teamMembers: readonly PartnerTeamMember[];
   readonly searchMode: boolean;
   readonly onCloseSearch: () => void;
@@ -41,7 +41,7 @@ export function OperationalOrdersInboxScreen({
   const commands = usePartnerOrderCommands(onRetry);
   const [expandedFulfillmentOrderId, setExpandedFulfillmentOrderId] = React.useState<string | null>(null);
   const pendingDecisions = React.useMemo(
-    () => items.filter((item) => item.status === 'new' || item.status === 'needs_accept'),
+    () => items.filter((item) => item.allowedActions.includes('accept') || item.allowedActions.includes('reject')),
     [items],
   );
   const expandedFulfillmentOrder = React.useMemo(
@@ -63,33 +63,36 @@ export function OperationalOrdersInboxScreen({
     }
 
     if (actionId === 'reject') {
-      onNavigateAction('reject', orderId);
+      onNavigateAction(item.allowedActions.includes('reject') ? 'reject' : 'details', orderId);
       return;
     }
 
     // A pending-order issue is an acceptance decision, not a support incident.
-    if (actionId === 'issue' && (item.status === 'new' || item.status === 'needs_accept')) {
+    if (actionId === 'issue' && item.allowedActions.includes('reject')) {
       onNavigateAction('reject', orderId);
       return;
     }
 
     if (actionId === 'handoff') {
+      if (!item.allowedActions.includes('handoff')) {
+        onNavigateAction('details', orderId);
+        return;
+      }
       if (item.orderMode === 'partner_delivery' || item.orderMode === 'pickup') {
         setExpandedFulfillmentOrderId(orderId);
         return;
       }
-      // Bthwani delivery is monitored here but assigned only by control-panel operations.
-      onNavigateAction('handoff', orderId);
+      onNavigateAction('details', orderId);
       return;
     }
 
-    const mutation = resolvePartnerOrderMutation(actionId, item.status);
+    const mutation = resolvePartnerOrderMutation(actionId, item.allowedActions);
     if (mutation) {
       void commands.execute(mutation, orderId);
       return;
     }
 
-    onNavigateAction(actionId, orderId);
+    onNavigateAction(actionId === 'details' ? 'details' : 'details', orderId);
   }, [commands, items, onNavigateAction]);
 
   return (
@@ -114,21 +117,25 @@ export function OperationalOrdersInboxScreen({
               <Box gap={2}>
                 <Text role="bodySm">{`${order.orderCode} · ${order.itemsCountLabel} · ${order.amountLabel}`}</Text>
                 <Box layoutDirection="row" gap={2}>
-                  <Button
-                    label="قبول وبدء التجهيز"
-                    size="sm"
-                    fullWidth={false}
-                    disabled={commands.state.kind === 'submitting'}
-                    onPress={() => void commands.execute('accept', order.id)}
-                  />
-                  <Button
-                    label="رفض مع سبب"
-                    size="sm"
-                    tone="danger"
-                    fullWidth={false}
-                    disabled={commands.state.kind === 'submitting'}
-                    onPress={() => onNavigateAction('reject', order.id)}
-                  />
+                  {order.allowedActions.includes('accept') ? (
+                    <Button
+                      label="قبول الطلب"
+                      size="sm"
+                      fullWidth={false}
+                      disabled={commands.state.kind === 'submitting'}
+                      onPress={() => void commands.execute('accept', order.id)}
+                    />
+                  ) : null}
+                  {order.allowedActions.includes('reject') ? (
+                    <Button
+                      label="رفض مع سبب"
+                      size="sm"
+                      tone="danger"
+                      fullWidth={false}
+                      disabled={commands.state.kind === 'submitting'}
+                      onPress={() => onNavigateAction('reject', order.id)}
+                    />
+                  ) : null}
                 </Box>
               </Box>
             </React.Fragment>
