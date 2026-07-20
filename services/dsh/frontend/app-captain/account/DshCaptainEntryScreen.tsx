@@ -8,7 +8,7 @@ import {
 } from '@bthwani/ui-kit';
 import { DshOperationScreen } from '../DshOperationScreen';
 
-export type DshEntryScreenState = 'ready' | 'loading' | 'empty';
+export type DshEntryScreenState = 'ready' | 'loading' | 'empty' | 'error';
 
 export type DshEntryScreenProps = {
 	state?: DshEntryScreenState;
@@ -45,7 +45,7 @@ function renderCompletionSection(onOpenProofCapturePress?: () => void) {
 				subtitle="يبقى رفع الإثبات بوابة إغلاق واضحة قبل إقفال الطلب بالكامل."
 			/>
 			<Text role="bodySm" tone="muted">
-				يبقى المالية والطبقات والمجموعات غير الحرجة خارج هذا المدخل الأول حتى تظل إجراءات التسليم هي الأساسية.
+				المالية والطبقات غير الحرجة خارج هذا المدخل الأول حتى تظل إجراءات التسليم هي الأساسية.
 			</Text>
 			<Button label="فتح إثبات التسليم" tone="secondary" onPress={onOpenProofCapturePress} />
 		</Surface>
