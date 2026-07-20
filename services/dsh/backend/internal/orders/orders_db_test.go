@@ -68,15 +68,22 @@ func TestCreateOrderStoresRealPriceSnapshotDBIntegration(t *testing.T) {
 
 	var intentID string
 	if err := db.QueryRowContext(ctx, `
-		INSERT INTO dsh_checkout_intents (tenant_id, client_id, cart_id, store_id, state, payment_method, wlt_payment_session_id)
-		VALUES ($1, $2, $3::uuid, $4, 'payment_pending', 'cod', $5)
+		INSERT INTO dsh_checkout_intents (
+			tenant_id, client_id, cart_id, store_id, state, fulfillment_mode,
+			payment_method, wlt_payment_session_id
+		)
+		VALUES ($1, $2, $3::uuid, $4, 'payment_pending', 'bthwani_delivery', 'cod', $5)
 		RETURNING id::text`,
 		tenantID, clientID, cartID, storeID, "wlt-ps-"+suffix,
 	).Scan(&intentID); err != nil {
 		t.Fatalf("failed to insert test checkout intent: %v", err)
 	}
 
-	order, err := CreateOrder(db, CreateOrderInput{CheckoutIntentID: intentID, ClientID: clientID})
+	order, err := CreateOrder(db, CreateOrderInput{
+		CheckoutIntentID: intentID,
+		ClientID:         clientID,
+		TenantID:         tenantID,
+	})
 	if err != nil {
 		t.Fatalf("CreateOrder failed: %v", err)
 	}
@@ -97,9 +104,9 @@ func TestCreateOrderStoresRealPriceSnapshotDBIntegration(t *testing.T) {
 	}
 }
 
-// seedOrderFixture creates a store, checkout intent, and order row with a WLT
-// payment session reference already attached, mirroring what CreateOrder
-// would have produced for a wallet/cod order.
+// seedOrderFixture creates a tenant-scoped store, checkout intent, and order
+// row with a WLT payment session reference already attached, mirroring the
+// governed CreateOrder path used by wallet/COD orders.
 func seedOrderFixture(t *testing.T, db *sql.DB, status string) (order *Order, paymentSessionID string) {
 	t.Helper()
 	ctx := context.Background()
@@ -119,8 +126,11 @@ func seedOrderFixture(t *testing.T, db *sql.DB, status string) (order *Order, pa
 
 	var intentID string
 	if err := db.QueryRowContext(ctx, `
-		INSERT INTO dsh_checkout_intents (tenant_id, client_id, cart_id, store_id, state, payment_method, wlt_payment_session_id)
-		VALUES ($1, $2, gen_random_uuid(), $3, 'confirmed', 'wallet', $4)
+		INSERT INTO dsh_checkout_intents (
+			tenant_id, client_id, cart_id, store_id, state, fulfillment_mode,
+			payment_method, wlt_payment_session_id
+		)
+		VALUES ($1, $2, gen_random_uuid(), $3, 'confirmed', 'bthwani_delivery', 'wallet', $4)
 		RETURNING id::text`,
 		tenantID, clientID, storeID, paymentSessionID,
 	).Scan(&intentID); err != nil {
@@ -129,8 +139,11 @@ func seedOrderFixture(t *testing.T, db *sql.DB, status string) (order *Order, pa
 
 	var o Order
 	if err := db.QueryRowContext(ctx, `
-		INSERT INTO dsh_orders (tenant_id, checkout_intent_id, store_id, client_id, status, wlt_payment_ref_id)
-		VALUES ($1, $2::uuid, $3, $4, $5, $6)
+		INSERT INTO dsh_orders (
+			tenant_id, checkout_intent_id, store_id, fulfillment_mode,
+			client_id, status, wlt_payment_ref_id
+		)
+		VALUES ($1, $2::uuid, $3, 'bthwani_delivery', $4, $5, $6)
 		RETURNING id::text, checkout_intent_id::text, store_id, client_id, status,
 		          COALESCE(rejection_reason, ''), wlt_payment_ref_id, created_at, updated_at`,
 		tenantID, intentID, storeID, clientID, status, paymentSessionID,
@@ -141,6 +154,7 @@ func seedOrderFixture(t *testing.T, db *sql.DB, status string) (order *Order, pa
 	); err != nil {
 		t.Fatalf("failed to insert test order: %v", err)
 	}
+	o.FulfillmentMode = "bthwani_delivery"
 	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_orders WHERE id = $1::uuid`, o.ID) })
 	return &o, paymentSessionID
 }
