@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src/App.tsx",
+    "../../../services/dsh/frontend/app-captain/DshCaptainSurface.tsx",
+    "../../../services/dsh/frontend/app-captain/DshCaptainOrderJourneyRenderer.tsx",
+    "../../../services/dsh/frontend/app-captain/DshCaptainRouteRenderer.tsx",
+    "../../../services/dsh/frontend/app-captain/orders/**/*.ts",
+    "../../../services/dsh/frontend/app-captain/orders/**/*.tsx",
+    "../../../services/dsh/frontend/shared/delivery/**/*.ts",
+    "../../../services/dsh/frontend/shared/delivery/**/*.tsx",
+    "../../../services/dsh/frontend/shared/dispatch/**/*.ts",
+    "../../../services/dsh/frontend/shared/orders/**/*.ts",
+    "../../../services/dsh/frontend/shared/_kernel/**/*.ts"
+  ]
+}
