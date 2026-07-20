@@ -28,16 +28,40 @@ server_path.write_text(server, encoding="utf-8")
 
 refund_path = Path("services/wlt/backend/internal/refund/refund.go")
 refund = refund_path.read_text(encoding="utf-8")
-start = refund.index("func CreateRefund(db *sql.DB, input CreateRefundInput) (*Refund, error) {")
-end = refund.index("// getActiveRefundForSessionTx", start)
-replacement = '''func CreateRefund(db *sql.DB, input CreateRefundInput) (*Refund, error) {
+refund = refund.replace('\n\t"wlt-api/internal/reference"', "", 1)
+comment_start = refund.index("// CreateRefund creates a refund")
+function_start = refund.index("func CreateRefund(db *sql.DB, input CreateRefundInput) (*Refund, error) {", comment_start)
+function_end = refund.index("// getActiveRefundForSessionTx", function_start)
+replacement = '''// CreateRefund preserves the internal compatibility signature while delegating
+// every creation to the atomic, ownership-safe implementation. This keeps all
+// refund entry points aligned on required reason, session ownership, amount,
+// currency, and idempotency rules.
+func CreateRefund(db *sql.DB, input CreateRefundInput) (*Refund, error) {
 	created, _, err := CreateRefundAtomic(db, input)
 	return created, err
 }
 
 '''
-refund = refund[:start] + replacement + refund[end:]
+refund = refund[:comment_start] + replacement + refund[function_end:]
 refund_path.write_text(refund, encoding="utf-8")
 
 test_path = Path("services/wlt/backend/internal/refund/refund_db_test.go")
-test = test_path.read_text(encoding="utf-8")n
+test = test_path.read_text(encoding="utf-8")
+old = '''	r, err := CreateRefund(db, CreateRefundInput{
+		PaymentSessionID: sessionID,
+		OrderID:          orderID,
+		ClientID:         "client-test",
+	})'''
+new = '''	r, err := CreateRefund(db, CreateRefundInput{
+		PaymentSessionID: sessionID,
+		OrderID:          orderID,
+		ClientID:         "client-test",
+		Reason:           "cancelled COD order",
+	})'''
+if old not in test and new not in test:
+    raise RuntimeError("COD refund reason fixture anchor not found")
+test = test.replace(old, new, 1)
+test_path.write_text(test, encoding="utf-8")
+
+Path("tools/scripts/patch-cancellation-wlt-governed-routes.py").unlink(missing_ok=True)
+print("All WLT cancellation and refund routes now use governed atomic ownership-safe logic.")
