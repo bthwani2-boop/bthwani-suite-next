@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
 )
 
@@ -39,12 +38,22 @@ func (c *Client) CancelSessionForOrder(
 	if paymentSessionID == "" || input.OrderID == "" || input.ClientID == "" || input.Reason == "" {
 		return nil, fmt.Errorf("paymentSessionId, orderId, clientId, and reason are required")
 	}
-	body, err := json.Marshal(input)
+	requestBody := struct {
+		PaymentSessionID string `json:"paymentSessionId"`
+		OrderID          string `json:"orderId"`
+		ClientID         string `json:"clientId"`
+		Reason           string `json:"reason"`
+	}{
+		PaymentSessionID: paymentSessionID,
+		OrderID:          input.OrderID,
+		ClientID:         input.ClientID,
+		Reason:           input.Reason,
+	}
+	body, err := json.Marshal(requestBody)
 	if err != nil {
 		return nil, fmt.Errorf("encode WLT cancel-for-order request: %w", err)
 	}
-	path := "/wlt/payment-sessions/" + url.PathEscape(paymentSessionID) + "/cancel-for-order"
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+path, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/wlt/order-cancellations", bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("build WLT cancel-for-order request: %w", err)
 	}
@@ -73,8 +82,8 @@ func (c *Client) CancelSessionForOrder(
 	}
 
 	var envelope struct {
-		Action        string `json:"action"`
-		SessionStatus string `json:"sessionStatus"`
+		Action         string `json:"action"`
+		SessionStatus  string `json:"sessionStatus"`
 		PaymentSession *struct {
 			ID string `json:"id"`
 		} `json:"paymentSession"`
