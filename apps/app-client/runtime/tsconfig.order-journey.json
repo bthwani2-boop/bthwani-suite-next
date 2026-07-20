@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src/App.tsx",
+    "../../../services/dsh/frontend/app-client/DshClientSurface.tsx",
+    "../../../services/dsh/frontend/app-client/orders/**/*.ts",
+    "../../../services/dsh/frontend/app-client/orders/**/*.tsx",
+    "../../../services/dsh/frontend/shared/orders/**/*.ts",
+    "../../../services/dsh/frontend/shared/dispatch/**/*.ts",
+    "../../../services/dsh/frontend/shared/_kernel/**/*.ts",
+    "../../../services/dsh/clients/**/*.ts"
+  ]
+}
