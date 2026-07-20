@@ -3,11 +3,13 @@ import { DshPartnerRouteRenderer } from './DshPartnerRouteRenderer';
 import { OperationalOrderDecisionScreen } from './orders/OperationalOrderDecisionScreen';
 import { OperationalOrdersInboxScreen } from './orders/OperationalOrdersInboxScreen';
 
-type Props = React.ComponentProps<typeof DshPartnerRouteRenderer>;
+type LegacyRendererProps = React.ComponentProps<typeof DshPartnerRouteRenderer>;
+type Props = Omit<LegacyRendererProps, 'handleMarkReady'>;
 
 /**
- * Journey-specific renderer that replaces only operational order routes. All
- * unrelated partner routes continue through the established renderer.
+ * Journey-specific renderer that owns all operational order routes. The legacy
+ * mark-ready callback is injected only when delegating unrelated routes and is
+ * unreachable from the inbox/decision journey.
  */
 export function DshPartnerOrderJourneyRenderer(props: Props): React.ReactElement {
   const activeOrder = props.partnerOrders.find((order) => order.id === props.activeOrderId)
@@ -25,7 +27,7 @@ export function DshPartnerOrderJourneyRenderer(props: Props): React.ReactElement
   }
 
   if (props.route !== 'inbox') {
-    return <DshPartnerRouteRenderer {...props} />;
+    return <DshPartnerRouteRenderer {...props} handleMarkReady={() => undefined} />;
   }
 
   return props.renderMainShell(
@@ -47,8 +49,6 @@ export function DshPartnerOrderJourneyRenderer(props: Props): React.ReactElement
           return;
         }
         if (actionId === 'handoff') {
-          // Only Bthwani-delivery reaches this branch. Partner-delivery and
-          // pickup are executed inline by the governed fulfillment panel.
           props.openSupportCommandFromOperationalFlow('order-handoff', 'orders');
           return;
         }
