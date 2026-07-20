@@ -23,7 +23,20 @@ type CancelSessionForOrderResult struct {
 	PaymentSessionID string `json:"paymentSessionId,omitempty"`
 }
 
+// CancelSessionForOrder preserves the established error-only contract for
+// callers and tests that do not need the financial result projection.
 func (c *Client) CancelSessionForOrder(
+	ctx context.Context,
+	paymentSessionID string,
+	input CancelSessionForOrderInput,
+) error {
+	_, err := c.CancelSessionForOrderWithResult(ctx, paymentSessionID, input)
+	return err
+}
+
+// CancelSessionForOrderWithResult is used by the durable DSH outbox worker to
+// project WLT's expire/refund/no-op decision back onto the order journey.
+func (c *Client) CancelSessionForOrderWithResult(
 	ctx context.Context,
 	paymentSessionID string,
 	input CancelSessionForOrderInput,
