@@ -5,6 +5,7 @@ import type {
   DshPickupCustomerArrivedResponse,
   DshPickupMarkReadyResponse,
   DshPickupNotifyResponse,
+  DshPickupSession,
   DshPickupSessionListResponse,
   DshPickupSessionResponse,
   PickupErrorCode,
@@ -12,8 +13,19 @@ import type {
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "pickup");
 
-// --- Partner (store) side ----------------------------------------------------
-// Endpoints registered on pickup.go — real backend calls only.
+export type PartnerPickupStage = "not_ready" | "ready" | "notified" | "customer_arrived" | "verified" | "no_show";
+export type DshPartnerPickupStateResponse = {
+  readonly session: DshPickupSession | null;
+  readonly stage: PartnerPickupStage;
+};
+
+// --- Partner (store) side --------------------------------------------------
+
+export async function fetchPartnerPickupState(orderId: string): Promise<DshPartnerPickupStateResponse> {
+  return request<DshPartnerPickupStateResponse>(
+    `/dsh/partner/orders/${encodeURIComponent(orderId)}/pickup`,
+  );
+}
 
 export async function markPickupReady(
   orderId: string,
@@ -57,7 +69,7 @@ export async function verifyPickupSession(
 
 export async function markPickupNoShow(
   orderId: string,
-  input: { readonly expectedVersion: number; readonly reason?: string } = { expectedVersion: 0 },
+  input: { readonly expectedVersion: number; readonly reason: string },
 ): Promise<DshPickupSessionResponse> {
   return request<DshPickupSessionResponse>(
     `/dsh/partner/orders/${encodeURIComponent(orderId)}/pickup/no-show`,
@@ -65,7 +77,7 @@ export async function markPickupNoShow(
   );
 }
 
-// --- Operator side -------------------------------------------------------------
+// --- Operator side --------------------------------------------------------
 
 export async function fetchOperatorPickups(params: {
   readonly storeId?: string;
@@ -84,10 +96,6 @@ export async function fetchOperatorPickup(orderId: string): Promise<DshPickupSes
   return request<DshPickupSessionResponse>(`/dsh/operator/pickups/${encodeURIComponent(orderId)}`);
 }
 
-/**
- * Operator-only manage action: manually extend a pickup session's expiry
- * window. Requires a reason per the backend contract (handleExtendPickupWindow).
- */
 export async function extendPickupWindow(
   orderId: string,
   input: { readonly expectedVersion: number; readonly reason: string; readonly newExpiry: string },
@@ -97,8 +105,6 @@ export async function extendPickupWindow(
     { method: "POST", body: { ...input, commandId: corrId("pk-extend") } },
   );
 }
-
-// --- Error classification -------------------------------------------------------
 
 function classified(
   kind: ClassifiedPickupError["kind"],
@@ -110,9 +116,7 @@ function classified(
 
 export function classifyPickupError(error: unknown): ClassifiedPickupError {
   const typed = error as { kind?: string; status?: number; code?: string; message?: string };
-  if (typed?.kind === "network") {
-    return classified("network", undefined, typed.message);
-  }
+  if (typed?.kind === "network") return classified("network", undefined, typed.message);
   if (typed?.kind === "http") {
     const code = typed.code as PickupErrorCode | undefined;
     if (typed.status === 409) return classified("conflict", code ?? "VERSION_CONFLICT", typed.message);
