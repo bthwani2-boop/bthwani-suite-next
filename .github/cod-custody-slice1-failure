@@ -1,50 +1,17 @@
-apply=success
-contract=success
-compile=failure
+apply=failure
+contract=skipped
+compile=skipped
 typecheck=skipped
 database=skipped
 invariants=skipped
-source_sha=822b32c24369a28c9ab7aea7ec0c5d825c94b512
+source_sha=801f18b4b802f589e588b6403a72e87d9d50ddbd
 
 === artifacts/cod-custody-slice1/apply.log ===
-Applied COD custody slice one.
-Aligned client tests, imports, captain section, and governed WLT payment-session fixtures.
-
-=== artifacts/cod-custody-slice1/compile.log ===
-go: downloading github.com/google/uuid v1.6.0
-go: downloading github.com/lib/pq v1.12.3
-# dsh-api/internal/wlt
-internal/wlt/delivery_collection.go:11:6: NotifyDeliveryCollectionInput redeclared in this block
-	internal/wlt/client.go:124:6: other declaration of NotifyDeliveryCollectionInput
-internal/wlt/delivery_collection.go:19:18: method Client.NotifyDeliveryCollection already declared at internal/wlt/client.go:137:18
-FAIL	dsh-api/internal/wlt [build failed]
-FAIL	dsh-api/internal/wltoutbox [build failed]
-FAIL	dsh-api/internal/dispatch [build failed]
-FAIL	dsh-api/internal/partnerdelivery [build failed]
-FAIL
-
-=== artifacts/cod-custody-slice1/contract.log ===
-
-> bthwani-suite-next@0.0.0 openapi:generate:wlt /home/runner/work/bthwani-suite-next/bthwani-suite-next
-> pnpm dlx openapi-typescript@7.13.0 services/wlt/contracts/wlt.openapi.yaml -o services/wlt/clients/generated/wlt-api.ts
-
-Progress: resolved 1, reused 0, downloaded 0, added 0
-Packages: +33
-+++++++++++++++++++++++++++++++++
-Progress: resolved 33, reused 30, downloaded 3, added 33, done
-✨ openapi-typescript 7.13.0
-🚀 services/wlt/contracts/wlt.openapi.yaml → services/wlt/clients/generated/wlt-api.ts [132.6ms]
-        - collectorType
-          description: Compatibility projection, present only when collectorType is captain.
-        collectorType:
-      required: [orderId, collectorType, collectorId, partnerId, checkoutIntentId]
-        collectorType:
-        - collectorId
-        collectorId: { type: string, minLength: 1 }
-      required: [orderId, collectorType, collectorId, partnerId, checkoutIntentId]
-        collectorId: { type: string, minLength: 1 }
-            /** @description Compatibility projection, present only when collectorType is captain. */
-            collectorType: "captain" | "store_courier" | "partner_store";
-            collectorType: "captain" | "store_courier" | "partner_store";
-            collectorId: string;
-            collectorId: string;
+Traceback (most recent call last):
+  File "/home/runner/work/bthwani-suite-next/bthwani-suite-next/tools/scripts/patch-cod-custody-slice1.py", line 571, in <module>
+    main()
+  File "/home/runner/work/bthwani-suite-next/bthwani-suite-next/tools/scripts/patch-cod-custody-slice1.py", line 561, in main
+    patch_wlt_cod_domain()
+  File "/home/runner/work/bthwani-suite-next/bthwani-suite-next/tools/scripts/patch-cod-custody-slice1.py", line 295, in patch_wlt_cod_domain
+    raise RuntimeError("ListCodRecords block not found")
+RuntimeError: ListCodRecords block not found
