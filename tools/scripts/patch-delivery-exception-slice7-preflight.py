@@ -20,6 +20,19 @@ patch = patch.replace(
 if 's.partnerOrder(w, r, r.PathValue("orderId"))' in patch:
     raise RuntimeError("stale partnerOrder signature remains in slice7 patch")
 
+# The return-complete path is currently the final OpenAPI path before components.
+# Replace the formatting assumption with an explicit next-path/components boundary.
+old_contract_boundary = "        end = text.index('\\n  /', start + len(old_route_start))"
+new_contract_boundary = """        next_route = text.find('\\n  /', start + len(old_route_start))
+        components_boundary = text.find('\\ncomponents:', start + len(old_route_start))
+        candidates = [value for value in (next_route, components_boundary) if value != -1]
+        if not candidates:
+            raise RuntimeError('return route end boundary not found')
+        end = min(candidates)"""
+if old_contract_boundary not in patch and "components_boundary = text.find('\\ncomponents:'" not in patch:
+    raise RuntimeError("OpenAPI return route boundary anchor not found")
+patch = patch.replace(old_contract_boundary, new_contract_boundary, 1)
+
 # The old test patch matched formatting rather than behavior. Replace the test
 # directly using semantic start/end boundaries, then disable only that obsolete
 # patch function in the main script.
@@ -53,7 +66,7 @@ if "CaptainArriveReturnToStore(db, assignmentID, captainID)" not in test:
 \tif returned.ReturnedAt == nil || returned.ReturnAcceptedByActorID == nil {
 \t\tt.Fatalf("partner receipt was not recorded: %+v", returned)
 \t}
-\tif err := db.QueryRow(`SELECT o.status,d.status,a.status FROM dsh_orders o JOIN dsh_assignments a ON a.order_id=o.id JOIN dsh_deliveries d ON d.assignment_id=a.id WHERE a.id=$1::uuid`, assignmentID).Scan(&orderStatus, &deliveryStatus, &assignmentStatus); err != nil {
+\tif err := db.QueryRow(`SELECT o.status,d.status,a.status FROM dsh_orders o JOIN dsh_assignments a ON a.order_id=o.id JOIN dsh_deliveries d ON d.assignment_id=a.id WHERE a.id=$1::uuid`, orderID).Scan(&orderStatus, &deliveryStatus, &assignmentStatus); err != nil {
 \t\tt.Fatal(err)
 \t}
 \tif orderStatus != "returned_to_store" || deliveryStatus != "returned_to_store" || assignmentStatus != "completed" {
@@ -74,4 +87,4 @@ function_start = patch.index("def patch_db_test() -> None:")
 function_end = patch.index("\ndef main() -> None:", function_start)
 patch = patch[:function_start] + "def patch_db_test() -> None:\n    return\n" + patch[function_end:]
 patch_path.write_text(patch, encoding="utf-8")
-print("Aligned slice7 patch with current routes, ownership boundary, and return test behavior.")
+print("Aligned slice7 patch with current routes, OpenAPI boundary, ownership, and return test behavior.")
