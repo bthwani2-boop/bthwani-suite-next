@@ -201,34 +201,134 @@ jobs:
         run: exit 1
 
       - name: DB proof — DSH financial outbox
+        id: db_outbox
+        continue-on-error: true
         shell: bash
         run: |
+          set -o pipefail
+          mkdir -p artifacts/cancellation-db-outbox
           cd services/dsh/backend
-          DSH_REQUIRE_DB_TESTS=true DATABASE_URL="$DSH_DATABASE_URL" go test ./internal/checkoutfinanceoutbox -count=1 -v
+          DSH_REQUIRE_DB_TESTS=true DATABASE_URL="$DSH_DATABASE_URL" go test ./internal/checkoutfinanceoutbox -count=1 -v 2>&1 \
+            | tee ../../../artifacts/cancellation-db-outbox/outbox.log
+          exit ${PIPESTATUS[0]}
+
+      - name: Upload DSH outbox database diagnostic
+        if: steps.db_outbox.outcome == 'failure'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: cancellation-db-outbox-${{ github.sha }}
+          path: artifacts/cancellation-db-outbox/outbox.log
+          if-no-files-found: error
+          retention-days: 2
+
+      - name: Stop on DSH outbox database failure
+        if: steps.db_outbox.outcome == 'failure'
+        shell: bash
+        run: exit 1
 
       - name: DB proof — DSH dispatch cancellation
+        id: db_dispatch
+        continue-on-error: true
         shell: bash
         run: |
+          set -o pipefail
+          mkdir -p artifacts/cancellation-db-dispatch
           cd services/dsh/backend
-          DSH_REQUIRE_DB_TESTS=true DATABASE_URL="$DSH_DATABASE_URL" go test ./internal/dispatch -count=1 -v
+          DSH_REQUIRE_DB_TESTS=true DATABASE_URL="$DSH_DATABASE_URL" go test ./internal/dispatch -count=1 -v 2>&1 \
+            | tee ../../../artifacts/cancellation-db-dispatch/dispatch.log
+          exit ${PIPESTATUS[0]}
+
+      - name: Upload DSH dispatch database diagnostic
+        if: steps.db_dispatch.outcome == 'failure'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: cancellation-db-dispatch-${{ github.sha }}
+          path: artifacts/cancellation-db-dispatch/dispatch.log
+          if-no-files-found: error
+          retention-days: 2
+
+      - name: Stop on DSH dispatch database failure
+        if: steps.db_dispatch.outcome == 'failure'
+        shell: bash
+        run: exit 1
 
       - name: DB proof — DSH pickup cancellation
+        id: db_pickup
+        continue-on-error: true
         shell: bash
         run: |
+          set -o pipefail
+          mkdir -p artifacts/cancellation-db-pickup
           cd services/dsh/backend
-          DSH_REQUIRE_DB_TESTS=true DATABASE_URL="$DSH_DATABASE_URL" go test ./internal/pickup -count=1 -v
+          DSH_REQUIRE_DB_TESTS=true DATABASE_URL="$DSH_DATABASE_URL" go test ./internal/pickup -count=1 -v 2>&1 \
+            | tee ../../../artifacts/cancellation-db-pickup/pickup.log
+          exit ${PIPESTATUS[0]}
+
+      - name: Upload DSH pickup database diagnostic
+        if: steps.db_pickup.outcome == 'failure'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: cancellation-db-pickup-${{ github.sha }}
+          path: artifacts/cancellation-db-pickup/pickup.log
+          if-no-files-found: error
+          retention-days: 2
+
+      - name: Stop on DSH pickup database failure
+        if: steps.db_pickup.outcome == 'failure'
+        shell: bash
+        run: exit 1
 
       - name: DB proof — WLT payment cancellation
+        id: db_wlt_payment
+        continue-on-error: true
         shell: bash
         run: |
+          set -o pipefail
+          mkdir -p artifacts/cancellation-db-wlt-payment
           cd services/wlt/backend
-          WLT_REQUIRE_DB_TESTS=true DATABASE_URL="$WLT_DATABASE_URL" go test ./internal/payment -count=1 -v
+          WLT_REQUIRE_DB_TESTS=true DATABASE_URL="$WLT_DATABASE_URL" go test ./internal/payment -count=1 -v 2>&1 \
+            | tee ../../../artifacts/cancellation-db-wlt-payment/payment.log
+          exit ${PIPESTATUS[0]}
+
+      - name: Upload WLT payment database diagnostic
+        if: steps.db_wlt_payment.outcome == 'failure'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: cancellation-db-wlt-payment-${{ github.sha }}
+          path: artifacts/cancellation-db-wlt-payment/payment.log
+          if-no-files-found: error
+          retention-days: 2
+
+      - name: Stop on WLT payment database failure
+        if: steps.db_wlt_payment.outcome == 'failure'
+        shell: bash
+        run: exit 1
 
       - name: DB proof — WLT refund integrity
+        id: db_wlt_refund
+        continue-on-error: true
         shell: bash
         run: |
+          set -o pipefail
+          mkdir -p artifacts/cancellation-db-wlt-refund
           cd services/wlt/backend
-          WLT_REQUIRE_DB_TESTS=true DATABASE_URL="$WLT_DATABASE_URL" go test ./internal/refund -count=1 -v
+          WLT_REQUIRE_DB_TESTS=true DATABASE_URL="$WLT_DATABASE_URL" go test ./internal/refund -count=1 -v 2>&1 \
+            | tee ../../../artifacts/cancellation-db-wlt-refund/refund.log
+          exit ${PIPESTATUS[0]}
+
+      - name: Upload WLT refund database diagnostic
+        if: steps.db_wlt_refund.outcome == 'failure'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: cancellation-db-wlt-refund-${{ github.sha }}
+          path: artifacts/cancellation-db-wlt-refund/refund.log
+          if-no-files-found: error
+          retention-days: 2
+
+      - name: Stop on WLT refund database failure
+        if: steps.db_wlt_refund.outcome == 'failure'
+        shell: bash
+        run: exit 1
 
       - name: Prove journey terminal invariants
         shell: bash
@@ -279,7 +379,14 @@ jobs:
             tools/scripts/fix-captain-route-renderer-types.py \
             tools/scripts/fix-wlt-invalid-response-refs.py \
             tools/scripts/patch-cancellation-pickup-resume.py \
-            tools/scripts/patch-cancellation-pickup-contract.py
+            tools/scripts/patch-cancellation-pickup-contract.py \
+            tools/scripts/patch-cancellation-outbox-db-fixtures.py \
+            tools/scripts/patch-cancellation-outbox-contract-test.py \
+            tools/scripts/patch-cancellation-pricing-db-fixtures.py \
+            tools/scripts/patch-cancellation-order-tenant-write.py \
+            tools/scripts/patch-cancellation-order-assignment-fixture.py \
+            tools/scripts/patch-cancellation-wlt-governed-routes.py \
+            tools/scripts/patch-cancellation-pickup-operations-ui.py
 
       - name: Commit verified closure changes
         shell: bash
