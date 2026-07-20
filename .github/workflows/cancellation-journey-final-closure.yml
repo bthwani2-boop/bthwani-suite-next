@@ -160,14 +160,21 @@ jobs:
             go test ./internal/payment ./internal/refund ./internal/http ./cmd/wlt-api -run '^$' -count=1
           )
 
-      - name: Typecheck all affected surfaces including captain
+      - name: Typecheck app-client cancellation surface
         shell: bash
-        run: |
-          set -euo pipefail
-          pnpm exec tsc -p apps/app-client/runtime/tsconfig.cancellation-journey.json --noEmit --pretty false
-          pnpm exec tsc -p apps/app-partner/runtime/tsconfig.cancellation-journey.json --noEmit --pretty false
-          pnpm exec tsc -p apps/app-captain/runtime/tsconfig.order-journey.json --noEmit --pretty false
-          pnpm exec tsc -p apps/control-panel/runtime/tsconfig.cancellation-journey.json --noEmit --pretty false
+        run: pnpm exec tsc -p apps/app-client/runtime/tsconfig.cancellation-journey.json --noEmit --pretty false
+
+      - name: Typecheck app-partner cancellation surface
+        shell: bash
+        run: pnpm exec tsc -p apps/app-partner/runtime/tsconfig.cancellation-journey.json --noEmit --pretty false
+
+      - name: Typecheck app-captain cancellation surface
+        shell: bash
+        run: pnpm exec tsc -p apps/app-captain/runtime/tsconfig.order-journey.json --noEmit --pretty false
+
+      - name: Typecheck control-panel cancellation surface
+        shell: bash
+        run: pnpm exec tsc -p apps/control-panel/runtime/tsconfig.cancellation-journey.json --noEmit --pretty false
 
       - name: Apply clean migrations and replay journey migrations
         shell: bash
