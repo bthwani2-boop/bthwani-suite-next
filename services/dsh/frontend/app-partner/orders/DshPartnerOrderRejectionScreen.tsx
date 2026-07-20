@@ -30,6 +30,8 @@ export type DshPartnerOrderRejectionScreenProps = {
     description?: string;
     requiresNote?: boolean;
   }>;
+  canAccept?: boolean;
+  canReject?: boolean;
   onAccept: () => void;
   onReject: (reasonId: string, reasonNote: string) => void;
   onBack?: () => void;
@@ -42,6 +44,8 @@ export function DshPartnerOrderRejectionScreen({
   amount,
   items,
   rejectionReasons,
+  canAccept = true,
+  canReject = true,
   onAccept,
   onReject,
   onBack,
@@ -52,6 +56,14 @@ export function DshPartnerOrderRejectionScreen({
   const [reasonNote, setReasonNote] = React.useState('');
   const [showRejectionPanel, setShowRejectionPanel] = React.useState(false);
   const selectedReason = rejectionReasons.find((reason) => reason.id === selectedReasonId);
+
+  React.useEffect(() => {
+    if (!canReject && showRejectionPanel) {
+      setShowRejectionPanel(false);
+      setSelectedReasonId(null);
+      setReasonNote('');
+    }
+  }, [canReject, showRejectionPanel]);
 
   if (state === 'loading') {
     return <Surface style={styles.root}><StateView title="جارٍ تثبيت القرار" loading /></Surface>;
@@ -75,7 +87,7 @@ export function DshPartnerOrderRejectionScreen({
       <Box gap={2}>
         <Text role="titleLg">قرار قبول أو إلغاء الطلب</Text>
         <Text role="bodyMd" tone="muted">
-          القرار يغيّر حالة الطلب فعليًا ويلغي أي مهمة تنفيذ تابعة عند اختيار الإلغاء.
+          الأزرار المعروضة هي الإجراءات التي يسمح بها DSH للحالة الحالية فقط.
         </Text>
       </Box>
 
@@ -89,7 +101,7 @@ export function DshPartnerOrderRejectionScreen({
       <Surface tone="action" gap={3}>
         <Box style={{ flexDirection: resolveRowDirection(direction), justifyContent: 'space-between', alignItems: 'center' }}>
           <Text role="titleMd" style={{ color: colorPalette.white }}>الطلب {orderCode}</Text>
-          <Chip label="ينتظر القرار" selected />
+          <Chip label={canAccept || canReject ? 'ينتظر القرار' : 'تم تحديث الحالة'} selected />
         </Box>
         <Text role="bodySm" style={{ color: colorPalette.white }}>الإجمالي: {amount}</Text>
       </Surface>
@@ -108,12 +120,23 @@ export function DshPartnerOrderRejectionScreen({
 
       {!showRejectionPanel ? (
         <Box gap={3} style={{ marginTop: spacing[4] }}>
-          <Button label="قبول الطلب وبدء التحضير" tone="primary" onPress={onAccept} />
-          <Button
-            label="إلغاء الطلب مع سبب"
-            tone="danger"
-            onPress={() => setShowRejectionPanel(true)}
-          />
+          {canAccept ? <Button label="قبول الطلب" tone="primary" onPress={onAccept} /> : null}
+          {canReject ? (
+            <Button
+              label="إلغاء الطلب مع سبب"
+              tone="danger"
+              onPress={() => setShowRejectionPanel(true)}
+            />
+          ) : null}
+          {!canAccept && !canReject ? (
+            <StateView
+              tone="warning"
+              title="لا يوجد قرار متاح"
+              description="تغيرت حالة الطلب. ارجع إلى لوحة الطلبات لقراءة الحالة الحالية."
+              actionLabel="العودة للطلبات"
+              onActionPress={onBack}
+            />
+          ) : null}
         </Box>
       ) : (
         <Surface tone="default" gap={3}>
@@ -159,8 +182,8 @@ export function DshPartnerOrderRejectionScreen({
             <Button
               label="تأكيد إلغاء الطلب"
               tone="danger"
-              disabled={!selectedReasonId || Boolean(selectedReason?.requiresNote && !reasonNote.trim())}
-              onPress={() => selectedReasonId && onReject(selectedReasonId, reasonNote.trim())}
+              disabled={!canReject || !selectedReasonId || Boolean(selectedReason?.requiresNote && !reasonNote.trim())}
+              onPress={() => canReject && selectedReasonId && onReject(selectedReasonId, reasonNote.trim())}
             />
             <Button
               label="تراجع"
