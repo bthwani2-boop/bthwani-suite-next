@@ -1,17 +1,7 @@
 import React from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
-import {
-  Button,
-  Icon,
-  MobileScrollView,
-  StateView,
-  Surface,
-  Text,
-  TopBar,
-  colorRoles,
-  spacing,
-} from '@bthwani/ui-kit';
-import type { DshCaptainLocationPush } from '../../shared/delivery';
+import { StyleSheet, View } from 'react-native';
+import { Box, Button, Icon, MobileScrollView, StateView, Surface, Text, TopBar, colorRoles, spacing } from '@bthwani/ui-kit';
+import type { DshCaptainLocationPush } from '../../shared/delivery/use-captain-order-runtime';
 
 export type OperationalCaptainExecutionScreenProps = {
   readonly assignmentId: string;
@@ -26,35 +16,6 @@ export type OperationalCaptainExecutionScreenProps = {
   readonly onPushLocation: (push: DshCaptainLocationPush) => Promise<unknown>;
 };
 
-async function readForegroundLocation(): Promise<{ latitude: number; longitude: number }> {
-  if (Platform.OS === 'web') {
-    return new Promise((resolve, reject) => {
-      if (typeof navigator === 'undefined' || !navigator.geolocation) {
-        reject(new Error('خدمة الموقع غير متاحة في هذا الجهاز.'));
-        return;
-      }
-      navigator.geolocation.getCurrentPosition(
-        (position) => resolve({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-        }),
-        () => reject(new Error('تعذر قراءة الموقع الحالي.')),
-        { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 },
-      );
-    });
-  }
-
-  // @ts-ignore optional device dependency
-  const Location = await import('expo-location');
-  const permission = await Location.requestForegroundPermissionsAsync();
-  if (!permission.granted) throw new Error('صلاحية الموقع مطلوبة أثناء تنفيذ المهمة.');
-  const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-  return {
-    latitude: position.coords.latitude,
-    longitude: position.coords.longitude,
-  };
-}
-
 export function OperationalCaptainExecutionScreen({
   assignmentId,
   orderId,
@@ -68,28 +29,30 @@ export function OperationalCaptainExecutionScreen({
   onPushLocation,
 }: OperationalCaptainExecutionScreenProps) {
   const [locationState, setLocationState] = React.useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-  const [locationMessage, setLocationMessage] = React.useState('');
-
-  if (!assignmentId) {
-    return (
-      <StateView
-        title="لا توجد مهمة نشطة"
-        description="اختر إسنادًا حقيقيًا من صندوق الطلبات قبل فتح التنفيذ الميداني."
-        tone="warning"
-        actionLabel="العودة"
-        onActionPress={onBack}
-      />
-    );
-  }
+  const [locationMessage, setLocationMessage] = React.useState<string | null>(null);
 
   const pushCurrentLocation = async () => {
+    if (!assignmentId || !captainId) {
+      setLocationState('error');
+      setLocationMessage('لا توجد مهمة نشطة مرتبطة بالكابتن.');
+      return;
+    }
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setLocationState('error');
+      setLocationMessage('خدمة الموقع غير متاحة على هذا الجهاز.');
+      return;
+    }
     setLocationState('loading');
-    setLocationMessage('');
+    setLocationMessage(null);
     try {
-      const point = await readForegroundLocation();
+      const point = await new Promise<{ latitude: number; longitude: number }>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(
+          (position) => resolve({ latitude: position.coords.latitude, longitude: position.coords.longitude }),
+          reject,
+          { enableHighAccuracy: true, maximumAge: 5_000, timeout: 10_000 },
+        );
+      });
       await onPushLocation({
-        // The runtime contract currently names this field orderId, but the
-        // authority key passed here is intentionally the assignment id.
         orderId: assignmentId,
         captainId,
         latitude: point.latitude,
@@ -106,7 +69,7 @@ export function OperationalCaptainExecutionScreen({
 
   return (
     <View style={styles.root}>
-      <TopBar title="تنفيذ المهمة" onBackPress={onBack} />
+      <TopBar title="تنفيذ المهمة" onBack={onBack} />
       <MobileScrollView fill padding={4} gap={4} contentContainerStyle={styles.content}>
         <Surface tone="action" gap={3}>
           <Text role="titleMd" style={styles.inverted}>{`الطلب #${orderId}`}</Text>
@@ -131,23 +94,24 @@ export function OperationalCaptainExecutionScreen({
             onPress={() => void pushCurrentLocation()}
           />
           {locationMessage ? (
-            <Text role="bodySm" tone={locationState === 'error' ? 'danger' : 'success'}>
-              {locationMessage}
-            </Text>
+            <StateView
+              title={locationState === 'success' ? 'تم تحديث الموقع' : 'تعذر تحديث الموقع'}
+              description={locationMessage}
+              tone={locationState === 'success' ? 'success' : 'danger'}
+            />
           ) : null}
         </Surface>
 
         <Surface tone="raised" gap={3}>
-          <Text role="titleSm">انتقالات المهمة</Text>
-          <Button label="تأكيد الاستلام من المتجر" onPress={onConfirmPickup} />
-          {podRequired ? (
-            <Button label="فتح إثبات التسليم" tone="primary" onPress={onOpenPod} />
-          ) : (
-            <Button label="تأكيد التسليم" tone="primary" onPress={onConfirmDelivery} />
-          )}
-          <Text role="caption" tone="muted">
-            كل انتقال يثبت في DSH ويظهر للعميل ولوحة العمليات؛ لا يوجد تحديث محلي متفائل.
-          </Text>
+          <Text role="bodyStrong">إجراءات المهمة</Text>
+          <Box gap={2}>
+            <Button label="تأكيد الاستلام" onPress={onConfirmPickup} />
+            <Button
+              label={podRequired ? 'فتح إثبات التسليم' : 'تأكيد التسليم'}
+              tone="secondary"
+              onPress={podRequired ? onOpenPod : onConfirmDelivery}
+            />
+          </Box>
         </Surface>
       </MobileScrollView>
     </View>
@@ -155,8 +119,8 @@ export function OperationalCaptainExecutionScreen({
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colorRoles.surfaceWarm },
-  content: { paddingBottom: spacing[12] },
+  root: { flex: 1, backgroundColor: colorRoles.surfaceBase },
+  content: { paddingBottom: spacing[8] },
   row: { flexDirection: 'row-reverse', alignItems: 'center', gap: spacing[3] },
   flex: { flex: 1, alignItems: 'flex-end', gap: spacing[1] },
   inverted: { color: colorRoles.surfaceBase, textAlign: 'right' },
