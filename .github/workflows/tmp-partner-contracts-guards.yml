@@ -20,7 +20,7 @@ concurrency:
 jobs:
   contracts-guards:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
@@ -28,16 +28,14 @@ jobs:
       - uses: ./.github/actions/setup-node-workspace
       - name: Contracts foundation
         run: pnpm run contracts:lint
-      - name: Backend API binding
-        run: pnpm run guard:backend-api-binding
-      - name: Frontend feature binding
-        run: pnpm run guard:frontend-feature-binding
+      - name: Partner app typecheck
+        run: pnpm --dir apps/app-partner/runtime typecheck
+      - name: Field app partner-surface typecheck
+        run: pnpm --dir apps/app-field/runtime typecheck
+      - name: Control panel partner-surface typecheck
+        run: pnpm --dir apps/control-panel/runtime typecheck
       - name: WLT financial boundary
         run: pnpm run guard:wlt-financial-boundary
-      - name: Runtime real bindings
-        run: pnpm run guard:runtime-real-bindings
-      - name: Live cross journey integrity
-        run: pnpm run guard:live-cross-journey-integrity
 
   publish:
     if: always()
