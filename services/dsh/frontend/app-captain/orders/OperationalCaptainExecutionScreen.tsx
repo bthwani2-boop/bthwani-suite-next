@@ -1,7 +1,10 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Box, Button, Icon, MobileScrollView, StateView, Surface, Text, TopBar, colorRoles, spacing } from '@bthwani/ui-kit';
-import type { DshCaptainLocationPush } from '../../shared/delivery/use-captain-order-runtime';
+import {
+  readCaptainForegroundLocation,
+  type DshCaptainLocationPush,
+} from '../../shared/delivery/use-captain-order-runtime';
 
 export type OperationalCaptainExecutionScreenProps = {
   readonly assignmentId: string;
@@ -37,27 +40,14 @@ export function OperationalCaptainExecutionScreen({
       setLocationMessage('لا توجد مهمة نشطة مرتبطة بالكابتن.');
       return;
     }
-    if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      setLocationState('error');
-      setLocationMessage('خدمة الموقع غير متاحة على هذا الجهاز.');
-      return;
-    }
     setLocationState('loading');
     setLocationMessage(null);
     try {
-      const point = await new Promise<{ latitude: number; longitude: number }>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(
-          (position) => resolve({ latitude: position.coords.latitude, longitude: position.coords.longitude }),
-          reject,
-          { enableHighAccuracy: true, maximumAge: 5_000, timeout: 10_000 },
-        );
-      });
+      const point = await readCaptainForegroundLocation();
       await onPushLocation({
-        orderId: assignmentId,
-        captainId,
+        assignmentId,
         latitude: point.latitude,
         longitude: point.longitude,
-        lifecycleStatus: currentStageLabel,
       });
       setLocationState('success');
       setLocationMessage('تم تحديث آخر موقع فعلي للمهمة.');
