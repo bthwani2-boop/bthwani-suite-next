@@ -1,0 +1,233 @@
+name: Cancellation Journey Final Closure
+run-name: Cancellation Final Closure · ${{ github.sha }}
+
+on:
+  push:
+    branches: ["journey/cancellation-refund-reconciliation-closure"]
+    paths:
+      - ".github/cancellation-journey-final-trigger"
+      - "services/dsh/backend/internal/dispatch/**"
+      - "services/dsh/backend/internal/pickup/**"
+      - "services/dsh/backend/internal/http/pickup.go"
+      - "services/dsh/backend/internal/orders/**"
+      - "services/dsh/backend/internal/checkoutfinanceoutbox/**"
+      - "services/dsh/backend/internal/wlt/cancel_for_order.go"
+      - "services/dsh/backend/internal/http/order_cancellations.go"
+      - "services/dsh/database/migrations/dsh-090_order_cancellation_refund_lifecycle.sql"
+      - "services/dsh/database/migrations/dsh-091_pickup_cancellation_state.sql"
+      - "services/dsh/contracts/dsh.openapi.yaml"
+      - "services/dsh/clients/generated/dsh-api.ts"
+      - "services/dsh/frontend/shared/dispatch/**"
+      - "services/dsh/frontend/shared/delivery/captain-inbox.model.ts"
+      - "services/dsh/frontend/shared/delivery/captain.surface-model.ts"
+      - "services/dsh/tests/dispatch-controller-core.test.mjs"
+      - "services/wlt/backend/internal/payment/**"
+      - "services/wlt/backend/internal/refund/**"
+      - "services/wlt/backend/internal/http/order_cancellation_routes.go"
+      - "services/wlt/contracts/wlt.openapi.yaml"
+      - "services/wlt/clients/generated/wlt-api.ts"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  statuses: write
+
+concurrency:
+  group: cancellation-final-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  close-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      dsh-postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: dsh_journey
+          POSTGRES_USER: dsh_journey
+          POSTGRES_PASSWORD: dsh_journey
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd "pg_isready -U dsh_journey -d dsh_journey"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+      wlt-postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: wlt_journey
+          POSTGRES_USER: wlt_journey
+          POSTGRES_PASSWORD: wlt_journey
+        ports:
+          - 55433:5432
+        options: >-
+          --health-cmd "pg_isready -U wlt_journey -d wlt_journey"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DSH_DATABASE_URL: postgres://dsh_journey:dsh_journey@localhost:55432/dsh_journey?sslmode=disable
+      WLT_DATABASE_URL: postgres://wlt_journey:wlt_journey@localhost:55433/wlt_journey?sslmode=disable
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: true
+          fetch-depth: 0
+
+      - uses: ./.github/actions/setup-node-workspace
+
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache: true
+          cache-dependency-path: |
+            services/dsh/backend/go.sum
+            services/wlt/backend/go.sum
+
+      - name: Apply source closure
+        shell: bash
+        run: python tools/scripts/close-cancellation-refund-reconciliation.py
+
+      - name: Format governed Go sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          gofmt -w \
+            services/dsh/backend/internal/dispatch/dispatch.go \
+            services/dsh/backend/internal/pickup/pickup.go \
+            services/dsh/backend/internal/pickup/service.go \
+            services/dsh/backend/internal/pickup/pickup_db_test.go \
+            services/dsh/backend/internal/http/pickup.go \
+            services/wlt/backend/internal/payment/order_cancellation.go \
+            services/wlt/backend/internal/refund/refund_atomic.go
+
+      - name: Generate governed clients and prove contract paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm run openapi:generate:dsh
+          pnpm run openapi:generate:wlt
+          grep -F '/wlt/order-cancellations' services/wlt/contracts/wlt.openapi.yaml
+          grep -F 'WltOrderCancellationRequest' services/wlt/contracts/wlt.openapi.yaml
+          grep -F 'createWltOrderCancellation' services/wlt/clients/generated/wlt-api.ts
+          grep -F 'cancelled' services/dsh/clients/generated/dsh-api.ts
+          grep -F 'DshPickupSessionStatus' services/dsh/clients/generated/dsh-api.ts
+
+      - name: Compile targeted DSH and WLT boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          (
+            cd services/dsh/backend
+            go test ./internal/orders ./internal/checkoutfinanceoutbox ./internal/wlt ./internal/dispatch ./internal/pickup ./internal/http ./cmd/dsh-api -run '^$' -count=1
+          )
+          (
+            cd services/wlt/backend
+            go test ./internal/payment ./internal/refund ./internal/http ./cmd/wlt-api -run '^$' -count=1
+          )
+
+      - name: Typecheck every affected surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm exec tsc -p apps/app-client/runtime/tsconfig.cancellation-journey.json --noEmit --pretty false
+          pnpm exec tsc -p apps/app-partner/runtime/tsconfig.cancellation-journey.json --noEmit --pretty false
+          pnpm exec tsc -p apps/app-captain/runtime/tsconfig.order-journey.json --noEmit --pretty false
+          pnpm exec tsc -p apps/control-panel/runtime/tsconfig.cancellation-journey.json --noEmit --pretty false
+
+      - name: Apply clean database migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in $(find services/dsh/database/migrations -maxdepth 1 -type f -name '*.sql' | sort); do
+            psql "$DSH_DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file" >/dev/null
+          done
+          for file in $(find services/wlt/database/migrations -maxdepth 1 -type f -name '*.sql' | sort); do
+            psql "$WLT_DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file" >/dev/null
+          done
+          psql "$DSH_DATABASE_URL" -v ON_ERROR_STOP=1 -f services/dsh/database/migrations/dsh-090_order_cancellation_refund_lifecycle.sql >/dev/null
+          psql "$DSH_DATABASE_URL" -v ON_ERROR_STOP=1 -f services/dsh/database/migrations/dsh-091_pickup_cancellation_state.sql >/dev/null
+          psql "$WLT_DATABASE_URL" -v ON_ERROR_STOP=1 -f services/wlt/database/migrations/wlt-026_refund_reference_integrity.sql >/dev/null
+
+      - name: Run database integration proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          (
+            cd services/dsh/backend
+            DSH_REQUIRE_DB_TESTS=true DATABASE_URL="$DSH_DATABASE_URL" \
+              go test ./internal/orders ./internal/checkoutfinanceoutbox ./internal/dispatch ./internal/pickup -count=1
+          )
+          (
+            cd services/wlt/backend
+            WLT_REQUIRE_DB_TESTS=true DATABASE_URL="$WLT_DATABASE_URL" \
+              go test ./internal/payment ./internal/refund -count=1
+          )
+
+      - name: Prove cancellation terminal invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$DSH_DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          DO $$
+          BEGIN
+            IF NOT EXISTS (
+              SELECT 1 FROM information_schema.columns
+              WHERE table_name='dsh_pickup_sessions' AND column_name='cancelled_at'
+            ) THEN
+              RAISE EXCEPTION 'pickup cancelled_at is missing';
+            END IF;
+            IF NOT EXISTS (
+              SELECT 1 FROM pg_constraint WHERE conname='dsh_pickup_sessions_terminal_state_check'
+            ) THEN
+              RAISE EXCEPTION 'pickup terminal state constraint is missing';
+            END IF;
+          END $$;
+          SQL
+          grep -F "AND a.status IN ('offered', 'accepted')" services/dsh/backend/internal/dispatch/dispatch.go
+          grep -F 'ErrCancelled' services/dsh/backend/internal/pickup/service.go
+          grep -F 'PICKUP_CANCELLED' services/dsh/backend/internal/http/pickup.go
+          grep -F 'trackingCancelledState' services/dsh/frontend/shared/dispatch/dispatch.controller-core.ts
+
+      - name: Commit verified closure changes
+        id: commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "pushed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix(cancellation-journey): close captain pickup and WLT contract gaps"
+          git push origin HEAD:journey/cancellation-refund-reconciliation-closure
+          echo "pushed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Publish focused final status
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          JOB_STATUS: ${{ job.status }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        shell: bash
+        run: |
+          state=failure
+          [ "$JOB_STATUS" = success ] && state=success
+          jq -n \
+            --arg state "$state" \
+            --arg context "Cancellation Journey Final Closure" \
+            --arg description "targeted cancellation/refund/pickup/captain closure: $JOB_STATUS" \
+            --arg target_url "$RUN_URL" \
+            '{state:$state,context:$context,description:$description,target_url:$target_url}' > status.json
+          curl --fail-with-body --silent --show-error -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$REPOSITORY/statuses/$SHA" \
+            -d @status.json
