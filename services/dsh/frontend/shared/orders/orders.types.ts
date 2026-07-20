@@ -3,14 +3,7 @@ import type { components } from "../../../clients/generated/dsh-api";
 type GeneratedDshOrder = components["schemas"]["DshOrder"];
 type GeneratedDshOrderStatus = components["schemas"]["DshOrderStatus"];
 
-export type DshOrderStatus =
-  | GeneratedDshOrderStatus
-  | "cancelled_by_client"
-  | "cancelled_by_store"
-  | "cancelled_by_operator"
-  | "cancelled_no_driver"
-  | "failed_payment"
-  | "failed_dispatch";
+export type DshOrderStatus = GeneratedDshOrderStatus;
 
 export type DshOrderItem = components["schemas"]["DshOrderItem"];
 export type DshOrder = Omit<GeneratedDshOrder, "status"> & {
@@ -61,7 +54,6 @@ export type DshOrderActionState =
   | { readonly kind: "error"; readonly message: string };
 
 export const CANCELLATION_ORDER_STATUSES: readonly DshOrderStatus[] = [
-  "cancelled",
   "cancelled_by_client",
   "cancelled_by_store",
   "cancelled_by_operator",
@@ -84,7 +76,6 @@ export const ORDER_STATUS_LABELS: Record<DshOrderStatus, string> = {
   picked_up: "تم الاستلام",
   arrived_customer: "وصل الكابتن للعميل",
   delivered: "تم التسليم",
-  cancelled: "ملغي — حالة قديمة",
   cancelled_by_client: "ألغاه العميل",
   cancelled_by_store: "ألغاه المتجر",
   cancelled_by_operator: "ألغته العمليات",
