@@ -9,23 +9,30 @@ import (
 )
 
 type operatorOrderWorkboardRow struct {
-	ID                     string    `json:"id"`
-	StoreID                string    `json:"storeId"`
-	FulfillmentMode        string    `json:"fulfillmentMode"`
-	ClientID               string    `json:"clientId"`
-	Status                 string    `json:"status"`
-	CaptainID              *string   `json:"captainId"`
-	CaptainLifecycleStatus *string   `json:"captainLifecycleStatus"`
-	PodMediaKey            *string   `json:"podMediaKey"`
-	DeliveryFailureReason  *string   `json:"deliveryFailureReason"`
-	TotalPrice             float64   `json:"totalPrice"`
-	CreatedAt              time.Time `json:"createdAt"`
-	UpdatedAt              time.Time `json:"updatedAt"`
+	ID                       string     `json:"id"`
+	StoreID                  string     `json:"storeId"`
+	FulfillmentMode          string     `json:"fulfillmentMode"`
+	ClientID                 string     `json:"clientId"`
+	Status                   string     `json:"status"`
+	CaptainID                *string    `json:"captainId"`
+	CaptainLifecycleStatus   *string    `json:"captainLifecycleStatus"`
+	PodMediaKey              *string    `json:"podMediaKey"`
+	DeliveryFailureReason    *string    `json:"deliveryFailureReason"`
+	CancellationReasonCode   *string    `json:"cancellationReasonCode"`
+	CancellationNote         *string    `json:"cancellationNote"`
+	CancelledByRole          *string    `json:"cancelledByRole"`
+	CancelledAt              *time.Time `json:"cancelledAt"`
+	FinancialClosureStatus   string     `json:"financialClosureStatus"`
+	FinancialClosureReference *string   `json:"financialClosureReference"`
+	FinancialClosureFailure  *string    `json:"financialClosureFailure"`
+	TotalPrice               float64    `json:"totalPrice"`
+	CreatedAt                time.Time  `json:"createdAt"`
+	UpdatedAt                time.Time  `json:"updatedAt"`
 }
 
 // GET /dsh/operator/order-workboard?status=...&limit=...
-// Returns one joined row per order. Assignment and delivery values come from
-// the latest dispatch assignment; the UI never infers them from order status.
+// Returns one joined row per order. Assignment, cancellation and financial
+// closure values come from their owning records; the UI never infers them.
 func (s *protectedStoreServer) handleOperatorOrderWorkboard(w http.ResponseWriter, r *http.Request) {
 	_, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead, "operator")
 	if !ok {
@@ -44,9 +51,16 @@ func (s *protectedStoreServer) handleOperatorOrderWorkboard(w http.ResponseWrite
 			latest.delivery_status,
 			latest.pod_reference,
 			latest.delivery_note,
+			NULLIF(o.cancellation_reason_code,''),
+			NULLIF(o.cancellation_note,''),
+			NULLIF(o.cancelled_by_role,''),
+			o.cancelled_at,
+			o.financial_closure_status,
+			NULLIF(o.financial_closure_reference,''),
+			finance.last_error,
 			COALESCE(items.total_price, 0)::float8,
 			o.created_at,
-			GREATEST(o.updated_at, COALESCE(latest.updated_at, o.updated_at))
+			GREATEST(o.updated_at, COALESCE(latest.updated_at, o.updated_at), COALESCE(finance.updated_at, o.updated_at))
 		FROM dsh_orders o
 		LEFT JOIN LATERAL (
 			SELECT
@@ -61,6 +75,13 @@ func (s *protectedStoreServer) handleOperatorOrderWorkboard(w http.ResponseWrite
 			ORDER BY a.created_at DESC
 			LIMIT 1
 		) latest ON TRUE
+		LEFT JOIN LATERAL (
+			SELECT NULLIF(last_error,'') AS last_error, updated_at
+			FROM dsh_checkout_financial_closure_outbox
+			WHERE order_id=o.id
+			ORDER BY created_at DESC
+			LIMIT 1
+		) finance ON TRUE
 		LEFT JOIN LATERAL (
 			SELECT SUM(oi.quantity * oi.unit_price) AS total_price
 			FROM dsh_order_items oi
@@ -88,6 +109,13 @@ func (s *protectedStoreServer) handleOperatorOrderWorkboard(w http.ResponseWrite
 			&row.CaptainLifecycleStatus,
 			&row.PodMediaKey,
 			&row.DeliveryFailureReason,
+			&row.CancellationReasonCode,
+			&row.CancellationNote,
+			&row.CancelledByRole,
+			&row.CancelledAt,
+			&row.FinancialClosureStatus,
+			&row.FinancialClosureReference,
+			&row.FinancialClosureFailure,
 			&row.TotalPrice,
 			&row.CreatedAt,
 			&row.UpdatedAt,
