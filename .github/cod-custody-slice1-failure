@@ -1,17 +1,55 @@
-apply=failure
-contract=skipped
-compile=skipped
+apply=success
+contract=success
+compile=failure
 typecheck=skipped
 database=skipped
 invariants=skipped
-source_sha=801f18b4b802f589e588b6403a72e87d9d50ddbd
+source_sha=e9d4ea34c63314318ff088f6ba4d2ec551b12037
 
 === artifacts/cod-custody-slice1/apply.log ===
-Traceback (most recent call last):
-  File "/home/runner/work/bthwani-suite-next/bthwani-suite-next/tools/scripts/patch-cod-custody-slice1.py", line 571, in <module>
-    main()
-  File "/home/runner/work/bthwani-suite-next/bthwani-suite-next/tools/scripts/patch-cod-custody-slice1.py", line 561, in main
-    patch_wlt_cod_domain()
-  File "/home/runner/work/bthwani-suite-next/bthwani-suite-next/tools/scripts/patch-cod-custody-slice1.py", line 295, in patch_wlt_cod_domain
-    raise RuntimeError("ListCodRecords block not found")
-RuntimeError: ListCodRecords block not found
+Verified permanent COD custody implementation and prepared focused TypeScript config.
+Removed stale COD client, aligned client tests, imports, captain section, and governed WLT fixtures.
+
+=== artifacts/cod-custody-slice1/compile.log ===
+go: downloading github.com/google/uuid v1.6.0
+go: downloading github.com/lib/pq v1.12.3
+# dsh-api/internal/wlt [dsh-api/internal/wlt.test]
+internal/wlt/client_resilience_test.go:161:14: c.NotifyDeliveryCompleted undefined (type *Client has no field or method NotifyDeliveryCompleted)
+internal/wlt/client_resilience_test.go:161:60: undefined: NotifyDeliveryCompletedInput
+internal/wlt/client_resilience_test.go:203:11: undefined: NotifyDeliveryCompletedInput
+internal/wlt/client_resilience_test.go:208:16: c.NotifyDeliveryCompleted undefined (type *Client has no field or method NotifyDeliveryCompleted)
+internal/wlt/client_resilience_test.go:216:17: c.NotifyDeliveryCompleted undefined (type *Client has no field or method NotifyDeliveryCompleted)
+internal/wlt/mutation_headers_test.go:58:19: client.NotifyDeliveryCompleted undefined (type *Client has no field or method NotifyDeliveryCompleted)
+internal/wlt/mutation_headers_test.go:58:65: undefined: NotifyDeliveryCompletedInput
+FAIL	dsh-api/internal/wlt [build failed]
+ok  	dsh-api/internal/wltoutbox	0.004s [no tests to run]
+ok  	dsh-api/internal/dispatch	0.004s [no tests to run]
+ok  	dsh-api/internal/partnerdelivery	0.004s [no tests to run]
+FAIL
+
+=== artifacts/cod-custody-slice1/contract.log ===
+
+> bthwani-suite-next@0.0.0 openapi:generate:wlt /home/runner/work/bthwani-suite-next/bthwani-suite-next
+> pnpm dlx openapi-typescript@7.13.0 services/wlt/contracts/wlt.openapi.yaml -o services/wlt/clients/generated/wlt-api.ts
+
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Progress: resolved 21, reused 19, downloaded 2, added 0
+Packages: +33
++++++++++++++++++++++++++++++++++
+Progress: resolved 33, reused 30, downloaded 3, added 33, done
+✨ openapi-typescript 7.13.0
+🚀 services/wlt/contracts/wlt.openapi.yaml → services/wlt/clients/generated/wlt-api.ts [138.2ms]
+        - collectorType
+          description: Compatibility projection, present only when collectorType is captain.
+        collectorType:
+      required: [orderId, collectorType, collectorId, partnerId, checkoutIntentId]
+        collectorType:
+        - collectorId
+        collectorId: { type: string, minLength: 1 }
+      required: [orderId, collectorType, collectorId, partnerId, checkoutIntentId]
+        collectorId: { type: string, minLength: 1 }
+            /** @description Compatibility projection, present only when collectorType is captain. */
+            collectorType: "captain" | "store_courier" | "partner_store";
+            collectorType: "captain" | "store_courier" | "partner_store";
+            collectorId: string;
+            collectorId: string;
