@@ -20,20 +20,26 @@ concurrency:
 jobs:
   contracts-guards:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-node-workspace
-      - name: Validate partner contracts and bindings
-        shell: bash
-        run: |
-          set -euo pipefail
-          pnpm run contracts:lint
-          pnpm run guard:partner-surface-truth
-          pnpm run guard:partner-support-truth
-          pnpm run guard:wlt-financial-boundary
+      - name: Contracts foundation
+        run: pnpm run contracts:lint
+      - name: API binding
+        run: pnpm run guard:api-binding
+      - name: Backend API binding
+        run: pnpm run guard:backend-api-binding
+      - name: Frontend feature binding
+        run: pnpm run guard:frontend-feature-binding
+      - name: WLT financial boundary
+        run: pnpm run guard:wlt-financial-boundary
+      - name: Runtime real bindings
+        run: pnpm run guard:runtime-real-bindings
+      - name: Live cross journey integrity
+        run: pnpm run guard:live-cross-journey-integrity
 
   publish:
     if: always()
@@ -49,7 +55,16 @@ jobs:
           RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
         shell: bash
         run: |
+          set -euo pipefail
           state=failure; [ "$RESULT" = success ] && state=success
           jq -n --arg state "$state" --arg context "Partner Contracts Guards" --arg description "result=$RESULT run=${GITHUB_RUN_ID}" --arg target_url "$RUN_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' > payload.json
-          curl --fail-with-body --silent --show-error -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" "https://api.github.com/repos/$REPOSITORY/statuses/$SHA" -d @payload.json
+          for attempt in 1 2 3 4 5 6 7 8; do
+            if curl --fail-with-body --silent --show-error -X POST \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/$REPOSITORY/statuses/$SHA" \
+              -d @payload.json; then break; fi
+            sleep $((attempt * 3))
+          done
           test "$state" = success
