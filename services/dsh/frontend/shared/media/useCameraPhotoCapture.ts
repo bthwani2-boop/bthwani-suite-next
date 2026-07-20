@@ -18,9 +18,10 @@ export function useCameraPhotoCapture() {
         const result = await ImagePicker.launchCameraAsync({
           quality: 0.8,
         });
+        const asset = result.assets?.[0];
 
-        if (!result.canceled && result.assets && result.assets.length > 0) {
-          return { uri: result.assets[0].uri };
+        if (!result.canceled && asset) {
+          return { uri: asset.uri };
         }
 
         return null;
