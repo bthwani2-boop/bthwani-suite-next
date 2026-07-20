@@ -6,20 +6,20 @@ import (
 )
 
 type Cancellation struct {
-	ID                       string  `json:"id"`
-	OrderID                  string  `json:"orderId"`
-	ActorID                  string  `json:"actorId"`
-	ActorRole                string  `json:"actorRole"`
-	ReasonCode               string  `json:"reasonCode"`
-	ReasonNote               string  `json:"reasonNote"`
-	FromStatus               string  `json:"fromStatus"`
-	ToStatus                 string  `json:"toStatus"`
-	FinancialClosureStatus   string  `json:"financialClosureStatus"`
-	FinancialReference       string  `json:"financialReference"`
-	FinancialResultAction    string  `json:"financialResultAction"`
-	FinancialFailure         string  `json:"financialFailure"`
-	CreatedAt                string  `json:"createdAt"`
-	UpdatedAt                string  `json:"updatedAt"`
+	ID                     string `json:"id"`
+	OrderID                string `json:"orderId"`
+	ActorID                string `json:"actorId"`
+	ActorRole              string `json:"actorRole"`
+	ReasonCode             string `json:"reasonCode"`
+	ReasonNote             string `json:"reasonNote"`
+	FromStatus             string `json:"fromStatus"`
+	ToStatus               string `json:"toStatus"`
+	FinancialClosureStatus string `json:"financialClosureStatus"`
+	FinancialReference     string `json:"financialReference"`
+	FinancialResultAction  string `json:"financialResultAction"`
+	FinancialFailure       string `json:"financialFailure"`
+	CreatedAt              string `json:"createdAt"`
+	UpdatedAt              string `json:"updatedAt"`
 }
 
 func GetCancellation(db *sql.DB, orderID string) (*Cancellation, error) {

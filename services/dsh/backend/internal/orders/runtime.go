@@ -189,12 +189,12 @@ func MarkReadyForPickup(db *sql.DB, orderID, actorID string) (*Order, error) {
 }
 
 type CancellationInput struct {
-	OrderID      string
-	TenantID     string
-	ActorID      string
-	ActorRole    string
-	ReasonCode   string
-	ReasonNote   string
+	OrderID       string
+	TenantID      string
+	ActorID       string
+	ActorRole     string
+	ReasonCode    string
+	ReasonNote    string
 	CorrelationID string
 }
 
@@ -281,10 +281,10 @@ func CancelOrder(db *sql.DB, input CancellationInput) (*Order, error) {
 
 	var (
 		checkoutIntentID string
-		clientID string
-		tenantID string
+		clientID         string
+		tenantID         string
 		paymentSessionID string
-		current OrderStatus
+		current          OrderStatus
 	)
 	err = tx.QueryRow(`
 		SELECT checkout_intent_id::text, client_id, tenant_id, wlt_payment_ref_id, status
@@ -408,12 +408,12 @@ func CancelOrder(db *sql.DB, input CancellationInput) (*Order, error) {
 	if paymentSessionID != "" {
 		orderID := input.OrderID
 		if err := checkoutfinanceoutbox.Enqueue(tx, checkoutfinanceoutbox.EnqueueInput{
-			EventType: checkoutfinanceoutbox.EventTypeCancelForOrder,
+			EventType:        checkoutfinanceoutbox.EventTypeCancelForOrder,
 			CheckoutIntentID: checkoutIntentID,
 			PaymentSessionID: paymentSessionID,
-			OrderID: &orderID,
-			ClientID: clientID,
-			Reason: input.ReasonCode + ": " + input.ReasonNote,
+			OrderID:          &orderID,
+			ClientID:         clientID,
+			Reason:           input.ReasonCode + ": " + input.ReasonNote,
 		}); err != nil {
 			return nil, err
 		}
@@ -449,11 +449,11 @@ func RejectOrder(db *sql.DB, orderID, actorID, reason string) (*Order, error) {
 		return nil, ErrInvalid
 	}
 	return CancelOrder(db, CancellationInput{
-		OrderID: orderID,
-		ActorID: actorID,
-		ActorRole: "partner",
-		ReasonCode: "other",
-		ReasonNote: reason,
+		OrderID:       orderID,
+		ActorID:       actorID,
+		ActorRole:     "partner",
+		ReasonCode:    "other",
+		ReasonNote:    reason,
 		CorrelationID: "partner-reject:" + orderID,
 	})
 }
@@ -464,11 +464,11 @@ func CancelOrderByOperator(db *sql.DB, orderID, actorID, reason string) (*Order,
 		return nil, ErrInvalid
 	}
 	return CancelOrder(db, CancellationInput{
-		OrderID: orderID,
-		ActorID: actorID,
-		ActorRole: "operator",
-		ReasonCode: "other",
-		ReasonNote: reason,
+		OrderID:       orderID,
+		ActorID:       actorID,
+		ActorRole:     "operator",
+		ReasonCode:    "other",
+		ReasonNote:    reason,
 		CorrelationID: "operator-cancel:" + orderID,
 	})
 }

@@ -9,25 +9,25 @@ import (
 )
 
 type operatorOrderWorkboardRow struct {
-	ID                       string     `json:"id"`
-	StoreID                  string     `json:"storeId"`
-	FulfillmentMode          string     `json:"fulfillmentMode"`
-	ClientID                 string     `json:"clientId"`
-	Status                   string     `json:"status"`
-	CaptainID                *string    `json:"captainId"`
-	CaptainLifecycleStatus   *string    `json:"captainLifecycleStatus"`
-	PodMediaKey              *string    `json:"podMediaKey"`
-	DeliveryFailureReason    *string    `json:"deliveryFailureReason"`
-	CancellationReasonCode   *string    `json:"cancellationReasonCode"`
-	CancellationNote         *string    `json:"cancellationNote"`
-	CancelledByRole          *string    `json:"cancelledByRole"`
-	CancelledAt              *time.Time `json:"cancelledAt"`
-	FinancialClosureStatus   string     `json:"financialClosureStatus"`
-	FinancialClosureReference *string   `json:"financialClosureReference"`
-	FinancialClosureFailure  *string    `json:"financialClosureFailure"`
-	TotalPrice               float64    `json:"totalPrice"`
-	CreatedAt                time.Time  `json:"createdAt"`
-	UpdatedAt                time.Time  `json:"updatedAt"`
+	ID                        string     `json:"id"`
+	StoreID                   string     `json:"storeId"`
+	FulfillmentMode           string     `json:"fulfillmentMode"`
+	ClientID                  string     `json:"clientId"`
+	Status                    string     `json:"status"`
+	CaptainID                 *string    `json:"captainId"`
+	CaptainLifecycleStatus    *string    `json:"captainLifecycleStatus"`
+	PodMediaKey               *string    `json:"podMediaKey"`
+	DeliveryFailureReason     *string    `json:"deliveryFailureReason"`
+	CancellationReasonCode    *string    `json:"cancellationReasonCode"`
+	CancellationNote          *string    `json:"cancellationNote"`
+	CancelledByRole           *string    `json:"cancelledByRole"`
+	CancelledAt               *time.Time `json:"cancelledAt"`
+	FinancialClosureStatus    string     `json:"financialClosureStatus"`
+	FinancialClosureReference *string    `json:"financialClosureReference"`
+	FinancialClosureFailure   *string    `json:"financialClosureFailure"`
+	TotalPrice                float64    `json:"totalPrice"`
+	CreatedAt                 time.Time  `json:"createdAt"`
+	UpdatedAt                 time.Time  `json:"updatedAt"`
 }
 
 // GET /dsh/operator/order-workboard?status=...&limit=...
