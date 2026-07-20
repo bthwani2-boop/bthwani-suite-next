@@ -1,10 +1,14 @@
 import React from 'react';
+import type { GovernedPartnerOrderItem } from '../shared/partner/partner.adapters';
 import { DshPartnerRouteRenderer } from './DshPartnerRouteRenderer';
 import { OperationalOrderDecisionScreen } from './orders/OperationalOrderDecisionScreen';
 import { OperationalOrdersInboxScreen } from './orders/OperationalOrdersInboxScreen';
 
 type LegacyRendererProps = React.ComponentProps<typeof DshPartnerRouteRenderer>;
-type Props = Omit<LegacyRendererProps, 'handleMarkReady'>;
+type Props = Omit<LegacyRendererProps, 'handleMarkReady' | 'partnerOrders' | 'refreshOrders'> & {
+  readonly partnerOrders: readonly GovernedPartnerOrderItem[];
+  readonly refreshOrders: () => void | Promise<void>;
+};
 
 /**
  * Journey-specific renderer that owns all operational order routes. The legacy
