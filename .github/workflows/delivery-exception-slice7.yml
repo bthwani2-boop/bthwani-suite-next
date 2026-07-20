@@ -54,20 +54,41 @@ jobs:
           cache-dependency-path: services/dsh/backend/go.sum
 
       - name: Apply dual return receipt handshake
+        id: apply
+        continue-on-error: true
         shell: bash
         run: |
-          set -euo pipefail
-          python tools/scripts/patch-delivery-exception-slice7-preflight.py
-          python tools/scripts/patch-delivery-exception-slice7.py
-          python tools/scripts/patch-delivery-exception-slice7-corrections.py
-          gofmt -w \
-            services/dsh/backend/internal/orders/orders.go \
-            services/dsh/backend/internal/dispatch/dispatch.go \
-            services/dsh/backend/internal/dispatch/delivery_exceptions.go \
-            services/dsh/backend/internal/dispatch/delivery_return_db_test.go \
-            services/dsh/backend/internal/http/dispatch.go \
-            services/dsh/backend/internal/http/partner_delivery.go \
-            services/dsh/backend/internal/http/server.go
+          set -o pipefail
+          mkdir -p artifacts/delivery-exception-slice7-apply
+          {
+            set -euo pipefail
+            python tools/scripts/patch-delivery-exception-slice7-preflight.py
+            python tools/scripts/patch-delivery-exception-slice7.py
+            python tools/scripts/patch-delivery-exception-slice7-corrections.py
+            gofmt -w \
+              services/dsh/backend/internal/orders/orders.go \
+              services/dsh/backend/internal/dispatch/dispatch.go \
+              services/dsh/backend/internal/dispatch/delivery_exceptions.go \
+              services/dsh/backend/internal/dispatch/delivery_return_db_test.go \
+              services/dsh/backend/internal/http/dispatch.go \
+              services/dsh/backend/internal/http/partner_delivery.go \
+              services/dsh/backend/internal/http/server.go
+          } 2>&1 | tee artifacts/delivery-exception-slice7-apply/apply.log
+          exit ${PIPESTATUS[0]}
+
+      - name: Upload apply diagnostic
+        if: steps.apply.outcome == 'failure'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: delivery-exception-slice7-apply-${{ github.sha }}
+          path: artifacts/delivery-exception-slice7-apply/apply.log
+          if-no-files-found: error
+          retention-days: 2
+
+      - name: Stop on apply failure
+        if: steps.apply.outcome == 'failure'
+        shell: bash
+        run: exit 1
 
       - name: Generate and prove DSH contract
         shell: bash
