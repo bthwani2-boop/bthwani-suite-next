@@ -88,6 +88,8 @@ jobs:
         run: exit 1
 
       - name: Generate WLT client and prove contract
+        id: contract
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
@@ -97,6 +99,10 @@ jobs:
           grep -F 'collectorType' services/wlt/clients/generated/wlt-api.ts
           grep -F 'collectorId' services/wlt/clients/generated/wlt-api.ts
           ! grep -A35 'WltCreateCodRecordRequest:' services/wlt/contracts/wlt.openapi.yaml | grep -F 'amountMinorUnits'
+
+      - name: Stop on contract failure
+        if: steps.contract.outcome == 'failure'
+        run: exit 1
 
       - name: Compile DSH and WLT COD boundaries
         id: compile
@@ -181,6 +187,8 @@ jobs:
         run: exit 1
 
       - name: Prove no local captain finance fiction
+        id: invariants
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
@@ -202,12 +210,34 @@ jobs:
           ! grep -F 'paymentMethods' "$screen"
           ! grep -Ei '(mock|fixture|demo)[A-Za-z0-9_]*[[:space:]]*=' "$screen"
 
+      - name: Stop on invariant failure
+        if: steps.invariants.outcome == 'failure'
+        run: exit 1
+
+      - name: Commit focused failure marker
+        if: failure()
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'apply=%s\ncontract=%s\ncompile=%s\ntypecheck=%s\ndatabase=%s\ninvariants=%s\nsource_sha=%s\n' \
+            '${{ steps.apply.outcome }}' '${{ steps.contract.outcome }}' '${{ steps.compile.outcome }}' \
+            '${{ steps.typecheck.outcome }}' '${{ steps.database.outcome }}' '${{ steps.invariants.outcome }}' \
+            '${{ github.sha }}' > .github/cod-custody-slice1-failure
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/cod-custody-slice1-failure
+          git commit -m "ci(cod-custody): record focused slice one failure [skip ci]"
+          git pull --rebase origin journey/cod-cash-custody-settlement-closure
+          git push origin HEAD:journey/cod-cash-custody-settlement-closure
+
       - name: Remove temporary machinery and commit verified slice
+        if: success()
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f .github/cod-custody-slice1-failure
           git rm -f \
             .github/workflows/cod-custody-slice1.yml \
             tools/scripts/patch-cod-custody-slice1.py \
