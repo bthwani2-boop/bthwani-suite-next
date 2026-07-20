@@ -6,9 +6,9 @@ import { spacing } from '../../tokens/spacing';
 
 export type TopBarProps = {
   title: string;
-  subtitle?: string;
-  variant?: 'primary' | 'secondary';
-  onBack?: () => void;
+  subtitle?: string | undefined;
+  variant?: 'primary' | 'secondary' | undefined;
+  onBack?: (() => void) | undefined;
   style?: any;
 };
 
