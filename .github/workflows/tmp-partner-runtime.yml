@@ -1,0 +1,76 @@
+name: Temporary Partner Runtime Closure
+run-name: Partner Runtime · ${{ github.sha }}
+
+on:
+  push:
+    branches: ["tmp/partner-closure-run"]
+    paths:
+      - ".github/partner-runtime-trigger"
+      - ".github/workflows/tmp-partner-runtime.yml"
+      - "tools/scripts/invoke-partner-multisurface-runtime-closure.ps1"
+      - "tools/scripts/test-partner-multisurface-runtime-journey.ps1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: tmp-partner-runtime-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - name: Verify PowerShell
+        shell: bash
+        run: pwsh --version
+      - name: Build Identity
+        shell: bash
+        run: docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml --profile identity build identity-api
+      - name: Run focused partner runtime
+        shell: pwsh
+        run: ./tools/scripts/invoke-partner-multisurface-runtime-closure.ps1
+      - name: Diagnostics
+        if: failure()
+        shell: bash
+        run: |
+          docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml --profile identity --profile workforce --profile dsh --profile media --profile wlt ps -a || true
+          docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml --profile identity --profile workforce --profile dsh --profile media --profile wlt logs --tail=400 identity-api workforce-api dsh-api wlt-api postgres minio || true
+          find artifacts/partner-journey-closure -maxdepth 1 -type f -print -exec tail -n 300 {} \; || true
+      - name: Stop runtime
+        if: always()
+        shell: pwsh
+        run: ./infra/docker/scripts/runtime.ps1 -Action down -Profiles identity,workforce,dsh,media,wlt
+      - name: Upload runtime evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: partner-runtime-evidence-${{ github.sha }}
+          path: artifacts/partner-journey-closure
+          if-no-files-found: warn
+          retention-days: 14
+
+  publish:
+    if: always()
+    needs: [runtime]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish runtime status
+        env:
+          RESULT: ${{ needs.runtime.result }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        shell: bash
+        run: |
+          state=failure; [ "$RESULT" = success ] && state=success
+          jq -n --arg state "$state" --arg context "Partner Runtime" --arg description "result=$RESULT run=${GITHUB_RUN_ID}" --arg target_url "$RUN_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' > payload.json
+          curl --fail-with-body --silent --show-error -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" "https://api.github.com/repos/$REPOSITORY/statuses/$SHA" -d @payload.json
+          test "$state" = success
