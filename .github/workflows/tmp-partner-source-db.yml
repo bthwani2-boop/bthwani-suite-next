@@ -64,7 +64,18 @@ jobs:
       - name: Run partner unit tests
         working-directory: services/dsh/backend
         shell: bash
-        run: go test ./internal/partner -count=1 -v
+        run: |
+          set -o pipefail
+          mkdir -p ../../../artifacts/partner-source-db
+          go test ./internal/partner -count=1 -json | tee ../../../artifacts/partner-source-db/go-test.json
+      - name: Upload partner test diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: partner-source-db-${{ github.sha }}
+          path: artifacts/partner-source-db
+          if-no-files-found: warn
+          retention-days: 7
       - name: Apply DSH migration chain
         shell: bash
         run: |
