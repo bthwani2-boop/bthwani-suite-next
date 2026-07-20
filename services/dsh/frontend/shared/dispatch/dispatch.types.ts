@@ -28,6 +28,7 @@ export type DshTrackingState =
   | { readonly kind: "loading" }
   | { readonly kind: "tracking_active"; readonly assignment: DshDispatchAssignment }
   | { readonly kind: "delivered"; readonly assignment: DshDispatchAssignment }
+  | { readonly kind: "cancelled"; readonly assignment: DshDispatchAssignment }
   | { readonly kind: "error"; readonly message: string };
 
 export const DELIVERY_STATUS_LABELS: Record<DshDeliveryStatus, string> = {
@@ -37,6 +38,7 @@ export const DELIVERY_STATUS_LABELS: Record<DshDeliveryStatus, string> = {
   picked_up: "تم الاستلام من المتجر",
   arrived_customer: "وصل الكابتن للعميل",
   delivered: "تم التسليم",
+  cancelled: "ألغيت المهمة بسبب إلغاء الطلب",
 };
 
 export const ASSIGNMENT_STATUS_LABELS: Record<DshAssignmentStatus, string> = {
@@ -44,4 +46,5 @@ export const ASSIGNMENT_STATUS_LABELS: Record<DshAssignmentStatus, string> = {
   accepted: "مقبولة",
   declined: "مرفوضة",
   completed: "مكتملة",
+  cancelled: "ملغاة",
 };
