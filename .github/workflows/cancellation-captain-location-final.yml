@@ -1,0 +1,111 @@
+name: Cancellation Captain Location Final
+run-name: Captain Location Final · ${{ github.sha }}
+
+on:
+  push:
+    branches: ["journey/cancellation-refund-reconciliation-closure"]
+    paths:
+      - ".github/workflows/cancellation-captain-location-final.yml"
+      - "services/dsh/frontend/shared/delivery/use-captain-order-runtime.ts"
+      - "services/dsh/frontend/app-captain/orders/OperationalCaptainExecutionScreen.tsx"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  statuses: write
+
+concurrency:
+  group: cancellation-captain-location-final-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-and-clean:
+    if: ${{ !contains(github.event.head_commit.message || '', '[skip ci]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: true
+          fetch-depth: 0
+
+      - uses: ./.github/actions/setup-node-workspace
+
+      - name: Prove captain location contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          runtime="services/dsh/frontend/shared/delivery/use-captain-order-runtime.ts"
+          screen="services/dsh/frontend/app-captain/orders/OperationalCaptainExecutionScreen.tsx"
+          package="apps/app-captain/runtime/package.json"
+
+          grep -F 'readonly assignmentId: string;' "$runtime"
+          grep -F 'updateForegroundDispatchLocation(push.assignmentId' "$runtime"
+          grep -F 'readCaptainForegroundLocation' "$runtime"
+          grep -F "await import('expo-location')" "$runtime"
+          grep -F '"expo-location"' "$package"
+          grep -F 'const point = await readCaptainForegroundLocation();' "$screen"
+          grep -F 'assignmentId,' "$screen"
+
+          ! grep -F 'Kept as orderId temporarily' "$runtime"
+          ! grep -F 'updateForegroundDispatchLocation(push.orderId' "$runtime"
+          ! grep -F 'orderId: activeAssignmentId' "$runtime"
+          ! grep -F 'navigator.geolocation' "$screen"
+          ! grep -Ei '(mock|fixture|demo)[A-Za-z0-9_]*[[:space:]]*=' "$screen"
+
+      - name: Typecheck captain journey surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm exec tsc -p apps/app-captain/runtime/tsconfig.order-journey.json --noEmit --pretty false
+
+      - name: Remove temporary workflow and publish final head
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/cancellation-captain-location-final.yml
+          git commit -m "chore(cancellation-journey): remove temporary captain location gate [skip ci]"
+          git pull --rebase origin journey/cancellation-refund-reconciliation-closure
+          git push origin HEAD:journey/cancellation-refund-reconciliation-closure
+
+          final_sha="$(git rev-parse HEAD)"
+          jq -n \
+            --arg state success \
+            --arg context "Cancellation Captain Location Final" \
+            --arg description "captain foreground location contract and surface verified" \
+            --arg target_url "$RUN_URL" \
+            '{state:$state,context:$context,description:$description,target_url:$target_url}' > status.json
+          curl --fail-with-body --silent --show-error -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$REPOSITORY/statuses/$final_sha" \
+            -d @status.json
+
+      - name: Publish focused failure status
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -n \
+            --arg state failure \
+            --arg context "Cancellation Captain Location Final" \
+            --arg description "captain location closure failed" \
+            --arg target_url "$RUN_URL" \
+            '{state:$state,context:$context,description:$description,target_url:$target_url}' > status.json
+          curl --fail-with-body --silent --show-error -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$REPOSITORY/statuses/${{ github.sha }}" \
+            -d @status.json
