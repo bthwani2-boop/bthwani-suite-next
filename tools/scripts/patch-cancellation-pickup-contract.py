@@ -26,6 +26,10 @@ def main() -> None:
     if tenant_write_patch.exists():
         runpy.run_path(str(tenant_write_patch), run_name="__main__")
 
+    wlt_routes_patch = Path("tools/scripts/patch-cancellation-wlt-governed-routes.py")
+    if wlt_routes_patch.exists():
+        runpy.run_path(str(wlt_routes_patch), run_name="__main__")
+
     text = CONTRACT.read_text(encoding="utf-8")
 
     if "  /dsh/partner/orders/{orderId}/pickup:\n" not in text:
@@ -86,7 +90,7 @@ def main() -> None:
 
     CONTRACT.write_text(text, encoding="utf-8")
     Path("tools/scripts/patch-cancellation-pickup-contract.py").unlink(missing_ok=True)
-    print("Partner pickup contract, tenant fixtures, governed pricing, and explicit order tenancy patched.")
+    print("Cancellation journey contract, tenancy, pricing, fixtures, and governed WLT routes patched.")
 
 
 if __name__ == "__main__":
