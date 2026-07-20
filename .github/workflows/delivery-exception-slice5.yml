@@ -83,7 +83,7 @@ jobs:
           cd services/dsh/backend
           go test ./internal/orders ./internal/dispatch ./internal/http ./cmd/dsh-api -run '^$' -count=1
 
-      - name: Typecheck affected multi-surface frontends
+      - name: Typecheck every affected surface
         id: surfaces_typecheck
         continue-on-error: true
         shell: bash
@@ -91,10 +91,17 @@ jobs:
           set -o pipefail
           mkdir -p artifacts/delivery-exception-slice5-typecheck
           {
-            pnpm exec tsc -p apps/app-client/runtime/tsconfig.cancellation-journey.json --noEmit --pretty false
-            pnpm exec tsc -p apps/app-partner/runtime/tsconfig.cancellation-journey.json --noEmit --pretty false
-            pnpm exec tsc -p apps/app-captain/runtime/tsconfig.order-journey.json --noEmit --pretty false
-            pnpm exec tsc -p apps/control-panel/runtime/tsconfig.delivery-exception-journey.json --noEmit --pretty false
+            status=0
+            for config in \
+              apps/app-client/runtime/tsconfig.cancellation-journey.json \
+              apps/app-partner/runtime/tsconfig.cancellation-journey.json \
+              apps/app-captain/runtime/tsconfig.order-journey.json \
+              apps/control-panel/runtime/tsconfig.delivery-exception-journey.json
+            do
+              echo "=== TYPECHECK $config ==="
+              pnpm exec tsc -p "$config" --noEmit --pretty false || status=1
+            done
+            exit "$status"
           } 2>&1 | tee artifacts/delivery-exception-slice5-typecheck/typecheck.log
           exit ${PIPESTATUS[0]}
 
