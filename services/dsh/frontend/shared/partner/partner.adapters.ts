@@ -3,7 +3,7 @@
 
 import type { DshRuntimeOrderRow } from '../operations/dsh-operational-runtime-adapter';
 import { getSurfaceModeCapability } from '../identity-access';
-import type { DshOrder } from '../orders/orders.types';
+import type { DshPartnerOrder, DshPartnerOrderAction } from '../orders/orders.types';
 import type {
   DshOrderLifecycleHandoff,
 } from '../orders/dsh-order-lifecycle-handoffs';
@@ -56,6 +56,10 @@ const nextActionMap: Record<PartnerOrderStatus, string> = {
   cancelled: 'عرض سبب الإلغاء',
 };
 
+export type GovernedPartnerOrderItem = PartnerOrderItem & {
+  readonly allowedActions: readonly DshPartnerOrderAction[];
+};
+
 type CanonicalOrderShape = {
   readonly id?: string;
   readonly storeId?: string;
@@ -65,6 +69,7 @@ type CanonicalOrderShape = {
   readonly rejectionReason?: string;
   readonly createdAt?: string;
   readonly updatedAt?: string;
+  readonly allowedActions?: readonly DshPartnerOrderAction[];
   readonly items?: readonly {
     readonly productName?: string;
     readonly quantity?: number;
@@ -104,14 +109,16 @@ function formatElapsed(createdAt: Date): { label: string; minutes: number } {
 }
 
 /**
- * Canonical partner adapter. It consumes the actor-scoped `/dsh/partner/orders`
- * contract directly and deliberately rejects missing fulfillment mode instead
- * of silently inventing one.
+ * Canonical partner adapter. It consumes the actor-scoped partner workboard
+ * contract and rejects responses without server-authoritative actions.
  */
-export function mapDshOrderToPartnerOrderItem(order: DshOrder): PartnerOrderItem {
+export function mapDshOrderToPartnerOrderItem(order: DshPartnerOrder): GovernedPartnerOrderItem {
   const raw = order as unknown as CanonicalOrderShape;
   const orderId = String(raw.id ?? '');
   if (!orderId) throw new Error('partner order response is missing id');
+  if (!Array.isArray(raw.allowedActions)) {
+    throw new Error(`partner order ${orderId} is missing server allowedActions`);
+  }
 
   const status = resolvePartnerStatus(raw.status);
   const orderMode = resolveOrderMode(orderId, raw.fulfillmentMode);
@@ -138,6 +145,7 @@ export function mapDshOrderToPartnerOrderItem(order: DshOrder): PartnerOrderItem
     orderCode: `#${orderId.slice(-6).toUpperCase()}`,
     branchLabel: String(raw.storeId ?? 'الفرع المرتبط بالحساب'),
     status,
+    allowedActions: [...raw.allowedActions],
     priority: acceptanceRisk ? 'high' : 'normal',
     orderTypeLabel: resolveOrderTypeLabel(orderMode),
     orderMode,
