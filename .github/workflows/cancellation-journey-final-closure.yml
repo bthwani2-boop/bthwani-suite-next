@@ -175,10 +175,30 @@ jobs:
           psql "$WLT_DATABASE_URL" -v ON_ERROR_STOP=1 -f services/wlt/database/migrations/wlt-026_refund_reference_integrity.sql >/dev/null
 
       - name: DB proof — DSH orders cancellation
+        id: db_orders
+        continue-on-error: true
         shell: bash
         run: |
+          set -o pipefail
+          mkdir -p artifacts/cancellation-db-orders
           cd services/dsh/backend
-          DSH_REQUIRE_DB_TESTS=true DATABASE_URL="$DSH_DATABASE_URL" go test ./internal/orders -count=1 -v
+          DSH_REQUIRE_DB_TESTS=true DATABASE_URL="$DSH_DATABASE_URL" go test ./internal/orders -count=1 -v 2>&1 \
+            | tee ../../../artifacts/cancellation-db-orders/orders.log
+          exit ${PIPESTATUS[0]}
+
+      - name: Upload DSH orders database diagnostic
+        if: steps.db_orders.outcome == 'failure'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: cancellation-db-orders-${{ github.sha }}
+          path: artifacts/cancellation-db-orders/orders.log
+          if-no-files-found: error
+          retention-days: 2
+
+      - name: Stop on DSH orders database failure
+        if: steps.db_orders.outcome == 'failure'
+        shell: bash
+        run: exit 1
 
       - name: DB proof — DSH financial outbox
         shell: bash
