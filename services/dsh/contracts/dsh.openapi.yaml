@@ -6708,6 +6708,31 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/DshErrorResponse" }
 
+  /dsh/captain/dispatch/assignments/{assignmentId}/return-to-store/complete:
+    parameters:
+      - name: assignmentId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      operationId: completeDshCaptainReturnToStore
+      summary: Confirm that a governed returned order was handed back to the store.
+      tags: [DshDispatch]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Return completed and assignment closed.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshDeliveryExceptionResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Assignment is not in returning_to_store state.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshErrorResponse" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -6797,7 +6822,7 @@ components:
         expectedVersion: { type: integer, minimum: 1 }
         action:
           type: string
-          enum: [retry_same_captain, reassign_captain]
+          enum: [retry_same_captain, reassign_captain, return_to_store]
         note: { type: string, minLength: 5, maxLength: 1000 }
         newCaptainId:
           type: string
@@ -6883,6 +6908,8 @@ components:
         resolutionNote: { type: string, nullable: true }
         replacementAssignmentId: { type: string, format: uuid, nullable: true }
         replacementCaptainId: { type: string, nullable: true }
+        returnStartedAt: { type: string, format: date-time, nullable: true }
+        returnedAt: { type: string, format: date-time, nullable: true }
         version: { type: integer, minimum: 1 }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
@@ -8052,6 +8079,8 @@ components:
         - driver_arrived_store
         - picked_up
         - arrived_customer
+        - returning_to_store
+        - returned_to_store
         - delivered
         - cancelled_by_client
         - cancelled_by_store
@@ -8233,7 +8262,7 @@ components:
 
     DshDeliveryStatus:
       type: string
-      enum: [assigned, driver_assigned, driver_arrived_store, picked_up, arrived_customer, delivered, cancelled]
+      enum: [assigned, driver_assigned, driver_arrived_store, picked_up, arrived_customer, returning_to_store, returned_to_store, delivered, cancelled]
 
     DshDelivery:
       type: object

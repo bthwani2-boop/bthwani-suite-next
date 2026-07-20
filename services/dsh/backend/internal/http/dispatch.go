@@ -288,10 +288,26 @@ func (s *protectedStoreServer) handleResolveDeliveryException(w http.ResponseWri
 		item, err = dispatch.ResolveDeliveryExceptionRetrySameCaptain(s.db, r.PathValue("exceptionId"), body.ExpectedVersion, body.Note, actor.ID)
 	case "reassign_captain":
 		item, err = dispatch.ResolveDeliveryExceptionReassignCaptain(s.db, r.PathValue("exceptionId"), body.ExpectedVersion, body.NewCaptainID, body.Note, actor.ID)
+	case "return_to_store":
+		item, err = dispatch.ResolveDeliveryExceptionReturnToStore(s.db, r.PathValue("exceptionId"), body.ExpectedVersion, body.Note, actor.ID)
 	default:
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "unsupported delivery exception resolution action")
 		return
 	}
+	if err != nil {
+		writeDeliveryExceptionError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"exception": marshalDeliveryException(item)})
+}
+
+// POST /dsh/captain/dispatch/assignments/{assignmentId}/return-to-store/complete
+func (s *protectedStoreServer) handleCompleteReturnToStore(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "captain")
+	if !ok {
+		return
+	}
+	item, err := dispatch.CompleteReturnToStore(s.db, r.PathValue("assignmentId"), actor.ID)
 	if err != nil {
 		writeDeliveryExceptionError(w, err)
 		return

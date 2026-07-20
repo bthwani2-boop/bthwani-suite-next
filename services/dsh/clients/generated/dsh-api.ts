@@ -4134,6 +4134,25 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dsh/captain/dispatch/assignments/{assignmentId}/return-to-store/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignmentId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm that a governed returned order was handed back to the store. */
+        post: operations["completeDshCaptainReturnToStore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -4144,7 +4163,7 @@ export interface components {
         DshResolveDeliveryExceptionRequest: {
             expectedVersion: number;
             /** @enum {string} */
-            action: "retry_same_captain" | "reassign_captain";
+            action: "retry_same_captain" | "reassign_captain" | "return_to_store";
             note: string;
             /** @description Required only when action is reassign_captain. */
             newCaptainId?: string;
@@ -4197,6 +4216,10 @@ export interface components {
             /** Format: uuid */
             replacementAssignmentId?: string | null;
             replacementCaptainId?: string | null;
+            /** Format: date-time */
+            returnStartedAt?: string | null;
+            /** Format: date-time */
+            returnedAt?: string | null;
             version: number;
             /** Format: date-time */
             createdAt: string;
@@ -4844,7 +4867,7 @@ export interface components {
          * @description Explicit operational terminal states; the ambiguous legacy `cancelled` value is forbidden.
          * @enum {string}
          */
-        DshOrderStatus: "pending" | "store_accepted" | "preparing" | "ready_for_pickup" | "driver_assigned" | "driver_arrived_store" | "picked_up" | "arrived_customer" | "delivered" | "cancelled_by_client" | "cancelled_by_store" | "cancelled_by_operator" | "cancelled_no_driver" | "failed_payment" | "failed_dispatch";
+        DshOrderStatus: "pending" | "store_accepted" | "preparing" | "ready_for_pickup" | "driver_assigned" | "driver_arrived_store" | "picked_up" | "arrived_customer" | "returning_to_store" | "returned_to_store" | "delivered" | "cancelled_by_client" | "cancelled_by_store" | "cancelled_by_operator" | "cancelled_no_driver" | "failed_payment" | "failed_dispatch";
         /**
          * @description DSH projection of the WLT-owned financial closure decision.
          * @enum {string}
@@ -4938,7 +4961,7 @@ export interface components {
         /** @enum {string} */
         DshAssignmentStatus: "offered" | "accepted" | "declined" | "completed" | "cancelled";
         /** @enum {string} */
-        DshDeliveryStatus: "assigned" | "driver_assigned" | "driver_arrived_store" | "picked_up" | "arrived_customer" | "delivered" | "cancelled";
+        DshDeliveryStatus: "assigned" | "driver_assigned" | "driver_arrived_store" | "picked_up" | "arrived_customer" | "returning_to_store" | "returned_to_store" | "delivered" | "cancelled";
         DshDelivery: {
             id: string;
             assignmentId: string;
@@ -14350,6 +14373,39 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             /** @description Version conflict or assignment no longer eligible for retry. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+        };
+    };
+    completeDshCaptainReturnToStore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Return completed and assignment closed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshDeliveryExceptionResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            /** @description Assignment is not in returning_to_store state. */
             409: {
                 headers: {
                     [name: string]: unknown;

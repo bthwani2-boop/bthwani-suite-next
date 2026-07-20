@@ -57,6 +57,8 @@ type DeliveryException struct {
 	ResolutionNote          *string
 	ReplacementAssignmentID *string
 	ReplacementCaptainID    *string
+	ReturnStartedAt         *time.Time
+	ReturnedAt              *time.Time
 	Version                 int
 	CreatedAt               time.Time
 	UpdatedAt               time.Time
@@ -431,6 +433,143 @@ func ResolveDeliveryExceptionReassignCaptain(db *sql.DB, id string, expectedVers
 	return GetDeliveryException(db, id)
 }
 
+func ResolveDeliveryExceptionReturnToStore(db *sql.DB, id string, expectedVersion int, note, actorID string) (*DeliveryException, error) {
+	note = strings.TrimSpace(note)
+	actorID = strings.TrimSpace(actorID)
+	if strings.TrimSpace(id) == "" || expectedVersion <= 0 || actorID == "" || len(note) < 5 {
+		return nil, fmt.Errorf("%w: id, expectedVersion, actor, and return note are required", ErrInvalid)
+	}
+	if len(note) > 1000 {
+		return nil, fmt.Errorf("%w: return note must not exceed 1000 characters", ErrInvalid)
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	current, err := getDeliveryExceptionForUpdate(tx, id)
+	if err != nil {
+		return nil, err
+	}
+	if current.Status == DeliveryExceptionResolved {
+		if current.ResolutionAction != nil && *current.ResolutionAction == "return_to_store" && current.ResolutionNote != nil && *current.ResolutionNote == note {
+			return current, nil
+		}
+		return nil, fmt.Errorf("%w: delivery exception was already resolved differently", ErrConflict)
+	}
+	if current.Version != expectedVersion {
+		return nil, fmt.Errorf("%w: delivery exception version changed", ErrConflict)
+	}
+	var assignmentStatus AssignmentStatus
+	var deliveryStatus DeliveryStatus
+	var orderStatus string
+	if err := tx.QueryRow(`
+		SELECT a.status,d.status,o.status
+		FROM dsh_assignments a
+		JOIN dsh_deliveries d ON d.assignment_id=a.id
+		JOIN dsh_orders o ON o.id=a.order_id
+		WHERE a.id=$1::uuid AND a.captain_id=$2 AND o.id=$3::uuid
+		FOR UPDATE OF a,d,o`, current.AssignmentID, current.CaptainID, current.OrderID).
+		Scan(&assignmentStatus, &deliveryStatus, &orderStatus); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	if assignmentStatus != AssignmentAccepted || (deliveryStatus != DeliveryPickedUp && deliveryStatus != DeliveryArrivedCustomer) {
+		return nil, fmt.Errorf("%w: return-to-store is allowed only after pickup and before delivery", ErrConflict)
+	}
+	if _, err := tx.Exec(`UPDATE dsh_deliveries SET status='returning_to_store', note=$1, updated_at=NOW() WHERE assignment_id=$2::uuid`, note, current.AssignmentID); err != nil {
+		return nil, err
+	}
+	if _, err := tx.Exec(`UPDATE dsh_orders SET status='returning_to_store', updated_at=NOW() WHERE id=$1::uuid`, current.OrderID); err != nil {
+		return nil, err
+	}
+	if _, err := tx.Exec(`INSERT INTO dsh_order_status_events(order_id,actor_role,from_status,to_status,note) VALUES($1::uuid,'operator',$2,'returning_to_store',$3)`, current.OrderID, orderStatus, note); err != nil {
+		return nil, err
+	}
+	res, err := tx.Exec(`
+		UPDATE dsh_delivery_exceptions
+		SET status='resolved', resolved_at=NOW(), resolved_by_actor_id=$1,
+		    resolution_action='return_to_store', resolution_note=$2,
+		    return_started_at=NOW(), version=version+1, updated_at=NOW()
+		WHERE id=$3::uuid AND version=$4 AND status IN ('open','acknowledged')`, actorID, note, id, expectedVersion)
+	if err != nil {
+		return nil, err
+	}
+	if n, _ := res.RowsAffected(); n != 1 {
+		return nil, fmt.Errorf("%w: delivery exception version changed", ErrConflict)
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return GetDeliveryException(db, id)
+}
+
+func CompleteReturnToStore(db *sql.DB, assignmentID, captainID string) (*DeliveryException, error) {
+	assignmentID = strings.TrimSpace(assignmentID)
+	captainID = strings.TrimSpace(captainID)
+	if assignmentID == "" || captainID == "" {
+		return nil, fmt.Errorf("%w: assignment and captain are required", ErrInvalid)
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	var assignmentStatus AssignmentStatus
+	var deliveryStatus DeliveryStatus
+	var orderID, orderStatus string
+	if err := tx.QueryRow(`
+		SELECT a.status,d.status,a.order_id::text,o.status
+		FROM dsh_assignments a
+		JOIN dsh_deliveries d ON d.assignment_id=a.id
+		JOIN dsh_orders o ON o.id=a.order_id
+		WHERE a.id=$1::uuid AND a.captain_id=$2
+		FOR UPDATE OF a,d,o`, assignmentID, captainID).
+		Scan(&assignmentStatus, &deliveryStatus, &orderID, &orderStatus); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	if assignmentStatus != AssignmentAccepted || deliveryStatus != DeliveryReturningStore || orderStatus != "returning_to_store" {
+		return nil, fmt.Errorf("%w: assignment is not returning to store", ErrConflict)
+	}
+	row := tx.QueryRow(`
+		SELECT `+deliveryExceptionColumns+`
+		FROM dsh_delivery_exceptions e
+		WHERE e.assignment_id=$1::uuid AND e.status='resolved'
+		  AND e.resolution_action='return_to_store' AND e.returned_at IS NULL
+		ORDER BY e.resolved_at DESC LIMIT 1 FOR UPDATE`, assignmentID)
+	item, err := scanDeliveryException(row.Scan)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	if _, err := tx.Exec(`UPDATE dsh_deliveries SET status='returned_to_store', updated_at=NOW() WHERE assignment_id=$1::uuid`, assignmentID); err != nil {
+		return nil, err
+	}
+	if _, err := tx.Exec(`UPDATE dsh_assignments SET status='completed', completed_at=NOW(), updated_at=NOW() WHERE id=$1::uuid`, assignmentID); err != nil {
+		return nil, err
+	}
+	if _, err := tx.Exec(`UPDATE dsh_orders SET status='returned_to_store', updated_at=NOW() WHERE id=$1::uuid`, orderID); err != nil {
+		return nil, err
+	}
+	if _, err := tx.Exec(`INSERT INTO dsh_order_status_events(order_id,actor_role,from_status,to_status,note) VALUES($1::uuid,'captain','returning_to_store','returned_to_store','returned order handed back to store')`, orderID); err != nil {
+		return nil, err
+	}
+	if _, err := tx.Exec(`UPDATE dsh_delivery_exceptions SET returned_at=NOW(), version=version+1, updated_at=NOW() WHERE id=$1::uuid AND returned_at IS NULL`, item.ID); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return GetDeliveryException(db, item.ID)
+}
+
 func getDeliveryExceptionForUpdate(tx *sql.Tx, id string) (*DeliveryException, error) {
 	row := tx.QueryRow(`SELECT `+deliveryExceptionColumns+` FROM dsh_delivery_exceptions e WHERE e.id=$1::uuid FOR UPDATE`, id)
 	item, err := scanDeliveryException(row.Scan)
@@ -460,7 +599,7 @@ func GetCaptainOpenDeliveryException(db *sql.DB, assignmentID, captainID string)
 		SELECT `+deliveryExceptionColumns+`
 		FROM dsh_delivery_exceptions e
 		JOIN dsh_assignments a ON a.id=e.assignment_id
-		WHERE e.assignment_id=$1::uuid AND a.captain_id=$2 AND e.status IN ('open','acknowledged')
+		WHERE e.assignment_id=$1::uuid AND a.captain_id=$2 AND (e.status IN ('open','acknowledged') OR (e.status='resolved' AND e.resolution_action='return_to_store' AND e.returned_at IS NULL))
 		ORDER BY e.reported_at DESC LIMIT 1`, assignmentID, captainID)
 	item, err := scanDeliveryException(row.Scan)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -514,7 +653,7 @@ const deliveryExceptionColumns = `
 	e.reason_code, e.note, e.delivery_status_at_report, e.severity, e.status,
 	e.correlation_id, e.reported_latitude, e.reported_longitude, e.reported_at,
 	e.acknowledged_at, e.acknowledged_by_actor_id, e.resolved_at, e.resolved_by_actor_id, e.resolution_action,
-	e.resolution_note, e.replacement_assignment_id::text, e.replacement_captain_id, e.version, e.created_at, e.updated_at`
+	e.resolution_note, e.replacement_assignment_id::text, e.replacement_captain_id, e.return_started_at, e.returned_at, e.version, e.created_at, e.updated_at`
 
 type deliveryExceptionScanner func(dest ...any) error
 
@@ -525,7 +664,7 @@ func scanDeliveryException(scan deliveryExceptionScanner) (*DeliveryException, e
 		&item.ReasonCode, &item.Note, &item.DeliveryStatusAtReport, &item.Severity, &item.Status,
 		&item.CorrelationID, &item.ReportedLatitude, &item.ReportedLongitude, &item.ReportedAt,
 		&item.AcknowledgedAt, &item.AcknowledgedByActorID, &item.ResolvedAt, &item.ResolvedByActorID, &item.ResolutionAction,
-		&item.ResolutionNote, &item.ReplacementAssignmentID, &item.ReplacementCaptainID, &item.Version, &item.CreatedAt, &item.UpdatedAt,
+		&item.ResolutionNote, &item.ReplacementAssignmentID, &item.ReplacementCaptainID, &item.ReturnStartedAt, &item.ReturnedAt, &item.Version, &item.CreatedAt, &item.UpdatedAt,
 	)
 	return &item, err
 }

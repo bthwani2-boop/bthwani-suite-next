@@ -15,6 +15,7 @@ import {
   fetchOperatorDeliveryExceptions,
   resolveDeliveryExceptionReassignCaptain,
   resolveDeliveryExceptionRetrySameCaptain,
+  resolveDeliveryExceptionReturnToStore,
 } from '../../shared/dispatch/dispatch.api';
 import type { DshDeliveryException } from '../../shared/dispatch/dispatch.types';
 import { listCaptains } from '../../shared/workforce/workforce.api';
@@ -26,7 +27,7 @@ export type ExceptionsEscalationsScreenProps = { readonly hubHref: string; reado
 type WorkspaceState =
   | { readonly kind: 'loading' }
   | { readonly kind: 'error'; readonly message: string }
-  | { readonly kind: 'ready'; readonly readiness: readonly DshReadinessEscalation[]; readonly delivery: readonly DshDeliveryException[] };
+  | { readonly kind: 'ready'; readonly readiness: readonly DshReadinessEscalation[]; readonly delivery: readonly DshDeliveryException[]; readonly returns: readonly DshDeliveryException[] };
 
 type ActionState =
   | { readonly kind: 'idle' }
@@ -82,12 +83,18 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
   const load = React.useCallback(async () => {
     setState({ kind: 'loading' });
     try {
-      const [readiness, open, acknowledged] = await Promise.all([
+      const [readiness, open, acknowledged, resolved] = await Promise.all([
         fetchOperatorEscalations(),
         fetchOperatorDeliveryExceptions('open'),
         fetchOperatorDeliveryExceptions('acknowledged'),
+        fetchOperatorDeliveryExceptions('resolved'),
       ]);
-      setState({ kind: 'ready', readiness, delivery: [...open, ...acknowledged] });
+      setState({
+        kind: 'ready',
+        readiness,
+        delivery: [...open, ...acknowledged],
+        returns: resolved.filter((item) => item.resolutionAction === 'return_to_store'),
+      });
     } catch (error) {
       setState({ kind: 'error', message: error instanceof Error ? error.message : 'تعذر تحميل الاستثناءات الحية من DSH.' });
     }
@@ -155,6 +162,21 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
     }
   }, [load, note, selectedReplacementCaptainId]);
 
+  const resolveReturn = React.useCallback(async (item: DshDeliveryException) => {
+    if (note.trim().length < 5) {
+      setActionState({ kind: 'error', id: item.id, message: 'اكتب سبب الإرجاع وخطوات التسليم للمتجر.' });
+      return;
+    }
+    setActionState({ kind: 'submitting', id: item.id });
+    try {
+      await resolveDeliveryExceptionReturnToStore(item.id, item.version, note.trim());
+      setSelectedDeliveryId(null);
+      await load();
+    } catch (error) {
+      setActionState({ kind: 'error', id: item.id, message: error instanceof Error ? error.message : 'تعذر بدء إرجاع الطلب.' });
+    }
+  }, [load, note]);
+
   const resolveReadiness = React.useCallback(async (item: DshReadinessEscalation, status: 'acknowledged' | 'resolved') => {
     if (status === 'resolved' && note.trim().length < 5) {
       setActionState({ kind: 'error', id: item.id, message: 'اكتب نتيجة حل واضحة من خمسة أحرف على الأقل.' });
@@ -195,6 +217,8 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
       <Box gap={2} style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
         <Badge label={`استثناءات توصيل نشطة: ${state.delivery.length}`} tone={state.delivery.length ? 'warning' : 'success'} />
         <Badge label={`كباتن مؤهلون: ${captainsState === 'ready' ? captains.length : '—'}`} tone={captains.length ? 'success' : 'warning'} />
+        <Badge label={`مرتجعات قيد المتابعة: ${state.returns.filter((item) => !item.returnedAt).length}`} tone="warning" />
+        <Badge label={`مرتجعات مستلمة: ${state.returns.filter((item) => Boolean(item.returnedAt)).length}`} tone="neutral" />
         <Badge label={`تصعيدات جاهزية: ${state.readiness.filter((item) => item.status !== 'resolved').length}`} tone="neutral" />
       </Box>
 
@@ -236,6 +260,21 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
         </Box>
       </Box>
 
+      <Box gap={3}>
+        <Text role="titleSm" align="start">رحلات الإرجاع إلى المتجر</Text>
+        {state.returns.length === 0 ? (
+          <StateView tone="neutral" title="لا توجد رحلات إرجاع" />
+        ) : state.returns.map((item) => (
+          <Card key={`return-${item.id}`} padding={4} gap={2}>
+            <Text role="bodyStrong" align="start">الطلب: {item.orderId}</Text>
+            <Text role="caption" tone="muted" align="start">الكابتن: {item.captainId}</Text>
+            <Badge label={item.returnedAt ? 'استلم المتجر المرتجع' : 'في طريق العودة إلى المتجر'} tone={item.returnedAt ? 'success' : 'warning'} />
+            <Text role="bodySm" align="start">{item.resolutionNote}</Text>
+            <Button label="فتح الطلب الحي" tone="ghost" size="sm" fullWidth={false} onPress={() => router.push(buildOperationsHref('live-orders', { subGroup: 'queue', orderId: item.orderId }))} />
+          </Card>
+        ))}
+      </Box>
+
       {selectedDelivery ? (
         <Card padding={4} gap={3}>
           <Text role="titleSm" align="start">قرار استثناء التوصيل {selectedDelivery.id}</Text>
@@ -263,6 +302,7 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
             {selectedDelivery.status === 'open' ? <Button label="اعتماد وبدء المراجعة" tone="secondary" disabled={actionState.kind === 'submitting'} onPress={() => void acknowledge(selectedDelivery)} /> : null}
             <Button label="حل: إعادة المحاولة مع الكابتن نفسه" tone="primary" disabled={actionState.kind === 'submitting'} onPress={() => void resolveRetry(selectedDelivery)} />
             {canReassign(selectedDelivery) ? <Button label="حل: إعادة الإسناد للكابتن البديل" tone="secondary" disabled={!selectedReplacementCaptainId || actionState.kind === 'submitting'} onPress={() => void resolveReassign(selectedDelivery)} /> : null}
+            {(selectedDelivery.deliveryStatusAtReport === 'picked_up' || selectedDelivery.deliveryStatusAtReport === 'arrived_customer') ? <Button label="حل: إرجاع الطلب إلى المتجر" tone="secondary" disabled={actionState.kind === 'submitting'} onPress={() => void resolveReturn(selectedDelivery)} /> : null}
             <Button label="إغلاق التفاصيل" tone="ghost" onPress={() => setSelectedDeliveryId(null)} />
           </Box>
         </Card>

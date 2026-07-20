@@ -39,6 +39,7 @@ const activeDeliveryStates = new Set([
   'driver_arrived_store',
   'picked_up',
   'arrived_customer',
+  'returning_to_store',
 ]);
 
 // Foreground-only periodic sampling. No background task and no location history.

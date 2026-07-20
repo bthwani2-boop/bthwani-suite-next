@@ -25,6 +25,8 @@ const (
 	StatusArrivedStore    OrderStatus = "driver_arrived_store"
 	StatusPickedUp        OrderStatus = "picked_up"
 	StatusArrivedCustomer OrderStatus = "arrived_customer"
+	StatusReturningStore  OrderStatus = "returning_to_store"
+	StatusReturnedStore   OrderStatus = "returned_to_store"
 	StatusDelivered       OrderStatus = "delivered"
 	StatusCancelled       OrderStatus = "cancelled"
 )

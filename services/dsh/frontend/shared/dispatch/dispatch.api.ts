@@ -116,6 +116,26 @@ export async function resolveDeliveryExceptionReassignCaptain(
   return data.exception;
 }
 
+export async function resolveDeliveryExceptionReturnToStore(
+  id: string,
+  expectedVersion: number,
+  note: string,
+): Promise<DshDeliveryException> {
+  const data = await request<{ exception: DshDeliveryException }>(
+    `/dsh/operator/delivery-exceptions/${encodeURIComponent(id)}/resolve`,
+    { method: "POST", body: { expectedVersion, action: "return_to_store", note } },
+  );
+  return data.exception;
+}
+
+export async function completeCaptainReturnToStore(assignmentId: string): Promise<DshDeliveryException> {
+  const data = await request<{ exception: DshDeliveryException }>(
+    `/dsh/captain/dispatch/assignments/${encodeURIComponent(assignmentId)}/return-to-store/complete`,
+    { method: "POST" },
+  );
+  return data.exception;
+}
+
 export async function fetchClientOrderTracking(orderId: string): Promise<DshDispatchAssignment> {
   const data = await request<{ assignment: DshDispatchAssignment }>(
     `/dsh/client/orders/${encodeURIComponent(orderId)}/tracking`,

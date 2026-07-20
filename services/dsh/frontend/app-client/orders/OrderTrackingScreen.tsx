@@ -66,6 +66,14 @@ function financialTone(status: DshFinancialClosureStatus): 'neutral' | 'success'
 }
 
 function OrderTimeline({ status }: { readonly status: DshOrderStatus }) {
+  if (status === 'returning_to_store' || status === 'returned_to_store') {
+    return (
+      <Surface tone={status === 'returned_to_store' ? 'raised' : 'warning'} gap={2}>
+        <Text role="bodyStrong">{ORDER_STATUS_LABELS[status]}</Text>
+        <Text role="bodySm">{status === 'returned_to_store' ? 'استلم المتجر المرتجع وتراجع العمليات الإغلاق المالي المناسب.' : 'تعذر إكمال التسليم واعتمدت العمليات إعادة الطلب إلى المتجر.'}</Text>
+      </Surface>
+    );
+  }
   if (isOrderCancellationStatus(status)) {
     return (
       <Surface tone="danger" gap={2}>

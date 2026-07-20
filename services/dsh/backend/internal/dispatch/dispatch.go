@@ -34,6 +34,8 @@ const (
 	DeliveryArrivedStore    DeliveryStatus = "driver_arrived_store"
 	DeliveryPickedUp        DeliveryStatus = "picked_up"
 	DeliveryArrivedCustomer DeliveryStatus = "arrived_customer"
+	DeliveryReturningStore  DeliveryStatus = "returning_to_store"
+	DeliveryReturnedStore   DeliveryStatus = "returned_to_store"
 	DeliveryDelivered       DeliveryStatus = "delivered"
 	DeliveryCancelled       DeliveryStatus = "cancelled"
 )

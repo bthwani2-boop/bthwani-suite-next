@@ -40,6 +40,8 @@ export const DELIVERY_STATUS_LABELS: Record<DshDeliveryStatus, string> = {
   driver_arrived_store: "وصل الكابتن للمتجر",
   picked_up: "تم الاستلام من المتجر",
   arrived_customer: "وصل الكابتن للعميل",
+  returning_to_store: "في طريق العودة إلى المتجر",
+  returned_to_store: "أعيد إلى المتجر",
   delivered: "تم التسليم",
   cancelled: "ألغيت المهمة بسبب إلغاء الطلب",
 };
