@@ -90,7 +90,6 @@ function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }:
   const openInventoryManagement = actions.openInventoryManagement;
   const openStoreCourier = actions.openStoreCourier;
   const openSupportCommandFromOperationalFlow = actions.handleOperationalFlowNavigation;
-  const handleMarkReady = actions.handleMarkReady;
 
   React.useEffect(() => {
     if (Platform.OS !== 'android') return undefined;
@@ -281,7 +280,6 @@ function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }:
       openStoreCourier={openStoreCourier}
       openStoreScope={() => setStoreScopeVisible(true)}
       openSupportCommandFromOperationalFlow={openSupportCommandFromOperationalFlow}
-      handleMarkReady={handleMarkReady}
       refreshOrders={actions.refreshOrders}
       teamMembers={teamMembers}
       isTeamLoading={isTeamLoading}
