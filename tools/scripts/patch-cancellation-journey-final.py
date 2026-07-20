@@ -16,87 +16,110 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
     return text.replace(old, new, 1)
 
 
+def transform_function(text: str, signature: str, transform) -> str:
+    start = text.find(signature)
+    if start < 0:
+        raise RuntimeError(f"function not found: {signature}")
+    end = text.find("\nfunc ", start + len(signature))
+    if end < 0:
+        end = len(text)
+    block = text[start:end]
+    return text[:start] + transform(block) + text[end:]
+
+
+def guard_active_session(block: str, return_value: str) -> str:
+    if "current.Status == SessionCancelled" in block:
+        return block
+    anchor = (
+        "\tcurrent, err := GetForUpdateByOrderID(tx, orderID)\n"
+        "\tif err != nil {\n"
+        f"\t\treturn {return_value}, err\n"
+        "\t}\n"
+    )
+    replacement = anchor + (
+        "\tif current.Status == SessionCancelled {\n"
+        f"\t\treturn {return_value}, ErrCancelled\n"
+        "\t}\n"
+        "\tif current.Status != SessionActive || current.UsedAt != nil {\n"
+        f"\t\treturn {return_value}, ErrAlreadyUsed\n"
+        "\t}\n"
+    )
+    if anchor not in block:
+        raise RuntimeError("pickup session lock anchor not found")
+    block = block.replace(anchor, replacement, 1)
+    duplicate = (
+        "\tif current.UsedAt != nil {\n"
+        f"\t\treturn {return_value}, ErrAlreadyUsed\n"
+        "\t}\n"
+    )
+    return block.replace(duplicate, "", 1)
+
+
 def patch_pickup_service() -> None:
     text = PICKUP_SERVICE.read_text(encoding="utf-8")
 
-    if "current.Status == SessionCancelled" not in text:
-        text = replace_once(
-            text,
-            "\tif current.UsedAt != nil {\n\t\treturn nil, ErrAlreadyUsed\n\t}\n\tif !current.ExpiresAt.After(time.Now().UTC()) {",
-            "\tif current.Status == SessionCancelled {\n\t\treturn nil, ErrCancelled\n\t}\n\tif current.Status != SessionActive || current.UsedAt != nil {\n\t\treturn nil, ErrAlreadyUsed\n\t}\n\tif !current.ExpiresAt.After(time.Now().UTC()) {",
-            "verify cancelled guard",
-        )
+    def patch_issue(block: str) -> str:
+        if "current.Status == SessionCancelled" not in block:
+            block = replace_once(
+                block,
+                "\t} else {\n\t\tfromJSON = sessionJSON(current)\n",
+                "\t} else {\n"
+                "\t\tif current.Status == SessionCancelled {\n"
+                "\t\t\treturn \"\", nil, ErrCancelled\n"
+                "\t\t}\n"
+                "\t\tfromJSON = sessionJSON(current)\n",
+                "IssueOtp cancellation guard",
+            )
+        if "status = 'active'" not in block:
+            block = replace_once(
+                block,
+                "\t\t\tSET hashed_otp = $1, expires_at = $2, attempt_count = 0, max_attempts = $3,\n"
+                "\t\t\t    used_at = NULL, verified_by_actor_id = NULL, verification_method = NULL,\n"
+                "\t\t\t    version = version + 1, updated_at = NOW()",
+                "\t\t\tSET hashed_otp = $1, expires_at = $2, attempt_count = 0, max_attempts = $3,\n"
+                "\t\t\t    used_at = NULL, verified_by_actor_id = NULL, verification_method = NULL,\n"
+                "\t\t\t    status = 'active', cancelled_at = NULL, cancellation_reason = NULL,\n"
+                "\t\t\t    version = version + 1, updated_at = NOW()",
+                "IssueOtp reset state",
+            )
+        return block
 
-    if "status = 'active'" not in text:
-        text = replace_once(
-            text,
-            "\t\t\tSET hashed_otp = $1, expires_at = $2, attempt_count = 0, max_attempts = $3,\n\t\t\t    used_at = NULL, verified_by_actor_id = NULL, verification_method = NULL,\n\t\t\t    version = version + 1, updated_at = NOW()",
-            "\t\t\tSET hashed_otp = $1, expires_at = $2, attempt_count = 0, max_attempts = $3,\n\t\t\t    used_at = NULL, verified_by_actor_id = NULL, verification_method = NULL,\n\t\t\t    status = 'active', cancelled_at = NULL, cancellation_reason = NULL,\n\t\t\t    version = version + 1, updated_at = NOW()",
-            "otp reset state",
-        )
+    text = transform_function(text, "func (s *Service) IssueOtp", patch_issue)
 
-    if "status = 'verified'" not in text:
-        text = replace_once(
-            text,
-            "\t\tSET used_at = NOW(), verified_by_actor_id = $1, verification_method = 'otp',\n\t\t    version = version + 1, updated_at = NOW()",
-            "\t\tSET used_at = NOW(), verified_by_actor_id = $1, verification_method = 'otp',\n\t\t    status = 'verified', version = version + 1, updated_at = NOW()",
-            "verify state",
-        )
+    def patch_verify(block: str) -> str:
+        block = guard_active_session(block, "nil")
+        if "status = 'verified'" not in block:
+            block = replace_once(
+                block,
+                "\t\tSET used_at = NOW(), verified_by_actor_id = $1, verification_method = 'otp',\n"
+                "\t\t    version = version + 1, updated_at = NOW()",
+                "\t\tSET used_at = NOW(), verified_by_actor_id = $1, verification_method = 'otp',\n"
+                "\t\t    status = 'verified', version = version + 1, updated_at = NOW()",
+                "VerifyOtp state",
+            )
+        return block
 
-    no_show_guard = """\tif current.UsedAt != nil {
-\t\treturn nil, ErrAlreadyUsed
-\t}
-\tfromJSON := sessionJSON(current)
-"""
-    if text.count(no_show_guard) == 1:
-        text = text.replace(
-            no_show_guard,
-            """\tif current.Status == SessionCancelled {
-\t\treturn nil, ErrCancelled
-\t}
-\tif current.Status != SessionActive || current.UsedAt != nil {
-\t\treturn nil, ErrAlreadyUsed
-\t}
-\tfromJSON := sessionJSON(current)
-""",
-            1,
-        )
+    text = transform_function(text, "func (s *Service) VerifyOtp", patch_verify)
 
-    if "status = 'no_show'" not in text:
-        text = replace_once(
-            text,
-            "\t\tSET used_at = NOW(), verified_by_actor_id = $1, verification_method = 'no_show',\n\t\t    version = version + 1, updated_at = NOW()",
-            "\t\tSET used_at = NOW(), verified_by_actor_id = $1, verification_method = 'no_show',\n\t\t    status = 'no_show', version = version + 1, updated_at = NOW()",
-            "no-show state",
-        )
+    def patch_no_show(block: str) -> str:
+        block = guard_active_session(block, "nil")
+        if "status = 'no_show'" not in block:
+            block = replace_once(
+                block,
+                "\t\tSET used_at = NOW(), verified_by_actor_id = $1, verification_method = 'no_show',\n"
+                "\t\t    version = version + 1, updated_at = NOW()",
+                "\t\tSET used_at = NOW(), verified_by_actor_id = $1, verification_method = 'no_show',\n"
+                "\t\t    status = 'no_show', version = version + 1, updated_at = NOW()",
+                "NoShow state",
+            )
+        return block
 
-    extend_anchor = """\tcurrent, err := GetForUpdateByOrderID(tx, orderID)
-\tif err != nil {
-\t\treturn nil, err
-\t}
-\tif current.UsedAt != nil {
-\t\treturn nil, ErrAlreadyUsed
-\t}
-\tfromJSON := sessionJSON(current)
-"""
-    if extend_anchor in text:
-        text = text.replace(
-            extend_anchor,
-            """\tcurrent, err := GetForUpdateByOrderID(tx, orderID)
-\tif err != nil {
-\t\treturn nil, err
-\t}
-\tif current.Status == SessionCancelled {
-\t\treturn nil, ErrCancelled
-\t}
-\tif current.Status != SessionActive || current.UsedAt != nil {
-\t\treturn nil, ErrAlreadyUsed
-\t}
-\tfromJSON := sessionJSON(current)
-""",
-            1,
-        )
-
+    text = transform_function(text, "func (s *Service) NoShow", patch_no_show)
+    text = transform_function(
+        text,
+        "func (s *Service) ExtendWindow",
+        lambda block: guard_active_session(block, "nil"),
+    )
     PICKUP_SERVICE.write_text(text, encoding="utf-8")
 
 
@@ -109,7 +132,8 @@ def patch_pickup_http() -> None:
             "\tcase errors.Is(err, pickup.ErrCancelled):\n\t\tstore.SendError(w, http.StatusConflict, \"PICKUP_CANCELLED\", \"pickup session was cancelled with the order\")\n\tcase errors.Is(err, pickup.ErrAlreadyUsed):\n\t\tstore.SendError(w, http.StatusUnprocessableEntity, \"PICKUP_CODE_ALREADY_USED\", err.Error())",
             "pickup cancelled error",
         )
-    if '"status":' not in text[text.index("func marshalPickupSession"):text.index("func (s *protectedStoreServer) handlePickupMarkReady")]:
+    segment = text[text.index("func marshalPickupSession"):text.index("func (s *protectedStoreServer) handlePickupMarkReady")]
+    if '"status":' not in segment:
         text = replace_once(
             text,
             '\t\t"verificationMethod": s.VerificationMethod,\n\t\t"version":            s.Version,',
@@ -138,7 +162,8 @@ def patch_dsh_contract() -> None:
     end = start + len(marker) + next_schema.start()
     block = text[start:end]
     if "cancellationReason:" not in block:
-        block = block.replace(
+        block = replace_once(
+            block,
             "        verificationMethod:",
             "        status:\n"
             "          type: string\n"
@@ -146,7 +171,7 @@ def patch_dsh_contract() -> None:
             "        cancelledAt: { type: [string, \"null\"], format: date-time }\n"
             "        cancellationReason: { type: [string, \"null\"] }\n"
             "        verificationMethod:",
-            1,
+            "pickup contract lifecycle",
         )
         text = text[:start] + block + text[end:]
     DSH_CONTRACT.write_text(text, encoding="utf-8")
@@ -156,7 +181,6 @@ def patch_wlt_contract() -> None:
     text = WLT_CONTRACT.read_text(encoding="utf-8")
     if "  version: 0.2.0\n" in text:
         text = text.replace("  version: 0.2.0\n", "  version: 0.3.0\n", 1)
-
     if "/wlt/order-cancellations:" not in text:
         path_block = r'''
   /wlt/order-cancellations:
@@ -199,9 +223,12 @@ def patch_wlt_contract() -> None:
         "409": { $ref: "#/components/responses/Conflict" }
 
 '''
-        anchor = "  /wlt/payment-sessions/{paymentSessionId}/cod-collect:\n"
-        text = replace_once(text, anchor, path_block + anchor, "WLT cancellation path")
-
+        text = replace_once(
+            text,
+            "  /wlt/payment-sessions/{paymentSessionId}/cod-collect:\n",
+            path_block + "  /wlt/payment-sessions/{paymentSessionId}/cod-collect:\n",
+            "WLT cancellation path",
+        )
     if "    WltGovernedOrderCancellationRequest:\n" not in text:
         schemas = r'''
     WltGovernedOrderCancellationRequest:
@@ -228,9 +255,12 @@ def patch_wlt_contract() -> None:
         sessionStatus: { type: string }
 
 '''
-        anchor = "    WltCancelPaymentSessionForOrderRequest:\n"
-        text = replace_once(text, anchor, schemas + anchor, "WLT cancellation schemas")
-
+        text = replace_once(
+            text,
+            "    WltCancelPaymentSessionForOrderRequest:\n",
+            schemas + "    WltCancelPaymentSessionForOrderRequest:\n",
+            "WLT cancellation schemas",
+        )
     WLT_CONTRACT.write_text(text, encoding="utf-8")
 
 
