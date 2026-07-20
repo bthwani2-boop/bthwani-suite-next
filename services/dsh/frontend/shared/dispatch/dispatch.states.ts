@@ -57,6 +57,10 @@ export function trackingDeliveredState(assignment: DshDispatchAssignment): DshTr
   return { kind: "delivered", assignment };
 }
 
+export function trackingCancelledState(assignment: DshDispatchAssignment): DshTrackingState {
+  return { kind: "cancelled", assignment };
+}
+
 export function trackingErrorState(message: string): DshTrackingState {
   return { kind: "error", message };
 }
