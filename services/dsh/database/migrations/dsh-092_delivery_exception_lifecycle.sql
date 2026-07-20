@@ -51,8 +51,11 @@ CREATE TABLE IF NOT EXISTS dsh_delivery_exceptions (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT dsh_delivery_exceptions_location_pair_check CHECK (
-        (reported_latitude IS NULL AND reported_longitude IS NULL) OR
-        (reported_latitude BETWEEN -90 AND 90 AND reported_longitude BETWEEN -180 AND 180)
+        (reported_latitude IS NULL) = (reported_longitude IS NULL)
+        AND (reported_latitude IS NULL OR (
+            reported_latitude BETWEEN -90 AND 90
+            AND reported_longitude BETWEEN -180 AND 180
+        ))
     ),
     CONSTRAINT dsh_delivery_exceptions_resolution_shape_check CHECK (
         (status = 'resolved' AND resolved_at IS NOT NULL AND resolved_by_actor_id IS NOT NULL

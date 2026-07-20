@@ -110,7 +110,7 @@ export function useCaptainOrderRuntime() {
     (assignmentId: string, _captainId: string) => reportDeliveryException(assignmentId, {
       reasonCode: 'proof_unavailable',
       note: 'تعذر إكمال إثبات التسليم؛ تم تحويل المهمة إلى مراجعة العمليات.',
-      correlationId: globalThis.crypto?.randomUUID?.() ?? `${assignmentId}-${Date.now()}`,
+      correlationId: `${assignmentId}-${Date.now()}-${Math.random().toString(36).slice(2)}` ,
     }),
     [],
   );

@@ -149,9 +149,6 @@ func ReportDeliveryException(db *sql.DB, assignmentID, captainID string, input R
 	if current.OrderID == "" {
 		return nil, fmt.Errorf("%w: delivery exceptions require an order-backed assignment", ErrConflict)
 	}
-	if current.Status != AssignmentAccepted || !reportableDeliveryStatuses[current.Delivery.Status] {
-		return nil, fmt.Errorf("%w: delivery exception requires an active accepted delivery", ErrConflict)
-	}
 
 	var tenantID string
 	if err := tx.QueryRow(`SELECT tenant_id FROM dsh_orders WHERE id=$1::uuid FOR UPDATE`, current.OrderID).Scan(&tenantID); err != nil {
@@ -161,6 +158,9 @@ func ReportDeliveryException(db *sql.DB, assignmentID, captainID string, input R
 		return nil, err
 	}
 
+	// Idempotency is evaluated before current-state eligibility so a retried
+	// command returns its original result even after operations has moved the
+	// assignment or resolved the exception.
 	existing, err := getDeliveryExceptionByCorrelationTx(tx, tenantID, input.CorrelationID)
 	if err == nil {
 		if existing.AssignmentID != assignmentID || existing.CaptainID != captainID || existing.ReasonCode != input.ReasonCode {
@@ -170,6 +170,10 @@ func ReportDeliveryException(db *sql.DB, assignmentID, captainID string, input R
 	}
 	if !errors.Is(err, sql.ErrNoRows) {
 		return nil, err
+	}
+
+	if current.Status != AssignmentAccepted || !reportableDeliveryStatuses[current.Delivery.Status] {
+		return nil, fmt.Errorf("%w: delivery exception requires an active accepted delivery", ErrConflict)
 	}
 
 	var openID string
