@@ -1,8 +1,37 @@
 import type { components } from "../../../clients/generated/dsh-api";
 
-export type DshOrderStatus = components["schemas"]["DshOrderStatus"];
+type GeneratedDshOrder = components["schemas"]["DshOrder"];
+type GeneratedDshOrderStatus = components["schemas"]["DshOrderStatus"];
+
+export type DshOrderStatus =
+  | GeneratedDshOrderStatus
+  | "cancelled_by_client"
+  | "cancelled_by_store"
+  | "cancelled_by_operator"
+  | "cancelled_no_driver"
+  | "failed_payment"
+  | "failed_dispatch";
+
 export type DshOrderItem = components["schemas"]["DshOrderItem"];
-export type DshOrder = components["schemas"]["DshOrder"];
+export type DshOrder = Omit<GeneratedDshOrder, "status"> & {
+  readonly status: DshOrderStatus;
+  readonly cancellationReasonCode?: string | null;
+  readonly cancellationNote?: string | null;
+  readonly cancelledByActorId?: string | null;
+  readonly cancelledByRole?: "client" | "partner" | "operator" | "system" | null;
+  readonly cancelledAt?: string | null;
+  readonly financialClosureStatus?: DshFinancialClosureStatus;
+  readonly financialClosureReference?: string | null;
+};
+
+export type DshFinancialClosureStatus =
+  | "not_required"
+  | "pending"
+  | "session_expired"
+  | "refund_requested"
+  | "refund_completed"
+  | "no_action"
+  | "failed";
 
 export type DshCreateOrderInput = {
   readonly checkoutIntentId: string;
@@ -31,6 +60,20 @@ export type DshOrderActionState =
   | { readonly kind: "success"; readonly order: DshOrder }
   | { readonly kind: "error"; readonly message: string };
 
+export const CANCELLATION_ORDER_STATUSES: readonly DshOrderStatus[] = [
+  "cancelled",
+  "cancelled_by_client",
+  "cancelled_by_store",
+  "cancelled_by_operator",
+  "cancelled_no_driver",
+  "failed_payment",
+  "failed_dispatch",
+];
+
+export function isOrderCancellationStatus(status: DshOrderStatus): boolean {
+  return CANCELLATION_ORDER_STATUSES.includes(status);
+}
+
 export const ORDER_STATUS_LABELS: Record<DshOrderStatus, string> = {
   pending: "قيد الانتظار",
   store_accepted: "تم القبول",
@@ -41,5 +84,21 @@ export const ORDER_STATUS_LABELS: Record<DshOrderStatus, string> = {
   picked_up: "تم الاستلام",
   arrived_customer: "وصل الكابتن للعميل",
   delivered: "تم التسليم",
-  cancelled: "ملغي",
+  cancelled: "ملغي — حالة قديمة",
+  cancelled_by_client: "ألغاه العميل",
+  cancelled_by_store: "ألغاه المتجر",
+  cancelled_by_operator: "ألغته العمليات",
+  cancelled_no_driver: "ألغي لعدم توفر كابتن",
+  failed_payment: "فشل الدفع",
+  failed_dispatch: "فشل الإسناد",
+};
+
+export const FINANCIAL_CLOSURE_LABELS: Record<DshFinancialClosureStatus, string> = {
+  not_required: "لا توجد معاملة مالية للإغلاق",
+  pending: "جارٍ تحديد الإجراء المالي",
+  session_expired: "تم تحرير جلسة الدفع",
+  refund_requested: "تم إنشاء طلب استرداد",
+  refund_completed: "اكتمل الاسترداد",
+  no_action: "لا يلزم إجراء مالي إضافي",
+  failed: "تعذر إغلاق الأثر المالي ويتطلب مراجعة",
 };
