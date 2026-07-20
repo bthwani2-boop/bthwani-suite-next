@@ -7,6 +7,7 @@ on:
     paths:
       - ".github/workflows/cod-custody-slice1.yml"
       - "tools/scripts/patch-cod-custody-slice1.py"
+      - "tools/scripts/patch-cod-custody-slice1-corrections.py"
   workflow_dispatch:
 
 permissions:
@@ -63,8 +64,10 @@ jobs:
           {
             set -euo pipefail
             python tools/scripts/patch-cod-custody-slice1.py
+            python tools/scripts/patch-cod-custody-slice1-corrections.py
             gofmt -w \
               services/dsh/backend/internal/wlt/client.go \
+              services/dsh/backend/internal/wlt/client_test.go \
               services/dsh/backend/internal/wltoutbox/worker.go \
               services/wlt/backend/internal/cod/cod.go \
               services/wlt/backend/internal/cod/cod_db_test.go
@@ -183,10 +186,12 @@ jobs:
           set -euo pipefail
           screen=services/dsh/frontend/shared/finance-wlt-link/wlt/generated/WltDshCaptainBridge.tsx
           client=services/dsh/backend/internal/wlt/client.go
+          client_test=services/dsh/backend/internal/wlt/client_test.go
           cod=services/wlt/backend/internal/cod/cod.go
           grep -F 'NotifyDeliveryCollection' "$client"
           grep -F 'CollectorType' "$cod"
           grep -F 'CollectorID' "$cod"
+          grep -F 'CollectorType:    "captain"' "$client_test"
           grep -F 'codPendingCollectionCount' "$screen"
           grep -F 'codCollectedOutstandingCount' "$screen"
           grep -F 'عهدة النقد عند الاستلام' "$screen"
@@ -206,6 +211,7 @@ jobs:
           git rm -f \
             .github/workflows/cod-custody-slice1.yml \
             tools/scripts/patch-cod-custody-slice1.py \
+            tools/scripts/patch-cod-custody-slice1-corrections.py \
             apps/app-captain/runtime/tsconfig.cod-custody-journey.json
           git add -A
           git commit -m "feat(cod-custody): establish governed collector identity and live captain truth [skip ci]"
