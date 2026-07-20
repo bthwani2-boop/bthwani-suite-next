@@ -3,7 +3,6 @@ package wlt
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,60 +11,6 @@ import (
 )
 
 const maxFinanceProxyResponseBytes = 4 << 20
-
-// CancelSessionForOrderInput is the DSH operational decision sent to WLT.
-// WLT remains responsible for selecting expire, refund-pending, or terminal no-op.
-type CancelSessionForOrderInput struct {
-	OrderID  string `json:"orderId"`
-	ClientID string `json:"clientId"`
-	Reason   string `json:"reason"`
-}
-
-func (c *Client) CancelSessionForOrder(
-	ctx context.Context,
-	paymentSessionID string,
-	input CancelSessionForOrderInput,
-) error {
-	if !c.Configured() {
-		return fmt.Errorf("WLT payment-session handoff is not configured")
-	}
-	paymentSessionID = strings.TrimSpace(paymentSessionID)
-	input.OrderID = strings.TrimSpace(input.OrderID)
-	input.ClientID = strings.TrimSpace(input.ClientID)
-	input.Reason = strings.TrimSpace(input.Reason)
-	if paymentSessionID == "" || input.OrderID == "" {
-		return fmt.Errorf("paymentSessionID and orderId are required")
-	}
-
-	body, err := json.Marshal(input)
-	if err != nil {
-		return fmt.Errorf("encode WLT cancel-for-order request: %w", err)
-	}
-	path := "/wlt/payment-sessions/" + url.PathEscape(paymentSessionID) + "/cancel-for-order"
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+path, bytes.NewReader(body))
-	if err != nil {
-		return fmt.Errorf("build WLT cancel-for-order request: %w", err)
-	}
-	setServiceHeaders(req, c.serviceToken)
-	req.Header.Set("Content-Type", "application/json")
-	if err := setRequiredMutationHeaders(
-		req,
-		input.OrderID,
-		deterministicMutationKey("payment-session-cancel-for-order", paymentSessionID, input.OrderID),
-	); err != nil {
-		return fmt.Errorf("prepare WLT cancel-for-order request: %w", err)
-	}
-
-	response, err := c.http.Do(req)
-	if err != nil {
-		return fmt.Errorf("call WLT cancel-for-order: %w", err)
-	}
-	defer response.Body.Close()
-	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return fmt.Errorf("WLT cancel-for-order returned HTTP %d", response.StatusCode)
-	}
-	return nil
-}
 
 var financeReadAllowlist = map[string]struct{}{
 	"/wlt/settlements":              {},
