@@ -65,24 +65,37 @@ func TestDeliveryExceptionReturnToStoreLifecycleDBIntegration(t *testing.T) {
 	if err != nil || visible.ID != item.ID {
 		t.Fatalf("return decision must remain visible to captain: %+v err=%v", visible, err)
 	}
-	returned, err := CompleteReturnToStore(db, assignmentID, captainID)
+	arrived, err := CaptainArriveReturnToStore(db, assignmentID, captainID)
 	if err != nil {
-		t.Fatalf("complete return: %v", err)
+		t.Fatalf("captain arrive return: %v", err)
 	}
-	if returned.ReturnedAt == nil {
-		t.Fatalf("returnedAt was not recorded: %+v", returned)
+	if arrived.ReturnArrivedAt == nil || arrived.ReturnedAt != nil {
+		t.Fatalf("captain arrival must not complete store receipt: %+v", arrived)
+	}
+	if err := db.QueryRow(`SELECT o.status,d.status,a.status FROM dsh_orders o JOIN dsh_assignments a ON a.order_id=o.id JOIN dsh_deliveries d ON d.assignment_id=a.id WHERE a.id=$1::uuid`, assignmentID).Scan(&orderStatus, &deliveryStatus, &assignmentStatus); err != nil {
+		t.Fatal(err)
+	}
+	if orderStatus != "return_arrived_store" || deliveryStatus != "return_arrived_store" || assignmentStatus != "accepted" {
+		t.Fatalf("arrival handshake mismatch: %s %s %s", orderStatus, deliveryStatus, assignmentStatus)
+	}
+	returned, err := AcceptReturnToStoreByPartner(db, orderID, "partner-return-receipt-test")
+	if err != nil {
+		t.Fatalf("partner accept return: %v", err)
+	}
+	if returned.ReturnedAt == nil || returned.ReturnAcceptedByActorID == nil {
+		t.Fatalf("partner receipt was not recorded: %+v", returned)
 	}
 	if err := db.QueryRow(`SELECT o.status,d.status,a.status FROM dsh_orders o JOIN dsh_assignments a ON a.order_id=o.id JOIN dsh_deliveries d ON d.assignment_id=a.id WHERE a.id=$1::uuid`, assignmentID).Scan(&orderStatus, &deliveryStatus, &assignmentStatus); err != nil {
 		t.Fatal(err)
 	}
 	if orderStatus != "returned_to_store" || deliveryStatus != "returned_to_store" || assignmentStatus != "completed" {
-		t.Fatalf("return completion mismatch: %s %s %s", orderStatus, deliveryStatus, assignmentStatus)
+		t.Fatalf("partner receipt completion mismatch: %s %s %s", orderStatus, deliveryStatus, assignmentStatus)
 	}
 	if _, err := GetCaptainOpenDeliveryException(db, assignmentID, captainID); !errors.Is(err, ErrNotFound) {
-		t.Fatalf("completed return must leave captain exception view, got %v", err)
+		t.Fatalf("accepted return must leave captain exception view, got %v", err)
 	}
 	inbox, err := ListCaptainAssignments(db, captainID, 50)
 	if err != nil || len(inbox) != 0 {
-		t.Fatalf("completed return remained active: %+v err=%v", inbox, err)
+		t.Fatalf("partner-accepted return remained active: %+v err=%v", inbox, err)
 	}
 }

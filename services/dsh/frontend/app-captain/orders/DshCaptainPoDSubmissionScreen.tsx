@@ -16,7 +16,7 @@ import {
   spacing,
 } from '@bthwani/ui-kit';
 import { DshOperationScreen } from '../DshOperationScreen';
-import { completeCaptainReturnToStore, fetchCaptainDeliveryException } from '../../shared/dispatch/dispatch.api';
+import { arriveCaptainReturnToStore, fetchCaptainDeliveryException } from '../../shared/dispatch/dispatch.api';
 import type { DshDeliveryException, DshDeliveryExceptionReasonCode } from '../../shared/dispatch/dispatch.types';
 import type { CaptainDeliveryExceptionDraft } from '../../shared/delivery/use-captain-order-runtime';
 
@@ -81,7 +81,7 @@ export function DshCaptainPoDSubmissionScreen({
   const [activeException, setActiveException] = React.useState<DshDeliveryException | null>(null);
   const [exceptionLoadError, setExceptionLoadError] = React.useState<string | null>(null);
   const [reporting, setReporting] = React.useState(false);
-  const [completingReturn, setCompletingReturn] = React.useState(false);
+  const [arrivingReturn, setArrivingReturn] = React.useState(false);
 
   const loadException = React.useCallback(async () => {
     if (!assignmentId) return;
@@ -123,32 +123,34 @@ export function DshCaptainPoDSubmissionScreen({
     }
   }, [onReportFailure, reasonCode, reasonNote]);
 
-  const completeReturn = React.useCallback(async () => {
-    setCompletingReturn(true);
+  const arriveReturn = React.useCallback(async () => {
+    setArrivingReturn(true);
     setExceptionLoadError(null);
     try {
-      await completeCaptainReturnToStore(assignmentId);
-      setActiveException(null);
-      onBack?.();
+      const item = await arriveCaptainReturnToStore(assignmentId);
+      setActiveException(item);
     } catch (error) {
       setExceptionLoadError(error instanceof Error ? error.message : 'تعذر تثبيت تسليم المرتجع للمتجر.');
     } finally {
-      setCompletingReturn(false);
+      setArrivingReturn(false);
     }
   }, [assignmentId, onBack]);
 
   if (activeException) {
-    const returningToStore = activeException.resolutionAction === 'return_to_store' && !activeException.returnedAt;
+    const returnInProgress = activeException.resolutionAction === 'return_to_store' && !activeException.returnArrivedAt;
+    const awaitingStoreReceipt = activeException.resolutionAction === 'return_to_store' && Boolean(activeException.returnArrivedAt) && !activeException.returnedAt;
     return (
       <View style={styles.root}>
         <StateView
-          tone={returningToStore ? 'warning' : activeException.severity === 'critical' ? 'danger' : 'warning'}
-          title={returningToStore ? 'أعد الطلب إلى المتجر' : activeException.status === 'acknowledged' ? 'العمليات تراجع الاستثناء' : 'تم رفع الاستثناء إلى العمليات'}
-          description={returningToStore
-            ? `اعتمدت العمليات إرجاع الطلب. استمر بتحديث GPS، ثم ثبّت تسليم المرتجع للمتجر. ${activeException.resolutionNote ?? ''}`
-            : `${REASON_LABELS[activeException.reasonCode]}${activeException.note ? ` — ${activeException.note}` : ''}. توقفت انتقالات المهمة وإثبات التسليم مؤقتًا، بينما يبقى تحديث GPS فعالًا.`}
-          actionLabel={returningToStore ? (completingReturn ? 'جارٍ تثبيت المرتجع…' : 'تأكيد تسليم المرتجع للمتجر') : 'تحديث قرار العمليات'}
-          onActionPress={() => returningToStore ? void completeReturn() : void loadException()}
+          tone={(returnInProgress || awaitingStoreReceipt) ? 'warning' : activeException.severity === 'critical' ? 'danger' : 'warning'}
+          title={returnInProgress ? 'أعد الطلب إلى المتجر' : awaitingStoreReceipt ? 'بانتظار تأكيد استلام المتجر' : activeException.status === 'acknowledged' ? 'العمليات تراجع الاستثناء' : 'تم رفع الاستثناء إلى العمليات'}
+          description={returnInProgress
+            ? `اعتمدت العمليات إرجاع الطلب. استمر بتحديث GPS، وعند الوصول ثبّت وصولك بالمرتجع. ${activeException.resolutionNote ?? ''}`
+            : awaitingStoreReceipt
+              ? 'تم تسجيل وصولك بالمرتجع. تبقى المهمة مفتوحة حتى يؤكد المتجر استلام العهدة من تطبيق الشريك.'
+              : `${REASON_LABELS[activeException.reasonCode]}${activeException.note ? ` — ${activeException.note}` : ''}. توقفت انتقالات المهمة وإثبات التسليم مؤقتًا، بينما يبقى تحديث GPS فعالًا.`}
+          actionLabel={returnInProgress ? (arrivingReturn ? 'جارٍ تسجيل الوصول…' : 'تأكيد الوصول بالمرتجع') : 'تحديث الحالة'}
+          onActionPress={() => returnInProgress ? void arriveReturn() : void loadException()}
         />
         {exceptionLoadError ? <Text role="caption" tone="danger">{exceptionLoadError}</Text> : null}
         {onBack ? <Button label="العودة إلى المهمة" tone="secondary" onPress={onBack} /> : null}

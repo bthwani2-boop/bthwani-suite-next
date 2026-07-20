@@ -6708,20 +6708,21 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/DshErrorResponse" }
 
-  /dsh/captain/dispatch/assignments/{assignmentId}/return-to-store/complete:
+  /dsh/captain/dispatch/assignments/{assignmentId}/return-to-store/arrive:
     parameters:
       - name: assignmentId
         in: path
         required: true
         schema: { type: string, format: uuid }
     post:
-      operationId: completeDshCaptainReturnToStore
-      summary: Confirm that a governed returned order was handed back to the store.
+      operationId: arriveDshCaptainReturnToStore
+      summary: Confirm captain arrival at the store with the returned order.
+      description: Does not complete custody; the owning partner must accept the return.
       tags: [DshDispatch]
       security: [{ bearerAuth: [] }]
       responses:
         "200":
-          description: Return completed and assignment closed.
+          description: Captain arrival recorded; store receipt remains pending.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/DshDeliveryExceptionResponse" }
@@ -6729,6 +6730,53 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "409":
           description: Assignment is not in returning_to_store state.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshErrorResponse" }
+
+  /dsh/partner/orders/{orderId}/return-to-store:
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      operationId: getDshPartnerReturnToStore
+      summary: Read the governed return state for an order owned by the partner.
+      tags: [DshDispatch]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Return state returned.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshDeliveryExceptionResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/partner/orders/{orderId}/return-to-store/accept:
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      operationId: acceptDshPartnerReturnToStore
+      summary: Confirm store custody of a returned order after captain arrival.
+      tags: [DshDispatch]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Store receipt confirmed and return completed.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshDeliveryExceptionResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Captain has not arrived or return was already finalized inconsistently.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/DshErrorResponse" }
@@ -6909,7 +6957,9 @@ components:
         replacementAssignmentId: { type: string, format: uuid, nullable: true }
         replacementCaptainId: { type: string, nullable: true }
         returnStartedAt: { type: string, format: date-time, nullable: true }
+        returnArrivedAt: { type: string, format: date-time, nullable: true }
         returnedAt: { type: string, format: date-time, nullable: true }
+        returnAcceptedByActorId: { type: string, nullable: true }
         version: { type: integer, minimum: 1 }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
@@ -8080,6 +8130,7 @@ components:
         - picked_up
         - arrived_customer
         - returning_to_store
+        - return_arrived_store
         - returned_to_store
         - delivered
         - cancelled_by_client
@@ -8262,7 +8313,7 @@ components:
 
     DshDeliveryStatus:
       type: string
-      enum: [assigned, driver_assigned, driver_arrived_store, picked_up, arrived_customer, returning_to_store, returned_to_store, delivered, cancelled]
+      enum: [assigned, driver_assigned, driver_arrived_store, picked_up, arrived_customer, returning_to_store, return_arrived_store, returned_to_store, delivered, cancelled]
 
     DshDelivery:
       type: object

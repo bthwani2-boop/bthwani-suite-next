@@ -76,6 +76,7 @@ export const ORDER_STATUS_LABELS: Record<DshOrderStatus, string> = {
   picked_up: "تم الاستلام",
   arrived_customer: "وصل الكابتن للعميل",
   returning_to_store: "جارٍ إرجاع الطلب إلى المتجر",
+  return_arrived_store: "وصل المرتجع وينتظر تأكيد المتجر",
   returned_to_store: "أعيد الطلب إلى المتجر",
   delivered: "تم التسليم",
   cancelled_by_client: "ألغاه العميل",

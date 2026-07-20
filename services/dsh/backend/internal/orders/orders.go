@@ -17,18 +17,19 @@ var (
 type OrderStatus string
 
 const (
-	StatusPending         OrderStatus = "pending"
-	StatusStoreAccepted   OrderStatus = "store_accepted"
-	StatusPreparing       OrderStatus = "preparing"
-	StatusReadyForPickup  OrderStatus = "ready_for_pickup"
-	StatusDriverAssigned  OrderStatus = "driver_assigned"
-	StatusArrivedStore    OrderStatus = "driver_arrived_store"
-	StatusPickedUp        OrderStatus = "picked_up"
-	StatusArrivedCustomer OrderStatus = "arrived_customer"
-	StatusReturningStore  OrderStatus = "returning_to_store"
-	StatusReturnedStore   OrderStatus = "returned_to_store"
-	StatusDelivered       OrderStatus = "delivered"
-	StatusCancelled       OrderStatus = "cancelled"
+	StatusPending            OrderStatus = "pending"
+	StatusStoreAccepted      OrderStatus = "store_accepted"
+	StatusPreparing          OrderStatus = "preparing"
+	StatusReadyForPickup     OrderStatus = "ready_for_pickup"
+	StatusDriverAssigned     OrderStatus = "driver_assigned"
+	StatusArrivedStore       OrderStatus = "driver_arrived_store"
+	StatusPickedUp           OrderStatus = "picked_up"
+	StatusArrivedCustomer    OrderStatus = "arrived_customer"
+	StatusReturningStore     OrderStatus = "returning_to_store"
+	StatusReturnArrivedStore OrderStatus = "return_arrived_store"
+	StatusReturnedStore      OrderStatus = "returned_to_store"
+	StatusDelivered          OrderStatus = "delivered"
+	StatusCancelled          OrderStatus = "cancelled"
 )
 
 type OrderItem struct {
@@ -299,8 +300,9 @@ func ListPartnerOrders(db *sql.DB, storeID, statusFilter string, limit int) ([]O
 					WHEN 'picked_up' THEN 7
 					WHEN 'arrived_customer' THEN 8
 					WHEN 'returning_to_store' THEN 9
-					WHEN 'returned_to_store' THEN 10
-					WHEN 'delivered' THEN 11
+					WHEN 'return_arrived_store' THEN 10
+					WHEN 'returned_to_store' THEN 11
+					WHEN 'delivered' THEN 12
 					WHEN 'cancelled_by_client' THEN 12
 					WHEN 'cancelled_by_store' THEN 13
 					WHEN 'cancelled_by_operator' THEN 14

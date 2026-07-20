@@ -128,9 +128,24 @@ export async function resolveDeliveryExceptionReturnToStore(
   return data.exception;
 }
 
-export async function completeCaptainReturnToStore(assignmentId: string): Promise<DshDeliveryException> {
+export async function arriveCaptainReturnToStore(assignmentId: string): Promise<DshDeliveryException> {
   const data = await request<{ exception: DshDeliveryException }>(
-    `/dsh/captain/dispatch/assignments/${encodeURIComponent(assignmentId)}/return-to-store/complete`,
+    `/dsh/captain/dispatch/assignments/${encodeURIComponent(assignmentId)}/return-to-store/arrive`,
+    { method: "POST" },
+  );
+  return data.exception;
+}
+
+export async function fetchPartnerReturnToStore(orderId: string): Promise<DshDeliveryException> {
+  const data = await request<{ exception: DshDeliveryException }>(
+    `/dsh/partner/orders/${encodeURIComponent(orderId)}/return-to-store`,
+  );
+  return data.exception;
+}
+
+export async function acceptPartnerReturnToStore(orderId: string): Promise<DshDeliveryException> {
+  const data = await request<{ exception: DshDeliveryException }>(
+    `/dsh/partner/orders/${encodeURIComponent(orderId)}/return-to-store/accept`,
     { method: "POST" },
   );
   return data.exception;

@@ -221,28 +221,25 @@ func writeDeliveryExceptionError(w http.ResponseWriter, err error) {
 
 func marshalDeliveryException(item *dispatch.DeliveryException) map[string]any {
 	return map[string]any{
-		"id":                     item.ID,
-		"tenantId":               item.TenantID,
-		"assignmentId":           item.AssignmentID,
-		"orderId":                item.OrderID,
-		"captainId":              item.CaptainID,
-		"reasonCode":             string(item.ReasonCode),
-		"note":                   item.Note,
+		"id": item.ID, "tenantId": item.TenantID, "assignmentId": item.AssignmentID,
+		"orderId": item.OrderID, "captainId": item.CaptainID,
+		"reasonCode": string(item.ReasonCode), "note": item.Note,
 		"deliveryStatusAtReport": string(item.DeliveryStatusAtReport),
-		"severity":               string(item.Severity),
-		"status":                 string(item.Status),
-		"correlationId":          item.CorrelationID,
-		"reportedLatitude":       item.ReportedLatitude,
-		"reportedLongitude":      item.ReportedLongitude,
-		"reportedAt":             item.ReportedAt,
-		"acknowledgedAt":         item.AcknowledgedAt,
-		"resolvedAt":             item.ResolvedAt,
-		"resolvedByActorId":      item.ResolvedByActorID,
-		"resolutionAction":       item.ResolutionAction,
-		"resolutionNote":         item.ResolutionNote,
-		"version":                item.Version,
-		"createdAt":              item.CreatedAt,
-		"updatedAt":              item.UpdatedAt,
+		"severity":               string(item.Severity), "status": string(item.Status),
+		"correlationId":    item.CorrelationID,
+		"reportedLatitude": item.ReportedLatitude, "reportedLongitude": item.ReportedLongitude,
+		"reportedAt":            item.ReportedAt,
+		"acknowledgedAt":        item.AcknowledgedAt,
+		"acknowledgedByActorId": item.AcknowledgedByActorID,
+		"resolvedAt":            item.ResolvedAt, "resolvedByActorId": item.ResolvedByActorID,
+		"resolutionAction": item.ResolutionAction, "resolutionNote": item.ResolutionNote,
+		"replacementAssignmentId": item.ReplacementAssignmentID,
+		"replacementCaptainId":    item.ReplacementCaptainID,
+		"returnStartedAt":         item.ReturnStartedAt,
+		"returnArrivedAt":         item.ReturnArrivedAt,
+		"returnedAt":              item.ReturnedAt,
+		"returnAcceptedByActorId": item.ReturnAcceptedByActorID,
+		"version":                 item.Version, "createdAt": item.CreatedAt, "updatedAt": item.UpdatedAt,
 	}
 }
 
@@ -301,13 +298,13 @@ func (s *protectedStoreServer) handleResolveDeliveryException(w http.ResponseWri
 	store.SendJSON(w, http.StatusOK, map[string]any{"exception": marshalDeliveryException(item)})
 }
 
-// POST /dsh/captain/dispatch/assignments/{assignmentId}/return-to-store/complete
-func (s *protectedStoreServer) handleCompleteReturnToStore(w http.ResponseWriter, r *http.Request) {
+// POST /dsh/captain/dispatch/assignments/{assignmentId}/return-to-store/arrive
+func (s *protectedStoreServer) handleArriveReturnToStore(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "captain")
 	if !ok {
 		return
 	}
-	item, err := dispatch.CompleteReturnToStore(s.db, r.PathValue("assignmentId"), actor.ID)
+	item, err := dispatch.CaptainArriveReturnToStore(s.db, r.PathValue("assignmentId"), actor.ID)
 	if err != nil {
 		writeDeliveryExceptionError(w, err)
 		return

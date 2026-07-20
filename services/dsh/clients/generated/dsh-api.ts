@@ -4134,7 +4134,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/dsh/captain/dispatch/assignments/{assignmentId}/return-to-store/complete": {
+    "/dsh/captain/dispatch/assignments/{assignmentId}/return-to-store/arrive": {
         parameters: {
             query?: never;
             header?: never;
@@ -4145,8 +4145,49 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Confirm that a governed returned order was handed back to the store. */
-        post: operations["completeDshCaptainReturnToStore"];
+        /**
+         * Confirm captain arrival at the store with the returned order.
+         * @description Does not complete custody; the owning partner must accept the return.
+         */
+        post: operations["arriveDshCaptainReturnToStore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/orders/{orderId}/return-to-store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        /** Read the governed return state for an order owned by the partner. */
+        get: operations["getDshPartnerReturnToStore"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/orders/{orderId}/return-to-store/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm store custody of a returned order after captain arrival. */
+        post: operations["acceptDshPartnerReturnToStore"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4219,7 +4260,10 @@ export interface components {
             /** Format: date-time */
             returnStartedAt?: string | null;
             /** Format: date-time */
+            returnArrivedAt?: string | null;
+            /** Format: date-time */
             returnedAt?: string | null;
+            returnAcceptedByActorId?: string | null;
             version: number;
             /** Format: date-time */
             createdAt: string;
@@ -4867,7 +4911,7 @@ export interface components {
          * @description Explicit operational terminal states; the ambiguous legacy `cancelled` value is forbidden.
          * @enum {string}
          */
-        DshOrderStatus: "pending" | "store_accepted" | "preparing" | "ready_for_pickup" | "driver_assigned" | "driver_arrived_store" | "picked_up" | "arrived_customer" | "returning_to_store" | "returned_to_store" | "delivered" | "cancelled_by_client" | "cancelled_by_store" | "cancelled_by_operator" | "cancelled_no_driver" | "failed_payment" | "failed_dispatch";
+        DshOrderStatus: "pending" | "store_accepted" | "preparing" | "ready_for_pickup" | "driver_assigned" | "driver_arrived_store" | "picked_up" | "arrived_customer" | "returning_to_store" | "return_arrived_store" | "returned_to_store" | "delivered" | "cancelled_by_client" | "cancelled_by_store" | "cancelled_by_operator" | "cancelled_no_driver" | "failed_payment" | "failed_dispatch";
         /**
          * @description DSH projection of the WLT-owned financial closure decision.
          * @enum {string}
@@ -4961,7 +5005,7 @@ export interface components {
         /** @enum {string} */
         DshAssignmentStatus: "offered" | "accepted" | "declined" | "completed" | "cancelled";
         /** @enum {string} */
-        DshDeliveryStatus: "assigned" | "driver_assigned" | "driver_arrived_store" | "picked_up" | "arrived_customer" | "returning_to_store" | "returned_to_store" | "delivered" | "cancelled";
+        DshDeliveryStatus: "assigned" | "driver_assigned" | "driver_arrived_store" | "picked_up" | "arrived_customer" | "returning_to_store" | "return_arrived_store" | "returned_to_store" | "delivered" | "cancelled";
         DshDelivery: {
             id: string;
             assignmentId: string;
@@ -14383,7 +14427,7 @@ export interface operations {
             };
         };
     };
-    completeDshCaptainReturnToStore: {
+    arriveDshCaptainReturnToStore: {
         parameters: {
             query?: never;
             header?: never;
@@ -14394,7 +14438,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Return completed and assignment closed. */
+            /** @description Captain arrival recorded; store receipt remains pending. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -14406,6 +14450,65 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             404: components["responses"]["NotFound"];
             /** @description Assignment is not in returning_to_store state. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+        };
+    };
+    getDshPartnerReturnToStore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Return state returned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshDeliveryExceptionResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    acceptDshPartnerReturnToStore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Store receipt confirmed and return completed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshDeliveryExceptionResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Captain has not arrived or return was already finalized inconsistently. */
             409: {
                 headers: {
                     [name: string]: unknown;

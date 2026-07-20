@@ -5,6 +5,8 @@ import type { DshFulfillmentDeliveryMode } from '../../shared/delivery/delivery.
 import type { PartnerTeamMember } from '../team/partner-team.types';
 import { usePartnerDeliveryActionsController } from '../../shared/partner-delivery/use-partner-delivery-controller';
 import { usePickupActionsController } from '../../shared/pickup/use-pickup-controller';
+import { acceptPartnerReturnToStore, fetchPartnerReturnToStore } from '../../shared/dispatch/dispatch.api';
+import type { DshDeliveryException } from '../../shared/dispatch/dispatch.types';
 
 export type PartnerFulfillmentActionsPanelProps = {
   readonly orderId: string;
@@ -29,6 +31,83 @@ const PICKUP_ERROR_LABELS: Record<string, string> = {
   PICKUP_INVALID_TRANSITION: 'لا يمكن تنفيذ هذا الإجراء في المرحلة الحالية.',
   VERSION_CONFLICT: 'تغيّرت الجلسة من سطح آخر؛ أعد التحميل قبل المتابعة.',
 };
+
+function isNotFound(error: unknown): boolean {
+  const typed = error as { status?: number; body?: { code?: string } };
+  return typed.status === 404 || typed.body?.code === 'NOT_FOUND';
+}
+
+function ReturnToStoreReceiptActions({ orderId }: { readonly orderId: string }) {
+  const { direction } = useDirection();
+  const textAlign = direction === 'rtl' ? 'right' : 'left';
+  const [state, setState] = React.useState<
+    | { readonly kind: 'loading' }
+    | { readonly kind: 'none' }
+    | { readonly kind: 'ready'; readonly item: DshDeliveryException }
+    | { readonly kind: 'error'; readonly message: string }
+  >({ kind: 'loading' });
+  const [accepting, setAccepting] = React.useState(false);
+
+  const load = React.useCallback(async () => {
+    try {
+      const item = await fetchPartnerReturnToStore(orderId);
+      setState({ kind: 'ready', item });
+    } catch (error) {
+      if (isNotFound(error)) {
+        setState({ kind: 'none' });
+        return;
+      }
+      setState({ kind: 'error', message: error instanceof Error ? error.message : 'تعذر قراءة حالة المرتجع.' });
+    }
+  }, [orderId]);
+
+  React.useEffect(() => {
+    void load();
+    const interval = setInterval(() => void load(), 10_000);
+    return () => clearInterval(interval);
+  }, [load]);
+
+  const accept = React.useCallback(async () => {
+    setAccepting(true);
+    try {
+      const item = await acceptPartnerReturnToStore(orderId);
+      setState({ kind: 'ready', item });
+    } catch (error) {
+      setState({ kind: 'error', message: error instanceof Error ? error.message : 'تعذر تأكيد استلام المرتجع.' });
+    } finally {
+      setAccepting(false);
+    }
+  }, [orderId]);
+
+  if (state.kind === 'none') return null;
+  if (state.kind === 'loading') return null;
+  if (state.kind === 'error') return <StateView tone="danger" title="تعذر قراءة المرتجع" description={state.message} actionLabel="إعادة المحاولة" onActionPress={() => void load()} />;
+
+  const item = state.item;
+  const arrived = Boolean(item.returnArrivedAt);
+  const accepted = Boolean(item.returnedAt);
+  return (
+    <Surface tone="raised" gap={3}>
+      <Text role="label" style={{ textAlign }}>استلام مرتجع توصيل بثواني</Text>
+      <Text role="bodySm" tone="muted" style={{ textAlign }}>
+        لا يتحول الطلب إلى «أعيد إلى المتجر» إلا بعد تأكيدك استلام العهدة فعليًا من الكابتن.
+      </Text>
+      <Badge
+        label={accepted ? 'تم استلام المرتجع' : arrived ? 'الكابتن وصل بالمرتجع' : 'المرتجع في الطريق'}
+        tone={accepted ? 'success' : arrived ? 'warning' : 'action'}
+      />
+      {arrived && !accepted ? (
+        <Button
+          label={accepting ? 'جارٍ تثبيت الاستلام…' : 'تأكيد استلام المرتجع من الكابتن'}
+          disabled={accepting}
+          onPress={() => void accept()}
+        />
+      ) : null}
+      {!arrived ? <Text role="caption" tone="muted">لا يوجد إجراء قبل تسجيل وصول الكابتن بالمرتجع.</Text> : null}
+      <Button label="تحديث حالة المرتجع" tone="ghost" size="sm" fullWidth={false} disabled={accepting} onPress={() => void load()} />
+    </Surface>
+  );
+}
 
 function PartnerDeliveryActions({
   orderId,
@@ -270,6 +349,9 @@ export function PartnerFulfillmentActionsPanel({
   fulfillmentMode,
   teamMembers,
 }: PartnerFulfillmentActionsPanelProps) {
+  if (fulfillmentMode === 'bthwani_delivery') {
+    return <ReturnToStoreReceiptActions orderId={orderId} />;
+  }
   if (fulfillmentMode === 'partner_delivery') {
     return <PartnerDeliveryActions orderId={orderId} teamMembers={teamMembers ?? []} />;
   }

@@ -272,7 +272,8 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
       <Box gap={2} style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
         <Badge label={`استثناءات توصيل نشطة: ${state.delivery.length}`} tone={state.delivery.length ? 'warning' : 'success'} />
         <Badge label={`كباتن مؤهلون: ${captainsState === 'ready' ? captains.length : '—'}`} tone={captains.length ? 'success' : 'warning'} />
-        <Badge label={`مرتجعات قيد المتابعة: ${state.returns.filter((item) => !item.returnedAt).length}`} tone="warning" />
+        <Badge label={`مرتجعات في الطريق: ${state.returns.filter((item) => !item.returnArrivedAt).length}`} tone="warning" />
+        <Badge label={`بانتظار المتجر: ${state.returns.filter((item) => Boolean(item.returnArrivedAt) && !item.returnedAt).length}`} tone="warning" />
         <Badge label={`مرتجعات مستلمة: ${state.returns.filter((item) => Boolean(item.returnedAt)).length}`} tone="neutral" />
         <Badge label={`تصعيدات جاهزية: ${state.readiness.filter((item) => item.status !== 'resolved').length}`} tone="neutral" />
       </Box>
@@ -325,7 +326,7 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
             <Card key={`return-${item.id}`} padding={4} gap={2}>
               <Text role="bodyStrong" align="start">الطلب: {item.orderId}</Text>
               <Text role="caption" tone="muted" align="start">الكابتن: {item.captainId}</Text>
-              <Badge label={item.returnedAt ? 'استلم المتجر المرتجع' : 'في طريق العودة إلى المتجر'} tone={item.returnedAt ? 'success' : 'warning'} />
+              <Badge label={item.returnedAt ? 'استلم المتجر المرتجع' : item.returnArrivedAt ? 'وصل المرتجع وينتظر تأكيد المتجر' : 'في طريق العودة إلى المتجر'} tone={item.returnedAt ? 'success' : 'warning'} />
               <Text role="bodySm" align="start">{item.resolutionNote}</Text>
               {cancellation ? (
                 <>
