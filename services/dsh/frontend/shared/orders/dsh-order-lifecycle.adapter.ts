@@ -37,6 +37,7 @@ export function normalizeDshOrderStatus(status: unknown): DshOrderStatus {
     case 'accepted_by_captain':
     case 'driver_assigned':
     case 'assigned':
+    case 'offered':
       return 'driver_assigned';
     case 'driver_arrived_store':
       return 'driver_arrived_store';
@@ -48,18 +49,30 @@ export function normalizeDshOrderStatus(status: unknown): DshOrderStatus {
       return 'arrived_customer';
     case 'delivered':
     case 'returned':
-      return 'delivered';
-    case 'cancelled':
-    case 'refunded':
-    case 'failed_delivery':
-    case 'returning_to_store':
-      return 'cancelled';
-    case 'offered':
-      return 'driver_assigned';
-    case 'declined':
-      return 'pending';
     case 'completed':
       return 'delivered';
+    case 'cancelled_by_client':
+      return 'cancelled_by_client';
+    case 'cancelled_by_store':
+      return 'cancelled_by_store';
+    case 'cancelled_by_operator':
+      return 'cancelled_by_operator';
+    case 'cancelled_no_driver':
+      return 'cancelled_no_driver';
+    case 'failed_payment':
+      return 'failed_payment';
+    case 'failed_dispatch':
+    case 'failed_delivery':
+    case 'returning_to_store':
+      return 'failed_dispatch';
+    case 'cancelled':
+    case 'refunded':
+      // Compatibility is intentionally one-way: ambiguous legacy rows are
+      // projected into the operator-governed terminal state, never reintroduced
+      // into the sovereign status union.
+      return 'cancelled_by_operator';
+    case 'declined':
+      return 'pending';
     default:
       throw {
         kind: 'contract',
@@ -167,3 +180,5 @@ export function normalizeDispatchAssignmentAsOrder(raw: BackendDispatchAssignmen
 export function normalizeAssignmentResponse(resp: { readonly assignment?: BackendDispatchAssignment }): DshOrderRecord {
   return normalizeDispatchAssignmentAsOrder(resp.assignment ?? {});
 }
+
+export { isDshOrderApiOfflineError, isDshOrderApiContractError };
