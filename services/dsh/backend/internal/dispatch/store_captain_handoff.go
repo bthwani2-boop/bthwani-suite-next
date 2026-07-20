@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"dsh-api/internal/orders"
 )
 
 var ErrStoreHandoffRequired = errors.New("store handoff confirmation is required")
@@ -135,6 +137,116 @@ func completeStoreCaptainHandoff(tx *sql.Tx, assignmentID, captainID string) err
 		return ErrStoreHandoffRequired
 	}
 	return nil
+}
+
+// UpdateDeliveryStatusGoverned preserves the existing captain lifecycle while
+// enforcing a two-actor custody boundary for platform deliveries.
+func UpdateDeliveryStatusGoverned(db *sql.DB, assignmentID, captainID string, status DeliveryStatus) (*Assignment, error) {
+	switch status {
+	case DeliveryArrivedStore:
+		return updateDeliveryProgressWithStoreHandoff(
+			db,
+			assignmentID,
+			captainID,
+			[]DeliveryStatus{DeliveryDriverAssigned},
+			status,
+			orders.StatusArrivedStore,
+		)
+	case DeliveryPickedUp:
+		return updateDeliveryProgressWithStoreHandoff(
+			db,
+			assignmentID,
+			captainID,
+			[]DeliveryStatus{DeliveryArrivedStore},
+			status,
+			orders.StatusPickedUp,
+		)
+	case DeliveryArrivedCustomer:
+		return updateDeliveryProgress(db, assignmentID, captainID, []DeliveryStatus{DeliveryPickedUp}, status, orders.StatusArrivedCustomer)
+	default:
+		return nil, fmt.Errorf("%w: unsupported delivery status", ErrInvalid)
+	}
+}
+
+func updateDeliveryProgressWithStoreHandoff(
+	db *sql.DB,
+	assignmentID string,
+	captainID string,
+	allowed []DeliveryStatus,
+	next DeliveryStatus,
+	orderStatus orders.OrderStatus,
+) (*Assignment, error) {
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	current, err := lockAssignment(tx, assignmentID, captainID)
+	if err != nil {
+		return nil, err
+	}
+	if current.Status == AssignmentCancelled || current.Delivery.Status == DeliveryCancelled {
+		return nil, fmt.Errorf("%w: assignment was cancelled with the order", ErrConflict)
+	}
+	if err = ensureNoOpenDeliveryException(tx, assignmentID); err != nil {
+		return nil, err
+	}
+	if current.Status != AssignmentAccepted {
+		return nil, fmt.Errorf("%w: assignment is not accepted", ErrConflict)
+	}
+
+	valid := false
+	for _, candidate := range allowed {
+		if current.Delivery.Status == candidate {
+			valid = true
+			break
+		}
+	}
+	if !valid {
+		return nil, fmt.Errorf("%w: delivery cannot move from %s to %s", ErrConflict, current.Delivery.Status, next)
+	}
+
+	if current.OrderID != "" && next == DeliveryPickedUp {
+		if err = requireStoreCaptainHandoffConfirmed(tx, assignmentID, captainID); err != nil {
+			return nil, err
+		}
+	}
+	if current.OrderID != "" && next == DeliveryArrivedStore {
+		if err = ensureStoreCaptainHandoff(tx, current); err != nil {
+			return nil, err
+		}
+	}
+
+	if current.OrderID != "" {
+		if _, err = orders.TransitionDispatchOrder(
+			tx,
+			current.OrderID,
+			"captain",
+			[]orders.OrderStatus{orders.OrderStatus(current.Delivery.Status)},
+			orderStatus,
+			string(next),
+		); err != nil {
+			return nil, mapOrderError(err)
+		}
+	}
+
+	if _, err = tx.Exec(`
+		UPDATE dsh_deliveries
+		SET status = $1, updated_at = NOW()
+		WHERE assignment_id = $2::uuid AND captain_id = $3`, string(next), assignmentID, captainID); err != nil {
+		return nil, err
+	}
+	if current.OrderID != "" && next == DeliveryPickedUp {
+		if err = completeStoreCaptainHandoff(tx, assignmentID, captainID); err != nil {
+			return nil, err
+		}
+	}
+
+	if err = tx.Commit(); err != nil {
+		return nil, err
+	}
+	return GetCaptainAssignment(db, assignmentID, captainID)
 }
 
 func ConfirmStoreCaptainHandoff(db *sql.DB, orderID, storeID, actorID string) (*StoreCaptainHandoff, error) {
