@@ -2,6 +2,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 
+stale_client_path = ROOT / "services/dsh/backend/internal/wlt/delivery_collection.go"
+if stale_client_path.exists():
+    stale_client_path.unlink()
+
 client_test_path = ROOT / "services/dsh/backend/internal/wlt/client_test.go"
 text = client_test_path.read_text(encoding="utf-8")
 text = text.replace("TestNotifyDeliveryCompletedSendsServiceHeaders", "TestNotifyDeliveryCollectionSendsGovernedCollectorHeaders")
@@ -25,10 +29,29 @@ text = text.replace(
 \t\tCollectorID:      "captain-1",
 \t\tPartnerID:        "partner-1",''',
 )
-for stale in ["NotifyDeliveryCompletedInput", "NotifyDeliveryCompleted(", "CaptainID:        \"captain-1\""]:
+text = text.replace(
+    'NotifyDeliveryCollectionInput{OrderID: "order-1"}',
+    'NotifyDeliveryCollectionInput{OrderID: "order-1", CollectorType: "captain", CollectorID: "captain-1", PartnerID: "partner-1", CheckoutIntentID: "intent-1"}',
+)
+for stale in [
+    "NotifyDeliveryCompletedInput",
+    "NotifyDeliveryCompleted(",
+    "CaptainID:        \"captain-1\"",
+]:
     if stale in text:
         raise RuntimeError(f"stale DSH WLT COD client test reference remains: {stale}")
 client_test_path.write_text(text, encoding="utf-8")
+
+client_path = ROOT / "services/dsh/backend/internal/wlt/client.go"
+client = client_path.read_text(encoding="utf-8")
+if client.count("type NotifyDeliveryCollectionInput struct") != 1:
+    raise RuntimeError("DSH must expose exactly one COD collection input")
+if client.count("func (c *Client) NotifyDeliveryCollection") != 1:
+    raise RuntimeError("DSH must expose exactly one COD collection method")
+if "/wlt/delivery-collections" in client:
+    raise RuntimeError("obsolete delivery-collections route remains in DSH WLT client")
+if 'c.baseURL+"/wlt/cod-records"' not in client:
+    raise RuntimeError("governed WLT cod-records route is missing")
 
 cod_path = ROOT / "services/wlt/backend/internal/cod/cod.go"
 cod = cod_path.read_text(encoding="utf-8")
@@ -96,4 +119,4 @@ if "INSERT INTO wlt_payment_sessions(checkout_intent_id,client_id" in cod_test:
     raise RuntimeError("ungoverned payment-session fixture remains in COD DB tests")
 cod_test_path.write_text(cod_test, encoding="utf-8")
 
-print("Aligned client tests, imports, captain section, and governed WLT payment-session fixtures.")
+print("Removed stale COD client, aligned client tests, imports, captain section, and governed WLT fixtures.")
