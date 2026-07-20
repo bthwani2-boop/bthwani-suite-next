@@ -54,6 +54,15 @@ jobs:
         shell: pwsh
         run: |
           & ./infra/docker/scripts/runtime.ps1 -Action migrate -Profiles wlt *>&1 | Tee-Object -FilePath artifacts/partner-journey-closure/migrate-wlt.log
+      - name: Verify partner settlement summary SQL
+        shell: bash
+        env:
+          DATABASE_URL: postgres://wlt_runtime:wlt_runtime_password@localhost:55432/wlt_runtime?sslmode=disable
+          WLT_REQUIRE_DB_TESTS: "true"
+        run: |
+          set -o pipefail
+          cd services/wlt/backend
+          go test ./internal/settlement -run 'TestListSettlementSummaryGoverned_' -count=1 -v 2>&1 | tee ../../../artifacts/partner-journey-closure/wlt-partner-summary-test.log
       - name: Migrate DSH
         shell: pwsh
         run: |
