@@ -45,9 +45,9 @@ func NewRouter(db *sql.DB, mutationsEnabled bool) *http.ServeMux {
 	mux.HandleFunc("POST /wlt/payment-sessions/{paymentSessionId}/capture", gate(serviceAuth(payment.HandleCaptureSessionSovereign(db))))
 	mux.HandleFunc("POST /wlt/payment-sessions/{paymentSessionId}/expire", gate(serviceAuth(payment.HandleExpireSession(db))))
 	mux.HandleFunc("POST /wlt/payment-sessions/{paymentSessionId}/cod-collect", gate(serviceAuth(payment.HandleCodCollectionViaPaymentSessionBlocked(db))))
-	mux.HandleFunc("POST /wlt/payment-sessions/{paymentSessionId}/cancel-for-order", gate(serviceAuth(payment.HandleCancelSessionForOrder(db))))
+	mux.HandleFunc("POST /wlt/payment-sessions/{paymentSessionId}/cancel-for-order", gate(serviceAuth(payment.HandleGovernedSessionCancellation(db))))
 
-	mux.HandleFunc("POST /wlt/refunds", gate(serviceAuth(refund.HandleCreateRefund(db))))
+	mux.HandleFunc("POST /wlt/refunds", gate(serviceAuth(refund.HandleCreateRefundAtomic(db))))
 	mux.HandleFunc("GET /wlt/refunds/{refundId}", readGate(refund.HandleGetRefund(db)))
 	mux.HandleFunc("GET /wlt/refunds", readGate(refund.HandleListRefunds(db)))
 	mux.HandleFunc("POST /wlt/refunds/{refundId}/approve", gate(serviceAuth(refund.HandleApproveRefund(db))))

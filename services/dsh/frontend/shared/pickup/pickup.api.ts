@@ -13,7 +13,7 @@ import type {
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "pickup");
 
-export type PartnerPickupStage = "not_ready" | "ready" | "notified" | "customer_arrived" | "verified" | "no_show";
+export type PartnerPickupStage = "not_ready" | "ready" | "notified" | "customer_arrived" | "verified" | "no_show" | "cancelled";
 export type DshPartnerPickupStateResponse = {
   readonly session: DshPickupSession | null;
   readonly stage: PartnerPickupStage;

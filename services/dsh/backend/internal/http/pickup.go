@@ -44,6 +44,8 @@ func writePickupError(w http.ResponseWriter, err error) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "pickup session not found")
 	case errors.Is(err, pickup.ErrVersionConflict):
 		store.SendError(w, http.StatusConflict, "VERSION_CONFLICT", "pickup session version changed; reload before retrying")
+	case errors.Is(err, pickup.ErrCancelled):
+		store.SendError(w, http.StatusConflict, "PICKUP_CANCELLED", "pickup session was cancelled with the order")
 	case errors.Is(err, pickup.ErrAlreadyUsed):
 		store.SendError(w, http.StatusUnprocessableEntity, "PICKUP_CODE_ALREADY_USED", err.Error())
 	case errors.Is(err, pickup.ErrExpired):
@@ -73,10 +75,49 @@ func marshalPickupSession(s *pickup.PickupSession) map[string]any {
 		"usedAt":             s.UsedAt,
 		"verifiedByActorId":  s.VerifiedByActorID,
 		"verificationMethod": s.VerificationMethod,
+		"status":             s.Status,
+		"cancelledAt":        s.CancelledAt,
+		"cancellationReason": s.CancellationReason,
 		"version":            s.Version,
 		"createdAt":          s.CreatedAt,
 		"updatedAt":          s.UpdatedAt,
 	}
+}
+
+func (s *protectedStoreServer) handleGetPartnerPickupState(w http.ResponseWriter, r *http.Request) {
+	_, ownedOrder, ok := s.partnerOrder(w, r)
+	if !ok {
+		return
+	}
+	if ownedOrder.FulfillmentMode != "pickup" {
+		store.SendError(w, http.StatusUnprocessableEntity, "PICKUP_INVALID_TRANSITION", "order is not a pickup order")
+		return
+	}
+
+	session, err := pickup.GetByOrderID(s.db, ownedOrder.ID)
+	if errors.Is(err, pickup.ErrNotFound) {
+		session = nil
+		err = nil
+	}
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load pickup session")
+		return
+	}
+
+	stage, err := pickup.ResolvePartnerStage(s.db, ownedOrder.ID, string(ownedOrder.Status), session)
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to resolve pickup stage")
+		return
+	}
+
+	var sessionPayload any
+	if session != nil {
+		sessionPayload = marshalPickupSession(session)
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{
+		"session": sessionPayload,
+		"stage":   stage,
+	})
 }
 
 func (s *protectedStoreServer) handlePickupMarkReady(w http.ResponseWriter, r *http.Request) {
@@ -241,6 +282,7 @@ func (s *protectedStoreServer) handleListOperatorPickups(w http.ResponseWriter, 
 	limit, offset := parseLimitOffset(r)
 	sessions, err := pickup.List(s.db, pickup.ListFilter{
 		StoreID: r.URL.Query().Get("storeId"),
+		Status:  pickup.SessionStatus(r.URL.Query().Get("status")),
 		Limit:   limit,
 		Offset:  offset,
 	})

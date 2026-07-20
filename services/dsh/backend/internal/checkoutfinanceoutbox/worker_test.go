@@ -46,6 +46,7 @@ func uniqueID(prefix string) string {
 func seedCheckoutIntentFixture(t *testing.T, db *sql.DB, paymentSessionID string) (storeID, clientID, intentID string) {
 	t.Helper()
 	ctx := context.Background()
+	tenantID := uniqueID("tenant-checkout-finance-outbox")
 	storeID = uniqueID("checkout-finance-outbox-store")
 	clientID = uniqueID("checkout-finance-outbox-client")
 
@@ -58,10 +59,11 @@ func seedCheckoutIntentFixture(t *testing.T, db *sql.DB, paymentSessionID string
 	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_stores WHERE id = $1`, storeID) })
 
 	if err := db.QueryRowContext(ctx, `
-		INSERT INTO dsh_checkout_intents (client_id, cart_id, store_id, state, payment_method, wlt_payment_session_id)
-		VALUES ($1, gen_random_uuid(), $2, 'payment_pending', 'cod', $3)
+		INSERT INTO dsh_checkout_intents (tenant_id, client_id, cart_id, store_id, state, payment_method, wlt_payment_session_id, subtotal_minor_units, delivery_fee_minor_units, discount_minor_units, total_minor_units, currency, pricing_snapshot_hash)
+		VALUES ($1, $2, gen_random_uuid(), $3, 'payment_pending', 'cod', $4,
+		        1000, 0, 0, 1000, 'YER', repeat('e', 64))
 		RETURNING id::text`,
-		clientID, storeID, paymentSessionID,
+		tenantID, clientID, storeID, paymentSessionID,
 	).Scan(&intentID); err != nil {
 		t.Fatalf("failed to insert test checkout intent: %v", err)
 	}
@@ -162,8 +164,10 @@ func TestProcessOnceDispatchesCancelForOrderDBIntegration(t *testing.T) {
 	t.Cleanup(func() { _, _ = db.Exec(`DELETE FROM dsh_stores WHERE id = $1`, storeID) })
 
 	if err := db.QueryRow(`
-		INSERT INTO dsh_orders (checkout_intent_id, store_id, client_id, status, wlt_payment_ref_id)
-		VALUES ($1::uuid, $2, $3, 'cancelled', $4)
+		INSERT INTO dsh_orders (tenant_id, checkout_intent_id, store_id, client_id, status, wlt_payment_ref_id)
+		SELECT tenant_id, $1::uuid, $2, $3, 'cancelled_by_operator', $4
+		FROM dsh_checkout_intents
+		WHERE id = $1::uuid
 		RETURNING id::text`,
 		intentID, storeID, clientID, paymentSessionID,
 	).Scan(&orderID); err != nil {
@@ -194,7 +198,9 @@ func TestProcessOnceDispatchesCancelForOrderDBIntegration(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotPath = r.URL.Path
 		_ = json.NewDecoder(r.Body).Decode(&gotBody)
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"action":"refund_requested","refund":{"id":"refund-outbox-test"}}`))
 	}))
 	defer server.Close()
 
@@ -203,9 +209,12 @@ func TestProcessOnceDispatchesCancelForOrderDBIntegration(t *testing.T) {
 		t.Fatalf("ProcessOnce failed: %v", err)
 	}
 
-	expectedPath := "/wlt/payment-sessions/" + paymentSessionID + "/cancel-for-order"
+	expectedPath := "/wlt/order-cancellations"
 	if gotPath != expectedPath {
 		t.Fatalf("expected path %q, got %q", expectedPath, gotPath)
+	}
+	if gotBody["paymentSessionId"] != paymentSessionID {
+		t.Fatalf("expected paymentSessionId=%q, got %v", paymentSessionID, gotBody["paymentSessionId"])
 	}
 	if gotBody["orderId"] != orderID {
 		t.Fatalf("expected orderId=%q, got %v", orderID, gotBody["orderId"])
@@ -224,6 +233,16 @@ func TestProcessOnceDispatchesCancelForOrderDBIntegration(t *testing.T) {
 	status, _, _ := fetchOutboxRow(t, db, id)
 	if status != "sent" {
 		t.Fatalf("expected status 'sent' after successful delivery, got %q", status)
+	}
+	var projectedStatus, projectedReference string
+	if err := db.QueryRow(`
+		SELECT financial_closure_status, COALESCE(financial_closure_reference, '')
+		FROM dsh_orders WHERE id=$1::uuid`, orderID,
+	).Scan(&projectedStatus, &projectedReference); err != nil {
+		t.Fatal(err)
+	}
+	if projectedStatus != "refund_requested" || projectedReference != "refund-outbox-test" {
+		t.Fatalf("unexpected financial projection: status=%q reference=%q", projectedStatus, projectedReference)
 	}
 }
 

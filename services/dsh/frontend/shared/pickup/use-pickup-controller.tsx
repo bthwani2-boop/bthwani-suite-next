@@ -79,6 +79,8 @@ export function usePickupActionsController(orderId: string) {
 
   useEffect(() => {
     void load();
+    const interval = setInterval(() => void load(), 10_000);
+    return () => clearInterval(interval);
   }, [load]);
 
   const runAction = useCallback(async (
@@ -100,6 +102,23 @@ export function usePickupActionsController(orderId: string) {
       return true;
     } catch (error) {
       const { message, classified } = classifiedMessage(error, "تعذر تنفيذ الإجراء.");
+      if (classified.code === "PICKUP_CANCELLED") {
+        try {
+          const response = await fetchPartnerPickupState(orderId);
+          setState({
+            session: response.session,
+            stage: response.stage,
+            loaded: true,
+            busy: false,
+            isError: true,
+            message,
+            errorCode: classified.code,
+          });
+          return false;
+        } catch {
+          // Preserve the original governed cancellation error below.
+        }
+      }
       setState((current) => ({
         ...current,
         busy: false,
@@ -188,7 +207,10 @@ export function useOperatorPickupsController(
   }, [storeId, limit]);
 
   useEffect(() => {
-    if (autoLoad) void loadList();
+    if (!autoLoad) return;
+    void loadList();
+    const interval = setInterval(() => void loadList(), 15_000);
+    return () => clearInterval(interval);
   }, [autoLoad, loadList]);
 
   const loadDetail = useCallback((orderIdValue: string) => {

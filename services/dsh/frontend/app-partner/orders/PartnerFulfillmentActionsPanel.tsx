@@ -21,6 +21,7 @@ const PARTNER_DELIVERY_ERROR_LABELS: Record<string, string> = {
 };
 
 const PICKUP_ERROR_LABELS: Record<string, string> = {
+  PICKUP_CANCELLED: 'ألغيت جلسة الاستلام الذاتي مع إلغاء الطلب.',
   PICKUP_CODE_ALREADY_USED: 'تم استخدام رمز الاستلام مسبقًا.',
   PICKUP_CODE_EXPIRED: 'انتهت صلاحية رمز الاستلام؛ أرسل رمزًا جديدًا.',
   PICKUP_CODE_ATTEMPTS_EXCEEDED: 'تم تجاوز عدد محاولات الرمز المسموح.',
@@ -177,7 +178,7 @@ function PickupActions({ orderId }: { readonly orderId: string }) {
       </Text>
       <Badge
         label={`المرحلة: ${stage}`}
-        tone={stage === 'verified' ? 'success' : stage === 'no_show' ? 'danger' : 'action'}
+        tone={stage === 'verified' ? 'success' : stage === 'no_show' || stage === 'cancelled' ? 'danger' : 'action'}
       />
 
       <Button
@@ -239,6 +240,16 @@ function PickupActions({ orderId }: { readonly orderId: string }) {
         <Text role="bodySm" tone="warning" style={{ textAlign }}>
           أغلقت جلسة الرمز كعدم حضور. يبقى قرار إلغاء الطلب أو تمديد النافذة بيد العمليات.
         </Text>
+      ) : null}
+
+      {stage === 'cancelled' ? (
+        <Box layoutDirection="row" style={{ alignItems: 'center', gap: spacing[2] }}>
+          <Icon name="close-circle" size={18} tone="danger" />
+          <Text role="bodySm" tone="danger" style={{ textAlign }}>
+            ألغيت جلسة الاستلام الذاتي مع الطلب، وتم تعطيل إصدار الرمز والتحقق والتمديد.
+            {session?.cancellationReason ? ` السبب: ${session.cancellationReason}` : ''}
+          </Text>
+        </Box>
       ) : null}
 
       <Button label="إعادة قراءة المرحلة" tone="ghost" size="sm" fullWidth={false} disabled={busy} onPress={() => void refresh()} />

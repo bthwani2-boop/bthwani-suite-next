@@ -17,6 +17,7 @@ export type DshPickupNotifyResponse = components["schemas"]["DshPickupNotifyResp
 export type PickupErrorCode =
   | "NOT_FOUND"
   | "VERSION_CONFLICT"
+  | "PICKUP_CANCELLED"
   | "PICKUP_CODE_ALREADY_USED"
   | "PICKUP_CODE_EXPIRED"
   | "PICKUP_CODE_ATTEMPTS_EXCEEDED"

@@ -70,9 +70,10 @@ func TestCreateOrderStoresRealPriceSnapshotDBIntegration(t *testing.T) {
 	if err := db.QueryRowContext(ctx, `
 		INSERT INTO dsh_checkout_intents (
 			tenant_id, client_id, cart_id, store_id, state, fulfillment_mode,
-			payment_method, wlt_payment_session_id
+			payment_method, wlt_payment_session_id, subtotal_minor_units, delivery_fee_minor_units, discount_minor_units, total_minor_units, currency, pricing_snapshot_hash
 		)
-		VALUES ($1, $2, $3::uuid, $4, 'payment_pending', 'bthwani_delivery', 'cod', $5)
+		VALUES ($1, $2, $3::uuid, $4, 'payment_pending', 'bthwani_delivery', 'cod', $5,
+		        8400, 0, 0, 8400, 'YER', repeat('a', 64))
 		RETURNING id::text`,
 		tenantID, clientID, cartID, storeID, "wlt-ps-"+suffix,
 	).Scan(&intentID); err != nil {
@@ -128,9 +129,10 @@ func seedOrderFixture(t *testing.T, db *sql.DB, status string) (order *Order, pa
 	if err := db.QueryRowContext(ctx, `
 		INSERT INTO dsh_checkout_intents (
 			tenant_id, client_id, cart_id, store_id, state, fulfillment_mode,
-			payment_method, wlt_payment_session_id
+			payment_method, wlt_payment_session_id, subtotal_minor_units, delivery_fee_minor_units, discount_minor_units, total_minor_units, currency, pricing_snapshot_hash
 		)
-		VALUES ($1, $2, gen_random_uuid(), $3, 'confirmed', 'bthwani_delivery', 'wallet', $4)
+		VALUES ($1, $2, gen_random_uuid(), $3, 'confirmed', 'bthwani_delivery', 'wallet', $4,
+		        1000, 0, 0, 1000, 'YER', repeat('b', 64))
 		RETURNING id::text`,
 		tenantID, clientID, storeID, paymentSessionID,
 	).Scan(&intentID); err != nil {

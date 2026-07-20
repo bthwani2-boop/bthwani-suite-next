@@ -8,12 +8,12 @@ import (
 type Stage string
 
 const (
-	StageNotReady       Stage = "not_ready"
-	StageReady          Stage = "ready"
-	StageNotified       Stage = "notified"
+	StageNotReady        Stage = "not_ready"
+	StageReady           Stage = "ready"
+	StageNotified        Stage = "notified"
 	StageCustomerArrived Stage = "customer_arrived"
-	StageVerified       Stage = "verified"
-	StageNoShow         Stage = "no_show"
+	StageVerified        Stage = "verified"
+	StageNoShow          Stage = "no_show"
 )
 
 // ResolveStage derives one durable pickup stage without duplicating workflow

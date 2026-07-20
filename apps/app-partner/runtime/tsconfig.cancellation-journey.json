@@ -3,9 +3,12 @@
   "include": [
     "../../../services/dsh/frontend/app-partner/orders/OperationalOrderDecisionScreen.tsx",
     "../../../services/dsh/frontend/app-partner/orders/DshPartnerOrderRejectionScreen.tsx",
+    "../../../services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx",
     "../../../services/dsh/frontend/app-partner/orders/usePartnerOrderCommands.ts",
     "../../../services/dsh/frontend/shared/orders/**/*.ts",
     "../../../services/dsh/frontend/shared/orders/**/*.tsx",
+    "../../../services/dsh/frontend/shared/pickup/**/*.ts",
+    "../../../services/dsh/frontend/shared/pickup/**/*.tsx",
     "../../../services/dsh/frontend/shared/_kernel/**/*.ts",
     "../../../services/dsh/clients/**/*.ts"
   ]

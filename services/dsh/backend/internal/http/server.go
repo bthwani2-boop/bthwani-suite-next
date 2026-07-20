@@ -127,6 +127,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/partner-delivery/exception", protected.handlePartnerDeliveryException)
 	mux.HandleFunc("GET /dsh/operator/partner-deliveries", protected.handleListOperatorPartnerDeliveries)
 	mux.HandleFunc("GET /dsh/operator/partner-deliveries/{taskId}", protected.handleGetOperatorPartnerDelivery)
+	mux.HandleFunc("GET /dsh/partner/orders/{orderId}/pickup", protected.handleGetPartnerPickupState)
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/pickup/mark-ready", protected.handlePickupMarkReady)
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/pickup/notify", protected.handlePickupNotify)
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/pickup/customer-arrived", protected.handlePickupCustomerArrived)

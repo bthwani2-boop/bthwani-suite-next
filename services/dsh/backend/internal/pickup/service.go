@@ -185,12 +185,16 @@ func (s *Service) IssueOtp(ctx context.Context, orderID, clientID, actorID, acto
 	} else if err != nil {
 		return "", nil, err
 	} else {
+		if current.Status == SessionCancelled {
+			return "", nil, ErrCancelled
+		}
 		fromJSON = sessionJSON(current)
 		sessionID = current.ID
 		res, err := tx.Exec(`
 			UPDATE dsh_pickup_sessions
 			SET hashed_otp = $1, expires_at = $2, attempt_count = 0, max_attempts = $3,
 			    used_at = NULL, verified_by_actor_id = NULL, verification_method = NULL,
+			    status = 'active', cancelled_at = NULL, cancellation_reason = NULL,
 			    version = version + 1, updated_at = NOW()
 			WHERE id = $4 AND version = $5`,
 			hashed, expiresAt, defaultMaxAttempts, sessionID, current.Version)
@@ -265,7 +269,10 @@ func (s *Service) VerifyOtp(ctx context.Context, orderID, submittedOtp, actorID,
 	if err != nil {
 		return nil, err
 	}
-	if current.UsedAt != nil {
+	if current.Status == SessionCancelled {
+		return nil, ErrCancelled
+	}
+	if current.Status != SessionActive || current.UsedAt != nil {
 		return nil, ErrAlreadyUsed
 	}
 	if !current.ExpiresAt.After(time.Now().UTC()) {
@@ -295,7 +302,7 @@ func (s *Service) VerifyOtp(ctx context.Context, orderID, submittedOtp, actorID,
 	res, err := tx.Exec(`
 		UPDATE dsh_pickup_sessions
 		SET used_at = NOW(), verified_by_actor_id = $1, verification_method = 'otp',
-		    version = version + 1, updated_at = NOW()
+		    status = 'verified', version = version + 1, updated_at = NOW()
 		WHERE id = $2 AND version = $3`,
 		actorID, current.ID, current.Version)
 	if err != nil {
@@ -345,7 +352,10 @@ func (s *Service) NoShow(ctx context.Context, orderID, actorID, actorRole, reaso
 	if err != nil {
 		return nil, err
 	}
-	if current.UsedAt != nil {
+	if current.Status == SessionCancelled {
+		return nil, ErrCancelled
+	}
+	if current.Status != SessionActive || current.UsedAt != nil {
 		return nil, ErrAlreadyUsed
 	}
 	fromJSON := sessionJSON(current)
@@ -353,7 +363,7 @@ func (s *Service) NoShow(ctx context.Context, orderID, actorID, actorRole, reaso
 	res, err := tx.Exec(`
 		UPDATE dsh_pickup_sessions
 		SET used_at = NOW(), verified_by_actor_id = $1, verification_method = 'no_show',
-		    version = version + 1, updated_at = NOW()
+		    status = 'no_show', version = version + 1, updated_at = NOW()
 		WHERE id = $2 AND version = $3`,
 		actorID, current.ID, current.Version)
 	if err != nil {
@@ -400,7 +410,10 @@ func (s *Service) ExtendWindow(ctx context.Context, orderID string, newExpiry ti
 	if err != nil {
 		return nil, err
 	}
-	if current.UsedAt != nil {
+	if current.Status == SessionCancelled {
+		return nil, ErrCancelled
+	}
+	if current.Status != SessionActive || current.UsedAt != nil {
 		return nil, ErrAlreadyUsed
 	}
 	fromJSON := sessionJSON(current)

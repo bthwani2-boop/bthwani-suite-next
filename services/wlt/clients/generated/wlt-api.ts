@@ -1191,7 +1191,7 @@ export interface components {
             paymentSessionId: string;
             orderId: string;
             clientId: string;
-            reason?: string;
+            reason: string;
         };
         WltGovernedOrderCancellationRequest: {
             paymentSessionId: string;
@@ -1210,7 +1210,7 @@ export interface components {
         WltCancelPaymentSessionForOrderRequest: {
             orderId: string;
             clientId: string;
-            reason?: string;
+            reason: string;
         };
         WltCancelPaymentSessionForOrderResponse: {
             /** @enum {string} */
@@ -1218,6 +1218,11 @@ export interface components {
             paymentSession?: components["schemas"]["WltPaymentSession"];
             refund?: components["schemas"]["WltRefund"];
             sessionStatus?: string;
+        };
+        WltCreateRefundResponse: {
+            refund: components["schemas"]["WltRefund"];
+            /** @description True when the existing active refund was returned idempotently. */
+            replayed: boolean;
         };
         WltRefundResponse: {
             refund: components["schemas"]["WltRefund"];
@@ -2331,13 +2336,22 @@ export interface operations {
             };
         };
         responses: {
+            /** @description Existing active refund returned for an idempotent replay. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WltCreateRefundResponse"];
+                };
+            };
             /** @description Refund created. */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["WltRefundResponse"];
+                    "application/json": components["schemas"]["WltCreateRefundResponse"];
                 };
             };
             400: components["responses"]["BadRequest"];

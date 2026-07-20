@@ -48,8 +48,9 @@ func TestCancelledOrderRemovesCaptainTaskAndRejectsStaleAcceptDBIntegration(t *t
 
 	var checkoutIntentID string
 	if err := db.QueryRow(`
-		INSERT INTO dsh_checkout_intents(tenant_id,client_id,cart_id,store_id,state,fulfillment_mode,payment_method,wlt_payment_session_id)
-		VALUES($1,$2,gen_random_uuid(),$3,'confirmed','bthwani_delivery','wallet',$4)
+		INSERT INTO dsh_checkout_intents(tenant_id,client_id,cart_id,store_id,state,fulfillment_mode,payment_method,wlt_payment_session_id,subtotal_minor_units, delivery_fee_minor_units, discount_minor_units, total_minor_units, currency, pricing_snapshot_hash)
+		VALUES($1,$2,gen_random_uuid(),$3,'confirmed','bthwani_delivery','wallet',$4,
+		       1000,0,0,1000,'YER',repeat('c',64))
 		RETURNING id::text`, tenantID, clientID, storeID, "dispatch-cancel-payment-"+suffix).Scan(&checkoutIntentID); err != nil {
 		t.Fatalf("insert checkout intent: %v", err)
 	}

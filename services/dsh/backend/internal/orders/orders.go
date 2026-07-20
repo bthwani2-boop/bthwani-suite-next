@@ -132,8 +132,8 @@ func CreateOrder(db *sql.DB, input CreateOrderInput) (*Order, error) {
 
 	var order Order
 	err = tx.QueryRow(`
-		INSERT INTO dsh_orders (checkout_intent_id, store_id, fulfillment_mode, client_id, status, wlt_payment_ref_id)
-		VALUES ($1::uuid, $2, (SELECT fulfillment_mode FROM dsh_checkout_intents WHERE id = $1::uuid AND tenant_id=$3), $4, $5, $6)
+		INSERT INTO dsh_orders (tenant_id, checkout_intent_id, store_id, fulfillment_mode, client_id, status, wlt_payment_ref_id)
+		VALUES ($3, $1::uuid, $2, (SELECT fulfillment_mode FROM dsh_checkout_intents WHERE id = $1::uuid AND tenant_id=$3), $4, $5, $6)
 		RETURNING id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status,
 		          COALESCE(rejection_reason, ''), wlt_payment_ref_id, created_at, updated_at`,
 		input.CheckoutIntentID, storeID, input.TenantID, input.ClientID, string(StatusPending), wltPaymentSessionID,

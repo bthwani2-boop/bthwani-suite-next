@@ -3814,6 +3814,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dsh/partner/orders/{orderId}/pickup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Return the authenticated partner's resumable pickup session stage.
+         * @description Reads the sovereign order, pickup session, and durable pickup audit trail. Returns cancelled explicitly after order cancellation and never represents cancellation as a used or successfully verified pickup.
+         */
+        get: operations["getDshPartnerPickupState"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/dsh/partner/orders/{orderId}/pickup/mark-ready": {
         parameters: {
             query?: never;
@@ -6038,6 +6058,11 @@ export interface components {
             /** Format: date-time */
             usedAt?: string | null;
             verifiedByActorId?: string | null;
+            /** @enum {string} */
+            status?: "active" | "verified" | "no_show" | "consumed" | "cancelled";
+            /** Format: date-time */
+            cancelledAt?: string | null;
+            cancellationReason?: string | null;
             /** @description Known values: otp, no_show. */
             verificationMethod?: string | null;
             version: number;
@@ -6051,6 +6076,15 @@ export interface components {
         };
         DshPickupSessionListResponse: {
             sessions: components["schemas"]["DshPickupSession"][];
+        };
+        /**
+         * @description Resumable partner pickup stage derived by DSH from order, session, and audit truth.
+         * @enum {string}
+         */
+        DshPartnerPickupStage: "not_ready" | "ready" | "notified" | "customer_arrived" | "verified" | "no_show" | "cancelled";
+        DshPartnerPickupStateResponse: {
+            session: components["schemas"]["DshPickupSession"] | null;
+            stage: components["schemas"]["DshPartnerPickupStage"];
         };
         DshPickupMutationRequest: {
             expectedVersion: number;
@@ -13463,6 +13497,40 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    getDshPartnerPickupState: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Resumable pickup state returned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerPickupStateResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description The order does not use pickup fulfillment. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
         };
     };
     markDshPickupReady: {

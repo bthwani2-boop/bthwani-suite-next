@@ -3,7 +3,6 @@ package payment
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -567,68 +566,12 @@ type CancelForOrderResult struct {
 //     cancellation racing with an already-terminal session is normal, not
 //     an error.
 func CancelSessionForOrder(db *sql.DB, sessionID, orderID, clientID, reason string) (*CancelForOrderResult, error) {
-	if sessionID == "" {
-		return nil, fmt.Errorf("paymentSessionId is required")
-	}
-	if orderID == "" || clientID == "" {
-		return nil, fmt.Errorf("orderId and clientId are required")
-	}
-	current, err := getSession(db, sessionID)
-	if err != nil || current == nil {
-		return nil, err
-	}
-
-	switch current.Status {
-	case "reference_created", "pending_provider", "authorized":
-		tx, err := db.Begin()
-		if err != nil {
-			return nil, err
-		}
-		defer tx.Rollback()
-		s, err := expireSessionTx(tx, sessionID)
-		if errors.Is(err, ErrNotExpirable) {
-			// Raced with another transition between our read above and the
-			// guarded update; report the session's actual current state
-			// rather than surfacing an error for a harmless race.
-			latest, ferr := getSession(db, sessionID)
-			if ferr != nil || latest == nil {
-				return nil, ferr
-			}
-			return &CancelForOrderResult{Action: "none", SessionStatus: latest.Status}, nil
-		}
-		if err != nil {
-			return nil, err
-		}
-		if s == nil {
-			return nil, nil
-		}
-		if err := tx.Commit(); err != nil {
-			return nil, err
-		}
-		return &CancelForOrderResult{Action: "expired", PaymentSession: s}, nil
-
-	case "captured", "cod_collected":
-		ref, err := refund.CreateRefund(db, refund.CreateRefundInput{
-			PaymentSessionID: sessionID,
-			OrderID:          orderID,
-			ClientID:         clientID,
-			Reason:           reason,
-		})
-		if errors.Is(err, refund.ErrSessionNotRefundable) {
-			latest, ferr := getSession(db, sessionID)
-			if ferr != nil || latest == nil {
-				return nil, ferr
-			}
-			return &CancelForOrderResult{Action: "none", SessionStatus: latest.Status}, nil
-		}
-		if err != nil {
-			return nil, err
-		}
-		return &CancelForOrderResult{Action: "refund_requested", Refund: ref}, nil
-
-	default:
-		return &CancelForOrderResult{Action: "none", SessionStatus: current.Status}, nil
-	}
+	return CancelOrderFinancially(db, GovernedOrderCancellationInput{
+		PaymentSessionID: sessionID,
+		OrderID:          orderID,
+		ClientID:         clientID,
+		Reason:           reason,
+	})
 }
 
 // HTTP handlers
@@ -708,36 +651,7 @@ func HandleExpireSession(db *sql.DB) http.HandlerFunc {
 //   - {"action": "refund_requested", "refund": {...}}
 //   - {"action": "none", "sessionStatus": "<status>"}
 func HandleCancelSessionForOrder(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		sessionID := r.PathValue("paymentSessionId")
-		var input struct {
-			OrderID  string `json:"orderId"`
-			ClientID string `json:"clientId"`
-			Reason   string `json:"reason"`
-		}
-		decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64*1024))
-		if err := decoder.Decode(&input); err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
-			return
-		}
-		result, err := CancelSessionForOrder(db, sessionID, input.OrderID, input.ClientID, input.Reason)
-		if err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-			return
-		}
-		if result == nil {
-			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "payment session not found")
-			return
-		}
-		switch result.Action {
-		case "expired":
-			shared.SendJSON(w, http.StatusOK, map[string]any{"action": "expired", "paymentSession": result.PaymentSession})
-		case "refund_requested":
-			shared.SendJSON(w, http.StatusOK, map[string]any{"action": "refund_requested", "refund": result.Refund})
-		default:
-			shared.SendJSON(w, http.StatusOK, map[string]any{"action": "none", "sessionStatus": result.SessionStatus})
-		}
-	}
+	return HandleGovernedSessionCancellation(db)
 }
 
 func HandleMarkCodCollected(db *sql.DB) http.HandlerFunc {

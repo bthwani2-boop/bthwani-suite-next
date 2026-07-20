@@ -102,24 +102,44 @@ export function PickupWorkbenchScreen() {
           />
         ) : (
           listState.data.map((session) => {
-            const expired = new Date(session.expiresAt).getTime() < Date.now();
+            const cancelled = session.status === 'cancelled' || Boolean(session.cancelledAt);
+            const consumed = Boolean(session.usedAt);
+            const expired = !cancelled && !consumed && new Date(session.expiresAt).getTime() < Date.now();
             const pending = actionPendingFor === session.orderId;
-            const action = session.usedAt
-              ? undefined
-              : {
+            const action = session.status === 'active' && !cancelled && !consumed
+              ? {
                   id: `extend-${session.id}`,
                   label: pending ? 'جارٍ التمديد...' : 'تمديد ساعتين',
                   onAction: () => void handleExtend(session.orderId, session.version),
-                };
+                }
+              : undefined;
+            const status = cancelled
+              ? 'cancelled'
+              : consumed
+                ? session.status
+                : expired
+                  ? 'expired'
+                  : session.status;
+            const statusTone = cancelled || expired
+              ? 'danger'
+              : consumed
+                ? 'success'
+                : 'warning';
+            const reason = cancelled
+              ? `سبب الإلغاء: ${session.cancellationReason || 'إلغاء الطلب'}`
+              : `المحاولات: ${session.attemptCount}/${session.maxAttempts}`;
+            const sla = cancelled && session.cancelledAt
+              ? `ألغي: ${new Date(session.cancelledAt).toLocaleString('ar-SA')}`
+              : `ينتهي: ${new Date(session.expiresAt).toLocaleString('ar-SA')}`;
             return (
               <WebControlPanelDecisionRow
                 key={session.id}
                 entityId={session.id}
                 entityLabel={`طلب: ${session.orderId} — عميل: ${session.clientId}`}
-                status={session.usedAt ? 'verified' : expired ? 'expired' : 'active'}
-                statusTone={session.usedAt ? 'success' : expired ? 'danger' : 'warning'}
-                reason={`المحاولات: ${session.attemptCount}/${session.maxAttempts}`}
-                sla={`ينتهي: ${new Date(session.expiresAt).toLocaleString('ar-SA')}`}
+                status={status}
+                statusTone={statusTone}
+                reason={reason}
+                sla={sla}
                 {...(action ? { primaryAction: action } : {})}
               />
             );
