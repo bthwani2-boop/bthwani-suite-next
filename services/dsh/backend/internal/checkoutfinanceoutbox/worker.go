@@ -71,7 +71,7 @@ func dispatch(ctx context.Context, client *wlt.Client, event Event) (DeliveryRes
 			PaymentSessionID: event.PaymentSessionID,
 		}, nil
 	case EventTypeCancelForOrder:
-		result, err := client.CancelSessionForOrder(ctx, event.PaymentSessionID, wlt.CancelSessionForOrderInput{
+		result, err := client.CancelSessionForOrderWithResult(ctx, event.PaymentSessionID, wlt.CancelSessionForOrderInput{
 			OrderID:       event.OrderID,
 			ClientID:      event.ClientID,
 			Reason:        event.Reason,
