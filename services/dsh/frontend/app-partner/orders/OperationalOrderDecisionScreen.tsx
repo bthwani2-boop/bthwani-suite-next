@@ -1,15 +1,12 @@
 import React from 'react';
 import type { PartnerOrderItem } from '../../shared/orders/orders.contract';
+import {
+  PARTNER_CANCELLATION_REASONS,
+  useOrderCancellationController,
+  type PartnerCancellationReasonCode,
+} from '../../shared/orders';
 import { DshPartnerOrderRejectionScreen } from './DshPartnerOrderRejectionScreen';
 import { usePartnerOrderCommands } from './usePartnerOrderCommands';
-
-const REJECTION_REASONS = [
-  { id: 'out-of-stock', label: 'بعض الأصناف غير متوفرة' },
-  { id: 'busy', label: 'المتجر مزدحم جداً حالياً' },
-  { id: 'closing-soon', label: 'المتجر سيغلق قريباً' },
-  { id: 'technical-issue', label: 'مشكلة تقنية في استقبال الطلبات' },
-  { id: 'other', label: 'سبب تشغيلي آخر' },
-] as const;
 
 export type OperationalOrderDecisionScreenProps = {
   readonly order: PartnerOrderItem | undefined;
@@ -25,18 +22,29 @@ export function OperationalOrderDecisionScreen({
   onBack,
 }: OperationalOrderDecisionScreenProps) {
   const commands = usePartnerOrderCommands(refreshOrders);
+  const cancellation = useOrderCancellationController({
+    surface: 'partner',
+    orderId,
+    onCancelled: refreshOrders,
+  });
 
-  const state = commands.state.kind === 'submitting'
+  const state = commands.state.kind === 'submitting' || cancellation.state.kind === 'submitting'
     ? 'loading'
-    : commands.state.kind === 'success'
+    : cancellation.state.kind === 'ready'
       ? 'success'
-      : commands.state.kind === 'error'
+      : commands.state.kind === 'error' || cancellation.state.kind === 'error' || cancellation.state.kind === 'requires_review'
         ? 'error'
         : 'ready';
+  const errorMessage = commands.state.kind === 'error'
+    ? commands.state.message
+    : cancellation.state.kind === 'error' || cancellation.state.kind === 'requires_review'
+      ? cancellation.state.message
+      : undefined;
 
   return (
     <DshPartnerOrderRejectionScreen
       state={state}
+      errorMessage={errorMessage}
       orderCode={order?.orderCode ?? `#${orderId}`}
       amount={order?.amountLabel ?? '—'}
       items={[
@@ -46,15 +54,22 @@ export function OperationalOrderDecisionScreen({
           quantity: 1,
         },
       ]}
-      rejectionReasons={[...REJECTION_REASONS]}
+      rejectionReasons={PARTNER_CANCELLATION_REASONS.map((reason) => ({
+        id: reason.code,
+        label: reason.label,
+        description: reason.description,
+        requiresNote: reason.code === 'other',
+      }))}
       onAccept={() => {
         void commands.execute('accept', orderId).then((ok) => {
           if (ok) onBack();
         });
       }}
-      onReject={(reasonId) => {
-        const reason = REJECTION_REASONS.find((candidate) => candidate.id === reasonId);
-        void commands.execute('reject', orderId, reason?.label ?? reasonId);
+      onReject={(reasonId, reasonNote) => {
+        void cancellation.submit({
+          reasonCode: reasonId as PartnerCancellationReasonCode,
+          reasonNote,
+        });
       }}
       onBack={onBack}
     />
