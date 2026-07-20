@@ -4,97 +4,100 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-
-	"dsh-api/internal/checkoutfinanceoutbox"
+	"strings"
 )
 
 func AcceptOrder(db *sql.DB, orderID, actorID string) (*Order, error) {
-	return transitionOrder(db, orderID, actorID, "partner",
-		[]OrderStatus{StatusPending}, StatusStoreAccepted, "")
+	return transitionOrder(
+		db,
+		orderID,
+		actorID,
+		"partner",
+		[]OrderStatus{StatusPending},
+		StatusStoreAccepted,
+		"",
+	)
 }
 
+// RejectOrder is retained as a compatibility entry point. It delegates to the
+// governed cancellation runtime so no caller can write the obsolete generic
+// cancelled status or bypass financial closure.
 func RejectOrder(db *sql.DB, orderID, actorID, reason string) (*Order, error) {
+	reason = strings.TrimSpace(reason)
 	if reason == "" {
 		return nil, fmt.Errorf("%w: rejection reason is required", ErrInvalid)
 	}
-	tx, err := db.Begin()
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-
-	order, err := scanOrderRow(tx.QueryRow(`
-		UPDATE dsh_orders
-		SET status = $1, rejection_reason = $2, updated_at = NOW()
-		WHERE id = $3::uuid AND status = 'pending'
-		RETURNING id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status,
-		          COALESCE(rejection_reason, ''), wlt_payment_ref_id, created_at, updated_at`,
-		string(StatusCancelled), reason, orderID))
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, fmt.Errorf("%w: order not found or already actioned", ErrConflict)
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	if _, err = tx.Exec(`
-		INSERT INTO dsh_order_status_events (order_id, actor_role, from_status, to_status, note)
-		VALUES ($1::uuid, $2, $3, $4, $5)`,
-		order.ID, "partner", string(StatusPending), string(StatusCancelled), reason); err != nil {
-		return nil, err
-	}
-
-	if err = enqueueOrderFinancialClosure(tx, order, reason); err != nil {
-		return nil, err
-	}
-
-	if err = tx.Commit(); err != nil {
-		return nil, err
-	}
-	return order, nil
-}
-
-// enqueueOrderFinancialClosure enqueues a durable cancel_for_order outbox
-// event in the same transaction that commits order rejection/cancellation.
-func enqueueOrderFinancialClosure(tx *sql.Tx, order *Order, reason string) error {
-	if order.WltPaymentRefID == "" {
-		return nil
-	}
-	orderID := order.ID
-	return checkoutfinanceoutbox.Enqueue(tx, checkoutfinanceoutbox.EnqueueInput{
-		EventType:        checkoutfinanceoutbox.EventTypeCancelForOrder,
-		CheckoutIntentID: order.CheckoutIntentID,
-		PaymentSessionID: order.WltPaymentRefID,
-		OrderID:          &orderID,
-		ClientID:         order.ClientID,
-		Reason:           reason,
+	return CancelOrder(db, CancellationInput{
+		OrderID:       orderID,
+		ActorID:       actorID,
+		ActorRole:     "partner",
+		ReasonCode:    "other",
+		ReasonNote:    reason,
+		CorrelationID: "partner-reject:" + orderID,
 	})
 }
 
+// CancelOrderByOperator is retained for existing callers and routes every
+// mutation through the same cancellation record, task shutdown and WLT outbox.
 func CancelOrderByOperator(db *sql.DB, orderID, actorID, reason string) (*Order, error) {
+	reason = strings.TrimSpace(reason)
 	if reason == "" {
 		return nil, fmt.Errorf("%w: cancellation reason is required", ErrInvalid)
 	}
-	return transitionOrder(db, orderID, actorID, "operator",
-		[]OrderStatus{StatusPending, StatusStoreAccepted}, StatusCancelled, reason)
+	return CancelOrder(db, CancellationInput{
+		OrderID:       orderID,
+		ActorID:       actorID,
+		ActorRole:     "operator",
+		ReasonCode:    "other",
+		ReasonNote:    reason,
+		CorrelationID: "operator-cancel:" + orderID,
+	})
 }
 
 func MarkPreparing(db *sql.DB, orderID, actorID string) (*Order, error) {
-	return transitionOrder(db, orderID, actorID, "partner",
-		[]OrderStatus{StatusStoreAccepted}, StatusPreparing, "")
+	return transitionOrder(
+		db,
+		orderID,
+		actorID,
+		"partner",
+		[]OrderStatus{StatusStoreAccepted},
+		StatusPreparing,
+		"",
+	)
 }
 
 func MarkReadyForPickup(db *sql.DB, orderID, actorID string) (*Order, error) {
-	return transitionOrder(db, orderID, actorID, "partner",
-		[]OrderStatus{StatusPreparing}, StatusReadyForPickup, "")
+	return transitionOrder(
+		db,
+		orderID,
+		actorID,
+		"partner",
+		[]OrderStatus{StatusPreparing},
+		StatusReadyForPickup,
+		"",
+	)
 }
 
-func TransitionDispatchOrder(db *sql.Tx, orderID, actorRole string, allowedFrom []OrderStatus, toStatus OrderStatus, note string) (*Order, error) {
+func TransitionDispatchOrder(
+	db *sql.Tx,
+	orderID,
+	actorRole string,
+	allowedFrom []OrderStatus,
+	toStatus OrderStatus,
+	note string,
+) (*Order, error) {
 	return transitionOrderTx(db, orderID, actorRole, allowedFrom, toStatus, note)
 }
 
-func transitionOrder(db *sql.DB, orderID, actorID, actorRole string,
-	allowedFrom []OrderStatus, toStatus OrderStatus, note string) (*Order, error) {
+func transitionOrder(
+	db *sql.DB,
+	orderID,
+	actorID,
+	actorRole string,
+	allowedFrom []OrderStatus,
+	toStatus OrderStatus,
+	note string,
+) (*Order, error) {
 	if orderID == "" || actorID == "" || actorRole == "" || len(allowedFrom) == 0 {
 		return nil, ErrInvalid
 	}
@@ -114,10 +117,20 @@ func transitionOrder(db *sql.DB, orderID, actorID, actorRole string,
 	return order, nil
 }
 
-func transitionOrderTx(tx *sql.Tx, orderID, actorRole string,
-	allowedFrom []OrderStatus, toStatus OrderStatus, note string) (*Order, error) {
+func transitionOrderTx(
+	tx *sql.Tx,
+	orderID,
+	actorRole string,
+	allowedFrom []OrderStatus,
+	toStatus OrderStatus,
+	note string,
+) (*Order, error) {
 	var fromStatus string
-	err := tx.QueryRow(`SELECT status FROM dsh_orders WHERE id = $1::uuid FOR UPDATE`, orderID).Scan(&fromStatus)
+	err := tx.QueryRow(`
+		SELECT status
+		FROM dsh_orders
+		WHERE id = $1::uuid
+		FOR UPDATE`, orderID).Scan(&fromStatus)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -142,7 +155,10 @@ func transitionOrderTx(tx *sql.Tx, orderID, actorRole string,
 		WHERE id = $2::uuid AND status = $3
 		RETURNING id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status,
 		          COALESCE(rejection_reason, ''), wlt_payment_ref_id, created_at, updated_at`,
-		string(toStatus), orderID, fromStatus))
+		string(toStatus),
+		orderID,
+		fromStatus,
+	))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrConflict
 	}
@@ -153,14 +169,13 @@ func transitionOrderTx(tx *sql.Tx, orderID, actorRole string,
 	if _, err = tx.Exec(`
 		INSERT INTO dsh_order_status_events (order_id, actor_role, from_status, to_status, note)
 		VALUES ($1::uuid, $2, $3, $4, NULLIF($5, ''))`,
-		order.ID, actorRole, fromStatus, string(toStatus), note); err != nil {
+		order.ID,
+		actorRole,
+		fromStatus,
+		string(toStatus),
+		note,
+	); err != nil {
 		return nil, err
-	}
-
-	if toStatus == StatusCancelled {
-		if err = enqueueOrderFinancialClosure(tx, order, note); err != nil {
-			return nil, err
-		}
 	}
 	return order, nil
 }
@@ -170,7 +185,7 @@ func listOrderItems(db *sql.DB, orderID string) ([]OrderItem, error) {
 		SELECT id::text, order_id::text, product_id, product_name, quantity, unit_price
 		FROM dsh_order_items
 		WHERE order_id = $1::uuid
-		ORDER BY product_name`, orderID)
+		ORDER BY created_at, id`, orderID)
 	if err != nil {
 		return nil, err
 	}
@@ -178,8 +193,14 @@ func listOrderItems(db *sql.DB, orderID string) ([]OrderItem, error) {
 	items := make([]OrderItem, 0)
 	for rows.Next() {
 		var item OrderItem
-		if err := rows.Scan(&item.ID, &item.OrderID, &item.ProductID, &item.ProductName,
-			&item.Quantity, &item.UnitPrice); err != nil {
+		if err := rows.Scan(
+			&item.ID,
+			&item.OrderID,
+			&item.ProductID,
+			&item.ProductName,
+			&item.Quantity,
+			&item.UnitPrice,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, item)
@@ -190,9 +211,16 @@ func listOrderItems(db *sql.DB, orderID string) ([]OrderItem, error) {
 func scanOrderRow(row *sql.Row) (*Order, error) {
 	var order Order
 	err := row.Scan(
-		&order.ID, &order.CheckoutIntentID, &order.StoreID, &order.FulfillmentMode, &order.ClientID,
-		&order.Status, &order.RejectionReason, &order.WltPaymentRefID,
-		&order.CreatedAt, &order.UpdatedAt,
+		&order.ID,
+		&order.CheckoutIntentID,
+		&order.StoreID,
+		&order.FulfillmentMode,
+		&order.ClientID,
+		&order.Status,
+		&order.RejectionReason,
+		&order.WltPaymentRefID,
+		&order.CreatedAt,
+		&order.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
@@ -205,9 +233,16 @@ func scanOrders(rows *sql.Rows) ([]Order, error) {
 	for rows.Next() {
 		var order Order
 		if err := rows.Scan(
-			&order.ID, &order.CheckoutIntentID, &order.StoreID, &order.FulfillmentMode, &order.ClientID,
-			&order.Status, &order.RejectionReason, &order.WltPaymentRefID,
-			&order.CreatedAt, &order.UpdatedAt,
+			&order.ID,
+			&order.CheckoutIntentID,
+			&order.StoreID,
+			&order.FulfillmentMode,
+			&order.ClientID,
+			&order.Status,
+			&order.RejectionReason,
+			&order.WltPaymentRefID,
+			&order.CreatedAt,
+			&order.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
