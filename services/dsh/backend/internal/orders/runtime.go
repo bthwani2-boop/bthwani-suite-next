@@ -20,74 +20,6 @@ const (
 
 var ErrCancellationRequiresReview = errors.New("order cancellation requires operator review")
 
-type scanner interface {
-	Scan(dest ...any) error
-}
-
-func scanOrder(scan scanner) (*Order, error) {
-	var order Order
-	if err := scan.Scan(
-		&order.ID,
-		&order.CheckoutIntentID,
-		&order.StoreID,
-		&order.FulfillmentMode,
-		&order.ClientID,
-		&order.Status,
-		&order.RejectionReason,
-		&order.WltPaymentRefID,
-		&order.CreatedAt,
-		&order.UpdatedAt,
-	); err != nil {
-		return nil, err
-	}
-	return &order, nil
-}
-
-func scanOrderRow(row *sql.Row) (*Order, error) {
-	return scanOrder(row)
-}
-
-func scanOrders(rows *sql.Rows) ([]Order, error) {
-	result := make([]Order, 0)
-	for rows.Next() {
-		order, err := scanOrder(rows)
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, *order)
-	}
-	return result, rows.Err()
-}
-
-func listOrderItems(db *sql.DB, orderID string) ([]OrderItem, error) {
-	rows, err := db.Query(`
-		SELECT id::text, order_id::text, product_id, product_name, quantity, unit_price
-		FROM dsh_order_items
-		WHERE order_id = $1::uuid
-		ORDER BY created_at, id`, orderID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	items := make([]OrderItem, 0)
-	for rows.Next() {
-		var item OrderItem
-		if err := rows.Scan(
-			&item.ID,
-			&item.OrderID,
-			&item.ProductID,
-			&item.ProductName,
-			&item.Quantity,
-			&item.UnitPrice,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, item)
-	}
-	return items, rows.Err()
-}
-
 func hydrateOrders(db *sql.DB, list []Order) ([]Order, error) {
 	for i := range list {
 		items, err := listOrderItems(db, list[i].ID)
@@ -105,87 +37,6 @@ func ListClientOrdersHydrated(db *sql.DB, tenantID, clientID string, limit int) 
 		return nil, err
 	}
 	return hydrateOrders(db, list)
-}
-
-func transitionOrder(
-	db *sql.DB,
-	orderID,
-	actorRole,
-	actorID string,
-	allowedFrom []OrderStatus,
-	to OrderStatus,
-	note string,
-) (*Order, error) {
-	if db == nil {
-		return nil, fmt.Errorf("database is required")
-	}
-	tx, err := db.Begin()
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-	if err := transitionOrderTx(tx, orderID, actorRole, actorID, allowedFrom, to, note); err != nil {
-		return nil, err
-	}
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
-	return GetOrder(db, orderID)
-}
-
-func transitionOrderTx(
-	tx *sql.Tx,
-	orderID,
-	actorRole,
-	actorID string,
-	allowedFrom []OrderStatus,
-	to OrderStatus,
-	note string,
-) error {
-	if strings.TrimSpace(orderID) == "" || strings.TrimSpace(actorRole) == "" || strings.TrimSpace(actorID) == "" {
-		return ErrInvalid
-	}
-	var current OrderStatus
-	if err := tx.QueryRow(`SELECT status FROM dsh_orders WHERE id=$1::uuid FOR UPDATE`, orderID).Scan(&current); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return ErrNotFound
-		}
-		return err
-	}
-	allowed := false
-	for _, status := range allowedFrom {
-		if current == status {
-			allowed = true
-			break
-		}
-	}
-	if !allowed {
-		return ErrConflict
-	}
-	if _, err := tx.Exec(`
-		UPDATE dsh_orders
-		SET status=$2, updated_at=NOW()
-		WHERE id=$1::uuid AND status=$3`, orderID, string(to), string(current)); err != nil {
-		return err
-	}
-	if _, err := tx.Exec(`
-		INSERT INTO dsh_order_status_events(order_id,actor_role,from_status,to_status,note)
-		VALUES($1::uuid,$2,$3,$4,$5)`, orderID, actorRole, string(current), string(to), note); err != nil {
-		return err
-	}
-	return nil
-}
-
-func AcceptOrder(db *sql.DB, orderID, actorID string) (*Order, error) {
-	return transitionOrder(db, orderID, "partner", actorID, []OrderStatus{StatusPending}, StatusStoreAccepted, "store accepted order")
-}
-
-func MarkPreparing(db *sql.DB, orderID, actorID string) (*Order, error) {
-	return transitionOrder(db, orderID, "partner", actorID, []OrderStatus{StatusStoreAccepted}, StatusPreparing, "store started preparation")
-}
-
-func MarkReadyForPickup(db *sql.DB, orderID, actorID string) (*Order, error) {
-	return transitionOrder(db, orderID, "partner", actorID, []OrderStatus{StatusPreparing}, StatusReadyForPickup, "order ready for fulfillment")
 }
 
 type CancellationInput struct {
@@ -291,7 +142,11 @@ func CancelOrder(db *sql.DB, input CancellationInput) (*Order, error) {
 		FROM dsh_orders
 		WHERE id=$1::uuid
 		FOR UPDATE`, input.OrderID).Scan(
-		&checkoutIntentID, &clientID, &tenantID, &paymentSessionID, &current,
+		&checkoutIntentID,
+		&clientID,
+		&tenantID,
+		&paymentSessionID,
+		&current,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
@@ -304,7 +159,10 @@ func CancelOrder(db *sql.DB, input CancellationInput) (*Order, error) {
 	}
 
 	var existingCorrelation string
-	err = tx.QueryRow(`SELECT correlation_id FROM dsh_order_cancellations WHERE order_id=$1::uuid`, input.OrderID).Scan(&existingCorrelation)
+	err = tx.QueryRow(`
+		SELECT correlation_id
+		FROM dsh_order_cancellations
+		WHERE order_id=$1::uuid`, input.OrderID).Scan(&existingCorrelation)
 	if err == nil {
 		if existingCorrelation == input.CorrelationID {
 			if err := tx.Commit(); err != nil {
@@ -326,7 +184,11 @@ func CancelOrder(db *sql.DB, input CancellationInput) (*Order, error) {
 		}
 	}
 	if !allowed {
-		if input.ActorRole == "client" && (current == StatusPreparing || current == StatusReadyForPickup || current == StatusDriverAssigned || current == StatusArrivedStore) {
+		if input.ActorRole == "client" && (
+			current == StatusPreparing ||
+				current == StatusReadyForPickup ||
+				current == StatusDriverAssigned ||
+				current == StatusArrivedStore) {
 			return nil, ErrCancellationRequiresReview
 		}
 		return nil, ErrConflict
@@ -365,7 +227,11 @@ func CancelOrder(db *sql.DB, input CancellationInput) (*Order, error) {
 	if _, err := tx.Exec(`
 		INSERT INTO dsh_order_status_events(order_id,actor_role,from_status,to_status,note)
 		VALUES($1::uuid,$2,$3,$4,$5)`,
-		input.OrderID, input.ActorRole, string(current), string(target), input.ReasonCode+": "+input.ReasonNote,
+		input.OrderID,
+		input.ActorRole,
+		string(current),
+		string(target),
+		input.ReasonCode+": "+input.ReasonNote,
 	); err != nil {
 		return nil, err
 	}
@@ -374,34 +240,17 @@ func CancelOrder(db *sql.DB, input CancellationInput) (*Order, error) {
 			order_id,tenant_id,actor_id,actor_role,reason_code,reason_note,
 			from_status,to_status,financial_closure_status,correlation_id)
 		VALUES($1::uuid,$2,$3,$4,$5,NULLIF($6,''),$7,$8,$9,$10)`,
-		input.OrderID, tenantID, input.ActorID, input.ActorRole, input.ReasonCode,
-		input.ReasonNote, string(current), string(target), financialStatus, input.CorrelationID,
+		input.OrderID,
+		tenantID,
+		input.ActorID,
+		input.ActorRole,
+		input.ReasonCode,
+		input.ReasonNote,
+		string(current),
+		string(target),
+		financialStatus,
+		input.CorrelationID,
 	); err != nil {
-		return nil, err
-	}
-
-	// Remove all remaining fulfillment work atomically with the terminal order
-	// transition. No actor should continue seeing an actionable assignment after
-	// cancellation has committed.
-	if _, err := tx.Exec(`
-		UPDATE dsh_assignments
-		SET status='declined', declined_at=COALESCE(declined_at,NOW()), updated_at=NOW()
-		WHERE order_id=$1::uuid AND status IN ('offered','accepted')`, input.OrderID); err != nil {
-		return nil, err
-	}
-	if _, err := tx.Exec(`
-		UPDATE dsh_partner_delivery_tasks
-		SET status='cancelled', version=version+1, updated_at=NOW()
-		WHERE order_id=$1::uuid AND status NOT IN ('completed','cancelled')`, input.OrderID); err != nil {
-		return nil, err
-	}
-	if _, err := tx.Exec(`
-		UPDATE dsh_pickup_sessions
-		SET used_at=COALESCE(used_at,NOW()),
-		    verification_method=COALESCE(verification_method,'cancelled'),
-		    version=version+1,
-		    updated_at=NOW()
-		WHERE order_id=$1::uuid AND used_at IS NULL`, input.OrderID); err != nil {
 		return nil, err
 	}
 
@@ -420,7 +269,10 @@ func CancelOrder(db *sql.DB, input CancellationInput) (*Order, error) {
 		if _, err := tx.Exec(`
 			UPDATE dsh_checkout_financial_closure_outbox
 			SET correlation_id=$2
-			WHERE payment_session_id=$1 AND event_type='cancel_for_order'`, paymentSessionID, input.CorrelationID); err != nil {
+			WHERE payment_session_id=$1 AND event_type='cancel_for_order'`,
+			paymentSessionID,
+			input.CorrelationID,
+		); err != nil {
 			return nil, err
 		}
 	}
@@ -431,7 +283,12 @@ func CancelOrder(db *sql.DB, input CancellationInput) (*Order, error) {
 		VALUES($1,'order',$2,$3::jsonb,$4)`,
 		"order."+string(target),
 		input.OrderID,
-		fmt.Sprintf(`{"orderId":%q,"clientId":%q,"reasonCode":%q}`, input.OrderID, clientID, input.ReasonCode),
+		fmt.Sprintf(
+			`{"orderId":%q,"clientId":%q,"reasonCode":%q}`,
+			input.OrderID,
+			clientID,
+			input.ReasonCode,
+		),
 		input.CorrelationID,
 	); err != nil {
 		return nil, err
@@ -441,34 +298,4 @@ func CancelOrder(db *sql.DB, input CancellationInput) (*Order, error) {
 		return nil, err
 	}
 	return GetOrder(db, input.OrderID)
-}
-
-func RejectOrder(db *sql.DB, orderID, actorID, reason string) (*Order, error) {
-	reason = strings.TrimSpace(reason)
-	if reason == "" {
-		return nil, ErrInvalid
-	}
-	return CancelOrder(db, CancellationInput{
-		OrderID:       orderID,
-		ActorID:       actorID,
-		ActorRole:     "partner",
-		ReasonCode:    "other",
-		ReasonNote:    reason,
-		CorrelationID: "partner-reject:" + orderID,
-	})
-}
-
-func CancelOrderByOperator(db *sql.DB, orderID, actorID, reason string) (*Order, error) {
-	reason = strings.TrimSpace(reason)
-	if reason == "" {
-		return nil, ErrInvalid
-	}
-	return CancelOrder(db, CancellationInput{
-		OrderID:       orderID,
-		ActorID:       actorID,
-		ActorRole:     "operator",
-		ReasonCode:    "other",
-		ReasonNote:    reason,
-		CorrelationID: "operator-cancel:" + orderID,
-	})
 }
