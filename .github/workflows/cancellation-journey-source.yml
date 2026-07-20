@@ -1,0 +1,179 @@
+name: Cancellation Refund Journey Source
+run-name: Cancellation Refund Source · ${{ github.sha }}
+
+on:
+  push:
+    branches: ["journey/cancellation-refund-reconciliation-closure"]
+    paths:
+      - ".github/cancellation-journey-source-trigger"
+      - ".github/workflows/cancellation-journey-source.yml"
+      - "apps/**/tsconfig.cancellation-journey.json"
+      - "services/dsh/backend/internal/orders/**"
+      - "services/dsh/backend/internal/checkoutfinanceoutbox/**"
+      - "services/dsh/backend/internal/wlt/cancel_for_order.go"
+      - "services/dsh/backend/internal/http/order_cancellations.go"
+      - "services/dsh/backend/internal/http/operator_order_workboard.go"
+      - "services/dsh/frontend/**/*Order*"
+      - "services/dsh/frontend/shared/orders/**"
+      - "services/dsh/frontend/shared/operations/**"
+      - "services/wlt/backend/internal/refund/**"
+      - "services/wlt/backend/internal/payment/order_cancellation.go"
+      - "services/wlt/backend/internal/http/order_cancellation_routes.go"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: cancellation-refund-source-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dsh-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache: true
+          cache-dependency-path: services/dsh/backend/go.sum
+      - name: Compile DSH cancellation boundary
+        working-directory: services/dsh/backend
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p ../../../artifacts/cancellation-journey-source
+          {
+            files="$(gofmt -l \
+              internal/orders/runtime.go \
+              internal/orders/cancellation_read.go \
+              internal/checkoutfinanceoutbox/projection.go \
+              internal/checkoutfinanceoutbox/worker.go \
+              internal/wlt/cancel_for_order.go \
+              internal/http/order_cancellations.go \
+              internal/http/operator_order_workboard.go \
+              cmd/dsh-api/main.go)"
+            test -z "$files" || { printf 'Unformatted DSH files:\n%s\n' "$files"; exit 1; }
+            go test ./internal/orders ./internal/checkoutfinanceoutbox ./internal/wlt ./internal/http ./cmd/dsh-api -run '^$' -count=1
+          } 2>&1 | tee ../../../artifacts/cancellation-journey-source/dsh-source.log
+          exit ${PIPESTATUS[0]}
+      - name: Upload DSH diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: cancellation-dsh-${{ github.sha }}
+          path: artifacts/cancellation-journey-source/dsh-source.log
+          if-no-files-found: error
+          retention-days: 7
+
+  wlt-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version-file: services/wlt/backend/go.mod
+          cache: true
+          cache-dependency-path: services/wlt/backend/go.sum
+      - name: Compile WLT refund boundary
+        working-directory: services/wlt/backend
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p ../../../artifacts/cancellation-journey-source
+          {
+            files="$(gofmt -l \
+              internal/refund/refund_atomic.go \
+              internal/payment/order_cancellation.go \
+              internal/http/order_cancellation_routes.go \
+              cmd/wlt-api/main.go)"
+            test -z "$files" || { printf 'Unformatted WLT files:\n%s\n' "$files"; exit 1; }
+            go test ./internal/refund ./internal/payment ./internal/http ./cmd/wlt-api -run '^$' -count=1
+          } 2>&1 | tee ../../../artifacts/cancellation-journey-source/wlt-source.log
+          exit ${PIPESTATUS[0]}
+      - name: Upload WLT diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: cancellation-wlt-${{ github.sha }}
+          path: artifacts/cancellation-journey-source/wlt-source.log
+          if-no-files-found: error
+          retention-days: 7
+
+  typescript-surfaces:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: app-client
+            project: apps/app-client/runtime/tsconfig.cancellation-journey.json
+          - name: app-partner
+            project: apps/app-partner/runtime/tsconfig.cancellation-journey.json
+          - name: control-panel
+            project: apps/control-panel/runtime/tsconfig.cancellation-journey.json
+    name: typescript-${{ matrix.name }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-node-workspace
+      - name: Typecheck cancellation surface
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/cancellation-journey-source
+          pnpm exec tsc -p "${{ matrix.project }}" --noEmit --pretty false 2>&1 \
+            | tee "artifacts/cancellation-journey-source/typescript-${{ matrix.name }}.log"
+          exit ${PIPESTATUS[0]}
+      - name: Upload TypeScript diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: cancellation-typescript-${{ matrix.name }}-${{ github.sha }}
+          path: artifacts/cancellation-journey-source
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    if: always()
+    needs: [dsh-source, wlt-source, typescript-surfaces]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish focused source status
+        env:
+          DSH_RESULT: ${{ needs.dsh-source.result }}
+          WLT_RESULT: ${{ needs.wlt-source.result }}
+          TS_RESULT: ${{ needs.typescript-surfaces.result }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          state=failure
+          [ "$DSH_RESULT" = success ] && [ "$WLT_RESULT" = success ] && [ "$TS_RESULT" = success ] && state=success
+          description="dsh=$DSH_RESULT wlt=$WLT_RESULT ts=$TS_RESULT run=${GITHUB_RUN_ID}"
+          jq -n --arg state "$state" --arg context "Cancellation Refund Journey Source" --arg description "$description" --arg target_url "$RUN_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' > payload.json
+          posted=false
+          for attempt in 1 2 3 4 5 6 7 8; do
+            if curl --fail-with-body --silent --show-error -X POST \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/$REPOSITORY/statuses/$SHA" \
+              -d @payload.json; then posted=true; break; fi
+            sleep $((attempt * 3))
+          done
+          test "$posted" = true
+          test "$state" = success
