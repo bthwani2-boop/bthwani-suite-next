@@ -1,11 +1,11 @@
 import React from 'react';
 import { ActivityIndicator, BackHandler, Platform, View, Pressable, StyleSheet, I18nManager } from 'react-native';
-import { Button, Card, Icon, Text, spacing, colorRoles } from '@bthwani/ui-kit';
+import { Icon, Text, spacing, colorRoles } from '@bthwani/ui-kit';
 import type { DshPartnerSurfaceProps } from './dsh-partner.types';
 import { useDshPartnerSurfaceModel } from './useDshPartnerSurfaceModel';
 import { PlatformVarsProvider, FeatureFlagProvider, usePlatformVars } from '../shared/platform';
 import { PartnerStoreScopeSheet } from './store/PartnerStoreScopeSheet';
-import { DshPartnerRouteRenderer } from './DshPartnerRouteRenderer';
+import { DshPartnerOrderJourneyRenderer } from './DshPartnerOrderJourneyRenderer';
 
 const COLORS = {
   background: colorRoles.surfaceBase,
@@ -243,7 +243,7 @@ function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }:
   );
 
   return (
-    <DshPartnerRouteRenderer
+    <DshPartnerOrderJourneyRenderer
       route={route}
       initialOrderId={initialOrderId}
       activeOrderId={activeOrderId}
