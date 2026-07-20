@@ -61,6 +61,19 @@ jobs:
         working-directory: services/dsh/backend
         shell: bash
         run: go test ./internal/http -run '^$' -count=1
+      - name: Apply DSH migration chain
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r migration; do
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
+          done < <(find services/dsh/database/migrations -maxdepth 1 -type f -name '*.sql' | sort)
+      - name: Prove partner audit migration and invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/dsh/database/migrations/dsh-088_partner_team_action_runtime_audit.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/dsh/database/tests/dsh-088_partner_team_action_runtime_audit.sql
       - name: Run partner unit tests
         working-directory: services/dsh/backend
         shell: bash
@@ -76,19 +89,6 @@ jobs:
           path: artifacts/partner-source-db
           if-no-files-found: warn
           retention-days: 7
-      - name: Apply DSH migration chain
-        shell: bash
-        run: |
-          set -euo pipefail
-          while IFS= read -r migration; do
-            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
-          done < <(find services/dsh/database/migrations -maxdepth 1 -type f -name '*.sql' | sort)
-      - name: Prove partner audit migration and invariants
-        shell: bash
-        run: |
-          set -euo pipefail
-          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/dsh/database/migrations/dsh-088_partner_team_action_runtime_audit.sql
-          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/dsh/database/tests/dsh-088_partner_team_action_runtime_audit.sql
 
   publish:
     if: always()
