@@ -4,6 +4,10 @@
 
 BEGIN;
 
+-- Order-item snapshots need deterministic creation order for every surface.
+ALTER TABLE dsh_order_items
+    ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
 ALTER TABLE dsh_orders
     ADD COLUMN IF NOT EXISTS cancellation_reason_code TEXT,
     ADD COLUMN IF NOT EXISTS cancellation_note TEXT,
