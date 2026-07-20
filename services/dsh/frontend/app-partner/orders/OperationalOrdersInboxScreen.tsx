@@ -1,10 +1,12 @@
 import React from 'react';
 import { Box, Button, Divider, Text } from '@bthwani/ui-kit';
 import type { PartnerOrderItem } from '../../shared/orders/orders.contract';
+import type { PartnerTeamMember } from '../team/partner-team.types';
 import {
   DshPartnerOrdersScreen,
   type PartnerOrdersHomeScreenState,
 } from './OrdersInboxScreen';
+import { PartnerFulfillmentActionsPanel } from './PartnerFulfillmentActionsPanel';
 import {
   resolvePartnerOrderMutation,
   usePartnerOrderCommands,
@@ -15,6 +17,7 @@ type OrderHubAction = 'accept' | 'reject' | 'details' | 'prepare' | 'ready' | 'h
 export type OperationalOrdersInboxScreenProps = {
   readonly state: PartnerOrdersHomeScreenState;
   readonly items: readonly PartnerOrderItem[];
+  readonly teamMembers: readonly PartnerTeamMember[];
   readonly searchMode: boolean;
   readonly onCloseSearch: () => void;
   readonly onRetry: () => void | Promise<void>;
@@ -29,16 +32,28 @@ export type OperationalOrdersInboxScreenProps = {
 export function OperationalOrdersInboxScreen({
   state,
   items,
+  teamMembers,
   searchMode,
   onCloseSearch,
   onRetry,
   onNavigateAction,
 }: OperationalOrdersInboxScreenProps) {
   const commands = usePartnerOrderCommands(onRetry);
+  const [expandedFulfillmentOrderId, setExpandedFulfillmentOrderId] = React.useState<string | null>(null);
   const pendingDecisions = React.useMemo(
     () => items.filter((item) => item.status === 'new' || item.status === 'needs_accept'),
     [items],
   );
+  const expandedFulfillmentOrder = React.useMemo(
+    () => items.find((item) => item.id === expandedFulfillmentOrderId) ?? null,
+    [expandedFulfillmentOrderId, items],
+  );
+
+  React.useEffect(() => {
+    if (expandedFulfillmentOrderId && !expandedFulfillmentOrder) {
+      setExpandedFulfillmentOrderId(null);
+    }
+  }, [expandedFulfillmentOrder, expandedFulfillmentOrderId]);
 
   const handleOrderAction = React.useCallback((actionId: OrderHubAction, orderId: string) => {
     const item = items.find((candidate) => candidate.id === orderId);
@@ -55,6 +70,16 @@ export function OperationalOrdersInboxScreen({
     // A pending-order issue is an acceptance decision, not a support incident.
     if (actionId === 'issue' && (item.status === 'new' || item.status === 'needs_accept')) {
       onNavigateAction('reject', orderId);
+      return;
+    }
+
+    if (actionId === 'handoff') {
+      if (item.orderMode === 'partner_delivery' || item.orderMode === 'pickup') {
+        setExpandedFulfillmentOrderId(orderId);
+        return;
+      }
+      // Bthwani delivery is monitored here but assigned only by control-panel operations.
+      onNavigateAction('handoff', orderId);
       return;
     }
 
@@ -110,6 +135,30 @@ export function OperationalOrdersInboxScreen({
           ))}
         </Box>
       ) : null}
+
+      {expandedFulfillmentOrder ? (
+        <Box padding={4} gap={3} background="surfaceInset">
+          <Box layoutDirection="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+            <Box gap={1}>
+              <Text role="bodyStrong">تنفيذ {expandedFulfillmentOrder.orderCode}</Text>
+              <Text role="caption" tone="muted">{expandedFulfillmentOrder.orderTypeLabel}</Text>
+            </Box>
+            <Button
+              label="إغلاق"
+              tone="ghost"
+              size="sm"
+              fullWidth={false}
+              onPress={() => setExpandedFulfillmentOrderId(null)}
+            />
+          </Box>
+          <PartnerFulfillmentActionsPanel
+            orderId={expandedFulfillmentOrder.id}
+            fulfillmentMode={expandedFulfillmentOrder.orderMode}
+            teamMembers={teamMembers}
+          />
+        </Box>
+      ) : null}
+
       <DshPartnerOrdersScreen
         state={state}
         items={items}
