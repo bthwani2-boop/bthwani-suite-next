@@ -1,6 +1,6 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { createDshHttpClient, type DshRequestOptions } from "../_kernel/dsh-http-request";
-import type { DshOrder, DshCreateOrderInput, DshRejectOrderInput } from "./orders.types";
+import type { DshOrder, DshPartnerOrder, DshCreateOrderInput, DshRejectOrderInput } from "./orders.types";
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "order");
 
@@ -32,19 +32,18 @@ export async function fetchClientOrder(orderId: string): Promise<DshOrder> {
 }
 
 /**
- * Partner order scope is resolved exclusively from the authenticated actor.
- * The workboard returns all lifecycle states when status is omitted and carries
- * the fulfillment mode, item snapshots, and governed totals required by the
- * partner command center.
+ * Partner order scope and executable actions are resolved exclusively by DSH
+ * from the authenticated actor. Surfaces must not derive mutation authority
+ * from status labels or a caller-provided store identifier.
  */
 export async function fetchPartnerOrders(
   status?: string,
   token?: string,
-): Promise<readonly DshOrder[]> {
+): Promise<readonly DshPartnerOrder[]> {
   const params = new URLSearchParams();
   if (status) params.set("status", status);
   const query = params.toString();
-  const data = await request<{ orders: DshOrder[] }>(
+  const data = await request<{ orders: DshPartnerOrder[] }>(
     `/dsh/partner/order-workboard${query ? `?${query}` : ""}`,
     withOptionalToken({}, token),
   );
