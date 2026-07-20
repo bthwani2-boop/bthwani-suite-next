@@ -1,7 +1,3 @@
-// Canonical location: dsh/frontend/shared/delivery/captain/captain-inbox.model.ts
-// Authority: dsh/frontend/shared/delivery — captain's live dispatch-assignment inbox.
-// No JSX. No ui-kit. No Tamagui.
-
 import React from 'react';
 import {
   fetchCaptainDispatchAssignments,
@@ -12,6 +8,15 @@ import type { DshDispatchAssignment } from '../dispatch/dispatch.types';
 import type { DshCaptainOrderBellItem, DshCaptainOrderServiceType, DshCaptainOrdersScreenState } from '../orders';
 
 export type CaptainInboxFetchState = Extract<DshCaptainOrdersScreenState, 'ready' | 'loading' | 'empty' | 'error'>;
+
+const ACTIVE_ASSIGNMENT_STATUSES = new Set(['offered', 'accepted']);
+const ACTIVE_DELIVERY_STATUSES = new Set([
+  'assigned',
+  'driver_assigned',
+  'driver_arrived_store',
+  'picked_up',
+  'arrived_customer',
+]);
 
 export function resolveServiceType(assignment: DshDispatchAssignment): DshCaptainOrderServiceType {
   if (!assignment.specialRequestId) return 'standard';
@@ -26,13 +31,11 @@ function resolveBellTitle(assignment: DshDispatchAssignment, serviceType: DshCap
   return `طلب #${assignment.orderId}`;
 }
 
-// Exported for the app-captain fulfillment-exclusion regression test
-// (services/dsh/tests/captain-inbox-exclusion.test.mjs): this is the real
-// structural boundary where any incoming assignment-shaped object is turned
-// into a captain bell item. `fulfillmentMode` below is a hardcoded literal,
-// never read off the input `assignment` -- so a caller cannot smuggle a
-// `partner_delivery`/`pickup` fulfillmentMode through this mapper even if
-// the input object carries one (see the regression test for proof).
+export function isCaptainAssignmentActionable(assignment: DshDispatchAssignment): boolean {
+  return ACTIVE_ASSIGNMENT_STATUSES.has(assignment.status)
+    && ACTIVE_DELIVERY_STATUSES.has(assignment.delivery.status);
+}
+
 export function toBellItem(assignment: DshDispatchAssignment): DshCaptainOrderBellItem {
   const serviceType = resolveServiceType(assignment);
   return {
@@ -52,35 +55,45 @@ export function useCaptainInboxModel(captainId: string) {
   const [fetchState, setFetchState] = React.useState<CaptainInboxFetchState>('loading');
   const requestTokenRef = React.useRef(0);
 
-  const refresh = React.useCallback(async () => {
+  const refresh = React.useCallback(async (options: { readonly silent?: boolean } = {}) => {
     if (!captainId) {
       setAssignments([]);
       setFetchState('empty');
       return;
     }
     const token = ++requestTokenRef.current;
-    setFetchState('loading');
+    if (!options.silent) setFetchState('loading');
     try {
       const data = await fetchCaptainDispatchAssignments();
       if (requestTokenRef.current !== token) return;
-      setAssignments(data);
-      setFetchState(data.length > 0 ? 'ready' : 'empty');
-    } catch (err) {
+      const actionable = data.filter(isCaptainAssignmentActionable);
+      setAssignments(actionable);
+      setFetchState(actionable.length > 0 ? 'ready' : 'empty');
+    } catch (error) {
       if (requestTokenRef.current !== token) return;
-      console.error('[captain:inbox] failed to load dispatch assignments', classifyDispatchError(err));
-      setAssignments([]);
-      setFetchState('error');
+      console.error('[captain:inbox] failed to load dispatch assignments', classifyDispatchError(error));
+      if (!options.silent) {
+        setAssignments([]);
+        setFetchState('error');
+      }
     }
   }, [captainId]);
 
   React.useEffect(() => {
-    refresh();
+    void refresh();
   }, [refresh]);
 
-  const items = React.useMemo(() => assignments.map(toBellItem), [assignments]);
+  React.useEffect(() => {
+    if (!captainId) return undefined;
+    const intervalId = setInterval(() => {
+      void refresh({ silent: true });
+    }, 10_000);
+    return () => clearInterval(intervalId);
+  }, [captainId, refresh]);
 
+  const items = React.useMemo(() => assignments.map(toBellItem), [assignments]);
   const findAssignment = React.useCallback(
-    (assignmentId: string) => assignments.find((a) => a.id === assignmentId),
+    (assignmentId: string) => assignments.find((assignment) => assignment.id === assignmentId),
     [assignments],
   );
 
