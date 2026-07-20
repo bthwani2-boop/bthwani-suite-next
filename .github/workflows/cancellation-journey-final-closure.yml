@@ -7,7 +7,7 @@ on:
     paths:
       - ".github/workflows/cancellation-journey-final-closure.yml"
       - ".github/cancellation-journey-final-trigger"
-      - "tools/scripts/close-cancellation-refund-reconciliation.py"
+      - "tools/scripts/patch-cancellation-journey-final.py"
       - "services/dsh/backend/internal/dispatch/**"
       - "services/dsh/backend/internal/pickup/**"
       - "services/dsh/backend/internal/http/pickup.go"
@@ -22,7 +22,6 @@ on:
       - "services/dsh/frontend/shared/dispatch/**"
       - "services/dsh/frontend/shared/delivery/captain-inbox.model.ts"
       - "services/dsh/frontend/shared/delivery/captain.surface-model.ts"
-      - "services/dsh/tests/dispatch-controller-core.test.mjs"
       - "services/wlt/backend/internal/payment/**"
       - "services/wlt/backend/internal/refund/**"
       - "services/wlt/backend/internal/http/order_cancellation_routes.go"
@@ -86,9 +85,9 @@ jobs:
             services/dsh/backend/go.sum
             services/wlt/backend/go.sum
 
-      - name: Apply only remaining journey fixes
+      - name: Apply deterministic remaining journey fixes
         shell: bash
-        run: python tools/scripts/close-cancellation-refund-reconciliation.py
+        run: python tools/scripts/patch-cancellation-journey-final.py
 
       - name: Format affected Go sources
         shell: bash
@@ -96,6 +95,8 @@ jobs:
           set -euo pipefail
           gofmt -w \
             services/dsh/backend/internal/dispatch/dispatch.go \
+            services/dsh/backend/internal/dispatch/dispatch_helpers.go \
+            services/dsh/backend/internal/dispatch/cancellation_db_test.go \
             services/dsh/backend/internal/pickup/pickup.go \
             services/dsh/backend/internal/pickup/service.go \
             services/dsh/backend/internal/pickup/pickup_cancellation_db_test.go \
@@ -190,9 +191,9 @@ jobs:
           grep -F 'ErrCancelled' services/dsh/backend/internal/pickup/service.go
           grep -F 'PICKUP_CANCELLED' services/dsh/backend/internal/http/pickup.go
           grep -F 'trackingCancelledState' services/dsh/frontend/shared/dispatch/dispatch.controller-core.ts
-          grep -F 'isCaptainAssignmentActive' services/dsh/frontend/shared/delivery/captain-inbox.model.ts
+          grep -F 'isCaptainAssignmentActionable' services/dsh/frontend/shared/delivery/captain-inbox.model.ts
 
-      - name: Commit verified closure and remove temporary journey machinery
+      - name: Commit verified closure changes
         shell: bash
         run: |
           set -euo pipefail
