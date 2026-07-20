@@ -8,6 +8,7 @@ on:
       - ".github/workflows/delivery-exception-slice6.yml"
       - "tools/scripts/patch-delivery-exception-slice6.py"
       - "tools/scripts/patch-delivery-exception-slice6-types.py"
+      - "tools/scripts/inspect-governed-cancel-source.py"
   workflow_dispatch:
 
 permissions:
@@ -104,13 +105,20 @@ jobs:
         shell: bash
         run: exit 1
 
+      - name: Capture governed cancellation implementation
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/delivery-exception-slice6-db
+          python tools/scripts/inspect-governed-cancel-source.py \
+            | tee artifacts/delivery-exception-slice6-db/cancel-source.log
+
       - name: Apply migrations and prove one cancellation handoff
         id: returned_cancel_db
         continue-on-error: true
         shell: bash
         run: |
           set -o pipefail
-          mkdir -p artifacts/delivery-exception-slice6-db
           for file in $(find services/dsh/database/migrations -maxdepth 1 -type f -name '*.sql' | sort); do
             psql "$DSH_DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file" >/dev/null || exit 1
           done
@@ -126,7 +134,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: delivery-exception-slice6-db-${{ github.sha }}
-          path: artifacts/delivery-exception-slice6-db/returned-cancellation.log
+          path: artifacts/delivery-exception-slice6-db/*.log
           if-no-files-found: error
           retention-days: 2
 
@@ -165,7 +173,8 @@ jobs:
           git rm \
             .github/workflows/delivery-exception-slice6.yml \
             tools/scripts/patch-delivery-exception-slice6.py \
-            tools/scripts/patch-delivery-exception-slice6-types.py
+            tools/scripts/patch-delivery-exception-slice6-types.py \
+            tools/scripts/inspect-governed-cancel-source.py
           git add -A
           git commit -m "feat(delivery-exception): hand returned orders to governed cancellation and WLT [skip ci]"
           git pull --rebase origin journey/delivery-exception-redelivery-closure
