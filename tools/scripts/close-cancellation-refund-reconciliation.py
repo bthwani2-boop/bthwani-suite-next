@@ -121,6 +121,7 @@ def cleanup_temporary_files() -> None:
         ".github/workflows/cancellation-journey-recheck.yml",
         ".github/workflows/cancellation-journey-source.yml",
         ".github/workflows/cancellation-journey-final-patch.yml",
+        ".github/workflows/cancellation-journey-final-closure.yml",
         ".github/cancellation-journey-contract-trigger",
         ".github/cancellation-journey-format-trigger",
         ".github/cancellation-journey-recheck-trigger",
@@ -128,6 +129,7 @@ def cleanup_temporary_files() -> None:
         ".github/cancellation-journey-final-patch-trigger",
         ".github/cancellation-journey-final-trigger",
         "tools/scripts/patch-cancellation-journey-final.py",
+        "tools/scripts/close-cancellation-refund-reconciliation.py",
     ]:
         (ROOT / path).unlink(missing_ok=True)
 
