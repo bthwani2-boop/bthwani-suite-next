@@ -17,6 +17,7 @@ ALTER TABLE dsh_orders
     ADD COLUMN IF NOT EXISTS financial_closure_status TEXT NOT NULL DEFAULT 'not_required',
     ADD COLUMN IF NOT EXISTS financial_closure_reference TEXT;
 
+-- Transitional constraint permits legacy cancelled rows until they are mapped.
 ALTER TABLE dsh_orders DROP CONSTRAINT IF EXISTS dsh_orders_status_check;
 ALTER TABLE dsh_orders ADD CONSTRAINT dsh_orders_status_check
     CHECK (status IN (
@@ -54,6 +55,22 @@ ALTER TABLE dsh_orders ADD CONSTRAINT dsh_orders_financial_closure_status_check
         'failed'
     ));
 
+ALTER TABLE dsh_assignments DROP CONSTRAINT IF EXISTS dsh_assignments_status_check;
+ALTER TABLE dsh_assignments ADD CONSTRAINT dsh_assignments_status_check
+    CHECK (status IN ('offered','accepted','declined','completed','cancelled'));
+
+ALTER TABLE dsh_deliveries DROP CONSTRAINT IF EXISTS dsh_deliveries_status_check;
+ALTER TABLE dsh_deliveries ADD CONSTRAINT dsh_deliveries_status_check
+    CHECK (status IN (
+        'assigned',
+        'driver_assigned',
+        'driver_arrived_store',
+        'picked_up',
+        'arrived_customer',
+        'delivered',
+        'cancelled'
+    ));
+
 -- Preserve old rows while removing the ambiguous generic terminal state.
 WITH latest_actor AS (
     SELECT DISTINCT ON (order_id)
@@ -82,6 +99,27 @@ SET status = 'cancelled_by_operator',
     cancelled_at = COALESCE(cancelled_at, updated_at),
     cancellation_note = COALESCE(cancellation_note, rejection_reason)
 WHERE status = 'cancelled';
+
+-- Final constraint forbids any new ambiguous generic cancellation.
+ALTER TABLE dsh_orders DROP CONSTRAINT IF EXISTS dsh_orders_status_check;
+ALTER TABLE dsh_orders ADD CONSTRAINT dsh_orders_status_check
+    CHECK (status IN (
+        'pending',
+        'store_accepted',
+        'preparing',
+        'ready_for_pickup',
+        'driver_assigned',
+        'driver_arrived_store',
+        'picked_up',
+        'arrived_customer',
+        'delivered',
+        'cancelled_by_client',
+        'cancelled_by_store',
+        'cancelled_by_operator',
+        'cancelled_no_driver',
+        'failed_payment',
+        'failed_dispatch'
+    ));
 
 CREATE TABLE IF NOT EXISTS dsh_order_cancellations (
     id                         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -115,5 +153,56 @@ ALTER TABLE dsh_checkout_financial_closure_outbox
 CREATE INDEX IF NOT EXISTS idx_dsh_checkout_financial_closure_outbox_order
     ON dsh_checkout_financial_closure_outbox(order_id, created_at DESC)
     WHERE order_id IS NOT NULL;
+
+CREATE OR REPLACE FUNCTION dsh_cancel_order_dependent_work()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF NEW.status NOT IN (
+        'cancelled_by_client',
+        'cancelled_by_store',
+        'cancelled_by_operator',
+        'cancelled_no_driver',
+        'failed_payment',
+        'failed_dispatch'
+    ) OR OLD.status = NEW.status THEN
+        RETURN NEW;
+    END IF;
+
+    UPDATE dsh_assignments
+       SET status='cancelled', updated_at=NOW()
+     WHERE order_id=NEW.id
+       AND status IN ('offered','accepted');
+
+    UPDATE dsh_deliveries
+       SET status='cancelled',
+           note=COALESCE(NULLIF(note,''), 'order cancelled'),
+           updated_at=NOW()
+     WHERE order_id=NEW.id
+       AND status <> 'delivered';
+
+    UPDATE dsh_partner_delivery_tasks
+       SET status='cancelled', version=version+1, updated_at=NOW()
+     WHERE order_id=NEW.id
+       AND status NOT IN ('completed','cancelled');
+
+    UPDATE dsh_pickup_sessions
+       SET used_at=COALESCE(used_at,NOW()),
+           verification_method=COALESCE(verification_method,'cancelled'),
+           version=version+1,
+           updated_at=NOW()
+     WHERE order_id=NEW.id
+       AND used_at IS NULL;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_dsh_cancel_order_dependent_work ON dsh_orders;
+CREATE TRIGGER trg_dsh_cancel_order_dependent_work
+AFTER UPDATE OF status ON dsh_orders
+FOR EACH ROW
+EXECUTE FUNCTION dsh_cancel_order_dependent_work();
 
 COMMIT;
