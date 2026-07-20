@@ -20,6 +20,7 @@ export function PartnerHubSettingsPanel({
   openOperationsDirectory,
 }: {
   appearanceMode: BThwaniAppearanceMode;
+  appearanceHydrated?: boolean;
   setAppearanceMode: (mode: BThwaniAppearanceMode) => void;
   notificationPreferences: NotificationPreferenceState;
   updateNotificationPreference: (preferenceId: NotificationPreferenceId, nextValue: boolean) => void;
@@ -108,7 +109,6 @@ export function PartnerHubSettingsPanel({
 
   return (
     <Box gap={4}>
-      {/* Appearance Section */}
       <Box padding={0} gap={0}>
         <View
           style={{
@@ -142,7 +142,7 @@ export function PartnerHubSettingsPanel({
               </Text>
               <Text role="bodySm" tone="muted" style={{ textAlign: direction === 'rtl' ? 'right' : 'left' }} numberOfLines={1}>
                 فاتح أبيض أو داكن زجاجي
-            </Text>
+              </Text>
             </View>
           </View>
 
@@ -199,157 +199,66 @@ export function PartnerHubSettingsPanel({
         </View>
       </Box>
 
-      <Divider />
-
-      {/* Current Preferences */}
-      <Box padding={0} gap={0}>
-        <Text role="label" tone="muted" style={{ paddingHorizontal: spacing[4], paddingBottom: spacing[2] }}>
-          التفضيلات الحالية
-        </Text>
-        {([
-          { label: 'مستوى التنبيه', value: notificationPreferences.priorityOnly ? 'العاجلة فقط' : 'كل التنبيهات', tone: notificationPreferences.priorityOnly ? 'warning' : 'success' },
-          { label: 'الصوت والاهتزاز', value: notificationPreferences.sound ? 'مفعّل' : 'موقوف', tone: notificationPreferences.sound ? 'success' : 'warning' },
-          { label: 'الملخص اليومي', value: notificationPreferences.dailyDigest ? 'مفعّل' : 'موقوف', tone: notificationPreferences.dailyDigest ? 'info' : 'default' },
-          { label: 'الظهور في القائمة', value: resolvedListingEnabled ? 'مفعل' : 'موقوف', tone: resolvedListingEnabled ? 'success' : 'warning' },
-          { label: 'حالة المتجر', value: isAvailable ? 'مفتوح الآن' : 'مغلق الآن', tone: isAvailable ? 'success' : 'warning' },
-          { label: 'ساعات العمل', value: todayHoursLabel, tone: 'default' },
-        ] as const).map((item, index, arr) => (
-          <View
-            key={item.label}
-            style={{
-              flexDirection: rowDirection,
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              paddingHorizontal: spacing[4],
-              paddingVertical: spacing[3],
-              backgroundColor: theme.surface,
-              borderBottomWidth: index === arr.length - 1 ? 0 : 1,
-              borderBottomColor: theme.line,
-            }}
-          >
-            <Text role="body" style={{ color: theme.text }}>
-              {item.label}
-            </Text>
-            <Chip label={item.value} />
-          </View>
-        ))}
-      </Box>
-
-      <Divider />
-
-      {/* Notification Preferences */}
-      <Box padding={0} gap={0}>
-        <Text role="label" tone="muted" style={{ paddingHorizontal: spacing[4], paddingBottom: spacing[2] }}>
-          إعدادات الإشعارات
-        </Text>
+      <Box padding={4} gap={3} background="surface">
+        <Text role="titleSm">الإشعارات</Text>
         {primaryNotificationRows.map((item) => (
           <SettingsOptionRow
             key={item.id}
+            icon={item.icon}
             title={item.title}
             subtitle={item.subtitle}
-            icon={item.icon}
             value={item.value}
-            onValueChange={(nextValue) => updateNotificationPreference(item.id, nextValue)}
-            compact={true}
-            last={false}
+            onToggle={() => updateNotificationPreference(item.id, !item.value)}
           />
         ))}
-
-        <Pressable
-          onPress={() => setShowAdvancedNotifications(!showAdvancedNotifications)}
-          style={({ pressed }) => ({
-            flexDirection: rowDirection,
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            paddingHorizontal: spacing[4],
-            paddingVertical: 10,
-            backgroundColor: pressed ? theme.surfaceInset : theme.surface,
-            borderBottomWidth: showAdvancedNotifications ? 1 : 0,
-            borderBottomColor: theme.line,
-          })}
-        >
-          <View style={{ flexDirection: rowDirection, alignItems: 'center', gap: 10, flexShrink: 1, minWidth: 0 }}>
-            <Icon name="options-outline" size={18} tone="muted" style={{ flexShrink: 0 }} />
-            <View style={{ flexShrink: 1, minWidth: 0, gap: 2, alignItems: direction === 'rtl' ? 'flex-end' : 'flex-start' }}>
-              <Text role="bodyStrong" style={{ color: theme.brand, textAlign: direction === 'rtl' ? 'right' : 'left' }}>
-                إعدادات متقدمة
-              </Text>
-              <Text role="bodySm" tone="muted" style={{ textAlign: direction === 'rtl' ? 'right' : 'left' }}>
-                إدارة إعدادات الصوت، الملخصات والتسويق
-              </Text>
-            </View>
-          </View>
-          <Icon name={showAdvancedNotifications ? "chevron-down-outline" : "chevron-forward-outline"} mirrored tone="muted" size={18} />
+        <Pressable onPress={() => setShowAdvancedNotifications(!showAdvancedNotifications)}>
+          <Text role="bodyStrong" tone="brand">
+            {showAdvancedNotifications ? 'إخفاء الإعدادات المتقدمة' : 'عرض الإعدادات المتقدمة'}
+          </Text>
         </Pressable>
+        {showAdvancedNotifications
+          ? secondaryNotificationRows.map((item) => (
+              <SettingsOptionRow
+                key={item.id}
+                icon={item.icon}
+                title={item.title}
+                subtitle={item.subtitle}
+                value={item.value}
+                onToggle={() => updateNotificationPreference(item.id, !item.value)}
+              />
+            ))
+          : null}
+      </Box>
 
-        {showAdvancedNotifications && secondaryNotificationRows.map((item, index, arr) => (
+      <Box padding={4} gap={3} background="surface">
+        <Text role="titleSm">حالة المتجر</Text>
+        <View style={{ flexDirection: rowDirection, flexWrap: 'wrap', gap: spacing[2] }}>
+          <Chip label={isAvailable ? 'المتجر مفتوح' : 'المتجر مغلق'} selected={isAvailable} />
+          <Chip label={resolvedListingEnabled ? 'الظهور مفعل' : 'الظهور متوقف'} selected={resolvedListingEnabled} />
+          <Chip label={todayHoursLabel} selected />
+        </View>
+        <Divider />
+        <SettingsOptionRow
+          icon="notifications-outline"
+          title="تنبيهات الطلبات"
+          subtitle="مراجعة الطلبات والتنبيهات التشغيلية الفعلية."
+          onPress={openOrderAlerts}
+        />
+        {onOpenStoreScope ? (
           <SettingsOptionRow
-            key={item.id}
-            title={item.title}
-            subtitle={item.subtitle}
-            icon={item.icon}
-            value={item.value}
-            onValueChange={(nextValue) => updateNotificationPreference(item.id, nextValue)}
-            compact={true}
-            last={index === arr.length - 1}
+            icon="git-branch-outline"
+            title="نطاق المتجر"
+            subtitle="تغيير المتجر أو الفرع النشط."
+            onPress={onOpenStoreScope}
           />
-        ))}
+        ) : null}
+        <SettingsOptionRow
+          icon="construct-outline"
+          title="دليل العمليات"
+          subtitle="فتح مسارات التشغيل والدعم المرتبطة."
+          onPress={openOperationsDirectory}
+        />
       </Box>
-
-      <Divider />
-
-      {/* Quick Access */}
-      <Box padding={0} gap={0}>
-        <Text role="label" tone="muted" style={{ paddingHorizontal: spacing[4], paddingBottom: spacing[2] }}>
-          الوصول السريع
-        </Text>
-        {[
-          {
-            id: 'order-alerts',
-            title: 'فتح تنبيهات الطلب',
-            icon: 'notifications-outline' as const,
-            onPress: openOrderAlerts,
-          },
-          {
-            id: 'branch-scope',
-            title: 'اختيار الفرع',
-            icon: 'git-branch-outline' as const,
-            onPress: onOpenStoreScope,
-          },
-          {
-            id: 'operations-directory',
-            title: 'دليل العمليات',
-            icon: 'headset-outline' as const,
-            onPress: openOperationsDirectory,
-          },
-        ].map((item, index, arr) => (
-          <Pressable
-            key={item.id}
-            onPress={item.onPress}
-            style={({ pressed }) => ({
-              flexDirection: rowDirection,
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              paddingHorizontal: spacing[4],
-              paddingVertical: spacing[3],
-              backgroundColor: pressed ? theme.surfaceInset : theme.surface,
-              borderBottomWidth: index === arr.length - 1 ? 0 : 1,
-              borderBottomColor: theme.line,
-            })}
-          >
-            <View style={{ flexDirection: rowDirection, alignItems: 'center', gap: 10, flexShrink: 1, minWidth: 0 }}>
-              <Icon name={item.icon} size={18} tone="muted" style={{ flexShrink: 0 }} />
-              <Text role="bodyStrong" style={{ textAlign: direction === 'rtl' ? 'right' : 'left' }}>
-                {item.title}
-              </Text>
-            </View>
-            <Icon name="chevron-forward-outline" mirrored tone="muted" size={18} />
-          </Pressable>
-        ))}
-      </Box>
-
-      {/* Safe area spacer for bottom navigation */}
-      <View style={{ height: 140 }} />
     </Box>
   );
 }
