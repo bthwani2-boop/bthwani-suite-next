@@ -3950,6 +3950,92 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dsh/client/orders/{orderId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel an authenticated client's early-stage order and start governed WLT closure. */
+        post: operations["cancelDshClientOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/client/orders/{orderId}/cancellation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Return the client's cancellation and WLT financial-closure projection. */
+        get: operations["getDshClientOrderCancellation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/orders/{orderId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel a partner-owned order using a structured operational reason. */
+        post: operations["cancelDshPartnerOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/orders/{orderId}/cancellation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Return the partner-scoped cancellation and WLT closure projection. */
+        get: operations["getDshPartnerOrderCancellation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/orders/{orderId}/cancellation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Return cancellation, refund reference and financial delivery failure for operations. */
+        get: operations["getDshOperatorOrderCancellation"];
+        put?: never;
+        /** Cancel an order after operational review and stop all dependent work atomically. */
+        post: operations["cancelDshOperatorOrderGoverned"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -4585,8 +4671,16 @@ export interface components {
         DshOperatorCheckoutIntentsResponse: {
             intents: components["schemas"]["DshCheckoutIntent"][];
         };
-        /** @enum {string} */
-        DshOrderStatus: "pending" | "store_accepted" | "preparing" | "ready_for_pickup" | "driver_assigned" | "driver_arrived_store" | "picked_up" | "arrived_customer" | "delivered" | "cancelled";
+        /**
+         * @description Explicit operational terminal states; the ambiguous legacy `cancelled` value is forbidden.
+         * @enum {string}
+         */
+        DshOrderStatus: "pending" | "store_accepted" | "preparing" | "ready_for_pickup" | "driver_assigned" | "driver_arrived_store" | "picked_up" | "arrived_customer" | "delivered" | "cancelled_by_client" | "cancelled_by_store" | "cancelled_by_operator" | "cancelled_no_driver" | "failed_payment" | "failed_dispatch";
+        /**
+         * @description DSH projection of the WLT-owned financial closure decision.
+         * @enum {string}
+         */
+        DshFinancialClosureStatus: "not_required" | "pending" | "session_expired" | "refund_requested" | "refund_completed" | "no_action" | "failed";
         DshOrderItem: {
             id: string;
             productId: string;
@@ -4604,6 +4698,15 @@ export interface components {
             clientId: string;
             status: components["schemas"]["DshOrderStatus"];
             rejectionReason?: string;
+            cancellationReasonCode?: string | null;
+            cancellationNote?: string | null;
+            cancelledByActorId?: string | null;
+            /** @enum {string|null} */
+            cancelledByRole?: "client" | "partner" | "operator" | "system" | null;
+            /** Format: date-time */
+            cancelledAt?: string | null;
+            financialClosureStatus?: components["schemas"]["DshFinancialClosureStatus"];
+            financialClosureReference?: string | null;
             /** @description Opaque WLT payment reference. DSH never mutates financial truth. */
             wltPaymentRefId: string;
             items?: components["schemas"]["DshOrderItem"][];
@@ -4626,9 +4729,47 @@ export interface components {
             reason: string;
         };
         /** @enum {string} */
-        DshAssignmentStatus: "offered" | "accepted" | "declined" | "completed";
+        DshOrderCancellationReasonCode: "changed_mind" | "duplicate_order" | "address_error" | "payment_issue" | "excessive_delay" | "out_of_stock" | "store_closed" | "capacity" | "pricing_issue" | "cannot_fulfill" | "customer_request" | "partner_request" | "no_driver" | "fraud_risk" | "safety" | "operational_failure" | "other";
+        DshOrderCancellationRequest: {
+            reasonCode: components["schemas"]["DshOrderCancellationReasonCode"];
+            /** @description Required when reasonCode is `other`; otherwise optional operational context. */
+            reasonNote?: string;
+            /** @description Idempotent command identifier. */
+            commandId: string;
+            /** @description Cross-service correlation identifier; defaults to commandId. */
+            correlationId?: string;
+        };
+        DshOrderCancellation: {
+            id: string;
+            orderId: string;
+            actorId: string;
+            /** @enum {string} */
+            actorRole: "client" | "partner" | "operator" | "system";
+            reasonCode: components["schemas"]["DshOrderCancellationReasonCode"];
+            reasonNote: string;
+            fromStatus: string;
+            toStatus: components["schemas"]["DshOrderStatus"];
+            financialClosureStatus: components["schemas"]["DshFinancialClosureStatus"];
+            financialReference: string;
+            /** @enum {string} */
+            financialResultAction: "expired" | "refund_requested" | "none" | "";
+            financialFailure: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshOrderCancellationResponse: {
+            cancellation: components["schemas"]["DshOrderCancellation"];
+        };
+        DshCancelOrderResponse: {
+            order: components["schemas"]["DshOrder"];
+            cancellation: components["schemas"]["DshOrderCancellation"];
+        };
         /** @enum {string} */
-        DshDeliveryStatus: "assigned" | "driver_assigned" | "driver_arrived_store" | "picked_up" | "arrived_customer" | "delivered";
+        DshAssignmentStatus: "offered" | "accepted" | "declined" | "completed" | "cancelled";
+        /** @enum {string} */
+        DshDeliveryStatus: "assigned" | "driver_assigned" | "driver_arrived_store" | "picked_up" | "arrived_customer" | "delivered" | "cancelled";
         DshDelivery: {
             id: string;
             assignmentId: string;
@@ -13636,6 +13777,198 @@ export interface operations {
             };
             /** @description Pickup session was already used (PICKUP_CODE_ALREADY_USED). */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+        };
+    };
+    cancelDshClientOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshOrderCancellationRequest"];
+            };
+        };
+        responses: {
+            /** @description Order cancelled and financial closure queued or not required. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshCancelOrderResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Order state requires operator review or no longer permits direct client cancellation. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+        };
+    };
+    getDshClientOrderCancellation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cancellation projection returned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshOrderCancellationResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    cancelDshPartnerOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshOrderCancellationRequest"];
+            };
+        };
+        responses: {
+            /** @description Order cancelled and financial closure queued or not required. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshCancelOrderResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Order state does not allow partner cancellation. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+        };
+    };
+    getDshPartnerOrderCancellation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cancellation projection returned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshOrderCancellationResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getDshOperatorOrderCancellation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cancellation projection returned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshOrderCancellationResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    cancelDshOperatorOrderGoverned: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshOrderCancellationRequest"];
+            };
+        };
+        responses: {
+            /** @description Order cancelled and WLT closure queued or not required. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshCancelOrderResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Order is already terminal or cannot be cancelled from its current state. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
