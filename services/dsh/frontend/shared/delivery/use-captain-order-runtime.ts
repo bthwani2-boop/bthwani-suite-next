@@ -27,7 +27,13 @@ export type DshCaptainActiveLocationPushConfig = {
   readonly lifecycleStatus: string | undefined;
 };
 
-const activeDeliveryStates = new Set(['offer-accepting', 'offer-accepted']);
+const activeDeliveryStates = new Set([
+  'assigned',
+  'driver_assigned',
+  'driver_arrived_store',
+  'picked_up',
+  'arrived_customer',
+]);
 
 // Foreground-only periodic sampling. No background task and no location history.
 export const CAPTAIN_LOCATION_PUSH_INTERVAL_MS = 3 * 60 * 1000;
@@ -114,7 +120,7 @@ export function useCaptainActiveLocationPush({
         latitude,
         longitude,
         lifecycleStatus,
-        orderStatus: 'EN_ROUTE',
+        orderStatus: lifecycleStatus === 'arrived_customer' ? 'ARRIVED' : 'EN_ROUTE',
       }).catch((err: unknown) => {
         console.warn('[captain:location-push] failed', err);
       });
