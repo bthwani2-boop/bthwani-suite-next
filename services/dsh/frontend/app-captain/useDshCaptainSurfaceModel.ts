@@ -14,8 +14,8 @@ export type {
 } from '../shared/delivery/captain.surface.types';
 
 export function useDshCaptainSurfaceModel(
-  command: DshCaptainNavigationCommand | undefined,
   captainRuntimeId: string,
+  command?: DshCaptainNavigationCommand,
 ) {
   return useDshCaptainSurfaceBinding(command, captainRuntimeId);
 }
