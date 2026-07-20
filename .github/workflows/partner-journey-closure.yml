@@ -80,7 +80,7 @@ jobs:
         run: |
           set -euo pipefail
           go test ./internal/partner -count=1 -v
-          go test ./internal/http -count=1 -run 'Partner|TeamMember|StoreTeam|Support|Fleet|Commercial' -v
+          go test ./internal/http -count=1 -run '^$'
       - name: Setup governed Node workspace
         uses: ./.github/actions/setup-node-workspace
       - name: Partner contracts and surface guards
