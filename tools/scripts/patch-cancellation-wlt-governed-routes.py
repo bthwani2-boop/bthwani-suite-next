@@ -61,7 +61,37 @@ func CreateRefund(db *sql.DB, input CreateRefundInput) (*Refund, error) {
 
 '''
 refund = refund[:comment_start] + replacement + refund[function_end:]
+legacy_handler_start = refund.index("func HandleCreateRefund(db *sql.DB) http.HandlerFunc {")
+legacy_handler_end = refund.index("func HandleGetRefund", legacy_handler_start)
+refund = refund[:legacy_handler_start] + '''func HandleCreateRefund(db *sql.DB) http.HandlerFunc {
+	return HandleCreateRefundAtomic(db)
+}
+
+''' + refund[legacy_handler_end:]
 refund_path.write_text(refund, encoding="utf-8")
+
+payment_path = Path("services/wlt/backend/internal/payment/payment.go")
+payment = payment_path.read_text(encoding="utf-8")
+cancel_start = payment.index("func CancelSessionForOrder(db *sql.DB, sessionID, orderID, clientID, reason string) (*CancelForOrderResult, error) {")
+cancel_end = payment.index("// HTTP handlers", cancel_start)
+payment = payment[:cancel_start] + '''func CancelSessionForOrder(db *sql.DB, sessionID, orderID, clientID, reason string) (*CancelForOrderResult, error) {
+	return CancelOrderFinancially(db, GovernedOrderCancellationInput{
+		PaymentSessionID: sessionID,
+		OrderID:          orderID,
+		ClientID:         clientID,
+		Reason:           reason,
+	})
+}
+
+''' + payment[cancel_end:]
+handler_start = payment.index("func HandleCancelSessionForOrder(db *sql.DB) http.HandlerFunc {")
+handler_end = payment.index("func HandleMarkCodCollected", handler_start)
+payment = payment[:handler_start] + '''func HandleCancelSessionForOrder(db *sql.DB) http.HandlerFunc {
+	return HandleGovernedSessionCancellation(db)
+}
+
+''' + payment[handler_end:]
+payment_path.write_text(payment, encoding="utf-8")
 
 test_path = Path("services/wlt/backend/internal/refund/refund_db_test.go")
 test = test_path.read_text(encoding="utf-8")
@@ -135,4 +165,4 @@ if post_response_governed not in contract:
 contract_path.write_text(contract, encoding="utf-8")
 
 Path("tools/scripts/patch-cancellation-wlt-governed-routes.py").unlink(missing_ok=True)
-print("WLT cancellation/refund runtime and contract now share governed atomic ownership-safe logic.")
+print("WLT cancellation/refund runtime, compatibility functions, and contract now share one governed atomic implementation.")
