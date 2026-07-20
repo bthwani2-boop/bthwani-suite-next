@@ -1,8 +1,5 @@
 {
   "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "types": ["node", "react", "react-native"]
-  },
   "include": [
     "../../../services/dsh/frontend/app-client/orders/OrderTrackingScreen.tsx",
     "../../../services/dsh/frontend/app-client/orders/useClientOrderJourneyController.ts",
