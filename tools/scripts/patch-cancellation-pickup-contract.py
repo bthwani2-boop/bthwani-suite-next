@@ -26,6 +26,10 @@ def main() -> None:
     if tenant_write_patch.exists():
         runpy.run_path(str(tenant_write_patch), run_name="__main__")
 
+    assignment_fixture_patch = Path("tools/scripts/patch-cancellation-order-assignment-fixture.py")
+    if assignment_fixture_patch.exists():
+        runpy.run_path(str(assignment_fixture_patch), run_name="__main__")
+
     wlt_routes_patch = Path("tools/scripts/patch-cancellation-wlt-governed-routes.py")
     if wlt_routes_patch.exists():
         runpy.run_path(str(wlt_routes_patch), run_name="__main__")
@@ -94,7 +98,7 @@ def main() -> None:
 
     CONTRACT.write_text(text, encoding="utf-8")
     Path("tools/scripts/patch-cancellation-pickup-contract.py").unlink(missing_ok=True)
-    print("Cancellation journey contract, tenancy, pricing, WLT, pickup resume, and operations UI patched.")
+    print("Cancellation journey contract, tenancy, pricing, assignment actor, WLT, pickup resume, and operations UI patched.")
 
 
 if __name__ == "__main__":
