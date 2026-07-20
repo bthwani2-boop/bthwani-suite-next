@@ -76,6 +76,7 @@ text = text.replace(
     'NotifyDeliveryCollectionInput{OrderID: "order-1"}',
     'NotifyDeliveryCollectionInput{OrderID: "order-1", CollectorType: "captain", CollectorID: "captain-1", PartnerID: "partner-1", CheckoutIntentID: "intent-1"}',
 )
+text = text.replace('/wlt/cod-records', '/wlt/delivery-collections')
 for stale in [
     "NotifyDeliveryCompletedInput",
     "NotifyDeliveryCompleted(",
@@ -90,14 +91,16 @@ align_delivery_collection_tests(ROOT / "services/dsh/backend/internal/wlt/mutati
 
 client_path = ROOT / "services/dsh/backend/internal/wlt/client.go"
 client = client_path.read_text(encoding="utf-8")
+client = client.replace('c.baseURL+"/wlt/cod-records"', 'c.baseURL+"/wlt/delivery-collections"')
+client = client.replace('deterministicMutationKey("cod-custody-create"', 'deterministicMutationKey("delivery-collection-handoff"')
+client = client.replace("WLT COD custody returned HTTP", "WLT delivery collection handoff returned HTTP")
 if client.count("type NotifyDeliveryCollectionInput struct") != 1:
     raise RuntimeError("DSH must expose exactly one COD collection input")
 if client.count("func (c *Client) NotifyDeliveryCollection") != 1:
     raise RuntimeError("DSH must expose exactly one COD collection method")
-if "/wlt/delivery-collections" in client:
-    raise RuntimeError("obsolete delivery-collections route remains in DSH WLT client")
-if 'c.baseURL+"/wlt/cod-records"' not in client:
-    raise RuntimeError("governed WLT cod-records route is missing")
+if 'c.baseURL+"/wlt/delivery-collections"' not in client:
+    raise RuntimeError("governed WLT delivery-collections handoff is missing")
+client_path.write_text(client, encoding="utf-8")
 
 cod_path = ROOT / "services/wlt/backend/internal/cod/cod.go"
 cod = cod_path.read_text(encoding="utf-8")
@@ -106,7 +109,110 @@ if '"strings"' not in cod:
     if anchor not in cod:
         raise RuntimeError("WLT COD import anchor not found")
     cod = cod.replace(anchor, anchor + '\t"strings"\n', 1)
+cod = cod.replace(
+    "func normalizeCollector(input CreateCodRecordInput)",
+    "func normalizeCodRecordCollector(input CreateCodRecordInput)",
+)
+cod = cod.replace(
+    "collectorType, collectorID, captainID, err := normalizeCollector(input)",
+    "collectorType, collectorID, captainID, err := normalizeCodRecordCollector(input)",
+)
+if cod.count("func normalizeCollector(") != 0:
+    raise RuntimeError("generic normalizeCollector still duplicated in cod.go")
 cod_path.write_text(cod, encoding="utf-8")
+
+collector_path = ROOT / "services/wlt/backend/internal/cod/cod_collector.go"
+collector = collector_path.read_text(encoding="utf-8")
+positive_anchor = '''\tif session.PaymentMethod != "cod" {
+\t\treturn nil, false, fmt.Errorf("checkoutIntentId %q is not a COD payment session", input.CheckoutIntentID)
+\t}
+'''
+positive_block = positive_anchor + '''\tif session.AmountMinorUnits <= 0 {
+\t\treturn nil, false, fmt.Errorf("checkoutIntentId %q has no positive COD amount", input.CheckoutIntentID)
+\t}
+'''
+if "has no positive COD amount" not in collector:
+    if positive_anchor not in collector:
+        raise RuntimeError("delivery collection amount validation anchor not found")
+    collector = collector.replace(positive_anchor, positive_block, 1)
+collector_path.write_text(collector, encoding="utf-8")
+
+server_path = ROOT / "services/wlt/backend/internal/http/server.go"
+server = server_path.read_text(encoding="utf-8")
+route = '\tmux.HandleFunc("POST /wlt/delivery-collections", gate(serviceAuth(cod.HandleCreateDeliveryCollectionHandoff(db))))\n'
+if route not in server:
+    anchor = '\tmux.HandleFunc("POST /wlt/cod-records", gate(serviceAuth(cod.HandleCreateCodRecordAtomic(db))))\n'
+    if anchor not in server:
+        raise RuntimeError("WLT COD router anchor not found")
+    server = server.replace(anchor, route + anchor, 1)
+server_path.write_text(server, encoding="utf-8")
+
+contract_path = ROOT / "services/wlt/contracts/wlt.openapi.yaml"
+contract = contract_path.read_text(encoding="utf-8")
+if "  /wlt/delivery-collections:\n" not in contract:
+    anchor = "  /wlt/cod-records:\n"
+    if anchor not in contract:
+        raise RuntimeError("WLT COD OpenAPI path anchor not found")
+    handoff = '''  /wlt/delivery-collections:
+    post:
+      operationId: createWltDeliveryCollectionHandoff
+      summary: Accept a governed DSH delivery-completion handoff.
+      description: >-
+        DSH sends delivery and collector identities only. WLT resolves the payment
+        session, returns applicable=false for prepaid orders, and creates one COD
+        custody record for COD orders without trusting caller-supplied money.
+      tags: [WltCod]
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema: { type: string }
+        - name: X-Service-Caller
+          in: header
+          required: true
+          schema:
+            type: string
+            enum: [dsh]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WltCreateCodRecordRequest"
+      responses:
+        "200":
+          description: Handoff replayed or not applicable to a prepaid order.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [applicable, replayed]
+                properties:
+                  codRecord:
+                    anyOf:
+                      - $ref: "#/components/schemas/WltCodRecord"
+                      - type: "null"
+                  applicable: { type: boolean }
+                  replayed: { type: boolean }
+        "201":
+          description: COD custody record created from WLT payment-session truth.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [codRecord, applicable, replayed]
+                properties:
+                  codRecord: { $ref: "#/components/schemas/WltCodRecord" }
+                  applicable: { type: boolean, const: true }
+                  replayed: { type: boolean, const: false }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+'''
+    contract = contract.replace(anchor, handoff + anchor, 1)
+contract_path.write_text(contract, encoding="utf-8")
 
 captain_path = ROOT / "services/dsh/frontend/shared/finance-wlt-link/wlt/generated/WltDshCaptainBridge.tsx"
 captain = captain_path.read_text(encoding="utf-8")
@@ -165,4 +271,4 @@ if "INSERT INTO wlt_payment_sessions(checkout_intent_id,client_id" in cod_test:
     raise RuntimeError("ungoverned payment-session fixture remains in COD DB tests")
 cod_test_path.write_text(cod_test, encoding="utf-8")
 
-print("Aligned all DSH COD client tests, imports, captain section, and governed WLT fixtures.")
+print("Wired governed delivery-collection handoff and aligned COD record management.")
