@@ -205,20 +205,42 @@ jobs:
           ! grep -Ei '(mock|fixture|demo)[A-Za-z0-9_]*[[:space:]]*=' "$captain" "$partner" "$client" "$operations"
 
       - name: Remove temporary files and commit verified slice
+        id: cleanup
+        continue-on-error: true
         shell: bash
         run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm \
-            .github/workflows/delivery-exception-slice7.yml \
-            tools/scripts/patch-delivery-exception-slice7-preflight.py \
-            tools/scripts/patch-delivery-exception-slice7.py \
-            tools/scripts/patch-delivery-exception-slice7-corrections.py
-          git add -A
-          git commit -m "feat(delivery-exception): require partner receipt for returned custody [skip ci]"
-          git push --force-with-lease=refs/heads/journey/delivery-exception-redelivery-closure:${{ github.sha }} \
-            origin HEAD:journey/delivery-exception-redelivery-closure
+          set -o pipefail
+          mkdir -p artifacts/delivery-exception-slice7-cleanup
+          {
+            set -euo pipefail
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git rm \
+              .github/workflows/delivery-exception-slice7.yml \
+              tools/scripts/patch-delivery-exception-slice7-preflight.py \
+              tools/scripts/patch-delivery-exception-slice7.py \
+              tools/scripts/patch-delivery-exception-slice7-corrections.py
+            git add -A
+            git status --short
+            git commit -m "feat(delivery-exception): require partner receipt for returned custody [skip ci]"
+            git push --force-with-lease=refs/heads/journey/delivery-exception-redelivery-closure:${{ github.sha }} \
+              origin HEAD:journey/delivery-exception-redelivery-closure
+          } 2>&1 | tee artifacts/delivery-exception-slice7-cleanup/cleanup.log
+          exit ${PIPESTATUS[0]}
+
+      - name: Upload cleanup diagnostic
+        if: steps.cleanup.outcome == 'failure'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: delivery-exception-slice7-cleanup-${{ github.sha }}
+          path: artifacts/delivery-exception-slice7-cleanup/cleanup.log
+          if-no-files-found: error
+          retention-days: 2
+
+      - name: Stop on cleanup failure
+        if: steps.cleanup.outcome == 'failure'
+        shell: bash
+        run: exit 1
 
       - name: Publish focused failure status
         if: failure()
