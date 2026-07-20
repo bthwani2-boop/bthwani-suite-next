@@ -31,23 +31,25 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          gofmt -w \
-            services/dsh/backend/internal/orders/runtime.go \
-            services/dsh/backend/internal/orders/cancellation_read.go \
-            services/dsh/backend/internal/http/order_cancellations.go \
-            services/dsh/backend/internal/http/operator_order_workboard.go \
+          files=(
+            services/dsh/backend/internal/orders/runtime.go
+            services/dsh/backend/internal/orders/lifecycle.go
+            services/dsh/backend/internal/orders/cancellation_read.go
+            services/dsh/backend/internal/checkoutfinanceoutbox/projection.go
+            services/dsh/backend/internal/checkoutfinanceoutbox/worker.go
+            services/dsh/backend/internal/wlt/cancel_for_order.go
+            services/dsh/backend/internal/wlt/finance_proxy.go
+            services/dsh/backend/internal/http/order_cancellations.go
+            services/dsh/backend/internal/http/operator_order_workboard.go
             services/dsh/backend/cmd/dsh-api/main.go
+          )
+          gofmt -w "${files[@]}"
           if git diff --quiet; then
             echo "Cancellation journey Go source is already formatted."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add \
-            services/dsh/backend/internal/orders/runtime.go \
-            services/dsh/backend/internal/orders/cancellation_read.go \
-            services/dsh/backend/internal/http/order_cancellations.go \
-            services/dsh/backend/internal/http/operator_order_workboard.go \
-            services/dsh/backend/cmd/dsh-api/main.go
+          git add "${files[@]}"
           git commit -m "style(cancellation-journey): format governed Go source"
           git push origin HEAD:journey/cancellation-refund-reconciliation-closure
