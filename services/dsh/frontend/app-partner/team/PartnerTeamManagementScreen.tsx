@@ -12,9 +12,7 @@ import {
   radius,
   spacing,
 } from "@bthwani/ui-kit";
-import type {
-  PartnerTeamMember,
-} from "./partner-team.types";
+import type { PartnerTeamMember } from "./partner-team.types";
 import type { PartnerTeamMutationResult } from "./usePartnerTeamModel";
 
 export type PartnerTeamSection = "members" | "invites" | "couriers";
@@ -38,8 +36,11 @@ export function selectPartnerTeamSection(id: PartnerTeamSection): PartnerTeamSec
 
 type PartnerTeamManagementScreenProps = {
   readonly storeId: string;
+  readonly storeName?: string;
+  readonly branchLabel?: string;
   readonly members: readonly PartnerTeamMember[];
-  readonly pendingInvites: number;
+  readonly pendingInvites?: number;
+  readonly isLoading?: boolean;
   readonly error?: string | null;
   readonly onRetry?: () => void;
   readonly onInviteMember: (identity: string) => Promise<PartnerTeamMutationResult>;
@@ -71,6 +72,7 @@ function actionLabel(action: PartnerTeamInlineAction): string {
     case "resend-invite": return "إعادة إرسال الدعوة";
     case "cancel-invite": return "إلغاء الدعوة";
     case "audit-log": return "سجل التدقيق";
+    default: return action;
   }
 }
 
@@ -83,8 +85,11 @@ function memberStatusTone(status: PartnerTeamMember["status"]): "success" | "war
 
 export function PartnerTeamManagementScreen({
   storeId,
+  storeName,
+  branchLabel,
   members,
-  pendingInvites,
+  pendingInvites = 0,
+  isLoading = false,
   error,
   onRetry,
   onInviteMember,
@@ -109,11 +114,11 @@ export function PartnerTeamManagementScreen({
     setMutation({ kind: "submitting", target: "invite" });
     const result = await onInviteMember(identity);
     if (!result.ok) {
-      setMutation({ kind: "error", message: result.message });
+      setMutation({ kind: "error", message: result.error });
       return;
     }
     setInviteIdentity("");
-    setMutation({ kind: "success", message: result.message || "تم إرسال الدعوة من DSH." });
+    setMutation({ kind: "success", message: "تم إرسال الدعوة من DSH." });
   };
 
   const submitAction = async (member: PartnerTeamMember, action: PartnerTeamInlineAction) => {
@@ -121,10 +126,10 @@ export function PartnerTeamManagementScreen({
     setMutation({ kind: "submitting", target: member.id });
     const result = await onMemberAction(member, action);
     if (!result.ok) {
-      setMutation({ kind: "error", message: result.message });
+      setMutation({ kind: "error", message: result.error });
       return;
     }
-    setMutation({ kind: "success", message: result.message || "تم تنفيذ الإجراء في DSH." });
+    setMutation({ kind: "success", message: "تم تنفيذ الإجراء في DSH." });
   };
 
   const issueCourierCode = async (member: PartnerTeamMember) => {
@@ -156,12 +161,16 @@ export function PartnerTeamManagementScreen({
     );
   }
 
+  if (isLoading) {
+    return <StateView tone="neutral" title="جارٍ تحميل فريق المتجر" />;
+  }
+
   return (
     <ScrollScreen contentContainerStyle={styles.content}>
       <Card style={styles.headerCard}>
         <Text role="titleMd" style={styles.rtl}>فريق المتجر</Text>
         <Text role="caption" tone="muted" style={styles.rtl}>
-          المتجر: {storeId} · الدعوات المعلقة: {pendingInvites}
+          {storeName ? `${storeName} · ` : ""}{branchLabel ? `${branchLabel} · ` : ""}المتجر: {storeId} · الدعوات المعلقة: {pendingInvites}
         </Text>
       </Card>
 
