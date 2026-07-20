@@ -44,7 +44,7 @@ export function OperationalOrderDecisionScreen({
   return (
     <DshPartnerOrderRejectionScreen
       state={state}
-      errorMessage={errorMessage}
+      {...(errorMessage === undefined ? {} : { errorMessage })}
       orderCode={order?.orderCode ?? `#${orderId}`}
       amount={order?.amountLabel ?? '—'}
       items={[
