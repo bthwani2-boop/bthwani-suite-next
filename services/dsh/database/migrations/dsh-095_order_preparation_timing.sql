@@ -44,6 +44,58 @@ ALTER TABLE dsh_orders
         AND (accepted_at IS NULL OR preparation_warning_minutes < estimated_preparation_minutes)
     );
 
+CREATE OR REPLACE FUNCTION dsh_capture_order_preparation_timing()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    policy_default_minutes INTEGER := 25;
+    policy_warning_minutes INTEGER := 5;
+BEGIN
+    IF NEW.status IS NOT DISTINCT FROM OLD.status THEN
+        RETURN NEW;
+    END IF;
+
+    IF OLD.status = 'pending' AND NEW.status = 'store_accepted' THEN
+        SELECT
+            COALESCE(policy.default_preparation_minutes, 25),
+            COALESCE(policy.warning_before_minutes, 5)
+        INTO policy_default_minutes, policy_warning_minutes
+        FROM (SELECT NEW.store_id AS store_id) requested
+        LEFT JOIN dsh_store_order_preparation_policies policy USING (store_id);
+
+        NEW.accepted_at := COALESCE(NEW.accepted_at, NOW());
+        NEW.estimated_preparation_minutes := CASE
+            WHEN NEW.estimated_preparation_minutes BETWEEN 5 AND 180
+                THEN NEW.estimated_preparation_minutes
+            ELSE policy_default_minutes
+        END;
+        NEW.preparation_warning_minutes := CASE
+            WHEN NEW.preparation_warning_minutes BETWEEN 1 AND NEW.estimated_preparation_minutes - 1
+                THEN NEW.preparation_warning_minutes
+            ELSE LEAST(policy_warning_minutes, NEW.estimated_preparation_minutes - 1)
+        END;
+        NEW.estimated_ready_at := COALESCE(
+            NEW.estimated_ready_at,
+            NEW.accepted_at + make_interval(mins => NEW.estimated_preparation_minutes)
+        );
+        NEW.preparation_delay_reason := NULL;
+    ELSIF OLD.status = 'store_accepted' AND NEW.status = 'preparing' THEN
+        NEW.preparation_started_at := COALESCE(NEW.preparation_started_at, NOW());
+    ELSIF OLD.status = 'preparing' AND NEW.status = 'ready_for_pickup' THEN
+        NEW.ready_at := COALESCE(NEW.ready_at, NOW());
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_dsh_capture_order_preparation_timing ON dsh_orders;
+CREATE TRIGGER trg_dsh_capture_order_preparation_timing
+BEFORE UPDATE OF status ON dsh_orders
+FOR EACH ROW
+EXECUTE FUNCTION dsh_capture_order_preparation_timing();
+
 CREATE TABLE IF NOT EXISTS dsh_order_preparation_estimate_events (
     id                         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     order_id                   UUID        NOT NULL REFERENCES dsh_orders(id) ON DELETE CASCADE,
