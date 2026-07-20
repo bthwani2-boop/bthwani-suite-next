@@ -60,7 +60,7 @@ func (s *protectedStoreServer) handleListClientOrders(w http.ResponseWriter, r *
 	if !ok {
 		return
 	}
-	list, err := orders.ListClientOrders(s.db, actor.TenantID, actor.ID, 50)
+	list, err := orders.ListClientOrdersHydrated(s.db, actor.TenantID, actor.ID, 50)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list orders")
 		return
@@ -265,7 +265,10 @@ func (s *protectedStoreServer) handleOperatorCancelOrder(w http.ResponseWriter, 
 
 func marshalOrder(o *orders.Order) map[string]any {
 	items := make([]map[string]any, len(o.Items))
+	totalPrice := 0.0
 	for i, it := range o.Items {
+		lineTotal := it.UnitPrice * float64(it.Quantity)
+		totalPrice += lineTotal
 		items[i] = map[string]any{
 			"id":          it.ID,
 			"productId":   it.ProductID,
@@ -278,10 +281,12 @@ func marshalOrder(o *orders.Order) map[string]any {
 		"id":               o.ID,
 		"checkoutIntentId": o.CheckoutIntentID,
 		"storeId":          o.StoreID,
+		"fulfillmentMode":  o.FulfillmentMode,
 		"clientId":         o.ClientID,
 		"status":           string(o.Status),
 		"rejectionReason":  o.RejectionReason,
 		"wltPaymentRefId":  o.WltPaymentRefID,
+		"totalPrice":       totalPrice,
 		"items":            items,
 		"createdAt":        o.CreatedAt,
 		"updatedAt":        o.UpdatedAt,
@@ -290,18 +295,8 @@ func marshalOrder(o *orders.Order) map[string]any {
 
 func marshalOrders(list []orders.Order) []map[string]any {
 	out := make([]map[string]any, len(list))
-	for i, o := range list {
-		out[i] = map[string]any{
-			"id":               o.ID,
-			"checkoutIntentId": o.CheckoutIntentID,
-			"storeId":          o.StoreID,
-			"clientId":         o.ClientID,
-			"status":           string(o.Status),
-			"rejectionReason":  o.RejectionReason,
-			"wltPaymentRefId":  o.WltPaymentRefID,
-			"createdAt":        o.CreatedAt,
-			"updatedAt":        o.UpdatedAt,
-		}
+	for i := range list {
+		out[i] = marshalOrder(&list[i])
 	}
 	return out
 }
