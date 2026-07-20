@@ -33,9 +33,9 @@ export async function fetchClientOrder(orderId: string): Promise<DshOrder> {
 
 /**
  * Partner order scope is resolved exclusively from the authenticated actor.
- * A store id must never be accepted from the UI because that creates a false
- * cross-store authority signal and diverges from the backend authorization
- * boundary.
+ * The workboard returns all lifecycle states when status is omitted and carries
+ * the fulfillment mode, item snapshots, and governed totals required by the
+ * partner command center.
  */
 export async function fetchPartnerOrders(
   status?: string,
@@ -45,7 +45,7 @@ export async function fetchPartnerOrders(
   if (status) params.set("status", status);
   const query = params.toString();
   const data = await request<{ orders: DshOrder[] }>(
-    `/dsh/partner/orders${query ? `?${query}` : ""}`,
+    `/dsh/partner/order-workboard${query ? `?${query}` : ""}`,
     withOptionalToken({}, token),
   );
   return data.orders ?? [];
