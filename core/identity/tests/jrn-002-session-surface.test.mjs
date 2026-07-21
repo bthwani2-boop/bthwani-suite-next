@@ -41,8 +41,10 @@ test("JRN-002 keeps HTTP, CORS, OpenAPI, and Workforce actor search aligned", as
   assert.match(server, /Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS"/);
   assert.match(server, /sendJSON\(w, http\.StatusOK, views\)/);
   assert.doesNotMatch(server, /map\[string\]any\{"actors": views\}/);
-  assert.match(main, /BrowserCorsMiddleware/);
+  assert.match(main, /BrowserOriginGuard/);
   assert.match(main, /CorsMiddleware/);
+  assert.doesNotMatch(main, /BrowserCorsMiddleware/);
+  assert.match(browserCors, /BrowserOriginGuard/);
   assert.match(browserCors, /CORS_ORIGIN_FORBIDDEN/);
   assert.match(browserCors, /allowedCorsOrigins/);
   assert.doesNotMatch(browserCors, /Access-Control-Allow-Methods/);
