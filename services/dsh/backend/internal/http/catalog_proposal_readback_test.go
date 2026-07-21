@@ -23,6 +23,12 @@ func TestCatalogProposalReadbackRoutesAreRegistered(t *testing.T) {
 			pattern: "GET /dsh/partner/catalog/product-proposals",
 		},
 		{
+			name:    "partner query cannot select a different route scope",
+			method:  http.MethodGet,
+			path:    "/dsh/partner/catalog/product-proposals?storeId=forged-store&offset=0",
+			pattern: "GET /dsh/partner/catalog/product-proposals",
+		},
+		{
 			name:    "field scoped partner proposal history",
 			method:  http.MethodGet,
 			path:    "/dsh/field/partners/partner-1/catalog/product-proposals?offset=0",
