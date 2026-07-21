@@ -6,6 +6,10 @@ import {
   fetchCheckoutIntent,
   fetchOperatorCheckoutIntents,
 } from "./checkout.api";
+import {
+  clearCheckoutAttempt,
+  getOrCreateCheckoutAttempt,
+} from "./checkout-create-attempt";
 import type {
   DshCheckoutIntent,
   DshCheckoutState,
@@ -28,7 +32,13 @@ export function useCheckoutController() {
   const submit = useCallback(async (input: DshCreateIntentInput) => {
     setState(beginCheckoutSubmit());
     try {
-      const intent = await createCheckoutIntent(input);
+      const attempt = await getOrCreateCheckoutAttempt(input);
+      const intent = await createCheckoutIntent(input, attempt.context);
+      try {
+        await clearCheckoutAttempt(attempt.fingerprint);
+      } catch {
+        // The accepted server mutation is idempotent; retaining the key is safe.
+      }
       setState(resolveCheckoutSubmitSuccess(intent));
     } catch (error) {
       setState(resolveCheckoutSubmitError(classifyCheckoutError(error)));
