@@ -25,6 +25,8 @@ func writeClientMapError(w http.ResponseWriter, err error) {
 		store.SendError(w, http.StatusServiceUnavailable, "MAP_RUNTIME_NOT_CONFIGURED", "governed map runtime is not configured")
 	case errors.Is(err, mapproviders.ErrInvalid), errors.Is(err, servicearea.ErrInvalid):
 		store.SendError(w, http.StatusBadRequest, "INVALID_MAP_REQUEST", "map request is invalid")
+	case errors.Is(err, servicearea.ErrNotFound):
+		store.SendError(w, http.StatusNotFound, "SERVICE_AREA_NOT_FOUND", "service area was not found")
 	case errors.Is(err, mapproviders.ErrUncertain):
 		store.SendError(w, http.StatusUnprocessableEntity, "MAP_RESULT_UNCERTAIN", "map provider returned a result that could not be trusted")
 	case errors.Is(err, mapproviders.ErrTimeout):
@@ -119,12 +121,24 @@ func (s *protectedStoreServer) handleOperatorListServiceAreas(w http.ResponseWri
 	if _, ok := s.requirePermission(w, r, "control-panel", "platform.read", "operator"); !ok {
 		return
 	}
-	items, err := servicearea.List(r.Context(), s.db)
+	items, err := servicearea.ListProjections(r.Context(), s.db)
 	if err != nil {
 		writeClientMapError(w, err)
 		return
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"serviceAreas": items})
+}
+
+func (s *protectedStoreServer) handleOperatorGetServiceArea(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requirePermission(w, r, "control-panel", "platform.read", "operator"); !ok {
+		return
+	}
+	item, err := servicearea.GetProjection(r.Context(), s.db, r.PathValue("serviceAreaCode"))
+	if err != nil {
+		writeClientMapError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"serviceArea": item})
 }
 
 func (s *protectedStoreServer) handleOperatorUpsertServiceArea(w http.ResponseWriter, r *http.Request) {
@@ -150,5 +164,5 @@ func (s *protectedStoreServer) handleOperatorUpsertServiceArea(w http.ResponseWr
 		writeClientMapError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"serviceArea": item})
+	store.SendJSON(w, http.StatusOK, map[string]any{"serviceArea": servicearea.Project(item)})
 }
