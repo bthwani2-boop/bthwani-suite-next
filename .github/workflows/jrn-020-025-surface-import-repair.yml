@@ -1,5 +1,5 @@
 name: JRN 020-025 surface import repair
-# Safe codemod: replace internal shared API imports only when the shared barrel exports them.
+# Safe codemod rerun after the governed operations assignment facade was exported.
 
 on:
   push:
