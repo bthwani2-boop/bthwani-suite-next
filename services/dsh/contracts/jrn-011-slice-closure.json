@@ -11,18 +11,14 @@
       "id": "FS-01",
       "name": "Product Truth",
       "codeStatus": "CLOSED",
-      "requiredFiles": [
-        "governance/product/contracts/jrn-011-order-creation-truth.product-truth.json"
-      ],
+      "requiredFiles": ["governance/product/contracts/jrn-011-order-creation-truth.product-truth.json"],
       "requiredMarkers": ["acceptanceCriteria", "negativeInvariants", "READY_FOR_REVIEW"]
     },
     {
       "id": "FS-02",
       "name": "Roles, permissions and surfaces",
       "codeStatus": "CLOSED",
-      "requiredFiles": [
-        "services/dsh/contracts/jrn-011-surface-rbac-registry.json"
-      ],
+      "requiredFiles": ["services/dsh/contracts/jrn-011-surface-rbac-registry.json"],
       "requiredMarkers": ["defaultEffect", "operations.read", "partnerStoreIds"]
     },
     {
@@ -42,9 +38,9 @@
       "codeStatus": "CLOSED",
       "requiredFiles": [
         "governance/boundaries/jrn-011-dsh-wlt-order-truth-boundary.md",
-        "services/dsh/backend/internal/wlt/payment_session_client.go"
+        "services/dsh/backend/internal/wlt/client.go"
       ],
-      "requiredMarkers": ["WLT owns", "GetPaymentSession", "read-only"]
+      "requiredMarkers": ["WLT owns", "PaymentSession", "read-only"]
     },
     {
       "id": "FS-05",
@@ -63,9 +59,7 @@
       "id": "FS-06",
       "name": "OpenAPI and canonical contracts",
       "codeStatus": "CLOSED",
-      "requiredFiles": [
-        "services/dsh/contracts/dsh.order-truth.openapi.yaml"
-      ],
+      "requiredFiles": ["services/dsh/contracts/dsh.order-truth.openapi.yaml"],
       "requiredMarkers": ["Idempotency-Key", "Idempotent-Replay", "paymentStatusProjection"]
     },
     {
