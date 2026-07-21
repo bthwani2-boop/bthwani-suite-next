@@ -90,8 +90,10 @@ jobs:
             DESCRIPTION='JRN-001 FS-01..FS-18 verification passed'
           else
             STATE=failure
+            LOCATION="$(grep -o -m1 -E 'jrn-001-[^: ]+\.test\.mjs:[0-9]+:[0-9]+' /tmp/jrn001.log 2>/dev/null || true)"
             RAW="$(grep -m1 -E '^not ok|AssertionError|ERR_ASSERTION|error TS[0-9]+|FAIL|panic:' /tmp/jrn001.log 2>/dev/null || true)"
-            DETAIL="$(printf '%s' "${RAW:-check-failed}" | sed -E 's/[^[:alnum:]_.:/-]+/-/g' | cut -c1-50)"
+            DETAIL="${LOCATION:-${RAW:-check-failed}}"
+            DETAIL="$(printf '%s' "$DETAIL" | sed -E 's/[^[:alnum:]_.:/-]+/-/g' | cut -c1-50)"
             CONTEXT="journeys/jrn-001/$STAGE/$DETAIL"
             CONTEXT="$(printf '%s' "$CONTEXT" | cut -c1-100)"
             DESCRIPTION="JRN-001 failed at $STAGE"
