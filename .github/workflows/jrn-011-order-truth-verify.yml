@@ -89,6 +89,7 @@ jobs:
           name: jrn011-gofmt-output
           path: |
             jrn011-gofmt.patch
+            services/dsh/backend/internal/http/order_truth.go
             services/dsh/backend/internal/orders/order_truth_queries.go
             services/dsh/backend/internal/orders/order_truth_db_test.go
           retention-days: 3
