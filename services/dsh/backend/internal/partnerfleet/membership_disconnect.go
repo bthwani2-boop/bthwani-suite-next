@@ -10,7 +10,8 @@ import (
 // DisconnectCaptainMembership removes only the authenticated captain's binding
 // to one partner-store courier row. The team row remains as operational history,
 // but it is paused and cannot be used for partner delivery until a new one-time
-// connection code is redeemed.
+// connection code is redeemed. Redeemed connection records are revoked in the
+// same transaction so the previous relationship cannot be treated as active.
 func DisconnectCaptainMembership(
 	ctx context.Context,
 	db *sql.DB,
@@ -96,6 +97,19 @@ func DisconnectCaptainMembership(
 	}
 	if affected != 1 {
 		return CaptainFleetMembership{}, ErrVersionConflict
+	}
+
+	if _, err := tx.ExecContext(ctx, `
+		UPDATE dsh_partner_courier_connection_codes
+		SET status = 'revoked',
+		    revoked_at = COALESCE(revoked_at, NOW()),
+		    version = version + 1,
+		    updated_at = NOW()
+		WHERE store_id = $1
+		  AND team_member_id = $2
+		  AND redeemed_by_captain_actor_id = $3
+		  AND status = 'redeemed'`, storeID, teamMemberID, captainActorID); err != nil {
+		return CaptainFleetMembership{}, err
 	}
 
 	if _, err := tx.ExecContext(ctx, `
