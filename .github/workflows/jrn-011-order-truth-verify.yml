@@ -58,12 +58,14 @@ jobs:
           path: jrn011-static-tests.log
           retention-days: 3
           if-no-files-found: error
-      - name: Export current journey registry for safe whole-file update
+      - name: Export canonical sources for safe whole-file updates
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: jrn011-registry-source
-          path: governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md
+          name: jrn011-canonical-sources
+          path: |
+            governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md
+            services/dsh/tests/jrn-011-order-truth-integrity.test.mjs
           retention-days: 1
           if-no-files-found: error
 
