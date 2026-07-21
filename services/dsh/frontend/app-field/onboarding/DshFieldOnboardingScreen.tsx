@@ -236,6 +236,7 @@ export function DshFieldOnboardingScreen({
           {partnerId && (
             <Button label="إعادة المحاولة" tone="primary" onPress={() => void controller.loadDraft(partnerId)} />
           )}
+          {onBack ? <Button label="رجوع" tone="ghost" onPress={onBack} /> : null}
         </View>
       </View>
     );
@@ -245,7 +246,17 @@ export function DshFieldOnboardingScreen({
   if (state.isSubmitted) {
     return (
       <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
-        <Header title="تم الإرسال" />
+        <Header
+          title="تم الإرسال"
+          actions={onBack ? (
+            <IconButton
+              icon={<Icon name="arrow-back" mirrored />}
+              accessibilityLabel="رجوع"
+              tone="ghost"
+              onPress={onBack}
+            />
+          ) : undefined}
+        />
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
           <Text role="titleLg" style={{ textAlign: 'center', marginBottom: 12 }}>
             ✓ تم إرسال ملف الشريك
@@ -356,15 +367,25 @@ export function DshFieldOnboardingScreen({
     <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
       <Header
         title={form.legalNameAr || 'ملف انضمام جديد'}
-        actions={
-          <IconButton
-            icon={<Icon name="save-outline" size={20} tone="brand" />}
-            accessibilityLabel="حفظ المسودة"
-            onPress={() => void controller.save()}
-            tone="ghost"
-            loading={state.isSaving}
-          />
-        }
+        actions={(
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[1] }}>
+            {onBack ? (
+              <IconButton
+                icon={<Icon name="arrow-back" mirrored />}
+                accessibilityLabel="رجوع"
+                onPress={onBack}
+                tone="ghost"
+              />
+            ) : null}
+            <IconButton
+              icon={<Icon name="save-outline" size={20} tone="brand" />}
+              accessibilityLabel="حفظ المسودة"
+              onPress={() => void controller.save()}
+              tone="ghost"
+              loading={state.isSaving}
+            />
+          </View>
+        )}
       />
 
       <ScrollView
@@ -379,231 +400,85 @@ export function DshFieldOnboardingScreen({
           <Text role="caption" tone="muted" style={{ textAlign: 'right' }}>
             الملف الميداني الموحد لجمع وثائق وإحداثيات الشريك.
           </Text>
-          {state.lastSavedAt && !state.submitError && (
-            <Text role="caption" tone="muted" style={{ textAlign: 'right' }}>
-              {`آخر حفظ: ${formatSavedAtTime(state.lastSavedAt)}`}
+          {state.lastSavedAt ? (
+            <Text role="caption" tone="success" style={{ textAlign: 'right' }}>
+              آخر حفظ مؤكد: {formatSavedAtTime(state.lastSavedAt)}
             </Text>
-          )}
+          ) : null}
         </View>
 
-        <View style={{ height: 1, backgroundColor: colorRoles.borderSubtle }} />
-
-        {/* ── Products section ── */}
-        {onOpenProducts && (
-          <View
-            style={{
-              borderWidth: borders.hairline,
-              borderColor: colorRoles.borderSubtle,
-              borderRadius: radius.md,
-              padding: spacing[4],
-              gap: spacing[2],
-            }}
-          >
-            <Text role="bodyStrong" style={{ textAlign: 'right', fontWeight: 'bold' }}>
-              قسم المنتجات
-            </Text>
-            <Text role="bodySm" tone="muted" style={{ textAlign: 'right' }}>
-              أضف منتجات تجريبية لمتجر الشريك قبل إرسال الملف أو بعده.
-            </Text>
-            <Button
-              label="رفع منتجات"
-              tone="secondary"
-              onPress={async () => {
-                let id = state.partnerId;
-                if (!id) {
-                  const created = await controller.ensureDraftCreated(true);
-                  if (created) id = created;
-                }
-                if (id) {
-                  onOpenProducts(id);
-                } else {
-                  setActiveGroup('basics_profile');
-                }
-              }}
-            />
-          </View>
-        )}
-
-        {/* ── Store onboarding fee reference (read-only, control-panel owns the policy) ── */}
-        {feeRefState.kind === 'success' && feeRefState.data.enabled && (
-          <View
-            style={{
-              borderWidth: borders.hairline,
-              borderColor: colorRoles.borderSubtle,
-              borderRadius: radius.md,
-              padding: spacing[4],
-              gap: spacing[1],
-            }}
-          >
-            <Text role="bodyStrong" style={{ textAlign: 'right', fontWeight: 'bold' }}>
-              رسوم انضمام المتجر (مرجع)
-            </Text>
-            <Text role="bodySm" tone="muted" style={{ textAlign: 'right' }}>
-              {`${feeRefState.data.amount} ${feeRefState.data.currency} — تُحصَّل ${
-                CHARGE_TIMING_REFERENCE_LABELS[feeRefState.data.chargeTiming] ?? feeRefState.data.chargeTiming
-              } من الشريك. هذا مرجع اطّلاع فقط ولا ينشئ أي حركة مالية الآن.`}
+        {feeRefState.kind === 'success' ? (
+          <View style={{ padding: spacing[3], borderRadius: radius.md, borderWidth: borders.hairline, borderColor: colorRoles.borderSubtle, gap: spacing[1] }}>
+            <Text role="bodyStrong" style={{ textAlign: 'right' }}>مرجع رسوم انضمام المتجر</Text>
+            <Text role="bodySm" tone="secondary" style={{ textAlign: 'right' }}>
+              {feeRefState.data.amountMinor} {feeRefState.data.currency} — {CHARGE_TIMING_REFERENCE_LABELS[feeRefState.data.chargeTiming] ?? feeRefState.data.chargeTiming}
             </Text>
           </View>
-        )}
+        ) : null}
 
-        {/* ── Vertical timeline accordion ── */}
         <View style={{ gap: spacing[2] }}>
           {GROUP_ORDER.map((groupId, index) => {
-            const isActive = activeGroup === groupId;
-            const groupMissing = groupMissingCounts[groupId];
-            const isComplete = groupMissing === 0;
-
+            const active = groupId === activeGroup;
+            const completed = index < activeGroupIndex && groupMissingCounts[groupId] === 0;
+            const missingCount = groupMissingCounts[groupId];
             return (
-              <View
+              <Pressable
                 key={groupId}
+                accessibilityRole="button"
+                accessibilityLabel={`${GROUP_LABELS[groupId]}${missingCount > 0 ? `، ${missingCount} عناصر ناقصة` : ''}`}
+                onPress={() => setActiveGroup(groupId)}
                 style={{
                   flexDirection: 'row-reverse',
-                  alignItems: 'stretch',
+                  alignItems: 'center',
+                  padding: spacing[3],
+                  borderRadius: radius.md,
+                  borderWidth: active ? 2 : borders.hairline,
+                  borderColor: active ? colorRoles.brandPrimary : colorRoles.borderSubtle,
+                  backgroundColor: active ? colorRoles.surfaceRaised : colorRoles.surfaceBase,
+                  gap: spacing[2],
                 }}
               >
-                {/* Timeline column */}
-                <View style={{ alignItems: 'center', width: 48 }}>
-                  <Pressable
-                    onPress={() => setActiveGroup(groupId)}
-                    style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: radius.round,
-                      backgroundColor: isComplete
-                        ? colorRoles.success
-                        : isActive
-                        ? colorRoles.brandAction
-                        : colorRoles.surfaceMuted,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      borderWidth: isActive ? 0 : borders.hairline,
-                      borderColor: isComplete ? colorRoles.success : colorRoles.borderStrong,
-                      zIndex: 2,
-                    }}
-                  >
-                    {isComplete ? (
-                      <Icon name="checkmark" size={14} color={colorRoles.surfaceBase} />
-                    ) : (
-                      <Text
-                        role="caption"
-                        style={{
-                          fontWeight: 'bold',
-                          color: isActive ? colorRoles.surfaceBase : colorRoles.textMuted,
-                        }}
-                      >
-                        {index + 1}
-                      </Text>
-                    )}
-                  </Pressable>
-                  {index < GROUP_ORDER.length - 1 && (
-                    <View
-                      style={{
-                        width: 2,
-                        flex: 1,
-                        backgroundColor: colorRoles.borderSubtle,
-                        marginVertical: 4,
-                        zIndex: 1,
-                      }}
-                    />
-                  )}
-                </View>
-
-                {/* Content column */}
-                <View style={{ flex: 1 }}>
-                  {/* Group header row — tap to expand */}
-                  <Pressable
-                    onPress={() => setActiveGroup(groupId)}
-                    style={{
-                      paddingVertical: spacing[3],
-                      paddingHorizontal: spacing[2],
-                      flexDirection: 'row-reverse',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                    }}
-                  >
-                    <Text
-                      role="bodyStrong"
-                      style={{
-                        fontWeight: 'bold',
-                        color: isActive ? colorRoles.brandAction : colorRoles.textPrimary,
-                      }}
-                    >
-                      {GROUP_LABELS[groupId]}
-                    </Text>
-
-                    <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: spacing[1] }}>
-                      {groupMissing > 0 ? (
-                        <Badge label={`${groupMissing} نواقص`} tone="warning" />
-                      ) : (
-                        <Badge label="مكتمل" tone="success" />
-                      )}
-                      <Icon
-                        name={isActive ? 'chevron-down' : 'chevron-back'}
-                        size={16}
-                        tone="muted"
-                        mirrored
-                      />
-                    </View>
-                  </Pressable>
-
-                  {/* Group body (visible only when active) */}
-                  {isActive && (
-                    <View
-                      style={{
-                        paddingBottom: spacing[4],
-                        paddingHorizontal: spacing[2],
-                        borderBottomWidth: 1,
-                        borderBottomColor: colorRoles.borderSubtle,
-                      }}
-                    >
-                      {renderGroupContent(groupId)}
-                    </View>
-                  )}
-                </View>
-              </View>
+                <Icon
+                  name={completed ? 'checkmark-circle' : active ? 'radio-button-on' : 'radio-button-off'}
+                  size={20}
+                  tone={completed ? 'success' : active ? 'brand' : 'muted'}
+                />
+                <Text role="bodyStrong" style={{ flex: 1, textAlign: 'right' }}>{GROUP_LABELS[groupId]}</Text>
+                {missingCount > 0 ? <Badge label={String(missingCount)} tone="warning" /> : null}
+              </Pressable>
             );
           })}
         </View>
-      </ScrollView>
 
-      {state.submitError && (
-        <View
-          style={{
-            paddingHorizontal: spacing[4],
-            paddingTop: spacing[2],
-            backgroundColor: colorRoles.surfaceBase,
-          }}
-        >
-          <Text role="bodySm" tone="danger" style={{ textAlign: 'right' }}>
-            {state.submitError}
-          </Text>
+        <View style={{ padding: spacing[3], borderRadius: radius.md, borderWidth: borders.hairline, borderColor: colorRoles.borderSubtle }}>
+          {renderGroupContent(activeGroup)}
         </View>
-      )}
 
-      {/* ── Footer actions ── */}
-      <View
-        style={{
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: spacing[3],
-          borderTopWidth: 1,
-          borderTopColor: colorRoles.borderSubtle,
-          backgroundColor: colorRoles.surfaceBase,
-          padding: spacing[3],
-          paddingBottom: spacing[3] + insets.bottom,
-        }}
-      >
-        {/* التالي / إرسال */}
-        <Button
-          label={isLastGroup ? (state.isSubmitting ? 'جارٍ الإرسال...' : 'إرسال للمراجعة') : `التالي: ${nextLabel}`}
-          tone={isReadyToSubmit && isLastGroup ? 'success' : 'primary'}
-          disabled={isLastGroup ? !isReadyToSubmit || state.isSubmitting : false}
-          loading={isLastGroup && state.isSubmitting}
-          onPress={() => void goToNext()}
-          style={{ flex: 1 }}
-        />
-      </View>
+        {state.submitError ? (
+          <Text role="bodySm" tone="danger" style={{ textAlign: 'right' }}>{state.submitError}</Text>
+        ) : null}
+
+        <View style={{ flexDirection: 'row-reverse', gap: spacing[2], alignItems: 'center' }}>
+          <Button
+            label={isLastGroup ? (state.isSubmitting ? 'جارٍ الإرسال…' : 'إرسال للمراجعة') : `التالي: ${nextLabel}`}
+            tone="primary"
+            onPress={() => void goToNext()}
+            disabled={state.isSaving || state.isSubmitting || (isLastGroup && !isReadyToSubmit)}
+            fullWidth
+          />
+          {activeGroupIndex > 0 ? (
+            <Button
+              label="السابق"
+              tone="ghost"
+              onPress={() => setActiveGroup(GROUP_ORDER[activeGroupIndex - 1] as GroupId)}
+              disabled={state.isSaving || state.isSubmitting}
+              fullWidth={false}
+            />
+          ) : null}
+        </View>
+
+        {Platform.OS === 'web' ? <View style={{ height: insets.bottom }} /> : null}
+      </ScrollView>
     </View>
   );
 }
