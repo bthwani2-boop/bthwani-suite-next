@@ -1,35 +1,56 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "journeyId": "JRN-001",
   "journeyName": "Partner and store onboarding and publication",
   "branch": "sambassam",
   "sliceId": "FS-18",
   "trackingStatus": "READY_FOR_REVIEW",
   "decision": "READY_FOR_REVIEW",
-  "evidenceBaseSha": "cf5a0dbd08a3cb322d0ad3ad69895cb9b16624b3",
+  "implementationDecision": "PASS",
+  "implementationClosure": "All mandatory technical slices FS-01 through FS-18 passed sequentially on one immutable commit.",
+  "closedTechnicalSliceCount": 18,
+  "totalTechnicalSliceCount": 18,
+  "evidenceBaseSha": "8afac87a1137e0bfeb7d0b6aa23bce52dc8bfc16",
   "latestTargetedVerification": {
-    "commit": "cf5a0dbd08a3cb322d0ad3ad69895cb9b16624b3",
+    "commit": "8afac87a1137e0bfeb7d0b6aa23bce52dc8bfc16",
+    "runId": 29854498267,
     "result": "success",
+    "aggregateContext": "journeys/jrn-001/all-slices-sequential",
     "coveredScopes": [
-      "FS-12 cross-surface committed truth and scoped TypeScript consumers",
-      "FS-17 comprehensive JRN-001 contracts, guards, backend and app-field verification",
-      "FS-18 evidence, rollback and open-gap verification"
+      "FS-01 Product Truth",
+      "FS-02 RBAC and surface scope",
+      "FS-03 partner lifecycle state policy",
+      "FS-04 DSH/WLT financial ownership boundary",
+      "FS-05 database integrity and audit retention",
+      "FS-06 canonical OpenAPI and operation contracts",
+      "FS-07 governed backend routes and mutations",
+      "FS-08 durable WLT outbox and reconciliation",
+      "FS-09 Shared Brain and field onboarding controller",
+      "FS-10 required surfaces and deep navigation",
+      "FS-11 visible states and recovery",
+      "FS-12 cross-surface committed truth",
+      "FS-13 security privacy and negative paths",
+      "FS-14 Arabic RTL accessibility and weak-network quality",
+      "FS-15 SLO alerting diagnostics and support",
+      "FS-16 cleanup and canonical ownership",
+      "FS-17 comprehensive implementation verification",
+      "FS-18 evidence rollback and open-gap registration"
     ]
   },
   "sameCommitVerification": {
     "canonicalDshContract": "services/dsh/contracts/dsh.partner-onboarding.openapi.yaml",
-    "workflow": ".github/workflows/jrn-001-fs-18-evidence.yml",
-    "verifiedCommit": "cf5a0dbd08a3cb322d0ad3ad69895cb9b16624b3",
+    "workflow": ".github/workflows/jrn-001-all-slices-sequential.yml",
+    "verifiedCommit": "8afac87a1137e0bfeb7d0b6aa23bce52dc8bfc16",
     "requiredContexts": [
       "journeys/jrn-001/fs-12-cross-surface-truth",
       "journeys/jrn-001/fs-17-comprehensive",
       "journeys/jrn-001/fs-18-evidence"
     ],
+    "aggregateContext": "journeys/jrn-001/all-slices-sequential",
     "workflowRuns": {
-      "fs12": 29850740692,
-      "fs17AndFs18": 29850741316
+      "allSlicesSequential": 29854498267
     },
-    "resolvedCommitShaSource": "The final branch head must expose all required success contexts on the same commit."
+    "resolvedCommitShaSource": "The final implementation evidence commit exposes success for every FS-01 through FS-18 context and the aggregate context."
   },
   "implementationCorrections": [
     "Rebound FS-17 and FS-18 to the canonical partner onboarding OpenAPI contract.",
@@ -37,26 +58,38 @@
     "Bound field activation to the governed field actor type.",
     "Removed the runtime developer activation bypass and hardcoded credentials.",
     "Added a permanent regression assertion for the activation bypass prohibition.",
-    "Aligned the shared TextField contract with the six-digit activation length constraint."
+    "Aligned the shared TextField contract with the six-digit activation length constraint.",
+    "Added explicit Product Truth and database-integrity tests for FS-01 and FS-05.",
+    "Added a governed sequential verifier that executes every slice and publishes an independent status without stopping after an earlier failure.",
+    "Replaced the stale constant serviceability marker with verification of live active coverage-zone truth.",
+    "Bound FS-18 to a real evidence, rollback and open-gap test instead of a missing historical filename."
   ],
   "slices": [
     {
       "id": "FS-01",
-      "status": "READY_FOR_REVIEW",
+      "status": "PASS",
+      "commit": "8afac87a1137e0bfeb7d0b6aa23bce52dc8bfc16",
+      "runId": 29854498267,
+      "context": "journeys/jrn-001/fs-01-product-truth",
       "evidence": [
-        "governance/product/contracts/jrn-001-partner-onboarding-store-publication.product-truth.json"
+        "governance/product/contracts/jrn-001-partner-onboarding-store-publication.product-truth.json",
+        "services/dsh/tests/jrn-001-fs-01-product-truth.test.mjs"
       ]
     },
     {
       "id": "FS-02",
-      "status": "READY_FOR_REVIEW",
-      "evidence": [
-        "services/dsh/tests/jrn-001-fs-02-rbac.test.mjs"
-      ]
+      "status": "PASS",
+      "commit": "8afac87a1137e0bfeb7d0b6aa23bce52dc8bfc16",
+      "runId": 29854498267,
+      "context": "journeys/jrn-001/fs-02-rbac",
+      "evidence": ["services/dsh/tests/jrn-001-fs-02-rbac.test.mjs"]
     },
     {
       "id": "FS-03",
-      "status": "READY_FOR_REVIEW",
+      "status": "PASS",
+      "commit": "8afac87a1137e0bfeb7d0b6aa23bce52dc8bfc16",
+      "runId": 29854498267,
+      "context": "journeys/jrn-001/fs-03-state-policy",
       "evidence": [
         "services/dsh/backend/internal/partner/state_policy.go",
         "services/dsh/backend/internal/partner/state_policy_test.go"
@@ -64,7 +97,10 @@
     },
     {
       "id": "FS-04",
-      "status": "READY_FOR_REVIEW",
+      "status": "PASS",
+      "commit": "8afac87a1137e0bfeb7d0b6aa23bce52dc8bfc16",
+      "runId": 29854498267,
+      "context": "journeys/jrn-001/fs-04-wlt-boundary",
       "evidence": [
         "services/dsh/tests/jrn-001-fs-04-wlt-boundary.test.mjs",
         "tools/guards/wlt-financial-boundary-gate.mjs"
@@ -72,16 +108,23 @@
     },
     {
       "id": "FS-05",
-      "status": "READY_FOR_REVIEW",
+      "status": "PASS",
+      "commit": "8afac87a1137e0bfeb7d0b6aa23bce52dc8bfc16",
+      "runId": 29854498267,
+      "context": "journeys/jrn-001/fs-05-database-integrity",
       "evidence": [
         "services/dsh/database/migrations/dsh-015_partner_lifecycle.sql",
         "services/dsh/database/migrations/dsh-098_partner_onboarding_integrity.sql",
-        "services/dsh/database/migrations/dsh-099_partner_onboarding_audit_retention.sql"
+        "services/dsh/database/migrations/dsh-099_partner_onboarding_audit_retention.sql",
+        "services/dsh/tests/jrn-001-fs-05-database-integrity.test.mjs"
       ]
     },
     {
       "id": "FS-06",
-      "status": "READY_FOR_REVIEW",
+      "status": "PASS",
+      "commit": "8afac87a1137e0bfeb7d0b6aa23bce52dc8bfc16",
+      "runId": 29854498267,
+      "context": "journeys/jrn-001/fs-06-contracts",
       "evidence": [
         "services/dsh/contracts/dsh.partner-onboarding.openapi.yaml",
         "services/dsh/contracts/jrn-001-operation-registry.json",
@@ -90,7 +133,10 @@
     },
     {
       "id": "FS-07",
-      "status": "READY_FOR_REVIEW",
+      "status": "PASS",
+      "commit": "8afac87a1137e0bfeb7d0b6aa23bce52dc8bfc16",
+      "runId": 29854498267,
+      "context": "journeys/jrn-001/fs-07-backend",
       "evidence": [
         "services/dsh/backend/internal/http/partner_lifecycle_routes.go",
         "services/dsh/backend/internal/partner/onboarding_integrity_handlers.go",
@@ -100,7 +146,10 @@
     },
     {
       "id": "FS-08",
-      "status": "READY_FOR_REVIEW",
+      "status": "PASS",
+      "commit": "8afac87a1137e0bfeb7d0b6aa23bce52dc8bfc16",
+      "runId": 29854498267,
+      "context": "journeys/jrn-001/fs-08-events",
       "evidence": [
         "services/dsh/backend/internal/partnerwltoutbox/outbox.go",
         "services/dsh/tests/jrn-001-fs-08-events.test.mjs"
@@ -108,7 +157,10 @@
     },
     {
       "id": "FS-09",
-      "status": "READY_FOR_REVIEW",
+      "status": "PASS",
+      "commit": "8afac87a1137e0bfeb7d0b6aa23bce52dc8bfc16",
+      "runId": 29854498267,
+      "context": "journeys/jrn-001/fs-09-shared-brain",
       "evidence": [
         "services/dsh/frontend/shared/partner/index.ts",
         "services/dsh/frontend/shared/field-onboarding/use-field-partner-onboarding-controller.tsx",
@@ -117,64 +169,105 @@
     },
     {
       "id": "FS-10",
-      "status": "READY_FOR_REVIEW",
-      "commit": "19dcd182ee03913048bba2118c32a0cc77a4b827",
-      "runId": 29840286750
+      "status": "PASS",
+      "commit": "8afac87a1137e0bfeb7d0b6aa23bce52dc8bfc16",
+      "runId": 29854498267,
+      "context": "journeys/jrn-001/fs-10-surfaces",
+      "evidence": [
+        "services/dsh/contracts/jrn-001-surface-registry.json",
+        "tools/guards/partner/partner-surface-truth-gate.mjs",
+        "services/dsh/tests/jrn-001-fs-10-surfaces.test.mjs"
+      ]
     },
     {
       "id": "FS-11",
-      "status": "READY_FOR_REVIEW",
-      "commit": "66f9a5b0c6457bfa282161bc1ec82cddaadc3b51",
-      "runId": 29840655702
+      "status": "PASS",
+      "commit": "8afac87a1137e0bfeb7d0b6aa23bce52dc8bfc16",
+      "runId": 29854498267,
+      "context": "journeys/jrn-001/fs-11-visible-states",
+      "evidence": [
+        "services/dsh/contracts/jrn-001-visible-state-registry.json",
+        "services/dsh/tests/jrn-001-fs-11-visible-states.test.mjs"
+      ]
     },
     {
       "id": "FS-12",
-      "status": "READY_FOR_REVIEW",
-      "commit": "cf5a0dbd08a3cb322d0ad3ad69895cb9b16624b3",
-      "runId": 29850740692,
-      "context": "journeys/jrn-001/fs-12-cross-surface-truth"
+      "status": "PASS",
+      "commit": "8afac87a1137e0bfeb7d0b6aa23bce52dc8bfc16",
+      "runId": 29854498267,
+      "context": "journeys/jrn-001/fs-12-cross-surface-truth",
+      "evidence": [
+        "services/dsh/contracts/jrn-001-consistency-registry.json",
+        "tools/guards/partner/jrn-001-cross-surface-truth-gate.mjs"
+      ]
     },
     {
       "id": "FS-13",
-      "status": "READY_FOR_REVIEW",
-      "commit": "13946e27c25d5dce4256f47a6a7dfefef8315502",
-      "runId": 29841121954
+      "status": "PASS",
+      "commit": "8afac87a1137e0bfeb7d0b6aa23bce52dc8bfc16",
+      "runId": 29854498267,
+      "context": "journeys/jrn-001/fs-13-security-privacy",
+      "evidence": [
+        "services/dsh/contracts/jrn-001-security-privacy-registry.json",
+        "tools/guards/partner/jrn-001-security-privacy-gate.mjs"
+      ]
     },
     {
       "id": "FS-14",
-      "status": "READY_FOR_REVIEW",
-      "commit": "4023abd23bfb713a0636b2975dde23362dec83b6",
-      "runId": 29841625321
+      "status": "PASS",
+      "commit": "8afac87a1137e0bfeb7d0b6aa23bce52dc8bfc16",
+      "runId": 29854498267,
+      "context": "journeys/jrn-001/fs-14-experience-quality",
+      "evidence": [
+        "services/dsh/contracts/jrn-001-experience-quality-registry.json",
+        "tools/guards/partner/jrn-001-experience-quality-gate.mjs"
+      ]
     },
     {
       "id": "FS-15",
-      "status": "READY_FOR_REVIEW",
-      "commit": "99d8340febf40c1fdcebc37f1c266bc610e80626",
-      "runId": 29842014861
+      "status": "PASS",
+      "commit": "8afac87a1137e0bfeb7d0b6aa23bce52dc8bfc16",
+      "runId": 29854498267,
+      "context": "journeys/jrn-001/fs-15-observability",
+      "evidence": [
+        "services/dsh/contracts/jrn-001-observability-slo.json",
+        "governance/runbooks/JRN-001_PARTNER_ONBOARDING_SUPPORT.md",
+        "tools/guards/partner/jrn-001-observability-gate.mjs"
+      ]
     },
     {
       "id": "FS-16",
-      "status": "READY_FOR_REVIEW",
-      "commit": "d03b327c26863531d66471a6589efe623635d999",
-      "runId": 29842865985
+      "status": "PASS",
+      "commit": "8afac87a1137e0bfeb7d0b6aa23bce52dc8bfc16",
+      "runId": 29854498267,
+      "context": "journeys/jrn-001/fs-16-cleanup",
+      "evidence": [
+        "services/dsh/contracts/jrn-001-cleanup-manifest.json",
+        "tools/guards/partner/jrn-001-cleanup-gate.mjs"
+      ]
     },
     {
       "id": "FS-17",
-      "status": "READY_FOR_REVIEW",
-      "commit": "cf5a0dbd08a3cb322d0ad3ad69895cb9b16624b3",
-      "runId": 29850741316,
-      "context": "journeys/jrn-001/fs-17-comprehensive"
+      "status": "PASS",
+      "commit": "8afac87a1137e0bfeb7d0b6aa23bce52dc8bfc16",
+      "runId": 29854498267,
+      "context": "journeys/jrn-001/fs-17-comprehensive",
+      "evidence": [
+        ".github/workflows/jrn-001-fs-17-comprehensive-verification.yml",
+        ".github/workflows/jrn-001-all-slices-sequential.yml"
+      ]
     },
     {
       "id": "FS-18",
-      "status": "READY_FOR_REVIEW",
-      "commit": "cf5a0dbd08a3cb322d0ad3ad69895cb9b16624b3",
-      "runId": 29850741316,
+      "status": "PASS",
+      "commit": "8afac87a1137e0bfeb7d0b6aa23bce52dc8bfc16",
+      "runId": 29854498267,
       "context": "journeys/jrn-001/fs-18-evidence",
       "evidence": [
         "governance/evidence/JRN-001_PARTNER_ONBOARDING_EVIDENCE.json",
         "governance/evidence/JRN-001_PARTNER_ONBOARDING_STORE_PUBLICATION.md",
-        "governance/runbooks/JRN-001_PARTNER_ONBOARDING_SUPPORT.md"
+        "governance/runbooks/JRN-001_PARTNER_ONBOARDING_SUPPORT.md",
+        "services/dsh/tests/jrn-001-fs-18-evidence.test.mjs"
       ]
     }
   ],
@@ -190,9 +283,10 @@
     "Device-level visual and weak-network runtime evidence is pending.",
     "Production rollout and production observation evidence are pending."
   ],
-  "closureClaim": "CLOSED_WITH_EVIDENCE is explicitly not claimed.",
+  "closureClaim": "CLOSED_WITH_EVIDENCE is not claimed because independent approvals, device runtime evidence, release, deployment and production observation remain external to this repository execution.",
   "registryLog": {
     "path": "governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md",
-    "decision": "READY_FOR_REVIEW"
+    "implementationDecision": "PASS",
+    "journeyDecision": "READY_FOR_REVIEW"
   }
 }
