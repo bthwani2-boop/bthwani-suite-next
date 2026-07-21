@@ -14,6 +14,12 @@ import (
 	"github.com/google/uuid"
 )
 
+type uploadedDeliveryProof struct {
+	storageKey string
+	contentType string
+	fileName string
+}
+
 func isMultipartRequest(r *http.Request) bool {
 	return strings.HasPrefix(strings.ToLower(r.Header.Get("Content-Type")), "multipart/form-data")
 }
@@ -23,36 +29,36 @@ func (s *protectedStoreServer) uploadDeliveryProofObject(
 	r *http.Request,
 	namespace string,
 	ownerID string,
-) (mediaRef string, storageKey string, ok bool) {
+) (uploadedDeliveryProof, bool) {
 	mediaClient := s.mediaClient()
 	if mediaClient == nil {
 		store.SendError(w, http.StatusServiceUnavailable, "MEDIA_UNAVAILABLE", "media storage is not configured")
-		return "", "", false
+		return uploadedDeliveryProof{}, false
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, maxMediaUploadBytes+mediaUploadMultipartOverheadBytes)
 	if err := r.ParseMultipartForm(maxMediaUploadBytes); err != nil {
 		store.SendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid multipart upload or file too large")
-		return "", "", false
+		return uploadedDeliveryProof{}, false
 	}
 	file, header, err := r.FormFile("file")
 	if err != nil {
 		store.SendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "file field is required")
-		return "", "", false
+		return uploadedDeliveryProof{}, false
 	}
 	defer file.Close()
 
 	uploadBody, contentType, err := prepareMediaUploadBody(file, header.Header.Get("Content-Type"))
 	if err != nil {
 		store.SendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "unsupported delivery proof media type")
-		return "", "", false
+		return uploadedDeliveryProof{}, false
 	}
 	opaqueID := strings.ReplaceAll(uuid.NewString(), "-", "")
 	key := media.BuildKey(namespace, ownerID, opaqueID, fmt.Sprintf("%d-%s", time.Now().UnixNano(), header.Filename))
 	if err := mediaClient.Upload(r.Context(), key, uploadBody, header.Size, contentType); err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to upload delivery proof")
-		return "", "", false
+		return uploadedDeliveryProof{}, false
 	}
-	return contentType + "\x00" + header.Filename, key, true
+	return uploadedDeliveryProof{storageKey: key, contentType: contentType, fileName: header.Filename}, true
 }
 
 func (s *protectedStoreServer) removeDeliveryProofObject(r *http.Request, mediaRef, storageKey string) {
@@ -103,14 +109,9 @@ func (s *protectedStoreServer) handleSubmitDispatchPoDWithMedia(w http.ResponseW
 		return
 	}
 
-	metadata, key, uploaded := s.uploadDeliveryProofObject(w, r, "dsh-delivery-proofs", actor.ID)
+	upload, uploaded := s.uploadDeliveryProofObject(w, r, "dsh-delivery-proofs", actor.ID)
 	if !uploaded {
 		return
-	}
-	parts := strings.SplitN(metadata, "\x00", 2)
-	contentType, fileName := parts[0], ""
-	if len(parts) == 2 {
-		fileName = parts[1]
 	}
 
 	var mediaRef string
@@ -118,8 +119,8 @@ func (s *protectedStoreServer) handleSubmitDispatchPoDWithMedia(w http.ResponseW
 		INSERT INTO dsh_media_refs
 			(storage_key, owner_actor_id, owner_actor_role, purpose, content_type, original_filename)
 		VALUES ($1,$2,'captain','delivery_proof',$3,$4)
-		RETURNING media_ref`, key, actor.ID, contentType, fileName).Scan(&mediaRef); err != nil {
-		s.removeDeliveryProofObject(r, "", key)
+		RETURNING media_ref`, upload.storageKey, actor.ID, upload.contentType, upload.fileName).Scan(&mediaRef); err != nil {
+		s.removeDeliveryProofObject(r, "", upload.storageKey)
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to register delivery proof")
 		return
 	}
@@ -129,7 +130,7 @@ func (s *protectedStoreServer) handleSubmitDispatchPoDWithMedia(w http.ResponseW
 		Reference: mediaRef,
 	})
 	if err != nil {
-		s.removeDeliveryProofObject(r, mediaRef, key)
+		s.removeDeliveryProofObject(r, mediaRef, upload.storageKey)
 	}
 	s.writeDispatchResult(w, http.StatusOK, assignment, err)
 }
@@ -164,14 +165,9 @@ func (s *protectedStoreServer) handlePartnerDeliveryProofWithMedia(w http.Respon
 		return
 	}
 
-	metadata, key, uploaded := s.uploadDeliveryProofObject(w, r, "dsh-partner-delivery-proofs", actor.ID)
+	upload, uploaded := s.uploadDeliveryProofObject(w, r, "dsh-partner-delivery-proofs", actor.ID)
 	if !uploaded {
 		return
-	}
-	parts := strings.SplitN(metadata, "\x00", 2)
-	contentType, fileName := parts[0], ""
-	if len(parts) == 2 {
-		fileName = parts[1]
 	}
 
 	var mediaRef string
@@ -179,8 +175,8 @@ func (s *protectedStoreServer) handlePartnerDeliveryProofWithMedia(w http.Respon
 		INSERT INTO dsh_media_refs
 			(storage_key, owner_actor_id, owner_actor_role, partner_id, store_id, purpose, content_type, original_filename)
 		VALUES ($1,$2,'partner',$3,$4,'partner_delivery_proof',$5,$6)
-		RETURNING media_ref`, key, actor.ID, partnerID, task.StoreID, contentType, fileName).Scan(&mediaRef); err != nil {
-		s.removeDeliveryProofObject(r, "", key)
+		RETURNING media_ref`, upload.storageKey, actor.ID, partnerID, task.StoreID, upload.contentType, upload.fileName).Scan(&mediaRef); err != nil {
+		s.removeDeliveryProofObject(r, "", upload.storageKey)
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to register partner delivery proof")
 		return
 	}
@@ -197,7 +193,7 @@ func (s *protectedStoreServer) handlePartnerDeliveryProofWithMedia(w http.Respon
 		partnerDeliveryCorrelationID(r, ""),
 	)
 	if err != nil {
-		s.removeDeliveryProofObject(r, mediaRef, key)
+		s.removeDeliveryProofObject(r, mediaRef, upload.storageKey)
 		writePartnerDeliveryError(w, err)
 		return
 	}
