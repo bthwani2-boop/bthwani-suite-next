@@ -17,12 +17,12 @@ import {
 } from '../../shared/operations';
 import { listCaptains } from '../../shared/workforce';
 import type { Captain } from '../../shared/workforce';
-import type { OperatorOrderWorkboardRow } from '../../shared/operations';
+import type { OperationsFocusParams, OperatorOrderWorkboardRow } from '../../shared/operations';
 
 export type OrderJourneyDispatchAssignmentScreenProps = {
   hubHref: string;
   subGroup?: string;
-  focusParams?: { orderId?: string };
+  focusParams?: OperationsFocusParams;
 };
 
 function isEligibleCaptain(captain: Captain): boolean {
@@ -78,113 +78,94 @@ export function OrderJourneyDispatchAssignmentScreen({
   if (workboard.state.kind === 'loading') {
     return <StateView stateId="loading" title="جاري تحميل طابور الإسناد" description="نقرأ الطلبات الجاهزة من DSH والكباتن المؤهلين من Workforce." />;
   }
+
   if (workboard.state.kind === 'error') {
     return <StateView stateId="recoverableError" title="تعذر تحميل طابور الإسناد" description={workboard.state.message} actionLabel="إعادة المحاولة" onActionPress={workboard.refresh} />;
   }
 
-  const queue = workboard.state.orders.filter(eligibleOrder);
-  const selectedOrder = queue.find((order) => order.id === selectedOrderId) ?? null;
+  const orders = workboard.state.orders.filter(eligibleOrder);
+  const selectedOrder = orders.find((order) => order.id === selectedOrderId) ?? null;
+  const selectedCaptain = captains.find((captain) => captain.id === selectedCaptainId) ?? null;
 
-  const submit = async () => {
-    if (!selectedOrder || !selectedCaptainId) {
-      setMutationState('error');
-      setMutationMessage('اختر طلبًا وكابتنًا مؤهلًا.');
-      return;
-    }
+  async function handleAssign() {
+    if (!selectedOrder || !selectedCaptain) return;
     setMutationState('loading');
     setMutationMessage('');
     try {
-      await assignOrderToCaptain(selectedOrder.id, selectedCaptainId);
-      await workboard.refresh();
+      await assignOrderToCaptain({ orderId: selectedOrder.id, captainId: selectedCaptain.id });
       setMutationState('success');
-      setMutationMessage('تم إنشاء عرض الإسناد للكابتن وتحديث Workboard.');
+      setMutationMessage('تم إسناد الطلب للكابتن وتحديث القراءة التشغيلية.');
       setSelectedOrderId(null);
       setSelectedCaptainId('');
+      await workboard.refresh();
     } catch (error) {
       setMutationState('error');
       setMutationMessage(dispatchAssignmentErrorMessage(error));
     }
-  };
+  }
 
   return (
     <Box gap={3}>
       <WebControlPanelKpiStrip items={[
-        { id: 'queue', label: 'جاهزة للإسناد', value: String(queue.length), tone: queue.length > 0 ? 'warning' : 'success' },
-        { id: 'eligible-captains', label: 'كباتن مؤهلون', value: captainsState === 'ready' ? String(captains.length) : '—', tone: captains.length > 0 ? 'success' : 'warning' },
-        { id: 'order-source', label: 'مصدر الطلب', value: 'DSH Workboard', tone: 'success' },
-        { id: 'captain-source', label: 'مصدر الكابتن', value: 'Workforce', tone: 'success' },
+        { id: 'ready', label: 'جاهزة للإسناد', value: String(orders.length), tone: orders.length > 0 ? 'warning' : 'success' },
+        { id: 'captains', label: 'كباتن مؤهلون', value: String(captains.length), tone: captains.length > 0 ? 'success' : 'danger' },
       ]} />
 
       {captainsState === 'error' ? (
-        <StateView stateId="recoverableError" title="تعذر تحميل الكباتن" description={captainsError} actionLabel="إعادة المحاولة" onActionPress={loadCaptains} />
+        <StateView stateId="recoverableError" title="تعذر تحميل الكباتن" description={captainsError} actionLabel="إعادة المحاولة" onActionPress={() => void loadCaptains()} />
       ) : null}
 
       <div className={styles.surfaceSplitGrid}>
-        <WebControlPanelQueue title="طلبات جاهزة لتوصيل بثواني" meta={`${queue.length} طلب`}>
-          {queue.length === 0 ? (
-            <StateView stateId="empty" title="لا توجد طلبات قابلة للإسناد" description="يدخل الطابور فقط طلب توصيل بثواني بعد أن يؤكد الشريك جاهزيته." actionLabel="تحديث" onActionPress={workboard.refresh} />
-          ) : queue.map((order) => (
+        <WebControlPanelQueue title="طلبات جاهزة بلا كابتن" meta={String(orders.length)}>
+          {orders.length === 0 ? (
+            <StateView stateId="empty" title="لا توجد طلبات تنتظر الإسناد" description="كل الطلبات الجاهزة مسندة أو لا تنطبق عليها رحلة توصيل بثواني." actionLabel="تحديث" onActionPress={workboard.refresh} />
+          ) : orders.map((order) => (
             <WebControlPanelDecisionRow
               key={order.id}
               entityId={order.id}
-              entityLabel={`متجر: ${order.storeId} — عميل: ${order.clientId}`}
-              status="جاهز للإسناد"
+              entityLabel={`متجر: ${order.storeId}`}
+              status={order.status}
               statusTone="warning"
-              reason={`${order.totalPrice.toLocaleString('ar-YE')} ر.ي · جاهز للاستلام`}
-              sla={`منذ ${new Date(order.updatedAt).toLocaleString('ar-YE')}`}
-              onInspect={() => {
-                setSelectedOrderId(order.id);
-                setSelectedCaptainId('');
-                setMutationState('idle');
-                setMutationMessage('');
-              }}
+              reason={`طلب ${order.id}`}
+              sla={`آخر تحديث: ${new Date(order.updatedAt).toLocaleString('ar-YE')}`}
+              onInspect={() => setSelectedOrderId(order.id)}
             />
           ))}
         </WebControlPanelQueue>
 
-        {selectedOrder ? (
-          <WebControlPanelInspectorShell title={`إسناد الطلب ${selectedOrder.id}`} onClose={() => setSelectedOrderId(null)}>
-            <Box gap={3} padding={4}>
-              <Text role="bodySm">المتجر: {selectedOrder.storeId}</Text>
-              <Text role="bodySm">العميل: {selectedOrder.clientId}</Text>
-              <Text role="bodySm">الحالة المثبتة: {selectedOrder.status}</Text>
-              <label htmlFor="eligible-captain-select" style={{ fontWeight: 700 }}>الكابتن المؤهل</label>
-              <select
-                id="eligible-captain-select"
-                value={selectedCaptainId}
-                onChange={(event) => setSelectedCaptainId(event.target.value)}
-                disabled={captainsState !== 'ready' || mutationState === 'loading'}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  border: '1px solid var(--bthwani-control-panel-border)',
-                  borderRadius: '8px',
-                  background: 'var(--bthwani-control-panel-surface-base)',
-                }}
-              >
-                <option value="">اختر كابتنًا</option>
-                {captains.map((captain) => (
-                  <option key={captain.actorId} value={captain.actorId}>
-                    {`${captain.fullNameAr} · ${captain.captainProfile?.vehicleType ?? ''} · ${captain.captainProfile?.serviceZoneId ?? ''}`}
-                  </option>
-                ))}
-              </select>
-              {mutationMessage ? <Text role="bodySm" tone={mutationState === 'error' ? 'danger' : 'success'}>{mutationMessage}</Text> : null}
-              <Button
-                label={mutationState === 'loading' ? 'جارٍ إنشاء الإسناد…' : 'إرسال عرض الإسناد'}
-                disabled={!selectedCaptainId || mutationState === 'loading'}
-                onPress={() => void submit()}
-              />
-            </Box>
-          </WebControlPanelInspectorShell>
-        ) : (
+        <Box gap={3}>
           <WebControlPanelRecommendation
             title="إسناد محكوم"
-            reason="اختر طلبًا جاهزًا ثم كابتنًا مفعلًا برخصة صالحة ومركبة ونطاق خدمة من Workforce."
-            confidence="high"
-            auditTag="ORDER_DISPATCH_ELIGIBILITY"
+            description="اختر طلبًا جاهزًا وكابتنًا فعالًا مكتمل المركبة والترخيص والمنطقة. لا تنفذ الواجهة نجاحًا محليًا."
+            tone={orders.length > 0 && captains.length === 0 ? 'warning' : 'neutral'}
           />
-        )}
+
+          <WebControlPanelInspectorShell
+            title="اختيار الكابتن"
+            description={selectedOrder ? `الطلب: ${selectedOrder.id}` : 'اختر طلبًا من الطابور أولًا.'}
+          >
+            <Box gap={2}>
+              {captainsState === 'loading' ? <Text role="bodySm">جاري تحميل الكباتن…</Text> : null}
+              {captainsState === 'ready' && captains.length === 0 ? (
+                <StateView stateId="empty" title="لا يوجد كابتن مؤهل" description="تحقق من حالة Workforce والترخيص والمركبة والمنطقة قبل الإسناد." />
+              ) : null}
+              {captains.map((captain) => (
+                <Button
+                  key={captain.id}
+                  label={`${captain.displayName} — ${captain.captainProfile?.vehicleIdentifier ?? 'بلا مركبة'}`}
+                  tone={selectedCaptainId === captain.id ? 'brand' : 'secondary'}
+                  onPress={() => setSelectedCaptainId(captain.id)}
+                />
+              ))}
+              <Button
+                label={mutationState === 'loading' ? 'جاري الإسناد…' : 'تأكيد الإسناد'}
+                disabled={!selectedOrder || !selectedCaptain || mutationState === 'loading'}
+                onPress={() => void handleAssign()}
+              />
+              {mutationMessage ? <Text role="bodySm" tone={mutationState === 'error' ? 'danger' : 'success'}>{mutationMessage}</Text> : null}
+            </Box>
+          </WebControlPanelInspectorShell>
+        </Box>
       </div>
     </Box>
   );
