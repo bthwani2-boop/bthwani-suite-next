@@ -17,6 +17,7 @@ export type DshContractRegistration = {
     | "dsh-partner-commercial"
     | "dsh-partner-fleet"
     | "dsh-home-marketing-governance"
+    | "dsh-home-marketing-events"
     | "dsh-client-address"
     | "dsh-client-map"
     | "dsh-platform-policies"
@@ -89,6 +90,14 @@ export const DSH_CONTRACT_REGISTRY = [
     runtimeDependency: true,
     clientStrategy: "PARENT_GENERATED_SUBSET",
     generatedClient: "clients/generated/dsh-api.ts",
+  },
+  {
+    id: "dsh-home-marketing-events",
+    path: "contracts/dsh.home-marketing-events.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/home-discovery",
   },
   {
     id: "dsh-client-address",
