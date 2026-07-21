@@ -1,44 +1,50 @@
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { colorRoles, alpha } from '@bthwani/ui-kit';
+import React from "react";
+import { StyleSheet, Text, View } from "react-native";
+import { colorRoles, alpha } from "@bthwani/ui-kit";
 
 type Props = Readonly<{
-  openingHours?: string;
-  catalogSummary?: string;
+  openingHours: string;
+  coverageSummary: string;
+  addressLine: string;
+  deliveryReadiness: string;
   isRTL: boolean;
 }>;
 
+type StoreInfoRow = Readonly<{
+  icon: string;
+  arLabel: string;
+  enLabel: string;
+  value: string;
+}>;
+
 export function StoreDetailInfoCard({
-  openingHours = '08:00 - 23:00',
-  catalogSummary = 'Over 1,200 fresh groceries and daily essentials',
+  openingHours,
+  coverageSummary,
+  addressLine,
+  deliveryReadiness,
   isRTL,
 }: Props) {
-  const displaySummary = catalogSummary === 'Over 1,200 fresh groceries and daily essentials' && isRTL
-    ? 'أكثر من ١,٢٠٠ من المواد الغذائية الطازجة والاحتياجات اليومية'
-    : catalogSummary;
+  const rows: readonly StoreInfoRow[] = [
+    { icon: "🕒", arLabel: "أوقات العمل", enLabel: "Opening hours", value: openingHours.trim() },
+    { icon: "📍", arLabel: "العنوان", enLabel: "Address", value: addressLine.trim() },
+    { icon: "🗺️", arLabel: "نطاق التغطية", enLabel: "Coverage", value: coverageSummary.trim() },
+    { icon: "🛵", arLabel: "جاهزية التوصيل", enLabel: "Delivery readiness", value: deliveryReadiness.trim() },
+  ].filter((row) => row.value.length > 0);
+
+  if (rows.length === 0) return null;
 
   return (
     <View style={styles.container}>
-      {openingHours ? (
-        <View style={[styles.chipRow, isRTL && styles.rowReverse]}>
+      {rows.map((row) => (
+        <View key={row.enLabel} style={[styles.chipRow, isRTL && styles.rowReverse]}>
           <View style={styles.iconContainer}>
-            <Text style={styles.icon}>🕒</Text>
+            <Text style={styles.icon}>{row.icon}</Text>
           </View>
           <Text style={[styles.label, isRTL && styles.textRight]}>
-            {isRTL ? `أوقات العمل: ${openingHours}` : `Opening Hours: ${openingHours}`}
+            {isRTL ? `${row.arLabel}: ${row.value}` : `${row.enLabel}: ${row.value}`}
           </Text>
         </View>
-      ) : null}
-      {displaySummary ? (
-        <View style={[styles.chipRow, isRTL && styles.rowReverse]}>
-          <View style={styles.iconContainer}>
-            <Text style={styles.icon}>🛍️</Text>
-          </View>
-          <Text style={[styles.label, isRTL && styles.textRight]}>
-            {isRTL ? `ملخص المتجر: ${displaySummary}` : `Store Summary: ${displaySummary}`}
-          </Text>
-        </View>
-      ) : null}
+      ))}
     </View>
   );
 }
@@ -50,8 +56,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   chipRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: alpha(colorRoles.brandStructure, 0.03),
     borderRadius: 14,
     borderWidth: 1,
@@ -61,15 +67,15 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   rowReverse: {
-    flexDirection: 'row-reverse',
+    flexDirection: "row-reverse",
   },
   iconContainer: {
     width: 28,
     height: 28,
     borderRadius: 14,
     backgroundColor: alpha(colorRoles.brandStructure, 0.06),
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   icon: {
     fontSize: 13,
@@ -77,10 +83,10 @@ const styles = StyleSheet.create({
   label: {
     flex: 1,
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colorRoles.textSecondary,
   },
   textRight: {
-    textAlign: 'right',
+    textAlign: "right",
   },
 });
