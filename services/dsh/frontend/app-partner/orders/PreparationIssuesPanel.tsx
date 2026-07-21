@@ -1,6 +1,7 @@
 import React from 'react';
 import { Badge, Box, Button, Divider, StateView, Text, TextField } from '@bthwani/ui-kit';
 import {
+  PREPARATION_ISSUE_CUSTOMER_DECISION_LABELS,
   PREPARATION_ISSUE_KIND_LABELS,
   classifyOrderError,
   createOrderPreparationIssue,
@@ -44,6 +45,7 @@ export function PreparationIssuesPanel({
   const [message, setMessage] = React.useState('');
 
   const openIssues = order.preparationIssues.filter((issue) => issue.status === 'open');
+  const pendingCustomerDecisions = openIssues.filter((issue) => issue.customerDecision === 'pending');
   const selectedIssue = openIssues.find((issue) => issue.id === selectedIssueId) ?? null;
   const selectedOrderItem = order.orderItems.find((item) => item.id === selectedOrderItemId) ?? null;
   const itemRequired = kind !== 'other';
@@ -58,6 +60,7 @@ export function PreparationIssuesPanel({
     && (kind !== 'substitution_required' || replacementName.trim().length >= 2);
   const canResolve = Boolean(
     selectedIssue
+      && selectedIssue.customerDecision !== 'pending'
       && order.allowedActions.includes('resolve_issue')
       && resolutionNote.trim().length >= 3,
   );
@@ -84,7 +87,11 @@ export function PreparationIssuesPanel({
       setReplacementName('');
       setAffectedQuantity('1');
       setState('success');
-      setMessage('تم تسجيل المشكلة وربطها بالصنف ومنع إعلان الجاهزية حتى حلها.');
+      setMessage(
+        kind === 'substitution_required'
+          ? 'تم إرسال الاستبدال للعميل. لا يمكن حله أو إعلان الجاهزية قبل قراره.'
+          : 'تم تسجيل المشكلة وربطها بالصنف ومنع إعلان الجاهزية حتى حلها.',
+      );
     } catch (error) {
       setState('error');
       setMessage(issueErrorMessage(error, 'تعذر تسجيل مشكلة التحضير.'));
@@ -121,6 +128,11 @@ export function PreparationIssuesPanel({
               ? `${openIssues.length} مشكلة مفتوحة تمنع إعلان الجاهزية.`
               : 'لا توجد مشكلة مفتوحة. يمكن تسجيل نقص أو استبدال أثناء التحضير.'}
           </Text>
+          {pendingCustomerDecisions.length > 0 ? (
+            <Text role="caption" tone="warning">
+              {`${pendingCustomerDecisions.length} استبدال بانتظار قرار العميل. لا تُنهِ المشكلة قبل الرد.`}
+            </Text>
+          ) : null}
         </Box>
         <Button label="إغلاق" tone="ghost" size="sm" fullWidth={false} onPress={onClose} />
       </Box>
@@ -138,6 +150,7 @@ export function PreparationIssuesPanel({
           <Text role="bodyStrong">المشكلات المفتوحة</Text>
           {openIssues.map((issue, index) => {
             const affectedItem = order.orderItems.find((item) => item.id === issue.orderItemId);
+            const waitingForCustomer = issue.customerDecision === 'pending';
             return (
               <React.Fragment key={issue.id}>
                 {index > 0 ? <Divider /> : null}
@@ -153,14 +166,31 @@ export function PreparationIssuesPanel({
                   {issue.replacementProductName ? (
                     <Text role="caption" tone="warning">{`البديل المقترح: ${issue.replacementProductName}`}</Text>
                   ) : null}
-                  <Button
-                    label={selectedIssueId === issue.id ? 'إلغاء الحل' : 'حل المشكلة'}
-                    tone="secondary"
-                    size="sm"
-                    fullWidth={false}
-                    disabled={!order.allowedActions.includes('resolve_issue') || state === 'submitting'}
-                    onPress={() => setSelectedIssueId(selectedIssueId === issue.id ? null : issue.id)}
-                  />
+                  {issue.kind === 'substitution_required' ? (
+                    <Badge
+                      label={PREPARATION_ISSUE_CUSTOMER_DECISION_LABELS[issue.customerDecision]}
+                      tone={waitingForCustomer ? 'warning' : issue.customerDecision === 'approved' ? 'success' : 'danger'}
+                    />
+                  ) : null}
+                  {issue.customerDecisionNote ? (
+                    <Text role="caption" tone="muted">{`ملاحظة العميل: ${issue.customerDecisionNote}`}</Text>
+                  ) : null}
+                  {waitingForCustomer ? (
+                    <StateView
+                      tone="warning"
+                      title="بانتظار قرار العميل"
+                      description="يمنع الخادم حل هذا الاستبدال حتى يسجل العميل الموافقة أو الرفض."
+                    />
+                  ) : (
+                    <Button
+                      label={selectedIssueId === issue.id ? 'إلغاء الحل' : 'حل المشكلة'}
+                      tone="secondary"
+                      size="sm"
+                      fullWidth={false}
+                      disabled={!order.allowedActions.includes('resolve_issue') || state === 'submitting'}
+                      onPress={() => setSelectedIssueId(selectedIssueId === issue.id ? null : issue.id)}
+                    />
+                  )}
                 </Box>
               </React.Fragment>
             );
@@ -174,7 +204,7 @@ export function PreparationIssuesPanel({
             label="كيف تم حل المشكلة؟"
             value={resolutionNote}
             onChangeText={setResolutionNote}
-            placeholder="مثال: تم توفير الصنف أو اعتماد البديل"
+            placeholder="مثال: تم توفير الصنف أو تطبيق قرار العميل على البديل"
           />
           <Button
             label={state === 'submitting' ? 'جارٍ تثبيت الحل…' : 'تثبيت حل المشكلة'}
