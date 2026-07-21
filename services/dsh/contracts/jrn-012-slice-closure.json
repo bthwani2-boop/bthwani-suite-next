@@ -53,14 +53,25 @@
       "id": "FS-07",
       "name": "Missing items substitutions and preparation issues",
       "codeStatus": "CLOSED",
-      "requiredFiles": ["services/dsh/database/migrations/dsh-126_order_preparation_issues.sql", "services/dsh/backend/internal/orders/preparation_issues.go"],
-      "requiredMarkers": ["substitution_required", "CreatePreparationIssue", "ResolvePreparationIssue", "dsh_order_preparation_issue_events"]
+      "requiredFiles": [
+        "services/dsh/database/migrations/dsh-126_order_preparation_issues.sql",
+        "services/dsh/database/migrations/dsh-127_preparation_issue_item_binding.sql",
+        "services/dsh/backend/internal/orders/preparation_issues.go",
+        "services/dsh/backend/internal/http/order_preparation_issues.go"
+      ],
+      "requiredMarkers": [
+        "substitution_required",
+        "dsh_order_preparation_issues_item_binding_check",
+        "CreatePreparationIssue",
+        "ResolvePreparationIssue",
+        "orderItemId is required for item preparation issues"
+      ]
     },
     {
       "id": "FS-08",
       "name": "SLA risk and escalation projection",
       "codeStatus": "CLOSED",
-      "requiredFiles": ["services/dsh/backend/internal/orders/preparation_timing.go", "services/dsh/frontend/shared/partner/partner.adapters.ts"],
+      "requiredFiles": ["services/dsh/backend/internal/orders/preparation_sla.go", "services/dsh/frontend/shared/partner/partner.adapters.ts"],
       "requiredMarkers": ["EvaluatePreparationTiming", "due_soon", "overdue", "preparationRisk"]
     },
     {
@@ -82,14 +93,14 @@
       "name": "Shared brain types API and server-truth validation",
       "codeStatus": "CLOSED",
       "requiredFiles": ["services/dsh/frontend/shared/orders/orders.types.ts", "services/dsh/frontend/shared/orders/orders.api.ts", "services/dsh/frontend/shared/partner/partner.adapters.ts"],
-      "requiredMarkers": ["DshPreparationIssue", "createOrderPreparationIssue", "resolveOrderPreparationIssue", "preparation issue count is inconsistent"]
+      "requiredMarkers": ["DshPreparationIssue", "createOrderPreparationIssue", "resolveOrderPreparationIssue", "missing immutable order items", "preparation issue count is inconsistent"]
     },
     {
       "id": "FS-12",
       "name": "Partner issue and readiness experience",
       "codeStatus": "CLOSED",
       "requiredFiles": ["services/dsh/frontend/app-partner/orders/PreparationIssuesPanel.tsx", "services/dsh/frontend/app-partner/orders/GovernedPartnerOrdersScreen.tsx", "services/dsh/frontend/app-partner/orders/OperationalOrdersInboxScreen.tsx"],
-      "requiredMarkers": ["تسجيل مشكلة جديدة", "حل مشكلات التحضير", "PreparationIssuesPanel", "مشكلة تمنع الجاهزية"]
+      "requiredMarkers": ["selectedOrderItemId", "orderItemId: selectedOrderItem.id", "حل مشكلات التحضير", "PreparationIssuesPanel", "مشكلة تمنع الجاهزية"]
     },
     {
       "id": "FS-13",
@@ -109,8 +120,8 @@
       "id": "FS-15",
       "name": "Operator readiness readback and intervention",
       "codeStatus": "CLOSED",
-      "requiredFiles": ["services/dsh/frontend/control-panel/operations/OrderJourneyLiveOrdersScreen.tsx"],
-      "requiredMarkers": ["OrderTruthReadbackSummary", "ready_for_pickup", "OrderJourneyOperatorIntervention"]
+      "requiredFiles": ["services/dsh/frontend/control-panel/operations/OrderJourneyLiveOrdersScreen.tsx", "services/dsh/backend/internal/http/order_preparation_issues.go"],
+      "requiredMarkers": ["OrderTruthReadbackSummary", "ready_for_pickup", "OrderJourneyOperatorIntervention", "OperationsPermissionRead"]
     },
     {
       "id": "FS-16",
