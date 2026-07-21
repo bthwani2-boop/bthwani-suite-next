@@ -1,0 +1,88 @@
+name: JRN 020-025 surface import repair
+
+on:
+  push:
+    branches: [sambassam]
+    paths:
+      - .github/workflows/jrn-020-025-surface-import-repair.yml
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout sambassam
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: sambassam
+          fetch-depth: 0
+      - name: Replace direct journey API imports with shared facades
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+
+          const root = path.resolve('services/dsh/frontend');
+          const surfaceRoots = [
+            'app-client',
+            'app-partner',
+            'app-captain',
+            'app-field',
+            'control-panel',
+          ].map((name) => path.join(root, name));
+
+          const replacements = [
+            ['/shared/dispatch/dispatch.api', '/shared/dispatch'],
+            ['/shared/dispatch/dispatch.types', '/shared/dispatch'],
+            ['/shared/orders/orders.api', '/shared/orders'],
+            ['/shared/orders/orders.types', '/shared/orders'],
+            ['/shared/partner/partner.api', '/shared/partner'],
+            ['/shared/notifications/notifications.api', '/shared/notifications'],
+            ['/shared/special-requests/special-requests.api', '/shared/special-requests'],
+            ['/shared/field-readiness/field-readiness.api', '/shared/field-readiness'],
+            ['/shared/marketing/marketing.api', '/shared/marketing'],
+            ['/shared/support/actor-support.api', '/shared/support'],
+            ['/shared/support/support.api', '/shared/support'],
+          ];
+
+          const changed = [];
+          function walk(dir) {
+            if (!fs.existsSync(dir)) return;
+            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+              const full = path.join(dir, entry.name);
+              if (entry.isDirectory()) {
+                walk(full);
+                continue;
+              }
+              if (!/\.(?:ts|tsx|js|jsx|mjs|cjs)$/.test(entry.name)) continue;
+              const before = fs.readFileSync(full, 'utf8');
+              let after = before;
+              for (const [from, to] of replacements) {
+                after = after.split(from).join(to);
+              }
+              if (after !== before) {
+                fs.writeFileSync(full, after);
+                changed.push(path.relative(process.cwd(), full).replaceAll('\\', '/'));
+              }
+            }
+          }
+
+          for (const dir of surfaceRoots) walk(dir);
+          console.log(JSON.stringify({ changed }, null, 2));
+          NODE
+
+          if git diff --quiet; then
+            echo "No direct journey API imports required repair."
+            exit 0
+          fi
+
+          git diff --check
+          git config user.name "bthwani-journey-closure"
+          git config user.email "actions@users.noreply.github.com"
+          git add services/dsh/frontend
+          git commit -m "fix(dsh): enforce shared facades across journey surfaces"
+          git push origin HEAD:sambassam
