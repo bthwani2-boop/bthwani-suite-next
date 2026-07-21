@@ -39,10 +39,25 @@
     "لا تنفيذ خصم أو استرداد أو تسوية أو تغيير رصيد داخل DSH."
   ],
   "evidenceRequired": ["static", "database", "contract", "backend", "runtime", "cross-surface", "security", "isolation", "qa", "governance", "ci"],
-  "lastVerifiedCommit": "fdace18a6ae4a92b077db32254d7f0253d102fd7",
-  "workflowRunId": "29873796768",
+  "sliceClosureRegistry": "services/dsh/contracts/jrn-011-slice-closure.json",
+  "technicalSlices": "FS-01..FS-18 CODE_CLOSED",
+  "verifiedImplementationCommit": "9254986458ed4f3126162a440bd4a78ad3a333ae",
+  "workflowRunId": "29877543554",
   "statusContext": "jrn-011/order-truth",
   "internalZeroGate": "PASS",
+  "liveAutomatedProofs": [
+    "create",
+    "identical-replay",
+    "idempotency-conflict",
+    "client-and-store-isolation",
+    "partner-and-operator-redaction",
+    "immutable-order-snapshot",
+    "transactional-event-outbox",
+    "event-bridge-replay-idempotency",
+    "wlt-payment-projection",
+    "stale-wlt-source-protection"
+  ],
+  "openCodeGaps": [],
   "independentReviewPending": ["product-owner", "qa-device-accessibility", "security", "finance-boundary", "release-production"],
   "decision": "READY_FOR_REVIEW"
 }
