@@ -61,12 +61,15 @@ export async function submitPoD(assignmentId: string, input: DshSubmitPoDInput):
   return data.assignment;
 }
 
-export async function reportDeliveryException(assignmentId: string, input: DshReportDeliveryExceptionInput): Promise<DshDeliveryException> {
-  const data = await request<{ exception: DshDeliveryException }>(
+export async function reportDeliveryException(
+  assignmentId: string,
+  input: DshReportDeliveryExceptionInput,
+): Promise<DshDeliveryException> {
+  await request<{ exception: DshDeliveryException }>(
     `/dsh/captain/dispatch/assignments/${encodeURIComponent(assignmentId)}/exceptions`,
     { method: "POST", body: input },
   );
-  return data.exception;
+  return fetchCaptainDeliveryException(assignmentId);
 }
 
 export async function fetchCaptainDeliveryException(assignmentId: string): Promise<DshDeliveryException> {
@@ -129,11 +132,11 @@ export async function resolveDeliveryExceptionReturnToStore(
 }
 
 export async function arriveCaptainReturnToStore(assignmentId: string): Promise<DshDeliveryException> {
-  const data = await request<{ exception: DshDeliveryException }>(
+  await request<{ exception: DshDeliveryException }>(
     `/dsh/captain/dispatch/assignments/${encodeURIComponent(assignmentId)}/return-to-store/arrive`,
     { method: "POST" },
   );
-  return data.exception;
+  return fetchCaptainDeliveryException(assignmentId);
 }
 
 export async function fetchPartnerReturnToStore(orderId: string): Promise<DshDeliveryException> {
@@ -144,11 +147,11 @@ export async function fetchPartnerReturnToStore(orderId: string): Promise<DshDel
 }
 
 export async function acceptPartnerReturnToStore(orderId: string): Promise<DshDeliveryException> {
-  const data = await request<{ exception: DshDeliveryException }>(
+  await request<{ exception: DshDeliveryException }>(
     `/dsh/partner/orders/${encodeURIComponent(orderId)}/return-to-store/accept`,
     { method: "POST" },
   );
-  return data.exception;
+  return fetchPartnerReturnToStore(orderId);
 }
 
 export async function fetchClientOrderTracking(orderId: string): Promise<DshDispatchAssignment> {
