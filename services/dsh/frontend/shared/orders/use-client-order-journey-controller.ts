@@ -1,9 +1,13 @@
 import React from 'react';
 import {
   fetchOrderPreparation,
+  fetchOrderPreparationIssues,
   classifyOrderError,
 } from './orders.api';
-import type { DshOrderPreparation } from './orders.types';
+import type {
+  DshOrderPreparation,
+  DshPreparationIssue,
+} from './orders.types';
 import {
   classifyOrderTruthFailure,
   fetchClientOrderTruthDetail,
@@ -22,6 +26,9 @@ export type ClientOrderJourneyState =
       readonly kind: 'ready';
       readonly order: OrderTruth;
       readonly preparation: DshOrderPreparation;
+      readonly preparationIssues: readonly DshPreparationIssue[];
+      readonly openPreparationIssueCount: number;
+      readonly pendingCustomerDecisionCount: number;
       readonly assignment: DshDispatchAssignment | null;
       readonly partnerDeliveryTask: DshPartnerDeliveryTask | null;
     };
@@ -38,8 +45,8 @@ function orderErrorMessage(error: unknown): string {
 
 /**
  * Shared client journey controller. The order itself is always read from the
- * JRN-011 actor-scoped order-truth endpoint. Preparation and dispatch remain
- * separate operational projections and cannot override order truth.
+ * JRN-011 actor-scoped order-truth endpoint. Preparation, issues and dispatch
+ * remain separate operational projections and cannot override order truth.
  */
 export function useClientOrderJourneyController(orderId: string) {
   const [state, setState] = React.useState<ClientOrderJourneyState>({ kind: 'loading' });
@@ -51,9 +58,10 @@ export function useClientOrderJourneyController(orderId: string) {
     }
 
     try {
-      const [order, preparation] = await Promise.all([
+      const [order, preparation, issueList] = await Promise.all([
         fetchClientOrderTruthDetail(orderId),
         fetchOrderPreparation(orderId),
+        fetchOrderPreparationIssues(orderId),
       ]);
       let assignment: DshDispatchAssignment | null = null;
       let partnerDeliveryTask: DshPartnerDeliveryTask | null = null;
@@ -82,7 +90,16 @@ export function useClientOrderJourneyController(orderId: string) {
           }
         }
       }
-      setState({ kind: 'ready', order, preparation, assignment, partnerDeliveryTask });
+      setState({
+        kind: 'ready',
+        order,
+        preparation,
+        preparationIssues: issueList.issues,
+        openPreparationIssueCount: issueList.openCount,
+        pendingCustomerDecisionCount: issueList.pendingCustomerDecisionCount,
+        assignment,
+        partnerDeliveryTask,
+      });
     } catch (error) {
       setState({ kind: 'error', message: orderErrorMessage(error) });
     }
