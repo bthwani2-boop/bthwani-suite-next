@@ -43,10 +43,10 @@ const discoveryStates = read("services/dsh/frontend/shared/home-discovery/home-d
 const discoveryShell = read("services/dsh/frontend/app-client/home-discovery/HomeDiscoveryShell.tsx");
 const storeDetail = read("services/dsh/frontend/app-client/store/StoreDetailScreen.tsx");
 const orderTruthController = read("services/dsh/frontend/shared/order-truth/use-order-truth-controller.ts");
-assert.match(discoveryStates, /kind: "service_unavailable"/);
-assert.match(discoveryShell, /state\.kind === "service_unavailable"/);
+assert.match(discoveryStates, /kind: ['"]service_unavailable['"]/);
+assert.match(discoveryShell, /state\.kind === ['"]service_unavailable['"]/);
 assert.match(discoveryShell, /<OfflineState/);
-assert.match(discoveryShell, /onRetry=\{onRetry\}/);
+assert.match(discoveryShell, /onActionPress=\{onRetry\}/);
 assert.match(storeDetail, /storeCtrl\.state\.kind === "service_unavailable"/);
 assert.match(storeDetail, /actionLabel="إعادة المحاولة"/);
 assert.match(storeDetail, /onActionPress=\{handleRetry\}/);
