@@ -1,0 +1,31 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-014",
+  "defaultEffect": "DENY",
+  "surfaces": [
+    {
+      "surface": "control-panel",
+      "roles": ["operator"],
+      "readPermission": "operations.read",
+      "managePermission": "operations.manage",
+      "allowedActions": ["listAssignments", "listCandidates", "createOffer", "expireOffers", "cancelAssignment", "reassignAssignment", "readDecisionLog", "updateCaptainDispatchProfile"],
+      "forbiddenActions": ["acceptAsCaptain", "declineAsCaptain", "mutateWallet"]
+    },
+    {
+      "surface": "app-captain",
+      "roles": ["captain"],
+      "scope": "identity.subject equals assignment.captain_id",
+      "allowedActions": ["listOwnOffers", "acceptOwnOffer", "declineOwnOffer", "executeAcceptedAssignment", "pushForegroundLocation"],
+      "forbiddenActions": ["listOtherCaptainAssignments", "selectReplacementCaptain", "changeCapacity", "mutateWallet"]
+    },
+    {
+      "surface": "app-client",
+      "roles": ["client"],
+      "scope": "identity.subject owns order",
+      "allowedActions": ["readRedactedTracking"],
+      "forbiddenActions": ["readCandidateEligibility", "readDecisionLog", "readCaptainCapacity", "createOrCancelAssignment"]
+    }
+  ],
+  "tenantIsolation": "tenant_id required in operator and captain list queries",
+  "auditActions": ["offered", "accepted", "declined", "expired", "cancelled", "reassigned", "eligibility_rejected", "capacity_rejected"]
+}
