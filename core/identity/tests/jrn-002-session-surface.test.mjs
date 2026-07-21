@@ -89,6 +89,7 @@ test("JRN-002 removes stale declarations, temporary diagnostics, and unbound ses
   for (const removedPath of [
     ".github/workflows/tmp-jrn-002-diagnostics.yml",
     "core/identity/backend/internal/identity/support_sessions.go",
+    "core/identity/backend/internal/http/support_sessions.go",
     "core/identity/clients/identity-client.d.ts.map",
     "core/identity/clients/identity-session-store.d.ts.map",
     "core/identity/clients/use-identity-session.d.ts.map",
