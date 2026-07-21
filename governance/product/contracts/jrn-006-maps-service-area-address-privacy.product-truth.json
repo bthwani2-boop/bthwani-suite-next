@@ -2,7 +2,9 @@
   "schemaVersion": "2.0.0",
   "journeyId": "JRN-006",
   "journeyName": "الخرائط ومناطق الخدمة وخصوصية العناوين",
-  "status": "CLOSED_WITH_EVIDENCE",
+  "status": "IMPLEMENTED_PENDING_INDEPENDENT_REVIEW",
+  "decision": "READY_FOR_REVIEW",
+  "codeClosure": "COMPLETE",
   "sliceRegistry": "services/dsh/contracts/jrn-006-slice-verification-registry.json",
   "closureEvidence": {
     "path": "governance/evidence/JRN-006_ALL_SLICES_CLOSURE.json",
@@ -18,11 +20,7 @@
     "clientAddress": "services/dsh/backend/internal/clientaddress",
     "addressPrivacyRetentionAnonymizationAudit": "services/dsh/backend/internal/clientaddress"
   },
-  "actors": [
-    "authenticated_client",
-    "authorized_operator",
-    "privacy_worker"
-  ],
+  "actors": ["authenticated_client", "authorized_operator", "privacy_worker"],
   "requiredSurfaces": [
     "app-client",
     "control-panel",
@@ -87,14 +85,20 @@
     "operatorProviderHealthSurface": "services/dsh/frontend/control-panel/platform/MapProviderHealthCard.tsx",
     "operatorPrivacySurface": "services/dsh/frontend/control-panel/platform/ClientAddressPrivacySection.tsx"
   },
-  "acceptanceConditions": [
-    "All eight entries in the JRN-006 slice registry are verified on the exact commit.",
-    "Targeted frontend TypeScript compilation passes for the JRN-006 control-panel and shared-brain files.",
-    "JRN-006 Go ownership packages compile and pass on the exact commit.",
-    "PostgreSQL 16 applies migrations dsh-056, 076, 078, 081, 082, 083, 906, 907, and 908 and passes database invariant tests 906, 907, and 908.",
-    "The exact commit publishes journeys/jrn-006/all-slices=success.",
-    "Evidence records the exact commit, workflow run, artifact id, and artifact digest before status changes to CLOSED_WITH_EVIDENCE."
+  "technicalAcceptanceConditions": [
+    "All eight entries in the JRN-006 slice registry are closed with evidence.",
+    "Targeted frontend TypeScript compilation passes.",
+    "JRN-006 Go ownership packages compile and pass.",
+    "PostgreSQL 16 applies migrations dsh-056, 076, 078, 081, 082, 083, 906, 907, and 908 and passes database tests 906, 907, and 908.",
+    "The implementation commit publishes journeys/jrn-006/all-slices=success.",
+    "Evidence records the implementation commit, workflow run, artifact id, and artifact digest."
   ],
-  "acceptanceResult": "PASS",
-  "knownOpenGaps": []
+  "technicalAcceptanceResult": "PASS",
+  "openCodeGaps": [],
+  "independentReviewPending": [
+    "product_owner_approval",
+    "qa_physical_device_runtime_and_accessibility_evidence",
+    "security_and_privacy_approval",
+    "release_and_production_approval"
+  ]
 }
