@@ -3,8 +3,10 @@ import { reportPartnerStoreCaptainHandoffException } from "../orders/orders.api"
 import type { DshStoreCaptainHandoffExceptionReason } from "../orders/orders.types";
 import {
   classifyDispatchError,
+  fetchCaptainDeliveryException,
   reportCaptainHandoffException,
 } from "./dispatch.api";
+import type { DshDeliveryException } from "./dispatch.types";
 
 export type StoreCaptainHandoffExceptionActor = "partner" | "captain";
 
@@ -22,6 +24,13 @@ export type StoreCaptainHandoffExceptionState =
   | { readonly kind: "success"; readonly entityId: string }
   | ({ readonly kind: "error"; readonly message: string } & StoreCaptainHandoffExceptionDraft);
 
+export type StoreCaptainHandoffExceptionReadback =
+  | { readonly kind: "idle" }
+  | { readonly kind: "loading"; readonly entityId: string }
+  | { readonly kind: "clear"; readonly entityId: string }
+  | { readonly kind: "blocked"; readonly entityId: string; readonly exception: DshDeliveryException }
+  | { readonly kind: "error"; readonly entityId: string; readonly message: string };
+
 function exceptionMessage(error: unknown): string {
   const classified = classifyDispatchError(error);
   if (classified.kind === "permission_denied") return "لا تملك صلاحية تسجيل استثناء العهدة.";
@@ -31,6 +40,13 @@ function exceptionMessage(error: unknown): string {
     return classified.message ?? "توجد معالجة تشغيلية مفتوحة لهذا الطلب.";
   }
   return classified.message ?? "تعذر تسجيل استثناء العهدة.";
+}
+
+function readbackMessage(error: unknown): string {
+  const classified = classifyDispatchError(error);
+  if (classified.kind === "permission_denied") return "تعذر التحقق من استثناء العهدة بسبب الصلاحيات.";
+  if (classified.kind === "offline") return "تعذر التحقق من حالة العهدة. الاستلام محجوب حتى عودة الاتصال.";
+  return classified.message ?? "تعذر التحقق من حالة استثناء العهدة.";
 }
 
 function isEditableState(
@@ -44,6 +60,7 @@ export function useStoreCaptainHandoffException(
   refresh: () => void | Promise<void>,
 ) {
   const [state, setState] = React.useState<StoreCaptainHandoffExceptionState>({ kind: "idle" });
+  const [readback, setReadback] = React.useState<StoreCaptainHandoffExceptionReadback>({ kind: "idle" });
 
   const begin = React.useCallback((entityId: string) => {
     if (!entityId) return;
@@ -70,6 +87,29 @@ export function useStoreCaptainHandoffException(
 
   const cancel = React.useCallback(() => setState({ kind: "idle" }), []);
 
+  const loadExisting = React.useCallback(async (entityId: string): Promise<void> => {
+    if (actor !== "captain" || !entityId.trim()) {
+      setReadback({ kind: "clear", entityId });
+      return;
+    }
+    setReadback({ kind: "loading", entityId });
+    try {
+      const item = await fetchCaptainDeliveryException(entityId);
+      if (item.reasonCode === "handoff_shortage" || item.reasonCode === "handoff_mismatch") {
+        setReadback({ kind: "blocked", entityId, exception: item });
+        return;
+      }
+      setReadback({ kind: "clear", entityId });
+    } catch (error) {
+      const classified = classifyDispatchError(error);
+      if (classified.kind === "not_found") {
+        setReadback({ kind: "clear", entityId });
+        return;
+      }
+      setReadback({ kind: "error", entityId, message: readbackMessage(error) });
+    }
+  }, [actor]);
+
   const submit = React.useCallback(async (): Promise<boolean> => {
     if (!isEditableState(state)) return false;
     const note = state.note.trim();
@@ -87,12 +127,13 @@ export function useStoreCaptainHandoffException(
         note: command.note,
         correlationId: command.correlationId,
       };
-      if (actor === "partner") {
-        await reportPartnerStoreCaptainHandoffException(command.entityId, input);
-      } else {
-        await reportCaptainHandoffException(command.entityId, input);
-      }
+      const item = actor === "partner"
+        ? await reportPartnerStoreCaptainHandoffException(command.entityId, input)
+        : await reportCaptainHandoffException(command.entityId, input);
       setState({ kind: "success", entityId: command.entityId });
+      if (actor === "captain") {
+        setReadback({ kind: "blocked", entityId: command.entityId, exception: item });
+      }
       await refresh();
       return true;
     } catch (error) {
@@ -101,5 +142,14 @@ export function useStoreCaptainHandoffException(
     }
   }, [actor, refresh, state]);
 
-  return { state, begin, setReasonCode, setNote, cancel, submit } as const;
+  return {
+    state,
+    readback,
+    begin,
+    setReasonCode,
+    setNote,
+    cancel,
+    loadExisting,
+    submit,
+  } as const;
 }
