@@ -1,0 +1,16 @@
+{
+  "journeyId": "JRN-001",
+  "statusContext": "journeys/jrn-001-sequential",
+  "requiredChecks": [
+    "all jrn-001 source and contract tests",
+    "app-field typecheck",
+    "app-partner typecheck",
+    "control-panel typecheck",
+    "partner security unit tests",
+    "partner HTTP compile",
+    "dsh-api compile",
+    "fullstack ownership boundary",
+    "WLT financial boundary"
+  ],
+  "evidenceRule": "all applicable checks must pass on the same commit"
+}
