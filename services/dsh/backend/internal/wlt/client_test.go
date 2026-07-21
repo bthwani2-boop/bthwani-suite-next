@@ -114,6 +114,9 @@ func TestCreatePaymentSessionNonSuccessStatus(t *testing.T) {
 	if !strings.Contains(err.Error(), "500") {
 		t.Fatalf("expected error to mention status 500, got: %v", err)
 	}
+	if !IsPaymentSessionOutcomeUnknown(err) {
+		t.Fatalf("expected HTTP 500 to be classified as unknown outcome, got: %v", err)
+	}
 }
 
 func TestCreatePaymentSessionMalformedBody(t *testing.T) {
@@ -131,6 +134,9 @@ func TestCreatePaymentSessionMalformedBody(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "decode") {
 		t.Fatalf("expected decode error, got: %v", err)
+	}
+	if !IsPaymentSessionOutcomeUnknown(err) {
+		t.Fatalf("expected malformed success response to be unknown, got: %v", err)
 	}
 }
 
@@ -153,6 +159,9 @@ func TestCreatePaymentSessionMissingID(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "missing id") {
 		t.Fatalf("expected 'missing id' error, got: %v", err)
+	}
+	if !IsPaymentSessionOutcomeUnknown(err) {
+		t.Fatalf("expected missing id after success to be unknown, got: %v", err)
 	}
 }
 
@@ -522,5 +531,21 @@ func TestNotifyDeliveryCollectionNonSuccessStatus(t *testing.T) {
 	err := c.NotifyDeliveryCollection(context.Background(), NotifyDeliveryCollectionInput{OrderID: "order-1", CollectorType: "captain", CollectorID: "captain-1", PartnerID: "partner-1", CheckoutIntentID: "intent-1"})
 	if err == nil || !strings.Contains(err.Error(), "500") {
 		t.Fatalf("expected error mentioning status 500, got: %v", err)
+	}
+}
+
+func TestCreatePaymentSessionClientErrorIsDefinitive(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+	}))
+	defer server.Close()
+
+	c := NewClient(server.URL, "test-service-token")
+	_, err := c.CreatePaymentSession(context.Background(), CreatePaymentSessionInput{CheckoutIntentID: "intent-1"})
+	if err == nil {
+		t.Fatal("expected HTTP 400 error")
+	}
+	if IsPaymentSessionOutcomeUnknown(err) {
+		t.Fatalf("expected HTTP 400 to be definitive, got: %v", err)
 	}
 }
