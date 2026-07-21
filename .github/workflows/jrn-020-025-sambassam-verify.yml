@@ -1,0 +1,73 @@
+name: JRN-020..025 Permanent Verification
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [sambassam]
+    paths:
+      - "services/dsh/backend/internal/dispatch/**"
+      - "services/dsh/backend/internal/http/journeys_020_025_routes_test.go"
+      - "services/dsh/backend/internal/http/journeys_015_020_test.go"
+      - "services/dsh/backend/internal/http/dispatch*.go"
+      - "services/dsh/backend/internal/http/order_cancellations.go"
+      - "services/dsh/frontend/shared/dispatch/**"
+      - "services/dsh/frontend/shared/support/**"
+      - "services/dsh/frontend/shared/special-requests/**"
+      - "services/dsh/frontend/shared/notifications/**"
+      - "services/dsh/frontend/shared/field-readiness/**"
+      - "services/dsh/frontend/shared/marketing/**"
+      - "services/dsh/tests/journeys-020-025-binding.test.mjs"
+      - "tools/guards/jrn-015-020-affected-boundary.mjs"
+      - ".github/workflows/jrn-020-025-sambassam-verify.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jrn-020-025-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sovereign-boundaries:
+    name: Sovereign boundaries and bindings
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24.17.0
+      - name: Verify repository hygiene
+        run: git diff --check
+      - name: Verify JRN-020..025 binding and verifier hygiene
+        run: node --test services/dsh/tests/journeys-020-025-binding.test.mjs
+      - name: Verify JRN-015..020 affected boundary
+        run: node tools/guards/jrn-015-020-affected-boundary.mjs
+      - name: Verify full-stack ownership boundary
+        run: pnpm guard:fullstack-boundary
+      - name: Verify WLT financial ownership boundary
+        run: pnpm guard:wlt-financial-boundary
+
+  governed-routes:
+    name: Governed HTTP routes
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: services/dsh/backend
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Setup Go from module
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: services/dsh/backend/go.sum
+      - name: Verify JRN-020..025 and dependent JRN-015..020 routes
+        run: go test ./internal/http -run 'TestJourneys020To025ExposeGovernedRoutes|TestJourneys015Through020ExposeGovernedRoutes|TestDispatchLocationTimestampPolicy' -count=1
