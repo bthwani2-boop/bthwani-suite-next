@@ -287,7 +287,7 @@ export function CartScreen({
             label="إفراغ السلة"
             tone="secondary"
             disabled={actionPending}
-            onPress={() => void controller.clear(controller.state.cart)}
+            onPress={() => { if (cart) void controller.clear(cart); }}
           />
           {controller.action === "error" ? (
             <Text role="caption" style={styles.errorText}>تعذر تنفيذ تعديل السلة. أعد المحاولة.</Text>
