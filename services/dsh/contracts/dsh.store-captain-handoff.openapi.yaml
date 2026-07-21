@@ -12,6 +12,10 @@ x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-client-generation: DISABLED
 x-bthwani-runtime-dependency: true
 x-bthwani-adapter-owner: frontend/shared/orders,frontend/shared/dispatch
+x-bthwani-parent-operation:
+  path: /dsh/captain/dispatch/assignments/{assignmentId}/status
+  operationId: updateDshDeliveryStatus
+  governance: picked_up is accepted only after completed dual custody and with no active delivery exception
 
 paths:
   /dsh/partner/orders/{orderId}/captain-handoff/confirm:
@@ -57,42 +61,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DeliveryExceptionResponse'
-        '400': { $ref: '#/components/responses/InvalidRequest' }
-        '401': { $ref: '#/components/responses/Unauthenticated' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
-
-  /dsh/captain/dispatch/assignments/{assignmentId}/status:
-    post:
-      operationId: updateCaptainDeliveryStatusWithCustodyGuard
-      summary: Apply a governed delivery transition; pickup requires completed dual custody.
-      tags: [DshStoreCaptainHandoff]
-      security: [{ bearerAuth: [] }]
-      parameters:
-        - $ref: '#/components/parameters/AssignmentId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: false
-              required: [status]
-              properties:
-                status:
-                  type: string
-                  enum: [driver_arrived_store, picked_up, arrived_customer]
-      responses:
-        '200':
-          description: Current assignment truth, including an idempotent replay result.
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [assignment]
-                properties:
-                  assignment: { type: object, additionalProperties: true }
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '403': { $ref: '#/components/responses/Forbidden' }
