@@ -20,7 +20,7 @@ describe("JRN-026 coupons, delivery pricing, and loyalty policies", () => {
   });
 
   it("keeps delivery pricing actor-owned and routed through DSH", () => {
-    assert.match(deliveryPricing, /fetchPartnerDeliveryPricing|fetchOperatorDeliveryPricing/);
+    assert.match(deliveryPricing, /listPartnerDeliveryPricing|listOperatorDeliveryPricing/);
     assert.match(server, /PUT \/dsh\/operator\/stores\/\{storeId\}\/delivery-pricing\/\{fulfillmentMode\}/);
     assert.match(server, /PUT \/dsh\/partner\/stores\/\{storeId\}\/delivery-pricing\/\{fulfillmentMode\}/);
   });
