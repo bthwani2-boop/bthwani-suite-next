@@ -61,6 +61,18 @@ export type DshStoreAdminDetailState =
   | { readonly kind: "permission_denied"; readonly statusCode: 401 | 403 }
   | { readonly kind: "success"; readonly detail: DshStoreAdminDetail };
 
+export type DshStorePublicationDiagnosticsState =
+  | { readonly kind: "idle" }
+  | { readonly kind: "loading" }
+  | { readonly kind: "error"; readonly message: string }
+  | { readonly kind: "not_found" }
+  | { readonly kind: "permission_denied"; readonly statusCode: 401 | 403 }
+  | {
+      readonly kind: "success";
+      readonly isReady: boolean;
+      readonly blockers: readonly string[];
+    };
+
 export type DshStoreAdminKpiSummary = {
   readonly total: number;
   readonly visible: number;
