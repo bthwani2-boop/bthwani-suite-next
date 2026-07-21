@@ -34,11 +34,11 @@ jobs:
       - name: JRN-001 source and contract tests
         shell: bash
         run: |
-          echo source-tests > /tmp/jrn001-stage
-          set +e
-          node --test services/dsh/tests/jrn-001-*.test.mjs 2>&1 | tee /tmp/jrn001.log
-          EXIT_CODE=${PIPESTATUS[0]}
-          exit "$EXIT_CODE"
+          set -o pipefail
+          for FILE in services/dsh/tests/jrn-001-*.test.mjs; do
+            echo "source-$(basename "$FILE" .test.mjs)" > /tmp/jrn001-stage
+            node --test "$FILE" 2>&1 | tee /tmp/jrn001.log
+          done
       - name: Typecheck app-field
         run: |
           echo typecheck-app-field > /tmp/jrn001-stage
@@ -91,7 +91,7 @@ jobs:
           else
             STATE=failure
             RAW="$(grep -m1 -E '^not ok|AssertionError|ERR_ASSERTION|error TS[0-9]+|FAIL|panic:' /tmp/jrn001.log 2>/dev/null || true)"
-            DETAIL="$(printf '%s' "${RAW:-check-failed}" | sed -E 's/[^[:alnum:]_.:/-]+/-/g' | cut -c1-58)"
+            DETAIL="$(printf '%s' "${RAW:-check-failed}" | sed -E 's/[^[:alnum:]_.:/-]+/-/g' | cut -c1-50)"
             CONTEXT="journeys/jrn-001/$STAGE/$DETAIL"
             CONTEXT="$(printf '%s' "$CONTEXT" | cut -c1-100)"
             DESCRIPTION="JRN-001 failed at $STAGE"
