@@ -160,7 +160,6 @@ function IdentityAccessPanel({
               onChangeText={setCode}
               placeholder="رمز التفعيل من 6 أرقام"
               keyboardType="numeric"
-              maxLength={6}
             />
             <Button
               label={submitting ? "جاري التفعيل" : "تفعيل ودخول"}
