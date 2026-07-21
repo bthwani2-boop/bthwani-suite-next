@@ -1,0 +1,174 @@
+name: JRN-010 Finalize Verified Registry
+
+on:
+  push:
+    branches: [sambassam]
+    paths:
+      - ".github/workflows/jrn-010-finalize-registry.yml"
+
+permissions:
+  contents: write
+  statuses: write
+
+concurrency:
+  group: jrn-010-finalize-registry
+  cancel-in-progress: false
+
+jobs:
+  finalize:
+    name: Finalize verified JRN-010 FS-01..18
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      VERIFIED_COMMIT: 72de130ff4cc3341f13261f3c10d68cf7a6930fa
+      VERIFIED_RUN_ID: "29871710692"
+      STATUS_CONTEXT: journeys/jrn-010/all-slices
+    steps:
+      - name: Checkout active branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: sambassam
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Rebase on latest remote head
+        run: git pull --rebase origin sambassam
+
+      - name: Prove verified implementation is unchanged
+        shell: bash
+        run: |
+          set -euo pipefail
+          git cat-file -e "$VERIFIED_COMMIT^{commit}"
+          changed="$(git diff --name-only "$VERIFIED_COMMIT..HEAD" -- \
+            infra/docker/compose.runtime.yml \
+            infra/docker/scripts/wlt-migration-probes.ps1 \
+            contracts/master.openapi.yaml \
+            governance/product/contracts/jrn-010-checkout-wlt-handoff.product-truth.json \
+            services/dsh/backend/internal/checkout \
+            services/dsh/backend/internal/coupons/payment_lifecycle_tx.go \
+            services/dsh/backend/internal/http/checkout.go \
+            services/dsh/backend/internal/http/wlt_events.go \
+            services/dsh/backend/internal/wlt \
+            services/dsh/contracts/dsh.jrn-010-checkout.openapi.yaml \
+            services/dsh/database/migrations/dsh-910_jrn_010_wlt_event_receipts.sql \
+            services/dsh/database/tests/dsh-910_jrn_010_wlt_event_receipts.sql \
+            services/dsh/frontend/shared/checkout \
+            services/dsh/frontend/app-client/checkout \
+            services/dsh/frontend/control-panel/operations/CheckoutActivityScreen.tsx \
+            services/dsh/frontend/control-panel/operations/CartActivityScreen.tsx \
+            services/dsh/tests/jrn-010-all-slices.test.mjs \
+            services/wlt/backend \
+            services/wlt/database \
+            services/wlt/frontend/shared/dsh \
+            tools/guards/checkout/jrn-010-checkout-truth-gate.mjs)"
+          if [ -n "$changed" ]; then
+            echo "JRN-010 implementation changed after verified commit:" >&2
+            echo "$changed" >&2
+            exit 1
+          fi
+
+      - name: Finalize slice truth and evidence
+        run: |
+          python tools/journeys/finalize_jrn_010.py \
+            --verified-commit "$VERIFIED_COMMIT" \
+            --workflow-run-id "$VERIFIED_RUN_ID"
+
+      - name: Validate finalized records
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          python -m json.tool services/dsh/contracts/jrn-010-slice-verification-registry.json >/dev/null
+          python -m json.tool governance/evidence/JRN-010_CHECKOUT_WLT_ALL_SLICES_CLOSURE.json >/dev/null
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          verified = "72de130ff4cc3341f13261f3c10d68cf7a6930fa"
+          run_id = 29871710692
+          slices = json.loads(Path("services/dsh/contracts/jrn-010-slice-verification-registry.json").read_text(encoding="utf-8"))
+          evidence = json.loads(Path("governance/evidence/JRN-010_CHECKOUT_WLT_ALL_SLICES_CLOSURE.json").read_text(encoding="utf-8"))
+          registry = Path("governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md").read_text(encoding="utf-8")
+
+          assert slices["technicalClosure"] == "COMPLETE"
+          assert slices["verifiedCommit"] == verified
+          assert slices["workflowRunId"] == run_id
+          assert [item["id"] for item in slices["slices"]] == [f"FS-{i:02d}" for i in range(1, 19)]
+          assert all(item["status"] == "IMPLEMENTED" for item in slices["slices"])
+          assert slices["technicalOpenGaps"] == []
+
+          assert evidence["decision"] == "READY_FOR_REVIEW"
+          assert evidence["technicalClosure"] == "COMPLETE"
+          assert evidence["verifiedCommit"] == verified
+          assert evidence["workflowRunId"] == run_id
+          assert evidence["sameCommitStatus"] == "success"
+          assert evidence["openCodeGaps"] == []
+
+          assert "| JRN-010 | Checkout وتسليم جلسة الدفع إلى WLT | DSH + WLT | READY_FOR_REVIEW |" in registry
+          assert "technical_slices: `FS-01..FS-18 COMPLETE`" in registry
+          assert f"last_verified_commit: `{verified}`" in registry
+          assert "open_code_gaps: `[]`" in registry
+          PY
+
+      - name: Commit finalized technical closure
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "bthwani-journey-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git rm .github/workflows/jrn-010-finalize-registry.yml
+          git rm tools/journeys/finalize_jrn_010.py
+          git add governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md \
+                  governance/evidence/JRN-010_CHECKOUT_WLT_ALL_SLICES_CLOSURE.json \
+                  services/dsh/contracts/jrn-010-slice-verification-registry.json
+          git commit -m "governance(jrn-010): finalize FS-01 through FS-18 technical closure"
+
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:sambassam; then
+              break
+            fi
+            if [ "$attempt" = 5 ]; then
+              exit 1
+            fi
+            git pull --rebase origin sambassam
+            changed="$(git diff --name-only "$VERIFIED_COMMIT..HEAD^" -- \
+              infra/docker/compose.runtime.yml \
+              infra/docker/scripts/wlt-migration-probes.ps1 \
+              contracts/master.openapi.yaml \
+              governance/product/contracts/jrn-010-checkout-wlt-handoff.product-truth.json \
+              services/dsh/backend/internal/checkout \
+              services/dsh/backend/internal/coupons/payment_lifecycle_tx.go \
+              services/dsh/backend/internal/http/checkout.go \
+              services/dsh/backend/internal/http/wlt_events.go \
+              services/dsh/contracts/dsh.jrn-010-checkout.openapi.yaml \
+              services/dsh/database/migrations/dsh-910_jrn_010_wlt_event_receipts.sql \
+              services/dsh/frontend/shared/checkout \
+              services/dsh/frontend/app-client/checkout \
+              services/dsh/frontend/control-panel/operations/CheckoutActivityScreen.tsx \
+              services/dsh/tests/jrn-010-all-slices.test.mjs \
+              services/wlt/backend \
+              services/wlt/database \
+              tools/guards/checkout/jrn-010-checkout-truth-gate.mjs)"
+            test -z "$changed"
+          done
+          echo "FINAL_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: Publish final commit status
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -n \
+            --arg state success \
+            --arg context "$STATUS_CONTEXT" \
+            --arg description "JRN-010 FS-01..FS-18 technical closure finalized" \
+            --arg target_url "$TARGET_URL" \
+            '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/status.json
+          curl --fail-with-body --silent --show-error -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ github.repository }}/statuses/$FINAL_SHA" \
+            -d @/tmp/status.json
