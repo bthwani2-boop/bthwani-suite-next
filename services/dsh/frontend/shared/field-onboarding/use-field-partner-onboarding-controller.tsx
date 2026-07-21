@@ -14,6 +14,9 @@ import {
   fieldSubmitPartner,
   fieldUploadDocument,
   fieldCreateVisit,
+  createPartnerMutationContext,
+  assertPartnerReadback,
+  mapPartnerOnboardingFailure,
   type DshPartnerDocumentType,
 } from "../partner";
 import {
@@ -193,9 +196,9 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
           beneficiaryName: partner.beneficiaryName,
           bankName: partner.bankName,
           bankBranch: partner.bankBranch,
-          accountNumber: partner.accountNumber,
-          iban: partner.iban,
-          payoutMobileNumber: partner.payoutMobileNumber,
+          accountNumber: "",
+          iban: "",
+          payoutMobileNumber: "",
           settlementPreference: partner.settlementPreference as FieldPartnerDraftForm["settlementPreference"],
           bankAccountHolderMatchesOwner: partner.bankAccountHolderMatchesOwner,
           bankNotes: partner.bankNotes,
