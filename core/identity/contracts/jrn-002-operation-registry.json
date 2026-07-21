@@ -1,0 +1,35 @@
+{
+  "journeyId": "JRN-002",
+  "openapi": "core/identity/contracts/auth.openapi.yaml",
+  "client": "core/identity/clients/identity-client.ts",
+  "operations": [
+    {"operationId":"getIdentityHealth","method":"GET","path":"/identity/health","clientMethod":"health","audience":"runtime"},
+    {"operationId":"getIdentityReadiness","method":"GET","path":"/identity/readiness","clientMethod":"readiness","audience":"runtime"},
+    {"operationId":"login","method":"POST","path":"/auth/login","clientMethod":"login","audience":"all-authenticated-surfaces"},
+    {"operationId":"requestOtp","method":"POST","path":"/auth/otp/request","clientMethod":"requestOtp","audience":"activation-surfaces"},
+    {"operationId":"activateActor","method":"POST","path":"/auth/activate","clientMethod":"activate","audience":"activation-surfaces"},
+    {"operationId":"refreshSession","method":"POST","path":"/auth/refresh","clientMethod":"refresh","audience":"all-authenticated-surfaces"},
+    {"operationId":"getAuthSession","method":"GET","path":"/auth/session","clientMethod":"session","audience":"all-authenticated-surfaces"},
+    {"operationId":"introspectToken","method":"POST","path":"/auth/introspect","clientMethod":"introspect","audience":"trusted-runtime"},
+    {"operationId":"listSessions","method":"GET","path":"/auth/sessions","clientMethod":"listSessions","audience":"self-service"},
+    {"operationId":"revokeSession","method":"DELETE","path":"/auth/sessions/{sessionId}","clientMethod":"revokeSession","audience":"self-service"},
+    {"operationId":"logout","method":"POST","path":"/auth/logout","clientMethod":"logout","audience":"all-authenticated-surfaces"},
+    {"operationId":"changePassword","method":"POST","path":"/auth/password/change","clientMethod":"changePassword","audience":"self-service"},
+    {"operationId":"deleteAccount","method":"DELETE","path":"/auth/account","clientMethod":"deleteAccount","audience":"self-service"},
+    {"operationId":"provisionActor","method":"POST","path":"/internal/actors/provision","clientMethod":"workforce.provisionActor","audience":"workforce-service"},
+    {"operationId":"searchInternalActors","method":"GET","path":"/internal/actors/search","clientMethod":"workforce.searchActors","audience":"workforce-service"},
+    {"operationId":"getInternalActor","method":"GET","path":"/internal/actors/{actorId}","clientMethod":"workforce.getActor","audience":"workforce-service"},
+    {"operationId":"deactivateActor","method":"POST","path":"/internal/actors/{actorId}/deactivate","clientMethod":"workforce.deactivateActor","audience":"workforce-service"},
+    {"operationId":"reactivateActor","method":"POST","path":"/internal/actors/{actorId}/reactivate","clientMethod":"workforce.reactivateActor","audience":"workforce-service"},
+    {"operationId":"issueActivationForActor","method":"POST","path":"/internal/actors/{actorId}/activations","clientMethod":"workforce.issueActivation","audience":"workforce-service"},
+    {"operationId":"getLatestActivationForActor","method":"GET","path":"/internal/actors/{actorId}/activations/latest","clientMethod":"workforce.latestActivation","audience":"workforce-service"},
+    {"operationId":"revokeActorActivations","method":"POST","path":"/internal/actors/{actorId}/activations/revoke","clientMethod":"workforce.revokeActivations","audience":"workforce-service"}
+  ],
+  "rules": [
+    "Every operationId must occur exactly once in auth.openapi.yaml.",
+    "Every public operation must have a sovereign TypeScript client binding.",
+    "Every internal operation must have a Workforce service client binding.",
+    "HTTP method and path must match Go route registration exactly.",
+    "No route may exist only in backend code without an entry in this registry and OpenAPI."
+  ]
+}
