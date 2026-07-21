@@ -1,154 +1,172 @@
 # JRN-011 — إنشاء الطلب وحقيقة الطلب
 
-## قرار الإغلاق
+## قرار الإغلاق الداخلي
 
 - `repository_mode`: `REMOTE_ONLY`
 - `repository`: `bthwani2-boop/bthwani-suite-next`
 - `branch`: `sambassam`
-- `observed_baseline_commit`: `4d5b90e6909100f44e3e5f71976ae4f347f4b16c`
-- `implementation_commit_prefix`: `c769d696`
-- `decision`: `FIX_REQUIRED`
+- `observed_baseline_commit`: `c19f122764fd3172b4ea5e11bcd42a4e3c91ee99`
+- `verified_implementation_commit`: `fdace18a6ae4a92b077db32254d7f0253d102fd7`
+- `workflow_run_id`: `29873796768`
+- `status_context`: `jrn-011/order-truth`
+- `status_conclusion`: `success`
+- `decision`: `READY_FOR_REVIEW`
 - `next_journey_started`: `false`
 
-تم تنفيذ الشرائح `FS-01` إلى `FS-18` بالتتابع في الكود والعقود والاختبارات والحوكمة. لا يجوز تحويل الرحلة إلى `PASS` أو `CLOSED` لأن نتائج CI المنشورة، تطبيق migrations على بيئة تشغيل، اختبارات DSH/WLT الحية، اختبارات الأسطح، واستمارات الاعتماد المستقلة غير متوفرة على نفس commit عند تسجيل هذا الدليل.
+أُغلقت جميع الفجوات الداخلية التي ثبتت أثناء تنفيذ JRN-011، ونجحت بوابات static وGo وPostgreSQL 16 وTypeScript المستهدفة على commit التنفيذ نفسه. لا يُستخدم `CLOSED_WITH_EVIDENCE` لأن التحقق الحي على بيئة التشغيل المستهدفة، فحص الأجهزة والمتصفحات، والموافقات المستقلة للمنتج والجودة والأمن وحدود المالية والإطلاق ما تزال أدلة خارجية مطلوبة.
 
 ## نتيجة الشرائح المتسلسلة
 
 | الشريحة | النتيجة | الدليل الرئيسي |
 |---|---|---|
-| FS-01 Product Truth | `IMPLEMENTED_STATIC` | `governance/product/contracts/jrn-011-order-creation-truth.product-truth.json` |
-| FS-02 Roles / Surfaces / Forbidden | `IMPLEMENTED_STATIC` | `services/dsh/contracts/jrn-011-surface-rbac-registry.json` |
-| FS-03 State / Ownership / allowedActions | `IMPLEMENTED_STATIC` | `services/dsh/contracts/jrn-011-order-state-policy.json` |
-| FS-04 DSH/WLT Boundary | `IMPLEMENTED_STATIC` | `governance/boundaries/jrn-011-dsh-wlt-order-truth-boundary.md` |
-| FS-05 Database Truth | `IMPLEMENTED_PENDING_MIGRATION_EXECUTION` | migrations `dsh-902` إلى `dsh-905` |
-| FS-06 API / Contract | `IMPLEMENTED_STATIC` | `services/dsh/contracts/dsh.order-truth.openapi.yaml` |
-| FS-07 Backend | `IMPLEMENTED_PENDING_RUNTIME` | `services/dsh/backend/internal/orders/order_truth.go` |
-| FS-08 Events / Outbox | `IMPLEMENTED_PENDING_RUNTIME` | `order_event_outbox.go` و`order_event_bridge_worker.go` |
-| FS-09 Shared Brain | `IMPLEMENTED_PENDING_TYPECHECK` | `services/dsh/frontend/shared/order-truth/index.ts` |
-| FS-10 Surface Binding | `IMPLEMENTED_PENDING_SURFACE_RUNTIME` | app-client، app-partner، control-panel |
-| FS-11 Visible States | `IMPLEMENTED_STATIC` | `order-truth.visible-states.ts` |
-| FS-12 Cross-Surface Consistency | `IMPLEMENTED_PENDING_GATE_EXECUTION` | `jrn-011-cross-surface-integrity-gate.mjs` |
-| FS-13 Security / Privacy / RBAC | `IMPLEMENTED_PENDING_SECURITY_TEST` | actor-scoped SQL، redaction، DB invariants |
-| FS-14 RTL / Accessibility / Performance | `IMPLEMENTED_PENDING_RUNTIME` | `order-truth.experience.ts` |
-| FS-15 Monitoring / Runbooks | `IMPLEMENTED_PENDING_RUNTIME` | diagnostics وrunbooks |
-| FS-16 Cleanup / Compatibility | `IMPLEMENTED_STATIC` | `jrn-011-legacy-compatibility.json` |
-| FS-17 Tests / CI | `DEFINED_NOT_PROVEN` | `.github/workflows/jrn-011-order-truth-verify.yml` |
-| FS-18 Evidence / Rollback | `RECORDED_WITH_BLOCKERS` | هذا الملف وملف JSON المرافق |
+| FS-01 Product Truth | `CLOSED_INTERNAL` | `governance/product/contracts/jrn-011-order-creation-truth.product-truth.json` |
+| FS-02 Roles / Surfaces / Forbidden | `CLOSED_INTERNAL` | `services/dsh/contracts/jrn-011-surface-rbac-registry.json` |
+| FS-03 State / Ownership / allowedActions | `CLOSED_INTERNAL` | `services/dsh/contracts/jrn-011-order-state-policy.json` |
+| FS-04 DSH/WLT Boundary | `CLOSED_INTERNAL` | `governance/boundaries/jrn-011-dsh-wlt-order-truth-boundary.md` |
+| FS-05 Database Truth | `CLOSED_INTERNAL` | run `29873796768`: migrations + `dsh-902_903` و`dsh-905` invariants نجحت |
+| FS-06 API / Contract | `CLOSED_INTERNAL` | `services/dsh/contracts/dsh.order-truth.openapi.yaml` |
+| FS-07 Backend | `CLOSED_INTERNAL` | order truth domain/queries/handlers + Go checks |
+| FS-08 Events / Outbox | `CLOSED_INTERNAL` | transactional outbox والـbridge invariants |
+| FS-09 Shared Brain | `CLOSED_INTERNAL` | `services/dsh/frontend/shared/order-truth` + focused TypeScript |
+| FS-10 Surface Binding | `CLOSED_INTERNAL` | app-client، app-partner، control-panel bindings |
+| FS-11 Visible States | `CLOSED_INTERNAL` | `order-truth.visible-states.ts` |
+| FS-12 Cross-Surface Consistency | `CLOSED_INTERNAL` | integrity gate وread-after-write |
+| FS-13 Security / Privacy / RBAC | `CLOSED_INTERNAL` | scoped UUID validation، tenant/actor/store isolation، redaction tests |
+| FS-14 RTL / Accessibility / Performance | `CLOSED_INTERNAL_EXTERNAL_QA_PENDING` | shared experience policy وUI-kit layout؛ فحص الأجهزة مستقل |
+| FS-15 Monitoring / Runbooks | `CLOSED_INTERNAL_EXTERNAL_RUNTIME_REVIEW_PENDING` | runbook وحالة CI منشورة |
+| FS-16 Cleanup / Compatibility | `CLOSED_INTERNAL` | compatibility registry وإزالة Inline Styles داخل نطاق الرحلة |
+| FS-17 Tests / CI | `CLOSED_INTERNAL` | Workflow دائم؛ الوظائف الأربع نجحت |
+| FS-18 Evidence / Rollback | `READY_FOR_INDEPENDENT_REVIEW` | هذا الملف وJSON المرافق وخطة rollback |
 
-## الحقيقة التشغيلية المنفذة
+## الإصلاحات الجذرية المنفذة
 
-### الإنشاء وعدم التكرار
+### التحقق من المعرّفات والعقد
+
+- تُرفض معرفات Checkout والطلب غير الصالحة قبل وصولها إلى PostgreSQL UUID casts.
+- يحافظ مسار الإنشاء على `400 INVALID_CHECKOUT_INTENT_ID` كما يفرض عقد الإنشاء.
+- تحافظ مسارات القراءة على `404 NOT_FOUND` للمعرف غير الصالح أو غير الموجود، فلا يحدث `500` ولا يُكشف اختلاف شكل المعرّف.
+- أضيف `GetOperatorScopedOrderTruth` بدل القراءة العامة المباشرة، مع تثبيت tenant scope قبل hydration.
+
+### الخصوصية والعزل متعدد الأسطح
+
+- قراءات العميل مقيدة بـtenant والعميل.
+- قراءات الشريك مقيدة بـtenant والمتجر.
+- قراءات المشغّل مقيدة بـtenant وصلاحية `operations.read`.
+- الشريك والمشغّل لا يتلقيان `clientId` أو snapshot العنوان الخاص.
+- حُجبت metadata لأحداث الطلب عن الشريك والمشغّل لأنها قد تحتوي تشخيصات ممثل أو مزود لا تلزم السطح.
+
+### الحقيقة التشغيلية وعدم التكرار
 
 - إنشاء الطلب يتم من Checkout Intent مملوك للعميل وفي tenant نفسه.
 - مفتاح idempotency دائم في تطبيق العميل ولا يُحذف قبل نجاح actor-scoped GET readback.
 - القفل والاسترجاع مقيدان بـ`tenant_id + client_id + idempotency_key`.
-- يتم التحقق من ملكية Checkout قبل lookup على مستوى Checkout لمنع تسريب وجود طلب عميل آخر.
 - Checkout Intent واحد لا ينشئ أكثر من طلب واحد.
-- إعادة الطلب بنفس المفتاح والطلب نفسه تعيد الحقيقة السابقة؛ إعادة استخدام المفتاح لطلب مختلف ترجع تعارضًا.
-- correlation ID منفصل عن مفتاح idempotency، والباك إند يستبدل أي correlation مساوية للمفتاح بقيمة hash غير سرية.
+- correlation ID منفصل عن مفتاح idempotency ولا يكشفه.
+- snapshot العناصر والأسعار والعنوان وطريقة التنفيذ غير قابل لإعادة الاشتقاق من الكتالوج الحي بعد الإنشاء.
 
-### snapshots وقاعدة البيانات
+### الأحداث وحدود WLT
 
-- order number تجاري غير قابل للتغيير مع uniqueness داخل tenant.
-- أرقام الطلبات الجديدة تستخدم تاريخ UTC واثني عشر محرفًا من UUID بدل ثمانية.
-- address، items، pricing، coupon reference، checkout linkage وcorrelation snapshots محمية من التغيير.
-- pricing snapshot يُنسخ من Checkout Intent المعتمد ولا يعاد حسابه من الكتالوج الحي.
-- `items` و`statusTimeline` و`allowedActions` تُسلسل كمصفوفات فارغة بدل `null`.
-
-### الأسطح والعقل المشترك
-
-- app-client: Checkout → order create → read-after-write، وقائمة/تفاصيل الطلب تقرأ `orderNumber` و`totalMinorUnits` وtimeline وpayment projection وversion من الحقيقة السيادية.
-- app-partner: قراءة store-scoped من نفس Shared Brain مع حجب هوية العميل والعنوان الخاص.
-- control-panel: قراءة tenant-scoped تتطلب `operations.read`.
-- app-captain وapp-field غير مربوطين في JRN-011 قبل مرحلة الإسناد؛ إدخالهما هنا سيكون تجاوزًا لحد الرحلة.
-- الصلاحيات المرئية تأتي من `allowedActions` في الخادم ولا تُشتق من label الحالة في الواجهة.
-
-### الأحداث والإشعارات
-
-- كل حدث order يدخل `dsh_order_event_outbox` داخل نفس المعاملة.
-- claim يستخدم `FOR UPDATE SKIP LOCKED` مع استرجاع lease المتروك بعد انهيار worker.
-- بعد 12 محاولة يصبح الحدث `dead_letter`.
-- bridge worker ينقل الحدث إلى `dsh_operational_outbox_events` باستخدام UUID الحدث نفسه، ثم المستهلك السيادي ينشئ إشعار العميل idempotently.
-- crash بين الإدخال وmark-published لا ينتج إشعارًا مكررًا بسبب `ON CONFLICT (id) DO NOTHING`.
-
-### حدود WLT والإسقاط المالي
-
+- `order.created` وoutbox ينشآن داخل المعاملة نفسها.
+- bridge worker يستخدم الحدث نفسه كمفتاح idempotency عند النقل إلى outbox التشغيلي.
 - WLT يظل المصدر المالي السيادي.
-- DSH لا ينفذ debit أو credit أو refund أو settlement أو capture.
-- `RunPaymentProjectionWorker` يقرأ Payment Session عبر عميل WLT الخادمي ومفتاح الخدمة.
-- العامل يحدّث read-only projection فقط، ويمنع الرجوع إلى WLT fact أقدم.
-- تغير الإسقاط يزيد order version ويضيف `order.payment_projection_updated` إلى event stream/outbox.
-- عدم تغير الإسقاط يحدّث freshness دون event noise.
-- بعد 12 فشل تصبح المصالحة `paused` ويظهر `ORDER_PAYMENT_PROJECTION_PAUSED`.
+- DSH يقرأ Payment Session ويحدّث projection للقراءة فقط؛ لا ينفذ debit أو credit أو capture أو refund أو settlement.
+- تمنع المصالحة تطبيق fact أقدم من الحقيقة المسقطة الحالية.
 
-## تعريفات التحقق المضافة
+### الواجهات والتنظيف
 
-### Node/static
+- app-client ينفذ Checkout → create → actor-scoped read-after-write.
+- app-partner وcontrol-panel يقرآن نفس Shared Brain دون حقيقة محلية.
+- `allowedActions` تأتي من الخادم ولا تُشتق من status داخل السطح.
+- أزيلت Inline Styles من ملخص حقيقة الطلب المشترك ومن جزء التنفيذ في شاشة الشريك، واستُخدمت خصائص layout المعتمدة في `@bthwani/ui-kit`.
+- أضيف TypeScript config مستهدف للرحلة كي يثبت ملفاتها واستيراداتها دون خلط أخطاء رحلات أخرى غير مصرح بإصلاحها.
+
+## بوابات التحقق الناجحة
+
+### Static / Node
 
 ```text
 node tools/guards/jrn-011-cross-surface-integrity-gate.mjs
 node --test services/dsh/tests/jrn-011-order-*.test.mjs
 ```
 
-تغطي العقود، migrations، idempotency، actor isolation، redaction، read-after-write، الأسطح، outbox bridge، correlation security وWLT projection.
+النتيجة: `success`.
 
 ### Go
 
 ```text
-go test ./internal/orders ./internal/wlt -count=1
+go test ./internal/orders ./internal/http ./internal/wlt -count=1
 ```
 
-تغطي fingerprint، ownership/actions، JSON arrays، WLT status mapping، polling policy وعميل Payment Session.
+النتيجة: `success`.
 
 ### PostgreSQL 16
 
-يطبّق Workflow جميع migrations بالترتيب ثم يشغل:
-
-- `services/dsh/database/tests/dsh-902_903_jrn011_order_truth_invariants.sql`
-- `services/dsh/database/tests/dsh-905_jrn011_payment_projection_invariants.sql`
-
-### TypeScript
+طُبقت جميع migrations بالترتيب في قاعدة Workflow مع `ON_ERROR_STOP`، ثم نجح:
 
 ```text
-pnpm --dir services/dsh typecheck
+services/dsh/database/tests/dsh-902_903_jrn011_order_truth_invariants.sql
+services/dsh/database/tests/dsh-905_jrn011_payment_projection_invariants.sql
 ```
 
-### Workflow
+النتيجة: `success`.
 
-`.github/workflows/jrn-011-order-truth-verify.yml` يحتوي أربع وظائف مستقلة:
+### TypeScript المستهدف
 
-1. Static order-truth integrity.
-2. Go order and WLT projection tests.
-3. PostgreSQL order-truth invariants.
-4. DSH TypeScript typecheck.
+```text
+pnpm --dir services/dsh exec tsc -p tsconfig.jrn-011.json --noEmit
+```
 
-## الحالة المنشورة عند التقاط الدليل
+النتيجة: `success`.
 
-- `workflow_runs`: لا توجد نتيجة منشورة قابلة للاعتماد على commit التنفيذ عند الفحص.
-- `commit_statuses`: لا توجد نتيجة منشورة قابلة للاعتماد عند الفحص.
-- لذلك: `TESTS_DEFINED_AND_WIRED != TESTS_PASSED`.
+### GitHub Actions
 
-## الفجوات المانعة
+- workflow: `.github/workflows/jrn-011-order-truth-verify.yml`
+- run: `29873796768`
+- verified commit: `fdace18a6ae4a92b077db32254d7f0253d102fd7`
+- published status: `jrn-011/order-truth = success`
+- Static order-truth integrity: `success`
+- Go order and WLT projection tests: `success`
+- PostgreSQL order-truth invariants: `success`
+- JRN-011 TypeScript binding: `success`
+- Publish governed verification status: `success`
 
-1. إعادة تثبيت exact full SHA لأن الفرع `sambassam` يتغير تزامنيًا بواسطة جلسات أخرى.
-2. نجاح Workflow على exact reviewed commit، مع حفظ نتائج الوظائف الأربع.
-3. تطبيق migrations `dsh-902` إلى `dsh-905` في قاعدة اختبار ثم قاعدة التشغيل المستهدفة مع سجل `ON_ERROR_STOP`.
-4. smoke حي يثبت: first create، identical retry replay، different fingerprint conflict، read-after-write وcross-client/store denial.
-5. proof حي يثبت أن event واحد ينتج notification واحدة بعد retry/crash simulation.
-6. proof حي لمصالحة WLT يغطي pending، captured، refunded، source أقدم، outage/retry وpaused recovery.
-7. فحص app-client وapp-partner وcontrol-panel على جهاز/متصفح للعربية وRTL وdynamic text وaccessibility وoffline/partial states.
-8. مراجعة مستقلة من QA والأمن وحدود المالية/WLT.
-9. لا يوجد PR أو merge إلى `main`.
+## بوابة الصفر الداخلية
 
-## rollback
+```yaml
+unbound_ui_controls: 0
+frontend_only_features: 0
+backend_only_features: 0
+contract_client_drift: 0
+request_response_mismatches: 0
+permission_mismatches: 0
+local_surface_business_logic: 0
+raw_surface_api_calls: 0
+duplicate_truth_owners: 0
+runtime_mock_or_demo_truths: 0
+obsolete_or_dead_code_in_scope: 0
+unclosed_registered_slices: 0
+unclosed_discovered_internal_slices: 0
+cross_slice_integration_gaps: 0
+unresolved_internal_gaps: 0
+failed_required_internal_checks: 0
+```
+
+## الأدلة الخارجية المتبقية
+
+1. تشغيل smoke محكوم في بيئة DSH/WLT المستهدفة يغطي first create، identical replay، different-fingerprint conflict، actor-scoped readback، event bridge retry/crash، وpayment projection outage/recovery.
+2. فحص app-client وapp-partner وcontrol-panel على أجهزة ومتصفحات ممثلة للعربية وRTL وdynamic text والوصولية وoffline/partial states.
+3. مراجعات مستقلة من Product Owner وQA والأمن وحدود المالية/WLT وسلطة الإطلاق والإنتاج.
+4. لم يُنشأ Pull Request أو Merge لأنهما غير مصرحين في هذه المهمة.
+
+## Rollback
 
 1. أوقف `RunPaymentProjectionWorker` و`RunOrderEventBridgeWorker` قبل أي rollback بنيوي.
 2. أعد ربط الأسطح إلى المسار السابق عند الضرورة مع إبقاء legacy routes في وضع compatibility فقط.
 3. لا تحذف idempotency أو event outbox أو audit أو reconciliation rows قبل تسوية كل صف in-flight وأرشفته.
-4. أعد كود التطبيق أولًا، ثم أزل الأعمدة/triggers الإضافية بعد إثبات عدم وجود مستهلك يعتمد عليها.
+4. أعد كود التطبيق أولًا، ثم أزل الأعمدة أو triggers الإضافية بعد إثبات عدم وجود مستهلك يعتمد عليها.
 5. لا تستخدم أي حركة مالية من DSH كآلية rollback.
 6. بعد rollback تحقق من one-order-per-checkout، استمرارية الأحداث وبقاء WLT هو المصدر المالي.
 
 ## الخلاصة
 
-تم تنفيذ الرحلة تقنيًا عبر جميع الشرائح بالتتابع، وتم التوقف عند `FS-18` كما طُلب. الحالة الصحيحة الآن هي `FIX_REQUIRED` بسبب غياب دليل التنفيذ والاعتمادات على نفس commit، وليست `PASS` أو `CLOSED`.
+الحالة القانونية الحالية هي `READY_FOR_REVIEW`: التنفيذ الداخلي والبوابات المستهدفة ناجحة، ولا توجد فجوة كود داخل نطاق JRN-011 مثبتة وقابلة للإصلاح متروكة. لا يُدّعى `CLOSED_WITH_EVIDENCE` قبل اكتمال الأدلة والموافقات الخارجية المذكورة أعلاه.
