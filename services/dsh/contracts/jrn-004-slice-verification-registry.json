@@ -1,0 +1,51 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-004",
+  "journeyName": "اكتشاف المتاجر وسياقها وحوكمتها",
+  "targetRef": "sambassam",
+  "decision": "IMPLEMENTED_PENDING_SAME_COMMIT_VERIFICATION",
+  "evidenceCommit": "PENDING_SAME_COMMIT_VERIFICATION",
+  "functionalSlices": [
+    {"id":"JRN-004-S01","name":"قائمة المتاجر العامة وتفاصيل المتجر وسياقه","status":"COMPLETE","evidence":["services/dsh/backend/internal/store/repository.go","services/dsh/frontend/app-client/store/StoreDetailScreen.tsx"]},
+    {"id":"JRN-004-S02","name":"التغطية ومناطق الخدمة وقابلية الظهور","status":"COMPLETE","evidence":["services/dsh/backend/internal/store/publication_diagnostics.go","services/dsh/frontend/app-partner/account/PartnerHubScreen.tsx"]},
+    {"id":"JRN-004-S03","name":"سياق الاستلام للكابتن والتحقق الميداني","status":"COMPLETE","evidence":["services/dsh/backend/internal/store/governance.go","services/dsh/frontend/shared/store/store-role-context.view-model.ts"]},
+    {"id":"JRN-004-S04","name":"إعدادات الشريك والمتجر والكابتن وطرق التوصيل","status":"COMPLETE","evidence":["services/dsh/frontend/app-partner/store/StoreProfileScreen.tsx","services/dsh/frontend/shared/store/store-role.api.ts"]},
+    {"id":"JRN-004-S05","name":"ساعات العمل والتوفر والإيقاف المؤقت","status":"COMPLETE","evidence":["services/dsh/frontend/shared/store/store-discovery.view-model.ts","services/dsh/frontend/app-partner/store/StoreProfileScreen.tsx"]},
+    {"id":"JRN-004-S06","name":"إعدادات courier ونطاقات تغطية المتجر","status":"COMPLETE","evidence":["services/dsh/backend/internal/http/protected_store.go","services/dsh/frontend/shared/partner/partner.api.ts"]},
+    {"id":"JRN-004-S07","name":"قائمة المتاجر التشغيلية وتفاصيل المشغل","status":"COMPLETE","evidence":["services/dsh/backend/internal/http/protected_store.go","services/dsh/frontend/shared/store/store-admin.api.ts"]},
+    {"id":"JRN-004-S08","name":"حوكمة المتجر والتشخيص والإخفاء والحظر وإعادة التفعيل","status":"COMPLETE","evidence":["services/dsh/backend/internal/http/store_publication_diagnostics.go","services/dsh/frontend/control-panel/partners/stores/StoreGovernanceActions.tsx"]},
+    {"id":"JRN-004-S09","name":"سجل تدقيق المتجر وقراءة أثر القرار في كل سطح","status":"COMPLETE","evidence":["services/dsh/backend/internal/store/governance.go","services/dsh/frontend/control-panel/partners/stores/StoreDetailAdminPanel.tsx"]}
+  ],
+  "fullStackSlices": [
+    {"id":"FS-01","status":"COMPLETE","evidence":"governance/product-truth/JRN-004_STORE_DISCOVERY_CONTEXT_GOVERNANCE.md"},
+    {"id":"FS-02","status":"COMPLETE","evidence":"services/dsh/contracts/jrn-004-access-matrix.json"},
+    {"id":"FS-03","status":"COMPLETE","evidence":"services/dsh/contracts/jrn-004-state-machine.json"},
+    {"id":"FS-04","status":"COMPLETE","evidence":"services/dsh/contracts/jrn-004-governance-policy.json"},
+    {"id":"FS-05","status":"COMPLETE","evidence":"services/dsh/database/migrations/dsh-098_jrn_004_store_governance_closure.sql"},
+    {"id":"FS-06","status":"COMPLETE","evidence":"services/dsh/contracts/jrn-004-operation-registry.json"},
+    {"id":"FS-07","status":"COMPLETE","evidence":"services/dsh/contracts/jrn-004-operation-registry.json"},
+    {"id":"FS-08","status":"COMPLETE","evidence":"services/dsh/contracts/jrn-004-governance-policy.json"},
+    {"id":"FS-09","status":"COMPLETE","evidence":"services/dsh/contracts/jrn-004-surface-registry.json"},
+    {"id":"FS-10","status":"COMPLETE","evidence":"services/dsh/contracts/jrn-004-surface-registry.json"},
+    {"id":"FS-11","status":"COMPLETE","evidence":"services/dsh/contracts/jrn-004-surface-registry.json"},
+    {"id":"FS-12","status":"COMPLETE","evidence":"services/dsh/contracts/jrn-004-surface-registry.json"},
+    {"id":"FS-13","status":"COMPLETE","evidence":"services/dsh/contracts/jrn-004-governance-policy.json"},
+    {"id":"FS-14","status":"COMPLETE","evidence":"services/dsh/contracts/jrn-004-surface-registry.json"},
+    {"id":"FS-15","status":"COMPLETE","evidence":"governance/runbooks/JRN-004_STORE_OPERATIONS.md"},
+    {"id":"FS-16","status":"COMPLETE","evidence":"services/dsh/contracts/jrn-004-governance-policy.json"},
+    {"id":"FS-17","status":"PENDING_SAME_COMMIT_VERIFICATION","evidence":".github/workflows/jrn-004-fullstack-slices.yml"},
+    {"id":"FS-18","status":"COMPLETE_INTERNAL_PENDING_INDEPENDENT_APPROVALS","evidence":"governance/evidence/JRN-004_SLICE_EXECUTION_LOG.md"}
+  ],
+  "zeroGate": {
+    "unboundUiControls": 0,
+    "frontendOnlyFeatures": 0,
+    "backendOnlyFeatures": 0,
+    "duplicateTruthOwners": 0,
+    "runtimeMocksAsTruth": 0,
+    "deadCodeInScope": 0,
+    "unclosedFunctionalSlices": 0,
+    "unclosedImplementationSlices": 0
+  },
+  "independentApprovalsRequired": ["Product Owner", "QA/device", "Security", "Release", "Production"],
+  "approvalBoundary": "Implementation agent may close internal slices and produce evidence, but may not self-approve independent gates."
+}
