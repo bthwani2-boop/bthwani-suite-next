@@ -22,25 +22,22 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
+
           path = Path('services/dsh/frontend/shared/partner/partner.api.ts')
           text = path.read_text(encoding='utf-8')
-          old = '''  return httpClient.request<T>(path, {
-            method: options.method,
-            body: options.body,
-            idempotencyKey: mutation?.idempotencyKey,
-            correlationId: mutation?.correlationId,
-            expectedVersion: mutation?.expectedVersion,
-          });'''.replace('          ', '')
-          new = '''  return httpClient.request<T>(path, {
-            ...(options.method !== undefined ? { method: options.method } : {}),
-            ...(options.body !== undefined ? { body: options.body } : {}),
-            ...(mutation?.idempotencyKey !== undefined ? { idempotencyKey: mutation.idempotencyKey } : {}),
-            ...(mutation?.correlationId !== undefined ? { correlationId: mutation.correlationId } : {}),
-            ...(mutation?.expectedVersion !== undefined ? { expectedVersion: mutation.expectedVersion } : {}),
-          });'''.replace('          ', '')
-          if old not in text:
-              raise SystemExit('request option block not found')
-          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          pattern = re.compile(r'''  return httpClient\.request<T>\(path, \{\n\s*method: options\.method,\n\s*body: options\.body,\n\s*idempotencyKey: mutation\?\.idempotencyKey,\n\s*correlationId: mutation\?\.correlationId,\n\s*expectedVersion: mutation\?\.expectedVersion,\n\s*\}\);''')
+          replacement = '''  return httpClient.request<T>(path, {
+    ...(options.method !== undefined ? { method: options.method } : {}),
+    ...(options.body !== undefined ? { body: options.body } : {}),
+    ...(mutation?.idempotencyKey !== undefined ? { idempotencyKey: mutation.idempotencyKey } : {}),
+    ...(mutation?.correlationId !== undefined ? { correlationId: mutation.correlationId } : {}),
+    ...(mutation?.expectedVersion !== undefined ? { expectedVersion: mutation.expectedVersion } : {}),
+  });'''
+          text, count = pattern.subn(replacement, text, count=1)
+          if count != 1:
+              raise SystemExit(f'request option block matches={count}')
+          path.write_text(text, encoding='utf-8')
           PY
           git config user.name 'bthwani-governance-bot'
           git config user.email 'noreply@bthwani.local'
