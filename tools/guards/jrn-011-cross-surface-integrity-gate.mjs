@@ -39,7 +39,7 @@ const [
 
 mustContain(api, [
   '"/dsh/client/order-truth"',
-  'Idempotency',
+  "idempotencyKey: context.idempotencyKey",
   "fetchClientOrderTruthDetail",
   '"/dsh/partner/order-truth',
   '"/dsh/operator/order-truth',
@@ -61,22 +61,22 @@ mustContain(checkoutFlow, [
 ], "app-client checkout binding");
 
 mustContain(partnerSurface, [
-  'from \'../../shared/order-truth\'',
-  '<OrderTruthReadbackSummary',
+  "from '../../shared/order-truth'",
+  "<OrderTruthReadbackSummary",
   'actor="partner"',
 ], "app-partner binding");
 
 mustContain(operatorSurface, [
   "from '../../shared/order-truth'",
-  '<OrderTruthReadbackSummary',
+  "<OrderTruthReadbackSummary",
   'actor="operator"',
 ], "control-panel binding");
 
 mustContain(backendRoutes, [
-  'POST /dsh/client/order-truth',
-  'GET /dsh/client/order-truth/{orderId}',
-  'GET /dsh/partner/order-truth',
-  'GET /dsh/operator/order-truth',
+  "POST /dsh/client/order-truth",
+  "GET /dsh/client/order-truth/{orderId}",
+  "GET /dsh/partner/order-truth",
+  "GET /dsh/operator/order-truth",
 ], "backend canonical routes");
 
 mustContain(backendTruth, [
