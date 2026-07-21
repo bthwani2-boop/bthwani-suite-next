@@ -178,12 +178,26 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
-          $dshHealth = Invoke-RestMethod http://localhost:58080/dsh/health -TimeoutSec 10
-          $dshReady = Invoke-RestMethod http://localhost:58080/dsh/readiness -TimeoutSec 10
-          $wltHealth = Invoke-RestMethod http://localhost:58083/wlt/health -TimeoutSec 10
-          $wltReady = Invoke-RestMethod http://localhost:58083/wlt/readiness -TimeoutSec 10
-          if ($dshHealth.status -ne "healthy" -or $dshReady.status -ne "ready") { throw "DSH runtime is not ready" }
-          if ($wltHealth.status -ne "healthy" -or $wltReady.status -ne "ready") { throw "WLT runtime is not ready" }
+          function Wait-JsonState([string] $Name, [string] $Uri, [string] $Expected) {
+            $last = "no response"
+            for ($attempt = 1; $attempt -le 30; $attempt++) {
+              try {
+                $response = Invoke-RestMethod $Uri -TimeoutSec 10 -ErrorAction Stop
+                $last = $response | ConvertTo-Json -Compress -Depth 8
+                "${Name} attempt ${attempt}/30: ${last}" | Tee-Object -FilePath /tmp/jrn-010-health.log -Append
+                if ($response.status -eq $Expected) { return }
+              } catch {
+                $last = $_.Exception.Message
+                "${Name} attempt ${attempt}/30: ${last}" | Tee-Object -FilePath /tmp/jrn-010-health.log -Append
+              }
+              Start-Sleep -Seconds 3
+            }
+            throw "${Name} did not reach ${Expected}; last=${last}"
+          }
+          Wait-JsonState "DSH health" "http://localhost:58080/dsh/health" "healthy"
+          Wait-JsonState "DSH readiness" "http://localhost:58080/dsh/readiness" "ready"
+          Wait-JsonState "WLT health" "http://localhost:58083/wlt/health" "healthy"
+          Wait-JsonState "WLT readiness" "http://localhost:58083/wlt/readiness" "ready"
       - name: Capture runtime diagnostics on failure
         if: failure()
         shell: pwsh
