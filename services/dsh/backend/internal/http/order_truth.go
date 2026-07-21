@@ -67,15 +67,14 @@ func (s *protectedStoreServer) handleListClientOrderTruth(w http.ResponseWriter,
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list governed orders")
 		return
 	}
-	for i := range list { orders.RedactOrderTruthForViewer(&list[i], "client") }
 	store.SendJSON(w, http.StatusOK, map[string]any{"orders": list})
 }
 
 func (s *protectedStoreServer) handleGetClientOrderTruth(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "client")
 	if !ok { return }
-	truth, err := orders.GetOrderTruth(s.db, r.PathValue("orderId"), actor.TenantID, "client")
-	if errors.Is(err, orders.ErrNotFound) || (err == nil && truth.ClientID != actor.ID) {
+	truth, err := orders.GetClientScopedOrderTruth(s.db, r.PathValue("orderId"), actor.TenantID, actor.ID)
+	if errors.Is(err, orders.ErrNotFound) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "order not found")
 		return
 	}
@@ -90,8 +89,8 @@ func (s *protectedStoreServer) handleGetClientOrderTruth(w http.ResponseWriter, 
 func (s *protectedStoreServer) handleListClientOrderTruthEvents(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "client")
 	if !ok { return }
-	truth, err := orders.GetOrderTruth(s.db, r.PathValue("orderId"), actor.TenantID, "client")
-	if errors.Is(err, orders.ErrNotFound) || (err == nil && truth.ClientID != actor.ID) {
+	truth, err := orders.GetClientScopedOrderTruth(s.db, r.PathValue("orderId"), actor.TenantID, actor.ID)
+	if errors.Is(err, orders.ErrNotFound) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "order not found")
 		return
 	}
@@ -110,14 +109,13 @@ func (s *protectedStoreServer) handleListPartnerOrderTruth(w http.ResponseWriter
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list store order truth")
 		return
 	}
-	for i := range list { orders.RedactOrderTruthForViewer(&list[i], "partner") }
 	store.SendJSON(w, http.StatusOK, map[string]any{"orders": list})
 }
 
 func (s *protectedStoreServer) handleGetPartnerOrderTruth(w http.ResponseWriter, r *http.Request) {
-	actor, ownedOrder, ok := s.partnerOrder(w, r)
+	actor, storeID, ok := s.partnerStore(w, r)
 	if !ok { return }
-	truth, err := orders.GetOrderTruth(s.db, ownedOrder.ID, actor.TenantID, "partner")
+	truth, err := orders.GetPartnerScopedOrderTruth(s.db, r.PathValue("orderId"), actor.TenantID, storeID)
 	if errors.Is(err, orders.ErrNotFound) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "order not found")
 		return
@@ -138,7 +136,6 @@ func (s *protectedStoreServer) handleListOperatorOrderTruth(w http.ResponseWrite
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list tenant order truth")
 		return
 	}
-	for i := range list { orders.RedactOrderTruthForViewer(&list[i], "operator") }
 	store.SendJSON(w, http.StatusOK, map[string]any{"orders": list})
 }
 
