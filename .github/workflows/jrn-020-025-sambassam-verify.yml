@@ -18,6 +18,7 @@ on:
       - "services/dsh/frontend/shared/marketing/**"
       - "services/dsh/tests/journeys-020-025-binding.test.mjs"
       - "tools/guards/jrn-015-020-affected-boundary.mjs"
+      - ".github/actions/setup-node-workspace/action.yml"
       - ".github/workflows/jrn-020-025-sambassam-verify.yml"
 
 permissions:
@@ -31,16 +32,14 @@ jobs:
   sovereign-boundaries:
     name: Sovereign boundaries and bindings
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Checkout exact commit
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false
-      - name: Setup Node
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
-        with:
-          node-version: 24.17.0
+      - name: Setup pinned Node and PNPM workspace
+        uses: ./.github/actions/setup-node-workspace
       - name: Verify repository hygiene
         run: git diff --check
       - name: Verify JRN-020..025 binding and verifier hygiene
