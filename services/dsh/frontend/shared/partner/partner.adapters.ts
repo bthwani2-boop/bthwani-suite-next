@@ -8,6 +8,8 @@ import type {
   DshPartnerOrder,
   DshPartnerOrderAction,
   DshPreparationIssue,
+  DshStoreCaptainHandoffExceptionReason,
+  DshStoreCaptainHandoffExceptionStatus,
   DshStoreCaptainHandoffStatus,
 } from "../orders/orders.types";
 import type { DshOrderLifecycleHandoff } from "../orders/dsh-order-lifecycle-handoffs";
@@ -69,6 +71,9 @@ export type GovernedPartnerOrderItem = PartnerOrderItem & {
   readonly orderItems: readonly GovernedPreparationOrderItem[];
   readonly storeCaptainHandoffStatus: DshStoreCaptainHandoffStatus;
   readonly storeCaptainHandoffCaptainId: string;
+  readonly openStoreCaptainHandoffExceptionId: string;
+  readonly openStoreCaptainHandoffExceptionReason: DshStoreCaptainHandoffExceptionReason | "";
+  readonly openStoreCaptainHandoffExceptionStatus: DshStoreCaptainHandoffExceptionStatus;
 };
 
 type CanonicalOrderShape = {
@@ -86,6 +91,9 @@ type CanonicalOrderShape = {
   readonly openPreparationIssueCount?: number;
   readonly storeCaptainHandoffStatus?: DshStoreCaptainHandoffStatus;
   readonly storeCaptainHandoffCaptainId?: string;
+  readonly openStoreCaptainHandoffExceptionId?: string;
+  readonly openStoreCaptainHandoffExceptionReason?: DshStoreCaptainHandoffExceptionReason | "";
+  readonly openStoreCaptainHandoffExceptionStatus?: DshStoreCaptainHandoffExceptionStatus;
   readonly items?: readonly {
     readonly id?: string;
     readonly orderId?: string;
@@ -141,6 +149,23 @@ function preparationSlaLabel(preparation: DshOrderPreparation): string | undefin
   return undefined;
 }
 
+function validateHandoffExceptionProjection(raw: CanonicalOrderShape, orderId: string) {
+  const id = String(raw.openStoreCaptainHandoffExceptionId ?? "").trim();
+  const reason = raw.openStoreCaptainHandoffExceptionReason ?? "";
+  const status = raw.openStoreCaptainHandoffExceptionStatus ?? "";
+  const hasException = id !== "";
+  const reasonValid = reason === "handoff_shortage" || reason === "handoff_mismatch";
+  const statusValid = status === "open" || status === "acknowledged";
+
+  if (hasException !== reasonValid || hasException !== statusValid) {
+    throw new Error(`partner order ${orderId} has inconsistent custody exception readback`);
+  }
+  if (hasException && raw.allowedActions?.includes("handoff")) {
+    throw new Error(`partner order ${orderId} exposes handoff while custody exception is active`);
+  }
+  return { id, reason, status, hasException } as const;
+}
+
 /** Canonical actor-scoped partner order adapter. */
 export function mapDshOrderToPartnerOrderItem(order: DshPartnerOrder): GovernedPartnerOrderItem {
   const raw = order as unknown as CanonicalOrderShape;
@@ -167,6 +192,7 @@ export function mapDshOrderToPartnerOrderItem(order: DshPartnerOrder): GovernedP
     throw new Error(`partner order ${orderId} preparation issue count is inconsistent`);
   }
 
+  const handoffException = validateHandoffExceptionProjection(raw, orderId);
   const status = resolvePartnerStatus(raw.status);
   const orderMode = resolveOrderMode(orderId, raw.fulfillmentMode);
   const createdAt = new Date(raw.createdAt ?? raw.updatedAt ?? 0);
@@ -194,6 +220,7 @@ export function mapDshOrderToPartnerOrderItem(order: DshPartnerOrder): GovernedP
   const preparationRisk = raw.preparation.preparationSlaState === "due_soon"
     || raw.preparation.preparationSlaState === "overdue";
   const issueRisk = openPreparationIssueCount > 0;
+  const custodyExceptionRisk = handoffException.hasException;
   const slaLabel = preparationSlaLabel(raw.preparation);
 
   return {
@@ -208,20 +235,29 @@ export function mapDshOrderToPartnerOrderItem(order: DshPartnerOrder): GovernedP
     orderItems,
     storeCaptainHandoffStatus: raw.storeCaptainHandoffStatus ?? "",
     storeCaptainHandoffCaptainId: String(raw.storeCaptainHandoffCaptainId ?? ""),
-    priority: acceptanceRisk || preparationRisk || issueRisk ? "high" : "normal",
+    openStoreCaptainHandoffExceptionId: handoffException.id,
+    openStoreCaptainHandoffExceptionReason: handoffException.reason,
+    openStoreCaptainHandoffExceptionStatus: handoffException.status,
+    priority: acceptanceRisk || preparationRisk || issueRisk || custodyExceptionRisk ? "high" : "normal",
     orderTypeLabel: resolveOrderTypeLabel(orderMode),
     orderMode,
     itemsCountLabel: itemCount > 0 ? `${itemCount} عنصر` : "العناصر عند فتح التفاصيل",
     amountLabel: total > 0 ? `${total.toLocaleString("ar-YE")} ر.ي` : "—",
     createdAtLabel: createdAt.toLocaleTimeString("ar-YE", { hour: "2-digit", minute: "2-digit" }),
     elapsedLabel: elapsed.label,
-    nextActionLabel: issueRisk ? "حل مشكلات التحضير" : nextActionMap[status],
-    ...(acceptanceRisk || preparationRisk || issueRisk ? { urgent: true, slaRisk: true } : {}),
+    nextActionLabel: custodyExceptionRisk
+      ? "بانتظار معالجة استثناء العهدة"
+      : issueRisk
+        ? "حل مشكلات التحضير"
+        : nextActionMap[status],
+    ...(acceptanceRisk || preparationRisk || issueRisk || custodyExceptionRisk ? { urgent: true, slaRisk: true } : {}),
     ...(slaLabel ? { slaLabel } : {}),
     ...(status === "needs_accept" ? { unread: true } : {}),
     ...(itemNames.length > 0 ? { itemsSummaryLabel: itemNames.join("، ") } : {}),
     ...(raw.wltPaymentRefId ? { paymentLabel: "مرجع مالي مرتبط" } : {}),
-    ...(issueRisk || (status === "cancelled" && raw.rejectionReason) ? { issueRequired: true } : {}),
+    ...(issueRisk || custodyExceptionRisk || (status === "cancelled" && raw.rejectionReason)
+      ? { issueRequired: true }
+      : {}),
   };
 }
 
