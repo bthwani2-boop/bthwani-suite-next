@@ -147,11 +147,13 @@ func registerUnifiedCatalogRoutes(mux *http.ServeMux, s *protectedStoreServer) {
 
 	// Partner and field taxonomy and store-scoped catalog operations.
 	mux.HandleFunc("GET /dsh/partner/catalog/taxonomy", s.handleCatalogTaxonomy)
+	mux.HandleFunc("GET /dsh/partner/catalog/product-proposals", s.handleListPartnerProductProposals)
 	mux.HandleFunc("POST /dsh/partner/catalog/product-proposals", s.handlePartnerCreateProductProposal)
 	mux.HandleFunc("PATCH /dsh/partner/catalog/product-proposals/{proposalId}", s.handleUpdatePartnerProductProposalAtomic)
 	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/assortment", s.handlePartnerGetStoreAssortment)
 	mux.HandleFunc("PUT /dsh/partner/stores/{storeId}/assortment/{masterProductId}", s.handlePartnerUpsertStoreAssortmentAtomic)
 	mux.HandleFunc("GET /dsh/field/catalog/taxonomy", s.handleCatalogTaxonomy)
+	mux.HandleFunc("GET /dsh/field/partners/{partnerId}/catalog/product-proposals", s.handleListFieldProductProposals)
 	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/catalog/product-proposals", s.handleFieldCreateProductProposal)
 	mux.HandleFunc("PATCH /dsh/field/partners/{partnerId}/catalog/product-proposals/{proposalId}", s.handleUpdateFieldProductProposalAtomic)
 	mux.HandleFunc("GET /dsh/field/partners/{partnerId}/assortment", s.handleFieldGetStoreAssortment)
