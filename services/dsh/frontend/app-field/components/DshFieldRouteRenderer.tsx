@@ -13,7 +13,7 @@ import { DshFieldProfileHomeScreen } from '../account/DshFieldProfileHomeScreen'
 import { DshFieldProfileScreen } from '../account/DshFieldProfileScreen';
 import { DshFieldStoresHistoryScreen } from '../stores/DshFieldStoresHistoryScreen';
 import { DshFieldFinanceScreen } from '../finance/DshFieldFinanceScreen';
-import { DshFieldPartnerProductsScreen } from './DshFieldPartnerProductsScreen';
+import { DshFieldCatalogOperationsScreen } from './DshFieldCatalogOperationsScreen';
 import type { useDshFieldSurfaceModel } from '../field.surface-model';
 import type { FieldOnboardingController } from '../../shared/field-onboarding';
 import type { useIdentitySession } from '@bthwani/core-identity';
@@ -147,7 +147,7 @@ export function DshFieldRouteRenderer({ model, actions, onboardingController, id
   }
   if (route.kind === 'products-upload') {
     return (
-      <DshFieldPartnerProductsScreen
+      <DshFieldCatalogOperationsScreen
         partnerId={route.partnerId}
         onBack={actions.popRoute}
       />
