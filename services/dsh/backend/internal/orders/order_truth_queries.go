@@ -2,6 +2,7 @@ package orders
 
 import (
 	"database/sql"
+	"errors"
 	"strings"
 )
 
@@ -15,6 +16,36 @@ func ListPartnerOrderTruth(db *sql.DB, tenantID, storeID, status string, limit i
 
 func ListOperatorOrderTruth(db *sql.DB, tenantID, status string, limit int) ([]OrderTruth, error) {
 	return listOrderTruthByScope(db, tenantID, "operator", "", status, limit)
+}
+
+func GetClientScopedOrderTruth(db *sql.DB, orderID, tenantID, clientID string) (*OrderTruth, error) {
+	orderID = strings.TrimSpace(orderID)
+	tenantID = strings.TrimSpace(tenantID)
+	clientID = strings.TrimSpace(clientID)
+	if orderID == "" || tenantID == "" || clientID == "" { return nil, ErrInvalid }
+	var scopedID string
+	err := db.QueryRow(`
+		SELECT id::text FROM dsh_orders
+		WHERE id=$1::uuid AND tenant_id=$2 AND client_id=$3`, orderID, tenantID, clientID,
+	).Scan(&scopedID)
+	if errors.Is(err, sql.ErrNoRows) { return nil, ErrNotFound }
+	if err != nil { return nil, err }
+	return GetOrderTruth(db, scopedID, tenantID, "client")
+}
+
+func GetPartnerScopedOrderTruth(db *sql.DB, orderID, tenantID, storeID string) (*OrderTruth, error) {
+	orderID = strings.TrimSpace(orderID)
+	tenantID = strings.TrimSpace(tenantID)
+	storeID = strings.TrimSpace(storeID)
+	if orderID == "" || tenantID == "" || storeID == "" { return nil, ErrInvalid }
+	var scopedID string
+	err := db.QueryRow(`
+		SELECT id::text FROM dsh_orders
+		WHERE id=$1::uuid AND tenant_id=$2 AND store_id=$3`, orderID, tenantID, storeID,
+	).Scan(&scopedID)
+	if errors.Is(err, sql.ErrNoRows) { return nil, ErrNotFound }
+	if err != nil { return nil, err }
+	return GetOrderTruth(db, scopedID, tenantID, "partner")
 }
 
 func listOrderTruthByScope(db *sql.DB, tenantID, viewerRole, scopeID, status string, limit int) ([]OrderTruth, error) {
@@ -60,6 +91,7 @@ func listOrderTruthByScope(db *sql.DB, tenantID, viewerRole, scopeID, status str
 	for _, id := range ids {
 		truth, readErr := GetOrderTruth(db, id, tenantID, viewerRole)
 		if readErr != nil { return nil, readErr }
+		RedactOrderTruthForViewer(truth, viewerRole)
 		result = append(result, *truth)
 	}
 	return result, nil
@@ -70,11 +102,15 @@ func RedactOrderTruthForViewer(truth *OrderTruth, viewerRole string) {
 	if truth.Items == nil { truth.Items = []OrderTruthItem{} }
 	if truth.StatusTimeline == nil { truth.StatusTimeline = []OrderTruthEvent{} }
 	if truth.AllowedActions == nil { truth.AllowedActions = []string{"view"} }
-	if viewerRole == "partner" {
+	if viewerRole == "partner" || viewerRole == "operator" {
 		truth.ClientID = ""
 		truth.DeliveryAddressSnapshot = []byte(`{"redacted":true}`)
 	}
-	if viewerRole == "operator" {
-		truth.ClientID = ""
+	for index := range truth.StatusTimeline {
+		// Actor identifiers are deliberately absent from the public event model;
+		// metadata is reduced for non-client surfaces to prevent accidental PII.
+		if viewerRole == "partner" {
+			truth.StatusTimeline[index].Metadata = []byte(`{}`)
+		}
 	}
 }
