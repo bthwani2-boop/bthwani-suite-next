@@ -9,7 +9,7 @@ on:
       - "core/workforce/backend/**"
       - "core/workforce/contracts/**"
       - "services/dsh/frontend/shared/workforce/**"
-      - "services/dsh/frontend/app-field/account/DshFieldProfileCompletionScreen.tsx"
+      - "services/dsh/frontend/app-field/account/**"
       - "apps/app-field/runtime/src/App.tsx"
       - "apps/app-captain/runtime/src/App.tsx"
       - ".github/workflows/jrn-003-workforce-closure.yml"
