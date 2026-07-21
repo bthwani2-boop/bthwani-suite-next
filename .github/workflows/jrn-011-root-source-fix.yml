@@ -1,0 +1,68 @@
+name: JRN-011 One-Time Root Source Fix
+
+on:
+  push:
+    branches:
+      - sambassam
+    paths:
+      - ".github/workflows/jrn-011-root-source-fix.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: jrn-011-root-source-fix
+  cancel-in-progress: false
+
+jobs:
+  apply-root-fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: sambassam
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache: false
+      - name: Apply explicit PostgreSQL payload parameter types
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("services/dsh/backend/internal/orders/order_truth.go")
+          source = path.read_text()
+          old = "jsonb_build_object('orderId',$2,'checkoutIntentId',$5,'correlationId',$4,'version',1))"
+          new = "jsonb_build_object('orderId',$2::text,'checkoutIntentId',$5::text,'correlationId',$4::text,'version',1))"
+          if new in source:
+              print("JRN-011 root source fix is already applied")
+          elif old in source:
+              path.write_text(source.replace(old, new, 1))
+          else:
+              raise SystemExit("canonical JRN-011 outbox payload expression was not found")
+          PY
+          gofmt -w services/dsh/backend/internal/orders/order_truth.go
+          git diff --check
+      - name: Commit exact source fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- services/dsh/backend/internal/orders/order_truth.go; then
+            exit 0
+          fi
+          git config user.name "bthwani-journey-closure"
+          git config user.email "actions@users.noreply.github.com"
+          git add services/dsh/backend/internal/orders/order_truth.go
+          git commit -m "fix(jrn-011): type order event payload parameters"
+          for attempt in 1 2 3; do
+            git fetch origin sambassam
+            git rebase origin/sambassam
+            if git push origin HEAD:sambassam; then
+              exit 0
+            fi
+            sleep 2
+          done
+          exit 1
