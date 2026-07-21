@@ -5,6 +5,8 @@ export * from './order-cancellation.types';
 export * from './order-cancellation.api';
 export * from './use-order-cancellation-controller';
 export * from './use-client-order-journey-controller';
+export * from './use-order-preparation-readback';
+export * from './OrderPreparationReadbackCard';
 export * from './dsh-order-lifecycle-client';
 export * from './captain-order.model';
 export * from './use-orders-controller';
