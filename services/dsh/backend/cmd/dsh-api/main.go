@@ -18,6 +18,7 @@ import (
 	dshHttp "dsh-api/internal/http"
 	"dsh-api/internal/media"
 	"dsh-api/internal/operationaloutbox"
+	"dsh-api/internal/orders"
 	"dsh-api/internal/partnerwltoutbox"
 	"dsh-api/internal/promotionfundingoutbox"
 	"dsh-api/internal/wlt"
@@ -69,8 +70,9 @@ func main() {
 	handler := dshHttp.CorsMiddleware(authMode, router)
 
 	outboxCtx, cancelOutbox := context.WithCancel(context.Background())
+	go orders.RunOrderEventBridgeWorker(outboxCtx, db, 5*time.Second)
 	go operationaloutbox.RunWorker(outboxCtx, db, 5*time.Second)
-	log.Println("[dsh-api] operational outbox worker enabled")
+	log.Println("[dsh-api] order event bridge and operational outbox workers enabled")
 
 	if wltClient.Configured() {
 		go wltoutbox.RunWorker(outboxCtx, db, wltClient, 15*time.Second)
@@ -141,8 +143,8 @@ func newMediaProvider(ctx context.Context) *media.Provider {
 		PublicEndpoint: publicEndpoint,
 		AccessKey:      accessKey,
 		SecretKey:      secretKey,
-		Bucket:         bucket,
-		UseSSL:         useSSL,
-		PublicUseSSL:   publicUseSSL,
+		Bucket:          bucket,
+		UseSSL:          useSSL,
+		PublicUseSSL:    publicUseSSL,
 	}, 15*time.Second)
 }
