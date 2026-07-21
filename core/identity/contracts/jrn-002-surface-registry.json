@@ -1,0 +1,55 @@
+{
+  "journeyId": "JRN-002",
+  "sharedGate": "services/dsh/frontend/shared/session/IdentitySessionGate.tsx",
+  "surfaces": [
+    {
+      "surface": "app-client",
+      "runtime": "apps/app-client/runtime",
+      "requiredRole": "client",
+      "requiredSurface": "app-client",
+      "entry": "apps/app-client/runtime/App.tsx",
+      "selfService": "services/dsh/frontend/app-client/account/IdentityHubScreen.tsx"
+    },
+    {
+      "surface": "app-partner",
+      "runtime": "apps/app-partner/runtime",
+      "requiredRole": "partner",
+      "requiredSurface": "app-partner",
+      "entry": "apps/app-partner/runtime/App.tsx"
+    },
+    {
+      "surface": "app-captain",
+      "runtime": "apps/app-captain/runtime",
+      "requiredRole": "captain",
+      "requiredSurface": "app-captain",
+      "entry": "apps/app-captain/runtime/App.tsx"
+    },
+    {
+      "surface": "app-field",
+      "runtime": "apps/app-field/runtime",
+      "requiredRole": "field",
+      "requiredSurface": "app-field",
+      "entry": "apps/app-field/runtime/App.tsx"
+    },
+    {
+      "surface": "control-panel",
+      "runtime": "apps/control-panel/runtime",
+      "requiredRole": "operator",
+      "requiredSurface": "control-panel",
+      "entry": "apps/control-panel/runtime/src/app/layout.tsx",
+      "serverBoundary": "apps/control-panel/runtime/src/app/api/auth/_lib/identity-server.ts"
+    }
+  ],
+  "requiredControls": [
+    "login mode",
+    "activation mode where role permits",
+    "phone input",
+    "activation-code input",
+    "submit/loading lock",
+    "forbidden role state",
+    "forbidden surface state",
+    "error recovery",
+    "session restoration"
+  ],
+  "deepLinkRule": "Authenticated deep links must remain behind IdentitySessionGate and must never render protected content before role and surface validation."
+}
