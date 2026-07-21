@@ -5,7 +5,6 @@ import {
   classifyOrderError,
   createOrderPreparationIssue,
   resolveOrderPreparationIssue,
-  type DshPreparationIssue,
   type DshPreparationIssueKind,
 } from '../../shared/orders';
 import type { GovernedPartnerOrderItem } from '../../shared/partner/partner.adapters';
@@ -35,6 +34,7 @@ export function PreparationIssuesPanel({
   readonly onUpdated: () => void | Promise<void>;
 }) {
   const [kind, setKind] = React.useState<DshPreparationIssueKind>('missing_item');
+  const [selectedOrderItemId, setSelectedOrderItemId] = React.useState<string | null>(null);
   const [affectedQuantity, setAffectedQuantity] = React.useState('1');
   const [note, setNote] = React.useState('');
   const [replacementName, setReplacementName] = React.useState('');
@@ -45,10 +45,15 @@ export function PreparationIssuesPanel({
 
   const openIssues = order.preparationIssues.filter((issue) => issue.status === 'open');
   const selectedIssue = openIssues.find((issue) => issue.id === selectedIssueId) ?? null;
+  const selectedOrderItem = order.orderItems.find((item) => item.id === selectedOrderItemId) ?? null;
+  const itemRequired = kind !== 'other';
   const quantity = Number.parseInt(affectedQuantity.trim(), 10);
-  const canReport = order.allowedActions.includes('report_issue')
-    && Number.isInteger(quantity)
+  const quantityValid = Number.isInteger(quantity)
     && quantity > 0
+    && (!itemRequired || Boolean(selectedOrderItem && quantity <= selectedOrderItem.quantity));
+  const canReport = order.allowedActions.includes('report_issue')
+    && quantityValid
+    && (!itemRequired || selectedOrderItem !== null)
     && note.trim().length >= 3
     && (kind !== 'substitution_required' || replacementName.trim().length >= 2);
   const canResolve = Boolean(
@@ -66,21 +71,25 @@ export function PreparationIssuesPanel({
         kind,
         affectedQuantity: quantity,
         note: note.trim(),
+        ...(itemRequired && selectedOrderItem
+          ? { orderItemId: selectedOrderItem.id }
+          : {}),
         ...(kind === 'substitution_required'
           ? { replacementProductName: replacementName.trim() }
           : {}),
       });
       await onUpdated();
+      setSelectedOrderItemId(null);
       setNote('');
       setReplacementName('');
       setAffectedQuantity('1');
       setState('success');
-      setMessage('تم تسجيل المشكلة ومنع إعلان الجاهزية حتى حلها.');
+      setMessage('تم تسجيل المشكلة وربطها بالصنف ومنع إعلان الجاهزية حتى حلها.');
     } catch (error) {
       setState('error');
       setMessage(issueErrorMessage(error, 'تعذر تسجيل مشكلة التحضير.'));
     }
-  }, [affectedQuantity, canReport, kind, note, onUpdated, order.id, quantity, replacementName]);
+  }, [canReport, itemRequired, kind, note, onUpdated, order.id, quantity, replacementName, selectedOrderItem]);
 
   const resolveIssue = React.useCallback(async () => {
     if (!selectedIssue || !canResolve) return;
@@ -127,29 +136,35 @@ export function PreparationIssuesPanel({
       {openIssues.length > 0 ? (
         <Box gap={2}>
           <Text role="bodyStrong">المشكلات المفتوحة</Text>
-          {openIssues.map((issue, index) => (
-            <React.Fragment key={issue.id}>
-              {index > 0 ? <Divider /> : null}
-              <Box gap={2} paddingY={2}>
-                <Box layoutDirection="row" justify="space-between" align="center">
-                  <Text role="bodySm">{PREPARATION_ISSUE_KIND_LABELS[issue.kind]}</Text>
-                  <Badge label={`الكمية ${issue.affectedQuantity}`} tone="warning" />
+          {openIssues.map((issue, index) => {
+            const affectedItem = order.orderItems.find((item) => item.id === issue.orderItemId);
+            return (
+              <React.Fragment key={issue.id}>
+                {index > 0 ? <Divider /> : null}
+                <Box gap={2} paddingY={2}>
+                  <Box layoutDirection="row" justify="space-between" align="center">
+                    <Text role="bodySm">{PREPARATION_ISSUE_KIND_LABELS[issue.kind]}</Text>
+                    <Badge label={`الكمية ${issue.affectedQuantity}`} tone="warning" />
+                  </Box>
+                  {affectedItem ? (
+                    <Text role="caption" tone="warning">{`الصنف: ${affectedItem.productName}`}</Text>
+                  ) : null}
+                  <Text role="caption" tone="muted">{issue.note}</Text>
+                  {issue.replacementProductName ? (
+                    <Text role="caption" tone="warning">{`البديل المقترح: ${issue.replacementProductName}`}</Text>
+                  ) : null}
+                  <Button
+                    label={selectedIssueId === issue.id ? 'إلغاء الحل' : 'حل المشكلة'}
+                    tone="secondary"
+                    size="sm"
+                    fullWidth={false}
+                    disabled={!order.allowedActions.includes('resolve_issue') || state === 'submitting'}
+                    onPress={() => setSelectedIssueId(selectedIssueId === issue.id ? null : issue.id)}
+                  />
                 </Box>
-                <Text role="caption" tone="muted">{issue.note}</Text>
-                {issue.replacementProductName ? (
-                  <Text role="caption" tone="warning">{`البديل المقترح: ${issue.replacementProductName}`}</Text>
-                ) : null}
-                <Button
-                  label={selectedIssueId === issue.id ? 'إلغاء الحل' : 'حل المشكلة'}
-                  tone="secondary"
-                  size="sm"
-                  fullWidth={false}
-                  disabled={!order.allowedActions.includes('resolve_issue') || state === 'submitting'}
-                  onPress={() => setSelectedIssueId(selectedIssueId === issue.id ? null : issue.id)}
-                />
-              </Box>
-            </React.Fragment>
-          ))}
+              </React.Fragment>
+            );
+          })}
         </Box>
       ) : null}
 
@@ -181,21 +196,52 @@ export function PreparationIssuesPanel({
                 tone={kind === issueKind ? 'secondary' : 'ghost'}
                 size="sm"
                 fullWidth={false}
-                onPress={() => setKind(issueKind)}
+                onPress={() => {
+                  setKind(issueKind);
+                  if (issueKind === 'other') setSelectedOrderItemId(null);
+                }}
               />
             ))}
           </Box>
+          {itemRequired ? (
+            <Box gap={2}>
+              <Text role="bodySm">اختر الصنف المتأثر من عناصر الطلب</Text>
+              {order.orderItems.map((item) => (
+                <Button
+                  key={item.id}
+                  label={`${item.productName} · الكمية ${item.quantity}`}
+                  tone={selectedOrderItemId === item.id ? 'secondary' : 'ghost'}
+                  size="sm"
+                  fullWidth={false}
+                  onPress={() => {
+                    setSelectedOrderItemId(item.id);
+                    if (quantity > item.quantity) setAffectedQuantity(String(item.quantity));
+                  }}
+                />
+              ))}
+              {order.orderItems.length === 0 ? (
+                <StateView
+                  tone="danger"
+                  title="تعذر ربط المشكلة بصنف"
+                  description="أعد تحميل الطلب قبل تسجيل مشكلة تخص صنفًا."
+                />
+              ) : null}
+            </Box>
+          ) : null}
           <TextField
             label="الكمية المتأثرة"
             value={affectedQuantity}
             onChangeText={setAffectedQuantity}
             placeholder="1"
           />
+          {selectedOrderItem && quantity > selectedOrderItem.quantity ? (
+            <Text role="caption" tone="danger">لا يمكن أن تتجاوز الكمية المتأثرة كمية الصنف في الطلب.</Text>
+          ) : null}
           <TextField
             label="تفاصيل المشكلة"
             value={note}
             onChangeText={setNote}
-            placeholder="اذكر الصنف والسبب بوضوح"
+            placeholder="اذكر السبب بوضوح"
           />
           {kind === 'substitution_required' ? (
             <TextField
