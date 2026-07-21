@@ -1,6 +1,13 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { createDshRawHttpClient } from "../_kernel/dsh-http-request";
-import type { DshNotification, DshNotificationPreference, DshPlatformNotificationConfig } from "./notifications.types";
+import type {
+  DshNotification,
+  DshNotificationDeliveryAttempt,
+  DshNotificationDeliveryAuditSummary,
+  DshNotificationDeliveryOutcome,
+  DshNotificationPreference,
+  DshPlatformNotificationConfig,
+} from "./notifications.types";
 
 const { req: request } = createDshRawHttpClient(resolveDshApiBaseUrl(), "notif");
 
@@ -44,4 +51,16 @@ export async function upsertPlatformNotificationConfig(
     method: "PUT",
     body: JSON.stringify({ topic, actorTypes, isEnabled, description }),
   });
+}
+
+export async function fetchNotificationDeliveryAttempts(
+  outcome?: DshNotificationDeliveryOutcome,
+  limit = 100,
+): Promise<{
+  attempts: DshNotificationDeliveryAttempt[];
+  summary: DshNotificationDeliveryAuditSummary;
+}> {
+  const query = new URLSearchParams({ limit: String(limit) });
+  if (outcome) query.set("outcome", outcome);
+  return request(`/dsh/operator/notifications/delivery-attempts?${query.toString()}`);
 }
