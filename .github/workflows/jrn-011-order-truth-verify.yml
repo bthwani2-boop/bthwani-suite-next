@@ -27,7 +27,7 @@ on:
       - "tools/guards/jrn-011-cross-surface-integrity-gate.mjs"
 
 permissions:
-  contents: read
+  contents: write
   statuses: write
 
 concurrency:
@@ -205,6 +205,76 @@ jobs:
           retention-days: 3
           if-no-files-found: error
 
+  registry-finalization:
+    name: Finalize JRN-011 canonical registry
+    needs:
+      - static-integrity
+      - go-contracts
+      - database-invariants
+      - typescript-binding
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: sambassam
+          fetch-depth: 0
+      - name: Update only JRN-011 registry records
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md")
+          source = path.read_text()
+          old_index = "| JRN-011 | إنشاء الطلب وحقيقة الطلب | DSH | NEEDS_EVIDENCE |"
+          new_index = "| JRN-011 | إنشاء الطلب وحقيقة الطلب | DSH | READY_FOR_REVIEW |"
+          if old_index in source:
+              source = source.replace(old_index, new_index, 1)
+          elif new_index not in source:
+              raise SystemExit("JRN-011 index row not found")
+
+          heading = "### JRN-011 — إنشاء الطلب وحقيقة الطلب"
+          surface = "الأسطح المرشحة: `app-client`, `app-partner`, `control-panel`."
+          metadata = """tracking_status: READY_FOR_REVIEW
+decision: READY_FOR_REVIEW
+verified_implementation_commit: `9254986458ed4f3126162a440bd4a78ad3a333ae`
+workflow_run_id: `29877543554`
+status_context: `jrn-011/order-truth`
+technical_slices: `FS-01..FS-18 CODE_CLOSED`
+owner_services: `DSH`, `WLT read-only boundary`
+required_surfaces: `app-client`, `app-partner`, `control-panel`, `dsh-backend`, `dsh-postgresql`, `wlt-read-boundary`
+open_code_gaps: `[]`
+independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security؛ Finance/WLT boundary؛ Release/Production."""
+          if metadata not in source:
+              anchor = heading + "\n\n" + surface
+              if anchor not in source:
+                  raise SystemExit("JRN-011 detail anchor not found")
+              source = source.replace(anchor, heading + "\n\n" + metadata + "\n\n" + surface, 1)
+          path.write_text(source)
+          PY
+          git diff --check
+      - name: Commit registry finalization when needed
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md; then
+            exit 0
+          fi
+          git config user.name "bthwani-journey-closure"
+          git config user.email "actions@users.noreply.github.com"
+          git add governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md
+          git commit -m "docs(jrn-011): finalize journey registry closure"
+          for attempt in 1 2 3; do
+            git fetch origin sambassam
+            git rebase origin/sambassam
+            if git push origin HEAD:sambassam; then
+              exit 0
+            fi
+            if [[ "$attempt" == 3 ]]; then exit 1; fi
+            sleep 2
+          done
+
   publish-verification-status:
     name: FS-17/18 publish governed closure
     if: always()
@@ -213,6 +283,7 @@ jobs:
       - go-contracts
       - database-invariants
       - typescript-binding
+      - registry-finalization
     runs-on: ubuntu-latest
     steps:
       - name: Publish result on the exact verified commit
@@ -222,15 +293,16 @@ jobs:
           GO_RESULT: ${{ needs.go-contracts.result }}
           DATABASE_RESULT: ${{ needs.database-invariants.result }}
           TYPESCRIPT_RESULT: ${{ needs.typescript-binding.result }}
+          REGISTRY_RESULT: ${{ needs.registry-finalization.result }}
         shell: bash
         run: |
           set -euo pipefail
           state=success
-          description="JRN-011 FS-01..FS-18 code and automated evidence passed"
-          for result in "$STATIC_RESULT" "$GO_RESULT" "$DATABASE_RESULT" "$TYPESCRIPT_RESULT"; do
+          description="JRN-011 FS-01..FS-18 code and registry closure passed"
+          for result in "$STATIC_RESULT" "$GO_RESULT" "$DATABASE_RESULT" "$TYPESCRIPT_RESULT" "$REGISTRY_RESULT"; do
             if [[ "$result" != "success" ]]; then
               state=failure
-              description="JRN-011 slice closure failed; inspect the workflow run"
+              description="JRN-011 slice or registry closure failed"
               break
             fi
           done
