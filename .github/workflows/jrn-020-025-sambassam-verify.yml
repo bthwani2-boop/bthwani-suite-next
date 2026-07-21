@@ -1,5 +1,5 @@
 name: JRN 020-025 sambassam verification
-# Closure verification rerun after exact-optional and notification-state repairs.
+# Closure verification for the unified journeys 020 through 025.
 
 on:
   push:
@@ -16,6 +16,7 @@ on:
       - services/dsh/frontend/shared/marketing/**
       - services/dsh/frontend/app-captain/orders/**
       - services/dsh/frontend/app-captain/account/**
+      - services/dsh/backend/cmd/dsh-api/main.go
       - services/dsh/backend/internal/dispatch/**
       - services/dsh/backend/internal/support/**
       - services/dsh/backend/internal/notifications/**
@@ -111,11 +112,11 @@ jobs:
           go-version-file: services/dsh/backend/go.mod
           cache-dependency-path: services/dsh/backend/go.sum
 
-      - name: Run journey backend tests
+      - name: Run journey backend domain tests
         shell: bash
         working-directory: services/dsh/backend
         run: |
-          echo "journey-backend-tests" > /tmp/jrn-verification-stage
+          echo "journey-backend-domain-tests" > /tmp/jrn-verification-stage
           set +e
           go test \
             ./internal/dispatch \
@@ -124,8 +125,28 @@ jobs:
             ./internal/specialrequests \
             ./internal/fieldreadiness \
             ./internal/marketing \
-            ./internal/http \
             2>&1 | tee /tmp/jrn-verification.log
+          EXIT_CODE=${PIPESTATUS[0]}
+          exit "$EXIT_CODE"
+
+      - name: Run journey HTTP route matrix
+        shell: bash
+        working-directory: services/dsh/backend
+        run: |
+          echo "journey-http-route-matrix" > /tmp/jrn-verification-stage
+          set +e
+          go test ./internal/http -run '^TestJourneys020To025ExposeGovernedRoutes$' -count=1 \
+            2>&1 | tee /tmp/jrn-verification.log
+          EXIT_CODE=${PIPESTATUS[0]}
+          exit "$EXIT_CODE"
+
+      - name: Compile DSH API entrypoint
+        shell: bash
+        working-directory: services/dsh/backend
+        run: |
+          echo "compile-dsh-api" > /tmp/jrn-verification-stage
+          set +e
+          go test ./cmd/dsh-api -run '^$' -count=1 2>&1 | tee /tmp/jrn-verification.log
           EXIT_CODE=${PIPESTATUS[0]}
           exit "$EXIT_CODE"
 
