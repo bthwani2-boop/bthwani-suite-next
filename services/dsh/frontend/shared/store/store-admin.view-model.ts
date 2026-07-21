@@ -40,6 +40,19 @@ export type DshStoreAdminDetail = DshStoreAdminTableRow & {
   readonly version: number;
 };
 
+export type DshStoreAuditEvent = {
+  readonly id: string;
+  readonly actorId: string;
+  readonly actorRole: string;
+  readonly storeId: string;
+  readonly action: string;
+  readonly fromState: Readonly<Record<string, unknown>>;
+  readonly toState: Readonly<Record<string, unknown>>;
+  readonly reason: string;
+  readonly correlationId: string;
+  readonly createdAt: string;
+};
+
 export type DshStoreAdminListState =
   | { readonly kind: "loading" }
   | { readonly kind: "empty" }
@@ -72,6 +85,14 @@ export type DshStorePublicationDiagnosticsState =
       readonly isReady: boolean;
       readonly blockers: readonly string[];
     };
+
+export type DshStoreAuditState =
+  | { readonly kind: "idle" }
+  | { readonly kind: "loading" }
+  | { readonly kind: "error"; readonly message: string }
+  | { readonly kind: "not_found" }
+  | { readonly kind: "permission_denied"; readonly statusCode: 401 | 403 }
+  | { readonly kind: "success"; readonly events: readonly DshStoreAuditEvent[] };
 
 export type DshStoreAdminKpiSummary = {
   readonly total: number;
@@ -175,9 +196,9 @@ export function toAdminKpiSummary(
   rows: readonly DshStoreAdminTableRow[],
   total: number,
 ): DshStoreAdminKpiSummary {
-  const visible = rows.filter((r) => r.isVisible).length;
-  const open = rows.filter((r) => r.isOpen).length;
-  const categoryCount = new Set(rows.map((r) => r.category)).size;
+  const visible = rows.filter((row) => row.isVisible).length;
+  const open = rows.filter((row) => row.isOpen).length;
+  const categoryCount = new Set(rows.map((row) => row.category)).size;
   return { total, visible, open, categoryCount };
 }
 
@@ -190,12 +211,12 @@ export function applyAdminFilters(
     if (filters.isVisible !== null && row.isVisible !== filters.isVisible) return false;
     if (filters.category !== null && row.category !== filters.category) return false;
     if (filters.search !== null && filters.search.trim().length > 0) {
-      const q = filters.search.trim().toLowerCase();
+      const query = filters.search.trim().toLowerCase();
       return (
-        row.displayName.toLowerCase().includes(q) ||
-        row.id.toLowerCase().includes(q) ||
-        row.cityCode.toLowerCase().includes(q) ||
-        row.serviceAreaCode.toLowerCase().includes(q)
+        row.displayName.toLowerCase().includes(query) ||
+        row.id.toLowerCase().includes(query) ||
+        row.cityCode.toLowerCase().includes(query) ||
+        row.serviceAreaCode.toLowerCase().includes(query)
       );
     }
     return true;
