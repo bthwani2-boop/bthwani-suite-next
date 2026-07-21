@@ -7,6 +7,7 @@ import type { CompactOrderChatMessage, CaptainAppMode } from './captain.contract
 import type { StoreCourierStage, ActiveOrderPhase } from './delivery.contract';
 import { useCaptainOrderRuntime, type CaptainDeliveryExceptionDraft } from './use-captain-order-runtime';
 import { DSH_CAPTAIN_CONTRACT_CAPABILITIES } from '../orders/dsh-order-lifecycle-client';
+import { uploadAndSubmitCaptainDeliveryProof } from '../media/pod/delivery-proof-media.api';
 
 export type DeliveryActionsDeps = {
   captainRuntimeId: string;
@@ -37,7 +38,6 @@ export function useCaptainDeliveryActions(deps: DeliveryActionsDeps) {
     activeAssignmentId,
     setActiveAssignmentId,
     captainPodPhotoUri,
-    captainPodMediaKey,
     captainAppMode,
     setRoute,
     resetOrderState,
@@ -111,33 +111,30 @@ export function useCaptainDeliveryActions(deps: DeliveryActionsDeps) {
 
   const confirmDelivery = React.useCallback(async () => {
     if (!captainRuntimeId || !activeAssignmentId) return void setCaptainPodState('error');
-    try {
-      await captainOrderRuntime.deliverOrder(activeAssignmentId, captainRuntimeId);
-      await Promise.resolve(refreshInbox());
-      setInboxState('delivered');
-      setActiveOrderExpanded(false);
-    } catch (err) {
-      console.error('[captain:confirm-delivery]', err);
-      setCaptainPodState('error');
-    }
-  }, [activeAssignmentId, captainOrderRuntime, captainRuntimeId, refreshInbox, setCaptainPodState, setInboxState, setActiveOrderExpanded]);
+    setCaptainPodState('ready');
+    setRoute('pod-submission');
+  }, [activeAssignmentId, captainRuntimeId, setCaptainPodState, setRoute]);
 
   const confirmPodSubmission = React.useCallback(async () => {
-    if (!captainRuntimeId || !activeAssignmentId || !captainPodPhotoUri || !captainPodMediaKey) return;
+    if (!captainRuntimeId || !activeAssignmentId || !captainPodPhotoUri) {
+      setCaptainPodState('error');
+      return;
+    }
     setCaptainPodState('loading');
     try {
-      await captainOrderRuntime.deliverOrder(activeAssignmentId, captainRuntimeId, captainPodMediaKey);
+      await uploadAndSubmitCaptainDeliveryProof(activeAssignmentId, { uri: captainPodPhotoUri });
       await Promise.resolve(refreshInbox());
       setCaptainPodState('success');
+      setInboxState('delivered');
+      setActiveOrderExpanded(false);
       if (captainAppMode === 'store_courier_mode') {
         setStoreCourierStage('delivered' as StoreCourierStage);
-        setInboxState('delivered');
       }
     } catch (err) {
       console.error('[captain:pod-submit]', err);
       setCaptainPodState('error');
     }
-  }, [activeAssignmentId, captainAppMode, captainOrderRuntime, captainRuntimeId, captainPodMediaKey, captainPodPhotoUri, refreshInbox, setCaptainPodState, setStoreCourierStage, setInboxState]);
+  }, [activeAssignmentId, captainAppMode, captainPodPhotoUri, captainRuntimeId, refreshInbox, setActiveOrderExpanded, setCaptainPodState, setInboxState, setStoreCourierStage]);
 
   const reportPodFailure = React.useCallback(async (draft: CaptainDeliveryExceptionDraft) => {
     if (!captainRuntimeId || !activeAssignmentId) {
