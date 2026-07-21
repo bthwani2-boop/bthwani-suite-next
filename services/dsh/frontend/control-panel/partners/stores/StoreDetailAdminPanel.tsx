@@ -12,12 +12,14 @@ import {
   formatDeliveryModes,
   type DshStoreAdminDetailState,
   type DshStorePublicationDiagnosticsState,
+  type DshStoreAuditState,
 } from "../../../shared/store";
 import { uploadAndLinkAsset } from "../../../shared/catalog";
 
 type Props = {
   readonly state: DshStoreAdminDetailState;
   readonly diagnosticsState: DshStorePublicationDiagnosticsState;
+  readonly auditState: DshStoreAuditState;
   readonly onClose: () => void;
 };
 
@@ -100,7 +102,40 @@ function StoreDiagnosticsRows({ state }: { readonly state: DshStorePublicationDi
   );
 }
 
-export function StoreDetailAdminPanel({ state, diagnosticsState, onClose }: Props) {
+function StoreAuditRows({ state }: { readonly state: DshStoreAuditState }) {
+  if (state.kind === "idle" || state.kind === "loading") {
+    return <CpDescriptionRow label="سجل التدقيق">جاري تحميل أثر القرارات…</CpDescriptionRow>;
+  }
+  if (state.kind === "permission_denied") {
+    return <CpDescriptionRow label="سجل التدقيق">HTTP {state.statusCode} — غير مصرح.</CpDescriptionRow>;
+  }
+  if (state.kind === "not_found") {
+    return <CpDescriptionRow label="سجل التدقيق">المتجر غير موجود.</CpDescriptionRow>;
+  }
+  if (state.kind === "error") {
+    return <CpDescriptionRow label="سجل التدقيق">{state.message}</CpDescriptionRow>;
+  }
+  if (state.events.length === 0) {
+    return <CpDescriptionRow label="سجل التدقيق">لا توجد قرارات مسجلة بعد.</CpDescriptionRow>;
+  }
+  return (
+    <CpDescriptionRow label="سجل التدقيق">
+      <ol aria-label="أحدث قرارات حوكمة المتجر">
+        {state.events.map((event) => (
+          <li key={event.id}>
+            <strong>{event.action}</strong>
+            {" — "}{event.actorRole} / {event.actorId}
+            {" — "}{event.reason}
+            {" — "}{new Date(event.createdAt).toLocaleString("ar")}
+            {" — "}معرّف الارتباط: <CpInlineCode>{event.correlationId}</CpInlineCode>
+          </li>
+        ))}
+      </ol>
+    </CpDescriptionRow>
+  );
+}
+
+export function StoreDetailAdminPanel({ state, diagnosticsState, auditState, onClose }: Props) {
   return (
     <CpDetailPanel title="تفاصيل المتجر" onClose={onClose}>
       {state.kind === "loading" && (
@@ -169,6 +204,7 @@ export function StoreDetailAdminPanel({ state, diagnosticsState, onClose }: Prop
             {state.detail.publicationEligible ? "مؤهل" : "غير مؤهل"}
           </CpDescriptionRow>
           <StoreDiagnosticsRows state={diagnosticsState} />
+          <StoreAuditRows state={auditState} />
           {state.detail.deliveryEtaMin !== null &&
             state.detail.deliveryEtaMax !== null && (
               <CpDescriptionRow label="وقت التوصيل">
