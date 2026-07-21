@@ -27,6 +27,8 @@ on:
       - "services/dsh/backend/internal/http/specialrequests.go"
       - "services/dsh/backend/internal/http/notifications.go"
       - "services/dsh/backend/internal/http/notification_routes.go"
+      - "services/dsh/backend/internal/http/notification_delivery_audit.go"
+      - "services/dsh/backend/internal/http/notification_delivery_audit_test.go"
       - "services/dsh/backend/internal/http/fieldreadiness.go"
       - "services/dsh/backend/internal/http/field_readiness_routes.go"
       - "services/dsh/backend/internal/http/marketing.go"
@@ -63,9 +65,11 @@ on:
       - "services/dsh/frontend/app-partner/team/PartnerTeamManagementScreen.tsx"
       - "services/dsh/frontend/control-panel/operations/SpecialOpsWorkbenchScreen.tsx"
       - "services/dsh/frontend/control-panel/operations/AreaCapacityScreen.tsx"
+      - "services/dsh/frontend/control-panel/support/PlatformNotificationConfigScreen.tsx"
       - "services/dsh/frontend/control-panel/marketing/**"
       - "services/dsh/tests/journeys-020-025-binding.test.mjs"
       - "services/dsh/tests/journeys-026-030-binding.test.mjs"
+      - "services/dsh/tests/jrn-023-notification-delivery-binding.test.mjs"
       - "services/dsh/tests/jrn-030-partner-fleet-surface-binding.test.mjs"
       - "services/wlt/backend/internal/promotionfunding/**"
       - "services/wlt/contracts/wlt.promotion-funding.openapi.yaml"
@@ -102,13 +106,16 @@ jobs:
           node --test
           services/dsh/tests/journeys-020-025-binding.test.mjs
           services/dsh/tests/journeys-026-030-binding.test.mjs
+          services/dsh/tests/jrn-023-notification-delivery-binding.test.mjs
           services/dsh/tests/jrn-030-partner-fleet-surface-binding.test.mjs
-      - name: Verify sovereign boundaries
-        run: |
-          pnpm guard:fullstack-boundary
-          pnpm guard:wlt-financial-boundary
-          pnpm guard:no-broken-imports
-          node tools/guards/jrn-015-020-affected-boundary.mjs
+      - name: Verify full-stack ownership boundary
+        run: pnpm guard:fullstack-boundary
+      - name: Verify WLT financial ownership boundary
+        run: pnpm guard:wlt-financial-boundary
+      - name: Verify repository imports
+        run: pnpm guard:no-broken-imports
+      - name: Verify JRN-015..020 affected boundary
+        run: node tools/guards/jrn-015-020-affected-boundary.mjs
 
   typecheck:
     name: Shared brain and authorized surface typecheck
