@@ -29,4 +29,7 @@ func RegisterOrderJourneyRoutes(
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/preparation-issues/{issueId}/resolve", protected.handleResolvePreparationIssue)
 	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/order-preparation-policy", protected.handleGetStorePreparationPolicy)
 	mux.HandleFunc("PUT /dsh/partner/stores/{storeId}/order-preparation-policy", protected.handleUpdateStorePreparationPolicy)
+
+	mux.HandleFunc("POST /dsh/captain/dispatch/assignments/{assignmentId}/handoff-exceptions", protected.handleReportCaptainStoreCaptainHandoffException)
+	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/captain-handoff/exceptions", protected.handleReportPartnerStoreCaptainHandoffException)
 }
