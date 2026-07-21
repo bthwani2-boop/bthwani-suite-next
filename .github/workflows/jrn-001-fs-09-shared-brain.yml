@@ -6,6 +6,7 @@ on:
     paths:
       - services/dsh/frontend/shared/partner/**
       - services/dsh/frontend/shared/field-onboarding/**
+      - services/dsh/frontend/shared/support/support.partner-policies.ts
       - services/dsh/frontend/app-field/onboarding/**
       - services/dsh/frontend/app-partner/account/PartnerOnboardingStatusView.tsx
       - services/dsh/frontend/control-panel/partners/**
