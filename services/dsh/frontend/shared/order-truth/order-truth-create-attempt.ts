@@ -24,12 +24,13 @@ export function fingerprintOrderTruthInput(input: CreateOrderTruthInput): string
 }
 
 function newAttempt(fingerprint: string): StoredOrderTruthAttempt {
-  const part = uniquePart();
+  const idempotencyPart = uniquePart();
+  const correlationPart = uniquePart();
   return {
     fingerprint,
     context: {
-      idempotencyKey: `order-create:${part}`,
-      correlationId: `order-create:${part}`,
+      idempotencyKey: `order-create:${idempotencyPart}`,
+      correlationId: `order-trace:${correlationPart}`,
     },
   };
 }
@@ -41,7 +42,8 @@ function isStoredAttempt(value: unknown): value is StoredOrderTruthAttempt {
     typeof candidate.context?.idempotencyKey === "string" &&
     candidate.context.idempotencyKey.length >= 16 &&
     typeof candidate.context.correlationId === "string" &&
-    candidate.context.correlationId.length >= 8;
+    candidate.context.correlationId.length >= 8 &&
+    candidate.context.idempotencyKey !== candidate.context.correlationId;
 }
 
 export async function getOrCreateOrderTruthAttempt(
