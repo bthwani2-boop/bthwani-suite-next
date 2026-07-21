@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-014",
+  "title": "إسناد الكابتن والتوزيع",
+  "owner": "services/dsh",
+  "truthOwner": "DSH",
+  "financialBoundary": "WLT_REFERENCE_ONLY",
+  "surfaces": ["control-panel", "app-captain", "app-client"],
+  "goal": "إنشاء عرض إسناد واحد محكوم للطلب الجاهز، عرضه للكابتن، تسجيل قراره، وإنهاء أو إعادة الإسناد دون تضارب أو بيانات وهمية.",
+  "acceptanceCriteria": [
+    "لا يُنشأ العرض إلا لطلب bthwani_delivery في ready_for_pickup ومنطقة متجر مطابقة.",
+    "لا يُرشح إلا كابتن معتمد ومتاح ومربوط بالمنطقة ولديه سعة متبقية.",
+    "إنشاء العرض وإعادة الإسناد محميان بمفتاح idempotency ومعاملات وقفل تزامن.",
+    "يظهر للكابتن الطلب والمنطقة والمسافة والأولوية وسبب العرض ومهلة الرد من DSH.",
+    "القبول والرفض يخصان الكابتن المصادق عليه فقط والرفض يتطلب سببًا.",
+    "العرض المتأخر ينتهي ويعود الطلب إلى ready_for_pickup مع قرار تدقيقي.",
+    "الإلغاء وإعادة الإسناد ممنوعان بعد بدء الاستلام التنفيذي.",
+    "يعرض المشغل الإسنادات النشطة والبدائل المؤهلة وسجل القرارات الحقيقي.",
+    "يرى العميل حالة التتبع فقط ولا يرى بيانات أهلية الكابتن أو قرارات التشغيل الداخلية."
+  ],
+  "negativeInvariants": [
+    "لا إسناد عبر captainId فقط دون serviceAreaCode وidempotencyKey.",
+    "لا حساب أهلية أو سعة نهائي داخل الواجهة.",
+    "لا قبول أو تنفيذ بعد انتهاء المهلة.",
+    "لا إسنادين نشطين لنفس الطلب.",
+    "لا تجاوز لسعة الكابتن تحت الطلبات المتزامنة.",
+    "لا قراءة إسنادات مستأجر آخر.",
+    "لا إعادة إسناد غير ذرية تترك الطلب بلا مهمة أو بمهمتين.",
+    "لا بيانات عميل أو عنوان أو قيمة مالية ثابتة أو وهمية في تطبيق الكابتن.",
+    "لا تعديل رصيد أو عمولة أو تسوية داخل DSH.",
+    "لا اعتبار الرحلة مغلقة إنتاجيًا دون مراجعات QA والأمن والمنتج المستقلة."
+  ],
+  "sliceClosureRegistry": "services/dsh/contracts/jrn-014-slice-closure.json",
+  "evidenceRequired": ["static", "database", "contract", "backend", "runtime", "cross-surface", "security", "isolation", "qa", "governance", "ci"],
+  "statusContext": "dispatch-governance",
+  "internalZeroGate": "PENDING_AUTOMATED_VERIFICATION",
+  "openCodeGaps": [],
+  "independentReviewPending": ["product-owner", "qa-device-accessibility", "security", "release-production"],
+  "decision": "IMPLEMENTED_PENDING_VERIFICATION"
+}
