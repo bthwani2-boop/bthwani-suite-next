@@ -10,7 +10,10 @@ on:
       - "services/dsh/backend/internal/dispatch/store_captain_handoff*.go"
       - "services/dsh/backend/internal/http/store_captain_handoff*.go"
       - "services/dsh/backend/internal/http/order_journey_routes.go"
+      - "services/dsh/backend/internal/http/partner_order_workboard.go"
+      - "services/dsh/backend/internal/http/partner_order_workboard_test.go"
       - "services/dsh/contracts/dsh.store-captain-handoff.openapi.yaml"
+      - "services/dsh/contracts/jrn-013-slice-closure.json"
       - "services/dsh/contracts/contract-registry.ts"
       - "services/dsh/database/migrations/dsh-095_store_captain_outbound_handoff.sql"
       - "services/dsh/database/migrations/dsh-096_store_captain_handoff_reassignment.sql"
@@ -18,6 +21,8 @@ on:
       - "services/dsh/frontend/shared/dispatch/**"
       - "services/dsh/frontend/shared/orders/orders.api.ts"
       - "services/dsh/frontend/shared/orders/orders.types.ts"
+      - "services/dsh/frontend/shared/orders/use-client-order-journey-controller.ts"
+      - "services/dsh/frontend/shared/partner/partner.adapters.ts"
       - "services/dsh/frontend/shared/delivery/captain.surface-model.ts"
       - "services/dsh/frontend/shared/delivery/captain.surface.types.ts"
       - "services/dsh/frontend/app-partner/orders/GovernedPartnerOrdersScreen.tsx"
@@ -25,7 +30,9 @@ on:
       - "services/dsh/frontend/app-captain/DshCaptainSurface.tsx"
       - "services/dsh/frontend/app-captain/DshCaptainOrderJourneyRenderer.tsx"
       - "services/dsh/frontend/app-captain/orders/OperationalCaptainExecutionScreen.tsx"
+      - "services/dsh/frontend/control-panel/operations/ExceptionsEscalationsScreen.tsx"
       - "services/dsh/tests/store-captain-handoff-closure.test.mjs"
+      - "services/dsh/tests/jrn-013-slice-closure.test.mjs"
   workflow_dispatch:
 
 permissions:
@@ -58,9 +65,17 @@ jobs:
         shell: bash
         run: pnpm install --frozen-lockfile
 
-      - name: Verify full-stack custody bindings
+      - name: Verify all registered custody slices
         shell: bash
-        run: node --test services/dsh/tests/store-captain-handoff-closure.test.mjs
+        run: |
+          set -euo pipefail
+          node --test \
+            services/dsh/tests/store-captain-handoff-closure.test.mjs \
+            services/dsh/tests/jrn-013-slice-closure.test.mjs
+
+      - name: Validate contract registry and OpenAPI foundation
+        shell: bash
+        run: pnpm run contracts:lint
 
       - name: Typecheck DSH shared brain and surfaces
         shell: bash
@@ -115,6 +130,8 @@ jobs:
             services/dsh/backend/internal/http/store_captain_handoff.go
             services/dsh/backend/internal/http/store_captain_handoff_exceptions.go
             services/dsh/backend/internal/http/order_journey_routes.go
+            services/dsh/backend/internal/http/partner_order_workboard.go
+            services/dsh/backend/internal/http/partner_order_workboard_test.go
           )
           test -z "$(gofmt -l "${files[@]}")"
 
@@ -124,6 +141,13 @@ jobs:
           set -euo pipefail
           cd services/dsh/backend
           go test ./internal/dispatch ./internal/http ./cmd/dsh-api -run '^$' -count=1
+
+      - name: Prove partner action suppression
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd services/dsh/backend
+          go test ./internal/http -run '^TestPartnerOrderAllowedActions$' -count=1 -v
 
       - name: Apply DSH migrations from a clean database
         shell: bash
