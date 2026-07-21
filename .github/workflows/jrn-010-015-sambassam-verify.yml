@@ -1,0 +1,51 @@
+name: JRN 010-015 sambassam verification
+
+on:
+  push:
+    branches:
+      - sambassam
+    paths:
+      - .github/workflows/jrn-010-015-sambassam-verify.yml
+      - services/dsh/frontend/shared/checkout/**
+      - services/dsh/frontend/shared/dispatch/**
+      - services/dsh/frontend/shared/pickup/**
+      - services/dsh/frontend/app-partner/orders/**
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jrn-010-015-sambassam-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  affected-typecheck:
+    runs-on: ubuntu-latest
+    container: node:24.17.0-bookworm
+    timeout-minutes: 20
+    steps:
+      - name: Checkout pinned source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Activate locked pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.34.2 --activate
+          node --version
+          pnpm --version
+      - name: Install locked workspace
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck app-client runtime
+        run: pnpm --dir apps/app-client/runtime typecheck
+      - name: Typecheck app-partner runtime
+        run: pnpm --dir apps/app-partner/runtime typecheck
+      - name: Typecheck app-captain runtime
+        run: pnpm --dir apps/app-captain/runtime typecheck
+      - name: Typecheck control-panel runtime
+        run: pnpm --dir apps/control-panel/runtime typecheck
+      - name: Run affected full-stack boundaries
+        run: |
+          pnpm run guard:no-broken-imports
+          pnpm run guard:fullstack-boundary
+          pnpm run guard:wlt-financial-boundary
