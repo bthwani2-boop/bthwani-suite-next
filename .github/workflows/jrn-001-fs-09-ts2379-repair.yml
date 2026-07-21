@@ -17,32 +17,23 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           fetch-depth: 0
-      - name: Repair exact optional request options
+      - name: Permit explicit undefined mutation option
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
-          import re
-
           path = Path('services/dsh/frontend/shared/partner/partner.api.ts')
           text = path.read_text(encoding='utf-8')
-          pattern = re.compile(r'''  return httpClient\.request<T>\(path, \{\n\s*method: options\.method,\n\s*body: options\.body,\n\s*idempotencyKey: mutation\?\.idempotencyKey,\n\s*correlationId: mutation\?\.correlationId,\n\s*expectedVersion: mutation\?\.expectedVersion,\n\s*\}\);''')
-          replacement = '''  return httpClient.request<T>(path, {
-    ...(options.method !== undefined ? { method: options.method } : {}),
-    ...(options.body !== undefined ? { body: options.body } : {}),
-    ...(mutation?.idempotencyKey !== undefined ? { idempotencyKey: mutation.idempotencyKey } : {}),
-    ...(mutation?.correlationId !== undefined ? { correlationId: mutation.correlationId } : {}),
-    ...(mutation?.expectedVersion !== undefined ? { expectedVersion: mutation.expectedVersion } : {}),
-  });'''
-          text, count = pattern.subn(replacement, text, count=1)
-          if count != 1:
-              raise SystemExit(f'request option block matches={count}')
-          path.write_text(text, encoding='utf-8')
+          old = '  readonly mutation?: PartnerMutationContext;'
+          new = '  readonly mutation?: PartnerMutationContext | undefined;'
+          if old not in text:
+              raise SystemExit('PartnerRequestOptions mutation property not found')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
           PY
           git config user.name 'bthwani-governance-bot'
           git config user.email 'noreply@bthwani.local'
           git add services/dsh/frontend/shared/partner/partner.api.ts
-          git commit -m 'fix(jrn-001): honor exact optional request options'
+          git commit -m 'fix(jrn-001): permit explicit undefined mutation context'
           git push origin HEAD:sambassam
       - name: Publish repair status
         if: always()
