@@ -123,6 +123,18 @@ export type DshStoreCaptainHandoff = {
   readonly updatedAt: string;
 };
 
+export type DshStoreCaptainHandoffExceptionReason =
+  | "handoff_shortage"
+  | "handoff_mismatch";
+
+export type DshReportStoreCaptainHandoffExceptionInput = {
+  readonly reasonCode: DshStoreCaptainHandoffExceptionReason;
+  readonly note: string;
+  readonly correlationId: string;
+  readonly latitude?: number;
+  readonly longitude?: number;
+};
+
 export type DshPartnerOrder = DshOrder & {
   readonly allowedActions: readonly DshPartnerOrderAction[];
   readonly preparation: DshOrderPreparation;
@@ -219,6 +231,14 @@ export const PREPARATION_ISSUE_KIND_LABELS: Record<DshPreparationIssueKind, stri
   substitution_required: "استبدال مطلوب",
   quality_issue: "مشكلة جودة",
   other: "مشكلة أخرى",
+};
+
+export const STORE_CAPTAIN_HANDOFF_EXCEPTION_LABELS: Record<
+  DshStoreCaptainHandoffExceptionReason,
+  string
+> = {
+  handoff_shortage: "نقص في محتوى الطرد",
+  handoff_mismatch: "محتوى الطرد لا يطابق الطلب",
 };
 
 export const FINANCIAL_CLOSURE_LABELS: Record<DshFinancialClosureStatus, string> = {
