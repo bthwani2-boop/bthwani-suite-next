@@ -1,0 +1,61 @@
+import fs from 'node:fs';
+
+const violations = [];
+const surfaceFiles = [
+  'services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx',
+  'services/dsh/frontend/app-captain/orders/DshCaptainPoDSubmissionScreen.tsx',
+  'services/dsh/frontend/app-client/orders/OrderTrackingScreen.tsx',
+  'services/dsh/frontend/control-panel/operations/PickupWorkbenchScreen.tsx',
+];
+const sharedFiles = [
+  'services/dsh/frontend/shared/media/pod/delivery-proof-media.api.ts',
+  'services/dsh/frontend/shared/delivery/delivery.actions.ts',
+  'services/dsh/frontend/shared/delivery/use-captain-order-runtime.ts',
+  'services/dsh/frontend/shared/partner-delivery/use-partner-delivery-controller.tsx',
+  'services/dsh/frontend/shared/dispatch/use-partner-return-to-store-controller.ts',
+  'services/dsh/frontend/shared/pickup/use-pickup-controller.tsx',
+];
+
+function read(file) {
+  if (!fs.existsSync(file)) {
+    violations.push(`${file}: required affected file is missing`);
+    return '';
+  }
+  return fs.readFileSync(file, 'utf8');
+}
+
+for (const file of surfaceFiles) {
+  const content = read(file);
+  if (/\bfetch\(/.test(content)) violations.push(`${file}: direct fetch() in surface`);
+  if (/\baxios\b/.test(content)) violations.push(`${file}: axios in surface`);
+  if (/process\.env/.test(content)) violations.push(`${file}: process.env in surface`);
+  if (/\bnew\s+URL\(/.test(content)) violations.push(`${file}: URL construction in surface`);
+
+  for (const match of content.matchAll(/(?:from\s+|import\s*\()(["'])([^"']+)\1/g)) {
+    const specifier = match[2];
+    if (specifier.endsWith('.api') || specifier.includes('.api.') || specifier.includes('.api/')) {
+      violations.push(`${file}: surface imports API adapter directly (${specifier})`);
+    }
+    if (specifier.includes('/frontend/app-') || specifier.includes('/frontend/control-panel')) {
+      violations.push(`${file}: surface imports another surface (${specifier})`);
+    }
+  }
+}
+
+for (const file of sharedFiles) {
+  const content = read(file);
+  if (/frontend\/(?:app-[^/]+|control-panel)\//.test(content)) {
+    violations.push(`${file}: shared brain imports a surface`);
+  }
+  if (/captain-confirmed-delivery/.test(content)) {
+    violations.push(`${file}: synthetic delivery completion truth remains`);
+  }
+}
+
+if (violations.length > 0) {
+  console.error('[jrn-015-020-affected-boundary] violations detected');
+  for (const violation of violations) console.error(`- ${violation}`);
+  process.exit(1);
+}
+
+console.log('[jrn-015-020-affected-boundary] PASS');
