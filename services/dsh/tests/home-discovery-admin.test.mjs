@@ -4,10 +4,11 @@ import assert from "node:assert/strict";
 const {
   EMPTY_HOME_ADMIN_INPUT,
   classifyAdminError,
+  describeAdminMutationError,
 } = await import("../dist/services/dsh/frontend/shared/home-discovery/home-discovery-admin.js");
 
 describe("home discovery admin shared brain", () => {
-  test("provides a production-shaped empty editor contract", () => {
+  test("opens new content as an unpublished draft", () => {
     assert.deepEqual(EMPTY_HOME_ADMIN_INPUT, {
       title: "",
       subtitle: "",
@@ -16,7 +17,8 @@ describe("home discovery admin shared brain", () => {
       actionType: "none",
       actionTarget: "",
       sortOrder: 0,
-      isActive: true,
+      isActive: false,
+      publicationStatus: "draft",
     });
   });
 
@@ -28,5 +30,12 @@ describe("home discovery admin shared brain", () => {
       kind: "error",
       message: "خدمة إدارة محتوى الصفحة الرئيسية غير متاحة.",
     });
+  });
+
+  test("explains optimistic concurrency conflicts", () => {
+    assert.equal(
+      describeAdminMutationError({ kind: "http", status: 409 }),
+      "تم تعديل العنصر من مستخدم آخر. حدّث القائمة ثم أعد المحاولة.",
+    );
   });
 });
