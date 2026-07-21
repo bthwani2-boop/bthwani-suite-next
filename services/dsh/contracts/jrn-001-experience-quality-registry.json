@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "journeyId": "JRN-001",
+  "sliceId": "FS-14",
+  "locale": "ar-YE",
+  "direction": "rtl",
+  "accessibility": {
+    "required": ["semantic roles", "accessible action labels", "non-color status text", "keyboard reachable control-panel tabs"],
+    "minimumTouchTarget": 44
+  },
+  "weakNetwork": {
+    "mutationRule": "retain the same idempotency identity for a retry",
+    "truthRule": "never present retained local input as committed server state",
+    "recovery": ["retry", "reload committed state", "show correlation reference on persistent failure"]
+  },
+  "performance": {
+    "listPaginationLimit": 50,
+    "avoid": ["unbounded partner lists", "screen-owned duplicate fetches", "render-time network calls"],
+    "required": ["shared controllers", "bounded media capture quality", "stable callbacks for reload and mutation"]
+  },
+  "surfaces": ["app-field", "app-partner", "control-panel", "app-client"]
+}
