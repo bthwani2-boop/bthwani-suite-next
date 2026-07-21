@@ -5,7 +5,8 @@ on:
   push:
     branches: [sambassam]
     paths:
-      - "core/identity/database/migrations/**"
+      - "core/identity/backend/**"
+      - "core/identity/database/**"
       - "services/dsh/backend/internal/cart/**"
       - "services/dsh/backend/internal/http/cart.go"
       - "services/dsh/frontend/shared/cart/**"
