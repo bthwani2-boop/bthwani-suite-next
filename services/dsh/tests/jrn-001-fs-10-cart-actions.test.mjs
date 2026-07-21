@@ -3,7 +3,12 @@ import fs from "node:fs";
 
 const cartScreen = fs.readFileSync("services/dsh/frontend/app-client/cart/CartScreen.tsx", "utf8");
 const governedCartScreen = fs.readFileSync("services/dsh/frontend/app-client/cart/GovernedCartScreen.tsx", "utf8");
+const cartIndex = fs.readFileSync("services/dsh/frontend/app-client/cart/index.ts", "utf8");
 const checkoutRoute = fs.readFileSync("services/dsh/frontend/app-client/checkout/ClientCheckoutRoute.tsx", "utf8");
+
+assert.match(cartIndex, /export \{ CartScreen \} from ["']\.\/CartScreen["']/);
+assert.match(cartIndex, /export \{ GovernedCartScreen \} from ["']\.\/GovernedCartScreen["']/);
+assert.doesNotMatch(cartIndex, /GovernedCartScreen as CartScreen/);
 
 assert.match(cartScreen, /controller\.removeItem\(item\.cartId, item\.id\)/);
 assert.doesNotMatch(cartScreen, /controller\.state\.cart\.id/);
@@ -25,4 +30,4 @@ assert.match(governedCartScreen, /presentationSubtotal\.toLocaleString/);
 assert.match(checkoutRoute, /\.\.\.\(onSuccess \? \{ onSuccess \} : \{\}\)/);
 assert.doesNotMatch(checkoutRoute, /onSuccess=\{onSuccess\}/);
 
-console.log("JRN-001 FS-10 app-client cart, checkout callback, and exact optional prop boundaries verified");
+console.log("JRN-001 FS-10 canonical cart barrel, checkout callback, and exact optional prop boundaries verified");
