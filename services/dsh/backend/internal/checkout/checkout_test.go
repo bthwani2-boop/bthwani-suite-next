@@ -83,3 +83,20 @@ func TestNewPaymentConfirmationStateConstants(t *testing.T) {
 		t.Fatalf("expected 2 distinct new payment confirmation states, got %d", len(states))
 	}
 }
+
+func TestPaymentEventTargetStateDistinguishesExpired(t *testing.T) {
+	state, intermediate, err := paymentEventTargetState("expired")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if intermediate || state != StateExpired {
+		t.Fatalf("expected terminal expired state, got state=%q intermediate=%v", state, intermediate)
+	}
+	state, intermediate, err = paymentEventTargetState("failed")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if intermediate || state != StatePaymentFailed {
+		t.Fatalf("expected terminal payment_failed state, got state=%q intermediate=%v", state, intermediate)
+	}
+}

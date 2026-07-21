@@ -308,23 +308,30 @@ func GetIntentForService(db *sql.DB, tenantID, intentID string) (*Intent, error)
 
 var ErrPaymentSessionMismatch = errors.New("wlt payment session id does not match checkout intent")
 
+func paymentEventTargetState(wltStatus string) (IntentState, bool, error) {
+	switch strings.TrimSpace(wltStatus) {
+	case "captured", "cod_collected":
+		return StatePaymentConfirmed, false, nil
+	case "failed":
+		return StatePaymentFailed, false, nil
+	case "expired":
+		return StateExpired, false, nil
+	case "authorized", "reference_created", "cod_pending":
+		return "", true, nil
+	default:
+		return "", false, fmt.Errorf("%w: unsupported wltStatus %q", ErrInvalid, wltStatus)
+	}
+}
+
 func ApplyWltPaymentEvent(db *sql.DB, tenantID, intentID, paymentSessionID, wltStatus string) (*Intent, error) {
 	tenantID = normalizeTenant(tenantID)
 	if tenantID == "" || intentID == "" || paymentSessionID == "" || wltStatus == "" {
 		return nil, ErrInvalid
 	}
 
-	var targetState IntentState
-	intermediate := false
-	switch wltStatus {
-	case "captured", "cod_collected":
-		targetState = StatePaymentConfirmed
-	case "failed", "expired":
-		targetState = StatePaymentFailed
-	case "authorized", "reference_created", "cod_pending":
-		intermediate = true
-	default:
-		return nil, fmt.Errorf("%w: unsupported wltStatus %q", ErrInvalid, wltStatus)
+	targetState, intermediate, err := paymentEventTargetState(wltStatus)
+	if err != nil {
+		return nil, err
 	}
 
 	tx, err := db.Begin()
