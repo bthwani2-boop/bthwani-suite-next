@@ -52,10 +52,27 @@ jobs:
           pnpm install --frozen-lockfile
       - name: Verify repository hygiene
         run: git diff --check
-      - name: Verify all JRN-001 contracts tests and guards
+      - name: Verify JRN-001 contract tests individually
+        shell: bash
         run: |
-          node --test services/dsh/tests/jrn-001-*.test.mjs
-          for guard in tools/guards/partner/jrn-001-*.mjs; do node "$guard"; done
+          rm -f /tmp/jrn001-failure
+          for test_file in services/dsh/tests/jrn-001-*.test.mjs; do
+            echo "==> $test_file"
+            if ! node --test "$test_file"; then
+              printf 'test-%s' "$(basename "$test_file" .test.mjs)" >/tmp/jrn001-failure
+              exit 1
+            fi
+          done
+      - name: Verify JRN-001 guards individually
+        shell: bash
+        run: |
+          for guard in tools/guards/partner/jrn-001-*.mjs; do
+            echo "==> $guard"
+            if ! node "$guard"; then
+              printf 'guard-%s' "$(basename "$guard" .mjs)" >/tmp/jrn001-failure
+              exit 1
+            fi
+          done
       - name: Verify JRN-001 backend and outbox
         working-directory: services/dsh/backend
         run: |
@@ -75,8 +92,11 @@ jobs:
         shell: bash
         run: |
           [ "$RESULT" = success ] && STATE=success || STATE=failure
+          FAILURE_DETAIL="$(cat /tmp/jrn001-failure 2>/dev/null || true)"
+          DESCRIPTION="JRN-001 same-commit evidence: $RESULT"
+          [ -z "$FAILURE_DETAIL" ] || DESCRIPTION="$DESCRIPTION ($FAILURE_DETAIL)"
           for CONTEXT in 'journeys/jrn-001/fs-17-comprehensive' 'journeys/jrn-001/fs-18-evidence'; do
-            jq -n --arg state "$STATE" --arg context "$CONTEXT" --arg description "JRN-001 same-commit evidence: $RESULT" --arg target_url "$TARGET_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/status.json
+            jq -n --arg state "$STATE" --arg context "$CONTEXT" --arg description "$DESCRIPTION" --arg target_url "$TARGET_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/status.json
             curl --fail-with-body --silent --show-error -X POST \
               -H "Authorization: Bearer $GH_TOKEN" \
               -H 'Accept: application/vnd.github+json' \
@@ -84,3 +104,14 @@ jobs:
               "https://api.github.com/repos/${{ github.repository }}/statuses/$COMMIT_SHA" \
               -d @/tmp/status.json
           done
+          if [ "$STATE" = failure ] && [ -n "$FAILURE_DETAIL" ]; then
+            FAILURE_CONTEXT="journeys/jrn-001/failure/$FAILURE_DETAIL"
+            FAILURE_CONTEXT="$(printf '%s' "$FAILURE_CONTEXT" | cut -c1-100)"
+            jq -n --arg state failure --arg context "$FAILURE_CONTEXT" --arg description "$DESCRIPTION" --arg target_url "$TARGET_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/status.json
+            curl --fail-with-body --silent --show-error -X POST \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H 'Accept: application/vnd.github+json' \
+              -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "https://api.github.com/repos/${{ github.repository }}/statuses/$COMMIT_SHA" \
+              -d @/tmp/status.json
+          fi
