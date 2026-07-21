@@ -6,7 +6,8 @@
 - Journey owner: `core/identity`
 - Internal slice status: `FS-01..FS-18 COMPLETE`
 - Journey decision: `READY_FOR_REVIEW`
-- Evidence commit resolution: the exact commit containing `core/identity/tests/jrn-002-final-evidence-marker.test.mjs` and three successful permanent status contexts listed below.
+- Evidence commit: `17646344199040a5ea95930b6f876555ed8e743a`
+- Evidence marker: `core/identity/tests/jrn-002-final-evidence-marker.test.mjs`
 
 ## Slice ledger
 
@@ -47,15 +48,17 @@
 
 ## Permanent evidence gates
 
-- `journeys/jrn-002/fullstack-slices`
-- `journeys/jrn-002/runtime-proof`
-- `journeys/jrn-001-010/targeted-verification`
+| Status context | Run | Result |
+|---|---:|---|
+| `journeys/jrn-002/fullstack-slices` | `29856590917` | SUCCESS |
+| `journeys/jrn-002/runtime-proof` | `29856590986` | SUCCESS |
+| `journeys/jrn-001-010/targeted-verification` | `29856591135` | SUCCESS |
 
-All three must succeed on the evidence-marker commit. A later final head is acceptable only when it is a linear descendant and every intervening file is outside JRN-002 implementation scope or is evidence-only documentation.
+The three gates succeeded on evidence commit `17646344199040a5ea95930b6f876555ed8e743a`. A later final head is acceptable only when it is a linear descendant and every intervening file is outside JRN-002 implementation scope or is evidence-only documentation.
 
 ## Rollback
 
-Rollback targets the latest commit where all permanent JRN-002 statuses succeeded. Database changes are forward-only: corrective migrations must preserve actor, session, activation and outbox audit history.
+Rollback targets evidence commit `17646344199040a5ea95930b6f876555ed8e743a` or a later commit carrying the same three successful status contexts. Database changes are forward-only: corrective migrations must preserve actor, session, activation and outbox audit history.
 
 ## Remaining external approvals
 
