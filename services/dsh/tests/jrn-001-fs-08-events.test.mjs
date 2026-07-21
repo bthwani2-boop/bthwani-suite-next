@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import assert from "node:assert/strict";
 
+// Canonical rerun after aligning the text activation-event key and Go formatting.
 const read = (path) => fs.readFileSync(path, "utf8");
 const migration = read("services/dsh/database/migrations/dsh-101_partner_wlt_outbox_reconciliation.sql");
 const worker = read("services/dsh/backend/internal/partnerwltoutbox/outbox.go");
@@ -10,6 +11,7 @@ const wltServer = read("services/wlt/backend/internal/http/server.go");
 
 assert.match(migration, /dsh_partner_wlt_outbox/);
 assert.match(migration, /dsh_partner_wlt_reconciliation_cases/);
+assert.match(migration, /activation_event_id text NOT NULL REFERENCES dsh_partner_activation_events\(id\)/);
 assert.match(migration, /AFTER INSERT ON dsh_partner_activation_events/);
 assert.match(migration, /NEW\.to_status = 'partner_deactivated'/);
 assert.match(migration, /UNIQUE \(event_type, activation_event_id\)/);
