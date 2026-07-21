@@ -17,10 +17,47 @@ export type DshOrder = Omit<GeneratedDshOrder, "status"> & {
   readonly financialClosureReference?: string | null;
 };
 
-export type DshPartnerOrderAction = "accept" | "reject" | "prepare" | "ready" | "handoff";
+export type DshPreparationSlaState =
+  | "not_started"
+  | "on_track"
+  | "due_soon"
+  | "overdue"
+  | "ready";
+
+export type DshOrderPreparation = {
+  readonly orderId: string;
+  readonly acceptedAt?: string | null;
+  readonly preparationStartedAt?: string | null;
+  readonly estimatedReadyAt?: string | null;
+  readonly readyAt?: string | null;
+  readonly estimatedPreparationMinutes: number;
+  readonly preparationWarningMinutes: number;
+  readonly preparationDelayReason: string;
+  readonly preparationEstimateRevisionCount: number;
+  readonly preparationSlaState: DshPreparationSlaState;
+  readonly preparationRemainingSeconds: number;
+};
+
+export type DshStorePreparationPolicy = {
+  readonly storeId: string;
+  readonly defaultPreparationMinutes: number;
+  readonly warningBeforeMinutes: number;
+  readonly version: number;
+  readonly updatedByActorId: string;
+  readonly updatedAt: string;
+};
+
+export type DshPartnerOrderAction =
+  | "accept"
+  | "reject"
+  | "prepare"
+  | "ready"
+  | "revise_estimate"
+  | "handoff";
 
 export type DshPartnerOrder = DshOrder & {
   readonly allowedActions: readonly DshPartnerOrderAction[];
+  readonly preparation: DshOrderPreparation;
 };
 
 export type DshFinancialClosureStatus =
@@ -91,6 +128,14 @@ export const ORDER_STATUS_LABELS: Record<DshOrderStatus, string> = {
   cancelled_no_driver: "ألغي لعدم توفر كابتن",
   failed_payment: "فشل الدفع",
   failed_dispatch: "فشل الإسناد",
+};
+
+export const PREPARATION_SLA_LABELS: Record<DshPreparationSlaState, string> = {
+  not_started: "لم يبدأ توقيت التحضير",
+  on_track: "ضمن زمن التحضير",
+  due_soon: "اقترب موعد الجاهزية",
+  overdue: "متأخر عن موعد الجاهزية",
+  ready: "جاهز",
 };
 
 export const FINANCIAL_CLOSURE_LABELS: Record<DshFinancialClosureStatus, string> = {
