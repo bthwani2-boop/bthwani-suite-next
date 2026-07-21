@@ -21,6 +21,7 @@ const partnerScreen = read("frontend/app-partner/catalog/ProductOverridesScreen.
 const fieldScreen = read("frontend/app-field/components/DshFieldAssortmentPauseScreen.tsx");
 const fieldRouter = read("frontend/app-field/components/DshFieldRouteRenderer.tsx");
 const dashboard = read("frontend/control-panel/catalogs/CatalogDashboardScreen.tsx");
+const reelsPanel = read("frontend/control-panel/catalogs/ReelsReviewPanel.tsx");
 
 function requireMarkers(source, markers, label) {
   for (const marker of markers) {
@@ -89,7 +90,7 @@ test("JRN-008 slice 04 closes proposal review, rejection and transitions", () =>
     "catalog-approved",
     "client-visible",
   ], "proposal state machine");
-  requireMarkers(dashboard, ["handleProposalDecision", "handleProposalTransition", "needs-fix", "rejected"], "proposal review UI");
+  requireMarkers(dashboard, ["handleProposalTransition", "controller.transitionProposal", "needs-fix", "rejected"], "proposal review UI");
 });
 
 test("JRN-008 slice 05 closes assortment, inventory, availability and temporary pause", () => {
@@ -140,7 +141,7 @@ test("JRN-008 slice 08 closes reels submission, review and public projection", (
   ], "reels protected routes");
   requireMarkers(dshContract, ["listPublicReels", "/dsh/public/reels"], "public reels contract");
   requireMarkers(centralCatalogApi, ["fetchPublicReels", "/dsh/public/reels"], "public reels shared adapter");
-  requireMarkers(read("frontend/control-panel/catalogs/ReelsReviewPanel.tsx"), ["reviewReel", "approved", "rejected"], "reels review UI");
+  requireMarkers(reelsPanel, ["onReviewReel", "handleReview", "approved", "rejected", "archived"], "reels review UI");
 });
 
 test("JRN-008 slice 09 closes approvals, policies, seed diagnostics, audit and rollback", () => {
