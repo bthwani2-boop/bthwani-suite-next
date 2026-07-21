@@ -74,11 +74,15 @@ test("JRN-006 keeps map, geofence, address and privacy truth governed across all
   assert.match(privacyContract, /operationId: listDshClientAddressPrivacyAuditEvents/);
 
   assert.equal(productTruth.journeyId, "JRN-006");
-  assert.match(productTruth.status, /^(IMPLEMENTED_PENDING_VERIFICATION|CLOSED_WITH_EVIDENCE)$/);
+  assert.equal(productTruth.status, "IMPLEMENTED_PENDING_INDEPENDENT_REVIEW");
+  assert.equal(productTruth.decision, "READY_FOR_REVIEW");
+  assert.equal(productTruth.technicalAcceptanceResult, "PASS");
   assert.equal(sliceRegistry.journeyId, "JRN-006");
+  assert.equal(sliceRegistry.status, "READY_FOR_REVIEW");
+  assert.equal(sliceRegistry.codeClosure, "COMPLETE");
   assert.equal(sliceRegistry.slices.length, 8);
   for (const slice of sliceRegistry.slices) {
-    assert.match(slice.status, /^(IMPLEMENTED_PENDING_VERIFICATION|CLOSED_WITH_EVIDENCE)$/);
+    assert.equal(slice.status, "CLOSED_WITH_EVIDENCE");
   }
 });
 
