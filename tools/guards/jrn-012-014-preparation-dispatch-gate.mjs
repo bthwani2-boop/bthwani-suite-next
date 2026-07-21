@@ -44,6 +44,8 @@ assert.match(dispatchSurface, /useDispatchCaptainOptions/);
 assert.doesNotMatch(dispatchSurface, /workforce\.api/);
 assert.doesNotMatch(dispatchSurface, /from ['"]\.\.\/\.\.\/shared\/workforce['"]/);
 assert.match(captainOptions, /listCaptains\(\{ status: 'active', limit: 200 \}\)/);
+assert.match(captainOptions, /workforceErrorMessage\(error\)/);
+assert.match(captainOptions, /useEffect\(\(\) => \{[\s\S]*void reload\(\);[\s\S]*\}, \[reload\]\)/);
 assert.match(captainOptions, /from '\.\.\/workforce\/workforce\.api'/);
 
 console.log('[jrn-012-014-preparation-dispatch] PASS');
