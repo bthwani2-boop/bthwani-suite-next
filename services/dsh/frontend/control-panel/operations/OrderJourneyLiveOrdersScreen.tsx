@@ -20,6 +20,7 @@ import type { OperationsFocusParams, OperatorOrderWorkboardRow } from '../../sha
 import { resolveRuntimeOrderStatusTone } from '../shared/ControlPanelDshDecisionBoard';
 import { buildOperationsHref } from './operations.registry';
 import { OrderJourneyOperatorIntervention } from './OrderJourneyOperatorIntervention';
+import { OrderPreparationAlertsPanel } from './OrderPreparationAlertsPanel';
 
 export type OrderJourneyLiveOrdersScreenProps = {
   hubHref: string;
@@ -127,6 +128,8 @@ export function OrderJourneyLiveOrdersScreen({
         { id: 'refunds', label: 'استردادات مطلوبة', value: String(requestedRefunds), tone: requestedRefunds > 0 ? 'warning' : 'neutral' },
         { id: 'financial-failures', label: 'تعثر مالي', value: String(financialFailures), tone: financialFailures > 0 ? 'danger' : 'success' },
       ]} />
+
+      <OrderPreparationAlertsPanel onOpenOrder={setSelectedOrderId} />
 
       <div className={styles.surfaceSplitGrid}>
         <WebControlPanelQueue title="الطلبات المباشرة" meta={`${visible.length} من ${workboard.state.total}`}>
