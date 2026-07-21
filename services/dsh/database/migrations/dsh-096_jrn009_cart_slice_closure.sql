@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS dsh_cart_serviceability_checks (
     id                      UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     client_id               TEXT        NOT NULL,
     store_id                TEXT        NOT NULL REFERENCES dsh_stores(id) ON DELETE RESTRICT,
-    address_id              UUID        REFERENCES dsh_client_addresses(id) ON DELETE SET NULL,
+    address_id              TEXT        REFERENCES dsh_client_addresses(id) ON DELETE SET NULL,
     address_version         INTEGER,
     requested_mode          TEXT        NOT NULL CHECK (requested_mode IN ('bthwani_delivery', 'partner_delivery', 'pickup')),
     service_area_code       TEXT        NOT NULL,
