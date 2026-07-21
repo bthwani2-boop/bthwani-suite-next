@@ -105,6 +105,7 @@ func RequestRoleDefinition(
 	if err != nil {
 		return RoleDefinitionRequest{}, err
 	}
+	permissionsValue := string(permissionsJSON)
 
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
@@ -120,7 +121,7 @@ func RequestRoleDefinition(
 		RETURNING id::TEXT, role_name, description, permissions, requested_by,
 		          reason, status, COALESCE(reviewed_by,''), COALESCE(review_note,''),
 		          version, created_at, updated_at, reviewed_at`,
-		roleName, description, permissionsJSON, requestedBy, reason))
+		roleName, description, permissionsValue, requestedBy, reason))
 	if errors.Is(err, sql.ErrNoRows) {
 		return RoleDefinitionRequest{}, ErrApprovalConflict
 	}
@@ -229,13 +230,14 @@ func ReviewRoleDefinition(
 		if marshalErr != nil {
 			return RoleDefinitionRequest{}, nil, marshalErr
 		}
+		permissionsValue := string(permissionsJSON)
 		var role Role
 		var rolePermissionsJSON []byte
 		err = tx.QueryRowContext(ctx, `
 			INSERT INTO dsh_admin_roles (name, description, permissions)
 			VALUES ($1, $2, $3::jsonb)
 			RETURNING id::TEXT, name, COALESCE(description,''), permissions, created_at`,
-			current.RoleName, current.Description, permissionsJSON).Scan(
+			current.RoleName, current.Description, permissionsValue).Scan(
 			&role.ID, &role.Name, &role.Description, &rolePermissionsJSON, &role.CreatedAt,
 		)
 		if err != nil {
