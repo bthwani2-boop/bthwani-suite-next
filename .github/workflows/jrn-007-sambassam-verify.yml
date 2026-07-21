@@ -16,6 +16,7 @@ on:
       - "services/dsh/contracts/contract-registry.ts"
       - "services/dsh/contracts/dsh.home-discovery.overlay.yaml"
       - "services/dsh/contracts/dsh.home-marketing-events.openapi.yaml"
+      - "services/dsh/database/migrations/dsh-001_store_discovery.sql"
       - "services/dsh/database/migrations/dsh-002_home_discovery.sql"
       - "services/dsh/database/migrations/dsh-012_marketing.sql"
       - "services/dsh/database/migrations/dsh-017_marketing_governance.sql"
@@ -140,6 +141,7 @@ jobs:
           set -o pipefail
           {
             for file in \
+              services/dsh/database/migrations/dsh-001_store_discovery.sql \
               services/dsh/database/migrations/dsh-002_home_discovery.sql \
               services/dsh/database/migrations/dsh-012_marketing.sql \
               services/dsh/database/migrations/dsh-017_marketing_governance.sql \
