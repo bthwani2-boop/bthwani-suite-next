@@ -32,52 +32,54 @@ jobs:
 
           partner_hub = Path('services/dsh/frontend/app-partner/account/PartnerHubScreen.tsx')
           source = partner_hub.read_text(encoding='utf-8')
-          old = '''  if (selfStatusState.kind !== "success") {
-            return (
-              <StateView
-                tone="danger"
-                title="حالة شريك غير قابلة للعرض"
-                description="لم يعد DSH حالة نجاح أو خطأ صريحة."
-              />
-            );
-          }
-          '''
-          new = '''  if (selfStatusState.kind === "not_found") {
-            return (
-              <StateView
-                tone="warning"
-                title="ملف الشريك غير موجود"
-                description="الجلسة الحالية غير مرتبطة بملف شريك صالح في DSH."
-                actionLabel="إعادة التحقق"
-                onActionPress={reloadSelfStatus}
-              />
-            );
-          }
-
-          if (selfStatusState.kind === "forbidden") {
-            return (
-              <StateView
-                tone="danger"
-                title="غير مصرح بعرض ملف الشريك"
-                description="تحقق من هوية الشريك ونطاق المتجر المرتبط بهذه الجلسة."
-                actionLabel="إعادة التحقق"
-                onActionPress={reloadSelfStatus}
-              />
-            );
-          }
-
-          if (selfStatusState.kind !== "success") {
-            return (
-              <StateView
-                tone="danger"
-                title="حالة شريك غير قابلة للعرض"
-                description="لم يعد DSH حالة صريحة قابلة للعرض."
-                actionLabel="إعادة التحقق"
-                onActionPress={reloadSelfStatus}
-              />
-            );
-          }
-          '''
+          old = '\n'.join([
+              '  if (selfStatusState.kind !== "success") {',
+              '    return (',
+              '      <StateView',
+              '        tone="danger"',
+              '        title="حالة شريك غير قابلة للعرض"',
+              '        description="لم يعد DSH حالة نجاح أو خطأ صريحة."',
+              '      />',
+              '    );',
+              '  }',
+          ])
+          new = '\n'.join([
+              '  if (selfStatusState.kind === "not_found") {',
+              '    return (',
+              '      <StateView',
+              '        tone="warning"',
+              '        title="ملف الشريك غير موجود"',
+              '        description="الجلسة الحالية غير مرتبطة بملف شريك صالح في DSH."',
+              '        actionLabel="إعادة التحقق"',
+              '        onActionPress={reloadSelfStatus}',
+              '      />',
+              '    );',
+              '  }',
+              '',
+              '  if (selfStatusState.kind === "forbidden") {',
+              '    return (',
+              '      <StateView',
+              '        tone="danger"',
+              '        title="غير مصرح بعرض ملف الشريك"',
+              '        description="تحقق من هوية الشريك ونطاق المتجر المرتبط بهذه الجلسة."',
+              '        actionLabel="إعادة التحقق"',
+              '        onActionPress={reloadSelfStatus}',
+              '      />',
+              '    );',
+              '  }',
+              '',
+              '  if (selfStatusState.kind !== "success") {',
+              '    return (',
+              '      <StateView',
+              '        tone="danger"',
+              '        title="حالة شريك غير قابلة للعرض"',
+              '        description="لم يعد DSH حالة صريحة قابلة للعرض."',
+              '        actionLabel="إعادة التحقق"',
+              '        onActionPress={reloadSelfStatus}',
+              '      />',
+              '    );',
+              '  }',
+          ])
           if old not in source:
               if 'selfStatusState.kind === "not_found"' not in source or 'selfStatusState.kind === "forbidden"' not in source:
                   raise SystemExit('PartnerHub status boundary not found')
@@ -98,7 +100,7 @@ jobs:
           git diff --check
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add services/dsh/frontend/app-partner/account/PartnerHubScreen.tsx services/dsh/contracts/jrn-001-cleanup-manifest.json .github/workflows/jrn-001-fs-11-partner-hub-repair.yml .github/workflows/tmp-jrn-001-partnerhub-patch.yml
+          git add -A services/dsh/frontend/app-partner/account/PartnerHubScreen.tsx services/dsh/contracts/jrn-001-cleanup-manifest.json .github/workflows/jrn-001-fs-11-partner-hub-repair.yml .github/workflows/tmp-jrn-001-partnerhub-patch.yml
           git commit -m 'fix(jrn-001-fs-11): expose partner status recovery and clean repairs'
           for attempt in 1 2 3 4 5; do
             git fetch origin sambassam
