@@ -4,11 +4,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
 )
+
+var ErrPayoutDestinationNotFound = errors.New("WLT payout destination not found")
 
 // PayoutDestinationUpsertInput contains raw payout details only while the
 // request is in flight to WLT. DSH must never persist these raw values.
@@ -100,6 +103,44 @@ func (c *Client) UpsertPayoutDestination(ctx context.Context, partnerID string, 
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		return nil, fmt.Errorf("WLT payout destination returned HTTP %d", response.StatusCode)
 	}
+	ref, err := decodePayoutDestinationRef(response, partnerID)
+	if err != nil {
+		return nil, err
+	}
+	return ref, nil
+}
+
+func (c *Client) GetPayoutDestination(ctx context.Context, partnerID string) (*PayoutDestinationRef, error) {
+	if !c.Configured() {
+		return nil, fmt.Errorf("WLT payout-destination readback is not configured")
+	}
+	partnerID = strings.TrimSpace(partnerID)
+	if partnerID == "" {
+		return nil, fmt.Errorf("partner is required for payout readback")
+	}
+	path := "/wlt/payout-destinations/" + url.PathEscape(partnerID)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+path, nil)
+	if err != nil {
+		return nil, fmt.Errorf("build WLT payout readback request: %w", err)
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
+	req.Header.Set("X-Service-Caller", "dsh")
+	response, err := c.http.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("call WLT payout readback: %w", err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode == http.StatusNotFound {
+		return nil, ErrPayoutDestinationNotFound
+	}
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		return nil, fmt.Errorf("WLT payout readback returned HTTP %d", response.StatusCode)
+	}
+	return decodePayoutDestinationRef(response, partnerID)
+}
+
+func decodePayoutDestinationRef(response *http.Response, partnerID string) (*PayoutDestinationRef, error) {
 	var ref PayoutDestinationRef
 	if err := json.NewDecoder(response.Body).Decode(&ref); err != nil {
 		return nil, fmt.Errorf("decode WLT payout destination response: %w", err)
