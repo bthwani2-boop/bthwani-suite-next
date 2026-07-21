@@ -47,6 +47,39 @@ var workforceJourneyRoutes = []workforceJourneyRouteCase{
 	{method: http.MethodGet, path: "/workforce/reference/supervisors", pattern: "GET /workforce/reference/supervisors"},
 }
 
+func TestWorkforceJourneyRouteMatrixIsCompleteAndUnique(t *testing.T) {
+	const expectedRouteCount = 31
+	if len(workforceJourneyRoutes) != expectedRouteCount {
+		t.Fatalf("expected %d governed workforce routes, got %d", expectedRouteCount, len(workforceJourneyRoutes))
+	}
+
+	seen := make(map[string]struct{}, len(workforceJourneyRoutes))
+	requiredFamilies := map[string]bool{
+		"/workforce/field-agents": false,
+		"/workforce/captains":     false,
+		"/workforce/employees":    false,
+		"/workforce/me":           false,
+		"/workforce/reference":    false,
+	}
+	for _, tc := range workforceJourneyRoutes {
+		key := tc.method + " " + tc.path
+		if _, exists := seen[key]; exists {
+			t.Fatalf("duplicate workforce route case %q", key)
+		}
+		seen[key] = struct{}{}
+		for family := range requiredFamilies {
+			if strings.HasPrefix(tc.path, family) {
+				requiredFamilies[family] = true
+			}
+		}
+	}
+	for family, covered := range requiredFamilies {
+		if !covered {
+			t.Fatalf("workforce route family %q is missing from the governed matrix", family)
+		}
+	}
+}
+
 func TestWorkforceJourneyRoutesAreMounted(t *testing.T) {
 	router := NewRouter(nil, nil, nil, nil)
 	mux, ok := router.(*http.ServeMux)
