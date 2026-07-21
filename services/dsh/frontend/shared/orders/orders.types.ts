@@ -3,7 +3,7 @@ import type { components } from "../../../clients/generated/dsh-api";
 type GeneratedDshOrder = components["schemas"]["DshOrder"];
 type GeneratedDshOrderStatus = components["schemas"]["DshOrderStatus"];
 
-export type DshOrderStatus = GeneratedDshOrderStatus;
+export type DshOrderStatus = GeneratedDshOrderStatus | "store_handoff_confirmed";
 
 export type DshOrderItem = components["schemas"]["DshOrderItem"];
 export type DshOrder = Omit<GeneratedDshOrder, "status"> & {
@@ -144,6 +144,7 @@ export const ORDER_STATUS_LABELS: Record<DshOrderStatus, string> = {
   ready_for_pickup: "جاهز للاستلام",
   driver_assigned: "تم تعيين الكابتن",
   driver_arrived_store: "وصل الكابتن للمتجر",
+  store_handoff_confirmed: "أكد المتجر التسليم للكابتن",
   picked_up: "تم الاستلام",
   arrived_customer: "وصل الكابتن للعميل",
   returning_to_store: "جارٍ إرجاع الطلب إلى المتجر",
