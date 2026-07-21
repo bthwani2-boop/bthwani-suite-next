@@ -45,6 +45,7 @@ export type PartnerMutationContext = {
 export type PartnerOnboardingRuntimeState =
   | "idle"
   | "loading"
+  | "empty"
   | "ready"
   | "saving"
   | "submitting"
@@ -57,7 +58,7 @@ export type PartnerOnboardingRuntimeState =
   | "error";
 
 export type PartnerOnboardingFailure = {
-  readonly state: Exclude<PartnerOnboardingRuntimeState, "idle" | "loading" | "ready" | "saving" | "submitting">;
+  readonly state: Exclude<PartnerOnboardingRuntimeState, "idle" | "loading" | "empty" | "ready" | "saving" | "submitting">;
   readonly code: string;
   readonly message: string;
   readonly retryable: boolean;
