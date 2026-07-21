@@ -310,6 +310,23 @@ func scanIntentRow(rows *sql.Rows, intent *Intent) error {
 	)
 }
 
+func GetIntentForOperator(db *sql.DB, intentID string) (*Intent, error) {
+	if strings.TrimSpace(intentID) == "" {
+		return nil, ErrInvalid
+	}
+	row := db.QueryRow(`
+		SELECT id, tenant_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
+		       state, payment_method, wlt_payment_session_id,
+		       delivery_address, note, version, created_at, updated_at
+		FROM dsh_checkout_intents
+		WHERE id = $1::uuid`, intentID)
+	intent, err := scanIntent(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	return intent, err
+}
+
 func GetIntentForService(db *sql.DB, tenantID, intentID string) (*Intent, error) {
 	tenantID = normalizeTenant(tenantID)
 	if tenantID == "" || intentID == "" {

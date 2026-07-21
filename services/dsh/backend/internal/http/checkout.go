@@ -485,3 +485,70 @@ func checkoutCreateFingerprint(parts ...string) string {
 	digest := sha256.Sum256([]byte(strings.Join(parts, "\x1f")))
 	return hex.EncodeToString(digest[:])
 }
+
+func (s *protectedStoreServer) handleReconcileCheckoutIntent(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage, "operator"); !ok {
+		return
+	}
+	intent, err := checkout.GetIntentForOperator(s.db, r.PathValue("intentId"))
+	if errors.Is(err, checkout.ErrNotFound) {
+		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "checkout intent not found")
+		return
+	}
+	if err != nil {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid checkout intent")
+		return
+	}
+	if intent.State != checkout.StateWltOutcomeUnknown {
+		store.SendError(w, http.StatusConflict, "RECONCILIATION_NOT_REQUIRED", "checkout intent is not waiting for WLT reconciliation")
+		return
+	}
+	pricing, err := checkout.GetPricing(s.db, intent.ID)
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load checkout pricing")
+		return
+	}
+	correlationID := fundingCorrelation(r.Header.Get("X-Correlation-ID"), intent.ID)
+	session, err := s.wlt.CreatePaymentSession(r.Context(), wlt.CreatePaymentSessionInput{
+		CheckoutIntentID: intent.ID,
+		TenantID:         intent.TenantID,
+		ClientID:         intent.ClientID,
+		StoreID:          intent.StoreID,
+		PaymentMethod:    string(intent.PaymentMethod),
+		AmountMinorUnits: pricing.TotalMinorUnits,
+		Currency:         pricing.Currency,
+		CartSnapshotHash: pricing.SnapshotHash,
+		CorrelationID:    correlationID,
+		IdempotencyKey:   "dsh-checkout-intent:" + intent.ID,
+	})
+	if err != nil {
+		if wlt.IsPaymentSessionOutcomeUnknown(err) {
+			store.SendJSON(w, http.StatusAccepted, map[string]any{
+				"intent":                 marshalIntentWithPricing(intent, pricing),
+				"reconciliationRequired": true,
+			})
+			return
+		}
+		_ = s.releaseCouponFunding(r.Context(), intent.TenantID, intent.ID, "reconciliation_definitive_failure", correlationID)
+		_ = coupons.ReleaseByIntent(s.db, intent.ID, "reconciliation_definitive_failure")
+		failed, markErr := checkout.MarkWltHandoffFailed(s.db, intent.ID, intent.TenantID, intent.ClientID)
+		if markErr == nil {
+			store.SendJSON(w, http.StatusServiceUnavailable, map[string]any{
+				"intent":                 marshalIntentWithPricing(failed, pricing),
+				"reconciliationRequired": false,
+			})
+			return
+		}
+		store.SendError(w, http.StatusServiceUnavailable, "WLT_HANDOFF_UNAVAILABLE", "WLT reconciliation failed definitively")
+		return
+	}
+	reconciled, err := checkout.AttachWltPaymentSessionIdempotent(s.db, intent.ID, intent.TenantID, intent.ClientID, session.ID)
+	if err != nil {
+		store.SendError(w, http.StatusConflict, "RECONCILIATION_CONFLICT", "checkout state changed while reconciling")
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{
+		"intent":                 marshalIntentWithPricing(reconciled, pricing),
+		"reconciliationRequired": false,
+	})
+}

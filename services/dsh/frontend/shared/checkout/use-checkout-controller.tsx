@@ -5,6 +5,7 @@ import {
   createCheckoutIntent,
   fetchCheckoutIntent,
   fetchOperatorCheckoutIntents,
+  reconcileOperatorCheckoutIntent,
 } from "./checkout.api";
 import {
   clearCheckoutAttempt,
@@ -97,9 +98,15 @@ export function useOperatorCheckoutController(authKind = "unauthenticated") {
     if (authKind === "authenticated") void load();
   }, [authKind, load]);
 
+  const reconcile = useCallback(async (intentId: string) => {
+    await reconcileOperatorCheckoutIntent(intentId);
+    await load();
+  }, [load]);
+
   return {
     intents,
     loadState,
+    reconcile,
     reload: (stateFilter?: string) => void load(stateFilter),
   };
 }

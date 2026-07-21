@@ -3860,6 +3860,21 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/DshPartnerPerformanceResponse" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
+  /dsh/operator/checkout-intents/{intentId}/reconcile:
+    post:
+      operationId: reconcileDshCheckoutIntent
+      tags: [Checkout]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: intentId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: WLT payment-session reference reconciled idempotently. }
+        "202": { description: WLT outcome remains unknown and requires another retry. }
+        "409": { description: Reconciliation is not required or state changed. }
+
   /dsh/internal/wlt/payment-session-events:
     post:
       operationId: reportWltPaymentSessionEvent
