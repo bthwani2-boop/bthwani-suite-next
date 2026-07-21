@@ -29,12 +29,12 @@ type Event struct {
 }
 
 type partnerReadback struct {
-	PartnerID          string
-	PayoutDestination  string
-	MaskedAccount      string
-	MaskedIBAN         string
-	MaskedMobile       string
-	ActivationStatus   string
+	PartnerID         string
+	PayoutDestination string
+	MaskedAccount     string
+	MaskedIBAN        string
+	MaskedMobile      string
+	ActivationStatus  string
 }
 
 // RunWorker drains durable partner-to-WLT events and periodically compares DSH
