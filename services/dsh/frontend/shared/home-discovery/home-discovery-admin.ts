@@ -64,20 +64,27 @@ export async function saveHomeDiscoveryAdmin(
   kind: DshHomeAdminKind,
   itemId: string | null,
   input: DshHomeAdminContentInput,
-): Promise<void> {
+): Promise<DshHomeAdminContentItem> {
   if (itemId === null) {
-    await httpClient.request(`/dsh/operator/home-discovery/${kind}`, {
-      method: "POST",
-      body: input,
-      ...mutationAuth("home-content-create"),
-    });
-    return;
+    const response = await httpClient.request<{ item: DshHomeAdminContentItem }>(
+      `/dsh/operator/home-discovery/${kind}`,
+      {
+        method: "POST",
+        body: input,
+        ...mutationAuth("home-content-create"),
+      },
+    );
+    return response.item;
   }
-  await httpClient.request(`/dsh/operator/home-discovery/${kind}/${encodeURIComponent(itemId)}`, {
-    method: "PATCH",
-    body: input,
-    ...mutationAuth("home-content-update"),
-  });
+  const response = await httpClient.request<{ item: DshHomeAdminContentItem }>(
+    `/dsh/operator/home-discovery/${kind}/${encodeURIComponent(itemId)}`,
+    {
+      method: "PATCH",
+      body: input,
+      ...mutationAuth("home-content-update"),
+    },
+  );
+  return response.item;
 }
 
 export async function removeHomeDiscoveryAdmin(kind: DshHomeAdminKind, itemId: string): Promise<void> {
