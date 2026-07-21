@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: BThwani DSH Governed Client Map and Service Area API
-  version: 0.1.0
+  version: 0.2.0
   description: Map-provider results normalized through Providers and verified only against DSH-owned service-area geofences.
 x-bthwani-owner: services/dsh
 x-bthwani-contract-state: CONTRACT_ACTIVE
@@ -35,8 +35,10 @@ paths:
                     items: { $ref: "#/components/schemas/DshVerifiedMapLocation" }
         "400": { $ref: "#/components/responses/InvalidRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
+        "422": { $ref: "#/components/responses/MapUncertain" }
         "502": { $ref: "#/components/responses/MapUnavailable" }
         "503": { $ref: "#/components/responses/MapNotConfigured" }
+        "504": { $ref: "#/components/responses/MapTimeout" }
 
   /dsh/client/maps/reverse:
     post:
@@ -61,8 +63,32 @@ paths:
                   location: { $ref: "#/components/schemas/DshVerifiedMapLocation" }
         "400": { $ref: "#/components/responses/InvalidRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
+        "422": { $ref: "#/components/responses/MapUncertain" }
         "502": { $ref: "#/components/responses/MapUnavailable" }
         "503": { $ref: "#/components/responses/MapNotConfigured" }
+        "504": { $ref: "#/components/responses/MapTimeout" }
+
+  /dsh/operator/platform/map-provider-health:
+    get:
+      operationId: getDshOperatorMapProviderHealth
+      tags: [DshServiceAreaGovernance]
+      summary: Return the governed Providers health projection for map providers only.
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Governed map-provider health snapshot.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [mapProviderHealth]
+                properties:
+                  mapProviderHealth: { $ref: "#/components/schemas/DshMapProviderHealth" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "502": { $ref: "#/components/responses/MapUnavailable" }
+        "503": { $ref: "#/components/responses/MapNotConfigured" }
+        "504": { $ref: "#/components/responses/MapTimeout" }
 
   /dsh/operator/platform/service-areas:
     get:
@@ -145,7 +171,7 @@ components:
         countryCodes:
           type: array
           maxItems: 8
-          items: { type: string, minLength: 2, maxLength: 2 }
+          items: { type: string, pattern: "^[A-Za-z]{2}$" }
 
     DshMapReverseInput:
       type: object
@@ -166,20 +192,40 @@ components:
         - longitude
         - serviceAreaVerified
       properties:
-        providerCode: { type: string }
-        providerPlaceId: { type: string }
-        displayName: { type: string }
-        latitude: { type: number, format: double }
-        longitude: { type: number, format: double }
-        countryCode: { type: string }
+        providerCode: { type: string, minLength: 1 }
+        providerPlaceId: { type: string, minLength: 1 }
+        displayName: { type: string, minLength: 1 }
+        latitude: { type: number, format: double, minimum: -90, maximum: 90 }
+        longitude: { type: number, format: double, minimum: -180, maximum: 180 }
+        countryCode: { type: string, pattern: "^[A-Z]{2}$" }
         administrativeArea: { type: string }
         locality: { type: string }
         postalCode: { type: string }
-        confidence: { type: number, format: double }
+        confidence: { type: number, format: double, minimum: 0, maximum: 1 }
         serviceAreaCode: { type: string }
         serviceAreaName: { type: string }
         serviceAreaVersion: { type: integer, minimum: 1 }
         serviceAreaVerified: { type: boolean }
+
+    DshMapProviderHealthItem:
+      type: object
+      required: [kind, status, checkedAt]
+      properties:
+        kind: { type: string, enum: [map, maps] }
+        status: { type: string }
+        checkedAt: { type: string, format: date-time }
+        message: { type: string }
+
+    DshMapProviderHealth:
+      type: object
+      required: [configured, status, checkedAt, providers]
+      properties:
+        configured: { type: boolean }
+        status: { type: string, enum: [healthy, degraded, unknown, not_configured] }
+        checkedAt: { type: string, format: date-time }
+        providers:
+          type: array
+          items: { $ref: "#/components/schemas/DshMapProviderHealthItem" }
 
     DshPolygonPoint:
       type: array
@@ -253,6 +299,11 @@ components:
       content:
         application/json:
           schema: { $ref: "#/components/schemas/DshError" }
+    MapUncertain:
+      description: Provider returned a malformed or incomplete result that DSH refused to trust.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/DshError" }
     MapUnavailable:
       description: All configured governed map providers failed.
       content:
@@ -260,6 +311,11 @@ components:
           schema: { $ref: "#/components/schemas/DshError" }
     MapNotConfigured:
       description: No governed map provider is configured.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/DshError" }
+    MapTimeout:
+      description: Governed map-provider invocation exceeded its timeout.
       content:
         application/json:
           schema: { $ref: "#/components/schemas/DshError" }
