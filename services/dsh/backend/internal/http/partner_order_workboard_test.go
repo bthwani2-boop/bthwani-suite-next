@@ -31,11 +31,11 @@ func TestPartnerOrderAllowedActions(t *testing.T) {
 			if got := partnerOrderAllowedActions(tt.status, tt.mode, tt.handoffStatus); !reflect.DeepEqual(got, tt.want) {
 				t.Fatalf(
 					"partnerOrderAllowedActions(%q,%q,%q)=%v want %v",
-					t.status,
-					t.mode,
-					t.handoffStatus,
+					tt.status,
+					tt.mode,
+					tt.handoffStatus,
 					got,
-					t.want,
+					tt.want,
 				)
 			}
 		})
