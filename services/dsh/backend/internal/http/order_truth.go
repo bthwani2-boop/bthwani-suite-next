@@ -17,7 +17,13 @@ func (s *protectedStoreServer) handleCreateOrderTruth(w http.ResponseWriter, r *
 	if !decodeProtectedJSON(w, r, &body) { return }
 	body.CheckoutIntentID = strings.TrimSpace(body.CheckoutIntentID)
 	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
-	correlationID := strings.TrimSpace(r.Header.Get("X-Correlation-ID"))
+	correlationID := safeOrderCreateCorrelation(
+		actor.TenantID,
+		actor.ID,
+		body.CheckoutIntentID,
+		idempotencyKey,
+		r.Header.Get("X-Correlation-ID"),
+	)
 	if body.CheckoutIntentID == "" {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "checkoutIntentId is required")
 		return
