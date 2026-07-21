@@ -13,6 +13,8 @@ import {
   type DshStoreAdminListState,
   type DshStoreAdminDetailState,
   type DshStorePublicationDiagnosticsState,
+  type DshStoreAuditEvent,
+  type DshStoreAuditState,
 } from "./store-admin.view-model";
 
 const DSH_ADMIN_API_BASE_URL = resolveDshApiBaseUrl();
@@ -26,6 +28,17 @@ export { adminLoadingState };
 
 function adminToken(): string | undefined | null {
   return isBffMode ? undefined : getIdentityAccessToken();
+}
+
+function buildOperatorStoreListPath(params?: {
+  readonly limit?: number;
+  readonly offset?: number;
+}): string {
+  const query = new URLSearchParams();
+  if (params?.limit !== undefined) query.set("limit", String(params.limit));
+  if (params?.offset !== undefined) query.set("offset", String(params.offset));
+  const encoded = query.toString();
+  return encoded.length > 0 ? `/dsh/operator/stores?${encoded}` : "/dsh/operator/stores";
 }
 
 export async function fetchAdminStoreList(params?: {
@@ -43,7 +56,7 @@ export async function fetchAdminStoreList(params?: {
 
   try {
     const response = await adminHttpClient.request<OperatorStoreListResponse>(
-      "/dsh/operator/stores",
+      buildOperatorStoreListPath(params),
       { ...(token ? { token } : {}) },
     );
 
@@ -58,8 +71,8 @@ export async function fetchAdminStoreList(params?: {
       response.pagination.limit,
       response.pagination.offset,
     );
-  } catch (err: unknown) {
-    return classifyAdminError(err);
+  } catch (error: unknown) {
+    return classifyAdminError(error);
   }
 }
 
@@ -81,8 +94,8 @@ export async function fetchAdminStoreDetail(
       return { kind: "not_found" };
     }
     return { kind: "success", detail: toAdminDetail(response.store) };
-  } catch (err: unknown) {
-    return classifyAdminDetailError(err);
+  } catch (error: unknown) {
+    return classifyAdminDetailError(error);
   }
 }
 
@@ -115,14 +128,76 @@ export async function fetchAdminStorePublicationDiagnostics(
       return { kind: "error", message: "INVALID_RESPONSE: ready diagnostics cannot contain blockers" };
     }
     return { kind: "success", isReady: value.isReady, blockers: value.blockers };
-  } catch (err: unknown) {
-    return classifyAdminDiagnosticsError(err);
+  } catch (error: unknown) {
+    return classifyAdminDiagnosticsError(error);
   }
 }
 
-function classifyAdminDetailError(err: unknown): DshStoreAdminDetailState {
-  if (err !== null && typeof err === "object" && "kind" in err) {
-    const typed = err as { kind: string; status?: number; message?: string };
+function toAuditEvent(value: unknown): DshStoreAuditEvent | null {
+  if (value === null || typeof value !== "object") return null;
+  const event = value as Record<string, unknown>;
+  const fromState = event.fromState;
+  const toState = event.toState;
+  if (
+    typeof event.id !== "string" ||
+    typeof event.actorId !== "string" ||
+    typeof event.actorRole !== "string" ||
+    typeof event.storeId !== "string" ||
+    typeof event.action !== "string" ||
+    fromState === null || typeof fromState !== "object" || Array.isArray(fromState) ||
+    toState === null || typeof toState !== "object" || Array.isArray(toState) ||
+    typeof event.reason !== "string" ||
+    typeof event.correlationId !== "string" ||
+    typeof event.createdAt !== "string"
+  ) {
+    return null;
+  }
+  return {
+    id: event.id,
+    actorId: event.actorId,
+    actorRole: event.actorRole,
+    storeId: event.storeId,
+    action: event.action,
+    fromState: fromState as Readonly<Record<string, unknown>>,
+    toState: toState as Readonly<Record<string, unknown>>,
+    reason: event.reason,
+    correlationId: event.correlationId,
+    createdAt: event.createdAt,
+  };
+}
+
+export async function fetchAdminStoreAudit(storeId: string): Promise<DshStoreAuditState> {
+  if (!adminHttpClient) {
+    return { kind: "error", message: "API_CONFIG_ERROR: DSH admin client not initialized" };
+  }
+  const token = adminToken();
+  if (!isBffMode && token === null) return { kind: "permission_denied", statusCode: 401 };
+
+  try {
+    const response = await adminHttpClient.request<unknown>(
+      `/dsh/operator/stores/${encodeURIComponent(storeId)}/audit`,
+      { ...(token ? { token } : {}) },
+    );
+    if (response === null || typeof response !== "object") {
+      return { kind: "error", message: "INVALID_RESPONSE: audit object missing" };
+    }
+    const value = response as Record<string, unknown>;
+    if (!Array.isArray(value.events)) {
+      return { kind: "error", message: "INVALID_RESPONSE: audit events missing" };
+    }
+    const events = value.events.map(toAuditEvent);
+    if (events.some((event) => event === null)) {
+      return { kind: "error", message: "INVALID_RESPONSE: audit event contract mismatch" };
+    }
+    return { kind: "success", events: events as DshStoreAuditEvent[] };
+  } catch (error: unknown) {
+    return classifyAdminAuditError(error);
+  }
+}
+
+function classifyAdminDetailError(error: unknown): DshStoreAdminDetailState {
+  if (error !== null && typeof error === "object" && "kind" in error) {
+    const typed = error as { kind: string; status?: number; message?: string };
     if (typed.kind === "http") {
       if (typed.status === 404) return { kind: "not_found" };
       if (typed.status === 401) return { kind: "permission_denied", statusCode: 401 };
@@ -133,21 +208,29 @@ function classifyAdminDetailError(err: unknown): DshStoreAdminDetailState {
       return { kind: "error", message: `NETWORK_ERROR: ${typed.message ?? "unknown"}` };
     }
   }
-  const errMsg = err instanceof Error ? err.message : String(err);
-  return { kind: "error", message: `FETCH_ERROR: ${errMsg}` };
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  return { kind: "error", message: `FETCH_ERROR: ${errorMessage}` };
 }
 
-function classifyAdminDiagnosticsError(err: unknown): DshStorePublicationDiagnosticsState {
-  const detail = classifyAdminDetailError(err);
+function classifyAdminDiagnosticsError(error: unknown): DshStorePublicationDiagnosticsState {
+  const detail = classifyAdminDetailError(error);
   if (detail.kind === "not_found") return detail;
   if (detail.kind === "permission_denied") return detail;
   if (detail.kind === "error") return detail;
   return { kind: "error", message: "UNKNOWN_DIAGNOSTICS_ERROR" };
 }
 
-function classifyAdminError(err: unknown): DshStoreAdminListState {
-  if (err !== null && typeof err === "object" && "kind" in err) {
-    const typed = err as { kind: string; status?: number; message?: string };
+function classifyAdminAuditError(error: unknown): DshStoreAuditState {
+  const detail = classifyAdminDetailError(error);
+  if (detail.kind === "not_found") return detail;
+  if (detail.kind === "permission_denied") return detail;
+  if (detail.kind === "error") return detail;
+  return { kind: "error", message: "UNKNOWN_AUDIT_ERROR" };
+}
+
+function classifyAdminError(error: unknown): DshStoreAdminListState {
+  if (error !== null && typeof error === "object" && "kind" in error) {
+    const typed = error as { kind: string; status?: number; message?: string };
     if (typed.kind === "http") {
       if (typed.status === 503) return adminServiceUnavailableState();
       if (typed.status === 401) return adminPermissionDeniedState(401);
@@ -155,13 +238,13 @@ function classifyAdminError(err: unknown): DshStoreAdminListState {
       return adminErrorState(`HTTP_STATUS: ${typed.status ?? "unknown"}`);
     }
     if (typed.kind === "network") {
-      const msg = typed.message ?? "";
-      if (msg.includes("ECONNREFUSED") || msg.includes("connect")) {
+      const message = typed.message ?? "";
+      if (message.includes("ECONNREFUSED") || message.includes("connect")) {
         return adminServiceUnavailableState();
       }
-      return adminErrorState(`NETWORK_ERROR: ${msg}`);
+      return adminErrorState(`NETWORK_ERROR: ${message}`);
     }
   }
-  const errMsg = err instanceof Error ? err.message : String(err);
-  return adminErrorState(`FETCH_ERROR: ${errMsg}`);
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  return adminErrorState(`FETCH_ERROR: ${errorMessage}`);
 }
