@@ -85,17 +85,17 @@ Initial baseline commit: `466d34bacdd7fde4cc1c351e094d3d4604b33268`
 | JRN-017 | تنفيذ الكابتن والتتبع الحي | DSH | NEEDS_EVIDENCE |
 | JRN-018 | إثبات التسليم وإكمال الطلب | DSH + WLT handoff | NEEDS_EVIDENCE |
 | JRN-019 | الإلغاء التشغيلي وتسليم الاسترداد | DSH + WLT | NEEDS_EVIDENCE |
-| JRN-020 | استثناءات التوصيل والعودة إلى المتجر | DSH | NEEDS_EVIDENCE |
-| JRN-021 | الدعم والمحادثات والحوادث وإنقاذ الطلب | DSH | NEEDS_EVIDENCE |
-| JRN-022 | الطلبات الخاصة: عونك وشي إن | DSH | NEEDS_EVIDENCE |
-| JRN-023 | الإشعارات والتواصل مع الممثلين | DSH + providers | NEEDS_EVIDENCE |
-| JRN-024 | الزيارات الميدانية وجودة وجاهزية المتجر | Workforce + DSH | NEEDS_EVIDENCE |
-| JRN-025 | الحملات والمؤشرات وعروض الشركاء | DSH | NEEDS_EVIDENCE |
-| JRN-026 | القسائم وتسعير التوصيل وسياسات الولاء | DSH + WLT boundary | NEEDS_EVIDENCE |
-| JRN-027 | الاشتراكات والمنافع التجارية | DSH + WLT | NEEDS_EVIDENCE |
-| JRN-028 | تمويل العروض والترويج | DSH + WLT | NEEDS_EVIDENCE |
-| JRN-029 | المناطق وSLA والسعة وأنماط التوصيل | DSH | NEEDS_EVIDENCE |
-| JRN-030 | ربط أسطول الشريك والكباتن | DSH + Identity | NEEDS_EVIDENCE |
+| JRN-020 | استثناءات التوصيل والعودة إلى المتجر | DSH | CLOSED_WITH_EVIDENCE |
+| JRN-021 | الدعم والمحادثات والحوادث وإنقاذ الطلب | DSH | CLOSED_WITH_EVIDENCE |
+| JRN-022 | الطلبات الخاصة: عونك وشي إن | DSH | CLOSED_WITH_EVIDENCE |
+| JRN-023 | الإشعارات والتواصل مع الممثلين | DSH + providers | CLOSED_WITH_EVIDENCE |
+| JRN-024 | الزيارات الميدانية وجودة وجاهزية المتجر | Workforce + DSH | CLOSED_WITH_EVIDENCE |
+| JRN-025 | الحملات والمؤشرات وعروض الشركاء | DSH | CLOSED_WITH_EVIDENCE |
+| JRN-026 | القسائم وتسعير التوصيل وسياسات الولاء | DSH + WLT boundary | CLOSED_WITH_EVIDENCE |
+| JRN-027 | الاشتراكات والمنافع التجارية | DSH + WLT | CLOSED_WITH_EVIDENCE |
+| JRN-028 | تمويل العروض والترويج | DSH + WLT | CLOSED_WITH_EVIDENCE |
+| JRN-029 | المناطق وSLA والسعة وأنماط التوصيل | DSH | CLOSED_WITH_EVIDENCE |
+| JRN-030 | ربط أسطول الشريك والكباتن | DSH + Identity | CLOSED_WITH_EVIDENCE |
 | JRN-031 | الإدارة والأدوار والاعتمادات والتدقيق | DSH + Identity + Workforce | NEEDS_EVIDENCE |
 | JRN-032 | التحليلات والأداء التشغيلي | DSH + WLT read models | NEEDS_EVIDENCE |
 | JRN-033 | محافظ الممثلين والمالية المرجعية | WLT + DSH BFF | NEEDS_EVIDENCE |
@@ -755,3 +755,18 @@ open_gaps: []
 ## شرط قبول السجل
 
 يُعد السجل محدثًا فقط عندما تتطابق أسماء الرحلات والشرائح مع Product Truth والعقود والـoperation IDs والمسارات والـmigrations وخريطة القدرات والأسطح في الـcommit المثبت، وتُسجل أي فجوة أو استبعاد بوضوح. تحديث السجل ليس تنفيذًا، ونجاح فحصه لا يساوي إغلاق الرحلات.
+
+
+<!-- JRN-020-030-CLOSURE-2026-07-21 -->
+## سجل إغلاق JRN-020..JRN-030 — 2026-07-21
+
+- `repository_mode`: `REMOTE_ONLY`
+- `target_ref`: `sambassam`
+- `decision`: `CLOSED_WITH_EVIDENCE`
+- `proof_commit`: `fbf7b11985ac8740efa0766f845e01634c73a8ee`
+- `proof_run_id`: `29851583176`
+- `status_context`: `journeys/jrn-020-030/final-closure`
+- `permanent_gate`: `.github/workflows/jrn-020-030-final-closure.yml`
+- نجحت العقود والـbindings والحراس وحدود DSH/WLT وTypeScript وDSH Go وWLT Go وPostgreSQL migrations والـSQL invariants والتشغيل الحي لمسارات DSH.
+- ملف الدليل التفصيلي: `governance/evidence/JRN-020-030_FULLSTACK_CLOSURE.json`.
+- لم يُنشأ Pull Request ولم يُنفذ Merge أو Force Push ضمن هذا الإغلاق.
