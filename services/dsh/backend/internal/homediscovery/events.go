@@ -11,10 +11,13 @@ import (
 )
 
 type HomeContentEventInput struct {
-	EventType   string `json:"eventType"`
-	ContentKind string `json:"contentKind"`
-	ContentID   string `json:"contentId"`
-	ViewerRef   string `json:"viewerRef,omitempty"`
+	EventType        string `json:"eventType"`
+	ContentKind      string `json:"contentKind"`
+	ContentID        string `json:"contentId"`
+	ViewerRef        string `json:"viewerRef"`
+	CityCode         string `json:"cityCode,omitempty"`
+	ServiceAreaCode  string `json:"serviceAreaCode,omitempty"`
+	AudienceSegment  string `json:"audienceSegment"`
 }
 
 func HandleHomeContentEvent(db *sql.DB) http.HandlerFunc {
@@ -30,7 +33,7 @@ func HandleHomeContentEvent(db *sql.DB) http.HandlerFunc {
 		}
 		if err := RecordHomeContentEvent(r.Context(), db, input); err != nil {
 			switch err.Error() {
-			case "content not publishable":
+			case "content not publishable for context":
 				sendError(w, http.StatusNotFound, "CONTENT_NOT_PUBLISHABLE", err.Error())
 			default:
 				sendError(w, http.StatusBadRequest, "INVALID_EVENT", err.Error())
@@ -45,12 +48,29 @@ func RecordHomeContentEvent(ctx context.Context, db *sql.DB, input HomeContentEv
 	eventType := strings.TrimSpace(input.EventType)
 	kind := strings.TrimSpace(input.ContentKind)
 	contentID := strings.TrimSpace(input.ContentID)
+	viewerRef := strings.TrimSpace(input.ViewerRef)
+	cityCode := strings.TrimSpace(input.CityCode)
+	serviceAreaCode := strings.TrimSpace(input.ServiceAreaCode)
+	audienceSegment := strings.TrimSpace(input.AudienceSegment)
 	if eventType != "impression" && eventType != "click" {
 		return fmt.Errorf("invalid event type")
 	}
 	if contentID == "" {
 		return fmt.Errorf("contentId is required")
 	}
+	if len(viewerRef) < 8 || len(viewerRef) > 160 || !homeTargetCodePattern.MatchString(viewerRef) {
+		return fmt.Errorf("invalid viewerRef")
+	}
+	if cityCode != "" && !homeTargetCodePattern.MatchString(cityCode) {
+		return fmt.Errorf("invalid cityCode")
+	}
+	if serviceAreaCode != "" && !homeTargetCodePattern.MatchString(serviceAreaCode) {
+		return fmt.Errorf("invalid serviceAreaCode")
+	}
+	if audienceSegment != "guest" && audienceSegment != "authenticated" {
+		return fmt.Errorf("invalid audienceSegment")
+	}
+
 	var sourceTable, entityType, eventTable string
 	switch kind {
 	case "banners":
@@ -68,28 +88,66 @@ func RecordHomeContentEvent(ctx context.Context, db *sql.DB, input HomeContentEv
 
 	var publishable bool
 	query := `SELECT EXISTS (
-		SELECT 1 FROM ` + sourceTable + `
-		WHERE id = $1
-		  AND is_active = TRUE
-		  AND publication_status = 'published'
-		  AND approved_at IS NOT NULL
-		  AND (publish_from IS NULL OR publish_from <= NOW())
-		  AND (publish_until IS NULL OR publish_until > NOW())
+		SELECT 1 FROM ` + sourceTable + ` c
+		WHERE c.id = $1
+		  AND c.is_active = TRUE
+		  AND c.publication_status = 'published'
+		  AND c.approved_at IS NOT NULL
+		  AND (c.publish_from IS NULL OR c.publish_from <= NOW())
+		  AND (c.publish_until IS NULL OR c.publish_until > NOW())
+		  AND (
+			NOT EXISTS (
+				SELECT 1 FROM dsh_home_content_targets t
+				WHERE t.content_kind=$5 AND t.content_id=c.id AND t.target_type='city'
+			)
+			OR ($2 <> '' AND EXISTS (
+				SELECT 1 FROM dsh_home_content_targets t
+				WHERE t.content_kind=$5 AND t.content_id=c.id
+				  AND t.target_type='city' AND t.target_value=$2
+			))
+		  )
+		  AND (
+			NOT EXISTS (
+				SELECT 1 FROM dsh_home_content_targets t
+				WHERE t.content_kind=$5 AND t.content_id=c.id AND t.target_type='service_area'
+			)
+			OR ($3 <> '' AND EXISTS (
+				SELECT 1 FROM dsh_home_content_targets t
+				WHERE t.content_kind=$5 AND t.content_id=c.id
+				  AND t.target_type='service_area' AND t.target_value=$3
+			))
+		  )
+		  AND (
+			NOT EXISTS (
+				SELECT 1 FROM dsh_home_content_targets t
+				WHERE t.content_kind=$5 AND t.content_id=c.id AND t.target_type='audience'
+			)
+			OR EXISTS (
+				SELECT 1 FROM dsh_home_content_targets t
+				WHERE t.content_kind=$5 AND t.content_id=c.id
+				  AND t.target_type='audience' AND t.target_value=$4
+			)
+		  )
 	)`
-	if err := db.QueryRowContext(ctx, query, contentID).Scan(&publishable); err != nil {
+	if err := db.QueryRowContext(
+		ctx,
+		query,
+		contentID,
+		cityCode,
+		serviceAreaCode,
+		audienceSegment,
+		kind,
+	).Scan(&publishable); err != nil {
 		return err
 	}
 	if !publishable {
-		return fmt.Errorf("content not publishable")
+		return fmt.Errorf("content not publishable for context")
 	}
 
-	viewerRef := strings.TrimSpace(input.ViewerRef)
-	if len(viewerRef) > 160 {
-		return fmt.Errorf("viewerRef is too long")
-	}
 	_, err := db.ExecContext(ctx, `INSERT INTO `+eventTable+`
 		(id,entity_type,entity_id,surface,viewer_ref)
-		VALUES ($1,$2,$3,'app-client',NULLIF($4,''))`,
+		VALUES ($1,$2,$3,'app-client',$4)
+		ON CONFLICT DO NOTHING`,
 		fmt.Sprintf("home-%s-%d", eventType, time.Now().UnixNano()), entityType, contentID, viewerRef,
 	)
 	return err
