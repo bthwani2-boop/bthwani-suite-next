@@ -31,6 +31,10 @@ export type DshStoreAdminDetail = DshStoreAdminTableRow & {
   readonly isFreeDelivery: boolean;
   readonly isPopular: boolean;
   readonly pointsMultiplier: number | null;
+  readonly addressLine: string;
+  readonly coverageSummary: string;
+  readonly operatingHours: string;
+  readonly deliveryReadiness: string;
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly version: number;
@@ -145,6 +149,10 @@ export function toAdminDetail(dto: DshStoreDetailDto): DshStoreAdminDetail {
     isFreeDelivery: dto.isFreeDelivery,
     isPopular: dto.isPopular,
     pointsMultiplier: dto.pointsMultiplier ?? null,
+    addressLine: dto.addressLine.trim(),
+    coverageSummary: dto.coverageSummary.trim(),
+    operatingHours: dto.operatingHours.trim(),
+    deliveryReadiness: dto.deliveryReadiness.trim(),
     createdAt: dto.createdAt,
     updatedAt: dto.updatedAt,
     version: dto.version,
