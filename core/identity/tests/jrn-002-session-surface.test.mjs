@@ -48,3 +48,18 @@ test("JRN-002 keeps HTTP, CORS, OpenAPI, and Workforce actor search aligned", as
   assert.match(contract, /type: array/);
   assert.match(workforceClient, /var result \[\]ActorView/);
 });
+
+test("JRN-002 typechecks every identity-consuming runtime", async () => {
+  const packageJson = JSON.parse(await read("core/identity/package.json"));
+  const script = packageJson.scripts?.typecheck ?? "";
+
+  for (const runtime of [
+    "apps/app-client/runtime",
+    "apps/app-partner/runtime",
+    "apps/app-captain/runtime",
+    "apps/app-field/runtime",
+    "apps/control-panel/runtime",
+  ]) {
+    assert.ok(script.includes(runtime), `identity typecheck must cover ${runtime}`);
+  }
+});
