@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   createDshClientAddress,
   deleteDshClientAddress,
@@ -54,7 +54,7 @@ export function useClientAddressController() {
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [mutating, setMutating] = useState(false);
-  const mutationLock = useMemo(() => ({ current: false }), []);
+  const mutationLock = useRef(false);
 
   const load = useCallback(async () => {
     setState({ kind: "loading" });
@@ -88,25 +88,20 @@ export function useClientAddressController() {
       mutationLock.current = false;
       setMutating(false);
     }
-  }, [mutationLock]);
+  }, []);
 
   const createAddress = useCallback(async (input: DshClientAddressDraft): Promise<boolean> => {
-    let attempt;
-    try {
-      attempt = await getOrCreateClientAddressAttempt(input);
-    } catch (error) {
-      setMutationError(messageOf(error));
-      return false;
-    }
-
-    const address = await runMutation(() => createDshClientAddress(input, attempt.context));
+    const address = await runMutation(async () => {
+      const attempt = await getOrCreateClientAddressAttempt(input);
+      const created = await createDshClientAddress(input, attempt.context);
+      try {
+        await clearClientAddressAttempt(attempt.fingerprint);
+      } catch {
+        // The server accepted the idempotent mutation; replaying the stored key remains safe.
+      }
+      return created;
+    });
     if (!address) return false;
-
-    try {
-      await clearClientAddressAttempt(attempt.fingerprint);
-    } catch {
-      // The server already accepted the idempotent mutation; a later replay remains safe.
-    }
     setSelectedAddressId(address.id);
     await load();
     return true;
