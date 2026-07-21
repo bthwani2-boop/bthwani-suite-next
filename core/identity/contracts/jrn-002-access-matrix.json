@@ -1,0 +1,57 @@
+{
+  "journeyId": "JRN-002",
+  "owner": "core/identity",
+  "roles": {
+    "client": {"requiredSurfaces": ["app-client"], "activation": true},
+    "partner": {"requiredSurfaces": ["app-partner"], "activation": true},
+    "captain": {"requiredSurfaces": ["app-captain"], "activation": true},
+    "field": {"requiredSurfaces": ["app-field"], "activation": true},
+    "operator": {"requiredSurfaces": ["control-panel"], "activation": false},
+    "system": {"requiredSurfaces": [], "activation": false}
+  },
+  "trustedCallers": {
+    "workforce": [
+      "actor.provision",
+      "actor.search",
+      "actor.read",
+      "actor.deactivate",
+      "actor.reactivate",
+      "activation.issue",
+      "activation.readLatest",
+      "activation.revokeAll"
+    ]
+  },
+  "publicActions": [
+    "identity.health",
+    "identity.readiness",
+    "auth.login",
+    "activation.request",
+    "activation.consume",
+    "session.refresh",
+    "session.read",
+    "session.introspect",
+    "session.listOwn",
+    "session.revokeOwn",
+    "session.logout",
+    "password.changeOwn",
+    "account.deleteOwn"
+  ],
+  "forbidden": [
+    "actor.readOtherSessions",
+    "actor.revokeOtherSessions",
+    "actor.overrideRoleFromClient",
+    "actor.overrideSurfaceFromClient",
+    "activation.reuseConsumedCode",
+    "activation.crossRoleConsume",
+    "activation.crossSurfaceConsume",
+    "refresh.reuseRotatedToken",
+    "browser.untrustedOrigin",
+    "service.missingCallerIdentity",
+    "service.missingBearerToken",
+    "support.impersonationWithoutApprovedContract"
+  ],
+  "excludedSurfaces": {
+    "website": "No authenticated Identity journey is registered on the public marketing website.",
+    "webapp": "No separate authenticated webapp surface is active; control-panel owns operator authentication."
+  }
+}
