@@ -16,6 +16,9 @@ func TestJourney031ExposesGovernedAdministrationRoutes(t *testing.T) {
 		pattern string
 	}{
 		{name: "list roles", method: http.MethodGet, path: "/dsh/operator/admin/roles", pattern: "GET /dsh/operator/admin/roles"},
+		{name: "request role definition", method: http.MethodPost, path: "/dsh/operator/admin/roles/requests", pattern: "POST /dsh/operator/admin/roles/requests"},
+		{name: "list role definitions", method: http.MethodGet, path: "/dsh/operator/admin/role-requests?status=pending", pattern: "GET /dsh/operator/admin/role-requests"},
+		{name: "review role definition", method: http.MethodPost, path: "/dsh/operator/admin/role-requests/request-1/review", pattern: "POST /dsh/operator/admin/role-requests/{requestId}/review"},
 		{name: "list staff", method: http.MethodGet, path: "/dsh/operator/admin/staff", pattern: "GET /dsh/operator/admin/staff"},
 		{name: "request role assignment", method: http.MethodPost, path: "/dsh/operator/admin/staff/actor-2/roles", pattern: "POST /dsh/operator/admin/staff/{staffId}/roles"},
 		{name: "list approvals", method: http.MethodGet, path: "/dsh/operator/admin/approvals?status=pending", pattern: "GET /dsh/operator/admin/approvals"},
