@@ -38,7 +38,7 @@ export function CheckoutActivityScreen() {
   const stateView = controller.loadState === "loading"
     ? <CpStatePanel role="status" title="جاري تحميل نشاط checkout" description="يتم تحميل نوايا الدفع ومرجع WLT من DSH." />
     : controller.loadState === "empty"
-      ? <CpStatePanel role="status" title="لا توجد نوايا checkout" description="ستظهر هنا أي نية دفع تنشأ من DSH." />
+      ? <CpStatePanel role="status" title="لا توجد نوايا checkout" description="لا توجد سجلات مطابقة للمرشح الحالي." />
       : controller.loadState === "error"
         ? (
           <CpStatePanel role="alert" title="تعذر تحميل نشاط checkout" description="تحقق من صلاحيات operator واتصال DSH API.">
@@ -55,8 +55,14 @@ export function CheckoutActivityScreen() {
         <section style={styles.toolbar}>
           <strong>حدود الخدمة والرحلة التشغيلية</strong>
           <p style={styles.toolbarDescription}>
-            هذه الشاشة مراقبة تشغيلية فقط: DSH يعرض نية checkout، و WLT يملك مرجع جلسة الدفع. لا توجد أزرار خصم أو استرداد أو تسوية هنا.
+            هذه الشاشة مراقبة تشغيلية فقط: DSH يعرض نية checkout، وWLT يملك مرجع جلسة الدفع. لا توجد أزرار خصم أو استرداد أو تسوية هنا.
           </p>
+          <div style={styles.filters} aria-label="مرشحات حالة checkout">
+            <CpButton onClick={() => controller.reload()}>كل الحالات</CpButton>
+            <CpButton onClick={() => controller.reload("wlt_outcome_unknown")}>تحتاج مصالحة</CpButton>
+            <CpButton onClick={() => controller.reload("wlt_handoff_failed")}>فشل التسليم إلى WLT</CpButton>
+            <CpButton onClick={() => controller.reload("payment_pending")}>في انتظار نتيجة الدفع</CpButton>
+          </div>
         </section>
       )}
       stateView={stateView}
@@ -73,6 +79,7 @@ export function CheckoutActivityScreen() {
         <CpTable aria-label="نشاط checkout">
           <thead>
             <tr>
+              <CpTableHeaderCell>المستأجر</CpTableHeaderCell>
               <CpTableHeaderCell>معرف العميل</CpTableHeaderCell>
               <CpTableHeaderCell>معرف المتجر</CpTableHeaderCell>
               <CpTableHeaderCell>طريقة التوصيل</CpTableHeaderCell>
@@ -113,6 +120,7 @@ function CheckoutIntentRow({
 
   return (
     <tr>
+      <CpTableCell>{intent.tenantId || "غير متاح"}</CpTableCell>
       <CpTableCell>{intent.clientId}</CpTableCell>
       <CpTableCell>{intent.storeId}</CpTableCell>
       <CpTableCell>{FULFILLMENT_LABELS[intent.fulfillmentMode] ?? intent.fulfillmentMode}</CpTableCell>
@@ -157,6 +165,12 @@ const styles = WebStyleSheet.create({
   toolbarDescription: {
     margin: "0.35rem 0 0",
     opacity: 0.75,
+  },
+  filters: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "0.5rem",
+    marginTop: "0.85rem",
   },
   alertWrap: {
     margin: "0 1rem 1rem",
