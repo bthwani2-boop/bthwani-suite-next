@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "journeyId": "JRN-001",
+  "sliceId": "FS-10",
+  "description": "Required UI surfaces, routes, screens, tabs, actions, icons, and deep-navigation bindings for partner onboarding and first-store publication.",
+  "authority": "governance/product/contracts/jrn-001-partner-onboarding-store-publication.product-truth.json",
+  "requiredSurfaces": [
+    {
+      "surfaceId": "app-client",
+      "actors": ["client"],
+      "routes": [
+        {
+          "routeId": "store-discovery",
+          "routeFile": "services/dsh/frontend/app-client/home-discovery/HomeDiscoveryRoute.tsx",
+          "screenFile": "services/dsh/frontend/app-client/home-discovery/HomeDiscoveryScreen.tsx",
+          "actions": ["onStorePress", "onRetry"],
+          "deepLinks": ["storeId", "slug"]
+        },
+        {
+          "routeId": "store-detail",
+          "routeFile": "services/dsh/frontend/app-client/store/StoreDetailRoute.tsx",
+          "screenFile": "services/dsh/frontend/app-client/store/StoreDetailScreen.tsx",
+          "actions": ["onBack", "onGoToCart", "onAddToCart", "onToggleFavorite"],
+          "publicationGate": "isClientEligible"
+        }
+      ]
+    },
+    {
+      "surfaceId": "app-field",
+      "actors": ["field-agent"],
+      "routeRegistry": "services/dsh/frontend/app-field/dsh-field.routes.ts",
+      "routeRenderer": "services/dsh/frontend/app-field/components/DshFieldRouteRenderer.tsx",
+      "routes": ["stores", "onboarding", "partner-progress", "visit", "verification", "checklist", "escalation", "work-queue", "products-upload"],
+      "screenFile": "services/dsh/frontend/app-field/onboarding/DshFieldOnboardingScreen.tsx",
+      "tabs": ["basics_profile", "location_media", "evidence", "bank_account", "agreement_review"],
+      "actions": ["onBack", "save", "upload-document", "capture-location", "submit", "open-products", "open-visit", "open-escalation"],
+      "icons": ["arrow-back", "save-outline", "checkmark-circle", "radio-button-on", "radio-button-off"]
+    },
+    {
+      "surfaceId": "app-partner",
+      "actors": ["partner-owner"],
+      "bindingRegistry": "services/dsh/frontend/app-partner/dsh-partner-binding.contracts.ts",
+      "routeRenderer": "services/dsh/frontend/app-partner/DshPartnerRouteRenderer.tsx",
+      "routes": ["home", "entry", "team"],
+      "screens": [
+        "services/dsh/frontend/app-partner/account/PartnerHubScreen.tsx",
+        "services/dsh/frontend/app-partner/account/PartnerOnboardingStatusView.tsx",
+        "services/dsh/frontend/app-partner/team/PartnerTeamManagementScreen.tsx"
+      ],
+      "actions": ["reloadSelfStatus", "openStoreScope", "onInviteMember", "onMemberAction"],
+      "deepLinks": ["home-to-team", "home-to-store-scope"]
+    },
+    {
+      "surfaceId": "control-panel",
+      "actors": ["control-operator"],
+      "routes": [
+        {
+          "routeId": "partners-list",
+          "routeFile": "apps/control-panel/runtime/src/app/dsh/partners/page.tsx",
+          "screenFile": "services/dsh/frontend/control-panel/partners/PartnersReviewQueueScreen.tsx",
+          "deepLink": "/dsh/partners/{partnerId}"
+        },
+        {
+          "routeId": "partner-detail",
+          "routeFile": "apps/control-panel/runtime/src/app/dsh/partners/[partnerId]/page.tsx",
+          "screenFile": "services/dsh/frontend/control-panel/partners/PartnerDetailOperationalScreen.tsx",
+          "backRoute": "/dsh/partners"
+        }
+      ],
+      "tabs": ["overview", "documents", "visits", "stores", "readiness", "audit"],
+      "actions": ["open-partner", "approve-document", "reject-document", "request-resubmit", "link-store", "apply-transition", "read-audit"]
+    }
+  ],
+  "excludedSurfaces": [
+    {
+      "surfaceId": "app-captain",
+      "reason": "Captain assignment and fulfillment begin after store publication in later journeys."
+    }
+  ]
+}
