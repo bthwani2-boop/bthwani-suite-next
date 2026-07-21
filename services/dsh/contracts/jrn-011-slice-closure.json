@@ -38,9 +38,10 @@
       "codeStatus": "CLOSED",
       "requiredFiles": [
         "governance/boundaries/jrn-011-dsh-wlt-order-truth-boundary.md",
-        "services/dsh/backend/internal/wlt/client.go"
+        "services/dsh/backend/internal/wlt/payment_session.go",
+        "services/dsh/backend/internal/orders/order_truth_payment_projection_db_test.go"
       ],
-      "requiredMarkers": ["WLT owns", "PaymentSession", "read-only"]
+      "requiredMarkers": ["WLT owns", "GetPaymentSession", "never mutates WLT-owned state", "TestJRN011PaymentProjectionDBIntegration"]
     },
     {
       "id": "FS-05",
@@ -81,9 +82,11 @@
       "requiredFiles": [
         "services/dsh/backend/internal/orders/order_event_outbox.go",
         "services/dsh/backend/internal/orders/order_event_bridge_worker.go",
-        "services/dsh/backend/internal/orders/order_truth_db_test.go"
+        "services/dsh/backend/internal/orders/order_payment_projection_worker.go",
+        "services/dsh/backend/internal/orders/order_truth_db_test.go",
+        "services/dsh/backend/internal/orders/order_truth_payment_projection_db_test.go"
       ],
-      "requiredMarkers": ["FOR UPDATE SKIP LOCKED", "order.created", "transactional outbox"]
+      "requiredMarkers": ["FOR UPDATE SKIP LOCKED", "ProcessOrderEventBridgeOnce", "order.created", "applyPaymentProjection"]
     },
     {
       "id": "FS-09",
@@ -178,9 +181,10 @@
       "requiredFiles": [
         ".github/workflows/jrn-011-order-truth-verify.yml",
         "services/dsh/backend/internal/orders/order_truth_db_test.go",
+        "services/dsh/backend/internal/orders/order_truth_payment_projection_db_test.go",
         "services/dsh/tsconfig.jrn-011.json"
       ],
-      "requiredMarkers": ["database-invariants", "go-contracts", "typescript-binding"]
+      "requiredMarkers": ["database-invariants", "go-contracts", "typescript-binding", "TestJRN011PaymentProjectionDBIntegration"]
     },
     {
       "id": "FS-18",
