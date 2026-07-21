@@ -191,12 +191,7 @@ func RowToSummary(row DshStoreRow) DshStoreSummary {
 }
 
 func IsPublicationEligible(row DshStoreRow) bool {
-	return row.Status == StatusActive &&
-		row.IsVisible &&
-		(row.ServiceabilityStatus == ServiceabilityServiceable || row.ServiceabilityStatus == ServiceabilityLimited) &&
-		row.PartnerReadiness == "ready" &&
-		row.CatalogApprovalStatus == "approved" &&
-		row.MarketingVisibility == "visible"
+	return DiagnoseStorePublication(row).IsReady
 }
 
 func RowToDetail(row DshStoreRow) DshStoreDetail {
