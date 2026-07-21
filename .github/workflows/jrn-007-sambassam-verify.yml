@@ -6,6 +6,8 @@ on:
     branches: [sambassam]
     paths:
       - "contracts/master.openapi.yaml"
+      - "governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md"
+      - "governance/evidence/JRN-007_FULLSTACK_MULTI_SURFACE_CLOSURE.json"
       - "services/dsh/tsconfig.jrn-007.json"
       - "services/dsh/backend/internal/homediscovery/**"
       - "services/dsh/backend/internal/http/server.go"
@@ -15,6 +17,7 @@ on:
       - "services/dsh/contracts/dsh.home-discovery.overlay.yaml"
       - "services/dsh/contracts/dsh.home-marketing-events.openapi.yaml"
       - "services/dsh/database/migrations/dsh-002_home_discovery.sql"
+      - "services/dsh/database/migrations/dsh-012_marketing.sql"
       - "services/dsh/database/migrations/dsh-017_marketing_governance.sql"
       - "services/dsh/database/migrations/dsh-018_retire_marketing_banners_promos.sql"
       - "services/dsh/database/migrations/dsh-025_marketing_entity_type_constraints.sql"
@@ -51,6 +54,8 @@ jobs:
           persist-credentials: false
       - name: Setup pinned Node and PNPM workspace
         uses: ./.github/actions/setup-node-workspace
+      - name: Prepare diagnostics
+        run: mkdir -p journey-diagnostics
       - name: Verify repository hygiene
         run: git diff --check
       - name: Verify JRN-007 OpenAPI document
@@ -58,7 +63,25 @@ jobs:
       - name: Verify JRN-007 source bindings
         run: node --test services/dsh/tests/jrn-007-home-discovery-closure.test.mjs
       - name: Typecheck JRN-007 shared brain and surfaces
-        run: pnpm --dir services/dsh exec tsc -p tsconfig.jrn-007.json --noEmit --pretty false
+        id: typecheck
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm --dir services/dsh exec tsc -p tsconfig.jrn-007.json --noEmit --pretty false 2>&1 | tee journey-diagnostics/typecheck.log
+      - name: Upload typecheck diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: jrn-007-typecheck-diagnostics
+          path: journey-diagnostics/typecheck.log
+          if-no-files-found: error
+          retention-days: 7
+      - name: Enforce typecheck outcome
+        if: always()
+        env:
+          TYPECHECK_RESULT: ${{ steps.typecheck.outcome }}
+        run: test "$TYPECHECK_RESULT" = success
 
   home-go:
     name: Home domain and governed routes
@@ -107,23 +130,49 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false
+      - name: Prepare diagnostics
+        run: mkdir -p journey-diagnostics
       - name: Apply JRN-007 dependency migrations
+        id: migrations
+        continue-on-error: true
         shell: bash
         run: |
-          set -euo pipefail
-          for file in \
-            services/dsh/database/migrations/dsh-002_home_discovery.sql \
-            services/dsh/database/migrations/dsh-017_marketing_governance.sql \
-            services/dsh/database/migrations/dsh-018_retire_marketing_banners_promos.sql \
-            services/dsh/database/migrations/dsh-025_marketing_entity_type_constraints.sql \
-            services/dsh/database/migrations/dsh-060_home_marketing_publication_gates.sql \
-            services/dsh/database/migrations/dsh-098_home_discovery_targeting.sql \
-            services/dsh/database/migrations/dsh-099_home_marketing_impression_dedup.sql; do
-            echo "==> $file"
-            psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f "$file"
-          done
+          set -o pipefail
+          {
+            for file in \
+              services/dsh/database/migrations/dsh-002_home_discovery.sql \
+              services/dsh/database/migrations/dsh-012_marketing.sql \
+              services/dsh/database/migrations/dsh-017_marketing_governance.sql \
+              services/dsh/database/migrations/dsh-018_retire_marketing_banners_promos.sql \
+              services/dsh/database/migrations/dsh-025_marketing_entity_type_constraints.sql \
+              services/dsh/database/migrations/dsh-060_home_marketing_publication_gates.sql \
+              services/dsh/database/migrations/dsh-098_home_discovery_targeting.sql \
+              services/dsh/database/migrations/dsh-099_home_marketing_impression_dedup.sql; do
+              echo "==> $file"
+              psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f "$file"
+            done
+          } 2>&1 | tee journey-diagnostics/migrations.log
       - name: Verify JRN-007 SQL invariants
-        run: psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f services/dsh/database/tests/dsh-098_099_home_discovery_invariants.sql
+        id: sqltests
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f services/dsh/database/tests/dsh-098_099_home_discovery_invariants.sql 2>&1 | tee journey-diagnostics/sql-tests.log
+      - name: Upload database diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: jrn-007-database-diagnostics
+          path: journey-diagnostics
+          if-no-files-found: error
+          retention-days: 7
+      - name: Enforce database outcomes
+        if: always()
+        env:
+          MIGRATIONS_RESULT: ${{ steps.migrations.outcome }}
+          SQL_TESTS_RESULT: ${{ steps.sqltests.outcome }}
+        run: test "$MIGRATIONS_RESULT" = success && test "$SQL_TESTS_RESULT" = success
 
   publish-result:
     name: Publish JRN-007 same-commit status
