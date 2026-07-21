@@ -12,6 +12,7 @@ import {
   Text,
   Header,
   IconButton,
+  StateView,
   spacing,
   radius,
   borders,
@@ -33,7 +34,11 @@ import {
   type FieldPartnerDraftStep,
   type FieldOnboardingController,
 } from '../../shared/field-onboarding';
-import { REQUIRED_DOCUMENT_TYPES, type DshPartnerDocumentType } from '../../shared/partner';
+import {
+  REQUIRED_DOCUMENT_TYPES,
+  resolvePartnerOnboardingFailureState,
+  type DshPartnerDocumentType,
+} from '../../shared/partner';
 import { uploadFieldMedia } from '../../shared/media';
 import { useStoreOnboardingFeeReferenceController } from '../../shared/platform';
 import { OnboardingBasicsSection } from '../components/OnboardingBasicsSection';
@@ -191,6 +196,41 @@ export function DshFieldOnboardingScreen({
     bank_account: getBankAccountMissingCount(form),
     agreement_review: getAgreementReviewMissingCount(form, state.uploadedDocumentTypes),
   };
+  const visibleFailure = state.failure
+    ? resolvePartnerOnboardingFailureState(state.failure)
+    : null;
+  const firstIncompleteGroup = GROUP_ORDER.find(
+    (groupId) => groupMissingCounts[groupId] > 0,
+  ) ?? 'agreement_review';
+
+  const recoverVisibleFailure = () => {
+    if (!visibleFailure) return;
+    if (visibleFailure.action === 'reload' && state.partnerId) {
+      void controller.loadDraft(state.partnerId);
+      return;
+    }
+    if (visibleFailure.action === 'retry') {
+      if (activeGroup === 'agreement_review' && isReadyToSubmit && state.partnerId) {
+        void controller.submitDraft();
+      } else if (state.partnerId) {
+        void controller.save();
+      } else {
+        void controller.ensureDraftCreated();
+      }
+      return;
+    }
+    if (visibleFailure.action === 'complete_requirements') {
+      setActiveGroup(firstIncompleteGroup);
+      return;
+    }
+    if (visibleFailure.action === 'sign_in') onBack?.();
+  };
+
+  const canRecoverVisibleFailure = Boolean(
+    visibleFailure &&
+    visibleFailure.action !== 'none' &&
+    (visibleFailure.action !== 'sign_in' || onBack),
+  );
 
   // ── Session restoring (after all hooks) ───────────────────────────────────
   if (identity.state.kind === 'restoring' || identity.state.kind === 'unconfigured') {
@@ -218,9 +258,12 @@ export function DshFieldOnboardingScreen({
     return (
       <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
         <Header title="جارٍ التحميل" />
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-          <Text role="bodyMd" tone="secondary">جارٍ تحميل بيانات ملف الشريك…</Text>
-        </View>
+        <StateView
+          loading
+          tone="info"
+          title="جارٍ تحميل ملف الشريك"
+          description="يتم جلب أحدث حالة معتمدة من DSH."
+        />
       </View>
     );
   }
@@ -228,16 +271,19 @@ export function DshFieldOnboardingScreen({
   if (state.loadStatus === 'error') {
     return (
       <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
-        <Header title="تعذر التحميل" />
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, gap: spacing[3] }}>
-          <Text role="bodyMd" tone="danger" style={{ textAlign: 'center' }}>
-            {state.loadError ?? 'تعذر تحميل بيانات ملف الشريك'}
-          </Text>
-          {partnerId && (
-            <Button label="إعادة المحاولة" tone="primary" onPress={() => void controller.loadDraft(partnerId)} />
-          )}
-          {onBack ? <Button label="رجوع" tone="ghost" onPress={onBack} /> : null}
-        </View>
+        <Header title={visibleFailure?.title ?? 'تعذر التحميل'} />
+        <StateView
+          tone={visibleFailure?.tone ?? 'danger'}
+          title={visibleFailure?.title ?? 'تعذر تحميل ملف الشريك'}
+          description={visibleFailure?.description ?? state.loadError ?? 'تعذر تحميل بيانات ملف الشريك'}
+          {...(canRecoverVisibleFailure && visibleFailure
+            ? { actionLabel: visibleFailure.actionLabel, onActionPress: recoverVisibleFailure }
+            : partnerId
+              ? { actionLabel: 'إعادة المحاولة', onActionPress: () => void controller.loadDraft(partnerId) }
+              : onBack
+                ? { actionLabel: 'رجوع', onActionPress: onBack }
+                : {})}
+        />
       </View>
     );
   }
@@ -416,6 +462,20 @@ export function DshFieldOnboardingScreen({
           </View>
         ) : null}
 
+        {state.isSaving ? (
+          <StateView
+            tone="info"
+            title="جارٍ حفظ المسودة"
+            description="لا تغادر حتى تكتمل قراءة الحالة بعد الكتابة."
+          />
+        ) : state.isSubmitting ? (
+          <StateView
+            tone="info"
+            title="جارٍ إرسال الملف للمراجعة"
+            description="يتم تثبيت المسودة والأدلة ثم التحقق من الحالة الملتزم بها."
+          />
+        ) : null}
+
         <View style={{ gap: spacing[2] }}>
           {GROUP_ORDER.map((groupId, index) => {
             const active = groupId === activeGroup;
@@ -454,8 +514,23 @@ export function DshFieldOnboardingScreen({
           {renderGroupContent(activeGroup)}
         </View>
 
-        {state.submitError ? (
-          <Text role="bodySm" tone="danger" style={{ textAlign: 'right' }}>{state.submitError}</Text>
+        {visibleFailure ? (
+          <StateView
+            tone={visibleFailure.tone}
+            title={visibleFailure.title}
+            description={visibleFailure.description}
+            {...(canRecoverVisibleFailure
+              ? { actionLabel: visibleFailure.actionLabel, onActionPress: recoverVisibleFailure }
+              : {})}
+          />
+        ) : isLastGroup && !isReadyToSubmit ? (
+          <StateView
+            tone="warning"
+            title="متطلبات التأهيل غير مكتملة"
+            description={`العناصر الناقصة: ${missingItems.join('، ')}`}
+            actionLabel="فتح أول قسم ناقص"
+            onActionPress={() => setActiveGroup(firstIncompleteGroup)}
+          />
         ) : null}
 
         <View style={{ flexDirection: 'row-reverse', gap: spacing[2], alignItems: 'center' }}>
