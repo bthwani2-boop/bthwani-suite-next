@@ -48,12 +48,18 @@ if ($storeParts.Count -ne 4 -or -not $storeParts[0] -or -not $storeParts[2] -or 
 $serviceAreaCode = $storeParts[0]
 $storeLatitude = [double]::Parse($storeParts[2], [Globalization.CultureInfo]::InvariantCulture)
 $storeLongitude = [double]::Parse($storeParts[3], [Globalization.CultureInfo]::InvariantCulture)
+$invariantCulture = [Globalization.CultureInfo]::InvariantCulture
+$latLow = ($storeLatitude - 0.01).ToString($invariantCulture)
+$latHigh = ($storeLatitude + 0.01).ToString($invariantCulture)
+$lngLow = ($storeLongitude - 0.01).ToString($invariantCulture)
+$lngHigh = ($storeLongitude + 0.01).ToString($invariantCulture)
+$runtimePolygon = "[[$lngLow,$latLow],[$lngHigh,$latLow],[$lngHigh,$latHigh],[$lngLow,$latHigh]]"
 
 $assortment = Invoke-DshScalar "SELECT master_product_id || '|' || unit_price::text FROM dsh_store_assortments WHERE store_id='store-test-grocery' AND available=TRUE AND unit_price>0 ORDER BY master_product_id LIMIT 1;"
 if (-not $assortment.Contains("|")) { throw "No priced grocery assortment" }
 $parts = $assortment.Split("|", 2)
 $masterProductId = $parts[0]
-$expectedUnitPrice = [decimal]::Parse($parts[1], [Globalization.CultureInfo]::InvariantCulture)
+$expectedUnitPrice = [decimal]::Parse($parts[1], $invariantCulture)
 
 $clientSession = Get-ActorSession "client"
 $operatorSession = Get-ActorSession "operator"
@@ -67,6 +73,9 @@ $capacityId = "00000000-0000-0000-0000-000000009010"
 $slaId = "00000000-0000-0000-0000-000000009011"
 $escapedArea = $serviceAreaCode.Replace("'", "''")
 Invoke-DshScalar @"
+INSERT INTO dsh_service_area_geofences (service_area_code,display_name,polygon,active,priority)
+VALUES ('$escapedArea','JRN-009 runtime service area','$runtimePolygon'::jsonb,TRUE,100000)
+ON CONFLICT (service_area_code) DO UPDATE SET display_name=EXCLUDED.display_name,polygon=EXCLUDED.polygon,active=TRUE,priority=EXCLUDED.priority,version=dsh_service_area_geofences.version+1,updated_at=NOW();
 INSERT INTO dsh_platform_zones (id,name,city_code,is_active,description)
 VALUES ('$zoneId'::uuid,'JRN-009 runtime zone','$escapedArea',TRUE,'Cart runtime policy zone')
 ON CONFLICT (id) DO UPDATE SET city_code=EXCLUDED.city_code,is_active=TRUE,updated_at=NOW();
@@ -116,7 +125,7 @@ $cartReadback = Invoke-RestMethod "$DshBaseUrl/dsh/client/cart?storeId=store-tes
 if (-not $cartReadback.cart.validation.ready -or @($cartReadback.cart.items).Count -ne 1) { throw "Initial cart reconciliation failed" }
 
 $newUnitPrice = $expectedUnitPrice + [decimal]1.00
-$newPriceText = $newUnitPrice.ToString([Globalization.CultureInfo]::InvariantCulture)
+$newPriceText = $newUnitPrice.ToString($invariantCulture)
 Invoke-DshScalar "UPDATE dsh_store_assortments SET unit_price=$newPriceText,updated_at=NOW() WHERE store_id='store-test-grocery' AND master_product_id='$masterProductId';" | Out-Null
 $priceChanged = Invoke-RestMethod "$DshBaseUrl/dsh/client/cart?storeId=store-test-grocery" -Headers $clientHeaders -TimeoutSec 15
 if ($priceChanged.cart.validation.ready -or -not $priceChanged.cart.validation.priceChanged -or [decimal]$priceChanged.cart.items[0].unitPrice -ne $expectedUnitPrice) { throw "Immutable price-change reconciliation failed" }
