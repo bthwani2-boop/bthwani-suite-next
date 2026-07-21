@@ -1,0 +1,68 @@
+openapi: 3.1.0
+info:
+  title: JRN-003 DSH Workforce Scope Contract
+  version: 1.0.0
+paths:
+  /dsh/operator/workforce/scopes/{actorId}:
+    get:
+      operationId: getWorkforceActorScopes
+      parameters:
+        - in: path
+          name: actorId
+          required: true
+          schema: { type: string }
+        - in: query
+          name: actorRole
+          required: true
+          schema: { type: string, enum: [field, captain] }
+      responses:
+        '200': { description: Scope snapshot }
+    put:
+      operationId: replaceWorkforceActorScopes
+      parameters:
+        - in: path
+          name: actorId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkforceScopeInput'
+      responses:
+        '200': { description: Scope snapshot }
+  /dsh/operator/workforce/employees/{actorId}/media/uploads:
+    post:
+      operationId: uploadWorkforceEmployeeMedia
+      parameters:
+        - in: path
+          name: actorId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        '201': { description: Uploaded media reference }
+components:
+  schemas:
+    WorkforceScopeInput:
+      type: object
+      required: [actorRole, storeIds, serviceAreaCodes]
+      properties:
+        actorRole: { type: string, enum: [field, captain] }
+        storeIds:
+          type: array
+          uniqueItems: true
+          items: { type: string }
+        serviceAreaCodes:
+          type: array
+          uniqueItems: true
+          items: { type: string }
