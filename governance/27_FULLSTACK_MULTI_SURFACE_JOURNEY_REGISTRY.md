@@ -72,7 +72,7 @@ Initial baseline commit: `466d34bacdd7fde4cc1c351e094d3d4604b33268`
 | JRN-004 | اكتشاف المتاجر وسياقها وحوكمتها | DSH | READY_FOR_REVIEW |
 | JRN-005 | دفتر عناوين العميل | DSH | NEEDS_EVIDENCE |
 | JRN-006 | الخرائط ومناطق الخدمة وخصوصية العناوين | Providers + DSH | NEEDS_EVIDENCE |
-| JRN-007 | الصفحة الرئيسية والاكتشاف التسويقي | DSH | NEEDS_EVIDENCE |
+| JRN-007 | الصفحة الرئيسية والاكتشاف التسويقي | DSH | READY_FOR_REVIEW |
 | JRN-008 | الكتالوج المركزي والوسائط والتشكيلة | DSH | NEEDS_EVIDENCE |
 | JRN-009 | العربة وقابلية الخدمة | DSH | NEEDS_EVIDENCE |
 | JRN-010 | Checkout وتسليم جلسة الدفع إلى WLT | DSH + WLT | NEEDS_EVIDENCE |
@@ -778,4 +778,23 @@ open_gaps: []
 - `permanent_gate`: `.github/workflows/jrn-020-030-final-closure.yml`
 - نجحت العقود والـbindings والحراس وحدود DSH/WLT وTypeScript وDSH Go وWLT Go وPostgreSQL migrations والـSQL invariants والتشغيل الحي لمسارات DSH.
 - ملف الدليل التفصيلي: `governance/evidence/JRN-020-030_FULLSTACK_CLOSURE.json`.
+- لم يُنشأ Pull Request ولم يُنفذ Merge أو Force Push ضمن هذا الإغلاق.
+
+<!-- JRN-007-CODE-CLOSURE-2026-07-21 -->
+## إغلاق الكود للرحلة JRN-007 — 2026-07-21
+
+- `repository_mode`: `REMOTE_ONLY`
+- `target_ref`: `sambassam`
+- `tracking_status`: `READY_FOR_REVIEW`
+- `decision`: `READY_FOR_REVIEW`
+- `code_closure`: `COMPLETE`
+- `verified_implementation_commit`: `7018be0d7de0abd6ce98311a7cb0ad245b93ac49`
+- `proof_run_id`: `29867162535`
+- `status_context`: `journeys/jrn-007/home-discovery`
+- `permanent_gate`: `.github/workflows/jrn-007-sambassam-verify.yml`
+- `product_truth`: `governance/product-truth/JRN-007_HOME_DISCOVERY_PRODUCT_TRUTH.md`
+- `evidence`: `governance/evidence/JRN-007_FULLSTACK_MULTI_SURFACE_CLOSURE.json`
+- أُغلقت الشرائح `JRN-007-S1..S8` في الكود الفعلي: المجموعات والفئات، البنرات والوسائط والإجراءات، الاستهداف الإقليمي والجماهيري، الجدولة والنشر، CRUD المحكوم، منع ازدواج الملكية، حالات تطبيق العميل، وقياس الظهور والنقر المحكوم بالسياق.
+- `open_code_gaps`: `[]`
+- لا تُستخدم `CLOSED_WITH_EVIDENCE` قبل الموافقات المستقلة وأدلة الجهاز الفعلي والإصدار المطلوبة في السجل الحاكم.
 - لم يُنشأ Pull Request ولم يُنفذ Merge أو Force Push ضمن هذا الإغلاق.
