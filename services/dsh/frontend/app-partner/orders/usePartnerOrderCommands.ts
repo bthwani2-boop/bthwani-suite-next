@@ -13,7 +13,13 @@ export type PartnerOrderMutationCommand = 'accept' | 'prepare' | 'ready' | 'hand
 export type PartnerOrderCommandState =
   | { readonly kind: 'idle' }
   | { readonly kind: 'submitting'; readonly command: PartnerOrderMutationCommand; readonly orderId: string }
-  | { readonly kind: 'success'; readonly command: PartnerOrderMutationCommand; readonly orderId: string }
+  | {
+      readonly kind: 'success';
+      readonly command: PartnerOrderMutationCommand;
+      readonly orderId: string;
+      readonly readback: 'fresh' | 'stale';
+      readonly message?: string;
+    }
   | { readonly kind: 'error'; readonly command: PartnerOrderMutationCommand; readonly orderId: string; readonly message: string };
 
 export function resolvePartnerOrderMutation(
@@ -54,15 +60,30 @@ export function usePartnerOrderCommands(refreshOrders: () => void | Promise<void
       else if (command === 'prepare') await markOrderPreparing(orderId);
       else if (command === 'ready') await markOrderReady(orderId);
       else await confirmStoreCaptainHandoff(orderId);
-
-      await refreshOrders();
-      setState({ kind: 'success', command, orderId });
-      return true;
     } catch (error) {
       setState({ kind: 'error', command, orderId, message: resolveErrorMessage(error) });
-      await refreshOrders();
+      try {
+        await refreshOrders();
+      } catch {
+        // Preserve the canonical mutation failure; a readback failure must not replace it.
+      }
       return false;
     }
+
+    setState({ kind: 'success', command, orderId, readback: 'stale' });
+    try {
+      await refreshOrders();
+      setState({ kind: 'success', command, orderId, readback: 'fresh' });
+    } catch {
+      setState({
+        kind: 'success',
+        command,
+        orderId,
+        readback: 'stale',
+        message: 'تم تنفيذ الإجراء، لكن تعذر تحديث القائمة. أعد المحاولة من شاشة الطلبات.',
+      });
+    }
+    return true;
   }, [refreshOrders]);
 
   const reset = React.useCallback(() => setState({ kind: 'idle' }), []);
