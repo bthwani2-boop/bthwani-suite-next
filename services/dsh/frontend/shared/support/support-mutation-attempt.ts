@@ -10,6 +10,8 @@ type StoredAttempt = {
   readonly context: SupportMutationContext;
 };
 
+type SupportMutationScope = "actor" | "client" | "operator" | "partner";
+
 const PREFIX = "@bthwani/dsh/support-mutation/v1/";
 let fallbackSequence = 0;
 
@@ -42,7 +44,7 @@ function parseStored(raw: string | null): StoredAttempt | null {
 }
 
 export async function getOrCreateSupportMutationAttempt(input: {
-  readonly scope: "client" | "operator";
+  readonly scope: SupportMutationScope;
   readonly operation: string;
   readonly entityId?: string;
   readonly fingerprint: string;
@@ -63,7 +65,7 @@ export async function getOrCreateSupportMutationAttempt(input: {
 }
 
 export async function clearSupportMutationAttempt(input: {
-  readonly scope: "client" | "operator";
+  readonly scope: SupportMutationScope;
   readonly operation: string;
   readonly entityId?: string;
   readonly fingerprint: string;
