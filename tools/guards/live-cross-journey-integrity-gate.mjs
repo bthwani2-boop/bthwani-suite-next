@@ -220,7 +220,7 @@ for (const marker of ["bassam", "contents: read", "ci-result:", "if: always()"] 
   if (!ci.includes(marker)) violations.push({ file: ".github/workflows/ci.yml", line: 0, message: `CI_TOPOLOGY_MARKER_MISSING ${marker}` });
 }
 for (const forbidden of ["git push", "git commit", "gofmt -w", "contents: write"]) {
-  if (ci.includes(forbidden)) violations.push({ file: ".github/workflows/ci.yml", line: 0, message: `CI_SOURCE_MUTATION_FORBIDDEN ${forbidden}`);
+  if (ci.includes(forbidden)) violations.push({ file: ".github/workflows/ci.yml", line: 0, message: `CI_SOURCE_MUTATION_FORBIDDEN ${forbidden}` });
 }
 
 console.log("live-cross-journey-integrity-gate: scoped regression invariants only");
