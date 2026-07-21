@@ -17,11 +17,7 @@ func isValidOrderTruthUUID(value string) bool {
 }
 
 func writeOrderTruthReadFailure(w http.ResponseWriter, err error, internalMessage string) bool {
-	if errors.Is(err, orders.ErrInvalid) {
-		store.SendError(w, http.StatusBadRequest, "INVALID_ORDER_ID", "orderId must be a valid UUID")
-		return true
-	}
-	if errors.Is(err, orders.ErrNotFound) {
+	if errors.Is(err, orders.ErrInvalid) || errors.Is(err, orders.ErrNotFound) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "order not found")
 		return true
 	}
