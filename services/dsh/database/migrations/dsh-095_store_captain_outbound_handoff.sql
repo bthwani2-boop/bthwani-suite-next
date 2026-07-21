@@ -5,6 +5,30 @@
 
 BEGIN;
 
+ALTER TABLE dsh_orders DROP CONSTRAINT IF EXISTS dsh_orders_status_check;
+ALTER TABLE dsh_orders ADD CONSTRAINT dsh_orders_status_check
+    CHECK (status IN (
+        'pending',
+        'store_accepted',
+        'preparing',
+        'ready_for_pickup',
+        'driver_assigned',
+        'driver_arrived_store',
+        'store_handoff_confirmed',
+        'picked_up',
+        'arrived_customer',
+        'returning_to_store',
+        'return_arrived_store',
+        'returned_to_store',
+        'delivered',
+        'cancelled_by_client',
+        'cancelled_by_store',
+        'cancelled_by_operator',
+        'cancelled_no_driver',
+        'failed_payment',
+        'failed_dispatch'
+    ));
+
 CREATE TABLE IF NOT EXISTS dsh_store_captain_handoffs (
     id                              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     order_id                        UUID        NOT NULL REFERENCES dsh_orders(id) ON DELETE CASCADE,
