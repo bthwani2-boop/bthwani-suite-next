@@ -141,7 +141,7 @@ export function OrderJourneyLiveOrdersScreen({
                     primaryAction: {
                       id: 'assign-captain',
                       label: 'إسناد كابتن',
-                      onPress: () => router.push(buildOperationsHref('dispatch-capacity', { orderId: order.id, panel: 'dispatch' })),
+                      onAction: () => router.push(buildOperationsHref('dispatch-capacity', { orderId: order.id, panel: 'dispatch' })),
                     },
                   }
                 : {})}
