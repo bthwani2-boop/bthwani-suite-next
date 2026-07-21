@@ -1,0 +1,70 @@
+name: Temporary JRN-020..030 Latest Ancestry Revalidation
+
+on:
+  push:
+    branches: [sambassam]
+    paths:
+      - ".github/workflows/tmp-jrn-020-030-latest-ancestry-revalidation.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-remove-self:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout sambassam
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: sambassam
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Include support-session ancestry in final compile
+        shell: bash
+        run: |
+          git pull --ff-only origin sambassam
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('.github/workflows/jrn-020-030-final-closure.yml')
+          content = path.read_text(encoding='utf-8')
+          replacements = [
+              (
+                  '      - "services/dsh/backend/internal/support/**"\n',
+                  '      - "services/dsh/backend/internal/support/**"\n      - "services/dsh/backend/internal/supportsession/**"\n',
+              ),
+              (
+                  '      - "services/dsh/backend/internal/http/support*.go"\n',
+                  '      - "services/dsh/backend/internal/http/support*.go"\n      - "services/dsh/backend/internal/http/administration_support_sessions.go"\n',
+              ),
+              (
+                  '          ./internal/support\n',
+                  '          ./internal/support\n          ./internal/supportsession\n',
+              ),
+          ]
+          for before, after in replacements:
+              if after in content:
+                  continue
+              if content.count(before) != 1:
+                  raise SystemExit(f'expected one workflow patch target: {before!r}')
+              content = content.replace(before, after, 1)
+          path.write_text(content, encoding='utf-8')
+          PY
+          git rm .github/workflows/tmp-jrn-020-030-latest-ancestry-revalidation.yml
+          git diff --check
+      - name: Commit and push latest ancestry validation
+        shell: bash
+        run: |
+          git config user.name "bthwani-journey-automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add .github/workflows/jrn-020-030-final-closure.yml
+          git commit -m "ci(jrn-020-030): validate support-session ancestry in final gate"
+          for attempt in 1 2 3; do
+            git fetch origin sambassam
+            git rebase origin/sambassam
+            if git push origin HEAD:sambassam; then
+              exit 0
+            fi
+          done
+          exit 1
