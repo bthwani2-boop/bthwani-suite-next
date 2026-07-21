@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-014",
+  "locale": "ar-YE",
+  "direction": "rtl",
+  "requirements": {
+    "minimumTouchTargetPx": 44,
+    "reasonInputMinimumCharacters": 3,
+    "deadlineRefreshMilliseconds": 1000,
+    "captainInboxRefreshMilliseconds": 10000,
+    "operatorManualRefresh": true,
+    "weakNetwork": "preserve prior readback where available and show recoverable error",
+    "loading": "visible and non-optimistic",
+    "success": "shown only after API mutation and read-after-write",
+    "conflict": "show governed server reason and refresh stale state",
+    "accessibility": ["descriptive labels", "state is not color-only", "RTL text alignment", "disabled controls during mutation"],
+    "performance": ["candidate limit <= 200", "assignment limit <= 500", "indexed tenant/captain/order/decision queries", "no unbounded polling"]
+  },
+  "captainOfferFields": ["orderId", "serviceAreaCode", "distanceMeters", "priority", "offerReason", "responseDeadlineAt"],
+  "operatorFields": ["assignmentId", "orderId", "captainId", "status", "serviceAreaCode", "distanceMeters", "priority", "offerReason", "decisionLog"],
+  "forbidden": ["hardcoded customer identity", "hardcoded phone", "hardcoded address", "hardcoded price", "no-op success button", "execution before acceptance"]
+}
