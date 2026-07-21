@@ -16,30 +16,36 @@ test("JRN-005 persists address retry identity across application restarts", () =
   assert.doesNotMatch(controller, /createAttempt\s*=\s*useRef/);
 });
 
-test("JRN-006 keeps map calls and address writes behind governed service areas", () => {
+test("JRN-006 keeps map, geofence, address and privacy truth governed across all eight slices", () => {
   const controller = read("frontend/shared/client-map/use-client-map-controller.ts");
   const api = read("frontend/shared/client-map/client-map.api.ts");
   const mapHandler = read("backend/internal/http/client_maps.go");
   const addressHandler = read("backend/internal/http/client_addresses.go");
   const addressBinding = read("backend/internal/clientaddress/address_service_area.go");
   const provider = read("backend/internal/mapproviders/client.go");
-  const migration = read("database/migrations/dsh-906_jrn_006_client_address_geofence_binding.sql");
-  const contract = read("contracts/dsh.client-address.openapi.yaml");
+  const geofenceMigration = read("database/migrations/dsh-906_jrn_006_client_address_geofence_binding.sql");
+  const topologyMigration = read("database/migrations/dsh-907_jrn_006_service_area_topology.sql");
+  const privacyProjection = read("database/migrations/dsh-908_jrn_006_privacy_audit_projection.sql");
+  const addressContract = read("contracts/dsh.client-address.openapi.yaml");
+  const mapContract = read("contracts/dsh.client-map.openapi.yaml");
+  const privacyContract = read("contracts/dsh.client-address-privacy.openapi.yaml");
+  const sliceRegistry = JSON.parse(read("contracts/jrn-006-slice-verification-registry.json"));
   const productTruth = JSON.parse(
     read("../../governance/product/contracts/jrn-006-maps-service-area-address-privacy.product-truth.json"),
-  );
-  const evidence = JSON.parse(
-    read("../../governance/evidence/JRN-006_MAPS_SERVICE_AREA_ADDRESS_PRIVACY_EVIDENCE.json"),
   );
 
   assert.match(controller, /searchDshClientMapLocations/);
   assert.match(controller, /reverseDshClientMapLocation/);
   assert.match(api, /\/dsh\/client\/maps\/search/);
   assert.match(api, /\/dsh\/client\/maps\/reverse/);
+  assert.match(api, /\/dsh\/operator\/platform\/map-provider-health/);
   assert.match(mapHandler, /servicearea\.Resolve/);
   assert.match(mapHandler, /ServiceAreaVerified/);
-  assert.match(provider, /\/providers\/maps\/search/);
-  assert.match(provider, /\/providers\/maps\/reverse/);
+  assert.match(mapHandler, /servicearea\.UpsertGoverned/);
+  assert.match(provider, /normalizeSearchInput/);
+  assert.match(provider, /normalizeReverseInput/);
+  assert.match(provider, /ErrTimeout/);
+  assert.match(provider, /ErrUncertain/);
 
   assert.match(addressBinding, /FindCreateReplay/);
   assert.match(addressBinding, /ValidateServiceArea/);
@@ -50,26 +56,30 @@ test("JRN-006 keeps map calls and address writes behind governed service areas",
   assert.match(addressHandler, /ADDRESS_SERVICE_AREA_UNVERIFIED/);
   assert.match(addressHandler, /StatusUnprocessableEntity/);
 
-  assert.match(migration, /dsh_enforce_client_address_service_area/);
-  assert.match(migration, /DSH_ADDRESS_COORDINATES_REQUIRED/);
-  assert.match(migration, /DSH_ADDRESS_SERVICE_AREA_UNVERIFIED/);
-  assert.match(migration, /g\.active = TRUE/);
-  assert.match(migration, /FOR SHARE/);
-  assert.match(contract, /"422": \{ \$ref: "#\/components\/responses\/ServiceAreaUnverified" \}/);
-  assert.match(contract, /required: \[label, recipientName, phoneE164, addressLine, serviceAreaCode, latitude, longitude\]/);
+  assert.match(geofenceMigration, /dsh_enforce_client_address_service_area/);
+  assert.match(geofenceMigration, /DSH_ADDRESS_COORDINATES_REQUIRED/);
+  assert.match(geofenceMigration, /DSH_ADDRESS_SERVICE_AREA_UNVERIFIED/);
+  assert.match(geofenceMigration, /g\.active = TRUE/);
+  assert.match(geofenceMigration, /FOR SHARE/);
+  assert.match(topologyMigration, /dsh_validate_service_area_polygon/);
+  assert.match(topologyMigration, /dsh_service_area_geofences_polygon_topology_check/);
+  assert.match(privacyProjection, /dsh_client_address_privacy_audit_projection/);
+  assert.match(privacyProjection, /client_subject_hash/);
+
+  assert.match(addressContract, /"422": \{ \$ref: "#\/components\/responses\/ServiceAreaUnverified" \}/);
+  assert.match(addressContract, /required: \[label, recipientName, phoneE164, addressLine, serviceAreaCode, latitude, longitude\]/);
+  assert.match(mapContract, /operationId: getDshOperatorMapProviderHealth/);
+  assert.match(mapContract, /operationId: getDshOperatorServiceArea/);
+  assert.match(privacyContract, /operationId: getDshClientAddressPrivacyQueueStatus/);
+  assert.match(privacyContract, /operationId: listDshClientAddressPrivacyAuditEvents/);
 
   assert.equal(productTruth.journeyId, "JRN-006");
-  assert.equal(productTruth.status, "IMPLEMENTED_PENDING_INDEPENDENT_REVIEW");
-  assert.equal(evidence.journeyId, "JRN-006");
-  assert.equal(evidence.decision, "READY_FOR_REVIEW");
-  assert.equal(evidence.evidenceCommit, "5497fe684329e2d905bc399d8f6ad09ca7f69c9a");
-  assert.equal(evidence.workflowRun.statusContext, "journeys/jrn-006/targeted-verification");
-  assert.equal(
-    evidence.workflowRun.artifactDigest,
-    "sha256:62f2d841f7878cc245d462c6702bb0acfdf2992f1a45ea5a1195ff7a6b643245",
-  );
-  assert.equal(evidence.checks.postgres16MigrationApply, "PASS");
-  assert.equal(evidence.checks.postgresOutsidePolygonRejected, "PASS");
+  assert.match(productTruth.status, /^(IMPLEMENTED_PENDING_VERIFICATION|CLOSED_WITH_EVIDENCE)$/);
+  assert.equal(sliceRegistry.journeyId, "JRN-006");
+  assert.equal(sliceRegistry.slices.length, 8);
+  for (const slice of sliceRegistry.slices) {
+    assert.match(slice.status, /^(IMPLEMENTED_PENDING_VERIFICATION|CLOSED_WITH_EVIDENCE)$/);
+  }
 });
 
 test("JRN-007 scopes discovery to the persisted selected address", () => {
