@@ -7,7 +7,9 @@ CREATE TABLE IF NOT EXISTS dsh_home_content_targets (
   content_kind        TEXT        NOT NULL CHECK (content_kind IN ('banners','promos')),
   content_id          TEXT        NOT NULL,
   target_type         TEXT        NOT NULL CHECK (target_type IN ('city','service_area','audience')),
-  target_value        TEXT        NOT NULL CHECK (length(trim(target_value)) BETWEEN 1 AND 80),
+  target_value        TEXT        NOT NULL
+    CHECK (target_value ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,79}$')
+    CHECK (target_type <> 'audience' OR target_value IN ('guest','authenticated')),
   created_by_actor_id TEXT        NOT NULL,
   correlation_id      TEXT        NOT NULL CHECK (length(trim(correlation_id)) >= 8),
   created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
