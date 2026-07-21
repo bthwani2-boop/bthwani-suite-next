@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "journeyId": "JRN-001",
+  "sliceId": "FS-13",
+  "defaultEffect": "deny",
+  "protectedResources": ["partner", "first-store", "partner-document", "field-visit", "payout-reference", "activation-audit"],
+  "actorScopes": {
+    "field-agent": "created_by_actor_id = actor.id",
+    "partner-owner": "partner_id and store scope derived from authenticated actor",
+    "control-operator": "explicit partner governance permissions and tenant scope",
+    "client": "published public store projection only"
+  },
+  "piiPolicy": {
+    "dshMayReturn": ["maskedAccountNumber", "maskedIban", "maskedMobileNumber"],
+    "dshMustNotPersistOrReturn": ["rawAccountNumberAfterWltBinding", "rawIbanAfterWltBinding", "rawPayoutMobileAfterWltBinding"],
+    "documentMedia": "actor-scoped governed media references only"
+  },
+  "auditRequired": ["actorId", "actorSurface", "correlationId", "idempotencyKey", "fromStatus", "toStatus", "createdAt"],
+  "negativeInvariants": [
+    "field agent cannot read or mutate another field agent partner draft",
+    "partner owner cannot approve or publish itself",
+    "generic link route cannot reassign an owned store",
+    "client cannot read private onboarding or payout data",
+    "stale version and divergent idempotency replay are rejected"
+  ]
+}
