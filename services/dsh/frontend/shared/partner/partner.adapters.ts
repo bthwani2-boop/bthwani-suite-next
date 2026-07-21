@@ -3,17 +3,14 @@
 
 import type { DshRuntimeOrderRow } from '../operations/dsh-operational-runtime-adapter';
 import { getSurfaceModeCapability } from '../identity-access';
-import type { DshPartnerOrder, DshPartnerOrderAction } from '../orders/orders.types';
 import type {
-  DshOrderLifecycleHandoff,
-} from '../orders/dsh-order-lifecycle-handoffs';
-import type {
-  PartnerOrderItem,
-  PartnerOrderStatus,
-} from '../orders/orders.contract';
+  DshOrderPreparation,
+  DshPartnerOrder,
+  DshPartnerOrderAction,
+} from '../orders/orders.types';
+import type { DshOrderLifecycleHandoff } from '../orders/dsh-order-lifecycle-handoffs';
+import type { PartnerOrderItem, PartnerOrderStatus } from '../orders/orders.contract';
 import type { DshPartnerOperationalScope, PartnerRuntimeProfile } from './partner.types';
-
-// ── Partner order item adapter ─────────────────────────────────────────────
 
 const statusMap: Record<string, PartnerOrderStatus> = {
   pending: 'needs_accept',
@@ -58,6 +55,7 @@ const nextActionMap: Record<PartnerOrderStatus, string> = {
 
 export type GovernedPartnerOrderItem = PartnerOrderItem & {
   readonly allowedActions: readonly DshPartnerOrderAction[];
+  readonly preparation: DshOrderPreparation;
 };
 
 type CanonicalOrderShape = {
@@ -70,6 +68,7 @@ type CanonicalOrderShape = {
   readonly createdAt?: string;
   readonly updatedAt?: string;
   readonly allowedActions?: readonly DshPartnerOrderAction[];
+  readonly preparation?: DshOrderPreparation;
   readonly items?: readonly {
     readonly productName?: string;
     readonly quantity?: number;
@@ -108,16 +107,30 @@ function formatElapsed(createdAt: Date): { label: string; minutes: number } {
   };
 }
 
-/**
- * Canonical partner adapter. It consumes the actor-scoped partner workboard
- * contract and rejects responses without server-authoritative actions.
- */
+function preparationSlaLabel(preparation: DshOrderPreparation): string | undefined {
+  if (preparation.preparationSlaState === 'overdue') {
+    return `متأخر ${Math.ceil(Math.abs(preparation.preparationRemainingSeconds) / 60)} د`;
+  }
+  if (preparation.preparationSlaState === 'due_soon') {
+    return `يتبقى ${Math.max(1, Math.ceil(preparation.preparationRemainingSeconds / 60))} د`;
+  }
+  if (preparation.preparationSlaState === 'on_track') {
+    return `جاهزية خلال ${Math.max(1, Math.ceil(preparation.preparationRemainingSeconds / 60))} د`;
+  }
+  if (preparation.preparationSlaState === 'ready') return 'جاهز ضمن سجل التحضير';
+  return undefined;
+}
+
+/** Canonical actor-scoped partner order adapter. */
 export function mapDshOrderToPartnerOrderItem(order: DshPartnerOrder): GovernedPartnerOrderItem {
   const raw = order as unknown as CanonicalOrderShape;
   const orderId = String(raw.id ?? '');
   if (!orderId) throw new Error('partner order response is missing id');
   if (!Array.isArray(raw.allowedActions)) {
     throw new Error(`partner order ${orderId} is missing server allowedActions`);
+  }
+  if (!raw.preparation || raw.preparation.orderId !== orderId) {
+    throw new Error(`partner order ${orderId} is missing governed preparation timing`);
   }
 
   const status = resolvePartnerStatus(raw.status);
@@ -139,6 +152,9 @@ export function mapDshOrderToPartnerOrderItem(order: DshPartnerOrder): GovernedP
     .slice(0, 3);
   const elapsed = formatElapsed(createdAt);
   const acceptanceRisk = status === 'needs_accept' && elapsed.minutes >= 10;
+  const preparationRisk = raw.preparation.preparationSlaState === 'due_soon'
+    || raw.preparation.preparationSlaState === 'overdue';
+  const slaLabel = preparationSlaLabel(raw.preparation);
 
   return {
     id: orderId,
@@ -146,7 +162,8 @@ export function mapDshOrderToPartnerOrderItem(order: DshPartnerOrder): GovernedP
     branchLabel: String(raw.storeId ?? 'الفرع المرتبط بالحساب'),
     status,
     allowedActions: [...raw.allowedActions],
-    priority: acceptanceRisk ? 'high' : 'normal',
+    preparation: raw.preparation,
+    priority: acceptanceRisk || raw.preparation.preparationSlaState === 'overdue' ? 'high' : 'normal',
     orderTypeLabel: resolveOrderTypeLabel(orderMode),
     orderMode,
     itemsCountLabel: itemCount > 0 ? `${itemCount} عنصر` : 'العناصر عند فتح التفاصيل',
@@ -154,7 +171,8 @@ export function mapDshOrderToPartnerOrderItem(order: DshPartnerOrder): GovernedP
     createdAtLabel: createdAt.toLocaleTimeString('ar-YE', { hour: '2-digit', minute: '2-digit' }),
     elapsedLabel: elapsed.label,
     nextActionLabel: nextActionMap[status],
-    ...(acceptanceRisk ? { urgent: true, slaRisk: true, slaLabel: 'تجاوز مهلة القبول' } : {}),
+    ...(acceptanceRisk || preparationRisk ? { urgent: true, slaRisk: true } : {}),
+    ...(slaLabel ? { slaLabel } : {}),
     ...(status === 'needs_accept' ? { unread: true } : {}),
     ...(itemNames.length > 0 ? { itemsSummaryLabel: itemNames.join('، ') } : {}),
     ...(raw.wltPaymentRefId ? { paymentLabel: 'مرجع مالي مرتبط' } : {}),
@@ -162,10 +180,7 @@ export function mapDshOrderToPartnerOrderItem(order: DshPartnerOrder): GovernedP
   };
 }
 
-/**
- * @deprecated Compatibility adapter for the legacy broad operations read-model.
- * New partner surfaces must use mapDshOrderToPartnerOrderItem.
- */
+/** @deprecated New partner surfaces must use mapDshOrderToPartnerOrderItem. */
 export function mapRuntimeRowToPartnerOrderItem(row: DshRuntimeOrderRow): PartnerOrderItem {
   const partnerStatus = resolvePartnerStatus(row.status);
   const created = new Date(row.createdAt);
@@ -185,8 +200,6 @@ export function mapRuntimeRowToPartnerOrderItem(row: DshRuntimeOrderRow): Partne
     nextActionLabel: nextActionMap[partnerStatus],
   };
 }
-
-// ── Partner delivery ops summary ───────────────────────────────────────────
 
 type PartnerOrderForOps = {
   status: string;
@@ -231,8 +244,6 @@ export function buildPartnerDeliveryOpsSummary(
       partnerActionableHandoffs.filter((h) => h.wltImpact.eventKind !== 'none').length,
   };
 }
-
-// ── Partner profile builder ────────────────────────────────────────────────
 
 export function buildPartnerProfileFromScope(scope?: DshPartnerOperationalScope): PartnerRuntimeProfile {
   if (!scope) {
