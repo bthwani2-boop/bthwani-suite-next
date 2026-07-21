@@ -30,6 +30,13 @@ func openAddressIntegrationDB(t *testing.T) *sql.DB {
 	return db
 }
 
+func integrationPhone(suffix string, prefix string) string {
+	if len(suffix) > 7 {
+		suffix = suffix[len(suffix)-7:]
+	}
+	return "+967" + prefix + suffix
+}
+
 func insertIntegrationAddress(t *testing.T, db *sql.DB, clientID, suffix string, makeDefault bool) *Address {
 	t.Helper()
 	address, err := scanAddress(db.QueryRowContext(context.Background(), `INSERT INTO dsh_client_addresses
@@ -40,7 +47,7 @@ func insertIntegrationAddress(t *testing.T, db *sql.DB, clientID, suffix string,
 		clientID,
 		"label-"+suffix,
 		"Recipient "+suffix,
-		"+96770000"+suffix,
+		integrationPhone(suffix, "70"),
 		"Integration address "+suffix,
 		"integration-area-"+suffix,
 		"building-"+suffix,
@@ -62,7 +69,7 @@ func integrationDraft(suffix string, makeDefault bool) CreateInput {
 	return CreateInput{
 		Label:                "updated-" + suffix,
 		RecipientName:        "Updated Recipient " + suffix,
-		PhoneE164:            "+96771111" + suffix,
+		PhoneE164:            integrationPhone(suffix, "71"),
 		AddressLine:          "Updated integration address " + suffix,
 		ServiceAreaCode:      "integration-area-" + suffix,
 		Building:             "updated-building-" + suffix,
@@ -105,7 +112,7 @@ func TestIdempotentAddressMutationsAreExactlyOnceAndClientScoped(t *testing.T) {
 
 	updateKey := "address-update:shared:" + suffix
 	updated, err := UpdateIdempotent(ctx, db, clientA, first.ID, UpdateInput{
-		CreateInput: integrationDraft(suffix+"11", true),
+		CreateInput:    integrationDraft(suffix+"11", true),
 		ExpectedVersion: first.Version,
 	}, MutationContext{IdempotencyKey: updateKey, CorrelationID: "corr-update-" + suffix})
 	if err != nil {
@@ -116,7 +123,7 @@ func TestIdempotentAddressMutationsAreExactlyOnceAndClientScoped(t *testing.T) {
 	}
 
 	replayed, err := UpdateIdempotent(ctx, db, clientA, first.ID, UpdateInput{
-		CreateInput: integrationDraft(suffix+"11", true),
+		CreateInput:    integrationDraft(suffix+"11", true),
 		ExpectedVersion: first.Version,
 	}, MutationContext{IdempotencyKey: updateKey, CorrelationID: "corr-update-replay-" + suffix})
 	if err != nil {
@@ -130,7 +137,7 @@ func TestIdempotentAddressMutationsAreExactlyOnceAndClientScoped(t *testing.T) {
 	}
 
 	_, err = UpdateIdempotent(ctx, db, clientA, first.ID, UpdateInput{
-		CreateInput: integrationDraft(suffix+"12", true),
+		CreateInput:    integrationDraft(suffix+"12", true),
 		ExpectedVersion: first.Version,
 	}, MutationContext{IdempotencyKey: updateKey, CorrelationID: "corr-update-conflict-" + suffix})
 	if !errors.Is(err, ErrMutationIdempotencyConflict) {
@@ -138,7 +145,7 @@ func TestIdempotentAddressMutationsAreExactlyOnceAndClientScoped(t *testing.T) {
 	}
 
 	otherUpdated, err := UpdateIdempotent(ctx, db, clientB, otherClient.ID, UpdateInput{
-		CreateInput: integrationDraft(suffix+"13", true),
+		CreateInput:    integrationDraft(suffix+"13", true),
 		ExpectedVersion: otherClient.Version,
 	}, MutationContext{IdempotencyKey: updateKey, CorrelationID: "corr-other-client-" + suffix})
 	if err != nil {
