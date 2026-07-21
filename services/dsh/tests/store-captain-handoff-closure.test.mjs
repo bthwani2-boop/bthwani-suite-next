@@ -32,7 +32,7 @@ test('custody database truth has dual confirmation, reassignment, and reporter a
   assert.match(handoff, /superseded/);
   assert.match(handoff, /partner_confirmed_by_actor_id/);
   assert.match(handoff, /captain_confirmed_by_actor_id/);
-  assert.match(handoff, /version INTEGER NOT NULL DEFAULT 1/);
+  assert.match(handoff, /version\s+INTEGER\s+NOT NULL DEFAULT 1/);
 
   const reassignment = read(paths.reassignmentMigration);
   assert.match(reassignment, /AFTER INSERT ON dsh_assignments/);
