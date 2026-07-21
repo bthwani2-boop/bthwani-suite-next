@@ -112,16 +112,11 @@ func (s *protectedStoreServer) handleRemoveCartItem(w http.ResponseWriter, r *ht
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "cartId and itemId are required")
 		return
 	}
-	// Verify cart belongs to actor
-	storeID := r.URL.Query().Get("storeId")
-	if storeID != "" {
-		if _, err := cart.GetCart(r.Context(), s.db, actor.ID, storeID); errors.Is(err, cart.ErrNotFound) {
-			store.SendError(w, http.StatusForbidden, "FORBIDDEN", "cart not accessible")
-			return
-		}
-	}
-	if err := cart.RemoveItem(r.Context(), s.db, cartID, itemID); errors.Is(err, cart.ErrNotFound) {
+	if err := cart.RemoveOwnedItem(r.Context(), s.db, actor.ID, cartID, itemID); errors.Is(err, cart.ErrNotFound) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "cart item not found")
+		return
+	} else if errors.Is(err, cart.ErrInvalid) {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid cart item reference")
 		return
 	} else if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "could not remove cart item")
@@ -154,7 +149,13 @@ func (s *protectedStoreServer) handleClearCart(w http.ResponseWriter, r *http.Re
 		}
 		cartID = c.ID
 	}
-	if err := cart.ClearCart(r.Context(), s.db, cartID); err != nil {
+	if err := cart.ClearOwnedCart(r.Context(), s.db, actor.ID, cartID); errors.Is(err, cart.ErrNotFound) {
+		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "cart not found")
+		return
+	} else if errors.Is(err, cart.ErrInvalid) {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid cart reference")
+		return
+	} else if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "could not clear cart")
 		return
 	}
