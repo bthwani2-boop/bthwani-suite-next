@@ -84,6 +84,8 @@ func deliver(ctx context.Context, db *sql.DB, event Event) error {
 	title, body := notificationCopy(event.EventType)
 	actionURL := "/orders"
 	switch event.EntityType {
+	case "order":
+		actionURL = "/orders/" + event.EntityID
 	case "pickup_session":
 		actionURL = "/orders/pickup"
 	case "special_request":
@@ -105,6 +107,16 @@ func deliver(ctx context.Context, db *sql.DB, event Event) error {
 
 func resolveClientID(ctx context.Context, db *sql.DB, event Event) (string, error) {
 	switch event.EntityType {
+	case "order":
+		var clientID string
+		err := db.QueryRowContext(ctx, `
+			SELECT client_id::text
+			FROM dsh_orders
+			WHERE id = $1::uuid`, event.EntityID).Scan(&clientID)
+		if err != nil {
+			return "", fmt.Errorf("resolve order recipient: %w", err)
+		}
+		return clientID, nil
 	case "partner_delivery_task":
 		var clientID string
 		err := db.QueryRowContext(ctx, `
@@ -155,6 +167,10 @@ func resolveClientID(ctx context.Context, db *sql.DB, event Event) (string, erro
 
 func notificationCopy(eventType string) (string, string) {
 	switch eventType {
+	case "order.created":
+		return "تم إنشاء طلبك", "تم تثبيت الطلب وبدأت رحلة التنفيذ."
+	case "order.status_changed":
+		return "تحديث على طلبك", "تغيرت الحالة التشغيلية للطلب. افتح الطلب لعرض التفاصيل."
 	case "partner_delivery_assigned":
 		return "تم إسناد طلبك لمندوب المتجر", "بدأ المتجر تجهيز رحلة التوصيل الخاصة بطلبك."
 	case "partner_delivery_mark_picked_up":
