@@ -46,11 +46,18 @@ jobs:
 
       - name: Run governed backend tests
         working-directory: services/dsh/backend
-        run: go test ./internal/http ./internal/dispatch ./internal/partnerdelivery
+        shell: bash
+        run: |
+          echo "go-backend-tests" > /tmp/jrn-015-020-stage
+          set +e
+          go test ./internal/http ./internal/dispatch ./internal/partnerdelivery 2>&1 | tee /tmp/jrn-015-020.log
+          EXIT_CODE=${PIPESTATUS[0]}
+          exit "$EXIT_CODE"
 
       - name: Verify migration integrity guards
         shell: bash
         run: |
+          echo "migration-integrity" > /tmp/jrn-015-020-stage
           set -euo pipefail
           grep -q "dsh_validate_captain_delivery_proof_reference" services/dsh/database/migrations/dsh-096_delivery_proof_media_integrity.sql
           grep -q "dsh_validate_partner_delivery_proof_reference" services/dsh/database/migrations/dsh-096_delivery_proof_media_integrity.sql
@@ -69,10 +76,14 @@ jobs:
           pnpm --version
 
       - name: Install locked workspace
-        run: pnpm install --frozen-lockfile
+        run: |
+          echo "install-workspace" > /tmp/jrn-015-020-stage
+          pnpm install --frozen-lockfile
 
       - name: Validate delivery proof OpenAPI
-        run: pnpm exec openapi-typescript services/dsh/contracts/dsh.delivery-proof-media.openapi.yaml --output /tmp/dsh-delivery-proof-media.d.ts
+        run: |
+          echo "openapi-validation" > /tmp/jrn-015-020-stage
+          pnpm exec openapi-typescript services/dsh/contracts/dsh.delivery-proof-media.openapi.yaml --output /tmp/dsh-delivery-proof-media.d.ts
 
       - name: Create journey-scoped TypeScript project
         run: |
@@ -97,13 +108,23 @@ jobs:
           JSON
 
       - name: Typecheck journey files and consumers
-        run: pnpm exec tsc --noEmit -p .tmp/jrn-015-020.tsconfig.json
+        shell: bash
+        run: |
+          echo "typescript-check" > /tmp/jrn-015-020-stage
+          set +e
+          pnpm exec tsc --noEmit -p .tmp/jrn-015-020.tsconfig.json 2>&1 | tee /tmp/jrn-015-020.log
+          EXIT_CODE=${PIPESTATUS[0]}
+          exit "$EXIT_CODE"
 
       - name: Full-stack ownership boundary
-        run: pnpm run guard:fullstack-boundary
+        run: |
+          echo "fullstack-boundary" > /tmp/jrn-015-020-stage
+          pnpm run guard:fullstack-boundary
 
       - name: WLT financial boundary
-        run: pnpm run guard:wlt-financial-boundary
+        run: |
+          echo "wlt-boundary" > /tmp/jrn-015-020-stage
+          pnpm run guard:wlt-financial-boundary
 
       - name: Publish targeted commit status
         if: always()
@@ -114,12 +135,16 @@ jobs:
           TARGET_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         shell: bash
         run: |
+          STAGE="$(cat /tmp/jrn-015-020-stage 2>/dev/null || echo workflow-bootstrap)"
           if [ "$JOB_STATUS" = "success" ]; then
             STATE="success"
             DESCRIPTION="JRN-015..020 targeted checks passed"
           else
             STATE="failure"
-            DESCRIPTION="JRN-015..020 targeted checks failed"
+            FIRST_ERROR="$(grep -m1 -E 'undefined:|cannot use|not enough arguments|too many arguments|error TS[0-9]+|FAIL|Error:|ERR_' /tmp/jrn-015-020.log 2>/dev/null || true)"
+            FIRST_ERROR="$(printf '%s' "$FIRST_ERROR" | tr '\n' ' ' | cut -c1-90)"
+            DESCRIPTION="Failed at $STAGE${FIRST_ERROR:+: $FIRST_ERROR}"
+            DESCRIPTION="$(printf '%s' "$DESCRIPTION" | cut -c1-140)"
           fi
           jq -n \
             --arg state "$STATE" \
