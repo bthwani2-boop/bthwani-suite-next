@@ -121,12 +121,21 @@ func (s *protectedStoreServer) handleAnonymizeExpiredClientAddresses(w http.Resp
 		writeClientAddressPrivacyError(w, err)
 		return
 	}
+	purgedReceipts, err := clientaddress.PurgeExpiredMutationReceipts(r.Context(), s.db, body.Limit)
+	if err != nil {
+		writeClientAddressPrivacyError(w, err)
+		return
+	}
 	status, statusErr := clientaddress.GetPrivacyQueueStatus(r.Context(), s.db)
 	if statusErr != nil {
 		writeClientAddressPrivacyError(w, statusErr)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"result": result, "status": status})
+	store.SendJSON(w, http.StatusOK, map[string]any{
+		"result": result,
+		"status": status,
+		"expiredMutationReceiptsPurged": purgedReceipts,
+	})
 }
 
 func privacyEventLimit(r *http.Request) (int, error) {
