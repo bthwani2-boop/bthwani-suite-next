@@ -1,0 +1,66 @@
+{
+  "journeyId": "JRN-010",
+  "title": "Checkout and WLT payment-session handoff",
+  "repositoryMode": "REMOTE_ONLY",
+  "branch": "sambassam",
+  "technicalSliceRange": "FS-01..FS-18",
+  "functionalSlices": [
+    "Create checkout intent from a valid cart",
+    "Final item, price, address and serviceability validation",
+    "Select fulfillment and payment methods",
+    "Create an opaque WLT payment-session reference without transferring financial truth",
+    "Receive authenticated WLT events and store only reference and operational projection",
+    "Waiting, success, failure, expiry and cancellation states",
+    "Idempotency and duplicate-session/discount prevention",
+    "Unknown provider outcome recovery and reconciliation",
+    "Control-panel checkout monitoring"
+  ],
+  "decision": "READY_FOR_REVIEW",
+  "technicalClosure": "IMPLEMENTED_PENDING_SAME_COMMIT_CI",
+  "verifiedCommit": null,
+  "workflow": ".github/workflows/jrn-010-all-slices.yml",
+  "statusContext": "journeys/jrn-010/all-slices",
+  "workflowRunId": null,
+  "productTruth": "governance/product/contracts/jrn-010-checkout-wlt-handoff.product-truth.json",
+  "sliceRegistry": "services/dsh/contracts/jrn-010-slice-verification-registry.json",
+  "contractShard": "services/dsh/contracts/dsh.jrn-010-checkout.openapi.yaml",
+  "databaseEvidence": [
+    "services/dsh/database/migrations/dsh-910_jrn_010_wlt_event_receipts.sql",
+    "services/dsh/database/tests/dsh-910_jrn_010_wlt_event_receipts.sql"
+  ],
+  "implementationEvidence": [
+    "services/dsh/backend/internal/http/checkout.go",
+    "services/dsh/backend/internal/http/wlt_events.go",
+    "services/dsh/backend/internal/checkout/wlt_event_atomic.go",
+    "services/dsh/backend/internal/coupons/payment_lifecycle_tx.go",
+    "services/dsh/frontend/shared/checkout",
+    "services/dsh/frontend/app-client/checkout/GovernedCheckoutScreen.tsx",
+    "services/dsh/frontend/control-panel/operations/CheckoutActivityScreen.tsx"
+  ],
+  "verificationEvidence": [
+    "services/dsh/tests/jrn-010-all-slices.test.mjs",
+    "services/dsh/backend/internal/checkout/wlt_event_atomic_test.go",
+    "tools/guards/checkout/jrn-010-checkout-truth-gate.mjs"
+  ],
+  "truthBoundary": {
+    "dsh": "cart/address/serviceability/pricing snapshots, checkout intent and operational payment projection",
+    "wlt": "payment session, authorization, capture, refund, settlement and ledger truth"
+  },
+  "closedDefects": [
+    "WLT unknown outcome reconciliation could not attach a recovered payment session.",
+    "Checkout and coupon projections could commit partially for one WLT event.",
+    "WLT events had no durable tenant/session-scoped replay receipt.",
+    "Client checkout collapsed unknown, failed, expired and cancelled states into generic states.",
+    "Client checkout did not poll canonical DSH state after WLT handoff.",
+    "Operator monitoring lacked tenant visibility and reconciliation queue filters."
+  ],
+  "openCodeGaps": [],
+  "rollbackRunbook": "governance/runbooks/JRN-010_CHECKOUT_WLT_OPERATIONS.md",
+  "independentReviewPending": [
+    "Product Owner acceptance",
+    "QA device/runtime/accessibility review",
+    "Security and Finance boundary review",
+    "Release and Production evidence"
+  ],
+  "closurePolicy": "READY_FOR_REVIEW is the maximum technical decision before the listed independent reviews. CLOSED_WITH_EVIDENCE must not be asserted from this file alone."
+}
