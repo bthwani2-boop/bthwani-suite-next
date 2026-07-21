@@ -63,6 +63,21 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
+      - name: Publish pending same-commit status
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMIT_SHA: ${{ github.sha }}
+          TARGET_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        shell: bash
+        run: |
+          jq -n --arg state "pending" --arg context "journeys/jrn-006/all-slices" --arg description "JRN-006 all eight slices are being verified" --arg target_url "$TARGET_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/jrn-006-pending.json
+          curl --fail-with-body --silent --show-error -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ github.repository }}/statuses/$COMMIT_SHA" \
+            -d @/tmp/jrn-006-pending.json
+
       - name: Checkout exact commit
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
@@ -96,13 +111,17 @@ jobs:
           pnpm --dir apps/control-panel/runtime exec tsc -p tsconfig.jrn-006.json 2>&1 | tee -a /tmp/jrn-006-all-slices.log
           FRONTEND_EXIT=${PIPESTATUS[0]}
 
-          GOFMT_FILES=$(gofmt -l \
+          GOFMT_FILES=$(find \
             services/dsh/backend/internal/mapproviders \
             services/dsh/backend/internal/servicearea \
             services/dsh/backend/internal/clientaddress \
+            -type f -name '*.go' -print0 | xargs -0 gofmt -l)
+          GOFMT_FILES="$GOFMT_FILES
+          $(gofmt -l \
             services/dsh/backend/internal/http/client_maps.go \
             services/dsh/backend/internal/http/client_address_privacy.go \
-            services/dsh/backend/internal/http/platformpolicies_routes.go)
+            services/dsh/backend/internal/http/platformpolicies_routes.go)"
+          GOFMT_FILES=$(printf '%s\n' "$GOFMT_FILES" | sed '/^[[:space:]]*$/d')
           if [ -n "$GOFMT_FILES" ]; then
             printf 'gofmt_required:\n%s\n' "$GOFMT_FILES" | tee -a /tmp/jrn-006-all-slices.log
             GOFMT_EXIT=1
