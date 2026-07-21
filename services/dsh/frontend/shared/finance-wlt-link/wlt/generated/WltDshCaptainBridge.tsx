@@ -3,20 +3,16 @@ import { View, Pressable } from 'react-native';
 import {
   Badge,
   Box,
-  Button,
   Divider,
   Icon,
   KeyValueList,
   MobileScrollView,
   StateView,
-  Surface,
   Text,
   TopBar,
   useTheme,
   useDirection,
   spacing,
-  TextField,
-  radius,
 } from '@bthwani/ui-kit';
 import { useWltDshCaptainCodReferenceController } from '@bthwani/wlt/frontend/shared/dsh/use-wlt-dsh-captain-cod-reference-controller';
 import type { WltDshCodReference } from '@bthwani/wlt/frontend/shared/dsh/wlt-dsh-boundary.types';
@@ -83,9 +79,6 @@ export type WltDshCaptainBridgeProps = {
   dshClientId?: string | null;
 };
 
-const WLT_MUTATIONS_NOT_APPROVED_MESSAGE =
-  'شحن الرصيد وطلب التسوية عمليتان ماليتان حقيقيتان عبر WLT وغير معتمدتين للتشغيل الحي بعد. ستُفعّلان تلقائيًا فور اعتماد WLT لعمليات الدفع.';
-
 type WltDshFinanceSummaryRecord = {
   id: string;
   title: string;
@@ -106,15 +99,16 @@ function formatMinorUnitsToLabel(amountMinorUnits: number, currency: string, sig
 
 function codReferenceToRecord(ref: WltDshCodReference): WltDshFinanceSummaryRecord {
   const isRemitted = ref.status === 'remitted' || ref.remittedAt != null;
+  const isCollected = ref.status === 'collected' || ref.collectedAt != null;
   return {
     id: ref.id,
     title: `تحصيل طلب #${ref.orderId}`,
     subtitle: 'نقد عند الاستلام COD',
     timeLabel: ref.collectedAt ?? ref.createdAt,
-    amountLabel: formatMinorUnitsToLabel(ref.amountMinorUnits, ref.currency, '-'),
-    tone: 'negative',
-    statusLabel: isRemitted ? 'تم الإيداع' : 'قيد الإيداع',
-    statusTone: isRemitted ? 'success' : 'warning',
+    amountLabel: formatMinorUnitsToLabel(ref.amountMinorUnits, ref.currency, isCollected && !isRemitted ? '-' : ''),
+    tone: isCollected && !isRemitted ? 'negative' : 'neutral',
+    statusLabel: isRemitted ? 'تم الإيداع' : isCollected ? 'عهدة بانتظار الإيداع' : 'بانتظار إثبات التحصيل',
+    statusTone: isRemitted ? 'success' : isCollected ? 'warning' : 'info',
     kind: 'captain-cod-liability',
   };
 }
@@ -170,7 +164,7 @@ function RecordRow({ record }: { record: WltDshFinanceSummaryRecord }) {
 }
 
 export function WltDshCaptainBridge({
-  section = 'eligibility',
+  section = 'cod-liability',
   onBack,
   dshClientId,
 }: WltDshCaptainBridgeProps) {
@@ -194,120 +188,30 @@ export function WltDshCaptainBridge({
 
   const codOutstandingMinorUnits = codController.state.kind === 'loaded'
     ? codController.state.records
-        .filter((r) => r.status !== 'remitted' && r.remittedAt == null)
+        .filter((r) => r.status === 'collected' && r.remittedAt == null)
         .reduce((sum, r) => sum + r.amountMinorUnits, 0)
     : 0;
   const codCurrency = codController.state.kind === 'loaded' && codController.state.records[0]
     ? codController.state.records[0].currency
     : 'ر.ي';
 
-  // Eligibility, earnings and settlement mutation actions are NOT wired to fabricated
-  // local success — WLT mutation journeys are not yet approved for live processing
-  // (mutationJourneysApproved: false in services/wlt/service.manifest.ts). Until WLT
-  // exposes an approved mutation endpoint, these actions are surfaced as disabled with
-  // an explicit not-yet-available notice instead of simulating money movement.
-  const [eligibilityBalance] = React.useState(0);
-  const isEligible = false;
-
-  const [showFundingForm, setShowFundingForm] = React.useState(false);
-  const [selectedMethod, setSelectedMethod] = React.useState<'card' | 'karimi' | 'one_cash' | 'saba'>('card');
-
-  const paymentMethods = [
-    { id: 'card' as const, label: 'بطاقة ائتمانية' },
-    { id: 'karimi' as const, label: 'بنك الكريمي' },
-    { id: 'one_cash' as const, label: 'ONE كاش' },
-    { id: 'saba' as const, label: 'سباكاش' },
-  ];
+  const codPendingCollectionCount = codController.state.kind === 'loaded'
+    ? codController.state.records.filter((record) => record.status === 'pending_collection').length
+    : 0;
+  const codCollectedOutstandingCount = codController.state.kind === 'loaded'
+    ? codController.state.records.filter((record) => record.status === 'collected' && record.remittedAt == null).length
+    : 0;
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.surface }}>
       <TopBar variant="primary" title="مالية الكابتن" {...(onBack ? { onBack } : {})} />
       <MobileScrollView fill padding={0} gap={0} contentContainerStyle={{ paddingBottom: 120 }}>
         <Box padding={0} gap={0}>
-          {/* 1. الأهلية والشحن */}
-          <ActionStrip
-            icon="shield-checkmark-outline"
-            title="الأهلية والشحن"
-            subtitle={isEligible ? `مؤهل لاستقبال الطلبات · الرصيد: ${eligibilityBalance.toLocaleString()} ر.ي` : `غير مؤهل — الرصيد: ${eligibilityBalance.toLocaleString()} ر.ي`}
-            expanded={expandedSection === 'eligibility'}
-            onPress={() => setExpandedSection(expandedSection === 'eligibility' ? null : 'eligibility')}
-          >
-            <Box gap={3} style={{ paddingY: 8 }}>
-              <Text role="label" tone="muted" style={{ textAlign: isRtl ? 'right' : 'left' }}>
-                أهلية استقبال الطلبات
-              </Text>
-              <KeyValueList
-                dense
-                items={[
-                  { label: 'الرصيد الضامن الحالي', value: `${eligibilityBalance.toLocaleString()} ر.ي`, tone: isEligible ? 'success' : 'warning' },
-                  { label: 'الحد الأدنى المطلوب', value: '2,000 ر.ي', tone: 'info' },
-                  { label: 'الحالة', value: isEligible ? 'مؤهل لاستقبال الطلبات' : 'غير مؤهل — رصيد غير كافٍ', tone: isEligible ? 'success' : 'warning' },
-                ]}
-              />
-
-              <StateView
-                tone="info"
-                title="شحن الرصيد الضامن غير متاح حاليًا"
-                description={WLT_MUTATIONS_NOT_APPROVED_MESSAGE}
-              />
-
-              {showFundingForm ? (
-                <Surface tone="inset" padding={3} gap={3} style={{ borderRadius: radius.sm, borderWidth: 1, borderColor: theme.line }}>
-                  <Text role="bodyStrong" style={{ textAlign: 'right' }}>إجراء شحن رصيد الضامن</Text>
-
-                  <Box gap={1}>
-                    <Text role="caption" tone="muted" style={{ textAlign: 'right' }}>وسيلة الشحن</Text>
-                    <Box layoutDirection="row" gap={2} style={{ flexWrap: 'wrap', flexDirection: 'row-reverse' }}>
-                      {paymentMethods.map((m) => (
-                        <Pressable
-                          key={m.id}
-                          onPress={() => setSelectedMethod(m.id)}
-                          style={{
-                            paddingHorizontal: spacing[3],
-                            paddingVertical: 6,
-                            borderRadius: radius.xs,
-                            backgroundColor: selectedMethod === m.id ? theme.brand : theme.surfaceInset,
-                            borderWidth: 1,
-                            borderColor: selectedMethod === m.id ? theme.brand : theme.line,
-                          }}
-                        >
-                          <Text role="bodySm" style={{ color: selectedMethod === m.id ? theme.brandContrast : theme.text }}>
-                            {m.label}
-                          </Text>
-                        </Pressable>
-                      ))}
-                    </Box>
-                  </Box>
-
-                  <Box layoutDirection="row" gap={2} style={{ flexDirection: 'row-reverse', marginTop: spacing[2] }}>
-                    <Button
-                      label="إلغاء"
-                      tone="secondary"
-                      fullWidth={false}
-                      style={{ flex: 1 }}
-                      onPress={() => setShowFundingForm(false)}
-                    />
-                  </Box>
-                </Surface>
-              ) : (
-                <Box gap={2} style={{ paddingVertical: 4 }}>
-                  <Button
-                    label="شحن رصيد إضافي"
-                    tone="ghost"
-                    fullWidth
-                    disabled
-                    onPress={() => setShowFundingForm(true)}
-                  />
-                </Box>
-              )}
-            </Box>
-          </ActionStrip>
-
-          {/* 2. ذمة COD */}
+          {/* 1. عهدة COD الحية من WLT */}
           <ActionStrip
             icon="wallet-outline"
-            title="ذمة COD"
-            subtitle={`الذمة القائمة: ${formatMinorUnitsToLabel(codOutstandingMinorUnits, codCurrency)}`}
+            title="عهدة النقد عند الاستلام"
+            subtitle={`العهدة المحصّلة غير المودعة: ${formatMinorUnitsToLabel(codOutstandingMinorUnits, codCurrency)}`}
             expanded={expandedSection === 'cod-liability'}
             onPress={() => setExpandedSection(expandedSection === 'cod-liability' ? null : 'cod-liability')}
           >
@@ -350,9 +254,9 @@ export function WltDshCaptainBridge({
                 <KeyValueList
                   dense
                   items={[
-                    { label: 'المبلغ المحصّل — ذمة قائمة', value: formatMinorUnitsToLabel(codOutstandingMinorUnits, codCurrency), tone: 'warning' },
-                    { label: 'دورة التسوية', value: 'أسبوعية - كل خميس', tone: 'default' },
-                    { label: 'الإجراء التالي', value: 'إيداع المبلغ بالبنك قبل موعد التسوية', tone: 'info' },
+                    { label: 'بانتظار إثبات التحصيل', value: codPendingCollectionCount.toLocaleString(), tone: codPendingCollectionCount > 0 ? 'info' : 'default' },
+                    { label: 'عهد محصّلة غير مودعة', value: codCollectedOutstandingCount.toLocaleString(), tone: codCollectedOutstandingCount > 0 ? 'warning' : 'default' },
+                    { label: 'إجمالي العهدة القائمة', value: formatMinorUnitsToLabel(codOutstandingMinorUnits, codCurrency), tone: codOutstandingMinorUnits > 0 ? 'warning' : 'success' },
                   ]}
                 />
               )}

@@ -121,30 +121,38 @@ func (c *Client) CreatePaymentSession(ctx context.Context, input CreatePaymentSe
 	return &envelope.PaymentSession, nil
 }
 
-type NotifyDeliveryCompletedInput struct {
+type NotifyDeliveryCollectionInput struct {
 	OrderID          string `json:"orderId"`
-	CaptainID        string `json:"captainId"`
+	CollectorType    string `json:"collectorType"`
+	CollectorID      string `json:"collectorId"`
 	PartnerID        string `json:"partnerId"`
 	CheckoutIntentID string `json:"checkoutIntentId"`
 	CorrelationID    string `json:"-"`
 	IdempotencyKey   string `json:"-"`
 }
 
-// NotifyDeliveryCompleted tells WLT a COD order has been delivered so it can
-// open its own COD collection record. WLT re-derives the amount from its own
-// payment session for the checkout intent; DSH never computes or forwards a
-// financial amount. Errors are the caller's to decide whether to retry.
-func (c *Client) NotifyDeliveryCompleted(ctx context.Context, input NotifyDeliveryCompletedInput) error {
+// NotifyDeliveryCollection creates one WLT-owned COD custody record after a
+// governed delivery proof. WLT derives amount/currency from its own payment
+// session. DSH sends only operational identities and never a monetary amount.
+func (c *Client) NotifyDeliveryCollection(ctx context.Context, input NotifyDeliveryCollectionInput) error {
 	if !c.Configured() {
-		return fmt.Errorf("WLT payment-session handoff is not configured")
+		return fmt.Errorf("WLT COD custody handoff is not configured")
+	}
+	input.OrderID = strings.TrimSpace(input.OrderID)
+	input.CollectorType = strings.TrimSpace(input.CollectorType)
+	input.CollectorID = strings.TrimSpace(input.CollectorID)
+	input.PartnerID = strings.TrimSpace(input.PartnerID)
+	input.CheckoutIntentID = strings.TrimSpace(input.CheckoutIntentID)
+	if input.OrderID == "" || input.CollectorType == "" || input.CollectorID == "" || input.PartnerID == "" || input.CheckoutIntentID == "" {
+		return fmt.Errorf("order, collector, partner, and checkout intent are required for COD custody")
 	}
 	body, err := json.Marshal(input)
 	if err != nil {
-		return fmt.Errorf("encode WLT delivery-completed request: %w", err)
+		return fmt.Errorf("encode WLT COD custody request: %w", err)
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/wlt/cod-records", bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/wlt/delivery-collections", bytes.NewReader(body))
 	if err != nil {
-		return fmt.Errorf("build WLT delivery-completed request: %w", err)
+		return fmt.Errorf("build WLT COD custody request: %w", err)
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
@@ -156,19 +164,18 @@ func (c *Client) NotifyDeliveryCompleted(ctx context.Context, input NotifyDelive
 	}
 	idempotencyKey := strings.TrimSpace(input.IdempotencyKey)
 	if idempotencyKey == "" {
-		idempotencyKey = deterministicMutationKey("cod-record-create", input.OrderID, input.CheckoutIntentID)
+		idempotencyKey = deterministicMutationKey("delivery-collection-handoff", input.OrderID, input.CheckoutIntentID, input.CollectorType, input.CollectorID)
 	}
 	if err := setRequiredMutationHeaders(req, correlationID, idempotencyKey); err != nil {
-		return fmt.Errorf("prepare WLT delivery-completed request: %w", err)
+		return fmt.Errorf("prepare WLT COD custody request: %w", err)
 	}
-
 	response, err := c.http.Do(req)
 	if err != nil {
-		return fmt.Errorf("call WLT delivery-completed: %w", err)
+		return fmt.Errorf("call WLT COD custody: %w", err)
 	}
 	defer response.Body.Close()
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return fmt.Errorf("WLT delivery-completed returned HTTP %d", response.StatusCode)
+		return fmt.Errorf("WLT delivery collection handoff returned HTTP %d", response.StatusCode)
 	}
 	return nil
 }

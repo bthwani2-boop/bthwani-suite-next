@@ -664,6 +664,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/wlt/delivery-collections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept a governed DSH delivery-completion handoff.
+         * @description DSH sends delivery and collector identities only. WLT resolves the payment session, returns applicable=false for prepaid orders, and creates one COD custody record for COD orders without trusting caller-supplied money.
+         */
+        post: operations["createWltDeliveryCollectionHandoff"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/wlt/cod-records": {
         parameters: {
             query?: never;
@@ -1323,7 +1343,11 @@ export interface components {
         WltCodRecord: {
             id: string;
             orderId: string;
-            captainId: string;
+            /** @description Compatibility projection, present only when collectorType is captain. */
+            captainId?: string;
+            /** @enum {string} */
+            collectorType: "captain" | "store_courier" | "partner_store";
+            collectorId: string;
             partnerId: string;
             /** Format: int64 */
             amountMinorUnits: number;
@@ -1339,16 +1363,16 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
         };
+        /** @description Internal DSH-only custody handoff. Monetary values are forbidden in the request and are always derived from WLT's payment session. */
         WltCreateCodRecordRequest: {
             orderId: string;
-            captainId: string;
+            /** @enum {string} */
+            collectorType: "captain" | "store_courier" | "partner_store";
+            collectorId: string;
+            /** @description Deprecated compatibility input for captain collectors. */
+            captainId?: string;
             partnerId: string;
-            /** @description When set, WLT derives amountMinorUnits/currency from its own payment session for this checkout intent instead of trusting the caller; amountMinorUnits/currency in the request are ignored in that case. */
-            checkoutIntentId?: string;
-            /** Format: int64 */
-            amountMinorUnits?: number;
-            /** @default YER */
-            currency: string;
+            checkoutIntentId: string;
         };
         WltCodRecordResponse: {
             codRecord: components["schemas"]["WltCodRecord"];
@@ -2622,6 +2646,56 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    createWltDeliveryCollectionHandoff: {
+        parameters: {
+            query?: never;
+            header: {
+                Authorization: string;
+                "X-Service-Caller": "dsh";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WltCreateCodRecordRequest"];
+            };
+        };
+        responses: {
+            /** @description Handoff replayed or not applicable to a prepaid order. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        codRecord?: components["schemas"]["WltCodRecord"] | null;
+                        applicable: boolean;
+                        replayed: boolean;
+                    };
+                };
+            };
+            /** @description COD custody record created from WLT payment-session truth. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        codRecord: components["schemas"]["WltCodRecord"];
+                        /** @constant */
+                        applicable: true;
+                        /** @constant */
+                        replayed: false;
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
         };
     };
     listWltCodRecords: {

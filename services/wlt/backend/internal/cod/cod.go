@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"wlt-api/internal/ledger"
 	"wlt-api/internal/reference"
@@ -17,7 +18,9 @@ import (
 type CodRecord struct {
 	ID               string  `json:"id"`
 	OrderID          string  `json:"orderId"`
-	CaptainID        string  `json:"captainId"`
+	CaptainID        string  `json:"captainId,omitempty"`
+	CollectorType    string  `json:"collectorType"`
+	CollectorID      string  `json:"collectorId"`
 	PartnerID        string  `json:"partnerId"`
 	AmountMinorUnits int64   `json:"amountMinorUnits"`
 	Currency         string  `json:"currency"`
@@ -66,16 +69,18 @@ type CreateCommissionInput struct {
 }
 
 type CreateCodRecordInput struct {
-	OrderID   string `json:"orderId"`
-	CaptainID string `json:"captainId"`
-	PartnerID string `json:"partnerId"`
+	OrderID       string `json:"orderId"`
+	CaptainID     string `json:"captainId,omitempty"`
+	CollectorType string `json:"collectorType"`
+	CollectorID   string `json:"collectorId"`
+	PartnerID     string `json:"partnerId"`
 	// CheckoutIntentID is the sole source of AmountMinorUnits/Currency: WLT
 	// looks up its own payment session for that checkout intent rather than
 	// trusting a caller-supplied amount.
 	CheckoutIntentID string `json:"checkoutIntentId"`
 }
 
-const codCols = `id, order_id, captain_id, partner_id, amount_minor_units, currency,
+const codCols = `id, order_id, COALESCE(captain_id,''), collector_type, collector_id, partner_id, amount_minor_units, currency,
 	status, collected_at, remitted_at, created_at, updated_at`
 
 const commissionCols = `id, beneficiary_actor_id, beneficiary_actor_type, source_type, source_id, visit_id, store_id, commission_policy_id, commission_type,
@@ -84,7 +89,7 @@ const commissionCols = `id, beneficiary_actor_id, beneficiary_actor_type, source
 func scanCodRecord(row *sql.Row) (*CodRecord, error) {
 	var c CodRecord
 	err := row.Scan(
-		&c.ID, &c.OrderID, &c.CaptainID, &c.PartnerID,
+		&c.ID, &c.OrderID, &c.CaptainID, &c.CollectorType, &c.CollectorID, &c.PartnerID,
 		&c.AmountMinorUnits, &c.Currency, &c.Status,
 		&c.CollectedAt, &c.RemittedAt, &c.CreatedAt, &c.UpdatedAt,
 	)
@@ -97,7 +102,7 @@ func scanCodRecord(row *sql.Row) (*CodRecord, error) {
 func scanCodRecordRow(rows *sql.Rows) (*CodRecord, error) {
 	var c CodRecord
 	err := rows.Scan(
-		&c.ID, &c.OrderID, &c.CaptainID, &c.PartnerID,
+		&c.ID, &c.OrderID, &c.CaptainID, &c.CollectorType, &c.CollectorID, &c.PartnerID,
 		&c.AmountMinorUnits, &c.Currency, &c.Status,
 		&c.CollectedAt, &c.RemittedAt, &c.CreatedAt, &c.UpdatedAt,
 	)
@@ -141,12 +146,43 @@ func scanCommissionRow(rows *sql.Rows) (*Commission, error) {
 	return &c, nil
 }
 
-func CreateCodRecord(db *sql.DB, input CreateCodRecordInput) (*CodRecord, error) {
-	if input.OrderID == "" || input.CaptainID == "" || input.PartnerID == "" {
-		return nil, fmt.Errorf("orderId, captainId, and partnerId are required")
+func normalizeCodRecordCollector(input CreateCodRecordInput) (string, string, string, error) {
+	collectorType := strings.TrimSpace(input.CollectorType)
+	collectorID := strings.TrimSpace(input.CollectorID)
+	captainID := strings.TrimSpace(input.CaptainID)
+	if collectorType == "" && captainID != "" {
+		collectorType = "captain"
+		collectorID = captainID
 	}
-	if input.CheckoutIntentID == "" {
-		return nil, fmt.Errorf("checkoutIntentId is required")
+	if collectorType == "captain" && collectorID == "" {
+		collectorID = captainID
+	}
+	switch collectorType {
+	case "captain", "store_courier", "partner_store":
+	default:
+		return "", "", "", fmt.Errorf("collectorType must be captain, store_courier, or partner_store")
+	}
+	if collectorID == "" {
+		return "", "", "", fmt.Errorf("collectorId is required")
+	}
+	if collectorType == "captain" {
+		captainID = collectorID
+	} else {
+		captainID = ""
+	}
+	return collectorType, collectorID, captainID, nil
+}
+
+func CreateCodRecord(db *sql.DB, input CreateCodRecordInput) (*CodRecord, error) {
+	input.OrderID = strings.TrimSpace(input.OrderID)
+	input.PartnerID = strings.TrimSpace(input.PartnerID)
+	input.CheckoutIntentID = strings.TrimSpace(input.CheckoutIntentID)
+	if input.OrderID == "" || input.PartnerID == "" || input.CheckoutIntentID == "" {
+		return nil, fmt.Errorf("orderId, partnerId, and checkoutIntentId are required")
+	}
+	collectorType, collectorID, captainID, err := normalizeCodRecordCollector(input)
+	if err != nil {
+		return nil, err
 	}
 
 	existing, err := getCodRecordByOrder(db, input.OrderID)
@@ -154,6 +190,9 @@ func CreateCodRecord(db *sql.DB, input CreateCodRecordInput) (*CodRecord, error)
 		return nil, err
 	}
 	if existing != nil {
+		if existing.CollectorType != collectorType || existing.CollectorID != collectorID || existing.PartnerID != input.PartnerID {
+			return nil, ErrCodStateConflict
+		}
 		return existing, nil
 	}
 	session, err := reference.GetPaymentSessionByCheckoutIntent(db, input.CheckoutIntentID)
@@ -166,18 +205,33 @@ func CreateCodRecord(db *sql.DB, input CreateCodRecordInput) (*CodRecord, error)
 	if session.PaymentMethod != "cod" {
 		return nil, fmt.Errorf("checkoutIntentId %q is not a COD payment session", input.CheckoutIntentID)
 	}
-	amountMinorUnits := session.AmountMinorUnits
+	if session.AmountMinorUnits <= 0 {
+		return nil, fmt.Errorf("checkoutIntentId %q has no positive COD amount", input.CheckoutIntentID)
+	}
 	currency := session.Currency
 	if currency == "" {
 		currency = "YER"
 	}
 
 	const q = `
-		INSERT INTO wlt_cod_records (order_id, captain_id, partner_id, amount_minor_units, currency)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO wlt_cod_records
+		  (order_id, captain_id, collector_type, collector_id, partner_id, amount_minor_units, currency)
+		VALUES ($1, NULLIF($2,''), $3, $4, $5, $6, $7)
+		ON CONFLICT (order_id) DO NOTHING
 		RETURNING ` + codCols
-	row := db.QueryRow(q, input.OrderID, input.CaptainID, input.PartnerID, amountMinorUnits, currency)
-	return scanCodRecord(row)
+	row := db.QueryRow(q, input.OrderID, captainID, collectorType, collectorID, input.PartnerID, session.AmountMinorUnits, currency)
+	created, err := scanCodRecord(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		existing, getErr := getCodRecordByOrder(db, input.OrderID)
+		if getErr != nil {
+			return nil, getErr
+		}
+		if existing == nil || existing.CollectorType != collectorType || existing.CollectorID != collectorID || existing.PartnerID != input.PartnerID {
+			return nil, ErrCodStateConflict
+		}
+		return existing, nil
+	}
+	return created, err
 }
 
 func getCodRecordByOrder(db *sql.DB, orderID string) (*CodRecord, error) {
@@ -202,17 +256,20 @@ func GetCodRecord(db *sql.DB, codRecordID string) (*CodRecord, error) {
 	return c, err
 }
 
-func ListCodRecords(db *sql.DB, captainID, partnerID string) ([]*CodRecord, error) {
+func ListCodRecords(db *sql.DB, captainID, partnerID, orderID string) ([]*CodRecord, error) {
 	var q string
 	var arg string
-	if captainID != "" {
-		q = `SELECT ` + codCols + ` FROM wlt_cod_records WHERE captain_id = $1 ORDER BY created_at DESC`
+	if captainID = strings.TrimSpace(captainID); captainID != "" {
+		q = `SELECT ` + codCols + ` FROM wlt_cod_records WHERE collector_type='captain' AND collector_id = $1 ORDER BY created_at DESC`
 		arg = captainID
-	} else if partnerID != "" {
+	} else if partnerID = strings.TrimSpace(partnerID); partnerID != "" {
 		q = `SELECT ` + codCols + ` FROM wlt_cod_records WHERE partner_id = $1 ORDER BY created_at DESC`
 		arg = partnerID
+	} else if orderID = strings.TrimSpace(orderID); orderID != "" {
+		q = `SELECT ` + codCols + ` FROM wlt_cod_records WHERE order_id = $1 ORDER BY created_at DESC`
+		arg = orderID
 	} else {
-		return nil, fmt.Errorf("captainId or partnerId query parameter is required")
+		return nil, fmt.Errorf("captainId, partnerId, or orderId query parameter is required")
 	}
 	rows, err := db.Query(q, arg)
 	if err != nil {
@@ -748,7 +805,7 @@ func HandleGetCodRecord(db *sql.DB) http.HandlerFunc {
 func HandleListCodRecords(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query()
-		records, err := ListCodRecords(db, q.Get("captainId"), q.Get("partnerId"))
+		records, err := ListCodRecords(db, q.Get("captainId"), q.Get("partnerId"), q.Get("orderId"))
 		if err != nil {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 			return

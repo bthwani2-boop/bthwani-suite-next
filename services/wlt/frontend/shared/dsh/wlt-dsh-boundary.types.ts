@@ -115,10 +115,14 @@ export type WltCommissionStatus =
   | "settled"
   | "reversed";
 
+export type WltCodCollectorType = "captain" | "store_courier" | "partner_store";
+
 export type WltDshCodReference = {
   readonly id: string;
   readonly orderId: string;
-  readonly captainId: string;
+  readonly captainId?: string;
+  readonly collectorType: WltCodCollectorType;
+  readonly collectorId: string;
   readonly partnerId: string;
   readonly amountMinorUnits: number;
   readonly currency: string;

@@ -1200,6 +1200,63 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /wlt/delivery-collections:
+    post:
+      operationId: createWltDeliveryCollectionHandoff
+      summary: Accept a governed DSH delivery-completion handoff.
+      description: >-
+        DSH sends delivery and collector identities only. WLT resolves the payment
+        session, returns applicable=false for prepaid orders, and creates one COD
+        custody record for COD orders without trusting caller-supplied money.
+      tags: [WltCod]
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema: { type: string }
+        - name: X-Service-Caller
+          in: header
+          required: true
+          schema:
+            type: string
+            enum: [dsh]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WltCreateCodRecordRequest"
+      responses:
+        "200":
+          description: Handoff replayed or not applicable to a prepaid order.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [applicable, replayed]
+                properties:
+                  codRecord:
+                    anyOf:
+                      - $ref: "#/components/schemas/WltCodRecord"
+                      - type: "null"
+                  applicable: { type: boolean }
+                  replayed: { type: boolean }
+        "201":
+          description: COD custody record created from WLT payment-session truth.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [codRecord, applicable, replayed]
+                properties:
+                  codRecord: { $ref: "#/components/schemas/WltCodRecord" }
+                  applicable: { type: boolean, const: true }
+                  replayed: { type: boolean, const: false }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
   /wlt/cod-records:
     post:
       operationId: createWltCodRecord
@@ -2705,7 +2762,8 @@ components:
       required:
         - id
         - orderId
-        - captainId
+        - collectorType
+        - collectorId
         - partnerId
         - amountMinorUnits
         - currency
@@ -2713,65 +2771,44 @@ components:
         - createdAt
         - updatedAt
       properties:
-        id:
-          type: string
-        orderId:
-          type: string
+        id: { type: string }
+        orderId: { type: string }
         captainId:
           type: string
-        partnerId:
+          description: Compatibility projection, present only when collectorType is captain.
+        collectorType:
           type: string
-        amountMinorUnits:
-          type: integer
-          format: int64
-        currency:
-          type: string
+          enum: [captain, store_courier, partner_store]
+        collectorId: { type: string, minLength: 1 }
+        partnerId: { type: string }
+        amountMinorUnits: { type: integer, format: int64, minimum: 1 }
+        currency: { type: string }
         status:
           type: string
-          enum:
-            - pending_collection
-            - collected
-            - remitted
-            - disputed
-            - resolved
-        collectedAt:
-          type: [string, 'null']
-          format: date-time
-        remittedAt:
-          type: [string, 'null']
-          format: date-time
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
+          enum: [pending_collection, collected, remitted, disputed, resolved]
+        collectedAt: { type: [string, 'null'], format: date-time }
+        remittedAt: { type: [string, 'null'], format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
 
     WltCreateCodRecordRequest:
       type: object
-      required:
-        - orderId
-        - captainId
-        - partnerId
+      additionalProperties: false
+      description: >-
+        Internal DSH-only custody handoff. Monetary values are forbidden in the
+        request and are always derived from WLT's payment session.
+      required: [orderId, collectorType, collectorId, partnerId, checkoutIntentId]
       properties:
-        orderId:
+        orderId: { type: string, minLength: 1 }
+        collectorType:
           type: string
+          enum: [captain, store_courier, partner_store]
+        collectorId: { type: string, minLength: 1 }
         captainId:
           type: string
-        partnerId:
-          type: string
-        checkoutIntentId:
-          type: string
-          description: >
-            When set, WLT derives amountMinorUnits/currency from its own payment
-            session for this checkout intent instead of trusting the caller;
-            amountMinorUnits/currency in the request are ignored in that case.
-        amountMinorUnits:
-          type: integer
-          format: int64
-        currency:
-          type: string
-          default: YER
+          description: Deprecated compatibility input for captain collectors.
+        partnerId: { type: string, minLength: 1 }
+        checkoutIntentId: { type: string, minLength: 1 }
 
     WltCodRecordResponse:
       type: object
