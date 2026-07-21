@@ -29,9 +29,9 @@ export type {
 export type { DshPartnerListRowViewModel, DshPartnerDetailViewModel, DshPartnerReadinessViewModel, DshPartnerBankAccountViewModel } from "./partner.view-model";
 export { buildPartnerListRowViewModel, buildPartnerDetailViewModel, buildPartnerReadinessViewModel } from "./partner.view-model";
 
-export type { DshPartnerListFilters } from "./use-partner-admin-controller";
+export type { DshPartnerListFilters } from "./use-partner-admin-governed-controller";
+export { usePartnerAdminController } from "./use-partner-admin-governed-controller";
 export {
-  usePartnerAdminController,
   usePartnerDetailController,
   usePartnerDocumentsController,
   usePartnerReadinessController,
