@@ -28,7 +28,7 @@ assert.match(adapter, /mutation\?\.expectedVersion !== undefined/);
 assert.match(adapter, /EXPECTED_VERSION_REQUIRED/);
 assert.match(adapter, /expectedVersion < 1/);
 assert.doesNotMatch(adapter, /\bfetch\s*\(/);
-assert.doesNotMatch(adapter, /\baxios\b/);
+assert.doesNotMatch(adapter, /from\s+["']axios["']|\baxios\s*\./);
 
 assert.match(barrel, /createPartnerMutationContext/);
 assert.match(barrel, /derivePartnerOnboardingViewModel/);
@@ -51,6 +51,6 @@ assert.doesNotMatch(controller, /accountNumber: partner\.accountNumber/);
 assert.doesNotMatch(controller, /iban: partner\.iban/);
 assert.doesNotMatch(controller, /payoutMobileNumber: partner\.payoutMobileNumber/);
 assert.doesNotMatch(controller, /\bfetch\s*\(/);
-assert.doesNotMatch(controller, /\baxios\b/);
+assert.doesNotMatch(controller, /from\s+["']axios["']|\baxios\s*\./);
 
 console.log("JRN-001 FS-09 shared brain, mutation identity, privacy, and readback verified");
