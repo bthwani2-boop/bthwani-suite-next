@@ -126,6 +126,8 @@ export function useOrderTruthDetailController(
       const failure = classifyOrderTruthFailure(error, actor);
       if (failure.kind === "offline" && previousSuccess.current) {
         setState({ kind: "partial", order: previousSuccess.current, message: failure.message });
+      } else if (failure.kind === "conflict") {
+        setState({ kind: "error", message: failure.message });
       } else {
         setState({ kind: failure.kind, message: failure.message });
       }
