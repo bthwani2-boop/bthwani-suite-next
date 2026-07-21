@@ -6,9 +6,10 @@ import (
 	"fmt"
 )
 
-// AttachWltPaymentSessionIdempotent binds the WLT-owned session once and treats
-// an exact replay as success. A different session or a closed intent remains a
-// conflict and must never overwrite financial references.
+// AttachWltPaymentSessionIdempotent binds the WLT-owned session once from any
+// unresolved handoff state and treats an exact replay as success. A different
+// session or a closed intent remains a conflict and must never overwrite the
+// financial reference.
 func AttachWltPaymentSessionIdempotent(
 	db *sql.DB,
 	intentID string,
@@ -35,7 +36,7 @@ func AttachWltPaymentSessionIdempotent(
 		    END
 		WHERE id = $3::uuid AND tenant_id = $4 AND client_id = $5
 		  AND (
-		      state IN ('pending', 'wlt_handoff_failed')
+		      state IN ('pending', 'wlt_handoff_failed', 'wlt_outcome_unknown')
 		      OR (state = 'payment_pending' AND wlt_payment_session_id = $2)
 		  )
 		RETURNING id, tenant_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
