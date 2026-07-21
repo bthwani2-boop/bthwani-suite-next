@@ -1,4 +1,5 @@
 name: JRN 015-020 WLT boundary diagnostic
+# Rerun after governance guards were excluded from runtime-provider scanning.
 
 on:
   push:
