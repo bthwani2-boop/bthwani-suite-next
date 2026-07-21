@@ -25,6 +25,7 @@ assert.match(runbook, /VERSION_CONFLICT/);
 assert.match(runbook, /IDEMPOTENCY_KEY_REUSED/);
 assert.match(runbook, /PARTNER_READINESS_GATES_FAILED/);
 assert.match(runbook, /publication gate/i);
-assert.doesNotMatch(runbook, /paste raw bank|سجّل رقم الحساب كاملًا/i);
+assert.match(runbook, /Never request or paste raw bank account/);
+assert.match(runbook, /Never manually create a financial ledger entry in DSH/);
 
 console.log("JRN-001 FS-15 SLO, alerting, diagnostics and support runbook gate passed");
