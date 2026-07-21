@@ -2,8 +2,16 @@
   "schemaVersion": "2.0.0",
   "journeyId": "JRN-006",
   "journeyName": "الخرائط ومناطق الخدمة وخصوصية العناوين",
-  "status": "IMPLEMENTED_PENDING_VERIFICATION",
+  "status": "CLOSED_WITH_EVIDENCE",
   "sliceRegistry": "services/dsh/contracts/jrn-006-slice-verification-registry.json",
+  "closureEvidence": {
+    "path": "governance/evidence/JRN-006_ALL_SLICES_CLOSURE.json",
+    "implementationCommit": "633ae051264bb03049a4751ac67ac79724bb03d2",
+    "workflowRunId": 29865894007,
+    "statusContext": "journeys/jrn-006/all-slices",
+    "artifactId": 8509195051,
+    "artifactDigest": "sha256:d3b6effafb18304c3712013a489f4d439fc37bbb275323a23ef0568bc943bb43"
+  },
   "truthOwners": {
     "externalMapResolution": "core/providers -> services/dsh/backend/internal/mapproviders",
     "serviceAreaAndGeofence": "services/dsh/backend/internal/servicearea",
@@ -86,5 +94,7 @@
     "PostgreSQL 16 applies migrations dsh-056, 076, 078, 081, 082, 083, 906, 907, and 908 and passes database invariant tests 906, 907, and 908.",
     "The exact commit publishes journeys/jrn-006/all-slices=success.",
     "Evidence records the exact commit, workflow run, artifact id, and artifact digest before status changes to CLOSED_WITH_EVIDENCE."
-  ]
+  ],
+  "acceptanceResult": "PASS",
+  "knownOpenGaps": []
 }
