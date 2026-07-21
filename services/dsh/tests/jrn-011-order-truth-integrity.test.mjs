@@ -30,7 +30,9 @@ test("JRN-011 product, state, boundary and RBAC truth are explicit", () => {
     /"journeyId": "JRN-011"/,
     /Checkout Intent واحد طلبًا واحدًا فقط/,
     /snapshot السعر أو العنوان أو العناصر/,
-    /"decision": "FIX_REQUIRED"/,
+    /"decision": "READY_FOR_REVIEW"/,
+    /"internalZeroGate": "PASS"/,
+    /"statusContext": "jrn-011\/order-truth"/,
   ], "product truth");
   assertAll(rbac, [
     /"defaultEffect": "deny"/,
