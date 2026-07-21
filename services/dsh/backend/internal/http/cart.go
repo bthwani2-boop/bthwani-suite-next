@@ -85,10 +85,14 @@ func (s *protectedStoreServer) handleUpsertCartItem(w http.ResponseWriter, r *ht
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "could not resolve cart")
 		return
 	}
-	item, err := cart.UpsertItem(r.Context(), s.db, body.StoreID, c.ID, cart.UpsertItemInput{
+	item, err := cart.UpsertOwnedItem(r.Context(), s.db, actor.ID, body.StoreID, c.ID, cart.UpsertItemInput{
 		MasterProductID: body.MasterProductID,
 		Quantity:        body.Quantity,
 	})
+	if errors.Is(err, cart.ErrNotFound) {
+		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "active cart not found")
+		return
+	}
 	if errors.Is(err, cart.ErrInvalid) {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid cart item")
 		return
@@ -171,6 +175,11 @@ func (s *protectedStoreServer) handleOperatorCarts(w http.ResponseWriter, r *htt
 	carts, err := cart.ListOperatorCarts(r.Context(), s.db, stateFilter)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "could not load carts")
+		return
+	}
+	carts, err = cart.HydrateOperatorCartItems(r.Context(), s.db, carts)
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "could not load cart items")
 		return
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"carts": carts})
