@@ -47,12 +47,128 @@ func validateStoreCaptainHandoffExceptionInput(input ReportDeliveryExceptionInpu
 	return nil
 }
 
+func validateExistingHandoffExceptionCommand(
+	db *sql.DB,
+	exceptionID string,
+	recordedReason DeliveryExceptionReasonCode,
+	recordedActorID string,
+	recordedRole string,
+	expectedReason DeliveryExceptionReasonCode,
+	expectedActorID string,
+	expectedRole StoreCaptainHandoffExceptionReporterRole,
+) (*DeliveryException, error) {
+	if recordedReason != expectedReason {
+		return nil, fmt.Errorf("%w: correlationId already belongs to a different exception command", ErrConflict)
+	}
+	if recordedActorID != expectedActorID || recordedRole != string(expectedRole) {
+		return nil, fmt.Errorf("%w: correlationId already belongs to another reporter", ErrConflict)
+	}
+	return GetDeliveryException(db, exceptionID)
+}
+
+func findCaptainHandoffExceptionReplay(
+	db *sql.DB,
+	assignmentID string,
+	captainID string,
+	input ReportDeliveryExceptionInput,
+) (*DeliveryException, bool, error) {
+	var exceptionID, recordedActorID, recordedRole string
+	var recordedReason DeliveryExceptionReasonCode
+	err := db.QueryRow(`
+		SELECT e.id::text, e.reason_code, r.actor_id, r.actor_role
+		FROM dsh_delivery_exceptions e
+		JOIN dsh_delivery_exception_reporters r ON r.exception_id = e.id
+		WHERE e.assignment_id = $1::uuid
+		  AND e.captain_id = $2
+		  AND e.correlation_id = $3
+		ORDER BY e.reported_at DESC
+		LIMIT 1`, assignmentID, captainID, input.CorrelationID).Scan(
+		&exceptionID,
+		&recordedReason,
+		&recordedActorID,
+		&recordedRole,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, err
+	}
+	item, err := validateExistingHandoffExceptionCommand(
+		db,
+		exceptionID,
+		recordedReason,
+		recordedActorID,
+		recordedRole,
+		input.ReasonCode,
+		captainID,
+		HandoffExceptionReporterCaptain,
+	)
+	return item, true, err
+}
+
+func findPartnerHandoffExceptionReplay(
+	db *sql.DB,
+	orderID string,
+	storeID string,
+	actorID string,
+	input ReportDeliveryExceptionInput,
+) (*DeliveryException, bool, error) {
+	var exceptionID, recordedActorID, recordedRole string
+	var recordedReason DeliveryExceptionReasonCode
+	err := db.QueryRow(`
+		SELECT e.id::text, e.reason_code, r.actor_id, r.actor_role
+		FROM dsh_delivery_exceptions e
+		JOIN dsh_delivery_exception_reporters r ON r.exception_id = e.id
+		JOIN dsh_orders o ON o.id = e.order_id
+		WHERE e.order_id = $1::uuid
+		  AND o.store_id = $2
+		  AND e.correlation_id = $3
+		ORDER BY e.reported_at DESC
+		LIMIT 1`, orderID, storeID, input.CorrelationID).Scan(
+		&exceptionID,
+		&recordedReason,
+		&recordedActorID,
+		&recordedRole,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, err
+	}
+	item, err := validateExistingHandoffExceptionCommand(
+		db,
+		exceptionID,
+		recordedReason,
+		recordedActorID,
+		recordedRole,
+		input.ReasonCode,
+		actorID,
+		HandoffExceptionReporterPartner,
+	)
+	return item, true, err
+}
+
 func ReportCaptainStoreCaptainHandoffException(
 	db *sql.DB,
 	assignmentID string,
 	captainID string,
 	input ReportDeliveryExceptionInput,
 ) (*DeliveryException, error) {
+	assignmentID = strings.TrimSpace(assignmentID)
+	captainID = strings.TrimSpace(captainID)
+	input.Note = strings.TrimSpace(input.Note)
+	input.CorrelationID = strings.TrimSpace(input.CorrelationID)
+	if assignmentID == "" || captainID == "" {
+		return nil, fmt.Errorf("%w: assignment and captain are required", ErrInvalid)
+	}
+	if err := validateStoreCaptainHandoffExceptionInput(input); err != nil {
+		return nil, err
+	}
+	if existing, found, err := findCaptainHandoffExceptionReplay(db, assignmentID, captainID, input); found || err != nil {
+		return existing, err
+	}
 	return reportStoreCaptainHandoffException(
 		db,
 		assignmentID,
@@ -71,8 +187,19 @@ func ReportPartnerStoreCaptainHandoffException(
 	actorID string,
 	input ReportDeliveryExceptionInput,
 ) (*DeliveryException, error) {
-	if strings.TrimSpace(orderID) == "" || strings.TrimSpace(storeID) == "" {
-		return nil, fmt.Errorf("%w: order and store are required", ErrInvalid)
+	orderID = strings.TrimSpace(orderID)
+	storeID = strings.TrimSpace(storeID)
+	actorID = strings.TrimSpace(actorID)
+	input.Note = strings.TrimSpace(input.Note)
+	input.CorrelationID = strings.TrimSpace(input.CorrelationID)
+	if orderID == "" || storeID == "" || actorID == "" {
+		return nil, fmt.Errorf("%w: order, store, and reporter are required", ErrInvalid)
+	}
+	if err := validateStoreCaptainHandoffExceptionInput(input); err != nil {
+		return nil, err
+	}
+	if existing, found, err := findPartnerHandoffExceptionReplay(db, orderID, storeID, actorID, input); found || err != nil {
+		return existing, err
 	}
 
 	var assignmentID, captainID string
