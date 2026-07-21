@@ -60,6 +60,8 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("POST /dsh/operator/home-discovery/{kind}", protected.handleHomeDiscoveryAdminCreate)
 	mux.HandleFunc("PATCH /dsh/operator/home-discovery/{kind}/{itemId}", protected.handleHomeDiscoveryAdminUpdate)
 	mux.HandleFunc("DELETE /dsh/operator/home-discovery/{kind}/{itemId}", protected.handleHomeDiscoveryAdminDelete)
+	mux.HandleFunc("GET /dsh/operator/home-discovery/{kind}/{itemId}/targeting", protected.handleHomeDiscoveryAdminTargetingGet)
+	mux.HandleFunc("PUT /dsh/operator/home-discovery/{kind}/{itemId}/targeting", protected.handleHomeDiscoveryAdminTargetingPut)
 	mux.HandleFunc("GET /dsh/operator/platform/service-areas", protected.handleOperatorListServiceAreas)
 	mux.HandleFunc("PUT /dsh/operator/platform/service-areas/{serviceAreaCode}", protected.handleOperatorUpsertServiceArea)
 
