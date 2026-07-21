@@ -13,6 +13,11 @@ import {
   clearOrderTruthAttempt,
   getOrCreateOrderTruthAttempt,
 } from "./order-truth-create-attempt";
+import {
+  isTerminalOrderTruth,
+  resolveOrderTruthPollingMs,
+  type OrderTruthNetworkClass,
+} from "./order-truth.experience";
 import type {
   CreateOrderTruthInput,
   OrderTruth,
@@ -97,6 +102,8 @@ export function useOrderTruthDetailController(
   orderId: string,
   token?: string,
   pollingMs = 5000,
+  networkClass: OrderTruthNetworkClass = "normal",
+  foreground = true,
 ) {
   const [state, setState] = useState<OrderTruthDetailState>({ kind: "idle" });
   const previousSuccess = useRef<OrderTruth | null>(null);
@@ -125,12 +132,21 @@ export function useOrderTruthDetailController(
     }
   }, [actor, orderId, token]);
 
+  const currentOrder = state.kind === "success" || state.kind === "partial" ? state.order : null;
+  const resolvedPollingMs = resolveOrderTruthPollingMs({
+    actor,
+    requestedMs: pollingMs,
+    networkClass,
+    foreground,
+    terminal: currentOrder ? isTerminalOrderTruth(currentOrder) : false,
+  });
+
   useEffect(() => {
     void load();
-    if (pollingMs <= 0) return undefined;
-    const interval = setInterval(() => { void load(); }, Math.max(pollingMs, 3000));
+    if (resolvedPollingMs <= 0) return undefined;
+    const interval = setInterval(() => { void load(); }, resolvedPollingMs);
     return () => clearInterval(interval);
-  }, [load, pollingMs]);
+  }, [load, resolvedPollingMs]);
 
-  return { state, reload: load };
+  return { state, reload: load, pollingMs: resolvedPollingMs };
 }
