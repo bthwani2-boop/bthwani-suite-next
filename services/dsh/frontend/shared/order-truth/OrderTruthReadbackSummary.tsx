@@ -2,6 +2,7 @@ import React from "react";
 import { Box, Button, Text } from "@bthwani/ui-kit";
 import { useOrderTruthCollectionController } from "./use-order-truth-controller";
 import { toOrderTruthSummary } from "./order-truth.view-model";
+import { resolveOrderTruthVisibleState } from "./order-truth.visible-states";
 import type { OrderTruthActor } from "./order-truth.types";
 
 type Props = {
@@ -25,35 +26,44 @@ export function OrderTruthReadbackSummary({
   const { state } = controller;
 
   if (state.kind === "idle" || state.kind === "loading") {
+    const policy = resolveOrderTruthVisibleState(state.kind);
     return (
       <Box padding={3} gap={1} background="surfaceInset">
         <Text role="bodyStrong">{title}</Text>
-        <Text role="bodySm" tone="muted">جارٍ قراءة النسخة التشغيلية الموحّدة…</Text>
+        <Text role="bodySm" tone="muted">{policy.description}</Text>
       </Box>
     );
   }
 
   if (state.kind === "empty") {
+    const policy = resolveOrderTruthVisibleState("empty");
     return (
       <Box padding={3} gap={2} background="surfaceInset">
         <Text role="bodyStrong">{title}</Text>
-        <Text role="bodySm" tone="muted">لا توجد طلبات في النطاق الحالي.</Text>
+        <Text role="bodySm" tone="muted">{policy.description}</Text>
         <Button label="تحديث" tone="ghost" size="sm" fullWidth={false} onPress={controller.reload} />
       </Box>
     );
   }
 
   if (state.kind === "offline" || state.kind === "forbidden" || state.kind === "error") {
+    const policy = resolveOrderTruthVisibleState(state.kind, state.message);
     return (
-      <Box padding={3} gap={2} background={state.kind === "forbidden" ? "warningSurface" : "dangerSurface"}>
-        <Text role="bodyStrong">{title}</Text>
-        <Text role="bodySm" tone={state.kind === "forbidden" ? "warning" : "danger"}>{state.message}</Text>
-        <Button label="إعادة المحاولة" tone="secondary" size="sm" fullWidth={false} onPress={controller.reload} />
+      <Box padding={3} gap={2} background={policy.tone === "warning" ? "warningSurface" : "dangerSurface"}>
+        <Text role="bodyStrong">{policy.title}</Text>
+        <Text role="bodySm" tone={policy.tone === "warning" ? "warning" : "danger"}>{policy.description}</Text>
+        {policy.retryable ? (
+          <Button label="إعادة المحاولة" tone="secondary" size="sm" fullWidth={false} onPress={controller.reload} />
+        ) : null}
       </Box>
     );
   }
 
   const orders = state.orders;
+  const policy = resolveOrderTruthVisibleState(
+    state.kind === "partial" ? "partial" : "success",
+    state.kind === "partial" ? state.message : undefined,
+  );
   return (
     <Box padding={3} gap={2} background={state.kind === "partial" ? "warningSurface" : "surfaceInset"}>
       <Box layoutDirection="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
@@ -63,7 +73,7 @@ export function OrderTruthReadbackSummary({
         </Box>
         <Button label="تحديث" tone="ghost" size="sm" fullWidth={false} onPress={controller.reload} />
       </Box>
-      {state.kind === "partial" ? <Text role="bodySm" tone="warning">{state.message}</Text> : null}
+      {state.kind === "partial" ? <Text role="bodySm" tone="warning">{policy.description}</Text> : null}
       {orders.map((order) => {
         const view = toOrderTruthSummary(order);
         return (
