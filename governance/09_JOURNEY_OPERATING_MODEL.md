@@ -8,6 +8,12 @@ Build capabilities as production-shaped operational journeys derived from curren
 
 This document does not maintain a frozen universal journey list. The applicable journey is derived from the resolved codebase and declared impact.
 
+## Living journey registry
+
+`governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md` is the active living inventory for journey names, functional slices, sequencing, and update history. It must be consulted at the start of journey work and updated whenever the resolved codebase introduces, merges, retires, or materially changes a capability, contract operation, state transition, route, migration, or required surface.
+
+The registry is derived inventory, not implementation or closure proof. Product Truth, service ownership, live manifests, contracts, routes, migrations, generated clients, bound surfaces, and same-commit evidence remain the execution truth. A registry entry may not turn an absent capability into an active one, and an omitted required surface remains a failure unless Product Truth explicitly excludes it with a reason.
+
 A journey may include:
 
 - Product Truth and actor model;
