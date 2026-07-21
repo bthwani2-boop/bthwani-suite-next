@@ -80,6 +80,8 @@ test("JRN-002 owns permanent PostgreSQL and HTTP runtime proof", async () => {
   assert.match(workflow, /\/auth\/sessions/);
   assert.match(workflow, /\/auth\/refresh/);
   assert.match(workflow, /\/auth\/logout/);
+  assert.match(workflow, /test "\$OLD_STATUS" = "401"/);
+  assert.match(workflow, /test "\$REVOKED_STATUS" = "401"/);
   assert.match(workflow, /CORS_ORIGIN_FORBIDDEN/);
   assert.match(workflow, /JRN-002_RUNTIME_PASS/);
   assert.match(workflow, /journeys\/jrn-002\/runtime-proof/);
