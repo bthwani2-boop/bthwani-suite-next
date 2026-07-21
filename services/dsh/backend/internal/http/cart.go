@@ -3,6 +3,7 @@ package http
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"dsh-api/internal/cart"
 	"dsh-api/internal/clientaddress"
@@ -27,24 +28,45 @@ func (s *protectedStoreServer) handleCartServiceability(w http.ResponseWriter, r
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	if body.StoreID == "" || body.AddressID == "" {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "storeId and addressId are required")
+	body.StoreID = strings.TrimSpace(body.StoreID)
+	body.AddressID = strings.TrimSpace(body.AddressID)
+	if body.StoreID == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "storeId is required")
 		return
 	}
-	mode := cart.FulfillmentMode(body.FulfillmentMode)
+	mode := cart.FulfillmentMode(strings.TrimSpace(body.FulfillmentMode))
+	if mode == "" {
+		mode = cart.ModeBthwaniDelivery
+	}
 	if mode != cart.ModeBthwaniDelivery && mode != cart.ModePartnerDelivery && mode != cart.ModePickup {
 		store.SendError(w, http.StatusBadRequest, "INVALID_FULFILLMENT_MODE", "fulfillmentMode is invalid")
 		return
 	}
-	address, err := clientaddress.GetOwned(r.Context(), s.db, actor.ID, body.AddressID)
+
+	var address *clientaddress.Address
+	var err error
+	if body.AddressID != "" {
+		address, err = clientaddress.GetOwned(r.Context(), s.db, actor.ID, body.AddressID)
+	} else {
+		var addresses []clientaddress.Address
+		addresses, err = clientaddress.List(r.Context(), s.db, actor.ID)
+		if err == nil && len(addresses) == 0 {
+			store.SendError(w, http.StatusUnprocessableEntity, "ADDRESS_REQUIRED", "create a governed client address before checking delivery serviceability")
+			return
+		}
+		if err == nil {
+			address = &addresses[0]
+		}
+	}
 	if errors.Is(err, clientaddress.ErrNotFound) {
 		store.SendError(w, http.StatusNotFound, "ADDRESS_NOT_FOUND", "address is not owned by the authenticated client")
 		return
 	}
-	if err != nil {
+	if err != nil || address == nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "could not resolve delivery address")
 		return
 	}
+
 	result := cart.CheckGovernedServiceability(
 		r.Context(),
 		s.db,
@@ -129,9 +151,9 @@ func (s *protectedStoreServer) handleUpsertCartItem(w http.ResponseWriter, r *ht
 		conflict := &cart.StoreConflictError{}
 		if errors.As(err, &conflict) {
 			store.SendJSON(w, http.StatusConflict, map[string]any{
-				"code": "CART_STORE_CONFLICT",
-				"message": "clear the active cart before adding products from another store",
-				"activeCartId": conflict.ActiveCartID,
+				"code":          "CART_STORE_CONFLICT",
+				"message":       "clear the active cart before adding products from another store",
+				"activeCartId":  conflict.ActiveCartID,
 				"activeStoreId": conflict.ActiveStoreID,
 			})
 			return
