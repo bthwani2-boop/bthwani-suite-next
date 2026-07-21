@@ -18,13 +18,27 @@ const STATE_LABELS: Record<string, string> = {
   abandoned: "متروكة",
 };
 
+function validationLabel(cart: DshCart): string {
+  if (!cart.validation) return "لم تُفحص";
+  if (cart.validation.ready) return "جاهزة";
+  const changes = [
+    cart.validation.priceChanged ? "تغير سعر" : null,
+    cart.validation.unavailableCount > 0
+      ? `${cart.validation.unavailableCount} عنصر غير متاح`
+      : null,
+  ].filter((value): value is string => value !== null);
+  return changes.join(" · ") || "تحتاج مراجعة";
+}
+
 const CART_COLUMNS = [
-  { key: "clientId", header: "معرف العميل", render: (c: DshCart) => <Text role="body">{c.clientId}</Text> },
-  { key: "storeId", header: "معرف المتجر", render: (c: DshCart) => <Text role="body">{c.storeId}</Text> },
-  { key: "fulfillmentMode", header: "طريقة التوصيل", render: (c: DshCart) => <Text role="body">{FULFILLMENT_LABELS[c.fulfillmentMode] ?? c.fulfillmentMode}</Text> },
-  { key: "state", header: "الحالة", render: (c: DshCart) => <Text role="body">{STATE_LABELS[c.state] ?? c.state}</Text> },
-  { key: "items", header: "المنتجات", render: (c: DshCart) => <Text role="body">{String(c.items.length)}</Text> },
-  { key: "updatedAt", header: "آخر تحديث", render: (c: DshCart) => <Text role="body">{new Date(c.updatedAt).toLocaleString("ar-SA")}</Text> },
+  { key: "clientId", header: "معرف العميل", render: (cart: DshCart) => <Text role="body">{cart.clientId}</Text> },
+  { key: "storeId", header: "معرف المتجر", render: (cart: DshCart) => <Text role="body">{cart.storeId}</Text> },
+  { key: "fulfillmentMode", header: "طريقة التنفيذ", render: (cart: DshCart) => <Text role="body">{FULFILLMENT_LABELS[cart.fulfillmentMode] ?? cart.fulfillmentMode}</Text> },
+  { key: "state", header: "الحالة", render: (cart: DshCart) => <Text role="body">{STATE_LABELS[cart.state] ?? cart.state}</Text> },
+  { key: "items", header: "المنتجات", render: (cart: DshCart) => <Text role="body">{String(cart.items.length)}</Text> },
+  { key: "validation", header: "سلامة التشكيلة", render: (cart: DshCart) => <Text role="body">{validationLabel(cart)}</Text> },
+  { key: "version", header: "نسخة السلة", render: (cart: DshCart) => <Text role="body">{String(cart.version)}</Text> },
+  { key: "updatedAt", header: "آخر تحديث", render: (cart: DshCart) => <Text role="body">{new Date(cart.updatedAt).toLocaleString("ar-SA")}</Text> },
 ] as const;
 
 export function CartActivityScreen() {
@@ -33,7 +47,7 @@ export function CartActivityScreen() {
   return (
     <DataTablePageFrame
       dir="rtl"
-      header={<CpPageHeader title="نشاط سلال التسوق" />}
+      header={<CpPageHeader title="نشاط سلال التسوق" description="قراءة تشغيلية لحالة السلة والتشكيلة فقط؛ لا توجد كتابة أو حقيقة مالية في هذا السطح." />}
       stateView={
         controller.loadState === "loading" ? <Text role="body">جاري تحميل السلال…</Text>
           : controller.loadState === "empty" ? <Text role="body">لا توجد سلال في هذه الحالة.</Text>
@@ -45,7 +59,7 @@ export function CartActivityScreen() {
         <DataTable
           columns={CART_COLUMNS}
           rows={controller.carts}
-          getRowKey={(c) => c.id}
+          getRowKey={(cart) => cart.id}
           emptyTitle="لا توجد سلال"
         />
       )}
