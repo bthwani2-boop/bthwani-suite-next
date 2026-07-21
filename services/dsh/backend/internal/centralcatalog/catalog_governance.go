@@ -173,10 +173,10 @@ type CatalogNodeAttributeRule struct {
 }
 
 type CatalogNodeAttributeRuleInput struct {
-	IsRequired    bool `json:"isRequired"`
-	IsFilterable  bool `json:"isFilterable"`
-	IsVariantAxis bool `json:"isVariantAxis"`
-	SortOrder     int  `json:"sortOrder"`
+	IsRequired      bool `json:"isRequired"`
+	IsFilterable    bool `json:"isFilterable"`
+	IsVariantAxis   bool `json:"isVariantAxis"`
+	SortOrder       int  `json:"sortOrder"`
 	ExpectedVersion *int `json:"expectedVersion"`
 }
 
@@ -262,12 +262,16 @@ func UpsertMasterProductAttributeValue(ctx context.Context, db *sql.DB, productI
 	}
 	var productNodeID *string
 	if err := db.QueryRowContext(ctx, `SELECT category_node_id FROM dsh_master_products WHERE id=$1`, productID).Scan(&productNodeID); err != nil {
-		if errors.Is(err, sql.ErrNoRows) { return MasterProductAttributeValue{}, ErrNotFound }
+		if errors.Is(err, sql.ErrNoRows) {
+			return MasterProductAttributeValue{}, ErrNotFound
+		}
 		return MasterProductAttributeValue{}, err
 	}
 	var attributeDataType string
 	if err := db.QueryRowContext(ctx, `SELECT data_type FROM dsh_catalog_attributes WHERE id=$1 AND is_active=TRUE`, attributeID).Scan(&attributeDataType); err != nil {
-		if errors.Is(err, sql.ErrNoRows) { return MasterProductAttributeValue{}, ErrNotFound }
+		if errors.Is(err, sql.ErrNoRows) {
+			return MasterProductAttributeValue{}, ErrNotFound
+		}
 		return MasterProductAttributeValue{}, err
 	}
 	if err := validateAttributeJSON(attributeDataType, input.Value); err != nil {
@@ -294,7 +298,9 @@ func UpsertMasterProductAttributeValue(ctx context.Context, db *sql.DB, productI
 		WHERE master_product_id=$1 AND attribute_id=$2 AND locale IS NOT DISTINCT FROM $3`, productID, attributeID, input.Locale).
 		Scan(&existingID, &currentVersion)
 	if errors.Is(err, sql.ErrNoRows) {
-		if input.ExpectedVersion != nil { return MasterProductAttributeValue{}, ErrConflict }
+		if input.ExpectedVersion != nil {
+			return MasterProductAttributeValue{}, ErrConflict
+		}
 		var item MasterProductAttributeValue
 		err = db.QueryRowContext(ctx, `INSERT INTO dsh_master_product_attribute_values
 			(id, master_product_id, attribute_id, value_json, locale)
@@ -304,7 +310,9 @@ func UpsertMasterProductAttributeValue(ctx context.Context, db *sql.DB, productI
 			Scan(&item.ID, &item.MasterProductID, &item.AttributeID, &item.Value, &item.Locale, &item.Version, &item.UpdatedAt)
 		return item, err
 	}
-	if err != nil { return MasterProductAttributeValue{}, err }
+	if err != nil {
+		return MasterProductAttributeValue{}, err
+	}
 	if input.ExpectedVersion == nil || currentVersion != *input.ExpectedVersion {
 		return MasterProductAttributeValue{}, &ConflictError{EntityID: existingID, ExpectedVersion: input.ExpectedVersion, CurrentVersion: currentVersion, Message: "version mismatch"}
 	}
@@ -319,18 +327,32 @@ func UpsertMasterProductAttributeValue(ctx context.Context, db *sql.DB, productI
 
 func validateAttributeJSON(dataType string, value json.RawMessage) error {
 	var decoded any
-	if err := json.Unmarshal(value, &decoded); err != nil { return ErrInvalid }
+	if err := json.Unmarshal(value, &decoded); err != nil {
+		return ErrInvalid
+	}
 	switch dataType {
 	case "text", "date", "media", "enum":
-		if _, ok := decoded.(string); !ok { return fmt.Errorf("%w: attribute requires string", ErrInvalid) }
+		if _, ok := decoded.(string); !ok {
+			return fmt.Errorf("%w: attribute requires string", ErrInvalid)
+		}
 	case "number", "money", "measurement":
-		if _, ok := decoded.(float64); !ok { return fmt.Errorf("%w: attribute requires number", ErrInvalid) }
+		if _, ok := decoded.(float64); !ok {
+			return fmt.Errorf("%w: attribute requires number", ErrInvalid)
+		}
 	case "boolean":
-		if _, ok := decoded.(bool); !ok { return fmt.Errorf("%w: attribute requires boolean", ErrInvalid) }
+		if _, ok := decoded.(bool); !ok {
+			return fmt.Errorf("%w: attribute requires boolean", ErrInvalid)
+		}
 	case "multi_enum":
 		values, ok := decoded.([]any)
-		if !ok { return fmt.Errorf("%w: multi_enum requires array", ErrInvalid) }
-		for _, value := range values { if _, ok := value.(string); !ok { return fmt.Errorf("%w: multi_enum values must be strings", ErrInvalid) } }
+		if !ok {
+			return fmt.Errorf("%w: multi_enum requires array", ErrInvalid)
+		}
+		for _, value := range values {
+			if _, ok := value.(string); !ok {
+				return fmt.Errorf("%w: multi_enum values must be strings", ErrInvalid)
+			}
+		}
 	default:
 		return ErrInvalid
 	}
@@ -371,19 +393,25 @@ func scanRelationship(scanner interface{ Scan(...any) error }) (MasterProductRel
 	err := scanner.Scan(&item.ID, &item.SourceMasterProductID, &item.TargetMasterProductID,
 		&item.RelationshipType, &item.Priority, &item.Reason, &item.IsActive, &item.CreatedBy,
 		&item.Version, &item.CreatedAt, &item.UpdatedAt)
-	if errors.Is(err, sql.ErrNoRows) { return item, ErrNotFound }
+	if errors.Is(err, sql.ErrNoRows) {
+		return item, ErrNotFound
+	}
 	return item, err
 }
 
 func ListMasterProductRelationships(ctx context.Context, db *sql.DB, productID string) ([]MasterProductRelationship, error) {
 	rows, err := db.QueryContext(ctx, `SELECT `+relationshipColumns+` FROM dsh_master_product_relationships
 		WHERE source_master_product_id=$1 ORDER BY relationship_type, priority, created_at`, productID)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 	defer rows.Close()
 	items := []MasterProductRelationship{}
 	for rows.Next() {
 		item, err := scanRelationship(rows)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		items = append(items, item)
 	}
 	return items, rows.Err()
@@ -397,7 +425,9 @@ func UpsertMasterProductRelationship(ctx context.Context, db *sql.DB, actorID, p
 	if err := db.QueryRowContext(ctx, `SELECT COUNT(*)=2 FROM dsh_master_products WHERE id IN ($1,$2)`, productID, input.TargetMasterProductID).Scan(&productsExist); err != nil {
 		return MasterProductRelationship{}, err
 	}
-	if !productsExist { return MasterProductRelationship{}, ErrNotFound }
+	if !productsExist {
+		return MasterProductRelationship{}, ErrNotFound
+	}
 
 	var existingID string
 	var currentVersion int
@@ -405,14 +435,18 @@ func UpsertMasterProductRelationship(ctx context.Context, db *sql.DB, actorID, p
 		WHERE source_master_product_id=$1 AND target_master_product_id=$2 AND relationship_type=$3`,
 		productID, input.TargetMasterProductID, input.RelationshipType).Scan(&existingID, &currentVersion)
 	if errors.Is(err, sql.ErrNoRows) {
-		if input.ExpectedVersion != nil { return MasterProductRelationship{}, ErrConflict }
+		if input.ExpectedVersion != nil {
+			return MasterProductRelationship{}, ErrConflict
+		}
 		return scanRelationship(db.QueryRowContext(ctx, `INSERT INTO dsh_master_product_relationships
 			(id, source_master_product_id, target_master_product_id, relationship_type, priority, reason, is_active, created_by)
 			VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING `+relationshipColumns,
 			entityID("product-rel"), productID, input.TargetMasterProductID, input.RelationshipType,
 			input.Priority, strings.TrimSpace(input.Reason), input.IsActive, actorID))
 	}
-	if err != nil { return MasterProductRelationship{}, err }
+	if err != nil {
+		return MasterProductRelationship{}, err
+	}
 	if input.ExpectedVersion == nil || currentVersion != *input.ExpectedVersion {
 		return MasterProductRelationship{}, &ConflictError{EntityID: existingID, ExpectedVersion: input.ExpectedVersion, CurrentVersion: currentVersion, Message: "version mismatch"}
 	}
@@ -424,8 +458,12 @@ func UpsertMasterProductRelationship(ctx context.Context, db *sql.DB, actorID, p
 
 func DeleteMasterProductRelationship(ctx context.Context, db *sql.DB, id string, expectedVersion int) error {
 	result, err := db.ExecContext(ctx, `DELETE FROM dsh_master_product_relationships WHERE id=$1 AND version=$2`, id, expectedVersion)
-	if err != nil { return err }
-	if count, _ := result.RowsAffected(); count != 1 { return ErrConflict }
+	if err != nil {
+		return err
+	}
+	if count, _ := result.RowsAffected(); count != 1 {
+		return ErrConflict
+	}
 	return nil
 }
 
@@ -449,14 +487,18 @@ func PauseStoreAssortment(ctx context.Context, db *sql.DB, storeID, productID, a
 	item, err := scanAssortment(row)
 	if errors.Is(err, ErrNotFound) {
 		current, currentErr := GetStoreAssortmentByKey(ctx, db, storeID, productID)
-		if currentErr != nil { return StoreAssortment{}, currentErr }
+		if currentErr != nil {
+			return StoreAssortment{}, currentErr
+		}
 		return StoreAssortment{}, &ConflictError{EntityID: current.ID, ExpectedVersion: input.ExpectedVersion, CurrentVersion: current.Version, Message: "version mismatch"}
 	}
 	return item, err
 }
 
 func ResumeStoreAssortment(ctx context.Context, db *sql.DB, storeID, productID, actorID string, expectedVersion *int) (StoreAssortment, error) {
-	if expectedVersion == nil { return StoreAssortment{}, ErrInvalid }
+	if expectedVersion == nil {
+		return StoreAssortment{}, ErrInvalid
+	}
 	row := db.QueryRowContext(ctx, `UPDATE dsh_store_assortments SET
 		available=available_before_pause, pause_reason='', paused_until=NULL, paused_at=NULL,
 		paused_by=NULL, submitted_by=$1, version=version+1, updated_at=NOW()
@@ -466,7 +508,9 @@ func ResumeStoreAssortment(ctx context.Context, db *sql.DB, storeID, productID, 
 	item, err := scanAssortment(row)
 	if errors.Is(err, ErrNotFound) {
 		current, currentErr := GetStoreAssortmentByKey(ctx, db, storeID, productID)
-		if currentErr != nil { return StoreAssortment{}, currentErr }
+		if currentErr != nil {
+			return StoreAssortment{}, currentErr
+		}
 		return StoreAssortment{}, &ConflictError{EntityID: current.ID, ExpectedVersion: expectedVersion, CurrentVersion: current.Version, Message: "version mismatch"}
 	}
 	return item, err
@@ -509,7 +553,9 @@ func ListCatalogAudit(ctx context.Context, db *sql.DB, filter CatalogAuditFilter
 		metadata_json, created_at FROM dsh_catalog_entity_audit `+where+`
 		ORDER BY created_at DESC LIMIT $4 OFFSET $5`,
 		filter.EntityType, filter.EntityID, filter.Action, limit, offset)
-	if err != nil { return nil, 0, err }
+	if err != nil {
+		return nil, 0, err
+	}
 	defer rows.Close()
 	items := []CatalogAuditEntry{}
 	for rows.Next() {
@@ -544,7 +590,9 @@ func RollbackCatalogAudit(ctx context.Context, db *sql.DB, auditID, actorID, act
 		FROM dsh_catalog_rollback_audit($1,$2,$3,$4,$5)`,
 		auditID, actorID, actorRole, strings.TrimSpace(input.Reason), *input.ExpectedVersion).
 		Scan(&result.EntityType, &result.EntityID, &result.NewVersion)
-	if err == nil { return result, nil }
+	if err == nil {
+		return result, nil
+	}
 	message := err.Error()
 	switch {
 	case strings.Contains(message, "ROLLBACK_VERSION_CONFLICT"):

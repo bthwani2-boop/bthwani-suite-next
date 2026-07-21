@@ -11,15 +11,15 @@ import (
 // existing sellable-assortment contract remains backward compatible while
 // every surface can still read the temporary operational pause truth.
 type AssortmentPauseState struct {
-	AssortmentID   string     `json:"assortmentId"`
-	StoreID        string     `json:"storeId"`
-	MasterProductID string    `json:"masterProductId"`
-	Paused         bool       `json:"paused"`
-	Reason         string     `json:"reason"`
-	PausedUntil    *time.Time `json:"pausedUntil"`
-	PausedAt       *time.Time `json:"pausedAt"`
-	PausedBy       *string    `json:"pausedBy"`
-	Version        int        `json:"version"`
+	AssortmentID    string     `json:"assortmentId"`
+	StoreID         string     `json:"storeId"`
+	MasterProductID string     `json:"masterProductId"`
+	Paused          bool       `json:"paused"`
+	Reason          string     `json:"reason"`
+	PausedUntil     *time.Time `json:"pausedUntil"`
+	PausedAt        *time.Time `json:"pausedAt"`
+	PausedBy        *string    `json:"pausedBy"`
+	Version         int        `json:"version"`
 }
 
 func scanAssortmentPauseState(scanner interface{ Scan(...any) error }) (AssortmentPauseState, error) {
