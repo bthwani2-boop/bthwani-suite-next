@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: DSH Administration Governance API
-  version: 1.0.0
+  version: 1.1.0
   description: JRN-031 maker-checker administration contract.
 servers:
   - url: /dsh
@@ -11,7 +11,7 @@ paths:
       operationId: listDshAdministrationRoles
       responses:
         "200":
-          description: Administrative roles.
+          description: Approved administrative roles.
           content:
             application/json:
               schema:
@@ -22,6 +22,82 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/Role"
+  /operator/admin/roles/requests:
+    post:
+      operationId: requestDshAdministrationRoleDefinition
+      description: Creates a pending role-definition request; it never creates a role directly.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoleDefinitionRequestInput"
+      responses:
+        "202":
+          description: Pending role-definition request created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [request]
+                properties:
+                  request:
+                    $ref: "#/components/schemas/RoleDefinitionRequest"
+        "409": { description: Role exists or an equivalent request is pending. }
+  /operator/admin/role-requests:
+    get:
+      operationId: listDshAdministrationRoleDefinitionRequests
+      parameters:
+        - in: query
+          name: status
+          required: false
+          schema:
+            $ref: "#/components/schemas/ApprovalStatus"
+      responses:
+        "200":
+          description: Role-definition approval queue.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [requests]
+                properties:
+                  requests:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/RoleDefinitionRequest"
+  /operator/admin/role-requests/{requestId}/review:
+    post:
+      operationId: reviewDshAdministrationRoleDefinitionRequest
+      description: Creates a role only after an independent checker approves the pending request.
+      parameters:
+        - in: path
+          name: requestId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApprovalReviewInput"
+      responses:
+        "200":
+          description: Role-definition request reviewed.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [request]
+                properties:
+                  request:
+                    $ref: "#/components/schemas/RoleDefinitionRequest"
+                  role:
+                    oneOf:
+                      - $ref: "#/components/schemas/Role"
+                      - type: "null"
+        "403": { description: Self-approval is forbidden. }
+        "409": { description: Version, lifecycle, or duplicate-role conflict. }
   /operator/admin/staff:
     get:
       operationId: listDshAdministrationStaff
@@ -102,7 +178,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/RoleAssignmentReviewInput"
+              $ref: "#/components/schemas/ApprovalReviewInput"
       responses:
         "200":
           description: Approval reviewed and assignment applied when approved.
@@ -125,6 +201,12 @@ components:
     ApprovalStatus:
       type: string
       enum: [pending, approved, rejected]
+    AdministrationPermission:
+      type: string
+      enum:
+        - administration.read
+        - administration.manage
+        - administration.approve
     Role:
       type: object
       required: [id, name, description, permissions, createdAt]
@@ -134,8 +216,62 @@ components:
         description: { type: string }
         permissions:
           type: array
-          items: { type: string }
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/AdministrationPermission"
         createdAt: { type: string, format: date-time }
+    RoleDefinitionRequestInput:
+      type: object
+      additionalProperties: false
+      required: [name, description, permissions, reason]
+      properties:
+        name:
+          type: string
+          pattern: "^[a-z][a-z0-9-]{2,79}$"
+        description: { type: string, maxLength: 500 }
+        permissions:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/AdministrationPermission"
+        reason: { type: string, minLength: 5 }
+    RoleDefinitionRequest:
+      type: object
+      required:
+        - id
+        - roleName
+        - description
+        - permissions
+        - requestedBy
+        - reason
+        - status
+        - reviewedBy
+        - reviewNote
+        - version
+        - createdAt
+        - updatedAt
+      properties:
+        id: { type: string, format: uuid }
+        roleName: { type: string }
+        description: { type: string }
+        permissions:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/AdministrationPermission"
+        requestedBy: { type: string }
+        reason: { type: string, minLength: 5 }
+        status:
+          $ref: "#/components/schemas/ApprovalStatus"
+        reviewedBy: { type: string }
+        reviewNote: { type: string }
+        version: { type: integer, minimum: 1 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        reviewedAt:
+          type: [string, "null"]
+          format: date-time
     StaffAssignment:
       type: object
       required: [id, actorId, roleId, roleName, assignedBy, assignedAt]
@@ -153,7 +289,7 @@ components:
       properties:
         roleId: { type: string, format: uuid }
         reason: { type: string, minLength: 5 }
-    RoleAssignmentReviewInput:
+    ApprovalReviewInput:
       type: object
       additionalProperties: false
       required: [decision, reviewNote, expectedVersion]
