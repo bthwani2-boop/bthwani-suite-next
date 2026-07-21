@@ -87,5 +87,19 @@ export {
 export type { DshPartnerReadinessItem, DshPartnerDocumentType } from "./partner.types";
 export { REQUIRED_DOCUMENT_TYPES, DOCUMENT_TYPE_LABELS } from "./partner.types";
 export * from "./partner.workflow";
+export type {
+  DshPartnerAllowedAction,
+  DshGovernedPartner,
+  PartnerMutationContext,
+  PartnerOnboardingRuntimeState,
+  PartnerOnboardingFailure,
+  PartnerOnboardingViewModel,
+} from "./partner-onboarding.runtime";
+export {
+  createPartnerMutationContext,
+  derivePartnerOnboardingViewModel,
+  mapPartnerOnboardingFailure,
+  assertPartnerReadback,
+} from "./partner-onboarding.runtime";
 export * from "./catalog-approval.api";
 export * from "./partner-fleet.api";

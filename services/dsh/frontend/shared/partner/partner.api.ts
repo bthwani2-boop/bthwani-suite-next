@@ -22,7 +22,7 @@ import type {
   DshPartnerStoreCourierSettings,
   DshPartnerCoverageZone,
 } from "./partner.types";
-import type { DshGovernedPartner, PartnerMutationContext } from "./partner-onboarding.runtime";
+import { createPartnerMutationContext, type DshGovernedPartner, type PartnerMutationContext } from "./partner-onboarding.runtime";
 
 const baseUrl = resolveDshApiBaseUrl();
 const httpClient = createDshHttpClient(baseUrl, "partner");
@@ -39,12 +39,18 @@ type PartnerRequestOptions = {
  * Mutation identity and optimistic concurrency are translated here once.
  */
 function request<T>(path: string, options: PartnerRequestOptions = {}): Promise<T> {
+  const mutation = options.method && options.method !== "GET"
+    ? {
+        ...createPartnerMutationContext(options.method.toLowerCase(), path, options.mutation?.expectedVersion),
+        ...options.mutation,
+      }
+    : options.mutation;
   return httpClient.request<T>(path, {
     method: options.method,
     body: options.body,
-    idempotencyKey: options.mutation?.idempotencyKey,
-    correlationId: options.mutation?.correlationId,
-    expectedVersion: options.mutation?.expectedVersion,
+    idempotencyKey: mutation?.idempotencyKey,
+    correlationId: mutation?.correlationId,
+    expectedVersion: mutation?.expectedVersion,
   });
 }
 

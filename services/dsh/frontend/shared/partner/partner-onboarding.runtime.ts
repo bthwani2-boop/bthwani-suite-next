@@ -110,13 +110,10 @@ export function derivePartnerOnboardingViewModel(
   const allowedTransitions = partner.allowedTransitions ?? [];
   const has = (action: DshPartnerAllowedAction) => allowedActions.includes(action);
   const payoutDisplay =
-    partner.maskedAccountNumber ||
-    partner.maskedIban ||
-    partner.maskedMobileNumber ||
-    partner.accountNumber ||
-    partner.iban ||
-    partner.payoutMobileNumber ||
-    "";
+  partner.maskedAccountNumber ||
+  partner.maskedIban ||
+  partner.maskedMobileNumber ||
+  "";
   const readinessBlockers = readiness?.checklist
     .filter((item) => !item.satisfied)
     .map((item) => item.blockedReason || item.label) ?? [];
