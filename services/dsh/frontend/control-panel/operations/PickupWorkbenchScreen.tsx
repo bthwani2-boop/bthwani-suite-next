@@ -103,11 +103,12 @@ export function PickupWorkbenchScreen() {
           />
         ) : (
           listState.data.map((session) => {
-            const cancelled = session.status === 'cancelled' || Boolean(session.cancelledAt);
+            const currentStatus = session.status ?? 'unknown';
+            const cancelled = currentStatus === 'cancelled' || Boolean(session.cancelledAt);
             const consumed = Boolean(session.usedAt);
             const expired = !cancelled && !consumed && new Date(session.expiresAt).getTime() < Date.now();
             const pending = actionPendingFor === session.orderId;
-            const action = session.status === 'active' && !cancelled && !consumed
+            const action = currentStatus === 'active' && !cancelled && !consumed
               ? {
                   id: `extend-${session.id}`,
                   label: pending ? 'جارٍ التمديد...' : 'تمديد ساعتين',
@@ -117,10 +118,10 @@ export function PickupWorkbenchScreen() {
             const status = cancelled
               ? 'cancelled'
               : consumed
-                ? session.status
+                ? currentStatus
                 : expired
                   ? 'expired'
-                  : session.status;
+                  : currentStatus;
             const statusTone = cancelled || expired
               ? 'danger'
               : consumed
