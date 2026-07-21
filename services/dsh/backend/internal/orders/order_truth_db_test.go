@@ -20,16 +20,16 @@ type orderTruthDBFixture struct {
 	OtherCheckoutID string
 }
 
-func seedOrderTruthCheckout(t *testing.T, db *sql.DB, tenantID, clientID, storeID, suffix string) string {
+func seedOrderTruthCheckout(t *testing.T, db *sql.DB, tenantID, clientID, storeID, cartState, suffix string) string {
 	t.Helper()
 	ctx := context.Background()
 
 	var cartID string
 	if err := db.QueryRowContext(ctx, `
 		INSERT INTO dsh_carts (client_id, store_id, fulfillment_mode, state)
-		VALUES ($1, $2, 'bthwani_delivery', 'active')
+		VALUES ($1, $2, 'bthwani_delivery', $3)
 		RETURNING id::text`,
-		clientID, storeID,
+		clientID, storeID, cartState,
 	).Scan(&cartID); err != nil {
 		t.Fatalf("seed cart: %v", err)
 	}
@@ -96,14 +96,20 @@ func seedOrderTruthDBFixture(t *testing.T, db *sql.DB) orderTruthDBFixture {
 		fixture.TenantID,
 		fixture.ClientID,
 		fixture.StoreID,
+		"active",
 		suffix+"-primary",
 	)
+	// The second Checkout exists only to prove that reusing an idempotency key
+	// with another request conflicts before any second order can be created.
+	// Its cart is intentionally non-active so the fixture respects the database
+	// invariant that one client may have only one active cart at a time.
 	fixture.OtherCheckoutID = seedOrderTruthCheckout(
 		t,
 		db,
 		fixture.TenantID,
 		fixture.ClientID,
 		fixture.StoreID,
+		"checked_out",
 		suffix+"-other",
 	)
 	return fixture
