@@ -1,3 +1,4 @@
+export * from './orders.api';
 export * from './orders.contract';
 export * from './orders.types';
 export * from './order-cancellation.types';
