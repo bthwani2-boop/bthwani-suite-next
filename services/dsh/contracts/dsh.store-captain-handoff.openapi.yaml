@@ -1,0 +1,233 @@
+openapi: 3.1.0
+info:
+  title: BThwani DSH Store Captain Handoff API
+  version: 1.0.0
+  description: >
+    Governed dual-custody contract for transferring an order package from the
+    owning store to the assigned captain. DSH owns the custody and operational
+    exception truth; no financial mutation is performed by these operations.
+
+x-bthwani-owner: services/dsh
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-client-generation: DISABLED
+x-bthwani-runtime-dependency: true
+x-bthwani-adapter-owner: frontend/shared/orders,frontend/shared/dispatch
+
+paths:
+  /dsh/partner/orders/{orderId}/captain-handoff/confirm:
+    post:
+      operationId: confirmPartnerStoreCaptainHandoff
+      summary: Confirm that the owning store released the package to the assigned captain.
+      tags: [DshStoreCaptainHandoff]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200':
+          description: Existing or newly confirmed handoff truth.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StoreCaptainHandoffResponse'
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /dsh/partner/orders/{orderId}/captain-handoff/exceptions:
+    post:
+      operationId: reportPartnerStoreCaptainHandoffException
+      summary: Report package shortage or mismatch before store confirmation.
+      tags: [DshStoreCaptainHandoff]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreCaptainHandoffExceptionRequest'
+      responses:
+        '201':
+          description: Governed operations exception opened or replayed idempotently.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryExceptionResponse'
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /dsh/captain/dispatch/assignments/{assignmentId}/status:
+    post:
+      operationId: updateCaptainDeliveryStatusWithCustodyGuard
+      summary: Apply a governed delivery transition; pickup requires completed dual custody.
+      tags: [DshStoreCaptainHandoff]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/AssignmentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [driver_arrived_store, picked_up, arrived_customer]
+      responses:
+        '200':
+          description: Current assignment truth, including an idempotent replay result.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [assignment]
+                properties:
+                  assignment: { type: object, additionalProperties: true }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /dsh/captain/dispatch/assignments/{assignmentId}/handoff-exceptions:
+    post:
+      operationId: reportCaptainStoreCaptainHandoffException
+      summary: Report package shortage or mismatch before captain pickup.
+      tags: [DshStoreCaptainHandoff]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/AssignmentId'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreCaptainHandoffExceptionRequest'
+      responses:
+        '201':
+          description: Governed operations exception opened or replayed idempotently.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryExceptionResponse'
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    OrderId:
+      name: orderId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    AssignmentId:
+      name: assignmentId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    CorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: false
+      schema: { type: string, minLength: 1, maxLength: 200 }
+
+  schemas:
+    StoreCaptainHandoffStatus:
+      type: string
+      enum: [awaiting_partner, partner_confirmed, completed, superseded]
+    StoreCaptainHandoff:
+      type: object
+      additionalProperties: false
+      required: [id, orderId, assignmentId, storeId, captainId, status, version, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        orderId: { type: string, format: uuid }
+        assignmentId: { type: string, format: uuid }
+        storeId: { type: string }
+        captainId: { type: string }
+        status: { $ref: '#/components/schemas/StoreCaptainHandoffStatus' }
+        partnerConfirmedAt: { type: [string, 'null'], format: date-time }
+        partnerConfirmedByActorId: { type: [string, 'null'] }
+        captainConfirmedAt: { type: [string, 'null'], format: date-time }
+        captainConfirmedByActorId: { type: [string, 'null'] }
+        version: { type: integer, minimum: 1 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    StoreCaptainHandoffResponse:
+      type: object
+      additionalProperties: false
+      required: [handoff]
+      properties:
+        handoff: { $ref: '#/components/schemas/StoreCaptainHandoff' }
+    StoreCaptainHandoffExceptionReason:
+      type: string
+      enum: [handoff_shortage, handoff_mismatch]
+    StoreCaptainHandoffExceptionRequest:
+      type: object
+      additionalProperties: false
+      required: [reasonCode, note, correlationId]
+      properties:
+        reasonCode: { $ref: '#/components/schemas/StoreCaptainHandoffExceptionReason' }
+        note: { type: string, minLength: 5, maxLength: 1000 }
+        correlationId: { type: string, minLength: 1, maxLength: 200 }
+        latitude: { type: number, minimum: -90, maximum: 90 }
+        longitude: { type: number, minimum: -180, maximum: 180 }
+    DeliveryExceptionResponse:
+      type: object
+      additionalProperties: false
+      required: [exception]
+      properties:
+        exception: { type: object, additionalProperties: true }
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+
+  responses:
+    InvalidRequest:
+      description: Invalid request.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Unauthenticated:
+      description: Authentication is required.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Forbidden:
+      description: Actor role or store scope is not authorized.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    NotFound:
+      description: Active handoff truth was not found for the actor scope.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Conflict:
+      description: Current lifecycle state or an open exception blocks the command.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
