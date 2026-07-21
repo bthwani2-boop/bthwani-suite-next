@@ -158,17 +158,28 @@ export async function fetchClientOrderTracking(orderId: string): Promise<DshDisp
   return data.assignment;
 }
 
-export function classifyDispatchError(error: unknown): {
-  kind: "permission_denied" | "offline" | "conflict" | "not_found" | "error";
-} {
-  const typed = error as { kind?: string; status?: number };
+export type DshDispatchError = {
+  readonly kind: "permission_denied" | "offline" | "conflict" | "not_found" | "error";
+  readonly code?: string;
+  readonly message?: string;
+};
+
+export function classifyDispatchError(error: unknown): DshDispatchError {
+  const typed = error as {
+    kind?: string;
+    status?: number;
+    message?: string;
+    body?: { code?: string; message?: string };
+  };
+  const code = typed.body?.code;
+  const message = typed.body?.message ?? typed.message;
   if (typed.kind === "http") {
-    if (typed.status === 401 || typed.status === 403) return { kind: "permission_denied" };
-    if (typed.status === 404) return { kind: "not_found" };
-    if (typed.status === 409) return { kind: "conflict" };
+    if (typed.status === 401 || typed.status === 403) return { kind: "permission_denied", code, message };
+    if (typed.status === 404) return { kind: "not_found", code, message };
+    if (typed.status === 409) return { kind: "conflict", code, message };
   }
-  if (typed.kind === "network") return { kind: "offline" };
-  return { kind: "error" };
+  if (typed.kind === "network") return { kind: "offline", code, message };
+  return { kind: "error", code, message };
 }
 
 export function getDshOrderLifecycleRuntimeClient() {
