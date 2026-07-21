@@ -16,24 +16,131 @@
     "resolvedCommitShaSource": "github.sha of the successful FS-18 workflow run"
   },
   "slices": [
-    { "id": "FS-01", "status": "READY_FOR_REVIEW", "evidence": ["governance/product/contracts/jrn-001-partner-onboarding-store-publication.product-truth.json", "services/dsh/tests/jrn-001-fs-01-product-truth.test.mjs"] },
-    { "id": "FS-02", "status": "READY_FOR_REVIEW", "evidence": ["services/dsh/tests/jrn-001-fs-02-rbac.test.mjs"] },
-    { "id": "FS-03", "status": "READY_FOR_REVIEW", "evidence": ["services/dsh/tests/jrn-001-fs-03-state-policy.test.mjs"] },
-    { "id": "FS-04", "status": "READY_FOR_REVIEW", "evidence": ["services/dsh/tests/jrn-001-fs-04-wlt-boundary.test.mjs", "tools/guards/wlt-financial-boundary-gate.mjs"] },
-    { "id": "FS-05", "status": "READY_FOR_REVIEW", "evidence": ["services/dsh/database/migrations/dsh-015_partner_lifecycle.sql", "services/dsh/database/migrations/dsh-098_partner_onboarding_integrity.sql"] },
-    { "id": "FS-06", "status": "READY_FOR_REVIEW", "evidence": ["services/dsh/contracts/dsh.partner-activation.openapi.yaml"] },
-    { "id": "FS-07", "status": "READY_FOR_REVIEW", "evidence": ["services/dsh/backend/internal/http/partner_lifecycle_routes.go", "services/dsh/backend/internal/partner/onboarding_integrity_handlers.go", "services/dsh/backend/internal/partner/onboarding_integrity_repository.go"] },
-    { "id": "FS-08", "status": "READY_FOR_REVIEW", "evidence": ["services/dsh/backend/internal/partnerwltoutbox/outbox.go"] },
-    { "id": "FS-09", "status": "READY_FOR_REVIEW", "evidence": ["services/dsh/frontend/shared/partner/index.ts", "services/dsh/frontend/shared/field-onboarding/use-field-partner-onboarding-controller.tsx"] },
-    { "id": "FS-10", "status": "READY_FOR_REVIEW", "commit": "19dcd182ee03913048bba2118c32a0cc77a4b827", "runId": 29840286750 },
-    { "id": "FS-11", "status": "READY_FOR_REVIEW", "commit": "66f9a5b0c6457bfa282161bc1ec82cddaadc3b51", "runId": 29840655702 },
-    { "id": "FS-12", "status": "READY_FOR_REVIEW", "commit": "a7ae3cb96e76e42d5f646999459743fa6d0d4ff9", "runId": 29840846383 },
-    { "id": "FS-13", "status": "READY_FOR_REVIEW", "commit": "13946e27c25d5dce4256f47a6a7dfefef8315502", "runId": 29841121954 },
-    { "id": "FS-14", "status": "READY_FOR_REVIEW", "commit": "4023abd23bfb713a0636b2975dde23362dec83b6", "runId": 29841625321 },
-    { "id": "FS-15", "status": "READY_FOR_REVIEW", "commit": "99d8340febf40c1fdcebc37f1c266bc610e80626", "runId": 29842014861 },
-    { "id": "FS-16", "status": "READY_FOR_REVIEW", "commit": "d03b327c26863531d66471a6589efe623635d999", "runId": 29842865985 },
-    { "id": "FS-17", "status": "READY_FOR_REVIEW", "commit": "9348ee4734eff211c4d4ed4d94afde700712dfad", "runId": 29843015193 },
-    { "id": "FS-18", "status": "READY_FOR_REVIEW", "evidence": ["governance/evidence/JRN-001_PARTNER_ONBOARDING_EVIDENCE.json", "governance/evidence/JRN-001_PARTNER_ONBOARDING_STORE_PUBLICATION.md"] }
+    {
+      "id": "FS-01",
+      "status": "READY_FOR_REVIEW",
+      "evidence": [
+        "governance/product/contracts/jrn-001-partner-onboarding-store-publication.product-truth.json",
+        "services/dsh/tests/jrn-001-fs-01-product-truth.test.mjs"
+      ]
+    },
+    {
+      "id": "FS-02",
+      "status": "READY_FOR_REVIEW",
+      "evidence": [
+        "services/dsh/tests/jrn-001-fs-02-rbac.test.mjs"
+      ]
+    },
+    {
+      "id": "FS-03",
+      "status": "READY_FOR_REVIEW",
+      "evidence": [
+        "services/dsh/tests/jrn-001-fs-03-state-policy.test.mjs"
+      ]
+    },
+    {
+      "id": "FS-04",
+      "status": "READY_FOR_REVIEW",
+      "evidence": [
+        "services/dsh/tests/jrn-001-fs-04-wlt-boundary.test.mjs",
+        "tools/guards/wlt-financial-boundary-gate.mjs"
+      ]
+    },
+    {
+      "id": "FS-05",
+      "status": "READY_FOR_REVIEW",
+      "evidence": [
+        "services/dsh/database/migrations/dsh-015_partner_lifecycle.sql",
+        "services/dsh/database/migrations/dsh-098_partner_onboarding_integrity.sql"
+      ]
+    },
+    {
+      "id": "FS-06",
+      "status": "READY_FOR_REVIEW",
+      "evidence": [
+        "services/dsh/contracts/dsh.partner-activation.openapi.yaml"
+      ]
+    },
+    {
+      "id": "FS-07",
+      "status": "READY_FOR_REVIEW",
+      "evidence": [
+        "services/dsh/backend/internal/http/partner_lifecycle_routes.go",
+        "services/dsh/backend/internal/partner/onboarding_integrity_handlers.go",
+        "services/dsh/backend/internal/partner/onboarding_integrity_repository.go"
+      ]
+    },
+    {
+      "id": "FS-08",
+      "status": "READY_FOR_REVIEW",
+      "evidence": [
+        "services/dsh/backend/internal/partnerwltoutbox/outbox.go"
+      ]
+    },
+    {
+      "id": "FS-09",
+      "status": "READY_FOR_REVIEW",
+      "evidence": [
+        "services/dsh/frontend/shared/partner/index.ts",
+        "services/dsh/frontend/shared/field-onboarding/use-field-partner-onboarding-controller.tsx"
+      ]
+    },
+    {
+      "id": "FS-10",
+      "status": "READY_FOR_REVIEW",
+      "commit": "19dcd182ee03913048bba2118c32a0cc77a4b827",
+      "runId": 29840286750
+    },
+    {
+      "id": "FS-11",
+      "status": "READY_FOR_REVIEW",
+      "commit": "66f9a5b0c6457bfa282161bc1ec82cddaadc3b51",
+      "runId": 29840655702
+    },
+    {
+      "id": "FS-12",
+      "status": "READY_FOR_REVIEW",
+      "commit": "a7ae3cb96e76e42d5f646999459743fa6d0d4ff9",
+      "runId": 29840846383
+    },
+    {
+      "id": "FS-13",
+      "status": "READY_FOR_REVIEW",
+      "commit": "13946e27c25d5dce4256f47a6a7dfefef8315502",
+      "runId": 29841121954
+    },
+    {
+      "id": "FS-14",
+      "status": "READY_FOR_REVIEW",
+      "commit": "4023abd23bfb713a0636b2975dde23362dec83b6",
+      "runId": 29841625321
+    },
+    {
+      "id": "FS-15",
+      "status": "READY_FOR_REVIEW",
+      "commit": "99d8340febf40c1fdcebc37f1c266bc610e80626",
+      "runId": 29842014861
+    },
+    {
+      "id": "FS-16",
+      "status": "READY_FOR_REVIEW",
+      "commit": "d03b327c26863531d66471a6589efe623635d999",
+      "runId": 29842865985
+    },
+    {
+      "id": "FS-17",
+      "status": "READY_FOR_REVIEW",
+      "commit": "9348ee4734eff211c4d4ed4d94afde700712dfad",
+      "runId": 29843015193
+    },
+    {
+      "id": "FS-18",
+      "status": "READY_FOR_REVIEW",
+      "evidence": [
+        "governance/evidence/JRN-001_PARTNER_ONBOARDING_EVIDENCE.json",
+        "governance/evidence/JRN-001_PARTNER_ONBOARDING_STORE_PUBLICATION.md"
+      ]
+    }
   ],
   "rollback": {
     "runbook": "governance/runbooks/JRN-001_PARTNER_ONBOARDING_SUPPORT.md",
@@ -47,5 +154,10 @@
     "Device-level visual and weak-network runtime evidence is pending.",
     "Production rollout and production observation evidence are pending."
   ],
-  "closureClaim": "CLOSED_WITH_EVIDENCE is explicitly not claimed."
+  "closureClaim": "CLOSED_WITH_EVIDENCE is explicitly not claimed.",
+  "registryLog": {
+    "path": "governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md",
+    "evidenceCommit": "246d4e63d75fecaa64a982938885bb2bfd6249cb",
+    "decision": "READY_FOR_REVIEW"
+  }
 }

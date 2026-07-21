@@ -725,6 +725,8 @@ Initial baseline commit: `466d34bacdd7fde4cc1c351e094d3d4604b33268`
 |---|---|---|---|---|---|---|---|
 | 2026-07-21 | REGISTRY | استخراج السجل الأولي من baseline الفرع | sambassam | `466d34bacdd7fde4cc1c351e094d3d4604b33268` | جميع الأسطح مسجلة لا مُثبتة | NEEDS_EVIDENCE | تقييم كل رحلة وتحديثها على commits لاحقة |
 
+| 2026-07-21 | JRN-001 | FS-01..FS-18 sequential execution | sambassam | `246d4e63d75fecaa64a982938885bb2bfd6249cb` | app-field, app-partner, control-panel, app-client public projection | READY_FOR_REVIEW | Product, QA, Security, Release, device runtime and production evidence pending |
+
 ## قالب إضافة رحلة أو تحديثها
 
 ```markdown
