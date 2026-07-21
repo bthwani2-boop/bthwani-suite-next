@@ -27,6 +27,14 @@ const VISIBLE_STATES: Readonly<Record<PartnerOnboardingRuntimeState, Omit<Partne
     actionLabel: "",
     blocksMutation: true,
   },
+  empty: {
+    title: "لا يوجد ملف تأهيل بعد",
+    description: "أنشئ مسودة شريك مملوكة للممثل الحالي من المصدر التشغيلي قبل متابعة التأهيل.",
+    tone: "neutral",
+    action: "none",
+    actionLabel: "",
+    blocksMutation: false,
+  },
   ready: {
     title: "ملف الشريك جاهز",
     description: "الحالة المعروضة مطابقة لآخر قراءة مؤكدة من DSH.",
