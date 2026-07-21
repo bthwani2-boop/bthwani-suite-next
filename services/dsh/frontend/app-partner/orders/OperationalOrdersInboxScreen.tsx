@@ -1,5 +1,9 @@
 import React from 'react';
 import { Box, Button, Text } from '@bthwani/ui-kit';
+import {
+  StoreCaptainHandoffExceptionForm,
+  useStoreCaptainHandoffException,
+} from '../../shared/dispatch';
 import { OrderTruthReadbackSummary } from '../../shared/order-truth';
 import type { GovernedPartnerOrderItem } from '../../shared/partner/partner.adapters';
 import type { PartnerTeamMember } from '../team/partner-team.types';
@@ -38,6 +42,7 @@ export function OperationalOrdersInboxScreen({
   onNavigateAction,
 }: OperationalOrdersInboxScreenProps) {
   const commands = usePartnerOrderCommands(onRetry);
+  const handoffException = useStoreCaptainHandoffException('partner', onRetry);
   const [expandedFulfillmentOrderId, setExpandedFulfillmentOrderId] = React.useState<string | null>(null);
   const [estimateOrderId, setEstimateOrderId] = React.useState<string | null>(null);
   const [issueOrderId, setIssueOrderId] = React.useState<string | null>(null);
@@ -53,6 +58,10 @@ export function OperationalOrdersInboxScreen({
     () => items.find((item) => item.id === issueOrderId) ?? null,
     [issueOrderId, items],
   );
+  const handoffExceptionOrder = React.useMemo(() => {
+    if (handoffException.state.kind === 'idle') return null;
+    return items.find((item) => item.id === handoffException.state.entityId) ?? null;
+  }, [handoffException.state, items]);
 
   React.useEffect(() => {
     if (expandedFulfillmentOrderId && !expandedFulfillmentOrder) setExpandedFulfillmentOrderId(null);
@@ -60,7 +69,24 @@ export function OperationalOrdersInboxScreen({
       setEstimateOrderId(null);
     }
     if (issueOrderId && !issueOrder) setIssueOrderId(null);
-  }, [expandedFulfillmentOrder, expandedFulfillmentOrderId, estimateOrder, estimateOrderId, issueOrder, issueOrderId]);
+    if (
+      handoffExceptionOrder
+      && handoffException.state.kind !== 'success'
+      && handoffExceptionOrder.storeCaptainHandoffStatus !== 'awaiting_partner'
+      && handoffExceptionOrder.storeCaptainHandoffStatus !== 'partner_confirmed'
+    ) {
+      handoffException.cancel();
+    }
+  }, [
+    expandedFulfillmentOrder,
+    expandedFulfillmentOrderId,
+    estimateOrder,
+    estimateOrderId,
+    handoffException,
+    handoffExceptionOrder,
+    issueOrder,
+    issueOrderId,
+  ]);
 
   const handleOrderAction = React.useCallback((actionId: OrderHubAction, orderId: string) => {
     const item = items.find((candidate) => candidate.id === orderId);
@@ -69,6 +95,13 @@ export function OperationalOrdersInboxScreen({
       return;
     }
 
+    if (actionId === 'handoff_exception') {
+      const handoffOpen = item.storeCaptainHandoffStatus === 'awaiting_partner'
+        || item.storeCaptainHandoffStatus === 'partner_confirmed';
+      if (handoffOpen) handoffException.begin(orderId);
+      else onNavigateAction('details', orderId);
+      return;
+    }
     if (actionId === 'report_issue' || actionId === 'resolve_issue') {
       const allowed = item.allowedActions.includes(actionId)
         || (actionId === 'resolve_issue' && item.openPreparationIssueCount > 0);
@@ -119,7 +152,7 @@ export function OperationalOrdersInboxScreen({
       return;
     }
     onNavigateAction(actionId === 'delivering' || actionId === 'issue' ? actionId : 'details', orderId);
-  }, [commands, items, onNavigateAction]);
+  }, [commands, handoffException, items, onNavigateAction]);
 
   return (
     <>
@@ -147,6 +180,24 @@ export function OperationalOrdersInboxScreen({
       {commands.state.kind === 'success' && commands.state.command === 'handoff' ? (
         <Box paddingX={4} paddingY={2} background="successSurface">
           <Text role="bodySm" tone="success">تم تأكيد تسليم الطلب للكابتن. ينتظر النظام تأكيده الاستلام.</Text>
+        </Box>
+      ) : null}
+      {handoffException.state.kind === 'success' ? (
+        <Box paddingX={4} paddingY={2} background="dangerSurface">
+          <Text role="bodySm" tone="danger">تم إيقاف العهدة وفتح الاستثناء في طابور العمليات.</Text>
+        </Box>
+      ) : null}
+
+      {handoffExceptionOrder ? (
+        <Box padding={4}>
+          <StoreCaptainHandoffExceptionForm
+            entityLabel={handoffExceptionOrder.orderCode}
+            state={handoffException.state}
+            onReasonCodeChange={handoffException.setReasonCode}
+            onNoteChange={handoffException.setNote}
+            onSubmit={handoffException.submit}
+            onCancel={handoffException.cancel}
+          />
         </Box>
       ) : null}
 
