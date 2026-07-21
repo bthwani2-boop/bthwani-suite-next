@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: write
+  statuses: write
 
 concurrency:
   group: jrn-011-registry-finalization
@@ -39,13 +40,9 @@ jobs:
           elif new_index not in source:
               raise SystemExit("JRN-011 registry index row was not found")
 
-          old_section = """### JRN-011 — إنشاء الطلب وحقيقة الطلب
-
-الأسطح المرشحة: `app-client`, `app-partner`, `control-panel`.
-"""
-          new_section = """### JRN-011 — إنشاء الطلب وحقيقة الطلب
-
-tracking_status: READY_FOR_REVIEW
+          heading = "### JRN-011 — إنشاء الطلب وحقيقة الطلب"
+          surface = "الأسطح المرشحة: `app-client`, `app-partner`, `control-panel`."
+          metadata = """tracking_status: READY_FOR_REVIEW
 decision: READY_FOR_REVIEW
 verified_implementation_commit: `9254986458ed4f3126162a440bd4a78ad3a333ae`
 workflow_run_id: `29877543554`
@@ -54,14 +51,13 @@ technical_slices: `FS-01..FS-18 CODE_CLOSED`
 owner_services: `DSH`, `WLT read-only boundary`
 required_surfaces: `app-client`, `app-partner`, `control-panel`, `dsh-backend`, `dsh-postgresql`, `wlt-read-boundary`
 open_code_gaps: `[]`
-independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security؛ Finance/WLT boundary؛ Release/Production.
+independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security؛ Finance/WLT boundary؛ Release/Production."""
 
-الأسطح المرشحة: `app-client`, `app-partner`, `control-panel`.
-"""
-          if old_section in source:
-              source = source.replace(old_section, new_section, 1)
-          elif new_section not in source:
-              raise SystemExit("JRN-011 registry detail section was not found")
+          if metadata not in source:
+              anchor = heading + "\n\n" + surface
+              if anchor not in source:
+                  raise SystemExit("JRN-011 registry detail anchor was not found")
+              source = source.replace(anchor, heading + "\n\n" + metadata + "\n\n" + surface, 1)
 
           path.write_text(source)
           PY
@@ -70,19 +66,37 @@ independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security؛
         shell: bash
         run: |
           set -euo pipefail
-          if git diff --quiet -- governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md; then
-            exit 0
+          if ! git diff --quiet -- governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md; then
+            git config user.name "bthwani-journey-closure"
+            git config user.email "actions@users.noreply.github.com"
+            git add governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md
+            git commit -m "docs(jrn-011): finalize journey registry closure"
+            for attempt in 1 2 3; do
+              git fetch origin sambassam
+              git rebase origin/sambassam
+              if git push origin HEAD:sambassam; then
+                break
+              fi
+              if [[ "$attempt" == 3 ]]; then exit 1; fi
+              sleep 2
+            done
           fi
-          git config user.name "bthwani-journey-closure"
-          git config user.email "actions@users.noreply.github.com"
-          git add governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md
-          git commit -m "docs(jrn-011): finalize journey registry closure"
-          for attempt in 1 2 3; do
-            git fetch origin sambassam
-            git rebase origin/sambassam
-            if git push origin HEAD:sambassam; then
-              exit 0
-            fi
-            sleep 2
-          done
-          exit 1
+      - name: Publish finalization result
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OUTCOME: ${{ job.status }}
+        shell: bash
+        run: |
+          state=success
+          description="JRN-011 canonical registry finalized"
+          if [[ "$OUTCOME" != "success" ]]; then
+            state=failure
+            description="JRN-011 registry finalization failed"
+          fi
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            -f state="$state" \
+            -f context="jrn-011/registry-finalize" \
+            -f description="$description" \
+            -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          [[ "$state" == "success" ]]
