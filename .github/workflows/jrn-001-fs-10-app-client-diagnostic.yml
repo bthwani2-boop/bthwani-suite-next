@@ -1,4 +1,4 @@
-name: JRN-001 FS-10 app-client error block diagnostic
+name: JRN-001 FS-10 app-client OrdersList diagnostic
 
 on:
   push:
