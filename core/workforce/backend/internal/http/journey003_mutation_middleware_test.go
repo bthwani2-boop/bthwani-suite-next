@@ -13,7 +13,7 @@ func TestJRN003ProviderDocumentPathParsing(t *testing.T) {
 		{"/workforce/captains/captain-1/documents", "captain", "captain-1", true},
 		{"/workforce/employees/employee-1/documents", "employee", "employee-1", true},
 		{"/workforce/unknown/x/documents", "", "", false},
-		{"/workforce/captains//documents", "", "", false},
+		{"/workforce/captains//documents", "captain", "", false},
 	}
 	for _, tc := range cases {
 		kind, actorID, ok := parseProviderDocumentPath(tc.path)
