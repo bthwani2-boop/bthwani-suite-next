@@ -321,7 +321,6 @@ export function CartScreen({
                   <Button
                     label="إعادة فحص قابلية الخدمة"
                     tone="secondary"
-                    disabled={serviceabilityController.serviceability.kind === "checking"}
                     onPress={() => void serviceabilityController.check(
                       storeId,
                       selectedAddress.serviceAreaCode,
