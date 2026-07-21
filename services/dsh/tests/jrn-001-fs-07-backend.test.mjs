@@ -21,7 +21,11 @@ const governedBindings = new Map([
   ["POST /dsh/field/partners/{partnerId}/submit", "handleGovernedFieldSubmitPartnerDraft"],
 ]);
 for (const [path, handler] of governedBindings) {
-  assert.ok(routes.includes(`mux.HandleFunc("${path}", protected.${handler})`), `${path} is not bound to ${handler}`);
+  const start = routes.indexOf(`mux.HandleFunc("${path}"`);
+  assert.ok(start >= 0, `${path} route is missing`);
+  const end = routes.indexOf("\n", start);
+  const binding = routes.slice(start, end >= 0 ? end : undefined);
+  assert.ok(binding.includes(`protected.${handler}`), `${path} is not bound to ${handler}`);
 }
 
 for (const legacyHandler of [
