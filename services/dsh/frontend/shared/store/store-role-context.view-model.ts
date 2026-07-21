@@ -44,6 +44,13 @@ export type CaptainStoreContextViewModel = {
   readonly pickupInstruction: string;
 };
 
+function operatingLabel(store: DshStoreAdminDetail): string {
+  const lifecycle = store.isOpen ? "المتجر يعمل" : "المتجر غير متاح حاليًا";
+  return store.operatingHours.length > 0
+    ? `${lifecycle} · ${store.operatingHours}`
+    : `${lifecycle} · ساعات التشغيل غير مكتملة`;
+}
+
 export function toPartnerStoreContext(
   store: DshStoreAdminDetail,
 ): PartnerStoreContextViewModel {
@@ -53,11 +60,11 @@ export function toPartnerStoreContext(
   return {
     store,
     checks,
-    operatingLabel: store.isOpen ? "المتجر يعمل" : "المتجر غير متاح حاليًا",
+    operatingLabel: operatingLabel(store),
     visibilityLabel: store.isVisible ? "ظاهر للعملاء" : "مخفي عن العملاء",
-    catalogReadinessSummary: checks.every((check) => check.ready)
-      ? "بيانات المتجر جاهزة للربط بكتالوج لاحق"
-      : "يلزم استكمال بيانات المتجر قبل ربط الكتالوج",
+    catalogReadinessSummary: store.publicationEligible
+      ? "المتجر اجتاز بوابة النشر التشغيلية"
+      : "يلزم إغلاق عناصر الجاهزية قبل النشر للعملاء",
     readinessPercent: Math.round((readyCount / checks.length) * 100),
     attentionCount,
     serviceModesLabel: formatDeliveryModes(store.deliveryModes),
@@ -90,6 +97,9 @@ export function toCaptainStoreContext(
   store: DshStoreAdminDetail,
 ): CaptainStoreContextViewModel {
   const pickupEnabled = store.deliveryModes.includes("pickup");
+  const hasLocation = store.addressLine.length > 0 && store.coverageSummary.length > 0;
+  const hasOperatingHours = store.operatingHours.length > 0;
+  const deliveryReady = store.deliveryReadiness === "ready";
   const pickupChecks: readonly StoreReadinessCheck[] = [
     {
       id: "store-open",
@@ -109,6 +119,24 @@ export function toCaptainStoreContext(
       ready: store.isServiceable,
       detail: store.isServiceable ? "الموقع قابل للخدمة" : "الموقع خارج الخدمة",
     },
+    {
+      id: "location",
+      label: "عنوان الاستلام",
+      ready: hasLocation,
+      detail: hasLocation ? `${store.addressLine} · ${store.coverageSummary}` : "عنوان أو تغطية المتجر غير مكتملين",
+    },
+    {
+      id: "operating-hours",
+      label: "ساعات التشغيل",
+      ready: hasOperatingHours,
+      detail: hasOperatingHours ? store.operatingHours : "ساعات التشغيل غير محددة",
+    },
+    {
+      id: "delivery-readiness",
+      label: "جاهزية التسليم",
+      ready: deliveryReady,
+      detail: deliveryReady ? "المتجر جاهز للتسليم" : `الحالة: ${store.deliveryReadiness || "غير محددة"}`,
+    },
   ];
   return {
     store,
@@ -116,8 +144,8 @@ export function toCaptainStoreContext(
     pickupLabel: pickupEnabled
       ? "الاستلام من المتجر متاح"
       : "الاستلام من المتجر غير متاح",
-    locationLabel: formatServiceArea(store.cityCode, store.serviceAreaCode),
-    operatingLabel: store.isOpen ? "مفتوح للاستلام" : "غير متاح للاستلام",
+    locationLabel: store.addressLine || formatServiceArea(store.cityCode, store.serviceAreaCode),
+    operatingLabel: operatingLabel(store),
     serviceModesLabel: formatDeliveryModes(store.deliveryModes, "غير محددة"),
     estimatedWindowLabel:
       store.deliveryEtaMin !== null && store.deliveryEtaMax !== null
@@ -134,6 +162,11 @@ export function toCaptainStoreContext(
 function createReadinessChecks(
   store: DshStoreAdminDetail,
 ): readonly StoreReadinessCheck[] {
+  const operationalContextReady =
+    store.addressLine.length > 0 &&
+    store.coverageSummary.length > 0 &&
+    store.operatingHours.length > 0 &&
+    store.deliveryReadiness.length > 0;
   return [
     {
       id: "location",
@@ -142,6 +175,14 @@ function createReadinessChecks(
         store.cityCode.trim().length > 0 &&
         store.serviceAreaCode.trim().length > 0,
       detail: formatServiceArea(store.cityCode, store.serviceAreaCode),
+    },
+    {
+      id: "operational-context",
+      label: "الساعات والعنوان والجاهزية",
+      ready: operationalContextReady,
+      detail: operationalContextReady
+        ? `${store.operatingHours} · ${store.addressLine}`
+        : "يلزم استكمال العنوان والتغطية والساعات وجاهزية التوصيل",
     },
     {
       id: "media",
