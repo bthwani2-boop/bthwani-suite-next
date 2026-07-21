@@ -1,9 +1,13 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 function source(relativePath) {
   return readFileSync(new URL(relativePath, import.meta.url), "utf8");
+}
+
+function exists(relativePath) {
+  return existsSync(new URL(relativePath, import.meta.url));
 }
 
 describe("JRN-020 delivery exceptions and return custody", () => {
@@ -114,5 +118,19 @@ describe("JRN-025 campaigns, tickers, and partner offers", () => {
     assert.match(wltBoundaryGuard, /"tools\/guards\/"/);
     assert.doesNotMatch(wltBoundaryGuard, /"tools\/guards\/wlt-financial-boundary-gate\.mjs"/);
     assert.match(wltBoundaryGuard, /"tools\/scripts\/smoke-wlt-provider-through-wlt\.ps1"/);
+  });
+});
+
+describe("JRN-020..025 verification hygiene", () => {
+  it("keeps one permanent verifier and removes one-off repair workflows", () => {
+    assert.equal(exists("../../../.github/workflows/jrn-020-025-sambassam-verify.yml"), true);
+    for (const workflow of [
+      "jrn-020-025-boundary-diagnostic.yml",
+      "jrn-020-025-wlt-boundary-diagnostic.yml",
+      "jrn-020-025-surface-import-repair.yml",
+      "jrn-020-025-wlt-guard-scope-repair.yml",
+    ]) {
+      assert.equal(exists(`../../../.github/workflows/${workflow}`), false, `${workflow} must remain removed`);
+    }
   });
 });
