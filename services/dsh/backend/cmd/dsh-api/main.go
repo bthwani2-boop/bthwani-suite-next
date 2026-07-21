@@ -68,6 +68,7 @@ func main() {
 	dshHttp.RegisterOrderJourneyRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterOrderCancellationRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterPlatformPolicyRoutes(router, db, identityClient, wltClient, mediaProvider)
+	dshHttp.RegisterAdministrationRoutes(router, db, identityClient, wltClient, mediaProvider)
 	handler := dshHttp.CorsMiddleware(authMode, router)
 
 	outboxCtx, cancelOutbox := context.WithCancel(context.Background())
