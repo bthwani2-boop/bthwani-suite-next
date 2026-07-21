@@ -9,16 +9,16 @@ import { HomeDiscoveryShell } from "./HomeDiscoveryShell";
 type Props = {
   onStorePress?: ((storeId: string, slug: string) => void) | undefined;
   onSpecialCategoryPress?: ((nodeId: string) => void) | undefined;
+  onMarketingAction?: ((actionType: string, actionTarget: string) => void) | undefined;
 };
 
-export function HomeDiscoveryScreen({ onStorePress, onSpecialCategoryPress }: Props) {
+export function HomeDiscoveryScreen({ onStorePress, onSpecialCategoryPress, onMarketingAction }: Props) {
   const addressController = useClientAddressController();
   const serviceAreaCode = addressController.selectedAddress?.serviceAreaCode;
   const controller = useHomeDiscoveryController({
     enabled: addressController.state.kind === "ready",
     ...(serviceAreaCode !== undefined ? { serviceAreaCode } : {}),
   });
-
   const state: HomeDiscoveryState = addressController.state.kind === "error"
     ? { kind: "error", message: addressController.state.message }
     : controller.state;
@@ -38,6 +38,7 @@ export function HomeDiscoveryScreen({ onStorePress, onSpecialCategoryPress }: Pr
       onFilterChange={controller.setActiveFilter}
       onStorePress={onStorePress}
       onSpecialCategoryPress={onSpecialCategoryPress}
+      onMarketingAction={onMarketingAction}
       onRetry={retry}
     />
   );
