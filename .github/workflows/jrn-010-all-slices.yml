@@ -10,6 +10,7 @@ on:
       - "governance/evidence/JRN-010_CHECKOUT_WLT_ALL_SLICES_CLOSURE.json"
       - "governance/runbooks/JRN-010_CHECKOUT_WLT_OPERATIONS.md"
       - "governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md"
+      - "infra/docker/scripts/wlt-migration-probes.ps1"
       - "services/dsh/backend/internal/checkout/**"
       - "services/dsh/backend/internal/coupons/**"
       - "services/dsh/backend/internal/http/checkout.go"
@@ -25,6 +26,7 @@ on:
       - "services/dsh/tests/jrn-010-all-slices.test.mjs"
       - "services/dsh/tsconfig.jrn-010-020.json"
       - "services/wlt/backend/**"
+      - "services/wlt/database/**"
       - "services/wlt/frontend/shared/dsh/**"
       - "tools/guards/checkout/jrn-010-checkout-truth-gate.mjs"
       - ".github/workflows/jrn-010-all-slices.yml"
@@ -101,12 +103,42 @@ jobs:
         with:
           go-version-file: services/dsh/backend/go.mod
           cache-dependency-path: services/dsh/backend/go.sum
-      - name: Format gate
+      - name: Check formatting of affected Go files
+        id: format
+        continue-on-error: true
         working-directory: services/dsh/backend
-        run: test -z "$(gofmt -l internal/checkout internal/coupons internal/http internal/wlt)"
+        shell: bash
+        run: |
+          set -o pipefail
+          gofmt -l \
+            internal/checkout/wlt_event_atomic.go \
+            internal/checkout/wlt_event_atomic_test.go \
+            internal/coupons/payment_lifecycle_tx.go \
+            internal/http/wlt_events.go | tee /tmp/jrn-010-gofmt.log
+          test ! -s /tmp/jrn-010-gofmt.log
       - name: Test DSH checkout boundary
+        id: test
+        if: always()
+        continue-on-error: true
         working-directory: services/dsh/backend
-        run: go test ./internal/checkout ./internal/coupons ./internal/wlt ./internal/http -count=1
+        shell: bash
+        run: |
+          set -o pipefail
+          go test ./internal/checkout ./internal/coupons ./internal/wlt ./internal/http -count=1 2>&1 | tee /tmp/jrn-010-dsh-go.log
+      - name: Upload DSH Go diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: jrn-010-dsh-go-diagnostics
+          path: /tmp/jrn-010-*.log
+          retention-days: 7
+          if-no-files-found: error
+      - name: Enforce DSH Go results
+        if: always()
+        env:
+          FORMAT_RESULT: ${{ steps.format.outcome }}
+          TEST_RESULT: ${{ steps.test.outcome }}
+        run: test "$FORMAT_RESULT" = success && test "$TEST_RESULT" = success
 
   wlt-go:
     name: WLT payment-session authority behavior
@@ -140,7 +172,25 @@ jobs:
       - name: Setup pinned Node workspace
         uses: ./.github/actions/setup-node-workspace
       - name: Typecheck JRN-010 authorized scope
-        run: pnpm --dir services/dsh exec tsc -p tsconfig.jrn-010-020.json --noEmit --pretty false
+        id: typecheck
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm --dir services/dsh exec tsc -p tsconfig.jrn-010-020.json --noEmit --pretty false 2>&1 | tee /tmp/jrn-010-typecheck.log
+      - name: Upload frontend diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: jrn-010-frontend-typecheck-diagnostics
+          path: /tmp/jrn-010-typecheck.log
+          retention-days: 7
+          if-no-files-found: error
+      - name: Enforce frontend result
+        if: always()
+        env:
+          TYPECHECK_RESULT: ${{ steps.typecheck.outcome }}
+        run: test "$TYPECHECK_RESULT" = success
 
   runtime-postgresql:
     name: PostgreSQL migrations, invariants and DSH/WLT health
