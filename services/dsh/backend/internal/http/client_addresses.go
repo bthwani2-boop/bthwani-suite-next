@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"dsh-api/internal/clientaddress"
 	"dsh-api/internal/store"
@@ -22,6 +23,13 @@ func isAddressServiceAreaConstraint(err error) bool {
 	default:
 		return false
 	}
+}
+
+func observeClientAddressOperation(operation string, started time.Time, err error) {
+	if isAddressServiceAreaConstraint(err) {
+		err = clientaddress.ErrServiceAreaUnverified
+	}
+	clientaddress.RecordOperation(operation, started, err)
 }
 
 func addressError(w http.ResponseWriter, err error) {
@@ -69,7 +77,9 @@ func (s *protectedStoreServer) handleListClientAddresses(w http.ResponseWriter, 
 	if !ok {
 		return
 	}
+	started := time.Now()
 	addresses, err := clientaddress.List(r.Context(), s.db, actor.ID)
+	observeClientAddressOperation("list", started, err)
 	if err != nil {
 		addressError(w, err)
 		return
@@ -82,12 +92,18 @@ func (s *protectedStoreServer) handleCreateClientAddress(w http.ResponseWriter, 
 	if !ok {
 		return
 	}
+	started := time.Now()
+	var operationErr error
+	defer func() { observeClientAddressOperation("create", started, operationErr) }()
+
 	mutation, ok := addressMutationContext(w, r)
 	if !ok {
+		operationErr = clientaddress.ErrInvalid
 		return
 	}
 	var input clientaddress.CreateInput
 	if !decodeProtectedJSON(w, r, &input) {
+		operationErr = clientaddress.ErrInvalid
 		return
 	}
 
@@ -98,6 +114,7 @@ func (s *protectedStoreServer) handleCreateClientAddress(w http.ResponseWriter, 
 		mutation.IdempotencyKey,
 	)
 	if err != nil {
+		operationErr = err
 		addressError(w, err)
 		return
 	}
@@ -106,12 +123,14 @@ func (s *protectedStoreServer) handleCreateClientAddress(w http.ResponseWriter, 
 		return
 	}
 	if err := clientaddress.ValidateServiceArea(r.Context(), s.db, input); err != nil {
+		operationErr = err
 		addressError(w, err)
 		return
 	}
 
 	address, created, err := clientaddress.Create(r.Context(), s.db, actor.ID, input, mutation)
 	if err != nil {
+		operationErr = err
 		addressError(w, err)
 		return
 	}
@@ -127,15 +146,22 @@ func (s *protectedStoreServer) handleUpdateClientAddress(w http.ResponseWriter, 
 	if !ok {
 		return
 	}
+	started := time.Now()
+	var operationErr error
+	defer func() { observeClientAddressOperation("update", started, operationErr) }()
+
 	mutation, ok := addressMutationContext(w, r)
 	if !ok {
+		operationErr = clientaddress.ErrInvalid
 		return
 	}
 	var input clientaddress.UpdateInput
 	if !decodeProtectedJSON(w, r, &input) {
+		operationErr = clientaddress.ErrInvalid
 		return
 	}
 	if err := clientaddress.ValidateServiceArea(r.Context(), s.db, input.CreateInput); err != nil {
+		operationErr = err
 		addressError(w, err)
 		return
 	}
@@ -148,6 +174,7 @@ func (s *protectedStoreServer) handleUpdateClientAddress(w http.ResponseWriter, 
 		mutation,
 	)
 	if err != nil {
+		operationErr = err
 		addressError(w, err)
 		return
 	}
@@ -159,15 +186,21 @@ func (s *protectedStoreServer) handleDeleteClientAddress(w http.ResponseWriter, 
 	if !ok {
 		return
 	}
+	started := time.Now()
+	var operationErr error
+	defer func() { observeClientAddressOperation("delete", started, operationErr) }()
+
 	mutation, ok := addressMutationContext(w, r)
 	if !ok {
+		operationErr = clientaddress.ErrInvalid
 		return
 	}
 	expectedVersion, ok := addressExpectedVersion(w, r)
 	if !ok {
+		operationErr = clientaddress.ErrInvalid
 		return
 	}
-	err := clientaddress.DeleteIdempotent(
+	operationErr = clientaddress.DeleteIdempotent(
 		r.Context(),
 		s.db,
 		actor.ID,
@@ -175,8 +208,8 @@ func (s *protectedStoreServer) handleDeleteClientAddress(w http.ResponseWriter, 
 		expectedVersion,
 		mutation,
 	)
-	if err != nil {
-		addressError(w, err)
+	if operationErr != nil {
+		addressError(w, operationErr)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -187,12 +220,18 @@ func (s *protectedStoreServer) handleSetClientDefaultAddress(w http.ResponseWrit
 	if !ok {
 		return
 	}
+	started := time.Now()
+	var operationErr error
+	defer func() { observeClientAddressOperation("set_default", started, operationErr) }()
+
 	mutation, ok := addressMutationContext(w, r)
 	if !ok {
+		operationErr = clientaddress.ErrInvalid
 		return
 	}
 	expectedVersion, ok := addressExpectedVersion(w, r)
 	if !ok {
+		operationErr = clientaddress.ErrInvalid
 		return
 	}
 	address, err := clientaddress.SetDefaultIdempotent(
@@ -204,6 +243,7 @@ func (s *protectedStoreServer) handleSetClientDefaultAddress(w http.ResponseWrit
 		mutation,
 	)
 	if err != nil {
+		operationErr = err
 		addressError(w, err)
 		return
 	}
