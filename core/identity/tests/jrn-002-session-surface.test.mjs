@@ -29,10 +29,11 @@ test("JRN-002 binds actor-specific activation and the full session lifecycle", a
   assert.doesNotMatch(account, /@bthwani\.yemen/);
 });
 
-test("JRN-002 keeps HTTP, OpenAPI, and Workforce actor search aligned", async () => {
-  const [server, main, contract, workforceClient] = await Promise.all([
+test("JRN-002 keeps HTTP, CORS, OpenAPI, and Workforce actor search aligned", async () => {
+  const [server, main, browserCors, contract, workforceClient] = await Promise.all([
     read("core/identity/backend/internal/http/server.go"),
     read("core/identity/backend/cmd/identity-api/main.go"),
+    read("core/identity/backend/internal/http/browser_cors.go"),
     read("core/identity/contracts/auth.openapi.yaml"),
     read("core/workforce/backend/internal/identityclient/client.go"),
   ]);
@@ -40,7 +41,9 @@ test("JRN-002 keeps HTTP, OpenAPI, and Workforce actor search aligned", async ()
   assert.match(server, /Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS"/);
   assert.match(server, /sendJSON\(w, http\.StatusOK, views\)/);
   assert.doesNotMatch(server, /map\[string\]any\{"actors": views\}/);
-  assert.doesNotMatch(main, /BrowserCorsMiddleware/);
+  assert.match(main, /BrowserCorsMiddleware/);
+  assert.match(browserCors, /CORS_ORIGIN_FORBIDDEN/);
+  assert.doesNotMatch(browserCors, /Access-Control-Allow-Methods/);
   assert.match(contract, /\/internal\/actors\/search:/);
   assert.match(contract, /type: array/);
   assert.match(workforceClient, /var result \[\]ActorView/);
