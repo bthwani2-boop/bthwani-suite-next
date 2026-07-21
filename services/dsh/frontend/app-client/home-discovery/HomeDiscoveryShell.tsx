@@ -59,6 +59,26 @@ export function HomeDiscoveryShell({
   const [activeCategoryId, setActiveCategoryId] = React.useState<string | null>(null);
   const [showDropdown, setShowDropdown] = React.useState(false);
   const recordedImpressions = React.useRef(new Set<string>());
+  const viewerRef = React.useRef(
+    `home.${Date.now().toString(36)}.${Math.random().toString(36).slice(2, 12)}`,
+  );
+
+  const emitMarketingEvent = React.useCallback((
+    eventType: "impression" | "click",
+    contentKind: "banners" | "promos",
+    contentId: string,
+  ) => {
+    if (state.kind !== "success") return;
+    void recordHomeMarketingEvent({
+      eventType,
+      contentKind,
+      contentId,
+      viewerRef: viewerRef.current,
+      cityCode: state.data.context.cityCode,
+      serviceAreaCode: state.data.context.serviceAreaCode,
+      audienceSegment: state.data.context.audienceSegment,
+    });
+  }, [state]);
 
   React.useEffect(() => {
     if (state.kind !== "success") return;
@@ -70,13 +90,9 @@ export function HomeDiscoveryShell({
       const key = `${item.kind}:${item.id}`;
       if (recordedImpressions.current.has(key)) continue;
       recordedImpressions.current.add(key);
-      void recordHomeMarketingEvent({
-        eventType: "impression",
-        contentKind: item.kind,
-        contentId: item.id,
-      });
+      emitMarketingEvent("impression", item.kind, item.id);
     }
-  }, [state]);
+  }, [emitMarketingEvent, state]);
 
   const executeMarketingAction = React.useCallback((actionType: string, actionTarget: string) => {
     const target = actionTarget.trim();
@@ -89,22 +105,14 @@ export function HomeDiscoveryShell({
   }, [onMarketingAction]);
 
   const handleBannerPress = React.useCallback((banner: BannerViewModel) => {
-    void recordHomeMarketingEvent({
-      eventType: "click",
-      contentKind: "banners",
-      contentId: banner.id,
-    });
+    emitMarketingEvent("click", "banners", banner.id);
     executeMarketingAction(banner.actionType, banner.actionTarget);
-  }, [executeMarketingAction]);
+  }, [emitMarketingEvent, executeMarketingAction]);
 
   const handlePromoPress = React.useCallback((promo: PromoViewModel) => {
-    void recordHomeMarketingEvent({
-      eventType: "click",
-      contentKind: "promos",
-      contentId: promo.id,
-    });
+    emitMarketingEvent("click", "promos", promo.id);
     executeMarketingAction(promo.actionType, promo.actionTarget);
-  }, [executeMarketingAction]);
+  }, [emitMarketingEvent, executeMarketingAction]);
 
   if (state.kind === "loading") {
     return <Screen padded={false}><LoadingState title="جاري التحميل..." /></Screen>;
