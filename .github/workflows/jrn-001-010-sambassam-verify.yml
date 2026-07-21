@@ -30,14 +30,16 @@ on:
       - "tools/guards/live-cross-journey-integrity-gate.mjs"
       - "tools/guards/partner/jrn-001-*.mjs"
       - ".github/workflows/jrn-001-010-sambassam-verify.yml"
+      - ".github/workflows/tmp-jrn-001-010-diagnostics.yml"
+      - ".github/workflows/tmp-jrn-003-workforce-http-diagnostics.yml"
 
 permissions:
   contents: read
   statuses: write
 
 concurrency:
-  group: jrn-001-010-${{ github.ref }}
-  cancel-in-progress: true
+  group: jrn-001-010-${{ github.sha }}
+  cancel-in-progress: false
 
 jobs:
   announce:
@@ -94,7 +96,7 @@ jobs:
           INTEGRITY_TEST_EXIT=${PIPESTATUS[0]}
           printf 'guard=%s partner_tests=%s partner_guards=%s integration=%s\n' "$GUARD_EXIT" "$PARTNER_TEST_EXIT" "$PARTNER_GUARD_EXIT" "$INTEGRITY_TEST_EXIT" | tee -a /tmp/jrn-001-010-static.log
           if [ "$GUARD_EXIT" -ne 0 ] || [ "$PARTNER_TEST_EXIT" -ne 0 ] || [ "$PARTNER_GUARD_EXIT" -ne 0 ] || [ "$INTEGRITY_TEST_EXIT" -ne 0 ]; then exit 1; fi
-      - name: Upload static failure evidence
+      - name: Upload static evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
@@ -136,7 +138,7 @@ jobs:
           WORKFORCE_EXIT=${PIPESTATUS[0]}
           printf 'identity=%s workforce=%s\n' "$IDENTITY_EXIT" "$WORKFORCE_EXIT" | tee -a /tmp/jrn-001-010-identity-workforce.log
           if [ "$IDENTITY_EXIT" -ne 0 ] || [ "$WORKFORCE_EXIT" -ne 0 ]; then exit 1; fi
-      - name: Upload identity-workforce failure evidence
+      - name: Upload identity-workforce evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
@@ -171,7 +173,7 @@ jobs:
           DSH_EXIT=${PIPESTATUS[0]}
           printf 'dsh=%s\n' "$DSH_EXIT" | tee -a /tmp/jrn-001-010-dsh.log
           exit "$DSH_EXIT"
-      - name: Upload DSH failure evidence
+      - name: Upload DSH evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
