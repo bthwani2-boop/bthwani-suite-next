@@ -1,4 +1,4 @@
-name: JRN-009 Cart and Serviceability Verification
+name: JRN-009 All Slices Cart and Serviceability Verification
 
 on:
   workflow_dispatch:
@@ -7,12 +7,18 @@ on:
     paths:
       - "core/identity/backend/**"
       - "core/identity/database/**"
+      - "governance/product/contracts/jrn-009-cart-serviceability.product-truth.json"
+      - "governance/evidence/JRN-009_ALL_SLICES_CLOSURE.json"
       - "services/dsh/backend/internal/cart/**"
+      - "services/dsh/backend/internal/clientaddress/**"
       - "services/dsh/backend/internal/http/cart.go"
+      - "services/dsh/database/migrations/dsh-096_jrn009_cart_slice_closure.sql"
+      - "services/dsh/contracts/jrn-009-slice-verification-registry.json"
       - "services/dsh/frontend/shared/cart/**"
       - "services/dsh/frontend/app-client/cart/**"
       - "services/dsh/frontend/control-panel/operations/CartActivityScreen.tsx"
       - "services/dsh/tests/jrn-005-010-integrity.test.mjs"
+      - "services/dsh/tests/jrn-009-all-slices.test.mjs"
       - "services/dsh/tsconfig.jrn-009.json"
       - "tools/scripts/smoke-jrn-009-cart.ps1"
       - ".github/workflows/jrn-009-sambassam-verify.yml"
@@ -22,12 +28,12 @@ permissions:
   statuses: write
 
 concurrency:
-  group: jrn-009-${{ github.sha }}
+  group: jrn-009-all-slices-${{ github.sha }}
   cancel-in-progress: false
 
 jobs:
   announce:
-    name: Announce JRN-009 verification
+    name: Announce JRN-009 all-slices verification
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
@@ -38,7 +44,7 @@ jobs:
           TARGET_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         shell: bash
         run: |
-          jq -n --arg state "pending" --arg context "journeys/jrn-009/targeted-verification" --arg description "JRN-009 targeted verification is running" --arg target_url "$TARGET_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/status.json
+          jq -n --arg state "pending" --arg context "journeys/jrn-009/all-slices" --arg description "JRN-009 all eight slices are running" --arg target_url "$TARGET_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/status.json
           curl --fail-with-body --silent --show-error -X POST \
             -H "Authorization: Bearer $GH_TOKEN" \
             -H "Accept: application/vnd.github+json" \
@@ -47,7 +53,7 @@ jobs:
             -d @/tmp/status.json
 
   static-integrity:
-    name: JRN-009 static full-stack integrity
+    name: JRN-009 all-slices static integrity
     needs: announce
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -62,8 +68,8 @@ jobs:
           node-version: 24.17.0
       - name: Verify repository hygiene
         run: git diff --check
-      - name: Verify cart ownership, pricing, and operator readback
-        run: node --test services/dsh/tests/jrn-005-010-integrity.test.mjs
+      - name: Verify previous boundary plus every JRN-009 slice
+        run: node --test services/dsh/tests/jrn-005-010-integrity.test.mjs services/dsh/tests/jrn-009-all-slices.test.mjs
 
   frontend-typecheck:
     name: JRN-009 affected frontend typecheck
@@ -86,13 +92,13 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: jrn-009-frontend-typecheck-evidence
+          name: jrn-009-all-slices-frontend-typecheck
           path: /tmp/jrn-009-frontend-typecheck.log
           retention-days: 3
           if-no-files-found: error
 
   backend-go:
-    name: JRN-009 cart and HTTP behavior
+    name: JRN-009 cart and mounted HTTP behavior
     needs: announce
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -111,10 +117,10 @@ jobs:
         run: go test ./internal/cart ./internal/http -count=1
 
   runtime-postgres:
-    name: JRN-009 PostgreSQL runtime journey
+    name: JRN-009 all-slices PostgreSQL runtime
     needs: announce
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 40
     steps:
       - name: Checkout exact commit
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -130,7 +136,7 @@ jobs:
         run: |
           set -o pipefail
           pwsh -NoProfile -File infra/docker/scripts/runtime.ps1 -Action seed -Profiles dsh 2>&1 | tee -a /tmp/jrn-009-runtime.log
-      - name: Execute cart and serviceability journey
+      - name: Execute all cart and serviceability slices
         shell: bash
         run: |
           set -o pipefail
@@ -139,11 +145,11 @@ jobs:
         if: failure()
         shell: bash
         run: pwsh -NoProfile -File infra/docker/scripts/runtime.ps1 -Action doctor -Profiles dsh 2>&1 | tee -a /tmp/jrn-009-runtime.log
-      - name: Upload runtime evidence
+      - name: Upload all-slices runtime evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: jrn-009-postgres-runtime-evidence
+          name: jrn-009-all-slices-runtime-evidence
           path: /tmp/jrn-009-runtime.log
           retention-days: 3
           if-no-files-found: error
@@ -153,7 +159,7 @@ jobs:
         run: pwsh -NoProfile -File infra/docker/scripts/runtime.ps1 -Action down -Profiles dsh
 
   publish-result:
-    name: Publish JRN-009 same-commit result
+    name: Publish JRN-009 all-slices same-commit result
     if: always()
     needs: [announce, static-integrity, frontend-typecheck, backend-go, runtime-postgres]
     runs-on: ubuntu-latest
@@ -171,12 +177,12 @@ jobs:
         shell: bash
         run: |
           state=failure
-          description="JRN-009 targeted verification failed"
+          description="JRN-009 all-slices verification failed"
           if [ "$STATIC_RESULT" = success ] && [ "$FRONTEND_RESULT" = success ] && [ "$BACKEND_RESULT" = success ] && [ "$RUNTIME_RESULT" = success ]; then
             state=success
-            description="JRN-009 targeted verification passed"
+            description="JRN-009 all eight slices passed"
           fi
-          jq -n --arg state "$state" --arg context "journeys/jrn-009/targeted-verification" --arg description "$description" --arg target_url "$TARGET_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/status.json
+          jq -n --arg state "$state" --arg context "journeys/jrn-009/all-slices" --arg description "$description" --arg target_url "$TARGET_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/status.json
           curl --fail-with-body --silent --show-error -X POST \
             -H "Authorization: Bearer $GH_TOKEN" \
             -H "Accept: application/vnd.github+json" \
