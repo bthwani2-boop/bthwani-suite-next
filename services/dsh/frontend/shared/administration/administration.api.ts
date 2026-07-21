@@ -8,6 +8,7 @@ import type {
   DshAdminAuditEntry,
   DshRoleAssignmentApproval,
   DshRoleAssignmentApprovalStatus,
+  DshRoleChangeAction,
   DshRoleDefinitionRequest,
   DshAdministrationApprovalStatus,
 } from "./administration.types";
@@ -41,10 +42,15 @@ export const reviewRoleDefinitionRequest = (
 
 export const fetchStaff = () => req<{ staff: DshStaffMember[] }>("/dsh/operator/admin/staff");
 
-export const requestStaffRoleAssignment = (staffId: string, roleId: string, reason: string) =>
-  req<{ approval: DshRoleAssignmentApproval }>(`/dsh/operator/admin/staff/${staffId}/roles`, {
-    method: "POST", body: JSON.stringify({ roleId, reason }),
-  });
+export const requestStaffRoleChange = (
+  staffId: string,
+  roleId: string,
+  actionType: DshRoleChangeAction,
+  reason: string,
+) => req<{ approval: DshRoleAssignmentApproval }>(`/dsh/operator/admin/staff/${staffId}/roles`, {
+  method: "POST",
+  body: JSON.stringify({ roleId, actionType, reason }),
+});
 
 export const fetchRoleAssignmentApprovals = (status: DshRoleAssignmentApprovalStatus | "" = "pending") =>
   req<{ approvals: DshRoleAssignmentApproval[] }>(
