@@ -108,7 +108,7 @@
   /dsh/partner/orders/{orderId}/preparation-issues:
     post:
       operationId: createDshPartnerOrderPreparationIssue
-      summary: Open a missing-item, substitution, quality, or other preparation issue.
+      summary: Open a missing-item, substitution, quality, or order-level preparation issue.
       tags: [DshOrders]
       security: [{ bearerAuth: [] }]
       parameters:
@@ -303,7 +303,9 @@
         id: { type: string, format: uuid }
         orderId: { type: string, format: uuid }
         storeId: { type: string }
-        orderItemId: { type: string }
+        orderItemId:
+          type: string
+          description: Immutable order-item UUID for item-level issues; empty only for kind=other.
         kind:
           $ref: "#/components/schemas/DshPreparationIssueKind"
         status:
@@ -325,13 +327,26 @@
       type: object
       required: [kind, affectedQuantity, note]
       properties:
-        orderItemId: { type: string, format: uuid }
+        orderItemId:
+          type: string
+          format: uuid
+          description: Required when kind is missing_item, substitution_required, or quality_issue.
         kind:
           $ref: "#/components/schemas/DshPreparationIssueKind"
         affectedQuantity: { type: integer, minimum: 1 }
         note: { type: string, minLength: 3, maxLength: 500 }
         replacementProductId: { type: string }
         replacementProductName: { type: string, minLength: 2 }
+      oneOf:
+        - required: [orderItemId]
+          properties:
+            kind:
+              type: string
+              enum: [missing_item, substitution_required, quality_issue]
+        - properties:
+            kind:
+              type: string
+              enum: [other]
 
     DshResolvePreparationIssueInput:
       type: object
