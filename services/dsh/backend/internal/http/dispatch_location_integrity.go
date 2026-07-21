@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"time"
@@ -16,6 +17,30 @@ const (
 	maxLocationSampleAge         = 10 * time.Minute
 	maxLocationFutureSkew        = 30 * time.Second
 )
+
+type dispatchLocationTimestampDecision string
+
+const (
+	locationTimestampAccepted   dispatchLocationTimestampDecision = "accepted"
+	locationTimestampStale      dispatchLocationTimestampDecision = "stale"
+	locationTimestampFuture     dispatchLocationTimestampDecision = "future"
+	locationTimestampOutOfOrder dispatchLocationTimestampDecision = "out_of_order"
+)
+
+func validateDispatchLocationTimestamp(recordedAt, now time.Time, previous *time.Time) dispatchLocationTimestampDecision {
+	recordedAt = recordedAt.UTC()
+	now = now.UTC()
+	if recordedAt.Before(now.Add(-maxLocationSampleAge)) {
+		return locationTimestampStale
+	}
+	if recordedAt.After(now.Add(maxLocationFutureSkew)) {
+		return locationTimestampFuture
+	}
+	if previous != nil && !recordedAt.After(previous.UTC()) {
+		return locationTimestampOutOfOrder
+	}
+	return locationTimestampAccepted
+}
 
 // handlePushDispatchLocationGoverned validates sample freshness and monotonic
 // ordering before delegating to the canonical dispatch handler. The request
@@ -50,16 +75,6 @@ func (s *protectedStoreServer) handlePushDispatchLocationGoverned(w http.Respons
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "recordedAt must be RFC3339")
 		return
 	}
-	now := time.Now().UTC()
-	recordedAt = recordedAt.UTC()
-	if recordedAt.Before(now.Add(-maxLocationSampleAge)) {
-		store.SendError(w, http.StatusUnprocessableEntity, "LOCATION_SAMPLE_STALE", "location sample is older than the allowed window")
-		return
-	}
-	if recordedAt.After(now.Add(maxLocationFutureSkew)) {
-		store.SendError(w, http.StatusUnprocessableEntity, "LOCATION_SAMPLE_FUTURE", "location sample is ahead of server time")
-		return
-	}
 
 	var previous sql.NullTime
 	err = s.db.QueryRowContext(r.Context(), `
@@ -68,7 +83,7 @@ func (s *protectedStoreServer) handlePushDispatchLocationGoverned(w http.Respons
 		WHERE id = $1::uuid AND captain_id = $2`,
 		r.PathValue("assignmentId"), actor.ID,
 	).Scan(&previous)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "dispatch assignment not found")
 		return
 	}
@@ -76,7 +91,20 @@ func (s *protectedStoreServer) handlePushDispatchLocationGoverned(w http.Respons
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to validate location sequence")
 		return
 	}
-	if previous.Valid && !recordedAt.After(previous.Time.UTC()) {
+
+	var previousTime *time.Time
+	if previous.Valid {
+		value := previous.Time
+		previousTime = &value
+	}
+	switch validateDispatchLocationTimestamp(recordedAt, time.Now(), previousTime) {
+	case locationTimestampStale:
+		store.SendError(w, http.StatusUnprocessableEntity, "LOCATION_SAMPLE_STALE", "location sample is older than the allowed window")
+		return
+	case locationTimestampFuture:
+		store.SendError(w, http.StatusUnprocessableEntity, "LOCATION_SAMPLE_FUTURE", "location sample is ahead of server time")
+		return
+	case locationTimestampOutOfOrder:
 		store.SendError(w, http.StatusConflict, "LOCATION_SAMPLE_OUT_OF_ORDER", "location sample must be newer than the stored sample")
 		return
 	}
