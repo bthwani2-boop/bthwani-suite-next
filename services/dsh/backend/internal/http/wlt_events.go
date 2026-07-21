@@ -171,9 +171,9 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 		return
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{
-		"intent":        marshalIntentWithPricing(intent, pricing),
+		"intent":         marshalIntentWithPricing(intent, pricing),
 		"eventReference": eventKey,
-		"replayed":      replayed,
+		"replayed":       replayed,
 	})
 }
 
