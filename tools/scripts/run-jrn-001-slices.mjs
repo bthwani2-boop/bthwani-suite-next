@@ -40,15 +40,35 @@ function execute(command) {
   const startedAt = Date.now();
   const result = spawnSync(command, {
     shell: "/bin/bash",
-    stdio: "inherit",
+    encoding: "utf8",
+    maxBuffer: 32 * 1024 * 1024,
     env: process.env,
   });
+  if (result.stdout) process.stdout.write(result.stdout);
+  if (result.stderr) process.stderr.write(result.stderr);
+  const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}`.trim();
   return {
     command,
     exitCode: typeof result.status === "number" ? result.status : 1,
     signal: result.signal ?? null,
     durationMs: Date.now() - startedAt,
     error: result.error?.message ?? null,
+    output,
+  };
+}
+
+function failureDetail(commandResult) {
+  const lines = commandResult.output.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const line = lines.find((candidate) => /[A-Z][A-Z0-9_]{5,}|AssertionError|ERR_|error TS[0-9]+|not ok|FAIL/i.test(candidate))
+    ?? lines.at(-1)
+    ?? commandResult.error
+    ?? "command-failed";
+  const code = line.match(/[A-Z][A-Z0-9_]{5,}/)?.[0]
+    ?? line.match(/TS[0-9]+/)?.[0]
+    ?? "COMMAND_FAILED";
+  return {
+    line: line.replace(/\s+/g, " ").slice(0, 120),
+    token: code.replace(/[^A-Za-z0-9_-]/g, "-").slice(0, 48),
   };
 }
 
@@ -70,12 +90,14 @@ for (const slice of registry.slices) {
   }
 
   const passed = failedCommand === null;
+  const detail = passed ? null : failureDetail(failedCommand);
   const result = {
     id: slice.id,
     name: slice.name,
     context: slice.context,
     state: passed ? "success" : "failure",
     failedCommandIndex,
+    failureDetail: detail,
     commands: commandResults,
     evidence: slice.evidence,
   };
@@ -84,16 +106,16 @@ for (const slice of registry.slices) {
   if (!passed) {
     await publishStatus({
       state: "failure",
-      context: `${slice.context}/cmd-${String(failedCommandIndex).padStart(2, "0")}`,
-      description: `${slice.id} command ${failedCommandIndex} failed: ${failedCommand.command}`,
+      context: `${slice.context}/cmd-${String(failedCommandIndex).padStart(2, "0")}/${detail.token}`,
+      description: `${slice.id} command ${failedCommandIndex}: ${detail.line}`,
     });
   }
 
   const description = passed
     ? `${slice.id} ${slice.name} passed on final-head verification`
-    : `${slice.id} failed at command ${failedCommandIndex}`;
+    : `${slice.id} failed at command ${failedCommandIndex}: ${detail.token}`;
   await publishStatus({ state: result.state, context: slice.context, description });
-  console.log(`${slice.id}: ${passed ? "PASS" : `FAIL command ${failedCommandIndex}`}`);
+  console.log(`${slice.id}: ${passed ? "PASS" : `FAIL command ${failedCommandIndex} ${detail.token}`}`);
 }
 
 const failedSlices = results.filter((result) => result.state !== "success");
@@ -103,7 +125,7 @@ await publishStatus({
   context: registry.aggregateContext,
   description: failedSlices.length === 0
     ? "FS-01 through FS-18 passed sequentially on one commit"
-    : `Failed slices: ${failedSlices.map((slice) => `${slice.id}/cmd-${slice.failedCommandIndex}`).join(", ")}`,
+    : `Failed slices: ${failedSlices.map((slice) => `${slice.id}/cmd-${slice.failedCommandIndex}/${slice.failureDetail.token}`).join(", ")}`,
 });
 
 const output = {
@@ -124,9 +146,9 @@ if (summaryPath) {
     "",
     `Commit: \`${commitSha}\``,
     "",
-    "| Slice | Result | Failed command |",
-    "|---|---|---|",
-    ...results.map((result) => `| ${result.id} | ${result.state === "success" ? "PASS" : "FAIL"} | ${result.failedCommandIndex ?? "—"} |`),
+    "| Slice | Result | Failed command | Detail |",
+    "|---|---|---|---|",
+    ...results.map((result) => `| ${result.id} | ${result.state === "success" ? "PASS" : "FAIL"} | ${result.failedCommandIndex ?? "—"} | ${result.failureDetail?.token ?? "—"} |`),
     "",
     `Aggregate: **${aggregateState === "success" ? "PASS" : "FAIL"}**`,
   ];
