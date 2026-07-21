@@ -77,14 +77,15 @@ func main() {
 	log.Println("[dsh-api] order event bridge and operational outbox workers enabled")
 
 	if wltClient.Configured() {
+		go orders.RunPaymentProjectionWorker(outboxCtx, db, wltClient, 15*time.Second)
 		go wltoutbox.RunWorker(outboxCtx, db, wltClient, 15*time.Second)
 		go fieldcommissionoutbox.RunWorker(outboxCtx, db, wltClient, 15*time.Second)
 		go checkoutfinanceoutbox.RunWorker(outboxCtx, db, wltClient, 15*time.Second)
 		go promotionfundingoutbox.RunWorker(outboxCtx, db, wltClient, 15*time.Second)
 		go partnerwltoutbox.RunWorker(outboxCtx, db, wltClient, 15*time.Second)
-		log.Println("[dsh-api] WLT outbox workers enabled, including partner payout reconciliation")
+		log.Println("[dsh-api] WLT readback, outbox and payout reconciliation workers enabled")
 	} else {
-		log.Println("[dsh-api] WLT outbox workers disabled: DSH_WLT_BASE_URL and WLT_DSH_SERVICE_TOKEN are required")
+		log.Println("[dsh-api] WLT workers disabled: DSH_WLT_BASE_URL and WLT_DSH_SERVICE_TOKEN are required")
 	}
 
 	server := &http.Server{
