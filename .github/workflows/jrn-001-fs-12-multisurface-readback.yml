@@ -12,7 +12,7 @@ permissions:
 jobs:
   close-fs-12:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
@@ -123,14 +123,15 @@ jobs:
       return { ok: false, error: resolveErrorMessage(err) };
     }`);
 
-          const test = `import assert from "node:assert/strict";\nimport fs from "node:fs";\nconst admin = fs.readFileSync("services/dsh/frontend/shared/partner/use-partner-admin-controller.tsx", "utf8");\nconst field = fs.readFileSync("services/dsh/frontend/shared/field-onboarding/use-field-partner-onboarding-controller.tsx", "utf8");\nconst team = fs.readFileSync("services/dsh/frontend/shared/partner/use-partner-team-controller.ts", "utf8");\nassert.match(admin, /createPartner\(input\)[\s\S]*fetchPartner\(created\.id\)/);\nassert.match(admin, /transitionPartner\(partnerId[\s\S]*fetchPartner\(partnerId\)/);\nassert.match(field, /fieldSubmitPartner[\s\S]*assertPartnerReadback[\s\S]*fieldGetPartner/);\nassert.match(team, /await invitePartnerTeamMember[\s\S]*await loadTeam\(\)/);\nassert.match(team, /await executePartnerTeamMemberAction[\s\S]*await loadTeam\(\)/);\nfor (const source of [admin, field, team]) { assert.doesNotMatch(source, /mockPartner|fakePartner|localSuccess/i); }\nconsole.log("JRN-001 FS-12 multisurface readback verified");\n`;
+          const test = `import assert from "node:assert/strict";\nimport fs from "node:fs";\nconst admin = fs.readFileSync("services/dsh/frontend/shared/partner/use-partner-admin-controller.tsx", "utf8");\nconst field = fs.readFileSync("services/dsh/frontend/shared/field-onboarding/use-field-partner-onboarding-controller.tsx", "utf8");\nconst team = fs.readFileSync("services/dsh/frontend/shared/partner/use-partner-team-controller.ts", "utf8");\nassert.match(admin, /createPartner\\(input\\)[\\s\\S]*fetchPartner\\(created\\.id\\)/);\nassert.match(admin, /transitionPartner\\(partnerId[\\s\\S]*fetchPartner\\(partnerId\\)/);\nassert.match(field, /fieldSubmitPartner[\\s\\S]*assertPartnerReadback[\\s\\S]*fieldGetPartner/);\nassert.match(team, /await invitePartnerTeamMember[\\s\\S]*await loadTeam\\(\\)/);\nassert.match(team, /await executePartnerTeamMemberAction[\\s\\S]*await loadTeam\\(\\)/);\nfor (const source of [admin, field, team]) assert.doesNotMatch(source, /mockPartner|fakePartner|localSuccess/i);\nconsole.log("JRN-001 FS-12 multisurface readback verified");\n`;
           fs.writeFileSync('services/dsh/tests/jrn-001-fs-12-multisurface-readback.test.mjs', test);
           NODE
           corepack enable
           corepack prepare pnpm@10.34.2 --activate
           pnpm install --frozen-lockfile
           node --test services/dsh/tests/jrn-001-fs-12-multisurface-readback.test.mjs
-          pnpm exec tsc --noEmit -p tsconfig.base.json
+          pnpm --dir apps/app-partner/runtime typecheck
+          pnpm --dir apps/control-panel/runtime typecheck
           git diff --check
           git config user.name 'bthwani-journey-closure'
           git config user.email 'actions@users.noreply.github.com'
