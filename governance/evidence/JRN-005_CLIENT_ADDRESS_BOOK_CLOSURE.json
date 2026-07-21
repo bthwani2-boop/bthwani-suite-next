@@ -1,10 +1,10 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "journeyId": "JRN-005",
   "journeyName": "Client address book",
   "repository": "bthwani2-boop/bthwani-suite-next",
   "targetRef": "sambassam",
-  "decision": "READY_FOR_TARGETED_VERIFICATION",
+  "decision": "READY_FOR_REVIEW",
   "implementationTruth": {
     "productTruth": "governance/product/contracts/jrn-005-client-address-book.product-truth.json",
     "sliceRegistry": "services/dsh/contracts/jrn-005-all-slices-registry.json",
@@ -16,7 +16,7 @@
   "functionalSlices": {
     "registered": 18,
     "implemented": 18,
-    "workflowVerified": 0,
+    "workflowVerified": 18,
     "independentlyApproved": 0
   },
   "implementedCapabilities": [
@@ -32,25 +32,27 @@
     "privacy retention and irreversible anonymization",
     "Arabic RTL visible states and recovery",
     "SLO, support and rollback runbook",
-    "static and database regression gates"
+    "static, TypeScript, Go and PostgreSQL regression gates"
   ],
   "sameCommitVerification": {
     "statusContext": "journeys/jrn-005/all-slices",
     "workflow": ".github/workflows/jrn-005-all-slices.yml",
-    "expectedChecks": [
-      "repository hygiene",
-      "JRN-005 all-slices static test",
-      "client-commerce truth guard",
-      "Go clientaddress and HTTP tests",
-      "PostgreSQL 16 migration apply",
-      "PostgreSQL logical duplicate insert rejection",
-      "PostgreSQL logical duplicate update rejection",
-      "targeted app-client typecheck"
-    ],
-    "verifiedCommit": null,
-    "workflowRunId": null,
-    "artifactDigest": null,
-    "result": "PENDING"
+    "verifiedCommit": "2b30d16fd027646c256034ef9456e56cbe57187e",
+    "workflowRunId": 29861781564,
+    "artifactId": 8507604073,
+    "artifactDigest": "sha256:66e288414f5097031a63ddd1c5a0b0815dc3e0fd7b10cf59beb13637fa6a1da6",
+    "result": "PASS",
+    "checks": {
+      "repositoryHygiene": "PASS",
+      "allSlicesStaticTest": "PASS",
+      "clientCommerceTruthGuard": "PASS",
+      "targetedAppClientTypecheck": "PASS",
+      "goClientAddressAndHttpTests": "PASS",
+      "postgres16BaseMigration": "PASS",
+      "postgres16LogicalDeduplicationMigration": "PASS",
+      "postgres16DuplicateInsertInvariant": "PASS",
+      "postgres16DuplicateUpdateInvariant": "PASS"
+    }
   },
   "approvalMatrix": {
     "product": "PENDING_INDEPENDENT_REVIEW",
@@ -70,5 +72,5 @@
     "preserveData": ["address rows", "soft-delete timestamps", "address events", "privacy audit events"],
     "forbiddenEmergencyActions": ["disable owner scoping", "drop single-default constraint", "convert duplicate conflict to success", "log address PII"]
   },
-  "formalClosureRule": "Set decision to CLOSED_WITH_EVIDENCE only after the same-commit workflow succeeds and every required independent approval and device evidence field is complete."
+  "formalClosureRule": "Implementation and all FS-01..FS-18 technical verification are complete. Set decision to CLOSED_WITH_EVIDENCE only after every required independent approval and device evidence field is complete."
 }
