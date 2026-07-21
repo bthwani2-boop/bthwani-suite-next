@@ -1,5 +1,5 @@
 name: JRN 020-025 boundary diagnostic
-# Rerun after routing captain and client order journeys through shared facades.
+# Rerun after multisurface journey imports were normalized through shared facades.
 
 on:
   push:
