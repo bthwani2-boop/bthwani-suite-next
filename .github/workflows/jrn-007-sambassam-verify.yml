@@ -26,8 +26,8 @@ permissions:
   statuses: write
 
 concurrency:
-  group: jrn-007-${{ github.ref }}
-  cancel-in-progress: true
+  group: jrn-007-${{ github.sha }}
+  cancel-in-progress: false
 
 jobs:
   home-bindings:
