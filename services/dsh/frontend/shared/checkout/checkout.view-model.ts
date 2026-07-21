@@ -1,9 +1,10 @@
 import type { DshCheckoutIntent } from "./checkout.types";
 import {
-  checkoutIdleState,
   checkoutBlockedPaymentUnavailableState,
   checkoutPaymentPendingState,
+  checkoutReconciliationPendingState,
   checkoutSuccessState,
+  checkoutTerminalState,
 } from "./checkout.states";
 
 export function checkoutIntentHasWltSession(intent: DshCheckoutIntent): boolean {
@@ -11,26 +12,31 @@ export function checkoutIntentHasWltSession(intent: DshCheckoutIntent): boolean 
 }
 
 export function resolveCheckoutIntentDisplayState(intent: DshCheckoutIntent) {
-  if (intent.state === "cancelled" || intent.state === "expired") {
-    return checkoutIdleState();
+  switch (intent.state) {
+    case "cancelled":
+      return checkoutTerminalState(intent, "cancelled");
+    case "expired":
+      return checkoutTerminalState(intent, "expired");
+    case "payment_failed":
+      return checkoutTerminalState(intent, "payment_failed");
+    case "wlt_handoff_failed":
+      return checkoutBlockedPaymentUnavailableState();
+    case "wlt_outcome_unknown":
+      return checkoutReconciliationPendingState(intent);
+    case "payment_confirmed":
+    case "confirmed":
+      return checkoutSuccessState(intent);
+    case "payment_pending":
+      // COD creates only a WLT reference at checkout. With that reference
+      // attached, DSH may create the order without pretending cash was captured.
+      return intent.paymentMethod === "cod" && checkoutIntentHasWltSession(intent)
+        ? checkoutSuccessState(intent)
+        : checkoutPaymentPendingState(intent);
+    case "pending":
+      return checkoutPaymentPendingState(intent);
+    default: {
+      const exhaustive: never = intent.state;
+      return exhaustive;
+    }
   }
-  if (intent.state === "wlt_handoff_failed" || intent.state === "wlt_outcome_unknown") {
-    return checkoutPaymentPendingState(intent);
-  }
-  if (intent.state === "payment_failed") {
-    return checkoutBlockedPaymentUnavailableState();
-  }
-  // payment_confirmed is reported by WLT (the sole owner of payment capture
-  // truth) via the payment-session-event webhook once a non-COD payment is
-  // captured, so any payment method is a success here.
-  if (intent.state === "payment_confirmed") {
-    return checkoutSuccessState(intent);
-  }
-  // COD never captures funds up front, so reaching payment_pending with an
-  // attached WLT reference is already enough to proceed to order creation.
-  return intent.state === "payment_pending" &&
-    intent.paymentMethod === "cod" &&
-    checkoutIntentHasWltSession(intent)
-    ? checkoutSuccessState(intent)
-    : checkoutPaymentPendingState(intent);
 }
