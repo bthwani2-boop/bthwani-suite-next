@@ -74,8 +74,7 @@ jobs:
           : >/tmp/jrn-008-static.log
           git diff --check 2>&1 | tee -a /tmp/jrn-008-static.log
           node --test services/dsh/tests/jrn-008-all-slices.test.mjs 2>&1 | tee -a /tmp/jrn-008-static.log
-          node tools/guards/service-manifest-drift-gate.mjs 2>&1 | tee -a /tmp/jrn-008-static.log
-          node tools/guards/backend-api-binding-gate.mjs 2>&1 | tee -a /tmp/jrn-008-static.log
+          node tools/guards/catalog/jrn-008-contract-ownership-gate.mjs 2>&1 | tee -a /tmp/jrn-008-static.log
       - name: Upload static evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
