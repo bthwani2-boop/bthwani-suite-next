@@ -1,0 +1,69 @@
+openapi: 3.1.0
+info:
+  title: BThwani DSH Catalog Proposal Readback API
+  version: 1.0.0
+  description: >-
+    Store-scoped readback contract for product proposals submitted by partner
+    and field surfaces. Store ownership is resolved from the authenticated
+    actor context and cannot be supplied as an arbitrary query parameter.
+
+x-bthwani-owner: services/dsh
+x-bthwani-parent-contract: contracts/dsh.catalog.openapi.yaml
+x-bthwani-contract-role: executable-fragment
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-client-binding: MANUAL_TYPED_ADAPTER
+x-bthwani-runtime-dependency: true
+
+paths:
+  /dsh/partner/catalog/product-proposals:
+    get:
+      operationId: listPartnerProductProposals
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: status, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0 } }
+      responses:
+        "200":
+          description: Proposals belonging to the authenticated partner store
+          content:
+            application/json:
+              schema:
+                $ref: "./dsh.catalog.openapi.yaml#/components/schemas/ProposalListResponse"
+        "401":
+          $ref: "./dsh.catalog.openapi.yaml#/components/responses/Unauthenticated"
+        "403":
+          $ref: "./dsh.catalog.openapi.yaml#/components/responses/Forbidden"
+
+  /dsh/field/partners/{partnerId}/catalog/product-proposals:
+    get:
+      operationId: listFieldProductProposals
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema: { type: string }
+        - { name: status, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0 } }
+      responses:
+        "200":
+          description: Proposals belonging to the field-authorized partner store
+          content:
+            application/json:
+              schema:
+                $ref: "./dsh.catalog.openapi.yaml#/components/schemas/ProposalListResponse"
+        "401":
+          $ref: "./dsh.catalog.openapi.yaml#/components/responses/Unauthenticated"
+        "403":
+          $ref: "./dsh.catalog.openapi.yaml#/components/responses/Forbidden"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
