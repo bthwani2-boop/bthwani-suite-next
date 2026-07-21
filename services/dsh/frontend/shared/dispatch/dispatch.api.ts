@@ -73,6 +73,17 @@ export async function reportDeliveryException(
   return fetchCaptainDeliveryException(assignmentId);
 }
 
+export async function reportCaptainHandoffException(
+  assignmentId: string,
+  input: DshReportDeliveryExceptionInput,
+): Promise<DshDeliveryException> {
+  const data = await request<{ exception: DshDeliveryException }>(
+    `/dsh/captain/dispatch/assignments/${encodeURIComponent(assignmentId)}/handoff-exceptions`,
+    { method: "POST", body: input },
+  );
+  return data.exception;
+}
+
 export async function fetchCaptainDeliveryException(assignmentId: string): Promise<DshDeliveryException> {
   const data = await request<{ exception: DshDeliveryException }>(
     `/dsh/captain/dispatch/assignments/${encodeURIComponent(assignmentId)}/exceptions`,
