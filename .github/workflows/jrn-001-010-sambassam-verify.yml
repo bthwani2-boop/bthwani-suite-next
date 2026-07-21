@@ -79,16 +79,14 @@ jobs:
   static-integrity:
     name: Static cross-journey integrity
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Checkout exact commit
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false
-      - name: Setup Node
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
-        with:
-          node-version: 24.17.0
+      - name: Setup pinned Node workspace
+        uses: ./.github/actions/setup-node-workspace
       - name: Verify repository hygiene
         run: git diff --check
       - name: Verify JRN-001..010 static evidence
