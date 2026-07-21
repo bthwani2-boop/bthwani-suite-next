@@ -1,21 +1,17 @@
 import type { paths } from "../../../clients/generated/dsh-api";
 import type { DshFulfillmentDeliveryMode } from "../delivery/delivery.contract";
+import type { DshStoreOperationalContextContract } from "./store-operational-context.contract";
 
 export type DshStoreSummaryDto =
   paths["/dsh/stores"]["get"]["responses"]["200"]["content"]["application/json"]["stores"][number];
 
 /**
- * Operational context persisted by DSH and returned by the live store-detail
- * endpoint. This intersection is temporary compatibility for the generated
- * client until the next contract generation run; consumers still fail closed
- * at runtime when any field is absent.
+ * Store-detail response composed from the aggregate generated client and the
+ * active DSH store operational-context overlay. The overlay explicitly uses a
+ * MANUAL_TYPED_ADAPTER; runtime consumers validate all overlay fields and fail
+ * closed before constructing this type.
  */
-export type DshStoreOperationalContextDto = {
-  readonly addressLine: string;
-  readonly coverageSummary: string;
-  readonly operatingHours: string;
-  readonly deliveryReadiness: string;
-};
+export type DshStoreOperationalContextDto = DshStoreOperationalContextContract;
 
 export type DshStoreDetailDto =
   paths["/dsh/stores/{storeId}"]["get"]["responses"]["200"]["content"]["application/json"]["store"] &
