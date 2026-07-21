@@ -10,6 +10,7 @@ on:
       - "governance/evidence/JRN-010_CHECKOUT_WLT_ALL_SLICES_CLOSURE.json"
       - "governance/runbooks/JRN-010_CHECKOUT_WLT_OPERATIONS.md"
       - "governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md"
+      - "infra/docker/compose.runtime.yml"
       - "infra/docker/scripts/wlt-migration-probes.ps1"
       - "services/dsh/backend/internal/checkout/**"
       - "services/dsh/backend/internal/coupons/**"
@@ -155,6 +156,11 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with: {persist-credentials: false}
+      - name: Validate governed runtime graph
+        shell: bash
+        run: |
+          docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml --profile dsh --profile wlt config > /tmp/jrn-010-compose-config.yml
+          grep -q "minio-init" /tmp/jrn-010-compose-config.yml
       - name: Record WLT migration inventory
         shell: pwsh
         run: Get-ChildItem services/wlt/database/migrations -Filter '*.sql' | Sort-Object Name | Select-Object -ExpandProperty Name | Tee-Object -FilePath /tmp/jrn-010-wlt-migrations.log
