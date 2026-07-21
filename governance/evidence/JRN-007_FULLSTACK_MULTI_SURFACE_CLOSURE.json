@@ -1,0 +1,107 @@
+{
+  "journey_id": "JRN-007",
+  "journey_name_ar": "الصفحة الرئيسية والاكتشاف التسويقي",
+  "branch": "sambassam",
+  "repository_mode": "REMOTE_ONLY",
+  "surfaces": ["app-client", "control-panel"],
+  "verification_context": "journeys/jrn-007/home-discovery",
+  "same_commit_verification_required": true,
+  "closure_state": "IMPLEMENTED_AWAITING_FINAL_SAME_COMMIT_GATE",
+  "slices": [
+    {
+      "id": "JRN-007-S1",
+      "name_ar": "أقسام الصفحة الرئيسية والفئات والمجموعات المعروضة",
+      "state": "IMPLEMENTED",
+      "evidence": [
+        "services/dsh/frontend/shared/home-discovery/home-discovery.groups.ts",
+        "services/dsh/frontend/app-client/home-discovery/HomeStoreGroupsSection.tsx",
+        "services/dsh/frontend/app-client/home-discovery/HomeDiscoveryShell.tsx"
+      ]
+    },
+    {
+      "id": "JRN-007-S2",
+      "name_ar": "البنرات والمحتوى الترويجي والروابط والوسائط",
+      "state": "IMPLEMENTED",
+      "evidence": [
+        "services/dsh/backend/internal/homediscovery/admin.go",
+        "services/dsh/backend/internal/homediscovery/repository.go",
+        "services/dsh/frontend/control-panel/marketing/components/MarketingHomeDiscoveryPanel.tsx",
+        "services/dsh/frontend/app-client/DshClientSurface.tsx"
+      ]
+    },
+    {
+      "id": "JRN-007-S3",
+      "name_ar": "ترتيب المحتوى والأولوية والاستهداف حسب المنطقة والجمهور",
+      "state": "IMPLEMENTED",
+      "evidence": [
+        "services/dsh/database/migrations/dsh-098_home_discovery_targeting.sql",
+        "services/dsh/backend/internal/homediscovery/targeting.go",
+        "services/dsh/backend/internal/homediscovery/repository.go",
+        "services/dsh/contracts/dsh.home-discovery.overlay.yaml",
+        "services/dsh/frontend/shared/home-discovery/home-discovery-targeting.ts"
+      ]
+    },
+    {
+      "id": "JRN-007-S4",
+      "name_ar": "الجدولة والنشر والانتهاء والأرشفة",
+      "state": "IMPLEMENTED",
+      "evidence": [
+        "services/dsh/database/migrations/dsh-060_home_marketing_publication_gates.sql",
+        "services/dsh/backend/internal/homediscovery/admin.go",
+        "services/dsh/backend/internal/homediscovery/repository.go",
+        "services/dsh/frontend/control-panel/marketing/components/MarketingHomeDiscoveryPanel.tsx"
+      ]
+    },
+    {
+      "id": "JRN-007-S5",
+      "name_ar": "إنشاء وتعديل وحذف المحتوى المحكوم من لوحة التحكم",
+      "state": "IMPLEMENTED",
+      "evidence": [
+        "services/dsh/backend/internal/http/protected_store.go",
+        "services/dsh/backend/internal/http/home_discovery_targeting_handlers.go",
+        "services/dsh/frontend/shared/home-discovery/use-home-discovery-admin-controller.tsx",
+        "services/dsh/frontend/control-panel/marketing/components/MarketingHomeDiscoveryPanel.tsx"
+      ]
+    },
+    {
+      "id": "JRN-007-S6",
+      "name_ar": "منع ازدواج ملكية محتوى الصفحة مع Marketing Command Deck",
+      "state": "IMPLEMENTED",
+      "evidence": [
+        "services/dsh/database/migrations/dsh-002_home_discovery.sql",
+        "services/dsh/database/migrations/dsh-018_retire_marketing_banners_promos.sql",
+        "services/dsh/backend/internal/homediscovery/admin.go"
+      ]
+    },
+    {
+      "id": "JRN-007-S7",
+      "name_ar": "العرض الفعلي في تطبيق العميل وحالات empty/error/offline",
+      "state": "IMPLEMENTED",
+      "evidence": [
+        "services/dsh/frontend/shared/home-discovery/home-discovery.api.ts",
+        "services/dsh/frontend/shared/home-discovery/home-discovery.states.ts",
+        "services/dsh/frontend/app-client/home-discovery/HomeDiscoveryShell.tsx"
+      ]
+    },
+    {
+      "id": "JRN-007-S8",
+      "name_ar": "قياس الظهور والنقر دون ادعاء بيانات غير موجودة",
+      "state": "IMPLEMENTED",
+      "evidence": [
+        "services/dsh/contracts/dsh.home-marketing-events.openapi.yaml",
+        "services/dsh/backend/internal/homediscovery/events.go",
+        "services/dsh/database/migrations/dsh-099_home_marketing_impression_dedup.sql",
+        "services/dsh/frontend/shared/home-discovery/home-discovery-events.ts",
+        "services/dsh/frontend/app-client/home-discovery/HomeDiscoveryShell.tsx"
+      ]
+    }
+  ],
+  "verification": {
+    "source_bindings": "services/dsh/tests/jrn-007-home-discovery-closure.test.mjs",
+    "go_invariants": "services/dsh/backend/internal/homediscovery/journey_007_test.go",
+    "route_invariants": "services/dsh/backend/internal/http/journey_007_routes_test.go",
+    "sql_invariants": "services/dsh/database/tests/dsh-098_099_home_discovery_invariants.sql",
+    "targeted_typecheck": "services/dsh/tsconfig.jrn-007.json",
+    "workflow": ".github/workflows/jrn-007-sambassam-verify.yml"
+  }
+}
