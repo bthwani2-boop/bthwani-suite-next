@@ -1,6 +1,7 @@
 import type { paths } from "../../../clients/generated/dsh-api";
 import { createDshFlexibleHttpClient } from "../_kernel/dsh-http-request";
 import { toCardViewModel, toDetailViewModel } from "./store-discovery.view-model";
+import type { DshStoreDetailDto } from "./store-discovery.types";
 import {
   loadingState,
   errorState,
@@ -42,6 +43,19 @@ function hasRuntimeCardContract(
     typeof value["hasCouponBadge"] === "boolean" &&
     typeof value["isPopular"] === "boolean" &&
     typeof value["publicationEligible"] === "boolean"
+  );
+}
+
+function hasRuntimeDetailContract(store: unknown): store is DshStoreDetailDto {
+  if (!hasRuntimeCardContract(store)) return false;
+  const value = store as unknown as Record<string, unknown>;
+  return (
+    typeof value["createdAt"] === "string" &&
+    typeof value["updatedAt"] === "string" &&
+    typeof value["addressLine"] === "string" &&
+    typeof value["coverageSummary"] === "string" &&
+    typeof value["operatingHours"] === "string" &&
+    typeof value["deliveryReadiness"] === "string"
   );
 }
 
@@ -128,6 +142,12 @@ export async function fetchStoreDetail(storeId: string): Promise<DshStoreDetailS
     );
     if (!response || !response.store) {
       return { kind: "error", message: "INVALID_RESPONSE: store detail missing" };
+    }
+    if (!hasRuntimeDetailContract(response.store)) {
+      return {
+        kind: "error",
+        message: "INVALID_RESPONSE: governed store operational context is incomplete",
+      };
     }
     return { kind: "success", store: toDetailViewModel(response.store) };
   } catch (err: unknown) {
