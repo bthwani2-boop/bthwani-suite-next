@@ -8,6 +8,8 @@ const lifecycleRoutes = read("services/dsh/backend/internal/http/partner_lifecyc
 const governedHandlers = read("services/dsh/backend/internal/partner/onboarding_integrity_handlers.go");
 const governedRepository = read("services/dsh/backend/internal/partner/onboarding_integrity_repository.go");
 const ownershipMigration = read("services/dsh/database/migrations/dsh-098_partner_onboarding_integrity.sql");
+const fieldActivationCard = read("services/dsh/frontend/app-field/components/DshFieldActivationCard.tsx");
+const identitySessionHook = read("core/identity/clients/use-identity-session.ts");
 
 function actor(id) {
   const value = truth.actors.find((candidate) => candidate.id === id);
@@ -79,4 +81,10 @@ assert.match(governedRepository, /currentPartnerID\.String != partnerID/);
 assert.match(ownershipMigration, /STORE_PARTNER_REASSIGNMENT_FORBIDDEN/);
 assert.match(ownershipMigration, /BEFORE UPDATE OF partner_id ON dsh_stores/);
 
-console.log("JRN-001 FS-02 RBAC and surface matrix verified");
+assert.match(fieldActivationCard, /configureIdentityActivationActorType\("field"\)/);
+assert.doesNotMatch(fieldActivationCard, /تجاوز المطور|دخول فوري|774182730/);
+assert.doesNotMatch(fieldActivationCard, /onSubmit\([^\n]*"000000"/);
+assert.match(identitySessionHook, /IDENTITY_ACTOR_TYPE_NOT_CONFIGURED/);
+assert.match(identitySessionHook, /activateIdentity\(configuredActivationActorType/);
+
+console.log("JRN-001 FS-02 RBAC, activation and surface matrix verified");
