@@ -73,6 +73,15 @@ export async function listDshOperatorServiceAreas(): Promise<
   return result.serviceAreas;
 }
 
+export async function getDshOperatorServiceArea(
+  serviceAreaCode: string,
+): Promise<DshServiceArea> {
+  const result = await request<{ serviceArea: DshServiceArea }>(
+    `/dsh/operator/platform/service-areas/${encodeURIComponent(serviceAreaCode)}`,
+  );
+  return result.serviceArea;
+}
+
 export async function upsertDshOperatorServiceArea(
   serviceAreaCode: string,
   input: DshServiceAreaUpsertInput,
