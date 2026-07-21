@@ -44,7 +44,7 @@ function CapacityInspector({
 }: {
   zone: DshZone;
   onClose: () => void;
-  onToggle: (nextActive: boolean) => Promise<void>;
+  onToggle: (zone: DshZone, nextActive: boolean) => Promise<void>;
 }) {
   const { state, reload, save } = useAreaCapacityController('authenticated', zone.id);
   const [form, setForm] = React.useState<CapacityForm>(EMPTY_FORM);
@@ -53,10 +53,15 @@ function CapacityInspector({
 
   React.useEffect(() => {
     if (state.kind !== 'success') return;
+    const capacityConfig = state.data.capacityConfig;
+    if (!capacityConfig) {
+      setForm(EMPTY_FORM);
+      return;
+    }
     setForm({
-      maxConcurrentOrders: String(state.data.capacityConfig.maxConcurrentOrders),
-      maxCaptainsOnline: String(state.data.capacityConfig.maxCaptainsOnline),
-      throttleThreshold: String(state.data.capacityConfig.throttleThreshold),
+      maxConcurrentOrders: String(capacityConfig.maxConcurrentOrders),
+      maxCaptainsOnline: String(capacityConfig.maxCaptainsOnline),
+      throttleThreshold: String(capacityConfig.throttleThreshold),
     });
   }, [state]);
 
@@ -73,6 +78,7 @@ function CapacityInspector({
         maxConcurrentOrders: parsePositiveInteger(form.maxConcurrentOrders, 'أقصى الطلبات المتزامنة'),
         maxCaptainsOnline: parsePositiveInteger(form.maxCaptainsOnline, 'أقصى الكباتن المتصلين'),
         throttleThreshold: parsePositiveInteger(form.throttleThreshold, 'حد الاختناق'),
+        reason: 'تحديث السعة التشغيلية للمنطقة من لوحة التحكم',
       });
       setFeedback('تم حفظ السعة وقراءة القيم المحدثة من النظام.');
     } catch (error) {
@@ -86,14 +92,14 @@ function CapacityInspector({
     setPendingAction('toggle');
     setFeedback(null);
     try {
-      await onToggle(!zone.isActive);
+      await onToggle(zone, !zone.isActive);
       setFeedback('تم تحديث حالة المنطقة وقراءة القائمة من النظام.');
     } catch (error) {
       setFeedback(error instanceof Error ? error.message : 'تعذر تحديث حالة المنطقة');
     } finally {
       setPendingAction(null);
     }
-  }, [onToggle, zone.isActive]);
+  }, [onToggle, zone]);
 
   return (
     <WebControlPanelInspectorShell title={`المنطقة والسعة — ${zone.name}`} onClose={onClose}>
@@ -230,7 +236,7 @@ export function AreaCapacityScreen({ hubHref: _hubHref, subGroup: _subGroup }: A
           <CapacityInspector
             zone={selectedZone}
             onClose={() => setSelectedZoneId(null)}
-            onToggle={async (nextActive) => { await toggle(selectedZone.id, nextActive); }}
+            onToggle={async (zone, nextActive) => { await toggle(zone, nextActive); }}
           />
         ) : (
           <StateView stateId="empty" title="اختر منطقة" description="افتح منطقة لعرض السعة وقابلية الخدمة وتحديثهما." />
