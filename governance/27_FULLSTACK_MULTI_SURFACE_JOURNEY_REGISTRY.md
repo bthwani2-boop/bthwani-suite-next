@@ -69,7 +69,7 @@ Initial baseline commit: `466d34bacdd7fde4cc1c351e094d3d4604b33268`
 | JRN-001 | تأهيل الشريك والمتجر ونشره | DSH + Identity + Workforce | NEEDS_EVIDENCE |
 | JRN-002 | الهوية والتفعيل والجلسات | Identity | NEEDS_EVIDENCE |
 | JRN-003 | القوى العاملة والموارد البشرية | Workforce + Identity + DSH | NEEDS_EVIDENCE |
-| JRN-004 | اكتشاف المتاجر وسياقها وحوكمتها | DSH | NEEDS_EVIDENCE |
+| JRN-004 | اكتشاف المتاجر وسياقها وحوكمتها | DSH | READY_FOR_REVIEW |
 | JRN-005 | دفتر عناوين العميل | DSH | NEEDS_EVIDENCE |
 | JRN-006 | الخرائط ومناطق الخدمة وخصوصية العناوين | Providers + DSH | NEEDS_EVIDENCE |
 | JRN-007 | الصفحة الرئيسية والاكتشاف التسويقي | DSH | NEEDS_EVIDENCE |
@@ -173,6 +173,15 @@ Initial baseline commit: `466d34bacdd7fde4cc1c351e094d3d4604b33268`
 - قائمة المتاجر التشغيلية وتفاصيل المشغل.
 - حوكمة المتجر والتشخيص والإخفاء والحظر وإعادة التفعيل.
 - سجل تدقيق المتجر وقراءة أثر القرار في كل سطح.
+
+
+حالة التنفيذ الحالية: `READY_FOR_REVIEW`.
+
+- سجل الشرائح: `services/dsh/contracts/jrn-004-slice-verification-registry.json`.
+- Product Truth: `governance/product-truth/JRN-004_STORE_DISCOVERY_CONTEXT_GOVERNANCE.md`.
+- دليل التنفيذ: `governance/evidence/JRN-004_SLICE_EXECUTION_LOG.md`.
+- بوابة نفس الالتزام: `journeys/jrn-004/fullstack-slices`.
+- جميع الشرائح الوظيفية و`FS-01..FS-18` مغلقة داخليًا؛ الموافقات المستقلة فقط متبقية قبل `CLOSED_WITH_EVIDENCE`.
 
 ### JRN-005 — دفتر عناوين العميل
 
