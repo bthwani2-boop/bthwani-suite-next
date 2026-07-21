@@ -5,7 +5,6 @@ import {
   acceptDispatchAssignment,
   declineDispatchAssignment,
   reportDeliveryException,
-  submitPoD,
   updateDeliveryStatus,
 } from '../dispatch/dispatch.api';
 import { updateForegroundDispatchLocation } from '../dispatch/dispatch-location.api';
@@ -104,15 +103,6 @@ export function useCaptainOrderRuntime() {
     [],
   );
 
-  const deliverOrder = React.useCallback(
-    (assignmentId: string, _captainId: string, podMediaKey?: string) =>
-      submitPoD(assignmentId, {
-        method: 'photo',
-        reference: podMediaKey ?? 'captain-confirmed-delivery',
-      }),
-    [],
-  );
-
   const failDelivery = React.useCallback(
     async (assignmentId: string, _captainId: string, draft: CaptainDeliveryExceptionDraft): Promise<DshDeliveryException> => {
       let coordinates: DshCaptainCoordinates | undefined;
@@ -137,10 +127,9 @@ export function useCaptainOrderRuntime() {
       declineTask,
       confirmPickup,
       pushLocation,
-      deliverOrder,
       failDelivery,
     }),
-    [acceptTask, confirmPickup, declineTask, deliverOrder, failDelivery, pushLocation],
+    [acceptTask, confirmPickup, declineTask, failDelivery, pushLocation],
   );
 }
 
