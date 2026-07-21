@@ -20,6 +20,7 @@ on:
       - services/dsh/frontend/shared/partner-delivery/use-partner-delivery-controller.tsx
       - services/dsh/frontend/shared/dispatch/use-partner-return-to-store-controller.ts
       - services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx
+      - tools/guards/jrn-010-015-affected-boundary.mjs
       - tools/guards/jrn-015-020-affected-boundary.mjs
       - tools/scripts/build-swagger-static.mjs
 
