@@ -41,11 +41,15 @@ export type DshStoreCardViewModel = {
   readonly hasCouponBadge: boolean;
   readonly pointsMultiplier: number | null;
   readonly isPopular: boolean;
-  /** true only when backend confirms partner onboarding_status = 'client_visible' */
+  /** true only when backend confirms all publication gates. */
   readonly isClientEligible: boolean;
 };
 
 export type DshStoreDetailViewModel = DshStoreCardViewModel & {
+  readonly addressLine: string;
+  readonly coverageSummary: string;
+  readonly operatingHours: string;
+  readonly deliveryReadiness: string;
   readonly createdAt: string;
   readonly updatedAt: string;
 };
@@ -141,13 +145,17 @@ export function toCardViewModel(dto: DshStoreSummaryDto): DshStoreCardViewModel 
     hasCouponBadge: dto.hasCouponBadge,
     pointsMultiplier: dto.pointsMultiplier ?? null,
     isPopular: dto.isPopular,
-    isClientEligible: (dto as { publicationEligible?: boolean }).publicationEligible ?? false,
+    isClientEligible: dto.publicationEligible,
   };
 }
 
 export function toDetailViewModel(dto: DshStoreDetailDto): DshStoreDetailViewModel {
   return {
     ...toCardViewModel(dto),
+    addressLine: dto.addressLine.trim(),
+    coverageSummary: dto.coverageSummary.trim(),
+    operatingHours: dto.operatingHours.trim(),
+    deliveryReadiness: dto.deliveryReadiness.trim(),
     createdAt: dto.createdAt,
     updatedAt: dto.updatedAt,
   };
