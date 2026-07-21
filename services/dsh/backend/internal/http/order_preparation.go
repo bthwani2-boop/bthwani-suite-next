@@ -135,7 +135,7 @@ func (s *protectedStoreServer) handleRevisePreparationEstimate(w http.ResponseWr
 }
 
 func (s *protectedStoreServer) handleGetOrderPreparation(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "client", "partner", "operator")
+	actor, ok := s.requireActor(w, r, "client", "partner", "captain", "operator")
 	if !ok {
 		return
 	}
@@ -158,9 +158,26 @@ func (s *protectedStoreServer) handleGetOrderPreparation(w http.ResponseWriter, 
 		if _, ownedOrder, exists := s.partnerOrder(w, r); !exists || ownedOrder.ID != orderID {
 			return
 		}
+	case "captain":
+		allowed, err := captainCanReadOrderPreparation(r.Context(), s.db, orderID, actor.TenantID, actor.ID)
+		if err != nil {
+			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to authorize captain order")
+			return
+		}
+		if !allowed {
+			store.SendError(w, http.StatusNotFound, "NOT_FOUND", "order not found")
+			return
+		}
 	case "operator":
-		// The role was already resolved by requireActor. Operator order timing is a
-		// read-only operational projection and never grants a mutation capability.
+		if _, permitted := s.requirePermission(
+			w,
+			r,
+			"control-panel",
+			OperationsPermissionRead,
+			"operator",
+		); !permitted {
+			return
+		}
 	}
 
 	timing, err := orders.GetPreparationTiming(s.db, orderID, time.Now())
