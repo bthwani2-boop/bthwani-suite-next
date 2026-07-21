@@ -24,9 +24,9 @@ func RegisterPartnerLifecycleRoutes(
 	// Control-panel: partner intake, review, activation, documents, stores,
 	// field evidence and immutable audit history.
 	mux.HandleFunc("GET /dsh/operator/partners", protected.handleListPartners)
-	mux.HandleFunc("POST /dsh/operator/partners", protected.handleCreatePartner)
+	mux.HandleFunc("POST /dsh/operator/partners", observePartnerOnboardingRoute("operator.create_partner", protected.handleCreatePartner))
 	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}", protected.handleGovernedGetPartner)
-	mux.HandleFunc("POST /dsh/operator/partners/{partnerId}/transition", protected.handleGovernedActivationTransition)
+	mux.HandleFunc("POST /dsh/operator/partners/{partnerId}/transition", observePartnerOnboardingRoute("operator.transition_partner", protected.handleGovernedActivationTransition))
 	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/readiness", protected.handleGetPartnerReadiness)
 	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/documents", protected.handleListPartnerDocuments)
 	mux.HandleFunc("POST /dsh/operator/partners/{partnerId}/documents", protected.handleAddPartnerDocument)
@@ -39,15 +39,15 @@ func RegisterPartnerLifecycleRoutes(
 	// App-field: owned drafts, store profile, documents, visits, readiness and
 	// submission. Every handler verifies the field actor and draft ownership.
 	mux.HandleFunc("GET /dsh/field/partners", protected.handleFieldListPartnerDrafts)
-	mux.HandleFunc("POST /dsh/field/partners/drafts", protected.handleFieldCreatePartnerDraft)
+	mux.HandleFunc("POST /dsh/field/partners/drafts", observePartnerOnboardingRoute("field.create_draft", protected.handleFieldCreatePartnerDraft))
 	mux.HandleFunc("GET /dsh/field/partners/{partnerId}", protected.handleGovernedFieldGetPartnerDraft)
-	mux.HandleFunc("PATCH /dsh/field/partners/{partnerId}", protected.handleGovernedFieldUpdatePartnerDraft)
+	mux.HandleFunc("PATCH /dsh/field/partners/{partnerId}", observePartnerOnboardingRoute("field.update_draft", protected.handleGovernedFieldUpdatePartnerDraft))
 	mux.HandleFunc("GET /dsh/field/partners/{partnerId}/readiness", protected.handleFieldGetPartnerReadiness)
 	mux.HandleFunc("GET /dsh/field/partners/{partnerId}/store", protected.handleFieldGetPartnerStore)
 	mux.HandleFunc("PATCH /dsh/field/partners/{partnerId}/store", protected.handleFieldUpdatePartnerStore)
 	mux.HandleFunc("GET /dsh/field/partners/{partnerId}/documents", protected.handleFieldListPartnerDocuments)
 	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/documents", protected.handleFieldUploadPartnerDocument)
-	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/visits", protected.handleGovernedFieldCreatePartnerVisit)
+	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/visits", observePartnerOnboardingRoute("field.capture_visit", protected.handleGovernedFieldCreatePartnerVisit))
 	mux.HandleFunc("GET /dsh/field/partners/{partnerId}/field-visits", protected.handleFieldListPartnerFieldVisits)
-	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/submit", protected.handleGovernedFieldSubmitPartnerDraft)
+	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/submit", observePartnerOnboardingRoute("field.submit_partner", protected.handleGovernedFieldSubmitPartnerDraft))
 }
