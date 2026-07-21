@@ -1,0 +1,105 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-009",
+  "journeyName": "العربة وقابلية الخدمة",
+  "repository": "bthwani2-boop/bthwani-suite-next",
+  "branch": "sambassam",
+  "decision": "READY_FOR_REVIEW",
+  "codeClosure": "COMPLETE",
+  "technicalAcceptanceResult": "PASS",
+  "implementationCommit": "0c1e61105debbf1b813d332325574333fe710f26",
+  "workflow": ".github/workflows/jrn-009-sambassam-verify.yml",
+  "workflowRunId": 29871172199,
+  "statusContext": "journeys/jrn-009/all-slices",
+  "statusState": "success",
+  "sameCommitEvidence": true,
+  "checks": {
+    "staticAllSlices": "PASS",
+    "frontendAffectedTypecheck": "PASS",
+    "cartDomainGo": "PASS",
+    "mountedHttpGo": "PASS",
+    "postgresqlMigrations": "PASS",
+    "identityAndDshRuntime": "PASS",
+    "governedSeeds": "PASS",
+    "allSlicesRuntimeSmoke": "PASS"
+  },
+  "artifacts": [
+    {
+      "id": 8511238667,
+      "name": "jrn-009-all-slices-runtime-evidence",
+      "digest": "sha256:3757d2408337a1bbacedf4c49c757308fc2ade5b6fce569f7e4f7ea341ddda44",
+      "expiresAt": "2026-07-24T21:47:07Z"
+    },
+    {
+      "id": 8511194139,
+      "name": "jrn-009-all-slices-frontend-typecheck",
+      "digest": "sha256:fd58d6f7e902659d5db38b5ef8abc3934b3165aa9572567a8c7dd658defd8bf9",
+      "expiresAt": "2026-07-24T21:45:26Z"
+    }
+  ],
+  "slices": [
+    {
+      "sliceId": "JRN-009-S01",
+      "name": "server-cart-load-and-real-state",
+      "status": "CLOSED_WITH_EVIDENCE",
+      "evidence": ["staticAllSlices", "frontendAffectedTypecheck", "allSlicesRuntimeSmoke"]
+    },
+    {
+      "sliceId": "JRN-009-S02",
+      "name": "owned-add-quantity-remove-and-clear",
+      "status": "CLOSED_WITH_EVIDENCE",
+      "evidence": ["cartDomainGo", "mountedHttpGo", "allSlicesRuntimeSmoke"]
+    },
+    {
+      "sliceId": "JRN-009-S03",
+      "name": "product-price-and-assortment-snapshot",
+      "status": "CLOSED_WITH_EVIDENCE",
+      "evidence": ["staticAllSlices", "postgresqlMigrations", "allSlicesRuntimeSmoke"]
+    },
+    {
+      "sliceId": "JRN-009-S04",
+      "name": "store-address-zone-and-fulfillment-validation",
+      "status": "CLOSED_WITH_EVIDENCE",
+      "evidence": ["mountedHttpGo", "identityAndDshRuntime", "allSlicesRuntimeSmoke"]
+    },
+    {
+      "sliceId": "JRN-009-S05",
+      "name": "coverage-capacity-readiness-and-sla",
+      "status": "CLOSED_WITH_EVIDENCE",
+      "evidence": ["postgresqlMigrations", "governedSeeds", "allSlicesRuntimeSmoke"]
+    },
+    {
+      "sliceId": "JRN-009-S06",
+      "name": "unavailability-price-and-assortment-reconciliation",
+      "status": "CLOSED_WITH_EVIDENCE",
+      "evidence": ["cartDomainGo", "frontendAffectedTypecheck", "allSlicesRuntimeSmoke"]
+    },
+    {
+      "sliceId": "JRN-009-S07",
+      "name": "single-active-store-cart",
+      "status": "CLOSED_WITH_EVIDENCE",
+      "evidence": ["postgresqlMigrations", "cartDomainGo", "allSlicesRuntimeSmoke"]
+    },
+    {
+      "sliceId": "JRN-009-S08",
+      "name": "operator-read-only-cart-observability",
+      "status": "CLOSED_WITH_EVIDENCE",
+      "evidence": ["mountedHttpGo", "frontendAffectedTypecheck", "allSlicesRuntimeSmoke"]
+    }
+  ],
+  "openCodeGaps": [],
+  "openSliceCount": 0,
+  "failedRequiredCheckCount": 0,
+  "financialBoundary": "DSH owns operational cart and commercial snapshots; WLT remains the sole payment and ledger truth owner.",
+  "independentReviewPending": [
+    "product_owner_approval",
+    "qa_physical_device_runtime_rtl_accessibility_evidence",
+    "security_and_privacy_approval",
+    "release_and_production_approval"
+  ],
+  "unrelatedRepositoryStatus": {
+    "context": "journeys/jrn-001-010/targeted-verification",
+    "state": "failure",
+    "reason": "Identity TypeScript client and surfaces failed outside JRN-009 scope; JRN-009 static, Go, TypeScript, PostgreSQL, and runtime jobs all passed on the implementation commit."
+  }
+}
