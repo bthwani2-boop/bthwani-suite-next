@@ -15,7 +15,8 @@ export type DshStaffMember = {
   readonly assignedAt: string;
 };
 
-export type DshRoleAssignmentApprovalStatus = "pending" | "approved" | "rejected";
+export type DshAdministrationApprovalStatus = "pending" | "approved" | "rejected";
+export type DshRoleAssignmentApprovalStatus = DshAdministrationApprovalStatus;
 
 export type DshRoleAssignmentApproval = {
   readonly id: string;
@@ -26,6 +27,22 @@ export type DshRoleAssignmentApproval = {
   readonly requestedBy: string;
   readonly reason: string;
   readonly status: DshRoleAssignmentApprovalStatus;
+  readonly reviewedBy: string;
+  readonly reviewNote: string;
+  readonly version: number;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly reviewedAt?: string;
+};
+
+export type DshRoleDefinitionRequest = {
+  readonly id: string;
+  readonly roleName: string;
+  readonly description: string;
+  readonly permissions: readonly string[];
+  readonly requestedBy: string;
+  readonly reason: string;
+  readonly status: DshAdministrationApprovalStatus;
   readonly reviewedBy: string;
   readonly reviewNote: string;
   readonly version: number;
