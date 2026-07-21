@@ -2,6 +2,7 @@ package http
 
 import (
 	"net/http"
+	"strings"
 
 	"dsh-api/internal/analytics"
 	"dsh-api/internal/clientaddress"
@@ -15,11 +16,17 @@ func (s *protectedStoreServer) handleResolveEscalation(w http.ResponseWriter, r 
 }
 
 func (s *protectedStoreServer) handleGetOperationsAnalytics(w http.ResponseWriter, r *http.Request) {
+	// Preserve the historical platform-KPI response unless the caller explicitly
+	// requests the additive client-address diagnostic projection.
+	if !strings.EqualFold(strings.TrimSpace(r.URL.Query().Get("include")), "client-address-book") {
+		s.handlePlatformKpis(w, r)
+		return
+	}
 	_, ok := s.requirePermission(w, r, "control-panel", AnalyticsPermissionRead, "operator")
 	if !ok {
 		return
 	}
-	period := r.URL.Query().Get("period")
+	period := strings.TrimSpace(r.URL.Query().Get("period"))
 	if period == "" {
 		period = "today"
 	}
@@ -37,7 +44,7 @@ func (s *protectedStoreServer) handleGetOperationsAnalytics(w http.ResponseWrite
 		"period":   period,
 		"platform": platform,
 		"clientAddressBook": map[string]any{
-			"integrity": integrity,
+			"integrity":  integrity,
 			"operations": clientaddress.TelemetrySnapshot(),
 		},
 	})
