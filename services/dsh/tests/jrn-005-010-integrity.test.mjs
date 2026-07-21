@@ -16,20 +16,41 @@ test("JRN-005 persists address retry identity across application restarts", () =
   assert.doesNotMatch(controller, /createAttempt\s*=\s*useRef/);
 });
 
-test("JRN-006 keeps map calls behind DSH and service-area governance", () => {
+test("JRN-006 keeps map calls and address writes behind governed service areas", () => {
   const controller = read("frontend/shared/client-map/use-client-map-controller.ts");
   const api = read("frontend/shared/client-map/client-map.api.ts");
-  const handler = read("backend/internal/http/client_maps.go");
+  const mapHandler = read("backend/internal/http/client_maps.go");
+  const addressHandler = read("backend/internal/http/client_addresses.go");
+  const addressBinding = read("backend/internal/clientaddress/address_service_area.go");
   const provider = read("backend/internal/mapproviders/client.go");
+  const migration = read("database/migrations/dsh-906_jrn_006_client_address_geofence_binding.sql");
+  const contract = read("contracts/dsh.client-address.openapi.yaml");
 
   assert.match(controller, /searchDshClientMapLocations/);
   assert.match(controller, /reverseDshClientMapLocation/);
   assert.match(api, /\/dsh\/client\/maps\/search/);
   assert.match(api, /\/dsh\/client\/maps\/reverse/);
-  assert.match(handler, /servicearea\.Resolve/);
-  assert.match(handler, /ServiceAreaVerified/);
+  assert.match(mapHandler, /servicearea\.Resolve/);
+  assert.match(mapHandler, /ServiceAreaVerified/);
   assert.match(provider, /\/providers\/maps\/search/);
   assert.match(provider, /\/providers\/maps\/reverse/);
+
+  assert.match(addressBinding, /FindCreateReplay/);
+  assert.match(addressBinding, /ValidateServiceArea/);
+  assert.match(addressBinding, /servicearea\.Resolve/);
+  assert.match(addressBinding, /ErrServiceAreaUnverified/);
+  assert.match(addressHandler, /clientaddress\.FindCreateReplay/);
+  assert.match(addressHandler, /clientaddress\.ValidateServiceArea/);
+  assert.match(addressHandler, /ADDRESS_SERVICE_AREA_UNVERIFIED/);
+  assert.match(addressHandler, /StatusUnprocessableEntity/);
+
+  assert.match(migration, /dsh_enforce_client_address_service_area/);
+  assert.match(migration, /DSH_ADDRESS_COORDINATES_REQUIRED/);
+  assert.match(migration, /DSH_ADDRESS_SERVICE_AREA_UNVERIFIED/);
+  assert.match(migration, /g\.active = TRUE/);
+  assert.match(migration, /FOR SHARE/);
+  assert.match(contract, /"422": \{ \$ref: "#\/components\/responses\/ServiceAreaUnverified" \}/);
+  assert.match(contract, /required: \[label, recipientName, phoneE164, addressLine, serviceAreaCode, latitude, longitude\]/);
 });
 
 test("JRN-007 scopes discovery to the persisted selected address", () => {
