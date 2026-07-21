@@ -1,10 +1,12 @@
 import type { components, paths } from "./generated/identity-api.ts";
 
 export type ActorIdentity = components["schemas"]["ActorIdentity"];
+export type RuntimeStatus = components["schemas"]["RuntimeStatus"];
 export type LoginRequest = components["schemas"]["LoginRequest"];
 export type OtpRequest = components["schemas"]["OtpRequest"];
 export type IssueActivationResponse = components["schemas"]["IssueActivationResponse"];
 export type ActivateRequest = components["schemas"]["ActivateRequest"];
+export type IntrospectRequest = components["schemas"]["IntrospectRequest"];
 export type ActivationActorType = ActivateRequest["actorType"];
 export type SessionInfo = components["schemas"]["SessionInfo"];
 export type TokenResponse =
@@ -15,10 +17,13 @@ export type IdentityClientError =
   | { readonly kind: "network"; readonly message: string };
 
 export type IdentityClient = {
+  health(): Promise<RuntimeStatus>;
+  readiness(): Promise<RuntimeStatus>;
   login(request: LoginRequest): Promise<TokenResponse>;
   requestOtp(request: OtpRequest): Promise<IssueActivationResponse>;
   activate(request: ActivateRequest): Promise<TokenResponse>;
   session(accessToken: string): Promise<ActorIdentity>;
+  introspect(request: IntrospectRequest): Promise<ActorIdentity>;
   refresh(refreshToken: string): Promise<TokenResponse>;
   listSessions(accessToken: string): Promise<SessionInfo[]>;
   revokeSession(accessToken: string, sessionId: string): Promise<void>;
@@ -74,6 +79,12 @@ export function createIdentityClient(baseUrl: string): IdentityClient {
   }
 
   return {
+    health() {
+      return request("/identity/health", { method: "GET" });
+    },
+    readiness() {
+      return request("/identity/readiness", { method: "GET" });
+    },
     login(body) {
       return request("/auth/login", { method: "POST", body });
     },
@@ -85,6 +96,9 @@ export function createIdentityClient(baseUrl: string): IdentityClient {
     },
     session(accessToken) {
       return request("/auth/session", { method: "GET", token: accessToken });
+    },
+    introspect(body) {
+      return request("/auth/introspect", { method: "POST", body });
     },
     refresh(refreshToken) {
       return request("/auth/refresh", { method: "POST", body: { refreshToken } });
