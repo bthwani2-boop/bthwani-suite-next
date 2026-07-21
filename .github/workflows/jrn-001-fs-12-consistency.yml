@@ -15,7 +15,7 @@ permissions:
   statuses: write
 
 jobs:
-  truth-guard:
+  truth_guard:
     name: Committed readback and local-truth guard
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -28,7 +28,7 @@ jobs:
           node-version: 24.17.0
       - run: node tools/guards/partner/jrn-001-cross-surface-truth-gate.mjs
 
-  app-field:
+  app_field:
     name: Typecheck app-field JRN-001 consumer
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -45,7 +45,7 @@ jobs:
           pnpm install --frozen-lockfile --reporter=silent
       - run: pnpm --dir apps/app-field/runtime typecheck
 
-  app-partner:
+  app_partner:
     name: Typecheck app-partner JRN-001 consumer
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -62,7 +62,7 @@ jobs:
           pnpm install --frozen-lockfile --reporter=silent
       - run: pnpm --dir apps/app-partner/runtime typecheck
 
-  control-panel:
+  control_panel:
     name: Typecheck control-panel JRN-001 consumer
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -82,7 +82,7 @@ jobs:
   result:
     name: Publish FS-12 result
     if: always()
-    needs: [truth-guard, app-field, app-partner, control-panel]
+    needs: [truth_guard, app_field, app_partner, control_panel]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -90,10 +90,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           COMMIT_SHA: ${{ github.sha }}
-          GUARD_RESULT: ${{ needs.truth-guard.result }}
-          APP_FIELD_RESULT: ${{ needs.app-field.result }}
-          APP_PARTNER_RESULT: ${{ needs.app-partner.result }}
-          CONTROL_PANEL_RESULT: ${{ needs.control-panel.result }}
+          GUARD_RESULT: ${{ needs.truth_guard.result }}
+          APP_FIELD_RESULT: ${{ needs.app_field.result }}
+          APP_PARTNER_RESULT: ${{ needs.app_partner.result }}
+          CONTROL_PANEL_RESULT: ${{ needs.control_panel.result }}
           TARGET_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         shell: bash
         run: |
