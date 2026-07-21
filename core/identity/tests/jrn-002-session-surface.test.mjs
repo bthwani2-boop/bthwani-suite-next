@@ -71,6 +71,24 @@ test("JRN-002 typechecks every identity-consuming runtime", async () => {
   }
 });
 
-test("JRN-002 leaves no temporary diagnostic workflow", () => {
-  assert.equal(existsSync(".github/workflows/tmp-jrn-002-diagnostics.yml"), false);
+test("JRN-002 removes stale generated declarations and temporary diagnostics", async () => {
+  const [clientDeclaration, storeDeclaration, hookDeclaration] = await Promise.all([
+    read("core/identity/clients/identity-client.d.ts"),
+    read("core/identity/clients/identity-session-store.d.ts"),
+    read("core/identity/clients/use-identity-session.d.ts"),
+  ]);
+
+  assert.doesNotMatch(storeDeclaration, /devBypassLogin/);
+  assert.match(clientDeclaration, /requestOtp/);
+  assert.match(storeDeclaration, /activateIdentity\(actorType: ActivationActorType/);
+  assert.match(hookDeclaration, /revokeSession/);
+
+  for (const removedPath of [
+    ".github/workflows/tmp-jrn-002-diagnostics.yml",
+    "core/identity/clients/identity-client.d.ts.map",
+    "core/identity/clients/identity-session-store.d.ts.map",
+    "core/identity/clients/use-identity-session.d.ts.map",
+  ]) {
+    assert.equal(existsSync(removedPath), false, `${removedPath} must remain removed`);
+  }
 });
