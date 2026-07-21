@@ -96,16 +96,16 @@ export function CaptainAssignmentOfferPanel({
             onChangeText={setReason}
             editable={!busy && !expired}
             placeholder="مثال: عطل بالمركبة أو تعذر الوصول"
-            placeholderTextColor={colorRoles.textMuted}
+            placeholderTextColor={colorRoles.brandStructure}
             multiline
             textAlign="right"
             style={{
               minHeight: 72,
               borderWidth: 1,
-              borderColor: colorRoles.borderDefault,
+              borderColor: colorRoles.brandStructure,
               borderRadius: 10,
               padding: spacing[3],
-              color: colorRoles.textPrimary,
+              color: colorRoles.brandStructure,
               backgroundColor: colorRoles.surfaceBase,
             }}
           />
