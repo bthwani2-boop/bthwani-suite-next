@@ -10,6 +10,7 @@ import (
 
 func TestClientAddressMutationOwnershipIsolation(t *testing.T) {
 	db := openAddressIntegrationDB(t)
+	ensureIntegrationServiceArea(t, db)
 	ctx := context.Background()
 	suffix := fmt.Sprintf("%08d", time.Now().UnixNano()%100000000)
 	ownerID := "jrn005-owner-" + suffix
