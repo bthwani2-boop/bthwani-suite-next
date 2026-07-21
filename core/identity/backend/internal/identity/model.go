@@ -21,19 +21,16 @@ type Permission struct {
 }
 
 type ActorIdentity struct {
-	Subject          string          `json:"subject"`
-	TenantID         string          `json:"tenantId"`
-	PhoneE164        string          `json:"phoneE164"`
-	Roles            []string        `json:"roles"`
-	Permissions      []Permission    `json:"permissions"`
-	AuthState        string          `json:"authState"`
-	SurfaceAccess    map[string]bool `json:"surfaceAccess"`
-	ServiceAccess    map[string]bool `json:"serviceAccess"`
-	SessionID        string          `json:"sessionId"`
-	SessionKind      string          `json:"sessionKind"`
-	InitiatorActorID string          `json:"initiatorActorId,omitempty"`
-	SupportRequestID string          `json:"supportRequestId,omitempty"`
-	ExpiresAt        time.Time       `json:"expiresAt"`
+	Subject       string          `json:"subject"`
+	TenantID      string          `json:"tenantId"`
+	PhoneE164     string          `json:"phoneE164"`
+	Roles         []string        `json:"roles"`
+	Permissions   []Permission    `json:"permissions"`
+	AuthState     string          `json:"authState"`
+	SurfaceAccess map[string]bool `json:"surfaceAccess"`
+	ServiceAccess map[string]bool `json:"serviceAccess"`
+	SessionID     string          `json:"sessionId"`
+	ExpiresAt     time.Time       `json:"expiresAt"`
 }
 
 type TokenPair struct {
@@ -41,21 +38,6 @@ type TokenPair struct {
 	RefreshToken string
 	AccessExpiry time.Time
 	Identity     ActorIdentity
-}
-
-type SupportSessionToken struct {
-	AccessToken  string        `json:"accessToken"`
-	TokenType    string        `json:"tokenType"`
-	ExpiresIn    int           `json:"expiresIn"`
-	Identity     ActorIdentity `json:"identity"`
-}
-
-type SupportSessionInput struct {
-	SupportRequestID string
-	TargetActorID    string
-	InitiatorActorID string
-	Reason           string
-	Duration         time.Duration
 }
 
 type LocalBootstrap struct {
