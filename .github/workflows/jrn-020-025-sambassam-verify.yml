@@ -1,5 +1,5 @@
 name: JRN 020-025 sambassam verification
-# Closure verification for the unified journeys 020 through 025.
+# Final closure verification for unified journeys 020 through 025 and their multisurface consumers.
 
 on:
   push:
@@ -10,12 +10,19 @@ on:
       - services/dsh/frontend/shared/dispatch/**
       - services/dsh/frontend/shared/support/**
       - services/dsh/frontend/shared/delivery/**
+      - services/dsh/frontend/shared/orders/**
+      - services/dsh/frontend/shared/operations/**
+      - services/dsh/frontend/shared/workforce/**
+      - services/dsh/frontend/shared/partner/**
       - services/dsh/frontend/shared/special-requests/**
       - services/dsh/frontend/shared/notifications/**
       - services/dsh/frontend/shared/field-readiness/**
       - services/dsh/frontend/shared/marketing/**
-      - services/dsh/frontend/app-captain/orders/**
-      - services/dsh/frontend/app-captain/account/**
+      - services/dsh/frontend/app-client/**
+      - services/dsh/frontend/app-partner/**
+      - services/dsh/frontend/app-captain/**
+      - services/dsh/frontend/app-field/**
+      - services/dsh/frontend/control-panel/operations/**
       - services/dsh/backend/cmd/dsh-api/main.go
       - services/dsh/backend/internal/dispatch/**
       - services/dsh/backend/internal/support/**
@@ -71,24 +78,43 @@ jobs:
             "compilerOptions": { "noEmit": true },
             "files": [
               "../services/dsh/frontend/css-modules.d.ts",
-              "../services/dsh/frontend/shared/dispatch/dispatch.api.ts",
-              "../services/dsh/frontend/shared/support/actor-support.api.ts",
+              "../services/dsh/frontend/shared/dispatch/index.ts",
+              "../services/dsh/frontend/shared/support/index.ts",
+              "../services/dsh/frontend/shared/orders/index.ts",
+              "../services/dsh/frontend/shared/operations/index.ts",
+              "../services/dsh/frontend/shared/workforce/index.ts",
+              "../services/dsh/frontend/shared/partner/index.ts",
+              "../services/dsh/frontend/shared/special-requests/index.ts",
+              "../services/dsh/frontend/shared/notifications/index.ts",
+              "../services/dsh/frontend/shared/field-readiness/index.ts",
+              "../services/dsh/frontend/shared/marketing/index.ts",
               "../services/dsh/frontend/shared/support/support-mutation-attempt.ts",
               "../services/dsh/frontend/shared/delivery/delivery.policy.ts",
               "../services/dsh/frontend/shared/delivery/captain-navigation.model.ts",
-              "../services/dsh/frontend/shared/special-requests/use-special-requests-controller.tsx",
-              "../services/dsh/frontend/shared/notifications/notifications.api.ts",
-              "../services/dsh/frontend/shared/notifications/use-notifications-controller.tsx",
-              "../services/dsh/frontend/shared/notifications/ActorNotificationsPanel.tsx",
-              "../services/dsh/frontend/shared/field-readiness/use-field-readiness-controller.tsx",
-              "../services/dsh/frontend/shared/marketing/use-marketing-controller.tsx",
+              "../services/dsh/frontend/app-client/orders/useClientOrderJourneyController.ts",
+              "../services/dsh/frontend/app-client/orders/OrderTrackingScreen.tsx",
+              "../services/dsh/frontend/app-partner/account/PartnerHubScreen.tsx",
+              "../services/dsh/frontend/app-partner/account/PartnerAnalyticsInsightsPanel.tsx",
+              "../services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx",
+              "../services/dsh/frontend/app-partner/orders/PreparationEstimateRevisionPanel.tsx",
+              "../services/dsh/frontend/app-partner/orders/usePartnerOrderCommands.ts",
+              "../services/dsh/frontend/app-partner/orders/usePartnerOrdersRuntime.ts",
+              "../services/dsh/frontend/app-captain/DshCaptainRouteRenderer.tsx",
+              "../services/dsh/frontend/app-captain/orders/DshCaptainPoDSubmissionScreen.tsx",
               "../services/dsh/frontend/app-captain/orders/CaptainOrderSupportConversationScreen.tsx",
-              "../services/dsh/frontend/app-captain/account/CaptainSupportScreenRouter.tsx"
+              "../services/dsh/frontend/app-captain/orders/OrderChatSection.tsx",
+              "../services/dsh/frontend/app-captain/account/CaptainSupportScreenRouter.tsx",
+              "../services/dsh/frontend/app-field/account/DshFieldProfileHomeScreen.tsx",
+              "../services/dsh/frontend/app-field/account/DshFieldProfileScreen.tsx",
+              "../services/dsh/frontend/control-panel/operations/ExceptionsEscalationsScreen.tsx",
+              "../services/dsh/frontend/control-panel/operations/OrderJourneyDispatchAssignmentScreen.tsx",
+              "../services/dsh/frontend/control-panel/operations/OrderJourneyLiveOrdersScreen.tsx",
+              "../services/dsh/frontend/control-panel/operations/OrderJourneyOperatorIntervention.tsx"
             ]
           }
           JSON
 
-      - name: Typecheck journey files and consumers
+      - name: Typecheck journey files and multisurface consumers
         shell: bash
         run: |
           echo "typecheck-journey-files" > /tmp/jrn-verification-stage
