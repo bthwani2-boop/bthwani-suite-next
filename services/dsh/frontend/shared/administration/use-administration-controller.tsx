@@ -1,14 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
 import {
+  fetchRoles,
   fetchStaff,
   requestStaffRoleAssignment,
+  fetchPartnerActivations,
   fetchCaptainCredentials,
   fetchAdminAudit,
   fetchRoleAssignmentApprovals,
   reviewRoleAssignmentApproval,
 } from "./administration.api";
 import type {
+  DshRole,
   DshStaffMember,
+  DshPartnerActivation,
   DshCaptainCredential,
   DshAdminAuditEntry,
   DshAdminState,
@@ -16,16 +20,41 @@ import type {
   DshRoleAssignmentApprovalStatus,
 } from "./administration.types";
 
-export function useStaffController(authKind: string) {
-  const [state, setState] = useState<DshAdminState<DshStaffMember[]>>({ kind: "idle" });
+function useReadModel<T>(authKind: string, loader: () => Promise<T>) {
+  const [state, setState] = useState<DshAdminState<T>>({ kind: "idle" });
   const load = useCallback(async () => {
     setState({ kind: "loading" });
-    try { setState({ kind: "success", data: (await fetchStaff()).staff }); }
-    catch (err) { setState({ kind: "error", message: msg(err) }); }
-  }, []);
-  useEffect(() => { if (authKind !== "authenticated") { setState({ kind: "idle" }); return; } load(); }, [authKind, load]);
+    try { setState({ kind: "success", data: await loader() }); }
+    catch (err) { setState({ kind: "error", message: messageFromError(err) }); }
+  }, [loader]);
+  useEffect(() => {
+    if (authKind !== "authenticated") {
+      setState({ kind: "idle" });
+      return;
+    }
+    void load();
+  }, [authKind, load]);
+  return { state, reload: load };
+}
+
+function messageFromError(err: unknown): string {
+  const error = err as { status?: number; message?: string } | undefined;
+  if (error?.status === 401) return "الجلسة منتهية";
+  if (error?.status === 403) return "لا تملك صلاحية تنفيذ هذا الإجراء";
+  if (error?.status === 409) return "تغيّر طلب الاعتماد أو يوجد طلب مماثل معلق";
+  return error?.message || "تعذّر تحميل البيانات";
+}
+
+export function useAdministrationRolesController(authKind: string) {
+  const loader = useCallback(async (): Promise<DshRole[]> => (await fetchRoles()).roles, []);
+  return useReadModel(authKind, loader);
+}
+
+export function useStaffController(authKind: string) {
+  const loader = useCallback(async (): Promise<DshStaffMember[]> => (await fetchStaff()).staff, []);
+  const readModel = useReadModel(authKind, loader);
   return {
-    state, reload: load,
+    ...readModel,
     requestRoleAssignment: async (staffId: string, roleId: string, reason: string) => {
       const response = await requestStaffRoleAssignment(staffId, roleId, reason);
       return response.approval;
@@ -33,25 +62,15 @@ export function useStaffController(authKind: string) {
   };
 }
 
-function msg(err: unknown): string {
-  const e = err as { kind?: string; status?: number; message?: string } | undefined;
-  if (e?.status === 401) return "الجلسة منتهية";
-  if (e?.status === 403) return "لا تملك صلاحية تنفيذ هذا الإجراء";
-  if (e?.status === 409) return "تغيّر طلب الاعتماد أو يوجد طلب مماثل معلق";
-  return e?.message || "تعذّر تحميل البيانات";
-}
-
 export function useRoleAssignmentApprovalController(
   authKind: string,
   status: DshRoleAssignmentApprovalStatus | "" = "pending",
 ) {
-  const [state, setState] = useState<DshAdminState<DshRoleAssignmentApproval[]>>({ kind: "idle" });
-  const load = useCallback(async () => {
-    setState({ kind: "loading" });
-    try { setState({ kind: "success", data: (await fetchRoleAssignmentApprovals(status)).approvals }); }
-    catch (err) { setState({ kind: "error", message: msg(err) }); }
-  }, [status]);
-  useEffect(() => { if (authKind !== "authenticated") { setState({ kind: "idle" }); return; } load(); }, [authKind, load]);
+  const loader = useCallback(
+    async (): Promise<DshRoleAssignmentApproval[]> => (await fetchRoleAssignmentApprovals(status)).approvals,
+    [status],
+  );
+  const readModel = useReadModel(authKind, loader);
 
   const review = useCallback(async (
     approvalId: string,
@@ -60,30 +79,23 @@ export function useRoleAssignmentApprovalController(
     reviewNote: string,
   ) => {
     await reviewRoleAssignmentApproval(approvalId, { decision, expectedVersion, reviewNote });
-    await load();
-  }, [load]);
+    await readModel.reload();
+  }, [readModel]);
 
-  return { state, reload: load, review };
+  return { ...readModel, review };
+}
+
+export function usePartnerActivationReadController(authKind: string) {
+  const loader = useCallback(async (): Promise<DshPartnerActivation[]> => (await fetchPartnerActivations()).activations, []);
+  return useReadModel(authKind, loader);
 }
 
 export function useCaptainCredentialController(authKind: string) {
-  const [state, setState] = useState<DshAdminState<DshCaptainCredential[]>>({ kind: "idle" });
-  const load = useCallback(async () => {
-    setState({ kind: "loading" });
-    try { setState({ kind: "success", data: (await fetchCaptainCredentials()).credentials }); }
-    catch (err) { setState({ kind: "error", message: msg(err) }); }
-  }, []);
-  useEffect(() => { if (authKind !== "authenticated") { setState({ kind: "idle" }); return; } load(); }, [authKind, load]);
-  return { state, reload: load };
+  const loader = useCallback(async (): Promise<DshCaptainCredential[]> => (await fetchCaptainCredentials()).credentials, []);
+  return useReadModel(authKind, loader);
 }
 
 export function useAdminAuditController(authKind: string) {
-  const [state, setState] = useState<DshAdminState<DshAdminAuditEntry[]>>({ kind: "idle" });
-  const load = useCallback(async () => {
-    setState({ kind: "loading" });
-    try { setState({ kind: "success", data: (await fetchAdminAudit()).audit }); }
-    catch (err) { setState({ kind: "error", message: msg(err) }); }
-  }, []);
-  useEffect(() => { if (authKind !== "authenticated") { setState({ kind: "idle" }); return; } load(); }, [authKind, load]);
-  return { state, reload: load };
+  const loader = useCallback(async (): Promise<DshAdminAuditEntry[]> => (await fetchAdminAudit()).audit, []);
+  return useReadModel(authKind, loader);
 }
