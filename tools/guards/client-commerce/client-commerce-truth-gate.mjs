@@ -12,7 +12,7 @@ const rules = [
   ["services/dsh/frontend/shared/client-address/client-address.api.ts", [
     [/\bfetch\s*\(/g, "RAW_ADDRESS_FETCH_FORBIDDEN"],
     [/\blocalStorage\b|\bsessionStorage\b/g, "LOCAL_ADDRESS_PERSISTENCE_FORBIDDEN"],
-  ], ["createDshHttpClient", "idempotencyKey:", "correlationId:", "expectedVersion,", "address-default", "/dsh/client/addresses"]],
+  ], ["createDshHttpClient", "setDshClientDefaultAddress", "idempotencyKey: mutation.idempotencyKey", "correlationId:", "expectedVersion,", "/dsh/client/addresses"]],
   ["services/dsh/frontend/shared/client-address/use-client-address-controller.ts", [], ["ADDRESS_ALREADY_EXISTS", "ADDRESS_CONFLICT", "IDEMPOTENCY_CONFLICT", "ADDRESS_SERVICE_AREA_UNVERIFIED", "versionedMutationContext", "shouldReloadCommittedState", "لن تُنفذ مرتين", "await load()"]],
   ["services/dsh/frontend/shared/_kernel/dsh-http-request.ts", [
     [/Math\.random\s*\(/g, "RANDOM_CORRELATION_FALLBACK_FORBIDDEN"],
@@ -51,7 +51,7 @@ const rules = [
   ["services/dsh/database/migrations/dsh-907_jrn_005_address_mutation_receipts.sql", [[/response_body|recipient_name|phone_e164|address_line/g, "ADDRESS_RECEIPT_PII_FORBIDDEN"]], ["dsh_client_address_mutation_receipts", "PRIMARY KEY (client_id, idempotency_key)", "request_fingerprint", "result_deleted", "PII-free"]],
   ["services/dsh/database/tests/dsh-901_client_address_logical_deduplication.sql", [], ["logical duplicate insert was not rejected", "logical duplicate update was not rejected", "uq_dsh_client_addresses_active_fingerprint"]],
   ["services/dsh/database/tests/dsh-907_jrn_005_address_mutation_receipts.sql", [], ["client-scoped idempotency-key reuse was not rejected", "mutation receipt schema contains address PII or response body", "idx_dsh_client_address_mutation_receipts_address"]],
-  ["services/dsh/contracts/dsh.client-address.openapi.yaml", [], ["version: 0.3.0", "durable PII-free idempotency receipts", "updateDshClientAddress", "deleteDshClientAddress", "setDshClientDefaultAddress", "Idempotency-Key was already used", "ExpectedVersion", "ServiceAreaUnverified"]],
+  ["services/dsh/contracts/dsh.client-address.openapi.yaml", [], ["version: 0.3.0", "durable PII-free idempotency receipts", "updateDshClientAddress", "deleteDshClientAddress", "setDshClientDefaultAddress", "Reuse with a different request returns IDEMPOTENCY_CONFLICT", "ExpectedVersion", "ServiceAreaUnverified"]],
   ["governance/product/contracts/jrn-005-client-address-book.product-truth.json", [], ["JRN-005", "acceptanceCriteria", "negativeInvariants", "No address PII"]],
   ["services/dsh/contracts/jrn-005-all-slices-registry.json", [], ["FS-01", "FS-18", "READY_FOR_TARGETED_VERIFICATION", "NEEDS_SAME_COMMIT_CI_AND_INDEPENDENT_APPROVALS"]],
   ["services/dsh/contracts/jrn-005-consistency-registry.json", [], ["schemaVersion\": 2", "uq_dsh_client_addresses_active_fingerprint", "prevent-active-logical-duplicates", "ADDRESS_ALREADY_EXISTS", "journeys/jrn-005/all-slices"]],
