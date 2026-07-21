@@ -27,12 +27,34 @@ ALTER TABLE dsh_field_visits
     ADD COLUMN IF NOT EXISTS start_geofence_status       text,
     ADD COLUMN IF NOT EXISTS completion_geofence_status  text;
 
--- Geofence status values: 'inside', 'outside', 'unknown'
-ALTER TABLE dsh_field_visits
-    ADD CONSTRAINT dsh_field_visits_start_geofence_status_chk
-        CHECK (start_geofence_status IS NULL OR start_geofence_status IN ('inside', 'outside', 'unknown')),
-    ADD CONSTRAINT dsh_field_visits_completion_geofence_status_chk
-        CHECK (completion_geofence_status IS NULL OR completion_geofence_status IN ('inside', 'outside', 'unknown'));
+-- PostgreSQL does not support ADD CONSTRAINT IF NOT EXISTS. Use catalog-backed
+-- guards so the complete migration chain can be replayed safely in verification
+-- and recovery environments.
+DO $constraints$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conrelid = 'dsh_field_visits'::regclass
+          AND conname = 'dsh_field_visits_start_geofence_status_chk'
+    ) THEN
+        ALTER TABLE dsh_field_visits
+            ADD CONSTRAINT dsh_field_visits_start_geofence_status_chk
+            CHECK (start_geofence_status IS NULL OR start_geofence_status IN ('inside', 'outside', 'unknown'));
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conrelid = 'dsh_field_visits'::regclass
+          AND conname = 'dsh_field_visits_completion_geofence_status_chk'
+    ) THEN
+        ALTER TABLE dsh_field_visits
+            ADD CONSTRAINT dsh_field_visits_completion_geofence_status_chk
+            CHECK (completion_geofence_status IS NULL OR completion_geofence_status IN ('inside', 'outside', 'unknown'));
+    END IF;
+END
+$constraints$;
 
 CREATE INDEX IF NOT EXISTS idx_dsh_field_visits_start_geofence
     ON dsh_field_visits(start_geofence_status) WHERE start_geofence_status IS NOT NULL;
