@@ -5,6 +5,7 @@ import {
   StoreCaptainHandoffExceptionForm,
   useStoreCaptainHandoffException,
 } from '../../shared/dispatch';
+import { STORE_CAPTAIN_HANDOFF_EXCEPTION_LABELS } from '../../shared/orders';
 import {
   readCaptainForegroundLocation,
   type DshCaptainLocationPush,
@@ -43,8 +44,20 @@ export function OperationalCaptainExecutionScreen({
   const [locationMessage, setLocationMessage] = React.useState<string | null>(null);
   const handoffException = useStoreCaptainHandoffException('captain', onRefresh);
   const handoffExceptionKind = handoffException.state.kind;
+  const handoffReadback = handoffException.readback;
   const cancelHandoffException = handoffException.cancel;
-  const handoffBlocked = handoffExceptionKind !== 'idle';
+  const loadExistingHandoffException = handoffException.loadExisting;
+  const readbackBlocksPickup = handoffExceptionEnabled && handoffReadback.kind !== 'clear';
+  const handoffBlocked = handoffExceptionKind !== 'idle' || readbackBlocksPickup;
+
+  React.useEffect(() => {
+    if (!handoffExceptionEnabled || !assignmentId) return undefined;
+    void loadExistingHandoffException(assignmentId);
+    const interval = setInterval(() => {
+      void loadExistingHandoffException(assignmentId);
+    }, 15_000);
+    return () => clearInterval(interval);
+  }, [assignmentId, handoffExceptionEnabled, loadExistingHandoffException]);
 
   React.useEffect(() => {
     if (
@@ -114,7 +127,33 @@ export function OperationalCaptainExecutionScreen({
           ) : null}
         </Surface>
 
-        {handoffExceptionKind === 'success' ? (
+        {handoffExceptionEnabled && handoffReadback.kind === 'loading' ? (
+          <StateView
+            loading
+            title="جارٍ التحقق من عهدة الطلب"
+            description="يبقى الاستلام محجوبًا حتى تكتمل قراءة DSH."
+          />
+        ) : null}
+
+        {handoffExceptionEnabled && handoffReadback.kind === 'blocked' ? (
+          <StateView
+            title="الاستلام محجوب بقرار تشغيلي"
+            description={`${STORE_CAPTAIN_HANDOFF_EXCEPTION_LABELS[handoffReadback.exception.reasonCode as 'handoff_shortage' | 'handoff_mismatch']} · ${handoffReadback.exception.note}`}
+            tone="warning"
+          />
+        ) : null}
+
+        {handoffExceptionEnabled && handoffReadback.kind === 'error' ? (
+          <StateView
+            title="تعذر التحقق من استثناء العهدة"
+            description={handoffReadback.message}
+            tone="danger"
+            actionLabel="إعادة التحقق"
+            onActionPress={() => void loadExistingHandoffException(assignmentId)}
+          />
+        ) : null}
+
+        {handoffExceptionKind === 'success' && handoffReadback.kind !== 'blocked' ? (
           <StateView
             title="تم إيقاف الاستلام"
             description="سُجل استثناء العهدة في طابور العمليات. لا تؤكد الاستلام حتى تعالج العمليات البلاغ."
@@ -128,7 +167,9 @@ export function OperationalCaptainExecutionScreen({
             state={handoffException.state}
             onReasonCodeChange={handoffException.setReasonCode}
             onNoteChange={handoffException.setNote}
-            onSubmit={handoffException.submit}
+            onSubmit={async () => {
+              await handoffException.submit();
+            }}
             onCancel={cancelHandoffException}
           />
         ) : null}
@@ -141,13 +182,15 @@ export function OperationalCaptainExecutionScreen({
               disabled={handoffBlocked}
               onPress={onConfirmPickup}
             />
-            {handoffExceptionEnabled && handoffExceptionKind === 'idle' ? (
-              <Button
-                label="نقص أو عدم تطابق في الطرد"
-                tone="danger"
-                onPress={() => handoffException.begin(assignmentId)}
-              />
-            ) : null}
+            {handoffExceptionEnabled
+              && handoffExceptionKind === 'idle'
+              && handoffReadback.kind === 'clear' ? (
+                <Button
+                  label="نقص أو عدم تطابق في الطرد"
+                  tone="danger"
+                  onPress={() => handoffException.begin(assignmentId)}
+                />
+              ) : null}
             <Button
               label={podRequired ? 'فتح إثبات التسليم' : 'تأكيد التسليم'}
               tone="secondary"
