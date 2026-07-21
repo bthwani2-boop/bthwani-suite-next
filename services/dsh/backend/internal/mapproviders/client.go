@@ -98,10 +98,19 @@ func (c *Client) Search(ctx context.Context, authorization string, input SearchI
 }
 
 func (c *Client) Reverse(ctx context.Context, authorization string, input ReverseInput) (ReverseResponse, error) {
+	input, err := normalizeReverseInput(input)
+	if err != nil {
+		return ReverseResponse{}, err
+	}
 	var response ReverseResponse
 	if err := c.post(ctx, authorization, "/providers/maps/reverse", input, &response); err != nil {
 		return ReverseResponse{}, err
 	}
+	location, err := normalizeVerifiedLocation(response.Location)
+	if err != nil {
+		return ReverseResponse{}, err
+	}
+	response.Location = location
 	return response, nil
 }
 
@@ -125,6 +134,14 @@ func normalizeSearchInput(input SearchInput) (SearchInput, error) {
 			}
 		}
 		input.CountryCodes[index] = code
+	}
+	return input, nil
+}
+
+func normalizeReverseInput(input ReverseInput) (ReverseInput, error) {
+	input.Language = strings.TrimSpace(input.Language)
+	if !validCoordinate(input.Latitude, input.Longitude) || len(input.Language) > 32 {
+		return ReverseInput{}, ErrInvalid
 	}
 	return input, nil
 }
