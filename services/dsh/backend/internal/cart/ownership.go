@@ -59,20 +59,20 @@ func ClearOwnedCart(
 	if err := tx.QueryRowContext(ctx, `
 		SELECT id::text
 		FROM dsh_carts
-		WHERE id = $1::uuid AND client_id = $2 AND state = 'active'
+		WHERE id = $1 AND client_id = $2 AND state = 'active'
 		FOR UPDATE`, cartID, clientID,
 	).Scan(&lockedCartID); errors.Is(err, sql.ErrNoRows) {
 		return ErrNotFound
 	} else if err != nil {
 		return err
 	}
-	if _, err := tx.ExecContext(ctx, `DELETE FROM dsh_cart_items WHERE cart_id = $1::uuid`, lockedCartID); err != nil {
+	if _, err := tx.ExecContext(ctx, `DELETE FROM dsh_cart_items WHERE cart_id = $1`, lockedCartID); err != nil {
 		return err
 	}
 	result, err := tx.ExecContext(ctx, `
 		UPDATE dsh_carts
 		SET state = 'abandoned', version = version + 1, updated_at = NOW()
-		WHERE id = $1::uuid AND client_id = $2 AND state = 'active'`, lockedCartID, clientID)
+		WHERE id = $1 AND client_id = $2 AND state = 'active'`, lockedCartID, clientID)
 	if err != nil {
 		return err
 	}
