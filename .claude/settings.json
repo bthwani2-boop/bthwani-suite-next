@@ -32,7 +32,8 @@
       "Bash(pg_isready)",
       "Bash(DSH_REQUIRE_DB_TESTS=true DATABASE_URL=\"postgres://bthwani_runtime:bthwani_runtime_password@127.0.0.1:55432/bthwani_runtime?sslmode=disable\" go test ./internal/dispatch/... -run 'DeliveryException' -v)",
       "Bash(DSH_REQUIRE_DB_TESTS=true DATABASE_URL=\"postgres://dsh_runtime:dsh_runtime_password@127.0.0.1:55432/dsh_runtime?sslmode=disable\" go test ./internal/dispatch/... -run 'DeliveryException' -v)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(echo \"guard exit: $?\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\bassa\\.claude\\plans"

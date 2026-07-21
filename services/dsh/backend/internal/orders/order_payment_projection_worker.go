@@ -129,7 +129,7 @@ func claimPaymentProjectionWork(ctx context.Context, db *sql.DB, limit int) ([]p
 	return result, nil
 }
 
-func applyPaymentProjection(ctx context.Context, db *sql.DB, item paymentProjectionWork, session *wlt.PaymentSession) error {
+func applyPaymentProjection(ctx context.Context, db *sql.DB, item paymentProjectionWork, session *wlt.PaymentSessionDetail) error {
 	projection, err := mapWltPaymentProjection(session.Method, session.Status)
 	if err != nil {
 		return err
