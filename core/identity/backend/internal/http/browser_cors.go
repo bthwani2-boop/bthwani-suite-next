@@ -2,28 +2,37 @@ package http
 
 import (
 	"net/http"
+	"strings"
 )
 
-// BrowserCorsMiddleware owns browser preflight handling for Identity's public
-// HTTP surface. It is intentionally layered outside CorsMiddleware so legacy
-// request handling remains unchanged while DELETE session/account operations
-// are exposed to approved browser origins.
+// BrowserCorsMiddleware extends the existing Identity CORS contract with the
+// DELETE method required by session revocation and account deletion. The inner
+// CorsMiddleware remains the single owner of origins, headers, and preflight
+// status; this adapter only repairs the missing method before headers commit.
 func BrowserCorsMiddleware(next http.Handler) http.Handler {
-	allowed := allowedCorsOrigins()
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodOptions {
-			next.ServeHTTP(w, r)
-			return
-		}
-
-		w.Header().Set("X-Service", "core-identity")
-		origin := r.Header.Get("Origin")
-		if allowed[origin] {
-			w.Header().Set("Access-Control-Allow-Origin", origin)
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Device-Fingerprint, Idempotency-Key, X-Correlation-ID")
-			w.Header().Set("Vary", "Origin")
-		}
-		w.WriteHeader(http.StatusNoContent)
+		next.ServeHTTP(&deleteCorsResponseWriter{ResponseWriter: w}, r)
 	})
+}
+
+type deleteCorsResponseWriter struct {
+	http.ResponseWriter
+}
+
+func (w *deleteCorsResponseWriter) WriteHeader(statusCode int) {
+	w.ensureDeleteMethod()
+	w.ResponseWriter.WriteHeader(statusCode)
+}
+
+func (w *deleteCorsResponseWriter) Write(body []byte) (int, error) {
+	w.ensureDeleteMethod()
+	return w.ResponseWriter.Write(body)
+}
+
+func (w *deleteCorsResponseWriter) ensureDeleteMethod() {
+	methods := strings.TrimSpace(w.Header().Get("Access-Control-Allow-Methods"))
+	if methods == "" || strings.Contains(methods, http.MethodDelete) {
+		return
+	}
+	w.Header().Set("Access-Control-Allow-Methods", methods+", "+http.MethodDelete)
 }
