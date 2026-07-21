@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "journeyId": "JRN-005",
+  "journeyNameAr": "دفتر عناوين العميل",
+  "status": "IMPLEMENTED_PENDING_SAME_COMMIT_EVIDENCE",
+  "problem": "The client requires one durable, authenticated and serviceable delivery-address book that remains authoritative across cart, checkout and application restarts without local address truth or duplicate active records.",
+  "goal": "Persist, read, update, default and soft-delete client-owned delivery addresses through DSH, with idempotency, optimistic concurrency, governed service-area validation, privacy controls and committed readback.",
+  "actors": [
+    { "actor": "client", "surface": "app-client", "role": "owner", "scope": "own addresses only" },
+    { "actor": "support-operator", "surface": "control-panel", "role": "privacy and support oversight", "scope": "governed diagnostics and privacy actions only" },
+    { "actor": "dsh-service", "surface": "backend", "role": "truth owner", "scope": "persistence, validation, events and checkout resolution" }
+  ],
+  "requiredSurfaces": ["app-client", "dsh-backend", "postgresql"],
+  "excludedSurfaces": [
+    { "surface": "app-partner", "reason": "Partners do not own client delivery-address books." },
+    { "surface": "app-field", "reason": "Field staff do not create or mutate client-owned addresses." },
+    { "surface": "app-captain", "reason": "Captains receive order-scoped delivery snapshots only after order creation." },
+    { "surface": "website", "reason": "No authenticated client address-book runtime is registered on the public website." }
+  ],
+  "acceptanceCriteria": [
+    "Authenticated clients can list only their active addresses.",
+    "Create is idempotent across retries and application restarts.",
+    "An active logical duplicate is rejected with ADDRESS_ALREADY_EXISTS.",
+    "Update and delete reject stale versions with ADDRESS_CONFLICT.",
+    "Exactly one active address is default whenever active addresses exist.",
+    "Deleting the default deterministically promotes one remaining active address.",
+    "Checkout resolves a client-owned address by deliveryAddressId and never accepts a client-supplied snapshot as truth.",
+    "Coordinates and serviceAreaCode are verified by DSH before persistence.",
+    "Soft-deleted address PII follows the governed retention and anonymization policy.",
+    "The client refreshes the committed address list after every successful mutation.",
+    "No surface persists address records in AsyncStorage, localStorage, sessionStorage, MMKV, fixtures or mocks."
+  ],
+  "negativeInvariants": [
+    "No clientId query parameter may select an address owner.",
+    "No cross-client read, update, default or delete is permitted.",
+    "No second active default or active logical duplicate is permitted.",
+    "No unverified or mismatched service-area coordinates may be committed.",
+    "No mutation success may be displayed before canonical response and readback.",
+    "No address PII may be emitted in logs, metrics labels or correlation identifiers."
+  ],
+  "truthOwners": {
+    "operational": "services/dsh/database/migrations/dsh-056_client_addresses.sql",
+    "logicalUniqueness": "services/dsh/database/migrations/dsh-901_client_address_logical_deduplication.sql",
+    "serviceAreaBinding": "services/dsh/database/migrations/dsh-906_jrn_006_client_address_geofence_binding.sql",
+    "privacy": "services/dsh/database/migrations/dsh-078_client_address_pii_governance.sql",
+    "api": "services/dsh/contracts/dsh.client-address.openapi.yaml",
+    "sharedFrontend": "services/dsh/frontend/shared/client-address",
+    "surface": "services/dsh/frontend/app-client/account/AddressLocationScreen.tsx"
+  },
+  "decisionPolicy": "READY_FOR_REVIEW requires all FS-01..FS-18 implementation checks on one commit. CLOSED_WITH_EVIDENCE additionally requires independent product, QA, security, privacy, device and release evidence."
+}
