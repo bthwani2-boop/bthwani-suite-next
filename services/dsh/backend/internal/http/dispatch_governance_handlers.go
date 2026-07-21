@@ -60,11 +60,12 @@ func (s *protectedStoreServer) handleListGovernedOperatorDispatchAssignments(w h
 	if !ok {
 		return
 	}
-	if _, err := dispatch.ExpireOverdueAssignments(s.db, r.URL.Query().Get("tenantId"), actor.ID, 100); err != nil {
+	tenantID := r.URL.Query().Get("tenantId")
+	if _, err := dispatch.ExpireOverdueAssignments(s.db, tenantID, actor.ID, 100); err != nil {
 		writeGovernedDispatchError(w, err)
 		return
 	}
-	list, err := dispatch.ListOperatorAssignments(s.db, 200)
+	list, err := dispatch.ListOperatorAssignmentsInTenant(s.db, tenantID, 200)
 	if err != nil {
 		writeGovernedDispatchError(w, err)
 		return
@@ -82,11 +83,12 @@ func (s *protectedStoreServer) handleListGovernedCaptainDispatchAssignments(w ht
 	if !ok {
 		return
 	}
-	if _, err := dispatch.ExpireOverdueAssignments(s.db, r.URL.Query().Get("tenantId"), "dispatch-captain-inbox", 100); err != nil {
+	tenantID := r.URL.Query().Get("tenantId")
+	if _, err := dispatch.ExpireOverdueAssignments(s.db, tenantID, "dispatch-captain-inbox", 100); err != nil {
 		writeGovernedDispatchError(w, err)
 		return
 	}
-	list, err := dispatch.ListCaptainAssignments(s.db, actor.ID, 100)
+	list, err := dispatch.ListCaptainAssignmentsInTenant(s.db, tenantID, actor.ID, 100)
 	if err != nil {
 		writeGovernedDispatchError(w, err)
 		return
