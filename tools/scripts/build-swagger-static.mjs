@@ -16,6 +16,7 @@ const specs = [
   { input: "core/providers/contracts/providers.openapi.yaml", name: "Core - Providers API" },
   { input: "core/workforce/contracts/workforce.openapi.yaml", name: "Core - Workforce API" },
   { input: "services/dsh/contracts/dsh.openapi.yaml", name: "Services - DSH API" },
+  { input: "services/dsh/contracts/dsh.delivery-proof-media.openapi.yaml", name: "Services - DSH Delivery Proof Media API" },
   { input: "services/dsh/contracts/dsh.catalog.openapi.yaml", name: "Services - DSH Catalog API" },
   { input: "services/dsh/contracts/dsh.client-address.openapi.yaml", name: "Services - DSH Client Address API" },
   { input: "services/dsh/contracts/dsh.client-map.openapi.yaml", name: "Services - DSH Client Map API" },
