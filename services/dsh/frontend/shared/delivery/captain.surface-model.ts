@@ -177,6 +177,7 @@ export function useDshCaptainSurfaceModel({
     state,
     actions,
     derived,
+    activeAssignment,
     assignmentClosureNotice: orderModel.assignmentClosureNotice,
   };
 }
