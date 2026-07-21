@@ -1,0 +1,135 @@
+{
+  "schemaVersion": 1,
+  "journeyId": "JRN-001",
+  "executionMode": "SEQUENTIAL_FIX_FIRST",
+  "resultPolicy": "Every slice publishes an independent commit status; all slices run even when an earlier slice fails.",
+  "aggregateContext": "journeys/jrn-001/all-slices-sequential",
+  "slices": [
+    {
+      "id": "FS-01",
+      "name": "Product Truth",
+      "context": "journeys/jrn-001/fs-01-product-truth",
+      "commands": ["node --test services/dsh/tests/jrn-001-fs-01-product-truth.test.mjs"],
+      "evidence": ["governance/product/contracts/jrn-001-partner-onboarding-store-publication.product-truth.json", "services/dsh/tests/jrn-001-fs-01-product-truth.test.mjs"]
+    },
+    {
+      "id": "FS-02",
+      "name": "RBAC and surface scope",
+      "context": "journeys/jrn-001/fs-02-rbac",
+      "commands": ["node --test services/dsh/tests/jrn-001-fs-02-rbac.test.mjs"],
+      "evidence": ["services/dsh/tests/jrn-001-fs-02-rbac.test.mjs"]
+    },
+    {
+      "id": "FS-03",
+      "name": "Partner lifecycle state policy",
+      "context": "journeys/jrn-001/fs-03-state-policy",
+      "commands": ["cd services/dsh/backend && go test ./internal/partner -count=1"],
+      "evidence": ["services/dsh/backend/internal/partner/state_policy.go", "services/dsh/backend/internal/partner/state_policy_test.go"]
+    },
+    {
+      "id": "FS-04",
+      "name": "DSH WLT financial ownership boundary",
+      "context": "journeys/jrn-001/fs-04-wlt-boundary",
+      "commands": ["node --test services/dsh/tests/jrn-001-fs-04-wlt-boundary.test.mjs", "node tools/guards/wlt-financial-boundary-gate.mjs"],
+      "evidence": ["services/dsh/tests/jrn-001-fs-04-wlt-boundary.test.mjs", "tools/guards/wlt-financial-boundary-gate.mjs"]
+    },
+    {
+      "id": "FS-05",
+      "name": "Database integrity and audit retention",
+      "context": "journeys/jrn-001/fs-05-database-integrity",
+      "commands": ["node --test services/dsh/tests/jrn-001-fs-05-database-integrity.test.mjs"],
+      "evidence": ["services/dsh/database/migrations/dsh-015_partner_lifecycle.sql", "services/dsh/database/migrations/dsh-098_partner_onboarding_integrity.sql", "services/dsh/database/migrations/dsh-099_partner_onboarding_audit_retention.sql", "services/dsh/tests/jrn-001-fs-05-database-integrity.test.mjs"]
+    },
+    {
+      "id": "FS-06",
+      "name": "Canonical OpenAPI and operation contracts",
+      "context": "journeys/jrn-001/fs-06-contracts",
+      "commands": ["node --test services/dsh/tests/jrn-001-fs-06-contracts.test.mjs"],
+      "evidence": ["services/dsh/contracts/dsh.partner-onboarding.openapi.yaml", "services/dsh/contracts/jrn-001-operation-registry.json", "services/dsh/tests/jrn-001-fs-06-contracts.test.mjs"]
+    },
+    {
+      "id": "FS-07",
+      "name": "Governed backend routes and mutations",
+      "context": "journeys/jrn-001/fs-07-backend",
+      "commands": ["node --test services/dsh/tests/jrn-001-fs-07-backend.test.mjs", "cd services/dsh/backend && go test ./internal/partner -count=1", "cd services/dsh/backend && go test ./internal/http -run 'TestFirstFiveJourneysExposeGovernedDSHRoutes|TestPartnerSelfRoutesRegisterOnceOnApplicationRouter' -count=1"],
+      "evidence": ["services/dsh/backend/internal/http/partner_lifecycle_routes.go", "services/dsh/backend/internal/partner/onboarding_integrity_handlers.go", "services/dsh/backend/internal/partner/onboarding_integrity_repository.go", "services/dsh/tests/jrn-001-fs-07-backend.test.mjs"]
+    },
+    {
+      "id": "FS-08",
+      "name": "Durable WLT outbox and reconciliation",
+      "context": "journeys/jrn-001/fs-08-events",
+      "commands": ["node --test services/dsh/tests/jrn-001-fs-08-events.test.mjs", "cd services/dsh/backend && go test ./internal/partnerwltoutbox -count=1"],
+      "evidence": ["services/dsh/backend/internal/partnerwltoutbox/outbox.go", "services/dsh/tests/jrn-001-fs-08-events.test.mjs"]
+    },
+    {
+      "id": "FS-09",
+      "name": "Shared Brain and field onboarding controller",
+      "context": "journeys/jrn-001/fs-09-shared-brain",
+      "commands": ["node --test services/dsh/tests/jrn-001-fs-09-shared-brain.test.mjs", "pnpm --dir apps/app-field/runtime typecheck"],
+      "evidence": ["services/dsh/frontend/shared/partner/index.ts", "services/dsh/frontend/shared/field-onboarding/use-field-partner-onboarding-controller.tsx", "services/dsh/tests/jrn-001-fs-09-shared-brain.test.mjs"]
+    },
+    {
+      "id": "FS-10",
+      "name": "Required surfaces and deep navigation",
+      "context": "journeys/jrn-001/fs-10-surfaces",
+      "commands": ["pnpm --dir apps/app-client/runtime typecheck", "pnpm --dir apps/app-field/runtime typecheck", "pnpm --dir apps/app-partner/runtime typecheck", "pnpm --dir apps/control-panel/runtime typecheck", "node --test services/dsh/tests/jrn-001-fs-10-cart-actions.test.mjs", "node --test services/dsh/tests/jrn-001-fs-10-support-mutation.test.mjs", "node --test services/dsh/tests/jrn-001-fs-10-surfaces.test.mjs", "node tools/guards/partner/partner-surface-truth-gate.mjs"],
+      "evidence": ["services/dsh/contracts/jrn-001-surface-registry.json", "services/dsh/tests/jrn-001-fs-10-cart-actions.test.mjs", "services/dsh/tests/jrn-001-fs-10-support-mutation.test.mjs", "services/dsh/tests/jrn-001-fs-10-surfaces.test.mjs"]
+    },
+    {
+      "id": "FS-11",
+      "name": "Visible states and recovery",
+      "context": "journeys/jrn-001/fs-11-visible-states",
+      "commands": ["node --test services/dsh/tests/jrn-001-fs-11-visible-states.test.mjs", "pnpm --dir apps/app-client/runtime typecheck", "pnpm --dir apps/app-field/runtime typecheck", "pnpm --dir apps/app-partner/runtime typecheck", "pnpm --dir apps/control-panel/runtime typecheck"],
+      "evidence": ["services/dsh/contracts/jrn-001-visible-state-registry.json", "services/dsh/tests/jrn-001-fs-11-visible-states.test.mjs"]
+    },
+    {
+      "id": "FS-12",
+      "name": "Cross-surface committed truth",
+      "context": "journeys/jrn-001/fs-12-cross-surface-truth",
+      "commands": ["node tools/guards/partner/jrn-001-cross-surface-truth-gate.mjs", "pnpm --dir apps/app-field/runtime typecheck", "pnpm --dir apps/app-partner/runtime exec tsc --noEmit -p ../../../services/dsh/tests/tsconfig.jrn-001-app-partner.json", "pnpm --dir apps/control-panel/runtime exec tsc --noEmit -p tsconfig.jrn-001.json"],
+      "evidence": ["services/dsh/contracts/jrn-001-consistency-registry.json", "tools/guards/partner/jrn-001-cross-surface-truth-gate.mjs"]
+    },
+    {
+      "id": "FS-13",
+      "name": "Security privacy and negative paths",
+      "context": "journeys/jrn-001/fs-13-security-privacy",
+      "commands": ["node tools/guards/partner/jrn-001-security-privacy-gate.mjs", "node --test services/dsh/tests/jrn-001-fs-02-rbac.test.mjs", "cd services/dsh/backend && go test ./internal/partner -run 'Test.*(Ownership|Idempotency|Version|Sanitize|Transition)' -count=1"],
+      "evidence": ["services/dsh/contracts/jrn-001-security-privacy-registry.json", "tools/guards/partner/jrn-001-security-privacy-gate.mjs"]
+    },
+    {
+      "id": "FS-14",
+      "name": "Arabic RTL accessibility and weak-network quality",
+      "context": "journeys/jrn-001/fs-14-experience-quality",
+      "commands": ["node tools/guards/partner/jrn-001-experience-quality-gate.mjs"],
+      "evidence": ["services/dsh/contracts/jrn-001-experience-quality-registry.json", "tools/guards/partner/jrn-001-experience-quality-gate.mjs"]
+    },
+    {
+      "id": "FS-15",
+      "name": "SLO alerting diagnostics and support",
+      "context": "journeys/jrn-001/fs-15-observability",
+      "commands": ["node tools/guards/partner/jrn-001-observability-gate.mjs"],
+      "evidence": ["services/dsh/contracts/jrn-001-observability-slo.json", "governance/runbooks/JRN-001_PARTNER_ONBOARDING_SUPPORT.md", "tools/guards/partner/jrn-001-observability-gate.mjs"]
+    },
+    {
+      "id": "FS-16",
+      "name": "Cleanup and canonical ownership",
+      "context": "journeys/jrn-001/fs-16-cleanup",
+      "commands": ["node tools/guards/partner/jrn-001-cleanup-gate.mjs"],
+      "evidence": ["services/dsh/contracts/jrn-001-cleanup-manifest.json", "tools/guards/partner/jrn-001-cleanup-gate.mjs"]
+    },
+    {
+      "id": "FS-17",
+      "name": "Comprehensive implementation verification",
+      "context": "journeys/jrn-001/fs-17-comprehensive",
+      "commands": ["node --test services/dsh/tests/jrn-001-*.test.mjs", "for guard in tools/guards/partner/jrn-001-*.mjs; do node \"$guard\" || exit 1; done", "cd services/dsh/backend && go test ./internal/partner ./internal/partnerwltoutbox ./internal/store -count=1", "cd core/identity/backend && go test ./... -count=1", "pnpm --dir apps/app-field/runtime typecheck", "node tools/guards/wlt-financial-boundary-gate.mjs"],
+      "evidence": [".github/workflows/jrn-001-fs-17-comprehensive-verification.yml"]
+    },
+    {
+      "id": "FS-18",
+      "name": "Evidence rollback and open-gap registration",
+      "context": "journeys/jrn-001/fs-18-evidence",
+      "commands": ["node --test services/dsh/tests/jrn-001-fs-18-evidence.test.mjs", "node --test services/dsh/tests/jrn-001-slice-verification-registry.test.mjs"],
+      "evidence": ["governance/evidence/JRN-001_PARTNER_ONBOARDING_EVIDENCE.json", "governance/evidence/JRN-001_PARTNER_ONBOARDING_STORE_PUBLICATION.md", "governance/runbooks/JRN-001_PARTNER_ONBOARDING_SUPPORT.md"]
+    }
+  ]
+}
