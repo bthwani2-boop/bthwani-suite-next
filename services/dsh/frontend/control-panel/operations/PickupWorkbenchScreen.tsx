@@ -6,6 +6,7 @@ import {
   WebControlPanelDecisionRow,
   WebControlPanelQueue,
   WebControlPanelRecommendation,
+  type WebControlPanelDecisionRowProps,
 } from '@bthwani/ui-kit/web';
 import { useOperatorPickupsController } from '../../shared/pickup/use-pickup-controller';
 
@@ -131,18 +132,16 @@ export function PickupWorkbenchScreen() {
             const sla = cancelled && session.cancelledAt
               ? `ألغي: ${new Date(session.cancelledAt).toLocaleString('ar-SA')}`
               : `ينتهي: ${new Date(session.expiresAt).toLocaleString('ar-SA')}`;
-            return (
-              <WebControlPanelDecisionRow
-                key={session.id}
-                entityId={session.id}
-                entityLabel={`طلب: ${session.orderId} — عميل: ${session.clientId}`}
-                status={status}
-                statusTone={statusTone}
-                reason={reason}
-                sla={sla}
-                {...(action ? { primaryAction: action } : {})}
-              />
-            );
+            const rowProps: WebControlPanelDecisionRowProps = {
+              entityId: session.id,
+              entityLabel: `طلب: ${session.orderId} — عميل: ${session.clientId}`,
+              status,
+              statusTone,
+              reason,
+              sla,
+              ...(action ? { primaryAction: action } : {}),
+            };
+            return <WebControlPanelDecisionRow key={session.id} {...rowProps} />;
           })
         )}
       </WebControlPanelQueue>
