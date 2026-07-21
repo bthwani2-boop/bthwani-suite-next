@@ -45,15 +45,9 @@ func NewRouter(db *sql.DB, repository *identity.Repository) http.Handler {
 	return mux
 }
 
-// serviceOnly guards the /internal surface. Workforce is currently the only
-// allowed caller for actor provisioning/activation; it must present its own
-// service credential and a stable caller header. A non-empty caller header is
-// not sufficient authorization.
 func (s *server) serviceOnly(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		expectedCaller := "workforce"
-		caller := strings.TrimSpace(r.Header.Get("X-Service-Caller"))
-		if caller != expectedCaller {
+		if strings.TrimSpace(r.Header.Get("X-Service-Caller")) != "workforce" {
 			sendError(w, http.StatusForbidden, "FORBIDDEN", "X-Service-Caller is not allowed")
 			return
 		}
@@ -71,11 +65,6 @@ func (s *server) serviceOnly(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// allowedCorsOrigins reads IDENTITY_CORS_ALLOWED_ORIGINS (comma-separated)
-// so each deployment environment configures its own real origins instead of
-// this service hardcoding a single localhost dev port. Falls back to the
-// local control-panel dev origin only when the env var is unset, matching
-// prior behavior for local development.
 func allowedCorsOrigins() map[string]bool {
 	raw := strings.TrimSpace(os.Getenv("IDENTITY_CORS_ALLOWED_ORIGINS"))
 	if raw == "" {
@@ -83,9 +72,8 @@ func allowedCorsOrigins() map[string]bool {
 	}
 	origins := map[string]bool{}
 	for _, origin := range strings.Split(raw, ",") {
-		origin = strings.TrimSpace(origin)
-		if origin != "" {
-			origins[origin] = true
+		if normalized := strings.TrimSpace(origin); normalized != "" {
+			origins[normalized] = true
 		}
 	}
 	return origins
@@ -98,7 +86,7 @@ func CorsMiddleware(next http.Handler) http.Handler {
 		origin := r.Header.Get("Origin")
 		if allowed[origin] {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Device-Fingerprint, Idempotency-Key, X-Correlation-ID")
 			w.Header().Set("Vary", "Origin")
 		}
@@ -143,6 +131,28 @@ func (s *server) login(w http.ResponseWriter, r *http.Request) {
 	sendJSON(w, http.StatusOK, tokenResponse(pair))
 }
 
+func (s *server) requestOtp(w http.ResponseWriter, r *http.Request) {
+	var request identity.OtpInput
+	if !decodeJSON(w, r, &request) {
+		return
+	}
+	result, err := s.repository.RequestOtp(r.Context(), request)
+	if err != nil {
+		switch err {
+		case identity.ErrActivationRateLimited:
+			sendError(w, http.StatusTooManyRequests, "ACTIVATION_RATE_LIMITED", "activation can be requested again later")
+		case identity.ErrInvalidActivation:
+			sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid phone or actor type")
+		case identity.ErrActivationUnavailable:
+			sendError(w, http.StatusServiceUnavailable, "ACTIVATION_UNAVAILABLE", "activation is not configured")
+		default:
+			sendError(w, http.StatusInternalServerError, "IDENTITY_INTERNAL_ERROR", "identity request failed")
+		}
+		return
+	}
+	sendJSON(w, http.StatusOK, result)
+}
+
 func (s *server) activate(w http.ResponseWriter, r *http.Request) {
 	var request struct {
 		ActorType         string `json:"actorType"`
@@ -154,9 +164,7 @@ func (s *server) activate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	pair, err := s.repository.ConsumeActivation(r.Context(), identity.ConsumeActivationInput{
-		ActorType:         request.ActorType,
-		Phone:             request.Phone,
-		Code:              request.Code,
+		ActorType: request.ActorType, Phone: request.Phone, Code: request.Code,
 		DeviceFingerprint: request.DeviceFingerprint,
 	})
 	if err != nil {
@@ -195,14 +203,8 @@ func (s *server) logout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) session(w http.ResponseWriter, r *http.Request) {
-	token, ok := bearerToken(r)
+	resolved, ok := s.resolveSession(w, r)
 	if !ok {
-		sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "bearer token is required")
-		return
-	}
-	resolved, err := s.repository.ResolveAccessToken(r.Context(), token)
-	if err != nil {
-		sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "session is invalid or expired")
 		return
 	}
 	sendJSON(w, http.StatusOK, resolved)
@@ -234,10 +236,8 @@ func (s *server) provisionActor(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	view, err := s.repository.ProvisionActor(r.Context(), identity.ProvisionActorInput{
-		Username:  request.Username,
-		PhoneE164: request.PhoneE164,
-		Role:      request.Role,
-		TenantID:  request.TenantID,
+		Username: request.Username, PhoneE164: request.PhoneE164,
+		Role: request.Role, TenantID: request.TenantID,
 	})
 	if err != nil {
 		writeInternalActorError(w, err)
@@ -255,17 +255,19 @@ func (s *server) internalActorGet(w http.ResponseWriter, r *http.Request) {
 	sendJSON(w, http.StatusOK, view)
 }
 
-// internalActorSearch backs Workforce's supervisor picker: role+query
-// lookup instead of the free-text actor-id box the HR screen used to
-// expose. Results are capped and never include password hashes.
 func (s *server) internalActorSearch(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
-	views, err := s.repository.SearchActors(r.Context(), strings.TrimSpace(query.Get("role")), strings.TrimSpace(query.Get("q")), 25)
+	views, err := s.repository.SearchActors(
+		r.Context(), strings.TrimSpace(query.Get("role")), strings.TrimSpace(query.Get("q")), 25,
+	)
 	if err != nil {
 		writeInternalActorError(w, err)
 		return
 	}
-	sendJSON(w, http.StatusOK, map[string]any{"actors": views})
+	if views == nil {
+		views = []identity.ActorAdminView{}
+	}
+	sendJSON(w, http.StatusOK, views)
 }
 
 func (s *server) internalActorDeactivate(w http.ResponseWriter, r *http.Request) {
@@ -299,11 +301,11 @@ func (s *server) internalActorIssueActivation(w http.ResponseWriter, r *http.Req
 	}
 	result, err := s.repository.IssueActivationForActor(
 		r.Context(), r.PathValue("actorId"), identity.IssueActivationForActorInput{
-			IssuedByActorID:   request.IssuedByActorID,
+			IssuedByActorID: request.IssuedByActorID,
 			ExpectedActorType: request.ExpectedActorType,
-			ExpectedSurface:   request.ExpectedSurface,
-		},
-		r.Header.Get("Idempotency-Key"), r.Header.Get("X-Correlation-ID"))
+			ExpectedSurface: request.ExpectedSurface,
+		}, r.Header.Get("Idempotency-Key"), r.Header.Get("X-Correlation-ID"),
+	)
 	if err != nil {
 		writeInternalActorError(w, err)
 		return
@@ -332,37 +334,9 @@ func (s *server) internalActorRevokeActivations(w http.ResponseWriter, r *http.R
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (s *server) requestOtp(w http.ResponseWriter, r *http.Request) {
-	var request identity.OtpInput
-	if !decodeJSON(w, r, &request) {
-		return
-	}
-	result, err := s.repository.RequestOtp(r.Context(), request)
-	if err != nil {
-		switch err {
-		case identity.ErrActivationRateLimited:
-			sendError(w, http.StatusTooManyRequests, "ACTIVATION_RATE_LIMITED", "activation can be requested again later")
-		case identity.ErrInvalidActivation:
-			sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid phone or actor type")
-		case identity.ErrActivationUnavailable:
-			sendError(w, http.StatusServiceUnavailable, "ACTIVATION_UNAVAILABLE", "activation is not configured")
-		default:
-			sendError(w, http.StatusInternalServerError, "IDENTITY_INTERNAL_ERROR", "identity request failed")
-		}
-		return
-	}
-	sendJSON(w, http.StatusOK, result)
-}
-
 func (s *server) listSessions(w http.ResponseWriter, r *http.Request) {
-	token, ok := bearerToken(r)
+	resolved, ok := s.resolveSession(w, r)
 	if !ok {
-		sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "bearer token is required")
-		return
-	}
-	resolved, err := s.repository.ResolveAccessToken(r.Context(), token)
-	if err != nil {
-		sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "session is invalid or expired")
 		return
 	}
 	sessions, err := s.repository.ListSessions(r.Context(), resolved.Subject)
@@ -377,14 +351,8 @@ func (s *server) listSessions(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) revokeSession(w http.ResponseWriter, r *http.Request) {
-	token, ok := bearerToken(r)
+	resolved, ok := s.resolveSession(w, r)
 	if !ok {
-		sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "bearer token is required")
-		return
-	}
-	resolved, err := s.repository.ResolveAccessToken(r.Context(), token)
-	if err != nil {
-		sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "session is invalid or expired")
 		return
 	}
 	if err := s.repository.RevokeSession(r.Context(), resolved.Subject, r.PathValue("sessionId")); err != nil {
@@ -399,14 +367,8 @@ func (s *server) revokeSession(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) deleteAccount(w http.ResponseWriter, r *http.Request) {
-	token, ok := bearerToken(r)
+	resolved, ok := s.resolveSession(w, r)
 	if !ok {
-		sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "bearer token is required")
-		return
-	}
-	resolved, err := s.repository.ResolveAccessToken(r.Context(), token)
-	if err != nil {
-		sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "session is invalid or expired")
 		return
 	}
 	if err := s.repository.DeleteAccount(r.Context(), resolved.Subject); err != nil {
@@ -421,14 +383,8 @@ func (s *server) deleteAccount(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) changePassword(w http.ResponseWriter, r *http.Request) {
-	token, ok := bearerToken(r)
+	resolved, ok := s.resolveSession(w, r)
 	if !ok {
-		sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "bearer token is required")
-		return
-	}
-	resolved, err := s.repository.ResolveAccessToken(r.Context(), token)
-	if err != nil {
-		sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "session is invalid or expired")
 		return
 	}
 	var request struct {
@@ -442,6 +398,20 @@ func (s *server) changePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *server) resolveSession(w http.ResponseWriter, r *http.Request) (identity.ActorIdentity, bool) {
+	token, ok := bearerToken(r)
+	if !ok {
+		sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "bearer token is required")
+		return identity.ActorIdentity{}, false
+	}
+	resolved, err := s.repository.ResolveAccessToken(r.Context(), token)
+	if err != nil {
+		sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "session is invalid or expired")
+		return identity.ActorIdentity{}, false
+	}
+	return resolved, true
 }
 
 func writeInternalActorError(w http.ResponseWriter, err error) {
@@ -465,8 +435,11 @@ func writeInternalActorError(w http.ResponseWriter, err error) {
 
 func tokenResponse(pair identity.TokenPair) map[string]any {
 	return map[string]any{
-		"accessToken": pair.AccessToken, "refreshToken": pair.RefreshToken,
-		"tokenType": "Bearer", "expiresIn": 900, "identity": pair.Identity,
+		"accessToken": pair.AccessToken,
+		"refreshToken": pair.RefreshToken,
+		"tokenType": "Bearer",
+		"expiresIn": 900,
+		"identity": pair.Identity,
 	}
 }
 
@@ -479,10 +452,6 @@ func bearerToken(r *http.Request) (string, bool) {
 	return token, token != ""
 }
 
-// clientIP extracts the caller's address for login-attempt auditing. It
-// trusts X-Forwarded-For only as a best-effort signal (this service sits
-// behind infra-controlled proxies in every deployed environment); it is
-// never used for any authorization decision, only for the audit record.
 func clientIP(r *http.Request) string {
 	if forwarded := strings.TrimSpace(r.Header.Get("X-Forwarded-For")); forwarded != "" {
 		if first, _, found := strings.Cut(forwarded, ","); found {
