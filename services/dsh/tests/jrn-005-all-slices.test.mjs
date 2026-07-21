@@ -30,11 +30,14 @@ test("JRN-005 FS-01..FS-04 fixes product truth, actors, states and ownership bou
   assert.doesNotMatch(checkout, /DeliveryAddress\s+string\s+`json:"deliveryAddress"`/);
 });
 
-test("JRN-005 FS-05..FS-08 closes persistence, contract, backend and event recovery", () => {
+test("JRN-005 FS-05..FS-08 implements persistence, durable retries, OCC and event recovery", () => {
   const baseMigration = read("services/dsh/database/migrations/dsh-056_client_addresses.sql");
   const dedupeMigration = read("services/dsh/database/migrations/dsh-901_client_address_logical_deduplication.sql");
+  const receiptMigration = read("services/dsh/database/migrations/dsh-907_jrn_005_address_mutation_receipts.sql");
+  const receiptTest = read("services/dsh/database/tests/dsh-907_jrn_005_address_mutation_receipts.sql");
   const geofenceMigration = read("services/dsh/database/migrations/dsh-906_jrn_006_client_address_geofence_binding.sql");
   const address = read("services/dsh/backend/internal/clientaddress/address.go");
+  const idempotent = read("services/dsh/backend/internal/clientaddress/idempotent_mutations.go");
   const handler = read("services/dsh/backend/internal/http/client_addresses.go");
   const contract = read("services/dsh/contracts/dsh.client-address.openapi.yaml");
 
@@ -43,12 +46,26 @@ test("JRN-005 FS-05..FS-08 closes persistence, contract, backend and event recov
   assert.match(baseMigration, /dsh_client_address_events/);
   assert.match(dedupeMigration, /uq_dsh_client_addresses_active_fingerprint/);
   assert.match(dedupeMigration, /trg_dsh_client_address_fingerprint/);
+  assert.match(receiptMigration, /dsh_client_address_mutation_receipts/);
+  assert.match(receiptMigration, /PRIMARY KEY \(client_id, idempotency_key\)/);
+  assert.doesNotMatch(receiptMigration, /response_body|recipient_name|phone_e164|address_line/);
+  assert.match(receiptTest, /client-scoped idempotency-key reuse was not rejected/);
+  assert.match(receiptTest, /mutation receipt schema contains address PII or response body/);
   assert.match(geofenceMigration, /dsh_enforce_client_address_service_area/);
   assert.match(address, /pg_advisory_xact_lock/);
-  assert.match(address, /ExpectedVersion/);
-  assert.match(handler, /FindCreateReplay/);
+  assert.match(idempotent, /func UpdateIdempotent/);
+  assert.match(idempotent, /func DeleteIdempotent/);
+  assert.match(idempotent, /func SetDefaultIdempotent/);
+  assert.match(idempotent, /loadMutationReceipt/);
+  assert.match(idempotent, /saveMutationReceipt/);
+  assert.match(idempotent, /recordEvent\(ctx, tx, promotedID, clientID, "defaulted"/);
+  assert.match(handler, /addressMutationContext/);
+  assert.match(handler, /addressExpectedVersion/);
+  assert.match(handler, /UpdateIdempotent/);
+  assert.match(handler, /DeleteIdempotent/);
+  assert.match(handler, /SetDefaultIdempotent/);
+  assert.match(handler, /IDEMPOTENCY_CONFLICT/);
   assert.match(handler, /ValidateServiceArea/);
-  assert.match(handler, /ADDRESS_ALREADY_EXISTS/);
   for (const operation of [
     "listDshClientAddresses",
     "createDshClientAddress",
@@ -56,11 +73,12 @@ test("JRN-005 FS-05..FS-08 closes persistence, contract, backend and event recov
     "deleteDshClientAddress",
     "setDshClientDefaultAddress",
   ]) assert.match(contract, new RegExp(`operationId: ${operation}`));
-  assert.match(contract, /duplicate-address/);
+  assert.match(contract, /durable PII-free idempotency receipts/);
+  assert.match(contract, /Idempotency-Key was already used/);
   assert.match(contract, /ServiceAreaUnverified/);
 });
 
-test("JRN-005 FS-09..FS-12 binds one shared brain, client surface and committed readback", () => {
+test("JRN-005 FS-09..FS-12 binds retry-safe shared code, client surface and committed readback", () => {
   const api = read("services/dsh/frontend/shared/client-address/client-address.api.ts");
   const controller = read("services/dsh/frontend/shared/client-address/use-client-address-controller.ts");
   const attempt = read("services/dsh/frontend/shared/client-address/client-address-create-attempt.ts");
@@ -71,10 +89,16 @@ test("JRN-005 FS-09..FS-12 binds one shared brain, client surface and committed 
 
   assert.match(api, /createDshHttpClient/);
   assert.doesNotMatch(api, /\bfetch\s*\(/);
+  assert.match(api, /expectedVersion,/);
+  assert.match(api, /address-default/);
   assert.match(attempt, /AsyncStorage/);
   assert.match(attempt, /getOrCreateClientAddressAttempt/);
   assert.match(controller, /ADDRESS_ALREADY_EXISTS/);
   assert.match(controller, /ADDRESS_CONFLICT/);
+  assert.match(controller, /IDEMPOTENCY_CONFLICT/);
+  assert.match(controller, /ADDRESS_SERVICE_AREA_UNVERIFIED/);
+  assert.match(controller, /versionedMutationContext/);
+  assert.match(controller, /shouldReloadCommittedState/);
   assert.match(controller, /await load\(\)/);
   assert.match(screen, /useClientAddressController/);
   assert.match(screen, /Location\.getCurrentPositionAsync/);
@@ -85,10 +109,12 @@ test("JRN-005 FS-09..FS-12 binds one shared brain, client surface and committed 
   assert.doesNotMatch(screen, /\blocalStorage\b|\bSEED_ADDRESSES\b|\bMAP_PRESETS\b/);
 });
 
-test("JRN-005 FS-13..FS-16 closes privacy, experience, observability and cleanup", () => {
+test("JRN-005 FS-13..FS-16 closes privacy, experience, observability and cleanup in code", () => {
   const privacyHandler = read("services/dsh/backend/internal/http/client_address_privacy.go");
   const privacyMigration = read("services/dsh/database/migrations/dsh-081_client_address_subject_anonymization.sql");
+  const receiptMigration = read("services/dsh/database/migrations/dsh-907_jrn_005_address_mutation_receipts.sql");
   const screen = read("services/dsh/frontend/app-client/account/AddressLocationScreen.tsx");
+  const controller = read("services/dsh/frontend/shared/client-address/use-client-address-controller.ts");
   const slo = json(sloPath);
   const runbook = read("governance/runbooks/JRN-005_CLIENT_ADDRESS_OPERATIONS.md");
   const guard = read("tools/guards/client-commerce/client-commerce-truth-gate.mjs");
@@ -96,19 +122,21 @@ test("JRN-005 FS-13..FS-16 closes privacy, experience, observability and cleanup
   assert.match(privacyHandler, /requirePermission|requireActor/);
   assert.match(privacyMigration, /subjectLinkSevered/);
   assert.match(privacyMigration, /addressEventsScrubbed/);
+  assert.doesNotMatch(receiptMigration, /response_body|recipient_name|phone_e164/);
   assert.match(screen, /textAlign: "right"/);
   assert.match(screen, /disabled=\{controller\.mutating\}/);
   assert.match(screen, /إعادة المحاولة/);
+  assert.match(controller, /لن تُنفذ مرتين/);
   assert.equal(slo.journeyId, "JRN-005");
   assert.equal(slo.serviceLevelObjectives.mutationCorrectness.target, 1);
   assert.ok(slo.forbiddenSignalFields.includes("phone_e164"));
   assert.match(runbook, /## Rollback/);
   assert.match(runbook, /## Privacy job/);
-  assert.match(guard, /dsh-901_client_address_logical_deduplication/);
+  assert.match(guard, /dsh-907_jrn_005_address_mutation_receipts/);
   assert.match(guard, /LOCAL_OR_SEEDED_ADDRESS_TRUTH_FORBIDDEN/);
 });
 
-test("JRN-005 FS-17..FS-18 registers targeted same-commit verification and evidence", () => {
+test("JRN-005 FS-17..FS-18 executes the real code gates on one commit", () => {
   const registry = json(sliceRegistryPath);
   const ids = registry.slices.map(({ id }) => id);
   const expected = Array.from({ length: 18 }, (_, index) => `FS-${String(index + 1).padStart(2, "0")}`);
@@ -120,7 +148,10 @@ test("JRN-005 FS-17..FS-18 registers targeted same-commit verification and evide
   assert.equal(new Set(ids).size, 18);
   assert.match(workflow, /journeys\/jrn-005\/all-slices/);
   assert.match(workflow, /postgres:16-alpine/);
+  assert.match(workflow, /go test \.\/internal\/clientaddress \.\/internal\/http/);
+  assert.match(workflow, /tsconfig\.jrn-005-app-client\.json/);
   assert.match(workflow, /dsh-901_client_address_logical_deduplication\.sql/);
+  assert.match(workflow, /dsh-907_jrn_005_address_mutation_receipts\.sql/);
   assert.match(workflow, /jrn-005-all-slices\.test\.mjs/);
   assert.equal(evidence.journeyId, "JRN-005");
   assert.equal(evidence.functionalSlices.registered, 18);
