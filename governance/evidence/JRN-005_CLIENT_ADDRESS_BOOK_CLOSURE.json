@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "journeyId": "JRN-005",
+  "journeyName": "Client address book",
+  "repository": "bthwani2-boop/bthwani-suite-next",
+  "targetRef": "sambassam",
+  "decision": "READY_FOR_TARGETED_VERIFICATION",
+  "implementationTruth": {
+    "productTruth": "governance/product/contracts/jrn-005-client-address-book.product-truth.json",
+    "sliceRegistry": "services/dsh/contracts/jrn-005-all-slices-registry.json",
+    "canonicalContract": "services/dsh/contracts/dsh.client-address.openapi.yaml",
+    "consistencyRegistry": "services/dsh/contracts/jrn-005-consistency-registry.json",
+    "observabilitySlo": "services/dsh/contracts/jrn-005-observability-slo.json",
+    "operationsRunbook": "governance/runbooks/JRN-005_CLIENT_ADDRESS_OPERATIONS.md"
+  },
+  "functionalSlices": {
+    "registered": 18,
+    "implemented": 18,
+    "workflowVerified": 0,
+    "independentlyApproved": 0
+  },
+  "implementedCapabilities": [
+    "authenticated owner-scoped list",
+    "idempotent create with restart-persistent retry identity",
+    "active logical duplicate rejection",
+    "optimistic-concurrency update and delete",
+    "single active default",
+    "deterministic default promotion after delete",
+    "governed service-area validation",
+    "address events and committed readback",
+    "checkout-owned address resolution",
+    "privacy retention and irreversible anonymization",
+    "Arabic RTL visible states and recovery",
+    "SLO, support and rollback runbook",
+    "static and database regression gates"
+  ],
+  "sameCommitVerification": {
+    "statusContext": "journeys/jrn-005/all-slices",
+    "workflow": ".github/workflows/jrn-005-all-slices.yml",
+    "expectedChecks": [
+      "repository hygiene",
+      "JRN-005 all-slices static test",
+      "client-commerce truth guard",
+      "Go clientaddress and HTTP tests",
+      "PostgreSQL 16 migration apply",
+      "PostgreSQL logical duplicate insert rejection",
+      "PostgreSQL logical duplicate update rejection",
+      "targeted app-client typecheck"
+    ],
+    "verifiedCommit": null,
+    "workflowRunId": null,
+    "artifactDigest": null,
+    "result": "PENDING"
+  },
+  "approvalMatrix": {
+    "product": "PENDING_INDEPENDENT_REVIEW",
+    "qa": "PENDING_INDEPENDENT_REVIEW",
+    "security": "PENDING_INDEPENDENT_REVIEW",
+    "privacy": "PENDING_INDEPENDENT_REVIEW",
+    "accessibility": "PENDING_INDEPENDENT_REVIEW",
+    "release": "PENDING_INDEPENDENT_REVIEW"
+  },
+  "deviceEvidence": {
+    "appClientAndroid": "PENDING",
+    "weakNetworkRetry": "PENDING",
+    "rtlAndAccessibility": "PENDING"
+  },
+  "rollback": {
+    "runbook": "governance/runbooks/JRN-005_CLIENT_ADDRESS_OPERATIONS.md#rollback",
+    "preserveData": ["address rows", "soft-delete timestamps", "address events", "privacy audit events"],
+    "forbiddenEmergencyActions": ["disable owner scoping", "drop single-default constraint", "convert duplicate conflict to success", "log address PII"]
+  },
+  "formalClosureRule": "Set decision to CLOSED_WITH_EVIDENCE only after the same-commit workflow succeeds and every required independent approval and device evidence field is complete."
+}
