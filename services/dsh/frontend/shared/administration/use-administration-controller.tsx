@@ -5,10 +5,13 @@ import {
   fetchPartnerActivations, activatePartner, blockPartner,
   fetchCaptainCredentials, upsertCaptainCredential,
   fetchAdminAudit,
+  fetchRoleAssignmentApprovals,
+  reviewRoleAssignmentApproval,
 } from "./administration.api";
 import type {
   DshRole, DshStaffMember, DshPartnerActivation,
   DshCaptainCredential, DshAdminAuditEntry, DshAdminState,
+  DshRoleAssignmentApproval, DshRoleAssignmentApprovalStatus,
 } from "./administration.types";
 
 export function useStaffController(authKind: string) {
@@ -21,14 +24,19 @@ export function useStaffController(authKind: string) {
   useEffect(() => { if (authKind !== "authenticated") { setState({ kind: "idle" }); return; } load(); }, [authKind, load]);
   return {
     state, reload: load,
-    assignRole: async (staffId: string, roleId: string) => { await assignStaffRole(staffId, roleId); await load(); },
+    requestRoleAssignment: async (staffId: string, roleId: string, reason: string) => {
+      const response = await assignStaffRole(staffId, roleId, reason);
+      return response.approval;
+    },
   };
 }
 
 function msg(err: unknown): string {
-  const e = err as { kind?: string; status?: number } | undefined;
+  const e = err as { kind?: string; status?: number; message?: string } | undefined;
   if (e?.status === 401) return "الجلسة منتهية";
-  return "تعذّر تحميل البيانات";
+  if (e?.status === 403) return "لا تملك صلاحية تنفيذ هذا الإجراء";
+  if (e?.status === 409) return "تغيّر طلب الاعتماد أو يوجد طلب مماثل معلق";
+  return e?.message || "تعذّر تحميل البيانات";
 }
 
 function useRolesController(authKind: string) {
@@ -43,6 +51,31 @@ function useRolesController(authKind: string) {
     state, reload: load,
     create: async (body: { name: string; description?: string }) => { await createRole(body); await load(); },
   };
+}
+
+export function useRoleAssignmentApprovalController(
+  authKind: string,
+  status: DshRoleAssignmentApprovalStatus | "" = "pending",
+) {
+  const [state, setState] = useState<DshAdminState<DshRoleAssignmentApproval[]>>({ kind: "idle" });
+  const load = useCallback(async () => {
+    setState({ kind: "loading" });
+    try { setState({ kind: "success", data: (await fetchRoleAssignmentApprovals(status)).approvals }); }
+    catch (err) { setState({ kind: "error", message: msg(err) }); }
+  }, [status]);
+  useEffect(() => { if (authKind !== "authenticated") { setState({ kind: "idle" }); return; } load(); }, [authKind, load]);
+
+  const review = useCallback(async (
+    approvalId: string,
+    decision: "approved" | "rejected",
+    expectedVersion: number,
+    reviewNote: string,
+  ) => {
+    await reviewRoleAssignmentApproval(approvalId, { decision, expectedVersion, reviewNote });
+    await load();
+  }, [load]);
+
+  return { state, reload: load, review };
 }
 
 function usePartnerActivationController(authKind: string, status?: string) {
