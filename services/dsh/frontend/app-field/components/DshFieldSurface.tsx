@@ -206,7 +206,7 @@ export function DshFieldSurface({ command, onExit }: DshFieldSurfaceProps = {}) 
           <DshFieldActivationCard
             loading={identity.state.kind === 'authenticating'}
             {...(identity.state.kind === 'error' ? { error: identity.state.message } : {})}
-            onSubmit={(phone, code) => void identity.activate(phone, code)}
+            onSubmit={(phone, code) => void identity.activate('field', phone, code)}
           />
         </View>
       </View>
