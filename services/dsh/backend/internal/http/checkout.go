@@ -158,7 +158,7 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to recover idempotent checkout pricing")
 			return
 		}
-		if intent.State != checkout.StatePending {
+		if intent.State != checkout.StatePending && intent.State != checkout.StateWltOutcomeUnknown {
 			store.SendJSON(w, http.StatusOK, map[string]any{"intent": marshalIntentWithPricing(intent, pricing)})
 			return
 		}
@@ -308,6 +308,22 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 		IdempotencyKey:   "dsh-checkout-intent:" + intent.ID,
 	})
 	if err != nil {
+		if wlt.IsPaymentSessionOutcomeUnknown(err) {
+			unknownIntent, markErr := checkout.MarkWltOutcomeUnknown(s.db, intent.ID, actor.TenantID, actor.ID)
+			if markErr != nil {
+				store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to mark unknown WLT outcome")
+				return
+			}
+			store.SendJSON(w, http.StatusAccepted, map[string]any{
+				"intent":                 marshalIntentWithPricing(unknownIntent, pricing),
+				"reconciliationRequired": true,
+				"error": map[string]any{
+					"code":    "WLT_OUTCOME_UNKNOWN",
+					"message": "WLT may have accepted the idempotent request; retry or operator reconciliation is required",
+				},
+			})
+			return
+		}
 		fundingReleaseFailed := false
 		if fundingProjection != nil {
 			if releaseErr := s.releaseCouponFunding(r.Context(), actor.TenantID, intent.ID, "payment_session_handoff_failed", correlationID); releaseErr != nil {
