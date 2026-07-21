@@ -3,8 +3,10 @@
   "journeyId": "JRN-004",
   "journeyName": "اكتشاف المتاجر وسياقها وحوكمتها",
   "targetRef": "sambassam",
-  "decision": "IMPLEMENTED_PENDING_SAME_COMMIT_VERIFICATION",
-  "evidenceCommit": "PENDING_SAME_COMMIT_VERIFICATION",
+  "decision": "READY_FOR_REVIEW",
+  "evidenceCommit": "2a330d9ccd37484d6c156cb40b4be87271a53545",
+  "evidenceRunId": 29860178822,
+  "evidenceArtifactDigest": "sha256:7660c460e84d6c83a3bb2da03ffbd92413c70313e5591dd7d3ec675332548de9",
   "functionalSlices": [
     {"id":"JRN-004-S01","name":"قائمة المتاجر العامة وتفاصيل المتجر وسياقه","status":"COMPLETE","evidence":["services/dsh/backend/internal/store/repository.go","services/dsh/frontend/app-client/store/StoreDetailScreen.tsx"]},
     {"id":"JRN-004-S02","name":"التغطية ومناطق الخدمة وقابلية الظهور","status":"COMPLETE","evidence":["services/dsh/backend/internal/store/publication_diagnostics.go","services/dsh/frontend/app-partner/account/PartnerHubScreen.tsx"]},
@@ -33,7 +35,7 @@
     {"id":"FS-14","status":"COMPLETE","evidence":"services/dsh/contracts/jrn-004-surface-registry.json"},
     {"id":"FS-15","status":"COMPLETE","evidence":"governance/runbooks/JRN-004_STORE_OPERATIONS.md"},
     {"id":"FS-16","status":"COMPLETE","evidence":"services/dsh/contracts/jrn-004-governance-policy.json"},
-    {"id":"FS-17","status":"PENDING_SAME_COMMIT_VERIFICATION","evidence":".github/workflows/jrn-004-fullstack-slices.yml"},
+    {"id":"FS-17","status":"COMPLETE","evidence":".github/workflows/jrn-004-fullstack-slices.yml"},
     {"id":"FS-18","status":"COMPLETE_INTERNAL_PENDING_INDEPENDENT_APPROVALS","evidence":"governance/evidence/JRN-004_SLICE_EXECUTION_LOG.md"}
   ],
   "zeroGate": {
@@ -43,9 +45,11 @@
     "duplicateTruthOwners": 0,
     "runtimeMocksAsTruth": 0,
     "deadCodeInScope": 0,
+    "temporaryPatchFiles": 0,
     "unclosedFunctionalSlices": 0,
-    "unclosedImplementationSlices": 0
+    "unclosedImplementationSlices": 0,
+    "failedRequiredChecks": 0
   },
   "independentApprovalsRequired": ["Product Owner", "QA/device", "Security", "Release", "Production"],
-  "approvalBoundary": "Implementation agent may close internal slices and produce evidence, but may not self-approve independent gates."
+  "approvalBoundary": "All internal implementation slices are closed. Independent approvals cannot be self-issued and remain required before CLOSED_WITH_EVIDENCE."
 }
