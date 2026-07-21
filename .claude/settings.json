@@ -24,7 +24,14 @@
       "Bash(git check-ignore *)",
       "Bash(echo \"exit:$?\")",
       "Bash(xargs grep -liE \"dsh_media_refs|dsh_wlt_outbox_events|dsh_deliveries\")",
-      "Bash(pnpm --version)"
+      "Bash(pnpm --version)",
+      "Bash(xargs -I{} basename {})",
+      "Bash(xargs -n1 basename)",
+      "Bash(mkdir -p \"C:\\\\Users\\\\bassa\\\\.claude\\\\plans\" 2>&1; echo done)",
+      "Bash(git commit *)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\bassa\\.claude\\plans"
     ]
   },
   "project": "bthwani-suite-next",
