@@ -9,7 +9,12 @@ on:
       - services/dsh/frontend/shared/checkout/**
       - services/dsh/frontend/shared/dispatch/**
       - services/dsh/frontend/shared/pickup/**
+      - services/dsh/frontend/app-client/checkout/**
+      - services/dsh/frontend/app-client/orders/**
       - services/dsh/frontend/app-partner/orders/**
+      - services/dsh/frontend/app-captain/dispatch/**
+      - services/dsh/frontend/control-panel/operations/OrderJourneyDispatchAssignmentScreen.tsx
+      - services/dsh/frontend/control-panel/operations/PickupWorkbenchScreen.tsx
 
 permissions:
   contents: read
