@@ -56,10 +56,11 @@ func MarkPreparing(db *sql.DB, orderID, actorID string) (*Order, error) {
 	return MarkPreparingWithTiming(db, orderID, actorID)
 }
 
-// MarkReadyForPickup delegates to the governed timing implementation so
-// ready_at and the final SLA state cannot diverge from the order lifecycle.
+// MarkReadyForPickup delegates to the governed issue gate so open missing-item,
+// substitution, or quality issues cannot coexist with a ready order. The gate
+// records ready_at and the lifecycle transition in the same transaction.
 func MarkReadyForPickup(db *sql.DB, orderID, actorID string) (*Order, error) {
-	return MarkReadyWithTiming(db, orderID, actorID)
+	return MarkReadyWithIssueGuard(db, orderID, actorID)
 }
 
 func TransitionDispatchOrder(
