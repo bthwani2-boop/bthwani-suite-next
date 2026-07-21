@@ -16,6 +16,8 @@ func addressError(w http.ResponseWriter, err error) {
 		store.SendError(w, http.StatusBadRequest, "INVALID_ADDRESS", "address input is invalid")
 	case errors.Is(err, clientaddress.ErrNotFound):
 		store.SendError(w, http.StatusNotFound, "ADDRESS_NOT_FOUND", "address was not found")
+	case clientaddress.IsDuplicateError(err):
+		store.SendError(w, http.StatusConflict, "ADDRESS_ALREADY_EXISTS", "an identical active address already exists; update the existing address instead")
 	case errors.Is(err, clientaddress.ErrConflict):
 		store.SendError(w, http.StatusConflict, "ADDRESS_CONFLICT", "address changed; reload and retry")
 	default:
