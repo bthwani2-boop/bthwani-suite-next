@@ -9,7 +9,7 @@ on:
       - governance/evidence/JRN-001_PARTNER_ONBOARDING_STORE_PUBLICATION.md
       - governance/runbooks/JRN-001_PARTNER_ONBOARDING_SUPPORT.md
       - services/dsh/contracts/jrn-001-*.json
-      - services/dsh/contracts/dsh.partner-activation.openapi.yaml
+      - services/dsh/contracts/dsh.partner-onboarding.openapi.yaml
       - services/dsh/backend/internal/http/partner_lifecycle_routes.go
       - services/dsh/backend/internal/partner/**
       - services/dsh/backend/internal/partnerwltoutbox/**
