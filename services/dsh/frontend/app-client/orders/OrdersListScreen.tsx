@@ -16,18 +16,37 @@ import { ORDER_STATUS_LABELS } from "../../shared/orders";
 import { useClientOrdersController } from "../../shared/orders/use-orders-controller";
 import type { DshOrder, DshOrderStatus } from "../../shared/orders";
 
-const STATUS_TONE: Record<DshOrderStatus, "neutral" | "success" | "warning" | "danger" | "info"> = {
-  pending: "warning",
-  store_accepted: "info",
-  preparing: "info",
-  ready_for_pickup: "success",
-  driver_assigned: "info",
-  driver_arrived_store: "info",
-  picked_up: "info",
-  arrived_customer: "warning",
-  delivered: "success",
-  cancelled: "danger",
-};
+type StatusTone = "neutral" | "success" | "warning" | "danger" | "info";
+
+function orderStatusTone(status: DshOrderStatus): StatusTone {
+  switch (status) {
+    case "pending":
+    case "arrived_customer":
+      return "warning";
+    case "ready_for_pickup":
+    case "delivered":
+      return "success";
+    case "cancelled_by_client":
+    case "cancelled_by_store":
+    case "cancelled_by_operator":
+    case "cancelled_no_driver":
+    case "failed_payment":
+    case "failed_dispatch":
+      return "danger";
+    case "store_accepted":
+    case "preparing":
+    case "driver_assigned":
+    case "driver_arrived_store":
+    case "store_handoff_confirmed":
+    case "picked_up":
+    case "returning_to_store":
+    case "return_arrived_store":
+    case "returned_to_store":
+      return "info";
+    default:
+      return "neutral";
+  }
+}
 
 type Props = {
   readonly onOpenOrder?: (orderId: string) => void;
@@ -37,18 +56,16 @@ type Props = {
 function OrderCard({ order, onOpenOrder }: { order: DshOrder; onOpenOrder?: (id: string) => void }) {
   const [expanded, setExpanded] = useState(false);
   const label = ORDER_STATUS_LABELS[order.status] ?? order.status;
-  const tone = STATUS_TONE[order.status] ?? "neutral";
+  const tone = orderStatusTone(order.status);
   const items = order.items ?? [];
-  
-  // Calculate total price
+
   const totalPrice = items.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
   const totalPriceLabel = `${totalPrice.toLocaleString("ar-YE")} ر.ي`;
-  
-  // Summary text
+
   const mainItemName = items[0]?.productName ?? "طلب فارغ";
   const summaryText = items.length > 1 ? `${mainItemName} و ${items.length - 1} آخرين` : mainItemName;
 
-  const orderDate = new Date(order.createdAt).toLocaleDateString("ar-YE", {
+  const orderDate = new Date(order.createdAt).toLocaleString("ar-YE", {
     year: "numeric",
     month: "long",
     day: "numeric",
@@ -56,7 +73,7 @@ function OrderCard({ order, onOpenOrder }: { order: DshOrder; onOpenOrder?: (id:
     minute: "2-digit",
   });
 
-  const isActive = order.status !== "delivered" && order.status !== "cancelled";
+  const isActive = order.status !== "delivered" && !order.status.startsWith("cancelled_") && !order.status.startsWith("failed_");
 
   return (
     <Surface style={styles.card}>
@@ -72,7 +89,7 @@ function OrderCard({ order, onOpenOrder }: { order: DshOrder; onOpenOrder?: (id:
             </Text>
           </View>
         </View>
-        
+
         <View style={styles.statusRow}>
           <Badge label={label} tone={tone} />
           <Text role="caption" tone="muted" style={styles.dateText}>
@@ -93,7 +110,7 @@ function OrderCard({ order, onOpenOrder }: { order: DshOrder; onOpenOrder?: (id:
               </Text>
             </View>
           ))}
-          
+
           <View style={styles.actionRow}>
             {onOpenOrder && (
               <Button
@@ -116,8 +133,8 @@ export function OrdersListScreen({ onOpenOrder, onBack }: Props) {
 
   return (
     <View style={styles.container}>
-      <TopBar title="طلباتي" />
-      
+      <TopBar title="طلباتي" {...(onBack ? { onBack } : {})} />
+
       {state.kind === "loading" ? (
         <View style={styles.center}>
           <Text role="body">جارٍ تحميل طلباتك...</Text>
@@ -244,4 +261,3 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
-
