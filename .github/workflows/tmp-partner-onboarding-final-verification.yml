@@ -1,0 +1,39 @@
+name: Temporary partner onboarding final verification
+
+on:
+  push:
+    branches:
+      - journey/order-preparation-handoff-closure
+    paths:
+      - .github/workflows/tmp-partner-onboarding-final-verification.yml
+
+permissions:
+  contents: read
+
+jobs:
+  verify-partner-onboarding:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: services/dsh/backend/go.sum
+      - name: Verify touched Go formatting
+        working-directory: services/dsh/backend
+        shell: bash
+        run: |
+          output="$(gofmt -d internal/http/partner_self_routes_test.go internal/http/server.go internal/http/server_public_reels_compat.go internal/http/partner_order_workboard_test.go internal/partner/model.go internal/partner/model_test.go internal/partner/repository.go internal/partner/repository_db_test.go)"
+          test -z "$output" || { printf '%s\n' "$output"; exit 1; }
+      - name: Test partner backend packages
+        working-directory: services/dsh/backend
+        run: go test ./internal/partner ./internal/http
+      - name: Verify partner surface truth
+        run: node tools/guards/partner/partner-surface-truth-gate.mjs
+      - name: Verify partner support truth
+        run: node tools/guards/partner/partner-support-truth-gate.mjs
+      - name: Verify composed contracts
+        run: node tools/important-scripts/contracts-foundation.mjs
+      - name: Verify governed workboard contract
+        run: node --test services/dsh/tests/order-preparation-contract.test.mjs
