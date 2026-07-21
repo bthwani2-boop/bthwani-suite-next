@@ -1,37 +1,10 @@
 name: JRN 020-025 sambassam verification
-# Final closure verification for unified journeys 020 through 025 and their multisurface consumers.
+# Permanent closure verification for unified journeys 020 through 025 and global ownership boundaries.
 
 on:
   push:
     branches:
       - sambassam
-    paths:
-      - .github/workflows/jrn-020-025-sambassam-verify.yml
-      - services/dsh/frontend/shared/dispatch/**
-      - services/dsh/frontend/shared/support/**
-      - services/dsh/frontend/shared/delivery/**
-      - services/dsh/frontend/shared/orders/**
-      - services/dsh/frontend/shared/operations/**
-      - services/dsh/frontend/shared/workforce/**
-      - services/dsh/frontend/shared/partner/**
-      - services/dsh/frontend/shared/special-requests/**
-      - services/dsh/frontend/shared/notifications/**
-      - services/dsh/frontend/shared/field-readiness/**
-      - services/dsh/frontend/shared/marketing/**
-      - services/dsh/frontend/app-client/**
-      - services/dsh/frontend/app-partner/**
-      - services/dsh/frontend/app-captain/**
-      - services/dsh/frontend/app-field/**
-      - services/dsh/frontend/control-panel/operations/**
-      - services/dsh/backend/cmd/dsh-api/main.go
-      - services/dsh/backend/internal/dispatch/**
-      - services/dsh/backend/internal/support/**
-      - services/dsh/backend/internal/notifications/**
-      - services/dsh/backend/internal/specialrequests/**
-      - services/dsh/backend/internal/fieldreadiness/**
-      - services/dsh/backend/internal/marketing/**
-      - services/dsh/backend/internal/http/**
-      - services/dsh/tests/journeys-020-025-binding.test.mjs
 
 permissions:
   contents: read
