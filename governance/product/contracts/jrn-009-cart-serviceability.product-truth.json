@@ -1,0 +1,91 @@
+{
+  "schemaVersion": "2.0.0",
+  "journeyId": "JRN-009",
+  "journeyName": "العربة وقابلية الخدمة",
+  "status": "IMPLEMENTED_PENDING_VERIFICATION",
+  "decision": "FIX_REQUIRED",
+  "codeClosure": "IMPLEMENTED_PENDING_VERIFICATION",
+  "sliceRegistry": "services/dsh/contracts/jrn-009-slice-verification-registry.json",
+  "truthOwners": {
+    "cartAndSnapshot": "services/dsh/backend/internal/cart",
+    "catalogAndAssortment": "services/dsh/backend/internal/centralcatalog + dsh_store_assortments",
+    "clientAddress": "services/dsh/backend/internal/clientaddress",
+    "serviceabilityCapacityAndSla": "services/dsh/backend/internal/cart + dsh_platform_*",
+    "financialPaymentAndLedger": "services/wlt"
+  },
+  "actors": ["authenticated_client", "authorized_operator"],
+  "requiredSurfaces": [
+    "app-client",
+    "control-panel",
+    "dsh-shared-brain",
+    "dsh-backend",
+    "dsh-database",
+    "dsh-contracts"
+  ],
+  "excludedSurfaces": {
+    "app-partner": "The partner consumes order preparation after checkout and does not own client cart truth.",
+    "app-captain": "Captain execution begins after order creation and assignment.",
+    "app-field": "Field operations do not mutate client carts.",
+    "wlt-ui": "WLT owns payment and ledger truth but no pre-checkout cart mutation."
+  },
+  "productDecisions": {
+    "activeCartPolicy": "one-active-cart-per-client-across-stores",
+    "storeSwitchPolicy": "explicit-clear-abandons-current-cart-before-another-store",
+    "priceChangePolicy": "preserve-snapshot-and-require-explicit-client-refresh",
+    "unavailableItemPolicy": "block-checkout-until-remove-or-current-assortment-restored",
+    "addressPolicy": "delivery-serviceability-requires-authenticated-client-owned-address",
+    "capacityPolicy": "exhausted-or-throttled-capacity-blocks-delivery",
+    "missingPolicyVisibility": "unconfigured-capacity-or-sla-is-explicit-never-fabricated",
+    "financialBoundary": "dsh-stores-commercial-snapshot-wlt-stores-payment-ledger-truth"
+  },
+  "capabilities": [
+    "The client loads one persisted DSH cart and reads committed items after every mutation.",
+    "Add, quantity update, remove, and explicit clear are actor-owned and server-authorized.",
+    "Product, store assortment, name, and unit price are snapshotted only from current DSH catalog truth.",
+    "Delivery serviceability resolves an address owned by the authenticated client and evaluates store, zone, requested mode, capacity, and SLA.",
+    "Cart reads reconcile each immutable snapshot against current price, availability, product linkage, and assortment identity.",
+    "A client cannot create a second active cart for another store; explicit clear abandons the old cart.",
+    "The control panel reads the same persisted items and reconciliation state without financial mutation.",
+    "Runtime evidence persists every address-owned serviceability check without storing payment or ledger truth."
+  ],
+  "negativeInvariants": [
+    "No client-supplied price, product name, assortment identity, service-area code, latitude, or longitude establishes cart truth.",
+    "No cart identifier permits mutation without authenticated client ownership.",
+    "No client has more than one active cart across stores.",
+    "No silent store switch destroys an active cart.",
+    "No price or assortment change silently rewrites an existing snapshot.",
+    "No unavailable, unpriced, unlinked, or changed item is reported checkout-ready.",
+    "No exhausted or throttled capacity is reported serviceable.",
+    "No control-panel cart view writes payment, settlement, refund, or ledger state.",
+    "No runtime mock or local cart establishes operational truth."
+  ],
+  "implementation": {
+    "cartRepository": "services/dsh/backend/internal/cart/cart.go",
+    "sliceClosure": "services/dsh/backend/internal/cart/jrn009_closure.go",
+    "ownership": "services/dsh/backend/internal/cart/ownership.go",
+    "serviceabilityEvidence": "services/dsh/backend/internal/cart/jrn009_serviceability_evidence.go",
+    "httpHandler": "services/dsh/backend/internal/http/cart.go",
+    "databaseEnforcement": "services/dsh/database/migrations/dsh-096_jrn009_cart_slice_closure.sql",
+    "sharedBrain": "services/dsh/frontend/shared/cart",
+    "clientSurface": "services/dsh/frontend/app-client/cart/CartScreen.tsx",
+    "operatorSurface": "services/dsh/frontend/control-panel/operations/CartActivityScreen.tsx",
+    "runtimeProof": "tools/scripts/smoke-jrn-009-cart.ps1",
+    "workflow": ".github/workflows/jrn-009-sambassam-verify.yml"
+  },
+  "technicalAcceptanceConditions": [
+    "All eight entries in the JRN-009 slice registry are closed by implementation and same-commit evidence.",
+    "Targeted frontend TypeScript compilation passes.",
+    "Cart and mounted HTTP Go tests pass.",
+    "PostgreSQL applies every DSH migration including dsh-096.",
+    "Runtime proves owned address, serviceability, capacity, SLA, snapshot reconciliation, store isolation, operator readback, delete, and clear.",
+    "The implementation commit publishes journeys/jrn-009/all-slices=success."
+  ],
+  "technicalAcceptanceResult": "PENDING",
+  "openCodeGaps": [],
+  "independentReviewPending": [
+    "product_owner_approval",
+    "qa_physical_device_runtime_rtl_accessibility_evidence",
+    "security_and_privacy_approval",
+    "release_and_production_approval"
+  ]
+}
