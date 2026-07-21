@@ -8,6 +8,7 @@ on:
       - "services/dsh/tsconfig.jrn-031.json"
       - "services/dsh/database/migrations/dsh-076_admin_role_assignment_approvals.sql"
       - "services/dsh/database/migrations/dsh-077_admin_role_permissions.sql"
+      - "services/dsh/database/migrations/dsh-078_admin_role_definition_approvals.sql"
       - "services/dsh/backend/internal/administration/**"
       - "services/dsh/backend/internal/http/administration*.go"
       - "services/dsh/backend/internal/http/journey_031_routes_test.go"
