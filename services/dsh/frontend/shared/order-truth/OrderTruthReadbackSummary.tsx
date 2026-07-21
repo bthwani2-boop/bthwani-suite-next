@@ -31,7 +31,11 @@ export function OrderTruthReadbackSummary({
     ORDER_TRUTH_EXPERIENCE_POLICY.maximumSummaryRows,
     Math.max(1, Math.trunc(limit)),
   );
-  const controller = useOrderTruthCollectionController(actor, { status, limit: safeLimit, token });
+  const controller = useOrderTruthCollectionController(actor, {
+    limit: safeLimit,
+    ...(status !== undefined ? { status } : {}),
+    ...(token !== undefined ? { token } : {}),
+  });
   const { state } = controller;
 
   if (state.kind === "idle" || state.kind === "loading") {
