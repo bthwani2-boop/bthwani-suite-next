@@ -10,7 +10,10 @@ import {
   Tabs,
   Text,
 } from '@bthwani/ui-kit';
-import { PREPARATION_ISSUE_KIND_LABELS } from '../../shared/orders';
+import {
+  PREPARATION_ISSUE_KIND_LABELS,
+  STORE_CAPTAIN_HANDOFF_EXCEPTION_LABELS,
+} from '../../shared/orders';
 import type { GovernedPartnerOrderItem } from '../../shared/partner/partner.adapters';
 import type { PartnerOrdersHomeScreenState } from './OrdersInboxScreen';
 
@@ -39,7 +42,12 @@ const STAGES: ReadonlyArray<{ readonly id: StageId; readonly label: string }> = 
   { id: 'monitoring', label: 'متابعة' },
 ];
 
+function hasOpenHandoffException(item: GovernedPartnerOrderItem): boolean {
+  return item.openStoreCaptainHandoffExceptionId !== '';
+}
+
 function primaryAction(item: GovernedPartnerOrderItem): GovernedPartnerOrderActionId {
+  if (hasOpenHandoffException(item)) return 'details';
   if (item.allowedActions.includes('resolve_issue')) return 'resolve_issue';
   if (item.allowedActions.includes('accept')) return 'accept';
   if (item.allowedActions.includes('prepare')) return 'prepare';
@@ -52,6 +60,7 @@ function primaryAction(item: GovernedPartnerOrderItem): GovernedPartnerOrderActi
 }
 
 function primaryLabel(item: GovernedPartnerOrderItem): string {
+  if (hasOpenHandoffException(item)) return 'عرض استثناء العهدة';
   const action = primaryAction(item);
   if (action === 'resolve_issue') return 'حل مشكلات التحضير';
   if (action === 'accept') return 'قبول الطلب';
@@ -75,7 +84,8 @@ function stageMatches(item: GovernedPartnerOrderItem, stage: StageId): boolean {
   }
   if (stage === 'ready') return item.allowedActions.includes('ready');
   if (stage === 'handoff') {
-    return item.allowedActions.includes('handoff')
+    return hasOpenHandoffException(item)
+      || item.allowedActions.includes('handoff')
       || item.storeCaptainHandoffStatus === 'awaiting_partner'
       || item.storeCaptainHandoffStatus === 'partner_confirmed';
   }
@@ -83,6 +93,11 @@ function stageMatches(item: GovernedPartnerOrderItem, stage: StageId): boolean {
 }
 
 function statusLabel(item: GovernedPartnerOrderItem): string {
+  if (hasOpenHandoffException(item)) {
+    return item.openStoreCaptainHandoffExceptionStatus === 'acknowledged'
+      ? 'استثناء عهدة قيد مراجعة العمليات'
+      : 'استثناء عهدة جديد';
+  }
   if (item.openPreparationIssueCount > 0) return `${item.openPreparationIssueCount} مشكلة تمنع الجاهزية`;
   if (item.storeCaptainHandoffStatus === 'awaiting_partner') return 'ينتظر تأكيد المتجر';
   if (item.storeCaptainHandoffStatus === 'partner_confirmed') return 'ينتظر استلام الكابتن';
@@ -98,6 +113,7 @@ function statusLabel(item: GovernedPartnerOrderItem): string {
 }
 
 function statusTone(item: GovernedPartnerOrderItem): 'danger' | 'warning' | 'success' | 'neutral' {
+  if (hasOpenHandoffException(item)) return 'danger';
   if (item.openPreparationIssueCount > 0) return 'danger';
   if (item.storeCaptainHandoffStatus === 'awaiting_partner') return 'warning';
   if (item.storeCaptainHandoffStatus === 'partner_confirmed') return 'success';
@@ -175,8 +191,11 @@ export function GovernedPartnerOrdersScreen({
           {filtered.map((item, index) => {
             const action = primaryAction(item);
             const expanded = expandedId === item.id;
-            const handoffExceptionAvailable = item.storeCaptainHandoffStatus === 'awaiting_partner'
-              || item.storeCaptainHandoffStatus === 'partner_confirmed';
+            const openHandoffException = hasOpenHandoffException(item);
+            const handoffExceptionAvailable = !openHandoffException && (
+              item.storeCaptainHandoffStatus === 'awaiting_partner'
+              || item.storeCaptainHandoffStatus === 'partner_confirmed'
+            );
             return (
               <React.Fragment key={item.id}>
                 {index > 0 ? <Divider /> : null}
@@ -204,6 +223,11 @@ export function GovernedPartnerOrdersScreen({
                           {`${PREPARATION_ISSUE_KIND_LABELS[issue.kind]}: ${issue.note}`}
                         </Text>
                       ))}
+                      {openHandoffException && item.openStoreCaptainHandoffExceptionReason ? (
+                        <Text role="bodySm" tone="danger">
+                          {`${STORE_CAPTAIN_HANDOFF_EXCEPTION_LABELS[item.openStoreCaptainHandoffExceptionReason]} · ${item.openStoreCaptainHandoffExceptionStatus === 'acknowledged' ? 'قيد مراجعة العمليات' : 'بانتظار اعتماد العمليات'}`}
+                        </Text>
+                      ) : null}
                       {item.storeCaptainHandoffCaptainId ? (
                         <Text role="caption" tone="muted">{`الكابتن المعيّن: ${item.storeCaptainHandoffCaptainId}`}</Text>
                       ) : null}
