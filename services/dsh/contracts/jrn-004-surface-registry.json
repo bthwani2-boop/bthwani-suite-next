@@ -1,0 +1,77 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-004",
+  "requiredSurfaces": {
+    "app-client": {
+      "routes": ["store-list", "store-detail"],
+      "bindings": [
+        "services/dsh/frontend/shared/store/use-store-discovery-controller.tsx",
+        "services/dsh/frontend/shared/store/use-store-detail-controller.tsx",
+        "services/dsh/frontend/app-client/store/StoreDetailScreen.tsx"
+      ],
+      "requiredVisibleStates": ["loading", "empty", "offline", "not_found", "error", "ready"],
+      "truthRule": "published DSH response only"
+    },
+    "app-partner": {
+      "routes": ["partner-hub", "store-profile", "operations", "courier-settings"],
+      "bindings": [
+        "services/dsh/frontend/app-partner/account/PartnerHubScreen.tsx",
+        "services/dsh/frontend/app-partner/store/StoreProfileScreen.tsx",
+        "services/dsh/frontend/shared/partner/store-scope.model.ts"
+      ],
+      "requiredVisibleStates": ["loading", "offline", "forbidden", "conflict", "error", "ready"],
+      "truthRule": "active actor/store scope and read-after-write"
+    },
+    "app-field": {
+      "routes": ["assigned-store-context", "field-verification"],
+      "bindings": [
+        "services/dsh/frontend/shared/store/store-role-context.view-model.ts",
+        "services/dsh/frontend/shared/store/use-store-role-context-controller.tsx"
+      ],
+      "requiredVisibleStates": ["loading", "empty", "offline", "forbidden", "conflict", "partial", "error", "ready"],
+      "truthRule": "assigned scope, owned visit, and evidence-derived readiness"
+    },
+    "app-captain": {
+      "routes": ["pickup-store-context", "pickup-readiness"],
+      "bindings": [
+        "services/dsh/frontend/shared/store/store-role-context.view-model.ts",
+        "services/dsh/frontend/shared/store/use-store-role-context-controller.tsx"
+      ],
+      "requiredVisibleStates": ["loading", "empty", "offline", "forbidden", "conflict", "blocked", "error", "ready"],
+      "truthRule": "assigned scope and governed pickup checks"
+    },
+    "control-panel": {
+      "routes": ["partners/stores", "store-detail", "store-governance", "store-diagnostics", "store-audit"],
+      "bindings": [
+        "services/dsh/frontend/shared/store/use-store-admin-controller.tsx",
+        "services/dsh/frontend/control-panel/partners/stores/StoreManagementScreen.tsx",
+        "services/dsh/frontend/control-panel/partners/stores/StoreDetailAdminPanel.tsx",
+        "services/dsh/frontend/control-panel/partners/stores/StoreGovernanceActions.tsx"
+      ],
+      "requiredVisibleStates": ["loading", "empty", "service_unavailable", "permission_denied", "not_found", "conflict", "error", "ready"],
+      "truthRule": "permission-gated operational readback with diagnostics and audit"
+    }
+  },
+  "excludedSurfaces": {
+    "webapp": "No independent JRN-004 runtime is registered.",
+    "website": "Public website does not own authenticated or operational store context.",
+    "wlt": "Financial service is outside store state and publication ownership."
+  },
+  "crossSurfaceInvariants": [
+    "All surfaces import the shared store contracts or view-models.",
+    "No surface contains a second publication predicate.",
+    "No successful mutation is shown before readback.",
+    "The operator panel reloads detail, diagnostics, audit, and list after governance.",
+    "The partner profile reloads settings and rejects stale or non-incremented versions.",
+    "Captain and field pickup checks consume the same operational context fields."
+  ],
+  "rtlAndAccessibility": {
+    "primaryLocale": "ar",
+    "direction": "rtl",
+    "requirements": ["semantic labels", "keyboard reachable control-panel controls", "screen-reader state text", "no color-only status"]
+  },
+  "fsDecision": {
+    "slices": ["FS-09", "FS-10", "FS-11", "FS-12", "FS-14"],
+    "result": "CLOSED_WITH_IMPLEMENTATION_EVIDENCE"
+  }
+}
