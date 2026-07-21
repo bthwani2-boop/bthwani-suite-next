@@ -324,6 +324,42 @@ func (s *protectedStoreServer) handleGetClientTracking(w http.ResponseWriter, r 
 	s.writeDispatchResult(w, http.StatusOK, assignment, err)
 }
 
+// GET /dsh/partner/orders/{orderId}/dispatch-tracking
+//
+// JRN-017 restricts the partner to a reference status read: no captain
+// location, no PoD reference — those stay client/operator/captain-only.
+func (s *protectedStoreServer) handleGetPartnerDispatchTracking(w http.ResponseWriter, r *http.Request) {
+	_, ownedOrder, ok := s.partnerOrder(w, r)
+	if !ok {
+		return
+	}
+	assignment, err := dispatch.GetPartnerTracking(s.db, ownedOrder.ID, ownedOrder.StoreID)
+	switch {
+	case err == nil:
+		store.SendJSON(w, http.StatusOK, map[string]any{"assignment": marshalDispatchAssignmentForPartner(*assignment)})
+	case errors.Is(err, dispatch.ErrNotFound):
+		store.SendJSON(w, http.StatusOK, map[string]any{"assignment": nil})
+	case errors.Is(err, dispatch.ErrInvalid):
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+	default:
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "dispatch operation failed")
+	}
+}
+
+func marshalDispatchAssignmentForPartner(a dispatch.Assignment) map[string]any {
+	return map[string]any{
+		"id":                 a.ID,
+		"orderId":            a.OrderID,
+		"captainId":          a.CaptainID,
+		"status":             string(a.Status),
+		"acceptedAt":         a.AcceptedAt,
+		"completedAt":        a.CompletedAt,
+		"createdAt":          a.CreatedAt,
+		"updatedAt":          a.UpdatedAt,
+		"deliveryStatus":     string(a.Delivery.Status),
+	}
+}
+
 func (s *protectedStoreServer) writeDispatchResult(w http.ResponseWriter, status int, assignment *dispatch.Assignment, err error) {
 	switch {
 	case err == nil:

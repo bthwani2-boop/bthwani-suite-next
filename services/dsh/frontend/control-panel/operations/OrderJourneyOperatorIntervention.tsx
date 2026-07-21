@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Badge, Box, Button, Text } from '@bthwani/ui-kit';
+import { Badge, Box, Button, Text, TextField } from '@bthwani/ui-kit';
 import {
   FINANCIAL_CLOSURE_LABELS,
   OPERATOR_CANCELLATION_REASONS,
@@ -12,6 +12,7 @@ import {
   operatorOrderWorkboardErrorMessage,
   type OperatorOrderWorkboardRow,
 } from '../../shared/operations';
+import { useOperatorPartnerDeliveriesController } from '../../shared/partner-delivery/use-partner-delivery-controller';
 
 export type OrderJourneyOperatorInterventionProps = {
   readonly order: OperatorOrderWorkboardRow;
@@ -32,6 +33,70 @@ function isTerminal(status: string): boolean {
     || status.startsWith('cancelled_')
     || status === 'failed_payment'
     || status === 'failed_dispatch';
+}
+
+const PARTNER_DELIVERY_EXCEPTION_CLOSED_STATUSES = new Set(['completed', 'cancelled', 'exception']);
+
+/**
+ * Operator-only "raise exception" trigger for a partner_delivery task.
+ * PartnerDeliveryWorkbenchScreen deliberately refuses to mount a
+ * partner-scoped store UI from operations; this stays inside that boundary
+ * by acting on a single order (no fabricated store context) through the
+ * same control-panel-permission-gated endpoint the backend already exposes.
+ */
+function PartnerDeliveryExceptionPanel({ orderId }: { readonly orderId: string }) {
+  const { detailState, loadDetailByOrder, raiseException } = useOperatorPartnerDeliveriesController({ autoLoad: false });
+  const [reason, setReason] = React.useState('');
+  const [submitting, setSubmitting] = React.useState(false);
+  const [message, setMessage] = React.useState<{ readonly text: string; readonly tone: 'success' | 'danger' } | null>(null);
+
+  React.useEffect(() => {
+    setReason('');
+    setMessage(null);
+    void loadDetailByOrder(orderId);
+    // loadDetailByOrder is stable (useCallback with no deps); re-running per orderId change only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderId]);
+
+  const task = detailState.data;
+  if (!detailState.loaded || !task) return null;
+  if (PARTNER_DELIVERY_EXCEPTION_CLOSED_STATUSES.has(task.status)) return null;
+
+  const submit = async () => {
+    if (!reason.trim()) return;
+    setSubmitting(true);
+    setMessage(null);
+    const result = await raiseException(orderId, task.version, reason.trim());
+    setSubmitting(false);
+    if (result.ok) {
+      setReason('');
+      setMessage({ text: 'تم تسجيل الاستثناء على مهمة توصيل المتجر.', tone: 'success' });
+    } else {
+      setMessage({ text: result.message, tone: 'danger' });
+    }
+  };
+
+  return (
+    <Box gap={2} padding={4} background="surfaceInset" radiusToken="md">
+      <Text role="titleSm">تسجيل استثناء توصيل المتجر</Text>
+      <Text role="bodySm" tone="muted">
+        يبقى تعديل فريق المتجر ونطاق الفروع داخل تطبيق الشريك. هذا الإجراء يسجل استثناءً تشغيليًا على المهمة الحالية فقط.
+      </Text>
+      <TextField
+        label="سبب الاستثناء"
+        placeholder="سبب تشغيلي مسجل قبل إغلاق المهمة"
+        value={reason}
+        onChangeText={setReason}
+      />
+      {message ? <Text role="bodySm" tone={message.tone}>{message.text}</Text> : null}
+      <Button
+        label={submitting ? 'جارٍ تسجيل الاستثناء…' : 'تسجيل استثناء'}
+        tone="danger"
+        disabled={submitting || !reason.trim()}
+        onPress={() => void submit()}
+      />
+    </Box>
+  );
 }
 
 export function OrderJourneyOperatorIntervention({
@@ -108,50 +173,53 @@ export function OrderJourneyOperatorIntervention({
   };
 
   return (
-    <Box gap={3} padding={4} background="surfaceInset" radiusToken="md">
-      <Text role="titleSm">تدخل تشغيلي محكوم</Text>
-      <Text role="bodySm" tone="muted">
-        يوقف الإلغاء جميع المهام التابعة داخل نفس المعاملة. WLT وحده يقرر تحرير الدفع أو إنشاء الاسترداد.
-      </Text>
-      <Box gap={2}>
-        {OPERATOR_CANCELLATION_REASONS.map((reason) => (
-          <Button
-            key={reason.code}
-            label={reason.label}
-            tone={reasonCode === reason.code ? 'brand' : 'secondary'}
-            size="sm"
-            fullWidth={false}
-            disabled={state === 'loading'}
-            onPress={() => {
-              setReasonCode(reason.code as OperatorCancellationReasonCode);
-              if (reason.code !== 'other') setReasonNote('');
-            }}
-          />
-        ))}
+    <Box gap={3}>
+      <Box gap={3} padding={4} background="surfaceInset" radiusToken="md">
+        <Text role="titleSm">تدخل تشغيلي محكوم</Text>
+        <Text role="bodySm" tone="muted">
+          يوقف الإلغاء جميع المهام التابعة داخل نفس المعاملة. WLT وحده يقرر تحرير الدفع أو إنشاء الاسترداد.
+        </Text>
+        <Box gap={2}>
+          {OPERATOR_CANCELLATION_REASONS.map((reason) => (
+            <Button
+              key={reason.code}
+              label={reason.label}
+              tone={reasonCode === reason.code ? 'brand' : 'secondary'}
+              size="sm"
+              fullWidth={false}
+              disabled={state === 'loading'}
+              onPress={() => {
+                setReasonCode(reason.code as OperatorCancellationReasonCode);
+                if (reason.code !== 'other') setReasonNote('');
+              }}
+            />
+          ))}
+        </Box>
+        {selectedReason ? <Text role="caption" tone="muted">{selectedReason.description}</Text> : null}
+        <textarea
+          value={reasonNote}
+          onChange={(event) => setReasonNote(event.target.value)}
+          placeholder={noteRequired ? 'اكتب التوضيح المطلوب' : 'ملاحظة تشغيلية اختيارية'}
+          aria-label="توضيح إلغاء الطلب"
+          rows={3}
+          style={{
+            width: '100%',
+            padding: '10px 12px',
+            border: '1px solid var(--bthwani-control-panel-border)',
+            borderRadius: '8px',
+            background: 'var(--bthwani-control-panel-surface-base)',
+            resize: 'vertical',
+          }}
+        />
+        {message ? <Text role="bodySm" tone={state === 'error' ? 'danger' : 'success'}>{message}</Text> : null}
+        <Button
+          label={state === 'loading' ? 'جارٍ تثبيت الإلغاء…' : 'تأكيد الإلغاء وإغلاق المهام'}
+          tone="danger"
+          disabled={state === 'loading' || (noteRequired && !reasonNote.trim())}
+          onPress={() => void submit()}
+        />
       </Box>
-      {selectedReason ? <Text role="caption" tone="muted">{selectedReason.description}</Text> : null}
-      <textarea
-        value={reasonNote}
-        onChange={(event) => setReasonNote(event.target.value)}
-        placeholder={noteRequired ? 'اكتب التوضيح المطلوب' : 'ملاحظة تشغيلية اختيارية'}
-        aria-label="توضيح إلغاء الطلب"
-        rows={3}
-        style={{
-          width: '100%',
-          padding: '10px 12px',
-          border: '1px solid var(--bthwani-control-panel-border)',
-          borderRadius: '8px',
-          background: 'var(--bthwani-control-panel-surface-base)',
-          resize: 'vertical',
-        }}
-      />
-      {message ? <Text role="bodySm" tone={state === 'error' ? 'danger' : 'success'}>{message}</Text> : null}
-      <Button
-        label={state === 'loading' ? 'جارٍ تثبيت الإلغاء…' : 'تأكيد الإلغاء وإغلاق المهام'}
-        tone="danger"
-        disabled={state === 'loading' || (noteRequired && !reasonNote.trim())}
-        onPress={() => void submit()}
-      />
+      {order.fulfillmentMode === 'partner_delivery' ? <PartnerDeliveryExceptionPanel orderId={order.id} /> : null}
     </Box>
   );
 }

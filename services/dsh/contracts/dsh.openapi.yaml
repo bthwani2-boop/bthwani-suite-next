@@ -6191,6 +6191,33 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /dsh/operator/partner-deliveries/order/{orderId}:
+    get:
+      operationId: getDshOperatorPartnerDeliveryByOrder
+      summary: Get a partner_delivery task by orderId, for operator surfaces that only hold the order id
+      description: >-
+        Mirrors getDshOperatorPickup's by-orderId lookup. LiveOrders operator
+        screens carry orderId, not the partner_delivery task id; this lets
+        them resolve the task's current version before raising an exception,
+        which is optimistic-concurrency gated on expectedVersion.
+      tags:
+        - DshOperatorPartnerDelivery
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartnerDeliveryTaskResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /dsh/client/orders/{orderId}/pickup:
     get:
       operationId: getDshClientPickupSession

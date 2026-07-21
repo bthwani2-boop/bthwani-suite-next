@@ -109,6 +109,14 @@ export async function fetchOperatorPartnerDelivery(taskId: string): Promise<DshP
   return request<DshPartnerDeliveryTaskResponse>(`/dsh/operator/partner-deliveries/${encodeURIComponent(taskId)}`);
 }
 
+/** LiveOrders holds orderId, not the task id — resolves the task's current
+ * version before raising an exception (optimistic-concurrency gated). */
+export async function fetchOperatorPartnerDeliveryByOrder(orderId: string): Promise<DshPartnerDeliveryTaskResponse> {
+  return request<DshPartnerDeliveryTaskResponse>(
+    `/dsh/operator/partner-deliveries/order/${encodeURIComponent(orderId)}`,
+  );
+}
+
 export async function raisePartnerDeliveryException(
   orderId: string,
   input: { readonly expectedVersion: number; readonly reason: string },

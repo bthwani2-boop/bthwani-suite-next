@@ -37,16 +37,21 @@ test("JRN-007 scopes discovery to the persisted selected address", () => {
   const controller = read("frontend/shared/home-discovery/use-home-discovery-controller.tsx");
 
   assert.match(screen, /useClientAddressController/);
-  assert.match(screen, /serviceAreaCode: addressController\.selectedAddress\?\.serviceAreaCode/);
+  assert.match(screen, /serviceAreaCode = addressController\.selectedAddress\?\.serviceAreaCode/);
   assert.match(screen, /enabled: addressController\.state\.kind === "ready"/);
-  assert.match(controller, /fetchHomeDiscovery\(\{ cityCode, serviceAreaCode, limit: 20 \}\)/);
+  assert.match(controller, /fetchHomeDiscovery\(\{/);
+  assert.match(controller, /\.\.\.\(cityCode !== undefined \? \{ cityCode \} : \{\}\)/);
+  assert.match(controller, /\.\.\.\(serviceAreaCode !== undefined \? \{ serviceAreaCode \} : \{\}\)/);
+  assert.match(controller, /limit: 20,/);
 });
 
 test("JRN-008 retains one central catalog truth and no retired local routes", () => {
   const router = read("backend/internal/http/server.go");
+  const unifiedRoutes = read("backend/internal/http/catalog_unified_routes.go");
   const migration = read("database/migrations/dsh-036_central_catalog_runtime_closure.sql");
 
-  assert.match(router, /GET \/dsh\/partner\/catalog\/taxonomy/);
+  assert.match(router, /registerUnifiedCatalogRoutes\(mux, protected\)/);
+  assert.match(unifiedRoutes, /GET \/dsh\/partner\/catalog\/taxonomy/);
   assert.match(router, /GET \/dsh\/partner\/catalog\/master-products/);
   assert.match(migration, /DROP TABLE IF EXISTS dsh_catalog_products/);
   assert.match(migration, /DROP TABLE IF EXISTS dsh_catalog_categories/);

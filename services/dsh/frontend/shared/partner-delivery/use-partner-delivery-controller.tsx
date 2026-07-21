@@ -7,6 +7,7 @@ import {
   submitPartnerDeliveryProof,
   fetchPartnerDeliveryTask,
   fetchOperatorPartnerDelivery,
+  fetchOperatorPartnerDeliveryByOrder,
   fetchOperatorPartnerDeliveries,
   raisePartnerDeliveryException,
   classifyPartnerDeliveryError,
@@ -200,6 +201,18 @@ export function useOperatorPartnerDeliveriesController(params: UseOperatorPartne
       });
   }, []);
 
+  /** LiveOrders holds orderId, not the task id — use this to resolve the
+   * task before raising an exception. */
+  const loadDetailByOrder = useCallback((orderId: string) => {
+    setDetailState({ loaded: false, error: null, offline: false, data: null });
+    return fetchOperatorPartnerDeliveryByOrder(orderId)
+      .then((response) => setDetailState({ loaded: true, error: null, offline: false, data: response.task }))
+      .catch((error: unknown) => {
+        const { message, classified } = classifiedMessage(error, "تعذر تحميل تفاصيل المهمة");
+        setDetailState({ loaded: false, error: message, offline: classified.kind === "network", data: null });
+      });
+  }, []);
+
   const raiseException = useCallback((orderIdValue: string, expectedVersion: number, reason: string) =>
     raisePartnerDeliveryException(orderIdValue, { expectedVersion, reason })
       .then((response) => {
@@ -211,5 +224,5 @@ export function useOperatorPartnerDeliveriesController(params: UseOperatorPartne
         return { ok: false as const, kind: classified.kind, message };
       }), []);
 
-  return { listState, loadList, detailState, loadDetail, raiseException };
+  return { listState, loadList, detailState, loadDetail, loadDetailByOrder, raiseException };
 }

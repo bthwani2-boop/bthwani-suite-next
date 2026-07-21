@@ -115,6 +115,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("POST /dsh/operator/delivery-exceptions/{exceptionId}/acknowledge", protected.handleAcknowledgeDeliveryException)
 	mux.HandleFunc("POST /dsh/operator/delivery-exceptions/{exceptionId}/resolve", protected.handleResolveDeliveryException)
 	mux.HandleFunc("GET /dsh/client/orders/{orderId}/tracking", protected.handleGetClientTracking)
+	mux.HandleFunc("GET /dsh/partner/orders/{orderId}/dispatch-tracking", protected.handleGetPartnerDispatchTracking)
 
 	// Special Requests (Shein, Awnak)
 	mux.HandleFunc("POST /dsh/client/special-requests", protected.handleCreateSpecialRequest)
@@ -138,6 +139,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/return-to-store/accept", protected.handleAcceptPartnerReturnToStore)
 	mux.HandleFunc("GET /dsh/operator/partner-deliveries", protected.handleListOperatorPartnerDeliveries)
 	mux.HandleFunc("GET /dsh/operator/partner-deliveries/{taskId}", protected.handleGetOperatorPartnerDelivery)
+	mux.HandleFunc("GET /dsh/operator/partner-deliveries/order/{orderId}", protected.handleGetOperatorPartnerDeliveryByOrder)
 	mux.HandleFunc("GET /dsh/client/orders/{orderId}/pickup", protected.handleGetClientPickupSession)
 	mux.HandleFunc("GET /dsh/client/orders/{orderId}/partner-delivery", protected.handleGetClientPartnerDeliveryTask)
 	mux.HandleFunc("GET /dsh/partner/orders/{orderId}/pickup", protected.handleGetPartnerPickupState)

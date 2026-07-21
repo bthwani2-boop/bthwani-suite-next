@@ -274,6 +274,25 @@ func (s *protectedStoreServer) handleGetOperatorPartnerDelivery(w http.ResponseW
 	store.SendJSON(w, http.StatusOK, map[string]any{"task": marshalPartnerDeliveryTask(task)})
 }
 
+// GET /dsh/operator/partner-deliveries/order/{orderId}
+// Lets the LiveOrders operator surface resolve a partner-delivery task's
+// current version by orderId (the only key it holds), mirroring
+// handleGetOperatorPickup's by-orderId lookup. Required before an operator
+// can raise an exception, since that mutation is optimistic-concurrency
+// gated on expectedVersion.
+func (s *protectedStoreServer) handleGetOperatorPartnerDeliveryByOrder(w http.ResponseWriter, r *http.Request) {
+	_, ok := s.requirePermission(w, r, "control-panel", PartnerDeliveryPermissionRead, "operator")
+	if !ok {
+		return
+	}
+	task, err := partnerdelivery.GetByOrderID(s.db, r.PathValue("orderId"))
+	if err != nil {
+		writePartnerDeliveryError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"task": marshalPartnerDeliveryTask(task)})
+}
+
 // GET /dsh/partner/orders/{orderId}/return-to-store
 func (s *protectedStoreServer) handleGetPartnerReturnToStore(w http.ResponseWriter, r *http.Request) {
 	_, order, ok := s.partnerOrder(w, r)

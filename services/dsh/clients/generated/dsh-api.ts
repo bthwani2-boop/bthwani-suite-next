@@ -3867,6 +3867,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dsh/operator/partner-deliveries/order/{orderId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a partner_delivery task by orderId, for operator surfaces that only hold the order id
+         * @description Mirrors getDshOperatorPickup's by-orderId lookup. LiveOrders operator screens carry orderId, not the partner_delivery task id; this lets them resolve the task's current version before raising an exception, which is optimistic-concurrency gated on expectedVersion.
+         */
+        get: operations["getDshOperatorPartnerDeliveryByOrder"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/dsh/client/orders/{orderId}/pickup": {
         parameters: {
             query?: never;
@@ -13905,6 +13925,31 @@ export interface operations {
             header?: never;
             path: {
                 taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerDeliveryTaskResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getDshOperatorPartnerDeliveryByOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
             };
             cookie?: never;
         };
