@@ -138,11 +138,12 @@ test("JRN-006-S08 uses a hashed PII-safe audit projection and actor-owned addres
   const dbTest = read("database/tests/dsh-908_jrn_006_privacy_audit_projection.sql");
   const addressHandler = read("backend/internal/http/client_addresses.go");
   const privacyContract = read("contracts/dsh.client-address-privacy.openapi.yaml");
+  const selectList = migration.split("FROM dsh_client_address_privacy_events")[0];
   assert.match(routes, /GET \/dsh\/operator\/privacy\/client-addresses\/events/);
   assert.match(audit, /dsh_client_address_privacy_audit_projection/);
   assert.doesNotMatch(audit, /recipient_name|phone_e164|address_line|latitude|longitude/);
   assert.match(migration, /client_subject_hash/);
-  assert.doesNotMatch(migration, /SELECT[\s\S]*recipient_name/);
+  assert.doesNotMatch(selectList, /client_id|recipient_name|phone_e164|address_line|delivery_instructions|latitude|longitude/);
   assert.match(dbTest, /PII column leaked through privacy audit projection/);
   assert.match(addressHandler, /clientaddress\.List\(r\.Context\(\), s\.db, actor\.ID\)/);
   assert.match(privacyContract, /x-bthwani-pii-rule/);
