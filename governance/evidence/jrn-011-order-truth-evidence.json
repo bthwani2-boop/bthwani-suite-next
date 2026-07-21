@@ -1,0 +1,75 @@
+{
+  "journeyId": "JRN-011",
+  "journeyNameAr": "إنشاء الطلب وحقيقة الطلب",
+  "repository": "bthwani2-boop/bthwani-suite-next",
+  "branch": "sambassam",
+  "repositoryMode": "REMOTE_ONLY",
+  "observedBaselineCommit": "4d5b90e6909100f44e3e5f71976ae4f347f4b16c",
+  "implementationCommitPrefix": "c769d696",
+  "decision": "FIX_REQUIRED",
+  "decisionReason": "All mandatory slices were implemented in code and evidence definitions, but no same-commit published CI result, applied target-runtime migrations, live DSH/WLT smoke, device/browser verification, fault-injection proof, or independent QA/security/finance approval was available at evidence capture time.",
+  "sliceExecution": [
+    { "slice": "FS-01", "status": "IMPLEMENTED_STATIC", "evidence": "governance/product/contracts/jrn-011-order-creation-truth.product-truth.json" },
+    { "slice": "FS-02", "status": "IMPLEMENTED_STATIC", "evidence": "services/dsh/contracts/jrn-011-surface-rbac-registry.json" },
+    { "slice": "FS-03", "status": "IMPLEMENTED_STATIC", "evidence": "services/dsh/contracts/jrn-011-order-state-policy.json" },
+    { "slice": "FS-04", "status": "IMPLEMENTED_STATIC", "evidence": "governance/boundaries/jrn-011-dsh-wlt-order-truth-boundary.md" },
+    { "slice": "FS-05", "status": "IMPLEMENTED_PENDING_MIGRATION_EXECUTION", "evidence": "services/dsh/database/migrations/dsh-902_jrn_011_order_truth.sql" },
+    { "slice": "FS-06", "status": "IMPLEMENTED_STATIC", "evidence": "services/dsh/contracts/dsh.order-truth.openapi.yaml" },
+    { "slice": "FS-07", "status": "IMPLEMENTED_PENDING_RUNTIME", "evidence": "services/dsh/backend/internal/orders/order_truth.go" },
+    { "slice": "FS-08", "status": "IMPLEMENTED_PENDING_RUNTIME", "evidence": "services/dsh/backend/internal/orders/order_event_bridge_worker.go" },
+    { "slice": "FS-09", "status": "IMPLEMENTED_PENDING_TYPECHECK", "evidence": "services/dsh/frontend/shared/order-truth/index.ts" },
+    { "slice": "FS-10", "status": "IMPLEMENTED_PENDING_SURFACE_RUNTIME", "evidence": "services/dsh/contracts/jrn-011-cross-surface-binding.json" },
+    { "slice": "FS-11", "status": "IMPLEMENTED_STATIC", "evidence": "services/dsh/frontend/shared/order-truth/order-truth.visible-states.ts" },
+    { "slice": "FS-12", "status": "IMPLEMENTED_PENDING_GATE_EXECUTION", "evidence": "tools/guards/jrn-011-cross-surface-integrity-gate.mjs" },
+    { "slice": "FS-13", "status": "IMPLEMENTED_PENDING_SECURITY_TEST", "evidence": "services/dsh/database/tests/dsh-902_903_jrn011_order_truth_invariants.sql" },
+    { "slice": "FS-14", "status": "IMPLEMENTED_PENDING_ACCESSIBILITY_RUNTIME", "evidence": "services/dsh/frontend/shared/order-truth/order-truth.experience.ts" },
+    { "slice": "FS-15", "status": "IMPLEMENTED_PENDING_RUNTIME", "evidence": "governance/runbooks/jrn-011-order-truth-operations.md" },
+    { "slice": "FS-16", "status": "IMPLEMENTED_STATIC", "evidence": "services/dsh/contracts/jrn-011-legacy-compatibility.json" },
+    { "slice": "FS-17", "status": "TESTS_AND_CI_DEFINED_NOT_PROVEN", "evidence": ".github/workflows/jrn-011-order-truth-verify.yml" },
+    { "slice": "FS-18", "status": "EVIDENCE_RECORDED_WITH_BLOCKERS", "evidence": "governance/evidence/jrn-011-order-truth-evidence.md" }
+  ],
+  "canonicalCapabilities": [
+    "One actor-owned eligible Checkout Intent creates at most one order.",
+    "Persistent client idempotency attempt survives retries until actor-scoped readback succeeds.",
+    "Order item, address and pricing snapshots are immutable after creation.",
+    "Client, partner and operator reads apply tenant and actor/store scopes before hydration.",
+    "Partner and operator responses redact client identity and private address data.",
+    "Server returns allowedActions and surfaces do not derive authority locally.",
+    "Order events enter a transactional outbox, bridge to the canonical operational outbox and are delivered idempotently.",
+    "WLT remains financially authoritative; DSH periodically reconciles only a read-only payment projection.",
+    "Future business order numbers use a twelve-character UUID suffix plus tenant uniqueness.",
+    "Correlation identifiers are distinct from and do not expose raw idempotency keys."
+  ],
+  "verificationDefinitions": {
+    "staticNode": "node tools/guards/jrn-011-cross-surface-integrity-gate.mjs && node --test services/dsh/tests/jrn-011-order-*.test.mjs",
+    "go": "go test ./internal/orders ./internal/wlt -count=1",
+    "postgres": "Apply all DSH migrations in lexical order, then execute dsh-902_903 and dsh-905 invariant SQL files on PostgreSQL 16.",
+    "typescript": "pnpm --dir services/dsh typecheck",
+    "workflow": ".github/workflows/jrn-011-order-truth-verify.yml"
+  },
+  "publishedVerificationObserved": {
+    "workflowRuns": [],
+    "commitStatuses": [],
+    "conclusion": "NO_SAME_COMMIT_PUBLISHED_RESULT_OBSERVED"
+  },
+  "blockingEvidence": [
+    "Exact full final branch head must be re-pinned because sambassam is concurrently modified by other sessions.",
+    "The JRN-011 workflow must complete successfully on the exact reviewed commit.",
+    "Migrations dsh-902 through dsh-905 must be applied to an isolated database and then the target runtime database with recorded output.",
+    "A live DSH/WLT smoke must prove first create, identical retry replay, different-fingerprint conflict and actor-scoped readback.",
+    "Live event bridge proof must show one order event produces one canonical notification without duplicate delivery after retry.",
+    "Live WLT reconciliation proof must cover pending, captured, refunded, stale source, outage/retry and paused recovery.",
+    "Client, partner and control-panel surfaces require device/browser RTL and accessibility verification.",
+    "Independent QA, security and finance-boundary approvals are absent.",
+    "No pull request or merge has been created."
+  ],
+  "rollback": [
+    "Stop RunPaymentProjectionWorker and RunOrderEventBridgeWorker before schema rollback.",
+    "Restore the pre-JRN-011 shared-surface bindings while retaining compatibility-only legacy reads.",
+    "Do not drop idempotency, event outbox, audit or reconciliation tables until every in-flight row is reconciled and archived.",
+    "Roll back application code before removing additive columns or triggers.",
+    "Never perform a debit, credit, refund or settlement from DSH as a rollback mechanism.",
+    "After rollback verify one-order-per-checkout, event continuity and WLT authority."
+  ],
+  "nextJourneyStarted": false
+}
