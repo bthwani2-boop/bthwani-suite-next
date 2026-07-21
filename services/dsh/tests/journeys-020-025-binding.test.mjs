@@ -96,6 +96,7 @@ describe("JRN-024 field visits and readiness", () => {
 
 describe("JRN-025 campaigns, tickers, and partner offers", () => {
   const controller = source("../frontend/shared/marketing/use-marketing-controller.tsx");
+  const wltBoundaryGuard = source("../../../tools/guards/wlt-financial-boundary-gate.mjs");
 
   it("refreshes API truth after ticker and partner-offer mutations", () => {
     assert.match(controller, /createTicker[\s\S]*await load\(\)/);
@@ -107,5 +108,11 @@ describe("JRN-025 campaigns, tickers, and partner offers", () => {
   it("does not expose a client-side visibility gate bypass", () => {
     assert.doesNotMatch(controller, /toggleBypass\s*[:=]/);
     assert.doesNotMatch(controller, /bypassedGates\s*[:=]/);
+  });
+
+  it("keeps governance guards outside runtime-provider scanning without exempting scripts", () => {
+    assert.match(wltBoundaryGuard, /"tools\/guards\/"/);
+    assert.doesNotMatch(wltBoundaryGuard, /"tools\/guards\/wlt-financial-boundary-gate\.mjs"/);
+    assert.match(wltBoundaryGuard, /"tools\/scripts\/smoke-wlt-provider-through-wlt\.ps1"/);
   });
 });
