@@ -87,7 +87,8 @@ const partnerTeam = read("services/dsh/frontend/app-partner/team/PartnerTeamMana
 for (const route of ["home", "entry", "team"]) {
   assert.match(partnerBindings, new RegExp(`(?:^|\\s|["'])${route}(?:["']|:)`, "m"), `app-partner binding missing: ${route}`);
 }
-assert.match(partnerRenderer, /hasDshPartnerBindingContract/);
+assert.match(partnerRenderer, /function hasRouteBindingContract/);
+assert.match(partnerRenderer, /DSH_PARTNER_BINDING_CONTRACTS\.some/);
 assert.match(partnerRenderer, /PartnerTeamManagementScreen/);
 assert.match(partnerHub, /PartnerOnboardingStatusView/);
 assert.match(partnerStatus, /reloadSelfStatus/);
