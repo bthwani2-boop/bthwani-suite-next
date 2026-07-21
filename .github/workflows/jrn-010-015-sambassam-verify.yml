@@ -16,6 +16,7 @@ on:
       - services/dsh/frontend/app-captain/dispatch/**
       - services/dsh/frontend/control-panel/operations/OrderJourneyDispatchAssignmentScreen.tsx
       - services/dsh/frontend/control-panel/operations/PickupWorkbenchScreen.tsx
+      - services/dsh/tests/captain-inbox-exclusion.test.mjs
 
 permissions:
   contents: read
@@ -65,6 +66,7 @@ jobs:
               "../services/dsh/frontend/app-partner/orders/OperationalOrderDecisionScreen.tsx",
               "../services/dsh/frontend/app-partner/orders/OperationalOrdersInboxScreen.tsx",
               "../services/dsh/frontend/shared/dispatch/use-dispatch-controller.ts",
+              "../services/dsh/frontend/shared/delivery/captain-inbox.mapper.ts",
               "../services/dsh/frontend/shared/delivery/captain-inbox.model.ts",
               "../services/dsh/frontend/app-captain/dispatch/DshCaptainOrdersScreen.tsx",
               "../services/dsh/frontend/app-client/orders/OrderTrackingScreen.tsx",
@@ -79,7 +81,7 @@ jobs:
             "extends": "../tsconfig.json",
             "files": [
               "../frontend/shared/checkout/checkout.controller-core.ts",
-              "../frontend/shared/delivery/captain-inbox.model.ts"
+              "../frontend/shared/delivery/captain-inbox.mapper.ts"
             ]
           }
           JSON
