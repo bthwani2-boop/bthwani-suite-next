@@ -1,8 +1,7 @@
 // Thin surface re-export. The controller lives in the DSH shared brain
-// (services/dsh/frontend/shared/partner/use-partner-team-controller.ts) so
-// this surface module never imports the API adapter directly.
+// and returns success only after canonical team readback completes.
 export {
   usePartnerTeamController as usePartnerTeamModel,
   type PartnerTeamMutationResult,
   type PartnerTeamModelStatus,
-} from '../../shared/partner/use-partner-team-controller';
+} from '../../shared/partner/use-partner-team-governed-controller';
