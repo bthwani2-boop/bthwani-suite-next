@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { AdministrationDashboardScreen } from "./AdministrationDashboardScreen";
 import { RoleAssignmentApprovalQueue } from "./RoleAssignmentApprovalQueue";
 
