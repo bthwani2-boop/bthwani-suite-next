@@ -88,7 +88,8 @@ mustContain(backendRoutes, [
 
 mustContain(backendHandlers, [
   "INVALID_CHECKOUT_INTENT_ID",
-  "INVALID_ORDER_ID",
+  "errors.Is(err, orders.ErrInvalid) || errors.Is(err, orders.ErrNotFound)",
+  'http.StatusNotFound, "NOT_FOUND"',
   "GetOperatorScopedOrderTruth",
 ], "backend order-truth validation");
 
@@ -121,6 +122,7 @@ mustNotContain(checkoutFlow, [
   "allowedActions =",
 ], "app-client checkout binding");
 
+mustNotContain(backendHandlers, ["INVALID_ORDER_ID"], "backend read contract");
 mustNotContain(sharedSummary, ["style={{"], "shared order-truth summary");
 mustNotContain(partnerSurface, ["style={{"], "app-partner order-truth binding");
 
