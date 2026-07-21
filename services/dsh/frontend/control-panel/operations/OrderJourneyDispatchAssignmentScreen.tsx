@@ -13,7 +13,7 @@ import {
   assignOrderToCaptain,
   dispatchAssignmentErrorMessage,
 } from '../../shared/operations';
-import { useCaptainListController } from '../../shared/workforce/use-workforce-controllers';
+import { useDispatchCaptainOptions } from '../../shared/operations/use-dispatch-captain-options';
 import type { Captain } from '../../shared/workforce/workforce.types';
 import type { OperationsFocusParams, OperatorOrderWorkboardRow } from '../../shared/operations';
 
@@ -43,7 +43,7 @@ export function OrderJourneyDispatchAssignmentScreen({
   focusParams,
 }: OrderJourneyDispatchAssignmentScreenProps) {
   const workboard = useOperatorOrderWorkboard();
-  const captainList = useCaptainListController('active');
+  const captainList = useDispatchCaptainOptions();
   const [selectedOrderId, setSelectedOrderId] = React.useState<string | null>(focusParams?.orderId ?? null);
   const [selectedCaptainId, setSelectedCaptainId] = React.useState('');
   const [mutationState, setMutationState] = React.useState<'idle' | 'loading' | 'success' | 'error'>('idle');
