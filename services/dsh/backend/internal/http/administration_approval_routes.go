@@ -14,9 +14,8 @@ import (
 
 const AdministrationPermissionApprove = "administration.approve"
 
-// RegisterAdministrationRoutes exposes read models and the governed
-// maker-checker role-assignment lifecycle. Legacy direct sensitive mutations
-// are deliberately not mounted here.
+// RegisterAdministrationRoutes exposes read models and governed maker-checker
+// lifecycles. Legacy direct sensitive mutations are deliberately not mounted.
 func RegisterAdministrationRoutes(
 	router *http.ServeMux,
 	db *sql.DB,
@@ -26,6 +25,9 @@ func RegisterAdministrationRoutes(
 ) {
 	server := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
 	router.HandleFunc("GET /dsh/operator/admin/roles", server.handleListRoles)
+	router.HandleFunc("POST /dsh/operator/admin/roles/requests", server.handleRequestRoleDefinition)
+	router.HandleFunc("GET /dsh/operator/admin/role-requests", server.handleListRoleDefinitionRequests)
+	router.HandleFunc("POST /dsh/operator/admin/role-requests/{requestId}/review", server.handleReviewRoleDefinition)
 	router.HandleFunc("GET /dsh/operator/admin/staff", server.handleListStaff)
 	router.HandleFunc("POST /dsh/operator/admin/staff/{staffId}/roles", server.handleRequestStaffRoleAssignment)
 	router.HandleFunc("GET /dsh/operator/admin/approvals", server.handleListRoleAssignmentApprovals)
@@ -48,6 +50,70 @@ func writeAdministrationApprovalError(w http.ResponseWriter, err error) {
 	default:
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "administration approval action failed")
 	}
+}
+
+// POST /dsh/operator/admin/roles/requests
+func (s *protectedStoreServer) handleRequestRoleDefinition(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireAdministrationPermission(w, r, AdministrationPermissionManage)
+	if !ok {
+		return
+	}
+	var body struct {
+		Name        string   `json:"name"`
+		Description string   `json:"description"`
+		Permissions []string `json:"permissions"`
+		Reason      string   `json:"reason"`
+	}
+	if !decodeProtectedJSON(w, r, &body) {
+		return
+	}
+	request, err := administration.RequestRoleDefinition(
+		r.Context(), s.db, body.Name, body.Description, body.Permissions, actor.ID, body.Reason,
+	)
+	if err != nil {
+		writeAdministrationApprovalError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusAccepted, map[string]any{"request": request})
+}
+
+// GET /dsh/operator/admin/role-requests?status=pending
+func (s *protectedStoreServer) handleListRoleDefinitionRequests(w http.ResponseWriter, r *http.Request) {
+	_, ok := s.requireAdministrationPermission(w, r, AdministrationPermissionRead)
+	if !ok {
+		return
+	}
+	requests, err := administration.ListRoleDefinitionRequests(r.Context(), s.db, r.URL.Query().Get("status"), 100)
+	if err != nil {
+		writeAdministrationApprovalError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"requests": requests})
+}
+
+// POST /dsh/operator/admin/role-requests/{requestId}/review
+func (s *protectedStoreServer) handleReviewRoleDefinition(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireAdministrationPermission(w, r, AdministrationPermissionApprove)
+	if !ok {
+		return
+	}
+	var body struct {
+		Decision        string `json:"decision"`
+		ReviewNote      string `json:"reviewNote"`
+		ExpectedVersion int    `json:"expectedVersion"`
+	}
+	if !decodeProtectedJSON(w, r, &body) {
+		return
+	}
+	request, role, err := administration.ReviewRoleDefinition(
+		r.Context(), s.db, r.PathValue("requestId"), actor.ID,
+		body.Decision, body.ReviewNote, body.ExpectedVersion,
+	)
+	if err != nil {
+		writeAdministrationApprovalError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"request": request, "role": role})
 }
 
 // POST /dsh/operator/admin/staff/{staffId}/roles
