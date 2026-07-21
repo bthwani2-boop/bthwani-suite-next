@@ -41,7 +41,13 @@ export function StoreManagementScreen() {
       }
       sidePanel={
         c.selectedStoreId !== null && c.detailState !== null
-          ? <StoreDetailAdminPanel state={c.detailState} onClose={() => c.selectStore(null)} />
+          ? (
+              <StoreDetailAdminPanel
+                state={c.detailState}
+                diagnosticsState={c.diagnosticsState}
+                onClose={() => c.selectStore(null)}
+              />
+            )
           : undefined
       }
     >
