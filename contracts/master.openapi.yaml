@@ -16,6 +16,7 @@ x-bthwani-contracts:
     workforce: ../core/workforce/contracts/workforce.openapi.yaml
   services:
     dsh: ../services/dsh/contracts/dsh.openapi.yaml
+    dshHomeDiscoveryOverlay: ../services/dsh/contracts/dsh.home-discovery.overlay.yaml
     dshCatalog: ../services/dsh/contracts/dsh.catalog.openapi.yaml
     dshCatalogOverlay: ../services/dsh/contracts/dsh.catalog.overlay.yaml
     dshCatalogProposalReadback: ../services/dsh/contracts/dsh.catalog-proposal-readback.openapi.yaml
