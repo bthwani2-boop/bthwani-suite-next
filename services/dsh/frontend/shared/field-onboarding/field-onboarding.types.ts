@@ -1,7 +1,7 @@
 // Field onboarding types — for the app-field partner draft creation flow.
 // No JSX. No ui-kit.
 
-import { DOCUMENT_TYPE_LABELS, REQUIRED_DOCUMENT_TYPES, type DshPartnerDocumentType } from "../partner";
+import { DOCUMENT_TYPE_LABELS, REQUIRED_DOCUMENT_TYPES, type DshPartnerDocumentType, type PartnerOnboardingFailure } from "../partner";
 
 export type FieldPartnerDraftForm = {
   // ── Identity (Step 1) ──────────────────────────────────────────
@@ -86,6 +86,7 @@ export type FieldOnboardingDraftState = {
   isDirty: boolean;
   isSubmitting: boolean;
   submitError: string | null;
+  runtimeFailure: PartnerOnboardingFailure | null;
   isSubmitted: boolean;
   loadStatus: FieldOnboardingLoadStatus;
   loadError: string | null;
@@ -111,6 +112,7 @@ export function initialDraftState(): FieldOnboardingDraftState {
     isDirty: false,
     isSubmitting: false,
     submitError: null,
+    runtimeFailure: null,
     isSubmitted: false,
     loadStatus: "idle",
     loadError: null,

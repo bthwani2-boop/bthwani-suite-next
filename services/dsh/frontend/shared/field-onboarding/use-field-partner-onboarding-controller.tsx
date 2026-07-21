@@ -152,17 +152,18 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
         partnerVersion: readback.version,
         form: { ...s.form, ...form },
         submitError: null,
+        runtimeFailure: null,
       }));
       return readback.id;
     } catch (err) {
       const failure = mapPartnerOnboardingFailure(err);
-      setState((s) => ({ ...s, submitError: failure.message }));
+      setState((s) => ({ ...s, submitError: failure.message, runtimeFailure: failure }));
       return false;
     }
   }, [state.partnerId, state.form, setState, setValidationErrors]);
 
   const loadDraft = useCallback(async (partnerId: string): Promise<boolean> => {
-    setState((s) => ({ ...s, loadStatus: "hydrating", loadError: null }));
+    setState((s) => ({ ...s, loadStatus: "hydrating", loadError: null, runtimeFailure: null }));
     try {
       const [partner, storeRes, documentsRes, visitsRes] = await Promise.all([
         fieldGetPartner(partnerId),
@@ -218,13 +219,8 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
       }));
       return true;
     } catch (err) {
-      const status = err && typeof err === "object" && "status" in err ? (err as { status?: number }).status : undefined;
-      const msg = status === 403
-        ? "لا تملك صلاحية الوصول إلى ملف هذا الشريك"
-        : status === 404
-          ? "تعذر العثور على ملف الشريك"
-          : "تعذر تحميل بيانات ملف الشريك";
-      setState((s) => ({ ...s, loadStatus: "error", loadError: msg }));
+      const failure = mapPartnerOnboardingFailure(err);
+      setState((s) => ({ ...s, loadStatus: "error", loadError: failure.message, runtimeFailure: failure }));
       return false;
     }
   }, []);
@@ -245,7 +241,7 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
 
   const saveDraft = useCallback(async (): Promise<boolean> => {
     if (!state.partnerId) return false;
-    setState((s) => ({ ...s, isSaving: true, submitError: null }));
+    setState((s) => ({ ...s, isSaving: true, submitError: null, runtimeFailure: null }));
     try {
       const expectedVersion = state.partnerVersion ?? 0;
       const updatedPartner = await fieldUpdatePartner(
@@ -279,6 +275,7 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
         ...s,
         isSaving: false,
         submitError: failure.message,
+        runtimeFailure: failure,
       }));
       return false;
     }
@@ -309,18 +306,19 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
         uploadedDocumentIds: s.uploadedDocumentIds.includes(doc.id) ? s.uploadedDocumentIds : [...s.uploadedDocumentIds, doc.id],
         uploadedDocumentTypes: s.uploadedDocumentTypes.includes(kind) ? s.uploadedDocumentTypes : [...s.uploadedDocumentTypes, kind],
         submitError: null,
+        runtimeFailure: null,
       }));
       return true;
     } catch (err) {
       const failure = mapPartnerOnboardingFailure(err);
-      setState((s) => ({ ...s, submitError: failure.message }));
+      setState((s) => ({ ...s, submitError: failure.message, runtimeFailure: failure }));
       return false;
     }
   }, [state.partnerId]);
 
   const submitDraft = useCallback(async () => {
     if (!state.partnerId) return;
-    setState((s) => ({ ...s, isSubmitting: true, submitError: null }));
+    setState((s) => ({ ...s, isSubmitting: true, submitError: null, runtimeFailure: null }));
 
     try {
       const expectedVersion = state.partnerVersion ?? 0;
@@ -367,6 +365,7 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
         isSubmitting: false,
         isSubmitted: true,
         partnerVersion: readback.version,
+        runtimeFailure: null,
       }));
     } catch (err) {
       const failure = mapPartnerOnboardingFailure(err);

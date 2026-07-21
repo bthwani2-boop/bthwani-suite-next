@@ -454,7 +454,17 @@ export function DshFieldOnboardingScreen({
           {renderGroupContent(activeGroup)}
         </View>
 
-        {state.submitError ? (
+        {state.runtimeFailure ? (
+          <View accessibilityRole="alert" style={{ padding: spacing[3], borderRadius: radius.md, borderWidth: borders.hairline, borderColor: state.runtimeFailure.state === 'forbidden' ? colorRoles.danger : colorRoles.warning, gap: spacing[2] }}>
+            <Text role="bodyStrong" tone={state.runtimeFailure.state === 'forbidden' ? 'danger' : 'warning'} style={{ textAlign: 'right' }}>
+              {state.runtimeFailure.state === 'offline' ? 'لا يوجد اتصال' : state.runtimeFailure.state === 'conflict' ? 'تعارض في النسخة' : state.runtimeFailure.state === 'forbidden' ? 'الإجراء غير مسموح' : state.runtimeFailure.state === 'readiness_blocked' ? 'متطلبات الجاهزية غير مكتملة' : state.runtimeFailure.state === 'wlt_unavailable' ? 'خدمة WLT غير متاحة' : state.runtimeFailure.state === 'partial' ? 'نتيجة جزئية تحتاج إعادة قراءة' : 'تعذر إكمال العملية'}
+            </Text>
+            <Text role="bodySm" tone="secondary" style={{ textAlign: 'right' }}>{state.runtimeFailure.message}</Text>
+            {state.runtimeFailure.retryable ? (
+              <Button label={state.runtimeFailure.reloadRequired ? 'إعادة تحميل الحقيقة' : 'إعادة المحاولة'} tone="secondary" onPress={() => void (state.partnerId ? controller.loadDraft(state.partnerId) : controller.save())} />
+            ) : null}
+          </View>
+        ) : state.submitError ? (
           <Text role="bodySm" tone="danger" style={{ textAlign: 'right' }}>{state.submitError}</Text>
         ) : null}
 

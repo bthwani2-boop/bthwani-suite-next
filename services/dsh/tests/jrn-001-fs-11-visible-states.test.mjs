@@ -1,0 +1,12 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+const runtime = fs.readFileSync("services/dsh/frontend/shared/partner/partner-onboarding.runtime.ts", "utf8");
+const types = fs.readFileSync("services/dsh/frontend/shared/field-onboarding/field-onboarding.types.ts", "utf8");
+const controller = fs.readFileSync("services/dsh/frontend/shared/field-onboarding/use-field-partner-onboarding-controller.tsx", "utf8");
+const screen = fs.readFileSync("services/dsh/frontend/app-field/onboarding/DshFieldOnboardingScreen.tsx", "utf8");
+for (const state of ["offline", "forbidden", "conflict", "readiness_blocked", "wlt_unavailable", "partial", "error"]) assert.match(runtime, new RegExp('state: "' + state + '"'));
+assert.match(types, /runtimeFailure: PartnerOnboardingFailure | null/);
+assert.match(controller, /runtimeFailure: failure/);
+assert.match(screen, /إعادة تحميل الحقيقة/);
+assert.match(screen, /accessibilityRole="alert"/);
+console.log("JRN-001 FS-11 governed visible states verified");

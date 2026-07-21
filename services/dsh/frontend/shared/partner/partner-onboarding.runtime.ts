@@ -147,6 +147,15 @@ export function mapPartnerOnboardingFailure(error: unknown): PartnerOnboardingFa
   const code = value.code ?? (value.kind === "network" ? "NETWORK_ERROR" : "UNKNOWN_ERROR");
   const serverMessage = value.message?.trim();
 
+  if (value.kind === "integrity" || status === 206) {
+    return {
+      state: "partial",
+      code,
+      message: serverMessage || "اكتملت العملية جزئيًا لكن قراءة الحقيقة اللاحقة لم تتطابق. أعد التحميل قبل أي إجراء آخر.",
+      retryable: true,
+      reloadRequired: true,
+    };
+  }
   if (value.kind === "network" || status === 0) {
     return {
       state: "offline",
