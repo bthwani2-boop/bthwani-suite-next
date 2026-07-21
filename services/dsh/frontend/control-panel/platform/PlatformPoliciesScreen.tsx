@@ -19,6 +19,7 @@ import {
   type DshSlaRule,
   type DshZone,
 } from "../../shared/platform";
+import { MapProviderHealthCard } from "./MapProviderHealthCard";
 import { ServiceAreaGovernanceSection } from "./ServiceAreaGovernanceSection";
 import { StoreOnboardingFeePolicySection } from "./StoreOnboardingFeePolicySection";
 
@@ -33,6 +34,7 @@ export function PlatformPoliciesScreen() {
         subtitle="حقيقة DSH التشغيلية للمناطق والمضلعات وSLA والسعة ورسوم تهيئة المتجر"
       />
 
+      <MapProviderHealthCard />
       <ServiceAreaGovernanceSection />
 
       <View style={styles.section}>
