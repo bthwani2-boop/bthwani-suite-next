@@ -1,7 +1,8 @@
+import { getIdentityAccessToken } from "@bthwani/core-identity";
 import {
-  getIdentityAccessToken,
-} from "@bthwani/core-identity";
-import { createDshFlexibleHttpClient } from "../_kernel/dsh-http-request";
+  corrId,
+  createDshFlexibleHttpClient,
+} from "../_kernel/dsh-http-request";
 import type {
   DshHomeAdminContentInput,
   DshHomeAdminContentItem,
@@ -12,8 +13,8 @@ import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 const httpClient = createDshFlexibleHttpClient(resolveDshApiBaseUrl());
 
 type DshHomeDiscoveryAdminClientError =
-  | { kind: 'http'; status: number; body: unknown }
-  | { kind: 'network'; message: string };
+  | { kind: "http"; status: number; body?: unknown; code?: string; message?: string }
+  | { kind: "network"; message: string };
 
 export type HomeDiscoveryAdminState =
   | { readonly kind: "loading" }
@@ -28,13 +29,28 @@ export type HomeDiscoveryAdminActionState =
   | { readonly kind: "success"; readonly message: string }
   | { readonly kind: "error"; readonly message: string };
 
-export async function fetchHomeDiscoveryAdmin(kind: DshHomeAdminKind): Promise<HomeDiscoveryAdminState> {
+function optionalToken(): { readonly token?: string } {
   const token = getIdentityAccessToken();
-  if (token === null) return { kind: "permission_denied" };
+  return token === null ? {} : { token };
+}
+
+function mutationAuth(prefix: string) {
+  const token = getIdentityAccessToken();
+  const correlationId = corrId(prefix);
+  return {
+    auth: {
+      ...(token === null ? {} : { accessToken: token }),
+      idempotencyKey: correlationId,
+      correlationId,
+    },
+  } as const;
+}
+
+export async function fetchHomeDiscoveryAdmin(kind: DshHomeAdminKind): Promise<HomeDiscoveryAdminState> {
   try {
     const response = await httpClient.request<{ items: DshHomeAdminContentItem[] }>(
       `/dsh/operator/home-discovery/${kind}`,
-      { token },
+      optionalToken(),
     );
     return response.items.length === 0
       ? { kind: "empty" }
@@ -49,29 +65,25 @@ export async function saveHomeDiscoveryAdmin(
   itemId: string | null,
   input: DshHomeAdminContentInput,
 ): Promise<void> {
-  const token = getIdentityAccessToken();
-  if (token === null) throw { kind: "http", status: 401 };
   if (itemId === null) {
     await httpClient.request(`/dsh/operator/home-discovery/${kind}`, {
       method: "POST",
       body: input,
-      token,
+      ...mutationAuth("home-content-create"),
     });
-  } else {
-    await httpClient.request(`/dsh/operator/home-discovery/${kind}/${encodeURIComponent(itemId)}`, {
-      method: "PATCH",
-      body: input,
-      token,
-    });
+    return;
   }
+  await httpClient.request(`/dsh/operator/home-discovery/${kind}/${encodeURIComponent(itemId)}`, {
+    method: "PATCH",
+    body: input,
+    ...mutationAuth("home-content-update"),
+  });
 }
 
 export async function removeHomeDiscoveryAdmin(kind: DshHomeAdminKind, itemId: string): Promise<void> {
-  const token = getIdentityAccessToken();
-  if (token === null) throw { kind: "http", status: 401 };
   await httpClient.request(`/dsh/operator/home-discovery/${kind}/${encodeURIComponent(itemId)}`, {
     method: "DELETE",
-    token,
+    ...mutationAuth("home-content-delete"),
   });
 }
 
@@ -83,7 +95,23 @@ export function classifyAdminError(error: unknown): HomeDiscoveryAdminState {
   if (typed?.kind === "network") {
     return { kind: "error", message: "خدمة إدارة محتوى الصفحة الرئيسية غير متاحة." };
   }
-  return { kind: "error", message: typed?.kind === "http" ? `HTTP_${typed.status}` : "UNKNOWN_ERROR" };
+  return {
+    kind: "error",
+    message: typed?.kind === "http"
+      ? typed.message ?? typed.code ?? `HTTP_${typed.status}`
+      : "UNKNOWN_ERROR",
+  };
+}
+
+export function describeAdminMutationError(error: unknown): string {
+  const typed = error as DshHomeDiscoveryAdminClientError;
+  if (typed?.kind === "http") {
+    if (typed.status === 401 || typed.status === 403) return "لا تملك صلاحية إدارة هذا المحتوى.";
+    if (typed.status === 409) return "تم تعديل العنصر من مستخدم آخر. حدّث القائمة ثم أعد المحاولة.";
+    return typed.message ?? typed.code ?? "تعذر حفظ التغيير.";
+  }
+  if (typed?.kind === "network") return "تعذر الاتصال بخدمة إدارة المحتوى.";
+  return "تعذر حفظ التغيير.";
 }
 
 export const EMPTY_HOME_ADMIN_INPUT: DshHomeAdminContentInput = {
@@ -94,7 +122,8 @@ export const EMPTY_HOME_ADMIN_INPUT: DshHomeAdminContentInput = {
   actionType: "none",
   actionTarget: "",
   sortOrder: 0,
-  isActive: true,
+  isActive: false,
+  publicationStatus: "draft",
 };
 
 export type {
