@@ -17,13 +17,18 @@ import {
 import {
   CLIENT_CANCELLATION_REASONS,
   FINANCIAL_CLOSURE_LABELS,
-  ORDER_STATUS_LABELS,
-  isOrderCancellationStatus,
   useOrderCancellationController,
   type ClientCancellationReasonCode,
   type DshFinancialClosureStatus,
-  type DshOrderStatus,
 } from '../../shared/orders';
+import {
+  bidiIsolate,
+  buildOrderTruthAccessibilityLabel,
+  formatMinorUnits,
+  orderEventLabel,
+  toOrderTruthSummary,
+  type OrderTruth,
+} from '../../shared/order-truth';
 import { DELIVERY_STATUS_LABELS } from '../../shared/dispatch';
 import { useClientOrderJourneyController } from './useClientOrderJourneyController';
 
@@ -32,27 +37,15 @@ type Props = {
   readonly onBack?: () => void;
 };
 
-const STATUS_ORDER: readonly DshOrderStatus[] = [
-  'pending',
-  'store_accepted',
-  'preparing',
-  'ready_for_pickup',
-  'driver_assigned',
-  'driver_arrived_store',
-  'picked_up',
-  'arrived_customer',
-  'delivered',
-];
-
-const FULFILLMENT_LABELS = {
+const FULFILLMENT_LABELS: Readonly<Record<OrderTruth['fulfillmentMode'], string>> = {
   bthwani_delivery: 'توصيل بثواني',
   partner_delivery: 'توصيل المتجر',
   pickup: 'استلام ذاتي',
-} as const;
+};
 
-function statusTone(status: DshOrderStatus): 'neutral' | 'success' | 'warning' | 'danger' | 'info' {
-  if (isOrderCancellationStatus(status)) return 'danger';
-  if (status === 'delivered' || status === 'ready_for_pickup') return 'success';
+function statusTone(status: string): 'neutral' | 'success' | 'warning' | 'danger' | 'info' {
+  if (status.startsWith('cancelled_') || status.startsWith('failed_')) return 'danger';
+  if (status === 'delivered' || status === 'ready_for_pickup' || status === 'returned_to_store') return 'success';
   if (status === 'pending') return 'warning';
   return 'info';
 }
@@ -65,43 +58,35 @@ function financialTone(status: DshFinancialClosureStatus): 'neutral' | 'success'
   return 'neutral';
 }
 
-function OrderTimeline({ status }: { readonly status: DshOrderStatus }) {
-  if (status === 'returning_to_store' || status === 'return_arrived_store' || status === 'returned_to_store') {
+function OrderTimeline({ order }: { readonly order: OrderTruth }) {
+  const summary = toOrderTruthSummary(order);
+  if (order.statusTimeline.length === 0) {
     return (
-      <Surface tone={status === 'returned_to_store' ? 'raised' : 'warning'} gap={2}>
-        <Text role="bodyStrong">{ORDER_STATUS_LABELS[status]}</Text>
-        <Text role="bodySm">{status === 'returned_to_store' ? 'استلم المتجر المرتجع وتراجع العمليات الإغلاق المالي المناسب.' : status === 'return_arrived_store' ? 'وصل المرتجع إلى المتجر وينتظر تأكيد الاستلام من الشريك.' : 'تعذر إكمال التسليم واعتمدت العمليات إعادة الطلب إلى المتجر.'}</Text>
-      </Surface>
-    );
-  }
-  if (isOrderCancellationStatus(status)) {
-    return (
-      <Surface tone="danger" gap={2}>
-        <Text role="bodyStrong">{ORDER_STATUS_LABELS[status]}</Text>
-        <Text role="bodySm">توقفت العمليات التابعة للطلب، وتتم متابعة الأثر المالي بصورة مستقلة داخل WLT.</Text>
+      <Surface tone="raised" gap={2}>
+        <Text role="titleSm">سجل حالة الطلب</Text>
+        <Text role="bodyStrong">{summary.statusLabel}</Text>
+        <Text role="bodySm" tone="muted">لم تُعد أحداث إضافية في القراءة الحالية.</Text>
       </Surface>
     );
   }
 
-  const currentIndex = STATUS_ORDER.indexOf(status);
   return (
     <Surface tone="raised" gap={3}>
-      <Text role="titleSm">مراحل الطلب</Text>
-      {STATUS_ORDER.map((step, index) => {
-        const completed = currentIndex >= index;
-        const current = currentIndex === index;
+      <Text role="titleSm">سجل حالة الطلب</Text>
+      {order.statusTimeline.map((event, index) => {
+        const current = index === order.statusTimeline.length - 1;
         return (
-          <View key={step} style={styles.timelineRow}>
+          <View key={event.id} style={styles.timelineRow}>
             <Icon
-              name={completed ? 'checkmark-circle' : 'ellipse-outline'}
+              name={current ? 'radio-button-on' : 'checkmark-circle'}
               size={18}
-              tone={completed ? 'success' : 'muted'}
+              tone={current ? 'info' : 'success'}
             />
             <View style={styles.timelineText}>
-              <Text role={current ? 'bodyStrong' : 'bodySm'}>
-                {ORDER_STATUS_LABELS[step]}
+              <Text role={current ? 'bodyStrong' : 'bodySm'}>{orderEventLabel(event)}</Text>
+              <Text role="caption" tone="muted">
+                {new Date(event.createdAt).toLocaleString('ar-YE')} · الإصدار {event.orderVersion}
               </Text>
-              {current ? <Text role="caption" tone="muted">الحالة الحالية</Text> : null}
             </View>
           </View>
         );
@@ -112,11 +97,11 @@ function OrderTimeline({ status }: { readonly status: DshOrderStatus }) {
 
 function ClientCancellationPanel({
   orderId,
-  status,
+  allowedActions,
   onOrderChanged,
 }: {
   readonly orderId: string;
-  readonly status: DshOrderStatus;
+  readonly allowedActions: readonly string[];
   readonly onOrderChanged: () => void | Promise<void>;
 }) {
   const [reasonCode, setReasonCode] = React.useState<ClientCancellationReasonCode>('changed_mind');
@@ -126,7 +111,7 @@ function ClientCancellationPanel({
     orderId,
     onCancelled: onOrderChanged,
   });
-  const canCancel = status === 'pending' || status === 'store_accepted';
+  const canCancel = allowedActions.includes('cancel_if_policy_allows');
   const cancellation =
     controller.state.kind === 'ready'
       ? controller.state.cancellation
@@ -142,9 +127,7 @@ function ClientCancellationPanel({
           <Text role="bodySm" tone="muted">سبب الإلغاء</Text>
           <Text role="bodyStrong">{cancellation.reasonCode}</Text>
         </View>
-        {cancellation.reasonNote ? (
-          <Text role="bodySm" tone="muted">{cancellation.reasonNote}</Text>
-        ) : null}
+        {cancellation.reasonNote ? <Text role="bodySm" tone="muted">{cancellation.reasonNote}</Text> : null}
         <Badge
           label={FINANCIAL_CLOSURE_LABELS[cancellation.financialClosureStatus]}
           tone={financialTone(cancellation.financialClosureStatus)}
@@ -152,14 +135,13 @@ function ClientCancellationPanel({
         {cancellation.financialReference ? (
           <View style={styles.detailRow}>
             <Text role="bodySm" tone="muted">المرجع المالي</Text>
-            <Text role="caption">{cancellation.financialReference}</Text>
+            <Text role="caption">{bidiIsolate(cancellation.financialReference)}</Text>
           </View>
         ) : null}
-        {cancellation.financialFailure ? (
-          <Text role="bodySm" tone="danger">{cancellation.financialFailure}</Text>
-        ) : null}
+        {cancellation.financialFailure ? <Text role="bodySm" tone="danger">{cancellation.financialFailure}</Text> : null}
         <Button
           label={controller.state.kind === 'submitting' ? 'جارٍ تحديث القرار المالي…' : 'تحديث حالة الاسترداد'}
+          accessibilityLabel="تحديث حالة الاسترداد من المصدر المالي"
           tone="secondary"
           disabled={controller.state.kind === 'submitting'}
           onPress={() => void controller.refresh()}
@@ -183,7 +165,7 @@ function ClientCancellationPanel({
       <Surface tone="raised" gap={2}>
         <Text role="bodyStrong">قرار الإلغاء</Text>
         <Text role="bodySm" tone="muted">
-          بدأ تجهيز الطلب أو تنفيذه؛ أي طلب إلغاء الآن يحتاج مراجعة العمليات ولا يُنفذ مباشرة من التطبيق.
+          لا يعرض الخادم إجراء إلغاء مباشر لهذا الطلب. أي متابعة إضافية تتم عبر العمليات وفق السياسة.
         </Text>
       </Surface>
     );
@@ -197,13 +179,14 @@ function ClientCancellationPanel({
     <Surface tone="raised" gap={3}>
       <Text role="titleSm">إلغاء الطلب</Text>
       <Text role="bodySm" tone="muted">
-        الإلغاء متاح قبل بدء التجهيز. يقرر WLT لاحقًا تحرير جلسة الدفع أو إنشاء طلب استرداد وفق الحالة المالية الحقيقية.
+        صلاحية الإلغاء معروضة من `allowedActions`. يقرر WLT تحرير الدفع أو الاسترداد بصورة مستقلة.
       </Text>
       <Box gap={2}>
         {CLIENT_CANCELLATION_REASONS.map((reason) => (
           <Button
             key={reason.code}
             label={reason.label}
+            accessibilityLabel={`اختيار سبب الإلغاء: ${reason.label}`}
             tone={reasonCode === reason.code ? 'brand' : 'secondary'}
             size="sm"
             fullWidth={false}
@@ -219,11 +202,10 @@ function ClientCancellationPanel({
         value={reasonNote}
         onChangeText={setReasonNote}
       />
-      {controller.state.kind === 'error' ? (
-        <Text role="bodySm" tone="danger">{controller.state.message}</Text>
-      ) : null}
+      {controller.state.kind === 'error' ? <Text role="bodySm" tone="danger">{controller.state.message}</Text> : null}
       <Button
         label={submitting ? 'جارٍ تثبيت الإلغاء…' : 'تأكيد إلغاء الطلب'}
+        accessibilityLabel="تأكيد إلغاء الطلب وفق السياسة"
         tone="danger"
         disabled={submitting || (noteRequired && !reasonNote.trim())}
         onPress={() => void controller.submit({ reasonCode, reasonNote })}
@@ -236,7 +218,7 @@ export function OrderTrackingScreen({ orderId, onBack }: Props) {
   const { state, reload } = useClientOrderJourneyController(orderId);
 
   if (state.kind === 'loading') {
-    return <StateView title="جارٍ تحميل رحلة الطلب" description="نقرأ حالة الطلب والتتبع المباشر من DSH." loading />;
+    return <StateView title="جارٍ تحميل رحلة الطلب" description="نقرأ حقيقة الطلب والتجهيز والتتبع من مصادر DSH المقيدة بالحساب." loading />;
   }
 
   if (state.kind === 'error') {
@@ -255,12 +237,9 @@ export function OrderTrackingScreen({ orderId, onBack }: Props) {
   }
 
   const { order, assignment } = state;
-  const items = order.items ?? [];
-  const totalPrice = items.reduce(
-    (sum, item) => sum + Number(item.unitPrice ?? 0) * Number(item.quantity ?? 0),
-    0,
-  );
+  const summary = toOrderTruthSummary(order);
   const deliveryStatus = assignment?.delivery?.status;
+  const accessibilityLabel = buildOrderTruthAccessibilityLabel(order);
 
   return (
     <View style={styles.root}>
@@ -268,19 +247,33 @@ export function OrderTrackingScreen({ orderId, onBack }: Props) {
       <MobileScrollView fill padding={4} gap={4} contentContainerStyle={styles.content}>
         <Surface tone="action" gap={3}>
           <View style={styles.summaryHeader}>
-            <Text role="titleMd" style={styles.actionText}>{`#${order.id.slice(-6).toUpperCase()}`}</Text>
-            <Badge label={ORDER_STATUS_LABELS[order.status]} tone={statusTone(order.status)} />
+            <Text role="titleMd" style={styles.actionText}>{bidiIsolate(order.orderNumber)}</Text>
+            <Badge label={summary.statusLabel} tone={statusTone(order.status)} />
           </View>
-          <Text role="bodySm" style={styles.actionText}>
-            {FULFILLMENT_LABELS[order.fulfillmentMode]}
+          <Text role="bodySm" style={styles.actionText}>{FULFILLMENT_LABELS[order.fulfillmentMode]}</Text>
+          <Text role="caption" style={styles.actionText}>
+            {`${order.items.length} أصناف · ${formatMinorUnits(order.totalMinorUnits, order.currency)}`}
           </Text>
           <Text role="caption" style={styles.actionText}>
-            {`${items.length} أصناف · ${totalPrice.toLocaleString('ar-YE')} ر.ي`}
+            {`المالك الحالي: ${summary.currentOwnerLabel} · الإصدار: ${order.version}`}
           </Text>
         </Surface>
 
-        <OrderTimeline status={order.status} />
-        <ClientCancellationPanel orderId={order.id} status={order.status} onOrderChanged={reload} />
+        <OrderTimeline order={order} />
+        <ClientCancellationPanel orderId={order.id} allowedActions={order.allowedActions} onOrderChanged={reload} />
+
+        <Surface tone="raised" gap={3}>
+          <Text role="titleSm">إسقاط الدفع للقراءة فقط</Text>
+          <View style={styles.detailRow}>
+            <Text role="bodySm" tone="muted">الحالة</Text>
+            <Text role="bodyStrong">{order.paymentStatusProjection}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text role="bodySm" tone="muted">مرجع WLT المعتم</Text>
+            <Text role="caption">{bidiIsolate(order.wltPaymentRefId)}</Text>
+          </View>
+          <Text role="caption" tone="muted">لا ينفذ هذا السطح خصمًا أو استردادًا أو تسوية.</Text>
+        </Surface>
 
         <Surface tone="raised" gap={3}>
           <Text role="titleSm">تفاصيل التوصيل</Text>
@@ -288,19 +281,15 @@ export function OrderTrackingScreen({ orderId, onBack }: Props) {
             <>
               <View style={styles.detailRow}>
                 <Text role="bodySm" tone="muted">الكابتن</Text>
-                <Text role="bodyStrong">{assignment.captainId}</Text>
+                <Text role="bodyStrong">{bidiIsolate(assignment.captainId)}</Text>
               </View>
               <View style={styles.detailRow}>
                 <Text role="bodySm" tone="muted">حالة المهمة</Text>
-                <Text role="bodyStrong">
-                  {deliveryStatus ? DELIVERY_STATUS_LABELS[deliveryStatus] : 'بانتظار قبول المهمة'}
-                </Text>
+                <Text role="bodyStrong">{deliveryStatus ? DELIVERY_STATUS_LABELS[deliveryStatus] : 'بانتظار قبول المهمة'}</Text>
               </View>
               <View style={styles.detailRow}>
                 <Text role="bodySm" tone="muted">وقت الإسناد</Text>
-                <Text role="bodyStrong">
-                  {new Date(assignment.createdAt).toLocaleString('ar-YE')}
-                </Text>
+                <Text role="bodyStrong">{new Date(assignment.createdAt).toLocaleString('ar-YE')}</Text>
               </View>
             </>
           ) : (
@@ -315,16 +304,26 @@ export function OrderTrackingScreen({ orderId, onBack }: Props) {
         </Surface>
 
         <Surface tone="raised" gap={3}>
-          <Text role="titleSm">أصناف الطلب</Text>
-          {items.map((item) => (
+          <Text role="titleSm">أصناف الطلب المثبتة</Text>
+          {order.items.map((item) => (
             <View key={item.id} style={styles.detailRow}>
               <Text role="bodySm">{item.productName}</Text>
-              <Text role="bodyStrong">{`×${item.quantity}`}</Text>
+              <Text role="bodyStrong">{`×${item.quantity} · ${formatMinorUnits(item.lineTotalMinorUnits, order.currency)}`}</Text>
             </View>
           ))}
         </Surface>
 
-        <Button label="تحديث الحالة" tone="secondary" onPress={() => void reload()} />
+        <Surface tone="raised" gap={2}>
+          <Text role="titleSm">مرجع التدقيق</Text>
+          <Text role="caption">{bidiIsolate(order.correlationId)}</Text>
+        </Surface>
+
+        <Button
+          label="تحديث الحالة"
+          accessibilityLabel={`${accessibilityLabel}، تحديث الحالة`}
+          tone="secondary"
+          onPress={() => void reload()}
+        />
         {onBack ? <Button label="العودة للطلبات" tone="ghost" onPress={onBack} /> : null}
       </MobileScrollView>
     </View>
@@ -350,6 +349,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: spacing[2],
   },
   actionText: {
     color: colorRoles.surfaceBase,
