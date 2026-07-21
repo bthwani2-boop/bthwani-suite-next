@@ -9,8 +9,8 @@ import {
   StateView,
   Tabs,
   Text,
-  spacing,
 } from '@bthwani/ui-kit';
+import { PREPARATION_ISSUE_KIND_LABELS } from '../../shared/orders';
 import type { GovernedPartnerOrderItem } from '../../shared/partner/partner.adapters';
 import type { PartnerOrdersHomeScreenState } from './OrdersInboxScreen';
 
@@ -21,6 +21,8 @@ export type GovernedPartnerOrderActionId =
   | 'prepare'
   | 'ready'
   | 'revise_estimate'
+  | 'report_issue'
+  | 'resolve_issue'
   | 'handoff'
   | 'issue'
   | 'delivering';
@@ -37,10 +39,12 @@ const STAGES: ReadonlyArray<{ readonly id: StageId; readonly label: string }> = 
 ];
 
 function primaryAction(item: GovernedPartnerOrderItem): GovernedPartnerOrderActionId {
+  if (item.allowedActions.includes('resolve_issue')) return 'resolve_issue';
   if (item.allowedActions.includes('accept')) return 'accept';
   if (item.allowedActions.includes('prepare')) return 'prepare';
   if (item.allowedActions.includes('ready')) return 'ready';
   if (item.allowedActions.includes('handoff')) return 'handoff';
+  if (item.allowedActions.includes('report_issue')) return 'report_issue';
   if (item.status === 'delivering') return 'delivering';
   if (item.issueRequired || item.status === 'cancelled') return 'issue';
   return 'details';
@@ -48,10 +52,12 @@ function primaryAction(item: GovernedPartnerOrderItem): GovernedPartnerOrderActi
 
 function primaryLabel(item: GovernedPartnerOrderItem): string {
   const action = primaryAction(item);
+  if (action === 'resolve_issue') return 'حل مشكلات التحضير';
   if (action === 'accept') return 'قبول الطلب';
   if (action === 'prepare') return 'بدء التحضير';
   if (action === 'ready') return 'تأكيد الجاهزية';
   if (action === 'handoff') return 'فتح التسليم';
+  if (action === 'report_issue') return 'تسجيل مشكلة';
   if (action === 'delivering') return 'متابعة التوصيل';
   if (action === 'issue') return 'فتح المشكلة';
   return 'عرض التفاصيل';
@@ -60,13 +66,19 @@ function primaryLabel(item: GovernedPartnerOrderItem): string {
 function stageMatches(item: GovernedPartnerOrderItem, stage: StageId): boolean {
   if (stage === 'all') return true;
   if (stage === 'decision') return item.allowedActions.includes('accept') || item.allowedActions.includes('reject');
-  if (stage === 'preparation') return item.allowedActions.includes('prepare') || item.allowedActions.includes('revise_estimate');
+  if (stage === 'preparation') {
+    return item.allowedActions.includes('prepare')
+      || item.allowedActions.includes('revise_estimate')
+      || item.allowedActions.includes('report_issue')
+      || item.allowedActions.includes('resolve_issue');
+  }
   if (stage === 'ready') return item.allowedActions.includes('ready');
   if (stage === 'handoff') return item.allowedActions.includes('handoff');
   return item.allowedActions.length === 0;
 }
 
 function statusLabel(item: GovernedPartnerOrderItem): string {
+  if (item.openPreparationIssueCount > 0) return `${item.openPreparationIssueCount} مشكلة تمنع الجاهزية`;
   if (item.preparation.preparationSlaState === 'overdue') return item.slaLabel ?? 'متأخر عن الجاهزية';
   if (item.preparation.preparationSlaState === 'due_soon') return item.slaLabel ?? 'اقترب موعد الجاهزية';
   if (item.allowedActions.includes('accept')) return 'ينتظر قرار المتجر';
@@ -79,6 +91,7 @@ function statusLabel(item: GovernedPartnerOrderItem): string {
 }
 
 function statusTone(item: GovernedPartnerOrderItem): 'danger' | 'warning' | 'success' | 'neutral' {
+  if (item.openPreparationIssueCount > 0) return 'danger';
   if (item.preparation.preparationSlaState === 'overdue') return 'danger';
   if (item.preparation.preparationSlaState === 'due_soon') return 'warning';
   if (item.preparation.preparationSlaState === 'ready') return 'success';
@@ -131,10 +144,10 @@ export function GovernedPartnerOrdersScreen({
   }));
 
   return (
-    <MobileScrollView fill padding={4} gap={3} contentContainerStyle={{ paddingBottom: spacing[12] }}>
+    <MobileScrollView fill padding={4} gap={3}>
       <Box gap={1}>
         <Text role="titleLg">مركز تجهيز الطلبات</Text>
-        <Text role="bodySm" tone="muted">الموعد والإجراءات مصدرها DSH، وتُحدّث بعد كل انتقال أو مراجعة.</Text>
+        <Text role="bodySm" tone="muted">الموعد والمشكلات والإجراءات مصدرها DSH، ولا يمكن إعلان الجاهزية مع مشكلة مفتوحة.</Text>
       </Box>
 
       <Tabs items={tabItems} value={stage} onValueChange={(value) => setStage(value as StageId)} />
@@ -175,12 +188,20 @@ export function GovernedPartnerOrdersScreen({
                       {item.preparation.preparationDelayReason ? (
                         <Text role="caption" tone="warning">{`سبب آخر مراجعة: ${item.preparation.preparationDelayReason}`}</Text>
                       ) : null}
+                      {item.preparationIssues.filter((issue) => issue.status === 'open').map((issue) => (
+                        <Text key={issue.id} role="caption" tone="danger">
+                          {`${PREPARATION_ISSUE_KIND_LABELS[issue.kind]}: ${issue.note}`}
+                        </Text>
+                      ))}
                       {item.nextOwnerLabel ? <Text role="caption" tone="muted">{`الجهة التالية: ${item.nextOwnerLabel}`}</Text> : null}
                     </Box>
                   ) : null}
 
                   <Box layoutDirection="row" gap={2}>
                     <Button label={primaryLabel(item)} size="sm" fullWidth={false} onPress={() => onAction(action, item.id)} />
+                    {item.allowedActions.includes('report_issue') && action !== 'report_issue' ? (
+                      <Button label="تسجيل مشكلة" tone="danger" size="sm" fullWidth={false} onPress={() => onAction('report_issue', item.id)} />
+                    ) : null}
                     {item.allowedActions.includes('revise_estimate') ? (
                       <Button label="تعديل الوقت" tone="secondary" size="sm" fullWidth={false} onPress={() => onAction('revise_estimate', item.id)} />
                     ) : null}
