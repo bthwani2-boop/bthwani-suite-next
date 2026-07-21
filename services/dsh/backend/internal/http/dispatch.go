@@ -348,15 +348,15 @@ func (s *protectedStoreServer) handleGetPartnerDispatchTracking(w http.ResponseW
 
 func marshalDispatchAssignmentForPartner(a dispatch.Assignment) map[string]any {
 	return map[string]any{
-		"id":                 a.ID,
-		"orderId":            a.OrderID,
-		"captainId":          a.CaptainID,
-		"status":             string(a.Status),
-		"acceptedAt":         a.AcceptedAt,
-		"completedAt":        a.CompletedAt,
-		"createdAt":          a.CreatedAt,
-		"updatedAt":          a.UpdatedAt,
-		"deliveryStatus":     string(a.Delivery.Status),
+		"id":             a.ID,
+		"orderId":        a.OrderID,
+		"captainId":      a.CaptainID,
+		"status":         string(a.Status),
+		"acceptedAt":     a.AcceptedAt,
+		"completedAt":    a.CompletedAt,
+		"createdAt":      a.CreatedAt,
+		"updatedAt":      a.UpdatedAt,
+		"deliveryStatus": string(a.Delivery.Status),
 	}
 }
 
