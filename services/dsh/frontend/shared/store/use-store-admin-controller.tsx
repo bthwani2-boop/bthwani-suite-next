@@ -3,12 +3,14 @@ import {
   fetchAdminStoreList,
   fetchAdminStoreDetail,
   fetchAdminStorePublicationDiagnostics,
+  fetchAdminStoreAudit,
   adminLoadingState,
 } from "./store-admin.api";
 import {
   type DshStoreAdminListState,
   type DshStoreAdminDetailState,
   type DshStorePublicationDiagnosticsState,
+  type DshStoreAuditState,
   type DshStoreAdminFilters,
   type DshStoreAdminKpiSummary,
   type DshStoreAdminTableRow,
@@ -33,6 +35,7 @@ export type StoreAdminController = {
   readonly listState: DshStoreAdminListState;
   readonly detailState: DshStoreAdminDetailState | null;
   readonly diagnosticsState: DshStorePublicationDiagnosticsState;
+  readonly auditState: DshStoreAuditState;
   readonly selectedStoreId: string | null;
   readonly filters: DshStoreAdminFilters;
   readonly offset: number;
@@ -57,6 +60,7 @@ export function useStoreAdminController(authKind = "unauthenticated"): StoreAdmi
   const [listState, setListState] = useState<DshStoreAdminListState>(adminLoadingState());
   const [detailState, setDetailState] = useState<DshStoreAdminDetailState | null>(null);
   const [diagnosticsState, setDiagnosticsState] = useState<DshStorePublicationDiagnosticsState>({ kind: "idle" });
+  const [auditState, setAuditState] = useState<DshStoreAuditState>({ kind: "idle" });
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
   const [filters, setFilters] = useState<DshStoreAdminFilters>(createStoreAdminInitialFilters);
   const [offset, setOffset] = useState(0);
@@ -76,6 +80,15 @@ export function useStoreAdminController(authKind = "unauthenticated"): StoreAdmi
     setDiagnosticsState(await fetchAdminStorePublicationDiagnostics(storeId));
   }, []);
 
+  const loadAudit = useCallback(async (storeId: string | null) => {
+    if (storeId === null) {
+      setAuditState({ kind: "idle" });
+      return;
+    }
+    setAuditState({ kind: "loading" });
+    setAuditState(await fetchAdminStoreAudit(storeId));
+  }, []);
+
   useEffect(() => {
     if (authKind === "authenticated") void loadStores(offset);
   }, [loadStores, offset, authKind]);
@@ -83,13 +96,15 @@ export function useStoreAdminController(authKind = "unauthenticated"): StoreAdmi
   useEffect(() => {
     void loadStoreAdminDetail(selectedStoreId, fetchAdminStoreDetail, setDetailState);
     void loadDiagnostics(selectedStoreId);
-  }, [selectedStoreId, loadDiagnostics]);
+    void loadAudit(selectedStoreId);
+  }, [selectedStoreId, loadAudit, loadDiagnostics]);
 
   const retry = useCallback(() => {
     void loadStores(offset);
     void loadStoreAdminDetail(selectedStoreId, fetchAdminStoreDetail, setDetailState);
     void loadDiagnostics(selectedStoreId);
-  }, [loadDiagnostics, loadStores, offset, selectedStoreId]);
+    void loadAudit(selectedStoreId);
+  }, [loadAudit, loadDiagnostics, loadStores, offset, selectedStoreId]);
   const selectStore = useCallback((id: string | null) => setSelectedStoreId(id), []);
   const nextPage = useCallback(() => setOffset(nextStoreAdminOffset), []);
   const prevPage = useCallback(() => setOffset(previousStoreAdminOffset), []);
@@ -108,6 +123,7 @@ export function useStoreAdminController(authKind = "unauthenticated"): StoreAdmi
         loadStores(offset),
         loadStoreAdminDetail(storeId, fetchAdminStoreDetail, setDetailState),
         loadDiagnostics(storeId),
+        loadAudit(storeId),
       ]);
     } catch (error) {
       const typed = error as { kind?: string; status?: number };
@@ -121,12 +137,13 @@ export function useStoreAdminController(authKind = "unauthenticated"): StoreAdmi
         setActionState({ kind: "error", message: "تعذر تطبيق إجراء الحوكمة." });
       }
     }
-  }, [loadDiagnostics, loadStores, offset]);
+  }, [loadAudit, loadDiagnostics, loadStores, offset]);
 
   return {
     listState,
     detailState,
     diagnosticsState,
+    auditState,
     selectedStoreId,
     filters,
     offset,
