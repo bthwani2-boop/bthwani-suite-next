@@ -100,10 +100,9 @@ const DSH_CAPTAIN_INBOX_MODE_FILTERS: readonly DshCaptainInboxModeFilter[] = [
 
 export function getRouteForCommandTarget(target: DshCaptainCommandTarget): DshCaptainRoute {
   const map: Partial<Record<DshCaptainCommandTarget, DshCaptainRoute>> = {
-    inbox: 'inbox', detail: 'detail', orderchat: 'orderchat', bell: 'bell',
+    inbox: 'inbox', detail: 'detail', orderchat: 'support-screen', bell: 'bell',
     'support-directory': 'support-directory', 'account-orders': 'account-orders',
     'pickup-dropoff': 'pickup-dropoff', 'pod-submission': 'pod-submission', entry: 'entry',
   };
   return map[target] ?? 'home';
 }
-
