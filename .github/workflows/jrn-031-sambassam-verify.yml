@@ -1,0 +1,67 @@
+name: JRN-031 Administration Maker-Checker Verification
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [sambassam]
+    paths:
+      - "services/dsh/database/migrations/dsh-076_admin_role_assignment_approvals.sql"
+      - "services/dsh/backend/internal/administration/**"
+      - "services/dsh/backend/internal/http/administration*.go"
+      - "services/dsh/backend/internal/http/journey_031_routes_test.go"
+      - "services/dsh/backend/cmd/dsh-api/main.go"
+      - "services/dsh/contracts/dsh.administration.openapi.yaml"
+      - "services/dsh/frontend/shared/administration/**"
+      - "services/dsh/frontend/control-panel/administration/**"
+      - "apps/control-panel/runtime/src/app/dsh/administration/page.tsx"
+      - "services/dsh/tests/jrn-031-administration-maker-checker.test.mjs"
+      - ".github/actions/setup-node-workspace/action.yml"
+      - ".github/workflows/jrn-031-sambassam-verify.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jrn-031-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  administration-bindings:
+    name: Administration contract and surface bindings
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Setup pinned Node and PNPM workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Verify repository hygiene
+        run: git diff --check
+      - name: Verify JRN-031 bindings
+        run: node --test services/dsh/tests/jrn-031-administration-maker-checker.test.mjs
+      - name: Verify full-stack ownership boundary
+        run: pnpm guard:fullstack-boundary
+
+  administration-go:
+    name: Administration domain and governed routes
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: services/dsh/backend
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Setup Go from module
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: services/dsh/backend/go.sum
+      - name: Compile administration domain
+        run: go test ./internal/administration -count=1
+      - name: Verify governed route registration
+        run: go test ./internal/http -run TestJourney031ExposesGovernedAdministrationRoutes -count=1
