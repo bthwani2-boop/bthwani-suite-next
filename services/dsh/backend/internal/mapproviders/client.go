@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -16,6 +17,7 @@ import (
 var (
 	ErrNotConfigured = errors.New("providers map runtime is not configured")
 	ErrUnavailable   = errors.New("providers map runtime is unavailable")
+	ErrTimeout       = errors.New("providers map runtime timed out")
 	ErrInvalid       = errors.New("providers map request is invalid")
 	ErrUncertain     = errors.New("providers map result is uncertain")
 )
@@ -59,20 +61,80 @@ type ReverseResponse struct {
 	Location Location `json:"location"`
 }
 
+type HealthItem struct {
+	Kind      string    `json:"kind"`
+	Status    string    `json:"status"`
+	CheckedAt time.Time `json:"checkedAt"`
+	Message   string    `json:"message,omitempty"`
+}
+
+type providerHealthResponse struct {
+	Providers []HealthItem `json:"providers"`
+}
+
+type HealthSnapshot struct {
+	Configured bool         `json:"configured"`
+	Status     string       `json:"status"`
+	CheckedAt  time.Time    `json:"checkedAt"`
+	Providers  []HealthItem `json:"providers"`
+}
+
 type upstreamError struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
 }
 
 func NewClient(baseURL string) *Client {
+	return NewClientWithTimeout(baseURL, 8*time.Second)
+}
+
+func NewClientWithTimeout(baseURL string, timeout time.Duration) *Client {
+	if timeout <= 0 {
+		timeout = 8 * time.Second
+	}
 	return &Client{
 		baseURL: strings.TrimRight(strings.TrimSpace(baseURL), "/"),
-		http:    &http.Client{Timeout: 8 * time.Second},
+		http:    &http.Client{Timeout: timeout},
 	}
 }
 
 func (c *Client) Configured() bool {
 	return c != nil && c.baseURL != ""
+}
+
+func (c *Client) Health(ctx context.Context, authorization string) (HealthSnapshot, error) {
+	if !c.Configured() {
+		return HealthSnapshot{Configured: false, Status: "not_configured", CheckedAt: time.Now().UTC(), Providers: []HealthItem{}}, ErrNotConfigured
+	}
+	var response providerHealthResponse
+	if err := c.get(ctx, authorization, "/providers/health", &response); err != nil {
+		return HealthSnapshot{}, err
+	}
+	items := make([]HealthItem, 0)
+	status := "unknown"
+	checkedAt := time.Now().UTC()
+	for _, item := range response.Providers {
+		item.Kind = strings.ToLower(strings.TrimSpace(item.Kind))
+		item.Status = strings.ToLower(strings.TrimSpace(item.Status))
+		item.Message = strings.TrimSpace(item.Message)
+		if item.Kind != "map" && item.Kind != "maps" {
+			continue
+		}
+		if item.CheckedAt.After(checkedAt) {
+			checkedAt = item.CheckedAt
+		}
+		items = append(items, item)
+	}
+	if len(items) > 0 {
+		status = "healthy"
+		for _, item := range items {
+			if item.Status != "healthy" && item.Status != "ok" && item.Status != "ready" {
+				status = "degraded"
+				break
+			}
+		}
+	}
+	return HealthSnapshot{Configured: true, Status: status, CheckedAt: checkedAt, Providers: items}, nil
 }
 
 func (c *Client) Search(ctx context.Context, authorization string, input SearchInput) (SearchResponse, error) {
@@ -167,6 +229,19 @@ func validCoordinate(latitude, longitude float64) bool {
 	return !math.IsNaN(latitude) && !math.IsNaN(longitude) && !math.IsInf(latitude, 0) && !math.IsInf(longitude, 0) && latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180
 }
 
+func (c *Client) get(ctx context.Context, authorization, path string, output any) error {
+	if !c.Configured() {
+		return ErrNotConfigured
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+path, nil)
+	if err != nil {
+		return ErrUnavailable
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Authorization", strings.TrimSpace(authorization))
+	return c.do(req, output)
+}
+
 func (c *Client) post(ctx context.Context, authorization, path string, input, output any) error {
 	if !c.Configured() {
 		return ErrNotConfigured
@@ -182,8 +257,16 @@ func (c *Client) post(ctx context.Context, authorization, path string, input, ou
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Authorization", strings.TrimSpace(authorization))
+	return c.do(req, output)
+}
+
+func (c *Client) do(req *http.Request, output any) error {
 	resp, err := c.http.Do(req)
 	if err != nil {
+		var netError net.Error
+		if errors.Is(err, context.DeadlineExceeded) || (errors.As(err, &netError) && netError.Timeout()) {
+			return fmt.Errorf("%w: %v", ErrTimeout, err)
+		}
 		return fmt.Errorf("%w: %v", ErrUnavailable, err)
 	}
 	defer resp.Body.Close()
@@ -197,6 +280,8 @@ func (c *Client) post(ctx context.Context, authorization, path string, input, ou
 		switch resp.StatusCode {
 		case http.StatusBadRequest:
 			return fmt.Errorf("%w: %s", ErrInvalid, apiError.Code)
+		case http.StatusGatewayTimeout:
+			return fmt.Errorf("%w: %s", ErrTimeout, apiError.Code)
 		case http.StatusServiceUnavailable, http.StatusBadGateway:
 			return fmt.Errorf("%w: %s", ErrUnavailable, apiError.Code)
 		default:
