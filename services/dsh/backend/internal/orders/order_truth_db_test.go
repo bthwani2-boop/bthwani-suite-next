@@ -185,6 +185,17 @@ func TestCreateOrderTruthLifecycleDBIntegration(t *testing.T) {
 		t.Fatalf("one checkout must create exactly one order, got %d", orderCount)
 	}
 
+	var eventID string
+	if err := db.QueryRow(`
+		SELECT id::text FROM dsh_order_status_events
+		WHERE tenant_id=$1 AND order_id=$2::uuid AND event_type='order.created'
+		ORDER BY created_at, id
+		LIMIT 1`,
+		fixture.TenantID, created.ID,
+	).Scan(&eventID); err != nil {
+		t.Fatalf("read order.created event: %v", err)
+	}
+
 	var eventCount, outboxCount, completedAttemptCount int
 	if err := db.QueryRow(`
 		SELECT COUNT(*) FROM dsh_order_status_events
@@ -210,6 +221,42 @@ func TestCreateOrderTruthLifecycleDBIntegration(t *testing.T) {
 	}
 	if eventCount != 1 || outboxCount != 1 || completedAttemptCount != 1 {
 		t.Fatalf("transactional creation evidence mismatch: events=%d outbox=%d attempts=%d", eventCount, outboxCount, completedAttemptCount)
+	}
+
+	if err := ProcessOrderEventBridgeOnce(context.Background(), db); err != nil {
+		t.Fatalf("first event bridge pass: %v", err)
+	}
+	var operationalOutboxCount int
+	if err := db.QueryRow(`
+		SELECT COUNT(*) FROM dsh_operational_outbox_events
+		WHERE id=$1::uuid`, eventID,
+	).Scan(&operationalOutboxCount); err != nil {
+		t.Fatalf("count canonical operational outbox event: %v", err)
+	}
+	if operationalOutboxCount != 1 {
+		t.Fatalf("expected one canonical operational event, got %d", operationalOutboxCount)
+	}
+
+	// Simulate a crash after downstream insert but before the source row was
+	// durably marked as published. Replaying must not duplicate the canonical
+	// event because the status-event UUID is reused as the downstream UUID.
+	if _, err := db.Exec(`
+		UPDATE dsh_order_event_outbox
+		SET status='retry', next_attempt_at=NOW(), published_at=NULL, updated_at=NOW()
+		WHERE tenant_id=$1 AND event_id=$2::uuid`, fixture.TenantID, eventID); err != nil {
+		t.Fatalf("reset order event for replay simulation: %v", err)
+	}
+	if err := ProcessOrderEventBridgeOnce(context.Background(), db); err != nil {
+		t.Fatalf("replayed event bridge pass: %v", err)
+	}
+	if err := db.QueryRow(`
+		SELECT COUNT(*) FROM dsh_operational_outbox_events
+		WHERE id=$1::uuid`, eventID,
+	).Scan(&operationalOutboxCount); err != nil {
+		t.Fatalf("recount canonical operational outbox event: %v", err)
+	}
+	if operationalOutboxCount != 1 {
+		t.Fatalf("bridge replay duplicated canonical event: %d", operationalOutboxCount)
 	}
 
 	if _, err := GetClientScopedOrderTruth(db, created.ID, fixture.TenantID, fixture.OtherClientID); !errors.Is(err, ErrNotFound) {
