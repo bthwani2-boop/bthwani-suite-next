@@ -31,12 +31,12 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false
-      - name: Verify Identity browser session boundary
+      - name: Verify Identity activation and browser session boundaries
         working-directory: core/identity/backend
-        run: go test ./internal/http -run 'TestBrowserCorsMiddleware|TestAllowedCorsOrigins' -count=1
-      - name: Verify Workforce lifecycle bindings
+        run: go test ./internal/http -run 'TestActivationSafety|TestBrowserCorsMiddleware|TestAllowedCorsOrigins' -count=1
+      - name: Verify Workforce lifecycle and activation boundaries
         working-directory: core/workforce/backend
-        run: go test ./internal/http -run 'TestWorkforceJourneyRoutesAreMounted|TestWorkforceCorsAllowsGovernedMutations' -count=1
+        run: go test ./internal/http -run 'TestActivationMutationSafety|TestWorkforceJourneyRoutesAreMounted|TestWorkforceCorsAllowsGovernedMutations' -count=1
       - name: Verify partner, discovery, and address bindings
         working-directory: services/dsh/backend
         run: go test ./internal/http -run 'TestFirstFiveJourneysExposeGovernedDSHRoutes|TestPartnerSelfRoutesRegisterOnceOnApplicationRouter' -count=1
