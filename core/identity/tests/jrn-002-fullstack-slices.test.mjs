@@ -94,7 +94,7 @@ test("FS-06 operation registry matches OpenAPI, routes, and both clients", async
   };
   for (const operation of registry.operations) {
     assert.match(openapi, new RegExp(`operationId:\\s*${operation.operationId}\\b`), operation.operationId);
-    assert.ok(openapi.includes(`  ${operation.path}:`) || openapi.includes(`  ${operation.path.replaceAll("{", "{")}:`), operation.path);
+    assert.ok(openapi.includes(`  ${operation.path}:`), operation.path);
     assert.ok(server.includes(`\"${operation.method} ${operation.path}\"`), `${operation.method} ${operation.path}`);
     if (operation.clientMethod.startsWith("workforce.")) {
       assert.match(workforce, new RegExp(`func \\(c \\*Client\\) ${workforceMethods[operation.clientMethod]}\\b`));
@@ -209,14 +209,28 @@ test("FS-16 leaves one canonical implementation and no stale artifacts", async (
 });
 
 test("FS-17 permanent verification owns static, Go, TypeScript, PostgreSQL, and HTTP runtime evidence", async () => {
-  const [targeted, runtime] = await Promise.all([
-    read(".github/workflows/jrn-001-010-sambassam-verify.yml"),
+  const [slices, runtime, targeted] = await Promise.all([
+    read(".github/workflows/jrn-002-fullstack-slices.yml"),
     read(".github/workflows/jrn-002-identity-runtime.yml"),
+    read(".github/workflows/jrn-001-010-sambassam-verify.yml"),
   ]);
-  assert.match(targeted, /jrn-002-fullstack-slices\.test\.mjs/);
-  assert.match(targeted, /pnpm --dir core\/identity typecheck/);
-  assert.match(targeted, /go test \.\/internal\/http \.\/internal\/identity/);
+  assert.match(slices, /node --test core\/identity\/tests\/jrn-002-\*\.test\.mjs/);
+  assert.match(slices, /pnpm --dir core\/identity typecheck/);
+  assert.match(slices, /go test \.\/\.\.\. -count=1/);
+  assert.match(slices, /journeys\/jrn-002\/fullstack-slices/);
   assert.match(runtime, /postgres:16-alpine/);
   assert.match(runtime, /JRN-002_RUNTIME_PASS/);
   assert.match(runtime, /journeys\/jrn-002\/runtime-proof/);
+  assert.match(targeted, /journeys\/jrn-001-010\/targeted-verification/);
+});
+
+test("FS-18 closure ledger records all slices, rollback, gaps, and independent approval boundary", async () => {
+  const closure = await read("governance/evidence/JRN-002_IDENTITY_ACTIVATION_SESSIONS_CLOSURE.md");
+  for (let slice = 1; slice <= 18; slice += 1) {
+    assert.match(closure, new RegExp(`FS-${String(slice).padStart(2, "0")}`));
+  }
+  assert.match(closure, /Known implementation gaps[\s\S]*`none`/);
+  assert.match(closure, /## Rollback/);
+  assert.match(closure, /## Remaining external approvals/);
+  assert.match(closure, /READY_FOR_REVIEW/);
 });
