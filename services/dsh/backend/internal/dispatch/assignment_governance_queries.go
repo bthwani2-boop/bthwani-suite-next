@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/lib/pq"
 )
 
 type AssignmentGovernance struct {
@@ -56,7 +58,8 @@ func ListAssignmentGovernance(db *sql.DB, assignmentIDs []string) (map[string]As
 		       distance_meters, COALESCE(offer_reason,''), COALESCE(response_reason,''),
 		       expired_at, cancelled_at, COALESCE(cancelled_by,''),
 		       COALESCE(supersedes_assignment_id::text,''), version
-		FROM dsh_assignments WHERE id::text = ANY($1)`, assignmentIDs)
+		FROM dsh_assignments
+		WHERE id::text = ANY($1::text[])`, pq.Array(assignmentIDs))
 	if err != nil {
 		return nil, err
 	}
