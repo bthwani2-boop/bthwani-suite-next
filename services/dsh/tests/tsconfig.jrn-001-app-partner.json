@@ -1,0 +1,11 @@
+{
+  "extends": "../../../apps/app-partner/runtime/tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": [
+    "../frontend/app-partner/dsh-partner-binding.contracts.ts",
+    "../frontend/app-partner/account/PartnerOnboardingStatusView.tsx",
+    "../frontend/app-partner/team/PartnerTeamManagementScreen.tsx"
+  ]
+}
