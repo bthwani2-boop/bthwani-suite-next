@@ -127,6 +127,8 @@ export type DshStoreCaptainHandoffExceptionReason =
   | "handoff_shortage"
   | "handoff_mismatch";
 
+export type DshStoreCaptainHandoffExceptionStatus = "" | "open" | "acknowledged";
+
 export type DshReportStoreCaptainHandoffExceptionInput = {
   readonly reasonCode: DshStoreCaptainHandoffExceptionReason;
   readonly note: string;
@@ -145,6 +147,9 @@ export type DshPartnerOrder = DshOrder & {
   readonly storeCaptainHandoffCaptainId: string;
   readonly partnerHandoffConfirmedAt?: string | null;
   readonly captainPickupConfirmedAt?: string | null;
+  readonly openStoreCaptainHandoffExceptionId: string;
+  readonly openStoreCaptainHandoffExceptionReason: DshStoreCaptainHandoffExceptionReason | "";
+  readonly openStoreCaptainHandoffExceptionStatus: DshStoreCaptainHandoffExceptionStatus;
 };
 
 export type DshFinancialClosureStatus =
