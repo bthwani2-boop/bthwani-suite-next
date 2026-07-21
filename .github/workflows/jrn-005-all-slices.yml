@@ -15,9 +15,11 @@ on:
       - "services/dsh/contracts/dsh.client-address.openapi.yaml"
       - "services/dsh/contracts/jrn-005-*.json"
       - "services/dsh/database/migrations/dsh-056_client_addresses.sql"
+      - "services/dsh/database/migrations/dsh-076_service_area_geofences.sql"
       - "services/dsh/database/migrations/dsh-078_client_address_pii_governance.sql"
       - "services/dsh/database/migrations/dsh-081_client_address_subject_anonymization.sql"
       - "services/dsh/database/migrations/dsh-901_client_address_logical_deduplication.sql"
+      - "services/dsh/database/migrations/dsh-906_jrn_006_client_address_geofence_binding.sql"
       - "services/dsh/database/migrations/dsh-907_jrn_005_address_mutation_receipts.sql"
       - "services/dsh/database/migrations/dsh-908_jrn_005_mutation_receipt_retention.sql"
       - "services/dsh/database/tests/dsh-901_client_address_logical_deduplication.sql"
@@ -142,6 +144,11 @@ jobs:
           psql -h localhost -U postgres -d jrn005 -v ON_ERROR_STOP=1 -f services/dsh/database/tests/dsh-908_jrn_005_mutation_receipt_retention.sql 2>&1 | tee -a /tmp/jrn-005-all-slices.log
           DB_RETENTION_TEST_EXIT=${PIPESTATUS[0]}
 
+          psql -h localhost -U postgres -d jrn005 -v ON_ERROR_STOP=1 -f services/dsh/database/migrations/dsh-076_service_area_geofences.sql 2>&1 | tee -a /tmp/jrn-005-all-slices.log
+          DB_GEOFENCE_BASE_EXIT=${PIPESTATUS[0]}
+          psql -h localhost -U postgres -d jrn005 -v ON_ERROR_STOP=1 -f services/dsh/database/migrations/dsh-906_jrn_006_client_address_geofence_binding.sql 2>&1 | tee -a /tmp/jrn-005-all-slices.log
+          DB_GEOFENCE_BINDING_EXIT=${PIPESTATUS[0]}
+
           (
             cd services/dsh/backend
             DSH_TEST_DATABASE_URL='postgres://postgres:postgres@localhost:5432/jrn005?sslmode=disable' \
@@ -151,11 +158,11 @@ jobs:
           ) 2>&1 | tee -a /tmp/jrn-005-all-slices.log
           DB_GO_INTEGRATION_EXIT=${PIPESTATUS[0]}
 
-          printf 'hygiene=%s static=%s guard=%s typecheck=%s go=%s db_extension=%s db_base=%s db_dedupe_migration=%s db_receipt_migration=%s db_retention_migration=%s db_dedupe_test=%s db_receipt_test=%s db_retention_test=%s db_go_integration=%s\n' \
-            "$HYGIENE_EXIT" "$STATIC_EXIT" "$GUARD_EXIT" "$TYPECHECK_EXIT" "$GO_EXIT" "$DB_EXTENSION_EXIT" "$DB_BASE_EXIT" "$DB_DEDUPE_MIGRATION_EXIT" "$DB_RECEIPT_MIGRATION_EXIT" "$DB_RETENTION_MIGRATION_EXIT" "$DB_DEDUPE_TEST_EXIT" "$DB_RECEIPT_TEST_EXIT" "$DB_RETENTION_TEST_EXIT" "$DB_GO_INTEGRATION_EXIT" \
+          printf 'hygiene=%s static=%s guard=%s typecheck=%s go=%s db_extension=%s db_base=%s db_dedupe_migration=%s db_receipt_migration=%s db_retention_migration=%s db_dedupe_test=%s db_receipt_test=%s db_retention_test=%s db_geofence_base=%s db_geofence_binding=%s db_go_integration=%s\n' \
+            "$HYGIENE_EXIT" "$STATIC_EXIT" "$GUARD_EXIT" "$TYPECHECK_EXIT" "$GO_EXIT" "$DB_EXTENSION_EXIT" "$DB_BASE_EXIT" "$DB_DEDUPE_MIGRATION_EXIT" "$DB_RECEIPT_MIGRATION_EXIT" "$DB_RETENTION_MIGRATION_EXIT" "$DB_DEDUPE_TEST_EXIT" "$DB_RECEIPT_TEST_EXIT" "$DB_RETENTION_TEST_EXIT" "$DB_GEOFENCE_BASE_EXIT" "$DB_GEOFENCE_BINDING_EXIT" "$DB_GO_INTEGRATION_EXIT" \
             | tee -a /tmp/jrn-005-all-slices.log
 
-          if [ "$HYGIENE_EXIT" -ne 0 ] || [ "$STATIC_EXIT" -ne 0 ] || [ "$GUARD_EXIT" -ne 0 ] || [ "$TYPECHECK_EXIT" -ne 0 ] || [ "$GO_EXIT" -ne 0 ] || [ "$DB_EXTENSION_EXIT" -ne 0 ] || [ "$DB_BASE_EXIT" -ne 0 ] || [ "$DB_DEDUPE_MIGRATION_EXIT" -ne 0 ] || [ "$DB_RECEIPT_MIGRATION_EXIT" -ne 0 ] || [ "$DB_RETENTION_MIGRATION_EXIT" -ne 0 ] || [ "$DB_DEDUPE_TEST_EXIT" -ne 0 ] || [ "$DB_RECEIPT_TEST_EXIT" -ne 0 ] || [ "$DB_RETENTION_TEST_EXIT" -ne 0 ] || [ "$DB_GO_INTEGRATION_EXIT" -ne 0 ]; then
+          if [ "$HYGIENE_EXIT" -ne 0 ] || [ "$STATIC_EXIT" -ne 0 ] || [ "$GUARD_EXIT" -ne 0 ] || [ "$TYPECHECK_EXIT" -ne 0 ] || [ "$GO_EXIT" -ne 0 ] || [ "$DB_EXTENSION_EXIT" -ne 0 ] || [ "$DB_BASE_EXIT" -ne 0 ] || [ "$DB_DEDUPE_MIGRATION_EXIT" -ne 0 ] || [ "$DB_RECEIPT_MIGRATION_EXIT" -ne 0 ] || [ "$DB_RETENTION_MIGRATION_EXIT" -ne 0 ] || [ "$DB_DEDUPE_TEST_EXIT" -ne 0 ] || [ "$DB_RECEIPT_TEST_EXIT" -ne 0 ] || [ "$DB_RETENTION_TEST_EXIT" -ne 0 ] || [ "$DB_GEOFENCE_BASE_EXIT" -ne 0 ] || [ "$DB_GEOFENCE_BINDING_EXIT" -ne 0 ] || [ "$DB_GO_INTEGRATION_EXIT" -ne 0 ]; then
             exit 1
           fi
 
