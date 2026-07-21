@@ -2,10 +2,10 @@ package http
 
 import "net/http"
 
-// BrowserOriginGuard fails closed for browser-originated requests before
+// BrowserCorsMiddleware fails closed for browser-originated requests before
 // CorsMiddleware can answer a preflight request. Native/mobile and service
 // callers normally omit Origin and remain unaffected.
-func BrowserOriginGuard(next http.Handler) http.Handler {
+func BrowserCorsMiddleware(next http.Handler) http.Handler {
 	allowed := allowedCorsOrigins()
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
