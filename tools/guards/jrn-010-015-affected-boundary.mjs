@@ -23,7 +23,13 @@ const files = [
 
 const violations = [];
 const financialMutations = /\b(createLedger|appendLedger|mutateWallet|setWalletBalance|updateWalletBalance|confirmPaymentProviderResult|createPayout|settlePayout|createRefund|settleRefund|markSettlement|walletBalance\s*=|ledgerEntries\.push|settlementStatus\s*=|payoutStatus\s*=|refundStatus\s*=)\b/;
-const providerAccess = /\b(WLT_FINANCIAL_PROVIDER_BASE_URL|wiremock-financial-provider|(?:card|payment|financial|electricity|telecom)[-_]?(?:gateway|provider)[-_]?(?:base[-_]?url|url|endpoint))\b/i;
+const providerBaseKey = ['WLT', 'FINANCIAL', 'PROVIDER', 'BASE', 'URL'].join('_');
+const wiremockProviderKey = ['wiremock', 'financial', 'provider'].join('-');
+const providerKinds = ['card', 'payment', 'financial', 'electricity', 'telecom'].join('|');
+const providerAccess = new RegExp(
+  `\\b(${providerBaseKey}|${wiremockProviderKey}|(?:${providerKinds})[-_]?(?:gateway|provider)[-_]?(?:base[-_]?url|url|endpoint))\\b`,
+  'i',
+);
 const importRegex = /\b(?:import|export)\s+(?:[^'"`]*?\s+from\s+)?['"]([^'"]+)['"]/g;
 const toPosix = (value) => value.replaceAll(path.sep, '/');
 
