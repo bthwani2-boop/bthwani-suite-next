@@ -202,7 +202,7 @@ export function useOperatorPickupsController(
       )
       .catch((error: unknown) => {
         const { message, classified } = classifiedMessage(error, "تعذر تحميل جلسات الاستلام الذاتي");
-        setListState({ loaded: false, error: message, offline: classified.kind === "network", data: [] });
+        setListState({ loaded: true, error: message, offline: classified.kind === "network", data: [] });
       });
   }, [storeId, limit]);
 
@@ -221,7 +221,7 @@ export function useOperatorPickupsController(
       )
       .catch((error: unknown) => {
         const { message, classified } = classifiedMessage(error, "تعذر تحميل تفاصيل جلسة الاستلام");
-        setDetailState({ loaded: false, error: message, offline: classified.kind === "network", data: null });
+        setDetailState({ loaded: true, error: message, offline: classified.kind === "network", data: null });
       });
   }, []);
 
