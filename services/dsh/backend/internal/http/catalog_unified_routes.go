@@ -98,8 +98,20 @@ func (s *protectedStoreServer) handleUpdateCatalogPlatformPolicyAtomic(w http.Re
 
 // registerUnifiedCatalogRoutes binds exact paths consumed by the shared
 // multi-surface clients and restores the platform policy routes declared by
-// the capability registry.
+// the capability registry. JRN-011 routes are registered here because this is
+// the final protected-route extension point called by NewRouter.
 func registerUnifiedCatalogRoutes(mux *http.ServeMux, s *protectedStoreServer) {
+	// JRN-011 canonical order-truth routes. Legacy /orders routes remain for
+	// compatibility while all new shared clients consume these governed paths.
+	mux.HandleFunc("POST /dsh/client/order-truth", s.handleCreateOrderTruth)
+	mux.HandleFunc("GET /dsh/client/order-truth", s.handleListClientOrderTruth)
+	mux.HandleFunc("GET /dsh/client/order-truth/{orderId}", s.handleGetClientOrderTruth)
+	mux.HandleFunc("GET /dsh/client/order-truth/{orderId}/events", s.handleListClientOrderTruthEvents)
+	mux.HandleFunc("GET /dsh/partner/order-truth", s.handleListPartnerOrderTruth)
+	mux.HandleFunc("GET /dsh/partner/order-truth/{orderId}", s.handleGetPartnerOrderTruth)
+	mux.HandleFunc("GET /dsh/operator/order-truth", s.handleListOperatorOrderTruth)
+	mux.HandleFunc("GET /dsh/operator/order-truth/{orderId}", s.handleGetOperatorOrderTruth)
+
 	// Sovereign operational policy truth.
 	mux.HandleFunc("GET /dsh/operator/platform/zones", s.handleListPlatformZones)
 	mux.HandleFunc("POST /dsh/operator/platform/zones", s.handleCreatePlatformZone)
