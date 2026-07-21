@@ -51,7 +51,7 @@ export function StoreCaptainHandoffExceptionForm({
           <Button
             key={reason}
             label={STORE_CAPTAIN_HANDOFF_EXCEPTION_LABELS[reason]}
-            tone={state.reasonCode === reason ? "primary" : "secondary"}
+            tone={state.reasonCode === reason ? "brand" : "ghost"}
             size="sm"
             fullWidth={false}
             onPress={() => onReasonCodeChange(reason)}
