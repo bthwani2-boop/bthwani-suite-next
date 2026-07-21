@@ -14,6 +14,7 @@ export type DshContractRegistration = {
     | "dsh-main"
     | "dsh-catalog"
     | "dsh-catalog-proposal-readback"
+    | "dsh-catalog-governance"
     | "dsh-marketing-commercial"
     | "dsh-partner-commercial"
     | "dsh-partner-fleet"
@@ -67,6 +68,14 @@ export const DSH_CONTRACT_REGISTRY = [
     runtimeDependency: true,
     clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
     adapterOwner: "frontend/shared/catalog/product-proposal-readback.api.ts",
+  },
+  {
+    id: "dsh-catalog-governance",
+    path: "contracts/dsh.catalog-governance.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/catalog/catalog-governance.api.ts",
   },
   {
     id: "dsh-marketing-commercial",
