@@ -22,168 +22,179 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-          import re
 
           path = Path('services/dsh/frontend/shared/field-onboarding/use-field-partner-onboarding-controller.tsx')
           text = path.read_text(encoding='utf-8')
 
-          old = '''  fieldCreateVisit,
-            type DshPartnerDocumentType,
-          } from "../partner";'''.replace('            ', '  ')
-          new = '''  fieldCreateVisit,
-            createPartnerMutationContext,
-            assertPartnerReadback,
-            mapPartnerOnboardingFailure,
-            type DshPartnerDocumentType,
-          } from "../partner";'''.replace('            ', '  ')
-          if old not in text:
-              raise SystemExit('controller import anchor not found')
-          text = text.replace(old, new, 1)
+          def replace_once(old: str, new: str, label: str) -> None:
+              global text
+              if old not in text:
+                  raise SystemExit(f'{label} not found')
+              text = text.replace(old, new, 1)
 
-          pattern = re.compile(r'''      const res = await fieldCreateDraft\((\{.*?\})\);\n      await fieldUpdatePartnerStore\(res\.id, buildStoreDraftInput\(form\)\);\n      setState\(\(s\) => \(\{\n        \.\.\.s,\n        partnerId: res\.id,\n        partnerVersion: res\.version,''', re.S)
-          replacement = '''      const createMutation = createPartnerMutationContext("field-create-draft", "new-draft");
-          const res = await fieldCreateDraft(\1, createMutation);
-          await fieldUpdatePartnerStore(
-            res.id,
-            buildStoreDraftInput(form),
-            createPartnerMutationContext("field-update-first-store", res.id),
-          );
-          const readback = assertPartnerReadback(res.id, res.version, await fieldGetPartner(res.id));
-          setState((s) => ({
-            ...s,
-            partnerId: readback.id,
-            partnerVersion: readback.version,'''.replace('          ', '')
-          text, count = pattern.subn(replacement, text, count=1)
-          if count != 1:
-              raise SystemExit(f'create/readback block matches={count}')
+          replace_once(
+              '  fieldCreateVisit,\n  type DshPartnerDocumentType,',
+              '  fieldCreateVisit,\n  createPartnerMutationContext,\n  assertPartnerReadback,\n  mapPartnerOnboardingFailure,\n  type DshPartnerDocumentType,',
+              'controller imports',
+          )
 
-          for old_line, new_line in [
-              ('          accountNumber: partner.accountNumber,', '          accountNumber: "",'),
-              ('          iban: partner.iban,', '          iban: "",'),
-              ('          payoutMobileNumber: partner.payoutMobileNumber,', '          payoutMobileNumber: "",'),
-          ]:
-              if old_line not in text:
-                  raise SystemExit(f'raw hydration line missing: {old_line}')
-              text = text.replace(old_line, new_line, 1)
+          replace_once(
+              '      const res = await fieldCreateDraft({',
+              '      const createMutation = createPartnerMutationContext("field-create-draft", "new-draft");\n      const res = await fieldCreateDraft({',
+              'draft mutation creation',
+          )
+          replace_once(
+              '      });\n      await fieldUpdatePartnerStore(res.id, buildStoreDraftInput(form));',
+              '      }, createMutation);\n      await fieldUpdatePartnerStore(\n        res.id,\n        buildStoreDraftInput(form),\n        createPartnerMutationContext("field-update-first-store", res.id),\n      );\n      const readback = assertPartnerReadback(res.id, res.version, await fieldGetPartner(res.id));',
+              'draft create and store readback',
+          )
+          replace_once(
+              '        partnerId: res.id,\n        partnerVersion: res.version,',
+              '        partnerId: readback.id,\n        partnerVersion: readback.version,',
+              'draft readback state',
+          )
 
-          save_start = text.index('  const saveDraft = useCallback')
-          save_end = text.index('  const save = useCallback', save_start)
-          save = text[save_start:save_end]
-          pattern = re.compile(r'''      const updatedPartner = await fieldUpdatePartner\(\n        state\.partnerId,\n        buildUpdatePartnerInput\(state\.form\),\n        state\.partnerVersion \?\? 0\n      \);\n      await fieldUpdatePartnerStore\(state\.partnerId, buildStoreDraftInput\(state\.form\)\);\n      setState\(\(s\) => \(\{\n        \.\.\.s,\n        isSaving: false,\n        isDirty: false,\n        partnerVersion: updatedPartner\.version,''')
-          replacement = '''      const expectedVersion = state.partnerVersion ?? 0;
-          const updatedPartner = await fieldUpdatePartner(
-            state.partnerId,
-            buildUpdatePartnerInput(state.form),
-            expectedVersion,
-            createPartnerMutationContext("field-save-partner", state.partnerId, expectedVersion),
-          );
-          await fieldUpdatePartnerStore(
-            state.partnerId,
-            buildStoreDraftInput(state.form),
-            createPartnerMutationContext("field-save-store", state.partnerId),
-          );
-          const readback = assertPartnerReadback(
-            state.partnerId,
-            updatedPartner.version,
-            await fieldGetPartner(state.partnerId),
-          );
-          setState((s) => ({
-            ...s,
-            isSaving: false,
-            isDirty: false,
-            partnerVersion: readback.version,'''.replace('          ', '')
-          save, count = pattern.subn(replacement, save, count=1)
-          if count != 1:
-              raise SystemExit(f'save/readback block matches={count}')
-          pattern = re.compile(r'''    \} catch \(err\) \{\n      const status = .*?\n      if \(status === 409\) \{.*?\n        return false;\n      \}\n      setState\(\(s\) => \(\{\n        \.\.\.s,\n        isSaving: false,\n        submitError: "فشل حفظ التعديلات\. تحقق من اتصال الشبكة وأعد المحاولة\.",\n      \}\)\);\n      return false;\n    \}''', re.S)
-          replacement = '''    } catch (err) {
-            const failure = mapPartnerOnboardingFailure(err);
-            setState((s) => ({
-              ...s,
-              isSaving: false,
-              submitError: failure.message,
-            }));
-            return false;
-          }'''.replace('          ', '')
-          save, count = pattern.subn(replacement, save, count=1)
-          if count != 1:
-              raise SystemExit(f'save failure mapping matches={count}')
-          text = text[:save_start] + save + text[save_end:]
+          replace_once('          accountNumber: partner.accountNumber,', '          accountNumber: "",', 'raw account hydration')
+          replace_once('          iban: partner.iban,', '          iban: "",', 'raw iban hydration')
+          replace_once('          payoutMobileNumber: partner.payoutMobileNumber,', '          payoutMobileNumber: "",', 'raw mobile hydration')
 
-          old = '''      const doc = await fieldUploadDocument(state.partnerId, {
-            documentType: kind,
-            mediaRef,
-            notes: "مرفوع عبر تطبيق الميداني",
-          });'''.replace('          ', '')
-          new = '''      const doc = await fieldUploadDocument(
-            state.partnerId,
-            {
-              documentType: kind,
-              mediaRef,
-              notes: "مرفوع عبر تطبيق الميداني",
-            },
-            createPartnerMutationContext("field-upload-document", `${state.partnerId}:${kind}`),
-          );'''.replace('          ', '')
-          if old not in text:
-              raise SystemExit('document mutation block not found')
-          text = text.replace(old, new, 1)
+          replace_once(
+              '''      const updatedPartner = await fieldUpdatePartner(
+        state.partnerId,
+        buildUpdatePartnerInput(state.form),
+        state.partnerVersion ?? 0
+      );
+      await fieldUpdatePartnerStore(state.partnerId, buildStoreDraftInput(state.form));
+      setState((s) => ({
+        ...s,
+        isSaving: false,
+        isDirty: false,
+        partnerVersion: updatedPartner.version,''',
+              '''      const expectedVersion = state.partnerVersion ?? 0;
+      const updatedPartner = await fieldUpdatePartner(
+        state.partnerId,
+        buildUpdatePartnerInput(state.form),
+        expectedVersion,
+        createPartnerMutationContext("field-save-partner", state.partnerId, expectedVersion),
+      );
+      await fieldUpdatePartnerStore(
+        state.partnerId,
+        buildStoreDraftInput(state.form),
+        createPartnerMutationContext("field-save-store", state.partnerId),
+      );
+      const readback = assertPartnerReadback(
+        state.partnerId,
+        updatedPartner.version,
+        await fieldGetPartner(state.partnerId),
+      );
+      setState((s) => ({
+        ...s,
+        isSaving: false,
+        isDirty: false,
+        partnerVersion: readback.version,''',
+              'save readback block',
+          )
 
-          submit_start = text.index('  const submitDraft = useCallback')
-          submit_end = text.index('  const reset = useCallback', submit_start)
-          submit = text[submit_start:submit_end]
-          pattern = re.compile(r'''      const updatedPartner = await fieldUpdatePartner\(\n        state\.partnerId,\n        buildUpdatePartnerInput\(state\.form\),\n        state\.partnerVersion \?\? 0\n      \);\n      await fieldUpdatePartnerStore\(state\.partnerId, buildStoreDraftInput\(state\.form\)\);''')
-          replacement = '''      const expectedVersion = state.partnerVersion ?? 0;
-          const updatedPartner = await fieldUpdatePartner(
-            state.partnerId,
-            buildUpdatePartnerInput(state.form),
-            expectedVersion,
-            createPartnerMutationContext("field-submit-save", state.partnerId, expectedVersion),
-          );
-          await fieldUpdatePartnerStore(
-            state.partnerId,
-            buildStoreDraftInput(state.form),
-            createPartnerMutationContext("field-submit-store", state.partnerId),
-          );'''.replace('          ', '')
-          submit, count = pattern.subn(replacement, submit, count=1)
-          if count != 1:
-              raise SystemExit(f'submit save block matches={count}')
-          old = '        await fieldCreateVisit(state.partnerId, visitPayload);'
-          new = '''        await fieldCreateVisit(
-          state.partnerId,
-          visitPayload,
-          createPartnerMutationContext("field-submit-visit", state.partnerId),
-        );'''
-          if old not in submit:
-              raise SystemExit('submit visit call not found')
-          submit = submit.replace(old, new, 1)
-          old = '''      await fieldSubmitPartner(state.partnerId);
-          setState((s) => ({ ...s, isSubmitting: false, isSubmitted: true, partnerVersion: updatedPartner.version }));'''.replace('          ', '')
-          new = '''      const submitted = await fieldSubmitPartner(
-            state.partnerId,
-            createPartnerMutationContext("field-submit-partner", state.partnerId, updatedPartner.version),
-          );
-          const readback = assertPartnerReadback(
-            state.partnerId,
-            submitted.partner.version,
-            await fieldGetPartner(state.partnerId),
-          );
-          setState((s) => ({ ...s, isSubmitting: false, isSubmitted: true, partnerVersion: readback.version }));'''.replace('          ', '')
-          if old not in submit:
-              raise SystemExit('submit readback block not found')
-          submit = submit.replace(old, new, 1)
-          pattern = re.compile(r'''    \} catch \(err\) \{\n      const msg = .*?\n      setState\(\(s\) => \(\{\n        \.\.\.s,\n        isSubmitting: false,\n        submitError: msg,\n      \}\)\);\n    \}''', re.S)
-          replacement = '''    } catch (err) {
-            const failure = mapPartnerOnboardingFailure(err);
-            setState((s) => ({
-              ...s,
-              isSubmitting: false,
-              submitError: failure.message,
-            }));
-          }'''.replace('          ', '')
-          submit, count = pattern.subn(replacement, submit, count=1)
-          if count != 1:
-              raise SystemExit(f'submit failure mapping matches={count}')
-          text = text[:submit_start] + submit + text[submit_end:]
+          replace_once(
+              '''      const status = err && typeof err === "object" && "status" in err ? (err as any).status : undefined;
+      if (status === 409) {
+        setState((s) => ({
+          ...s,
+          isSaving: false,
+          submitError: "تم تعديل بيانات هذا الملف من مكان آخر. أعد تحميل الملف قبل الحفظ مرة أخرى.",
+        }));
+        return false;
+      }
+      setState((s) => ({
+        ...s,
+        isSaving: false,
+        submitError: "فشل حفظ التعديلات. تحقق من اتصال الشبكة وأعد المحاولة.",
+      }));''',
+              '''      const failure = mapPartnerOnboardingFailure(err);
+      setState((s) => ({
+        ...s,
+        isSaving: false,
+        submitError: failure.message,
+      }));''',
+              'save failure mapping',
+          )
+
+          replace_once(
+              '''      const doc = await fieldUploadDocument(state.partnerId, {
+        documentType: kind,
+        mediaRef,
+        notes: "مرفوع عبر تطبيق الميداني",
+      });''',
+              '''      const doc = await fieldUploadDocument(
+        state.partnerId,
+        {
+          documentType: kind,
+          mediaRef,
+          notes: "مرفوع عبر تطبيق الميداني",
+        },
+        createPartnerMutationContext("field-upload-document", `${state.partnerId}:${kind}`),
+      );''',
+              'document mutation context',
+          )
+
+          replace_once(
+              '''      const updatedPartner = await fieldUpdatePartner(
+        state.partnerId,
+        buildUpdatePartnerInput(state.form),
+        state.partnerVersion ?? 0
+      );
+      await fieldUpdatePartnerStore(state.partnerId, buildStoreDraftInput(state.form));''',
+              '''      const expectedVersion = state.partnerVersion ?? 0;
+      const updatedPartner = await fieldUpdatePartner(
+        state.partnerId,
+        buildUpdatePartnerInput(state.form),
+        expectedVersion,
+        createPartnerMutationContext("field-submit-save", state.partnerId, expectedVersion),
+      );
+      await fieldUpdatePartnerStore(
+        state.partnerId,
+        buildStoreDraftInput(state.form),
+        createPartnerMutationContext("field-submit-store", state.partnerId),
+      );''',
+              'submit save mutation block',
+          )
+          replace_once(
+              '        await fieldCreateVisit(state.partnerId, visitPayload);',
+              '        await fieldCreateVisit(\n          state.partnerId,\n          visitPayload,\n          createPartnerMutationContext("field-submit-visit", state.partnerId),\n        );',
+              'visit mutation context',
+          )
+          replace_once(
+              '''      await fieldSubmitPartner(state.partnerId);
+      setState((s) => ({ ...s, isSubmitting: false, isSubmitted: true, partnerVersion: updatedPartner.version }));''',
+              '''      const submitted = await fieldSubmitPartner(
+        state.partnerId,
+        createPartnerMutationContext("field-submit-partner", state.partnerId, updatedPartner.version),
+      );
+      const readback = assertPartnerReadback(
+        state.partnerId,
+        submitted.partner.version,
+        await fieldGetPartner(state.partnerId),
+      );
+      setState((s) => ({ ...s, isSubmitting: false, isSubmitted: true, partnerVersion: readback.version }));''',
+              'submit readback block',
+          )
+          replace_once(
+              '''      const msg = err && typeof err === "object" && "status" in err && (err as any).status === 422
+        ? "لا يمكن إرسال الملف في الحالة الحالية — تأكد من استكمال البيانات"
+        : "فشل إرسال مسودة الشريك للمراجعة";
+      setState((s) => ({
+        ...s,
+        isSubmitting: false,
+        submitError: msg,
+      }));''',
+              '''      const failure = mapPartnerOnboardingFailure(err);
+      setState((s) => ({
+        ...s,
+        isSubmitting: false,
+        submitError: failure.message,
+      }));''',
+              'submit failure mapping',
+          )
 
           path.write_text(text, encoding='utf-8')
           PY
