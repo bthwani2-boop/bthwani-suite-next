@@ -23,6 +23,7 @@ func RegisterPlatformPolicyRoutes(
 ) {
 	protected := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
 	mux.HandleFunc("GET /dsh/operator/platform/map-provider-health", protected.handleOperatorMapProviderHealth)
+	mux.HandleFunc("GET /dsh/operator/platform/service-areas/{serviceAreaCode}", protected.handleOperatorGetServiceArea)
 
 	// The following routes are now registered via registerUnifiedCatalogRoutes in catalog_unified_routes.go.
 	// mux.HandleFunc("GET /dsh/operator/platform/zones", protected.handleListZones)
