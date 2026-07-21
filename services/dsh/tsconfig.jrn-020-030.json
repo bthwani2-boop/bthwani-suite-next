@@ -1,0 +1,49 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "outDir": "dist-jrn-020-030"
+  },
+  "include": [
+    "frontend/**/*.d.ts",
+    "frontend/shared/_kernel/**/*.ts",
+    "frontend/shared/_kernel/**/*.tsx",
+    "frontend/shared/dispatch/**/*.ts",
+    "frontend/shared/dispatch/**/*.tsx",
+    "frontend/shared/support/**/*.ts",
+    "frontend/shared/support/**/*.tsx",
+    "frontend/shared/special-requests/**/*.ts",
+    "frontend/shared/special-requests/**/*.tsx",
+    "frontend/shared/notifications/**/*.ts",
+    "frontend/shared/notifications/**/*.tsx",
+    "frontend/shared/field-readiness/**/*.ts",
+    "frontend/shared/field-readiness/**/*.tsx",
+    "frontend/shared/marketing/**/*.ts",
+    "frontend/shared/marketing/**/*.tsx",
+    "frontend/shared/partner/partner-fleet.api.ts",
+    "frontend/shared/partner/use-partner-fleet-controller.ts",
+    "frontend/shared/partner/use-delivery-pricing-controller.ts",
+    "frontend/shared/partner/partner-delivery-pricing.api.ts",
+    "frontend/shared/partner/dsh-partner-offer-types.ts",
+    "frontend/shared/platform/**/*.ts",
+    "frontend/shared/platform/**/*.tsx",
+    "frontend/shared/home-discovery/**/*.ts",
+    "frontend/shared/home-discovery/**/*.tsx",
+    "frontend/app-client/DshClientSurface.tsx",
+    "frontend/app-client/account/BenefitsHubScreen.tsx",
+    "frontend/app-captain/orders/CaptainOrderSupportConversationScreen.tsx",
+    "frontend/app-captain/account/PartnerFleetConnectionCard.tsx",
+    "frontend/app-partner/team/PartnerTeamManagementScreen.tsx",
+    "frontend/control-panel/operations/SpecialOpsWorkbenchScreen.tsx",
+    "frontend/control-panel/operations/AreaCapacityScreen.tsx",
+    "frontend/control-panel/marketing/**/*.ts",
+    "frontend/control-panel/marketing/**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "dist-jrn-020-030"
+  ]
+}
