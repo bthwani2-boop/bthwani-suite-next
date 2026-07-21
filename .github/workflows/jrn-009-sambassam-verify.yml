@@ -12,6 +12,7 @@ on:
       - "services/dsh/frontend/control-panel/operations/CartActivityScreen.tsx"
       - "services/dsh/tests/jrn-005-010-integrity.test.mjs"
       - "services/dsh/tsconfig.jrn-009.json"
+      - "tools/scripts/smoke-jrn-009-cart.ps1"
       - ".github/workflows/jrn-009-sambassam-verify.yml"
 
 permissions:
@@ -107,10 +108,52 @@ jobs:
         working-directory: services/dsh/backend
         run: go test ./internal/cart ./internal/http -count=1
 
+  runtime-postgres:
+    name: JRN-009 PostgreSQL runtime journey
+    needs: announce
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Start governed identity and DSH runtime
+        shell: bash
+        run: |
+          set -o pipefail
+          pwsh -NoProfile -File infra/docker/scripts/runtime.ps1 -Action up -Profiles dsh 2>&1 | tee /tmp/jrn-009-runtime.log
+      - name: Apply governed DSH seeds
+        shell: bash
+        run: |
+          set -o pipefail
+          pwsh -NoProfile -File infra/docker/scripts/runtime.ps1 -Action seed -Profiles dsh 2>&1 | tee -a /tmp/jrn-009-runtime.log
+      - name: Execute cart and serviceability journey
+        shell: bash
+        run: |
+          set -o pipefail
+          pwsh -NoProfile -File tools/scripts/smoke-jrn-009-cart.ps1 2>&1 | tee -a /tmp/jrn-009-runtime.log
+      - name: Capture runtime diagnostics on failure
+        if: failure()
+        shell: bash
+        run: pwsh -NoProfile -File infra/docker/scripts/runtime.ps1 -Action doctor -Profiles dsh 2>&1 | tee -a /tmp/jrn-009-runtime.log
+      - name: Upload runtime evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: jrn-009-postgres-runtime-evidence
+          path: /tmp/jrn-009-runtime.log
+          retention-days: 3
+          if-no-files-found: error
+      - name: Stop governed runtime
+        if: always()
+        shell: bash
+        run: pwsh -NoProfile -File infra/docker/scripts/runtime.ps1 -Action down -Profiles dsh
+
   publish-result:
     name: Publish JRN-009 same-commit result
     if: always()
-    needs: [announce, static-integrity, frontend-typecheck, backend-go]
+    needs: [announce, static-integrity, frontend-typecheck, backend-go, runtime-postgres]
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
@@ -122,11 +165,12 @@ jobs:
           STATIC_RESULT: ${{ needs.static-integrity.result }}
           FRONTEND_RESULT: ${{ needs.frontend-typecheck.result }}
           BACKEND_RESULT: ${{ needs.backend-go.result }}
+          RUNTIME_RESULT: ${{ needs.runtime-postgres.result }}
         shell: bash
         run: |
           state=failure
           description="JRN-009 targeted verification failed"
-          if [ "$STATIC_RESULT" = success ] && [ "$FRONTEND_RESULT" = success ] && [ "$BACKEND_RESULT" = success ]; then
+          if [ "$STATIC_RESULT" = success ] && [ "$FRONTEND_RESULT" = success ] && [ "$BACKEND_RESULT" = success ] && [ "$RUNTIME_RESULT" = success ]; then
             state=success
             description="JRN-009 targeted verification passed"
           fi
