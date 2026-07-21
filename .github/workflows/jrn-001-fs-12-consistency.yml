@@ -9,6 +9,7 @@ on:
       - services/dsh/contracts/jrn-001-consistency-registry.json
       - services/dsh/frontend/shared/field-onboarding/**
       - services/dsh/frontend/shared/partner/**
+      - services/dsh/frontend/shared/session/IdentitySessionGate.tsx
       - services/dsh/frontend/app-field/components/DshFieldActivationCard.tsx
       - services/dsh/frontend/app-field/components/DshFieldSurface.tsx
       - services/dsh/frontend/app-field/components/DshFieldRouteRenderer.tsx
