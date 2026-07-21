@@ -1,4 +1,5 @@
 name: JRN 020-025 boundary diagnostic
+# Rerun after routing captain PoD exception actions through the shared dispatch facade.
 
 on:
   push:
