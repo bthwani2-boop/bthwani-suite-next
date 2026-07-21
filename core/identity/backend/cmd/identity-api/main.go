@@ -47,7 +47,7 @@ func main() {
 
 	server := &http.Server{
 		Addr: ":" + port,
-		Handler: identityhttp.BrowserCorsMiddleware(
+		Handler: identityhttp.BrowserOriginGuard(
 			identityhttp.CorsMiddleware(
 				identityhttp.ActivationSafetyMiddleware(identityhttp.NewRouter(db, repository)),
 			),
