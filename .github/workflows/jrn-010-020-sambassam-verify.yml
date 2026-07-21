@@ -55,8 +55,8 @@ permissions:
   statuses: write
 
 concurrency:
-  group: jrn-010-020-${{ github.ref }}
-  cancel-in-progress: true
+  group: jrn-010-020-${{ github.sha }}
+  cancel-in-progress: false
 
 jobs:
   static-integrity:
