@@ -10,6 +10,7 @@ on:
       - "services/dsh/backend/internal/orders/**"
       - "services/dsh/backend/internal/dispatch/**"
       - "services/dsh/backend/internal/pickup/**"
+      - "services/dsh/backend/internal/wlt/**"
       - "services/dsh/backend/internal/http/checkout.go"
       - "services/dsh/backend/internal/http/order_*.go"
       - "services/dsh/backend/internal/http/dispatch*.go"
@@ -21,7 +22,7 @@ on:
       - "services/dsh/contracts/fragments/order-preparation-handoff.fragment.yaml"
       - "services/dsh/database/migrations/dsh-09*.sql"
       - "services/dsh/database/migrations/dsh-90*.sql"
-      - "services/dsh/database/tests/dsh-902_903_jrn011_order_truth_invariants.sql"
+      - "services/dsh/database/tests/dsh-90*_jrn011_*.sql"
       - "services/dsh/frontend/shared/checkout/**"
       - "services/dsh/frontend/shared/order-truth/**"
       - "services/dsh/frontend/shared/orders/**"
@@ -40,6 +41,7 @@ on:
       - "tools/guards/jrn-011-cross-surface-integrity-gate.mjs"
       - "tools/guards/jrn-012-014-preparation-dispatch-gate.mjs"
       - "tools/guards/jrn-015-020-affected-boundary.mjs"
+      - "governance/runbooks/jrn-011-*.md"
       - ".github/workflows/jrn-010-020-sambassam-verify.yml"
 
 permissions:
@@ -54,7 +56,7 @@ jobs:
   static-integrity:
     name: Static contracts, bindings, and boundaries
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - name: Checkout exact commit
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -66,25 +68,81 @@ jobs:
           node-version: 24.17.0
       - name: Enable pinned pnpm
         run: corepack enable && corepack prepare pnpm@10.34.2 --activate
+      - name: Prepare diagnostics directory
+        run: mkdir -p .journey-diagnostics
       - name: Verify repository hygiene
-        run: git diff --check
+        id: hygiene
+        continue-on-error: true
+        shell: bash
+        run: set -o pipefail; git diff --check 2>&1 | tee .journey-diagnostics/repository-hygiene.log
       - name: Verify JRN-010 checkout truth
-        run: node tools/guards/checkout/jrn-010-checkout-truth-gate.mjs
-      - name: Verify JRN-011 order truth
-        run: |
-          node tools/guards/jrn-011-cross-surface-integrity-gate.mjs
-          node --test services/dsh/tests/jrn-011-order-*.test.mjs
+        id: jrn010
+        continue-on-error: true
+        shell: bash
+        run: set -o pipefail; node tools/guards/checkout/jrn-010-checkout-truth-gate.mjs 2>&1 | tee .journey-diagnostics/jrn-010.log
+      - name: Verify JRN-011 cross-surface gate
+        id: jrn011gate
+        continue-on-error: true
+        shell: bash
+        run: set -o pipefail; node tools/guards/jrn-011-cross-surface-integrity-gate.mjs 2>&1 | tee .journey-diagnostics/jrn-011-gate.log
+      - name: Verify JRN-011 integrity tests
+        id: jrn011tests
+        continue-on-error: true
+        shell: bash
+        run: set -o pipefail; node --test services/dsh/tests/jrn-011-order-*.test.mjs 2>&1 | tee .journey-diagnostics/jrn-011-tests.log
       - name: Verify JRN-012..014 preparation, custody, and dispatch
-        run: node tools/guards/jrn-012-014-preparation-dispatch-gate.mjs
+        id: jrn012014
+        continue-on-error: true
+        shell: bash
+        run: set -o pipefail; node tools/guards/jrn-012-014-preparation-dispatch-gate.mjs 2>&1 | tee .journey-diagnostics/jrn-012-014.log
       - name: Verify JRN-015..020 affected surfaces and readback
+        id: jrn015020
+        continue-on-error: true
+        shell: bash
         run: |
-          node tools/guards/jrn-015-020-affected-boundary.mjs
-          node --test services/dsh/tests/journeys-020-025-binding.test.mjs
+          set -o pipefail
+          {
+            node tools/guards/jrn-015-020-affected-boundary.mjs
+            node --test services/dsh/tests/journeys-020-025-binding.test.mjs
+          } 2>&1 | tee .journey-diagnostics/jrn-015-020.log
       - name: Verify sovereign boundaries
+        id: boundaries
+        continue-on-error: true
+        shell: bash
         run: |
-          pnpm guard:fullstack-boundary
-          pnpm guard:wlt-financial-boundary
-          pnpm guard:no-broken-imports
+          set -o pipefail
+          {
+            pnpm guard:fullstack-boundary
+            pnpm guard:wlt-financial-boundary
+            pnpm guard:no-broken-imports
+          } 2>&1 | tee .journey-diagnostics/sovereign-boundaries.log
+      - name: Upload static diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: jrn-010-020-static-diagnostics
+          path: .journey-diagnostics
+          if-no-files-found: error
+          retention-days: 7
+      - name: Enforce static results
+        if: always()
+        shell: bash
+        env:
+          HYGIENE: ${{ steps.hygiene.outcome }}
+          JRN010: ${{ steps.jrn010.outcome }}
+          JRN011_GATE: ${{ steps.jrn011gate.outcome }}
+          JRN011_TESTS: ${{ steps.jrn011tests.outcome }}
+          JRN012_014: ${{ steps.jrn012014.outcome }}
+          JRN015_020: ${{ steps.jrn015020.outcome }}
+          BOUNDARIES: ${{ steps.boundaries.outcome }}
+        run: |
+          test "$HYGIENE" = success
+          test "$JRN010" = success
+          test "$JRN011_GATE" = success
+          test "$JRN011_TESTS" = success
+          test "$JRN012_014" = success
+          test "$JRN015_020" = success
+          test "$BOUNDARIES" = success
 
   go-integration:
     name: Go domain, HTTP, and runtime compile
@@ -104,7 +162,7 @@ jobs:
           go-version-file: services/dsh/backend/go.mod
           cache-dependency-path: services/dsh/backend/go.sum
       - name: Verify JRN-010..020 domain and route integration
-        run: go test ./cmd/dsh-api ./internal/checkout ./internal/orders ./internal/dispatch ./internal/pickup ./internal/http -count=1
+        run: go test ./cmd/dsh-api ./internal/checkout ./internal/orders ./internal/dispatch ./internal/pickup ./internal/wlt ./internal/http -count=1
 
   dsh-typecheck:
     name: DSH shared brain and surface typecheck
@@ -124,7 +182,26 @@ jobs:
       - name: Install locked workspace
         run: pnpm install --frozen-lockfile
       - name: Typecheck DSH
-        run: pnpm --dir services/dsh typecheck
+        id: typecheck
+        continue-on-error: true
+        shell: bash
+        run: |
+          mkdir -p .journey-diagnostics
+          set -o pipefail
+          pnpm --dir services/dsh typecheck 2>&1 | tee .journey-diagnostics/dsh-typecheck.log
+      - name: Upload typecheck diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: jrn-010-020-typecheck-diagnostics
+          path: .journey-diagnostics/dsh-typecheck.log
+          if-no-files-found: error
+          retention-days: 7
+      - name: Enforce typecheck result
+        if: always()
+        env:
+          TYPECHECK: ${{ steps.typecheck.outcome }}
+        run: test "$TYPECHECK" = success
 
   publish-result:
     name: Publish same-commit closure status
