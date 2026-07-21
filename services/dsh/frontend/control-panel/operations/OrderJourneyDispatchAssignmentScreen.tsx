@@ -4,10 +4,8 @@ import React from 'react';
 import { Box, Button, StateView, Text } from '@bthwani/ui-kit';
 import {
   WebControlPanelDecisionRow,
-  WebControlPanelInspectorShell,
   WebControlPanelKpiStrip,
   WebControlPanelQueue,
-  WebControlPanelRecommendation,
 } from '@bthwani/ui-kit/web';
 import styles from '../shared/control-panel-surface.module.css';
 import { useOperatorOrderWorkboard } from '../../shared/operations/use-operator-order-workboard';
@@ -15,8 +13,8 @@ import {
   assignOrderToCaptain,
   dispatchAssignmentErrorMessage,
 } from '../../shared/operations';
-import { listCaptains } from '../../shared/workforce';
-import type { Captain } from '../../shared/workforce';
+import { listCaptains } from '../../shared/workforce/workforce.api';
+import type { Captain } from '../../shared/workforce/workforce.types';
 import type { OperationsFocusParams, OperatorOrderWorkboardRow } from '../../shared/operations';
 
 export type OrderJourneyDispatchAssignmentScreenProps = {
@@ -85,14 +83,14 @@ export function OrderJourneyDispatchAssignmentScreen({
 
   const orders = workboard.state.orders.filter(eligibleOrder);
   const selectedOrder = orders.find((order) => order.id === selectedOrderId) ?? null;
-  const selectedCaptain = captains.find((captain) => captain.id === selectedCaptainId) ?? null;
+  const selectedCaptain = captains.find((captain) => captain.actorId === selectedCaptainId) ?? null;
 
   async function handleAssign() {
     if (!selectedOrder || !selectedCaptain) return;
     setMutationState('loading');
     setMutationMessage('');
     try {
-      await assignOrderToCaptain({ orderId: selectedOrder.id, captainId: selectedCaptain.id });
+      await assignOrderToCaptain(selectedOrder.id, selectedCaptain.actorId);
       setMutationState('success');
       setMutationMessage('تم إسناد الطلب للكابتن وتحديث القراءة التشغيلية.');
       setSelectedOrderId(null);
@@ -134,37 +132,37 @@ export function OrderJourneyDispatchAssignmentScreen({
         </WebControlPanelQueue>
 
         <Box gap={3}>
-          <WebControlPanelRecommendation
-            title="إسناد محكوم"
-            description="اختر طلبًا جاهزًا وكابتنًا فعالًا مكتمل المركبة والترخيص والمنطقة. لا تنفذ الواجهة نجاحًا محليًا."
-            tone={orders.length > 0 && captains.length === 0 ? 'warning' : 'neutral'}
-          />
+          <Box gap={1}>
+            <Text role="label">إسناد محكوم</Text>
+            <Text role="bodySm" tone={orders.length > 0 && captains.length === 0 ? 'warning' : 'muted'}>
+              اختر طلبًا جاهزًا وكابتنًا فعالًا مكتمل المركبة والترخيص والمنطقة. لا تنفذ الواجهة نجاحًا محليًا.
+            </Text>
+          </Box>
 
-          <WebControlPanelInspectorShell
-            title="اختيار الكابتن"
-            description={selectedOrder ? `الطلب: ${selectedOrder.id}` : 'اختر طلبًا من الطابور أولًا.'}
-          >
-            <Box gap={2}>
-              {captainsState === 'loading' ? <Text role="bodySm">جاري تحميل الكباتن…</Text> : null}
-              {captainsState === 'ready' && captains.length === 0 ? (
-                <StateView stateId="empty" title="لا يوجد كابتن مؤهل" description="تحقق من حالة Workforce والترخيص والمركبة والمنطقة قبل الإسناد." />
-              ) : null}
-              {captains.map((captain) => (
-                <Button
-                  key={captain.id}
-                  label={`${captain.displayName} — ${captain.captainProfile?.vehicleIdentifier ?? 'بلا مركبة'}`}
-                  tone={selectedCaptainId === captain.id ? 'brand' : 'secondary'}
-                  onPress={() => setSelectedCaptainId(captain.id)}
-                />
-              ))}
+          <Box gap={2}>
+            <Text role="label">اختيار الكابتن</Text>
+            <Text role="bodySm" tone="muted">
+              {selectedOrder ? `الطلب: ${selectedOrder.id}` : 'اختر طلبًا من الطابور أولًا.'}
+            </Text>
+            {captainsState === 'loading' ? <Text role="bodySm">جاري تحميل الكباتن…</Text> : null}
+            {captainsState === 'ready' && captains.length === 0 ? (
+              <StateView stateId="empty" title="لا يوجد كابتن مؤهل" description="تحقق من حالة Workforce والترخيص والمركبة والمنطقة قبل الإسناد." />
+            ) : null}
+            {captains.map((captain) => (
               <Button
-                label={mutationState === 'loading' ? 'جاري الإسناد…' : 'تأكيد الإسناد'}
-                disabled={!selectedOrder || !selectedCaptain || mutationState === 'loading'}
-                onPress={() => void handleAssign()}
+                key={captain.actorId}
+                label={`${captain.fullNameAr} — ${captain.captainProfile?.vehicleIdentifier ?? 'بلا مركبة'}`}
+                tone={selectedCaptainId === captain.actorId ? 'brand' : 'secondary'}
+                onPress={() => setSelectedCaptainId(captain.actorId)}
               />
-              {mutationMessage ? <Text role="bodySm" tone={mutationState === 'error' ? 'danger' : 'success'}>{mutationMessage}</Text> : null}
-            </Box>
-          </WebControlPanelInspectorShell>
+            ))}
+            <Button
+              label={mutationState === 'loading' ? 'جاري الإسناد…' : 'تأكيد الإسناد'}
+              disabled={!selectedOrder || !selectedCaptain || mutationState === 'loading'}
+              onPress={() => void handleAssign()}
+            />
+            {mutationMessage ? <Text role="bodySm" tone={mutationState === 'error' ? 'danger' : 'success'}>{mutationMessage}</Text> : null}
+          </Box>
         </Box>
       </div>
     </Box>
