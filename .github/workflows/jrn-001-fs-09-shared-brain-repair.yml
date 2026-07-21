@@ -1,0 +1,320 @@
+name: JRN-001 FS-09 shared brain repair
+
+on:
+  push:
+    branches: [sambassam]
+    paths: [.github/workflows/jrn-001-fs-09-shared-brain-repair.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+      - name: Govern partner mutation identity and readback
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          runtime = Path('services/dsh/frontend/shared/partner/partner-onboarding.runtime.ts')
+          text = runtime.read_text(encoding='utf-8')
+          old = '''  const payoutDisplay =
+            partner.maskedAccountNumber ||
+            partner.maskedIban ||
+            partner.maskedMobileNumber ||
+            partner.accountNumber ||
+            partner.iban ||
+            partner.payoutMobileNumber ||
+            "";'''.replace('            ', '    ')
+          new = '''  const payoutDisplay =
+            partner.maskedAccountNumber ||
+            partner.maskedIban ||
+            partner.maskedMobileNumber ||
+            "";'''.replace('            ', '    ')
+          if old not in text:
+              raise SystemExit('runtime payout fallback block not found')
+          runtime.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          api = Path('services/dsh/frontend/shared/partner/partner.api.ts')
+          text = api.read_text(encoding='utf-8')
+          old = 'import type { DshGovernedPartner, PartnerMutationContext } from "./partner-onboarding.runtime";'
+          new = 'import { createPartnerMutationContext, type DshGovernedPartner, type PartnerMutationContext } from "./partner-onboarding.runtime";'
+          if old not in text:
+              raise SystemExit('partner api runtime import not found')
+          text = text.replace(old, new, 1)
+          old = '''function request<T>(path: string, options: PartnerRequestOptions = {}): Promise<T> {
+            return httpClient.request<T>(path, {
+              method: options.method,
+              body: options.body,
+              idempotencyKey: options.mutation?.idempotencyKey,
+              correlationId: options.mutation?.correlationId,
+              expectedVersion: options.mutation?.expectedVersion,
+            });
+          }'''.replace('          ', '')
+          new = '''function request<T>(path: string, options: PartnerRequestOptions = {}): Promise<T> {
+            const mutation = options.method && options.method !== "GET"
+              ? {
+                  ...createPartnerMutationContext(options.method.toLowerCase(), path, options.mutation?.expectedVersion),
+                  ...options.mutation,
+                }
+              : options.mutation;
+            return httpClient.request<T>(path, {
+              method: options.method,
+              body: options.body,
+              idempotencyKey: mutation?.idempotencyKey,
+              correlationId: mutation?.correlationId,
+              expectedVersion: mutation?.expectedVersion,
+            });
+          }'''.replace('          ', '')
+          if old not in text:
+              raise SystemExit('partner api request helper not found')
+          api.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          barrel = Path('services/dsh/frontend/shared/partner/index.ts')
+          text = barrel.read_text(encoding='utf-8')
+          anchor = 'export * from "./partner.workflow";'
+          replacement = '''export * from "./partner.workflow";
+          export type {
+            DshPartnerAllowedAction,
+            DshGovernedPartner,
+            PartnerMutationContext,
+            PartnerOnboardingRuntimeState,
+            PartnerOnboardingFailure,
+            PartnerOnboardingViewModel,
+          } from "./partner-onboarding.runtime";
+          export {
+            createPartnerMutationContext,
+            derivePartnerOnboardingViewModel,
+            mapPartnerOnboardingFailure,
+            assertPartnerReadback,
+          } from "./partner-onboarding.runtime";'''.replace('          ', '')
+          if anchor not in text:
+              raise SystemExit('partner barrel anchor not found')
+          barrel.write_text(text.replace(anchor, replacement, 1), encoding='utf-8')
+
+          controller = Path('services/dsh/frontend/shared/field-onboarding/use-field-partner-onboarding-controller.tsx')
+          text = controller.read_text(encoding='utf-8')
+          old = '''  fieldCreateVisit,
+            type DshPartnerDocumentType,
+          } from "../partner";'''.replace('            ', '  ')
+          new = '''  fieldCreateVisit,
+            createPartnerMutationContext,
+            assertPartnerReadback,
+            mapPartnerOnboardingFailure,
+            type DshPartnerDocumentType,
+          } from "../partner";'''.replace('            ', '  ')
+          if old not in text:
+              raise SystemExit('controller import anchor not found')
+          text = text.replace(old, new, 1)
+
+          old = '''      const res = await fieldCreateDraft({
+            legalNameAr: form.legalNameAr!,
+            displayName: form.displayName!,
+            primaryPhone: form.primaryPhone ?? "",
+            legalIdentityType: form.legalIdentityType ?? "commercial_register",
+            legalIdentityNumber: form.legalIdentityNumber!,
+            legalNameEn: form.legalNameEn ?? "",
+            ownerName: form.ownerName ?? "",
+            secondaryPhone: form.secondaryPhone ?? "",
+            email: form.email ?? "",
+            category: form.category ?? "default",
+            notes: form.notes ?? "",
+          });
+          await fieldUpdatePartnerStore(res.id, buildStoreDraftInput(form));
+          setState((s) => ({
+            ...s,
+            partnerId: res.id,
+            partnerVersion: res.version,'''.replace('          ', '')
+          new = '''      const createMutation = createPartnerMutationContext("field-create-draft", "new-draft");
+          const res = await fieldCreateDraft({
+            legalNameAr: form.legalNameAr!,
+            displayName: form.displayName!,
+            primaryPhone: form.primaryPhone ?? "",
+            legalIdentityType: form.legalIdentityType ?? "commercial_register",
+            legalIdentityNumber: form.legalIdentityNumber!,
+            legalNameEn: form.legalNameEn ?? "",
+            ownerName: form.ownerName ?? "",
+            secondaryPhone: form.secondaryPhone ?? "",
+            email: form.email ?? "",
+            category: form.category ?? "default",
+            notes: form.notes ?? "",
+          }, createMutation);
+          await fieldUpdatePartnerStore(
+            res.id,
+            buildStoreDraftInput(form),
+            createPartnerMutationContext("field-update-first-store", res.id),
+          );
+          const readback = assertPartnerReadback(res.id, res.version, await fieldGetPartner(res.id));
+          setState((s) => ({
+            ...s,
+            partnerId: readback.id,
+            partnerVersion: readback.version,'''.replace('          ', '')
+          if old not in text:
+              raise SystemExit('controller create block not found')
+          text = text.replace(old, new, 1)
+
+          for old, new in [
+            ('          accountNumber: partner.accountNumber,', '          accountNumber: "",'),
+            ('          iban: partner.iban,', '          iban: "",'),
+            ('          payoutMobileNumber: partner.payoutMobileNumber,', '          payoutMobileNumber: "",'),
+          ]:
+              if old not in text:
+                  raise SystemExit(f'controller raw hydration line not found: {old}')
+              text = text.replace(old, new, 1)
+
+          old = '''      const updatedPartner = await fieldUpdatePartner(
+            state.partnerId,
+            buildUpdatePartnerInput(state.form),
+            state.partnerVersion ?? 0
+          );
+          await fieldUpdatePartnerStore(state.partnerId, buildStoreDraftInput(state.form));
+          setState((s) => ({
+            ...s,
+            isSaving: false,
+            isDirty: false,
+            partnerVersion: updatedPartner.version,'''.replace('          ', '')
+          new = '''      const expectedVersion = state.partnerVersion ?? 0;
+          const updatedPartner = await fieldUpdatePartner(
+            state.partnerId,
+            buildUpdatePartnerInput(state.form),
+            expectedVersion,
+            createPartnerMutationContext("field-save-partner", state.partnerId, expectedVersion),
+          );
+          await fieldUpdatePartnerStore(
+            state.partnerId,
+            buildStoreDraftInput(state.form),
+            createPartnerMutationContext("field-save-store", state.partnerId),
+          );
+          const readback = assertPartnerReadback(
+            state.partnerId,
+            updatedPartner.version,
+            await fieldGetPartner(state.partnerId),
+          );
+          setState((s) => ({
+            ...s,
+            isSaving: false,
+            isDirty: false,
+            partnerVersion: readback.version,'''.replace('          ', '')
+          if old not in text:
+              raise SystemExit('controller save block not found')
+          text = text.replace(old, new, 1)
+
+          old = '''      const status = err && typeof err === "object" && "status" in err ? (err as any).status : undefined;
+            if (status === 409) {
+              setState((s) => ({
+                ...s,
+                isSaving: false,
+                submitError: "تم تعديل بيانات هذا الملف من مكان آخر. أعد تحميل الملف قبل الحفظ مرة أخرى.",
+              }));
+              return false;
+            }
+            setState((s) => ({
+              ...s,
+              isSaving: false,
+              submitError: "فشل حفظ التعديلات. تحقق من اتصال الشبكة وأعد المحاولة.",
+            }));'''.replace('            ', '      ')
+          new = '''      const failure = mapPartnerOnboardingFailure(err);
+            setState((s) => ({
+              ...s,
+              isSaving: false,
+              submitError: failure.message,
+            }));'''.replace('            ', '      ')
+          if old not in text:
+              raise SystemExit('controller save catch block not found')
+          text = text.replace(old, new, 1)
+
+          old = '''      const doc = await fieldUploadDocument(state.partnerId, {
+            documentType: kind,
+            mediaRef,
+            notes: "مرفوع عبر تطبيق الميداني",
+          });'''.replace('          ', '')
+          new = '''      const doc = await fieldUploadDocument(state.partnerId, {
+            documentType: kind,
+            mediaRef,
+            notes: "مرفوع عبر تطبيق الميداني",
+          }, createPartnerMutationContext("field-upload-document", `${state.partnerId}:${kind}`));'''.replace('          ', '')
+          if old not in text:
+              raise SystemExit('controller upload block not found')
+          text = text.replace(old, new, 1)
+
+          old = '''      const updatedPartner = await fieldUpdatePartner(
+            state.partnerId,
+            buildUpdatePartnerInput(state.form),
+            state.partnerVersion ?? 0
+          );
+          await fieldUpdatePartnerStore(state.partnerId, buildStoreDraftInput(state.form));'''.replace('          ', '')
+          new = '''      const expectedVersion = state.partnerVersion ?? 0;
+          const updatedPartner = await fieldUpdatePartner(
+            state.partnerId,
+            buildUpdatePartnerInput(state.form),
+            expectedVersion,
+            createPartnerMutationContext("field-submit-save", state.partnerId, expectedVersion),
+          );
+          await fieldUpdatePartnerStore(
+            state.partnerId,
+            buildStoreDraftInput(state.form),
+            createPartnerMutationContext("field-submit-store", state.partnerId),
+          );'''.replace('          ', '')
+          if old not in text:
+              raise SystemExit('controller submit save block not found')
+          text = text.replace(old, new, 1)
+
+          old = '        await fieldCreateVisit(state.partnerId, visitPayload);'
+          new = '''        await fieldCreateVisit(
+          state.partnerId,
+          visitPayload,
+          createPartnerMutationContext("field-submit-visit", state.partnerId),
+        );'''
+          if old not in text:
+              raise SystemExit('controller visit call not found')
+          text = text.replace(old, new, 1)
+
+          old = '''      await fieldSubmitPartner(state.partnerId);
+          setState((s) => ({ ...s, isSubmitting: false, isSubmitted: true, partnerVersion: updatedPartner.version }));'''.replace('          ', '')
+          new = '''      const submitted = await fieldSubmitPartner(
+            state.partnerId,
+            createPartnerMutationContext("field-submit-partner", state.partnerId, updatedPartner.version),
+          );
+          const readback = assertPartnerReadback(
+            state.partnerId,
+            submitted.partner.version,
+            await fieldGetPartner(state.partnerId),
+          );
+          setState((s) => ({ ...s, isSubmitting: false, isSubmitted: true, partnerVersion: readback.version }));'''.replace('          ', '')
+          if old not in text:
+              raise SystemExit('controller submit/readback block not found')
+          text = text.replace(old, new, 1)
+
+          old = '''      const msg = err && typeof err === "object" && "status" in err && (err as any).status === 422
+            ? "لا يمكن إرسال الملف في الحالة الحالية — تأكد من استكمال البيانات"
+            : "فشل إرسال مسودة الشريك للمراجعة";
+          setState((s) => ({
+            ...s,
+            isSubmitting: false,
+            submitError: msg,
+          }));'''.replace('          ', '')
+          new = '''      const failure = mapPartnerOnboardingFailure(err);
+          setState((s) => ({
+            ...s,
+            isSubmitting: false,
+            submitError: failure.message,
+          }));'''.replace('          ', '')
+          if old not in text:
+              raise SystemExit('controller submit catch block not found')
+          controller.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+          git config user.name 'bthwani-governance-bot'
+          git config user.email 'noreply@bthwani.local'
+          git add \
+            services/dsh/frontend/shared/partner/partner-onboarding.runtime.ts \
+            services/dsh/frontend/shared/partner/partner.api.ts \
+            services/dsh/frontend/shared/partner/index.ts \
+            services/dsh/frontend/shared/field-onboarding/use-field-partner-onboarding-controller.tsx
+          git commit -m 'fix(jrn-001): govern shared onboarding mutations and readback'
+          git push origin HEAD:sambassam
