@@ -80,6 +80,11 @@ describe("JRN-022 Awnak and SHEIN special requests", () => {
 describe("JRN-023 actor notifications", () => {
   const api = source("../frontend/shared/notifications/notifications.api.ts");
   const controller = source("../frontend/shared/notifications/use-notifications-controller.tsx");
+  const migration = source("../database/migrations/dsh-097_notification_delivery_audit.sql");
+  const outbox = source("../backend/internal/operationaloutbox/operationaloutbox.go");
+  const auditDomain = source("../backend/internal/notifications/delivery_audit.go");
+  const routeRegistrar = source("../backend/internal/http/notification_routes.go");
+  const operatorScreen = source("../frontend/control-panel/support/PlatformNotificationConfigScreen.tsx");
 
   it("reads preferences before presenting actor controls", () => {
     assert.match(api, /GET|fetchNotificationPreferences/);
@@ -89,6 +94,20 @@ describe("JRN-023 actor notifications", () => {
 
   it("re-reads preferences after every update", () => {
     assert.match(controller, /updateNotificationPreferences\(topic, enabled\)[\s\S]*loadPreferences\(\)/);
+  });
+
+  it("bounds retries, records immutable attempts, and exposes dead letters to operators", () => {
+    assert.match(migration, /dsh_notification_delivery_attempts/);
+    assert.match(migration, /dead_letter/);
+    assert.match(outbox, /MaxDeliveryAttempts\s*=\s*10/);
+    assert.match(outbox, /status = "failed"/);
+    assert.match(outbox, /outcome = "dead_letter"/);
+    assert.match(auditDomain, /ListDeliveryAttempts/);
+    assert.match(routeRegistrar, /GET \/dsh\/operator\/notifications\/delivery-attempts/);
+    assert.match(api, /fetchNotificationDeliveryAttempts/);
+    assert.match(controller, /useNotificationDeliveryAuditController/);
+    assert.match(operatorScreen, /تدقيق تسليم الإشعارات/);
+    assert.match(operatorScreen, /Dead letter/);
   });
 });
 
