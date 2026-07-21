@@ -1,8 +1,9 @@
 # JRN-001 — Partner onboarding and store publication evidence
 
 - Branch: `sambassam`
-- Last successful broad targeted baseline: `7fc63949e7328ea135e84d4d0bc0d07aa0055fe1`
-- Baseline workflow run: `29847584806`
+- Latest successful same-commit proof: `cf5a0dbd08a3cb322d0ad3ad69895cb9b16624b3`
+- FS-12 workflow run: `29850740692`
+- FS-17/FS-18 workflow run: `29850741316`
 - Tracking status: `READY_FOR_REVIEW`
 - Decision: `READY_FOR_REVIEW`
 - Closure claim: `CLOSED_WITH_EVIDENCE` is not claimed.
@@ -13,16 +14,17 @@ The eighteen mandatory full-stack slices were executed in sequence: Product Trut
 
 The functional journey includes field creation of an owned partner draft, legal identity and contact details, first-store profile and service area, governed media and documents, field visits and readiness evidence, operator document review, partner/store state transitions, store and scope binding, partner team invitations and membership operations, publication/hide/suspend/reactivate controls, audit history, and partner self-readback.
 
+The closure repair also bound field activation to the governed `field` actor type, removed the runtime developer bypass and hardcoded credentials, added a regression test prohibiting their return, aligned the shared `TextField` contract with the six-digit activation constraint, and replaced stale workflow references with the canonical onboarding contract.
+
 ## Verification
 
-The canonical JRN-001 DSH contract is `services/dsh/contracts/dsh.partner-onboarding.openapi.yaml`. The FS-17 and FS-18 workflows watch that live contract, all `JRN-001` registries, Node tests and guards, Go partner and partner-WLT outbox packages, governed route registration, the app-field TypeScript surface, the WLT financial-boundary guard, and repository hygiene.
+The canonical JRN-001 DSH contract is `services/dsh/contracts/dsh.partner-onboarding.openapi.yaml`. The verification workflows cover JRN-001 registries, Node tests and guards, Go partner and partner-WLT outbox packages, governed route registration, scoped TypeScript consumers for `app-field`, `app-partner`, and `control-panel`, the WLT financial-boundary guard, and repository hygiene.
 
-The authoritative same-commit proof is the successful final-head status contexts:
+The authoritative same-commit proof on `cf5a0dbd08a3cb322d0ad3ad69895cb9b16624b3` is:
 
-- `journeys/jrn-001/fs-17-comprehensive`
-- `journeys/jrn-001/fs-18-evidence`
-
-The broad targeted baseline at run `29847584806` also passed JRN-001 static evidence, DSH partner/HTTP packages, and Identity/Workforce governed behavior on commit `7fc63949e7328ea135e84d4d0bc0d07aa0055fe1`.
+- `journeys/jrn-001/fs-12-cross-surface-truth` — success, run `29850740692`
+- `journeys/jrn-001/fs-17-comprehensive` — success, run `29850741316`
+- `journeys/jrn-001/fs-18-evidence` — success, run `29850741316`
 
 ## Rollback
 
