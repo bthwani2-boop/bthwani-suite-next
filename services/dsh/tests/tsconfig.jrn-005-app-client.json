@@ -1,0 +1,13 @@
+{
+  "extends": "../../../apps/app-client/runtime/tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": [
+    "../frontend/shared/client-address/**/*.ts",
+    "../frontend/shared/client-address/**/*.tsx",
+    "../frontend/app-client/account/AddressLocationScreen.tsx",
+    "../frontend/app-client/cart/CartScreen.tsx",
+    "../frontend/app-client/checkout/ClientCheckoutRoute.tsx"
+  ]
+}
