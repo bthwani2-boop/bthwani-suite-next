@@ -74,7 +74,7 @@ test("JRN-005 FS-05..FS-08 implements persistence, durable retries, OCC and even
     "setDshClientDefaultAddress",
   ]) assert.match(contract, new RegExp(`operationId: ${operation}`));
   assert.match(contract, /durable PII-free idempotency receipts/);
-  assert.match(contract, /Idempotency-Key was already used/);
+  assert.match(contract, /Reuse with a different request returns IDEMPOTENCY_CONFLICT/);
   assert.match(contract, /ServiceAreaUnverified/);
 });
 
@@ -89,8 +89,9 @@ test("JRN-005 FS-09..FS-12 binds retry-safe shared code, client surface and comm
 
   assert.match(api, /createDshHttpClient/);
   assert.doesNotMatch(api, /\bfetch\s*\(/);
+  assert.match(api, /setDshClientDefaultAddress/);
+  assert.match(api, /idempotencyKey: mutation\.idempotencyKey/);
   assert.match(api, /expectedVersion,/);
-  assert.match(api, /address-default/);
   assert.match(attempt, /AsyncStorage/);
   assert.match(attempt, /getOrCreateClientAddressAttempt/);
   assert.match(controller, /ADDRESS_ALREADY_EXISTS/);
