@@ -110,9 +110,20 @@ jobs:
           node-version: 24.17.0
           cache: pnpm
       - name: Install workspace dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --reporter=silent
       - name: Typecheck DSH shared brain and surfaces
-        run: pnpm --dir services/dsh typecheck
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm --dir services/dsh typecheck 2>&1 | tee jrn011-typecheck.log
+      - name: Preserve TypeScript failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jrn011-typecheck-log
+          path: jrn011-typecheck.log
+          retention-days: 3
+          if-no-files-found: error
 
   publish-verification-status:
     name: Publish governed verification status
