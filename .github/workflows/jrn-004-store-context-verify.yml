@@ -7,9 +7,10 @@ on:
     paths:
       - "services/dsh/backend/internal/store/**"
       - "services/dsh/backend/internal/http/server.go"
-      - "services/dsh/backend/internal/http/protected_store.go"
+      - "services/dsh/backend/internal/http/protected_store*.go"
       - "services/dsh/backend/internal/http/store_publication_diagnostics.go"
       - "services/dsh/contracts/dsh.openapi.yaml"
+      - "services/dsh/contracts/dsh.store-operational-context.overlay.yaml"
       - "services/dsh/clients/generated/dsh-api.ts"
       - "services/dsh/frontend/shared/store/**"
       - "services/dsh/frontend/shared/partner/**"
