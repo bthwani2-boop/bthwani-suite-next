@@ -72,6 +72,8 @@ describe("JRN-023 actor notifications", () => {
 
 describe("JRN-024 field visits and readiness", () => {
   const controller = source("../frontend/shared/field-readiness/use-field-readiness-controller.tsx");
+  const routeRegistrar = source("../backend/internal/http/field_readiness_routes.go");
+  const apiMain = source("../backend/cmd/dsh-api/main.go");
 
   it("refreshes visit and checklist truth after writes", () => {
     assert.match(controller, /createFieldVisit[\s\S]*await load\(\)/);
@@ -83,6 +85,12 @@ describe("JRN-024 field visits and readiness", () => {
     assert.match(controller, /visitActionQueuedState/);
     assert.match(controller, /checkActionQueuedState/);
     assert.match(controller, /escalationActionQueuedState/);
+  });
+
+  it("mounts the governed field readiness routes in the DSH runtime", () => {
+    assert.match(routeRegistrar, /POST \/dsh\/field\/stores\/\{storeId\}\/visits/);
+    assert.match(routeRegistrar, /GET \/dsh\/operator\/field-readiness\/escalations/);
+    assert.match(apiMain, /RegisterFieldReadinessRoutes\(router/);
   });
 });
 
