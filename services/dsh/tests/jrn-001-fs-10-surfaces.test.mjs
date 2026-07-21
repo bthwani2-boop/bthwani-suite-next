@@ -85,7 +85,8 @@ const partnerHub = read("services/dsh/frontend/app-partner/account/PartnerHubScr
 const partnerStatus = read("services/dsh/frontend/app-partner/account/PartnerOnboardingStatusView.tsx");
 const partnerTeam = read("services/dsh/frontend/app-partner/team/PartnerTeamManagementScreen.tsx");
 for (const route of ["home", "entry", "team"]) {
-  assert.match(partnerBindings, new RegExp(`(?:^|\\s|["'])${route}(?:["']|:)`, "m"), `app-partner binding missing: ${route}`);
+  const routeKey = new RegExp(`^\\s*(?:["']${route}["']|${route})\\s*:`, "m");
+  assert.match(partnerBindings, routeKey, `app-partner binding missing: ${route}`);
 }
 assert.match(partnerRenderer, /hasDshPartnerBindingContract/);
 assert.match(partnerRenderer, /PartnerTeamManagementScreen/);
