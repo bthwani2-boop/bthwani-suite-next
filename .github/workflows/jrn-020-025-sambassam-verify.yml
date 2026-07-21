@@ -1,4 +1,5 @@
 name: JRN 020-025 sambassam verification
+# Closure verification rerun after exact-optional and notification-state repairs.
 
 on:
   push:
