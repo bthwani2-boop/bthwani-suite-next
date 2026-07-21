@@ -15,6 +15,7 @@ const paths = {
   exceptionDomain: 'services/dsh/backend/internal/dispatch/store_captain_handoff_exceptions.go',
   routes: 'services/dsh/backend/internal/http/order_journey_routes.go',
   workboard: 'services/dsh/backend/internal/http/partner_order_workboard.go',
+  baseContract: 'services/dsh/contracts/dsh.openapi.yaml',
   contract: 'services/dsh/contracts/dsh.store-captain-handoff.openapi.yaml',
   contractRegistry: 'services/dsh/contracts/contract-registry.ts',
   sliceManifest: 'services/dsh/contracts/jrn-013-slice-closure.json',
@@ -72,13 +73,16 @@ test('backend enforces idempotency, early-pickup prevention, and exception block
 
   assert.match(exception, /ReportPartnerStoreCaptainHandoffException/);
   assert.match(exception, /ReportCaptainStoreCaptainHandoffException/);
+  assert.match(exception, /findPartnerHandoffExceptionReplay/);
+  assert.match(exception, /findCaptainHandoffExceptionReplay/);
   assert.match(exception, /correlationId already belongs to a different exception command/);
   assert.match(exception, /severity/);
   assert.match(exception, /'high'/);
 });
 
-test('runtime routes and OpenAPI contract remain aligned', () => {
+test('runtime routes and OpenAPI contracts have single operation ownership', () => {
   const routes = read(paths.routes);
+  const baseContract = read(paths.baseContract);
   const contract = read(paths.contract);
   const registry = read(paths.contractRegistry);
 
@@ -91,7 +95,12 @@ test('runtime routes and OpenAPI contract remain aligned', () => {
   }
 
   assert.match(contract, /confirmPartnerStoreCaptainHandoff/);
-  assert.match(contract, /updateCaptainDeliveryStatusWithCustodyGuard/);
+  assert.match(contract, /reportPartnerStoreCaptainHandoffException/);
+  assert.match(contract, /reportCaptainStoreCaptainHandoffException/);
+  assert.match(contract, /x-bthwani-parent-operation/);
+  assert.doesNotMatch(contract, /operationId: updateCaptainDeliveryStatusWithCustodyGuard/);
+  assert.match(baseContract, /\/dsh\/captain\/dispatch\/assignments\/\{assignmentId\}\/status:/);
+  assert.match(baseContract, /operationId: updateDshDeliveryStatus/);
   assert.match(contract, /handoff_shortage/);
   assert.match(contract, /handoff_mismatch/);
   assert.match(contract, /bearerAuth/);
@@ -194,6 +203,8 @@ test('product truth and slice manifest close code without claiming release appro
 test('verification workflow covers source, type, boundaries, database, and backend', () => {
   const workflow = read(paths.workflow);
   assert.match(workflow, /store-captain-handoff-closure\.test\.mjs/);
+  assert.match(workflow, /jrn-013-slice-closure\.test\.mjs/);
+  assert.match(workflow, /contracts:lint/);
   assert.match(workflow, /Typecheck DSH shared brain and surfaces/);
   assert.match(workflow, /guard:ui-kit-boundary/);
   assert.match(workflow, /guard:fullstack-boundary/);
