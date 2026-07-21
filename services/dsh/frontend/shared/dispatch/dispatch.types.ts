@@ -20,7 +20,7 @@ export type DshDeliveryStatus = components["schemas"]["DshDeliveryStatus"];
 export type DshDelivery = components["schemas"]["DshDelivery"];
 export type DshCreateAssignmentInput = components["schemas"]["DshCreateAssignmentRequest"];
 export type DshSubmitPoDInput = components["schemas"]["DshSubmitPoDRequest"];
-export type DshDeliveryException = components["schemas"]["DshDeliveryException"];
+type GeneratedDshDeliveryException = components["schemas"]["DshDeliveryException"];
 type GeneratedDshDeliveryExceptionReasonCode = components["schemas"]["DshDeliveryExceptionReasonCode"];
 type GeneratedDshReportDeliveryExceptionInput = components["schemas"]["DshReportDeliveryExceptionRequest"];
 
@@ -28,6 +28,10 @@ export type DshDeliveryExceptionReasonCode =
   | GeneratedDshDeliveryExceptionReasonCode
   | "handoff_shortage"
   | "handoff_mismatch";
+
+export type DshDeliveryException = Omit<GeneratedDshDeliveryException, "reasonCode"> & {
+  readonly reasonCode: DshDeliveryExceptionReasonCode;
+};
 
 export type DshReportDeliveryExceptionInput = Omit<GeneratedDshReportDeliveryExceptionInput, "reasonCode"> & {
   readonly reasonCode: DshDeliveryExceptionReasonCode;
