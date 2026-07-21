@@ -1,0 +1,118 @@
+name: Temporary JRN-006 Registry Finalizer
+
+on:
+  push:
+    branches: [sambassam]
+    paths:
+      - ".github/workflows/tmp-jrn-006-registry-finalize.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: jrn-006-registry-finalize
+  cancel-in-progress: false
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout latest target branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: sambassam
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Rebase onto latest remote head
+        run: git pull --rebase origin sambassam
+
+      - name: Patch JRN-006 registry and closure evidence
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+
+          registry_path = Path("governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md")
+          text = registry_path.read_text(encoding="utf-8")
+
+          old_index = "| JRN-006 | الخرائط ومناطق الخدمة وخصوصية العناوين | Providers + DSH | NEEDS_EVIDENCE |"
+          new_index = "| JRN-006 | الخرائط ومناطق الخدمة وخصوصية العناوين | Providers + DSH | CLOSED_WITH_EVIDENCE |"
+          if old_index in text:
+              text = text.replace(old_index, new_index, 1)
+          elif new_index not in text:
+              raise SystemExit("JRN-006 index row was not found")
+
+          old_section = """### JRN-006 — الخرائط ومناطق الخدمة وخصوصية العناوين
+
+الأسطح المرشحة: `app-client`, `control-panel`، وكل سطح يحتاج موقعًا محكومًا.
+
+- البحث عن المواقع عبر مزود الخرائط.
+- reverse geocoding للإحداثيات والتحقق من النتيجة.
+- health وفشل المزود والمهلة والنتيجة غير المؤكدة.
+- قائمة مناطق الخدمة وإحداثيات وحدود كل منطقة.
+- إنشاء أو تحديث geofence وربطه بقابلية الخدمة.
+- سياسة خصوصية العناوين والاحتفاظ والانتهاء.
+- إخفاء أو anonymize العناوين المنتهية.
+- حماية PII والتدقيق ومنع التسريب بين الممثلين."""
+          new_section = """### JRN-006 — الخرائط ومناطق الخدمة وخصوصية العناوين
+
+tracking_status: CLOSED_WITH_EVIDENCE  
+decision: CLOSED_WITH_EVIDENCE  
+last_verified_commit: `633ae051264bb03049a4751ac67ac79724bb03d2`  
+slice_registry: `services/dsh/contracts/jrn-006-slice-verification-registry.json`  
+product_truth: `governance/product/contracts/jrn-006-maps-service-area-address-privacy.product-truth.json`  
+evidence: `governance/evidence/JRN-006_ALL_SLICES_CLOSURE.json`  
+status_context: `journeys/jrn-006/all-slices`  
+workflow_run: `29865894007`
+
+الأسطح المنفذة: `app-client`, `control-panel`, العقل المشترك لـDSH، باك إند DSH، PostgreSQL، العقود، وقراءة حالة Providers.
+
+- [x] `JRN-006-S01` — البحث المحكوم عن المواقع ورفض نتائج المزود غير الصالحة.
+- [x] `JRN-006-S02` — reverse geocoding والتحقق من الإحداثيات والنتيجة وربطها بمنطقة DSH.
+- [x] `JRN-006-S03` — health وفشل المزود والمهلة والنتيجة غير المؤكدة مع readback للمشغل.
+- [x] `JRN-006-S04` — قائمة وتفصيل مناطق الخدمة والمضلع وعدد النقاط والحدود المحسوبة.
+- [x] `JRN-006-S05` — إنشاء وتحديث geofence مع OCC وidempotency ومنع التقاطع والمساحة الصفرية في Go وPostgreSQL.
+- [x] `JRN-006-S06` — سياسة الاحتفاظ والانتهاء وإعادة الجدولة وحالة طابور الخصوصية.
+- [x] `JRN-006-S07` — anonymization المستحق مع `SKIP LOCKED` وهوية تشغيل ثابتة لإعادة المحاولة.
+- [x] `JRN-006-S08` — حماية PII وعزل الممثلين وقراءة تدقيق من projection خالية بنيويًا من PII الخام.
+
+لا توجد فجوات داخل النطاق المثبت. WLT والتفعيل التجاري لـSaaS وPR/Merge خارج نطاق هذه الرحلة."""
+          if old_section in text:
+              text = text.replace(old_section, new_section, 1)
+          elif "tracking_status: CLOSED_WITH_EVIDENCE" not in text[text.find("### JRN-006"):text.find("### JRN-007")]:
+              raise SystemExit("JRN-006 section did not match the expected registry content")
+
+          execution_row = "| 2026-07-21 | JRN-006 | JRN-006-S01..S08 map, geofence, retention, anonymization and PII-safe audit closure | sambassam | `633ae051264bb03049a4751ac67ac79724bb03d2`; run `29865894007`; artifact `8509195051` | app-client, control-panel, DSH shared/backend/database/contracts, Providers health | CLOSED_WITH_EVIDENCE | none |"
+          if execution_row not in text:
+              marker = "|---|---|---|---|---|---|---|---|"
+              marker_index = text.find(marker)
+              if marker_index < 0:
+                  raise SystemExit("execution-log table marker not found")
+              insertion = marker_index + len(marker)
+              text = text[:insertion] + "\n" + execution_row + text[insertion:]
+
+          registry_path.write_text(text, encoding="utf-8")
+
+          evidence_path = Path("governance/evidence/JRN-006_ALL_SLICES_CLOSURE.json")
+          evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+          evidence["centralRegistry"] = {
+              "path": str(registry_path),
+              "updated": True,
+              "decision": "CLOSED_WITH_EVIDENCE"
+          }
+          evidence_path.write_text(json.dumps(evidence, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+          Path(".github/workflows/tmp-jrn-006-registry-finalize.yml").unlink()
+          PY
+
+      - name: Commit registry closure
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md governance/evidence/JRN-006_ALL_SLICES_CLOSURE.json .github/workflows/tmp-jrn-006-registry-finalize.yml
+          git commit -m "governance(jrn-006): finalize central eight-slice closure"
+          git push origin HEAD:sambassam
