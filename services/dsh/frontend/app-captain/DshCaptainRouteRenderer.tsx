@@ -39,7 +39,7 @@ import { CaptainStorePickupContextScreen } from "./store/CaptainStorePickupConte
 import { OfferDeclineSheet } from "./orders/OfferDeclineSheet";
 import { CaptainSupportScreenRouter } from "./account/CaptainSupportScreenRouter";
 import type { DshCaptainOrderBellItem, DshCaptainOrdersScreenState } from "../shared/orders";
-import type { DshDeliveryException } from "../shared/dispatch/dispatch.types";
+import type { DshDeliveryException } from "../shared/dispatch";
 import { ActorNotificationsPanel } from "../shared/notifications";
 
 type BThwaniAppearanceMode = "lightPremium" | "darkPremium";

@@ -5,8 +5,8 @@ import {
   confirmStoreCaptainHandoff,
   markOrderPreparing,
   markOrderReady,
-} from '../../shared/orders/orders.api';
-import type { DshPartnerOrderAction } from '../../shared/orders/orders.types';
+} from '../../shared/orders';
+import type { DshPartnerOrderAction } from '../../shared/orders';
 
 export type PartnerOrderMutationCommand = 'accept' | 'prepare' | 'ready' | 'handoff';
 

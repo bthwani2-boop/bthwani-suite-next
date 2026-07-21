@@ -50,7 +50,7 @@ export function AnalyticsInsightsPanel({ storeName, canonicalStoreId }: { storeN
       return;
     }
     setLoading(true);
-    import('../../shared/partner/partner.api').then(({ fetchPartnerPerformance }) => {
+    import('../../shared/partner').then(({ fetchPartnerPerformance }) => {
       fetchPartnerPerformance('today').then(res => {
         setPerformance(res);
         setLoading(false);

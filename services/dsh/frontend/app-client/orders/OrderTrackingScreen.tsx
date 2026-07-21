@@ -24,7 +24,7 @@ import {
   type DshFinancialClosureStatus,
   type DshOrderStatus,
 } from '../../shared/orders';
-import { DELIVERY_STATUS_LABELS } from '../../shared/dispatch/dispatch.types';
+import { DELIVERY_STATUS_LABELS } from '../../shared/dispatch';
 import { useClientOrderJourneyController } from './useClientOrderJourneyController';
 
 type Props = {

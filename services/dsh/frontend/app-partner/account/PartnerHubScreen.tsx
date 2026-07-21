@@ -28,7 +28,7 @@ import { usePartnerSelfController } from "../../shared/partner/use-partner-self-
 import {
   fetchPartnerStoreCoverageZones,
   fetchPartnerStoreSettings,
-} from "../../shared/partner/partner.api";
+} from "../../shared/partner";
 import type {
   BThwaniAppearanceMode,
   NotificationPreferenceId,
@@ -251,7 +251,7 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
         ...current,
         [preferenceId]: nextValue,
       }));
-      void import("../../shared/notifications/notifications.api")
+      void import("../../shared/notifications")
         .then(({ updateNotificationPreferences }) =>
           updateNotificationPreferences(preferenceId, nextValue),
         )

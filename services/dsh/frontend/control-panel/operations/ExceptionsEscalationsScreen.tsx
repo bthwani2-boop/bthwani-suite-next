@@ -16,8 +16,8 @@ import {
   resolveDeliveryExceptionReassignCaptain,
   resolveDeliveryExceptionRetrySameCaptain,
   resolveDeliveryExceptionReturnToStore,
-} from '../../shared/dispatch/dispatch.api';
-import type { DshDeliveryException } from '../../shared/dispatch/dispatch.types';
+} from '../../shared/dispatch';
+import type { DshDeliveryException } from '../../shared/dispatch';
 import {
   FINANCIAL_CLOSURE_LABELS,
   cancelOrder,
