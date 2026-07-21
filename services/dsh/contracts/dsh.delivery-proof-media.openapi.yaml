@@ -1,0 +1,170 @@
+openapi: 3.1.0
+info:
+  title: BThwani DSH Delivery Proof Media API
+  version: 1.0.0
+  description: >-
+    Governed binary proof-of-delivery upload contract for BThwani captains and
+    partner-owned store couriers. The operation uploads the binary, registers
+    actor-owned media truth, and completes the delivery only after DSH accepts
+    the current lifecycle transition.
+x-bthwani-owner: services/dsh
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-runtime-dependency: true
+x-bthwani-canonical-parent: services/dsh/contracts/dsh.openapi.yaml
+servers:
+  - url: http://localhost:58080
+paths:
+  /dsh/captain/dispatch/assignments/{assignmentId}/pod:
+    post:
+      operationId: uploadAndSubmitDshCaptainDeliveryProof
+      summary: Upload captain-owned photo proof and complete an arrived delivery.
+      tags: [DshDeliveryProofMedia]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: assignmentId
+          in: path
+          required: true
+          schema: { type: string }
+        - name: X-Correlation-ID
+          in: header
+          required: false
+          schema: { type: string, minLength: 1, maxLength: 128 }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: JPEG, PNG, or WebP delivery proof within the governed media size limit.
+      responses:
+        "200":
+          description: Proof uploaded, registered, and delivery completed.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DispatchAssignmentEnvelope" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "413": { $ref: "#/components/responses/UploadTooLarge" }
+        "422": { $ref: "#/components/responses/InvalidTransition" }
+        "503": { $ref: "#/components/responses/MediaUnavailable" }
+  /dsh/partner/orders/{orderId}/partner-delivery/proof:
+    post:
+      operationId: uploadAndSubmitDshPartnerDeliveryProof
+      summary: Upload partner-owned photo proof and complete a store-courier delivery.
+      tags: [DshDeliveryProofMedia]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string }
+        - name: X-Correlation-ID
+          in: header
+          required: false
+          schema: { type: string, minLength: 1, maxLength: 128 }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: JPEG, PNG, or WebP proof owned by the authenticated partner and order store.
+      responses:
+        "200":
+          description: Proof uploaded, registered, and partner delivery completed.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PartnerDeliveryTaskEnvelope" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "413": { $ref: "#/components/responses/UploadTooLarge" }
+        "422": { $ref: "#/components/responses/InvalidTransition" }
+        "503": { $ref: "#/components/responses/MediaUnavailable" }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ErrorEnvelope:
+      type: object
+      additionalProperties: true
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+    DispatchAssignmentEnvelope:
+      type: object
+      additionalProperties: false
+      required: [assignment]
+      properties:
+        assignment:
+          type: object
+          additionalProperties: true
+    PartnerDeliveryTaskEnvelope:
+      type: object
+      additionalProperties: false
+      required: [task]
+      properties:
+        task:
+          type: object
+          additionalProperties: true
+  responses:
+    InvalidRequest:
+      description: Invalid multipart body or unsupported media type.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+    Unauthenticated:
+      description: Authentication is required.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+    Forbidden:
+      description: The actor does not own the requested partner order.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+    NotFound:
+      description: Assignment, order, or delivery task was not found.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+    Conflict:
+      description: Actor ownership, version, or delivery state conflicts with the request.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+    UploadTooLarge:
+      description: Uploaded proof exceeds the governed media size limit.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+    InvalidTransition:
+      description: Delivery has not reached the proof-eligible state.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+    MediaUnavailable:
+      description: Governed media storage is not configured or unavailable.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
