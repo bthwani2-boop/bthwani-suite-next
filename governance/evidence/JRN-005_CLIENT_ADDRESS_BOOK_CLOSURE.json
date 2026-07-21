@@ -1,10 +1,13 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "journeyId": "JRN-005",
   "journeyName": "Client address book",
   "repository": "bthwani2-boop/bthwani-suite-next",
   "targetRef": "sambassam",
   "decision": "READY_FOR_REVIEW",
+  "codeClosure": "COMPLETE",
+  "verifiedImplementationCommit": "bda5452525840cbe4b357713032747cfc500bfc4",
+  "verifiedHeadContainmentCommit": "fa0d0142d877ef1041e8acdd682b4a2dc58722ab",
   "implementationTruth": {
     "productTruth": "governance/product/contracts/jrn-005-client-address-book.product-truth.json",
     "sliceRegistry": "services/dsh/contracts/jrn-005-all-slices-registry.json",
@@ -15,44 +18,61 @@
   },
   "functionalSlices": {
     "registered": 18,
-    "implemented": 18,
+    "implementedInCode": 18,
     "workflowVerified": 18,
+    "openCodeGaps": 0,
     "independentlyApproved": 0
   },
   "implementedCapabilities": [
     "authenticated owner-scoped list",
+    "shared OpenAPI-aligned frontend validation",
+    "required governed coordinates before network mutation",
     "idempotent create with restart-persistent retry identity",
+    "durable PII-free update, delete and set-default mutation receipts",
     "active logical duplicate rejection",
-    "optimistic-concurrency update and delete",
+    "optimistic concurrency for update, delete and set-default",
+    "committed update replay before mutable geofence validation",
     "single active default",
-    "deterministic default promotion after delete",
-    "governed service-area validation",
+    "deterministic default promotion with audit event after delete",
+    "governed service-area database trigger",
     "address events and committed readback",
     "checkout-owned address resolution",
+    "cross-client mutation isolation",
     "privacy retention and irreversible anonymization",
-    "Arabic RTL visible states and recovery",
-    "SLO, support and rollback runbook",
+    "bounded 30-day mutation-receipt retention and purge",
+    "aggregate PII-free telemetry and integrity diagnostics",
+    "backward-compatible operations analytics projection",
+    "Arabic RTL, labelled bounded fields, busy states and live error recovery",
     "static, TypeScript, Go and PostgreSQL regression gates"
   ],
   "sameCommitVerification": {
     "statusContext": "journeys/jrn-005/all-slices",
     "workflow": ".github/workflows/jrn-005-all-slices.yml",
-    "verifiedCommit": "2b30d16fd027646c256034ef9456e56cbe57187e",
-    "workflowRunId": 29861781564,
-    "artifactId": 8507604073,
-    "artifactDigest": "sha256:66e288414f5097031a63ddd1c5a0b0815dc3e0fd7b10cf59beb13637fa6a1da6",
+    "verifiedCommit": "bda5452525840cbe4b357713032747cfc500bfc4",
+    "workflowRunId": 29866310744,
+    "artifactId": 8509347789,
+    "artifactDigest": "sha256:7be9a0a90c950a5619147c947999bbfd8cca529bd1fbbae01adb04d1bc438d23",
     "result": "PASS",
     "checks": {
       "repositoryHygiene": "PASS",
-      "allSlicesStaticTest": "PASS",
+      "allSlicesStaticTests": "PASS_11_OF_11",
       "clientCommerceTruthGuard": "PASS",
       "targetedAppClientTypecheck": "PASS",
-      "goClientAddressAndHttpTests": "PASS",
+      "goClientAddressUnitTests": "PASS",
+      "goHttpBoundaryTests": "PASS",
       "postgres16BaseMigration": "PASS",
       "postgres16LogicalDeduplicationMigration": "PASS",
-      "postgres16DuplicateInsertInvariant": "PASS",
-      "postgres16DuplicateUpdateInvariant": "PASS"
-    }
+      "postgres16MutationReceiptMigration": "PASS",
+      "postgres16ReceiptRetentionMigration": "PASS",
+      "postgres16LogicalDuplicateInvariants": "PASS",
+      "postgres16MutationReceiptInvariants": "PASS",
+      "postgres16ReceiptRetentionInvariants": "PASS",
+      "postgres16ServiceAreaGeofenceMigration": "PASS",
+      "postgres16AddressGeofenceBinding": "PASS",
+      "goExactlyOnceDatabaseIntegration": "PASS",
+      "goCrossClientIsolationDatabaseIntegration": "PASS"
+    },
+    "summaryLine": "hygiene=0 static=0 guard=0 typecheck=0 go=0 db_extension=0 db_base=0 db_dedupe_migration=0 db_receipt_migration=0 db_retention_migration=0 db_dedupe_test=0 db_receipt_test=0 db_retention_test=0 db_geofence_base=0 db_geofence_binding=0 db_go_integration=0"
   },
   "approvalMatrix": {
     "product": "PENDING_INDEPENDENT_REVIEW",
@@ -63,14 +83,26 @@
     "release": "PENDING_INDEPENDENT_REVIEW"
   },
   "deviceEvidence": {
-    "appClientAndroid": "PENDING",
-    "weakNetworkRetry": "PENDING",
-    "rtlAndAccessibility": "PENDING"
+    "appClientAndroid": "PENDING_PHYSICAL_DEVICE",
+    "weakNetworkRetry": "PENDING_PHYSICAL_DEVICE",
+    "rtlAndAccessibility": "PENDING_PHYSICAL_DEVICE"
   },
   "rollback": {
     "runbook": "governance/runbooks/JRN-005_CLIENT_ADDRESS_OPERATIONS.md#rollback",
-    "preserveData": ["address rows", "soft-delete timestamps", "address events", "privacy audit events"],
-    "forbiddenEmergencyActions": ["disable owner scoping", "drop single-default constraint", "convert duplicate conflict to success", "log address PII"]
+    "preserveData": [
+      "address rows",
+      "soft-delete timestamps",
+      "address events",
+      "privacy audit events",
+      "unexpired mutation receipts"
+    ],
+    "forbiddenEmergencyActions": [
+      "disable owner scoping",
+      "drop single-default constraint",
+      "bypass the service-area trigger",
+      "convert duplicate or idempotency conflict to success",
+      "log address PII"
+    ]
   },
-  "formalClosureRule": "Implementation and all FS-01..FS-18 technical verification are complete. Set decision to CLOSED_WITH_EVIDENCE only after every required independent approval and device evidence field is complete."
+  "formalClosureRule": "All FS-01..FS-18 code and same-commit technical verification are complete with zero open code gaps. CLOSED_WITH_EVIDENCE remains reserved for independent Product, QA, Security, Privacy, Accessibility and Release approvals plus physical-device evidence."
 }
