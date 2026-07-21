@@ -1,1 +1,2 @@
-export { GovernedCartScreen as CartScreen } from "./GovernedCartScreen";
+export { CartScreen } from "./CartScreen";
+export { GovernedCartScreen } from "./GovernedCartScreen";
