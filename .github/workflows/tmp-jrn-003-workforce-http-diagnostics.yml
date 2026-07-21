@@ -35,7 +35,7 @@ jobs:
           go test ./internal/http -json -count=1 >/tmp/workforce-http.json
           code=$?
           mapfile -t failed < <(jq -r 'select(.Action == "fail" and .Test != null) | .Test' /tmp/workforce-http.json | sort -u)
-          build_detail=$(jq -r 'select(.Action == "output" and .Test == null) | .Output' /tmp/workforce-http.json | grep -E '\.go:[0-9]+:|undefined|not enough arguments|too many arguments|cannot use|build failed' | tail -n 1 | tr '\n' ' ' | cut -c1-130)
+          build_detail=$(jq -r 'select(.Action == "output" and .Test == null) | .Output' /tmp/workforce-http.json | grep -E '\.go:[0-9]+:|undefined|not enough arguments|too many arguments|cannot use' | head -n 1 | tr '\n' ' ' | cut -c1-130)
           if [ ${#failed[@]} -eq 0 ]; then
             if [ "$code" -eq 0 ]; then
               failed=(all-tests-passed)
