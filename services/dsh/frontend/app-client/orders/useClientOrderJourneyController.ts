@@ -1,8 +1,13 @@
 import React from 'react';
-import { fetchClientOrder, classifyOrderError } from '../../shared/orders/orders.api';
+import {
+  fetchClientOrder,
+  fetchOrderPreparation,
+  classifyOrderError,
+} from '../../shared/orders/orders.api';
 import {
   isOrderCancellationStatus,
   type DshOrder,
+  type DshOrderPreparation,
 } from '../../shared/orders/orders.types';
 import { fetchClientOrderTracking, classifyDispatchError } from '../../shared/dispatch/dispatch.api';
 import type { DshDispatchAssignment } from '../../shared/dispatch/dispatch.types';
@@ -13,6 +18,7 @@ export type ClientOrderJourneyState =
   | {
       readonly kind: 'ready';
       readonly order: DshOrder;
+      readonly preparation: DshOrderPreparation;
       readonly assignment: DshDispatchAssignment | null;
     };
 
@@ -25,9 +31,8 @@ function orderErrorMessage(error: unknown): string {
 }
 
 /**
- * Loads the order as the primary truth and dispatch as an optional projection.
- * A missing dispatch assignment is a valid pre-dispatch lifecycle state, not an
- * error. Active journeys refresh periodically without inventing captain data.
+ * Loads order and preparation as required DSH truth. Dispatch is optional until
+ * assignment exists; preparation is never replaced with a local estimate.
  */
 export function useClientOrderJourneyController(orderId: string) {
   const [state, setState] = React.useState<ClientOrderJourneyState>({ kind: 'loading' });
@@ -39,7 +44,10 @@ export function useClientOrderJourneyController(orderId: string) {
     }
 
     try {
-      const order = await fetchClientOrder(orderId);
+      const [order, preparation] = await Promise.all([
+        fetchClientOrder(orderId),
+        fetchOrderPreparation(orderId),
+      ]);
       let assignment: DshDispatchAssignment | null = null;
       try {
         assignment = await fetchClientOrderTracking(orderId);
@@ -50,12 +58,10 @@ export function useClientOrderJourneyController(orderId: string) {
             setState({ kind: 'error', message: 'لا تملك صلاحية عرض تتبع هذا الطلب.' });
             return;
           }
-          if (classified.kind === 'offline') {
-            assignment = null;
-          }
+          if (classified.kind === 'offline') assignment = null;
         }
       }
-      setState({ kind: 'ready', order, assignment });
+      setState({ kind: 'ready', order, preparation, assignment });
     } catch (error) {
       setState({ kind: 'error', message: orderErrorMessage(error) });
     }
@@ -68,9 +74,7 @@ export function useClientOrderJourneyController(orderId: string) {
 
   React.useEffect(() => {
     if (state.kind !== 'ready') return undefined;
-    if (state.order.status === 'delivered' || isOrderCancellationStatus(state.order.status)) {
-      return undefined;
-    }
+    if (state.order.status === 'delivered' || isOrderCancellationStatus(state.order.status)) return undefined;
     const interval = setInterval(() => void load(), 15000);
     return () => clearInterval(interval);
   }, [load, state]);
