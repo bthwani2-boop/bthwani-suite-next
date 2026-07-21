@@ -9,10 +9,19 @@ on:
       - "services/dsh/tsconfig.jrn-007.json"
       - "services/dsh/backend/internal/homediscovery/**"
       - "services/dsh/backend/internal/http/server.go"
+      - "services/dsh/backend/internal/http/home_discovery_targeting_handlers.go"
       - "services/dsh/backend/internal/http/journey_007_routes_test.go"
       - "services/dsh/contracts/contract-registry.ts"
+      - "services/dsh/contracts/dsh.home-discovery.overlay.yaml"
       - "services/dsh/contracts/dsh.home-marketing-events.openapi.yaml"
+      - "services/dsh/database/migrations/dsh-002_home_discovery.sql"
       - "services/dsh/database/migrations/dsh-017_marketing_governance.sql"
+      - "services/dsh/database/migrations/dsh-018_retire_marketing_banners_promos.sql"
+      - "services/dsh/database/migrations/dsh-025_marketing_entity_type_constraints.sql"
+      - "services/dsh/database/migrations/dsh-060_home_marketing_publication_gates.sql"
+      - "services/dsh/database/migrations/dsh-098_home_discovery_targeting.sql"
+      - "services/dsh/database/migrations/dsh-099_home_marketing_impression_dedup.sql"
+      - "services/dsh/database/tests/dsh-098_099_home_discovery_invariants.sql"
       - "services/dsh/frontend/shared/home-discovery/**"
       - "services/dsh/frontend/app-client/home-discovery/**"
       - "services/dsh/frontend/app-client/DshClientSurface.tsx"
@@ -71,12 +80,55 @@ jobs:
       - name: Verify home discovery domain
         run: go test ./internal/homediscovery -count=1
       - name: Verify JRN-007 route registration
-        run: go test ./internal/http -run TestJourney007ExposesHomeMarketingEventRoute -count=1
+        run: go test ./internal/http -run TestJourney007 -count=1
+
+  home-database:
+    name: PostgreSQL targeting and telemetry invariants
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: dsh_runtime
+          POSTGRES_PASSWORD: dsh_runtime_password
+          POSTGRES_DB: dsh_runtime
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U dsh_runtime -d dsh_runtime"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://dsh_runtime:dsh_runtime_password@localhost:5432/dsh_runtime?sslmode=disable
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Apply JRN-007 dependency migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in \
+            services/dsh/database/migrations/dsh-002_home_discovery.sql \
+            services/dsh/database/migrations/dsh-017_marketing_governance.sql \
+            services/dsh/database/migrations/dsh-018_retire_marketing_banners_promos.sql \
+            services/dsh/database/migrations/dsh-025_marketing_entity_type_constraints.sql \
+            services/dsh/database/migrations/dsh-060_home_marketing_publication_gates.sql \
+            services/dsh/database/migrations/dsh-098_home_discovery_targeting.sql \
+            services/dsh/database/migrations/dsh-099_home_marketing_impression_dedup.sql; do
+            echo "==> $file"
+            psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f "$file"
+          done
+      - name: Verify JRN-007 SQL invariants
+        run: psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f services/dsh/database/tests/dsh-098_099_home_discovery_invariants.sql
 
   publish-result:
     name: Publish JRN-007 same-commit status
     if: always()
-    needs: [home-bindings, home-go]
+    needs: [home-bindings, home-go, home-database]
     runs-on: ubuntu-latest
     steps:
       - name: Publish aggregate status
@@ -85,14 +137,15 @@ jobs:
           COMMIT_SHA: ${{ github.sha }}
           BINDINGS_RESULT: ${{ needs.home-bindings.result }}
           GO_RESULT: ${{ needs.home-go.result }}
+          DATABASE_RESULT: ${{ needs.home-database.result }}
           TARGET_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         shell: bash
         run: |
           STATE=failure
           DESCRIPTION="JRN-007 home discovery verification failed"
-          if [ "$BINDINGS_RESULT" = success ] && [ "$GO_RESULT" = success ]; then
+          if [ "$BINDINGS_RESULT" = success ] && [ "$GO_RESULT" = success ] && [ "$DATABASE_RESULT" = success ]; then
             STATE=success
-            DESCRIPTION="JRN-007 home discovery verification passed"
+            DESCRIPTION="JRN-007 all eight slices verified"
           fi
           jq -n \
             --arg state "$STATE" \
