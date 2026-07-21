@@ -9,8 +9,18 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
-import { alpha, colorRoles, elevation, radius, spacing } from "@bthwani/ui-kit";
-import { EmptyState, ErrorState, LoadingState, OfflineState, Screen } from "@bthwani/ui-kit";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  OfflineState,
+  Screen,
+  alpha,
+  colorRoles,
+  elevation,
+  radius,
+  spacing,
+} from "@bthwani/ui-kit";
 import {
   applyDiscoveryFilter,
   recordHomeMarketingEvent,
@@ -66,26 +76,36 @@ export function HomeDiscoveryShell({
     }
   }, [state]);
 
-  const handleBannerPress = React.useCallback((banner: BannerViewModel) => {
-    void recordHomeMarketingEvent({ eventType: "click", contentKind: "banners", contentId: banner.id });
-    if (banner.actionType !== "none" && banner.actionTarget.trim()) {
-      onMarketingAction?.(banner.actionType, banner.actionTarget);
+  const executeMarketingAction = React.useCallback((actionType: string, actionTarget: string) => {
+    const target = actionTarget.trim();
+    if (!target || actionType === "none") return;
+    if (actionType === "category") {
+      setActiveCategoryId(target);
+      return;
     }
+    onMarketingAction?.(actionType, target);
   }, [onMarketingAction]);
+
+  const handleBannerPress = React.useCallback((banner: BannerViewModel) => {
+    void recordHomeMarketingEvent({
+      eventType: "click",
+      contentKind: "banners",
+      contentId: banner.id,
+    });
+    executeMarketingAction(banner.actionType, banner.actionTarget);
+  }, [executeMarketingAction]);
 
   const handlePromoPress = React.useCallback((promo: PromoViewModel) => {
-    void recordHomeMarketingEvent({ eventType: "click", contentKind: "promos", contentId: promo.id });
-    if (promo.actionType !== "none" && promo.actionTarget.trim()) {
-      onMarketingAction?.(promo.actionType, promo.actionTarget);
-    }
-  }, [onMarketingAction]);
+    void recordHomeMarketingEvent({
+      eventType: "click",
+      contentKind: "promos",
+      contentId: promo.id,
+    });
+    executeMarketingAction(promo.actionType, promo.actionTarget);
+  }, [executeMarketingAction]);
 
   if (state.kind === "loading") {
-    return (
-      <Screen padded={false}>
-        <LoadingState title="جاري التحميل..." />
-      </Screen>
-    );
+    return <Screen padded={false}><LoadingState title="جاري التحميل..." /></Screen>;
   }
   if (state.kind === "error") {
     return (
@@ -230,7 +250,9 @@ function CategoryOption({
       accessibilityRole="button"
       accessibilityState={{ selected }}
     >
-      <View style={styles.selectionIndicator}>{selected ? <Text style={styles.checkmark}>✓</Text> : null}</View>
+      <View style={styles.selectionIndicator}>
+        {selected ? <Text style={styles.checkmark}>✓</Text> : null}
+      </View>
       <Text style={[styles.dropdownLabel, selected && styles.dropdownLabelActive]}>{label}</Text>
       <View style={[styles.emojiContainer, selected && styles.emojiContainerActive]}>
         <Text style={styles.dropdownEmoji}>{icon}</Text>
