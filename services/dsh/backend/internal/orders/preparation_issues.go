@@ -13,6 +13,8 @@ type PreparationIssueKind string
 
 type PreparationIssueStatus string
 
+type PreparationIssueCustomerDecision string
+
 const (
 	PreparationIssueMissingItem          PreparationIssueKind = "missing_item"
 	PreparationIssueSubstitutionRequired PreparationIssueKind = "substitution_required"
@@ -21,27 +23,36 @@ const (
 
 	PreparationIssueOpen     PreparationIssueStatus = "open"
 	PreparationIssueResolved PreparationIssueStatus = "resolved"
+
+	PreparationIssueDecisionNotRequired PreparationIssueCustomerDecision = "not_required"
+	PreparationIssueDecisionPending     PreparationIssueCustomerDecision = "pending"
+	PreparationIssueDecisionApproved    PreparationIssueCustomerDecision = "approved"
+	PreparationIssueDecisionRejected    PreparationIssueCustomerDecision = "rejected"
 )
 
 type PreparationIssue struct {
-	ID                     string                 `json:"id"`
-	OrderID                string                 `json:"orderId"`
-	StoreID                string                 `json:"storeId"`
-	OrderItemID            string                 `json:"orderItemId"`
-	Kind                   PreparationIssueKind   `json:"kind"`
-	Status                 PreparationIssueStatus `json:"status"`
-	AffectedQuantity       int                    `json:"affectedQuantity"`
-	Note                   string                 `json:"note"`
-	ReplacementProductID   string                 `json:"replacementProductId"`
-	ReplacementProductName string                 `json:"replacementProductName"`
-	OpenedByActorID        string                 `json:"openedByActorId"`
-	OpenedAt               time.Time              `json:"openedAt"`
-	ResolvedByActorID      string                 `json:"resolvedByActorId"`
-	ResolutionNote         string                 `json:"resolutionNote"`
-	ResolvedAt             *time.Time             `json:"resolvedAt"`
-	Version                int                    `json:"version"`
-	CreatedAt              time.Time              `json:"createdAt"`
-	UpdatedAt              time.Time              `json:"updatedAt"`
+	ID                       string                           `json:"id"`
+	OrderID                  string                           `json:"orderId"`
+	StoreID                  string                           `json:"storeId"`
+	OrderItemID              string                           `json:"orderItemId"`
+	Kind                     PreparationIssueKind             `json:"kind"`
+	Status                   PreparationIssueStatus           `json:"status"`
+	AffectedQuantity         int                              `json:"affectedQuantity"`
+	Note                     string                           `json:"note"`
+	ReplacementProductID     string                           `json:"replacementProductId"`
+	ReplacementProductName   string                           `json:"replacementProductName"`
+	CustomerDecision         PreparationIssueCustomerDecision `json:"customerDecision"`
+	CustomerDecidedByActorID string                           `json:"customerDecidedByActorId"`
+	CustomerDecisionNote     string                           `json:"customerDecisionNote"`
+	CustomerDecidedAt        *time.Time                       `json:"customerDecidedAt"`
+	OpenedByActorID          string                           `json:"openedByActorId"`
+	OpenedAt                 time.Time                        `json:"openedAt"`
+	ResolvedByActorID        string                           `json:"resolvedByActorId"`
+	ResolutionNote           string                           `json:"resolutionNote"`
+	ResolvedAt               *time.Time                       `json:"resolvedAt"`
+	Version                  int                              `json:"version"`
+	CreatedAt                time.Time                        `json:"createdAt"`
+	UpdatedAt                time.Time                        `json:"updatedAt"`
 }
 
 type CreatePreparationIssueInput struct {
@@ -57,14 +68,24 @@ type CreatePreparationIssueInput struct {
 	CorrelationID          string
 }
 
-type ResolvePreparationIssueInput struct {
-	IssueID        string
-	OrderID        string
-	StoreID        string
-	ActorID        string
+type DecidePreparationIssueInput struct {
+	IssueID         string
+	OrderID         string
+	ActorID         string
 	ExpectedVersion int
-	ResolutionNote string
-	CorrelationID  string
+	Decision        PreparationIssueCustomerDecision
+	Note            string
+	CorrelationID   string
+}
+
+type ResolvePreparationIssueInput struct {
+	IssueID         string
+	OrderID         string
+	StoreID         string
+	ActorID         string
+	ExpectedVersion int
+	ResolutionNote  string
+	CorrelationID   string
 }
 
 type preparationIssueScanner interface {
@@ -82,6 +103,10 @@ const preparationIssueColumns = `
 	note,
 	COALESCE(replacement_product_id, ''),
 	COALESCE(replacement_product_name, ''),
+	customer_decision,
+	COALESCE(customer_decided_by_actor_id, ''),
+	COALESCE(customer_decision_note, ''),
+	customer_decided_at,
 	opened_by_actor_id,
 	opened_at,
 	COALESCE(resolved_by_actor_id, ''),
@@ -104,6 +129,10 @@ func scanPreparationIssue(scanner preparationIssueScanner) (*PreparationIssue, e
 		&issue.Note,
 		&issue.ReplacementProductID,
 		&issue.ReplacementProductName,
+		&issue.CustomerDecision,
+		&issue.CustomerDecidedByActorID,
+		&issue.CustomerDecisionNote,
+		&issue.CustomerDecidedAt,
 		&issue.OpenedByActorID,
 		&issue.OpenedAt,
 		&issue.ResolvedByActorID,
@@ -128,6 +157,10 @@ func validPreparationIssueKind(kind PreparationIssueKind) bool {
 	default:
 		return false
 	}
+}
+
+func validPreparationIssueDecision(decision PreparationIssueCustomerDecision) bool {
+	return decision == PreparationIssueDecisionApproved || decision == PreparationIssueDecisionRejected
 }
 
 func normalizeCreatePreparationIssueInput(input CreatePreparationIssueInput) CreatePreparationIssueInput {
@@ -216,6 +249,9 @@ func CreatePreparationIssue(db *sql.DB, rawInput CreatePreparationIssueInput) (*
 		len(input.Note) < 3 || len(input.Note) > 500 || input.CorrelationID == "" {
 		return nil, ErrInvalid
 	}
+	if input.Kind != PreparationIssueOther && input.OrderItemID == "" {
+		return nil, fmt.Errorf("%w: order item is required for item preparation issues", ErrInvalid)
+	}
 	if input.Kind == PreparationIssueSubstitutionRequired &&
 		input.ReplacementProductID == "" && len(input.ReplacementProductName) < 2 {
 		return nil, fmt.Errorf("%w: replacement product is required", ErrInvalid)
@@ -291,8 +327,13 @@ func CreatePreparationIssue(db *sql.DB, rawInput CreatePreparationIssueInput) (*
 	issue, err := scanPreparationIssue(tx.QueryRow(`
 		INSERT INTO dsh_order_preparation_issues(
 			order_id,store_id,order_item_id,issue_kind,affected_quantity,note,
-			replacement_product_id,replacement_product_name,opened_by_actor_id,correlation_id)
-		VALUES($1::uuid,$2,NULLIF($3,'')::uuid,$4,$5,$6,NULLIF($7,''),NULLIF($8,''),$9,$10)
+			replacement_product_id,replacement_product_name,customer_decision,
+			opened_by_actor_id,correlation_id)
+		VALUES(
+			$1::uuid,$2,NULLIF($3,'')::uuid,$4,$5,$6,NULLIF($7,''),NULLIF($8,''),
+			CASE WHEN $4='substitution_required' THEN 'pending' ELSE 'not_required' END,
+			$9,$10
+		)
 		RETURNING `+preparationIssueColumns,
 		input.OrderID,
 		input.StoreID,
@@ -309,12 +350,14 @@ func CreatePreparationIssue(db *sql.DB, rawInput CreatePreparationIssueInput) (*
 		return nil, err
 	}
 	payload, _ := json.Marshal(map[string]any{
-		"issueId": issue.ID,
-		"orderId": issue.OrderID,
-		"storeId": issue.StoreID,
-		"kind": issue.Kind,
-		"orderItemId": issue.OrderItemID,
-		"affectedQuantity": issue.AffectedQuantity,
+		"issueId":           issue.ID,
+		"orderId":           issue.OrderID,
+		"storeId":           issue.StoreID,
+		"kind":              issue.Kind,
+		"orderItemId":       issue.OrderItemID,
+		"affectedQuantity":  issue.AffectedQuantity,
+		"customerDecision":  issue.CustomerDecision,
+		"replacementProduct": issue.ReplacementProductName,
 	})
 	if _, err := tx.Exec(`
 		INSERT INTO dsh_order_preparation_issue_events(
@@ -335,6 +378,118 @@ func CreatePreparationIssue(db *sql.DB, rawInput CreatePreparationIssueInput) (*
 		return nil, err
 	}
 	return issue, nil
+}
+
+func DecidePreparationIssue(db *sql.DB, input DecidePreparationIssueInput) (*PreparationIssue, error) {
+	input.IssueID = strings.TrimSpace(input.IssueID)
+	input.OrderID = strings.TrimSpace(input.OrderID)
+	input.ActorID = strings.TrimSpace(input.ActorID)
+	input.Note = strings.TrimSpace(input.Note)
+	input.CorrelationID = strings.TrimSpace(input.CorrelationID)
+	if db == nil || input.IssueID == "" || input.OrderID == "" || input.ActorID == "" ||
+		input.ExpectedVersion < 1 || !validPreparationIssueDecision(input.Decision) ||
+		len(input.Note) > 500 || input.CorrelationID == "" {
+		return nil, ErrInvalid
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	current, err := scanPreparationIssue(tx.QueryRow(`
+		SELECT `+preparationIssueColumns+`
+		FROM dsh_order_preparation_issues
+		WHERE id=$1::uuid AND order_id=$2::uuid
+		FOR UPDATE`, input.IssueID, input.OrderID))
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	var replayed bool
+	if err := tx.QueryRow(`
+		SELECT EXISTS(
+			SELECT 1 FROM dsh_order_preparation_issue_events
+			WHERE issue_id=$1::uuid AND correlation_id=$2
+		)`, input.IssueID, input.CorrelationID).Scan(&replayed); err != nil {
+		return nil, err
+	}
+	if replayed {
+		if err := tx.Commit(); err != nil {
+			return nil, err
+		}
+		return GetPreparationIssue(db, input.IssueID, input.OrderID)
+	}
+	if current.Kind != PreparationIssueSubstitutionRequired ||
+		current.Status != PreparationIssueOpen ||
+		current.CustomerDecision != PreparationIssueDecisionPending ||
+		current.Version != input.ExpectedVersion {
+		return nil, ErrConflict
+	}
+
+	decided, err := scanPreparationIssue(tx.QueryRow(`
+		UPDATE dsh_order_preparation_issues
+		SET customer_decision=$3,
+		    customer_decided_by_actor_id=$4,
+		    customer_decision_note=NULLIF($5,''),
+		    customer_decided_at=NOW(),
+		    version=version+1,
+		    updated_at=NOW()
+		WHERE id=$1::uuid AND order_id=$2::uuid
+		  AND issue_kind='substitution_required'
+		  AND status='open'
+		  AND customer_decision='pending'
+		  AND version=$6
+		RETURNING `+preparationIssueColumns,
+		input.IssueID,
+		input.OrderID,
+		string(input.Decision),
+		input.ActorID,
+		input.Note,
+		input.ExpectedVersion,
+	))
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrConflict
+	}
+	if err != nil {
+		return nil, err
+	}
+	payload, _ := json.Marshal(map[string]any{
+		"issueId":          decided.ID,
+		"orderId":          decided.OrderID,
+		"storeId":          decided.StoreID,
+		"customerDecision": decided.CustomerDecision,
+		"version":          decided.Version,
+	})
+	if _, err := tx.Exec(`
+		INSERT INTO dsh_order_preparation_issue_events(
+			issue_id,order_id,store_id,actor_id,event_type,from_status,to_status,note,payload,correlation_id)
+		VALUES($1::uuid,$2::uuid,$3,$4,'customer_decision','open','open',$5,$6::jsonb,$7)`,
+		decided.ID,
+		decided.OrderID,
+		decided.StoreID,
+		input.ActorID,
+		string(input.Decision),
+		string(payload),
+		input.CorrelationID,
+	); err != nil {
+		return nil, err
+	}
+	if _, err := tx.Exec(`
+		INSERT INTO dsh_operational_outbox_events(event_type,entity_type,entity_id,payload,correlation_id)
+		VALUES('order.preparation_issue_customer_decided','order',$1,$2::jsonb,$3)`,
+		input.OrderID, string(payload), input.CorrelationID,
+	); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return decided, nil
 }
 
 func ResolvePreparationIssue(db *sql.DB, input ResolvePreparationIssueInput) (*PreparationIssue, error) {
@@ -388,6 +543,10 @@ func ResolvePreparationIssue(db *sql.DB, input ResolvePreparationIssueInput) (*P
 	if current.Status != PreparationIssueOpen || current.Version != input.ExpectedVersion {
 		return nil, ErrConflict
 	}
+	if current.Kind == PreparationIssueSubstitutionRequired &&
+		current.CustomerDecision == PreparationIssueDecisionPending {
+		return nil, fmt.Errorf("%w: customer substitution decision is still pending", ErrConflict)
+	}
 
 	resolved, err := scanPreparationIssue(tx.QueryRow(`
 		UPDATE dsh_order_preparation_issues
@@ -414,18 +573,24 @@ func ResolvePreparationIssue(db *sql.DB, input ResolvePreparationIssueInput) (*P
 		return nil, err
 	}
 	payload, _ := json.Marshal(map[string]any{
-		"issueId": resolved.ID,
-		"orderId": resolved.OrderID,
-		"storeId": resolved.StoreID,
-		"status": resolved.Status,
-		"version": resolved.Version,
+		"issueId":          resolved.ID,
+		"orderId":          resolved.OrderID,
+		"storeId":          resolved.StoreID,
+		"status":           resolved.Status,
+		"customerDecision": resolved.CustomerDecision,
+		"version":          resolved.Version,
 	})
 	if _, err := tx.Exec(`
 		INSERT INTO dsh_order_preparation_issue_events(
 			issue_id,order_id,store_id,actor_id,event_type,from_status,to_status,note,payload,correlation_id)
 		VALUES($1::uuid,$2::uuid,$3,$4,'resolved','open','resolved',$5,$6::jsonb,$7)`,
-		resolved.ID, resolved.OrderID, resolved.StoreID, input.ActorID,
-		input.ResolutionNote, string(payload), input.CorrelationID,
+		resolved.ID,
+		resolved.OrderID,
+		resolved.StoreID,
+		input.ActorID,
+		input.ResolutionNote,
+		string(payload),
+		input.CorrelationID,
 	); err != nil {
 		return nil, err
 	}
