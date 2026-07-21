@@ -23,7 +23,9 @@ assert.match(migration, /STORE_PARTNER_REASSIGNMENT_FORBIDDEN/);
 assert.match(repository, /ErrIdempotencyConflict/);
 assert.match(repository, /ErrVersionConflict/);
 assert.match(repository, /correlation_id, idempotency_key, request_hash/);
-assert.match(rbacTest, /defaultEffect/);
+assert.match(rbacTest, /approve-own-evidence/);
+assert.match(rbacTest, /read-raw-payout-identifiers-from-dsh/);
+assert.match(rbacTest, /requireFieldOwnsPartner/);
 for (const field of policy.auditRequired) assert.equal(typeof field, "string");
 assert.doesNotMatch(routes + handlers, /password\s*=|secret\s*=|api[_-]?key\s*=/i);
 
