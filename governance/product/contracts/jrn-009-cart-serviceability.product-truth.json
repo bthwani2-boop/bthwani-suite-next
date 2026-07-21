@@ -2,10 +2,11 @@
   "schemaVersion": "2.0.0",
   "journeyId": "JRN-009",
   "journeyName": "العربة وقابلية الخدمة",
-  "status": "IMPLEMENTED_PENDING_VERIFICATION",
-  "decision": "FIX_REQUIRED",
-  "codeClosure": "IMPLEMENTED_PENDING_VERIFICATION",
+  "status": "IMPLEMENTED_PENDING_INDEPENDENT_REVIEW",
+  "decision": "READY_FOR_REVIEW",
+  "codeClosure": "COMPLETE",
   "sliceRegistry": "services/dsh/contracts/jrn-009-slice-verification-registry.json",
+  "closureEvidence": "governance/evidence/JRN-009_ALL_SLICES_CLOSURE.json",
   "truthOwners": {
     "cartAndSnapshot": "services/dsh/backend/internal/cart",
     "catalogAndAssortment": "services/dsh/backend/internal/centralcatalog + dsh_store_assortments",
@@ -80,7 +81,14 @@
     "Runtime proves owned address, serviceability, capacity, SLA, snapshot reconciliation, store isolation, operator readback, delete, and clear.",
     "The implementation commit publishes journeys/jrn-009/all-slices=success."
   ],
-  "technicalAcceptanceResult": "PENDING",
+  "technicalAcceptanceResult": "PASS",
+  "verification": {
+    "implementationCommit": "0c1e61105debbf1b813d332325574333fe710f26",
+    "workflowRunId": 29871172199,
+    "statusContext": "journeys/jrn-009/all-slices",
+    "statusState": "success",
+    "sameCommitEvidence": true
+  },
   "openCodeGaps": [],
   "independentReviewPending": [
     "product_owner_approval",
