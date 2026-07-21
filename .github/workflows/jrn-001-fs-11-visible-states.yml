@@ -1,5 +1,5 @@
 name: JRN-001 FS-11 Visible States
-# Verification generation 3: include exact assertion location in failure status.
+# Verification generation 4: publish compact assertion location.
 
 on:
   push:
@@ -98,8 +98,12 @@ jobs:
             ASSERT_LOCATION="$(grep -o -m1 -E 'jrn-001-fs-11-visible-states\.test\.mjs:[0-9]+:[0-9]+' /tmp/fs11.log 2>/dev/null || true)"
             [ -n "$ERROR_CODE" ] || ERROR_CODE='visible-state-check-failed'
             [ -n "$ERROR_FILE" ] || ERROR_FILE='unknown-file'
-            LOCATION_TOKEN="$(printf '%s' "${ASSERT_LOCATION:-no-location}" | tr ':.' '--')"
-            CONTEXT="journeys/jrn-001/fs-11/${ERROR_FILE}-${ERROR_CODE}-${LOCATION_TOKEN}"
+            if [ -n "$ASSERT_LOCATION" ]; then
+              LOCATION_TOKEN="$(printf '%s' "$ASSERT_LOCATION" | sed -E 's#^.*\.mjs:##' | tr ':' '-')"
+              CONTEXT="j1/fs11/assert/${LOCATION_TOKEN}"
+            else
+              CONTEXT="j1/fs11/${ERROR_FILE}-${ERROR_CODE}"
+            fi
             CONTEXT="$(printf '%s' "$CONTEXT" | tr -cd '[:alnum:]_./:-' | cut -c1-100)"
             DESCRIPTION="$(printf '%s' "${ASSERT_LOCATION:-} ${RAW_ERROR:-FS-11 verification failed}" | cut -c1-120)"
           fi
