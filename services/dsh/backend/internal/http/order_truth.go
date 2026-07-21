@@ -30,9 +30,15 @@ func writeOrderTruthReadFailure(w http.ResponseWriter, err error, internalMessag
 
 func (s *protectedStoreServer) handleCreateOrderTruth(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "client")
-	if !ok { return }
-	var body struct { CheckoutIntentID string `json:"checkoutIntentId"` }
-	if !decodeProtectedJSON(w, r, &body) { return }
+	if !ok {
+		return
+	}
+	var body struct {
+		CheckoutIntentID string `json:"checkoutIntentId"`
+	}
+	if !decodeProtectedJSON(w, r, &body) {
+		return
+	}
 	body.CheckoutIntentID = strings.TrimSpace(body.CheckoutIntentID)
 	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
 	correlationID := safeOrderCreateCorrelation(
@@ -52,10 +58,10 @@ func (s *protectedStoreServer) handleCreateOrderTruth(w http.ResponseWriter, r *
 	}
 	truth, replay, err := orders.CreateOrderTruth(s.db, orders.CreateOrderTruthInput{
 		CheckoutIntentID: body.CheckoutIntentID,
-		ClientID: actor.ID,
-		TenantID: actor.TenantID,
-		IdempotencyKey: idempotencyKey,
-		CorrelationID: correlationID,
+		ClientID:         actor.ID,
+		TenantID:         actor.TenantID,
+		IdempotencyKey:   idempotencyKey,
+		CorrelationID:    correlationID,
 	})
 	if errors.Is(err, orders.ErrInvalid) {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
@@ -63,28 +69,28 @@ func (s *protectedStoreServer) handleCreateOrderTruth(w http.ResponseWriter, r *
 	}
 	if errors.Is(err, orders.ErrIdempotencyConflict) {
 		_ = orders.RecordOrderTruthAudit(s.db, orders.OrderTruthAuditInput{
-			TenantID: actor.TenantID,
-			ActorID: actor.ID,
-			ActorRole: "client",
+			TenantID:         actor.TenantID,
+			ActorID:          actor.ID,
+			ActorRole:        "client",
 			CheckoutIntentID: body.CheckoutIntentID,
-			EventType: "order.idempotency_conflict",
-			ResultCode: "IDEMPOTENCY_KEY_REUSED",
-			CorrelationID: correlationID,
-			Metadata: map[string]any{"surface": "app-client", "route": "/dsh/client/order-truth", "status": 409},
+			EventType:        "order.idempotency_conflict",
+			ResultCode:       "IDEMPOTENCY_KEY_REUSED",
+			CorrelationID:    correlationID,
+			Metadata:         map[string]any{"surface": "app-client", "route": "/dsh/client/order-truth", "status": 409},
 		})
 		store.SendError(w, http.StatusConflict, "IDEMPOTENCY_KEY_REUSED", "Idempotency-Key was already used for another order request")
 		return
 	}
 	if errors.Is(err, orders.ErrConflict) {
 		_ = orders.RecordOrderTruthAudit(s.db, orders.OrderTruthAuditInput{
-			TenantID: actor.TenantID,
-			ActorID: actor.ID,
-			ActorRole: "client",
+			TenantID:         actor.TenantID,
+			ActorID:          actor.ID,
+			ActorRole:        "client",
 			CheckoutIntentID: body.CheckoutIntentID,
-			EventType: "order.create_conflict",
-			ResultCode: "ORDER_CREATE_CONFLICT",
-			CorrelationID: correlationID,
-			Metadata: map[string]any{"surface": "app-client", "route": "/dsh/client/order-truth", "status": 409},
+			EventType:        "order.create_conflict",
+			ResultCode:       "ORDER_CREATE_CONFLICT",
+			CorrelationID:    correlationID,
+			Metadata:         map[string]any{"surface": "app-client", "route": "/dsh/client/order-truth", "status": 409},
 		})
 		store.SendError(w, http.StatusConflict, "ORDER_CREATE_CONFLICT", err.Error())
 		return
@@ -102,19 +108,19 @@ func (s *protectedStoreServer) handleCreateOrderTruth(w http.ResponseWriter, r *
 		w.Header().Set("Idempotent-Replay", "true")
 	}
 	_ = orders.RecordOrderTruthAudit(s.db, orders.OrderTruthAuditInput{
-		TenantID: actor.TenantID,
-		ActorID: actor.ID,
-		ActorRole: "client",
-		OrderID: truth.ID,
+		TenantID:         actor.TenantID,
+		ActorID:          actor.ID,
+		ActorRole:        "client",
+		OrderID:          truth.ID,
 		CheckoutIntentID: body.CheckoutIntentID,
-		EventType: eventType,
-		ResultCode: http.StatusText(status),
-		CorrelationID: truth.CorrelationID,
+		EventType:        eventType,
+		ResultCode:       http.StatusText(status),
+		CorrelationID:    truth.CorrelationID,
 		Metadata: map[string]any{
 			"surface": "app-client",
-			"route": "/dsh/client/order-truth",
-			"status": status,
-			"replay": replay,
+			"route":   "/dsh/client/order-truth",
+			"status":  status,
+			"replay":  replay,
 			"version": truth.Version,
 		},
 	})
@@ -124,7 +130,9 @@ func (s *protectedStoreServer) handleCreateOrderTruth(w http.ResponseWriter, r *
 
 func (s *protectedStoreServer) handleListClientOrderTruth(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "client")
-	if !ok { return }
+	if !ok {
+		return
+	}
 	list, err := orders.ListClientOrderTruth(s.db, actor.TenantID, actor.ID, parseOrderTruthLimit(r))
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list governed orders")
@@ -135,24 +143,34 @@ func (s *protectedStoreServer) handleListClientOrderTruth(w http.ResponseWriter,
 
 func (s *protectedStoreServer) handleGetClientOrderTruth(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "client")
-	if !ok { return }
+	if !ok {
+		return
+	}
 	truth, err := orders.GetClientScopedOrderTruth(s.db, r.PathValue("orderId"), actor.TenantID, actor.ID)
-	if writeOrderTruthReadFailure(w, err, "failed to read governed order") { return }
+	if writeOrderTruthReadFailure(w, err, "failed to read governed order") {
+		return
+	}
 	orders.RedactOrderTruthForViewer(truth, "client")
 	store.SendJSON(w, http.StatusOK, map[string]any{"order": truth})
 }
 
 func (s *protectedStoreServer) handleListClientOrderTruthEvents(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "client")
-	if !ok { return }
+	if !ok {
+		return
+	}
 	truth, err := orders.GetClientScopedOrderTruth(s.db, r.PathValue("orderId"), actor.TenantID, actor.ID)
-	if writeOrderTruthReadFailure(w, err, "failed to read order timeline") { return }
+	if writeOrderTruthReadFailure(w, err, "failed to read order timeline") {
+		return
+	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"events": truth.StatusTimeline})
 }
 
 func (s *protectedStoreServer) handleListPartnerOrderTruth(w http.ResponseWriter, r *http.Request) {
 	actor, storeID, ok := s.partnerStore(w, r)
-	if !ok { return }
+	if !ok {
+		return
+	}
 	list, err := orders.ListPartnerOrderTruth(s.db, actor.TenantID, storeID, strings.TrimSpace(r.URL.Query().Get("status")), parseOrderTruthLimit(r))
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list store order truth")
@@ -163,16 +181,22 @@ func (s *protectedStoreServer) handleListPartnerOrderTruth(w http.ResponseWriter
 
 func (s *protectedStoreServer) handleGetPartnerOrderTruth(w http.ResponseWriter, r *http.Request) {
 	actor, storeID, ok := s.partnerStore(w, r)
-	if !ok { return }
+	if !ok {
+		return
+	}
 	truth, err := orders.GetPartnerScopedOrderTruth(s.db, r.PathValue("orderId"), actor.TenantID, storeID)
-	if writeOrderTruthReadFailure(w, err, "failed to read store order truth") { return }
+	if writeOrderTruthReadFailure(w, err, "failed to read store order truth") {
+		return
+	}
 	orders.RedactOrderTruthForViewer(truth, "partner")
 	store.SendJSON(w, http.StatusOK, map[string]any{"order": truth})
 }
 
 func (s *protectedStoreServer) handleListOperatorOrderTruth(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead, "operator")
-	if !ok { return }
+	if !ok {
+		return
+	}
 	list, err := orders.ListOperatorOrderTruth(s.db, actor.TenantID, strings.TrimSpace(r.URL.Query().Get("status")), parseOrderTruthLimit(r))
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list tenant order truth")
@@ -183,17 +207,25 @@ func (s *protectedStoreServer) handleListOperatorOrderTruth(w http.ResponseWrite
 
 func (s *protectedStoreServer) handleGetOperatorOrderTruth(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead, "operator")
-	if !ok { return }
+	if !ok {
+		return
+	}
 	truth, err := orders.GetOperatorScopedOrderTruth(s.db, r.PathValue("orderId"), actor.TenantID)
-	if writeOrderTruthReadFailure(w, err, "failed to read tenant order truth") { return }
+	if writeOrderTruthReadFailure(w, err, "failed to read tenant order truth") {
+		return
+	}
 	orders.RedactOrderTruthForViewer(truth, "operator")
 	store.SendJSON(w, http.StatusOK, map[string]any{"order": truth})
 }
 
 func parseOrderTruthLimit(r *http.Request) int {
 	value := strings.TrimSpace(r.URL.Query().Get("limit"))
-	if value == "" { return 50 }
+	if value == "" {
+		return 50
+	}
 	limit, err := strconv.Atoi(value)
-	if err != nil || limit <= 0 || limit > 200 { return 50 }
+	if err != nil || limit <= 0 || limit > 200 {
+		return 50
+	}
 	return limit
 }
