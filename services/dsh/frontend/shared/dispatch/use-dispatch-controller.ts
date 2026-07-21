@@ -142,7 +142,11 @@ export function useOperatorDispatchController() {
       setActionState(dispatchActionSuccessState(assignment));
       await load();
     } catch (error) {
-      setActionState(resolveDispatchActionError(classifyDispatchError(error), "assign"));
+      const classified = classifyDispatchError(error);
+      setActionState(resolveDispatchActionError(classified, "assign"));
+      if (classified.kind === "conflict" || classified.kind === "not_found") {
+        await load();
+      }
     }
   }, [load]);
 
