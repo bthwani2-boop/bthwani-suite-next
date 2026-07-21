@@ -119,8 +119,7 @@ function PartnerDeliveryActions({
   const { direction } = useDirection();
   const textAlign = direction === 'rtl' ? 'right' : 'left';
   const [selectedCourierId, setSelectedCourierId] = React.useState('');
-  const [proofReference, setProofReference] = React.useState('');
-  const { state, assign, pickup, depart, arrive, submitProof, refresh } =
+  const { state, assign, pickup, depart, arrive, captureAndSubmitProof, refresh } =
     usePartnerDeliveryActionsController(orderId);
   const { task, loaded, busy, message, isError, errorCode } = state;
   const displayMessage = isError
@@ -197,18 +196,13 @@ function PartnerDeliveryActions({
 
           {status === 'arrived' || status === 'proof_pending' ? (
             <Box gap={2}>
-              <TextField
-                label="مرجع إثبات التسليم"
-                placeholder="مفتاح صورة DAM أو مرجع OTP/توقيع موثق"
-                value={proofReference}
-                onChangeText={setProofReference}
-              />
+              <Text role="bodySm" tone="muted" style={{ textAlign }}>
+                التقط صورة إثبات حقيقية. يرفعها التطبيق إلى التخزين المحكوم ثم يغلق المهمة فقط بعد قبول DSH.
+              </Text>
               <Button
-                label={busy ? 'جارٍ تثبيت الإثبات…' : 'إغلاق المهمة بإثبات التسليم'}
-                disabled={busy || !proofReference.trim()}
-                onPress={() => void submitProof('photo', proofReference).then((ok) => {
-                  if (ok) setProofReference('');
-                })}
+                label={busy ? 'جارٍ رفع الإثبات وتثبيت التسليم…' : 'التقاط صورة وإغلاق المهمة'}
+                disabled={busy}
+                onPress={() => void captureAndSubmitProof()}
               />
             </Box>
           ) : null}
