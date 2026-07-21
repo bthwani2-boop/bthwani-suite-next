@@ -14,14 +14,14 @@ func TestGetPaymentSessionUsesServiceTokenAndParsesTruth(t *testing.T) {
 		if r.Method != http.MethodGet {
 			t.Fatalf("method=%s, want GET", r.Method)
 		}
-		if r.URL.Path != "/payment-sessions/session-1" {
+		if r.URL.Path != "/wlt/payment-sessions/session-1" {
 			t.Fatalf("path=%s", r.URL.Path)
 		}
-		if got := r.Header.Get("X-Service-Token"); got != "service-secret" {
-			t.Fatalf("service token=%q", got)
+		if got := r.Header.Get("Authorization"); got != "Bearer service-secret" {
+			t.Fatalf("authorization=%q", got)
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{
+		_, _ = w.Write([]byte(`{"paymentSession": {
 			"id":"session-1",
 			"idempotencyKey":"checkout-1",
 			"actorId":"client-1",
@@ -33,7 +33,7 @@ func TestGetPaymentSessionUsesServiceTokenAndParsesTruth(t *testing.T) {
 			"reference":"WLT-001",
 			"createdAt":"2026-07-21T01:00:00Z",
 			"updatedAt":"2026-07-21T01:02:03Z"
-		}`))
+		}}`))
 	}))
 	defer server.Close()
 
@@ -53,7 +53,7 @@ func TestGetPaymentSessionUsesServiceTokenAndParsesTruth(t *testing.T) {
 func TestGetPaymentSessionRejectsIncompleteResponse(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"id":"session-1"}`))
+		_, _ = w.Write([]byte(`{"paymentSession": {"id":"session-1"}}`))
 	}))
 	defer server.Close()
 
