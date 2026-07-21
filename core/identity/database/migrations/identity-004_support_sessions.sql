@@ -63,7 +63,7 @@ CREATE INDEX IF NOT EXISTS idx_identity_support_initiator
 CREATE TABLE IF NOT EXISTS identity_support_session_audit (
   id                  UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   support_request_id  TEXT        NOT NULL,
-  session_id          UUID        REFERENCES identity_sessions(id) ON DELETE SET NULL,
+  session_id          TEXT        REFERENCES identity_sessions(id) ON DELETE SET NULL,
   target_actor_id     TEXT        NOT NULL REFERENCES identity_actors(id) ON DELETE RESTRICT,
   initiator_actor_id  TEXT        NOT NULL REFERENCES identity_actors(id) ON DELETE RESTRICT,
   event_type          TEXT        NOT NULL CHECK (event_type IN ('issued','revoked','expired')),
