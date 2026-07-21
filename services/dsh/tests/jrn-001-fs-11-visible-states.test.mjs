@@ -40,6 +40,7 @@ assert.deepEqual(
 const discoveryStates = read("services/dsh/frontend/shared/home-discovery/home-discovery.states.ts");
 const discoveryShell = read("services/dsh/frontend/app-client/home-discovery/HomeDiscoveryShell.tsx");
 const storeDetail = read("services/dsh/frontend/app-client/store/StoreDetailScreen.tsx");
+const orderTruthController = read("services/dsh/frontend/shared/order-truth/use-order-truth-controller.ts");
 assert.match(discoveryStates, /kind: "service_unavailable"/);
 assert.match(discoveryShell, /state\.kind === "service_unavailable"/);
 assert.match(discoveryShell, /<OfflineState/);
@@ -47,6 +48,8 @@ assert.match(discoveryShell, /onRetry=\{onRetry\}/);
 assert.match(storeDetail, /storeCtrl\.state\.kind === "service_unavailable"/);
 assert.match(storeDetail, /actionLabel="إعادة المحاولة"/);
 assert.match(storeDetail, /onActionPress=\{handleRetry\}/);
+assert.match(orderTruthController, /failure\.kind === "conflict"/);
+assert.match(orderTruthController, /setState\(\{ kind: "error", message: failure\.message \}\)/);
 
 // app-field: typed failures survive the controller and drive real recovery UI.
 const fieldTypes = read("services/dsh/frontend/shared/field-onboarding/field-onboarding.types.ts");
@@ -73,13 +76,16 @@ assert.match(fieldScreen, /title="جارٍ حفظ المسودة"/);
 assert.match(fieldScreen, /title="جارٍ إرسال الملف للمراجعة"/);
 assert.doesNotMatch(fieldScreen, /\{state\.submitError \? \(/);
 
-// app-partner: self identity boundaries and partial readiness are explicit and recoverable.
+// app-partner: 403/404 normalize to the Product Truth error state, with Hub retry and partial readiness recovery.
+const partnerSelfController = read("services/dsh/frontend/shared/partner/use-partner-self-controller.tsx");
 const partnerHub = read("services/dsh/frontend/app-partner/account/PartnerHubScreen.tsx");
 const partnerStatus = read("services/dsh/frontend/app-partner/account/PartnerOnboardingStatusView.tsx");
-assert.match(partnerHub, /selfStatusState\.kind === "not_found"/);
-assert.match(partnerHub, /title="ملف الشريك غير موجود"/);
-assert.match(partnerHub, /selfStatusState\.kind === "forbidden"/);
-assert.match(partnerHub, /title="غير مصرح بعرض ملف الشريك"/);
+assert.match(partnerSelfController, /e\?\.status === 403/);
+assert.match(partnerSelfController, /e\?\.status === 404/);
+assert.match(partnerSelfController, /setStatusState\(\{ kind: "error", message: resolveMessage\(err\) \}\)/);
+assert.doesNotMatch(partnerSelfController, /setStatusState\(\{ kind: "not_found" \}\)/);
+assert.doesNotMatch(partnerSelfController, /setStatusState\(\{ kind: "forbidden" \}\)/);
+assert.match(partnerHub, /selfStatusState\.kind === "error"/);
 assert.match(partnerHub, /onActionPress=\{reloadSelfStatus\}/);
 assert.match(partnerStatus, /selfReadinessState\.kind === "error"/);
 assert.match(partnerStatus, /title="الحالة التشغيلية متاحة جزئيًا"/);
