@@ -138,6 +138,50 @@ for (const forbidden of [
   forbidText(checkout, forbidden, "CHECKOUT_FAKE_OR_LOCAL_SUCCESS_FORBIDDEN");
 }
 
+// JRN-005 address retries must retain the server idempotency identity after restart.
+const addressAttempt = "services/dsh/frontend/shared/client-address/client-address-create-attempt.ts";
+for (const marker of ["AsyncStorage", "fingerprintClientAddressDraft", "getOrCreateClientAddressAttempt", "clearClientAddressAttempt"]) {
+  requireText(addressAttempt, marker, `ADDRESS_PERSISTED_ATTEMPT_MISSING ${marker}`);
+}
+const addressController = "services/dsh/frontend/shared/client-address/use-client-address-controller.ts";
+for (const marker of ["getOrCreateClientAddressAttempt", "clearClientAddressAttempt", "attempt.context", "attempt.fingerprint"]) {
+  requireText(addressController, marker, `ADDRESS_CONTROLLER_RETRY_BINDING_MISSING ${marker}`);
+}
+forbidText(addressController, "createAttempt = useRef", "ADDRESS_MEMORY_ONLY_RETRY_FORBIDDEN");
+
+// JRN-010 checkout creation is idempotent from the client through DSH and WLT.
+const checkoutAttempt = "services/dsh/frontend/shared/checkout/checkout-create-attempt.ts";
+for (const marker of ["AsyncStorage", "fingerprintCheckoutInput", "getOrCreateCheckoutAttempt", "clearCheckoutAttempt"]) {
+  requireText(checkoutAttempt, marker, `CHECKOUT_PERSISTED_ATTEMPT_MISSING ${marker}`);
+}
+const checkoutApi = "services/dsh/frontend/shared/checkout/checkout.api.ts";
+for (const marker of ["DshCheckoutMutationContext", "idempotencyKey: mutation.idempotencyKey", "correlationId: mutation.correlationId"]) {
+  requireText(checkoutApi, marker, `CHECKOUT_HTTP_IDEMPOTENCY_BINDING_MISSING ${marker}`);
+}
+const checkoutController = "services/dsh/frontend/shared/checkout/use-checkout-controller.tsx";
+for (const marker of ["getOrCreateCheckoutAttempt", "createCheckoutIntent(input, attempt.context)", "clearCheckoutAttempt(attempt.fingerprint)"]) {
+  requireText(checkoutController, marker, `CHECKOUT_CONTROLLER_RETRY_BINDING_MISSING ${marker}`);
+}
+const checkoutMigration = "services/dsh/database/migrations/dsh-901_checkout_create_idempotency.sql";
+for (const marker of ["dsh_checkout_create_idempotency", "PRIMARY KEY (tenant_id, client_id, idempotency_key)", "request_fingerprint", "checkout_intent_id"]) {
+  requireText(checkoutMigration, marker, `CHECKOUT_IDEMPOTENCY_SCHEMA_MISSING ${marker}`);
+}
+const checkoutHandler = "services/dsh/backend/internal/http/checkout.go";
+for (const marker of [
+  'r.Header.Get("Idempotency-Key")',
+  "LockCreateIdempotencyTx",
+  "FindCreateIdempotencyTx",
+  "BindCreateIdempotencyTx",
+  "IDEMPOTENCY_KEY_REUSED",
+  "AttachWltPaymentSessionIdempotent",
+]) {
+  requireText(checkoutHandler, marker, `CHECKOUT_BACKEND_IDEMPOTENCY_MISSING ${marker}`);
+}
+const checkoutSession = "services/dsh/backend/internal/checkout/wlt_session_idempotency.go";
+for (const marker of ["AttachWltPaymentSessionIdempotent", "state = 'payment_pending' AND wlt_payment_session_id = $2", "ELSE version + 1"]) {
+  requireText(checkoutSession, marker, `CHECKOUT_WLT_REPLAY_SAFETY_MISSING ${marker}`);
+}
+
 // Captain unsupported transitions remain fail-closed until contracts exist.
 const captainPolicy = "services/dsh/frontend/shared/orders/dsh-order-lifecycle.policy.ts";
 for (const marker of ["locationPush: false", "failDelivery: false", "confirmReturn: false"]) {
@@ -176,7 +220,7 @@ for (const marker of ["bassam", "contents: read", "ci-result:", "if: always()"] 
   if (!ci.includes(marker)) violations.push({ file: ".github/workflows/ci.yml", line: 0, message: `CI_TOPOLOGY_MARKER_MISSING ${marker}` });
 }
 for (const forbidden of ["git push", "git commit", "gofmt -w", "contents: write"]) {
-  if (ci.includes(forbidden)) violations.push({ file: ".github/workflows/ci.yml", line: 0, message: `CI_SOURCE_MUTATION_FORBIDDEN ${forbidden}` });
+  if (ci.includes(forbidden)) violations.push({ file: ".github/workflows/ci.yml", line: 0, message: `CI_SOURCE_MUTATION_FORBIDDEN ${forbidden}`);
 }
 
 console.log("live-cross-journey-integrity-gate: scoped regression invariants only");
