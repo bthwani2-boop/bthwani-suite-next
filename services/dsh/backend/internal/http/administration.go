@@ -7,8 +7,6 @@ import (
 	"dsh-api/internal/store"
 )
 
-// Administration permission actions on the control-panel surface.
-// "operator" remains a valid fallback role during RBAC data migration.
 const (
 	AdministrationPermissionRead   = "administration.read"
 	AdministrationPermissionManage = "administration.manage"
@@ -16,7 +14,7 @@ const (
 
 // GET /dsh/operator/admin/roles
 func (s *protectedStoreServer) handleListRoles(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", AdministrationPermissionRead, "operator")
+	_, ok := s.requireAdministrationPermission(w, r, AdministrationPermissionRead)
 	if !ok {
 		return
 	}
@@ -30,7 +28,7 @@ func (s *protectedStoreServer) handleListRoles(w http.ResponseWriter, r *http.Re
 
 // GET /dsh/operator/admin/staff
 func (s *protectedStoreServer) handleListStaff(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", AdministrationPermissionRead, "operator")
+	_, ok := s.requireAdministrationPermission(w, r, AdministrationPermissionRead)
 	if !ok {
 		return
 	}
@@ -44,7 +42,7 @@ func (s *protectedStoreServer) handleListStaff(w http.ResponseWriter, r *http.Re
 
 // GET /dsh/operator/admin/partners
 func (s *protectedStoreServer) handleListPartnerActivations(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", AdministrationPermissionRead, "operator")
+	_, ok := s.requireAdministrationPermission(w, r, AdministrationPermissionRead)
 	if !ok {
 		return
 	}
@@ -58,7 +56,7 @@ func (s *protectedStoreServer) handleListPartnerActivations(w http.ResponseWrite
 
 // GET /dsh/operator/admin/captains
 func (s *protectedStoreServer) handleListCaptainCredentials(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", AdministrationPermissionRead, "operator")
+	_, ok := s.requireAdministrationPermission(w, r, AdministrationPermissionRead)
 	if !ok {
 		return
 	}
@@ -72,7 +70,7 @@ func (s *protectedStoreServer) handleListCaptainCredentials(w http.ResponseWrite
 
 // GET /dsh/operator/admin/audit
 func (s *protectedStoreServer) handleListAdminAudit(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", AdministrationPermissionRead, "operator")
+	_, ok := s.requireAdministrationPermission(w, r, AdministrationPermissionRead)
 	if !ok {
 		return
 	}
