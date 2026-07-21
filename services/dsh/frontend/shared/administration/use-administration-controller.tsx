@@ -5,7 +5,7 @@ import {
   fetchRoleDefinitionRequests,
   reviewRoleDefinitionRequest,
   fetchStaff,
-  requestStaffRoleAssignment,
+  requestStaffRoleChange,
   fetchPartnerActivations,
   fetchCaptainCredentials,
   fetchAdminAudit,
@@ -46,7 +46,7 @@ function messageFromError(err: unknown): string {
   const error = err as { status?: number; message?: string } | undefined;
   if (error?.status === 401) return "الجلسة منتهية";
   if (error?.status === 403) return "لا تملك صلاحية تنفيذ هذا الإجراء";
-  if (error?.status === 409) return "تغيّر طلب الاعتماد أو يوجد طلب مماثل معلق";
+  if (error?.status === 409) return "تغيّر طلب الاعتماد أو لم تعد حالة الدور صالحة للعملية";
   return error?.message || "تعذّر تحميل البيانات";
 }
 
@@ -92,12 +92,22 @@ export function useRoleDefinitionApprovalController(
 export function useStaffController(authKind: string) {
   const loader = useCallback(async (): Promise<DshStaffMember[]> => (await fetchStaff()).staff, []);
   const readModel = useReadModel(authKind, loader);
+  const requestChange = useCallback(async (
+    staffId: string,
+    roleId: string,
+    actionType: "staff_role_assignment" | "staff_role_revocation",
+    reason: string,
+  ) => {
+    const response = await requestStaffRoleChange(staffId, roleId, actionType, reason);
+    await readModel.reload();
+    return response.approval;
+  }, [readModel]);
   return {
     ...readModel,
-    requestRoleAssignment: async (staffId: string, roleId: string, reason: string) => {
-      const response = await requestStaffRoleAssignment(staffId, roleId, reason);
-      return response.approval;
-    },
+    requestRoleAssignment: (staffId: string, roleId: string, reason: string) =>
+      requestChange(staffId, roleId, "staff_role_assignment", reason),
+    requestRoleRevocation: (staffId: string, roleId: string, reason: string) =>
+      requestChange(staffId, roleId, "staff_role_revocation", reason),
   };
 }
 
