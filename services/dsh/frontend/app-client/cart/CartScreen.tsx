@@ -27,17 +27,17 @@ import { PaymentDecisionSection } from "./PaymentDecisionSection";
 type Props = {
   readonly storeId: string;
   readonly selectedAddress: DshClientAddress | null;
-  readonly authKind?: "authenticated" | "unauthenticated";
-  readonly onProceedToCheckout?: (
+  readonly authKind?: "authenticated" | "unauthenticated" | undefined;
+  readonly onProceedToCheckout?: ((
     cart: DshCart,
     deliveryAddressId: string,
     note: string,
     paymentMethod: DshPaymentMethod,
     couponCode: string,
-  ) => void;
-  readonly onManageAddresses?: () => void;
-  readonly onBrowseCatalog?: () => void;
-  readonly onBack?: () => void;
+  ) => void) | undefined;
+  readonly onManageAddresses?: (() => void) | undefined;
+  readonly onBrowseCatalog?: (() => void) | undefined;
+  readonly onBack?: (() => void) | undefined;
 };
 
 function fulfillmentLabel(mode: DshFulfillmentMode): string {
