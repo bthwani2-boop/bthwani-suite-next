@@ -26,7 +26,8 @@ function resolveMessage(err: unknown): string {
 }
 
 type PreferenceState =
-  | { readonly kind: "idle" | "loading" }
+  | { readonly kind: "idle" }
+  | { readonly kind: "loading" }
   | { readonly kind: "success"; readonly preferences: readonly DshNotificationPreference[] }
   | { readonly kind: "error"; readonly message: string };
 
