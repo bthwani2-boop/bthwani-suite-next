@@ -317,13 +317,26 @@ components:
     DeliveryStatus:
       type: string
       enum: [assigned, driver_assigned, driver_arrived_store, picked_up, arrived_customer, returning_to_store, return_arrived_store, returned_to_store, delivered, cancelled]
+    DispatchOfferControls:
+      type: object
+      additionalProperties: false
+      required: [captainId, serviceAreaCode, idempotencyKey]
+      properties:
+        tenantId: { type: string, default: default }
+        captainId: { type: string, minLength: 1 }
+        serviceAreaCode: { type: string, minLength: 1 }
+        idempotencyKey: { type: string, minLength: 16, maxLength: 200 }
+        priority: { type: integer, minimum: 0, maximum: 100, default: 0 }
+        distanceMeters: { type: integer, minimum: 0 }
+        offerReason: { type: string, maxLength: 500 }
+        responseTimeoutSeconds: { type: integer, minimum: 30, maximum: 600, default: 90 }
     GovernedDispatchAssignment:
       type: object
-      required: [id, orderId, captainId, assignedBy, status, responseDeadlineAt, createdAt, updatedAt, tenantId, serviceAreaCode, priority, version, delivery]
+      required: [id, captainId, assignedBy, status, responseDeadlineAt, createdAt, updatedAt, tenantId, serviceAreaCode, priority, version, delivery]
       properties:
         id: { type: string, format: uuid }
-        orderId: { type: string, format: uuid }
-        specialRequestId: { type: string, format: uuid }
+        orderId: { type: string }
+        specialRequestId: { type: string }
         requestType: { type: string }
         captainId: { type: string }
         assignedBy: { type: string }
@@ -351,8 +364,8 @@ components:
           properties:
             id: { type: string, format: uuid }
             assignmentId: { type: string, format: uuid }
-            orderId: { type: string, format: uuid }
-            specialRequestId: { type: string, format: uuid }
+            orderId: { type: string }
+            specialRequestId: { type: string }
             captainId: { type: string }
             status: { $ref: '#/components/schemas/DeliveryStatus' }
             podMethod: { type: string }
@@ -367,22 +380,15 @@ components:
         assignment: { $ref: '#/components/schemas/GovernedDispatchAssignment' }
         replayed: { type: boolean, default: false }
     CreateGovernedDispatchAssignmentRequest:
-      type: object
-      additionalProperties: false
-      required: [orderId, captainId, serviceAreaCode, idempotencyKey]
-      properties:
-        orderId: { type: string, format: uuid }
-        tenantId: { type: string, default: default }
-        captainId: { type: string, minLength: 1 }
-        serviceAreaCode: { type: string, minLength: 1 }
-        idempotencyKey: { type: string, minLength: 16, maxLength: 200 }
-        priority: { type: integer, minimum: 0, maximum: 100, default: 0 }
-        distanceMeters: { type: integer, minimum: 0 }
-        offerReason: { type: string, maxLength: 500 }
-        responseTimeoutSeconds: { type: integer, minimum: 30, maximum: 600, default: 90 }
+      allOf:
+        - $ref: '#/components/schemas/DispatchOfferControls'
+        - type: object
+          required: [orderId]
+          properties:
+            orderId: { type: string, format: uuid }
     ReassignDispatchAssignmentRequest:
       allOf:
-        - $ref: '#/components/schemas/CreateGovernedDispatchAssignmentRequest'
+        - $ref: '#/components/schemas/DispatchOfferControls'
         - type: object
           required: [reason]
           properties:
