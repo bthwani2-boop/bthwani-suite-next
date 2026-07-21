@@ -52,7 +52,7 @@ func writeAdministrationApprovalError(w http.ResponseWriter, err error) {
 
 // POST /dsh/operator/admin/staff/{staffId}/roles
 func (s *protectedStoreServer) handleRequestStaffRoleAssignment(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", AdministrationPermissionManage, "operator")
+	actor, ok := s.requireAdministrationPermission(w, r, AdministrationPermissionManage)
 	if !ok {
 		return
 	}
@@ -75,7 +75,7 @@ func (s *protectedStoreServer) handleRequestStaffRoleAssignment(w http.ResponseW
 
 // GET /dsh/operator/admin/approvals?status=pending
 func (s *protectedStoreServer) handleListRoleAssignmentApprovals(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", AdministrationPermissionRead, "operator")
+	_, ok := s.requireAdministrationPermission(w, r, AdministrationPermissionRead)
 	if !ok {
 		return
 	}
@@ -89,7 +89,7 @@ func (s *protectedStoreServer) handleListRoleAssignmentApprovals(w http.Response
 
 // POST /dsh/operator/admin/approvals/{approvalId}/review
 func (s *protectedStoreServer) handleReviewStaffRoleAssignment(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", AdministrationPermissionApprove, "operator")
+	actor, ok := s.requireAdministrationPermission(w, r, AdministrationPermissionApprove)
 	if !ok {
 		return
 	}
