@@ -1,5 +1,5 @@
 name: JRN 020-025 boundary diagnostic
-# Rerun after safe exported facade codemod across all DSH surfaces.
+# Rerun after operations screens were normalized through the shared operations facade.
 
 on:
   push:
