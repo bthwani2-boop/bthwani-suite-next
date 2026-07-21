@@ -2,9 +2,14 @@
   "journeyId": "JRN-009",
   "journeyName": "cart-serviceability",
   "branch": "sambassam",
-  "status": "IMPLEMENTED_PENDING_VERIFICATION",
-  "codeClosure": "IMPLEMENTED_PENDING_VERIFICATION",
-  "implementationCommit": "PENDING_SAME_COMMIT_VERIFICATION",
+  "status": "READY_FOR_REVIEW",
+  "codeClosure": "COMPLETE",
+  "implementationCommit": "0c1e61105debbf1b813d332325574333fe710f26",
+  "closureEvidence": "governance/evidence/JRN-009_ALL_SLICES_CLOSURE.json",
+  "workflowRunId": 29871172199,
+  "statusContext": "journeys/jrn-009/all-slices",
+  "statusState": "success",
+  "sameCommitEvidence": true,
   "openCodeGaps": [],
   "independentReviewRequired": [
     "product_owner_approval",
@@ -16,56 +21,56 @@
     {
       "sliceId": "JRN-009-S01",
       "name": "server-cart-load-and-real-state",
-      "status": "IMPLEMENTED_PENDING_VERIFICATION",
+      "status": "CLOSED_WITH_EVIDENCE",
       "owners": ["services/dsh/backend/internal/cart", "services/dsh/frontend/shared/cart", "services/dsh/frontend/app-client/cart"],
       "invariants": ["server-persisted-cart", "read-after-write", "loading-empty-offline-forbidden-error-states"]
     },
     {
       "sliceId": "JRN-009-S02",
       "name": "owned-add-quantity-remove-and-clear",
-      "status": "IMPLEMENTED_PENDING_VERIFICATION",
+      "status": "CLOSED_WITH_EVIDENCE",
       "owners": ["services/dsh/backend/internal/cart", "services/dsh/backend/internal/http", "services/dsh/frontend/shared/cart"],
       "invariants": ["actor-owned-mutations", "explicit-clear", "clear-abandons-cart", "mutation-readback"]
     },
     {
       "sliceId": "JRN-009-S03",
       "name": "product-price-and-assortment-snapshot",
-      "status": "IMPLEMENTED_PENDING_VERIFICATION",
+      "status": "CLOSED_WITH_EVIDENCE",
       "owners": ["services/dsh/backend/internal/cart", "services/dsh/database"],
       "invariants": ["server-product-name", "server-unit-price", "master-product-snapshot", "store-assortment-snapshot"]
     },
     {
       "sliceId": "JRN-009-S04",
       "name": "store-address-zone-and-fulfillment-validation",
-      "status": "IMPLEMENTED_PENDING_VERIFICATION",
+      "status": "CLOSED_WITH_EVIDENCE",
       "owners": ["services/dsh/backend/internal/clientaddress", "services/dsh/backend/internal/cart", "services/dsh/backend/internal/http"],
       "invariants": ["owned-address-required", "no-client-location-truth", "store-state-checked", "zone-checked", "requested-mode-checked"]
     },
     {
       "sliceId": "JRN-009-S05",
       "name": "coverage-capacity-readiness-and-sla",
-      "status": "IMPLEMENTED_PENDING_VERIFICATION",
+      "status": "CLOSED_WITH_EVIDENCE",
       "owners": ["services/dsh/backend/internal/cart", "services/dsh/database", "services/dsh/frontend/app-client/cart"],
       "invariants": ["coverage-evaluated", "capacity-visible", "throttle-blocks", "exhaustion-blocks", "sla-visible", "missing-policy-explicit"]
     },
     {
       "sliceId": "JRN-009-S06",
       "name": "unavailability-price-and-assortment-reconciliation",
-      "status": "IMPLEMENTED_PENDING_VERIFICATION",
+      "status": "CLOSED_WITH_EVIDENCE",
       "owners": ["services/dsh/backend/internal/cart", "services/dsh/frontend/shared/cart", "services/dsh/frontend/app-client/cart"],
       "invariants": ["snapshot-immutable", "price-change-blocks", "explicit-price-refresh", "unavailable-blocks", "assortment-change-blocks", "recovery-action-visible"]
     },
     {
       "sliceId": "JRN-009-S07",
       "name": "single-active-store-cart",
-      "status": "IMPLEMENTED_PENDING_VERIFICATION",
+      "status": "CLOSED_WITH_EVIDENCE",
       "owners": ["services/dsh/backend/internal/cart", "services/dsh/database"],
       "invariants": ["one-active-cart-per-client", "database-partial-unique-index", "concurrency-lock", "explicit-store-switch"]
     },
     {
       "sliceId": "JRN-009-S08",
       "name": "operator-read-only-cart-observability",
-      "status": "IMPLEMENTED_PENDING_VERIFICATION",
+      "status": "CLOSED_WITH_EVIDENCE",
       "owners": ["services/dsh/backend/internal/cart", "services/dsh/frontend/control-panel/operations"],
       "invariants": ["actual-items-hydrated", "same-reconciliation-state", "operations-permission-required", "no-financial-mutation"]
     }
