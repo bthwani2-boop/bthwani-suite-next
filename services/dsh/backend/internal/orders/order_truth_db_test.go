@@ -48,13 +48,13 @@ func seedOrderTruthCheckout(t *testing.T, db *sql.DB, tenantID, clientID, storeI
 	if err := db.QueryRowContext(ctx, `
 		INSERT INTO dsh_checkout_intents (
 			tenant_id, client_id, cart_id, store_id, state, fulfillment_mode,
-			payment_method, wlt_payment_session_id, delivery_address_id, delivery_address,
+			payment_method, wlt_payment_session_id, delivery_address,
 			subtotal_minor_units, delivery_fee_minor_units, discount_minor_units,
 			total_minor_units, currency, pricing_snapshot_hash
 		)
 		VALUES (
 			$1, $2, $3::uuid, $4, 'payment_pending', 'bthwani_delivery',
-			'cod', $5, $6, 'صنعاء - عنوان اختبار محكوم',
+			'cod', $5, 'صنعاء - عنوان اختبار محكوم',
 			250000, 5000, 0, 255000, 'YER', repeat('c', 64)
 		)
 		RETURNING id::text`,
@@ -63,7 +63,6 @@ func seedOrderTruthCheckout(t *testing.T, db *sql.DB, tenantID, clientID, storeI
 		cartID,
 		storeID,
 		"wlt-jrn011-"+suffix,
-		"address-jrn011-"+suffix,
 	).Scan(&checkoutID); err != nil {
 		t.Fatalf("seed checkout intent: %v", err)
 	}
