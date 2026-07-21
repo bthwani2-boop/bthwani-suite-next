@@ -144,6 +144,7 @@ function AuthenticatedCaptainSurface({
           setRoute={actions.setRoute}
           activeAssignmentId={state.activeAssignmentId}
           activeOrderId={state.activeOrderId}
+          activeDeliveryStatus={state.activeDeliveryStatus}
           activeOrderDisplayId={derived.activeOrderDisplayId}
           activeSummary={state.activeAssignmentId ? derived.activeSummary : null}
           inboxItems={state.inboxItems}
