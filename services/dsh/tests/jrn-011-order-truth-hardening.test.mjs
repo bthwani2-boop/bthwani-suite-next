@@ -15,7 +15,9 @@ test("JRN-011 rejects malformed identifiers before PostgreSQL UUID casts", async
   assert.match(queries, /uuid\.Parse\(strings\.TrimSpace\(value\)\)/);
   assert.match(queries, /GetOperatorScopedOrderTruth/);
   assert.match(handlers, /INVALID_CHECKOUT_INTENT_ID/);
-  assert.match(handlers, /INVALID_ORDER_ID/);
+  assert.match(handlers, /errors\.Is\(err, orders\.ErrInvalid\) \|\| errors\.Is\(err, orders\.ErrNotFound\)/);
+  assert.match(handlers, /http\.StatusNotFound, "NOT_FOUND"/);
+  assert.doesNotMatch(handlers, /INVALID_ORDER_ID/);
   assert.match(handlers, /orders\.GetOperatorScopedOrderTruth/);
 });
 
