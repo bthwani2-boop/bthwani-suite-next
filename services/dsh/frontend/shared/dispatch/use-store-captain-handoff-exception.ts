@@ -8,24 +8,19 @@ import {
 
 export type StoreCaptainHandoffExceptionActor = "partner" | "captain";
 
+type StoreCaptainHandoffExceptionDraft = {
+  readonly entityId: string;
+  readonly reasonCode: DshStoreCaptainHandoffExceptionReason;
+  readonly note: string;
+  readonly correlationId: string;
+};
+
 export type StoreCaptainHandoffExceptionState =
   | { readonly kind: "idle" }
-  | {
-      readonly kind: "editing";
-      readonly entityId: string;
-      readonly reasonCode: DshStoreCaptainHandoffExceptionReason;
-      readonly note: string;
-      readonly correlationId: string;
-    }
-  | {
-      readonly kind: "submitting";
-      readonly entityId: string;
-      readonly reasonCode: DshStoreCaptainHandoffExceptionReason;
-      readonly note: string;
-      readonly correlationId: string;
-    }
+  | ({ readonly kind: "editing" } & StoreCaptainHandoffExceptionDraft)
+  | ({ readonly kind: "submitting" } & StoreCaptainHandoffExceptionDraft)
   | { readonly kind: "success"; readonly entityId: string }
-  | { readonly kind: "error"; readonly entityId: string; readonly message: string };
+  | ({ readonly kind: "error"; readonly message: string } & StoreCaptainHandoffExceptionDraft);
 
 function exceptionMessage(error: unknown): string {
   const classified = classifyDispatchError(error);
@@ -36,6 +31,12 @@ function exceptionMessage(error: unknown): string {
     return classified.message ?? "توجد معالجة تشغيلية مفتوحة لهذا الطلب.";
   }
   return classified.message ?? "تعذر تسجيل استثناء العهدة.";
+}
+
+function isEditableState(
+  state: StoreCaptainHandoffExceptionState,
+): state is Extract<StoreCaptainHandoffExceptionState, { kind: "editing" | "error" }> {
+  return state.kind === "editing" || state.kind === "error";
 }
 
 export function useStoreCaptainHandoffException(
@@ -56,24 +57,29 @@ export function useStoreCaptainHandoffException(
   }, [actor]);
 
   const setReasonCode = React.useCallback((reasonCode: DshStoreCaptainHandoffExceptionReason) => {
-    setState((current) => current.kind === "editing" ? { ...current, reasonCode } : current);
+    setState((current) => isEditableState(current)
+      ? { ...current, kind: "editing", reasonCode }
+      : current);
   }, []);
 
   const setNote = React.useCallback((note: string) => {
-    setState((current) => current.kind === "editing" ? { ...current, note } : current);
+    setState((current) => isEditableState(current)
+      ? { ...current, kind: "editing", note }
+      : current);
   }, []);
 
   const cancel = React.useCallback(() => setState({ kind: "idle" }), []);
 
   const submit = React.useCallback(async (): Promise<boolean> => {
-    if (state.kind !== "editing") return false;
+    if (!isEditableState(state)) return false;
     const note = state.note.trim();
+    const draft = { ...state, note };
     if (note.length < 5) {
-      setState({ kind: "error", entityId: state.entityId, message: "اكتب وصفًا واضحًا من خمسة أحرف على الأقل." });
+      setState({ ...draft, kind: "error", message: "اكتب وصفًا واضحًا من خمسة أحرف على الأقل." });
       return false;
     }
 
-    const command = { ...state, kind: "submitting" as const, note };
+    const command = { ...draft, kind: "submitting" as const };
     setState(command);
     try {
       const input = {
@@ -90,7 +96,7 @@ export function useStoreCaptainHandoffException(
       await refresh();
       return true;
     } catch (error) {
-      setState({ kind: "error", entityId: command.entityId, message: exceptionMessage(error) });
+      setState({ ...command, kind: "error", message: exceptionMessage(error) });
       return false;
     }
   }, [actor, refresh, state]);
