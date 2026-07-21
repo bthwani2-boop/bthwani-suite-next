@@ -1,0 +1,16 @@
+overlay: 1.0.0
+info:
+  title: DSH home discovery audience targeting overlay
+  version: 1.0.0
+actions:
+  - target: $.paths['/dsh/home-discovery'].get.parameters
+    description: Add the audience dimension consumed by the JRN-007 targeted home runtime.
+    update:
+      - name: audienceSegment
+        in: query
+        required: false
+        description: Resolved client audience used with city and service area targeting.
+        schema:
+          type: string
+          enum: [guest, authenticated]
+          default: guest
