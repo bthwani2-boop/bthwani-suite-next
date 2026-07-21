@@ -10,6 +10,7 @@ on:
       - services/dsh/backend/internal/http/partner_lifecycle_routes.go
       - services/dsh/backend/internal/partner/**
       - services/dsh/backend/internal/partnerwltoutbox/**
+      - services/dsh/backend/internal/store/**
       - services/dsh/database/migrations/dsh-015_partner_lifecycle.sql
       - services/dsh/database/migrations/dsh-098_partner_onboarding_integrity.sql
       - services/dsh/frontend/shared/partner/**
@@ -62,7 +63,7 @@ jobs:
       - name: Verify JRN-001 backend packages
         working-directory: services/dsh/backend
         run: |
-          go test ./internal/partner ./internal/partnerwltoutbox -count=1
+          go test ./internal/partner ./internal/partnerwltoutbox ./internal/store -count=1
           go test ./internal/http -run 'TestFirstFiveJourneysExposeGovernedDSHRoutes|TestPartnerSelfRoutesRegisterOnceOnApplicationRouter' -count=1
       - name: Typecheck changed JRN-001 field surface
         run: pnpm --dir apps/app-field/runtime typecheck
