@@ -1,0 +1,79 @@
+name: JRN-010 Resume Sequential Checkout Closure
+
+on:
+  push:
+    branches: [sambassam]
+    paths:
+      - .github/workflows/jrn-010-resume-sequential-closure.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: jrn-010-sequential-closure-sambassam
+  cancel-in-progress: false
+
+jobs:
+  execute:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: sambassam
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: services/dsh/backend/go.sum
+
+      - name: Recover and repair sequential executor
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import base64
+          import gzip
+          import re
+
+          source = Path('.github/workflows/jrn-010-sequential-closure.yml').read_text(encoding='utf-8')
+          match = re.search(r"printf '%s' '([^']+)' \| base64 -d \| gzip -d", source)
+          if not match:
+              raise SystemExit('encoded JRN-010 executor was not found')
+          text = gzip.decompress(base64.b64decode(match.group(1))).decode('utf-8')
+
+          # Repair the escaped source emitted by the first launcher.
+          text = text.replace("r'''", "'''")
+          text = text.replace('\\\\', '\\')
+
+          # Skip the already committed S01-S03 truth-gate commits.
+          start = text.index("write(guard_path, guard_header + '''", text.index('guard_header ='))
+          end = text.index('replace_once(wlt_client_path', start)
+          block = text[start:end]
+          wrapped = 'if not (ROOT / guard_path).exists() or "MethodOfficialWallet" not in read(guard_path):\n'
+          wrapped += ''.join(('    ' + line) if line.strip() else line for line in block.splitlines(True))
+          text = text[:start] + wrapped + text[end:]
+
+          # Ensure Go package tests execute from the DSH backend module.
+          text = re.sub(
+              r'def go_test\(\*packages: str\) -> None:\n(?:    .*\n)+?\n\ndef node_test',
+              'def go_test(*packages: str) -> None:\n    subprocess.run(["go", "test", *packages], cwd=ROOT / "services/dsh/backend", check=True)\n\n\ndef node_test',
+              text,
+              count=1,
+          )
+
+          # Delete both tracked launch workflows at final cleanup; the decoded
+          # script itself is untracked and must not be passed as a git pathspec.
+          cleanup_start = text.index('for transient in ["tools/scripts/jrn-010-sequential-closure.py"')
+          cleanup = '''for workflow in [\n    ".github/workflows/jrn-010-sequential-closure.yml",\n    ".github/workflows/jrn-010-resume-sequential-closure.yml",\n]:\n    path = ROOT / workflow\n    if path.exists():\n        path.unlink()\ncommit_and_push(\n    "[JRN-010][CLEANUP] remove transient sequential executors",\n    [\n        ".github/workflows/jrn-010-sequential-closure.yml",\n        ".github/workflows/jrn-010-resume-sequential-closure.yml",\n    ],\n)\n'''
+          text = text[:cleanup_start] + cleanup
+
+          target = Path('tools/scripts/jrn-010-sequential-closure.py')
+          target.parent.mkdir(parents=True, exist_ok=True)
+          target.write_text(text, encoding='utf-8')
+          compile(text, str(target), 'exec')
+          PY
+
+      - name: Execute JRN-010 slices 4-9 sequentially
+        run: python tools/scripts/jrn-010-sequential-closure.py
