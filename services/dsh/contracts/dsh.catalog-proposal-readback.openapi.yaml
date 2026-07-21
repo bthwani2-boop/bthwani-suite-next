@@ -11,7 +11,7 @@ x-bthwani-owner: services/dsh
 x-bthwani-parent-contract: contracts/dsh.catalog.openapi.yaml
 x-bthwani-contract-role: executable-fragment
 x-bthwani-contract-state: CONTRACT_ACTIVE
-x-bthwani-generation: DISABLED
+x-bthwani-client-generation: DISABLED
 x-bthwani-client-binding: MANUAL_TYPED_ADAPTER
 x-bthwani-adapter-owner: frontend/shared/catalog/product-proposal-readback.api.ts
 x-bthwani-runtime-dependency: true
