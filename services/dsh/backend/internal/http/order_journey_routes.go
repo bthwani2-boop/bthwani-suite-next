@@ -31,6 +31,10 @@ func RegisterOrderJourneyRoutes(
 	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/order-preparation-policy", protected.handleGetStorePreparationPolicy)
 	mux.HandleFunc("PUT /dsh/partner/stores/{storeId}/order-preparation-policy", protected.handleUpdateStorePreparationPolicy)
 
+	mux.HandleFunc("POST /dsh/operator/order-preparation/alerts/refresh", protected.handleRefreshPreparationAlerts)
+	mux.HandleFunc("GET /dsh/operator/order-preparation/alerts", protected.handleListPreparationAlerts)
+	mux.HandleFunc("POST /dsh/operator/order-preparation/alerts/{alertId}/acknowledge", protected.handleAcknowledgePreparationAlert)
+
 	mux.HandleFunc("POST /dsh/captain/dispatch/assignments/{assignmentId}/handoff-exceptions", protected.handleReportCaptainStoreCaptainHandoffException)
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/captain-handoff/exceptions", protected.handleReportPartnerStoreCaptainHandoffException)
 }
