@@ -8,10 +8,26 @@ import (
 
 	"dsh-api/internal/clientaddress"
 	"dsh-api/internal/store"
+	"github.com/lib/pq"
 )
+
+func isAddressServiceAreaConstraint(err error) bool {
+	var postgresError *pq.Error
+	if !errors.As(err, &postgresError) || postgresError.Code != "23514" {
+		return false
+	}
+	switch strings.TrimSpace(postgresError.Message) {
+	case "DSH_ADDRESS_COORDINATES_REQUIRED", "DSH_ADDRESS_SERVICE_AREA_UNVERIFIED":
+		return true
+	default:
+		return false
+	}
+}
 
 func addressError(w http.ResponseWriter, err error) {
 	switch {
+	case errors.Is(err, clientaddress.ErrServiceAreaUnverified), isAddressServiceAreaConstraint(err):
+		store.SendError(w, http.StatusUnprocessableEntity, "ADDRESS_SERVICE_AREA_UNVERIFIED", "address coordinates must resolve to the supplied active DSH service area")
 	case errors.Is(err, clientaddress.ErrInvalid):
 		store.SendError(w, http.StatusBadRequest, "INVALID_ADDRESS", "address input is invalid")
 	case errors.Is(err, clientaddress.ErrNotFound):
@@ -52,6 +68,26 @@ func (s *protectedStoreServer) handleCreateClientAddress(w http.ResponseWriter, 
 	if !decodeProtectedJSON(w, r, &input) {
 		return
 	}
+
+	replay, found, err := clientaddress.FindCreateReplay(
+		r.Context(),
+		s.db,
+		actor.ID,
+		idempotencyKey,
+	)
+	if err != nil {
+		addressError(w, err)
+		return
+	}
+	if found {
+		store.SendJSON(w, http.StatusOK, map[string]any{"address": replay})
+		return
+	}
+	if err := clientaddress.ValidateServiceArea(r.Context(), s.db, input); err != nil {
+		addressError(w, err)
+		return
+	}
+
 	address, created, err := clientaddress.Create(r.Context(), s.db, actor.ID, input, clientaddress.MutationContext{
 		IdempotencyKey: idempotencyKey,
 		CorrelationID:  strings.TrimSpace(r.Header.Get("X-Correlation-ID")),
@@ -74,6 +110,10 @@ func (s *protectedStoreServer) handleUpdateClientAddress(w http.ResponseWriter, 
 	}
 	var input clientaddress.UpdateInput
 	if !decodeProtectedJSON(w, r, &input) {
+		return
+	}
+	if err := clientaddress.ValidateServiceArea(r.Context(), s.db, input.CreateInput); err != nil {
+		addressError(w, err)
 		return
 	}
 	address, err := clientaddress.Update(
