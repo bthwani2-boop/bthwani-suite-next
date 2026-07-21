@@ -101,5 +101,11 @@ export {
   mapPartnerOnboardingFailure,
   assertPartnerReadback,
 } from "./partner-onboarding.runtime";
+export type { PartnerOnboardingVisibleState } from "./partner-onboarding.visible-state";
+export {
+  PARTNER_ONBOARDING_VISIBLE_STATE_KINDS,
+  resolvePartnerOnboardingFailureState,
+  resolvePartnerOnboardingVisibleState,
+} from "./partner-onboarding.visible-state";
 export * from "./catalog-approval.api";
 export * from "./partner-fleet.api";
