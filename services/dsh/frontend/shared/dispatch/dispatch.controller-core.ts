@@ -53,8 +53,17 @@ export function resolveTrackingError(error: { readonly kind: DispatchErrorKind }
   return trackingErrorState("تعذر تحميل تتبع الطلب.");
 }
 
-export function resolveDispatchActionError(error: { readonly kind: DispatchErrorKind }, action: "assign" | "accept" | "decline" | "status" | "pod") {
-  if (error.kind === "conflict") return { kind: "error" as const, message: "ألغيت المهمة أو تغيّرت حالتها؛ أغلقت الإجراءات غير الصالحة." };
+export function resolveDispatchActionError(
+  error: { readonly kind: DispatchErrorKind; readonly code?: string; readonly message?: string },
+  action: "assign" | "accept" | "decline" | "status" | "pod",
+) {
+  if (error.code === "STORE_HANDOFF_REQUIRED") {
+    return {
+      kind: "error" as const,
+      message: "وصلت إلى المتجر. بانتظار تأكيد المتجر تسليم الطلب لك قبل تثبيت الاستلام.",
+    };
+  }
+  if (error.kind === "conflict") return { kind: "error" as const, message: error.message ?? "ألغيت المهمة أو تغيّرت حالتها؛ أغلقت الإجراءات غير الصالحة." };
   if (error.kind === "not_found") return { kind: "error" as const, message: "المهمة غير موجودة أو لم تعد نشطة." };
   if (error.kind === "permission_denied") return { kind: "error" as const, message: "لا تملك صلاحية تنفيذ هذا الإجراء." };
   const fallback: Record<typeof action, string> = {
