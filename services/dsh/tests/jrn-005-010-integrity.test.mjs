@@ -62,7 +62,12 @@ test("JRN-006 keeps map calls and address writes behind governed service areas",
   assert.equal(productTruth.status, "IMPLEMENTED_PENDING_INDEPENDENT_REVIEW");
   assert.equal(evidence.journeyId, "JRN-006");
   assert.equal(evidence.decision, "READY_FOR_REVIEW");
+  assert.equal(evidence.evidenceCommit, "5497fe684329e2d905bc399d8f6ad09ca7f69c9a");
   assert.equal(evidence.workflowRun.statusContext, "journeys/jrn-006/targeted-verification");
+  assert.equal(
+    evidence.workflowRun.artifactDigest,
+    "sha256:62f2d841f7878cc245d462c6702bb0acfdf2992f1a45ea5a1195ff7a6b643245",
+  );
   assert.equal(evidence.checks.postgres16MigrationApply, "PASS");
   assert.equal(evidence.checks.postgresOutsidePolygonRejected, "PASS");
 });
