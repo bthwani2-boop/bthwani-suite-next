@@ -7,6 +7,9 @@ on:
       - sambassam
     paths:
       - ".github/workflows/jrn-011-order-truth-verify.yml"
+      - "governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md"
+      - "governance/evidence/jrn-011-order-truth-evidence.json"
+      - "governance/evidence/jrn-011-order-truth-evidence.md"
       - "governance/product/contracts/jrn-011-order-creation-truth.product-truth.json"
       - "services/dsh/backend/internal/http/order_truth*.go"
       - "services/dsh/backend/internal/orders/order_truth*.go"
