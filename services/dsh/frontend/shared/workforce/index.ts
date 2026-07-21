@@ -1,5 +1,6 @@
 export * from "./workforce.types";
 export * from "./workforce.api";
+export * from "./workforce-documents.api";
 export * from "./use-workforce-controllers";
 export * from "./use-workforce-employee-controllers";
 export * from "./use-workforce-create-activation-controller";
