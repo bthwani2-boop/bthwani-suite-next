@@ -8,7 +8,29 @@ import (
 
 	"dsh-api/internal/orders"
 	"dsh-api/internal/store"
+	"github.com/google/uuid"
 )
+
+func isValidOrderTruthUUID(value string) bool {
+	_, err := uuid.Parse(strings.TrimSpace(value))
+	return err == nil
+}
+
+func writeOrderTruthReadFailure(w http.ResponseWriter, err error, internalMessage string) bool {
+	if errors.Is(err, orders.ErrInvalid) {
+		store.SendError(w, http.StatusBadRequest, "INVALID_ORDER_ID", "orderId must be a valid UUID")
+		return true
+	}
+	if errors.Is(err, orders.ErrNotFound) {
+		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "order not found")
+		return true
+	}
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", internalMessage)
+		return true
+	}
+	return false
+}
 
 func (s *protectedStoreServer) handleCreateOrderTruth(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "client")
@@ -24,8 +46,8 @@ func (s *protectedStoreServer) handleCreateOrderTruth(w http.ResponseWriter, r *
 		idempotencyKey,
 		r.Header.Get("X-Correlation-ID"),
 	)
-	if body.CheckoutIntentID == "" {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "checkoutIntentId is required")
+	if !isValidOrderTruthUUID(body.CheckoutIntentID) {
+		store.SendError(w, http.StatusBadRequest, "INVALID_CHECKOUT_INTENT_ID", "checkoutIntentId must be a valid UUID")
 		return
 	}
 	if len(idempotencyKey) < 16 || len(idempotencyKey) > 200 {
@@ -119,14 +141,7 @@ func (s *protectedStoreServer) handleGetClientOrderTruth(w http.ResponseWriter, 
 	actor, ok := s.requireActor(w, r, "client")
 	if !ok { return }
 	truth, err := orders.GetClientScopedOrderTruth(s.db, r.PathValue("orderId"), actor.TenantID, actor.ID)
-	if errors.Is(err, orders.ErrNotFound) {
-		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "order not found")
-		return
-	}
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to read governed order")
-		return
-	}
+	if writeOrderTruthReadFailure(w, err, "failed to read governed order") { return }
 	orders.RedactOrderTruthForViewer(truth, "client")
 	store.SendJSON(w, http.StatusOK, map[string]any{"order": truth})
 }
@@ -135,14 +150,7 @@ func (s *protectedStoreServer) handleListClientOrderTruthEvents(w http.ResponseW
 	actor, ok := s.requireActor(w, r, "client")
 	if !ok { return }
 	truth, err := orders.GetClientScopedOrderTruth(s.db, r.PathValue("orderId"), actor.TenantID, actor.ID)
-	if errors.Is(err, orders.ErrNotFound) {
-		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "order not found")
-		return
-	}
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to read order timeline")
-		return
-	}
+	if writeOrderTruthReadFailure(w, err, "failed to read order timeline") { return }
 	store.SendJSON(w, http.StatusOK, map[string]any{"events": truth.StatusTimeline})
 }
 
@@ -161,14 +169,7 @@ func (s *protectedStoreServer) handleGetPartnerOrderTruth(w http.ResponseWriter,
 	actor, storeID, ok := s.partnerStore(w, r)
 	if !ok { return }
 	truth, err := orders.GetPartnerScopedOrderTruth(s.db, r.PathValue("orderId"), actor.TenantID, storeID)
-	if errors.Is(err, orders.ErrNotFound) {
-		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "order not found")
-		return
-	}
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to read store order truth")
-		return
-	}
+	if writeOrderTruthReadFailure(w, err, "failed to read store order truth") { return }
 	orders.RedactOrderTruthForViewer(truth, "partner")
 	store.SendJSON(w, http.StatusOK, map[string]any{"order": truth})
 }
@@ -187,15 +188,8 @@ func (s *protectedStoreServer) handleListOperatorOrderTruth(w http.ResponseWrite
 func (s *protectedStoreServer) handleGetOperatorOrderTruth(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead, "operator")
 	if !ok { return }
-	truth, err := orders.GetOrderTruth(s.db, r.PathValue("orderId"), actor.TenantID, "operator")
-	if errors.Is(err, orders.ErrNotFound) {
-		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "order not found")
-		return
-	}
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to read tenant order truth")
-		return
-	}
+	truth, err := orders.GetOperatorScopedOrderTruth(s.db, r.PathValue("orderId"), actor.TenantID)
+	if writeOrderTruthReadFailure(w, err, "failed to read tenant order truth") { return }
 	orders.RedactOrderTruthForViewer(truth, "operator")
 	store.SendJSON(w, http.StatusOK, map[string]any{"order": truth})
 }
