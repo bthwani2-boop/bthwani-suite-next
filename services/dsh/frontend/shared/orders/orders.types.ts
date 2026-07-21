@@ -38,6 +38,49 @@ export type DshOrderPreparation = {
   readonly preparationRemainingSeconds: number;
 };
 
+export type DshPreparationIssueKind =
+  | "missing_item"
+  | "substitution_required"
+  | "quality_issue"
+  | "other";
+
+export type DshPreparationIssueStatus = "open" | "resolved";
+
+export type DshPreparationIssue = {
+  readonly id: string;
+  readonly orderId: string;
+  readonly storeId: string;
+  readonly orderItemId: string;
+  readonly kind: DshPreparationIssueKind;
+  readonly status: DshPreparationIssueStatus;
+  readonly affectedQuantity: number;
+  readonly note: string;
+  readonly replacementProductId: string;
+  readonly replacementProductName: string;
+  readonly openedByActorId: string;
+  readonly openedAt: string;
+  readonly resolvedByActorId: string;
+  readonly resolutionNote: string;
+  readonly resolvedAt?: string | null;
+  readonly version: number;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+};
+
+export type DshCreatePreparationIssueInput = {
+  readonly orderItemId?: string;
+  readonly kind: DshPreparationIssueKind;
+  readonly affectedQuantity: number;
+  readonly note: string;
+  readonly replacementProductId?: string;
+  readonly replacementProductName?: string;
+};
+
+export type DshResolvePreparationIssueInput = {
+  readonly expectedVersion: number;
+  readonly resolutionNote: string;
+};
+
 export type DshStorePreparationPolicy = {
   readonly storeId: string;
   readonly defaultPreparationMinutes: number;
@@ -53,6 +96,8 @@ export type DshPartnerOrderAction =
   | "prepare"
   | "ready"
   | "revise_estimate"
+  | "report_issue"
+  | "resolve_issue"
   | "handoff";
 
 export type DshStoreCaptainHandoffStatus =
@@ -81,6 +126,8 @@ export type DshStoreCaptainHandoff = {
 export type DshPartnerOrder = DshOrder & {
   readonly allowedActions: readonly DshPartnerOrderAction[];
   readonly preparation: DshOrderPreparation;
+  readonly preparationIssues: readonly DshPreparationIssue[];
+  readonly openPreparationIssueCount: number;
   readonly storeCaptainHandoffStatus: DshStoreCaptainHandoffStatus;
   readonly storeCaptainHandoffAssignmentId: string;
   readonly storeCaptainHandoffCaptainId: string;
@@ -165,6 +212,13 @@ export const PREPARATION_SLA_LABELS: Record<DshPreparationSlaState, string> = {
   due_soon: "اقترب موعد الجاهزية",
   overdue: "متأخر عن موعد الجاهزية",
   ready: "جاهز",
+};
+
+export const PREPARATION_ISSUE_KIND_LABELS: Record<DshPreparationIssueKind, string> = {
+  missing_item: "صنف غير متوفر",
+  substitution_required: "استبدال مطلوب",
+  quality_issue: "مشكلة جودة",
+  other: "مشكلة أخرى",
 };
 
 export const FINANCIAL_CLOSURE_LABELS: Record<DshFinancialClosureStatus, string> = {
