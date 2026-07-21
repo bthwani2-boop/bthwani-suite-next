@@ -6,7 +6,7 @@
 - Journey owner: `core/identity`
 - Internal slice status: `FS-01..FS-18 COMPLETE`
 - Journey decision: `READY_FOR_REVIEW`
-- Evidence commit: `PENDING_SAME_COMMIT_GATE`
+- Evidence commit resolution: the exact commit containing `core/identity/tests/jrn-002-final-evidence-marker.test.mjs` and three successful permanent status contexts listed below.
 
 ## Slice ledger
 
@@ -51,7 +51,7 @@
 - `journeys/jrn-002/runtime-proof`
 - `journeys/jrn-001-010/targeted-verification`
 
-All three must succeed on the evidence commit or on an unchanged descendant whose intervening files do not touch JRN-002 scope.
+All three must succeed on the evidence-marker commit. A later final head is acceptable only when it is a linear descendant and every intervening file is outside JRN-002 implementation scope or is evidence-only documentation.
 
 ## Rollback
 
