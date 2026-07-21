@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "journeyId": "JRN-001",
+  "contracts": [
+    "services/dsh/contracts/dsh.partner-onboarding.openapi.yaml",
+    "services/wlt/contracts/wlt.payout-destination.openapi.yaml"
+  ],
+  "adapterPolicy": "manual-shared-adapter-until-runnable-generated-facade",
+  "operations": [
+    {
+      "operationId": "getDshPartner",
+      "method": "GET",
+      "path": "/dsh/operator/partners/{partnerId}",
+      "owner": "dsh",
+      "surface": "control-panel",
+      "adapter": "services/dsh/frontend/shared/partner/partner.api.ts#fetchPartner"
+    },
+    {
+      "operationId": "transitionDshPartner",
+      "method": "POST",
+      "path": "/dsh/operator/partners/{partnerId}/transition",
+      "owner": "dsh",
+      "surface": "control-panel",
+      "adapter": "services/dsh/frontend/shared/partner/partner.api.ts#transitionPartner"
+    },
+    {
+      "operationId": "linkDshPartnerStore",
+      "method": "POST",
+      "path": "/dsh/operator/partners/{partnerId}/stores",
+      "owner": "dsh",
+      "surface": "control-panel",
+      "adapter": "services/dsh/frontend/shared/partner/partner.api.ts#linkPartnerStore"
+    },
+    {
+      "operationId": "getFieldPartnerDraft",
+      "method": "GET",
+      "path": "/dsh/field/partners/{partnerId}",
+      "owner": "dsh",
+      "surface": "app-field",
+      "adapter": "services/dsh/frontend/shared/partner/partner.api.ts#fieldGetPartner"
+    },
+    {
+      "operationId": "updateFieldPartnerDraft",
+      "method": "PATCH",
+      "path": "/dsh/field/partners/{partnerId}",
+      "owner": "dsh",
+      "surface": "app-field",
+      "adapter": "services/dsh/frontend/shared/partner/partner.api.ts#fieldUpdatePartner"
+    },
+    {
+      "operationId": "createFieldPartnerVisit",
+      "method": "POST",
+      "path": "/dsh/field/partners/{partnerId}/visits",
+      "owner": "dsh",
+      "surface": "app-field",
+      "adapter": "services/dsh/frontend/shared/partner/partner.api.ts#fieldCreateVisit"
+    },
+    {
+      "operationId": "submitFieldPartnerDraft",
+      "method": "POST",
+      "path": "/dsh/field/partners/{partnerId}/submit",
+      "owner": "dsh",
+      "surface": "app-field",
+      "adapter": "services/dsh/frontend/shared/partner/partner.api.ts#fieldSubmitPartner"
+    },
+    {
+      "operationId": "getDshPartnerActivationStatus",
+      "method": "GET",
+      "path": "/dsh/partner/activation/status",
+      "owner": "dsh",
+      "surface": "app-partner",
+      "adapter": "services/dsh/frontend/shared/partner/partner.api.ts#fetchPartnerSelfStatus"
+    },
+    {
+      "operationId": "getDshPartnerSelfReadiness",
+      "method": "GET",
+      "path": "/dsh/partner/activation/readiness",
+      "owner": "dsh",
+      "surface": "app-partner",
+      "adapter": "services/dsh/frontend/shared/partner/partner.api.ts#fetchPartnerSelfReadiness"
+    },
+    {
+      "operationId": "upsertWltPayoutDestination",
+      "method": "PUT",
+      "path": "/wlt/payout-destinations/{partnerId}",
+      "owner": "wlt",
+      "surface": "backend",
+      "adapter": "services/dsh/backend/internal/wlt/payout_destination.go#UpsertPayoutDestination"
+    },
+    {
+      "operationId": "getWltPayoutDestination",
+      "method": "GET",
+      "path": "/wlt/payout-destinations/{partnerId}",
+      "owner": "wlt",
+      "surface": "backend",
+      "adapter": "services/wlt/backend/internal/payout/payout.go#HandleGetPayoutDestination"
+    },
+    {
+      "operationId": "deactivateWltPayoutDestination",
+      "method": "POST",
+      "path": "/wlt/payout-destinations/{partnerId}/deactivate",
+      "owner": "wlt",
+      "surface": "backend",
+      "adapter": "services/dsh/backend/internal/wlt/payout_destination.go#DeactivatePayoutDestination"
+    }
+  ]
+}
