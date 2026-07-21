@@ -1,133 +1,156 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "journeyId": "JRN-005",
   "title": "Client address book full-stack multi-surface closure",
   "authority": "governance/product/contracts/jrn-005-client-address-book.product-truth.json",
   "targetRef": "sambassam",
   "truthOwner": "DSH persisted client-owned addresses",
   "financialBoundary": "OUT_OF_SCOPE_NO_WLT_MUTATION",
+  "verifiedImplementationCommit": "bda5452525840cbe4b357713032747cfc500bfc4",
+  "statusContext": "journeys/jrn-005/all-slices",
+  "workflowRunId": 29866310744,
+  "artifactDigest": "sha256:7be9a0a90c950a5619147c947999bbfd8cca529bd1fbbae01adb04d1bc438d23",
   "slices": [
     {
       "id": "FS-01",
       "name": "Product Truth",
-      "status": "IMPLEMENTED",
-      "evidence": ["governance/product/contracts/jrn-005-client-address-book.product-truth.json"]
+      "status": "IMPLEMENTED_VERIFIED",
+      "evidence": ["governance/product/contracts/jrn-005-client-address-book.product-truth.json", "services/dsh/tests/jrn-005-all-slices.test.mjs"]
     },
     {
       "id": "FS-02",
       "name": "Actors, authorization and surfaces",
-      "status": "IMPLEMENTED",
-      "evidence": ["services/dsh/backend/internal/http/client_addresses.go#requireActor", "services/dsh/contracts/dsh.client-address.openapi.yaml#bearerAuth"],
-      "invariants": ["client actor only", "owner derived from authenticated actor", "no clientId query ownership"]
+      "status": "IMPLEMENTED_VERIFIED",
+      "evidence": ["services/dsh/backend/internal/http/client_addresses.go#requireActor", "services/dsh/backend/internal/clientaddress/ownership_isolation_db_test.go"],
+      "invariants": ["client actor only", "owner derived from authenticated actor", "no clientId query ownership", "cross-client mutations return not found without receipts"]
     },
     {
       "id": "FS-03",
       "name": "States, transitions and allowed actions",
-      "status": "IMPLEMENTED",
+      "status": "IMPLEMENTED_VERIFIED",
       "states": ["active", "soft_deleted", "pii_retained", "pii_anonymized"],
-      "actions": ["list", "create", "update", "set_default", "delete", "anonymize"],
-      "evidence": ["services/dsh/backend/internal/clientaddress/address.go", "services/dsh/backend/internal/http/client_address_privacy.go"]
+      "actions": ["list", "create", "update", "set_default", "delete", "anonymize", "purge_expired_receipts"],
+      "evidence": ["services/dsh/backend/internal/clientaddress/address.go", "services/dsh/backend/internal/clientaddress/idempotent_mutations.go", "services/dsh/backend/internal/http/client_address_privacy.go"]
     },
     {
       "id": "FS-04",
       "name": "Truth ownership and service boundaries",
-      "status": "IMPLEMENTED",
+      "status": "IMPLEMENTED_VERIFIED",
       "evidence": ["services/dsh/database/migrations/dsh-056_client_addresses.sql", "services/dsh/backend/internal/http/checkout.go#clientaddress.GetOwned"],
-      "boundary": "DSH owns address truth; providers verify maps; WLT receives no address-book mutation."
+      "boundary": "DSH owns address truth; Providers verify maps; WLT receives no address-book mutation."
     },
     {
       "id": "FS-05",
       "name": "Database constraints, concurrency and retention",
-      "status": "IMPLEMENTED",
-      "evidence": ["services/dsh/database/migrations/dsh-056_client_addresses.sql", "services/dsh/database/migrations/dsh-078_client_address_pii_governance.sql", "services/dsh/database/migrations/dsh-081_client_address_subject_anonymization.sql", "services/dsh/database/migrations/dsh-901_client_address_logical_deduplication.sql", "services/dsh/database/migrations/dsh-906_jrn_006_client_address_geofence_binding.sql"]
+      "status": "IMPLEMENTED_VERIFIED",
+      "evidence": [
+        "services/dsh/database/migrations/dsh-056_client_addresses.sql",
+        "services/dsh/database/migrations/dsh-078_client_address_pii_governance.sql",
+        "services/dsh/database/migrations/dsh-081_client_address_subject_anonymization.sql",
+        "services/dsh/database/migrations/dsh-901_client_address_logical_deduplication.sql",
+        "services/dsh/database/migrations/dsh-906_jrn_006_client_address_geofence_binding.sql",
+        "services/dsh/database/migrations/dsh-907_jrn_005_address_mutation_receipts.sql",
+        "services/dsh/database/migrations/dsh-908_jrn_005_mutation_receipt_retention.sql",
+        "services/dsh/backend/internal/clientaddress/idempotent_mutations_db_test.go"
+      ]
     },
     {
       "id": "FS-06",
       "name": "OpenAPI and adapter contract",
-      "status": "IMPLEMENTED",
-      "evidence": ["services/dsh/contracts/dsh.client-address.openapi.yaml", "contracts/master.openapi.yaml", "services/dsh/frontend/shared/client-address/client-address.api.ts"]
+      "status": "IMPLEMENTED_VERIFIED",
+      "evidence": ["services/dsh/contracts/dsh.client-address.openapi.yaml", "contracts/master.openapi.yaml", "services/dsh/frontend/shared/client-address/client-address.api.ts", "services/dsh/tests/tsconfig.jrn-005-app-client.json"]
     },
     {
       "id": "FS-07",
       "name": "Backend validation, authz, idempotency and OCC",
-      "status": "IMPLEMENTED",
-      "evidence": ["services/dsh/backend/internal/http/client_addresses.go", "services/dsh/backend/internal/clientaddress/address.go", "services/dsh/backend/internal/clientaddress/address_service_area.go", "services/dsh/backend/internal/clientaddress/duplicate_error.go"]
+      "status": "IMPLEMENTED_VERIFIED",
+      "evidence": [
+        "services/dsh/backend/internal/http/client_addresses.go",
+        "services/dsh/backend/internal/clientaddress/address.go",
+        "services/dsh/backend/internal/clientaddress/address_service_area.go",
+        "services/dsh/backend/internal/clientaddress/update_replay.go",
+        "services/dsh/backend/internal/clientaddress/idempotent_mutations.go",
+        "services/dsh/backend/internal/clientaddress/duplicate_error.go",
+        "services/dsh/backend/internal/clientaddress/idempotent_mutations_db_test.go"
+      ]
     },
     {
       "id": "FS-08",
       "name": "Events, readback and recovery",
-      "status": "IMPLEMENTED",
-      "evidence": ["services/dsh/database/migrations/dsh-056_client_addresses.sql#dsh_client_address_events", "services/dsh/frontend/shared/client-address/client-address-create-attempt.ts", "services/dsh/frontend/shared/client-address/use-client-address-controller.ts"],
+      "status": "IMPLEMENTED_VERIFIED",
+      "evidence": ["services/dsh/database/migrations/dsh-056_client_addresses.sql#dsh_client_address_events", "services/dsh/frontend/shared/client-address/client-address-create-attempt.ts", "services/dsh/frontend/shared/client-address/use-client-address-controller.ts", "services/dsh/backend/internal/clientaddress/idempotent_mutations_db_test.go"],
       "outboxDecision": "NOT_APPLICABLE_WITHIN_SINGLE_DSH_TRANSACTION; checkout stores an immutable order-scoped snapshot in its own journey."
     },
     {
       "id": "FS-09",
       "name": "Shared frontend brain",
-      "status": "IMPLEMENTED",
-      "evidence": ["services/dsh/frontend/shared/client-address/client-address.types.ts", "services/dsh/frontend/shared/client-address/client-address.api.ts", "services/dsh/frontend/shared/client-address/use-client-address-controller.ts"]
+      "status": "IMPLEMENTED_VERIFIED",
+      "evidence": ["services/dsh/frontend/shared/client-address/client-address.types.ts", "services/dsh/frontend/shared/client-address/client-address.validation.ts", "services/dsh/frontend/shared/client-address/client-address.api.ts", "services/dsh/frontend/shared/client-address/use-client-address-controller.ts"]
     },
     {
       "id": "FS-10",
       "name": "Required surfaces and navigation",
-      "status": "IMPLEMENTED",
+      "status": "IMPLEMENTED_VERIFIED",
       "requiredSurfaces": ["app-client"],
       "evidence": ["services/dsh/frontend/app-client/account/AddressLocationScreen.tsx", "services/dsh/frontend/app-client/DshClientSurface.tsx", "services/dsh/frontend/app-client/cart/CartScreen.tsx", "services/dsh/frontend/app-client/checkout/ClientCheckoutRoute.tsx"]
     },
     {
       "id": "FS-11",
       "name": "Visible states and recovery",
-      "status": "IMPLEMENTED",
-      "states": ["loading", "empty", "ready", "network_error", "unauthenticated", "not_found", "conflict", "duplicate", "service_area_unverified", "mutating"],
-      "evidence": ["services/dsh/frontend/app-client/account/AddressLocationScreen.tsx", "services/dsh/frontend/shared/client-address/use-client-address-controller.ts"]
+      "status": "IMPLEMENTED_VERIFIED",
+      "states": ["loading", "empty", "ready", "network_error", "unauthenticated", "not_found", "conflict", "duplicate", "idempotency_conflict", "service_area_unverified", "mutating"],
+      "evidence": ["services/dsh/frontend/app-client/account/AddressLocationScreen.tsx", "services/dsh/frontend/shared/client-address/use-client-address-controller.ts", "services/dsh/tests/jrn-005-address-experience.test.mjs"]
     },
     {
       "id": "FS-12",
       "name": "Cross-surface consistency and committed readback",
-      "status": "IMPLEMENTED",
-      "evidence": ["services/dsh/contracts/jrn-005-consistency-registry.json", "services/dsh/frontend/shared/client-address/use-client-address-controller.ts", "services/dsh/backend/internal/http/checkout.go"],
+      "status": "IMPLEMENTED_VERIFIED",
+      "evidence": ["services/dsh/contracts/jrn-005-consistency-registry.json", "services/dsh/frontend/shared/client-address/use-client-address-controller.ts", "services/dsh/backend/internal/http/checkout.go", "services/dsh/tests/jrn-005-replay-compatibility.test.mjs"],
       "forbiddenTruth": ["local address records", "cart-owned address copies", "client-supplied checkout snapshots"]
     },
     {
       "id": "FS-13",
       "name": "Security, privacy and audit",
-      "status": "IMPLEMENTED",
-      "evidence": ["services/dsh/backend/internal/http/client_addresses.go", "services/dsh/backend/internal/http/client_address_privacy.go", "services/dsh/database/migrations/dsh-078_client_address_pii_governance.sql", "services/dsh/database/migrations/dsh-081_client_address_subject_anonymization.sql", "services/dsh/database/tests/dsh-081_client_address_subject_anonymization.sql"]
+      "status": "IMPLEMENTED_VERIFIED",
+      "evidence": ["services/dsh/backend/internal/http/client_addresses.go", "services/dsh/backend/internal/http/client_address_privacy.go", "services/dsh/database/migrations/dsh-078_client_address_pii_governance.sql", "services/dsh/database/migrations/dsh-081_client_address_subject_anonymization.sql", "services/dsh/database/migrations/dsh-907_jrn_005_address_mutation_receipts.sql", "services/dsh/database/migrations/dsh-908_jrn_005_mutation_receipt_retention.sql", "services/dsh/backend/internal/clientaddress/ownership_isolation_db_test.go"]
     },
     {
       "id": "FS-14",
       "name": "RTL, accessibility, reliability and weak-network UX",
-      "status": "IMPLEMENTED",
-      "evidence": ["services/dsh/frontend/app-client/account/AddressLocationScreen.tsx", "services/dsh/frontend/shared/client-address/client-address-create-attempt.ts", "services/dsh/frontend/shared/client-address/use-client-address-controller.ts"],
-      "requirements": ["Arabic RTL text", "descriptive labels", "disabled mutation controls", "retry-safe create identity", "confirmation before delete"]
+      "status": "IMPLEMENTED_VERIFIED",
+      "evidence": ["services/dsh/frontend/app-client/account/AddressLocationScreen.tsx", "services/dsh/frontend/shared/client-address/client-address.validation.ts", "services/dsh/frontend/shared/client-address/client-address-create-attempt.ts", "services/dsh/frontend/shared/client-address/use-client-address-controller.ts", "services/dsh/tests/jrn-005-address-experience.test.mjs"],
+      "requirements": ["Arabic RTL text", "labelled bounded fields", "live error regions", "busy accessibility state", "required governed coordinates", "retry-safe mutation identity", "confirmation before delete"]
     },
     {
       "id": "FS-15",
       "name": "SLO, diagnostics and support",
-      "status": "IMPLEMENTED",
-      "evidence": ["governance/runbooks/JRN-005_CLIENT_ADDRESS_OPERATIONS.md", "services/dsh/contracts/jrn-005-observability-slo.json"],
-      "piiPolicy": "Metrics and logs must contain operation, outcome, status code and correlation id only; never address fields."
+      "status": "IMPLEMENTED_VERIFIED",
+      "evidence": ["services/dsh/backend/internal/clientaddress/telemetry.go", "services/dsh/backend/internal/clientaddress/diagnostics.go", "services/dsh/backend/internal/http/unified_handler_aliases.go", "governance/runbooks/JRN-005_CLIENT_ADDRESS_OPERATIONS.md", "services/dsh/contracts/jrn-005-observability-slo.json", "services/dsh/tests/jrn-005-runtime-observability.test.mjs"],
+      "piiPolicy": "Telemetry and diagnostics expose aggregate operation, outcome and duration only; never address or actor identifiers."
     },
     {
       "id": "FS-16",
       "name": "Cleanup and duplicate-truth prevention",
-      "status": "IMPLEMENTED",
-      "evidence": ["services/dsh/database/migrations/dsh-901_client_address_logical_deduplication.sql", "tools/guards/client-commerce/client-commerce-truth-gate.mjs"],
-      "forbidden": ["seeded address truth", "screen mocks", "raw fetch", "clientId owner query", "duplicate active fingerprints"]
+      "status": "IMPLEMENTED_VERIFIED",
+      "evidence": ["services/dsh/database/migrations/dsh-901_client_address_logical_deduplication.sql", "services/dsh/database/migrations/dsh-908_jrn_005_mutation_receipt_retention.sql", "tools/guards/client-commerce/client-commerce-truth-gate.mjs"],
+      "forbidden": ["seeded address truth", "screen mocks", "raw fetch", "clientId owner query", "duplicate active fingerprints", "unbounded retry receipt retention", "non-idempotent update/delete/default handlers"]
     },
     {
       "id": "FS-17",
       "name": "Targeted verification",
-      "status": "IMPLEMENTED_PENDING_WORKFLOW_RESULT",
-      "evidence": ["services/dsh/tests/jrn-005-all-slices.test.mjs", "services/dsh/backend/internal/http/client_addresses_error_test.go", "services/dsh/backend/internal/clientaddress/duplicate_error_test.go", "services/dsh/database/tests/dsh-901_client_address_logical_deduplication.sql", ".github/workflows/jrn-005-all-slices.yml"]
+      "status": "IMPLEMENTED_VERIFIED",
+      "evidence": ["services/dsh/tests/jrn-005-all-slices.test.mjs", "services/dsh/tests/jrn-005-runtime-observability.test.mjs", "services/dsh/tests/jrn-005-replay-compatibility.test.mjs", "services/dsh/tests/jrn-005-address-experience.test.mjs", "services/dsh/backend/internal/clientaddress/idempotent_mutations_db_test.go", "services/dsh/backend/internal/clientaddress/ownership_isolation_db_test.go", "services/dsh/database/tests/dsh-901_client_address_logical_deduplication.sql", "services/dsh/database/tests/dsh-907_jrn_005_address_mutation_receipts.sql", "services/dsh/database/tests/dsh-908_jrn_005_mutation_receipt_retention.sql", ".github/workflows/jrn-005-all-slices.yml"]
     },
     {
       "id": "FS-18",
       "name": "Same-commit evidence, rollback and approvals",
-      "status": "IMPLEMENTED_PENDING_INDEPENDENT_APPROVALS",
-      "evidence": ["governance/evidence/JRN-005_CLIENT_ADDRESS_BOOK_CLOSURE.json", "governance/evidence/JRN-005_SLICE_EXECUTION_LOG.md"],
-      "rollback": ["disable deployment before schema rollback", "drop active fingerprint index only after duplicate-risk acceptance", "restore prior application commit", "retain soft-deleted rows and audit events"]
+      "status": "CODE_CLOSED_PENDING_INDEPENDENT_EVIDENCE",
+      "evidence": ["governance/evidence/JRN-005_CLIENT_ADDRESS_BOOK_CLOSURE.json", "governance/evidence/JRN-005_SLICE_EXECUTION_LOG.md", "governance/runbooks/JRN-005_CLIENT_ADDRESS_OPERATIONS.md"],
+      "rollback": ["disable deployment before schema rollback", "preserve address and audit history", "preserve unexpired mutation receipts", "restore prior application commit", "never disable owner, default, duplicate or service-area invariants"]
     }
   ],
-  "implementationDecision": "READY_FOR_TARGETED_VERIFICATION",
-  "formalClosureDecision": "NEEDS_SAME_COMMIT_CI_AND_INDEPENDENT_APPROVALS"
+  "codeClosureDecision": "CLOSED",
+  "implementationDecision": "READY_FOR_REVIEW",
+  "formalClosureDecision": "PENDING_INDEPENDENT_APPROVALS_AND_PHYSICAL_DEVICE_EVIDENCE",
+  "openCodeGaps": []
 }
