@@ -29,13 +29,15 @@ type OrderTruthDiagnostics struct {
 // intentionally excludes client identity, address snapshots and payment data.
 func LoadOrderTruthDiagnostics(db *sql.DB, tenantID string) (*OrderTruthDiagnostics, error) {
 	tenantID = strings.TrimSpace(tenantID)
-	if tenantID == "" { return nil, ErrInvalid }
+	if tenantID == "" {
+		return nil, ErrInvalid
+	}
 
 	result := &OrderTruthDiagnostics{
-		TenantID: tenantID,
+		TenantID:    tenantID,
 		GeneratedAt: time.Now().UTC(),
-		Health: "healthy",
-		Alerts: []string{},
+		Health:      "healthy",
+		Alerts:      []string{},
 	}
 	var oldest sql.NullTime
 	err := db.QueryRow(`
@@ -50,8 +52,8 @@ func LoadOrderTruthDiagnostics(db *sql.DB, tenantID string) (*OrderTruthDiagnost
 		  (SELECT MIN(x.created_at) FROM dsh_order_event_outbox x
 		    WHERE x.tenant_id=$1 AND x.status IN ('pending','processing','retry')),
 		  COUNT(*) FILTER (WHERE o.payment_status_projection='unknown'),
-		  COUNT(*) FILTER (WHERE o.payment_projection_updated_at IS NULL
-		    OR o.payment_projection_updated_at < NOW()-INTERVAL '2 minutes'),
+		  COUNT(*) FILTER (WHERE o.payment_projection_reconciled_at IS NULL
+		    OR o.payment_projection_reconciled_at < NOW()-INTERVAL '2 minutes'),
 		  (SELECT COUNT(*) FROM dsh_order_truth_audit a
 		    WHERE a.tenant_id=$1 AND a.event_type='order.idempotency_conflict'
 		      AND a.created_at >= NOW()-INTERVAL '1 hour'),
@@ -73,9 +75,15 @@ func LoadOrderTruthDiagnostics(db *sql.DB, tenantID string) (*OrderTruthDiagnost
 		&result.IdempotencyConflictsLastHour,
 		&result.SnapshotProtectionFailuresHour,
 	)
-	if errors.Is(err, sql.ErrNoRows) { return result, nil }
-	if err != nil { return nil, err }
-	if oldest.Valid { result.OldestUnpublishedEventAt = &oldest.Time }
+	if errors.Is(err, sql.ErrNoRows) {
+		return result, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if oldest.Valid {
+		result.OldestUnpublishedEventAt = &oldest.Time
+	}
 
 	if result.IncompleteCreateAttempts > 0 {
 		result.Health = "degraded"
@@ -94,7 +102,9 @@ func LoadOrderTruthDiagnostics(db *sql.DB, tenantID string) (*OrderTruthDiagnost
 		result.Alerts = append(result.Alerts, "ORDER_SNAPSHOT_TAMPER_ATTEMPT")
 	}
 	if result.StalePaymentProjections > 0 {
-		if result.Health == "healthy" { result.Health = "degraded" }
+		if result.Health == "healthy" {
+			result.Health = "degraded"
+		}
 		result.Alerts = append(result.Alerts, "ORDER_PAYMENT_PROJECTION_STALE")
 	}
 	return result, nil
