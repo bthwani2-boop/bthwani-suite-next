@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -89,7 +90,7 @@ func TestPartnerDeactivationTriggerAndOutboxDeliveryDBIntegration(t *testing.T) 
 		) VALUES ($1,'partner_active','partner_deactivated','operator-db','control-panel',
 		          'integration deactivation','partner-deactivation-correlation',
 		          'partner-deactivation-transition-key','partner-deactivation-hash')
-		RETURNING id::text`, partnerID,
+		RETURNING id`, partnerID,
 	).Scan(&activationEventID); err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +98,7 @@ func TestPartnerDeactivationTriggerAndOutboxDeliveryDBIntegration(t *testing.T) 
 	var pendingCount int
 	if err := db.QueryRow(`
 		SELECT COUNT(*) FROM dsh_partner_wlt_outbox
-		WHERE partner_id = $1 AND activation_event_id = $2::uuid AND status = 'pending'`,
+		WHERE partner_id = $1 AND activation_event_id = $2 AND status = 'pending'`,
 		partnerID, activationEventID,
 	).Scan(&pendingCount); err != nil {
 		t.Fatal(err)
@@ -121,7 +122,7 @@ func TestPartnerDeactivationTriggerAndOutboxDeliveryDBIntegration(t *testing.T) 
 	var attempts int
 	if err := db.QueryRow(`
 		SELECT status, attempt_count FROM dsh_partner_wlt_outbox
-		WHERE activation_event_id = $1::uuid`, activationEventID,
+		WHERE activation_event_id = $1`, activationEventID,
 	).Scan(&status, &attempts); err != nil {
 		t.Fatal(err)
 	}
@@ -136,21 +137,27 @@ func TestPartnerWltReconciliationCreatesAndResolvesMaskedReadbackCaseDBIntegrati
 
 	active := true
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet || r.URL.Path != "/wlt/payout-destinations/"+partnerID {
-			t.Fatalf("unexpected WLT readback request: %s %s", r.Method, r.URL.Path)
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		requestedPartnerID := strings.TrimPrefix(r.URL.Path, "/wlt/payout-destinations/")
+		if requestedPartnerID != partnerID {
+			http.Error(w, "not found", http.StatusNotFound)
+			return
 		}
 		_ = json.NewEncoder(w).Encode(map[string]any{
-			"id": "wpd-reconciliation-ref",
-			"partnerId": partnerID,
+			"id":                   "wpd-reconciliation-ref",
+			"partnerId":            partnerID,
 			"settlementPreference": "bank",
-			"maskedAccountNumber": "*****1234",
-			"maskedIban": "********5678",
-			"maskedMobileNumber": "",
-			"beneficiaryName": "Partner Owner",
-			"bankName": "Test Bank",
-			"bankBranch": "Main",
-			"active": active,
-			"updatedAt": time.Now().UTC().Format(time.RFC3339Nano),
+			"maskedAccountNumber":  "*****1234",
+			"maskedIban":           "********5678",
+			"maskedMobileNumber":   "",
+			"beneficiaryName":      "Partner Owner",
+			"bankName":             "Test Bank",
+			"bankBranch":           "Main",
+			"active":               active,
+			"updatedAt":            time.Now().UTC().Format(time.RFC3339Nano),
 		})
 	}))
 	defer server.Close()
