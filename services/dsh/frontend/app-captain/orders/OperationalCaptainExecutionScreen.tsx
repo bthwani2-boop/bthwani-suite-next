@@ -4,6 +4,7 @@ import { Box, Button, Icon, MobileScrollView, StateView, Surface, Text, TopBar, 
 import {
   StoreCaptainHandoffExceptionForm,
   useStoreCaptainHandoffException,
+  type DshDeliveryExceptionReasonCode,
 } from '../../shared/dispatch';
 import { STORE_CAPTAIN_HANDOFF_EXCEPTION_LABELS } from '../../shared/orders';
 import {
@@ -25,6 +26,13 @@ export type OperationalCaptainExecutionScreenProps = {
   readonly onOpenPod: () => void;
   readonly onPushLocation: (push: DshCaptainLocationPush) => Promise<unknown>;
 };
+
+function deliveryExceptionLabel(reason: DshDeliveryExceptionReasonCode): string {
+  if (reason === 'handoff_shortage' || reason === 'handoff_mismatch') {
+    return STORE_CAPTAIN_HANDOFF_EXCEPTION_LABELS[reason];
+  }
+  return 'يوجد استثناء توصيل نشط لهذه المهمة';
+}
 
 export function OperationalCaptainExecutionScreen({
   assignmentId,
@@ -138,14 +146,14 @@ export function OperationalCaptainExecutionScreen({
         {handoffExceptionEnabled && handoffReadback.kind === 'blocked' ? (
           <StateView
             title="الاستلام محجوب بقرار تشغيلي"
-            description={`${STORE_CAPTAIN_HANDOFF_EXCEPTION_LABELS[handoffReadback.exception.reasonCode as 'handoff_shortage' | 'handoff_mismatch']} · ${handoffReadback.exception.note}`}
+            description={`${deliveryExceptionLabel(handoffReadback.exception.reasonCode)} · ${handoffReadback.exception.note}`}
             tone="warning"
           />
         ) : null}
 
         {handoffExceptionEnabled && handoffReadback.kind === 'error' ? (
           <StateView
-            title="تعذر التحقق من استثناء العهدة"
+            title="تعذر التحقق من الاستثناء التشغيلي"
             description={handoffReadback.message}
             tone="danger"
             actionLabel="إعادة التحقق"
