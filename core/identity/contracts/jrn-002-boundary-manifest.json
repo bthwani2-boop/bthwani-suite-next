@@ -1,0 +1,39 @@
+{
+  "journeyId": "JRN-002",
+  "truthOwner": "core/identity",
+  "ownedData": [
+    "identity_actors",
+    "identity_sessions",
+    "identity_activation_challenges",
+    "identity_login_attempts",
+    "identity_account_deletions_outbox"
+  ],
+  "ownedCapabilities": [
+    "actor identity",
+    "phone ownership",
+    "roles and permissions",
+    "activation challenges",
+    "password authentication",
+    "access and refresh sessions",
+    "account anonymization",
+    "identity deletion outbox"
+  ],
+  "allowedConsumers": {
+    "core/workforce": "Provision and manage workforce actors through authenticated internal APIs; never stores identity passwords or session tokens.",
+    "services/dsh": "Consumes resolved actor subject, role, permission, surface, and tenant context; never owns credentials or sessions.",
+    "services/wlt": "Consumes trusted actor references only; no authentication or session ownership.",
+    "apps/*": "Consume the sovereign TypeScript client and session store only."
+  },
+  "forbiddenOwnership": [
+    "DSH must not create identity sessions.",
+    "WLT must not authenticate actors or persist identity tokens.",
+    "Workforce must not persist a second phone truth or password hash.",
+    "UI surfaces must not synthesize roles, permissions, tenantId, sessionId, or phoneE164.",
+    "No service may expose an impersonation/support session without a separately approved contract, migration, audit model, and security review."
+  ],
+  "crossServiceRules": [
+    "Internal actor administration requires X-Service-Caller=workforce and a constant-time verified service bearer token.",
+    "Identity deletion emits outbox work; downstream deletion/anonymization is asynchronous and idempotent.",
+    "Financial state and wallet authorization remain exclusively owned by WLT and are outside JRN-002."
+  ]
+}
