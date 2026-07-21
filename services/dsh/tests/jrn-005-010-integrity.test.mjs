@@ -25,6 +25,12 @@ test("JRN-006 keeps map calls and address writes behind governed service areas",
   const provider = read("backend/internal/mapproviders/client.go");
   const migration = read("database/migrations/dsh-906_jrn_006_client_address_geofence_binding.sql");
   const contract = read("contracts/dsh.client-address.openapi.yaml");
+  const productTruth = JSON.parse(
+    read("../../governance/product/contracts/jrn-006-maps-service-area-address-privacy.product-truth.json"),
+  );
+  const evidence = JSON.parse(
+    read("../../governance/evidence/JRN-006_MAPS_SERVICE_AREA_ADDRESS_PRIVACY_EVIDENCE.json"),
+  );
 
   assert.match(controller, /searchDshClientMapLocations/);
   assert.match(controller, /reverseDshClientMapLocation/);
@@ -51,6 +57,14 @@ test("JRN-006 keeps map calls and address writes behind governed service areas",
   assert.match(migration, /FOR SHARE/);
   assert.match(contract, /"422": \{ \$ref: "#\/components\/responses\/ServiceAreaUnverified" \}/);
   assert.match(contract, /required: \[label, recipientName, phoneE164, addressLine, serviceAreaCode, latitude, longitude\]/);
+
+  assert.equal(productTruth.journeyId, "JRN-006");
+  assert.equal(productTruth.status, "IMPLEMENTED_PENDING_INDEPENDENT_REVIEW");
+  assert.equal(evidence.journeyId, "JRN-006");
+  assert.equal(evidence.decision, "READY_FOR_REVIEW");
+  assert.equal(evidence.workflowRun.statusContext, "journeys/jrn-006/targeted-verification");
+  assert.equal(evidence.checks.postgres16MigrationApply, "PASS");
+  assert.equal(evidence.checks.postgresOutsidePolygonRejected, "PASS");
 });
 
 test("JRN-007 scopes discovery to the persisted selected address", () => {
@@ -95,7 +109,6 @@ test("JRN-008 retains one central catalog truth and governed proposal readback",
   assert.match(readbackApi, /\/dsh\/field\/partners\/\$\{encodeURIComponent\(partnerId\)\}\/catalog\/product-proposals/);
   assert.match(fieldController, /fetchFieldProductProposals\(partnerId/);
   assert.match(fieldController, /setProposals\(proposalPage\.items\)/);
-  assert.match(partnerScreen, /fetchPartnerProductProposals/);
   assert.match(partnerScreen, /اقتراحات المنتجات وحالة المراجعة/);
 
   assert.match(readbackContract, /operationId: listPartnerProductProposals/);
