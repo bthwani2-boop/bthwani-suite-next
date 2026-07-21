@@ -17,7 +17,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           fetch-depth: 0
-      - name: Enforce positive optimistic version in admin controllers
+      - name: Enforce optimistic version in partner controllers
         shell: bash
         run: |
           python - <<'PY'
@@ -25,61 +25,38 @@ jobs:
           path = Path('services/dsh/frontend/shared/partner/use-partner-admin-controller.tsx')
           text = path.read_text(encoding='utf-8')
 
-          old = '''  const transition = useCallback(async (partnerId: string, input: DshPartnerTransitionInput, version?: number) => {
-    setMutationState({ kind: "loading" });
-    try {
-      const res = await transitionPartner(partnerId, input, version);'''
-          new = '''  const transition = useCallback(async (partnerId: string, input: DshPartnerTransitionInput, version?: number) => {
-    const expectedVersion = version ?? (
-      detailState.kind === "success" && detailState.partner.id === partnerId
-        ? detailState.partner.version
-        : 0
-    );
-    if (expectedVersion < 1) {
-      setMutationState({ kind: "version_conflict" });
-      return null;
-    }
-    setMutationState({ kind: "loading" });
-    try {
+          old = '      const res = await transitionPartner(partnerId, input, version);'
+          new = '''      const expectedVersion = version ?? (
+        detailState.kind === "success" && detailState.partner.id === partnerId
+          ? detailState.partner.version
+          : 0
+      );
+      if (expectedVersion < 1) {
+        setMutationState({ kind: "version_conflict" });
+        return null;
+      }
       const res = await transitionPartner(partnerId, input, expectedVersion);'''
           if old not in text:
-              raise SystemExit('admin transition block not found')
-          text = text.replace(old, new, 1)
-          old = '  }, [filters, page, loadList]);'
-          new = '  }, [filters, page, loadList, detailState]);'
-          if old not in text:
-              raise SystemExit('admin transition dependency block not found')
+              raise SystemExit('admin transition call not found')
           text = text.replace(old, new, 1)
 
-          old = '''  const transition = useCallback(async (input: DshPartnerTransitionInput, version?: number): Promise<boolean> => {
-    setMutationState({ kind: "loading" });
-    try {
-      await transitionPartner(partnerId, input, version);'''
-          new = '''  const transition = useCallback(async (input: DshPartnerTransitionInput, version?: number): Promise<boolean> => {
-    const expectedVersion = version ?? (detailState.kind === "success" ? detailState.partner.version : 0);
-    if (expectedVersion < 1) {
-      setMutationState({ kind: "error", message: "version_required" });
-      return false;
-    }
-    setMutationState({ kind: "loading" });
-    try {
+          old = '      await transitionPartner(partnerId, input, version);'
+          new = '''      const expectedVersion = version ?? (detailState.kind === "success" ? detailState.partner.version : 0);
+      if (expectedVersion < 1) {
+        setMutationState({ kind: "error", message: "version_required" });
+        return false;
+      }
       await transitionPartner(partnerId, input, expectedVersion);'''
           if old not in text:
-              raise SystemExit('detail transition block not found')
+              raise SystemExit('detail transition call not found')
           text = text.replace(old, new, 1)
-          old = '  }, [partnerId, load]);'
-          new = '  }, [partnerId, load, detailState]);'
-          index = text.find(old, text.find('export function usePartnerDetailController'))
-          if index < 0:
-              raise SystemExit('detail transition dependency block not found')
-          text = text[:index] + text[index:].replace(old, new, 1)
 
           path.write_text(text, encoding='utf-8')
           PY
           git config user.name 'bthwani-governance-bot'
           git config user.email 'noreply@bthwani.local'
           git add services/dsh/frontend/shared/partner/use-partner-admin-controller.tsx
-          git commit -m 'fix(jrn-001): require optimistic version in admin transitions'
+          git commit -m 'fix(jrn-001): enforce optimistic partner transition version'
           git push origin HEAD:sambassam
       - name: Publish repair status
         if: always()
