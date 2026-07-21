@@ -1,16 +1,17 @@
 import React from 'react';
 import {
+  classifyOrderError,
   fetchClientOrder,
   fetchOrderPreparation,
-  classifyOrderError,
-} from '../../shared/orders/orders.api';
-import {
   isOrderCancellationStatus,
   type DshOrder,
   type DshOrderPreparation,
-} from '../../shared/orders/orders.types';
-import { fetchClientOrderTracking, classifyDispatchError } from '../../shared/dispatch/dispatch.api';
-import type { DshDispatchAssignment } from '../../shared/dispatch/dispatch.types';
+} from '../../shared/orders';
+import {
+  classifyDispatchError,
+  fetchClientOrderTracking,
+  type DshDispatchAssignment,
+} from '../../shared/dispatch';
 
 export type ClientOrderJourneyState =
   | { readonly kind: 'loading' }
