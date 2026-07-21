@@ -38,10 +38,30 @@ func (s *protectedStoreServer) handleCreateOrderTruth(w http.ResponseWriter, r *
 		return
 	}
 	if errors.Is(err, orders.ErrIdempotencyConflict) {
+		_ = orders.RecordOrderTruthAudit(s.db, orders.OrderTruthAuditInput{
+			TenantID: actor.TenantID,
+			ActorID: actor.ID,
+			ActorRole: "client",
+			CheckoutIntentID: body.CheckoutIntentID,
+			EventType: "order.idempotency_conflict",
+			ResultCode: "IDEMPOTENCY_KEY_REUSED",
+			CorrelationID: correlationID,
+			Metadata: map[string]any{"surface": "app-client", "route": "/dsh/client/order-truth", "status": 409},
+		})
 		store.SendError(w, http.StatusConflict, "IDEMPOTENCY_KEY_REUSED", "Idempotency-Key was already used for another order request")
 		return
 	}
 	if errors.Is(err, orders.ErrConflict) {
+		_ = orders.RecordOrderTruthAudit(s.db, orders.OrderTruthAuditInput{
+			TenantID: actor.TenantID,
+			ActorID: actor.ID,
+			ActorRole: "client",
+			CheckoutIntentID: body.CheckoutIntentID,
+			EventType: "order.create_conflict",
+			ResultCode: "ORDER_CREATE_CONFLICT",
+			CorrelationID: correlationID,
+			Metadata: map[string]any{"surface": "app-client", "route": "/dsh/client/order-truth", "status": 409},
+		})
 		store.SendError(w, http.StatusConflict, "ORDER_CREATE_CONFLICT", err.Error())
 		return
 	}
@@ -51,10 +71,29 @@ func (s *protectedStoreServer) handleCreateOrderTruth(w http.ResponseWriter, r *
 	}
 	orders.RedactOrderTruthForViewer(truth, "client")
 	status := http.StatusCreated
+	eventType := "order.create_succeeded"
 	if replay {
 		status = http.StatusOK
+		eventType = "order.create_replayed"
 		w.Header().Set("Idempotent-Replay", "true")
 	}
+	_ = orders.RecordOrderTruthAudit(s.db, orders.OrderTruthAuditInput{
+		TenantID: actor.TenantID,
+		ActorID: actor.ID,
+		ActorRole: "client",
+		OrderID: truth.ID,
+		CheckoutIntentID: body.CheckoutIntentID,
+		EventType: eventType,
+		ResultCode: http.StatusText(status),
+		CorrelationID: truth.CorrelationID,
+		Metadata: map[string]any{
+			"surface": "app-client",
+			"route": "/dsh/client/order-truth",
+			"status": status,
+			"replay": replay,
+			"version": truth.Version,
+		},
+	})
 	w.Header().Set("X-Correlation-ID", truth.CorrelationID)
 	store.SendJSON(w, status, map[string]any{"order": truth})
 }
