@@ -1,6 +1,6 @@
 import React from 'react';
 import { StateView } from '@bthwani/ui-kit';
-import type { DshAssignmentStatus, DshDeliveryStatus } from '../shared/dispatch';
+import type { DshDeliveryStatus } from '../shared/dispatch';
 import type { DshCaptainRoute } from './dsh-captain.types';
 import {
   DshCaptainRouteRenderer,
@@ -10,14 +10,15 @@ import { OperationalCaptainExecutionScreen } from './orders/OperationalCaptainEx
 
 export type DshCaptainOrderJourneyRendererProps = DshCaptainRouteRendererProps & {
   readonly setRoute: (route: DshCaptainRoute) => void;
-  readonly activeAssignmentStatus: DshAssignmentStatus | '';
   readonly activeDeliveryStatus: DshDeliveryStatus | '';
 };
 
 export function DshCaptainOrderJourneyRenderer(
   props: DshCaptainOrderJourneyRendererProps,
 ): React.ReactElement {
-  if (props.route === 'detail' && props.activeAssignmentStatus === 'offered') {
+  const offerPending = props.activeDeliveryStatus === 'assigned';
+
+  if (props.route === 'detail' && offerPending) {
     return (
       <StateView
         title="العرض ينتظر قرارك"
@@ -33,7 +34,7 @@ export function DshCaptainOrderJourneyRenderer(
     return <DshCaptainRouteRenderer {...props} />;
   }
 
-  if (props.activeAssignmentStatus !== 'accepted') {
+  if (offerPending || !props.activeAssignmentId) {
     return (
       <StateView
         title="الخريطة التنفيذية غير متاحة"
