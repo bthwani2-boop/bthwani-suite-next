@@ -19,15 +19,15 @@ test("JRN-005 persists address retry identity across application restarts", () =
 test("JRN-006 keeps map calls behind DSH and service-area governance", () => {
   const controller = read("frontend/shared/client-map/use-client-map-controller.ts");
   const api = read("frontend/shared/client-map/client-map.api.ts");
-  const handler = read("backend/internal/http/client_map.go");
-  const provider = read("backend/internal/mapprovider/client.go");
+  const handler = read("backend/internal/http/client_maps.go");
+  const provider = read("backend/internal/mapproviders/client.go");
 
-  assert.match(controller, /searchClientMap/);
-  assert.match(controller, /reverseClientMap/);
-  assert.match(api, /\/dsh\/client\/map\/search/);
-  assert.match(api, /\/dsh\/client\/map\/reverse/);
-  assert.match(handler, /SearchServiceAreas/);
-  assert.match(handler, /ReverseServiceAreas/);
+  assert.match(controller, /searchDshClientMapLocations/);
+  assert.match(controller, /reverseDshClientMapLocation/);
+  assert.match(api, /\/dsh\/client\/maps\/search/);
+  assert.match(api, /\/dsh\/client\/maps\/reverse/);
+  assert.match(handler, /servicearea\.Resolve/);
+  assert.match(handler, /ServiceAreaVerified/);
   assert.match(provider, /\/providers\/maps\/search/);
   assert.match(provider, /\/providers\/maps\/reverse/);
 });
