@@ -37,7 +37,11 @@ export function useHomeDiscoveryController(
       return;
     }
     await loadHomeDiscovery(
-      () => fetchHomeDiscovery({ cityCode, serviceAreaCode, limit: 20 }),
+      () => fetchHomeDiscovery({
+        ...(cityCode !== undefined ? { cityCode } : {}),
+        ...(serviceAreaCode !== undefined ? { serviceAreaCode } : {}),
+        limit: 20,
+      }),
       setState,
     );
   }, [cityCode, enabled, serviceAreaCode]);
