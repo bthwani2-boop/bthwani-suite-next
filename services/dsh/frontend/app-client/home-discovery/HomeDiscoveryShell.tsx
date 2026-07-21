@@ -23,6 +23,7 @@ import {
 } from "@bthwani/ui-kit";
 import {
   applyDiscoveryFilter,
+  buildHomeStoreGroups,
   recordHomeMarketingEvent,
   type BannerViewModel,
   type DiscoveryFilterKind,
@@ -33,6 +34,7 @@ import { HomeFilterRailSection } from "./HomeFilterRailSection";
 import { HomeHeroBannerSection } from "./HomeHeroBannerSection";
 import { HomePromoSection } from "./HomePromoSection";
 import { HomeStoreFeedSection } from "./HomeStoreFeedSection";
+import { HomeStoreGroupsSection } from "./HomeStoreGroupsSection";
 
 type Props = {
   state: HomeDiscoveryState;
@@ -138,6 +140,7 @@ export function HomeDiscoveryShell({
   }
 
   const { banners, promos, filters, categories, stores } = state.data;
+  const groups = buildHomeStoreGroups(stores);
   const filteredStores = applyDiscoveryFilter(stores, activeFilter)
     .filter((store) => activeCategoryId === null || store.categoryId === activeCategoryId);
 
@@ -158,6 +161,7 @@ export function HomeDiscoveryShell({
             onCategoriesPress={() => setShowDropdown(true)}
           />
         ) : null}
+        <HomeStoreGroupsSection groups={groups} onStorePress={onStorePress} />
         <HomeFilterRailSection
           filters={filters}
           activeFilter={activeFilter}
