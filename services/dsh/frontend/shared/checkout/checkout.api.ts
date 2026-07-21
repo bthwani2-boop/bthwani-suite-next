@@ -1,15 +1,19 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { createDshHttpClient } from "../_kernel/dsh-http-request";
+import type { DshCheckoutMutationContext } from "./checkout-create-attempt";
 import type { DshCheckoutIntent, DshCreateIntentInput } from "./checkout.types";
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "checkout");
 
 export async function createCheckoutIntent(
   input: DshCreateIntentInput,
+  mutation: DshCheckoutMutationContext,
 ): Promise<DshCheckoutIntent> {
   const data = await request<{ intent: DshCheckoutIntent }>("/dsh/client/checkout-intents", {
     method: "POST",
     body: input,
+    idempotencyKey: mutation.idempotencyKey,
+    correlationId: mutation.correlationId,
   });
   return data.intent;
 }
