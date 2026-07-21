@@ -12,6 +12,8 @@ import (
 	_ "github.com/lib/pq"
 )
 
+const integrationServiceAreaCode = "jrn005-integration-area"
+
 func openAddressIntegrationDB(t *testing.T) *sql.DB {
 	t.Helper()
 	databaseURL := os.Getenv("DSH_TEST_DATABASE_URL")
@@ -28,6 +30,23 @@ func openAddressIntegrationDB(t *testing.T) *sql.DB {
 	}
 	t.Cleanup(func() { _ = db.Close() })
 	return db
+}
+
+func ensureIntegrationServiceArea(t *testing.T, db *sql.DB) {
+	t.Helper()
+	_, err := db.Exec(`INSERT INTO dsh_service_area_geofences
+		(service_area_code, display_name, polygon, active, priority)
+		VALUES ($1, 'JRN-005 integration area', '[[44,15],[45,15],[45,16],[44,16]]'::jsonb, TRUE, 1000)
+		ON CONFLICT (service_area_code) DO UPDATE SET
+			display_name = EXCLUDED.display_name,
+			polygon = EXCLUDED.polygon,
+			active = TRUE,
+			priority = EXCLUDED.priority,
+			version = dsh_service_area_geofences.version + 1,
+			updated_at = NOW()`, integrationServiceAreaCode)
+	if err != nil {
+		t.Fatalf("ensure integration service area: %v", err)
+	}
 }
 
 func integrationPhone(suffix string, prefix string) string {
@@ -49,7 +68,7 @@ func insertIntegrationAddress(t *testing.T, db *sql.DB, clientID, suffix string,
 		"Recipient "+suffix,
 		integrationPhone(suffix, "70"),
 		"Integration address "+suffix,
-		"integration-area-"+suffix,
+		integrationServiceAreaCode,
 		"building-"+suffix,
 		"1",
 		"unit-"+suffix,
@@ -71,7 +90,7 @@ func integrationDraft(suffix string, makeDefault bool) CreateInput {
 		RecipientName:        "Updated Recipient " + suffix,
 		PhoneE164:            integrationPhone(suffix, "71"),
 		AddressLine:          "Updated integration address " + suffix,
-		ServiceAreaCode:      "integration-area-" + suffix,
+		ServiceAreaCode:      integrationServiceAreaCode,
 		Building:             stringPointer("updated-building-" + suffix),
 		Floor:                stringPointer("2"),
 		Unit:                 stringPointer("updated-unit-" + suffix),
@@ -97,6 +116,7 @@ func eventCount(t *testing.T, db *sql.DB, clientID, addressID, action string) in
 
 func TestIdempotentAddressMutationsAreExactlyOnceAndClientScoped(t *testing.T) {
 	db := openAddressIntegrationDB(t)
+	ensureIntegrationServiceArea(t, db)
 	ctx := context.Background()
 	suffix := fmt.Sprintf("%08d", time.Now().UnixNano()%100000000)
 	clientA := "jrn005-client-a-" + suffix
