@@ -54,11 +54,11 @@ func main() {
 	service := workforce.NewService(repo, identity, dsh)
 	authClient := auth.NewClient(identityBaseURL)
 
+	baseRouter := workforcehttp.NewRouter(db, service, repo, authClient)
+	journeyRouter := workforcehttp.Journey003MutationMiddleware(baseRouter, repo, authClient)
 	server := &http.Server{
 		Addr: ":" + port,
-		Handler: workforcehttp.CorsMiddleware(workforcehttp.ActivationMutationSafetyMiddleware(
-			workforcehttp.NewRouter(db, service, repo, authClient),
-		)),
+		Handler: workforcehttp.CorsMiddleware(workforcehttp.ActivationMutationSafetyMiddleware(journeyRouter)),
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,
