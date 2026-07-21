@@ -73,8 +73,24 @@ func ConfirmStoreCaptainHandoffIdempotent(
 		orderID,
 		storeID,
 	))
-	if err == nil && (item.Status == "partner_confirmed" || item.Status == "completed") {
-		return item, nil
+	if err == nil {
+		if item.Status == "partner_confirmed" || item.Status == "completed" {
+			return item, nil
+		}
+
+		var exceptionOpen bool
+		if err = db.QueryRow(`
+			SELECT EXISTS (
+				SELECT 1
+				FROM dsh_delivery_exceptions
+				WHERE assignment_id = $1::uuid
+				  AND status IN ('open', 'acknowledged')
+			)`, item.AssignmentID).Scan(&exceptionOpen); err != nil {
+			return nil, err
+		}
+		if exceptionOpen {
+			return nil, fmt.Errorf("%w: handoff exception requires operations resolution", ErrConflict)
+		}
 	}
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, err
