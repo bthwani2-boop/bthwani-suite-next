@@ -5,7 +5,7 @@ import type { HomeStoreGroupViewModel } from "../../shared/home-discovery";
 
 type Props = Readonly<{
   groups: readonly HomeStoreGroupViewModel[];
-  onStorePress?: (storeId: string, slug: string) => void;
+  onStorePress?: ((storeId: string, slug: string) => void) | undefined;
 }>;
 
 export function HomeStoreGroupsSection({ groups, onStorePress }: Props) {
@@ -97,6 +97,6 @@ const styles = StyleSheet.create({
     backgroundColor: alpha(colorRoles.brandAction, 0.08),
     paddingHorizontal: spacing[2],
     paddingVertical: 2,
-    borderRadius: radius.full,
+    borderRadius: radius.round,
   },
 });
