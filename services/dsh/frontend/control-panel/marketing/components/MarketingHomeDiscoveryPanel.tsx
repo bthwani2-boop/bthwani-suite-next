@@ -15,9 +15,12 @@ import {
 } from "@bthwani/control-panel/components";
 import { useControlPanelSession } from "../../../shared/session/control-panel-session";
 import {
+  formatTargetList,
+  parseTargetList,
   useHomeDiscoveryAdminController,
   type DshHomeAdminContentInput,
   type DshHomeAdminKind,
+  type DshHomeAdminTargeting,
 } from "../../../shared/home-discovery";
 
 const KIND_META = {
@@ -74,7 +77,7 @@ export function MarketingHomeDiscoveryPanel({ kind }: { readonly kind: DshHomeAd
           <div>
             <h3 style={styles.title}>{meta.title}</h3>
             <p style={styles.description}>
-              المحتوى المنشور فقط، وفي نافذته الزمنية، يظهر فعليًا في تطبيق العميل.
+              المحتوى المنشور فقط، وفي نافذته الزمنية والمتوافق مع المنطقة والجمهور، يظهر في تطبيق العميل.
             </p>
           </div>
           <div style={styles.actions}>
@@ -142,6 +145,9 @@ export function MarketingHomeDiscoveryPanel({ kind }: { readonly kind: DshHomeAd
             kind={kind}
             draft={controller.draft}
             setDraft={controller.setDraft}
+            targeting={controller.targeting}
+            setTargeting={controller.setTargeting}
+            targetingLoading={controller.targetingLoading}
             editing={controller.selected !== null}
             submitting={controller.actionState.kind === "submitting"}
             onSave={() => void controller.save(controller.draft)}
@@ -160,14 +166,24 @@ function formatPublicationWindow(from?: string, until?: string): string {
   return `حتى ${until}`;
 }
 
-function computeQuality(draft: DshHomeAdminContentInput): number {
+function isSafeMediaUrl(value: string): boolean {
+  const normalized = value.trim();
+  return /^https?:\/\//i.test(normalized) || /^\/dsh\/public\/media\//.test(normalized);
+}
+
+function computeQuality(draft: DshHomeAdminContentInput, targeting: DshHomeAdminTargeting): number {
   let score = 0;
-  if (draft.title.trim().length >= 2) score += 25;
-  if ((draft.subtitle ?? "").trim().length >= 5) score += 15;
-  if (draft.imageUrl.trim().length > 0) score += 25;
+  if (draft.title.trim().length >= 2) score += 20;
+  if ((draft.subtitle ?? "").trim().length >= 5) score += 10;
+  if (isSafeMediaUrl(draft.imageUrl)) score += 20;
   if (draft.actionType === "none" || draft.actionTarget.trim().length > 0) score += 15;
   if (draft.publicationStatus) score += 10;
   if (draft.publishFrom || draft.publishUntil) score += 10;
+  if (
+    targeting.cityCodes.length > 0 ||
+    targeting.serviceAreaCodes.length > 0 ||
+    targeting.audienceSegments.length > 0
+  ) score += 15;
   return score;
 }
 
@@ -175,6 +191,9 @@ function HomeDiscoveryEditor({
   kind,
   draft,
   setDraft,
+  targeting,
+  setTargeting,
+  targetingLoading,
   editing,
   submitting,
   onSave,
@@ -183,6 +202,9 @@ function HomeDiscoveryEditor({
   readonly kind: DshHomeAdminKind;
   readonly draft: DshHomeAdminContentInput;
   readonly setDraft: (value: DshHomeAdminContentInput) => void;
+  readonly targeting: DshHomeAdminTargeting;
+  readonly setTargeting: (value: DshHomeAdminTargeting) => void;
+  readonly targetingLoading: boolean;
   readonly editing: boolean;
   readonly submitting: boolean;
   readonly onSave: () => void;
@@ -192,26 +214,32 @@ function HomeDiscoveryEditor({
   const update = <K extends keyof DshHomeAdminContentInput>(key: K, value: DshHomeAdminContentInput[K]) => {
     setDraft({ ...draft, [key]: value });
   };
-  const quality = computeQuality(draft);
+  const quality = computeQuality(draft, targeting);
   const needsTarget = draft.actionType !== "none";
   const canSubmit =
     draft.title.trim().length >= 2 &&
-    draft.imageUrl.trim().length > 0 &&
+    isSafeMediaUrl(draft.imageUrl) &&
     (!needsTarget || draft.actionTarget.trim().length > 0) &&
+    !targetingLoading &&
     !submitting;
+  const audienceValue = targeting.audienceSegments.length === 1
+    ? targeting.audienceSegments[0]
+    : "all";
 
   return (
     <div style={styles.editor}>
       <div>
         <h4 style={styles.editorTitle}>{editing ? `تعديل ${meta.singular}` : `إضافة ${meta.singular}`}</h4>
-        <p style={styles.editorHint}>الحفظ يحترم حالة النشر والجدولة ورقم النسخة الحالي.</p>
+        <p style={styles.editorHint}>
+          عند النشر يُحفظ العنصر كمسودة أولًا، ثم الاستهداف، ثم يُنشر بعد نجاح الخطوتين.
+        </p>
       </div>
 
       <div style={styles.preview}>
-        {draft.imageUrl.trim() ? (
-          <img src={draft.imageUrl} alt="" style={styles.previewImage} />
+        {isSafeMediaUrl(draft.imageUrl) ? (
+          <img src={draft.imageUrl} alt={draft.title || `معاينة ${meta.singular}`} style={styles.previewImage} />
         ) : (
-          <div style={styles.previewPlaceholder}>لا توجد صورة للمعاينة</div>
+          <div style={styles.previewPlaceholder}>أدخل رابط وسائط HTTPS أو مسار وسائط DSH محكوم</div>
         )}
         <div style={styles.previewCopy}>
           <strong>{draft.title || `عنوان ${meta.singular}`}</strong>
@@ -257,6 +285,37 @@ function HomeDiscoveryEditor({
         />
       ) : null}
 
+      <div style={styles.targetingBox}>
+        <strong style={styles.targetingTitle}>الاستهداف</strong>
+        <p style={styles.editorHint}>اترك البعد فارغًا ليشمل الجميع. افصل القيم بفاصلة أو مسافة.</p>
+        <CpTextInput
+          value={formatTargetList(targeting.cityCodes)}
+          onChange={(value) => setTargeting({ ...targeting, cityCodes: parseTargetList(value) })}
+          placeholder="رموز المدن — مثال SANA'A, TAIZ"
+          aria-label="المدن المستهدفة"
+        />
+        <CpTextInput
+          value={formatTargetList(targeting.serviceAreaCodes)}
+          onChange={(value) => setTargeting({ ...targeting, serviceAreaCodes: parseTargetList(value) })}
+          placeholder="رموز مناطق الخدمة"
+          aria-label="مناطق الخدمة المستهدفة"
+        />
+        <CpSelect
+          value={audienceValue}
+          onChange={(value) => setTargeting({
+            ...targeting,
+            audienceSegments: value === "all" ? [] : [value as "guest" | "authenticated"],
+          })}
+          options={[
+            { value: "all", label: "كل الجماهير" },
+            { value: "guest", label: "الزوار غير المسجلين" },
+            { value: "authenticated", label: "العملاء المسجلون" },
+          ]}
+          aria-label="الجمهور المستهدف"
+        />
+        {targetingLoading ? <p role="status" style={styles.editorHint}>جاري تحميل الاستهداف…</p> : null}
+      </div>
+
       <CpTextInput
         value={String(draft.sortOrder)}
         onChange={(value) => update("sortOrder", Math.max(0, Number.parseInt(value, 10) || 0))}
@@ -292,7 +351,7 @@ function HomeDiscoveryEditor({
 
       <div style={styles.editorActions}>
         <CpButton disabled={!canSubmit} onClick={onSave}>
-          {submitting ? "جاري الحفظ…" : draft.publicationStatus === "published" ? "حفظ ونشر" : "حفظ"}
+          {submitting ? "جاري الحفظ…" : draft.publicationStatus === "published" ? "حفظ الاستهداف ونشر" : "حفظ"}
         </CpButton>
         <CpButton onClick={onCancel}>إلغاء</CpButton>
       </div>
@@ -355,6 +414,8 @@ const styles = WebStyleSheet.create({
     placeItems: "center",
     color: colorRoles.textMuted,
     fontSize: "0.8rem",
+    padding: spacing[3],
+    textAlign: "center",
   },
   previewCopy: {
     position: "absolute",
@@ -371,5 +432,14 @@ const styles = WebStyleSheet.create({
   qualityBox: { padding: spacing[3], backgroundColor: colorRoles.surfaceInset, borderRadius: radius.md },
   qualityHeader: { display: "flex", justifyContent: "space-between", fontSize: "0.75rem", marginBottom: spacing[1] },
   progress: { width: "100%" },
+  targetingBox: {
+    display: "grid",
+    gap: spacing[2],
+    padding: spacing[3],
+    backgroundColor: colorRoles.brandStructureSoft,
+    borderRadius: radius.md,
+    border: `1px solid ${colorRoles.borderSubtle}`,
+  },
+  targetingTitle: { color: colorRoles.textPrimary, fontSize: "0.85rem" },
   editorActions: { display: "flex", gap: spacing[2], marginTop: spacing[1], flexWrap: "wrap" },
 });
