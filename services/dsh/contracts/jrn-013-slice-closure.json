@@ -65,10 +65,10 @@
     },
     {
       "id": "FS-09",
-      "name": "Partner and captain exception commands",
+      "name": "Partner and captain exception commands with lifecycle-independent replay",
       "codeStatus": "CLOSED",
-      "requiredFiles": ["services/dsh/backend/internal/dispatch/store_captain_handoff_exceptions.go"],
-      "requiredMarkers": ["ReportPartnerStoreCaptainHandoffException", "ReportCaptainStoreCaptainHandoffException", "correlationId already belongs to a different exception command", "reporterActorID"]
+      "requiredFiles": ["services/dsh/backend/internal/dispatch/store_captain_handoff_exceptions.go", "services/dsh/backend/internal/dispatch/store_captain_handoff_exceptions_db_test.go"],
+      "requiredMarkers": ["ReportPartnerStoreCaptainHandoffException", "ReportCaptainStoreCaptainHandoffException", "findPartnerHandoffExceptionReplay", "findCaptainHandoffExceptionReplay", "partner replay after lifecycle closure", "captain replay after lifecycle closure"]
     },
     {
       "id": "FS-10",
@@ -130,8 +130,8 @@
       "id": "FS-18",
       "name": "Targeted source database and CI gates",
       "codeStatus": "CLOSED",
-      "requiredFiles": ["services/dsh/tests/store-captain-handoff-closure.test.mjs", ".github/workflows/store-captain-handoff-verification.yml"],
-      "requiredMarkers": ["custody database truth has dual confirmation", "partner and captain surfaces consume only shared custody commands", "Prove custody, replay, reassignment, and exception invariants", "Typecheck DSH shared brain and surfaces"]
+      "requiredFiles": ["services/dsh/tests/store-captain-handoff-closure.test.mjs", "services/dsh/tests/jrn-013-slice-closure.test.mjs", ".github/workflows/store-captain-handoff-verification.yml"],
+      "requiredMarkers": ["custody database truth has dual confirmation", "registers exactly FS-01 through FS-18", "Verify all registered custody slices", "Prove custody, replay, reassignment, and exception invariants", "Typecheck DSH shared brain and surfaces"]
     }
   ],
   "independentReviewPending": ["product-owner", "qa-device-accessibility", "security", "finance-boundary", "release-production"],
