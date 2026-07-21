@@ -60,3 +60,51 @@ func TestCorsMiddlewareRejectsUnknownOrigin(t *testing.T) {
 		t.Fatalf("untrusted origin received CORS methods: %q", got)
 	}
 }
+
+func TestBrowserOriginGuardFailsClosedForUntrustedOrigin(t *testing.T) {
+	t.Setenv("IDENTITY_CORS_ALLOWED_ORIGINS", "https://control-panel.example.com")
+
+	nextCalled := false
+	handler := BrowserOriginGuard(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		nextCalled = true
+	}))
+
+	request := httptest.NewRequest(http.MethodPost, "/auth/login", strings.NewReader(`{"username":"test"}`))
+	request.Header.Set("Origin", "https://untrusted.example.com")
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, request)
+
+	if response.Code != http.StatusForbidden {
+		t.Fatalf("expected forbidden origin to receive 403, got %d", response.Code)
+	}
+	if nextCalled {
+		t.Fatal("untrusted browser origin must not reach identity handlers")
+	}
+	if !strings.Contains(response.Body.String(), "CORS_ORIGIN_FORBIDDEN") {
+		t.Fatalf("missing governed CORS error code: %q", response.Body.String())
+	}
+}
+
+func TestBrowserOriginGuardAllowsConfiguredOrigin(t *testing.T) {
+	t.Setenv("IDENTITY_CORS_ALLOWED_ORIGINS", "https://control-panel.example.com")
+
+	nextCalled := false
+	handler := BrowserOriginGuard(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		nextCalled = true
+		w.WriteHeader(http.StatusAccepted)
+	}))
+
+	request := httptest.NewRequest(http.MethodPost, "/auth/login", nil)
+	request.Header.Set("Origin", "https://control-panel.example.com")
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, request)
+
+	if !nextCalled {
+		t.Fatal("configured browser origin must reach the canonical identity middleware chain")
+	}
+	if response.Code != http.StatusAccepted {
+		t.Fatalf("expected downstream response, got %d", response.Code)
+	}
+}
