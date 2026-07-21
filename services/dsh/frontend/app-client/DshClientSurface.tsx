@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { BackHandler, StyleSheet, View } from "react-native";
+import { BackHandler, Linking, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppHeader } from "../../../../apps/app-client/runtime/src/shell/AppHeader";
 import {
@@ -100,6 +100,18 @@ export function DshClientSurface() {
       openOrderTracking(orderMatch[1]);
     }
   }, [openOrderTracking]);
+
+  const openHomeMarketingAction = useCallback((actionType: string, actionTarget: string) => {
+    const target = actionTarget.trim();
+    if (actionType === "store" && target) {
+      setSelectedStoreId(target);
+      setActiveTab("stores");
+      return;
+    }
+    if (actionType === "external" && /^https?:\/\//i.test(target)) {
+      void Linking.openURL(target);
+    }
+  }, []);
 
   const openAddressBookFromCart = useCallback(() => {
     setProfileRoute("addresses");
@@ -224,6 +236,7 @@ export function DshClientSurface() {
               if (nodeId === "node-shein") setActiveSpecialRequest("shein");
               if (nodeId === "node-awnak") setActiveSpecialRequest("awnak");
             }}
+            onMarketingAction={openHomeMarketingAction}
           />
         ) : activeTab === "stores" ? (
           selectedStoreId === null ? (
