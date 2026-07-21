@@ -2,6 +2,7 @@
   "schemaVersion": 1,
   "journeyId": "JRN-001",
   "sliceId": "FS-12",
+  "verificationGeneration": 2,
   "truthOwner": "DSH committed partner, store, document, visit and audit records",
   "financialTruthOwner": "WLT payout destination records",
   "canonicalContract": "services/dsh/contracts/dsh.partner-onboarding.openapi.yaml",
