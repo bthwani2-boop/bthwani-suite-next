@@ -1,0 +1,160 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-008",
+  "journeyName": "الكتالوج المركزي والوسائط والتشكيلة",
+  "repository": "bthwani2-boop/bthwani-suite-next",
+  "branch": "sambassam",
+  "decision": "READY_FOR_REVIEW",
+  "codeClosure": "COMPLETE",
+  "sliceClosure": "COMPLETE",
+  "technicalAcceptanceResult": "PASS",
+  "implementationCommit": "3a4069bfb24a28fde864b7c71f8b4e58bb753a32",
+  "formattedSourceCommit": "804bac073dccc69d7965fcec0dd9bd86b47116e3",
+  "workflow": ".github/workflows/jrn-008-sambassam-verify.yml",
+  "workflowRunId": 29871585138,
+  "statusContext": "journeys/jrn-008/catalog-slice-closure",
+  "statusState": "success",
+  "sameCommitEvidence": true,
+  "checks": {
+    "allTenFunctionalSlices": "PASS",
+    "fullStackSlicesFs01ToFs18": "PASS",
+    "contractMetadataAndRegistration": "PASS",
+    "operationOwnership": "PASS",
+    "goRouteRegistration": "PASS",
+    "typedSharedAdapter": "PASS",
+    "goFormatting": "PASS",
+    "goDomainAndHttpTests": "PASS",
+    "controlPanelTypecheck": "PASS",
+    "partnerTypecheck": "PASS",
+    "fieldTypecheck": "PASS",
+    "fullSchemaBuild": "PASS",
+    "journeyMigrationReplay": "PASS",
+    "auditedMutation": "PASS",
+    "guardedRollback": "PASS"
+  },
+  "artifacts": [
+    {
+      "id": 8511353491,
+      "name": "jrn-008-static-evidence",
+      "digest": "sha256:4a93467349edf43dfbc4471ed60a6ee22f140b2974c24da9a4d304f54b6cc3ba",
+      "expiresAt": "2026-07-26T21:51:46Z"
+    },
+    {
+      "id": 8511350128,
+      "name": "jrn-008-go-evidence",
+      "digest": "sha256:2dbada489e03d33544dfc781686df38d9d4b6b88c63dbb4284d4322822737885",
+      "expiresAt": "2026-07-26T21:51:39Z"
+    },
+    {
+      "id": 8511360580,
+      "name": "jrn-008-typescript-evidence",
+      "digest": "sha256:2333f734ca43d2255aae2f2502ce908732de9fd84799983c78d2b7830133e363",
+      "expiresAt": "2026-07-26T21:52:03Z"
+    },
+    {
+      "id": 8511355536,
+      "name": "jrn-008-database-evidence",
+      "digest": "sha256:c2fbce1d1f4cf990ab2c25125ad5b1f34def002b7caf291e88683ee43350d746",
+      "expiresAt": "2026-07-26T21:51:51Z"
+    }
+  ],
+  "slices": [
+    {
+      "sliceId": "JRN-008-S01",
+      "name": "domains-tree-and-category-nodes",
+      "status": "CLOSED_WITH_EVIDENCE",
+      "evidence": ["allTenFunctionalSlices", "contractMetadataAndRegistration", "controlPanelTypecheck"]
+    },
+    {
+      "sliceId": "JRN-008-S02",
+      "name": "master-products-units-attributes-and-alternatives",
+      "status": "CLOSED_WITH_EVIDENCE",
+      "evidence": ["goDomainAndHttpTests", "typedSharedAdapter", "fullSchemaBuild", "controlPanelTypecheck"]
+    },
+    {
+      "sliceId": "JRN-008-S03",
+      "name": "partner-and-field-product-proposals",
+      "status": "CLOSED_WITH_EVIDENCE",
+      "evidence": ["goRouteRegistration", "partnerTypecheck", "fieldTypecheck", "allTenFunctionalSlices"]
+    },
+    {
+      "sliceId": "JRN-008-S04",
+      "name": "proposal-review-rejection-and-transitions",
+      "status": "CLOSED_WITH_EVIDENCE",
+      "evidence": ["goDomainAndHttpTests", "controlPanelTypecheck", "allTenFunctionalSlices"]
+    },
+    {
+      "sliceId": "JRN-008-S05",
+      "name": "store-assortment-inventory-availability-and-temporary-pause",
+      "status": "CLOSED_WITH_EVIDENCE",
+      "evidence": ["journeyMigrationReplay", "goDomainAndHttpTests", "partnerTypecheck", "fieldTypecheck"]
+    },
+    {
+      "sliceId": "JRN-008-S06",
+      "name": "domain-category-product-media-and-links",
+      "status": "CLOSED_WITH_EVIDENCE",
+      "evidence": ["allTenFunctionalSlices", "contractMetadataAndRegistration", "fullSchemaBuild"]
+    },
+    {
+      "sliceId": "JRN-008-S07",
+      "name": "asset-upload-complete-review-link-unlink-delete",
+      "status": "CLOSED_WITH_EVIDENCE",
+      "evidence": ["allTenFunctionalSlices", "goRouteRegistration", "controlPanelTypecheck"]
+    },
+    {
+      "sliceId": "JRN-008-S08",
+      "name": "reels-submission-review-and-public-projection",
+      "status": "CLOSED_WITH_EVIDENCE",
+      "evidence": ["allTenFunctionalSlices", "contractMetadataAndRegistration", "partnerTypecheck", "controlPanelTypecheck"]
+    },
+    {
+      "sliceId": "JRN-008-S09",
+      "name": "approvals-policies-seed-audit-and-rollback",
+      "status": "CLOSED_WITH_EVIDENCE",
+      "evidence": ["auditedMutation", "guardedRollback", "journeyMigrationReplay", "controlPanelTypecheck"]
+    },
+    {
+      "sliceId": "JRN-008-S10",
+      "name": "single-published-client-catalog-and-local-catalog-retirement",
+      "status": "CLOSED_WITH_EVIDENCE",
+      "evidence": ["allTenFunctionalSlices", "operationOwnership", "typedSharedAdapter", "fullSchemaBuild"]
+    }
+  ],
+  "fullStackSliceRange": {
+    "from": "FS-01",
+    "to": "FS-18",
+    "status": "CLOSED_WITH_EVIDENCE",
+    "evidence": [
+      "fullStackSlicesFs01ToFs18",
+      "contractMetadataAndRegistration",
+      "operationOwnership",
+      "goRouteRegistration",
+      "typedSharedAdapter",
+      "goFormatting",
+      "goDomainAndHttpTests",
+      "controlPanelTypecheck",
+      "partnerTypecheck",
+      "fieldTypecheck",
+      "fullSchemaBuild",
+      "journeyMigrationReplay",
+      "auditedMutation",
+      "guardedRollback"
+    ]
+  },
+  "openCodeGaps": [],
+  "openSliceCount": 0,
+  "failedRequiredCheckCount": 0,
+  "parallelLocalCatalogDetected": false,
+  "financialBoundary": "JRN-008 owns catalog, media and store-assortment operational truth; WLT remains outside this journey and retains sole ownership of wallet, ledger and settlement truth.",
+  "independentReviewPending": [
+    "product_owner_approval",
+    "qa_physical_device_runtime_rtl_accessibility_evidence",
+    "security_and_privacy_approval",
+    "release_and_production_approval"
+  ],
+  "notes": [
+    "Every declared functional slice is implemented in code and represented by executable static evidence.",
+    "FS-01 through FS-18 are bound to contracts, database, backend, shared frontend brain, operator/partner/field surfaces and CI verification.",
+    "The overall decision remains READY_FOR_REVIEW because independent QA, product, security and production approvals are intentionally outside self-authored code closure."
+  ]
+}
