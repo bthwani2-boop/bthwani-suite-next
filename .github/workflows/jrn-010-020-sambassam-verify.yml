@@ -38,6 +38,7 @@ on:
       - "services/dsh/tests/journeys-020-025-binding.test.mjs"
       - "tools/guards/checkout/jrn-010-checkout-truth-gate.mjs"
       - "tools/guards/jrn-011-cross-surface-integrity-gate.mjs"
+      - "tools/guards/jrn-012-014-preparation-dispatch-gate.mjs"
       - "tools/guards/jrn-015-020-affected-boundary.mjs"
       - ".github/workflows/jrn-010-020-sambassam-verify.yml"
 
@@ -73,6 +74,8 @@ jobs:
         run: |
           node tools/guards/jrn-011-cross-surface-integrity-gate.mjs
           node --test services/dsh/tests/jrn-011-order-*.test.mjs
+      - name: Verify JRN-012..014 preparation, custody, and dispatch
+        run: node tools/guards/jrn-012-014-preparation-dispatch-gate.mjs
       - name: Verify JRN-015..020 affected surfaces and readback
         run: |
           node tools/guards/jrn-015-020-affected-boundary.mjs
