@@ -287,6 +287,8 @@ func (s *protectedStoreServer) handleResolveDeliveryException(w http.ResponseWri
 		item, err = dispatch.ResolveDeliveryExceptionReassignCaptain(s.db, r.PathValue("exceptionId"), body.ExpectedVersion, body.NewCaptainID, body.Note, actor.ID)
 	case "return_to_store":
 		item, err = dispatch.ResolveDeliveryExceptionReturnToStore(s.db, r.PathValue("exceptionId"), body.ExpectedVersion, body.Note, actor.ID)
+	case "cancel_order":
+		item, err = dispatch.ResolveDeliveryExceptionCancelOrder(s.db, r.PathValue("exceptionId"), body.ExpectedVersion, body.Note, actor.ID)
 	default:
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "unsupported delivery exception resolution action")
 		return
