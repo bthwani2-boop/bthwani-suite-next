@@ -80,7 +80,7 @@ function OrderTimeline({ order }: { readonly order: OrderTruth }) {
             <Icon
               name={current ? 'radio-button-on' : 'checkmark-circle'}
               size={18}
-              tone={current ? 'info' : 'success'}
+              tone={current ? 'action' : 'success'}
             />
             <View style={styles.timelineText}>
               <Text role={current ? 'bodyStrong' : 'bodySm'}>{orderEventLabel(event)}</Text>
@@ -179,7 +179,7 @@ function ClientCancellationPanel({
     <Surface tone="raised" gap={3}>
       <Text role="titleSm">إلغاء الطلب</Text>
       <Text role="bodySm" tone="muted">
-        صلاحية الإلغاء معروضة من `allowedActions`. يقرر WLT تحرير الدفع أو الاسترداد بصورة مستقلة.
+        صلاحية الإلغاء معروضة من allowedActions. يقرر WLT تحرير الدفع أو الاسترداد بصورة مستقلة.
       </Text>
       <Box gap={2}>
         {CLIENT_CANCELLATION_REASONS.map((reason) => (
