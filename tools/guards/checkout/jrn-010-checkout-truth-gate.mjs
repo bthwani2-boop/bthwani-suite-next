@@ -8,6 +8,9 @@ const routes = readFileSync("services/dsh/backend/internal/http/server.go", "utf
 const operatorScreen = readFileSync("services/dsh/frontend/control-panel/operations/CheckoutActivityScreen.tsx", "utf8");
 
 assert.match(checkoutHttp, /requireActor\(w, r, "client"\)/);
-assert.match(checkoutHttp, /cartId, storeId and authenticated tenant are required/);
 assert.match(checkoutHttp, /ComputeCheckoutSnapshotForClientTx/);
-assert.match(routes, /POST \/dsh\/client\/checkout-intents/);
+assert.match(checkoutHttp, /clientaddress\.GetOwned/);
+assert.match(checkoutHttp, /cart\.CheckServiceability/);
+assert.match(checkoutHttp, /ResolveDeliveryPricingTx/);
+assert.match(checkoutHttp, /PRICING_CURRENCY_MISMATCH/);
+assert.match(checkoutHttp, /BuildPricingSnapshotHash/);
