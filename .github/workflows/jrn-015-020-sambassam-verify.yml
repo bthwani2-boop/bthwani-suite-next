@@ -142,8 +142,8 @@ jobs:
             DESCRIPTION="JRN-015..020 targeted checks passed"
           else
             STATE="failure"
-            FIRST_ERROR="$(grep -m1 -E 'undefined:|cannot use|not enough arguments|too many arguments|error TS[0-9]+|FAIL|Error:|ERR_' /tmp/jrn-015-020.log 2>/dev/null || true)"
-            ERROR_TOKEN="$(printf '%s' "$FIRST_ERROR" | tr '[:upper:]' '[:lower:]' | tr -cs '[:alnum:]_.-' '-' | sed 's/^-//;s/-$//' | cut -c1-50)"
+            FIRST_ERROR="$(grep -m1 -E 'expected route|undefined:|cannot use|not enough arguments|too many arguments|error TS[0-9]+|Error:|ERR_|FAIL' /tmp/jrn-015-020.log 2>/dev/null || true)"
+            ERROR_TOKEN="$(printf '%s' "$FIRST_ERROR" | tr '[:upper:]' '[:lower:]' | tr -cs '[:alnum:]_.-' '-' | sed 's/^-//;s/-$//' | cut -c1-60)"
             CONTEXT="journeys/jrn-015-020/$STAGE/${ERROR_TOKEN:-check-failed}"
             CONTEXT="$(printf '%s' "$CONTEXT" | cut -c1-100)"
             DESCRIPTION="Failed at $STAGE"
