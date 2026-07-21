@@ -7,6 +7,7 @@
   "repository": "bthwani2-boop/bthwani-suite-next",
   "branch": "sambassam",
   "implementationCommit": "633ae051264bb03049a4751ac67ac79724bb03d2",
+  "finalVerificationRequestedOnBaseHead": "ae9cebe7341b70ee48e21f494b3e930d7e86114b",
   "workflowRun": {
     "id": 29865894007,
     "name": "JRN-006 All Slices Closure",
