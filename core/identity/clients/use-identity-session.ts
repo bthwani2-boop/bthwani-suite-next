@@ -13,6 +13,17 @@ import {
   deleteAccountIdentity,
 } from "./identity-session-store.ts";
 
+export type IdentityActivationAction = {
+  (phone: string, code: string): Promise<void>;
+  (actorType: ActivationActorType, phone: string, code: string): Promise<void>;
+};
+
+let configuredActivationActorType: ActivationActorType | null = null;
+
+export function configureIdentityActivationActorType(actorType: ActivationActorType): void {
+  configuredActivationActorType = actorType;
+}
+
 export function useIdentitySession() {
   const state = useSyncExternalStore(
     subscribeIdentityState,
@@ -28,9 +39,16 @@ export function useIdentitySession() {
     (actorType: ActivationActorType, phone: string) => requestOtpIdentity(actorType, phone),
     [],
   );
-  const activate = useCallback(
-    (actorType: ActivationActorType, phone: string, code: string) =>
-      activateIdentity(actorType, phone, code),
+  const activate = useCallback<IdentityActivationAction>(
+    (...args: [string, string] | [ActivationActorType, string, string]) => {
+      if (args.length === 2) {
+        if (configuredActivationActorType === null) {
+          return Promise.reject(new Error("IDENTITY_ACTOR_TYPE_NOT_CONFIGURED"));
+        }
+        return activateIdentity(configuredActivationActorType, args[0], args[1]);
+      }
+      return activateIdentity(args[0], args[1], args[2]);
+    },
     [],
   );
   const listSessions = useCallback(() => listIdentitySessions(), []);
