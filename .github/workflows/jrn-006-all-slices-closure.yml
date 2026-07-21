@@ -38,7 +38,7 @@ on:
       - ".github/workflows/jrn-006-all-slices-closure.yml"
 
 permissions:
-  contents: read
+  contents: write
   statuses: write
 
 concurrency:
@@ -82,7 +82,8 @@ jobs:
       - name: Checkout exact commit
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
-          persist-credentials: false
+          fetch-depth: 0
+          persist-credentials: true
 
       - name: Setup pinned Node workspace
         uses: ./.github/actions/setup-node-workspace
@@ -173,3 +174,69 @@ jobs:
         env:
           OUTCOME: ${{ steps.closure.outcome }}
         run: test "$OUTCOME" = success
+
+      - name: Synchronize central registry to ready for review
+        if: success() && github.ref_name == 'sambassam'
+        shell: bash
+        run: |
+          git checkout -B sambassam "$GITHUB_SHA"
+          git pull --rebase origin sambassam
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md")
+          text = path.read_text(encoding="utf-8")
+          old_row = "| JRN-006 | الخرائط ومناطق الخدمة وخصوصية العناوين | Providers + DSH | NEEDS_EVIDENCE |"
+          ready_row = "| JRN-006 | الخرائط ومناطق الخدمة وخصوصية العناوين | Providers + DSH | READY_FOR_REVIEW |"
+          if old_row in text:
+              text = text.replace(old_row, ready_row, 1)
+          elif ready_row not in text:
+              raise SystemExit("JRN-006 index row not found")
+
+          start = text.index("### JRN-006 — الخرائط ومناطق الخدمة وخصوصية العناوين")
+          end = text.index("### JRN-007", start)
+          section = """### JRN-006 — الخرائط ومناطق الخدمة وخصوصية العناوين
+
+tracking_status: READY_FOR_REVIEW  
+decision: READY_FOR_REVIEW  
+technical_slice_closure: COMPLETE  
+last_verified_commit: `8a9fe9f5b704699d86f17468407685a083cea4d0`  
+slice_registry: `services/dsh/contracts/jrn-006-slice-verification-registry.json`  
+product_truth: `governance/product/contracts/jrn-006-maps-service-area-address-privacy.product-truth.json`  
+evidence: `governance/evidence/JRN-006_ALL_SLICES_CLOSURE.json`  
+status_context: `journeys/jrn-006/all-slices`  
+workflow_run: `29867637640`
+
+الأسطح المنفذة: `app-client`, `control-panel`, العقل المشترك لـDSH، باك إند DSH، PostgreSQL، العقود، وقراءة حالة Providers.
+
+- [x] `JRN-006-S01` — البحث المحكوم عن المواقع ورفض نتائج المزود غير الصالحة.
+- [x] `JRN-006-S02` — reverse geocoding والتحقق من الإحداثيات والنتيجة وربطها بمنطقة DSH.
+- [x] `JRN-006-S03` — health وفشل المزود والمهلة والنتيجة غير المؤكدة مع readback للمشغل.
+- [x] `JRN-006-S04` — قائمة وتفصيل مناطق الخدمة والمضلع وعدد النقاط والحدود المحسوبة.
+- [x] `JRN-006-S05` — إنشاء وتحديث geofence مع OCC وidempotency ومنع التقاطع والمساحة الصفرية في Go وPostgreSQL.
+- [x] `JRN-006-S06` — سياسة الاحتفاظ والانتهاء وإعادة الجدولة وحالة طابور الخصوصية.
+- [x] `JRN-006-S07` — anonymization المستحق مع `SKIP LOCKED` وهوية تشغيل ثابتة لإعادة المحاولة.
+- [x] `JRN-006-S08` — حماية PII وعزل الممثلين وقراءة تدقيق من projection خالية بنيويًا من PII الخام.
+
+open_code_gaps: none  
+independent_review_pending: Product Owner, QA device/runtime/accessibility, Security/Privacy, Release/Production.
+
+"""
+          text = text[:start] + section + text[end:]
+          row = "| 2026-07-21 | JRN-006 | JRN-006-S01..S08 technical code closure | sambassam | `8a9fe9f5b704699d86f17468407685a083cea4d0`; run `29867637640`; artifact `8509858584` | app-client, control-panel, DSH shared/backend/database/contracts, Providers health | READY_FOR_REVIEW | independent Product, QA/device/accessibility, Security/Privacy and Release/Production review |"
+          if row not in text:
+              marker = "|---|---|---|---|---|---|---|---|"
+              point = text.index(marker) + len(marker)
+              text = text[:point] + "\n" + row + text[point:]
+          path.write_text(text, encoding="utf-8")
+          PY
+          if git diff --quiet; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md
+          git commit -m "governance(jrn-006): mark technical slices ready for review"
+          for attempt in 1 2 3; do
+            git push origin HEAD:sambassam && exit 0
+            git pull --rebase origin sambassam
+          done
+          exit 1
