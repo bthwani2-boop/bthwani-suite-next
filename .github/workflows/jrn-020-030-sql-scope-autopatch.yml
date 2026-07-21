@@ -1,0 +1,56 @@
+name: JRN-020..030 SQL Scope Autopatch
+
+on:
+  push:
+    branches: [sambassam]
+    paths:
+      - ".github/workflows/jrn-020-030-sql-scope-autopatch.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-remove-self:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout sambassam
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: sambassam
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Scope final SQL suites and remove this workflow
+        shell: bash
+        run: |
+          git pull --ff-only origin sambassam
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('.github/workflows/jrn-020-030-final-closure.yml')
+          content = path.read_text(encoding='utf-8')
+          before = "done < <(find services/dsh/database/tests -maxdepth 1 -type f -name '*.sql' | sort)"
+          after = "done < <(find services/dsh/database/tests -maxdepth 1 -type f -name '*.sql' | sort | grep -E '/dsh-(009|011|012|019|020|034|054|055|058|059|065|066|067|068|069|070|071|072|073|074|075|076|077|080|084|087|093|094|095|096|097)[^/]*\\.sql$')"
+          if before not in content:
+              if after not in content:
+                  raise SystemExit('final closure SQL test selector not found')
+          else:
+              content = content.replace(before, after, 1)
+              path.write_text(content, encoding='utf-8')
+          PY
+          git rm .github/workflows/jrn-020-030-sql-scope-autopatch.yml
+          git diff --check
+      - name: Commit and push SQL scope
+        shell: bash
+        run: |
+          git config user.name "bthwani-journey-automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add .github/workflows/jrn-020-030-final-closure.yml
+          git commit -m "ci(jrn-020-030): run only authorized SQL invariant suites"
+          for attempt in 1 2 3; do
+            git fetch origin sambassam
+            git rebase origin/sambassam
+            if git push origin HEAD:sambassam; then
+              exit 0
+            fi
+          done
+          exit 1
