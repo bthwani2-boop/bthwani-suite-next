@@ -4,6 +4,7 @@ on:
   push:
     branches: [sambassam]
     paths:
+      - governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md
       - governance/evidence/JRN-001_PARTNER_ONBOARDING_EVIDENCE.json
       - governance/evidence/JRN-001_PARTNER_ONBOARDING_STORE_PUBLICATION.md
       - governance/runbooks/JRN-001_PARTNER_ONBOARDING_SUPPORT.md
