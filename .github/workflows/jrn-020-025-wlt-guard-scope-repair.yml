@@ -1,4 +1,5 @@
 name: JRN 020-025 WLT guard scope repair
+# Rebase-safe repair for concurrent sambassam writers.
 
 on:
   push:
@@ -30,14 +31,19 @@ jobs:
             '  "tools/guards/live-cross-journey-integrity-gate.mjs",',
           ].join('\n');
           if (!before.includes(oldBlock)) {
+            if (before.includes('  "tools/guards/",')) process.exit(0);
             throw new Error('expected WLT guard allowlist block was not found');
           }
-          const after = before.replace(oldBlock, '  "tools/guards/",');
-          fs.writeFileSync(file, after);
+          fs.writeFileSync(file, before.replace(oldBlock, '  "tools/guards/",'));
           NODE
+          if git diff --quiet; then
+            echo "WLT guard scope is already aligned."
+            exit 0
+          fi
           git diff --check
           git config user.name "bthwani-journey-closure"
           git config user.email "actions@users.noreply.github.com"
           git add tools/guards/wlt-financial-boundary-gate.mjs
           git commit -m "fix(wlt): exclude governance guards from provider runtime scan"
+          git pull --rebase origin sambassam
           git push origin HEAD:sambassam
