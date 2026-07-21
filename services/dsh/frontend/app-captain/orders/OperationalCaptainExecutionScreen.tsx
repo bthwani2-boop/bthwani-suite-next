@@ -6,7 +6,11 @@ import {
   useStoreCaptainHandoffException,
   type DshDeliveryExceptionReasonCode,
 } from '../../shared/dispatch';
-import { STORE_CAPTAIN_HANDOFF_EXCEPTION_LABELS } from '../../shared/orders';
+import {
+  OrderPreparationReadbackCard,
+  STORE_CAPTAIN_HANDOFF_EXCEPTION_LABELS,
+  useOrderPreparationReadback,
+} from '../../shared/orders';
 import {
   readCaptainForegroundLocation,
   type DshCaptainLocationPush,
@@ -51,6 +55,7 @@ export function OperationalCaptainExecutionScreen({
   const [locationState, setLocationState] = React.useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [locationMessage, setLocationMessage] = React.useState<string | null>(null);
   const handoffException = useStoreCaptainHandoffException('captain', onRefresh);
+  const preparationReadback = useOrderPreparationReadback(orderId, { pollIntervalMs: 15_000 });
   const handoffExceptionKind = handoffException.state.kind;
   const handoffReadback = handoffException.readback;
   const cancelHandoffException = handoffException.cancel;
@@ -109,6 +114,12 @@ export function OperationalCaptainExecutionScreen({
           <Text role="bodySm" style={styles.inverted}>{currentStageLabel}</Text>
           <Text role="caption" style={styles.inverted}>{`الإسناد: ${assignmentId}`}</Text>
         </Surface>
+
+        <OrderPreparationReadbackCard
+          state={preparationReadback.state}
+          title="جاهزية الطلب لدى المتجر"
+          onRetry={preparationReadback.refresh}
+        />
 
         <Surface tone="raised" gap={3}>
           <View style={styles.row}>
