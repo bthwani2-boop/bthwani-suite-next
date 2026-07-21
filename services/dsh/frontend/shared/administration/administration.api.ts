@@ -8,11 +8,37 @@ import type {
   DshAdminAuditEntry,
   DshRoleAssignmentApproval,
   DshRoleAssignmentApprovalStatus,
+  DshRoleDefinitionRequest,
+  DshAdministrationApprovalStatus,
 } from "./administration.types";
 
 const { req } = createDshRawHttpClient(resolveDshApiBaseUrl(), "adm");
 
 export const fetchRoles = () => req<{ roles: DshRole[] }>("/dsh/operator/admin/roles");
+
+export const requestRoleDefinition = (body: {
+  name: string;
+  description: string;
+  permissions: readonly string[];
+  reason: string;
+}) => req<{ request: DshRoleDefinitionRequest }>("/dsh/operator/admin/roles/requests", {
+  method: "POST",
+  body: JSON.stringify(body),
+});
+
+export const fetchRoleDefinitionRequests = (status: DshAdministrationApprovalStatus | "" = "pending") =>
+  req<{ requests: DshRoleDefinitionRequest[] }>(
+    `/dsh/operator/admin/role-requests${status ? `?status=${status}` : ""}`,
+  );
+
+export const reviewRoleDefinitionRequest = (
+  requestId: string,
+  body: { decision: "approved" | "rejected"; reviewNote: string; expectedVersion: number },
+) => req<{ request: DshRoleDefinitionRequest; role: DshRole | null }>(
+  `/dsh/operator/admin/role-requests/${requestId}/review`,
+  { method: "POST", body: JSON.stringify(body) },
+);
+
 export const fetchStaff = () => req<{ staff: DshStaffMember[] }>("/dsh/operator/admin/staff");
 
 export const requestStaffRoleAssignment = (staffId: string, roleId: string, reason: string) =>
