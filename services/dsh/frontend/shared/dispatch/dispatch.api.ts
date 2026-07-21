@@ -176,13 +176,17 @@ export function classifyDispatchError(error: unknown): DshDispatchError {
   };
   const code = typed.body?.code;
   const message = typed.body?.message ?? typed.message;
+  const details = {
+    ...(code !== undefined ? { code } : {}),
+    ...(message !== undefined ? { message } : {}),
+  };
   if (typed.kind === "http") {
-    if (typed.status === 401 || typed.status === 403) return { kind: "permission_denied", code, message };
-    if (typed.status === 404) return { kind: "not_found", code, message };
-    if (typed.status === 409) return { kind: "conflict", code, message };
+    if (typed.status === 401 || typed.status === 403) return { kind: "permission_denied", ...details };
+    if (typed.status === 404) return { kind: "not_found", ...details };
+    if (typed.status === 409) return { kind: "conflict", ...details };
   }
-  if (typed.kind === "network") return { kind: "offline", code, message };
-  return { kind: "error", code, message };
+  if (typed.kind === "network") return { kind: "offline", ...details };
+  return { kind: "error", ...details };
 }
 
 export function getDshOrderLifecycleRuntimeClient() {
