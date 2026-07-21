@@ -172,7 +172,7 @@ func TransitionStatusGoverned(ctx context.Context, db *sql.DB, partnerID string,
 
 	if _, err := tx.ExecContext(ctx,
 		`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,
-		partnerID+"\x00"+input.IdempotencyKey,
+		partnerID+"\x1f"+input.IdempotencyKey,
 	); err != nil {
 		return Partner{}, ActivationEvent{}, err
 	}

@@ -65,7 +65,7 @@ func HandleUpsertPayoutDestinationGoverned(db *sql.DB) http.HandlerFunc {
 		// reservation exists. The durable primary key remains the final invariant.
 		if _, err := tx.ExecContext(r.Context(),
 			`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,
-			partnerID+"\x00"+idempotencyKey,
+			partnerID+"\x1f"+idempotencyKey,
 		); err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "WLT_INTERNAL_ERROR", "failed to lock payout request")
 			return
