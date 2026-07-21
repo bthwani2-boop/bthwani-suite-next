@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-006",
+  "journeyName": "الخرائط ومناطق الخدمة وخصوصية العناوين",
+  "decision": "CLOSED_WITH_EVIDENCE",
+  "repositoryMode": "REMOTE_ONLY",
+  "repository": "bthwani2-boop/bthwani-suite-next",
+  "branch": "sambassam",
+  "implementationCommit": "633ae051264bb03049a4751ac67ac79724bb03d2",
+  "workflowRun": {
+    "id": 29865894007,
+    "name": "JRN-006 All Slices Closure",
+    "job": "JRN-006 eight-slice verification",
+    "statusContext": "journeys/jrn-006/all-slices",
+    "result": "success"
+  },
+  "artifact": {
+    "id": 8509195051,
+    "name": "jrn-006-all-slices-evidence",
+    "digest": "sha256:d3b6effafb18304c3712013a489f4d439fc37bbb275323a23ef0568bc943bb43",
+    "retentionExpiresAt": "2026-07-28T20:29:43Z"
+  },
+  "checks": {
+    "repositoryHygiene": "PASS",
+    "allSliceStaticTests": "PASS",
+    "controlPanelTargetedTypeScript": "PASS",
+    "goFormatting": "PASS",
+    "mapProviderGoTests": "PASS",
+    "serviceAreaGoTests": "PASS",
+    "clientAddressGoTests": "PASS",
+    "httpGoTests": "PASS",
+    "postgres16MigrationApply": "PASS",
+    "addressGeofenceBindingDatabaseTest": "PASS",
+    "serviceAreaTopologyDatabaseTest": "PASS",
+    "privacyAuditProjectionDatabaseTest": "PASS"
+  },
+  "slices": [
+    { "sliceId": "JRN-006-S01", "name": "governed-location-search", "status": "CLOSED_WITH_EVIDENCE" },
+    { "sliceId": "JRN-006-S02", "name": "reverse-geocoding-and-verification", "status": "CLOSED_WITH_EVIDENCE" },
+    { "sliceId": "JRN-006-S03", "name": "provider-health-failure-timeout-uncertainty", "status": "CLOSED_WITH_EVIDENCE" },
+    { "sliceId": "JRN-006-S04", "name": "service-area-list-detail-coordinates-bounds", "status": "CLOSED_WITH_EVIDENCE" },
+    { "sliceId": "JRN-006-S05", "name": "geofence-create-update-and-serviceability-binding", "status": "CLOSED_WITH_EVIDENCE" },
+    { "sliceId": "JRN-006-S06", "name": "address-retention-expiry-policy", "status": "CLOSED_WITH_EVIDENCE" },
+    { "sliceId": "JRN-006-S07", "name": "expired-address-anonymization", "status": "CLOSED_WITH_EVIDENCE" },
+    { "sliceId": "JRN-006-S08", "name": "pii-protection-audit-no-cross-actor-leakage", "status": "CLOSED_WITH_EVIDENCE" }
+  ],
+  "scope": {
+    "included": [
+      "app-client address location flow",
+      "control-panel map provider health",
+      "control-panel service-area governance",
+      "control-panel client-address privacy operations",
+      "DSH shared client-map and privacy brains",
+      "DSH mapproviders, servicearea, clientaddress and HTTP packages",
+      "DSH contracts and PostgreSQL migrations/tests",
+      "Providers health projection"
+    ],
+    "excluded": [
+      "partner-owned address mutation",
+      "captain delivery navigation journeys",
+      "field workforce assignment journeys",
+      "WLT financial behavior",
+      "SaaS commercial activation"
+    ]
+  },
+  "knownOpenGaps": [],
+  "statement": "All eight JRN-006 slices passed exact-commit static, targeted frontend TypeScript, Go, formatting, PostgreSQL 16 migration, and database invariant verification."
+}
