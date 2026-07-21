@@ -12,6 +12,8 @@ const dispatch = source('services/dsh/backend/internal/dispatch/dispatch.go');
 const routes = source('services/dsh/backend/internal/http/server.go');
 const partnerApi = source('services/dsh/frontend/shared/orders/orders.api.ts');
 const partnerCommands = source('services/dsh/frontend/shared/orders/use-partner-order-commands.ts');
+const dispatchSurface = source('services/dsh/frontend/control-panel/operations/OrderJourneyDispatchAssignmentScreen.tsx');
+const captainOptions = source('services/dsh/frontend/shared/operations/use-dispatch-captain-options.ts');
 
 // JRN-012: public compatibility entry points must execute the authoritative
 // timing implementation instead of the former generic lifecycle transition.
@@ -30,11 +32,17 @@ assert.match(routes, /POST \/dsh\/captain\/dispatch\/assignments\/\{assignmentId
 assert.doesNotMatch(routes, /POST \/dsh\/captain\/dispatch\/assignments\/\{assignmentId\}\/status", protected\.handleUpdateDeliveryStatus/);
 
 // JRN-014: operator assignment starts only from ready_for_pickup and creates
-// assignment + delivery atomically; partner surfaces consume server actions.
+// assignment + delivery atomically. Workforce options are loaded through a
+// dedicated shared controller, never by a surface API call or broad barrel.
 assert.match(dispatch, /TransitionDispatchOrder[\s\S]*StatusReadyForPickup[\s\S]*StatusDriverAssigned/);
 assert.match(dispatch, /INSERT INTO dsh_assignments[\s\S]*INSERT INTO dsh_deliveries[\s\S]*tx\.Commit/);
 assert.match(partnerApi, /\/dsh\/partner\/order-workboard/);
 assert.match(partnerCommands, /confirmStoreCaptainHandoff/);
 assert.match(partnerCommands, /await refreshOrders\(\)/);
+assert.match(dispatchSurface, /useDispatchCaptainOptions/);
+assert.doesNotMatch(dispatchSurface, /workforce\.api/);
+assert.doesNotMatch(dispatchSurface, /from ['"]\.\.\/\.\.\/shared\/workforce['"]/);
+assert.match(captainOptions, /listCaptains\(\{ status: 'active', limit: 200 \}\)/);
+assert.match(captainOptions, /from '\.\.\/workforce\/workforce\.api'/);
 
 console.log('[jrn-012-014-preparation-dispatch] PASS');
