@@ -12,6 +12,7 @@ on:
       - "services/dsh/backend/internal/http/journey_007_routes_test.go"
       - "services/dsh/contracts/contract-registry.ts"
       - "services/dsh/contracts/dsh.home-marketing-events.openapi.yaml"
+      - "services/dsh/database/migrations/dsh-017_marketing_governance.sql"
       - "services/dsh/frontend/shared/home-discovery/**"
       - "services/dsh/frontend/app-client/home-discovery/**"
       - "services/dsh/frontend/app-client/DshClientSurface.tsx"
