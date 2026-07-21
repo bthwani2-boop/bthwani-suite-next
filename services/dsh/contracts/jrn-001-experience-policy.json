@@ -1,0 +1,21 @@
+{
+  "journeyId": "JRN-001",
+  "locale": "ar-YE",
+  "direction": "rtl",
+  "accessibility": {
+    "interactiveElementsRequireLabels": true,
+    "stateChangesRequireAnnouncements": true,
+    "selectedStepsExposeState": true,
+    "errorsUseAlertSemantics": true
+  },
+  "weakNetwork": {
+    "offlineIsNotSuccess": true,
+    "retryPreservesIdempotency": true,
+    "partialReadbackRequiresReload": true
+  },
+  "performance": {
+    "imagePickerQuality": 0.8,
+    "base64MediaInSurface": false,
+    "canonicalDataLoadedOnDemand": true
+  }
+}
