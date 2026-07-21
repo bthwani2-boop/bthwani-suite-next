@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "journeyId": "JRN-001",
+  "sliceId": "FS-12",
+  "truthOwner": "DSH committed partner, store, document, visit and audit records",
+  "financialTruthOwner": "WLT payout destination records",
+  "requiredReadAfterWrite": [
+    "field-create-draft",
+    "field-save-draft",
+    "field-submit-draft",
+    "operator-transition-partner",
+    "operator-review-document",
+    "operator-link-store"
+  ],
+  "forbiddenTruthSources": ["AsyncStorage", "localStorage", "sessionStorage", "MMKV", "screen fixtures", "screen mocks"],
+  "conflictPolicy": "Reload committed state before another mutation.",
+  "successPolicy": "A surface may report success only after committed readback or a canonical mutation response followed by list/detail refresh."
+}
