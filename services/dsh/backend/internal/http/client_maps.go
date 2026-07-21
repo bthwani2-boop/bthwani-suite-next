@@ -25,6 +25,8 @@ func writeClientMapError(w http.ResponseWriter, err error) {
 		store.SendError(w, http.StatusServiceUnavailable, "MAP_RUNTIME_NOT_CONFIGURED", "governed map runtime is not configured")
 	case errors.Is(err, mapproviders.ErrInvalid), errors.Is(err, servicearea.ErrInvalid):
 		store.SendError(w, http.StatusBadRequest, "INVALID_MAP_REQUEST", "map request is invalid")
+	case errors.Is(err, mapproviders.ErrUncertain):
+		store.SendError(w, http.StatusUnprocessableEntity, "MAP_RESULT_UNCERTAIN", "map provider returned a result that could not be trusted")
 	case errors.Is(err, mapproviders.ErrUnavailable):
 		store.SendError(w, http.StatusBadGateway, "MAP_RUNTIME_UNAVAILABLE", "governed map runtime is unavailable")
 	case errors.Is(err, servicearea.ErrVersionConflict):
