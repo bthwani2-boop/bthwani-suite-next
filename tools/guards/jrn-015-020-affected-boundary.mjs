@@ -59,6 +59,14 @@ for (const file of sharedFiles) {
   }
 }
 
+const routeRegistrar = read('services/dsh/backend/internal/http/server.go');
+if (!/POST \/dsh\/captain\/dispatch\/assignments\/\{assignmentId\}\/status", protected\.handleGovernedUpdateDeliveryStatus/.test(routeRegistrar)) {
+  violations.push('services/dsh/backend/internal/http/server.go: captain status route does not use the governed store-captain custody handler');
+}
+if (/POST \/dsh\/captain\/dispatch\/assignments\/\{assignmentId\}\/status", protected\.handleUpdateDeliveryStatus/.test(routeRegistrar)) {
+  violations.push('services/dsh/backend/internal/http/server.go: legacy ungoverned captain status handler is registered');
+}
+
 if (violations.length > 0) {
   console.error(`FORBIDDEN: ${violations[0]}`);
   for (const violation of violations.slice(1)) console.error(`- ${violation}`);

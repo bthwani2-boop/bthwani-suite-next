@@ -55,14 +55,33 @@ jobs:
           node-version: 24.17.0
       - name: Verify repository hygiene
         run: git diff --check
-      - name: Verify JRN-001..010 governed invariants
-        run: node tools/guards/live-cross-journey-integrity-gate.mjs
-      - name: Verify JRN-001 partner static contracts
+      - name: Verify all JRN-001..010 static evidence
+        shell: bash
         run: |
-          node --test services/dsh/tests/jrn-001-*.test.mjs
-          for guard in tools/guards/partner/jrn-001-*.mjs; do node "$guard"; done
-      - name: Verify JRN-005..010 integration bindings
-        run: node --test services/dsh/tests/jrn-005-010-integrity.test.mjs
+          set +e
+          : >/tmp/jrn-001-010-static.log
+          node tools/guards/live-cross-journey-integrity-gate.mjs 2>&1 | tee -a /tmp/jrn-001-010-static.log
+          GUARD_EXIT=${PIPESTATUS[0]}
+          node --test services/dsh/tests/jrn-001-*.test.mjs 2>&1 | tee -a /tmp/jrn-001-010-static.log
+          PARTNER_TEST_EXIT=${PIPESTATUS[0]}
+          PARTNER_GUARD_EXIT=0
+          for guard in tools/guards/partner/jrn-001-*.mjs; do
+            node "$guard" 2>&1 | tee -a /tmp/jrn-001-010-static.log
+            CURRENT_EXIT=${PIPESTATUS[0]}
+            if [ "$CURRENT_EXIT" -ne 0 ]; then PARTNER_GUARD_EXIT=$CURRENT_EXIT; fi
+          done
+          node --test services/dsh/tests/jrn-005-010-integrity.test.mjs 2>&1 | tee -a /tmp/jrn-001-010-static.log
+          INTEGRITY_TEST_EXIT=${PIPESTATUS[0]}
+          printf 'guard=%s partner_tests=%s partner_guards=%s integration=%s\n' "$GUARD_EXIT" "$PARTNER_TEST_EXIT" "$PARTNER_GUARD_EXIT" "$INTEGRITY_TEST_EXIT" | tee -a /tmp/jrn-001-010-static.log
+          if [ "$GUARD_EXIT" -ne 0 ] || [ "$PARTNER_TEST_EXIT" -ne 0 ] || [ "$PARTNER_GUARD_EXIT" -ne 0 ] || [ "$INTEGRITY_TEST_EXIT" -ne 0 ]; then exit 1; fi
+      - name: Upload static failure evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: jrn-001-010-static-evidence
+          path: /tmp/jrn-001-010-static.log
+          retention-days: 3
+          if-no-files-found: error
 
   identity-workforce:
     name: Identity and workforce governed behavior
@@ -80,12 +99,31 @@ jobs:
           cache-dependency-path: |
             core/identity/backend/go.sum
             core/workforce/backend/go.sum
-      - name: Verify identity activation and session safety
-        working-directory: core/identity/backend
-        run: go test ./internal/http ./internal/identity -count=1
-      - name: Verify workforce lifecycle and routes
-        working-directory: core/workforce/backend
-        run: go test ./internal/http ./internal/workforce -count=1
+      - name: Verify identity and workforce packages
+        shell: bash
+        run: |
+          set +e
+          : >/tmp/jrn-001-010-identity-workforce.log
+          (
+            cd core/identity/backend
+            go test ./internal/http ./internal/identity -count=1
+          ) 2>&1 | tee -a /tmp/jrn-001-010-identity-workforce.log
+          IDENTITY_EXIT=${PIPESTATUS[0]}
+          (
+            cd core/workforce/backend
+            go test ./internal/http ./internal/workforce -count=1
+          ) 2>&1 | tee -a /tmp/jrn-001-010-identity-workforce.log
+          WORKFORCE_EXIT=${PIPESTATUS[0]}
+          printf 'identity=%s workforce=%s\n' "$IDENTITY_EXIT" "$WORKFORCE_EXIT" | tee -a /tmp/jrn-001-010-identity-workforce.log
+          if [ "$IDENTITY_EXIT" -ne 0 ] || [ "$WORKFORCE_EXIT" -ne 0 ]; then exit 1; fi
+      - name: Upload identity-workforce failure evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: jrn-001-010-identity-workforce-evidence
+          path: /tmp/jrn-001-010-identity-workforce.log
+          retention-days: 3
+          if-no-files-found: error
 
   dsh-journeys:
     name: DSH partner store address map cart checkout
@@ -102,8 +140,25 @@ jobs:
           go-version-file: services/dsh/backend/go.mod
           cache-dependency-path: services/dsh/backend/go.sum
       - name: Verify governed DSH packages
-        working-directory: services/dsh/backend
-        run: go test ./internal/http ./internal/partner ./internal/cart ./internal/checkout ./internal/wlt -count=1
+        shell: bash
+        run: |
+          set +e
+          : >/tmp/jrn-001-010-dsh.log
+          (
+            cd services/dsh/backend
+            go test ./internal/http ./internal/partner ./internal/cart ./internal/checkout ./internal/wlt -count=1
+          ) 2>&1 | tee -a /tmp/jrn-001-010-dsh.log
+          DSH_EXIT=${PIPESTATUS[0]}
+          printf 'dsh=%s\n' "$DSH_EXIT" | tee -a /tmp/jrn-001-010-dsh.log
+          exit "$DSH_EXIT"
+      - name: Upload DSH failure evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: jrn-001-010-dsh-evidence
+          path: /tmp/jrn-001-010-dsh.log
+          retention-days: 3
+          if-no-files-found: error
 
   verification-result:
     name: JRN-001..010 verification result
