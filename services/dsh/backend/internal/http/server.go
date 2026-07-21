@@ -131,7 +131,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/partner-delivery/pickup", protected.handlePartnerDeliveryPickup)
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/partner-delivery/depart", protected.handlePartnerDeliveryDepart)
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/partner-delivery/arrive", protected.handlePartnerDeliveryArrive)
-	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/partner-delivery/proof", protected.handlePartnerDeliveryProof)
+	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/partner-delivery/proof", protected.handlePartnerDeliveryProofWithMedia)
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/partner-delivery/exception", protected.handlePartnerDeliveryException)
 	mux.HandleFunc("GET /dsh/partner/orders/{orderId}/return-to-store", protected.handleGetPartnerReturnToStore)
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/return-to-store/accept", protected.handleAcceptPartnerReturnToStore)
