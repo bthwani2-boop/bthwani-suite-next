@@ -33,6 +33,8 @@ type partnerOrderWorkboardOrder struct {
 	CreatedAt                       time.Time                   `json:"createdAt"`
 	AllowedActions                  []string                    `json:"allowedActions"`
 	Preparation                     orders.PreparationTiming    `json:"preparation"`
+	PreparationIssues               []orders.PreparationIssue   `json:"preparationIssues"`
+	OpenPreparationIssueCount       int                         `json:"openPreparationIssueCount"`
 	StoreCaptainHandoffStatus       string                      `json:"storeCaptainHandoffStatus"`
 	StoreCaptainHandoffAssignmentID string                      `json:"storeCaptainHandoffAssignmentId"`
 	StoreCaptainHandoffCaptainID    string                      `json:"storeCaptainHandoffCaptainId"`
@@ -41,14 +43,27 @@ type partnerOrderWorkboardOrder struct {
 	UpdatedAt                       time.Time                   `json:"updatedAt"`
 }
 
-func partnerOrderAllowedActions(status, fulfillmentMode, storeCaptainHandoffStatus string) []string {
+func partnerOrderAllowedActions(
+	status,
+	fulfillmentMode,
+	storeCaptainHandoffStatus string,
+	openPreparationIssueCount int,
+) []string {
 	switch strings.TrimSpace(status) {
 	case "pending":
 		return []string{"accept", "reject"}
 	case "store_accepted":
-		return []string{"prepare", "revise_estimate"}
+		actions := []string{"prepare", "revise_estimate", "report_issue"}
+		if openPreparationIssueCount > 0 {
+			actions = append(actions, "resolve_issue")
+		}
+		return actions
 	case "preparing":
-		return []string{"ready", "revise_estimate"}
+		actions := []string{"revise_estimate", "report_issue"}
+		if openPreparationIssueCount > 0 {
+			return append(actions, "resolve_issue")
+		}
+		return append([]string{"ready"}, actions...)
 	case "ready_for_pickup":
 		if fulfillmentMode == "partner_delivery" || fulfillmentMode == "pickup" {
 			return []string{"handoff"}
@@ -66,8 +81,8 @@ func partnerOrderAllowedActions(status, fulfillmentMode, storeCaptainHandoffStat
 // The store scope is resolved from the authenticated partner actor. The
 // workboard deliberately returns all lifecycle states when status is omitted;
 // inbox tabs must not be backed by a hidden pending-only default. Executable
-// actions, preparation SLA, and custody state are derived by DSH, never inferred
-// by a screen.
+// actions, preparation SLA, open issues, and custody state are derived by DSH,
+// never inferred by a screen.
 func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter, r *http.Request) {
 	_, storeID, ok := s.partnerStore(w, r)
 	if !ok {
@@ -85,21 +100,8 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 			o.status,
 			COALESCE(o.rejection_reason, ''),
 			o.wlt_payment_ref_id,
-			COALESCE(SUM(oi.quantity * oi.unit_price), 0)::float8 AS total_price,
-			COALESCE(
-				jsonb_agg(
-					jsonb_build_object(
-						'id', oi.id::text,
-						'orderId', oi.order_id::text,
-						'productId', oi.product_id,
-						'productName', oi.product_name,
-						'quantity', oi.quantity,
-						'unitPrice', oi.unit_price
-					)
-					ORDER BY oi.created_at
-				) FILTER (WHERE oi.id IS NOT NULL),
-				'[]'::jsonb
-			) AS items,
+			COALESCE(item_projection.total_price, 0)::float8,
+			COALESCE(item_projection.items, '[]'::jsonb),
 			o.created_at,
 			o.accepted_at,
 			o.preparation_started_at,
@@ -109,6 +111,8 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 			o.preparation_warning_minutes,
 			COALESCE(o.preparation_delay_reason, ''),
 			o.preparation_estimate_revision_count,
+			COALESCE(issue_projection.issues, '[]'::jsonb),
+			COALESCE(issue_projection.open_count, 0),
 			COALESCE(h.status, ''),
 			COALESCE(h.assignment_id, ''),
 			COALESCE(h.captain_id, ''),
@@ -116,7 +120,58 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 			h.captain_confirmed_at,
 			o.updated_at
 		FROM dsh_orders o
-		LEFT JOIN dsh_order_items oi ON oi.order_id = o.id
+		LEFT JOIN LATERAL (
+			SELECT
+				COALESCE(SUM(oi.quantity * oi.unit_price), 0) AS total_price,
+				COALESCE(
+					jsonb_agg(
+						jsonb_build_object(
+							'id', oi.id::text,
+							'orderId', oi.order_id::text,
+							'productId', oi.product_id,
+							'productName', oi.product_name,
+							'quantity', oi.quantity,
+							'unitPrice', oi.unit_price
+						)
+						ORDER BY oi.created_at
+					),
+					'[]'::jsonb
+				) AS items
+			FROM dsh_order_items oi
+			WHERE oi.order_id = o.id
+		) item_projection ON TRUE
+		LEFT JOIN LATERAL (
+			SELECT
+				COALESCE(
+					jsonb_agg(
+						jsonb_build_object(
+							'id', pi.id::text,
+							'orderId', pi.order_id::text,
+							'storeId', pi.store_id,
+							'orderItemId', COALESCE(pi.order_item_id::text, ''),
+							'kind', pi.issue_kind,
+							'status', pi.status,
+							'affectedQuantity', pi.affected_quantity,
+							'note', pi.note,
+							'replacementProductId', COALESCE(pi.replacement_product_id, ''),
+							'replacementProductName', COALESCE(pi.replacement_product_name, ''),
+							'openedByActorId', pi.opened_by_actor_id,
+							'openedAt', pi.opened_at,
+							'resolvedByActorId', COALESCE(pi.resolved_by_actor_id, ''),
+							'resolutionNote', COALESCE(pi.resolution_note, ''),
+							'resolvedAt', pi.resolved_at,
+							'version', pi.version,
+							'createdAt', pi.created_at,
+							'updatedAt', pi.updated_at
+						)
+						ORDER BY CASE pi.status WHEN 'open' THEN 0 ELSE 1 END, pi.created_at DESC
+					),
+					'[]'::jsonb
+				) AS issues,
+				COUNT(*) FILTER (WHERE pi.status = 'open') AS open_count
+			FROM dsh_order_preparation_issues pi
+			WHERE pi.order_id = o.id
+		) issue_projection ON TRUE
 		LEFT JOIN LATERAL (
 			SELECT
 				assignment_id::text AS assignment_id,
@@ -131,30 +186,6 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 		) h ON TRUE
 		WHERE o.store_id = $1
 		  AND ($2 = '' OR o.status = $2)
-		GROUP BY
-			o.id,
-			o.checkout_intent_id,
-			o.store_id,
-			o.fulfillment_mode,
-			o.client_id,
-			o.status,
-			o.rejection_reason,
-			o.wlt_payment_ref_id,
-			o.created_at,
-			o.accepted_at,
-			o.preparation_started_at,
-			o.estimated_ready_at,
-			o.ready_at,
-			o.estimated_preparation_minutes,
-			o.preparation_warning_minutes,
-			o.preparation_delay_reason,
-			o.preparation_estimate_revision_count,
-			h.status,
-			h.assignment_id,
-			h.captain_id,
-			h.partner_confirmed_at,
-			h.captain_confirmed_at,
-			o.updated_at
 		ORDER BY
 			CASE o.status
 				WHEN 'pending' THEN 1
@@ -184,6 +215,7 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 	for rows.Next() {
 		var order partnerOrderWorkboardOrder
 		var itemsJSON []byte
+		var issuesJSON []byte
 		if err := rows.Scan(
 			&order.ID,
 			&order.CheckoutIntentID,
@@ -204,6 +236,8 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 			&order.Preparation.WarningMinutes,
 			&order.Preparation.DelayReason,
 			&order.Preparation.EstimateRevisionCount,
+			&issuesJSON,
+			&order.OpenPreparationIssueCount,
 			&order.StoreCaptainHandoffStatus,
 			&order.StoreCaptainHandoffAssignmentID,
 			&order.StoreCaptainHandoffCaptainID,
@@ -218,13 +252,21 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "invalid partner order item projection")
 			return
 		}
+		if err := json.Unmarshal(issuesJSON, &order.PreparationIssues); err != nil {
+			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "invalid preparation issue projection")
+			return
+		}
 		if order.Items == nil {
 			order.Items = []partnerOrderWorkboardItem{}
+		}
+		if order.PreparationIssues == nil {
+			order.PreparationIssues = []orders.PreparationIssue{}
 		}
 		order.AllowedActions = partnerOrderAllowedActions(
 			order.Status,
 			order.FulfillmentMode,
 			order.StoreCaptainHandoffStatus,
+			order.OpenPreparationIssueCount,
 		)
 		order.Preparation.OrderID = order.ID
 		order.Preparation = orders.EvaluatePreparationTiming(order.Preparation, now)
