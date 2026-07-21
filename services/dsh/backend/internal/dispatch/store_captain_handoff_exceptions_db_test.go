@@ -5,6 +5,41 @@ import (
 	"testing"
 )
 
+func closeHandoffExceptionFixture(t *testing.T, item *DeliveryException, fixture outboundHandoffFixture) {
+	t.Helper()
+	db := openRequiredDB(t)
+	if _, err := db.Exec(`
+		UPDATE dsh_delivery_exceptions
+		SET status='resolved',
+		    resolution_action='retry_same_captain',
+		    resolution_note='resolved for idempotent replay test',
+		    resolved_at=NOW(),
+		    resolved_by_actor_id='operator-replay-test',
+		    version=version+1,
+		    updated_at=NOW()
+		WHERE id=$1::uuid`, item.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`
+		UPDATE dsh_store_captain_handoffs
+		SET status='superseded', version=version+1, updated_at=NOW()
+		WHERE assignment_id=$1::uuid`, fixture.AssignmentID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`
+		UPDATE dsh_assignments
+		SET status='cancelled', updated_at=NOW()
+		WHERE id=$1::uuid`, fixture.AssignmentID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`
+		UPDATE dsh_deliveries
+		SET status='cancelled', updated_at=NOW()
+		WHERE assignment_id=$1::uuid`, fixture.AssignmentID); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestPartnerHandoffShortageOpensGovernedExceptionDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	fixture := seedOutboundHandoffFixture(t, db)
@@ -81,6 +116,21 @@ func TestPartnerHandoffShortageOpensGovernedExceptionDBIntegration(t *testing.T)
 	); !errors.Is(err, ErrConflict) {
 		t.Fatalf("pickup with open exception error=%v want ErrConflict", err)
 	}
+
+	closeHandoffExceptionFixture(t, item, fixture)
+	closedReplay, err := ReportPartnerStoreCaptainHandoffException(
+		db,
+		fixture.OrderID,
+		fixture.StoreID,
+		"partner-handoff-actor",
+		input,
+	)
+	if err != nil {
+		t.Fatalf("partner replay after lifecycle closure failed: %v", err)
+	}
+	if closedReplay.ID != item.ID || closedReplay.Status != DeliveryExceptionResolved {
+		t.Fatalf("closed replay=%+v want id=%s status=resolved", closedReplay, item.ID)
+	}
 }
 
 func TestCaptainHandoffMismatchAfterPartnerConfirmationBlocksPickupDBIntegration(t *testing.T) {
@@ -104,15 +154,16 @@ func TestCaptainHandoffMismatchAfterPartnerConfirmationBlocksPickupDBIntegration
 		t.Fatalf("partner confirmation failed: %v", err)
 	}
 
+	input := ReportDeliveryExceptionInput{
+		ReasonCode:    ExceptionHandoffMismatch,
+		Note:          "محتوى الطرد لا يطابق تفاصيل الطلب المعروضة",
+		CorrelationID: "captain-handoff-mismatch:" + fixture.AssignmentID,
+	}
 	item, err := ReportCaptainStoreCaptainHandoffException(
 		db,
 		fixture.AssignmentID,
 		fixture.CaptainID,
-		ReportDeliveryExceptionInput{
-			ReasonCode:    ExceptionHandoffMismatch,
-			Note:          "محتوى الطرد لا يطابق تفاصيل الطلب المعروضة",
-			CorrelationID: "captain-handoff-mismatch:" + fixture.AssignmentID,
-		},
+		input,
 	)
 	if err != nil {
 		t.Fatalf("captain handoff exception failed: %v", err)
@@ -138,5 +189,19 @@ func TestCaptainHandoffMismatchAfterPartnerConfirmationBlocksPickupDBIntegration
 		DeliveryPickedUp,
 	); !errors.Is(err, ErrConflict) {
 		t.Fatalf("pickup after partner confirmation with open exception error=%v want ErrConflict", err)
+	}
+
+	closeHandoffExceptionFixture(t, item, fixture)
+	closedReplay, err := ReportCaptainStoreCaptainHandoffException(
+		db,
+		fixture.AssignmentID,
+		fixture.CaptainID,
+		input,
+	)
+	if err != nil {
+		t.Fatalf("captain replay after lifecycle closure failed: %v", err)
+	}
+	if closedReplay.ID != item.ID || closedReplay.Status != DeliveryExceptionResolved {
+		t.Fatalf("closed replay=%+v want id=%s status=resolved", closedReplay, item.ID)
 	}
 }
