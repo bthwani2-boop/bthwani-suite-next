@@ -38,47 +38,37 @@ jobs:
       - name: Verify repository patch hygiene
         run: git diff --check
       - name: Typecheck app-client
-        shell: bash
-        run: |
-          set +e
-          pnpm --dir apps/app-client/runtime typecheck 2>&1 | tee /tmp/fs10.log
-          EXIT_CODE=${PIPESTATUS[0]}
-          exit "$EXIT_CODE"
+        run: pnpm --dir apps/app-client/runtime typecheck
       - name: Typecheck app-field
-        shell: bash
-        run: |
-          set +e
-          pnpm --dir apps/app-field/runtime typecheck 2>&1 | tee /tmp/fs10.log
-          EXIT_CODE=${PIPESTATUS[0]}
-          exit "$EXIT_CODE"
+        run: pnpm --dir apps/app-field/runtime typecheck
       - name: Typecheck app-partner
-        shell: bash
-        run: |
-          set +e
-          pnpm --dir apps/app-partner/runtime typecheck 2>&1 | tee /tmp/fs10.log
-          EXIT_CODE=${PIPESTATUS[0]}
-          exit "$EXIT_CODE"
+        run: pnpm --dir apps/app-partner/runtime typecheck
       - name: Typecheck control-panel
+        run: pnpm --dir apps/control-panel/runtime typecheck
+      - name: Verify cart and checkout surface actions
         shell: bash
         run: |
           set +e
-          pnpm --dir apps/control-panel/runtime typecheck 2>&1 | tee /tmp/fs10.log
-          EXIT_CODE=${PIPESTATUS[0]}
-          exit "$EXIT_CODE"
-      - name: Verify JRN-001 surface registry and deep navigation
+          node --test services/dsh/tests/jrn-001-fs-10-cart-actions.test.mjs 2>&1 | tee /tmp/fs10.log
+          exit ${PIPESTATUS[0]}
+      - name: Verify support mutation identity
         shell: bash
         run: |
           set +e
-          node --test services/dsh/tests/jrn-001-fs-10-*.test.mjs 2>&1 | tee /tmp/fs10.log
-          EXIT_CODE=${PIPESTATUS[0]}
-          exit "$EXIT_CODE"
+          node --test services/dsh/tests/jrn-001-fs-10-support-mutation.test.mjs 2>&1 | tee /tmp/fs10.log
+          exit ${PIPESTATUS[0]}
+      - name: Verify surface registry and deep navigation
+        shell: bash
+        run: |
+          set +e
+          node --test services/dsh/tests/jrn-001-fs-10-surfaces.test.mjs 2>&1 | tee /tmp/fs10.log
+          exit ${PIPESTATUS[0]}
       - name: Verify partner surface truth guard
         shell: bash
         run: |
           set +e
           node tools/guards/partner/partner-surface-truth-gate.mjs 2>&1 | tee /tmp/fs10.log
-          EXIT_CODE=${PIPESTATUS[0]}
-          exit "$EXIT_CODE"
+          exit ${PIPESTATUS[0]}
       - name: Publish FS-10 status
         if: always()
         env:
