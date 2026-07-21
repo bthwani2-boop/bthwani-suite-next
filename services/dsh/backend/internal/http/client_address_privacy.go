@@ -63,6 +63,23 @@ func (s *protectedStoreServer) handleGetClientAddressPrivacyStatus(w http.Respon
 	store.SendJSON(w, http.StatusOK, map[string]any{"status": status})
 }
 
+func (s *protectedStoreServer) handleListClientAddressPrivacyEvents(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requirePermission(w, r, "control-panel", "platform.read", "operator"); !ok {
+		return
+	}
+	limit, err := privacyEventLimit(r)
+	if err != nil {
+		writeClientAddressPrivacyError(w, err)
+		return
+	}
+	events, err := clientaddress.ListPrivacyAuditEvents(r.Context(), s.db, limit)
+	if err != nil {
+		writeClientAddressPrivacyError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"events": events})
+}
+
 func (s *protectedStoreServer) handleUpdateClientAddressPrivacyPolicy(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requirePermission(w, r, "control-panel", "platform.manage", "operator")
 	if !ok {
