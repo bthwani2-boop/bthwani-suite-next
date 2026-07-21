@@ -123,6 +123,7 @@ func TestCreateRefund_CodCollected_Allowed(t *testing.T) {
 		PaymentSessionID: sessionID,
 		OrderID:          orderID,
 		ClientID:         "client-test",
+		Reason:           "cancelled COD order",
 	})
 	if err != nil {
 		t.Fatalf("expected refund creation to succeed for cod_collected session, got error: %v", err)

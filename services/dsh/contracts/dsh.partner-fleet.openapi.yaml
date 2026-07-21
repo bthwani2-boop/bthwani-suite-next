@@ -1,0 +1,141 @@
+openapi: 3.1.0
+info:
+  title: BThwani DSH Partner Fleet Connection API
+  version: 0.2.0
+  description: Partner-store courier connection codes and authenticated captain fleet memberships.
+x-bthwani-owner: services/dsh
+x-bthwani-parent-contract: services/dsh/contracts/dsh.openapi.yaml
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-client-generation: DISABLED
+x-bthwani-client-binding: MANUAL_TYPED_ADAPTER
+x-bthwani-runtime-dependency: true
+paths:
+  /dsh/partner/stores/{storeId}/couriers/{memberId}/connection-code:
+    post:
+      operationId: issueDshPartnerCourierConnectionCode
+      tags: [DshPartnerFleet]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/StoreId'
+        - name: memberId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                expiresInHours: { type: integer, minimum: 1, maximum: 48, default: 24 }
+      responses:
+        '201': { $ref: '#/components/responses/ObjectResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '404': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '422': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/partner/stores/{storeId}/courier-connections:
+    get:
+      operationId: listDshPartnerCourierConnections
+      tags: [DshPartnerFleet]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/StoreId'
+      responses:
+        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '404': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/partner/stores/{storeId}/courier-connections/{connectionId}/revoke:
+    post:
+      operationId: revokeDshPartnerCourierConnection
+      tags: [DshPartnerFleet]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/StoreId'
+        - name: connectionId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer, minimum: 1 }
+      responses:
+        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '404': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/captain/partner-fleet/connect:
+    post:
+      operationId: connectDshCaptainToPartnerFleet
+      tags: [DshPartnerFleet]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [code]
+              properties:
+                code: { type: string, minLength: 8, maxLength: 16 }
+      responses:
+        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '404': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '410': { $ref: '#/components/responses/ErrorResponse' }
+        '422': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/captain/partner-fleet/memberships:
+    get:
+      operationId: listDshCaptainPartnerFleetMemberships
+      tags: [DshPartnerFleet]
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer }
+  parameters:
+    StoreId:
+      name: storeId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+  responses:
+    ObjectResponse:
+      description: Governed partner fleet object.
+      content:
+        application/json:
+          schema: { type: object, additionalProperties: true }
+    ErrorResponse:
+      description: Governed error response.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+  schemas:
+    Error:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }

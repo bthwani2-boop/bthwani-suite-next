@@ -1,11 +1,11 @@
 import React from 'react';
 import { ActivityIndicator, BackHandler, Platform, View, Pressable, StyleSheet, I18nManager } from 'react-native';
-import { Button, Card, Icon, Text, spacing, colorRoles } from '@bthwani/ui-kit';
+import { Icon, Text, spacing, colorRoles } from '@bthwani/ui-kit';
 import type { DshPartnerSurfaceProps } from './dsh-partner.types';
 import { useDshPartnerSurfaceModel } from './useDshPartnerSurfaceModel';
 import { PlatformVarsProvider, FeatureFlagProvider, usePlatformVars } from '../shared/platform';
 import { PartnerStoreScopeSheet } from './store/PartnerStoreScopeSheet';
-import { DshPartnerRouteRenderer } from './DshPartnerRouteRenderer';
+import { DshPartnerOrderJourneyRenderer } from './DshPartnerOrderJourneyRenderer';
 
 const COLORS = {
   background: colorRoles.surfaceBase,
@@ -17,6 +17,14 @@ const COLORS = {
   line: colorRoles.surfaceBase,
   success: colorRoles.brandStructure,
   white: colorRoles.surfaceBase,
+};
+
+type PartnerNavIconName = React.ComponentProps<typeof Icon>['name'];
+type PartnerNavItem = {
+  readonly id: 'operations' | 'wallet' | 'orders' | 'inventory' | 'profile';
+  readonly label: string;
+  readonly icon: PartnerNavIconName;
+  readonly activeIcon: PartnerNavIconName;
 };
 
 export function DshPartnerSurface(props: DshPartnerSurfaceProps) {
@@ -82,7 +90,6 @@ function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }:
   const openInventoryManagement = actions.openInventoryManagement;
   const openStoreCourier = actions.openStoreCourier;
   const openSupportCommandFromOperationalFlow = actions.handleOperationalFlowNavigation;
-  const handleMarkReady = actions.handleMarkReady;
 
   React.useEffect(() => {
     if (Platform.OS !== 'android') return undefined;
@@ -133,7 +140,6 @@ function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }:
   const isRTL = I18nManager.isRTL;
   const rowDirection = isRTL ? 'row-reverse' : 'row';
 
-  // Custom premium header replacement
   const topBar = (
     <View style={[styles.headerContainer, { flexDirection: rowDirection }]}>
       <Pressable onPress={() => openAccountHub('profile')} style={styles.profileButton}>
@@ -171,7 +177,7 @@ function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }:
 
   const showBottomNav = route !== 'entry';
 
-  const navItems = [
+  const navItems: readonly PartnerNavItem[] = [
     { id: 'operations', label: 'العمليات', icon: 'people-outline', activeIcon: 'people' },
     { id: 'wallet', label: 'المحفظة', icon: 'wallet-outline', activeIcon: 'wallet' },
     { id: 'orders', label: 'الطلبات', icon: 'receipt-outline', activeIcon: 'receipt' },
@@ -179,7 +185,7 @@ function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }:
     { id: 'profile', label: 'حسابي', icon: 'person-outline', activeIcon: 'person' },
   ];
 
-  const handleNavSelect = (id: string) => {
+  const handleNavSelect = (id: PartnerNavItem['id']) => {
     if (id === 'orders') openOrdersBoard();
     else if (id === 'profile') openAccountHub('hub');
     else if (id === 'wallet') openAccountHub('wallet');
@@ -187,7 +193,6 @@ function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }:
     else if (id === 'operations') openSupportDirectory({ source: 'operations' });
   };
 
-  // Custom Bottom Navigation Bar
   const bottomNavBar = showBottomNav ? (
     <View style={[styles.bottomNavContainer, { flexDirection: rowDirection }]}>
       {navItems.map((item) => {
@@ -199,12 +204,12 @@ function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }:
             onPress={() => handleNavSelect(item.id)}
             style={styles.navTab}
           >
-            <Icon name={iconName as any} size={20} tone={isActive ? 'brand' : 'muted'} />
+            <Icon name={iconName} size={20} tone={isActive ? 'brand' : 'muted'} />
             <Text
               role="caption"
               style={[
                 styles.navTabText,
-                isActive ? styles.navTabTextActive : styles.navTabTextInactive
+                isActive ? styles.navTabTextActive : styles.navTabTextInactive,
               ]}
             >
               {item.label}
@@ -237,7 +242,7 @@ function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }:
   );
 
   return (
-    <DshPartnerRouteRenderer
+    <DshPartnerOrderJourneyRenderer
       route={route}
       initialOrderId={initialOrderId}
       activeOrderId={activeOrderId}
@@ -275,7 +280,6 @@ function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }:
       openStoreCourier={openStoreCourier}
       openStoreScope={() => setStoreScopeVisible(true)}
       openSupportCommandFromOperationalFlow={openSupportCommandFromOperationalFlow}
-      handleMarkReady={handleMarkReady}
       refreshOrders={actions.refreshOrders}
       teamMembers={teamMembers}
       isTeamLoading={isTeamLoading}

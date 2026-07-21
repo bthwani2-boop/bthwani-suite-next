@@ -9,6 +9,9 @@ export type DshDeliveryStatus = components["schemas"]["DshDeliveryStatus"];
 export type DshDelivery = components["schemas"]["DshDelivery"];
 export type DshCreateAssignmentInput = components["schemas"]["DshCreateAssignmentRequest"];
 export type DshSubmitPoDInput = components["schemas"]["DshSubmitPoDRequest"];
+export type DshDeliveryException = components["schemas"]["DshDeliveryException"];
+export type DshDeliveryExceptionReasonCode = components["schemas"]["DshDeliveryExceptionReasonCode"];
+export type DshReportDeliveryExceptionInput = components["schemas"]["DshReportDeliveryExceptionRequest"];
 
 export type DshDispatchListState =
   | { readonly kind: "idle" }
@@ -28,6 +31,7 @@ export type DshTrackingState =
   | { readonly kind: "loading" }
   | { readonly kind: "tracking_active"; readonly assignment: DshDispatchAssignment }
   | { readonly kind: "delivered"; readonly assignment: DshDispatchAssignment }
+  | { readonly kind: "cancelled"; readonly assignment: DshDispatchAssignment }
   | { readonly kind: "error"; readonly message: string };
 
 export const DELIVERY_STATUS_LABELS: Record<DshDeliveryStatus, string> = {
@@ -36,7 +40,11 @@ export const DELIVERY_STATUS_LABELS: Record<DshDeliveryStatus, string> = {
   driver_arrived_store: "وصل الكابتن للمتجر",
   picked_up: "تم الاستلام من المتجر",
   arrived_customer: "وصل الكابتن للعميل",
+  returning_to_store: "في طريق العودة إلى المتجر",
+  return_arrived_store: "وصل المرتجع وينتظر استلام المتجر",
+  returned_to_store: "أعيد إلى المتجر",
   delivered: "تم التسليم",
+  cancelled: "ألغيت المهمة بسبب إلغاء الطلب",
 };
 
 export const ASSIGNMENT_STATUS_LABELS: Record<DshAssignmentStatus, string> = {
@@ -44,4 +52,5 @@ export const ASSIGNMENT_STATUS_LABELS: Record<DshAssignmentStatus, string> = {
   accepted: "مقبولة",
   declined: "مرفوضة",
   completed: "مكتملة",
+  cancelled: "ملغاة",
 };

@@ -37,12 +37,12 @@ export function usePartnerSupportModel({ initialRoute, setRoute }: PartnerSuppor
   const supportDirectoryIntentRef = React.useRef(false);
 
   const setSelectedSupportScreen = React.useCallback(
-    (screen: DshPartnerSupportRouteId) => setSupportNav((s) => ({ ...s, screen })),
+    (screen: DshPartnerSupportRouteId) => setSupportNav((state) => ({ ...state, screen })),
     [],
   );
 
   const setSupportCommandContext = React.useCallback(
-    (context: DshPartnerSupportCommandContext) => setSupportNav((s) => ({ ...s, context })),
+    (context: DshPartnerSupportCommandContext) => setSupportNav((state) => ({ ...state, context })),
     [],
   );
 
@@ -53,7 +53,7 @@ export function usePartnerSupportModel({ initialRoute, setRoute }: PartnerSuppor
 
   const markSupportDirectoryIntent = React.useCallback(() => {
     supportDirectoryIntentRef.current = true;
-    Promise.resolve().then(() => {
+    queueMicrotask(() => {
       supportDirectoryIntentRef.current = false;
     });
   }, []);
@@ -70,10 +70,16 @@ export function usePartnerSupportModel({ initialRoute, setRoute }: PartnerSuppor
     [markSupportDirectoryIntent, setSupportCommandContext, setRoute],
   );
 
-  const returnToSupportDirectory = React.useCallback(() => setRoute('support-directory'), [setRoute]);
+  const returnToSupportDirectory = React.useCallback(
+    () => setRoute('support-directory'),
+    [setRoute],
+  );
 
   const openSupportScreen = React.useCallback(
-    (screenId: DshPartnerSupportRouteId, source: DshPartnerSupportCommandContext['source'] = 'operations') => {
+    (
+      screenId: DshPartnerSupportRouteId,
+      source: DshPartnerSupportCommandContext['source'] = 'operations',
+    ) => {
       const nextContext = buildSupportCommandContextFromSupportRoute(screenId, source);
       const shouldStay = supportDirectoryIntentRef.current && isCommandCenterInlineManagedRoute(screenId);
       supportDirectoryIntentRef.current = false;
@@ -90,8 +96,8 @@ export function usePartnerSupportModel({ initialRoute, setRoute }: PartnerSuppor
 
   const handleOperationalFlowNavigation = React.useCallback(
     (flowId: DshPartnerOperationalFlowId, source?: DshPartnerSupportCommandContext['source']) => {
-      const ctx = buildSupportCommandContextFromOperationalFlow(flowId, source);
-      setSupportCommandContext(ctx);
+      const context = buildSupportCommandContextFromOperationalFlow(flowId, source);
+      setSupportCommandContext(context);
       setRoute('support-directory');
     },
     [setSupportCommandContext, setRoute],

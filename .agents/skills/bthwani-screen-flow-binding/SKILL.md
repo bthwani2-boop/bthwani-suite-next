@@ -1,46 +1,61 @@
 ---
 name: bthwani-screen-flow-binding
-version: 2026.06.19-clean
-summary: Bind routes, screens, view-models, states, and visual evidence.
+version: 2026.07.17-v1
+summary: Verify route, screen, state, action, and controller binding for declared product surfaces.
 ---
 
 # bthwani-screen-flow-binding
 
+## Purpose
+
+Own verification that each declared user or operator flow is allocated to the correct surface, route, screen, actor, state model, action, and data controller.
+
 ## Invoke when
 
-- screen, navigation, route, tab, flow, CTA, state, or app-surface behavior changes
-- a user journey needs proof
+- A route, navigation entry, screen, tab, CTA, role-visible action, or surface state changes.
+- Product Truth declares a required UI surface or actor flow.
 
-## Read before
+## Do not invoke when
 
-`governance/09_JOURNEY_OPERATING_MODEL.md`, screen matrices, app route files, ui-kit contracts, API binding skill when data-backed
+- No user-facing or operator-facing route, screen, state, or action changes.
+- The task is API-only, database-only, or a behavior-preserving refactor with no surface impact.
+
+## Authority boundary
+
+This skill owns screen-flow binding verification only. It does not choose product scope, approve actor permissions, own API contracts, approve visual design, perform independent QA, or declare final closure.
 
 ## Execution contract
 
-Prove route path, screen owner, service owner, data source, primary CTA, state coverage, RTL, and visual evidence. Bind screen behavior to service/client when needed.
+Verify:
+
+1. required surface and actor come from Product Truth;
+2. route or navigation entry is reachable;
+3. screen and controller ownership are explicit;
+4. permitted and forbidden actions match the actor;
+5. loading, empty, success, failure, forbidden, and retry states exist when applicable;
+6. data-backed actions bind through the owned client/controller;
+7. RTL, accessibility, and visual proof are checked when applicable to the requested evidence scope.
 
 ## Forbidden
 
-- no orphan screen
-- no route without owner
-- no screen-local fake data as closure
-- do not block UI closure or normal implementation for lack of screenshots or visual evidence unless final closure, release/store requirements, or explicit escalation rules apply
-- do not require long output blocks for normal execution
+- Orphan screens, dead tabs, unreachable CTAs, or route entries without owners.
+- Screen-local seed or in-memory state presented as live runtime truth.
+- Actions exposed to excluded actors or surfaces.
+- Requiring screenshots for ordinary implementation when visual closure is not requested.
 
-## Required evidence
+## Required output
 
-- route path
-- screen/component path
-- service/client path when data-backed
-- state coverage
-- screenshot or visual evidence requirement (only when final closure, release, or explicit escalation is requested)
+```text
+product_truth_contract:
+actors:
+required_surfaces:
+routes_or_screens:
+states:
+actions:
+controller_bindings:
+checks:
+decision:
+remaining_gaps:
+```
 
-## Failure decision
-
-- route missing -> `FIX_REQUIRED`
-- data-backed screen without client binding -> `FIX_REQUIRED`
-- screenshots missing (only when escalation/release/explicit request applies) -> `NEEDS_VISUAL_EVIDENCE`
-
-## Notes
-
-All operations and scans must obey the token-drain exclusions specified in [LEAN_CODE_BASED_CHECK.md](../../../governance/LEAN_CODE_BASED_CHECK.md).
+Allowed decisions: `PASS`, `FIX_REQUIRED`, `NEEDS_EVIDENCE`, `BLOCKED_EXTERNAL`, and `OUT_OF_SCOPE_FOR_THIS_JOURNEY`.

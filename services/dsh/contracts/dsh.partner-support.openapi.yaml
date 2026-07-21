@@ -1,0 +1,215 @@
+openapi: 3.1.0
+info:
+  title: DSH Partner Support API
+  version: 1.0.0
+  description: Owner-scoped partner support tickets and conversation messages.
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-runtime-dependency: true
+x-bthwani-generation: DISABLED
+x-bthwani-client-binding: MANUAL_TYPED_ADAPTER
+servers:
+  - url: http://localhost:58080
+security:
+  - bearerAuth: []
+paths:
+  /dsh/partner/support/tickets:
+    get:
+      operationId: listDshPartnerSupportTickets
+      responses:
+        '200':
+          description: Partner-owned support tickets.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [tickets]
+                properties:
+                  tickets:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PartnerSupportTicket'
+    post:
+      operationId: createDshPartnerSupportTicket
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePartnerSupportTicketInput'
+      responses:
+        '201':
+          description: Ticket created or replayed from the same idempotency key.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ticket]
+                properties:
+                  ticket:
+                    $ref: '#/components/schemas/PartnerSupportTicket'
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /dsh/partner/support/tickets/{ticketId}:
+    parameters:
+      - $ref: '#/components/parameters/TicketId'
+    get:
+      operationId: getDshPartnerSupportTicket
+      responses:
+        '200':
+          description: Partner-owned ticket.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ticket]
+                properties:
+                  ticket:
+                    $ref: '#/components/schemas/PartnerSupportTicket'
+        '404': { $ref: '#/components/responses/Error' }
+  /dsh/partner/support/tickets/{ticketId}/messages:
+    parameters:
+      - $ref: '#/components/parameters/TicketId'
+    get:
+      operationId: listDshPartnerSupportMessages
+      responses:
+        '200':
+          description: Non-internal messages visible to the ticket owner.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [messages]
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PartnerSupportMessage'
+        '404': { $ref: '#/components/responses/Error' }
+    post:
+      operationId: addDshPartnerSupportMessage
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body:
+                  type: string
+                  minLength: 1
+                  maxLength: 4000
+      responses:
+        '201':
+          description: Message created or replayed from the same idempotency key.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message]
+                properties:
+                  message:
+                    $ref: '#/components/schemas/PartnerSupportMessage'
+        '400': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    TicketId:
+      name: ticketId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 200
+    CorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: false
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 200
+  responses:
+    Error:
+      description: Governed error envelope.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [code, message]
+            properties:
+              code: { type: string }
+              message: { type: string }
+  schemas:
+    CreatePartnerSupportTicketInput:
+      type: object
+      required: [subject, description, category]
+      properties:
+        storeId:
+          type: string
+        orderId:
+          type: string
+        subject:
+          type: string
+          minLength: 3
+          maxLength: 160
+        description:
+          type: string
+          minLength: 5
+          maxLength: 4000
+        category:
+          type: string
+          enum: [order_issue, delivery_issue, store_quality, payment_reference, account_access, app_bug, other]
+        priority:
+          type: string
+          enum: [low, normal, high, urgent]
+          default: normal
+    PartnerSupportTicket:
+      type: object
+      required: [id, reporterId, reporterRole, subject, description, category, priority, status, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        storeId: { type: string }
+        reporterId: { type: string }
+        reporterRole: { type: string, const: partner }
+        subject: { type: string }
+        description: { type: string }
+        category: { type: string }
+        priority: { type: string }
+        status: { type: string, enum: [open, in_review, pending_user, resolved, closed] }
+        assignedTo: { type: string }
+        orderId: { type: string }
+        resolvedAt: { type: [string, 'null'], format: date-time }
+        closedAt: { type: [string, 'null'], format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    PartnerSupportMessage:
+      type: object
+      required: [id, ticketId, senderId, senderRole, body, isInternal, createdAt]
+      properties:
+        id: { type: string }
+        ticketId: { type: string }
+        senderId: { type: string }
+        senderRole: { type: string }
+        body: { type: string }
+        isInternal: { type: boolean, const: false }
+        createdAt: { type: string, format: date-time }

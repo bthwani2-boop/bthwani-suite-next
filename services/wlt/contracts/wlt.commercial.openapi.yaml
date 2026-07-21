@@ -1,0 +1,253 @@
+openapi: 3.1.0
+info:
+  title: BThwani WLT Commercial Benefits API
+  version: 1.0.0
+  description: >
+    Approved WLT-owned contract for commercial products, paid subscriptions,
+    loyalty ledger entries and client benefit truth. Mutations are authorized
+    only for the DSH service caller, remain deployment-gated by
+    WLT_MUTATIONS_ENABLED, and require idempotency or correlation identifiers.
+x-bthwani-owner: services/wlt
+x-bthwani-parent-contract: services/wlt/contracts/wlt.openapi.yaml
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-client-generation: DISABLED
+x-bthwani-client-binding: MANUAL_TYPED_ADAPTER
+x-bthwani-runtime-dependency: true
+x-bthwani-financial-owner: true
+x-bthwani-mutation-scope-approved: true
+x-bthwani-deployment-gate: WLT_MUTATIONS_ENABLED
+paths:
+  /wlt/commercial/products:
+    post:
+      operationId: createWltCommercialProduct
+      tags: [WltCommercialBenefits]
+      security: [{ bearerAuth: [] }]
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/ServiceCallerHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CommercialProductWrite' }
+      responses:
+        '201': { $ref: '#/components/responses/ObjectResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+  /wlt/commercial/products/{productReference}:
+    get:
+      operationId: getWltCommercialProduct
+      tags: [WltCommercialBenefits]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/ServiceCallerHeader'
+        - $ref: '#/components/parameters/ProductReference'
+      responses:
+        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '404': { $ref: '#/components/responses/ErrorResponse' }
+    patch:
+      operationId: updateWltCommercialProduct
+      tags: [WltCommercialBenefits]
+      security: [{ bearerAuth: [] }]
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/ServiceCallerHeader'
+        - $ref: '#/components/parameters/ProductReference'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CommercialProductWrite' }
+      responses:
+        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '404': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+  /wlt/commercial/clients/{clientId}/benefits:
+    get:
+      operationId: getWltClientCommercialBenefits
+      tags: [WltCommercialBenefits]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/ServiceCallerHeader'
+        - name: clientId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+      responses:
+        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+  /wlt/commercial/payment-sessions:
+    post:
+      operationId: createWltSubscriptionPaymentSession
+      tags: [WltCommercialBenefits]
+      security: [{ bearerAuth: [] }]
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/ServiceCallerHeader'
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, minLength: 1 }
+        - name: X-Correlation-ID
+          in: header
+          required: true
+          schema: { type: string, minLength: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SubscriptionPaymentSessionCreate' }
+      responses:
+        '201': { $ref: '#/components/responses/ObjectResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '404': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+  /wlt/commercial/loyalty-entries:
+    post:
+      operationId: appendWltLoyaltyEntry
+      tags: [WltCommercialBenefits]
+      security: [{ bearerAuth: [] }]
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/ServiceCallerHeader'
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, minLength: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoyaltyEntryWrite' }
+      responses:
+        '201': { $ref: '#/components/responses/ObjectResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '404': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+  /wlt/commercial/subscriptions:
+    post:
+      operationId: activateWltCommercialSubscription
+      tags: [WltCommercialBenefits]
+      security: [{ bearerAuth: [] }]
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/ServiceCallerHeader'
+        - name: X-Correlation-ID
+          in: header
+          required: true
+          schema: { type: string, minLength: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SubscriptionActivation' }
+      responses:
+        '201': { $ref: '#/components/responses/ObjectResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '404': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer }
+  parameters:
+    AuthorizationHeader:
+      name: Authorization
+      in: header
+      required: true
+      schema: { type: string, pattern: '^Bearer .+' }
+    ServiceCallerHeader:
+      name: X-Service-Caller
+      in: header
+      required: true
+      schema: { type: string, enum: [dsh] }
+    ProductReference:
+      name: productReference
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+  responses:
+    ObjectResponse:
+      description: Governed WLT commercial object.
+      content:
+        application/json:
+          schema: { type: object, additionalProperties: true }
+    ErrorResponse:
+      description: Governed error response.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+  schemas:
+    Error:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+    CommercialProductWrite:
+      type: object
+      additionalProperties: true
+      minProperties: 1
+    LoyaltyEntryWrite:
+      type: object
+      additionalProperties: true
+      required: [clientId, direction, points, sourceType, sourceId]
+      properties:
+        clientId: { type: string, minLength: 1 }
+        direction: { type: string, enum: [earn, burn, expire, reverse] }
+        points: { type: integer, format: int64, minimum: 1 }
+        sourceType: { type: string, minLength: 1 }
+        sourceId: { type: string, minLength: 1 }
+        reversalOf: { type: string, minLength: 1 }
+        idempotencyKey: { type: string, minLength: 1 }
+        correlationId: { type: string, minLength: 1 }
+        metadata: { type: object, additionalProperties: true }
+    SubscriptionPaymentSessionCreate:
+      type: object
+      additionalProperties: false
+      required: [subscriptionPurchaseId, productReference, tenantId, clientId]
+      properties:
+        subscriptionPurchaseId: { type: string, minLength: 1 }
+        productReference: { type: string, minLength: 1 }
+        tenantId: { type: string, minLength: 1 }
+        clientId: { type: string, minLength: 1 }
+        paymentMethod: { type: string, enum: [official_wallet] }
+    SubscriptionActivation:
+      type: object
+      additionalProperties: false
+      required: [clientId, productReference, paymentSessionId, subscriptionPurchaseId]
+      properties:
+        clientId: { type: string, minLength: 1 }
+        productReference: { type: string, minLength: 1 }
+        paymentSessionId:
+          type: string
+          minLength: 1
+          pattern: '^wps_'
+        subscriptionPurchaseId: { type: string, minLength: 1 }

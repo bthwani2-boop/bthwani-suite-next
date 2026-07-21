@@ -5,16 +5,21 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"sort"
 )
 
 // ErrUnbalancedTransaction is returned when the supplied lines' debits and
 // credits do not net to zero for every currency involved.
 var ErrUnbalancedTransaction = errors.New("ledger transaction is not balanced")
 
-// LedgerLine describes one leg of a ledger transaction. Exactly two lines
-// (one debit, one credit) are required per transaction in this constrained
-// kernel -- see wlt-017_ledger_kernel.sql for why a full chart-of-accounts
-// journal was not built.
+// ErrLedgerReferenceConflict is returned when a previously posted financial
+// reference is retried with a different set of journal lines. Returning the
+// existing transaction is safe only when the complete posting payload matches.
+var ErrLedgerReferenceConflict = errors.New("ledger reference already exists with a different posting payload")
+
+// LedgerLine describes one leg of a ledger transaction. A transaction must
+// contain at least two lines and may contain any number of additional legs,
+// provided debits equal credits independently for every currency.
 type LedgerLine struct {
 	AccountType      string // wallet | platform_revenue | platform_payable | provider_clearing | platform_commission_receivable
 	ActorType        string // required when AccountType == "wallet"
@@ -32,20 +37,23 @@ type Actor struct {
 }
 
 // PostLedgerTransaction is the only write path for the double-entry ledger
-// kernel. It must be called with a transaction (tx) that the caller also
-// uses for its own status-changing statements, so the ledger posting and
-// the business-state transition commit or roll back together.
+// kernel. It must be called with the same transaction used by the caller for
+// the associated business-state change, so status and accounting truth commit
+// or roll back together.
 //
-// It validates that lines net to zero per currency, resolves (lazily
-// creating if needed) each line's account, applies an atomic balance update
-// per account, and writes the transaction header + line rows. It returns
-// the new ledger_transaction_id.
+// The source tuple (transactionType, referenceType, referenceID) is the
+// idempotency identity. A retry with identical lines returns the original
+// transaction ID without moving balances again. A retry with different lines
+// fails with ErrLedgerReferenceConflict.
 func PostLedgerTransaction(ctx context.Context, tx *sql.Tx, transactionType, referenceType, referenceID string, lines []LedgerLine, createdBy Actor) (string, error) {
 	if transactionType == "" {
 		return "", fmt.Errorf("transactionType is required")
 	}
-	if len(lines) != 2 {
-		return "", fmt.Errorf("exactly two ledger lines (one debit, one credit) are required, got %d", len(lines))
+	if referenceType == "" || referenceID == "" {
+		return "", fmt.Errorf("referenceType and referenceId are required")
+	}
+	if len(lines) < 2 {
+		return "", fmt.Errorf("at least two ledger lines are required, got %d", len(lines))
 	}
 
 	totals := map[string]int64{} // currency -> signed total (debit +, credit -)
@@ -65,6 +73,9 @@ func PostLedgerTransaction(ctx context.Context, tx *sql.Tx, transactionType, ref
 		if line.AccountType == "wallet" && (line.ActorType == "" || line.ActorID == "") {
 			return "", fmt.Errorf("line %d: actorType and actorId are required for wallet accounts", i)
 		}
+		if line.AccountType != "wallet" && (line.ActorType != "" || line.ActorID != "") {
+			return "", fmt.Errorf("line %d: actorType and actorId are only valid for wallet accounts", i)
+		}
 		delta := line.AmountMinorUnits
 		if line.DebitCredit == "credit" {
 			delta = -delta
@@ -78,14 +89,33 @@ func PostLedgerTransaction(ctx context.Context, tx *sql.Tx, transactionType, ref
 	}
 
 	var transactionID string
+	var inserted bool
 	err := tx.QueryRowContext(ctx, `
-		INSERT INTO wlt_ledger_transactions (transaction_type, reference_type, reference_id, created_by_actor_id, created_by_actor_type)
-		VALUES ($1, $2, $3, NULLIF($4, ''), NULLIF($5, ''))
-		RETURNING id`,
+		WITH inserted AS (
+			INSERT INTO wlt_ledger_transactions
+				(transaction_type, reference_type, reference_id, created_by_actor_id, created_by_actor_type)
+			VALUES ($1, $2, $3, NULLIF($4, ''), NULLIF($5, ''))
+			ON CONFLICT DO NOTHING
+			RETURNING id
+		)
+		SELECT id, true FROM inserted
+		UNION ALL
+		SELECT id, false
+		FROM wlt_ledger_transactions
+		WHERE transaction_type = $1 AND reference_type = $2 AND reference_id = $3
+		ORDER BY 2 DESC
+		LIMIT 1`,
 		transactionType, referenceType, referenceID, createdBy.ID, createdBy.Type,
-	).Scan(&transactionID)
+	).Scan(&transactionID, &inserted)
 	if err != nil {
-		return "", fmt.Errorf("insert ledger transaction: %w", err)
+		return "", fmt.Errorf("insert or resolve ledger transaction: %w", err)
+	}
+
+	if !inserted {
+		if err := assertExistingTransactionMatches(ctx, tx, transactionID, lines); err != nil {
+			return "", err
+		}
+		return transactionID, nil
 	}
 
 	for _, line := range lines {
@@ -124,11 +154,58 @@ func PostLedgerTransaction(ctx context.Context, tx *sql.Tx, transactionType, ref
 	return transactionID, nil
 }
 
-// getOrCreateAccountTx resolves the account row for a line, locking it via
-// the UPDATE in PostLedgerTransaction's caller (a fresh account row created
-// here has no concurrent writers yet, and an existing row is only mutated
-// through the atomic UPDATE ... RETURNING above, so a separate SELECT ...
-// FOR UPDATE is not needed here).
+func assertExistingTransactionMatches(ctx context.Context, tx *sql.Tx, transactionID string, expected []LedgerLine) error {
+	rows, err := tx.QueryContext(ctx, `
+		SELECT a.account_type,
+		       COALESCE(a.actor_type, ''),
+		       COALESCE(a.actor_id, ''),
+		       l.debit_credit,
+		       l.amount_minor_units,
+		       l.currency
+		FROM wlt_ledger_lines l
+		JOIN wlt_ledger_accounts a ON a.id = l.account_id
+		WHERE l.ledger_transaction_id = $1`, transactionID)
+	if err != nil {
+		return fmt.Errorf("read existing ledger transaction: %w", err)
+	}
+	defer rows.Close()
+
+	actualKeys := make([]string, 0, len(expected))
+	for rows.Next() {
+		var line LedgerLine
+		if err := rows.Scan(&line.AccountType, &line.ActorType, &line.ActorID, &line.DebitCredit, &line.AmountMinorUnits, &line.Currency); err != nil {
+			return fmt.Errorf("scan existing ledger line: %w", err)
+		}
+		actualKeys = append(actualKeys, ledgerLineKey(line))
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("read existing ledger lines: %w", err)
+	}
+
+	expectedKeys := make([]string, 0, len(expected))
+	for _, line := range expected {
+		expectedKeys = append(expectedKeys, ledgerLineKey(line))
+	}
+	sort.Strings(actualKeys)
+	sort.Strings(expectedKeys)
+	if len(actualKeys) != len(expectedKeys) {
+		return fmt.Errorf("%w: transaction %s line count differs", ErrLedgerReferenceConflict, transactionID)
+	}
+	for i := range actualKeys {
+		if actualKeys[i] != expectedKeys[i] {
+			return fmt.Errorf("%w: transaction %s line %d differs", ErrLedgerReferenceConflict, transactionID, i)
+		}
+	}
+	return nil
+}
+
+func ledgerLineKey(line LedgerLine) string {
+	return fmt.Sprintf("%s\x1f%s\x1f%s\x1f%s\x1f%d\x1f%s", line.AccountType, line.ActorType, line.ActorID, line.DebitCredit, line.AmountMinorUnits, line.Currency)
+}
+
+// getOrCreateAccountTx resolves the account row for a line. Existing balances
+// are mutated only through atomic UPDATE ... RETURNING statements, so concurrent
+// postings cannot lose updates.
 func getOrCreateAccountTx(ctx context.Context, tx *sql.Tx, accountType, actorType, actorID, currency string) (string, error) {
 	var id string
 	var err error

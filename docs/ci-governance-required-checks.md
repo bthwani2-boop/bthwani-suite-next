@@ -1,102 +1,73 @@
-# CI/CD Governance — Required Status Checks
+# CI/CD Governance — Required Checks and External Settings
 
-Update GitHub Branch Protection / Ruleset for `master` with these **exact job names**.
+Status: ACTIVE SUPPORT DOCUMENT
 
-## Current `ci.yml` (still active during transition)
+This document mirrors the active workflow job names on remote branch `bassam`. It does not prove that repository Rulesets or branch protection are configured; those are GitHub-side settings and require an independent readback from repository settings.
 
-| Job ID | Display Name | Required |
-|---|---|---|
-| `node-gates` | `Node / PNPM gates` | ✅ Yes |
-| `wlt-go` | `WLT Go backend` | ✅ Yes |
-| `wlt-go-db` | `WLT Go DB integration` | ✅ Yes |
-| `dsh-go` | `DSH Go backend` | ✅ Yes |
-| `dsh-go-db` | `DSH Go DB integration` | ✅ Yes |
-| `identity-go` | `Identity Go backend` | ✅ Yes |
-| `docker-runtime-smoke` | `Docker runtime smoke` | ✅ Yes |
+## Active required workflow results
 
----
+Use the final aggregator jobs as the stable required checks. Internal jobs remain independently visible for diagnosis but are not the Ruleset contract.
 
-## New Workflows — Required Checks per PR
+| Workflow | Job ID | Exact display name | Purpose |
+|---|---|---|---|
+| `.github/workflows/ci.yml` | `ci-result` | `CI result` | Requires governance, repository foundation, static binding/logic, generated-client drift, Node verification, and Go service verification. |
+| `.github/workflows/governance-audit.yml` | `governance-result` | `Governance audit result` | Requires governance contracts, workflow security/policy analysis, and repository hygiene. |
+| `.github/workflows/security.yml` | `security-result` | `Security result` | Requires every applicable dependency, Go, Node, OSS, secrets, and workflow-policy security job. |
+| `.github/workflows/dsh-operational-closure-ci.yml` | `operational-result` | `DSH operational verification result` | Requires DSH/WLT/Workforce database tests, static cross-surface binding, and migration invariants when the workflow is triggered. |
 
-### `ci-pr-fast.yml` — runs on every PR to `master`
+## Branch coverage
 
-| Job ID | Display Name | Required |
-|---|---|---|
-| `lockfile-check` | `Lockfile integrity` | ✅ Yes |
-| `node-fast-gate` | `Node fast gate (lint / typecheck / test / affected)` | ✅ Yes |
-| `guards-fast` | `Guards (contracts + boundary + policy)` | ✅ Yes |
+Repository workflows must cover:
 
-### `ci-governance.yml` — runs on every PR to `master`
-
-| Job ID | Display Name | Required |
-|---|---|---|
-| `governance-check` | `Repository governance checks` | ✅ Yes |
-
-### `security.yml` — runs on every PR to `master`
-
-| Job ID | Display Name | Required |
-|---|---|---|
-| `dependency-review` | `Dependency review (PR only)` | ✅ Yes |
-| `workflow-permissions-audit` | `Workflow permissions audit` | ✅ Yes |
-
-### `ci-db.yml` — runs on PRs touching `services/**/database/**`
-
-| Job ID | Display Name | Required |
-|---|---|---|
-| `migration-static-guards` | `Migration static guards` | ✅ Yes (when triggered) |
-| `wlt-db-gate` | `WLT DB gate (migrations + seed idempotency + Go tests)` | ✅ Yes (when triggered) |
-| `dsh-db-gate` | `DSH DB gate (migrations + seed idempotency + Go tests)` | ✅ Yes (when triggered) |
-
-### `ci-contracts.yml` — runs on PRs touching `contracts/**`
-
-| Job ID | Display Name | Required |
-|---|---|---|
-| `contracts-lint` | `Contracts lint (bthwani contracts-foundation)` | ✅ Yes (when triggered) |
-| `spectral-lint` | `OpenAPI Spectral lint` | ✅ Yes (when triggered) |
-| `openapi-client-drift` | `Generated client drift check` | ✅ Yes (when triggered) |
-
----
-
-## New Workflows — NOT Required on PR (push/nightly/manual only)
-
-| Workflow | Trigger | Notes |
-|---|---|---|
-| `ci-full.yml` | push to `master`, `workflow_dispatch` | Full baseline after merge |
-| `ci-runtime.yml` | push to `master` (paths filter), nightly, `workflow_dispatch` | Docker smoke |
-| `mobile-preflight.yml` | `workflow_dispatch` only | Needs `EXPO_TOKEN` secret |
-| `release-preflight.yml` | `workflow_dispatch` only | Pre-release readiness |
-| `dependabot-triage.yml` | Dependabot PRs only | Auto-labels |
-
----
-
-## GitHub Ruleset Settings (master)
-
-```
-Branch: master
-Protection:
-  ✅ Require a pull request before merging
-  ✅ Require status checks to pass
-  ✅ Require branches to be up to date before merging
-  ✅ Require code owner review (CODEOWNERS)
-  ✅ Restrict direct pushes
-
-Required checks (add these by EXACT name):
-  - "Lockfile integrity"
-  - "Node fast gate (lint / typecheck / test / affected)"
-  - "Guards (contracts + boundary + policy)"
-  - "Repository governance checks"
-  - "Dependency review (PR only)"
-  - "Workflow permissions audit"
+```text
+push: bassam, master
+pull_request: master
 ```
 
-> **Note**: For path-filtered workflows (ci-db, ci-contracts), GitHub will show them as skipped when
-> paths don't match. Skipped checks still count as passing in GitHub rulesets.
-> Add them as required only if you want to enforce them universally.
+The active remote implementation branch is `bassam`. Verification evidence belongs to the exact commit SHA that triggered the run; results from another branch, an earlier SHA, or a temporary merge ref do not prove the current branch head.
 
----
+## Workflow invariants enforced in code
 
-## Secrets to Add in GitHub Settings
+`tools/guards/guard-registry-gate.mjs` enforces the following for critical workflows:
 
-| Secret Name | Used By | Notes |
-|---|---|---|
-| `EXPO_TOKEN` | `mobile-preflight.yml` | Optional — EAS preflight skips if missing |
+- explicit top-level permissions;
+- no `contents: write` or `write-all`;
+- no `pull_request_target`;
+- no source commit, push, reset, merge, or formatting rewrite;
+- no `@latest` installation;
+- external Actions pinned to immutable 40-character commit SHAs;
+- `actions/checkout` uses `persist-credentials: false`;
+- no `continue-on-error: true` in critical workflows;
+- active `bassam` coverage;
+- an `if: always()` final aggregator;
+- no one-time, duplicated operational-protocol, or stale fast-CI workflows.
+
+## GitHub Ruleset settings — external requirement
+
+The following configuration must be verified in GitHub repository settings before merge or release governance can be considered proven:
+
+```text
+Target branch: master
+Require a pull request before merging: enabled
+Require status checks to pass: enabled
+Require branch to be up to date: enabled when operationally appropriate
+Require conversation resolution: enabled
+Dismiss stale approvals: enabled
+Restrict direct pushes: enabled
+Do not allow bypass for ordinary contributors: enabled
+Required checks:
+  - CI result
+  - Governance audit result
+  - Security result
+  - DSH operational verification result (when made universally required)
+```
+
+A path-filtered workflow can remain absent for an unrelated change. Do not configure a path-filtered result as universally required unless the Ruleset supports the intended skipped/not-triggered behavior.
+
+## Separation of duties
+
+`CODEOWNERS` routes ownership but cannot create independent QA, security, release, or risk-acceptance authorities when only one GitHub identity exists. Formal SDLC approval evidence remains `NEEDS_EVIDENCE` until separate authorized identities or teams and required-review rules are configured and read back.
+
+## Secrets
+
+`EXPO_TOKEN` is optional and belongs only to intentionally invoked mobile/EAS workflows. Missing optional deployment secrets must not weaken static CI or security verification.

@@ -1,0 +1,115 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "BThwani SaaS Governance State",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "platformMode",
+    "saasReadinessMode",
+    "commercialActivationState",
+    "tenantDefinition",
+    "trustedTenantContextRequired",
+    "clientSuppliedTenantTrusted",
+    "deferredCommercialFeatures",
+    "activationEvidence",
+    "canonicalDecision",
+    "decisionVocabulary"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "platformMode": { "const": "BTHWANI_NATIVE_PLATFORM" },
+    "saasReadinessMode": { "enum": ["NOT_APPLICABLE", "SAAS_READY_DEFERRED", "SAAS_ACTIVE"] },
+    "commercialActivationState": { "enum": ["BLOCKED_BY_POLICY", "ELIGIBLE_FOR_REVIEW", "ACTIVE"] },
+    "tenantDefinition": { "type": "string", "minLength": 1 },
+    "trustedTenantContextRequired": { "const": true },
+    "clientSuppliedTenantTrusted": { "const": false },
+    "deferredCommercialFeatures": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "activationEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tenantOwnedEntitiesClassified",
+        "tenantContextPropagationVerified",
+        "crossTenantNegativeTestsPassed",
+        "crossTenantDataLeakageZero",
+        "criticalVulnerabilitiesZero",
+        "unacceptedHighVulnerabilitiesZero",
+        "tenantBackupRestoreVerified",
+        "tenantExportDeletionVerified",
+        "perTenantObservabilityAvailable",
+        "quotaIsolationVerified",
+        "wltTenantFinancialIsolationVerified",
+        "independentSecurityReviewPassed",
+        "incidentRollbackRunbooksVerified",
+        "legalPrivacyCommercialModelApproved"
+      ],
+      "properties": {
+        "tenantOwnedEntitiesClassified": { "$ref": "#/definitions/evidenceState" },
+        "tenantContextPropagationVerified": { "$ref": "#/definitions/evidenceState" },
+        "crossTenantNegativeTestsPassed": { "$ref": "#/definitions/evidenceState" },
+        "crossTenantDataLeakageZero": { "$ref": "#/definitions/evidenceState" },
+        "criticalVulnerabilitiesZero": { "$ref": "#/definitions/evidenceState" },
+        "unacceptedHighVulnerabilitiesZero": { "$ref": "#/definitions/evidenceState" },
+        "tenantBackupRestoreVerified": { "$ref": "#/definitions/evidenceState" },
+        "tenantExportDeletionVerified": { "$ref": "#/definitions/evidenceState" },
+        "perTenantObservabilityAvailable": { "$ref": "#/definitions/evidenceState" },
+        "quotaIsolationVerified": { "$ref": "#/definitions/evidenceState" },
+        "wltTenantFinancialIsolationVerified": { "$ref": "#/definitions/evidenceState" },
+        "independentSecurityReviewPassed": { "$ref": "#/definitions/evidenceState" },
+        "incidentRollbackRunbooksVerified": { "$ref": "#/definitions/evidenceState" },
+        "legalPrivacyCommercialModelApproved": { "$ref": "#/definitions/evidenceState" }
+      }
+    },
+    "canonicalDecision": {
+      "enum": ["PASS", "FIX_REQUIRED", "BLOCKED_EXTERNAL", "NEEDS_EVIDENCE", "PROTOCOL_VIOLATION", "CLOSED_WITH_EVIDENCE"]
+    },
+    "decisionVocabulary": { "const": "governance/contracts/decision-vocabulary.json" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "commercialActivationState": { "const": "ACTIVE" } } },
+      "then": {
+        "properties": {
+          "saasReadinessMode": { "const": "SAAS_ACTIVE" },
+          "canonicalDecision": { "const": "CLOSED_WITH_EVIDENCE" },
+          "activationEvidence": {
+            "properties": {
+              "tenantOwnedEntitiesClassified": { "const": "PROVEN" },
+              "tenantContextPropagationVerified": { "const": "PROVEN" },
+              "crossTenantNegativeTestsPassed": { "const": "PROVEN" },
+              "crossTenantDataLeakageZero": { "const": "PROVEN" },
+              "criticalVulnerabilitiesZero": { "const": "PROVEN" },
+              "unacceptedHighVulnerabilitiesZero": { "const": "PROVEN" },
+              "tenantBackupRestoreVerified": { "const": "PROVEN" },
+              "tenantExportDeletionVerified": { "const": "PROVEN" },
+              "perTenantObservabilityAvailable": { "const": "PROVEN" },
+              "quotaIsolationVerified": { "const": "PROVEN" },
+              "wltTenantFinancialIsolationVerified": { "const": "PROVEN" },
+              "independentSecurityReviewPassed": { "const": "PROVEN" },
+              "incidentRollbackRunbooksVerified": { "const": "PROVEN" },
+              "legalPrivacyCommercialModelApproved": { "const": "PROVEN" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "commercialActivationState": { "const": "BLOCKED_BY_POLICY" } } },
+      "then": {
+        "properties": {
+          "saasReadinessMode": { "enum": ["NOT_APPLICABLE", "SAAS_READY_DEFERRED"] },
+          "canonicalDecision": { "enum": ["NEEDS_EVIDENCE", "BLOCKED_EXTERNAL", "FIX_REQUIRED"] }
+        }
+      }
+    }
+  ],
+  "definitions": {
+    "evidenceState": { "enum": ["NOT_APPLICABLE", "NOT_PROVEN", "PROVEN"] }
+  }
+}

@@ -1,8 +1,3 @@
-// Package pickup implements the pickup fulfillment mode's operational
-// closure: the store marks an order ready, a one-time code is issued to the
-// customer, and the customer's arrival is verified against that code. It is
-// the first real consumer of dsh_pickup_sessions (dsh-055), which existed
-// unused before this package.
 package pickup
 
 import (
@@ -17,13 +12,22 @@ var (
 	ErrConflict         = errors.New("pickup state conflict")
 	ErrVersionConflict  = errors.New("pickup session version conflict")
 	ErrAlreadyUsed      = errors.New("pickup code already used")
+	ErrCancelled        = errors.New("pickup session cancelled with order")
 	ErrExpired          = errors.New("pickup code expired")
 	ErrAttemptsExceeded = errors.New("pickup code attempts exceeded")
 	ErrInvalidCode      = errors.New("pickup code is invalid")
 )
 
-// PickupSession mirrors dsh_pickup_sessions' columns. hashed_otp is never
-// exposed outside the repository/service layer.
+type SessionStatus string
+
+const (
+	SessionActive    SessionStatus = "active"
+	SessionVerified  SessionStatus = "verified"
+	SessionNoShow    SessionStatus = "no_show"
+	SessionConsumed  SessionStatus = "consumed"
+	SessionCancelled SessionStatus = "cancelled"
+)
+
 type PickupSession struct {
 	ID                 string
 	OrderID            string
@@ -36,6 +40,9 @@ type PickupSession struct {
 	UsedAt             *time.Time
 	VerifiedByActorID  *string
 	VerificationMethod *string
+	Status             SessionStatus
+	CancelledAt        *time.Time
+	CancellationReason *string
 	Version            int
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
@@ -44,66 +51,76 @@ type PickupSession struct {
 const sessionColumns = `
 	id, order_id::text, store_id, client_id::text, hashed_otp, expires_at,
 	attempt_count, max_attempts, used_at, verified_by_actor_id, verification_method,
+	status, cancelled_at, cancellation_reason,
 	version, created_at, updated_at
 `
 
 func scanSession(scan func(...any) error) (*PickupSession, error) {
-	var s PickupSession
+	var session PickupSession
 	err := scan(
-		&s.ID, &s.OrderID, &s.StoreID, &s.ClientID, &s.HashedOtp, &s.ExpiresAt,
-		&s.AttemptCount, &s.MaxAttempts, &s.UsedAt, &s.VerifiedByActorID, &s.VerificationMethod,
-		&s.Version, &s.CreatedAt, &s.UpdatedAt,
+		&session.ID,
+		&session.OrderID,
+		&session.StoreID,
+		&session.ClientID,
+		&session.HashedOtp,
+		&session.ExpiresAt,
+		&session.AttemptCount,
+		&session.MaxAttempts,
+		&session.UsedAt,
+		&session.VerifiedByActorID,
+		&session.VerificationMethod,
+		&session.Status,
+		&session.CancelledAt,
+		&session.CancellationReason,
+		&session.Version,
+		&session.CreatedAt,
+		&session.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
 	}
-	return &s, nil
+	return &session, nil
 }
 
-// GetForUpdate locks and returns the session row for id within tx.
 func GetForUpdate(tx *sql.Tx, id string) (*PickupSession, error) {
 	query := `SELECT ` + sessionColumns + ` FROM dsh_pickup_sessions WHERE id = $1 FOR UPDATE`
-	s, err := scanSession(tx.QueryRow(query, id).Scan)
+	session, err := scanSession(tx.QueryRow(query, id).Scan)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
-	return s, err
+	return session, err
 }
 
-// GetForUpdateByOrderID locks and returns the session row for order_id
-// within tx, if one exists.
 func GetForUpdateByOrderID(tx *sql.Tx, orderID string) (*PickupSession, error) {
 	query := `SELECT ` + sessionColumns + ` FROM dsh_pickup_sessions WHERE order_id = $1::uuid FOR UPDATE`
-	s, err := scanSession(tx.QueryRow(query, orderID).Scan)
+	session, err := scanSession(tx.QueryRow(query, orderID).Scan)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
-	return s, err
+	return session, err
 }
 
-// GetByOrderID returns the session row for order_id, if one exists.
 func GetByOrderID(db *sql.DB, orderID string) (*PickupSession, error) {
 	query := `SELECT ` + sessionColumns + ` FROM dsh_pickup_sessions WHERE order_id = $1::uuid`
-	s, err := scanSession(db.QueryRow(query, orderID).Scan)
+	session, err := scanSession(db.QueryRow(query, orderID).Scan)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
-	return s, err
+	return session, err
 }
 
-// Get returns the session row by id.
 func Get(db *sql.DB, id string) (*PickupSession, error) {
 	query := `SELECT ` + sessionColumns + ` FROM dsh_pickup_sessions WHERE id = $1`
-	s, err := scanSession(db.QueryRow(query, id).Scan)
+	session, err := scanSession(db.QueryRow(query, id).Scan)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
-	return s, err
+	return session, err
 }
 
-// ListFilter narrows List by store and/or "active"/"used"/"expired" state.
 type ListFilter struct {
 	StoreID string
+	Status  SessionStatus
 	Limit   int
 	Offset  int
 }
@@ -115,19 +132,23 @@ func clampLimit(limit int) int {
 	return limit
 }
 
-// List returns pickup sessions matching filter, newest first.
 func List(db *sql.DB, filter ListFilter) ([]PickupSession, error) {
 	limit := clampLimit(filter.Limit)
 	where := "WHERE 1=1"
 	var args []any
-	idx := 1
+	index := 1
 	if filter.StoreID != "" {
-		where += " AND store_id = $" + itoa(idx)
+		where += " AND store_id = $" + itoa(index)
 		args = append(args, filter.StoreID)
-		idx++
+		index++
+	}
+	if filter.Status != "" {
+		where += " AND status = $" + itoa(index)
+		args = append(args, string(filter.Status))
+		index++
 	}
 	query := `SELECT ` + sessionColumns + ` FROM dsh_pickup_sessions ` + where +
-		` ORDER BY created_at DESC LIMIT $` + itoa(idx) + ` OFFSET $` + itoa(idx+1)
+		` ORDER BY created_at DESC LIMIT $` + itoa(index) + ` OFFSET $` + itoa(index+1)
 	args = append(args, limit, filter.Offset)
 
 	rows, err := db.Query(query, args...)
@@ -138,33 +159,36 @@ func List(db *sql.DB, filter ListFilter) ([]PickupSession, error) {
 
 	var sessions []PickupSession
 	for rows.Next() {
-		s, err := scanSession(rows.Scan)
+		session, err := scanSession(rows.Scan)
 		if err != nil {
 			return nil, err
 		}
-		sessions = append(sessions, *s)
+		sessions = append(sessions, *session)
+	}
+	if sessions == nil {
+		sessions = []PickupSession{}
 	}
 	return sessions, rows.Err()
 }
 
-func itoa(v int) string {
-	if v == 0 {
+func itoa(value int) string {
+	if value == 0 {
 		return "0"
 	}
-	neg := v < 0
-	if neg {
-		v = -v
+	negative := value < 0
+	if negative {
+		value = -value
 	}
-	var buf [20]byte
-	i := len(buf)
-	for v > 0 {
-		i--
-		buf[i] = byte('0' + v%10)
-		v /= 10
+	var buffer [20]byte
+	index := len(buffer)
+	for value > 0 {
+		index--
+		buffer[index] = byte('0' + value%10)
+		value /= 10
 	}
-	if neg {
-		i--
-		buf[i] = '-'
+	if negative {
+		index--
+		buffer[index] = '-'
 	}
-	return string(buf[i:])
+	return string(buffer[index:])
 }

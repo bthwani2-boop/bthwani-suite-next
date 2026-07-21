@@ -11,9 +11,9 @@ import {
   fetchFieldTaxonomy,
   fetchFieldMasterProducts,
   fetchFieldStoreAssortment,
-  upsertFieldStoreAssortment,
   createFieldProductProposal,
 } from "../catalog/central-catalog.api";
+import { upsertFieldStoreAssortmentOCC } from "../catalog/central-catalog-occ.api";
 import type {
   CentralCatalogDomain,
   CentralCatalogNode,
@@ -121,7 +121,7 @@ export function useFieldCatalogController(partnerId: string) {
       setActionState({ kind: "submitting" });
       try {
         const existing = assortmentItems.find((a) => a.masterProductId === masterProductId);
-        const assortment = await upsertFieldStoreAssortment(partnerId, storeState.storeId, masterProductId, {
+        const assortment = await upsertFieldStoreAssortmentOCC(partnerId, storeState.storeId, masterProductId, {
           unitPrice: input.unitPrice,
           currency: input.currency,
           available: input.available,
@@ -129,6 +129,7 @@ export function useFieldCatalogController(partnerId: string) {
           localNote: input.localNote,
           customImageObjectKey: null,
           publicationStatus: existing?.publicationStatus ?? "draft",
+          ...(existing ? { expectedVersion: existing.version } : {}),
         });
         setAssortmentItems((prev) => {
           const withoutExisting = prev.filter((a) => a.masterProductId !== masterProductId);
@@ -137,11 +138,12 @@ export function useFieldCatalogController(partnerId: string) {
         setActionState({ kind: "idle" });
         return true;
       } catch {
+        await loadStore();
         setActionState({ kind: "error", message: "تعذر ربط المنتج بالمتجر" });
         return false;
       }
     },
-    [partnerId, storeState, assortmentItems]
+    [partnerId, storeState, assortmentItems, loadStore]
   );
 
   const proposeNewProduct = useCallback(

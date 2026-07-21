@@ -38,12 +38,13 @@ export function useDshCaptainSurfaceBinding(
   const orderModel = useCaptainOrderModel();
   const chatModel = useCaptainChatModel();
   const inboxModel = useCaptainInboxModel(captainRuntimeId);
+  const activeAssignment = inboxModel.findAssignment(orderModel.activeAssignmentId);
 
   const captainOrderRuntime = useCaptainOrderRuntime();
   useCaptainActiveLocationPush({
     activeAssignmentId: orderModel.activeAssignmentId,
     captainId: captainRuntimeId,
-    lifecycleStatus: lifecycle.inboxState,
+    lifecycleStatus: activeAssignment?.delivery.status,
   });
 
   const navModel = useCaptainNavigationModel({

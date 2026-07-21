@@ -1,46 +1,26 @@
-# CODEOWNERS file for project-wide governance and reviews.
+# CODEOWNERS for repository ownership routing.
+# This file assigns repository ownership only. It does not prove SDLC separation of duties;
+# independent QA, security, release, and risk approvals remain separate governed evidence.
 
-# DSH owners
-services/dsh/**                                     @bthwani
+*                                                   @bthwani2-boop
 
-# WLT owners
-services/wlt/**                                     @bthwani
+# Governance, agents, skills, guards, and workflows
+AGENTS.md                                           @bthwani2-boop
+GEMINI.md                                           @bthwani2-boop
+.agents/**                                          @bthwani2-boop
+governance/**                                       @bthwani2-boop
+tools/guards/**                                     @bthwani2-boop
+.github/workflows/**                                @bthwani2-boop
+.github/CODEOWNERS                                  @bthwani2-boop
 
-# CI & GitHub Workflows owners
-.github/workflows/**                                @bthwani
-.github/CODEOWNERS                                  @bthwani
+# Service and financial ownership
+services/dsh/**                                     @bthwani2-boop
+services/wlt/**                                     @bthwani2-boop
+core/**                                             @bthwani2-boop
 
-# Runtime configuration & script owners
-infra/docker/**                                     @bthwani
-
-# API contracts owners
-services/dsh/contracts/**                           @bthwani
-
-# Shared UI kit
-shared/ui-kit/**                                    @bthwani
-
-# DSH/WLT frontend shared packages
-services/dsh/frontend/shared/**                     @bthwani
-services/wlt/frontend/shared/**                     @bthwani
-
-# All apps (client, partner, captain, field)
-apps/**                                             @bthwani
-
-# All GitHub governance files (CODEOWNERS, templates, dependabot)
-.github/**                                          @bthwani
-
-# Documentation
-docs/**                                             @bthwani
-
-# Tooling and scripts
-tools/**                                            @bthwani
-tools/guards/sdlc/**                                @bthwani
-
-# Infrastructure
-infra/**                                            @bthwani
-
-# Governance and agent authorities
-governance/**                                       @bthwani
-governance/operational_journey_protocol_package/sdlc/** @bthwani
-.agents/**                                         @bthwani
-.agents/skills/bthwani-sdlc-stage-gate-orchestrator/** @bthwani
+# Surfaces, shared UI, runtime, and tooling
+apps/**                                             @bthwani2-boop
+shared/ui-kit/**                                    @bthwani2-boop
+infra/**                                            @bthwani2-boop
+tools/**                                            @bthwani2-boop
+docs/**                                             @bthwani2-boop

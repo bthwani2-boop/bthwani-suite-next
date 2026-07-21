@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -79,19 +78,27 @@ func (c *Client) CreatePaymentSession(ctx context.Context, input CreatePaymentSe
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
-	if input.CorrelationID != "" {
-		req.Header.Set("X-Correlation-ID", input.CorrelationID)
-	} else if input.SpecialRequestID != "" {
-		req.Header.Set("X-Correlation-ID", input.SpecialRequestID)
-	} else {
-		req.Header.Set("X-Correlation-ID", input.CheckoutIntentID)
+	if input.TenantID != "" {
+		req.Header.Set("X-Tenant-ID", input.TenantID)
 	}
-	if input.IdempotencyKey != "" {
-		req.Header.Set("Idempotency-Key", input.IdempotencyKey)
-	} else if input.SpecialRequestID != "" {
-		req.Header.Set("Idempotency-Key", "dsh-special-request:"+input.SpecialRequestID)
-	} else {
-		req.Header.Set("Idempotency-Key", "dsh-checkout-intent:"+input.CheckoutIntentID)
+	correlationID := strings.TrimSpace(input.CorrelationID)
+	if correlationID == "" {
+		if input.SpecialRequestID != "" {
+			correlationID = input.SpecialRequestID
+		} else {
+			correlationID = input.CheckoutIntentID
+		}
+	}
+	idempotencyKey := strings.TrimSpace(input.IdempotencyKey)
+	if idempotencyKey == "" {
+		if input.SpecialRequestID != "" {
+			idempotencyKey = deterministicMutationKey("special-request-payment-session", input.SpecialRequestID)
+		} else {
+			idempotencyKey = deterministicMutationKey("checkout-payment-session", input.CheckoutIntentID)
+		}
+	}
+	if err := setRequiredMutationHeaders(req, correlationID, idempotencyKey); err != nil {
+		return nil, fmt.Errorf("prepare WLT payment session request: %w", err)
 	}
 
 	response, err := c.http.Do(req)
@@ -114,42 +121,61 @@ func (c *Client) CreatePaymentSession(ctx context.Context, input CreatePaymentSe
 	return &envelope.PaymentSession, nil
 }
 
-type NotifyDeliveryCompletedInput struct {
+type NotifyDeliveryCollectionInput struct {
 	OrderID          string `json:"orderId"`
-	CaptainID        string `json:"captainId"`
+	CollectorType    string `json:"collectorType"`
+	CollectorID      string `json:"collectorId"`
 	PartnerID        string `json:"partnerId"`
 	CheckoutIntentID string `json:"checkoutIntentId"`
+	CorrelationID    string `json:"-"`
+	IdempotencyKey   string `json:"-"`
 }
 
-// NotifyDeliveryCompleted tells WLT a COD order has been delivered so it can
-// open its own COD collection record. WLT re-derives the amount from its own
-// payment session for the checkout intent; DSH never computes or forwards a
-// financial amount. Errors are the caller's to decide whether to retry.
-func (c *Client) NotifyDeliveryCompleted(ctx context.Context, input NotifyDeliveryCompletedInput) error {
+// NotifyDeliveryCollection creates one WLT-owned COD custody record after a
+// governed delivery proof. WLT derives amount/currency from its own payment
+// session. DSH sends only operational identities and never a monetary amount.
+func (c *Client) NotifyDeliveryCollection(ctx context.Context, input NotifyDeliveryCollectionInput) error {
 	if !c.Configured() {
-		return fmt.Errorf("WLT payment-session handoff is not configured")
+		return fmt.Errorf("WLT COD custody handoff is not configured")
+	}
+	input.OrderID = strings.TrimSpace(input.OrderID)
+	input.CollectorType = strings.TrimSpace(input.CollectorType)
+	input.CollectorID = strings.TrimSpace(input.CollectorID)
+	input.PartnerID = strings.TrimSpace(input.PartnerID)
+	input.CheckoutIntentID = strings.TrimSpace(input.CheckoutIntentID)
+	if input.OrderID == "" || input.CollectorType == "" || input.CollectorID == "" || input.PartnerID == "" || input.CheckoutIntentID == "" {
+		return fmt.Errorf("order, collector, partner, and checkout intent are required for COD custody")
 	}
 	body, err := json.Marshal(input)
 	if err != nil {
-		return fmt.Errorf("encode WLT delivery-completed request: %w", err)
+		return fmt.Errorf("encode WLT COD custody request: %w", err)
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/wlt/cod-records", bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/wlt/delivery-collections", bytes.NewReader(body))
 	if err != nil {
-		return fmt.Errorf("build WLT delivery-completed request: %w", err)
+		return fmt.Errorf("build WLT COD custody request: %w", err)
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
-	req.Header.Set("X-Correlation-ID", input.OrderID)
-
+	correlationID := strings.TrimSpace(input.CorrelationID)
+	if correlationID == "" {
+		correlationID = input.OrderID
+	}
+	idempotencyKey := strings.TrimSpace(input.IdempotencyKey)
+	if idempotencyKey == "" {
+		idempotencyKey = deterministicMutationKey("delivery-collection-handoff", input.OrderID, input.CheckoutIntentID, input.CollectorType, input.CollectorID)
+	}
+	if err := setRequiredMutationHeaders(req, correlationID, idempotencyKey); err != nil {
+		return fmt.Errorf("prepare WLT COD custody request: %w", err)
+	}
 	response, err := c.http.Do(req)
 	if err != nil {
-		return fmt.Errorf("call WLT delivery-completed: %w", err)
+		return fmt.Errorf("call WLT COD custody: %w", err)
 	}
 	defer response.Body.Close()
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return fmt.Errorf("WLT delivery-completed returned HTTP %d", response.StatusCode)
+		return fmt.Errorf("WLT delivery collection handoff returned HTTP %d", response.StatusCode)
 	}
 	return nil
 }
@@ -180,6 +206,13 @@ func (c *Client) DeliverFieldCommission(ctx context.Context, input DeliverFieldC
 	if input.SourceType == "" {
 		input.SourceType = "field_visit"
 	}
+	if strings.TrimSpace(input.IdempotencyKey) == "" {
+		input.IdempotencyKey = deterministicMutationKey("field-commission", input.VisitID, input.SourceID, input.BeneficiaryActorID)
+	}
+	correlationID := strings.TrimSpace(input.CorrelationID)
+	if correlationID == "" {
+		correlationID = strings.TrimSpace(input.VisitID)
+	}
 	body, err := json.Marshal(input)
 	if err != nil {
 		return fmt.Errorf("encode WLT field commission request: %w", err)
@@ -192,10 +225,8 @@ func (c *Client) DeliverFieldCommission(ctx context.Context, input DeliverFieldC
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
-	if input.CorrelationID != "" {
-		req.Header.Set("X-Correlation-ID", input.CorrelationID)
-	} else {
-		req.Header.Set("X-Correlation-ID", input.VisitID)
+	if err := setRequiredMutationHeaders(req, correlationID, input.IdempotencyKey); err != nil {
+		return fmt.Errorf("prepare WLT field commission request: %w", err)
 	}
 
 	response, err := c.http.Do(req)
@@ -236,8 +267,11 @@ func (c *Client) ExpireSession(ctx context.Context, paymentSessionID, correlatio
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
-	if correlationID != "" {
-		req.Header.Set("X-Correlation-ID", correlationID)
+	if strings.TrimSpace(correlationID) == "" {
+		correlationID = paymentSessionID
+	}
+	if err := setRequiredMutationHeaders(req, correlationID, deterministicMutationKey("payment-session-expire", paymentSessionID)); err != nil {
+		return fmt.Errorf("prepare WLT expire-session request: %w", err)
 	}
 
 	response, err := c.http.Do(req)
@@ -254,218 +288,4 @@ func (c *Client) ExpireSession(ctx context.Context, paymentSessionID, correlatio
 		return fmt.Errorf("WLT expire-session returned HTTP %d", response.StatusCode)
 	}
 	return nil
-}
-
-// CancelSessionForOrderInput is the payload for CancelSessionForOrder.
-type CancelSessionForOrderInput struct {
-	OrderID  string `json:"orderId"`
-	ClientID string `json:"clientId"`
-	Reason   string `json:"reason"`
-}
-
-// CancelSessionForOrder tells WLT that the order backed by paymentSessionID
-// has been rejected or cancelled. WLT decides internally whether to expire
-// the session (not yet captured), open a pending refund for review (already
-// captured), or no-op (already terminal); DSH treats any 2xx response as
-// success regardless of which internal action WLT took.
-func (c *Client) CancelSessionForOrder(ctx context.Context, paymentSessionID string, input CancelSessionForOrderInput) error {
-	if !c.Configured() {
-		return fmt.Errorf("WLT payment-session handoff is not configured")
-	}
-	if paymentSessionID == "" {
-		return fmt.Errorf("paymentSessionID is required")
-	}
-	body, err := json.Marshal(input)
-	if err != nil {
-		return fmt.Errorf("encode WLT cancel-for-order request: %w", err)
-	}
-	path := "/wlt/payment-sessions/" + url.PathEscape(paymentSessionID) + "/cancel-for-order"
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+path, bytes.NewReader(body))
-	if err != nil {
-		return fmt.Errorf("build WLT cancel-for-order request: %w", err)
-	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
-	req.Header.Set("X-Service-Caller", "dsh")
-	req.Header.Set("X-Correlation-ID", input.OrderID)
-
-	response, err := c.http.Do(req)
-	if err != nil {
-		return fmt.Errorf("call WLT cancel-for-order: %w", err)
-	}
-	defer response.Body.Close()
-	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return fmt.Errorf("WLT cancel-for-order returned HTTP %d", response.StatusCode)
-	}
-	// Response body shape (e.g. an "action" field indicating which internal
-	// path WLT took) is not load-bearing for DSH's logic here; any 2xx is
-	// success, same treatment as NotifyDeliveryCompleted.
-	return nil
-}
-
-// financeReadAllowlist enumerates the WLT internal financial read collections
-// DSH is allowed to proxy for its own authenticated surfaces. Anything else
-// is rejected before an upstream request is made.
-var financeReadAllowlist = map[string]struct{}{
-	"/wlt/settlements":              {},
-	"/wlt/settlements/summary":      {},
-	"/wlt/refunds":                  {},
-	"/wlt/ledger/entries":           {},
-	"/wlt/ledger/financial-summary": {},
-	"/wlt/cod-records":              {},
-	"/wlt/commissions":              {},
-	"/wlt/references/wallet-status": {},
-	"/wlt/payout-requests":          {},
-	"/wlt/reconciliation-cases":     {},
-}
-
-func financeReadPathAllowed(path string) bool {
-	if _, ok := financeReadAllowlist[path]; ok {
-		return true
-	}
-	// Single-resource refund detail: /wlt/refunds/{refundId}
-	if rest, ok := strings.CutPrefix(path, "/wlt/refunds/"); ok {
-		return rest != "" && !strings.Contains(rest, "/")
-	}
-	// Single-resource reconciliation-case detail: /wlt/reconciliation-cases/{caseId}
-	if rest, ok := strings.CutPrefix(path, "/wlt/reconciliation-cases/"); ok {
-		return rest != "" && !strings.Contains(rest, "/")
-	}
-	return false
-}
-
-// financeReadWalletAllowlist enumerates the actor types DSH may look up a
-// wallet for via the path-parameterized WLT wallet route
-// GET /wlt/wallets/{actorType}/{actorId}.
-var financeReadWalletAllowlist = map[string]struct{}{
-	"field": {},
-}
-
-// FinanceReadWallet performs a service-authenticated GET against WLT's
-// path-parameterized wallet lookup route: GET /wlt/wallets/{actorType}/{actorId}.
-// actorType must be allowlisted and actorId is URL-escaped before being
-// embedded in the path so untrusted input can never alter the route shape.
-func (c *Client) FinanceReadWallet(ctx context.Context, actorType, actorID, correlationID string) (int, []byte, error) {
-	if !c.Configured() {
-		return 0, nil, fmt.Errorf("WLT integration is not configured")
-	}
-	if _, ok := financeReadWalletAllowlist[actorType]; !ok {
-		return 0, nil, fmt.Errorf("WLT wallet actor type %q is not allowlisted", actorType)
-	}
-	if actorID == "" {
-		return 0, nil, fmt.Errorf("WLT wallet actor id must not be empty")
-	}
-	path := "/wlt/wallets/" + url.PathEscape(actorType) + "/" + url.PathEscape(actorID)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+path, nil)
-	if err != nil {
-		return 0, nil, fmt.Errorf("build WLT finance read request: %w", err)
-	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
-	req.Header.Set("X-Service-Caller", "dsh")
-	if correlationID != "" {
-		req.Header.Set("X-Correlation-ID", correlationID)
-	}
-
-	response, err := c.http.Do(req)
-	if err != nil {
-		return 0, nil, fmt.Errorf("call WLT finance read: %w", err)
-	}
-	defer response.Body.Close()
-	body, err := io.ReadAll(io.LimitReader(response.Body, 4<<20))
-	if err != nil {
-		return 0, nil, fmt.Errorf("read WLT finance read response: %w", err)
-	}
-	return response.StatusCode, body, nil
-}
-
-// FinanceRead performs a service-authenticated GET against an allowlisted WLT
-// internal financial read path and returns the upstream HTTP status plus the
-// raw JSON body. WLT stays the only financial truth owner: DSH forwards the
-// governed view verbatim and never derives or mutates amounts here.
-func (c *Client) FinanceRead(ctx context.Context, path string, query url.Values, correlationID string) (int, []byte, error) {
-	if !c.Configured() {
-		return 0, nil, fmt.Errorf("WLT integration is not configured")
-	}
-	if !financeReadPathAllowed(path) {
-		return 0, nil, fmt.Errorf("WLT finance read path %q is not allowlisted", path)
-	}
-	target := c.baseURL + path
-	if len(query) > 0 {
-		target += "?" + query.Encode()
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, target, nil)
-	if err != nil {
-		return 0, nil, fmt.Errorf("build WLT finance read request: %w", err)
-	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
-	req.Header.Set("X-Service-Caller", "dsh")
-	if correlationID != "" {
-		req.Header.Set("X-Correlation-ID", correlationID)
-	}
-
-	response, err := c.http.Do(req)
-	if err != nil {
-		return 0, nil, fmt.Errorf("call WLT finance read: %w", err)
-	}
-	defer response.Body.Close()
-	body, err := io.ReadAll(io.LimitReader(response.Body, 4<<20))
-	if err != nil {
-		return 0, nil, fmt.Errorf("read WLT finance read response: %w", err)
-	}
-	return response.StatusCode, body, nil
-}
-
-// FinanceWrite performs a service-authenticated POST/PUT against an allowlisted WLT path.
-func (c *Client) FinanceWrite(ctx context.Context, method, path string, body []byte, correlationID string) (int, []byte, error) {
-	if !c.Configured() {
-		return 0, nil, fmt.Errorf("WLT integration is not configured")
-	}
-
-	allowed := false
-	if path == "/wlt/payout-requests" {
-		allowed = true
-	} else if strings.HasPrefix(path, "/wlt/payout-requests/") {
-		parts := strings.Split(path, "/")
-		// e.g. /wlt/payout-requests/{id}/approve
-		if len(parts) == 5 && (parts[4] == "approve" || parts[4] == "reject" || parts[4] == "process" || parts[4] == "complete" || parts[4] == "fail") {
-			allowed = true
-		}
-	} else if strings.HasPrefix(path, "/wlt/reconciliation-cases/") {
-		parts := strings.Split(path, "/")
-		// e.g. /wlt/reconciliation-cases/{id}/assign or .../resolve
-		if len(parts) == 5 && (parts[4] == "assign" || parts[4] == "resolve") {
-			allowed = true
-		}
-	}
-
-	if !allowed {
-		return 0, nil, fmt.Errorf("WLT finance write path %q is not allowlisted", path)
-	}
-
-	target := c.baseURL + path
-	req, err := http.NewRequestWithContext(ctx, method, target, bytes.NewReader(body))
-	if err != nil {
-		return 0, nil, fmt.Errorf("build WLT finance write request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
-	req.Header.Set("X-Service-Caller", "dsh")
-	if correlationID != "" {
-		req.Header.Set("X-Correlation-ID", correlationID)
-	}
-
-	response, err := c.http.Do(req)
-	if err != nil {
-		return 0, nil, fmt.Errorf("call WLT finance write: %w", err)
-	}
-	defer response.Body.Close()
-	respBody, err := io.ReadAll(io.LimitReader(response.Body, 4<<20))
-	if err != nil {
-		return 0, nil, fmt.Errorf("read WLT finance write response: %w", err)
-	}
-	return response.StatusCode, respBody, nil
 }

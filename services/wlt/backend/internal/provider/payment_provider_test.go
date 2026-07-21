@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -20,57 +21,48 @@ func TestPaymentProviderFactory(t *testing.T) {
 		}
 	})
 
-	t.Run("Production Mode factory", func(t *testing.T) {
+	t.Run("Production Mode fails closed", func(t *testing.T) {
 		t.Setenv("WLT_FINANCIAL_PROVIDER_MODE", "production")
 		t.Setenv("WLT_FINANCIAL_PROVIDER_BASE_URL", "https://prod.example")
 		t.Setenv("WLT_ALLOW_PRODUCTION_PROVIDER", "true")
 		provider, err := NewDefaultPaymentProvider()
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
+		if provider != nil {
+			t.Fatalf("expected no production provider, got %T", provider)
 		}
-		if _, ok := provider.(*ProductionPaymentAdapter); !ok {
-			t.Fatal("expected production provider to be of type *ProductionPaymentAdapter")
+		if !errors.Is(err, ErrProductionProviderUnavailable) {
+			t.Fatalf("expected ErrProductionProviderUnavailable, got %v", err)
 		}
 	})
 }
 
-func TestProductionPaymentAdapterSimulations(t *testing.T) {
+func TestProductionPaymentAdapterFailsClosed(t *testing.T) {
 	adapter := NewProductionPaymentAdapter()
 	ctx := context.Background()
 	meta := NewRequestMeta("test")
 
-	t.Run("Authorize path", func(t *testing.T) {
-		res, err := adapter.Post(ctx, "/financial/card/authorize", nil, meta)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if res.Status != "authorized" {
-			t.Errorf("expected status 'authorized', got %s", res.Status)
-		}
-		if res.ProviderReference == "" {
-			t.Error("expected provider reference to be generated")
-		}
-	})
+	for _, path := range []string{
+		"/financial/card/authorize",
+		"/financial/card/capture",
+		"/financial/card/refund",
+	} {
+		t.Run(path, func(t *testing.T) {
+			res, err := adapter.Post(ctx, path, nil, meta)
+			if !errors.Is(err, ErrProductionProviderUnavailable) {
+				t.Fatalf("expected fail-closed production error, got result=%+v err=%v", res, err)
+			}
+			if res.Status != "" || res.ProviderReference != "" {
+				t.Fatalf("production adapter must never synthesize a success: %+v", res)
+			}
+		})
+	}
 
-	t.Run("Capture path", func(t *testing.T) {
-		res, err := adapter.Post(ctx, "/financial/card/capture", nil, meta)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if res.Status != "captured" {
-			t.Errorf("expected status 'captured', got %s", res.Status)
-		}
-	})
-
-	t.Run("Refund path", func(t *testing.T) {
-		res, err := adapter.Post(ctx, "/financial/card/refund", nil, meta)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if res.Status != "refunded" {
-			t.Errorf("expected status 'refunded', got %s", res.Status)
-		}
-	})
+	res, err := adapter.Get(ctx, "/health", meta)
+	if !errors.Is(err, ErrProductionProviderUnavailable) {
+		t.Fatalf("expected production health/read to fail closed, got result=%+v err=%v", res, err)
+	}
+	if res.Status != "" || res.ProviderReference != "" {
+		t.Fatalf("production health/read must not report synthetic health: %+v", res)
+	}
 }
 
 func TestRequestMetaFromHTTP(t *testing.T) {

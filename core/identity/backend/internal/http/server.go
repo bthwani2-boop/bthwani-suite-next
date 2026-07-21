@@ -444,7 +444,6 @@ func (s *server) changePassword(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-
 func writeInternalActorError(w http.ResponseWriter, err error) {
 	switch err {
 	case identity.ErrActorNotFound:

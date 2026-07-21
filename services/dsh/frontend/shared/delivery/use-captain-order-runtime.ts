@@ -1,20 +1,30 @@
 import React from 'react';
 import { Platform } from 'react-native';
+import { DSH_CAPTAIN_CONTRACT_CAPABILITIES } from '../orders/dsh-order-lifecycle-client';
 import {
-  DSH_CAPTAIN_CONTRACT_CAPABILITIES,
-  createDshOrderLifecycleHttpClient,
-  resolveDshOrderApiBaseUrl,
-} from '../orders/dsh-order-lifecycle-client';
+  acceptDispatchAssignment,
+  declineDispatchAssignment,
+  reportDeliveryException,
+  submitPoD,
+  updateDeliveryStatus,
+} from '../dispatch/dispatch.api';
+import { updateForegroundDispatchLocation } from '../dispatch/dispatch-location.api';
+import type { DshDeliveryException, DshDeliveryExceptionReasonCode } from '../dispatch/dispatch.types';
 
-export type DshCaptainLifecycleStatus = 'EN_ROUTE' | 'ARRIVED';
+export type CaptainDeliveryExceptionDraft = {
+  readonly reasonCode: DshDeliveryExceptionReasonCode;
+  readonly note: string;
+};
 
 export type DshCaptainLocationPush = {
-  readonly orderId: string;
-  readonly captainId: string;
+  readonly assignmentId: string;
   readonly latitude: number;
   readonly longitude: number;
-  readonly lifecycleStatus: string;
-  readonly orderStatus?: DshCaptainLifecycleStatus;
+};
+
+export type DshCaptainCoordinates = {
+  readonly latitude: number;
+  readonly longitude: number;
 };
 
 export type DshCaptainActiveLocationPushConfig = {
@@ -23,76 +33,102 @@ export type DshCaptainActiveLocationPushConfig = {
   readonly lifecycleStatus: string | undefined;
 };
 
-const activeDeliveryStates = new Set(['offer-accepting', 'offer-accepted']);
+const activeDeliveryStates = new Set([
+  'assigned',
+  'driver_assigned',
+  'driver_arrived_store',
+  'picked_up',
+  'arrived_customer',
+  'returning_to_store',
+]);
 
-// Owner decision (register item 14 + 42): NO live tracking, NO background
-// location. The captain app samples and pushes its own location on this
-// fixed cadence, foreground-only, only while an active delivery assignment
-// exists. Shared here (instead of duplicated per-surface) so every caller —
-// this hook and any UI displaying "last update" — agrees on the cadence.
+// Foreground-only periodic sampling. No background task and no location history.
 export const CAPTAIN_LOCATION_PUSH_INTERVAL_MS = 3 * 60 * 1000;
 
-export function resolveDshRuntimeOrderId(orderId: string): string {
-  return orderId.startsWith('captain-order-') ? orderId.replace('captain-order-', '') : orderId;
+export async function readCaptainForegroundLocation(): Promise<DshCaptainCoordinates> {
+  if (Platform.OS === 'web') {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      throw new Error('خدمة الموقع غير متاحة على هذا الجهاز.');
+    }
+    return new Promise<DshCaptainCoordinates>((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(
+        (position) => resolve({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        }),
+        () => reject(new Error('تعذر قراءة الموقع الحالي. تحقق من صلاحية الموقع وحاول مجددًا.')),
+        { enableHighAccuracy: true, maximumAge: 5_000, timeout: 10_000 },
+      );
+    });
+  }
+
+  // @ts-ignore expo-location is supplied by the app-captain runtime on native devices.
+  const Location = await import('expo-location');
+  const permission = await Location.requestForegroundPermissionsAsync();
+  if (!permission.granted) {
+    throw new Error('صلاحية الموقع مطلوبة لتحديث موقع المهمة.');
+  }
+  const position = await Location.getCurrentPositionAsync({
+    accuracy: Location.Accuracy.High,
+  });
+  return {
+    latitude: position.coords.latitude,
+    longitude: position.coords.longitude,
+  };
 }
 
 export function useCaptainOrderRuntime() {
-  const orderLifecycleClient = React.useMemo(
-    () => createDshOrderLifecycleHttpClient(resolveDshOrderApiBaseUrl()),
+  const acceptTask = React.useCallback(
+    (assignmentId: string, _captainId: string) => acceptDispatchAssignment(assignmentId),
     [],
   );
 
-  const acceptTask = React.useCallback(
-    (orderId: string, captainId: string) =>
-      orderLifecycleClient.acceptTask(resolveDshRuntimeOrderId(orderId), { captain_id: captainId }),
-    [orderLifecycleClient],
-  );
-
   const declineTask = React.useCallback(
-    (orderId: string, captainId: string, reason: string) =>
-      orderLifecycleClient.declineTask(resolveDshRuntimeOrderId(orderId), { captain_id: captainId, reason }),
-    [orderLifecycleClient],
+    (assignmentId: string, _captainId: string, reason: string) =>
+      declineDispatchAssignment(assignmentId, reason),
+    [],
   );
 
   const confirmPickup = React.useCallback(
-    (orderId: string, captainId: string) =>
-      orderLifecycleClient.confirmPickup(resolveDshRuntimeOrderId(orderId), { captain_id: captainId }),
-    [orderLifecycleClient],
+    (assignmentId: string, _captainId: string) =>
+      updateDeliveryStatus(assignmentId, 'picked_up'),
+    [],
   );
 
   const pushLocation = React.useCallback(
-    (push: DshCaptainLocationPush) => {
-      const payload: any = {
-        captain_id: push.captainId,
-        latitude: push.latitude,
-        longitude: push.longitude,
-        lifecycle_status: push.lifecycleStatus,
-      };
-      if (push.orderStatus !== undefined) {
-        payload.order_status = push.orderStatus;
-      }
-      return orderLifecycleClient.pushLocation(resolveDshRuntimeOrderId(push.orderId), payload);
-    },
-    [orderLifecycleClient],
+    (push: DshCaptainLocationPush) => updateForegroundDispatchLocation(push.assignmentId, {
+      latitude: push.latitude,
+      longitude: push.longitude,
+      recordedAt: new Date().toISOString(),
+    }),
+    [],
   );
 
   const deliverOrder = React.useCallback(
-    (orderId: string, captainId: string, podMediaKey?: string) =>
-      orderLifecycleClient.deliverOrder(resolveDshRuntimeOrderId(orderId), {
-        captain_id: captainId,
-        ...(podMediaKey ? { pod_media_key: podMediaKey } : {}),
+    (assignmentId: string, _captainId: string, podMediaKey?: string) =>
+      submitPoD(assignmentId, {
+        method: 'photo',
+        reference: podMediaKey ?? 'captain-confirmed-delivery',
       }),
-    [orderLifecycleClient],
+    [],
   );
 
   const failDelivery = React.useCallback(
-    (orderId: string, captainId: string) =>
-      orderLifecycleClient.failDelivery(resolveDshRuntimeOrderId(orderId), {
-        captain_id: captainId,
-        failure_reason: 'CLIENT_UNREACHABLE',
-        return_required: true,
-      }),
-    [orderLifecycleClient],
+    async (assignmentId: string, _captainId: string, draft: CaptainDeliveryExceptionDraft): Promise<DshDeliveryException> => {
+      let coordinates: DshCaptainCoordinates | undefined;
+      try {
+        coordinates = await readCaptainForegroundLocation();
+      } catch {
+        // Location is valuable evidence but must not block safety or incident reporting.
+      }
+      return reportDeliveryException(assignmentId, {
+        reasonCode: draft.reasonCode,
+        note: draft.note.trim(),
+        correlationId: `${assignmentId}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        ...(coordinates ? { latitude: coordinates.latitude, longitude: coordinates.longitude } : {}),
+      });
+    },
+    [],
   );
 
   return React.useMemo(
@@ -126,41 +162,19 @@ export function useCaptainActiveLocationPush({
     const postLocation = (latitude: number, longitude: number) => {
       if (cancelled) return;
       captainOrderRuntime.pushLocation({
-        orderId: activeAssignmentId,
-        captainId,
+        assignmentId: activeAssignmentId,
         latitude,
         longitude,
-        lifecycleStatus,
-        orderStatus: 'EN_ROUTE',
       }).catch((err: unknown) => {
-        // Surface the failure instead of swallowing it silently; delivery
-        // continues, but operators must be able to see the push failed.
         console.warn('[captain:location-push] failed', err);
       });
     };
 
-    // Owner decision: foreground-only, periodic sampling — no watchPosition,
-    // no background location, no expo-task-manager. Each tick takes a single
-    // fresh fix and pushes it; nothing runs while the app is backgrounded.
     const sampleOnce = async () => {
       if (cancelled) return;
-      if (Platform.OS === 'web') {
-        if (typeof navigator !== 'undefined' && navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(
-            (pos) => postLocation(pos.coords.latitude, pos.coords.longitude),
-            () => undefined,
-            { enableHighAccuracy: true, maximumAge: 5000, timeout: 8000 },
-          );
-        }
-        return;
-      }
       try {
-        // @ts-ignore
-        const Location = await import('expo-location');
-        const permission = await Location.requestForegroundPermissionsAsync();
-        if (cancelled || !permission.granted) return;
-        const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-        if (!cancelled) postLocation(position.coords.latitude, position.coords.longitude);
+        const position = await readCaptainForegroundLocation();
+        if (!cancelled) postLocation(position.latitude, position.longitude);
       } catch (err) {
         console.warn('[captain:location-push] failed to sample device location', err);
       }
@@ -169,9 +183,7 @@ export function useCaptainActiveLocationPush({
     const startInterval = () => {
       if (cancelled || intervalId !== undefined) return;
       void sampleOnce();
-      intervalId = setInterval(() => {
-        void sampleOnce();
-      }, CAPTAIN_LOCATION_PUSH_INTERVAL_MS);
+      intervalId = setInterval(() => void sampleOnce(), CAPTAIN_LOCATION_PUSH_INTERVAL_MS);
     };
 
     const stopInterval = () => {
@@ -181,27 +193,13 @@ export function useCaptainActiveLocationPush({
       }
     };
 
-    // ── AppState guard: pause while backgrounded, resume when foregrounded ──
-    // Phase 6 policy: location sampling is foreground-only. When the OS moves
-    // the app to background/inactive the interval is torn down immediately.
-    // When the app returns to 'active' we take an immediate fix (so dispatch
-    // sees the captain's position without waiting a full interval) and restart
-    // the periodic timer.
     const { AppState } = require('react-native') as typeof import('react-native');
-    const handleAppStateChange = (nextState: string) => {
-      if (nextState === 'active') {
-        startInterval();
-      } else {
-        stopInterval();
-      }
-    };
+    const subscription = AppState.addEventListener('change', (nextState: string) => {
+      if (nextState === 'active') startInterval();
+      else stopInterval();
+    });
 
-    const subscription = AppState.addEventListener('change', handleAppStateChange);
-
-    // Only start if already in the foreground when this effect mounts.
-    if (AppState.currentState === 'active') {
-      startInterval();
-    }
+    if (AppState.currentState === 'active') startInterval();
 
     return () => {
       cancelled = true;

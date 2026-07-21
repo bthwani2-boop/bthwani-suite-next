@@ -1,44 +1,68 @@
 ---
 name: bthwani-docker-journey-runtime
-version: 2026.06.19-clean
-summary: Verify Docker, data-plane, and live-like runtime only when relevant.
+version: 2026.07.17-v1
+summary: Route Docker and data-plane changes to bounded same-commit runtime evidence without upgrading static checks.
 ---
 
 # bthwani-docker-journey-runtime
 
+## Purpose
+
+Own runtime-evidence routing for Docker, data-plane, service startup, health, migrations, persistence, Redis, MinIO, and live HTTP behavior.
+
 ## Invoke when
 
-- task touches `infra/docker`, data-plane, runtime smoke, service runtime, database, Redis, MinIO, or live-like behavior
-- the user asks for runtime proof
+- Docker, data-plane, runtime configuration, service startup, database, Redis, MinIO, or live behavior changes.
+- The requested claim includes runtime, integration, persistence, release, or production behavior.
+
+## Do not invoke when
+
+- The task is static or documentation-only and makes no runtime claim.
+- Runtime is explicitly outside the declared journey.
 
 ## Read before
 
-`package.json`, `governance/05_DOCKER_AND_DATA_PLANE.md`, `infra/docker`, `infra/data-plane`, service database paths
+- `governance/05_DOCKER_AND_DATA_PLANE.md`
+- `governance/06_EVIDENCE_AND_GATES.md`
+- `package.json`
+- applicable runtime scripts, compose files, service manifests, migrations, and health endpoints
 
-## Execution contract
+## Authority boundary
 
-Run only runtime-relevant scripts from `package.json`. Keep service business schema inside service database folders and infrastructure provisioning inside infra owners.
-
-## Forbidden
-
-- do not run runtime gates for docs-only/agent-only changes
-- do not use memory repository as live-like proof
-- do not use untagged or floating Docker images
-- do not move business schema into infra provisioning
+This skill selects and reconciles runtime evidence only. It cannot approve product, architecture, finance, QA, security, release, production, or final closure. A runtime declaration, health configuration, or static anti-stub guard is not proof that a runtime executed.
 
 ## Required evidence
 
-- runtime command output (when escalation applies)
-- smoke logs (when escalation applies)
-- changed infra/service database paths
-- Git diff checks
+1. Exact immutable commit and environment identity.
+2. Exact targeted runtime command and profiles.
+3. Startup and health result for affected services.
+4. Request/response evidence for claimed endpoints.
+5. Persistence or readback evidence when mutation or database state is claimed.
+6. Failure-path evidence when required by the journey.
+7. Explicit missing evidence and blocker classification.
 
-## Failure decision
+## Forbidden
 
-- runtime required by escalation but not run -> `NEEDS_EVIDENCE`
-- runtime script fails -> `FIX_REQUIRED`
-- live-like shortcut found -> `FIX_REQUIRED`
+- Running runtime gates for agent-only or documentation-only changes.
+- Treating memory repositories, mocks, seeds, fixtures, or declarations as live proof.
+- Using floating or unverified container references where the canonical runtime policy requires locks.
+- Moving service business schema into infrastructure provisioning.
+- Claiming production readiness from local or CI runtime smoke alone.
 
-## Notes
+## Required output
 
-No extra notes.
+```text
+resolved_commit_sha:
+environment:
+profiles:
+commands:
+service_health:
+http_evidence:
+persistence_readback:
+failed_paths:
+missing_evidence:
+decision:
+remaining_risk:
+```
+
+Allowed decisions: `PASS`, `FIX_REQUIRED`, `NEEDS_EVIDENCE`, `BLOCKED_EXTERNAL`, `RELEASE_BLOCK`, and `PROTOCOL_VIOLATION`.

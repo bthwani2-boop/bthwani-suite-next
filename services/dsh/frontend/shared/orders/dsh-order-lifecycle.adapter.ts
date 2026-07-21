@@ -20,51 +20,73 @@ function isDshOrderApiContractError(err: unknown): err is DshOrderApiContractErr
   return typeof err === 'object' && err !== null && (err as { kind?: unknown }).kind === 'contract';
 }
 
+const SOVEREIGN_ORDER_STATUSES = new Set<DshOrderStatus>([
+  'pending',
+  'store_accepted',
+  'preparing',
+  'ready_for_pickup',
+  'driver_assigned',
+  'driver_arrived_store',
+  'picked_up',
+  'arrived_customer',
+  'delivered',
+  'cancelled_by_client',
+  'cancelled_by_store',
+  'cancelled_by_operator',
+  'cancelled_no_driver',
+  'failed_payment',
+  'failed_dispatch',
+]);
+
+function contractStatusError(value: string, source = 'order'): DshOrderApiContractError {
+  return {
+    kind: 'contract',
+    message: `unknown DSH ${source} status "${value}" — backend/frontend status contract drift must be fixed, not masked`,
+  };
+}
+
 export function normalizeDshOrderStatus(status: unknown): DshOrderStatus {
-  const value = String(status ?? '').trim();
-  const normalized = value.toLowerCase();
-  switch (normalized) {
-    case 'created':
-    case 'pending':
-      return 'pending';
-    case 'accepted':
-    case 'store_accepted':
-      return 'store_accepted';
-    case 'preparing':
-      return 'preparing';
-    case 'ready_for_pickup':
-      return 'ready_for_pickup';
-    case 'accepted_by_captain':
-    case 'driver_assigned':
+  const value = String(status ?? '').trim().toLowerCase();
+  if (SOVEREIGN_ORDER_STATUSES.has(value as DshOrderStatus)) {
+    return value as DshOrderStatus;
+  }
+  throw contractStatusError(value);
+}
+
+function deriveOrderStatusFromDispatch(raw: BackendDispatchAssignment): DshOrderStatus {
+  const deliveryStatus = String(raw.delivery?.status ?? '').trim().toLowerCase();
+  switch (deliveryStatus) {
     case 'assigned':
+    case 'driver_assigned':
       return 'driver_assigned';
     case 'driver_arrived_store':
       return 'driver_arrived_store';
     case 'picked_up':
       return 'picked_up';
-    case 'en_route':
-    case 'arrived':
     case 'arrived_customer':
       return 'arrived_customer';
     case 'delivered':
-    case 'returned':
       return 'delivered';
     case 'cancelled':
-    case 'refunded':
-    case 'failed_delivery':
-    case 'returning_to_store':
-      return 'cancelled';
+      throw contractStatusError(deliveryStatus, 'dispatch');
+    case '':
+      break;
+    default:
+      throw contractStatusError(deliveryStatus, 'delivery');
+  }
+
+  const assignmentStatus = String(raw.status ?? '').trim().toLowerCase();
+  switch (assignmentStatus) {
     case 'offered':
+    case 'accepted':
       return 'driver_assigned';
-    case 'declined':
-      return 'pending';
     case 'completed':
       return 'delivered';
+    case 'declined':
+    case 'cancelled':
+      throw contractStatusError(assignmentStatus, 'assignment');
     default:
-      throw {
-        kind: 'contract',
-        message: `unknown DSH order status "${value}" — backend/frontend status contract drift must be fixed, not masked`,
-      } as DshOrderApiContractError;
+      throw contractStatusError(assignmentStatus, 'assignment');
   }
 }
 
@@ -143,7 +165,6 @@ export function normalizeOrderList(resp: { readonly orders?: readonly BackendOrd
 }
 
 export function normalizeDispatchAssignmentAsOrder(raw: BackendDispatchAssignment): DshOrderRecord {
-  const status = raw.delivery?.status || raw.status || 'driver_assigned';
   const captainId = raw.captainId;
   const lifecycleStatus = raw.delivery?.status;
   const podReference = raw.delivery?.podReference;
@@ -153,7 +174,7 @@ export function normalizeDispatchAssignmentAsOrder(raw: BackendDispatchAssignmen
     store_id: '',
     fulfillment_mode: 'bthwani_delivery',
     client_id: '',
-    status: normalizeDshOrderStatus(status),
+    status: deriveOrderStatusFromDispatch(raw),
     total_price: 0,
     ...(captainId !== undefined ? { captain_id: captainId } : {}),
     ...(lifecycleStatus !== undefined ? { captain_lifecycle_status: lifecycleStatus } : {}),
@@ -167,3 +188,5 @@ export function normalizeDispatchAssignmentAsOrder(raw: BackendDispatchAssignmen
 export function normalizeAssignmentResponse(resp: { readonly assignment?: BackendDispatchAssignment }): DshOrderRecord {
   return normalizeDispatchAssignmentAsOrder(resp.assignment ?? {});
 }
+
+export { isDshOrderApiOfflineError, isDshOrderApiContractError };

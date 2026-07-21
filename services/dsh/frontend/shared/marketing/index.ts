@@ -2,8 +2,11 @@ export * from "./marketing.types";
 export * from "./use-marketing-controller";
 export * from "./dsh-signal-layer.model";
 export * from "./marketing-registry";
-export * from "./commercial-contract";
+export * from "./marketing.api";
 export * from "./loyalty-subscriptions.types";
-export * from "./use-loyalty-subscriptions-controller";
-
-
+export * from "./use-commercial-programs-controller";
+export * from "./coupons.types";
+export * from "./use-coupons-controller";
+export * from "./use-governed-partner-offers-controller";
+export * from "./loyalty-policy.api";
+export * from "./use-loyalty-policy-controller";

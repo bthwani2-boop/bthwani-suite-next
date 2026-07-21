@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: BThwani DSH Service API
-  version: 0.5.0
+  version: 0.7.0
   description: >
     Delivery and shopping hub service contract. Core capabilities include Store Discovery,
     Home Discovery, Catalog Management, Cart & Serviceability, Checkout & WLT Handoff,
@@ -2761,6 +2761,360 @@ paths:
               schema: { type: object, additionalProperties: true }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/control-panel/finance/payout-requests/{payoutId}/process:
+    post:
+      operationId: processDshControlPanelFinancePayoutRequest
+      summary: Operator sends an approved governed payout request to the configured WLT financial provider.
+      tags: [DshFinanceProxy]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: payoutId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: WLT provider processing result with persisted provider proof (verbatim passthrough).
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/control-panel/finance/payout-requests/{payoutId}/complete:
+    post:
+      operationId: completeDshControlPanelFinancePayoutRequest
+      summary: A checker distinct from approver and processor completes a provider-proven payout and posts its WLT journal.
+      tags: [DshFinanceProxy]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: payoutId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: WLT payout completion and ledger result (verbatim passthrough).
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/control-panel/finance/payout-requests/{payoutId}/fail:
+    post:
+      operationId: failDshControlPanelFinancePayoutRequest
+      summary: Route an unresolved provider payout to WLT reconciliation; it never invents a failed financial outcome.
+      tags: [DshFinanceProxy]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: payoutId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "409": { $ref: "#/components/responses/Conflict" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/control-panel/finance/settlements/from-delivered-orders:
+    post:
+      operationId: createDshGovernedSettlementFromDeliveredOrders
+      summary: Derive eligible delivered-order sources in DSH and ask WLT to calculate the settlement.
+      tags: [DshFinanceProxy]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [partnerId, periodStart, periodEnd]
+              properties:
+                partnerId: { type: string, minLength: 1 }
+                periodStart: { type: string, format: date }
+                periodEnd: { type: string, format: date }
+                currency: { type: string, default: YER }
+      responses:
+        "201":
+          description: Governed WLT settlement created from DSH-owned delivered-order sources.
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/control-panel/finance/settlement-policies/{partnerId}:
+    put:
+      operationId: upsertDshSettlementPolicy
+      summary: Upsert the WLT-owned partner settlement fee policy.
+      tags: [DshFinanceProxy]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [feeBasisPoints]
+              properties:
+                feeBasisPoints: { type: integer, minimum: 0, maximum: 10000 }
+                currency: { type: string, default: YER }
+                status: { type: string, enum: [active, inactive], default: active }
+      responses:
+        "200":
+          description: Settlement policy persisted by WLT.
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /dsh/captain/finance/cod-records/{recordId}/collect:
+    post:
+      operationId: POSTDshCaptainFinanceCodRecordsRecordIdCollect
+      summary: Governed finance operation owned by DSH/WLT.
+      tags: [DshCaptainFinance]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: recordId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        "201": { description: Governed finance object created, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/captain/finance/cod-records/{recordId}/remit:
+    post:
+      operationId: POSTDshCaptainFinanceCodRecordsRecordIdRemit
+      summary: Governed finance operation owned by DSH/WLT.
+      tags: [DshCaptainFinance]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: recordId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        "201": { description: Governed finance object created, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/captain/finance/commissions:
+    get:
+      operationId: GETDshCaptainFinanceCommissions
+      summary: Governed finance operation owned by DSH/WLT.
+      tags: [DshCaptainFinance]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/captain/finance/payouts:
+    get:
+      operationId: GETDshCaptainFinancePayouts
+      summary: Governed finance operation owned by DSH/WLT.
+      tags: [DshCaptainFinance]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+    post:
+      operationId: POSTDshCaptainFinancePayouts
+      summary: Governed finance operation owned by DSH/WLT.
+      tags: [DshCaptainFinance]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        "201": { description: Governed finance object created, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/field/finance/commissions:
+    get:
+      operationId: GETDshFieldFinanceCommissions
+      summary: Governed finance operation owned by DSH/WLT.
+      tags: [DshFieldFinance]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/field/finance/wallet:
+    get:
+      operationId: GETDshFieldFinanceWallet
+      summary: Governed finance operation owned by DSH/WLT.
+      tags: [DshFieldFinance]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/field/finance/payouts:
+    get:
+      operationId: GETDshFieldFinancePayouts
+      summary: Governed finance operation owned by DSH/WLT.
+      tags: [DshFieldFinance]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+    post:
+      operationId: POSTDshFieldFinancePayouts
+      summary: Governed finance operation owned by DSH/WLT.
+      tags: [DshFieldFinance]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        "201": { description: Governed finance object created, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/field/finance/payout-destinations:
+    get:
+      operationId: GETDshFieldFinancePayoutDestinations
+      summary: Governed finance operation owned by DSH/WLT.
+      tags: [DshFieldFinance]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+    post:
+      operationId: POSTDshFieldFinancePayoutDestinations
+      summary: Governed finance operation owned by DSH/WLT.
+      tags: [DshFieldFinance]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        "201": { description: Governed finance object created, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/field/finance/payout-destinations/{destinationId}:
+    patch:
+      operationId: PATCHDshFieldFinancePayoutDestinationsDestinationId
+      summary: Governed finance operation owned by DSH/WLT.
+      tags: [DshFieldFinance]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: destinationId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+    delete:
+      operationId: DELETEDshFieldFinancePayoutDestinationsDestinationId
+      summary: Governed finance operation owned by DSH/WLT.
+      tags: [DshFieldFinance]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: destinationId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        "204": { description: Governed finance object deleted }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
 
   /dsh/control-panel/finance/reconciliation-cases:
     get:
@@ -5767,6 +6121,36 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /dsh/partner/orders/{orderId}/pickup:
+    get:
+      operationId: getDshPartnerPickupState
+      summary: Return the authenticated partner's resumable pickup session stage.
+      description: >-
+        Reads the sovereign order, pickup session, and durable pickup audit trail.
+        Returns cancelled explicitly after order cancellation and never represents
+        cancellation as a used or successfully verified pickup.
+      tags: [DshPickup]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Resumable pickup state returned.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartnerPickupStateResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422":
+          description: The order does not use pickup fulfillment.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshErrorResponse" }
+
   /dsh/partner/orders/{orderId}/pickup/mark-ready:
     post:
       operationId: markDshPickupReady
@@ -6033,6 +6417,370 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/DshErrorResponse" }
 
+
+  /dsh/client/orders/{orderId}/cancel:
+    post:
+      operationId: cancelDshClientOrder
+      summary: Cancel an authenticated client's early-stage order and start governed WLT closure.
+      tags: [DshOrders]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshOrderCancellationRequest" }
+      responses:
+        "200":
+          description: Order cancelled and financial closure queued or not required.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshCancelOrderResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Order state requires operator review or no longer permits direct client cancellation.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshErrorResponse" }
+
+  /dsh/client/orders/{orderId}/cancellation:
+    get:
+      operationId: getDshClientOrderCancellation
+      summary: Return the client's cancellation and WLT financial-closure projection.
+      tags: [DshOrders]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Cancellation projection returned.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshOrderCancellationResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/partner/orders/{orderId}/cancel:
+    post:
+      operationId: cancelDshPartnerOrder
+      summary: Cancel a partner-owned order using a structured operational reason.
+      tags: [DshPartnerOrders]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshOrderCancellationRequest" }
+      responses:
+        "200":
+          description: Order cancelled and financial closure queued or not required.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshCancelOrderResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Order state does not allow partner cancellation.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshErrorResponse" }
+
+  /dsh/partner/orders/{orderId}/cancellation:
+    get:
+      operationId: getDshPartnerOrderCancellation
+      summary: Return the partner-scoped cancellation and WLT closure projection.
+      tags: [DshPartnerOrders]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Cancellation projection returned.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshOrderCancellationResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/operator/orders/{orderId}/cancellation:
+    get:
+      operationId: getDshOperatorOrderCancellation
+      summary: Return cancellation, refund reference and financial delivery failure for operations.
+      tags: [DshOperatorOrders]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Cancellation projection returned.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshOrderCancellationResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: cancelDshOperatorOrderGoverned
+      summary: Cancel an order after operational review and stop all dependent work atomically.
+      tags: [DshOperatorOrders]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshOrderCancellationRequest" }
+      responses:
+        "200":
+          description: Order cancelled and WLT closure queued or not required.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshCancelOrderResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Order is already terminal or cannot be cancelled from its current state.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshErrorResponse" }
+
+  /dsh/captain/dispatch/assignments/{assignmentId}/exceptions:
+    parameters:
+      - name: assignmentId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      operationId: getDshCaptainDeliveryException
+      summary: Return the captain's active governed delivery exception.
+      tags: [DshDispatch]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Active delivery exception returned.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshDeliveryExceptionResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: reportDshCaptainDeliveryException
+      summary: Report one idempotent delivery exception for an active accepted assignment.
+      description: >-
+        Creates an operational overlay without changing the order status or financial truth.
+        Delivery progression and proof are blocked until operations resolves the exception;
+        foreground location pushes remain allowed for safety and response coordination.
+      tags: [DshDispatch]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshReportDeliveryExceptionRequest" }
+      responses:
+        "201":
+          description: Delivery exception recorded or idempotently replayed.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshDeliveryExceptionResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Assignment is not active or already has an unresolved exception.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshErrorResponse" }
+
+  /dsh/operator/delivery-exceptions:
+    get:
+      operationId: listDshOperatorDeliveryExceptions
+      summary: List the governed delivery-exception operations queue.
+      tags: [DshDispatch]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema: { $ref: "#/components/schemas/DshDeliveryExceptionStatus" }
+      responses:
+        "200":
+          description: Delivery-exception queue returned.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshDeliveryExceptionListResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /dsh/operator/delivery-exceptions/{exceptionId}/acknowledge:
+    parameters:
+      - name: exceptionId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      operationId: acknowledgeDshOperatorDeliveryException
+      summary: Acknowledge an open delivery exception for operations review.
+      tags: [DshDispatch]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshAcknowledgeDeliveryExceptionRequest" }
+      responses:
+        "200":
+          description: Exception acknowledged.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshDeliveryExceptionResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Version or lifecycle conflict.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshErrorResponse" }
+
+  /dsh/operator/delivery-exceptions/{exceptionId}/resolve:
+    parameters:
+      - name: exceptionId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      operationId: resolveDshOperatorDeliveryException
+      summary: Resolve an exception by allowing the same captain to retry from the preserved stage.
+      tags: [DshDispatch]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshResolveDeliveryExceptionRequest" }
+      responses:
+        "200":
+          description: Exception resolved and delivery progression reopened.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshDeliveryExceptionResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Version conflict or assignment no longer eligible for retry.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshErrorResponse" }
+
+  /dsh/captain/dispatch/assignments/{assignmentId}/return-to-store/arrive:
+    parameters:
+      - name: assignmentId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      operationId: arriveDshCaptainReturnToStore
+      summary: Confirm captain arrival at the store with the returned order.
+      description: Does not complete custody; the owning partner must accept the return.
+      tags: [DshDispatch]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Captain arrival recorded; store receipt remains pending.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshDeliveryExceptionResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Assignment is not in returning_to_store state.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshErrorResponse" }
+
+  /dsh/partner/orders/{orderId}/return-to-store:
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      operationId: getDshPartnerReturnToStore
+      summary: Read the governed return state for an order owned by the partner.
+      tags: [DshDispatch]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Return state returned.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshDeliveryExceptionResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/partner/orders/{orderId}/return-to-store/accept:
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      operationId: acceptDshPartnerReturnToStore
+      summary: Confirm store custody of a returned order after captain arrival.
+      tags: [DshDispatch]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Store receipt confirmed and return completed.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshDeliveryExceptionResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Captain has not arrived or return was already finalized inconsistently.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshErrorResponse" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -6107,6 +6855,131 @@ components:
           schema:
             $ref: "#/components/schemas/DshErrorResponse"
   schemas:
+    DshAcknowledgeDeliveryExceptionRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion]
+      properties:
+        expectedVersion: { type: integer, minimum: 1 }
+
+    DshResolveDeliveryExceptionRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, action, note]
+      properties:
+        expectedVersion: { type: integer, minimum: 1 }
+        action:
+          type: string
+          enum: [retry_same_captain, reassign_captain, return_to_store]
+        note: { type: string, minLength: 5, maxLength: 1000 }
+        newCaptainId:
+          type: string
+          minLength: 1
+          description: Required only when action is reassign_captain.
+
+    DshDeliveryExceptionReasonCode:
+      type: string
+      enum:
+        - customer_unreachable
+        - recipient_refused
+        - wrong_address
+        - unsafe_location
+        - vehicle_breakdown
+        - accident
+        - damaged_order
+        - cash_collection_issue
+        - weather_or_road_block
+        - proof_unavailable
+        - other
+
+    DshDeliveryExceptionStatus:
+      type: string
+      enum: [open, acknowledged, resolved]
+
+    DshDeliveryExceptionSeverity:
+      type: string
+      enum: [medium, high, critical]
+
+    DshReportDeliveryExceptionRequest:
+      type: object
+      additionalProperties: false
+      required: [reasonCode, correlationId]
+      properties:
+        reasonCode: { $ref: "#/components/schemas/DshDeliveryExceptionReasonCode" }
+        note: { type: string, maxLength: 1000 }
+        correlationId: { type: string, minLength: 1, maxLength: 200 }
+        latitude: { type: number, format: double, minimum: -90, maximum: 90, nullable: true }
+        longitude: { type: number, format: double, minimum: -180, maximum: 180, nullable: true }
+
+    DshDeliveryException:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - tenantId
+        - assignmentId
+        - orderId
+        - captainId
+        - reasonCode
+        - note
+        - deliveryStatusAtReport
+        - severity
+        - status
+        - correlationId
+        - reportedAt
+        - version
+        - createdAt
+        - updatedAt
+      properties:
+        id: { type: string, format: uuid }
+        tenantId: { type: string }
+        assignmentId: { type: string, format: uuid }
+        orderId: { type: string, format: uuid }
+        captainId: { type: string }
+        reasonCode: { $ref: "#/components/schemas/DshDeliveryExceptionReasonCode" }
+        note: { type: string }
+        deliveryStatusAtReport: { $ref: "#/components/schemas/DshDeliveryStatus" }
+        severity: { $ref: "#/components/schemas/DshDeliveryExceptionSeverity" }
+        status: { $ref: "#/components/schemas/DshDeliveryExceptionStatus" }
+        correlationId: { type: string }
+        reportedLatitude: { type: number, format: double, nullable: true }
+        reportedLongitude: { type: number, format: double, nullable: true }
+        reportedAt: { type: string, format: date-time }
+        acknowledgedAt: { type: string, format: date-time, nullable: true }
+        acknowledgedByActorId: { type: string, nullable: true }
+        resolvedAt: { type: string, format: date-time, nullable: true }
+        resolvedByActorId: { type: string, nullable: true }
+        resolutionAction:
+          type: string
+          enum: [retry_same_captain, reassign_captain, return_to_store, cancel_order]
+          nullable: true
+        resolutionNote: { type: string, nullable: true }
+        replacementAssignmentId: { type: string, format: uuid, nullable: true }
+        replacementCaptainId: { type: string, nullable: true }
+        returnStartedAt: { type: string, format: date-time, nullable: true }
+        returnArrivedAt: { type: string, format: date-time, nullable: true }
+        returnedAt: { type: string, format: date-time, nullable: true }
+        returnAcceptedByActorId: { type: string, nullable: true }
+        version: { type: integer, minimum: 1 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    DshDeliveryExceptionResponse:
+      type: object
+      additionalProperties: false
+      required: [exception]
+      properties:
+        exception: { $ref: "#/components/schemas/DshDeliveryException" }
+
+    DshDeliveryExceptionListResponse:
+      type: object
+      additionalProperties: false
+      required: [exceptions]
+      properties:
+        exceptions:
+          type: array
+          items: { $ref: "#/components/schemas/DshDeliveryException" }
+
     DshStoreStatus:
       type: string
       enum:
@@ -7247,7 +8120,31 @@ components:
     # ─── Order schemas ──────────────────────────────────────────────
     DshOrderStatus:
       type: string
-      enum: [pending, store_accepted, preparing, ready_for_pickup, driver_assigned, driver_arrived_store, picked_up, arrived_customer, delivered, cancelled]
+      enum:
+        - pending
+        - store_accepted
+        - preparing
+        - ready_for_pickup
+        - driver_assigned
+        - driver_arrived_store
+        - picked_up
+        - arrived_customer
+        - returning_to_store
+        - return_arrived_store
+        - returned_to_store
+        - delivered
+        - cancelled_by_client
+        - cancelled_by_store
+        - cancelled_by_operator
+        - cancelled_no_driver
+        - failed_payment
+        - failed_dispatch
+      description: Explicit operational terminal states; the ambiguous legacy `cancelled` value is forbidden.
+
+    DshFinancialClosureStatus:
+      type: string
+      enum: [not_required, pending, session_expired, refund_requested, refund_completed, no_action, failed]
+      description: DSH projection of the WLT-owned financial closure decision.
 
     DshOrderItem:
       type: object
@@ -7272,6 +8169,15 @@ components:
         clientId: { type: string }
         status: { $ref: "#/components/schemas/DshOrderStatus" }
         rejectionReason: { type: string }
+        cancellationReasonCode: { type: [string, "null"] }
+        cancellationNote: { type: [string, "null"] }
+        cancelledByActorId: { type: [string, "null"] }
+        cancelledByRole:
+          type: [string, "null"]
+          enum: [client, partner, operator, system, null]
+        cancelledAt: { type: [string, "null"], format: date-time }
+        financialClosureStatus: { $ref: "#/components/schemas/DshFinancialClosureStatus" }
+        financialClosureReference: { type: [string, "null"] }
         wltPaymentRefId:
           type: string
           description: "Opaque WLT payment reference. DSH never mutates financial truth."
@@ -7309,14 +8215,105 @@ components:
           type: string
           description: Mandatory rejection reason from partner.
 
+
+    # ─── Order cancellation and refund closure schemas ─────────────────
+    DshOrderCancellationReasonCode:
+      type: string
+      enum:
+        - changed_mind
+        - duplicate_order
+        - address_error
+        - payment_issue
+        - excessive_delay
+        - out_of_stock
+        - store_closed
+        - capacity
+        - pricing_issue
+        - cannot_fulfill
+        - customer_request
+        - partner_request
+        - no_driver
+        - fraud_risk
+        - safety
+        - operational_failure
+        - other
+
+    DshOrderCancellationRequest:
+      type: object
+      additionalProperties: false
+      required: [reasonCode, commandId]
+      properties:
+        reasonCode: { $ref: "#/components/schemas/DshOrderCancellationReasonCode" }
+        reasonNote:
+          type: string
+          maxLength: 1000
+          description: Required when reasonCode is `other`; otherwise optional operational context.
+        commandId:
+          type: string
+          minLength: 1
+          description: Idempotent command identifier.
+        correlationId:
+          type: string
+          description: Cross-service correlation identifier; defaults to commandId.
+
+    DshOrderCancellation:
+      type: object
+      required:
+        - id
+        - orderId
+        - actorId
+        - actorRole
+        - reasonCode
+        - reasonNote
+        - fromStatus
+        - toStatus
+        - financialClosureStatus
+        - financialReference
+        - financialResultAction
+        - financialFailure
+        - createdAt
+        - updatedAt
+      properties:
+        id: { type: string }
+        orderId: { type: string }
+        actorId: { type: string }
+        actorRole:
+          type: string
+          enum: [client, partner, operator, system]
+        reasonCode: { $ref: "#/components/schemas/DshOrderCancellationReasonCode" }
+        reasonNote: { type: string }
+        fromStatus: { type: string }
+        toStatus: { $ref: "#/components/schemas/DshOrderStatus" }
+        financialClosureStatus: { $ref: "#/components/schemas/DshFinancialClosureStatus" }
+        financialReference: { type: string }
+        financialResultAction:
+          type: string
+          enum: [expired, refund_requested, none, ""]
+        financialFailure: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    DshOrderCancellationResponse:
+      type: object
+      required: [cancellation]
+      properties:
+        cancellation: { $ref: "#/components/schemas/DshOrderCancellation" }
+
+    DshCancelOrderResponse:
+      type: object
+      required: [order, cancellation]
+      properties:
+        order: { $ref: "#/components/schemas/DshOrder" }
+        cancellation: { $ref: "#/components/schemas/DshOrderCancellation" }
+
     # ─── Dispatch schemas ───────────────────────────────────────────
     DshAssignmentStatus:
       type: string
-      enum: [offered, accepted, declined, completed]
+      enum: [offered, accepted, declined, completed, cancelled]
 
     DshDeliveryStatus:
       type: string
-      enum: [assigned, driver_assigned, driver_arrived_store, picked_up, arrived_customer, delivered]
+      enum: [assigned, driver_assigned, driver_arrived_store, picked_up, arrived_customer, returning_to_store, return_arrived_store, returned_to_store, delivered, cancelled]
 
     DshDelivery:
       type: object
@@ -8265,9 +9262,10 @@ components:
     DshReviewPartnerDocumentRequest:
       type: object
       required: [decision]
+      description: reason is mandatory when decision is rejected or needs_resubmit.
       properties:
         decision: { type: string, enum: [approved, rejected, needs_resubmit] }
-        reason: { type: string }
+        reason: { type: string, minLength: 1 }
 
     DshPartnerDocumentReview:
       type: object
@@ -9068,6 +10066,11 @@ components:
         maxAttempts: { type: integer }
         usedAt: { type: ["string", "null"], format: date-time }
         verifiedByActorId: { type: ["string", "null"] }
+        status:
+          type: string
+          enum: [active, verified, no_show, consumed, cancelled]
+        cancelledAt: { type: [string, "null"], format: date-time }
+        cancellationReason: { type: [string, "null"] }
         verificationMethod:
           type: ["string", "null"]
           description: "Known values: otp, no_show."
@@ -9090,6 +10093,22 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/DshPickupSession"
+
+    DshPartnerPickupStage:
+      type: string
+      enum: [not_ready, ready, notified, customer_arrived, verified, no_show, cancelled]
+      description: Resumable partner pickup stage derived by DSH from order, session, and audit truth.
+
+    DshPartnerPickupStateResponse:
+      type: object
+      additionalProperties: false
+      required: [session, stage]
+      properties:
+        session:
+          oneOf:
+            - $ref: "#/components/schemas/DshPickupSession"
+            - type: "null"
+        stage: { $ref: "#/components/schemas/DshPartnerPickupStage" }
 
     DshPickupMutationRequest:
       type: object

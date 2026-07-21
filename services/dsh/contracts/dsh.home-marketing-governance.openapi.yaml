@@ -1,0 +1,212 @@
+openapi: 3.1.0
+info:
+  title: BThwani DSH Home Marketing Governance API
+  version: 0.1.0
+  description: >
+    Active DSH contract shard for marketing-governed home banners and promos.
+    Client publication requires a published decision, authenticated marketing
+    approval and an active publication window. Store targets are additionally
+    gated by partner client visibility and store/catalog readiness.
+
+x-bthwani-owner: services/dsh
+x-bthwani-parent-contract: services/dsh/contracts/dsh.openapi.yaml
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-client-generation: ENABLED
+x-bthwani-runtime-dependency: true
+
+paths:
+  /dsh/operator/home-discovery/{kind}:
+    get:
+      operationId: listGovernedHomeMarketingContent
+      summary: List marketing home content including publication governance metadata.
+      tags: [DshHomeMarketing]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/ContentKind"
+      responses:
+        "200":
+          description: Governed home content.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/DshGovernedHomeContent" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      operationId: createGovernedHomeMarketingContent
+      summary: Create banner or promo and record the authenticated marketing publication decision.
+      tags: [DshHomeMarketing]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/ContentKind"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshGovernedHomeContentWrite" }
+      responses:
+        "201":
+          description: Content created.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshGovernedHomeContent" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /dsh/operator/home-discovery/{kind}/{itemId}:
+    patch:
+      operationId: updateGovernedHomeMarketingContent
+      summary: Update content and publication decision using optimistic concurrency.
+      tags: [DshHomeMarketing]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/ContentKind"
+        - name: itemId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshGovernedHomeContentWrite" }
+      responses:
+        "200":
+          description: Content updated.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshGovernedHomeContent" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+    delete:
+      operationId: deleteGovernedHomeMarketingContent
+      summary: Delete a banner or promo with an audit event.
+      tags: [DshHomeMarketing]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/ContentKind"
+        - name: itemId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+      responses:
+        "204": { description: Content deleted. }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+
+  parameters:
+    ContentKind:
+      name: kind
+      in: path
+      required: true
+      schema:
+        type: string
+        enum: [banners, promos]
+
+  responses:
+    InvalidRequest:
+      description: Request validation failed.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/DshHomeMarketingError" }
+    Unauthenticated:
+      description: Bearer session is missing, invalid or expired.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/DshHomeMarketingError" }
+    Forbidden:
+      description: Actor does not hold the marketing permission.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/DshHomeMarketingError" }
+    NotFound:
+      description: Content item was not found.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/DshHomeMarketingError" }
+    Conflict:
+      description: Optimistic concurrency conflict.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/DshHomeMarketingError" }
+
+  schemas:
+    DshHomeMarketingError:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+
+    DshHomePublicationStatus:
+      type: string
+      enum: [draft, published, paused, archived]
+
+    DshGovernedHomeContent:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - kind
+        - title
+        - actionType
+        - actionTarget
+        - sortOrder
+        - isActive
+        - publicationStatus
+        - createdByActorId
+        - version
+      properties:
+        id: { type: string }
+        kind: { type: string, enum: [banners, promos] }
+        title: { type: string }
+        subtitle: { type: string }
+        badgeLabel: { type: string }
+        imageUrl: { type: string }
+        actionType: { type: string, enum: [store, category, external, none] }
+        actionTarget: { type: string }
+        sortOrder: { type: integer, minimum: 0 }
+        isActive: { type: boolean }
+        publicationStatus: { $ref: "#/components/schemas/DshHomePublicationStatus" }
+        publishFrom: { type: string, format: date-time }
+        publishUntil: { type: string, format: date-time }
+        createdByActorId: { type: string }
+        approvedByActorId: { type: string }
+        approvedAt: { type: string, format: date-time }
+        version: { type: integer, minimum: 1 }
+
+    DshGovernedHomeContentWrite:
+      type: object
+      additionalProperties: false
+      required: [title, imageUrl, actionType, actionTarget, sortOrder, isActive]
+      properties:
+        title: { type: string, minLength: 2 }
+        subtitle: { type: string }
+        badgeLabel: { type: string }
+        imageUrl: { type: string, minLength: 1 }
+        actionType: { type: string, enum: [store, category, external, none] }
+        actionTarget: { type: string }
+        sortOrder: { type: integer, minimum: 0 }
+        isActive: { type: boolean }
+        publicationStatus: { $ref: "#/components/schemas/DshHomePublicationStatus" }
+        publishFrom: { type: string, format: date-time }
+        publishUntil: { type: string, format: date-time }
+        expectedVersion: { type: integer, minimum: 1 }

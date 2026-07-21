@@ -2,8 +2,12 @@ export type WltReferenceApiResult<T> =
   | { readonly ok: true; readonly data: T }
   | { readonly ok: false; readonly kind: "http" | "network"; readonly status?: number; readonly message: string };
 
+let wltCorrelationSequence = 0;
 function wltCorrId(): string {
-  return `wlt-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`}`;
+  const uuid = globalThis.crypto?.randomUUID?.();
+  if (uuid) return `wlt-${uuid}`;
+  wltCorrelationSequence += 1;
+  return `wlt-${Date.now().toString(36)}-${wltCorrelationSequence.toString(36)}`;
 }
 
 /**

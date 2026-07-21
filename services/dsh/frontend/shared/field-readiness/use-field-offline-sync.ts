@@ -1,77 +1,100 @@
 /**
  * useFieldOfflineSync
  *
- * React hook that drains the field offline queue whenever network
- * connectivity is restored. Integrates with @react-native-community/netinfo.
- *
- * Usage: mount once at the root of the field app surface.
- *
- * The hook accepts an `executor` map — a record of operationType →
- * async function that performs the actual API call. Pass `undefined` to skip
- * sync (e.g. during unauthenticated state).
+ * Drains the authenticated field queue on mount and connectivity recovery.
+ * Queue-level failures are surfaced to the field surface instead of becoming
+ * unhandled promises or silently discarding unsynced work.
  */
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import NetInfo from "@react-native-community/netinfo";
 import {
   getDueOperations,
   markOperationSynced,
   markOperationFailed,
   purgeSyncedOperations,
+  recoverCorruptFieldOfflineQueue,
   type FieldOfflineOperationType,
   type FieldOfflineOperation,
 } from "./field-offline-queue";
-
-// ─── Executor type ────────────────────────────────────────────────────────────
 
 export type FieldOfflineExecutorMap = Partial<
   Record<FieldOfflineOperationType, (op: FieldOfflineOperation) => Promise<void>>
 >;
 
-// ─── Hook ─────────────────────────────────────────────────────────────────────
+export type FieldOfflineSyncState =
+  | { readonly kind: "idle" }
+  | { readonly kind: "syncing" }
+  | { readonly kind: "ready" }
+  | { readonly kind: "error"; readonly message: string };
 
-export function useFieldOfflineSync(executors: FieldOfflineExecutorMap | undefined): void {
+export type FieldOfflineSyncController = {
+  readonly state: FieldOfflineSyncState;
+  readonly retry: () => void;
+  readonly recover: () => void;
+};
+
+export function useFieldOfflineSync(
+  executors: FieldOfflineExecutorMap | undefined,
+): FieldOfflineSyncController {
   const executorsRef = useRef(executors);
   executorsRef.current = executors;
-
   const syncRef = useRef(false);
+  const [state, setState] = useState<FieldOfflineSyncState>({ kind: "idle" });
 
   const drainQueue = useCallback(async () => {
-    if (syncRef.current) return; // prevent concurrent drains
-    if (!executorsRef.current) return;
+    if (syncRef.current || !executorsRef.current) return;
     syncRef.current = true;
+    setState({ kind: "syncing" });
     try {
       const due = await getDueOperations();
-      for (const op of due) {
-        const executor = executorsRef.current?.[op.operationType];
+      for (const operation of due) {
+        const executor = executorsRef.current?.[operation.operationType];
         if (!executor) continue;
         try {
-          await executor(op);
-          await markOperationSynced(op.operationId);
-        } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
-          await markOperationFailed(op.operationId, message);
+          await executor(operation);
+          await markOperationSynced(operation.operationId);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          await markOperationFailed(operation.operationId, message);
         }
       }
       await purgeSyncedOperations();
+      setState({ kind: "ready" });
+    } catch (error) {
+      setState({
+        kind: "error",
+        message: error instanceof Error ? error.message : String(error),
+      });
     } finally {
       syncRef.current = false;
     }
   }, []);
 
-  useEffect(() => {
-    // Drain on mount in case operations accumulated while offline.
+  const retry = useCallback(() => {
     void drainQueue();
+  }, [drainQueue]);
 
-    // Drain whenever connectivity is restored.
-    const unsubscribe = NetInfo.addEventListener((state) => {
-      if (state.isConnected && state.isInternetReachable) {
+  const recover = useCallback(() => {
+    void recoverCorruptFieldOfflineQueue()
+      .then(drainQueue)
+      .catch((error: unknown) => {
+        setState({
+          kind: "error",
+          message: error instanceof Error ? error.message : String(error),
+        });
+      });
+  }, [drainQueue]);
+
+  useEffect(() => {
+    void drainQueue();
+    const unsubscribe = NetInfo.addEventListener((networkState) => {
+      if (networkState.isConnected && networkState.isInternetReachable) {
         void drainQueue();
       }
     });
-
-    return () => {
-      unsubscribe();
-    };
+    return () => unsubscribe();
   }, [drainQueue]);
+
+  return { state, retry, recover };
 }

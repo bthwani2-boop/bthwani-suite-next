@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "next-env.d.ts",
+    "src/app/dsh/operations/**/*.tsx",
+    "../../../services/dsh/frontend/control-panel/operations/**/*.ts",
+    "../../../services/dsh/frontend/control-panel/operations/**/*.tsx",
+    "../../../services/dsh/frontend/control-panel/shared/**/*.ts",
+    "../../../services/dsh/frontend/control-panel/shared/**/*.tsx",
+    "../../../services/dsh/frontend/shared/operations/**/*.ts",
+    "../../../services/dsh/frontend/shared/dispatch/**/*.ts",
+    "../../../services/dsh/frontend/shared/workforce/**/*.ts",
+    "../../../services/dsh/frontend/shared/_kernel/**/*.ts",
+    "../../../services/dsh/clients/**/*.ts"
+  ],
+  "exclude": ["node_modules", ".next", "dist", "build"]
+}

@@ -1,0 +1,835 @@
+openapi: 3.1.0
+info:
+  title: BThwani DSH Sovereign Central Catalog API
+  version: 1.0.0
+  description: >-
+    Executable contract fragment for the sovereign central catalog. It mirrors
+    the paths registered by the DSH runtime and requires optimistic concurrency
+    control for every mutation of an existing versioned entity.
+
+x-bthwani-owner: services/dsh
+x-bthwani-parent-contract: contracts/dsh.openapi.yaml
+x-bthwani-contract-role: executable-fragment
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-client-generation: ENABLED
+x-bthwani-runtime-dependency: true
+
+paths:
+  /dsh/operator/catalog/domains:
+    get:
+      operationId: listCatalogDomains
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Domains, content: { application/json: { schema: { $ref: "#/components/schemas/DomainListResponse" } } } }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      operationId: createCatalogDomain
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CreateDomainRequest" } } }
+      responses:
+        "201": { description: Domain created, content: { application/json: { schema: { $ref: "#/components/schemas/DomainResponse" } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/operator/catalog/domains/{domainId}:
+    patch:
+      operationId: updateCatalogDomain
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/DomainId" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/UpdateDomainRequest" } } }
+      responses:
+        "200": { description: Domain updated, content: { application/json: { schema: { $ref: "#/components/schemas/DomainResponse" } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/operator/catalog/nodes:
+    get:
+      operationId: listCatalogNodes
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: domainId, in: query, schema: { type: string } }
+        - { name: parentId, in: query, schema: { type: string } }
+      responses:
+        "200": { description: Nodes, content: { application/json: { schema: { $ref: "#/components/schemas/NodeListResponse" } } } }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+    post:
+      operationId: createCatalogNode
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CreateNodeRequest" } } }
+      responses:
+        "201": { description: Node created, content: { application/json: { schema: { $ref: "#/components/schemas/NodeResponse" } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/operator/catalog/nodes/{nodeId}:
+    patch:
+      operationId: updateCatalogNode
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/NodeId" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/UpdateNodeRequest" } } }
+      responses:
+        "200": { description: Node updated, content: { application/json: { schema: { $ref: "#/components/schemas/NodeResponse" } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/operator/catalog/master-products:
+    get:
+      operationId: listMasterProductsOperator
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: domainId, in: query, schema: { type: string } }
+        - { name: categoryNodeId, in: query, schema: { type: string } }
+        - { name: approvalStatus, in: query, schema: { type: string } }
+        - { name: search, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0 } }
+      responses:
+        "200": { description: Master products, content: { application/json: { schema: { $ref: "#/components/schemas/MasterProductListResponse" } } } }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+    post:
+      operationId: createMasterProduct
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CreateMasterProductRequest" } } }
+      responses:
+        "201": { description: Master product created, content: { application/json: { schema: { $ref: "#/components/schemas/MasterProductResponse" } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/operator/catalog/master-products/{productId}:
+    patch:
+      operationId: updateMasterProduct
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/ProductId" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/UpdateMasterProductRequest" } } }
+      responses:
+        "200": { description: Master product updated, content: { application/json: { schema: { $ref: "#/components/schemas/MasterProductResponse" } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/operator/catalog/product-proposals:
+    get:
+      operationId: listProductProposals
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: status, in: query, schema: { type: string } }
+        - { name: storeId, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0 } }
+      responses:
+        "200": { description: Proposals, content: { application/json: { schema: { $ref: "#/components/schemas/ProposalListResponse" } } } }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/operator/catalog/product-proposals/{proposalId}/decision:
+    post:
+      operationId: decideProductProposal
+      deprecated: true
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/ProposalId" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/ProposalDecisionRequest" } } }
+      responses:
+        "200": { description: Proposal decided, content: { application/json: { schema: { $ref: "#/components/schemas/ProposalResponse" } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/operator/catalog/product-proposals/{proposalId}/transition:
+    post:
+      operationId: transitionProductProposal
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/ProposalId" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/ProposalTransitionRequest" } } }
+      responses:
+        "200": { description: Proposal transitioned, content: { application/json: { schema: { $ref: "#/components/schemas/ProposalResponse" } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/InvalidTransition" }
+
+  /dsh/operator/catalog/platform-policies:
+    get:
+      operationId: listCatalogPlatformPolicies
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Policies, content: { application/json: { schema: { $ref: "#/components/schemas/PolicyListResponse" } } } }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/operator/catalog/platform-policies/{policyId}:
+    put:
+      operationId: updateCatalogPlatformPolicy
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/PolicyId" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/UpdatePolicyRequest" } } }
+      responses:
+        "200": { description: Policy updated, content: { application/json: { schema: { $ref: "#/components/schemas/PolicyResponse" } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+    patch:
+      operationId: patchCatalogPlatformPolicy
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/PolicyId" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/UpdatePolicyRequest" } } }
+      responses:
+        "200": { description: Policy updated, content: { application/json: { schema: { $ref: "#/components/schemas/PolicyResponse" } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/operator/stores/{storeId}/assortment:
+    get:
+      operationId: getOperatorStoreAssortment
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/StoreId" }]
+      responses:
+        "200": { description: Assortment, content: { application/json: { schema: { $ref: "#/components/schemas/AssortmentListResponse" } } } }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /dsh/operator/stores/{storeId}/assortment/{masterProductId}:
+    put:
+      operationId: upsertOperatorStoreAssortment
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/StoreId" }
+        - { $ref: "#/components/parameters/MasterProductId" }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/UpsertAssortmentRequest" } } }
+      responses:
+        "200": { description: Assortment saved, content: { application/json: { schema: { $ref: "#/components/schemas/AssortmentResponse" } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/partner/catalog/taxonomy:
+    get:
+      operationId: getPartnerCatalogTaxonomy
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Partner-visible taxonomy, content: { application/json: { schema: { $ref: "#/components/schemas/TaxonomyResponse" } } } }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/partner/catalog/master-products:
+    get:
+      operationId: listPartnerMasterProducts
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Approved active master products, content: { application/json: { schema: { $ref: "#/components/schemas/MasterProductListResponse" } } } }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/partner/catalog/product-proposals:
+    post:
+      operationId: createPartnerProductProposal
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CreateProposalRequest" } } }
+      responses:
+        "201": { description: Proposal created, content: { application/json: { schema: { $ref: "#/components/schemas/ProposalResponse" } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /dsh/partner/catalog/product-proposals/{proposalId}:
+    patch:
+      operationId: updatePartnerProductProposal
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/ProposalId" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/UpdateProposalRequest" } } }
+      responses:
+        "200": { description: Proposal resubmitted, content: { application/json: { schema: { $ref: "#/components/schemas/ProposalResponse" } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/partner/stores/{storeId}/assortment:
+    get:
+      operationId: getPartnerStoreAssortment
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/StoreId" }]
+      responses:
+        "200": { description: Partner store assortment, content: { application/json: { schema: { $ref: "#/components/schemas/AssortmentListResponse" } } } }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /dsh/partner/stores/{storeId}/assortment/{masterProductId}:
+    put:
+      operationId: upsertPartnerStoreAssortment
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/StoreId" }
+        - { $ref: "#/components/parameters/MasterProductId" }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/UpsertAssortmentRequest" } } }
+      responses:
+        "200": { description: Partner assortment saved, content: { application/json: { schema: { $ref: "#/components/schemas/AssortmentResponse" } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/field/catalog/taxonomy:
+    get:
+      operationId: getFieldCatalogTaxonomy
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Field-visible taxonomy, content: { application/json: { schema: { $ref: "#/components/schemas/TaxonomyResponse" } } } }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/field/catalog/master-products:
+    get:
+      operationId: listFieldMasterProducts
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Approved active master products, content: { application/json: { schema: { $ref: "#/components/schemas/MasterProductListResponse" } } } }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/field/partners/{partnerId}/catalog/product-proposals:
+    post:
+      operationId: createFieldProductProposal
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/PartnerId" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CreateProposalRequest" } } }
+      responses:
+        "201": { description: Field proposal created, content: { application/json: { schema: { $ref: "#/components/schemas/ProposalResponse" } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /dsh/field/partners/{partnerId}/catalog/product-proposals/{proposalId}:
+    patch:
+      operationId: updateFieldProductProposal
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/PartnerId" }
+        - { $ref: "#/components/parameters/ProposalId" }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/UpdateProposalRequest" } } }
+      responses:
+        "200": { description: Field proposal resubmitted, content: { application/json: { schema: { $ref: "#/components/schemas/ProposalResponse" } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/field/partners/{partnerId}/assortment:
+    get:
+      operationId: fieldGetStoreAssortment
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/PartnerId" }]
+      responses:
+        "200": { description: Field-owned partner assortment, content: { application/json: { schema: { $ref: "#/components/schemas/FieldAssortmentListResponse" } } } }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /dsh/field/partners/{partnerId}/stores/{storeId}/assortment/{masterProductId}:
+    put:
+      operationId: fieldUpsertStoreAssortment
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/PartnerId" }
+        - { $ref: "#/components/parameters/StoreId" }
+        - { $ref: "#/components/parameters/MasterProductId" }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/UpsertAssortmentRequest" } } }
+      responses:
+        "200": { description: Field assortment saved, content: { application/json: { schema: { $ref: "#/components/schemas/AssortmentResponse" } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/operator/catalog/assets:
+    get:
+      operationId: listCatalogAssets
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: status, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0 } }
+      responses:
+        "200": { description: Assets, content: { application/json: { schema: { $ref: "#/components/schemas/AssetListResponse" } } } }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/operator/catalog/assets/{assetId}:
+    patch:
+      operationId: updateCatalogAsset
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AssetId" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/UpdateAssetRequest" } } }
+      responses:
+        "200": { description: Asset updated, content: { application/json: { schema: { $ref: "#/components/schemas/AssetResponse" } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/operator/catalog/assets/{assetId}/review:
+    post:
+      operationId: reviewCatalogAsset
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AssetId" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/ReviewAssetRequest" } } }
+      responses:
+        "200": { description: Asset reviewed, content: { application/json: { schema: { $ref: "#/components/schemas/AssetResponse" } } } }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer }
+  parameters:
+    DomainId: { name: domainId, in: path, required: true, schema: { type: string } }
+    NodeId: { name: nodeId, in: path, required: true, schema: { type: string } }
+    ProductId: { name: productId, in: path, required: true, schema: { type: string } }
+    MasterProductId: { name: masterProductId, in: path, required: true, schema: { type: string } }
+    ProposalId: { name: proposalId, in: path, required: true, schema: { type: string } }
+    PolicyId: { name: policyId, in: path, required: true, schema: { type: string } }
+    AssetId: { name: assetId, in: path, required: true, schema: { type: string } }
+    StoreId: { name: storeId, in: path, required: true, schema: { type: string } }
+    PartnerId: { name: partnerId, in: path, required: true, schema: { type: string } }
+  responses:
+    InvalidRequest: { description: Invalid request, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+    Unauthenticated: { description: Missing or invalid identity, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+    Forbidden: { description: Permission or ownership denied, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+    NotFound: { description: Entity not found, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+    Conflict: { description: Version conflict; reload before retrying, content: { application/json: { schema: { $ref: "#/components/schemas/ConflictResponse" } } } }
+    InvalidTransition: { description: Governed state transition rejected, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+  schemas:
+    PositiveVersion: { type: integer, minimum: 1 }
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties: { code: { type: string }, message: { type: string } }
+    ConflictResponse:
+      type: object
+      required: [code, message, entityId, currentVersion]
+      properties:
+        code: { const: CONFLICT }
+        message: { type: string }
+        entityId: { type: string }
+        expectedVersion: { type: [integer, "null"], minimum: 1 }
+        currentVersion: { type: integer, minimum: 1 }
+    VersionedEntity:
+      type: object
+      required: [id, version]
+      properties: { id: { type: string }, version: { $ref: "#/components/schemas/PositiveVersion" } }
+    Domain:
+      allOf:
+        - { $ref: "#/components/schemas/VersionedEntity" }
+        - type: object
+          required: [slug, nameAr, nameEn, icon, sortOrder, isActive, isClientVisible, requiresProductCatalog, isManualRequest]
+          properties:
+            slug: { type: string }
+            nameAr: { type: string }
+            nameEn: { type: string }
+            icon: { type: string }
+            sortOrder: { type: integer }
+            isActive: { type: boolean }
+            isClientVisible: { type: boolean }
+            requiresProductCatalog: { type: boolean }
+            isManualRequest: { type: boolean }
+    CreateDomainRequest:
+      type: object
+      required: [slug, nameAr, nameEn, icon, sortOrder, isActive, isClientVisible, requiresProductCatalog, isManualRequest]
+      properties:
+        slug: { type: string, minLength: 1 }
+        nameAr: { type: string, minLength: 1 }
+        nameEn: { type: string }
+        icon: { type: string }
+        sortOrder: { type: integer }
+        isActive: { type: boolean }
+        isClientVisible: { type: boolean }
+        requiresProductCatalog: { type: boolean }
+        isManualRequest: { type: boolean }
+    UpdateDomainRequest:
+      type: object
+      required: [expectedVersion]
+      properties:
+        expectedVersion: { $ref: "#/components/schemas/PositiveVersion" }
+        nameAr: { type: string, minLength: 1 }
+        nameEn: { type: string }
+        icon: { type: string }
+        sortOrder: { type: integer }
+        isActive: { type: boolean }
+        isClientVisible: { type: boolean }
+        requiresProductCatalog: { type: boolean }
+        isManualRequest: { type: boolean }
+    Node:
+      allOf:
+        - { $ref: "#/components/schemas/VersionedEntity" }
+        - type: object
+          required: [domainId, level, slug, nameAr, nameEn, sortOrder, isActive, isClientVisible]
+          properties:
+            domainId: { type: string }
+            parentId: { type: [string, "null"] }
+            level: { type: string }
+            slug: { type: string }
+            nameAr: { type: string }
+            nameEn: { type: string }
+            icon: { type: string }
+            sortOrder: { type: integer }
+            isActive: { type: boolean }
+            isClientVisible: { type: boolean }
+            requiresBarcode: { type: boolean }
+            allowsProductProposal: { type: boolean }
+            allowsStoreProductCustomImage: { type: boolean }
+            requiresCatalogReview: { type: boolean }
+            requiresProductCatalog: { type: boolean }
+    CreateNodeRequest:
+      type: object
+      required: [domainId, level, slug, nameAr, nameEn, icon, sortOrder, isActive, isClientVisible, requiresBarcode, allowsProductProposal, allowsStoreProductCustomImage, requiresCatalogReview, requiresProductCatalog]
+      properties:
+        domainId: { type: string }
+        parentId: { type: [string, "null"] }
+        level: { type: string }
+        slug: { type: string, minLength: 1 }
+        nameAr: { type: string, minLength: 1 }
+        nameEn: { type: string }
+        icon: { type: string }
+        sortOrder: { type: integer }
+        isActive: { type: boolean }
+        isClientVisible: { type: boolean }
+        requiresBarcode: { type: boolean }
+        allowsProductProposal: { type: boolean }
+        allowsStoreProductCustomImage: { type: boolean }
+        requiresCatalogReview: { type: boolean }
+        requiresProductCatalog: { type: boolean }
+    UpdateNodeRequest:
+      allOf:
+        - { $ref: "#/components/schemas/CreateNodeRequest" }
+        - type: object
+          required: [expectedVersion]
+          properties: { expectedVersion: { $ref: "#/components/schemas/PositiveVersion" } }
+    MasterProduct:
+      allOf:
+        - { $ref: "#/components/schemas/VersionedEntity" }
+        - type: object
+          required: [domainId, canonicalNameAr, canonicalNameEn, brand, unit, measurementType, approvalStatus, isActive]
+          properties:
+            domainId: { type: string }
+            categoryNodeId: { type: [string, "null"] }
+            canonicalNameAr: { type: string }
+            canonicalNameEn: { type: string }
+            brand: { type: string }
+            barcode: { type: [string, "null"] }
+            gtin: { type: [string, "null"] }
+            sku: { type: [string, "null"] }
+            unit: { type: string }
+            measurementType: { type: string }
+            canonicalImageObjectKey: { type: [string, "null"] }
+            approvalStatus: { type: string, enum: [draft, pending_review, approved, rejected, archived] }
+            isActive: { type: boolean }
+    CreateMasterProductRequest:
+      type: object
+      required: [domainId, canonicalNameAr, canonicalNameEn, brand, unit, measurementType, approvalStatus, isActive]
+      properties:
+        domainId: { type: string }
+        categoryNodeId: { type: [string, "null"] }
+        canonicalNameAr: { type: string, minLength: 1 }
+        canonicalNameEn: { type: string }
+        brand: { type: string }
+        barcode: { type: [string, "null"] }
+        gtin: { type: [string, "null"] }
+        sku: { type: [string, "null"] }
+        unit: { type: string }
+        measurementType: { type: string }
+        canonicalImageObjectKey: { type: [string, "null"] }
+        approvalStatus: { type: string }
+        isActive: { type: boolean }
+    UpdateMasterProductRequest:
+      type: object
+      required: [expectedVersion]
+      properties:
+        expectedVersion: { $ref: "#/components/schemas/PositiveVersion" }
+        categoryNodeId: { type: [string, "null"] }
+        canonicalNameAr: { type: string, minLength: 1 }
+        canonicalNameEn: { type: string }
+        brand: { type: string }
+        barcode: { type: [string, "null"] }
+        gtin: { type: [string, "null"] }
+        sku: { type: [string, "null"] }
+        unit: { type: string }
+        measurementType: { type: string }
+        approvalStatus: { type: string }
+        isActive: { type: boolean }
+    Proposal:
+      allOf:
+        - { $ref: "#/components/schemas/VersionedEntity" }
+        - type: object
+          required: [proposedNameAr, domainId, sourceSurface, sourceActorId, status]
+          properties:
+            proposedNameAr: { type: string }
+            proposedNameEn: { type: string }
+            domainId: { type: string }
+            categoryNodeId: { type: [string, "null"] }
+            brand: { type: string }
+            barcode: { type: [string, "null"] }
+            imageObjectKey: { type: [string, "null"] }
+            sourceSurface: { type: string }
+            sourceActorId: { type: string }
+            sourceStoreId: { type: [string, "null"] }
+            status: { type: string }
+            reviewNote: { type: string }
+    CreateProposalRequest:
+      type: object
+      required: [proposedNameAr, domainId]
+      properties:
+        proposedNameAr: { type: string, minLength: 1 }
+        proposedNameEn: { type: string }
+        domainId: { type: string }
+        categoryNodeId: { type: [string, "null"] }
+        brand: { type: string }
+        barcode: { type: [string, "null"] }
+        imageObjectKey: { type: [string, "null"] }
+        sourceSurface: { type: string }
+    UpdateProposalRequest:
+      type: object
+      required: [expectedVersion]
+      properties:
+        expectedVersion: { $ref: "#/components/schemas/PositiveVersion" }
+        proposedNameAr: { type: string, minLength: 1 }
+        proposedNameEn: { type: string }
+        brand: { type: string }
+        barcode: { type: [string, "null"] }
+        imageObjectKey: { type: [string, "null"] }
+    ProposalDecisionRequest:
+      type: object
+      required: [expectedVersion, decision, reviewNote]
+      properties:
+        expectedVersion: { $ref: "#/components/schemas/PositiveVersion" }
+        decision: { type: string, enum: [under_review, adopted, rejected, needs_fix] }
+        reviewNote: { type: string }
+        adoptedMasterProductId: { type: [string, "null"] }
+    ProposalTransitionRequest:
+      type: object
+      required: [expectedVersion, nextStatus, note]
+      properties:
+        expectedVersion: { $ref: "#/components/schemas/PositiveVersion" }
+        nextStatus: { type: string }
+        note: { type: string }
+        adoptedMasterProductId: { type: [string, "null"] }
+        createMasterProduct: { type: boolean }
+    Policy:
+      allOf:
+        - { $ref: "#/components/schemas/VersionedEntity" }
+        - type: object
+          additionalProperties: true
+    UpdatePolicyRequest:
+      type: object
+      required: [expectedVersion]
+      properties:
+        expectedVersion: { $ref: "#/components/schemas/PositiveVersion" }
+        platformCommissionRate: { type: number, minimum: 0, maximum: 1 }
+        fieldPartnerOnboardingCommissionAmount: { type: number, minimum: 0 }
+        fieldPartnerOnboardingCommissionCurrency: { type: string }
+        storeOnboardingFeeAmount: { type: number, minimum: 0 }
+        storeOnboardingFeeCurrency: { type: string }
+        allowsStoreProductCustomImage: { type: boolean }
+        allowsProductProposal: { type: boolean }
+        requiresBarcode: { type: boolean }
+        requiresCatalogReview: { type: boolean }
+        requiresMarketingReview: { type: boolean }
+        requiresProductImage: { type: boolean }
+        requiresCategoryImage: { type: boolean }
+        requiresDescription: { type: boolean }
+        requiresBrand: { type: boolean }
+        requiresUnit: { type: boolean }
+        productDataQualityMinimumScore: { type: number, minimum: 0, maximum: 1 }
+        maxGalleryImages: { type: integer, minimum: 0 }
+        manualRequestMode: { type: boolean }
+        isActive: { type: boolean }
+        effectiveFrom: { type: string, format: date-time }
+        notes: { type: string }
+    Assortment:
+      allOf:
+        - { $ref: "#/components/schemas/VersionedEntity" }
+        - type: object
+          required: [storeId, masterProductId, unitPrice, currency, available, stockStatus, publicationStatus]
+          properties:
+            storeId: { type: string }
+            masterProductId: { type: string }
+            unitPrice: { type: number, minimum: 0 }
+            currency: { type: string }
+            available: { type: boolean }
+            stockStatus: { type: string, enum: [in_stock, low_stock, out_of_stock] }
+            localNote: { type: string }
+            customImageObjectKey: { type: [string, "null"] }
+            publicationStatus: { type: string }
+    UpsertAssortmentRequest:
+      type: object
+      required: [unitPrice, currency, available, stockStatus, localNote, customImageObjectKey, publicationStatus]
+      properties:
+        expectedVersion: { $ref: "#/components/schemas/PositiveVersion" }
+        unitPrice: { type: number, minimum: 0 }
+        currency: { type: string }
+        available: { type: boolean }
+        stockStatus: { type: string, enum: [in_stock, low_stock, out_of_stock] }
+        localNote: { type: string }
+        customImageObjectKey: { type: [string, "null"] }
+        publicationStatus: { type: string }
+    Asset:
+      allOf:
+        - { $ref: "#/components/schemas/VersionedEntity" }
+        - type: object
+          additionalProperties: true
+    UpdateAssetRequest:
+      type: object
+      required: [expectedVersion]
+      properties:
+        expectedVersion: { $ref: "#/components/schemas/PositiveVersion" }
+        altAr: { type: string }
+        altEn: { type: string }
+        dominantColor: { type: [string, "null"] }
+    ReviewAssetRequest:
+      type: object
+      required: [expectedVersion, decision]
+      properties:
+        expectedVersion: { $ref: "#/components/schemas/PositiveVersion" }
+        decision: { type: string, enum: [approved, rejected] }
+        reviewNote: { type: string }
+    DomainResponse: { type: object, required: [domain], properties: { domain: { $ref: "#/components/schemas/Domain" } } }
+    DomainListResponse: { type: object, required: [domains], properties: { domains: { type: array, items: { $ref: "#/components/schemas/Domain" } } } }
+    NodeResponse: { type: object, required: [node], properties: { node: { $ref: "#/components/schemas/Node" } } }
+    NodeListResponse: { type: object, required: [nodes], properties: { nodes: { type: array, items: { $ref: "#/components/schemas/Node" } } } }
+    TaxonomyResponse:
+      type: object
+      required: [domains, nodes]
+      properties:
+        domains: { type: array, items: { $ref: "#/components/schemas/Domain" } }
+        nodes: { type: array, items: { $ref: "#/components/schemas/Node" } }
+    MasterProductResponse: { type: object, required: [masterProduct], properties: { masterProduct: { $ref: "#/components/schemas/MasterProduct" } } }
+    MasterProductListResponse:
+      type: object
+      required: [masterProducts]
+      properties:
+        masterProducts: { type: array, items: { $ref: "#/components/schemas/MasterProduct" } }
+        total: { type: integer }
+        limit: { type: integer }
+        offset: { type: integer }
+    ProposalResponse: { type: object, required: [proposal], properties: { proposal: { $ref: "#/components/schemas/Proposal" } } }
+    ProposalListResponse:
+      type: object
+      required: [proposals, total, limit, offset]
+      properties:
+        proposals: { type: array, items: { $ref: "#/components/schemas/Proposal" } }
+        total: { type: integer }
+        limit: { type: integer }
+        offset: { type: integer }
+    PolicyResponse: { type: object, required: [policy], properties: { policy: { $ref: "#/components/schemas/Policy" } } }
+    PolicyListResponse: { type: object, required: [policies], properties: { policies: { type: array, items: { $ref: "#/components/schemas/Policy" } } } }
+    AssortmentResponse: { type: object, required: [assortment], properties: { assortment: { $ref: "#/components/schemas/Assortment" } } }
+    AssortmentListResponse: { type: object, required: [assortment], properties: { assortment: { type: array, items: { $ref: "#/components/schemas/Assortment" } } } }
+    FieldAssortmentListResponse:
+      type: object
+      required: [storeId, assortment]
+      properties:
+        storeId: { type: string }
+        assortment: { type: array, items: { $ref: "#/components/schemas/Assortment" } }
+    AssetResponse: { type: object, required: [asset], properties: { asset: { $ref: "#/components/schemas/Asset" } } }
+    AssetListResponse:
+      type: object
+      required: [assets, total, limit, offset]
+      properties:
+        assets: { type: array, items: { $ref: "#/components/schemas/Asset" } }
+        total: { type: integer }
+        limit: { type: integer }
+        offset: { type: integer }

@@ -12,7 +12,6 @@ export type DshIntentState =
 
 import type { DshFulfillmentDeliveryMode } from "../delivery/delivery.contract";
 
-// Canonical source: shared/delivery/delivery.contract.ts (DshFulfillmentDeliveryMode).
 export type DshFulfillmentMode = DshFulfillmentDeliveryMode;
 
 export type DshCheckoutIntent = {
@@ -23,10 +22,18 @@ export type DshCheckoutIntent = {
   readonly fulfillmentMode: DshFulfillmentMode;
   readonly state: DshIntentState;
   readonly paymentMethod: DshPaymentMethod;
-  /** Opaque WLT-owned payment-session reference. */
   readonly wltPaymentSessionId: string;
   readonly deliveryAddress: string;
   readonly note: string;
+  readonly subtotalMinorUnits: number;
+  readonly deliveryFeeMinorUnits: number;
+  readonly discountMinorUnits: number;
+  readonly totalMinorUnits: number;
+  readonly currency: string;
+  readonly pricingSnapshotHash: string;
+  readonly couponId?: string;
+  readonly couponRedemptionId?: string;
+  readonly couponCodeLast4?: string;
   readonly version: number;
   readonly createdAt: string;
   readonly updatedAt: string;
@@ -37,8 +44,10 @@ export type DshCreateIntentInput = {
   readonly storeId: string;
   readonly fulfillmentMode?: DshFulfillmentMode;
   readonly paymentMethod?: DshPaymentMethod;
-  readonly deliveryAddress?: string;
+  /** Required for delivery; the backend resolves ownership and snapshots it. */
+  readonly deliveryAddressId?: string;
   readonly note?: string;
+  readonly couponCode?: string;
 };
 
 export type DshCheckoutState =

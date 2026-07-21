@@ -5,7 +5,7 @@
 import React from 'react';
 import type { DshPartnerRoute } from '../../shared/partner/partner.types';
 import { usePartnerOrdersRuntime } from './usePartnerOrdersRuntime';
-import type { PartnerOrderItem } from '../../shared/orders/orders.contract';
+import type { GovernedPartnerOrderItem } from '../../shared/partner/partner.adapters';
 
 export function usePartnerOrdersModel({
   route,
@@ -20,11 +20,10 @@ export function usePartnerOrdersModel({
   const [editingProductId, setEditingProductId] = React.useState<string | undefined>(undefined);
   const [activeOrderId, setActiveOrderId] = React.useState(initialOrderId);
 
-  const { orders: partnerOrders, state: partnerOrdersState, markReady: handleMarkReady, refresh } = usePartnerOrdersRuntime(route) as {
-    orders: readonly PartnerOrderItem[];
+  const { orders: partnerOrders, state: partnerOrdersState, refresh } = usePartnerOrdersRuntime(route) as {
+    orders: readonly GovernedPartnerOrderItem[];
     state: 'ready' | 'loading' | 'empty' | 'error' | 'offline' | 'disabled' | 'partial';
-    markReady: (orderId: string) => void;
-    refresh: () => void;
+    refresh: () => void | Promise<void>;
   };
 
   const openOrdersBoard = React.useCallback(() => {
@@ -46,7 +45,6 @@ export function usePartnerOrdersModel({
     setActiveOrderId,
     partnerOrders,
     partnerOrdersState,
-    handleMarkReady,
     refresh,
     openOrdersBoard,
     openOrdersSearch,

@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "policy": {
+    "default": "IMMUTABLE_AFTER_APPLY",
+    "amendmentRule": "A migration may be corrected in place only when the repository has no successful same-commit runtime evidence for it, clean installation or invariant verification proves the file is unsafe, and a governed forward-recovery migration exists for any environment that may have recorded the previous checksum.",
+    "appliedChecksumMismatchAction": "HARD_FAIL_AND_REQUIRE_EXPLICIT_FORWARD_RECOVERY"
+  },
+  "amendments": [
+    {
+      "service": "dsh",
+      "migrationId": "dsh-056_client_addresses.sql",
+      "originalBlobSha": "82e89d17c80d9037bbffb42b12542e25446111a7",
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "The original table-level UNIQUE(client_id, create_idempotency_key) constraint covered soft-deleted rows and contradicted the address lifecycle invariant that a deleted operation releases its idempotency key while active rows remain conflict-safe.",
+      "evidence": {
+        "cleanInstallCommitSha": "90e7e198100036fd9a959084b78074c9ff46fc5c",
+        "cleanInstallResult": "INVARIANT_FAILED_AFTER_APPLY",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Replace full-history uniqueness with uq_dsh_client_addresses_active_idempotency WHERE deleted_at IS NULL and retain dsh-900_client_address_active_idempotency_recovery.sql as the explicit forward recovery for any environment that applied the original constraint."
+    },
+    {
+      "service": "dsh",
+      "migrationId": "dsh-077_platform_operational_policies.sql",
+      "originalBlobSha": "636a7217a376873cb8fbfafae1461ff37219805c",
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "The migration declared TEXT foreign keys against the UUID zone identity created by dsh-013 and introduced a second capacity table instead of upgrading the legacy capacity source.",
+      "evidence": {
+        "cleanInstallCommitSha": "6a12e031284a7f9100b88597aeee8a2d3b4c4c56",
+        "cleanInstallResult": "FAILED_AT_THIS_MIGRATION",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Preserve UUID zone identity, migrate legacy capacity rows into the governed capacity-config table, and remove the duplicate legacy table only after successful copy."
+    },
+    {
+      "service": "wlt",
+      "migrationId": "wlt-031_governed_settlement_sources.sql",
+      "originalBlobSha": "1e0f8491fb415226872cd4d88b14917a84e57b58",
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "The migration declared settlement_id UUID while the sovereign wlt_settlements primary key has always been TEXT with a wset_ prefix.",
+      "evidence": {
+        "cleanInstallCommitSha": "6a12e031284a7f9100b88597aeee8a2d3b4c4c56",
+        "cleanInstallResult": "FAILED_AT_THIS_MIGRATION",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Use the exact sovereign settlement identifier type and retain the existing restrictive foreign key."
+    }
+  ]
+}

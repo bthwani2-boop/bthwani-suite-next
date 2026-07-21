@@ -1,11 +1,21 @@
+schemaVersion: 2
 capabilityId:
+productTruthContract:
 adr:
 systemContext:
+ownershipBoundaries: []
+dependencyDirection: []
 dataFlow:
 apiContractImpact:
 databaseImpact:
 migrationImpact:
 trustBoundaries: []
+requiredSurfaces: []
+excludedSurfaces: []
+crossSurfacePropagation: []
+uxJourneyImpact:
 observabilityPlan:
 rollbackPlan:
-crossSurfaceImpact: []
+securityReviewRequired: false
+wltFinanceReviewRequired: false
+runtimeEvidenceRequired: false

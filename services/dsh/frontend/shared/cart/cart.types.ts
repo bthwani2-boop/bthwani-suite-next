@@ -40,10 +40,17 @@ export type DshServiceabilityCode =
   | "out_of_area"
   | "catalog_unavailable";
 
+export type DshFulfillmentModeAvailability = {
+  readonly mode: DshFulfillmentMode;
+  readonly available: boolean;
+  readonly unavailableReasonCode?: string;
+};
+
 export type DshServiceabilityResult = {
   readonly serviceable: boolean;
   readonly code: DshServiceabilityCode;
   readonly reason?: string;
+  readonly availableModes?: readonly DshFulfillmentModeAvailability[];
 };
 
 export type DshCartState =
@@ -57,8 +64,16 @@ export type DshCartState =
 export type DshServiceabilityState =
   | { readonly kind: "idle" }
   | { readonly kind: "checking" }
-  | { readonly kind: "serviceable" }
-  | { readonly kind: "blocked"; readonly code: DshServiceabilityCode; readonly reason?: string }
+  | {
+      readonly kind: "serviceable";
+      readonly availableModes: readonly DshFulfillmentModeAvailability[];
+    }
+  | {
+      readonly kind: "blocked";
+      readonly code: DshServiceabilityCode;
+      readonly reason?: string;
+      readonly availableModes: readonly DshFulfillmentModeAvailability[];
+    }
   | { readonly kind: "error"; readonly message: string };
 
 export type DshCartActionState = "idle" | "submitting" | "success" | "error";

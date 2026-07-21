@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import * as api from "./central-catalog.api";
+import * as occApi from "./central-catalog-occ.api";
 import type {
   CentralCatalogDomain,
   CentralCatalogNode,
@@ -8,6 +9,64 @@ import type {
   StoreAssortment,
   CatalogPlatformPolicy,
 } from "./central-catalog.types";
+
+interface CatalogVersionedEntity {
+  readonly id: string;
+  readonly version?: number;
+}
+
+export type CatalogDomainUpdateInput = Omit<
+  Parameters<typeof occApi.updateCatalogDomainOCC>[1],
+  "expectedVersion"
+>;
+export type CatalogNodeUpdateInput = Omit<
+  Parameters<typeof occApi.updateCatalogNodeOCC>[1],
+  "expectedVersion"
+>;
+export type CatalogMasterProductUpdateInput = Omit<
+  Parameters<typeof occApi.updateMasterProductOCC>[1],
+  "expectedVersion"
+>;
+
+function resolveCatalogError(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message.trim()) return error.message;
+  if (typeof error === "object" && error !== null && "message" in error) {
+    const message = (error as { readonly message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) return message;
+  }
+  return fallback;
+}
+
+function requireCatalogVersion(
+  entities: readonly CatalogVersionedEntity[],
+  entityId: string,
+  entityKind: "domain" | "node" | "master_product" | "proposal" | "policy",
+): number {
+  const entity = entities.find((item) => item.id === entityId);
+  if (!entity) throw new Error(`CATALOG_${entityKind.toUpperCase()}_NOT_LOADED`);
+  if (!Number.isInteger(entity.version) || (entity.version ?? 0) < 1) {
+    throw new Error(`CATALOG_${entityKind.toUpperCase()}_VERSION_MISSING`);
+  }
+  return entity.version as number;
+}
+
+async function runMutationWithReadback<T>(
+  mutation: () => Promise<T>,
+  readback: () => Promise<void>,
+): Promise<T> {
+  try {
+    const result = await mutation();
+    await readback();
+    return result;
+  } catch (error) {
+    try {
+      await readback();
+    } catch {
+      // Preserve the original mutation or conflict error after a best-effort refresh.
+    }
+    throw error;
+  }
+}
 
 export interface CentralCatalogControllerState {
   readonly domains: {
@@ -54,15 +113,18 @@ export function useCentralCatalogController(authKind = "unauthenticated") {
     readonly error: string | null;
   }>({ items: [], loading: false, error: null });
 
-  const isAuthed = authKind === "authenticated" || authKind === "operator" || authKind === "partner" || authKind === "field";
+  const isAuthed = ["authenticated", "operator", "partner", "field"].includes(authKind);
 
   const loadDomains = useCallback(async () => {
     setState((prev) => ({ ...prev, domains: { ...prev.domains, loading: true, error: null } }));
     try {
       const items = await api.fetchCatalogDomains();
       setState((prev) => ({ ...prev, domains: { items, loading: false, error: null } }));
-    } catch (err: any) {
-      setState((prev) => ({ ...prev, domains: { ...prev.domains, loading: false, error: err.message ?? "Failed to load domains" } }));
+    } catch (error) {
+      setState((prev) => ({
+        ...prev,
+        domains: { ...prev.domains, loading: false, error: resolveCatalogError(error, "Failed to load domains") },
+      }));
     }
   }, []);
 
@@ -71,8 +133,11 @@ export function useCentralCatalogController(authKind = "unauthenticated") {
     try {
       const items = await api.fetchCatalogNodes(domainId ? { domainId } : undefined);
       setState((prev) => ({ ...prev, nodes: { items, loading: false, error: null } }));
-    } catch (err: any) {
-      setState((prev) => ({ ...prev, nodes: { ...prev.nodes, loading: false, error: err.message ?? "Failed to load nodes" } }));
+    } catch (error) {
+      setState((prev) => ({
+        ...prev,
+        nodes: { ...prev.nodes, loading: false, error: resolveCatalogError(error, "Failed to load nodes") },
+      }));
     }
   }, []);
 
@@ -81,8 +146,15 @@ export function useCentralCatalogController(authKind = "unauthenticated") {
     try {
       const { items, total } = await api.fetchMasterProductsPage(query);
       setState((prev) => ({ ...prev, masterProducts: { items, total, loading: false, error: null } }));
-    } catch (err: any) {
-      setState((prev) => ({ ...prev, masterProducts: { ...prev.masterProducts, loading: false, error: err.message ?? "Failed to load master products" } }));
+    } catch (error) {
+      setState((prev) => ({
+        ...prev,
+        masterProducts: {
+          ...prev.masterProducts,
+          loading: false,
+          error: resolveCatalogError(error, "Failed to load master products"),
+        },
+      }));
     }
   }, []);
 
@@ -91,8 +163,11 @@ export function useCentralCatalogController(authKind = "unauthenticated") {
     try {
       const { items, total } = await api.fetchProductProposalsPage(query);
       setState((prev) => ({ ...prev, proposals: { items, total, loading: false, error: null } }));
-    } catch (err: any) {
-      setState((prev) => ({ ...prev, proposals: { ...prev.proposals, loading: false, error: err.message ?? "Failed to load proposals" } }));
+    } catch (error) {
+      setState((prev) => ({
+        ...prev,
+        proposals: { ...prev.proposals, loading: false, error: resolveCatalogError(error, "Failed to load proposals") },
+      }));
     }
   }, []);
 
@@ -101,8 +176,11 @@ export function useCentralCatalogController(authKind = "unauthenticated") {
     try {
       const items = await api.fetchCatalogPlatformPolicies();
       setState((prev) => ({ ...prev, policies: { items, loading: false, error: null } }));
-    } catch (err: any) {
-      setState((prev) => ({ ...prev, policies: { ...prev.policies, loading: false, error: err.message ?? "Failed to load policies" } }));
+    } catch (error) {
+      setState((prev) => ({
+        ...prev,
+        policies: { ...prev.policies, loading: false, error: resolveCatalogError(error, "Failed to load policies") },
+      }));
     }
   }, []);
 
@@ -111,19 +189,22 @@ export function useCentralCatalogController(authKind = "unauthenticated") {
     try {
       const items = await api.fetchOperatorStoreAssortment(storeId);
       setAssortment({ items, loading: false, error: null });
-    } catch (err: any) {
-      setAssortment({ items: [], loading: false, error: err.message ?? "Failed to load assortment" });
+    } catch (error) {
+      setAssortment({
+        items: [],
+        loading: false,
+        error: resolveCatalogError(error, "Failed to load assortment"),
+      });
     }
   }, []);
 
   useEffect(() => {
-    if (isAuthed) {
-      void loadDomains();
-      void loadNodes();
-      void loadMasterProducts();
-      void loadProposals();
-      void loadPolicies();
-    }
+    if (!isAuthed) return;
+    void loadDomains();
+    void loadNodes();
+    void loadMasterProducts();
+    void loadProposals();
+    void loadPolicies();
   }, [isAuthed, loadDomains, loadNodes, loadMasterProducts, loadProposals, loadPolicies]);
 
   return {
@@ -137,65 +218,76 @@ export function useCentralCatalogController(authKind = "unauthenticated") {
     reloadPolicies: loadPolicies,
     reloadStoreAssortment: loadStoreAssortment,
 
-    // Mutations for domains
-    createDomain: async (input: Parameters<typeof api.createCatalogDomain>[0]) => {
-      const res = await api.createCatalogDomain(input);
-      void loadDomains();
-      return res;
-    },
-    updateDomain: async (domainId: string, input: Parameters<typeof api.updateCatalogDomain>[1]) => {
-      const res = await api.updateCatalogDomain(domainId, input);
-      void loadDomains();
-      return res;
+    createDomain: async (input: Parameters<typeof api.createCatalogDomain>[0]) =>
+      runMutationWithReadback(() => api.createCatalogDomain(input), loadDomains),
+
+    updateDomain: async (domainId: string, input: CatalogDomainUpdateInput) => {
+      const expectedVersion = requireCatalogVersion(state.domains.items, domainId, "domain");
+      return runMutationWithReadback(
+        () => occApi.updateCatalogDomainOCC(domainId, { ...input, expectedVersion }),
+        loadDomains,
+      );
     },
 
-    // Mutations for nodes
-    createNode: async (input: Parameters<typeof api.createCatalogNode>[0]) => {
-      const res = await api.createCatalogNode(input);
-      void loadNodes();
-      return res;
-    },
-    updateNode: async (nodeId: string, input: Parameters<typeof api.updateCatalogNode>[1]) => {
-      const res = await api.updateCatalogNode(nodeId, input);
-      void loadNodes();
-      return res;
+    createNode: async (input: Parameters<typeof api.createCatalogNode>[0]) =>
+      runMutationWithReadback(() => api.createCatalogNode(input), loadNodes),
+
+    updateNode: async (nodeId: string, input: CatalogNodeUpdateInput) => {
+      const expectedVersion = requireCatalogVersion(state.nodes.items, nodeId, "node");
+      return runMutationWithReadback(
+        () => occApi.updateCatalogNodeOCC(nodeId, { ...input, expectedVersion }),
+        loadNodes,
+      );
     },
 
-    // Mutations for master products
-    createMasterProduct: async (input: Parameters<typeof api.createMasterProduct>[0]) => {
-      const res = await api.createMasterProduct(input);
-      void loadMasterProducts();
-      return res;
-    },
-    updateMasterProduct: async (productId: string, input: Parameters<typeof api.updateMasterProduct>[1]) => {
-      const res = await api.updateMasterProduct(productId, input);
-      void loadMasterProducts();
-      return res;
+    createMasterProduct: async (input: Parameters<typeof api.createMasterProduct>[0]) =>
+      runMutationWithReadback(() => api.createMasterProduct(input), loadMasterProducts),
+
+    updateMasterProduct: async (productId: string, input: CatalogMasterProductUpdateInput) => {
+      const expectedVersion = requireCatalogVersion(state.masterProducts.items, productId, "master_product");
+      return runMutationWithReadback(
+        () => occApi.updateMasterProductOCC(productId, { ...input, expectedVersion }),
+        loadMasterProducts,
+      );
     },
 
     decideProposal: async (proposalId: string, input: Parameters<typeof api.decideProductProposal>[1]) => {
-      const res = await api.decideProductProposal(proposalId, input);
-      void loadProposals();
-      return res;
+      const expectedVersion = requireCatalogVersion(state.proposals.items, proposalId, "proposal");
+      return runMutationWithReadback(
+        () => occApi.decideProductProposalOCC(proposalId, { ...input, expectedVersion }),
+        loadProposals,
+      );
     },
+
     transitionProposal: async (proposalId: string, input: Parameters<typeof api.transitionProductProposal>[1]) => {
-      const res = await api.transitionProductProposal(proposalId, input);
-      void loadProposals();
-      return res;
+      const expectedVersion = requireCatalogVersion(state.proposals.items, proposalId, "proposal");
+      return runMutationWithReadback(
+        () => occApi.transitionProductProposalOCC(proposalId, { ...input, expectedVersion }),
+        loadProposals,
+      );
     },
 
-    // Policies
     updatePolicy: async (policyId: string, input: Parameters<typeof api.updateCatalogPlatformPolicy>[1]) => {
-      const res = await api.updateCatalogPlatformPolicy(policyId, input);
-      void loadPolicies();
-      return res;
+      const expectedVersion = requireCatalogVersion(state.policies.items, policyId, "policy");
+      return runMutationWithReadback(
+        () => occApi.updateCatalogPlatformPolicyOCC(policyId, { ...input, expectedVersion }),
+        loadPolicies,
+      );
     },
 
-    // Assortments
-    upsertAssortment: async (storeId: string, masterProductId: string, input: Parameters<typeof api.upsertOperatorStoreAssortment>[2]) => {
-      const res = await api.upsertOperatorStoreAssortment(storeId, masterProductId, input);
-      void loadStoreAssortment(storeId);
-      return res;
+    upsertAssortment: async (
+      storeId: string,
+      masterProductId: string,
+      input: Parameters<typeof api.upsertOperatorStoreAssortment>[2],
+    ) => {
+      const current = assortment.items.find((item) => item.masterProductId === masterProductId);
+      return runMutationWithReadback(
+        () => occApi.upsertOperatorStoreAssortmentOCC(storeId, masterProductId, {
+          ...input,
+          expectedVersion: current?.version,
+        }),
+        () => loadStoreAssortment(storeId),
+      );
     },
   };
 }

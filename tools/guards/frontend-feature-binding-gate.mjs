@@ -1,320 +1,148 @@
 import fs from "node:fs";
 import path from "node:path";
-import { fail, repoRoot } from "./_guard-utils.mjs";
+import Ajv from "ajv";
+import { fail, repoRoot, toPosix } from "./_guard-utils.mjs";
+import { cleanupGoRouteExtractor, extractGoRoutes, routeKey } from "./lib/go-route-extractor.mjs";
 
 const guardId = "frontend-feature-binding-gate";
 const violations = [];
+const registryRelative = "governance/guards/frontend-binding-registry.json";
+const schemaRelative = "governance/guards/frontend-binding-registry.schema.json";
+const openapiPath = "services/dsh/contracts/dsh.openapi.yaml";
+const routerPath = "services/dsh/backend/internal/http/server.go";
+const manifestPath = "services/dsh/service.manifest.ts";
+const sourceExtensions = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"];
 
-// ─── Evidence: verified by runtime-map.ts state field ────────────────────────
-// Capabilities with state="verified" in runtime-map.ts are considered proven.
-// This gate derives evidence status from the runtime-map, not raw evidence dirs.
-const RUNTIME_MAP_PATH = "services/dsh/runtime-map.ts";
-
-function loadVerifiedCapabilityIds() {
-  const content = fs.readFileSync(path.join(repoRoot, RUNTIME_MAP_PATH), "utf8");
-  const ids = new Set();
-  const regex = /capabilityId:\s*"([^"]+)"[^}]*state:\s*"verified"/gs;
-  for (const match of content.matchAll(regex)) {
-    ids.add(match[1]);
+function readJson(relativePath) {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(repoRoot, relativePath), "utf8"));
+  } catch (error) {
+    violations.push({ file: relativePath, line: 0, message: `INVALID_OR_MISSING_JSON ${error.message}` });
+    return null;
   }
-  return ids;
 }
 
-// ─── Segment definitions ────────────────────────────────────────────────────────
-// For each screen:
-//   path        – relative repo path to screen file
-//   controller  – relative repo path to shared controller/hook
-//   openapi     – exact operationId from dsh.openapi.yaml
-//   route       – exact pattern from DSH server.go
-//   capabilityId – must appear as state="verified" in runtime-map.ts
-const SEGMENTS = [
-  {
-    name: "Segment A: app-client checkout / orders / tracking",
-    screens: [
-      {
-        name: "checkout",
-        path: "services/dsh/frontend/app-client/checkout/CheckoutScreen.tsx",
-        controller: "services/dsh/frontend/shared/checkout/use-checkout-to-order-flow.tsx",
-        openapi: "createDshCheckoutIntent",
-        route: "POST /dsh/client/checkout-intents",
-        capabilityId: "dsh.client.checkout",
-      },
-      {
-        name: "orders list",
-        path: "services/dsh/frontend/app-client/orders/OrdersListScreen.tsx",
-        controller: "services/dsh/frontend/shared/orders/orders.controller-core.ts",
-        openapi: "listDshClientOrders",
-        route: "GET /dsh/client/orders",
-        capabilityId: "dsh.client.orders",
-      },
-      {
-        name: "order tracking",
-        path: "services/dsh/frontend/app-client/orders/OrderTrackingScreen.tsx",
-        controller: "services/dsh/frontend/shared/orders/orders.controller-core.ts",
-        openapi: "getDshClientOrderTracking",
-        route: "GET /dsh/client/orders/{orderId}/tracking",
-        capabilityId: "dsh.client.orders",
-      },
-    ],
-  },
-  {
-    name: "Segment B: app-partner orders / catalog / store",
-    screens: [
-      {
-        name: "orders inbox",
-        path: "services/dsh/frontend/app-partner/orders/OrdersInboxScreen.tsx",
-        controller: "services/dsh/frontend/shared/orders/orders.controller-core.ts",
-        openapi: "listDshPartnerOrders",
-        route: "GET /dsh/partner/orders",
-        capabilityId: "dsh.client.orders",
-      },
-      {
-        name: "central catalog workspace",
-        path: "services/dsh/frontend/app-partner/catalog/PartnerCatalogManagementScreen.tsx",
-        controller: "services/dsh/frontend/shared/catalog/central-catalog.api.ts",
-        openapi: "getPartnerCatalogTaxonomy",
-        route: "GET /dsh/partner/catalog/taxonomy",
-        capabilityId: "dsh.client.catalog",
-      },
-      {
-        name: "product proposal",
-        path: "services/dsh/frontend/app-partner/catalog/ProductEditScreen.tsx",
-        controller: "services/dsh/frontend/shared/catalog/central-catalog.api.ts",
-        openapi: "createPartnerProductProposal",
-        route: "POST /dsh/partner/catalog/product-proposals",
-        capabilityId: "dsh.client.catalog",
-      },
-      {
-        name: "central taxonomy browse",
-        path: "services/dsh/frontend/app-partner/catalog/CategoryManagementScreen.tsx",
-        controller: "services/dsh/frontend/shared/catalog/central-catalog.api.ts",
-        openapi: "getPartnerCatalogTaxonomy",
-        route: "GET /dsh/partner/catalog/taxonomy",
-        capabilityId: "dsh.client.catalog",
-      },
-      {
-        name: "store profile settings",
-        path: "services/dsh/frontend/app-partner/store/StoreProfileScreen.tsx",
-        controller: "services/dsh/frontend/shared/store/store-admin.controller-core.ts",
-        openapi: "updatePartnerStoreSettings",
-        route: "PATCH /dsh/partner/stores/{storeId}/settings",
-        capabilityId: "dsh.store.discovery",
-      },
-    ],
-  },
-  {
-    name: "Segment C: app-captain assignment / pickup / dropoff / POD",
-    screens: [
-      {
-        name: "assignments list",
-        path: "services/dsh/frontend/app-captain/orders/DshCaptainOrdersScreen.tsx",
-        controller: "services/dsh/frontend/shared/orders/orders.controller-core.ts",
-        openapi: "listDshCaptainAssignments",
-        route: "GET /dsh/captain/dispatch/assignments",
-        capabilityId: "dsh.client.dispatch",
-      },
-      {
-        name: "delivery map",
-        path: "services/dsh/frontend/app-captain/orders/DshCaptainMapScreen.tsx",
-        controller: "services/dsh/frontend/shared/delivery/delivery.view-model.ts",
-        openapi: "updateDshDeliveryStatus",
-        route: "POST /dsh/captain/dispatch/assignments/{assignmentId}/status",
-        capabilityId: "dsh.client.dispatch",
-      },
-      {
-        name: "pickup dropoff",
-        path: "services/dsh/frontend/app-captain/orders/DshCaptainPickupDropoffScreen.tsx",
-        controller: "services/dsh/frontend/shared/delivery/delivery.view-model.ts",
-        openapi: "updateDshDeliveryStatus",
-        route: "POST /dsh/captain/dispatch/assignments/{assignmentId}/status",
-        capabilityId: "dsh.client.dispatch",
-      },
-      {
-        name: "POD submission",
-        path: "services/dsh/frontend/app-captain/orders/DshCaptainPoDSubmissionScreen.tsx",
-        controller: "services/dsh/frontend/shared/delivery/delivery.view-model.ts",
-        openapi: "submitDshPoD",
-        route: "POST /dsh/captain/dispatch/assignments/{assignmentId}/pod",
-        capabilityId: "dsh.client.dispatch",
-      },
-    ],
-  },
-  {
-    name: "Segment D: app-field onboarding / media / visits",
-    screens: [
-      {
-        name: "partner onboarding",
-        path: "services/dsh/frontend/app-field/onboarding/DshFieldOnboardingScreen.tsx",
-        controller: "services/dsh/frontend/shared/field-onboarding/use-field-partner-onboarding-controller.tsx",
-        openapi: "submitFieldPartnerDraft",
-        route: "POST /dsh/field/partners/{partnerId}/submit",
-        capabilityId: "dsh.field.readiness",
-      },
-      {
-        name: "store verification",
-        path: "services/dsh/frontend/app-field/stores/DshFieldStoreVerificationScreen.tsx",
-        controller: "services/dsh/frontend/shared/field-readiness/field-readiness.controller-core.ts",
-        openapi: "submitFieldStoreVerification",
-        route: "POST /dsh/field/stores/{storeId}/verifications",
-        capabilityId: "dsh.field.readiness",
-      },
-      {
-        name: "media uploads",
-        path: "services/dsh/frontend/app-field/escalation/DshFieldVisitScreen.tsx",
-        controller: "services/dsh/frontend/shared/field-readiness/field-readiness.controller-core.ts",
-        openapi: "uploadFieldMedia",
-        route: "POST /dsh/field/media/uploads",
-        capabilityId: "dsh.field.readiness",
-      },
-      {
-        name: "visits history",
-        path: "services/dsh/frontend/app-field/stores/DshFieldStoresHistoryScreen.tsx",
-        controller: "services/dsh/frontend/shared/field-readiness/field-readiness.controller-core.ts",
-        openapi: "listDshFieldVisits",
-        route: "GET /dsh/field/stores/{storeId}/visits",
-        capabilityId: "dsh.field.readiness",
-      },
-    ],
-  },
-  {
-    name: "Segment E: control-panel operations / support / analytics",
-    screens: [
-      {
-        name: "operations hub",
-        path: "services/dsh/frontend/control-panel/operations/OperationsHubScreen.tsx",
-        controller: "services/dsh/frontend/shared/operations/use-operations-controller.tsx",
-        openapi: "listDshOperatorOrders",
-        route: "GET /dsh/operator/orders",
-        capabilityId: "dsh.client.orders",
-      },
-      {
-        name: "order queue",
-        path: "services/dsh/frontend/control-panel/operations/LiveOrdersScreen.tsx",
-        controller: "services/dsh/frontend/shared/operations/use-operations-controller.tsx",
-        openapi: "listDshOperatorOrders",
-        route: "GET /dsh/operator/orders",
-        capabilityId: "dsh.client.orders",
-      },
-      {
-        name: "cart activity",
-        path: "services/dsh/frontend/control-panel/operations/CartActivityScreen.tsx",
-        controller: "services/dsh/frontend/shared/operations/use-operations-controller.tsx",
-        openapi: "listOperatorCarts",
-        route: "GET /dsh/operator/carts",
-        capabilityId: "dsh.client.cart",
-      },
-      {
-        name: "checkout activity",
-        path: "services/dsh/frontend/control-panel/operations/CheckoutActivityScreen.tsx",
-        controller: "services/dsh/frontend/shared/operations/use-operations-controller.tsx",
-        openapi: "listOperatorCheckoutIntents",
-        route: "GET /dsh/operator/checkout-intents",
-        capabilityId: "dsh.client.checkout",
-      },
-      {
-        name: "analytics dashboard",
-        path: "services/dsh/frontend/control-panel/analytics/AnalyticsDashboardScreen.tsx",
-        controller: "services/dsh/frontend/shared/analytics/use-analytics-controller.tsx",
-        openapi: "getDshPlatformKpis",
-        route: "GET /dsh/operator/analytics/platform",
-        capabilityId: "dsh.operator.analytics",
-      },
-      {
-        name: "catalog approvals",
-        path: "services/dsh/frontend/control-panel/catalogs/CatalogApprovalScreen.tsx",
-        controller: "services/dsh/frontend/shared/partner/use-partners-controller.tsx",
-        openapi: "listDshCatalogApprovals",
-        route: "GET /dsh/catalog-approvals",
-        capabilityId: "dsh.admin",
-      },
-      {
-        name: "partners activation list",
-        path: "services/dsh/frontend/control-panel/partners/PartnerListScreen.tsx",
-        controller: "services/dsh/frontend/shared/partner/use-partners-controller.tsx",
-        openapi: "listDshPartners",
-        route: "GET /dsh/operator/partners",
-        capabilityId: "dsh.partner.activation",
-      },
-      {
-        name: "support tickets hub",
-        path: "services/dsh/frontend/control-panel/support/SupportDashboardScreen.tsx",
-        controller: "services/dsh/frontend/shared/support/use-support-controller.tsx",
-        openapi: "listDshOperatorTickets",
-        route: "GET /dsh/operator/support/tickets",
-        capabilityId: "dsh.support.hub",
-      },
-      {
-        name: "notifications config",
-        path: "services/dsh/frontend/control-panel/support/PlatformNotificationConfigScreen.tsx",
-        controller: "services/dsh/frontend/shared/support/use-support-controller.tsx",
-        openapi: "listDshPlatformNotificationConfig",
-        route: "GET /dsh/operator/notifications/config",
-        capabilityId: "dsh.notifications",
-      },
-    ],
-  },
-];
-
-// ─── Load sources of truth ────────────────────────────────────────────────────
-const openapiContent = fs.readFileSync(
-  path.join(repoRoot, "services/dsh/contracts/dsh.openapi.yaml"),
-  "utf8"
-);
-const routerContent = fs.readFileSync(
-  path.join(repoRoot, "services/dsh/backend/internal/http/server.go"),
-  "utf8"
-);
-const verifiedCapabilities = loadVerifiedCapabilityIds();
-
-console.log("=== FRONTEND FEATURE BINDING GATE ===");
-console.log(`Verified capability count: ${verifiedCapabilities.size}`);
-
-let passedSegments = 0;
-const totalSegments = SEGMENTS.length;
-
-for (const segment of SEGMENTS) {
-  console.log(`\n${segment.name}`);
-  let segmentOk = true;
-
-  for (const screen of segment.screens) {
-    const screenExists = fs.existsSync(path.join(repoRoot, screen.path));
-    const controllerExists = fs.existsSync(path.join(repoRoot, screen.controller));
-    const openapiBound = openapiContent.includes(screen.openapi);
-    const routeBound = routerContent.includes(screen.route);
-    const runtimeVerified = verifiedCapabilities.has(screen.capabilityId);
-
-    let status = "BOUND_ACTIVE";
-    let reason = "";
-
-    if (!screenExists) {
-      status = "SCREEN_MISSING";
-      reason = `Screen file not found: ${screen.path}`;
-    } else if (!controllerExists) {
-      status = "CONTROLLER_MISSING";
-      reason = `Controller not found: ${screen.controller}`;
-    } else if (!openapiBound) {
-      status = "OPENAPI_MISMATCH";
-      reason = `operationId not in spec: ${screen.openapi}`;
-    } else if (!routeBound) {
-      status = "ROUTE_MISSING";
-      reason = `Route not in server.go: ${screen.route}`;
-    } else if (!runtimeVerified) {
-      status = "CAPABILITY_NOT_VERIFIED";
-      reason = `Capability not runtime-verified: ${screen.capabilityId}`;
-    }
-
-    const icon = status === "BOUND_ACTIVE" ? "✓" : "✗";
-    console.log(`  ${icon} [${status}] ${screen.name}`);
-
-    if (status !== "BOUND_ACTIVE") {
-      segmentOk = false;
-      violations.push({ file: screen.path, message: `${status}: ${reason}` });
-    }
-  }
-
-  if (segmentOk) passedSegments++;
+function readText(relativePath) {
+  const fullPath = path.join(repoRoot, relativePath);
+  if (!fs.existsSync(fullPath)) return "";
+  return fs.readFileSync(fullPath, "utf8");
 }
 
-console.log(`\nSegments Passed: ${passedSegments}/${totalSegments}`);
+function moduleSpecifiers(content) {
+  const specifiers = [];
+  const staticPattern = /\b(?:import|export)\s+(?:type\s+)?(?:[^;]*?\s+from\s+)?["']([^"']+)["']/g;
+  const dynamicPattern = /\bimport\s*\(\s*["']([^"']+)["']\s*\)/g;
+  for (const pattern of [staticPattern, dynamicPattern]) {
+    for (const match of content.matchAll(pattern)) specifiers.push(match[1]);
+  }
+  return specifiers;
+}
 
+function resolveRelativeModule(fromRelative, specifier) {
+  if (!specifier.startsWith(".")) return null;
+  const base = path.resolve(repoRoot, path.dirname(fromRelative), specifier);
+  const candidates = [
+    base,
+    ...sourceExtensions.map((extension) => `${base}${extension}`),
+    ...sourceExtensions.map((extension) => path.join(base, `index${extension}`)),
+  ];
+  for (const candidate of candidates) {
+    if (!candidate.startsWith(`${repoRoot}${path.sep}`)) continue;
+    if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
+      return toPosix(path.relative(repoRoot, candidate));
+    }
+  }
+  return null;
+}
+
+function hasDependencyPath(startRelative, targetRelative) {
+  const target = toPosix(targetRelative);
+  const queue = [toPosix(startRelative)];
+  const visited = new Set();
+
+  while (queue.length) {
+    const current = queue.shift();
+    if (!current || visited.has(current)) continue;
+    if (current === target) return true;
+    visited.add(current);
+
+    const content = readText(current);
+    for (const specifier of moduleSpecifiers(content)) {
+      const resolved = resolveRelativeModule(current, specifier);
+      if (resolved && !visited.has(resolved)) queue.push(resolved);
+    }
+  }
+  return false;
+}
+
+const registry = readJson(registryRelative);
+const schema = readJson(schemaRelative);
+if (registry && schema) {
+  const validate = new Ajv({ allErrors: true, strict: false }).compile(schema);
+  if (!validate(registry)) {
+    for (const error of validate.errors ?? []) {
+      violations.push({ file: registryRelative, line: 0, message: `SCHEMA_VIOLATION ${error.instancePath} ${error.message}` });
+    }
+  }
+}
+
+const openapi = readText(openapiPath);
+const manifest = readText(manifestPath);
+let routeSet;
+try {
+  routeSet = new Set(extractGoRoutes(routerPath).map(routeKey));
+} catch (error) {
+  violations.push({ file: routerPath, line: 0, message: `GO_AST_ROUTE_EXTRACTION_FAILED ${error.message}` });
+}
+
+const seenIds = new Set();
+const seenScreens = new Set();
+const expectedPrefix = {
+  "app-client": "services/dsh/frontend/app-client/",
+  "app-partner": "services/dsh/frontend/app-partner/",
+  "app-captain": "services/dsh/frontend/app-captain/",
+  "app-field": "services/dsh/frontend/app-field/",
+  "control-panel": "services/dsh/frontend/control-panel/",
+};
+
+try {
+  for (const entry of registry?.entries ?? []) {
+    if (seenIds.has(entry.id)) violations.push({ file: registryRelative, line: 0, message: `DUPLICATE_BINDING_ID ${entry.id}` });
+    if (seenScreens.has(entry.screen)) violations.push({ file: registryRelative, line: 0, message: `DUPLICATE_SCREEN_BINDING ${entry.screen}` });
+    seenIds.add(entry.id);
+    seenScreens.add(entry.screen);
+
+    if (!entry.screen.startsWith(expectedPrefix[entry.surface] ?? "<invalid>/")) {
+      violations.push({ file: registryRelative, line: 0, message: `SURFACE_SCREEN_PATH_MISMATCH ${entry.id}` });
+    }
+
+    const screenExists = fs.existsSync(path.join(repoRoot, entry.screen));
+    const controllerExists = fs.existsSync(path.join(repoRoot, entry.controller));
+    if (!screenExists) violations.push({ file: entry.screen, line: 0, message: `SCREEN_MISSING ${entry.id}` });
+    if (!controllerExists) violations.push({ file: entry.controller, line: 0, message: `CONTROLLER_MISSING ${entry.id}` });
+    if (screenExists && controllerExists && !hasDependencyPath(entry.screen, entry.controller)) {
+      violations.push({ file: entry.screen, line: 0, message: `SCREEN_CONTROLLER_DEPENDENCY_UNREACHABLE ${entry.id} -> ${entry.controller}` });
+    }
+
+    const escapedOperationId = entry.operationId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    if (!new RegExp(`operationId:\\s*${escapedOperationId}\\b`).test(openapi)) {
+      violations.push({ file: openapiPath, line: 0, message: `OPENAPI_OPERATION_MISSING ${entry.id} -> ${entry.operationId}` });
+    }
+    if (routeSet && !routeSet.has(entry.route)) {
+      violations.push({ file: routerPath, line: 0, message: `BACKEND_ROUTE_MISSING ${entry.id} -> ${entry.route}` });
+    }
+    if (!manifest.includes(entry.capabilityId)) {
+      violations.push({ file: manifestPath, line: 0, message: `SERVICE_MANIFEST_CAPABILITY_MISSING ${entry.id} -> ${entry.capabilityId}` });
+    }
+  }
+} finally {
+  cleanupGoRouteExtractor();
+}
+
+if ((registry?.entries ?? []).length === 0) {
+  violations.push({ file: registryRelative, line: 0, message: "EMPTY_FRONTEND_BINDING_REGISTRY" });
+}
+
+console.log(`frontend-feature-binding-gate: checked ${(registry?.entries ?? []).length} STATIC_BINDING entries`);
+console.log("frontend-feature-binding-gate: proves static dependency and contract reachability only; runtime requires same-commit runtime evidence");
 fail(guardId, violations);

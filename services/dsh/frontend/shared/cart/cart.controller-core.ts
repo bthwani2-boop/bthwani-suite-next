@@ -1,4 +1,9 @@
-import type { DshCart, DshCartState, DshServiceabilityResult, DshServiceabilityState } from "./cart.types";
+import type {
+  DshCart,
+  DshCartState,
+  DshServiceabilityResult,
+  DshServiceabilityState,
+} from "./cart.types";
 import {
   emptyState,
   errorState,
@@ -28,8 +33,9 @@ export function resolveCartLoadError(error: { kind?: string; status?: number }):
 }
 
 export function resolveServiceabilityState(result: DshServiceabilityResult): DshServiceabilityState {
-  if (result.serviceable) return serviceabilityServiceableState();
-  return serviceabilityBlockedState(result.code, result.reason);
+  const availableModes = result.availableModes ?? [];
+  if (result.serviceable) return serviceabilityServiceableState(availableModes);
+  return serviceabilityBlockedState(result.code, availableModes, result.reason);
 }
 
 export function resolveServiceabilityError(): DshServiceabilityState {

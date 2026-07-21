@@ -1,45 +1,38 @@
-import React, { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import React, { useState } from "react";
+import { Pressable, StyleSheet, View } from "react-native";
 import {
   Icon,
   MobileScrollView,
-  Surface,
   Text,
   TopBar,
   spacing,
   SegmentedControl,
   colorRoles,
   brandScale,
-} from '@bthwani/ui-kit';
+} from "@bthwani/ui-kit";
 
-export type BThwaniAppearanceMode = 'lightPremium' | 'darkGlass';
+export type BThwaniAppearanceMode = "lightPremium" | "darkGlass";
 
 export type MySpaceScreenProps = {
   appearanceMode?: BThwaniAppearanceMode;
   onAppearanceModeChange?: (mode: BThwaniAppearanceMode) => void;
   onOpenOrders?: () => void;
-  onOpenWallet?: () => void;
-  onOpenBenefits?: (section?: 'loyalty' | 'subscription' | 'offers') => void;
   onOpenAddresses?: () => void;
   onOpenIdentity?: () => void;
-  onOpenAppearance?: () => void;
+  onOpenBenefits?: () => void;
   onOpenPreferences?: () => void;
   onOpenSupport?: () => void;
-  onBack?: () => void;
 };
 
 type MySpaceTab =
-  | 'orders'
-  | 'wallet'
-  | 'loyalty'
-  | 'subscription'
-  | 'offers'
-  | 'addresses'
-  | 'identity'
-  | 'appearance'
-  | 'language'
-  | 'preferences'
-  | 'support';
+  | "orders"
+  | "addresses"
+  | "identity"
+  | "benefits"
+  | "appearance"
+  | "language"
+  | "preferences"
+  | "support";
 
 type TabConfig = {
   id: MySpaceTab;
@@ -49,17 +42,14 @@ type TabConfig = {
 };
 
 const TABS: TabConfig[] = [
-  { id: 'orders', label: 'طلباتي', summary: 'الطلب والتاريخ والتتبع', iconName: 'bag-outline' },
-  { id: 'wallet', label: 'المحفظة', summary: 'الرصيد، الاسترداد، وطرق الدفع', iconName: 'wallet-outline' },
-  { id: 'loyalty', label: 'النقاط والمكافآت', summary: 'الرصيد، المستوى، وأقرب ثلاث مكافآت', iconName: 'star-outline' },
-  { id: 'subscription', label: 'الاشتراك', summary: 'الخطة الحالية والتبديل عند الحاجة فقط', iconName: 'card-outline' },
-  { id: 'offers', label: 'العروض والكوبونات', summary: 'ثلاث فرص قابلة للاستخدام بدل قائمة طويلة', iconName: 'pricetag-outline' },
-  { id: 'addresses', label: 'العناوين والموقع', summary: 'إدارة العناوين وموقع التوصيل', iconName: 'location-outline' },
-  { id: 'identity', label: 'الملف الشخصي', summary: 'البيانات الشخصية والأمان', iconName: 'person-outline' },
-  { id: 'appearance', label: 'المظهر', summary: 'فاتح أبيض أو داكن زجاجي', iconName: 'color-palette-outline' },
-  { id: 'language', label: 'اللغة', summary: 'العربية أو الإنجليزية', iconName: 'globe-outline' },
-  { id: 'preferences', label: 'تفضيلات التوصيل', summary: 'إعدادات خاصة بالتسليم والاستبدال', iconName: 'options-outline' },
-  { id: 'support', label: 'الدعم والمساعدة', summary: 'تذاكر الدعم ومتابعة المشاكل', iconName: 'help-buoy-outline' },
+  { id: "orders", label: "طلباتي", summary: "الطلب والتاريخ والتتبع", iconName: "bag-outline" },
+  { id: "addresses", label: "العناوين والموقع", summary: "إدارة العناوين وموقع التوصيل", iconName: "location-outline" },
+  { id: "identity", label: "الملف الشخصي", summary: "البيانات الشخصية والأمان", iconName: "person-outline" },
+  { id: "benefits", label: "المزايا والولاء", summary: "النقاط والاشتراكات والعروض المعتمدة", iconName: "gift-outline" },
+  { id: "appearance", label: "المظهر", summary: "فاتح أبيض أو داكن زجاجي", iconName: "color-palette-outline" },
+  { id: "language", label: "اللغة", summary: "العربية أو الإنجليزية", iconName: "globe-outline" },
+  { id: "preferences", label: "تفضيلات التوصيل", summary: "إعدادات خاصة بالتسليم والاستبدال", iconName: "options-outline" },
+  { id: "support", label: "الدعم والمساعدة", summary: "تذاكر الدعم ومتابعة المشاكل", iconName: "help-buoy-outline" },
 ];
 
 function MySpaceRow({
@@ -77,7 +67,7 @@ function MySpaceRow({
 }) {
   return (
     <Pressable
-      disabled={!!actionElement}
+      disabled={Boolean(actionElement)}
       onPress={onPress}
       style={({ pressed }) => [styles.row, pressed && !actionElement && styles.rowPressed]}
     >
@@ -98,33 +88,26 @@ function MySpaceRow({
 }
 
 export function MySpaceScreen({
-  appearanceMode = 'lightPremium',
+  appearanceMode = "lightPremium",
   onAppearanceModeChange,
   onOpenOrders,
-  onOpenWallet,
-  onOpenBenefits,
   onOpenAddresses,
   onOpenIdentity,
-  onOpenAppearance,
+  onOpenBenefits,
   onOpenPreferences,
   onOpenSupport,
-  onBack,
 }: MySpaceScreenProps) {
   const [lang, setLang] = useState<string>("ar");
 
   const handleRowPress = (id: MySpaceTab) => {
     switch (id) {
-      case 'orders':       return onOpenOrders?.();
-      case 'wallet':       return onOpenWallet?.();
-      case 'loyalty':      return onOpenBenefits?.('loyalty');
-      case 'subscription': return onOpenBenefits?.('subscription');
-      case 'offers':       return onOpenBenefits?.('offers');
-      case 'addresses':    return onOpenAddresses?.();
-      case 'identity':     return onOpenIdentity?.();
-      case 'appearance':   return onOpenAppearance?.();
-      case 'preferences':  return onOpenPreferences?.();
-      case 'support':      return onOpenSupport?.();
-      default:             break;
+      case "orders": return onOpenOrders?.();
+      case "addresses": return onOpenAddresses?.();
+      case "identity": return onOpenIdentity?.();
+      case "benefits": return onOpenBenefits?.();
+      case "preferences": return onOpenPreferences?.();
+      case "support": return onOpenSupport?.();
+      default: return undefined;
     }
   };
 
@@ -136,25 +119,25 @@ export function MySpaceScreen({
         {TABS.map((tab) => {
           let actionElement: React.ReactNode = undefined;
 
-          if (tab.id === 'appearance') {
+          if (tab.id === "appearance") {
             actionElement = (
               <SegmentedControl
                 items={[
-                  { value: 'lightPremium', label: 'فاتح' },
-                  { value: 'darkGlass', label: 'داكن' },
+                  { value: "lightPremium", label: "فاتح" },
+                  { value: "darkGlass", label: "داكن" },
                 ]}
-                value={appearanceMode === 'darkGlass' ? 'darkGlass' : 'lightPremium'}
+                value={appearanceMode === "darkGlass" ? "darkGlass" : "lightPremium"}
                 onValueChange={(nextValue) => {
                   onAppearanceModeChange?.(nextValue as BThwaniAppearanceMode);
                 }}
               />
             );
-          } else if (tab.id === 'language') {
+          } else if (tab.id === "language") {
             actionElement = (
               <SegmentedControl
                 items={[
-                  { value: 'ar', label: 'عربي' },
-                  { value: 'en', label: 'EN' },
+                  { value: "ar", label: "عربي" },
+                  { value: "en", label: "EN" },
                 ]}
                 value={lang}
                 onValueChange={setLang}
@@ -186,16 +169,9 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: spacing[12],
   },
-  listCard: {
-    backgroundColor: colorRoles.surfaceBase,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colorRoles.borderSubtle,
-    overflow: 'hidden',
-  },
   row: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
+    flexDirection: "row-reverse",
+    alignItems: "center",
     paddingHorizontal: spacing[4],
     paddingVertical: spacing[3],
     borderBottomWidth: 1,
@@ -212,8 +188,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colorRoles.borderSubtle,
     backgroundColor: brandScale.action[50],
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   rowText: {
     flex: 1,
@@ -221,20 +197,18 @@ const styles = StyleSheet.create({
   },
   rowTitle: {
     color: colorRoles.textPrimary,
-    textAlign: 'right',
+    textAlign: "right",
   },
   rowSummary: {
-    textAlign: 'right',
+    textAlign: "right",
   },
   actionWrapper: {
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   chevron: {
     fontSize: 20,
-    color: colorRoles.surfaceBase,
+    color: colorRoles.brandStructure,
     transform: [{ scaleX: -1 }],
   },
 });
-
-// export default MySpaceScreen; // Unused default export

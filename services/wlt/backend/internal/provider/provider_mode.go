@@ -33,8 +33,8 @@ func LoadConfig() (Config, error) {
 		return Config{}, fmt.Errorf("unsupported WLT_FINANCIAL_PROVIDER_MODE: %s", mode)
 	}
 
-	if mode == ModeProduction && os.Getenv("WLT_ALLOW_PRODUCTION_PROVIDER") != "true" {
-		return Config{}, fmt.Errorf("production financial provider mode requires WLT_ALLOW_PRODUCTION_PROVIDER=true")
+	if mode == ModeProduction {
+		return Config{}, fmt.Errorf("%w: WLT_FINANCIAL_PROVIDER_MODE=production is blocked until a real provider adapter, secret reference, inquiry, webhook verification, and reconciliation are implemented", ErrProductionProviderUnavailable)
 	}
 
 	return Config{Mode: mode, BaseURL: baseURL}, nil
@@ -45,7 +45,7 @@ func NewPaymentProvider(config Config) (PaymentProvider, error) {
 	case ModeMock, ModeSandbox:
 		return NewClient(config), nil
 	case ModeProduction:
-		return NewProductionPaymentAdapter(), nil
+		return nil, fmt.Errorf("%w: production provider construction is disabled", ErrProductionProviderUnavailable)
 	default:
 		return nil, fmt.Errorf("unsupported provider mode: %s", config.Mode)
 	}

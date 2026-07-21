@@ -146,6 +146,172 @@ func (s *protectedStoreServer) handlePushDispatchLocation(w http.ResponseWriter,
 	s.writeDispatchResult(w, http.StatusOK, assignment, err)
 }
 
+// POST /dsh/captain/dispatch/assignments/{assignmentId}/exceptions
+func (s *protectedStoreServer) handleReportDeliveryException(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "captain")
+	if !ok {
+		return
+	}
+	var body struct {
+		ReasonCode    dispatch.DeliveryExceptionReasonCode `json:"reasonCode"`
+		Note          string                               `json:"note"`
+		CorrelationID string                               `json:"correlationId"`
+		Latitude      *float64                             `json:"latitude"`
+		Longitude     *float64                             `json:"longitude"`
+	}
+	if !decodeProtectedJSON(w, r, &body) {
+		return
+	}
+	item, err := dispatch.ReportDeliveryException(s.db, r.PathValue("assignmentId"), actor.ID, dispatch.ReportDeliveryExceptionInput{
+		ReasonCode: body.ReasonCode, Note: body.Note,
+		CorrelationID: operationalCorrelationID(r, body.CorrelationID),
+		Latitude:      body.Latitude, Longitude: body.Longitude,
+	})
+	if err != nil {
+		writeDeliveryExceptionError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusCreated, map[string]any{"exception": marshalDeliveryException(item)})
+}
+
+// GET /dsh/captain/dispatch/assignments/{assignmentId}/exceptions
+func (s *protectedStoreServer) handleGetCaptainDeliveryException(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "captain")
+	if !ok {
+		return
+	}
+	item, err := dispatch.GetCaptainOpenDeliveryException(s.db, r.PathValue("assignmentId"), actor.ID)
+	if err != nil {
+		writeDeliveryExceptionError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"exception": marshalDeliveryException(item)})
+}
+
+// GET /dsh/operator/delivery-exceptions
+func (s *protectedStoreServer) handleListOperatorDeliveryExceptions(w http.ResponseWriter, r *http.Request) {
+	_, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead, "operator")
+	if !ok {
+		return
+	}
+	items, err := dispatch.ListOperatorDeliveryExceptions(s.db, dispatch.DeliveryExceptionStatus(r.URL.Query().Get("status")), 100)
+	if err != nil {
+		writeDeliveryExceptionError(w, err)
+		return
+	}
+	out := make([]map[string]any, 0, len(items))
+	for i := range items {
+		out = append(out, marshalDeliveryException(&items[i]))
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"exceptions": out})
+}
+
+func writeDeliveryExceptionError(w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, dispatch.ErrNotFound):
+		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "delivery exception not found")
+	case errors.Is(err, dispatch.ErrConflict):
+		store.SendError(w, http.StatusConflict, "DELIVERY_EXCEPTION_CONFLICT", err.Error())
+	case errors.Is(err, dispatch.ErrInvalid):
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+	default:
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "delivery exception operation failed")
+	}
+}
+
+func marshalDeliveryException(item *dispatch.DeliveryException) map[string]any {
+	return map[string]any{
+		"id": item.ID, "tenantId": item.TenantID, "assignmentId": item.AssignmentID,
+		"orderId": item.OrderID, "captainId": item.CaptainID,
+		"reasonCode": string(item.ReasonCode), "note": item.Note,
+		"deliveryStatusAtReport": string(item.DeliveryStatusAtReport),
+		"severity":               string(item.Severity), "status": string(item.Status),
+		"correlationId":    item.CorrelationID,
+		"reportedLatitude": item.ReportedLatitude, "reportedLongitude": item.ReportedLongitude,
+		"reportedAt":            item.ReportedAt,
+		"acknowledgedAt":        item.AcknowledgedAt,
+		"acknowledgedByActorId": item.AcknowledgedByActorID,
+		"resolvedAt":            item.ResolvedAt, "resolvedByActorId": item.ResolvedByActorID,
+		"resolutionAction": item.ResolutionAction, "resolutionNote": item.ResolutionNote,
+		"replacementAssignmentId": item.ReplacementAssignmentID,
+		"replacementCaptainId":    item.ReplacementCaptainID,
+		"returnStartedAt":         item.ReturnStartedAt,
+		"returnArrivedAt":         item.ReturnArrivedAt,
+		"returnedAt":              item.ReturnedAt,
+		"returnAcceptedByActorId": item.ReturnAcceptedByActorID,
+		"version":                 item.Version, "createdAt": item.CreatedAt, "updatedAt": item.UpdatedAt,
+	}
+}
+
+// POST /dsh/operator/delivery-exceptions/{exceptionId}/acknowledge
+func (s *protectedStoreServer) handleAcknowledgeDeliveryException(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage, "operator")
+	if !ok {
+		return
+	}
+	var body struct {
+		ExpectedVersion int `json:"expectedVersion"`
+	}
+	if !decodeProtectedJSON(w, r, &body) {
+		return
+	}
+	item, err := dispatch.AcknowledgeDeliveryException(s.db, r.PathValue("exceptionId"), body.ExpectedVersion, actor.ID)
+	if err != nil {
+		writeDeliveryExceptionError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"exception": marshalDeliveryException(item)})
+}
+
+// POST /dsh/operator/delivery-exceptions/{exceptionId}/resolve
+func (s *protectedStoreServer) handleResolveDeliveryException(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage, "operator")
+	if !ok {
+		return
+	}
+	var body struct {
+		ExpectedVersion int    `json:"expectedVersion"`
+		Action          string `json:"action"`
+		Note            string `json:"note"`
+		NewCaptainID    string `json:"newCaptainId"`
+	}
+	if !decodeProtectedJSON(w, r, &body) {
+		return
+	}
+	var item *dispatch.DeliveryException
+	var err error
+	switch body.Action {
+	case "retry_same_captain":
+		item, err = dispatch.ResolveDeliveryExceptionRetrySameCaptain(s.db, r.PathValue("exceptionId"), body.ExpectedVersion, body.Note, actor.ID)
+	case "reassign_captain":
+		item, err = dispatch.ResolveDeliveryExceptionReassignCaptain(s.db, r.PathValue("exceptionId"), body.ExpectedVersion, body.NewCaptainID, body.Note, actor.ID)
+	case "return_to_store":
+		item, err = dispatch.ResolveDeliveryExceptionReturnToStore(s.db, r.PathValue("exceptionId"), body.ExpectedVersion, body.Note, actor.ID)
+	default:
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "unsupported delivery exception resolution action")
+		return
+	}
+	if err != nil {
+		writeDeliveryExceptionError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"exception": marshalDeliveryException(item)})
+}
+
+// POST /dsh/captain/dispatch/assignments/{assignmentId}/return-to-store/arrive
+func (s *protectedStoreServer) handleArriveReturnToStore(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "captain")
+	if !ok {
+		return
+	}
+	item, err := dispatch.CaptainArriveReturnToStore(s.db, r.PathValue("assignmentId"), actor.ID)
+	if err != nil {
+		writeDeliveryExceptionError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"exception": marshalDeliveryException(item)})
+}
+
 // GET /dsh/client/orders/{orderId}/tracking
 func (s *protectedStoreServer) handleGetClientTracking(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "client")

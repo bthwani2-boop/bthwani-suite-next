@@ -5,7 +5,7 @@
 import React from 'react';
 import type { CompactOrderChatMessage, CaptainAppMode } from './captain.contract';
 import type { StoreCourierStage, ActiveOrderPhase } from './delivery.contract';
-import { resolveDshRuntimeOrderId, useCaptainOrderRuntime } from './use-captain-order-runtime';
+import { useCaptainOrderRuntime, type CaptainDeliveryExceptionDraft } from './use-captain-order-runtime';
 import { DSH_CAPTAIN_CONTRACT_CAPABILITIES } from '../orders/dsh-order-lifecycle-client';
 
 export type DeliveryActionsDeps = {
@@ -18,8 +18,6 @@ export type DeliveryActionsDeps = {
   setRoute: (r: any) => void;
   resetOrderState: () => void;
   refreshInbox: () => void;
-
-  // Lifecycle setters/states
   inboxState: string;
   setInboxState: (s: any) => void;
   setStoreCourierStage: (s: any) => void;
@@ -59,57 +57,52 @@ export function useCaptainDeliveryActions(deps: DeliveryActionsDeps) {
   const captainOrderRuntime = useCaptainOrderRuntime();
 
   const handleAcceptTask = React.useCallback(async (assignmentId: string) => {
-    if (!captainRuntimeId) return void setInboxState('error');
+    if (!captainRuntimeId || !assignmentId) return void setInboxState('error');
     try {
       setInboxState('offer-accepting');
-      await captainOrderRuntime.acceptTask(resolveDshRuntimeOrderId(assignmentId), captainRuntimeId);
-      setInboxState('offer-accepted');
+      await captainOrderRuntime.acceptTask(assignmentId, captainRuntimeId);
       setActiveAssignmentId(assignmentId);
       resetOrderState();
       if (captainAppMode !== 'store_courier_mode') setStoreCourierStage('ready_for_pickup' as StoreCourierStage);
+      await Promise.resolve(refreshInbox());
+      setInboxState('offer-accepted');
       setRoute('detail');
-      setInboxState('ready');
-      refreshInbox();
     } catch (err) {
-      console.error('[captain:accept-task]', err);
+      console.error('[captain:accept-assignment]', err);
       setInboxState('error');
     }
   }, [captainOrderRuntime, captainRuntimeId, captainAppMode, setActiveAssignmentId, resetOrderState, refreshInbox, setStoreCourierStage, setRoute, setInboxState]);
 
   const handleDeclineConfirm = React.useCallback(async (assignmentId: string, reason: string) => {
-    if (!captainRuntimeId) return void setDeclineSheetState('error');
+    if (!captainRuntimeId || !assignmentId || !reason.trim()) return void setDeclineSheetState('error');
     try {
       setDeclineSheetState('loading');
-      await captainOrderRuntime.declineTask(resolveDshRuntimeOrderId(assignmentId), captainRuntimeId, reason);
+      await captainOrderRuntime.declineTask(assignmentId, captainRuntimeId, reason.trim());
+      await Promise.resolve(refreshInbox());
       setDeclineSheetState('success');
-      refreshInbox();
-      setTimeout(() => {
-        setIsDeclineSheetVisible(false);
-        setDeclineSheetState('ready');
-        setRoute('inbox');
-      }, 1000);
+      setIsDeclineSheetVisible(false);
+      setDeclineSheetState('ready');
+      setRoute('inbox');
     } catch (err) {
-      console.error('[captain:decline-task]', err);
+      console.error('[captain:decline-assignment]', err);
       setDeclineSheetState('error');
     }
   }, [captainOrderRuntime, captainRuntimeId, refreshInbox, setDeclineSheetState, setIsDeclineSheetVisible, setRoute]);
 
   const confirmPickup = React.useCallback(async () => {
-    if (!captainRuntimeId) return void setPickupSheetState('error');
+    if (!captainRuntimeId || !activeAssignmentId) return void setPickupSheetState('error');
     try {
       setPickupSheetState('loading');
-      await captainOrderRuntime.confirmPickup(resolveDshRuntimeOrderId(activeAssignmentId), captainRuntimeId);
+      await captainOrderRuntime.confirmPickup(activeAssignmentId, captainRuntimeId);
+      await Promise.resolve(refreshInbox());
       setPickupSheetState('success');
-      refreshInbox();
-      setTimeout(() => {
-        setIsPickupSheetVisible(false);
-        setPickupSheetState('ready');
-        setActiveOrderPhase('delivery' as ActiveOrderPhase);
-        setActiveOrderMessages((cur: CompactOrderChatMessage[]) => [
-          ...cur,
-          { id: `msg-${cur.length + 1}`, sender: 'النظام', text: 'تم تأكيد الاستلام. المرحلة التالية هي التسليم.', time: 'الآن', side: 'start' },
-        ]);
-      }, 1000);
+      setIsPickupSheetVisible(false);
+      setPickupSheetState('ready');
+      setActiveOrderPhase('delivery' as ActiveOrderPhase);
+      setActiveOrderMessages((cur: CompactOrderChatMessage[]) => [
+        ...cur,
+        { id: `msg-${cur.length + 1}`, sender: 'النظام', text: 'تم تأكيد الاستلام. المرحلة التالية هي التسليم.', time: 'الآن', side: 'start' },
+      ]);
     } catch (err) {
       console.error('[captain:confirm-pickup]', err);
       setPickupSheetState('error');
@@ -117,12 +110,12 @@ export function useCaptainDeliveryActions(deps: DeliveryActionsDeps) {
   }, [activeAssignmentId, captainOrderRuntime, captainRuntimeId, refreshInbox, setPickupSheetState, setIsPickupSheetVisible, setActiveOrderPhase, setActiveOrderMessages]);
 
   const confirmDelivery = React.useCallback(async () => {
-    if (!captainRuntimeId) return void setCaptainPodState('error');
+    if (!captainRuntimeId || !activeAssignmentId) return void setCaptainPodState('error');
     try {
-      await captainOrderRuntime.deliverOrder(resolveDshRuntimeOrderId(activeAssignmentId), captainRuntimeId);
+      await captainOrderRuntime.deliverOrder(activeAssignmentId, captainRuntimeId);
+      await Promise.resolve(refreshInbox());
       setInboxState('delivered');
       setActiveOrderExpanded(false);
-      refreshInbox();
     } catch (err) {
       console.error('[captain:confirm-delivery]', err);
       setCaptainPodState('error');
@@ -130,40 +123,42 @@ export function useCaptainDeliveryActions(deps: DeliveryActionsDeps) {
   }, [activeAssignmentId, captainOrderRuntime, captainRuntimeId, refreshInbox, setCaptainPodState, setInboxState, setActiveOrderExpanded]);
 
   const confirmPodSubmission = React.useCallback(async () => {
-    if (!captainRuntimeId || !captainPodPhotoUri || !captainPodMediaKey) return;
+    if (!captainRuntimeId || !activeAssignmentId || !captainPodPhotoUri || !captainPodMediaKey) return;
     setCaptainPodState('loading');
     try {
-      await captainOrderRuntime.deliverOrder(resolveDshRuntimeOrderId(activeAssignmentId), captainRuntimeId, captainPodMediaKey);
+      await captainOrderRuntime.deliverOrder(activeAssignmentId, captainRuntimeId, captainPodMediaKey);
+      await Promise.resolve(refreshInbox());
       setCaptainPodState('success');
       if (captainAppMode === 'store_courier_mode') {
         setStoreCourierStage('delivered' as StoreCourierStage);
         setInboxState('delivered');
       }
-      refreshInbox();
     } catch (err) {
       console.error('[captain:pod-submit]', err);
       setCaptainPodState('error');
     }
   }, [activeAssignmentId, captainAppMode, captainOrderRuntime, captainRuntimeId, captainPodMediaKey, captainPodPhotoUri, refreshInbox, setCaptainPodState, setStoreCourierStage, setInboxState]);
 
-  const reportPodFailure = React.useCallback(async () => {
-    if (!captainRuntimeId) return void setCaptainPodState('error');
-    if (!DSH_CAPTAIN_CONTRACT_CAPABILITIES.failDelivery) {
-      // The DSH backend contract does not expose a failed-delivery mutation
-      // yet; the action is disabled explicitly instead of failing opaquely.
-      console.warn('[captain:pod-fail] delivery-failure reporting is not exposed by the DSH backend contract — action disabled');
+  const reportPodFailure = React.useCallback(async (draft: CaptainDeliveryExceptionDraft) => {
+    if (!captainRuntimeId || !activeAssignmentId) {
       setCaptainPodState('error');
-      return;
+      return undefined;
     }
+    if (!DSH_CAPTAIN_CONTRACT_CAPABILITIES.failDelivery || captainAppMode === 'store_courier_mode') {
+      setCaptainPodState('error');
+      return undefined;
+    }
+    setCaptainPodState('loading');
     try {
-      await captainOrderRuntime.failDelivery(resolveDshRuntimeOrderId(activeAssignmentId), captainRuntimeId);
-      setCaptainPodState('retry-required');
-      if (captainAppMode === 'store_courier_mode') setStoreCourierStage('delivery_failed' as StoreCourierStage);
+      const exception = await captainOrderRuntime.failDelivery(activeAssignmentId, captainRuntimeId, draft);
+      setCaptainPodState('ready');
+      return exception;
     } catch (err) {
-      console.error('[captain:pod-fail]', err);
+      console.error('[captain:delivery-exception]', err);
       setCaptainPodState('error');
+      return undefined;
     }
-  }, [activeAssignmentId, captainOrderRuntime, captainRuntimeId, captainAppMode, setCaptainPodState, setStoreCourierStage]);
+  }, [activeAssignmentId, captainOrderRuntime, captainRuntimeId, captainAppMode, setCaptainPodState]);
 
   return { handleAcceptTask, handleDeclineConfirm, confirmPickup, confirmDelivery, confirmPodSubmission, reportPodFailure };
 }

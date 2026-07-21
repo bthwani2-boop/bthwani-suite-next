@@ -7,7 +7,7 @@ import type { CaptainAppMode } from '../../delivery/captain.contract';
 import { getCaptainLifecycleForOrderStage } from '../../delivery/delivery.policy';
 
 export function usePodUploadFlow() {
-  const [captainPodState, setCaptainPodState] = React.useState<'ready' | 'loading' | 'success' | 'error' | 'retry-required'>('ready');
+  const [captainPodState, setCaptainPodState] = React.useState<'ready' | 'loading' | 'success' | 'error'>('ready');
   const [captainPodPhotoUri, setCaptainPodPhotoUri] = React.useState<string | undefined>(undefined);
   const [captainPodMediaKey, setCaptainPodMediaKey] = React.useState<string | undefined>(undefined);
 

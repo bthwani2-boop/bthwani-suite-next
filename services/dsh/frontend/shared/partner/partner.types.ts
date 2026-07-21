@@ -46,7 +46,7 @@ export type DshPartnerDocument = {
   readonly id: string;
   readonly partnerId: string;
   readonly documentType: string;
-  readonly documentStatus: 'pending' | 'under_review' | 'approved' | 'rejected' | 'needs_resubmit';
+  readonly documentStatus: 'pending' | 'under_review' | 'approved' | 'rejected';
   readonly uploadedByActorId: string;
   readonly mediaRef: string;
   readonly notes: string;
@@ -258,10 +258,6 @@ export const DSH_PARTNER_OPERATIONAL_FLOW_IDS = [
   'inventory-adjust',
   'inventory-update',
   'items-upsert',
-  'doc-upload',
-  'intake-start',
-  'store-nomination',
-  'video-upload',
   'partner-finance-bridge',
   'partner-settlement-summary',
   'partner-commission-summary',
@@ -274,8 +270,6 @@ export const DSH_PARTNER_SUPPORT_ROUTE_IDS = [
   'auction-status-update',
   'chat-read-ack',
   'chat-send',
-  'doc-upload',
-  'intake-start',
   'inventory-adjust',
   'inventory-update',
   'items-upsert',
@@ -291,8 +285,6 @@ export const DSH_PARTNER_SUPPORT_ROUTE_IDS = [
   'quick-reply-config',
   'quick-reply-settings',
   'quick-reply-setup',
-  'store-nomination',
-  'video-upload',
 ] as const;
 
 export type DshPartnerSupportRouteId = (typeof DSH_PARTNER_SUPPORT_ROUTE_IDS)[number];
@@ -332,8 +324,6 @@ export const DSH_PARTNER_SUPPORT_ROUTE_TO_OPERATIONAL_FLOW: Record<DshPartnerSup
   'auction-status-update': null,
   'chat-read-ack': 'order-chat-read-ack',
   'chat-send': 'order-chat-send',
-  'doc-upload': 'doc-upload',
-  'intake-start': 'intake-start',
   'inventory-adjust': 'inventory-adjust',
   'inventory-update': 'inventory-update',
   'items-upsert': 'items-upsert',
@@ -349,8 +339,6 @@ export const DSH_PARTNER_SUPPORT_ROUTE_TO_OPERATIONAL_FLOW: Record<DshPartnerSup
   'quick-reply-config': 'order-quick-reply-config',
   'quick-reply-settings': 'order-quick-reply-settings',
   'quick-reply-setup': 'order-quick-reply-setup',
-  'store-nomination': 'store-nomination',
-  'video-upload': 'video-upload',
 };
 
 export const DSH_PARTNER_OPERATIONAL_FLOW_TO_SUPPORT_ROUTE: Record<DshPartnerOperationalFlowId, DshPartnerSupportRouteId | null> = {
@@ -374,10 +362,6 @@ export const DSH_PARTNER_OPERATIONAL_FLOW_TO_SUPPORT_ROUTE: Record<DshPartnerOpe
   'inventory-adjust': 'inventory-adjust',
   'inventory-update': 'inventory-update',
   'items-upsert': 'items-upsert',
-  'doc-upload': 'doc-upload',
-  'intake-start': 'intake-start',
-  'store-nomination': 'store-nomination',
-  'video-upload': 'video-upload',
   'partner-finance-bridge': null,
   'partner-settlement-summary': null,
   'partner-commission-summary': null,

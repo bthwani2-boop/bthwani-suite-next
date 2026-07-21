@@ -1,110 +1,125 @@
 # BThwani Agent Routing Index
 
-## ⚡ Execution Model — Proportional to Task Nature
+Status: DERIVED_SUPPORT
+Authority: `AGENTS.md`, `governance/authority/authority-precedence.json`, and `governance/skills/skills-registry.json`
 
-The default project execution model is **CODE_BASED_LEAN** as canonicalized in [LEAN_CODE_BASED_CHECK.md](../governance/LEAN_CODE_BASED_CHECK.md). The agent must **match effort to task complexity** in accordance with the [Automated Execution Policy](./AUTOMATED_EXECUTION_POLICY.md).
+## Purpose
 
-### Execution & Automation Rules:
-* **LeanCTX as Context Layer**: LeanCTX is the default context and diagnostics layer when active. Agents must use `ctx_*` tools before native equivalents.
-* **Mandatory Automation**: All levels must use the smallest sufficient automation/checks. Scattered manual file-by-file chasing is strictly banned.
-* **Proportional Scaling**: Tiny tasks require small automated checks (no large/unnecessary scripts). High-risk or complex tasks require a full FAAV cycle and Close Loops.
-* **Complex Decision**: Complex tasks require consciously choosing the correct automation shape (e.g. single script or modular multi-script).
+Route repository work to the smallest sufficient set of active or conditional governed skills without duplicating policy, treating tools as authorities, or reviving retired legacy skills.
 
-### Tier 1 — Instant / Minimal Validation (no skills, small targeted check post-modification)
-Trivial tasks. Execute immediately and respond.
-- Single-file edit, rename, typo, small fix, comment, formatting
-- Reading or explaining code/files
-- Safe read-only commands (`git status`, `git log`, `git diff`)
-- Minimal validation post-modification (no new scripts needed, but must run a lightweight validation check)
+## Execution tiers
 
-### Tier 2 — Focused (1 skill max)
-Normal feature work within a single service or module.
-- Component changes, UI tweaks, adding a function/hook
-- Refactoring within clear boundaries
-- Load only the one task-specific skill needed. Skip authority + router unless ambiguous.
+| Tier | Use when | Default routing |
+|---|---|---|
+| Instant | isolated wording, explanation, or one-line safe fix | no owner skill unless repository truth is claimed |
+| Focused | one module or one owner boundary | workspace authority plus one applicable owner skill |
+| Standard | multi-file or cross-layer work | workspace authority, task router, applicable owner skills, targeted evidence |
+| Escalated | product, finance, security, tenant isolation, governance, CI, SaaS activation, migration, release, or formal closure | formal authorities, SDLC routing, independent evidence |
 
-### Tier 3 — Standard (2 skills max)
-Work that crosses module or layer boundaries.
-- Multi-file feature, API + frontend binding, screen routing
-- Load: `bthwani-current-workspace-authority` + one task skill
+LeanCTX, Graphify, and Nx are optional tools. They are never mandatory first steps and never own approval.
 
-### Tier 4 — Escalated Evidence (3 skills, evidence gate)
-High-risk or cross-service work.
-- Finance (WLT/DSH money), security, secrets, auth, agent/skill files
-- Multi-service journey, Docker, CI, dependency changes
-- Load: authority + `bthwani-evidence-gate-router` + task skill
-- Evidence gate is not default. Use it only for high-risk work, final closure, PR readiness, release readiness, or explicit user request.
+## Mandatory routing
 
-## Universal Router Link
+- Repository, branch, commit, PR, remote state, or write → `bthwani-current-workspace-authority`.
+- Task mode, risk, ownership, or scope ambiguity → `bthwani-universal-task-router`.
+- Evidence-scope selection → `bthwani-evidence-gate-router`.
+- Agent, skill, adapter, registry, or routing changes → `bthwani-agent-skill-integrity`.
+- Guard selection or command resolution → `bthwani-guard-command-router`.
+- Governance contracts, authority, agents, skills, guards, SaaS governance, or SDLC control-plane changes → `bthwani-governance-contract-guardian`.
+- GitHub Actions workflows, local actions, workflow permissions, immutable pins, or CI aggregation changes → `bthwani-ci-workflow-guardian`.
+- Protected G4 implementation verification → `bthwani-independent-implementation-reviewer`.
+- User-visible, role-sensitive, cross-surface, commercial, or workflow changes → `bthwani-product-truth-governor`.
+- API, route, generated client, or consumer binding → `bthwani-api-runtime-binding`.
+- Route, screen, state, action, or controller binding → `bthwani-screen-flow-binding`.
+- Cross-layer service capability → `bthwani-service-fullstack-journey`.
+- DSH/WLT financial truth or handoff → `bthwani-dsh-wlt-finance-boundary`.
+- Runtime configuration or provider posture → `bthwani-platform-runtime-config`.
+- Docker, data-plane, persistence, or live behavior evidence → `bthwani-docker-journey-runtime`.
+- Auth, authorization, sessions, secrets, PII, privacy, tenant isolation, CORS, or sensitive configuration → `bthwani-security-secrets-privacy`.
+- Formal G0–G10 lifecycle control → `bthwani-sdlc-stage-gate-orchestrator`.
+- Final multi-scope closure → `bthwani-final-journey-closure-judge`.
+- Two or more independent bounded work units with real subagent capability → `bthwani-cost-aware-subagent-orchestrator`.
 
-Before selecting a skill, apply the Universal Task Router in `AGENTS.md`.
+Governance-contract and CI-workflow approvals are separate. When both domains change, both skills apply and the approving identities must differ. Independent implementation review must also remain separate from the author, executor, and coordinator.
 
-Routing order: identify task mode, identify risk level, select at most the required skills, select the smallest sufficient verification, escalate only when the task mode requires it.
+## Product routing order
 
-Mandatory escalations:
-- `DSH_WLT` → `bthwani-dsh-wlt-finance-boundary` + `graphify` when ownership or dependency impact is broad.
-- `API_CONTRACT` → `bthwani-api-runtime-binding` + `bthwani-guard-command-router`.
-- `AGENT_SYSTEM` → `bthwani-agent-skill-integrity`.
-- `REFACTOR_CLEANUP` → `bthwani-clean-code-guard` + `graphify`.
-- `SECURITY_PRIVACY` → `bthwani-security-secrets-privacy`.
-- `RUNTIME` → `bthwani-docker-journey-runtime` only when runtime behavior is changed or claimed.
+```text
+Problem and evidence
+→ actors and role boundaries
+→ required and excluded surfaces
+→ observable outcome and acceptance
+→ Product Manager approval
+→ Product Owner implementation-readiness approval
+→ architecture and contracts
+→ implementation and developer verification
+→ independent G4 implementation review
+→ product acceptance
+→ independent governance, CI, QA, security, finance, isolation, release, risk, and production evidence as applicable
+```
 
-Do not load skills merely because they exist. Load only what the task mode requires.
+Implementation skills may not bypass Product Truth, independent review, or formal authorities.
 
----
+## Governed skills
 
-## Skill Catalog (load only what the task needs)
+### Always active
 
-### Tooling and evidence
-- Graph/ownership/context unclear → `graphify`
-- Need guard selection → `bthwani-guard-command-router`
-- Review local diff/patch (Escalation-only / PR review) → `bthwani-patch-review-evidence`
-- Create evidence packs only when explicitly requested. (Explicit-request-only) → `bthwani-agent-handoff-evidence-pack`
-- Updating or auditing agent files → `bthwani-agent-skill-integrity`
-- Explicit subagents, two or more independent work units, model/cost routing, or hierarchical delegation → `bthwani-cost-aware-subagent-orchestrator`
-- Do not invoke the orchestrator for tiny single-scope tasks when delegation overhead exceeds execution cost.
+- `bthwani-current-workspace-authority`
+- `bthwani-universal-task-router`
+- `bthwani-evidence-gate-router`
 
-### Safety and quality
-- Duplication/dead code/refactor risk → `bthwani-clean-code-guard`
-- Secrets/privacy/config risk → `bthwani-security-secrets-privacy`
-- Final closure judge. (Final-only / Closure phase) → `bthwani-final-journey-closure-judge`
+### Conditional owner and routing skills
 
-### Repository foundation
-- Foundation/governance/toolchain baseline → `bthwani-foundation-execution`
-- Donor or realtest extraction → `bthwani-legacy-extraction`
-- External agent donor reference, agent inspiration, or agency-agents review (Use only when user asks to design/improve agents/skills or internal agent design is blocked. Do not load by default) → `external-agent-donor-reference`
-- Matrix-driven closure or coverage → `bthwani-machine-readable-matrix-governor`
+- `bthwani-agent-skill-integrity`
+- `bthwani-guard-command-router`
+- `bthwani-governance-contract-guardian`
+- `bthwani-ci-workflow-guardian`
+- `bthwani-independent-implementation-reviewer`
+- `bthwani-product-truth-governor`
+- `bthwani-api-runtime-binding`
+- `bthwani-screen-flow-binding`
+- `bthwani-service-fullstack-journey`
+- `bthwani-dsh-wlt-finance-boundary`
+- `bthwani-platform-runtime-config`
+- `bthwani-docker-journey-runtime`
+- `bthwani-security-secrets-privacy`
+- `bthwani-sdlc-stage-gate-orchestrator`
+- `bthwani-final-journey-closure-judge`
+- `bthwani-cost-aware-subagent-orchestrator`
 
-### Full-stack and runtime
-- Service journey → `bthwani-service-fullstack-journey`
-- API/client/runtime binding → `bthwani-api-runtime-binding`
-- Docker/data-plane/runtime smoke → `bthwani-docker-journey-runtime`
-- Runtime env/provider/service slots → `bthwani-platform-runtime-config`
+## Retired skills
 
-### UI and finance
-- UI kit/design system (Visual evidence is escalation-only) → `bthwani-ui-kit-design-lock`
-- Route/state/screen binding (Visual evidence is escalation-only) → `bthwani-screen-flow-binding`
-- DSH/WLT money boundary → `bthwani-dsh-wlt-finance-boundary`
-- Premium UI execution/design system alignment (Visual evidence is escalation-only) → `bthwani-premium-visual-design-surgeon`
+The canonical retired set exists only in `governance/skills/skills-registry.json`. Retired skills:
 
+- may remain as historical/reference files;
+- may not be selected by routing;
+- may not own authority or approval;
+- may not be dependencies of active or conditional skills;
+- may not be described as active, default, mandatory, or current truth.
 
+The mixed `bthwani-governance-ci-guardian` skill is retired and must never be routed.
 
-<!-- BTHWANI_NX_SKILLS_START -->
-## Nx workspace support
+## Tool ladder
 
-Use these skills only for Nx-specific tasks. BThwani project rules override generic Nx examples.
+1. Direct scoped repository inspection.
+2. Existing targeted search, script, or registered guard.
+3. Small idempotent helper for a repeated narrow pattern.
+4. LeanCTX only when active and materially more efficient.
+5. Graphify only for unclear ownership, routing, dependency, duplication, or dead-code relationships.
+6. Nx affected only when workspace impact calculation is required.
+7. Runtime tools only when runtime behavior is changed or claimed.
 
-Active:
-- `nx-workspace` — inspect Nx workspace, projects, targets, and graph.
-- `nx-run-tasks` — run `nx run`, `run-many`, `affected`, filters, and task debugging.
-- `nx-import` — controlled import/migration from donor or external repos.
-- `nx-plugins` — evaluate and add Nx plugins only when required.
-- `nx-generate` — use generators only after dry-run and pattern check.
+## Skill ownership rules
 
-Deferred:
-- `monitor-ci` — activate only after CI/Nx Cloud is intentionally configured.
+- Load only the active or conditional governed skills required by the task.
+- Owner skills govern only their declared authority domain.
+- Coordinators orchestrate but do not execute implementation work or duplicate specialist policy.
+- The independent reviewer reviews but does not coordinate or implement the reviewed work.
+- Adapters and tools own no approval.
+- Every dependency must resolve to an active or conditional governed skill.
+- Every decision maps through `governance/contracts/decision-vocabulary.json`.
+- A scoped `PASS` cannot be upgraded to `CLOSED_WITH_EVIDENCE`.
 
-Rules:
-- Do not open Nx skills for normal feature work unless Nx routing, project graph, targets, generators, imports, plugins, or CI are involved.
-- Do not let generic Nx examples override BThwani ownership, WLT finance rules, Graphify routing, or live-code closure rules.
-<!-- BTHWANI_NX_SKILLS_END -->
+## Acceptance condition
+
+Accepted only when routing matches the skill registry, all selected skills are governed and non-retired, Product Truth precedes implementation where applicable, G0–G10 terminology is consistent, optional tools remain optional, dependencies resolve without cycles, governance and CI approval remain separate, G4 review is independent from coordination and implementation, the strongest supervisor stays advisory, and no adapter, tool, executor, retired skill, coordinator, or reviewer can self-grant another authority's approval.

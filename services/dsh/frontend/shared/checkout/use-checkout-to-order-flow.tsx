@@ -13,12 +13,6 @@ export type CheckoutToOrderFlowState =
   | { readonly kind: "order_error"; readonly message: string }
   | { readonly kind: "order_ready"; readonly intent: DshCheckoutIntent; readonly orderId: string };
 
-/**
- * Owns the checkout -> order-creation lifecycle as a single composed flow, so
- * DSH UI-only surfaces (e.g. CheckoutScreen) never call
- * useCreateOrderController or decide when to create an order themselves.
- * They only render the state this hook returns.
- */
 export function useCheckoutToOrderFlow(input: DshCreateIntentInput) {
   const checkout = useCheckoutController();
   const order = useCreateOrderController();
@@ -26,7 +20,15 @@ export function useCheckoutToOrderFlow(input: DshCreateIntentInput) {
   useEffect(() => {
     void checkout.submit(input);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [input.cartId, input.storeId, input.fulfillmentMode, input.paymentMethod, input.deliveryAddress, input.note]);
+  }, [
+    input.cartId,
+    input.storeId,
+    input.fulfillmentMode,
+    input.paymentMethod,
+    input.deliveryAddressId,
+    input.note,
+    input.couponCode,
+  ]);
 
   useEffect(() => {
     if (checkout.state.kind === "success" && order.state.kind === "idle") {
@@ -57,7 +59,6 @@ export function useCheckoutToOrderFlow(input: DshCreateIntentInput) {
     if (checkout.state.kind === "error") {
       return { kind: "error", message: checkout.state.message };
     }
-    // checkout.state.kind === "success" from here on
     const intent = checkout.state.intent;
     if (order.state.kind === "success") {
       return { kind: "order_ready", intent, orderId: order.state.order.id };

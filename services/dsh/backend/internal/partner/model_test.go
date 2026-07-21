@@ -253,10 +253,23 @@ func TestUploadDocumentInput_missingMediaRef(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestReviewDocumentInput_validDecisions(t *testing.T) {
-	for _, d := range []string{"approved", "rejected", "needs_resubmit"} {
-		input := ReviewDocumentInput{Decision: d}
+	cases := []ReviewDocumentInput{
+		{Decision: "approved"},
+		{Decision: "rejected", Reason: "document is unreadable"},
+		{Decision: "needs_resubmit", Reason: "required page is missing"},
+	}
+	for _, input := range cases {
 		if err := input.Validate(); err != nil {
-			t.Errorf("expected valid decision %q, got: %v", d, err)
+			t.Errorf("expected valid decision %q, got: %v", input.Decision, err)
+		}
+	}
+}
+
+func TestReviewDocumentInput_requiresReasonForNegativeDecisions(t *testing.T) {
+	for _, d := range []string{"rejected", "needs_resubmit"} {
+		input := ReviewDocumentInput{Decision: d, Reason: "   "}
+		if err := input.Validate(); err == nil {
+			t.Errorf("expected reason to be required for decision %q", d)
 		}
 	}
 }

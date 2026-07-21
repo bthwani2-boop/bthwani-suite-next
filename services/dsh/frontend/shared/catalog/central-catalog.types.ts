@@ -1,5 +1,6 @@
-﻿export interface CentralCatalogDomain {
+export interface CentralCatalogDomain {
   readonly id: string;
+  readonly version: number;
   readonly slug: string;
   readonly nameAr: string;
   readonly nameEn: string;
@@ -15,6 +16,7 @@
 
 export interface CentralCatalogNode {
   readonly id: string;
+  readonly version: number;
   readonly domainId: string;
   readonly parentId: string | null;
   readonly level: "BUSINESS_SUBDOMAIN" | "PRODUCT_MAIN_CLASS" | "PRODUCT_SUB_CLASS";
@@ -36,6 +38,7 @@ export interface CentralCatalogNode {
 
 export interface MasterProduct {
   readonly id: string;
+  readonly version: number;
   readonly domainId: string;
   readonly categoryNodeId: string | null;
   readonly canonicalNameAr: string;
@@ -56,20 +59,23 @@ export interface MasterProduct {
   readonly updatedAt: string;
 }
 
-/** PATCH input for master products - all fields optional; only sent fields are updated. */
+/** PATCH input for sovereign master products. Store price/stock fields belong to StoreAssortment. */
 export interface MasterProductPatchInput {
+  readonly categoryNodeId?: string | null;
   readonly canonicalNameAr?: string;
   readonly canonicalNameEn?: string;
   readonly brand?: string;
+  readonly barcode?: string | null;
+  readonly gtin?: string | null;
+  readonly sku?: string | null;
   readonly unit?: string;
-  readonly unitPrice?: number;
-  readonly currency?: string;
-  readonly stockStatus?: "in_stock" | "low_stock" | "out_of_stock";
+  readonly measurementType?: string;
+  readonly approvalStatus?: "draft" | "pending_review" | "approved" | "rejected" | "archived";
   readonly isActive?: boolean;
-  readonly approvalStatus?: string;
+  readonly expectedVersion?: number;
 }
 
-/** PATCH input for catalog domains - all fields optional. */
+/** PATCH input for catalog domains - all fields optional except caller-supplied OCC when updating. */
 export interface DomainPatchInput {
   readonly nameAr?: string;
   readonly nameEn?: string;
@@ -79,9 +85,10 @@ export interface DomainPatchInput {
   readonly isClientVisible?: boolean;
   readonly requiresProductCatalog?: boolean;
   readonly isManualRequest?: boolean;
+  readonly expectedVersion?: number;
 }
 
-/** PATCH input for catalog nodes - all fields optional. */
+/** PATCH input for catalog nodes - hierarchy identity is immutable after creation. */
 export interface NodePatchInput {
   readonly nameAr?: string;
   readonly nameEn?: string;
@@ -89,6 +96,12 @@ export interface NodePatchInput {
   readonly sortOrder?: number;
   readonly isActive?: boolean;
   readonly isClientVisible?: boolean;
+  readonly requiresBarcode?: boolean;
+  readonly allowsProductProposal?: boolean;
+  readonly allowsStoreProductCustomImage?: boolean;
+  readonly requiresCatalogReview?: boolean;
+  readonly requiresProductCatalog?: boolean;
+  readonly expectedVersion?: number;
 }
 
 /** PUT/PATCH input for platform policies. */
@@ -110,6 +123,7 @@ import type { ProductProposalPipelineStatus } from "./central-catalog-product-pi
 
 export interface ProductProposal {
   readonly id: string;
+  readonly version: number;
   readonly proposedNameAr: string;
   readonly proposedNameEn: string;
   readonly domainId: string;
@@ -139,6 +153,7 @@ export interface ProductProposal {
 
 export interface StoreAssortment {
   readonly id: string;
+  readonly version: number;
   readonly storeId: string;
   readonly masterProductId: string;
   readonly unitPrice: number;
@@ -156,6 +171,7 @@ export interface StoreAssortment {
 
 export interface CatalogPlatformPolicy {
   readonly id: string;
+  readonly version: number;
   readonly domainId: string | null;
   readonly nodeId: string | null;
   readonly policyScope: string;
@@ -193,6 +209,7 @@ export interface EffectiveImage {
 
 export interface ClientVisibleCatalogEntry {
   readonly id: string;
+  readonly version: number;
   readonly domainId: string;
   readonly categoryNodeId: string | null;
   readonly canonicalNameAr: string;
@@ -230,6 +247,7 @@ export interface ClientVisibleCatalogResponse {
 
 export interface CatalogAsset {
   readonly id: string;
+  readonly version: number;
   readonly objectKey: string;
   readonly publicUrl: string | null;
   readonly originalFileName: string;
@@ -257,6 +275,7 @@ export type CatalogAssetStatus = CatalogAsset["status"];
 
 export interface CatalogAssetLink {
   readonly id: string;
+  readonly version: number;
   readonly assetId: string;
   readonly entityType: "domain" | "node" | "master_product" | "product_proposal" | "store_assortment" | "collection" | "campaign" | "store";
   readonly entityId: string;
@@ -307,6 +326,14 @@ export interface AssetUpdateInput {
   readonly altAr?: string;
   readonly altEn?: string;
   readonly dominantColor?: string;
+}
+
+export interface CatalogConflictResponse {
+  readonly code: "CONFLICT";
+  readonly message: string;
+  readonly entityId: string;
+  readonly expectedVersion: number | null;
+  readonly currentVersion: number;
 }
 
 /** Upload progress state machine. */

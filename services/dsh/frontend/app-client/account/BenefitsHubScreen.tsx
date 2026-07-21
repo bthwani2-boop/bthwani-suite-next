@@ -1,262 +1,120 @@
-// Authority: services/dsh/frontend/app-client — benefits sub-screen.
-// Sovereign shared: services/dsh/frontend/shared/marketing
-// Sections: loyalty | subscription | offers (3 tabs from MySpaceScreen)
-//
-// RULE: This file contains ZERO fixture/seed data.
-// All data comes from the shared marketing registry (loyalty-subscriptions.types.ts).
+import React from "react";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
+import { Header, ScrollScreen, StateView, Text, spacing, colorRoles } from "@bthwani/ui-kit";
+import { useClientBenefitsController, type ClientBenefitsPayload } from "../../shared/marketing";
 
-import React from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
-import {
-  Badge,
-  Button,
-  Card,
-  Header,
-  ScrollScreen,
-  StateView,
-  Text,
-  spacing,
-  radius,
-  colorRoles,
-} from '@bthwani/ui-kit';
-import {
-  getLoyaltyTiers,
-  getSubscriptionPlans,
-  buildClientBenefitItems,
-  FALLBACK_LOYALTY_ROWS,
-  FALLBACK_SUBSCRIPTION_ROWS,
-  FALLBACK_OFFERS_ROWS,
-} from '../../shared/marketing';
-import type { BenefitRow } from '../../shared/marketing';
+export type BenefitsSection = "loyalty" | "subscription" | "offers";
+export type BenefitsHubScreenProps = { readonly initialSection?: BenefitsSection };
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-export type BenefitsSection = 'loyalty' | 'subscription' | 'offers';
-
-export type BenefitsHubScreenProps = {
-  initialSection?: BenefitsSection;
-  onBack?: () => void;
-  onAction?: (rowId: string, section: BenefitsSection) => void;
+type BenefitRow = {
+  readonly id: string;
+  readonly title: string;
+  readonly subtitle: string;
+  readonly badge?: string;
+  readonly helper?: string;
 };
 
-// ─── Section config (display strings only — no data) ──────────────────────
-
-const SECTION_CONFIG: Record<BenefitsSection, { label: string; subtitle: string }> = {
-  loyalty:      { label: 'النقاط والمكافآت',  subtitle: 'مستويات ولائك ومكافآتك المتاحة للاستبدال' },
-  subscription: { label: 'الاشتراك',           subtitle: 'خطط الاشتراك المتاحة وخيار التعديل متى احتجت' },
-  offers:       { label: 'العروض والكوبونات', subtitle: 'العروض والكوبونات المتاحة لاستخدامها الآن' },
+const LABELS: Record<BenefitsSection, string> = {
+  loyalty: "النقاط والمكافآت",
+  subscription: "الاشتراك",
+  offers: "العروض والكوبونات",
 };
 
-// ─── Registry hook (derives rows from shared marketing registry) ──────────
-
-function useRegistryBenefitRows(): Record<BenefitsSection, readonly BenefitRow[]> {
-  const derive = () => {
-    const tiers = getLoyaltyTiers();
-    const plans = getSubscriptionPlans();
-    const benefitItems = buildClientBenefitItems(tiers, plans);
-
-    const loyaltyRows: BenefitRow[] = benefitItems
-      .filter((b) => b.kind === 'loyalty')
-      .map((b) => ({
-        id: b.id,
-        title: b.title,
-        subtitle: b.description,
-        badgeLabel: b.badgeLabel ?? 'ولاء',
-        badgeTone: 'info' as const,
-        helperText: 'مدار من قسم التسويق في لوحة التحكم.',
-      }));
-
-    const subRows: BenefitRow[] = benefitItems
-      .filter((b) => b.kind === 'subscription')
-      .map((b) => ({
-        id: b.id,
-        title: b.title,
-        subtitle: b.description,
-        badgeLabel: b.badgeLabel ?? 'اشتراك',
-        badgeTone: 'success' as const,
-        actionLabel: 'اشترك الآن',
-        helperText: 'مدار من قسم التسويق في لوحة التحكم.',
-      }));
-
-    return {
-      loyalty:      loyaltyRows.length > 0 ? loyaltyRows : FALLBACK_LOYALTY_ROWS,
-      subscription: subRows.length > 0 ? subRows : FALLBACK_SUBSCRIPTION_ROWS,
-      offers:       FALLBACK_OFFERS_ROWS,
-    };
-  };
-
-  const [rows, setRows] = React.useState<Record<BenefitsSection, readonly BenefitRow[]>>(derive);
-
-  React.useEffect(() => {
-    setRows(derive());
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  return rows;
+function rowsFor(section: BenefitsSection, benefits: ClientBenefitsPayload): readonly BenefitRow[] {
+  if (section === "loyalty") {
+    return [
+      ...(benefits.loyaltyAccount ? [{
+        id: "account",
+        title: `${benefits.loyaltyAccount.pointsBalance.toLocaleString("ar")} نقطة`,
+        subtitle: benefits.loyaltyAccount.tier ? `المستوى الحالي: ${benefits.loyaltyAccount.tier.nameAr}` : "لا يوجد مستوى حالي",
+        badge: "رصيد WLT",
+      }] : []),
+      ...benefits.availableTiers.map((tier) => ({
+        id: tier.id,
+        title: `${tier.badge || "⭐"} ${tier.nameAr}`,
+        subtitle: `من ${tier.minPoints.toLocaleString("ar")} نقطة · خصم ${tier.discountPercent}%`,
+        badge: "معتمد",
+        helper: tier.freeDeliveryThreshold > 0 ? `توصيل مجاني بعد ${tier.freeDeliveryThreshold.toLocaleString("ar")} ر.ي` : undefined,
+      })),
+    ];
+  }
+  if (section === "subscription") {
+    return [
+      ...(benefits.activeSubscription ? [{
+        id: benefits.activeSubscription.id,
+        title: benefits.activeSubscription.plan.nameAr,
+        subtitle: "اشتراك نشط ومتحقق من WLT",
+        badge: "نشط",
+        helper: benefits.activeSubscription.endsAt ? `ينتهي ${new Date(benefits.activeSubscription.endsAt).toLocaleDateString("ar")}` : undefined,
+      }] : []),
+      ...benefits.availablePlans.map((plan) => ({
+        id: plan.id,
+        title: `${plan.badge || "🎟"} ${plan.nameAr}`,
+        subtitle: `${plan.priceYer.toLocaleString("ar")} ر.ي · ${plan.billingCycle}`,
+        badge: "متاح",
+        helper: plan.wltProductReference ? `مرجع WLT: ${plan.wltProductReference}` : undefined,
+      })),
+    ];
+  }
+  return benefits.offers.map((offer) => ({
+    id: offer.id,
+    title: offer.title,
+    subtitle: `${offer.storeLabel || offer.partnerName} · ${offer.valueLabel}`,
+    badge: offer.offerType === "coupon" ? "كوبون" : "عرض",
+    helper: offer.eligibility,
+  }));
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-function BenefitRowCard({
-  row,
-  section,
-  onAction,
-}: {
-  row: BenefitRow;
-  section: BenefitsSection;
-  onAction?: ((rowId: string, section: BenefitsSection) => void) | undefined;
-}) {
-  return (
-    <Card style={styles.rowCard}>
-      <View style={styles.rowContent}>
-        <View style={styles.rowInfo}>
-          <View style={styles.rowHeader}>
-            <Text role="titleSm" style={styles.rowTitle}>{row.title}</Text>
-            {row.badgeLabel && (
-              <Badge label={row.badgeLabel} tone={row.badgeTone ?? 'neutral'} />
-            )}
-          </View>
-          <Text role="caption" tone="muted" style={styles.rowSubtitle}>{row.subtitle}</Text>
-          {row.helperText && (
-            <Text role="caption" style={styles.helperText}>{row.helperText}</Text>
-          )}
-        </View>
-        {row.actionLabel && (
-          <Button
-            label={row.actionLabel}
-            tone="primary"
-            onPress={() => onAction?.(row.id, section)}
-          />
-        )}
-      </View>
-    </Card>
-  );
-}
-
-// ─── Screen ───────────────────────────────────────────────────────────────────
-
-export function BenefitsHubScreen({
-  initialSection = 'loyalty',
-  onBack,
-  onAction,
-}: BenefitsHubScreenProps) {
+export function BenefitsHubScreen({ initialSection = "loyalty" }: BenefitsHubScreenProps) {
   const [section, setSection] = React.useState<BenefitsSection>(initialSection);
-  const config = SECTION_CONFIG[section];
-  const sectionData = useRegistryBenefitRows();
-  const rows = sectionData[section];
+  const controller = useClientBenefitsController();
+  const benefits = controller.state.kind === "success" ? controller.state.benefits : null;
+  const rows = benefits ? rowsFor(section, benefits) : [];
 
   return (
     <ScrollScreen>
-      <Header
-        title={config.label}
-        subtitle={config.subtitle}
-      />
-
-      {/* Section Tabs */}
-      <View style={styles.tabBar}>
-        {(Object.keys(SECTION_CONFIG) as BenefitsSection[]).map((s) => (
-          <TouchableOpacity
-            key={s}
-            style={[styles.tab, section === s && styles.tabActive]}
-            onPress={() => setSection(s)}
-          >
-            <Text style={[styles.tabText, section === s && styles.tabTextActive]}>
-              {SECTION_CONFIG[s].label}
-            </Text>
+      <Header title={LABELS[section]} subtitle="بيانات معتمدة من DSH وWLT" />
+      <View style={styles.tabs}>
+        {(Object.keys(LABELS) as BenefitsSection[]).map((item) => (
+          <TouchableOpacity key={item} style={[styles.tab, item === section && styles.tabActive]} onPress={() => setSection(item)}>
+            <Text style={[styles.tabText, item === section && styles.tabTextActive]}>{LABELS[item]}</Text>
           </TouchableOpacity>
         ))}
       </View>
-
-      {/* Rows */}
       <View style={styles.content}>
-        {rows.length === 0 ? (
-          <StateView
-            tone="neutral"
-            title="لا توجد بيانات"
-            description="لا توجد معلومات متاحة في هذا القسم حالياً."
-          />
-        ) : (
-          rows.map((row) => (
-            <BenefitRowCard
-              key={row.id}
-              row={row}
-              section={section}
-              onAction={onAction}
-            />
-          ))
-        )}
+        {controller.state.kind === "loading" ? <StateView tone="neutral" title="جارٍ تحميل المزايا…" /> : null}
+        {controller.state.kind === "error" ? (
+          <>
+            <StateView tone="danger" title="تعذر تحميل المزايا" description={controller.state.message} />
+            <TouchableOpacity style={styles.retry} onPress={() => void controller.reload()}><Text style={styles.retryText}>إعادة المحاولة</Text></TouchableOpacity>
+          </>
+        ) : null}
+        {controller.state.kind === "success" && rows.length === 0 ? <StateView tone="neutral" title="لا توجد مزايا معتمدة" /> : null}
+        {rows.map((row) => (
+          <View key={row.id} style={styles.card}>
+            <View style={styles.cardHeader}><Text style={styles.title}>{row.title}</Text>{row.badge ? <Text style={styles.badge}>{row.badge}</Text> : null}</View>
+            <Text style={styles.subtitle}>{row.subtitle}</Text>
+            {row.helper ? <Text style={styles.helper}>{row.helper}</Text> : null}
+          </View>
+        ))}
       </View>
     </ScrollScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  tabBar: {
-    flexDirection: 'row-reverse',
-    backgroundColor: colorRoles.surfaceBase,
-    borderBottomWidth: 1,
-    borderBottomColor: colorRoles.surfaceBase,
-    paddingHorizontal: spacing[4],
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: spacing[3],
-    alignItems: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-  },
-  tabActive: {
-    borderBottomColor: colorRoles.brandAction,
-  },
-  tabText: {
-    fontSize: 13,
-    color: colorRoles.brandStructure,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  tabTextActive: {
-    color: colorRoles.brandAction,
-    fontWeight: '700',
-  },
-  content: {
-    padding: spacing[4],
-    gap: spacing[3],
-  },
-  rowCard: {
-    padding: spacing[4],
-    backgroundColor: colorRoles.surfaceBase,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colorRoles.surfaceBase,
-    marginBottom: spacing[3],
-  },
-  rowContent: {
-    gap: spacing[3],
-  },
-  rowInfo: {
-    gap: spacing[1],
-  },
-  rowHeader: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: spacing[2],
-  },
-  rowTitle: {
-    fontWeight: '700',
-    color: colorRoles.brandStructure,
-    textAlign: 'right',
-    flex: 1,
-  },
-  rowSubtitle: {
-    color: colorRoles.brandStructure,
-    textAlign: 'right',
-    lineHeight: 20,
-  },
-  helperText: {
-    color: colorRoles.surfaceBase,
-    fontSize: 12,
-    textAlign: 'right',
-    marginTop: 2,
-  },
+  tabs: { flexDirection: "row-reverse", borderBottomWidth: 1, borderBottomColor: colorRoles.borderSubtle, backgroundColor: colorRoles.surfaceBase },
+  tab: { flex: 1, alignItems: "center", paddingVertical: spacing[3], borderBottomWidth: 2, borderBottomColor: "transparent" },
+  tabActive: { borderBottomColor: colorRoles.brandAction },
+  tabText: { fontSize: 12, color: colorRoles.brandStructure, textAlign: "center" },
+  tabTextActive: { color: colorRoles.brandAction, fontWeight: "700" },
+  content: { padding: spacing[4], gap: spacing[3] },
+  card: { padding: spacing[4], gap: spacing[2], borderRadius: 12, backgroundColor: colorRoles.surfaceBase },
+  cardHeader: { flexDirection: "row-reverse", justifyContent: "space-between", gap: spacing[2] },
+  title: { flex: 1, fontSize: 16, fontWeight: "700", textAlign: "right" },
+  subtitle: { textAlign: "right", color: colorRoles.brandStructure },
+  helper: { textAlign: "right", fontSize: 12, color: colorRoles.brandStructure },
+  badge: { color: colorRoles.brandAction, fontWeight: "700", fontSize: 11 },
+  retry: { alignItems: "center", padding: spacing[3], borderRadius: 10, backgroundColor: colorRoles.brandAction },
+  retryText: { color: colorRoles.surfaceBase, fontWeight: "700" },
 });

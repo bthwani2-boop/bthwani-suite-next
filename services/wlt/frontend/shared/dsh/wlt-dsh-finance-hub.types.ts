@@ -83,12 +83,18 @@ export type WltFinancialCenter = {
   readonly isPreview: boolean;
 };
 
-// Raw shape of GET /wlt/ledger/financial-summary (services/wlt/backend
-// internal/ledger/kernel_read.go FinancialSummary), passed through verbatim
-// by the DSH proxy. Account-type-aware balances and categorization are
-// computed server-side; this type only describes the wire shape.
+export type WltFinancialAccountType =
+  | 'wallet'
+  | 'platform_revenue'
+  | 'platform_payable'
+  | 'provider_clearing'
+  | 'cash_in_transit'
+  | 'platform_commission_receivable';
+
+// Raw shape of GET /wlt/ledger/financial-summary. Categorization and normal
+// balance direction are computed by WLT; DSH surfaces only render the result.
 export type WltFinancialSummaryAccountBalance = {
-  readonly accountType: 'wallet' | 'platform_revenue' | 'platform_payable' | 'provider_clearing' | 'platform_commission_receivable';
+  readonly accountType: WltFinancialAccountType;
   readonly category: 'asset' | 'liability' | 'revenue' | 'expense';
   readonly normalBalanceSide: 'debit' | 'credit';
   readonly currency: string;
@@ -120,13 +126,11 @@ import type { components } from "../../../clients/generated/wlt-api";
 
 export type WltDshFinanceRuntimeReadModel = {
   readonly runtimeApiUrl: string;
-  readonly overview: components["schemas"]["WltSettlementListResponse"] | null; // settlements list
-  readonly ledgerEntries: readonly components["schemas"]["WltLedgerEntry"][]; // raw legacy ledger entries (individual movements, not accounting truth)
-  readonly refunds: readonly components["schemas"]["WltRefund"][]; // raw refunds queue
-  readonly payoutRequests: readonly components["schemas"]["WltPayoutRequest"][]; // raw payout requests queue
-  readonly financialSummary: WltFinancialSummaryRaw | null; // kernel-backed Assets/Liabilities/Revenue/Net Position
-  // Optional: WLT does not expose a reconciliation close-status endpoint yet,
-  // so runtime read models omit it. Consumers must treat "absent" as open.
+  readonly overview: components["schemas"]["WltSettlementListResponse"] | null;
+  readonly ledgerEntries: readonly components["schemas"]["WltLedgerEntry"][];
+  readonly refunds: readonly components["schemas"]["WltRefund"][];
+  readonly payoutRequests: readonly components["schemas"]["WltPayoutRequest"][];
+  readonly financialSummary: WltFinancialSummaryRaw | null;
   readonly closeStatus?: WltCloseStatus;
   readonly fetchedAt: string;
 };

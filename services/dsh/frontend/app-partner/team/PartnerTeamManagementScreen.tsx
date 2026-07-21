@@ -1,304 +1,275 @@
-import React from 'react';
-import { ScrollView, Pressable, View } from 'react-native';
+import React from "react";
+import { StyleSheet, View } from "react-native";
 import {
   Badge,
-  Card,
   Button,
-  Icon,
+  Card,
+  ScrollScreen,
+  StateView,
   Text,
   TextField,
-  Divider,
-  KeyValueList,
+  colorRoles,
+  radius,
   spacing,
-  useDirection,
-  useTheme,
-  resolveRowDirection,
-} from '@bthwani/ui-kit';
+} from "@bthwani/ui-kit";
+import type { PartnerTeamMember } from "./partner-team.types";
+import type { PartnerTeamMutationResult } from "./usePartnerTeamModel";
 
-// Domain types live in ./partner-team.types so non-UI code (e.g. the
-// usePartnerTeamModel hook) does not need to depend on this Screen module.
-// Re-exported here for backward compatibility with existing consumers.
-export type {
-  PartnerTeamRole,
-  PartnerTeamStatus,
-  PartnerTeamMember,
-} from './partner-team.types';
-import type { PartnerTeamMember, PartnerTeamRole, PartnerTeamStatus } from './partner-team.types';
+export type { PartnerTeamMember } from "./partner-team.types";
+export type PartnerTeamSection = "members" | "invites" | "couriers";
 
-export type PartnerTeamMutationResult = { readonly ok: true } | { readonly ok: false; readonly error: string };
+export type PartnerTeamInlineAction =
+  | "pause"
+  | "activate"
+  | "block"
+  | "resend-invite"
+  | "cancel-invite"
+  | "audit-log"
+  | string;
 
-export type PartnerTeamManagementScreenProps = {
-  readonly storeName: string;
-  readonly branchLabel: string;
-  readonly members?: readonly PartnerTeamMember[];
+export function isPartnerTeamSectionSelected(current: PartnerTeamSection, target: PartnerTeamSection): boolean {
+  return current === target;
+}
+
+export function selectPartnerTeamSection(id: PartnerTeamSection): PartnerTeamSection {
+  return id;
+}
+
+type PartnerTeamManagementScreenProps = {
+  readonly storeId: string;
+  readonly storeName?: string;
+  readonly branchLabel?: string;
+  readonly members: readonly PartnerTeamMember[];
+  readonly pendingInvites?: number;
   readonly isLoading?: boolean;
   readonly error?: string | null;
-  readonly onInviteMember?: (identity: string) => Promise<PartnerTeamMutationResult> | void;
-  readonly onMemberAction?: (memberId: string, action: string) => Promise<PartnerTeamMutationResult> | void;
-  readonly onBack?: () => void;
+  readonly onRetry?: () => void;
+  readonly onInviteMember: (identity: string) => Promise<PartnerTeamMutationResult>;
+  readonly onMemberAction: (
+    memberId: string,
+    action: PartnerTeamInlineAction,
+  ) => Promise<PartnerTeamMutationResult>;
+  readonly onIssueCourierConnectionCode?: (member: PartnerTeamMember) => Promise<string | null>;
+  readonly onRevokeCourierConnection?: (member: PartnerTeamMember) => Promise<boolean>;
 };
 
-const EMPTY_TEAM_MEMBERS: readonly PartnerTeamMember[] = [];
+type MutationState =
+  | { readonly kind: "idle" }
+  | { readonly kind: "submitting"; readonly target: string }
+  | { readonly kind: "success"; readonly message: string }
+  | { readonly kind: "error"; readonly message: string };
 
-function resolveTeamStatusTone(status: PartnerTeamStatus): 'success' | 'warning' | 'info' | 'danger' {
-  if (status === 'active') return 'success';
-  if (status === 'paused') return 'warning';
-  if (status === 'invited') return 'info';
-  if (status === 'review-needed') return 'warning';
-  return 'danger';
+const sections: readonly { id: PartnerTeamSection; label: string }[] = [
+  { id: "members", label: "الأعضاء" },
+  { id: "invites", label: "الدعوات" },
+  { id: "couriers", label: "الموصلون" },
+];
+
+function actionLabel(action: PartnerTeamInlineAction): string {
+  switch (action) {
+    case "pause": return "إيقاف مؤقت";
+    case "activate": return "تفعيل";
+    case "block": return "حظر";
+    case "resend-invite": return "إعادة إرسال الدعوة";
+    case "cancel-invite": return "إلغاء الدعوة";
+    case "audit-log": return "سجل التدقيق";
+    default: return action;
+  }
 }
 
-function resolveTeamRoleTone(role: PartnerTeamRole): 'brand' | 'action' | 'success' | 'muted' {
-  if (role === 'owner') return 'brand';
-  if (role === 'supervisor') return 'action';
-  if (role === 'courier') return 'success';
-  return 'muted';
-}
-
-function resolveMemberActionLabel(member: PartnerTeamMember): string {
-  if (member.status === 'active') return member.role === 'supervisor' ? 'تعطيل الحساب' : 'تعديل الدور';
-  if (member.status === 'paused') return 'إعادة تفعيل';
-  if (member.status === 'invited') return 'إعادة إرسال الدعوة';
-  if (member.status === 'blocked') return 'طلب مراجعة';
-  return 'إرسال للمراجعة';
+function memberStatusTone(status: PartnerTeamMember["status"]): "success" | "warning" | "danger" | "neutral" {
+  if (status === "active") return "success";
+  if (status === "invited" || status === "review-needed") return "warning";
+  if (status === "blocked") return "danger";
+  return "neutral";
 }
 
 export function PartnerTeamManagementScreen({
+  storeId,
   storeName,
   branchLabel,
-  members = EMPTY_TEAM_MEMBERS,
+  members,
+  pendingInvites = 0,
   isLoading = false,
-  error = null,
+  error,
+  onRetry,
   onInviteMember,
   onMemberAction,
-  onBack,
+  onIssueCourierConnectionCode,
+  onRevokeCourierConnection,
 }: PartnerTeamManagementScreenProps) {
-  const { direction } = useDirection();
-  const theme = useTheme() as any;
+  const [section, setSection] = React.useState<PartnerTeamSection>("members");
+  const [inviteIdentity, setInviteIdentity] = React.useState("");
+  const [mutation, setMutation] = React.useState<MutationState>({ kind: "idle" });
+  const busy = mutation.kind === "submitting";
 
-  const [selectedMemberId, setSelectedMemberId] = React.useState<string>('');
-  const [inviteDraft, setInviteDraft] = React.useState('');
-  const [actionFeedback, setActionFeedback] = React.useState<string | null>(null);
+  const visibleMembers = React.useMemo(() => {
+    if (section === "invites") return members.filter((member) => member.status === "invited");
+    if (section === "couriers") return members.filter((member) => member.role === "courier");
+    return members;
+  }, [members, section]);
 
-  const activeSupervisorCount = React.useMemo(() => {
-    return members.filter((m) => m.role === 'supervisor' && m.status === 'active').length;
-  }, [members]);
-
-  const handleAddMember = React.useCallback(() => {
-    const trimmed = inviteDraft.trim();
-    if (!trimmed) return;
-
-    if (!onInviteMember) {
-      setActionFeedback('ربط دعوات الفريق غير متاح من runtime الحالي.');
+  const submitInvite = async () => {
+    const identity = inviteIdentity.trim();
+    if (identity.length < 5 || busy) return;
+    setMutation({ kind: "submitting", target: "invite" });
+    const result = await onInviteMember(identity);
+    if (!result.ok) {
+      setMutation({ kind: "error", message: result.error });
       return;
     }
+    setInviteIdentity("");
+    setMutation({ kind: "success", message: "تم إرسال الدعوة من DSH." });
+  };
 
-    setActionFeedback(`جارٍ إرسال طلب دعوة العضو: ${trimmed}`);
-    Promise.resolve(onInviteMember(trimmed)).then((result) => {
-      if (result && !result.ok) {
-        setActionFeedback(`فشل إرسال الدعوة إلى ${trimmed}: ${result.error}`);
-        return;
-      }
-      setActionFeedback(`تم إرسال طلب دعوة العضو إلى runtime: ${trimmed}`);
-    }).catch((err: unknown) => {
-      setActionFeedback(`فشل إرسال الدعوة إلى ${trimmed}: ${err instanceof Error ? err.message : 'خطأ غير متوقع'}`);
-    });
-    setInviteDraft('');
-  }, [inviteDraft, onInviteMember]);
+  const submitAction = async (member: PartnerTeamMember, action: PartnerTeamInlineAction) => {
+    if (busy || action === "audit-log") return;
+    setMutation({ kind: "submitting", target: member.id });
+    const result = await onMemberAction(member.id, action);
+    if (!result.ok) {
+      setMutation({ kind: "error", message: result.error });
+      return;
+    }
+    setMutation({ kind: "success", message: "تم تنفيذ الإجراء في DSH." });
+  };
 
-  const handleMemberAction = React.useCallback((memberId: string, action: string, actionLabel: string, memberName: string) => {
-    if (!onMemberAction) return;
-    setActionFeedback(`جارٍ إرسال إجراء (${actionLabel}) للعضو: ${memberName}`);
-    Promise.resolve(onMemberAction(memberId, action)).then((result) => {
-      if (result && !result.ok) {
-        setActionFeedback(`فشل تنفيذ (${actionLabel}) للعضو ${memberName}: ${result.error}`);
-        return;
-      }
-      setActionFeedback(`تم إرسال إجراء (${actionLabel}) إلى runtime للعضو: ${memberName}`);
-    }).catch((err: unknown) => {
-      setActionFeedback(`فشل تنفيذ (${actionLabel}) للعضو ${memberName}: ${err instanceof Error ? err.message : 'خطأ غير متوقع'}`);
-    });
-  }, [onMemberAction]);
+  const issueCourierCode = async (member: PartnerTeamMember) => {
+    if (!onIssueCourierConnectionCode || busy) return;
+    setMutation({ kind: "submitting", target: member.id });
+    const code = await onIssueCourierConnectionCode(member);
+    setMutation(code
+      ? { kind: "success", message: `رمز الربط الصادر من DSH: ${code}` }
+      : { kind: "error", message: "تعذر إصدار رمز الربط من DSH." });
+  };
+
+  const revokeCourier = async (member: PartnerTeamMember) => {
+    if (!onRevokeCourierConnection || busy) return;
+    setMutation({ kind: "submitting", target: member.id });
+    const ok = await onRevokeCourierConnection(member);
+    setMutation(ok
+      ? { kind: "success", message: "تم إلغاء ربط الموصل في DSH." }
+      : { kind: "error", message: "تعذر إلغاء ربط الموصل." });
+  };
+
+  if (error) {
+    return (
+      <StateView
+        tone="danger"
+        title="تعذر تحميل فريق المتجر"
+        description={error}
+        {...(onRetry ? { actionLabel: "إعادة المحاولة", onActionPress: onRetry } : {})}
+      />
+    );
+  }
+
+  if (isLoading) {
+    return <StateView tone="neutral" title="جارٍ تحميل فريق المتجر" />;
+  }
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: theme.background }}
-      contentContainerStyle={{ paddingBottom: 160 }}
-      keyboardShouldPersistTaps="handled"
-    >
-      <View style={{ padding: spacing[4], gap: spacing[4] }}>
-        {/* Header */}
-        <View style={{ flexDirection: resolveRowDirection(direction), alignItems: 'center', gap: spacing[3] }}>
-          {onBack && (
-            <Button label="رجوع" tone="ghost" size="sm" fullWidth={false} onPress={onBack} />
-          )}
-          <View style={{ flex: 1, minWidth: 0, alignItems: 'flex-start' }}>
-            <Text role="titleSm" align="start">إدارة الفريق والصلاحيات</Text>
-            <Text role="bodySm" tone="muted" align="start">
-              {storeName} · {branchLabel}
-            </Text>
-          </View>
-        </View>
+    <ScrollScreen contentContainerStyle={styles.content}>
+      <Card style={styles.headerCard}>
+        <Text role="titleMd" style={styles.rtl}>فريق المتجر</Text>
+        <Text role="caption" tone="muted" style={styles.rtl}>
+          {storeName ? `${storeName} · ` : ""}{branchLabel ? `${branchLabel} · ` : ""}المتجر: {storeId} · الدعوات المعلقة: {pendingInvites}
+        </Text>
+      </Card>
 
-        {/* Info Banner */}
-        <Card tone="info" padding={3}>
-          <View style={{ flexDirection: resolveRowDirection(direction), gap: spacing[2], alignItems: 'flex-start' }}>
-            <Icon name="information-circle-outline" size={18} tone="brand" style={{ marginTop: 2 }} />
-            <Text role="bodySm" tone="action" align="start" style={{ flex: 1 }}>
-              الأدوار والدعوات تُعرض من runtime فقط، وتبقى إجراءات التعديل خلف مالك الصلاحيات المركزي.
-            </Text>
-          </View>
-        </Card>
+      <View style={styles.tabs}>
+        {sections.map((item) => (
+          <Button
+            key={item.id}
+            label={item.label}
+            tone={isPartnerTeamSectionSelected(section, item.id) ? "primary" : "ghost"}
+            size="sm"
+            onPress={() => setSection(selectPartnerTeamSection(item.id))}
+          />
+        ))}
+      </View>
 
-        {/* Read-path error banner */}
-        {error && (
-          <Card tone="danger" padding={3}>
-            <View style={{ flexDirection: resolveRowDirection(direction), gap: spacing[2], alignItems: 'flex-start' }}>
-              <Icon name="alert-circle-outline" size={18} tone="danger" style={{ marginTop: 2 }} />
-              <Text role="bodySm" tone="danger" align="start" style={{ flex: 1 }}>
-                تعذر تحميل بيانات الفريق من runtime: {error}
-              </Text>
+      {mutation.kind === "success" ? (
+        <StateView tone="success" title="تم التنفيذ" description={mutation.message} />
+      ) : mutation.kind === "error" ? (
+        <StateView tone="danger" title="تعذر التنفيذ" description={mutation.message} />
+      ) : null}
+
+      <Card style={styles.inviteCard}>
+        <Text role="bodyStrong" style={styles.rtl}>دعوة عضو جديد</Text>
+        <TextField
+          label="رقم الهاتف أو هوية الدعوة"
+          value={inviteIdentity}
+          onChangeText={setInviteIdentity}
+          placeholder="+967…"
+          keyboardType="phone-pad"
+        />
+        <Button
+          label={mutation.kind === "submitting" && mutation.target === "invite" ? "جارٍ الإرسال…" : "إرسال الدعوة"}
+          tone="primary"
+          disabled={busy || inviteIdentity.trim().length < 5}
+          onPress={() => void submitInvite()}
+        />
+      </Card>
+
+      {visibleMembers.length === 0 ? (
+        <StateView tone="neutral" title="لا توجد سجلات في هذا القسم" />
+      ) : (
+        visibleMembers.map((member) => (
+          <Card key={member.id} style={styles.memberCard}>
+            <View style={styles.rowBetween}>
+              <View style={styles.badges}>
+                <Badge label={member.statusLabel} tone={memberStatusTone(member.status)} />
+                <Badge label={member.roleLabel} tone="info" />
+              </View>
+              <View style={styles.memberInfo}>
+                <Text role="bodyStrong" style={styles.rtl}>{member.name}</Text>
+                <Text role="caption" tone="muted" style={styles.rtl}>{member.branchAssignment || "لا يوجد فرع محدد"}</Text>
+              </View>
+            </View>
+
+            {member.permissionsSummary ? <Text role="caption" style={styles.rtl}>{member.permissionsSummary}</Text> : null}
+            {member.inviteLifecycle ? <Text role="caption" tone="muted" style={styles.rtl}>{member.inviteLifecycle}</Text> : null}
+            {member.operationalImpact ? <Text role="caption" tone="muted" style={styles.rtl}>{member.operationalImpact}</Text> : null}
+
+            <View style={styles.actions}>
+              {member.inlineAction && member.inlineAction !== "audit-log" ? (
+                <Button
+                  label={member.inlineActionLabel || actionLabel(member.inlineAction)}
+                  tone={member.inlineAction === "block" || member.inlineAction === "cancel-invite" ? "danger" : "secondary"}
+                  size="sm"
+                  disabled={busy}
+                  onPress={() => void submitAction(member, member.inlineAction)}
+                />
+              ) : null}
+              {member.role === "courier" && onIssueCourierConnectionCode ? (
+                <Button label="إصدار رمز ربط" tone="secondary" size="sm" disabled={busy} onPress={() => void issueCourierCode(member)} />
+              ) : null}
+              {member.role === "courier" && onRevokeCourierConnection ? (
+                <Button label="إلغاء الربط" tone="danger" size="sm" disabled={busy} onPress={() => void revokeCourier(member)} />
+              ) : null}
             </View>
           </Card>
-        )}
-
-        {/* Add Member Form */}
-        <Card padding={3} gap={3}>
-          <Text role="bodyStrong" align="start">دعوة عضو جديد للفريق</Text>
-          <TextField
-            label="اسم العضو أو البريد الإلكتروني"
-            placeholder="مثال: staff@bthwani.sa"
-            value={inviteDraft}
-            onChangeText={setInviteDraft}
-            hint="سيتم إرسال دعوة انضمام مؤقتة للفرع الحالي."
-          />
-          <Button
-            label="إضافة عضو للفريق"
-            tone="brand"
-            size="sm"
-            fullWidth={false}
-            disabled={!onInviteMember}
-            onPress={handleAddMember}
-          />
-          {actionFeedback && (
-            <Text role="caption" tone={actionFeedback.startsWith('فشل') ? 'danger' : 'success'} align="start" style={{ marginTop: spacing[1] }}>
-              {actionFeedback}
-            </Text>
-          )}
-        </Card>
-
-        <Divider />
-
-        {/* Team Members List */}
-        <View style={{ gap: spacing[3] }}>
-          <Text role="bodyStrong" align="start">أعضاء الفريق التشغيلي ({members.length})</Text>
-
-          {members.length === 0 ? (
-            <Card tone="default" padding={3}>
-              <Text role="bodySm" tone="muted" align="start">
-                {isLoading ? 'جارٍ تحميل بيانات الفريق من runtime...' : 'لا توجد بيانات أعضاء runtime لهذا الفرع حالياً.'}
-              </Text>
-            </Card>
-          ) : (
-          <View style={{ gap: spacing[2] }}>
-            {members.map((member) => {
-              const isSelected = selectedMemberId === member.id;
-              const roleTone = resolveTeamRoleTone(member.role);
-              const statusTone = resolveTeamStatusTone(member.status);
-              const memberActionLabel = resolveMemberActionLabel(member);
-              const isLastSupervisor = member.role === 'supervisor' && member.status === 'active' && activeSupervisorCount <= 1;
-
-              return (
-                <Card key={member.id} padding={0}>
-                  <Pressable
-                    onPress={() => setSelectedMemberId(isSelected ? '' : member.id)}
-                    style={({ pressed }) => ({
-                      flexDirection: resolveRowDirection(direction),
-                      alignItems: 'center',
-                      padding: spacing[3],
-                      backgroundColor: pressed ? theme.surfaceInset : undefined,
-                    })}
-                  >
-                    <Icon
-                      name={
-                        member.role === 'courier'
-                          ? 'bicycle-outline'
-                          : member.role === 'owner'
-                            ? 'shield-checkmark-outline'
-                            : member.role === 'supervisor'
-                              ? 'person-circle-outline'
-                              : 'person-outline'
-                      }
-                      size={20}
-                      tone={roleTone}
-                      style={{ marginHorizontal: spacing[1] }}
-                    />
-                    <View style={{ flex: 1, minWidth: 0, alignItems: 'flex-start', marginHorizontal: spacing[2] }}>
-                      <Text role="bodyStrong" align="start">{member.name}</Text>
-                      <Text role="caption" tone="muted" align="start">{member.branchAssignment}</Text>
-                    </View>
-                    <View style={{ alignItems: direction === 'rtl' ? 'flex-start' : 'flex-end', gap: 4 }}>
-                      <Badge label={member.roleLabel} tone={roleTone === 'brand' ? 'action' : roleTone === 'muted' ? 'neutral' : roleTone} />
-                      <Badge label={member.statusLabel} tone={statusTone} />
-                    </View>
-                    <Icon name={isSelected ? 'chevron-down' : 'chevron-forward-outline'} mirrored tone="muted" size={14} style={{ marginStart: spacing[2] }} />
-                  </Pressable>
-
-                  {isSelected && (
-                    <View style={{ padding: spacing[3], borderTopWidth: 1, borderTopColor: theme.line, gap: spacing[3] }}>
-                      <KeyValueList
-                        dense
-                        items={[
-                          { label: 'الفرع المسند', value: member.branchAssignment },
-                          { label: 'صلاحيات الوصول', value: member.permissionsSummary },
-                          { label: 'إسناد التوصيل', value: member.deliveryAssignment },
-                          { label: 'تاريخ التسجيل', value: member.inviteLifecycle },
-                          { label: 'الأثر التشغيلي', value: member.operationalImpact },
-                        ]}
-                      />
-                      {member.auditNote && (
-                        <Text role="caption" tone="muted" align="start">
-                          ملاحظة تدقيق: {member.auditNote}
-                        </Text>
-                      )}
-                      {isLastSupervisor && (
-                        <Text role="caption" tone="warning" align="start">
-                          تنبيه: لا يمكن إلغاء تفعيل آخر مشرف للفرع لضمان استمرارية العمليات.
-                        </Text>
-                      )}
-                      <View style={{ flexDirection: resolveRowDirection(direction), gap: spacing[2] }}>
-                        <Button
-                          label={memberActionLabel}
-                          tone={member.status === 'blocked' ? 'secondary' : 'brand'}
-                          size="sm"
-                          fullWidth={false}
-                          disabled={isLastSupervisor}
-                          onPress={() => handleMemberAction(member.id, member.inlineAction, memberActionLabel, member.name)}
-                        />
-                        <Button
-                          label={member.status === 'invited' ? 'إلغاء الدعوة' : 'سجل العمليات'}
-                          tone="secondary"
-                          size="sm"
-                          fullWidth={false}
-                          onPress={() => handleMemberAction(
-                            member.id,
-                            member.status === 'invited' ? 'cancel-invite' : 'audit-log',
-                            member.status === 'invited' ? 'إلغاء الدعوة' : 'سجل العمليات',
-                            member.name,
-                          )}
-                        />
-                      </View>
-                    </View>
-                  )}
-                </Card>
-              );
-            })}
-          </View>
-          )}
-        </View>
-      </View>
-    </ScrollView>
+        ))
+      )}
+    </ScrollScreen>
   );
 }
 
-export default PartnerTeamManagementScreen;
+const styles = StyleSheet.create({
+  content: { padding: spacing[4], gap: spacing[3], paddingBottom: 96 },
+  rtl: { textAlign: "right" },
+  headerCard: { padding: spacing[4], gap: spacing[1], backgroundColor: colorRoles.surfaceBase },
+  tabs: { flexDirection: "row-reverse", flexWrap: "wrap", gap: spacing[2] },
+  inviteCard: { padding: spacing[4], gap: spacing[3], backgroundColor: colorRoles.surfaceBase },
+  memberCard: {
+    padding: spacing[4],
+    gap: spacing[2],
+    backgroundColor: colorRoles.surfaceBase,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colorRoles.borderSubtle,
+  },
+  rowBetween: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", gap: spacing[2] },
+  memberInfo: { flex: 1, alignItems: "flex-end", gap: 2 },
+  badges: { flexDirection: "row-reverse", gap: spacing[1], flexWrap: "wrap" },
+  actions: { flexDirection: "row-reverse", flexWrap: "wrap", gap: spacing[2] },
+});

@@ -1,46 +1,71 @@
 ---
 name: bthwani-evidence-gate-router
-version: 2026.06.19-clean
-summary: Choose the smallest sufficient verification gate for the task.
+version: 2026.07.17-v1
+summary: Select the smallest sufficient canonical evidence scopes and checks without granting approval or closure.
 ---
 
 # bthwani-evidence-gate-router
 
+## Purpose
+
+Classify the evidence needed for a claim and route it through the canonical evidence scopes in `governance/contracts/decision-vocabulary.json`.
+
 ## Invoke when
 
-- user asks for closure/readiness/verification level
-- task is high-risk
-- agent is unsure whether escalation is required
+- A task requests verification, readiness, closure, or a decision whose evidence scope is unclear.
+- A protected change requires independent or multi-scope evidence.
+- Another governed skill needs a precise verification route.
 
-## Read before
+## Do not invoke when
 
-`AGENTS.md`, `.agents/EVIDENCE_GATE_ROUTER.md`, relevant `package.json` scripts
+- The task is text-only and makes no implementation, readiness, or closure claim.
+- A specialist skill already defines the exact targeted check and no broader decision is requested.
 
-## Execution contract
+## Authority boundary
 
-Prefer CODE_BASED_LEAN. Select the smallest useful code-based check. Escalate only when risk requires it.
+This skill owns evidence-scope routing only. It cannot approve its own evidence, change stage state, accept residual risk, approve product, governance, CI, finance, QA, security, release, production, or final closure.
+
+## Canonical evidence scopes
+
+- `static`
+- `product`
+- `runtime`
+- `visual`
+- `qa`
+- `security`
+- `finance`
+- `isolation`
+- `governance`
+- `ci`
+- `release`
+- `production`
+
+`static` is always applicable to repository implementation. Other scopes are derived from declared impact. Tests are evidence inside the scope they exercise; they are not separate closure scopes that bypass Product Truth, runtime, finance, security, or release ownership.
+
+Use `CODE_BASED_LEAN` for ordinary work. Escalate only when claim, risk, impact, or requested stage requires it. Read `governance/guards/guard-assurance.json` before treating a guard result as positive evidence.
 
 ## Forbidden
 
-- do not run broad verification for text-only changes
-- do not claim closure from a tool summary
-- do not require visual evidence or screenshots for UI changes unless escalation rules, final visual closure, release/store requirements, or explicit user requests apply
-- do not require long output blocks for normal execution
+- Using obsolete scope names such as `STATIC_CODE`, `SCHEMA_CONTRACT`, or `RUNTIME_SMOKE` as canonical artifact scopes.
+- Requiring broad builds, screenshots, or evidence packs for every small change.
+- Treating a generated report, declaration, runtime map, seed, fixture, or prior run as proof for a newer commit.
+- Mapping a scope-specific `PASS` directly to `CLOSED_WITH_EVIDENCE`.
+- Omitting `finance` for WLT impact or `isolation` for tenant/isolation impact.
+- Producing or committing transient evidence by default.
 
 ## Required output
 
-- selected mode: CODE_BASED_LEAN or ESCALATED
-- targeted check if used
-- remaining risk
+```text
+resolved_commit_sha:
+claim:
+impact:
+applicable_scopes:
+selected_checks:
+guard_assurance_classes:
+same_commit_required:
+required_approvals:
+missing_evidence:
+decision:
+```
 
-Evidence files are required only when escalation applies, following the canonical policy in [LEAN_CODE_BASED_CHECK.md](../../../governance/LEAN_CODE_BASED_CHECK.md).
-
-## Failure decision
-
-- insufficient evidence -> `NEEDS_EVIDENCE`
-- visual evidence missing (only when escalation/release/explicit request applies) -> `NEEDS_VISUAL_EVIDENCE`
-- failed gate -> `FIX_REQUIRED`
-
-## Notes
-
-All operations and scans must obey the token-drain exclusions specified in [LEAN_CODE_BASED_CHECK.md](../../../governance/LEAN_CODE_BASED_CHECK.md).
+Allowed decisions: `PASS`, `FIX_REQUIRED`, `NEEDS_EVIDENCE`, `BLOCKED_EXTERNAL`, `OUT_OF_SCOPE_FOR_THIS_JOURNEY`, and `PROTOCOL_VIOLATION`.

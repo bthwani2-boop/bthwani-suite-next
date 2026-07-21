@@ -47,6 +47,19 @@ export { useFieldCatalogController } from "./use-field-catalog-controller";
 export * from "./partner-registry";
 export * from "./use-partners-controller";
 
+export type {
+  DeliveryPricingFulfillmentMode,
+  DeliveryPricingStatus,
+  DeliveryPricingRecord,
+  DeliveryPricingMutationInput,
+  OperatorDeliveryPricingState,
+} from "./operator-delivery-pricing";
+export {
+  fetchOperatorDeliveryPricing,
+  updateOperatorDeliveryPricing,
+  useOperatorDeliveryPricingController,
+} from "./operator-delivery-pricing";
+
 export {
   fieldListDrafts,
   fieldCreateDraft,
@@ -69,8 +82,10 @@ export {
   fetchPartnerStoreCoverageZones,
   fetchPartnerStoreSettings,
   updatePartnerStoreSettings,
+  fetchPartnerPerformance,
 } from "./partner.api";
 export type { DshPartnerReadinessItem, DshPartnerDocumentType } from "./partner.types";
 export { REQUIRED_DOCUMENT_TYPES, DOCUMENT_TYPE_LABELS } from "./partner.types";
 export * from "./partner.workflow";
 export * from "./catalog-approval.api";
+export * from "./partner-fleet.api";

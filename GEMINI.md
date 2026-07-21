@@ -1,40 +1,39 @@
 # Gemini CLI Instructions
 
-This adapter is thin. `AGENTS.md` is the governing instruction source.
+Status: ADAPTER
 
-Before any task, apply, in order: `AGENTS.md`, `.agents/INDEX.md`, `.agents/AUTHORITY_BOUNDARY.md`, `.agents/COMMAND_SAFETY_POLICY.md`.
+This file is a thin tool adapter. It may not create or override repository policy.
 
-Do not duplicate global policy here. If this file conflicts with `AGENTS.md`, `AGENTS.md` wins.
+Apply authority in this order:
 
-All agent commands must respect the [Command Safety Policy](.agents/COMMAND_SAFETY_POLICY.md).
+1. `governance/authority/authority-precedence.json`
+2. `AGENTS.md`
+3. applicable active canonical governance and machine-readable contracts
+4. applicable active or conditional governed owner skills under `.agents/skills`
 
-Use shared project skills from:
+If this file conflicts with any higher source, the higher source wins.
 
-    .agents/skills
+All commands must follow `.agents/COMMAND_SAFETY_POLICY.md` and the derived execution guidance in `.agents/AUTOMATED_EXECUTION_POLICY.md`.
 
-Also refer to [BThwani Harness Patterns](.agents/BTHWANI_HARNESS_PATTERNS.md).
+For repository tasks:
 
-For Graphify, read and follow:
+- pin the exact repository, explicitly named branch, and resolved commit through `bthwani-current-workspace-authority`;
+- never substitute the default branch, another branch, stale evidence, or a prior PR;
+- use Product Truth before implementing user-visible, role-sensitive, cross-surface, commercial, or workflow changes;
+- route governance contracts and CI workflow policy through separate owner skills and separate approvals;
+- treat SaaS readiness and commercial activation values as states, not canonical decisions;
+- use only active or conditional governed skills required by the task;
+- map decisions through `governance/contracts/decision-vocabulary.json`.
 
-    .agents/skills/graphify/SKILL.md
+Graphify is a conditional tool, not an agent. Use it only when ownership, routing, dependency, duplication, or dead-code relationships are unclear. Do not create duplicate Graphify skills under `.gemini/skills` or `.claude/skills`.
 
-Graphify is a tool, not an agent.
-
-Do not create or use:
-
-    .gemini/skills/graphify
-
-When repository understanding is needed, use Graphify first, then verify with actual files and Git evidence.
-
-## ⚡ Smart Execution Model
-
-Match effort to task nature. Never over-engineer or under-deliver.
+## Smart Execution Model
 
 | Tier | When | Action |
 |---|---|---|
-| **Instant** | Single file, typo, rename, comment, explain | Execute directly, 0 skills |
-| **Focused** | Feature within one module/service | 1 task skill only |
-| **Standard** | Multi-file or cross-layer | authority + 1 task skill |
-| **Full** | Finance, security, secrets, agent files | authority + router + task skill + evidence gate |
+| Instant | isolated wording or one-line safe fix | direct scoped execution |
+| Focused | one module or owner boundary | one owner skill |
+| Standard | cross-layer or multi-file work | workspace authority plus required owner skills |
+| Escalated | product, finance, security, tenant isolation, governance, CI, SaaS activation, migration, release, production, or closure | formal authority, evidence routing, and independent review as applicable |
 
-Default: smallest action, fastest response, precise output.
+Use the smallest sufficient action. Do not overclaim `static`, `product`, `runtime`, `visual`, `qa`, `security`, `finance`, `isolation`, `governance`, `ci`, `release`, `production`, or final closure evidence. A pass in one scope never upgrades another scope.

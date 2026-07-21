@@ -163,6 +163,44 @@ func TestCreateFieldVisitRejectsStoreNotOwnedByPartner(t *testing.T) {
 	}
 }
 
+func TestReviewDocumentClearsStaleRejectionReasonAfterApproval(t *testing.T) {
+	db := openRequiredDB(t)
+	p := createPartnerFixture(t, db, "DOC-REVIEW")
+	document, err := UploadDocument(db, p.ID, UploadDocumentInput{
+		DocumentType:      "commercial_register",
+		MediaRef:          "media://partner-document-review",
+		UploadedByActorID: "field-local-001",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	document, _, err = ReviewDocument(db, p.ID, document.ID, ReviewDocumentInput{
+		Decision:          "rejected",
+		Reason:            "document is unreadable",
+		ReviewedByActorID: "operator-local-001",
+		CorrelationID:     "partner-document-rejected",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if document.RejectionReason == "" {
+		t.Fatal("expected rejection reason to be persisted")
+	}
+
+	document, _, err = ReviewDocument(db, p.ID, document.ID, ReviewDocumentInput{
+		Decision:          "approved",
+		ReviewedByActorID: "operator-local-001",
+		CorrelationID:     "partner-document-approved",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if document.DocumentStatus != "approved" || document.RejectionReason != "" {
+		t.Fatalf("approved document retained stale rejection state: status=%q reason=%q", document.DocumentStatus, document.RejectionReason)
+	}
+}
+
 func assertStoreReadiness(t *testing.T, db *sql.DB, storeID, want string) {
 	t.Helper()
 	var got string

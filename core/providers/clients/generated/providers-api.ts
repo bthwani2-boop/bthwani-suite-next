@@ -59,6 +59,40 @@ export interface paths {
         patch: operations["updateProvider"];
         trace?: never;
     };
+    "/providers/maps/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Search locations through the governed active map-provider chain. */
+        post: operations["searchMapLocations"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/providers/maps/reverse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resolve coordinates through the governed active map-provider chain. */
+        post: operations["reverseMapLocation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -99,6 +133,40 @@ export interface components {
             parameters?: {
                 [key: string]: unknown;
             };
+        };
+        MapSearchRequest: {
+            query: string;
+            limit?: number;
+            language?: string;
+            countryCodes?: string[];
+        };
+        MapReverseRequest: {
+            /** Format: double */
+            latitude: number;
+            /** Format: double */
+            longitude: number;
+            language?: string;
+        };
+        MapLocation: {
+            providerCode: string;
+            providerPlaceId: string;
+            displayName: string;
+            /** Format: double */
+            latitude: number;
+            /** Format: double */
+            longitude: number;
+            countryCode?: string;
+            administrativeArea?: string;
+            locality?: string;
+            postalCode?: string;
+            /** Format: double */
+            confidence?: number;
+        };
+        MapSearchResponse: {
+            locations: components["schemas"]["MapLocation"][];
+        };
+        MapReverseResponse: {
+            location: components["schemas"]["MapLocation"];
         };
     };
     responses: never;
@@ -204,6 +272,124 @@ export interface operations {
             };
             /** @description Provider not found. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    searchMapLocations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MapSearchRequest"];
+            };
+        };
+        responses: {
+            /** @description Normalized map search results without provider credentials. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MapSearchResponse"];
+                };
+            };
+            /** @description Invalid map request. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authentication is required. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Actor is outside the map invocation scope. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description All configured map providers failed. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No governed map provider is configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    reverseMapLocation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MapReverseRequest"];
+            };
+        };
+        responses: {
+            /** @description Normalized reverse-geocoding result without provider credentials. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MapReverseResponse"];
+                };
+            };
+            /** @description Invalid coordinates. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authentication is required. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Actor is outside the map invocation scope. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description All configured map providers failed. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No governed map provider is configured. */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

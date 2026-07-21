@@ -1,0 +1,238 @@
+{
+  "schemaVersion": 2,
+  "repository": "bthwani2-boop/bthwani-suite-next",
+  "targetBranch": "lian",
+  "decision": "FIX_REQUIRED",
+  "items": [
+    {
+      "id": "P0-CI-001",
+      "priority": "P0",
+      "domain": "github-actions",
+      "status": "NEEDS_EVIDENCE",
+      "problem": "lian workflow coverage is implemented, but successful same-commit GitHub Actions execution has not been observed through the available connector evidence.",
+      "rootCause": "The repository previously targeted bassam/master and the current connector exposes no authoritative push-run result for the latest lian SHA.",
+      "affectedPaths": [
+        ".github/workflows/ci.yml",
+        ".github/workflows/security.yml",
+        ".github/workflows/governance-audit.yml",
+        ".github/workflows/dsh-operational-closure-ci.yml",
+        ".github/workflows/lian-fullstack-ci.yml"
+      ],
+      "implemented": [
+        "All critical workflows now trigger on lian",
+        "A dedicated same-commit lian workflow exists",
+        "All aggregators remain fail-closed"
+      ],
+      "acceptance": [
+        "Completed successful jobs are observed for the exact immutable lian commit",
+        "Job logs show governance, contracts, typecheck, build, tests, Go, and security checks passed",
+        "Required checks are enforced by GitHub ruleset or branch protection"
+      ]
+    },
+    {
+      "id": "P0-TRUTH-001",
+      "priority": "P0",
+      "domain": "service-truth",
+      "status": "NEEDS_EVIDENCE",
+      "problem": "DSH registries are structurally reconciled, but runtime readiness remains unverified for the current commit.",
+      "rootCause": "Historical evidence had been promoted to runtime language without same-commit proof.",
+      "affectedPaths": [
+        "services/dsh/capabilities.ts",
+        "services/dsh/service.manifest.ts",
+        "services/dsh/surface-map.ts",
+        "services/dsh/runtime-map.ts",
+        "tools/guards/service-manifest-drift-gate.mjs"
+      ],
+      "implemented": [
+        "Canonical merged capability registry",
+        "Derived manifest and surface ownership",
+        "Historical evidence marked HISTORICAL_NOT_SAME_COMMIT",
+        "Runtime and screen readiness remain false"
+      ],
+      "acceptance": [
+        "Typecheck and manifest guard pass",
+        "Same-commit runtime journey evidence is generated",
+        "Readiness claims are promoted only after runtime proof"
+      ]
+    },
+    {
+      "id": "P0-GUARD-001",
+      "priority": "P0",
+      "domain": "verification-integrity",
+      "status": "NEEDS_EVIDENCE",
+      "problem": "Required commands were changed to fail closed and the DSH host port was corrected; CI execution must confirm tool availability and command success.",
+      "rootCause": "Diagnostic wrappers and required gates had shared false-success behavior.",
+      "affectedPaths": [
+        "package.json",
+        "tools/guards/required-command-integrity-gate.mjs",
+        "governance/guards/guard-registry.json",
+        "tools/guards/guard-manifest.json"
+      ],
+      "implemented": [
+        "Playwright, Storybook, Loki, Markdown, performance, and bundle checks propagate failures",
+        "performance:api:quick targets http://localhost:58080/dsh/health",
+        "A registered guard prevents regression"
+      ],
+      "acceptance": [
+        "Required-command integrity guard passes",
+        "Every required binary is installed or the workflow fails explicitly",
+        "No required check returns zero after a failed tool invocation"
+      ]
+    },
+    {
+      "id": "P0-GITHUB-001",
+      "priority": "P0",
+      "domain": "repository-enforcement",
+      "status": "NEEDS_EVIDENCE",
+      "problem": "lian protection, required checks, same-commit CI, and independent reviewers are not proven.",
+      "rootCause": "These controls require live GitHub configuration and independent identities, not repository declarations.",
+      "affectedPaths": ["governance/github/repository-enforcement.json"],
+      "implemented": [
+        "Snapshot now targets lian",
+        "All unproven controls remain NOT_PROVEN",
+        "High-risk closure remains forbidden"
+      ],
+      "acceptance": [
+        "Branch protection or ruleset verified",
+        "Required checks verified",
+        "Independent reviewer identities verified",
+        "Same-commit successful CI verified"
+      ]
+    },
+    {
+      "id": "P1-CONTRACT-001",
+      "priority": "P1",
+      "domain": "api-contracts",
+      "status": "NEEDS_EVIDENCE",
+      "problem": "All active DSH contracts are registered with explicit client strategies; generated and subset drift checks require execution.",
+      "rootCause": "Contract activation, generated clients, adapters, and CI had evolved independently.",
+      "affectedPaths": [
+        "services/dsh/contracts/contract-registry.ts",
+        "services/dsh/service.manifest.ts",
+        "services/dsh/contracts",
+        "services/dsh/clients/generated",
+        "tools/guards/service-manifest-drift-gate.mjs",
+        "tools/scripts/generate-dsh-catalog-client.mjs"
+      ],
+      "implemented": [
+        "Active contract registry",
+        "Primary, secondary subset, parent subset, and manual adapter strategies",
+        "Detection of unregistered active contracts and shard operations absent from primary",
+        "Read-only catalog generated-client check"
+      ],
+      "acceptance": [
+        "Every active contract passes OpenAPI parsing",
+        "Every shard operation exists in primary contract",
+        "Every generated client contains its operations",
+        "Every manual adapter is route and consumer verified"
+      ]
+    },
+    {
+      "id": "P1-CLIENT-COMMERCE-001",
+      "priority": "P1",
+      "domain": "client-commerce",
+      "status": "NEEDS_EVIDENCE",
+      "problem": "The client store, cart, serviceability, checkout, and WLT payment-selection flow was rebuilt to remove fake local behavior; it still requires typecheck, build, tests, and device/runtime verification.",
+      "rootCause": "Donor-replica UI had replaced backend truth with seeded addresses, simulated maps, local calculations, dead controls, hardcoded areas, and unsafe casts.",
+      "affectedPaths": [
+        "services/dsh/frontend/app-client/DshClientSurface.tsx",
+        "services/dsh/frontend/app-client/store",
+        "services/dsh/frontend/app-client/cart",
+        "services/dsh/frontend/app-client/checkout/ClientCheckoutRoute.tsx",
+        "services/dsh/frontend/app-client/account/AddressLocationScreen.tsx",
+        "services/wlt/frontend/shared/dsh/use-wlt-dsh-payment-controller.tsx",
+        "tools/guards/client-commerce/client-commerce-truth-gate.mjs"
+      ],
+      "implemented": [
+        "Removed random and seeded address/map success",
+        "Removed localStorage address truth",
+        "Removed hardcoded sana checkout area",
+        "Removed local cart total and WLT amount calculations",
+        "Removed heuristic product units and modified price references",
+        "Removed dead buttons and unsafe fulfillment casts",
+        "Required real serviceability success before delivery checkout",
+        "Derived store area from live store response",
+        "Kept unsupported WLT methods disabled",
+        "Added a lian CI anti-regression guard"
+      ],
+      "acceptance": [
+        "Typecheck, build, unit tests, and client-commerce guard pass",
+        "Authenticated client can add, update, remove, clear, service-check, create checkout intent, receive WLT COD reference, create order, and open tracking",
+        "Negative authorization, out-of-area, stale cart, invalid coupon, and network failures are verified",
+        "Android device and control-panel readback are verified on the same commit"
+      ]
+    },
+    {
+      "id": "P1-CLIENT-ADDRESS-001",
+      "priority": "P1",
+      "domain": "client-addresses",
+      "status": "FIX_REQUIRED",
+      "problem": "No governed authenticated address-book contract, repository, database model, or map-provider boundary exists.",
+      "rootCause": "A local seeded screen previously masked the absence of the full-stack capability.",
+      "affectedPaths": [
+        "services/dsh/contracts/dsh.openapi.yaml",
+        "services/dsh/backend",
+        "services/dsh/database/migrations",
+        "services/dsh/frontend/shared",
+        "services/dsh/frontend/app-client/account/AddressLocationScreen.tsx",
+        "core/platform-control",
+        "core/providers"
+      ],
+      "acceptance": [
+        "Product Truth defines address ownership and retention",
+        "Authenticated CRUD contract and database constraints exist",
+        "Map provider is governed through Providers and Platform Control",
+        "Checkout can select a verified address and service-area result",
+        "PII, permission, audit, deletion, and negative tests pass"
+      ]
+    },
+    {
+      "id": "P1-WLT-001",
+      "priority": "P1",
+      "domain": "finance",
+      "status": "FIX_REQUIRED",
+      "problem": "WLT truth is now evidence-safe, but DSH-to-WLT mutation idempotency and complete runtime journeys are not fully verified.",
+      "rootCause": "Implementation readiness, simulator results, and production authorization had been conflated; some DSH financial calls do not visibly enforce a uniform idempotency header.",
+      "affectedPaths": [
+        "services/wlt/service.manifest.ts",
+        "services/wlt",
+        "services/dsh/backend/internal/wlt",
+        "infra/docker/financial-simulators"
+      ],
+      "implemented": [
+        "WLT remains the only financial truth owner",
+        "Runtime and production mutation claims reset to false",
+        "Production provider remains fail-closed",
+        "Client UI no longer calculates WLT amounts",
+        "Unit-layer duplicate, replay, timeout, out-of-order, and partial-failure coverage passes in services/dsh/backend/internal/wlt/client_resilience_test.go; runtime simulator journeys remain unverified"
+      ],
+      "acceptance": [
+        "Every DSH-to-WLT mutation has correlation and idempotency keys",
+        "Duplicate, replay, retry, timeout, out-of-order, and partial-failure tests pass",
+        "COD, refund, commission, settlement, payout, and reconciliation journeys pass",
+        "Production provider remains blocked until independent finance, security, release, and provider evidence"
+      ]
+    },
+    {
+      "id": "P1-SURFACE-001",
+      "priority": "P1",
+      "domain": "multi-surface",
+      "status": "FIX_REQUIRED",
+      "problem": "app-partner, app-captain, app-field, control-panel, and remaining app-client capabilities still require the same deep dead-control, contract, permission, persistence, readback, and runtime audit.",
+      "rootCause": "Static binding and historical evidence were previously treated as broad runtime readiness.",
+      "affectedPaths": [
+        "apps",
+        "services/dsh/frontend",
+        "services/wlt/frontend/shared/dsh",
+        "governance/guards/frontend-binding-registry.json"
+      ],
+      "acceptance": [
+        "Every required UI control has an end-to-end binding",
+        "Every excluded surface has a Product Truth reason",
+        "Negative and permission paths pass",
+        "No local commercial, operational, identity, workforce, or financial truth remains",
+        "Cross-surface readback is verified on the same commit"
+      ]
+    }
+  ]
+}

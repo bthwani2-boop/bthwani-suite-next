@@ -431,6 +431,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/wlt/order-cancellations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resolve the WLT-owned financial consequence of a governed DSH order cancellation.
+         * @description Internal DSH-only mutation. WLT derives all monetary values from the referenced payment session. It expires an uncollected session, creates one idempotent refund for captured or COD-collected money, or returns no action for an already terminal session.
+         */
+        post: operations["closeWltOrderCancellation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/wlt/payment-sessions/{paymentSessionId}/cod-collect": {
         parameters: {
             query?: never;
@@ -560,8 +580,8 @@ export interface paths {
         get: operations["listWltSettlements"];
         put?: never;
         /**
-         * Create a partner settlement record.
-         * @description Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
+         * Create a partner settlement from immutable delivered-order sources.
+         * @description DSH supplies server-derived delivered order identities, immutable gross snapshots and delivery timestamps. WLT owns the active fee policy and computes gross, platform fee, partner net and order count. Caller-supplied financial totals are forbidden. The mutation remains disabled unless WLT_MUTATIONS_ENABLED=true.
          */
         post: operations["createWltSettlement"];
         delete?: never;
@@ -618,6 +638,46 @@ export interface paths {
          * @description Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
          */
         post: operations["postWltSettlement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/settlement-policies/{partnerId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Upsert a partner settlement fee policy owned by WLT.
+         * @description Mutation-gated and service-authenticated.
+         */
+        put: operations["upsertWltSettlementPolicy"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/delivery-collections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept a governed DSH delivery-completion handoff.
+         * @description DSH sends delivery and collector identities only. WLT resolves the payment session, returns applicable=false for prepaid orders, and creates one COD custody record for COD orders without trusting caller-supplied money.
+         */
+        post: operations["createWltDeliveryCollectionHandoff"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1070,6 +1130,10 @@ export interface components {
             currency: string;
             idempotencyKey: string;
         };
+        WltPayoutOperatorRequest: {
+            /** @description Authenticated DSH operator identity. Maker/checker separation is enforced by WLT. */
+            operatorId: string;
+        };
         WltPayoutRequestResponse: {
             payoutRequest: components["schemas"]["WltPayoutRequest"];
         };
@@ -1084,20 +1148,34 @@ export interface components {
             /** Format: int64 */
             amountMinorUnits: number;
             currency: string;
-            status: string;
+            /** @enum {string} */
+            status: "pending" | "approved" | "rejected" | "provider_pending" | "processing" | "provider_result_unknown" | "completed" | "failed";
             /** Format: date-time */
             requestedAt: string;
             /** Format: date-time */
-            approvedAt?: string;
+            approvedAt?: string | null;
             /** Format: date-time */
-            rejectedAt?: string;
+            rejectedAt?: string | null;
             /** Format: date-time */
-            processedAt?: string;
+            processedAt?: string | null;
             /** Format: date-time */
-            completedAt?: string;
+            completedAt?: string | null;
             /** Format: date-time */
-            failedAt?: string;
+            failedAt?: string | null;
             failureReason?: string;
+            operatorId?: string;
+            approvedByOperatorId?: string;
+            rejectedByOperatorId?: string;
+            processedByOperatorId?: string;
+            completedByOperatorId?: string;
+            failedByOperatorId?: string;
+            /** @description Persisted provider or simulator transaction reference required before completion. */
+            providerReference?: string;
+            /** @enum {string} */
+            providerStatus?: "" | "unknown" | "declined" | "processed" | "succeeded";
+            /** Format: date-time */
+            providerProcessedAt?: string | null;
+            idempotencyKey?: string;
         };
         WltWalletStatusRefResponse: {
             reference: components["schemas"]["WltWalletStatusRef"];
@@ -1133,12 +1211,26 @@ export interface components {
             paymentSessionId: string;
             orderId: string;
             clientId: string;
-            reason?: string;
+            reason: string;
+        };
+        WltGovernedOrderCancellationRequest: {
+            paymentSessionId: string;
+            orderId: string;
+            clientId: string;
+            reason: string;
+        };
+        /** @enum {string} */
+        WltGovernedOrderCancellationAction: "expired" | "refund_requested" | "none";
+        WltGovernedOrderCancellationResponse: {
+            action: components["schemas"]["WltGovernedOrderCancellationAction"];
+            paymentSession?: components["schemas"]["WltPaymentSession"];
+            refund?: components["schemas"]["WltRefund"];
+            sessionStatus?: string;
         };
         WltCancelPaymentSessionForOrderRequest: {
             orderId: string;
             clientId: string;
-            reason?: string;
+            reason: string;
         };
         WltCancelPaymentSessionForOrderResponse: {
             /** @enum {string} */
@@ -1146,6 +1238,11 @@ export interface components {
             paymentSession?: components["schemas"]["WltPaymentSession"];
             refund?: components["schemas"]["WltRefund"];
             sessionStatus?: string;
+        };
+        WltCreateRefundResponse: {
+            refund: components["schemas"]["WltRefund"];
+            /** @description True when the existing active refund was returned idempotently. */
+            replayed: boolean;
         };
         WltRefundResponse: {
             refund: components["schemas"]["WltRefund"];
@@ -1183,16 +1280,40 @@ export interface components {
             periodStart: string;
             /** Format: date */
             periodEnd: string;
+            operatorId: string;
+            orderSources: components["schemas"]["WltDeliveredOrderSettlementSource"][];
+        };
+        WltDeliveredOrderSettlementSource: {
+            orderId: string;
             /** Format: int64 */
-            grossAmount: number;
-            /** Format: int64 */
-            platformFee: number;
-            /** Format: int64 */
-            netAmount: number;
+            grossAmountMinorUnits: number;
+            currency: string;
+            /** Format: date-time */
+            deliveredAt: string;
+        };
+        WltSettlementPolicyRequest: {
+            feeBasisPoints: number;
             /** @default YER */
             currency: string;
-            /** @default 0 */
-            orderCount: number;
+            /**
+             * @default active
+             * @enum {string}
+             */
+            status: "active" | "inactive";
+            operatorId: string;
+        };
+        WltSettlementPolicy: {
+            partnerId: string;
+            feeBasisPoints: number;
+            currency: string;
+            /** @enum {string} */
+            status: "active" | "inactive";
+            updatedByOperatorId: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        WltSettlementPolicyResponse: {
+            settlementPolicy: components["schemas"]["WltSettlementPolicy"];
         };
         WltSettlementResponse: {
             settlement: components["schemas"]["WltSettlement"];
@@ -1222,7 +1343,11 @@ export interface components {
         WltCodRecord: {
             id: string;
             orderId: string;
-            captainId: string;
+            /** @description Compatibility projection, present only when collectorType is captain. */
+            captainId?: string;
+            /** @enum {string} */
+            collectorType: "captain" | "store_courier" | "partner_store";
+            collectorId: string;
             partnerId: string;
             /** Format: int64 */
             amountMinorUnits: number;
@@ -1238,16 +1363,16 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
         };
+        /** @description Internal DSH-only custody handoff. Monetary values are forbidden in the request and are always derived from WLT's payment session. */
         WltCreateCodRecordRequest: {
             orderId: string;
-            captainId: string;
+            /** @enum {string} */
+            collectorType: "captain" | "store_courier" | "partner_store";
+            collectorId: string;
+            /** @description Deprecated compatibility input for captain collectors. */
+            captainId?: string;
             partnerId: string;
-            /** @description When set, WLT derives amountMinorUnits/currency from its own payment session for this checkout intent instead of trusting the caller; amountMinorUnits/currency in the request are ignored in that case. */
-            checkoutIntentId?: string;
-            /** Format: int64 */
-            amountMinorUnits?: number;
-            /** @default YER */
-            currency: string;
+            checkoutIntentId: string;
         };
         WltCodRecordResponse: {
             codRecord: components["schemas"]["WltCodRecord"];
@@ -1341,7 +1466,7 @@ export interface components {
         };
         WltLedgerAccountBalance: {
             /** @enum {string} */
-            accountType: "wallet" | "platform_revenue" | "platform_payable" | "provider_clearing" | "platform_commission_receivable";
+            accountType: "wallet" | "platform_revenue" | "platform_payable" | "provider_clearing" | "cash_in_transit" | "platform_commission_receivable";
             /** @enum {string} */
             category: "asset" | "liability" | "revenue" | "expense";
             /** @enum {string} */
@@ -1769,6 +1894,7 @@ export interface operations {
             query?: {
                 beneficiaryActorId?: string;
                 beneficiaryActorType?: string;
+                status?: "pending" | "approved" | "rejected" | "provider_pending" | "processing" | "provider_result_unknown" | "completed" | "failed";
             };
             header?: never;
             path?: never;
@@ -1848,7 +1974,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WltPayoutOperatorRequest"];
+            };
+        };
         responses: {
             /** @description Approved. */
             200: {
@@ -1870,7 +2000,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WltPayoutOperatorRequest"];
+            };
+        };
         responses: {
             /** @description Rejected. */
             200: {
@@ -1892,7 +2026,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WltPayoutOperatorRequest"];
+            };
+        };
         responses: {
             /** @description Processing. */
             200: {
@@ -1914,7 +2052,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WltPayoutOperatorRequest"];
+            };
+        };
         responses: {
             /** @description Completed. */
             200: {
@@ -1936,7 +2078,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WltPayoutOperatorRequest"];
+            };
+        };
         responses: {
             /** @description Failed. */
             200: {
@@ -2116,6 +2262,39 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    closeWltOrderCancellation: {
+        parameters: {
+            query?: never;
+            header: {
+                Authorization: string;
+                "X-Service-Caller": "dsh";
+                "Idempotency-Key": string;
+                "X-Correlation-ID": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WltGovernedOrderCancellationRequest"];
+            };
+        };
+        responses: {
+            /** @description Financial cancellation decision returned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WltGovernedOrderCancellationResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
     markWltCodCollected: {
         parameters: {
             query?: never;
@@ -2181,13 +2360,22 @@ export interface operations {
             };
         };
         responses: {
+            /** @description Existing active refund returned for an idempotent replay. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WltCreateRefundResponse"];
+                };
+            };
             /** @description Refund created. */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["WltRefundResponse"];
+                    "application/json": components["schemas"]["WltCreateRefundResponse"];
                 };
             };
             400: components["responses"]["BadRequest"];
@@ -2337,7 +2525,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Settlement created. */
+            /** @description Governed settlement created. */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -2348,6 +2536,7 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
         };
     };
     getWltSettlementSummary: {
@@ -2428,6 +2617,84 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    upsertWltSettlementPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WltSettlementPolicyRequest"];
+            };
+        };
+        responses: {
+            /** @description Settlement policy persisted. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WltSettlementPolicyResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createWltDeliveryCollectionHandoff: {
+        parameters: {
+            query?: never;
+            header: {
+                Authorization: string;
+                "X-Service-Caller": "dsh";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WltCreateCodRecordRequest"];
+            };
+        };
+        responses: {
+            /** @description Handoff replayed or not applicable to a prepaid order. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        codRecord?: components["schemas"]["WltCodRecord"] | null;
+                        applicable: boolean;
+                        replayed: boolean;
+                    };
+                };
+            };
+            /** @description COD custody record created from WLT payment-session truth. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        codRecord: components["schemas"]["WltCodRecord"];
+                        /** @constant */
+                        applicable: true;
+                        /** @constant */
+                        replayed: false;
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
         };
     };

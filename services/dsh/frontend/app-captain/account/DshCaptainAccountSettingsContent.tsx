@@ -1,37 +1,35 @@
-import React from 'react';
-import { Pressable, View } from 'react-native';
-import { Box, borders, Icon, lightThemeColors, radius, spacing, Text } from '@bthwani/ui-kit';
+import React from "react";
+import { Pressable, View } from "react-native";
+import {
+  Box,
+  borders,
+  Card,
+  Icon,
+  lightThemeColors,
+  radius,
+  spacing,
+  Text,
+} from "@bthwani/ui-kit";
+import { PartnerFleetConnectionCard } from "./PartnerFleetConnectionCard";
 
-type BThwaniAppearanceMode = 'lightPremium' | 'darkPremium';
-
-let RNSwitch: React.ComponentType<{
-  value: boolean;
-  onValueChange: (v: boolean) => void;
-  thumbColor?: string;
-  trackColor?: { false?: string; true?: string };
-  ios_backgroundColor?: string;
-}> | null = null;
-try {
-  // eslint-disable-next-line no-eval
-  RNSwitch = eval('require')('react-native').Switch;
-} catch { /* noop */ }
+type BThwaniAppearanceMode = "lightPremium" | "darkPremium";
 
 type AppearanceOption = {
-  mode: BThwaniAppearanceMode;
-  title: string;
+  readonly mode: BThwaniAppearanceMode;
+  readonly title: string;
 };
 
-const appearanceOptions: AppearanceOption[] = [
-  { mode: 'lightPremium', title: 'فاتح' },
-  { mode: 'darkPremium', title: 'داكن' },
+const appearanceOptions: readonly AppearanceOption[] = [
+  { mode: "lightPremium", title: "فاتح" },
+  { mode: "darkPremium", title: "داكن" },
 ];
 
 type Props = {
-  appearanceHydrated: boolean;
-  appearanceMode: BThwaniAppearanceMode;
-  isStoreCourierMode: boolean;
-  onSetAppearanceMode: (mode: BThwaniAppearanceMode) => void;
-  onToggleStoreCourierMode: (next: boolean) => void;
+  readonly appearanceHydrated: boolean;
+  readonly appearanceMode: BThwaniAppearanceMode;
+  readonly isStoreCourierMode: boolean;
+  readonly onSetAppearanceMode: (mode: BThwaniAppearanceMode) => void;
+  readonly onToggleStoreCourierMode: (next: boolean) => void;
 };
 
 export function DshCaptainAccountSettingsContent({
@@ -42,59 +40,88 @@ export function DshCaptainAccountSettingsContent({
   onToggleStoreCourierMode,
 }: Props) {
   const theme = lightThemeColors;
-  const rowDirection = 'row-reverse' as const;
-
-  const iconBox = (name: React.ComponentProps<typeof Icon>['name']) => (
-    <View style={{ width: 36, height: 36, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.surfaceInset, borderWidth: borders.hairline, borderColor: theme.borderColor, flexShrink: 0 }}>
-      <Icon name={name} size={17} tone="muted" />
-    </View>
-  );
 
   return (
     <Box gap={4}>
       <Box padding={0} gap={0}>
-        {/* Appearance row */}
-        <View style={{ flexDirection: rowDirection, alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing[4], paddingVertical: 14, backgroundColor: theme.surface }}>
-          <View style={{ flexDirection: rowDirection, alignItems: 'center', gap: spacing[3], flexShrink: 1, minWidth: 0 }}>
-            {iconBox('color-palette-outline')}
-            <View style={{ flexShrink: 1, minWidth: 0, gap: 2, alignItems: 'flex-end' }}>
-              <Text role="bodyStrong" style={{ textAlign: 'right' }} numberOfLines={1}>المظهر</Text>
-              <Text role="bodySm" tone="muted" style={{ textAlign: 'right' }} numberOfLines={1}>
-                {appearanceHydrated ? 'فاتح أبيض أو داكن زجاجي' : 'جارٍ الاستعادة...'}
+        <View
+          style={{
+            flexDirection: "row-reverse",
+            alignItems: "center",
+            justifyContent: "space-between",
+            paddingHorizontal: spacing[4],
+            paddingVertical: 14,
+            backgroundColor: theme.surface,
+          }}
+        >
+          <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: spacing[3], flexShrink: 1 }}>
+            <View
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: radius.sm,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: theme.surfaceInset,
+                borderWidth: borders.hairline,
+                borderColor: theme.borderColor,
+              }}
+            >
+              <Icon name="color-palette-outline" size={17} tone="muted" />
+            </View>
+            <View style={{ flexShrink: 1, gap: 2, alignItems: "flex-end" }}>
+              <Text role="bodyStrong" style={{ textAlign: "right" }}>المظهر</Text>
+              <Text role="bodySm" tone="muted" style={{ textAlign: "right" }}>
+                {appearanceHydrated ? "فاتح أبيض أو داكن" : "جارٍ استعادة الإعداد…"}
               </Text>
             </View>
           </View>
-          <View style={{ flexDirection: rowDirection, backgroundColor: theme.surfaceInset, borderRadius: radius.sm, padding: 3, borderWidth: borders.hairline, borderColor: theme.borderColor, gap: spacing[1] }}>
-            {appearanceOptions.map((opt) => (
-              <Pressable key={opt.mode} onPress={() => onSetAppearanceMode(opt.mode)} style={{ paddingHorizontal: spacing[3], paddingVertical: 6, borderRadius: 9, backgroundColor: appearanceMode === opt.mode ? theme.action : 'transparent' }}>
-                <Text role="bodyStrong" style={{ color: appearanceMode === opt.mode ? theme.colorInverse : theme.color }}>{opt.title}</Text>
+
+          <View
+            style={{
+              flexDirection: "row-reverse",
+              backgroundColor: theme.surfaceInset,
+              borderRadius: radius.sm,
+              padding: 3,
+              borderWidth: borders.hairline,
+              borderColor: theme.borderColor,
+              gap: spacing[1],
+            }}
+          >
+            {appearanceOptions.map((option) => (
+              <Pressable
+                key={option.mode}
+                accessibilityRole="button"
+                accessibilityState={{ selected: appearanceMode === option.mode }}
+                onPress={() => onSetAppearanceMode(option.mode)}
+                style={{
+                  paddingHorizontal: spacing[3],
+                  paddingVertical: 6,
+                  borderRadius: 9,
+                  backgroundColor: appearanceMode === option.mode ? theme.action : "transparent",
+                }}
+              >
+                <Text
+                  role="bodyStrong"
+                  style={{ color: appearanceMode === option.mode ? theme.colorInverse : theme.color }}
+                >
+                  {option.title}
+                </Text>
               </Pressable>
             ))}
           </View>
         </View>
-
-        {/* App mode row */}
-        <View style={{ flexDirection: rowDirection, alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing[4], paddingVertical: 14, backgroundColor: theme.surface, borderTopWidth: 1, borderTopColor: theme.borderColor }}>
-          <View style={{ flexDirection: rowDirection, alignItems: 'center', gap: spacing[3], flexShrink: 1, minWidth: 0 }}>
-            {iconBox('storefront-outline')}
-            <View style={{ flexShrink: 1, minWidth: 0, gap: 2, alignItems: 'flex-end' }}>
-              <Text role="bodyStrong" style={{ textAlign: 'right' }} numberOfLines={1}>وضع موصل المتجر</Text>
-              <Text role="bodySm" tone="muted" style={{ textAlign: 'right' }} numberOfLines={2}>
-                {isStoreCourierMode ? 'مفعّل — طلبات المتجر فقط' : 'غير مفعّل — الوضع الافتراضي'}
-              </Text>
-            </View>
-          </View>
-          {RNSwitch ? (
-            <RNSwitch
-              value={isStoreCourierMode}
-              onValueChange={onToggleStoreCourierMode}
-              thumbColor={isStoreCourierMode ? theme.colorInverse : theme.surfaceRaised}
-              trackColor={{ false: theme.borderColorStrong, true: theme.action }}
-              ios_backgroundColor={theme.borderColorStrong}
-            />
-          ) : null}
-        </View>
       </Box>
+
+      <PartnerFleetConnectionCard onMembershipStateChange={onToggleStoreCourierMode} />
+
+      <Card padding={3} tone={isStoreCourierMode ? "success" : "default"}>
+        <Text role="bodySm" align="start">
+          {isStoreCourierMode
+            ? "وضع موصل المتجر مفعّل من عضوية DSH نشطة ومتحقق منها."
+            : "وضع موصل المتجر غير مفعّل لعدم وجود عضوية DSH نشطة."}
+        </Text>
+      </Card>
     </Box>
   );
 }

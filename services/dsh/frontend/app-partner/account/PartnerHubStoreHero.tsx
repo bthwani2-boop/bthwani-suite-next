@@ -11,7 +11,7 @@ export interface PartnerHubStoreHeroProps {
   resolvedActiveZoneLabel: string;
   isAvailable: boolean;
   onOpenStoreScope: (() => void) | undefined;
-  serviceModes: PartnerOperationalMode[];
+  serviceModes: readonly PartnerOperationalMode[];
   selectedModeId: string;
   setSelectedModeId: (id: string) => void;
 }
@@ -89,7 +89,6 @@ export function PartnerHubStoreHero({
           </Pressable>
         </View>
       </View>
-      {/* Service mode chips — readonly display */}
       <View style={{ flexDirection: direction === 'rtl' ? 'row-reverse' : 'row', flexWrap: 'wrap', gap: spacing[2] }}>
         {serviceModes.map((mode) => (
           <Pressable

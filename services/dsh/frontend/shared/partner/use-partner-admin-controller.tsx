@@ -21,7 +21,7 @@ function resolveErrorMessage(err: unknown): string {
   if (e?.status === 401) return "جلسة منتهية — يرجى تسجيل الدخول مجدداً";
   if (e?.status === 403) return "غير مصرح لك بهذه العملية";
   if (e?.status === 404) return "الشريك غير موجود";
-  if (e?.status === 409) return "تعارض في البيانات — قد يكون الشريك موجوداً بالفعل";
+  if (e?.status === 409) return "تعارض في البيانات — أعد تحميل أحدث نسخة قبل المحاولة";
   if (e?.status === 422) return "الانتقال غير مسموح من الحالة الحالية";
   return "حدث خطأ، يرجى المحاولة مجدداً";
 }
@@ -38,11 +38,10 @@ export function usePartnerAdminController(authKind: string) {
   const [filters, setFilters] = useState<DshPartnerListFilters>({ status: "", category: "" });
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 50;
-
   const isAuth = authKind === "authenticated";
 
   const loadList = useCallback(async (f: DshPartnerListFilters, p: number) => {
-    if (!isAuth) return;
+    if (!isAuth) return false;
     setListState({ kind: "loading" });
     try {
       const res = await fetchPartners({
@@ -52,13 +51,13 @@ export function usePartnerAdminController(authKind: string) {
       });
       const partners = res.partners;
       const total = res.pagination.total;
-      if (partners.length === 0) {
-        setListState({ kind: "empty" });
-      } else {
-        setListState({ kind: "success", partners, total, page: p });
-      }
+      setListState(partners.length === 0
+        ? { kind: "empty" }
+        : { kind: "success", partners, total, page: p });
+      return true;
     } catch (err) {
       setListState({ kind: "error", message: resolveErrorMessage(err) });
+      return false;
     }
   }, [isAuth]);
 
@@ -67,16 +66,18 @@ export function usePartnerAdminController(authKind: string) {
   }, [loadList, filters, page]);
 
   const loadDetail = useCallback(async (partnerId: string) => {
-    if (!isAuth) return;
+    if (!isAuth) return false;
     setDetailState({ kind: "loading" });
     try {
       const partner = await fetchPartner(partnerId);
       setDetailState({ kind: "success", partner });
+      return true;
     } catch (err) {
       const e = err as { status?: number };
       if (e?.status === 404) setDetailState({ kind: "not_found" });
       else if (e?.status === 403) setDetailState({ kind: "forbidden" });
       else setDetailState({ kind: "error", message: resolveErrorMessage(err) });
+      return false;
     }
   }, [isAuth]);
 
@@ -85,7 +86,7 @@ export function usePartnerAdminController(authKind: string) {
     try {
       const partner = await createPartner(input);
       setMutationState({ kind: "success", partner });
-      void loadList(filters, page);
+      await loadList(filters, page);
       return partner;
     } catch (err) {
       setMutationState({ kind: "error", message: resolveErrorMessage(err) });
@@ -100,7 +101,7 @@ export function usePartnerAdminController(authKind: string) {
       const partner = res.partner;
       setMutationState({ kind: "success", partner });
       setDetailState({ kind: "success", partner });
-      void loadList(filters, page);
+      await loadList(filters, page);
       return partner;
     } catch (err) {
       const e = err as { status?: number };
@@ -116,15 +117,8 @@ export function usePartnerAdminController(authKind: string) {
   }, [filters, page, loadList]);
 
   const retry = useCallback(() => void loadList(filters, page), [loadList, filters, page]);
-
-  const rows = listState.kind === "success"
-    ? listState.partners.map(buildPartnerListRowViewModel)
-    : [];
-
-  const detailViewModel = detailState.kind === "success"
-    ? buildPartnerDetailViewModel(detailState.partner)
-    : null;
-
+  const rows = listState.kind === "success" ? listState.partners.map(buildPartnerListRowViewModel) : [];
+  const detailViewModel = detailState.kind === "success" ? buildPartnerDetailViewModel(detailState.partner) : null;
   const total = listState.kind === "success" ? listState.total : 0;
   const hasNextPage = (page + 1) * PAGE_SIZE < total;
   const hasPrevPage = page > 0;
@@ -157,39 +151,45 @@ export function usePartnerDocumentsController(partnerId: string, authKind: strin
   const isAuth = authKind === "authenticated";
 
   const load = useCallback(async () => {
-    if (!isAuth || !partnerId) return;
+    if (!isAuth || !partnerId) return false;
     setState({ kind: "loading" });
     try {
       const { documents } = await fetchPartnerDocuments(partnerId);
       setState(documents.length === 0
         ? { kind: "empty" }
         : { kind: "success", documents, total: documents.length });
+      return true;
     } catch (err) {
       setState({ kind: "error", message: resolveErrorMessage(err) });
+      return false;
     }
   }, [isAuth, partnerId]);
 
   useEffect(() => { void load(); }, [load]);
 
-  const add = useCallback(async (input: DshAddDocumentInput) => {
+  const add = useCallback(async (input: DshAddDocumentInput): Promise<boolean> => {
     setActionState({ kind: "loading" });
     try {
       await addPartnerDocument(partnerId, input);
+      await load();
       setActionState({ kind: "idle" });
-      void load();
+      return true;
     } catch (err) {
       setActionState({ kind: "error", message: resolveErrorMessage(err) });
+      return false;
     }
   }, [partnerId, load]);
 
-  const review = useCallback(async (docId: string, input: DshReviewDocumentInput) => {
+  const review = useCallback(async (docId: string, input: DshReviewDocumentInput): Promise<boolean> => {
     setActionState({ kind: "loading" });
     try {
       await reviewPartnerDocument(partnerId, docId, input);
+      await load();
       setActionState({ kind: "idle" });
-      void load();
+      return true;
     } catch (err) {
       setActionState({ kind: "error", message: resolveErrorMessage(err) });
+      return false;
     }
   }, [partnerId, load]);
 
@@ -201,22 +201,20 @@ export function usePartnerReadinessController(partnerId: string, authKind: strin
   const isAuth = authKind === "authenticated";
 
   const load = useCallback(async () => {
-    if (!isAuth || !partnerId) return;
+    if (!isAuth || !partnerId) return false;
     setState({ kind: "loading" });
     try {
       const readiness = await fetchPartnerReadiness(partnerId);
       setState({ kind: "success", readiness });
+      return true;
     } catch (err) {
       setState({ kind: "error", message: resolveErrorMessage(err) });
+      return false;
     }
   }, [isAuth, partnerId]);
 
   useEffect(() => { void load(); }, [load]);
-
-  const viewModel = state.kind === "success"
-    ? buildPartnerReadinessViewModel(state.readiness)
-    : null;
-
+  const viewModel = state.kind === "success" ? buildPartnerReadinessViewModel(state.readiness) : null;
   return { state, viewModel, reload: load };
 }
 
@@ -225,20 +223,19 @@ export function usePartnerAuditController(partnerId: string, authKind: string) {
   const isAuth = authKind === "authenticated";
 
   const load = useCallback(async () => {
-    if (!isAuth || !partnerId) return;
+    if (!isAuth || !partnerId) return false;
     setState({ kind: "loading" });
     try {
       const { events } = await fetchPartnerAuditEvents(partnerId);
-      setState(events.length === 0
-        ? { kind: "empty" }
-        : { kind: "success", events });
+      setState(events.length === 0 ? { kind: "empty" } : { kind: "success", events });
+      return true;
     } catch (err) {
       setState({ kind: "error", message: resolveErrorMessage(err) });
+      return false;
     }
   }, [isAuth, partnerId]);
 
   useEffect(() => { void load(); }, [load]);
-
   return { state, reload: load };
 }
 
@@ -248,29 +245,29 @@ export function usePartnerDetailController(partnerId: string, authKind: string) 
   const isAuth = authKind === "authenticated";
 
   const load = useCallback(async () => {
-    if (!isAuth || !partnerId) return;
+    if (!isAuth || !partnerId) return false;
     setDetailState({ kind: "loading" });
     try {
       const partner = await fetchPartner(partnerId);
       setDetailState({ kind: "success", partner });
+      return true;
     } catch (err) {
       const e = err as { status?: number };
-      if (e?.status === 404) {
-        setDetailState({ kind: "not_found" });
-      } else {
-        setDetailState({ kind: "error", message: resolveErrorMessage(err) });
-      }
+      if (e?.status === 404) setDetailState({ kind: "not_found" });
+      else setDetailState({ kind: "error", message: resolveErrorMessage(err) });
+      return false;
     }
   }, [isAuth, partnerId]);
 
   useEffect(() => { void load(); }, [load]);
 
-  const transition = useCallback(async (input: DshPartnerTransitionInput, version?: number) => {
+  const transition = useCallback(async (input: DshPartnerTransitionInput, version?: number): Promise<boolean> => {
     setMutationState({ kind: "loading" });
     try {
       await transitionPartner(partnerId, input, version);
+      await load();
       setMutationState({ kind: "idle" });
-      void load();
+      return true;
     } catch (err) {
       const e = err as { status?: number };
       if (e?.status === 422) {
@@ -280,13 +277,11 @@ export function usePartnerDetailController(partnerId: string, authKind: string) 
       } else {
         setMutationState({ kind: "error", message: resolveErrorMessage(err) });
       }
+      return false;
     }
   }, [partnerId, load]);
 
-  const detailViewModel = detailState.kind === "success"
-    ? buildPartnerDetailViewModel(detailState.partner)
-    : null;
-
+  const detailViewModel = detailState.kind === "success" ? buildPartnerDetailViewModel(detailState.partner) : null;
   return { detailState, detailViewModel, mutationState, reload: load, transition };
 }
 
@@ -296,28 +291,32 @@ export function usePartnerStoresController(partnerId: string, authKind: string) 
   const isAuth = authKind === "authenticated";
 
   const load = useCallback(async () => {
-    if (!isAuth || !partnerId) return;
+    if (!isAuth || !partnerId) return false;
     setState({ kind: "loading" });
     try {
       const { stores, total } = await fetchPartnerStores(partnerId);
       setState(stores.length === 0
         ? { kind: "empty" }
         : { kind: "success", stores, total });
+      return true;
     } catch (err) {
       setState({ kind: "error", message: resolveErrorMessage(err) });
+      return false;
     }
   }, [isAuth, partnerId]);
 
   useEffect(() => { void load(); }, [load]);
 
-  const linkStore = useCallback(async (storeId: string) => {
+  const linkStore = useCallback(async (storeId: string): Promise<boolean> => {
     setActionState({ kind: "loading" });
     try {
       await linkPartnerStore(partnerId, storeId);
+      await load();
       setActionState({ kind: "idle" });
-      void load();
+      return true;
     } catch (err) {
       setActionState({ kind: "error", message: resolveErrorMessage(err) });
+      return false;
     }
   }, [partnerId, load]);
 
@@ -329,19 +328,18 @@ export function usePartnerVisitsController(partnerId: string, authKind: string) 
   const isAuth = authKind === "authenticated";
 
   const load = useCallback(async () => {
-    if (!isAuth || !partnerId) return;
+    if (!isAuth || !partnerId) return false;
     setState({ kind: "loading" });
     try {
       const { visits } = await fetchPartnerFieldVisits(partnerId);
-      setState(visits.length === 0
-        ? { kind: "empty" }
-        : { kind: "success", visits });
+      setState(visits.length === 0 ? { kind: "empty" } : { kind: "success", visits });
+      return true;
     } catch (err) {
       setState({ kind: "error", message: resolveErrorMessage(err) });
+      return false;
     }
   }, [isAuth, partnerId]);
 
   useEffect(() => { void load(); }, [load]);
-
   return { state, reload: load };
 }

@@ -1,4 +1,5 @@
 import type { paths } from "../../../clients/generated/dsh-api";
+import type { DshFulfillmentDeliveryMode } from "../delivery/delivery.contract";
 
 export type PartnerStoreSettingsRequest =
   paths["/dsh/partner/stores/{storeId}/settings"]["patch"]["requestBody"]["content"]["application/json"];
@@ -18,10 +19,26 @@ export type OperatorStoreDetailResponse =
   paths["/dsh/operator/stores/{storeId}"]["get"]["responses"]["200"]["content"]["application/json"];
 
 export type StoreRoleAction =
-  | { readonly kind: "partner"; readonly storeId: string; readonly input: PartnerStoreSettingsRequest }
-  | { readonly kind: "field"; readonly storeId: string; readonly input: FieldStoreVerificationRequest }
-  | { readonly kind: "captain"; readonly storeId: string; readonly input: CaptainPickupReadinessRequest }
-  | { readonly kind: "operator"; readonly storeId: string; readonly input: OperatorStoreGovernanceRequest };
+  | {
+      readonly kind: "partner";
+      readonly storeId: string;
+      readonly input: PartnerStoreSettingsRequest;
+    }
+  | {
+      readonly kind: "field";
+      readonly storeId: string;
+      readonly input: FieldStoreVerificationRequest;
+    }
+  | {
+      readonly kind: "captain";
+      readonly storeId: string;
+      readonly input: CaptainPickupReadinessRequest;
+    }
+  | {
+      readonly kind: "operator";
+      readonly storeId: string;
+      readonly input: OperatorStoreGovernanceRequest;
+    };
 
 export type DshStoreSummaryDto =
   paths["/dsh/stores"]["get"]["responses"]["200"]["content"]["application/json"]["stores"][number];
@@ -29,14 +46,8 @@ export type DshStoreSummaryDto =
 export type DshStoreDetailDto =
   paths["/dsh/stores/{storeId}"]["get"]["responses"]["200"]["content"]["application/json"]["store"];
 
-type DshPaginationDto = {
-  readonly limit: number;
-  readonly offset: number;
-  readonly total: number;
-};
-
 export type StoreHeroFulfillmentMode = {
-  readonly id: string;
+  readonly id: DshFulfillmentDeliveryMode;
   readonly label: string;
   readonly icon: string;
 };

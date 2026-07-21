@@ -3,7 +3,6 @@ package refund
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -12,7 +11,6 @@ import (
 
 	"wlt-api/internal/ledger"
 	"wlt-api/internal/provider"
-	"wlt-api/internal/reference"
 	"wlt-api/internal/shared"
 )
 
@@ -108,64 +106,13 @@ func scanRefundRow(rows *sql.Rows) (*Refund, error) {
 const refundCols = `id, payment_session_id, order_id, client_id, amount_minor_units,
 	currency, reason, status, resolved_at, created_at, updated_at`
 
-// CreateRefund creates a refund for input.PaymentSessionID. The refunded
-// amount/currency are always read from that session's own row (never from
-// caller input -- see CreateRefundInput). The session must already be in a
-// funds-received state (captured, from a card capture, or cod_collected,
-// from a completed COD collection); anything else returns
-// ErrSessionNotRefundable. Calling this twice for the same session (e.g. a
-// retried DSH request) is idempotent: any existing non-rejected refund for
-// that session is returned instead of inserting a duplicate row, and the
-// check-then-insert runs inside a transaction (plus a partial unique index
-// as a defense-in-depth backstop -- see migration wlt-014) to avoid a race
-// between two concurrent requests both creating a refund for the session.
+// CreateRefund preserves the internal compatibility signature while delegating
+// every creation to the atomic, ownership-safe implementation. This keeps all
+// refund entry points aligned on required reason, session ownership, amount,
+// currency, and idempotency rules.
 func CreateRefund(db *sql.DB, input CreateRefundInput) (*Refund, error) {
-	if input.PaymentSessionID == "" || input.OrderID == "" || input.ClientID == "" {
-		return nil, fmt.Errorf("paymentSessionId, orderId, and clientId are required")
-	}
-	session, err := reference.GetPaymentSession(db, input.PaymentSessionID)
-	if err != nil {
-		return nil, err
-	}
-	if session == nil {
-		return nil, fmt.Errorf("payment session not found")
-	}
-	if session.Status != "captured" && session.Status != "cod_collected" {
-		return nil, ErrSessionNotRefundable
-	}
-
-	tx, err := db.Begin()
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-
-	existing, err := getActiveRefundForSessionTx(tx, input.PaymentSessionID)
-	if err != nil {
-		return nil, err
-	}
-	if existing != nil {
-		if err := tx.Commit(); err != nil {
-			return nil, err
-		}
-		return existing, nil
-	}
-
-	const q = `
-		INSERT INTO wlt_refunds
-			(payment_session_id, order_id, client_id, amount_minor_units, currency, reason)
-		VALUES ($1, $2, $3, $4, $5, $6)
-		RETURNING ` + refundCols
-	row := tx.QueryRow(q, input.PaymentSessionID, input.OrderID, input.ClientID,
-		session.AmountMinorUnits, session.Currency, input.Reason)
-	r, err := scanRefund(row)
-	if err != nil {
-		return nil, err
-	}
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
-	return r, nil
+	created, _, err := CreateRefundAtomic(db, input)
+	return created, err
 }
 
 // getActiveRefundForSessionTx looks up a non-rejected refund already
@@ -345,24 +292,7 @@ func RejectRefund(db *sql.DB, refundID string) (*Refund, error) {
 // HTTP handlers
 
 func HandleCreateRefund(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var input CreateRefundInput
-		decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64*1024))
-		if err := decoder.Decode(&input); err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
-			return
-		}
-		ref, err := CreateRefund(db, input)
-		if errors.Is(err, ErrSessionNotRefundable) {
-			shared.SendError(w, http.StatusConflict, "SESSION_NOT_REFUNDABLE", "payment session is not in a refundable state (must be captured or cod_collected)")
-			return
-		}
-		if err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-			return
-		}
-		shared.SendJSON(w, http.StatusCreated, map[string]any{"refund": ref})
-	}
+	return HandleCreateRefundAtomic(db)
 }
 
 func HandleGetRefund(db *sql.DB) http.HandlerFunc {

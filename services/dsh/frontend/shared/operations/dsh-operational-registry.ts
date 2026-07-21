@@ -789,62 +789,6 @@ const PARTNER_INVENTORY_FLOWS: readonly DshFlowRegistryEntry[] = [
   },
 ];
 
-const PARTNER_ONBOARDING_FLOWS: readonly DshFlowRegistryEntry[] = [
-  {
-    id: 'doc-upload',
-    label: 'رفع وثيقة',
-    domain: 'partner-operations',
-    ownerSurface: 'app-partner',
-    visibleSurfaces: ['app-partner', 'control-panel'],
-    visibility: 'primary',
-    routeId: 'doc-upload',
-    escalationOwner: 'control-panel',
-    onDemandPolicy: 'evidence-on-open',
-    allowedActions: ['رفع وثيقة', 'إرفاق مرجع'],
-    forbiddenActions: ['تضمين ملفات ثقيلة في state دائمًا'],
-  },
-  {
-    id: 'intake-start',
-    label: 'بدء الإدخال',
-    domain: 'partner-operations',
-    ownerSurface: 'app-partner',
-    visibleSurfaces: ['app-partner', 'control-panel'],
-    visibility: 'primary',
-    routeId: 'intake-start',
-    escalationOwner: 'control-panel',
-    onDemandPolicy: 'detail-on-open',
-    allowedActions: ['بدء ملف الإدخال', 'حفظ مسودة'],
-    forbiddenActions: ['التفعيل النهائي دون مراجعة'],
-  },
-  {
-    id: 'store-nomination',
-    label: 'ترشيح متجر',
-    domain: 'partner-operations',
-    ownerSurface: 'app-partner',
-    visibleSurfaces: ['app-partner', 'app-field', 'control-panel'],
-    visibility: 'primary',
-    routeId: 'store-nomination',
-    escalationOwner: 'control-panel',
-    onDemandPolicy: 'detail-on-open',
-    allowedActions: ['رفع بيانات الترشيح', 'تحويل للمراجعة'],
-    forbiddenActions: ['إسناد أثر مالي محلي', 'تفعيل دون مراجعة'],
-  },
-  {
-    id: 'video-upload',
-    label: 'رفع مقطع فيديو',
-    domain: 'partner-operations',
-    ownerSurface: 'app-partner',
-    visibleSurfaces: ['app-partner', 'control-panel'],
-    visibility: 'primary',
-    routeId: 'video-upload',
-    screenHint: 'OperationScreens > VideoUploadScreen',
-    escalationOwner: 'control-panel',
-    onDemandPolicy: 'evidence-on-open',
-    allowedActions: ['رفع مقطع', 'مراجعة قبل الإرسال'],
-    forbiddenActions: ['تضمين ملف الفيديو في state دائمًا'],
-  },
-];
-
 // ---------------------------------------------------------------------------
 // Registry — Finance Snapshot Flows (WLT bridge, hidden-compat on partner)
 // ---------------------------------------------------------------------------
@@ -1156,7 +1100,6 @@ export const DSH_FLOW_REGISTRY: readonly DshFlowRegistryEntry[] = [
   ...PARTNER_HIDDEN_COMPAT_FLOWS,
   ...PARTNER_CHAT_FLOWS,
   ...PARTNER_INVENTORY_FLOWS,
-  ...PARTNER_ONBOARDING_FLOWS,
   ...FINANCE_SNAPSHOT_FLOWS,
   ...CLIENT_FLOWS,
   ...CAPTAIN_FLOWS,

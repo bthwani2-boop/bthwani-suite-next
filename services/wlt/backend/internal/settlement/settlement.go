@@ -3,7 +3,6 @@ package settlement
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -12,19 +11,9 @@ import (
 	"wlt-api/internal/shared"
 )
 
-// ErrAlreadySettled is returned when PostSettlement is called on a
-// settlement that is already in the 'settled' state (double-post).
 var ErrAlreadySettled = errors.New("settlement is already settled")
-
-// ErrSettlementAmountsInconsistent is returned when the caller-supplied
-// grossAmount/platformFee/netAmount don't arithmetically agree
-// (netAmount must equal grossAmount - platformFee) or contain a negative
-// value. This does NOT verify the amounts against the partner's actual
-// orders/commissions -- that would require aggregating DSH-side order data
-// that isn't present in WLT's database, and remains a known gap (see the
-// comment on CreateSettlement). It only catches an internally-inconsistent
-// or obviously-tampered request before it's persisted as financial truth.
 var ErrSettlementAmountsInconsistent = errors.New("settlement amounts are not arithmetically consistent")
+var ErrSettlementCalculationSourceRequired = errors.New("settlement must be calculated from a governed DSH order source")
 
 type Settlement struct {
 	ID          string  `json:"id"`
@@ -54,6 +43,10 @@ type SettlementSummary struct {
 	Currency        string `json:"currency"`
 }
 
+// CreateSettlementInput remains as a compatibility contract while live
+// settlement creation is fail-closed. Its monetary values must never become
+// financial truth until DSH provides a governed, order-derived calculation
+// contract with an immutable source reference.
 type CreateSettlementInput struct {
 	PartnerID   string `json:"partnerId"`
 	PeriodStart string `json:"periodStart"`
@@ -114,66 +107,13 @@ func scanSettlementRow(rows *sql.Rows) (*Settlement, error) {
 	return &s, nil
 }
 
-// CreateSettlement inserts a settlement record and, in the same
-// transaction, posts a balanced ledger transaction (debit platform_revenue,
-// credit the partner's wallet account) so the settlement is reflected in the
-// double-entry ledger kernel rather than being an isolated row.
-//
-// KNOWN GAP: grossAmount/platformFee/netAmount/orderCount are still supplied
-// by the caller, not derived from the partner's actual orders/commissions --
-// full derivation would require aggregating DSH-side order data that is not
-// present in WLT's database (WLT only has commission records, not gross
-// order totals), which is a larger cross-service initiative. This function
-// only rejects internally-inconsistent input (netAmount != grossAmount -
-// platformFee, or any negative amount) as a narrower, achievable guard
-// against obviously wrong or tampered values.
+// CreateSettlement fails closed. Caller-supplied gross, fee, net and order
+// counts are not a governed financial source and therefore cannot be inserted
+// into WLT as settlement truth.
 func CreateSettlement(db *sql.DB, input CreateSettlementInput) (*Settlement, error) {
-	if input.PartnerID == "" || input.PeriodStart == "" || input.PeriodEnd == "" {
-		return nil, fmt.Errorf("partnerId, periodStart, and periodEnd are required")
-	}
-	if input.GrossAmount < 0 || input.PlatformFee < 0 || input.NetAmount < 0 {
-		return nil, ErrSettlementAmountsInconsistent
-	}
-	if input.NetAmount != input.GrossAmount-input.PlatformFee {
-		return nil, ErrSettlementAmountsInconsistent
-	}
-	currency := input.Currency
-	if currency == "" {
-		currency = "YER"
-	}
-
-	tx, err := db.Begin()
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-
-	const q = `
-		INSERT INTO wlt_settlements
-			(partner_id, period_start, period_end, gross_amount, platform_fee, net_amount, currency, order_count)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-		RETURNING ` + settlementCols
-	row := tx.QueryRow(q, input.PartnerID, input.PeriodStart, input.PeriodEnd,
-		input.GrossAmount, input.PlatformFee, input.NetAmount, currency, input.OrderCount)
-	s, err := scanSettlement(row)
-	if err != nil {
-		return nil, err
-	}
-
-	if s.NetAmount > 0 {
-		lines := []ledger.LedgerLine{
-			{AccountType: "platform_revenue", DebitCredit: "debit", AmountMinorUnits: s.NetAmount, Currency: currency},
-			{AccountType: "wallet", ActorType: "partner", ActorID: s.PartnerID, DebitCredit: "credit", AmountMinorUnits: s.NetAmount, Currency: currency},
-		}
-		if _, err := ledger.PostLedgerTransaction(context.Background(), tx, "settlement_posted", "settlement", s.ID, lines, ledger.Actor{ID: "system", Type: "system"}); err != nil {
-			return nil, fmt.Errorf("post settlement ledger transaction: %w", err)
-		}
-	}
-
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
-	return s, nil
+	_ = db
+	_ = input
+	return nil, ErrSettlementCalculationSourceRequired
 }
 
 func GetSettlement(db *sql.DB, settlementID string) (*Settlement, error) {
@@ -183,34 +123,34 @@ func GetSettlement(db *sql.DB, settlementID string) (*Settlement, error) {
 	const q = `SELECT ` + settlementCols + ` FROM wlt_settlements WHERE id = $1`
 	row := db.QueryRow(q, settlementID)
 	s, err := scanSettlement(row)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
 	return s, err
 }
 
 func ListPartnerSettlements(db *sql.DB, partnerID string) ([]*Settlement, error) {
-	var q string
-	var rows *sql.Rows
-	var err error
+	var (
+		rows *sql.Rows
+		err  error
+	)
 	if partnerID == "" {
-		q = `SELECT ` + settlementCols + ` FROM wlt_settlements ORDER BY period_start DESC LIMIT 50`
-		rows, err = db.Query(q)
+		rows, err = db.Query(`SELECT ` + settlementCols + ` FROM wlt_settlements ORDER BY period_start DESC LIMIT 50`)
 	} else {
-		q = `SELECT ` + settlementCols + ` FROM wlt_settlements WHERE partner_id = $1 ORDER BY period_start DESC`
-		rows, err = db.Query(q, partnerID)
+		rows, err = db.Query(`SELECT `+settlementCols+` FROM wlt_settlements WHERE partner_id = $1 ORDER BY period_start DESC`, partnerID)
 	}
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var settlements []*Settlement
+
+	settlements := make([]*Settlement, 0)
 	for rows.Next() {
-		s, err := scanSettlementRow(rows)
-		if err != nil {
-			return nil, err
+		settlement, scanErr := scanSettlementRow(rows)
+		if scanErr != nil {
+			return nil, scanErr
 		}
-		settlements = append(settlements, s)
+		settlements = append(settlements, settlement)
 	}
 	return settlements, rows.Err()
 }
@@ -253,65 +193,126 @@ func ListSettlementSummary(db *sql.DB, partnerID, periodStart, periodEnd string)
 	return &summary, nil
 }
 
+// PostSettlement moves one pending settlement to settled and posts its balanced
+// journal in the same database transaction. No state transition is committed
+// unless the journal succeeds.
 func PostSettlement(db *sql.DB, settlementID string) (*Settlement, error) {
+	return postSettlement(context.Background(), db, settlementID)
+}
+
+func postSettlement(ctx context.Context, db *sql.DB, settlementID string) (*Settlement, error) {
 	if settlementID == "" {
 		return nil, fmt.Errorf("settlementId is required")
 	}
-	existing, err := GetSettlement(db, settlementID)
+
+	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
-	if existing == nil {
-		return nil, nil
-	}
-	const q = `
+	defer tx.Rollback()
+
+	row := tx.QueryRowContext(ctx, `
 		UPDATE wlt_settlements
 		SET status = 'settled', settled_at = NOW(), updated_at = NOW()
-		WHERE id = $1 AND status != 'settled'
-		RETURNING ` + settlementCols
-	row := db.QueryRow(q, settlementID)
-	s, err := scanSettlement(row)
-	if err == sql.ErrNoRows {
-		return nil, ErrAlreadySettled
+		WHERE id = $1 AND status = 'pending'
+		RETURNING `+settlementCols, settlementID)
+	settlement, err := scanSettlement(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		var status string
+		lookupErr := tx.QueryRowContext(ctx, `SELECT status FROM wlt_settlements WHERE id = $1`, settlementID).Scan(&status)
+		if errors.Is(lookupErr, sql.ErrNoRows) {
+			return nil, nil
+		}
+		if lookupErr != nil {
+			return nil, lookupErr
+		}
+		if status == "settled" {
+			return nil, ErrAlreadySettled
+		}
+		return nil, fmt.Errorf("settlement cannot be posted from status %s", status)
 	}
-	return s, err
+	if err != nil {
+		return nil, err
+	}
+
+	if settlement.GrossAmount < 0 || settlement.PlatformFee < 0 || settlement.NetAmount < 0 ||
+		settlement.GrossAmount != settlement.NetAmount+settlement.PlatformFee || settlement.Currency == "" {
+		return nil, ErrSettlementAmountsInconsistent
+	}
+
+	if settlement.GrossAmount > 0 {
+		lines := []ledger.LedgerLine{
+			{
+				AccountType:      "platform_payable",
+				DebitCredit:      "debit",
+				AmountMinorUnits: settlement.GrossAmount,
+				Currency:         settlement.Currency,
+			},
+		}
+		if settlement.NetAmount > 0 {
+			lines = append(lines, ledger.LedgerLine{
+				AccountType:      "wallet",
+				ActorType:        "partner",
+				ActorID:          settlement.PartnerID,
+				DebitCredit:      "credit",
+				AmountMinorUnits: settlement.NetAmount,
+				Currency:         settlement.Currency,
+			})
+		}
+		if settlement.PlatformFee > 0 {
+			lines = append(lines, ledger.LedgerLine{
+				AccountType:      "platform_revenue",
+				DebitCredit:      "credit",
+				AmountMinorUnits: settlement.PlatformFee,
+				Currency:         settlement.Currency,
+			})
+		}
+		if _, err := ledger.PostLedgerTransaction(
+			ctx,
+			tx,
+			"settlement_posted",
+			"settlement",
+			settlement.ID,
+			lines,
+			ledger.Actor{ID: "wlt", Type: "service"},
+		); err != nil {
+			return nil, fmt.Errorf("post settlement journal: %w", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return settlement, nil
 }
 
-// HTTP handlers
-
+// HandleCreateSettlement intentionally ignores the submitted body and fails
+// closed until a governed DSH order-derived calculation contract exists.
 func HandleCreateSettlement(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var input CreateSettlementInput
-		decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64*1024))
-		if err := decoder.Decode(&input); err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
-			return
-		}
-		s, err := CreateSettlement(db, input)
-		if errors.Is(err, ErrSettlementAmountsInconsistent) {
-			shared.SendError(w, http.StatusBadRequest, "AMOUNTS_INCONSISTENT", "netAmount must equal grossAmount - platformFee, and no amount may be negative")
-			return
-		}
-		if err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-			return
-		}
-		shared.SendJSON(w, http.StatusCreated, map[string]any{"settlement": s})
+		_ = db
+		_ = r
+		shared.SendError(
+			w,
+			http.StatusConflict,
+			"SETTLEMENT_SOURCE_REQUIRED",
+			ErrSettlementCalculationSourceRequired.Error(),
+		)
 	}
 }
 
 func HandleGetSettlement(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		s, err := GetSettlement(db, r.PathValue("settlementId"))
+		settlement, err := GetSettlement(db, r.PathValue("settlementId"))
 		if err != nil {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 			return
 		}
-		if s == nil {
+		if settlement == nil {
 			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "settlement not found")
 			return
 		}
-		shared.SendJSON(w, http.StatusOK, map[string]any{"settlement": s})
+		shared.SendJSON(w, http.StatusOK, map[string]any{"settlement": settlement})
 	}
 }
 
@@ -323,39 +324,42 @@ func HandleListSettlements(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 			return
 		}
-		if settlements == nil {
-			settlements = []*Settlement{}
-		}
 		shared.SendJSON(w, http.StatusOK, map[string]any{"settlements": settlements})
 	}
 }
 
 func HandlePostSettlement(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		s, err := PostSettlement(db, r.PathValue("settlementId"))
+		settlement, err := postSettlement(r.Context(), db, r.PathValue("settlementId"))
 		if errors.Is(err, ErrAlreadySettled) {
-			shared.SendError(w, http.StatusConflict, "INVALID_STATE", "settlement is already settled")
+			shared.SendError(w, http.StatusConflict, "ALREADY_SETTLED", "settlement has already been posted")
+			return
+		}
+		if errors.Is(err, ErrSettlementAmountsInconsistent) {
+			shared.SendError(w, http.StatusConflict, "AMOUNTS_INCONSISTENT", "settlement gross, fee and net amounts are inconsistent")
 			return
 		}
 		if err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+			shared.SendError(w, http.StatusConflict, "INVALID_STATE", err.Error())
 			return
 		}
-		if s == nil {
+		if settlement == nil {
 			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "settlement not found")
 			return
 		}
-		shared.SendJSON(w, http.StatusOK, map[string]any{"settlement": s})
+		shared.SendJSON(w, http.StatusOK, map[string]any{"settlement": settlement})
 	}
 }
 
 func HandleGetSettlementSummary(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		q := r.URL.Query()
-		partnerID := q.Get("partnerId")
-		periodStart := q.Get("periodStart")
-		periodEnd := q.Get("periodEnd")
-		summary, err := ListSettlementSummary(db, partnerID, periodStart, periodEnd)
+		query := r.URL.Query()
+		summary, err := ListSettlementSummary(
+			db,
+			query.Get("partnerId"),
+			query.Get("periodStart"),
+			query.Get("periodEnd"),
+		)
 		if err != nil {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 			return

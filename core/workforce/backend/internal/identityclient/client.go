@@ -71,7 +71,6 @@ type ActivationMetadata struct {
 	MaskedPhone  string    `json:"maskedPhone"`
 }
 
-
 func (c *Client) Provision(ctx context.Context, input ProvisionInput) (ActorView, error) {
 	var view ActorView
 	err := c.do(ctx, http.MethodPost, "/internal/actors/provision", input, &view, nil)
@@ -140,7 +139,6 @@ func (c *Client) LatestActivation(ctx context.Context, actorID string) (*Activat
 	err := c.do(ctx, http.MethodGet, "/internal/actors/"+url.PathEscape(actorID)+"/activations/latest", nil, &meta, nil)
 	return meta, err
 }
-
 
 func (c *Client) do(ctx context.Context, method, path string, body, target any, headers map[string]string) error {
 	if !c.Configured() {

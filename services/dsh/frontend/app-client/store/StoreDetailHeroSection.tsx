@@ -1,29 +1,54 @@
-import React from 'react';
-import { type Animated } from 'react-native';
-import { StoreHero } from './StoreHero';
-import type { DshStoreDetailViewModel, StoreHeroFulfillmentMode } from '../../shared/store';
-import type { DshFulfillmentDeliveryMode } from '../../shared/delivery/delivery.contract';
+import React from "react";
+import { type Animated } from "react-native";
+import { StoreHero } from "./StoreHero";
+import type {
+  DshStoreDetailViewModel,
+  StoreHeroFulfillmentMode,
+} from "../../shared/store";
+import {
+  isDshFulfillmentDeliveryMode,
+  type DshFulfillmentDeliveryMode,
+} from "../../shared/delivery/delivery.contract";
 
-const DELIVERY_MODE_PRESENTATION: Record<DshFulfillmentDeliveryMode, StoreHeroFulfillmentMode> = {
-  bthwani_delivery: { id: 'bthwani_delivery', label: 'توصيل بثواني', icon: '🚲' },
-  partner_delivery: { id: 'partner_delivery', label: 'توصيل المتجر', icon: '🛵' },
-  pickup: { id: 'pickup', label: 'استلم بنفسك', icon: '🏪' },
+const DELIVERY_MODE_PRESENTATION: Record<
+  DshFulfillmentDeliveryMode,
+  StoreHeroFulfillmentMode
+> = {
+  bthwani_delivery: {
+    id: "bthwani_delivery",
+    label: "توصيل بثواني",
+    icon: "🚲",
+  },
+  partner_delivery: {
+    id: "partner_delivery",
+    label: "توصيل المتجر",
+    icon: "🛵",
+  },
+  pickup: { id: "pickup", label: "استلم بنفسك", icon: "🏪" },
 };
 
 type Props = Readonly<{
   store: DshStoreDetailViewModel;
-  selectedMode: string;
-  onModeChange: (id: string) => void;
+  selectedMode: DshFulfillmentDeliveryMode;
+  onModeChange: (id: DshFulfillmentDeliveryMode) => void;
+  onCartPress?: (() => void) | undefined;
   onBack?: (() => void) | undefined;
   scrollY: Animated.Value;
 }>;
 
-export function StoreDetailHeroSection({ store, selectedMode, onModeChange, onBack, scrollY }: Props) {
-  // Modes come from the store's own enabled fulfillment modes (already mapped
-  // from the store-publication vocabulary via toFulfillmentModes()) — never a
-  // static three-mode list, and never guessed from formatted display labels.
+export function StoreDetailHeroSection({
+  store,
+  selectedMode,
+  onModeChange,
+  onCartPress,
+  onBack,
+  scrollY,
+}: Props) {
   const visibleModes = React.useMemo(
-    () => store.availableFulfillmentModes.map((mode) => DELIVERY_MODE_PRESENTATION[mode]),
+    () =>
+      store.availableFulfillmentModes.map(
+        (mode) => DELIVERY_MODE_PRESENTATION[mode],
+      ),
     [store.availableFulfillmentModes],
   );
 
@@ -38,14 +63,14 @@ export function StoreDetailHeroSection({ store, selectedMode, onModeChange, onBa
       distanceLabel={store.distanceLabel ?? undefined}
       deliveryTimeLabel={store.etaLabel ?? undefined}
       rating={store.ratingAverage ?? undefined}
-      onSearchPress={() => {}}
-      onCartPress={() => {}}
-      onSharePress={() => {}}
+      onCartPress={onCartPress}
       onBackPress={onBack}
       scrollY={scrollY}
       deliveryModes={visibleModes}
       selectedMode={selectedMode}
-      onModeChange={onModeChange}
+      onModeChange={(mode) => {
+        if (isDshFulfillmentDeliveryMode(mode)) onModeChange(mode);
+      }}
     />
   );
 }

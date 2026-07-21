@@ -1,67 +1,47 @@
-version: 1
+version: 3
 authority: governance/26_SDLC_TEAM_AND_STAGE_GATES.md
+decision_vocabulary: governance/contracts/decision-vocabulary.json
 gates:
   G0_INTAKE:
-    evidence:
-      - capability_id
-      - scope
-      - exclusions
-      - risk_class
-      - owners
-  G1_REQUIREMENTS_APPROVED:
-    evidence:
-      - requirements
-      - acceptance_criteria
-      - permissions
-      - quality_profile
-      - security_requirements
+    owner: sdlc_program_authority
+    evidence: [capability_id, product_truth_contract_or_product_impact_none, problem_and_evidence_state, actors, required_and_excluded_surfaces, risk_class, owners]
+  G1_PRODUCT_MODEL_APPROVED:
+    owner: product_manager_authority
+    evidence: [product_manager_approval, actor_and_role_model, outcome_and_primary_metric, acceptance_criteria, negative_invariants, fixed_constraints_and_variable_scope]
   G2_DESIGN_APPROVED:
-    evidence:
-      - architecture_decision
-      - data_flow
-      - api_contract_impact
-      - database_impact
-      - rollback_plan
+    owner: architecture_authority
+    evidence: [architecture_decision, data_flow, api_contract_impact, database_impact, ux_journey_when_applicable, threat_model_when_applicable, rollback_plan]
   G3_READY_FOR_IMPLEMENTATION:
-    evidence:
-      - implementation_tasks
-      - dependency_map
-      - target_checks
-      - ownership_confirmation
+    owner: product_owner_acceptance_authority
+    evidence: [product_owner_approval, functional_behavior, permissions_and_states, implementation_tasks, dependency_map, target_checks, ownership_confirmation]
   G4_IMPLEMENTATION_VERIFIED:
-    evidence:
-      - code_review
-      - targeted_checks
-      - diff_scope
-  G5_QA_APPROVED:
-    evidence:
-      - qa_result
-      - negative_tests
-      - cross_surface_consistency
-  G6_SECURITY_APPROVED:
-    evidence:
-      - security_result
-      - vulnerability_status
-      - threat_model_when_applicable
-      - tenant_isolation_when_applicable
-  G7_RELEASE_APPROVED:
-    evidence:
-      - release_readiness
-      - rollback_procedure
-      - monitoring_owner
-      - unresolved_blocker_review
-  G8_DEPLOYED:
-    evidence:
-      - deployment_result
-  G9_PRODUCTION_VERIFIED:
-    evidence:
-      - production_smoke
-      - telemetry_review
-decisions:
-  - GATE_PASS
-  - FIX_REQUIRED
-  - QA_BLOCK
-  - SECURITY_BLOCK
-  - RELEASE_BLOCK
-  - HARD_BLOCKED_EXTERNAL_ONLY
-  - CLOSED_WITH_EVIDENCE
+    owner: independent_reviewer
+    evidence: [independent_code_review, targeted_checks, diff_scope, no_unauthorized_scope_expansion, no_fake_runtime_or_commercial_claim, change_author_separated_from_reviewer, governance_contract_approval_when_governance_impacted, ci_workflow_approval_when_ci_impacted, finance_approval_when_wlt_finance_impacted]
+  G5_PRODUCT_ACCEPTED:
+    owner: product_owner_acceptance_authority
+    evidence: [independent_product_acceptance, required_surfaces_present, excluded_surfaces_absent, actor_actions_and_forbidden_actions_verified, state_and_failure_behavior_accepted]
+  G6_QA_APPROVED:
+    owner: independent_quality_authority
+    requires: [G5_PRODUCT_ACCEPTED]
+    evidence: [qa_result, negative_tests, cross_surface_consistency, accessibility_and_rtl_when_applicable]
+  G7_SECURITY_APPROVED:
+    owner: application_security_authority
+    requires: [G6_QA_APPROVED]
+    evidence: [security_result, vulnerability_status, threat_model_when_applicable, isolation_when_applicable]
+  G8_RELEASE_APPROVED:
+    owner: release_authority
+    requires: [G7_SECURITY_APPROVED]
+    evidence: [release_readiness, residual_risk_decision, rollback_procedure, monitoring_owner, unresolved_blocker_review]
+  G9_DEPLOYED:
+    owner: release_authority
+    requires: [G8_RELEASE_APPROVED]
+    evidence: [deployment_result, immutable_commit_match]
+  G10_PRODUCTION_VERIFIED:
+    owner: release_authority
+    requires: [G9_DEPLOYED]
+    evidence: [production_smoke, telemetry_review, rollback_readiness]
+  CLOSED_WITH_EVIDENCE:
+    owner: final_closure_judge
+    requires: [latest_applicable_stage_passed, every_skipped_stage_has_not_applicable_evidence]
+    evidence: [all_applicable_evidence_scopes_passed, all_required_approvals_passed, same_commit_evidence, separation_of_duties_proven, no_open_blocker]
+canonical_decisions: [PASS, FIX_REQUIRED, BLOCKED_EXTERNAL, NEEDS_EVIDENCE, QA_BLOCK, SECURITY_BLOCK, RELEASE_BLOCK, PROTOCOL_VIOLATION, CLOSED_WITH_EVIDENCE]

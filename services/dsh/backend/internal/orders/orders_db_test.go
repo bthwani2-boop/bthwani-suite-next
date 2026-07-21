@@ -37,6 +37,7 @@ func TestCreateOrderStoresRealPriceSnapshotDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	ctx := context.Background()
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
+	tenantID := "tenant-order-price-" + suffix
 	storeID := "order-price-test-store-" + suffix
 	clientID := "order-price-test-client-" + suffix
 
@@ -67,15 +68,23 @@ func TestCreateOrderStoresRealPriceSnapshotDBIntegration(t *testing.T) {
 
 	var intentID string
 	if err := db.QueryRowContext(ctx, `
-		INSERT INTO dsh_checkout_intents (client_id, cart_id, store_id, state, payment_method, wlt_payment_session_id)
-		VALUES ($1, $2::uuid, $3, 'payment_pending', 'cod', $4)
+		INSERT INTO dsh_checkout_intents (
+			tenant_id, client_id, cart_id, store_id, state, fulfillment_mode,
+			payment_method, wlt_payment_session_id, subtotal_minor_units, delivery_fee_minor_units, discount_minor_units, total_minor_units, currency, pricing_snapshot_hash
+		)
+		VALUES ($1, $2, $3::uuid, $4, 'payment_pending', 'bthwani_delivery', 'cod', $5,
+		        8400, 0, 0, 8400, 'YER', repeat('a', 64))
 		RETURNING id::text`,
-		clientID, cartID, storeID, "wlt-ps-"+suffix,
+		tenantID, clientID, cartID, storeID, "wlt-ps-"+suffix,
 	).Scan(&intentID); err != nil {
 		t.Fatalf("failed to insert test checkout intent: %v", err)
 	}
 
-	order, err := CreateOrder(db, CreateOrderInput{CheckoutIntentID: intentID, ClientID: clientID})
+	order, err := CreateOrder(db, CreateOrderInput{
+		CheckoutIntentID: intentID,
+		ClientID:         clientID,
+		TenantID:         tenantID,
+	})
 	if err != nil {
 		t.Fatalf("CreateOrder failed: %v", err)
 	}
@@ -96,13 +105,14 @@ func TestCreateOrderStoresRealPriceSnapshotDBIntegration(t *testing.T) {
 	}
 }
 
-// seedOrderFixture creates a store, checkout intent, and order row with a WLT
-// payment session reference already attached, mirroring what CreateOrder
-// would have produced for a wallet/cod order.
+// seedOrderFixture creates a tenant-scoped store, checkout intent, and order
+// row with a WLT payment session reference already attached, mirroring the
+// governed CreateOrder path used by wallet/COD orders.
 func seedOrderFixture(t *testing.T, db *sql.DB, status string) (order *Order, paymentSessionID string) {
 	t.Helper()
 	ctx := context.Background()
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
+	tenantID := "tenant-order-outbox-" + suffix
 	storeID := "order-outbox-test-store-" + suffix
 	clientID := "order-outbox-test-client-" + suffix
 	paymentSessionID = "order-outbox-test-ps-" + suffix
@@ -117,21 +127,28 @@ func seedOrderFixture(t *testing.T, db *sql.DB, status string) (order *Order, pa
 
 	var intentID string
 	if err := db.QueryRowContext(ctx, `
-		INSERT INTO dsh_checkout_intents (client_id, cart_id, store_id, state, payment_method, wlt_payment_session_id)
-		VALUES ($1, gen_random_uuid(), $2, 'confirmed', 'wallet', $3)
+		INSERT INTO dsh_checkout_intents (
+			tenant_id, client_id, cart_id, store_id, state, fulfillment_mode,
+			payment_method, wlt_payment_session_id, subtotal_minor_units, delivery_fee_minor_units, discount_minor_units, total_minor_units, currency, pricing_snapshot_hash
+		)
+		VALUES ($1, $2, gen_random_uuid(), $3, 'confirmed', 'bthwani_delivery', 'wallet', $4,
+		        1000, 0, 0, 1000, 'YER', repeat('b', 64))
 		RETURNING id::text`,
-		clientID, storeID, paymentSessionID,
+		tenantID, clientID, storeID, paymentSessionID,
 	).Scan(&intentID); err != nil {
 		t.Fatalf("failed to insert test checkout intent: %v", err)
 	}
 
 	var o Order
 	if err := db.QueryRowContext(ctx, `
-		INSERT INTO dsh_orders (checkout_intent_id, store_id, client_id, status, wlt_payment_ref_id)
-		VALUES ($1::uuid, $2, $3, $4, $5)
+		INSERT INTO dsh_orders (
+			tenant_id, checkout_intent_id, store_id, fulfillment_mode,
+			client_id, status, wlt_payment_ref_id
+		)
+		VALUES ($1, $2::uuid, $3, 'bthwani_delivery', $4, $5, $6)
 		RETURNING id::text, checkout_intent_id::text, store_id, client_id, status,
 		          COALESCE(rejection_reason, ''), wlt_payment_ref_id, created_at, updated_at`,
-		intentID, storeID, clientID, status, paymentSessionID,
+		tenantID, intentID, storeID, clientID, status, paymentSessionID,
 	).Scan(
 		&o.ID, &o.CheckoutIntentID, &o.StoreID, &o.ClientID,
 		&o.Status, &o.RejectionReason, &o.WltPaymentRefID,
@@ -139,6 +156,7 @@ func seedOrderFixture(t *testing.T, db *sql.DB, status string) (order *Order, pa
 	); err != nil {
 		t.Fatalf("failed to insert test order: %v", err)
 	}
+	o.FulfillmentMode = "bthwani_delivery"
 	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_orders WHERE id = $1::uuid`, o.ID) })
 	return &o, paymentSessionID
 }
@@ -160,10 +178,8 @@ func fetchFinancialClosureOutboxRow(t *testing.T, db *sql.DB, paymentSessionID s
 }
 
 // TestRejectOrderEnqueuesCancelForOrderWhenPaymentRefExistsDBIntegration
-// proves rejecting a pending order that already has a WLT payment session
-// reference enqueues a durable cancel_for_order outbox event in the same
-// transaction as the rejection — closing the gap where order rejection never
-// triggered any WLT financial action.
+// proves the legacy partner-reject entry point delegates to the governed store
+// cancellation state and enqueues the same durable WLT closure event.
 func TestRejectOrderEnqueuesCancelForOrderWhenPaymentRefExistsDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	order, paymentSessionID := seedOrderFixture(t, db, string(StatusPending))
@@ -175,8 +191,8 @@ func TestRejectOrderEnqueuesCancelForOrderWhenPaymentRefExistsDBIntegration(t *t
 	if err != nil {
 		t.Fatalf("RejectOrder failed: %v", err)
 	}
-	if rejected.Status != StatusCancelled {
-		t.Fatalf("expected status cancelled, got %s", rejected.Status)
+	if rejected.Status != StatusCancelledByStore {
+		t.Fatalf("expected status %s, got %s", StatusCancelledByStore, rejected.Status)
 	}
 
 	eventType, orderID, reason, found := fetchFinancialClosureOutboxRow(t, db, paymentSessionID)
@@ -189,14 +205,13 @@ func TestRejectOrderEnqueuesCancelForOrderWhenPaymentRefExistsDBIntegration(t *t
 	if !orderID.Valid || orderID.String != order.ID {
 		t.Fatalf("expected order_id=%q, got %+v", order.ID, orderID)
 	}
-	if reason != "out of stock" {
-		t.Fatalf("expected reason='out of stock', got %q", reason)
+	if reason != "other: out of stock" {
+		t.Fatalf("expected governed reason, got %q", reason)
 	}
 }
 
-// TestCancelOrderByOperatorEnqueuesCancelForOrderDBIntegration proves an
-// operator-initiated cancellation also enqueues the cancel_for_order outbox
-// event, going through the shared transitionOrder/transitionOrderTx path.
+// TestCancelOrderByOperatorEnqueuesCancelForOrderDBIntegration proves the
+// compatibility operator entry point delegates to the governed explicit state.
 func TestCancelOrderByOperatorEnqueuesCancelForOrderDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	order, paymentSessionID := seedOrderFixture(t, db, string(StatusPending))
@@ -208,8 +223,8 @@ func TestCancelOrderByOperatorEnqueuesCancelForOrderDBIntegration(t *testing.T) 
 	if err != nil {
 		t.Fatalf("CancelOrderByOperator failed: %v", err)
 	}
-	if cancelled.Status != StatusCancelled {
-		t.Fatalf("expected status cancelled, got %s", cancelled.Status)
+	if cancelled.Status != StatusCancelledByOperator {
+		t.Fatalf("expected status %s, got %s", StatusCancelledByOperator, cancelled.Status)
 	}
 
 	eventType, orderID, reason, found := fetchFinancialClosureOutboxRow(t, db, paymentSessionID)
@@ -222,14 +237,13 @@ func TestCancelOrderByOperatorEnqueuesCancelForOrderDBIntegration(t *testing.T) 
 	if !orderID.Valid || orderID.String != order.ID {
 		t.Fatalf("expected order_id=%q, got %+v", order.ID, orderID)
 	}
-	if reason != "store unresponsive" {
-		t.Fatalf("expected reason='store unresponsive', got %q", reason)
+	if reason != "other: store unresponsive" {
+		t.Fatalf("expected governed reason, got %q", reason)
 	}
 }
 
 // TestAcceptOrderEnqueuesNothingDBIntegration proves a non-cancelling
-// transition (accept) through the same shared transitionOrder/
-// transitionOrderTx helper does not write a financial closure outbox event.
+// transition does not write a financial closure event.
 func TestAcceptOrderEnqueuesNothingDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	order, paymentSessionID := seedOrderFixture(t, db, string(StatusPending))

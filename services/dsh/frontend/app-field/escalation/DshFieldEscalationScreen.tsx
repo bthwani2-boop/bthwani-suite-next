@@ -2,7 +2,6 @@ import React from "react";
 import { StyleSheet, View } from "react-native";
 import { useIdentitySession } from "@bthwani/core-identity";
 import {
-  Badge,
   Button,
   Card,
   Header,
@@ -29,39 +28,50 @@ type Props = {
   readonly onBack?: () => void;
 };
 
+const SEVERITIES: readonly DshEscalationSeverity[] = ["low", "medium", "high", "critical"];
+const CATEGORIES: readonly DshEscalationCategory[] = [
+  "document_missing",
+  "safety_violation",
+  "location_mismatch",
+  "product_compliance",
+  "equipment_failure",
+  "other",
+];
+
 export function DshFieldEscalationScreen({ storeId, visitId, onBack }: Props) {
   const identity = useIdentitySession();
-  const { actionState, raiseEscalation, resetAction } = useFieldEscalationController();
+  const { actionState, raiseEscalation, resetAction } = useFieldEscalationController(identity.state.kind);
   const [severity, setSeverity] = React.useState<DshEscalationSeverity>("medium");
   const [category, setCategory] = React.useState<DshEscalationCategory>("document_missing");
   const [description, setDescription] = React.useState("");
 
-  if (identity.state.kind !== "authenticated") return null;
+  if (identity.state.kind !== "authenticated") {
+    return (
+      <StateView
+        tone="danger"
+        title="تسجيل الدخول مطلوب"
+        description="لا يمكن إنشاء تصعيد ميداني دون جلسة موظف ميداني موثقة."
+        {...(onBack ? { actionLabel: "رجوع", onActionPress: onBack } : {})}
+      />
+    );
+  }
 
-  const canSubmit = description.trim().length >= 10 && actionState.kind !== "submitting";
+  const canSubmit =
+    description.trim().length >= 10 &&
+    actionState.kind !== "submitting" &&
+    actionState.kind !== "queued";
 
   function handleSubmit() {
+    if (!canSubmit) return;
     void raiseEscalation(storeId, {
       ...(visitId !== undefined ? { visitId } : {}),
       severity,
       category,
       description: description.trim(),
-    }).then((success) => {
-      if (success) {
-        setDescription("");
-      }
+    }).then((accepted) => {
+      if (accepted) setDescription("");
     });
   }
-
-  const SEVERITIES: DshEscalationSeverity[] = ["low", "medium", "high", "critical"];
-  const CATEGORIES: DshEscalationCategory[] = [
-    "document_missing",
-    "safety_violation",
-    "location_mismatch",
-    "product_compliance",
-    "equipment_failure",
-    "other",
-  ];
 
   return (
     <ScrollScreen>
@@ -78,48 +88,60 @@ export function DshFieldEscalationScreen({ storeId, visitId, onBack }: Props) {
         ) : undefined}
       />
 
-      {actionState.kind === "success" && (
+      {actionState.kind === "success" ? (
         <Card tone="success" padding="$3" style={{ marginBottom: spacing[3] }}>
           <View style={styles.notice}>
-            <Text tone="success">تم رفع التصعيد بنجاح وسيُراجع قريباً</Text>
+            <Text tone="success">تم تسجيل التصعيد في DSH بنجاح.</Text>
             <Button label="إغلاق" tone="ghost" size="sm" onPress={resetAction} />
           </View>
         </Card>
-      )}
+      ) : null}
 
-      {actionState.kind === "error" && (
+      {actionState.kind === "queued" ? (
+        <Card tone="warning" padding="$3" style={{ marginBottom: spacing[3] }}>
+          <View style={styles.notice}>
+            <View style={styles.noticeText}>
+              <Text tone="warning">{actionState.message}</Text>
+              <Text role="caption" tone="muted">المرجع المحلي: {actionState.operationId}</Text>
+            </View>
+            <Button label="إغلاق" tone="ghost" size="sm" onPress={resetAction} />
+          </View>
+        </Card>
+      ) : null}
+
+      {actionState.kind === "error" ? (
         <Card tone="danger" padding="$3" style={{ marginBottom: spacing[3] }}>
           <View style={styles.notice}>
             <Text tone="danger">{actionState.message}</Text>
             <Button label="إغلاق" tone="ghost" size="sm" onPress={resetAction} />
           </View>
         </Card>
-      )}
+      ) : null}
 
       <Card padding="$5" gap="$4">
         <View style={styles.section}>
-          <Text role="bodyStrong" style={{ textAlign: "right", marginBottom: 6 }}>مستوى الخطورة</Text>
+          <Text role="bodyStrong" style={styles.label}>مستوى الخطورة</Text>
           <View style={styles.chips}>
-            {SEVERITIES.map((s) => (
+            {SEVERITIES.map((item) => (
               <Chip
-                key={s}
-                label={ESCALATION_SEVERITY_LABELS[s]}
-                selected={severity === s}
-                onPress={() => setSeverity(s)}
+                key={item}
+                label={ESCALATION_SEVERITY_LABELS[item]}
+                selected={severity === item}
+                onPress={() => setSeverity(item)}
               />
             ))}
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text role="bodyStrong" style={{ textAlign: "right", marginBottom: 6 }}>نوع المشكلة</Text>
+          <Text role="bodyStrong" style={styles.label}>نوع المشكلة</Text>
           <View style={styles.chips}>
-            {CATEGORIES.map((c) => (
+            {CATEGORIES.map((item) => (
               <Chip
-                key={c}
-                label={ESCALATION_CATEGORY_LABELS[c]}
-                selected={category === c}
-                onPress={() => setCategory(c)}
+                key={item}
+                label={ESCALATION_CATEGORY_LABELS[item]}
+                selected={category === item}
+                onPress={() => setCategory(item)}
               />
             ))}
           </View>
@@ -136,7 +158,13 @@ export function DshFieldEscalationScreen({ storeId, visitId, onBack }: Props) {
         </View>
 
         <Button
-          label={actionState.kind === "submitting" ? "جاري الإرسال…" : "رفع التصعيد"}
+          label={
+            actionState.kind === "submitting"
+              ? "جاري الإرسال…"
+              : actionState.kind === "queued"
+                ? "محفوظ للمزامنة"
+                : "رفع التصعيد"
+          }
           tone="danger"
           disabled={!canSubmit}
           onPress={handleSubmit}
@@ -152,13 +180,10 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     padding: spacing[1],
-  },
-  section: {
     gap: spacing[2],
   },
-  chips: {
-    flexDirection: "row-reverse",
-    flexWrap: "wrap",
-    gap: spacing[2],
-  },
+  noticeText: { flex: 1, gap: spacing[1] },
+  section: { gap: spacing[2] },
+  label: { textAlign: "right", marginBottom: 6 },
+  chips: { flexDirection: "row-reverse", flexWrap: "wrap", gap: spacing[2] },
 });

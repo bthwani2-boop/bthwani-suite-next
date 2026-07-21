@@ -4,6 +4,40 @@
  */
 
 export interface paths {
+    "/platform/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Return process and database liveness. */
+        get: operations["getPlatformControlProcessHealth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/readiness": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Return platform-control readiness. */
+        get: operations["getPlatformControlReadiness"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/platform/v1/runtime-config": {
         parameters: {
             query?: never;
@@ -28,7 +62,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Return the effective runtime configuration for the requested scope. */
+        /** Return effective persisted variables and feature flags. */
         get: operations["getEffectiveRuntimeConfig"];
         put?: never;
         post?: never;
@@ -45,7 +79,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List platform variables. */
+        /** List persisted platform variables. */
         get: operations["listPlatformVariables"];
         put?: never;
         post?: never;
@@ -62,7 +96,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get a platform variable by key. */
+        /** Get a scoped platform variable. */
         get: operations["getPlatformVariable"];
         put?: never;
         post?: never;
@@ -79,7 +113,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List platform feature flags. */
+        /** List persisted platform feature flags. */
         get: operations["listPlatformFeatureFlags"];
         put?: never;
         post?: never;
@@ -96,7 +130,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List platform service posture. */
+        /** List live platform service posture. */
         get: operations["listPlatformServices"];
         put?: never;
         post?: never;
@@ -113,7 +147,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Return platform health posture. */
+        /** Return authorized aggregated platform health posture. */
         get: operations["getPlatformHealth"];
         put?: never;
         post?: never;
@@ -130,7 +164,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List platform audit events. */
+        /** List immutable platform audit events. */
         get: operations["listPlatformAuditEvents"];
         put?: never;
         post?: never;
@@ -147,11 +181,28 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List platform change sets. */
+        /** List governed platform change sets. */
         get: operations["listPlatformChangeSets"];
         put?: never;
-        /** Create a platform change set proposal. */
+        /** Create a draft platform change set. */
         post: operations["createPlatformChangeSet"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/v1/change-sets/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one platform change set with items. */
+        get: operations["getPlatformChangeSet"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -167,7 +218,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Validate a platform change set. */
+        /** Validate a draft change set. */
         post: operations["validatePlatformChangeSet"];
         delete?: never;
         options?: never;
@@ -184,7 +235,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Submit a platform change set for approval. */
+        /** Submit a validated change set for independent approval. */
         post: operations["submitPlatformChangeSet"];
         delete?: never;
         options?: never;
@@ -201,7 +252,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Approve a platform change set. */
+        /** Independently approve a submitted change set. */
         post: operations["approvePlatformChangeSet"];
         delete?: never;
         options?: never;
@@ -218,7 +269,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Reject a platform change set. */
+        /** Reject a submitted change set with a reason. */
         post: operations["rejectPlatformChangeSet"];
         delete?: never;
         options?: never;
@@ -235,7 +286,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Apply an approved platform change set. */
+        /** Atomically apply an approved change set with revision checks. */
         post: operations["applyPlatformChangeSet"];
         delete?: never;
         options?: never;
@@ -252,7 +303,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Roll back an applied platform change set. */
+        /** Atomically roll back an applied change set from captured snapshots. */
         post: operations["rollbackPlatformChangeSet"];
         delete?: never;
         options?: never;
@@ -267,10 +318,28 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** List progressive feature-flag rollouts. */
+        get: operations["listPlatformRollouts"];
         put?: never;
-        /** Create a platform rollout. */
+        /** Create a health-gated rollout for an applied disabled feature flag. */
         post: operations["createPlatformRollout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/v1/rollouts/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one progressive rollout. */
+        get: operations["getPlatformRollout"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -286,7 +355,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Advance a platform rollout. */
+        /** Advance a rollout after evaluating its configured health gate. */
         post: operations["advancePlatformRollout"];
         delete?: never;
         options?: never;
@@ -303,7 +372,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Pause a platform rollout. */
+        /** Pause a running rollout. */
         post: operations["pausePlatformRollout"];
         delete?: never;
         options?: never;
@@ -320,7 +389,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Abort a platform rollout. */
+        /** Abort an active rollout and restore its captured baseline. */
         post: operations["abortPlatformRollout"];
         delete?: never;
         options?: never;
@@ -337,7 +406,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Roll back a platform rollout. */
+        /** Roll back a completed rollout and restore its captured baseline. */
         post: operations["rollbackPlatformRollout"];
         delete?: never;
         options?: never;
@@ -350,7 +419,13 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /** @enum {string} */
-        PlatformControlState: "FIX_REQUIRED" | "PARTIALLY_BOUND" | "UNKNOWN_HEALTH" | "ROLLBACK_UNAVAILABLE" | "CONTRACT_REQUIRED" | "READ_ONLY_BOUND";
+        PlatformControlState: "FIX_REQUIRED" | "PARTIALLY_BOUND" | "UNKNOWN_HEALTH" | "ROLLBACK_UNAVAILABLE" | "CONTRACT_REQUIRED" | "READ_ONLY_BOUND" | "OPERATIONAL";
+        /** @enum {string} */
+        PlatformChangeSetStatus: "draft" | "validated" | "submitted" | "approved" | "rejected" | "applied" | "rolled_back" | "failed";
+        /** @enum {string} */
+        PlatformChangeTargetType: "variable" | "feature_flag";
+        /** @enum {string} */
+        PlatformRolloutStatus: "running" | "paused" | "completed" | "aborted" | "rolled_back" | "failed";
         PlatformRuntimeSnapshot: {
             status: components["schemas"]["PlatformControlState"];
             revision: string;
@@ -381,6 +456,7 @@ export interface components {
             classification: string;
             scopeType: string;
             scopeId?: string;
+            value?: unknown;
             revision: string;
             status: components["schemas"]["PlatformControlState"];
             /** Format: date-time */
@@ -390,14 +466,25 @@ export interface components {
         };
         PlatformFeatureFlag: {
             key: string;
+            ownerService: string;
             status: components["schemas"]["PlatformControlState"];
             revision: string;
             enabled?: boolean;
+            targeting?: {
+                [key: string]: unknown;
+            };
         };
         PlatformServicePosture: {
             service: string;
             state: components["schemas"]["PlatformControlState"];
             evidenceSource: string;
+            /** Format: uri */
+            endpoint?: string;
+            /** Format: date-time */
+            checkedAt?: string;
+            /** Format: int64 */
+            latencyMs?: number;
+            message?: string;
         };
         PlatformHealthSnapshot: {
             state: components["schemas"]["PlatformControlState"];
@@ -406,18 +493,152 @@ export interface components {
             services: components["schemas"]["PlatformServicePosture"][];
         };
         PlatformAuditEvent: {
+            /** Format: uuid */
             id: string;
+            /** Format: uuid */
+            changeSetId?: string;
             action: string;
             actorId: string;
+            actorRoles?: string[];
             /** Format: date-time */
             createdAt: string;
-            status: components["schemas"]["PlatformControlState"];
+            status: string;
+            reason?: string;
+            correlationId?: string;
+        };
+        PlatformChangeSetItem: {
+            /** Format: uuid */
+            id: string;
+            targetType: components["schemas"]["PlatformChangeTargetType"];
+            targetKey: string;
+            ownerService: string;
+            scopeType: string;
+            scopeId?: string;
+            valueType: string;
+            classification: string;
+            /** Format: int64 */
+            expectedRevision: number;
+            beforeValue?: unknown;
+            proposedValue: unknown;
+            /** Format: int64 */
+            appliedRevision?: number;
         };
         PlatformChangeSet: {
+            /** Format: uuid */
             id: string;
-            status: components["schemas"]["PlatformControlState"];
+            title: string;
+            reason: string;
+            impactAssessment: string;
+            rollbackPlan: string;
+            status: components["schemas"]["PlatformChangeSetStatus"];
+            proposerActorId: string;
+            approverActorId?: string;
+            appliedByActorId?: string;
+            rejectedByActorId?: string;
+            rejectionReason?: string;
+            /** Format: int64 */
+            version: number;
             /** Format: date-time */
             createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: date-time */
+            validatedAt?: string;
+            /** Format: date-time */
+            submittedAt?: string;
+            /** Format: date-time */
+            approvedAt?: string;
+            /** Format: date-time */
+            rejectedAt?: string;
+            /** Format: date-time */
+            appliedAt?: string;
+            /** Format: date-time */
+            rolledBackAt?: string;
+            items: components["schemas"]["PlatformChangeSetItem"][];
+        };
+        PlatformRollout: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            changeSetId: string;
+            featureFlagKey: string;
+            status: components["schemas"]["PlatformRolloutStatus"];
+            targetScope: {
+                [key: string]: unknown;
+            };
+            steps: number[];
+            currentStepIndex: number;
+            /** Format: int64 */
+            currentPercentage: number;
+            healthGate: {
+                [key: string]: unknown;
+            };
+            baselineEnabled: boolean;
+            baselineTargeting: {
+                [key: string]: unknown;
+            };
+            /** Format: int64 */
+            flagRevision: number;
+            createdByActorId: string;
+            updatedByActorId: string;
+            /** Format: int64 */
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: date-time */
+            startedAt?: string;
+            /** Format: date-time */
+            pausedAt?: string;
+            /** Format: date-time */
+            completedAt?: string;
+            /** Format: date-time */
+            abortedAt?: string;
+            /** Format: date-time */
+            rolledBackAt?: string;
+        };
+        CreatePlatformChangeSetItemInput: {
+            targetType: components["schemas"]["PlatformChangeTargetType"];
+            targetKey: string;
+            ownerService: string;
+            /** @default global */
+            scopeType: string;
+            /** @default  */
+            scopeId: string;
+            /** @default json */
+            valueType: string;
+            /** @default internal */
+            classification: string;
+            /** Format: int64 */
+            expectedRevision: number;
+            proposedValue: unknown;
+        };
+        CreatePlatformChangeSetInput: {
+            title: string;
+            reason: string;
+            impactAssessment: string;
+            rollbackPlan: string;
+            items: components["schemas"]["CreatePlatformChangeSetItemInput"][];
+        };
+        RejectPlatformChangeSetInput: {
+            reason: string;
+        };
+        CreatePlatformRolloutInput: {
+            /** Format: uuid */
+            changeSetId: string;
+            featureFlagKey: string;
+            targetScope: {
+                [key: string]: unknown;
+            };
+            steps: number[];
+            healthGate: {
+                /** @enum {string} */
+                requiredState: "OPERATIONAL";
+                requiredServices?: string[];
+                /** Format: int64 */
+                maxLatencyMs?: number;
+            };
         };
         PlatformApiError: {
             code: string;
@@ -425,8 +646,21 @@ export interface components {
         };
     };
     responses: {
-        /** @description Change workflow is not enabled in P1. */
-        ChangeWorkflowRequired: {
+        /** @description Process health or readiness state. */
+        PublicHealth: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    status: string;
+                    service: string;
+                    reason?: string;
+                };
+            };
+        };
+        /** @description Platform-control error. */
+        PlatformError: {
             headers: {
                 [name: string]: unknown;
             };
@@ -434,13 +668,26 @@ export interface components {
                 "application/json": components["schemas"]["PlatformApiError"];
             };
         };
-        /** @description Rollout workflow is not enabled in P1. */
-        RolloutWorkflowRequired: {
+        /** @description Platform change set readback. */
+        PlatformChangeSetResponse: {
             headers: {
                 [name: string]: unknown;
             };
             content: {
-                "application/json": components["schemas"]["PlatformApiError"];
+                "application/json": {
+                    changeSet: components["schemas"]["PlatformChangeSet"];
+                };
+            };
+        };
+        /** @description Progressive rollout readback. */
+        PlatformRolloutResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    rollout: components["schemas"]["PlatformRollout"];
+                };
             };
         };
     };
@@ -454,6 +701,32 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    getPlatformControlProcessHealth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["PublicHealth"];
+            503: components["responses"]["PublicHealth"];
+        };
+    };
+    getPlatformControlReadiness: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["PublicHealth"];
+            503: components["responses"]["PublicHealth"];
+        };
+    };
     getPlatformRuntimeConfig: {
         parameters: {
             query?: never;
@@ -476,11 +749,7 @@ export interface operations {
     };
     getEffectiveRuntimeConfig: {
         parameters: {
-            query?: {
-                surface?: string;
-                city?: string;
-                zone?: string;
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
@@ -496,6 +765,7 @@ export interface operations {
                     "application/json": components["schemas"]["PlatformEffectiveRuntimeConfig"];
                 };
             };
+            500: components["responses"]["PlatformError"];
         };
     };
     listPlatformVariables: {
@@ -518,11 +788,15 @@ export interface operations {
                     };
                 };
             };
+            500: components["responses"]["PlatformError"];
         };
     };
     getPlatformVariable: {
         parameters: {
-            query?: never;
+            query?: {
+                scopeType?: string;
+                scopeId?: string;
+            };
             header?: never;
             path: {
                 key: string;
@@ -531,15 +805,18 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Variable is not present until the variable store exists. */
-            404: {
+            /** @description Scoped platform variable. */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PlatformApiError"];
+                    "application/json": {
+                        variable: components["schemas"]["PlatformVariable"];
+                    };
                 };
             };
+            404: components["responses"]["PlatformError"];
         };
     };
     listPlatformFeatureFlags: {
@@ -562,6 +839,7 @@ export interface operations {
                     };
                 };
             };
+            500: components["responses"]["PlatformError"];
         };
     };
     listPlatformServices: {
@@ -626,6 +904,7 @@ export interface operations {
                     };
                 };
             };
+            500: components["responses"]["PlatformError"];
         };
     };
     listPlatformChangeSets: {
@@ -648,6 +927,7 @@ export interface operations {
                     };
                 };
             };
+            500: components["responses"]["PlatformError"];
         };
     };
     createPlatformChangeSet: {
@@ -657,17 +937,29 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePlatformChangeSetInput"];
+            };
+        };
+        responses: {
+            201: components["responses"]["PlatformChangeSetResponse"];
+            422: components["responses"]["PlatformError"];
+        };
+    };
+    getPlatformChangeSet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ChangeSetId"];
+            };
+            cookie?: never;
+        };
         requestBody?: never;
         responses: {
-            /** @description Change workflow is not enabled in P1. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PlatformApiError"];
-                };
-            };
+            200: components["responses"]["PlatformChangeSetResponse"];
+            404: components["responses"]["PlatformError"];
         };
     };
     validatePlatformChangeSet: {
@@ -681,7 +973,9 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            409: components["responses"]["ChangeWorkflowRequired"];
+            200: components["responses"]["PlatformChangeSetResponse"];
+            409: components["responses"]["PlatformError"];
+            422: components["responses"]["PlatformError"];
         };
     };
     submitPlatformChangeSet: {
@@ -695,7 +989,8 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            409: components["responses"]["ChangeWorkflowRequired"];
+            200: components["responses"]["PlatformChangeSetResponse"];
+            409: components["responses"]["PlatformError"];
         };
     };
     approvePlatformChangeSet: {
@@ -709,7 +1004,8 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            409: components["responses"]["ChangeWorkflowRequired"];
+            200: components["responses"]["PlatformChangeSetResponse"];
+            409: components["responses"]["PlatformError"];
         };
     };
     rejectPlatformChangeSet: {
@@ -721,9 +1017,15 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RejectPlatformChangeSetInput"];
+            };
+        };
         responses: {
-            409: components["responses"]["ChangeWorkflowRequired"];
+            200: components["responses"]["PlatformChangeSetResponse"];
+            409: components["responses"]["PlatformError"];
+            422: components["responses"]["PlatformError"];
         };
     };
     applyPlatformChangeSet: {
@@ -737,7 +1039,8 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            409: components["responses"]["ChangeWorkflowRequired"];
+            200: components["responses"]["PlatformChangeSetResponse"];
+            409: components["responses"]["PlatformError"];
         };
     };
     rollbackPlatformChangeSet: {
@@ -751,7 +1054,31 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            409: components["responses"]["ChangeWorkflowRequired"];
+            200: components["responses"]["PlatformChangeSetResponse"];
+            409: components["responses"]["PlatformError"];
+        };
+    };
+    listPlatformRollouts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Progressive rollouts. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        rollouts: components["schemas"]["PlatformRollout"][];
+                    };
+                };
+            };
+            500: components["responses"]["PlatformError"];
         };
     };
     createPlatformRollout: {
@@ -761,9 +1088,30 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePlatformRolloutInput"];
+            };
+        };
+        responses: {
+            201: components["responses"]["PlatformRolloutResponse"];
+            409: components["responses"]["PlatformError"];
+            422: components["responses"]["PlatformError"];
+        };
+    };
+    getPlatformRollout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["RolloutId"];
+            };
+            cookie?: never;
+        };
         requestBody?: never;
         responses: {
-            409: components["responses"]["RolloutWorkflowRequired"];
+            200: components["responses"]["PlatformRolloutResponse"];
+            404: components["responses"]["PlatformError"];
         };
     };
     advancePlatformRollout: {
@@ -777,7 +1125,8 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            409: components["responses"]["RolloutWorkflowRequired"];
+            200: components["responses"]["PlatformRolloutResponse"];
+            409: components["responses"]["PlatformError"];
         };
     };
     pausePlatformRollout: {
@@ -791,7 +1140,8 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            409: components["responses"]["RolloutWorkflowRequired"];
+            200: components["responses"]["PlatformRolloutResponse"];
+            409: components["responses"]["PlatformError"];
         };
     };
     abortPlatformRollout: {
@@ -805,7 +1155,8 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            409: components["responses"]["RolloutWorkflowRequired"];
+            200: components["responses"]["PlatformRolloutResponse"];
+            409: components["responses"]["PlatformError"];
         };
     };
     rollbackPlatformRollout: {
@@ -819,7 +1170,8 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            409: components["responses"]["RolloutWorkflowRequired"];
+            200: components["responses"]["PlatformRolloutResponse"];
+            409: components["responses"]["PlatformError"];
         };
     };
 }

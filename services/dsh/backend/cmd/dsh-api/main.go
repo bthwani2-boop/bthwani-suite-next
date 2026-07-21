@@ -18,6 +18,7 @@ import (
 	dshHttp "dsh-api/internal/http"
 	"dsh-api/internal/media"
 	"dsh-api/internal/operationaloutbox"
+	"dsh-api/internal/promotionfundingoutbox"
 	"dsh-api/internal/wlt"
 	"dsh-api/internal/wltoutbox"
 )
@@ -54,8 +55,15 @@ func main() {
 
 	appCtx, cancelApp := context.WithCancel(context.Background())
 	mediaProvider := newMediaProvider(appCtx)
+	identityClient := auth.NewClient(identityBaseURL)
 	wltClient := wlt.NewClient(wltBaseURL, wltServiceToken)
-	router := dshHttp.NewRouter(db, auth.NewClient(identityBaseURL), wltClient, mediaProvider)
+	router := dshHttp.NewRouter(db, identityClient, wltClient, mediaProvider)
+	dshHttp.RegisterPartnerLifecycleRoutes(router, db, identityClient, wltClient, mediaProvider)
+	dshHttp.RegisterPartnerSelfRoutes(router, db, identityClient, wltClient, mediaProvider)
+	dshHttp.RegisterActorNotificationRoutes(router, db, identityClient, wltClient, mediaProvider)
+	dshHttp.RegisterOrderJourneyRoutes(router, db, identityClient, wltClient, mediaProvider)
+	dshHttp.RegisterOrderCancellationRoutes(router, db, identityClient, wltClient, mediaProvider)
+	dshHttp.RegisterPlatformPolicyRoutes(router, db, identityClient, wltClient, mediaProvider)
 	handler := dshHttp.CorsMiddleware(authMode, router)
 
 	outboxCtx, cancelOutbox := context.WithCancel(context.Background())
@@ -66,6 +74,8 @@ func main() {
 		go wltoutbox.RunWorker(outboxCtx, db, wltClient, 15*time.Second)
 		go fieldcommissionoutbox.RunWorker(outboxCtx, db, wltClient, 15*time.Second)
 		go checkoutfinanceoutbox.RunWorker(outboxCtx, db, wltClient, 15*time.Second)
+		go promotionfundingoutbox.RunWorker(outboxCtx, db, wltClient, 15*time.Second)
+		log.Println("[dsh-api] WLT promotion funding outbox worker enabled")
 	} else {
 		log.Println("[dsh-api] WLT outbox workers disabled: DSH_WLT_BASE_URL and WLT_DSH_SERVICE_TOKEN are required")
 	}

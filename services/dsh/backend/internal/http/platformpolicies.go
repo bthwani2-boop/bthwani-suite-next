@@ -10,103 +10,102 @@ import (
 	"dsh-api/internal/store"
 )
 
-// Platform permission actions on the control-panel surface. "operator"
-// remains a valid fallback role during RBAC data migration.
 const (
 	PlatformPermissionRead   = "platform.read"
 	PlatformPermissionManage = "platform.manage"
 )
 
-// GET /dsh/operator/platform/zones
-// includeInactive defaults to true (existing zone-admin behavior); callers
-// that only want assignable zones (e.g. the Workforce provider create form)
-// pass includeInactive=false explicitly.
 func (s *protectedStoreServer) handleListZones(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionRead, "operator")
-	if !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionRead, "operator"); !ok {
 		return
 	}
 	includeInactive := true
 	if raw := r.URL.Query().Get("includeInactive"); raw != "" {
-		includeInactive = raw == "true"
+		parsed, err := strconv.ParseBool(raw)
+		if err != nil {
+			store.SendError(w, http.StatusBadRequest, "INVALID_INCLUDE_INACTIVE", "includeInactive must be true or false")
+			return
+		}
+		includeInactive = parsed
 	}
-	zones, err := platformpolicies.ListZones(s.db, includeInactive)
+	zones, err := platformpolicies.ListZones(r.Context(), s.db, includeInactive)
 	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list zones")
+		writePlatformPolicyError(w, err)
 		return
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"zones": zones})
 }
 
-// POST /dsh/operator/platform/zones
 func (s *protectedStoreServer) handleCreateZone(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionManage, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionManage, "operator")
 	if !ok {
 		return
 	}
 	var body struct {
+		ID          string `json:"id"`
 		Name        string `json:"name"`
 		CityCode    string `json:"cityCode"`
 		Description string `json:"description"`
+		Reason      string `json:"reason"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	z, err := platformpolicies.CreateZone(s.db, body.Name, body.CityCode, body.Description)
-	if errors.Is(err, platformpolicies.ErrInvalid) {
-		store.SendError(w, http.StatusBadRequest, "INVALID_INPUT", "name and cityCode are required")
+	mutation, ok := platformPolicyMutation(w, r, actor.ID, body.Reason)
+	if !ok {
 		return
 	}
+	zone, err := platformpolicies.CreateZone(r.Context(), s.db, platformpolicies.CreateZoneInput{
+		ID: body.ID, Name: body.Name, CityCode: body.CityCode, Description: body.Description,
+	}, mutation)
 	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to create zone")
+		writePlatformPolicyError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusCreated, map[string]any{"zone": z})
+	store.SendJSON(w, http.StatusCreated, map[string]any{"zone": zone})
 }
 
-// PATCH /dsh/operator/platform/zones/{zoneId}
 func (s *protectedStoreServer) handleUpdateZone(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionManage, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionManage, "operator")
 	if !ok {
 		return
 	}
-	id := r.PathValue("zoneId")
 	var body struct {
-		IsActive    bool   `json:"isActive"`
-		Name        string `json:"name"`
-		Description string `json:"description"`
+		Name            *string `json:"name"`
+		Description     *string `json:"description"`
+		IsActive        *bool   `json:"isActive"`
+		ExpectedVersion int     `json:"expectedVersion"`
+		Reason          string  `json:"reason"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	z, err := platformpolicies.UpdateZone(s.db, id, body.IsActive, body.Name, body.Description)
-	if errors.Is(err, platformpolicies.ErrNotFound) {
-		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "zone not found")
-		return
-	}
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to update zone")
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"zone": z})
-}
-
-// GET /dsh/operator/platform/sla-rules
-func (s *protectedStoreServer) handleListSlaRules(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionRead, "operator")
+	mutation, ok := platformPolicyMutation(w, r, actor.ID, body.Reason)
 	if !ok {
 		return
 	}
-	zoneID := r.URL.Query().Get("zoneId")
-	rules, err := platformpolicies.ListSlaRules(s.db, zoneID)
+	zone, err := platformpolicies.UpdateZone(r.Context(), s.db, r.PathValue("zoneId"), platformpolicies.UpdateZoneInput{
+		Name: body.Name, Description: body.Description, IsActive: body.IsActive, ExpectedVersion: body.ExpectedVersion,
+	}, mutation)
 	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list SLA rules")
+		writePlatformPolicyError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"zone": zone})
+}
+
+func (s *protectedStoreServer) handleListSlaRules(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionRead, "operator"); !ok {
+		return
+	}
+	rules, err := platformpolicies.ListSlaRules(r.Context(), s.db, r.URL.Query().Get("zoneId"))
+	if err != nil {
+		writePlatformPolicyError(w, err)
 		return
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"slaRules": rules})
 }
 
-// PUT /dsh/operator/platform/sla-rules
 func (s *protectedStoreServer) handleUpsertSlaRules(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionManage, "operator")
 	if !ok {
@@ -117,167 +116,155 @@ func (s *protectedStoreServer) handleUpsertSlaRules(w http.ResponseWriter, r *ht
 		Category        string `json:"category"`
 		MaxPrepMins     int    `json:"maxPrepMins"`
 		MaxDeliveryMins int    `json:"maxDeliveryMins"`
+		ExpectedVersion int    `json:"expectedVersion"`
+		Reason          string `json:"reason"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	rule, err := platformpolicies.UpsertSlaRule(s.db,
-		body.ZoneID, body.Category, body.MaxPrepMins, body.MaxDeliveryMins, actor.ID)
-	if errors.Is(err, platformpolicies.ErrInvalid) {
-		store.SendError(w, http.StatusBadRequest, "INVALID_INPUT", "zoneId and category are required")
+	mutation, ok := platformPolicyMutation(w, r, actor.ID, body.Reason)
+	if !ok {
 		return
 	}
+	rule, err := platformpolicies.UpsertSlaRule(r.Context(), s.db, platformpolicies.UpsertSlaInput{
+		ZoneID: body.ZoneID, Category: body.Category, MaxPrepMins: body.MaxPrepMins,
+		MaxDeliveryMins: body.MaxDeliveryMins, ExpectedVersion: body.ExpectedVersion,
+	}, mutation)
 	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to upsert SLA rule")
+		writePlatformPolicyError(w, err)
 		return
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"slaRule": rule})
 }
 
-// GET /dsh/operator/platform/capacity
 func (s *protectedStoreServer) handleGetCapacityConfig(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionRead, "operator")
-	if !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionRead, "operator"); !ok {
 		return
 	}
-	zoneID := r.URL.Query().Get("zoneId")
-	cfg, err := platformpolicies.GetCapacityConfig(s.db, zoneID)
-	if errors.Is(err, platformpolicies.ErrNotFound) {
-		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "capacity config not found for zone")
-		return
-	}
+	config, err := platformpolicies.GetCapacity(r.Context(), s.db, r.URL.Query().Get("zoneId"))
 	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to get capacity config")
+		writePlatformPolicyError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"capacityConfig": cfg})
+	store.SendJSON(w, http.StatusOK, map[string]any{"capacityConfig": config})
 }
 
-// PUT /dsh/operator/platform/capacity
 func (s *protectedStoreServer) handleUpsertCapacityConfig(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionManage, "operator")
 	if !ok {
 		return
 	}
 	var body struct {
-		ZoneID              string `json:"zoneId"`
-		MaxConcurrentOrders int    `json:"maxConcurrentOrders"`
-		MaxCaptainsOnline   int    `json:"maxCaptainsOnline"`
-		ThrottleThreshold   int    `json:"throttleThreshold"`
+		ZoneID              string  `json:"zoneId"`
+		MaxConcurrentOrders int     `json:"maxConcurrentOrders"`
+		MaxCaptainsOnline   int     `json:"maxCaptainsOnline"`
+		ThrottleThreshold   float64 `json:"throttleThreshold"`
+		ExpectedVersion     int     `json:"expectedVersion"`
+		Reason              string  `json:"reason"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	cfg, err := platformpolicies.UpsertCapacityConfig(s.db,
-		body.ZoneID, body.MaxConcurrentOrders, body.MaxCaptainsOnline, body.ThrottleThreshold, actor.ID)
-	if errors.Is(err, platformpolicies.ErrInvalid) {
-		store.SendError(w, http.StatusBadRequest, "INVALID_INPUT", "zoneId is required")
-		return
-	}
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to upsert capacity config")
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"capacityConfig": cfg})
-}
-
-// GET /dsh/operator/platform/store-onboarding-fee — operator edit view.
-func (s *protectedStoreServer) handleGetStoreOnboardingFeePolicy(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionRead, "operator")
+	mutation, ok := platformPolicyMutation(w, r, actor.ID, body.Reason)
 	if !ok {
 		return
 	}
-	policy, err := platformpolicies.GetStoreOnboardingFeePolicy(s.db)
+	config, err := platformpolicies.UpsertCapacity(r.Context(), s.db, platformpolicies.UpsertCapacityInput{
+		ZoneID: body.ZoneID, MaxConcurrentOrders: body.MaxConcurrentOrders,
+		MaxCaptainsOnline: body.MaxCaptainsOnline, ThrottleThreshold: body.ThrottleThreshold,
+		ExpectedVersion: body.ExpectedVersion,
+	}, mutation)
+	if err != nil {
+		writePlatformPolicyError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"capacityConfig": config})
+}
+
+func (s *protectedStoreServer) handleGetZoneServiceability(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionRead, "operator"); !ok {
+		return
+	}
+	result, err := platformpolicies.GetZoneServiceability(r.Context(), s.db, r.PathValue("zoneId"))
+	if err != nil {
+		writePlatformPolicyError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, result)
+}
+
+func (s *protectedStoreServer) handleGetStoreOnboardingFeePolicy(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionRead, "operator"); !ok {
+		return
+	}
+	policy, err := platformpolicies.GetStoreOnboardingFeePolicy(r.Context(), s.db)
 	if errors.Is(err, platformpolicies.ErrNotFound) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "store onboarding fee policy not found")
 		return
 	}
 	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to get store onboarding fee policy")
+		writePlatformPolicyError(w, err)
 		return
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"policy": policy})
 }
 
-// PUT /dsh/operator/platform/store-onboarding-fee
 func (s *protectedStoreServer) handleUpsertStoreOnboardingFeePolicy(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionManage, "operator")
 	if !ok {
 		return
 	}
 	var body struct {
-		Enabled       bool    `json:"enabled"`
-		Amount        float64 `json:"amount"`
-		Currency      string  `json:"currency"`
-		AppliesTo     string  `json:"appliesTo"`
-		ChargeTiming  string  `json:"chargeTiming"`
-		EffectiveFrom *string `json:"effectiveFrom"`
-		Notes         string  `json:"notes"`
+		Enabled         bool    `json:"enabled"`
+		Amount          float64 `json:"amount"`
+		Currency        string  `json:"currency"`
+		AppliesTo       string  `json:"appliesTo"`
+		ChargeTiming    string  `json:"chargeTiming"`
+		EffectiveFrom   *string `json:"effectiveFrom"`
+		Notes           string  `json:"notes"`
+		ExpectedVersion int     `json:"expectedVersion"`
+		Reason          string  `json:"reason"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
 	input := platformpolicies.StoreOnboardingFeePolicyInput{
-		Enabled:      body.Enabled,
-		Amount:       body.Amount,
-		Currency:     body.Currency,
-		AppliesTo:    body.AppliesTo,
-		ChargeTiming: body.ChargeTiming,
-		Notes:        body.Notes,
+		Enabled: body.Enabled, Amount: body.Amount, Currency: body.Currency,
+		AppliesTo: body.AppliesTo, ChargeTiming: body.ChargeTiming,
+		Notes: body.Notes, ExpectedVersion: body.ExpectedVersion,
 	}
 	if body.EffectiveFrom != nil && *body.EffectiveFrom != "" {
-		if t, err := time.Parse(time.RFC3339, *body.EffectiveFrom); err == nil {
-			input.EffectiveFrom = &t
+		parsed, err := time.Parse(time.RFC3339, *body.EffectiveFrom)
+		if err != nil {
+			store.SendError(w, http.StatusBadRequest, "INVALID_EFFECTIVE_FROM", "effectiveFrom must be RFC3339")
+			return
 		}
+		input.EffectiveFrom = &parsed
 	}
-	policy, err := platformpolicies.UpsertStoreOnboardingFeePolicy(s.db, input, actor.ID)
-	if errors.Is(err, platformpolicies.ErrInvalid) {
-		store.SendError(w, http.StatusBadRequest, "INVALID_INPUT", "invalid appliesTo, chargeTiming, or negative amount")
+	mutation, ok := platformPolicyMutation(w, r, actor.ID, body.Reason)
+	if !ok {
 		return
 	}
+	policy, err := platformpolicies.UpsertStoreOnboardingFeePolicy(r.Context(), s.db, input, mutation)
 	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to upsert store onboarding fee policy")
+		writePlatformPolicyError(w, err)
 		return
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"policy": policy})
 }
 
-// GET /dsh/platform/store-onboarding-fee — read-only reference for app-field
-// and app-partner. Never for app-client.
 func (s *protectedStoreServer) handleGetStoreOnboardingFeeReference(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireActor(w, r, "field", "partner", "operator")
-	if !ok {
+	if _, ok := s.requireActor(w, r, "field", "partner", "operator"); !ok {
 		return
 	}
-	policy, err := platformpolicies.GetStoreOnboardingFeePolicy(s.db)
+	policy, err := platformpolicies.GetStoreOnboardingFeePolicy(r.Context(), s.db)
 	if errors.Is(err, platformpolicies.ErrNotFound) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "store onboarding fee policy not found")
 		return
 	}
 	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to get store onboarding fee reference")
+		writePlatformPolicyError(w, err)
 		return
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"policy": policy})
 }
-
-// GET /dsh/operator/platform/serviceability/{zoneId}
-func (s *protectedStoreServer) handleGetZoneServiceability(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionRead, "operator")
-	if !ok {
-		return
-	}
-	zoneID := r.PathValue("zoneId")
-	result, err := platformpolicies.GetZoneServiceability(s.db, zoneID)
-	if errors.Is(err, platformpolicies.ErrNotFound) {
-		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "zone not found")
-		return
-	}
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to get serviceability")
-		return
-	}
-	store.SendJSON(w, http.StatusOK, result)
-}
-
-var _ = strconv.Itoa

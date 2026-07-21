@@ -1,11 +1,20 @@
 "use client";
 
-// control-panel/platform — StoreOnboardingFeePolicySection
-// Control-panel owns the policy DEFINITION only. DSH never creates a WLT
-// ledger entry for this fee — WLT remains the sole owner of financial truth
-// once a settlement/payment is actually recorded.
-import { Badge, Button, SegmentedControl, StateView, Text, TextField, spacing } from "@bthwani/ui-kit";
-import { WebView as View, WebStyleSheet as StyleSheet } from "@bthwani/ui-kit/web";
+// Control-panel owns the policy definition only. DSH never creates a WLT
+// ledger entry for this fee; WLT remains the sole financial truth owner.
+import {
+  Badge,
+  Button,
+  SegmentedControl,
+  StateView,
+  Text,
+  TextField,
+  spacing,
+} from "@bthwani/ui-kit";
+import {
+  WebStyleSheet as StyleSheet,
+  WebView as View,
+} from "@bthwani/ui-kit/web";
 import {
   STORE_ONBOARDING_FEE_APPLIES_TO_ITEMS,
   STORE_ONBOARDING_FEE_CHARGE_TIMING_ITEMS,
@@ -13,61 +22,112 @@ import {
   useStoreOnboardingFeePolicyFormController,
 } from "../../shared/platform";
 
-
-export function StoreOnboardingFeePolicySection({ authKind }: { readonly authKind: string }) {
-  const {
-    state,
-    reload,
-    form,
-    saving,
-    setEnabledValue,
-    setAmount,
-    setCurrency,
-    setAppliesTo,
-    setChargeTiming,
-    setNotes,
-    save,
-  } = useStoreOnboardingFeePolicyFormController(authKind);
+export function StoreOnboardingFeePolicySection({
+  authKind,
+}: {
+  readonly authKind: string;
+}) {
+  const controller = useStoreOnboardingFeePolicyFormController(authKind);
 
   return (
     <View style={styles.section}>
-      <Text role="titleSm">رسوم إضافة متجر (store_onboarding_fee_policy)</Text>
+      <Text role="titleSm">سياسة رسوم تهيئة المتجر</Text>
       <Text role="caption" tone="muted">
-        سياسة المنصة فقط — لا يُنشئ هذا الإعداد أي حركة مالية في WLT، الحقيقة المالية تبقى لدى WLT عند التسوية الفعلية.
+        تعريف تشغيلي داخل DSH فقط. لا ينشئ هذا الإعداد رصيدًا أو قيدًا ماليًا؛
+        الحقيقة المالية الفعلية تبقى داخل WLT.
       </Text>
 
-      {state.kind === "loading" && <StateView title="جارٍ التحميل…" />}
-      {state.kind === "error" && (
-        <StateView title="خطأ" description={state.message} actionLabel="إعادة المحاولة" onActionPress={reload} />
-      )}
+      {controller.state.kind === "loading" ? (
+        <StateView title="جارٍ تحميل السياسة…" />
+      ) : null}
+      {controller.state.kind === "error" ? (
+        <StateView
+          title="تعذر تحميل السياسة"
+          description={controller.state.message}
+          actionLabel="إعادة المحاولة"
+          onActionPress={controller.reload}
+        />
+      ) : null}
 
-      {(state.kind === "success" || state.kind === "idle") && (
+      {controller.state.kind === "success" ? (
         <View style={styles.form}>
-          {state.kind === "success" && !state.data.isConfigured && (
-            <Badge label={state.data.blockedReason ?? "السياسة غير مكتملة"} tone="warning" />
-          )}
+          <View style={styles.badges}>
+            <Badge
+              label={`الإصدار ${controller.state.data.version}`}
+              tone="info"
+            />
+            <Badge
+              label={
+                controller.state.data.isConfigured
+                  ? "سياسة مكتملة"
+                  : controller.state.data.blockedReason ?? "السياسة غير مكتملة"
+              }
+              tone={
+                controller.state.data.isConfigured ? "success" : "warning"
+              }
+            />
+          </View>
 
           <Text role="bodySm">حالة الرسم</Text>
           <SegmentedControl
             items={STORE_ONBOARDING_FEE_ENABLED_ITEMS}
-            value={form.enabledValue}
-            onValueChange={setEnabledValue}
+            value={controller.form.enabledValue}
+            onValueChange={controller.setEnabledValue}
           />
 
-          <TextField label="المبلغ" value={form.amount} onChangeText={setAmount} placeholder="0" />
-          <TextField label="العملة" value={form.currency} onChangeText={setCurrency} placeholder="YER" />
+          <TextField
+            label="المبلغ"
+            value={controller.form.amount}
+            onChangeText={controller.setAmount}
+            placeholder="0"
+            keyboardType="numeric"
+          />
+          <TextField
+            label="العملة"
+            value={controller.form.currency}
+            onChangeText={controller.setCurrency}
+            placeholder="YER"
+          />
 
           <Text role="bodySm">ينطبق على</Text>
-          <SegmentedControl items={STORE_ONBOARDING_FEE_APPLIES_TO_ITEMS} value={form.appliesTo} onValueChange={setAppliesTo} />
+          <SegmentedControl
+            items={STORE_ONBOARDING_FEE_APPLIES_TO_ITEMS}
+            value={controller.form.appliesTo}
+            onValueChange={controller.setAppliesTo}
+          />
 
           <Text role="bodySm">توقيت التحصيل</Text>
-          <SegmentedControl items={STORE_ONBOARDING_FEE_CHARGE_TIMING_ITEMS} value={form.chargeTiming} onValueChange={setChargeTiming} />
+          <SegmentedControl
+            items={STORE_ONBOARDING_FEE_CHARGE_TIMING_ITEMS}
+            value={controller.form.chargeTiming}
+            onValueChange={controller.setChargeTiming}
+          />
 
-          <TextField label="ملاحظات" value={form.notes} onChangeText={setNotes} placeholder="اختياري" />
+          <TextField
+            label="ملاحظات"
+            value={controller.form.notes}
+            onChangeText={controller.setNotes}
+            placeholder="اختياري"
+          />
+          <TextField
+            label="سبب التغيير"
+            value={controller.form.reason}
+            onChangeText={controller.setReason}
+            placeholder="سبب تشغيلي قابل للتدقيق"
+          />
 
-          <Button label={saving ? "جارٍ الحفظ…" : "حفظ السياسة"} tone="primary" disabled={saving} onPress={() => void save()} />
+          {controller.validationError ? (
+            <Text tone="danger">{controller.validationError}</Text>
+          ) : null}
+
+          <Button
+            label={controller.saving ? "جارٍ الحفظ…" : "حفظ السياسة"}
+            tone="primary"
+            disabled={controller.saving}
+            onPress={() => void controller.save()}
+          />
         </View>
-      )}
+      ) : null}
     </View>
   );
 }
@@ -75,4 +135,5 @@ export function StoreOnboardingFeePolicySection({ authKind }: { readonly authKin
 const styles = StyleSheet.create({
   section: { margin: spacing[4], gap: spacing[2] },
   form: { gap: spacing[3] },
+  badges: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
 });

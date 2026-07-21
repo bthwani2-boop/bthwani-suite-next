@@ -27,10 +27,8 @@ describe("generated WLT API client coverage", () => {
     assert.match(source, /expireWltPaymentSession/);
     assert.match(source, /markWltCodCollected/);
     assert.match(source, /WltAuthorizePaymentSessionRequest/);
-    assert.match(source, /WltAuthorizePaymentSessionResponse/);
     assert.match(source, /WltCapturePaymentSessionResponse/);
-    assert.match(source, /WltExpirePaymentSessionResponse/);
-    assert.match(source, /WltCodCollectResponse/);
+    assert.match(source, /WltPaymentSessionResponse/);
   });
 
   test("includes WLT Refund Status refund operations", () => {
@@ -43,8 +41,7 @@ describe("generated WLT API client coverage", () => {
     assert.match(source, /WltRefund[^s]/);
     assert.match(source, /WltCreateRefundRequest/);
     assert.match(source, /WltRefundResponse/);
-    assert.match(source, /WltRefundsListResponse/);
-    assert.match(source, /WltRejectRefundRequest/);
+    assert.match(source, /WltRefundListResponse/);
   });
 
   test("includes WLT Settlement Status settlement operations", () => {
@@ -56,7 +53,7 @@ describe("generated WLT API client coverage", () => {
     assert.match(source, /WltSettlement[^s]/);
     assert.match(source, /WltCreateSettlementRequest/);
     assert.match(source, /WltSettlementResponse/);
-    assert.match(source, /WltSettlementsListResponse/);
+    assert.match(source, /WltSettlementListResponse/);
     assert.match(source, /WltSettlementSummary/);
     assert.match(source, /WltSettlementSummaryResponse/);
   });
@@ -72,11 +69,11 @@ describe("generated WLT API client coverage", () => {
     assert.match(source, /WltCodRecord[^s]/);
     assert.match(source, /WltCreateCodRecordRequest/);
     assert.match(source, /WltCodRecordResponse/);
-    assert.match(source, /WltCodRecordsListResponse/);
+    assert.match(source, /WltCodRecordListResponse/);
     assert.match(source, /WltCommission[^s]/);
     assert.match(source, /WltCreateCommissionRequest/);
     assert.match(source, /WltCommissionResponse/);
-    assert.match(source, /WltCommissionsListResponse/);
+    assert.match(source, /WltCommissionListResponse/);
   });
 
   test("includes WLT Ledger ledger audit operations", () => {
@@ -86,6 +83,6 @@ describe("generated WLT API client coverage", () => {
     assert.match(source, /WltLedgerEntry[^R]/);
     assert.match(source, /WltCreateLedgerEntryRequest/);
     assert.match(source, /WltLedgerEntryResponse/);
-    assert.match(source, /WltLedgerEntriesListResponse/);
+    assert.match(source, /WltLedgerEntryListResponse/);
   });
 });

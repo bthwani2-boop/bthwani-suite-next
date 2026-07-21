@@ -278,11 +278,16 @@ func (s *protectedStoreServer) handleDeleteTicker(w http.ResponseWriter, r *http
 }
 
 func writePartnerOfferError(w http.ResponseWriter, err error) {
-	if errors.Is(err, marketing.ErrRejectionReasonRequired) {
+	switch {
+	case errors.Is(err, marketing.ErrCouponLinkRequired):
+		store.SendError(w, http.StatusConflict, "ACTIVE_COUPON_LINK_REQUIRED", "published coupon offer requires an active checkout coupon")
+	case errors.Is(err, marketing.ErrCommercialVersionConflict):
+		store.SendError(w, http.StatusConflict, "VERSION_CONFLICT", "partner offer changed; reload before retrying")
+	case errors.Is(err, marketing.ErrRejectionReasonRequired):
 		store.SendError(w, http.StatusBadRequest, "REJECTION_REASON_REQUIRED", "a rejection reason is required")
-		return
+	default:
+		writeMarketingError(w, err, "partner offer not found")
 	}
-	writeMarketingError(w, err, "partner offer not found")
 }
 
 // GET /dsh/operator/marketing/partner-offers
@@ -314,6 +319,8 @@ func (s *protectedStoreServer) handleUpdatePartnerOffer(w http.ResponseWriter, r
 		ActiveToDate    *string `json:"activeToDate"`
 		RejectionReason *string `json:"rejectionReason"`
 		MarginRiskNote  *string `json:"marginRiskNote"`
+		CouponID        *string `json:"couponId"`
+		ExpectedVersion int     `json:"expectedVersion"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
@@ -327,6 +334,8 @@ func (s *protectedStoreServer) handleUpdatePartnerOffer(w http.ResponseWriter, r
 		ActiveToDate:    body.ActiveToDate,
 		RejectionReason: body.RejectionReason,
 		MarginRiskNote:  body.MarginRiskNote,
+		CouponID:        body.CouponID,
+		ExpectedVersion: body.ExpectedVersion,
 		ActorID:         actor.ID,
 		CorrelationID:   marketingCorrelationID(r),
 	})

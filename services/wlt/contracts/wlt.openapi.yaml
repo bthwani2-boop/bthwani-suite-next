@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: BThwani WLT Service API
-  version: 0.2.0
+  version: 0.3.0
   description: WLT owns wallet and financial mutation endpoints. DSH and frontend surfaces must not call external financial providers directly.
 
 x-bthwani-owner: services/wlt
@@ -332,6 +332,11 @@ paths:
         - name: beneficiaryActorType
           in: query
           schema: { type: string }
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, approved, rejected, provider_pending, processing, provider_result_unknown, completed, failed]
       responses:
         "200":
           description: List of payout requests.
@@ -376,6 +381,12 @@ paths:
           in: path
           required: true
           schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WltPayoutOperatorRequest"
       responses:
         "200":
           description: Approved.
@@ -395,6 +406,12 @@ paths:
           in: path
           required: true
           schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WltPayoutOperatorRequest"
       responses:
         "200":
           description: Rejected.
@@ -414,6 +431,12 @@ paths:
           in: path
           required: true
           schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WltPayoutOperatorRequest"
       responses:
         "200":
           description: Processing.
@@ -433,6 +456,12 @@ paths:
           in: path
           required: true
           schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WltPayoutOperatorRequest"
       responses:
         "200":
           description: Completed.
@@ -452,6 +481,12 @@ paths:
           in: path
           required: true
           schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WltPayoutOperatorRequest"
       responses:
         "200":
           description: Failed.
@@ -686,6 +721,55 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+
+  /wlt/order-cancellations:
+    post:
+      operationId: closeWltOrderCancellation
+      summary: Resolve the WLT-owned financial consequence of a governed DSH order cancellation.
+      description: >-
+        Internal DSH-only mutation. WLT derives all monetary values from the referenced payment session.
+        It expires an uncollected session, creates one idempotent refund for captured or COD-collected money,
+        or returns no action for an already terminal session.
+      tags: [WltPaymentSessions]
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema: { type: string, minLength: 1 }
+        - name: X-Service-Caller
+          in: header
+          required: true
+          schema: { type: string, enum: [dsh] }
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, minLength: 1 }
+        - name: X-Correlation-ID
+          in: header
+          required: true
+          schema: { type: string, minLength: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WltGovernedOrderCancellationRequest"
+      responses:
+        "200":
+          description: Financial cancellation decision returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WltGovernedOrderCancellationResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
   /wlt/payment-sessions/{paymentSessionId}/cod-collect:
     post:
       operationId: markWltCodCollected
@@ -735,12 +819,18 @@ paths:
             schema:
               $ref: "#/components/schemas/WltCreateRefundRequest"
       responses:
+        "200":
+          description: Existing active refund returned for an idempotent replay.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WltCreateRefundResponse"
         "201":
           description: Refund created.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/WltRefundResponse"
+                $ref: "#/components/schemas/WltCreateRefundResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
         "403":
@@ -913,11 +1003,12 @@ paths:
   /wlt/settlements:
     post:
       operationId: createWltSettlement
-      summary: Create a partner settlement record.
+      summary: Create a partner settlement from immutable delivered-order sources.
       description: >-
-        Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless
-        WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
-      x-bthwani-mutation-approved: false
+        DSH supplies server-derived delivered order identities, immutable gross snapshots and delivery timestamps.
+        WLT owns the active fee policy and computes gross, platform fee, partner net and order count.
+        Caller-supplied financial totals are forbidden. The mutation remains disabled unless WLT_MUTATIONS_ENABLED=true.
+      x-bthwani-mutation-approved: true
       x-bthwani-default-enabled: false
       tags:
         - WltSettlements
@@ -929,7 +1020,7 @@ paths:
               $ref: "#/components/schemas/WltCreateSettlementRequest"
       responses:
         "201":
-          description: Settlement created.
+          description: Governed settlement created.
           content:
             application/json:
               schema:
@@ -938,6 +1029,8 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
     get:
       operationId: listWltSettlements
       summary: List settlements by partnerId.
@@ -1077,6 +1170,92 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+
+  /wlt/settlement-policies/{partnerId}:
+    put:
+      operationId: upsertWltSettlementPolicy
+      summary: Upsert a partner settlement fee policy owned by WLT.
+      description: Mutation-gated and service-authenticated.
+      x-bthwani-mutation-approved: true
+      x-bthwani-default-enabled: false
+      tags: [WltSettlements]
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WltSettlementPolicyRequest"
+      responses:
+        "200":
+          description: Settlement policy persisted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WltSettlementPolicyResponse"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /wlt/delivery-collections:
+    post:
+      operationId: createWltDeliveryCollectionHandoff
+      summary: Accept a governed DSH delivery-completion handoff.
+      description: >-
+        DSH sends delivery and collector identities only. WLT resolves the payment
+        session, returns applicable=false for prepaid orders, and creates one COD
+        custody record for COD orders without trusting caller-supplied money.
+      tags: [WltCod]
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema: { type: string }
+        - name: X-Service-Caller
+          in: header
+          required: true
+          schema:
+            type: string
+            enum: [dsh]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WltCreateCodRecordRequest"
+      responses:
+        "200":
+          description: Handoff replayed or not applicable to a prepaid order.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [applicable, replayed]
+                properties:
+                  codRecord:
+                    anyOf:
+                      - $ref: "#/components/schemas/WltCodRecord"
+                      - type: "null"
+                  applicable: { type: boolean }
+                  replayed: { type: boolean }
+        "201":
+          description: COD custody record created from WLT payment-session truth.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [codRecord, applicable, replayed]
+                properties:
+                  codRecord: { $ref: "#/components/schemas/WltCodRecord" }
+                  applicable: { type: boolean, const: true }
+                  replayed: { type: boolean, const: false }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
 
   /wlt/cod-records:
     post:
@@ -2138,6 +2317,16 @@ components:
         currency: { type: string }
         idempotencyKey: { type: string }
 
+    WltPayoutOperatorRequest:
+      type: object
+      required: [operatorId]
+      additionalProperties: false
+      properties:
+        operatorId:
+          type: string
+          minLength: 1
+          description: Authenticated DSH operator identity. Maker/checker separation is enforced by WLT.
+
     WltPayoutRequestResponse:
       type: object
       required: [payoutRequest]
@@ -2171,14 +2360,30 @@ components:
         beneficiaryActorType: { type: string }
         amountMinorUnits: { type: integer, format: int64 }
         currency: { type: string }
-        status: { type: string }
+        status:
+          type: string
+          enum: [pending, approved, rejected, provider_pending, processing, provider_result_unknown, completed, failed]
         requestedAt: { type: string, format: date-time }
-        approvedAt: { type: string, format: date-time }
-        rejectedAt: { type: string, format: date-time }
-        processedAt: { type: string, format: date-time }
-        completedAt: { type: string, format: date-time }
-        failedAt: { type: string, format: date-time }
+        approvedAt: { type: [string, 'null'], format: date-time }
+        rejectedAt: { type: [string, 'null'], format: date-time }
+        processedAt: { type: [string, 'null'], format: date-time }
+        completedAt: { type: [string, 'null'], format: date-time }
+        failedAt: { type: [string, 'null'], format: date-time }
         failureReason: { type: string }
+        operatorId: { type: string }
+        approvedByOperatorId: { type: string }
+        rejectedByOperatorId: { type: string }
+        processedByOperatorId: { type: string }
+        completedByOperatorId: { type: string }
+        failedByOperatorId: { type: string }
+        providerReference:
+          type: string
+          description: Persisted provider or simulator transaction reference required before completion.
+        providerStatus:
+          type: string
+          enum: ['', unknown, declined, processed, succeeded]
+        providerProcessedAt: { type: [string, 'null'], format: date-time }
+        idempotencyKey: { type: string }
 
     WltWalletStatusRefResponse:
       type: object
@@ -2263,6 +2468,7 @@ components:
 
     WltCreateRefundRequest:
       type: object
+      additionalProperties: false
       description: >-
         amountMinorUnits/currency are intentionally not accepted here -- the
         refunded amount is always derived from the referenced payment
@@ -2272,6 +2478,7 @@ components:
         - paymentSessionId
         - orderId
         - clientId
+        - reason
       properties:
         paymentSessionId:
           type: string
@@ -2281,12 +2488,45 @@ components:
           type: string
         reason:
           type: string
+          minLength: 1
+          maxLength: 1000
+
+
+    WltGovernedOrderCancellationRequest:
+      type: object
+      additionalProperties: false
+      required: [paymentSessionId, orderId, clientId, reason]
+      properties:
+        paymentSessionId: { type: string, minLength: 1 }
+        orderId: { type: string, minLength: 1 }
+        clientId: { type: string, minLength: 1 }
+        reason: { type: string, minLength: 1, maxLength: 1000 }
+
+    WltGovernedOrderCancellationAction:
+      type: string
+      enum: [expired, refund_requested, none]
+
+    WltGovernedOrderCancellationResponse:
+      type: object
+      additionalProperties: false
+      required: [action]
+      properties:
+        action:
+          $ref: "#/components/schemas/WltGovernedOrderCancellationAction"
+        paymentSession:
+          $ref: "#/components/schemas/WltPaymentSession"
+        refund:
+          $ref: "#/components/schemas/WltRefund"
+        sessionStatus:
+          type: string
 
     WltCancelPaymentSessionForOrderRequest:
       type: object
+      additionalProperties: false
       required:
         - orderId
         - clientId
+        - reason
       properties:
         orderId:
           type: string
@@ -2294,6 +2534,8 @@ components:
           type: string
         reason:
           type: string
+          minLength: 1
+          maxLength: 1000
 
     WltCancelPaymentSessionForOrderResponse:
       type: object
@@ -2312,6 +2554,19 @@ components:
           $ref: "#/components/schemas/WltRefund"
         sessionStatus:
           type: string
+
+    WltCreateRefundResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - refund
+        - replayed
+      properties:
+        refund:
+          $ref: "#/components/schemas/WltRefund"
+        replayed:
+          type: boolean
+          description: True when the existing active refund was returned idempotently.
 
     WltRefundResponse:
       type: object
@@ -2390,37 +2645,56 @@ components:
 
     WltCreateSettlementRequest:
       type: object
-      required:
-        - partnerId
-        - periodStart
-        - periodEnd
-        - grossAmount
-        - platformFee
-        - netAmount
+      additionalProperties: false
+      required: [partnerId, periodStart, periodEnd, orderSources, operatorId]
       properties:
-        partnerId:
-          type: string
-        periodStart:
-          type: string
-          format: date
-        periodEnd:
-          type: string
-          format: date
-        grossAmount:
-          type: integer
-          format: int64
-        platformFee:
-          type: integer
-          format: int64
-        netAmount:
-          type: integer
-          format: int64
-        currency:
-          type: string
-          default: YER
-        orderCount:
-          type: integer
-          default: 0
+        partnerId: { type: string, minLength: 1 }
+        periodStart: { type: string, format: date }
+        periodEnd: { type: string, format: date }
+        operatorId: { type: string, minLength: 1 }
+        orderSources:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/WltDeliveredOrderSettlementSource"
+
+    WltDeliveredOrderSettlementSource:
+      type: object
+      additionalProperties: false
+      required: [orderId, grossAmountMinorUnits, currency, deliveredAt]
+      properties:
+        orderId: { type: string, minLength: 1 }
+        grossAmountMinorUnits: { type: integer, format: int64, minimum: 1 }
+        currency: { type: string, minLength: 1 }
+        deliveredAt: { type: string, format: date-time }
+
+    WltSettlementPolicyRequest:
+      type: object
+      additionalProperties: false
+      required: [feeBasisPoints, operatorId]
+      properties:
+        feeBasisPoints: { type: integer, minimum: 0, maximum: 10000 }
+        currency: { type: string, default: YER }
+        status: { type: string, enum: [active, inactive], default: active }
+        operatorId: { type: string, minLength: 1 }
+
+    WltSettlementPolicy:
+      type: object
+      required: [partnerId, feeBasisPoints, currency, status, updatedByOperatorId, updatedAt]
+      properties:
+        partnerId: { type: string }
+        feeBasisPoints: { type: integer }
+        currency: { type: string }
+        status: { type: string, enum: [active, inactive] }
+        updatedByOperatorId: { type: string }
+        updatedAt: { type: string, format: date-time }
+
+    WltSettlementPolicyResponse:
+      type: object
+      required: [settlementPolicy]
+      properties:
+        settlementPolicy:
+          $ref: "#/components/schemas/WltSettlementPolicy"
 
     WltSettlementResponse:
       type: object
@@ -2488,7 +2762,8 @@ components:
       required:
         - id
         - orderId
-        - captainId
+        - collectorType
+        - collectorId
         - partnerId
         - amountMinorUnits
         - currency
@@ -2496,65 +2771,44 @@ components:
         - createdAt
         - updatedAt
       properties:
-        id:
-          type: string
-        orderId:
-          type: string
+        id: { type: string }
+        orderId: { type: string }
         captainId:
           type: string
-        partnerId:
+          description: Compatibility projection, present only when collectorType is captain.
+        collectorType:
           type: string
-        amountMinorUnits:
-          type: integer
-          format: int64
-        currency:
-          type: string
+          enum: [captain, store_courier, partner_store]
+        collectorId: { type: string, minLength: 1 }
+        partnerId: { type: string }
+        amountMinorUnits: { type: integer, format: int64, minimum: 1 }
+        currency: { type: string }
         status:
           type: string
-          enum:
-            - pending_collection
-            - collected
-            - remitted
-            - disputed
-            - resolved
-        collectedAt:
-          type: [string, 'null']
-          format: date-time
-        remittedAt:
-          type: [string, 'null']
-          format: date-time
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
+          enum: [pending_collection, collected, remitted, disputed, resolved]
+        collectedAt: { type: [string, 'null'], format: date-time }
+        remittedAt: { type: [string, 'null'], format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
 
     WltCreateCodRecordRequest:
       type: object
-      required:
-        - orderId
-        - captainId
-        - partnerId
+      additionalProperties: false
+      description: >-
+        Internal DSH-only custody handoff. Monetary values are forbidden in the
+        request and are always derived from WLT's payment session.
+      required: [orderId, collectorType, collectorId, partnerId, checkoutIntentId]
       properties:
-        orderId:
+        orderId: { type: string, minLength: 1 }
+        collectorType:
           type: string
+          enum: [captain, store_courier, partner_store]
+        collectorId: { type: string, minLength: 1 }
         captainId:
           type: string
-        partnerId:
-          type: string
-        checkoutIntentId:
-          type: string
-          description: >
-            When set, WLT derives amountMinorUnits/currency from its own payment
-            session for this checkout intent instead of trusting the caller;
-            amountMinorUnits/currency in the request are ignored in that case.
-        amountMinorUnits:
-          type: integer
-          format: int64
-        currency:
-          type: string
-          default: YER
+          description: Deprecated compatibility input for captain collectors.
+        partnerId: { type: string, minLength: 1 }
+        checkoutIntentId: { type: string, minLength: 1 }
 
     WltCodRecordResponse:
       type: object
@@ -2804,6 +3058,7 @@ components:
             - platform_revenue
             - platform_payable
             - provider_clearing
+            - cash_in_transit
             - platform_commission_receivable
         category:
           type: string

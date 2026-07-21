@@ -1,363 +1,411 @@
-// Authority: services/dsh/frontend/app-client — addresses sub-screen.
-// Sovereign shared: services/dsh/frontend/shared
-
-import React from 'react';
-import { ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Circle, Path } from 'react-native-svg';
+import React from "react";
+import { ScrollView, StyleSheet, View } from "react-native";
+import * as Location from "expo-location";
 import {
+  Badge,
   Button,
+  Card,
+  StateView,
   Text,
+  TextField,
+  TopBar,
   colorRoles,
-  alpha,
-  radius,
   spacing,
-} from '@bthwani/ui-kit';
+} from "@bthwani/ui-kit";
+import {
+  useClientAddressController,
+  type DshClientAddress,
+  type DshClientAddressDraft,
+} from "../../shared/client-address";
+import {
+  useClientMapController,
+  type DshVerifiedMapLocation,
+} from "../../shared/client-map";
 
 export type AddressLocationScreenProps = {
-  onBack?: () => void;
+  readonly onBack?: () => void;
+  readonly onOpenCheckout?: () => void;
 };
 
-type SavedAddress = {
-  id: string;
+type EditableDraft = {
   label: string;
-  isDefault: boolean;
+  recipientName: string;
+  phoneE164: string;
+  addressLine: string;
+  serviceAreaCode: string;
+  building: string;
+  floor: string;
+  unit: string;
+  deliveryInstructions: string;
+  latitude: number | null;
+  longitude: number | null;
+  makeDefault: boolean;
 };
 
-const SEED_ADDRESSES: SavedAddress[] = [
-  { id: 'addr-home',  label: 'المنزل',      isDefault: true  },
-  { id: 'addr-work',  label: 'العمل',        isDefault: false },
-  { id: 'addr-other', label: 'عنوان آخر',   isDefault: false },
-];
+const EMPTY_DRAFT: EditableDraft = {
+  label: "",
+  recipientName: "",
+  phoneE164: "+967",
+  addressLine: "",
+  serviceAreaCode: "",
+  building: "",
+  floor: "",
+  unit: "",
+  deliveryInstructions: "",
+  latitude: null,
+  longitude: null,
+  makeDefault: false,
+};
 
-// SVG Icons
-function BackIcon({ color = colorRoles.textPrimary }: { color?: string }) {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-      <Path d="M15 19l-7-7 7-7" stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
+function draftFromAddress(address: DshClientAddress): EditableDraft {
+  return {
+    label: address.label,
+    recipientName: address.recipientName,
+    phoneE164: address.phoneE164,
+    addressLine: address.addressLine,
+    serviceAreaCode: address.serviceAreaCode,
+    building: address.building ?? "",
+    floor: address.floor ?? "",
+    unit: address.unit ?? "",
+    deliveryInstructions: address.deliveryInstructions ?? "",
+    latitude: address.latitude,
+    longitude: address.longitude,
+    makeDefault: address.isDefault,
+  };
 }
 
-function MapIcon({ color = colorRoles.brandAction }: { color?: string }) {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-      <Path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3V6z" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M9 3v15M15 6v15" stroke={color} strokeWidth={2} />
-    </Svg>
-  );
+function toInput(draft: EditableDraft): DshClientAddressDraft {
+  return {
+    label: draft.label.trim(),
+    recipientName: draft.recipientName.trim(),
+    phoneE164: draft.phoneE164.trim(),
+    addressLine: draft.addressLine.trim(),
+    serviceAreaCode: draft.serviceAreaCode.trim(),
+    ...(draft.building.trim() ? { building: draft.building.trim() } : {}),
+    ...(draft.floor.trim() ? { floor: draft.floor.trim() } : {}),
+    ...(draft.unit.trim() ? { unit: draft.unit.trim() } : {}),
+    ...(draft.deliveryInstructions.trim()
+      ? { deliveryInstructions: draft.deliveryInstructions.trim() }
+      : {}),
+    ...(draft.latitude !== null && draft.longitude !== null
+      ? { latitude: draft.latitude, longitude: draft.longitude }
+      : {}),
+    makeDefault: draft.makeDefault,
+  };
 }
 
-function PinIcon({ color = colorRoles.brandAction }: { color?: string }) {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 2a8 8 0 00-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 00-8-8z" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <Circle cx="12" cy="10" r="3" stroke={color} strokeWidth={2} />
-    </Svg>
-  );
+function validateDraft(draft: EditableDraft): string | null {
+  if (draft.label.trim().length < 1) return "اكتب اسمًا مختصرًا للعنوان.";
+  if (draft.recipientName.trim().length < 2) return "اكتب اسم المستلم.";
+  if (!/^\+[1-9][0-9]{7,14}$/.test(draft.phoneE164.trim())) return "رقم الهاتف يجب أن يكون بصيغة دولية صحيحة.";
+  if (draft.addressLine.trim().length < 5) return "اختر موقعًا محكومًا أو اكتب وصفًا أوضح للتسليم.";
+  if (draft.serviceAreaCode.trim().length < 1) return "الموقع المختار خارج مناطق الخدمة المعتمدة.";
+  if ((draft.latitude === null) !== (draft.longitude === null)) return "يجب حفظ خط العرض والطول معًا.";
+  return null;
 }
 
-function ChevronDownIcon({ color = colorRoles.textMuted }: { color?: string }) {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-      <Path d="M19 9l-7 7-7-7" stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-}
+export function AddressLocationScreen({ onBack, onOpenCheckout }: AddressLocationScreenProps) {
+  const controller = useClientAddressController();
+  const mapController = useClientMapController();
+  const [editing, setEditing] = React.useState<DshClientAddress | null>(null);
+  const [draft, setDraft] = React.useState<EditableDraft>(EMPTY_DRAFT);
+  const [showForm, setShowForm] = React.useState(false);
+  const [formError, setFormError] = React.useState<string | null>(null);
+  const [locationError, setLocationError] = React.useState<string | null>(null);
+  const [capturingLocation, setCapturingLocation] = React.useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = React.useState<string | null>(null);
+  const [mapQuery, setMapQuery] = React.useState("");
 
-function ChevronUpIcon({ color = colorRoles.textMuted }: { color?: string }) {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-      <Path d="M5 15l7-7 7 7" stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-}
+  const resetMap = React.useCallback(() => {
+    setMapQuery("");
+    mapController.clear();
+  }, [mapController]);
 
-// Local Custom Components
-function ScreenHeader({ title, onBack }: { title: string; onBack?: () => void }) {
-  return (
-    <View
-      style={{
-        flexDirection: 'row-reverse',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        height: 56,
-        paddingHorizontal: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: colorRoles.borderSubtle,
-        backgroundColor: colorRoles.surfaceBase,
-      }}
-    >
-      <View style={{ width: 40, alignItems: 'center' }}>
-        {onBack ? (
-          <TouchableOpacity onPress={onBack} style={{ padding: 8 }}>
-            <BackIcon color={colorRoles.textPrimary} />
-          </TouchableOpacity>
-        ) : null}
-      </View>
-      <Text role="bodyStrong" style={{ fontSize: 18, color: colorRoles.textPrimary }}>
-        {title}
-      </Text>
-      <View style={{ width: 40 }} />
-    </View>
-  );
-}
+  const beginCreate = () => {
+    setEditing(null);
+    setDraft({ ...EMPTY_DRAFT, makeDefault: controller.addresses.length === 0 });
+    setFormError(null);
+    setLocationError(null);
+    resetMap();
+    setShowForm(true);
+  };
 
-function StyledTextField({ label, placeholder, value, onChangeText }: { label: string; placeholder?: string; value: string; onChangeText: (text: string) => void }) {
-  return (
-    <View style={{ width: '100%', gap: 6, alignItems: 'flex-end' }}>
-      <Text role="bodyStrong" style={{ color: colorRoles.textPrimary, fontSize: 14 }}>
-        {label}
-      </Text>
-      <TextInput
-        placeholder={placeholder}
-        placeholderTextColor={colorRoles.surfaceBase}
-        value={value}
-        onChangeText={onChangeText}
-        style={{
-          width: '100%',
-          height: 48,
-          borderWidth: 1,
-          borderColor: colorRoles.surfaceBase,
-          borderRadius: 16,
-          paddingHorizontal: 16,
-          textAlign: 'right',
-          color: colorRoles.textPrimary,
-          backgroundColor: colorRoles.surfaceBase,
-        }}
-      />
-    </View>
-  );
-}
+  const beginEdit = (address: DshClientAddress) => {
+    setEditing(address);
+    setDraft(draftFromAddress(address));
+    setFormError(null);
+    setLocationError(null);
+    resetMap();
+    setShowForm(true);
+  };
 
-function DefaultBadge() {
-  return (
-    <View
-      style={{
-        borderWidth: 1,
-        borderColor: colorRoles.surfaceBase,
-        backgroundColor: colorRoles.surfaceBase,
-        borderRadius: 12,
-        paddingHorizontal: 12,
-        paddingVertical: 4,
-      }}
-    >
-      <Text role="caption" style={{ color: colorRoles.brandAction, fontSize: 12, fontWeight: 'bold' }}>
-        افتراضي
-      </Text>
-    </View>
-  );
-}
+  const applyMapLocation = (location: DshVerifiedMapLocation): boolean => {
+    if (!location.serviceAreaVerified || !location.serviceAreaCode) {
+      setLocationError("الموقع موجود على الخريطة لكنه خارج مناطق الخدمة المعتمدة في DSH.");
+      return false;
+    }
+    setDraft((current) => ({
+      ...current,
+      addressLine: location.displayName,
+      serviceAreaCode: location.serviceAreaCode ?? "",
+      latitude: location.latitude,
+      longitude: location.longitude,
+    }));
+    setLocationError(null);
+    setMapQuery(location.displayName);
+    return true;
+  };
 
-interface AddressRowProps {
-  address: SavedAddress;
-  isLast?: boolean;
-  onSetDefault: (id: string) => void;
-  onEdit: (id: string) => void;
-}
-
-function AddressRow({ address, isLast = false, onSetDefault, onEdit }: AddressRowProps) {
-  const [expanded, setExpanded] = React.useState(false);
-
-  return (
-    <View style={{ width: '100%' }}>
-      <TouchableOpacity
-        onPress={() => setExpanded(!expanded)}
-        activeOpacity={0.8}
-        style={{
-          flexDirection: 'row-reverse',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingVertical: 16,
-          paddingHorizontal: 16,
-        }}
-      >
-        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 12, flex: 1 }}>
-          <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: alpha(colorRoles.brandAction, 0.08), justifyContent: 'center', alignItems: 'center' }}>
-            <PinIcon color={colorRoles.brandAction} />
-          </View>
-          <View style={{ flex: 1, alignItems: 'flex-end', gap: 2 }}>
-            <Text role="bodyStrong" style={{ color: colorRoles.textPrimary }}>{address.label}</Text>
-            {address.isDefault && <DefaultBadge />}
-          </View>
-        </View>
-        <View style={{ paddingRight: 8 }}>
-          {expanded ? <ChevronUpIcon /> : <ChevronDownIcon />}
-        </View>
-      </TouchableOpacity>
-
-      {expanded && (
-        <View style={{ paddingHorizontal: 16, paddingBottom: 16, gap: spacing[3], flexDirection: 'row-reverse', justifyContent: 'flex-start' }}>
-          {!address.isDefault && (
-            <Button
-              label="تعيين كافتراضي"
-              tone="primary"
-              size="sm"
-              style={{ borderRadius: radius.xs, backgroundColor: colorRoles.brandAction }}
-              onPress={() => { onSetDefault(address.id); setExpanded(false); }}
-            />
-          )}
-          <Button
-            label="تعديل"
-            tone="secondary"
-            size="sm"
-            style={{ borderRadius: radius.xs }}
-            onPress={() => { onEdit(address.id); setExpanded(false); }}
-          />
-        </View>
-      )}
-
-      {!isLast && <View style={{ height: 1, backgroundColor: colorRoles.borderSubtle, marginHorizontal: 16 }} />}
-    </View>
-  );
-}
-
-const MAP_PRESETS = [
-  "صنعاء، شارع حدة، أمام مركز الكميم (15.3214, 44.1982)",
-  "عدن، المنصورة، شارع التسعين (12.8361, 44.9881)",
-  "تعز، شارع جمال، بجانب شركة النفط (13.5789, 44.0167)",
-  "الحديدة، شارع الميناء (14.8012, 42.9511)",
-  "حضرموت، المكلا، حي السلام (14.5367, 49.1233)"
-];
-
-export function AddressLocationScreen({ onBack }: AddressLocationScreenProps) {
-  const insets = useSafeAreaInsets();
-  const [newLabel, setNewLabel] = React.useState('');
-  const [addresses, setAddresses] = React.useState<SavedAddress[]>(SEED_ADDRESSES);
-  const [editingId, setEditingId] = React.useState<string | null>(null);
-  const [mapNotice, setMapNotice] = React.useState('سيتم ربط اختيار الموقع بمزود الخرائط من لوحة التحكم لاحقًا.');
-
-  React.useEffect(() => {
+  const captureLocation = async () => {
+    setCapturingLocation(true);
+    setLocationError(null);
     try {
-      const saved = localStorage.getItem('bthwani-client-addresses');
-      if (saved) {
-        setAddresses(JSON.parse(saved));
+      const permission = await Location.requestForegroundPermissionsAsync();
+      if (permission.status !== "granted") {
+        setLocationError("صلاحية الموقع مطلوبة لالتقاط الإحداثيات.");
+        return;
       }
-    } catch (e) {
-      console.warn("Could not load addresses from localStorage", e);
-    }
-  }, []);
-
-  const saveAddresses = (newAddrs: SavedAddress[]) => {
-    setAddresses(newAddrs);
-    try {
-      localStorage.setItem('bthwani-client-addresses', JSON.stringify(newAddrs));
-    } catch (e) {
-      console.warn("Could not save addresses to localStorage", e);
-    }
-  };
-
-  const handleSetDefault = (id: string) => {
-    const updated = addresses.map((a) => ({ ...a, isDefault: a.id === id }));
-    saveAddresses(updated);
-  };
-
-  const handleEdit = (id: string) => {
-    const addr = addresses.find((a) => a.id === id);
-    if (addr) {
-      setNewLabel(addr.label);
-      setEditingId(id);
+      const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      if (position.mocked === true) {
+        setLocationError("رفض DSH موقعًا صادرًا من مزود وهمي. استخدم موقع الجهاز الفعلي.");
+        return;
+      }
+      if (!Number.isFinite(position.coords.latitude) || !Number.isFinite(position.coords.longitude)) {
+        setLocationError("لم يُرجع الجهاز إحداثيات صالحة.");
+        return;
+      }
+      const resolved = await mapController.reverse(
+        position.coords.latitude,
+        position.coords.longitude,
+      );
+      if (!resolved) {
+        setLocationError("تعذر التحقق من الإحداثيات عبر مزود الخرائط المحكوم.");
+        return;
+      }
+      applyMapLocation(resolved);
+    } catch (error) {
+      setLocationError(error instanceof Error ? error.message : "تعذر التقاط الموقع.");
+    } finally {
+      setCapturingLocation(false);
     }
   };
 
-  const handleSave = () => {
-    if (!newLabel.trim()) return;
-    if (editingId) {
-      const updated = addresses.map((a) => a.id === editingId ? { ...a, label: newLabel.trim() } : a);
-      saveAddresses(updated);
-      setEditingId(null);
-    } else {
-      const updated = [...addresses, { id: `addr-${Date.now()}`, label: newLabel.trim(), isDefault: false }];
-      saveAddresses(updated);
-    }
-    setNewLabel('');
+  const searchLocation = async () => {
+    setLocationError(null);
+    await mapController.search(mapQuery);
   };
 
-  const handleSelectFromMap = () => {
-    const randomIndex = Math.floor(Math.random() * MAP_PRESETS.length);
-    const selected = MAP_PRESETS[randomIndex] || '';
-    setNewLabel(selected);
-    setMapNotice(`تم التقاط الإحداثيات بنجاح: ${selected}`);
+  const save = async () => {
+    const validation = validateDraft(draft);
+    if (validation) {
+      setFormError(validation);
+      return;
+    }
+    setFormError(null);
+    const input = toInput(draft);
+    const ok = editing
+      ? await controller.updateAddress(editing, input)
+      : await controller.createAddress(input);
+    if (ok) {
+      setEditing(null);
+      setDraft(EMPTY_DRAFT);
+      setShowForm(false);
+      resetMap();
+    }
   };
+
+  if (controller.state.kind === "loading") {
+    return (
+      <View style={styles.root}>
+        <TopBar title="العناوين والموقع" {...(onBack ? { onBack } : {})} />
+        <StateView loading title="جارٍ تحميل عناوينك" />
+      </View>
+    );
+  }
+
+  if (controller.state.kind === "error") {
+    return (
+      <View style={styles.root}>
+        <TopBar title="العناوين والموقع" {...(onBack ? { onBack } : {})} />
+        <StateView
+          tone="danger"
+          title="تعذر تحميل دفتر العناوين"
+          description={controller.state.message}
+          actionLabel="إعادة المحاولة"
+          onActionPress={controller.reload}
+        />
+      </View>
+    );
+  }
 
   return (
-    <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
-      <ScreenHeader title="العناوين والموقع" {...(onBack ? { onBack } : {})} />
+    <View style={styles.root}>
+      <TopBar title="العناوين والموقع" {...(onBack ? { onBack } : {})} />
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {controller.mutationError ? (
+          <Card style={styles.errorCard}>
+            <Text tone="danger" style={styles.rtl}>{controller.mutationError}</Text>
+            <Button label="إغلاق" tone="ghost" size="sm" onPress={controller.clearMutationError} />
+          </Card>
+        ) : null}
 
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{
-          padding: spacing[4],
-          gap: spacing[4],
-          paddingBottom: insets.bottom + spacing[12],
-        }}
-        showsVerticalScrollIndicator={false}
-      >
-        <Text role="bodySm" style={{ color: colorRoles.textMuted, textAlign: 'right' }}>
-          أدخل عنوانك الوصفي أو حدد موقعك من الخريطة.
-        </Text>
-
-        <View style={{ gap: spacing[3] }}>
-          <StyledTextField
-            label="العنوان الوصفي"
-            placeholder="مثال: المنزل، شارع الستين، بجانب صيدلية..."
-            value={newLabel}
-            onChangeText={setNewLabel}
-          />
-
-          <Button
-            tone="secondary"
-            leading={<MapIcon color={colorRoles.brandAction} />}
-            label="تحديد من Google Map"
-            onPress={handleSelectFromMap}
-            style={{ borderRadius: 100, borderColor: colorRoles.surfaceBase }}
-          />
-
-          <View
-            style={{
-              backgroundColor: colorRoles.surfaceBase,
-              borderWidth: 1,
-              borderColor: colorRoles.surfaceBase,
-              borderRadius: 16,
-              paddingHorizontal: 16,
-              paddingVertical: 12,
-              alignItems: 'flex-end',
-            }}
-          >
-            <Text role="caption" style={{ color: colorRoles.brandAction, textAlign: 'right' }}>
-              {mapNotice}
-            </Text>
-          </View>
-
-          <Button
-            tone="primary"
-            label={editingId ? "تعديل العنوان" : "حفظ العنوان"}
-            onPress={handleSave}
-            style={{ backgroundColor: colorRoles.brandStructure, borderRadius: 100 }}
-          />
+        <View style={styles.sectionHeader}>
+          <Text role="titleMd">عناوين التسليم</Text>
+          <Button label="إضافة عنوان" tone="primary" size="sm" onPress={beginCreate} />
         </View>
 
-        <View style={{ height: 1, backgroundColor: colorRoles.borderSubtle, marginVertical: spacing[1] }} />
+        {controller.addresses.length === 0 ? (
+          <StateView
+            title="لا توجد عناوين محفوظة"
+            description="أضف عنوانًا حقيقيًا مرتبطًا بحسابك ليستخدمه فحص الخدمة وcheckout."
+            actionLabel="إضافة أول عنوان"
+            onActionPress={beginCreate}
+          />
+        ) : (
+          controller.addresses.map((address) => (
+            <Card key={address.id} style={styles.addressCard}>
+              <View style={styles.addressTitleRow}>
+                <View style={styles.badges}>
+                  {address.isDefault ? <Badge label="الافتراضي" tone="success" /> : null}
+                  {address.latitude !== null ? <Badge label="موقع معتمد" tone="info" /> : null}
+                </View>
+                <Text role="titleSm" style={styles.rtl}>{address.label}</Text>
+              </View>
+              <Text role="bodyStrong" style={styles.rtl}>{address.recipientName}</Text>
+              <Text role="bodySm" style={styles.rtl}>{address.addressLine}</Text>
+              <Text role="caption" tone="muted" style={styles.rtl}>
+                {address.serviceAreaCode} · {address.phoneE164}
+              </Text>
+              <View style={styles.actions}>
+                {!address.isDefault ? (
+                  <Button
+                    label="جعله افتراضيًا"
+                    tone="secondary"
+                    size="sm"
+                    disabled={controller.mutating}
+                    onPress={() => void controller.makeDefault(address)}
+                  />
+                ) : null}
+                <Button label="تعديل" tone="ghost" size="sm" disabled={controller.mutating} onPress={() => beginEdit(address)} />
+                {pendingDeleteId === address.id ? (
+                  <>
+                    <Button
+                      label="تأكيد الحذف"
+                      tone="danger"
+                      size="sm"
+                      disabled={controller.mutating}
+                      onPress={() => void controller.deleteAddress(address).then((ok) => ok && setPendingDeleteId(null))}
+                    />
+                    <Button label="إلغاء" tone="ghost" size="sm" onPress={() => setPendingDeleteId(null)} />
+                  </>
+                ) : (
+                  <Button label="حذف" tone="danger" size="sm" disabled={controller.mutating} onPress={() => setPendingDeleteId(address.id)} />
+                )}
+              </View>
+              {onOpenCheckout ? (
+                <Button
+                  label={address.isDefault ? "استخدام هذا العنوان" : "تعيين واستخدام"}
+                  tone="primary"
+                  disabled={controller.mutating}
+                  onPress={() => void controller.makeDefault(address).then((ok) => ok && onOpenCheckout())}
+                />
+              ) : null}
+            </Card>
+          ))
+        )}
 
-        <View style={{ gap: spacing[2] }}>
-          <Text role="bodyStrong" style={{ color: colorRoles.textPrimary, textAlign: 'right', paddingHorizontal: spacing[4] }}>
-            العناوين المحفوظة
-          </Text>
-          <View style={{ borderWidth: 1, borderColor: colorRoles.borderSubtle, borderRadius: 16, overflow: 'hidden', backgroundColor: colorRoles.surfaceBase }}>
-            {addresses.map((addr, idx) => (
-              <AddressRow
-                key={addr.id}
-                address={addr}
-                isLast={idx === addresses.length - 1}
-                onSetDefault={handleSetDefault}
-                onEdit={handleEdit}
+        {showForm ? (
+          <Card style={styles.formCard}>
+            <Text role="titleMd" style={styles.rtl}>{editing ? "تعديل العنوان" : "عنوان جديد"}</Text>
+            <TextField label="اسم العنوان" value={draft.label} onChangeText={(value) => setDraft((current) => ({ ...current, label: value }))} placeholder="المنزل، العمل…" />
+            <TextField label="اسم المستلم" value={draft.recipientName} onChangeText={(value) => setDraft((current) => ({ ...current, recipientName: value }))} />
+            <TextField label="الهاتف الدولي" value={draft.phoneE164} onChangeText={(value) => setDraft((current) => ({ ...current, phoneE164: value }))} keyboardType="phone-pad" />
+
+            <Text role="bodyStrong" style={styles.rtl}>الموقع المحكوم</Text>
+            <TextField
+              label="ابحث عن موقع أو معلم"
+              value={mapQuery}
+              onChangeText={setMapQuery}
+              placeholder="مثال: جامعة صنعاء"
+            />
+            <View style={styles.actions}>
+              <Button
+                label={mapController.state.kind === "loading" ? "جارٍ البحث…" : "بحث"}
+                tone="secondary"
+                disabled={mapController.state.kind === "loading" || controller.mutating}
+                onPress={() => void searchLocation()}
               />
+              <Button
+                label={capturingLocation ? "جارٍ التحقق…" : "استخدام موقع الجهاز"}
+                tone="secondary"
+                disabled={capturingLocation || mapController.state.kind === "loading" || controller.mutating}
+                onPress={() => void captureLocation()}
+              />
+            </View>
+            {mapController.state.kind === "empty" ? (
+              <Text role="caption" tone="muted" style={styles.rtl}>لم يُعثر على موقع مطابق.</Text>
+            ) : null}
+            {mapController.state.kind === "error" ? (
+              <Text tone="danger" style={styles.rtl}>{mapController.state.message}</Text>
+            ) : null}
+            {mapController.locations.map((location) => (
+              <Card key={`${location.providerCode}:${location.providerPlaceId}`} style={styles.mapResult}>
+                <Text role="bodyStrong" style={styles.rtl}>{location.displayName}</Text>
+                <View style={styles.badges}>
+                  <Badge
+                    label={location.serviceAreaVerified ? `ضمن ${location.serviceAreaName ?? location.serviceAreaCode}` : "خارج التغطية"}
+                    tone={location.serviceAreaVerified ? "success" : "warning"}
+                  />
+                </View>
+                <Button
+                  label="اختيار الموقع"
+                  tone="primary"
+                  size="sm"
+                  disabled={!location.serviceAreaVerified}
+                  onPress={() => applyMapLocation(location)}
+                />
+              </Card>
             ))}
-          </View>
-        </View>
+
+            <TextField label="وصف العنوان" value={draft.addressLine} onChangeText={(value) => setDraft((current) => ({ ...current, addressLine: value }))} multiline />
+            {draft.serviceAreaCode ? (
+              <Text role="caption" tone="muted" style={styles.rtl}>منطقة الخدمة المعتمدة: {draft.serviceAreaCode}</Text>
+            ) : null}
+            <View style={styles.inlineFields}>
+              <TextField label="المبنى" value={draft.building} onChangeText={(value) => setDraft((current) => ({ ...current, building: value }))} />
+              <TextField label="الدور" value={draft.floor} onChangeText={(value) => setDraft((current) => ({ ...current, floor: value }))} />
+              <TextField label="الشقة" value={draft.unit} onChangeText={(value) => setDraft((current) => ({ ...current, unit: value }))} />
+            </View>
+            <TextField label="تعليمات التسليم" value={draft.deliveryInstructions} onChangeText={(value) => setDraft((current) => ({ ...current, deliveryInstructions: value }))} multiline />
+            {draft.latitude !== null && draft.longitude !== null ? (
+              <Text role="caption" tone="muted" style={styles.rtl}>
+                {draft.latitude.toFixed(6)}, {draft.longitude.toFixed(6)}
+              </Text>
+            ) : null}
+            {locationError ? <Text tone="danger" style={styles.rtl}>{locationError}</Text> : null}
+            {formError ? <Text tone="danger" style={styles.rtl}>{formError}</Text> : null}
+            <View style={styles.actions}>
+              <Button label={controller.mutating ? "جارٍ الحفظ…" : "حفظ"} tone="primary" disabled={controller.mutating} onPress={() => void save()} />
+              <Button label="إلغاء" tone="ghost" disabled={controller.mutating} onPress={() => { setShowForm(false); setEditing(null); setFormError(null); resetMap(); }} />
+            </View>
+          </Card>
+        ) : null}
       </ScrollView>
     </View>
   );
 }
 
-// export default AddressLocationScreen; // Unused default export
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: colorRoles.surfaceBase },
+  content: { padding: spacing[4], gap: spacing[3], paddingBottom: 96 },
+  rtl: { textAlign: "right" },
+  sectionHeader: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" },
+  addressCard: { padding: spacing[4], gap: spacing[2] },
+  addressTitleRow: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", gap: spacing[2] },
+  badges: { flexDirection: "row-reverse", flexWrap: "wrap", gap: spacing[1] },
+  actions: { flexDirection: "row-reverse", flexWrap: "wrap", gap: spacing[2] },
+  formCard: { padding: spacing[4], gap: spacing[3] },
+  mapResult: { padding: spacing[3], gap: spacing[2] },
+  errorCard: { padding: spacing[3], gap: spacing[2], borderColor: colorRoles.danger, borderWidth: 1 },
+  inlineFields: { gap: spacing[2] },
+});

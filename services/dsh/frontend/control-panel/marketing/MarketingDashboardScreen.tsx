@@ -1,61 +1,29 @@
 "use client";
-import { colorRoles } from '@bthwani/ui-kit';
-import { useState } from "react";
-import {
-  CpButton,
-  CpKpiCard,
-  CpKpiStrip,
-  CpPageHeader,
-} from "@bthwani/control-panel/components";
+
+import { colorRoles } from "@bthwani/ui-kit";
+import { useState, type ReactNode } from "react";
+import { CpKpiCard, CpKpiStrip, CpPageHeader } from "@bthwani/control-panel/components";
 import { DataTablePageFrame } from "@bthwani/control-panel/shell";
 import {
   MARKETING_MAIN_TABS,
   useMarketingKpiMetricsController,
   useMarketingDeliverySignalsController,
   type MarketingMainTabId,
-  type MarketingSectionTabId,
 } from "../../shared/marketing";
-
-// Import split command decks
 import { TickerCommandDeck } from "./components/TickerCommandDeck";
 import { CampaignsCommandDeck } from "./components/CampaignsCommandDeck";
 import { PartnerOffersCommandDeck } from "./components/PartnerOffersCommandDeck";
 import { SignalsMeasurementCommandDeck } from "./components/SignalsMeasurementCommandDeck";
-import { LoyaltyCommandDeck } from "./components/LoyaltyCommandDeck";
-import { SubscriptionsCommandDeck } from "./components/SubscriptionsCommandDeck";
-
-// Import split dashboard sections
 import { VisibilityGatesSection } from "./components/VisibilityGatesSection";
 import { MarketingHomeDiscoveryPanel } from "./components/MarketingHomeDiscoveryPanel";
+import { LoyaltyCommandDeck } from "./components/LoyaltyCommandDeck";
+import { SubscriptionsCommandDeck } from "./components/SubscriptionsCommandDeck";
+import { CouponsCommandDeck } from "./components/CouponsCommandDeck";
+import { LoyaltyPolicyPanel } from "./components/LoyaltyPolicyPanel";
 
-// ─── Main Tab button (underline style) ─────────────────────────────────────
-
-function MainTabButton({
-  active,
-  onClick,
-  children,
-}: {
-  readonly active: boolean;
-  readonly onClick: () => void;
-  readonly children: React.ReactNode;
-}) {
+function MainTabButton({ active, onClick, children }: { readonly active: boolean; readonly onClick: () => void; readonly children: ReactNode }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        padding: "0.625rem 1.125rem",
-        background: "none",
-        border: "none",
-        borderBottom: active ? `2px solid ${colorRoles.brandAction}` : "2px solid transparent",
-        color: active ? colorRoles.brandAction : "currentColor",
-        fontWeight: active ? 700 : 500,
-        fontSize: "0.875rem",
-        cursor: "pointer",
-        whiteSpace: "nowrap",
-        transition: "all 0.15s",
-      }}
-    >
+    <button type="button" onClick={onClick} style={{ padding: "0.625rem 1.125rem", background: "none", border: "none", borderBottom: active ? `2px solid ${colorRoles.brandAction}` : "2px solid transparent", color: active ? colorRoles.brandAction : "currentColor", fontWeight: active ? 700 : 500, fontSize: "0.875rem", cursor: "pointer", whiteSpace: "nowrap" }}>
       {children}
     </button>
   );
@@ -63,8 +31,7 @@ function MainTabButton({
 
 export function MarketingDashboardScreen() {
   const [mainTab, setMainTab] = useState<MarketingMainTabId>("visibility-gates");
-  const [sectionTab, setSectionTab] = useState<MarketingSectionTabId>("eligibility");
-  const { metrics } = useMarketingKpiMetricsController();
+  const { metrics, reload: reloadMetrics } = useMarketingKpiMetricsController();
   const deliverySignals = useMarketingDeliverySignalsController();
 
   return (
@@ -72,81 +39,30 @@ export function MarketingDashboardScreen() {
       dir="rtl"
       header={
         <CpPageHeader title="تسويق DSH">
-          <p style={{ margin: "0 0 0.75rem", opacity: 0.65, fontSize: "0.875rem" }}>
-            حوكمة المحتوى التسويقي والنمو الاستراتيجي
-          </p>
-
-          {/* ── KPI Strip ─────────────────────────────────────────────── */}
+          <p style={{ margin: "0 0 0.75rem", opacity: 0.65, fontSize: "0.875rem" }}>إدارة المحتوى والحملات والعروض والكوبونات والبرامج التجارية المرتبطة بعقود DSH وWLT الفعلية</p>
           <CpKpiStrip>
-            <CpKpiCard label="متاجر نشطة"      value={metrics.activeStoresRatio} />
-            <CpKpiCard label="طلبات مكتملة"    value={metrics.deliveredOrders.toLocaleString("ar")} />
-            <CpKpiCard label="تذاكر مفتوحة"    value={metrics.openTickets.toLocaleString("ar")} />
+            <CpKpiCard label="متاجر نشطة" value={metrics.activeStoresRatio} />
+            <CpKpiCard label="طلبات مكتملة" value={metrics.deliveredOrders.toLocaleString("ar")} />
+            <CpKpiCard label="تذاكر مفتوحة" value={metrics.openTickets.toLocaleString("ar")} />
             <CpKpiCard label="تصعيدات مفتوحة" value={metrics.openEscalations.toLocaleString("ar")} />
           </CpKpiStrip>
-          {!metrics.isBackedByApi && (
-            <p role="status" style={{ margin: "0.5rem 0 0", fontSize: "0.75rem", color: colorRoles.brandAction, opacity: 0.85 }}>
-              ⚠️ {metrics.disclosureReason}
-            </p>
-          )}
         </CpPageHeader>
       }
     >
-      {/* ── Main Tab Navigation (matching underline style) ──────────────── */}
-      <nav
-        dir="rtl"
-        style={{
-          display: "flex",
-          borderBottom: "1px solid color-mix(in srgb, currentColor 12%, transparent)",
-          padding: "0 1rem",
-          gap: "0.25rem",
-          marginBottom: "0.75rem",
-          overflowX: "auto",
-        }}
-      >
-        {MARKETING_MAIN_TABS.map((t) => (
-          <MainTabButton
-            key={t.id}
-            active={mainTab === t.id}
-            onClick={() => setMainTab(t.id)}
-          >
-            {t.label}
-          </MainTabButton>
-        ))}
+      <nav aria-label="أقسام التسويق" dir="rtl" style={{ display: "flex", borderBottom: `1px solid ${colorRoles.borderSubtle}`, padding: "0 1rem", gap: "0.25rem", marginBottom: "0.75rem", overflowX: "auto" }}>
+        {MARKETING_MAIN_TABS.map((tab) => <MainTabButton key={tab.id} active={mainTab === tab.id} onClick={() => setMainTab(tab.id)}>{tab.label}</MainTabButton>)}
       </nav>
 
-      {/* ── Main Dashboard Layout ─────────────────────────────────────── */}
-      {mainTab === "visibility-gates" && (
-        <VisibilityGatesSection
-          sectionTab={sectionTab}
-          setSectionTab={setSectionTab}
-          metrics={metrics}
-          deliverySignals={deliverySignals}
-        />
-      )}
-
-      {/* ── Banners Tab ── */}
-      {mainTab === "banners-carousel" && (
-        <MarketingHomeDiscoveryPanel kind="banners" />
-      )}
-
-      {/* ── Promos Tab ── */}
-      {mainTab === "homepage-promos" && (
-        <MarketingHomeDiscoveryPanel kind="promos" />
-      )}
-
-      {/* ─── Smart Bar / Tickers Tab ─── */}
-      {mainTab === "smart-bar" && (
-        <TickerCommandDeck />
-      )}
-
-      {/* ── Remaining Command Deck tabs ── */}
-      {mainTab === "campaigns" && <CampaignsCommandDeck />}
-      {mainTab === "partner-offers" && <PartnerOffersCommandDeck />}
-      {mainTab === "signals-measurement" && <SignalsMeasurementCommandDeck />}
-
-      {/* ── Loyalty & Subscriptions tabs ── */}
-      {mainTab === "loyalty" && <LoyaltyCommandDeck />}
-      {mainTab === "subscriptions" && <SubscriptionsCommandDeck />}
+      {mainTab === "visibility-gates" ? <VisibilityGatesSection metrics={metrics} reloadMetrics={reloadMetrics} deliverySignals={deliverySignals} /> : null}
+      {mainTab === "banners-carousel" ? <MarketingHomeDiscoveryPanel kind="banners" /> : null}
+      {mainTab === "homepage-promos" ? <MarketingHomeDiscoveryPanel kind="promos" /> : null}
+      {mainTab === "smart-bar" ? <TickerCommandDeck /> : null}
+      {mainTab === "campaigns" ? <CampaignsCommandDeck /> : null}
+      {mainTab === "partner-offers" ? <PartnerOffersCommandDeck /> : null}
+      {mainTab === "coupons" ? <CouponsCommandDeck /> : null}
+      {mainTab === "loyalty" ? <><LoyaltyCommandDeck /><LoyaltyPolicyPanel /></> : null}
+      {mainTab === "subscriptions" ? <SubscriptionsCommandDeck /> : null}
+      {mainTab === "signals-measurement" ? <SignalsMeasurementCommandDeck /> : null}
     </DataTablePageFrame>
   );
 }

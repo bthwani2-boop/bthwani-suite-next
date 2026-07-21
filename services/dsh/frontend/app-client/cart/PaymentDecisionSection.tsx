@@ -1,15 +1,17 @@
 import React from "react";
-import { StyleSheet, View, Pressable } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import {
   Badge,
   Button,
-  Icon,
   Surface,
   Text,
   colorRoles,
   radius,
 } from "@bthwani/ui-kit";
-import type { PaymentDecisionOption, PaymentMethodKey } from "../../shared/finance-wlt-link";
+import type {
+  PaymentDecisionOption,
+  PaymentMethodKey,
+} from "../../shared/finance-wlt-link";
 
 type Props = {
   readonly paymentMethod: PaymentMethodKey;
@@ -17,69 +19,81 @@ type Props = {
   readonly onSelectMethod: (method: PaymentMethodKey) => void;
 };
 
-export function PaymentDecisionSection({ paymentMethod, options, onSelectMethod }: Props) {
+export function PaymentDecisionSection({
+  paymentMethod,
+  options,
+  onSelectMethod,
+}: Props) {
   return (
     <Surface tone="default" style={styles.cardFrame}>
-      <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}>
-        <Text role="bodySm" weight="bold" style={styles.cardLabel}>قرار الدفع</Text>
-        <Badge label="معاينة دفع" tone="info" />
+      <View style={styles.headerRow}>
+        <Text role="bodySm" weight="bold" style={styles.cardLabel}>
+          وسيلة الدفع
+        </Text>
+        <Badge label="WLT" tone="info" />
       </View>
-      <Text role="caption" style={{ color: colorRoles.textSecondary, textAlign: "right", marginBottom: 6 }}>
-        معاينة الدفع غير منفذة ماليًا · WLT يملك منطق الدفع الفعلي
+      <Text role="caption" style={styles.description}>
+        لا تُحسب أرصدة أو مبالغ داخل الواجهة. يعتمد checkout النتيجة المالية
+        ويربطها بمرجع WLT.
       </Text>
 
-      <View style={{ gap: 8 }}>
-        {options.map((opt) => {
-          const isSelected = opt.id === paymentMethod;
+      <View style={styles.options}>
+        {options.map((option) => {
+          const isSelected = option.id === paymentMethod;
           return (
             <Pressable
-              key={opt.id}
-              disabled={opt.disabled}
-              onPress={() => onSelectMethod(opt.id)}
+              key={option.id}
+              accessibilityRole="radio"
+              accessibilityState={{
+                selected: isSelected,
+                disabled: option.disabled === true,
+              }}
+              disabled={option.disabled}
+              onPress={() => onSelectMethod(option.id)}
               style={[
                 styles.paymentCard,
                 isSelected && styles.paymentCardActive,
-                opt.disabled && { opacity: 0.4 },
+                option.disabled && styles.paymentCardDisabled,
               ]}
             >
-              <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}>
-                <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8, flex: 1 }}>
-                  <View style={[styles.radioDot, isSelected && styles.radioDotActive]} />
-                  <View style={{ alignItems: "flex-end", flex: 1 }}>
-                    <Text role="bodyStrong" style={{ color: colorRoles.textPrimary, textAlign: "right" }}>{opt.title}</Text>
-                    <Text role="caption" style={{ color: colorRoles.textSecondary, textAlign: "right" }}>{opt.description}</Text>
+              <View style={styles.optionHeader}>
+                <View style={styles.optionIdentity}>
+                  <View
+                    style={[styles.radioDot, isSelected && styles.radioDotActive]}
+                  />
+                  <View style={styles.optionText}>
+                    <Text role="bodyStrong" style={styles.optionTitle}>
+                      {option.title}
+                    </Text>
+                    <Text role="caption" style={styles.optionDescription}>
+                      {option.description}
+                    </Text>
                   </View>
                 </View>
-                {opt.statusLabel && (
-                  <Badge label={opt.statusLabel} tone={opt.statusTone ?? "info"} />
-                )}
+                {option.statusLabel ? (
+                  <Badge
+                    label={option.statusLabel}
+                    tone={option.statusTone ?? "info"}
+                  />
+                ) : null}
               </View>
 
-              {opt.amountRows && isSelected && (
-                <View style={styles.paymentBreakdown}>
-                  {opt.amountRows.map((row) => (
-                    <View key={row.label} style={{ flexDirection: "row-reverse", justifyContent: "space-between", marginVertical: 2 }}>
-                      <Text role="caption" style={{ color: colorRoles.textSecondary }}>{row.label}</Text>
-                      <Text role="caption" weight="bold" style={{ color: row.tone === "brand" ? colorRoles.brandAction : colorRoles.textPrimary }}>{row.value}</Text>
-                    </View>
-                  ))}
-                </View>
-              )}
+              {option.helperText ? (
+                <Text role="caption" style={styles.helperText}>
+                  {option.helperText}
+                </Text>
+              ) : null}
 
-              {opt.helperText && isSelected && (
-                <Text role="caption" style={{ color: colorRoles.danger, textAlign: "right", marginTop: 4 }}>{opt.helperText}</Text>
-              )}
-
-              {opt.action && isSelected && (
+              {option.action && isSelected ? (
                 <Button
-                  label={opt.action.label}
+                  label={option.action.label}
                   tone="secondary"
                   size="sm"
                   fullWidth={false}
-                  onPress={opt.action.onPress}
-                  style={{ alignSelf: "flex-start", marginTop: 6 }}
+                  onPress={option.action.onPress}
+                  style={styles.actionButton}
                 />
-              )}
+              ) : null}
             </Pressable>
           );
         })}
@@ -97,23 +111,53 @@ const styles = StyleSheet.create({
     padding: 14,
     gap: 12,
   },
+  headerRow: {
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
   cardLabel: {
     color: colorRoles.textPrimary,
     fontSize: 14,
     fontWeight: "bold",
     textAlign: "right",
   },
+  description: {
+    color: colorRoles.textSecondary,
+    textAlign: "right",
+    lineHeight: 19,
+  },
+  options: { gap: 8 },
   paymentCard: {
     borderWidth: 1,
     borderColor: colorRoles.borderSubtle,
     borderRadius: radius.md,
     padding: 12,
     backgroundColor: colorRoles.surfaceBase,
-    gap: 4,
+    gap: 6,
   },
   paymentCardActive: {
     borderColor: colorRoles.brandAction,
-    backgroundColor: colorRoles.surfaceBase,
+  },
+  paymentCardDisabled: { opacity: 0.48 },
+  optionHeader: {
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 8,
+  },
+  optionIdentity: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 8,
+    flex: 1,
+  },
+  optionText: { alignItems: "flex-end", flex: 1 },
+  optionTitle: { color: colorRoles.textPrimary, textAlign: "right" },
+  optionDescription: {
+    color: colorRoles.textSecondary,
+    textAlign: "right",
+    lineHeight: 18,
   },
   radioDot: {
     width: 14,
@@ -127,10 +171,10 @@ const styles = StyleSheet.create({
     borderColor: colorRoles.brandAction,
     backgroundColor: colorRoles.brandAction,
   },
-  paymentBreakdown: {
-    marginTop: 6,
-    paddingTop: 6,
-    borderTopWidth: 1,
-    borderTopColor: colorRoles.borderSubtle,
+  helperText: {
+    color: colorRoles.textSecondary,
+    textAlign: "right",
+    lineHeight: 18,
   },
+  actionButton: { alignSelf: "flex-start", marginTop: 4 },
 });

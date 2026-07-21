@@ -6,38 +6,42 @@ import (
 	"time"
 )
 
-func TestRuntimeSnapshotIsExplicitlyNotFullyReady(t *testing.T) {
+func TestRuntimeSnapshotFailsClosedWithoutRepository(t *testing.T) {
 	service := NewService()
-	service.now = func() time.Time { return time.Date(2026, 7, 16, 12, 0, 0, 0, time.UTC) }
+	service.now = func() time.Time { return time.Date(2026, 7, 18, 12, 0, 0, 0, time.UTC) }
 
 	snapshot := service.RuntimeSnapshot(context.Background())
 
-	if snapshot.Status != StatePartiallyBound {
-		t.Fatalf("expected PARTIALLY_BOUND, got %s", snapshot.Status)
+	if snapshot.Status != StateFixRequired {
+		t.Fatalf("expected FIX_REQUIRED, got %s", snapshot.Status)
 	}
-	if snapshot.HealthState != StateUnknownHealth {
-		t.Fatalf("expected UNKNOWN_HEALTH, got %s", snapshot.HealthState)
+	if snapshot.VariablesState != StateFixRequired || snapshot.AuditState != StateFixRequired {
+		t.Fatalf("expected persistent capabilities to fail closed, got variables=%s audit=%s", snapshot.VariablesState, snapshot.AuditState)
 	}
-	if snapshot.RollbackState != StateRollbackUnavailable {
-		t.Fatalf("expected ROLLBACK_UNAVAILABLE, got %s", snapshot.RollbackState)
+	if snapshot.RolloutsState != StateFixRequired {
+		t.Fatalf("expected live rollout capability to fail closed without persistence, got %s", snapshot.RolloutsState)
+	}
+	if snapshot.HealthState != StateFixRequired || snapshot.ServicesState != StateFixRequired {
+		t.Fatalf("expected health and service posture to fail closed, got health=%s services=%s", snapshot.HealthState, snapshot.ServicesState)
 	}
 	if len(snapshot.Evidence) == 0 {
 		t.Fatal("expected evidence notes")
 	}
 }
 
-func TestEffectiveRuntimeConfigUsesFallbackUntilStoreExists(t *testing.T) {
+func TestRepositoryBackedReadsRejectMissingRepository(t *testing.T) {
 	service := NewService()
 
-	config := service.EffectiveRuntimeConfig(context.Background())
-
-	if !config.Stale {
-		t.Fatal("expected stale config until runtime store exists")
+	if _, err := service.EffectiveRuntimeConfig(context.Background()); err == nil {
+		t.Fatal("expected effective runtime config to reject a missing repository")
 	}
-	if !config.FallbackUsed {
-		t.Fatal("expected fallback to be marked as used")
+	if _, err := service.Variables(context.Background()); err == nil {
+		t.Fatal("expected variables read to reject a missing repository")
 	}
-	if len(config.Values) != 0 {
-		t.Fatalf("expected no fake values, got %d", len(config.Values))
+	if _, err := service.ChangeSets(context.Background()); err == nil {
+		t.Fatal("expected change-set read to reject a missing repository")
+	}
+	if _, err := service.Rollouts(context.Background()); err == nil {
+		t.Fatal("expected rollout read to reject a missing repository")
 	}
 }

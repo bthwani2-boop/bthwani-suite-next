@@ -1,18 +1,16 @@
-// Canonical location: dsh/frontend/shared/delivery/captain/captain.derived.ts
-// Authority: dsh/frontend/shared/delivery/captain — captain derived selectors.
-// No JSX. No ui-kit. No Tamagui. No React hooks — all computations are pure functions.
-
 import {
-  type CaptainAvailabilityStatus,
   type DshCaptainRoute,
   getCaptainAvailabilityMeta,
 } from './captain.contract';
 import { EMPTY_CAPTAIN_ORDER_SUMMARY } from './captain.cod';
-import { resolveDshRuntimeOrderId } from './use-captain-order-runtime';
 import { isCaptainPodRequiredForMode, isCaptainCodCollectorForMode } from '../identity-access/surface-visibility.policy';
 import type { DshCaptainSurfaceState, DshCaptainSurfaceDerived } from './captain.surface.types';
 import { ASSIGNMENT_STATUS_LABELS, DELIVERY_STATUS_LABELS, type DshDispatchAssignment } from '../dispatch/dispatch.types';
 import type { DshCaptainOrderDetailSummary } from '../orders';
+
+function resolveDshRuntimeOrderId(orderId: string): string {
+  return orderId.trim();
+}
 
 export function buildActiveOrderSummary(
   assignment: DshDispatchAssignment | undefined,
@@ -22,7 +20,7 @@ export function buildActiveOrderSummary(
   return {
     orderId: assignment.orderId,
     pickupLabel: `طلب #${assignment.orderId} — استلام من المتجر`,
-    dropoffLabel: `تسليم إلى العميل`,
+    dropoffLabel: 'تسليم إلى العميل',
     etaLabel: ASSIGNMENT_STATUS_LABELS[assignment.status] ?? assignment.status,
     currentStageLabel: deliveryStageLabel,
     nextActionLabel: assignment.delivery.status === 'picked_up' ? 'تأكيد التسليم' : 'تأكيد الاستلام',
@@ -30,7 +28,7 @@ export function buildActiveOrderSummary(
 }
 
 const CAPTAIN_BOTTOM_NAV_ROUTES = new Set<DshCaptainRoute>([
-  'home', 'map', 'inbox', 'account', 'account-finance', 'account-orders',
+  'home', 'entry', 'map', 'inbox', 'account', 'account-finance', 'account-orders',
   'account-profile', 'account-docs', 'account-shifts', 'account-support',
   'support-directory', 'support-screen',
 ]);
@@ -47,7 +45,7 @@ export function buildCaptainBottomActiveId(
   isStoreCourierMode: boolean,
 ): string {
   if (isStoreCourierMode) {
-    if (route === 'home') return 'my-orders';
+    if (route === 'home' || route === 'entry') return 'my-orders';
     if (route === 'account') return 'profile';
     return '';
   }
@@ -75,12 +73,12 @@ export function buildCaptainHomeTicker(
       marquee: false,
     };
   }
-  if (state.inboxState === 'loading') return { statusLabel: 'تحميل',  message: 'جارٍ تجهيز حركة الكابتن.', onPress: callbacks.goToInbox,       marquee: false };
-  if (state.inboxState === 'error')   return { statusLabel: 'تنبيه',  message: 'تعذر تحميل الطلب النشط.', onPress: callbacks.resetInboxState,    marquee: false };
-  if (state.inboxState === 'empty')   return { statusLabel: 'انتظار', message: 'لا يوجد طلب نشط الآن.',   onPress: callbacks.goToInbox,           marquee: false };
-  if (state.inboxState === 'delivered') return { statusLabel: 'مغلق', message: 'تم تسليم الطلب الأخير.',  onPress: callbacks.goToInbox,           marquee: false };
+  if (state.inboxState === 'loading') return { statusLabel: 'تحميل', message: 'جارٍ تجهيز حركة الكابتن.', onPress: callbacks.goToInbox, marquee: false };
+  if (state.inboxState === 'error') return { statusLabel: 'تنبيه', message: 'تعذر تحميل الطلب النشط.', onPress: callbacks.resetInboxState, marquee: false };
+  if (state.inboxState === 'empty') return { statusLabel: 'انتظار', message: 'لا يوجد طلب نشط الآن.', onPress: callbacks.goToInbox, marquee: false };
+  if (state.inboxState === 'delivered') return { statusLabel: 'مغلق', message: 'تم تسليم الطلب الأخير.', onPress: callbacks.goToInbox, marquee: false };
   return {
-    statusLabel: `#${activeOrderDisplayId}`,
+    statusLabel: activeOrderDisplayId ? `#${activeOrderDisplayId}` : 'جاهز',
     message: `${activeSummary.currentStageLabel} · ${activeSummary.etaLabel}`,
     onPress: callbacks.toggleOrderExpanded,
     marquee: false,
@@ -100,14 +98,23 @@ export function buildCaptainDerived(
   const currentAvailabilityMeta = getCaptainAvailabilityMeta(state.captainAvailabilityStatus);
   const activeOrderDisplayId = state.activeOrderId ? resolveDshRuntimeOrderId(state.activeOrderId) : '';
   const showBottomNav = isStoreCourierMode
-    ? state.route === 'home' || state.route === 'account'
+    ? state.route === 'home' || state.route === 'entry' || state.route === 'account'
     : CAPTAIN_BOTTOM_NAV_ROUTES.has(state.route);
   const captainBottomActiveId = buildCaptainBottomActiveId(state.route, isStoreCourierMode);
   const activeSummary = buildActiveOrderSummary(activeAssignment);
   const homeTicker = buildCaptainHomeTicker(state, callbacks, activeSummary);
 
   return {
-    isStoreCourierMode, isCaptainAvailable, isGpsEnabled, captainPodRequired, captainCollectsCod,
-    showBottomNav, captainBottomActiveId, currentAvailabilityMeta, activeOrderDisplayId, activeSummary, homeTicker,
+    isStoreCourierMode,
+    isCaptainAvailable,
+    isGpsEnabled,
+    captainPodRequired,
+    captainCollectsCod,
+    showBottomNav,
+    captainBottomActiveId,
+    currentAvailabilityMeta,
+    activeOrderDisplayId,
+    activeSummary,
+    homeTicker,
   };
 }

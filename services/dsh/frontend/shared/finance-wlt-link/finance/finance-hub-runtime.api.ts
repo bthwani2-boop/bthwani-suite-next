@@ -1,26 +1,73 @@
 import { resolveDshApiBaseUrl } from "../../_kernel/dsh-api-base-url";
 import { createDshHttpClient } from "../../_kernel/dsh-http-request";
-import type { WltDshFinanceRuntimeResult } from "@bthwani/wlt";
+import type { WltDshFinanceRuntimeResult, WltFinancialSummaryRaw } from "@bthwani/wlt";
 
-// WLT internal financial reads are service-authenticated, so the control-panel
-// finance hub reads them through the governed DSH finance proxy — never
-// directly from the browser. WLT stays the only owner of financial truth;
-// this loader only assembles the read model DSH surfaces render.
-const { request: financeGet } = createDshHttpClient(resolveDshApiBaseUrl(), "finance-hub");
+const { request: financeRequest } = createDshHttpClient(resolveDshApiBaseUrl(), "finance-hub");
 
-type LoadResult<T> = { ok: true; data: T } | { ok: false; message: string };
+type RuntimeData = Extract<WltDshFinanceRuntimeResult, { readonly state: "runtime" }>["data"];
+export type FinancePayoutRequest = RuntimeData["payoutRequests"][number] & {
+  readonly providerReference?: string;
+  readonly providerStatus?: string;
+  readonly providerProcessedAt?: string | null;
+  readonly approvedByOperatorId?: string;
+  readonly processedByOperatorId?: string;
+  readonly completedByOperatorId?: string;
+  readonly failureReason?: string;
+};
+type FinanceLedgerEntry = RuntimeData["ledgerEntries"][number];
+type FinanceRefund = RuntimeData["refunds"][number];
+type FinanceOverview = RuntimeData["overview"];
 
-// Maps the raw transport/backend error into the one of the five diagnostic
-// codes control-panel finance surfaces to operators, so "WLT runtime غير
-// متاح" is never shown for causes it doesn't actually describe.
-function classifyFinanceRuntimeError(err: {
+type LoadResult<T> = { readonly ok: true; readonly data: T } | { readonly ok: false; readonly message: string };
+export type FinanceActionResult =
+  | { readonly ok: true }
+  | { readonly ok: false; readonly code: string; readonly message: string };
+
+export type SettlementPolicyInput = {
+  readonly partnerId: string;
+  readonly feeBasisPoints: number;
+  readonly currency: string;
+  readonly status: "active" | "inactive";
+};
+
+export type GovernedSettlementInput = {
+  readonly partnerId: string;
+  readonly periodStart: string;
+  readonly periodEnd: string;
+  readonly currency: string;
+};
+
+export type SettlementActionResult =
+  | { readonly ok: true; readonly data: unknown }
+  | { readonly ok: false; readonly code: string; readonly message: string };
+
+type ErrorShape = {
   readonly kind?: string;
   readonly status?: number;
   readonly code?: string;
   readonly message?: string;
-}): string {
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function arrayField<T>(body: unknown, key: string): readonly T[] {
+  if (!isRecord(body)) return [];
+  const value = body[key];
+  return Array.isArray(value) ? (value as readonly T[]) : [];
+}
+
+function objectField<T>(body: unknown, key: string): T | null {
+  if (!isRecord(body)) return null;
+  const value = body[key];
+  return isRecord(value) ? (value as T) : null;
+}
+
+function classifyFinanceRuntimeError(err: ErrorShape): string {
   if (err.kind === "network") return "RUNTIME_PORT_MISMATCH";
   if (err.status === 401) return "AUTH_MISSING";
+  if (err.status === 403) return err.code ?? "FINANCE_PERMISSION_DENIED";
   if (err.code === "WLT_NOT_CONFIGURED") return "WLT_NOT_CONFIGURED";
   if (err.code === "WLT_UNAVAILABLE") return "WLT_UNAVAILABLE";
   if (err.code === "NOT_FOUND" && err.message === "Route not found") return "ROUTE_NOT_FOUND";
@@ -28,12 +75,12 @@ function classifyFinanceRuntimeError(err: {
   return `HTTP_${err.status ?? "ERROR"}`;
 }
 
-async function tryGet<T>(path: string, extract: (body: any) => T): Promise<LoadResult<T>> {
+async function tryGet<T>(path: string, extract: (body: unknown) => T): Promise<LoadResult<T>> {
   try {
-    const body = await financeGet<any>(path);
+    const body = await financeRequest<unknown>(path);
     return { ok: true, data: extract(body) };
-  } catch (e) {
-    const err = e as { kind?: string; status?: number; code?: string; message?: string };
+  } catch (error) {
+    const err = error as ErrorShape;
     return { ok: false, message: classifyFinanceRuntimeError(err) };
   }
 }
@@ -41,22 +88,18 @@ async function tryGet<T>(path: string, extract: (body: any) => T): Promise<LoadR
 export async function loadDshFinanceRuntimeReadModel(): Promise<WltDshFinanceRuntimeResult> {
   const baseUrl = resolveDshApiBaseUrl();
   if (!baseUrl) {
-    return {
-      state: "blocked",
-      runtimeApiUrl: "",
-      error: "dsh_runtime_base_url_missing",
-    };
+    return { state: "blocked", runtimeApiUrl: "", error: "dsh_runtime_base_url_missing" };
   }
 
   const [overview, ledger, refunds, payoutRequests, financialSummary] = await Promise.all([
-    tryGet("/dsh/control-panel/finance/settlements", (body: any) => body),
-    tryGet("/dsh/control-panel/finance/ledger/entries?limit=250", (body: any) => (body.ledgerEntries ?? []) as readonly any[]),
-    tryGet("/dsh/control-panel/finance/refunds", (body: any) => (body.refunds ?? []) as readonly any[]),
-    tryGet("/dsh/control-panel/finance/payout-requests?status=pending", (body: any) => (body.payoutRequests ?? []) as readonly any[]),
-    tryGet("/dsh/control-panel/finance/financial-summary", (body: any) => body.financialSummary ?? null),
+    tryGet<FinanceOverview>("/dsh/control-panel/finance/settlements", (body) => (isRecord(body) ? (body as FinanceOverview) : null)),
+    tryGet<readonly FinanceLedgerEntry[]>("/dsh/control-panel/finance/ledger/entries?limit=250", (body) => arrayField<FinanceLedgerEntry>(body, "ledgerEntries")),
+    tryGet<readonly FinanceRefund[]>("/dsh/control-panel/finance/refunds", (body) => arrayField<FinanceRefund>(body, "refunds")),
+    tryGet<readonly FinancePayoutRequest[]>("/dsh/control-panel/finance/payout-requests", (body) => arrayField<FinancePayoutRequest>(body, "payoutRequests")),
+    tryGet<WltFinancialSummaryRaw | null>("/dsh/control-panel/finance/financial-summary", (body) => objectField<WltFinancialSummaryRaw>(body, "financialSummary")),
   ]);
 
-  const failures: { key: string; message: string }[] = [];
+  const failures: { readonly key: string; readonly message: string }[] = [];
   if (!overview.ok) failures.push({ key: "overview_err", message: overview.message });
   if (!ledger.ok) failures.push({ key: "ledger_err", message: ledger.message });
   if (!refunds.ok) failures.push({ key: "refunds_err", message: refunds.message });
@@ -67,7 +110,7 @@ export async function loadDshFinanceRuntimeReadModel(): Promise<WltDshFinanceRun
     return {
       state: "blocked",
       runtimeApiUrl: baseUrl,
-      error: `${failures.map((f) => f.key).join(", ")}: ${failures[0]?.message ?? "wlt_runtime_unavailable"}`,
+      error: `${failures.map((failure) => failure.key).join(", ")}: ${failures[0]?.message ?? "wlt_runtime_unavailable"}`,
     };
   }
 
@@ -85,25 +128,83 @@ export async function loadDshFinanceRuntimeReadModel(): Promise<WltDshFinanceRun
   };
 }
 
-export async function approvePayoutRequest(payoutId: string): Promise<boolean> {
+export type PayoutTransition = "approve" | "reject" | "process" | "complete" | "fail";
+
+export async function transitionPayoutRequest(payoutId: string, transition: PayoutTransition): Promise<FinanceActionResult> {
   try {
-    const { request: financePost } = createDshHttpClient(resolveDshApiBaseUrl(), "finance-hub");
-    await financePost(`/dsh/control-panel/finance/payout-requests/${encodeURIComponent(payoutId)}/approve`, { method: "POST" });
-    return true;
-  } catch (e) {
-    console.error("Failed to approve payout request", e);
-    return false;
+    await financeRequest<unknown>(
+      `/dsh/control-panel/finance/payout-requests/${encodeURIComponent(payoutId)}/${transition}`,
+      { method: "POST" },
+    );
+    return { ok: true };
+  } catch (error) {
+    const err = error as ErrorShape;
+    return {
+      ok: false,
+      code: classifyFinanceRuntimeError(err),
+      message: err.message ?? "تعذر تنفيذ انتقال طلب الصرف.",
+    };
   }
 }
 
-export async function rejectPayoutRequest(payoutId: string): Promise<boolean> {
+export function approvePayoutRequest(payoutId: string): Promise<FinanceActionResult> {
+  return transitionPayoutRequest(payoutId, "approve");
+}
+
+export function rejectPayoutRequest(payoutId: string): Promise<FinanceActionResult> {
+  return transitionPayoutRequest(payoutId, "reject");
+}
+
+export function processPayoutRequest(payoutId: string): Promise<FinanceActionResult> {
+  return transitionPayoutRequest(payoutId, "process");
+}
+
+export function completePayoutRequest(payoutId: string): Promise<FinanceActionResult> {
+  return transitionPayoutRequest(payoutId, "complete");
+}
+
+export function failPayoutRequest(payoutId: string): Promise<FinanceActionResult> {
+  return transitionPayoutRequest(payoutId, "fail");
+}
+
+export async function upsertSettlementPolicy(input: SettlementPolicyInput): Promise<SettlementActionResult> {
   try {
-    const { request: financePost } = createDshHttpClient(resolveDshApiBaseUrl(), "finance-hub");
-    await financePost(`/dsh/control-panel/finance/payout-requests/${encodeURIComponent(payoutId)}/reject`, { method: "POST" });
-    return true;
-  } catch (e) {
-    console.error("Failed to reject payout request", e);
-    return false;
+    const data = await financeRequest<unknown>(
+      `/dsh/control-panel/finance/settlement-policies/${encodeURIComponent(input.partnerId)}`,
+      {
+        method: "PUT",
+        body: {
+          feeBasisPoints: input.feeBasisPoints,
+          currency: input.currency,
+          status: input.status,
+        },
+      },
+    );
+    return { ok: true, data };
+  } catch (error) {
+    const err = error as ErrorShape;
+    return {
+      ok: false,
+      code: classifyFinanceRuntimeError(err),
+      message: err.message ?? "تعذر حفظ سياسة التسوية.",
+    };
+  }
+}
+
+export async function createSettlementFromDeliveredOrders(input: GovernedSettlementInput): Promise<SettlementActionResult> {
+  try {
+    const data = await financeRequest<unknown>("/dsh/control-panel/finance/settlements/from-delivered-orders", {
+      method: "POST",
+      body: input,
+    });
+    return { ok: true, data };
+  } catch (error) {
+    const err = error as ErrorShape;
+    return {
+      ok: false,
+      code: classifyFinanceRuntimeError(err),
+      message: err.message ?? "تعذر إنشاء التسوية من الأوامر المسلمة.",
+    };
   }
 }
 
@@ -122,17 +223,16 @@ export type ReconciliationCase = {
 };
 
 export async function loadOpenReconciliationCases(): Promise<LoadResult<readonly ReconciliationCase[]>> {
-  return tryGet("/dsh/control-panel/finance/reconciliation-cases?status=open", (body: any) => (body.reconciliationCases ?? []) as readonly ReconciliationCase[]);
+  return tryGet("/dsh/control-panel/finance/reconciliation-cases?status=open", (body) => arrayField<ReconciliationCase>(body, "reconciliationCases"));
 }
 
-export async function assignReconciliationCase(caseId: string): Promise<boolean> {
+export async function assignReconciliationCase(caseId: string): Promise<FinanceActionResult> {
   try {
-    const { request: financePost } = createDshHttpClient(resolveDshApiBaseUrl(), "finance-hub");
-    await financePost(`/dsh/control-panel/finance/reconciliation-cases/${encodeURIComponent(caseId)}/assign`, { method: "POST" });
-    return true;
-  } catch (e) {
-    console.error("Failed to assign reconciliation case", e);
-    return false;
+    await financeRequest<unknown>(`/dsh/control-panel/finance/reconciliation-cases/${encodeURIComponent(caseId)}/assign`, { method: "POST" });
+    return { ok: true };
+  } catch (error) {
+    const err = error as ErrorShape;
+    return { ok: false, code: classifyFinanceRuntimeError(err), message: err.message ?? "تعذر إسناد حالة المطابقة." };
   }
 }
 
@@ -140,16 +240,15 @@ export async function resolveReconciliationCase(
   caseId: string,
   resolutionAction: "confirmed_success" | "confirmed_failed" | "manual_adjustment" | "ignored",
   resolutionNote: string,
-): Promise<boolean> {
+): Promise<FinanceActionResult> {
   try {
-    const { request: financePost } = createDshHttpClient(resolveDshApiBaseUrl(), "finance-hub");
-    await financePost(`/dsh/control-panel/finance/reconciliation-cases/${encodeURIComponent(caseId)}/resolve`, {
+    await financeRequest<unknown>(`/dsh/control-panel/finance/reconciliation-cases/${encodeURIComponent(caseId)}/resolve`, {
       method: "POST",
       body: { resolutionAction, resolutionNote },
     });
-    return true;
-  } catch (e) {
-    console.error("Failed to resolve reconciliation case", e);
-    return false;
+    return { ok: true };
+  } catch (error) {
+    const err = error as ErrorShape;
+    return { ok: false, code: classifyFinanceRuntimeError(err), message: err.message ?? "تعذر حسم حالة المطابقة." };
   }
 }

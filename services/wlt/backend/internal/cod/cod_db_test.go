@@ -10,6 +10,7 @@ import (
 
 	_ "github.com/lib/pq"
 
+	"wlt-api/internal/reference"
 	"wlt-api/internal/wallet"
 )
 
@@ -41,8 +42,8 @@ func insertTestCodRecord(t *testing.T, db *sql.DB) string {
 	orderID := fmt.Sprintf("test-order-%d", time.Now().UnixNano())
 	var id string
 	err := db.QueryRow(`
-		INSERT INTO wlt_cod_records (order_id, captain_id, partner_id, amount_minor_units, currency)
-		VALUES ($1, 'captain-test', 'partner-test', 1000, 'YER')
+		INSERT INTO wlt_cod_records (order_id, captain_id, collector_type, collector_id, partner_id, amount_minor_units, currency)
+		VALUES ($1, 'captain-test', 'captain', 'captain-test', 'partner-test', 1000, 'YER')
 		RETURNING id`, orderID).Scan(&id)
 	if err != nil {
 		t.Fatalf("failed to insert test COD record: %v", err)
@@ -348,5 +349,74 @@ func TestCreateCommission_NonFieldVisit_WalletUntouched(t *testing.T) {
 	}
 	if w != nil {
 		t.Fatalf("expected no wallet to be created/touched for non-field-visit commission, got %+v", w)
+	}
+}
+
+func TestCreateCodRecordUsesWltSessionAndCollectorIdentity(t *testing.T) {
+	db := getTestDB(t)
+	if db == nil {
+		return
+	}
+	defer db.Close()
+	checkoutIntentID := fmt.Sprintf("checkout-cod-%d", time.Now().UnixNano())
+	orderID := fmt.Sprintf("order-cod-%d", time.Now().UnixNano())
+	if _, err := reference.CreatePaymentSession(db, reference.CreatePaymentSessionInput{
+		CheckoutIntentID: checkoutIntentID,
+		TenantID:         "tenant-cod-test",
+		ClientID:         "client-cod-test",
+		StoreID:          "store-cod-test",
+		PaymentMethod:    "cod",
+		AmountMinorUnits: 432100,
+		Currency:         "YER",
+		CartSnapshotHash: "cod-custody-test-snapshot",
+		IdempotencyKey:   "cod-session-" + checkoutIntentID,
+		CorrelationID:    "cod-session-" + checkoutIntentID,
+	}); err != nil {
+		t.Fatalf("create governed COD payment session: %v", err)
+	}
+	input := CreateCodRecordInput{OrderID: orderID, CollectorType: "store_courier", CollectorID: "courier-cod-test", PartnerID: "partner-cod-test", CheckoutIntentID: checkoutIntentID}
+	first, err := CreateCodRecord(db, input)
+	if err != nil {
+		t.Fatalf("create COD custody: %v", err)
+	}
+	second, err := CreateCodRecord(db, input)
+	if err != nil {
+		t.Fatalf("replay COD custody: %v", err)
+	}
+	if first.ID != second.ID {
+		t.Fatalf("expected idempotent replay, got %s and %s", first.ID, second.ID)
+	}
+	if first.AmountMinorUnits != 432100 || first.Currency != "YER" {
+		t.Fatalf("WLT session truth not used: %+v", first)
+	}
+	if first.CollectorType != "store_courier" || first.CollectorID != "courier-cod-test" || first.CaptainID != "" {
+		t.Fatalf("collector identity mismatch: %+v", first)
+	}
+}
+
+func TestCreateCodRecordRejectsNonCodSession(t *testing.T) {
+	db := getTestDB(t)
+	if db == nil {
+		return
+	}
+	defer db.Close()
+	checkoutIntentID := fmt.Sprintf("checkout-wallet-%d", time.Now().UnixNano())
+	if _, err := reference.CreatePaymentSession(db, reference.CreatePaymentSessionInput{
+		CheckoutIntentID: checkoutIntentID,
+		TenantID:         "tenant-wallet-test",
+		ClientID:         "client-wallet-test",
+		StoreID:          "store-wallet-test",
+		PaymentMethod:    "wallet",
+		AmountMinorUnits: 1000,
+		Currency:         "YER",
+		CartSnapshotHash: "wallet-custody-test-snapshot",
+		IdempotencyKey:   "wallet-session-" + checkoutIntentID,
+		CorrelationID:    "wallet-session-" + checkoutIntentID,
+	}); err != nil {
+		t.Fatalf("create governed wallet payment session: %v", err)
+	}
+	_, err := CreateCodRecord(db, CreateCodRecordInput{OrderID: fmt.Sprintf("order-wallet-%d", time.Now().UnixNano()), CollectorType: "captain", CollectorID: "captain-wallet-test", PartnerID: "partner-wallet-test", CheckoutIntentID: checkoutIntentID})
+	if err == nil {
+		t.Fatal("expected non-COD payment session to be rejected")
 	}
 }

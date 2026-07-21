@@ -11,9 +11,8 @@ import type {
   PartnerHubSection,
   DshPartnerOperationalScope,
 } from '../shared/partner/partner.types';
-import type { PartnerOrderItem } from '../shared/orders';
+import type { GovernedPartnerOrderItem } from '../shared/partner/partner.adapters';
 
-// Topic models
 import { usePartnerProfileModel } from './account/usePartnerProfileModel';
 import { useStoreScopeModel } from '../shared/partner/store-scope.model';
 import { usePartnerOrdersModel } from './orders/usePartnerOrdersModel';
@@ -59,10 +58,9 @@ export type DshPartnerSurfaceActions = {
   openWalletHub: () => void;
   openStoreScope: () => void;
   openSupportScreen: (screenId: DshPartnerSupportRouteId, source?: DshPartnerSupportCommandContext['source']) => void;
-  handleMarkReady: (orderId: string) => void;
-  refreshOrders: () => void;
+  refreshOrders: () => void | Promise<void>;
   onInviteMember: (identity: string) => Promise<PartnerTeamMutationResult>;
-  onMemberAction: (memberId: string, actionLabel: string) => Promise<PartnerTeamMutationResult>;
+  onMemberAction: (memberId: string, action: string) => Promise<PartnerTeamMutationResult>;
   handleHardwareBackPress: () => boolean;
 };
 
@@ -82,7 +80,7 @@ export type DshPartnerSurfaceModel = {
     activeZoneLabel: string;
   };
   partnerOrdersState: 'ready' | 'loading' | 'empty' | 'error' | 'offline' | 'disabled' | 'partial';
-  partnerOrders: readonly PartnerOrderItem[];
+  partnerOrders: readonly GovernedPartnerOrderItem[];
   deliveryOpsSummary: PartnerDeliveryOpsSummary;
   isCommandCenterInline: boolean;
   teamMembers: readonly PartnerTeamMember[];
@@ -94,7 +92,6 @@ export function useDshPartnerSurfaceModel(
   initialRoute: DshPartnerRoute = 'inbox',
   initialOrderId: string = '',
 ): DshPartnerSurfaceModel {
-  // ── Sub-hooks ──────────────────────────────────────────────────────────────
   const profile = usePartnerProfileModel(initialRoute);
   const storeScope = useStoreScopeModel();
   const orders = usePartnerOrdersModel({
@@ -112,14 +109,12 @@ export function useDshPartnerSurfaceModel(
     selectedStoreScopeId: storeScope.selectedStoreScopeId ?? 'all',
   });
 
-  // ── Sync order search mode when route changes ─────────────────────────────
   React.useEffect(() => {
     if (profile.route !== 'inbox' && orders.ordersSearchMode) {
       orders.setOrdersSearchMode(false);
     }
   }, [profile.route, orders]);
 
-  // ── Orchestrated back press ───────────────────────────────────────────────
   const handleHardwareBackPress = React.useCallback(() => {
     if (storeScope.storeScopeVisible) {
       storeScope.setStoreScopeVisible(false);
@@ -175,7 +170,6 @@ export function useDshPartnerSurfaceModel(
     openWalletHub: profile.openWalletHub,
     openStoreScope: storeScope.openStoreScope,
     openSupportScreen: support.openSupportScreen,
-    handleMarkReady: orders.handleMarkReady,
     refreshOrders: orders.refresh,
     onInviteMember: team.onInviteMember,
     onMemberAction: team.onMemberAction,

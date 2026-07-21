@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"dsh-api/internal/dispatch"
 	"dsh-api/internal/partnerdelivery"
 	"dsh-api/internal/store"
 
@@ -272,4 +273,32 @@ func (s *protectedStoreServer) handleGetOperatorPartnerDelivery(w http.ResponseW
 		return
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"task": marshalPartnerDeliveryTask(task)})
+}
+
+// GET /dsh/partner/orders/{orderId}/return-to-store
+func (s *protectedStoreServer) handleGetPartnerReturnToStore(w http.ResponseWriter, r *http.Request) {
+	_, order, ok := s.partnerOrder(w, r)
+	if !ok {
+		return
+	}
+	item, err := dispatch.GetPartnerReturnToStore(s.db, order.ID)
+	if err != nil {
+		writeDeliveryExceptionError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"exception": marshalDeliveryException(item)})
+}
+
+// POST /dsh/partner/orders/{orderId}/return-to-store/accept
+func (s *protectedStoreServer) handleAcceptPartnerReturnToStore(w http.ResponseWriter, r *http.Request) {
+	actor, order, ok := s.partnerOrder(w, r)
+	if !ok {
+		return
+	}
+	item, err := dispatch.AcceptReturnToStoreByPartner(s.db, order.ID, actor.ID)
+	if err != nil {
+		writeDeliveryExceptionError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"exception": marshalDeliveryException(item)})
 }

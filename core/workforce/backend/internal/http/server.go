@@ -402,7 +402,6 @@ func (s *server) listCities(w http.ResponseWriter, r *http.Request, identity aut
 	sendJSON(w, http.StatusOK, map[string]any{"cities": cities})
 }
 
-
 func (s *server) listShifts(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
 	shifts, err := s.repo.ListShifts(r.Context(), identity.HasRole("operator") && r.URL.Query().Get("includeInactive") == "true")
 	if err != nil {

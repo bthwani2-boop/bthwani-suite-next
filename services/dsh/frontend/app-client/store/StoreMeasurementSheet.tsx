@@ -1,108 +1,56 @@
-import React, { useMemo } from 'react';
+import React from "react";
 import {
   I18nManager,
   Modal,
   Pressable,
   StyleSheet,
+  Text,
   TouchableOpacity,
   View,
-  Text,
-} from 'react-native';
-import { colorRoles, colorPalette, alpha } from '@bthwani/ui-kit';
-import type { CatalogProduct } from '../../shared/catalog/client-catalog.types';
+} from "react-native";
+import { alpha, colorPalette, colorRoles } from "@bthwani/ui-kit";
+import type { CatalogProduct } from "../../shared/catalog/client-catalog.types";
 
 export type StoreMeasurementSheetProps = {
   readonly product: CatalogProduct | null;
-  readonly categoryLabel: string;
-  readonly selectedOption: string | null;
-  readonly setSelectedOption: (option: string | null) => void;
   readonly quantity: number;
-  readonly setQuantity: (qty: number | ((q: number) => number)) => void;
+  readonly setQuantity: (quantity: number | ((current: number) => number)) => void;
   readonly isAddedToCart: boolean;
+  readonly isSubmitting: boolean;
+  readonly errorMessage?: string | null;
   readonly onAddToCart: () => void;
   readonly onGoToCart: () => void;
   readonly onClose: () => void;
 };
 
-// Measurement-entry UI heuristic (no product ids/prices) — not catalog data (closure decision WP5)
-export function getProductMeasurementOptions(productName: string, categoryLabel: string) {
-  const normalized = (productName + ' ' + categoryLabel).toLowerCase();
-
-  if (
-    normalized.includes('تفاح') ||
-    normalized.includes('بقالة') ||
-    normalized.includes('fresh') ||
-    normalized.includes('grocery')
-  ) {
-    return {
-      options: ['250 جرام', '500 جرام', '1 كجم'],
-      multipliers: { '250 جرام': 0.25, '500 جرام': 0.5, '1 كجم': 1.0 } as Record<string, number>,
-    };
-  }
-  if (
-    normalized.includes('خبز') ||
-    normalized.includes('مخبوز') ||
-    normalized.includes('bakery')
-  ) {
-    return {
-      options: ['حبة', '2 حبة', '6 حبات'],
-      multipliers: { 'حبة': 1.0, '2 حبة': 2.0, '6 حبات': 6.0 } as Record<string, number>,
-    };
-  }
-  return {
-    options: ['حبة', '2 حبة', '4 حبات'],
-    multipliers: { 'حبة': 1.0, '2 حبة': 2.0, '4 حبات': 4.0 } as Record<string, number>,
-  };
-}
-
+/**
+ * Quantity-only product sheet.
+ *
+ * Product units, variants, and prices are catalog-owned. This component must
+ * never infer them from product names or calculate a commercial amount from a
+ * display/reference string. The server resolves the current assortment and
+ * authoritative price when the cart mutation is accepted.
+ */
 export const StoreMeasurementSheet = React.memo(function StoreMeasurementSheet({
   product,
-  categoryLabel,
-  selectedOption,
-  setSelectedOption,
   quantity,
   setQuantity,
   isAddedToCart,
+  isSubmitting,
+  errorMessage,
   onAddToCart,
   onGoToCart,
   onClose,
 }: StoreMeasurementSheetProps) {
   const isRtl = I18nManager.isRTL;
 
-  const { options, multipliers } = useMemo(() => {
-    if (!product) return { options: [], multipliers: {} as Record<string, number> };
-    return getProductMeasurementOptions(product.name, categoryLabel);
-  }, [product, categoryLabel]);
-
-  const basePrice = useMemo(() => {
-    if (!product) return 0;
-    return parseFloat(product.priceReference || '0');
-  }, [product]);
-
-  const selectedMultiplier = useMemo(
-    () => (selectedOption ? (multipliers[selectedOption] ?? 1.0) : 1.0),
-    [selectedOption, multipliers],
-  );
-
-  const totalPrice = useMemo(
-    () => basePrice * selectedMultiplier * quantity,
-    [basePrice, selectedMultiplier, quantity],
-  );
-
   if (!product) return null;
 
   return (
-    <Modal
-      visible={Boolean(product)}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      {/* Soft overlay — donor exact: no backdrop dim, just overlaySoft */}
-      <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable style={styles.popoverCard}>
+    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={styles.overlay} onPress={isSubmitting ? undefined : onClose}>
+        <Pressable style={styles.popoverCard} accessibilityRole="none">
           {isAddedToCart ? (
-            // ── Cart confirmation state — matches donor CartConfirmationBlock layout ──
             <View style={styles.confirmContainer}>
               <View style={styles.confirmOriginBubble}>
                 <Text style={styles.confirmBubbleIcon}>🛒</Text>
@@ -112,24 +60,22 @@ export const StoreMeasurementSheet = React.memo(function StoreMeasurementSheet({
               </View>
 
               <Text style={styles.confirmTitle}>تمت إضافة المنتج للسلة</Text>
-              <Text style={styles.confirmSubtitle}>
-                {product.name}
-                {selectedOption ? ` (${selectedOption})` : ''}
-              </Text>
+              <Text style={styles.confirmSubtitle}>{product.name}</Text>
 
               <View style={[styles.confirmActions, isRtl && styles.rowReverse]}>
                 <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel="الانتقال إلى السلة"
                   style={styles.goToCartBtn}
                   activeOpacity={0.88}
                   onPress={onGoToCart}
                 >
-                  <View style={[styles.btnInner, isRtl && styles.rowReverse]}>
-                    <Text style={styles.goToCartText}>انتقل للسلة</Text>
-                    <Text style={styles.btnIcon}>🛒</Text>
-                  </View>
+                  <Text style={styles.goToCartText}>انتقل للسلة</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel="متابعة التسوق"
                   style={styles.continueBtn}
                   activeOpacity={0.88}
                   onPress={onClose}
@@ -139,93 +85,84 @@ export const StoreMeasurementSheet = React.memo(function StoreMeasurementSheet({
               </View>
             </View>
           ) : (
-            // ── Measurement picker — donor exact compact layout ──
             <View style={styles.pickerContainer}>
-              {/* Header */}
               <View style={styles.pickerHeader}>
-                <Text style={[styles.pickerTitle, { color: colorRoles.brandStructure }]}>
-                  {product.name}
-                </Text>
+                <Text style={styles.pickerTitle}>{product.name}</Text>
+                {product.unitLabel ? (
+                  <Text style={styles.productMeta}>{product.unitLabel}</Text>
+                ) : null}
+                {product.priceReference ? (
+                  <Text style={styles.productMeta}>
+                    السعر المعروض: {product.priceReference}
+                  </Text>
+                ) : null}
               </View>
 
-              {/* Options grid — row-reverse for RTL, donor exact chip sizing */}
-              <View style={[styles.optionsGrid, isRtl && styles.rowReverse]}>
-                {options.map((option) => {
-                  const selected = selectedOption === option;
-                  const price = basePrice * (multipliers[option] ?? 1.0);
-                  return (
-                    <TouchableOpacity
-                      key={option}
-                      style={[
-                        styles.optionChip,
-                        { backgroundColor: colorRoles.surfaceBase, borderColor: colorRoles.borderSubtle },
-                        selected && { backgroundColor: colorRoles.brandAction, borderColor: colorRoles.brandAction },
-                      ]}
-                      activeOpacity={0.88}
-                      onPress={() => setSelectedOption(option)}
-                    >
-                      <Text
-                        style={[
-                          styles.optionLabel,
-                          { color: selected ? colorPalette.white : colorRoles.brandStructure },
-                        ]}
-                      >
-                        {option}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.optionPrice,
-                          { color: selected ? alpha(colorPalette.white, 0.8) : colorRoles.textSecondary },
-                        ]}
-                      >
-                        {price.toFixed(1).replace(/\.0$/, '')} د.ي
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+              <Text style={styles.priceNotice}>
+                يُثبت السعر والتوافر من الكتالوج المركزي عند قبول DSH لعملية
+                السلة.
+              </Text>
 
-              {/* Qty row — donor exact: ghost minus, branded plus, pill display */}
               <View style={styles.qtyRow}>
                 <TouchableOpacity
-                  style={[styles.qtyGhostBtn, { backgroundColor: colorRoles.surfaceBase, borderColor: colorRoles.borderSubtle }]}
+                  accessibilityRole="button"
+                  accessibilityLabel="تقليل الكمية"
+                  disabled={quantity <= 1 || isSubmitting}
+                  style={[
+                    styles.qtyGhostBtn,
+                    (quantity <= 1 || isSubmitting) && styles.disabledButton,
+                  ]}
                   activeOpacity={0.85}
-                  onPress={() => setQuantity((q) => Math.max(1, q - 1))}
+                  onPress={() =>
+                    setQuantity((current) => Math.max(1, current - 1))
+                  }
                 >
-                  <Text style={[styles.qtyBtnText, { color: colorRoles.textSecondary }]}>−</Text>
+                  <Text style={styles.qtyBtnText}>−</Text>
                 </TouchableOpacity>
 
-                <View style={[styles.qtyPill, { backgroundColor: colorRoles.surfaceBase, borderColor: colorRoles.borderSubtle }]}>
-                  <Text style={[styles.qtyValue, { color: colorRoles.brandStructure }]}>{quantity}</Text>
+                <View style={styles.qtyPill} accessibilityLabel={`الكمية ${quantity}`}>
+                  <Text style={styles.qtyValue}>{quantity}</Text>
                 </View>
 
                 <TouchableOpacity
-                  style={[styles.qtyPrimaryBtn, { backgroundColor: colorRoles.brandAction, borderColor: colorRoles.brandAction }]}
+                  accessibilityRole="button"
+                  accessibilityLabel="زيادة الكمية"
+                  disabled={isSubmitting}
+                  style={[
+                    styles.qtyPrimaryBtn,
+                    isSubmitting && styles.disabledButton,
+                  ]}
                   activeOpacity={0.9}
-                  onPress={() => setQuantity((q) => q + 1)}
+                  onPress={() =>
+                    setQuantity((current) => Math.min(99, current + 1))
+                  }
                 >
                   <Text style={styles.qtyBtnTextWhite}>+</Text>
                 </TouchableOpacity>
               </View>
 
-              {/* Footer bar — donor exact: price left, confirm right, combined pill */}
-              <View style={[styles.footerBar, { borderColor: colorRoles.borderSubtle }]}>
-                <View style={[styles.priceBox, { backgroundColor: colorRoles.surfaceBase }]}>
-                  <Text style={[styles.priceText, { color: colorRoles.brandStructure }]}>
-                    {totalPrice.toFixed(1).replace(/\.0$/, '')} د.ي
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  style={[styles.confirmBtn, { backgroundColor: colorRoles.brandAction }]}
-                  activeOpacity={0.9}
-                  onPress={onAddToCart}
-                >
-                  <View style={[styles.btnInner, isRtl && styles.rowReverse]}>
-                    <Text style={styles.confirmBtnText}>أضف للسلة</Text>
-                    <Text style={styles.btnIcon}>🛒</Text>
-                  </View>
-                </TouchableOpacity>
-              </View>
+              {errorMessage ? (
+                <Text accessibilityRole="alert" style={styles.errorText}>
+                  {errorMessage}
+                </Text>
+              ) : null}
+
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel="إضافة المنتج إلى السلة"
+                accessibilityState={{ busy: isSubmitting, disabled: isSubmitting }}
+                disabled={isSubmitting}
+                style={[
+                  styles.confirmBtn,
+                  isSubmitting && styles.disabledButton,
+                ]}
+                activeOpacity={0.9}
+                onPress={onAddToCart}
+              >
+                <Text style={styles.confirmBtnText}>
+                  {isSubmitting ? "جاري الإضافة…" : "أضف للسلة"}
+                </Text>
+              </TouchableOpacity>
             </View>
           )}
         </Pressable>
@@ -235,238 +172,173 @@ export const StoreMeasurementSheet = React.memo(function StoreMeasurementSheet({
 });
 
 const styles = StyleSheet.create({
-  // Donor: soft overlay (no dark backdrop)
   overlay: {
     flex: 1,
-    backgroundColor: alpha(colorPalette.black, 0.08),
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: alpha(colorPalette.black, 0.12),
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 16,
   },
-  // Donor: compact card maxWidth 280, rounded, subtle shadow
   popoverCard: {
-    width: '90%',
-    maxWidth: 320,
+    width: "100%",
+    maxWidth: 360,
     backgroundColor: colorRoles.surfaceBase,
-    borderRadius: 16,
-    padding: 12,
+    borderRadius: 18,
+    padding: 16,
     borderWidth: 1,
     borderColor: colorRoles.borderSubtle,
-    ...{
-      shadowColor: colorRoles.brandStructure,
-      shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: 0.12,
-      shadowRadius: 14,
-      elevation: 6,
-    },
-    gap: 6,
+    shadowColor: colorRoles.brandStructure,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 14,
+    elevation: 6,
   },
-  rowReverse: { flexDirection: 'row-reverse' },
-
-  // ── Picker ──
-  pickerContainer: { alignItems: 'stretch' },
-  pickerHeader: { alignItems: 'flex-end', marginBottom: 2 },
+  rowReverse: { flexDirection: "row-reverse" },
+  pickerContainer: { gap: 16 },
+  pickerHeader: { alignItems: "flex-end", gap: 4 },
   pickerTitle: {
-    fontSize: 16,
-    fontWeight: '900',
-    textAlign: 'right',
+    fontSize: 18,
+    fontWeight: "900",
+    color: colorRoles.brandStructure,
+    textAlign: "right",
   },
-  optionsGrid: {
-    flexDirection: 'row',
-    gap: 6,
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  optionChip: {
-    flex: 1,
-    minHeight: 48,
-    borderRadius: 14,
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-  },
-  optionLabel: {
+  productMeta: {
     fontSize: 13,
-    fontWeight: '800',
+    color: colorRoles.textSecondary,
+    textAlign: "right",
   },
-  optionPrice: {
-    fontSize: 11,
-    fontWeight: '600',
+  priceNotice: {
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: alpha(colorRoles.brandAction, 0.08),
+    color: colorRoles.textSecondary,
+    fontSize: 12,
+    lineHeight: 19,
+    textAlign: "right",
   },
-
-  // Qty row — donor: 38px circles/pill
   qtyRow: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    marginBottom: 12,
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
   },
   qtyGhostBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     borderWidth: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderColor: colorRoles.borderSubtle,
+    backgroundColor: colorRoles.surfaceBase,
+    justifyContent: "center",
+    alignItems: "center",
   },
   qtyPrimaryBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    borderWidth: 2,
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: colorRoles.brandAction,
+    justifyContent: "center",
+    alignItems: "center",
   },
+  disabledButton: { opacity: 0.45 },
   qtyPill: {
-    minWidth: 56,
-    height: 38,
-    borderRadius: 10,
-    borderWidth: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-  },
-  qtyBtnText: {
-    fontSize: 20,
-    fontWeight: '900',
-    lineHeight: 24,
-  },
-  qtyBtnTextWhite: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: colorPalette.white,
-    lineHeight: 24,
-  },
-  qtyValue: {
-    fontSize: 16,
-    fontWeight: '900',
-  },
-
-  // Footer bar — donor: combined pill, price left, confirm right
-  footerBar: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    overflow: 'hidden',
+    minWidth: 64,
+    height: 42,
     borderRadius: 12,
     borderWidth: 1,
-    marginTop: 2,
+    borderColor: colorRoles.borderSubtle,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  priceBox: {
-    minWidth: 72,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 10,
+  qtyBtnText: {
+    fontSize: 22,
+    fontWeight: "900",
+    color: colorRoles.textSecondary,
   },
-  priceText: {
-    fontSize: 16,
-    fontWeight: '900',
+  qtyBtnTextWhite: {
+    fontSize: 22,
+    fontWeight: "900",
+    color: colorPalette.white,
+  },
+  qtyValue: {
+    fontSize: 17,
+    fontWeight: "900",
+    color: colorRoles.brandStructure,
+  },
+  errorText: {
+    color: colorRoles.danger,
+    fontSize: 12,
+    lineHeight: 19,
+    textAlign: "right",
   },
   confirmBtn: {
-    flex: 1,
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    paddingHorizontal: 10,
+    minHeight: 46,
+    borderRadius: 13,
+    backgroundColor: colorRoles.brandAction,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 16,
   },
   confirmBtnText: {
     color: colorPalette.white,
-    fontSize: 14,
-    fontWeight: '900',
+    fontSize: 15,
+    fontWeight: "900",
   },
-  btnInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  btnIcon: { fontSize: 16 },
-
-  // ── Confirmation state ──
-  confirmContainer: {
-    alignItems: 'center',
-    paddingVertical: 8,
-    gap: 8,
-  },
+  confirmContainer: { alignItems: "center", gap: 12 },
   confirmOriginBubble: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colorRoles.brandAction,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-    borderWidth: 2,
-    borderColor: colorRoles.brandActionSoft,
-    marginBottom: 4,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: alpha(colorRoles.brandAction, 0.12),
+    alignItems: "center",
+    justifyContent: "center",
   },
-  confirmBubbleIcon: { fontSize: 20 },
+  confirmBubbleIcon: { fontSize: 28 },
   confirmPlusBadge: {
-    position: 'absolute',
-    top: -2,
-    left: -2,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: colorPalette.white,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colorRoles.borderSubtle,
+    position: "absolute",
+    right: -2,
+    bottom: 0,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: colorRoles.brandAction,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  confirmPlusText: {
-    fontSize: 10,
-    fontWeight: '900',
-    color: colorRoles.brandAction,
-    lineHeight: 12,
-  },
+  confirmPlusText: { color: colorPalette.white, fontWeight: "900" },
   confirmTitle: {
-    fontSize: 16,
-    fontWeight: '900',
     color: colorRoles.brandStructure,
-    textAlign: 'center',
+    fontSize: 17,
+    fontWeight: "900",
+    textAlign: "center",
   },
   confirmSubtitle: {
-    fontSize: 13,
     color: colorRoles.textSecondary,
-    textAlign: 'center',
+    fontSize: 13,
+    textAlign: "center",
   },
   confirmActions: {
-    flexDirection: 'row',
-    width: '100%',
+    flexDirection: "row",
+    width: "100%",
     gap: 10,
-    marginTop: 8,
   },
   goToCartBtn: {
     flex: 1,
-    height: 44,
-    backgroundColor: colorRoles.brandAction,
+    minHeight: 44,
     borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: colorRoles.brandAction,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  goToCartText: {
-    color: colorPalette.white,
-    fontSize: 14,
-    fontWeight: '900',
-  },
+  goToCartText: { color: colorPalette.white, fontWeight: "800" },
   continueBtn: {
     flex: 1,
-    height: 44,
-    backgroundColor: colorRoles.surfaceBase,
+    minHeight: 44,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: colorRoles.borderSubtle,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
-  continueText: {
-    color: colorRoles.brandStructure,
-    fontSize: 14,
-    fontWeight: '800',
-  },
+  continueText: { color: colorRoles.brandStructure, fontWeight: "800" },
 });

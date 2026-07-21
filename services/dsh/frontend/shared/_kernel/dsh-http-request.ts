@@ -8,6 +8,8 @@ export type DshRequestOptions = {
   readonly token?: string;
   readonly idempotencyKey?: string;
   readonly correlationId?: string;
+  /** Positive optimistic-concurrency version sent as If-Match-Version. */
+  readonly expectedVersion?: number;
 };
 
 export type DshSessionRequestResult<T> = {
@@ -18,8 +20,12 @@ export type DshSessionRequestResult<T> = {
   readonly message?: string;
 };
 
+let correlationFallbackSequence = 0;
 export function corrId(prefix: string): string {
-  return `${prefix}-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`}`;
+  const uuid = globalThis.crypto?.randomUUID?.();
+  if (uuid) return `${prefix}-${uuid}`;
+  correlationFallbackSequence += 1;
+  return `${prefix}-${Date.now().toString(36)}-${correlationFallbackSequence.toString(36)}`;
 }
 
 async function parseResponse<T>(response: Response): Promise<T> {
@@ -68,6 +74,12 @@ export function createDshHttpClient(baseUrl: string, corrPrefix: string, timeout
   async function request<T>(path: string, options: DshRequestOptions = {}): Promise<T> {
     const token = options.token ?? (cookieMode ? undefined : getIdentityAccessToken());
     if (!cookieMode && !token) throw { kind: "http", status: 401 };
+    if (
+      options.expectedVersion !== undefined &&
+      (!Number.isInteger(options.expectedVersion) || options.expectedVersion < 1)
+    ) {
+      throw { kind: "invalid_request", message: "expectedVersion must be a positive integer" };
+    }
     let response: Response;
     try {
       response = await fetch(resolveRequestUrl(path, baseUrl), {
@@ -77,6 +89,9 @@ export function createDshHttpClient(baseUrl: string, corrPrefix: string, timeout
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
           "X-Correlation-ID": options.correlationId ?? corrId(corrPrefix),
           ...(options.idempotencyKey ? { "Idempotency-Key": options.idempotencyKey } : {}),
+          ...(options.expectedVersion !== undefined
+            ? { "If-Match-Version": String(options.expectedVersion) }
+            : {}),
           ...(options.body !== undefined ? { "Content-Type": "application/json" } : {}),
         },
         ...(options.body !== undefined ? { body: JSON.stringify(options.body) } : {}),
@@ -84,6 +99,14 @@ export function createDshHttpClient(baseUrl: string, corrPrefix: string, timeout
         signal: AbortSignal.timeout(timeoutMs),
       });
     } catch (error) {
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "kind" in error &&
+        (error as { kind?: unknown }).kind === "invalid_request"
+      ) {
+        throw error;
+      }
       throw { kind: "network", message: error instanceof Error ? error.message : "network error" };
     }
     return parseResponse<T>(response);

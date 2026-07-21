@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   fetchAdminStoreList,
   fetchAdminStoreDetail,
@@ -20,7 +20,11 @@ import {
   previousStoreAdminOffset,
 } from "./store-admin.controller-core";
 import { submitStoreRoleAction } from "./store-role.api";
-import type { OperatorStoreGovernanceRequest } from "./store-discovery.types";
+import {
+  resolveStoreRoleMutationAttempt,
+  type StoreRoleMutationAttempt,
+} from "./store-role-mutation";
+import type { OperatorStoreGovernanceRequest, StoreRoleAction } from "./store-discovery.types";
 import type { StoreActionState } from "./use-store-role-context-controller";
 
 export type StoreAdminController = {
@@ -50,11 +54,10 @@ export function useStoreAdminController(authKind = "unauthenticated"): StoreAdmi
   const [listState, setListState] = useState<DshStoreAdminListState>(adminLoadingState());
   const [detailState, setDetailState] = useState<DshStoreAdminDetailState | null>(null);
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
-  const [filters, setFilters] = useState<DshStoreAdminFilters>(
-    createStoreAdminInitialFilters,
-  );
+  const [filters, setFilters] = useState<DshStoreAdminFilters>(createStoreAdminInitialFilters);
   const [offset, setOffset] = useState(0);
   const [actionState, setActionState] = useState<StoreActionState>({ kind: "idle" });
+  const mutationAttemptRef = useRef<StoreRoleMutationAttempt | null>(null);
 
   const loadStores = useCallback(async (currentOffset: number) => {
     await loadStoreAdminList(currentOffset, fetchAdminStoreList, setListState);
@@ -65,11 +68,7 @@ export function useStoreAdminController(authKind = "unauthenticated"): StoreAdmi
   }, [loadStores, offset, authKind]);
 
   useEffect(() => {
-    void loadStoreAdminDetail(
-      selectedStoreId,
-      fetchAdminStoreDetail,
-      setDetailState,
-    );
+    void loadStoreAdminDetail(selectedStoreId, fetchAdminStoreDetail, setDetailState);
   }, [selectedStoreId]);
 
   const retry = useCallback(() => { void loadStores(offset); }, [loadStores, offset]);
@@ -77,18 +76,27 @@ export function useStoreAdminController(authKind = "unauthenticated"): StoreAdmi
   const nextPage = useCallback(() => setOffset(nextStoreAdminOffset), []);
   const prevPage = useCallback(() => setOffset(previousStoreAdminOffset), []);
   const derived = deriveStoreAdminView(listState, filters, offset);
+
   const govern = useCallback(async (storeId: string, input: OperatorStoreGovernanceRequest) => {
+    const action: StoreRoleAction = { kind: "operator", storeId, input };
     setActionState({ kind: "submitting", actionKind: "operator" });
+    const attempt = resolveStoreRoleMutationAttempt(mutationAttemptRef.current, action);
+    mutationAttemptRef.current = attempt;
     try {
-      const response = await submitStoreRoleAction({ kind: "operator", storeId, input });
+      const response = await submitStoreRoleAction(action, attempt.auth);
+      mutationAttemptRef.current = null;
       setActionState({ kind: "success", replayed: response.replayed });
       await loadStores(offset);
       await loadStoreAdminDetail(storeId, fetchAdminStoreDetail, setDetailState);
     } catch (error) {
       const typed = error as { kind?: string; status?: number };
       if (typed.kind === "http" && typed.status === 409) {
+        mutationAttemptRef.current = null;
         setActionState({ kind: "conflict", message: "تغيّرت نسخة المتجر. أعد التحميل قبل تطبيق الإجراء." });
+      } else if (typed.kind === "network" || (typed.kind === "http" && typed.status === 503)) {
+        setActionState({ kind: "error", message: "تعذر الاتصال. إعادة إجراء الحوكمة نفسه ستستخدم مفتاحه السابق." });
       } else {
+        mutationAttemptRef.current = null;
         setActionState({ kind: "error", message: "تعذر تطبيق إجراء الحوكمة." });
       }
     }

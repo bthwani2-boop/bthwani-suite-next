@@ -1794,6 +1794,248 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dsh/control-panel/finance/payout-requests/{payoutId}/process": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Operator sends an approved governed payout request to the configured WLT financial provider. */
+        post: operations["processDshControlPanelFinancePayoutRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/control-panel/finance/payout-requests/{payoutId}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** A checker distinct from approver and processor completes a provider-proven payout and posts its WLT journal. */
+        post: operations["completeDshControlPanelFinancePayoutRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/control-panel/finance/payout-requests/{payoutId}/fail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Route an unresolved provider payout to WLT reconciliation; it never invents a failed financial outcome. */
+        post: operations["failDshControlPanelFinancePayoutRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/control-panel/finance/settlements/from-delivered-orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Derive eligible delivered-order sources in DSH and ask WLT to calculate the settlement. */
+        post: operations["createDshGovernedSettlementFromDeliveredOrders"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/control-panel/finance/settlement-policies/{partnerId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Upsert the WLT-owned partner settlement fee policy. */
+        put: operations["upsertDshSettlementPolicy"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/captain/finance/cod-records/{recordId}/collect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Governed finance operation owned by DSH/WLT. */
+        post: operations["POSTDshCaptainFinanceCodRecordsRecordIdCollect"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/captain/finance/cod-records/{recordId}/remit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Governed finance operation owned by DSH/WLT. */
+        post: operations["POSTDshCaptainFinanceCodRecordsRecordIdRemit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/captain/finance/commissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Governed finance operation owned by DSH/WLT. */
+        get: operations["GETDshCaptainFinanceCommissions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/captain/finance/payouts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Governed finance operation owned by DSH/WLT. */
+        get: operations["GETDshCaptainFinancePayouts"];
+        put?: never;
+        /** Governed finance operation owned by DSH/WLT. */
+        post: operations["POSTDshCaptainFinancePayouts"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/field/finance/commissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Governed finance operation owned by DSH/WLT. */
+        get: operations["GETDshFieldFinanceCommissions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/field/finance/wallet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Governed finance operation owned by DSH/WLT. */
+        get: operations["GETDshFieldFinanceWallet"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/field/finance/payouts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Governed finance operation owned by DSH/WLT. */
+        get: operations["GETDshFieldFinancePayouts"];
+        put?: never;
+        /** Governed finance operation owned by DSH/WLT. */
+        post: operations["POSTDshFieldFinancePayouts"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/field/finance/payout-destinations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Governed finance operation owned by DSH/WLT. */
+        get: operations["GETDshFieldFinancePayoutDestinations"];
+        put?: never;
+        /** Governed finance operation owned by DSH/WLT. */
+        post: operations["POSTDshFieldFinancePayoutDestinations"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/field/finance/payout-destinations/{destinationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Governed finance operation owned by DSH/WLT. */
+        delete: operations["DELETEDshFieldFinancePayoutDestinationsDestinationId"];
+        options?: never;
+        head?: never;
+        /** Governed finance operation owned by DSH/WLT. */
+        patch: operations["PATCHDshFieldFinancePayoutDestinationsDestinationId"];
+        trace?: never;
+    };
     "/dsh/control-panel/finance/reconciliation-cases": {
         parameters: {
             query?: never;
@@ -3572,6 +3814,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dsh/partner/orders/{orderId}/pickup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Return the authenticated partner's resumable pickup session stage.
+         * @description Reads the sovereign order, pickup session, and durable pickup audit trail. Returns cancelled explicitly after order cancellation and never represents cancellation as a used or successfully verified pickup.
+         */
+        get: operations["getDshPartnerPickupState"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/dsh/partner/orders/{orderId}/pickup/mark-ready": {
         parameters: {
             query?: never;
@@ -3708,10 +3970,312 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dsh/client/orders/{orderId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel an authenticated client's early-stage order and start governed WLT closure. */
+        post: operations["cancelDshClientOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/client/orders/{orderId}/cancellation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Return the client's cancellation and WLT financial-closure projection. */
+        get: operations["getDshClientOrderCancellation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/orders/{orderId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel a partner-owned order using a structured operational reason. */
+        post: operations["cancelDshPartnerOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/orders/{orderId}/cancellation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Return the partner-scoped cancellation and WLT closure projection. */
+        get: operations["getDshPartnerOrderCancellation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/orders/{orderId}/cancellation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Return cancellation, refund reference and financial delivery failure for operations. */
+        get: operations["getDshOperatorOrderCancellation"];
+        put?: never;
+        /** Cancel an order after operational review and stop all dependent work atomically. */
+        post: operations["cancelDshOperatorOrderGoverned"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/captain/dispatch/assignments/{assignmentId}/exceptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignmentId: string;
+            };
+            cookie?: never;
+        };
+        /** Return the captain's active governed delivery exception. */
+        get: operations["getDshCaptainDeliveryException"];
+        put?: never;
+        /**
+         * Report one idempotent delivery exception for an active accepted assignment.
+         * @description Creates an operational overlay without changing the order status or financial truth. Delivery progression and proof are blocked until operations resolves the exception; foreground location pushes remain allowed for safety and response coordination.
+         */
+        post: operations["reportDshCaptainDeliveryException"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/delivery-exceptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the governed delivery-exception operations queue. */
+        get: operations["listDshOperatorDeliveryExceptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/delivery-exceptions/{exceptionId}/acknowledge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                exceptionId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Acknowledge an open delivery exception for operations review. */
+        post: operations["acknowledgeDshOperatorDeliveryException"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/delivery-exceptions/{exceptionId}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                exceptionId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resolve an exception by allowing the same captain to retry from the preserved stage. */
+        post: operations["resolveDshOperatorDeliveryException"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/captain/dispatch/assignments/{assignmentId}/return-to-store/arrive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignmentId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm captain arrival at the store with the returned order.
+         * @description Does not complete custody; the owning partner must accept the return.
+         */
+        post: operations["arriveDshCaptainReturnToStore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/orders/{orderId}/return-to-store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        /** Read the governed return state for an order owned by the partner. */
+        get: operations["getDshPartnerReturnToStore"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/orders/{orderId}/return-to-store/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm store custody of a returned order after captain arrival. */
+        post: operations["acceptDshPartnerReturnToStore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        DshAcknowledgeDeliveryExceptionRequest: {
+            expectedVersion: number;
+        };
+        DshResolveDeliveryExceptionRequest: {
+            expectedVersion: number;
+            /** @enum {string} */
+            action: "retry_same_captain" | "reassign_captain" | "return_to_store";
+            note: string;
+            /** @description Required only when action is reassign_captain. */
+            newCaptainId?: string;
+        };
+        /** @enum {string} */
+        DshDeliveryExceptionReasonCode: "customer_unreachable" | "recipient_refused" | "wrong_address" | "unsafe_location" | "vehicle_breakdown" | "accident" | "damaged_order" | "cash_collection_issue" | "weather_or_road_block" | "proof_unavailable" | "other";
+        /** @enum {string} */
+        DshDeliveryExceptionStatus: "open" | "acknowledged" | "resolved";
+        /** @enum {string} */
+        DshDeliveryExceptionSeverity: "medium" | "high" | "critical";
+        DshReportDeliveryExceptionRequest: {
+            reasonCode: components["schemas"]["DshDeliveryExceptionReasonCode"];
+            note?: string;
+            correlationId: string;
+            /** Format: double */
+            latitude?: number | null;
+            /** Format: double */
+            longitude?: number | null;
+        };
+        DshDeliveryException: {
+            /** Format: uuid */
+            id: string;
+            tenantId: string;
+            /** Format: uuid */
+            assignmentId: string;
+            /** Format: uuid */
+            orderId: string;
+            captainId: string;
+            reasonCode: components["schemas"]["DshDeliveryExceptionReasonCode"];
+            note: string;
+            deliveryStatusAtReport: components["schemas"]["DshDeliveryStatus"];
+            severity: components["schemas"]["DshDeliveryExceptionSeverity"];
+            status: components["schemas"]["DshDeliveryExceptionStatus"];
+            correlationId: string;
+            /** Format: double */
+            reportedLatitude?: number | null;
+            /** Format: double */
+            reportedLongitude?: number | null;
+            /** Format: date-time */
+            reportedAt: string;
+            /** Format: date-time */
+            acknowledgedAt?: string | null;
+            acknowledgedByActorId?: string | null;
+            /** Format: date-time */
+            resolvedAt?: string | null;
+            resolvedByActorId?: string | null;
+            /** @enum {string|null} */
+            resolutionAction?: "retry_same_captain" | "reassign_captain" | "return_to_store" | "cancel_order" | null;
+            resolutionNote?: string | null;
+            /** Format: uuid */
+            replacementAssignmentId?: string | null;
+            replacementCaptainId?: string | null;
+            /** Format: date-time */
+            returnStartedAt?: string | null;
+            /** Format: date-time */
+            returnArrivedAt?: string | null;
+            /** Format: date-time */
+            returnedAt?: string | null;
+            returnAcceptedByActorId?: string | null;
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshDeliveryExceptionResponse: {
+            exception: components["schemas"]["DshDeliveryException"];
+        };
+        DshDeliveryExceptionListResponse: {
+            exceptions: components["schemas"]["DshDeliveryException"][];
+        };
         /** @enum {string} */
         DshStoreStatus: "active" | "inactive" | "temporarily_closed" | "unavailable";
         /** @enum {string} */
@@ -4343,8 +4907,16 @@ export interface components {
         DshOperatorCheckoutIntentsResponse: {
             intents: components["schemas"]["DshCheckoutIntent"][];
         };
-        /** @enum {string} */
-        DshOrderStatus: "pending" | "store_accepted" | "preparing" | "ready_for_pickup" | "driver_assigned" | "driver_arrived_store" | "picked_up" | "arrived_customer" | "delivered" | "cancelled";
+        /**
+         * @description Explicit operational terminal states; the ambiguous legacy `cancelled` value is forbidden.
+         * @enum {string}
+         */
+        DshOrderStatus: "pending" | "store_accepted" | "preparing" | "ready_for_pickup" | "driver_assigned" | "driver_arrived_store" | "picked_up" | "arrived_customer" | "returning_to_store" | "return_arrived_store" | "returned_to_store" | "delivered" | "cancelled_by_client" | "cancelled_by_store" | "cancelled_by_operator" | "cancelled_no_driver" | "failed_payment" | "failed_dispatch";
+        /**
+         * @description DSH projection of the WLT-owned financial closure decision.
+         * @enum {string}
+         */
+        DshFinancialClosureStatus: "not_required" | "pending" | "session_expired" | "refund_requested" | "refund_completed" | "no_action" | "failed";
         DshOrderItem: {
             id: string;
             productId: string;
@@ -4362,6 +4934,15 @@ export interface components {
             clientId: string;
             status: components["schemas"]["DshOrderStatus"];
             rejectionReason?: string;
+            cancellationReasonCode?: string | null;
+            cancellationNote?: string | null;
+            cancelledByActorId?: string | null;
+            /** @enum {string|null} */
+            cancelledByRole?: "client" | "partner" | "operator" | "system" | null;
+            /** Format: date-time */
+            cancelledAt?: string | null;
+            financialClosureStatus?: components["schemas"]["DshFinancialClosureStatus"];
+            financialClosureReference?: string | null;
             /** @description Opaque WLT payment reference. DSH never mutates financial truth. */
             wltPaymentRefId: string;
             items?: components["schemas"]["DshOrderItem"][];
@@ -4384,9 +4965,47 @@ export interface components {
             reason: string;
         };
         /** @enum {string} */
-        DshAssignmentStatus: "offered" | "accepted" | "declined" | "completed";
+        DshOrderCancellationReasonCode: "changed_mind" | "duplicate_order" | "address_error" | "payment_issue" | "excessive_delay" | "out_of_stock" | "store_closed" | "capacity" | "pricing_issue" | "cannot_fulfill" | "customer_request" | "partner_request" | "no_driver" | "fraud_risk" | "safety" | "operational_failure" | "other";
+        DshOrderCancellationRequest: {
+            reasonCode: components["schemas"]["DshOrderCancellationReasonCode"];
+            /** @description Required when reasonCode is `other`; otherwise optional operational context. */
+            reasonNote?: string;
+            /** @description Idempotent command identifier. */
+            commandId: string;
+            /** @description Cross-service correlation identifier; defaults to commandId. */
+            correlationId?: string;
+        };
+        DshOrderCancellation: {
+            id: string;
+            orderId: string;
+            actorId: string;
+            /** @enum {string} */
+            actorRole: "client" | "partner" | "operator" | "system";
+            reasonCode: components["schemas"]["DshOrderCancellationReasonCode"];
+            reasonNote: string;
+            fromStatus: string;
+            toStatus: components["schemas"]["DshOrderStatus"];
+            financialClosureStatus: components["schemas"]["DshFinancialClosureStatus"];
+            financialReference: string;
+            /** @enum {string} */
+            financialResultAction: "expired" | "refund_requested" | "none" | "";
+            financialFailure: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshOrderCancellationResponse: {
+            cancellation: components["schemas"]["DshOrderCancellation"];
+        };
+        DshCancelOrderResponse: {
+            order: components["schemas"]["DshOrder"];
+            cancellation: components["schemas"]["DshOrderCancellation"];
+        };
         /** @enum {string} */
-        DshDeliveryStatus: "assigned" | "driver_assigned" | "driver_arrived_store" | "picked_up" | "arrived_customer" | "delivered";
+        DshAssignmentStatus: "offered" | "accepted" | "declined" | "completed" | "cancelled";
+        /** @enum {string} */
+        DshDeliveryStatus: "assigned" | "driver_assigned" | "driver_arrived_store" | "picked_up" | "arrived_customer" | "returning_to_store" | "return_arrived_store" | "returned_to_store" | "delivered" | "cancelled";
         DshDelivery: {
             id: string;
             assignmentId: string;
@@ -5655,6 +6274,11 @@ export interface components {
             /** Format: date-time */
             usedAt?: string | null;
             verifiedByActorId?: string | null;
+            /** @enum {string} */
+            status?: "active" | "verified" | "no_show" | "consumed" | "cancelled";
+            /** Format: date-time */
+            cancelledAt?: string | null;
+            cancellationReason?: string | null;
             /** @description Known values: otp, no_show. */
             verificationMethod?: string | null;
             version: number;
@@ -5668,6 +6292,15 @@ export interface components {
         };
         DshPickupSessionListResponse: {
             sessions: components["schemas"]["DshPickupSession"][];
+        };
+        /**
+         * @description Resumable partner pickup stage derived by DSH from order, session, and audit truth.
+         * @enum {string}
+         */
+        DshPartnerPickupStage: "not_ready" | "ready" | "notified" | "customer_arrived" | "verified" | "no_show" | "cancelled";
+        DshPartnerPickupStateResponse: {
+            session: components["schemas"]["DshPickupSession"] | null;
+            stage: components["schemas"]["DshPartnerPickupStage"];
         };
         DshPickupMutationRequest: {
             expectedVersion: number;
@@ -8940,6 +9573,614 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    processDshControlPanelFinancePayoutRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payoutId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description WLT provider processing result with persisted provider proof (verbatim passthrough). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    completeDshControlPanelFinancePayoutRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payoutId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description WLT payout completion and ledger result (verbatim passthrough). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    failDshControlPanelFinancePayoutRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payoutId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    createDshGovernedSettlementFromDeliveredOrders: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    partnerId: string;
+                    /** Format: date */
+                    periodStart: string;
+                    /** Format: date */
+                    periodEnd: string;
+                    /** @default YER */
+                    currency?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Governed WLT settlement created from DSH-owned delivered-order sources. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    upsertDshSettlementPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    feeBasisPoints: number;
+                    /** @default YER */
+                    currency?: string;
+                    /**
+                     * @default active
+                     * @enum {string}
+                     */
+                    status?: "active" | "inactive";
+                };
+            };
+        };
+        responses: {
+            /** @description Settlement policy persisted by WLT. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    POSTDshCaptainFinanceCodRecordsRecordIdCollect: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recordId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Governed finance response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Governed finance object created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    POSTDshCaptainFinanceCodRecordsRecordIdRemit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recordId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Governed finance response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Governed finance object created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    GETDshCaptainFinanceCommissions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Governed finance response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    GETDshCaptainFinancePayouts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Governed finance response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    POSTDshCaptainFinancePayouts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Governed finance response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Governed finance object created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    GETDshFieldFinanceCommissions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Governed finance response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    GETDshFieldFinanceWallet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Governed finance response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    GETDshFieldFinancePayouts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Governed finance response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    POSTDshFieldFinancePayouts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Governed finance response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Governed finance object created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    GETDshFieldFinancePayoutDestinations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Governed finance response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    POSTDshFieldFinancePayoutDestinations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Governed finance response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Governed finance object created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    DELETEDshFieldFinancePayoutDestinationsDestinationId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                destinationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Governed finance response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Governed finance object deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    PATCHDshFieldFinancePayoutDestinationsDestinationId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                destinationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Governed finance response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     listDshControlPanelFinanceReconciliationCases: {
@@ -12474,6 +13715,40 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    getDshPartnerPickupState: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Resumable pickup state returned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerPickupStateResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description The order does not use pickup fulfillment. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+        };
+    };
     markDshPickupReady: {
         parameters: {
             query?: never;
@@ -12786,6 +14061,455 @@ export interface operations {
             };
             /** @description Pickup session was already used (PICKUP_CODE_ALREADY_USED). */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+        };
+    };
+    cancelDshClientOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshOrderCancellationRequest"];
+            };
+        };
+        responses: {
+            /** @description Order cancelled and financial closure queued or not required. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshCancelOrderResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Order state requires operator review or no longer permits direct client cancellation. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+        };
+    };
+    getDshClientOrderCancellation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cancellation projection returned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshOrderCancellationResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    cancelDshPartnerOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshOrderCancellationRequest"];
+            };
+        };
+        responses: {
+            /** @description Order cancelled and financial closure queued or not required. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshCancelOrderResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Order state does not allow partner cancellation. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+        };
+    };
+    getDshPartnerOrderCancellation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cancellation projection returned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshOrderCancellationResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getDshOperatorOrderCancellation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cancellation projection returned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshOrderCancellationResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    cancelDshOperatorOrderGoverned: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshOrderCancellationRequest"];
+            };
+        };
+        responses: {
+            /** @description Order cancelled and WLT closure queued or not required. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshCancelOrderResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Order is already terminal or cannot be cancelled from its current state. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+        };
+    };
+    getDshCaptainDeliveryException: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Active delivery exception returned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshDeliveryExceptionResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    reportDshCaptainDeliveryException: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshReportDeliveryExceptionRequest"];
+            };
+        };
+        responses: {
+            /** @description Delivery exception recorded or idempotently replayed. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshDeliveryExceptionResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            /** @description Assignment is not active or already has an unresolved exception. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+        };
+    };
+    listDshOperatorDeliveryExceptions: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["DshDeliveryExceptionStatus"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Delivery-exception queue returned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshDeliveryExceptionListResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    acknowledgeDshOperatorDeliveryException: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                exceptionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshAcknowledgeDeliveryExceptionRequest"];
+            };
+        };
+        responses: {
+            /** @description Exception acknowledged. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshDeliveryExceptionResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Version or lifecycle conflict. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+        };
+    };
+    resolveDshOperatorDeliveryException: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                exceptionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshResolveDeliveryExceptionRequest"];
+            };
+        };
+        responses: {
+            /** @description Exception resolved and delivery progression reopened. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshDeliveryExceptionResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Version conflict or assignment no longer eligible for retry. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+        };
+    };
+    arriveDshCaptainReturnToStore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Captain arrival recorded; store receipt remains pending. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshDeliveryExceptionResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            /** @description Assignment is not in returning_to_store state. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+        };
+    };
+    getDshPartnerReturnToStore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Return state returned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshDeliveryExceptionResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    acceptDshPartnerReturnToStore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Store receipt confirmed and return completed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshDeliveryExceptionResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Captain has not arrived or return was already finalized inconsistently. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

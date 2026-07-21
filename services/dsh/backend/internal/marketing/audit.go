@@ -44,7 +44,7 @@ func WriteVisibilityGateCheck(db *sql.DB, entityType, entityID, targetType, targ
 		INSERT INTO dsh_marketing_visibility_gates
 			(id, entity_type, entity_id, target_type, target_id, gate, passed, reason)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-		uuid.NewString(), entityType, entityID, targetType, nullableString(targetID), gate, passed, reason,
+		uuid.NewString(), entityType, entityID, targetType, nullableAuditString(targetID), gate, passed, reason,
 	)
 	return err
 }
@@ -59,12 +59,12 @@ func WriteTargetBinding(db *sql.DB, entityType, entityID, targetType, targetID, 
 		INSERT INTO dsh_marketing_target_bindings
 			(id, entity_type, entity_id, target_type, target_id, bound_by_actor_id, correlation_id)
 		VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-		uuid.NewString(), entityType, entityID, targetType, nullableString(targetID), actorID, correlationID,
+		uuid.NewString(), entityType, entityID, targetType, nullableAuditString(targetID), actorID, correlationID,
 	)
 	return err
 }
 
-func nullableString(s string) interface{} {
+func nullableAuditString(s string) interface{} {
 	if s == "" {
 		return nil
 	}

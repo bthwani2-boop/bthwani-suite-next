@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useState } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import {
   fetchFieldMeWallet,
   fetchFieldMeCommissions,
@@ -8,6 +8,10 @@ import {
   type FieldCommission,
   type FieldPayoutRequest,
 } from "./field-finance.api";
+import {
+  clearFieldPayoutAttempt,
+  getOrCreateFieldPayoutAttempt,
+} from "./field-payout-attempt";
 
 type FieldFinanceState =
   | { kind: "idle" }
@@ -18,10 +22,6 @@ type FieldFinanceState =
       wallet: FieldWallet;
       commissions: FieldCommission[];
       payoutRequests: FieldPayoutRequest[];
-      // Non-fatal: the wallet loaded but commissions and/or payout requests
-      // failed to load. Previously these failures were silently swallowed
-      // into an empty list, which looks identical to "genuinely none" --
-      // surfacing the message lets the screen show a real error instead.
       commissionsError: string | null;
       payoutRequestsError: string | null;
     };
@@ -68,11 +68,12 @@ export function useFieldFinanceController(): FieldFinanceController {
   const [state, dispatch] = useReducer(reducer, { kind: "idle" });
   const [submittingPayout, setSubmittingPayout] = useState(false);
   const [submitPayoutError, setSubmitPayoutError] = useState<string | null>(null);
+  const submittingRef = useRef(false);
 
-  const load = () => {
+  const load = useCallback(() => {
     dispatch({ type: "LOADING" });
 
-    Promise.all([
+    void Promise.all([
       fetchFieldMeWallet(),
       fetchFieldMeCommissions(),
       fetchFieldMePayoutRequests(),
@@ -91,32 +92,73 @@ export function useFieldFinanceController(): FieldFinanceController {
           payoutRequestsError: payoutsResult.ok ? null : payoutsResult.message,
         });
       })
-      .catch((e: unknown) => {
+      .catch((error: unknown) => {
         dispatch({
           type: "ERROR",
-          message: e instanceof Error ? e.message : "unknown error",
+          message: error instanceof Error ? error.message : "unknown error",
         });
       });
-  };
+  }, []);
 
   useEffect(() => {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [load]);
 
-  const submitPayoutRequest = async (amountMinorUnits: number, currency: string): Promise<boolean> => {
-    setSubmittingPayout(true);
-    setSubmitPayoutError(null);
-    const idempotencyKey = `field-payout-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    const result = await submitFieldMePayoutRequest(amountMinorUnits, currency, idempotencyKey);
-    setSubmittingPayout(false);
-    if (!result.ok) {
-      setSubmitPayoutError(result.message);
+  const submitPayoutRequest = useCallback(async (
+    amountMinorUnits: number,
+    currency: string,
+  ): Promise<boolean> => {
+    if (submittingRef.current) {
+      setSubmitPayoutError("يوجد طلب صرف قيد الإرسال بالفعل.");
       return false;
     }
-    load();
-    return true;
-  };
+    if (state.kind !== "loaded") {
+      setSubmitPayoutError("يجب تحميل المحفظة قبل إرسال طلب الصرف.");
+      return false;
+    }
+    if (!Number.isSafeInteger(amountMinorUnits) || amountMinorUnits <= 0) {
+      setSubmitPayoutError("مبلغ الصرف غير صالح.");
+      return false;
+    }
+    const normalizedCurrency = currency.trim().toUpperCase();
+    if (normalizedCurrency !== state.wallet.currency.trim().toUpperCase()) {
+      setSubmitPayoutError("عملة طلب الصرف لا تطابق عملة المحفظة.");
+      return false;
+    }
+    if (amountMinorUnits > state.wallet.availableBalanceMinorUnits) {
+      setSubmitPayoutError("مبلغ الصرف أكبر من الرصيد المتاح.");
+      return false;
+    }
+
+    submittingRef.current = true;
+    setSubmittingPayout(true);
+    setSubmitPayoutError(null);
+    try {
+      const attempt = await getOrCreateFieldPayoutAttempt(
+        state.wallet.actorId,
+        amountMinorUnits,
+        normalizedCurrency,
+      );
+      const result = await submitFieldMePayoutRequest(
+        amountMinorUnits,
+        normalizedCurrency,
+        attempt.idempotencyKey,
+      );
+      if (!result.ok) {
+        setSubmitPayoutError(result.message);
+        return false;
+      }
+      await clearFieldPayoutAttempt(attempt.idempotencyKey);
+      load();
+      return true;
+    } catch (error) {
+      setSubmitPayoutError(error instanceof Error ? error.message : String(error));
+      return false;
+    } finally {
+      submittingRef.current = false;
+      setSubmittingPayout(false);
+    }
+  }, [load, state]);
 
   return { state, refresh: load, submittingPayout, submitPayoutError, submitPayoutRequest };
 }

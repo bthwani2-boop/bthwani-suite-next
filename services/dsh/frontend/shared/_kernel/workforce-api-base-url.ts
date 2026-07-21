@@ -1,3 +1,7 @@
+declare const process:
+  | { readonly env?: Readonly<Record<string, string | undefined>> }
+  | undefined;
+
 /**
  * Single source of truth for the workforce API base URL used by native apps
  * (no BFF cookie jar — direct bearer-token calls). Reads
@@ -6,11 +10,10 @@
  * default on port 58086.
  */
 export function resolveWorkforceApiBaseUrl(): string {
-  if (typeof process !== "undefined") {
-    const env = process.env as Record<string, string | undefined>;
+  if (typeof process !== "undefined" && process.env) {
     const configured =
-      env["NEXT_PUBLIC_WORKFORCE_API_BASE_URL"] ??
-      env["EXPO_PUBLIC_WORKFORCE_API_BASE_URL"];
+      process.env["NEXT_PUBLIC_WORKFORCE_API_BASE_URL"] ??
+      process.env["EXPO_PUBLIC_WORKFORCE_API_BASE_URL"];
     if (configured && configured.trim().length > 0) return configured.trim();
   }
   return "http://localhost:58086";

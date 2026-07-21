@@ -107,7 +107,7 @@ func TestCreatePaymentSessionNonSuccessStatus(t *testing.T) {
 	defer server.Close()
 
 	c := NewClient(server.URL, "test-service-token")
-	_, err := c.CreatePaymentSession(context.Background(), CreatePaymentSessionInput{})
+	_, err := c.CreatePaymentSession(context.Background(), CreatePaymentSessionInput{CheckoutIntentID: "intent-1"})
 	if err == nil {
 		t.Fatalf("expected error for HTTP 500 response")
 	}
@@ -125,7 +125,7 @@ func TestCreatePaymentSessionMalformedBody(t *testing.T) {
 	defer server.Close()
 
 	c := NewClient(server.URL, "test-service-token")
-	_, err := c.CreatePaymentSession(context.Background(), CreatePaymentSessionInput{})
+	_, err := c.CreatePaymentSession(context.Background(), CreatePaymentSessionInput{CheckoutIntentID: "intent-1"})
 	if err == nil {
 		t.Fatalf("expected error for malformed JSON response")
 	}
@@ -147,7 +147,7 @@ func TestCreatePaymentSessionMissingID(t *testing.T) {
 	defer server.Close()
 
 	c := NewClient(server.URL, "test-service-token")
-	_, err := c.CreatePaymentSession(context.Background(), CreatePaymentSessionInput{})
+	_, err := c.CreatePaymentSession(context.Background(), CreatePaymentSessionInput{CheckoutIntentID: "intent-1"})
 	if err == nil {
 		t.Fatalf("expected error when response is missing paymentSession.id")
 	}
@@ -163,19 +163,19 @@ func TestNewClientTrimsTrailingSlash(t *testing.T) {
 	}
 }
 
-func TestNotifyDeliveryCompletedSendsServiceHeaders(t *testing.T) {
+func TestNotifyDeliveryCollectionSendsGovernedCollectorHeaders(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/wlt/cod-records" {
-			t.Fatalf("expected /wlt/cod-records, got %s", r.URL.Path)
+		if r.URL.Path != "/wlt/delivery-collections" {
+			t.Fatalf("expected /wlt/delivery-collections, got %s", r.URL.Path)
 		}
 		if r.Header.Get("X-Service-Caller") != "dsh" {
 			t.Fatalf("expected X-Service-Caller=dsh, got %q", r.Header.Get("X-Service-Caller"))
 		}
-		var input NotifyDeliveryCompletedInput
+		var input NotifyDeliveryCollectionInput
 		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 			t.Fatalf("failed to decode request body: %v", err)
 		}
-		if input.OrderID != "order-1" || input.CheckoutIntentID != "intent-1" {
+		if input.OrderID != "order-1" || input.CheckoutIntentID != "intent-1" || input.CollectorType != "captain" || input.CollectorID != "captain-1" {
 			t.Fatalf("unexpected input: %+v", input)
 		}
 		w.WriteHeader(http.StatusCreated)
@@ -183,9 +183,10 @@ func TestNotifyDeliveryCompletedSendsServiceHeaders(t *testing.T) {
 	defer server.Close()
 
 	c := NewClient(server.URL, "test-service-token")
-	err := c.NotifyDeliveryCompleted(context.Background(), NotifyDeliveryCompletedInput{
+	err := c.NotifyDeliveryCollection(context.Background(), NotifyDeliveryCollectionInput{
 		OrderID:          "order-1",
-		CaptainID:        "captain-1",
+		CollectorType:    "captain",
+		CollectorID:      "captain-1",
 		PartnerID:        "partner-1",
 		CheckoutIntentID: "intent-1",
 	})
@@ -194,9 +195,9 @@ func TestNotifyDeliveryCompletedSendsServiceHeaders(t *testing.T) {
 	}
 }
 
-func TestNotifyDeliveryCompletedNotConfigured(t *testing.T) {
+func TestNotifyDeliveryCollectionNotConfigured(t *testing.T) {
 	c := NewClient("", "")
-	err := c.NotifyDeliveryCompleted(context.Background(), NotifyDeliveryCompletedInput{})
+	err := c.NotifyDeliveryCollection(context.Background(), NotifyDeliveryCollectionInput{})
 	if err == nil || !strings.Contains(err.Error(), "not configured") {
 		t.Fatalf("expected 'not configured' error, got: %v", err)
 	}
@@ -455,14 +456,17 @@ func TestCancelSessionForOrderSendsExactBodyAndHeaders(t *testing.T) {
 		if r.Header.Get("X-Service-Caller") != "dsh" {
 			t.Fatalf("expected X-Service-Caller=dsh, got %q", r.Header.Get("X-Service-Caller"))
 		}
-		if r.Header.Get("X-Correlation-ID") != "order-1" {
-			t.Fatalf("expected X-Correlation-ID=order-1, got %q", r.Header.Get("X-Correlation-ID"))
+		if r.Header.Get("X-Correlation-ID") != "order-cancellation-order-1" {
+			t.Fatalf("expected X-Correlation-ID=order-cancellation-order-1, got %q", r.Header.Get("X-Correlation-ID"))
 		}
 		if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
 			t.Fatalf("failed to decode request body: %v", err)
 		}
 		w.WriteHeader(http.StatusOK)
-		_ = json.NewEncoder(w).Encode(map[string]any{"action": "refund_pending"})
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"action": "refund_requested",
+			"refund": map[string]any{"id": "refund-1"},
+		})
 	}))
 	defer server.Close()
 
@@ -475,8 +479,8 @@ func TestCancelSessionForOrderSendsExactBodyAndHeaders(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if gotPath != "/wlt/payment-sessions/ps-1/cancel-for-order" {
-		t.Fatalf("expected /wlt/payment-sessions/ps-1/cancel-for-order, got %q", gotPath)
+	if gotPath != "/wlt/order-cancellations" {
+		t.Fatalf("expected /wlt/order-cancellations, got %q", gotPath)
 	}
 	if gotBody["orderId"] != "order-1" || gotBody["clientId"] != "client-1" || gotBody["reason"] != "store rejected order" {
 		t.Fatalf("unexpected request body: %+v", gotBody)
@@ -490,7 +494,11 @@ func TestCancelSessionForOrderNonSuccessStatus(t *testing.T) {
 	defer server.Close()
 
 	c := NewClient(server.URL, "test-service-token")
-	err := c.CancelSessionForOrder(context.Background(), "ps-1", CancelSessionForOrderInput{OrderID: "order-1"})
+	err := c.CancelSessionForOrder(context.Background(), "ps-1", CancelSessionForOrderInput{
+		OrderID:  "order-1",
+		ClientID: "client-1",
+		Reason:   "client cancelled order",
+	})
 	if err == nil || !strings.Contains(err.Error(), "500") {
 		t.Fatalf("expected error mentioning status 500, got: %v", err)
 	}
@@ -504,14 +512,14 @@ func TestCancelSessionForOrderNotConfigured(t *testing.T) {
 	}
 }
 
-func TestNotifyDeliveryCompletedNonSuccessStatus(t *testing.T) {
+func TestNotifyDeliveryCollectionNonSuccessStatus(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
 	defer server.Close()
 
 	c := NewClient(server.URL, "test-service-token")
-	err := c.NotifyDeliveryCompleted(context.Background(), NotifyDeliveryCompletedInput{OrderID: "order-1"})
+	err := c.NotifyDeliveryCollection(context.Background(), NotifyDeliveryCollectionInput{OrderID: "order-1", CollectorType: "captain", CollectorID: "captain-1", PartnerID: "partner-1", CheckoutIntentID: "intent-1"})
 	if err == nil || !strings.Contains(err.Error(), "500") {
 		t.Fatalf("expected error mentioning status 500, got: %v", err)
 	}

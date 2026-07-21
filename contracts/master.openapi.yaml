@@ -16,4 +16,16 @@ x-bthwani-contracts:
     workforce: ../core/workforce/contracts/workforce.openapi.yaml
   services:
     dsh: ../services/dsh/contracts/dsh.openapi.yaml
+    dshCatalog: ../services/dsh/contracts/dsh.catalog.openapi.yaml
+    dshCatalogOverlay: ../services/dsh/contracts/dsh.catalog.overlay.yaml
+    dshClientAddress: ../services/dsh/contracts/dsh.client-address.openapi.yaml
+    dshClientMap: ../services/dsh/contracts/dsh.client-map.openapi.yaml
+    dshPlatformPolicies: ../services/dsh/contracts/dsh.platform-policies.openapi.yaml
+    dshMarketingCommercial: ../services/dsh/contracts/dsh.marketing-commercial.openapi.yaml
+    dshPartnerFleet: ../services/dsh/contracts/dsh.partner-fleet.openapi.yaml
+    dshPartnerSupport: ../services/dsh/contracts/dsh.partner-support.openapi.yaml
+    dshSupportGovernance: ../services/dsh/contracts/dsh.support-governance.openapi.yaml
     wlt: ../services/wlt/contracts/wlt.openapi.yaml
+    wltCommercialBenefits: ../services/wlt/contracts/wlt.commercial.openapi.yaml
+    wltCommercialBenefitsSummary: ../services/wlt/contracts/wlt.commercial-summary.openapi.yaml
+    wltPromotionFunding: ../services/wlt/contracts/wlt.promotion-funding.openapi.yaml

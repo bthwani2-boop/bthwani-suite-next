@@ -1,6 +1,9 @@
 export * from "./support.types";
 export * from "./support.states";
 export { useOperatorTicketController, useSupportIncidentController, useSupportTicketController, useTicketDetailController } from "./use-support-controller";
+export { usePartnerSupportController } from "./use-partner-support-controller";
+export type { PartnerSupportControllerState, PartnerSupportDetailState } from "./use-partner-support-controller";
+export * from "./partner-support.api";
 export * from "./support.flows";
 export * from "./support.captain-escalation";
 export {

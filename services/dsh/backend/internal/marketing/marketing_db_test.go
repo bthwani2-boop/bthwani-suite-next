@@ -31,6 +31,48 @@ func openRequiredDB(t *testing.T) *sql.DB {
 	return db
 }
 
+func TestCampaignTransitionPolicy(t *testing.T) {
+	tests := []struct {
+		from string
+		to   string
+		want bool
+	}{
+		{from: "draft", to: "active", want: true},
+		{from: "draft", to: "paused", want: false},
+		{from: "active", to: "paused", want: true},
+		{from: "active", to: "completed", want: true},
+		{from: "paused", to: "active", want: true},
+		{from: "completed", to: "active", want: false},
+		{from: "cancelled", to: "draft", want: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.from+"_to_"+tt.to, func(t *testing.T) {
+			if got := campaignTransitionAllowed(tt.from, tt.to); got != tt.want {
+				t.Fatalf("campaignTransitionAllowed(%q,%q)=%v want %v", tt.from, tt.to, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestValidateCampaignDates(t *testing.T) {
+	if err := validateCampaignDates("", ""); err != nil {
+		t.Fatalf("empty draft schedule should be accepted: %v", err)
+	}
+	if err := validateCampaignDates("2099-01-01", "2099-01-02"); err != nil {
+		t.Fatalf("valid campaign dates rejected: %v", err)
+	}
+	for _, pair := range [][2]string{
+		{"2099-01-01", ""},
+		{"not-a-date", "2099-01-02"},
+		{"2099-01-02", "2099-01-02"},
+		{"2099-01-03", "2099-01-02"},
+	} {
+		if err := validateCampaignDates(pair[0], pair[1]); !errors.Is(err, ErrInvalid) {
+			t.Fatalf("expected ErrInvalid for %q -> %q, got %v", pair[0], pair[1], err)
+		}
+	}
+}
+
 func TestMarketingCampaignLifecycleDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
@@ -38,6 +80,8 @@ func TestMarketingCampaignLifecycleDBIntegration(t *testing.T) {
 	c, err := CreateCampaign(db, CreateCampaignInput{
 		Title:         "Campaign DB Smoke " + suffix,
 		Description:   "integration test campaign",
+		StartDate:     "2099-01-01",
+		EndDate:       "2099-01-31",
 		CreatedBy:     "operator-local-001",
 		CorrelationID: "corr-" + suffix,
 	})
@@ -46,6 +90,14 @@ func TestMarketingCampaignLifecycleDBIntegration(t *testing.T) {
 	}
 	if c.Status != "draft" {
 		t.Fatalf("expected draft status, got %q", c.Status)
+	}
+
+	if _, err := UpdateCampaign(db, c.ID, UpdateCampaignInput{
+		Status:        "paused",
+		ActorID:       "operator-local-001",
+		CorrelationID: "corr-" + suffix,
+	}); !errors.Is(err, ErrInvalidTransition) {
+		t.Fatalf("expected ErrInvalidTransition for draft->paused, got %v", err)
 	}
 
 	updated, err := UpdateCampaign(db, c.ID, UpdateCampaignInput{
@@ -60,6 +112,14 @@ func TestMarketingCampaignLifecycleDBIntegration(t *testing.T) {
 		t.Fatalf("expected active status, got %q", updated.Status)
 	}
 
+	if _, err := UpdateCampaign(db, c.ID, UpdateCampaignInput{
+		Status:        "draft",
+		ActorID:       "operator-local-001",
+		CorrelationID: "corr-" + suffix,
+	}); !errors.Is(err, ErrInvalidTransition) {
+		t.Fatalf("expected ErrInvalidTransition for active->draft, got %v", err)
+	}
+
 	if err := ArchiveCampaign(db, c.ID, "operator-local-001", "corr-"+suffix); err != nil {
 		t.Fatalf("ArchiveCampaign: %v", err)
 	}
@@ -72,6 +132,16 @@ func TestMarketingCampaignLifecycleDBIntegration(t *testing.T) {
 	}
 	if after.ArchivedAt == nil {
 		t.Fatal("expected archived_at to be set after archive")
+	}
+
+	list, err := ListCampaigns(db)
+	if err != nil {
+		t.Fatalf("ListCampaigns: %v", err)
+	}
+	for _, item := range list {
+		if item.ID == c.ID {
+			t.Fatal("archived campaign must not appear in list")
+		}
 	}
 
 	if err := ArchiveCampaign(db, c.ID, "operator-local-001", "corr-"+suffix); err != ErrNotFound {

@@ -7,15 +7,15 @@ import {
   assignReconciliationCase,
   loadOpenReconciliationCases,
   resolveReconciliationCase,
+  type FinanceActionResult,
   type ReconciliationCase,
 } from "../../shared/finance-wlt-link/finance/finance.controller";
 
-// Self-contained panel: fetches and mutates reconciliation cases independently
-// of the broader WltDshFinanceHubViewModel, so it can be dropped into any
-// finance tab without touching that shared, generated view-model type.
 export function ReconciliationCasesPanel() {
   const [cases, setCases] = useState<readonly ReconciliationCase[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [busyCaseId, setBusyCaseId] = useState<string | null>(null);
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
 
   const load = useCallback(async () => {
@@ -28,94 +28,90 @@ export function ReconciliationCasesPanel() {
     }
   }, []);
 
-  useEffect(() => {
-    void load();
+  useEffect(() => { void load(); }, [load]);
+
+  const runAction = useCallback(async (caseId: string, action: () => Promise<FinanceActionResult>) => {
+    setBusyCaseId(caseId);
+    setActionError(null);
+    try {
+      const result = await action();
+      if (!result.ok) {
+        setActionError(`${result.code}: ${result.message}`);
+        return;
+      }
+      await load();
+    } finally {
+      setBusyCaseId(null);
+    }
   }, [load]);
 
   if (error) {
     return (
       <Card style={{ padding: "1.5rem", marginTop: "1rem" }}>
-        <Text role="titleMd" style={{ marginBottom: "0.5rem" }}>
-          قضايا المصالحة المفتوحة (Reconciliation Cases)
-        </Text>
-        <Text role="body" tone="danger">
-          تعذر تحميل قضايا المصالحة: {error}
-        </Text>
+        <Text role="titleMd" style={{ marginBottom: "0.5rem" }}>قضايا المطابقة المفتوحة</Text>
+        <Text role="body" tone="danger">تعذر تحميل قضايا المطابقة: {error}</Text>
       </Card>
     );
   }
 
-  if (!cases) {
-    return null;
-  }
+  if (!cases) return null;
 
   return (
     <Card style={{ padding: "1.5rem", marginTop: "1rem" }}>
-      <Text role="titleMd" style={{ marginBottom: "1rem" }}>
-        قضايا المصالحة المفتوحة (Reconciliation Cases)
-      </Text>
+      <Text role="titleMd" style={{ marginBottom: "1rem" }}>قضايا المطابقة المفتوحة</Text>
+      {actionError ? (
+        <Text role="body" tone="danger" style={{ marginBottom: "0.75rem" }}>{actionError}</Text>
+      ) : null}
       {cases.length === 0 ? (
-        <Text role="body" tone="muted">
-          لا توجد قضايا مصالحة مفتوحة حالياً.
-        </Text>
+        <Text role="body" tone="muted">لا توجد قضايا مطابقة مفتوحة حالياً.</Text>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-          {cases.map((c) => (
-            <Card key={c.id} style={{ padding: "1rem", borderLeft: `4px solid ${lightThemeColors.warning}` }}>
-              <Text role="body" style={{ fontWeight: "bold" }}>
-                قضية: {c.id}
-              </Text>
-              <Text role="caption" tone="muted">
-                جلسة الدفع: {c.paymentSessionId} · العملية: {c.operation}
-              </Text>
-              <Text role="caption" tone="muted">
-                السبب: {c.triggerReason}
-              </Text>
-              <Text role="caption" tone="muted">
-                مُسندة إلى: {c.assignedToOperatorId || "—"}
-              </Text>
-              <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem", flexWrap: "wrap" }}>
-                <Button
-                  label="إسناد لنفسي"
-                  tone="secondary"
-                  onPress={async () => {
-                    const ok = await assignReconciliationCase(c.id);
-                    if (ok) void load();
-                  }}
-                />
-                <CpTextInput
-                  placeholder="ملاحظة القرار"
-                  value={noteDrafts[c.id] ?? ""}
-                  onChange={(value) => setNoteDrafts((prev) => ({ ...prev, [c.id]: value }))}
-                  aria-label={`ملاحظة القرار لقضية ${c.id}`}
-                />
-                <Button
-                  label="تأكيد النجاح"
-                  tone="success"
-                  onPress={async () => {
-                    const ok = await resolveReconciliationCase(c.id, "confirmed_success", noteDrafts[c.id] ?? "");
-                    if (ok) void load();
-                  }}
-                />
-                <Button
-                  label="تأكيد الفشل"
-                  tone="danger"
-                  onPress={async () => {
-                    const ok = await resolveReconciliationCase(c.id, "confirmed_failed", noteDrafts[c.id] ?? "");
-                    if (ok) void load();
-                  }}
-                />
-                <Button
-                  label="تعديل يدوي"
-                  tone="secondary"
-                  onPress={async () => {
-                    const ok = await resolveReconciliationCase(c.id, "manual_adjustment", noteDrafts[c.id] ?? "");
-                    if (ok) void load();
-                  }}
-                />
-              </div>
-            </Card>
-          ))}
+          {cases.map((reconciliationCase) => {
+            const busy = busyCaseId === reconciliationCase.id;
+            const note = noteDrafts[reconciliationCase.id] ?? "";
+            return (
+              <Card key={reconciliationCase.id} style={{ padding: "1rem", borderLeft: `4px solid ${lightThemeColors.warning}` }}>
+                <Text role="body" style={{ fontWeight: "bold" }}>قضية: {reconciliationCase.id}</Text>
+                <Text role="caption" tone="muted">
+                  جلسة الدفع: {reconciliationCase.paymentSessionId} · العملية: {reconciliationCase.operation}
+                </Text>
+                <Text role="caption" tone="muted">السبب: {reconciliationCase.triggerReason}</Text>
+                <Text role="caption" tone="muted">مُسندة إلى: {reconciliationCase.assignedToOperatorId || "—"}</Text>
+                <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem", flexWrap: "wrap" }}>
+                  <Button
+                    label={busy ? "جارٍ التنفيذ…" : "إسناد لنفسي"}
+                    tone="secondary"
+                    disabled={busy}
+                    onPress={() => runAction(reconciliationCase.id, () => assignReconciliationCase(reconciliationCase.id))}
+                  />
+                  <CpTextInput
+                    placeholder="ملاحظة القرار"
+                    value={note}
+                    onChange={(value) => setNoteDrafts((previous) => ({ ...previous, [reconciliationCase.id]: value }))}
+                    aria-label={`ملاحظة القرار لقضية ${reconciliationCase.id}`}
+                  />
+                  <Button
+                    label="تأكيد النجاح"
+                    tone="success"
+                    disabled={busy || note.trim().length === 0}
+                    onPress={() => runAction(reconciliationCase.id, () => resolveReconciliationCase(reconciliationCase.id, "confirmed_success", note))}
+                  />
+                  <Button
+                    label="تأكيد الفشل"
+                    tone="danger"
+                    disabled={busy || note.trim().length === 0}
+                    onPress={() => runAction(reconciliationCase.id, () => resolveReconciliationCase(reconciliationCase.id, "confirmed_failed", note))}
+                  />
+                  <Button
+                    label="تعديل يدوي"
+                    tone="secondary"
+                    disabled={busy || note.trim().length === 0}
+                    onPress={() => runAction(reconciliationCase.id, () => resolveReconciliationCase(reconciliationCase.id, "manual_adjustment", note))}
+                  />
+                </div>
+              </Card>
+            );
+          })}
         </div>
       )}
     </Card>

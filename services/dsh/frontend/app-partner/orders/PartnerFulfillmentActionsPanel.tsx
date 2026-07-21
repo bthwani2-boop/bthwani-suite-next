@@ -1,80 +1,156 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Badge, Box, Button, Icon, Surface, Text, TextField, spacing, useDirection } from '@bthwani/ui-kit';
+import { Badge, Box, Button, Icon, StateView, Surface, Text, TextField, spacing, useDirection } from '@bthwani/ui-kit';
 import type { DshFulfillmentDeliveryMode } from '../../shared/delivery/delivery.contract';
 import type { PartnerTeamMember } from '../team/partner-team.types';
 import { usePartnerDeliveryActionsController } from '../../shared/partner-delivery/use-partner-delivery-controller';
 import { usePickupActionsController } from '../../shared/pickup/use-pickup-controller';
+import { acceptPartnerReturnToStore, fetchPartnerReturnToStore } from '../../shared/dispatch/dispatch.api';
+import type { DshDeliveryException } from '../../shared/dispatch/dispatch.types';
 
 export type PartnerFulfillmentActionsPanelProps = {
   readonly orderId: string;
   readonly fulfillmentMode: DshFulfillmentDeliveryMode;
   readonly teamMembers?: readonly PartnerTeamMember[];
-  /** The already-assigned partner-delivery task id (server task.id), when known. */
-  readonly partnerDeliveryTaskId?: string;
 };
 
 const PARTNER_DELIVERY_ERROR_LABELS: Record<string, string> = {
-  PARTNER_DELIVERY_NOT_READY: 'الطلب غير جاهز بعد لإسناد موصل الشريك.',
-  COURIER_INELIGIBLE: 'الموصل المحدد غير مؤهل لاستلام هذه المهمة.',
-  PARTNER_DELIVERY_ALREADY_ASSIGNED: 'تم إسناد هذه المهمة بالفعل لموصل آخر.',
-  PARTNER_DELIVERY_INVALID_TRANSITION: 'لا يمكن تنفيذ هذا الإجراء في الحالة الحالية للمهمة.',
-  VERSION_CONFLICT: 'تغيّرت بيانات المهمة من مكان آخر — أعد التحميل قبل المتابعة.',
+  PARTNER_DELIVERY_NOT_READY: 'الطلب غير جاهز بعد لإسناد موصل المتجر.',
+  COURIER_INELIGIBLE: 'الموصل المحدد غير مؤهل أو لا ينتمي إلى فرع الطلب.',
+  PARTNER_DELIVERY_ALREADY_ASSIGNED: 'تم إسناد هذه المهمة بالفعل.',
+  PARTNER_DELIVERY_INVALID_TRANSITION: 'لا يمكن تنفيذ هذا الانتقال من الحالة الحالية.',
+  VERSION_CONFLICT: 'تغيّرت المهمة من سطح آخر؛ تمسح إعادة التحميل قبل التكرار.',
 };
 
 const PICKUP_ERROR_LABELS: Record<string, string> = {
+  PICKUP_CANCELLED: 'ألغيت جلسة الاستلام الذاتي مع إلغاء الطلب.',
   PICKUP_CODE_ALREADY_USED: 'تم استخدام رمز الاستلام مسبقًا.',
-  PICKUP_CODE_EXPIRED: 'انتهت صلاحية رمز الاستلام — أرسل رمزًا جديدًا.',
-  PICKUP_CODE_ATTEMPTS_EXCEEDED: 'تم تجاوز عدد محاولات إدخال الرمز المسموح.',
+  PICKUP_CODE_EXPIRED: 'انتهت صلاحية رمز الاستلام؛ أرسل رمزًا جديدًا.',
+  PICKUP_CODE_ATTEMPTS_EXCEEDED: 'تم تجاوز عدد محاولات الرمز المسموح.',
   PICKUP_CODE_INVALID: 'رمز الاستلام غير صحيح.',
-  PICKUP_INVALID_TRANSITION: 'لا يمكن تنفيذ هذا الإجراء في الحالة الحالية لجلسة الاستلام.',
-  VERSION_CONFLICT: 'تغيّرت بيانات الجلسة من مكان آخر — أعد التحميل قبل المتابعة.',
+  PICKUP_INVALID_TRANSITION: 'لا يمكن تنفيذ هذا الإجراء في المرحلة الحالية.',
+  VERSION_CONFLICT: 'تغيّرت الجلسة من سطح آخر؛ أعد التحميل قبل المتابعة.',
 };
 
-function PartnerDeliveryActions({ orderId, teamMembers }: { orderId: string; teamMembers: readonly PartnerTeamMember[] }) {
+function isNotFound(error: unknown): boolean {
+  const typed = error as { status?: number; body?: { code?: string } };
+  return typed.status === 404 || typed.body?.code === 'NOT_FOUND';
+}
+
+function ReturnToStoreReceiptActions({ orderId }: { readonly orderId: string }) {
+  const { direction } = useDirection();
+  const textAlign = direction === 'rtl' ? 'right' : 'left';
+  const [state, setState] = React.useState<
+    | { readonly kind: 'loading' }
+    | { readonly kind: 'none' }
+    | { readonly kind: 'ready'; readonly item: DshDeliveryException }
+    | { readonly kind: 'error'; readonly message: string }
+  >({ kind: 'loading' });
+  const [accepting, setAccepting] = React.useState(false);
+
+  const load = React.useCallback(async () => {
+    try {
+      const item = await fetchPartnerReturnToStore(orderId);
+      setState({ kind: 'ready', item });
+    } catch (error) {
+      if (isNotFound(error)) {
+        setState({ kind: 'none' });
+        return;
+      }
+      setState({ kind: 'error', message: error instanceof Error ? error.message : 'تعذر قراءة حالة المرتجع.' });
+    }
+  }, [orderId]);
+
+  React.useEffect(() => {
+    void load();
+    const interval = setInterval(() => void load(), 10_000);
+    return () => clearInterval(interval);
+  }, [load]);
+
+  const accept = React.useCallback(async () => {
+    setAccepting(true);
+    try {
+      const item = await acceptPartnerReturnToStore(orderId);
+      setState({ kind: 'ready', item });
+    } catch (error) {
+      setState({ kind: 'error', message: error instanceof Error ? error.message : 'تعذر تأكيد استلام المرتجع.' });
+    } finally {
+      setAccepting(false);
+    }
+  }, [orderId]);
+
+  if (state.kind === 'none') return null;
+  if (state.kind === 'loading') return null;
+  if (state.kind === 'error') return <StateView tone="danger" title="تعذر قراءة المرتجع" description={state.message} actionLabel="إعادة المحاولة" onActionPress={() => void load()} />;
+
+  const item = state.item;
+  const arrived = Boolean(item.returnArrivedAt);
+  const accepted = Boolean(item.returnedAt);
+  return (
+    <Surface tone="raised" gap={3}>
+      <Text role="label" style={{ textAlign }}>استلام مرتجع توصيل بثواني</Text>
+      <Text role="bodySm" tone="muted" style={{ textAlign }}>
+        لا يتحول الطلب إلى «أعيد إلى المتجر» إلا بعد تأكيدك استلام العهدة فعليًا من الكابتن.
+      </Text>
+      <Badge
+        label={accepted ? 'تم استلام المرتجع' : arrived ? 'الكابتن وصل بالمرتجع' : 'المرتجع في الطريق'}
+        tone={accepted ? 'success' : arrived ? 'warning' : 'action'}
+      />
+      {arrived && !accepted ? (
+        <Button
+          label={accepting ? 'جارٍ تثبيت الاستلام…' : 'تأكيد استلام المرتجع من الكابتن'}
+          disabled={accepting}
+          onPress={() => void accept()}
+        />
+      ) : null}
+      {!arrived ? <Text role="caption" tone="muted">لا يوجد إجراء قبل تسجيل وصول الكابتن بالمرتجع.</Text> : null}
+      <Button label="تحديث حالة المرتجع" tone="ghost" size="sm" fullWidth={false} disabled={accepting} onPress={() => void load()} />
+    </Surface>
+  );
+}
+
+function PartnerDeliveryActions({
+  orderId,
+  teamMembers,
+}: {
+  readonly orderId: string;
+  readonly teamMembers: readonly PartnerTeamMember[];
+}) {
   const { direction } = useDirection();
   const textAlign = direction === 'rtl' ? 'right' : 'left';
   const [selectedCourierId, setSelectedCourierId] = React.useState('');
-  const { state, assign, depart, arrive, submitProof, refresh } = usePartnerDeliveryActionsController();
-  const { task, busy, message, isError, errorCode } = state;
-  const displayMessage = isError ? ((errorCode && PARTNER_DELIVERY_ERROR_LABELS[errorCode]) ?? message) : message;
+  const [proofReference, setProofReference] = React.useState('');
+  const { state, assign, pickup, depart, arrive, submitProof, refresh } =
+    usePartnerDeliveryActionsController(orderId);
+  const { task, loaded, busy, message, isError, errorCode } = state;
+  const displayMessage = isError
+    ? ((errorCode && PARTNER_DELIVERY_ERROR_LABELS[errorCode]) ?? message)
+    : message;
 
   const eligibleCouriers = React.useMemo(
-    () => teamMembers.filter((m) => m.role === 'courier' && m.status === 'active'),
+    () => teamMembers.filter((member) => member.role === 'courier' && member.status === 'active'),
     [teamMembers],
   );
 
-  const handleAssign = React.useCallback(() => {
-    if (!selectedCourierId) return;
-    void assign(orderId, selectedCourierId);
-  }, [orderId, selectedCourierId, assign]);
-
-  const handleDepart = React.useCallback(() => {
-    if (!task) return;
-    void depart(orderId, task.version);
-  }, [orderId, task, depart]);
-
-  const handleArrive = React.useCallback(() => {
-    if (!task) return;
-    void arrive(orderId, task.version);
-  }, [orderId, task, arrive]);
-
-  const handleProof = React.useCallback(() => {
-    if (!task) return;
-    void submitProof(orderId, task.version, 'photo');
-  }, [orderId, task, submitProof]);
+  if (!loaded) {
+    return <StateView title="جارٍ تحميل مهمة توصيل المتجر" description="نقرأ المهمة والإصدار من DSH." loading />;
+  }
 
   const status = task?.status ?? 'unassigned';
+  const pickedUp = Boolean(task?.pickedUpAt);
 
   return (
-    <Surface tone="raised" gap={2}>
-      <Text role="label" style={{ textAlign }}>موصل الشريك</Text>
+    <Surface tone="raised" gap={3}>
+      <Text role="label" style={{ textAlign }}>توصيل المتجر</Text>
+      <Text role="bodySm" tone="muted" style={{ textAlign }}>
+        هذه الرحلة تدار بموصل من فريق المتجر فقط ولا تدخل صندوق كباتن بثواني.
+      </Text>
 
       {!task || status === 'unassigned' ? (
         <Box gap={2}>
           {eligibleCouriers.length === 0 ? (
-            <Text role="bodySm" tone="muted" style={{ textAlign }}>
-              لا يوجد موصلون نشطون (role=courier) في فريق هذا الفرع بعد. أضِفهم من إدارة الفريق أولًا.
+            <Text role="bodySm" tone="warning" style={{ textAlign }}>
+              لا يوجد عضو فريق نشط بدور courier في هذا الفرع. أضف موصلًا من إدارة الفريق أولًا.
             </Text>
           ) : (
             <View style={{ gap: spacing[1] }}>
@@ -91,126 +167,191 @@ function PartnerDeliveryActions({ orderId, teamMembers }: { orderId: string; tea
             </View>
           )}
           <Button
-            label={busy ? 'جارٍ الإسناد...' : 'إسناد موصل الشريك (assign)'}
+            label={busy ? 'جارٍ الإسناد…' : 'إسناد موصل المتجر'}
             disabled={!selectedCourierId || busy}
-            onPress={handleAssign}
+            onPress={() => void assign(selectedCourierId)}
           />
         </Box>
       ) : (
-        <Box gap={2}>
-          <Badge label={`الحالة: ${status}`} tone={status === 'completed' ? 'success' : status === 'exception' ? 'danger' : 'action'} />
-          <Box gap={2}>
-            <Button
-              label={busy ? 'جارٍ...' : 'خروج الموصل (depart)'}
-              size="sm"
-              fullWidth={false}
-              disabled={busy || status !== 'assigned'}
-              onPress={handleDepart}
-            />
-            <Button
-              label={busy ? 'جارٍ...' : 'وصول الموصل (arrive)'}
-              size="sm"
-              fullWidth={false}
-              disabled={busy || status !== 'departed'}
-              onPress={handleArrive}
-            />
-            <Button
-              label={busy ? 'جارٍ...' : 'رفع إثبات التسليم (proof)'}
-              size="sm"
-              fullWidth={false}
-              disabled={busy || status !== 'arrived'}
-              onPress={handleProof}
-            />
-          </Box>
+        <Box gap={3}>
+          <Badge
+            label={`الحالة: ${status}`}
+            tone={status === 'completed' ? 'success' : status === 'exception' ? 'danger' : 'action'}
+          />
+
           <Button
-            label="تحديث حالة المهمة"
+            label={busy ? 'جارٍ التثبيت…' : 'تأكيد استلام الموصل من المتجر'}
+            disabled={busy || status !== 'assigned' || pickedUp}
+            onPress={() => void pickup()}
+          />
+          <Button
+            label={busy ? 'جارٍ التثبيت…' : 'تأكيد مغادرة الموصل'}
+            disabled={busy || status !== 'assigned' || !pickedUp}
+            onPress={() => void depart()}
+          />
+          <Button
+            label={busy ? 'جارٍ التثبيت…' : 'تأكيد الوصول إلى العميل'}
+            disabled={busy || status !== 'departed'}
+            onPress={() => void arrive()}
+          />
+
+          {status === 'arrived' || status === 'proof_pending' ? (
+            <Box gap={2}>
+              <TextField
+                label="مرجع إثبات التسليم"
+                placeholder="مفتاح صورة DAM أو مرجع OTP/توقيع موثق"
+                value={proofReference}
+                onChangeText={setProofReference}
+              />
+              <Button
+                label={busy ? 'جارٍ تثبيت الإثبات…' : 'إغلاق المهمة بإثبات التسليم'}
+                disabled={busy || !proofReference.trim()}
+                onPress={() => void submitProof('photo', proofReference).then((ok) => {
+                  if (ok) setProofReference('');
+                })}
+              />
+            </Box>
+          ) : null}
+
+          <Button
+            label="إعادة قراءة المهمة"
             tone="ghost"
             size="sm"
             fullWidth={false}
-            disabled={!task || busy}
-            onPress={() => task && refresh(task.id)}
+            disabled={busy}
+            onPress={() => void refresh()}
           />
         </Box>
       )}
 
-      {displayMessage && (
+      {displayMessage ? (
         <Text role="caption" tone={isError ? 'danger' : 'success'} style={{ textAlign }}>
           {displayMessage}
         </Text>
-      )}
+      ) : null}
     </Surface>
   );
 }
 
-function PickupActions({ orderId }: { orderId: string }) {
+function PickupActions({ orderId }: { readonly orderId: string }) {
   const { direction } = useDirection();
   const textAlign = direction === 'rtl' ? 'right' : 'left';
   const [code, setCode] = React.useState('');
-  const { state, markReady, notify, customerArrived, verify } = usePickupActionsController();
-  const { session, stage, busy, message, isError, errorCode } = state;
-  const displayMessage = isError ? ((errorCode && PICKUP_ERROR_LABELS[errorCode]) ?? message) : message;
+  const [noShowReason, setNoShowReason] = React.useState('');
+  const { state, markReady, notify, customerArrived, verify, noShow, refresh } =
+    usePickupActionsController(orderId);
+  const { session, stage, loaded, busy, message, isError, errorCode } = state;
+  const displayMessage = isError
+    ? ((errorCode && PICKUP_ERROR_LABELS[errorCode]) ?? message)
+    : message;
 
-  const handleMarkReady = React.useCallback(() => {
-    void markReady(orderId, session?.version ?? 0);
-  }, [orderId, session, markReady]);
-
-  const handleNotify = React.useCallback(() => {
-    void notify(orderId, session?.version ?? 0);
-  }, [orderId, session, notify]);
-
-  const handleCustomerArrived = React.useCallback(() => {
-    void customerArrived(orderId, session?.version ?? 0);
-  }, [orderId, session, customerArrived]);
-
-  const handleVerify = React.useCallback(() => {
-    if (!code.trim()) return;
-    void verify(orderId, session?.version ?? 0, code.trim()).then(() => setCode(''));
-  }, [orderId, code, session, verify]);
+  if (!loaded) {
+    return <StateView title="جارٍ تحميل الاستلام الذاتي" description="نقرأ الطلب وجلسة OTP وآخر مرحلة مثبتة." loading />;
+  }
 
   return (
-    <Surface tone="raised" gap={2}>
-      <Text role="label" style={{ textAlign }}>استلام العميل الذاتي</Text>
+    <Surface tone="raised" gap={3}>
+      <Text role="label" style={{ textAlign }}>الاستلام الذاتي</Text>
+      <Text role="bodySm" tone="muted" style={{ textAlign }}>
+        لا يُنشأ إسناد كابتن أو موصل متجر. الإغلاق يتم فقط بعد رمز العميل أحادي الاستخدام.
+      </Text>
+      <Badge
+        label={`المرحلة: ${stage}`}
+        tone={stage === 'verified' ? 'success' : stage === 'no_show' || stage === 'cancelled' ? 'danger' : 'action'}
+      />
 
-      <Box gap={2}>
-        <Button label={busy ? 'جارٍ...' : 'تعليم جاهز للاستلام (mark-ready)'} size="sm" fullWidth={false} disabled={busy || stage !== 'not_ready'} onPress={handleMarkReady} />
-        <Button label={busy ? 'جارٍ...' : 'إشعار العميل (notify)'} size="sm" fullWidth={false} disabled={busy || (stage !== 'ready' && stage !== 'not_ready')} onPress={handleNotify} />
-        <Button label={busy ? 'جارٍ...' : 'وصول العميل (customer-arrived)'} size="sm" fullWidth={false} disabled={busy || stage !== 'notified'} onPress={handleCustomerArrived} />
-      </Box>
+      <Button
+        label={busy ? 'جارٍ التثبيت…' : 'تعليم الطلب جاهزًا للاستلام'}
+        disabled={busy || stage !== 'not_ready'}
+        onPress={() => void markReady()}
+      />
+      <Button
+        label={busy ? 'جارٍ إرسال الرمز…' : stage === 'notified' ? 'إصدار رمز جديد وإشعار العميل' : 'إشعار العميل وإصدار الرمز'}
+        disabled={busy || (stage !== 'ready' && stage !== 'notified')}
+        onPress={() => void notify()}
+      />
+      <Button
+        label={busy ? 'جارٍ التثبيت…' : 'تأكيد وصول العميل'}
+        disabled={busy || stage !== 'notified'}
+        onPress={() => void customerArrived()}
+      />
 
-      {stage === 'arrived' && (
+      {stage === 'customer_arrived' ? (
         <Box gap={2}>
           <TextField
-            label="رمز الاستلام (OTP)"
-            placeholder="أدخل الرمز الذي أدخله العميل"
+            label="رمز الاستلام"
+            placeholder="أدخل الرمز الظاهر للعميل"
             value={code}
-            onChangeText={(v: string) => setCode(v.replace(/[^0-9]/g, ''))}
+            onChangeText={(value: string) => setCode(value.replace(/[^0-9]/g, '').slice(0, 6))}
           />
-          <Button label={busy ? 'جارٍ التحقق...' : 'تحقق من الرمز (verify)'} disabled={busy || !code.trim()} onPress={handleVerify} />
+          <Button
+            label={busy ? 'جارٍ التحقق…' : 'التحقق وإغلاق الطلب'}
+            disabled={busy || code.length !== 6}
+            onPress={() => void verify(code).then((ok) => {
+              if (ok) setCode('');
+            })}
+          />
+          <TextField
+            label="سبب عدم الحضور"
+            placeholder="سبب تشغيلي مسجل قبل إغلاق جلسة الرمز"
+            value={noShowReason}
+            onChangeText={setNoShowReason}
+          />
+          <Button
+            label="تسجيل عدم حضور العميل"
+            tone="danger"
+            disabled={busy || !noShowReason.trim()}
+            onPress={() => void noShow(noShowReason).then((ok) => {
+              if (ok) setNoShowReason('');
+            })}
+          />
         </Box>
-      )}
+      ) : null}
 
-      {stage === 'verified' && (
+      {stage === 'verified' ? (
         <Box layoutDirection="row" style={{ alignItems: 'center', gap: spacing[2] }}>
           <Icon name="checkmark-circle" size={18} tone="success" />
-          <Text role="bodySm" tone="success">تم استلام الطلب من قِبل العميل بنجاح.</Text>
+          <Text role="bodySm" tone="success">تم تسليم الطلب للعميل والتحقق من الرمز.</Text>
         </Box>
-      )}
+      ) : null}
 
-      {displayMessage && (
+      {stage === 'no_show' ? (
+        <Text role="bodySm" tone="warning" style={{ textAlign }}>
+          أغلقت جلسة الرمز كعدم حضور. يبقى قرار إلغاء الطلب أو تمديد النافذة بيد العمليات.
+        </Text>
+      ) : null}
+
+      {stage === 'cancelled' ? (
+        <Box layoutDirection="row" style={{ alignItems: 'center', gap: spacing[2] }}>
+          <Icon name="close-circle" size={18} tone="danger" />
+          <Text role="bodySm" tone="danger" style={{ textAlign }}>
+            ألغيت جلسة الاستلام الذاتي مع الطلب، وتم تعطيل إصدار الرمز والتحقق والتمديد.
+            {session?.cancellationReason ? ` السبب: ${session.cancellationReason}` : ''}
+          </Text>
+        </Box>
+      ) : null}
+
+      <Button label="إعادة قراءة المرحلة" tone="ghost" size="sm" fullWidth={false} disabled={busy} onPress={() => void refresh()} />
+      {session ? <Text role="caption" tone="muted">الإصدار: {session.version}</Text> : null}
+
+      {displayMessage ? (
         <Text role="caption" tone={isError ? 'danger' : 'success'} style={{ textAlign }}>
           {displayMessage}
         </Text>
-      )}
+      ) : null}
     </Surface>
   );
 }
 
-/**
- * Real, backend-wired action panel for `partner_delivery` and `pickup`
- * fulfillment modes. Every button awaits a real generated-types response
- * before enabling the next step — no local-only success state.
- */
-export function PartnerFulfillmentActionsPanel({ orderId, fulfillmentMode, teamMembers }: PartnerFulfillmentActionsPanelProps) {
+/** Real backend-wired fulfillment actions; no local-success state. */
+export function PartnerFulfillmentActionsPanel({
+  orderId,
+  fulfillmentMode,
+  teamMembers,
+}: PartnerFulfillmentActionsPanelProps) {
+  if (fulfillmentMode === 'bthwani_delivery') {
+    return <ReturnToStoreReceiptActions orderId={orderId} />;
+  }
   if (fulfillmentMode === 'partner_delivery') {
     return <PartnerDeliveryActions orderId={orderId} teamMembers={teamMembers ?? []} />;
   }

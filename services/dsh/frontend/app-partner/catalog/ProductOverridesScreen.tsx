@@ -13,7 +13,7 @@ import {
   spacing,
   Divider,
 } from '@bthwani/ui-kit';
-import { fetchPartnerStoreAssortment, upsertPartnerStoreAssortment, fetchPartnerMasterProducts } from '../../shared/catalog';
+import { fetchPartnerStoreAssortment, upsertPartnerStoreAssortmentOCC, fetchPartnerMasterProducts } from '../../shared/catalog';
 import type { StoreAssortment, MasterProduct } from '../../shared/catalog';
 
 export type ProductOverridesScreenProps = {
@@ -53,24 +53,19 @@ export function ProductOverridesScreen({
     setScreenState('loading');
     setErrorMessage(null);
     try {
-      // 1. Fetch partner master products to find canonical name
       const masterProducts = await fetchPartnerMasterProducts({ search: productId, limit: 1 });
       const mp = masterProducts.find((p) => p.id === productId);
-      if (mp) {
-        setMasterProduct(mp);
-      }
+      if (mp) setMasterProduct(mp);
 
-      // 2. Fetch partner assortment for storeId
       const assortments = await fetchPartnerStoreAssortment(storeId);
-      const match = assortments.find((a) => a.masterProductId === productId);
+      const match = assortments.find((a) => a.masterProductId === productId) ?? null;
+      setAssortment(match);
       if (match) {
-        setAssortment(match);
         setUnitPrice(String(match.unitPrice));
         setStockStatus(match.stockStatus);
         setAvailable(match.available);
         setLocalNote(match.localNote);
       } else {
-        // Default values if no assortment exists yet
         setUnitPrice('0.00');
         setStockStatus('in_stock');
         setAvailable(true);
@@ -92,22 +87,25 @@ export function ProductOverridesScreen({
     setErrorMessage(null);
     try {
       const priceNum = parseFloat(unitPrice) || 0.0;
-      await upsertPartnerStoreAssortment(storeId, productId, {
+      const saved = await upsertPartnerStoreAssortmentOCC(storeId, productId, {
         unitPrice: priceNum,
         currency: assortment?.currency ?? 'YER',
         available,
         stockStatus,
         localNote,
         customImageObjectKey: assortment?.customImageObjectKey ?? null,
-        publicationStatus: assortment?.publicationStatus ?? 'client_visible',
+        publicationStatus: assortment?.publicationStatus ?? 'draft',
+        expectedVersion: assortment?.version,
       });
+      setAssortment(saved);
       setScreenState('saved');
       onSaved?.();
     } catch (err: any) {
       setErrorMessage(err.message ?? 'فشل حفظ التجاوزات المحلية للمنتج.');
       setScreenState('error');
+      await loadData();
     }
-  }, [storeId, productId, unitPrice, available, stockStatus, localNote, assortment, onSaved]);
+  }, [storeId, productId, unitPrice, available, stockStatus, localNote, assortment, onSaved, loadData]);
 
   if (screenState === 'loading') {
     return <StateView title="جارٍ تحميل تفاصيل الكتالوج والتجاوزات…" loading />;
@@ -120,7 +118,6 @@ export function ProductOverridesScreen({
       keyboardShouldPersistTaps="handled"
     >
       <Box gap={4} style={{ padding: spacing[4] }}>
-        {/* Header */}
         <Box style={{ flexDirection: resolveRowDirection(direction), alignItems: 'center', gap: spacing[3] }}>
           {onBack && (
             <Button label="رجوع" tone="ghost" size="sm" fullWidth={false} onPress={onBack} />
@@ -133,7 +130,6 @@ export function ProductOverridesScreen({
           </Box>
         </Box>
 
-        {/* Product Central Metadata View */}
         {masterProduct && (
           <Surface tone="inset" padding={3} gap={2} radiusToken="md">
             <Text role="bodyStrong" align="start">هوية المنتج المركزي</Text>
@@ -146,7 +142,6 @@ export function ProductOverridesScreen({
 
         <Divider />
 
-        {/* Error Banner */}
         {errorMessage && (
           <Surface tone="danger" padding={3} radiusToken="md">
             <Text role="bodySm" tone="danger" align="start">{errorMessage}</Text>
@@ -154,7 +149,6 @@ export function ProductOverridesScreen({
           </Surface>
         )}
 
-        {/* Success Confirmation */}
         {screenState === 'saved' && (
           <Surface tone="success" padding={3} radiusToken="md">
             <Text role="bodyStrong" tone="success" align="start">تم حفظ التجاوزات المحلية بنجاح</Text>
@@ -162,7 +156,6 @@ export function ProductOverridesScreen({
           </Surface>
         )}
 
-        {/* Form Fields */}
         {screenState !== 'saved' && (
           <Box gap={3}>
             <Text role="bodyStrong" align="start">القيم المحلية المعدلة</Text>
@@ -183,28 +176,12 @@ export function ProductOverridesScreen({
               disabled={screenState === 'saving'}
             />
 
-            {/* Stock status toggles */}
             <Box gap={1}>
               <Text role="bodySm" tone="muted" align="start">حالة المخزون المحلية</Text>
               <Box style={{ flexDirection: 'row', gap: spacing[2] }}>
-                <Button
-                  label="متوفر"
-                  tone={stockStatus === 'in_stock' ? 'primary' : 'secondary'}
-                  size="sm"
-                  onPress={() => setStockStatus('in_stock')}
-                />
-                <Button
-                  label="منخفض"
-                  tone={stockStatus === 'low_stock' ? 'primary' : 'secondary'}
-                  size="sm"
-                  onPress={() => setStockStatus('low_stock')}
-                />
-                <Button
-                  label="نفد"
-                  tone={stockStatus === 'out_of_stock' ? 'primary' : 'secondary'}
-                  size="sm"
-                  onPress={() => setStockStatus('out_of_stock')}
-                />
+                <Button label="متوفر" tone={stockStatus === 'in_stock' ? 'primary' : 'secondary'} size="sm" onPress={() => setStockStatus('in_stock')} />
+                <Button label="منخفض" tone={stockStatus === 'low_stock' ? 'primary' : 'secondary'} size="sm" onPress={() => setStockStatus('low_stock')} />
+                <Button label="نفد" tone={stockStatus === 'out_of_stock' ? 'primary' : 'secondary'} size="sm" onPress={() => setStockStatus('out_of_stock')} />
               </Box>
             </Box>
 

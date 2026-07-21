@@ -1,205 +1,102 @@
 "use client";
-import { colorRoles } from "@bthwani/ui-kit";
-import React, { useState } from "react";
-import {
-  CpButton,
-  CpTextInput,
-  CpTable,
-  CpTableCell,
-  CpTableHeaderCell,
-  CpEmptyTableMessage,
-  CpKpiStrip,
-  CpKpiCard,
-} from "@bthwani/control-panel/components";
-import {
-  useLoyaltyController,
-} from "../../../shared/marketing";
-import type { LoyaltyTierRecord } from "../../../shared/marketing";
 
-const STATUS_LABEL: Record<LoyaltyTierRecord["status"], string> = {
-  draft: "مسودة",
-  active: "نشط",
-  paused: "موقوف",
-  archived: "مؤرشف",
-};
+import { useState, type CSSProperties } from "react";
+import { colorRoles } from "@bthwani/ui-kit";
+import { useLoyaltyTiersController, type LoyaltyTierRecord } from "../../../shared/marketing";
 
 export function LoyaltyCommandDeck() {
-  const controller = useLoyaltyController("authenticated");
-
-  // ─ Create form ─
+  const controller = useLoyaltyTiersController("authenticated");
   const [nameAr, setNameAr] = useState("");
-  const [minPoints, setMinPoints] = useState("");
-  const [discountPercent, setDiscountPercent] = useState("");
-  const [freeDeliveryThreshold, setFreeDeliveryThreshold] = useState("0");
-  const [badge, setBadge] = useState("");
-  const [formError, setFormError] = useState<string | null>(null);
+  const [minPoints, setMinPoints] = useState("0");
+  const [discountPercent, setDiscountPercent] = useState("0");
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleCreate = () => {
-    if (!nameAr.trim() || !minPoints || !discountPercent) {
-      setFormError("الاسم بالعربية، الحد الأدنى للنقاط، ونسبة الخصم حقول مطلوبة.");
-      return;
+  const createDraft = async () => {
+    const points = Number(minPoints);
+    const discount = Number(discountPercent);
+    if (!nameAr.trim() || !Number.isFinite(points) || points < 0 || !Number.isFinite(discount) || discount < 0 || discount > 100) return;
+    setSubmitting(true);
+    try {
+      await controller.create({ nameAr: nameAr.trim(), minPoints: points, discountPercent: discount });
+      setNameAr("");
+      setMinPoints("0");
+      setDiscountPercent("0");
+    } finally {
+      setSubmitting(false);
     }
-    const min = parseInt(minPoints, 10);
-    const disc = parseFloat(discountPercent);
-    const fdt = parseInt(freeDeliveryThreshold, 10) || 0;
-    if (isNaN(min) || min < 0) { setFormError("الحد الأدنى للنقاط يجب أن يكون عدداً صحيحاً غير سالب."); return; }
-    if (isNaN(disc) || disc < 0 || disc > 100) { setFormError("نسبة الخصم يجب أن تكون بين 0 و100."); return; }
-    setFormError(null);
-    controller.create({ nameAr, nameEn: nameAr, minPoints: min, discountPercent: disc, freeDeliveryThreshold: fdt, badge: badge || "⭐" });
-    setNameAr(""); setMinPoints(""); setDiscountPercent(""); setFreeDeliveryThreshold("0"); setBadge("");
   };
 
+  const updateStatus = async (tier: LoyaltyTierRecord, status: LoyaltyTierRecord["status"]) => {
+    setSubmitting(true);
+    try {
+      await controller.update(tier, { status });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const items = controller.state.kind === "success" ? controller.state.items : [];
+
   return (
-    <div style={{ padding: "1.5rem" }} dir="rtl">
-      {/* ── KPI Strip ── */}
-      <CpKpiStrip>
-        <CpKpiCard label="مستويات نشطة"       value={String(controller.summary.activeTiers)} />
-        <CpKpiCard label="عملاء مشتركون"     value={controller.summary.totalEnrolledClients.toLocaleString("ar")} />
-        <CpKpiCard label="نقاط مُصدَرة (الشهر)" value={controller.summary.pointsIssuedThisMonth.toLocaleString("ar")} />
-      </CpKpiStrip>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 22rem", gap: "1.5rem" }}>
-
-        {/* ── Tiers table ── */}
+    <section dir="rtl" style={styles.root}>
+      <div style={styles.header}>
         <div>
-          <h3 style={{ margin: "0 0 1rem", color: colorRoles.brandAction, fontSize: "1.15rem" }}>
-            مستويات برنامج الولاء
-          </h3>
-
-          {controller.tiers.length === 0 ? (
-            <CpEmptyTableMessage>لا توجد مستويات ولاء محددة حالياً.</CpEmptyTableMessage>
-          ) : (
-            <CpTable>
-              <thead>
-                <tr>
-                  <CpTableHeaderCell>الشارة</CpTableHeaderCell>
-                  <CpTableHeaderCell>الاسم</CpTableHeaderCell>
-                  <CpTableHeaderCell>الحد الأدنى (نقطة)</CpTableHeaderCell>
-                  <CpTableHeaderCell>الخصم</CpTableHeaderCell>
-                  <CpTableHeaderCell>توصيل مجاني فوق</CpTableHeaderCell>
-                  <CpTableHeaderCell>الحالة</CpTableHeaderCell>
-                  <CpTableHeaderCell>العمليات</CpTableHeaderCell>
-                </tr>
-              </thead>
-              <tbody>
-                {controller.tiers.map((tier) => (
-                  <tr key={tier.id}>
-                    <CpTableCell>{tier.badge}</CpTableCell>
-                    <CpTableCell><strong>{tier.nameAr}</strong></CpTableCell>
-                    <CpTableCell>{tier.minPoints.toLocaleString("ar")}</CpTableCell>
-                    <CpTableCell>{tier.discountPercent}%</CpTableCell>
-                    <CpTableCell>
-                      {tier.freeDeliveryThreshold > 0
-                        ? `${tier.freeDeliveryThreshold.toLocaleString("ar")} ر.ي`
-                        : "—"}
-                    </CpTableCell>
-                    <CpTableCell>
-                      <span
-                        style={{
-                          color: tier.status === "active" ? colorRoles.brandStructure : undefined,
-                          opacity: tier.status === "draft" ? 0.55 : 1,
-                        }}
-                      >
-                        {STATUS_LABEL[tier.status]}
-                      </span>
-                    </CpTableCell>
-                    <CpTableCell>
-                      <div style={{ display: "flex", gap: "0.25rem" }}>
-                        <CpButton onClick={() => controller.select(tier)}>تعديل</CpButton>
-                        <CpButton
-                          onClick={() => controller.toggleStatus(tier.id)}
-                          style={{ background: colorRoles.surfaceBase }}
-                        >
-                          {tier.status === "active" ? "إيقاف" : "تفعيل"}
-                        </CpButton>
-                      </div>
-                    </CpTableCell>
-                  </tr>
-                ))}
-              </tbody>
-            </CpTable>
-          )}
+          <h3 style={styles.title}>مستويات الولاء</h3>
+          <p style={styles.muted}>تعريفات DSH فقط؛ رصيد النقاط والحركات المالية تظل في WLT.</p>
         </div>
-
-        {/* ── Side panel: edit or create ── */}
-        <div
-          style={{
-            background: colorRoles.surfaceBase,
-            borderRadius: "0.75rem",
-            padding: "1.25rem",
-          }}
-        >
-          {controller.selected !== null && controller.draft ? (
-            <>
-              <h4 style={{ margin: "0 0 1rem", fontSize: "0.95rem", fontWeight: 700 }}>
-                تعديل مستوى: {controller.selected.nameAr}
-              </h4>
-              {controller.errorMessage && (
-                <div style={{ color: colorRoles.brandAction, fontSize: "0.75rem", marginBottom: "0.75rem" }}>
-                  {controller.errorMessage}
-                </div>
-              )}
-              <div style={{ display: "grid", gap: "0.75rem" }}>
-                <label style={{ fontSize: "0.75rem", fontWeight: 600 }}>نسبة الخصم (%)</label>
-                <CpTextInput
-                  value={String(controller.draft.discountPercent)}
-                  onChange={(v) => controller.setDraft({ ...controller.draft!, discountPercent: parseFloat(v) || 0 })}
-                />
-                <label style={{ fontSize: "0.75rem", fontWeight: 600 }}>حد التوصيل المجاني (ريال، 0 = غير مفعل)</label>
-                <CpTextInput
-                  value={String(controller.draft.freeDeliveryThreshold)}
-                  onChange={(v) => controller.setDraft({ ...controller.draft!, freeDeliveryThreshold: parseInt(v, 10) || 0 })}
-                />
-                <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
-                  <CpButton
-                    onClick={() => controller.save(controller.draft!)}
-                    style={{ background: colorRoles.brandAction, color: "white", flex: 1 }}
-                  >
-                    حفظ التعديلات
-                  </CpButton>
-                  <CpButton onClick={() => controller.select(null)} style={{ flex: 1 }}>
-                    إلغاء
-                  </CpButton>
-                </div>
-              </div>
-            </>
-          ) : (
-            <>
-              <h4 style={{ margin: "0 0 1rem", fontSize: "0.95rem", fontWeight: 700 }}>
-                إضافة مستوى جديد
-              </h4>
-              {formError && (
-                <div style={{ color: colorRoles.brandAction, fontSize: "0.75rem", marginBottom: "0.75rem" }}>
-                  {formError}
-                </div>
-              )}
-              <div style={{ display: "grid", gap: "0.75rem" }}>
-                <label style={{ fontSize: "0.75rem", fontWeight: 600 }}>اسم المستوى (عربي)</label>
-                <CpTextInput value={nameAr} onChange={setNameAr} placeholder="مثال: ذهبي" />
-
-                <label style={{ fontSize: "0.75rem", fontWeight: 600 }}>شارة (إيموجي)</label>
-                <CpTextInput value={badge} onChange={setBadge} placeholder="مثال: 🥇" />
-
-                <label style={{ fontSize: "0.75rem", fontWeight: 600 }}>الحد الأدنى للنقاط</label>
-                <CpTextInput value={minPoints} onChange={setMinPoints} placeholder="مثال: 1500" />
-
-                <label style={{ fontSize: "0.75rem", fontWeight: 600 }}>نسبة الخصم (%)</label>
-                <CpTextInput value={discountPercent} onChange={setDiscountPercent} placeholder="مثال: 12" />
-
-                <label style={{ fontSize: "0.75rem", fontWeight: 600 }}>حد التوصيل المجاني (ريال)</label>
-                <CpTextInput value={freeDeliveryThreshold} onChange={setFreeDeliveryThreshold} placeholder="0 = غير مفعل" />
-
-                <CpButton
-                  onClick={handleCreate}
-                  style={{ background: colorRoles.brandAction, color: "white", marginTop: "0.5rem" }}
-                >
-                  إضافة المستوى
-                </CpButton>
-              </div>
-            </>
-          )}
-        </div>
+        <button type="button" onClick={() => void controller.reload()} style={styles.secondary}>إعادة التحميل</button>
       </div>
-    </div>
+
+      <div style={styles.summary}>
+        <span>نشطة: {controller.summary.activeTiers.toLocaleString("ar")}</span>
+        <span>عملاء مسجلون: {controller.summary.totalEnrolledClients.toLocaleString("ar")}</span>
+        <span>نقاط الشهر: {controller.summary.pointsIssuedThisMonth.toLocaleString("ar")}</span>
+      </div>
+
+      <div style={styles.form}>
+        <input value={nameAr} onChange={(event) => setNameAr(event.target.value)} placeholder="اسم المستوى" style={styles.input} />
+        <input value={minPoints} onChange={(event) => setMinPoints(event.target.value)} inputMode="numeric" placeholder="الحد الأدنى للنقاط" style={styles.input} />
+        <input value={discountPercent} onChange={(event) => setDiscountPercent(event.target.value)} inputMode="decimal" placeholder="نسبة الخصم" style={styles.input} />
+        <button type="button" disabled={submitting} onClick={() => void createDraft()} style={styles.primary}>إنشاء مسودة</button>
+      </div>
+
+      {controller.state.kind === "loading" ? <p>جارٍ التحميل…</p> : null}
+      {controller.state.kind === "error" ? <p role="alert" style={styles.error}>{controller.state.message}</p> : null}
+      {controller.actionError ? <p role="alert" style={styles.error}>{controller.actionError}</p> : null}
+      {controller.state.kind === "success" && items.length === 0 ? <p style={styles.muted}>لا توجد مستويات ولاء.</p> : null}
+
+      <div style={styles.list}>
+        {items.map((tier) => (
+          <article key={tier.id} style={styles.card}>
+            <div>
+              <strong>{tier.nameAr}</strong>
+              <p style={styles.muted}>من {tier.minPoints.toLocaleString("ar")} نقطة · خصم {tier.discountPercent}% · الإصدار {tier.version}</p>
+              <p style={styles.muted}>الحالة: {tier.status}</p>
+            </div>
+            <div style={styles.actions}>
+              {tier.status !== "active" ? <button type="button" disabled={submitting} onClick={() => void updateStatus(tier, "active")} style={styles.primary}>طلب اعتماد نشط</button> : null}
+              {tier.status === "active" ? <button type="button" disabled={submitting} onClick={() => void updateStatus(tier, "paused")} style={styles.secondary}>إيقاف</button> : null}
+              {tier.status !== "archived" ? <button type="button" disabled={submitting} onClick={() => void updateStatus(tier, "archived")} style={styles.secondary}>أرشفة</button> : null}
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
   );
 }
+
+const styles: Record<string, CSSProperties> = {
+  root: { display: "grid", gap: "1rem", padding: "1rem" },
+  header: { display: "flex", justifyContent: "space-between", gap: "1rem", alignItems: "flex-start" },
+  title: { margin: 0, color: colorRoles.brandStructure },
+  muted: { margin: "0.25rem 0", opacity: 0.68, fontSize: "0.82rem" },
+  summary: { display: "flex", flexWrap: "wrap", gap: "1rem", padding: "0.8rem", border: `1px solid ${colorRoles.borderSubtle}`, borderRadius: "0.7rem" },
+  form: { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: "0.6rem" },
+  input: { padding: "0.65rem", border: `1px solid ${colorRoles.borderSubtle}`, borderRadius: "0.5rem", background: colorRoles.surfaceBase },
+  primary: { padding: "0.6rem 0.8rem", border: 0, borderRadius: "0.5rem", background: colorRoles.brandAction, color: colorRoles.surfaceBase, cursor: "pointer", fontWeight: 700 },
+  secondary: { padding: "0.55rem 0.75rem", border: `1px solid ${colorRoles.borderSubtle}`, borderRadius: "0.5rem", background: colorRoles.surfaceBase, cursor: "pointer", fontWeight: 700 },
+  error: { color: colorRoles.danger, margin: 0 },
+  list: { display: "grid", gap: "0.6rem" },
+  card: { display: "flex", justifyContent: "space-between", gap: "1rem", padding: "0.9rem", border: `1px solid ${colorRoles.borderSubtle}`, borderRadius: "0.7rem", background: colorRoles.surfaceBase },
+  actions: { display: "flex", flexWrap: "wrap", gap: "0.45rem", alignItems: "center" },
+};

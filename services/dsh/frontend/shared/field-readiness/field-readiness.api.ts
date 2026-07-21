@@ -15,22 +15,63 @@ import type {
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "field-readiness");
 
-function requestId(prefix: string): string {
-  return `${prefix}-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`}`;
+export type FieldMutationContext = {
+  readonly correlationId: string;
+  readonly idempotencyKey: string;
+};
+
+function stableHash(value: string): string {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(36);
 }
 
-function mutationHeaders(operation: string) {
-  const correlationId = requestId("field-readiness-corr");
+export function buildFieldMutationContext(
+  operation: string,
+  identityParts: readonly unknown[],
+  supplied?: FieldMutationContext,
+): FieldMutationContext {
+  const suppliedCorrelation = supplied?.correlationId.trim() ?? "";
+  const suppliedIdempotency = supplied?.idempotencyKey.trim() ?? "";
+  if (suppliedCorrelation || suppliedIdempotency) {
+    if (!suppliedCorrelation || !suppliedIdempotency) {
+      throw new Error("field mutation correlation and idempotency must be supplied together");
+    }
+    return {
+      correlationId: suppliedCorrelation,
+      idempotencyKey: suppliedIdempotency,
+    };
+  }
+
+  const identity = identityParts
+    .map((part) => (part === undefined || part === null ? "" : String(part).trim()))
+    .join("|");
+  if (!identity.replaceAll("|", "")) {
+    throw new Error(`field mutation ${operation} has no stable business identity`);
+  }
+  const fingerprint = stableHash(`${operation}|${identity}`);
   return {
-    correlationId,
-    idempotencyKey: `${operation}-${correlationId}`,
+    correlationId: `field:${operation}:${fingerprint}`,
+    idempotencyKey: `field:${operation}:${fingerprint}`,
   };
 }
 
-export async function createFieldVisit(storeId: string, input: DshCreateVisitInput): Promise<DshFieldVisit> {
+export async function createFieldVisit(
+  storeId: string,
+  input: DshCreateVisitInput,
+  supplied?: FieldMutationContext,
+): Promise<DshFieldVisit> {
+  const headers = buildFieldMutationContext(
+    "create-visit",
+    [storeId, input.visitType ?? "onboarding", input.startLocation.capturedAt],
+    supplied,
+  );
   const data = await request<{ visit: DshFieldVisit }>(
     `/dsh/field/stores/${encodeURIComponent(storeId)}/visits`,
-    { method: "POST", body: input, ...mutationHeaders("create-visit") },
+    { method: "POST", body: input, ...headers },
   );
   return data.visit;
 }
@@ -42,18 +83,32 @@ export async function fetchFieldVisits(storeId: string): Promise<readonly DshFie
   return data.visits ?? [];
 }
 
-export async function completeFieldVisit(visitId: string, input: DshCompleteVisitInput): Promise<DshFieldVisit> {
+export async function completeFieldVisit(
+  visitId: string,
+  input: DshCompleteVisitInput,
+  supplied?: FieldMutationContext,
+): Promise<DshFieldVisit> {
+  const headers = buildFieldMutationContext("complete-visit", [visitId], supplied);
   const data = await request<{ visit: DshFieldVisit }>(
     `/dsh/field/visits/${encodeURIComponent(visitId)}/complete`,
-    { method: "POST", body: input, ...mutationHeaders("complete-visit") },
+    { method: "POST", body: input, ...headers },
   );
   return data.visit;
 }
 
-export async function upsertReadinessCheck(visitId: string, input: DshUpsertCheckInput): Promise<DshReadinessCheck> {
+export async function upsertReadinessCheck(
+  visitId: string,
+  input: DshUpsertCheckInput,
+  supplied?: FieldMutationContext,
+): Promise<DshReadinessCheck> {
+  const headers = buildFieldMutationContext(
+    "upsert-check",
+    [visitId, input.checkType, input.status, input.evidenceUrl ?? "", input.notes ?? ""],
+    supplied,
+  );
   const data = await request<{ check: DshReadinessCheck }>(
     `/dsh/field/visits/${encodeURIComponent(visitId)}/checks`,
-    { method: "PUT", body: input, ...mutationHeaders("upsert-check") },
+    { method: "PUT", body: input, ...headers },
   );
   return data.check;
 }
@@ -65,10 +120,19 @@ export async function fetchVisitChecks(visitId: string): Promise<readonly DshRea
   return data.checks ?? [];
 }
 
-export async function createReadinessEscalation(storeId: string, input: DshCreateEscalationInput): Promise<DshReadinessEscalation> {
+export async function createReadinessEscalation(
+  storeId: string,
+  input: DshCreateEscalationInput,
+  supplied?: FieldMutationContext,
+): Promise<DshReadinessEscalation> {
+  const headers = buildFieldMutationContext(
+    "create-escalation",
+    [storeId, input.visitId ?? "", input.severity, input.category, input.description],
+    supplied,
+  );
   const data = await request<{ escalation: DshReadinessEscalation }>(
     `/dsh/field/stores/${encodeURIComponent(storeId)}/escalations`,
-    { method: "POST", body: input, ...mutationHeaders("create-escalation") },
+    { method: "POST", body: input, ...headers },
   );
   return data.escalation;
 }
@@ -81,10 +145,19 @@ export async function fetchOperatorEscalations(statusFilter?: string): Promise<r
   return data.escalations ?? [];
 }
 
-export async function updateEscalation(escalationId: string, input: DshUpdateEscalationInput): Promise<DshReadinessEscalation> {
+export async function updateEscalation(
+  escalationId: string,
+  input: DshUpdateEscalationInput,
+  supplied?: FieldMutationContext,
+): Promise<DshReadinessEscalation> {
+  const headers = buildFieldMutationContext(
+    "update-escalation",
+    [escalationId, input.status, input.resolutionNote ?? ""],
+    supplied,
+  );
   const data = await request<{ escalation: DshReadinessEscalation }>(
     `/dsh/operator/field-readiness/escalations/${encodeURIComponent(escalationId)}`,
-    { method: "PATCH", body: input, ...mutationHeaders("update-escalation") },
+    { method: "PATCH", body: input, ...headers },
   );
   return data.escalation;
 }
@@ -96,6 +169,7 @@ export async function fetchPartnerOnboardingStatus(storeId: string): Promise<Dsh
 export async function fetchFieldWorkQueue(): Promise<DshFieldWorkQueue> {
   return request<DshFieldWorkQueue>("/dsh/field/work-queue");
 }
+
 export function classifyFieldReadinessError(error: unknown): {
   kind: "permission_denied" | "offline" | "not_found" | "error";
 } {

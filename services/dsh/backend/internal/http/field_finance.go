@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"dsh-api/internal/store"
 )
@@ -20,7 +21,7 @@ func (s *protectedStoreServer) handleFieldMeWallet(w http.ResponseWriter, r *htt
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	w.Write(body)
+	_, _ = w.Write(body)
 }
 
 func (s *protectedStoreServer) handleFieldMeCommissions(w http.ResponseWriter, r *http.Request) {
@@ -36,7 +37,7 @@ func (s *protectedStoreServer) handleFieldMeCommissions(w http.ResponseWriter, r
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	w.Write(body)
+	_, _ = w.Write(body)
 }
 
 func (s *protectedStoreServer) handleFieldMeLedgerEntries(w http.ResponseWriter, r *http.Request) {
@@ -52,7 +53,7 @@ func (s *protectedStoreServer) handleFieldMeLedgerEntries(w http.ResponseWriter,
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	w.Write(body)
+	_, _ = w.Write(body)
 }
 
 func (s *protectedStoreServer) handleFieldMePayoutRequests(w http.ResponseWriter, r *http.Request) {
@@ -68,7 +69,7 @@ func (s *protectedStoreServer) handleFieldMePayoutRequests(w http.ResponseWriter
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	w.Write(body)
+	_, _ = w.Write(body)
 }
 
 func (s *protectedStoreServer) handleSubmitFieldMePayoutRequest(w http.ResponseWriter, r *http.Request) {
@@ -77,35 +78,41 @@ func (s *protectedStoreServer) handleSubmitFieldMePayoutRequest(w http.ResponseW
 		return
 	}
 
-	type requestBody struct {
+	var request struct {
 		AmountMinorUnits int64  `json:"amountMinorUnits"`
 		Currency         string `json:"currency"`
 		IdempotencyKey   string `json:"idempotencyKey"`
 	}
-
-	var req requestBody
 	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64*1024))
-	if err := decoder.Decode(&req); err != nil {
+	if err := decoder.Decode(&request); err != nil {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid payload")
 		return
 	}
+	request.Currency = strings.TrimSpace(request.Currency)
+	request.IdempotencyKey = strings.TrimSpace(request.IdempotencyKey)
+	if request.AmountMinorUnits <= 0 || request.Currency == "" || request.IdempotencyKey == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "positive amount, currency, and idempotencyKey are required")
+		return
+	}
 
-	// Payload expected by WLT
 	payload := map[string]any{
 		"beneficiaryActorId":   actor.ID,
 		"beneficiaryActorType": "field",
-		"amountMinorUnits":     req.AmountMinorUnits,
-		"currency":             req.Currency,
-		"idempotencyKey":       req.IdempotencyKey,
+		"amountMinorUnits":     request.AmountMinorUnits,
+		"currency":             request.Currency,
+		"idempotencyKey":       request.IdempotencyKey,
 	}
-
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to marshal request")
 		return
 	}
 
-	status, body, err := s.wlt.FinanceWrite(r.Context(), http.MethodPost, "/wlt/payout-requests", payloadBytes, r.Header.Get("X-Correlation-ID"))
+	correlationID := strings.TrimSpace(r.Header.Get("X-Correlation-ID"))
+	if correlationID == "" {
+		correlationID = request.IdempotencyKey
+	}
+	status, body, err := s.wlt.FinanceWrite(r.Context(), http.MethodPost, "/wlt/payout-requests", payloadBytes, correlationID)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 		return
@@ -113,5 +120,5 @@ func (s *protectedStoreServer) handleSubmitFieldMePayoutRequest(w http.ResponseW
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	w.Write(body)
+	_, _ = w.Write(body)
 }

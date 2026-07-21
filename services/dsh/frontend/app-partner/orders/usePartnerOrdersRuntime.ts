@@ -1,88 +1,50 @@
 import React from 'react';
 import {
-  createDshOrderLifecycleHttpClient,
-  resolveDshOrderApiBaseUrl,
-} from '../../shared/orders/dsh-order-lifecycle-client';
+  classifyOrderError,
+  fetchPartnerOrders,
+} from '../../shared/orders/orders.api';
 import {
-  fetchDshRuntimeOrders,
-} from '../../shared/operations/dsh-operational-runtime-adapter';
-import { mapRuntimeRowToPartnerOrderItem } from '../../shared/partner/partner.adapters';
-import { usePlatformVars } from '../../shared/platform/PlatformVarsProvider';
+  mapDshOrderToPartnerOrderItem,
+  type GovernedPartnerOrderItem,
+} from '../../shared/partner/partner.adapters';
 
-type PartnerOrderItemLike = ReturnType<typeof mapRuntimeRowToPartnerOrderItem>;
 type PartnerOrdersState = 'ready' | 'loading' | 'empty' | 'error' | 'offline' | 'disabled' | 'partial';
 
+/**
+ * Actor-scoped partner workboard. It owns reads only; all mutations are
+ * centralized in usePartnerOrderCommands so every button uses the same
+ * server-authoritative action set and read-after-write refresh.
+ */
 export function usePartnerOrdersRuntime(route: string) {
-  const { dshClientId } = usePlatformVars();
-
-  const [orders, setOrders] = React.useState<readonly PartnerOrderItemLike[]>([]);
-  const [state, setState] = React.useState<PartnerOrdersState>(dshClientId ? 'loading' : 'disabled');
-
-  const orderLifecycleClient = React.useMemo(
-    () => (dshClientId
-      ? createDshOrderLifecycleHttpClient(resolveDshOrderApiBaseUrl(), undefined, { clientId: dshClientId })
-      : null),
-    [dshClientId],
+  const [orders, setOrders] = React.useState<readonly GovernedPartnerOrderItem[]>([]);
+  const [state, setState] = React.useState<PartnerOrdersState>(
+    route === 'inbox' ? 'loading' : 'disabled',
   );
 
-  const fetchOrders = React.useCallback(() => {
-    if (!dshClientId) return;
-    fetchDshRuntimeOrders({ limit: 100, scope: 'partner' }, dshClientId, 'partner').then((result) => {
-      if (result.kind === 'ok') {
-        const nextOrders = result.orders.map(mapRuntimeRowToPartnerOrderItem);
-        setOrders(nextOrders);
-        setState(nextOrders.length === 0 ? 'empty' : 'ready');
-      } else if (result.kind === 'offline') {
-        setState('offline');
-      } else {
-        setState('error');
-      }
-    }).catch(() => {
-      setState('error');
-    });
-  }, [dshClientId]);
+  const fetchOrders = React.useCallback(async () => {
+    try {
+      const result = await fetchPartnerOrders();
+      const nextOrders = result.map(mapDshOrderToPartnerOrderItem);
+      setOrders(nextOrders);
+      setState(nextOrders.length === 0 ? 'empty' : 'ready');
+    } catch (error) {
+      const classified = classifyOrderError(error);
+      setState(classified.kind === 'offline' ? 'offline' : 'error');
+    }
+  }, []);
 
   React.useEffect(() => {
-    if (route !== 'inbox') return;
-    if (!dshClientId) {
+    if (route !== 'inbox') {
       setState('disabled');
       return;
     }
     setState('loading');
-    fetchOrders();
-    
-    // Polling could be added here for real-time updates
-  }, [route, dshClientId, fetchOrders]);
-
-  const markReady = React.useCallback(
-    (orderId: string) => {
-      if (!orderLifecycleClient) return;
-      
-      // Optimistic update
-      setOrders((prev) =>
-        prev.map((item) =>
-          item.id === orderId ? { ...item, status: 'ready' as const } : item,
-        ),
-      );
-
-      orderLifecycleClient
-        .updateOrderStatus(orderId, { actor: 'partner', status: 'ready_for_pickup' })
-        .then(() => {
-          // Read-after-write for conflict resolution
-          fetchOrders();
-        })
-        .catch(() => {
-          // Rollback on error (handled by a fresh read)
-          fetchOrders();
-        });
-    },
-    [orderLifecycleClient, fetchOrders],
-  );
+    void fetchOrders();
+  }, [route, fetchOrders]);
 
   return {
     orders,
     state,
-    markReady,
     refresh: fetchOrders,
   } as const;
 }

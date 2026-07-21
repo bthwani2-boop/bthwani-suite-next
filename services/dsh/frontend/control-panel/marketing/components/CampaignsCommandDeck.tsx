@@ -1,5 +1,5 @@
 "use client";
-import { colorRoles } from '@bthwani/ui-kit';
+import { colorRoles } from "@bthwani/ui-kit";
 import React, { useState } from "react";
 import {
   CpButton,
@@ -10,6 +10,52 @@ import {
   CpEmptyTableMessage,
 } from "@bthwani/control-panel/components";
 import { useCampaignsController } from "../../../shared/marketing";
+import type { DshCampaign } from "../../../shared/marketing";
+
+const STATUS_LABEL: Record<string, string> = {
+  draft: "مسودة",
+  active: "نشطة",
+  paused: "موقوفة",
+  completed: "مكتملة",
+  cancelled: "ملغاة",
+};
+
+function CampaignActions({
+  campaign,
+  onStatus,
+  onArchive,
+}: {
+  readonly campaign: DshCampaign;
+  readonly onStatus: (status: string) => void;
+  readonly onArchive: () => void;
+}) {
+  if (campaign.status === "completed" || campaign.status === "cancelled") {
+    return <span style={{ fontSize: "0.75rem", opacity: 0.6 }}>لا توجد إجراءات متاحة</span>;
+  }
+
+  return (
+    <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
+      {campaign.status === "draft" && (
+        <CpButton onClick={() => onStatus("active")}>تفعيل</CpButton>
+      )}
+      {campaign.status === "active" && (
+        <CpButton onClick={() => onStatus("paused")}>إيقاف مؤقت</CpButton>
+      )}
+      {campaign.status === "paused" && (
+        <CpButton onClick={() => onStatus("active")}>استئناف</CpButton>
+      )}
+      {(campaign.status === "active" || campaign.status === "paused") && (
+        <CpButton onClick={() => onStatus("completed")}>إنهاء</CpButton>
+      )}
+      <CpButton
+        onClick={onArchive}
+        style={{ background: colorRoles.surfaceBase, color: colorRoles.brandAction }}
+      >
+        إلغاء وأرشفة
+      </CpButton>
+    </div>
+  );
+}
 
 export function CampaignsCommandDeck() {
   const controller = useCampaignsController("authenticated");
@@ -18,54 +64,103 @@ export function CampaignsCommandDeck() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  const handleLaunch = async () => {
+  const handleCreateDraft = async () => {
     if (!title.trim() || !startDate || !endDate) {
-      setErrorMsg("الحقول: العنوان، تاريخ البداية وتاريخ النهاية هي حقول مطلوبة.");
+      setErrorMsg("العنوان وتاريخ البداية وتاريخ النهاية حقول مطلوبة.");
       return;
     }
-    // Validation constraint: End date must be greater than start date
+    if (Number.isNaN(Date.parse(startDate)) || Number.isNaN(Date.parse(endDate))) {
+      setErrorMsg("صيغة التاريخ غير صحيحة. استخدم YYYY-MM-DD.");
+      return;
+    }
     if (new Date(endDate) <= new Date(startDate)) {
-      setErrorMsg("خطأ في الجدولة الزمنية: تاريخ النهاية يجب أن يكون لاحقاً لتاريخ البداية.");
+      setErrorMsg("تاريخ النهاية يجب أن يكون لاحقاً لتاريخ البداية.");
       return;
     }
+
     setErrorMsg(null);
-    await controller.create({ title, description, startDate, endDate });
-    setTitle("");
-    setDescription("");
-    setStartDate("");
-    setEndDate("");
+    setSuccessMsg(null);
+    try {
+      await controller.create({ title: title.trim(), description: description.trim(), startDate, endDate });
+      setTitle("");
+      setDescription("");
+      setStartDate("");
+      setEndDate("");
+      setSuccessMsg("تم حفظ الحملة كمسودة. لن تظهر على أي سطح قبل التفعيل.");
+    } catch (error) {
+      setErrorMsg(error instanceof Error ? error.message : "تعذر حفظ مسودة الحملة.");
+    }
+  };
+
+  const handleStatus = async (campaign: DshCampaign, status: string) => {
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    try {
+      await controller.update(campaign.id, { status });
+      setSuccessMsg(`تم تحديث حالة الحملة إلى: ${STATUS_LABEL[status] ?? status}.`);
+    } catch (error) {
+      setErrorMsg(error instanceof Error ? error.message : "تعذر تحديث حالة الحملة.");
+    }
+  };
+
+  const handleArchive = async (campaign: DshCampaign) => {
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    try {
+      await controller.remove(campaign.id);
+      setSuccessMsg("تم إلغاء الحملة وأرشفتها مع الاحتفاظ بسجل التدقيق.");
+    } catch (error) {
+      setErrorMsg(error instanceof Error ? error.message : "تعذر أرشفة الحملة.");
+    }
   };
 
   return (
     <div style={{ padding: "1.5rem", display: "grid", gridTemplateColumns: "1fr 22rem", gap: "1.5rem" }} dir="rtl">
       <div>
-        <h3 style={{ margin: "0 0 1rem", color: colorRoles.brandAction, fontSize: "1.15rem" }}>إدارة وجدولة الحملات التسويقية</h3>
+        <h3 style={{ margin: "0 0 1rem", color: colorRoles.brandAction, fontSize: "1.15rem" }}>
+          إدارة وجدولة الحملات التسويقية
+        </h3>
 
+        {errorMsg && <p role="alert" style={{ color: colorRoles.brandAction }}>{errorMsg}</p>}
+        {successMsg && <p role="status" style={{ color: colorRoles.brandStructure }}>{successMsg}</p>}
         {controller.state.kind === "loading" && <p>جارٍ التحميل...</p>}
-        {controller.state.kind === "error" && <p style={{ color: colorRoles.brandAction }}>{controller.state.message}</p>}
+        {controller.state.kind === "error" && <p role="alert" style={{ color: colorRoles.brandAction }}>{controller.state.message}</p>}
         {controller.state.kind === "success" && controller.state.items.length === 0 ? (
-          <CpEmptyTableMessage>لا توجد حملات تسويقية مجدولة حالياً.</CpEmptyTableMessage>
+          <CpEmptyTableMessage>لا توجد حملات تسويقية حالياً.</CpEmptyTableMessage>
         ) : controller.state.kind === "success" && (
           <CpTable>
             <thead>
               <tr>
-                <CpTableHeaderCell>عنوان الحملة</CpTableHeaderCell>
-                <CpTableHeaderCell>الوصف</CpTableHeaderCell>
-                <CpTableHeaderCell>تاريخ البدء</CpTableHeaderCell>
-                <CpTableHeaderCell>تاريخ الانتهاء</CpTableHeaderCell>
+                <CpTableHeaderCell>الحملة</CpTableHeaderCell>
+                <CpTableHeaderCell>الحالة</CpTableHeaderCell>
+                <CpTableHeaderCell>الجدولة</CpTableHeaderCell>
+                <CpTableHeaderCell>الجمهور والهدف</CpTableHeaderCell>
                 <CpTableHeaderCell>العمليات</CpTableHeaderCell>
               </tr>
             </thead>
             <tbody>
-              {controller.state.items.map((camp) => (
-                <tr key={camp.id}>
-                  <CpTableCell><strong>{camp.title}</strong></CpTableCell>
-                  <CpTableCell>{camp.description}</CpTableCell>
-                  <CpTableCell>{camp.startDate}</CpTableCell>
-                  <CpTableCell>{camp.endDate}</CpTableCell>
+              {controller.state.items.map((campaign) => (
+                <tr key={campaign.id}>
                   <CpTableCell>
-                    <CpButton onClick={() => controller.remove(camp.id)} style={{ background: colorRoles.surfaceBase, color: colorRoles.brandAction }}>حذف</CpButton>
+                    <strong>{campaign.title}</strong>
+                    <div style={{ fontSize: "0.75rem", opacity: 0.65 }}>{campaign.description || "بدون وصف"}</div>
+                  </CpTableCell>
+                  <CpTableCell>{STATUS_LABEL[campaign.status] ?? campaign.status}</CpTableCell>
+                  <CpTableCell>{campaign.startDate} — {campaign.endDate}</CpTableCell>
+                  <CpTableCell>
+                    <div>{campaign.audience || "all"}</div>
+                    <div style={{ fontSize: "0.75rem", opacity: 0.65 }}>
+                      {campaign.targetType ? `${campaign.targetType}: ${campaign.targetId || "—"}` : "بدون هدف مرتبط"}
+                    </div>
+                  </CpTableCell>
+                  <CpTableCell>
+                    <CampaignActions
+                      campaign={campaign}
+                      onStatus={(status) => void handleStatus(campaign, status)}
+                      onArchive={() => void handleArchive(campaign)}
+                    />
                   </CpTableCell>
                 </tr>
               ))}
@@ -74,21 +169,18 @@ export function CampaignsCommandDeck() {
         )}
       </div>
 
-      <div style={{ background: colorRoles.surfaceBase, border: "1px solid colorRoles.surfaceBase", borderRadius: "0.75rem", padding: "1.25rem" }}>
-        <h4 style={{ margin: "0 0 1rem", fontSize: "0.95rem", fontWeight: 700 }}>جدولة حملة تسويقية جديدة</h4>
-
-        {errorMsg && (
-          <div style={{ color: colorRoles.brandAction, background: colorRoles.surfaceBase, padding: "0.5rem", borderRadius: "0.375rem", fontSize: "0.75rem", marginBottom: "0.75rem" }}>
-            {errorMsg}
-          </div>
-        )}
+      <div style={{ background: colorRoles.surfaceBase, border: `1px solid ${colorRoles.surfaceBase}`, borderRadius: "0.75rem", padding: "1.25rem" }}>
+        <h4 style={{ margin: "0 0 1rem", fontSize: "0.95rem", fontWeight: 700 }}>إنشاء مسودة حملة جديدة</h4>
+        <p style={{ margin: "0 0 1rem", fontSize: "0.75rem", opacity: 0.7 }}>
+          الحفظ ينشئ مسودة فقط. التفعيل إجراء منفصل ومحكوم من جدول الحملات.
+        </p>
 
         <div style={{ display: "grid", gap: "0.75rem" }}>
           <label style={{ fontSize: "0.75rem", fontWeight: 600 }}>عنوان الحملة</label>
           <CpTextInput value={title} onChange={setTitle} placeholder="مثال: حملة الصيف الكبرى 2026" />
 
           <label style={{ fontSize: "0.75rem", fontWeight: 600 }}>الوصف الاستراتيجي</label>
-          <CpTextInput value={description} onChange={setDescription} placeholder="وصف موجز للمستهدفين والهدف..." />
+          <CpTextInput value={description} onChange={setDescription} placeholder="الهدف والجمهور والرسالة..." />
 
           <label style={{ fontSize: "0.75rem", fontWeight: 600 }}>تاريخ البداية</label>
           <CpTextInput value={startDate} onChange={setStartDate} placeholder="YYYY-MM-DD" />
@@ -96,7 +188,9 @@ export function CampaignsCommandDeck() {
           <label style={{ fontSize: "0.75rem", fontWeight: 600 }}>تاريخ النهاية</label>
           <CpTextInput value={endDate} onChange={setEndDate} placeholder="YYYY-MM-DD" />
 
-          <CpButton onClick={handleLaunch} style={{ background: colorRoles.brandAction, color: "white", marginTop: "0.5rem" }}>إطلاق الحملة</CpButton>
+          <CpButton onClick={() => void handleCreateDraft()} style={{ background: colorRoles.brandAction, color: "white", marginTop: "0.5rem" }}>
+            حفظ كمسودة
+          </CpButton>
         </div>
       </div>
     </div>

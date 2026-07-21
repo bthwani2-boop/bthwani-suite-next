@@ -1,14 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import {
-  acceptOrder,
   classifyOrderError,
   createOrder,
   fetchClientOrder,
   fetchClientOrders,
-  fetchPartnerOrders,
-  markOrderPreparing,
-  markOrderReady,
-  rejectOrder,
 } from "./orders.api";
 import type {
   DshCreateOrderInput,
@@ -24,10 +19,6 @@ import {
   resolveCreateOrderSuccess,
   resolveOrdersLoadError,
   resolveOrdersLoadSuccess,
-  resolvePartnerOrderActionError,
-  resolvePartnerOrderActionSuccess,
-  resolveRejectOrderValidation,
-  shouldLoadPartnerOrders,
 } from "./orders.controller-core";
 import { orderActionIdleState, ordersIdleState } from "./orders.states";
 
@@ -44,7 +35,7 @@ export function useClientOrdersController() {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { void load(); }, [load]);
 
   return { state, reload: load };
 }
@@ -67,79 +58,6 @@ export function useCreateOrderController() {
   return { state, submit, reset };
 }
 
-function usePartnerOrdersController(storeId: string, statusFilter?: string) {
-  const [state, setState] = useState<DshOrdersListState>(ordersIdleState());
-
-  const load = useCallback(async () => {
-    if (!shouldLoadPartnerOrders(storeId)) return;
-    setState(beginOrdersLoad());
-    try {
-      const orders = await fetchPartnerOrders(storeId, statusFilter);
-      setState(resolveOrdersLoadSuccess(orders));
-    } catch (error) {
-      setState(resolveOrdersLoadError(classifyOrderError(error), "partner"));
-    }
-  }, [storeId, statusFilter]);
-
-  useEffect(() => { load(); }, [load]);
-
-  return { state, reload: load };
-}
-
-function usePartnerOrderActionController() {
-  const [state, setState] = useState<DshOrderActionState>(orderActionIdleState());
-
-  const accept = useCallback(async (orderId: string) => {
-    setState(beginOrderAction());
-    try {
-      const order = await acceptOrder(orderId);
-      setState(resolvePartnerOrderActionSuccess(order));
-    } catch (error) {
-      setState(resolvePartnerOrderActionError(classifyOrderError(error), "accept"));
-    }
-  }, []);
-
-  const reject = useCallback(async (orderId: string, reason: string) => {
-    const validationState = resolveRejectOrderValidation(reason);
-    if (validationState) {
-      setState(validationState);
-      return;
-    }
-    setState(beginOrderAction());
-    try {
-      const order = await rejectOrder(orderId, { reason });
-      setState(resolvePartnerOrderActionSuccess(order));
-    } catch (error) {
-      setState(resolvePartnerOrderActionError(classifyOrderError(error), "reject"));
-    }
-  }, []);
-
-  const markPreparing = useCallback(async (orderId: string) => {
-    setState(beginOrderAction());
-    try {
-      const order = await markOrderPreparing(orderId);
-      setState(resolvePartnerOrderActionSuccess(order));
-    } catch (error) {
-      setState(resolvePartnerOrderActionError(classifyOrderError(error), "preparing"));
-    }
-  }, []);
-
-  const markReady = useCallback(async (orderId: string) => {
-    setState(beginOrderAction());
-    try {
-      const order = await markOrderReady(orderId);
-      setState(resolvePartnerOrderActionSuccess(order));
-    } catch (error) {
-      setState(resolvePartnerOrderActionError(classifyOrderError(error), "ready"));
-    }
-  }, []);
-
-  const reset = useCallback(() => setState(orderActionIdleState()), []);
-
-  return { state, accept, reject, markPreparing, markReady, reset };
-}
-
-
 export type { DshOrder, DshOrdersListState, DshOrderActionState };
 
 export function useClientOrderDetailController(orderId: string) {
@@ -149,7 +67,7 @@ export function useClientOrderDetailController(orderId: string) {
     try {
       const order = await fetchClientOrder(orderId);
       setState({ kind: "success", order });
-    } catch (error) {
+    } catch {
       setState({ kind: "error", message: "تعذر تحميل تفاصيل الطلب." });
     }
   }, [orderId]);

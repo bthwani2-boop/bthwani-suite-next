@@ -1,91 +1,118 @@
-# نطاق WLT المالي الأدنى القابل للتشغيل — v1
+# نطاق WLT المالي والتجاري القابل للتشغيل — v2
 
-**الخدمة:** `services/wlt` (Wallet / Financial Truth)
-**المصدر:** قرار مالك معتمد — البند 2/3 من `tools/plan/BTHWANI_FINAL_CLOSURE_DECISION_REGISTER_ONEBYONE.md`
-**الوضع الافتراضي:** مزود مالي Mock (WireMock داخل Docker) نشط افتراضيًا في local/staging؛ استبدال المزود الحقيقي بعد الإطلاق عبر env فقط.
+**الخدمة:** `services/wlt` — المالك الوحيد للحقيقة المالية وأرصدة الولاء والاستحقاقات المدفوعة.
 
-> قاعدة حاكمة: كل قدرة مالية ظاهرة في أي سطح يجب أن تكون إما مربوطة فعليًا بـ Runtime (WLT + المزود) أو محذوفة/مخفية تمامًا من الإصدار. لا يوجد وسط بينهما (انظر شرط الإغلاق في البند 3 من سجل القرارات).
+**الوضع الافتراضي المحلي:** مزود مالي Mock داخل Docker، مع تفعيل mutations في بيئات التطوير والتحقق الإنتاجي المحلي فقط.
 
----
+> قاعدة حاكمة: كل قدرة مالية أو تجارية ظاهرة يجب أن تكون مرتبطة بعقد WLT حي، ومحمية بهوية خدمة DSH، ومفتاح idempotency أو correlation، ومسار عكس/تسوية عند الحاجة. لا توجد نجاحات واجهة محلية.
 
-## 1. داخل النطاق (IN SCOPE) — v1
+## 1. داخل النطاق المعتمد
 
-### 1.1 مرجع جلسة الدفع (DSH → WLT Handoff)
-- إنشاء وقراءة `payment_session_reference` من DSH إلى WLT عند بدء الدفع.
-- WLT هو المالك الوحيد لحالة الجلسة؛ DSH يستهلك فقط `wlt_reference` و`payment_status_reference`.
-- لا يجوز لأي سطح آخر إنشاء أو تعديل حالة الدفع مباشرة.
+### 1.1 جلسات الدفع والتفويض والالتقاط
 
-### 1.2 التفويض والالتقاط عبر بطاقة (Card Authorize/Capture)
-- ينفذ عبر `provider adapter` واحد داخل `services/wlt/backend/internal/provider`.
-- الوضع الافتراضي: **mock** عبر `wiremock-financial-provider` (Docker، profile `financial-simulators`).
-- المزود الحقيقي (production) يبقى ممنوعًا افتراضيًا؛ التفعيل عبر متغيرات بيئة فقط (انظر القسم 3).
+- DSH يثبت snapshot التسعير، ويرسل المبلغ النهائي ومرجع snapshot إلى WLT.
+- WLT يملك جلسة الدفع وحالات authorize/capture/failure/expiry.
+- لا يحق لأي تطبيق أو متصفح مخاطبة المزود المالي مباشرة.
 
-### 1.3 الدفع عند الاستلام (COD)
-- تسجيل `cod_financial_state` وتحصيل COD ضمن ملكية WLT.
-- لا يجوز لـ DSH أو أي تطبيق تخزين حالة تحصيل COD كحقيقة نهائية؛ DSH يعرض مرجع الحالة فقط.
+### 1.2 الدفع عند الاستلام
 
-### 1.4 المرتجعات المالية (Refunds)
-- إنشاء وتتبع `refunds` وربطها بـ `settlements`/`ledger` داخل WLT.
-- حالة الاسترجاع الظاهرة لأي سطح هي `refund_status_reference` فقط.
+- WLT يملك سجل COD والتحصيل والتسليم والتسوية.
+- DSH يرسل حقائق التنفيذ عبر outbox durable فقط.
 
----
+### 1.3 الاسترجاعات
 
-## 2. خارج النطاق ومخفي في v1 (OUT OF SCOPE & HIDDEN)
+- WLT يملك إنشاء الاسترجاع واعتماده وإكماله.
+- بعد اكتمال refund يرسل WLT حدثًا موثقًا إلى DSH.
+- DSH يعكس الآثار التشغيلية التجارية idempotently: حجز الكوبون وقيد الولاء.
 
-يطابق `deferred_and_hidden_in_v1` في سجل قرارات الإغلاق (البنود 46/55 وما في حكمها):
+### 1.4 المنتجات التجارية والاشتراكات
 
-- **الولاء (Loyalty):** لا نقاط، لا مكافآت، لا رصيد ولاء ظاهر أو محسوب.
-- **الاشتراكات (Subscriptions):** لا خطط اشتراك، لا تجديد تلقائي، لا فوترة دورية.
-- **الإكراميات (Tips):** لا حقل tip في السلة أو الطلب أو الإيصال حتى اعتماد مالي كامل منفصل.
+- WLT يملك المنتج المالي التجاري وسعره ودورته.
+- DSH يملك العرض التسويقي وتعريف الخطة الظاهر للعميل، ويربطه بـ`wlt_product_reference`.
+- شراء الاشتراك يبدأ من DSH ثم ينشئ WLT payment session.
+- التفعيل لا يحدث إلا بعد إثبات capture ومطابقة العميل والمبلغ والعملة والمنتج.
+- الاستحقاق النشط داخل WLT هو الحقيقة المالية؛ DSH يحتفظ بمرجع تشغيلي للعرض متعدد الأسطح.
 
-أي إشارة UI أو Seed أو route أو deep link لهذه القدرات يجب أن تكون محذوفة تمامًا من الإصدار، لا "قريبًا" ولا حالة معطّلة ظاهرة.
+### 1.5 الولاء
 
----
+- DSH يملك سياسة الاستحقاق التشغيلية ويرصد حقيقة اكتمال الطلب.
+- WLT يملك رصيد النقاط والدفتر غير القابل للتعديل.
+- DSH يرسل earn/reverse عبر outbox durable وبمفتاح idempotency لكل طلب.
+- refund مؤكد يلغي earn غير المرسل، أو يطلب reverse إذا كان القيد وصل إلى WLT.
+- لا يجوز تعديل رصيد النقاط مباشرة من لوحة التحكم أو تطبيق العميل.
 
-## 3. إجراء استبدال المزود المالي (Provider Swap Procedure)
+### 1.6 تمويل العروض
 
-الاستبدال بين المزود الوهمي (mock) والمزود الحقيقي (production) يتم **حصريًا عبر متغيرات البيئة** دون أي تغيير كود:
+- DSH يملك حساب الخصم والأهلية وsnapshot checkout.
+- WLT يملك حجز وتمرير وعكس مساهمة المنصة/الشريك المالية.
+- أي عرض ممول يتطلب reservation قبل اعتماد الدفع، وcommit عند إنشاء الطلب، وrelease عند الفشل، وreverse عند refund.
 
-```bash
-WLT_FINANCIAL_PROVIDER_MODE=mock        # القيمة الافتراضية في local/staging
-WLT_FINANCIAL_PROVIDER_BASE_URL=http://wiremock-financial-provider:8080
-WLT_ALLOW_PRODUCTION_PROVIDER=false     # يجب أن يبقى false إلا بقرار وتفعيل صريحين
+## 2. خارج النطاق الحالي
+
+- الإكراميات `tips` حتى اعتماد نموذج مالي مستقل وتسوية وعكس كاملين.
+- الخصم أو النقاط أو الاشتراك الذي لا يمر عبر حدود WLT المعتمدة.
+- أي مزود إنتاج حقيقي دون قرار إطلاق وبيانات اعتماد ومراقبة وتسوية.
+
+## 3. بوابات التشغيل
+
+كل mutation في WLT يحتاج بوابتين مستقلتين:
+
+1. `X-Service-Caller: dsh` مع `WLT_DSH_SERVICE_TOKEN` صحيح.
+2. `WLT_MUTATIONS_ENABLED=true` في بيئة النشر المقصودة.
+
+المسارات التجارية معتمدة في:
+
+```text
+services/wlt/contracts/wlt.commercial.openapi.yaml
 ```
 
-- التبديل إلى مزود حقيقي: تعيين `WLT_FINANCIAL_PROVIDER_MODE=production`، `WLT_FINANCIAL_PROVIDER_BASE_URL` إلى نقطة نهاية المزود الحقيقي، و`WLT_ALLOW_PRODUCTION_PROVIDER=true` معًا في بيئة الإنتاج فقط.
-- هذا القرار مرتبط ببند [P0] "مزود الدفع والعمليات المالية الفعلية" في سجل قرارات الإغلاق ويبقى `PENDING` حتى اعتماد مزود إنتاج فعلي؛ الافتراضي الحالي (mock) لا يمثل جاهزية إنتاجية.
-- الحارس `tools/guards/wlt-financial-boundary-gate.mjs` يمنع أي إشارة مباشرة لمزود مالي إنتاجي أو نقطة وصول مباشرة خارج `services/wlt` والمسارات المسموح بها.
+لكنها تبقى fail-closed إذا غاب متغير البيئة. بيئات التطوير والتحقق المحلي تستخدم مزودًا وهميًا وتفعّل البوابة. الإنتاج الحقيقي يجب أن يضبطها صراحة بعد اكتمال provider/reconciliation release gates.
 
----
+## 4. استبدال المزود المالي
 
-## 4. القاعدة الحاكمة للإغلاق
+```bash
+WLT_FINANCIAL_PROVIDER_MODE=mock
+WLT_FINANCIAL_PROVIDER_BASE_URL=http://wiremock-financial-provider:8080
+WLT_ALLOW_PRODUCTION_PROVIDER=false
+WLT_MUTATIONS_ENABLED=true
+```
 
-كل قدرة مالية ظاهرة لأي مستخدم (عميل، شريك، كابتن، ميداني، تحكم) يجب أن تكون:
+للإنتاج الحقيقي فقط:
 
-- **مربوطة Runtime بالكامل** (WLT حي + مزود mock/production يستجيب + مسار E2E مُختبر)، **أو**
-- **محذوفة بالكامل** من ذلك السطح (لا زر، لا نص، لا route، لا Seed).
+- `WLT_FINANCIAL_PROVIDER_MODE=production`
+- `WLT_FINANCIAL_PROVIDER_BASE_URL=<approved-provider>`
+- `WLT_ALLOW_PRODUCTION_PROVIDER=true`
+- `WLT_MUTATIONS_ENABLED=true`
+- مفاتيح الخدمة والمزود من secret manager، لا من المستودع.
 
-لا يُقبل عرض قدرة مالية "معطّلة بصريًا" أو "قريبًا" كحل وسط (يطابق شرط إغلاق البند 3 في سجل القرارات).
+## 5. شرط الإغلاق
 
----
+لا تُعد القدرة مغلقة إلا إذا اجتازت معًا:
+
+- العقد والراوتر والحارس.
+- مصادقة الخدمة والبوابة البيئية.
+- idempotency والتعارض المتزامن.
+- مسار الفشل والتحرير والعكس.
+- تطبيق migrations على قاعدة نظيفة.
+- اختبارات backend وE2E متعددة الأسطح.
 
 ```yaml
-financial_scope_version: v1
+financial_scope_version: v2
 provider_mode_default: mock
-mutations_enabled_default: true
+commercial_mutations_approved: true
+mutation_runtime_gate: WLT_MUTATIONS_ENABLED
 production_provider_allowed_default: false
 in_scope:
-  - payment_session_reference_handoff
-  - card_authorize_capture_via_provider_adapter
-  - cod_records_and_collection
+  - payment_sessions
+  - authorize_capture
+  - cod
   - refunds
-deferred_and_hidden_in_v1:
-  - loyalty
-  - subscriptions
+  - settlements
+  - commercial_products
+  - paid_subscriptions
+  - loyalty_ledger
+  - promotion_funding
+out_of_scope:
   - tips
-provider_swap_env_vars:
-  - WLT_FINANCIAL_PROVIDER_MODE
-  - WLT_FINANCIAL_PROVIDER_BASE_URL
-  - WLT_ALLOW_PRODUCTION_PROVIDER
-closure_rule: every_visible_financial_capability_must_be_runtime_bound_or_removed
+closure_rule: every_visible_financial_capability_must_be_runtime_bound_idempotent_reversible_or_removed
 ```

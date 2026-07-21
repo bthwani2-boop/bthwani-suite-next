@@ -1,46 +1,47 @@
 # 10 — Toolchain Version Lock
 
-Status: CANONICAL
+Status: ACTIVE_CANONICAL
 
 ## Source of truth
 
-`package.json` at the repository root is the **operative source of truth** for locked tool versions.
-This file documents those values and enforces the invariant that they must agree.
+The root `package.json`, package lockfile, Go module files, container references, and runtime manifests own the operative installed or declared versions for their ecosystems. This document records cross-tool invariants and must remain consistent with those live sources.
 
-Any future change to pnpm, TypeScript, or Node versions **must** update both `package.json` **and** this file in the same commit.
-A mismatch between the two fails the phase gate.
+A version change updates every affected live manifest, lockfile, installer, workflow, and documented baseline in the same bounded change.
 
 ## Locked baseline
 
-| Tool | Version | Source | State |
+| Tool | Declared baseline | Operative source | Evidence state |
 |---|---:|---|---|
-| Node.js | >=24.17.0 <25 | engines.node in package.json | LOCKED |
-| pnpm | 10.34.2 | packageManager + engines.pnpm in package.json | LOCKED |
-| TypeScript | ~6.0.3 | devDependencies.typescript in package.json | LOCKED |
-| Go | 1.26.4 | LOCKED_WHEN_GO_SERVICES_ARE_INTRODUCED | LOCKED_WHEN_GO_SERVICES_ARE_INTRODUCED |
-| PostgreSQL | BLOCKED_NEEDS_RUNTIME_EVIDENCE | BLOCKED_NEEDS_RUNTIME_EVIDENCE | BLOCKED_NEEDS_RUNTIME_EVIDENCE |
-| MinIO | BLOCKED_NEEDS_RUNTIME_EVIDENCE | BLOCKED_NEEDS_RUNTIME_EVIDENCE | BLOCKED_NEEDS_RUNTIME_EVIDENCE |
-| Expo SDK | OUT_OF_SCOPE_FOR_THIS_JOURNEY | OUT_OF_SCOPE_FOR_THIS_JOURNEY | OUT_OF_SCOPE_FOR_THIS_JOURNEY |
-| React | OUT_OF_SCOPE_FOR_THIS_JOURNEY | OUT_OF_SCOPE_FOR_THIS_JOURNEY | OUT_OF_SCOPE_FOR_THIS_JOURNEY |
-| React Native | OUT_OF_SCOPE_FOR_THIS_JOURNEY | OUT_OF_SCOPE_FOR_THIS_JOURNEY | OUT_OF_SCOPE_FOR_THIS_JOURNEY |
-| Next.js | OUT_OF_SCOPE_FOR_THIS_JOURNEY | OUT_OF_SCOPE_FOR_THIS_JOURNEY | OUT_OF_SCOPE_FOR_THIS_JOURNEY |
+| Node.js | `>=24.17.0 <25` | `package.json#engines.node` | `PASS` only when the manifest and active CI setup agree |
+| pnpm | `10.34.2` | `packageManager` and `engines.pnpm` | `PASS` only when the manifest, lockfile, and setup action agree |
+| TypeScript | `~6.0.3` | `devDependencies.typescript` | `PASS` only when package metadata and lockfile agree |
+| Go | repository `go.mod` declarations | applicable `go.mod` files and CI setup | `NEEDS_EVIDENCE` when no applicable module or CI evidence exists |
+| PostgreSQL | versioned runtime references | compose and runtime manifests | `NEEDS_EVIDENCE` without same-commit runtime evidence |
+| MinIO | versioned runtime references | compose and runtime manifests | `NEEDS_EVIDENCE` without same-commit runtime evidence |
+| Expo, React Native, React, Next.js | package manifests and lockfile | applicable app package files | `OUT_OF_SCOPE_FOR_THIS_JOURNEY` only when the current change does not affect them |
+
+The decision terms in the evidence column are scoped. They do not imply final closure.
 
 ## Rules
 
-- no `latest`
-- no wildcard versions
-- `packageManager` must be set in package.json
-- `engines.node` and `engines.pnpm` must be set in package.json
-- Docker images must be tagged
-- This file and package.json must always agree — divergence fails the phase gate
+- no `latest`, wildcard, or unbounded version in governed runtime and CI references;
+- `packageManager`, `engines.node`, and `engines.pnpm` remain explicit;
+- external GitHub Actions use immutable commit SHAs;
+- container references follow the applicable version or digest policy;
+- package manifests and lockfiles change together;
+- installer scripts and CI setup use the same accepted versions;
+- a documentation value never overrides a live manifest or lockfile.
 
-## Sync invariant
+## Verification
 
-When bumping any locked tool:
-1. Update `package.json` (packageManager, engines, devDependencies as applicable)
-2. Update this file in the same commit
-3. Verify with `git diff --check` and foundation gate
+For each affected ecosystem:
+
+1. compare all operative manifests and lockfiles;
+2. verify CI and installer references;
+3. run the smallest applicable version or installation check;
+4. report `PASS`, `FIX_REQUIRED`, or `NEEDS_EVIDENCE` for the declared scope;
+5. do not use deprecated aliases such as `BLOCKED_NEEDS_RUNTIME_EVIDENCE`.
 
 ## Acceptance condition
 
-Accepted only when local versions and package metadata match the lock, and `git diff --check` passes.
+Accepted only when affected version sources agree, immutable references are enforced where required, manifests and lockfiles remain synchronized, missing runtime proof is reported as `NEEDS_EVIDENCE`, and no documentation-only baseline is presented as installed or executed truth.

@@ -1,47 +1,53 @@
 ---
 name: bthwani-sdlc-stage-gate-orchestrator
-description: Route BThwani changes through governed SDLC stage gates. Use when a task mentions SDLC, stage gates, QA/security/release approval, risk acceptance, production readiness, tenant/SaaS activation governance, or asks to classify a change and choose applicable gates before closure.
+version: 2026.07.17-v3
+summary: Route governed changes through G0-G10 and final closure without owning specialist approval.
 ---
 
-# BThwani SDLC Stage Gate Orchestrator
+# bthwani-sdlc-stage-gate-orchestrator
 
 ## Purpose
 
-Coordinate governed BThwani changes through formal SDLC stage gates while preserving lean, affected-only execution for ordinary changes.
+Own formal SDLC stage routing, applicable-gate selection, no-skip validation, and evidence reconciliation for changes that require lifecycle control.
 
-## Workflow
+## Invoke when
 
-1. Establish the local branch and commit with `git branch --show-current` and `git rev-parse HEAD`.
-2. Classify the task mode: `analysis_only`, `implementation_or_closure`, or `merge_review`.
-3. Build a compact change impact from the real diff or requested scope:
-   - affected paths
-   - services and surfaces
-   - API/database/runtime/security/WLT/tenant impact
-   - risk class
-4. Read only the relevant governance sources:
-   - `governance/26_SDLC_TEAM_AND_STAGE_GATES.md`
-   - `governance/06_EVIDENCE_AND_GATES.md`
-   - `governance/07_SECURITY_AND_SECRETS.md` when security-sensitive
-   - `governance/operational_journey_protocol_package/sdlc/README.md`
-   - `governance/operational_journey_protocol_package/annexes/SAAS_READINESS_AND_TENANCY_GATES.md` when tenant/SaaS conditions apply
-5. Select the requested stage and applicable gates.
-6. Run the smallest validation command that matches the task. For SDLC package integrity use:
+- A task requires G0-G10 transitions, formal product, governance, CI, QA, security, release, production, or residual-risk decisions.
+- A high-risk capability needs an artifact manifest and change-impact contract.
 
-```powershell
-pnpm run guard:sdlc -- --capability <CAPABILITY_ID> --stage <REQUESTED_STAGE> --affected
-```
+## Do not invoke when
 
-## Decision Rules
+- A low-risk code-only change requires only targeted verification.
+- The task is analysis-only and does not request a stage decision.
+- Commercial SaaS activation is requested while that separate implementation remains explicitly deferred.
 
-- Do not mutate stage state directly.
-- Do not claim `CLOSED_WITH_EVIDENCE` from `guard:sdlc` alone.
-- Treat missing evidence, missing approval, self-approval, unknown stage, or unowned residual risk as `FIX_REQUIRED`.
-- Treat missing external access, unavailable CI/runtime, or unpushed remote ref as `HARD_BLOCKED_EXTERNAL_ONLY` only when no local progress is possible.
-- Use existing specialist skills and guards for API, runtime, security, WLT, UI, and release evidence instead of duplicating their work.
+## Authority boundary
 
-## Output
+This skill owns SDLC routing and stage-state validation only. It does not approve product scope, functional acceptance, architecture, implementation, governance, CI, QA, security, release, production verification, residual risk, or final closure on behalf of their authorities.
 
-Return a compact machine-readable decision when asked for a gate result:
+## Resolution and workflow
+
+1. Pin repository mode, branch, and immutable commit with `bthwani-current-workspace-authority`.
+2. Classify task mode, risk, and real impact.
+3. Require Product Truth for applicable user-visible, role-sensitive, cross-surface, workflow, or commercial changes.
+4. Build or validate change-impact and artifact-manifest inputs.
+5. Select the immediate next stage only; stage skipping is forbidden without explicit not-applicable evidence.
+6. Run `pnpm run guard:sdlc` with artifact and impact inputs for affected formal transitions.
+7. Require governance-contract and CI-workflow approvals when their impact flags are true.
+8. Collect specialist evidence and approvals without manufacturing them.
+9. Map the result through the canonical decision vocabulary.
+
+## Forbidden
+
+- Treating any lifecycle that ends before G10 as complete; the active lifecycle is G0-G10 plus `CLOSED_WITH_EVIDENCE`.
+- Assuming local mode when GitHub Remote is named.
+- Mutating stage state from a validator.
+- Passing an affected transition without artifact, impact, Product Truth when applicable, and required approvals.
+- Using stale SHA, another branch, merge ref, or documentation-only evidence as current proof.
+- Emitting deprecated gate-decision aliases; use scoped `PASS`.
+- Claiming `CLOSED_WITH_EVIDENCE` from `guard:sdlc` alone.
+
+## Required output
 
 ```json
 {
@@ -61,3 +67,5 @@ Return a compact machine-readable decision when asked for a gate result:
   "decision": "FIX_REQUIRED"
 }
 ```
+
+Allowed decisions: `PASS`, `FIX_REQUIRED`, `NEEDS_EVIDENCE`, `QA_BLOCK`, `SECURITY_BLOCK`, `RELEASE_BLOCK`, `BLOCKED_EXTERNAL`, `PROTOCOL_VIOLATION`, and `CLOSED_WITH_EVIDENCE` only after the applicable final stage with complete independent evidence.

@@ -1,0 +1,163 @@
+{
+  "schemaVersion": 3,
+  "repositoryMode": "REMOTE_ONLY",
+  "repository": "bthwani2-boop/bthwani-suite-next",
+  "targetBranch": "lian",
+  "initialObservedCommitSha": "dd771bff58e119b4b764df0045a9304930c60225",
+  "lastPinnedCommitSha": "ebfc5eceb92d96c6c24d498e295fed7cdb9ad5d2",
+  "mode": "CODE_BASED_LEAN_HIGH_RISK_MULTI_SURFACE",
+  "canonicalDecision": "FIX_REQUIRED",
+  "activePhase": "P2_SAME_COMMIT_RUNTIME_AND_MULTI_SURFACE_CLOSURE",
+  "closureTarget": "CLOSED_WITH_EVIDENCE",
+  "scope": {
+    "primaryServices": ["dsh", "wlt"],
+    "surfaces": [
+      "app-client",
+      "app-partner",
+      "app-captain",
+      "app-field",
+      "control-panel"
+    ],
+    "conditionalDependencies": [
+      "identity",
+      "workforce",
+      "platform-control",
+      "providers",
+      "media",
+      "postgres",
+      "github-actions"
+    ]
+  },
+  "executionLoops": [
+    "PIN_REMOTE_TRUTH",
+    "DISCOVER_AND_CLASSIFY",
+    "RECONCILE_OWNER_AND_CONTRACT",
+    "IMPLEMENT_SMALLEST_SAFE_FIX",
+    "VERIFY_AFFECTED_SCOPE",
+    "RUN_RUNTIME_WHEN_CLAIMED",
+    "READ_BACK_ACROSS_SURFACES",
+    "REPIN_AND_RECLASSIFY"
+  ],
+  "completedRepositoryWaves": [
+    {
+      "id": "P0-CI-TRUTH",
+      "state": "IMPLEMENTED_NEEDS_SAME_COMMIT_EVIDENCE",
+      "outcomes": [
+        "Added lian push coverage to central, security, governance, DSH operational, and dedicated full-stack workflows",
+        "Added fail-closed required-command integrity checks",
+        "Corrected host DSH health target to port 58080",
+        "Kept branch protection, required checks, and independent approval as NOT_PROVEN"
+      ]
+    },
+    {
+      "id": "P0-DSH-REGISTRY",
+      "state": "IMPLEMENTED_NEEDS_CI_AND_RUNTIME_EVIDENCE",
+      "outcomes": [
+        "Established canonical merged DSH capability registry",
+        "Derived manifest capabilities, operations, surfaces, and runtime posture from explicit owners",
+        "Marked historical runtime evidence as not valid for the current commit",
+        "Established active DSH contract registry and contract/client drift guard"
+      ]
+    },
+    {
+      "id": "P1-CLIENT-COMMERCE",
+      "state": "IMPLEMENTED_NEEDS_TYPECHECK_BUILD_TEST_RUNTIME",
+      "outcomes": [
+        "Removed heuristic product units and local price multiplication",
+        "Removed dead store banner, image, search, share, and cart actions",
+        "Removed unsafe fulfillment casts",
+        "Rebuilt cart around DSH cart and serviceability controllers",
+        "Removed seeded addresses, localStorage persistence, random map coordinates, fake subscription success, local cart total calculation, and hardcoded checkout area",
+        "Derived checkout service area from live store data",
+        "Kept only WLT-supported COD available and removed local payment amount claims",
+        "Added client-commerce anti-regression journey guard to lian CI"
+      ]
+    },
+    {
+      "id": "P1-CLIENT-ADDRESS",
+      "state": "IMPLEMENTED_NEEDS_MAP_GOVERNANCE_AND_SAME_COMMIT_RUNTIME",
+      "outcomes": [
+        "Added authenticated client-address OpenAPI contract",
+        "Added PostgreSQL ownership, default uniqueness, soft deletion, optimistic concurrency, idempotency, and audit events",
+        "Added protected CRUD and default-address handlers",
+        "Bound address selection to serviceability and checkout",
+        "Added address and checkout database tests and workflow"
+      ]
+    },
+    {
+      "id": "P1-WLT-MUTATION-IDEMPOTENCY",
+      "state": "IMPLEMENTED_NEEDS_GO_TESTS_AND_INTEGRATED_JOURNEYS",
+      "outcomes": [
+        "Added fail-closed shared mutation headers",
+        "Added deterministic idempotency-key generation",
+        "Added tests for delivery, field commission, actor finance, settlement, commercial, promotion-funding, and subscription mutations",
+        "Kept production provider mutations fail-closed"
+      ]
+    },
+    {
+      "id": "P1-FIELD-OFFLINE-AND-PAYOUT",
+      "state": "IMPLEMENTED_NEEDS_DEVICE_RUNTIME_AND_READBACK",
+      "outcomes": [
+        "Activated the field offline queue for visits, checks, completion, and escalations",
+        "Reused mutation correlation and idempotency context during synchronization",
+        "Removed synthetic visits and invalid location success",
+        "Persisted payout attempts across restart and blocked requests above balance",
+        "Bound account gates to Workforce states"
+      ]
+    },
+    {
+      "id": "P1-GOVERNED-SUPPORT",
+      "state": "IMPLEMENTED_NEEDS_CONTRACT_DATABASE_RUNTIME_AND_MEDIA_SLA_EVIDENCE",
+      "outcomes": [
+        "Registered governed client, partner, captain, and operator support operations",
+        "Added ownership, permission, ticket-message, transition, idempotency, correlation, and event-audit paths",
+        "Bound partner support navigation to a real support surface",
+        "Kept Media evidence and governed SLA policy outside the closure claim"
+      ]
+    }
+  ],
+  "currentFacts": {
+    "dshManifestState": "FIX_REQUIRED",
+    "dshRuntimeState": "PARTIALLY_BOUND",
+    "dshScreensReady": false,
+    "dshTechnicalRuntimeReady": false,
+    "dshRealExperienceReady": false,
+    "generatedClientSameCommitVerified": false,
+    "wltJourneyRuntimeVerified": false,
+    "wltProductionMutationsReady": false,
+    "sameCommitCiProven": false,
+    "independentApprovalsProven": false,
+    "branchProtectionProven": false,
+    "clientAddressContractImplemented": true,
+    "clientAddressPersistenceImplemented": true,
+    "clientAddressCheckoutBindingImplemented": true,
+    "clientMapProviderIntegrated": false,
+    "clientAddressPiiGovernanceClosed": false,
+    "dshWltMutationIdempotencyImplemented": true,
+    "dshWltMutationIdempotencyFullyVerified": false,
+    "governedSupportImplemented": true,
+    "governedSupportRuntimeVerified": false,
+    "allSurfaceActionsAudited": false
+  },
+  "nextActions": [
+    "Obtain and inspect same-commit GitHub Actions job IDs and logs for the current lian SHA and fix every failure",
+    "Run DSH, WLT, Platform Control, Identity, and Workforce migrations from clean databases and supported upgrade baselines",
+    "Execute generated-client, shard-subset, manual-adapter, route, handler, and consumer congruence checks",
+    "Integrate governed map search, reverse geocoding, coordinate-to-service-area validation, provider fallback, secret management, and address PII retention/deletion",
+    "Verify address CRUD, ownership isolation, retry, timeout, restart, serviceability, checkout, and order-snapshot readback",
+    "Verify duplicate, replay, retry, timeout, out-of-order, and partial-failure behavior for every DSH-to-WLT mutation",
+    "Run client, partner, captain, field, support, notifications, special-request, and finance journeys across all required surfaces",
+    "Complete the UI action inventory and eliminate every dead control, local truth, placeholder, premature success, and permission mismatch",
+    "Verify live branch protection, required checks, stale approval dismissal, and independent reviewers",
+    "Re-pin one final immutable SHA and generate the final same-commit evidence bundle"
+  ],
+  "claimLimits": {
+    "staticDoesNotProveRuntime": true,
+    "simulatorDoesNotProveProductionFinance": true,
+    "documentationDoesNotProveImplementation": true,
+    "implementationAuthorCannotSelfApproveProtectedStages": true,
+    "emptyCommitStatusesDoNotProveCiSuccess": true,
+    "connectorPullRequestRunsDoNotProvePushWorkflowAbsence": true,
+    "allCapabilitiesRemainFixRequiredUntilEvidencePromotion": true
+  }
+}

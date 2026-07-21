@@ -34,27 +34,38 @@ type HomeCategory struct {
 }
 
 type AdminContentItem struct {
-	ID           string `json:"id"`
-	Kind         string `json:"kind"`
-	Title        string `json:"title"`
-	Subtitle     string `json:"subtitle,omitempty"`
-	BadgeLabel   string `json:"badgeLabel,omitempty"`
-	ImageURL     string `json:"imageUrl,omitempty"`
-	ActionType   string `json:"actionType"`
-	ActionTarget string `json:"actionTarget"`
-	SortOrder    int    `json:"sortOrder"`
-	IsActive     bool   `json:"isActive"`
+	ID                string  `json:"id"`
+	Kind              string  `json:"kind"`
+	Title             string  `json:"title"`
+	Subtitle          string  `json:"subtitle,omitempty"`
+	BadgeLabel        string  `json:"badgeLabel,omitempty"`
+	ImageURL          string  `json:"imageUrl,omitempty"`
+	ActionType        string  `json:"actionType"`
+	ActionTarget      string  `json:"actionTarget"`
+	SortOrder         int     `json:"sortOrder"`
+	IsActive          bool    `json:"isActive"`
+	PublicationStatus string  `json:"publicationStatus"`
+	PublishFrom       *string `json:"publishFrom,omitempty"`
+	PublishUntil      *string `json:"publishUntil,omitempty"`
+	CreatedByActorID  string  `json:"createdByActorId"`
+	ApprovedByActorID string  `json:"approvedByActorId,omitempty"`
+	ApprovedAt        *string `json:"approvedAt,omitempty"`
+	Version           int     `json:"version"`
 }
 
 type AdminContentInput struct {
-	Title        string `json:"title"`
-	Subtitle     string `json:"subtitle"`
-	BadgeLabel   string `json:"badgeLabel"`
-	ImageURL     string `json:"imageUrl"`
-	ActionType   string `json:"actionType"`
-	ActionTarget string `json:"actionTarget"`
-	SortOrder    int    `json:"sortOrder"`
-	IsActive     bool   `json:"isActive"`
+	Title             string  `json:"title"`
+	Subtitle          string  `json:"subtitle"`
+	BadgeLabel        string  `json:"badgeLabel"`
+	ImageURL          string  `json:"imageUrl"`
+	ActionType        string  `json:"actionType"`
+	ActionTarget      string  `json:"actionTarget"`
+	SortOrder         int     `json:"sortOrder"`
+	IsActive          bool    `json:"isActive"`
+	PublicationStatus string  `json:"publicationStatus"`
+	PublishFrom       *string `json:"publishFrom"`
+	PublishUntil      *string `json:"publishUntil"`
+	ExpectedVersion   int     `json:"expectedVersion"`
 }
 
 type HomeDiscoveryQuery struct {

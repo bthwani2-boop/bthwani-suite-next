@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "service": "wlt",
+  "operations": [
+    {
+      "operationId": "createWltSettlement",
+      "method": "POST",
+      "path": "/wlt/settlements",
+      "state": "CONTRACT_ACTIVE",
+      "runtimeStatus": 201,
+      "runtimeCode": "SETTLEMENT_CREATED",
+      "reason": "DSH now derives immutable delivered-order sources from server-owned order and item snapshots. WLT owns the active fee policy, computes gross, fee, net and order count, and prevents order reuse across settlements.",
+      "activationEvidence": [
+        "DSH queries delivered orders from server-owned dsh_orders and dsh_order_items",
+        "control-panel request cannot supply gross, fee, net or order count",
+        "WLT settlement policy owns fee_basis_points and currency",
+        "WLT computes gross, platform fee and partner net",
+        "wlt_settlement_source_orders locks each order_id to one settlement",
+        "settlement insertion and source-order locking use one database transaction",
+        "posting requires pending status and writes balanced multi-line ledger entries atomically",
+        "DSH-to-WLT settlement mutation path is explicit and allowlisted",
+        "control-panel exposes governed policy and order-derived creation workspace",
+        "OpenAPI and generated clients describe the governed source contract"
+      ]
+    }
+  ]
+}

@@ -1,3 +1,7 @@
+declare const process:
+  | { readonly env?: Readonly<Record<string, string | undefined>> }
+  | undefined;
+
 const FORBIDDEN_PORTS = new Set(["8080", "8081", "8082", "8083", "8084", "3000"]);
 const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
 
@@ -8,12 +12,11 @@ const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
  * on port 58083.
  */
 export function resolveWltApiBaseUrl(): string {
-  if (typeof process !== "undefined") {
-    const env = process.env as Record<string, string | undefined>;
+  if (typeof process !== "undefined" && process.env) {
     const configured =
-      env["NEXT_PUBLIC_WLT_API_BASE_URL"] ??
-      env["EXPO_PUBLIC_WLT_API_BASE_URL"] ??
-      env["WLT_API_URL"]; // @deprecated — migrate to NEXT_PUBLIC_WLT_API_BASE_URL
+      process.env["NEXT_PUBLIC_WLT_API_BASE_URL"] ??
+      process.env["EXPO_PUBLIC_WLT_API_BASE_URL"] ??
+      process.env["WLT_API_URL"];
     if (configured && configured.trim().length > 0)
       return configured.trim().replace(/\/$/, "");
   }
@@ -34,10 +37,7 @@ export function validateWltApiBaseUrl(url: string): boolean {
   }
 }
 
-/**
- * @deprecated Use `resolveWltApiBaseUrl()` instead.
- * Kept for backward compatibility — will be removed in a future cleanup.
- */
+/** @deprecated Use resolveWltApiBaseUrl instead. */
 export function getWltApiBaseUrl(): string {
   return resolveWltApiBaseUrl();
 }

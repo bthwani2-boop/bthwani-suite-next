@@ -1,80 +1,80 @@
 # Lean Code-Based Check
 
+Status: ACTIVE_CANONICAL
+
 Default project execution uses code-based checks.
-`Lean = LeanCTX-first context gathering + smallest sufficient automation.`
 
-## Canonical Policy: CODE_BASED_LEAN Default
+`Lean = direct scoped repository inspection + smallest sufficient automation and evidence.`
 
-The default execution model for all tasks is **CODE_BASED_LEAN**. Normal implementation is live-code first and token-efficient.
+## CODE_BASED_LEAN default
 
-### Core Rules
+The default execution model is live-code first, scope-bounded, and token-efficient. No optional tool is a mandatory first step.
 
-- **Live-Code First**: Inspect only the directly relevant code paths. Reuse existing code first. Avoid adding unnecessary abstractions, files, or dependencies.
-- **Smallest Safe Diff**: Implement the smallest correct change that solves the task.
-- **Automation over Manual**: LEAN means using the "smallest sufficient automation" (e.g., targeted local guards or package scripts) to verify correctness. It strictly prohibits manual file-by-file modifications as a primary development method and requires automated validation checks post-remediation.
-- **No Screenshots by Default**: Normal UI fixes, components, and layout work do not require screenshots, recordings, or visual evidence by default.
-- **No Handoff/Evidence Packs by Default**: Do not generate evidence packs, handoff ZIP archives (`_HANDOFF.zip`), or command logs unless explicitly requested or required by specific escalation rules.
-- **No Full Checks by Default**: Do not run full repository typecheck, test suites, builds, Nx graphs, or Graphify scans by default. Only run targeted code-based validation for the touched/affected files when useful and available.
+### Core rules
 
----
+- **Direct scoped inspection first**: inspect only the relevant contracts, code paths, imports, routes, manifests, registries, and owner policies.
+- **Smallest safe diff**: implement the smallest correct change that satisfies the declared acceptance conditions.
+- **Smallest sufficient automation**: use existing targeted guards or package scripts when they materially prove the claim. Manual inspection remains valid for bounded facts; repetitive changes require safe automation.
+- **No screenshots by default**: normal UI code changes do not require visual artifacts unless visual acceptance is explicitly applicable.
+- **No handoff/evidence packs by default**: do not generate evidence archives, command logs, or duplicated reports unless required by escalation or explicit request.
+- **No full checks by default**: do not run full workspace typecheck, test, build, Nx graph, Graphify, or all-guard suites without a proven scope need.
+- **Optional tools remain optional**: LeanCTX, Graphify, Nx, and diagnostic tools are selected only when they are the smallest sufficient option.
 
-## Escalation Rules
+## Escalation rules
 
-Create evidence files (including screenshots, logs, or handoff packs) only when:
+Additional evidence is required when applicable to:
 
-- High-risk work is involved (WLT/finance, security, auth, privacy, secrets, database migrations, runtime/Docker environment changes).
-- Destructive operations, broad refactoring, public contract/OpenAPI changes, or dependency upgrades are performed.
-- Preparing for a PR, merge, or release readiness check.
-- Specifically requested by the user.
+- Product Truth or product acceptance;
+- WLT/finance, security, authentication, privacy, or secrets;
+- database migrations or production data;
+- destructive operations or broad refactoring;
+- public API/OpenAPI changes;
+- runtime, Docker, provider, or persistence behavior;
+- governance, agents, skills, guards, stage gates, or CI workflows;
+- independent QA, release, rollback, deployment, or production verification;
+- final `CLOSED_WITH_EVIDENCE` decisions;
+- explicit user requests.
 
----
+Evidence must remain tied to the same immutable commit and must not be created merely to simulate completeness.
 
-## Token-Drain Exclusions
+## Token-drain exclusions
 
-To maximize token efficiency and avoid scanning massive generated, temporary, or third-party assets, all tools and scans MUST ignore the following paths:
+Unless the task explicitly owns one of these paths, targeted tools and scans exclude:
 
-### Excluded Directories
+### Directories
 
-- `.git/` (Git repository metadata)
-- `node_modules/` (Third-party dependencies)
-- `.pnpm-store/` (Local package cache)
-- `.next/` (Next.js build cache and output)
-- `.expo/` (Expo build cache and metadata)
-- `.turbo/` (Turborepo execution cache)
-- `.nx/` (Nx cache and metadata)
-- `.cache/` (General tools/bundler cache)
-- `dist/` (Build output)
-- `build/` (Build output)
-- `out/` (Static export output)
-- `coverage/` (Test coverage reports)
-- `tmp/` / `temp/` (Temporary files)
-- `logs/` (System/execution logs)
-- `graphify-out/` (Graphify metadata and outputs)
-- `tools/registry/runs/` (Execution/agent logs and telemetry)
-- `evidence/` / `**/evidence/` (Stored evidence packs)
-- `**/screenshots/` (Saved screenshots)
-- `**/recordings/` (Saved screen recordings)
-- `**/visual-evidence/` (Saved visual assets)
-- `**/generated/` / `**/__generated__/` (Auto-generated code/clients)
-- `android/` / `ios/` (Mobile platform directories, except when executing native tasks)
+- `.git/`
+- `node_modules/`
+- `.pnpm-store/`
+- `.next/`
+- `.expo/`
+- `.turbo/`
+- `.nx/`
+- `.cache/`
+- `dist/`, `build/`, `out/`, and `coverage/`
+- `tmp/`, `temp/`, and `logs/`
+- `graphify-out/`
+- `tools/registry/runs/`
+- `evidence/` and `**/evidence/`
+- `**/screenshots/`, `**/recordings/`, and `**/visual-evidence/`
+- `**/generated/` and `**/__generated__/`
+- `android/` and `ios/`, except for applicable native work
 
-### Excluded File Extensions & Patterns
+### Files
 
-- Media & Binary files: `*.png`, `*.jpg`, `*.jpeg`, `*.webp`, `*.gif`, `*.svg`, `*.ico`, `*.mp4`, `*.mov`, `*.avi`, `*.pdf`
-- Archive files: `*.zip`, `*.7z`, `*.rar`, `*.tar`, `*.gz`
-- Map files: `*.map`
-- Minified scripts: `*.min.js`
-- Lockfiles (except dependency-specific tasks): `pnpm-lock.yaml`, `package-lock.json`, `yarn.lock`
+- media and binary files;
+- archives;
+- source maps and minified bundles;
+- lockfiles except for dependency, toolchain, or reproducibility work.
 
----
+An exclusion is a default scope rule, not permission to ignore an affected owner path.
 
-## Document Link & Ignore File Policy
+## Document and ignore policy
 
-### Repo-Relative Links
+- Committed documentation uses repository-relative links.
+- Machine-local file URLs and hard-coded developer roots are forbidden.
+- Ignore configurations and guard exclusions must align with this policy without hiding applicable owner files.
 
-- All links inside committed repository documents (governance, agents, skills, and codebases) must be **repo-relative** (e.g., `../governance/LEAN_CODE_BASED_CHECK.md`).
-- **NEVER** commit Windows or machine-local file scheme links (e.g., `file:///C:/...` or `file:///c:/...`).
+## Acceptance condition
 
-### Ignore File Alignment
-
-- All project ignore configurations (`.graphifyignore`, `.aiderignore`, `.cursorignore`, `.aiexclude`) and automated guard exclusions must fully align with the **Token-Drain Exclusions** defined in this document.
+Accepted only when direct scoped inspection is the default, optional tools remain optional, full checks require explicit justification, evidence matches the declared risk and same commit, and no excluded path is ignored when it is actually affected.

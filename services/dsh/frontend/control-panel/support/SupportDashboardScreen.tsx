@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   CpButton,
   CpFilterBar,
@@ -22,6 +22,7 @@ import { DataTablePageFrame } from "@bthwani/control-panel/shell";
 import {
   useOperatorTicketController,
   useSupportIncidentController,
+  useTicketDetailController,
   SUPPORT_MAIN_TABS,
   SUPPORT_QUEUE_FILTERS,
   SUPPORT_OWNERSHIP,
@@ -34,6 +35,7 @@ import {
   type SupportMainTabId,
   type SupportQueueFilterId,
   type SupportTicketTone,
+  type DshSupportTicketEvent,
 } from "../../shared/support";
 import {
   ClientProfileWorkspace,
@@ -41,19 +43,17 @@ import {
   ComplianceRiskWorkspace,
   MessagesWorkspace,
 } from "./SupportWorkspaces";
-import { lightThemeColors, colorRoles } from '@bthwani/ui-kit';
-
-// ─── Inline badge ─────────────────────────────────────────────────────────────
+import { lightThemeColors, colorRoles } from "@bthwani/ui-kit";
 
 function StatusBadge({ label, tone }: { label: string; tone: SupportTicketTone }) {
   const toneColors: Record<SupportTicketTone, { bg: string; color: string }> = {
     warning: { bg: lightThemeColors.warningSoft, color: lightThemeColors.warning },
     success: { bg: lightThemeColors.successSoft, color: lightThemeColors.success },
-    danger:  { bg: lightThemeColors.dangerSoft, color: lightThemeColors.danger },
+    danger: { bg: lightThemeColors.dangerSoft, color: lightThemeColors.danger },
     neutral: { bg: lightThemeColors.surfaceInset, color: lightThemeColors.colorMuted },
-    info:    { bg: lightThemeColors.infoSoft, color: lightThemeColors.info },
+    info: { bg: lightThemeColors.infoSoft, color: lightThemeColors.info },
   };
-  const { bg, color } = toneColors[tone];
+  const selected = toneColors[tone];
   return (
     <span
       style={{
@@ -62,8 +62,8 @@ function StatusBadge({ label, tone }: { label: string; tone: SupportTicketTone }
         borderRadius: "999px",
         fontSize: "0.72rem",
         fontWeight: 600,
-        background: bg,
-        color,
+        background: selected.bg,
+        color: selected.color,
         whiteSpace: "nowrap",
       }}
     >
@@ -71,8 +71,6 @@ function StatusBadge({ label, tone }: { label: string; tone: SupportTicketTone }
     </span>
   );
 }
-
-// ─── Tab button ───────────────────────────────────────────────────────────────
 
 function MainTabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
@@ -89,7 +87,6 @@ function MainTabButton({ active, onClick, children }: { active: boolean; onClick
         fontSize: "0.813rem",
         cursor: "pointer",
         whiteSpace: "nowrap",
-        transition: "all 0.15s",
       }}
     >
       {children}
@@ -119,44 +116,74 @@ function FilterChip({ active, onClick, children }: { active: boolean; onClick: (
   );
 }
 
-// ─── Main Screen ─────────────────────────────────────────────────────────────
+function formatEvent(event: DshSupportTicketEvent): string {
+  const labels: Record<DshSupportTicketEvent["eventType"], string> = {
+    created: "إنشاء التذكرة",
+    message_added: "إضافة رسالة",
+    status_changed: "تغيير الحالة",
+    escalated: "تصعيد",
+    closed: "إغلاق",
+  };
+  const date = new Date(event.createdAt);
+  const timestamp = Number.isNaN(date.getTime()) ? event.createdAt : date.toLocaleString("ar");
+  return `${labels[event.eventType]} · ${event.actorRole} · ${timestamp}`;
+}
 
 export function SupportDashboardScreen() {
   const ticketCtrl = useOperatorTicketController("authenticated");
   const incidentCtrl = useSupportIncidentController("authenticated");
-
   const [mainTab, setMainTab] = useState<SupportMainTabId>("queues");
   const [queueFilter, setQueueFilter] = useState<SupportQueueFilterId>("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedTicketId, setSelectedTicketId] = useState<string | undefined>(undefined);
+  const [selectedTicketId, setSelectedTicketId] = useState<string | undefined>();
+  const [selectedIncidentId, setSelectedIncidentId] = useState<string | undefined>();
   const [replyBody, setReplyBody] = useState("");
+  const [internalReply, setInternalReply] = useState(false);
 
-  // ── KPI metrics ────────────────────────────────────────────────────────────
+  const detailCtrl = useTicketDetailController(selectedTicketId ?? "", "authenticated", "operator");
   const tickets = ticketCtrl.listState.kind === "success" ? ticketCtrl.listState.tickets : [];
   const incidents = incidentCtrl.listState.kind === "success" ? incidentCtrl.listState.incidents : [];
-
-  const metrics = useMemo(
-    () => buildSupportKpiMetrics(tickets, incidents),
-    [tickets, incidents],
-  );
-
-  // ── Filtered tickets ───────────────────────────────────────────────────────
+  const metrics = useMemo(() => buildSupportKpiMetrics(tickets, incidents), [tickets, incidents]);
   const filteredTickets = useMemo(() => {
     const byFilter = filterTicketsByQueueFilter(tickets, queueFilter);
     return filterTicketsBySearch(byFilter, searchQuery).map(buildSupportTicketViewModel);
-  }, [tickets, queueFilter, searchQuery]);
-
-  const filteredIncidents = useMemo(
-    () => incidents.map(buildSupportIncidentViewModel),
-    [incidents],
-  );
-
+  }, [queueFilter, searchQuery, tickets]);
+  const filteredIncidents = useMemo(() => incidents.map(buildSupportIncidentViewModel), [incidents]);
+  const selectedTicketRaw = tickets.find((ticket) => ticket.id === selectedTicketId);
+  const selectedTicket = selectedTicketRaw ? buildSupportTicketViewModel(selectedTicketRaw) : undefined;
+  const selectedIncident = incidents.find((incident) => incident.id === selectedIncidentId);
   const breadcrumb = buildSupportBreadcrumb(mainTab, queueFilter, filteredTickets.length);
-  const selectedTicket = filteredTickets.find((t) => t.id === selectedTicketId);
+  const isLoading = ticketCtrl.listState.kind === "loading" || incidentCtrl.listState.kind === "loading";
+  const hasRuntimeError = ticketCtrl.listState.kind === "error" || incidentCtrl.listState.kind === "error";
 
-  const isLoadingTickets = ticketCtrl.listState.kind === "loading";
-  const isLoadingIncidents = incidentCtrl.listState.kind === "loading";
-  const isLoading = isLoadingTickets || isLoadingIncidents;
+  const sendReply = async () => {
+    if (!selectedTicketRaw || replyBody.trim().length < 1) return;
+    const sent = await detailCtrl.sendMessage({ body: replyBody.trim(), isInternal: internalReply });
+    if (!sent) return;
+    setReplyBody("");
+    const targetStatus = selectedTicketRaw.status === "open" ? "in_review" : selectedTicketRaw.status;
+    if (targetStatus !== selectedTicketRaw.status) {
+      await ticketCtrl.operatorUpdateTicket(selectedTicketRaw.id, {
+        expectedStatus: selectedTicketRaw.status,
+        status: targetStatus,
+      });
+    }
+  };
+
+  const resolveSelectedTicket = async () => {
+    if (!selectedTicketRaw) return;
+    await ticketCtrl.operatorUpdateTicket(selectedTicketRaw.id, {
+      expectedStatus: selectedTicketRaw.status,
+      status: "resolved",
+    });
+    await detailCtrl.reloadDetail();
+    await detailCtrl.reloadEvents();
+  };
+
+  const resolveSelectedIncident = async () => {
+    if (!selectedIncident) return;
+    await incidentCtrl.resolveIncident(selectedIncident.id, { status: "resolved" });
+  };
 
   return (
     <DataTablePageFrame
@@ -164,90 +191,35 @@ export function SupportDashboardScreen() {
       header={
         <CpPageHeader title="دعم DSH">
           <p style={{ margin: "0 0 0.75rem", opacity: 0.65, fontSize: "0.875rem" }}>
-            صفوف دعم، نزاعات، تصعيد، وخطر الالتزام
+            تذاكر العميل والشريك، المحادثات، الحوادث، وسجل التدقيق من Runtime الفعلي.
           </p>
-
-          {/* ── KPI Strip ─────────────────────────────────────────────── */}
           <CpKpiStrip>
-            <CpKpiCard label="صفوف مقترحة"  value={metrics.suggestedQueues} />
-            <CpKpiCard label="نزاعات"        value={metrics.disputes}        />
-            <CpKpiCard label="خطر الالتزام" value={metrics.complianceRisk}  />
+            <CpKpiCard label="صفوف مقترحة" value={metrics.suggestedQueues} />
+            <CpKpiCard label="نزاعات" value={metrics.disputes} />
+            <CpKpiCard label="خطر الالتزام" value={metrics.complianceRisk} />
           </CpKpiStrip>
         </CpPageHeader>
       }
-      stateView={
-        isLoading ? <CpStatePanel role="status" title="جاري تحميل صفوف الدعم…" /> : undefined
-      }
+      stateView={isLoading ? <CpStatePanel role="status" title="جاري تحميل دعم DSH…" /> : undefined}
     >
-      {/* ── Main Tabs ──────────────────────────────────────────────────────── */}
       <CpFilterBar label="تبويبات الدعم الرئيسية">
-        {SUPPORT_MAIN_TABS.map((t) => (
-          <MainTabButton
-            key={t.id}
-            active={mainTab === t.id}
-            onClick={() => setMainTab(t.id)}
-          >
-            {t.label}
+        {SUPPORT_MAIN_TABS.map((tab) => (
+          <MainTabButton key={tab.id} active={mainTab === tab.id} onClick={() => setMainTab(tab.id)}>
+            {tab.label}
           </MainTabButton>
         ))}
       </CpFilterBar>
 
-      {/* ── Queue Sub-filters ────────────────────────────────────────────────── */}
-      {mainTab === "queues" && (
+      {mainTab === "queues" ? (
         <CpFilterBar label="فلاتر الصفوف">
-          {SUPPORT_QUEUE_FILTERS.map((f) => (
-            <FilterChip
-              key={f.id}
-              active={queueFilter === f.id}
-              onClick={() => setQueueFilter(f.id)}
-            >
-              {f.label}
+          {SUPPORT_QUEUE_FILTERS.map((filter) => (
+            <FilterChip key={filter.id} active={queueFilter === filter.id} onClick={() => setQueueFilter(filter.id)}>
+              {filter.label}
             </FilterChip>
           ))}
         </CpFilterBar>
-      )}
+      ) : null}
 
-      {/* ── Ownership Block ──────────────────────────────────────────────────── */}
-      <div
-        dir="rtl"
-        style={{
-          padding: "0.75rem 1rem",
-          background: "color-mix(in srgb, currentColor 4%, transparent)",
-          borderRadius: "0.75rem",
-          marginBottom: "0.5rem",
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "1rem",
-        }}
-      >
-        <div>
-          <strong style={{ fontSize: "0.875rem" }}>ملكية قسم الدعم</strong>
-          <p style={{ margin: "0.25rem 0 0", fontSize: "0.75rem", opacity: 0.7, lineHeight: 1.5 }}>
-            {SUPPORT_OWNERSHIP.policyNote}
-          </p>
-          <code style={{ fontSize: "0.7rem", opacity: 0.55, fontFamily: "monospace", wordBreak: "break-all" }}>
-            {SUPPORT_OWNERSHIP.ownerPath}
-          </code>
-        </div>
-        <div>
-          <strong style={{ fontSize: "0.875rem" }}>الصف المحدد</strong>
-          {selectedTicket ? (
-            <CpDescriptionList>
-              <CpDescriptionRow label="الموضوع">{selectedTicket.subject}</CpDescriptionRow>
-              <CpDescriptionRow label="التصنيف">{selectedTicket.category}</CpDescriptionRow>
-              <CpDescriptionRow label="الحالة">
-                <StatusBadge label={selectedTicket.statusLabel} tone={selectedTicket.statusTone} />
-              </CpDescriptionRow>
-            </CpDescriptionList>
-          ) : (
-            <p style={{ fontSize: "0.75rem", opacity: 0.55, margin: "0.25rem 0 0" }}>
-              التصنيف: دعم · السياسة: — · السند: غير محدد
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* ── Search ────────────────────────────────────────────────────────────── */}
       <CpFilterBar label="بحث وأدوات">
         <CpSearchInput
           value={searchQuery}
@@ -256,207 +228,168 @@ export function SupportDashboardScreen() {
           wide
           aria-label="بحث في صفوف الدعم"
         />
-        <CpButton
-          onClick={() => { void ticketCtrl.reload(); void incidentCtrl.reload(); }}
-          style={{ whiteSpace: "nowrap" }}
-        >
+        <CpButton onClick={() => { void ticketCtrl.reload(); void incidentCtrl.reload(); }}>
           تحديث
         </CpButton>
       </CpFilterBar>
 
-      {/* ── Breadcrumb ─────────────────────────────────────────────────────────── */}
-      <div
-        dir="rtl"
-        style={{ padding: "0.25rem 1rem", fontSize: "0.75rem", opacity: 0.55 }}
-        aria-label="مسار التنقل"
-      >
+      <div dir="rtl" style={{ padding: "0.25rem 1rem", fontSize: "0.75rem", opacity: 0.55 }}>
         {breadcrumb}
       </div>
 
-      {/* ─────────────────────── QUEUES TAB ────────────────────────────────── */}
-      {mainTab === "queues" && (
+      {mainTab === "queues" ? (
         <>
-          {ticketCtrl.listState.kind === "error" && (
-            <CpStatePanel
-              role="alert"
-              title="تعذر تحميل التذاكر"
-              description={ticketCtrl.listState.message}
-            />
-          )}
-
-          {ticketCtrl.listState.kind === "empty" && (
-            <CpStatePanel
-              role="status"
-              title="صفوف الدعم"
-              description="لا توجد عناصر في هذا الفلتر، اختر فلتراً آخر أو تحقق لاحقًا."
-            />
-          )}
-
-          {ticketCtrl.listState.kind === "success" && (
-            <div style={{ display: "grid", gridTemplateColumns: selectedTicket ? "1fr 24rem" : "1fr", gap: "1rem" }}>
-              {/* Table */}
+          {ticketCtrl.listState.kind === "error" ? (
+            <CpStatePanel role="alert" title="تعذر تحميل التذاكر" description={ticketCtrl.listState.message} />
+          ) : null}
+          {ticketCtrl.listState.kind === "empty" ? (
+            <CpStatePanel role="status" title="صفوف الدعم" description="لا توجد تذاكر في هذا الفلتر." />
+          ) : null}
+          {ticketCtrl.listState.kind === "success" ? (
+            <div style={{ display: "grid", gridTemplateColumns: selectedTicket ? "1fr 28rem" : "1fr", gap: "1rem" }}>
               <CpTable aria-label="جدول تذاكر الدعم">
                 <thead>
                   <tr dir="rtl">
                     <CpTableHeaderCell>الموضوع</CpTableHeaderCell>
+                    <CpTableHeaderCell>الجهة</CpTableHeaderCell>
                     <CpTableHeaderCell>التصنيف</CpTableHeaderCell>
                     <CpTableHeaderCell>الأولوية</CpTableHeaderCell>
                     <CpTableHeaderCell>الحالة</CpTableHeaderCell>
                     <CpTableHeaderCell>المتجر</CpTableHeaderCell>
-                    <CpTableHeaderCell>المُسند إليه</CpTableHeaderCell>
                   </tr>
                 </thead>
                 <tbody dir="rtl">
                   {filteredTickets.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} style={{ padding: "2rem", textAlign: "center", opacity: 0.5, fontSize: "0.875rem" }}>
-                        لا توجد تذاكر مطابقة للفلتر.
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredTickets.map((vm) => (
+                    <tr><td colSpan={6} style={{ padding: "2rem", textAlign: "center", opacity: 0.5 }}>لا توجد نتائج.</td></tr>
+                  ) : filteredTickets.map((ticket) => {
+                    const raw = tickets.find((item) => item.id === ticket.id);
+                    return (
                       <CpSelectableTableRow
-                        key={vm.id}
-                        selected={selectedTicketId === vm.id}
-                        onClick={() => setSelectedTicketId((prev) => prev === vm.id ? undefined : vm.id)}
+                        key={ticket.id}
+                        selected={selectedTicketId === ticket.id}
+                        onClick={() => setSelectedTicketId((current) => current === ticket.id ? undefined : ticket.id)}
                       >
-                        <CpTableCell>
-                          <span style={{ fontWeight: vm.isUrgent ? 700 : 400, fontSize: "0.875rem" }}>{vm.subject}</span>
-                        </CpTableCell>
-                        <CpTableCell style={{ fontSize: "0.813rem", opacity: 0.7 }}>{vm.category}</CpTableCell>
-                        <CpTableCell><StatusBadge label={vm.priorityLabel} tone={vm.priorityTone} /></CpTableCell>
-                        <CpTableCell><StatusBadge label={vm.statusLabel} tone={vm.statusTone} /></CpTableCell>
-                        <CpTableCell style={{ fontSize: "0.813rem", opacity: 0.7 }}>{vm.storeId}</CpTableCell>
-                        <CpTableCell style={{ fontSize: "0.813rem", opacity: 0.7 }}>{vm.assignedTo}</CpTableCell>
+                        <CpTableCell>{ticket.subject}</CpTableCell>
+                        <CpTableCell>{raw?.reporterRole ?? "—"}</CpTableCell>
+                        <CpTableCell>{ticket.category}</CpTableCell>
+                        <CpTableCell><StatusBadge label={ticket.priorityLabel} tone={ticket.priorityTone} /></CpTableCell>
+                        <CpTableCell><StatusBadge label={ticket.statusLabel} tone={ticket.statusTone} /></CpTableCell>
+                        <CpTableCell>{ticket.storeId || "—"}</CpTableCell>
                       </CpSelectableTableRow>
-                    ))
-                  )}
+                    );
+                  })}
                 </tbody>
-                <tfoot>
-                  <tr>
-                    <td colSpan={6} style={{ padding: "0.5rem 0.75rem", fontSize: "0.75rem", opacity: 0.5, borderTop: "1px solid color-mix(in srgb, currentColor 10%, transparent)", direction: "rtl" }}>
-                      السابق | صفحة 1 من 1 | التالي &nbsp;·&nbsp; {filteredTickets.length} سجل
-                    </td>
-                  </tr>
-                </tfoot>
               </CpTable>
 
-              {/* Detail Panel */}
-              {selectedTicket && (
-                <CpDetailPanel
-                  title={`تفاصيل: ${selectedTicket.id.slice(0, 8)}…`}
-                  onClose={() => setSelectedTicketId(undefined)}
-                >
+              {selectedTicket && selectedTicketRaw ? (
+                <CpDetailPanel title={`تفاصيل: ${selectedTicket.id.slice(0, 8)}…`} onClose={() => setSelectedTicketId(undefined)}>
                   <CpDescriptionList>
                     <CpDescriptionRow label="الموضوع">{selectedTicket.subject}</CpDescriptionRow>
-                    <CpDescriptionRow label="التصنيف">{selectedTicket.category}</CpDescriptionRow>
-                    <CpDescriptionRow label="الأولوية">
-                      <StatusBadge label={selectedTicket.priorityLabel} tone={selectedTicket.priorityTone} />
-                    </CpDescriptionRow>
-                    <CpDescriptionRow label="الحالة">
-                      <StatusBadge label={selectedTicket.statusLabel} tone={selectedTicket.statusTone} />
-                    </CpDescriptionRow>
-                    <CpDescriptionRow label="المُسند إليه">{selectedTicket.assignedTo}</CpDescriptionRow>
-                    <CpDescriptionRow label="المالك">{SUPPORT_OWNERSHIP.owner}</CpDescriptionRow>
+                    <CpDescriptionRow label="الجهة">{selectedTicketRaw.reporterRole}</CpDescriptionRow>
+                    <CpDescriptionRow label="الحالة"><StatusBadge label={selectedTicket.statusLabel} tone={selectedTicket.statusTone} /></CpDescriptionRow>
+                    <CpDescriptionRow label="الطلب">{selectedTicketRaw.orderId || "—"}</CpDescriptionRow>
+                    <CpDescriptionRow label="المُسند إليه">{selectedTicket.assignedTo || "غير مسند"}</CpDescriptionRow>
                   </CpDescriptionList>
 
-                  <div style={{ marginTop: "1rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                    <CpTextInput
-                      value={replyBody}
-                      onChange={setReplyBody}
-                      placeholder="الرد على التذكرة…"
-                      aria-label="رد التذكرة"
-                    />
+                  <section style={{ marginTop: "1rem" }}>
+                    <strong>المحادثة</strong>
+                    {detailCtrl.messageListState.kind === "loading" ? <p>جارٍ التحميل…</p> : null}
+                    {detailCtrl.messageListState.kind === "error" ? <p role="alert">{detailCtrl.messageListState.message}</p> : null}
+                    {detailCtrl.messageListState.kind === "success" ? (
+                      <div style={{ display: "grid", gap: "0.5rem", marginTop: "0.5rem" }}>
+                        {detailCtrl.messageListState.messages.length === 0 ? <p style={{ opacity: 0.6 }}>لا توجد رسائل.</p> : null}
+                        {detailCtrl.messageListState.messages.map((message) => (
+                          <div key={message.id} style={{ padding: "0.6rem", border: "1px solid color-mix(in srgb, currentColor 12%, transparent)", borderRadius: "0.5rem" }}>
+                            <div>{message.body}</div>
+                            <small style={{ opacity: 0.6 }}>{message.senderRole}{message.isInternal ? " · داخلي" : ""}</small>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </section>
+
+                  <section style={{ marginTop: "1rem" }}>
+                    <strong>سجل التدقيق</strong>
+                    {detailCtrl.eventState.kind === "loading" ? <p>جارٍ التحميل…</p> : null}
+                    {detailCtrl.eventState.kind === "error" ? <p role="alert">{detailCtrl.eventState.message}</p> : null}
+                    {detailCtrl.eventState.kind === "success" ? (
+                      <ul>
+                        {detailCtrl.eventState.events.map((event) => <li key={event.id}>{formatEvent(event)}</li>)}
+                      </ul>
+                    ) : null}
+                  </section>
+
+                  <div style={{ marginTop: "1rem", display: "grid", gap: "0.5rem" }}>
+                    <CpTextInput value={replyBody} onChange={setReplyBody} placeholder="الرد على التذكرة…" aria-label="رد التذكرة" />
+                    <label style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                      <input type="checkbox" checked={internalReply} onChange={(event) => setInternalReply(event.target.checked)} />
+                      ملاحظة داخلية لا تظهر لصاحب التذكرة
+                    </label>
                     <div style={{ display: "flex", gap: "0.5rem" }}>
                       <CpButton
-                        disabled={replyBody.trim().length < 3 || ticketCtrl.actionState.kind === "submitting"}
-                        onClick={() => {
-                          void ticketCtrl.operatorUpdateTicket(selectedTicket.id, { status: "in_review" });
-                          setReplyBody("");
-                        }}
+                        disabled={replyBody.trim().length < 1 || detailCtrl.messageActionState.kind === "submitting"}
+                        onClick={() => void sendReply()}
                         style={{ flex: 1 }}
                       >
-                        فتح التذكرة
+                        إرسال الرد
                       </CpButton>
                       <CpButton
-                        disabled={ticketCtrl.actionState.kind === "submitting"}
-                        onClick={() => void ticketCtrl.operatorUpdateTicket(selectedTicket.id, { status: "resolved" })}
-                        style={{
-                          flex: 1,
-                          background: colorRoles.surfaceBase,
-                          color: 'var(--status-success-strong, colorRoles.brandStructure)',
-                          border: "1px solid colorRoles.surfaceBase",
-                          borderRadius: "0.5rem",
-                        }}
+                        disabled={selectedTicketRaw.status === "resolved" || selectedTicketRaw.status === "closed" || ticketCtrl.actionState.kind === "submitting"}
+                        onClick={() => void resolveSelectedTicket()}
+                        style={{ flex: 1 }}
                       >
-                        فتح الإجابة عند الطلب
+                        حل التذكرة
                       </CpButton>
                     </div>
-                    {ticketCtrl.actionState.kind === "error" && (
-                      <p role="alert" style={{ color: lightThemeColors.danger, fontSize: "0.8rem" }}>
-                        {ticketCtrl.actionState.message}
-                      </p>
-                    )}
+                    {detailCtrl.messageActionState.kind === "error" ? <p role="alert">{detailCtrl.messageActionState.message}</p> : null}
+                    {ticketCtrl.actionState.kind === "error" ? <p role="alert">{ticketCtrl.actionState.message}</p> : null}
                   </div>
                 </CpDetailPanel>
-              )}
+              ) : null}
             </div>
-          )}
+          ) : null}
         </>
-      )}
+      ) : null}
 
-      {/* ─────────────────────── ESCALATION TAB ────────────────────────────── */}
-      {mainTab === "escalation" && (
+      {mainTab === "escalation" ? (
         <>
-          {incidentCtrl.listState.kind === "error" && (
+          {incidentCtrl.listState.kind === "error" ? (
             <CpStatePanel role="alert" title="تعذر تحميل الحوادث" description={incidentCtrl.listState.message} />
-          )}
-          {incidentCtrl.listState.kind === "success" && (
-            <CpTable aria-label="جدول الحوادث">
-              <thead>
-                <tr dir="rtl">
-                  <CpTableHeaderCell>العنوان</CpTableHeaderCell>
-                  <CpTableHeaderCell>الخطورة</CpTableHeaderCell>
-                  <CpTableHeaderCell>الحالة</CpTableHeaderCell>
-                  <CpTableHeaderCell>النطاق المتأثر</CpTableHeaderCell>
-                  <CpTableHeaderCell>رافع البلاغ</CpTableHeaderCell>
-                </tr>
-              </thead>
-              <tbody dir="rtl">
-                {filteredIncidents.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} style={{ padding: "2rem", textAlign: "center", opacity: 0.5, fontSize: "0.875rem" }}>
-                      لا توجد حوادث.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredIncidents.map((vm) => (
-                    <CpSelectableTableRow key={vm.id} selected={false} onClick={() => {}}>
-                      <CpTableCell>
-                        <span style={{ fontWeight: vm.isCritical ? 700 : 400, fontSize: "0.875rem" }}>{vm.title}</span>
-                      </CpTableCell>
-                      <CpTableCell><StatusBadge label={vm.severityLabel} tone={vm.severityTone} /></CpTableCell>
-                      <CpTableCell style={{ fontSize: "0.813rem", opacity: 0.7 }}>{vm.statusLabel}</CpTableCell>
-                      <CpTableCell style={{ fontSize: "0.813rem", opacity: 0.7 }}>{vm.affectedScopeLabel}</CpTableCell>
-                      <CpTableCell style={{ fontSize: "0.813rem", opacity: 0.7 }}>{vm.raisedBy}</CpTableCell>
+          ) : null}
+          {incidentCtrl.listState.kind === "success" ? (
+            <div style={{ display: "grid", gridTemplateColumns: selectedIncident ? "1fr 24rem" : "1fr", gap: "1rem" }}>
+              <CpTable aria-label="جدول الحوادث">
+                <thead><tr dir="rtl"><CpTableHeaderCell>العنوان</CpTableHeaderCell><CpTableHeaderCell>الخطورة</CpTableHeaderCell><CpTableHeaderCell>الحالة</CpTableHeaderCell><CpTableHeaderCell>النطاق</CpTableHeaderCell></tr></thead>
+                <tbody dir="rtl">
+                  {filteredIncidents.map((incident) => (
+                    <CpSelectableTableRow key={incident.id} selected={selectedIncidentId === incident.id} onClick={() => setSelectedIncidentId(incident.id)}>
+                      <CpTableCell>{incident.title}</CpTableCell>
+                      <CpTableCell><StatusBadge label={incident.severityLabel} tone={incident.severityTone} /></CpTableCell>
+                      <CpTableCell>{incident.statusLabel}</CpTableCell>
+                      <CpTableCell>{incident.affectedScopeLabel}</CpTableCell>
                     </CpSelectableTableRow>
-                  ))
-                )}
-              </tbody>
-            </CpTable>
-          )}
+                  ))}
+                </tbody>
+              </CpTable>
+              {selectedIncident ? (
+                <CpDetailPanel title={selectedIncident.title} onClose={() => setSelectedIncidentId(undefined)}>
+                  <p>{selectedIncident.description}</p>
+                  <CpButton disabled={selectedIncident.status === "resolved" || incidentCtrl.actionState.kind === "submitting"} onClick={() => void resolveSelectedIncident()}>
+                    تعليم الحادث كمحلول
+                  </CpButton>
+                  {incidentCtrl.actionState.kind === "error" ? <p role="alert">{incidentCtrl.actionState.message}</p> : null}
+                </CpDetailPanel>
+              ) : null}
+            </div>
+          ) : null}
         </>
-      )}
+      ) : null}
 
-      {mainTab === "client-profile" && <ClientProfileWorkspace />}
+      {mainTab === "client-profile" ? <ClientProfileWorkspace /> : null}
+      {mainTab === "call-reception" ? <CallReceptionWorkspace /> : null}
+      {mainTab === "compliance-risk" ? <ComplianceRiskWorkspace /> : null}
+      {mainTab === "messages" ? <MessagesWorkspace /> : null}
 
-      {mainTab === "call-reception" && <CallReceptionWorkspace />}
-
-      {mainTab === "compliance-risk" && <ComplianceRiskWorkspace />}
-
-      {mainTab === "messages" && <MessagesWorkspace />}
-
-      {/* ── Status Footer (ownership bar) ────────────────────────────────────── */}
       <div
         dir="rtl"
         style={{
@@ -464,18 +397,18 @@ export function SupportDashboardScreen() {
           gap: "1.5rem",
           padding: "0.5rem 1rem",
           fontSize: "0.75rem",
-          opacity: 0.6,
+          opacity: 0.7,
           borderTop: "1px solid color-mix(in srgb, currentColor 10%, transparent)",
           marginTop: "1rem",
           flexWrap: "wrap",
         }}
       >
         <span>المالك: <strong>{SUPPORT_OWNERSHIP.owner}</strong></span>
-        <span>رقلتق: 1/2</span>
-        <span>الخدمات المشتركة: —</span>
-        <span style={{ marginInlineStart: "auto", color: 'var(--status-success-strong, colorRoles.brandStructure)', fontWeight: 600 }}>جاهز</span>
+        <span>المصدر: DSH Runtime</span>
+        <span style={{ marginInlineStart: "auto", fontWeight: 600 }}>
+          {hasRuntimeError ? "توجد أخطاء تحميل" : isLoading ? "جارٍ التحقق" : "تم تحميل الحالة الحالية"}
+        </span>
       </div>
     </DataTablePageFrame>
   );
 }
-

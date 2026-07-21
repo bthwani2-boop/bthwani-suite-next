@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type {
   CanonicalFinanceGroupId,
   FinancePanelId,
@@ -11,16 +11,29 @@ import {
   buildFinanceHref,
   FINANCE_CANONICAL_GROUPS,
 } from './finance-registry';
-import {
-  buildWltDshFinanceHubViewModel,
-} from '@bthwani/wlt';
+import { buildWltDshFinanceHubViewModel } from '@bthwani/wlt';
 import {
   loadDshFinanceRuntimeReadModel,
   approvePayoutRequest,
   rejectPayoutRequest,
+  processPayoutRequest,
+  completePayoutRequest,
+  failPayoutRequest,
+  transitionPayoutRequest,
+  upsertSettlementPolicy,
+  createSettlementFromDeliveredOrders,
   assignReconciliationCase,
   loadOpenReconciliationCases,
   resolveReconciliationCase,
+} from './finance-hub-runtime.api';
+import type {
+  FinanceActionResult,
+  FinancePayoutRequest,
+  GovernedSettlementInput,
+  PayoutTransition,
+  ReconciliationCase,
+  SettlementActionResult,
+  SettlementPolicyInput,
 } from './finance-hub-runtime.api';
 import type {
   WltDshFinanceRuntimeResult,
@@ -31,12 +44,8 @@ export type UseFinanceControllerProps = {
   group?: CanonicalFinanceGroupId;
   panel?: FinancePanelId;
   state?: FinanceViewState;
-  searchParams?: {
-    get: (key: string) => string | null;
-  };
-  router?: {
-    push: (href: string) => void;
-  };
+  searchParams?: { get: (key: string) => string | null };
+  router?: { push: (href: string) => void };
 };
 
 export function useFinanceController({
@@ -50,51 +59,38 @@ export function useFinanceController({
   const [activeGroupState, setActiveGroupState] = useState<CanonicalFinanceGroupId>(group);
 
   useEffect(() => {
-    if (workspaceParam) {
-      setActiveGroupState(workspaceParam);
-    } else {
-      setActiveGroupState(group);
-    }
+    if (workspaceParam) setActiveGroupState(workspaceParam);
+    else setActiveGroupState(group);
   }, [workspaceParam, group]);
 
   const activeGroup = workspaceParam || activeGroupState;
-
   const activeGroupMeta = useMemo(() => getFinanceGroupMeta(activeGroup), [activeGroup]);
-  
-  const getParam = useCallback((key: string) => {
-    return searchParams?.get(key) ?? undefined;
-  }, [searchParams]);
+  const getParam = useCallback((key: string) => searchParams?.get(key) ?? undefined, [searchParams]);
 
-  const activeSubGroup = useMemo(() => {
-    return getParam('subGroup') || activeGroupMeta.subGroups?.[0]?.id || undefined;
-  }, [activeGroupMeta, getParam]);
+  const activeSubGroup = useMemo(
+    () => getParam('subGroup') || activeGroupMeta.subGroups?.[0]?.id || undefined,
+    [activeGroupMeta, getParam],
+  );
+  const activeSubGroupMeta = useMemo(
+    () => activeGroupMeta.subGroups?.find((sub) => sub.id === activeSubGroup),
+    [activeGroupMeta, activeSubGroup],
+  );
+  const hubHref = useMemo(
+    () => buildFinanceHref(activeGroup, { subGroup: activeSubGroup, panel }),
+    [activeGroup, activeSubGroup, panel],
+  );
 
-  const activeSubGroupMeta = useMemo(() => {
-    return activeGroupMeta.subGroups?.find((sub) => sub.id === activeSubGroup);
-  }, [activeGroupMeta, activeSubGroup]);
-
-  const hubHref = useMemo(() => buildFinanceHref(activeGroup, { subGroup: activeSubGroup, panel }), [activeGroup, activeSubGroup, panel]);
-
-  const tabItems = useMemo(() => {
-    return FINANCE_CANONICAL_GROUPS.map((item) => {
-      const id = item.id;
-      const label = item.label;
-      const active = item.id === activeGroup;
-      return { id, label, active };
-    });
-  }, [activeGroup]);
-
-  const subTabItems = useMemo(() => {
-    return activeGroupMeta.subGroups?.map((sub) => {
-      const id = sub.id;
-      const label = sub.label;
-      const active = activeSubGroup === sub.id;
-      return { id, label, active };
-    }) ?? [];
-  }, [activeGroupMeta, activeSubGroup]);
+  const tabItems = useMemo(
+    () => FINANCE_CANONICAL_GROUPS.map((item) => ({ id: item.id, label: item.label, active: item.id === activeGroup })),
+    [activeGroup],
+  );
+  const subTabItems = useMemo(
+    () => activeGroupMeta.subGroups?.map((sub) => ({ id: sub.id, label: sub.label, active: activeSubGroup === sub.id })) ?? [],
+    [activeGroupMeta, activeSubGroup],
+  );
 
   const [runtimeFinance, setRuntimeFinance] = useState<WltDshFinanceRuntimeResult | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
@@ -103,16 +99,14 @@ export function useFinanceController({
       const result = await loadDshFinanceRuntimeReadModel();
       setRuntimeFinance(result);
       setErrorMsg(null);
-    } catch (e) {
-      setErrorMsg(e instanceof Error ? e.message : 'Unknown loading error');
+    } catch (error) {
+      setErrorMsg(error instanceof Error ? error.message : 'Unknown loading error');
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    void loadData();
-  }, [loadData]);
+  useEffect(() => { void loadData(); }, [loadData]);
 
   const financeHubView = useMemo<WltDshFinanceHubViewModel>(
     () => buildWltDshFinanceHubViewModel(runtimeFinance),
@@ -130,16 +124,11 @@ export function useFinanceController({
   const onTabSelect = useCallback((id: string) => {
     const nextGroup = id as CanonicalFinanceGroupId;
     const meta = getFinanceGroupMeta(nextGroup);
-    const defaultSub = meta.subGroups?.[0]?.id;
-    if (router) {
-      router.push(buildFinanceHref(nextGroup, { subGroup: defaultSub, panel }));
-    }
+    if (router) router.push(buildFinanceHref(nextGroup, { subGroup: meta.subGroups?.[0]?.id, panel }));
   }, [router, panel]);
 
   const onSubTabSelect = useCallback((subId: string) => {
-    if (router) {
-      router.push(buildFinanceHref(activeGroup, { subGroup: subId, panel }));
-    }
+    if (router) router.push(buildFinanceHref(activeGroup, { subGroup: subId, panel }));
   }, [router, activeGroup, panel]);
 
   return {
@@ -162,8 +151,22 @@ export function useFinanceController({
 export {
   approvePayoutRequest,
   rejectPayoutRequest,
+  processPayoutRequest,
+  completePayoutRequest,
+  failPayoutRequest,
+  transitionPayoutRequest,
+  upsertSettlementPolicy,
+  createSettlementFromDeliveredOrders,
   assignReconciliationCase,
   loadOpenReconciliationCases,
   resolveReconciliationCase,
 };
-export type { ReconciliationCase } from './finance-hub-runtime.api';
+export type {
+  FinanceActionResult,
+  FinancePayoutRequest,
+  GovernedSettlementInput,
+  PayoutTransition,
+  ReconciliationCase,
+  SettlementActionResult,
+  SettlementPolicyInput,
+};

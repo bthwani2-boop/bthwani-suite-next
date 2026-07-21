@@ -2,12 +2,15 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	_ "github.com/lib/pq"
 
 	"platform-control-api/internal/auth"
 	platformhttp "platform-control-api/internal/http"
@@ -20,8 +23,31 @@ func main() {
 	if identityBaseURL == "" {
 		log.Fatal("[platform-control-api] PLATFORM_CONTROL_IDENTITY_BASE_URL is required")
 	}
+	databaseURL := os.Getenv("DATABASE_URL")
+	if databaseURL == "" {
+		log.Fatal("[platform-control-api] DATABASE_URL is required")
+	}
 
-	service := platformcontrol.NewService()
+	db, err := sql.Open("postgres", databaseURL)
+	if err != nil {
+		log.Fatalf("[platform-control-api] open database: %v", err)
+	}
+	db.SetMaxOpenConns(10)
+	db.SetMaxIdleConns(5)
+	db.SetConnMaxIdleTime(30 * time.Second)
+	if err := db.Ping(); err != nil {
+		log.Fatalf("[platform-control-api] database unavailable: %v", err)
+	}
+	defer db.Close()
+
+	repository := platformcontrol.NewRepository(db)
+	service := platformcontrol.NewService(repository)
+	service.ConfigureDependencies([]platformcontrol.ServiceDependency{
+		{Name: "identity", HealthURL: envOr("PLATFORM_CONTROL_IDENTITY_HEALTH_URL", identityBaseURL+"/identity/health")},
+		{Name: "providers", HealthURL: envOr("PLATFORM_CONTROL_PROVIDERS_HEALTH_URL", "http://providers-api:8087/providers/health")},
+		{Name: "wlt", HealthURL: envOr("PLATFORM_CONTROL_WLT_HEALTH_URL", "http://wlt-api:8083/wlt/health")},
+		{Name: "dsh", HealthURL: envOr("PLATFORM_CONTROL_DSH_HEALTH_URL", "http://dsh-api:8080/dsh/health")},
+	})
 	authClient := auth.NewClient(identityBaseURL)
 
 	server := &http.Server{
@@ -45,7 +71,9 @@ func main() {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	_ = server.Shutdown(ctx)
+	if err := server.Shutdown(ctx); err != nil {
+		log.Printf("[platform-control-api] shutdown: %v", err)
+	}
 }
 
 func envOr(name, fallback string) string {

@@ -1,49 +1,45 @@
 # 07 — Security and Secrets
 
-Status: CANONICAL
+Status: ACTIVE_CANONICAL
 
 ## Secret rules
 
-Do not commit real secrets, production tokens, private keys, payment secrets, SMS secrets, live DB passwords, service account credentials, signing keys, or private certificates.
+Never commit real production tokens, private keys, payment secrets, SMS credentials, live database passwords, service-account credentials, signing keys, private certificates, or unredacted sensitive evidence.
 
-## Local placeholders
+## Placeholders and examples
 
-Allowed only when clearly marked LOCAL_ONLY, not valid against a real provider, and not used as live fallback.
+Placeholders are allowed only when clearly nonfunctional, scoped to examples or local development, and never used as a live fallback. A placeholder, mock provider, or local secret does not prove provider readiness.
 
 ## Runtime configuration
 
-- real `.env` files are not committed
-- examples are placeholders only
-- live-like runtime must fail closed when required secrets are missing
-- provider credentials belong to controlled provider registry
+- real environment files are not committed;
+- examples contain placeholders only;
+- applicable runtime must fail closed when required sensitive configuration is missing;
+- provider credentials remain in controlled secret and provider owners;
+- logs and evidence exclude secrets, tokens, private data, and unnecessary PII.
 
-## Auth ownership
+## Identity and authorization ownership
 
-Authentication belongs to `core/identity`.
+Authentication, session, and actor identity belong to `core/identity`. Each service owns object-level authorization and business permissions for its resources. Role presence alone is insufficient when fine-grained permission or ownership checks apply.
 
-## Secure SDLC authority
+## Secure SDLC
 
-Security-sensitive journeys must define security requirements before implementation, not only after code is written.
+Security requirements are defined before implementation for applicable changes involving:
 
-Use risk-based security verification for:
+- authentication, sessions, authorization, RBAC, delegated access, or tenant context;
+- PII, secrets, payment data, WLT financial truth, files, media, or audit logs;
+- public, partner, captain, field, operator, or administrative APIs;
+- infrastructure, containers, CI, runtime configuration, or external providers.
 
-- authentication, sessions, RBAC, tenant context, or delegated access
-- PII, secrets, payments, WLT financial truth, files, media, or audit logs
-- public APIs, admin/operator APIs, infrastructure, containers, CI, or runtime configuration
+Required controls may include threat modeling, trust boundaries, object ownership, negative authorization tests, isolation tests, secret scanning, dependency review, API security tests, vulnerability decisions, residual-risk ownership, and independent retest.
 
-Required controls, when applicable:
+## Authority and decisions
 
-- threat model and trust boundaries
-- authorization and object ownership checks
-- tenant isolation negative tests
-- secret scanning
-- dependency and license review
-- API/security test profile
-- vulnerability severity and residual-risk owner
-- independent retest for critical or high security fixes
-
-Commercial SaaS activation remains blocked until the SaaS/Tenancy annex gate approves it.
+- The implementation author cannot grant the independent security approval required for the same high-risk change.
+- Security failures use `SECURITY_BLOCK`; do not introduce alternative security block labels.
+- A clean secret scan does not prove authorization, privacy, runtime, or production security.
+- Commercial SaaS activation remains outside current scope and requires its separate conditional gate if later authorized.
 
 ## Acceptance condition
 
-Accepted only when secret scan evidence exists for security-sensitive journeys, no committed file contains real secrets, and applicable secure SDLC or tenant-isolation controls are recorded.
+Accepted only when sensitive values are absent or sanitized, applicable controls and negative tests exist, required independent security evidence is tied to the same commit, unresolved security findings remain fail-closed, and no static scanner result is upgraded into complete security or production approval.

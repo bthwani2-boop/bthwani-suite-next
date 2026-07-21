@@ -1,22 +1,21 @@
 package http
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 
 	"dsh-api/internal/checkout"
+	"dsh-api/internal/coupons"
 	"dsh-api/internal/specialrequests"
 	"dsh-api/internal/store"
 )
 
 // POST /dsh/internal/wlt/payment-session-events
-//
-// Called by WLT — the sole owner of payment authorization/capture truth — to
-// report a terminal payment-session outcome for a checkout intent. This is
-// what lets non-COD checkout intents (wallet, mixed, official_wallet) leave
-// payment_pending; COD does not use this event because WLT never captures
-// funds up front for it.
+// WLT is the payment and refund authority. Every event is tenant-scoped before
+// DSH changes checkout, order, coupon, loyalty, or promotion-funding state.
 func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWriter, r *http.Request) {
 	if !requireWltServiceCaller(w, r) {
 		return
@@ -24,6 +23,9 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 	var body struct {
 		CheckoutIntentID string `json:"checkoutIntentId"`
 		SpecialRequestID string `json:"specialRequestId"`
+		OrderID          string `json:"orderId"`
+		RefundReference  string `json:"refundReference"`
+		Reason           string `json:"reason"`
 		TenantID         string `json:"tenantId"`
 		PaymentSessionID string `json:"paymentSessionId"`
 		Status           string `json:"status"`
@@ -34,8 +36,27 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
 		return
 	}
-	if body.PaymentSessionID == "" || body.Status == "" || (body.CheckoutIntentID == "" && body.SpecialRequestID == "") || (body.CheckoutIntentID != "" && body.SpecialRequestID != "") {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "exactly one of checkoutIntentId or specialRequestId, plus paymentSessionId and status, are required")
+	body.TenantID = strings.TrimSpace(body.TenantID)
+	body.Status = strings.TrimSpace(body.Status)
+	if body.TenantID == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "tenantId is required")
+		return
+	}
+	if body.Status == "refunded" {
+		handleConfirmedRefundEffect(
+			w,
+			s,
+			body.TenantID,
+			strings.TrimSpace(body.OrderID),
+			strings.TrimSpace(body.RefundReference),
+			strings.TrimSpace(body.Reason),
+		)
+		return
+	}
+	if body.PaymentSessionID == "" || body.Status == "" ||
+		(body.CheckoutIntentID == "" && body.SpecialRequestID == "") ||
+		(body.CheckoutIntentID != "" && body.SpecialRequestID != "") {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "tenantId, exactly one payment source, paymentSessionId and status are required")
 		return
 	}
 
@@ -65,9 +86,9 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 		return
 	}
 
-	intent, err := checkout.ApplyWltPaymentEvent(s.db, body.CheckoutIntentID, body.PaymentSessionID, body.Status)
+	intent, err := checkout.ApplyWltPaymentEvent(s.db, body.TenantID, body.CheckoutIntentID, body.PaymentSessionID, body.Status)
 	if errors.Is(err, checkout.ErrNotFound) {
-		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "checkout intent not found")
+		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "checkout intent not found in tenant")
 		return
 	}
 	if errors.Is(err, checkout.ErrPaymentSessionMismatch) {
@@ -86,12 +107,58 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to apply WLT payment event")
 		return
 	}
-
-	store.SendJSON(w, http.StatusOK, map[string]any{"intent": marshalIntent(intent)})
+	if err := coupons.ApplyPaymentOutcome(s.db, body.CheckoutIntentID, body.Status); err != nil {
+		store.SendError(w, http.StatusInternalServerError, "COUPON_RECONCILIATION_FAILED", "payment state changed but coupon reconciliation failed")
+		return
+	}
+	pricing, err := checkout.GetPricing(s.db, intent.ID)
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load checkout pricing")
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"intent": marshalIntentWithPricing(intent, pricing)})
 }
 
-// requireWltServiceCaller enforces that only the WLT service — never an
-// end-user actor — may report payment-session outcomes back to DSH.
+func handleConfirmedRefundEffect(w http.ResponseWriter, s *protectedStoreServer, tenantID, orderID, refundReference, reason string) {
+	if tenantID == "" || orderID == "" || refundReference == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "tenantId, orderId and refundReference are required for refunded status")
+		return
+	}
+	var exists bool
+	if err := s.db.QueryRow(`SELECT EXISTS(
+		SELECT 1 FROM dsh_orders WHERE id=$1::uuid AND tenant_id=$2
+	)`, orderID, tenantID).Scan(&exists); err != nil {
+		store.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to verify refund order tenant")
+		return
+	}
+	if !exists {
+		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "order not found in tenant")
+		return
+	}
+
+	var couponReversed, loyaltyQueued, fundingQueued bool
+	err := s.db.QueryRow(`
+		SELECT coupon_reversed,loyalty_reversal_queued,funding_reversal_queued
+		FROM dsh_apply_confirmed_refund_effects($1::uuid,$2,$3)`,
+		orderID, refundReference, reason,
+	).Scan(&couponReversed, &loyaltyQueued, &fundingQueued)
+	if errors.Is(err, sql.ErrNoRows) {
+		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "refund effect target not found")
+		return
+	}
+	if err != nil {
+		store.SendError(w, http.StatusConflict, "REFUND_EFFECT_CONFLICT", err.Error())
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{
+		"orderId":               orderID,
+		"refundReference":       refundReference,
+		"couponReversed":        couponReversed,
+		"loyaltyReversalQueued": loyaltyQueued,
+		"fundingReversalQueued": fundingQueued,
+	})
+}
+
 func requireWltServiceCaller(w http.ResponseWriter, r *http.Request) bool {
 	return store.RequireServiceCaller(w, r, "DSH_WLT_SERVICE_TOKEN", "wlt")
 }

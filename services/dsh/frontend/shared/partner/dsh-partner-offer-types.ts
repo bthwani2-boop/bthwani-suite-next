@@ -1,15 +1,15 @@
 export type PartnerOfferStatus =
-  | 'inbound'
-  | 'review'
-  | 'marketing-ready'
-  | 'published'
-  | 'paused'
-  | 'rejected'
-  | 'archived'
-  | 'expired'
-  | 'exhausted';
+  | "inbound"
+  | "review"
+  | "marketing-ready"
+  | "published"
+  | "paused"
+  | "rejected"
+  | "archived"
+  | "expired"
+  | "exhausted";
 
-export type PartnerOfferType = 'discount' | 'free-delivery' | 'bundle' | 'buy-x-get-y' | 'coupon';
+export type PartnerOfferType = "discount" | "free-delivery" | "bundle" | "buy-x-get-y" | "coupon";
 
 export type PartnerOfferRecord = {
   readonly id: string;
@@ -21,8 +21,9 @@ export type PartnerOfferRecord = {
   readonly productLabel: string;
   readonly category: string;
   readonly offerType: PartnerOfferType;
+  readonly couponId?: string;
   readonly status: PartnerOfferStatus;
-  readonly source: 'partner' | 'control-panel';
+  readonly source: "partner" | "control-panel";
   readonly valueLabel: string;
   readonly eligibility: string;
   readonly activeFromDate?: string;

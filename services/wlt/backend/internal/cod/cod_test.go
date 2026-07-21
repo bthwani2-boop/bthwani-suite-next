@@ -99,7 +99,7 @@ func TestHandleCreateCommissionRequiresDshCaller(t *testing.T) {
 
 func TestCreateCodRecordRejectsMissingFields(t *testing.T) {
 	if _, err := CreateCodRecord(nil, CreateCodRecordInput{}); err == nil {
-		t.Fatalf("expected error for missing orderId/captainId/partnerId")
+		t.Fatalf("expected error for missing order, collector, partner, and checkout intent")
 	}
 }
 
@@ -109,7 +109,7 @@ func TestCreateCodRecordRequiresCheckoutIntentIdBeforeDatabaseLookup(t *testing.
 		CaptainID: "captain-1",
 		PartnerID: "partner-1",
 	})
-	if err == nil || !strings.Contains(err.Error(), "checkoutIntentId is required") {
+	if err == nil || !strings.Contains(err.Error(), "checkoutIntentId") || !strings.Contains(err.Error(), "required") {
 		t.Fatalf("expected checkoutIntentId required error, got %v", err)
 	}
 }

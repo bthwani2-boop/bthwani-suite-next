@@ -1,14 +1,25 @@
+schemaVersion: 3
 capabilityId:
-branch:
+repositoryMode: REMOTE_ONLY
+branch: bassam
 resolvedCommitSha:
+evidenceCommitSha:
 currentStage:
-requestedStage:
+requestedStage: CLOSED_WITH_EVIDENCE
+productTruthState: NOT_APPLICABLE
 applicableGates: []
 passedGates: []
 failedGates: []
+applicableEvidenceScopes: [static]
+passedEvidenceScopes: []
+notApplicableStages: []
+stageExclusions: []
 missingEvidence: []
 requiredApprovals: []
+approvals: []
+changeAuthor:
 separationOfDutiesPass: false
 openBlockers: []
 residualRisks: []
-decision: FIX_REQUIRED
+evidence: []
+decision: NEEDS_EVIDENCE

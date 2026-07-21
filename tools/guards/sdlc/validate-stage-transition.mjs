@@ -4,6 +4,7 @@ import { fail, repoRoot } from "../_guard-utils.mjs";
 
 const guardId = "sdlc-stage-transition";
 const args = process.argv.slice(2);
+const violations = [];
 
 function getArg(name) {
   const prefix = `${name}=`;
@@ -13,121 +14,134 @@ function getArg(name) {
   return index >= 0 ? args[index + 1] : undefined;
 }
 
+function extractList(yaml, key) {
+  const lines = yaml.split(/\r?\n/);
+  const start = lines.findIndex((line) => line.trim() === `${key}:`);
+  if (start < 0) return [];
+  const values = [];
+  for (let index = start + 1; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (/^[^\s]/.test(line) && line.trim() !== "") break;
+    const match = line.match(/^\s+-\s+([A-Z0-9_]+)\s*$/);
+    if (match) values.push(match[1]);
+  }
+  return values;
+}
+
 const requestedStage = getArg("--stage");
 const artifactPath = getArg("--artifact");
-const lifecyclePath = path.join(
-  repoRoot,
-  "governance/operational_journey_protocol_package/sdlc/lifecycle.state-machine.yaml",
-);
-const content = fs.readFileSync(lifecyclePath, "utf8");
-const orderedStages = [
-  ...content.matchAll(/^\s+- (G[0-9]_[A-Z0-9_]+|CLOSED_WITH_EVIDENCE)$/gm),
-].map((match) => match[1]);
-const terminalFailureStages = new Set(["FIX_REQUIRED", "HARD_BLOCKED_EXTERNAL_ONLY"]);
-const allowedStages = new Set([...orderedStages, ...terminalFailureStages]);
-const violations = [];
+const lifecycleRelative = "governance/operational_journey_protocol_package/sdlc/lifecycle.state-machine.yaml";
+const lifecycle = fs.readFileSync(path.join(repoRoot, lifecycleRelative), "utf8");
+const orderedStages = extractList(lifecycle, "ordered_stages");
+const nonTerminalDecisions = new Set(extractList(lifecycle, "non_terminal_decisions"));
+const allowedStages = new Set(orderedStages);
+const allowedDecisions = new Set([...nonTerminalDecisions, "PASS", "CLOSED_WITH_EVIDENCE"]);
 
-if (requestedStage && !allowedStages.has(requestedStage)) {
-  violations.push({
-    file: "tools/guards/sdlc/validate-stage-transition.mjs",
-    message: `UNKNOWN_REQUESTED_STAGE: ${requestedStage}`,
-  });
-}
+for (const marker of [
+  "product_truth_precedes_implementation",
+  "product_manager_and_product_owner_approvals_are_separate",
+  "independent_reviewer_owns_g4_implementation_verification",
+  "reviewer_must_differ_from_author_executor_and_coordinator",
+  "product_acceptance_precedes_qa",
+  "same_commit_evidence_required",
+  "all_applicable_evidence_scopes_required_for_closure",
+  "executor_cannot_finally_approve_own_high_risk_work",
+  "governance_change_requires_governance_contract_authority",
+  "ci_change_requires_ci_workflow_authority",
+  "governance_and_ci_approvers_must_be_separate_when_both_apply",
+  "wlt_finance_change_requires_financial_control_authority",
+  "tenant_or_isolation_change_requires_isolation_security_approval",
+  "residual_risk_requires_risk_acceptance_authority",
+  "saas_activation_requires_explicit_product_security_finance_isolation_release_and_production_evidence",
+  "static_product_runtime_visual_qa_security_finance_isolation_governance_ci_release_and_production_scopes_remain_independent",
+]) if (!lifecycle.includes(marker)) violations.push({ file: lifecycleRelative, message: `MISSING_LIFECYCLE_RULE ${marker}` });
 
-if (!content.includes("rule: stages_must_not_skip_required_evidence_or_approval")) {
-  violations.push({
-    file: "governance/operational_journey_protocol_package/sdlc/lifecycle.state-machine.yaml",
-    message: "MISSING_NO_SKIP_RULE",
-  });
-}
+if (requestedStage && !allowedStages.has(requestedStage)) violations.push({ file: "<cli>", message: `UNKNOWN_REQUESTED_STAGE ${requestedStage}` });
 
 if (artifactPath) {
   const artifactFullPath = path.join(repoRoot, artifactPath);
-  if (fs.existsSync(artifactFullPath)) {
+  if (!fs.existsSync(artifactFullPath)) {
+    violations.push({ file: artifactPath, message: "MISSING_ARTIFACT" });
+  } else {
     let artifact;
     try {
       artifact = JSON.parse(fs.readFileSync(artifactFullPath, "utf8"));
     } catch (error) {
-      violations.push({ file: artifactPath, message: `INVALID_JSON: ${error.message}` });
+      violations.push({ file: artifactPath, message: `INVALID_JSON ${error.message}` });
     }
 
     if (artifact) {
-      if (requestedStage && artifact.requestedStage !== requestedStage) {
-        violations.push({
-          file: artifactPath,
-          message: `REQUESTED_STAGE_MISMATCH: cli=${requestedStage} artifact=${artifact.requestedStage}`,
-        });
-      }
+      if (!allowedStages.has(artifact.currentStage)) violations.push({ file: artifactPath, message: `UNKNOWN_CURRENT_STAGE ${artifact.currentStage}` });
+      if (!allowedStages.has(artifact.requestedStage)) violations.push({ file: artifactPath, message: `UNKNOWN_ARTIFACT_REQUESTED_STAGE ${artifact.requestedStage}` });
+      if (requestedStage && artifact.requestedStage !== requestedStage) violations.push({ file: artifactPath, message: `REQUESTED_STAGE_MISMATCH cli=${requestedStage} artifact=${artifact.requestedStage}` });
+      if (!allowedDecisions.has(artifact.decision)) violations.push({ file: artifactPath, message: `UNKNOWN_DECISION ${artifact.decision}` });
 
-      if (!allowedStages.has(artifact.currentStage)) {
-        violations.push({ file: artifactPath, message: `UNKNOWN_CURRENT_STAGE: ${artifact.currentStage}` });
-      }
-      if (!allowedStages.has(artifact.requestedStage)) {
-        violations.push({ file: artifactPath, message: `UNKNOWN_ARTIFACT_REQUESTED_STAGE: ${artifact.requestedStage}` });
-      }
+      const passDecision = ["PASS", "CLOSED_WITH_EVIDENCE"].includes(artifact.decision);
+      if (requestedStage && !passDecision) violations.push({ file: artifactPath, message: `REQUESTED_STAGE_NOT_APPROVED decision=${artifact.decision}` });
 
-      const isPassDecision = artifact.decision === "GATE_PASS" || artifact.decision === "CLOSED_WITH_EVIDENCE";
-      if (requestedStage && artifact.requestedStage === requestedStage && !isPassDecision) {
-        violations.push({
-          file: artifactPath,
-          message: `REQUESTED_STAGE_NOT_APPROVED: decision=${artifact.decision}`,
-        });
-      }
-
-      if (isPassDecision) {
+      if (passDecision) {
         const currentIndex = orderedStages.indexOf(artifact.currentStage);
-        const nextIndex = orderedStages.indexOf(artifact.requestedStage);
-        if (currentIndex < 0 || nextIndex !== currentIndex + 1) {
-          violations.push({
-            file: artifactPath,
-            message: `ILLEGAL_STAGE_SKIP: ${artifact.currentStage} -> ${artifact.requestedStage}`,
-          });
+        const requestedIndex = orderedStages.indexOf(artifact.requestedStage);
+        if (currentIndex < 0 || requestedIndex <= currentIndex) {
+          violations.push({ file: artifactPath, message: `NON_FORWARD_STAGE_TRANSITION ${artifact.currentStage} -> ${artifact.requestedStage}` });
+        } else {
+          const skippedStages = orderedStages.slice(currentIndex + 1, requestedIndex);
+          const notApplicable = new Set(artifact.notApplicableStages ?? []);
+          const exclusions = new Map((artifact.stageExclusions ?? []).map((entry) => [entry.stage, entry]));
+          for (const stage of skippedStages) {
+            if (!notApplicable.has(stage)) violations.push({ file: artifactPath, message: `STAGE_SKIP_WITHOUT_NOT_APPLICABLE ${stage}` });
+            const exclusion = exclusions.get(stage);
+            if (!exclusion || !exclusion.reason || !(exclusion.evidence?.length)) violations.push({ file: artifactPath, message: `STAGE_SKIP_WITHOUT_EXCLUSION_EVIDENCE ${stage}` });
+          }
+          if (notApplicable.has(artifact.currentStage)) violations.push({ file: artifactPath, message: `CURRENT_STAGE_CANNOT_BE_NOT_APPLICABLE ${artifact.currentStage}` });
+          if (notApplicable.has(artifact.requestedStage)) violations.push({ file: artifactPath, message: `REQUESTED_STAGE_CANNOT_BE_NOT_APPLICABLE ${artifact.requestedStage}` });
         }
 
-        const failedGates = artifact.failedGates ?? [];
-        const missingEvidence = artifact.missingEvidence ?? [];
-        const openBlockers = artifact.openBlockers ?? [];
-        if (failedGates.length > 0) {
-          violations.push({ file: artifactPath, message: "PASS_DECISION_WITH_FAILED_GATES" });
-        }
-        if (missingEvidence.length > 0) {
-          violations.push({ file: artifactPath, message: "PASS_DECISION_WITH_MISSING_EVIDENCE" });
-        }
-        if (openBlockers.length > 0) {
-          violations.push({ file: artifactPath, message: "PASS_DECISION_WITH_OPEN_BLOCKERS" });
+        if (artifact.evidenceCommitSha !== artifact.resolvedCommitSha) violations.push({ file: artifactPath, message: "EVIDENCE_COMMIT_MUST_MATCH_RESOLVED_COMMIT" });
+        for (const [field, value] of [["failedGates", artifact.failedGates], ["missingEvidence", artifact.missingEvidence], ["openBlockers", artifact.openBlockers]]) {
+          if ((value ?? []).length > 0) violations.push({ file: artifactPath, message: `PASS_DECISION_WITH_NONEMPTY_${field.toUpperCase()}` });
         }
 
         const passedGates = new Set(artifact.passedGates ?? []);
-        for (const gate of artifact.applicableGates ?? []) {
-          if (!passedGates.has(gate)) {
-            violations.push({ file: artifactPath, message: `APPLICABLE_GATE_NOT_PASSED: ${gate}` });
-          }
+        if (artifact.decision === "PASS" && !passedGates.has(artifact.requestedStage)) violations.push({ file: artifactPath, message: `REQUESTED_STAGE_GATE_NOT_PASSED ${artifact.requestedStage}` });
+        if (artifact.decision === "CLOSED_WITH_EVIDENCE") {
+          for (const gate of artifact.applicableGates ?? []) if (!passedGates.has(gate)) violations.push({ file: artifactPath, message: `CLOSURE_APPLICABLE_GATE_NOT_PASSED ${gate}` });
+          const passedScopes = new Set(artifact.passedEvidenceScopes ?? []);
+          for (const scope of artifact.applicableEvidenceScopes ?? []) if (!passedScopes.has(scope)) violations.push({ file: artifactPath, message: `CLOSURE_APPLICABLE_SCOPE_NOT_PASSED ${scope}` });
         }
 
-        const requestedIndex = orderedStages.indexOf(artifact.requestedStage);
-        if (requestedIndex >= orderedStages.indexOf("G5_QA_APPROVED") && artifact.separationOfDutiesPass !== true) {
-          violations.push({ file: artifactPath, message: "SEPARATION_OF_DUTIES_NOT_PROVEN" });
+        const stageIndex = requestedIndex;
+        const g3Index = orderedStages.indexOf("G3_READY_FOR_IMPLEMENTATION");
+        const g5Index = orderedStages.indexOf("G5_PRODUCT_ACCEPTED");
+        const g6Index = orderedStages.indexOf("G6_QA_APPROVED");
+        if (stageIndex >= g3Index && artifact.productTruthState !== "NOT_APPLICABLE") {
+          if (!artifact.productTruthContract) violations.push({ file: artifactPath, message: "PRODUCT_TRUTH_CONTRACT_REQUIRED" });
+          if (!["READY_FOR_IMPLEMENTATION", "IMPLEMENTED", "PRODUCT_ACCEPTED"].includes(artifact.productTruthState)) violations.push({ file: artifactPath, message: `PRODUCT_TRUTH_NOT_READY ${artifact.productTruthState}` });
         }
+        if (stageIndex >= g5Index && artifact.productTruthState !== "NOT_APPLICABLE" && artifact.productTruthState !== "PRODUCT_ACCEPTED") violations.push({ file: artifactPath, message: "PRODUCT_ACCEPTANCE_REQUIRED_BEFORE_G5_OR_LATER" });
+        if (stageIndex >= g6Index && artifact.separationOfDutiesPass !== true) violations.push({ file: artifactPath, message: "SEPARATION_OF_DUTIES_NOT_PROVEN" });
 
-        const evidence = artifact.evidence ?? [];
-        const requiredApprovalByStage = new Map([
-          ["G4_IMPLEMENTATION_VERIFIED", "engineering-reviewer"],
-          ["G5_QA_APPROVED", "qa-lead"],
-          ["G6_SECURITY_APPROVED", "security-authority"],
-          ["G7_RELEASE_APPROVED", "release-authority"],
+        const requiredAuthorityByStage = new Map([
+          ["G1_PRODUCT_MODEL_APPROVED", "product_manager_authority"],
+          ["G2_DESIGN_APPROVED", "architecture_authority"],
+          ["G3_READY_FOR_IMPLEMENTATION", "product_owner_acceptance_authority"],
+          ["G4_IMPLEMENTATION_VERIFIED", "independent_reviewer"],
+          ["G5_PRODUCT_ACCEPTED", "product_owner_acceptance_authority"],
+          ["G6_QA_APPROVED", "independent_quality_authority"],
+          ["G7_SECURITY_APPROVED", "application_security_authority"],
+          ["G8_RELEASE_APPROVED", "release_authority"],
+          ["G9_DEPLOYED", "release_authority"],
+          ["G10_PRODUCTION_VERIFIED", "release_authority"],
         ]);
-        const approvalRole = requiredApprovalByStage.get(artifact.requestedStage);
-        if (approvalRole && !evidence.some((item) => item.startsWith(`approval:${approvalRole}:`))) {
-          violations.push({
-            file: artifactPath,
-            message: `MISSING_APPROVAL_EVIDENCE: ${approvalRole}`,
-          });
+        const requiredAuthority = requiredAuthorityByStage.get(artifact.requestedStage);
+        if (requiredAuthority) {
+          const approval = (artifact.approvals ?? []).find((item) => item.authority === requiredAuthority && item.decision === "PASS");
+          if (!approval) violations.push({ file: artifactPath, message: `MISSING_APPROVAL ${requiredAuthority}` });
+          else if (approval.commitSha !== artifact.resolvedCommitSha) violations.push({ file: artifactPath, message: `APPROVAL_COMMIT_MISMATCH ${requiredAuthority}` });
         }
       }
 
-      if (artifact.decision === "CLOSED_WITH_EVIDENCE" && artifact.requestedStage !== "CLOSED_WITH_EVIDENCE") {
-        violations.push({ file: artifactPath, message: "CLOSURE_DECISION_WITHOUT_CLOSURE_STAGE" });
-      }
+      if (artifact.decision === "CLOSED_WITH_EVIDENCE" && artifact.requestedStage !== "CLOSED_WITH_EVIDENCE") violations.push({ file: artifactPath, message: "CLOSURE_DECISION_WITHOUT_CLOSURE_STAGE" });
     }
   }
 }
