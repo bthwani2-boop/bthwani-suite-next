@@ -159,7 +159,7 @@ func (s *protectedStoreServer) handleOperatorUpsertServiceArea(w http.ResponseWr
 	input.ActorSurface = "control-panel"
 	input.IdempotencyKey = idempotencyKey
 	input.CorrelationID = strings.TrimSpace(r.Header.Get("X-Correlation-ID"))
-	item, err := servicearea.Upsert(r.Context(), s.db, r.PathValue("serviceAreaCode"), input)
+	item, err := servicearea.UpsertGoverned(r.Context(), s.db, r.PathValue("serviceAreaCode"), input)
 	if err != nil {
 		writeClientMapError(w, err)
 		return
