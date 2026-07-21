@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   createDshClientAddress,
   deleteDshClientAddress,
@@ -6,6 +6,10 @@ import {
   setDshClientDefaultAddress,
   updateDshClientAddress,
 } from "./client-address.api";
+import {
+  clearClientAddressAttempt,
+  getOrCreateClientAddressAttempt,
+} from "./client-address-create-attempt";
 import type {
   DshAddressMutationContext,
   DshAddressTransportError,
@@ -45,33 +49,12 @@ function messageOf(error: unknown): string {
     : "تعذر تنفيذ عملية العنوان.";
 }
 
-function createFingerprint(input: DshClientAddressDraft): string {
-  return JSON.stringify({
-    label: input.label.trim(),
-    recipientName: input.recipientName.trim(),
-    phoneE164: input.phoneE164.trim(),
-    addressLine: input.addressLine.trim(),
-    serviceAreaCode: input.serviceAreaCode.trim(),
-    building: input.building?.trim() ?? "",
-    floor: input.floor?.trim() ?? "",
-    unit: input.unit?.trim() ?? "",
-    deliveryInstructions: input.deliveryInstructions?.trim() ?? "",
-    latitude: input.latitude ?? null,
-    longitude: input.longitude ?? null,
-    makeDefault: input.makeDefault === true,
-  });
-}
-
 export function useClientAddressController() {
   const [state, setState] = useState<ClientAddressState>({ kind: "loading" });
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [mutating, setMutating] = useState(false);
-  const mutationLock = useRef(false);
-  const createAttempt = useRef<{
-    fingerprint: string;
-    context: DshAddressMutationContext;
-  } | null>(null);
+  const mutationLock = useMemo(() => ({ current: false }), []);
 
   const load = useCallback(async () => {
     setState({ kind: "loading" });
@@ -105,19 +88,25 @@ export function useClientAddressController() {
       mutationLock.current = false;
       setMutating(false);
     }
-  }, []);
+  }, [mutationLock]);
 
   const createAddress = useCallback(async (input: DshClientAddressDraft): Promise<boolean> => {
-    const fingerprint = createFingerprint(input);
-    if (!createAttempt.current || createAttempt.current.fingerprint !== fingerprint) {
-      createAttempt.current = {
-        fingerprint,
-        context: mutationContext("address-create"),
-      };
+    let attempt;
+    try {
+      attempt = await getOrCreateClientAddressAttempt(input);
+    } catch (error) {
+      setMutationError(messageOf(error));
+      return false;
     }
-    const address = await runMutation(() => createDshClientAddress(input, createAttempt.current!.context));
+
+    const address = await runMutation(() => createDshClientAddress(input, attempt.context));
     if (!address) return false;
-    createAttempt.current = null;
+
+    try {
+      await clearClientAddressAttempt(attempt.fingerprint);
+    } catch {
+      // The server already accepted the idempotent mutation; a later replay remains safe.
+    }
     setSelectedAddressId(address.id);
     await load();
     return true;
