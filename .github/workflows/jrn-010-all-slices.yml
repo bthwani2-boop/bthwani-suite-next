@@ -160,7 +160,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml --profile dsh --profile wlt config 2>&1 | tee /tmp/jrn-010-compose-config.log
+          docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml --profile identity --profile dsh --profile wlt config 2>&1 | tee /tmp/jrn-010-compose-config.log
           grep -q "minio-init" /tmp/jrn-010-compose-config.log
       - name: Record WLT migration inventory
         shell: pwsh
