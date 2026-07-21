@@ -46,11 +46,11 @@ function request<T>(path: string, options: PartnerRequestOptions = {}): Promise<
       }
     : options.mutation;
   return httpClient.request<T>(path, {
-    method: options.method,
-    body: options.body,
-    idempotencyKey: mutation?.idempotencyKey,
-    correlationId: mutation?.correlationId,
-    expectedVersion: mutation?.expectedVersion,
+    ...(options.method !== undefined ? { method: options.method } : {}),
+    ...(options.body !== undefined ? { body: options.body } : {}),
+    ...(mutation?.idempotencyKey !== undefined ? { idempotencyKey: mutation.idempotencyKey } : {}),
+    ...(mutation?.correlationId !== undefined ? { correlationId: mutation.correlationId } : {}),
+    ...(mutation?.expectedVersion !== undefined ? { expectedVersion: mutation.expectedVersion } : {}),
   });
 }
 
