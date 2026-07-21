@@ -131,6 +131,16 @@ test("FS-13 DSH protects client, operator and service boundaries", () => {
   assert.match(eventHandler, /RequireServiceCaller\(w, r, "DSH_WLT_SERVICE_TOKEN", "wlt"\)/);
 });
 
+test("FS-13..17 initialize private media storage before DSH readiness", () => {
+  const compose = read("infra/docker/compose.runtime.yml");
+  assert.match(compose, /minio-init:/);
+  assert.match(compose, /mc mb --ignore-existing local\/dsh-media/);
+  assert.match(compose, /mc anonymous set none local\/dsh-media/);
+  assert.match(compose, /mc admin policy attach local dsh-media-rw --user/);
+  assert.match(compose, /minio-init:\s*\n\s*condition: service_completed_successfully/);
+  assert.doesNotMatch(compose, /DSH_MINIO_ACCESS_KEY:.*BTHWANI_MINIO_ROOT_USER/);
+});
+
 test("FS-16..18 have a dedicated gate, workflow, runbook and evidence contract", () => {
   const gate = read("tools/guards/checkout/jrn-010-checkout-truth-gate.mjs");
   const workflow = read(".github/workflows/jrn-010-all-slices.yml");
@@ -139,6 +149,7 @@ test("FS-16..18 have a dedicated gate, workflow, runbook and evidence contract",
   assert.match(gate, /AttachWltPaymentSessionIdempotent/);
   assert.match(workflow, /journeys\/jrn-010\/all-slices/);
   assert.match(workflow, /runtime-postgresql/);
+  assert.match(workflow, /infra\/docker\/compose\.runtime\.yml/);
   assert.match(runbook, /Rollback/);
   assert.equal(evidence.journeyId, "JRN-010");
   assert.equal(evidence.decision, "READY_FOR_REVIEW");
