@@ -26,6 +26,7 @@ func RegisterOrderJourneyRoutes(
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/preparation-estimate", protected.handleRevisePreparationEstimate)
 	mux.HandleFunc("GET /dsh/orders/{orderId}/preparation-issues", protected.handleListPreparationIssues)
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/preparation-issues", protected.handleCreatePreparationIssue)
+	mux.HandleFunc("POST /dsh/client/orders/{orderId}/preparation-issues/{issueId}/decision", protected.handleDecidePreparationIssue)
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/preparation-issues/{issueId}/resolve", protected.handleResolvePreparationIssue)
 	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/order-preparation-policy", protected.handleGetStorePreparationPolicy)
 	mux.HandleFunc("PUT /dsh/partner/stores/{storeId}/order-preparation-policy", protected.handleUpdateStorePreparationPolicy)
