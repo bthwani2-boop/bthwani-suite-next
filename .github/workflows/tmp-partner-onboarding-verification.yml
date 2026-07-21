@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - journey/order-preparation-handoff-closure
+    paths:
+      - .github/workflows/tmp-partner-onboarding-verification.yml
 
 permissions:
   contents: read
