@@ -16,6 +16,7 @@ import {
 } from '../../shared/operations';
 import { useDispatchCaptainOptions } from '../../shared/operations/use-dispatch-captain-options';
 import type { OperationsFocusParams, OperatorOrderWorkboardRow } from '../../shared/operations';
+import { DispatchOperationsPanel } from './DispatchOperationsPanel';
 
 export type OrderJourneyDispatchAssignmentScreenProps = {
   hubHref: string;
@@ -109,7 +110,7 @@ export function OrderJourneyDispatchAssignmentScreen({
   }
 
   return (
-    <Box gap={3}>
+    <Box gap={4}>
       <WebControlPanelKpiStrip items={[
         {
           id: 'ready',
@@ -219,6 +220,8 @@ export function OrderJourneyDispatchAssignmentScreen({
           </Box>
         </Box>
       </div>
+
+      <DispatchOperationsPanel />
     </Box>
   );
 }
