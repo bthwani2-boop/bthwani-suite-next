@@ -1,6 +1,8 @@
 /**
  * Home Discovery — Domain Types
- * Derived from OpenAPI-generated types; DB-backed runtime data only.
+ * Derived from generated DSH types. Publication-governance metadata is owned by
+ * the active dsh.home-marketing-governance.openapi.yaml contract shard until it
+ * is folded into the parent generated client.
  */
 
 import type { paths } from '../../../clients/generated/dsh-api';
@@ -23,8 +25,27 @@ export type DshHomeDiscoveryParams =
 export type DshHomeAdminKind =
   paths['/dsh/operator/home-discovery/{kind}']['get']['parameters']['path']['kind'];
 
-export type DshHomeAdminContentItem =
+type GeneratedHomeAdminContentItem =
   paths['/dsh/operator/home-discovery/{kind}']['get']['responses']['200']['content']['application/json']['items'][number];
 
-export type DshHomeAdminContentInput =
+type GeneratedHomeAdminContentInput =
   paths['/dsh/operator/home-discovery/{kind}']['post']['requestBody']['content']['application/json'];
+
+export type DshHomePublicationStatus = 'draft' | 'published' | 'paused' | 'archived';
+
+export type DshHomeAdminContentItem = GeneratedHomeAdminContentItem & {
+  readonly publicationStatus: DshHomePublicationStatus;
+  readonly publishFrom?: string;
+  readonly publishUntil?: string;
+  readonly createdByActorId: string;
+  readonly approvedByActorId?: string;
+  readonly approvedAt?: string;
+  readonly version: number;
+};
+
+export type DshHomeAdminContentInput = GeneratedHomeAdminContentInput & {
+  readonly publicationStatus: DshHomePublicationStatus;
+  readonly publishFrom?: string;
+  readonly publishUntil?: string;
+  readonly expectedVersion?: number;
+};
