@@ -159,8 +159,9 @@ jobs:
       - name: Validate governed runtime graph
         shell: bash
         run: |
-          docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml --profile dsh --profile wlt config > /tmp/jrn-010-compose-config.yml
-          grep -q "minio-init" /tmp/jrn-010-compose-config.yml
+          set -o pipefail
+          docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml --profile dsh --profile wlt config 2>&1 | tee /tmp/jrn-010-compose-config.log
+          grep -q "minio-init" /tmp/jrn-010-compose-config.log
       - name: Record WLT migration inventory
         shell: pwsh
         run: Get-ChildItem services/wlt/database/migrations -Filter '*.sql' | Sort-Object Name | Select-Object -ExpandProperty Name | Tee-Object -FilePath /tmp/jrn-010-wlt-migrations.log
