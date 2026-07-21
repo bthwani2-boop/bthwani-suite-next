@@ -10,6 +10,7 @@ on:
       - services/dsh/frontend/app-field/onboarding/**
       - services/dsh/frontend/app-partner/account/PartnerOnboardingStatusView.tsx
       - services/dsh/frontend/control-panel/partners/**
+      - services/dsh/frontend/control-panel/operations/AreaCapacityScreen.tsx
       - services/dsh/tests/jrn-001-fs-09-shared-brain.test.mjs
       - .github/workflows/jrn-001-fs-09-shared-brain.yml
 
