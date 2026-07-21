@@ -14,6 +14,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
+// This suite is the canonical FS-05 rerun after PostgreSQL-safe advisory lock keys.
 func openPayoutRequiredDB(t *testing.T) *sql.DB {
 	t.Helper()
 	if os.Getenv("WLT_REQUIRE_DB_TESTS") != "true" {
