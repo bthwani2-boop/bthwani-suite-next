@@ -1,0 +1,36 @@
+{
+  "journeyId": "JRN-001",
+  "journeyName": "تأهيل الشريك والمتجر ونشره",
+  "branch": "journey/jrn-001-sequential-closure",
+  "commitBinding": "SELF: this evidence is valid only when the containing commit has a successful journeys/jrn-001-sequential status",
+  "baseWithFs01ThroughFs10": "4a94fa5cbe28abd4de18693e3d632661853d40cd",
+  "sliceEvidence": {
+    "FS-01..FS-10": "inherited implementation and JRN-001 source contracts on the pinned base",
+    "FS-11": "fa8a73a311a64c6dfd8f899fd4a3f445715c7bf3",
+    "FS-12": "eeb36faecb7646be7bcef00eed85f0b526e5fdc6",
+    "FS-13": "c0222da74822567b415b1e97b999ab7a643f8b87",
+    "FS-14": "59e2eb1354b943d4a98cf7f487c53733edb16897",
+    "FS-15": "f81b9040e20323cea80409bb02cf766a7d2f810f",
+    "FS-16": "60c1f490c1537aaf451d4feeba3d85fff30df062",
+    "FS-17": "90b9e040ea93bacc9c21d3fe0bd1f4311696b241",
+    "FS-18": "SELF"
+  },
+  "implementationDecision": "READY_FOR_INDEPENDENT_REVIEW",
+  "independentApprovals": {
+    "qa": "PENDING",
+    "security": "PENDING",
+    "release": "PENDING"
+  },
+  "rollback": [
+    "revert FS-18 and later slice commits in reverse sequence",
+    "keep WLT payout destinations intact and never recreate raw payout storage in DSH",
+    "restore prior route bindings only after confirming no in-flight onboarding mutation"
+  ],
+  "residualRisks": [
+    "device-level visual evidence is not produced by GitHub hosted runners",
+    "production rollout approval is not granted by implementation CI",
+    "database integration evidence requires the governed runtime database job"
+  ],
+  "nextJourney": null,
+  "stopAfterJourney": true
+}
