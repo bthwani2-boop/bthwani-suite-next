@@ -1,0 +1,57 @@
+name: Temporary JRN-003 Workforce HTTP Diagnostics
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [sambassam]
+    paths:
+      - ".github/workflows/tmp-jrn-003-workforce-http-diagnostics.yml"
+
+permissions:
+  contents: read
+  statuses: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5
+        with:
+          go-version-file: core/workforce/backend/go.mod
+          cache-dependency-path: core/workforce/backend/go.sum
+      - name: Identify failing HTTP tests
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+          URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        shell: bash
+        run: |
+          set +e
+          cd core/workforce/backend
+          go test ./internal/http -json -count=1 >/tmp/workforce-http.json
+          code=$?
+          mapfile -t failed < <(jq -r 'select(.Action == "fail" and .Test != null) | .Test' /tmp/workforce-http.json | sort -u)
+          if [ ${#failed[@]} -eq 0 ]; then
+            if [ "$code" -eq 0 ]; then failed=(all-tests-passed); else failed=(package-setup-or-build-failure); fi
+          fi
+          state=success
+          [ "$code" -eq 0 ] || state=failure
+          for test_name in "${failed[@]}"; do
+            safe=$(printf '%s' "$test_name" | tr -cd '[:alnum:]_.-' | cut -c1-70)
+            [ -n "$safe" ] || safe=unknown
+            detail=$(jq -r --arg test "$test_name" 'select(.Test == $test and .Action == "output") | .Output' /tmp/workforce-http.json | grep -E 'expected|got|FAIL|error|panic|status|body' | tail -n 1 | tr '\n' ' ' | cut -c1-130)
+            [ -n "$detail" ] || detail="$test_name result: $state"
+            jq -n --arg state "$state" --arg context "journeys/jrn-003/diag-$safe" --arg description "$detail" --arg target_url "$URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/status.json
+            curl --fail-with-body --silent --show-error -X POST \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/${{ github.repository }}/statuses/$SHA" \
+              -d @/tmp/status.json
+          done
+          cat /tmp/workforce-http.json
+          exit "$code"
