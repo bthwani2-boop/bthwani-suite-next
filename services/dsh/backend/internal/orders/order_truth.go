@@ -323,7 +323,7 @@ func CreateOrderTruth(db *sql.DB, input CreateOrderTruthInput) (*OrderTruth, boo
 		INSERT INTO dsh_order_event_outbox
 		(tenant_id, order_id, event_id, event_type, correlation_id, causation_id, payload)
 		VALUES ($1,$2::uuid,$3::uuid,'order.created',$4,$5,
-		jsonb_build_object('orderId',$2,'checkoutIntentId',$5,'correlationId',$4,'version',1))
+		jsonb_build_object('orderId',$2::text,'checkoutIntentId',$5::text,'correlationId',$4::text,'version',1))
 		ON CONFLICT (tenant_id,event_id) DO NOTHING`,
 		input.TenantID, orderID, eventID, input.CorrelationID, input.CheckoutIntentID,
 	); err != nil {
