@@ -6,28 +6,39 @@
   "sliceId": "FS-18",
   "trackingStatus": "READY_FOR_REVIEW",
   "decision": "READY_FOR_REVIEW",
-  "evidenceBaseSha": "7fc63949e7328ea135e84d4d0bc0d07aa0055fe1",
-  "workflowRepairBaseSha": "cb4df69595780664bdd279b8af835e88d60a5909",
+  "evidenceBaseSha": "cf5a0dbd08a3cb322d0ad3ad69895cb9b16624b3",
   "latestTargetedVerification": {
-    "commit": "7fc63949e7328ea135e84d4d0bc0d07aa0055fe1",
-    "runId": 29847584806,
-    "context": "journeys/jrn-001-010/targeted-verification",
+    "commit": "cf5a0dbd08a3cb322d0ad3ad69895cb9b16624b3",
     "result": "success",
     "coveredScopes": [
-      "JRN-001 static contracts and guards",
-      "DSH partner and HTTP packages",
-      "Identity and Workforce governed behavior"
+      "FS-12 cross-surface committed truth and scoped TypeScript consumers",
+      "FS-17 comprehensive JRN-001 contracts, guards, backend and app-field verification",
+      "FS-18 evidence, rollback and open-gap verification"
     ]
   },
   "sameCommitVerification": {
     "canonicalDshContract": "services/dsh/contracts/dsh.partner-onboarding.openapi.yaml",
     "workflow": ".github/workflows/jrn-001-fs-18-evidence.yml",
+    "verifiedCommit": "cf5a0dbd08a3cb322d0ad3ad69895cb9b16624b3",
     "requiredContexts": [
+      "journeys/jrn-001/fs-12-cross-surface-truth",
       "journeys/jrn-001/fs-17-comprehensive",
       "journeys/jrn-001/fs-18-evidence"
     ],
-    "resolvedCommitShaSource": "github.sha of the successful FS-18 workflow run"
+    "workflowRuns": {
+      "fs12": 29850740692,
+      "fs17AndFs18": 29850741316
+    },
+    "resolvedCommitShaSource": "The final branch head must expose all required success contexts on the same commit."
   },
+  "implementationCorrections": [
+    "Rebound FS-17 and FS-18 to the canonical partner onboarding OpenAPI contract.",
+    "Separated JRN-001 surface typechecks so unrelated journey failures do not mask the owned consumer result.",
+    "Bound field activation to the governed field actor type.",
+    "Removed the runtime developer activation bypass and hardcoded credentials.",
+    "Added a permanent regression assertion for the activation bypass prohibition.",
+    "Aligned the shared TextField contract with the six-digit activation length constraint."
+  ],
   "slices": [
     {
       "id": "FS-01",
@@ -119,8 +130,9 @@
     {
       "id": "FS-12",
       "status": "READY_FOR_REVIEW",
-      "commit": "a7ae3cb96e76e42d5f646999459743fa6d0d4ff9",
-      "runId": 29840846383
+      "commit": "cf5a0dbd08a3cb322d0ad3ad69895cb9b16624b3",
+      "runId": 29850740692,
+      "context": "journeys/jrn-001/fs-12-cross-surface-truth"
     },
     {
       "id": "FS-13",
@@ -149,13 +161,16 @@
     {
       "id": "FS-17",
       "status": "READY_FOR_REVIEW",
-      "commit": "7fc63949e7328ea135e84d4d0bc0d07aa0055fe1",
-      "runId": 29847584806,
-      "context": "journeys/jrn-001-010/targeted-verification"
+      "commit": "cf5a0dbd08a3cb322d0ad3ad69895cb9b16624b3",
+      "runId": 29850741316,
+      "context": "journeys/jrn-001/fs-17-comprehensive"
     },
     {
       "id": "FS-18",
       "status": "READY_FOR_REVIEW",
+      "commit": "cf5a0dbd08a3cb322d0ad3ad69895cb9b16624b3",
+      "runId": 29850741316,
+      "context": "journeys/jrn-001/fs-18-evidence",
       "evidence": [
         "governance/evidence/JRN-001_PARTNER_ONBOARDING_EVIDENCE.json",
         "governance/evidence/JRN-001_PARTNER_ONBOARDING_STORE_PUBLICATION.md",
@@ -178,7 +193,6 @@
   "closureClaim": "CLOSED_WITH_EVIDENCE is explicitly not claimed.",
   "registryLog": {
     "path": "governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md",
-    "evidenceCommit": "246d4e63d75fecaa64a982938885bb2bfd6249cb",
     "decision": "READY_FOR_REVIEW"
   }
 }
