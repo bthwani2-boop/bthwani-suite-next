@@ -27,6 +27,7 @@ func RegisterPlatformPolicyRoutes(
 	mux.HandleFunc("GET /dsh/operator/privacy/client-addresses/policy", protected.handleGetClientAddressPrivacyPolicy)
 	mux.HandleFunc("PUT /dsh/operator/privacy/client-addresses/policy", protected.handleUpdateClientAddressPrivacyPolicy)
 	mux.HandleFunc("GET /dsh/operator/privacy/client-addresses/status", protected.handleGetClientAddressPrivacyStatus)
+	mux.HandleFunc("GET /dsh/operator/privacy/client-addresses/events", protected.handleListClientAddressPrivacyEvents)
 	mux.HandleFunc("POST /dsh/operator/privacy/client-addresses/anonymize", protected.handleAnonymizeExpiredClientAddresses)
 
 	// The following routes are now registered via registerUnifiedCatalogRoutes in catalog_unified_routes.go.
