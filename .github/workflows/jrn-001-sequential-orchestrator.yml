@@ -1,0 +1,605 @@
+name: JRN-001 sequential closure orchestrator
+
+on:
+  push:
+    branches: [journey/jrn-001-sequential-closure]
+    paths:
+      - .github/workflows/jrn-001-sequential-orchestrator.yml
+
+permissions:
+  contents: write
+  statuses: write
+
+concurrency:
+  group: jrn-001-sequential-orchestrator
+  cancel-in-progress: false
+
+jobs:
+  close-sequentially:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: journey/jrn-001-sequential-closure
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24.17.0
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: services/dsh/backend/go.sum
+
+      - name: Configure sequential writer
+        shell: bash
+        run: |
+          git config user.name 'bthwani-journey-closure'
+          git config user.email 'actions@users.noreply.github.com'
+          echo 'BRANCH=journey/jrn-001-sequential-closure' >> "$GITHUB_ENV"
+
+      - name: FS-12 — multisurface read-after-write
+        shell: bash
+        run: |
+          git pull --rebase origin "$BRANCH"
+          node <<'NODE'
+          const fs = require('node:fs');
+          function replace(file, from, to) {
+            const before = fs.readFileSync(file, 'utf8');
+            if (!before.includes(from)) {
+              if (before.includes(to)) return;
+              throw new Error(`${file}: expected block not found`);
+            }
+            fs.writeFileSync(file, before.replace(from, to));
+          }
+          const admin = 'services/dsh/frontend/shared/partner/use-partner-admin-controller.tsx';
+          replace(admin,
+`      const partner = await createPartner(input);
+      setMutationState({ kind: "success", partner });
+      await loadList(filters, page);
+      return partner;`,
+`      const created = await createPartner(input);
+      const partner = await fetchPartner(created.id);
+      setMutationState({ kind: "success", partner });
+      await loadList(filters, page);
+      return partner;`);
+          replace(admin,
+`      const res = await transitionPartner(partnerId, input, version);
+      const partner = res.partner;
+      setMutationState({ kind: "success", partner });`,
+`      await transitionPartner(partnerId, input, version);
+      const partner = await fetchPartner(partnerId);
+      setMutationState({ kind: "success", partner });`);
+          const team = 'services/dsh/frontend/shared/partner/use-partner-team-controller.ts';
+          replace(team,
+`  const loadTeam = React.useCallback(() => {
+    if (route !== 'team' || !activeStoreId) return;
+    setLoading(true);
+    setStatus('loading');
+    fetchPartnerTeam(activeStoreId).then((res) => {
+      const normalized = (res.members ?? [])
+        .map(toPartnerTeamMember)
+        .filter((member): member is PartnerTeamMember => member !== null);
+      setMembers(normalized);
+      setError(null);
+      setStatus('ready');
+    }).catch((err: unknown) => {
+      setMembers([]);
+      setError(resolveErrorMessage(err));
+      setStatus('error');
+    }).finally(() => {
+      setLoading(false);
+    });
+  }, [route, activeStoreId]);`,
+`  const loadTeam = React.useCallback(async (): Promise<boolean> => {
+    if (route !== 'team' || !activeStoreId) return false;
+    setLoading(true);
+    setStatus('loading');
+    try {
+      const res = await fetchPartnerTeam(activeStoreId);
+      const normalized = (res.members ?? [])
+        .map(toPartnerTeamMember)
+        .filter((member): member is PartnerTeamMember => member !== null);
+      setMembers(normalized);
+      setError(null);
+      setStatus('ready');
+      return true;
+    } catch (err) {
+      setMembers([]);
+      setError(resolveErrorMessage(err));
+      setStatus('error');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [route, activeStoreId]);`);
+          replace(team,
+`    return invitePartnerTeamMember(activeStoreId, identity).then((): PartnerTeamMutationResult => {
+      loadTeam();
+      return { ok: true };
+    }).catch((err: unknown): PartnerTeamMutationResult => {
+      return { ok: false, error: resolveErrorMessage(err) };
+    });`,
+`    try {
+      await invitePartnerTeamMember(activeStoreId, identity);
+      const reloaded = await loadTeam();
+      return reloaded ? { ok: true } : { ok: false, error: 'تم تنفيذ الدعوة لكن تعذر إعادة قراءة الفريق.' };
+    } catch (err) {
+      return { ok: false, error: resolveErrorMessage(err) };
+    }`);
+          replace(team,
+`    return executePartnerTeamMemberAction(activeStoreId, memberId, action).then((): PartnerTeamMutationResult => {
+      loadTeam();
+      return { ok: true };
+    }).catch((err: unknown): PartnerTeamMutationResult => {
+      return { ok: false, error: resolveErrorMessage(err) };
+    });`,
+`    try {
+      await executePartnerTeamMemberAction(activeStoreId, memberId, action);
+      const reloaded = await loadTeam();
+      return reloaded ? { ok: true } : { ok: false, error: 'تم تنفيذ الإجراء لكن تعذر إعادة قراءة الفريق.' };
+    } catch (err) {
+      return { ok: false, error: resolveErrorMessage(err) };
+    }`);
+          fs.writeFileSync('services/dsh/tests/jrn-001-fs-12-multisurface-readback.test.mjs', `import assert from "node:assert/strict";\nimport fs from "node:fs";\nconst admin = fs.readFileSync("services/dsh/frontend/shared/partner/use-partner-admin-controller.tsx", "utf8");\nconst field = fs.readFileSync("services/dsh/frontend/shared/field-onboarding/use-field-partner-onboarding-controller.tsx", "utf8");\nconst team = fs.readFileSync("services/dsh/frontend/shared/partner/use-partner-team-controller.ts", "utf8");\nassert.match(admin, /createPartner\\(input\\)[\\s\\S]*fetchPartner\\(created\\.id\\)/);\nassert.match(admin, /transitionPartner\\(partnerId[\\s\\S]*fetchPartner\\(partnerId\\)/);\nassert.match(field, /fieldSubmitPartner[\\s\\S]*assertPartnerReadback[\\s\\S]*fieldGetPartner/);\nassert.match(team, /await invitePartnerTeamMember[\\s\\S]*await loadTeam\\(\\)/);\nassert.match(team, /await executePartnerTeamMemberAction[\\s\\S]*await loadTeam\\(\\)/);\nfor (const source of [admin, field, team]) assert.doesNotMatch(source, /mockPartner|fakePartner|localSuccess/i);\nconsole.log("JRN-001 FS-12 multisurface readback verified");\n`);
+          NODE
+          node --test services/dsh/tests/jrn-001-fs-12-multisurface-readback.test.mjs
+          git diff --check
+          if ! git diff --quiet; then
+            git add services/dsh/frontend/shared/partner services/dsh/tests/jrn-001-fs-12-multisurface-readback.test.mjs
+            git commit -m 'fix(jrn-001-fs-12): require multisurface read-after-write'
+            git pull --rebase origin "$BRANCH"
+            git push origin HEAD:"$BRANCH"
+          fi
+          echo "FS12_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: FS-13 — security, privacy and isolation
+        shell: bash
+        run: |
+          git pull --rebase origin "$BRANCH"
+          cat > services/dsh/contracts/jrn-001-security-policy.json <<'JSON'
+          {
+            "journeyId": "JRN-001",
+            "dataClassification": {
+              "legalIdentityNumber": "restricted_pii",
+              "primaryPhone": "restricted_pii",
+              "rawPayoutDestination": "wlt_only_secret",
+              "maskedPayoutReference": "dsh_operational_reference"
+            },
+            "invariants": [
+              "field actors may read and mutate only drafts they own",
+              "operator partner routes require protected permission handlers",
+              "raw account, IBAN and payout mobile values never reach DSH surfaces",
+              "all mutations carry idempotency and correlation identifiers",
+              "tenant and actor scopes are derived from authenticated context",
+              "partner transitions and document decisions are audit recorded"
+            ]
+          }
+          JSON
+          cat > services/dsh/tests/jrn-001-fs-13-security-isolation.test.mjs <<'JS'
+          import assert from "node:assert/strict";
+          import fs from "node:fs";
+          const routes = fs.readFileSync("services/dsh/backend/internal/http/partner_lifecycle_routes.go", "utf8");
+          const handler = fs.readFileSync("services/dsh/backend/internal/partner/handler.go", "utf8");
+          const integrity = fs.readFileSync("services/dsh/backend/internal/partner/onboarding_integrity_test.go", "utf8");
+          const runtime = fs.readFileSync("services/dsh/frontend/shared/partner/partner-onboarding.runtime.ts", "utf8");
+          const policy = JSON.parse(fs.readFileSync("services/dsh/contracts/jrn-001-security-policy.json", "utf8"));
+          assert.equal(policy.journeyId, "JRN-001");
+          assert.match(routes, /protected\.handleGoverned/);
+          assert.match(handler, /p\.CreatedByActorID != actorID/);
+          assert.match(handler, /StatusForbidden/);
+          assert.match(integrity, /NeverReturnsRawPayoutIdentifiers/);
+          assert.match(runtime, /idempotencyKey/);
+          assert.match(runtime, /correlationId/);
+          assert.doesNotMatch(routes, /BankAccountNumber|BankIBAN|PayoutMobileNumber/);
+          console.log("JRN-001 FS-13 security and isolation verified");
+          JS
+          node --test services/dsh/tests/jrn-001-fs-13-security-isolation.test.mjs
+          git diff --check
+          git add services/dsh/contracts/jrn-001-security-policy.json services/dsh/tests/jrn-001-fs-13-security-isolation.test.mjs
+          git commit -m 'test(jrn-001-fs-13): enforce partner security and isolation'
+          git pull --rebase origin "$BRANCH"
+          git push origin HEAD:"$BRANCH"
+          echo "FS13_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: FS-14 — accessibility, RTL and weak-network UX
+        shell: bash
+        run: |
+          git pull --rebase origin "$BRANCH"
+          node <<'NODE'
+          const fs = require('node:fs');
+          const file = 'services/dsh/frontend/app-field/onboarding/DshFieldOnboardingScreen.tsx';
+          const before = fs.readFileSync(file, 'utf8');
+          const from = `                accessibilityRole="button"
+                accessibilityLabel={\`${GROUP_LABELS[groupId]}\${missingCount > 0 ? \`, \${missingCount} عناصر ناقصة\` : ''}\`}
+                onPress={() => setActiveGroup(groupId)}`.replace(', ', '، ');
+          const to = `                accessibilityRole="button"
+                accessibilityLabel={\`${GROUP_LABELS[groupId]}\${missingCount > 0 ? \`, \${missingCount} عناصر ناقصة\` : ''}\`}
+                accessibilityState={{ selected: active }}
+                accessibilityHint="يفتح مجموعة البيانات المختارة"
+                onPress={() => setActiveGroup(groupId)}`.replace(', ', '، ');
+          if (before.includes(from)) fs.writeFileSync(file, before.replace(from, to));
+          else if (!before.includes('accessibilityState={{ selected: active }}')) throw new Error('timeline accessibility block not found');
+          NODE
+          cat > services/dsh/tests/jrn-001-fs-14-accessibility-rtl.test.mjs <<'JS'
+          import assert from "node:assert/strict";
+          import fs from "node:fs";
+          const field = fs.readFileSync("services/dsh/frontend/app-field/onboarding/DshFieldOnboardingScreen.tsx", "utf8");
+          const control = fs.readFileSync("services/dsh/frontend/control-panel/partners/PartnerDetailOperationalScreen.tsx", "utf8");
+          assert.match(field, /accessibilityRole="button"/);
+          assert.match(field, /accessibilityRole="alert"/);
+          assert.match(field, /accessibilityState=\{\{ selected: active \}\}/);
+          assert.match(field, /accessibilityHint="يفتح مجموعة البيانات المختارة"/);
+          assert.match(field, /flexDirection: 'row-reverse'/);
+          assert.match(field, /launchImageLibraryAsync\(\{ quality: 0\.8 \}\)/);
+          assert.doesNotMatch(field, /base64:\s*true/);
+          assert.match(control, /role="tablist"/);
+          assert.match(control, /role="tab"/);
+          assert.match(control, /aria-selected/);
+          assert.match(control, /[\u0600-\u06FF]/);
+          console.log("JRN-001 FS-14 accessibility and RTL verified");
+          JS
+          node --test services/dsh/tests/jrn-001-fs-14-accessibility-rtl.test.mjs
+          git diff --check
+          git add services/dsh/frontend/app-field/onboarding/DshFieldOnboardingScreen.tsx services/dsh/tests/jrn-001-fs-14-accessibility-rtl.test.mjs
+          git commit -m 'fix(jrn-001-fs-14): strengthen onboarding accessibility and RTL'
+          git pull --rebase origin "$BRANCH"
+          git push origin HEAD:"$BRANCH"
+          echo "FS14_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: FS-15 — SLA, observability and operations runbook
+        shell: bash
+        run: |
+          git pull --rebase origin "$BRANCH"
+          cat > services/dsh/backend/internal/http/partner_onboarding_observability.go <<'GO'
+          package http
+
+          import (
+            "log/slog"
+            "net/http"
+            "time"
+          )
+
+          type partnerOnboardingStatusWriter struct {
+            http.ResponseWriter
+            status int
+          }
+
+          func (w *partnerOnboardingStatusWriter) WriteHeader(status int) {
+            if w.status != 0 { return }
+            w.status = status
+            w.ResponseWriter.WriteHeader(status)
+          }
+
+          func observePartnerOnboardingRoute(operation string, next http.HandlerFunc) http.HandlerFunc {
+            return func(w http.ResponseWriter, r *http.Request) {
+              started := time.Now()
+              captured := &partnerOnboardingStatusWriter{ResponseWriter: w}
+              next(captured, r)
+              status := captured.status
+              if status == 0 { status = http.StatusOK }
+              outcome := "success"
+              if status >= 500 { outcome = "server_error" } else if status >= 400 { outcome = "rejected" }
+              surface, _ := r.Context().Value("actor_surface").(string)
+              slog.Info("partner_onboarding_operation",
+                "journey_id", "JRN-001",
+                "operation", operation,
+                "outcome", outcome,
+                "http_status", status,
+                "duration_ms", time.Since(started).Milliseconds(),
+                "actor_surface", surface,
+                "partner_id", r.PathValue("partnerId"),
+                "correlation_id", r.Header.Get("X-Correlation-ID"),
+              )
+            }
+          }
+          GO
+          node <<'NODE'
+          const fs = require('node:fs');
+          const file = 'services/dsh/backend/internal/http/partner_lifecycle_routes.go';
+          let source = fs.readFileSync(file, 'utf8');
+          const replacements = [
+            ['mux.HandleFunc("POST /dsh/operator/partners", protected.handleCreatePartner)', 'mux.HandleFunc("POST /dsh/operator/partners", observePartnerOnboardingRoute("operator.create_partner", protected.handleCreatePartner))'],
+            ['mux.HandleFunc("POST /dsh/operator/partners/{partnerId}/transition", protected.handleGovernedActivationTransition)', 'mux.HandleFunc("POST /dsh/operator/partners/{partnerId}/transition", observePartnerOnboardingRoute("operator.transition_partner", protected.handleGovernedActivationTransition))'],
+            ['mux.HandleFunc("POST /dsh/field/partners/drafts", protected.handleFieldCreatePartnerDraft)', 'mux.HandleFunc("POST /dsh/field/partners/drafts", observePartnerOnboardingRoute("field.create_draft", protected.handleFieldCreatePartnerDraft))'],
+            ['mux.HandleFunc("PATCH /dsh/field/partners/{partnerId}", protected.handleGovernedFieldUpdatePartnerDraft)', 'mux.HandleFunc("PATCH /dsh/field/partners/{partnerId}", observePartnerOnboardingRoute("field.update_draft", protected.handleGovernedFieldUpdatePartnerDraft))'],
+            ['mux.HandleFunc("POST /dsh/field/partners/{partnerId}/visits", protected.handleGovernedFieldCreatePartnerVisit)', 'mux.HandleFunc("POST /dsh/field/partners/{partnerId}/visits", observePartnerOnboardingRoute("field.capture_visit", protected.handleGovernedFieldCreatePartnerVisit))'],
+            ['mux.HandleFunc("POST /dsh/field/partners/{partnerId}/submit", protected.handleGovernedFieldSubmitPartnerDraft)', 'mux.HandleFunc("POST /dsh/field/partners/{partnerId}/submit", observePartnerOnboardingRoute("field.submit_partner", protected.handleGovernedFieldSubmitPartnerDraft))'],
+          ];
+          for (const [from, to] of replacements) {
+            if (source.includes(from)) source = source.replace(from, to);
+            else if (!source.includes(to)) throw new Error(`route binding not found: ${from}`);
+          }
+          fs.writeFileSync(file, source);
+          NODE
+          mkdir -p governance/runbooks
+          cat > governance/runbooks/JRN_001_PARTNER_ONBOARDING.md <<'MD'
+          # JRN-001 Partner Onboarding Runbook
+
+          ## Service objectives
+          - Draft create/update p95: 750 ms inside DSH, excluding media transfer.
+          - Readback after mutation p95: 1,000 ms.
+          - Submission/transition p95: 1,500 ms when WLT is healthy.
+          - Error budget: 99.5% successful governed requests per rolling 30 days.
+
+          ## Signals and alerts
+          - Log event: `partner_onboarding_operation` with operation, outcome, status, duration, actor surface, partner reference and correlation ID.
+          - Alert when server-error ratio exceeds 2% for 10 minutes.
+          - Alert when p95 exceeds the relevant objective for 15 minutes.
+          - Alert on repeated version conflicts above 5% or WLT-unavailable responses above 1%.
+
+          ## Diagnosis
+          1. Search by correlation ID and partner reference.
+          2. Confirm actor surface and permission decision.
+          3. Inspect partner audit events and outbox state.
+          4. For payout failures, inspect WLT by payout destination reference; never copy raw payout values into DSH logs.
+          5. Re-run canonical GET readback before any manual intervention.
+
+          ## Recovery
+          - Network/5xx: retry with the same idempotency key.
+          - Conflict: reload and issue a new mutation with the current version.
+          - Partial readback: reconcile the mutation audit record against the canonical partner GET.
+          - WLT unavailable: leave DSH state non-published and retry the WLT handoff; do not persist raw financial data.
+          MD
+          cat > services/dsh/tests/jrn-001-fs-15-observability.test.mjs <<'JS'
+          import assert from "node:assert/strict";
+          import fs from "node:fs";
+          const observer = fs.readFileSync("services/dsh/backend/internal/http/partner_onboarding_observability.go", "utf8");
+          const routes = fs.readFileSync("services/dsh/backend/internal/http/partner_lifecycle_routes.go", "utf8");
+          const runbook = fs.readFileSync("governance/runbooks/JRN_001_PARTNER_ONBOARDING.md", "utf8");
+          assert.match(observer, /partner_onboarding_operation/);
+          assert.match(observer, /duration_ms/);
+          assert.match(observer, /correlation_id/);
+          assert.doesNotMatch(observer, /account_number|bank_iban|payout_mobile/i);
+          for (const op of ["operator.create_partner", "operator.transition_partner", "field.create_draft", "field.update_draft", "field.capture_visit", "field.submit_partner"]) assert.match(routes, new RegExp(op));
+          assert.match(runbook, /p95/);
+          assert.match(runbook, /Error budget/);
+          assert.match(runbook, /Recovery/);
+          console.log("JRN-001 FS-15 observability verified");
+          JS
+          gofmt -w services/dsh/backend/internal/http/partner_onboarding_observability.go services/dsh/backend/internal/http/partner_lifecycle_routes.go
+          node --test services/dsh/tests/jrn-001-fs-15-observability.test.mjs
+          (cd services/dsh/backend && go test ./internal/http -run '^$' -count=1)
+          git diff --check
+          git add services/dsh/backend/internal/http governance/runbooks/JRN_001_PARTNER_ONBOARDING.md services/dsh/tests/jrn-001-fs-15-observability.test.mjs
+          git commit -m 'feat(jrn-001-fs-15): add onboarding observability and runbook'
+          git pull --rebase origin "$BRANCH"
+          git push origin HEAD:"$BRANCH"
+          echo "FS15_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: FS-16 — remove one-off workflows and legacy drift
+        shell: bash
+        run: |
+          git pull --rebase origin "$BRANCH"
+          for file in \
+            .github/workflows/jrn-001-fs-10-app-client-diagnostic.yml \
+            .github/workflows/jrn-001-fs-10-store-link-repair.yml \
+            .github/workflows/jrn-001-fs-10-app-field-repair.yml \
+            .github/workflows/jrn-001-fs-11-visible-states.yml \
+            .github/workflows/jrn-001-fs-12-multisurface-readback.yml \
+            .github/workflows/jrn-001-fs-12-atomic.yml \
+            .github/workflows/jrn-001-sequential-orchestrator.yml; do
+            [ ! -e "$file" ] || git rm -f "$file"
+          done
+          cat > services/dsh/tests/jrn-001-fs-16-cleanup.test.mjs <<'JS'
+          import assert from "node:assert/strict";
+          import fs from "node:fs";
+          for (const file of [
+            ".github/workflows/jrn-001-fs-10-app-client-diagnostic.yml",
+            ".github/workflows/jrn-001-fs-10-store-link-repair.yml",
+            ".github/workflows/jrn-001-fs-10-app-field-repair.yml",
+            ".github/workflows/jrn-001-fs-11-visible-states.yml",
+            ".github/workflows/jrn-001-fs-12-multisurface-readback.yml",
+            ".github/workflows/jrn-001-fs-12-atomic.yml",
+            ".github/workflows/jrn-001-sequential-orchestrator.yml"
+          ]) assert.equal(fs.existsSync(file), false, `${file} must remain removed`);
+          const screen = fs.readFileSync("services/dsh/frontend/app-field/onboarding/DshFieldOnboardingScreen.tsx", "utf8");
+          assert.doesNotMatch(screen, /amountMinor|brandPrimary|surfaceRaised/);
+          const surfaces = [
+            "services/dsh/frontend/app-field",
+            "services/dsh/frontend/app-partner",
+            "services/dsh/frontend/control-panel/partners"
+          ];
+          for (const root of surfaces) assert.equal(fs.existsSync(root), true);
+          console.log("JRN-001 FS-16 cleanup verified");
+          JS
+          node --test services/dsh/tests/jrn-001-fs-16-cleanup.test.mjs
+          git diff --check
+          git add -A
+          git commit -m 'chore(jrn-001-fs-16): remove temporary closure tooling'
+          git pull --rebase origin "$BRANCH"
+          git push origin HEAD:"$BRANCH"
+          echo "FS16_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: FS-17 — install permanent targeted verification
+        shell: bash
+        run: |
+          git pull --rebase origin "$BRANCH"
+          cat > .github/workflows/jrn-001-sequential-verification.yml <<'YAML'
+          name: JRN-001 sequential verification
+          on:
+            push:
+              branches: [journey/jrn-001-sequential-closure]
+            pull_request:
+              branches: [sambassam]
+          permissions:
+            contents: read
+            statuses: write
+          concurrency:
+            group: jrn-001-${{ github.sha }}
+            cancel-in-progress: false
+          jobs:
+            verify:
+              runs-on: ubuntu-latest
+              timeout-minutes: 40
+              steps:
+                - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+                  with: {persist-credentials: false}
+                - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+                  with: {node-version: 24.17.0}
+                - run: |
+                    corepack enable
+                    corepack prepare pnpm@10.34.2 --activate
+                    pnpm install --frozen-lockfile
+                - name: JRN-001 source and contract tests
+                  run: node --test services/dsh/tests/jrn-001-*.test.mjs
+                - name: Typecheck app-field
+                  run: pnpm --dir apps/app-field/runtime typecheck
+                - name: Typecheck app-partner
+                  run: pnpm --dir apps/app-partner/runtime typecheck
+                - name: Typecheck control-panel
+                  run: pnpm --dir apps/control-panel/runtime typecheck
+                - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5
+                  with:
+                    go-version-file: services/dsh/backend/go.mod
+                    cache-dependency-path: services/dsh/backend/go.sum
+                - name: Partner unit security tests
+                  working-directory: services/dsh/backend
+                  run: go test ./internal/partner -run 'Test(SanitizePartnerForSurfaceNeverReturnsRawPayoutIdentifiers|TransitionRequestHashBindsActorStatusAndVersion|NormalizeDshPayoutPreferenceMapsSurfaceVocabulary|UnmaskedPayoutValueRejectsCompatibilityMasks)$' -count=1
+                - name: Compile partner HTTP and API entrypoint
+                  working-directory: services/dsh/backend
+                  run: |
+                    go test ./internal/http -run '^$' -count=1
+                    go test ./cmd/dsh-api -run '^$' -count=1
+                - name: Full-stack ownership boundary
+                  run: pnpm run guard:fullstack-boundary
+                - name: WLT financial boundary
+                  run: pnpm run guard:wlt-financial-boundary
+                - name: Publish result
+                  if: always()
+                  env:
+                    GH_TOKEN: ${{ github.token }}
+                    SHA: ${{ github.sha }}
+                    RESULT: ${{ job.status }}
+                    URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+                  run: |
+                    [ "$RESULT" = success ] && STATE=success || STATE=failure
+                    jq -n --arg state "$STATE" --arg context 'journeys/jrn-001-sequential' --arg description "JRN-001 sequential verification: $RESULT" --arg target_url "$URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/status.json
+                    curl --fail-with-body --silent --show-error -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "https://api.github.com/repos/${{ github.repository }}/statuses/$SHA" -d @/tmp/status.json
+          YAML
+          cat > services/dsh/contracts/jrn-001-verification-scope.json <<'JSON'
+          {
+            "journeyId": "JRN-001",
+            "requiredChecks": [
+              "all jrn-001 source and contract tests",
+              "app-field typecheck",
+              "app-partner typecheck",
+              "control-panel typecheck",
+              "partner security unit tests",
+              "partner HTTP and dsh-api compile",
+              "fullstack ownership boundary",
+              "WLT financial boundary"
+            ],
+            "statusContext": "journeys/jrn-001-sequential"
+          }
+          JSON
+          cat > services/dsh/tests/jrn-001-fs-17-verification-scope.test.mjs <<'JS'
+          import assert from "node:assert/strict";
+          import fs from "node:fs";
+          const workflow = fs.readFileSync(".github/workflows/jrn-001-sequential-verification.yml", "utf8");
+          const scope = JSON.parse(fs.readFileSync("services/dsh/contracts/jrn-001-verification-scope.json", "utf8"));
+          assert.equal(scope.journeyId, "JRN-001");
+          for (const marker of ["jrn-001-*.test.mjs", "apps/app-field/runtime typecheck", "apps/app-partner/runtime typecheck", "apps/control-panel/runtime typecheck", "guard:fullstack-boundary", "guard:wlt-financial-boundary", "journeys/jrn-001-sequential"]) assert.match(workflow, new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+          console.log("JRN-001 FS-17 verification scope verified");
+          JS
+          node --test services/dsh/tests/jrn-001-fs-17-verification-scope.test.mjs
+          git diff --check
+          git add .github/workflows/jrn-001-sequential-verification.yml services/dsh/contracts/jrn-001-verification-scope.json services/dsh/tests/jrn-001-fs-17-verification-scope.test.mjs
+          git commit -m 'ci(jrn-001-fs-17): install permanent sequential verification'
+          git pull --rebase origin "$BRANCH"
+          git push origin HEAD:"$BRANCH"
+          echo "FS17_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: FS-18 — bind evidence, rollback and residual risk
+        shell: bash
+        run: |
+          git pull --rebase origin "$BRANCH"
+          mkdir -p governance/evidence
+          cat > governance/evidence/JRN_001_SEQUENTIAL_CLOSURE.json <<JSON
+          {
+            "journeyId": "JRN-001",
+            "branch": "$BRANCH",
+            "commitBinding": "SELF: evidence is valid only when the containing commit has a successful journeys/jrn-001-sequential status",
+            "baseWithFs01ThroughFs10": "4a94fa5cbe28abd4de18693e3d632661853d40cd",
+            "sliceEvidence": {
+              "FS-01..FS-10": "inherited implementation plus JRN-001 tests on the base commit",
+              "FS-11": "fa8a73a311a64c6dfd8f899fd4a3f445715c7bf3",
+              "FS-12": "$FS12_SHA",
+              "FS-13": "$FS13_SHA",
+              "FS-14": "$FS14_SHA",
+              "FS-15": "$FS15_SHA",
+              "FS-16": "$FS16_SHA",
+              "FS-17": "$FS17_SHA",
+              "FS-18": "SELF"
+            },
+            "implementationDecision": "READY_FOR_INDEPENDENT_REVIEW",
+            "independentApprovals": {
+              "qa": "PENDING",
+              "security": "PENDING",
+              "release": "PENDING"
+            },
+            "rollback": [
+              "revert the FS-18 evidence commit and each later slice commit in reverse order",
+              "keep WLT payout destinations intact; DSH rollback must not recreate raw payout storage",
+              "restore the previous route bindings only after verifying no in-flight onboarding mutation"
+            ],
+            "residualRisks": [
+              "device-level visual evidence is not produced by GitHub hosted runners",
+              "production rollout approval is intentionally not granted by implementation CI",
+              "database integration tests require the governed runtime database job"
+            ]
+          }
+          JSON
+          cat > services/dsh/tests/jrn-001-fs-18-evidence.test.mjs <<'JS'
+          import assert from "node:assert/strict";
+          import fs from "node:fs";
+          const evidence = JSON.parse(fs.readFileSync("governance/evidence/JRN_001_SEQUENTIAL_CLOSURE.json", "utf8"));
+          assert.equal(evidence.journeyId, "JRN-001");
+          assert.match(evidence.commitBinding, /SELF/);
+          for (let index = 1; index <= 18; index += 1) {
+            const key = index <= 10 ? "FS-01..FS-10" : `FS-${String(index).padStart(2, "0")}`;
+            assert.ok(evidence.sliceEvidence[key], `${key} evidence missing`);
+          }
+          assert.equal(evidence.implementationDecision, "READY_FOR_INDEPENDENT_REVIEW");
+          assert.equal(evidence.independentApprovals.qa, "PENDING");
+          assert.ok(evidence.rollback.length >= 3);
+          assert.ok(evidence.residualRisks.length >= 3);
+          console.log("JRN-001 FS-18 evidence binding verified");
+          JS
+          node --test services/dsh/tests/jrn-001-fs-18-evidence.test.mjs
+          git diff --check
+          git add governance/evidence/JRN_001_SEQUENTIAL_CLOSURE.json services/dsh/tests/jrn-001-fs-18-evidence.test.mjs
+          git commit -m 'docs(jrn-001-fs-18): bind sequential closure evidence'
+          git pull --rebase origin "$BRANCH"
+          git push origin HEAD:"$BRANCH"
+          echo "FINAL_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: Final same-commit verification
+        shell: bash
+        run: |
+          git pull --ff-only origin "$BRANCH"
+          corepack enable
+          corepack prepare pnpm@10.34.2 --activate
+          pnpm install --frozen-lockfile
+          node --test services/dsh/tests/jrn-001-*.test.mjs
+          pnpm --dir apps/app-field/runtime typecheck
+          pnpm --dir apps/app-partner/runtime typecheck
+          pnpm --dir apps/control-panel/runtime typecheck
+          (cd services/dsh/backend && go test ./internal/partner -run 'Test(SanitizePartnerForSurfaceNeverReturnsRawPayoutIdentifiers|TransitionRequestHashBindsActorStatusAndVersion|NormalizeDshPayoutPreferenceMapsSurfaceVocabulary|UnmaskedPayoutValueRejectsCompatibilityMasks)$' -count=1)
+          (cd services/dsh/backend && go test ./internal/http -run '^$' -count=1)
+          (cd services/dsh/backend && go test ./cmd/dsh-api -run '^$' -count=1)
+          pnpm run guard:fullstack-boundary
+          pnpm run guard:wlt-financial-boundary
+
+      - name: Publish same-commit evidence status
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RESULT: ${{ job.status }}
+          TARGET_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          SHA="$(git rev-parse HEAD)"
+          [ "$RESULT" = success ] && STATE=success || STATE=failure
+          jq -n --arg state "$STATE" --arg context 'journeys/jrn-001-sequential' --arg description "JRN-001 FS-01..FS-18 sequential closure: $RESULT" --arg target_url "$TARGET_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/status.json
+          curl --fail-with-body --silent --show-error -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "https://api.github.com/repos/${{ github.repository }}/statuses/$SHA" -d @/tmp/status.json
