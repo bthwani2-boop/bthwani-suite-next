@@ -11,9 +11,9 @@ func TestBrowserCorsMiddlewareAllowsGovernedDeletePreflight(t *testing.T) {
 	t.Setenv("IDENTITY_CORS_ALLOWED_ORIGINS", "https://control-panel.example.com")
 
 	nextCalled := false
-	handler := BrowserCorsMiddleware(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+	handler := BrowserCorsMiddleware(CorsMiddleware(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
 		nextCalled = true
-	}))
+	})))
 
 	request := httptest.NewRequest(http.MethodOptions, "/auth/sessions/session-1", nil)
 	request.Header.Set("Origin", "https://control-panel.example.com")
@@ -39,9 +39,9 @@ func TestBrowserCorsMiddlewareAllowsGovernedDeletePreflight(t *testing.T) {
 
 func TestBrowserCorsMiddlewareRejectsUnknownOrigin(t *testing.T) {
 	t.Setenv("IDENTITY_CORS_ALLOWED_ORIGINS", "https://control-panel.example.com")
-	handler := BrowserCorsMiddleware(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+	handler := BrowserCorsMiddleware(CorsMiddleware(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
 		t.Fatal("preflight must not reach next handler")
-	}))
+	})))
 
 	request := httptest.NewRequest(http.MethodOptions, "/auth/account", nil)
 	request.Header.Set("Origin", "https://untrusted.example.com")
@@ -55,5 +55,8 @@ func TestBrowserCorsMiddlewareRejectsUnknownOrigin(t *testing.T) {
 	}
 	if got := response.Header().Get("Access-Control-Allow-Origin"); got != "" {
 		t.Fatalf("untrusted origin was allowed: %q", got)
+	}
+	if got := response.Header().Get("Access-Control-Allow-Methods"); got != "" {
+		t.Fatalf("untrusted origin received CORS methods: %q", got)
 	}
 }
