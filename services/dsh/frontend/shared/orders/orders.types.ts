@@ -55,9 +55,37 @@ export type DshPartnerOrderAction =
   | "revise_estimate"
   | "handoff";
 
+export type DshStoreCaptainHandoffStatus =
+  | ""
+  | "awaiting_partner"
+  | "partner_confirmed"
+  | "completed"
+  | "superseded";
+
+export type DshStoreCaptainHandoff = {
+  readonly id: string;
+  readonly orderId: string;
+  readonly assignmentId: string;
+  readonly storeId: string;
+  readonly captainId: string;
+  readonly status: Exclude<DshStoreCaptainHandoffStatus, "">;
+  readonly partnerConfirmedAt?: string | null;
+  readonly partnerConfirmedByActorId?: string;
+  readonly captainConfirmedAt?: string | null;
+  readonly captainConfirmedByActorId?: string;
+  readonly version: number;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+};
+
 export type DshPartnerOrder = DshOrder & {
   readonly allowedActions: readonly DshPartnerOrderAction[];
   readonly preparation: DshOrderPreparation;
+  readonly storeCaptainHandoffStatus: DshStoreCaptainHandoffStatus;
+  readonly storeCaptainHandoffAssignmentId: string;
+  readonly storeCaptainHandoffCaptainId: string;
+  readonly partnerHandoffConfirmedAt?: string | null;
+  readonly captainPickupConfirmedAt?: string | null;
 };
 
 export type DshFinancialClosureStatus =
