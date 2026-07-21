@@ -61,6 +61,35 @@ services:
     networks:
       - bthwani-runtime
 
+  minio-init:
+    profiles:
+      - media
+      - dsh
+    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
+    restart: "no"
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${BTHWANI_MINIO_ROOT_USER:-bthwani_minio}
+      MINIO_ROOT_PASSWORD: ${BTHWANI_MINIO_ROOT_PASSWORD:-bthwani_minio_password}
+      DSH_MINIO_ACCESS_KEY: ${BTHWANI_MINIO_DSH_ACCESS_KEY:-dsh_media_local}
+      DSH_MINIO_SECRET_KEY: ${BTHWANI_MINIO_DSH_SECRET_KEY:-dsh_media_local_secret}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"
+        mc mb --ignore-existing local/dsh-media
+        mc anonymous set none local/dsh-media
+        printf '%s' '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:GetObject","s3:PutObject","s3:DeleteObject","s3:ListBucket","s3:GetBucketLocation"],"Resource":["arn:aws:s3:::dsh-media","arn:aws:s3:::dsh-media/*"]}]}' > /tmp/dsh-media-rw.json
+        mc admin policy create local dsh-media-rw /tmp/dsh-media-rw.json || mc admin policy info local dsh-media-rw >/dev/null
+        mc admin user add local "$$DSH_MINIO_ACCESS_KEY" "$$DSH_MINIO_SECRET_KEY" || mc admin user info local "$$DSH_MINIO_ACCESS_KEY" >/dev/null
+        mc admin policy attach local dsh-media-rw --user "$$DSH_MINIO_ACCESS_KEY"
+        mc ls local/dsh-media >/dev/null
+    networks:
+      - bthwani-runtime
+
   identity-api:
     profiles:
       - identity
@@ -240,8 +269,8 @@ services:
         condition: service_healthy
       identity-api:
         condition: service_healthy
-      minio:
-        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/dsh/health || exit 1"]
       interval: 10s
