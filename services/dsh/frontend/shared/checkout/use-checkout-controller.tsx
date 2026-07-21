@@ -39,8 +39,17 @@ export function useCheckoutController() {
     try {
       await cancelCheckoutIntent(intentId);
       setState(checkoutIdleState());
-    } catch {
-      // Conflict or error — leave state as-is
+    } catch (error) {
+      const classified = classifyCheckoutError(error);
+      if (classified.kind === "offline") {
+        setState({ kind: "error", message: "تعذر إلغاء جلسة الدفع لعدم وجود اتصال بالإنترنت." });
+      } else if (classified.kind === "permission_denied") {
+        setState({ kind: "error", message: "لا تملك صلاحية إلغاء جلسة الدفع." });
+      } else if (classified.kind === "conflict") {
+        setState({ kind: "error", message: "تغيرت حالة جلسة الدفع ولم يعد الإلغاء متاحًا." });
+      } else {
+        setState({ kind: "error", message: "تعذر إلغاء جلسة الدفع." });
+      }
     }
   }, []);
 
