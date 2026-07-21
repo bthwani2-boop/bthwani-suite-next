@@ -34,6 +34,9 @@ for (const file of surfaceFiles) {
   if (/\baxios\b/.test(content)) violations.push(`${file}: axios in surface`);
   if (/process\.env/.test(content)) violations.push(`${file}: process.env in surface`);
   if (/\bnew\s+URL\(/.test(content)) violations.push(`${file}: URL construction in surface`);
+  if (file.endsWith('PartnerFulfillmentActionsPanel.tsx') && /style=\{\{/.test(content)) {
+    violations.push(`${file}: inline styles remain in the JRN-015/JRN-016/JRN-020 fulfillment surface`);
+  }
 
   for (const match of content.matchAll(/(?:from\s+|import\s*\()(["'])([^"']+)\1/g)) {
     const specifier = match[2];
