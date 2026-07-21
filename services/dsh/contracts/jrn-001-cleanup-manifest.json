@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "journeyId": "JRN-001",
+  "sliceId": "FS-16",
+  "removedTransientFiles": [
+    ".github/workflows/jrn-001-fs-10-app-client-diagnostic.yml",
+    ".github/workflows/jrn-001-fs-10-app-field-repair.yml",
+    ".github/workflows/jrn-001-fs-10-store-link-repair.yml"
+  ],
+  "canonicalFiles": {
+    "routes": "services/dsh/backend/internal/http/partner_lifecycle_routes.go",
+    "repository": "services/dsh/backend/internal/partner/onboarding_integrity_repository.go",
+    "sharedBrain": "services/dsh/frontend/shared/partner/index.ts",
+    "fieldController": "services/dsh/frontend/shared/field-onboarding/use-field-partner-onboarding-controller.tsx",
+    "surfaceRegistry": "services/dsh/contracts/jrn-001-surface-registry.json"
+  },
+  "forbiddenPatterns": [
+    "duplicate lifecycle route registration",
+    "screen-owned fetch for partner onboarding",
+    "local partner fixture as runtime truth",
+    "raw payout persistence in DSH after WLT binding",
+    "completed self-mutating repair workflow"
+  ]
+}
