@@ -43,8 +43,22 @@ export type StoreRoleAction =
 export type DshStoreSummaryDto =
   paths["/dsh/stores"]["get"]["responses"]["200"]["content"]["application/json"]["stores"][number];
 
+/**
+ * Operational context persisted by DSH and returned by the live store-detail
+ * endpoint. This intersection is temporary compatibility for the generated
+ * client until the next contract generation run; consumers still fail closed
+ * at runtime when any field is absent.
+ */
+export type DshStoreOperationalContextDto = {
+  readonly addressLine: string;
+  readonly coverageSummary: string;
+  readonly operatingHours: string;
+  readonly deliveryReadiness: string;
+};
+
 export type DshStoreDetailDto =
-  paths["/dsh/stores/{storeId}"]["get"]["responses"]["200"]["content"]["application/json"]["store"];
+  paths["/dsh/stores/{storeId}"]["get"]["responses"]["200"]["content"]["application/json"]["store"] &
+  DshStoreOperationalContextDto;
 
 export type StoreHeroFulfillmentMode = {
   readonly id: DshFulfillmentDeliveryMode;
