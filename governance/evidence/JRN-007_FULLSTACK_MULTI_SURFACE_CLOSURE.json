@@ -6,12 +6,24 @@
   "surfaces": ["app-client", "control-panel"],
   "verification_context": "journeys/jrn-007/home-discovery",
   "same_commit_verification_required": true,
-  "closure_state": "IMPLEMENTED_AWAITING_FINAL_SAME_COMMIT_GATE",
+  "closure_state": "READY_FOR_REVIEW",
+  "code_closure": "COMPLETE",
+  "verified_implementation_commit": "7018be0d7de0abd6ce98311a7cb0ad245b93ac49",
+  "proof_run_id": 29867162535,
+  "open_code_gaps": [],
+  "closed_with_evidence_requires": [
+    "independent_product_approval",
+    "independent_qa_approval",
+    "independent_security_privacy_approval",
+    "accessibility_evidence",
+    "physical_device_evidence",
+    "release_approval"
+  ],
   "slices": [
     {
       "id": "JRN-007-S1",
       "name_ar": "أقسام الصفحة الرئيسية والفئات والمجموعات المعروضة",
-      "state": "IMPLEMENTED",
+      "state": "CLOSED_IN_CODE",
       "evidence": [
         "services/dsh/frontend/shared/home-discovery/home-discovery.groups.ts",
         "services/dsh/frontend/app-client/home-discovery/HomeStoreGroupsSection.tsx",
@@ -21,7 +33,7 @@
     {
       "id": "JRN-007-S2",
       "name_ar": "البنرات والمحتوى الترويجي والروابط والوسائط",
-      "state": "IMPLEMENTED",
+      "state": "CLOSED_IN_CODE",
       "evidence": [
         "services/dsh/backend/internal/homediscovery/admin.go",
         "services/dsh/backend/internal/homediscovery/repository.go",
@@ -32,7 +44,7 @@
     {
       "id": "JRN-007-S3",
       "name_ar": "ترتيب المحتوى والأولوية والاستهداف حسب المنطقة والجمهور",
-      "state": "IMPLEMENTED",
+      "state": "CLOSED_IN_CODE",
       "evidence": [
         "services/dsh/database/migrations/dsh-098_home_discovery_targeting.sql",
         "services/dsh/backend/internal/homediscovery/targeting.go",
@@ -44,7 +56,7 @@
     {
       "id": "JRN-007-S4",
       "name_ar": "الجدولة والنشر والانتهاء والأرشفة",
-      "state": "IMPLEMENTED",
+      "state": "CLOSED_IN_CODE",
       "evidence": [
         "services/dsh/database/migrations/dsh-060_home_marketing_publication_gates.sql",
         "services/dsh/backend/internal/homediscovery/admin.go",
@@ -55,7 +67,7 @@
     {
       "id": "JRN-007-S5",
       "name_ar": "إنشاء وتعديل وحذف المحتوى المحكوم من لوحة التحكم",
-      "state": "IMPLEMENTED",
+      "state": "CLOSED_IN_CODE",
       "evidence": [
         "services/dsh/backend/internal/http/protected_store.go",
         "services/dsh/backend/internal/http/home_discovery_targeting_handlers.go",
@@ -66,17 +78,18 @@
     {
       "id": "JRN-007-S6",
       "name_ar": "منع ازدواج ملكية محتوى الصفحة مع Marketing Command Deck",
-      "state": "IMPLEMENTED",
+      "state": "CLOSED_IN_CODE",
       "evidence": [
         "services/dsh/database/migrations/dsh-002_home_discovery.sql",
         "services/dsh/database/migrations/dsh-018_retire_marketing_banners_promos.sql",
-        "services/dsh/backend/internal/homediscovery/admin.go"
+        "services/dsh/backend/internal/homediscovery/admin.go",
+        "governance/product-truth/JRN-007_HOME_DISCOVERY_PRODUCT_TRUTH.md"
       ]
     },
     {
       "id": "JRN-007-S7",
       "name_ar": "العرض الفعلي في تطبيق العميل وحالات empty/error/offline",
-      "state": "IMPLEMENTED",
+      "state": "CLOSED_IN_CODE",
       "evidence": [
         "services/dsh/frontend/shared/home-discovery/home-discovery.api.ts",
         "services/dsh/frontend/shared/home-discovery/home-discovery.states.ts",
@@ -86,7 +99,7 @@
     {
       "id": "JRN-007-S8",
       "name_ar": "قياس الظهور والنقر دون ادعاء بيانات غير موجودة",
-      "state": "IMPLEMENTED",
+      "state": "CLOSED_IN_CODE",
       "evidence": [
         "services/dsh/contracts/dsh.home-marketing-events.openapi.yaml",
         "services/dsh/backend/internal/homediscovery/events.go",
@@ -102,6 +115,7 @@
     "route_invariants": "services/dsh/backend/internal/http/journey_007_routes_test.go",
     "sql_invariants": "services/dsh/database/tests/dsh-098_099_home_discovery_invariants.sql",
     "targeted_typecheck": "services/dsh/tsconfig.jrn-007.json",
-    "workflow": ".github/workflows/jrn-007-sambassam-verify.yml"
+    "workflow": ".github/workflows/jrn-007-sambassam-verify.yml",
+    "result": "SUCCESS"
   }
 }
