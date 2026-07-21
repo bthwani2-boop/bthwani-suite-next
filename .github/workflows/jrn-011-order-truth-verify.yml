@@ -1,0 +1,91 @@
+name: JRN-011 Order Truth Verify
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [sambassam]
+    paths:
+      - "services/dsh/backend/internal/orders/**"
+      - "services/dsh/backend/internal/http/order_truth*.go"
+      - "services/dsh/backend/internal/http/catalog_unified_routes.go"
+      - "services/dsh/contracts/dsh.order-truth.openapi.yaml"
+      - "services/dsh/contracts/jrn-011-*.json"
+      - "services/dsh/database/migrations/dsh-90*.sql"
+      - "services/dsh/database/tests/dsh-902_903_jrn011_order_truth_invariants.sql"
+      - "services/dsh/frontend/shared/order-truth/**"
+      - "services/dsh/frontend/shared/checkout/use-checkout-to-order-flow.tsx"
+      - "services/dsh/frontend/shared/orders/use-client-order-journey-controller.ts"
+      - "services/dsh/frontend/app-client/orders/**"
+      - "services/dsh/frontend/app-client/checkout/GovernedCheckoutScreen.tsx"
+      - "services/dsh/frontend/app-partner/orders/OperationalOrdersInboxScreen.tsx"
+      - "services/dsh/frontend/control-panel/operations/OrderJourneyLiveOrdersScreen.tsx"
+      - "services/dsh/tests/jrn-011-order-truth-integrity.test.mjs"
+      - "tools/guards/jrn-011-cross-surface-integrity-gate.mjs"
+      - "governance/product/contracts/jrn-011-*.json"
+      - "governance/boundaries/jrn-011-*.md"
+      - "governance/runbooks/jrn-011-*.md"
+      - ".github/workflows/jrn-011-order-truth-verify.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jrn-011-order-truth-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static-integrity:
+    name: Static order-truth integrity
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+      - name: Run cross-surface gate
+        run: node tools/guards/jrn-011-cross-surface-integrity-gate.mjs
+      - name: Run JRN-011 integrity tests
+        run: node --test services/dsh/tests/jrn-011-order-truth-integrity.test.mjs
+
+  go-policy-tests:
+    name: Go order policy tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: services/dsh/backend
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+      - name: Setup Go from module
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: services/dsh/backend/go.sum
+      - name: Verify formatting
+        run: |
+          test -z "$(gofmt -l internal/orders/order_truth.go internal/orders/order_truth_queries.go internal/orders/order_event_outbox.go internal/orders/order_truth_diagnostics.go internal/orders/order_truth_audit.go internal/orders/order_truth_test.go)"
+      - name: Test order package
+        run: go test ./internal/orders -count=1
+
+  dsh-typecheck:
+    name: DSH TypeScript typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: pnpm
+      - name: Enable pinned pnpm
+        run: corepack enable && corepack prepare pnpm@10.34.2 --activate
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck DSH
+        run: pnpm --dir services/dsh typecheck
