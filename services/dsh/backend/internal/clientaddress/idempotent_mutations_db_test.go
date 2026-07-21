@@ -82,7 +82,7 @@ func integrationDraft(suffix string, makeDefault bool) CreateInput {
 	}
 }
 
-func stringPointer(value string) *string { return &value }
+func stringPointer(value string) *string  { return &value }
 func floatPointer(value float64) *float64 { return &value }
 
 func eventCount(t *testing.T, db *sql.DB, clientID, addressID, action string) int {
@@ -113,7 +113,7 @@ func TestIdempotentAddressMutationsAreExactlyOnceAndClientScoped(t *testing.T) {
 
 	updateKey := "address-update:shared:" + suffix
 	updated, err := UpdateIdempotent(ctx, db, clientA, first.ID, UpdateInput{
-		CreateInput:    integrationDraft(suffix+"11", true),
+		CreateInput:     integrationDraft(suffix+"11", true),
 		ExpectedVersion: first.Version,
 	}, MutationContext{IdempotencyKey: updateKey, CorrelationID: "corr-update-" + suffix})
 	if err != nil {
@@ -124,7 +124,7 @@ func TestIdempotentAddressMutationsAreExactlyOnceAndClientScoped(t *testing.T) {
 	}
 
 	replayed, err := UpdateIdempotent(ctx, db, clientA, first.ID, UpdateInput{
-		CreateInput:    integrationDraft(suffix+"11", true),
+		CreateInput:     integrationDraft(suffix+"11", true),
 		ExpectedVersion: first.Version,
 	}, MutationContext{IdempotencyKey: updateKey, CorrelationID: "corr-update-replay-" + suffix})
 	if err != nil {
@@ -138,7 +138,7 @@ func TestIdempotentAddressMutationsAreExactlyOnceAndClientScoped(t *testing.T) {
 	}
 
 	_, err = UpdateIdempotent(ctx, db, clientA, first.ID, UpdateInput{
-		CreateInput:    integrationDraft(suffix+"12", true),
+		CreateInput:     integrationDraft(suffix+"12", true),
 		ExpectedVersion: first.Version,
 	}, MutationContext{IdempotencyKey: updateKey, CorrelationID: "corr-update-conflict-" + suffix})
 	if !errors.Is(err, ErrMutationIdempotencyConflict) {
@@ -146,7 +146,7 @@ func TestIdempotentAddressMutationsAreExactlyOnceAndClientScoped(t *testing.T) {
 	}
 
 	otherUpdated, err := UpdateIdempotent(ctx, db, clientB, otherClient.ID, UpdateInput{
-		CreateInput:    integrationDraft(suffix+"13", true),
+		CreateInput:     integrationDraft(suffix+"13", true),
 		ExpectedVersion: otherClient.Version,
 	}, MutationContext{IdempotencyKey: updateKey, CorrelationID: "corr-other-client-" + suffix})
 	if err != nil {
