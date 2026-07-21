@@ -7,5 +7,8 @@ assert.match(cartScreen, /controller\.removeItem\(item\.cartId, item\.id\)/);
 assert.doesNotMatch(cartScreen, /controller\.state\.cart\.id/);
 assert.match(cartScreen, /if \(cart\) void controller\.clear\(cart\)/);
 assert.doesNotMatch(cartScreen, /controller\.clear\(controller\.state\.cart\)/);
+assert.match(cartScreen, /serviceabilityController\.serviceability\.kind === "blocked"/);
+assert.match(cartScreen, /serviceabilityController\.serviceability\.kind === "error"/);
+assert.doesNotMatch(cartScreen, /disabled=\{serviceabilityController\.serviceability\.kind === "checking"\}/);
 
-console.log("JRN-001 FS-10 app-client cart action ownership verified");
+console.log("JRN-001 FS-10 app-client cart action ownership and reachable serviceability actions verified");
