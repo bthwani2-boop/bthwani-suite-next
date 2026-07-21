@@ -39,5 +39,10 @@
     "لا تنفيذ خصم أو استرداد أو تسوية أو تغيير رصيد داخل DSH."
   ],
   "evidenceRequired": ["static", "database", "contract", "backend", "runtime", "cross-surface", "security", "isolation", "qa", "governance", "ci"],
-  "decision": "FIX_REQUIRED"
+  "lastVerifiedCommit": "fdace18a6ae4a92b077db32254d7f0253d102fd7",
+  "workflowRunId": "29873796768",
+  "statusContext": "jrn-011/order-truth",
+  "internalZeroGate": "PASS",
+  "independentReviewPending": ["product-owner", "qa-device-accessibility", "security", "finance-boundary", "release-production"],
+  "decision": "READY_FOR_REVIEW"
 }
