@@ -8,6 +8,9 @@ import type {
   DshRejectOrderInput,
   DshStoreCaptainHandoff,
   DshStorePreparationPolicy,
+  DshPreparationIssue,
+  DshCreatePreparationIssueInput,
+  DshResolvePreparationIssueInput,
 } from "./orders.types";
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "order");
@@ -48,6 +51,20 @@ export async function fetchOrderPreparation(
     withOptionalToken({}, token),
   );
   return data.preparation;
+}
+
+export async function fetchOrderPreparationIssues(
+  orderId: string,
+  token?: string,
+): Promise<{ readonly issues: readonly DshPreparationIssue[]; readonly openCount: number }> {
+  const data = await request<{ issues: DshPreparationIssue[]; openCount: number }>(
+    `/dsh/orders/${encodeURIComponent(orderId)}/preparation-issues`,
+    withOptionalToken({}, token),
+  );
+  return {
+    issues: data.issues ?? [],
+    openCount: Math.max(0, Number(data.openCount ?? 0)),
+  };
 }
 
 /**
@@ -126,6 +143,31 @@ export async function reviseOrderPreparationEstimate(
     withOptionalToken({ method: "POST", body: input }, token),
   );
   return data.preparation;
+}
+
+export async function createOrderPreparationIssue(
+  orderId: string,
+  input: DshCreatePreparationIssueInput,
+  token?: string,
+): Promise<DshPreparationIssue> {
+  const data = await request<{ issue: DshPreparationIssue }>(
+    `/dsh/partner/orders/${encodeURIComponent(orderId)}/preparation-issues`,
+    withOptionalToken({ method: "POST", body: input }, token),
+  );
+  return data.issue;
+}
+
+export async function resolveOrderPreparationIssue(
+  orderId: string,
+  issueId: string,
+  input: DshResolvePreparationIssueInput,
+  token?: string,
+): Promise<DshPreparationIssue> {
+  const data = await request<{ issue: DshPreparationIssue }>(
+    `/dsh/partner/orders/${encodeURIComponent(orderId)}/preparation-issues/${encodeURIComponent(issueId)}/resolve`,
+    withOptionalToken({ method: "POST", body: input }, token),
+  );
+  return data.issue;
 }
 
 export async function fetchStorePreparationPolicy(
