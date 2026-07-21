@@ -29,10 +29,26 @@ const EMPTY_FORM: CapacityForm = {
   throttleThreshold: '',
 };
 
-function parsePositiveInteger(value: string, field: string): number {
+function parseNonNegativeInteger(value: string, field: string): number {
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed < 0) {
     throw new Error(`${field} يجب أن يكون عددًا صحيحًا غير سالب`);
+  }
+  return parsed;
+}
+
+function parsePositiveInteger(value: string, field: string): number {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    throw new Error(`${field} يجب أن يكون عددًا صحيحًا أكبر من صفر`);
+  }
+  return parsed;
+}
+
+function parseUnitInterval(value: string, field: string): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 1) {
+    throw new Error(`${field} يجب أن يكون قيمة بين 0 و1`);
   }
   return parsed;
 }
@@ -76,8 +92,8 @@ function CapacityInspector({
     try {
       await save({
         maxConcurrentOrders: parsePositiveInteger(form.maxConcurrentOrders, 'أقصى الطلبات المتزامنة'),
-        maxCaptainsOnline: parsePositiveInteger(form.maxCaptainsOnline, 'أقصى الكباتن المتصلين'),
-        throttleThreshold: parsePositiveInteger(form.throttleThreshold, 'حد الاختناق'),
+        maxCaptainsOnline: parseNonNegativeInteger(form.maxCaptainsOnline, 'أقصى الكباتن المتصلين'),
+        throttleThreshold: parseUnitInterval(form.throttleThreshold, 'حد الاختناق'),
         reason: 'تحديث السعة التشغيلية للمنطقة من لوحة التحكم',
       });
       setFeedback('تم حفظ السعة وقراءة القيم المحدثة من النظام.');
@@ -103,7 +119,7 @@ function CapacityInspector({
 
   return (
     <WebControlPanelInspectorShell title={`المنطقة والسعة — ${zone.name}`} onClose={onClose}>
-      <div className={styles.surfaceStackSmall} style={{ padding: 16 }}>
+      <div className={`${styles.surfaceStackSmall} ${styles.surfaceStatePadding}`}>
         <div><strong>المعرّف:</strong> <span dir="ltr">{zone.id}</span></div>
         <div><strong>رمز المدينة:</strong> {zone.cityCode}</div>
         <div><strong>حالة المنطقة:</strong> {zone.isActive ? 'نشطة' : 'غير نشطة'}</div>
@@ -128,7 +144,7 @@ function CapacityInspector({
               أقصى الطلبات المتزامنة
               <input
                 type="number"
-                min={0}
+                min={1}
                 value={form.maxConcurrentOrders}
                 onChange={(event) => updateField('maxConcurrentOrders', event.target.value)}
                 disabled={pendingAction !== null}
@@ -145,10 +161,12 @@ function CapacityInspector({
               />
             </label>
             <label>
-              حد الاختناق
+              حد الاختناق (0–1)
               <input
                 type="number"
                 min={0}
+                max={1}
+                step="0.01"
                 value={form.throttleThreshold}
                 onChange={(event) => updateField('throttleThreshold', event.target.value)}
                 disabled={pendingAction !== null}
