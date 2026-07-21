@@ -1,0 +1,79 @@
+name: JRN-026..030 Permanent Verification
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [sambassam]
+    paths:
+      - "services/dsh/backend/internal/coupons/**"
+      - "services/dsh/backend/internal/http/coupon_funding_lifecycle.go"
+      - "services/dsh/backend/internal/http/delivery_pricing.go"
+      - "services/dsh/backend/internal/http/partner_fleet*.go"
+      - "services/dsh/backend/internal/http/journeys_026_030_routes_test.go"
+      - "services/dsh/backend/internal/partnerfleet/**"
+      - "services/dsh/backend/internal/platformpolicies/**"
+      - "services/dsh/backend/internal/promotionfundingoutbox/**"
+      - "services/dsh/backend/cmd/dsh-api/main.go"
+      - "services/dsh/contracts/dsh.marketing-commercial.openapi.yaml"
+      - "services/dsh/contracts/dsh.partner-fleet.openapi.yaml"
+      - "services/dsh/frontend/shared/marketing/**"
+      - "services/dsh/frontend/shared/partner/**"
+      - "services/dsh/frontend/shared/platform/**"
+      - "services/dsh/frontend/app-captain/account/PartnerFleetConnectionCard.tsx"
+      - "services/dsh/frontend/control-panel/operations/AreaCapacityScreen.tsx"
+      - "services/dsh/tests/journeys-026-030-binding.test.mjs"
+      - "services/wlt/backend/internal/promotionfunding/**"
+      - "services/wlt/contracts/wlt.promotion-funding.openapi.yaml"
+      - ".github/workflows/jrn-026-030-sambassam-verify.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jrn-026-030-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sovereign-boundaries:
+    name: Sovereign boundaries and bindings
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24.17.0
+      - name: Verify repository hygiene
+        run: git diff --check
+      - name: Verify JRN-026..030 bindings
+        run: node --test services/dsh/tests/journeys-026-030-binding.test.mjs
+      - name: Verify full-stack ownership boundary
+        run: pnpm guard:fullstack-boundary
+      - name: Verify WLT financial ownership boundary
+        run: pnpm guard:wlt-financial-boundary
+
+  governed-routes:
+    name: Governed HTTP routes and partner fleet domain
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: services/dsh/backend
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Setup Go from module
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: services/dsh/backend/go.sum
+      - name: Verify JRN-026..030 routes
+        run: go test ./internal/http -run TestJourneys026To030ExposeGovernedRoutes -count=1
+      - name: Compile partner fleet domain
+        run: go test ./internal/partnerfleet -count=1
