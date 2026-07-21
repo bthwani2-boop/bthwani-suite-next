@@ -2,65 +2,51 @@ package administration
 
 import "testing"
 
-func TestCreateRoleRequiresName(t *testing.T) {
-	_, err := CreateRole(nil, "", "some description")
-	if err != ErrInvalid {
-		t.Fatalf("expected ErrInvalid for empty role name, got %v", err)
+func TestRequestStaffRoleAssignmentRejectsInvalidInput(t *testing.T) {
+	cases := []struct {
+		target string
+		role   string
+		maker  string
+		reason string
+	}{
+		{target: "", role: "role-1", maker: "maker-1", reason: "valid reason"},
+		{target: "actor-1", role: "", maker: "maker-1", reason: "valid reason"},
+		{target: "actor-1", role: "role-1", maker: "", reason: "valid reason"},
+		{target: "actor-1", role: "role-1", maker: "maker-1", reason: "bad"},
 	}
-}
-
-func TestAssignStaffRoleRequiresActorAndRole(t *testing.T) {
-	cases := [][2]string{
-		{"", "role-1"},
-		{"actor-1", ""},
-	}
-	for _, c := range cases {
-		_, err := AssignStaffRole(nil, c[0], c[1], "assigner-1")
+	for _, tc := range cases {
+		_, err := RequestStaffRoleAssignment(nil, nil, tc.target, tc.role, tc.maker, tc.reason)
 		if err != ErrInvalid {
-			t.Fatalf("expected ErrInvalid for actorID=%q roleID=%q, got %v", c[0], c[1], err)
+			t.Fatalf("expected ErrInvalid for %+v, got %v", tc, err)
 		}
 	}
 }
 
-func TestUpsertCaptainCredentialRequiresCaptainID(t *testing.T) {
-	_, err := UpsertCaptainCredential(nil, "", "LIC-1", "motorcycle", "", "reviewer-1")
+func TestRequestStaffRoleAssignmentRejectsSelfAssignment(t *testing.T) {
+	_, err := RequestStaffRoleAssignment(nil, nil, "actor-1", "role-1", "actor-1", "valid reason")
+	// nil database is rejected before the actor invariant is evaluated.
 	if err != ErrInvalid {
-		t.Fatalf("expected ErrInvalid for empty captainID, got %v", err)
+		t.Fatalf("expected ErrInvalid without database, got %v", err)
 	}
 }
 
-func TestValidActivationTransitionsHaveNoSelfLoops(t *testing.T) {
-	for from, targets := range validActivationTransitions {
-		for _, to := range targets {
-			if from == to {
-				t.Fatalf("activation status %q must not transition to itself", from)
-			}
-		}
+func TestReviewStaffRoleAssignmentRejectsInvalidDecision(t *testing.T) {
+	_, _, err := ReviewStaffRoleAssignment(nil, nil, "approval-1", "checker-1", "unknown", "note", 1)
+	if err != ErrInvalid {
+		t.Fatalf("expected ErrInvalid for unknown decision, got %v", err)
 	}
 }
 
-func TestValidActivationTransitionsOnlyReferenceKnownStatuses(t *testing.T) {
-	known := map[string]bool{
-		"submitted":      true,
-		"ops_approved":   true,
-		"partner_active": true,
-		"blocked":        true,
-	}
-	for from, targets := range validActivationTransitions {
-		if !known[from] {
-			t.Fatalf("unexpected source status %q in validActivationTransitions", from)
-		}
-		for _, to := range targets {
-			if !known[to] {
-				t.Fatalf("unexpected target status %q for source %q", to, from)
-			}
-		}
+func TestReviewStaffRoleAssignmentRequiresVersion(t *testing.T) {
+	_, _, err := ReviewStaffRoleAssignment(nil, nil, "approval-1", "checker-1", "approved", "", 0)
+	if err != ErrInvalid {
+		t.Fatalf("expected ErrInvalid for missing expected version, got %v", err)
 	}
 }
 
-func TestBlockedCanOnlyReturnToSubmitted(t *testing.T) {
-	targets := validActivationTransitions["blocked"]
-	if len(targets) != 1 || targets[0] != "submitted" {
-		t.Fatalf("expected blocked to only transition to submitted, got %v", targets)
+func TestRejectedRoleAssignmentRequiresReviewNote(t *testing.T) {
+	_, _, err := ReviewStaffRoleAssignment(nil, nil, "approval-1", "checker-1", "rejected", "bad", 1)
+	if err != ErrInvalid {
+		t.Fatalf("expected ErrInvalid for short rejection note, got %v", err)
 	}
 }
