@@ -4,7 +4,21 @@
     "noEmit": true,
     "declaration": false,
     "declarationMap": false,
-    "outDir": "dist-jrn-009"
+    "outDir": "dist-jrn-009",
+    "paths": {
+      "@bthwani/ui-kit": ["shared/ui-kit/src/index.ts"],
+      "@bthwani/ui-kit/web": ["shared/ui-kit/src/web.ts"],
+      "@bthwani/ui-kit/tokens": ["shared/ui-kit/src/tokens/index.ts"],
+      "@bthwani/app-shell": ["shared/app-shell/src/index.ts"],
+      "@bthwani/core-identity": ["core/identity/clients/index.ts"],
+      "@bthwani/core-platform-control": ["core/platform-control/clients/generated/platform-control-api.ts"],
+      "@bthwani/core-providers": ["core/providers/clients/generated/providers-api.ts"],
+      "@bthwani/control-panel/shell": ["apps/control-panel/runtime/src/shell/index.ts"],
+      "@bthwani/control-panel/components": ["apps/control-panel/runtime/src/components/index.ts"],
+      "@dsh-shared/*": ["services/dsh/frontend/shared/*"],
+      "@dsh-clients/*": ["services/dsh/clients/*"],
+      "react-native": ["apps/app-client/runtime/node_modules/react-native"]
+    }
   },
   "include": [
     "frontend/**/*.d.ts",
