@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "journeyId": "JRN-005",
+  "sliceId": "FS-15",
+  "service": "dsh",
+  "operations": [
+    "listDshClientAddresses",
+    "createDshClientAddress",
+    "updateDshClientAddress",
+    "deleteDshClientAddress",
+    "setDshClientDefaultAddress"
+  ],
+  "serviceLevelObjectives": {
+    "availability": { "target": 0.995, "window": "30d", "measurement": "successful non-5xx responses / eligible requests" },
+    "latency": { "target": 0.95, "thresholdMs": 750, "window": "30d", "measurement": "server request duration excluding client network time" },
+    "mutationCorrectness": { "target": 1.0, "window": "release", "measurement": "single-default, owner-scope, logical-duplicate and optimistic-concurrency invariants" },
+    "privacy": { "target": 1.0, "window": "continuous", "measurement": "zero address PII in logs, metrics labels, traces and correlation identifiers" }
+  },
+  "requiredSignals": [
+    { "name": "dsh_client_address_requests_total", "labels": ["operation", "outcome", "status_class"] },
+    { "name": "dsh_client_address_request_duration_ms", "labels": ["operation", "outcome"] },
+    { "name": "dsh_client_address_conflicts_total", "labels": ["kind"] },
+    { "name": "dsh_client_address_privacy_actions_total", "labels": ["action", "outcome"] }
+  ],
+  "forbiddenSignalFields": [
+    "client_id",
+    "address_id",
+    "recipient_name",
+    "phone_e164",
+    "address_line",
+    "coordinates",
+    "delivery_instructions"
+  ],
+  "alerts": [
+    { "id": "ADDRESS_API_5XX_BURN", "condition": "5xx error budget burn exceeds 2x for 15m", "severity": "high", "runbook": "governance/runbooks/JRN-005_CLIENT_ADDRESS_OPERATIONS.md#5xx-burn" },
+    { "id": "ADDRESS_CONFLICT_SPIKE", "condition": "ADDRESS_CONFLICT or ADDRESS_ALREADY_EXISTS exceeds baseline by 3x for 30m", "severity": "medium", "runbook": "governance/runbooks/JRN-005_CLIENT_ADDRESS_OPERATIONS.md#conflict-spike" },
+    { "id": "ADDRESS_PRIVACY_JOB_FAILURE", "condition": "privacy batch fails or expired PII remains after its purge deadline", "severity": "critical", "runbook": "governance/runbooks/JRN-005_CLIENT_ADDRESS_OPERATIONS.md#privacy-job" },
+    { "id": "ADDRESS_DEFAULT_INVARIANT", "condition": "a client has more than one active default or active rows without one default", "severity": "critical", "runbook": "governance/runbooks/JRN-005_CLIENT_ADDRESS_OPERATIONS.md#default-invariant" }
+  ],
+  "supportCorrelationPolicy": "Expose and retain X-Correlation-ID for failed operations without embedding address or actor PII.",
+  "evidenceContext": "journeys/jrn-005/all-slices"
+}
