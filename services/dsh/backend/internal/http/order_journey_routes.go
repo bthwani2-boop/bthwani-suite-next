@@ -21,7 +21,6 @@ func RegisterOrderJourneyRoutes(
 	protected := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
 	mux.HandleFunc("GET /dsh/operator/order-workboard", protected.handleOperatorOrderWorkboard)
 	mux.HandleFunc("GET /dsh/partner/orders/{orderId}/partner-delivery", protected.handleGetPartnerDeliveryTask)
-	mux.HandleFunc("GET /dsh/partner/orders/{orderId}/pickup", protected.handleGetPartnerPickupSession)
 
 	mux.HandleFunc("GET /dsh/orders/{orderId}/preparation", protected.handleGetOrderPreparation)
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/preparation-estimate", protected.handleRevisePreparationEstimate)
