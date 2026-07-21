@@ -1,0 +1,43 @@
+{
+  "journeyId": "JRN-002",
+  "singleSource": {
+    "identity": "core/identity/backend",
+    "client": "core/identity/clients",
+    "gate": "services/dsh/frontend/shared/session/IdentitySessionGate.tsx"
+  },
+  "writeReadback": [
+    {
+      "write": "login or activation.consume",
+      "readback": "GET /auth/session",
+      "rule": "The returned subject, role, surfaceAccess, permissions, tenantId, sessionId, phoneE164, and expiry replace every cached projection."
+    },
+    {
+      "write": "POST /auth/refresh",
+      "readback": "GET /auth/session with the new access token",
+      "rule": "The previous refresh token is invalid and must be removed from secure storage before the new pair is committed."
+    },
+    {
+      "write": "DELETE /auth/sessions/{sessionId}",
+      "readback": "GET /auth/sessions",
+      "rule": "The revoked session disappears; revoking the current session clears local secure storage immediately."
+    },
+    {
+      "write": "actor.deactivate",
+      "readback": "all prior access and refresh tokens fail",
+      "rule": "No surface may continue from a locally cached authenticated state."
+    },
+    {
+      "write": "DELETE /auth/account",
+      "readback": "session endpoints reject the old token and the deletion outbox contains the stable event",
+      "rule": "The local session is cleared only after the server confirms deletion."
+    }
+  ],
+  "crossSurfaceInvariants": [
+    "One phone maps to one sovereign actor even when multiple roles are attached.",
+    "Each surface checks both requiredRole and requiredSurface before rendering protected content.",
+    "A role added by Workforce is visible after session refresh; clients never append roles locally.",
+    "Deactivation and account deletion take effect on every surface through server token validation.",
+    "No runtime uses demo identity, hard-coded email, fabricated session, local actor table, or fixture as operational truth."
+  ],
+  "storageRule": "Only the encrypted/platform secure session adapter may persist tokens; web and native runtimes use the same StoredSession envelope and server readback."
+}
