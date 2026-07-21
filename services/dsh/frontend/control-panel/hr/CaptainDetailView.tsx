@@ -14,6 +14,7 @@ import { uploadProviderMedia } from "../../shared/media/field-document-media";
 import { ProviderActivationWorkspace } from "../shared";
 import { WorkforceErrorState } from "../../shared/workforce/WorkforceErrorState";
 import { SupervisorPicker } from "./SupervisorPicker";
+import { WorkforceScopeManager } from "./WorkforceScopeManager";
 import { ZonePicker } from "./ZonePicker";
 
 const LICENSE_LABEL: Record<LicenseStatus, string> = {
@@ -83,7 +84,7 @@ export function CaptainDetailView(props: { readonly actorId: string; readonly on
   const profile = captain.captainProfile;
   const documentCount = profile?.documentMediaRefs.length ?? 0;
   const expiry = licenseExpiresAt ? new Date(licenseExpiresAt) : null;
-  const validExpiry = Boolean(expiry && !Number.isNaN(expiry.getTime()) && expiry >= new Date(new Date().toDateString()));
+  const validExpiry = Boolean(expiry && !Number.isNaN(expiry.getTime()) && expiry.getTime() >= new Date(new Date().toDateString()).getTime());
   const canApproveLicense = documentCount > 0 && validExpiry;
 
   const pickFile = (purpose: "photo" | "document") => {
@@ -126,7 +127,12 @@ export function CaptainDetailView(props: { readonly actorId: string; readonly on
       licenseExpiresAt: licenseExpiresAt.trim() || undefined,
     });
 
-  const canSave = fullNameAr.trim() && zoneId && vehicleType && vehicleIdentifier.trim() && !controller.actionBusy;
+  const canSave =
+    fullNameAr.trim().length > 0 &&
+    zoneId.length > 0 &&
+    vehicleType.trim().length > 0 &&
+    vehicleIdentifier.trim().length > 0 &&
+    !controller.actionBusy;
 
   return (
     <ScrollScreen>
@@ -150,7 +156,6 @@ export function CaptainDetailView(props: { readonly actorId: string; readonly on
 
         <Text role="bodySm" style={{ textAlign: "right", fontWeight: "bold" }}>المشرف</Text>
         <SupervisorPicker kind="captain" selected={supervisor} onSelect={setSupervisor} />
-
         {controller.actionError ? <Text role="bodySm" tone="danger" style={{ textAlign: "right" }}>{controller.actionError}</Text> : null}
 
         <Button
@@ -165,7 +170,7 @@ export function CaptainDetailView(props: { readonly actorId: string; readonly on
               fullNameEn: fullNameEn.trim() || undefined,
               engagementStartDate: engagementStartDate.trim() || undefined,
               serviceZoneId: zoneId,
-              vehicleType,
+              vehicleType: vehicleType.trim(),
               vehicleIdentifier: vehicleIdentifier.trim(),
               licenseExpiresAt: licenseExpiresAt.trim() || undefined,
               operatingScopeCode: operatingScopeCode.trim() || undefined,
@@ -197,6 +202,7 @@ export function CaptainDetailView(props: { readonly actorId: string; readonly on
         </Box>
       </Card>
 
+      <WorkforceScopeManager actorId={captain.actorId} actorRole="captain" />
       <ProviderActivationWorkspace providerKind="captain" initialActorId={captain.actorId} entrySource="hr" />
     </ScrollScreen>
   );
