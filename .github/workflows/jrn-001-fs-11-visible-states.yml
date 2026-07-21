@@ -15,6 +15,7 @@ on:
       - services/dsh/frontend/shared/field-onboarding/field-onboarding.types.ts
       - services/dsh/frontend/shared/field-onboarding/use-field-partner-onboarding-controller.tsx
       - services/dsh/frontend/shared/home-discovery/**
+      - services/dsh/frontend/shared/order-truth/**
       - services/dsh/frontend/app-client/home-discovery/**
       - services/dsh/frontend/app-client/store/**
       - services/dsh/frontend/app-field/onboarding/**
