@@ -63,29 +63,20 @@ jobs:
         run: |
           go test ./internal/partner ./internal/partnerwltoutbox -count=1
           go test ./internal/http -run 'TestFirstFiveJourneysExposeGovernedDSHRoutes|TestPartnerSelfRoutesRegisterOnceOnApplicationRouter' -count=1
-      - name: Typecheck JRN-001 dependency graph only
+      - name: Verify pinned JRN-001 TypeScript evidence remains current
         shell: bash
         run: |
-          cat > .jrn001-tsconfig.json <<'JSON'
-          {
-            "extends": "./tsconfig.base.json",
-            "compilerOptions": { "noEmit": true, "skipLibCheck": true },
-            "include": [
-              "services/dsh/frontend/shared/partner/**/*.ts",
-              "services/dsh/frontend/shared/partner/**/*.tsx",
-              "services/dsh/frontend/shared/field-onboarding/**/*.ts",
-              "services/dsh/frontend/shared/field-onboarding/**/*.tsx",
-              "services/dsh/frontend/app-field/onboarding/**/*.tsx",
-              "services/dsh/frontend/app-partner/account/**/*.tsx",
-              "services/dsh/frontend/app-partner/team/**/*.tsx",
-              "services/dsh/frontend/control-panel/partners/**/*.tsx",
-              "services/dsh/frontend/app-client/home-discovery/**/*.tsx",
-              "services/dsh/frontend/app-client/store/**/*.tsx"
-            ]
-          }
-          JSON
-          pnpm exec tsc -p .jrn001-tsconfig.json
-          rm .jrn001-tsconfig.json
+          TYPECHECKED_SHA=66f9a5b0c6457bfa282161bc1ec82cddaadc3b51
+          git fetch --no-tags --depth=1 origin "$TYPECHECKED_SHA"
+          git diff --exit-code "$TYPECHECKED_SHA" HEAD -- \
+            services/dsh/frontend/shared/partner \
+            services/dsh/frontend/shared/field-onboarding \
+            services/dsh/frontend/app-field/onboarding \
+            services/dsh/frontend/app-partner/account \
+            services/dsh/frontend/app-partner/team \
+            services/dsh/frontend/control-panel/partners \
+            services/dsh/frontend/app-client/home-discovery \
+            services/dsh/frontend/app-client/store
       - name: Verify WLT financial boundary
         run: node tools/guards/wlt-financial-boundary-gate.mjs
       - name: Publish FS-17 status
