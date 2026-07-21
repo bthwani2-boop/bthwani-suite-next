@@ -25,7 +25,7 @@
   /dsh/orders/{orderId}/preparation:
     get:
       operationId: getDshOrderPreparation
-      summary: Return the governed preparation timing visible to the authorized actor.
+      summary: Return governed preparation timing to an authorized client, partner, assigned captain, or operator.
       tags: [DshOrders]
       security: [{ bearerAuth: [] }]
       parameters:
@@ -86,7 +86,7 @@
   /dsh/orders/{orderId}/preparation-issues:
     get:
       operationId: listDshOrderPreparationIssues
-      summary: List preparation issues visible to the authorized order actor.
+      summary: List preparation issues for an authorized client, partner, assigned captain, or operator.
       tags: [DshOrders]
       security: [{ bearerAuth: [] }]
       parameters:
@@ -140,10 +140,49 @@
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
 
+  /dsh/client/orders/{orderId}/preparation-issues/{issueId}/decision:
+    post:
+      operationId: decideDshClientOrderPreparationIssue
+      summary: Record the owning client's approval or rejection of a proposed substitution.
+      tags: [DshOrders]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: issueId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/CorrelationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DshDecidePreparationIssueInput"
+      responses:
+        "200":
+          description: Customer substitution decision recorded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [issue]
+                properties:
+                  issue:
+                    $ref: "#/components/schemas/DshPreparationIssue"
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
   /dsh/partner/orders/{orderId}/preparation-issues/{issueId}/resolve:
     post:
       operationId: resolveDshPartnerOrderPreparationIssue
-      summary: Resolve one open preparation issue with optimistic concurrency.
+      summary: Resolve one open preparation issue after any required customer decision.
       tags: [DshOrders]
       security: [{ bearerAuth: [] }]
       parameters:
@@ -237,6 +276,90 @@
         "403": { $ref: "#/components/responses/Forbidden" }
         "409": { $ref: "#/components/responses/Conflict" }
 
+  /dsh/operator/order-preparation/alerts/refresh:
+    post:
+      operationId: refreshDshOperatorOrderPreparationAlerts
+      summary: Detect, open, and auto-resolve durable preparation alerts.
+      tags: [DshOrders]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/CorrelationId"
+      responses:
+        "200":
+          description: Preparation alert scan completed.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [result]
+                properties:
+                  result:
+                    $ref: "#/components/schemas/DshRefreshPreparationAlertsResult"
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /dsh/operator/order-preparation/alerts:
+    get:
+      operationId: listDshOperatorOrderPreparationAlerts
+      summary: List durable preparation alerts for operations.
+      tags: [DshOrders]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/DshPreparationAlertStatus"
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 500, default: 100 }
+      responses:
+        "200":
+          description: Preparation alerts returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DshPreparationAlertListResponse"
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /dsh/operator/order-preparation/alerts/{alertId}/acknowledge:
+    post:
+      operationId: acknowledgeDshOperatorOrderPreparationAlert
+      summary: Acknowledge one active preparation alert using optimistic concurrency.
+      tags: [DshOrders]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: alertId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/CorrelationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DshAcknowledgePreparationAlertInput"
+      responses:
+        "200":
+          description: Preparation alert acknowledged.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [alert]
+                properties:
+                  alert:
+                    $ref: "#/components/schemas/DshPreparationAlert"
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
 # @schemas
     DshPartnerOrderAction:
       type: string
@@ -279,6 +402,10 @@
       type: string
       enum: [open, resolved]
 
+    DshPreparationIssueCustomerDecision:
+      type: string
+      enum: [not_required, pending, approved, rejected]
+
     DshPreparationIssue:
       type: object
       required:
@@ -292,6 +419,9 @@
         - note
         - replacementProductId
         - replacementProductName
+        - customerDecision
+        - customerDecidedByActorId
+        - customerDecisionNote
         - openedByActorId
         - openedAt
         - resolvedByActorId
@@ -314,6 +444,11 @@
         note: { type: string, minLength: 3, maxLength: 500 }
         replacementProductId: { type: string }
         replacementProductName: { type: string }
+        customerDecision:
+          $ref: "#/components/schemas/DshPreparationIssueCustomerDecision"
+        customerDecidedByActorId: { type: string }
+        customerDecisionNote: { type: string, maxLength: 500 }
+        customerDecidedAt: { type: string, format: date-time, nullable: true }
         openedByActorId: { type: string }
         openedAt: { type: string, format: date-time }
         resolvedByActorId: { type: string }
@@ -348,6 +483,16 @@
               type: string
               enum: [other]
 
+    DshDecidePreparationIssueInput:
+      type: object
+      required: [expectedVersion, decision]
+      properties:
+        expectedVersion: { type: integer, minimum: 1 }
+        decision:
+          type: string
+          enum: [approved, rejected]
+        note: { type: string, maxLength: 500 }
+
     DshResolvePreparationIssueInput:
       type: object
       required: [expectedVersion, resolutionNote]
@@ -357,13 +502,14 @@
 
     DshPreparationIssueListResponse:
       type: object
-      required: [issues, openCount]
+      required: [issues, openCount, pendingCustomerDecisionCount]
       properties:
         issues:
           type: array
           items:
             $ref: "#/components/schemas/DshPreparationIssue"
         openCount: { type: integer, minimum: 0 }
+        pendingCustomerDecisionCount: { type: integer, minimum: 0 }
 
     DshRevisePreparationEstimateInput:
       type: object
@@ -398,6 +544,71 @@
         warningBeforeMinutes: { type: integer, minimum: 1, maximum: 60 }
         reason: { type: string, minLength: 3, maxLength: 500 }
 
+    DshPreparationAlertKind:
+      type: string
+      enum: [due_soon, overdue, customer_decision_pending]
+
+    DshPreparationAlertStatus:
+      type: string
+      enum: [open, acknowledged, resolved]
+
+    DshPreparationAlert:
+      type: object
+      required:
+        - id
+        - orderId
+        - storeId
+        - kind
+        - status
+        - estimateRevision
+        - detectedAt
+        - acknowledgedByActorId
+        - resolutionReason
+        - version
+        - createdAt
+        - updatedAt
+      properties:
+        id: { type: string, format: uuid }
+        orderId: { type: string, format: uuid }
+        storeId: { type: string }
+        kind:
+          $ref: "#/components/schemas/DshPreparationAlertKind"
+        status:
+          $ref: "#/components/schemas/DshPreparationAlertStatus"
+        estimateRevision: { type: integer, minimum: 0 }
+        detectedAt: { type: string, format: date-time }
+        acknowledgedByActorId: { type: string }
+        acknowledgedAt: { type: string, format: date-time, nullable: true }
+        resolvedAt: { type: string, format: date-time, nullable: true }
+        resolutionReason: { type: string }
+        version: { type: integer, minimum: 1 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    DshRefreshPreparationAlertsResult:
+      type: object
+      required: [opened, resolved, active]
+      properties:
+        opened: { type: integer, minimum: 0 }
+        resolved: { type: integer, minimum: 0 }
+        active: { type: integer, minimum: 0 }
+
+    DshAcknowledgePreparationAlertInput:
+      type: object
+      required: [expectedVersion]
+      properties:
+        expectedVersion: { type: integer, minimum: 1 }
+
+    DshPreparationAlertListResponse:
+      type: object
+      required: [alerts, total]
+      properties:
+        alerts:
+          type: array
+          items:
+            $ref: "#/components/schemas/DshPreparationAlert"
+        total: { type: integer, minimum: 0 }
+
     DshPartnerOrderWorkboardOrder:
       allOf:
         - $ref: "#/components/schemas/DshOrder"
@@ -407,9 +618,14 @@
             - preparation
             - preparationIssues
             - openPreparationIssueCount
+            - pendingCustomerDecisionCount
+            - resolvablePreparationIssueCount
             - storeCaptainHandoffStatus
             - storeCaptainHandoffAssignmentId
             - storeCaptainHandoffCaptainId
+            - openStoreCaptainHandoffExceptionId
+            - openStoreCaptainHandoffExceptionReason
+            - openStoreCaptainHandoffExceptionStatus
           properties:
             allowedActions:
               type: array
@@ -423,11 +639,16 @@
               items:
                 $ref: "#/components/schemas/DshPreparationIssue"
             openPreparationIssueCount: { type: integer, minimum: 0 }
+            pendingCustomerDecisionCount: { type: integer, minimum: 0 }
+            resolvablePreparationIssueCount: { type: integer, minimum: 0 }
             storeCaptainHandoffStatus: { type: string }
             storeCaptainHandoffAssignmentId: { type: string }
             storeCaptainHandoffCaptainId: { type: string }
             partnerHandoffConfirmedAt: { type: string, format: date-time, nullable: true }
             captainPickupConfirmedAt: { type: string, format: date-time, nullable: true }
+            openStoreCaptainHandoffExceptionId: { type: string }
+            openStoreCaptainHandoffExceptionReason: { type: string }
+            openStoreCaptainHandoffExceptionStatus: { type: string }
 
     DshPartnerOrderWorkboardResponse:
       type: object
