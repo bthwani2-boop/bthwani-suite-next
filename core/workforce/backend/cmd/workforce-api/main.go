@@ -55,8 +55,10 @@ func main() {
 	authClient := auth.NewClient(identityBaseURL)
 
 	server := &http.Server{
-		Addr:         ":" + port,
-		Handler:      workforcehttp.CorsMiddleware(workforcehttp.NewRouter(db, service, repo, authClient)),
+		Addr: ":" + port,
+		Handler: workforcehttp.CorsMiddleware(workforcehttp.ActivationMutationSafetyMiddleware(
+			workforcehttp.NewRouter(db, service, repo, authClient),
+		)),
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,
