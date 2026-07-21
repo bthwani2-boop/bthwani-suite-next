@@ -3,10 +3,23 @@ import { corrId, createDshFlexibleHttpClient } from "../_kernel/dsh-http-request
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import type { DshHomeAdminKind } from "./home-discovery.types";
 
+export type DshHomeAudienceTargets =
+  | readonly []
+  | readonly ["guest"]
+  | readonly ["authenticated"]
+  | readonly ["guest", "authenticated"]
+  | readonly ["authenticated", "guest"];
+
 export type DshHomeAdminTargeting = Readonly<{
   cityCodes: readonly string[];
   serviceAreaCodes: readonly string[];
-  audienceSegments: readonly ("guest" | "authenticated")[];
+  audienceSegments: DshHomeAudienceTargets;
+}>;
+
+type RawDshHomeAdminTargeting = Readonly<{
+  cityCodes: readonly string[];
+  serviceAreaCodes: readonly string[];
+  audienceSegments: readonly string[];
 }>;
 
 export const EMPTY_HOME_ADMIN_TARGETING: DshHomeAdminTargeting = {
@@ -42,7 +55,7 @@ export async function fetchHomeDiscoveryTargeting(
   kind: DshHomeAdminKind,
   itemId: string,
 ): Promise<DshHomeAdminTargeting> {
-  const response = await httpClient.request<{ targeting: DshHomeAdminTargeting }>(
+  const response = await httpClient.request<{ targeting: RawDshHomeAdminTargeting }>(
     endpoint(kind, itemId),
     tokenOptions(),
   );
@@ -54,7 +67,7 @@ export async function replaceHomeDiscoveryTargeting(
   itemId: string,
   targeting: DshHomeAdminTargeting,
 ): Promise<DshHomeAdminTargeting> {
-  const response = await httpClient.request<{ targeting: DshHomeAdminTargeting }>(
+  const response = await httpClient.request<{ targeting: RawDshHomeAdminTargeting }>(
     endpoint(kind, itemId),
     {
       method: "PUT",
@@ -65,13 +78,15 @@ export async function replaceHomeDiscoveryTargeting(
   return normalizeTargeting(response.targeting);
 }
 
-export function normalizeTargeting(targeting: DshHomeAdminTargeting): DshHomeAdminTargeting {
+export function normalizeTargeting(targeting: RawDshHomeAdminTargeting): DshHomeAdminTargeting {
   const unique = (values: readonly string[]) => [...new Set(values.map((value) => value.trim()).filter(Boolean))].sort();
+  const audiences = unique(targeting.audienceSegments)
+    .filter((value): value is "guest" | "authenticated" => value === "guest" || value === "authenticated")
+    .slice(0, 2) as DshHomeAudienceTargets;
   return {
     cityCodes: unique(targeting.cityCodes),
     serviceAreaCodes: unique(targeting.serviceAreaCodes),
-    audienceSegments: unique(targeting.audienceSegments)
-      .filter((value): value is "guest" | "authenticated" => value === "guest" || value === "authenticated"),
+    audienceSegments: audiences,
   };
 }
 
