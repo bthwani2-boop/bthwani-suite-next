@@ -2,7 +2,9 @@ package administration
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
+	"strings"
 	"time"
 )
 
@@ -11,9 +13,9 @@ var (
 	ErrInvalid  = errors.New("invalid input")
 )
 
-// Role is a read model. Role creation is intentionally not exposed by DSH;
-// governed role definitions are managed through the authoritative identity/IAM
-// boundary, while DSH only consumes the approved projection.
+// Role is the governed DSH authorization role projection. Identity owns the
+// authenticated actor and session, while these permissions own only DSH
+// administration actions after an independently approved assignment.
 type Role struct {
 	ID          string    `json:"id"`
 	Name        string    `json:"name"`
@@ -23,8 +25,11 @@ type Role struct {
 }
 
 func ListRoles(db *sql.DB) ([]Role, error) {
+	if db == nil {
+		return nil, ErrInvalid
+	}
 	rows, err := db.Query(`
-		SELECT id, name, COALESCE(description,''), created_at
+		SELECT id, name, COALESCE(description,''), permissions, created_at
 		FROM dsh_admin_roles ORDER BY name`)
 	if err != nil {
 		return nil, err
@@ -33,13 +38,40 @@ func ListRoles(db *sql.DB) ([]Role, error) {
 	out := make([]Role, 0)
 	for rows.Next() {
 		var r Role
-		if err := rows.Scan(&r.ID, &r.Name, &r.Description, &r.CreatedAt); err != nil {
+		var permissionsJSON []byte
+		if err := rows.Scan(&r.ID, &r.Name, &r.Description, &permissionsJSON, &r.CreatedAt); err != nil {
 			return nil, err
 		}
-		r.Permissions = []string{}
+		if err := json.Unmarshal(permissionsJSON, &r.Permissions); err != nil {
+			return nil, err
+		}
+		if r.Permissions == nil {
+			r.Permissions = []string{}
+		}
 		out = append(out, r)
 	}
 	return out, rows.Err()
+}
+
+// ActorHasPermission evaluates only approved DSH role assignments. It never
+// authenticates the actor and never expands access outside the DSH
+// administration action namespace.
+func ActorHasPermission(db *sql.DB, actorID string, action string) (bool, error) {
+	actorID = strings.TrimSpace(actorID)
+	action = strings.TrimSpace(action)
+	if db == nil || actorID == "" || action == "" || !strings.HasPrefix(action, "administration.") {
+		return false, ErrInvalid
+	}
+	var allowed bool
+	err := db.QueryRow(`
+		SELECT EXISTS (
+			SELECT 1
+			FROM dsh_admin_staff_assignments assignment
+			JOIN dsh_admin_roles role ON role.id = assignment.role_id
+			WHERE assignment.actor_id = $1
+			  AND role.permissions ? $2
+		)`, actorID, action).Scan(&allowed)
+	return allowed, err
 }
 
 // StaffMember is an approved role-assignment projection. Writes are performed
@@ -54,6 +86,9 @@ type StaffMember struct {
 }
 
 func ListStaff(db *sql.DB) ([]StaffMember, error) {
+	if db == nil {
+		return nil, ErrInvalid
+	}
 	rows, err := db.Query(`
 		SELECT sa.id, sa.actor_id, sa.role_id, r.name,
 		       COALESCE(sa.assigned_by,''), sa.assigned_at
@@ -90,6 +125,9 @@ type PartnerActivation struct {
 }
 
 func ListPartnerActivations(db *sql.DB, status string) ([]PartnerActivation, error) {
+	if db == nil {
+		return nil, ErrInvalid
+	}
 	rows, err := db.Query(`
 		SELECT id, partner_id, status, COALESCE(reviewed_by,''),
 		       COALESCE(notes,''), created_at, updated_at
@@ -125,6 +163,9 @@ type CaptainCredential struct {
 }
 
 func ListCaptainCredentials(db *sql.DB, status string) ([]CaptainCredential, error) {
+	if db == nil {
+		return nil, ErrInvalid
+	}
 	rows, err := db.Query(`
 		SELECT id, captain_id, COALESCE(license_number,''), COALESCE(vehicle_type,''),
 		       status, COALESCE(reviewed_by,''), updated_at
@@ -157,12 +198,18 @@ type AdminAuditEntry struct {
 }
 
 func ListAdminAudit(db *sql.DB, actorID string, limit int) ([]AdminAuditEntry, error) {
+	if db == nil {
+		return nil, ErrInvalid
+	}
+	if limit < 1 || limit > 500 {
+		limit = 100
+	}
 	rows, err := db.Query(`
 		SELECT id, actor_id, action, COALESCE(target_id,''),
 		       COALESCE(detail,''), created_at
 		FROM dsh_admin_audit
 		WHERE ($1='' OR actor_id=$1)
-		ORDER BY created_at DESC LIMIT $2`, actorID, limit)
+		ORDER BY created_at DESC LIMIT $2`, strings.TrimSpace(actorID), limit)
 	if err != nil {
 		return nil, err
 	}
