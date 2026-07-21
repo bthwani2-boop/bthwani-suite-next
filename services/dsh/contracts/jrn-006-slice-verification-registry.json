@@ -2,61 +2,69 @@
   "journeyId": "JRN-006",
   "journeyName": "maps-service-areas-address-privacy",
   "branch": "sambassam",
-  "status": "IMPLEMENTED_PENDING_VERIFICATION",
+  "status": "CLOSED_WITH_EVIDENCE",
+  "implementationCommit": "633ae051264bb03049a4751ac67ac79724bb03d2",
+  "evidence": {
+    "path": "governance/evidence/JRN-006_ALL_SLICES_CLOSURE.json",
+    "workflowRunId": 29865894007,
+    "statusContext": "journeys/jrn-006/all-slices",
+    "artifactId": 8509195051,
+    "artifactDigest": "sha256:d3b6effafb18304c3712013a489f4d439fc37bbb275323a23ef0568bc943bb43"
+  },
   "slices": [
     {
       "sliceId": "JRN-006-S01",
       "name": "governed-location-search",
-      "status": "IMPLEMENTED_PENDING_VERIFICATION",
+      "status": "CLOSED_WITH_EVIDENCE",
       "owners": ["services/dsh/backend/internal/mapproviders", "services/dsh/frontend/shared/client-map"],
       "invariants": ["input-normalized", "malformed-results-rejected", "provider-credentials-hidden"]
     },
     {
       "sliceId": "JRN-006-S02",
       "name": "reverse-geocoding-and-verification",
-      "status": "IMPLEMENTED_PENDING_VERIFICATION",
+      "status": "CLOSED_WITH_EVIDENCE",
       "owners": ["services/dsh/backend/internal/mapproviders", "services/dsh/backend/internal/servicearea"],
       "invariants": ["coordinates-validated", "provider-result-normalized", "service-area-resolved-by-dsh"]
     },
     {
       "sliceId": "JRN-006-S03",
       "name": "provider-health-failure-timeout-uncertainty",
-      "status": "IMPLEMENTED_PENDING_VERIFICATION",
+      "status": "CLOSED_WITH_EVIDENCE",
       "owners": ["core/providers", "services/dsh/backend/internal/mapproviders", "services/dsh/frontend/control-panel/platform"],
       "invariants": ["timeout-distinct", "unavailable-distinct", "uncertain-result-fail-closed", "operator-health-readback"]
     },
     {
       "sliceId": "JRN-006-S04",
       "name": "service-area-list-detail-coordinates-bounds",
-      "status": "IMPLEMENTED_PENDING_VERIFICATION",
+      "status": "CLOSED_WITH_EVIDENCE",
       "owners": ["services/dsh/backend/internal/servicearea", "services/dsh/frontend/control-panel/platform"],
       "invariants": ["polygon-returned", "point-count-returned", "bounds-computed", "single-area-readback"]
     },
     {
       "sliceId": "JRN-006-S05",
       "name": "geofence-create-update-and-serviceability-binding",
-      "status": "IMPLEMENTED_PENDING_VERIFICATION",
+      "status": "CLOSED_WITH_EVIDENCE",
       "owners": ["services/dsh/backend/internal/servicearea", "services/dsh/database"],
       "invariants": ["optimistic-versioning", "idempotent-write", "simple-polygon", "non-zero-area", "no-self-intersection", "database-check"]
     },
     {
       "sliceId": "JRN-006-S06",
       "name": "address-retention-expiry-policy",
-      "status": "IMPLEMENTED_PENDING_VERIFICATION",
+      "status": "CLOSED_WITH_EVIDENCE",
       "owners": ["services/dsh/backend/internal/clientaddress", "services/dsh/frontend/control-panel/platform"],
       "invariants": ["policy-versioned", "deleted-addresses-rescheduled", "queue-status-visible", "next-purge-visible"]
     },
     {
       "sliceId": "JRN-006-S07",
       "name": "expired-address-anonymization",
-      "status": "IMPLEMENTED_PENDING_VERIFICATION",
+      "status": "CLOSED_WITH_EVIDENCE",
       "owners": ["services/dsh/backend/internal/clientaddress", "services/dsh/database"],
       "invariants": ["due-only", "skip-locked", "irreversible-pii-replacement", "run-id-is-idempotency-and-correlation"]
     },
     {
       "sliceId": "JRN-006-S08",
       "name": "pii-protection-audit-no-cross-actor-leakage",
-      "status": "IMPLEMENTED_PENDING_VERIFICATION",
+      "status": "CLOSED_WITH_EVIDENCE",
       "owners": ["services/dsh/backend/internal/clientaddress", "services/dsh/database", "services/dsh/frontend/control-panel/platform"],
       "invariants": ["client-addresses-actor-owned", "audit-uses-subject-hash", "audit-view-excludes-raw-pii", "operator-read-permission-required"]
     }
