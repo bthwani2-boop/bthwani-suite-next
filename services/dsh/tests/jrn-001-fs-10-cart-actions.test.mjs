@@ -3,6 +3,7 @@ import fs from "node:fs";
 
 const cartScreen = fs.readFileSync("services/dsh/frontend/app-client/cart/CartScreen.tsx", "utf8");
 const governedCartScreen = fs.readFileSync("services/dsh/frontend/app-client/cart/GovernedCartScreen.tsx", "utf8");
+const checkoutRoute = fs.readFileSync("services/dsh/frontend/app-client/checkout/ClientCheckoutRoute.tsx", "utf8");
 
 assert.match(cartScreen, /controller\.removeItem\(item\.cartId, item\.id\)/);
 assert.doesNotMatch(cartScreen, /controller\.state\.cart\.id/);
@@ -16,4 +17,7 @@ assert.match(governedCartScreen, /const payment = useWltDshPaymentController\(\)
 assert.doesNotMatch(governedCartScreen, /useWltDshPaymentController\(presentationSubtotal\)/);
 assert.match(governedCartScreen, /presentationSubtotal\.toLocaleString/);
 
-console.log("JRN-001 FS-10 app-client cart actions and WLT presentation boundary verified");
+assert.match(checkoutRoute, /\.\.\.\(onSuccess \? \{ onSuccess \} : \{\}\)/);
+assert.doesNotMatch(checkoutRoute, /onSuccess=\{onSuccess\}/);
+
+console.log("JRN-001 FS-10 app-client cart actions, WLT presentation, and optional checkout callback boundaries verified");
