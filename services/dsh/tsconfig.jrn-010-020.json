@@ -32,6 +32,7 @@
     "frontend/shared/session/control-panel-session.tsx",
     "frontend/shared/session/control-panel-session.api.ts",
     "frontend/shared/session/control-panel-permissions.ts",
+    "frontend/shared/home-discovery/home-discovery.types.ts",
     "frontend/shared/checkout/**/*.ts",
     "frontend/shared/checkout/**/*.tsx",
     "frontend/shared/order-truth/**/*.ts",
