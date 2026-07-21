@@ -16,14 +16,36 @@ on:
 
 permissions:
   contents: read
+  statuses: write
 
 concurrency:
   group: jrn-009-${{ github.sha }}
   cancel-in-progress: false
 
 jobs:
+  announce:
+    name: Announce JRN-009 verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Publish pending same-commit status
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMIT_SHA: ${{ github.sha }}
+          TARGET_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        shell: bash
+        run: |
+          jq -n --arg state "pending" --arg context "journeys/jrn-009/targeted-verification" --arg description "JRN-009 targeted verification is running" --arg target_url "$TARGET_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/status.json
+          curl --fail-with-body --silent --show-error -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ github.repository }}/statuses/$COMMIT_SHA" \
+            -d @/tmp/status.json
+
   static-integrity:
     name: JRN-009 static full-stack integrity
+    needs: announce
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -42,6 +64,7 @@ jobs:
 
   frontend-typecheck:
     name: JRN-009 affected frontend typecheck
+    needs: announce
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -56,6 +79,7 @@ jobs:
 
   backend-go:
     name: JRN-009 cart and HTTP behavior
+    needs: announce
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -71,3 +95,34 @@ jobs:
       - name: Verify cart domain and mounted HTTP routes
         working-directory: services/dsh/backend
         run: go test ./internal/cart ./internal/http -count=1
+
+  publish-result:
+    name: Publish JRN-009 same-commit result
+    if: always()
+    needs: [announce, static-integrity, frontend-typecheck, backend-go]
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Publish final same-commit status
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMIT_SHA: ${{ github.sha }}
+          TARGET_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          STATIC_RESULT: ${{ needs.static-integrity.result }}
+          FRONTEND_RESULT: ${{ needs.frontend-typecheck.result }}
+          BACKEND_RESULT: ${{ needs.backend-go.result }}
+        shell: bash
+        run: |
+          state=failure
+          description="JRN-009 targeted verification failed"
+          if [ "$STATIC_RESULT" = success ] && [ "$FRONTEND_RESULT" = success ] && [ "$BACKEND_RESULT" = success ]; then
+            state=success
+            description="JRN-009 targeted verification passed"
+          fi
+          jq -n --arg state "$state" --arg context "journeys/jrn-009/targeted-verification" --arg description "$description" --arg target_url "$TARGET_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/status.json
+          curl --fail-with-body --silent --show-error -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ github.repository }}/statuses/$COMMIT_SHA" \
+            -d @/tmp/status.json
