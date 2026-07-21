@@ -6,10 +6,21 @@
   "sliceId": "FS-18",
   "trackingStatus": "READY_FOR_REVIEW",
   "decision": "READY_FOR_REVIEW",
-  "evidenceBaseSha": "9348ee4734eff211c4d4ed4d94afde700712dfad",
-  "finalRepairBaseSha": "d46271bcb229de552050a22afd318c235dbc572d",
-  "finalVisibleStateSha": "a7de56ca3306a25c4c6bca8d91fea3c442da5a1d",
+  "evidenceBaseSha": "7fc63949e7328ea135e84d4d0bc0d07aa0055fe1",
+  "workflowRepairBaseSha": "cb4df69595780664bdd279b8af835e88d60a5909",
+  "latestTargetedVerification": {
+    "commit": "7fc63949e7328ea135e84d4d0bc0d07aa0055fe1",
+    "runId": 29847584806,
+    "context": "journeys/jrn-001-010/targeted-verification",
+    "result": "success",
+    "coveredScopes": [
+      "JRN-001 static contracts and guards",
+      "DSH partner and HTTP packages",
+      "Identity and Workforce governed behavior"
+    ]
+  },
   "sameCommitVerification": {
+    "canonicalDshContract": "services/dsh/contracts/dsh.partner-onboarding.openapi.yaml",
     "workflow": ".github/workflows/jrn-001-fs-18-evidence.yml",
     "requiredContexts": [
       "journeys/jrn-001/fs-17-comprehensive",
@@ -22,8 +33,7 @@
       "id": "FS-01",
       "status": "READY_FOR_REVIEW",
       "evidence": [
-        "governance/product/contracts/jrn-001-partner-onboarding-store-publication.product-truth.json",
-        "services/dsh/tests/jrn-001-fs-01-product-truth.test.mjs"
+        "governance/product/contracts/jrn-001-partner-onboarding-store-publication.product-truth.json"
       ]
     },
     {
@@ -37,7 +47,8 @@
       "id": "FS-03",
       "status": "READY_FOR_REVIEW",
       "evidence": [
-        "services/dsh/tests/jrn-001-fs-03-state-policy.test.mjs"
+        "services/dsh/backend/internal/partner/state_policy.go",
+        "services/dsh/backend/internal/partner/state_policy_test.go"
       ]
     },
     {
@@ -53,14 +64,17 @@
       "status": "READY_FOR_REVIEW",
       "evidence": [
         "services/dsh/database/migrations/dsh-015_partner_lifecycle.sql",
-        "services/dsh/database/migrations/dsh-098_partner_onboarding_integrity.sql"
+        "services/dsh/database/migrations/dsh-098_partner_onboarding_integrity.sql",
+        "services/dsh/database/migrations/dsh-099_partner_onboarding_audit_retention.sql"
       ]
     },
     {
       "id": "FS-06",
       "status": "READY_FOR_REVIEW",
       "evidence": [
-        "services/dsh/contracts/dsh.partner-activation.openapi.yaml"
+        "services/dsh/contracts/dsh.partner-onboarding.openapi.yaml",
+        "services/dsh/contracts/jrn-001-operation-registry.json",
+        "services/dsh/tests/jrn-001-fs-06-contracts.test.mjs"
       ]
     },
     {
@@ -69,14 +83,16 @@
       "evidence": [
         "services/dsh/backend/internal/http/partner_lifecycle_routes.go",
         "services/dsh/backend/internal/partner/onboarding_integrity_handlers.go",
-        "services/dsh/backend/internal/partner/onboarding_integrity_repository.go"
+        "services/dsh/backend/internal/partner/onboarding_integrity_repository.go",
+        "services/dsh/tests/jrn-001-fs-07-backend.test.mjs"
       ]
     },
     {
       "id": "FS-08",
       "status": "READY_FOR_REVIEW",
       "evidence": [
-        "services/dsh/backend/internal/partnerwltoutbox/outbox.go"
+        "services/dsh/backend/internal/partnerwltoutbox/outbox.go",
+        "services/dsh/tests/jrn-001-fs-08-events.test.mjs"
       ]
     },
     {
@@ -84,7 +100,8 @@
       "status": "READY_FOR_REVIEW",
       "evidence": [
         "services/dsh/frontend/shared/partner/index.ts",
-        "services/dsh/frontend/shared/field-onboarding/use-field-partner-onboarding-controller.tsx"
+        "services/dsh/frontend/shared/field-onboarding/use-field-partner-onboarding-controller.tsx",
+        "services/dsh/tests/jrn-001-fs-09-shared-brain.test.mjs"
       ]
     },
     {
@@ -132,15 +149,17 @@
     {
       "id": "FS-17",
       "status": "READY_FOR_REVIEW",
-      "commit": "9348ee4734eff211c4d4ed4d94afde700712dfad",
-      "runId": 29843015193
+      "commit": "7fc63949e7328ea135e84d4d0bc0d07aa0055fe1",
+      "runId": 29847584806,
+      "context": "journeys/jrn-001-010/targeted-verification"
     },
     {
       "id": "FS-18",
       "status": "READY_FOR_REVIEW",
       "evidence": [
         "governance/evidence/JRN-001_PARTNER_ONBOARDING_EVIDENCE.json",
-        "governance/evidence/JRN-001_PARTNER_ONBOARDING_STORE_PUBLICATION.md"
+        "governance/evidence/JRN-001_PARTNER_ONBOARDING_STORE_PUBLICATION.md",
+        "governance/runbooks/JRN-001_PARTNER_ONBOARDING_SUPPORT.md"
       ]
     }
   ],
@@ -159,7 +178,7 @@
   "closureClaim": "CLOSED_WITH_EVIDENCE is explicitly not claimed.",
   "registryLog": {
     "path": "governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md",
-    "evidenceCommit": "71edad3cee775ced0b727676cdf97af456436f76",
+    "evidenceCommit": "246d4e63d75fecaa64a982938885bb2bfd6249cb",
     "decision": "READY_FOR_REVIEW"
   }
 }
