@@ -46,7 +46,7 @@ const orderTruthController = read("services/dsh/frontend/shared/order-truth/use-
 assert.match(discoveryStates, /kind: ['"]service_unavailable['"]/);
 assert.match(discoveryShell, /state\.kind === ['"]service_unavailable['"]/);
 assert.match(discoveryShell, /<OfflineState/);
-assert.match(discoveryShell, /onActionPress=\{onRetry\}/);
+assert.match(discoveryShell, /onActionPress\s*(?::|=)\s*(?:onRetry|\{onRetry\})/);
 assert.match(storeDetail, /storeCtrl\.state\.kind === "service_unavailable"/);
 assert.match(storeDetail, /actionLabel="إعادة المحاولة"/);
 assert.match(storeDetail, /onActionPress=\{handleRetry\}/);
