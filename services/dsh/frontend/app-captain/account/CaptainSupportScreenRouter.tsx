@@ -9,10 +9,7 @@ import {
   DshCaptainOrdersOffersListScreen,
   DshCaptainProofUploadScreen,
 } from '../orders/DshCaptainOrdersScreen';
-import {
-  DshCaptainChatReadAckScreen,
-  DshCaptainChatSendScreen,
-} from './DshCaptainOperationsScreen';
+import { CaptainOrderSupportConversationScreen } from '../orders/CaptainOrderSupportConversationScreen';
 import { DshCaptainCodBalanceScreen } from './DshCaptainFinanceScreen';
 import {
   DshCaptainProfileGetScreen,
@@ -59,9 +56,21 @@ export function CaptainSupportScreenRouter({
 }: CaptainSupportScreenRouterProps): React.ReactNode {
   switch (selectedSupportScreen) {
     case 'chat-read-ack':
-      return <DshCaptainChatReadAckScreen onBack={onBack} onSecondaryAction={onBack} />;
+      return (
+        <CaptainOrderSupportConversationScreen
+          orderId={activeOrderId}
+          composerEnabled={false}
+          onBack={onBack}
+        />
+      );
     case 'chat-send':
-      return <DshCaptainChatSendScreen onBack={onBack} onSecondaryAction={onBack} />;
+      return (
+        <CaptainOrderSupportConversationScreen
+          orderId={activeOrderId}
+          composerEnabled
+          onBack={onBack}
+        />
+      );
     case 'cod-liability':
       return captainCollectsCod ? (
         <DshCaptainCodBalanceScreen
