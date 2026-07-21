@@ -1,4 +1,4 @@
-import { fail, lineNumber, read } from "../../_guard-utils.mjs";
+import { fail, lineNumber, read } from "../_guard-utils.mjs";
 
 const guardId = "partner-support-truth-gate";
 const violations = [];

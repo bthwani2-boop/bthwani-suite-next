@@ -444,6 +444,9 @@ func (i ReviewDocumentInput) Validate() error {
 	if i.Decision != "approved" && i.Decision != "rejected" && i.Decision != "needs_resubmit" {
 		return ErrInvalid
 	}
+	if (i.Decision == "rejected" || i.Decision == "needs_resubmit") && strings.TrimSpace(i.Reason) == "" {
+		return ErrInvalid
+	}
 	return nil
 }
 

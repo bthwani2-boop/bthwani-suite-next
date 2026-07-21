@@ -13,10 +13,8 @@ import { AuctionStatusUpdateScreen } from "./account/AuctionStatusUpdateScreen";
 import { ConversationScreen } from "./orders/PartnerConversationScreen";
 import { InventoryActionScreen } from "./catalog/InventoryActionScreen";
 import { NotificationsScreen } from "./account/NotificationsScreen";
-import { OnboardingActionScreen } from "./account/OnboardingActionScreen";
 import { OrderActionScreen } from "./orders/OrderActionScreen";
 import { OrderIssueScreen } from "./orders/OrderIssueScreen";
-import { VideoUploadScreen } from "./account/VideoUploadScreen";
 import { OrdersInboxScreen } from "./orders/OrdersInboxScreen";
 import {
   DshPartnerOrderRejectionScreen,
@@ -495,22 +493,6 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
           onSecondaryAction={() => openSupportScreen("quick-reply-setup")}
         />
       ),
-      "doc-upload": (
-        <OnboardingActionScreen
-          activeFlowId="doc-upload"
-          onBack={returnToSupportDirectory}
-          onOpenScreen={openSupportScreen}
-          onSecondaryAction={returnToSupportDirectory}
-        />
-      ),
-      "intake-start": (
-        <OnboardingActionScreen
-          activeFlowId="intake-start"
-          onBack={returnToSupportDirectory}
-          onOpenScreen={openSupportScreen}
-          onSecondaryAction={returnToSupportDirectory}
-        />
-      ),
       "inventory-adjust": (
         <InventoryActionScreen
           activeFlowId="inventory-adjust"
@@ -640,20 +622,6 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
           activeFlowId="quick-reply-setup"
           onBack={returnToSupportDirectory}
           onOpenScreen={openSupportScreen}
-          onSecondaryAction={returnToSupportDirectory}
-        />
-      ),
-      "store-nomination": (
-        <OnboardingActionScreen
-          activeFlowId="store-nomination"
-          onBack={returnToSupportDirectory}
-          onOpenScreen={openSupportScreen}
-          onSecondaryAction={returnToSupportDirectory}
-        />
-      ),
-      "video-upload": (
-        <VideoUploadScreen
-          onBack={returnToSupportDirectory}
           onSecondaryAction={returnToSupportDirectory}
         />
       ),

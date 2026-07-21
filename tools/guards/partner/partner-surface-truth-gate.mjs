@@ -111,7 +111,7 @@ const checks = [
     required: [
       "Promise<PartnerTeamMutationResult>",
       "const result = await onInviteMember(identity)",
-      "const result = await onMemberAction(member, action)",
+      "const result = await onMemberAction(member.id, action)",
       "if (!result.ok)",
       "action === \"audit-log\"",
     ],
@@ -141,9 +141,10 @@ const checks = [
       [/runtimePartnerSupportCases/g, "EMPTY_RUNTIME_SUPPORT_ARRAY_FORBIDDEN"],
     ],
     required: [
-      "Partner support is intentionally fail-closed",
-      "لا يوجد عقد DSH حالي",
-      "تم حذف الحالات الثابتة والإجراءات المحلية",
+      "usePartnerSupportController(true)",
+      "controller.createTicket(input)",
+      "controller.sendMessage(messageBody)",
+      "controller.tickets.length === 0",
     ],
   },
 ];

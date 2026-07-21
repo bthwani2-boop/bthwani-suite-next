@@ -504,7 +504,7 @@ func ReviewDocument(db *sql.DB, partnerID, documentID string, input ReviewDocume
 	err = tx.QueryRow(`
 		UPDATE dsh_partner_documents SET
 			document_status  = $3,
-			rejection_reason = CASE WHEN $4='' THEN rejection_reason ELSE $4 END,
+			rejection_reason = CASE WHEN $3='approved' THEN '' ELSE $4 END,
 			version          = version + 1,
 			updated_at       = NOW()
 		WHERE id = $1 AND partner_id = $2
