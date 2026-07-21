@@ -35,43 +35,71 @@ async function appendPhoto(form: FormData, photo: CapturedDeliveryProofPhoto): P
   } as unknown as Blob);
 }
 
-export async function uploadAndSubmitCaptainDeliveryProof(
-  assignmentId: string,
+async function uploadAndSubmitDeliveryProof(
+  path: string,
+  correlationPrefix: string,
+  invalidSessionMessage: string,
+  rejectionMessage: string,
   photo: CapturedDeliveryProofPhoto,
 ): Promise<void> {
-  const normalizedAssignmentId = assignmentId.trim();
-  if (!normalizedAssignmentId) throw new Error('لا توجد مهمة نشطة لرفع الإثبات.');
   if (!photo.uri.trim()) throw new Error('صورة إثبات التسليم مطلوبة.');
 
   const baseUrl = resolveDshApiBaseUrl();
   const cookieMode = baseUrl.startsWith('/');
   const token = cookieMode ? undefined : getIdentityAccessToken();
-  if (!cookieMode && !token) throw new Error('جلسة الكابتن غير صالحة.');
+  if (!cookieMode && !token) throw new Error(invalidSessionMessage);
 
   const form = new FormData();
   await appendPhoto(form, photo);
 
   let response: Response;
   try {
-    response = await fetch(
-      resolveUploadUrl(`/dsh/captain/dispatch/assignments/${encodeURIComponent(normalizedAssignmentId)}/pod`),
-      {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'X-Correlation-ID': corrId('captain-pod-media'),
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: form,
-        ...(cookieMode ? { credentials: 'include' as const } : {}),
+    response = await fetch(resolveUploadUrl(path), {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'X-Correlation-ID': corrId(correlationPrefix),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-    );
+      body: form,
+      ...(cookieMode ? { credentials: 'include' as const } : {}),
+    });
   } catch (error) {
     throw new Error(error instanceof Error ? error.message : 'تعذر الاتصال بخدمة إثبات التسليم.');
   }
 
   if (!response.ok) {
     const body = await response.json().catch(() => null) as { message?: string } | null;
-    throw new Error(body?.message || 'رفض DSH إثبات التسليم.');
+    throw new Error(body?.message || rejectionMessage);
   }
+}
+
+export async function uploadAndSubmitCaptainDeliveryProof(
+  assignmentId: string,
+  photo: CapturedDeliveryProofPhoto,
+): Promise<void> {
+  const normalizedAssignmentId = assignmentId.trim();
+  if (!normalizedAssignmentId) throw new Error('لا توجد مهمة نشطة لرفع الإثبات.');
+  return uploadAndSubmitDeliveryProof(
+    `/dsh/captain/dispatch/assignments/${encodeURIComponent(normalizedAssignmentId)}/pod`,
+    'captain-pod-media',
+    'جلسة الكابتن غير صالحة.',
+    'رفض DSH إثبات التسليم.',
+    photo,
+  );
+}
+
+export async function uploadAndSubmitPartnerDeliveryProof(
+  orderId: string,
+  photo: CapturedDeliveryProofPhoto,
+): Promise<void> {
+  const normalizedOrderId = orderId.trim();
+  if (!normalizedOrderId) throw new Error('لا يوجد طلب صالح لرفع الإثبات.');
+  return uploadAndSubmitDeliveryProof(
+    `/dsh/partner/orders/${encodeURIComponent(normalizedOrderId)}/partner-delivery/proof`,
+    'partner-delivery-proof-media',
+    'جلسة الشريك غير صالحة.',
+    'رفض DSH إثبات توصيل المتجر.',
+    photo,
+  );
 }
