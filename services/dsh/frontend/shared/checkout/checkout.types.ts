@@ -17,7 +17,8 @@ export type DshFulfillmentMode = DshFulfillmentDeliveryMode;
 
 export type DshCheckoutIntent = {
   readonly id: string;
-  readonly tenantId: string;
+  /** Present on all current server responses; optional only for legacy typed fixtures. */
+  readonly tenantId?: string;
   readonly clientId: string;
   readonly cartId: string;
   readonly storeId: string;
