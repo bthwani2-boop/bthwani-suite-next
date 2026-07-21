@@ -11,7 +11,8 @@ import { ProviderListView } from "./ProviderListView";
 import { FieldAgentCreateView } from "./FieldAgentCreateView";
 import { CaptainCreateView } from "./CaptainCreateView";
 import { EmployeeCreateView } from "./EmployeeCreateView";
-import { ProviderDetailView } from "./ProviderDetailView";
+import { FieldAgentDetailView } from "./FieldAgentDetailView";
+import { CaptainDetailView } from "./CaptainDetailView";
 import { EmployeeDetailView } from "./EmployeeDetailView";
 import { WorkforceReferenceView } from "./WorkforceReferenceView";
 
@@ -37,10 +38,7 @@ function WorkforceHrScreenInner() {
       <ScrollScreen>
         <Card style={{ padding: spacing[4], gap: spacing[3] }}>
           <Box style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}>
-            <Header
-              title="إضافة عضو Workforce"
-              subtitle="أنشئ مقدم خدمة ميدانيًا أو كابتنًا أو موظفًا إداريًا من المصدر السيادي نفسه."
-            />
+            <Header title="إضافة عضو Workforce" subtitle="أنشئ الميداني والكابتن والموظف الإداري من المصدر السيادي نفسه." />
             <Button label="رجوع" tone="ghost" onPress={() => navigateTo("list")} />
           </Box>
           <Text role="bodySm" style={{ textAlign: "right", fontWeight: "bold" }}>نوع العضو:</Text>
@@ -63,11 +61,9 @@ function WorkforceHrScreenInner() {
   }
 
   if (view === "detail") {
-    return kind === "employee" ? (
-      <EmployeeDetailView actorId={actorId} onBack={() => navigateTo("list")} />
-    ) : (
-      <ProviderDetailView actorId={actorId} kind={kind} onBack={() => navigateTo("list")} />
-    );
+    if (kind === "employee") return <EmployeeDetailView actorId={actorId} onBack={() => navigateTo("list")} />;
+    if (kind === "captain") return <CaptainDetailView actorId={actorId} onBack={() => navigateTo("list")} />;
+    return <FieldAgentDetailView actorId={actorId} onBack={() => navigateTo("list")} />;
   }
 
   if (view === "reference") {
