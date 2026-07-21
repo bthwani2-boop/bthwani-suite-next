@@ -10,8 +10,18 @@ export type DshDelivery = components["schemas"]["DshDelivery"];
 export type DshCreateAssignmentInput = components["schemas"]["DshCreateAssignmentRequest"];
 export type DshSubmitPoDInput = components["schemas"]["DshSubmitPoDRequest"];
 export type DshDeliveryException = components["schemas"]["DshDeliveryException"];
-export type DshDeliveryExceptionReasonCode = components["schemas"]["DshDeliveryExceptionReasonCode"];
-export type DshReportDeliveryExceptionInput = components["schemas"]["DshReportDeliveryExceptionRequest"];
+type GeneratedDshDeliveryExceptionReasonCode = components["schemas"]["DshDeliveryExceptionReasonCode"];
+type GeneratedDshReportDeliveryExceptionInput = components["schemas"]["DshReportDeliveryExceptionRequest"];
+
+export type DshDeliveryExceptionReasonCode =
+  | GeneratedDshDeliveryExceptionReasonCode
+  | "handoff_shortage"
+  | "handoff_mismatch";
+
+export type DshReportDeliveryExceptionInput = Omit<GeneratedDshReportDeliveryExceptionInput, "reasonCode"> & {
+  readonly reasonCode: DshDeliveryExceptionReasonCode;
+};
+
 export type DshPartnerDispatchReference = components["schemas"]["DshPartnerDispatchReference"];
 
 export type DshDispatchListState =
@@ -54,4 +64,12 @@ export const ASSIGNMENT_STATUS_LABELS: Record<DshAssignmentStatus, string> = {
   declined: "مرفوضة",
   completed: "مكتملة",
   cancelled: "ملغاة",
+};
+
+export const HANDOFF_EXCEPTION_REASON_LABELS: Record<
+  Extract<DshDeliveryExceptionReasonCode, "handoff_shortage" | "handoff_mismatch">,
+  string
+> = {
+  handoff_shortage: "نقص في محتوى الطرد",
+  handoff_mismatch: "محتوى الطرد لا يطابق الطلب",
 };
