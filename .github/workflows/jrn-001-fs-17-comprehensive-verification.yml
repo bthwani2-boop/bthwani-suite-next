@@ -11,6 +11,7 @@ on:
       - services/dsh/backend/internal/partner/**
       - services/dsh/backend/internal/partnerwltoutbox/**
       - services/dsh/backend/internal/store/**
+      - core/identity/backend/internal/identity/**
       - services/dsh/database/migrations/dsh-015_partner_lifecycle.sql
       - services/dsh/database/migrations/dsh-098_partner_onboarding_integrity.sql
       - services/dsh/frontend/shared/partner/**
@@ -47,8 +48,10 @@ jobs:
           node-version: 24.17.0
       - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5
         with:
-          go-version-file: services/dsh/backend/go.mod
-          cache-dependency-path: services/dsh/backend/go.sum
+          go-version: 1.26.5
+          cache-dependency-path: |
+            services/dsh/backend/go.sum
+            core/identity/backend/go.sum
       - name: Install locked workspace
         run: |
           corepack enable
@@ -60,11 +63,14 @@ jobs:
         run: |
           node --test services/dsh/tests/jrn-001-*.test.mjs
           for guard in tools/guards/partner/jrn-001-*.mjs; do node "$guard"; done
-      - name: Verify JRN-001 backend packages
+      - name: Verify DSH partner and store packages
         working-directory: services/dsh/backend
         run: |
           go test ./internal/partner ./internal/partnerwltoutbox ./internal/store -count=1
           go test ./internal/http -run 'TestFirstFiveJourneysExposeGovernedDSHRoutes|TestPartnerSelfRoutesRegisterOnceOnApplicationRouter' -count=1
+      - name: Verify Identity activation package
+        working-directory: core/identity/backend
+        run: go test ./internal/identity -count=1
       - name: Typecheck changed JRN-001 field surface
         run: pnpm --dir apps/app-field/runtime typecheck
       - name: Verify WLT financial boundary
