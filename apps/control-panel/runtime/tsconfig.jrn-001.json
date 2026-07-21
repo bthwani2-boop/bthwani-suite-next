@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "incremental": false
+  },
+  "include": [
+    "next-env.d.ts",
+    "src/app/dsh/partners/page.tsx",
+    "src/app/dsh/partners/[partnerId]/page.tsx",
+    "../../../services/dsh/frontend/control-panel/partners/PartnersReviewQueueScreen.tsx",
+    "../../../services/dsh/frontend/control-panel/partners/PartnerDetailOperationalScreen.tsx"
+  ]
+}
