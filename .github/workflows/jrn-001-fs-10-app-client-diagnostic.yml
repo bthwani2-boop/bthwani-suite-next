@@ -1,4 +1,4 @@
-name: JRN-001 FS-10 app-client diagnostic
+name: JRN-001 FS-10 app-client property diagnostic
 
 on:
   push:
@@ -24,7 +24,7 @@ jobs:
           corepack enable
           corepack prepare pnpm@10.34.2 --activate
           pnpm install --frozen-lockfile
-      - name: Publish exact app-client error
+      - name: Publish incompatible property
         env:
           GH_TOKEN: ${{ github.token }}
           COMMIT_SHA: ${{ github.sha }}
@@ -34,9 +34,16 @@ jobs:
           set +e
           pnpm --dir apps/app-client/runtime typecheck 2>&1 | tee /tmp/diagnostic.log
           EXIT_CODE=${PIPESTATUS[0]}
+          FIRST_LINE="$(grep -n -m1 -E 'error TS[0-9]+' /tmp/diagnostic.log | cut -d: -f1)"
+          DETAIL=''
+          if [ -n "$FIRST_LINE" ]; then
+            END_LINE=$((FIRST_LINE + 8))
+            DETAIL="$(sed -n "${FIRST_LINE},${END_LINE}p" /tmp/diagnostic.log | grep -m1 -E "Types of property|Property '[^']+'|Type '[^']+' is not assignable" || true)"
+          fi
           FIRST="$(grep -m1 -E 'error TS[0-9]+' /tmp/diagnostic.log || true)"
-          if [ "$EXIT_CODE" -eq 0 ]; then STATE=success; TOKEN=pass; DESCRIPTION='app-client typecheck passed'; else STATE=failure; TOKEN="$(printf '%s' "$FIRST" | tr '[:upper:]' '[:lower:]' | tr -cs '[:alnum:]_.-' '-' | sed 's/^-//;s/-$//' | cut -c1-82)"; DESCRIPTION="$(printf '%s' "$FIRST" | cut -c1-120)"; fi
-          CONTEXT="j1/fs10/app-client/${TOKEN:-unknown}"
+          MESSAGE="${DETAIL:-$FIRST}"
+          if [ "$EXIT_CODE" -eq 0 ]; then STATE=success; TOKEN=pass; DESCRIPTION='app-client typecheck passed'; else STATE=failure; TOKEN="$(printf '%s' "$MESSAGE" | tr '[:upper:]' '[:lower:]' | tr -cs '[:alnum:]_.-' '-' | sed 's/^-//;s/-$//' | cut -c1-82)"; DESCRIPTION="$(printf '%s' "$MESSAGE" | sed 's/^[[:space:]]*//' | cut -c1-120)"; fi
+          CONTEXT="j1/fs10/app-client-prop/${TOKEN:-unknown}"
           CONTEXT="$(printf '%s' "$CONTEXT" | cut -c1-100)"
           jq -n --arg state "$STATE" --arg context "$CONTEXT" --arg description "$DESCRIPTION" --arg target_url "$TARGET_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/status.json
           curl --fail-with-body --silent --show-error -X POST \
