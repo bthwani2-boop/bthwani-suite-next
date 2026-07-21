@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: DSH Administration Governance API
-  version: 1.1.0
+  version: 1.2.0
   description: JRN-031 maker-checker administration contract.
 servers:
   - url: /dsh
@@ -116,8 +116,8 @@ paths:
                       $ref: "#/components/schemas/StaffAssignment"
   /operator/admin/staff/{staffId}/roles:
     post:
-      operationId: requestDshStaffRoleAssignment
-      description: Creates a pending maker-checker request; it never assigns the role directly.
+      operationId: requestDshStaffRoleChange
+      description: Creates a pending maker-checker request for either assignment or revocation; it never mutates the approved assignment directly.
       parameters:
         - in: path
           name: staffId
@@ -128,10 +128,10 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/RoleAssignmentRequestInput"
+              $ref: "#/components/schemas/RoleChangeRequestInput"
       responses:
         "202":
-          description: Pending approval request created.
+          description: Pending role-change approval request created.
           content:
             application/json:
               schema:
@@ -140,8 +140,8 @@ paths:
                 properties:
                   approval:
                     $ref: "#/components/schemas/RoleAssignmentApproval"
-        "403": { description: Self-assignment or authorization is forbidden. }
-        "409": { description: Equivalent pending request already exists. }
+        "403": { description: Self-change or authorization is forbidden. }
+        "409": { description: Requested assignment state is no longer valid or an equivalent request is pending. }
   /operator/admin/approvals:
     get:
       operationId: listDshRoleAssignmentApprovals
@@ -153,7 +153,7 @@ paths:
             $ref: "#/components/schemas/ApprovalStatus"
       responses:
         "200":
-          description: Role assignment approval queue.
+          description: Staff role-change approval queue.
           content:
             application/json:
               schema:
@@ -166,8 +166,8 @@ paths:
                       $ref: "#/components/schemas/RoleAssignmentApproval"
   /operator/admin/approvals/{approvalId}/review:
     post:
-      operationId: reviewDshRoleAssignmentApproval
-      description: Applies an approved role assignment only when checker differs from maker and beneficiary.
+      operationId: reviewDshStaffRoleChange
+      description: Applies an assignment or revocation only when checker differs from maker and beneficiary.
       parameters:
         - in: path
           name: approvalId
@@ -181,7 +181,7 @@ paths:
               $ref: "#/components/schemas/ApprovalReviewInput"
       responses:
         "200":
-          description: Approval reviewed and assignment applied when approved.
+          description: Role-change request reviewed and applied only when approved.
           content:
             application/json:
               schema:
@@ -195,7 +195,7 @@ paths:
                       - $ref: "#/components/schemas/StaffAssignment"
                       - type: "null"
         "403": { description: Self-approval is forbidden. }
-        "409": { description: Version or lifecycle conflict. }
+        "409": { description: Version, lifecycle, or role-state conflict. }
 components:
   schemas:
     ApprovalStatus:
@@ -207,6 +207,11 @@ components:
         - administration.read
         - administration.manage
         - administration.approve
+    RoleChangeAction:
+      type: string
+      enum:
+        - staff_role_assignment
+        - staff_role_revocation
     Role:
       type: object
       required: [id, name, description, permissions, createdAt]
@@ -282,12 +287,14 @@ components:
         roleName: { type: string }
         assignedBy: { type: string }
         assignedAt: { type: string, format: date-time }
-    RoleAssignmentRequestInput:
+    RoleChangeRequestInput:
       type: object
       additionalProperties: false
-      required: [roleId, reason]
+      required: [roleId, actionType, reason]
       properties:
         roleId: { type: string, format: uuid }
+        actionType:
+          $ref: "#/components/schemas/RoleChangeAction"
         reason: { type: string, minLength: 5 }
     ApprovalReviewInput:
       type: object
@@ -318,8 +325,7 @@ components:
       properties:
         id: { type: string, format: uuid }
         actionType:
-          type: string
-          const: staff_role_assignment
+          $ref: "#/components/schemas/RoleChangeAction"
         targetActorId: { type: string }
         roleId: { type: string, format: uuid }
         roleName: { type: string }
