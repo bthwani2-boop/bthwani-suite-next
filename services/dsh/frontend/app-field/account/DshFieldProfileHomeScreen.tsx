@@ -1,7 +1,7 @@
 // app-field — DshFieldProfileHomeScreen
 // Profile menu driven only by the authenticated Workforce profile.
 import React from 'react';
-import { Pressable, View, ScrollView } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import {
   Badge,
   Button,
@@ -43,7 +43,7 @@ export function DshFieldProfileHomeScreen({
       <StateView
         tone="warning"
         title="الملف التشغيلي غير منشأ"
-        description="تم تسجيل الهوية، لكن Workforce لم ينشئ ملف الموظف الميداني بعد. لا يمكن فتح المهام أو المالية قبل إنشائه."
+        description="تم تسجيل الهوية، لكن Workforce لم ينشئ ملف مقدم الخدمة الميداني بعد. لا يمكن فتح المهام أو المالية قبل إنشائه."
         actionLabel="إعادة المحاولة"
         onActionPress={() => void workforce.reload()}
       />
@@ -84,7 +84,7 @@ export function DshFieldProfileHomeScreen({
       <StateView
         tone="danger"
         title="نوع الحساب غير متوافق"
-        description="الجلسة الحالية لا تملك ملف موظف ميداني. افتح السطح المتوافق مع نوع Workforce المسجل."
+        description="الجلسة الحالية لا تملك ملف مقدم خدمة ميداني. افتح السطح المتوافق مع نوع Workforce المسجل."
         actionLabel="رجوع"
         onActionPress={onBack}
       />
@@ -100,14 +100,14 @@ export function DshFieldProfileHomeScreen({
         <Header title="ملف الميداني" subtitle="الهوية والملف التشغيلي من Workforce" />
       </View>
       <ScrollView
-        style={{ flex: 1 }}
+        style={styles.scroll}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.identityBlock}>
           <View style={styles.badges}>
             <Badge label="DSH" tone="success" />
-            <Badge label="موظف ميداني" tone="action" />
+            <Badge label="مقدم خدمة ميداني" tone="action" />
             <Badge
               label={ENGAGEMENT_STATUS_LABEL_AR[me.engagementStatus]}
               tone={operationallyActive ? 'success' : 'warning'}
@@ -126,7 +126,7 @@ export function DshFieldProfileHomeScreen({
 
         <View style={styles.divider} />
 
-        <View style={{ gap: 0 }}>
+        <View style={styles.menu}>
           <MenuRow title="بيانات الميداني" subtitle="الهوية، التغطية، والوردية الحالية." onPress={onOpenProfile} />
           <MenuRow title="السجل" subtitle="آخر حالة لكل متجر والتقدم المرتبط به." onPress={onOpenHistory} />
           <MenuRow title="المالية" subtitle="المحفظة والعمولات وطلبات الصرف من WLT." onPress={onOpenFinance} />
@@ -154,22 +154,24 @@ function MenuRow({ title, subtitle, onPress }: { title: string; subtitle: string
   );
 }
 
-const styles = {
+const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colorRoles.surfaceBase },
-  blockedRoot: { flex: 1, backgroundColor: colorRoles.surfaceBase, justifyContent: 'center' as const, padding: spacing[4], gap: spacing[3] },
+  blockedRoot: { flex: 1, backgroundColor: colorRoles.surfaceBase, justifyContent: 'center', padding: spacing[4], gap: spacing[3] },
   headerContainer: { paddingHorizontal: spacing[4], paddingTop: spacing[2] },
+  scroll: { flex: 1 },
   content: { padding: spacing[4], gap: spacing[4], paddingBottom: 96 },
   identityBlock: { gap: spacing[3], paddingVertical: spacing[2] },
-  badges: { flexDirection: 'row-reverse' as const, flexWrap: 'wrap' as const, gap: spacing[2] },
-  rtl: { textAlign: 'right' as const },
+  badges: { flexDirection: 'row-reverse', flexWrap: 'wrap', gap: spacing[2] },
+  rtl: { textAlign: 'right' },
   divider: { height: 1, backgroundColor: colorRoles.borderSubtle },
+  menu: { gap: 0 },
   menuRow: {
     paddingVertical: spacing[3],
     borderBottomWidth: 1,
     borderBottomColor: colorRoles.borderSubtle,
-    flexDirection: 'row-reverse' as const,
-    alignItems: 'center' as const,
-    justifyContent: 'space-between' as const,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  menuText: { flex: 1, alignItems: 'flex-end' as const, gap: 2 },
-};
+  menuText: { flex: 1, alignItems: 'flex-end', gap: 2 },
+});
