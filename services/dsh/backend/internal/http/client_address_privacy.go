@@ -35,7 +35,9 @@ func privacyMutationContext(w http.ResponseWriter, r *http.Request, actorID stri
 		return clientaddress.PrivacyMutationContext{}, false
 	}
 	return clientaddress.PrivacyMutationContext{
-		ActorID: actorID, IdempotencyKey: idempotencyKey, CorrelationID: correlationID,
+		ActorID:       actorID,
+		IdempotencyKey: idempotencyKey,
+		CorrelationID:  correlationID,
 	}, true
 }
 
@@ -132,8 +134,8 @@ func (s *protectedStoreServer) handleAnonymizeExpiredClientAddresses(w http.Resp
 		return
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{
-		"result": result,
-		"status": status,
+		"result":                        result,
+		"status":                        status,
 		"expiredMutationReceiptsPurged": purgedReceipts,
 	})
 }
