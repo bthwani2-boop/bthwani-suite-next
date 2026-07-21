@@ -22,58 +22,33 @@ import type {
   DshPartnerStoreCourierSettings,
   DshPartnerCoverageZone,
 } from "./partner.types";
+import type { DshGovernedPartner, PartnerMutationContext } from "./partner-onboarding.runtime";
 
 const baseUrl = resolveDshApiBaseUrl();
 const httpClient = createDshHttpClient(baseUrl, "partner");
 
+type PartnerRequestOptions = {
+  readonly method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+  readonly body?: unknown;
+  readonly mutation?: PartnerMutationContext;
+};
+
 /**
- * OpenAPI Operation Binding Matrix — contracts/dsh.openapi.yaml
- * This file implements the manual shared API adapter. Each function maps directly to an OpenAPI operationId.
- *
- * | Function Name            | Method | Route                                                   | OpenAPI operationId          |
- * |--------------------------|--------|---------------------------------------------------------|------------------------------|
- * | fetchPartners            | GET    | /dsh/operator/partners                                  | listDshPartners              |
- * | createPartner            | POST   | /dsh/operator/partners                                  | createDshPartner             |
- * | fetchPartner             | GET    | /dsh/operator/partners/{partnerId}                      | getDshPartner                |
- * | transitionPartner        | POST   | /dsh/operator/partners/{partnerId}/transition           | transitionDshPartner         |
- * | fetchPartnerReadiness    | GET    | /dsh/operator/partners/{partnerId}/readiness            | getDshPartnerReadiness       |
- * | fetchPartnerDocuments    | GET    | /dsh/operator/partners/{partnerId}/documents            | listDshPartnerDocuments      |
- * | addPartnerDocument       | POST   | /dsh/operator/partners/{partnerId}/documents            | addDshPartnerDocument        |
- * | reviewPartnerDocument    | PATCH  | /dsh/operator/partners/{partnerId}/documents/{docId}/review | reviewDshPartnerDocument |
- * | fetchPartnerStores       | GET    | /dsh/operator/partners/{partnerId}/stores               | listDshPartnerStores         |
- * | linkPartnerStore         | POST   | /dsh/operator/partners/{partnerId}/stores               | linkDshPartnerStore          |
- * | fetchPartnerAuditEvents  | GET    | /dsh/operator/partners/{partnerId}/audit                | listDshPartnerAuditEvents    |
- * | fetchListFieldVisits     | GET    | /dsh/operator/partners/{partnerId}/field-visits         | listDshPartnerFieldVisits    |
- * | fetchPartnerSelfStatus   | GET    | /dsh/partner/activation/status                          | getDshPartnerActivationStatus |
- * | fetchPartnerSelfReadiness | GET   | /dsh/partner/activation/readiness                       | getDshPartnerSelfReadiness   |
- * | fieldListDrafts          | GET    | /dsh/field/partners                                     | listFieldPartnerDrafts       |
- * | fieldCreateDraft         | POST   | /dsh/field/partners/drafts                              | createFieldPartnerDraft      |
- * | fieldGetPartner          | GET    | /dsh/field/partners/{partnerId}                         | getFieldPartnerDraft         |
- * | fieldUpdatePartner       | PATCH  | /dsh/field/partners/{partnerId}                         | updateFieldPartnerDraft      |
- * | fieldGetReadiness        | GET    | /dsh/field/partners/{partnerId}/readiness               | getFieldPartnerReadiness     |
- * | fieldGetPartnerStore     | GET    | /dsh/field/partners/{partnerId}/store                   | getFieldPartnerStore         |
- * | fieldUpdatePartnerStore  | PATCH  | /dsh/field/partners/{partnerId}/store                   | updateFieldPartnerStore      |
- * | fieldUploadDocument      | POST   | /dsh/field/partners/{partnerId}/documents               | uploadFieldPartnerDocument   |
- * | fieldListDocuments       | GET    | /dsh/field/partners/{partnerId}/documents               | listFieldPartnerDocuments    |
- * | fieldCreateVisit         | POST   | /dsh/field/partners/{partnerId}/visits                  | createFieldPartnerVisit      |
- * | fieldListFieldVisits     | GET    | /dsh/field/partners/{partnerId}/field-visits            | listFieldPartnerFieldVisits  |
- * | fieldSubmitPartner       | POST   | /dsh/field/partners/{partnerId}/submit                  | submitFieldPartnerDraft      |
- *
- * api_client_policy: manual shared adapter (Option B).
- * - All functions live in the DSH shared brain only; screens must never fetch directly
- *   (policy: surface code must never call fetch/axios directly; use shared adapters only).
- * - Every function is bound to one OpenAPI operationId above; any drift between this
- *   table and contracts/dsh.openapi.yaml is a defect.
- * - Reason the generated facade is not used yet: the generated openapi-typescript client
- *   (clients/generated/dsh-api.ts) exposes types only — no runnable request facade is
- *   generated for these operations, so this isolated adapter carries transport until a
- *   generated request facade is stabilized. No business logic lives here.
+ * JRN-001 uses the approved manual shared adapter until a runnable generated
+ * request facade is available. Screens must never call fetch/axios directly.
+ * Mutation identity and optimistic concurrency are translated here once.
  */
-function request<T>(path: string, options: { readonly method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"; readonly body?: unknown } = {}): Promise<T> {
-  return httpClient.request<T>(path, options);
+function request<T>(path: string, options: PartnerRequestOptions = {}): Promise<T> {
+  return httpClient.request<T>(path, {
+    method: options.method,
+    body: options.body,
+    idempotencyKey: options.mutation?.idempotencyKey,
+    correlationId: options.mutation?.correlationId,
+    expectedVersion: options.mutation?.expectedVersion,
+  });
 }
 
-// ── Operator: partner CRUD ────────────────────────────────────────────────────
+// ── Operator: partner lifecycle ─────────────────────────────────────────────
 
 export function fetchPartners(params: { status?: string; limit?: number; offset?: number } = {}): Promise<DshPartnerListResponse> {
   const q = new URLSearchParams();
@@ -84,17 +59,25 @@ export function fetchPartners(params: { status?: string; limit?: number; offset?
   return request(`/dsh/operator/partners${qs ? `?${qs}` : ""}`);
 }
 
-export function fetchPartner(partnerId: string): Promise<DshPartner> {
+export function fetchPartner(partnerId: string): Promise<DshGovernedPartner> {
   return request(`/dsh/operator/partners/${partnerId}`);
 }
 
-export function createPartner(input: DshCreatePartnerInput): Promise<DshPartner> {
-  return request("/dsh/operator/partners", { method: "POST", body: input });
+export function createPartner(input: DshCreatePartnerInput, mutation?: PartnerMutationContext): Promise<DshPartner> {
+  return request("/dsh/operator/partners", { method: "POST", body: input, mutation });
 }
 
-export function transitionPartner(partnerId: string, input: DshPartnerTransitionInput, version?: number): Promise<{ partner: DshPartner; event: DshPartnerAuditEvent }> {
-  const qs = version !== undefined ? `?version=${version}` : "";
-  return request(`/dsh/operator/partners/${partnerId}/transition${qs}`, { method: "POST", body: input });
+export function transitionPartner(
+  partnerId: string,
+  input: DshPartnerTransitionInput,
+  version: number,
+  mutation?: PartnerMutationContext,
+): Promise<{ partner: DshGovernedPartner; event: DshPartnerAuditEvent }> {
+  return request(`/dsh/operator/partners/${partnerId}/transition`, {
+    method: "POST",
+    body: input,
+    mutation: { ...mutation, expectedVersion: version } as PartnerMutationContext,
+  });
 }
 
 export function fetchPartnerReadiness(partnerId: string): Promise<DshPartnerReadiness> {
@@ -105,29 +88,54 @@ export function fetchPartnerDocuments(partnerId: string): Promise<{ documents: D
   return request(`/dsh/operator/partners/${partnerId}/documents`);
 }
 
-export function addPartnerDocument(partnerId: string, input: DshAddDocumentInput): Promise<DshPartnerDocument> {
-  return request(`/dsh/operator/partners/${partnerId}/documents`, { method: "POST", body: input });
+export function addPartnerDocument(
+  partnerId: string,
+  input: DshAddDocumentInput,
+  mutation?: PartnerMutationContext,
+): Promise<DshPartnerDocument> {
+  return request(`/dsh/operator/partners/${partnerId}/documents`, { method: "POST", body: input, mutation });
 }
 
-export function reviewPartnerDocument(partnerId: string, docId: string, input: DshReviewDocumentInput): Promise<{ document: DshPartnerDocument; review: unknown }> {
-  return request(`/dsh/operator/partners/${partnerId}/documents/${docId}/review`, { method: "PATCH", body: input });
+export function reviewPartnerDocument(
+  partnerId: string,
+  docId: string,
+  input: DshReviewDocumentInput,
+  mutation?: PartnerMutationContext,
+): Promise<{ document: DshPartnerDocument; review: unknown }> {
+  return request(`/dsh/operator/partners/${partnerId}/documents/${docId}/review`, {
+    method: "PATCH",
+    body: input,
+    mutation,
+  });
 }
 
 export function fetchPartnerStores(partnerId: string): Promise<{ stores: DshPartnerLinkedStore[]; total: number }> {
   return request(`/dsh/operator/partners/${partnerId}/stores`);
 }
 
-export function linkPartnerStore(partnerId: string, storeId: string): Promise<{ stores: DshPartnerLinkedStore[]; total: number }> {
-  return request(`/dsh/operator/partners/${partnerId}/stores`, { method: "POST", body: { storeId } });
+export function linkPartnerStore(
+  partnerId: string,
+  storeId: string,
+  mutation?: PartnerMutationContext,
+): Promise<{ stores: DshPartnerLinkedStore[]; total: number }> {
+  return request(`/dsh/operator/partners/${partnerId}/stores`, {
+    method: "POST",
+    body: { storeId },
+    mutation,
+  });
 }
 
 export function fetchPartnerAuditEvents(partnerId: string): Promise<{ events: DshPartnerAuditEvent[] }> {
   return request(`/dsh/operator/partners/${partnerId}/audit`);
 }
 
-// ── Partner self-view ─────────────────────────────────────────────────────────
+export function fetchPartnerFieldVisits(partnerId: string): Promise<{ visits: DshPartnerFieldVisit[] }> {
+  return request(`/dsh/operator/partners/${partnerId}/field-visits`);
+}
 
-export function fetchPartnerSelfStatus(): Promise<DshPartner> {
+// ── Partner self-view ───────────────────────────────────────────────────────
+
+export function fetchPartnerSelfStatus(): Promise<DshGovernedPartner> {
   return request("/dsh/partner/activation/status");
 }
 
@@ -143,20 +151,45 @@ export function fetchPartnerTeam(storeId: string): Promise<{ members: DshPartner
   return request(`/dsh/partner/stores/${storeId}/team`);
 }
 
-export function invitePartnerTeamMember(storeId: string, identity: string): Promise<{ success: boolean }> {
-  return request(`/dsh/partner/stores/${storeId}/team/invites`, { method: "POST", body: { identity } });
+export function invitePartnerTeamMember(
+  storeId: string,
+  identity: string,
+  mutation?: PartnerMutationContext,
+): Promise<{ success: boolean }> {
+  return request(`/dsh/partner/stores/${storeId}/team/invites`, {
+    method: "POST",
+    body: { identity },
+    mutation,
+  });
 }
 
-export function executePartnerTeamMemberAction(storeId: string, memberId: string, action: string): Promise<{ success: boolean }> {
-  return request(`/dsh/partner/stores/${storeId}/team/members/${memberId}/action`, { method: "POST", body: { action } });
+export function executePartnerTeamMemberAction(
+  storeId: string,
+  memberId: string,
+  action: string,
+  mutation?: PartnerMutationContext,
+): Promise<{ success: boolean }> {
+  return request(`/dsh/partner/stores/${storeId}/team/members/${memberId}/action`, {
+    method: "POST",
+    body: { action },
+    mutation,
+  });
 }
 
 export function fetchPartnerStoreCourierSettings(storeId: string): Promise<DshPartnerStoreCourierSettings> {
   return request(`/dsh/partner/stores/${storeId}/courier-settings`);
 }
 
-export function updatePartnerStoreCourierSettings(storeId: string, settings: DshPartnerStoreCourierSettings): Promise<DshPartnerStoreCourierSettings> {
-  return request(`/dsh/partner/stores/${storeId}/courier-settings`, { method: "PUT", body: settings });
+export function updatePartnerStoreCourierSettings(
+  storeId: string,
+  settings: DshPartnerStoreCourierSettings,
+  mutation?: PartnerMutationContext,
+): Promise<DshPartnerStoreCourierSettings> {
+  return request(`/dsh/partner/stores/${storeId}/courier-settings`, {
+    method: "PUT",
+    body: settings,
+    mutation,
+  });
 }
 
 export function fetchPartnerStoreCoverageZones(storeId: string): Promise<DshPartnerCoverageZone[]> {
@@ -167,11 +200,15 @@ export function fetchPartnerStoreSettings(storeId: string): Promise<unknown> {
   return request(`/dsh/partner/stores/${storeId}/settings`);
 }
 
-export function updatePartnerStoreSettings(storeId: string, settings: unknown): Promise<unknown> {
-  return request(`/dsh/partner/stores/${storeId}/settings`, { method: "PATCH", body: settings });
+export function updatePartnerStoreSettings(
+  storeId: string,
+  settings: unknown,
+  mutation?: PartnerMutationContext,
+): Promise<unknown> {
+  return request(`/dsh/partner/stores/${storeId}/settings`, { method: "PATCH", body: settings, mutation });
 }
 
-// ── Field intake ──────────────────────────────────────────────────────────────
+// ── Field intake ────────────────────────────────────────────────────────────
 
 export function fieldListDrafts(params: { status?: string; limit?: number; offset?: number } = {}): Promise<DshPartnerListResponse> {
   const q = new URLSearchParams();
@@ -182,38 +219,52 @@ export function fieldListDrafts(params: { status?: string; limit?: number; offse
   return request(`/dsh/field/partners${qs ? `?${qs}` : ""}`);
 }
 
-export function fieldCreateDraft(input: DshCreatePartnerInput): Promise<DshPartner> {
-  return request("/dsh/field/partners/drafts", { method: "POST", body: input });
+export function fieldCreateDraft(input: DshCreatePartnerInput, mutation?: PartnerMutationContext): Promise<DshPartner> {
+  return request("/dsh/field/partners/drafts", { method: "POST", body: input, mutation });
 }
 
-// ── Partner: analytics ────────────────────────────────────────────────────
-
-export function fetchPartnerPerformance(period: 'today' | 'week' | 'month' = 'today'): Promise<import('./partner.types').DshPartnerPerformanceResponse> {
-  return request(`/dsh/partner/analytics/performance?period=${period}`);
-}
-
-export function fieldUpdatePartner(partnerId: string, input: DshUpdatePartnerRequest, version: number): Promise<DshPartner> {
-  return request(`/dsh/field/partners/${partnerId}?version=${version}`, { method: "PATCH", body: input });
-}
-
-export function fieldGetPartner(partnerId: string): Promise<DshPartner> {
+export function fieldGetPartner(partnerId: string): Promise<DshGovernedPartner> {
   return request(`/dsh/field/partners/${partnerId}`);
 }
 
-export function fieldUploadDocument(partnerId: string, input: DshAddDocumentInput): Promise<DshPartnerDocument> {
-  return request(`/dsh/field/partners/${partnerId}/documents`, { method: "POST", body: input });
+export function fieldUpdatePartner(
+  partnerId: string,
+  input: DshUpdatePartnerRequest,
+  version: number,
+  mutation?: PartnerMutationContext,
+): Promise<DshGovernedPartner> {
+  return request(`/dsh/field/partners/${partnerId}`, {
+    method: "PATCH",
+    body: input,
+    mutation: { ...mutation, expectedVersion: version } as PartnerMutationContext,
+  });
 }
 
-export function fieldCreateVisit(partnerId: string, input: DshCreatePartnerFieldVisitRequest): Promise<DshPartnerFieldVisit> {
-  return request(`/dsh/field/partners/${partnerId}/visits`, { method: "POST", body: input });
+export function fieldUploadDocument(
+  partnerId: string,
+  input: DshAddDocumentInput,
+  mutation?: PartnerMutationContext,
+): Promise<DshPartnerDocument> {
+  return request(`/dsh/field/partners/${partnerId}/documents`, { method: "POST", body: input, mutation });
 }
 
-export function fieldSubmitPartner(partnerId: string): Promise<{ partner: DshPartner; event: DshPartnerAuditEvent }> {
-  return request(`/dsh/field/partners/${partnerId}/submit`, { method: "POST", body: { reason: "تأكيد من الميداني" } });
+export function fieldCreateVisit(
+  partnerId: string,
+  input: DshCreatePartnerFieldVisitRequest,
+  mutation?: PartnerMutationContext,
+): Promise<DshPartnerFieldVisit> {
+  return request(`/dsh/field/partners/${partnerId}/visits`, { method: "POST", body: input, mutation });
 }
 
-export function fetchPartnerFieldVisits(partnerId: string): Promise<{ visits: DshPartnerFieldVisit[] }> {
-  return request(`/dsh/operator/partners/${partnerId}/field-visits`);
+export function fieldSubmitPartner(
+  partnerId: string,
+  mutation?: PartnerMutationContext,
+): Promise<{ partner: DshGovernedPartner; event: DshPartnerAuditEvent }> {
+  return request(`/dsh/field/partners/${partnerId}/submit`, {
+    method: "POST",
+    body: { reason: "تأكيد من الميداني" },
+    mutation,
+  });
 }
 
 export function fieldGetReadiness(partnerId: string): Promise<DshPartnerReadiness> {
@@ -228,14 +279,20 @@ export function fieldListFieldVisits(partnerId: string): Promise<{ visits: DshPa
   return request(`/dsh/field/partners/${partnerId}/field-visits`);
 }
 
-// ── Field: first-store draft ────────────────────────────────────────────────
 export function fieldGetPartnerStore(partnerId: string): Promise<{ storeId: string; store: DshFieldPartnerStoreDraft }> {
   return request(`/dsh/field/partners/${partnerId}/store`);
 }
 
 export function fieldUpdatePartnerStore(
   partnerId: string,
-  input: DshFieldPartnerStoreDraftInput
+  input: DshFieldPartnerStoreDraftInput,
+  mutation?: PartnerMutationContext,
 ): Promise<{ storeId: string; store: DshFieldPartnerStoreDraft; audit: unknown }> {
-  return request(`/dsh/field/partners/${partnerId}/store`, { method: "PATCH", body: input });
+  return request(`/dsh/field/partners/${partnerId}/store`, { method: "PATCH", body: input, mutation });
+}
+
+// ── Partner analytics (outside JRN-001 mutation scope) ─────────────────────
+
+export function fetchPartnerPerformance(period: "today" | "week" | "month" = "today"): Promise<import("./partner.types").DshPartnerPerformanceResponse> {
+  return request(`/dsh/partner/analytics/performance?period=${period}`);
 }
