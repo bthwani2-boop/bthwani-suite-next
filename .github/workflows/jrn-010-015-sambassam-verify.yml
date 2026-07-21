@@ -22,13 +22,16 @@ concurrency:
 jobs:
   affected-typecheck:
     runs-on: ubuntu-latest
-    container: node:24.17.0-bookworm
     timeout-minutes: 20
     steps:
       - name: Checkout pinned source
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false
+      - name: Setup locked Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24.17.0
       - name: Activate locked pnpm
         run: |
           corepack enable
