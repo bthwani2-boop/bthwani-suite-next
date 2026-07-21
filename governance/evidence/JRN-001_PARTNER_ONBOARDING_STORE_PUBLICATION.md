@@ -1,35 +1,36 @@
 # JRN-001 — Partner onboarding and store publication evidence
 
 - Branch: `sambassam`
-- Latest successful same-commit proof: `cf5a0dbd08a3cb322d0ad3ad69895cb9b16624b3`
-- FS-12 workflow run: `29850740692`
-- FS-17/FS-18 workflow run: `29850741316`
-- Tracking status: `READY_FOR_REVIEW`
-- Decision: `READY_FOR_REVIEW`
+- Successful sequential implementation proof: `8afac87a1137e0bfeb7d0b6aa23bce52dc8bfc16`
+- Sequential workflow run: `29854498267`
+- Technical slices closed: `18/18`
+- Implementation decision: `PASS`
+- Journey tracking status: `READY_FOR_REVIEW`
+- Journey decision: `READY_FOR_REVIEW`
 - Closure claim: `CLOSED_WITH_EVIDENCE` is not claimed.
 
-## Scope completed
+## Technical scope closed
 
-The eighteen mandatory full-stack slices were executed in sequence: Product Truth; RBAC and surface scope; state policy; DSH/WLT ownership; database integrity; OpenAPI contracts; governed backend routes and logic; durable outbox and reconciliation; Shared Brain; required surfaces and navigation; visible runtime states and recovery; cross-surface read-after-write; security/privacy/audit; Arabic/RTL/accessibility/weak-network quality; SLOs, alerts and support runbook; cleanup and canonical ownership; comprehensive verification; and evidence/rollback/open-gap registration.
+FS-01 through FS-18 passed one by one on the same immutable implementation commit. The successful aggregate context is `journeys/jrn-001/all-slices-sequential`.
 
-The functional journey includes field creation of an owned partner draft, legal identity and contact details, first-store profile and service area, governed media and documents, field visits and readiness evidence, operator document review, partner/store state transitions, store and scope binding, partner team invitations and membership operations, publication/hide/suspend/reactivate controls, audit history, and partner self-readback.
+The closed technical slices are: Product Truth; RBAC and surface scope; lifecycle state policy; DSH/WLT ownership; database integrity and audit retention; canonical OpenAPI and operation contracts; governed backend routes and logic; durable outbox and reconciliation; Shared Brain; required surfaces and deep navigation; visible states and recovery; cross-surface committed read-after-write truth; security, privacy and negative paths; Arabic, RTL, accessibility and weak-network quality contracts; SLOs, diagnostics and support; cleanup and canonical ownership; comprehensive verification; and evidence, rollback and open-gap registration.
 
-The closure repair also bound field activation to the governed `field` actor type, removed the runtime developer bypass and hardcoded credentials, added a regression test prohibiting their return, aligned the shared `TextField` contract with the six-digit activation constraint, and replaced stale workflow references with the canonical onboarding contract.
+The functional journey covers field creation and resumption of an owned partner draft, legal identity and contacts, first-store profile and service area, governed media and documents, field visits and readiness evidence, operator document review, partner and store state transitions, store ownership and scope binding, partner team operations, publication and visibility controls, immutable audit history, partner self-readback, and client discovery only after publication gates pass.
 
-## Verification
+## Corrections completed
 
-The canonical JRN-001 DSH contract is `services/dsh/contracts/dsh.partner-onboarding.openapi.yaml`. The verification workflows cover JRN-001 registries, Node tests and guards, Go partner and partner-WLT outbox packages, governed route registration, scoped TypeScript consumers for `app-field`, `app-partner`, and `control-panel`, the WLT financial-boundary guard, and repository hygiene.
+The closure work bound field activation to the governed `field` actor type, removed the runtime developer bypass and hardcoded credentials, added regression protection against their return, aligned the shared `TextField` contract with the six-digit activation constraint, added explicit Product Truth and database-integrity tests, created a sequential non-short-circuit verifier for all eighteen slices, replaced stale workflow references with the canonical onboarding contract, replaced the stale constant serviceability marker with verification of live active coverage-zone truth, and bound FS-18 to a real evidence and rollback test.
 
-The authoritative same-commit proof on `cf5a0dbd08a3cb322d0ad3ad69895cb9b16624b3` is:
+## Same-commit verification
 
-- `journeys/jrn-001/fs-12-cross-surface-truth` — success, run `29850740692`
-- `journeys/jrn-001/fs-17-comprehensive` — success, run `29850741316`
-- `journeys/jrn-001/fs-18-evidence` — success, run `29850741316`
+The canonical DSH contract is `services/dsh/contracts/dsh.partner-onboarding.openapi.yaml`. Run `29854498267` on commit `8afac87a1137e0bfeb7d0b6aa23bce52dc8bfc16` reported success for every independent context from `journeys/jrn-001/fs-01-product-truth` through `journeys/jrn-001/fs-18-evidence`, plus `journeys/jrn-001/all-slices-sequential`.
+
+The verification covers repository hygiene, Product Truth schema and ownership, database migrations, Node tests and guards, DSH partner/store/HTTP Go packages, Identity Go packages, WLT outbox and financial boundary, TypeScript consumers for `app-client`, `app-field`, `app-partner`, and `control-panel`, navigation and visible states, committed readback, security negative paths, experience-quality contracts, observability, cleanup, and evidence integrity.
 
 ## Rollback
 
-Use `governance/runbooks/JRN-001_PARTNER_ONBOARDING_SUPPORT.md`. Prefer disabling the affected mutation or publication transition while preserving reads, activation events, document reviews, visits, audit records, outbox rows and reconciliation cases. Never compensate a WLT-owned financial mutation by writing a financial ledger entry in DSH.
+Use `governance/runbooks/JRN-001_PARTNER_ONBOARDING_SUPPORT.md`. Disable the affected mutation or publication transition while preserving reads, activation events, document reviews, visits, audit records, outbox rows and reconciliation cases. Never compensate a WLT-owned financial mutation by writing a financial ledger entry in DSH.
 
-## Remaining evidence and approvals
+## External evidence and approvals still required
 
-The code and targeted verification are ready for independent review. Product acceptance, independent QA, independent Security, independent Release approval, device-level visual and weak-network runtime evidence, and production rollout/observation evidence remain pending. Therefore the journey is not marked `CLOSED_WITH_EVIDENCE`.
+All repository-internal technical slices are `PASS`. Product acceptance, independent QA, independent Security, independent Release approval, device-level visual and weak-network runtime evidence, and production rollout/observation evidence remain pending. Those scopes are owned by independent authorities and environments and cannot be fabricated by repository execution. Therefore the journey remains `READY_FOR_REVIEW` and is not marked `CLOSED_WITH_EVIDENCE`.
