@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "journeyId": "JRN-001",
+  "sliceId": "FS-11",
+  "authority": "governance/product/contracts/jrn-001-partner-onboarding-store-publication.product-truth.json",
+  "sharedStateOwner": "services/dsh/frontend/shared/partner/partner-onboarding.visible-state.ts",
+  "states": {
+    "loading": { "blocksMutation": true, "recovery": "none" },
+    "empty": { "blocksMutation": false, "recovery": "create-owned-draft" },
+    "offline": { "blocksMutation": true, "recovery": "retry-same-attempt" },
+    "forbidden": { "blocksMutation": true, "recovery": "verify-actor-and-scope" },
+    "conflict": { "blocksMutation": true, "recovery": "reload-committed-state" },
+    "readiness_blocked": { "blocksMutation": true, "recovery": "complete-requirements" },
+    "wlt_unavailable": { "blocksMutation": true, "recovery": "retry-same-idempotency-key" },
+    "partial": { "blocksMutation": true, "recovery": "refresh-dependent-projection" },
+    "error": { "blocksMutation": true, "recovery": "retry-or-escalate-with-correlation" },
+    "ready": { "blocksMutation": false, "recovery": "none" }
+  },
+  "surfaceRequirements": [
+    { "surfaceId": "app-field", "required": ["loading", "offline", "forbidden", "conflict", "readiness_blocked", "wlt_unavailable", "error", "ready"] },
+    { "surfaceId": "app-partner", "required": ["loading", "partial", "forbidden", "error", "ready"] },
+    { "surfaceId": "control-panel", "required": ["loading", "empty", "forbidden", "conflict", "readiness_blocked", "partial", "error", "ready"] },
+    { "surfaceId": "app-client", "required": ["loading", "empty", "offline", "error", "ready"] }
+  ],
+  "invariants": [
+    "No surface may report mutation success before committed readback.",
+    "Offline state may retain user input but may not present it as server truth.",
+    "Conflict recovery must reload before another mutation.",
+    "WLT outage must not cause raw payout data to be persisted in DSH."
+  ]
+}
