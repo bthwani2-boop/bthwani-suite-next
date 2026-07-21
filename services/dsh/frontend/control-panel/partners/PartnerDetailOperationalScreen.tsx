@@ -87,6 +87,7 @@ export function PartnerDetailOperationalScreen({ partnerId, onBack }: PartnerDet
     readonly decision: DocumentDecision;
   } | null>(null);
   const [documentReason, setDocumentReason] = useState("");
+  const [storeIdToLink, setStoreIdToLink] = useState("");
 
   if (detail.detailState.kind === "idle" || detail.detailState.kind === "loading") {
     return <DetailPageFrame stateView={<CpStatePanel role="status" title="جاري تحميل بيانات الشريك…" />}>{null}</DetailPageFrame>;
@@ -135,6 +136,13 @@ export function PartnerDetailOperationalScreen({ partnerId, onBack }: PartnerDet
       setDocumentDecision(null);
       setDocumentReason("");
     }
+  };
+
+  const confirmStoreLink = async () => {
+    const storeId = storeIdToLink.trim();
+    if (!storeId) return;
+    const succeeded = await stores.linkStore(storeId);
+    if (succeeded) setStoreIdToLink("");
   };
 
   return (
@@ -268,14 +276,34 @@ export function PartnerDetailOperationalScreen({ partnerId, onBack }: PartnerDet
         ) : null}
 
         {tab === "stores" ? (
-          stores.state.kind === "loading" || stores.state.kind === "idle" ? <CpStatePanel role="status" title="جاري تحميل المتاجر…" />
-            : stores.state.kind === "empty" ? <CpStatePanel role="status" title="لا توجد متاجر مرتبطة بهذا الشريك بعد." />
-              : stores.state.kind === "error" ? <CpStatePanel role="alert" title="تعذر تحميل المتاجر" code={stores.state.message}><CpRetryButton onClick={() => void stores.reload()}>إعادة المحاولة</CpRetryButton></CpStatePanel>
-                : (
-                  <CpTable aria-label="متاجر الشريك"><thead><tr><CpTableHeaderCell>المتجر</CpTableHeaderCell><CpTableHeaderCell>المدينة</CpTableHeaderCell><CpTableHeaderCell>الحالة</CpTableHeaderCell><CpTableHeaderCell>ظهور العميل</CpTableHeaderCell></tr></thead><tbody>
-                    {stores.state.stores.map((store) => <tr key={store.id}><CpTableCell>{store.displayName}</CpTableCell><CpTableCell>{store.cityCode}</CpTableCell><CpTableCell>{store.status}</CpTableCell><CpTableCell>{store.isVisible ? "ظاهر" : "مخفي"}</CpTableCell></tr>)}
-                  </tbody></CpTable>
-                )
+          <div style={{ display: "grid", gap: 12 }}>
+            <section style={{ display: "grid", gap: 8, border: `1px solid ${neutralScale[200]}`, borderRadius: 12, padding: 16 }}>
+              <h3 style={{ margin: 0, fontSize: 14 }}>ربط متجر غير مملوك</h3>
+              <CpTextInput
+                value={storeIdToLink}
+                onChange={setStoreIdToLink}
+                placeholder="معرف المتجر"
+                aria-label="معرف المتجر المراد ربطه"
+              />
+              <CpButton
+                disabled={!storeIdToLink.trim() || stores.actionState.kind === "loading"}
+                onClick={() => void confirmStoreLink()}
+              >
+                {stores.actionState.kind === "loading" ? "جارٍ الربط…" : "ربط المتجر بالشريك"}
+              </CpButton>
+              {stores.actionState.kind === "error" ? (
+                <p role="alert" style={{ color: statusScale.danger, margin: 0 }}>{stores.actionState.message}</p>
+              ) : null}
+            </section>
+            {stores.state.kind === "loading" || stores.state.kind === "idle" ? <CpStatePanel role="status" title="جاري تحميل المتاجر…" />
+              : stores.state.kind === "empty" ? <CpStatePanel role="status" title="لا توجد متاجر مرتبطة بهذا الشريك بعد." />
+                : stores.state.kind === "error" ? <CpStatePanel role="alert" title="تعذر تحميل المتاجر" code={stores.state.message}><CpRetryButton onClick={() => void stores.reload()}>إعادة المحاولة</CpRetryButton></CpStatePanel>
+                  : (
+                    <CpTable aria-label="متاجر الشريك"><thead><tr><CpTableHeaderCell>المتجر</CpTableHeaderCell><CpTableHeaderCell>المدينة</CpTableHeaderCell><CpTableHeaderCell>الحالة</CpTableHeaderCell><CpTableHeaderCell>ظهور العميل</CpTableHeaderCell></tr></thead><tbody>
+                      {stores.state.stores.map((store) => <tr key={store.id}><CpTableCell>{store.displayName}</CpTableCell><CpTableCell>{store.cityCode}</CpTableCell><CpTableCell>{store.status}</CpTableCell><CpTableCell>{store.isVisible ? "ظاهر" : "مخفي"}</CpTableCell></tr>)}
+                    </tbody></CpTable>
+                  )}
+          </div>
         ) : null}
 
         {tab === "readiness" ? (
