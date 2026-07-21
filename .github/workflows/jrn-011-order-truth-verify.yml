@@ -80,6 +80,7 @@ jobs:
             services/dsh/backend/internal/orders/order_truth_queries.go
             services/dsh/backend/internal/orders/order_truth_test.go
             services/dsh/backend/internal/orders/order_truth_db_test.go
+            services/dsh/backend/internal/orders/order_truth_payment_projection_db_test.go
           )
           gofmt -w "${files[@]}"
           git diff -- "${files[@]}" > jrn011-gofmt.patch
@@ -92,6 +93,7 @@ jobs:
             services/dsh/backend/internal/http/order_truth.go
             services/dsh/backend/internal/orders/order_truth_queries.go
             services/dsh/backend/internal/orders/order_truth_db_test.go
+            services/dsh/backend/internal/orders/order_truth_payment_projection_db_test.go
           retention-days: 3
           if-no-files-found: error
       - name: Reject formatting drift
@@ -101,7 +103,7 @@ jobs:
         run: go test ./internal/orders ./internal/http ./internal/wlt -count=1
 
   database-invariants:
-    name: FS-05/08/13 PostgreSQL lifecycle
+    name: FS-04/05/08/13 PostgreSQL lifecycle
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -145,12 +147,14 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f services/dsh/database/tests/dsh-902_903_jrn011_order_truth_invariants.sql
       - name: Verify read-only WLT projection SQL invariants
         run: psql -v ON_ERROR_STOP=1 -f services/dsh/database/tests/dsh-905_jrn011_payment_projection_invariants.sql
-      - name: Execute live create, replay, conflict, isolation, redaction and immutability proof
+      - name: Execute live create, replay, bridge, isolation, projection and immutability proofs
         working-directory: services/dsh/backend
         shell: bash
         run: |
           set -o pipefail
-          go test ./internal/orders -run '^TestCreateOrderTruthLifecycleDBIntegration$' -count=1 -v 2>&1 | tee ../../../jrn011-db-lifecycle.log
+          go test ./internal/orders \
+            -run '^(TestCreateOrderTruthLifecycleDBIntegration|TestJRN011PaymentProjectionDBIntegration)$' \
+            -count=1 -v 2>&1 | tee ../../../jrn011-db-lifecycle.log
       - name: Preserve database lifecycle failure evidence
         if: failure()
         uses: actions/upload-artifact@v4
