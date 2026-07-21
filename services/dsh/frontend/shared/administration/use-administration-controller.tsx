@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   fetchRoles,
+  requestRoleDefinition,
+  fetchRoleDefinitionRequests,
+  reviewRoleDefinitionRequest,
   fetchStaff,
   requestStaffRoleAssignment,
   fetchPartnerActivations,
@@ -18,6 +21,8 @@ import type {
   DshAdminState,
   DshRoleAssignmentApproval,
   DshRoleAssignmentApprovalStatus,
+  DshRoleDefinitionRequest,
+  DshAdministrationApprovalStatus,
 } from "./administration.types";
 
 function useReadModel<T>(authKind: string, loader: () => Promise<T>) {
@@ -50,6 +55,40 @@ export function useAdministrationRolesController(authKind: string) {
   return useReadModel(authKind, loader);
 }
 
+export function useRoleDefinitionApprovalController(
+  authKind: string,
+  status: DshAdministrationApprovalStatus | "" = "pending",
+) {
+  const loader = useCallback(
+    async (): Promise<DshRoleDefinitionRequest[]> => (await fetchRoleDefinitionRequests(status)).requests,
+    [status],
+  );
+  const { state, reload } = useReadModel(authKind, loader);
+
+  const request = useCallback(async (input: {
+    name: string;
+    description: string;
+    permissions: readonly string[];
+    reason: string;
+  }) => {
+    const response = await requestRoleDefinition(input);
+    await reload();
+    return response.request;
+  }, [reload]);
+
+  const review = useCallback(async (
+    requestId: string,
+    decision: "approved" | "rejected",
+    expectedVersion: number,
+    reviewNote: string,
+  ) => {
+    await reviewRoleDefinitionRequest(requestId, { decision, expectedVersion, reviewNote });
+    await reload();
+  }, [reload]);
+
+  return { state, reload, request, review };
+}
+
 export function useStaffController(authKind: string) {
   const loader = useCallback(async (): Promise<DshStaffMember[]> => (await fetchStaff()).staff, []);
   const readModel = useReadModel(authKind, loader);
@@ -70,7 +109,7 @@ export function useRoleAssignmentApprovalController(
     async (): Promise<DshRoleAssignmentApproval[]> => (await fetchRoleAssignmentApprovals(status)).approvals,
     [status],
   );
-  const readModel = useReadModel(authKind, loader);
+  const { state, reload } = useReadModel(authKind, loader);
 
   const review = useCallback(async (
     approvalId: string,
@@ -79,10 +118,10 @@ export function useRoleAssignmentApprovalController(
     reviewNote: string,
   ) => {
     await reviewRoleAssignmentApproval(approvalId, { decision, expectedVersion, reviewNote });
-    await readModel.reload();
-  }, [readModel]);
+    await reload();
+  }, [reload]);
 
-  return { ...readModel, review };
+  return { state, reload, review };
 }
 
 export function usePartnerActivationReadController(authKind: string) {
