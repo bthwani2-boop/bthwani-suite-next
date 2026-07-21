@@ -1,0 +1,114 @@
+name: JRN-011 Order Truth Verification
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - sambassam
+    paths:
+      - ".github/workflows/jrn-011-order-truth-verify.yml"
+      - "governance/product/contracts/jrn-011-order-creation-truth.product-truth.json"
+      - "services/dsh/backend/internal/http/order_truth*.go"
+      - "services/dsh/backend/internal/orders/order_truth*.go"
+      - "services/dsh/backend/internal/wlt/**"
+      - "services/dsh/contracts/dsh.order-truth.openapi.yaml"
+      - "services/dsh/contracts/jrn-011-*.json"
+      - "services/dsh/database/migrations/dsh-90[2-5]_*.sql"
+      - "services/dsh/database/tests/dsh-90[2-5]_*.sql"
+      - "services/dsh/frontend/shared/order-truth/**"
+      - "services/dsh/frontend/shared/checkout/use-checkout-to-order-flow.tsx"
+      - "services/dsh/frontend/app-partner/orders/OperationalOrdersInboxScreen.tsx"
+      - "services/dsh/frontend/control-panel/operations/OrderJourneyLiveOrdersScreen.tsx"
+      - "services/dsh/tests/jrn-011-order-*.test.mjs"
+      - "tools/guards/jrn-011-cross-surface-integrity-gate.mjs"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jrn-011-order-truth-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static-integrity:
+    name: Static order-truth integrity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+      - name: Cross-surface binding gate
+        run: node tools/guards/jrn-011-cross-surface-integrity-gate.mjs
+      - name: Focused JRN-011 tests
+        run: node --test services/dsh/tests/jrn-011-order-*.test.mjs
+
+  go-contracts:
+    name: Go order and WLT projection tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: services/dsh/backend/go.sum
+      - name: Verify order truth and WLT read boundary
+        working-directory: services/dsh/backend
+        run: go test ./internal/orders ./internal/http ./internal/wlt -count=1
+
+  database-invariants:
+    name: PostgreSQL order-truth invariants
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: jrn011
+          POSTGRES_PASSWORD: jrn011
+          POSTGRES_DB: jrn011
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U jrn011 -d jrn011"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: jrn011
+      PGPASSWORD: jrn011
+      PGDATABASE: jrn011
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Apply DSH migrations in lexical order
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r migration; do
+            echo "Applying ${migration}"
+            psql -v ON_ERROR_STOP=1 -f "${migration}"
+          done < <(find services/dsh/database/migrations -maxdepth 1 -type f -name '*.sql' | sort)
+      - name: Verify immutable order and outbox invariants
+        run: psql -v ON_ERROR_STOP=1 -f services/dsh/database/tests/dsh-902_903_jrn011_order_truth_invariants.sql
+      - name: Verify read-only WLT projection invariants
+        run: psql -v ON_ERROR_STOP=1 -f services/dsh/database/tests/dsh-905_jrn011_payment_projection_invariants.sql
+
+  typescript-binding:
+    name: DSH TypeScript binding
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: pnpm
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck DSH shared brain and surfaces
+        run: pnpm --dir services/dsh typecheck
