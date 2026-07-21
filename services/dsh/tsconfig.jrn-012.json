@@ -1,0 +1,27 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "incremental": false
+  },
+  "include": [
+    "frontend/**/*.d.ts",
+    "frontend/shared/orders/orders.types.ts",
+    "frontend/shared/orders/orders.api.ts",
+    "frontend/shared/orders/use-client-order-journey-controller.ts",
+    "frontend/shared/partner/partner.adapters.ts",
+    "frontend/shared/dispatch/dispatch.controller-core.ts",
+    "frontend/app-partner/orders/PreparationEstimateRevisionPanel.tsx",
+    "frontend/app-partner/orders/PreparationIssuesPanel.tsx",
+    "frontend/app-partner/orders/GovernedPartnerOrdersScreen.tsx",
+    "frontend/app-partner/orders/OperationalOrdersInboxScreen.tsx",
+    "frontend/control-panel/operations/OrderJourneyLiveOrdersScreen.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
+}
