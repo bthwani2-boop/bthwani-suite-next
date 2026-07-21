@@ -15,8 +15,8 @@ import {
   assignOrderToCaptain,
   dispatchAssignmentErrorMessage,
 } from '../../shared/operations/dispatch-assignment.api';
-import { listCaptains } from '../../shared/workforce/workforce.api';
-import type { Captain } from '../../shared/workforce/workforce.types';
+import { listCaptains } from '../../shared/workforce';
+import type { Captain } from '../../shared/workforce';
 import type { OperatorOrderWorkboardRow } from '../../shared/operations/order-workboard.api';
 
 export type OrderJourneyDispatchAssignmentScreenProps = {

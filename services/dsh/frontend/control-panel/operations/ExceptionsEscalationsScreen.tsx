@@ -24,8 +24,8 @@ import {
   fetchOrderCancellation,
   type DshOrderCancellation,
 } from '../../shared/orders';
-import { listCaptains } from '../../shared/workforce/workforce.api';
-import type { Captain } from '../../shared/workforce/workforce.types';
+import { listCaptains } from '../../shared/workforce';
+import type { Captain } from '../../shared/workforce';
 import { buildOperationsHref } from './operations.registry';
 
 export type ExceptionsEscalationsScreenProps = { readonly hubHref: string; readonly subGroup?: string };

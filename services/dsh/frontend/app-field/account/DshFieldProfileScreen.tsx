@@ -4,7 +4,7 @@ import React from 'react';
 import { View, ScrollView } from 'react-native';
 import { Button, StateView, Text, Header, spacing, colorRoles } from '@bthwani/ui-kit';
 import { useWorkforceProfile } from '../../shared/workforce/use-workforce-profile';
-import { ENGAGEMENT_STATUS_LABEL_AR } from '../../shared/workforce/workforce.types';
+import { ENGAGEMENT_STATUS_LABEL_AR } from '../../shared/workforce';
 
 type DshFieldProfileScreenProps = {
   readonly onBack: () => void;

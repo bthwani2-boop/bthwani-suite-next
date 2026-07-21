@@ -13,7 +13,7 @@ import {
   Icon,
 } from '@bthwani/ui-kit';
 import { useWorkforceProfile } from '../../shared/workforce/use-workforce-profile';
-import { ENGAGEMENT_STATUS_LABEL_AR } from '../../shared/workforce/workforce.types';
+import { ENGAGEMENT_STATUS_LABEL_AR } from '../../shared/workforce';
 
 type DshFieldProfileHomeScreenProps = {
   readonly onBack: () => void;
