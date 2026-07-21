@@ -103,11 +103,17 @@ export function classifyAdminError(error: unknown): HomeDiscoveryAdminState {
   };
 }
 
+function isVersionConflict(error: Extract<DshHomeDiscoveryAdminClientError, { kind: "http" }>): boolean {
+  const message = error.message?.toLowerCase() ?? "";
+  const code = error.code?.toLowerCase() ?? "";
+  return error.status === 409 || message.includes("version conflict") || code.includes("version_conflict");
+}
+
 export function describeAdminMutationError(error: unknown): string {
   const typed = error as DshHomeDiscoveryAdminClientError;
   if (typed?.kind === "http") {
     if (typed.status === 401 || typed.status === 403) return "لا تملك صلاحية إدارة هذا المحتوى.";
-    if (typed.status === 409) return "تم تعديل العنصر من مستخدم آخر. حدّث القائمة ثم أعد المحاولة.";
+    if (isVersionConflict(typed)) return "تم تعديل العنصر من مستخدم آخر. حدّث القائمة ثم أعد المحاولة.";
     return typed.message ?? typed.code ?? "تعذر حفظ التغيير.";
   }
   if (typed?.kind === "network") return "تعذر الاتصال بخدمة إدارة المحتوى.";
