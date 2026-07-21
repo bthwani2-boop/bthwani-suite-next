@@ -375,12 +375,38 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
     );
   }
 
+  if (selfStatusState.kind === "not_found") {
+    return (
+      <StateView
+        tone="warning"
+        title="ملف الشريك غير موجود"
+        description="الجلسة الحالية غير مرتبطة بملف شريك صالح في DSH."
+        actionLabel="إعادة التحقق"
+        onActionPress={reloadSelfStatus}
+      />
+    );
+  }
+
+  if (selfStatusState.kind === "forbidden") {
+    return (
+      <StateView
+        tone="danger"
+        title="غير مصرح بعرض ملف الشريك"
+        description="تحقق من هوية الشريك ونطاق المتجر المرتبط بهذه الجلسة."
+        actionLabel="إعادة التحقق"
+        onActionPress={reloadSelfStatus}
+      />
+    );
+  }
+
   if (selfStatusState.kind !== "success") {
     return (
       <StateView
         tone="danger"
         title="حالة شريك غير قابلة للعرض"
-        description="لم يعد DSH حالة نجاح أو خطأ صريحة."
+        description="لم يعد DSH حالة صريحة قابلة للعرض."
+        actionLabel="إعادة التحقق"
+        onActionPress={reloadSelfStatus}
       />
     );
   }

@@ -8,7 +8,9 @@
     ".github/workflows/jrn-001-fs-10-store-link-repair.yml",
     ".github/workflows/jrn-001-fs-11-field-controller-repair.yml",
     ".github/workflows/jrn-001-fs-11-field-visible-state-repair.yml",
-    ".github/workflows/jrn-001-fs-11-partner-visible-state-repair.yml"
+    ".github/workflows/jrn-001-fs-11-partner-visible-state-repair.yml",
+    ".github/workflows/jrn-001-fs-11-partner-hub-repair.yml",
+    ".github/workflows/tmp-jrn-001-partnerhub-patch.yml"
   ],
   "canonicalFiles": {
     "routes": "services/dsh/backend/internal/http/partner_lifecycle_routes.go",
