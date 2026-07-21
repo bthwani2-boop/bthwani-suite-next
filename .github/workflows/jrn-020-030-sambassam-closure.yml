@@ -41,6 +41,7 @@ on:
       - "services/wlt/contracts/wlt.promotion-funding.openapi.yaml"
       - "tools/guards/**"
       - "governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md"
+      - "governance/evidence/JRN-020-030_FULLSTACK_CLOSURE.json"
       - ".github/actions/setup-node-workspace/action.yml"
       - ".github/workflows/jrn-020-030-sambassam-closure.yml"
 
@@ -197,10 +198,91 @@ jobs:
           ./internal/http
           -count=1
 
+  database-integration:
+    name: PostgreSQL migrations and SQL invariants
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: dsh_runtime
+          POSTGRES_PASSWORD: dsh_runtime_password
+          POSTGRES_DB: dsh_runtime
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U dsh_runtime -d dsh_runtime"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      PGPASSWORD: dsh_runtime_password
+      DATABASE_URL: postgres://dsh_runtime:dsh_runtime_password@localhost:5432/dsh_runtime?sslmode=disable
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Prepare database diagnostics
+        run: mkdir -p journey-diagnostics
+      - name: Apply governed DSH migrations in lexical order
+        id: migrations
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          {
+            count=0
+            while IFS= read -r file; do
+              echo "==> $file"
+              psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f "$file"
+              count=$((count + 1))
+            done < <(find services/dsh/database/migrations -maxdepth 1 -type f -name '*.sql' | sort)
+            test "$count" -gt 0
+            echo "applied_migrations=$count"
+          } 2>&1 | tee journey-diagnostics/migrations.log
+      - name: Run DSH SQL invariant suites
+        id: sqltests
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          {
+            count=0
+            while IFS= read -r file; do
+              echo "==> $file"
+              psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f "$file"
+              count=$((count + 1))
+            done < <(find services/dsh/database/tests -maxdepth 1 -type f -name '*.sql' | sort)
+            test "$count" -gt 0
+            echo "executed_sql_tests=$count"
+          } 2>&1 | tee journey-diagnostics/sql-tests.log
+      - name: Record database outcomes
+        if: always()
+        env:
+          MIGRATIONS: ${{ steps.migrations.outcome }}
+          SQL_TESTS: ${{ steps.sqltests.outcome }}
+        run: printf 'migrations=%s\nsql_tests=%s\n' "$MIGRATIONS" "$SQL_TESTS" | tee journey-diagnostics/outcomes.txt
+      - name: Upload database diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: jrn-020-030-database-diagnostics
+          path: journey-diagnostics
+          if-no-files-found: error
+          retention-days: 7
+      - name: Enforce database outcomes
+        if: always()
+        env:
+          MIGRATIONS: ${{ steps.migrations.outcome }}
+          SQL_TESTS: ${{ steps.sqltests.outcome }}
+        run: test "$MIGRATIONS" = success && test "$SQL_TESTS" = success
+
   publish-result:
     name: Publish same-commit JRN-020..030 closure status
     if: always()
-    needs: [static-integrity, dsh-typecheck, go-integration]
+    needs: [static-integrity, dsh-typecheck, go-integration, database-integration]
     runs-on: ubuntu-latest
     steps:
       - name: Publish aggregate status
@@ -210,12 +292,13 @@ jobs:
           STATIC_RESULT: ${{ needs.static-integrity.result }}
           TYPECHECK_RESULT: ${{ needs.dsh-typecheck.result }}
           GO_RESULT: ${{ needs.go-integration.result }}
+          DATABASE_RESULT: ${{ needs.database-integration.result }}
           TARGET_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         shell: bash
         run: |
           STATE=failure
           DESCRIPTION="JRN-020..030 fullstack closure failed"
-          if [ "$STATIC_RESULT" = success ] && [ "$TYPECHECK_RESULT" = success ] && [ "$GO_RESULT" = success ]; then
+          if [ "$STATIC_RESULT" = success ] && [ "$TYPECHECK_RESULT" = success ] && [ "$GO_RESULT" = success ] && [ "$DATABASE_RESULT" = success ]; then
             STATE=success
             DESCRIPTION="JRN-020..030 fullstack closure passed"
           fi
