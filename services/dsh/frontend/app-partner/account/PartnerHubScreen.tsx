@@ -450,7 +450,7 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
   const isClientVisibleStage = isDshPartnerClientVisible(activationStatus);
   const isInternalActiveOnly =
     isDshPartnerActivationComplete(activationStatus) && !isClientVisibleStage;
-  const serviceabilityVerified = false;
+  const serviceabilityVerified = coverageZones.some((zone) => zone.status === "active");
   const storeVisibility = resolveDshStoreClientVisibility({
     activationStatus,
     catalogPublished: resolvedListingEnabled,
