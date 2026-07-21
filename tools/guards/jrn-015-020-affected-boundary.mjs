@@ -60,11 +60,39 @@ for (const file of sharedFiles) {
 }
 
 const routeRegistrar = read('services/dsh/backend/internal/http/server.go');
+const runtime = read('services/dsh/backend/cmd/dsh-api/main.go');
+const orderHandlers = read('services/dsh/backend/internal/http/orders.go');
+const cancellationHandlers = read('services/dsh/backend/internal/http/order_cancellations.go');
+
 if (!/POST \/dsh\/captain\/dispatch\/assignments\/\{assignmentId\}\/status", protected\.handleGovernedUpdateDeliveryStatus/.test(routeRegistrar)) {
   violations.push('services/dsh/backend/internal/http/server.go: captain status route does not use the governed store-captain custody handler');
 }
 if (/POST \/dsh\/captain\/dispatch\/assignments\/\{assignmentId\}\/status", protected\.handleUpdateDeliveryStatus/.test(routeRegistrar)) {
   violations.push('services/dsh/backend/internal/http/server.go: legacy ungoverned captain status handler is registered');
+}
+if (!/POST \/dsh\/captain\/dispatch\/assignments\/\{assignmentId\}\/pod", protected\.handleSubmitDispatchPoDWithMedia/.test(routeRegistrar)) {
+  violations.push('services/dsh/backend/internal/http/server.go: proof-of-delivery route does not use the governed media handler');
+}
+if (/POST \/dsh\/captain\/dispatch\/assignments\/\{assignmentId\}\/pod", protected\.handleSubmitDispatchPoD\b/.test(routeRegistrar)) {
+  violations.push('services/dsh/backend/internal/http/server.go: legacy proof-of-delivery handler is registered');
+}
+if (!/POST \/dsh\/captain\/dispatch\/assignments\/\{assignmentId\}\/location", protected\.handlePushDispatchLocationGoverned/.test(routeRegistrar)) {
+  violations.push('services/dsh/backend/internal/http/server.go: captain location route does not use the governed timestamp policy');
+}
+if (/POST \/dsh\/captain\/dispatch\/assignments\/\{assignmentId\}\/location", protected\.handlePushDispatchLocation\b/.test(routeRegistrar)) {
+  violations.push('services/dsh/backend/internal/http/server.go: legacy captain location handler is registered');
+}
+if (!/RegisterOrderCancellationRoutes\(router, db, identityClient, wltClient, mediaProvider\)/.test(runtime)) {
+  violations.push('services/dsh/backend/cmd/dsh-api/main.go: canonical JRN-019 cancellation routes are not registered');
+}
+if (!/func \(s \*protectedStoreServer\) handleOperatorCancelOrder[\s\S]*s\.handleOperatorCancelOrderGoverned\(w, r\)/.test(orderHandlers)) {
+  violations.push('services/dsh/backend/internal/http/orders.go: legacy operator cancellation route is not a canonical compatibility alias');
+}
+if (/CancelOrderByOperator\(/.test(orderHandlers)) {
+  violations.push('services/dsh/backend/internal/http/orders.go: parallel operator cancellation mutation remains reachable');
+}
+if (!/body\.ReasonCode = "operator_cancelled"/.test(cancellationHandlers) || !/body\.CommandID = operationalCorrelationID/.test(cancellationHandlers)) {
+  violations.push('services/dsh/backend/internal/http/order_cancellations.go: legacy cancellation payload is not normalized into a canonical idempotent command');
 }
 
 if (violations.length > 0) {
