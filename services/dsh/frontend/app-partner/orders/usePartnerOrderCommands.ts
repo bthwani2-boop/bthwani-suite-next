@@ -2,12 +2,13 @@ import React from 'react';
 import {
   acceptOrder,
   classifyOrderError,
+  confirmStoreCaptainHandoff,
   markOrderPreparing,
   markOrderReady,
 } from '../../shared/orders/orders.api';
 import type { DshPartnerOrderAction } from '../../shared/orders/orders.types';
 
-export type PartnerOrderMutationCommand = 'accept' | 'prepare' | 'ready';
+export type PartnerOrderMutationCommand = 'accept' | 'prepare' | 'ready' | 'handoff';
 
 export type PartnerOrderCommandState =
   | { readonly kind: 'idle' }
@@ -21,6 +22,7 @@ export function resolvePartnerOrderMutation(
 ): PartnerOrderMutationCommand | null {
   if (actionId === 'accept' && allowedActions.includes('accept')) return 'accept';
   if (actionId === 'ready' && allowedActions.includes('ready')) return 'ready';
+  if (actionId === 'handoff' && allowedActions.includes('handoff')) return 'handoff';
   if (actionId === 'prepare') {
     if (allowedActions.includes('prepare')) return 'prepare';
     if (allowedActions.includes('ready')) return 'ready';
@@ -50,7 +52,8 @@ export function usePartnerOrderCommands(refreshOrders: () => void | Promise<void
     try {
       if (command === 'accept') await acceptOrder(orderId);
       else if (command === 'prepare') await markOrderPreparing(orderId);
-      else await markOrderReady(orderId);
+      else if (command === 'ready') await markOrderReady(orderId);
+      else await confirmStoreCaptainHandoff(orderId);
 
       await refreshOrders();
       setState({ kind: 'success', command, orderId });
