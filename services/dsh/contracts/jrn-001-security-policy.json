@@ -1,0 +1,23 @@
+{
+  "journeyId": "JRN-001",
+  "classification": {
+    "legalIdentityNumber": "restricted_pii",
+    "primaryPhone": "restricted_pii",
+    "rawPayoutDestination": "wlt_only_secret",
+    "maskedPayoutReference": "dsh_operational_reference"
+  },
+  "requiredInvariants": [
+    "field actors may read and mutate only drafts they own",
+    "operator partner routes require protected permission handlers",
+    "raw account, IBAN and payout mobile values never reach DSH surfaces",
+    "mutations carry idempotency and correlation identifiers",
+    "actor and store scopes are derived from authenticated context",
+    "partner transitions and document decisions are audit recorded"
+  ],
+  "forbidden": [
+    "raw payout values in DSH logs",
+    "cross-actor field draft access",
+    "unprotected operator mutation routes",
+    "client-supplied actor or tenant authority"
+  ]
+}
