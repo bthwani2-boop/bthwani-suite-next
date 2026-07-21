@@ -53,4 +53,13 @@ assert.doesNotMatch(controller, /payoutMobileNumber: partner\.payoutMobileNumber
 assert.doesNotMatch(controller, /\bfetch\s*\(/);
 assert.doesNotMatch(controller, /from\s+["']axios["']|\baxios\s*\./);
 
-console.log("JRN-001 FS-09 shared brain, mutation identity, privacy, and readback verified");
+for (const temporaryWorkflow of [
+  ".github/workflows/jrn-001-fs-09-shared-brain-repair.yml",
+  ".github/workflows/jrn-001-fs-09-ts2379-repair.yml",
+  ".github/workflows/jrn-001-fs-09-controller-repair.yml",
+  ".github/workflows/jrn-001-fs-09-admin-version-repair.yml",
+]) {
+  assert.equal(fs.existsSync(temporaryWorkflow), false, `${temporaryWorkflow} must be removed before FS-09 closure`);
+}
+
+console.log("JRN-001 FS-09 shared brain, mutation identity, privacy, readback, and cleanup verified");
