@@ -37,24 +37,24 @@ func TestPartnerOrderAllowedActions(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := partnerOrderAllowedActions(
-				t.status,
-				t.mode,
-				t.handoffStatus,
-				t.openIssueCount,
-				t.resolvableIssueCount,
-				t.handoffException,
+				tt.status,
+				tt.mode,
+				tt.handoffStatus,
+				tt.openIssueCount,
+				tt.resolvableIssueCount,
+				tt.handoffException,
 			)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Fatalf(
 					"partnerOrderAllowedActions(%q,%q,%q,%d,%d,%t)=%v want %v",
-					t.status,
-					t.mode,
-					t.handoffStatus,
-					t.openIssueCount,
-					t.resolvableIssueCount,
-					t.handoffException,
+					tt.status,
+					tt.mode,
+					tt.handoffStatus,
+					tt.openIssueCount,
+					tt.resolvableIssueCount,
+					tt.handoffException,
 					got,
-					t.want,
+					tt.want,
 				)
 			}
 		})
