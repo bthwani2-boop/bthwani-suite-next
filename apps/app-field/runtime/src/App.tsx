@@ -7,11 +7,16 @@ import { useEffect, useRef, useState } from "react";
 import { colorRoles } from "@bthwani/ui-kit";
 import { DshFieldSurface } from "../../../../services/dsh/frontend/app-field";
 import type { DshFieldNavigationCommand } from "../../../../services/dsh/frontend/app-field/dsh-field.routes";
-import { WorkforceProfileProvider } from "../../../../services/dsh/frontend/shared/workforce/use-workforce-profile";
+import { DshFieldProfileCompletionScreen } from "../../../../services/dsh/frontend/app-field/account/DshFieldProfileCompletionScreen";
+import {
+  WorkforceAccessGate,
+  WorkforceProfileProvider,
+} from "../../../../services/dsh/frontend/shared/workforce";
 import {
   configureIdentitySession,
   configureIdentitySessionStorage,
   type SessionStorageAdapter,
+  useIdentitySession,
 } from "@bthwani/core-identity";
 import { resolveIdentityApiBaseUrl } from "../../../../services/dsh/frontend/shared/_kernel/identity-api-base-url";
 import { IdentitySessionGate } from "../../../../services/dsh/frontend/shared/session/IdentitySessionGate";
@@ -69,6 +74,7 @@ function parseNotificationData(data: Record<string, unknown>): DshFieldNavigatio
 }
 
 function AppContent() {
+  const identity = useIdentitySession();
   const [navCommand, setNavCommand] = useState<DshFieldNavigationCommand | undefined>();
   const notifListenerRef = useRef<Notifications.EventSubscription | null>(null);
 
@@ -100,11 +106,21 @@ function AppContent() {
     };
   }, []);
 
+  const logout = () => {
+    void identity.logout();
+  };
+
   return (
     <View style={styles.root}>
       <View style={styles.screen}>
         <IdentitySessionGate requiredRole="field" requiredSurface="app-field">
-          <DshFieldSurface {...(navCommand ? { command: navCommand } : {})} />
+          <WorkforceAccessGate
+            expectedKind="field"
+            onLogout={logout}
+            incompleteContent={<DshFieldProfileCompletionScreen onLogout={logout} />}
+          >
+            <DshFieldSurface {...(navCommand ? { command: navCommand } : {})} />
+          </WorkforceAccessGate>
         </IdentitySessionGate>
       </View>
     </View>
@@ -123,4 +139,3 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colorRoles.surfaceMuted },
   screen: { flex: 1 },
 });
-
