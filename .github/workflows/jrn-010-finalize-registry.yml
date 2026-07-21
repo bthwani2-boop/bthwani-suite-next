@@ -1,0 +1,164 @@
+name: JRN-010 Finalize Registry Once
+
+on:
+  push:
+    branches: [sambassam]
+    paths:
+      - ".github/workflows/jrn-010-finalize-registry.yml"
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: jrn-010-finalize-registry
+  cancel-in-progress: false
+
+jobs:
+  finalize:
+    name: Finalize JRN-010 FS-01..18 registry
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout active branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: sambassam
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Rebase on latest remote head
+        run: git pull --rebase origin sambassam
+
+      - name: Finalize slice registry, evidence and central registry
+        env:
+          VERIFIED_COMMIT: 72de130ff4cc3341f13261f3c10d68cf7a6930fa
+          VERIFIED_RUN_ID: "29871710692"
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          verified_commit = os.environ["VERIFIED_COMMIT"]
+          verified_run_id = int(os.environ["VERIFIED_RUN_ID"])
+          status_context = "journeys/jrn-010/all-slices"
+
+          slice_path = Path("services/dsh/contracts/jrn-010-slice-verification-registry.json")
+          slices = json.loads(slice_path.read_text(encoding="utf-8"))
+          if slices.get("journeyId") != "JRN-010" or len(slices.get("slices", [])) != 18:
+              raise SystemExit("JRN-010 slice registry is incomplete")
+          slices["technicalClosure"] = "COMPLETE"
+          slices["verifiedCommit"] = verified_commit
+          slices["workflowRunId"] = verified_run_id
+          slices["statusContext"] = status_context
+          slices["technicalOpenGaps"] = []
+          for index, item in enumerate(slices["slices"], start=1):
+              expected = f"FS-{index:02d}"
+              if item.get("id") != expected:
+                  raise SystemExit(f"Unexpected slice order: {item.get('id')} != {expected}")
+              item["status"] = "IMPLEMENTED"
+          slice_path.write_text(json.dumps(slices, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+          evidence_path = Path("governance/evidence/JRN-010_CHECKOUT_WLT_ALL_SLICES_CLOSURE.json")
+          evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+          if evidence.get("journeyId") != "JRN-010":
+              raise SystemExit("Unexpected JRN-010 evidence file")
+          evidence["decision"] = "READY_FOR_REVIEW"
+          evidence["technicalClosure"] = "COMPLETE"
+          evidence["verifiedCommit"] = verified_commit
+          evidence["workflowRunId"] = verified_run_id
+          evidence["statusContext"] = status_context
+          evidence["sameCommitStatus"] = "success"
+          evidence["verifiedAt"] = "2026-07-21"
+          evidence["openCodeGaps"] = []
+          evidence_path.write_text(json.dumps(evidence, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+          registry_path = Path("governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md")
+          registry = registry_path.read_text(encoding="utf-8")
+
+          index_pattern = re.compile(
+              r"^\| JRN-010 \| Checkout وتسليم جلسة الدفع إلى WLT \| DSH \+ WLT \| [^|]+ \|$",
+              re.MULTILINE,
+          )
+          registry, replacements = index_pattern.subn(
+              "| JRN-010 | Checkout وتسليم جلسة الدفع إلى WLT | DSH + WLT | READY_FOR_REVIEW |",
+              registry,
+              count=1,
+          )
+          if replacements != 1:
+              raise SystemExit("Could not update the JRN-010 index row")
+
+          heading = "### JRN-010 — Checkout وتسليم جلسة الدفع إلى WLT"
+          surfaces = "الأسطح المرشحة: `app-client`, `control-panel` مع WLT."
+          heading_pos = registry.find(heading)
+          if heading_pos < 0:
+              raise SystemExit("JRN-010 heading is missing")
+          surfaces_pos = registry.find(surfaces, heading_pos)
+          if surfaces_pos < 0:
+              raise SystemExit("JRN-010 surfaces marker is missing")
+          metadata = f"""tracking_status: READY_FOR_REVIEW
+          decision: READY_FOR_REVIEW
+          last_verified_commit: `{verified_commit}`
+          workflow_run_id: `{verified_run_id}`
+          status_context: `{status_context}`
+          technical_slices: `FS-01..FS-18 COMPLETE`
+          owner_services: `DSH`, `WLT`
+          required_surfaces: `app-client`, `control-panel`, `dsh-backend`, `dsh-postgresql`, `wlt-boundary`
+          excluded_surfaces: `app-partner`, `app-captain`, `app-field`, `website` — ليست مالكة لحقيقة Checkout قبل إنشاء الطلب.
+          applicable_evidence_scopes: `product`, `static`, `database`, `backend`, `contract`, `frontend`, `runtime`, `security`, `finance-boundary`, `accessibility`, `ci`, `release`
+          open_code_gaps: `[]`
+          independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security/Finance؛ Release/Production.
+
+          """
+          section_prefix_end = heading_pos + len(heading)
+          registry = registry[:section_prefix_end] + "\n\n" + metadata + registry[surfaces_pos:]
+
+          log_row = (
+              f"| 2026-07-21 | JRN-010 | FS-01..FS-18 technical implementation and same-commit verification | "
+              f"sambassam | `{verified_commit}` / workflow `{verified_run_id}` | app-client, control-panel, "
+              f"DSH backend/PostgreSQL, WLT boundary | READY_FOR_REVIEW | Independent Product, QA/device/"
+              f"accessibility, Security/Finance and Release/Production approvals pending |\n"
+          )
+          if "JRN-010 | FS-01..FS-18 technical implementation and same-commit verification" not in registry:
+              template_marker = "## قالب إضافة رحلة أو تحديثها"
+              marker_pos = registry.find(template_marker)
+              if marker_pos < 0:
+                  raise SystemExit("Registry execution-log insertion marker is missing")
+              registry = registry[:marker_pos].rstrip() + "\n\n" + log_row + "\n" + registry[marker_pos:]
+
+          registry_path.write_text(registry, encoding="utf-8")
+          PY
+
+      - name: Validate finalized truth files
+        run: |
+          node --test services/dsh/tests/jrn-010-all-slices.test.mjs
+          node tools/guards/checkout/jrn-010-checkout-truth-gate.mjs
+          git diff --check
+          python -m json.tool services/dsh/contracts/jrn-010-slice-verification-registry.json >/dev/null
+          python -m json.tool governance/evidence/JRN-010_CHECKOUT_WLT_ALL_SLICES_CLOSURE.json >/dev/null
+
+      - name: Remove one-shot workflow and commit
+        run: |
+          git config user.name "bthwani-journey-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git rm .github/workflows/jrn-010-finalize-registry.yml
+          git add governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md \
+                  governance/evidence/JRN-010_CHECKOUT_WLT_ALL_SLICES_CLOSURE.json \
+                  services/dsh/contracts/jrn-010-slice-verification-registry.json
+          git commit -m "governance(jrn-010): finalize FS-01 through FS-18 technical closure"
+          git push origin HEAD:sambassam
+          echo "FINAL_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: Dispatch final same-commit verification
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          curl --fail-with-body --silent --show-error -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/jrn-010-all-slices.yml/dispatches" \
+            -d '{"ref":"sambassam"}'
+          echo "Finalized JRN-010 metadata commit: $FINAL_SHA"
