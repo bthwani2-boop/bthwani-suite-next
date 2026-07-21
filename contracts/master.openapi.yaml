@@ -23,6 +23,7 @@ x-bthwani-contracts:
     dshClientMap: ../services/dsh/contracts/dsh.client-map.openapi.yaml
     dshPlatformPolicies: ../services/dsh/contracts/dsh.platform-policies.openapi.yaml
     dshMarketingCommercial: ../services/dsh/contracts/dsh.marketing-commercial.openapi.yaml
+    dshHomeMarketingEvents: ../services/dsh/contracts/dsh.home-marketing-events.openapi.yaml
     dshPartnerFleet: ../services/dsh/contracts/dsh.partner-fleet.openapi.yaml
     dshPartnerSupport: ../services/dsh/contracts/dsh.partner-support.openapi.yaml
     dshSupportGovernance: ../services/dsh/contracts/dsh.support-governance.openapi.yaml
