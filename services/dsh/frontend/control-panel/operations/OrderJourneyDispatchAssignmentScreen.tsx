@@ -13,7 +13,8 @@ import {
   assignOrderToCaptain,
   dispatchAssignmentErrorMessage,
 } from '../../shared/operations';
-import { listCaptains, type Captain } from '../../shared/workforce';
+import { useCaptainListController } from '../../shared/workforce/use-workforce-controllers';
+import type { Captain } from '../../shared/workforce/workforce.types';
 import type { OperationsFocusParams, OperatorOrderWorkboardRow } from '../../shared/operations';
 
 export type OrderJourneyDispatchAssignmentScreenProps = {
@@ -42,31 +43,11 @@ export function OrderJourneyDispatchAssignmentScreen({
   focusParams,
 }: OrderJourneyDispatchAssignmentScreenProps) {
   const workboard = useOperatorOrderWorkboard();
-  const [captains, setCaptains] = React.useState<readonly Captain[]>([]);
-  const [captainsState, setCaptainsState] = React.useState<'loading' | 'ready' | 'error'>('loading');
-  const [captainsError, setCaptainsError] = React.useState('');
+  const captainList = useCaptainListController('active');
   const [selectedOrderId, setSelectedOrderId] = React.useState<string | null>(focusParams?.orderId ?? null);
   const [selectedCaptainId, setSelectedCaptainId] = React.useState('');
   const [mutationState, setMutationState] = React.useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [mutationMessage, setMutationMessage] = React.useState('');
-
-  const loadCaptains = React.useCallback(async () => {
-    setCaptainsState('loading');
-    setCaptainsError('');
-    try {
-      const result = await listCaptains({ status: 'active', limit: 200 });
-      setCaptains(result.filter(isEligibleCaptain));
-      setCaptainsState('ready');
-    } catch (error) {
-      setCaptains([]);
-      setCaptainsState('error');
-      setCaptainsError(error instanceof Error ? error.message : 'تعذر تحميل الكباتن من Workforce.');
-    }
-  }, []);
-
-  React.useEffect(() => {
-    void loadCaptains();
-  }, [loadCaptains]);
 
   React.useEffect(() => {
     if (focusParams?.orderId) setSelectedOrderId(focusParams.orderId);
@@ -80,6 +61,9 @@ export function OrderJourneyDispatchAssignmentScreen({
     return <StateView stateId="recoverableError" title="تعذر تحميل طابور الإسناد" description={workboard.state.message} actionLabel="إعادة المحاولة" onActionPress={workboard.refresh} />;
   }
 
+  const captains = captainList.state.kind === 'ready'
+    ? captainList.state.captains.filter(isEligibleCaptain)
+    : [];
   const orders = workboard.state.orders.filter(eligibleOrder);
   const selectedOrder = orders.find((order) => order.id === selectedOrderId) ?? null;
   const selectedCaptain = captains.find((captain) => captain.actorId === selectedCaptainId) ?? null;
@@ -108,8 +92,14 @@ export function OrderJourneyDispatchAssignmentScreen({
         { id: 'captains', label: 'كباتن مؤهلون', value: String(captains.length), tone: captains.length > 0 ? 'success' : 'danger' },
       ]} />
 
-      {captainsState === 'error' ? (
-        <StateView stateId="recoverableError" title="تعذر تحميل الكباتن" description={captainsError} actionLabel="إعادة المحاولة" onActionPress={() => void loadCaptains()} />
+      {captainList.state.kind === 'error' ? (
+        <StateView
+          stateId="recoverableError"
+          title="تعذر تحميل الكباتن"
+          description={captainList.state.message}
+          actionLabel="إعادة المحاولة"
+          onActionPress={() => void captainList.reload()}
+        />
       ) : null}
 
       <div className={styles.surfaceSplitGrid}>
@@ -143,8 +133,8 @@ export function OrderJourneyDispatchAssignmentScreen({
             <Text role="bodySm" tone="muted">
               {selectedOrder ? `الطلب: ${selectedOrder.id}` : 'اختر طلبًا من الطابور أولًا.'}
             </Text>
-            {captainsState === 'loading' ? <Text role="bodySm">جاري تحميل الكباتن…</Text> : null}
-            {captainsState === 'ready' && captains.length === 0 ? (
+            {captainList.state.kind === 'loading' ? <Text role="bodySm">جاري تحميل الكباتن…</Text> : null}
+            {captainList.state.kind === 'ready' && captains.length === 0 ? (
               <StateView stateId="empty" title="لا يوجد كابتن مؤهل" description="تحقق من حالة Workforce والترخيص والمركبة والمنطقة قبل الإسناد." />
             ) : null}
             {captains.map((captain) => (
