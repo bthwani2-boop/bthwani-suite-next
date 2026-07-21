@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"strings"
 	"time"
@@ -16,6 +17,7 @@ var (
 	ErrNotConfigured = errors.New("providers map runtime is not configured")
 	ErrUnavailable   = errors.New("providers map runtime is unavailable")
 	ErrInvalid       = errors.New("providers map request is invalid")
+	ErrUncertain     = errors.New("providers map result is uncertain")
 )
 
 type Client struct {
@@ -74,9 +76,23 @@ func (c *Client) Configured() bool {
 }
 
 func (c *Client) Search(ctx context.Context, authorization string, input SearchInput) (SearchResponse, error) {
+	input, err := normalizeSearchInput(input)
+	if err != nil {
+		return SearchResponse{}, err
+	}
 	var response SearchResponse
 	if err := c.post(ctx, authorization, "/providers/maps/search", input, &response); err != nil {
 		return SearchResponse{}, err
+	}
+	if response.Locations == nil {
+		response.Locations = []Location{}
+	}
+	for index := range response.Locations {
+		location, err := normalizeVerifiedLocation(response.Locations[index])
+		if err != nil {
+			return SearchResponse{}, err
+		}
+		response.Locations[index] = location
 	}
 	return response, nil
 }
@@ -87,6 +103,51 @@ func (c *Client) Reverse(ctx context.Context, authorization string, input Revers
 		return ReverseResponse{}, err
 	}
 	return response, nil
+}
+
+func normalizeSearchInput(input SearchInput) (SearchInput, error) {
+	input.Query = strings.TrimSpace(input.Query)
+	input.Language = strings.TrimSpace(input.Language)
+	if len(input.Query) < 2 || len(input.Query) > 240 || len(input.Language) > 32 || input.Limit < 0 || input.Limit > 10 || len(input.CountryCodes) > 8 {
+		return SearchInput{}, ErrInvalid
+	}
+	if input.Limit == 0 {
+		input.Limit = 6
+	}
+	for index, code := range input.CountryCodes {
+		code = strings.ToUpper(strings.TrimSpace(code))
+		if len(code) != 2 {
+			return SearchInput{}, ErrInvalid
+		}
+		for _, char := range code {
+			if char < 'A' || char > 'Z' {
+				return SearchInput{}, ErrInvalid
+			}
+		}
+		input.CountryCodes[index] = code
+	}
+	return input, nil
+}
+
+func normalizeVerifiedLocation(location Location) (Location, error) {
+	location.ProviderCode = strings.TrimSpace(location.ProviderCode)
+	location.ProviderPlaceID = strings.TrimSpace(location.ProviderPlaceID)
+	location.DisplayName = strings.TrimSpace(location.DisplayName)
+	location.CountryCode = strings.ToUpper(strings.TrimSpace(location.CountryCode))
+	location.AdministrativeArea = strings.TrimSpace(location.AdministrativeArea)
+	location.Locality = strings.TrimSpace(location.Locality)
+	location.PostalCode = strings.TrimSpace(location.PostalCode)
+	if location.ProviderCode == "" || location.ProviderPlaceID == "" || location.DisplayName == "" || !validCoordinate(location.Latitude, location.Longitude) || math.IsNaN(location.Confidence) || math.IsInf(location.Confidence, 0) || location.Confidence < 0 || location.Confidence > 1 {
+		return Location{}, ErrUncertain
+	}
+	if location.CountryCode != "" && len(location.CountryCode) != 2 {
+		return Location{}, ErrUncertain
+	}
+	return location, nil
+}
+
+func validCoordinate(latitude, longitude float64) bool {
+	return !math.IsNaN(latitude) && !math.IsNaN(longitude) && !math.IsInf(latitude, 0) && !math.IsInf(longitude, 0) && latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180
 }
 
 func (c *Client) post(ctx context.Context, authorization, path string, input, output any) error {
