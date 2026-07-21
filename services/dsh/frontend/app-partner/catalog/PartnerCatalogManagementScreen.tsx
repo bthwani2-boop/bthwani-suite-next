@@ -14,6 +14,7 @@ import {
 } from "@bthwani/ui-kit";
 import {
   fetchPartnerMasterProducts,
+  fetchPartnerProductProposals,
   fetchPartnerStoreAssortment,
   fetchPartnerTaxonomy,
   upsertPartnerStoreAssortmentOCC,
@@ -22,11 +23,23 @@ import type {
   CentralCatalogDomain,
   CentralCatalogNode,
   MasterProduct,
+  ProductProposal,
   StoreAssortment,
 } from "../../shared/catalog";
 
 type Props = {
   readonly storeId: string;
+};
+
+const PROPOSAL_STATUS_LABELS: Record<string, string> = {
+  submitted: "مرسل",
+  "partner-review": "مراجعة الشريك",
+  "marketing-review": "مراجعة التسويق",
+  "catalog-adopted": "تم التبني",
+  "catalog-approved": "معتمد",
+  "client-visible": "ظاهر للعملاء",
+  "needs-fix": "يحتاج تصحيحاً",
+  rejected: "مرفوض",
 };
 
 export function PartnerCatalogManagementScreen({ storeId }: Props) {
@@ -38,6 +51,7 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
   const [nodes, setNodes] = React.useState<readonly CentralCatalogNode[]>([]);
   const [masterProducts, setMasterProducts] = React.useState<readonly MasterProduct[]>([]);
   const [assortment, setAssortment] = React.useState<readonly StoreAssortment[]>([]);
+  const [proposals, setProposals] = React.useState<readonly ProductProposal[]>([]);
   const [selectedProductId, setSelectedProductId] = React.useState("");
   const [price, setPrice] = React.useState("");
   const [note, setNote] = React.useState("");
@@ -47,15 +61,17 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const [taxonomy, products, currentAssortment] = await Promise.all([
+      const [taxonomy, products, currentAssortment, proposalPage] = await Promise.all([
         fetchPartnerTaxonomy(),
         fetchPartnerMasterProducts({ limit: 100 }),
         fetchPartnerStoreAssortment(storeId),
+        fetchPartnerProductProposals({ limit: 100, offset: 0 }),
       ]);
       setDomains(taxonomy.domains);
       setNodes(taxonomy.nodes);
       setMasterProducts(products);
       setAssortment(currentAssortment);
+      setProposals(proposalPage.items);
     } catch (caught) {
       setError(
         caught instanceof Error
@@ -192,6 +208,7 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
               label={`${assortment.length} في تشكيلة المتجر`}
               tone="neutral"
             />
+            <Badge label={`${proposals.length} اقتراحات`} tone="info" />
           </View>
         </View>
       </Card>
@@ -286,6 +303,33 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
           </View>
         </Card>
       ) : null}
+
+      <Text role="titleMd" align="start">
+        اقتراحات المنتجات وحالة المراجعة
+      </Text>
+      <Card>
+        {proposals.length === 0 ? (
+          <View style={styles.section}>
+            <Text tone="secondary" align="center">
+              لا توجد اقتراحات منتجات مرسلة من هذا المتجر.
+            </Text>
+          </View>
+        ) : (
+          proposals.map((proposal) => (
+            <ListItem
+              key={proposal.id}
+              title={proposal.proposedNameAr}
+              subtitle={proposal.reviewNote || "بانتظار تحديث المراجعة"}
+              trailing={
+                <Badge
+                  label={PROPOSAL_STATUS_LABELS[proposal.status] ?? proposal.status}
+                  tone={proposal.status === "rejected" || proposal.status === "needs-fix" ? "warning" : "info"}
+                />
+              }
+            />
+          ))
+        )}
+      </Card>
 
       <Text role="titleMd" align="start">
         تشكيلة المتجر الحالية
