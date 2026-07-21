@@ -1,0 +1,137 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-014",
+  "title": "إسناد الكابتن والتوزيع",
+  "closureMode": "CODE_AND_AUTOMATED_EVIDENCE",
+  "requiredSliceCount": 18,
+  "codeDecision": "IMPLEMENTED_PENDING_VERIFICATION",
+  "releaseDecision": "NOT_RELEASED_PENDING_INDEPENDENT_REVIEW",
+  "slices": [
+    {
+      "id": "FS-01",
+      "name": "Product Truth",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["governance/product/contracts/jrn-014-captain-dispatch.product-truth.json"],
+      "requiredMarkers": ["acceptanceCriteria", "negativeInvariants", "IMPLEMENTED_PENDING_VERIFICATION"]
+    },
+    {
+      "id": "FS-02",
+      "name": "Roles, permissions and surfaces",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/contracts/jrn-014-surface-rbac-registry.json", "services/dsh/backend/internal/http/dispatch_governance_handlers.go"],
+      "requiredMarkers": ["defaultEffect", "operations.read", "operations.manage", "requireActor"]
+    },
+    {
+      "id": "FS-03",
+      "name": "States, ownership and allowed actions",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/contracts/jrn-014-dispatch-state-machine.json", "services/dsh/backend/internal/dispatch/assignment_governance.go"],
+      "requiredMarkers": ["forbiddenTransitions", "CreateGovernedAssignment", "AcceptGovernedAssignment", "ReassignGovernedAssignment"]
+    },
+    {
+      "id": "FS-04",
+      "name": "DSH and WLT truth boundary",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["governance/boundaries/jrn-014-dsh-wlt-dispatch-boundary.md"],
+      "requiredMarkers": ["DSH owns", "WLT owns", "Forbidden mutations"]
+    },
+    {
+      "id": "FS-05",
+      "name": "Database truth, constraints and concurrency",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/database/migrations/dsh-079_dispatch_assignment_governance.sql", "services/dsh/backend/internal/dispatch/assignment_governance_test.go"],
+      "requiredMarkers": ["uq_dsh_assignments_tenant_idempotency", "dsh_captain_dispatch_profiles", "dsh_dispatch_decisions", "TestFinalizeCandidateUsesAccreditationAvailabilityAndCapacity"]
+    },
+    {
+      "id": "FS-06",
+      "name": "OpenAPI and canonical operation contracts",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/contracts/dsh.dispatch-governance.openapi.yaml", "services/dsh/contracts/contract-registry.ts", "services/dsh/contracts/jrn-014-dispatch-operation-registry.json"],
+      "requiredMarkers": ["DispatchOfferControls", "dsh-dispatch-governance", "idempotencyRequired"]
+    },
+    {
+      "id": "FS-07",
+      "name": "Backend domain and HTTP behavior",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/backend/internal/dispatch/assignment_governance.go", "services/dsh/backend/internal/dispatch/assignment_governance_queries.go", "services/dsh/backend/internal/http/dispatch_governance_handlers.go"],
+      "requiredMarkers": ["pg_advisory_xact_lock", "FOR UPDATE", "writeGovernedDispatchError"]
+    },
+    {
+      "id": "FS-08",
+      "name": "Timeout, decision log, readback and reconciliation",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/backend/internal/dispatch/assignment_governance.go", "services/dsh/frontend/shared/operations/use-dispatch-operations.ts", "services/dsh/frontend/control-panel/operations/DispatchOperationsPanel.tsx"],
+      "requiredMarkers": ["ExpireOverdueAssignments", "ListDispatchDecisions", "fetchDispatchDecisions", "إنهاء العروض المتأخرة"]
+    },
+    {
+      "id": "FS-09",
+      "name": "Shared frontend brain",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/frontend/shared/dispatch/dispatch.api.ts", "services/dsh/frontend/shared/operations/use-dispatch-captain-options.ts", "services/dsh/frontend/shared/operations/use-dispatch-operations.ts", "services/dsh/frontend/shared/dispatch/use-dispatch-controller.ts"],
+      "requiredMarkers": ["createGovernedDispatchAssignment", "fetchCaptainDispatchCandidates", "buildDispatchAssignmentIdempotencyKey"]
+    },
+    {
+      "id": "FS-10",
+      "name": "Required surface binding",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/contracts/jrn-014-cross-surface-binding.json", "services/dsh/frontend/control-panel/operations/OrderJourneyDispatchAssignmentScreen.tsx", "services/dsh/frontend/app-captain/DshCaptainSurface.tsx", "services/dsh/frontend/shared/dispatch/use-dispatch-controller.ts"],
+      "requiredMarkers": ["control-panel", "app-captain", "app-client", "DispatchOperationsPanel", "CaptainAssignmentOfferPanel"]
+    },
+    {
+      "id": "FS-11",
+      "name": "Visible operational states",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/contracts/jrn-014-visible-states.json", "services/dsh/frontend/app-captain/orders/CaptainAssignmentOfferPanel.tsx", "services/dsh/frontend/control-panel/operations/DispatchOperationsPanel.tsx"],
+      "requiredMarkers": ["offer-expired", "execution-blocked-before-acceptance", "recoverableError"]
+    },
+    {
+      "id": "FS-12",
+      "name": "Cross-surface integrity and read-after-write",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/contracts/jrn-014-cross-surface-binding.json", "tools/guards/jrn-014-dispatch-integrity-gate.mjs", "services/dsh/tests/jrn-014-dispatch-integrity.test.mjs"],
+      "requiredMarkers": ["read-after-write", "crossSurfaceInvariants", "dispatch integrity gate passed"]
+    },
+    {
+      "id": "FS-13",
+      "name": "Security, isolation, PII and audit",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/contracts/jrn-014-security-privacy-registry.json", "services/dsh/backend/internal/dispatch/assignment_governance.go", "services/dsh/backend/internal/http/dispatch_governance_handlers.go"],
+      "requiredMarkers": ["tenant-isolation", "pii-minimization", "ListCaptainAssignmentsInTenant", "requirePermission"]
+    },
+    {
+      "id": "FS-14",
+      "name": "RTL, accessibility, performance and weak network",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/contracts/jrn-014-experience-quality-registry.json", "services/dsh/frontend/app-captain/orders/CaptainAssignmentOfferPanel.tsx"],
+      "requiredMarkers": ["minimumTouchTargetPx", "weakNetwork", "textAlign=\"right\""]
+    },
+    {
+      "id": "FS-15",
+      "name": "SLA, monitoring, diagnostics and support",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/contracts/jrn-014-observability-slo.json", "governance/runbooks/jrn-014-dispatch-operations.md", "services/dsh/frontend/control-panel/operations/DispatchOperationsPanel.tsx"],
+      "requiredMarkers": ["duplicate-active-order", "Safe database diagnostics", "سجل القرار"]
+    },
+    {
+      "id": "FS-16",
+      "name": "Legacy cleanup and compatibility",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/contracts/jrn-014-legacy-cleanup.json", "services/dsh/frontend/app-captain/dispatch/DshCaptainOrdersScreen.tsx", "tools/guards/jrn-014-dispatch-integrity-gate.mjs"],
+      "requiredMarkers": ["LEGACY_CONSUMERS_REMOVED", "newConsumersForbidden", "legacy ungoverned assignment consumer"]
+    },
+    {
+      "id": "FS-17",
+      "name": "Targeted verification and CI",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": [".github/workflows/dispatch-governance-verify.yml", "services/dsh/backend/internal/dispatch/assignment_governance_test.go", "services/dsh/tests/jrn-014-dispatch-integrity.test.mjs", "tools/guards/jrn-014-dispatch-integrity-gate.mjs"],
+      "requiredMarkers": ["DSH dispatch backend", "DSH frontend typecheck", "TestDispatchErrorCodeIsStable", "integrity gate"]
+    },
+    {
+      "id": "FS-18",
+      "name": "Same-commit evidence, rollback and final gate",
+      "codeStatus": "IMPLEMENTED_PENDING_EVIDENCE",
+      "requiredFiles": ["governance/evidence/jrn-014-dispatch-evidence.json", "governance/evidence/jrn-014-dispatch-evidence.md", "services/dsh/contracts/jrn-014-slice-closure.json"],
+      "requiredMarkers": ["zeroGate", "rollback", "nextJourneyStarted"]
+    }
+  ]
+}
