@@ -1,0 +1,57 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-004",
+  "journeyName": "اكتشاف المتاجر وسياقها وحوكمتها",
+  "repositoryMode": "REMOTE_ONLY",
+  "repository": "bthwani2-boop/bthwani-suite-next",
+  "targetRef": "sambassam",
+  "verifiedImplementationCommit": "2a330d9ccd37484d6c156cb40b4be87271a53545",
+  "decision": "READY_FOR_REVIEW",
+  "functionalSlices": {
+    "registered": 9,
+    "complete": 9,
+    "open": 0
+  },
+  "fullStackSlices": {
+    "registered": 18,
+    "completeInternal": 18,
+    "openInternal": 0
+  },
+  "verification": {
+    "statusContext": "journeys/jrn-004/fullstack-slices",
+    "runId": 29860178822,
+    "jobId": 88734597124,
+    "conclusion": "success",
+    "artifact": {
+      "id": 8506970902,
+      "name": "jrn-004-fullstack-slice-evidence",
+      "digest": "sha256:7660c460e84d6c83a3bb2da03ffbd92413c70313e5591dd7d3ec675332548de9"
+    },
+    "checks": {
+      "nodeTests": {"passed": 12, "failed": 0},
+      "typescript": "PASS",
+      "goInternalStore": "PASS",
+      "goInternalHttp": "PASS",
+      "postgres16": "PASS",
+      "gitDiffCheck": "PASS"
+    }
+  },
+  "zeroGate": {
+    "unboundUiControls": 0,
+    "frontendOnlyFeatures": 0,
+    "backendOnlyFeatures": 0,
+    "duplicateTruthOwners": 0,
+    "runtimeMocksAsTruth": 0,
+    "deadCodeInScope": 0,
+    "temporaryPatchFiles": 0,
+    "unclosedFunctionalSlices": 0,
+    "unclosedInternalSlices": 0,
+    "failedRequiredChecks": 0
+  },
+  "independentApprovals": {
+    "obtained": [],
+    "remaining": ["Product Owner", "QA/device", "Security", "Release", "Production"],
+    "reason": "Independent approvals cannot be self-issued by the implementation agent."
+  },
+  "rollbackReference": "governance/runbooks/JRN-004_STORE_OPERATIONS.md"
+}
