@@ -133,31 +133,3 @@ func (s *protectedStoreServer) handleCaptainPartnerFleetMemberships(w http.Respo
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"memberships": memberships})
 }
-
-// POST /dsh/captain/partner-fleet/memberships/{memberId}/disconnect
-func (s *protectedStoreServer) handleCaptainDisconnectPartnerFleetMembership(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "captain")
-	if !ok {
-		return
-	}
-	var body struct {
-		StoreID         string `json:"storeId"`
-		ExpectedVersion int    `json:"expectedVersion"`
-	}
-	if !decodeProtectedJSON(w, r, &body) {
-		return
-	}
-	membership, err := partnerfleet.DisconnectCaptainMembership(
-		r.Context(),
-		s.db,
-		actor.ID,
-		body.StoreID,
-		r.PathValue("memberId"),
-		body.ExpectedVersion,
-	)
-	if err != nil {
-		writePartnerFleetError(w, err)
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"membership": membership})
-}
