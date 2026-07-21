@@ -7,6 +7,7 @@ on:
       - sambassam
     paths:
       - ".github/workflows/jrn-012-order-preparation-verify.yml"
+      - "governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md"
       - "governance/product/contracts/jrn-012-order-preparation-readiness.product-truth.json"
       - "services/dsh/contracts/fragments/order-preparation-handoff.fragment.yaml"
       - "services/dsh/contracts/jrn-012-slice-closure.json"
@@ -14,6 +15,8 @@ on:
       - "services/dsh/database/migrations/dsh-095_store_captain_outbound_handoff.sql"
       - "services/dsh/database/migrations/dsh-126_order_preparation_issues.sql"
       - "services/dsh/database/migrations/dsh-127_preparation_issue_item_binding.sql"
+      - "services/dsh/database/migrations/dsh-128_preparation_issue_customer_decision.sql"
+      - "services/dsh/database/migrations/dsh-129_order_preparation_alerts.sql"
       - "services/dsh/database/tests/dsh-912_jrn012_order_preparation_invariants.sql"
       - "services/dsh/backend/internal/orders/lifecycle.go"
       - "services/dsh/backend/internal/orders/preparation*.go"
@@ -23,7 +26,11 @@ on:
       - "services/dsh/frontend/shared/orders/**"
       - "services/dsh/frontend/shared/partner/partner.adapters.ts"
       - "services/dsh/frontend/shared/dispatch/dispatch.controller-core.ts"
+      - "services/dsh/frontend/app-client/orders/ClientPreparationDecisionPanel.tsx"
+      - "services/dsh/frontend/app-client/orders/OrderTrackingScreen.tsx"
+      - "services/dsh/frontend/app-captain/orders/OperationalCaptainExecutionScreen.tsx"
       - "services/dsh/frontend/app-partner/orders/**"
+      - "services/dsh/frontend/control-panel/operations/OrderPreparationAlertsPanel.tsx"
       - "services/dsh/frontend/control-panel/operations/OrderJourneyLiveOrdersScreen.tsx"
       - "services/dsh/tests/jrn-012-*.test.mjs"
       - "services/dsh/tsconfig.jrn-012.json"
@@ -60,7 +67,7 @@ jobs:
           if-no-files-found: error
 
   go-lifecycle:
-    name: FS-03..FS-09 Go lifecycle and permissions
+    name: FS-03/07/08/13/15 Go lifecycle and permissions
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -77,9 +84,12 @@ jobs:
             services/dsh/backend/internal/orders/preparation.go
             services/dsh/backend/internal/orders/preparation_sla.go
             services/dsh/backend/internal/orders/preparation_issues.go
+            services/dsh/backend/internal/orders/preparation_alerts.go
             services/dsh/backend/internal/orders/preparation_ready_guard.go
             services/dsh/backend/internal/http/order_preparation.go
+            services/dsh/backend/internal/http/order_preparation_access.go
             services/dsh/backend/internal/http/order_preparation_issues.go
+            services/dsh/backend/internal/http/order_preparation_alerts.go
             services/dsh/backend/internal/http/order_journey_routes.go
             services/dsh/backend/internal/http/partner_order_workboard.go
             services/dsh/backend/internal/http/partner_order_workboard_test.go
@@ -94,7 +104,7 @@ jobs:
         run: go test ./internal/orders ./internal/http -count=1
 
   database-invariants:
-    name: FS-02/07/09/16 PostgreSQL invariants
+    name: FS-05/08/13/15 PostgreSQL invariants
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -128,7 +138,7 @@ jobs:
             echo "Applying ${migration}"
             psql -v ON_ERROR_STOP=1 -f "${migration}"
           done < <(find services/dsh/database/migrations -maxdepth 1 -type f -name '*.sql' | sort)
-      - name: Verify preparation persistence, item binding and WLT boundary
+      - name: Verify preparation persistence decisions alerts and WLT boundary
         shell: bash
         run: |
           set -o pipefail
@@ -144,7 +154,7 @@ jobs:
           if-no-files-found: error
 
   contract-typescript-binding:
-    name: FS-10..FS-15 contract and TypeScript binding
+    name: FS-06/09/10/11/12/14 contract and TypeScript binding
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -164,9 +174,13 @@ jobs:
           pnpm --dir services/dsh openapi:compose
           pnpm --dir services/dsh exec openapi-typescript contracts/generated/dsh.openapi.yaml -o /tmp/jrn012-dsh-api.ts
           grep -q 'createDshPartnerOrderPreparationIssue' /tmp/jrn012-dsh-api.ts
+          grep -q 'decideDshClientOrderPreparationIssue' /tmp/jrn012-dsh-api.ts
           grep -q 'resolveDshPartnerOrderPreparationIssue' /tmp/jrn012-dsh-api.ts
-          grep -q 'DshPreparationIssue' /tmp/jrn012-dsh-api.ts
-      - name: Typecheck JRN-012 shared brain and surfaces
+          grep -q 'refreshDshOperatorOrderPreparationAlerts' /tmp/jrn012-dsh-api.ts
+          grep -q 'acknowledgeDshOperatorOrderPreparationAlert' /tmp/jrn012-dsh-api.ts
+          grep -q 'DshPreparationIssueCustomerDecision' /tmp/jrn012-dsh-api.ts
+          grep -q 'DshPreparationAlert' /tmp/jrn012-dsh-api.ts
+      - name: Typecheck JRN-012 shared brain and all required surfaces
         shell: bash
         run: |
           set -o pipefail
