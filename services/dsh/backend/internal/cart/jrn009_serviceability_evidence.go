@@ -13,11 +13,12 @@ func RecordServiceabilityCheck(
 	ctx context.Context,
 	db *sql.DB,
 	clientID string,
+	storeID string,
 	serviceAreaCode string,
 	correlationID string,
 	result GovernedServiceabilityResult,
 ) error {
-	if strings.TrimSpace(clientID) == "" || strings.TrimSpace(result.AddressID) == "" || strings.TrimSpace(serviceAreaCode) == "" {
+	if strings.TrimSpace(clientID) == "" || strings.TrimSpace(storeID) == "" || strings.TrimSpace(result.AddressID) == "" || strings.TrimSpace(serviceAreaCode) == "" {
 		return ErrInvalid
 	}
 	_, err := db.ExecContext(ctx, `
@@ -58,7 +59,7 @@ func RecordServiceabilityCheck(
 			$16
 		)`,
 		strings.TrimSpace(clientID),
-		strings.TrimSpace(result.AddressID),
+		strings.TrimSpace(storeID),
 		strings.TrimSpace(result.AddressID),
 		result.AddressVersion,
 		result.RequestedMode,
