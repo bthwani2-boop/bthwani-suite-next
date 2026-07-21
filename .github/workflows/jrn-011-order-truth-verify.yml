@@ -19,7 +19,7 @@ on:
       - "services/dsh/frontend/app-client/checkout/GovernedCheckoutScreen.tsx"
       - "services/dsh/frontend/app-partner/orders/OperationalOrdersInboxScreen.tsx"
       - "services/dsh/frontend/control-panel/operations/OrderJourneyLiveOrdersScreen.tsx"
-      - "services/dsh/tests/jrn-011-order-truth-*.test.mjs"
+      - "services/dsh/tests/jrn-011-order-*.test.mjs"
       - "tools/guards/jrn-011-cross-surface-integrity-gate.mjs"
       - "governance/product/contracts/jrn-011-*.json"
       - "governance/boundaries/jrn-011-*.md"
@@ -48,7 +48,7 @@ jobs:
       - name: Run cross-surface gate
         run: node tools/guards/jrn-011-cross-surface-integrity-gate.mjs
       - name: Run JRN-011 integrity tests
-        run: node --test services/dsh/tests/jrn-011-order-truth-*.test.mjs
+        run: node --test services/dsh/tests/jrn-011-order-*.test.mjs
 
   go-policy-tests:
     name: Go order policy tests
