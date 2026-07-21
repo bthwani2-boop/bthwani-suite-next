@@ -1,7 +1,7 @@
 // app-field — DshFieldProfileScreen
 // Profile details sourced exclusively from Workforce.
 import React from 'react';
-import { View, ScrollView } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { Button, StateView, Text, Header, spacing, colorRoles } from '@bthwani/ui-kit';
 import { useWorkforceProfile } from '../../shared/workforce/use-workforce-profile';
 import { ENGAGEMENT_STATUS_LABEL_AR } from '../../shared/workforce';
@@ -60,7 +60,7 @@ export function DshFieldProfileScreen({ onBack }: DshFieldProfileScreenProps) {
       <StateView
         tone="danger"
         title="نوع الحساب غير متوافق"
-        description="ملف Workforce الحالي ليس ملف موظف ميداني."
+        description="ملف Workforce الحالي ليس ملف مقدم خدمة ميداني."
         actionLabel="رجوع"
         onActionPress={onBack}
       />
@@ -70,7 +70,7 @@ export function DshFieldProfileScreen({ onBack }: DshFieldProfileScreenProps) {
   const items: ReadonlyArray<{ label: string; value: string }> = [
     { label: 'الاسم الكامل', value: me.fullNameAr },
     { label: 'رقم مقدم الخدمة', value: me.workforceCode },
-    { label: 'نوع Workforce', value: 'موظف ميداني' },
+    { label: 'نوع Workforce', value: 'مقدم خدمة ميداني' },
     { label: 'منطقة الخدمة', value: me.fieldProfile?.serviceZoneId || 'غير محدد' },
     { label: 'الوردية', value: me.fieldProfile?.shiftCode || 'غير محدد' },
     { label: 'المشرف', value: me.fieldProfile?.supervisorActorId || 'غير محدد' },
@@ -84,7 +84,7 @@ export function DshFieldProfileScreen({ onBack }: DshFieldProfileScreenProps) {
       </View>
       <Header title="بيانات الميداني" subtitle="بيانات تشغيلية حية من Workforce" />
       <ScrollView
-        style={{ flex: 1 }}
+        style={styles.scroll}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
@@ -101,19 +101,20 @@ export function DshFieldProfileScreen({ onBack }: DshFieldProfileScreenProps) {
   );
 }
 
-const styles = {
+const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colorRoles.surfaceBase },
-  topActions: { paddingHorizontal: spacing[4], paddingTop: spacing[2], alignItems: 'flex-start' as const },
+  topActions: { paddingHorizontal: spacing[4], paddingTop: spacing[2], alignItems: 'flex-start' },
+  scroll: { flex: 1 },
   content: { padding: spacing[4], gap: spacing[4], paddingBottom: 96 },
-  items: { gap: spacing[2], width: '100%' as const },
+  items: { gap: spacing[2], width: '100%' },
   row: {
-    flexDirection: 'row-reverse' as const,
-    justifyContent: 'space-between' as const,
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-between',
     paddingVertical: spacing[3],
     borderBottomWidth: 1,
     borderBottomColor: colorRoles.borderSubtle,
     gap: spacing[3],
   },
-  rtl: { textAlign: 'right' as const },
-  value: { textAlign: 'left' as const, flexShrink: 1 },
-};
+  rtl: { textAlign: 'right' },
+  value: { textAlign: 'left', flexShrink: 1 },
+});
