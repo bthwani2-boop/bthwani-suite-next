@@ -1,38 +1,182 @@
-import type { ReactNode } from "react";
-import { useIdentitySession } from "@bthwani/core-identity";
-import type { ActorIdentity } from "@bthwani/core-identity";
-import { LoadingState, ErrorState, PermissionState } from "@bthwani/ui-kit";
+import React, { useState, type ReactNode } from "react";
+import { StyleSheet, View } from "react-native";
+import {
+  Button,
+  Card,
+  ErrorState,
+  LoadingState,
+  PermissionState,
+  Text,
+  TextField,
+  colorRoles,
+  spacing,
+} from "@bthwani/ui-kit";
+import {
+  useIdentitySession,
+  type ActivationActorType,
+  type ActorIdentity,
+} from "@bthwani/core-identity";
 
-/**
- * Runtime role literal accepted by DSH surfaces. Sourced from
- * ActorIdentity["roles"] (core/identity) rather than re-declared, so this
- * type always tracks the real identity contract.
- */
 export type DshSurfaceRole = ActorIdentity["roles"][number];
 
 export type IdentitySessionGateProps = {
-  /** The role required to view this surface (e.g. "client", "partner", "captain", "field"). */
   readonly requiredRole: DshSurfaceRole;
-  /**
-   * Optional key into ActorIdentity.surfaceAccess (e.g. "app-client"). When
-   * provided, the authenticated identity must also have surfaceAccess[key]
-   * === true, in addition to holding requiredRole.
-   */
   readonly requiredSurface?: string;
   readonly children: ReactNode;
 };
 
-/**
- * Single reusable gate for all 4 Expo DSH surfaces (app-client, app-partner,
- * app-captain, app-field). Wraps useIdentitySession() and renders a distinct,
- * real UI for every state the identity session can be in before rendering
- * `children`.
- *
- * Sign-in itself is out of scope here: these runtimes expect an identity
- * session to be restored from storage (configureIdentitySession +
- * configureIdentitySessionStorage, called once at app startup) or injected
- * by a host shell. There is no in-app login screen behind this gate.
- */
+type SignInMode = "login" | "activation";
+
+function isActivationActorType(role: DshSurfaceRole): role is ActivationActorType {
+  return role === "client" || role === "partner" || role === "captain" || role === "field";
+}
+
+function IdentityAccessPanel({
+  requiredRole,
+  errorMessage,
+}: {
+  readonly requiredRole: DshSurfaceRole;
+  readonly errorMessage?: string;
+}) {
+  const { login, requestOtp, activate } = useIdentitySession();
+  const activationAvailable = isActivationActorType(requiredRole);
+  const [mode, setMode] = useState<SignInMode>(activationAvailable ? "activation" : "login");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [phone, setPhone] = useState("");
+  const [code, setCode] = useState("");
+  const [feedback, setFeedback] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const submitLogin = async () => {
+    if (!username.trim() || !password) {
+      setFeedback("أدخل اسم المستخدم وكلمة المرور.");
+      return;
+    }
+    setSubmitting(true);
+    setFeedback("");
+    await login(username.trim(), password);
+    setSubmitting(false);
+  };
+
+  const issueOtp = async () => {
+    if (!activationAvailable || !phone.trim()) {
+      setFeedback("أدخل رقم الهاتف المرتبط بالحساب.");
+      return;
+    }
+    setSubmitting(true);
+    setFeedback("");
+    try {
+      const issued = await requestOtp(requiredRole, phone.trim());
+      setFeedback(`تم إصدار رمز تفعيل للرقم ${issued.maskedPhone}.`);
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : "تعذر إصدار رمز التفعيل.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const submitActivation = async () => {
+    if (!activationAvailable || !phone.trim() || !/^\d{6}$/.test(code.trim())) {
+      setFeedback("أدخل رقم الهاتف ورمز تفعيل مكوّنًا من ستة أرقام.");
+      return;
+    }
+    setSubmitting(true);
+    setFeedback("");
+    await activate(requiredRole, phone.trim(), code.trim());
+    setSubmitting(false);
+  };
+
+  return (
+    <View style={styles.accessRoot}>
+      <Card style={styles.accessCard}>
+        <Text role="titleLg" style={styles.title}>الدخول إلى بثواني</Text>
+        <Text role="body" tone="muted" style={styles.description}>
+          استخدم بيانات الحساب أو رمز التفعيل المخصص لهذا التطبيق.
+        </Text>
+
+        {errorMessage ? (
+          <Text role="caption" style={styles.errorText}>{errorMessage}</Text>
+        ) : null}
+
+        <View style={styles.modeRow}>
+          <Button
+            label="تسجيل الدخول"
+            tone={mode === "login" ? "primary" : "ghost"}
+            onPress={() => {
+              setMode("login");
+              setFeedback("");
+            }}
+          />
+          {activationAvailable ? (
+            <Button
+              label="التفعيل بالرمز"
+              tone={mode === "activation" ? "primary" : "ghost"}
+              onPress={() => {
+                setMode("activation");
+                setFeedback("");
+              }}
+            />
+          ) : null}
+        </View>
+
+        {mode === "login" ? (
+          <View style={styles.form}>
+            <TextField
+              value={username}
+              onChangeText={setUsername}
+              placeholder="اسم المستخدم"
+              autoCapitalize="none"
+            />
+            <TextField
+              value={password}
+              onChangeText={setPassword}
+              placeholder="كلمة المرور"
+              secureTextEntry
+            />
+            <Button
+              label={submitting ? "جاري الدخول" : "دخول"}
+              tone="primary"
+              disabled={submitting}
+              onPress={submitLogin}
+            />
+          </View>
+        ) : (
+          <View style={styles.form}>
+            <TextField
+              value={phone}
+              onChangeText={setPhone}
+              placeholder="رقم الهاتف"
+              keyboardType="phone-pad"
+            />
+            <Button
+              label={submitting ? "جاري الإصدار" : "طلب رمز التفعيل"}
+              tone="secondary"
+              disabled={submitting}
+              onPress={issueOtp}
+            />
+            <TextField
+              value={code}
+              onChangeText={setCode}
+              placeholder="رمز التفعيل من 6 أرقام"
+              keyboardType="number-pad"
+              maxLength={6}
+            />
+            <Button
+              label={submitting ? "جاري التفعيل" : "تفعيل ودخول"}
+              tone="primary"
+              disabled={submitting}
+              onPress={submitActivation}
+            />
+          </View>
+        )}
+
+        {feedback ? <Text role="caption" style={styles.feedback}>{feedback}</Text> : null}
+      </Card>
+    </View>
+  );
+}
+
 export function IdentitySessionGate({
   requiredRole,
   requiredSurface,
@@ -54,20 +198,10 @@ export function IdentitySessionGate({
       );
 
     case "error":
-      return (
-        <ErrorState
-          title="تعذر التحقق من الجلسة"
-          description={state.message}
-        />
-      );
+      return <IdentityAccessPanel requiredRole={requiredRole} errorMessage={state.message} />;
 
     case "signed_out":
-      return (
-        <PermissionState
-          title="لم يتم تسجيل الدخول"
-          description="هذا التطبيق لا يملك شاشة تسجيل دخول خاصة به — يجب تسجيل الدخول عبر البوابة المضيفة (Host Shell) قبل فتح هذه الواجهة."
-        />
-      );
+      return <IdentityAccessPanel requiredRole={requiredRole} />;
 
     case "authenticated": {
       const hasRole = state.identity.roles.includes(requiredRole);
@@ -91,8 +225,47 @@ export function IdentitySessionGate({
     }
 
     default: {
-      const _exhaustive: never = state;
-      return _exhaustive;
+      const exhaustive: never = state;
+      return exhaustive;
     }
   }
 }
+
+const styles = StyleSheet.create({
+  accessRoot: {
+    flex: 1,
+    justifyContent: "center",
+    padding: spacing[4],
+    backgroundColor: colorRoles.surfaceMuted,
+  },
+  accessCard: {
+    width: "100%",
+    maxWidth: 520,
+    alignSelf: "center",
+    padding: spacing[5],
+    gap: spacing[3],
+  },
+  title: {
+    textAlign: "right",
+    color: colorRoles.brandStructure,
+  },
+  description: {
+    textAlign: "right",
+  },
+  modeRow: {
+    flexDirection: "row-reverse",
+    flexWrap: "wrap",
+    gap: spacing[2],
+  },
+  form: {
+    gap: spacing[3],
+  },
+  errorText: {
+    textAlign: "right",
+    color: colorRoles.brandAction,
+  },
+  feedback: {
+    textAlign: "right",
+    color: colorRoles.brandStructure,
+  },
+});
