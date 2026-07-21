@@ -1,0 +1,36 @@
+{
+  "journeyId": "JRN-011",
+  "resource": "dsh.orderTruth",
+  "defaultEffect": "deny",
+  "permissions": {
+    "client": {
+      "surface": "app-client",
+      "scope": "tenant_id = actor.tenant_id AND client_id = actor.id",
+      "allow": ["order.createFromOwnedCheckout", "order.listOwn", "order.readOwn", "order.readOwnEvents"],
+      "deny": ["order.readOtherClient", "order.changeSnapshot", "order.changePaymentProjection"]
+    },
+    "partner": {
+      "surface": "app-partner",
+      "scope": "store_id IN actor.partnerStoreIds",
+      "allow": ["order.listStore", "order.readStore", "order.readOperationalEvents"],
+      "deny": ["order.create", "order.readClientPrivateAddress", "order.changePaymentProjection"]
+    },
+    "operator": {
+      "surface": "control-panel",
+      "scope": "tenant_id = actor.tenant_id AND permission operations.read",
+      "allow": ["order.listTenant", "order.readTenant", "order.readAuditEvents"],
+      "deny": ["order.changeSnapshot", "order.mutateWltTruth", "order.readCrossTenant"]
+    },
+    "system": {
+      "surface": "backend",
+      "scope": "trusted service identity + tenant context",
+      "allow": ["order.persistSnapshot", "order.appendEvent", "order.publishOutbox", "order.updatePaymentProjectionFromVerifiedWltEvent"],
+      "deny": ["wallet.debit", "wallet.credit", "refund.execute", "settlement.execute"]
+    }
+  },
+  "fieldVisibility": {
+    "app-client": ["orderNumber", "status", "statusTimeline", "allowedActions", "items", "pricing", "fulfillment", "paymentProjection", "createdAt", "updatedAt"],
+    "app-partner": ["orderNumber", "status", "statusTimeline", "allowedActions", "items", "pricing", "fulfillmentOperationalAddress", "paymentProjection.status", "createdAt", "updatedAt"],
+    "control-panel": ["orderNumber", "status", "statusTimeline", "allowedActions", "items", "pricing", "fulfillment", "paymentProjection", "correlationId", "version", "audit" ]
+  }
+}
