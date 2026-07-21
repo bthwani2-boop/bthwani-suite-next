@@ -71,7 +71,7 @@ function OrderCard({ order, onOpenOrder }: { order: OrderTruth; onOpenOrder?: (i
           <View style={styles.headerText}>
             <Text role="bodyStrong" style={styles.titleText}>{summaryText}</Text>
             <Text role="caption" tone="muted" style={styles.subtitleText}>
-              {`${view.totalLabel} • ${items.length} عناصر • المتجر: ${bidiIsolate(order.storeId)}`}
+              {`${formatMinorUnits(order.totalMinorUnits, order.currency)} • ${items.length} عناصر • المتجر: ${bidiIsolate(order.storeId)}`}
             </Text>
           </View>
         </View>
@@ -134,7 +134,7 @@ export function OrdersListScreen({ onOpenOrder, onBack }: Props) {
         </View>
       ) : state.kind === "offline" || state.kind === "forbidden" || state.kind === "error" ? (
         <View style={styles.center}>
-          <Text role="bodyStrong" style={{ color: state.kind === "forbidden" ? colorRoles.warning : colorRoles.danger }}>
+          <Text role="bodyStrong" style={state.kind === "forbidden" ? styles.warningText : styles.dangerText}>
             {state.kind === "forbidden" ? "لا تملك الجلسة صلاحية الطلبات" : "تعذر تحميل الطلبات"}
           </Text>
           <Text role="bodySm" tone="muted">{state.message}</Text>
@@ -144,7 +144,7 @@ export function OrdersListScreen({ onOpenOrder, onBack }: Props) {
               accessibilityLabel="إعادة محاولة تحميل طلباتي"
               tone="secondary"
               onPress={reload}
-              style={{ marginTop: spacing[4] }}
+              style={styles.retryButton}
             />
           ) : null}
         </View>
@@ -152,13 +152,13 @@ export function OrdersListScreen({ onOpenOrder, onBack }: Props) {
         <View style={styles.center}>
           <Text role="bodyStrong">لا توجد طلبات</Text>
           <Text role="bodySm" tone="muted">ستظهر طلباتك هنا بعد إنشاء أول طلب وقراءة حقيقته من الخادم.</Text>
-          {onBack ? <Button label="العودة" tone="secondary" onPress={onBack} style={{ marginTop: spacing[4] }} /> : null}
+          {onBack ? <Button label="العودة" tone="secondary" onPress={onBack} style={styles.retryButton} /> : null}
         </View>
       ) : (
         <MobileScrollView fill padding={4} gap={4} contentContainerStyle={styles.scrollContent}>
           {state.kind === "partial" ? (
             <Surface style={styles.partialBanner}>
-              <Text role="bodySm" style={{ color: colorRoles.warning }}>{state.message}</Text>
+              <Text role="bodySm" style={styles.warningText}>{state.message}</Text>
               <Button label="تحديث" accessibilityLabel="تحديث حقيقة الطلبات" tone="ghost" size="sm" onPress={reload} />
             </Surface>
           ) : null}
@@ -189,6 +189,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: spacing[6],
     gap: spacing[2],
+  },
+  retryButton: {
+    marginTop: spacing[4],
+  },
+  warningText: {
+    color: colorRoles.warning,
+  },
+  dangerText: {
+    color: colorRoles.danger,
   },
   partialBanner: {
     padding: spacing[3],
