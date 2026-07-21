@@ -5,8 +5,7 @@ import type { DshFulfillmentDeliveryMode } from '../../shared/delivery/delivery.
 import type { PartnerTeamMember } from '../team/partner-team.types';
 import { usePartnerDeliveryActionsController } from '../../shared/partner-delivery/use-partner-delivery-controller';
 import { usePickupActionsController } from '../../shared/pickup/use-pickup-controller';
-import { acceptPartnerReturnToStore, fetchPartnerReturnToStore } from '../../shared/dispatch/dispatch.api';
-import type { DshDeliveryException } from '../../shared/dispatch/dispatch.types';
+import { usePartnerReturnToStoreController } from '../../shared/dispatch/use-partner-return-to-store-controller';
 
 export type PartnerFulfillmentActionsPanelProps = {
   readonly orderId: string;
@@ -32,58 +31,26 @@ const PICKUP_ERROR_LABELS: Record<string, string> = {
   VERSION_CONFLICT: 'تغيّرت الجلسة من سطح آخر؛ أعد التحميل قبل المتابعة.',
 };
 
-function isNotFound(error: unknown): boolean {
-  const typed = error as { status?: number; body?: { code?: string } };
-  return typed.status === 404 || typed.body?.code === 'NOT_FOUND';
-}
-
 function ReturnToStoreReceiptActions({ orderId }: { readonly orderId: string }) {
   const { direction } = useDirection();
   const textAlign = direction === 'rtl' ? 'right' : 'left';
-  const [state, setState] = React.useState<
-    | { readonly kind: 'loading' }
-    | { readonly kind: 'none' }
-    | { readonly kind: 'ready'; readonly item: DshDeliveryException }
-    | { readonly kind: 'error'; readonly message: string }
-  >({ kind: 'loading' });
-  const [accepting, setAccepting] = React.useState(false);
-
-  const load = React.useCallback(async () => {
-    try {
-      const item = await fetchPartnerReturnToStore(orderId);
-      setState({ kind: 'ready', item });
-    } catch (error) {
-      if (isNotFound(error)) {
-        setState({ kind: 'none' });
-        return;
-      }
-      setState({ kind: 'error', message: error instanceof Error ? error.message : 'تعذر قراءة حالة المرتجع.' });
-    }
-  }, [orderId]);
-
-  React.useEffect(() => {
-    void load();
-    const interval = setInterval(() => void load(), 10_000);
-    return () => clearInterval(interval);
-  }, [load]);
-
-  const accept = React.useCallback(async () => {
-    setAccepting(true);
-    try {
-      const item = await acceptPartnerReturnToStore(orderId);
-      setState({ kind: 'ready', item });
-    } catch (error) {
-      setState({ kind: 'error', message: error instanceof Error ? error.message : 'تعذر تأكيد استلام المرتجع.' });
-    } finally {
-      setAccepting(false);
-    }
-  }, [orderId]);
+  const { state, load, accept } = usePartnerReturnToStoreController(orderId);
 
   if (state.kind === 'none') return null;
   if (state.kind === 'loading') return null;
-  if (state.kind === 'error') return <StateView tone="danger" title="تعذر قراءة المرتجع" description={state.message} actionLabel="إعادة المحاولة" onActionPress={() => void load()} />;
+  if (state.kind === 'error') {
+    return (
+      <StateView
+        tone="danger"
+        title="تعذر قراءة المرتجع"
+        description={state.message}
+        actionLabel="إعادة المحاولة"
+        onActionPress={() => void load()}
+      />
+    );
+  }
 
-  const item = state.item;
+  const { item, accepting } = state;
   const arrived = Boolean(item.returnArrivedAt);
   const accepted = Boolean(item.returnedAt);
   return (
