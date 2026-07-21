@@ -84,13 +84,15 @@ jobs:
           )
           gofmt -w "${files[@]}"
           git diff -- "${files[@]}" > jrn011-gofmt.patch
-      - name: Preserve canonical formatted files
+      - name: Preserve canonical formatted sources
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: jrn011-gofmt-output
+          name: jrn011-go-sources
           path: |
             jrn011-gofmt.patch
             services/dsh/backend/internal/http/order_truth.go
+            services/dsh/backend/internal/orders/order_truth.go
             services/dsh/backend/internal/orders/order_truth_queries.go
             services/dsh/backend/internal/orders/order_truth_db_test.go
             services/dsh/backend/internal/orders/order_truth_payment_projection_db_test.go
@@ -100,7 +102,18 @@ jobs:
         run: test ! -s jrn011-gofmt.patch
       - name: Verify order truth and WLT read boundary
         working-directory: services/dsh/backend
-        run: go test ./internal/orders ./internal/http ./internal/wlt -count=1
+        shell: bash
+        run: |
+          set -o pipefail
+          go test ./internal/orders ./internal/http ./internal/wlt -count=1 2>&1 | tee ../../../jrn011-go-tests.log
+      - name: Preserve Go test failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jrn011-go-tests-log
+          path: jrn011-go-tests.log
+          retention-days: 3
+          if-no-files-found: error
 
   database-invariants:
     name: FS-04/05/08/13 PostgreSQL lifecycle
