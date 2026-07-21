@@ -18,7 +18,9 @@ assert.equal(registry.authority, productTruthPath);
 assert.equal(productTruth.capabilityId, "JRN_001_PARTNER_ONBOARDING_STORE_PUBLICATION");
 for (const state of ["loading", "empty", "offline", "forbidden", "conflict", "readiness_blocked", "wlt_unavailable", "partial", "error", "ready"]) {
   assert.ok(registry.states[state], `visible state registry missing: ${state}`);
-  assert.match(visible, new RegExp(`\\b${state}:\\s*\\{`), `visible copy missing: ${state}`);
+}
+for (const state of ["idle", "loading", "ready", "saving", "submitting", "offline", "forbidden", "conflict", "readiness_blocked", "wlt_unavailable", "partial", "error"]) {
+  assert.match(visible, new RegExp(`\\b${state}:\\s*\\{`), `partner onboarding visible copy missing: ${state}`);
 }
 for (const state of ["offline", "forbidden", "conflict", "readiness_blocked", "wlt_unavailable", "error"]) {
   assert.match(runtime, new RegExp(`["']${state}["']`), `runtime failure state missing: ${state}`);
