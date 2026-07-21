@@ -34,11 +34,34 @@ func addressError(w http.ResponseWriter, err error) {
 		store.SendError(w, http.StatusNotFound, "ADDRESS_NOT_FOUND", "address was not found")
 	case clientaddress.IsDuplicateError(err):
 		store.SendError(w, http.StatusConflict, "ADDRESS_ALREADY_EXISTS", "an identical active address already exists; update the existing address instead")
+	case errors.Is(err, clientaddress.ErrMutationIdempotencyConflict):
+		store.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", "Idempotency-Key was already used for a different address mutation")
 	case errors.Is(err, clientaddress.ErrConflict):
 		store.SendError(w, http.StatusConflict, "ADDRESS_CONFLICT", "address changed; reload and retry")
 	default:
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "address operation failed")
 	}
+}
+
+func addressMutationContext(w http.ResponseWriter, r *http.Request) (clientaddress.MutationContext, bool) {
+	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	if len(idempotencyKey) < 8 || len(idempotencyKey) > 200 {
+		store.SendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key must contain between 8 and 200 characters")
+		return clientaddress.MutationContext{}, false
+	}
+	return clientaddress.MutationContext{
+		IdempotencyKey: idempotencyKey,
+		CorrelationID:  strings.TrimSpace(r.Header.Get("X-Correlation-ID")),
+	}, true
+}
+
+func addressExpectedVersion(w http.ResponseWriter, r *http.Request) (int, bool) {
+	expectedVersion, err := strconv.Atoi(strings.TrimSpace(r.Header.Get("If-Match-Version")))
+	if err != nil || expectedVersion < 1 {
+		store.SendError(w, http.StatusBadRequest, "EXPECTED_VERSION_REQUIRED", "If-Match-Version must be a positive integer")
+		return 0, false
+	}
+	return expectedVersion, true
 }
 
 func (s *protectedStoreServer) handleListClientAddresses(w http.ResponseWriter, r *http.Request) {
@@ -59,9 +82,8 @@ func (s *protectedStoreServer) handleCreateClientAddress(w http.ResponseWriter, 
 	if !ok {
 		return
 	}
-	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
-	if len(idempotencyKey) < 8 {
-		store.SendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key must contain at least 8 characters")
+	mutation, ok := addressMutationContext(w, r)
+	if !ok {
 		return
 	}
 	var input clientaddress.CreateInput
@@ -73,7 +95,7 @@ func (s *protectedStoreServer) handleCreateClientAddress(w http.ResponseWriter, 
 		r.Context(),
 		s.db,
 		actor.ID,
-		idempotencyKey,
+		mutation.IdempotencyKey,
 	)
 	if err != nil {
 		addressError(w, err)
@@ -88,10 +110,7 @@ func (s *protectedStoreServer) handleCreateClientAddress(w http.ResponseWriter, 
 		return
 	}
 
-	address, created, err := clientaddress.Create(r.Context(), s.db, actor.ID, input, clientaddress.MutationContext{
-		IdempotencyKey: idempotencyKey,
-		CorrelationID:  strings.TrimSpace(r.Header.Get("X-Correlation-ID")),
-	})
+	address, created, err := clientaddress.Create(r.Context(), s.db, actor.ID, input, mutation)
 	if err != nil {
 		addressError(w, err)
 		return
@@ -108,6 +127,10 @@ func (s *protectedStoreServer) handleUpdateClientAddress(w http.ResponseWriter, 
 	if !ok {
 		return
 	}
+	mutation, ok := addressMutationContext(w, r)
+	if !ok {
+		return
+	}
 	var input clientaddress.UpdateInput
 	if !decodeProtectedJSON(w, r, &input) {
 		return
@@ -116,9 +139,13 @@ func (s *protectedStoreServer) handleUpdateClientAddress(w http.ResponseWriter, 
 		addressError(w, err)
 		return
 	}
-	address, err := clientaddress.Update(
-		r.Context(), s.db, actor.ID, r.PathValue("addressId"), input,
-		strings.TrimSpace(r.Header.Get("X-Correlation-ID")),
+	address, err := clientaddress.UpdateIdempotent(
+		r.Context(),
+		s.db,
+		actor.ID,
+		r.PathValue("addressId"),
+		input,
+		mutation,
 	)
 	if err != nil {
 		addressError(w, err)
@@ -132,14 +159,21 @@ func (s *protectedStoreServer) handleDeleteClientAddress(w http.ResponseWriter, 
 	if !ok {
 		return
 	}
-	expectedVersion, err := strconv.Atoi(strings.TrimSpace(r.Header.Get("If-Match-Version")))
-	if err != nil || expectedVersion < 1 {
-		store.SendError(w, http.StatusBadRequest, "EXPECTED_VERSION_REQUIRED", "If-Match-Version must be a positive integer")
+	mutation, ok := addressMutationContext(w, r)
+	if !ok {
 		return
 	}
-	err = clientaddress.Delete(
-		r.Context(), s.db, actor.ID, r.PathValue("addressId"), expectedVersion,
-		strings.TrimSpace(r.Header.Get("X-Correlation-ID")),
+	expectedVersion, ok := addressExpectedVersion(w, r)
+	if !ok {
+		return
+	}
+	err := clientaddress.DeleteIdempotent(
+		r.Context(),
+		s.db,
+		actor.ID,
+		r.PathValue("addressId"),
+		expectedVersion,
+		mutation,
 	)
 	if err != nil {
 		addressError(w, err)
@@ -153,25 +187,21 @@ func (s *protectedStoreServer) handleSetClientDefaultAddress(w http.ResponseWrit
 	if !ok {
 		return
 	}
-	if len(strings.TrimSpace(r.Header.Get("Idempotency-Key"))) < 8 {
-		store.SendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key must contain at least 8 characters")
+	mutation, ok := addressMutationContext(w, r)
+	if !ok {
 		return
 	}
-	addressID := r.PathValue("addressId")
-	addresses, err := clientaddress.List(r.Context(), s.db, actor.ID)
-	if err != nil {
-		addressError(w, err)
+	expectedVersion, ok := addressExpectedVersion(w, r)
+	if !ok {
 		return
 	}
-	for index := range addresses {
-		if addresses[index].ID == addressID && addresses[index].IsDefault {
-			store.SendJSON(w, http.StatusOK, map[string]any{"address": addresses[index]})
-			return
-		}
-	}
-	address, err := clientaddress.SetDefault(
-		r.Context(), s.db, actor.ID, addressID,
-		strings.TrimSpace(r.Header.Get("X-Correlation-ID")),
+	address, err := clientaddress.SetDefaultIdempotent(
+		r.Context(),
+		s.db,
+		actor.ID,
+		r.PathValue("addressId"),
+		expectedVersion,
+		mutation,
 	)
 	if err != nil {
 		addressError(w, err)
