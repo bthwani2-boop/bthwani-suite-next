@@ -30,7 +30,7 @@ const httpClient = createDshHttpClient(baseUrl, "partner");
 type PartnerRequestOptions = {
   readonly method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   readonly body?: unknown;
-  readonly mutation?: PartnerMutationContext;
+  readonly mutation?: PartnerMutationContext | undefined;
 };
 
 /**
