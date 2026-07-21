@@ -14,14 +14,21 @@ const paths = {
   idempotencyDomain: 'services/dsh/backend/internal/dispatch/store_captain_handoff_idempotency.go',
   exceptionDomain: 'services/dsh/backend/internal/dispatch/store_captain_handoff_exceptions.go',
   routes: 'services/dsh/backend/internal/http/order_journey_routes.go',
+  workboard: 'services/dsh/backend/internal/http/partner_order_workboard.go',
   contract: 'services/dsh/contracts/dsh.store-captain-handoff.openapi.yaml',
   contractRegistry: 'services/dsh/contracts/contract-registry.ts',
+  sliceManifest: 'services/dsh/contracts/jrn-013-slice-closure.json',
   partnerApi: 'services/dsh/frontend/shared/orders/orders.api.ts',
   captainApi: 'services/dsh/frontend/shared/dispatch/dispatch.api.ts',
   controller: 'services/dsh/frontend/shared/dispatch/use-store-captain-handoff-exception.ts',
+  partnerAdapter: 'services/dsh/frontend/shared/partner/partner.adapters.ts',
   partnerScreen: 'services/dsh/frontend/app-partner/orders/OperationalOrdersInboxScreen.tsx',
+  partnerList: 'services/dsh/frontend/app-partner/orders/GovernedPartnerOrdersScreen.tsx',
   captainScreen: 'services/dsh/frontend/app-captain/orders/OperationalCaptainExecutionScreen.tsx',
+  operatorScreen: 'services/dsh/frontend/control-panel/operations/ExceptionsEscalationsScreen.tsx',
+  clientController: 'services/dsh/frontend/shared/orders/use-client-order-journey-controller.ts',
   productTruth: 'governance/product/contracts/jrn-013-store-captain-handoff.product-truth.json',
+  workflow: '.github/workflows/store-captain-handoff-verification.yml',
 };
 
 test('custody database truth has dual confirmation, reassignment, and reporter audit', () => {
@@ -51,6 +58,9 @@ test('backend enforces idempotency, early-pickup prevention, and exception block
   const exception = read(paths.exceptionDomain);
 
   assert.match(handoff, /ErrStoreHandoffRequired/);
+  assert.match(handoff, /ensureStoreCaptainHandoff/);
+  assert.match(handoff, /requireStoreCaptainHandoffConfirmed/);
+  assert.match(handoff, /completeStoreCaptainHandoff/);
   assert.match(handoff, /DeliveryArrivedStore/);
   assert.match(handoff, /partner_confirmed/);
   assert.match(handoff, /completed/);
@@ -84,8 +94,50 @@ test('runtime routes and OpenAPI contract remain aligned', () => {
   assert.match(contract, /updateCaptainDeliveryStatusWithCustodyGuard/);
   assert.match(contract, /handoff_shortage/);
   assert.match(contract, /handoff_mismatch/);
+  assert.match(contract, /bearerAuth/);
   assert.match(registry, /dsh-store-captain-handoff/);
   assert.match(registry, /dsh\.store-captain-handoff\.openapi\.yaml/);
+});
+
+test('partner readback survives refresh and preserves preparation decision governance', () => {
+  const workboard = read(paths.workboard);
+  const adapter = read(paths.partnerAdapter);
+  const list = read(paths.partnerList);
+  const screen = read(paths.partnerScreen);
+
+  assert.match(workboard, /OpenStoreCaptainHandoffExceptionID/);
+  assert.match(workboard, /hasOpenStoreCaptainHandoffException/);
+  assert.match(workboard, /PendingCustomerDecisionCount/);
+  assert.match(workboard, /ResolvablePreparationIssueCount/);
+  assert.match(workboard, /reason_code IN \('handoff_shortage', 'handoff_mismatch'\)/);
+
+  assert.match(adapter, /pending customer decision count is inconsistent/);
+  assert.match(adapter, /resolvable preparation issue count is inconsistent/);
+  assert.match(adapter, /exposes handoff while custody exception is active/);
+  assert.match(adapter, /openStoreCaptainHandoffExceptionId/);
+
+  assert.match(list, /استثناء عهدة قيد مراجعة العمليات/);
+  assert.match(list, /handoffExceptionAvailable/);
+  assert.match(screen, /openStoreCaptainHandoffExceptionId === ''/);
+  assert.match(screen, /StoreCaptainHandoffExceptionForm/);
+  assert.doesNotMatch(screen, /fetch\s*\(|\/dsh\//);
+});
+
+test('captain readback is persistent and fail-closed for every active exception', () => {
+  const captainApi = read(paths.captainApi);
+  const controller = read(paths.controller);
+  const screen = read(paths.captainScreen);
+
+  assert.match(captainApi, /fetchCaptainDeliveryException/);
+  assert.match(controller, /fetchCaptainDeliveryException/);
+  assert.match(controller, /backend pickup guard blocks on every open\/acknowledged delivery/);
+  assert.match(controller, /setReadback\(\{ kind: "blocked"/);
+  assert.match(screen, /setInterval/);
+  assert.match(screen, /readbackBlocksPickup/);
+  assert.match(screen, /handoffReadback\.kind !== 'clear'/);
+  assert.match(screen, /الاستلام محجوب بقرار تشغيلي/);
+  assert.match(screen, /تعذر التحقق من الاستثناء التشغيلي/);
+  assert.doesNotMatch(screen, /fetch\s*\(|\/dsh\//);
 });
 
 test('partner and captain surfaces consume only shared custody commands', () => {
@@ -99,22 +151,52 @@ test('partner and captain surfaces consume only shared custody commands', () => 
   assert.match(captainApi, /reportCaptainHandoffException/);
   assert.match(controller, /useStoreCaptainHandoffException/);
   assert.match(controller, /await refresh\(\)/);
-
-  assert.match(partnerScreen, /StoreCaptainHandoffExceptionForm/);
   assert.match(partnerScreen, /useStoreCaptainHandoffException\('partner'/);
-  assert.match(captainScreen, /StoreCaptainHandoffExceptionForm/);
   assert.match(captainScreen, /useStoreCaptainHandoffException\('captain'/);
   assert.match(captainScreen, /handoffExceptionEnabled/);
-
-  assert.doesNotMatch(partnerScreen, /fetch\s*\(|\/dsh\//);
-  assert.doesNotMatch(captainScreen, /fetch\s*\(|\/dsh\//);
 });
 
-test('product truth preserves DSH custody and WLT financial ownership', () => {
+test('operator and client consume the same DSH lifecycle truth', () => {
+  const operator = read(paths.operatorScreen);
+  const client = read(paths.clientController);
+
+  assert.match(operator, /handoff_shortage/);
+  assert.match(operator, /handoff_mismatch/);
+  assert.match(operator, /استثناءات عهدة/);
+  assert.match(operator, /السماح باستكمال العهدة/);
+  assert.match(operator, /resolveDeliveryExceptionReassignCaptain/);
+
+  assert.match(client, /fetchClientOrderTruthDetail/);
+  assert.match(client, /fetchClientOrderTracking/);
+  assert.match(client, /setInterval/);
+  assert.match(client, /cannot override order truth/);
+});
+
+test('product truth and slice manifest close code without claiming release approval', () => {
   const truth = JSON.parse(read(paths.productTruth));
+  const manifest = JSON.parse(read(paths.sliceManifest));
+
   assert.equal(truth.journeyId, 'JRN-013');
   assert.equal(truth.owner, 'DSH');
   assert.equal(truth.truthOwnership.financialTruth, 'WLT');
+  assert.equal(truth.internalZeroGate, 'SOURCE_CODE_CLOSED');
+  assert.equal(truth.decision, 'READY_FOR_REVIEW');
+  assert.equal(truth.evidenceState.ciExecution, 'NOT_OBSERVED_FROM_CONNECTOR');
+  assert.equal(truth.evidenceState.productionRelease, 'NOT_APPROVED');
   assert.ok(truth.negativeInvariants.includes('لا pickup قبل اكتمال العهدة الثنائية.'));
-  assert.equal(truth.decision, 'NEEDS_EVIDENCE');
+
+  assert.equal(manifest.requiredSliceCount, 18);
+  assert.equal(manifest.codeDecision, 'CLOSED');
+  assert.equal(manifest.releaseDecision, 'READY_FOR_INDEPENDENT_REVIEW');
+  assert.equal(manifest.slices.every((slice) => slice.codeStatus === 'CLOSED'), true);
+});
+
+test('verification workflow covers source, type, boundaries, database, and backend', () => {
+  const workflow = read(paths.workflow);
+  assert.match(workflow, /store-captain-handoff-closure\.test\.mjs/);
+  assert.match(workflow, /Typecheck DSH shared brain and surfaces/);
+  assert.match(workflow, /guard:ui-kit-boundary/);
+  assert.match(workflow, /guard:fullstack-boundary/);
+  assert.match(workflow, /Apply DSH migrations from a clean database/);
+  assert.match(workflow, /Prove custody, replay, reassignment, and exception invariants/);
 });
