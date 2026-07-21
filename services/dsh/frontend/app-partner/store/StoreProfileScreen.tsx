@@ -13,7 +13,6 @@ import {
   TextField,
   alpha,
   colorRoles,
-  resolveRowDirection,
   useDirection,
 } from '@bthwani/ui-kit';
 import {
@@ -114,7 +113,7 @@ function SectionBlock({ title, subtitle, actionLabel, expanded, onToggle, childr
   const { direction } = useDirection();
   return (
     <Box gap={3} style={styles.section}>
-      <Box style={[styles.sectionHeader, { flexDirection: resolveRowDirection(direction) }]}>
+      <Box style={[styles.sectionHeader, direction === 'rtl' ? styles.rowReverse : styles.row]}>
         <Box style={styles.flex} gap={1}>
           <Text role="bodyStrong" align="start">{title}</Text>
           <Text role="bodySm" tone="muted" align="start">{subtitle}</Text>
@@ -134,7 +133,6 @@ export function StoreProfileScreen({
   todayHoursLabel,
   activeZoneLabel,
   storeOpen,
-  listingEnabled,
   canonicalStoreId,
   sourceRecordId,
   deliveryReadinessLabel,
@@ -205,16 +203,12 @@ export function StoreProfileScreen({
 
     setSaveState({ kind: 'saving' });
     try {
-      await updatePartnerStoreSettings(
-        canonicalStoreId,
-        {
-          expectedVersion: loadState.settings.version,
-          status: desiredOpen ? 'active' : 'temporarily_closed',
-          deliveryModes: backendModes,
-          reason: normalizedReason,
-        },
-        { expectedVersion: loadState.settings.version },
-      );
+      await updatePartnerStoreSettings(canonicalStoreId, {
+        expectedVersion: loadState.settings.version,
+        status: desiredOpen ? 'active' : 'temporarily_closed',
+        deliveryModes: backendModes,
+        reason: normalizedReason,
+      });
       const readback = parseSettings(await fetchPartnerStoreSettings(canonicalStoreId));
       if (readback.version <= loadState.settings.version) {
         throw new Error('لم يؤكد DSH إصدارًا أحدث بعد الحفظ.');
@@ -256,7 +250,7 @@ export function StoreProfileScreen({
   const settings = loadState.settings;
   const storeStateLabel = settings.storeOpen ? 'مفتوح الآن' : 'مغلق مؤقتًا';
   const visibilityLabel = settings.listingEnabled ? 'مفعّل' : 'موقوف';
-  const serviceabilityAvailable = activeZoneLabel.trim().length > 0 && (coverageSummary?.trim().length ?? 0) > 0;
+  const serviceabilityAvailable = activeZoneLabel.trim().length > 0;
   const storeVisibility = resolveDshStoreClientVisibility({
     publishStage,
     activationStatus,
@@ -373,7 +367,7 @@ export function StoreProfileScreen({
         <Box gap={2}>
           {storeVisibility.checklist.map((check) => (
             <Box key={check.id} style={styles.checkRow}>
-              <Box style={[styles.checkHeader, { flexDirection: resolveRowDirection(direction) }]}>
+              <Box style={[styles.checkHeader, direction === 'rtl' ? styles.rowReverse : styles.row]}>
                 <Icon
                   name={check.satisfied ? 'checkmark-circle-outline' : 'close-circle-outline'}
                   size={16}
@@ -412,6 +406,12 @@ const styles = StyleSheet.create({
   sectionHeader: {
     alignItems: 'center',
     gap: 12,
+  },
+  row: {
+    flexDirection: 'row',
+  },
+  rowReverse: {
+    flexDirection: 'row-reverse',
   },
   flex: {
     flex: 1,
