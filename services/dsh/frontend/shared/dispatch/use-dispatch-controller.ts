@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   acceptDispatchAssignment,
   classifyDispatchError,
-  createDispatchAssignment,
+  createGovernedDispatchAssignment,
   declineDispatchAssignment,
   fetchCaptainDispatchAssignments,
   fetchClientOrderTracking,
@@ -30,9 +30,9 @@ import {
   trackingIdleState,
 } from "./dispatch.states";
 import type {
-  DshCreateAssignmentInput,
   DshDispatchActionState,
   DshDispatchListState,
+  DshGovernedCreateAssignmentInput,
   DshSubmitPoDInput,
   DshTrackingState,
 } from "./dispatch.types";
@@ -135,11 +135,11 @@ export function useOperatorDispatchController() {
     }
   }, []);
 
-  const assign = useCallback(async (input: DshCreateAssignmentInput) => {
+  const assign = useCallback(async (input: DshGovernedCreateAssignmentInput) => {
     setActionState(dispatchActionSubmittingState());
     try {
-      const assignment = await createDispatchAssignment(input);
-      setActionState(dispatchActionSuccessState(assignment));
+      const result = await createGovernedDispatchAssignment(input);
+      setActionState(dispatchActionSuccessState(result.assignment));
       await load();
     } catch (error) {
       const classified = classifyDispatchError(error);
