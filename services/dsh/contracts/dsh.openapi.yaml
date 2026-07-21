@@ -5857,6 +5857,61 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
 
+  /dsh/partner/orders/{orderId}/partner-delivery:
+    get:
+      operationId: getDshPartnerDeliveryTask
+      summary: Return the authenticated partner's partner_delivery task for the order.
+      tags: [DshPartnerDelivery]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Partner delivery state returned (task is null before assignment).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartnerDeliveryStateResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422":
+          description: The order does not use partner_delivery fulfillment.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshErrorResponse" }
+
+  /dsh/client/orders/{orderId}/partner-delivery:
+    get:
+      operationId: getDshClientPartnerDeliveryTask
+      summary: Return the authenticated client's reference partner_delivery status for the order.
+      description: >-
+        Client-facing reference status for JRN-016. Read-only projection of
+        the same partner_delivery task the store courier operates; the client
+        never mutates it.
+      tags: [DshPartnerDelivery]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Partner delivery state returned (task is null before assignment).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartnerDeliveryStateResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422":
+          description: The order does not use partner_delivery fulfillment.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshErrorResponse" }
+
   /dsh/partner/orders/{orderId}/partner-delivery/assign:
     post:
       operationId: assignDshPartnerDeliveryTask
@@ -10045,6 +10100,19 @@ components:
       properties:
         task:
           $ref: "#/components/schemas/DshPartnerDeliveryTask"
+
+    DshPartnerDeliveryStateResponse:
+      type: object
+      additionalProperties: false
+      required: [task, stage]
+      properties:
+        task:
+          oneOf:
+            - $ref: "#/components/schemas/DshPartnerDeliveryTask"
+            - type: "null"
+        stage:
+          type: string
+          description: task.status when a task exists, or "unassigned" before assignment.
 
     DshPartnerDeliveryTaskListResponse:
       type: object

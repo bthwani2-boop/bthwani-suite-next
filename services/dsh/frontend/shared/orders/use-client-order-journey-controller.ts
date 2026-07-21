@@ -12,6 +12,8 @@ import {
 } from '../order-truth';
 import { fetchClientOrderTracking, classifyDispatchError } from '../dispatch/dispatch.api';
 import type { DshDispatchAssignment } from '../dispatch/dispatch.types';
+import { fetchClientPartnerDeliveryTask, classifyPartnerDeliveryError } from '../partner-delivery/partner-delivery.api';
+import type { DshPartnerDeliveryTask } from '../partner-delivery/partner-delivery.types';
 
 export type ClientOrderJourneyState =
   | { readonly kind: 'loading' }
@@ -21,6 +23,7 @@ export type ClientOrderJourneyState =
       readonly order: OrderTruth;
       readonly preparation: DshOrderPreparation;
       readonly assignment: DshDispatchAssignment | null;
+      readonly partnerDeliveryTask: DshPartnerDeliveryTask | null;
     };
 
 function orderErrorMessage(error: unknown): string {
@@ -53,19 +56,33 @@ export function useClientOrderJourneyController(orderId: string) {
         fetchOrderPreparation(orderId),
       ]);
       let assignment: DshDispatchAssignment | null = null;
-      try {
-        assignment = await fetchClientOrderTracking(orderId);
-      } catch (trackingError) {
-        const classified = classifyDispatchError(trackingError);
-        if (classified.kind !== 'not_found') {
-          if (classified.kind === 'permission_denied') {
-            setState({ kind: 'error', message: 'لا تملك صلاحية عرض تتبع هذا الطلب.' });
+      let partnerDeliveryTask: DshPartnerDeliveryTask | null = null;
+      if (order.fulfillmentMode === 'partner_delivery') {
+        try {
+          const response = await fetchClientPartnerDeliveryTask(orderId);
+          partnerDeliveryTask = response.task;
+        } catch (partnerDeliveryError) {
+          const classified = classifyPartnerDeliveryError(partnerDeliveryError);
+          if (classified.kind === 'forbidden') {
+            setState({ kind: 'error', message: 'لا تملك صلاحية عرض توصيل الشريك لهذا الطلب.' });
             return;
           }
-          if (classified.kind === 'offline') assignment = null;
+        }
+      } else {
+        try {
+          assignment = await fetchClientOrderTracking(orderId);
+        } catch (trackingError) {
+          const classified = classifyDispatchError(trackingError);
+          if (classified.kind !== 'not_found') {
+            if (classified.kind === 'permission_denied') {
+              setState({ kind: 'error', message: 'لا تملك صلاحية عرض تتبع هذا الطلب.' });
+              return;
+            }
+            if (classified.kind === 'offline') assignment = null;
+          }
         }
       }
-      setState({ kind: 'ready', order, preparation, assignment });
+      setState({ kind: 'ready', order, preparation, assignment, partnerDeliveryTask });
     } catch (error) {
       setState({ kind: 'error', message: orderErrorMessage(error) });
     }

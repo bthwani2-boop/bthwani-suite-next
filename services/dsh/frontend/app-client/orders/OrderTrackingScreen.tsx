@@ -30,7 +30,19 @@ import {
   type OrderTruth,
 } from '../../shared/order-truth';
 import { DELIVERY_STATUS_LABELS } from '../../shared/dispatch';
+import type { DshPartnerDeliveryTaskStatus } from '../../shared/partner-delivery/partner-delivery.types';
 import { useClientOrderJourneyController } from './useClientOrderJourneyController';
+
+const PARTNER_DELIVERY_STATUS_LABELS: Readonly<Record<DshPartnerDeliveryTaskStatus, string>> = {
+  unassigned: 'بانتظار تعيين سائق من المتجر',
+  assigned: 'تم تعيين سائق من المتجر',
+  departed: 'السائق في الطريق إليك',
+  arrived: 'السائق وصل إلى موقعك',
+  proof_pending: 'بانتظار إثبات التسليم',
+  completed: 'تم تسليم الطلب',
+  cancelled: 'تم إلغاء توصيل الشريك',
+  exception: 'تعذر إتمام التوصيل، راجع الدعم',
+};
 
 type Props = {
   readonly orderId: string;
@@ -236,7 +248,7 @@ export function OrderTrackingScreen({ orderId, onBack }: Props) {
     );
   }
 
-  const { order, assignment } = state;
+  const { order, assignment, partnerDeliveryTask } = state;
   const summary = toOrderTruthSummary(order);
   const deliveryStatus = assignment?.delivery?.status;
   const accessibilityLabel = buildOrderTruthAccessibilityLabel(order);
@@ -277,7 +289,33 @@ export function OrderTrackingScreen({ orderId, onBack }: Props) {
 
         <Surface tone="raised" gap={3}>
           <Text role="titleSm">تفاصيل التوصيل</Text>
-          {assignment ? (
+          {order.fulfillmentMode === 'partner_delivery' ? (
+            partnerDeliveryTask ? (
+              <>
+                <View style={styles.detailRow}>
+                  <Text role="bodySm" tone="muted">حالة توصيل الشريك</Text>
+                  <Text role="bodyStrong">{PARTNER_DELIVERY_STATUS_LABELS[partnerDeliveryTask.status]}</Text>
+                </View>
+                {partnerDeliveryTask.departedAt ? (
+                  <View style={styles.detailRow}>
+                    <Text role="bodySm" tone="muted">وقت الانطلاق</Text>
+                    <Text role="bodyStrong">{new Date(partnerDeliveryTask.departedAt).toLocaleString('ar-YE')}</Text>
+                  </View>
+                ) : null}
+                {partnerDeliveryTask.arrivedAt ? (
+                  <View style={styles.detailRow}>
+                    <Text role="bodySm" tone="muted">وقت الوصول</Text>
+                    <Text role="bodyStrong">{new Date(partnerDeliveryTask.arrivedAt).toLocaleString('ar-YE')}</Text>
+                  </View>
+                ) : null}
+              </>
+            ) : (
+              <View style={styles.emptyDispatch}>
+                <Icon name="time-outline" size={24} tone="muted" />
+                <Text role="bodyStrong">بانتظار تعيين سائق من المتجر</Text>
+              </View>
+            )
+          ) : assignment ? (
             <>
               <View style={styles.detailRow}>
                 <Text role="bodySm" tone="muted">الكابتن</Text>
@@ -297,7 +335,7 @@ export function OrderTrackingScreen({ orderId, onBack }: Props) {
               <Icon name="time-outline" size={24} tone="muted" />
               <Text role="bodyStrong">لم يتم إسناد كابتن بعد</Text>
               <Text role="bodySm" tone="muted">
-                هذا طبيعي ما دام الطلب لدى المتجر أو كان نوع التنفيذ توصيل المتجر أو الاستلام الذاتي.
+                هذا طبيعي ما دام الطلب لدى المتجر أو كان نوع التنفيذ الاستلام الذاتي.
               </Text>
             </View>
           )}

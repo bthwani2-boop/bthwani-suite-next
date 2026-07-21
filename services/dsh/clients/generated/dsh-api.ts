@@ -3694,6 +3694,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dsh/partner/orders/{orderId}/partner-delivery": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Return the authenticated partner's partner_delivery task for the order. */
+        get: operations["getDshPartnerDeliveryTask"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/client/orders/{orderId}/partner-delivery": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Return the authenticated client's reference partner_delivery status for the order.
+         * @description Client-facing reference status for JRN-016. Read-only projection of the same partner_delivery task the store courier operates; the client never mutates it.
+         */
+        get: operations["getDshClientPartnerDeliveryTask"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/dsh/partner/orders/{orderId}/partner-delivery/assign": {
         parameters: {
             query?: never;
@@ -6308,6 +6345,11 @@ export interface components {
         };
         DshPartnerDeliveryTaskResponse: {
             task: components["schemas"]["DshPartnerDeliveryTask"];
+        };
+        DshPartnerDeliveryStateResponse: {
+            task: components["schemas"]["DshPartnerDeliveryTask"] | null;
+            /** @description task.status when a task exists, or "unassigned" before assignment. */
+            stage: string;
         };
         DshPartnerDeliveryTaskListResponse: {
             tasks: components["schemas"]["DshPartnerDeliveryTask"][];
@@ -13473,6 +13515,73 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    getDshPartnerDeliveryTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Partner delivery state returned (task is null before assignment). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerDeliveryStateResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description The order does not use partner_delivery fulfillment. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+        };
+    };
+    getDshClientPartnerDeliveryTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Partner delivery state returned (task is null before assignment). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerDeliveryStateResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            /** @description The order does not use partner_delivery fulfillment. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
         };
     };
     assignDshPartnerDeliveryTask: {

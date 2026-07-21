@@ -15,6 +15,16 @@ export type DshPartnerDeliveryStateResponse = {
   readonly stage: string;
 };
 
+// --- Client side (JRN-016 reference status, read-only) ----------------------
+
+export async function fetchClientPartnerDeliveryTask(
+  orderId: string,
+): Promise<DshPartnerDeliveryStateResponse> {
+  return request<DshPartnerDeliveryStateResponse>(
+    `/dsh/client/orders/${encodeURIComponent(orderId)}/partner-delivery`,
+  );
+}
+
 // --- Partner (store courier) side ------------------------------------------
 
 export async function fetchPartnerDeliveryTask(
