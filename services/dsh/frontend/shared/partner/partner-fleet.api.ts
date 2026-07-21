@@ -86,3 +86,18 @@ export function listCaptainPartnerFleetMemberships(): Promise<{
 }> {
   return request("/dsh/captain/partner-fleet/memberships");
 }
+
+export function disconnectCaptainPartnerFleetMembership(
+  membership: Pick<DshCaptainFleetMembership, "teamMemberId" | "storeId" | "version">,
+): Promise<{ membership: DshCaptainFleetMembership }> {
+  return request(
+    `/dsh/captain/partner-fleet/memberships/${membership.teamMemberId}/disconnect`,
+    {
+      method: "POST",
+      body: {
+        storeId: membership.storeId,
+        expectedVersion: membership.version,
+      },
+    },
+  );
+}
