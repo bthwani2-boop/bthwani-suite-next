@@ -31,11 +31,26 @@ jobs:
           pnpm install --frozen-lockfile
       - name: Enforce committed readback and no local truth
         run: node tools/guards/partner/jrn-001-cross-surface-truth-gate.mjs
-      - name: Typecheck shared consumers
+      - name: Typecheck app-field consumer
+        id: app_field_typecheck
+        continue-on-error: true
+        run: pnpm --dir apps/app-field/runtime typecheck
+      - name: Typecheck app-partner consumer
+        id: app_partner_typecheck
+        continue-on-error: true
+        run: pnpm --dir apps/app-partner/runtime typecheck
+      - name: Typecheck control-panel consumer
+        id: control_panel_typecheck
+        continue-on-error: true
+        run: pnpm --dir apps/control-panel/runtime typecheck
+      - name: Enforce consumer typecheck results
+        env:
+          APP_FIELD_RESULT: ${{ steps.app_field_typecheck.outcome }}
+          APP_PARTNER_RESULT: ${{ steps.app_partner_typecheck.outcome }}
+          CONTROL_PANEL_RESULT: ${{ steps.control_panel_typecheck.outcome }}
         run: |
-          pnpm --dir apps/app-field/runtime typecheck
-          pnpm --dir apps/app-partner/runtime typecheck
-          pnpm --dir apps/control-panel/runtime typecheck
+          printf 'app-field=%s app-partner=%s control-panel=%s\n' "$APP_FIELD_RESULT" "$APP_PARTNER_RESULT" "$CONTROL_PANEL_RESULT"
+          [ "$APP_FIELD_RESULT" = success ] && [ "$APP_PARTNER_RESULT" = success ] && [ "$CONTROL_PANEL_RESULT" = success ]
       - name: Publish FS-12 status
         if: always()
         env:
