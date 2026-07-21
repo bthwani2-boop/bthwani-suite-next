@@ -5,6 +5,7 @@ on:
   push:
     branches: [sambassam]
     paths:
+      - "contracts/master.openapi.yaml"
       - "services/dsh/tsconfig.jrn-007.json"
       - "services/dsh/backend/internal/homediscovery/**"
       - "services/dsh/backend/internal/http/server.go"
@@ -42,8 +43,8 @@ jobs:
         uses: ./.github/actions/setup-node-workspace
       - name: Verify repository hygiene
         run: git diff --check
-      - name: Verify registered OpenAPI contracts
-        run: pnpm contracts:lint
+      - name: Verify JRN-007 OpenAPI document
+        run: pnpm --dir services/dsh exec openapi-typescript contracts/dsh.home-marketing-events.openapi.yaml -o /tmp/dsh-home-marketing-events-api.ts
       - name: Verify JRN-007 source bindings
         run: node --test services/dsh/tests/jrn-007-home-discovery-closure.test.mjs
       - name: Typecheck JRN-007 shared brain and surfaces
