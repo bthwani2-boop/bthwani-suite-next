@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 
+// This affected-only guard complements, but never replaces, the repository-wide gates.
 const violations = [];
 const surfaceFiles = [
   'services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx',
