@@ -83,7 +83,7 @@ jobs:
           COMMIT_SHA: ${{ github.sha }}
           BINDINGS_RESULT: ${{ needs.home-bindings.result }}
           GO_RESULT: ${{ needs.home-go.result }}
-          TARGET_URL: ${{ github.server_url }}/${{ github.repository}/actions/runs/${{ github.run_id }}
+          TARGET_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         shell: bash
         run: |
           STATE=failure
