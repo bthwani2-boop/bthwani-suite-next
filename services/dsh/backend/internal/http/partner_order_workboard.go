@@ -35,6 +35,8 @@ type partnerOrderWorkboardOrder struct {
 	Preparation                             orders.PreparationTiming    `json:"preparation"`
 	PreparationIssues                       []orders.PreparationIssue   `json:"preparationIssues"`
 	OpenPreparationIssueCount               int                         `json:"openPreparationIssueCount"`
+	PendingCustomerDecisionCount            int                         `json:"pendingCustomerDecisionCount"`
+	ResolvablePreparationIssueCount         int                         `json:"resolvablePreparationIssueCount"`
 	StoreCaptainHandoffStatus               string                      `json:"storeCaptainHandoffStatus"`
 	StoreCaptainHandoffAssignmentID         string                      `json:"storeCaptainHandoffAssignmentId"`
 	StoreCaptainHandoffCaptainID            string                      `json:"storeCaptainHandoffCaptainId"`
@@ -50,7 +52,8 @@ func partnerOrderAllowedActions(
 	status,
 	fulfillmentMode,
 	storeCaptainHandoffStatus string,
-	openPreparationIssueCount int,
+	openPreparationIssueCount,
+	resolvablePreparationIssueCount int,
 	hasOpenStoreCaptainHandoffException bool,
 ) []string {
 	switch strings.TrimSpace(status) {
@@ -58,14 +61,17 @@ func partnerOrderAllowedActions(
 		return []string{"accept", "reject"}
 	case "store_accepted":
 		actions := []string{"prepare", "revise_estimate", "report_issue"}
-		if openPreparationIssueCount > 0 {
+		if resolvablePreparationIssueCount > 0 {
 			actions = append(actions, "resolve_issue")
 		}
 		return actions
 	case "preparing":
 		actions := []string{"revise_estimate", "report_issue"}
 		if openPreparationIssueCount > 0 {
-			return append(actions, "resolve_issue")
+			if resolvablePreparationIssueCount > 0 {
+				actions = append(actions, "resolve_issue")
+			}
+			return actions
 		}
 		return append([]string{"ready"}, actions...)
 	case "ready_for_pickup":
@@ -88,8 +94,8 @@ func partnerOrderAllowedActions(
 // The store scope is resolved from the authenticated partner actor. The
 // workboard deliberately returns all lifecycle states when status is omitted;
 // inbox tabs must not be backed by a hidden pending-only default. Executable
-// actions, preparation SLA, open issues, custody state, and active custody
-// exception readback are derived by DSH, never inferred by a screen.
+// actions, preparation SLA, open issues, customer substitution decisions,
+// custody state, and active custody exception readback are derived by DSH.
 func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter, r *http.Request) {
 	_, storeID, ok := s.partnerStore(w, r)
 	if !ok {
@@ -120,6 +126,8 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 			o.preparation_estimate_revision_count,
 			COALESCE(issue_projection.issues, '[]'::jsonb),
 			COALESCE(issue_projection.open_count, 0),
+			COALESCE(issue_projection.pending_customer_decision_count, 0),
+			COALESCE(issue_projection.resolvable_count, 0),
 			COALESCE(h.status, ''),
 			COALESCE(h.assignment_id::text, ''),
 			COALESCE(h.captain_id, ''),
@@ -165,6 +173,10 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 							'note', pi.note,
 							'replacementProductId', COALESCE(pi.replacement_product_id, ''),
 							'replacementProductName', COALESCE(pi.replacement_product_name, ''),
+							'customerDecision', pi.customer_decision,
+							'customerDecidedByActorId', COALESCE(pi.customer_decided_by_actor_id, ''),
+							'customerDecisionNote', COALESCE(pi.customer_decision_note, ''),
+							'customerDecidedAt', pi.customer_decided_at,
 							'openedByActorId', pi.opened_by_actor_id,
 							'openedAt', pi.opened_at,
 							'resolvedByActorId', COALESCE(pi.resolved_by_actor_id, ''),
@@ -178,7 +190,17 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 					),
 					'[]'::jsonb
 				) AS issues,
-				COUNT(*) FILTER (WHERE pi.status = 'open') AS open_count
+				COUNT(*) FILTER (WHERE pi.status = 'open') AS open_count,
+				COUNT(*) FILTER (
+					WHERE pi.status = 'open' AND pi.customer_decision = 'pending'
+				) AS pending_customer_decision_count,
+				COUNT(*) FILTER (
+					WHERE pi.status = 'open'
+					  AND NOT (
+						pi.issue_kind = 'substitution_required'
+						AND pi.customer_decision = 'pending'
+					  )
+				) AS resolvable_count
 			FROM dsh_order_preparation_issues pi
 			WHERE pi.order_id = o.id
 		) issue_projection ON TRUE
@@ -257,6 +279,8 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 			&order.Preparation.EstimateRevisionCount,
 			&issuesJSON,
 			&order.OpenPreparationIssueCount,
+			&order.PendingCustomerDecisionCount,
+			&order.ResolvablePreparationIssueCount,
 			&order.StoreCaptainHandoffStatus,
 			&order.StoreCaptainHandoffAssignmentID,
 			&order.StoreCaptainHandoffCaptainID,
@@ -289,6 +313,7 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 			order.FulfillmentMode,
 			order.StoreCaptainHandoffStatus,
 			order.OpenPreparationIssueCount,
+			order.ResolvablePreparationIssueCount,
 			order.OpenStoreCaptainHandoffExceptionID != "",
 		)
 		order.Preparation.OrderID = order.ID
