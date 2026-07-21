@@ -26,47 +26,38 @@ jobs:
           path = Path('services/dsh/frontend/control-panel/partners/PartnerDetailOperationalScreen.tsx')
           text = path.read_text(encoding='utf-8')
 
-          old = '  const [documentReason, setDocumentReason] = useState("");'
-          new = '''  const [documentReason, setDocumentReason] = useState("");
-          const [storeIdToLink, setStoreIdToLink] = useState("");'''.replace('          ', '')
-          if old not in text:
-              raise SystemExit('partner detail state anchor missing')
-          text = text.replace(old, new, 1)
+          state_anchor = '  const [documentReason, setDocumentReason] = useState("");'
+          if 'storeIdToLink' not in text:
+              if state_anchor not in text:
+                  raise SystemExit('partner detail state anchor missing')
+              text = text.replace(
+                  state_anchor,
+                  state_anchor + '\n  const [storeIdToLink, setStoreIdToLink] = useState("");',
+                  1,
+              )
 
-          anchor = '''  const confirmDocumentDecision = async () => {
-            if (!documentDecision || !documentReason.trim()) return;
-            const succeeded = await docs.review(documentDecision.documentId, {
-              decision: documentDecision.decision,
-              reason: documentReason.trim(),
-            });
-            if (succeeded) {
-              setDocumentDecision(null);
-              setDocumentReason("");
-            }
-          };'''.replace('          ', '')
-          replacement = anchor + '''
-
-          const confirmStoreLink = async () => {
+          function_anchor = '  return (\n    <DetailPageFrame'
+          if 'const confirmStoreLink' not in text:
+              if function_anchor not in text:
+                  raise SystemExit('partner detail return anchor missing')
+              function_block = '''  const confirmStoreLink = async () => {
             const storeId = storeIdToLink.trim();
             if (!storeId) return;
             const succeeded = await stores.linkStore(storeId);
             if (succeeded) setStoreIdToLink("");
-          };'''.replace('          ', '')
-          if anchor not in text:
-              raise SystemExit('document decision function anchor missing')
-          text = text.replace(anchor, replacement, 1)
+          };
 
-          old = '''        {tab === "stores" ? (
-            stores.state.kind === "loading" || stores.state.kind === "idle" ? <CpStatePanel role="status" title="جاري تحميل المتاجر…" />
-              : stores.state.kind === "empty" ? <CpStatePanel role="status" title="لا توجد متاجر مرتبطة بهذا الشريك بعد." />
-                : stores.state.kind === "error" ? <CpStatePanel role="alert" title="تعذر تحميل المتاجر" code={stores.state.message}><CpRetryButton onClick={() => void stores.reload()}>إعادة المحاولة</CpRetryButton></CpStatePanel>
-                  : (
-                    <CpTable aria-label="متاجر الشريك"><thead><tr><CpTableHeaderCell>المتجر</CpTableHeaderCell><CpTableHeaderCell>المدينة</CpTableHeaderCell><CpTableHeaderCell>الحالة</CpTableHeaderCell><CpTableHeaderCell>ظهور العميل</CpTableHeaderCell></tr></thead><tbody>
-                      {stores.state.stores.map((store) => <tr key={store.id}><CpTableCell>{store.displayName}</CpTableCell><CpTableCell>{store.cityCode}</CpTableCell><CpTableCell>{store.status}</CpTableCell><CpTableCell>{store.isVisible ? "ظاهر" : "مخفي"}</CpTableCell></tr>)}
-                    </tbody></CpTable>
-                  )
-          ) : null}'''.replace('          ', '')
-          new = '''        {tab === "stores" ? (
+          '''.replace('          ', '')
+              text = text.replace(function_anchor, function_block + function_anchor, 1)
+
+          start_marker = '        {tab === "stores" ? ('
+          end_marker = '        {tab === "readiness" ? ('
+          start = text.find(start_marker)
+          end = text.find(end_marker, start + 1)
+          if start < 0 or end < 0:
+              raise SystemExit(f'stores tab boundaries missing: start={start} end={end}')
+
+          stores_block = '''        {tab === "stores" ? (
             <div style={{ display: "grid", gap: 12 }}>
               <section style={{ display: "grid", gap: 8, border: `1px solid ${neutralScale[200]}`, borderRadius: 12, padding: 16 }}>
                 <h3 style={{ margin: 0, fontSize: 14 }}>ربط متجر غير مملوك</h3>
@@ -95,10 +86,11 @@ jobs:
                       </tbody></CpTable>
                     )}
             </div>
-          ) : null}'''.replace('          ', '')
-          if old not in text:
-              raise SystemExit('stores tab block missing')
-          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          ) : null}
+
+'''
+          text = text[:start] + stores_block + text[end:]
+          path.write_text(text, encoding='utf-8')
           PY
           git config user.name 'bthwani-governance-bot'
           git config user.email 'noreply@bthwani.local'
