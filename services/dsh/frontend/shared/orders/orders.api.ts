@@ -1,6 +1,13 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { createDshHttpClient, type DshRequestOptions } from "../_kernel/dsh-http-request";
-import type { DshOrder, DshPartnerOrder, DshCreateOrderInput, DshRejectOrderInput } from "./orders.types";
+import type {
+  DshOrder,
+  DshOrderPreparation,
+  DshPartnerOrder,
+  DshCreateOrderInput,
+  DshRejectOrderInput,
+  DshStorePreparationPolicy,
+} from "./orders.types";
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "order");
 
@@ -29,6 +36,17 @@ export async function fetchClientOrder(orderId: string): Promise<DshOrder> {
     `/dsh/client/orders/${encodeURIComponent(orderId)}`,
   );
   return data.order;
+}
+
+export async function fetchOrderPreparation(
+  orderId: string,
+  token?: string,
+): Promise<DshOrderPreparation> {
+  const data = await request<{ preparation: DshOrderPreparation }>(
+    `/dsh/orders/${encodeURIComponent(orderId)}/preparation`,
+    withOptionalToken({}, token),
+  );
+  return data.preparation;
 }
 
 /**
@@ -84,6 +102,46 @@ export async function markOrderReady(orderId: string, token?: string): Promise<D
     withOptionalToken({ method: "POST" }, token),
   );
   return data.order;
+}
+
+export async function reviseOrderPreparationEstimate(
+  orderId: string,
+  input: { readonly remainingMinutes: number; readonly reason: string },
+  token?: string,
+): Promise<DshOrderPreparation> {
+  const data = await request<{ preparation: DshOrderPreparation }>(
+    `/dsh/partner/orders/${encodeURIComponent(orderId)}/preparation-estimate`,
+    withOptionalToken({ method: "POST", body: input }, token),
+  );
+  return data.preparation;
+}
+
+export async function fetchStorePreparationPolicy(
+  storeId: string,
+  token?: string,
+): Promise<DshStorePreparationPolicy> {
+  const data = await request<{ policy: DshStorePreparationPolicy }>(
+    `/dsh/partner/stores/${encodeURIComponent(storeId)}/order-preparation-policy`,
+    withOptionalToken({}, token),
+  );
+  return data.policy;
+}
+
+export async function updateStorePreparationPolicy(
+  storeId: string,
+  input: {
+    readonly expectedVersion: number;
+    readonly defaultPreparationMinutes: number;
+    readonly warningBeforeMinutes: number;
+    readonly reason: string;
+  },
+  token?: string,
+): Promise<DshStorePreparationPolicy> {
+  const data = await request<{ policy: DshStorePreparationPolicy }>(
+    `/dsh/partner/stores/${encodeURIComponent(storeId)}/order-preparation-policy`,
+    withOptionalToken({ method: "PUT", body: input }, token),
+  );
+  return data.policy;
 }
 
 export function classifyOrderError(error: unknown): {
