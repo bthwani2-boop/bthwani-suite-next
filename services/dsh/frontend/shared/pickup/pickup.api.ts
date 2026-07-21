@@ -19,6 +19,15 @@ export type DshPartnerPickupStateResponse = {
   readonly stage: PartnerPickupStage;
 };
 
+// --- Client side ------------------------------------------------------------
+
+/** Backs the pickup_otp notification action_url; the client never receives the OTP here. */
+export async function fetchClientPickupState(orderId: string): Promise<DshPartnerPickupStateResponse> {
+  return request<DshPartnerPickupStateResponse>(
+    `/dsh/client/orders/${encodeURIComponent(orderId)}/pickup`,
+  );
+}
+
 // --- Partner (store) side --------------------------------------------------
 
 export async function fetchPartnerPickupState(orderId: string): Promise<DshPartnerPickupStateResponse> {

@@ -22,7 +22,8 @@
       "Bash(xargs -I{} echo {})",
       "Bash(xargs grep -liE \"proof.?of.?delivery|\\\\bPOD\\\\b|delivered|handoff|signature|otp\")",
       "Bash(git check-ignore *)",
-      "Bash(echo \"exit:$?\")"
+      "Bash(echo \"exit:$?\")",
+      "Bash(xargs grep -liE \"dsh_media_refs|dsh_wlt_outbox_events|dsh_deliveries\")"
     ]
   },
   "project": "bthwani-suite-next",

@@ -5,6 +5,7 @@ import {
   markPickupCustomerArrived,
   verifyPickupSession,
   markPickupNoShow,
+  fetchClientPickupState,
   fetchPartnerPickupState,
   fetchOperatorPickups,
   fetchOperatorPickup,
@@ -159,6 +160,61 @@ export function usePickupActionsController(orderId: string) {
   [orderId, runAction, state.session?.version]);
 
   return { state, markReady, notify, customerArrived, verify, noShow, refresh: load } as const;
+}
+
+export type ClientPickupViewState = {
+  readonly session: DshPickupSession | null;
+  readonly stage: PickupActionStage;
+  readonly loaded: boolean;
+  readonly message: string | null;
+  readonly isError: boolean;
+  readonly errorCode?: string | undefined;
+};
+
+/**
+ * Read-only client view of their own pickup session. Backs the screen opened
+ * from the pickup_otp notification action_url; the client observes status,
+ * they never mutate the session directly.
+ */
+export function useClientPickupSessionController(orderId: string) {
+  const [state, setState] = useState<ClientPickupViewState>({
+    session: null,
+    stage: "not_ready",
+    loaded: false,
+    message: null,
+    isError: false,
+  });
+
+  const load = useCallback(async () => {
+    if (!orderId) return;
+    try {
+      const response = await fetchClientPickupState(orderId);
+      setState({
+        session: response.session,
+        stage: response.stage,
+        loaded: true,
+        message: null,
+        isError: false,
+      });
+    } catch (error) {
+      const { message, classified } = classifiedMessage(error, "تعذر تحميل حالة استلام طلبك.");
+      setState((current) => ({
+        ...current,
+        loaded: true,
+        isError: true,
+        message,
+        errorCode: classified.code,
+      }));
+    }
+  }, [orderId]);
+
+  useEffect(() => {
+    void load();
+    const interval = setInterval(() => void load(), 10_000);
+    return () => clearInterval(interval);
+  }, [load]);
+
+  return { state, refresh: load } as const;
 }
 
 export type UseOperatorPickupsControllerParams = {
