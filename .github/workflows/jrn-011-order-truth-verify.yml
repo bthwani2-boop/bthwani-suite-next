@@ -36,7 +36,7 @@ concurrency:
 
 jobs:
   static-integrity:
-    name: Static order-truth integrity
+    name: FS-01..FS-18 executable closure
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -45,7 +45,7 @@ jobs:
           node-version: 24.17.0
       - name: Cross-surface binding gate
         run: node tools/guards/jrn-011-cross-surface-integrity-gate.mjs
-      - name: Focused JRN-011 tests
+      - name: Execute every registered JRN-011 slice assertion
         shell: bash
         run: |
           set -o pipefail
@@ -58,19 +58,9 @@ jobs:
           path: jrn011-static-tests.log
           retention-days: 3
           if-no-files-found: error
-      - name: Export canonical sources for safe whole-file updates
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: jrn011-canonical-sources
-          path: |
-            governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md
-            services/dsh/tests/jrn-011-order-truth-integrity.test.mjs
-          retention-days: 1
-          if-no-files-found: error
 
   go-contracts:
-    name: Go order and WLT projection tests
+    name: FS-03/04/07/08/13 Go contracts
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -78,12 +68,30 @@ jobs:
         with:
           go-version-file: services/dsh/backend/go.mod
           cache-dependency-path: services/dsh/backend/go.sum
+      - name: Verify formatting of JRN-011 Go implementation
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=(
+            services/dsh/backend/internal/http/order_truth.go
+            services/dsh/backend/internal/http/order_truth_correlation.go
+            services/dsh/backend/internal/http/order_truth_validation_test.go
+            services/dsh/backend/internal/orders/order_truth.go
+            services/dsh/backend/internal/orders/order_truth_queries.go
+            services/dsh/backend/internal/orders/order_truth_test.go
+            services/dsh/backend/internal/orders/order_truth_db_test.go
+          )
+          unformatted="$(gofmt -l "${files[@]}")"
+          if [[ -n "$unformatted" ]]; then
+            echo "$unformatted"
+            exit 1
+          fi
       - name: Verify order truth and WLT read boundary
         working-directory: services/dsh/backend
         run: go test ./internal/orders ./internal/http ./internal/wlt -count=1
 
   database-invariants:
-    name: PostgreSQL order-truth invariants
+    name: FS-05/08/13 PostgreSQL lifecycle
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -105,8 +113,14 @@ jobs:
       PGUSER: jrn011
       PGPASSWORD: jrn011
       PGDATABASE: jrn011
+      DATABASE_URL: postgres://jrn011:jrn011@127.0.0.1:5432/jrn011?sslmode=disable
+      DSH_REQUIRE_DB_TESTS: "true"
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: services/dsh/backend/go.sum
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
       - name: Apply DSH migrations in lexical order
@@ -117,13 +131,16 @@ jobs:
             echo "Applying ${migration}"
             psql -v ON_ERROR_STOP=1 -f "${migration}"
           done < <(find services/dsh/database/migrations -maxdepth 1 -type f -name '*.sql' | sort)
-      - name: Verify immutable order and outbox invariants
+      - name: Verify immutable order and outbox SQL invariants
         run: psql -v ON_ERROR_STOP=1 -f services/dsh/database/tests/dsh-902_903_jrn011_order_truth_invariants.sql
-      - name: Verify read-only WLT projection invariants
+      - name: Verify read-only WLT projection SQL invariants
         run: psql -v ON_ERROR_STOP=1 -f services/dsh/database/tests/dsh-905_jrn011_payment_projection_invariants.sql
+      - name: Execute live create, replay, conflict, isolation, redaction and immutability proof
+        working-directory: services/dsh/backend
+        run: go test ./internal/orders -run '^TestCreateOrderTruthLifecycleDBIntegration$' -count=1 -v
 
   typescript-binding:
-    name: JRN-011 TypeScript binding
+    name: FS-09/10/11/14/16 TypeScript binding
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -151,7 +168,7 @@ jobs:
           if-no-files-found: error
 
   publish-verification-status:
-    name: Publish governed verification status
+    name: FS-17/18 publish governed closure
     if: always()
     needs:
       - static-integrity
@@ -160,7 +177,7 @@ jobs:
       - typescript-binding
     runs-on: ubuntu-latest
     steps:
-      - name: Publish result on the verified commit
+      - name: Publish result on the exact verified commit
         env:
           GH_TOKEN: ${{ github.token }}
           STATIC_RESULT: ${{ needs.static-integrity.result }}
@@ -171,11 +188,11 @@ jobs:
         run: |
           set -euo pipefail
           state=success
-          description="JRN-011 static, Go, PostgreSQL and TypeScript checks passed"
+          description="JRN-011 FS-01..FS-18 code and automated evidence passed"
           for result in "$STATIC_RESULT" "$GO_RESULT" "$DATABASE_RESULT" "$TYPESCRIPT_RESULT"; do
             if [[ "$result" != "success" ]]; then
               state=failure
-              description="JRN-011 verification failed; inspect the workflow run"
+              description="JRN-011 slice closure failed; inspect the workflow run"
               break
             fi
           done
