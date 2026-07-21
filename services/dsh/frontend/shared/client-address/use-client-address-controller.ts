@@ -40,6 +40,7 @@ function mutationContext(prefix: string): DshAddressMutationContext {
 
 function messageOf(error: unknown): string {
   const typed = error as Partial<DshAddressTransportError>;
+  if (typed.code === "ADDRESS_ALREADY_EXISTS") return "هذا العنوان محفوظ بالفعل. عدّل العنوان الموجود بدل إنشاء نسخة مكررة.";
   if (typed.code === "ADDRESS_CONFLICT") return "تم تعديل العنوان من جلسة أخرى. حدّث القائمة ثم أعد المحاولة.";
   if (typed.status === 401) return "انتهت الجلسة. سجّل الدخول مجددًا.";
   if (typed.status === 404) return "العنوان غير موجود أو لم يعد متاحًا.";
