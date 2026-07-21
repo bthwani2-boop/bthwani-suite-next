@@ -20,6 +20,7 @@ export type GovernedPartnerOrderActionId =
   | 'details'
   | 'prepare'
   | 'ready'
+  | 'revise_estimate'
   | 'handoff'
   | 'issue'
   | 'delivering';
@@ -59,20 +60,29 @@ function primaryLabel(item: GovernedPartnerOrderItem): string {
 function stageMatches(item: GovernedPartnerOrderItem, stage: StageId): boolean {
   if (stage === 'all') return true;
   if (stage === 'decision') return item.allowedActions.includes('accept') || item.allowedActions.includes('reject');
-  if (stage === 'preparation') return item.allowedActions.includes('prepare');
+  if (stage === 'preparation') return item.allowedActions.includes('prepare') || item.allowedActions.includes('revise_estimate');
   if (stage === 'ready') return item.allowedActions.includes('ready');
   if (stage === 'handoff') return item.allowedActions.includes('handoff');
   return item.allowedActions.length === 0;
 }
 
 function statusLabel(item: GovernedPartnerOrderItem): string {
+  if (item.preparation.preparationSlaState === 'overdue') return item.slaLabel ?? 'متأخر عن الجاهزية';
+  if (item.preparation.preparationSlaState === 'due_soon') return item.slaLabel ?? 'اقترب موعد الجاهزية';
   if (item.allowedActions.includes('accept')) return 'ينتظر قرار المتجر';
-  if (item.allowedActions.includes('prepare')) return 'مقبول وينتظر بدء التحضير';
-  if (item.allowedActions.includes('ready')) return 'قيد التحضير';
+  if (item.allowedActions.includes('prepare')) return item.slaLabel ?? 'مقبول وينتظر بدء التحضير';
+  if (item.allowedActions.includes('ready')) return item.slaLabel ?? 'قيد التحضير';
   if (item.allowedActions.includes('handoff')) return 'جاهز للتسليم';
   if (item.status === 'completed') return 'مكتمل';
   if (item.status === 'cancelled') return 'ملغي';
   return item.nextActionLabel;
+}
+
+function statusTone(item: GovernedPartnerOrderItem): 'danger' | 'warning' | 'success' | 'neutral' {
+  if (item.preparation.preparationSlaState === 'overdue') return 'danger';
+  if (item.preparation.preparationSlaState === 'due_soon') return 'warning';
+  if (item.preparation.preparationSlaState === 'ready') return 'success';
+  return item.allowedActions.length > 0 ? 'warning' : 'neutral';
 }
 
 function renderState(state: Exclude<PartnerOrdersHomeScreenState, 'ready'>, onRetry: () => void | Promise<void>) {
@@ -124,7 +134,7 @@ export function GovernedPartnerOrdersScreen({
     <MobileScrollView fill padding={4} gap={3} contentContainerStyle={{ paddingBottom: spacing[12] }}>
       <Box gap={1}>
         <Text role="titleLg">مركز تجهيز الطلبات</Text>
-        <Text role="bodySm" tone="muted">الأزرار مصدرها DSH، وتختفي فور تغيّر حالة الطلب أو صلاحية المتجر.</Text>
+        <Text role="bodySm" tone="muted">الموعد والإجراءات مصدرها DSH، وتُحدّث بعد كل انتقال أو مراجعة.</Text>
       </Box>
 
       <Tabs items={tabItems} value={stage} onValueChange={(value) => setStage(value as StageId)} />
@@ -152,30 +162,34 @@ export function GovernedPartnerOrdersScreen({
                       <Text role="bodyStrong">{item.orderCode}</Text>
                       <Text role="caption" tone="muted">{`${item.itemsCountLabel} · ${item.amountLabel} · ${item.elapsedLabel}`}</Text>
                     </Box>
-                    <Badge label={statusLabel(item)} tone={item.allowedActions.length > 0 ? 'warning' : 'neutral'} />
+                    <Badge label={statusLabel(item)} tone={statusTone(item)} />
                   </Box>
 
                   {expanded ? (
                     <Box gap={1} background="surfaceInset" padding={3}>
                       <Text role="bodySm">{item.itemsSummaryLabel ?? 'تُقرأ تفاصيل الأصناف من الطلب عند فتحه.'}</Text>
                       <Text role="caption" tone="muted">{`نمط التنفيذ: ${item.orderTypeLabel}`}</Text>
+                      {item.preparation.estimatedReadyAt ? (
+                        <Text role="caption" tone="muted">{`موعد الجاهزية: ${new Date(item.preparation.estimatedReadyAt).toLocaleTimeString('ar-YE', { hour: '2-digit', minute: '2-digit' })}`}</Text>
+                      ) : null}
+                      {item.preparation.preparationDelayReason ? (
+                        <Text role="caption" tone="warning">{`سبب آخر مراجعة: ${item.preparation.preparationDelayReason}`}</Text>
+                      ) : null}
                       {item.nextOwnerLabel ? <Text role="caption" tone="muted">{`الجهة التالية: ${item.nextOwnerLabel}`}</Text> : null}
                     </Box>
                   ) : null}
 
                   <Box layoutDirection="row" gap={2}>
-                    <Button
-                      label={primaryLabel(item)}
-                      size="sm"
-                      fullWidth={false}
-                      onPress={() => onAction(action, item.id)}
-                    />
+                    <Button label={primaryLabel(item)} size="sm" fullWidth={false} onPress={() => onAction(action, item.id)} />
+                    {item.allowedActions.includes('revise_estimate') ? (
+                      <Button label="تعديل الوقت" tone="secondary" size="sm" fullWidth={false} onPress={() => onAction('revise_estimate', item.id)} />
+                    ) : null}
                     {item.allowedActions.includes('reject') ? (
                       <Button label="رفض مع سبب" tone="danger" size="sm" fullWidth={false} onPress={() => onAction('reject', item.id)} />
                     ) : null}
                     <Button
                       label={expanded ? 'إغلاق التفاصيل' : 'تفاصيل'}
-                      tone="secondary"
+                      tone="ghost"
                       size="sm"
                       fullWidth={false}
                       onPress={() => setExpandedId(expanded ? null : item.id)}
