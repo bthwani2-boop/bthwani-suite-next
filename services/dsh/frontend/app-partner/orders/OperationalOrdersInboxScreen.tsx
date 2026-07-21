@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box, Button, Text } from '@bthwani/ui-kit';
+import { OrderTruthReadbackSummary } from '../../shared/order-truth';
 import type { GovernedPartnerOrderItem } from '../../shared/partner/partner.adapters';
 import type { PartnerTeamMember } from '../team/partner-team.types';
 import {
@@ -102,6 +103,13 @@ export function OperationalOrdersInboxScreen({
 
   return (
     <>
+      <OrderTruthReadbackSummary
+        actor="partner"
+        title="حقيقة الطلبات المرتبطة بالمتجر"
+        limit={5}
+        onOpenOrder={(orderId) => onNavigateAction('details', orderId)}
+      />
+
       {commands.state.kind === 'error' ? (
         <Box paddingX={4} paddingY={2} background="dangerSurface">
           <Text role="bodySm" tone="danger">{commands.state.message}</Text>
