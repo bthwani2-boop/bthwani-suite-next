@@ -12,6 +12,7 @@ export * from "./catalog-registry";
 export * from "./central-catalog.types";
 export * from "./central-catalog.api";
 export * from "./central-catalog-occ.api";
+export * from "./product-proposal-readback.api";
 export {
   updateCatalogAssetOCC as updateCatalogAsset,
 } from "./central-catalog-occ.api";
