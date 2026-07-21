@@ -68,7 +68,7 @@ jobs:
         with:
           go-version-file: services/dsh/backend/go.mod
           cache-dependency-path: services/dsh/backend/go.sum
-      - name: Verify formatting of JRN-011 Go implementation
+      - name: Produce canonical gofmt output
         shell: bash
         run: |
           set -euo pipefail
@@ -81,11 +81,20 @@ jobs:
             services/dsh/backend/internal/orders/order_truth_test.go
             services/dsh/backend/internal/orders/order_truth_db_test.go
           )
-          unformatted="$(gofmt -l "${files[@]}")"
-          if [[ -n "$unformatted" ]]; then
-            echo "$unformatted"
-            exit 1
-          fi
+          gofmt -w "${files[@]}"
+          git diff -- "${files[@]}" > jrn011-gofmt.patch
+      - name: Preserve canonical formatted files
+        uses: actions/upload-artifact@v4
+        with:
+          name: jrn011-gofmt-output
+          path: |
+            jrn011-gofmt.patch
+            services/dsh/backend/internal/orders/order_truth_queries.go
+            services/dsh/backend/internal/orders/order_truth_db_test.go
+          retention-days: 3
+          if-no-files-found: error
+      - name: Reject formatting drift
+        run: test ! -s jrn011-gofmt.patch
       - name: Verify order truth and WLT read boundary
         working-directory: services/dsh/backend
         run: go test ./internal/orders ./internal/http ./internal/wlt -count=1
@@ -137,7 +146,18 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f services/dsh/database/tests/dsh-905_jrn011_payment_projection_invariants.sql
       - name: Execute live create, replay, conflict, isolation, redaction and immutability proof
         working-directory: services/dsh/backend
-        run: go test ./internal/orders -run '^TestCreateOrderTruthLifecycleDBIntegration$' -count=1 -v
+        shell: bash
+        run: |
+          set -o pipefail
+          go test ./internal/orders -run '^TestCreateOrderTruthLifecycleDBIntegration$' -count=1 -v 2>&1 | tee ../../../jrn011-db-lifecycle.log
+      - name: Preserve database lifecycle failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jrn011-db-lifecycle-log
+          path: jrn011-db-lifecycle.log
+          retention-days: 3
+          if-no-files-found: error
 
   typescript-binding:
     name: FS-09/10/11/14/16 TypeScript binding
