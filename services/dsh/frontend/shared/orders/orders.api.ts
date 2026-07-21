@@ -6,6 +6,7 @@ import type {
   DshPartnerOrder,
   DshCreateOrderInput,
   DshRejectOrderInput,
+  DshStoreCaptainHandoff,
   DshStorePreparationPolicy,
 } from "./orders.types";
 
@@ -102,6 +103,17 @@ export async function markOrderReady(orderId: string, token?: string): Promise<D
     withOptionalToken({ method: "POST" }, token),
   );
   return data.order;
+}
+
+export async function confirmStoreCaptainHandoff(
+  orderId: string,
+  token?: string,
+): Promise<DshStoreCaptainHandoff> {
+  const data = await request<{ handoff: DshStoreCaptainHandoff }>(
+    `/dsh/partner/orders/${encodeURIComponent(orderId)}/captain-handoff/confirm`,
+    withOptionalToken({ method: "POST" }, token),
+  );
+  return data.handoff;
 }
 
 export async function reviseOrderPreparationEstimate(
