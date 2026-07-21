@@ -44,33 +44,61 @@ jobs:
           echo "install-workspace" > /tmp/jrn-verification-stage
           pnpm install --frozen-lockfile
       - name: Typecheck app-client runtime
+        shell: bash
         run: |
           echo "typecheck-app-client" > /tmp/jrn-verification-stage
-          pnpm --dir apps/app-client/runtime typecheck
+          set +e
+          pnpm --dir apps/app-client/runtime typecheck 2>&1 | tee /tmp/jrn-verification.log
+          EXIT_CODE=${PIPESTATUS[0]}
+          exit "$EXIT_CODE"
       - name: Typecheck app-partner runtime
+        shell: bash
         run: |
           echo "typecheck-app-partner" > /tmp/jrn-verification-stage
-          pnpm --dir apps/app-partner/runtime typecheck
+          set +e
+          pnpm --dir apps/app-partner/runtime typecheck 2>&1 | tee /tmp/jrn-verification.log
+          EXIT_CODE=${PIPESTATUS[0]}
+          exit "$EXIT_CODE"
       - name: Typecheck app-captain runtime
+        shell: bash
         run: |
           echo "typecheck-app-captain" > /tmp/jrn-verification-stage
-          pnpm --dir apps/app-captain/runtime typecheck
+          set +e
+          pnpm --dir apps/app-captain/runtime typecheck 2>&1 | tee /tmp/jrn-verification.log
+          EXIT_CODE=${PIPESTATUS[0]}
+          exit "$EXIT_CODE"
       - name: Typecheck control-panel runtime
+        shell: bash
         run: |
           echo "typecheck-control-panel" > /tmp/jrn-verification-stage
-          pnpm --dir apps/control-panel/runtime typecheck
+          set +e
+          pnpm --dir apps/control-panel/runtime typecheck 2>&1 | tee /tmp/jrn-verification.log
+          EXIT_CODE=${PIPESTATUS[0]}
+          exit "$EXIT_CODE"
       - name: No broken imports
+        shell: bash
         run: |
           echo "guard-no-broken-imports" > /tmp/jrn-verification-stage
-          pnpm run guard:no-broken-imports
+          set +e
+          pnpm run guard:no-broken-imports 2>&1 | tee /tmp/jrn-verification.log
+          EXIT_CODE=${PIPESTATUS[0]}
+          exit "$EXIT_CODE"
       - name: Full-stack boundary
+        shell: bash
         run: |
           echo "guard-fullstack-boundary" > /tmp/jrn-verification-stage
-          pnpm run guard:fullstack-boundary
+          set +e
+          pnpm run guard:fullstack-boundary 2>&1 | tee /tmp/jrn-verification.log
+          EXIT_CODE=${PIPESTATUS[0]}
+          exit "$EXIT_CODE"
       - name: WLT financial boundary
+        shell: bash
         run: |
           echo "guard-wlt-financial-boundary" > /tmp/jrn-verification-stage
-          pnpm run guard:wlt-financial-boundary
+          set +e
+          pnpm run guard:wlt-financial-boundary 2>&1 | tee /tmp/jrn-verification.log
+          EXIT_CODE=${PIPESTATUS[0]}
+          exit "$EXIT_CODE"
       - name: Publish targeted commit status
         if: always()
         shell: bash
@@ -83,12 +111,23 @@ jobs:
           STAGE="$(cat /tmp/jrn-verification-stage 2>/dev/null || echo workflow-bootstrap)"
           if [ "$JOB_STATUS" = "success" ]; then
             STATE="success"
+            STATUS_CONTEXT="journeys/jrn-010-015-targeted"
             DESCRIPTION="JRN-010..015 targeted checks passed"
           else
             STATE="failure"
+            FIRST_ERROR="$(grep -m1 -E 'error TS[0-9]+|Error:|ERR_' /tmp/jrn-verification.log 2>/dev/null || true)"
+            FIRST_ERROR="$(printf '%s' "$FIRST_ERROR" | tr '\n\r\t\"' '    ' | tr -cd '[:alnum:]_./:() -' | cut -c1-55)"
+            [ -n "$FIRST_ERROR" ] || FIRST_ERROR="unknown-error"
+            STATUS_CONTEXT="journeys/jrn-010-015/$STAGE/$FIRST_ERROR"
+            STATUS_CONTEXT="$(printf '%s' "$STATUS_CONTEXT" | cut -c1-100)"
             DESCRIPTION="JRN-010..015 failed at $STAGE"
           fi
-          PAYLOAD="$(printf '{\"state\":\"%s\",\"context\":\"journeys/jrn-010-015-targeted\",\"description\":\"%s\",\"target_url\":\"%s\"}' "$STATE" "$DESCRIPTION" "$TARGET_URL")"
+          PAYLOAD="$(jq -n \
+            --arg state "$STATE" \
+            --arg context "$STATUS_CONTEXT" \
+            --arg description "$DESCRIPTION" \
+            --arg target_url "$TARGET_URL" \
+            '{state:$state,context:$context,description:$description,target_url:$target_url}')"
           curl --fail-with-body --silent --show-error \
             -X POST \
             -H "Authorization: Bearer $GH_TOKEN" \
