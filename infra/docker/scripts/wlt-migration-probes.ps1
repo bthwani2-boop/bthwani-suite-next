@@ -57,6 +57,7 @@ $script:WltMigrationProbes = [ordered]@{
   "wlt-030_subscription_payment_source.sql"       = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_payment_sessions' AND column_name = 'subscription_purchase_id') AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_payment_sessions' AND column_name = 'commercial_product_reference') AND to_regclass('public.uq_wlt_client_subscription_purchase') IS NOT NULL"
   "wlt-031_governed_settlement_sources.sql"       = "to_regclass('public.wlt_settlement_policies') IS NOT NULL AND to_regclass('public.wlt_settlement_source_orders') IS NOT NULL"
   "wlt-032_promotion_funding_ledger.sql"          = "to_regclass('public.wlt_promotion_funding_reservations') IS NOT NULL AND to_regclass('public.wlt_promotion_funding_events') IS NOT NULL"
+  "wlt-033_cod_collector_actor.sql"               = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_cod_records' AND column_name = 'collector_type') AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_cod_records' AND column_name = 'collector_id') AND to_regclass('public.idx_wlt_cod_records_collector') IS NOT NULL"
 }
 
 function Test-WltMigrationProbeCoverage {
@@ -87,13 +88,6 @@ function Test-WltMigrationProbeCoverage {
   }
 }
 
-# Returns the ordered prefix of $MigrationFiles whose schema objects already
-# exist (per $script:WltMigrationProbes), stopping at the first migration
-# whose probe is false. Migrations apply in file order, so a gap means every
-# later migration must be genuinely (re-)applied rather than assumed present.
-# $PsqlRunner is a [scriptblock] taking a single SQL string and returning its
-# scalar text result, so this stays testable against either a docker-exec'd
-# psql (production) or a native psql connection (tests).
 function Get-WltLegacyBackfillList {
   param(
     [System.IO.FileInfo[]]$MigrationFiles,
