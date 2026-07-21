@@ -104,6 +104,7 @@ export function useDshCaptainSurfaceModel({
     inboxState: lifecycle.inboxState,
     activeAssignmentId: orderModel.activeAssignmentId,
     activeOrderId: activeAssignment?.orderId ?? '',
+    activeDeliveryStatus: activeAssignment?.delivery.status ?? '',
     inboxItems: inboxModel.items,
     selectedSupportScreen,
     isPickupSheetVisible: lifecycle.isPickupSheetVisible,
