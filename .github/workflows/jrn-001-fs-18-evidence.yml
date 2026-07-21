@@ -73,15 +73,44 @@ jobs:
               exit 1
             fi
           done
-      - name: Verify JRN-001 backend and outbox
+      - name: Verify partner backend package
         working-directory: services/dsh/backend
+        shell: bash
         run: |
-          go test ./internal/partner ./internal/partnerwltoutbox -count=1
-          go test ./internal/http -run 'TestFirstFiveJourneysExposeGovernedDSHRoutes|TestPartnerSelfRoutesRegisterOnceOnApplicationRouter' -count=1
+          if ! go test ./internal/partner -count=1; then
+            printf 'go-partner' >/tmp/jrn001-failure
+            exit 1
+          fi
+      - name: Verify partner WLT outbox package
+        working-directory: services/dsh/backend
+        shell: bash
+        run: |
+          if ! go test ./internal/partnerwltoutbox -count=1; then
+            printf 'go-partnerwltoutbox' >/tmp/jrn001-failure
+            exit 1
+          fi
+      - name: Verify governed route registration
+        working-directory: services/dsh/backend
+        shell: bash
+        run: |
+          if ! go test ./internal/http -run 'TestFirstFiveJourneysExposeGovernedDSHRoutes|TestPartnerSelfRoutesRegisterOnceOnApplicationRouter' -count=1; then
+            printf 'go-http-routes' >/tmp/jrn001-failure
+            exit 1
+          fi
       - name: Typecheck current JRN-001 field surface
-        run: pnpm --dir apps/app-field/runtime typecheck
+        shell: bash
+        run: |
+          if ! pnpm --dir apps/app-field/runtime typecheck; then
+            printf 'typecheck-app-field' >/tmp/jrn001-failure
+            exit 1
+          fi
       - name: Verify WLT financial boundary
-        run: node tools/guards/wlt-financial-boundary-gate.mjs
+        shell: bash
+        run: |
+          if ! node tools/guards/wlt-financial-boundary-gate.mjs; then
+            printf 'wlt-financial-boundary' >/tmp/jrn001-failure
+            exit 1
+          fi
       - name: Publish same-commit FS-17 and FS-18 statuses
         if: always()
         env:
