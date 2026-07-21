@@ -11,11 +11,13 @@ import {
 import {
   formatDeliveryModes,
   type DshStoreAdminDetailState,
+  type DshStorePublicationDiagnosticsState,
 } from "../../../shared/store";
 import { uploadAndLinkAsset } from "../../../shared/catalog";
 
 type Props = {
   readonly state: DshStoreAdminDetailState;
+  readonly diagnosticsState: DshStorePublicationDiagnosticsState;
   readonly onClose: () => void;
 };
 
@@ -49,8 +51,8 @@ function StoreImageUploadForm({ storeId }: { readonly storeId: string }) {
       });
       alert("تم رفع الصورة؛ ستظهر على المتجر بعد اعتمادها من قائمة مراجعة الصور في الكتالوج.");
       if (fileInputRef.current) fileInputRef.current.value = "";
-    } catch (e: any) {
-      alert("فشل رفع الصورة: " + (e.message ?? e.toString()));
+    } catch (error: unknown) {
+      alert("فشل رفع الصورة: " + (error instanceof Error ? error.message : String(error)));
     } finally {
       setUploading(false);
     }
@@ -59,9 +61,9 @@ function StoreImageUploadForm({ storeId }: { readonly storeId: string }) {
   return (
     <CpDescriptionRow label="رفع صورة للمتجر">
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <select value={role} onChange={(e) => setRole(e.target.value)} aria-label="نوع صورة المتجر">
-          {STORE_IMAGE_ROLES.map((r) => (
-            <option key={r.value} value={r.value}>{r.label}</option>
+        <select value={role} onChange={(event) => setRole(event.target.value)} aria-label="نوع صورة المتجر">
+          {STORE_IMAGE_ROLES.map((imageRole) => (
+            <option key={imageRole.value} value={imageRole.value}>{imageRole.label}</option>
           ))}
         </select>
         <input ref={fileInputRef} type="file" accept="image/*" aria-label="اختيار ملف صورة المتجر" />
@@ -73,7 +75,32 @@ function StoreImageUploadForm({ storeId }: { readonly storeId: string }) {
   );
 }
 
-export function StoreDetailAdminPanel({ state, onClose }: Props) {
+function StoreDiagnosticsRows({ state }: { readonly state: DshStorePublicationDiagnosticsState }) {
+  if (state.kind === "idle" || state.kind === "loading") {
+    return <CpDescriptionRow label="تشخيص النشر">جاري التحقق…</CpDescriptionRow>;
+  }
+  if (state.kind === "permission_denied") {
+    return <CpDescriptionRow label="تشخيص النشر">HTTP {state.statusCode} — غير مصرح.</CpDescriptionRow>;
+  }
+  if (state.kind === "not_found") {
+    return <CpDescriptionRow label="تشخيص النشر">المتجر غير موجود.</CpDescriptionRow>;
+  }
+  if (state.kind === "error") {
+    return <CpDescriptionRow label="تشخيص النشر">{state.message}</CpDescriptionRow>;
+  }
+  return (
+    <>
+      <CpDescriptionRow label="جاهزية النشر">
+        {state.isReady ? "جاهز للنشر" : "محجوب حتى إغلاق الموانع"}
+      </CpDescriptionRow>
+      <CpDescriptionRow label="موانع النشر">
+        {state.blockers.length > 0 ? state.blockers.join(" | ") : "لا توجد موانع"}
+      </CpDescriptionRow>
+    </>
+  );
+}
+
+export function StoreDetailAdminPanel({ state, diagnosticsState, onClose }: Props) {
   return (
     <CpDetailPanel title="تفاصيل المتجر" onClose={onClose}>
       {state.kind === "loading" && (
@@ -114,9 +141,34 @@ export function StoreDetailAdminPanel({ state, onClose }: Props) {
           <CpDescriptionRow label="الموقع">
             {state.detail.cityCode} / {state.detail.serviceAreaCode}
           </CpDescriptionRow>
+          <CpDescriptionRow label="العنوان">
+            {state.detail.addressLine || "غير مكتمل"}
+          </CpDescriptionRow>
+          <CpDescriptionRow label="نطاق التغطية">
+            {state.detail.coverageSummary || "غير مكتمل"}
+          </CpDescriptionRow>
+          <CpDescriptionRow label="ساعات التشغيل">
+            {state.detail.operatingHours || "غير مكتملة"}
+          </CpDescriptionRow>
+          <CpDescriptionRow label="جاهزية التوصيل">
+            {state.detail.deliveryReadiness || "غير مكتملة"}
+          </CpDescriptionRow>
           <CpDescriptionRow label="طرق التوصيل">
             {formatDeliveryModes(state.detail.deliveryModes, "—")}
           </CpDescriptionRow>
+          <CpDescriptionRow label="جاهزية الشريك">
+            {state.detail.partnerReadiness}
+          </CpDescriptionRow>
+          <CpDescriptionRow label="اعتماد الكتالوج">
+            {state.detail.catalogApprovalStatus}
+          </CpDescriptionRow>
+          <CpDescriptionRow label="الظهور التسويقي">
+            {state.detail.marketingVisibility}
+          </CpDescriptionRow>
+          <CpDescriptionRow label="أهلية النشر الأساسية">
+            {state.detail.publicationEligible ? "مؤهل" : "غير مؤهل"}
+          </CpDescriptionRow>
+          <StoreDiagnosticsRows state={diagnosticsState} />
           {state.detail.deliveryEtaMin !== null &&
             state.detail.deliveryEtaMax !== null && (
               <CpDescriptionRow label="وقت التوصيل">
@@ -154,6 +206,7 @@ export function StoreDetailAdminPanel({ state, onClose }: Props) {
               .filter(Boolean)
               .join("، ") || "—"}
           </CpDescriptionRow>
+          <CpDescriptionRow label="إصدار السجل">{state.detail.version}</CpDescriptionRow>
           <CpDescriptionRow label="تاريخ الإنشاء">
             {new Date(state.detail.createdAt).toLocaleString("ar")}
           </CpDescriptionRow>
