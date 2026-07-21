@@ -4,13 +4,13 @@ import "testing"
 
 func validGovernedPayoutInput() UpsertPayoutDestinationInput {
 	return UpsertPayoutDestinationInput{
-		PartnerID: "prt-001",
-		BeneficiaryName: "Partner Owner",
-		BankName: "Test Bank",
-		AccountNumber: "123456789",
-		SettlementPreference: "bank",
+		PartnerID:                     "prt-001",
+		BeneficiaryName:               "Partner Owner",
+		BankName:                      "Test Bank",
+		AccountNumber:                 "123456789",
+		SettlementPreference:          "bank",
 		BankAccountHolderMatchesOwner: true,
-		CreatedByActorID: "field-001",
+		CreatedByActorID:              "field-001",
 	}
 }
 

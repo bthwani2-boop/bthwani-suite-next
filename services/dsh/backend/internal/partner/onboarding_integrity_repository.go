@@ -13,10 +13,10 @@ import (
 )
 
 var (
-	ErrReadinessGate          = errors.New("partner readiness gate failed")
+	ErrReadinessGate           = errors.New("partner readiness gate failed")
 	ErrExpectedVersionRequired = errors.New("positive partner version is required")
-	ErrIdempotencyConflict    = errors.New("idempotency key reused with different partner transition")
-	ErrStoreOwnershipConflict = errors.New("store already belongs to another partner")
+	ErrIdempotencyConflict     = errors.New("idempotency key reused with different partner transition")
+	ErrStoreOwnershipConflict  = errors.New("store already belongs to another partner")
 )
 
 const governedPartnerColumns = `id, legal_name_ar, legal_name_en, display_name,

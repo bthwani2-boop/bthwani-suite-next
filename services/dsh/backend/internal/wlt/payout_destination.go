@@ -14,17 +14,17 @@ import (
 // request is in flight to WLT. DSH must never persist these raw values.
 type PayoutDestinationUpsertInput struct {
 	BeneficiaryName               string `json:"beneficiaryName"`
-	BankName                     string `json:"bankName"`
-	BankBranch                   string `json:"bankBranch"`
-	AccountNumber                string `json:"accountNumber"`
-	IBAN                         string `json:"iban"`
-	PayoutMobileNumber           string `json:"payoutMobileNumber"`
-	SettlementPreference         string `json:"settlementPreference"`
+	BankName                      string `json:"bankName"`
+	BankBranch                    string `json:"bankBranch"`
+	AccountNumber                 string `json:"accountNumber"`
+	IBAN                          string `json:"iban"`
+	PayoutMobileNumber            string `json:"payoutMobileNumber"`
+	SettlementPreference          string `json:"settlementPreference"`
 	BankAccountHolderMatchesOwner bool   `json:"bankAccountHolderMatchesOwner"`
-	BankNotes                    string `json:"bankNotes"`
-	CreatedByActorID             string `json:"createdByActorId"`
-	CorrelationID                string `json:"-"`
-	IdempotencyKey               string `json:"-"`
+	BankNotes                     string `json:"bankNotes"`
+	CreatedByActorID              string `json:"createdByActorId"`
+	CorrelationID                 string `json:"-"`
+	IdempotencyKey                string `json:"-"`
 }
 
 type PayoutDestinationRef struct {

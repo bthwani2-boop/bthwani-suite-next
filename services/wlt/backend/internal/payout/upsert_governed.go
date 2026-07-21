@@ -198,23 +198,23 @@ func payoutDestinationRequestHash(input UpsertPayoutDestinationInput) string {
 	canonical := struct {
 		PartnerID                     string `json:"partnerId"`
 		BeneficiaryName               string `json:"beneficiaryName"`
-		BankName                     string `json:"bankName"`
-		BankBranch                   string `json:"bankBranch"`
-		AccountNumber                string `json:"accountNumber"`
-		IBAN                         string `json:"iban"`
-		PayoutMobileNumber           string `json:"payoutMobileNumber"`
-		SettlementPreference         string `json:"settlementPreference"`
+		BankName                      string `json:"bankName"`
+		BankBranch                    string `json:"bankBranch"`
+		AccountNumber                 string `json:"accountNumber"`
+		IBAN                          string `json:"iban"`
+		PayoutMobileNumber            string `json:"payoutMobileNumber"`
+		SettlementPreference          string `json:"settlementPreference"`
 		BankAccountHolderMatchesOwner bool   `json:"bankAccountHolderMatchesOwner"`
-		BankNotes                    string `json:"bankNotes"`
-		CreatedByActorID             string `json:"createdByActorId"`
+		BankNotes                     string `json:"bankNotes"`
+		CreatedByActorID              string `json:"createdByActorId"`
 	}{
 		PartnerID: input.PartnerID, BeneficiaryName: input.BeneficiaryName,
 		BankName: input.BankName, BankBranch: input.BankBranch,
 		AccountNumber: input.AccountNumber, IBAN: input.IBAN,
-		PayoutMobileNumber: input.PayoutMobileNumber,
-		SettlementPreference: input.SettlementPreference,
+		PayoutMobileNumber:            input.PayoutMobileNumber,
+		SettlementPreference:          input.SettlementPreference,
 		BankAccountHolderMatchesOwner: input.BankAccountHolderMatchesOwner,
-		BankNotes: input.BankNotes, CreatedByActorID: input.CreatedByActorID,
+		BankNotes:                     input.BankNotes, CreatedByActorID: input.CreatedByActorID,
 	}
 	encoded, _ := json.Marshal(canonical)
 	sum := sha256.Sum256(encoded)

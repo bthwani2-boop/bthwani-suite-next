@@ -98,18 +98,18 @@ func HandleGovernedFieldUpdatePartner(db *sql.DB, wltClient *wlt.Client) http.Ha
 				correlation = governedMutationKey("partner-payout-correlation", partnerID, idempotency)
 			}
 			ref, handoffErr := wltClient.UpsertPayoutDestination(r.Context(), partnerID, wlt.PayoutDestinationUpsertInput{
-				BeneficiaryName: input.BeneficiaryName,
-				BankName: input.BankName,
-				BankBranch: input.BankBranch,
-				AccountNumber: rawAccount,
-				IBAN: rawIBAN,
-				PayoutMobileNumber: rawMobile,
-				SettlementPreference: preference,
+				BeneficiaryName:               input.BeneficiaryName,
+				BankName:                      input.BankName,
+				BankBranch:                    input.BankBranch,
+				AccountNumber:                 rawAccount,
+				IBAN:                          rawIBAN,
+				PayoutMobileNumber:            rawMobile,
+				SettlementPreference:          preference,
 				BankAccountHolderMatchesOwner: boolValue(input.BankAccountHolderMatchesOwner),
-				BankNotes: input.BankNotes,
-				CreatedByActorID: actorID,
-				CorrelationID: correlation,
-				IdempotencyKey: idempotency,
+				BankNotes:                     input.BankNotes,
+				CreatedByActorID:              actorID,
+				CorrelationID:                 correlation,
+				IdempotencyKey:                idempotency,
 			})
 			if handoffErr != nil {
 				sendError(w, http.StatusBadGateway, "WLT_PAYOUT_HANDOFF_FAILED", handoffErr.Error())
@@ -267,11 +267,11 @@ func HandleGovernedFieldSubmitPartner(db *sql.DB) http.HandlerFunc {
 		}
 
 		input := TransitionInput{
-			ToStatus: StatusSubmitted,
-			Reason: body.Reason,
-			ActorID: actorID,
-			ActorSurface: "app-field",
-			CorrelationID: strings.TrimSpace(correlationID(r)),
+			ToStatus:       StatusSubmitted,
+			Reason:         body.Reason,
+			ActorID:        actorID,
+			ActorSurface:   "app-field",
+			CorrelationID:  strings.TrimSpace(correlationID(r)),
 			IdempotencyKey: strings.TrimSpace(idempotencyKey(r)),
 		}
 		if input.IdempotencyKey == "" {
