@@ -5,6 +5,7 @@
   "truthOwner": "DSH committed partner, store, document, visit and audit records",
   "financialTruthOwner": "WLT payout destination records",
   "canonicalContract": "services/dsh/contracts/dsh.partner-onboarding.openapi.yaml",
+  "evidenceManifest": "governance/evidence/JRN-001_PARTNER_ONBOARDING_EVIDENCE.json",
   "requiredReadAfterWrite": [
     "field-create-draft",
     "field-save-draft",
@@ -33,5 +34,6 @@
   ],
   "activationPolicy": "Each surface binds its governed actor type before accepting a two-field phone and code activation form.",
   "conflictPolicy": "Reload committed state before another mutation.",
-  "successPolicy": "A surface may report success only after committed readback or a canonical mutation response followed by list/detail refresh."
+  "successPolicy": "A surface may report success only after committed readback or a canonical mutation response followed by list/detail refresh.",
+  "finalVerificationPolicy": "All required contexts must report success on the resolved final branch head before READY_FOR_REVIEW is reported."
 }
