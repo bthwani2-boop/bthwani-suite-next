@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: BThwani DSH Client Address API
-  version: 0.1.0
-  description: Authenticated client-owned delivery address book for DSH checkout and serviceability.
+  version: 0.2.0
+  description: Authenticated client-owned delivery address book for DSH checkout and serviceability. Active address writes require coordinates that resolve to the supplied active DSH-owned service-area geofence.
 x-bthwani-owner: services/dsh
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-client-generation: DISABLED
@@ -32,7 +32,7 @@ paths:
     post:
       operationId: createDshClientAddress
       tags: [DshClientAddress]
-      summary: Create an address owned by the authenticated client.
+      summary: Create an address owned by the authenticated client after governed geofence verification.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
@@ -55,6 +55,7 @@ paths:
         "400": { $ref: "#/components/responses/InvalidRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ServiceAreaUnverified" }
 
   /dsh/client/addresses/{addressId}:
     parameters:
@@ -62,7 +63,7 @@ paths:
     patch:
       operationId: updateDshClientAddress
       tags: [DshClientAddress]
-      summary: Update an address owned by the authenticated client using optimistic concurrency.
+      summary: Update an owned address using optimistic concurrency and governed geofence verification.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "#/components/parameters/CorrelationId"
@@ -85,6 +86,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ServiceAreaUnverified" }
     delete:
       operationId: deleteDshClientAddress
       tags: [DshClientAddress]
@@ -187,13 +189,18 @@ components:
 
     DshCreateClientAddressInput:
       type: object
-      required: [label, recipientName, phoneE164, addressLine, serviceAreaCode]
+      additionalProperties: false
+      required: [label, recipientName, phoneE164, addressLine, serviceAreaCode, latitude, longitude]
       properties:
         label: { type: string, minLength: 1, maxLength: 80 }
         recipientName: { type: string, minLength: 2, maxLength: 160 }
         phoneE164: { type: string, pattern: '^\\+[1-9][0-9]{7,14}$' }
         addressLine: { type: string, minLength: 5, maxLength: 500 }
-        serviceAreaCode: { type: string, minLength: 1, maxLength: 80 }
+        serviceAreaCode:
+          type: string
+          minLength: 1
+          maxLength: 80
+          description: Must equal the active DSH service-area code resolved from latitude and longitude.
         building: { type: string, maxLength: 120 }
         floor: { type: string, maxLength: 40 }
         unit: { type: string, maxLength: 40 }
@@ -234,7 +241,12 @@ components:
         application/json:
           schema: { $ref: "#/components/schemas/DshError" }
     Conflict:
-      description: Idempotency or optimistic-concurrency conflict.
+      description: Idempotency, duplicate-address, or optimistic-concurrency conflict.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/DshError" }
+    ServiceAreaUnverified:
+      description: Coordinates are missing, outside active service areas, or do not match serviceAreaCode.
       content:
         application/json:
           schema: { $ref: "#/components/schemas/DshError" }
