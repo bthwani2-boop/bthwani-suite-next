@@ -23,18 +23,24 @@ const [
   api,
   controller,
   checkoutFlow,
+  sharedSummary,
   partnerSurface,
   operatorSurface,
   backendRoutes,
+  backendHandlers,
   backendTruth,
+  backendQueries,
 ] = await Promise.all([
   text("services/dsh/frontend/shared/order-truth/order-truth.api.ts"),
   text("services/dsh/frontend/shared/order-truth/use-order-truth-controller.ts"),
   text("services/dsh/frontend/shared/checkout/use-checkout-to-order-flow.tsx"),
+  text("services/dsh/frontend/shared/order-truth/OrderTruthReadbackSummary.tsx"),
   text("services/dsh/frontend/app-partner/orders/OperationalOrdersInboxScreen.tsx"),
   text("services/dsh/frontend/control-panel/operations/OrderJourneyLiveOrdersScreen.tsx"),
   text("services/dsh/backend/internal/http/catalog_unified_routes.go"),
+  text("services/dsh/backend/internal/http/order_truth.go"),
   text("services/dsh/backend/internal/orders/order_truth.go"),
+  text("services/dsh/backend/internal/orders/order_truth_queries.go"),
 ]);
 
 mustContain(api, [
@@ -80,6 +86,12 @@ mustContain(backendRoutes, [
   "GET /dsh/operator/order-truth",
 ], "backend canonical routes");
 
+mustContain(backendHandlers, [
+  "INVALID_CHECKOUT_INTENT_ID",
+  "INVALID_ORDER_ID",
+  "GetOperatorScopedOrderTruth",
+], "backend order-truth validation");
+
 mustContain(backendTruth, [
   "pg_advisory_xact_lock",
   "dsh_order_create_idempotency",
@@ -87,6 +99,12 @@ mustContain(backendTruth, [
   "AllowedActions",
   "payment_status_projection",
 ], "backend order truth");
+
+mustContain(backendQueries, [
+  "uuid.Parse(strings.TrimSpace(value))",
+  'viewerRole == "partner" || viewerRole == "operator"',
+  "StatusTimeline[index].Metadata = []byte(`{}`)",
+], "backend scoped reads and redaction");
 
 mustNotContain(api, [
   "mockOrder",
@@ -102,5 +120,8 @@ mustNotContain(checkoutFlow, [
   "totalPrice =",
   "allowedActions =",
 ], "app-client checkout binding");
+
+mustNotContain(sharedSummary, ["style={{"], "shared order-truth summary");
+mustNotContain(partnerSurface, ["style={{"], "app-partner order-truth binding");
 
 console.log("JRN-011 cross-surface integrity gate passed.");
