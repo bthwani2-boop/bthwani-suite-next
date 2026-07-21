@@ -110,6 +110,7 @@ func registerUnifiedCatalogRoutes(mux *http.ServeMux, s *protectedStoreServer) {
 	mux.HandleFunc("GET /dsh/partner/order-truth", s.handleListPartnerOrderTruth)
 	mux.HandleFunc("GET /dsh/partner/order-truth/{orderId}", s.handleGetPartnerOrderTruth)
 	mux.HandleFunc("GET /dsh/operator/order-truth", s.handleListOperatorOrderTruth)
+	mux.HandleFunc("GET /dsh/operator/order-truth/diagnostics", s.handleGetOrderTruthDiagnostics)
 	mux.HandleFunc("GET /dsh/operator/order-truth/{orderId}", s.handleGetOperatorOrderTruth)
 
 	// Sovereign operational policy truth.
