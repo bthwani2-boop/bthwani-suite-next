@@ -2,8 +2,16 @@
   "journeyId": "JRN-006",
   "journeyName": "maps-service-areas-address-privacy",
   "branch": "sambassam",
-  "status": "CLOSED_WITH_EVIDENCE",
+  "status": "READY_FOR_REVIEW",
+  "codeClosure": "COMPLETE",
   "implementationCommit": "633ae051264bb03049a4751ac67ac79724bb03d2",
+  "openCodeGaps": [],
+  "independentReviewRequired": [
+    "product_owner_approval",
+    "qa_device_runtime_accessibility_evidence",
+    "security_privacy_approval",
+    "release_production_approval"
+  ],
   "evidence": {
     "path": "governance/evidence/JRN-006_ALL_SLICES_CLOSURE.json",
     "workflowRunId": 29865894007,
