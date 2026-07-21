@@ -23,7 +23,7 @@ func (s *protectedStoreServer) handleGovernedUpdateDeliveryStatus(w http.Respons
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	assignment, err := dispatch.UpdateDeliveryStatusGoverned(
+	assignment, err := dispatch.UpdateDeliveryStatusGovernedIdempotent(
 		s.db,
 		r.PathValue("assignmentId"),
 		actor.ID,
@@ -47,7 +47,7 @@ func (s *protectedStoreServer) handleConfirmPartnerStoreCaptainHandoff(w http.Re
 	if !ok {
 		return
 	}
-	item, err := dispatch.ConfirmStoreCaptainHandoff(
+	item, err := dispatch.ConfirmStoreCaptainHandoffIdempotent(
 		s.db,
 		r.PathValue("orderId"),
 		storeID,
