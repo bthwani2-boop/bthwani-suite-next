@@ -32,10 +32,10 @@ jobs:
         run: |
           set +e
           cd core/workforce/backend
-          go test ./internal/http -json -count=1 >/tmp/workforce-http.json
+          go test ./internal/http -json -count=1 >/tmp/workforce-http.json 2>&1
           code=$?
-          mapfile -t failed < <(jq -r 'select(.Action == "fail" and .Test != null) | .Test' /tmp/workforce-http.json | sort -u)
-          build_detail=$(jq -r 'select(.Action == "output" and .Test == null) | .Output' /tmp/workforce-http.json | grep -E '\.go:[0-9]+:|undefined|not enough arguments|too many arguments|cannot use' | head -n 1 | tr '\n' ' ' | cut -c1-130)
+          mapfile -t failed < <(jq -r 'select(.Action == "fail" and .Test != null) | .Test' /tmp/workforce-http.json 2>/dev/null | sort -u)
+          build_detail=$(grep -E '\.go:[0-9]+:|undefined|not enough arguments|too many arguments|cannot use' /tmp/workforce-http.json | head -n 1 | tr '\n' ' ' | cut -c1-130)
           if [ ${#failed[@]} -eq 0 ]; then
             if [ "$code" -eq 0 ]; then
               failed=(all-tests-passed)
@@ -50,7 +50,7 @@ jobs:
           for test_name in "${failed[@]}"; do
             safe=$(printf '%s' "$test_name" | tr -cd '[:alnum:]_.:-' | cut -c1-70)
             [ -n "$safe" ] || safe=unknown
-            detail=$(jq -r --arg test "$test_name" 'select(.Test == $test and .Action == "output") | .Output' /tmp/workforce-http.json | grep -E 'expected|got|FAIL|error|panic|status|body' | tail -n 1 | tr '\n' ' ' | cut -c1-130)
+            detail=$(jq -r --arg test "$test_name" 'select(.Test == $test and .Action == "output") | .Output' /tmp/workforce-http.json 2>/dev/null | grep -E 'expected|got|FAIL|error|panic|status|body' | tail -n 1 | tr '\n' ' ' | cut -c1-130)
             [ -n "$detail" ] || detail="$build_detail"
             [ -n "$detail" ] || detail="$test_name result: $state"
             jq -n --arg state "$state" --arg context "journeys/jrn-003/diag-$safe" --arg description "$detail" --arg target_url "$URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/status.json
