@@ -7,8 +7,7 @@ export type DshHomeAudienceTargets =
   | readonly []
   | readonly ["guest"]
   | readonly ["authenticated"]
-  | readonly ["guest", "authenticated"]
-  | readonly ["authenticated", "guest"];
+  | readonly ["guest", "authenticated"];
 
 export type DshHomeAdminTargeting = Readonly<{
   cityCodes: readonly string[];
@@ -78,15 +77,21 @@ export async function replaceHomeDiscoveryTargeting(
   return normalizeTargeting(response.targeting);
 }
 
+function normalizeAudienceTargets(values: readonly string[]): DshHomeAudienceTargets {
+  const hasGuest = values.some((value) => value.trim() === "guest");
+  const hasAuthenticated = values.some((value) => value.trim() === "authenticated");
+  if (hasGuest && hasAuthenticated) return ["guest", "authenticated"];
+  if (hasGuest) return ["guest"];
+  if (hasAuthenticated) return ["authenticated"];
+  return [];
+}
+
 export function normalizeTargeting(targeting: RawDshHomeAdminTargeting): DshHomeAdminTargeting {
   const unique = (values: readonly string[]) => [...new Set(values.map((value) => value.trim()).filter(Boolean))].sort();
-  const audiences = unique(targeting.audienceSegments)
-    .filter((value): value is "guest" | "authenticated" => value === "guest" || value === "authenticated")
-    .slice(0, 2) as DshHomeAudienceTargets;
   return {
     cityCodes: unique(targeting.cityCodes),
     serviceAreaCodes: unique(targeting.serviceAreaCodes),
-    audienceSegments: audiences,
+    audienceSegments: normalizeAudienceTargets(targeting.audienceSegments),
   };
 }
 
