@@ -83,11 +83,12 @@ const identityServer = "core/identity/backend/internal/http/server.go";
 requireText(identityServer, "IDENTITY_CORS_ALLOWED_ORIGINS", "JRN002_CORS_ENV_ALLOWLIST_MISSING");
 forbidText(identityServer, 'origin == "http://localhost:13000"', "JRN002_HARDCODED_CORS_ORIGIN_FORBIDDEN");
 const identityMain = "core/identity/backend/cmd/identity-api/main.go";
-for (const marker of ["BrowserCorsMiddleware", "CorsMiddleware", "ActivationSafetyMiddleware", "IDENTITY_LOCAL_BOOTSTRAP"]) {
+for (const marker of ["BrowserOriginGuard", "CorsMiddleware", "ActivationSafetyMiddleware", "IDENTITY_LOCAL_BOOTSTRAP"]) {
   requireText(identityMain, marker, `JRN002_RUNTIME_SAFETY_MISSING ${marker}`);
 }
+forbidText(identityMain, "BrowserCorsMiddleware", "JRN002_STALE_BROWSER_CORS_NAME_FORBIDDEN");
 const identityBrowserCors = "core/identity/backend/internal/http/browser_cors.go";
-for (const marker of ["CORS_ORIGIN_FORBIDDEN", "allowedCorsOrigins"]) {
+for (const marker of ["BrowserOriginGuard", "CORS_ORIGIN_FORBIDDEN", "allowedCorsOrigins"]) {
   requireText(identityBrowserCors, marker, `JRN002_BROWSER_CORS_SAFETY_MISSING ${marker}`);
 }
 forbidText(identityBrowserCors, "Access-Control-Allow-Methods", "JRN002_BROWSER_CORS_MUST_NOT_DUPLICATE_RESPONSE_HEADERS");
