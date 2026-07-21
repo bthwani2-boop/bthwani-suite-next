@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import {
+  fetchNotificationDeliveryAttempts,
   fetchNotificationPreferences,
   fetchNotifications,
   markNotificationRead,
@@ -14,6 +15,8 @@ import {
 } from "./notifications.states";
 import type {
   DshNotificationConfigState,
+  DshNotificationDeliveryAuditState,
+  DshNotificationDeliveryOutcome,
   DshNotificationPreference,
   DshNotificationsState,
 } from "./notifications.types";
@@ -122,4 +125,36 @@ export function usePlatformNotificationConfigController(authKind: string) {
   }, [authKind, load]);
 
   return { state, reload: load, save };
+}
+
+export function useNotificationDeliveryAuditController(authKind: string) {
+  const [state, setState] = useState<DshNotificationDeliveryAuditState>({ kind: "idle" });
+  const [outcome, setOutcome] = useState<DshNotificationDeliveryOutcome | undefined>(undefined);
+
+  const load = useCallback(async (nextOutcome?: DshNotificationDeliveryOutcome) => {
+    setState({ kind: "loading" });
+    try {
+      const data = await fetchNotificationDeliveryAttempts(nextOutcome, 100);
+      setOutcome(nextOutcome);
+      setState({ kind: "success", attempts: data.attempts, summary: data.summary });
+    } catch (err) {
+      setState({ kind: "error", message: resolveMessage(err) });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (authKind !== "authenticated") {
+      setState({ kind: "idle" });
+      setOutcome(undefined);
+      return;
+    }
+    void load();
+  }, [authKind, load]);
+
+  return {
+    state,
+    outcome,
+    reload: () => load(outcome),
+    filter: (nextOutcome?: DshNotificationDeliveryOutcome) => load(nextOutcome),
+  };
 }
