@@ -7,6 +7,7 @@ import type {
   DshOrderPreparation,
   DshPartnerOrder,
   DshPartnerOrderAction,
+  DshPreparationIssue,
   DshStoreCaptainHandoffStatus,
 } from "../orders/orders.types";
 import type { DshOrderLifecycleHandoff } from "../orders/dsh-order-lifecycle-handoffs";
@@ -57,6 +58,8 @@ const nextActionMap: Record<PartnerOrderStatus, string> = {
 export type GovernedPartnerOrderItem = PartnerOrderItem & {
   readonly allowedActions: readonly DshPartnerOrderAction[];
   readonly preparation: DshOrderPreparation;
+  readonly preparationIssues: readonly DshPreparationIssue[];
+  readonly openPreparationIssueCount: number;
   readonly storeCaptainHandoffStatus: DshStoreCaptainHandoffStatus;
   readonly storeCaptainHandoffCaptainId: string;
 };
@@ -72,6 +75,8 @@ type CanonicalOrderShape = {
   readonly updatedAt?: string;
   readonly allowedActions?: readonly DshPartnerOrderAction[];
   readonly preparation?: DshOrderPreparation;
+  readonly preparationIssues?: readonly DshPreparationIssue[];
+  readonly openPreparationIssueCount?: number;
   readonly storeCaptainHandoffStatus?: DshStoreCaptainHandoffStatus;
   readonly storeCaptainHandoffCaptainId?: string;
   readonly items?: readonly {
@@ -137,6 +142,17 @@ export function mapDshOrderToPartnerOrderItem(order: DshPartnerOrder): GovernedP
   if (!raw.preparation || raw.preparation.orderId !== orderId) {
     throw new Error(`partner order ${orderId} is missing governed preparation timing`);
   }
+  if (!Array.isArray(raw.preparationIssues)) {
+    throw new Error(`partner order ${orderId} is missing governed preparation issues`);
+  }
+  const openPreparationIssueCount = Number(raw.openPreparationIssueCount);
+  if (!Number.isInteger(openPreparationIssueCount) || openPreparationIssueCount < 0) {
+    throw new Error(`partner order ${orderId} has invalid openPreparationIssueCount`);
+  }
+  const projectedOpenCount = raw.preparationIssues.filter((issue) => issue.status === "open").length;
+  if (projectedOpenCount !== openPreparationIssueCount) {
+    throw new Error(`partner order ${orderId} preparation issue count is inconsistent`);
+  }
 
   const status = resolvePartnerStatus(raw.status);
   const orderMode = resolveOrderMode(orderId, raw.fulfillmentMode);
@@ -159,6 +175,7 @@ export function mapDshOrderToPartnerOrderItem(order: DshPartnerOrder): GovernedP
   const acceptanceRisk = status === "needs_accept" && elapsed.minutes >= 10;
   const preparationRisk = raw.preparation.preparationSlaState === "due_soon"
     || raw.preparation.preparationSlaState === "overdue";
+  const issueRisk = openPreparationIssueCount > 0;
   const slaLabel = preparationSlaLabel(raw.preparation);
 
   return {
@@ -168,22 +185,24 @@ export function mapDshOrderToPartnerOrderItem(order: DshPartnerOrder): GovernedP
     status,
     allowedActions: [...raw.allowedActions],
     preparation: raw.preparation,
+    preparationIssues: [...raw.preparationIssues],
+    openPreparationIssueCount,
     storeCaptainHandoffStatus: raw.storeCaptainHandoffStatus ?? "",
     storeCaptainHandoffCaptainId: String(raw.storeCaptainHandoffCaptainId ?? ""),
-    priority: acceptanceRisk || raw.preparation.preparationSlaState === "overdue" ? "high" : "normal",
+    priority: acceptanceRisk || preparationRisk || issueRisk ? "high" : "normal",
     orderTypeLabel: resolveOrderTypeLabel(orderMode),
     orderMode,
     itemsCountLabel: itemCount > 0 ? `${itemCount} عنصر` : "العناصر عند فتح التفاصيل",
     amountLabel: total > 0 ? `${total.toLocaleString("ar-YE")} ر.ي` : "—",
     createdAtLabel: createdAt.toLocaleTimeString("ar-YE", { hour: "2-digit", minute: "2-digit" }),
     elapsedLabel: elapsed.label,
-    nextActionLabel: nextActionMap[status],
-    ...(acceptanceRisk || preparationRisk ? { urgent: true, slaRisk: true } : {}),
+    nextActionLabel: issueRisk ? "حل مشكلات التحضير" : nextActionMap[status],
+    ...(acceptanceRisk || preparationRisk || issueRisk ? { urgent: true, slaRisk: true } : {}),
     ...(slaLabel ? { slaLabel } : {}),
     ...(status === "needs_accept" ? { unread: true } : {}),
     ...(itemNames.length > 0 ? { itemsSummaryLabel: itemNames.join("، ") } : {}),
     ...(raw.wltPaymentRefId ? { paymentLabel: "مرجع مالي مرتبط" } : {}),
-    ...(status === "cancelled" && raw.rejectionReason ? { issueRequired: true } : {}),
+    ...(issueRisk || (status === "cancelled" && raw.rejectionReason) ? { issueRequired: true } : {}),
   };
 }
 
