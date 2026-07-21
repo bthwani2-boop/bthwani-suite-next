@@ -11,6 +11,7 @@ import {
 } from '@bthwani/ui-kit/web';
 import styles from '../shared/control-panel-surface.module.css';
 import { FINANCIAL_CLOSURE_LABELS } from '../../shared/orders';
+import { OrderTruthReadbackSummary } from '../../shared/order-truth';
 import { useOperatorOrderWorkboard } from '../../shared/operations/use-operator-order-workboard';
 import type { OperatorOrderWorkboardRow } from '../../shared/operations';
 import { resolveRuntimeOrderStatusTone } from '../shared/ControlPanelDshDecisionBoard';
@@ -111,6 +112,14 @@ export function OrderJourneyLiveOrdersScreen({
 
   return (
     <Box gap={3}>
+      <OrderTruthReadbackSummary
+        actor="operator"
+        title="حقيقة الطلبات السيادية"
+        status={subGroup === 'cancelled' ? 'cancelled_by_operator' : undefined}
+        limit={10}
+        onOpenOrder={setSelectedOrderId}
+      />
+
       <WebControlPanelKpiStrip items={[
         { id: 'visible', label: 'المعروض', value: String(visible.length), tone: 'neutral' },
         { id: 'unassigned', label: 'جاهزة بلا كابتن', value: String(unassigned), tone: unassigned > 0 ? 'warning' : 'success' },
