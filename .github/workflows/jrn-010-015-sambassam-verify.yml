@@ -16,8 +16,8 @@ permissions:
   statuses: write
 
 concurrency:
-  group: jrn-010-015-sambassam-${{ github.ref }}
-  cancel-in-progress: true
+  group: jrn-010-015-sambassam-${{ github.sha }}
+  cancel-in-progress: false
 
 jobs:
   affected-typecheck:
