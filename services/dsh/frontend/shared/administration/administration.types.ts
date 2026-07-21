@@ -17,10 +17,11 @@ export type DshStaffMember = {
 
 export type DshAdministrationApprovalStatus = "pending" | "approved" | "rejected";
 export type DshRoleAssignmentApprovalStatus = DshAdministrationApprovalStatus;
+export type DshRoleChangeAction = "staff_role_assignment" | "staff_role_revocation";
 
 export type DshRoleAssignmentApproval = {
   readonly id: string;
-  readonly actionType: "staff_role_assignment";
+  readonly actionType: DshRoleChangeAction;
   readonly targetActorId: string;
   readonly roleId: string;
   readonly roleName: string;
