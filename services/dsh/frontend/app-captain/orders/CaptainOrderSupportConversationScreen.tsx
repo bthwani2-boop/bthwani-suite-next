@@ -15,6 +15,7 @@ import {
   createActorSupportTicket,
   fetchActorSupportMessages,
   fetchActorSupportTickets,
+  markActorSupportMessagesRead,
   type DshSupportMessage,
   type DshSupportTicket,
 } from "../../shared/support";
@@ -80,7 +81,13 @@ export function CaptainOrderSupportConversationScreen({
       const tickets = await fetchActorSupportTickets();
       const selected = selectOrderTicket(tickets, orderId);
       setTicket(selected);
-      setMessages(selected ? await fetchActorSupportMessages(selected.id) : []);
+      if (selected) {
+        const readback = await fetchActorSupportMessages(selected.id);
+        await markActorSupportMessagesRead(selected.id);
+        setMessages(readback);
+      } else {
+        setMessages([]);
+      }
       setLoadState("ready");
     } catch (error) {
       setLoadState("error");
@@ -121,6 +128,7 @@ export function CaptainOrderSupportConversationScreen({
         fingerprint,
       });
       const readback = await fetchActorSupportMessages(created.id);
+      await markActorSupportMessagesRead(created.id);
       setTicket(created);
       setMessages(readback);
       setLoadState("ready");
@@ -157,6 +165,7 @@ export function CaptainOrderSupportConversationScreen({
         fetchActorSupportTickets(),
         fetchActorSupportMessages(ticket.id),
       ]);
+      await markActorSupportMessagesRead(ticket.id);
       setTicket(selectOrderTicket(updatedTicket, ticket.orderId) ?? ticket);
       setMessages(readback);
       setDraft("");
