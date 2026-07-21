@@ -16,10 +16,15 @@ export type CheckoutToOrderFlowState =
 export function useCheckoutToOrderFlow(input: DshCreateIntentInput) {
   const checkout = useCheckoutController();
   const order = useCreateOrderController();
+  const submitCheckout = checkout.submit;
+  const cancelCheckout = checkout.cancel;
+  const submitOrder = order.submit;
+  const resetOrder = order.reset;
 
   useEffect(() => {
-    void checkout.submit(input);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // A new checkout must never inherit the previous order mutation result.
+    resetOrder();
+    void submitCheckout(input);
   }, [
     input.cartId,
     input.storeId,
@@ -28,16 +33,24 @@ export function useCheckoutToOrderFlow(input: DshCreateIntentInput) {
     input.deliveryAddressId,
     input.note,
     input.couponCode,
+    resetOrder,
+    submitCheckout,
   ]);
 
-  useEffect(() => {
-    if (checkout.state.kind === "success" && order.state.kind === "idle") {
-      void order.submit({ checkoutIntentId: checkout.state.intent.id });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [checkout.state.kind, order.state.kind]);
+  const checkoutIntentId = checkout.state.kind === "success"
+    ? checkout.state.intent.id
+    : null;
 
-  const cancel = (intentId: string) => void checkout.cancel(intentId);
+  useEffect(() => {
+    if (checkoutIntentId && order.state.kind === "idle") {
+      void submitOrder({ checkoutIntentId });
+    }
+  }, [checkoutIntentId, order.state.kind, submitOrder]);
+
+  const cancel = (intentId: string) => {
+    resetOrder();
+    void cancelCheckout(intentId);
+  };
 
   const state: CheckoutToOrderFlowState = (() => {
     if (
