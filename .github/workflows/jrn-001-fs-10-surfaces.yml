@@ -95,8 +95,11 @@ jobs:
             STATE=failure
             RAW_ERROR="$(grep -m1 -E 'error TS[0-9]+|AssertionError|not ok|ERR_|missing|failed' /tmp/fs10.log 2>/dev/null || true)"
             ERROR_CODE="$(printf '%s' "$RAW_ERROR" | grep -o -m1 -E 'TS[0-9]+|ERR_[A-Z0-9_]+' || true)"
+            ERROR_FILE="$(printf '%s' "$RAW_ERROR" | sed -E 's#^([^(:]+).*#\1#' | sed -E 's#^.*[/\\]##' | cut -c1-48)"
             [ -n "$ERROR_CODE" ] || ERROR_CODE='surface-check-failed'
-            CONTEXT="journeys/jrn-001/fs-10/${ERROR_CODE}"
+            [ -n "$ERROR_FILE" ] || ERROR_FILE='unknown-file'
+            CONTEXT="journeys/jrn-001/fs-10/${ERROR_FILE}-${ERROR_CODE}"
+            CONTEXT="$(printf '%s' "$CONTEXT" | tr -cd '[:alnum:]_./:-' | cut -c1-100)"
             DESCRIPTION="$(printf '%s' "${RAW_ERROR:-FS-10 verification failed}" | cut -c1-120)"
           fi
           jq -n --arg state "$STATE" --arg context "$CONTEXT" --arg description "$DESCRIPTION" --arg target_url "$TARGET_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/status.json
