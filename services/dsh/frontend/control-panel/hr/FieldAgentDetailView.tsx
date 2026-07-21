@@ -14,6 +14,7 @@ import { uploadProviderMedia } from "../../shared/media/field-document-media";
 import { ProviderActivationWorkspace } from "../shared";
 import { WorkforceErrorState } from "../../shared/workforce/WorkforceErrorState";
 import { SupervisorPicker } from "./SupervisorPicker";
+import { WorkforceScopeManager } from "./WorkforceScopeManager";
 import { ZonePicker } from "./ZonePicker";
 
 export function FieldAgentDetailView(props: { readonly actorId: string; readonly onBack: () => void }) {
@@ -100,7 +101,11 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
   };
 
   const profile = agent.fieldProfile;
-  const canSave = fullNameAr.trim() && zoneId && shiftCode && !controller.actionBusy;
+  const canSave =
+    fullNameAr.trim().length > 0 &&
+    zoneId.length > 0 &&
+    shiftCode.length > 0 &&
+    !controller.actionBusy;
 
   return (
     <ScrollScreen>
@@ -116,7 +121,6 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
         <TextField label="الاسم بالعربية *" value={fullNameAr} onChangeText={setFullNameAr} />
         <TextField label="الاسم بالإنجليزية" value={fullNameEn} onChangeText={setFullNameEn} />
         <TextField label="تاريخ بداية الارتباط" value={engagementStartDate} onChangeText={setEngagementStartDate} placeholder="YYYY-MM-DD" />
-
         <ZonePicker value={zoneId} onChange={(zone) => setZoneId(zone?.id ?? "")} />
 
         <Text role="bodySm" style={{ textAlign: "right", fontWeight: "bold" }}>الوردية</Text>
@@ -133,7 +137,6 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
 
         <Text role="bodySm" style={{ textAlign: "right", fontWeight: "bold" }}>المشرف</Text>
         <SupervisorPicker kind="field" selected={supervisor} onSelect={setSupervisor} />
-
         {controller.actionError ? <Text role="bodySm" tone="danger" style={{ textAlign: "right" }}>{controller.actionError}</Text> : null}
 
         <Button
@@ -166,6 +169,7 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
         </Box>
       </Card>
 
+      <WorkforceScopeManager actorId={agent.actorId} actorRole="field" />
       <ProviderActivationWorkspace providerKind="field" initialActorId={agent.actorId} entrySource="hr" />
     </ScrollScreen>
   );
