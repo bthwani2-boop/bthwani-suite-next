@@ -1,23 +1,39 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { createDshHttpClient } from "../_kernel/dsh-http-request";
 import type {
+  DshCaptainDispatchCandidate,
+  DshCaptainDispatchProfileInput,
   DshCreateAssignmentInput,
   DshDeliveryException,
   DshDeliveryStatus,
   DshDispatchAssignment,
+  DshDispatchDecision,
+  DshGovernedCreateAssignmentInput,
   DshPartnerDispatchReference,
+  DshReassignAssignmentInput,
   DshSubmitPoDInput,
   DshReportDeliveryExceptionInput,
 } from "./dispatch.types";
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "dispatch");
 
+/** @deprecated JRN-014 operator surfaces must call createGovernedDispatchAssignment. */
 export async function createDispatchAssignment(input: DshCreateAssignmentInput): Promise<DshDispatchAssignment> {
   const data = await request<{ assignment: DshDispatchAssignment }>("/dsh/operator/dispatch/assignments", {
     method: "POST",
     body: input,
   });
   return data.assignment;
+}
+
+export async function createGovernedDispatchAssignment(
+  input: DshGovernedCreateAssignmentInput,
+): Promise<{ readonly assignment: DshDispatchAssignment; readonly replayed: boolean }> {
+  const data = await request<{ assignment: DshDispatchAssignment; replayed?: boolean }>(
+    "/dsh/operator/dispatch/assignments",
+    { method: "POST", body: input },
+  );
+  return { assignment: data.assignment, replayed: data.replayed === true };
 }
 
 export async function fetchOperatorDispatchAssignments(): Promise<readonly DshDispatchAssignment[]> {
@@ -30,6 +46,28 @@ export async function fetchCaptainDispatchAssignments(): Promise<readonly DshDis
   return data.assignments ?? [];
 }
 
+export async function fetchCaptainDispatchCandidates(
+  serviceAreaCode: string,
+  tenantId = "default",
+): Promise<readonly DshCaptainDispatchCandidate[]> {
+  const params = new URLSearchParams({ serviceAreaCode, tenantId });
+  const data = await request<{ candidates: DshCaptainDispatchCandidate[] }>(
+    `/dsh/operator/dispatch/candidates?${params.toString()}`,
+  );
+  return data.candidates ?? [];
+}
+
+export async function upsertCaptainDispatchProfile(
+  captainId: string,
+  input: DshCaptainDispatchProfileInput,
+): Promise<DshCaptainDispatchCandidate> {
+  const data = await request<{ candidate: DshCaptainDispatchCandidate }>(
+    `/dsh/operator/dispatch/captains/${encodeURIComponent(captainId)}/profile`,
+    { method: "PUT", body: input },
+  );
+  return data.candidate;
+}
+
 export async function acceptDispatchAssignment(assignmentId: string): Promise<DshDispatchAssignment> {
   const data = await request<{ assignment: DshDispatchAssignment }>(
     `/dsh/captain/dispatch/assignments/${encodeURIComponent(assignmentId)}/accept`,
@@ -38,12 +76,66 @@ export async function acceptDispatchAssignment(assignmentId: string): Promise<Ds
   return data.assignment;
 }
 
-export async function declineDispatchAssignment(assignmentId: string, reason: string): Promise<DshDispatchAssignment> {
+export async function declineDispatchAssignment(
+  assignmentId: string,
+  reason: string,
+  reasonCode = "captain_declined",
+): Promise<DshDispatchAssignment> {
   const data = await request<{ assignment: DshDispatchAssignment }>(
     `/dsh/captain/dispatch/assignments/${encodeURIComponent(assignmentId)}/decline`,
-    { method: "POST", body: { reason } },
+    { method: "POST", body: { reasonCode, reason } },
   );
   return data.assignment;
+}
+
+export async function reassignDispatchAssignment(
+  assignmentId: string,
+  input: DshReassignAssignmentInput,
+): Promise<DshDispatchAssignment> {
+  const data = await request<{ assignment: DshDispatchAssignment }>(
+    `/dsh/operator/dispatch/assignments/${encodeURIComponent(assignmentId)}/reassign`,
+    { method: "POST", body: input },
+  );
+  return data.assignment;
+}
+
+export async function cancelDispatchAssignment(
+  assignmentId: string,
+  reasonCode: string,
+  reason: string,
+): Promise<void> {
+  await request<void>(
+    `/dsh/operator/dispatch/assignments/${encodeURIComponent(assignmentId)}/cancel`,
+    { method: "POST", body: { reasonCode, reason } },
+  );
+}
+
+export async function expireDispatchAssignments(
+  tenantId = "default",
+  limit = 100,
+): Promise<number> {
+  const data = await request<{ expiredCount: number }>(
+    "/dsh/operator/dispatch/assignments/expire",
+    { method: "POST", body: { tenantId, limit } },
+  );
+  return Math.max(0, Number(data.expiredCount ?? 0));
+}
+
+export async function fetchDispatchDecisions(input: {
+  readonly tenantId?: string;
+  readonly assignmentId?: string;
+  readonly orderId?: string;
+  readonly limit?: number;
+}): Promise<readonly DshDispatchDecision[]> {
+  const params = new URLSearchParams();
+  if (input.tenantId) params.set("tenantId", input.tenantId);
+  if (input.assignmentId) params.set("assignmentId", input.assignmentId);
+  if (input.orderId) params.set("orderId", input.orderId);
+  if (input.limit) params.set("limit", String(input.limit));
+  const data = await request<{ decisions: DshDispatchDecision[] }>(
+    `/dsh/operator/dispatch/decisions?${params.toString()}`,
+  );
+  return data.decisions ?? [];
 }
 
 export async function updateDeliveryStatus(assignmentId: string, status: DshDeliveryStatus): Promise<DshDispatchAssignment> {
@@ -222,8 +314,24 @@ export function classifyDispatchError(error: unknown): DshDispatchError {
 
 export function getDshOrderLifecycleRuntimeClient() {
   return {
-    assignCaptain(orderId: string, input: { readonly captain_id: string }) {
-      return createDispatchAssignment({ orderId, captainId: input.captain_id });
+    assignCaptain(
+      orderId: string,
+      input: {
+        readonly captain_id: string;
+        readonly service_area_code: string;
+        readonly idempotency_key: string;
+        readonly priority?: number;
+        readonly distance_meters?: number;
+      },
+    ) {
+      return createGovernedDispatchAssignment({
+        orderId,
+        captainId: input.captain_id,
+        serviceAreaCode: input.service_area_code,
+        idempotencyKey: input.idempotency_key,
+        ...(input.priority === undefined ? {} : { priority: input.priority }),
+        ...(input.distance_meters === undefined ? {} : { distanceMeters: input.distance_meters }),
+      }).then((result) => result.assignment);
     },
   };
 }
