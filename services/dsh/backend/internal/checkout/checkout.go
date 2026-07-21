@@ -28,14 +28,15 @@ const (
 type IntentState string
 
 const (
-	StatePending          IntentState = "pending"
-	StateWltHandoffFailed IntentState = "wlt_handoff_failed"
-	StatePaymentPending   IntentState = "payment_pending"
-	StateConfirmed        IntentState = "confirmed"
-	StateCancelled        IntentState = "cancelled"
-	StatePaymentConfirmed IntentState = "payment_confirmed"
-	StatePaymentFailed    IntentState = "payment_failed"
-	StateExpired          IntentState = "expired"
+	StatePending           IntentState = "pending"
+	StateWltHandoffFailed  IntentState = "wlt_handoff_failed"
+	StateWltOutcomeUnknown IntentState = "wlt_outcome_unknown"
+	StatePaymentPending    IntentState = "payment_pending"
+	StateConfirmed         IntentState = "confirmed"
+	StateCancelled         IntentState = "cancelled"
+	StatePaymentConfirmed  IntentState = "payment_confirmed"
+	StatePaymentFailed     IntentState = "payment_failed"
+	StateExpired           IntentState = "expired"
 )
 
 type FulfillmentMode string
@@ -126,7 +127,7 @@ func AttachWltPaymentSession(db *sql.DB, intentID, tenantID, clientID, paymentSe
 		UPDATE dsh_checkout_intents
 		SET state = $1, wlt_payment_session_id = $2, version = version + 1, updated_at = NOW()
 		WHERE id = $3::uuid AND tenant_id = $4 AND client_id = $5
-		  AND state IN ('pending', 'wlt_handoff_failed')
+		  AND state IN ('pending', 'wlt_handoff_failed', 'wlt_outcome_unknown')
 		RETURNING id, tenant_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
 		          state, payment_method, wlt_payment_session_id,
 		          delivery_address, note, version, created_at, updated_at`
@@ -134,6 +135,27 @@ func AttachWltPaymentSession(db *sql.DB, intentID, tenantID, clientID, paymentSe
 	intent, err := scanIntent(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("%w: intent not found, tenant mismatch, or not handoff-ready", ErrConflict)
+	}
+	return intent, err
+}
+
+func MarkWltOutcomeUnknown(db *sql.DB, intentID, tenantID, clientID string) (*Intent, error) {
+	tenantID = normalizeTenant(tenantID)
+	if intentID == "" || tenantID == "" || clientID == "" {
+		return nil, ErrInvalid
+	}
+	const q = `
+		UPDATE dsh_checkout_intents
+		SET state = $1, version = version + 1, updated_at = NOW()
+		WHERE id = $2::uuid AND tenant_id = $3 AND client_id = $4
+		  AND state IN ('pending', 'wlt_handoff_failed', 'wlt_outcome_unknown')
+		RETURNING id, tenant_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
+		          state, payment_method, wlt_payment_session_id,
+		          delivery_address, note, version, created_at, updated_at`
+	row := db.QueryRow(q, string(StateWltOutcomeUnknown), intentID, tenantID, clientID)
+	intent, err := scanIntent(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("%w: intent not found, tenant mismatch, or not handoff-reconcilable", ErrConflict)
 	}
 	return intent, err
 }
@@ -147,7 +169,7 @@ func MarkWltHandoffFailed(db *sql.DB, intentID, tenantID, clientID string) (*Int
 		UPDATE dsh_checkout_intents
 		SET state = $1, version = version + 1, updated_at = NOW()
 		WHERE id = $2::uuid AND tenant_id = $3 AND client_id = $4
-		  AND state IN ('pending', 'payment_pending')
+		  AND state IN ('pending', 'payment_pending', 'wlt_outcome_unknown')
 		RETURNING id, tenant_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
 		          state, payment_method, wlt_payment_session_id,
 		          delivery_address, note, version, created_at, updated_at`
@@ -193,7 +215,7 @@ func CancelIntent(db *sql.DB, intentID, tenantID, clientID string) (*Intent, err
 		UPDATE dsh_checkout_intents
 		SET state = $1, version = version + 1, updated_at = NOW()
 		WHERE id = $2::uuid AND tenant_id = $3 AND client_id = $4
-		  AND state IN ('pending', 'wlt_handoff_failed', 'payment_pending')
+		  AND state IN ('pending', 'wlt_handoff_failed', 'wlt_outcome_unknown', 'payment_pending')
 		RETURNING id, tenant_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
 		          state, payment_method, wlt_payment_session_id,
 		          delivery_address, note, version, created_at, updated_at`

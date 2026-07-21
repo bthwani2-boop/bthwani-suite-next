@@ -2011,7 +2011,7 @@ paths:
           in: query
           schema:
             type: string
-            enum: [pending, wlt_handoff_failed, payment_pending, payment_confirmed, payment_failed, confirmed, cancelled, expired]
+            enum: [pending, wlt_handoff_failed, wlt_outcome_unknown, payment_pending, payment_confirmed, payment_failed, confirmed, cancelled, expired]
       responses:
         "200":
           description: List of checkout intents.
@@ -8073,7 +8073,7 @@ components:
           enum: [bthwani_delivery, partner_delivery, pickup]
         state:
           type: string
-          enum: [pending, wlt_handoff_failed, payment_pending, payment_confirmed, payment_failed, confirmed, cancelled, expired]
+          enum: [pending, wlt_handoff_failed, wlt_outcome_unknown, payment_pending, payment_confirmed, payment_failed, confirmed, cancelled, expired]
         paymentMethod:
           type: string
           enum: [cod, wallet, mixed, official_wallet]

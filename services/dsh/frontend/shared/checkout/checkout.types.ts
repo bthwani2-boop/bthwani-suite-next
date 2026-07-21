@@ -3,6 +3,7 @@ export type DshPaymentMethod = "cod" | "wallet" | "mixed" | "official_wallet";
 export type DshIntentState =
   | "pending"
   | "wlt_handoff_failed"
+  | "wlt_outcome_unknown"
   | "payment_pending"
   | "confirmed"
   | "cancelled"

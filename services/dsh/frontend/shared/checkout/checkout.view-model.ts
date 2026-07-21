@@ -14,7 +14,7 @@ export function resolveCheckoutIntentDisplayState(intent: DshCheckoutIntent) {
   if (intent.state === "cancelled" || intent.state === "expired") {
     return checkoutIdleState();
   }
-  if (intent.state === "wlt_handoff_failed") {
+  if (intent.state === "wlt_handoff_failed" || intent.state === "wlt_outcome_unknown") {
     return checkoutPaymentPendingState(intent);
   }
   if (intent.state === "payment_failed") {
