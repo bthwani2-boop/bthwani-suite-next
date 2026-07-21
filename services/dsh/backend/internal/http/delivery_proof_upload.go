@@ -75,7 +75,7 @@ func (s *protectedStoreServer) handleSubmitDispatchPoDWithMedia(w http.ResponseW
 		return
 	}
 	opaqueID := strings.ReplaceAll(uuid.NewString(), "-", "")
-	key := media.BuildKey("dsh-delivery-proofs", "captain", actor.ID, opaqueID, fmt.Sprintf("%d-%s", time.Now().UnixNano(), header.Filename))
+	key := media.BuildKey("dsh-delivery-proofs", actor.ID, opaqueID, fmt.Sprintf("%d-%s", time.Now().UnixNano(), header.Filename))
 	if err := mediaClient.Upload(r.Context(), key, uploadBody, header.Size, contentType); err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to upload delivery proof")
 		return
@@ -87,6 +87,7 @@ func (s *protectedStoreServer) handleSubmitDispatchPoDWithMedia(w http.ResponseW
 			(storage_key, owner_actor_id, owner_actor_role, purpose, content_type, original_filename)
 		VALUES ($1,$2,'captain','delivery_proof',$3,$4)
 		RETURNING media_ref`, key, actor.ID, contentType, header.Filename).Scan(&mediaRef); err != nil {
+		_ = mediaClient.Remove(r.Context(), key)
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to register delivery proof")
 		return
 	}
@@ -97,6 +98,7 @@ func (s *protectedStoreServer) handleSubmitDispatchPoDWithMedia(w http.ResponseW
 	})
 	if err != nil {
 		_, _ = s.db.ExecContext(r.Context(), `DELETE FROM dsh_media_refs WHERE media_ref = $1`, mediaRef)
+		_ = mediaClient.Remove(r.Context(), key)
 	}
 	s.writeDispatchResult(w, http.StatusOK, assignment, err)
 }
