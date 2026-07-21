@@ -1,0 +1,57 @@
+name: JRN-001 FS-10 app-field repair
+
+on:
+  push:
+    branches: [sambassam]
+    paths:
+      - .github/workflows/jrn-001-fs-10-app-field-repair.yml
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: sambassam
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24.17.0
+      - name: Align fee contract and UI tokens
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const file = 'services/dsh/frontend/app-field/onboarding/DshFieldOnboardingScreen.tsx';
+          const before = fs.readFileSync(file, 'utf8');
+          const replacements = [
+            ['feeRefState.data.amountMinor', 'feeRefState.data.amount'],
+            ['colorRoles.brandPrimary', 'colorRoles.brandAction'],
+            ['colorRoles.surfaceRaised', 'colorRoles.brandActionSoft'],
+          ];
+          let after = before;
+          for (const [from, to] of replacements) {
+            if (!after.includes(from) && !after.includes(to)) throw new Error(`missing expected token: ${from}`);
+            after = after.split(from).join(to);
+          }
+          fs.writeFileSync(file, after);
+          NODE
+          corepack enable
+          corepack prepare pnpm@10.34.2 --activate
+          pnpm install --frozen-lockfile
+          pnpm --dir apps/app-field/runtime typecheck
+          git diff --check
+          if git diff --quiet; then
+            echo 'FS-10 app-field already aligned.'
+            exit 0
+          fi
+          git config user.name 'bthwani-journey-closure'
+          git config user.email 'actions@users.noreply.github.com'
+          git add services/dsh/frontend/app-field/onboarding/DshFieldOnboardingScreen.tsx
+          git commit -m 'fix(jrn-001-fs-10): align onboarding fee and UI tokens'
+          git pull --rebase origin sambassam
+          git push origin HEAD:sambassam
