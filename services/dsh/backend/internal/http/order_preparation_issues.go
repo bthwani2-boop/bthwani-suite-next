@@ -36,8 +36,15 @@ func (s *protectedStoreServer) authorizePreparationIssueRead(
 			return "", false
 		}
 	case "operator":
-		// Operator access is a read-only operational projection. Mutations remain
-		// partner-store scoped and are never exposed through this branch.
+		if _, permitted := s.requirePermission(
+			w,
+			r,
+			"control-panel",
+			OperationsPermissionRead,
+			"operator",
+		); !permitted {
+			return "", false
+		}
 	}
 	return orderID, true
 }
@@ -63,7 +70,7 @@ func (s *protectedStoreServer) handleListPreparationIssues(w http.ResponseWriter
 		}
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{
-		"issues": issues,
+		"issues":    issues,
 		"openCount": openCount,
 	})
 }
@@ -82,6 +89,16 @@ func (s *protectedStoreServer) handleCreatePreparationIssue(w http.ResponseWrite
 		ReplacementProductName string                      `json:"replacementProductName"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
+		return
+	}
+	body.OrderItemID = strings.TrimSpace(body.OrderItemID)
+	if body.Kind != orders.PreparationIssueOther && body.OrderItemID == "" {
+		store.SendError(
+			w,
+			http.StatusBadRequest,
+			"INVALID_REQUEST",
+			"orderItemId is required for item preparation issues",
+		)
 		return
 	}
 	correlationID := strings.TrimSpace(r.Header.Get("X-Correlation-ID"))
