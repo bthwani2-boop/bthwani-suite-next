@@ -17,7 +17,9 @@ on:
       - "services/dsh/database/migrations/dsh-078_client_address_pii_governance.sql"
       - "services/dsh/database/migrations/dsh-081_client_address_subject_anonymization.sql"
       - "services/dsh/database/migrations/dsh-901_client_address_logical_deduplication.sql"
+      - "services/dsh/database/migrations/dsh-907_jrn_005_address_mutation_receipts.sql"
       - "services/dsh/database/tests/dsh-901_client_address_logical_deduplication.sql"
+      - "services/dsh/database/tests/dsh-907_jrn_005_address_mutation_receipts.sql"
       - "services/dsh/frontend/shared/client-address/**"
       - "services/dsh/frontend/app-client/account/AddressLocationScreen.tsx"
       - "services/dsh/frontend/app-client/cart/CartScreen.tsx"
@@ -117,15 +119,19 @@ jobs:
           psql -h localhost -U postgres -d jrn005 -v ON_ERROR_STOP=1 -f services/dsh/database/migrations/dsh-056_client_addresses.sql 2>&1 | tee -a /tmp/jrn-005-all-slices.log
           DB_BASE_EXIT=${PIPESTATUS[0]}
           psql -h localhost -U postgres -d jrn005 -v ON_ERROR_STOP=1 -f services/dsh/database/migrations/dsh-901_client_address_logical_deduplication.sql 2>&1 | tee -a /tmp/jrn-005-all-slices.log
-          DB_MIGRATION_EXIT=${PIPESTATUS[0]}
+          DB_DEDUPE_MIGRATION_EXIT=${PIPESTATUS[0]}
+          psql -h localhost -U postgres -d jrn005 -v ON_ERROR_STOP=1 -f services/dsh/database/migrations/dsh-907_jrn_005_address_mutation_receipts.sql 2>&1 | tee -a /tmp/jrn-005-all-slices.log
+          DB_RECEIPT_MIGRATION_EXIT=${PIPESTATUS[0]}
           psql -h localhost -U postgres -d jrn005 -v ON_ERROR_STOP=1 -f services/dsh/database/tests/dsh-901_client_address_logical_deduplication.sql 2>&1 | tee -a /tmp/jrn-005-all-slices.log
-          DB_TEST_EXIT=${PIPESTATUS[0]}
+          DB_DEDUPE_TEST_EXIT=${PIPESTATUS[0]}
+          psql -h localhost -U postgres -d jrn005 -v ON_ERROR_STOP=1 -f services/dsh/database/tests/dsh-907_jrn_005_address_mutation_receipts.sql 2>&1 | tee -a /tmp/jrn-005-all-slices.log
+          DB_RECEIPT_TEST_EXIT=${PIPESTATUS[0]}
 
-          printf 'hygiene=%s static=%s guard=%s typecheck=%s go=%s db_extension=%s db_base=%s db_migration=%s db_test=%s\n' \
-            "$HYGIENE_EXIT" "$STATIC_EXIT" "$GUARD_EXIT" "$TYPECHECK_EXIT" "$GO_EXIT" "$DB_EXTENSION_EXIT" "$DB_BASE_EXIT" "$DB_MIGRATION_EXIT" "$DB_TEST_EXIT" \
+          printf 'hygiene=%s static=%s guard=%s typecheck=%s go=%s db_extension=%s db_base=%s db_dedupe_migration=%s db_receipt_migration=%s db_dedupe_test=%s db_receipt_test=%s\n' \
+            "$HYGIENE_EXIT" "$STATIC_EXIT" "$GUARD_EXIT" "$TYPECHECK_EXIT" "$GO_EXIT" "$DB_EXTENSION_EXIT" "$DB_BASE_EXIT" "$DB_DEDUPE_MIGRATION_EXIT" "$DB_RECEIPT_MIGRATION_EXIT" "$DB_DEDUPE_TEST_EXIT" "$DB_RECEIPT_TEST_EXIT" \
             | tee -a /tmp/jrn-005-all-slices.log
 
-          if [ "$HYGIENE_EXIT" -ne 0 ] || [ "$STATIC_EXIT" -ne 0 ] || [ "$GUARD_EXIT" -ne 0 ] || [ "$TYPECHECK_EXIT" -ne 0 ] || [ "$GO_EXIT" -ne 0 ] || [ "$DB_EXTENSION_EXIT" -ne 0 ] || [ "$DB_BASE_EXIT" -ne 0 ] || [ "$DB_MIGRATION_EXIT" -ne 0 ] || [ "$DB_TEST_EXIT" -ne 0 ]; then
+          if [ "$HYGIENE_EXIT" -ne 0 ] || [ "$STATIC_EXIT" -ne 0 ] || [ "$GUARD_EXIT" -ne 0 ] || [ "$TYPECHECK_EXIT" -ne 0 ] || [ "$GO_EXIT" -ne 0 ] || [ "$DB_EXTENSION_EXIT" -ne 0 ] || [ "$DB_BASE_EXIT" -ne 0 ] || [ "$DB_DEDUPE_MIGRATION_EXIT" -ne 0 ] || [ "$DB_RECEIPT_MIGRATION_EXIT" -ne 0 ] || [ "$DB_DEDUPE_TEST_EXIT" -ne 0 ] || [ "$DB_RECEIPT_TEST_EXIT" -ne 0 ]; then
             exit 1
           fi
 
