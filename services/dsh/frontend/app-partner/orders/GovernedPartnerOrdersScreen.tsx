@@ -24,6 +24,7 @@ export type GovernedPartnerOrderActionId =
   | 'report_issue'
   | 'resolve_issue'
   | 'handoff'
+  | 'handoff_exception'
   | 'issue'
   | 'delivering';
 
@@ -56,7 +57,7 @@ function primaryLabel(item: GovernedPartnerOrderItem): string {
   if (action === 'accept') return 'قبول الطلب';
   if (action === 'prepare') return 'بدء التحضير';
   if (action === 'ready') return 'تأكيد الجاهزية';
-  if (action === 'handoff') return 'فتح التسليم';
+  if (action === 'handoff') return 'تأكيد التسليم للكابتن';
   if (action === 'report_issue') return 'تسجيل مشكلة';
   if (action === 'delivering') return 'متابعة التوصيل';
   if (action === 'issue') return 'فتح المشكلة';
@@ -73,12 +74,18 @@ function stageMatches(item: GovernedPartnerOrderItem, stage: StageId): boolean {
       || item.allowedActions.includes('resolve_issue');
   }
   if (stage === 'ready') return item.allowedActions.includes('ready');
-  if (stage === 'handoff') return item.allowedActions.includes('handoff');
+  if (stage === 'handoff') {
+    return item.allowedActions.includes('handoff')
+      || item.storeCaptainHandoffStatus === 'awaiting_partner'
+      || item.storeCaptainHandoffStatus === 'partner_confirmed';
+  }
   return item.allowedActions.length === 0;
 }
 
 function statusLabel(item: GovernedPartnerOrderItem): string {
   if (item.openPreparationIssueCount > 0) return `${item.openPreparationIssueCount} مشكلة تمنع الجاهزية`;
+  if (item.storeCaptainHandoffStatus === 'awaiting_partner') return 'ينتظر تأكيد المتجر';
+  if (item.storeCaptainHandoffStatus === 'partner_confirmed') return 'ينتظر استلام الكابتن';
   if (item.preparation.preparationSlaState === 'overdue') return item.slaLabel ?? 'متأخر عن الجاهزية';
   if (item.preparation.preparationSlaState === 'due_soon') return item.slaLabel ?? 'اقترب موعد الجاهزية';
   if (item.allowedActions.includes('accept')) return 'ينتظر قرار المتجر';
@@ -92,6 +99,8 @@ function statusLabel(item: GovernedPartnerOrderItem): string {
 
 function statusTone(item: GovernedPartnerOrderItem): 'danger' | 'warning' | 'success' | 'neutral' {
   if (item.openPreparationIssueCount > 0) return 'danger';
+  if (item.storeCaptainHandoffStatus === 'awaiting_partner') return 'warning';
+  if (item.storeCaptainHandoffStatus === 'partner_confirmed') return 'success';
   if (item.preparation.preparationSlaState === 'overdue') return 'danger';
   if (item.preparation.preparationSlaState === 'due_soon') return 'warning';
   if (item.preparation.preparationSlaState === 'ready') return 'success';
@@ -147,7 +156,7 @@ export function GovernedPartnerOrdersScreen({
     <MobileScrollView fill padding={4} gap={3}>
       <Box gap={1}>
         <Text role="titleLg">مركز تجهيز الطلبات</Text>
-        <Text role="bodySm" tone="muted">الموعد والمشكلات والإجراءات مصدرها DSH، ولا يمكن إعلان الجاهزية مع مشكلة مفتوحة.</Text>
+        <Text role="bodySm" tone="muted">الموعد والمشكلات والعهدة مصدرها DSH، ولا يمكن الاستلام قبل اكتمال التأكيد الثنائي.</Text>
       </Box>
 
       <Tabs items={tabItems} value={stage} onValueChange={(value) => setStage(value as StageId)} />
@@ -166,6 +175,8 @@ export function GovernedPartnerOrdersScreen({
           {filtered.map((item, index) => {
             const action = primaryAction(item);
             const expanded = expandedId === item.id;
+            const handoffExceptionAvailable = item.storeCaptainHandoffStatus === 'awaiting_partner'
+              || item.storeCaptainHandoffStatus === 'partner_confirmed';
             return (
               <React.Fragment key={item.id}>
                 {index > 0 ? <Divider /> : null}
@@ -193,12 +204,18 @@ export function GovernedPartnerOrdersScreen({
                           {`${PREPARATION_ISSUE_KIND_LABELS[issue.kind]}: ${issue.note}`}
                         </Text>
                       ))}
+                      {item.storeCaptainHandoffCaptainId ? (
+                        <Text role="caption" tone="muted">{`الكابتن المعيّن: ${item.storeCaptainHandoffCaptainId}`}</Text>
+                      ) : null}
                       {item.nextOwnerLabel ? <Text role="caption" tone="muted">{`الجهة التالية: ${item.nextOwnerLabel}`}</Text> : null}
                     </Box>
                   ) : null}
 
                   <Box layoutDirection="row" gap={2}>
                     <Button label={primaryLabel(item)} size="sm" fullWidth={false} onPress={() => onAction(action, item.id)} />
+                    {handoffExceptionAvailable ? (
+                      <Button label="نقص أو عدم تطابق" tone="danger" size="sm" fullWidth={false} onPress={() => onAction('handoff_exception', item.id)} />
+                    ) : null}
                     {item.allowedActions.includes('report_issue') && action !== 'report_issue' ? (
                       <Button label="تسجيل مشكلة" tone="danger" size="sm" fullWidth={false} onPress={() => onAction('report_issue', item.id)} />
                     ) : null}
