@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "incremental": false
+  },
+  "include": [
+    "next-env.d.ts",
+    "src/app/dsh/platform/policies/page.tsx",
+    "../../../services/dsh/frontend/control-panel/platform/PlatformPoliciesScreen.tsx",
+    "../../../services/dsh/frontend/control-panel/platform/MapProviderHealthCard.tsx",
+    "../../../services/dsh/frontend/control-panel/platform/ServiceAreaGovernanceSection.tsx",
+    "../../../services/dsh/frontend/control-panel/platform/ClientAddressPrivacySection.tsx",
+    "../../../services/dsh/frontend/shared/client-map/**/*.ts",
+    "../../../services/dsh/frontend/shared/privacy/**/*.ts"
+  ]
+}
