@@ -1,0 +1,264 @@
+{
+  "schemaVersion": 1,
+  "capabilityId": "JRN_001_PARTNER_ONBOARDING_STORE_PUBLICATION",
+  "state": "READY_FOR_IMPLEMENTATION",
+  "problem": {
+    "statement": "Partner onboarding, first-store readiness, approval, publication, and payout setup must form one governed journey instead of disconnected surface-specific records and manual checks.",
+    "affectedActors": [
+      "field-agent",
+      "partner-owner",
+      "control-operator",
+      "client"
+    ],
+    "currentWorkaround": "Operators manually reconcile partner, store, document, visit, publication, and payout state across separate screens and services.",
+    "frequency": "continuous",
+    "severity": "critical",
+    "evidenceState": "QUALITATIVE",
+    "evidenceReferences": [
+      "governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md#jrn-001",
+      "services/dsh/database/migrations/dsh-015_partner_lifecycle.sql",
+      "services/dsh/frontend/shared/field-onboarding/use-field-partner-onboarding-controller.tsx",
+      "services/wlt/database/migrations/wlt-010_payout_destinations.sql"
+    ]
+  },
+  "actors": [
+    {
+      "id": "field-agent",
+      "role": "Captures and maintains an owned partner and first-store onboarding draft with evidence.",
+      "permittedActions": [
+        "create-owned-partner-draft",
+        "edit-owned-partner-draft",
+        "capture-first-store-profile",
+        "upload-partner-documents",
+        "submit-evidence-bearing-field-visit",
+        "submit-owned-draft-for-review"
+      ],
+      "forbiddenActions": [
+        "approve-own-evidence",
+        "publish-store-to-client",
+        "reassign-a-store-owned-by-another-partner",
+        "write-financial-ledger-or-settlement-truth"
+      ]
+    },
+    {
+      "id": "partner-owner",
+      "role": "Reads the governed activation, readiness, store scope, and team state for the partner context.",
+      "permittedActions": [
+        "read-own-activation-state",
+        "read-own-readiness",
+        "read-own-store-scope",
+        "manage-authorized-store-team"
+      ],
+      "forbiddenActions": [
+        "self-approve-onboarding",
+        "override-store-publication-gates",
+        "read-raw-payout-identifiers-from-dsh"
+      ]
+    },
+    {
+      "id": "control-operator",
+      "role": "Reviews documents and evidence, links unowned stores, and applies governed activation and publication decisions.",
+      "permittedActions": [
+        "review-partner-documents",
+        "read-field-visit-evidence",
+        "link-an-unowned-store",
+        "apply-allowed-partner-transitions",
+        "read-immutable-onboarding-audit"
+      ],
+      "forbiddenActions": [
+        "bypass-readiness-gates",
+        "reassign-a-store-owned-by-another-partner",
+        "persist-raw-payout-identifiers-in-dsh",
+        "mutate-wlt-ledger-truth"
+      ]
+    },
+    {
+      "id": "client",
+      "role": "Discovers a store only after all publication gates are satisfied.",
+      "permittedActions": [
+        "discover-client-visible-store",
+        "read-public-store-profile"
+      ],
+      "forbiddenActions": [
+        "discover-hidden-or-unready-store",
+        "read-partner-private-onboarding-data"
+      ]
+    }
+  ],
+  "surfaces": [
+    {
+      "id": "app-client",
+      "required": true,
+      "actors": ["client"],
+      "routesOrScreens": ["store discovery", "store detail"],
+      "operationIds": ["listDshStores", "getDshStore"],
+      "states": ["loading", "empty", "ready", "offline", "error"],
+      "actions": ["discover-published-store", "open-public-store-detail"]
+    },
+    {
+      "id": "app-partner",
+      "required": true,
+      "actors": ["partner-owner"],
+      "routesOrScreens": ["partner activation status", "partner readiness", "partner team"],
+      "operationIds": ["getDshPartnerActivationStatus", "getDshPartnerSelfReadiness"],
+      "states": ["loading", "blocked", "in-review", "active", "hidden", "deactivated", "error"],
+      "actions": ["read-own-status", "read-own-readiness", "manage-authorized-team"]
+    },
+    {
+      "id": "app-captain",
+      "required": false,
+      "exclusionReason": "Captain assignment and fulfillment begin in later order and dispatch journeys after store publication.",
+      "actors": ["partner-owner"],
+      "states": ["out-of-scope"],
+      "actions": []
+    },
+    {
+      "id": "app-field",
+      "required": true,
+      "actors": ["field-agent"],
+      "routesOrScreens": ["partner draft", "first-store profile", "documents", "field visit", "submission"],
+      "operationIds": ["createFieldPartnerDraft", "updateFieldPartnerDraft", "updateFieldPartnerStore", "uploadFieldPartnerDocument", "createFieldPartnerVisit", "submitFieldPartnerDraft"],
+      "states": ["blank", "draft", "saving", "conflict", "offline", "blocked", "submitted", "error"],
+      "actions": ["create-draft", "save-draft", "capture-store", "upload-document", "capture-visit", "submit-for-review"]
+    },
+    {
+      "id": "control-panel",
+      "required": true,
+      "actors": ["control-operator"],
+      "routesOrScreens": ["partners list", "partner detail", "documents review", "field visits", "linked stores", "activation audit"],
+      "operationIds": ["listDshPartners", "getDshPartner", "reviewDshPartnerDocument", "listDshPartnerFieldVisits", "linkDshPartnerStore", "transitionDshPartner"],
+      "states": ["loading", "empty", "ready", "forbidden", "conflict", "readiness-blocked", "error"],
+      "actions": ["review-evidence", "link-unowned-store", "apply-allowed-transition", "read-audit"]
+    },
+    {
+      "id": "backend",
+      "required": true,
+      "actors": ["field-agent", "partner-owner", "control-operator", "client"],
+      "routesOrScreens": ["DSH partner lifecycle API", "WLT payout destination API"],
+      "operationIds": ["transitionDshPartner", "updateFieldPartnerDraft", "upsertWltPayoutDestination"],
+      "states": ["authorized", "forbidden", "conflict", "readiness-blocked", "idempotent-replay", "service-unavailable"],
+      "actions": ["authorize", "validate", "persist", "audit", "handoff-to-wlt", "readback"]
+    },
+    {
+      "id": "database",
+      "required": true,
+      "actors": ["control-operator"],
+      "routesOrScreens": ["DSH partner and store tables", "WLT payout destination tables"],
+      "operationIds": [],
+      "states": ["consistent", "conflict-rejected", "single-active-payout", "audit-retained"],
+      "actions": ["enforce-ownership", "enforce-version", "enforce-idempotency", "retain-audit"]
+    },
+    {
+      "id": "shared",
+      "required": true,
+      "actors": ["field-agent", "partner-owner", "control-operator"],
+      "routesOrScreens": ["partner shared brain", "field onboarding controller"],
+      "operationIds": [],
+      "states": ["loading", "ready", "offline", "forbidden", "conflict", "partial", "error"],
+      "actions": ["map-contracts", "coordinate-mutations", "normalize-readback", "present-recovery-actions"]
+    }
+  ],
+  "outcome": {
+    "statement": "A partner can be onboarded from field draft to a client-visible first store with one traceable state model, while WLT exclusively owns raw payout details.",
+    "primaryMetric": "percentage of submitted partner drafts reaching a governed terminal decision without manual cross-system reconciliation",
+    "guardrailMetrics": [
+      "zero stores reassigned between partners outside an explicit future transfer journey",
+      "zero raw payout account identifiers returned by DSH",
+      "zero client-visible stores failing any publication gate",
+      "zero duplicate transition audit events for identical retries"
+    ],
+    "baselineState": "Existing implementation contains disconnected readiness checks, weak retry identity, and legacy raw payout fields in DSH.",
+    "targetState": "Every mutation is authorization-scoped, concurrency-safe, idempotent, audited, and readable on all required surfaces.",
+    "observationWindow": "one complete onboarding cycle plus seven days of post-publication monitoring"
+  },
+  "acceptance": {
+    "criteria": [
+      "Field agents can create, resume, save, and submit only their own partner draft.",
+      "Submission is blocked until legal identity, first-store profile, and a WLT payout destination reference are complete.",
+      "All uploaded documents must be independently approved before operations review.",
+      "Partner activation requires a submitted evidence-bearing field visit linked to the partner store.",
+      "Client publication requires active, visible, serviceable, partner-ready, catalog-approved, and marketing-visible store state.",
+      "A store already owned by one partner cannot be linked to another partner.",
+      "Identical transition and payout retries replay the original result; payload changes under the same key are rejected.",
+      "DSH persists and returns only WLT payout references and masked compatibility values.",
+      "Partner and control-panel surfaces read back the committed activation and readiness state."
+    ],
+    "failureStates": [
+      "raw payout data stored or returned by DSH",
+      "store ownership silently changed",
+      "publication without all gates",
+      "approval without independent evidence",
+      "duplicate or payload-divergent retry accepted",
+      "surface reports success before committed readback"
+    ],
+    "requiredChecks": [
+      "product truth schema validation",
+      "OpenAPI validation",
+      "Go unit tests",
+      "PostgreSQL integration tests",
+      "shared TypeScript typecheck",
+      "multi-surface route and state verification",
+      "WLT financial-boundary guard",
+      "RBAC and negative-path tests",
+      "runtime smoke",
+      "visual and RTL review"
+    ],
+    "runtimeEvidenceRequired": true,
+    "visualEvidenceRequired": true
+  },
+  "invariants": {
+    "business": [
+      "One partner may own multiple stores, but one store has at most one onboarding owner.",
+      "Control-panel approval is distinct from field evidence capture.",
+      "WLT is the sole owner of raw payout destination data.",
+      "Client visibility is a store publication outcome, not merely a partner status label.",
+      "Every material transition has actor, surface, correlation, retry identity, and immutable audit."
+    ],
+    "negative": [
+      "A field agent cannot approve their own evidence.",
+      "A partner cannot self-publish a store.",
+      "A store cannot be reassigned by the generic link operation.",
+      "DSH cannot persist raw account number, IBAN, or payout mobile data after binding a WLT reference.",
+      "A stale version cannot mutate partner state.",
+      "A reused idempotency key cannot represent a different payload.",
+      "A hidden, unserviceable, unready, catalog-unapproved, or marketing-hidden store cannot appear to clients."
+    ]
+  },
+  "owners": {
+    "productManager": "BThwani product authority",
+    "productOwner": "DSH partner onboarding owner",
+    "uxJourneyOwner": "Multi-surface journey design owner",
+    "engineeringOwner": "DSH and WLT engineering owners",
+    "productManagerApproval": "APPROVED",
+    "productOwnerApproval": "APPROVED",
+    "productAcceptanceDecision": "PENDING"
+  },
+  "execution": {
+    "appetite": "Close JRN-001 sequentially across all mandatory FS-01 through FS-18 slices, then stop before JRN-002.",
+    "fixedConstraints": [
+      "Use GitHub Remote sambassam as execution truth.",
+      "DSH owns operational partner and store state; WLT owns financial payout truth.",
+      "No store reassignment through the generic onboarding link route.",
+      "No raw payout identifiers persisted or returned by DSH.",
+      "No next journey begins before the JRN-001 decision is recorded."
+    ],
+    "variableScope": [
+      "readiness copy and recovery actions",
+      "targeted tests and CI composition",
+      "non-breaking compatibility mappings for masked payout fields"
+    ],
+    "forbiddenScope": [
+      "captain fulfillment implementation",
+      "order lifecycle implementation",
+      "commercial SaaS activation",
+      "pull request, merge, release, or production deployment",
+      "fabricated runtime, QA, security, finance, or visual evidence"
+    ],
+    "forecastRange": "one governed journey",
+    "confidence": "high",
+    "unknowns": [
+      "independent runtime and visual evidence remain unavailable until CI and surface runs execute on the final commit",
+      "historical raw payout rows without a WLT reference require a separately verified migration run before production cleanup"
+    ]
+  }
+}
