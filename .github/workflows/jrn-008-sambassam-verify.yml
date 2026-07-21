@@ -23,6 +23,7 @@ on:
       - "services/dsh/frontend/app-field/components/DshFieldRouteRenderer.tsx"
       - "apps/control-panel/runtime/src/app/dsh/catalogs/**"
       - "services/dsh/tests/jrn-008-all-slices.test.mjs"
+      - "tools/scripts/test-jrn-008-catalog-migrations.ps1"
       - "tools/guards/catalog/jrn-008-*.mjs"
       - ".github/workflows/jrn-008-sambassam-verify.yml"
 
@@ -174,21 +175,9 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false
-      - name: Apply the complete catalog migration chain twice
+      - name: Build full schema once and replay JRN-008 migrations
         shell: pwsh
-        run: ./tools/scripts/test-central-catalog-migration.ps1 -PsqlMode native *> /tmp/jrn-008-database.log
-      - name: Verify JRN-008 schema objects
-        shell: bash
-        run: |
-          set -o pipefail
-          psql -v ON_ERROR_STOP=1 -d dsh_catalog_migration_test -tA <<'SQL' | tee -a /tmp/jrn-008-database.log
-          SELECT to_regclass('public.dsh_master_product_relationships') IS NOT NULL;
-          SELECT to_regclass('public.dsh_catalog_entity_audit') IS NOT NULL;
-          SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='dsh_store_assortments' AND column_name='paused_until');
-          SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='dsh_store_assortments' AND column_name='available_before_pause');
-          SELECT to_regprocedure('dsh_catalog_rollback_audit(text,text,text,text,integer)') IS NOT NULL;
-          SQL
-          grep -c '^t$' /tmp/jrn-008-database.log | grep -q '^5$'
+        run: ./tools/scripts/test-jrn-008-catalog-migrations.ps1 -PsqlMode native *> /tmp/jrn-008-database.log
       - name: Upload database evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
