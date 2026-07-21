@@ -139,9 +139,12 @@ export function PickupWorkbenchScreen() {
               statusTone,
               reason,
               sla,
-              ...(action ? { primaryAction: action } : {}),
             };
-            return <WebControlPanelDecisionRow key={session.id} {...rowProps} />;
+            return action ? (
+              <WebControlPanelDecisionRow key={session.id} {...rowProps} primaryAction={action} />
+            ) : (
+              <WebControlPanelDecisionRow key={session.id} {...rowProps} />
+            );
           })
         )}
       </WebControlPanelQueue>
