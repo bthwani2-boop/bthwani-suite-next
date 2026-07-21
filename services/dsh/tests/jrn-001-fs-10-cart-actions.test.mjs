@@ -12,6 +12,11 @@ assert.doesNotMatch(cartScreen, /controller\.clear\(controller\.state\.cart\)/);
 assert.match(cartScreen, /serviceabilityController\.serviceability\.kind === "blocked"/);
 assert.match(cartScreen, /serviceabilityController\.serviceability\.kind === "error"/);
 assert.doesNotMatch(cartScreen, /disabled=\{serviceabilityController\.serviceability\.kind === "checking"\}/);
+assert.match(cartScreen, /authKind\?: "authenticated" \| "unauthenticated" \| undefined/);
+assert.match(cartScreen, /onProceedToCheckout\?: \(\(/);
+assert.match(cartScreen, /onManageAddresses\?: \(\(\) => void\) \| undefined/);
+assert.match(cartScreen, /onBrowseCatalog\?: \(\(\) => void\) \| undefined/);
+assert.match(cartScreen, /onBack\?: \(\(\) => void\) \| undefined/);
 
 assert.match(governedCartScreen, /const payment = useWltDshPaymentController\(\);/);
 assert.doesNotMatch(governedCartScreen, /useWltDshPaymentController\(presentationSubtotal\)/);
@@ -20,4 +25,4 @@ assert.match(governedCartScreen, /presentationSubtotal\.toLocaleString/);
 assert.match(checkoutRoute, /\.\.\.\(onSuccess \? \{ onSuccess \} : \{\}\)/);
 assert.doesNotMatch(checkoutRoute, /onSuccess=\{onSuccess\}/);
 
-console.log("JRN-001 FS-10 app-client cart actions, WLT presentation, and optional checkout callback boundaries verified");
+console.log("JRN-001 FS-10 app-client cart, checkout callback, and exact optional prop boundaries verified");
