@@ -1,0 +1,23 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "outDir": "dist-jrn-009"
+  },
+  "include": [
+    "frontend/**/*.d.ts",
+    "frontend/shared/_kernel/**/*.ts",
+    "frontend/shared/_kernel/**/*.tsx",
+    "frontend/shared/cart/**/*.ts",
+    "frontend/shared/cart/**/*.tsx",
+    "frontend/app-client/cart/CartScreen.tsx",
+    "frontend/control-panel/operations/CartActivityScreen.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "dist-jrn-009"
+  ]
+}
