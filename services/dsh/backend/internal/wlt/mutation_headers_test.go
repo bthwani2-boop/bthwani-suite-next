@@ -44,7 +44,7 @@ func TestRequiredMutationHeadersRejectMissingValues(t *testing.T) {
 	}
 }
 
-func TestNotifyDeliveryCompletedAddsDeterministicHeaders(t *testing.T) {
+func TestNotifyDeliveryCollectionAddsDeterministicHeaders(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requireMutationHeaders(t, r)
 		if r.Header.Get("X-Correlation-ID") != "order-1" {
@@ -55,8 +55,11 @@ func TestNotifyDeliveryCompletedAddsDeterministicHeaders(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "token")
-	if err := client.NotifyDeliveryCompleted(context.Background(), NotifyDeliveryCompletedInput{
+	if err := client.NotifyDeliveryCollection(context.Background(), NotifyDeliveryCollectionInput{
 		OrderID:          "order-1",
+		CollectorType:    "captain",
+		CollectorID:      "captain-1",
+		PartnerID:        "partner-1",
 		CheckoutIntentID: "checkout-1",
 	}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
