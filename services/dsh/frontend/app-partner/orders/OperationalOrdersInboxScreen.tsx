@@ -59,8 +59,9 @@ export function OperationalOrdersInboxScreen({
     [issueOrderId, items],
   );
   const handoffExceptionOrder = React.useMemo(() => {
-    if (handoffException.state.kind === 'idle') return null;
-    return items.find((item) => item.id === handoffException.state.entityId) ?? null;
+    const exceptionState = handoffException.state;
+    if (!('entityId' in exceptionState)) return null;
+    return items.find((item) => item.id === exceptionState.entityId) ?? null;
   }, [handoffException.state, items]);
 
   React.useEffect(() => {
@@ -195,7 +196,9 @@ export function OperationalOrdersInboxScreen({
             state={handoffException.state}
             onReasonCodeChange={handoffException.setReasonCode}
             onNoteChange={handoffException.setNote}
-            onSubmit={handoffException.submit}
+            onSubmit={async () => {
+              await handoffException.submit();
+            }}
             onCancel={handoffException.cancel}
           />
         </Box>
