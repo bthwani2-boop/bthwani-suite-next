@@ -1,0 +1,45 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "outDir": "dist-jrn-010-020"
+  },
+  "include": [
+    "frontend/**/*.d.ts",
+    "frontend/shared/_kernel/**/*.ts",
+    "frontend/shared/_kernel/**/*.tsx",
+    "frontend/shared/checkout/**/*.ts",
+    "frontend/shared/checkout/**/*.tsx",
+    "frontend/shared/order-truth/**/*.ts",
+    "frontend/shared/order-truth/**/*.tsx",
+    "frontend/shared/orders/**/*.ts",
+    "frontend/shared/orders/**/*.tsx",
+    "frontend/shared/dispatch/**/*.ts",
+    "frontend/shared/dispatch/**/*.tsx",
+    "frontend/shared/pickup/**/*.ts",
+    "frontend/shared/pickup/**/*.tsx",
+    "frontend/shared/delivery/**/*.ts",
+    "frontend/shared/delivery/**/*.tsx",
+    "frontend/shared/partner-delivery/**/*.ts",
+    "frontend/shared/partner-delivery/**/*.tsx",
+    "frontend/shared/media/pod/**/*.ts",
+    "frontend/shared/media/pod/**/*.tsx",
+    "frontend/shared/operations/**/*.ts",
+    "frontend/shared/operations/**/*.tsx",
+    "frontend/app-client/orders/**/*.ts",
+    "frontend/app-client/orders/**/*.tsx",
+    "frontend/app-partner/orders/**/*.ts",
+    "frontend/app-partner/orders/**/*.tsx",
+    "frontend/app-captain/orders/**/*.ts",
+    "frontend/app-captain/orders/**/*.tsx",
+    "frontend/control-panel/operations/**/*.ts",
+    "frontend/control-panel/operations/**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "dist-jrn-010-020"
+  ]
+}
