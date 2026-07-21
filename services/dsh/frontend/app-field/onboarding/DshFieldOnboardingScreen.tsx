@@ -411,7 +411,7 @@ export function DshFieldOnboardingScreen({
           <View style={{ padding: spacing[3], borderRadius: radius.md, borderWidth: borders.hairline, borderColor: colorRoles.borderSubtle, gap: spacing[1] }}>
             <Text role="bodyStrong" style={{ textAlign: 'right' }}>مرجع رسوم انضمام المتجر</Text>
             <Text role="bodySm" tone="secondary" style={{ textAlign: 'right' }}>
-              {feeRefState.data.amountMinor} {feeRefState.data.currency} — {CHARGE_TIMING_REFERENCE_LABELS[feeRefState.data.chargeTiming] ?? feeRefState.data.chargeTiming}
+              {feeRefState.data.amount} {feeRefState.data.currency} — {CHARGE_TIMING_REFERENCE_LABELS[feeRefState.data.chargeTiming] ?? feeRefState.data.chargeTiming}
             </Text>
           </View>
         ) : null}
@@ -433,8 +433,8 @@ export function DshFieldOnboardingScreen({
                   padding: spacing[3],
                   borderRadius: radius.md,
                   borderWidth: active ? 2 : borders.hairline,
-                  borderColor: active ? colorRoles.brandPrimary : colorRoles.borderSubtle,
-                  backgroundColor: active ? colorRoles.surfaceRaised : colorRoles.surfaceBase,
+                  borderColor: active ? colorRoles.brandAction : colorRoles.borderSubtle,
+                  backgroundColor: active ? colorRoles.brandActionSoft : colorRoles.surfaceBase,
                   gap: spacing[2],
                 }}
               >
