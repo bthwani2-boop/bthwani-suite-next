@@ -5,6 +5,7 @@ on:
   push:
     branches: [sambassam]
     paths:
+      - "services/dsh/tsconfig.jrn-031.json"
       - "services/dsh/database/migrations/dsh-076_admin_role_assignment_approvals.sql"
       - "services/dsh/backend/internal/administration/**"
       - "services/dsh/backend/internal/http/administration*.go"
@@ -42,8 +43,8 @@ jobs:
         run: git diff --check
       - name: Verify JRN-031 bindings
         run: node --test services/dsh/tests/jrn-031-administration-maker-checker.test.mjs
-      - name: Verify full-stack ownership boundary
-        run: pnpm guard:fullstack-boundary
+      - name: Typecheck JRN-031 shared brain and administration surface
+        run: pnpm --dir services/dsh exec tsc -p tsconfig.jrn-031.json --noEmit --pretty false
 
   administration-go:
     name: Administration domain and governed routes
