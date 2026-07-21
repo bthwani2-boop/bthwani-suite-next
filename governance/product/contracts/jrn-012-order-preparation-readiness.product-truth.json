@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-012",
+  "title": "قبول الطلب وتحضيره وجاهزيته",
+  "status": "ACTIVE_CANONICAL_IMPLEMENTED_PENDING_INDEPENDENT_REVIEW",
+  "owner": "DSH",
+  "purpose": "إدارة قرار المتجر وتوقيت التحضير والمشكلات والاستبدالات والجاهزية من حقيقة تشغيلية واحدة تمنع الانتقالات غير الصالحة وتعرض القراءة الراجعة للأسطح المتأثرة.",
+  "actors": ["partner", "client", "captain", "operator", "system"],
+  "requiredSurfaces": ["app-partner", "app-client", "app-captain", "control-panel"],
+  "excludedSurfaces": {
+    "app-field": "لا يملك دورًا تشغيليًا في قبول الطلب أو تحضيره.",
+    "webapp": "لا يوجد سطح طلبات تشغيلي منشور له في الحالة الحالية.",
+    "website": "سطح تعريفي فقط."
+  },
+  "truthOwnership": {
+    "orderLifecycle": "DSH",
+    "preparationTiming": "DSH",
+    "preparationIssues": "DSH",
+    "allowedActions": "DSH backend",
+    "financialTruth": "WLT",
+    "surfaceResponsibility": "render, interact, navigate, and refresh only"
+  },
+  "preconditions": [
+    "الطلب موجود ومملوك للمتجر المحلول من هوية الشريك.",
+    "قبول الطلب مسموح فقط من pending ورفضه يتطلب سببًا.",
+    "بدء التحضير مسموح فقط بعد القبول.",
+    "كل تعديل لموعد الجاهزية يحمل سببًا ومعرف ارتباط ويُحفظ في سجل تاريخي.",
+    "كل مشكلة تحضير مرتبطة بالطلب والمتجر، وبعنصر الطلب عند تحديده.",
+    "أي أثر مالي يبقى مرجع قراءة أو مرشح تسوية إلى WLT ولا يُحسب داخل DSH."
+  ],
+  "acceptanceCriteria": [
+    "تعرض لوحة الشريك الطلبات المملوكة للمتجر فقط وتستقبل allowedActions من الخادم.",
+    "ينشئ القبول snapshot لسياسة زمن التحضير وموعد الجاهزية دون إعادة كتابة التاريخ عند تعديل السياسة لاحقًا.",
+    "يسجل بدء التحضير وتعديل التقدير والجاهزية كأحداث قابلة للتدقيق.",
+    "يمكن تسجيل صنف ناقص أو استبدال أو مشكلة جودة أو مشكلة أخرى دون تعديل الحقيقة المالية.",
+    "لا يظهر إجراء الجاهزية ولا ينجح endpoint الجاهزية عندما توجد مشكلة تحضير مفتوحة.",
+    "حل المشكلة يستخدم optimistic concurrency ويعيد allowedActions المحدثة بعد القراءة الراجعة.",
+    "يعرض الشريك حالات SLA on_track وdue_soon وoverdue والسبب وآخر موعد تقديري.",
+    "تظهر حالة الجاهزية الموحدة لأسطح العميل والكابتن والشريك والمشغل عبر حقيقة الطلب المشتركة.",
+    "لا تنتقل عهدة الطلب إلى الكابتن قبل حالة جاهزية صحيحة ومسار handoff معتمد.",
+    "تدعم الواجهات loading وempty وoffline وforbidden وconflict وpartial وretry دون Mock أو حقيقة محلية."
+  ],
+  "negativeInvariants": [
+    "لا قبول أو رفض أو تحضير أو جاهزية خارج الحالة المسموحة.",
+    "لا جاهزية مع مشكلة تحضير مفتوحة حتى عند استدعاء endpoint مباشرة أو بقراءة قديمة.",
+    "لا يستنتج أي سطح allowedActions من status محليًا.",
+    "لا تخزن الشاشات قائمة مشكلات تشغيلية بديلة عن DSH.",
+    "لا ينفذ DSH خصمًا أو استردادًا أو تسوية أو تغيير رصيد بسبب الاستبدال.",
+    "لا يتجاوز الشريك نطاق متجره بإرسال storeId من الطلب.",
+    "لا يعاد تطبيق إنشاء المشكلة أو حلها عند إعادة نفس correlationId.",
+    "لا يتحول الاستبدال المقترح إلى تغيير سعر أو عنصر نهائي دون رحلة مالية/تجارية مستقلة مصرح بها."
+  ],
+  "registeredFunctionalSlices": [
+    "server-owned order workboard and sovereign allowedActions",
+    "accept or reject with reason and permission enforcement",
+    "start preparation and calculate expected ready time",
+    "revise ready estimate with reason and version history",
+    "missing items, substitutions, and order problems",
+    "SLA risk, alerts, and escalation projection",
+    "announce readiness only in a valid state",
+    "readiness visible to partner, captain, client, and operator",
+    "audit and settlement candidate handoff to WLT without DSH financial computation"
+  ],
+  "evidenceRequired": ["static", "database", "contract", "backend", "runtime", "cross-surface", "security", "finance-boundary", "qa", "governance", "ci"],
+  "internalZeroGate": "SOURCE_IMPLEMENTED_PENDING_EXECUTION_EVIDENCE",
+  "independentReviewPending": ["product-owner", "qa-device-accessibility", "security", "finance-boundary", "release-production"],
+  "decision": "READY_FOR_REVIEW"
+}
