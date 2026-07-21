@@ -9,6 +9,10 @@ import (
 
 func TestWorkforceJourneyRoutesAreMounted(t *testing.T) {
 	router := NewRouter(nil, nil, nil, nil)
+	mux, ok := router.(*http.ServeMux)
+	if !ok {
+		t.Fatalf("expected workforce router to expose its governed ServeMux, got %T", router)
+	}
 	cases := []struct {
 		method  string
 		path    string
@@ -29,7 +33,7 @@ func TestWorkforceJourneyRoutesAreMounted(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		_, pattern := router.Handler(request)
+		_, pattern := mux.Handler(request)
 		if pattern != tc.pattern {
 			t.Fatalf("expected route %q, got %q", tc.pattern, pattern)
 		}
