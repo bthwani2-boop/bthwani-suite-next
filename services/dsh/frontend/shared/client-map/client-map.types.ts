@@ -47,10 +47,19 @@ export type DshMapProviderHealthState =
   | { readonly kind: "success"; readonly data: DshMapProviderHealth }
   | { readonly kind: "error"; readonly message: string };
 
+export type DshServiceAreaBounds = {
+  readonly minLongitude: number;
+  readonly minLatitude: number;
+  readonly maxLongitude: number;
+  readonly maxLatitude: number;
+};
+
 export type DshServiceArea = {
   readonly serviceAreaCode: string;
   readonly displayName: string;
   readonly polygon: readonly (readonly [number, number])[];
+  readonly pointCount: number;
+  readonly bounds: DshServiceAreaBounds;
   readonly active: boolean;
   readonly priority: number;
   readonly version: number;
