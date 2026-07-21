@@ -124,7 +124,7 @@ test("JRN-011 backend creation is tenant/client scoped, idempotent and replay sa
   assertAll(backend, [
     /pg_advisory_xact_lock/,
     /dsh_order_create_idempotency/,
-    /WHERE tenant_id=\$1 AND checkout_intent_id=\$2::uuid/,
+    /WHERE tenant_id=\$1 AND client_id=\$2 AND checkout_intent_id=\$3::uuid/,
     /checkout intent is not eligible for order creation/,
     /ON CONFLICT \(tenant_id,event_id\) DO NOTHING/,
     /getOrderTruthTx/,
@@ -134,7 +134,7 @@ test("JRN-011 backend creation is tenant/client scoped, idempotent and replay sa
     /WHERE id=\$1::uuid AND tenant_id=\$2 AND client_id=\$3/,
     /WHERE id=\$1::uuid AND tenant_id=\$2 AND store_id=\$3/,
     /truth\.ClientID = ""/,
-    /\{\"redacted\":true\}/,
+    /\{"redacted":true\}/,
   ], "actor scoped reads");
   assertAll(handler, [
     /r\.Header\.Get\("Idempotency-Key"\)/,
