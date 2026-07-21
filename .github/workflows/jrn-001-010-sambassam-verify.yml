@@ -250,29 +250,44 @@ jobs:
           PGPASSWORD: postgres
         shell: bash
         run: |
-          set -o pipefail
+          set +e
           : >/tmp/jrn-006-evidence.log
           command -v psql >/dev/null || { sudo apt-get update && sudo apt-get install -y postgresql-client; }
 
           node --test --test-name-pattern="JRN-006" services/dsh/tests/jrn-005-010-integrity.test.mjs 2>&1 | tee -a /tmp/jrn-006-evidence.log
+          STATIC_EXIT=${PIPESTATUS[0]}
 
           (
             cd services/dsh/backend
-            go test ./internal/http ./internal/clientaddress ./internal/servicearea ./internal/mapproviders -count=1
+            go test ./internal/clientaddress ./internal/servicearea ./internal/mapproviders -count=1
           ) 2>&1 | tee -a /tmp/jrn-006-evidence.log
+          GO_EXIT=${PIPESTATUS[0]}
 
+          DB_EXIT=0
           psql -h localhost -U postgres -d jrn006 -v ON_ERROR_STOP=1 -c 'CREATE EXTENSION IF NOT EXISTS pgcrypto;' 2>&1 | tee -a /tmp/jrn-006-evidence.log
-          for migration in \
-            services/dsh/database/migrations/dsh-056_client_addresses.sql \
-            services/dsh/database/migrations/dsh-076_service_area_geofences.sql \
-            services/dsh/database/migrations/dsh-078_client_address_pii_governance.sql \
-            services/dsh/database/migrations/dsh-081_client_address_subject_anonymization.sql \
-            services/dsh/database/migrations/dsh-082_client_address_privacy_reschedule.sql \
-            services/dsh/database/migrations/dsh-083_privacy_policy_batch_default.sql \
-            services/dsh/database/migrations/dsh-906_jrn_006_client_address_geofence_binding.sql; do
-            psql -h localhost -U postgres -d jrn006 -v ON_ERROR_STOP=1 -f "$migration" 2>&1 | tee -a /tmp/jrn-006-evidence.log
-          done
-          psql -h localhost -U postgres -d jrn006 -v ON_ERROR_STOP=1 -f services/dsh/database/tests/dsh-906_jrn_006_client_address_geofence_binding.sql 2>&1 | tee -a /tmp/jrn-006-evidence.log
+          if [ "${PIPESTATUS[0]}" -ne 0 ]; then DB_EXIT=1; fi
+
+          if [ "$DB_EXIT" -eq 0 ]; then
+            for migration in \
+              services/dsh/database/migrations/dsh-056_client_addresses.sql \
+              services/dsh/database/migrations/dsh-076_service_area_geofences.sql \
+              services/dsh/database/migrations/dsh-078_client_address_pii_governance.sql \
+              services/dsh/database/migrations/dsh-081_client_address_subject_anonymization.sql \
+              services/dsh/database/migrations/dsh-082_client_address_privacy_reschedule.sql \
+              services/dsh/database/migrations/dsh-083_privacy_policy_batch_default.sql \
+              services/dsh/database/migrations/dsh-906_jrn_006_client_address_geofence_binding.sql; do
+              psql -h localhost -U postgres -d jrn006 -v ON_ERROR_STOP=1 -f "$migration" 2>&1 | tee -a /tmp/jrn-006-evidence.log
+              if [ "${PIPESTATUS[0]}" -ne 0 ]; then DB_EXIT=1; break; fi
+            done
+          fi
+
+          if [ "$DB_EXIT" -eq 0 ]; then
+            psql -h localhost -U postgres -d jrn006 -v ON_ERROR_STOP=1 -f services/dsh/database/tests/dsh-906_jrn_006_client_address_geofence_binding.sql 2>&1 | tee -a /tmp/jrn-006-evidence.log
+            if [ "${PIPESTATUS[0]}" -ne 0 ]; then DB_EXIT=1; fi
+          fi
+
+          printf 'static=%s go=%s database=%s\n' "$STATIC_EXIT" "$GO_EXIT" "$DB_EXIT" | tee -a /tmp/jrn-006-evidence.log
+          if [ "$STATIC_EXIT" -ne 0 ] || [ "$GO_EXIT" -ne 0 ] || [ "$DB_EXIT" -ne 0 ]; then exit 1; fi
       - name: Upload JRN-006 evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
