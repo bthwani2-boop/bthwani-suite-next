@@ -18,9 +18,12 @@ export type DshHomeStoreDto = DshHomeDiscoveryResponseDto['stores'][number];
 export type DshHomePaginationDto = DshHomeDiscoveryResponseDto['pagination'];
 
 export type DiscoveryFilterKind = DshHomeFilterDto['kind'];
+export type DshHomeAudienceSegment = 'guest' | 'authenticated';
 
 export type DshHomeDiscoveryParams =
-  paths['/dsh/home-discovery']['get']['parameters']['query'];
+  paths['/dsh/home-discovery']['get']['parameters']['query'] & {
+    readonly audienceSegment?: DshHomeAudienceSegment;
+  };
 
 export type DshHomeAdminKind =
   paths['/dsh/operator/home-discovery/{kind}']['get']['parameters']['path']['kind'];
