@@ -9,13 +9,15 @@ function source(relativePath) {
 describe("JRN-031 administration maker-checker closure", () => {
   const migration = source("../database/migrations/dsh-076_admin_role_assignment_approvals.sql");
   const domain = source("../backend/internal/administration/role_assignment_approvals.go");
+  const administration = source("../backend/internal/administration/administration.go");
   const routes = source("../backend/internal/http/administration_approval_routes.go");
+  const administrationHttp = source("../backend/internal/http/administration.go");
   const main = source("../backend/cmd/dsh-api/main.go");
   const contract = source("../contracts/dsh.administration.openapi.yaml");
   const adapter = source("../frontend/shared/administration/administration.api.ts");
   const controller = source("../frontend/shared/administration/use-administration-controller.tsx");
   const queue = source("../frontend/control-panel/administration/RoleAssignmentApprovalQueue.tsx");
-  const page = source("../../apps/control-panel/runtime/src/app/dsh/administration/page.tsx");
+  const page = source("../../../apps/control-panel/runtime/src/app/dsh/administration/page.tsx");
 
   it("persists a versioned approval queue with self-assignment protection", () => {
     assert.match(migration, /dsh_admin_approval_requests/);
@@ -34,6 +36,19 @@ describe("JRN-031 administration maker-checker closure", () => {
     assert.match(domain, /staff_role_assignment_requested/);
     assert.match(domain, /staff_role_assignment_"\+decision/);
     assert.match(domain, /tx\.Commit/);
+  });
+
+  it("removes obsolete direct administration mutation paths", () => {
+    assert.doesNotMatch(administration, /func CreateRole\(/);
+    assert.doesNotMatch(administration, /func AssignStaffRole\(/);
+    assert.doesNotMatch(administration, /func ActivatePartner\(/);
+    assert.doesNotMatch(administration, /func BlockPartner\(/);
+    assert.doesNotMatch(administration, /func UpsertCaptainCredential\(/);
+    assert.doesNotMatch(administrationHttp, /handleAssignStaffRole/);
+    assert.doesNotMatch(administrationHttp, /handleCreateRole/);
+    assert.doesNotMatch(administrationHttp, /handleActivatePartner/);
+    assert.doesNotMatch(administrationHttp, /handleUpsertCaptainCredential/);
+    assert.doesNotMatch(adapter, /createRole|activatePartner|blockPartner|upsertCaptainCredential/);
   });
 
   it("mounts governed routes without mounting legacy direct mutations", () => {
