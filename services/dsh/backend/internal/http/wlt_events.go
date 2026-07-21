@@ -21,6 +21,8 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 		return
 	}
 	var body struct {
+		EventID          string `json:"eventId"`
+		CorrelationID    string `json:"correlationId"`
 		CheckoutIntentID string `json:"checkoutIntentId"`
 		SpecialRequestID string `json:"specialRequestId"`
 		OrderID          string `json:"orderId"`
@@ -36,7 +38,12 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
 		return
 	}
+	body.EventID = strings.TrimSpace(body.EventID)
+	body.CorrelationID = strings.TrimSpace(body.CorrelationID)
 	body.TenantID = strings.TrimSpace(body.TenantID)
+	body.CheckoutIntentID = strings.TrimSpace(body.CheckoutIntentID)
+	body.SpecialRequestID = strings.TrimSpace(body.SpecialRequestID)
+	body.PaymentSessionID = strings.TrimSpace(body.PaymentSessionID)
 	body.Status = strings.TrimSpace(body.Status)
 	if body.TenantID == "" {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "tenantId is required")
@@ -86,7 +93,23 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 		return
 	}
 
-	intent, err := checkout.ApplyWltPaymentEvent(s.db, body.TenantID, body.CheckoutIntentID, body.PaymentSessionID, body.Status)
+	// Checkout projection, coupon projection and durable event receipt are one
+	// PostgreSQL transaction. No response can expose a partially applied event.
+	tx, err := s.db.BeginTx(r.Context(), nil)
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to begin WLT event transaction")
+		return
+	}
+	defer tx.Rollback()
+
+	intent, err := checkout.ApplyWltPaymentEventTx(
+		r.Context(),
+		tx,
+		body.TenantID,
+		body.CheckoutIntentID,
+		body.PaymentSessionID,
+		body.Status,
+	)
 	if errors.Is(err, checkout.ErrNotFound) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "checkout intent not found in tenant")
 		return
@@ -107,16 +130,51 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to apply WLT payment event")
 		return
 	}
-	if err := coupons.ApplyPaymentOutcome(s.db, body.CheckoutIntentID, body.Status); err != nil {
-		store.SendError(w, http.StatusInternalServerError, "COUPON_RECONCILIATION_FAILED", "payment state changed but coupon reconciliation failed")
+
+	eventEnvelope := checkout.WltPaymentEventEnvelope{
+		EventID:          body.EventID,
+		TenantID:         body.TenantID,
+		CheckoutIntentID: body.CheckoutIntentID,
+		PaymentSessionID: body.PaymentSessionID,
+		Status:           body.Status,
+		CorrelationID:    body.CorrelationID,
+	}
+	eventKey, replayed, err := checkout.BeginWltPaymentEventTx(r.Context(), tx, eventEnvelope)
+	if errors.Is(err, checkout.ErrWltEventReplayConflict) {
+		store.SendError(w, http.StatusConflict, "WLT_EVENT_REPLAY_CONFLICT", "eventId was already used for a different WLT payment event")
 		return
 	}
+	if errors.Is(err, checkout.ErrInvalid) {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		return
+	}
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to register WLT payment event")
+		return
+	}
+	if err := coupons.ApplyPaymentOutcomeTx(r.Context(), tx, body.CheckoutIntentID, body.Status); err != nil {
+		store.SendError(w, http.StatusInternalServerError, "COUPON_RECONCILIATION_FAILED", "WLT event was not applied because coupon reconciliation failed")
+		return
+	}
+	if err := checkout.MarkWltPaymentEventAppliedTx(r.Context(), tx, eventKey, eventEnvelope); err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to finalize WLT payment event receipt")
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to commit WLT payment event")
+		return
+	}
+
 	pricing, err := checkout.GetPricing(s.db, intent.ID)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load checkout pricing")
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"intent": marshalIntentWithPricing(intent, pricing)})
+	store.SendJSON(w, http.StatusOK, map[string]any{
+		"intent":        marshalIntentWithPricing(intent, pricing),
+		"eventReference": eventKey,
+		"replayed":      replayed,
+	})
 }
 
 func handleConfirmedRefundEffect(w http.ResponseWriter, s *protectedStoreServer, tenantID, orderID, refundReference, reason string) {
