@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-013",
+  "title": "العهدة الثنائية من المتجر إلى الكابتن",
+  "status": "IMPLEMENTED_PENDING_INDEPENDENT_APPROVAL_AND_EXECUTION_EVIDENCE",
+  "owner": "DSH",
+  "purpose": "نقل عهدة الطلب من المتجر المالك إلى الكابتن المعين بتأكيدين مستقلين، ومنع الالتقاط المبكر، وتحويل النقص أو عدم التطابق إلى استثناء تشغيلي قابل للتدقيق والمعالجة.",
+  "actors": ["partner", "captain", "operator", "system"],
+  "requiredSurfaces": ["app-partner", "app-captain", "control-panel"],
+  "readbackSurfaces": ["app-client"],
+  "excludedSurfaces": {
+    "app-field": "لا يملك دورًا في عهدة الطلب بعد الجاهزية.",
+    "webapp": "لا يوجد سطح تشغيلي منشور للعهدة في الحالة الحالية.",
+    "website": "سطح تعريفي فقط.",
+    "wlt-finance": "لا توجد mutation مالية؛ WLT يبقى مالك أي حقيقة مالية لاحقة."
+  },
+  "truthOwnership": {
+    "custodyLifecycle": "DSH",
+    "assignmentTruth": "DSH dispatch",
+    "operationalExceptions": "DSH delivery exceptions",
+    "financialTruth": "WLT",
+    "surfaceResponsibility": "render, interact, navigate, and refresh only"
+  },
+  "states": ["awaiting_partner", "partner_confirmed", "completed", "superseded"],
+  "acceptanceCriteria": [
+    "ينشئ وصول الكابتن إلى المتجر محاولة عهدة مرتبطة بالإسناد النشط والمتجر والطلب والكابتن.",
+    "يؤكد الشريك تسليم الطرد من نطاق متجره فقط ويُحفظ actor والوقت والإصدار.",
+    "لا يسمح DSH بحالة picked_up قبل تأكيد المتجر وإكمال الكابتن للتأكيد الثنائي.",
+    "تكون إعادة أوامر الوصول وتأكيد المتجر والالتقاط الناجح idempotent وتعيد الحقيقة الحالية.",
+    "تبطل محاولة العهدة السابقة فور إنشاء إسناد بديل، وليس عند وصول البديل فقط.",
+    "يمكن للشريك أو الكابتن تسجيل handoff_shortage أو handoff_mismatch بمعرف ارتباط ثابت وهوية مبلّغ قابلة للتدقيق.",
+    "يمنع الاستثناء المفتوح أو المؤكد تأكيد المتجر والالتقاط حتى معالجة العمليات.",
+    "تظهر إجراءات الاستثناء في app-partner وapp-captain فقط عندما تكون محاولة العهدة قابلة للتنفيذ.",
+    "تقرأ control-panel الاستثناء من طابور delivery exceptions نفسه دون مصدر حقيقة إضافي.",
+    "تستمر app-client في قراءة حالة الطلب الموحدة من DSH دون إظهار نجاح التقاط غير واقع.",
+    "لا ينفذ DSH أي خصم أو استرداد أو ledger mutation بسبب استثناء العهدة."
+  ],
+  "negativeInvariants": [
+    "لا pickup قبل اكتمال العهدة الثنائية.",
+    "لا pickup أثناء وجود استثناء مفتوح أو acknowledged.",
+    "لا تأكيد متجر من actor خارج نطاق المتجر المالك.",
+    "لا إعادة استخدام correlationId لبلاغ مختلف أو مبلّغ مختلف.",
+    "لا تبقى محاولة عهدة مفتوحة بعد إنشاء إسناد بديل.",
+    "لا توجد حقيقة عهدة أو استثناء داخل ملفات الأسطح.",
+    "لا تستخدم الأسطح raw API calls أو بيانات demo أو fallback تشغيلي.",
+    "لا ينشئ DSH حقيقة مالية موازية لـ WLT."
+  ],
+  "registeredFunctionalSlices": [
+    "captain arrival creates assignment-bound custody attempt",
+    "partner release confirmation and audit",
+    "captain pickup confirmation with early-pickup guard",
+    "idempotent command replay",
+    "reassignment supersedes prior custody",
+    "partner and captain shortage or mismatch reporting",
+    "operations exception queue handoff",
+    "partner and captain governed UI bindings",
+    "client unified lifecycle readback",
+    "contract, database, security, and finance-boundary verification"
+  ],
+  "evidenceRequired": ["static", "database", "contract", "backend", "runtime", "cross-surface", "security", "finance-boundary", "qa", "governance", "ci"],
+  "internalZeroGate": "SOURCE_IMPLEMENTED_PENDING_EXECUTION_EVIDENCE",
+  "independentReviewPending": ["product-owner", "qa-device-accessibility", "security", "finance-boundary", "release-production"],
+  "decision": "NEEDS_EVIDENCE"
+}
