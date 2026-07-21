@@ -57,11 +57,14 @@ for (const slice of registry.slices) {
   console.log(`\n========== ${slice.id} — ${slice.name} ==========`);
   const commandResults = [];
   let failedCommand = null;
-  for (const command of slice.commands) {
+  let failedCommandIndex = null;
+  for (let commandIndex = 0; commandIndex < slice.commands.length; commandIndex += 1) {
+    const command = slice.commands[commandIndex];
     const commandResult = execute(command);
     commandResults.push(commandResult);
     if (commandResult.exitCode !== 0) {
       failedCommand = commandResult;
+      failedCommandIndex = commandIndex + 1;
       break;
     }
   }
@@ -72,16 +75,25 @@ for (const slice of registry.slices) {
     name: slice.name,
     context: slice.context,
     state: passed ? "success" : "failure",
+    failedCommandIndex,
     commands: commandResults,
     evidence: slice.evidence,
   };
   results.push(result);
 
+  if (!passed) {
+    await publishStatus({
+      state: "failure",
+      context: `${slice.context}/cmd-${String(failedCommandIndex).padStart(2, "0")}`,
+      description: `${slice.id} command ${failedCommandIndex} failed: ${failedCommand.command}`,
+    });
+  }
+
   const description = passed
     ? `${slice.id} ${slice.name} passed on final-head verification`
-    : `${slice.id} failed: ${failedCommand.command}`;
+    : `${slice.id} failed at command ${failedCommandIndex}`;
   await publishStatus({ state: result.state, context: slice.context, description });
-  console.log(`${slice.id}: ${passed ? "PASS" : "FAIL"}`);
+  console.log(`${slice.id}: ${passed ? "PASS" : `FAIL command ${failedCommandIndex}`}`);
 }
 
 const failedSlices = results.filter((result) => result.state !== "success");
@@ -91,7 +103,7 @@ await publishStatus({
   context: registry.aggregateContext,
   description: failedSlices.length === 0
     ? "FS-01 through FS-18 passed sequentially on one commit"
-    : `Failed slices: ${failedSlices.map((slice) => slice.id).join(", ")}`,
+    : `Failed slices: ${failedSlices.map((slice) => `${slice.id}/cmd-${slice.failedCommandIndex}`).join(", ")}`,
 });
 
 const output = {
@@ -112,9 +124,9 @@ if (summaryPath) {
     "",
     `Commit: \`${commitSha}\``,
     "",
-    "| Slice | Result |",
-    "|---|---|",
-    ...results.map((result) => `| ${result.id} | ${result.state === "success" ? "PASS" : "FAIL"} |`),
+    "| Slice | Result | Failed command |",
+    "|---|---|---|",
+    ...results.map((result) => `| ${result.id} | ${result.state === "success" ? "PASS" : "FAIL"} | ${result.failedCommandIndex ?? "—"} |`),
     "",
     `Aggregate: **${aggregateState === "success" ? "PASS" : "FAIL"}**`,
   ];
