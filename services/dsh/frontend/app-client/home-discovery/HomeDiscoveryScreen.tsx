@@ -1,7 +1,9 @@
 import React from "react";
 import { useClientAddressController } from "../../shared/client-address";
-import { useHomeDiscoveryController } from "../../shared/home-discovery";
-import type { HomeDiscoveryState } from "../../shared/home-discovery/home-discovery.states";
+import {
+  useHomeDiscoveryController,
+  type HomeDiscoveryState,
+} from "../../shared/home-discovery";
 import { HomeDiscoveryShell } from "./HomeDiscoveryShell";
 
 type Props = {
