@@ -14,10 +14,24 @@
     "operator-link-store"
   ],
   "sameCommitVerificationContexts": [
+    "journeys/jrn-001/fs-12-cross-surface-truth",
     "journeys/jrn-001/fs-17-comprehensive",
     "journeys/jrn-001/fs-18-evidence"
   ],
-  "forbiddenTruthSources": ["AsyncStorage", "localStorage", "sessionStorage", "MMKV", "screen fixtures", "screen mocks"],
+  "forbiddenTruthSources": [
+    "AsyncStorage",
+    "localStorage",
+    "sessionStorage",
+    "MMKV",
+    "screen fixtures",
+    "screen mocks"
+  ],
+  "forbiddenRuntimeControls": [
+    "developer activation bypass",
+    "hardcoded activation phone",
+    "hardcoded activation code"
+  ],
+  "activationPolicy": "Each surface binds its governed actor type before accepting a two-field phone and code activation form.",
   "conflictPolicy": "Reload committed state before another mutation.",
   "successPolicy": "A surface may report success only after committed readback or a canonical mutation response followed by list/detail refresh."
 }
