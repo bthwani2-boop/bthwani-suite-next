@@ -14,6 +14,7 @@ const partnerApi = source('services/dsh/frontend/shared/orders/orders.api.ts');
 const partnerCommands = source('services/dsh/frontend/shared/orders/use-partner-order-commands.ts');
 const dispatchSurface = source('services/dsh/frontend/control-panel/operations/OrderJourneyDispatchAssignmentScreen.tsx');
 const captainOptions = source('services/dsh/frontend/shared/operations/use-dispatch-captain-options.ts');
+const partnerStoreSurface = source('services/dsh/frontend/app-partner/store/StoreProfileScreen.tsx');
 
 // JRN-012: public compatibility entry points must execute the authoritative
 // timing implementation instead of the former generic lifecycle transition.
@@ -47,5 +48,11 @@ assert.match(captainOptions, /listCaptains\(\{ status: 'active', limit: 200 \}\)
 assert.match(captainOptions, /workforceErrorMessage\(error\)/);
 assert.match(captainOptions, /useEffect\(\(\) => \{[\s\S]*void reload\(\);[\s\S]*\}, \[reload\]\)/);
 assert.match(captainOptions, /from '\.\.\/workforce\/workforce\.api'/);
+
+// Cross-journey dependency repair: the repository-wide sovereign boundary is
+// required by this closure gate. Partner surfaces must consume the public
+// shared boundary rather than reaching into its API adapter implementation.
+assert.match(partnerStoreSurface, /from '\.\.\/\.\.\/shared\/partner'/);
+assert.doesNotMatch(partnerStoreSurface, /shared\/partner\/partner\.api/);
 
 console.log('[jrn-012-014-preparation-dispatch] PASS');
