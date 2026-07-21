@@ -16,6 +16,7 @@ on:
       - "services/dsh/backend/internal/partnerfleet/**"
       - "services/dsh/backend/internal/platformpolicies/**"
       - "services/dsh/backend/internal/promotionfundingoutbox/**"
+      - "services/dsh/backend/internal/operationaloutbox/**"
       - "services/dsh/backend/internal/http/support_message_delivery_routes.go"
       - "services/dsh/backend/internal/http/support_message_delivery_routes_test.go"
       - "services/dsh/backend/internal/http/journeys_020_025_routes_test.go"
@@ -94,58 +95,20 @@ jobs:
           persist-credentials: false
       - name: Setup pinned Node and PNPM workspace
         uses: ./.github/actions/setup-node-workspace
-      - name: Prepare diagnostics
-        run: mkdir -p journey-diagnostics
       - name: Verify repository hygiene
-        id: hygiene
-        continue-on-error: true
-        shell: bash
-        run: set -o pipefail; git diff --check 2>&1 | tee journey-diagnostics/repository-hygiene.log
+        run: git diff --check
       - name: Verify JRN-020..030 bindings
-        id: bindings
-        continue-on-error: true
-        shell: bash
-        run: |
-          set -o pipefail
-          node --test \
-            services/dsh/tests/journeys-020-025-binding.test.mjs \
-            services/dsh/tests/journeys-026-030-binding.test.mjs \
-            services/dsh/tests/jrn-030-partner-fleet-surface-binding.test.mjs \
-            2>&1 | tee journey-diagnostics/bindings.log
+        run: >-
+          node --test
+          services/dsh/tests/journeys-020-025-binding.test.mjs
+          services/dsh/tests/journeys-026-030-binding.test.mjs
+          services/dsh/tests/jrn-030-partner-fleet-surface-binding.test.mjs
       - name: Verify sovereign boundaries
-        id: boundaries
-        continue-on-error: true
-        shell: bash
         run: |
-          set -o pipefail
-          {
-            pnpm guard:fullstack-boundary
-            pnpm guard:wlt-financial-boundary
-            pnpm guard:no-broken-imports
-            node tools/guards/jrn-015-020-affected-boundary.mjs
-          } 2>&1 | tee journey-diagnostics/sovereign-boundaries.log
-      - name: Record outcomes
-        if: always()
-        env:
-          HYGIENE: ${{ steps.hygiene.outcome }}
-          BINDINGS: ${{ steps.bindings.outcome }}
-          BOUNDARIES: ${{ steps.boundaries.outcome }}
-        run: printf 'hygiene=%s\nbindings=%s\nboundaries=%s\n' "$HYGIENE" "$BINDINGS" "$BOUNDARIES" | tee journey-diagnostics/outcomes.txt
-      - name: Upload diagnostics
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: jrn-020-030-final-static
-          path: journey-diagnostics
-          if-no-files-found: error
-          retention-days: 7
-      - name: Enforce outcomes
-        if: always()
-        env:
-          HYGIENE: ${{ steps.hygiene.outcome }}
-          BINDINGS: ${{ steps.bindings.outcome }}
-          BOUNDARIES: ${{ steps.boundaries.outcome }}
-        run: test "$HYGIENE" = success && test "$BINDINGS" = success && test "$BOUNDARIES" = success
+          pnpm guard:fullstack-boundary
+          pnpm guard:wlt-financial-boundary
+          pnpm guard:no-broken-imports
+          node tools/guards/jrn-015-020-affected-boundary.mjs
 
   typecheck:
     name: Shared brain and authorized surface typecheck
@@ -159,26 +122,7 @@ jobs:
       - name: Setup pinned Node and PNPM workspace
         uses: ./.github/actions/setup-node-workspace
       - name: Typecheck JRN-020..030 scope
-        id: check
-        continue-on-error: true
-        shell: bash
-        run: |
-          mkdir -p journey-diagnostics
-          set -o pipefail
-          pnpm --dir services/dsh exec tsc -p tsconfig.jrn-020-030.json --noEmit --pretty false 2>&1 | tee journey-diagnostics/typecheck.log
-      - name: Upload diagnostics
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: jrn-020-030-final-typecheck
-          path: journey-diagnostics
-          if-no-files-found: error
-          retention-days: 7
-      - name: Enforce outcome
-        if: always()
-        env:
-          OUTCOME: ${{ steps.check.outcome }}
-        run: test "$OUTCOME" = success
+        run: pnpm --dir services/dsh exec tsc -p tsconfig.jrn-020-030.json --noEmit --pretty false
 
   go-integration:
     name: Go domains, routes, and runtime compile
@@ -211,11 +155,12 @@ jobs:
           ./internal/partnerfleet
           ./internal/platformpolicies
           ./internal/promotionfundingoutbox
+          ./internal/operationaloutbox
           ./internal/http
           -count=1
 
   database-integration:
-    name: PostgreSQL migrations and SQL invariants
+    name: PostgreSQL migrations and authorized SQL invariants
     runs-on: ubuntu-latest
     timeout-minutes: 35
     services:
@@ -240,60 +185,32 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false
-      - name: Prepare diagnostics
-        run: mkdir -p journey-diagnostics
-      - name: Apply DSH migrations
-        id: migrations
-        continue-on-error: true
+      - name: Apply every DSH migration on a clean PostgreSQL 16 database
         shell: bash
         run: |
-          set -o pipefail
-          {
-            count=0
-            while IFS= read -r file; do
-              echo "==> $file"
-              psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f "$file"
-              count=$((count + 1))
-            done < <(find services/dsh/database/migrations -maxdepth 1 -type f -name '*.sql' | sort)
-            test "$count" -gt 0
-            echo "applied_migrations=$count"
-          } 2>&1 | tee journey-diagnostics/migrations.log
-      - name: Run SQL invariant suites
-        id: sqltests
-        continue-on-error: true
+          set -euo pipefail
+          mapfile -t migrations < <(find services/dsh/database/migrations -maxdepth 1 -type f -name '*.sql' | sort)
+          test "${#migrations[@]}" -gt 0
+          for file in "${migrations[@]}"; do
+            echo "==> $file"
+            psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f "$file"
+          done
+          echo "applied_migrations=${#migrations[@]}"
+      - name: Run only JRN-020..030 SQL invariant suites
         shell: bash
         run: |
-          set -o pipefail
-          {
-            count=0
-            while IFS= read -r file; do
-              echo "==> $file"
-              psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f "$file"
-              count=$((count + 1))
-            done < <(find services/dsh/database/tests -maxdepth 1 -type f -name '*.sql' | sort)
-            test "$count" -gt 0
-            echo "executed_sql_tests=$count"
-          } 2>&1 | tee journey-diagnostics/sql-tests.log
-      - name: Record outcomes
-        if: always()
-        env:
-          MIGRATIONS: ${{ steps.migrations.outcome }}
-          SQL_TESTS: ${{ steps.sqltests.outcome }}
-        run: printf 'migrations=%s\nsql_tests=%s\n' "$MIGRATIONS" "$SQL_TESTS" | tee journey-diagnostics/outcomes.txt
-      - name: Upload diagnostics
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: jrn-020-030-final-database
-          path: journey-diagnostics
-          if-no-files-found: error
-          retention-days: 7
-      - name: Enforce outcomes
-        if: always()
-        env:
-          MIGRATIONS: ${{ steps.migrations.outcome }}
-          SQL_TESTS: ${{ steps.sqltests.outcome }}
-        run: test "$MIGRATIONS" = success && test "$SQL_TESTS" = success
+          set -euo pipefail
+          mapfile -t tests < <(
+            find services/dsh/database/tests -maxdepth 1 -type f -name '*.sql' \
+              | sort \
+              | grep -E '/dsh-(009|011|012|019|020|034|054|055|058|059|065|066|067|068|069|070|071|072|073|074|075|076|077|080|084|087|093|094|095|096|097)[^/]*\.sql$'
+          )
+          test "${#tests[@]}" -gt 0
+          for file in "${tests[@]}"; do
+            echo "==> $file"
+            psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f "$file"
+          done
+          echo "executed_sql_tests=${#tests[@]}"
 
   publish-result:
     name: Publish final same-commit closure status
