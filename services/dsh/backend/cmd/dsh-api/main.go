@@ -71,6 +71,7 @@ func main() {
 	dshHttp.RegisterPlatformPolicyRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterAdministrationRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterWorkforceScopeRoutes(router, db, identityClient, wltClient, mediaProvider)
+	dshHttp.RegisterWorkforceEmployeeMediaRoute(router, db, identityClient, wltClient, mediaProvider)
 	handler := dshHttp.CorsMiddleware(authMode, router)
 
 	outboxCtx, cancelOutbox := context.WithCancel(context.Background())
@@ -148,7 +149,7 @@ func newMediaProvider(ctx context.Context) *media.Provider {
 		PublicEndpoint: publicEndpoint,
 		AccessKey:      accessKey,
 		SecretKey:      secretKey,
-		Bucket:         bucket,
+		Bucket:          bucket,
 		UseSSL:          useSSL,
 		PublicUseSSL:    publicUseSSL,
 	}, 15*time.Second)
