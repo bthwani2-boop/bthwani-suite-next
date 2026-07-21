@@ -87,7 +87,7 @@ const partnerTeam = read("services/dsh/frontend/app-partner/team/PartnerTeamMana
 assert.match(partnerBindings, /^\s*home\s*:/m, "app-partner binding missing: home");
 assert.match(partnerBindings, /^\s*entry\s*:/m, "app-partner binding missing: entry");
 assert.match(partnerBindings, /^\s*team\s*:/m, "app-partner binding missing: team");
-assert.match(partnerRenderer, /hasDshPartnerBindingContract/);
+assert.match(partnerRenderer, /hasRouteBindingContract/);
 assert.match(partnerRenderer, /PartnerTeamManagementScreen/);
 assert.match(partnerHub, /PartnerOnboardingStatusView/);
 assert.match(partnerStatus, /reloadSelfStatus/);
