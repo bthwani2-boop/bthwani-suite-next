@@ -2,6 +2,7 @@ package homediscovery
 
 import (
 	"context"
+	"reflect"
 	"testing"
 )
 
@@ -18,6 +19,18 @@ func validJourney007AdminInput() AdminContentInput {
 		PublishFrom:       &from,
 		PublishUntil:      &until,
 		ExpectedVersion:   1,
+	}
+}
+
+func validJourney007Event() HomeContentEventInput {
+	return HomeContentEventInput{
+		EventType:       "impression",
+		ContentKind:     "banners",
+		ContentID:       "banner-1",
+		ViewerRef:       "home.session-1234",
+		CityCode:        "SANA-A",
+		ServiceAreaCode: "SANA-A-01",
+		AudienceSegment: "guest",
 	}
 }
 
@@ -40,6 +53,18 @@ func TestJourney007ValidatesGovernedPublication(t *testing.T) {
 		t.Fatal("expected unsafe external URL to fail")
 	}
 
+	badMedia := input
+	badMedia.ImageURL = "javascript:alert(1)"
+	if err := validateAdminInput("banners", badMedia); err == nil {
+		t.Fatal("expected unsafe media URL to fail")
+	}
+
+	governedMedia := input
+	governedMedia.ImageURL = "/dsh/public/media/asset-1/card"
+	if err := validateAdminInput("banners", governedMedia); err != nil {
+		t.Fatalf("expected governed DSH media URL, got %v", err)
+	}
+
 	reversed := input
 	from := "2026-07-23T08:00:00Z"
 	until := "2026-07-22T08:00:00Z"
@@ -47,6 +72,32 @@ func TestJourney007ValidatesGovernedPublication(t *testing.T) {
 	reversed.PublishUntil = &until
 	if err := validateAdminInput("banners", reversed); err == nil {
 		t.Fatal("expected reversed publication window to fail")
+	}
+}
+
+func TestJourney007NormalizesTargeting(t *testing.T) {
+	targeting, err := normalizeAdminTargeting(AdminTargeting{
+		CityCodes:        []string{"TAIZ", "SANA-A", "TAIZ", ""},
+		ServiceAreaCodes: []string{"SANA-A-01", "SANA-A-01"},
+		AudienceSegments: []string{"authenticated", "guest", "guest"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected targeting error: %v", err)
+	}
+	if !reflect.DeepEqual(targeting.CityCodes, []string{"SANA-A", "TAIZ"}) {
+		t.Fatalf("unexpected cities: %#v", targeting.CityCodes)
+	}
+	if !reflect.DeepEqual(targeting.ServiceAreaCodes, []string{"SANA-A-01"}) {
+		t.Fatalf("unexpected service areas: %#v", targeting.ServiceAreaCodes)
+	}
+	if !reflect.DeepEqual(targeting.AudienceSegments, []string{"authenticated", "guest"}) {
+		t.Fatalf("unexpected audiences: %#v", targeting.AudienceSegments)
+	}
+
+	if _, err := normalizeAdminTargeting(AdminTargeting{
+		AudienceSegments: []string{"vip-fabricated"},
+	}); err == nil {
+		t.Fatal("expected unsupported audience segment to fail")
 	}
 }
 
@@ -59,18 +110,27 @@ func TestJourney007RequiresOptimisticConcurrencyVersion(t *testing.T) {
 }
 
 func TestJourney007RejectsInvalidTelemetryBeforeDatabaseAccess(t *testing.T) {
-	if err := RecordHomeContentEvent(context.Background(), nil, HomeContentEventInput{
-		EventType:   "unknown",
-		ContentKind: "banners",
-		ContentID:   "banner-1",
-	}); err == nil {
+	invalidEvent := validJourney007Event()
+	invalidEvent.EventType = "unknown"
+	if err := RecordHomeContentEvent(context.Background(), nil, invalidEvent); err == nil {
 		t.Fatal("expected invalid telemetry event type to fail")
 	}
-	if err := RecordHomeContentEvent(context.Background(), nil, HomeContentEventInput{
-		EventType:   "click",
-		ContentKind: "unknown",
-		ContentID:   "banner-1",
-	}); err == nil {
+
+	invalidKind := validJourney007Event()
+	invalidKind.ContentKind = "unknown"
+	if err := RecordHomeContentEvent(context.Background(), nil, invalidKind); err == nil {
 		t.Fatal("expected invalid telemetry content kind to fail")
+	}
+
+	invalidAudience := validJourney007Event()
+	invalidAudience.AudienceSegment = "fabricated"
+	if err := RecordHomeContentEvent(context.Background(), nil, invalidAudience); err == nil {
+		t.Fatal("expected invalid telemetry audience to fail")
+	}
+
+	invalidViewer := validJourney007Event()
+	invalidViewer.ViewerRef = "x"
+	if err := RecordHomeContentEvent(context.Background(), nil, invalidViewer); err == nil {
+		t.Fatal("expected invalid telemetry viewer reference to fail")
 	}
 }
