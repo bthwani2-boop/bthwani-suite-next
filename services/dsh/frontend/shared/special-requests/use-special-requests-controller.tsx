@@ -27,21 +27,21 @@ import type { DshSpecialRequestState, DshSpecialRequestListLoadState } from "./s
 
 /**
  * Client-side controller: create / cancel / approve-quote a single special
- * request. Every mutation only reaches a success state AFTER the API call
- * resolves — never optimistically.
+ * request. A successful mutation is never trusted as final UI truth; the
+ * canonical request is re-read from DSH before exposing success.
  */
 export function useSpecialRequestsController() {
   const [state, setState] = useState<DshSpecialRequestState>(specialRequestIdleState());
 
   const submit = useCallback(async (input: DshCreateSpecialRequest): Promise<boolean> => {
-    // Guard against double-submit: bail out before making any API call.
     if (state.kind === "submitting") return false;
     setState(beginSubmit());
     try {
-      const request = await createSpecialRequest(input, {
+      const created = await createSpecialRequest(input, {
         idempotencyKey: input.idempotencyKey,
       });
-      setState(resolveSubmitSuccess(request));
+      const readback = await fetchClientSpecialRequest(created.id);
+      setState(resolveSubmitSuccess(readback));
       return true;
     } catch (error) {
       setState(resolveSubmitError(classifySpecialRequestError(error)));
@@ -53,8 +53,9 @@ export function useSpecialRequestsController() {
     if (state.kind === "submitting") return;
     setState(beginSubmit());
     try {
-      const request = await cancelSpecialRequest(id, expectedVersion);
-      setState(resolveCancelSuccess(request));
+      await cancelSpecialRequest(id, expectedVersion);
+      const readback = await fetchClientSpecialRequest(id);
+      setState(resolveCancelSuccess(readback));
     } catch (error) {
       setState(resolveSubmitError(classifySpecialRequestError(error)));
     }
@@ -64,8 +65,9 @@ export function useSpecialRequestsController() {
     if (state.kind === "submitting") return;
     setState(beginSubmit());
     try {
-      const request = await approveSpecialRequestQuote(id, expectedVersion);
-      setState(resolveApproveQuoteSuccess(request));
+      await approveSpecialRequestQuote(id, expectedVersion);
+      const readback = await fetchClientSpecialRequest(id);
+      setState(resolveApproveQuoteSuccess(readback));
     } catch (error) {
       setState(resolveSubmitError(classifySpecialRequestError(error)));
     }
@@ -94,11 +96,10 @@ export type UseOperatorSpecialRequestsControllerParams = {
 };
 
 /**
- * Operator-side controller: paginated list + single-item transitions.
- * After a successful mutation (update / dispatch-assign) the affected item
- * is patched in local list state in place — mirroring the "surgical local
- * patch, not a full refetch" convention already used by this codebase's
- * operator screens for responsiveness.
+ * Operator-side controller: paginated list + single-item transitions. Every
+ * write is followed by a single-item canonical readback before local state is
+ * updated, preventing stale workflow stages, versions, assignments and WLT
+ * references from being presented as successful.
  */
 export function useOperatorSpecialRequestsController(
   params: UseOperatorSpecialRequestsControllerParams = {},
@@ -152,15 +153,17 @@ export function useOperatorSpecialRequestsController(
   }, [patchLocal]);
 
   const update = useCallback(async (id: string, input: DshUpdateSpecialRequest) => {
-    const updated = await updateOperatorSpecialRequest(id, input);
-    patchLocal(updated);
-    return updated;
+    await updateOperatorSpecialRequest(id, input);
+    const readback = await fetchOperatorSpecialRequest(id);
+    patchLocal(readback);
+    return readback;
   }, [patchLocal]);
 
   const assignDispatch = useCallback(async (id: string, captainId: string) => {
-    const updated = await assignSpecialRequestDispatch(id, captainId);
-    patchLocal(updated);
-    return updated;
+    await assignSpecialRequestDispatch(id, captainId);
+    const readback = await fetchOperatorSpecialRequest(id);
+    patchLocal(readback);
+    return readback;
   }, [patchLocal]);
 
   const reload = useCallback(() => void load(offset), [load, offset]);
