@@ -1,4 +1,5 @@
 name: JRN 020-025 surface import repair
+# Safe codemod: replace internal shared API imports only when the shared barrel exports them.
 
 on:
   push:
@@ -19,23 +20,24 @@ jobs:
         with:
           ref: sambassam
           fetch-depth: 0
-      - name: Replace direct journey API imports with shared facades
+      - name: Replace direct shared internals with exported facades
         shell: bash
         run: |
           node <<'NODE'
           const fs = require('node:fs');
           const path = require('node:path');
 
-          const root = path.resolve('services/dsh/frontend');
+          const frontendRoot = path.resolve('services/dsh/frontend');
+          const sharedRoot = path.join(frontendRoot, 'shared');
           const surfaceRoots = [
             'app-client',
             'app-partner',
             'app-captain',
             'app-field',
             'control-panel',
-          ].map((name) => path.join(root, name));
+          ].map((name) => path.join(frontendRoot, name));
 
-          const replacements = [
+          const explicitReplacements = [
             ['/shared/dispatch/dispatch.api', '/shared/dispatch'],
             ['/shared/dispatch/dispatch.types', '/shared/dispatch'],
             ['/shared/orders/orders.api', '/shared/orders'],
@@ -47,7 +49,27 @@ jobs:
             ['/shared/marketing/marketing.api', '/shared/marketing'],
             ['/shared/support/actor-support.api', '/shared/support'],
             ['/shared/support/support.api', '/shared/support'],
+            ['/shared/workforce/workforce.api', '/shared/workforce'],
+            ['/shared/workforce/workforce.types', '/shared/workforce'],
           ];
+
+          function barrelExports(moduleName, internalName) {
+            const indexPath = path.join(sharedRoot, moduleName, 'index.ts');
+            if (!fs.existsSync(indexPath)) return false;
+            const indexSource = fs.readFileSync(indexPath, 'utf8');
+            return indexSource.includes(`./${internalName}`);
+          }
+
+          function rewriteExportedInternals(source) {
+            return source.replace(
+              /(["'])([^"']*\/shared\/([^/]+)\/([^/"']+\.(?:api|controller-core)))\1/g,
+              (full, quote, specifier, moduleName, internalName) => {
+                if (!barrelExports(moduleName, internalName)) return full;
+                const facade = specifier.slice(0, specifier.indexOf(`/shared/${moduleName}/`) + `/shared/${moduleName}`.length);
+                return `${quote}${facade}${quote}`;
+              },
+            );
+          }
 
           const changed = [];
           function walk(dir) {
@@ -61,9 +83,10 @@ jobs:
               if (!/\.(?:ts|tsx|js|jsx|mjs|cjs)$/.test(entry.name)) continue;
               const before = fs.readFileSync(full, 'utf8');
               let after = before;
-              for (const [from, to] of replacements) {
+              for (const [from, to] of explicitReplacements) {
                 after = after.split(from).join(to);
               }
+              after = rewriteExportedInternals(after);
               if (after !== before) {
                 fs.writeFileSync(full, after);
                 changed.push(path.relative(process.cwd(), full).replaceAll('\\', '/'));
@@ -76,7 +99,7 @@ jobs:
           NODE
 
           if git diff --quiet; then
-            echo "No direct journey API imports required repair."
+            echo "No safely exported shared internals required repair."
             exit 0
           fi
 
@@ -84,5 +107,5 @@ jobs:
           git config user.name "bthwani-journey-closure"
           git config user.email "actions@users.noreply.github.com"
           git add services/dsh/frontend
-          git commit -m "fix(dsh): enforce shared facades across journey surfaces"
+          git commit -m "fix(dsh): enforce exported shared facades across surfaces"
           git push origin HEAD:sambassam
