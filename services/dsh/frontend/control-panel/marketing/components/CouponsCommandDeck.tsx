@@ -12,7 +12,7 @@ import {
 
 type FundingEditorProps = {
   readonly coupon: CouponRecord;
-  readonly policy?: CouponFundingPolicy;
+  readonly policy?: CouponFundingPolicy | undefined;
   readonly loading: boolean;
   readonly onSave: (
     coupon: CouponRecord,

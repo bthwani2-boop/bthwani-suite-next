@@ -20,7 +20,7 @@ export function SubscriptionsCommandDeck() {
         nameAr: nameAr.trim(),
         priceYer: price,
         billingCycle: "monthly",
-        wltProductReference: wltProductReference.trim() || undefined,
+        ...(wltProductReference.trim() ? { wltProductReference: wltProductReference.trim() } : {}),
       });
       setNameAr("");
       setPriceYer("0");
