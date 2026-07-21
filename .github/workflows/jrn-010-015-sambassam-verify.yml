@@ -2,11 +2,11 @@ name: JRN 010-015 sambassam verification
 
 on:
   push:
-    branches:
-      - sambassam
+    branches: [sambassam]
     paths:
       - .github/workflows/jrn-010-015-sambassam-verify.yml
       - services/dsh/frontend/shared/checkout/**
+      - services/dsh/frontend/shared/orders/**
       - services/dsh/frontend/shared/delivery/**
       - services/dsh/frontend/shared/dispatch/**
       - services/dsh/frontend/shared/pickup/**
@@ -41,14 +41,12 @@ jobs:
           node-version: 24.17.0
       - name: Activate locked pnpm
         run: |
-          echo "activate-pnpm" > /tmp/jrn-verification-stage
+          echo activate-pnpm > /tmp/jrn-verification-stage
           corepack enable
           corepack prepare pnpm@10.34.2 --activate
-          node --version
-          pnpm --version
       - name: Install locked workspace
         run: |
-          echo "install-workspace" > /tmp/jrn-verification-stage
+          echo install-workspace > /tmp/jrn-verification-stage
           pnpm install --frozen-lockfile
       - name: Create journey-scoped TypeScript projects
         run: |
@@ -61,7 +59,11 @@ jobs:
               "../services/dsh/frontend/css-modules.d.ts",
               "../services/dsh/frontend/shared/checkout/use-checkout-controller.tsx",
               "../services/dsh/frontend/shared/checkout/use-checkout-to-order-flow.tsx",
+              "../services/dsh/frontend/shared/orders/use-client-order-journey-controller.ts",
+              "../services/dsh/frontend/shared/orders/use-partner-order-commands.ts",
               "../services/dsh/frontend/app-client/checkout/GovernedCheckoutScreen.tsx",
+              "../services/dsh/frontend/app-client/orders/useClientOrderJourneyController.ts",
+              "../services/dsh/frontend/app-client/orders/OrderTrackingScreen.tsx",
               "../services/dsh/frontend/app-partner/orders/usePartnerOrderCommands.ts",
               "../services/dsh/frontend/app-partner/orders/OperationalOrderDecisionScreen.tsx",
               "../services/dsh/frontend/app-partner/orders/OperationalOrdersInboxScreen.tsx",
@@ -69,7 +71,6 @@ jobs:
               "../services/dsh/frontend/shared/delivery/captain-inbox.mapper.ts",
               "../services/dsh/frontend/shared/delivery/captain-inbox.model.ts",
               "../services/dsh/frontend/app-captain/dispatch/DshCaptainOrdersScreen.tsx",
-              "../services/dsh/frontend/app-client/orders/OrderTrackingScreen.tsx",
               "../services/dsh/frontend/control-panel/operations/OrderJourneyDispatchAssignmentScreen.tsx",
               "../services/dsh/frontend/shared/pickup/use-pickup-controller.tsx",
               "../services/dsh/frontend/control-panel/operations/PickupWorkbenchScreen.tsx"
@@ -90,48 +91,115 @@ jobs:
       - name: Typecheck journey files and consumers
         shell: bash
         run: |
-          echo "typecheck-journey-files" > /tmp/jrn-verification-stage
+          echo typecheck-journey-files > /tmp/jrn-verification-stage
           set +e
           pnpm exec tsc --noEmit -p .tmp/jrn-010-015.tsconfig.json 2>&1 | tee /tmp/jrn-verification.log
-          EXIT_CODE=${PIPESTATUS[0]}
-          exit "$EXIT_CODE"
+          exit ${PIPESTATUS[0]}
       - name: Build modules required by journey tests
         shell: bash
         run: |
-          echo "build-journey-test-modules" > /tmp/jrn-verification-stage
+          echo build-journey-test-modules > /tmp/jrn-verification-stage
           rm -rf services/dsh/dist
           set +e
           pnpm exec tsc -p services/dsh/.tmp/jrn-010-015-test-build.tsconfig.json 2>&1 | tee /tmp/jrn-verification.log
-          EXIT_CODE=${PIPESTATUS[0]}
-          exit "$EXIT_CODE"
+          exit ${PIPESTATUS[0]}
       - name: Run journey contract tests
         shell: bash
         run: |
-          echo "journey-contract-tests" > /tmp/jrn-verification-stage
+          echo journey-contract-tests > /tmp/jrn-verification-stage
           set +e
           node --test \
             services/dsh/tests/checkout-controller-core.test.mjs \
             services/dsh/tests/order-preparation-contract.test.mjs \
             services/dsh/tests/captain-inbox-exclusion.test.mjs \
             2>&1 | tee /tmp/jrn-verification.log
-          EXIT_CODE=${PIPESTATUS[0]}
-          exit "$EXIT_CODE"
-      - name: Full-stack ownership boundary
+          exit ${PIPESTATUS[0]}
+      - name: Affected full-stack and financial boundaries
         shell: bash
         run: |
-          echo "guard-fullstack-boundary" > /tmp/jrn-verification-stage
+          echo affected-boundaries > /tmp/jrn-verification-stage
           set +e
-          pnpm run guard:fullstack-boundary 2>&1 | tee /tmp/jrn-verification.log
-          EXIT_CODE=${PIPESTATUS[0]}
-          exit "$EXIT_CODE"
-      - name: WLT financial boundary
-        shell: bash
-        run: |
-          echo "guard-wlt-financial-boundary" > /tmp/jrn-verification-stage
-          set +e
-          pnpm run guard:wlt-financial-boundary 2>&1 | tee /tmp/jrn-verification.log
-          EXIT_CODE=${PIPESTATUS[0]}
-          exit "$EXIT_CODE"
+          node --input-type=module <<'NODE' 2>&1 | tee /tmp/jrn-verification.log
+          import fs from 'node:fs';
+          import path from 'node:path';
+
+          const files = [
+            'services/dsh/frontend/shared/checkout/use-checkout-controller.tsx',
+            'services/dsh/frontend/shared/checkout/use-checkout-to-order-flow.tsx',
+            'services/dsh/frontend/shared/orders/use-client-order-journey-controller.ts',
+            'services/dsh/frontend/shared/orders/use-partner-order-commands.ts',
+            'services/dsh/frontend/app-client/checkout/GovernedCheckoutScreen.tsx',
+            'services/dsh/frontend/app-client/orders/useClientOrderJourneyController.ts',
+            'services/dsh/frontend/app-client/orders/OrderTrackingScreen.tsx',
+            'services/dsh/frontend/app-partner/orders/usePartnerOrderCommands.ts',
+            'services/dsh/frontend/app-partner/orders/OperationalOrderDecisionScreen.tsx',
+            'services/dsh/frontend/app-partner/orders/OperationalOrdersInboxScreen.tsx',
+            'services/dsh/frontend/shared/dispatch/use-dispatch-controller.ts',
+            'services/dsh/frontend/shared/delivery/captain-inbox.mapper.ts',
+            'services/dsh/frontend/shared/delivery/captain-inbox.model.ts',
+            'services/dsh/frontend/app-captain/dispatch/DshCaptainOrdersScreen.tsx',
+            'services/dsh/frontend/control-panel/operations/OrderJourneyDispatchAssignmentScreen.tsx',
+            'services/dsh/frontend/shared/pickup/use-pickup-controller.tsx',
+            'services/dsh/frontend/control-panel/operations/PickupWorkbenchScreen.tsx',
+          ];
+          const violations = [];
+          const financialMutations = /\b(createLedger|appendLedger|mutateWallet|setWalletBalance|updateWalletBalance|confirmPaymentProviderResult|createPayout|settlePayout|createRefund|settleRefund|markSettlement|walletBalance\s*=|ledgerEntries\.push|settlementStatus\s*=|payoutStatus\s*=|refundStatus\s*=)\b/;
+          const providerAccess = /\b(WLT_FINANCIAL_PROVIDER_BASE_URL|wiremock-financial-provider|(?:card|payment|financial|electricity|telecom)[-_]?(?:gateway|provider)[-_]?(?:base[-_]?url|url|endpoint))\b/i;
+          const importRegex = /\b(?:import|export)\s+(?:[^'"`]*?\s+from\s+)?['"]([^'"]+)['"]/g;
+          const posix = (value) => value.replaceAll(path.sep, '/');
+
+          for (const file of files) {
+            const content = fs.readFileSync(file, 'utf8');
+            const surfaceMatch = file.match(/^services\/([^/]+)\/frontend\/([^/]+)\//);
+            const isSurface = Boolean(surfaceMatch && surfaceMatch[2] !== 'shared');
+            const currentSurface = isSurface ? surfaceMatch[2] : null;
+            const isShared = file.includes('/frontend/shared/');
+
+            if (isSurface) {
+              for (const [pattern, message] of [
+                [/\bfetch\(/, 'direct fetch in surface'],
+                [/\baxios\b/, 'axios in surface'],
+                [/process\.env/, 'process.env in surface'],
+                [/\bnew\s+URL\(/, 'runtime URL construction in surface'],
+              ]) {
+                if (pattern.test(content)) violations.push(`${file} ${message}`);
+              }
+            }
+            if (financialMutations.test(content)) violations.push(`${file} financial mutation outside WLT`);
+            if (providerAccess.test(content)) violations.push(`${file} direct financial provider access outside WLT`);
+
+            importRegex.lastIndex = 0;
+            let match;
+            while ((match = importRegex.exec(content))) {
+              const specifier = match[1];
+              const resolved = specifier.startsWith('.')
+                ? posix(path.relative('.', path.resolve(path.dirname(file), specifier)))
+                : specifier;
+              if (isSurface) {
+                const importedSurface = resolved.match(/^services\/([^/]+)\/frontend\/([^/]+)\//)?.[2];
+                if (importedSurface && importedSurface !== 'shared' && importedSurface !== currentSurface) {
+                  violations.push(`${file} imports other surface ${importedSurface}`);
+                }
+                if (/^services\/[^/]+\/(backend|clients|generated)\//.test(resolved) || /\.api(?:\.|\/|$)/.test(resolved) || /\.controller-core(?:\.|\/|$)/.test(resolved)) {
+                  violations.push(`${file} imports API/backend/controller-core directly`);
+                }
+              }
+              if (isShared) {
+                const importedSurface = resolved.match(/^services\/([^/]+)\/frontend\/([^/]+)\//)?.[2];
+                if (importedSurface && importedSurface !== 'shared') violations.push(`${file} shared imports surface ${importedSurface}`);
+                if (resolved.startsWith('apps/')) violations.push(`${file} shared imports apps runtime`);
+              }
+            }
+          }
+
+          if (violations.length) {
+            console.error('affected-journey-boundaries: FAIL');
+            for (const violation of violations) console.error(`- ${violation}`);
+            process.exit(1);
+          }
+          console.log('affected-journey-boundaries: PASS');
+          NODE
+          exit ${PIPESTATUS[0]}
       - name: Publish targeted commit status
         if: always()
         shell: bash
@@ -142,29 +210,21 @@ jobs:
           TARGET_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           STAGE="$(cat /tmp/jrn-verification-stage 2>/dev/null || echo workflow-bootstrap)"
-          if [ "$JOB_STATUS" = "success" ]; then
-            STATE="success"
-            STATUS_CONTEXT="journeys/jrn-010-015-targeted"
-            DESCRIPTION="JRN-010..015 targeted checks passed"
+          if [ "$JOB_STATUS" = success ]; then
+            STATE=success
+            CONTEXT=journeys/jrn-010-015-targeted
+            DESCRIPTION='JRN-010..015 targeted checks passed'
           else
-            STATE="failure"
-            RAW_ERROR="$(grep -m1 -E '^- |error TS[0-9]+|not ok|Error:|ERR_' /tmp/jrn-verification.log 2>/dev/null || true)"
-            ERROR_DETAIL="$(printf '%s' "$RAW_ERROR" | sed -E 's/^- //' | tr '\n\r\t\"' '    ' | tr -cd '[:alnum:]_./:() -' | cut -c1-62)"
-            [ -n "$ERROR_DETAIL" ] || ERROR_DETAIL="unknown"
-            STATUS_CONTEXT="jrn-010-015/$STAGE/$ERROR_DETAIL"
-            STATUS_CONTEXT="$(printf '%s' "$STATUS_CONTEXT" | tr ' ' '-' | tr -cd '[:alnum:]_./:()-' | cut -c1-100)"
+            STATE=failure
+            DETAIL="$(grep -m1 -E '^- |error TS[0-9]+|not ok|Error:|ERR_' /tmp/jrn-verification.log 2>/dev/null | sed -E 's/^- //' | tr '\n\r\t\" ' '-' | tr -cd '[:alnum:]_./:()-' | cut -c1-62)"
+            [ -n "$DETAIL" ] || DETAIL=unknown
+            CONTEXT="jrn-010-015/$STAGE/$DETAIL"
             DESCRIPTION="JRN-010..015 failed at $STAGE"
           fi
-          PAYLOAD="$(jq -n \
-            --arg state "$STATE" \
-            --arg context "$STATUS_CONTEXT" \
-            --arg description "$DESCRIPTION" \
-            --arg target_url "$TARGET_URL" \
-            '{state:$state,context:$context,description:$description,target_url:$target_url}')"
-          curl --fail-with-body --silent --show-error \
-            -X POST \
+          jq -n --arg state "$STATE" --arg context "$CONTEXT" --arg description "$DESCRIPTION" --arg target_url "$TARGET_URL" '{state,context,description,target_url}' > /tmp/status.json
+          curl --fail-with-body --silent --show-error -X POST \
             -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
             "https://api.github.com/repos/${{ github.repository }}/statuses/$COMMIT_SHA" \
-            -d "$PAYLOAD"
+            -d @/tmp/status.json
