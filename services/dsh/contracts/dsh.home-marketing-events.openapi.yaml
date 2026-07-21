@@ -1,12 +1,12 @@
 openapi: 3.1.0
 info:
   title: BThwani DSH Home Marketing Events and Targeting API
-  version: 1.1.0
+  version: 1.2.0
   description: >
-    Standalone contract for client-home impression/click ingestion and governed
-    city, service-area, and audience targeting. Home content truth remains owned
-    by dsh_home_banners and dsh_home_promos; this contract owns only telemetry
-    ingestion and the targeting projection.
+    Standalone contract for context-validated client-home impression/click
+    ingestion and governed city, service-area, and audience targeting. Home
+    content truth remains owned by dsh_home_banners and dsh_home_promos; this
+    contract owns only telemetry ingestion and the targeting projection.
 
 x-bthwani-owner: services/dsh
 x-bthwani-contract-state: CONTRACT_ACTIVE
@@ -18,7 +18,7 @@ paths:
   /dsh/home-discovery/events:
     post:
       operationId: recordDshHomeMarketingEvent
-      summary: Record one publishable home banner or promo impression/click.
+      summary: Record one targeted, publishable home banner or promo impression/click.
       tags: [DshHomeMarketing]
       requestBody:
         required: true
@@ -28,7 +28,7 @@ paths:
               $ref: "#/components/schemas/DshHomeMarketingEventInput"
       responses:
         "204":
-          description: Event accepted and persisted.
+          description: Event accepted; duplicate impressions for the same view are ignored.
         "400":
           $ref: "#/components/responses/InvalidEvent"
         "404":
@@ -112,7 +112,12 @@ components:
     DshHomeMarketingEventInput:
       type: object
       additionalProperties: false
-      required: [eventType, contentKind, contentId]
+      required:
+        - eventType
+        - contentKind
+        - contentId
+        - viewerRef
+        - audienceSegment
       properties:
         eventType:
           type: string
@@ -125,7 +130,20 @@ components:
           minLength: 1
         viewerRef:
           type: string
+          minLength: 8
           maxLength: 160
+          pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]{7,159}$"
+        cityCode:
+          type: string
+          maxLength: 80
+          pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]{0,79}$"
+        serviceAreaCode:
+          type: string
+          maxLength: 80
+          pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]{0,79}$"
+        audienceSegment:
+          type: string
+          enum: [guest, authenticated]
 
     DshHomeTargeting:
       type: object
@@ -140,6 +158,7 @@ components:
             type: string
             minLength: 1
             maxLength: 80
+            pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]{0,79}$"
         serviceAreaCodes:
           type: array
           uniqueItems: true
@@ -148,6 +167,7 @@ components:
             type: string
             minLength: 1
             maxLength: 80
+            pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]{0,79}$"
         audienceSegments:
           type: array
           uniqueItems: true
@@ -180,7 +200,7 @@ components:
           schema:
             $ref: "#/components/schemas/DshHomeMarketingEventError"
     ContentNotPublishable:
-      description: Referenced content does not exist or is not currently publishable.
+      description: Referenced content is absent, inactive, outside schedule, or outside the supplied target context.
       content:
         application/json:
           schema:
