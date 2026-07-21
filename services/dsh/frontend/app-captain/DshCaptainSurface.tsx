@@ -17,6 +17,7 @@ import { useDshCaptainSurfaceModel } from "./useDshCaptainSurfaceModel";
 import type { DshCaptainRoute } from "./dsh-captain.types";
 import type { DshCaptainNavigationCommand } from "../shared/delivery/captain.surface.types";
 import { useCameraPhotoCapture } from "../shared/media/useCameraPhotoCapture";
+import { CaptainAssignmentOfferPanel } from "./orders/CaptainAssignmentOfferPanel";
 
 export type DshCaptainSurfaceProps = {
   readonly captainId?: string;
@@ -82,7 +83,13 @@ function AuthenticatedCaptainSurface({
   readonly command: DshCaptainNavigationCommand;
 }) {
   const insets = useSafeAreaInsets();
-  const { state, actions, derived, assignmentClosureNotice } = useDshCaptainSurfaceModel(captainId, command);
+  const {
+    state,
+    actions,
+    derived,
+    activeAssignment,
+    assignmentClosureNotice,
+  } = useDshCaptainSurfaceModel(captainId, command);
   const camera = useCameraPhotoCapture();
   const [cameraError, setCameraError] = React.useState<string | null>(null);
   const [appearanceMode, setAppearanceMode] = React.useState<AppearanceMode>("lightPremium");
@@ -106,6 +113,11 @@ function AuthenticatedCaptainSurface({
     />
   );
 
+  const offerBusy = state.inboxState === "offer-accepting" || state.declineSheetState === "loading";
+  const offerError = state.inboxState === "error" || state.declineSheetState === "error"
+    ? "تغيرت حالة العرض أو تعذر الوصول إلى DSH. حدّث صندوق المهام ثم أعد القرار."
+    : undefined;
+
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <Surface tone="raised" padding={3} style={styles.statusStrip}>
@@ -125,6 +137,16 @@ function AuthenticatedCaptainSurface({
           tone="warning"
           actionLabel="إغلاق"
           onActionPress={actions.dismissAssignmentClosureNotice}
+        />
+      ) : null}
+
+      {activeAssignment?.status === "offered" ? (
+        <CaptainAssignmentOfferPanel
+          assignment={activeAssignment}
+          busy={offerBusy}
+          {...(offerError ? { errorMessage: offerError } : {})}
+          onAccept={(assignmentId) => void actions.handleAcceptTask(assignmentId)}
+          onDecline={(assignmentId, reason) => void actions.handleDeclineConfirm(assignmentId, reason)}
         />
       ) : null}
 
