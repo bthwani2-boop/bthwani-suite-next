@@ -49,12 +49,16 @@ func main() {
 		Addr: ":" + port,
 		Handler: identityhttp.BrowserOriginGuard(
 			identityhttp.CorsMiddleware(
-				identityhttp.ActivationSafetyMiddleware(identityhttp.NewRouter(db, repository)),
+				identityhttp.RequestContractMiddleware(
+					identityhttp.ActivationSafetyMiddleware(identityhttp.NewRouter(db, repository)),
+				),
 			),
 		),
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
-		IdleTimeout:  60 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		ReadHeaderTimeout: 5 * time.Second,
+		WriteTimeout:      15 * time.Second,
+		IdleTimeout:       60 * time.Second,
+		MaxHeaderBytes:    32 * 1024,
 	}
 
 	go func() {
