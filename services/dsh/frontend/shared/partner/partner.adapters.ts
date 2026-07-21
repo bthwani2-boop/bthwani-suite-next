@@ -55,11 +55,18 @@ const nextActionMap: Record<PartnerOrderStatus, string> = {
   cancelled: "عرض سبب الإلغاء",
 };
 
+export type GovernedPreparationOrderItem = {
+  readonly id: string;
+  readonly productName: string;
+  readonly quantity: number;
+};
+
 export type GovernedPartnerOrderItem = PartnerOrderItem & {
   readonly allowedActions: readonly DshPartnerOrderAction[];
   readonly preparation: DshOrderPreparation;
   readonly preparationIssues: readonly DshPreparationIssue[];
   readonly openPreparationIssueCount: number;
+  readonly orderItems: readonly GovernedPreparationOrderItem[];
   readonly storeCaptainHandoffStatus: DshStoreCaptainHandoffStatus;
   readonly storeCaptainHandoffCaptainId: string;
 };
@@ -80,6 +87,9 @@ type CanonicalOrderShape = {
   readonly storeCaptainHandoffStatus?: DshStoreCaptainHandoffStatus;
   readonly storeCaptainHandoffCaptainId?: string;
   readonly items?: readonly {
+    readonly id?: string;
+    readonly orderId?: string;
+    readonly productId?: string;
     readonly productName?: string;
     readonly quantity?: number;
     readonly unitPrice?: number;
@@ -145,6 +155,9 @@ export function mapDshOrderToPartnerOrderItem(order: DshPartnerOrder): GovernedP
   if (!Array.isArray(raw.preparationIssues)) {
     throw new Error(`partner order ${orderId} is missing governed preparation issues`);
   }
+  if (!Array.isArray(raw.items)) {
+    throw new Error(`partner order ${orderId} is missing immutable order items`);
+  }
   const openPreparationIssueCount = Number(raw.openPreparationIssueCount);
   if (!Number.isInteger(openPreparationIssueCount) || openPreparationIssueCount < 0) {
     throw new Error(`partner order ${orderId} has invalid openPreparationIssueCount`);
@@ -161,16 +174,21 @@ export function mapDshOrderToPartnerOrderItem(order: DshPartnerOrder): GovernedP
     throw new Error(`partner order ${orderId} has an invalid createdAt`);
   }
 
-  const items = raw.items ?? [];
-  const itemCount = items.reduce((sum, item) => sum + Math.max(0, Number(item.quantity ?? 0)), 0);
-  const total = items.reduce(
+  const orderItems = raw.items.map((item) => {
+    const id = String(item.id ?? "").trim();
+    const productName = String(item.productName ?? "").trim();
+    const quantity = Math.trunc(Number(item.quantity ?? 0));
+    if (!id || !productName || quantity < 1) {
+      throw new Error(`partner order ${orderId} contains an invalid immutable order item`);
+    }
+    return { id, productName, quantity };
+  });
+  const itemCount = orderItems.reduce((sum, item) => sum + item.quantity, 0);
+  const total = raw.items.reduce(
     (sum, item) => sum + Math.max(0, Number(item.quantity ?? 0)) * Math.max(0, Number(item.unitPrice ?? 0)),
     0,
   );
-  const itemNames = items
-    .map((item) => String(item.productName ?? "").trim())
-    .filter(Boolean)
-    .slice(0, 3);
+  const itemNames = orderItems.map((item) => item.productName).slice(0, 3);
   const elapsed = formatElapsed(createdAt);
   const acceptanceRisk = status === "needs_accept" && elapsed.minutes >= 10;
   const preparationRisk = raw.preparation.preparationSlaState === "due_soon"
@@ -187,6 +205,7 @@ export function mapDshOrderToPartnerOrderItem(order: DshPartnerOrder): GovernedP
     preparation: raw.preparation,
     preparationIssues: [...raw.preparationIssues],
     openPreparationIssueCount,
+    orderItems,
     storeCaptainHandoffStatus: raw.storeCaptainHandoffStatus ?? "",
     storeCaptainHandoffCaptainId: String(raw.storeCaptainHandoffCaptainId ?? ""),
     priority: acceptanceRisk || preparationRisk || issueRisk ? "high" : "normal",
