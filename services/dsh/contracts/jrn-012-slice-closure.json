@@ -1,0 +1,138 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-012",
+  "journeyName": "قبول الطلب وتحضيره وجاهزيته",
+  "closureMode": "CODE_AND_TARGETED_SOURCE_EVIDENCE",
+  "requiredSliceCount": 18,
+  "codeDecision": "CLOSED",
+  "releaseDecision": "READY_FOR_INDEPENDENT_REVIEW",
+  "slices": [
+    {
+      "id": "FS-01",
+      "name": "Product truth and ownership boundaries",
+      "codeStatus": "CLOSED",
+      "requiredFiles": ["governance/product/contracts/jrn-012-order-preparation-readiness.product-truth.json"],
+      "requiredMarkers": ["JRN-012", "orderLifecycle", "financialTruth", "READY_FOR_REVIEW"]
+    },
+    {
+      "id": "FS-02",
+      "name": "Preparation policy and timing persistence",
+      "codeStatus": "CLOSED",
+      "requiredFiles": ["services/dsh/database/migrations/dsh-095_order_preparation_timing.sql"],
+      "requiredMarkers": ["dsh_store_order_preparation_policies", "estimated_ready_at", "dsh_order_preparation_estimate_events"]
+    },
+    {
+      "id": "FS-03",
+      "name": "Server-owned partner workboard and actions",
+      "codeStatus": "CLOSED",
+      "requiredFiles": ["services/dsh/backend/internal/http/partner_order_workboard.go"],
+      "requiredMarkers": ["partnerOrderAllowedActions", "AllowedActions", "OpenPreparationIssueCount"]
+    },
+    {
+      "id": "FS-04",
+      "name": "Accept and reject decision lifecycle",
+      "codeStatus": "CLOSED",
+      "requiredFiles": ["services/dsh/backend/internal/orders/lifecycle.go", "services/dsh/backend/internal/orders/preparation.go"],
+      "requiredMarkers": ["AcceptOrderWithPreparation", "rejection reason is required", "StatusStoreAccepted"]
+    },
+    {
+      "id": "FS-05",
+      "name": "Preparation start transition",
+      "codeStatus": "CLOSED",
+      "requiredFiles": ["services/dsh/backend/internal/orders/preparation.go"],
+      "requiredMarkers": ["MarkPreparingWithTiming", "preparation_started_at=COALESCE", "preparation started"]
+    },
+    {
+      "id": "FS-06",
+      "name": "Audited estimate revision",
+      "codeStatus": "CLOSED",
+      "requiredFiles": ["services/dsh/backend/internal/orders/preparation.go", "services/dsh/frontend/app-partner/orders/PreparationEstimateRevisionPanel.tsx"],
+      "requiredMarkers": ["RevisePreparationEstimate", "dsh_order_preparation_estimate_events", "reviseOrderPreparationEstimate"]
+    },
+    {
+      "id": "FS-07",
+      "name": "Missing items substitutions and preparation issues",
+      "codeStatus": "CLOSED",
+      "requiredFiles": ["services/dsh/database/migrations/dsh-126_order_preparation_issues.sql", "services/dsh/backend/internal/orders/preparation_issues.go"],
+      "requiredMarkers": ["substitution_required", "CreatePreparationIssue", "ResolvePreparationIssue", "dsh_order_preparation_issue_events"]
+    },
+    {
+      "id": "FS-08",
+      "name": "SLA risk and escalation projection",
+      "codeStatus": "CLOSED",
+      "requiredFiles": ["services/dsh/backend/internal/orders/preparation_timing.go", "services/dsh/frontend/shared/partner/partner.adapters.ts"],
+      "requiredMarkers": ["EvaluatePreparationTiming", "due_soon", "overdue", "preparationRisk"]
+    },
+    {
+      "id": "FS-09",
+      "name": "Atomic readiness invariant",
+      "codeStatus": "CLOSED",
+      "requiredFiles": ["services/dsh/backend/internal/orders/preparation_ready_guard.go", "services/dsh/backend/internal/orders/lifecycle.go"],
+      "requiredMarkers": ["countOpenPreparationIssuesTx", "must be resolved before readiness", "MarkReadyWithIssueGuard"]
+    },
+    {
+      "id": "FS-10",
+      "name": "OpenAPI request response and action contract",
+      "codeStatus": "CLOSED",
+      "requiredFiles": ["services/dsh/contracts/fragments/order-preparation-handoff.fragment.yaml"],
+      "requiredMarkers": ["revise_estimate", "report_issue", "resolve_issue", "DshPreparationIssue", "openPreparationIssueCount"]
+    },
+    {
+      "id": "FS-11",
+      "name": "Shared brain types API and server-truth validation",
+      "codeStatus": "CLOSED",
+      "requiredFiles": ["services/dsh/frontend/shared/orders/orders.types.ts", "services/dsh/frontend/shared/orders/orders.api.ts", "services/dsh/frontend/shared/partner/partner.adapters.ts"],
+      "requiredMarkers": ["DshPreparationIssue", "createOrderPreparationIssue", "resolveOrderPreparationIssue", "preparation issue count is inconsistent"]
+    },
+    {
+      "id": "FS-12",
+      "name": "Partner issue and readiness experience",
+      "codeStatus": "CLOSED",
+      "requiredFiles": ["services/dsh/frontend/app-partner/orders/PreparationIssuesPanel.tsx", "services/dsh/frontend/app-partner/orders/GovernedPartnerOrdersScreen.tsx", "services/dsh/frontend/app-partner/orders/OperationalOrdersInboxScreen.tsx"],
+      "requiredMarkers": ["تسجيل مشكلة جديدة", "حل مشكلات التحضير", "PreparationIssuesPanel", "مشكلة تمنع الجاهزية"]
+    },
+    {
+      "id": "FS-13",
+      "name": "Client preparation readback",
+      "codeStatus": "CLOSED",
+      "requiredFiles": ["services/dsh/frontend/shared/orders/use-client-order-journey-controller.ts"],
+      "requiredMarkers": ["fetchOrderPreparation", "preparation: DshOrderPreparation", "setInterval"]
+    },
+    {
+      "id": "FS-14",
+      "name": "Captain readiness and custody wait readback",
+      "codeStatus": "CLOSED",
+      "requiredFiles": ["services/dsh/frontend/shared/dispatch/dispatch.controller-core.ts"],
+      "requiredMarkers": ["STORE_HANDOFF_REQUIRED", "بانتظار تأكيد المتجر تسليم الطلب لك"]
+    },
+    {
+      "id": "FS-15",
+      "name": "Operator readiness readback and intervention",
+      "codeStatus": "CLOSED",
+      "requiredFiles": ["services/dsh/frontend/control-panel/operations/OrderJourneyLiveOrdersScreen.tsx"],
+      "requiredMarkers": ["OrderTruthReadbackSummary", "ready_for_pickup", "OrderJourneyOperatorIntervention"]
+    },
+    {
+      "id": "FS-16",
+      "name": "Store captain dual custody handoff",
+      "codeStatus": "CLOSED",
+      "requiredFiles": ["services/dsh/database/migrations/dsh-095_store_captain_outbound_handoff.sql", "services/dsh/backend/internal/http/partner_order_workboard.go"],
+      "requiredMarkers": ["dsh_store_captain_handoffs", "awaiting_partner", "partner_confirmed", "CaptainPickupConfirmedAt"]
+    },
+    {
+      "id": "FS-17",
+      "name": "Audit outbox and WLT ownership boundary",
+      "codeStatus": "CLOSED",
+      "requiredFiles": ["services/dsh/backend/internal/orders/preparation_issues.go", "governance/product/contracts/jrn-012-order-preparation-readiness.product-truth.json"],
+      "requiredMarkers": ["dsh_operational_outbox_events", "order.preparation_issue_opened", "financialTruth", "لا ينفذ DSH خصمًا"]
+    },
+    {
+      "id": "FS-18",
+      "name": "Targeted automated closure gates",
+      "codeStatus": "CLOSED",
+      "requiredFiles": ["services/dsh/tests/jrn-012-order-preparation-closure.test.mjs", "services/dsh/backend/internal/http/partner_order_workboard_test.go"],
+      "requiredMarkers": ["JRN-012", "preparing issue blocks ready", "partner UI reports and resolves issues"]
+    }
+  ],
+  "independentReviewPending": ["product-owner", "qa-device-accessibility", "security", "finance-boundary", "release-production"]
+}
