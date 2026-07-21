@@ -4,6 +4,7 @@ export { useOperatorTicketController, useSupportIncidentController, useSupportTi
 export { usePartnerSupportController } from "./use-partner-support-controller";
 export type { PartnerSupportControllerState, PartnerSupportDetailState } from "./use-partner-support-controller";
 export * from "./actor-support.api";
+export * from "./support-message-delivery.api";
 export * from "./partner-support.api";
 export * from "./support.flows";
 export * from "./support.captain-escalation";
