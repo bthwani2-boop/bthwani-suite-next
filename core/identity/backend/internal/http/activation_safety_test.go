@@ -1,6 +1,7 @@
 package http
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -31,8 +32,10 @@ func TestActivationSafetyAllowsBootstrapCodeOnlyInExplicitLocalMode(t *testing.T
 	nextCalled := false
 	handler := ActivationSafetyMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		nextCalled = true
-		body := make([]byte, r.ContentLength)
-		_, _ = r.Body.Read(body)
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Fatal(err)
+		}
 		if !strings.Contains(string(body), `"code":"000000"`) {
 			t.Fatalf("activation body was not restored: %s", string(body))
 		}
