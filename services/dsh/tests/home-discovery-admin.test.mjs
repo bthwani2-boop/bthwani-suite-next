@@ -32,10 +32,17 @@ describe("home discovery admin shared brain", () => {
     });
   });
 
-  test("explains optimistic concurrency conflicts", () => {
+  test("explains optimistic concurrency conflicts across both response envelopes", () => {
+    const expected = "تم تعديل العنصر من مستخدم آخر. حدّث القائمة ثم أعد المحاولة.";
+    assert.equal(describeAdminMutationError({ kind: "http", status: 409 }), expected);
     assert.equal(
-      describeAdminMutationError({ kind: "http", status: 409 }),
-      "تم تعديل العنصر من مستخدم آخر. حدّث القائمة ثم أعد المحاولة.",
+      describeAdminMutationError({
+        kind: "http",
+        status: 400,
+        code: "INVALID_REQUEST",
+        message: "home discovery content version conflict",
+      }),
+      expected,
     );
   });
 });
