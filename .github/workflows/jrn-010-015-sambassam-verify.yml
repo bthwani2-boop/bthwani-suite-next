@@ -51,6 +51,7 @@ jobs:
             "extends": "../tsconfig.base.json",
             "compilerOptions": { "noEmit": true },
             "files": [
+              "../services/dsh/frontend/css-modules.d.ts",
               "../services/dsh/frontend/shared/checkout/use-checkout-controller.tsx",
               "../services/dsh/frontend/shared/checkout/use-checkout-to-order-flow.tsx",
               "../services/dsh/frontend/app-client/checkout/GovernedCheckoutScreen.tsx",
