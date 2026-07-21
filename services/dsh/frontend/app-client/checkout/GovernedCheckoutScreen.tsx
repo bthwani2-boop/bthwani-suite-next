@@ -48,7 +48,7 @@ export function GovernedCheckoutScreen({
     ...(note ? { note } : {}),
     ...(couponCode.trim() ? { couponCode: couponCode.trim().toUpperCase() } : {}),
   };
-  const { state, cancel, retryOrder } = useCheckoutToOrderFlow(input);
+  const { state, cancel, refresh, retryOrder } = useCheckoutToOrderFlow(input);
 
   if (state.kind === "loading") {
     return <LoadingState title="جاري تثبيت العنوان والأسعار والتحقق من الكوبون…" />;
@@ -60,7 +60,15 @@ export function GovernedCheckoutScreen({
     return (
       <View style={{ flex: 1 }}>
         <TopBar title="الدفع غير متاح" {...(onCancel ? { onBack: onCancel } : {})} />
-        <ScrollScreen><StateView title="WLT غير متاح" description="لم يتم إنشاء طلب أو تثبيت استرداد الكوبون. أعد المحاولة بعد عودة WLT." tone="danger" /></ScrollScreen>
+        <ScrollScreen>
+          <StateView
+            title="WLT غير متاح"
+            description="لم يتم إنشاء طلب. أعد المحاولة من السلة بعد عودة WLT؛ مفتاح الإنشاء الخادمي يمنع إنشاء جلسة مزدوجة."
+            tone="danger"
+            actionLabel="العودة للسلة"
+            {...(onCancel ? { onActionPress: onCancel } : {})}
+          />
+        </ScrollScreen>
       </View>
     );
   }
@@ -97,6 +105,61 @@ export function GovernedCheckoutScreen({
     );
   }
 
+  if (state.kind === "terminal") {
+    const title = state.reason === "cancelled"
+      ? "تم إلغاء Checkout"
+      : state.reason === "expired"
+        ? "انتهت جلسة الدفع"
+        : "فشلت عملية الدفع";
+    const description = state.reason === "cancelled"
+      ? "ألغيت نية Checkout، وتم تحرير الموارد التشغيلية وإرسال انتهاء جلسة WLT عبر المسار الدائم عند وجودها."
+      : state.reason === "expired"
+        ? "أبلغ WLT بانتهاء الجلسة. ارجع إلى السلة وأنشئ محاولة جديدة بأسعار وقابلية خدمة محدثة."
+        : "أبلغ WLT بفشل الدفع، ولم يُنشأ الطلب. يمكنك العودة إلى السلة واختيار طريقة دفع أخرى.";
+    return (
+      <View style={{ flex: 1 }}>
+        <TopBar title={title} {...(onCancel ? { onBack: onCancel } : {})} />
+        <ScrollScreen>
+          <StateView
+            title={title}
+            description={description}
+            tone={state.reason === "cancelled" ? "warning" : "danger"}
+            actionLabel="العودة للسلة"
+            {...(onCancel ? { onActionPress: onCancel } : {})}
+          />
+        </ScrollScreen>
+      </View>
+    );
+  }
+
+  if (state.kind === "reconciliation_pending") {
+    const { intent } = state;
+    return (
+      <View style={{ flex: 1 }}>
+        <TopBar title="جارٍ التحقق من WLT" {...(onCancel ? { onBack: onCancel } : {})} />
+        <ScrollScreen>
+          <View style={{ gap: spacing[3] }}>
+            <StateView
+              title="نتيجة WLT غير مؤكدة"
+              description={`قد يكون WLT قبل الطلب قبل انقطاع الشبكة. تتم قراءة الحالة تلقائيًا دون إنشاء جلسة أخرى. مضى ${Math.max(0, intent.reconciliationAgeSeconds ?? 0)} ثانية.`}
+              tone="warning"
+            />
+            <Card padding={3} gap={2}>
+              <KeyValueList items={[
+                { label: "مرجع Checkout", value: intent.id },
+                { label: "مرجع WLT", value: intent.wltPaymentSessionId || "قيد المصالحة" },
+                { label: "الإجمالي", value: formatMinorUnits(intent.totalMinorUnits, intent.currency) },
+                { label: "نسخة الحالة", value: String(intent.version) },
+              ]} />
+            </Card>
+            <Button label="تحديث الحالة الآن" tone="brand" onPress={() => refresh(intent.id)} />
+            <Button label="إلغاء Checkout بأمان" tone="secondary" onPress={() => cancel(intent.id)} />
+          </View>
+        </ScrollScreen>
+      </View>
+    );
+  }
+
   if (state.kind === "payment_pending") {
     const { intent } = state;
     return (
@@ -104,7 +167,7 @@ export function GovernedCheckoutScreen({
         <TopBar title="في انتظار WLT" {...(onCancel ? { onBack: onCancel } : {})} />
         <ScrollScreen>
           <View style={{ gap: spacing[3] }}>
-            <StateView title="تم تثبيت عنوان وتسعير DSH" description="العنوان أدناه snapshot من دفتر العناوين المملوك لحسابك، والإجمالي هو نفس المبلغ المرسل إلى WLT." tone="warning" />
+            <StateView title="تم تثبيت عنوان وتسعير DSH" description="العنوان أدناه snapshot من دفتر العناوين المملوك لحسابك، والإجمالي هو نفس المبلغ المرسل إلى WLT. ستُحدّث الحالة تلقائيًا." tone="warning" />
             <Card padding={3} gap={2}>
               <KeyValueList items={[
                 { label: "عنوان التسليم", value: intent.deliveryAddress || "استلام ذاتي" },
@@ -116,7 +179,8 @@ export function GovernedCheckoutScreen({
                 { label: "مرجع snapshot", value: intent.pricingSnapshotHash.slice(0, 16) },
               ]} />
             </Card>
-            <Button label="إلغاء نية checkout وتحرير الكوبون" tone="secondary" onPress={() => cancel(intent.id)} />
+            <Button label="تحديث حالة الدفع" tone="brand" onPress={() => refresh(intent.id)} />
+            <Button label="إلغاء نية Checkout وتحرير الكوبون" tone="secondary" onPress={() => cancel(intent.id)} />
           </View>
         </ScrollScreen>
       </View>
