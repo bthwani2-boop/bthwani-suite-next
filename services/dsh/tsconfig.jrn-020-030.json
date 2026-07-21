@@ -88,6 +88,7 @@
     "frontend/app-partner/team/PartnerTeamManagementScreen.tsx",
     "frontend/control-panel/operations/SpecialOpsWorkbenchScreen.tsx",
     "frontend/control-panel/operations/AreaCapacityScreen.tsx",
+    "frontend/control-panel/support/PlatformNotificationConfigScreen.tsx",
     "frontend/control-panel/marketing/**/*.ts",
     "frontend/control-panel/marketing/**/*.tsx"
   ],
