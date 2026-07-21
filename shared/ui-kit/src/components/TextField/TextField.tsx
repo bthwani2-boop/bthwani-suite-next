@@ -17,6 +17,7 @@ export type TextFieldProps = {
   secureTextEntry?: boolean;
   multiline?: boolean;
   numberOfLines?: number;
+  maxLength?: number;
   keyboardType?: "default" | "email-address" | "numeric" | "phone-pad" | "decimal-pad";
   autoCapitalize?: "none" | "sentences" | "words" | "characters";
   onChangeText?: (value: string) => void;
