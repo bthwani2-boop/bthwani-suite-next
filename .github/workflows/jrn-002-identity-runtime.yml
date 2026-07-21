@@ -1,0 +1,206 @@
+name: JRN-002 Identity Runtime Proof
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [sambassam]
+    paths:
+      - "core/identity/backend/**"
+      - "core/identity/contracts/**"
+      - "core/identity/database/**"
+      - "core/identity/tests/**"
+      - "core/workforce/backend/internal/identityclient/**"
+      - "services/dsh/frontend/shared/session/**"
+      - "services/dsh/frontend/app-client/account/**"
+      - ".github/workflows/jrn-002-identity-runtime.yml"
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: jrn-002-runtime-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  identity-runtime:
+    name: JRN-002 PostgreSQL and HTTP runtime
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: jrn002
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d jrn002"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+
+      - name: Setup Go
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5
+        with:
+          go-version-file: core/identity/backend/go.mod
+          cache-dependency-path: core/identity/backend/go.sum
+
+      - name: Publish pending runtime status
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMIT_SHA: ${{ github.sha }}
+          TARGET_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        shell: bash
+        run: |
+          jq -n --arg state "pending" --arg context "journeys/jrn-002/runtime-proof" --arg description "JRN-002 PostgreSQL and HTTP runtime proof is running" --arg target_url "$TARGET_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/jrn-002-runtime-status.json
+          curl --fail-with-body --silent --show-error -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ github.repository }}/statuses/$COMMIT_SHA" \
+            -d @/tmp/jrn-002-runtime-status.json
+
+      - name: Apply migrations and exercise identity journey
+        id: runtime
+        continue-on-error: true
+        env:
+          PGPASSWORD: postgres
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/jrn002?sslmode=disable
+          PORT: "18082"
+          IDENTITY_LOCAL_BOOTSTRAP: "true"
+          IDENTITY_LOCAL_BOOTSTRAP_PASSWORD: identity-runtime-password
+          IDENTITY_ACTIVATION_HMAC_SECRET: 0123456789abcdef0123456789abcdef
+          IDENTITY_CORS_ALLOWED_ORIGINS: https://control-panel.example.com
+          IDENTITY_WORKFORCE_SERVICE_TOKEN: workforce-runtime-service-token
+        shell: bash
+        run: |
+          set -euo pipefail
+          : >/tmp/jrn-002-runtime.log
+          command -v psql >/dev/null || { sudo apt-get update && sudo apt-get install -y postgresql-client; }
+
+          for migration in core/identity/database/migrations/*.sql; do
+            echo "APPLY $migration" | tee -a /tmp/jrn-002-runtime.log
+            psql -h localhost -U postgres -d jrn002 -v ON_ERROR_STOP=1 -f "$migration" 2>&1 | tee -a /tmp/jrn-002-runtime.log
+          done
+
+          (
+            cd core/identity/backend
+            go run ./cmd/identity-api
+          ) >/tmp/identity-api.log 2>&1 &
+          API_PID=$!
+          cleanup() {
+            kill "$API_PID" 2>/dev/null || true
+            wait "$API_PID" 2>/dev/null || true
+            cat /tmp/identity-api.log >>/tmp/jrn-002-runtime.log
+          }
+          trap cleanup EXIT
+
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:18082/identity/readiness >/tmp/readiness.json; then
+              break
+            fi
+            if ! kill -0 "$API_PID" 2>/dev/null; then
+              cat /tmp/identity-api.log
+              exit 1
+            fi
+            sleep 1
+          done
+          jq -e '.status == "ready" and .service == "core-identity"' /tmp/readiness.json | tee -a /tmp/jrn-002-runtime.log
+
+          LOGIN=$(curl --fail-with-body --silent --show-error \
+            -H 'Content-Type: application/json' \
+            -d '{"username":"operator","password":"identity-runtime-password","deviceFingerprint":"jrn-002-runtime"}' \
+            http://127.0.0.1:18082/auth/login)
+          printf '%s\n' "$LOGIN" | jq -e '.tokenType == "Bearer" and .identity.subject == "operator-local-001" and .identity.phoneE164 == "+967770000000"' | tee -a /tmp/jrn-002-runtime.log
+          ACCESS=$(printf '%s' "$LOGIN" | jq -er '.accessToken')
+          REFRESH=$(printf '%s' "$LOGIN" | jq -er '.refreshToken')
+          SESSION_ID=$(printf '%s' "$LOGIN" | jq -er '.identity.sessionId')
+
+          SESSION=$(curl --fail-with-body --silent --show-error -H "Authorization: Bearer $ACCESS" http://127.0.0.1:18082/auth/session)
+          printf '%s\n' "$SESSION" | jq -e --arg sid "$SESSION_ID" '.subject == "operator-local-001" and .sessionId == $sid and .surfaceAccess["control-panel"] == true' | tee -a /tmp/jrn-002-runtime.log
+
+          SESSIONS=$(curl --fail-with-body --silent --show-error -H "Authorization: Bearer $ACCESS" http://127.0.0.1:18082/auth/sessions)
+          printf '%s\n' "$SESSIONS" | jq -e --arg sid "$SESSION_ID" 'any(.[]; .sessionId == $sid)' | tee -a /tmp/jrn-002-runtime.log
+
+          REFRESHED=$(curl --fail-with-body --silent --show-error \
+            -H 'Content-Type: application/json' \
+            -d "$(jq -nc --arg refreshToken "$REFRESH" '{refreshToken:$refreshToken}')" \
+            http://127.0.0.1:18082/auth/refresh)
+          NEW_ACCESS=$(printf '%s' "$REFRESHED" | jq -er '.accessToken')
+          printf '%s\n' "$REFRESHED" | jq -e '.identity.subject == "operator-local-001"' | tee -a /tmp/jrn-002-runtime.log
+
+          OLD_STATUS=$(curl --silent --output /tmp/old-session.json --write-out '%{http_code}' -H "Authorization: Bearer $ACCESS" http://127.0.0.1:18082/auth/session)
+          test "$OLD_STATUS" = "401"
+          jq -e '.code == "UNAUTHENTICATED"' /tmp/old-session.json | tee -a /tmp/jrn-002-runtime.log
+
+          ALLOWED_HEADERS=$(curl --silent --show-error --dump-header - --output /dev/null \
+            -X OPTIONS \
+            -H 'Origin: https://control-panel.example.com' \
+            -H 'Access-Control-Request-Method: DELETE' \
+            http://127.0.0.1:18082/auth/sessions/runtime-session)
+          printf '%s\n' "$ALLOWED_HEADERS" | grep -qi '^access-control-allow-origin: https://control-panel.example.com'
+          printf '%s\n' "$ALLOWED_HEADERS" | grep -qi 'access-control-allow-methods:.*DELETE'
+
+          BLOCKED_STATUS=$(curl --silent --output /tmp/blocked-origin.json --write-out '%{http_code}' \
+            -H 'Origin: https://untrusted.example.com' \
+            -H 'Content-Type: application/json' \
+            -d '{"username":"operator","password":"identity-runtime-password","deviceFingerprint":"blocked"}' \
+            http://127.0.0.1:18082/auth/login)
+          test "$BLOCKED_STATUS" = "403"
+          jq -e '.code == "CORS_ORIGIN_FORBIDDEN"' /tmp/blocked-origin.json | tee -a /tmp/jrn-002-runtime.log
+
+          LOGOUT_STATUS=$(curl --silent --output /tmp/logout.json --write-out '%{http_code}' \
+            -X POST -H "Authorization: Bearer $NEW_ACCESS" http://127.0.0.1:18082/auth/logout)
+          test "$LOGOUT_STATUS" = "204"
+          REVOKED_STATUS=$(curl --silent --output /tmp/revoked-session.json --write-out '%{http_code}' \
+            -H "Authorization: Bearer $NEW_ACCESS" http://127.0.0.1:18082/auth/session)
+          test "$REVOKED_STATUS" = "401"
+          jq -e '.code == "UNAUTHENTICATED"' /tmp/revoked-session.json | tee -a /tmp/jrn-002-runtime.log
+
+          echo 'JRN-002_RUNTIME_PASS' | tee -a /tmp/jrn-002-runtime.log
+
+      - name: Upload runtime evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: jrn-002-identity-runtime-evidence
+          path: /tmp/jrn-002-runtime.log
+          retention-days: 3
+          if-no-files-found: error
+
+      - name: Publish runtime result
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUNTIME_OUTCOME: ${{ steps.runtime.outcome }}
+          COMMIT_SHA: ${{ github.sha }}
+          TARGET_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        shell: bash
+        run: |
+          STATE=success
+          DESCRIPTION="JRN-002 PostgreSQL, login, session, refresh, logout, and CORS runtime proof passed"
+          if [ "$RUNTIME_OUTCOME" != success ]; then
+            STATE=failure
+            DESCRIPTION="JRN-002 identity runtime proof failed"
+          fi
+          jq -n --arg state "$STATE" --arg context "journeys/jrn-002/runtime-proof" --arg description "$DESCRIPTION" --arg target_url "$TARGET_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/jrn-002-runtime-status.json
+          curl --fail-with-body --silent --show-error -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ github.repository }}/statuses/$COMMIT_SHA" \
+            -d @/tmp/jrn-002-runtime-status.json
+
+      - name: Enforce runtime proof
+        if: always()
+        env:
+          RUNTIME_OUTCOME: ${{ steps.runtime.outcome }}
+        run: test "$RUNTIME_OUTCOME" = success
