@@ -7,16 +7,11 @@ import (
 	"strings"
 )
 
+// AcceptOrder is the compatibility entry point used by existing HTTP routes.
+// It delegates to the JRN-012 implementation so acceptance always initializes
+// the store policy snapshot and authoritative preparation SLA timestamps.
 func AcceptOrder(db *sql.DB, orderID, actorID string) (*Order, error) {
-	return transitionOrder(
-		db,
-		orderID,
-		actorID,
-		"partner",
-		[]OrderStatus{StatusPending},
-		StatusStoreAccepted,
-		"",
-	)
+	return AcceptOrderWithPreparation(db, orderID, actorID)
 }
 
 // RejectOrder is retained as a compatibility entry point. It delegates to the
@@ -54,28 +49,17 @@ func CancelOrderByOperator(db *sql.DB, orderID, actorID, reason string) (*Order,
 	})
 }
 
+// MarkPreparing is the compatibility entry point used by partner surfaces.
+// The governed implementation records preparation_started_at atomically with
+// the lifecycle transition.
 func MarkPreparing(db *sql.DB, orderID, actorID string) (*Order, error) {
-	return transitionOrder(
-		db,
-		orderID,
-		actorID,
-		"partner",
-		[]OrderStatus{StatusStoreAccepted},
-		StatusPreparing,
-		"",
-	)
+	return MarkPreparingWithTiming(db, orderID, actorID)
 }
 
+// MarkReadyForPickup delegates to the governed timing implementation so
+// ready_at and the final SLA state cannot diverge from the order lifecycle.
 func MarkReadyForPickup(db *sql.DB, orderID, actorID string) (*Order, error) {
-	return transitionOrder(
-		db,
-		orderID,
-		actorID,
-		"partner",
-		[]OrderStatus{StatusPreparing},
-		StatusReadyForPickup,
-		"",
-	)
+	return MarkReadyWithTiming(db, orderID, actorID)
 }
 
 func TransitionDispatchOrder(
