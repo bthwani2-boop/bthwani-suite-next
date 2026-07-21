@@ -76,13 +76,21 @@ export function createPartner(input: DshCreatePartnerInput, mutation?: PartnerMu
 export function transitionPartner(
   partnerId: string,
   input: DshPartnerTransitionInput,
-  version: number,
+  version?: number,
   mutation?: PartnerMutationContext,
 ): Promise<{ partner: DshGovernedPartner; event: DshPartnerAuditEvent }> {
+  const expectedVersion = version ?? 0;
+  if (!Number.isInteger(expectedVersion) || expectedVersion < 1) {
+    return Promise.reject({
+      kind: "invalid_request",
+      code: "EXPECTED_VERSION_REQUIRED",
+      message: "partner transition requires a positive expected version",
+    });
+  }
   return request(`/dsh/operator/partners/${partnerId}/transition`, {
     method: "POST",
     body: input,
-    mutation: { ...mutation, expectedVersion: version } as PartnerMutationContext,
+    mutation: { ...mutation, expectedVersion },
   });
 }
 
