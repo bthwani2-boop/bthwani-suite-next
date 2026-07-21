@@ -5,7 +5,11 @@ import {
 } from '../dispatch/dispatch.api';
 import { ASSIGNMENT_STATUS_LABELS, DELIVERY_STATUS_LABELS } from '../dispatch/dispatch.types';
 import type { DshDispatchAssignment } from '../dispatch/dispatch.types';
-import type { DshCaptainOrderBellItem, DshCaptainOrderServiceType, DshCaptainOrdersScreenState } from '../orders';
+import type {
+  DshCaptainOrderBellItem,
+  DshCaptainOrderServiceType,
+  DshCaptainOrdersScreenState,
+} from '../orders/orders.contract';
 
 export type CaptainInboxFetchState = Extract<DshCaptainOrdersScreenState, 'ready' | 'loading' | 'empty' | 'error'>;
 
