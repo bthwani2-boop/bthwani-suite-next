@@ -32,7 +32,7 @@ func TestClientAddressMutationOwnershipIsolation(t *testing.T) {
 	}
 
 	_, err = UpdateIdempotent(ctx, db, intruderID, owned.ID, UpdateInput{
-		CreateInput:    integrationDraft(suffix+"23", true),
+		CreateInput:     integrationDraft(suffix+"23", true),
 		ExpectedVersion: owned.Version,
 	}, MutationContext{
 		IdempotencyKey: "isolation-update:" + suffix,
