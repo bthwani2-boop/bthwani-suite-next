@@ -60,3 +60,43 @@ func TestCorsMiddlewareRejectsUnknownOrigin(t *testing.T) {
 		t.Fatalf("untrusted origin received CORS methods: %q", got)
 	}
 }
+
+func TestBrowserCorsMiddlewareRejectsUntrustedOrigin(t *testing.T) {
+	t.Setenv("IDENTITY_CORS_ALLOWED_ORIGINS", "https://control-panel.example.com")
+	nextCalled := false
+	handler := BrowserCorsMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		nextCalled = true
+		w.WriteHeader(http.StatusNoContent)
+	}))
+
+	request := httptest.NewRequest(http.MethodGet, "/auth/session", nil)
+	request.Header.Set("Origin", "https://untrusted.example.com")
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+
+	if response.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 for untrusted browser origin, got %d", response.Code)
+	}
+	if nextCalled {
+		t.Fatal("untrusted browser origin reached the identity handler")
+	}
+}
+
+func TestBrowserCorsMiddlewareAllowsTrustedAndNonBrowserRequests(t *testing.T) {
+	t.Setenv("IDENTITY_CORS_ALLOWED_ORIGINS", "https://control-panel.example.com")
+	handler := BrowserCorsMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}))
+
+	for _, origin := range []string{"https://control-panel.example.com", ""} {
+		request := httptest.NewRequest(http.MethodGet, "/auth/session", nil)
+		if origin != "" {
+			request.Header.Set("Origin", origin)
+		}
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, request)
+		if response.Code != http.StatusNoContent {
+			t.Fatalf("origin %q status = %d, want %d", origin, response.Code, http.StatusNoContent)
+		}
+	}
+}
