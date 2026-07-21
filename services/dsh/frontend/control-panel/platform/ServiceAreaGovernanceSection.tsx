@@ -77,6 +77,11 @@ function parsePolygon(text: string): readonly (readonly [number, number])[] {
   return polygon;
 }
 
+function formatBounds(area: DshServiceArea): string {
+  const bounds = area.bounds;
+  return `${bounds.minLongitude.toFixed(4)}, ${bounds.minLatitude.toFixed(4)} → ${bounds.maxLongitude.toFixed(4)}, ${bounds.maxLatitude.toFixed(4)}`;
+}
+
 export function ServiceAreaGovernanceSection() {
   const controller = useServiceAreaController(true);
   const [form, setForm] = React.useState<FormState>(EMPTY_FORM);
@@ -197,9 +202,14 @@ export function ServiceAreaGovernanceSection() {
                 render: (row) => String(row.priority),
               },
               {
-                key: "polygon",
+                key: "pointCount",
                 header: "النقاط",
-                render: (row) => String(row.polygon.length),
+                render: (row) => String(row.pointCount),
+              },
+              {
+                key: "bounds",
+                header: "الحدود",
+                render: (row) => formatBounds(row),
               },
               {
                 key: "active",
