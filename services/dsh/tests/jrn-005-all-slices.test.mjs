@@ -18,11 +18,14 @@ test("JRN-005 FS-01..FS-04 fixes product truth, actors, states and ownership bou
   const checkout = read("services/dsh/backend/internal/http/checkout.go");
 
   assert.equal(truth.journeyId, "JRN-005");
-  assert.equal(truth.status, "IMPLEMENTED_PENDING_SAME_COMMIT_EVIDENCE");
+  assert.equal(truth.status, "IMPLEMENTED_VERIFIED_PENDING_INDEPENDENT_EVIDENCE");
+  assert.equal(truth.verifiedImplementationCommit, "bda5452525840cbe4b357713032747cfc500bfc4");
   assert.deepEqual(truth.requiredSurfaces, ["app-client", "dsh-backend", "postgresql"]);
-  assert.ok(truth.acceptanceCriteria.length >= 10);
-  assert.ok(truth.negativeInvariants.length >= 6);
+  assert.ok(truth.acceptanceCriteria.length >= 15);
+  assert.ok(truth.negativeInvariants.length >= 8);
   assert.equal(registry.slices.length, 18);
+  assert.equal(registry.codeClosureDecision, "CLOSED");
+  assert.deepEqual(registry.openCodeGaps, []);
   assert.deepEqual(registry.slices.slice(0, 4).map(({ id }) => id), ["FS-01", "FS-02", "FS-03", "FS-04"]);
   assert.match(handler, /requireActor\(w, r, "client"\)/);
   assert.doesNotMatch(handler, /Query\(\)\.Get\(["']clientId["']\)/);
@@ -147,15 +150,21 @@ test("JRN-005 FS-17..FS-18 executes the real code gates on one commit", () => {
 
   assert.deepEqual(ids, expected);
   assert.equal(new Set(ids).size, 18);
+  assert.ok(registry.slices.slice(0, 17).every(({ status }) => status === "IMPLEMENTED_VERIFIED"));
+  assert.equal(registry.slices[17].status, "CODE_CLOSED_PENDING_INDEPENDENT_EVIDENCE");
   assert.match(workflow, /journeys\/jrn-005\/all-slices/);
   assert.match(workflow, /postgres:16-alpine/);
   assert.match(workflow, /go test \.\/internal\/clientaddress \.\/internal\/http/);
   assert.match(workflow, /tsconfig\.jrn-005-app-client\.json/);
   assert.match(workflow, /dsh-901_client_address_logical_deduplication\.sql/);
   assert.match(workflow, /dsh-907_jrn_005_address_mutation_receipts\.sql/);
+  assert.match(workflow, /dsh-908_jrn_005_mutation_receipt_retention\.sql/);
+  assert.match(workflow, /dsh-906_jrn_006_client_address_geofence_binding\.sql/);
   assert.match(workflow, /jrn-005-all-slices\.test\.mjs/);
   assert.equal(evidence.journeyId, "JRN-005");
+  assert.equal(evidence.codeClosure, "COMPLETE");
   assert.equal(evidence.functionalSlices.registered, 18);
+  assert.equal(evidence.functionalSlices.openCodeGaps, 0);
   assert.match(executionLog, /FS-01/);
   assert.match(executionLog, /FS-18/);
 });
