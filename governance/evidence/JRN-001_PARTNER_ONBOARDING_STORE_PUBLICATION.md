@@ -14,7 +14,7 @@ The functional journey includes field creation of an owned partner draft, legal 
 
 ## Verification
 
-The final evidence workflow reruns all `JRN-001` Node tests and journey guards, Go tests for partner and partner-WLT outbox packages, governed route registration tests, app-field and app-partner TypeScript verification, WLT financial-boundary verification, repository hygiene, and the FS-18 evidence guard on one commit. The authoritative proof is the successful commit status contexts:
+The final evidence workflow reruns all `JRN-001` Node tests and journey guards, Go tests for partner and partner-WLT outbox packages, governed route registration tests, app-field TypeScript verification, WLT financial-boundary verification, repository hygiene, and the FS-18 evidence guard on one commit. The authoritative proof is the successful commit status contexts:
 
 - `journeys/jrn-001/fs-17-comprehensive`
 - `journeys/jrn-001/fs-18-evidence`
