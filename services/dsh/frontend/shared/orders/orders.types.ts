@@ -46,6 +46,12 @@ export type DshPreparationIssueKind =
 
 export type DshPreparationIssueStatus = "open" | "resolved";
 
+export type DshPreparationIssueCustomerDecision =
+  | "not_required"
+  | "pending"
+  | "approved"
+  | "rejected";
+
 export type DshPreparationIssue = {
   readonly id: string;
   readonly orderId: string;
@@ -57,6 +63,10 @@ export type DshPreparationIssue = {
   readonly note: string;
   readonly replacementProductId: string;
   readonly replacementProductName: string;
+  readonly customerDecision: DshPreparationIssueCustomerDecision;
+  readonly customerDecidedByActorId: string;
+  readonly customerDecisionNote: string;
+  readonly customerDecidedAt?: string | null;
   readonly openedByActorId: string;
   readonly openedAt: string;
   readonly resolvedByActorId: string;
@@ -76,9 +86,21 @@ export type DshCreatePreparationIssueInput = {
   readonly replacementProductName?: string;
 };
 
+export type DshDecidePreparationIssueInput = {
+  readonly expectedVersion: number;
+  readonly decision: Extract<DshPreparationIssueCustomerDecision, "approved" | "rejected">;
+  readonly note?: string;
+};
+
 export type DshResolvePreparationIssueInput = {
   readonly expectedVersion: number;
   readonly resolutionNote: string;
+};
+
+export type DshPreparationIssueList = {
+  readonly issues: readonly DshPreparationIssue[];
+  readonly openCount: number;
+  readonly pendingCustomerDecisionCount: number;
 };
 
 export type DshStorePreparationPolicy = {
@@ -142,6 +164,8 @@ export type DshPartnerOrder = DshOrder & {
   readonly preparation: DshOrderPreparation;
   readonly preparationIssues: readonly DshPreparationIssue[];
   readonly openPreparationIssueCount: number;
+  readonly pendingCustomerDecisionCount: number;
+  readonly resolvablePreparationIssueCount: number;
   readonly storeCaptainHandoffStatus: DshStoreCaptainHandoffStatus;
   readonly storeCaptainHandoffAssignmentId: string;
   readonly storeCaptainHandoffCaptainId: string;
@@ -236,6 +260,16 @@ export const PREPARATION_ISSUE_KIND_LABELS: Record<DshPreparationIssueKind, stri
   substitution_required: "استبدال مطلوب",
   quality_issue: "مشكلة جودة",
   other: "مشكلة أخرى",
+};
+
+export const PREPARATION_ISSUE_CUSTOMER_DECISION_LABELS: Record<
+  DshPreparationIssueCustomerDecision,
+  string
+> = {
+  not_required: "لا يحتاج قرار العميل",
+  pending: "بانتظار قرار العميل",
+  approved: "وافق العميل",
+  rejected: "رفض العميل",
 };
 
 export const STORE_CAPTAIN_HANDOFF_EXCEPTION_LABELS: Record<
