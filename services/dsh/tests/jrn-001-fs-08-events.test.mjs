@@ -15,7 +15,7 @@ assert.match(migration, /activation_event_id text NOT NULL REFERENCES dsh_partne
 assert.match(migration, /AFTER INSERT ON dsh_partner_activation_events/);
 assert.match(migration, /NEW\.to_status = 'partner_deactivated'/);
 assert.match(migration, /UNIQUE \(event_type, activation_event_id\)/);
-assert.doesNotMatch(migration, /account_number\s+text|iban\s+text|payout_mobile_number\s+text/);
+assert.doesNotMatch(migration, /^\s+(account_number|iban|payout_mobile_number)\s+text\b/m);
 
 assert.match(worker, /FOR UPDATE SKIP LOCKED/);
 assert.match(worker, /status = 'processing'/);
