@@ -9,6 +9,7 @@ test("JRN-004 returns operational store context from DSH truth", () => {
   const api = read("frontend/shared/store/store-discovery.api.ts");
   const viewModel = read("frontend/shared/store/store-discovery.view-model.ts");
   const clientScreen = read("frontend/app-client/store/StoreDetailScreen.tsx");
+  const shell = read("frontend/app-client/store/StoreDetailShell.tsx");
   const infoCard = read("frontend/app-client/store/StoreDetailInfoCard.tsx");
 
   for (const field of ["AddressLine", "CoverageSummary", "OperatingHours", "DeliveryReadiness"]) {
@@ -20,8 +21,24 @@ test("JRN-004 returns operational store context from DSH truth", () => {
   assert.match(clientScreen, /coverageSummary=\{store\.coverageSummary\}/);
   assert.match(clientScreen, /addressLine=\{store\.addressLine\}/);
   assert.match(clientScreen, /deliveryReadiness=\{store\.deliveryReadiness\}/);
+  assert.doesNotMatch(shell, /StoreDetailInfoCard/);
   assert.doesNotMatch(infoCard, /08:00\s*-\s*23:00/);
   assert.doesNotMatch(infoCard, /1,200/);
+});
+
+test("JRN-004 contract overlay matches its manual typed adapter", () => {
+  const overlay = read("contracts/dsh.store-operational-context.overlay.yaml");
+  const typedAdapter = read("frontend/shared/store/store-operational-context.contract.ts");
+  const detailTypes = read("frontend/shared/store/store-discovery.types.ts");
+
+  assert.match(overlay, /x-bthwani-contract-state: CONTRACT_ACTIVE/);
+  assert.match(overlay, /x-bthwani-contract-role: SCHEMA_OVERLAY/);
+  assert.match(overlay, /x-bthwani-client-binding: MANUAL_TYPED_ADAPTER/);
+  assert.match(detailTypes, /DshStoreOperationalContextContract/);
+  for (const field of ["addressLine", "coverageSummary", "operatingHours", "deliveryReadiness"]) {
+    assert.match(overlay, new RegExp(`- ${field}`));
+    assert.match(typedAdapter, new RegExp(`readonly ${field}: string`));
+  }
 });
 
 test("JRN-004 keeps partner settings and profiles actor-scoped and read back", () => {
@@ -48,6 +65,7 @@ test("JRN-004 uses one governed publication diagnostic across backend and contro
   const router = read("backend/internal/http/server.go");
   const diagnostics = read("backend/internal/store/publication_diagnostics.go");
   const handler = read("backend/internal/http/store_publication_diagnostics.go");
+  const protectedStore = read("backend/internal/http/protected_store.go");
   const repository = read("backend/internal/store/repository.go");
   const model = read("backend/internal/store/model.go");
   const adminApi = read("frontend/shared/store/store-admin.api.ts");
@@ -56,6 +74,7 @@ test("JRN-004 uses one governed publication diagnostic across backend and contro
 
   assert.match(router, /GET \/dsh\/operator\/diagnostics\/stores\/\{storeId\}.*handleGovernedOperatorStoreDiagnostics/);
   assert.doesNotMatch(router, /handleOperatorStoreDiagnostics/);
+  assert.doesNotMatch(protectedStore, /handleOperatorStoreDiagnostics/);
   assert.match(handler, /store\.DiagnoseStorePublication\(\*row\)/);
   assert.match(model, /return DiagnoseStorePublication\(row\)\.IsReady/);
   assert.match(repository, /const publicStorePredicate/);
