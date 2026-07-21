@@ -54,7 +54,7 @@ jobs:
           pnpm --dir apps/app-field/runtime typecheck 2>&1 | tee /tmp/app-field-typecheck.log
           EXIT_CODE=${PIPESTATUS[0]}
           RAW="$(grep -m1 -E 'error TS[0-9]+:' /tmp/app-field-typecheck.log || true)"
-          DETAIL="$(printf '%s' "${RAW:-typecheck-failed}" | tr -cs '[:alnum:]' '-' | sed -E 's/^-+|-+$//g' | cut -c1-55)"
+          DETAIL="$(printf '%s' "${RAW:-typecheck-failed}" | sed -E 's#^.*/([^/]+)\(([0-9]+),([0-9]+)\): error (TS[0-9]+): (.*)$#\1-\2-\3-\4-\5#' | tr -cs '[:alnum:]' '-' | sed -E 's/^-+|-+$//g' | cut -c1-64)"
           STATE=success
           CONTEXT='journeys/jrn-001/fs-12/app-field'
           DESCRIPTION='app-field typecheck passed'
@@ -95,7 +95,7 @@ jobs:
           pnpm --dir apps/app-partner/runtime typecheck 2>&1 | tee /tmp/app-partner-typecheck.log
           EXIT_CODE=${PIPESTATUS[0]}
           RAW="$(grep -m1 -E 'error TS[0-9]+:' /tmp/app-partner-typecheck.log || true)"
-          DETAIL="$(printf '%s' "${RAW:-typecheck-failed}" | tr -cs '[:alnum:]' '-' | sed -E 's/^-+|-+$//g' | cut -c1-53)"
+          DETAIL="$(printf '%s' "${RAW:-typecheck-failed}" | sed -E 's#^.*/([^/]+)\(([0-9]+),([0-9]+)\): error (TS[0-9]+): (.*)$#\1-\2-\3-\4-\5#' | tr -cs '[:alnum:]' '-' | sed -E 's/^-+|-+$//g' | cut -c1-62)"
           STATE=success
           CONTEXT='journeys/jrn-001/fs-12/app-partner'
           DESCRIPTION='app-partner typecheck passed'
@@ -136,7 +136,7 @@ jobs:
           pnpm --dir apps/control-panel/runtime typecheck 2>&1 | tee /tmp/control-panel-typecheck.log
           EXIT_CODE=${PIPESTATUS[0]}
           RAW="$(grep -m1 -E 'error TS[0-9]+:' /tmp/control-panel-typecheck.log || true)"
-          DETAIL="$(printf '%s' "${RAW:-typecheck-failed}" | tr -cs '[:alnum:]' '-' | sed -E 's/^-+|-+$//g' | cut -c1-51)"
+          DETAIL="$(printf '%s' "${RAW:-typecheck-failed}" | sed -E 's#^.*/([^/]+)\(([0-9]+),([0-9]+)\): error (TS[0-9]+): (.*)$#\1-\2-\3-\4-\5#' | tr -cs '[:alnum:]' '-' | sed -E 's/^-+|-+$//g' | cut -c1-60)"
           STATE=success
           CONTEXT='journeys/jrn-001/fs-12/control-panel'
           DESCRIPTION='control-panel typecheck passed'
