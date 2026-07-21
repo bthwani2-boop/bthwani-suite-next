@@ -34,6 +34,7 @@ assert.doesNotMatch(routes, /POST \/dsh\/captain\/dispatch\/assignments\/\{assig
 // JRN-014: operator assignment starts only from ready_for_pickup and creates
 // assignment + delivery atomically. Workforce options are loaded through a
 // dedicated shared controller, never by a surface API call or broad barrel.
+assert.match(routes, /POST \/dsh\/operator\/dispatch\/assignments", protected\.handleCreateDispatchAssignment/);
 assert.match(dispatch, /TransitionDispatchOrder[\s\S]*StatusReadyForPickup[\s\S]*StatusDriverAssigned/);
 assert.match(dispatch, /INSERT INTO dsh_assignments[\s\S]*INSERT INTO dsh_deliveries[\s\S]*tx\.Commit/);
 assert.match(partnerApi, /\/dsh\/partner\/order-workboard/);
