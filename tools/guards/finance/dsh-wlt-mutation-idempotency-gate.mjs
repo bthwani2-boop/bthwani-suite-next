@@ -63,7 +63,7 @@ for (const file of requiredFiles) {
 const tests = read('services/dsh/backend/internal/wlt/mutation_headers_test.go');
 for (const invariant of [
   'TestRequiredMutationHeadersRejectMissingValues',
-  'TestNotifyDeliveryCompletedAddsDeterministicHeaders',
+  'TestNotifyDeliveryCollectionAddsDeterministicHeaders',
   'TestActorFinanceMutationRejectsMissingCorrelation',
   'TestSettlementMutationAddsRequiredHeaders',
   'TestPromotionFundingRejectsMissingTenantBeforeNetwork',
