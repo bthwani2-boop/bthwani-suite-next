@@ -159,7 +159,7 @@ function IdentityAccessPanel({
               value={code}
               onChangeText={setCode}
               placeholder="رمز التفعيل من 6 أرقام"
-              keyboardType="number-pad"
+              keyboardType="numeric"
               maxLength={6}
             />
             <Button
