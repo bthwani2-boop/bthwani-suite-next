@@ -8,6 +8,7 @@ import {
 } from './GovernedPartnerOrdersScreen';
 import type { PartnerOrdersHomeScreenState } from './OrdersInboxScreen';
 import { PartnerFulfillmentActionsPanel } from './PartnerFulfillmentActionsPanel';
+import { PreparationEstimateRevisionPanel } from './PreparationEstimateRevisionPanel';
 import {
   resolvePartnerOrderMutation,
   usePartnerOrderCommands,
@@ -25,10 +26,6 @@ export type OperationalOrdersInboxScreenProps = {
   readonly onNavigateAction: (actionId: OrderHubAction, orderId: string) => void;
 };
 
-/**
- * Operational wrapper for the server-authoritative partner command center.
- * Every mutation is checked against allowedActions and followed by a fresh read.
- */
 export function OperationalOrdersInboxScreen({
   state,
   items,
@@ -40,16 +37,22 @@ export function OperationalOrdersInboxScreen({
 }: OperationalOrdersInboxScreenProps) {
   const commands = usePartnerOrderCommands(onRetry);
   const [expandedFulfillmentOrderId, setExpandedFulfillmentOrderId] = React.useState<string | null>(null);
+  const [estimateOrderId, setEstimateOrderId] = React.useState<string | null>(null);
   const expandedFulfillmentOrder = React.useMemo(
     () => items.find((item) => item.id === expandedFulfillmentOrderId) ?? null,
     [expandedFulfillmentOrderId, items],
   );
+  const estimateOrder = React.useMemo(
+    () => items.find((item) => item.id === estimateOrderId) ?? null,
+    [estimateOrderId, items],
+  );
 
   React.useEffect(() => {
-    if (expandedFulfillmentOrderId && !expandedFulfillmentOrder) {
-      setExpandedFulfillmentOrderId(null);
+    if (expandedFulfillmentOrderId && !expandedFulfillmentOrder) setExpandedFulfillmentOrderId(null);
+    if (estimateOrderId && (!estimateOrder || !estimateOrder.allowedActions.includes('revise_estimate'))) {
+      setEstimateOrderId(null);
     }
-  }, [expandedFulfillmentOrder, expandedFulfillmentOrderId]);
+  }, [expandedFulfillmentOrder, expandedFulfillmentOrderId, estimateOrder, estimateOrderId]);
 
   const handleOrderAction = React.useCallback((actionId: OrderHubAction, orderId: string) => {
     const item = items.find((candidate) => candidate.id === orderId);
@@ -58,16 +61,19 @@ export function OperationalOrdersInboxScreen({
       return;
     }
 
+    if (actionId === 'revise_estimate') {
+      if (item.allowedActions.includes('revise_estimate')) setEstimateOrderId(orderId);
+      else onNavigateAction('details', orderId);
+      return;
+    }
     if (actionId === 'reject') {
       onNavigateAction(item.allowedActions.includes('reject') ? 'reject' : 'details', orderId);
       return;
     }
-
     if (actionId === 'issue' && item.allowedActions.includes('reject')) {
       onNavigateAction('reject', orderId);
       return;
     }
-
     if (actionId === 'handoff') {
       if (!item.allowedActions.includes('handoff')) {
         onNavigateAction('details', orderId);
@@ -86,7 +92,6 @@ export function OperationalOrdersInboxScreen({
       void commands.execute(mutation, orderId);
       return;
     }
-
     onNavigateAction(actionId === 'delivering' || actionId === 'issue' ? actionId : 'details', orderId);
   }, [commands, items, onNavigateAction]);
 
@@ -103,6 +108,14 @@ export function OperationalOrdersInboxScreen({
         </Box>
       ) : null}
 
+      {estimateOrder ? (
+        <PreparationEstimateRevisionPanel
+          order={estimateOrder}
+          onClose={() => setEstimateOrderId(null)}
+          onUpdated={onRetry}
+        />
+      ) : null}
+
       {expandedFulfillmentOrder ? (
         <Box padding={4} gap={3} background="surfaceInset">
           <Box layoutDirection="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
@@ -110,13 +123,7 @@ export function OperationalOrdersInboxScreen({
               <Text role="bodyStrong">تنفيذ {expandedFulfillmentOrder.orderCode}</Text>
               <Text role="caption" tone="muted">{expandedFulfillmentOrder.orderTypeLabel}</Text>
             </Box>
-            <Button
-              label="إغلاق"
-              tone="ghost"
-              size="sm"
-              fullWidth={false}
-              onPress={() => setExpandedFulfillmentOrderId(null)}
-            />
+            <Button label="إغلاق" tone="ghost" size="sm" fullWidth={false} onPress={() => setExpandedFulfillmentOrderId(null)} />
           </Box>
           <PartnerFulfillmentActionsPanel
             orderId={expandedFulfillmentOrder.id}
