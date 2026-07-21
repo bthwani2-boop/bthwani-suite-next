@@ -18,7 +18,7 @@ for (const metric of ["dsh_partner_mutation_total", "dsh_partner_wlt_outbox_olde
 assert.match(repository, /correlation_id/);
 assert.match(repository, /idempotency_key/);
 assert.match(repository, /request_hash/);
-assert.match(outbox, /next_attempt_at|NextAttemptAt/);
+assert.match(outbox, /available_at|next_attempt_at|AvailableAt|NextAttemptAt/);
 assert.match(outbox, /dead_letter|DeadLetter/);
 assert.match(visible, /رقم الارتباط|correlation/i);
 assert.match(runbook, /VERSION_CONFLICT/);
