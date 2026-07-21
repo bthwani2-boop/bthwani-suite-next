@@ -17,6 +17,19 @@ export type DshCapabilityExtension = {
 
 export const DSH_CAPABILITY_MAP_EXTENSIONS = [
   {
+    id: "dsh.client.catalog",
+    status: "runtime-verified",
+    contractOperations: [
+      "listPartnerProductProposals",
+      "listFieldProductProposals",
+    ],
+    surfaces: ["app-partner", "app-field"],
+    runtimeBound: true,
+    closureState: "FIX_REQUIRED",
+    topic: "catalog",
+    topicScope: ["partner-proposal-readback", "field-proposal-readback"],
+  },
+  {
     id: "dsh.field.finance",
     status: "experience-fix-required",
     contractOperations: [
