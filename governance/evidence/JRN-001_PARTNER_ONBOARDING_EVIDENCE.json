@@ -8,6 +8,7 @@
   "decision": "READY_FOR_REVIEW",
   "evidenceBaseSha": "9348ee4734eff211c4d4ed4d94afde700712dfad",
   "finalRepairBaseSha": "d46271bcb229de552050a22afd318c235dbc572d",
+  "finalVisibleStateSha": "a7de56ca3306a25c4c6bca8d91fea3c442da5a1d",
   "sameCommitVerification": {
     "workflow": ".github/workflows/jrn-001-fs-18-evidence.yml",
     "requiredContexts": [
