@@ -1,6 +1,7 @@
 package orders
 
 import (
+	"encoding/json"
 	"slices"
 	"testing"
 )
@@ -18,6 +19,39 @@ func TestOrderCreateFingerprintIsStableAndRequestSpecific(t *testing.T) {
 	}
 	if len(first) != 64 {
 		t.Fatalf("expected SHA-256 hex fingerprint length 64, got %d", len(first))
+	}
+}
+
+func TestOrderTruthIdentifierValidationRejectsDatabaseCastErrors(t *testing.T) {
+	if !validOrderTruthID("8ba4e0d1-2f80-42b5-a88a-f8600cf2c4f5") {
+		t.Fatal("canonical UUID must be accepted")
+	}
+	for _, invalid := range []string{"", "not-a-uuid", "../other-order", "8ba4e0d1"} {
+		if validOrderTruthID(invalid) {
+			t.Fatalf("malformed order identifier %q must be rejected before SQL", invalid)
+		}
+	}
+}
+
+func TestOrderTruthRedactionProtectsPartnerAndOperatorEventMetadata(t *testing.T) {
+	for _, viewerRole := range []string{"partner", "operator"} {
+		truth := &OrderTruth{
+			ClientID:                "client-sensitive",
+			DeliveryAddressSnapshot: json.RawMessage(`{"formattedAddress":"private address"}`),
+			StatusTimeline: []OrderTruthEvent{{
+				Metadata: json.RawMessage(`{"phone":"+967700000000","providerTrace":"secret"}`),
+			}},
+		}
+		RedactOrderTruthForViewer(truth, viewerRole)
+		if truth.ClientID != "" {
+			t.Fatalf("%s response leaked client id", viewerRole)
+		}
+		if string(truth.DeliveryAddressSnapshot) != `{"redacted":true}` {
+			t.Fatalf("%s response leaked address snapshot: %s", viewerRole, truth.DeliveryAddressSnapshot)
+		}
+		if len(truth.StatusTimeline) != 1 || string(truth.StatusTimeline[0].Metadata) != `{}` {
+			t.Fatalf("%s response leaked event metadata: %#v", viewerRole, truth.StatusTimeline)
+		}
 	}
 }
 
