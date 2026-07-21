@@ -7,11 +7,9 @@ const wltClient = readFileSync("services/dsh/backend/internal/wlt/client.go", "u
 const routes = readFileSync("services/dsh/backend/internal/http/server.go", "utf8");
 const operatorScreen = readFileSync("services/dsh/frontend/control-panel/operations/CheckoutActivityScreen.tsx", "utf8");
 
-assert.match(checkoutHttp, /ModeBthwaniDelivery/);
-assert.match(checkoutHttp, /ModePartnerDelivery/);
-assert.match(checkoutHttp, /ModePickup/);
-assert.match(checkoutHttp, /MethodCOD/);
-assert.match(checkoutHttp, /MethodWallet/);
-assert.match(checkoutHttp, /MethodMixed/);
-assert.match(checkoutHttp, /MethodOfficialWallet/);
-assert.match(checkoutHttp, /DELIVERY_ADDRESS_REQUIRED/);
+assert.match(routes, /GET \/dsh\/operator\/checkout-intents/);
+assert.match(routes, /POST \/dsh\/operator\/checkout-intents\/\{intentId\}\/reconcile/);
+assert.match(operatorScreen, /reconciliationRequired/);
+assert.match(operatorScreen, /إعادة المصالحة/);
+assert.match(checkoutHttp, /OperationsPermissionManage/);
+assert.match(checkoutHttp, /reconciliationAgeSeconds/);

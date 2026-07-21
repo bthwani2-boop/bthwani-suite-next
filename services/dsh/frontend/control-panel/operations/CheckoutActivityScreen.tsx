@@ -14,6 +14,7 @@ const FULFILLMENT_LABELS: Record<DshFulfillmentMode, string> = {
 const STATE_LABELS: Record<DshIntentState, string> = {
   pending: "قيد الانتظار",
   wlt_handoff_failed: "فشل تحويل الدفع إلى WLT",
+  wlt_outcome_unknown: "نتيجة WLT غير معروفة",
   payment_pending: "في انتظار الدفع",
   payment_confirmed: "تم تأكيد الدفع",
   payment_failed: "فشل الدفع",
@@ -25,6 +26,7 @@ const STATE_LABELS: Record<DshIntentState, string> = {
 const STATE_STYLES: Record<DshIntentState, { readonly background: string; readonly color: string }> = {
   pending: { background: "color-mix(in srgb, CanvasText 8%, transparent)", color: "CanvasText" },
   wlt_handoff_failed: { background: "color-mix(in srgb, Mark 16%, transparent)", color: "CanvasText" },
+  wlt_outcome_unknown: { background: "color-mix(in srgb, Highlight 22%, transparent)", color: "CanvasText" },
   payment_pending: { background: "color-mix(in srgb, Highlight 16%, transparent)", color: "CanvasText" },
   payment_confirmed: { background: "color-mix(in srgb, ActiveText 16%, transparent)", color: "CanvasText" },
   payment_failed: { background: "color-mix(in srgb, Mark 16%, transparent)", color: "CanvasText" },
@@ -68,12 +70,13 @@ export function CheckoutActivityScreen() {
               <CpTableHeaderCell>طريقة الدفع</CpTableHeaderCell>
               <CpTableHeaderCell>مرجع WLT</CpTableHeaderCell>
               <CpTableHeaderCell>الحالة</CpTableHeaderCell>
+              <CpTableHeaderCell>المصالحة</CpTableHeaderCell>
               <CpTableHeaderCell>آخر تحديث</CpTableHeaderCell>
             </tr>
           </thead>
           <tbody>
             {controller.intents.map((intent) => (
-              <CheckoutIntentRow key={intent.id} intent={intent} />
+              <CheckoutIntentRow key={intent.id} intent={intent} onReconcile={controller.reconcile} />
             ))}
           </tbody>
         </CpTable>
@@ -82,7 +85,13 @@ export function CheckoutActivityScreen() {
   );
 }
 
-function CheckoutIntentRow({ intent }: { readonly intent: DshCheckoutIntent }) {
+function CheckoutIntentRow({
+  intent,
+  onReconcile,
+}: {
+  readonly intent: DshCheckoutIntent;
+  readonly onReconcile: (intentId: string) => Promise<void>;
+}) {
   return (
     <tr>
       <CpTableCell>{intent.clientId}</CpTableCell>
@@ -91,6 +100,13 @@ function CheckoutIntentRow({ intent }: { readonly intent: DshCheckoutIntent }) {
       <CpTableCell>{intent.paymentMethod}</CpTableCell>
       <CpTableCell>{intent.wltPaymentSessionId || "غير متوفر"}</CpTableCell>
       <CpTableCell><StatusBadge state={intent.state} /></CpTableCell>
+      <CpTableCell>
+        {intent.reconciliationRequired ? (
+          <button type="button" onClick={() => void onReconcile(intent.id)}>
+            إعادة المصالحة ({Math.max(0, intent.reconciliationAgeSeconds ?? 0)}ث)
+          </button>
+        ) : "لا يلزم"}
+      </CpTableCell>
       <CpTableCell>{new Date(intent.updatedAt).toLocaleString("ar-SA")}</CpTableCell>
     </tr>
   );

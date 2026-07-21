@@ -4,12 +4,27 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
 )
+
+var ErrPaymentSessionOutcomeUnknown = errors.New("WLT payment-session outcome is unknown")
+
+type PaymentSessionHTTPError struct {
+	StatusCode int
+}
+
+func (e PaymentSessionHTTPError) Error() string {
+	return fmt.Sprintf("WLT payment session returned HTTP %d", e.StatusCode)
+}
+
+func IsPaymentSessionOutcomeUnknown(err error) bool {
+	return errors.Is(err, ErrPaymentSessionOutcomeUnknown)
+}
 
 type Client struct {
 	baseURL      string
@@ -103,20 +118,23 @@ func (c *Client) CreatePaymentSession(ctx context.Context, input CreatePaymentSe
 
 	response, err := c.http.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("call WLT payment session: %w", err)
+		return nil, fmt.Errorf("%w: call WLT payment session: %v", ErrPaymentSessionOutcomeUnknown, err)
 	}
 	defer response.Body.Close()
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return nil, fmt.Errorf("WLT payment session returned HTTP %d", response.StatusCode)
+		if response.StatusCode == http.StatusRequestTimeout || response.StatusCode == http.StatusTooManyRequests || response.StatusCode >= 500 {
+			return nil, fmt.Errorf("%w: HTTP %d", ErrPaymentSessionOutcomeUnknown, response.StatusCode)
+		}
+		return nil, PaymentSessionHTTPError{StatusCode: response.StatusCode}
 	}
 	var envelope struct {
 		PaymentSession PaymentSession `json:"paymentSession"`
 	}
 	if err := json.NewDecoder(response.Body).Decode(&envelope); err != nil {
-		return nil, fmt.Errorf("decode WLT payment session response: %w", err)
+		return nil, fmt.Errorf("%w: decode WLT payment session response: %v", ErrPaymentSessionOutcomeUnknown, err)
 	}
 	if envelope.PaymentSession.ID == "" {
-		return nil, fmt.Errorf("WLT payment session response missing id")
+		return nil, fmt.Errorf("%w: WLT payment session response missing id", ErrPaymentSessionOutcomeUnknown)
 	}
 	return &envelope.PaymentSession, nil
 }

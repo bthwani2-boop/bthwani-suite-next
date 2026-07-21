@@ -28,14 +28,15 @@ const (
 type IntentState string
 
 const (
-	StatePending          IntentState = "pending"
-	StateWltHandoffFailed IntentState = "wlt_handoff_failed"
-	StatePaymentPending   IntentState = "payment_pending"
-	StateConfirmed        IntentState = "confirmed"
-	StateCancelled        IntentState = "cancelled"
-	StatePaymentConfirmed IntentState = "payment_confirmed"
-	StatePaymentFailed    IntentState = "payment_failed"
-	StateExpired          IntentState = "expired"
+	StatePending           IntentState = "pending"
+	StateWltHandoffFailed  IntentState = "wlt_handoff_failed"
+	StateWltOutcomeUnknown IntentState = "wlt_outcome_unknown"
+	StatePaymentPending    IntentState = "payment_pending"
+	StateConfirmed         IntentState = "confirmed"
+	StateCancelled         IntentState = "cancelled"
+	StatePaymentConfirmed  IntentState = "payment_confirmed"
+	StatePaymentFailed     IntentState = "payment_failed"
+	StateExpired           IntentState = "expired"
 )
 
 type FulfillmentMode string
@@ -126,7 +127,7 @@ func AttachWltPaymentSession(db *sql.DB, intentID, tenantID, clientID, paymentSe
 		UPDATE dsh_checkout_intents
 		SET state = $1, wlt_payment_session_id = $2, version = version + 1, updated_at = NOW()
 		WHERE id = $3::uuid AND tenant_id = $4 AND client_id = $5
-		  AND state IN ('pending', 'wlt_handoff_failed')
+		  AND state IN ('pending', 'wlt_handoff_failed', 'wlt_outcome_unknown')
 		RETURNING id, tenant_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
 		          state, payment_method, wlt_payment_session_id,
 		          delivery_address, note, version, created_at, updated_at`
@@ -134,6 +135,27 @@ func AttachWltPaymentSession(db *sql.DB, intentID, tenantID, clientID, paymentSe
 	intent, err := scanIntent(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("%w: intent not found, tenant mismatch, or not handoff-ready", ErrConflict)
+	}
+	return intent, err
+}
+
+func MarkWltOutcomeUnknown(db *sql.DB, intentID, tenantID, clientID string) (*Intent, error) {
+	tenantID = normalizeTenant(tenantID)
+	if intentID == "" || tenantID == "" || clientID == "" {
+		return nil, ErrInvalid
+	}
+	const q = `
+		UPDATE dsh_checkout_intents
+		SET state = $1, version = version + 1, updated_at = NOW()
+		WHERE id = $2::uuid AND tenant_id = $3 AND client_id = $4
+		  AND state IN ('pending', 'wlt_handoff_failed', 'wlt_outcome_unknown')
+		RETURNING id, tenant_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
+		          state, payment_method, wlt_payment_session_id,
+		          delivery_address, note, version, created_at, updated_at`
+	row := db.QueryRow(q, string(StateWltOutcomeUnknown), intentID, tenantID, clientID)
+	intent, err := scanIntent(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("%w: intent not found, tenant mismatch, or not handoff-reconcilable", ErrConflict)
 	}
 	return intent, err
 }
@@ -147,7 +169,7 @@ func MarkWltHandoffFailed(db *sql.DB, intentID, tenantID, clientID string) (*Int
 		UPDATE dsh_checkout_intents
 		SET state = $1, version = version + 1, updated_at = NOW()
 		WHERE id = $2::uuid AND tenant_id = $3 AND client_id = $4
-		  AND state IN ('pending', 'payment_pending')
+		  AND state IN ('pending', 'payment_pending', 'wlt_outcome_unknown')
 		RETURNING id, tenant_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
 		          state, payment_method, wlt_payment_session_id,
 		          delivery_address, note, version, created_at, updated_at`
@@ -193,7 +215,7 @@ func CancelIntent(db *sql.DB, intentID, tenantID, clientID string) (*Intent, err
 		UPDATE dsh_checkout_intents
 		SET state = $1, version = version + 1, updated_at = NOW()
 		WHERE id = $2::uuid AND tenant_id = $3 AND client_id = $4
-		  AND state IN ('pending', 'wlt_handoff_failed', 'payment_pending')
+		  AND state IN ('pending', 'wlt_handoff_failed', 'wlt_outcome_unknown', 'payment_pending')
 		RETURNING id, tenant_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
 		          state, payment_method, wlt_payment_session_id,
 		          delivery_address, note, version, created_at, updated_at`
@@ -288,6 +310,23 @@ func scanIntentRow(rows *sql.Rows, intent *Intent) error {
 	)
 }
 
+func GetIntentForOperator(db *sql.DB, intentID string) (*Intent, error) {
+	if strings.TrimSpace(intentID) == "" {
+		return nil, ErrInvalid
+	}
+	row := db.QueryRow(`
+		SELECT id, tenant_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
+		       state, payment_method, wlt_payment_session_id,
+		       delivery_address, note, version, created_at, updated_at
+		FROM dsh_checkout_intents
+		WHERE id = $1::uuid`, intentID)
+	intent, err := scanIntent(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	return intent, err
+}
+
 func GetIntentForService(db *sql.DB, tenantID, intentID string) (*Intent, error) {
 	tenantID = normalizeTenant(tenantID)
 	if tenantID == "" || intentID == "" {
@@ -308,23 +347,30 @@ func GetIntentForService(db *sql.DB, tenantID, intentID string) (*Intent, error)
 
 var ErrPaymentSessionMismatch = errors.New("wlt payment session id does not match checkout intent")
 
+func paymentEventTargetState(wltStatus string) (IntentState, bool, error) {
+	switch strings.TrimSpace(wltStatus) {
+	case "captured", "cod_collected":
+		return StatePaymentConfirmed, false, nil
+	case "failed":
+		return StatePaymentFailed, false, nil
+	case "expired":
+		return StateExpired, false, nil
+	case "authorized", "reference_created", "cod_pending":
+		return "", true, nil
+	default:
+		return "", false, fmt.Errorf("%w: unsupported wltStatus %q", ErrInvalid, wltStatus)
+	}
+}
+
 func ApplyWltPaymentEvent(db *sql.DB, tenantID, intentID, paymentSessionID, wltStatus string) (*Intent, error) {
 	tenantID = normalizeTenant(tenantID)
 	if tenantID == "" || intentID == "" || paymentSessionID == "" || wltStatus == "" {
 		return nil, ErrInvalid
 	}
 
-	var targetState IntentState
-	intermediate := false
-	switch wltStatus {
-	case "captured", "cod_collected":
-		targetState = StatePaymentConfirmed
-	case "failed", "expired":
-		targetState = StatePaymentFailed
-	case "authorized", "reference_created", "cod_pending":
-		intermediate = true
-	default:
-		return nil, fmt.Errorf("%w: unsupported wltStatus %q", ErrInvalid, wltStatus)
+	targetState, intermediate, err := paymentEventTargetState(wltStatus)
+	if err != nil {
+		return nil, err
 	}
 
 	tx, err := db.Begin()

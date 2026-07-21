@@ -3,6 +3,7 @@ export type DshPaymentMethod = "cod" | "wallet" | "mixed" | "official_wallet";
 export type DshIntentState =
   | "pending"
   | "wlt_handoff_failed"
+  | "wlt_outcome_unknown"
   | "payment_pending"
   | "confirmed"
   | "cancelled"
@@ -37,6 +38,8 @@ export type DshCheckoutIntent = {
   readonly version: number;
   readonly createdAt: string;
   readonly updatedAt: string;
+  readonly reconciliationRequired?: boolean;
+  readonly reconciliationAgeSeconds?: number;
 };
 
 export type DshCreateIntentInput = {

@@ -33,6 +33,14 @@ export async function cancelCheckoutIntent(intentId: string): Promise<DshCheckou
   return data.intent;
 }
 
+export async function reconcileOperatorCheckoutIntent(intentId: string): Promise<DshCheckoutIntent> {
+  const data = await request<{ intent: DshCheckoutIntent }>(
+    `/dsh/operator/checkout-intents/${encodeURIComponent(intentId)}/reconcile`,
+    { method: "POST" },
+  );
+  return data.intent;
+}
+
 export async function fetchOperatorCheckoutIntents(
   stateFilter?: string,
 ): Promise<readonly DshCheckoutIntent[]> {
