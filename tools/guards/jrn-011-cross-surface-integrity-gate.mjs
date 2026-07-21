@@ -38,11 +38,12 @@ const [
 ]);
 
 mustContain(api, [
-  '"/dsh/client/order-truth"',
+  "/dsh/client/order-truth",
   "idempotencyKey: context.idempotencyKey",
+  "correlationId: context.correlationId",
   "fetchClientOrderTruthDetail",
-  '"/dsh/partner/order-truth',
-  '"/dsh/operator/order-truth',
+  "/dsh/partner/order-truth",
+  "/dsh/operator/order-truth",
 ], "shared order-truth API");
 
 mustContain(controller, [
