@@ -1,0 +1,32 @@
+name: Temporary JRN-004 Source Snapshot
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [sambassam]
+    paths:
+      - ".github/workflows/tmp-jrn-004-source-snapshot.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Upload exact source files
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: jrn-004-source-snapshot
+          path: |
+            services/dsh/contracts/dsh.openapi.yaml
+            services/dsh/clients/generated/dsh-api.ts
+            services/dsh/backend/internal/http/protected_store.go
+            services/dsh/frontend/app-client/store/StoreDetailShell.tsx
+          retention-days: 1
+          if-no-files-found: error
