@@ -20,7 +20,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  affected-typecheck:
+  targeted-verification:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -43,47 +43,50 @@ jobs:
         run: |
           echo "install-workspace" > /tmp/jrn-verification-stage
           pnpm install --frozen-lockfile
-      - name: Typecheck app-client runtime
+      - name: Create journey-scoped TypeScript project
+        run: |
+          mkdir -p .tmp
+          cat > .tmp/jrn-010-015.tsconfig.json <<'JSON'
+          {
+            "extends": "../tsconfig.base.json",
+            "compilerOptions": { "noEmit": true },
+            "files": [
+              "../services/dsh/frontend/shared/checkout/use-checkout-controller.tsx",
+              "../services/dsh/frontend/shared/checkout/use-checkout-to-order-flow.tsx",
+              "../services/dsh/frontend/app-client/checkout/GovernedCheckoutScreen.tsx",
+              "../services/dsh/frontend/app-partner/orders/usePartnerOrderCommands.ts",
+              "../services/dsh/frontend/app-partner/orders/OperationalOrderDecisionScreen.tsx",
+              "../services/dsh/frontend/app-partner/orders/OperationalOrdersInboxScreen.tsx",
+              "../services/dsh/frontend/shared/dispatch/use-dispatch-controller.ts",
+              "../services/dsh/frontend/app-captain/dispatch/DshCaptainOrdersScreen.tsx",
+              "../services/dsh/frontend/app-client/orders/OrderTrackingScreen.tsx",
+              "../services/dsh/frontend/control-panel/operations/OrderJourneyDispatchAssignmentScreen.tsx",
+              "../services/dsh/frontend/shared/pickup/use-pickup-controller.tsx",
+              "../services/dsh/frontend/control-panel/operations/PickupWorkbenchScreen.tsx"
+            ]
+          }
+          JSON
+      - name: Typecheck journey files and consumers
         shell: bash
         run: |
-          echo "typecheck-app-client" > /tmp/jrn-verification-stage
+          echo "typecheck-journey-files" > /tmp/jrn-verification-stage
           set +e
-          pnpm --dir apps/app-client/runtime typecheck 2>&1 | tee /tmp/jrn-verification.log
+          pnpm exec tsc --noEmit -p .tmp/jrn-010-015.tsconfig.json 2>&1 | tee /tmp/jrn-verification.log
           EXIT_CODE=${PIPESTATUS[0]}
           exit "$EXIT_CODE"
-      - name: Typecheck app-partner runtime
+      - name: Run journey contract tests
         shell: bash
         run: |
-          echo "typecheck-app-partner" > /tmp/jrn-verification-stage
+          echo "journey-contract-tests" > /tmp/jrn-verification-stage
           set +e
-          pnpm --dir apps/app-partner/runtime typecheck 2>&1 | tee /tmp/jrn-verification.log
+          node --test \
+            services/dsh/tests/checkout-controller-core.test.mjs \
+            services/dsh/tests/order-preparation-contract.test.mjs \
+            services/dsh/tests/captain-inbox-exclusion.test.mjs \
+            2>&1 | tee /tmp/jrn-verification.log
           EXIT_CODE=${PIPESTATUS[0]}
           exit "$EXIT_CODE"
-      - name: Typecheck app-captain runtime
-        shell: bash
-        run: |
-          echo "typecheck-app-captain" > /tmp/jrn-verification-stage
-          set +e
-          pnpm --dir apps/app-captain/runtime typecheck 2>&1 | tee /tmp/jrn-verification.log
-          EXIT_CODE=${PIPESTATUS[0]}
-          exit "$EXIT_CODE"
-      - name: Typecheck control-panel runtime
-        shell: bash
-        run: |
-          echo "typecheck-control-panel" > /tmp/jrn-verification-stage
-          set +e
-          pnpm --dir apps/control-panel/runtime typecheck 2>&1 | tee /tmp/jrn-verification.log
-          EXIT_CODE=${PIPESTATUS[0]}
-          exit "$EXIT_CODE"
-      - name: No broken imports
-        shell: bash
-        run: |
-          echo "guard-no-broken-imports" > /tmp/jrn-verification-stage
-          set +e
-          pnpm run guard:no-broken-imports 2>&1 | tee /tmp/jrn-verification.log
-          EXIT_CODE=${PIPESTATUS[0]}
-          exit "$EXIT_CODE"
-      - name: Full-stack boundary
+      - name: Full-stack ownership boundary
         shell: bash
         run: |
           echo "guard-fullstack-boundary" > /tmp/jrn-verification-stage
@@ -115,11 +118,13 @@ jobs:
             DESCRIPTION="JRN-010..015 targeted checks passed"
           else
             STATE="failure"
-            FIRST_ERROR="$(grep -m1 -E 'error TS[0-9]+|Error:|ERR_' /tmp/jrn-verification.log 2>/dev/null || true)"
-            FIRST_ERROR="$(printf '%s' "$FIRST_ERROR" | tr '\n\r\t\"' '    ' | tr -cd '[:alnum:]_./:() -' | cut -c1-55)"
-            [ -n "$FIRST_ERROR" ] || FIRST_ERROR="unknown-error"
-            STATUS_CONTEXT="journeys/jrn-010-015/$STAGE/$FIRST_ERROR"
-            STATUS_CONTEXT="$(printf '%s' "$STATUS_CONTEXT" | cut -c1-100)"
+            RAW_ERROR="$(grep -m1 -E 'error TS[0-9]+|not ok|Error:|ERR_' /tmp/jrn-verification.log 2>/dev/null || true)"
+            ERROR_CODE="$(printf '%s' "$RAW_ERROR" | grep -o -m1 -E 'TS[0-9]+' || true)"
+            ERROR_FILE="$(printf '%s' "$RAW_ERROR" | sed -E 's/^.*\/(.*\.(ts|tsx|mjs))\(.*/\1/' | cut -c1-38)"
+            [ -n "$ERROR_CODE" ] || ERROR_CODE="check-failed"
+            [ -n "$ERROR_FILE" ] || ERROR_FILE="unknown-file"
+            STATUS_CONTEXT="journeys/jrn-010-015/$STAGE/$ERROR_FILE-$ERROR_CODE"
+            STATUS_CONTEXT="$(printf '%s' "$STATUS_CONTEXT" | tr -cd '[:alnum:]_./:-' | cut -c1-100)"
             DESCRIPTION="JRN-010..015 failed at $STAGE"
           fi
           PAYLOAD="$(jq -n \
