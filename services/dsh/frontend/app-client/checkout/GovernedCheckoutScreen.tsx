@@ -48,13 +48,13 @@ export function GovernedCheckoutScreen({
     ...(note ? { note } : {}),
     ...(couponCode.trim() ? { couponCode: couponCode.trim().toUpperCase() } : {}),
   };
-  const { state, cancel } = useCheckoutToOrderFlow(input);
+  const { state, cancel, retryOrder } = useCheckoutToOrderFlow(input);
 
   if (state.kind === "loading") {
     return <LoadingState title="جاري تثبيت العنوان والأسعار والتحقق من الكوبون…" />;
   }
   if (state.kind === "creating_order") {
-    return <LoadingState title="تمت الموافقة المالية، جاري إنشاء الطلب من snapshot ثابت…" />;
+    return <LoadingState title="تمت الموافقة المالية، جاري إنشاء الطلب وقراءة حقيقته من الخادم…" />;
   }
   if (state.kind === "blocked_payment_unavailable") {
     return (
@@ -72,11 +72,27 @@ export function GovernedCheckoutScreen({
       </View>
     );
   }
-  if (state.kind === "error" || state.kind === "order_error") {
+  if (state.kind === "error") {
     return (
       <View style={{ flex: 1 }}>
-        <TopBar title="تعذر إكمال الطلب" {...(onCancel ? { onBack: onCancel } : {})} />
-        <ScrollScreen><StateView title="فشلت العملية" description={state.message} tone="danger" actionLabel="العودة للسلة" {...(onCancel ? { onActionPress: onCancel } : {})} /></ScrollScreen>
+        <TopBar title="تعذر بدء الطلب" {...(onCancel ? { onBack: onCancel } : {})} />
+        <ScrollScreen><StateView title="فشل Checkout" description={state.message} tone="danger" actionLabel="العودة للسلة" {...(onCancel ? { onActionPress: onCancel } : {})} /></ScrollScreen>
+      </View>
+    );
+  }
+  if (state.kind === "order_error") {
+    return (
+      <View style={{ flex: 1 }}>
+        <TopBar title="تعذر تثبيت حقيقة الطلب" {...(onCancel ? { onBack: onCancel } : {})} />
+        <ScrollScreen>
+          <StateView
+            title="لم يكتمل readback"
+            description={`${state.message} ستستخدم إعادة المحاولة نفس مفتاح الإنشاء ولن تنشئ طلبًا مكررًا.`}
+            tone="danger"
+            actionLabel="إعادة محاولة آمنة"
+            onActionPress={retryOrder}
+          />
+        </ScrollScreen>
       </View>
     );
   }
@@ -113,10 +129,12 @@ export function GovernedCheckoutScreen({
         <TopBar title="تم إنشاء الطلب" />
         <ScrollScreen>
           <View style={{ gap: spacing[3] }}>
-            <StateView title="تم تثبيت الطلب ماليًا وتشغيليًا" description="أصبح snapshot العنوان والتسعير غير قابلين للتعديل، وتم تثبيت استرداد الكوبون داخل معاملة إنشاء الطلب." tone="success" />
+            <StateView title="تمت قراءة حقيقة الطلب من DSH" description="تم تثبيت snapshot العنوان والتسعير، والتحقق من رقم الطلب والإصدار والارتباط بعد الإنشاء." tone="success" />
             <Card padding={3} gap={2}>
-              <Text role="bodyStrong" align="start">رقم الطلب: {state.orderId}</Text>
+              <Text role="bodyStrong" align="start">رقم الطلب: {state.orderNumber}</Text>
               <KeyValueList items={[
+                { label: "المعرف التقني", value: state.orderId },
+                { label: "مرجع التتبع", value: state.correlationId },
                 { label: "عنوان التسليم", value: state.intent.deliveryAddress || "استلام ذاتي" },
                 { label: "إجمالي المنتجات", value: formatMinorUnits(state.intent.subtotalMinorUnits, state.intent.currency) },
                 { label: "رسوم التوصيل", value: formatMinorUnits(state.intent.deliveryFeeMinorUnits, state.intent.currency) },
