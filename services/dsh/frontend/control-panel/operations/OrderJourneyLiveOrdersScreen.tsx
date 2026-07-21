@@ -7,7 +7,6 @@ import {
   WebControlPanelDecisionRow,
   WebControlPanelKpiStrip,
   WebControlPanelQueue,
-  WebControlPanelRecommendation,
 } from '@bthwani/ui-kit/web';
 import styles from '../shared/control-panel-surface.module.css';
 import { FINANCIAL_CLOSURE_LABELS } from '../../shared/orders';
@@ -56,14 +55,6 @@ function modeLabel(mode: OperatorOrderWorkboardRow['fulfillmentMode']): string {
   if (mode === 'partner_delivery') return 'توصيل المتجر';
   if (mode === 'pickup') return 'استلام ذاتي';
   return 'توصيل بثواني';
-}
-
-function financialTone(status: OperatorOrderWorkboardRow['financialClosureStatus']): 'neutral' | 'success' | 'warning' | 'danger' | 'info' {
-  if (status === 'failed') return 'danger';
-  if (status === 'pending') return 'warning';
-  if (status === 'refund_requested') return 'info';
-  if (status === 'session_expired' || status === 'refund_completed' || status === 'no_action') return 'success';
-  return 'neutral';
 }
 
 export function OrderJourneyLiveOrdersScreen({
@@ -148,6 +139,7 @@ export function OrderJourneyLiveOrdersScreen({
               {...(order.fulfillmentMode === 'bthwani_delivery' && order.status === 'ready_for_pickup' && !order.captainId
                 ? {
                     primaryAction: {
+                      id: 'assign-captain',
                       label: 'إسناد كابتن',
                       onPress: () => router.push(buildOperationsHref('dispatch-capacity', { orderId: order.id, panel: 'dispatch' })),
                     },
@@ -158,15 +150,19 @@ export function OrderJourneyLiveOrdersScreen({
         </WebControlPanelQueue>
 
         <Box gap={3}>
-          <WebControlPanelRecommendation
-            title="القرار التشغيلي التالي"
-            description={unassigned > 0
-              ? 'ابدأ بإسناد الطلبات الجاهزة بلا كابتن، ثم راقب الإثبات والإغلاق المالي.'
-              : 'راقب الحالات النشطة والإثباتات والاستردادات دون إنشاء حقيقة محلية.'}
-            actionLabel="فتح الإسناد"
-            onAction={() => router.push(buildOperationsHref('dispatch-capacity', { subGroup: 'pending' }))}
-            tone={unassigned > 0 ? 'warning' : 'neutral'}
-          />
+          <Box gap={2}>
+            <Text role="label">القرار التشغيلي التالي</Text>
+            <Text role="bodySm" tone={unassigned > 0 ? 'warning' : 'muted'}>
+              {unassigned > 0
+                ? 'ابدأ بإسناد الطلبات الجاهزة بلا كابتن، ثم راقب الإثبات والإغلاق المالي.'
+                : 'راقب الحالات النشطة والإثباتات والاستردادات دون إنشاء حقيقة محلية.'}
+            </Text>
+            <Button
+              label="فتح الإسناد"
+              tone="secondary"
+              onPress={() => router.push(buildOperationsHref('dispatch-capacity', { subGroup: 'pending' }))}
+            />
+          </Box>
 
           {selected ? (
             <OrderJourneyOperatorIntervention order={selected} onChanged={workboard.refresh} />
@@ -180,7 +176,7 @@ export function OrderJourneyLiveOrdersScreen({
               <Badge label={selected.status} tone={resolveRuntimeOrderStatusTone(selected.status)} />
               <Text role="bodySm">الوضع: {modeLabel(selected.fulfillmentMode)}</Text>
               <Text role="bodySm">الإغلاق المالي: {FINANCIAL_CLOSURE_LABELS[selected.financialClosureStatus]}</Text>
-              <Text role="bodySm">معرف الدفع: {selected.wltPaymentRefId || 'غير متاح'}</Text>
+              <Text role="bodySm">مرجع الإغلاق المالي: {selected.financialClosureReference || 'غير متاح'}</Text>
               {selected.podMediaKey ? <Text role="bodySm">إثبات التسليم: {selected.podMediaKey}</Text> : null}
               {selected.deliveryFailureReason ? <Text role="bodySm" tone="danger">سبب التعثر: {selected.deliveryFailureReason}</Text> : null}
               <Button label="فتح التفاصيل" tone="secondary" onPress={() => router.push(buildOperationsHref('live-orders', { orderId: selected.id, panel: 'detail' }))} />
