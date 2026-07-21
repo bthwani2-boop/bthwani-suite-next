@@ -71,6 +71,19 @@ test("JRN-002 typechecks every identity-consuming runtime", async () => {
   }
 });
 
+test("JRN-002 owns permanent PostgreSQL and HTTP runtime proof", async () => {
+  const workflow = await read(".github/workflows/jrn-002-identity-runtime.yml");
+  assert.match(workflow, /postgres:16-alpine/);
+  assert.match(workflow, /core\/identity\/database\/migrations\/\*\.sql/);
+  assert.match(workflow, /\/auth\/login/);
+  assert.match(workflow, /\/auth\/session/);
+  assert.match(workflow, /\/auth\/sessions/);
+  assert.match(workflow, /\/auth\/refresh/);
+  assert.match(workflow, /\/auth\/logout/);
+  assert.match(workflow, /CORS_ORIGIN_FORBIDDEN/);
+  assert.match(workflow, /journeys\/jrn-002\/runtime-proof/);
+});
+
 test("JRN-002 removes stale declarations, temporary diagnostics, and unbound session artifacts", async () => {
   const [clientDeclaration, storeDeclaration, hookDeclaration, model] = await Promise.all([
     read("core/identity/clients/identity-client.d.ts"),
