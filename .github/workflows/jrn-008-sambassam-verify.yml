@@ -98,25 +98,34 @@ jobs:
         with:
           go-version-file: services/dsh/backend/go.mod
           cache-dependency-path: services/dsh/backend/go.sum
-      - name: Test catalog and HTTP packages
+      - name: Verify Go formatting and behavior
         shell: bash
         run: |
           set -o pipefail
           : >/tmp/jrn-008-go.log
           cd services/dsh/backend
-          gofmt -w internal/centralcatalog/catalog_governance.go internal/centralcatalog/catalog_pause_readback.go internal/centralcatalog/catalog_governance_test.go internal/http/catalog_governance_handlers.go internal/http/catalog_governance_routes_test.go internal/http/catalog_unified_routes.go
-          git diff -- internal/centralcatalog/catalog_governance.go internal/centralcatalog/catalog_pause_readback.go internal/centralcatalog/catalog_governance_test.go internal/http/catalog_governance_handlers.go internal/http/catalog_governance_routes_test.go internal/http/catalog_unified_routes.go | tee /tmp/jrn-008-gofmt.patch
+          files=(
+            internal/centralcatalog/catalog_governance.go
+            internal/centralcatalog/catalog_pause_readback.go
+            internal/centralcatalog/catalog_governance_test.go
+            internal/http/catalog_governance_handlers.go
+            internal/http/catalog_governance_routes_test.go
+            internal/http/catalog_unified_routes.go
+          )
+          unformatted="$(gofmt -l "${files[@]}")"
+          if [ -n "$unformatted" ]; then
+            printf 'UNFORMATTED_GO_FILES\n%s\n' "$unformatted" | tee -a /tmp/jrn-008-go.log
+            exit 1
+          fi
           go test ./internal/centralcatalog ./internal/http -count=1 2>&1 | tee -a /tmp/jrn-008-go.log
       - name: Upload Go evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: jrn-008-go-evidence
-          path: |
-            /tmp/jrn-008-go.log
-            /tmp/jrn-008-gofmt.patch
+          path: /tmp/jrn-008-go.log
           retention-days: 5
-          if-no-files-found: warn
+          if-no-files-found: error
 
   typescript-surfaces:
     name: JRN-008 control partner field TypeScript
