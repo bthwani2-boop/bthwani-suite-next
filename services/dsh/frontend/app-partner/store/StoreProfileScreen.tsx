@@ -23,7 +23,7 @@ import { resolveDshStoreClientVisibility } from '../../shared/partner/dsh-client
 import {
   fetchPartnerStoreSettings,
   updatePartnerStoreSettings,
-} from '../../shared/partner/partner.api';
+} from '../../shared/partner';
 
 export type StoreProfileScreenProps = {
   storeName: string;
