@@ -13,6 +13,11 @@ var (
 	ErrSelfApproval     = errors.New("maker and checker must be different actors")
 )
 
+const (
+	RoleChangeAssign = "staff_role_assignment"
+	RoleChangeRevoke = "staff_role_revocation"
+)
+
 type RoleAssignmentApproval struct {
 	ID            string     `json:"id"`
 	ActionType    string     `json:"actionType"`
@@ -38,11 +43,35 @@ func RequestStaffRoleAssignment(
 	requestedBy string,
 	reason string,
 ) (RoleAssignmentApproval, error) {
+	return requestStaffRoleChange(ctx, db, RoleChangeAssign, targetActorID, roleID, requestedBy, reason)
+}
+
+func RequestStaffRoleRevocation(
+	ctx context.Context,
+	db *sql.DB,
+	targetActorID string,
+	roleID string,
+	requestedBy string,
+	reason string,
+) (RoleAssignmentApproval, error) {
+	return requestStaffRoleChange(ctx, db, RoleChangeRevoke, targetActorID, roleID, requestedBy, reason)
+}
+
+func requestStaffRoleChange(
+	ctx context.Context,
+	db *sql.DB,
+	actionType string,
+	targetActorID string,
+	roleID string,
+	requestedBy string,
+	reason string,
+) (RoleAssignmentApproval, error) {
 	targetActorID = strings.TrimSpace(targetActorID)
 	roleID = strings.TrimSpace(roleID)
 	requestedBy = strings.TrimSpace(requestedBy)
 	reason = strings.TrimSpace(reason)
-	if db == nil || targetActorID == "" || roleID == "" || requestedBy == "" || len(reason) < 5 {
+	if db == nil || targetActorID == "" || roleID == "" || requestedBy == "" || len(reason) < 5 ||
+		(actionType != RoleChangeAssign && actionType != RoleChangeRevoke) {
 		return RoleAssignmentApproval{}, ErrInvalid
 	}
 	if targetActorID == requestedBy {
@@ -59,25 +88,34 @@ func RequestStaffRoleAssignment(
 	err = tx.QueryRowContext(ctx, `
 		INSERT INTO dsh_admin_approval_requests
 			(action_type, target_actor_id, role_id, requested_by, reason)
-		SELECT 'staff_role_assignment', $1, r.id, $3, $4
+		SELECT $1, $2, r.id, $4, $5
 		FROM dsh_admin_roles r
-		WHERE r.id = $2
+		WHERE r.id = $3
+		  AND (
+		    ($1 = 'staff_role_assignment' AND NOT EXISTS (
+		      SELECT 1 FROM dsh_admin_staff_assignments a
+		      WHERE a.actor_id = $2 AND a.role_id = r.id
+		    ))
+		    OR
+		    ($1 = 'staff_role_revocation' AND EXISTS (
+		      SELECT 1 FROM dsh_admin_staff_assignments a
+		      WHERE a.actor_id = $2 AND a.role_id = r.id
+		    ))
+		  )
 		RETURNING id::TEXT, action_type, target_actor_id, role_id::TEXT,
 		          (SELECT name FROM dsh_admin_roles WHERE id = role_id),
 		          requested_by, reason, status, COALESCE(reviewed_by,''),
 		          COALESCE(review_note,''), version, created_at, updated_at, reviewed_at`,
-		targetActorID, roleID, requestedBy, reason).Scan(
+		actionType, targetActorID, roleID, requestedBy, reason).Scan(
 		&out.ID, &out.ActionType, &out.TargetActorID, &out.RoleID, &out.RoleName,
 		&out.RequestedBy, &out.Reason, &out.Status, &out.ReviewedBy,
 		&out.ReviewNote, &out.Version, &out.CreatedAt, &out.UpdatedAt, &out.ReviewedAt,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
-		return RoleAssignmentApproval{}, ErrNotFound
+		return RoleAssignmentApproval{}, ErrApprovalConflict
 	}
 	if err != nil {
-		// The partial unique index rejects duplicate pending requests.
-		if strings.Contains(strings.ToLower(err.Error()), "uq_dsh_admin_pending_role_assignment") ||
-			strings.Contains(strings.ToLower(err.Error()), "duplicate key") {
+		if strings.Contains(strings.ToLower(err.Error()), "duplicate key") {
 			return RoleAssignmentApproval{}, ErrApprovalConflict
 		}
 		return RoleAssignmentApproval{}, err
@@ -85,8 +123,9 @@ func RequestStaffRoleAssignment(
 
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO dsh_admin_audit (actor_id, action, target_id, detail)
-		VALUES ($1, 'staff_role_assignment_requested', $2, $3)`,
-		requestedBy, targetActorID, "role_id="+roleID+"; reason="+reason); err != nil {
+		VALUES ($1, $2, $3, $4)`,
+		requestedBy, actionType+"_requested", targetActorID,
+		"role_id="+roleID+"; reason="+reason); err != nil {
 		return RoleAssignmentApproval{}, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -102,10 +141,7 @@ func ListRoleAssignmentApprovals(
 	limit int,
 ) ([]RoleAssignmentApproval, error) {
 	status = strings.TrimSpace(status)
-	if db == nil {
-		return nil, ErrInvalid
-	}
-	if status != "" && status != "pending" && status != "approved" && status != "rejected" {
+	if db == nil || (status != "" && status != "pending" && status != "approved" && status != "rejected") {
 		return nil, ErrInvalid
 	}
 	if limit < 1 || limit > 200 {
@@ -154,10 +190,8 @@ func ReviewStaffRoleAssignment(
 	decision = strings.TrimSpace(decision)
 	reviewNote = strings.TrimSpace(reviewNote)
 	if db == nil || approvalID == "" || checkerActorID == "" || expectedVersion < 1 ||
-		(decision != "approved" && decision != "rejected") {
-		return RoleAssignmentApproval{}, nil, ErrInvalid
-	}
-	if decision == "rejected" && len(reviewNote) < 5 {
+		(decision != "approved" && decision != "rejected") ||
+		(decision == "rejected" && len(reviewNote) < 5) {
 		return RoleAssignmentApproval{}, nil, ErrInvalid
 	}
 
@@ -194,25 +228,43 @@ func ReviewStaffRoleAssignment(
 		return RoleAssignmentApproval{}, nil, ErrSelfApproval
 	}
 
-	var assignment *StaffMember
+	var affectedAssignment *StaffMember
 	if decision == "approved" {
 		var member StaffMember
-		err = tx.QueryRowContext(ctx, `
-			INSERT INTO dsh_admin_staff_assignments (actor_id, role_id, assigned_by)
-			VALUES ($1, $2, $3)
-			ON CONFLICT (actor_id, role_id) DO UPDATE
-			SET assigned_by = EXCLUDED.assigned_by, assigned_at = NOW()
-			RETURNING id::TEXT, actor_id, role_id::TEXT,
-			          (SELECT name FROM dsh_admin_roles WHERE id = role_id),
-			          COALESCE(assigned_by,''), assigned_at`,
-			current.TargetActorID, current.RoleID, checkerActorID).Scan(
-			&member.ID, &member.ActorID, &member.RoleID, &member.RoleName,
-			&member.AssignedBy, &member.AssignedAt,
-		)
+		switch current.ActionType {
+		case RoleChangeAssign:
+			err = tx.QueryRowContext(ctx, `
+				INSERT INTO dsh_admin_staff_assignments (actor_id, role_id, assigned_by)
+				VALUES ($1, $2, $3)
+				ON CONFLICT (actor_id, role_id) DO NOTHING
+				RETURNING id::TEXT, actor_id, role_id::TEXT,
+				          (SELECT name FROM dsh_admin_roles WHERE id = role_id),
+				          COALESCE(assigned_by,''), assigned_at`,
+				current.TargetActorID, current.RoleID, checkerActorID).Scan(
+				&member.ID, &member.ActorID, &member.RoleID, &member.RoleName,
+				&member.AssignedBy, &member.AssignedAt,
+			)
+		case RoleChangeRevoke:
+			err = tx.QueryRowContext(ctx, `
+				DELETE FROM dsh_admin_staff_assignments
+				WHERE actor_id = $1 AND role_id = $2
+				RETURNING id::TEXT, actor_id, role_id::TEXT,
+				          (SELECT name FROM dsh_admin_roles WHERE id = role_id),
+				          COALESCE(assigned_by,''), assigned_at`,
+				current.TargetActorID, current.RoleID).Scan(
+				&member.ID, &member.ActorID, &member.RoleID, &member.RoleName,
+				&member.AssignedBy, &member.AssignedAt,
+			)
+		default:
+			return RoleAssignmentApproval{}, nil, ErrInvalid
+		}
+		if errors.Is(err, sql.ErrNoRows) {
+			return RoleAssignmentApproval{}, nil, ErrApprovalConflict
+		}
 		if err != nil {
 			return RoleAssignmentApproval{}, nil, err
 		}
-		assignment = &member
+		affectedAssignment = &member
 	}
 
 	var reviewed RoleAssignmentApproval
@@ -240,12 +292,12 @@ func ReviewStaffRoleAssignment(
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO dsh_admin_audit (actor_id, action, target_id, detail)
 		VALUES ($1, $2, $3, $4)`,
-		checkerActorID, "staff_role_assignment_"+decision, current.TargetActorID,
+		checkerActorID, current.ActionType+"_"+decision, current.TargetActorID,
 		"approval_id="+approvalID+"; role_id="+current.RoleID+"; note="+reviewNote); err != nil {
 		return RoleAssignmentApproval{}, nil, err
 	}
 	if err := tx.Commit(); err != nil {
 		return RoleAssignmentApproval{}, nil, err
 	}
-	return reviewed, assignment, nil
+	return reviewed, affectedAssignment, nil
 }
