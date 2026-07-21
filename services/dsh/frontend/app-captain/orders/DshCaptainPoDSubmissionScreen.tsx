@@ -16,8 +16,12 @@ import {
   spacing,
 } from '@bthwani/ui-kit';
 import { DshOperationScreen } from '../DshOperationScreen';
-import { arriveCaptainReturnToStore, fetchCaptainDeliveryException } from '../../shared/dispatch/dispatch.api';
-import type { DshDeliveryException, DshDeliveryExceptionReasonCode } from '../../shared/dispatch/dispatch.types';
+import {
+  arriveCaptainReturnToStore,
+  fetchCaptainDeliveryException,
+  type DshDeliveryException,
+  type DshDeliveryExceptionReasonCode,
+} from '../../shared/dispatch';
 import type { CaptainDeliveryExceptionDraft } from '../../shared/delivery/use-captain-order-runtime';
 
 export type DshCaptainPoDSubmissionScreenProps = {
@@ -134,7 +138,7 @@ export function DshCaptainPoDSubmissionScreen({
     } finally {
       setArrivingReturn(false);
     }
-  }, [assignmentId, onBack]);
+  }, [assignmentId]);
 
   if (activeException) {
     const returnInProgress = activeException.resolutionAction === 'return_to_store' && !activeException.returnArrivedAt;
