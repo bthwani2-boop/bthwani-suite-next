@@ -45,14 +45,15 @@ test("JRN-007 scopes discovery to the persisted selected address", () => {
   assert.match(controller, /limit: 20,/);
 });
 
-test("JRN-008 retains one central catalog truth and no retired local routes", () => {
+test("JRN-008 retains one central catalog truth and governed surface routes", () => {
   const router = read("backend/internal/http/server.go");
   const unifiedRoutes = read("backend/internal/http/catalog_unified_routes.go");
   const migration = read("database/migrations/dsh-036_central_catalog_runtime_closure.sql");
 
   assert.match(router, /registerUnifiedCatalogRoutes\(mux, protected\)/);
   assert.match(unifiedRoutes, /GET \/dsh\/partner\/catalog\/taxonomy/);
-  assert.match(router, /GET \/dsh\/partner\/catalog\/master-products/);
+  assert.match(unifiedRoutes, /GET \/dsh\/operator\/catalog\/master-products/);
+  assert.match(unifiedRoutes, /GET \/dsh\/partner\/stores\/\{storeId\}\/assortment/);
   assert.match(migration, /DROP TABLE IF EXISTS dsh_catalog_products/);
   assert.match(migration, /DROP TABLE IF EXISTS dsh_catalog_categories/);
   assert.match(migration, /INSERT INTO dsh_master_products/);

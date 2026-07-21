@@ -13,7 +13,7 @@ import styles from '../shared/control-panel-surface.module.css';
 import { FINANCIAL_CLOSURE_LABELS } from '../../shared/orders';
 import { OrderTruthReadbackSummary } from '../../shared/order-truth';
 import { useOperatorOrderWorkboard } from '../../shared/operations/use-operator-order-workboard';
-import type { OperatorOrderWorkboardRow } from '../../shared/operations';
+import type { OperationsFocusParams, OperatorOrderWorkboardRow } from '../../shared/operations';
 import { resolveRuntimeOrderStatusTone } from '../shared/ControlPanelDshDecisionBoard';
 import { buildOperationsHref } from './operations.registry';
 import { OrderJourneyOperatorIntervention } from './OrderJourneyOperatorIntervention';
@@ -21,7 +21,7 @@ import { OrderJourneyOperatorIntervention } from './OrderJourneyOperatorInterven
 export type OrderJourneyLiveOrdersScreenProps = {
   hubHref: string;
   subGroup?: string;
-  focusParams?: { orderId?: string };
+  focusParams?: OperationsFocusParams;
 };
 
 function isCancelled(status: string): boolean {
@@ -115,7 +115,7 @@ export function OrderJourneyLiveOrdersScreen({
       <OrderTruthReadbackSummary
         actor="operator"
         title="حقيقة الطلبات السيادية"
-        status={subGroup === 'cancelled' ? 'cancelled_by_operator' : undefined}
+        {...(subGroup === 'cancelled' ? { status: 'cancelled_by_operator' } : {})}
         limit={10}
         onOpenOrder={setSelectedOrderId}
       />
@@ -148,9 +148,8 @@ export function OrderJourneyLiveOrdersScreen({
               {...(order.fulfillmentMode === 'bthwani_delivery' && order.status === 'ready_for_pickup' && !order.captainId
                 ? {
                     primaryAction: {
-                      id: `${order.id}-dispatch`,
                       label: 'إسناد كابتن',
-                      onAction: () => router.push(buildOperationsHref('dispatch-capacity', { orderId: order.id, subGroup: 'pending' })),
+                      onPress: () => router.push(buildOperationsHref('dispatch-capacity', { orderId: order.id, panel: 'dispatch' })),
                     },
                   }
                 : {})}
@@ -158,41 +157,36 @@ export function OrderJourneyLiveOrdersScreen({
           ))}
         </WebControlPanelQueue>
 
-        {selected ? (
-          <Box gap={3}>
-            <Box gap={2} padding={4} background="brandSurface" radiusToken="md">
-              <Text role="titleSm">الطلب {selected.id}</Text>
-              <Text role="bodySm">الحالة: {selected.status}</Text>
-              <Text role="bodySm">النمط: {modeLabel(selected.fulfillmentMode)}</Text>
-              <Text role="bodySm">الإجمالي: {selected.totalPrice.toLocaleString('ar-YE')} ر.ي</Text>
-              <Text role="bodySm">الكابتن: {selected.captainId ?? 'غير مسند'}</Text>
-              <Text role="bodySm">مرحلة التوصيل: {selected.captainLifecycleStatus ?? 'لم تبدأ'}</Text>
-              <Text role="bodySm">الإثبات: {selected.podMediaKey ?? 'لا يوجد'}</Text>
-              {selected.cancellationReasonCode ? (
-                <>
-                  <Text role="bodySm">سبب الإلغاء: {selected.cancellationReasonCode}</Text>
-                  <Text role="bodySm">فاعل الإلغاء: {selected.cancelledByRole ?? 'غير محدد'}</Text>
-                  {selected.cancellationNote ? <Text role="caption">{selected.cancellationNote}</Text> : null}
-                  <Badge
-                    label={FINANCIAL_CLOSURE_LABELS[selected.financialClosureStatus]}
-                    tone={financialTone(selected.financialClosureStatus)}
-                  />
-                  {selected.financialClosureReference ? <Text role="caption">المرجع المالي: {selected.financialClosureReference}</Text> : null}
-                  {selected.financialClosureFailure ? <Text role="bodySm" tone="danger">{selected.financialClosureFailure}</Text> : null}
-                </>
-              ) : null}
-              <Button label="إغلاق التفاصيل" tone="secondary" onPress={() => setSelectedOrderId(null)} />
-            </Box>
-            <OrderJourneyOperatorIntervention order={selected} onChanged={workboard.refresh} />
-          </Box>
-        ) : (
+        <Box gap={3}>
           <WebControlPanelRecommendation
-            title="حقيقة الطلب الموحدة"
-            reason="اختر طلبًا لعرض الطلب والإسناد والإلغاء وقرار WLT المالي دون استنتاج حقول غير موجودة."
-            confidence="high"
-            auditTag="ORDER_CANCELLATION_REFUND_WORKBOARD"
+            title="القرار التشغيلي التالي"
+            description={unassigned > 0
+              ? 'ابدأ بإسناد الطلبات الجاهزة بلا كابتن، ثم راقب الإثبات والإغلاق المالي.'
+              : 'راقب الحالات النشطة والإثباتات والاستردادات دون إنشاء حقيقة محلية.'}
+            actionLabel="فتح الإسناد"
+            onAction={() => router.push(buildOperationsHref('dispatch-capacity', { subGroup: 'pending' }))}
+            tone={unassigned > 0 ? 'warning' : 'neutral'}
           />
-        )}
+
+          {selected ? (
+            <OrderJourneyOperatorIntervention order={selected} onChanged={workboard.refresh} />
+          ) : (
+            <StateView stateId="empty" title="اختر طلبًا" description="اختر صفًا لعرض التدخلات المحكومة والنتيجة المالية." />
+          )}
+
+          {selected ? (
+            <Box gap={2}>
+              <Text role="label">ملخص القراءة الراجعة</Text>
+              <Badge label={selected.status} tone={resolveRuntimeOrderStatusTone(selected.status)} />
+              <Text role="bodySm">الوضع: {modeLabel(selected.fulfillmentMode)}</Text>
+              <Text role="bodySm">الإغلاق المالي: {FINANCIAL_CLOSURE_LABELS[selected.financialClosureStatus]}</Text>
+              <Text role="bodySm">معرف الدفع: {selected.wltPaymentRefId || 'غير متاح'}</Text>
+              {selected.podMediaKey ? <Text role="bodySm">إثبات التسليم: {selected.podMediaKey}</Text> : null}
+              {selected.deliveryFailureReason ? <Text role="bodySm" tone="danger">سبب التعثر: {selected.deliveryFailureReason}</Text> : null}
+              <Button label="فتح التفاصيل" tone="secondary" onPress={() => router.push(buildOperationsHref('live-orders', { orderId: selected.id, panel: 'detail' }))} />
+            </Box>
+          ) : null}
+        </Box>
       </div>
     </Box>
   );

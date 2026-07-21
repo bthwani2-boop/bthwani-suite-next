@@ -1,6 +1,14 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { createDshRawHttpClient } from "../_kernel/dsh-http-request";
-import type { DshRole, DshStaffMember, DshPartnerActivation, DshCaptainCredential, DshAdminAuditEntry } from "./administration.types";
+import type {
+  DshRole,
+  DshStaffMember,
+  DshPartnerActivation,
+  DshCaptainCredential,
+  DshAdminAuditEntry,
+  DshRoleAssignmentApproval,
+  DshRoleAssignmentApprovalStatus,
+} from "./administration.types";
 
 const { req } = createDshRawHttpClient(resolveDshApiBaseUrl(), "adm");
 
@@ -9,10 +17,23 @@ export const createRole = (body: { name: string; description?: string }) =>
   req<{ role: DshRole }>("/dsh/operator/admin/roles", { method: "POST", body: JSON.stringify(body) });
 
 export const fetchStaff = () => req<{ staff: DshStaffMember[] }>("/dsh/operator/admin/staff");
-export const assignStaffRole = (staffId: string, roleId: string) =>
-  req<{ assignment: DshStaffMember }>(`/dsh/operator/admin/staff/${staffId}/roles`, {
-    method: "POST", body: JSON.stringify({ roleId }),
+export const assignStaffRole = (staffId: string, roleId: string, reason: string) =>
+  req<{ approval: DshRoleAssignmentApproval }>(`/dsh/operator/admin/staff/${staffId}/roles`, {
+    method: "POST", body: JSON.stringify({ roleId, reason }),
   });
+
+export const fetchRoleAssignmentApprovals = (status: DshRoleAssignmentApprovalStatus | "" = "pending") =>
+  req<{ approvals: DshRoleAssignmentApproval[] }>(
+    `/dsh/operator/admin/approvals${status ? `?status=${status}` : ""}`,
+  );
+
+export const reviewRoleAssignmentApproval = (
+  approvalId: string,
+  body: { decision: "approved" | "rejected"; reviewNote: string; expectedVersion: number },
+) => req<{ approval: DshRoleAssignmentApproval; assignment: DshStaffMember | null }>(
+  `/dsh/operator/admin/approvals/${approvalId}/review`,
+  { method: "POST", body: JSON.stringify(body) },
+);
 
 export const fetchPartnerActivations = (status?: string) =>
   req<{ activations: DshPartnerActivation[] }>(`/dsh/operator/admin/partners${status ? `?status=${status}` : ""}`);
