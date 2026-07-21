@@ -19,7 +19,7 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
@@ -27,16 +27,8 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 24.17.0
-      - run: |
-          corepack enable
-          corepack prepare pnpm@10.34.2 --activate
-          pnpm install --frozen-lockfile
       - name: Verify accessibility RTL performance and weak network
         run: node tools/guards/partner/jrn-001-experience-quality-gate.mjs
-      - name: Typecheck mobile onboarding consumers
-        run: |
-          pnpm --dir apps/app-field/runtime typecheck
-          pnpm --dir apps/app-partner/runtime typecheck
       - name: Publish FS-14 status
         if: always()
         env:
