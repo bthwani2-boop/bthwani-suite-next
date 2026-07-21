@@ -27,6 +27,8 @@ func writeClientMapError(w http.ResponseWriter, err error) {
 		store.SendError(w, http.StatusBadRequest, "INVALID_MAP_REQUEST", "map request is invalid")
 	case errors.Is(err, mapproviders.ErrUncertain):
 		store.SendError(w, http.StatusUnprocessableEntity, "MAP_RESULT_UNCERTAIN", "map provider returned a result that could not be trusted")
+	case errors.Is(err, mapproviders.ErrTimeout):
+		store.SendError(w, http.StatusGatewayTimeout, "MAP_RUNTIME_TIMEOUT", "governed map runtime exceeded its timeout")
 	case errors.Is(err, mapproviders.ErrUnavailable):
 		store.SendError(w, http.StatusBadGateway, "MAP_RUNTIME_UNAVAILABLE", "governed map runtime is unavailable")
 	case errors.Is(err, servicearea.ErrVersionConflict):
@@ -84,6 +86,19 @@ func (s *protectedStoreServer) handleClientMapReverse(w http.ResponseWriter, r *
 		return
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"location": location})
+}
+
+func (s *protectedStoreServer) handleOperatorMapProviderHealth(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requirePermission(w, r, "control-panel", "platform.read", "operator"); !ok {
+		return
+	}
+	client := mapproviders.NewClient(os.Getenv("DSH_PROVIDERS_BASE_URL"))
+	health, err := client.Health(r.Context(), r.Header.Get("Authorization"))
+	if err != nil {
+		writeClientMapError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"mapProviderHealth": health})
 }
 
 func (s *protectedStoreServer) verifyMapLocation(r *http.Request, location mapproviders.Location) (verifiedMapLocation, error) {
