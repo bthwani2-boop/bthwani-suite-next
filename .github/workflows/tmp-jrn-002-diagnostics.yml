@@ -10,6 +10,7 @@ on:
       - "core/workforce/backend/internal/identityclient/**"
       - "services/dsh/frontend/shared/session/**"
       - "services/dsh/frontend/app-client/account/**"
+      - "apps/control-panel/runtime/tsconfig.json"
 
 permissions:
   contents: read
