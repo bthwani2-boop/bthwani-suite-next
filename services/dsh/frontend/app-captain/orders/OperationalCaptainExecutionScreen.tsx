@@ -42,13 +42,19 @@ export function OperationalCaptainExecutionScreen({
   const [locationState, setLocationState] = React.useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [locationMessage, setLocationMessage] = React.useState<string | null>(null);
   const handoffException = useStoreCaptainHandoffException('captain', onRefresh);
-  const handoffBlocked = handoffException.state.kind !== 'idle';
+  const handoffExceptionKind = handoffException.state.kind;
+  const cancelHandoffException = handoffException.cancel;
+  const handoffBlocked = handoffExceptionKind !== 'idle';
 
   React.useEffect(() => {
-    if (!handoffExceptionEnabled && handoffException.state.kind !== 'success') {
-      handoffException.cancel();
+    if (
+      !handoffExceptionEnabled
+      && handoffExceptionKind !== 'idle'
+      && handoffExceptionKind !== 'success'
+    ) {
+      cancelHandoffException();
     }
-  }, [handoffException, handoffExceptionEnabled]);
+  }, [cancelHandoffException, handoffExceptionEnabled, handoffExceptionKind]);
 
   const pushCurrentLocation = async () => {
     if (!assignmentId || !captainId) {
@@ -108,7 +114,7 @@ export function OperationalCaptainExecutionScreen({
           ) : null}
         </Surface>
 
-        {handoffException.state.kind === 'success' ? (
+        {handoffExceptionKind === 'success' ? (
           <StateView
             title="تم إيقاف الاستلام"
             description="سُجل استثناء العهدة في طابور العمليات. لا تؤكد الاستلام حتى تعالج العمليات البلاغ."
@@ -116,14 +122,14 @@ export function OperationalCaptainExecutionScreen({
           />
         ) : null}
 
-        {handoffException.state.kind !== 'idle' && handoffException.state.kind !== 'success' ? (
+        {handoffExceptionKind !== 'idle' && handoffExceptionKind !== 'success' ? (
           <StoreCaptainHandoffExceptionForm
             entityLabel={`الإسناد ${assignmentId}`}
             state={handoffException.state}
             onReasonCodeChange={handoffException.setReasonCode}
             onNoteChange={handoffException.setNote}
             onSubmit={handoffException.submit}
-            onCancel={handoffException.cancel}
+            onCancel={cancelHandoffException}
           />
         ) : null}
 
@@ -135,7 +141,7 @@ export function OperationalCaptainExecutionScreen({
               disabled={handoffBlocked}
               onPress={onConfirmPickup}
             />
-            {handoffExceptionEnabled && handoffException.state.kind === 'idle' ? (
+            {handoffExceptionEnabled && handoffExceptionKind === 'idle' ? (
               <Button
                 label="نقص أو عدم تطابق في الطرد"
                 tone="danger"
