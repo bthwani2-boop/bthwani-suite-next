@@ -4,9 +4,12 @@ on:
   push:
     branches: [sambassam]
     paths:
+      - core/identity/clients/use-identity-session.ts
+      - core/identity/clients/use-identity-session.d.ts
       - services/dsh/contracts/jrn-001-consistency-registry.json
       - services/dsh/frontend/shared/field-onboarding/**
       - services/dsh/frontend/shared/partner/**
+      - services/dsh/frontend/app-field/components/DshFieldActivationCard.tsx
       - services/dsh/frontend/app-field/components/DshFieldSurface.tsx
       - services/dsh/frontend/app-field/components/DshFieldRouteRenderer.tsx
       - services/dsh/frontend/app-field/onboarding/**
@@ -15,6 +18,7 @@ on:
       - services/dsh/frontend/app-partner/team/PartnerTeamManagementScreen.tsx
       - services/dsh/frontend/control-panel/partners/**
       - apps/control-panel/runtime/src/app/dsh/partners/**
+      - apps/control-panel/runtime/tsconfig.jrn-001.json
       - services/dsh/tests/tsconfig.jrn-001-*.json
       - tools/guards/partner/jrn-001-cross-surface-truth-gate.mjs
       - .github/workflows/jrn-001-fs-12-consistency.yml
@@ -142,7 +146,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          pnpm --dir apps/control-panel/runtime exec tsc --noEmit -p ../../../services/dsh/tests/tsconfig.jrn-001-control-panel.json 2>&1 | tee /tmp/control-panel-typecheck.log
+          pnpm --dir apps/control-panel/runtime exec tsc --noEmit -p tsconfig.jrn-001.json 2>&1 | tee /tmp/control-panel-typecheck.log
           EXIT_CODE=${PIPESTATUS[0]}
           RAW="$(grep -m1 -E 'error TS[0-9]+:' /tmp/control-panel-typecheck.log || true)"
           DETAIL="$(printf '%s' "${RAW:-typecheck-failed}" | sed -E 's#^.*/([^/]+)\(([0-9]+),([0-9]+)\): error (TS[0-9]+): (.*)$#\1-\2-\3-\4-\5#' | tr -cs '[:alnum:]' '-' | sed -E 's/^-+|-+$//g' | cut -c1-60)"
