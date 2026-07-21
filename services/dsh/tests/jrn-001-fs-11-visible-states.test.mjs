@@ -112,4 +112,17 @@ assert.match(detailScreen, /detail\.mutationState\.kind === "invalid_transition"
 assert.match(detailScreen, /title="القرار محجوب ببوابات الجاهزية"/);
 assert.match(detailScreen, /onClick=\{\(\) => setTab\("readiness"\)\}/);
 
-console.log("JRN-001 FS-11 canonical visible states and recovery actions verified");
+for (const temporaryWorkflow of [
+  ".github/workflows/jrn-001-fs-11-field-visible-state-repair.yml",
+  ".github/workflows/jrn-001-fs-11-field-controller-repair.yml",
+  ".github/workflows/jrn-001-fs-11-partner-visible-state-repair.yml",
+  ".github/workflows/jrn-001-fs-11-partner-hub-repair.yml",
+]) {
+  assert.equal(
+    fs.existsSync(temporaryWorkflow),
+    false,
+    `temporary FS-11 workflow must be removed: ${temporaryWorkflow}`,
+  );
+}
+
+console.log("JRN-001 FS-11 canonical visible states, recovery actions, and clean permanent gate verified");
