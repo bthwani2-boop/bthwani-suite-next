@@ -1,4 +1,4 @@
-name: JRN-001 FS-10 app-field error diagnostic
+name: JRN-001 FS-10 app-field property diagnostic
 
 on:
   push:
@@ -24,7 +24,7 @@ jobs:
           corepack enable
           corepack prepare pnpm@10.34.2 --activate
           pnpm install --frozen-lockfile
-      - name: Publish app-field TypeScript error block
+      - name: Publish compact app-field errors
         env:
           GH_TOKEN: ${{ github.token }}
           COMMIT_SHA: ${{ github.sha }}
@@ -34,23 +34,23 @@ jobs:
           set +e
           pnpm --dir apps/app-field/runtime typecheck 2>&1 | tee /tmp/diagnostic.log
           EXIT_CODE=${PIPESTATUS[0]}
-          FIRST_LINE="$(grep -n -m1 -E 'error TS[0-9]+' /tmp/diagnostic.log | cut -d: -f1)"
           if [ "$EXIT_CODE" -eq 0 ]; then
             jq -n --arg state success --arg context 'j1/fs10/app-field/pass' --arg description 'app-field typecheck passed' --arg target_url "$TARGET_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/status.json
             curl --fail-with-body --silent --show-error -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "https://api.github.com/repos/${{ github.repository }}/statuses/$COMMIT_SHA" -d @/tmp/status.json
             exit 0
           fi
-          [ -n "$FIRST_LINE" ] || FIRST_LINE=1
-          END_LINE=$((FIRST_LINE + 12))
           INDEX=0
           while IFS= read -r LINE; do
             INDEX=$((INDEX + 1))
-            TOKEN="$(printf '%s' "$LINE" | tr '[:upper:]' '[:lower:]' | tr -cs '[:alnum:]_.-' '-' | sed 's/^-//;s/-$//' | cut -c1-72)"
-            [ -n "$TOKEN" ] || TOKEN=empty
+            LOCATION="$(printf '%s' "$LINE" | grep -o -E 'DshFieldOnboardingScreen\.tsx\([^)]*\)' | head -1)"
+            MESSAGE="$(printf '%s' "$LINE" | sed -E 's#^.*error TS[0-9]+:[[:space:]]*##')"
+            SHORT="${LOCATION:-field}-${MESSAGE}"
+            TOKEN="$(printf '%s' "$SHORT" | tr '[:upper:]' '[:lower:]' | tr -cs '[:alnum:]_.-' '-' | sed 's/^-//;s/-$//' | cut -c1-86)"
+            [ -n "$TOKEN" ] || TOKEN=unknown
             CONTEXT="j1/fs10/app-field-${INDEX}/${TOKEN}"
             CONTEXT="$(printf '%s' "$CONTEXT" | cut -c1-100)"
-            DESCRIPTION="$(printf '%s' "$LINE" | sed 's/^[[:space:]]*//' | cut -c1-120)"
+            DESCRIPTION="$(printf '%s' "$SHORT" | cut -c1-120)"
             jq -n --arg state failure --arg context "$CONTEXT" --arg description "$DESCRIPTION" --arg target_url "$TARGET_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/status.json
             curl --fail-with-body --silent --show-error -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "https://api.github.com/repos/${{ github.repository }}/statuses/$COMMIT_SHA" -d @/tmp/status.json
-          done < <(sed -n "${FIRST_LINE},${END_LINE}p" /tmp/diagnostic.log)
+          done < <(grep -E 'DshFieldOnboardingScreen\.tsx.*error TS[0-9]+' /tmp/diagnostic.log)
           exit 0
