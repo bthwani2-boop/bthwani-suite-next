@@ -1,6 +1,7 @@
 import type { CaptainSupportRoute, CompactOrderChatMessage, CaptainAvailabilityStatus, CaptainGpsStatus, CaptainAppMode, CaptainServiceType, CaptainAvailabilityMeta } from './captain.contract';
 import type { DshCaptainRoute, DshCaptainCommandTarget } from './captain.contract';
 import type { ActiveOrderPhase, StoreCourierStage } from './delivery.contract';
+import type { DshDeliveryStatus } from '../dispatch';
 import type { DshCaptainOrderBellItem, DshCaptainOrderDetailSummary } from '../orders';
 export type { ActiveOrderPhase, StoreCourierStage } from './delivery.contract';
 
@@ -15,6 +16,7 @@ export type DshCaptainSurfaceState = {
   inboxState: 'ready' | 'loading' | 'error' | 'empty' | 'delivered' | 'offer-accepting' | 'offer-accepted';
   activeAssignmentId: string;
   activeOrderId: string;
+  activeDeliveryStatus: DshDeliveryStatus | '';
   inboxItems: DshCaptainOrderBellItem[];
   selectedSupportScreen: CaptainSupportRoute;
   isPickupSheetVisible: boolean;
