@@ -6,8 +6,7 @@ on:
     paths:
       - governance/product/contracts/jrn-001-partner-onboarding-store-publication.product-truth.json
       - services/dsh/contracts/jrn-001-surface-registry.json
-      - services/dsh/frontend/app-client/home-discovery/**
-      - services/dsh/frontend/app-client/store/**
+      - services/dsh/frontend/app-client/**
       - services/dsh/frontend/app-field/**
       - services/dsh/frontend/app-partner/**
       - services/dsh/frontend/control-panel/partners/**
