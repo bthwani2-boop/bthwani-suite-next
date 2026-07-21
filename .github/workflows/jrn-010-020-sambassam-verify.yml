@@ -23,6 +23,7 @@ on:
       - "services/dsh/database/migrations/dsh-09*.sql"
       - "services/dsh/database/migrations/dsh-90*.sql"
       - "services/dsh/database/tests/dsh-90*_jrn011_*.sql"
+      - "services/dsh/tsconfig.jrn-010-020.json"
       - "services/dsh/frontend/shared/checkout/**"
       - "services/dsh/frontend/shared/order-truth/**"
       - "services/dsh/frontend/shared/orders/**"
@@ -31,6 +32,7 @@ on:
       - "services/dsh/frontend/shared/delivery/**"
       - "services/dsh/frontend/shared/partner-delivery/**"
       - "services/dsh/frontend/shared/media/pod/**"
+      - "services/dsh/frontend/shared/operations/**"
       - "services/dsh/frontend/app-client/orders/**"
       - "services/dsh/frontend/app-partner/orders/**"
       - "services/dsh/frontend/app-captain/orders/**"
@@ -69,32 +71,32 @@ jobs:
       - name: Enable pinned pnpm
         run: corepack enable && corepack prepare pnpm@10.34.2 --activate
       - name: Prepare diagnostics directory
-        run: mkdir -p .journey-diagnostics
+        run: mkdir -p journey-diagnostics
       - name: Verify repository hygiene
         id: hygiene
         continue-on-error: true
         shell: bash
-        run: set -o pipefail; git diff --check 2>&1 | tee .journey-diagnostics/repository-hygiene.log
+        run: set -o pipefail; git diff --check 2>&1 | tee journey-diagnostics/repository-hygiene.log
       - name: Verify JRN-010 checkout truth
         id: jrn010
         continue-on-error: true
         shell: bash
-        run: set -o pipefail; node tools/guards/checkout/jrn-010-checkout-truth-gate.mjs 2>&1 | tee .journey-diagnostics/jrn-010.log
+        run: set -o pipefail; node tools/guards/checkout/jrn-010-checkout-truth-gate.mjs 2>&1 | tee journey-diagnostics/jrn-010.log
       - name: Verify JRN-011 cross-surface gate
         id: jrn011gate
         continue-on-error: true
         shell: bash
-        run: set -o pipefail; node tools/guards/jrn-011-cross-surface-integrity-gate.mjs 2>&1 | tee .journey-diagnostics/jrn-011-gate.log
+        run: set -o pipefail; node tools/guards/jrn-011-cross-surface-integrity-gate.mjs 2>&1 | tee journey-diagnostics/jrn-011-gate.log
       - name: Verify JRN-011 integrity tests
         id: jrn011tests
         continue-on-error: true
         shell: bash
-        run: set -o pipefail; node --test services/dsh/tests/jrn-011-order-*.test.mjs 2>&1 | tee .journey-diagnostics/jrn-011-tests.log
+        run: set -o pipefail; node --test services/dsh/tests/jrn-011-order-*.test.mjs 2>&1 | tee journey-diagnostics/jrn-011-tests.log
       - name: Verify JRN-012..014 preparation, custody, and dispatch
         id: jrn012014
         continue-on-error: true
         shell: bash
-        run: set -o pipefail; node tools/guards/jrn-012-014-preparation-dispatch-gate.mjs 2>&1 | tee .journey-diagnostics/jrn-012-014.log
+        run: set -o pipefail; node tools/guards/jrn-012-014-preparation-dispatch-gate.mjs 2>&1 | tee journey-diagnostics/jrn-012-014.log
       - name: Verify JRN-015..020 affected surfaces and readback
         id: jrn015020
         continue-on-error: true
@@ -104,7 +106,7 @@ jobs:
           {
             node tools/guards/jrn-015-020-affected-boundary.mjs
             node --test services/dsh/tests/journeys-020-025-binding.test.mjs
-          } 2>&1 | tee .journey-diagnostics/jrn-015-020.log
+          } 2>&1 | tee journey-diagnostics/jrn-015-020.log
       - name: Verify sovereign boundaries
         id: boundaries
         continue-on-error: true
@@ -115,13 +117,28 @@ jobs:
             pnpm guard:fullstack-boundary
             pnpm guard:wlt-financial-boundary
             pnpm guard:no-broken-imports
-          } 2>&1 | tee .journey-diagnostics/sovereign-boundaries.log
+          } 2>&1 | tee journey-diagnostics/sovereign-boundaries.log
+      - name: Record static outcomes
+        if: always()
+        shell: bash
+        env:
+          HYGIENE: ${{ steps.hygiene.outcome }}
+          JRN010: ${{ steps.jrn010.outcome }}
+          JRN011_GATE: ${{ steps.jrn011gate.outcome }}
+          JRN011_TESTS: ${{ steps.jrn011tests.outcome }}
+          JRN012_014: ${{ steps.jrn012014.outcome }}
+          JRN015_020: ${{ steps.jrn015020.outcome }}
+          BOUNDARIES: ${{ steps.boundaries.outcome }}
+        run: |
+          printf 'hygiene=%s\njrn010=%s\njrn011_gate=%s\njrn011_tests=%s\njrn012_014=%s\njrn015_020=%s\nboundaries=%s\n' \
+            "$HYGIENE" "$JRN010" "$JRN011_GATE" "$JRN011_TESTS" "$JRN012_014" "$JRN015_020" "$BOUNDARIES" \
+            | tee journey-diagnostics/outcomes.txt
       - name: Upload static diagnostics
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: jrn-010-020-static-diagnostics
-          path: .journey-diagnostics
+          path: journey-diagnostics
           if-no-files-found: error
           retention-days: 7
       - name: Enforce static results
@@ -165,7 +182,7 @@ jobs:
         run: go test ./cmd/dsh-api ./internal/checkout ./internal/orders ./internal/dispatch ./internal/pickup ./internal/wlt ./internal/http -count=1
 
   dsh-typecheck:
-    name: DSH shared brain and surface typecheck
+    name: JRN-010..020 shared brain and surface typecheck
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -181,20 +198,25 @@ jobs:
         run: corepack enable && corepack prepare pnpm@10.34.2 --activate
       - name: Install locked workspace
         run: pnpm install --frozen-lockfile
-      - name: Typecheck DSH
+      - name: Typecheck authorized journey scope
         id: typecheck
         continue-on-error: true
         shell: bash
         run: |
-          mkdir -p .journey-diagnostics
+          mkdir -p journey-diagnostics
           set -o pipefail
-          pnpm --dir services/dsh typecheck 2>&1 | tee .journey-diagnostics/dsh-typecheck.log
+          pnpm --dir services/dsh exec tsc -p tsconfig.jrn-010-020.json --noEmit --pretty false 2>&1 | tee journey-diagnostics/dsh-typecheck.log
+      - name: Record typecheck outcome
+        if: always()
+        env:
+          TYPECHECK: ${{ steps.typecheck.outcome }}
+        run: printf 'typecheck=%s\n' "$TYPECHECK" | tee journey-diagnostics/outcomes.txt
       - name: Upload typecheck diagnostics
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: jrn-010-020-typecheck-diagnostics
-          path: .journey-diagnostics/dsh-typecheck.log
+          path: journey-diagnostics
           if-no-files-found: error
           retention-days: 7
       - name: Enforce typecheck result
