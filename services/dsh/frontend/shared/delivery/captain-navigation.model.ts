@@ -30,6 +30,9 @@ export function useCaptainNavigationModel({
     if (commandKey !== commandKeyRef.current) {
       commandKeyRef.current = commandKey;
       const nextRoute = getRouteForCommandTarget(command.target);
+      if (command.target === 'orderchat') {
+        setSelectedSupportScreen('chat-send');
+      }
       routeHistoryRef.current = [nextRoute];
       routeTransitionFromBackRef.current = false;
       setRoute(nextRoute);
@@ -43,7 +46,7 @@ export function useCaptainNavigationModel({
         routeHistoryRef.current.push(route);
       }
     }
-  }, [command.target, command.token, route, setRoute]);
+  }, [command.target, command.token, route, setRoute, setSelectedSupportScreen]);
 
   const goBack = React.useCallback(() => {
     if (routeHistoryRef.current.length > 1) {
