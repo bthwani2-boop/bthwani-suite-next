@@ -1,3 +1,6 @@
+export * from './dispatch-assignment.api';
+export * from './order-workboard.api';
+export * from './use-operator-order-workboard';
 export * from './dsh-operational-registry';
 export * from './dsh-operational-summary-adapter';
 export * from './dsh-operational.contract';
