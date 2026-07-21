@@ -10,6 +10,7 @@ import {
 import type { PartnerOrdersHomeScreenState } from './OrdersInboxScreen';
 import { PartnerFulfillmentActionsPanel } from './PartnerFulfillmentActionsPanel';
 import { PreparationEstimateRevisionPanel } from './PreparationEstimateRevisionPanel';
+import { PreparationIssuesPanel } from './PreparationIssuesPanel';
 import {
   resolvePartnerOrderMutation,
   usePartnerOrderCommands,
@@ -39,6 +40,7 @@ export function OperationalOrdersInboxScreen({
   const commands = usePartnerOrderCommands(onRetry);
   const [expandedFulfillmentOrderId, setExpandedFulfillmentOrderId] = React.useState<string | null>(null);
   const [estimateOrderId, setEstimateOrderId] = React.useState<string | null>(null);
+  const [issueOrderId, setIssueOrderId] = React.useState<string | null>(null);
   const expandedFulfillmentOrder = React.useMemo(
     () => items.find((item) => item.id === expandedFulfillmentOrderId) ?? null,
     [expandedFulfillmentOrderId, items],
@@ -47,13 +49,18 @@ export function OperationalOrdersInboxScreen({
     () => items.find((item) => item.id === estimateOrderId) ?? null,
     [estimateOrderId, items],
   );
+  const issueOrder = React.useMemo(
+    () => items.find((item) => item.id === issueOrderId) ?? null,
+    [issueOrderId, items],
+  );
 
   React.useEffect(() => {
     if (expandedFulfillmentOrderId && !expandedFulfillmentOrder) setExpandedFulfillmentOrderId(null);
     if (estimateOrderId && (!estimateOrder || !estimateOrder.allowedActions.includes('revise_estimate'))) {
       setEstimateOrderId(null);
     }
-  }, [expandedFulfillmentOrder, expandedFulfillmentOrderId, estimateOrder, estimateOrderId]);
+    if (issueOrderId && !issueOrder) setIssueOrderId(null);
+  }, [expandedFulfillmentOrder, expandedFulfillmentOrderId, estimateOrder, estimateOrderId, issueOrder, issueOrderId]);
 
   const handleOrderAction = React.useCallback((actionId: OrderHubAction, orderId: string) => {
     const item = items.find((candidate) => candidate.id === orderId);
@@ -62,6 +69,13 @@ export function OperationalOrdersInboxScreen({
       return;
     }
 
+    if (actionId === 'report_issue' || actionId === 'resolve_issue') {
+      const allowed = item.allowedActions.includes(actionId)
+        || (actionId === 'resolve_issue' && item.openPreparationIssueCount > 0);
+      if (allowed) setIssueOrderId(orderId);
+      else onNavigateAction('details', orderId);
+      return;
+    }
     if (actionId === 'revise_estimate') {
       if (item.allowedActions.includes('revise_estimate')) setEstimateOrderId(orderId);
       else onNavigateAction('details', orderId);
@@ -71,9 +85,15 @@ export function OperationalOrdersInboxScreen({
       onNavigateAction(item.allowedActions.includes('reject') ? 'reject' : 'details', orderId);
       return;
     }
-    if (actionId === 'issue' && item.allowedActions.includes('reject')) {
-      onNavigateAction('reject', orderId);
-      return;
+    if (actionId === 'issue') {
+      if (item.openPreparationIssueCount > 0 || item.allowedActions.includes('report_issue')) {
+        setIssueOrderId(orderId);
+        return;
+      }
+      if (item.allowedActions.includes('reject')) {
+        onNavigateAction('reject', orderId);
+        return;
+      }
     }
     if (actionId === 'handoff') {
       if (!item.allowedActions.includes('handoff')) {
@@ -128,6 +148,14 @@ export function OperationalOrdersInboxScreen({
         <Box paddingX={4} paddingY={2} background="successSurface">
           <Text role="bodySm" tone="success">تم تأكيد تسليم الطلب للكابتن. ينتظر النظام تأكيده الاستلام.</Text>
         </Box>
+      ) : null}
+
+      {issueOrder ? (
+        <PreparationIssuesPanel
+          order={issueOrder}
+          onClose={() => setIssueOrderId(null)}
+          onUpdated={onRetry}
+        />
       ) : null}
 
       {estimateOrder ? (
