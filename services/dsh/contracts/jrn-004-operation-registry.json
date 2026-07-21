@@ -1,0 +1,35 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-004",
+  "contractSources": [
+    "services/dsh/contracts/dsh.openapi.yaml",
+    "services/dsh/contracts/dsh.store-operational-context.overlay.yaml"
+  ],
+  "operations": [
+    {"method":"GET","path":"/dsh/stores","actor":"public","purpose":"paginated published store discovery","handler":"store.HandleListStores","readModel":"DshStoreListResponse"},
+    {"method":"GET","path":"/dsh/stores/{storeId}","actor":"public","purpose":"published store detail","handler":"store.HandleGetStore","readModel":"DshStoreDetail"},
+    {"method":"GET","path":"/dsh/store-context","actor":"partner|field|captain|operator","purpose":"actor-scoped operational context and latest action","handler":"protectedStoreServer.handleStoreContext","readModel":"GetDshStoreContextResponse"},
+    {"method":"GET","path":"/dsh/partner/stores/{storeId}/settings","actor":"partner","purpose":"read owned store settings","handler":"protectedStoreServer.handleGetPartnerSettings","readModel":"PartnerStoreSettings"},
+    {"method":"PATCH","path":"/dsh/partner/stores/{storeId}/settings","actor":"partner","purpose":"update owned store state and delivery modes","handler":"protectedStoreServer.handlePartnerSettings","mutation":"store.UpdatePartnerSettings"},
+    {"method":"POST","path":"/dsh/field/stores/{storeId}/verifications","actor":"field","purpose":"submit governed field verification","handler":"protectedStoreServer.handleFieldVerification","mutation":"store.SubmitFieldVerification"},
+    {"method":"POST","path":"/dsh/captain/stores/{storeId}/pickup-readiness","actor":"captain","purpose":"report governed pickup readiness","handler":"protectedStoreServer.handleCaptainReadiness","mutation":"store.ReportCaptainReadiness"},
+    {"method":"GET","path":"/dsh/operator/stores","actor":"operator:partners.read","purpose":"paginated operational store list","handler":"protectedStoreServer.handleOperatorStores","readModel":"DshStoreListResponse"},
+    {"method":"GET","path":"/dsh/operator/stores/{storeId}","actor":"operator:partners.read","purpose":"internal store detail","handler":"protectedStoreServer.handleOperatorStoreDetail","readModel":"OperatorStoreDetailResponse"},
+    {"method":"POST","path":"/dsh/operator/stores/{storeId}/governance","actor":"operator:partners.manage","purpose":"apply governed store decision","handler":"protectedStoreServer.handleOperatorGovernance","mutation":"store.GovernStore"},
+    {"method":"GET","path":"/dsh/operator/stores/{storeId}/audit","actor":"operator:partners.read","purpose":"read immutable store action audit","handler":"protectedStoreServer.handleStoreAudit","readModel":"StoreAuditEvent[]"},
+    {"method":"GET","path":"/dsh/operator/diagnostics/stores/{storeId}","actor":"operator:partners.read","purpose":"read canonical publication blockers","handler":"protectedStoreServer.handleGovernedOperatorStoreDiagnostics","readModel":"StorePublicationDiagnostics"},
+    {"method":"GET","path":"/dsh/partner/stores/{storeId}/courier-settings","actor":"partner","purpose":"read courier configuration","handler":"protectedStoreServer.handlePartnerGetCourierSettings"},
+    {"method":"PATCH","path":"/dsh/partner/stores/{storeId}/courier-settings","actor":"partner","purpose":"update courier configuration","handler":"protectedStoreServer.handlePartnerUpdateCourierSettings"},
+    {"method":"GET","path":"/dsh/partner/stores/{storeId}/coverage-zones","actor":"partner","purpose":"read governed coverage zones","handler":"protectedStoreServer.handlePartnerCoverageZones"}
+  ],
+  "mutationContract": {
+    "requiredHeaders": ["Authorization", "Idempotency-Key", "X-Correlation-ID"],
+    "requiredBodyFields": ["expectedVersion", "reason_or_notes"],
+    "successReadback": ["store", "audit", "replayed"],
+    "conflictStatus": 409
+  },
+  "fsDecision": {
+    "slices": ["FS-06", "FS-07", "FS-08"],
+    "result": "CLOSED_WITH_IMPLEMENTATION_EVIDENCE"
+  }
+}
