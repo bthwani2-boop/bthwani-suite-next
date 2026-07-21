@@ -6,14 +6,15 @@ const read = (path) => fs.readFileSync(new URL(`../${path}`, import.meta.url), "
 const readRepo = (path) => fs.readFileSync(new URL(`../../../${path}`, import.meta.url), "utf8");
 
 const routes = read("backend/internal/http/catalog_unified_routes.go");
-const core = read("backend/internal/centralcatalog/centralcatalog.go");
 const governance = read("backend/internal/centralcatalog/catalog_governance.go");
+const proposalTransition = read("backend/internal/centralcatalog/proposal_transition_atomic.go");
 const handlers = read("backend/internal/http/catalog_governance_handlers.go");
 const contract = read("contracts/dsh.catalog-governance.openapi.yaml");
-const catalogContract = read("contracts/dsh.catalog.openapi.yaml");
+const dshContract = read("contracts/dsh.openapi.yaml");
 const migration = read("database/migrations/dsh-930_jrn_008_catalog_slice_closure.sql");
 const pauseMigration = read("database/migrations/dsh-931_jrn_008_assortment_pause_restore.sql");
 const sharedApi = read("frontend/shared/catalog/catalog-governance.api.ts");
+const centralCatalogApi = read("frontend/shared/catalog/central-catalog.api.ts");
 const sharedTypes = read("frontend/shared/catalog/catalog-governance.types.ts");
 const operatorScreen = read("frontend/control-panel/catalogs/CatalogGovernanceScreen.tsx");
 const partnerScreen = read("frontend/app-partner/catalog/ProductOverridesScreen.tsx");
@@ -36,7 +37,7 @@ test("JRN-008 slice 01 owns domains, trees and category nodes", () => {
     "POST /dsh/operator/catalog/nodes",
     "PATCH /dsh/operator/catalog/nodes/{nodeId}",
   ], "taxonomy routes");
-  requireMarkers(dashboard, ["taxonomy", "شجرة التصنيفات", "controller.createDomain", "controller.createNode"], "taxonomy operator UI");
+  requireMarkers(dashboard, ["taxonomy", "CategoryControlRoom", "controller.createDomain", "controller.createNode"], "taxonomy operator UI");
 });
 
 test("JRN-008 slice 02 closes master products, units, attributes and alternatives", () => {
@@ -81,7 +82,13 @@ test("JRN-008 slice 04 closes proposal review, rejection and transitions", () =>
     "POST /dsh/operator/catalog/product-proposals/{proposalId}/decision",
     "POST /dsh/operator/catalog/product-proposals/{proposalId}/transition",
   ], "proposal governance routes");
-  requireMarkers(core, ["DecideProposal", "TransitionProductProposal"], "proposal state machine");
+  requireMarkers(proposalTransition, [
+    "TransitionProposalAtomicExpected",
+    "needs-fix",
+    "rejected",
+    "catalog-approved",
+    "client-visible",
+  ], "proposal state machine");
   requireMarkers(dashboard, ["handleProposalDecision", "handleProposalTransition", "needs-fix", "rejected"], "proposal review UI");
 });
 
@@ -131,7 +138,8 @@ test("JRN-008 slice 08 closes reels submission, review and public projection", (
     "GET /dsh/operator/reels",
     "POST /dsh/operator/reels/{reelId}/review",
   ], "reels protected routes");
-  requireMarkers(catalogContract, ["listPublicReels", "/dsh/public/reels"], "public reels contract");
+  requireMarkers(dshContract, ["listPublicReels", "/dsh/public/reels"], "public reels contract");
+  requireMarkers(centralCatalogApi, ["fetchPublicReels", "/dsh/public/reels"], "public reels shared adapter");
   requireMarkers(read("frontend/control-panel/catalogs/ReelsReviewPanel.tsx"), ["reviewReel", "approved", "rejected"], "reels review UI");
 });
 
@@ -152,7 +160,8 @@ test("JRN-008 slice 09 closes approvals, policies, seed diagnostics, audit and r
 });
 
 test("JRN-008 slice 10 publishes one client catalog and forbids parallel local catalogs", () => {
-  requireMarkers(catalogContract, ["getPublishedDshCatalog", "/dsh/client/stores/{storeId}/catalog"], "published client catalog");
+  requireMarkers(dshContract, ["getPublishedDshCatalog", "/dsh/stores/{storeId}/catalog"], "published client catalog contract");
+  requireMarkers(centralCatalogApi, ["fetchPublishedCentralCatalog", "/dsh/stores/${encodeURIComponent(storeId)}/catalog"], "published client catalog adapter");
   requireMarkers(read("database/migrations/dsh-036_central_catalog_runtime_closure.sql"), [
     "DROP TABLE IF EXISTS dsh_catalog_products",
     "DROP TABLE IF EXISTS dsh_catalog_categories",
