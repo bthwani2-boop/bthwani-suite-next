@@ -12,6 +12,7 @@ import {
   spacing,
 } from "@bthwani/ui-kit";
 import {
+  identityErrorPresentation,
   useIdentitySession,
   type ActivationActorType,
   type ActorIdentity,
@@ -31,6 +32,11 @@ function isActivationActorType(role: DshSurfaceRole): role is ActivationActorTyp
   return role === "client" || role === "partner" || role === "captain" || role === "field";
 }
 
+function errorCode(error: unknown): string {
+  if (error instanceof Error && error.message.trim()) return error.message.trim();
+  return "IDENTITY_UNAVAILABLE";
+}
+
 function IdentityAccessPanel({
   requiredRole,
   errorMessage,
@@ -47,6 +53,7 @@ function IdentityAccessPanel({
   const [code, setCode] = useState("");
   const [feedback, setFeedback] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const errorPresentation = errorMessage ? identityErrorPresentation(errorMessage) : null;
 
   const submitLogin = async () => {
     if (!username.trim() || !password) {
@@ -55,8 +62,13 @@ function IdentityAccessPanel({
     }
     setSubmitting(true);
     setFeedback("");
-    await login(username.trim(), password);
-    setSubmitting(false);
+    try {
+      await login(username.trim(), password);
+    } catch (error) {
+      setFeedback(identityErrorPresentation(errorCode(error)).description);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const issueOtp = async () => {
@@ -70,7 +82,7 @@ function IdentityAccessPanel({
       const issued = await requestOtp(requiredRole, phone.trim());
       setFeedback(`تم إصدار رمز تفعيل للرقم ${issued.maskedPhone}.`);
     } catch (error) {
-      setFeedback(error instanceof Error ? error.message : "تعذر إصدار رمز التفعيل.");
+      setFeedback(identityErrorPresentation(errorCode(error)).description);
     } finally {
       setSubmitting(false);
     }
@@ -83,8 +95,13 @@ function IdentityAccessPanel({
     }
     setSubmitting(true);
     setFeedback("");
-    await activate(requiredRole, phone.trim(), code.trim());
-    setSubmitting(false);
+    try {
+      await activate(requiredRole, phone.trim(), code.trim());
+    } catch (error) {
+      setFeedback(identityErrorPresentation(errorCode(error)).description);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -95,8 +112,11 @@ function IdentityAccessPanel({
           استخدم بيانات الحساب أو رمز التفعيل المخصص لهذا التطبيق.
         </Text>
 
-        {errorMessage ? (
-          <Text role="caption" style={styles.errorText}>{errorMessage}</Text>
+        {errorPresentation ? (
+          <View style={styles.errorPanel}>
+            <Text role="body" style={styles.errorText}>{errorPresentation.title}</Text>
+            <Text role="caption" style={styles.errorText}>{errorPresentation.description}</Text>
+          </View>
         ) : null}
 
         <View style={styles.modeRow}>
@@ -258,6 +278,9 @@ const styles = StyleSheet.create({
   },
   form: {
     gap: spacing[3],
+  },
+  errorPanel: {
+    gap: spacing[1],
   },
   errorText: {
     textAlign: "right",
