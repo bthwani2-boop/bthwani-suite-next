@@ -2447,6 +2447,31 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /dsh/partner/orders/{orderId}/dispatch-tracking:
+    get:
+      operationId: getDshPartnerDispatchTracking
+      summary: Partner reads reference-only bthwani_delivery captain assignment status.
+      description: >-
+        JRN-017: the partner never sees the captain's live location or proof
+        of delivery here — only lifecycle status, for orders it owns.
+      tags: [DshDispatch]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Reference status (assignment is null before dispatch).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartnerDispatchReferenceResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /dsh/control-panel/finance/settlements:
     get:
       operationId: listDshControlPanelFinanceSettlements
@@ -8488,6 +8513,32 @@ components:
       required: [assignment]
       properties:
         assignment: { $ref: "#/components/schemas/DshDispatchAssignment" }
+
+    DshPartnerDispatchReference:
+      type: object
+      required: [id, orderId, captainId, status, createdAt, updatedAt, deliveryStatus]
+      description: >-
+        JRN-017 partner-facing reference status only. Never includes the
+        captain's location or proof-of-delivery reference.
+      properties:
+        id: { type: string }
+        orderId: { type: string }
+        captainId: { type: string }
+        status: { $ref: "#/components/schemas/DshAssignmentStatus" }
+        acceptedAt: { type: ["string", "null"], format: date-time }
+        completedAt: { type: ["string", "null"], format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        deliveryStatus: { type: string }
+
+    DshPartnerDispatchReferenceResponse:
+      type: object
+      required: [assignment]
+      properties:
+        assignment:
+          oneOf:
+            - $ref: "#/components/schemas/DshPartnerDispatchReference"
+            - type: "null"
 
     DshDispatchAssignmentsResponse:
       type: object

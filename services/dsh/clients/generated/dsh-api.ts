@@ -1573,6 +1573,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dsh/partner/orders/{orderId}/dispatch-tracking": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Partner reads reference-only bthwani_delivery captain assignment status.
+         * @description JRN-017: the partner never sees the captain's live location or proof of delivery here — only lifecycle status, for orders it owns.
+         */
+        get: operations["getDshPartnerDispatchTracking"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/dsh/control-panel/finance/settlements": {
         parameters: {
             query?: never;
@@ -5170,6 +5190,25 @@ export interface components {
         };
         DshDispatchAssignmentResponse: {
             assignment: components["schemas"]["DshDispatchAssignment"];
+        };
+        /** @description JRN-017 partner-facing reference status only. Never includes the captain's location or proof-of-delivery reference. */
+        DshPartnerDispatchReference: {
+            id: string;
+            orderId: string;
+            captainId: string;
+            status: components["schemas"]["DshAssignmentStatus"];
+            /** Format: date-time */
+            acceptedAt?: string | null;
+            /** Format: date-time */
+            completedAt?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            deliveryStatus: string;
+        };
+        DshPartnerDispatchReferenceResponse: {
+            assignment: components["schemas"]["DshPartnerDispatchReference"] | null;
         };
         DshDispatchAssignmentsResponse: {
             assignments: components["schemas"]["DshDispatchAssignment"][];
@@ -9357,6 +9396,32 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getDshPartnerDispatchTracking: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reference status (assignment is null before dispatch). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerDispatchReferenceResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };
     };

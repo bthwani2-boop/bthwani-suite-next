@@ -39,7 +39,9 @@
       "Bash(gofmt -w ./internal/http/dispatch.go ./internal/dispatch/dispatch.go)",
       "Bash(DSH_REQUIRE_DB_TESTS=true go -C services/dsh/backend test ./internal/partnerdelivery/... -v)",
       "Bash(gofmt -l internal/http/dispatch.go internal/dispatch/dispatch.go)",
-      "Bash(gofmt -w internal/http/dispatch.go internal/dispatch/dispatch.go)"
+      "Bash(gofmt -w internal/http/dispatch.go internal/dispatch/dispatch.go)",
+      "Bash(node tools/guards/live-cross-journey-integrity-gate.mjs)",
+      "Bash(DSH_REQUIRE_DB_TESTS=true DATABASE_URL=\"postgres://bthwani_runtime:bthwani_runtime_password@127.0.0.1:55432/bthwani_runtime?sslmode=disable\" go test ./internal/partnerdelivery/... -v)"
     ],
     "additionalDirectories": [
       "C:\\Users\\bassa\\.claude\\plans"

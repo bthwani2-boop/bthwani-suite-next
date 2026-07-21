@@ -5,6 +5,7 @@ import type {
   DshDeliveryException,
   DshDeliveryStatus,
   DshDispatchAssignment,
+  DshPartnerDispatchReference,
   DshSubmitPoDInput,
   DshReportDeliveryExceptionInput,
 } from "./dispatch.types";
@@ -169,6 +170,13 @@ export async function acceptPartnerReturnToStore(orderId: string): Promise<DshDe
 export async function fetchClientOrderTracking(orderId: string): Promise<DshDispatchAssignment> {
   const data = await request<{ assignment: DshDispatchAssignment }>(
     `/dsh/client/orders/${encodeURIComponent(orderId)}/tracking`,
+  );
+  return data.assignment;
+}
+
+export async function fetchPartnerDispatchTracking(orderId: string): Promise<DshPartnerDispatchReference | null> {
+  const data = await request<{ assignment: DshPartnerDispatchReference | null }>(
+    `/dsh/partner/orders/${encodeURIComponent(orderId)}/dispatch-tracking`,
   );
   return data.assignment;
 }

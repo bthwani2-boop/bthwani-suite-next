@@ -12,6 +12,7 @@ export type DshSubmitPoDInput = components["schemas"]["DshSubmitPoDRequest"];
 export type DshDeliveryException = components["schemas"]["DshDeliveryException"];
 export type DshDeliveryExceptionReasonCode = components["schemas"]["DshDeliveryExceptionReasonCode"];
 export type DshReportDeliveryExceptionInput = components["schemas"]["DshReportDeliveryExceptionRequest"];
+export type DshPartnerDispatchReference = components["schemas"]["DshPartnerDispatchReference"];
 
 export type DshDispatchListState =
   | { readonly kind: "idle" }
