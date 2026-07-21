@@ -3,6 +3,8 @@
 DO $$
 DECLARE
     item_binding_definition TEXT;
+    customer_decision_definition TEXT;
+    alert_active_index_definition TEXT;
     forbidden_financial_columns INTEGER;
 BEGIN
     IF to_regclass('public.dsh_store_order_preparation_policies') IS NULL THEN
@@ -17,8 +19,14 @@ BEGIN
     IF to_regclass('public.dsh_order_preparation_issue_events') IS NULL THEN
         RAISE EXCEPTION 'missing dsh_order_preparation_issue_events';
     END IF;
+    IF to_regclass('public.dsh_order_preparation_alerts') IS NULL THEN
+        RAISE EXCEPTION 'missing dsh_order_preparation_alerts';
+    END IF;
     IF to_regclass('public.uq_dsh_order_preparation_open_issue') IS NULL THEN
         RAISE EXCEPTION 'missing unique open preparation issue index';
+    END IF;
+    IF to_regclass('public.uq_dsh_order_preparation_active_alert') IS NULL THEN
+        RAISE EXCEPTION 'missing unique active preparation alert index';
     END IF;
 
     SELECT pg_get_constraintdef(c.oid)
@@ -33,6 +41,30 @@ BEGIN
         RAISE EXCEPTION 'item-level preparation issue binding constraint is missing or malformed: %', item_binding_definition;
     END IF;
 
+    SELECT pg_get_constraintdef(c.oid)
+      INTO customer_decision_definition
+      FROM pg_constraint c
+      JOIN pg_class t ON t.oid = c.conrelid
+     WHERE t.relname = 'dsh_order_preparation_issues'
+       AND c.conname = 'dsh_order_preparation_issues_customer_decision_check';
+
+    IF customer_decision_definition IS NULL
+       OR customer_decision_definition NOT LIKE '%substitution_required%pending%approved%rejected%'
+       OR customer_decision_definition NOT LIKE '%not_required%' THEN
+        RAISE EXCEPTION 'customer substitution decision constraint is missing or malformed: %', customer_decision_definition;
+    END IF;
+
+    SELECT indexdef
+      INTO alert_active_index_definition
+      FROM pg_indexes
+     WHERE schemaname = 'public'
+       AND indexname = 'uq_dsh_order_preparation_active_alert';
+
+    IF alert_active_index_definition IS NULL
+       OR alert_active_index_definition NOT LIKE '%status%open%acknowledged%' THEN
+        RAISE EXCEPTION 'active preparation alert idempotency index is malformed: %', alert_active_index_definition;
+    END IF;
+
     IF NOT EXISTS (
         SELECT 1
           FROM information_schema.columns
@@ -43,15 +75,29 @@ BEGIN
         RAISE EXCEPTION 'dsh_orders.estimated_ready_at is missing';
     END IF;
 
+    IF NOT EXISTS (
+        SELECT 1
+          FROM information_schema.columns
+         WHERE table_schema = 'public'
+           AND table_name = 'dsh_order_preparation_issues'
+           AND column_name = 'customer_decision'
+    ) THEN
+        RAISE EXCEPTION 'preparation issue customer decision is missing';
+    END IF;
+
     SELECT COUNT(*)
       INTO forbidden_financial_columns
       FROM information_schema.columns
      WHERE table_schema = 'public'
-       AND table_name IN ('dsh_order_preparation_issues', 'dsh_order_preparation_issue_events')
+       AND table_name IN (
+           'dsh_order_preparation_issues',
+           'dsh_order_preparation_issue_events',
+           'dsh_order_preparation_alerts'
+       )
        AND column_name ~* '(wallet|ledger|balance|settlement|refund_amount|captured_amount)';
 
     IF forbidden_financial_columns <> 0 THEN
-        RAISE EXCEPTION 'DSH preparation issue tables contain WLT-owned financial truth';
+        RAISE EXCEPTION 'DSH preparation tables contain WLT-owned financial truth';
     END IF;
 
     IF NOT EXISTS (
@@ -63,6 +109,17 @@ BEGIN
            AND pg_get_constraintdef(c.oid) LIKE '%dsh_order_items%'
     ) THEN
         RAISE EXCEPTION 'preparation issues are not foreign-keyed to immutable order items';
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1
+          FROM pg_constraint c
+          JOIN pg_class t ON t.oid = c.conrelid
+         WHERE t.relname = 'dsh_order_preparation_alerts'
+           AND c.contype = 'f'
+           AND pg_get_constraintdef(c.oid) LIKE '%dsh_orders%'
+    ) THEN
+        RAISE EXCEPTION 'preparation alerts are not foreign-keyed to orders';
     END IF;
 END
 $$;
