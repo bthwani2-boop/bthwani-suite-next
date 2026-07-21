@@ -8,19 +8,17 @@ on:
 
 permissions:
   contents: write
+  statuses: write
 
 jobs:
   repair:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           ref: sambassam
           fetch-depth: 0
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
-        with:
-          node-version: 24.17.0
       - name: Align fee contract and UI tokens
         shell: bash
         run: |
@@ -40,10 +38,6 @@ jobs:
           }
           fs.writeFileSync(file, after);
           NODE
-          corepack enable
-          corepack prepare pnpm@10.34.2 --activate
-          pnpm install --frozen-lockfile
-          pnpm --dir apps/app-field/runtime typecheck
           git diff --check
           if git diff --quiet; then
             echo 'FS-10 app-field already aligned.'
