@@ -77,9 +77,14 @@ jobs:
         working-directory: services/dsh/backend
         shell: bash
         run: |
-          if ! go test ./internal/partner -count=1; then
-            printf 'go-partner' >/tmp/jrn001-failure
-            exit 1
+          set +e
+          go test ./internal/partner -count=1 2>&1 | tee /tmp/jrn001-go-partner.log
+          EXIT_CODE=${PIPESTATUS[0]}
+          if [ "$EXIT_CODE" -ne 0 ]; then
+            RAW="$(grep -m1 -E -- '--- FAIL:|undefined:|cannot use|not enough arguments|too many arguments|panic:|FAIL[[:space:]]' /tmp/jrn001-go-partner.log || true)"
+            DETAIL="$(printf '%s' "${RAW:-package-failed}" | tr -cs '[:alnum:]' '-' | sed -E 's/^-+|-+$//g' | cut -c1-58)"
+            printf 'go-partner-%s' "$DETAIL" >/tmp/jrn001-failure
+            exit "$EXIT_CODE"
           fi
       - name: Verify partner WLT outbox package
         working-directory: services/dsh/backend
