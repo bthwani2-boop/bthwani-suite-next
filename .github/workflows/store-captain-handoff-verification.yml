@@ -45,7 +45,6 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 24.17.0
-          cache: pnpm
 
       - name: Enable pinned pnpm
         shell: bash
@@ -53,6 +52,7 @@ jobs:
           set -euo pipefail
           corepack enable
           corepack prepare pnpm@10.34.2 --activate
+          pnpm --version
 
       - name: Install workspace dependencies
         shell: bash
