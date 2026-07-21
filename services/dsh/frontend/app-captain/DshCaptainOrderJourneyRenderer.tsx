@@ -1,5 +1,6 @@
 import React from 'react';
-import type { DshDeliveryStatus } from '../shared/dispatch';
+import { StateView } from '@bthwani/ui-kit';
+import type { DshAssignmentStatus, DshDeliveryStatus } from '../shared/dispatch';
 import type { DshCaptainRoute } from './dsh-captain.types';
 import {
   DshCaptainRouteRenderer,
@@ -9,14 +10,39 @@ import { OperationalCaptainExecutionScreen } from './orders/OperationalCaptainEx
 
 export type DshCaptainOrderJourneyRendererProps = DshCaptainRouteRendererProps & {
   readonly setRoute: (route: DshCaptainRoute) => void;
+  readonly activeAssignmentStatus: DshAssignmentStatus | '';
   readonly activeDeliveryStatus: DshDeliveryStatus | '';
 };
 
 export function DshCaptainOrderJourneyRenderer(
   props: DshCaptainOrderJourneyRendererProps,
 ): React.ReactElement {
+  if (props.route === 'detail' && props.activeAssignmentStatus === 'offered') {
+    return (
+      <StateView
+        title="العرض ينتظر قرارك"
+        description="لا يمكن بدء الاستلام أو التسليم قبل قبول عرض الإسناد من اللوحة أعلاه."
+        tone="warning"
+        actionLabel="العودة إلى صندوق الطلبات"
+        onActionPress={props.onGoToInbox}
+      />
+    );
+  }
+
   if (props.route !== 'map') {
     return <DshCaptainRouteRenderer {...props} />;
+  }
+
+  if (props.activeAssignmentStatus !== 'accepted') {
+    return (
+      <StateView
+        title="الخريطة التنفيذية غير متاحة"
+        description="يجب قبول عرض الإسناد قبل فتح مسار التنفيذ والموقع."
+        tone="warning"
+        actionLabel="فتح صندوق الطلبات"
+        onActionPress={props.onGoToInbox}
+      />
+    );
   }
 
   return (
