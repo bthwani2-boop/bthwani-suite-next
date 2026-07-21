@@ -17,6 +17,7 @@ import {
 import {
   CLIENT_CANCELLATION_REASONS,
   FINANCIAL_CLOSURE_LABELS,
+  PREPARATION_SLA_LABELS,
   useOrderCancellationController,
   type ClientCancellationReasonCode,
   type DshFinancialClosureStatus,
@@ -31,6 +32,7 @@ import {
 } from '../../shared/order-truth';
 import { DELIVERY_STATUS_LABELS } from '../../shared/dispatch';
 import type { DshPartnerDeliveryTaskStatus } from '../../shared/partner-delivery/partner-delivery.types';
+import { ClientPreparationDecisionPanel } from './ClientPreparationDecisionPanel';
 import { useClientOrderJourneyController } from './useClientOrderJourneyController';
 
 const PARTNER_DELIVERY_STATUS_LABELS: Readonly<Record<DshPartnerDeliveryTaskStatus, string>> = {
@@ -230,7 +232,7 @@ export function OrderTrackingScreen({ orderId, onBack }: Props) {
   const { state, reload } = useClientOrderJourneyController(orderId);
 
   if (state.kind === 'loading') {
-    return <StateView title="جارٍ تحميل رحلة الطلب" description="نقرأ حقيقة الطلب والتجهيز والتتبع من مصادر DSH المقيدة بالحساب." loading />;
+    return <StateView title="جارٍ تحميل رحلة الطلب" description="نقرأ حقيقة الطلب والتجهيز والمشكلات والتتبع من مصادر DSH المقيدة بالحساب." loading />;
   }
 
   if (state.kind === 'error') {
@@ -248,10 +250,21 @@ export function OrderTrackingScreen({ orderId, onBack }: Props) {
     );
   }
 
-  const { order, assignment, partnerDeliveryTask } = state;
+  const {
+    order,
+    preparation,
+    preparationIssues,
+    openPreparationIssueCount,
+    pendingCustomerDecisionCount,
+    assignment,
+    partnerDeliveryTask,
+  } = state;
   const summary = toOrderTruthSummary(order);
   const deliveryStatus = assignment?.delivery?.status;
   const accessibilityLabel = buildOrderTruthAccessibilityLabel(order);
+  const estimatedReadyLabel = preparation.estimatedReadyAt
+    ? new Date(preparation.estimatedReadyAt).toLocaleString('ar-YE')
+    : 'لم يحدد بعد';
 
   return (
     <View style={styles.root}>
@@ -272,6 +285,36 @@ export function OrderTrackingScreen({ orderId, onBack }: Props) {
         </Surface>
 
         <OrderTimeline order={order} />
+
+        <Surface tone="raised" gap={3}>
+          <Box layoutDirection="row" justify="space-between" align="center">
+            <Text role="titleSm">تجهيز الطلب</Text>
+            <Badge
+              label={PREPARATION_SLA_LABELS[preparation.preparationSlaState]}
+              tone={preparation.preparationSlaState === 'overdue' ? 'danger' : preparation.preparationSlaState === 'due_soon' ? 'warning' : 'info'}
+            />
+          </Box>
+          <View style={styles.detailRow}>
+            <Text role="bodySm" tone="muted">موعد الجاهزية المتوقع</Text>
+            <Text role="bodyStrong">{estimatedReadyLabel}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text role="bodySm" tone="muted">المشكلات المفتوحة</Text>
+            <Text role="bodyStrong">{openPreparationIssueCount}</Text>
+          </View>
+          {preparation.preparationDelayReason ? (
+            <Text role="bodySm" tone="warning">{`سبب تعديل الموعد: ${preparation.preparationDelayReason}`}</Text>
+          ) : null}
+        </Surface>
+
+        <ClientPreparationDecisionPanel
+          orderId={order.id}
+          orderItems={order.items}
+          issues={preparationIssues}
+          pendingCustomerDecisionCount={pendingCustomerDecisionCount}
+          onUpdated={reload}
+        />
+
         <ClientCancellationPanel orderId={order.id} allowedActions={order.allowedActions} onOrderChanged={reload} />
 
         <Surface tone="raised" gap={3}>
