@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: BThwani DSH Governed Client Map and Service Area API
-  version: 0.2.0
+  version: 0.3.0
   description: Map-provider results normalized through Providers and verified only against DSH-owned service-area geofences.
 x-bthwani-owner: services/dsh
 x-bthwani-contract-state: CONTRACT_ACTIVE
@@ -94,7 +94,7 @@ paths:
     get:
       operationId: listDshOperatorServiceAreas
       tags: [DshServiceAreaGovernance]
-      summary: List governed DSH service-area geofences.
+      summary: List governed DSH service-area geofences with computed coordinate bounds.
       security: [{ bearerAuth: [] }]
       responses:
         "200":
@@ -112,18 +112,38 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
 
   /dsh/operator/platform/service-areas/{serviceAreaCode}:
+    parameters:
+      - name: serviceAreaCode
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "^[a-z0-9][a-z0-9_-]{1,79}$"
+    get:
+      operationId: getDshOperatorServiceArea
+      tags: [DshServiceAreaGovernance]
+      summary: Read one governed service-area polygon, point count, bounds, state, and version.
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Service-area detail returned.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [serviceArea]
+                properties:
+                  serviceArea: { $ref: "#/components/schemas/DshServiceArea" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
     put:
       operationId: upsertDshOperatorServiceArea
       tags: [DshServiceAreaGovernance]
-      summary: Create or version-update a governed DSH service-area geofence.
+      summary: Create or version-update a governed simple, non-zero-area, non-self-intersecting DSH geofence.
       security: [{ bearerAuth: [] }]
       parameters:
-        - name: serviceAreaCode
-          in: path
-          required: true
-          schema:
-            type: string
-            pattern: "^[a-z0-9][a-z0-9_-]{1,79}$"
         - name: Idempotency-Key
           in: header
           required: true
@@ -184,13 +204,8 @@ components:
 
     DshVerifiedMapLocation:
       type: object
-      required:
-        - providerCode
-        - providerPlaceId
-        - displayName
-        - latitude
-        - longitude
-        - serviceAreaVerified
+      additionalProperties: false
+      required: [providerCode, providerPlaceId, displayName, latitude, longitude, serviceAreaVerified]
       properties:
         providerCode: { type: string, minLength: 1 }
         providerPlaceId: { type: string, minLength: 1 }
@@ -209,6 +224,7 @@ components:
 
     DshMapProviderHealthItem:
       type: object
+      additionalProperties: false
       required: [kind, status, checkedAt]
       properties:
         kind: { type: string, enum: [map, maps] }
@@ -218,6 +234,7 @@ components:
 
     DshMapProviderHealth:
       type: object
+      additionalProperties: false
       required: [configured, status, checkedAt, providers]
       properties:
         configured: { type: boolean }
@@ -235,9 +252,20 @@ components:
         - { type: number, format: double, minimum: -180, maximum: 180 }
         - { type: number, format: double, minimum: -90, maximum: 90 }
 
+    DshServiceAreaBounds:
+      type: object
+      additionalProperties: false
+      required: [minLongitude, minLatitude, maxLongitude, maxLatitude]
+      properties:
+        minLongitude: { type: number, format: double, minimum: -180, maximum: 180 }
+        minLatitude: { type: number, format: double, minimum: -90, maximum: 90 }
+        maxLongitude: { type: number, format: double, minimum: -180, maximum: 180 }
+        maxLatitude: { type: number, format: double, minimum: -90, maximum: 90 }
+
     DshServiceArea:
       type: object
-      required: [serviceAreaCode, displayName, polygon, active, priority, version, createdAt, updatedAt]
+      additionalProperties: false
+      required: [serviceAreaCode, displayName, polygon, pointCount, bounds, active, priority, version, createdAt, updatedAt]
       properties:
         serviceAreaCode: { type: string }
         displayName: { type: string }
@@ -245,7 +273,10 @@ components:
           type: array
           minItems: 3
           maxItems: 10000
+          description: Simple polygon with no adjacent duplicate points, no self-intersection, and non-zero signed area.
           items: { $ref: "#/components/schemas/DshPolygonPoint" }
+        pointCount: { type: integer, minimum: 3, maximum: 10000 }
+        bounds: { $ref: "#/components/schemas/DshServiceAreaBounds" }
         active: { type: boolean }
         priority: { type: integer, minimum: 0, maximum: 100000 }
         version: { type: integer, minimum: 1 }
@@ -262,6 +293,7 @@ components:
           type: array
           minItems: 3
           maxItems: 10000
+          description: Must be a simple polygon with no adjacent duplicate points, no self-intersection, and non-zero signed area.
           items: { $ref: "#/components/schemas/DshPolygonPoint" }
         active: { type: boolean }
         priority: { type: integer, minimum: 0, maximum: 100000 }
@@ -281,41 +313,28 @@ components:
   responses:
     InvalidRequest:
       description: Request validation failed.
-      content:
-        application/json:
-          schema: { $ref: "#/components/schemas/DshError" }
+      content: { application/json: { schema: { $ref: "#/components/schemas/DshError" } } }
     Unauthenticated:
       description: Authentication is required.
-      content:
-        application/json:
-          schema: { $ref: "#/components/schemas/DshError" }
+      content: { application/json: { schema: { $ref: "#/components/schemas/DshError" } } }
     Forbidden:
       description: Permission is required.
-      content:
-        application/json:
-          schema: { $ref: "#/components/schemas/DshError" }
+      content: { application/json: { schema: { $ref: "#/components/schemas/DshError" } } }
+    NotFound:
+      description: Service area was not found.
+      content: { application/json: { schema: { $ref: "#/components/schemas/DshError" } } }
     Conflict:
       description: Version or idempotency conflict.
-      content:
-        application/json:
-          schema: { $ref: "#/components/schemas/DshError" }
+      content: { application/json: { schema: { $ref: "#/components/schemas/DshError" } } }
     MapUncertain:
       description: Provider returned a malformed or incomplete result that DSH refused to trust.
-      content:
-        application/json:
-          schema: { $ref: "#/components/schemas/DshError" }
+      content: { application/json: { schema: { $ref: "#/components/schemas/DshError" } } }
     MapUnavailable:
       description: All configured governed map providers failed.
-      content:
-        application/json:
-          schema: { $ref: "#/components/schemas/DshError" }
+      content: { application/json: { schema: { $ref: "#/components/schemas/DshError" } } }
     MapNotConfigured:
       description: No governed map provider is configured.
-      content:
-        application/json:
-          schema: { $ref: "#/components/schemas/DshError" }
+      content: { application/json: { schema: { $ref: "#/components/schemas/DshError" } } }
     MapTimeout:
       description: Governed map-provider invocation exceeded its timeout.
-      content:
-        application/json:
-          schema: { $ref: "#/components/schemas/DshError" }
+      content: { application/json: { schema: { $ref: "#/components/schemas/DshError" } } }
