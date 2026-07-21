@@ -1,11 +1,17 @@
 import { useCallback, useEffect } from "react";
 import { useCheckoutController } from "./use-checkout-controller";
 import { useCreateOrderTruthController } from "../order-truth";
-import type { DshCheckoutIntent, DshCreateIntentInput } from "./checkout.types";
+import type {
+  DshCheckoutIntent,
+  DshCheckoutTerminalReason,
+  DshCreateIntentInput,
+} from "./checkout.types";
 
 export type CheckoutToOrderFlowState =
   | { readonly kind: "loading" }
   | { readonly kind: "payment_pending"; readonly intent: DshCheckoutIntent }
+  | { readonly kind: "reconciliation_pending"; readonly intent: DshCheckoutIntent }
+  | { readonly kind: "terminal"; readonly intent: DshCheckoutIntent; readonly reason: DshCheckoutTerminalReason }
   | { readonly kind: "blocked_payment_unavailable" }
   | { readonly kind: "out_of_area" }
   | { readonly kind: "error"; readonly message: string }
@@ -24,6 +30,7 @@ export function useCheckoutToOrderFlow(input: DshCreateIntentInput) {
   const order = useCreateOrderTruthController();
   const submitCheckout = checkout.submit;
   const cancelCheckout = checkout.cancel;
+  const reloadCheckout = checkout.reload;
   const submitOrder = order.submit;
   const resetOrder = order.reset;
 
@@ -48,6 +55,21 @@ export function useCheckoutToOrderFlow(input: DshCreateIntentInput) {
     ? checkout.state.intent.id
     : null;
 
+  const pendingIntentId = checkout.state.kind === "payment_pending" ||
+    checkout.state.kind === "reconciliation_pending"
+    ? checkout.state.intent.id
+    : null;
+  const reconciliationPending = checkout.state.kind === "reconciliation_pending";
+
+  useEffect(() => {
+    if (!pendingIntentId) return undefined;
+    const timer = setTimeout(
+      () => void reloadCheckout(pendingIntentId),
+      reconciliationPending ? 3_000 : 5_000,
+    );
+    return () => clearTimeout(timer);
+  }, [pendingIntentId, reconciliationPending, reloadCheckout]);
+
   useEffect(() => {
     if (checkoutIntentId && order.state.kind === "idle") {
       void submitOrder({ checkoutIntentId });
@@ -60,10 +82,14 @@ export function useCheckoutToOrderFlow(input: DshCreateIntentInput) {
     void submitOrder({ checkoutIntentId });
   }, [checkoutIntentId, resetOrder, submitOrder]);
 
-  const cancel = (intentId: string) => {
+  const cancel = useCallback((intentId: string) => {
     resetOrder();
     void cancelCheckout(intentId);
-  };
+  }, [cancelCheckout, resetOrder]);
+
+  const refresh = useCallback((intentId: string) => {
+    void reloadCheckout(intentId);
+  }, [reloadCheckout]);
 
   const state: CheckoutToOrderFlowState = (() => {
     if (
@@ -75,6 +101,12 @@ export function useCheckoutToOrderFlow(input: DshCreateIntentInput) {
     }
     if (checkout.state.kind === "payment_pending") {
       return { kind: "payment_pending", intent: checkout.state.intent };
+    }
+    if (checkout.state.kind === "reconciliation_pending") {
+      return { kind: "reconciliation_pending", intent: checkout.state.intent };
+    }
+    if (checkout.state.kind === "terminal") {
+      return { kind: "terminal", intent: checkout.state.intent, reason: checkout.state.reason };
     }
     if (checkout.state.kind === "blocked_payment_unavailable") {
       return { kind: "blocked_payment_unavailable" };
@@ -106,5 +138,5 @@ export function useCheckoutToOrderFlow(input: DshCreateIntentInput) {
     return { kind: "creating_order", intent };
   })();
 
-  return { state, cancel, retryOrder };
+  return { state, cancel, refresh, retryOrder };
 }
