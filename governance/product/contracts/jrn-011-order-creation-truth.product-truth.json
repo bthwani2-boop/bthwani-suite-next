@@ -1,0 +1,43 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-011",
+  "title": "إنشاء الطلب وحقيقة الطلب",
+  "status": "ACTIVE_CANONICAL",
+  "owner": "DSH",
+  "purpose": "إنشاء طلب واحد قابل للتدقيق من Checkout Intent صالح وتثبيت حقيقة تشغيلية غير قابلة لإعادة التسعير أو إعادة ربط العنوان بعد الإنشاء.",
+  "actors": ["client", "partner", "operator", "system"],
+  "requiredSurfaces": ["app-client", "app-partner", "control-panel"],
+  "excludedSurfaces": {
+    "app-captain": "لا يدخل قبل الإسناد في JRN-014.",
+    "app-field": "لا يملك دورًا في إنشاء الطلب أو حقيقة الطلب.",
+    "webapp": "لا يوجد checkout منشور لهذا السطح في الحالة الحالية.",
+    "website": "سطح تعريفي فقط."
+  },
+  "preconditions": [
+    "Checkout Intent مملوك لنفس tenant والعميل.",
+    "Checkout Intent في payment_confirmed، أو payment_pending عند COD فقط.",
+    "العربة فعالة وغير فارغة وكل عنصر يحمل snapshot سعر صالحًا.",
+    "العنوان وطريقة التنفيذ وقابلية الخدمة مثبتة في Checkout Intent.",
+    "معرف جلسة WLT موجود كمرجع معتم فقط ولا يمنح DSH ملكية الحقيقة المالية."
+  ],
+  "acceptanceCriteria": [
+    "ينتج Checkout Intent واحد طلبًا واحدًا فقط حتى مع إعادة المحاولة المتزامنة.",
+    "يحمل الطلب orderNumber فريدًا داخل tenant وcorrelationId ثابتًا وversion موجبًا.",
+    "تثبت عناصر الطلب والأسعار والعملة والعنوان وطريقة التنفيذ عند الإنشاء ولا يعاد اشتقاقها من كتالوج حي.",
+    "تعرض قراءات العميل والشريك والمشغل نفس status وstatusTimeline وallowedActions مع حجب الحقول غير المصرح بها.",
+    "تعرض حالة الدفع كإسقاط قراءة فقط ومصدرها WLT دون أي عملية مالية في DSH.",
+    "ينشأ حدث order.created وoutbox في المعاملة نفسها ويقبل retry والمصالحة.",
+    "تدعم الواجهات loading وempty وoffline وforbidden وconflict وpartial وretry دون Mock أو حقيقة محلية.",
+    "كل قراءة وكتابة معزولة بالـtenant وactor scope وتنتج أثر تدقيق قابل للربط."
+  ],
+  "negativeInvariants": [
+    "لا إنشاء من Checkout Intent ملغى أو منتهي أو غير مدفوع لوسيلة غير COD.",
+    "لا إنشاء طلبين لنفس Checkout Intent.",
+    "لا تعديل snapshot السعر أو العنوان أو العناصر بعد الإنشاء.",
+    "لا اشتقاق صلاحيات الأفعال داخل الواجهة من status فقط.",
+    "لا إظهار PII العنوان الكامل للشريك أو المشغل خارج الحقول التشغيلية اللازمة.",
+    "لا تنفيذ خصم أو استرداد أو تسوية أو تغيير رصيد داخل DSH."
+  ],
+  "evidenceRequired": ["static", "database", "contract", "backend", "runtime", "cross-surface", "security", "isolation", "qa", "governance", "ci"],
+  "decision": "FIX_REQUIRED"
+}
