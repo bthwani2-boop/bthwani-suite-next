@@ -66,15 +66,42 @@ test("JRN-007 scopes discovery to the persisted selected address", () => {
   assert.match(controller, /limit: 20,/);
 });
 
-test("JRN-008 retains one central catalog truth and governed surface routes", () => {
+test("JRN-008 retains one central catalog truth and governed proposal readback", () => {
   const router = read("backend/internal/http/server.go");
   const unifiedRoutes = read("backend/internal/http/catalog_unified_routes.go");
+  const readbackHandler = read("backend/internal/http/catalog_proposal_readback.go");
+  const readbackApi = read("frontend/shared/catalog/product-proposal-readback.api.ts");
+  const fieldController = read("frontend/shared/partner/use-field-catalog-controller.tsx");
+  const partnerScreen = read("frontend/app-partner/catalog/PartnerCatalogManagementScreen.tsx");
+  const readbackContract = read("contracts/dsh.catalog-proposal-readback.openapi.yaml");
+  const masterContract = read("../../contracts/master.openapi.yaml");
   const migration = read("database/migrations/dsh-036_central_catalog_runtime_closure.sql");
 
   assert.match(router, /registerUnifiedCatalogRoutes\(mux, protected\)/);
   assert.match(unifiedRoutes, /GET \/dsh\/partner\/catalog\/taxonomy/);
   assert.match(unifiedRoutes, /GET \/dsh\/operator\/catalog\/master-products/);
   assert.match(unifiedRoutes, /GET \/dsh\/partner\/stores\/\{storeId\}\/assortment/);
+  assert.match(unifiedRoutes, /GET \/dsh\/partner\/catalog\/product-proposals/);
+  assert.match(unifiedRoutes, /GET \/dsh\/field\/partners\/\{partnerId\}\/catalog\/product-proposals/);
+
+  assert.match(readbackHandler, /s\.partnerStore\(w, r\)/);
+  assert.match(readbackHandler, /s\.fieldPartnerStore\(w, r\)/);
+  assert.match(readbackHandler, /StoreID: storeID/);
+  assert.doesNotMatch(readbackHandler, /Query\(\)\.Get\("storeId"\)/);
+
+  assert.match(readbackApi, /fetchPartnerProductProposals/);
+  assert.match(readbackApi, /fetchFieldProductProposals/);
+  assert.match(readbackApi, /\/dsh\/partner\/catalog\/product-proposals/);
+  assert.match(readbackApi, /\/dsh\/field\/partners\/\$\{encodeURIComponent\(partnerId\)\}\/catalog\/product-proposals/);
+  assert.match(fieldController, /fetchFieldProductProposals\(partnerId/);
+  assert.match(fieldController, /setProposals\(proposalPage\.items\)/);
+  assert.match(partnerScreen, /fetchPartnerProductProposals/);
+  assert.match(partnerScreen, /اقتراحات المنتجات وحالة المراجعة/);
+
+  assert.match(readbackContract, /operationId: listPartnerProductProposals/);
+  assert.match(readbackContract, /operationId: listFieldProductProposals/);
+  assert.match(masterContract, /dshCatalogProposalReadback:/);
+
   assert.match(migration, /DROP TABLE IF EXISTS dsh_catalog_products/);
   assert.match(migration, /DROP TABLE IF EXISTS dsh_catalog_categories/);
   assert.match(migration, /INSERT INTO dsh_master_products/);
