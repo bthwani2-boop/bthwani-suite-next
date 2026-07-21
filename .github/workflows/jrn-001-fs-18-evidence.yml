@@ -14,6 +14,7 @@ on:
       - services/dsh/backend/internal/partner/**
       - services/dsh/backend/internal/partnerwltoutbox/**
       - services/dsh/backend/internal/store/**
+      - core/identity/backend/internal/identity/**
       - services/dsh/database/migrations/dsh-015_partner_lifecycle.sql
       - services/dsh/database/migrations/dsh-098_partner_onboarding_integrity.sql
       - services/dsh/frontend/shared/partner/**
@@ -50,8 +51,10 @@ jobs:
           node-version: 24.17.0
       - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5
         with:
-          go-version-file: services/dsh/backend/go.mod
-          cache-dependency-path: services/dsh/backend/go.sum
+          go-version: 1.26.5
+          cache-dependency-path: |
+            services/dsh/backend/go.sum
+            core/identity/backend/go.sum
       - name: Install locked workspace
         run: |
           corepack enable
@@ -80,7 +83,7 @@ jobs:
               exit 1
             fi
           done
-      - name: Verify partner and store backend packages
+      - name: Verify DSH partner and store packages
         working-directory: services/dsh/backend
         shell: bash
         run: |
@@ -99,6 +102,14 @@ jobs:
         run: |
           if ! go test ./internal/partnerwltoutbox -count=1; then
             printf 'go-partnerwltoutbox' >/tmp/jrn001-failure
+            exit 1
+          fi
+      - name: Verify Identity activation package
+        working-directory: core/identity/backend
+        shell: bash
+        run: |
+          if ! go test ./internal/identity -count=1; then
+            printf 'go-identity' >/tmp/jrn001-failure
             exit 1
           fi
       - name: Verify governed route registration
