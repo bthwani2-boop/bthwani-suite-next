@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -13,44 +14,55 @@ func HandleHomeDiscovery(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 		defer cancel()
-		_ = ctx
 
-		cityCode := r.URL.Query().Get("cityCode")
-		serviceAreaCode := r.URL.Query().Get("serviceAreaCode")
+		cityCode := strings.TrimSpace(r.URL.Query().Get("cityCode"))
+		serviceAreaCode := strings.TrimSpace(r.URL.Query().Get("serviceAreaCode"))
+		audienceSegment := strings.TrimSpace(r.URL.Query().Get("audienceSegment"))
+		if audienceSegment == "" {
+			audienceSegment = "guest"
+		}
+		if audienceSegment != "guest" && audienceSegment != "authenticated" {
+			sendError(w, http.StatusBadRequest, "INVALID_AUDIENCE_SEGMENT", "invalid audience segment")
+			return
+		}
 		limit := 10
 		if l := r.URL.Query().Get("limit"); l != "" {
-			if parsed, err := strconv.Atoi(l); err == nil && parsed >= 1 && parsed <= 50 {
-				limit = parsed
+			parsed, err := strconv.Atoi(l)
+			if err != nil || parsed < 1 || parsed > 50 {
+				sendError(w, http.StatusBadRequest, "INVALID_LIMIT", "limit must be between 1 and 50")
+				return
 			}
+			limit = parsed
 		}
 
 		query := HomeDiscoveryQuery{
 			CityCode:        cityCode,
 			ServiceAreaCode: serviceAreaCode,
+			AudienceSegment: audienceSegment,
 			Limit:           limit,
 		}
 
-		banners, err := ListBanners(db)
+		banners, err := ListBanners(ctx, db, query)
 		if err != nil {
-			sendError(w, 503, "BANNERS_UNAVAILABLE", "banners unavailable")
+			sendError(w, http.StatusServiceUnavailable, "BANNERS_UNAVAILABLE", "banners unavailable")
 			return
 		}
 
-		promos, err := ListPromos(db)
+		promos, err := ListPromos(ctx, db, query)
 		if err != nil {
-			sendError(w, 503, "PROMOS_UNAVAILABLE", "promos unavailable")
+			sendError(w, http.StatusServiceUnavailable, "PROMOS_UNAVAILABLE", "promos unavailable")
 			return
 		}
 
-		categories, err := ListCategories(db)
+		categories, err := ListCategories(ctx, db)
 		if err != nil {
-			sendError(w, 503, "CATEGORIES_UNAVAILABLE", "categories unavailable")
+			sendError(w, http.StatusServiceUnavailable, "CATEGORIES_UNAVAILABLE", "categories unavailable")
 			return
 		}
 
-		stores, total, err := ListHomeStores(db, query)
+		stores, total, err := ListHomeStores(ctx, db, query)
 		if err != nil {
-			sendError(w, 503, "STORES_UNAVAILABLE", "stores unavailable")
+			sendError(w, http.StatusServiceUnavailable, "STORES_UNAVAILABLE", "stores unavailable")
 			return
 		}
 
