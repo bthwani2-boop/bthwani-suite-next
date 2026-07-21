@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "journeyId": "JRN-005",
+  "journeyName": "Client address book",
+  "truthOwner": "DSH persisted client-owned delivery addresses",
+  "canonicalContract": "services/dsh/contracts/dsh.client-address.openapi.yaml",
+  "databaseTruth": {
+    "table": "dsh_client_addresses",
+    "singleDefaultIndex": "uq_dsh_client_addresses_single_default",
+    "activeIdempotencyIndex": "uq_dsh_client_addresses_active_idempotency",
+    "activeLogicalUniquenessIndex": "uq_dsh_client_addresses_active_fingerprint",
+    "logicalFingerprintMigration": "services/dsh/database/migrations/dsh-901_client_address_logical_deduplication.sql"
+  },
+  "requiredCapabilities": [
+    "list-owned-addresses",
+    "create-idempotently",
+    "prevent-active-logical-duplicates",
+    "update-with-optimistic-concurrency",
+    "soft-delete-with-default-recovery",
+    "set-one-default",
+    "checkout-owned-address-readback"
+  ],
+  "requiredReadAfterWrite": [
+    "create-address-then-list",
+    "update-address-then-list",
+    "delete-address-then-list",
+    "set-default-then-list"
+  ],
+  "requiredVisibleStates": [
+    "loading",
+    "empty",
+    "error",
+    "network-retry",
+    "conflict",
+    "duplicate-address-recovery"
+  ],
+  "forbiddenTruthSources": [
+    "AsyncStorage address records",
+    "localStorage address records",
+    "sessionStorage address records",
+    "screen fixtures",
+    "screen mocks",
+    "cart-owned address copies"
+  ],
+  "requiredVerification": [
+    "services/dsh/backend/internal/http/client_addresses_error_test.go",
+    "services/dsh/backend/internal/clientaddress/duplicate_error_test.go",
+    "services/dsh/database/tests/dsh-901_client_address_logical_deduplication.sql",
+    "tools/guards/client-commerce/client-commerce-truth-gate.mjs"
+  ],
+  "conflictPolicy": "Return ADDRESS_CONFLICT for stale versions and ADDRESS_ALREADY_EXISTS for an active logical duplicate; the client must keep committed state authoritative.",
+  "successPolicy": "The surface reports success only after the canonical mutation response and a refreshed persisted address list.",
+  "formalClosureRequires": [
+    "same-commit database migration execution",
+    "same-commit targeted CI",
+    "device visual and accessibility evidence",
+    "independent product, QA, security and privacy approvals"
+  ]
+}
