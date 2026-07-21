@@ -19,7 +19,7 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
@@ -32,29 +32,25 @@ jobs:
           corepack enable
           corepack prepare pnpm@10.34.2 --activate
           pnpm install --frozen-lockfile
-      - name: Create FS-09 TypeScript project
-        shell: bash
-        run: |
-          mkdir -p .tmp
-          cat > .tmp/jrn-001-fs-09.tsconfig.json <<'JSON'
-          {
-            "extends": "../tsconfig.base.json",
-            "compilerOptions": { "noEmit": true },
-            "files": [
-              "../services/dsh/frontend/css-modules.d.ts",
-              "../services/dsh/frontend/shared/partner/index.ts",
-              "../services/dsh/frontend/shared/field-onboarding/use-field-partner-onboarding-controller.tsx",
-              "../services/dsh/frontend/app-field/onboarding/DshFieldOnboardingScreen.tsx",
-              "../services/dsh/frontend/app-partner/account/PartnerOnboardingStatusView.tsx",
-              "../services/dsh/frontend/control-panel/partners/PartnerListScreen.tsx"
-            ]
-          }
-          JSON
-      - name: Typecheck shared brain and multisurface consumers
+      - name: Typecheck app-field consumer
         shell: bash
         run: |
           set +e
-          pnpm exec tsc --noEmit -p .tmp/jrn-001-fs-09.tsconfig.json 2>&1 | tee /tmp/fs09.log
+          pnpm --dir apps/app-field/runtime typecheck 2>&1 | tee /tmp/fs09.log
+          EXIT_CODE=${PIPESTATUS[0]}
+          exit "$EXIT_CODE"
+      - name: Typecheck app-partner consumer
+        shell: bash
+        run: |
+          set +e
+          pnpm --dir apps/app-partner/runtime typecheck 2>&1 | tee /tmp/fs09.log
+          EXIT_CODE=${PIPESTATUS[0]}
+          exit "$EXIT_CODE"
+      - name: Typecheck control-panel consumer
+        shell: bash
+        run: |
+          set +e
+          pnpm --dir apps/control-panel/runtime typecheck 2>&1 | tee /tmp/fs09.log
           EXIT_CODE=${PIPESTATUS[0]}
           exit "$EXIT_CODE"
       - name: Verify runtime, privacy, and readback invariants
