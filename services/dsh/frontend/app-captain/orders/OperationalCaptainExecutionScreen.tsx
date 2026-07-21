@@ -2,6 +2,10 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Box, Button, Icon, MobileScrollView, StateView, Surface, Text, TopBar, colorRoles, spacing } from '@bthwani/ui-kit';
 import {
+  StoreCaptainHandoffExceptionForm,
+  useStoreCaptainHandoffException,
+} from '../../shared/dispatch';
+import {
   readCaptainForegroundLocation,
   type DshCaptainLocationPush,
 } from '../../shared/delivery/use-captain-order-runtime';
@@ -11,8 +15,10 @@ export type OperationalCaptainExecutionScreenProps = {
   readonly orderId: string;
   readonly captainId: string;
   readonly currentStageLabel: string;
+  readonly handoffExceptionEnabled: boolean;
   readonly podRequired: boolean;
   readonly onBack: () => void;
+  readonly onRefresh: () => void | Promise<void>;
   readonly onConfirmPickup: () => void;
   readonly onConfirmDelivery: () => void;
   readonly onOpenPod: () => void;
@@ -24,8 +30,10 @@ export function OperationalCaptainExecutionScreen({
   orderId,
   captainId,
   currentStageLabel,
+  handoffExceptionEnabled,
   podRequired,
   onBack,
+  onRefresh,
   onConfirmPickup,
   onConfirmDelivery,
   onOpenPod,
@@ -33,6 +41,14 @@ export function OperationalCaptainExecutionScreen({
 }: OperationalCaptainExecutionScreenProps) {
   const [locationState, setLocationState] = React.useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [locationMessage, setLocationMessage] = React.useState<string | null>(null);
+  const handoffException = useStoreCaptainHandoffException('captain', onRefresh);
+  const handoffBlocked = handoffException.state.kind !== 'idle';
+
+  React.useEffect(() => {
+    if (!handoffExceptionEnabled && handoffException.state.kind !== 'success') {
+      handoffException.cancel();
+    }
+  }, [handoffException, handoffExceptionEnabled]);
 
   const pushCurrentLocation = async () => {
     if (!assignmentId || !captainId) {
@@ -92,10 +108,40 @@ export function OperationalCaptainExecutionScreen({
           ) : null}
         </Surface>
 
+        {handoffException.state.kind === 'success' ? (
+          <StateView
+            title="تم إيقاف الاستلام"
+            description="سُجل استثناء العهدة في طابور العمليات. لا تؤكد الاستلام حتى تعالج العمليات البلاغ."
+            tone="warning"
+          />
+        ) : null}
+
+        {handoffException.state.kind !== 'idle' && handoffException.state.kind !== 'success' ? (
+          <StoreCaptainHandoffExceptionForm
+            entityLabel={`الإسناد ${assignmentId}`}
+            state={handoffException.state}
+            onReasonCodeChange={handoffException.setReasonCode}
+            onNoteChange={handoffException.setNote}
+            onSubmit={handoffException.submit}
+            onCancel={handoffException.cancel}
+          />
+        ) : null}
+
         <Surface tone="raised" gap={3}>
           <Text role="bodyStrong">إجراءات المهمة</Text>
           <Box gap={2}>
-            <Button label="تأكيد الاستلام" onPress={onConfirmPickup} />
+            <Button
+              label="تأكيد الاستلام"
+              disabled={handoffBlocked}
+              onPress={onConfirmPickup}
+            />
+            {handoffExceptionEnabled && handoffException.state.kind === 'idle' ? (
+              <Button
+                label="نقص أو عدم تطابق في الطرد"
+                tone="danger"
+                onPress={() => handoffException.begin(assignmentId)}
+              />
+            ) : null}
             <Button
               label={podRequired ? 'فتح إثبات التسليم' : 'تأكيد التسليم'}
               tone="secondary"
