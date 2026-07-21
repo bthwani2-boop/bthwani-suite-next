@@ -63,6 +63,16 @@ func orientation(first, second, third []float64) float64 {
 	return (second[0]-first[0])*(third[1]-first[1]) - (second[1]-first[1])*(third[0]-first[0])
 }
 
+func pointOnTopologySegment(point, start, end []float64) bool {
+	if math.Abs(orientation(start, end, point)) > topologyEpsilon {
+		return false
+	}
+	return point[0] >= math.Min(start[0], end[0])-topologyEpsilon &&
+		point[0] <= math.Max(start[0], end[0])+topologyEpsilon &&
+		point[1] >= math.Min(start[1], end[1])-topologyEpsilon &&
+		point[1] <= math.Max(start[1], end[1])+topologyEpsilon
+}
+
 func segmentsIntersect(a, b, c, d []float64) bool {
 	o1 := orientation(a, b, c)
 	o2 := orientation(a, b, d)
@@ -72,5 +82,8 @@ func segmentsIntersect(a, b, c, d []float64) bool {
 		((o3 > topologyEpsilon && o4 < -topologyEpsilon) || (o3 < -topologyEpsilon && o4 > topologyEpsilon)) {
 		return true
 	}
-	return math.Abs(o1) <= topologyEpsilon || math.Abs(o2) <= topologyEpsilon || math.Abs(o3) <= topologyEpsilon || math.Abs(o4) <= topologyEpsilon
+	return (math.Abs(o1) <= topologyEpsilon && pointOnTopologySegment(c, a, b)) ||
+		(math.Abs(o2) <= topologyEpsilon && pointOnTopologySegment(d, a, b)) ||
+		(math.Abs(o3) <= topologyEpsilon && pointOnTopologySegment(a, c, d)) ||
+		(math.Abs(o4) <= topologyEpsilon && pointOnTopologySegment(b, c, d))
 }
