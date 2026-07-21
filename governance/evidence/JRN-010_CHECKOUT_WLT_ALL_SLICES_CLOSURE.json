@@ -16,11 +16,11 @@
     "Control-panel checkout monitoring"
   ],
   "decision": "READY_FOR_REVIEW",
-  "technicalClosure": "IMPLEMENTED_PENDING_SAME_COMMIT_CI",
-  "verifiedCommit": null,
+  "technicalClosure": "COMPLETE",
+  "verifiedCommit": "72de130ff4cc3341f13261f3c10d68cf7a6930fa",
   "workflow": ".github/workflows/jrn-010-all-slices.yml",
   "statusContext": "journeys/jrn-010/all-slices",
-  "workflowRunId": null,
+  "workflowRunId": 29871710692,
   "productTruth": "governance/product/contracts/jrn-010-checkout-wlt-handoff.product-truth.json",
   "sliceRegistry": "services/dsh/contracts/jrn-010-slice-verification-registry.json",
   "contractShard": "services/dsh/contracts/dsh.jrn-010-checkout.openapi.yaml",
@@ -62,5 +62,7 @@
     "Security and Finance boundary review",
     "Release and Production evidence"
   ],
-  "closurePolicy": "READY_FOR_REVIEW is the maximum technical decision before the listed independent reviews. CLOSED_WITH_EVIDENCE must not be asserted from this file alone."
+  "closurePolicy": "READY_FOR_REVIEW is the maximum technical decision before the listed independent reviews. CLOSED_WITH_EVIDENCE must not be asserted from this file alone.",
+  "sameCommitStatus": "success",
+  "verifiedAt": "2026-07-21"
 }

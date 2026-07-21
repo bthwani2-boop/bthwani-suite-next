@@ -75,7 +75,7 @@ Initial baseline commit: `466d34bacdd7fde4cc1c351e094d3d4604b33268`
 | JRN-007 | الصفحة الرئيسية والاكتشاف التسويقي | DSH | READY_FOR_REVIEW |
 | JRN-008 | الكتالوج المركزي والوسائط والتشكيلة | DSH | NEEDS_EVIDENCE |
 | JRN-009 | العربة وقابلية الخدمة | DSH | NEEDS_EVIDENCE |
-| JRN-010 | Checkout وتسليم جلسة الدفع إلى WLT | DSH + WLT | NEEDS_EVIDENCE |
+| JRN-010 | Checkout وتسليم جلسة الدفع إلى WLT | DSH + WLT | READY_FOR_REVIEW |
 | JRN-011 | إنشاء الطلب وحقيقة الطلب | DSH | NEEDS_EVIDENCE |
 | JRN-012 | قبول الطلب وتحضيره وجاهزيته | DSH | NEEDS_EVIDENCE |
 | JRN-013 | العهدة الثنائية من المتجر إلى الكابتن | DSH | NEEDS_EVIDENCE |
@@ -251,6 +251,19 @@ Initial baseline commit: `466d34bacdd7fde4cc1c351e094d3d4604b33268`
 - رؤية العربات تشغيليًا من لوحة التحكم دون تعديل مالي.
 
 ### JRN-010 — Checkout وتسليم جلسة الدفع إلى WLT
+
+tracking_status: READY_FOR_REVIEW
+decision: READY_FOR_REVIEW
+last_verified_commit: `72de130ff4cc3341f13261f3c10d68cf7a6930fa`
+workflow_run_id: `29871710692`
+status_context: `journeys/jrn-010/all-slices`
+technical_slices: `FS-01..FS-18 COMPLETE`
+owner_services: `DSH`, `WLT`
+required_surfaces: `app-client`, `control-panel`, `dsh-backend`, `dsh-postgresql`, `wlt-boundary`
+excluded_surfaces: `app-partner`, `app-captain`, `app-field`, `website` — ليست مالكة لحقيقة Checkout قبل إنشاء الطلب.
+applicable_evidence_scopes: `product`, `static`, `database`, `backend`, `contract`, `frontend`, `runtime`, `security`, `finance-boundary`, `accessibility`, `ci`, `release`
+open_code_gaps: `[]`
+independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security/Finance؛ Release/Production.
 
 الأسطح المرشحة: `app-client`, `control-panel` مع WLT.
 
@@ -739,6 +752,8 @@ Initial baseline commit: `466d34bacdd7fde4cc1c351e094d3d4604b33268`
 | 2026-07-21 | JRN-015 | FS-06/FS-07/FS-09/FS-10/FS-12: closed the `app-client` gap — added `GET /dsh/client/orders/{orderId}/pickup` (client-scoped, reuses `orders.GetClientOrder` ownership check and `pickup.ResolvePartnerStage`), registered `getDshClientPickupSession` in `dsh.openapi.yaml`, regenerated `services/dsh/clients/generated/dsh-api.ts`, added `fetchClientPickupState` + `useClientPickupSessionController` to the shared pickup brain, and built `PickupSessionScreen` in `app-client` wired to the `pickup_otp` notification's previously-orphaned `action_url` (`/orders/{orderId}/pickup`) | sambassam | `501ad0c7` | app-client, app-partner (unchanged), control-panel (unchanged) | READY_FOR_REVIEW | Product Owner sign-off on the new client-visible screen, DB-integration authz test (client cannot read another client's session), device/runtime and QA/security/accessibility evidence pending |
 | 2026-07-21 | JRN-011 | cross_journey_dependency_repair: `internal/wlt/payment_session.go` redeclared `PaymentSession` (collided with the create-handoff type in `client.go`), called an undefined `c.requestJSON`, and referenced undefined `ErrNotConfigured` — the whole DSH backend module failed `go build`, blocking verification of any journey. Renamed the read model to `PaymentSessionDetail`, implemented `GetPaymentSession` on the established `/wlt/...` + `Authorization: Bearer` + `{"paymentSession":...}` envelope convention shared by every other real `Client` method, and corrected `payment_session_test.go` to that same contract instead of the invented one | sambassam | `e5560177` | none (backend build/startup unblocked for all surfaces) | FIX_REQUIRED closed | none known |
 | 2026-07-21 | JRN-016 | FS-06/FS-09/FS-10/FS-12: closed the `app-client` gap — the client's order tracking screen only ever fetched captain dispatch tracking, which 404s for `partner_delivery` orders, so the client saw a permanent "no captain assigned yet" state even after the store's own courier had departed or arrived. Added `GET /dsh/client/orders/{orderId}/partner-delivery` (client-scoped, same ownership pattern as the pickup client endpoint) and, while there, also registered the previously-uncontracted partner `GET /dsh/partner/orders/{orderId}/partner-delivery` in `dsh.openapi.yaml`; regenerated the client; branched `OrderTrackingScreen` on `fulfillmentMode` to render the store courier's real status | sambassam | `b92d117d` | app-client, app-partner (unchanged, already wired via `PartnerFulfillmentActionsPanel`), control-panel (unchanged, already covered by `PartnerDeliveryWorkbenchScreen`) | READY_FOR_REVIEW | Product Owner sign-off on the client-visible status text, DB-integration authz test, device/runtime and QA/security/accessibility evidence pending |
+
+| 2026-07-21 | JRN-010 | FS-01..FS-18 technical implementation and same-commit verification | sambassam | `72de130ff4cc3341f13261f3c10d68cf7a6930fa` / workflow `29871710692` | app-client, control-panel, DSH backend/PostgreSQL, WLT boundary | READY_FOR_REVIEW | Independent Product, QA/device/accessibility, Security/Finance and Release/Production approvals pending |
 
 ## قالب إضافة رحلة أو تحديثها
 
