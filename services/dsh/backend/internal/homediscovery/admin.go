@@ -256,6 +256,18 @@ func parseOptionalPublicationTime(value *string, field string) (*time.Time, erro
 	return &parsed, nil
 }
 
+func validateHomeMediaURL(value string) error {
+	normalized := strings.TrimSpace(value)
+	if strings.HasPrefix(normalized, "/dsh/public/media/") {
+		return nil
+	}
+	parsed, err := url.ParseRequestURI(normalized)
+	if err != nil || parsed.Host == "" || (parsed.Scheme != "https" && parsed.Scheme != "http") {
+		return fmt.Errorf("image url must be an http, https, or governed DSH public media URL")
+	}
+	return nil
+}
+
 func validateAdminInput(kind string, input AdminContentInput) error {
 	if _, err := adminTable(kind); err != nil {
 		return err
@@ -263,14 +275,17 @@ func validateAdminInput(kind string, input AdminContentInput) error {
 	if len(strings.TrimSpace(input.Title)) < 2 || input.SortOrder < 0 {
 		return fmt.Errorf("invalid home discovery content")
 	}
-	if strings.TrimSpace(input.ImageURL) == "" {
-		return fmt.Errorf("image url is required")
+	if err := validateHomeMediaURL(input.ImageURL); err != nil {
+		return err
 	}
 	target := strings.TrimSpace(input.ActionTarget)
 	switch input.ActionType {
 	case "store", "category":
 		if target == "" {
 			return fmt.Errorf("action target is required")
+		}
+		if !homeTargetCodePattern.MatchString(target) {
+			return fmt.Errorf("invalid action target")
 		}
 	case "external":
 		if target == "" {
