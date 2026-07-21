@@ -1,0 +1,119 @@
+{
+  "journeyId": "JRN-010",
+  "title": "Checkout and WLT payment-session handoff",
+  "branch": "sambassam",
+  "technicalClosure": "IMPLEMENTED_PENDING_SAME_COMMIT_CI",
+  "requiredSurfaces": ["app-client", "control-panel", "dsh-backend", "dsh-postgresql", "wlt-boundary"],
+  "slices": [
+    {
+      "id": "FS-01",
+      "name": "Product Truth",
+      "status": "IMPLEMENTED",
+      "evidence": ["governance/product/contracts/jrn-010-checkout-wlt-handoff.product-truth.json"]
+    },
+    {
+      "id": "FS-02",
+      "name": "Roles, permissions and surfaces",
+      "status": "IMPLEMENTED",
+      "evidence": ["governance/product/contracts/jrn-010-checkout-wlt-handoff.product-truth.json", "services/dsh/backend/internal/http/checkout.go", "services/dsh/backend/internal/http/wlt_events.go"]
+    },
+    {
+      "id": "FS-03",
+      "name": "States, transitions and negative invariants",
+      "status": "IMPLEMENTED",
+      "evidence": ["governance/product/contracts/jrn-010-checkout-wlt-handoff.product-truth.json", "services/dsh/backend/internal/checkout/checkout.go", "services/dsh/frontend/shared/checkout/checkout.view-model.ts"]
+    },
+    {
+      "id": "FS-04",
+      "name": "Truth ownership and service boundaries",
+      "status": "IMPLEMENTED",
+      "evidence": ["services/dsh/contracts/dsh.jrn-010-checkout.openapi.yaml", "services/wlt/frontend/shared/dsh/wlt-dsh-checkout-handoff.contract.ts", "tools/guards/checkout/jrn-010-checkout-truth-gate.mjs"]
+    },
+    {
+      "id": "FS-05",
+      "name": "Database migrations, constraints, indexes and concurrency",
+      "status": "IMPLEMENTED",
+      "evidence": ["services/dsh/database/migrations/dsh-910_jrn_010_wlt_event_receipts.sql", "services/dsh/database/tests/dsh-910_jrn_010_wlt_event_receipts.sql"]
+    },
+    {
+      "id": "FS-06",
+      "name": "OpenAPI, contract shards and clients",
+      "status": "IMPLEMENTED",
+      "evidence": ["services/dsh/contracts/dsh.jrn-010-checkout.openapi.yaml", "contracts/master.openapi.yaml", "services/dsh/contracts/dsh.openapi.yaml"]
+    },
+    {
+      "id": "FS-07",
+      "name": "Backend routes, domain validation, authz and idempotency",
+      "status": "IMPLEMENTED",
+      "evidence": ["services/dsh/backend/internal/http/checkout.go", "services/dsh/backend/internal/http/wlt_events.go", "services/dsh/backend/internal/checkout/wlt_event_atomic.go", "services/dsh/backend/internal/coupons/payment_lifecycle_tx.go"]
+    },
+    {
+      "id": "FS-08",
+      "name": "Events, durable receipt, retries and reconciliation",
+      "status": "IMPLEMENTED",
+      "evidence": ["services/dsh/backend/internal/checkout/wlt_event_atomic.go", "services/dsh/database/migrations/dsh-910_jrn_010_wlt_event_receipts.sql", "services/dsh/backend/internal/http/checkout.go"]
+    },
+    {
+      "id": "FS-09",
+      "name": "Shared frontend brain",
+      "status": "IMPLEMENTED",
+      "evidence": ["services/dsh/frontend/shared/checkout/checkout.types.ts", "services/dsh/frontend/shared/checkout/checkout.states.ts", "services/dsh/frontend/shared/checkout/checkout.view-model.ts", "services/dsh/frontend/shared/checkout/use-checkout-to-order-flow.tsx"]
+    },
+    {
+      "id": "FS-10",
+      "name": "Required surfaces",
+      "status": "IMPLEMENTED",
+      "evidence": ["services/dsh/frontend/app-client/checkout/GovernedCheckoutScreen.tsx", "services/dsh/frontend/control-panel/operations/CheckoutActivityScreen.tsx"]
+    },
+    {
+      "id": "FS-11",
+      "name": "Visible loading, offline, forbidden, conflict, partial and recovery states",
+      "status": "IMPLEMENTED",
+      "evidence": ["services/dsh/frontend/app-client/checkout/GovernedCheckoutScreen.tsx", "services/dsh/frontend/shared/checkout/checkout.view-model.ts", "services/dsh/frontend/shared/checkout/use-checkout-controller.tsx"]
+    },
+    {
+      "id": "FS-12",
+      "name": "Cross-surface readback and no local truth",
+      "status": "IMPLEMENTED",
+      "evidence": ["services/dsh/frontend/shared/checkout/checkout.api.ts", "services/dsh/frontend/shared/checkout/use-checkout-to-order-flow.tsx", "services/dsh/frontend/control-panel/operations/CheckoutActivityScreen.tsx"]
+    },
+    {
+      "id": "FS-13",
+      "name": "Security, privacy, tenant isolation, RBAC and audit",
+      "status": "IMPLEMENTED",
+      "evidence": ["services/dsh/backend/internal/http/checkout.go", "services/dsh/backend/internal/http/wlt_events.go", "services/dsh/database/migrations/dsh-910_jrn_010_wlt_event_receipts.sql"]
+    },
+    {
+      "id": "FS-14",
+      "name": "Accessibility, Arabic RTL, reliability and weak-network UX",
+      "status": "IMPLEMENTED",
+      "evidence": ["services/dsh/frontend/app-client/checkout/GovernedCheckoutScreen.tsx", "services/dsh/frontend/control-panel/operations/CheckoutActivityScreen.tsx"]
+    },
+    {
+      "id": "FS-15",
+      "name": "SLA, observability, diagnostics and operations",
+      "status": "IMPLEMENTED",
+      "evidence": ["services/dsh/database/migrations/dsh-910_jrn_010_wlt_event_receipts.sql", "services/dsh/frontend/control-panel/operations/CheckoutActivityScreen.tsx", "governance/runbooks/JRN-010_CHECKOUT_WLT_OPERATIONS.md"]
+    },
+    {
+      "id": "FS-16",
+      "name": "Cleanup and sovereign boundary enforcement",
+      "status": "IMPLEMENTED",
+      "evidence": ["tools/guards/checkout/jrn-010-checkout-truth-gate.mjs", "services/dsh/tests/jrn-010-all-slices.test.mjs"]
+    },
+    {
+      "id": "FS-17",
+      "name": "Targeted verification",
+      "status": "IMPLEMENTED_PENDING_CI",
+      "evidence": [".github/workflows/jrn-010-all-slices.yml", "services/dsh/tests/jrn-010-all-slices.test.mjs", "services/dsh/backend/internal/checkout/wlt_event_atomic_test.go", "services/dsh/database/tests/dsh-910_jrn_010_wlt_event_receipts.sql"]
+    },
+    {
+      "id": "FS-18",
+      "name": "Same-commit evidence, rollback and residual risk",
+      "status": "IMPLEMENTED_PENDING_CI",
+      "evidence": ["governance/evidence/JRN-010_CHECKOUT_WLT_ALL_SLICES_CLOSURE.json", "governance/runbooks/JRN-010_CHECKOUT_WLT_OPERATIONS.md"]
+    }
+  ],
+  "technicalOpenGaps": [],
+  "independentApprovalsRequired": ["Product Owner", "QA device/runtime/accessibility", "Security and Finance boundary", "Release and Production"]
+}
