@@ -1,0 +1,201 @@
+openapi: 3.1.0
+info:
+  title: DSH Administration Governance API
+  version: 1.0.0
+  description: JRN-031 maker-checker administration contract.
+servers:
+  - url: /dsh
+paths:
+  /operator/admin/roles:
+    get:
+      operationId: listDshAdministrationRoles
+      responses:
+        "200":
+          description: Administrative roles.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [roles]
+                properties:
+                  roles:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Role"
+  /operator/admin/staff:
+    get:
+      operationId: listDshAdministrationStaff
+      responses:
+        "200":
+          description: Existing approved staff role assignments.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [staff]
+                properties:
+                  staff:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/StaffAssignment"
+  /operator/admin/staff/{staffId}/roles:
+    post:
+      operationId: requestDshStaffRoleAssignment
+      description: Creates a pending maker-checker request; it never assigns the role directly.
+      parameters:
+        - in: path
+          name: staffId
+          required: true
+          schema: { type: string, minLength: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoleAssignmentRequestInput"
+      responses:
+        "202":
+          description: Pending approval request created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [approval]
+                properties:
+                  approval:
+                    $ref: "#/components/schemas/RoleAssignmentApproval"
+        "403": { description: Self-assignment or authorization is forbidden. }
+        "409": { description: Equivalent pending request already exists. }
+  /operator/admin/approvals:
+    get:
+      operationId: listDshRoleAssignmentApprovals
+      parameters:
+        - in: query
+          name: status
+          required: false
+          schema:
+            $ref: "#/components/schemas/ApprovalStatus"
+      responses:
+        "200":
+          description: Role assignment approval queue.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [approvals]
+                properties:
+                  approvals:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/RoleAssignmentApproval"
+  /operator/admin/approvals/{approvalId}/review:
+    post:
+      operationId: reviewDshRoleAssignmentApproval
+      description: Applies an approved role assignment only when checker differs from maker and beneficiary.
+      parameters:
+        - in: path
+          name: approvalId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoleAssignmentReviewInput"
+      responses:
+        "200":
+          description: Approval reviewed and assignment applied when approved.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [approval]
+                properties:
+                  approval:
+                    $ref: "#/components/schemas/RoleAssignmentApproval"
+                  assignment:
+                    oneOf:
+                      - $ref: "#/components/schemas/StaffAssignment"
+                      - type: "null"
+        "403": { description: Self-approval is forbidden. }
+        "409": { description: Version or lifecycle conflict. }
+components:
+  schemas:
+    ApprovalStatus:
+      type: string
+      enum: [pending, approved, rejected]
+    Role:
+      type: object
+      required: [id, name, description, permissions, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string }
+        permissions:
+          type: array
+          items: { type: string }
+        createdAt: { type: string, format: date-time }
+    StaffAssignment:
+      type: object
+      required: [id, actorId, roleId, roleName, assignedBy, assignedAt]
+      properties:
+        id: { type: string, format: uuid }
+        actorId: { type: string }
+        roleId: { type: string, format: uuid }
+        roleName: { type: string }
+        assignedBy: { type: string }
+        assignedAt: { type: string, format: date-time }
+    RoleAssignmentRequestInput:
+      type: object
+      additionalProperties: false
+      required: [roleId, reason]
+      properties:
+        roleId: { type: string, format: uuid }
+        reason: { type: string, minLength: 5 }
+    RoleAssignmentReviewInput:
+      type: object
+      additionalProperties: false
+      required: [decision, reviewNote, expectedVersion]
+      properties:
+        decision:
+          type: string
+          enum: [approved, rejected]
+        reviewNote: { type: string }
+        expectedVersion: { type: integer, minimum: 1 }
+    RoleAssignmentApproval:
+      type: object
+      required:
+        - id
+        - actionType
+        - targetActorId
+        - roleId
+        - roleName
+        - requestedBy
+        - reason
+        - status
+        - reviewedBy
+        - reviewNote
+        - version
+        - createdAt
+        - updatedAt
+      properties:
+        id: { type: string, format: uuid }
+        actionType:
+          type: string
+          const: staff_role_assignment
+        targetActorId: { type: string }
+        roleId: { type: string, format: uuid }
+        roleName: { type: string }
+        requestedBy: { type: string }
+        reason: { type: string, minLength: 5 }
+        status:
+          $ref: "#/components/schemas/ApprovalStatus"
+        reviewedBy: { type: string }
+        reviewNote: { type: string }
+        version: { type: integer, minimum: 1 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        reviewedAt:
+          type: [string, "null"]
+          format: date-time
