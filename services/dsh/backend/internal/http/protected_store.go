@@ -309,7 +309,12 @@ func (s *protectedStoreServer) handleOperatorStores(w http.ResponseWriter, r *ht
 	if !ok {
 		return
 	}
-	result, err := store.ListAllStores(s.db, store.DshStoreListQuery{Limit: 100, Offset: 0})
+	listQuery, errMessage := store.ParseListQuery(r.URL.Query())
+	if errMessage != "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_PARAMETER", errMessage)
+		return
+	}
+	result, err := store.ListAllStores(s.db, listQuery)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "could not load stores")
 		return
