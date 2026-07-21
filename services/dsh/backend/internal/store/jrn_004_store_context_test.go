@@ -6,6 +6,8 @@ import (
 )
 
 func eligibleStoreRow() DshStoreRow {
+	logoURL := "https://media.example/store/logo.webp"
+	heroURL := "https://media.example/store/cover.webp"
 	return DshStoreRow{
 		ID:                    "store-jrn-004",
 		Slug:                  "store-jrn-004",
@@ -15,6 +17,8 @@ func eligibleStoreRow() DshStoreRow {
 		ServiceAreaCode:       "haddah",
 		ServiceabilityStatus:  ServiceabilityServiceable,
 		IsVisible:             true,
+		HeroImageURL:          &heroURL,
+		LogoURL:               &logoURL,
 		Category:              CategoryGrocery,
 		CategoryLabel:         "بقالة",
 		DeliveryModes:         []string{"delivery", "pickup"},
@@ -61,6 +65,13 @@ func TestPublicationEligibilityFailsClosedForEveryGovernanceGate(t *testing.T) {
 		{name: "partner blocked", mutate: func(row *DshStoreRow) { row.PartnerReadiness = "blocked" }},
 		{name: "catalog draft", mutate: func(row *DshStoreRow) { row.CatalogApprovalStatus = "draft" }},
 		{name: "marketing hidden", mutate: func(row *DshStoreRow) { row.MarketingVisibility = "hidden" }},
+		{name: "delivery modes missing", mutate: func(row *DshStoreRow) { row.DeliveryModes = nil }},
+		{name: "address missing", mutate: func(row *DshStoreRow) { row.AddressLine = "" }},
+		{name: "coverage missing", mutate: func(row *DshStoreRow) { row.CoverageSummary = "" }},
+		{name: "operating hours missing", mutate: func(row *DshStoreRow) { row.OperatingHours = "" }},
+		{name: "delivery not ready", mutate: func(row *DshStoreRow) { row.DeliveryReadiness = "blocked" }},
+		{name: "logo missing", mutate: func(row *DshStoreRow) { row.LogoURL = nil }},
+		{name: "cover missing", mutate: func(row *DshStoreRow) { row.HeroImageURL = nil }},
 	}
 
 	for _, tc := range tests {
