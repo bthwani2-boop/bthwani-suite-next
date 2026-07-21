@@ -1,9 +1,13 @@
 import { useCallback, useSyncExternalStore } from "react";
+import type { ActivationActorType } from "./identity-client.ts";
 import {
   subscribeIdentityState,
   getIdentityState,
   loginIdentity,
+  requestOtpIdentity,
   activateIdentity,
+  listIdentitySessions,
+  revokeIdentitySession,
   logoutIdentity,
   changePasswordIdentity,
   deleteAccountIdentity,
@@ -15,25 +19,41 @@ export function useIdentitySession() {
     getIdentityState,
     getIdentityState,
   );
+
   const login = useCallback(
     (username: string, password: string) => loginIdentity(username, password),
     [],
   );
+  const requestOtp = useCallback(
+    (actorType: ActivationActorType, phone: string) => requestOtpIdentity(actorType, phone),
+    [],
+  );
   const activate = useCallback(
-    (phone: string, code: string) => activateIdentity(phone, code),
+    (actorType: ActivationActorType, phone: string, code: string) =>
+      activateIdentity(actorType, phone, code),
+    [],
+  );
+  const listSessions = useCallback(() => listIdentitySessions(), []);
+  const revokeSession = useCallback(
+    (sessionId: string) => revokeIdentitySession(sessionId),
     [],
   );
   const logout = useCallback(() => logoutIdentity(), []);
-
   const changePassword = useCallback(
     (password: string) => changePasswordIdentity(password),
     [],
   );
+  const deleteAccount = useCallback(() => deleteAccountIdentity(), []);
 
-  const deleteAccount = useCallback(
-    () => deleteAccountIdentity(),
-    [],
-  );
-
-  return { state, login, activate, logout, changePassword, deleteAccount };
+  return {
+    state,
+    login,
+    requestOtp,
+    activate,
+    listSessions,
+    revokeSession,
+    logout,
+    changePassword,
+    deleteAccount,
+  };
 }
