@@ -40,6 +40,7 @@ const clientDiscoveryRoute = read("services/dsh/frontend/app-client/home-discove
 const clientDiscoveryScreen = read("services/dsh/frontend/app-client/home-discovery/HomeDiscoveryScreen.tsx");
 const clientStoreRoute = read("services/dsh/frontend/app-client/store/StoreDetailRoute.tsx");
 const clientStoreScreen = read("services/dsh/frontend/app-client/store/StoreDetailScreen.tsx");
+const clientCartScreen = read("services/dsh/frontend/app-client/cart/CartScreen.tsx");
 assert.match(clientDiscoveryRoute, /onStorePress=\{onStorePress\}/);
 assert.match(clientDiscoveryScreen, /onStorePress=\{onStorePress\}/);
 assert.match(clientStoreRoute, /storeId=\{storeId\}/);
@@ -48,6 +49,8 @@ assert.match(clientStoreScreen, /!store\.isClientEligible/);
 assert.match(clientStoreScreen, /لم يجتز المتجر بوابة النشر للعميل/);
 assert.match(clientStoreScreen, /onAddToCart=\{handleAddToCart\}/);
 assert.match(clientStoreScreen, /onGoToCart=\{onGoToCart\}/);
+assert.match(clientCartScreen, /controller\.removeItem\(item\.cartId, item\.id\)/);
+assert.doesNotMatch(clientCartScreen, /controller\.state\.cart\.id/);
 
 // app-field: complete route registry, deep navigation, five governed groups, back/save icons, and real actions.
 const fieldRoutes = read("services/dsh/frontend/app-field/dsh-field.routes.ts");
