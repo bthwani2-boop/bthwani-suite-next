@@ -15,6 +15,25 @@ export type DshStaffMember = {
   readonly assignedAt: string;
 };
 
+export type DshRoleAssignmentApprovalStatus = "pending" | "approved" | "rejected";
+
+export type DshRoleAssignmentApproval = {
+  readonly id: string;
+  readonly actionType: "staff_role_assignment";
+  readonly targetActorId: string;
+  readonly roleId: string;
+  readonly roleName: string;
+  readonly requestedBy: string;
+  readonly reason: string;
+  readonly status: DshRoleAssignmentApprovalStatus;
+  readonly reviewedBy: string;
+  readonly reviewNote: string;
+  readonly version: number;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly reviewedAt?: string;
+};
+
 export type DshPartnerActivation = {
   readonly id: string;
   readonly partnerId: string;
