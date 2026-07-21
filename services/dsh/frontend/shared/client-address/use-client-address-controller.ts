@@ -38,13 +38,37 @@ function mutationContext(prefix: string): DshAddressMutationContext {
   };
 }
 
+function versionedMutationContext(operation: string, address: DshClientAddress): DshAddressMutationContext {
+  const part = uniquePart();
+  return {
+    idempotencyKey: `${operation}:${address.id}:v${address.version}`,
+    correlationId: `client-address:${part}`,
+  };
+}
+
+function transportError(error: unknown): Partial<DshAddressTransportError> {
+  return error as Partial<DshAddressTransportError>;
+}
+
+function shouldReloadCommittedState(error: unknown): boolean {
+  const typed = transportError(error);
+  return typed.status === 404 || [
+    "ADDRESS_ALREADY_EXISTS",
+    "ADDRESS_CONFLICT",
+    "IDEMPOTENCY_CONFLICT",
+  ].includes(typed.code ?? "");
+}
+
 function messageOf(error: unknown): string {
-  const typed = error as Partial<DshAddressTransportError>;
+  const typed = transportError(error);
   if (typed.code === "ADDRESS_ALREADY_EXISTS") return "هذا العنوان محفوظ بالفعل. عدّل العنوان الموجود بدل إنشاء نسخة مكررة.";
-  if (typed.code === "ADDRESS_CONFLICT") return "تم تعديل العنوان من جلسة أخرى. حدّث القائمة ثم أعد المحاولة.";
+  if (typed.code === "ADDRESS_CONFLICT") return "تم تعديل العنوان من جلسة أخرى. حُدّثت القائمة؛ راجع البيانات ثم أعد المحاولة.";
+  if (typed.code === "IDEMPOTENCY_CONFLICT") return "تعذر إعادة العملية بأمان لأن هوية المحاولة استُخدمت لطلب مختلف. حُدّثت القائمة قبل أي محاولة جديدة.";
+  if (typed.code === "ADDRESS_SERVICE_AREA_UNVERIFIED" || typed.status === 422) return "الموقع لا يطابق منطقة خدمة فعالة. اختر موقعًا معتمدًا ثم أعد الحفظ.";
+  if (typed.code === "INVALID_ADDRESS") return "بيانات العنوان غير مكتملة أو غير صالحة.";
   if (typed.status === 401) return "انتهت الجلسة. سجّل الدخول مجددًا.";
-  if (typed.status === 404) return "العنوان غير موجود أو لم يعد متاحًا.";
-  if (typed.kind === "network") return "تعذر الاتصال. ستُستخدم نفس هوية العملية عند إعادة المحاولة.";
+  if (typed.status === 404) return "العنوان غير موجود أو لم يعد متاحًا. حُدّثت القائمة.";
+  if (typed.kind === "network") return "تعذر الاتصال. أعد المحاولة؛ ستستخدم العملية نفس الهوية ولن تُنفذ مرتين.";
   return typeof typed.message === "string" && typed.message.length > 0
     ? typed.message
     : "تعذر تنفيذ عملية العنوان.";
@@ -84,12 +108,15 @@ export function useClientAddressController() {
       return await operation();
     } catch (error) {
       setMutationError(messageOf(error));
+      if (shouldReloadCommittedState(error)) {
+        await load();
+      }
       return null;
     } finally {
       mutationLock.current = false;
       setMutating(false);
     }
-  }, []);
+  }, [load]);
 
   const createAddress = useCallback(async (input: DshClientAddressDraft): Promise<boolean> => {
     const address = await runMutation(async () => {
@@ -140,7 +167,8 @@ export function useClientAddressController() {
     if (address.isDefault) return true;
     const updated = await runMutation(() => setDshClientDefaultAddress(
       address.id,
-      mutationContext(`address-default:${address.id}`),
+      address.version,
+      versionedMutationContext("address-default", address),
     ));
     if (!updated) return false;
     setSelectedAddressId(updated.id);
