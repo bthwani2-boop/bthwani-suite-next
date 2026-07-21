@@ -56,8 +56,8 @@ for (const file of sharedFiles) {
 }
 
 if (violations.length > 0) {
-  console.error('[jrn-015-020-affected-boundary] violations detected');
-  for (const violation of violations) console.error(`- ${violation}`);
+  console.error(`FORBIDDEN: ${violations[0]}`);
+  for (const violation of violations.slice(1)) console.error(`- ${violation}`);
   process.exit(1);
 }
 
