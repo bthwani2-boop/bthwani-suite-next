@@ -1,6 +1,7 @@
 package homediscovery
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -10,10 +11,10 @@ import (
 )
 
 type HomeContentEventInput struct {
-	EventType  string `json:"eventType"`
+	EventType   string `json:"eventType"`
 	ContentKind string `json:"contentKind"`
-	ContentID  string `json:"contentId"`
-	ViewerRef  string `json:"viewerRef,omitempty"`
+	ContentID   string `json:"contentId"`
+	ViewerRef   string `json:"viewerRef,omitempty"`
 }
 
 func HandleHomeContentEvent(db *sql.DB) http.HandlerFunc {
@@ -40,12 +41,7 @@ func HandleHomeContentEvent(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func RecordHomeContentEvent(ctx interface {
-	Done() <-chan struct{}
-	Err() error
-	Deadline() (time.Time, bool)
-	Value(key any) any
-}, db *sql.DB, input HomeContentEventInput) error {
+func RecordHomeContentEvent(ctx context.Context, db *sql.DB, input HomeContentEventInput) error {
 	eventType := strings.TrimSpace(input.EventType)
 	kind := strings.TrimSpace(input.ContentKind)
 	contentID := strings.TrimSpace(input.ContentID)
