@@ -6,6 +6,23 @@ import (
 	"fmt"
 )
 
+func ensureNoActiveStoreCaptainHandoffException(db *sql.DB, assignmentID string) error {
+	var exceptionOpen bool
+	if err := db.QueryRow(`
+		SELECT EXISTS (
+			SELECT 1
+			FROM dsh_delivery_exceptions
+			WHERE assignment_id = $1::uuid
+			  AND status IN ('open', 'acknowledged')
+		)`, assignmentID).Scan(&exceptionOpen); err != nil {
+		return err
+	}
+	if exceptionOpen {
+		return fmt.Errorf("%w: handoff exception requires operations resolution", ErrConflict)
+	}
+	return nil
+}
+
 // UpdateDeliveryStatusGovernedIdempotent preserves the governed delivery
 // transition rules while making an exact replay of an already-applied status
 // return the current server truth instead of a false state conflict.
@@ -24,6 +41,11 @@ func UpdateDeliveryStatusGovernedIdempotent(
 	current, err := GetCaptainAssignment(db, assignmentID, captainID)
 	if err != nil {
 		return nil, err
+	}
+	if status == DeliveryPickedUp && current.Delivery.Status != DeliveryPickedUp {
+		if err = ensureNoActiveStoreCaptainHandoffException(db, assignmentID); err != nil {
+			return nil, err
+		}
 	}
 	if current.Delivery.Status != status {
 		return UpdateDeliveryStatusGoverned(db, assignmentID, captainID, status)
@@ -77,19 +99,8 @@ func ConfirmStoreCaptainHandoffIdempotent(
 		if item.Status == "partner_confirmed" || item.Status == "completed" {
 			return item, nil
 		}
-
-		var exceptionOpen bool
-		if err = db.QueryRow(`
-			SELECT EXISTS (
-				SELECT 1
-				FROM dsh_delivery_exceptions
-				WHERE assignment_id = $1::uuid
-				  AND status IN ('open', 'acknowledged')
-			)`, item.AssignmentID).Scan(&exceptionOpen); err != nil {
+		if err = ensureNoActiveStoreCaptainHandoffException(db, item.AssignmentID); err != nil {
 			return nil, err
-		}
-		if exceptionOpen {
-			return nil, fmt.Errorf("%w: handoff exception requires operations resolution", ErrConflict)
 		}
 	}
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
