@@ -8,10 +8,11 @@ import type { ProviderKind } from "../../shared/workforce";
 import { Box, Button, Card, Header, ScrollScreen, Text, spacing } from "@bthwani/ui-kit";
 
 import { ProviderListView } from "./ProviderListView";
-
 import { FieldAgentCreateView } from "./FieldAgentCreateView";
 import { CaptainCreateView } from "./CaptainCreateView";
+import { EmployeeCreateView } from "./EmployeeCreateView";
 import { ProviderDetailView } from "./ProviderDetailView";
+import { EmployeeDetailView } from "./EmployeeDetailView";
 import { WorkforceReferenceView } from "./WorkforceReferenceView";
 
 function WorkforceHrScreenInner() {
@@ -19,7 +20,8 @@ function WorkforceHrScreenInner() {
   const searchParams = useSearchParams();
 
   const view = searchParams.get("view") || "list";
-  const kind = (searchParams.get("kind") as ProviderKind) || "field";
+  const rawKind = searchParams.get("kind");
+  const kind: ProviderKind = rawKind === "captain" || rawKind === "employee" ? rawKind : "field";
   const actorId = searchParams.get("actorId") || "";
 
   const navigateTo = (newView: string, newKind?: ProviderKind, newActorId?: string) => {
@@ -30,57 +32,44 @@ function WorkforceHrScreenInner() {
     router.push(`?${params.toString()}`);
   };
 
-  // Unified "إضافة مقدم خدمة" view — form includes activation (autoActivate toggle).
   if (view === "create" || view === "manage" || view === "type-select" || view === "activation") {
     return (
       <ScrollScreen>
         <Card style={{ padding: spacing[4], gap: spacing[3] }}>
           <Box style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}>
             <Header
-              title="إضافة مقدم خدمة"
-              subtitle="أكمل البيانات أدناه — يمكنك تفعيل الحساب وإصدار كود الدخول في نفس الاستمارة."
+              title="إضافة عضو Workforce"
+              subtitle="أنشئ مقدم خدمة ميدانيًا أو كابتنًا أو موظفًا إداريًا من المصدر السيادي نفسه."
             />
             <Button label="رجوع" tone="ghost" onPress={() => navigateTo("list")} />
           </Box>
-          <Text role="bodySm" style={{ textAlign: "right", fontWeight: "bold" }}>نوع مقدم الخدمة:</Text>
-          <Box style={{ flexDirection: "row-reverse", gap: spacing[2] }}>
-            <Button
-              label="كابتن"
-              tone={kind === "captain" ? "primary" : "secondary"}
-              onPress={() => navigateTo("create", "captain")}
-            />
-            <Button
-              label="ميداني"
-              tone={kind === "field" ? "primary" : "secondary"}
-              onPress={() => navigateTo("create", "field")}
-            />
+          <Text role="bodySm" style={{ textAlign: "right", fontWeight: "bold" }}>نوع العضو:</Text>
+          <Box style={{ flexDirection: "row-reverse", gap: spacing[2], flexWrap: "wrap" }}>
+            <Button label="كابتن" tone={kind === "captain" ? "primary" : "secondary"} onPress={() => navigateTo("create", "captain")} />
+            <Button label="ميداني" tone={kind === "field" ? "primary" : "secondary"} onPress={() => navigateTo("create", "field")} />
+            <Button label="موظف إداري" tone={kind === "employee" ? "primary" : "secondary"} onPress={() => navigateTo("create", "employee")} />
           </Box>
         </Card>
 
         {kind === "captain" ? (
-          <CaptainCreateView
-            inline
-            onCreated={(captain) => navigateTo("detail", "captain", captain.actorId)}
-          />
+          <CaptainCreateView inline onCreated={(captain) => navigateTo("detail", "captain", captain.actorId)} />
+        ) : kind === "employee" ? (
+          <EmployeeCreateView inline onCreated={(employee) => navigateTo("detail", "employee", employee.actorId)} />
         ) : (
-          <FieldAgentCreateView
-            inline
-            onCreated={(agent) => navigateTo("detail", "field", agent.actorId)}
-          />
+          <FieldAgentCreateView inline onCreated={(agent) => navigateTo("detail", "field", agent.actorId)} />
         )}
       </ScrollScreen>
     );
   }
 
   if (view === "detail") {
-    return (
-      <ProviderDetailView
-        actorId={actorId}
-        kind={kind}
-        onBack={() => navigateTo("list")}
-      />
+    return kind === "employee" ? (
+      <EmployeeDetailView actorId={actorId} onBack={() => navigateTo("list")} />
+    ) : (
+      <ProviderDetailView actorId={actorId} kind={kind} onBack={() => navigateTo("list")} />
     );
   }
+
   if (view === "reference") {
     return <WorkforceReferenceView onBack={() => navigateTo("list")} />;
   }
