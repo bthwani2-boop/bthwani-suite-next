@@ -36,8 +36,9 @@ func RemoveOwnedItem(
 	return nil
 }
 
-// ClearOwnedCart is intentionally idempotent for an owned active cart. It
-// distinguishes an inaccessible cart from an already-empty owned cart.
+// ClearOwnedCart is the explicit store-switch boundary. It removes the lines
+// and transitions the owned active cart to abandoned in one transaction, so
+// the single-active-cart invariant no longer traps the client on an empty cart.
 func ClearOwnedCart(
 	ctx context.Context,
 	db *sql.DB,
@@ -47,11 +48,18 @@ func ClearOwnedCart(
 	if clientID == "" || cartID == "" {
 		return ErrInvalid
 	}
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
 	var owned bool
-	if err := db.QueryRowContext(ctx, `
+	if err := tx.QueryRowContext(ctx, `
 		SELECT EXISTS (
 			SELECT 1 FROM dsh_carts
 			WHERE id = $1 AND client_id = $2 AND state = 'active'
+			FOR UPDATE
 		)`, cartID, clientID,
 	).Scan(&owned); err != nil {
 		return err
@@ -59,6 +67,18 @@ func ClearOwnedCart(
 	if !owned {
 		return ErrNotFound
 	}
-	_, err := db.ExecContext(ctx, `DELETE FROM dsh_cart_items WHERE cart_id = $1`, cartID)
-	return err
+	if _, err := tx.ExecContext(ctx, `DELETE FROM dsh_cart_items WHERE cart_id = $1`, cartID); err != nil {
+		return err
+	}
+	result, err := tx.ExecContext(ctx, `
+		UPDATE dsh_carts
+		SET state = 'abandoned', version = version + 1, updated_at = NOW()
+		WHERE id = $1 AND client_id = $2 AND state = 'active'`, cartID, clientID)
+	if err != nil {
+		return err
+	}
+	if affected, _ := result.RowsAffected(); affected != 1 {
+		return ErrConflict
+	}
+	return tx.Commit()
 }
