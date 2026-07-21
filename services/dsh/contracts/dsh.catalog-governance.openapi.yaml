@@ -1,0 +1,335 @@
+openapi: 3.1.0
+info:
+  title: BThwani DSH Catalog Governance API
+  version: 1.0.0
+  description: >-
+    Governed JRN-008 contract for PIM attributes, product relationships,
+    temporary assortment pauses, catalog audit readback and guarded rollback.
+
+x-bthwani-owner: services/dsh
+x-bthwani-parent-contract: contracts/dsh.catalog.openapi.yaml
+x-bthwani-contract-role: executable-fragment
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-client-generation: DISABLED
+x-bthwani-client-binding: MANUAL_TYPED_ADAPTER
+x-bthwani-adapter-owner: frontend/shared/catalog/catalog-governance.api.ts
+x-bthwani-runtime-dependency: true
+
+paths:
+  /dsh/operator/catalog/attributes:
+    get:
+      operationId: listOperatorCatalogAttributes
+      tags: [CentralCatalogGovernance]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Governed catalog attributes }
+    post:
+      operationId: createOperatorCatalogAttribute
+      tags: [CentralCatalogGovernance]
+      security: [{ bearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        "201": { description: Attribute created }
+
+  /dsh/operator/catalog/attributes/{attributeId}/options:
+    parameters:
+      - $ref: "#/components/parameters/AttributeId"
+    get:
+      operationId: listOperatorCatalogAttributeOptions
+      tags: [CentralCatalogGovernance]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Attribute options }
+    post:
+      operationId: createOperatorCatalogAttributeOption
+      tags: [CentralCatalogGovernance]
+      security: [{ bearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        "201": { description: Attribute option created }
+
+  /dsh/operator/catalog/nodes/{nodeId}/attributes/{attributeId}:
+    parameters:
+      - $ref: "#/components/parameters/NodeId"
+      - $ref: "#/components/parameters/AttributeId"
+    put:
+      operationId: upsertOperatorCatalogNodeAttributeRule
+      tags: [CentralCatalogGovernance]
+      security: [{ bearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        "200": { description: Node attribute rule saved }
+
+  /dsh/operator/catalog/master-products/{productId}/attribute-values:
+    parameters:
+      - $ref: "#/components/parameters/ProductId"
+    get:
+      operationId: listOperatorMasterProductAttributeValues
+      tags: [CentralCatalogGovernance]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Master-product attribute values }
+
+  /dsh/operator/catalog/master-products/{productId}/attribute-values/{attributeId}:
+    parameters:
+      - $ref: "#/components/parameters/ProductId"
+      - $ref: "#/components/parameters/AttributeId"
+    put:
+      operationId: upsertOperatorMasterProductAttributeValue
+      tags: [CentralCatalogGovernance]
+      security: [{ bearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        "200": { description: Master-product attribute value saved }
+
+  /dsh/operator/catalog/master-products/{productId}/relationships:
+    parameters:
+      - $ref: "#/components/parameters/ProductId"
+    get:
+      operationId: listOperatorMasterProductRelationships
+      tags: [CentralCatalogGovernance]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Product alternatives, substitutes and complements }
+    put:
+      operationId: upsertOperatorMasterProductRelationship
+      tags: [CentralCatalogGovernance]
+      security: [{ bearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        "200": { description: Product relationship saved }
+
+  /dsh/operator/catalog/master-products/{productId}/relationships/{relationshipId}:
+    parameters:
+      - $ref: "#/components/parameters/ProductId"
+      - $ref: "#/components/parameters/RelationshipId"
+      - name: expectedVersion
+        in: query
+        required: true
+        schema: { type: integer, minimum: 1 }
+    delete:
+      operationId: deleteOperatorMasterProductRelationship
+      tags: [CentralCatalogGovernance]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "204": { description: Product relationship deleted }
+
+  /dsh/operator/stores/{storeId}/assortment-pauses:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    get:
+      operationId: listOperatorAssortmentPauses
+      tags: [CentralCatalogGovernance]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Store assortment pause states }
+
+  /dsh/operator/stores/{storeId}/assortment/{masterProductId}/pause:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - $ref: "#/components/parameters/MasterProductId"
+    post:
+      operationId: pauseOperatorStoreAssortment
+      tags: [CentralCatalogGovernance]
+      security: [{ bearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        "200": { description: Assortment temporarily paused }
+
+  /dsh/operator/stores/{storeId}/assortment/{masterProductId}/resume:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - $ref: "#/components/parameters/MasterProductId"
+    post:
+      operationId: resumeOperatorStoreAssortment
+      tags: [CentralCatalogGovernance]
+      security: [{ bearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        "200": { description: Assortment resumed from temporary pause }
+
+  /dsh/operator/catalog/audit:
+    get:
+      operationId: listOperatorCatalogAudit
+      tags: [CentralCatalogGovernance]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: entityType, in: query, schema: { type: string } }
+        - { name: entityId, in: query, schema: { type: string } }
+        - { name: action, in: query, schema: { type: string, enum: [INSERT, UPDATE, DELETE, ROLLBACK] } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0 } }
+      responses:
+        "200": { description: Append-only catalog audit page }
+
+  /dsh/operator/catalog/audit/{auditId}/rollback:
+    parameters:
+      - $ref: "#/components/parameters/AuditId"
+    post:
+      operationId: rollbackOperatorCatalogAudit
+      tags: [CentralCatalogGovernance]
+      security: [{ bearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        "200": { description: Guarded rollback completed }
+        "409": { description: Entity version changed after the audited update }
+
+  /dsh/partner/catalog/attributes:
+    get:
+      operationId: listPartnerCatalogAttributes
+      tags: [CentralCatalogGovernance]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Published attribute definitions for partner catalog }
+
+  /dsh/partner/catalog/attributes/{attributeId}/options:
+    parameters:
+      - $ref: "#/components/parameters/AttributeId"
+    get:
+      operationId: listPartnerCatalogAttributeOptions
+      tags: [CentralCatalogGovernance]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Published attribute options }
+
+  /dsh/partner/catalog/master-products/{productId}/attribute-values:
+    parameters:
+      - $ref: "#/components/parameters/ProductId"
+    get:
+      operationId: listPartnerMasterProductAttributeValues
+      tags: [CentralCatalogGovernance]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Published product attribute values }
+
+  /dsh/partner/catalog/master-products/{productId}/relationships:
+    parameters:
+      - $ref: "#/components/parameters/ProductId"
+    get:
+      operationId: listPartnerMasterProductRelationships
+      tags: [CentralCatalogGovernance]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Published product relationships }
+
+  /dsh/partner/stores/{storeId}/assortment-pauses:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    get:
+      operationId: listPartnerAssortmentPauses
+      tags: [CentralCatalogGovernance]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Pause states for the authenticated partner store }
+
+  /dsh/partner/stores/{storeId}/assortment/{masterProductId}/pause:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - $ref: "#/components/parameters/MasterProductId"
+    post:
+      operationId: pausePartnerStoreAssortment
+      tags: [CentralCatalogGovernance]
+      security: [{ bearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        "200": { description: Partner assortment paused }
+
+  /dsh/partner/stores/{storeId}/assortment/{masterProductId}/resume:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - $ref: "#/components/parameters/MasterProductId"
+    post:
+      operationId: resumePartnerStoreAssortment
+      tags: [CentralCatalogGovernance]
+      security: [{ bearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        "200": { description: Partner assortment resumed }
+
+  /dsh/field/catalog/attributes:
+    get:
+      operationId: listFieldCatalogAttributes
+      tags: [CentralCatalogGovernance]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Published attribute definitions for field catalog }
+
+  /dsh/field/catalog/attributes/{attributeId}/options:
+    parameters:
+      - $ref: "#/components/parameters/AttributeId"
+    get:
+      operationId: listFieldCatalogAttributeOptions
+      tags: [CentralCatalogGovernance]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Published field attribute options }
+
+  /dsh/field/catalog/master-products/{productId}/attribute-values:
+    parameters:
+      - $ref: "#/components/parameters/ProductId"
+    get:
+      operationId: listFieldMasterProductAttributeValues
+      tags: [CentralCatalogGovernance]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Published field product attribute values }
+
+  /dsh/field/catalog/master-products/{productId}/relationships:
+    parameters:
+      - $ref: "#/components/parameters/ProductId"
+    get:
+      operationId: listFieldMasterProductRelationships
+      tags: [CentralCatalogGovernance]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Published field product relationships }
+
+  /dsh/field/partners/{partnerId}/assortment-pauses:
+    parameters:
+      - $ref: "#/components/parameters/PartnerId"
+    get:
+      operationId: listFieldAssortmentPauses
+      tags: [CentralCatalogGovernance]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Pause states for field-authorized partner store }
+
+  /dsh/field/partners/{partnerId}/assortment/{masterProductId}/pause:
+    parameters:
+      - $ref: "#/components/parameters/PartnerId"
+      - $ref: "#/components/parameters/MasterProductId"
+    post:
+      operationId: pauseFieldStoreAssortment
+      tags: [CentralCatalogGovernance]
+      security: [{ bearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        "200": { description: Field-authorized assortment paused }
+
+  /dsh/field/partners/{partnerId}/assortment/{masterProductId}/resume:
+    parameters:
+      - $ref: "#/components/parameters/PartnerId"
+      - $ref: "#/components/parameters/MasterProductId"
+    post:
+      operationId: resumeFieldStoreAssortment
+      tags: [CentralCatalogGovernance]
+      security: [{ bearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        "200": { description: Field-authorized assortment resumed }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    AttributeId: { name: attributeId, in: path, required: true, schema: { type: string } }
+    NodeId: { name: nodeId, in: path, required: true, schema: { type: string } }
+    ProductId: { name: productId, in: path, required: true, schema: { type: string } }
+    MasterProductId: { name: masterProductId, in: path, required: true, schema: { type: string } }
+    RelationshipId: { name: relationshipId, in: path, required: true, schema: { type: string } }
+    StoreId: { name: storeId, in: path, required: true, schema: { type: string } }
+    PartnerId: { name: partnerId, in: path, required: true, schema: { type: string } }
+    AuditId: { name: auditId, in: path, required: true, schema: { type: string } }
