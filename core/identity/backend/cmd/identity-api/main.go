@@ -47,7 +47,7 @@ func main() {
 
 	server := &http.Server{
 		Addr:         ":" + port,
-		Handler:      identityhttp.CorsMiddleware(identityhttp.NewRouter(db, repository)),
+		Handler:      identityhttp.BrowserCorsMiddleware(identityhttp.CorsMiddleware(identityhttp.NewRouter(db, repository))),
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,
