@@ -277,7 +277,7 @@ export function CartScreen({
                   tone="secondary"
                   size="sm"
                   disabled={actionPending}
-                  onPress={() => void controller.removeItem(controller.state.cart.id, item.id)}
+                  onPress={() => void controller.removeItem(item.cartId, item.id)}
                 />
               </View>
             </View>
