@@ -13,8 +13,15 @@ import {
   spacing,
   Divider,
 } from '@bthwani/ui-kit';
-import { fetchPartnerStoreAssortment, upsertPartnerStoreAssortmentOCC, fetchPartnerMasterProducts } from '../../shared/catalog';
-import type { StoreAssortment, MasterProduct } from '../../shared/catalog';
+import {
+  fetchPartnerAssortmentPauses,
+  fetchPartnerStoreAssortment,
+  upsertPartnerStoreAssortmentOCC,
+  fetchPartnerMasterProducts,
+  pausePartnerStoreAssortment,
+  resumePartnerStoreAssortment,
+} from '../../shared/catalog';
+import type { AssortmentPauseState, StoreAssortment, MasterProduct } from '../../shared/catalog';
 
 export type ProductOverridesScreenProps = {
   storeId: string;
@@ -42,24 +49,33 @@ export function ProductOverridesScreen({
 
   const [screenState, setScreenState] = React.useState<ProductOverridesScreenState>('loading');
   const [assortment, setAssortment] = React.useState<StoreAssortment | null>(null);
+  const [pauseState, setPauseState] = React.useState<AssortmentPauseState | null>(null);
   const [masterProduct, setMasterProduct] = React.useState<MasterProduct | null>(null);
   const [unitPrice, setUnitPrice] = React.useState('');
   const [stockStatus, setStockStatus] = React.useState<"in_stock" | "low_stock" | "out_of_stock">('in_stock');
   const [available, setAvailable] = React.useState(true);
   const [localNote, setLocalNote] = React.useState('');
+  const [pauseReason, setPauseReason] = React.useState('');
+  const [pausedUntil, setPausedUntil] = React.useState('');
+  const [pauseSaving, setPauseSaving] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
   const loadData = React.useCallback(async () => {
     setScreenState('loading');
     setErrorMessage(null);
     try {
-      const masterProducts = await fetchPartnerMasterProducts({ search: productId, limit: 1 });
-      const mp = masterProducts.find((p) => p.id === productId);
+      const [masterProducts, assortments, pauses] = await Promise.all([
+        fetchPartnerMasterProducts({ search: productId, limit: 1 }),
+        fetchPartnerStoreAssortment(storeId),
+        fetchPartnerAssortmentPauses(storeId),
+      ]);
+      const mp = masterProducts.find((product) => product.id === productId);
       if (mp) setMasterProduct(mp);
 
-      const assortments = await fetchPartnerStoreAssortment(storeId);
-      const match = assortments.find((a) => a.masterProductId === productId) ?? null;
+      const match = assortments.find((item) => item.masterProductId === productId) ?? null;
+      const pause = pauses.find((item) => item.masterProductId === productId) ?? null;
       setAssortment(match);
+      setPauseState(pause);
       if (match) {
         setUnitPrice(String(match.unitPrice));
         setStockStatus(match.stockStatus);
@@ -71,6 +87,8 @@ export function ProductOverridesScreen({
         setAvailable(true);
         setLocalNote('');
       }
+      setPauseReason(pause?.reason ?? '');
+      setPausedUntil(pause?.pausedUntil ?? '');
       setScreenState('form');
     } catch (err: any) {
       setErrorMessage(err.message ?? 'تعذر تحميل تفاصيل المنتج والتجاوزات المحلية.');
@@ -98,6 +116,7 @@ export function ProductOverridesScreen({
         expectedVersion: assortment?.version,
       });
       setAssortment(saved);
+      setPauseState((current) => current ? { ...current, version: saved.version } : current);
       setScreenState('saved');
       onSaved?.();
     } catch (err: any) {
@@ -106,6 +125,49 @@ export function ProductOverridesScreen({
       await loadData();
     }
   }, [storeId, productId, unitPrice, available, stockStatus, localNote, assortment, onSaved, loadData]);
+
+  const handlePause = React.useCallback(async () => {
+    if (!pauseState || pauseReason.trim().length < 3) {
+      setErrorMessage('حمّل التشكيلة واكتب سبباً واضحاً للإيقاف المؤقت.');
+      return;
+    }
+    setPauseSaving(true);
+    setErrorMessage(null);
+    try {
+      const result = await pausePartnerStoreAssortment(storeId, productId, {
+        reason: pauseReason.trim(),
+        pausedUntil: pausedUntil.trim() || null,
+        expectedVersion: pauseState.version,
+      });
+      setAssortment(result.assortment);
+      setPauseState(result.pause);
+      setAvailable(result.assortment.available);
+    } catch (err: any) {
+      setErrorMessage(err.message ?? 'تعذر إيقاف المنتج مؤقتاً.');
+      await loadData();
+    } finally {
+      setPauseSaving(false);
+    }
+  }, [loadData, pauseReason, pauseState, pausedUntil, productId, storeId]);
+
+  const handleResume = React.useCallback(async () => {
+    if (!pauseState) return;
+    setPauseSaving(true);
+    setErrorMessage(null);
+    try {
+      const result = await resumePartnerStoreAssortment(storeId, productId, pauseState.version);
+      setAssortment(result.assortment);
+      setPauseState(result.pause);
+      setAvailable(result.assortment.available);
+      setPauseReason('');
+      setPausedUntil('');
+    } catch (err: any) {
+      setErrorMessage(err.message ?? 'تعذر استئناف المنتج.');
+      await loadData();
+    } finally {
+      setPauseSaving(false);
+    }
+  }, [loadData, pauseState, productId, storeId]);
 
   if (screenState === 'loading') {
     return <StateView title="جارٍ تحميل تفاصيل الكتالوج والتجاوزات…" loading />;
@@ -125,7 +187,7 @@ export function ProductOverridesScreen({
           <Box style={{ flex: 1, minWidth: 0 }}>
             <Text role="titleSm" align="start">تعديل الأسعار والتوفر</Text>
             <Text role="bodySm" tone="muted" align="start">
-              تجاوز السعر وحالة التوفر والمخزون لفرع المتجر الحالي محلياً فقط.
+              السعر والمخزون محليان للمتجر، بينما هوية المنتج والخصائص والبدائل مركزية.
             </Text>
           </Box>
         </Box>
@@ -165,7 +227,7 @@ export function ProductOverridesScreen({
               value={unitPrice}
               onChangeText={setUnitPrice}
               placeholder="مثال: 15.00"
-              disabled={screenState === 'saving'}
+              disabled={screenState === 'saving' || pauseState?.paused === true}
             />
 
             <TextField
@@ -188,14 +250,14 @@ export function ProductOverridesScreen({
             <Box style={{ flexDirection: resolveRowDirection(direction), alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing[2] }}>
               <Box style={{ gap: 2 }}>
                 <Text role="bodyStrong" align="start">حالة التوفر المحلية</Text>
-                <Text role="caption" tone="muted" align="start">تحديد ما إذا كان هذا المنتج متاحاً للطلب بالفرع</Text>
+                <Text role="caption" tone="muted" align="start">الإيقاف المؤقت المحكوم أدناه مستقل عن التوفر الدائم.</Text>
               </Box>
               <Button
-                label={available ? 'متاح للطلب' : 'غير متوفر مؤقتاً'}
+                label={available ? 'متاح للطلب' : 'غير متوفر'}
                 tone={available ? 'success' : 'danger'}
                 size="sm"
                 fullWidth={false}
-                disabled={screenState === 'saving'}
+                disabled={screenState === 'saving' || pauseState?.paused === true}
                 onPress={() => setAvailable(!available)}
               />
             </Box>
@@ -203,11 +265,54 @@ export function ProductOverridesScreen({
             <Button
               label={screenState === 'saving' ? 'جاري الحفظ...' : 'حفظ التجاوزات'}
               tone="primary"
-              disabled={screenState === 'saving'}
+              disabled={screenState === 'saving' || pauseState?.paused === true}
               onPress={handleSave}
             />
           </Box>
         )}
+
+        <Divider />
+
+        <Surface tone={pauseState?.paused ? 'warning' : 'inset'} padding={3} gap={3} radiusToken="md">
+          <Text role="bodyStrong" align="start">الإيقاف المؤقت التشغيلي</Text>
+          <Text role="bodySm" tone="muted" align="start">
+            {pauseState?.paused
+              ? `المنتج موقوف مؤقتاً: ${pauseState.reason}`
+              : 'المنتج غير موقوف مؤقتاً. يتطلب الإيقاف سبباً وإصداراً مطابقاً للحقيقة.'}
+          </Text>
+          {pauseState?.pausedUntil ? <Text role="caption" tone="muted">حتى: {pauseState.pausedUntil}</Text> : null}
+          {!pauseState?.paused ? (
+            <>
+              <TextField
+                label="سبب الإيقاف"
+                value={pauseReason}
+                onChangeText={setPauseReason}
+                placeholder="مثال: نفاد مؤقت لدى المورد"
+                disabled={pauseSaving}
+              />
+              <TextField
+                label="وقت الاستئناف ISO (اختياري)"
+                value={pausedUntil}
+                onChangeText={setPausedUntil}
+                placeholder="2026-07-22T12:00:00+03:00"
+                disabled={pauseSaving}
+              />
+              <Button
+                label={pauseSaving ? 'جاري الإيقاف...' : 'إيقاف المنتج مؤقتاً'}
+                tone="danger"
+                disabled={pauseSaving || !pauseState || pauseReason.trim().length < 3}
+                onPress={handlePause}
+              />
+            </>
+          ) : (
+            <Button
+              label={pauseSaving ? 'جاري الاستئناف...' : 'استئناف المنتج'}
+              tone="success"
+              disabled={pauseSaving}
+              onPress={handleResume}
+            />
+          )}
+        </Surface>
       </Box>
     </ScrollView>
   );
