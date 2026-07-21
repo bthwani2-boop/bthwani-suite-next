@@ -25,14 +25,15 @@ func SendError(w http.ResponseWriter, status int, code, message string) {
 	SendJSON(w, status, ApiError{Code: code, Message: message})
 }
 
-// validateListQuery parses and validates the query parameters for the store
-// list endpoint. It returns the parsed query and an error message; an empty
-// error message means the query is valid. Behavior:
+// ParseListQuery parses and validates the query parameters shared by the
+// public discovery list and the governed operator list. It returns the parsed
+// query and an error message; an empty error message means the query is valid.
+// Behavior:
 //   - limit defaults to 20, must be an integer in [1, 100]
 //   - offset defaults to 0, must be an integer >= 0
 //   - status, if present, must be one of the known DshStoreStatus values
 //   - isVisible is tri-state: "true" -> true, "false" -> false, otherwise unset
-func validateListQuery(q url.Values) (DshStoreListQuery, string) {
+func ParseListQuery(q url.Values) (DshStoreListQuery, string) {
 	limitStr := q.Get("limit")
 	offsetStr := q.Get("offset")
 
@@ -66,7 +67,6 @@ func validateListQuery(q url.Values) (DshStoreListQuery, string) {
 
 	status := DshStoreStatus(q.Get("status"))
 
-	// Validate query params
 	if limit < 1 || limit > 100 {
 		return DshStoreListQuery{}, "limit must be between 1 and 100"
 	}
@@ -89,9 +89,15 @@ func validateListQuery(q url.Values) (DshStoreListQuery, string) {
 	}, ""
 }
 
+// validateListQuery remains as the package-local compatibility entry point for
+// existing tests and callers while ParseListQuery is used by protected routes.
+func validateListQuery(q url.Values) (DshStoreListQuery, string) {
+	return ParseListQuery(q)
+}
+
 func HandleListStores(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		listQuery, errMsg := validateListQuery(r.URL.Query())
+		listQuery, errMsg := ParseListQuery(r.URL.Query())
 		if errMsg != "" {
 			SendError(w, http.StatusBadRequest, "INVALID_PARAMETER", errMsg)
 			return
