@@ -1,6 +1,7 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { createDshHttpClient } from "../_kernel/dsh-http-request";
 import type {
+  DshMapProviderHealth,
   DshMapReverseInput,
   DshMapSearchInput,
   DshServiceArea,
@@ -54,6 +55,13 @@ export async function reverseDshClientMapLocation(
     },
   );
   return result.location;
+}
+
+export async function getDshOperatorMapProviderHealth(): Promise<DshMapProviderHealth> {
+  const result = await request<{ mapProviderHealth: DshMapProviderHealth }>(
+    "/dsh/operator/platform/map-provider-health",
+  );
+  return result.mapProviderHealth;
 }
 
 export async function listDshOperatorServiceAreas(): Promise<
