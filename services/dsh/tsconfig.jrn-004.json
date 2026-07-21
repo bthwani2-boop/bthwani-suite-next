@@ -1,0 +1,32 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "outDir": "dist-jrn-004"
+  },
+  "include": [
+    "frontend/**/*.d.ts",
+    "frontend/shared/_kernel/**/*.ts",
+    "frontend/shared/_kernel/**/*.tsx",
+    "frontend/shared/store/**/*.ts",
+    "frontend/shared/store/**/*.tsx",
+    "frontend/shared/partner/partner.api.ts",
+    "frontend/shared/partner/partner.types.ts",
+    "frontend/shared/partner/partner-hub.types.ts",
+    "frontend/shared/partner/partner-store-profile.ts",
+    "frontend/shared/partner/store-scope.model.ts",
+    "frontend/app-client/store/**/*.ts",
+    "frontend/app-client/store/**/*.tsx",
+    "frontend/app-partner/store/StoreProfileScreen.tsx",
+    "frontend/app-partner/account/PartnerHubScreen.tsx",
+    "frontend/control-panel/partners/stores/**/*.ts",
+    "frontend/control-panel/partners/stores/**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "dist-jrn-004"
+  ]
+}
