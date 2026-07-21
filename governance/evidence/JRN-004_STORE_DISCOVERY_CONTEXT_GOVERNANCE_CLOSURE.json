@@ -6,6 +6,7 @@
   "repository": "bthwani2-boop/bthwani-suite-next",
   "targetRef": "sambassam",
   "verifiedImplementationCommit": "2a330d9ccd37484d6c156cb40b4be87271a53545",
+  "canonicalRegistryCommit": "38daee532191b9b207bde38e5b688178956a7f8b",
   "decision": "READY_FOR_REVIEW",
   "functionalSlices": {
     "registered": 9,
