@@ -9,7 +9,11 @@ import {
   WebControlPanelQueue,
 } from '@bthwani/ui-kit/web';
 import styles from '../shared/control-panel-surface.module.css';
-import { FINANCIAL_CLOSURE_LABELS } from '../../shared/orders';
+import {
+  FINANCIAL_CLOSURE_LABELS,
+  OrderPreparationReadbackCard,
+  useOrderPreparationReadback,
+} from '../../shared/orders';
 import { OrderTruthReadbackSummary } from '../../shared/order-truth';
 import { useOperatorOrderWorkboard } from '../../shared/operations/use-operator-order-workboard';
 import type { OperationsFocusParams, OperatorOrderWorkboardRow } from '../../shared/operations';
@@ -65,6 +69,10 @@ export function OrderJourneyLiveOrdersScreen({
   const workboard = useOperatorOrderWorkboard();
   const [selectedOrderId, setSelectedOrderId] = React.useState<string | null>(
     focusParams?.orderId ?? null,
+  );
+  const preparationReadback = useOrderPreparationReadback(
+    selectedOrderId ?? '',
+    { pollIntervalMs: 15_000 },
   );
 
   React.useEffect(() => {
@@ -165,9 +173,17 @@ export function OrderJourneyLiveOrdersScreen({
           </Box>
 
           {selected ? (
+            <OrderPreparationReadbackCard
+              state={preparationReadback.state}
+              title="التجهيز والمشكلات"
+              onRetry={preparationReadback.refresh}
+            />
+          ) : null}
+
+          {selected ? (
             <OrderJourneyOperatorIntervention order={selected} onChanged={workboard.refresh} />
           ) : (
-            <StateView stateId="empty" title="اختر طلبًا" description="اختر صفًا لعرض التدخلات المحكومة والنتيجة المالية." />
+            <StateView stateId="empty" title="اختر طلبًا" description="اختر صفًا لعرض التجهيز والتدخلات المحكومة والنتيجة المالية." />
           )}
 
           {selected ? (
