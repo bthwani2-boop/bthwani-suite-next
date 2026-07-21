@@ -48,7 +48,21 @@ function forbidInDirectory(relativeDir, extensions, pattern, message, exclude = 
   }
 }
 
-// Identity/session invariants.
+// JRN-001 partner onboarding must keep one governed product model and cross-surface runtime.
+const partnerTruth = "governance/product/contracts/jrn-001-partner-onboarding-store-publication.product-truth.json";
+for (const marker of ["JRN-001", "app-field", "app-partner", "control-panel"]) {
+  requireText(partnerTruth, marker, `JRN001_PRODUCT_TRUTH_MISSING ${marker}`);
+}
+const partnerRuntime = "services/dsh/frontend/shared/partner/partner-onboarding.runtime.ts";
+for (const marker of ["partner", "store", "readiness", "activation"]) {
+  requireText(partnerRuntime, marker, `JRN001_SHARED_RUNTIME_MISSING ${marker}`);
+}
+const partnerIntegrity = "services/dsh/backend/internal/partner/onboarding_integrity_handlers.go";
+for (const marker of ["Partner", "Store", "Readiness"]) {
+  requireText(partnerIntegrity, marker, `JRN001_BACKEND_INTEGRITY_MISSING ${marker}`);
+}
+
+// JRN-002 identity/session invariants.
 const identityStore = "core/identity/clients/identity-session-store.ts";
 for (const marker of ["isValidActorIdentity", "restoreStoredSession", "identityClient.session", "identityClient.refresh", "IDENTITY_SESSION_INVALID"]) {
   requireText(identityStore, marker, `IDENTITY_SESSION_INVARIANT_MISSING ${marker}`);
@@ -70,6 +84,46 @@ requireText(identityRepository, "identity_login_attempts", "IDENTITY_LOGIN_AUDIT
 const identityServer = "core/identity/backend/internal/http/server.go";
 requireText(identityServer, "IDENTITY_CORS_ALLOWED_ORIGINS", "IDENTITY_CORS_ENV_ALLOWLIST_MISSING");
 forbidText(identityServer, 'origin == "http://localhost:13000"', "HARDCODED_IDENTITY_CORS_ORIGIN_FORBIDDEN");
+const identityMain = "core/identity/backend/cmd/identity-api/main.go";
+for (const marker of ["BrowserCorsMiddleware", "CorsMiddleware", "ActivationSafetyMiddleware", "IDENTITY_LOCAL_BOOTSTRAP"]) {
+  requireText(identityMain, marker, `JRN002_RUNTIME_SAFETY_MISSING ${marker}`);
+}
+const identityActivationSafetyTest = "core/identity/backend/internal/http/activation_safety_test.go";
+for (const marker of ["RejectsBootstrapCodeOutsideLocalMode", "AllowsBootstrapCodeOnlyInExplicitLocalMode"]) {
+  requireText(identityActivationSafetyTest, marker, `JRN002_ACTIVATION_TEST_MISSING ${marker}`);
+}
+
+// JRN-003 workforce lifecycle must be mounted and mutation-safe.
+const workforceMain = "core/workforce/backend/cmd/workforce-api/main.go";
+for (const marker of ["ActivationMutationSafetyMiddleware", "CorsMiddleware", "WORKFORCE_IDENTITY_BASE_URL", "WORKFORCE_DSH_BASE_URL"]) {
+  requireText(workforceMain, marker, `JRN003_RUNTIME_BINDING_MISSING ${marker}`);
+}
+const workforceRoutesTest = "core/workforce/backend/internal/http/journey_routes_test.go";
+for (const marker of [
+  "POST /workforce/field-agents",
+  "PATCH /workforce/field-agents/{actorId}",
+  "POST /workforce/captains",
+  "POST /workforce/employees",
+  "GET /workforce/me",
+  "PATCH /workforce/me",
+]) {
+  requireText(workforceRoutesTest, marker, `JRN003_ROUTE_PROOF_MISSING ${marker}`);
+}
+
+// JRN-004 and JRN-005 routes must remain mounted on the governed DSH router.
+const firstFiveRoutesTest = "services/dsh/backend/internal/http/first_five_journeys_routes_test.go";
+for (const marker of [
+  "GET /dsh/stores",
+  "GET /dsh/stores/{storeId}",
+  "POST /dsh/operator/stores/{storeId}/governance",
+  "GET /dsh/client/addresses",
+  "POST /dsh/client/addresses",
+  "PATCH /dsh/client/addresses/{addressId}",
+  "DELETE /dsh/client/addresses/{addressId}",
+  "POST /dsh/client/addresses/{addressId}/default",
+]) {
+  requireText(firstFiveRoutesTest, marker, `JRN004_005_ROUTE_PROOF_MISSING ${marker}`);
+}
 
 // Operator authorization must be permission-based, not coarse role-only.
 for (const file of walk("services/dsh/backend", [".go"])) {
@@ -149,6 +203,54 @@ for (const marker of ["getOrCreateClientAddressAttempt", "clearClientAddressAtte
 }
 forbidText(addressController, "createAttempt = useRef", "ADDRESS_MEMORY_ONLY_RETRY_FORBIDDEN");
 
+// JRN-006 map provider calls stay behind DSH and verified service-area governance.
+const clientMapController = "services/dsh/frontend/shared/client-map/use-client-map-controller.ts";
+for (const marker of ["searchDshClientMapLocations", "reverseDshClientMapLocation"]) {
+  requireText(clientMapController, marker, `JRN006_MAP_CONTROLLER_BINDING_MISSING ${marker}`);
+}
+const clientMapApi = "services/dsh/frontend/shared/client-map/client-map.api.ts";
+for (const marker of ["/dsh/client/maps/search", "/dsh/client/maps/reverse"]) {
+  requireText(clientMapApi, marker, `JRN006_DSH_MAP_ROUTE_MISSING ${marker}`);
+}
+const clientMapHandler = "services/dsh/backend/internal/http/client_maps.go";
+for (const marker of ["servicearea.Resolve", "ServiceAreaVerified"]) {
+  requireText(clientMapHandler, marker, `JRN006_SERVICE_AREA_GOVERNANCE_MISSING ${marker}`);
+}
+
+// JRN-007 discovery must be scoped by the persisted selected address.
+const discoveryScreen = "services/dsh/frontend/app-client/home-discovery/HomeDiscoveryScreen.tsx";
+for (const marker of ["useClientAddressController", "addressController.selectedAddress?.serviceAreaCode", 'addressController.state.kind === "ready"']) {
+  requireText(discoveryScreen, marker, `JRN007_ADDRESS_SCOPED_DISCOVERY_MISSING ${marker}`);
+}
+const discoveryController = "services/dsh/frontend/shared/home-discovery/use-home-discovery-controller.tsx";
+requireText(discoveryController, "fetchHomeDiscovery({ cityCode, serviceAreaCode, limit: 20 })", "JRN007_DISCOVERY_QUERY_SCOPE_MISSING");
+
+// JRN-008 central catalog remains the only runtime catalog truth.
+const dshRouter = "services/dsh/backend/internal/http/server.go";
+for (const marker of ["GET /dsh/partner/catalog/taxonomy", "GET /dsh/partner/catalog/master-products"]) {
+  requireText(dshRouter, marker, `JRN008_CENTRAL_CATALOG_ROUTE_MISSING ${marker}`);
+}
+const centralCatalogMigration = "services/dsh/database/migrations/dsh-036_central_catalog_runtime_closure.sql";
+for (const marker of [
+  "DROP TABLE IF EXISTS dsh_catalog_products",
+  "DROP TABLE IF EXISTS dsh_catalog_categories",
+  "INSERT INTO dsh_master_products",
+  "INSERT INTO dsh_store_assortments",
+]) {
+  requireText(centralCatalogMigration, marker, `JRN008_CATALOG_CONSOLIDATION_MISSING ${marker}`);
+}
+
+// JRN-009 cart mutations must remain actor-owned and server-scoped.
+const cartHandler = "services/dsh/backend/internal/http/cart.go";
+for (const marker of ["cart.RemoveOwnedItem", "cart.ClearOwnedCart"]) {
+  requireText(cartHandler, marker, `JRN009_OWNED_CART_MUTATION_MISSING ${marker}`);
+}
+forbidText(cartHandler, "cart.RemoveItem(r.Context(), s.db, cartID, itemID)", "JRN009_UNSCOPED_CART_REMOVE_FORBIDDEN");
+const cartOwnership = "services/dsh/backend/internal/cart/ownership.go";
+for (const marker of ["cart.client_id = $3", "WHERE id = $1 AND client_id = $2 AND state = 'active'"]) {
+  requireText(cartOwnership, marker, `JRN009_CART_OWNERSHIP_QUERY_MISSING ${marker}`);
+}
+
 // JRN-010 checkout creation is idempotent from the client through DSH and WLT.
 const checkoutAttempt = "services/dsh/frontend/shared/checkout/checkout-create-attempt.ts";
 for (const marker of ["AsyncStorage", "fingerprintCheckoutInput", "getOrCreateCheckoutAttempt", "clearCheckoutAttempt"]) {
@@ -159,9 +261,22 @@ for (const marker of ["DshCheckoutMutationContext", "idempotencyKey: mutation.id
   requireText(checkoutApi, marker, `CHECKOUT_HTTP_IDEMPOTENCY_BINDING_MISSING ${marker}`);
 }
 const checkoutController = "services/dsh/frontend/shared/checkout/use-checkout-controller.tsx";
-for (const marker of ["getOrCreateCheckoutAttempt", "createCheckoutIntent(input, attempt.context)", "clearCheckoutAttempt(attempt.fingerprint)"]) {
+for (const marker of [
+  "getOrCreateCheckoutAttempt",
+  "createCheckoutIntent(input, attempt.context)",
+  "clearCheckoutAttempt(attempt.fingerprint)",
+  "reconcileLock.current",
+  "reconcilingIntentId",
+  "operatorReconcileMessage",
+  "setReconcileError",
+]) {
   requireText(checkoutController, marker, `CHECKOUT_CONTROLLER_RETRY_BINDING_MISSING ${marker}`);
 }
+const checkoutOperatorScreen = "services/dsh/frontend/control-panel/operations/CheckoutActivityScreen.tsx";
+for (const marker of ["CpButton", "CpStatePanel", "WebStyleSheet.create", "disabled={reconciliationLocked}", "controller.reconcileError"]) {
+  requireText(checkoutOperatorScreen, marker, `JRN010_OPERATOR_RECONCILIATION_UX_MISSING ${marker}`);
+}
+forbidText(checkoutOperatorScreen, '<button type="button" onClick={() => void onReconcile', "JRN010_RAW_UNGUARDED_RECONCILE_BUTTON_FORBIDDEN");
 const checkoutMigration = "services/dsh/database/migrations/dsh-901_checkout_create_idempotency.sql";
 for (const marker of ["dsh_checkout_create_idempotency", "PRIMARY KEY (tenant_id, client_id, idempotency_key)", "request_fingerprint", "checkout_intent_id"]) {
   requireText(checkoutMigration, marker, `CHECKOUT_IDEMPOTENCY_SCHEMA_MISSING ${marker}`);
@@ -223,6 +338,6 @@ for (const forbidden of ["git push", "git commit", "gofmt -w", "contents: write"
   if (ci.includes(forbidden)) violations.push({ file: ".github/workflows/ci.yml", line: 0, message: `CI_SOURCE_MUTATION_FORBIDDEN ${forbidden}` });
 }
 
-console.log("live-cross-journey-integrity-gate: scoped regression invariants only");
-console.log("live-cross-journey-integrity-gate: PASS does not prove full journey runtime, QA, security, release, or production closure");
+console.log("live-cross-journey-integrity-gate: JRN-001..JRN-010 scoped regression invariants");
+console.log("live-cross-journey-integrity-gate: PASS does not prove full journey runtime, QA, security, finance, release, or production closure");
 fail(guardId, violations);
