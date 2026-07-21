@@ -1,0 +1,73 @@
+name: JRN-009 Cart and Serviceability Verification
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [sambassam]
+    paths:
+      - "services/dsh/backend/internal/cart/**"
+      - "services/dsh/backend/internal/http/cart.go"
+      - "services/dsh/frontend/shared/cart/**"
+      - "services/dsh/frontend/app-client/cart/**"
+      - "services/dsh/frontend/control-panel/operations/CartActivityScreen.tsx"
+      - "services/dsh/tests/jrn-005-010-integrity.test.mjs"
+      - "services/dsh/tsconfig.jrn-009.json"
+      - ".github/workflows/jrn-009-sambassam-verify.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jrn-009-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  static-integrity:
+    name: JRN-009 static full-stack integrity
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24.17.0
+      - name: Verify repository hygiene
+        run: git diff --check
+      - name: Verify cart ownership, pricing, and operator readback
+        run: node --test services/dsh/tests/jrn-005-010-integrity.test.mjs
+
+  frontend-typecheck:
+    name: JRN-009 affected frontend typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Setup pinned Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Typecheck cart shared brain and affected surfaces
+        run: pnpm --dir services/dsh exec tsc -p tsconfig.jrn-009.json --noEmit --pretty false
+
+  backend-go:
+    name: JRN-009 cart and HTTP behavior
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Setup Go
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: services/dsh/backend/go.sum
+      - name: Verify cart domain and mounted HTTP routes
+        working-directory: services/dsh/backend
+        run: go test ./internal/cart ./internal/http -count=1
