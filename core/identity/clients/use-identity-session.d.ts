@@ -1,6 +1,11 @@
 export declare function useIdentitySession(): {
     state: import("./identity-session-store.ts").IdentitySessionState;
     login: (username: string, password: string) => Promise<void>;
+    requestOtp: (actorType: import("./identity-client.ts").ActivationActorType, phone: string) => Promise<import("./identity-client.ts").IssueActivationResponse>;
+    activate: (actorType: import("./identity-client.ts").ActivationActorType, phone: string, code: string) => Promise<void>;
+    listSessions: () => Promise<import("./identity-client.ts").SessionInfo[]>;
+    revokeSession: (sessionId: string) => Promise<void>;
     logout: () => Promise<void>;
+    changePassword: (password: string) => Promise<void>;
+    deleteAccount: () => Promise<void>;
 };
-//# sourceMappingURL=use-identity-session.d.ts.map
