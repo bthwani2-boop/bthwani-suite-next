@@ -20,23 +20,28 @@ type partnerOrderWorkboardItem struct {
 }
 
 type partnerOrderWorkboardOrder struct {
-	ID               string                      `json:"id"`
-	CheckoutIntentID string                      `json:"checkoutIntentId"`
-	StoreID          string                      `json:"storeId"`
-	FulfillmentMode  string                      `json:"fulfillmentMode"`
-	ClientID         string                      `json:"clientId"`
-	Status           string                      `json:"status"`
-	RejectionReason  string                      `json:"rejectionReason"`
-	WltPaymentRefID  string                      `json:"wltPaymentRefId"`
-	TotalPrice       float64                     `json:"totalPrice"`
-	Items            []partnerOrderWorkboardItem `json:"items"`
-	CreatedAt        time.Time                   `json:"createdAt"`
-	AllowedActions   []string                    `json:"allowedActions"`
-	Preparation      orders.PreparationTiming    `json:"preparation"`
-	UpdatedAt        time.Time                   `json:"updatedAt"`
+	ID                              string                      `json:"id"`
+	CheckoutIntentID                string                      `json:"checkoutIntentId"`
+	StoreID                         string                      `json:"storeId"`
+	FulfillmentMode                 string                      `json:"fulfillmentMode"`
+	ClientID                        string                      `json:"clientId"`
+	Status                          string                      `json:"status"`
+	RejectionReason                 string                      `json:"rejectionReason"`
+	WltPaymentRefID                 string                      `json:"wltPaymentRefId"`
+	TotalPrice                      float64                     `json:"totalPrice"`
+	Items                           []partnerOrderWorkboardItem `json:"items"`
+	CreatedAt                       time.Time                   `json:"createdAt"`
+	AllowedActions                  []string                    `json:"allowedActions"`
+	Preparation                     orders.PreparationTiming    `json:"preparation"`
+	StoreCaptainHandoffStatus       string                      `json:"storeCaptainHandoffStatus"`
+	StoreCaptainHandoffAssignmentID string                      `json:"storeCaptainHandoffAssignmentId"`
+	StoreCaptainHandoffCaptainID    string                      `json:"storeCaptainHandoffCaptainId"`
+	PartnerHandoffConfirmedAt       *time.Time                  `json:"partnerHandoffConfirmedAt"`
+	CaptainPickupConfirmedAt        *time.Time                  `json:"captainPickupConfirmedAt"`
+	UpdatedAt                       time.Time                   `json:"updatedAt"`
 }
 
-func partnerOrderAllowedActions(status, fulfillmentMode string) []string {
+func partnerOrderAllowedActions(status, fulfillmentMode, storeCaptainHandoffStatus string) []string {
 	switch strings.TrimSpace(status) {
 	case "pending":
 		return []string{"accept", "reject"}
@@ -48,6 +53,10 @@ func partnerOrderAllowedActions(status, fulfillmentMode string) []string {
 		if fulfillmentMode == "partner_delivery" || fulfillmentMode == "pickup" {
 			return []string{"handoff"}
 		}
+	case "driver_arrived_store":
+		if fulfillmentMode == "bthwani_delivery" && storeCaptainHandoffStatus == "awaiting_partner" {
+			return []string{"handoff"}
+		}
 	}
 	return []string{}
 }
@@ -57,7 +66,8 @@ func partnerOrderAllowedActions(status, fulfillmentMode string) []string {
 // The store scope is resolved from the authenticated partner actor. The
 // workboard deliberately returns all lifecycle states when status is omitted;
 // inbox tabs must not be backed by a hidden pending-only default. Executable
-// actions and preparation SLA are derived by DSH, never inferred by a screen.
+// actions, preparation SLA, and custody state are derived by DSH, never inferred
+// by a screen.
 func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter, r *http.Request) {
 	_, storeID, ok := s.partnerStore(w, r)
 	if !ok {
@@ -99,9 +109,26 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 			o.preparation_warning_minutes,
 			COALESCE(o.preparation_delay_reason, ''),
 			o.preparation_estimate_revision_count,
+			COALESCE(h.status, ''),
+			COALESCE(h.assignment_id, ''),
+			COALESCE(h.captain_id, ''),
+			h.partner_confirmed_at,
+			h.captain_confirmed_at,
 			o.updated_at
 		FROM dsh_orders o
 		LEFT JOIN dsh_order_items oi ON oi.order_id = o.id
+		LEFT JOIN LATERAL (
+			SELECT
+				assignment_id::text AS assignment_id,
+				captain_id,
+				status,
+				partner_confirmed_at,
+				captain_confirmed_at
+			FROM dsh_store_captain_handoffs
+			WHERE order_id = o.id
+			ORDER BY created_at DESC
+			LIMIT 1
+		) h ON TRUE
 		WHERE o.store_id = $1
 		  AND ($2 = '' OR o.status = $2)
 		GROUP BY
@@ -122,6 +149,11 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 			o.preparation_warning_minutes,
 			o.preparation_delay_reason,
 			o.preparation_estimate_revision_count,
+			h.status,
+			h.assignment_id,
+			h.captain_id,
+			h.partner_confirmed_at,
+			h.captain_confirmed_at,
 			o.updated_at
 		ORDER BY
 			CASE o.status
@@ -172,6 +204,11 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 			&order.Preparation.WarningMinutes,
 			&order.Preparation.DelayReason,
 			&order.Preparation.EstimateRevisionCount,
+			&order.StoreCaptainHandoffStatus,
+			&order.StoreCaptainHandoffAssignmentID,
+			&order.StoreCaptainHandoffCaptainID,
+			&order.PartnerHandoffConfirmedAt,
+			&order.CaptainPickupConfirmedAt,
 			&order.UpdatedAt,
 		); err != nil {
 			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to read partner order workboard")
@@ -184,7 +221,11 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 		if order.Items == nil {
 			order.Items = []partnerOrderWorkboardItem{}
 		}
-		order.AllowedActions = partnerOrderAllowedActions(order.Status, order.FulfillmentMode)
+		order.AllowedActions = partnerOrderAllowedActions(
+			order.Status,
+			order.FulfillmentMode,
+			order.StoreCaptainHandoffStatus,
+		)
 		order.Preparation.OrderID = order.ID
 		order.Preparation = orders.EvaluatePreparationTiming(order.Preparation, now)
 		workboardOrders = append(workboardOrders, order)
