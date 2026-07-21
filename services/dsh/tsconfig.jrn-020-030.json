@@ -4,7 +4,57 @@
     "noEmit": true,
     "declaration": false,
     "declarationMap": false,
-    "outDir": "dist-jrn-020-030"
+    "outDir": "dist-jrn-020-030",
+    "paths": {
+      "@bthwani/ui-kit": [
+        "shared/ui-kit/src/index.ts"
+      ],
+      "@bthwani/ui-kit/web": [
+        "shared/ui-kit/src/web.ts"
+      ],
+      "@bthwani/ui-kit/tokens": [
+        "shared/ui-kit/src/tokens/index.ts"
+      ],
+      "@bthwani/app-shell": [
+        "shared/app-shell/src/index.ts"
+      ],
+      "@bthwani/core-identity": [
+        "core/identity/clients/index.ts"
+      ],
+      "@bthwani/core-platform-control": [
+        "core/platform-control/clients/generated/platform-control-api.ts"
+      ],
+      "@bthwani/core-providers": [
+        "core/providers/clients/generated/providers-api.ts"
+      ],
+      "@bthwani/app-captain-runtime": [
+        "apps/app-captain/runtime/src/index.ts"
+      ],
+      "@bthwani/app-client-runtime": [
+        "apps/app-client/runtime/src/index.ts"
+      ],
+      "@bthwani/app-field-runtime": [
+        "apps/app-field/runtime/src/index.ts"
+      ],
+      "@bthwani/app-partner-runtime": [
+        "apps/app-partner/runtime/src/index.ts"
+      ],
+      "@dsh-shared/*": [
+        "services/dsh/frontend/shared/*"
+      ],
+      "react-native": [
+        "apps/app-client/runtime/node_modules/react-native"
+      ],
+      "expo-image-picker": [
+        "apps/app-field/runtime/node_modules/expo-image-picker"
+      ],
+      "expo-location": [
+        "apps/app-field/runtime/node_modules/expo-location"
+      ],
+      "expo-secure-store": [
+        "apps/app-field/runtime/node_modules/expo-secure-store"
+      ]
+    }
   },
   "include": [
     "frontend/**/*.d.ts",
