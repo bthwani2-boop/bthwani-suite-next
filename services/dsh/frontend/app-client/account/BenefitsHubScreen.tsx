@@ -10,8 +10,8 @@ type BenefitRow = {
   readonly id: string;
   readonly title: string;
   readonly subtitle: string;
-  readonly badge?: string;
-  readonly helper?: string;
+  readonly badge?: string | undefined;
+  readonly helper?: string | undefined;
 };
 
 const LABELS: Record<BenefitsSection, string> = {
