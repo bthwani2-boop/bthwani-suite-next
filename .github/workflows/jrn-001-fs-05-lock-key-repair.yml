@@ -1,0 +1,49 @@
+name: JRN-001 FS-05 lock key repair
+
+on:
+  push:
+    branches: [sambassam]
+    paths: [.github/workflows/jrn-001-fs-05-lock-key-repair.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+      - name: Replace PostgreSQL-invalid NUL lock separators
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          paths = [
+              Path('services/dsh/backend/internal/partner/onboarding_integrity_repository.go'),
+              Path('services/wlt/backend/internal/payout/upsert_governed.go'),
+          ]
+          old = 'partnerID+"\\x00"+input.IdempotencyKey'
+          replacements = {
+              paths[0]: 'partnerID+"\\x1f"+input.IdempotencyKey',
+              paths[1]: 'partnerID+"\\x1f"+idempotencyKey',
+          }
+          for path in paths:
+              text = path.read_text(encoding='utf-8')
+              candidate = old if path == paths[0] else 'partnerID+"\\x00"+idempotencyKey'
+              if candidate not in text:
+                  raise SystemExit(f'expected lock key pattern missing in {path}')
+              path.write_text(text.replace(candidate, replacements[path], 1), encoding='utf-8')
+          PY
+          gofmt -w \
+            services/dsh/backend/internal/partner/onboarding_integrity_repository.go \
+            services/wlt/backend/internal/payout/upsert_governed.go
+          git config user.name 'bthwani-governance-bot'
+          git config user.email 'noreply@bthwani.local'
+          git add \
+            services/dsh/backend/internal/partner/onboarding_integrity_repository.go \
+            services/wlt/backend/internal/payout/upsert_governed.go
+          git commit -m 'fix(jrn-001): use UTF-8-safe advisory lock keys'
+          git push origin HEAD:sambassam
