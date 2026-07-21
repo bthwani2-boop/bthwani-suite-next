@@ -25,9 +25,14 @@ describe("JRN-020 delivery exceptions and return custody", () => {
 
 describe("JRN-021 support conversation and order rescue", () => {
   const actorApi = source("../frontend/shared/support/actor-support.api.ts");
+  const deliveryApi = source("../frontend/shared/support/support-message-delivery.api.ts");
+  const deliveryDomain = source("../backend/internal/support/message_delivery.go");
+  const deliveryRoutes = source("../backend/internal/http/support_message_delivery_routes.go");
+  const migration = source("../database/migrations/dsh-096_support_message_delivery.sql");
   const conversation = source("../frontend/app-captain/orders/CaptainOrderSupportConversationScreen.tsx");
   const navigation = source("../frontend/shared/delivery/captain-navigation.model.ts");
   const policy = source("../frontend/shared/delivery/delivery.policy.ts");
+  const apiMain = source("../backend/cmd/dsh-api/main.go");
 
   it("uses governed actor support routes for captain conversations", () => {
     assert.match(actorApi, /\/dsh\/support\/tickets/);
@@ -35,6 +40,19 @@ describe("JRN-021 support conversation and order rescue", () => {
     assert.match(conversation, /fetchActorSupportMessages/);
     assert.doesNotMatch(conversation, /setMessages\(\(current\)/);
     assert.doesNotMatch(conversation, /تم الإرسال بنجاح/);
+  });
+
+  it("persists attachment references and read receipts through the shared boundary", () => {
+    assert.match(migration, /dsh_support_message_attachments/);
+    assert.match(migration, /dsh_support_message_read_receipts/);
+    assert.match(deliveryDomain, /AttachActorMessageAsset/);
+    assert.match(deliveryDomain, /MarkActorTicketMessagesRead/);
+    assert.match(deliveryRoutes, /messages\/\{messageId\}\/attachments/);
+    assert.match(deliveryRoutes, /messages\/read/);
+    assert.match(deliveryApi, /attachActorSupportMessageAsset/);
+    assert.match(deliveryApi, /markActorSupportMessagesRead/);
+    assert.match(conversation, /markActorSupportMessagesRead/);
+    assert.match(apiMain, /RegisterSupportMessageDeliveryRoutes\(router/);
   });
 
   it("routes the order chat command to the live support screen", () => {
