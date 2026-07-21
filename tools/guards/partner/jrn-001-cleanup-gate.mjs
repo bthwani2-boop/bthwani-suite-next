@@ -19,7 +19,9 @@ for (const route of [
   "PATCH /dsh/field/partners/{partnerId}",
   "POST /dsh/field/partners/{partnerId}/submit",
 ]) {
-  assert.equal(routes.split(route).length - 1, 1, `route must be registered exactly once: ${route}`);
+  const escaped = route.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const matches = routes.match(new RegExp(`mux\\.HandleFunc\\(["']${escaped}["']\\s*,`, "g")) ?? [];
+  assert.equal(matches.length, 1, `route must be registered exactly once: ${route}`);
 }
 assert.doesNotMatch(fieldController, /AsyncStorage|localStorage|mockPartner|partnerFixture/i);
 assert.doesNotMatch(fieldController, /fetch\s*\(/);
