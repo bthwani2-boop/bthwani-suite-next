@@ -1,6 +1,8 @@
 package http
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"net/http"
 	"strings"
@@ -31,8 +33,16 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	if body.CartID == "" || body.StoreID == "" || actor.TenantID == "" {
+
+	cartID := strings.TrimSpace(body.CartID)
+	storeID := strings.TrimSpace(body.StoreID)
+	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	if cartID == "" || storeID == "" || actor.TenantID == "" {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "cartId, storeId and authenticated tenant are required")
+		return
+	}
+	if len(idempotencyKey) < 16 || len(idempotencyKey) > 200 {
+		store.SendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key must contain between 16 and 200 characters")
 		return
 	}
 
@@ -44,6 +54,18 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 		fulfillmentMode != string(checkout.ModePartnerDelivery) &&
 		fulfillmentMode != string(checkout.ModePickup) {
 		store.SendError(w, http.StatusBadRequest, "INVALID_FULFILLMENT_MODE", "fulfillment mode is invalid")
+		return
+	}
+
+	paymentMethod := strings.TrimSpace(body.PaymentMethod)
+	if paymentMethod == "" {
+		paymentMethod = string(checkout.MethodCOD)
+	}
+	if paymentMethod != string(checkout.MethodCOD) &&
+		paymentMethod != string(checkout.MethodWallet) &&
+		paymentMethod != string(checkout.MethodMixed) &&
+		paymentMethod != string(checkout.MethodOfficialWallet) {
+		store.SendError(w, http.StatusBadRequest, "INVALID_PAYMENT_METHOD", "payment method is invalid")
 		return
 	}
 
@@ -65,7 +87,7 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 			return
 		}
 		serviceability := cart.CheckServiceability(
-			r.Context(), s.db, body.StoreID, address.ServiceAreaCode, address.Latitude, address.Longitude,
+			r.Context(), s.db, storeID, address.ServiceAreaCode, address.Latitude, address.Longitude,
 		)
 		if !serviceability.Serviceable {
 			store.SendError(w, http.StatusUnprocessableEntity, "OUT_OF_AREA", serviceability.Reason)
@@ -74,11 +96,17 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 		deliveryAddressSnapshot = address.CheckoutSnapshot()
 	}
 
-	intentID, err := checkout.NewIntentID(s.db)
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to allocate checkout intent")
-		return
-	}
+	note := strings.TrimSpace(body.Note)
+	couponCode := strings.TrimSpace(body.CouponCode)
+	requestFingerprint := checkoutCreateFingerprint(
+		cartID,
+		storeID,
+		fulfillmentMode,
+		paymentMethod,
+		deliveryAddressID,
+		note,
+		strings.ToUpper(couponCode),
+	)
 
 	tx, err := s.db.BeginTx(r.Context(), nil)
 	if err != nil {
@@ -87,107 +115,171 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 	}
 	defer tx.Rollback()
 
-	snapshot, err := cart.ComputeCheckoutSnapshotForClientTx(r.Context(), tx, body.CartID, actor.ID, body.StoreID)
-	if errors.Is(err, cart.ErrCartItemMissingPrice) {
-		store.SendError(w, http.StatusConflict, "CART_ITEM_MISSING_PRICE", "one or more cart items are missing a price snapshot")
-		return
-	}
-	if errors.Is(err, cart.ErrNotFound) {
-		store.SendError(w, http.StatusNotFound, "CART_NOT_FOUND", "active cart does not belong to the authenticated client and store")
-		return
-	}
-	if errors.Is(err, cart.ErrInvalid) {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-		return
-	}
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to compute cart snapshot")
+	if err := checkout.LockCreateIdempotencyTx(r.Context(), tx, actor.TenantID, actor.ID, idempotencyKey); err != nil {
+		if errors.Is(err, checkout.ErrInvalid) {
+			store.SendError(w, http.StatusBadRequest, "INVALID_IDEMPOTENCY_KEY", "checkout idempotency context is invalid")
+			return
+		}
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to lock checkout idempotency key")
 		return
 	}
 
-	deliveryPolicy, err := checkout.ResolveDeliveryPricingTx(r.Context(), tx, body.StoreID, fulfillmentMode)
-	if errors.Is(err, checkout.ErrDeliveryPricingUnavailable) {
-		store.SendError(w, http.StatusConflict, "DELIVERY_PRICING_UNAVAILABLE", "no approved delivery pricing policy exists for this store and fulfillment mode")
-		return
-	}
-	if errors.Is(err, checkout.ErrInvalid) {
-		store.SendError(w, http.StatusBadRequest, "INVALID_FULFILLMENT_MODE", "fulfillment mode is invalid")
-		return
-	}
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to resolve delivery pricing")
-		return
-	}
-	if deliveryPolicy.Currency != snapshot.Currency {
-		store.SendError(w, http.StatusConflict, "PRICING_CURRENCY_MISMATCH", "cart and delivery pricing currencies do not match")
-		return
-	}
-
-	reservation, err := coupons.ReservePricedTx(r.Context(), tx, coupons.ReservePricedInput{
-		Code: body.CouponCode, ClientActorID: actor.ID, CartID: body.CartID,
-		CheckoutIntentID: intentID, StoreID: body.StoreID,
-		FulfillmentMode:       fulfillmentMode,
-		SubtotalMinorUnits:    snapshot.AmountMinorUnits,
-		DeliveryFeeMinorUnits: deliveryPolicy.FeeMinorUnits,
-		Currency:              snapshot.Currency,
-	})
-	if errors.Is(err, coupons.ErrUsageLimit) {
-		store.SendError(w, http.StatusConflict, "COUPON_USAGE_LIMIT", "coupon usage limit has been reached")
-		return
-	}
-	if errors.Is(err, coupons.ErrNotFound) || errors.Is(err, coupons.ErrInactive) || errors.Is(err, coupons.ErrNotEligible) {
-		store.SendError(w, http.StatusUnprocessableEntity, "COUPON_INVALID_OR_INELIGIBLE", "coupon is invalid or not eligible for this checkout")
-		return
-	}
-	if errors.Is(err, coupons.ErrInvalid) {
-		store.SendError(w, http.StatusBadRequest, "INVALID_COUPON", "coupon code format is invalid")
+	record, err := checkout.FindCreateIdempotencyTx(
+		r.Context(), tx, actor.TenantID, actor.ID, idempotencyKey, requestFingerprint,
+	)
+	if errors.Is(err, checkout.ErrIdempotencyConflict) {
+		store.SendError(w, http.StatusConflict, "IDEMPOTENCY_KEY_REUSED", "Idempotency-Key was already used for a different checkout request")
 		return
 	}
 	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to reserve coupon")
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to inspect checkout idempotency state")
 		return
 	}
 
-	pricing := checkout.PricingSnapshot{
-		SubtotalMinorUnits:    snapshot.AmountMinorUnits,
-		DeliveryFeeMinorUnits: deliveryPolicy.FeeMinorUnits,
-		TotalMinorUnits:       snapshot.AmountMinorUnits + deliveryPolicy.FeeMinorUnits,
-		Currency:              snapshot.Currency,
-	}
-	if reservation != nil {
-		pricing.DiscountMinorUnits = reservation.DiscountMinorUnits
-		pricing.TotalMinorUnits = reservation.TotalMinorUnits
-		pricing.CouponID = reservation.CouponID
-		pricing.CouponRedemptionID = reservation.ID
-		pricing.CouponCodeLast4 = reservation.CouponCodeLast4
-	}
-	pricing.SnapshotHash = checkout.BuildPricingSnapshotHash(
-		snapshot.SnapshotHash, pricing.CouponID, pricing.SubtotalMinorUnits,
-		pricing.DeliveryFeeMinorUnits, pricing.DiscountMinorUnits, pricing.TotalMinorUnits,
+	var (
+		intent           *checkout.Intent
+		pricing          checkout.PricingSnapshot
+		hasCouponFunding bool
+		responseStatus   = http.StatusCreated
 	)
 
-	intent, err := checkout.CreatePricedIntentWithAddressTx(r.Context(), tx, checkout.CreateIntentInput{
-		ID: intentID, TenantID: actor.TenantID, ClientID: actor.ID, CartID: body.CartID, StoreID: body.StoreID,
-		FulfillmentMode: checkout.FulfillmentMode(fulfillmentMode),
-		PaymentMethod:   checkout.PaymentMethod(body.PaymentMethod),
-		DeliveryAddress: deliveryAddressSnapshot, Note: body.Note,
-	}, pricing, deliveryAddressID)
-	if errors.Is(err, checkout.ErrInvalid) {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-		return
-	}
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to create checkout intent")
-		return
-	}
-	if err := tx.Commit(); err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to commit checkout intent")
-		return
+	if record != nil {
+		if err := tx.Rollback(); err != nil {
+			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to release checkout retry lock")
+			return
+		}
+		intent, err = checkout.GetIntent(s.db, record.IntentID, actor.TenantID, actor.ID)
+		if err != nil {
+			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to recover idempotent checkout intent")
+			return
+		}
+		pricing, err = checkout.GetPricing(s.db, intent.ID)
+		if err != nil {
+			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to recover idempotent checkout pricing")
+			return
+		}
+		if intent.State != checkout.StatePending {
+			store.SendJSON(w, http.StatusOK, map[string]any{"intent": marshalIntentWithPricing(intent, pricing)})
+			return
+		}
+		hasCouponFunding = pricing.CouponRedemptionID != ""
+		responseStatus = http.StatusOK
+	} else {
+		intentID, allocationErr := checkout.NewIntentID(s.db)
+		if allocationErr != nil {
+			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to allocate checkout intent")
+			return
+		}
+
+		snapshot, snapshotErr := cart.ComputeCheckoutSnapshotForClientTx(r.Context(), tx, cartID, actor.ID, storeID)
+		if errors.Is(snapshotErr, cart.ErrCartItemMissingPrice) {
+			store.SendError(w, http.StatusConflict, "CART_ITEM_MISSING_PRICE", "one or more cart items are missing a price snapshot")
+			return
+		}
+		if errors.Is(snapshotErr, cart.ErrNotFound) {
+			store.SendError(w, http.StatusNotFound, "CART_NOT_FOUND", "active cart does not belong to the authenticated client and store")
+			return
+		}
+		if errors.Is(snapshotErr, cart.ErrInvalid) {
+			store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", snapshotErr.Error())
+			return
+		}
+		if snapshotErr != nil {
+			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to compute cart snapshot")
+			return
+		}
+
+		deliveryPolicy, pricingErr := checkout.ResolveDeliveryPricingTx(r.Context(), tx, storeID, fulfillmentMode)
+		if errors.Is(pricingErr, checkout.ErrDeliveryPricingUnavailable) {
+			store.SendError(w, http.StatusConflict, "DELIVERY_PRICING_UNAVAILABLE", "no approved delivery pricing policy exists for this store and fulfillment mode")
+			return
+		}
+		if errors.Is(pricingErr, checkout.ErrInvalid) {
+			store.SendError(w, http.StatusBadRequest, "INVALID_FULFILLMENT_MODE", "fulfillment mode is invalid")
+			return
+		}
+		if pricingErr != nil {
+			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to resolve delivery pricing")
+			return
+		}
+		if deliveryPolicy.Currency != snapshot.Currency {
+			store.SendError(w, http.StatusConflict, "PRICING_CURRENCY_MISMATCH", "cart and delivery pricing currencies do not match")
+			return
+		}
+
+		reservation, reservationErr := coupons.ReservePricedTx(r.Context(), tx, coupons.ReservePricedInput{
+			Code: couponCode, ClientActorID: actor.ID, CartID: cartID,
+			CheckoutIntentID: intentID, StoreID: storeID,
+			FulfillmentMode:       fulfillmentMode,
+			SubtotalMinorUnits:    snapshot.AmountMinorUnits,
+			DeliveryFeeMinorUnits: deliveryPolicy.FeeMinorUnits,
+			Currency:              snapshot.Currency,
+		})
+		if errors.Is(reservationErr, coupons.ErrUsageLimit) {
+			store.SendError(w, http.StatusConflict, "COUPON_USAGE_LIMIT", "coupon usage limit has been reached")
+			return
+		}
+		if errors.Is(reservationErr, coupons.ErrNotFound) || errors.Is(reservationErr, coupons.ErrInactive) || errors.Is(reservationErr, coupons.ErrNotEligible) {
+			store.SendError(w, http.StatusUnprocessableEntity, "COUPON_INVALID_OR_INELIGIBLE", "coupon is invalid or not eligible for this checkout")
+			return
+		}
+		if errors.Is(reservationErr, coupons.ErrInvalid) {
+			store.SendError(w, http.StatusBadRequest, "INVALID_COUPON", "coupon code format is invalid")
+			return
+		}
+		if reservationErr != nil {
+			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to reserve coupon")
+			return
+		}
+
+		pricing = checkout.PricingSnapshot{
+			SubtotalMinorUnits:    snapshot.AmountMinorUnits,
+			DeliveryFeeMinorUnits: deliveryPolicy.FeeMinorUnits,
+			TotalMinorUnits:       snapshot.AmountMinorUnits + deliveryPolicy.FeeMinorUnits,
+			Currency:              snapshot.Currency,
+		}
+		if reservation != nil {
+			pricing.DiscountMinorUnits = reservation.DiscountMinorUnits
+			pricing.TotalMinorUnits = reservation.TotalMinorUnits
+			pricing.CouponID = reservation.CouponID
+			pricing.CouponRedemptionID = reservation.ID
+			pricing.CouponCodeLast4 = reservation.CouponCodeLast4
+		}
+		pricing.SnapshotHash = checkout.BuildPricingSnapshotHash(
+			snapshot.SnapshotHash, pricing.CouponID, pricing.SubtotalMinorUnits,
+			pricing.DeliveryFeeMinorUnits, pricing.DiscountMinorUnits, pricing.TotalMinorUnits,
+		)
+
+		intent, err = checkout.CreatePricedIntentWithAddressTx(r.Context(), tx, checkout.CreateIntentInput{
+			ID: intentID, TenantID: actor.TenantID, ClientID: actor.ID, CartID: cartID, StoreID: storeID,
+			FulfillmentMode: checkout.FulfillmentMode(fulfillmentMode),
+			PaymentMethod:   checkout.PaymentMethod(paymentMethod),
+			DeliveryAddress: deliveryAddressSnapshot, Note: note,
+		}, pricing, deliveryAddressID)
+		if errors.Is(err, checkout.ErrInvalid) {
+			store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+			return
+		}
+		if err != nil {
+			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to create checkout intent")
+			return
+		}
+		if err := checkout.BindCreateIdempotencyTx(
+			r.Context(), tx, actor.TenantID, actor.ID, idempotencyKey, requestFingerprint, intent.ID,
+		); err != nil {
+			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to bind checkout idempotency state")
+			return
+		}
+		if err := tx.Commit(); err != nil {
+			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to commit checkout intent")
+			return
+		}
+		hasCouponFunding = reservation != nil
 	}
 
 	correlationID := fundingCorrelation(r.Header.Get("X-Correlation-ID"), intent.ID)
 	var fundingProjection *coupons.FundingProjection
-	if reservation != nil {
+	if hasCouponFunding {
 		fundingProjection, err = s.reserveCouponFunding(r.Context(), actor.TenantID, intent.ID, correlationID)
 		if err != nil {
 			_ = coupons.ReleaseByIntent(s.db, intent.ID, "wlt_funding_reserve_failed")
@@ -262,7 +354,7 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to attach WLT payment session")
 		return
 	}
-	store.SendJSON(w, http.StatusCreated, map[string]any{"intent": marshalIntentWithPricing(intent, pricing)})
+	store.SendJSON(w, responseStatus, map[string]any{"intent": marshalIntentWithPricing(intent, pricing)})
 }
 
 func (s *protectedStoreServer) handleGetCheckoutIntent(w http.ResponseWriter, r *http.Request) {
@@ -371,4 +463,9 @@ func marshalIntentWithPricing(i *checkout.Intent, pricing checkout.PricingSnapsh
 	result["couponRedemptionId"] = pricing.CouponRedemptionID
 	result["couponCodeLast4"] = pricing.CouponCodeLast4
 	return result
+}
+
+func checkoutCreateFingerprint(parts ...string) string {
+	digest := sha256.Sum256([]byte(strings.Join(parts, "\x1f")))
+	return hex.EncodeToString(digest[:])
 }
