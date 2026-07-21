@@ -8,6 +8,7 @@ describe("JRN-007 home discovery closure", () => {
   test("binds the standalone event contract to the Go route and shared adapter", () => {
     const contract = read("services/dsh/contracts/dsh.home-marketing-events.openapi.yaml");
     const registry = read("services/dsh/contracts/contract-registry.ts");
+    const master = read("contracts/master.openapi.yaml");
     const server = read("services/dsh/backend/internal/http/server.go");
     const adapter = read("services/dsh/frontend/shared/home-discovery/home-discovery-events.ts");
 
@@ -15,12 +16,13 @@ describe("JRN-007 home discovery closure", () => {
     assert.match(contract, /eventType:[\s\S]*impression, click/);
     assert.match(registry, /dsh-home-marketing-events/);
     assert.match(registry, /STANDALONE_MANUAL_TYPED_ADAPTER/);
+    assert.match(master, /dshHomeMarketingEvents/);
     assert.match(server, /POST \/dsh\/home-discovery\/events/);
     assert.match(adapter, /recordHomeMarketingEvent/);
     assert.match(adapter, /method: "POST"/);
   });
 
-  test("binds real impressions, clicks, and actions in app-client", () => {
+  test("binds real impressions, clicks, and every governed action in app-client", () => {
     const shell = read("services/dsh/frontend/app-client/home-discovery/HomeDiscoveryShell.tsx");
     const surface = read("services/dsh/frontend/app-client/DshClientSurface.tsx");
 
@@ -28,6 +30,8 @@ describe("JRN-007 home discovery closure", () => {
     assert.match(shell, /eventType: "click"/);
     assert.match(shell, /onBannerPress=\{handleBannerPress\}/);
     assert.match(shell, /onPromoPress=\{handlePromoPress\}/);
+    assert.match(shell, /actionType === "category"/);
+    assert.match(shell, /setActiveCategoryId\(target\)/);
     assert.match(surface, /actionType === "store"/);
     assert.match(surface, /actionType === "external"/);
     assert.match(surface, /Linking\.openURL/);
