@@ -1,7 +1,6 @@
-// Partner adapters — order item mapping and ops summary.
-// No JSX. No ui-kit. No Tamagui.
+// Partner adapters — governed order mapping and operations summary.
+// No JSX. No ui-kit. No Tamagui. No compatibility projection for legacy rows.
 
-import type { DshRuntimeOrderRow } from "../operations/dsh-operational-runtime-adapter";
 import { getSurfaceModeCapability } from "../identity-access";
 import type {
   DshOrderPreparation,
@@ -184,6 +183,12 @@ function validatePreparationIssueProjection(raw: CanonicalOrderShape, orderId: s
   if (pendingCount > openCount || resolvableCount > openCount) {
     throw new Error(`partner order ${orderId} preparation decision counts exceed open issues`);
   }
+  if (openCount > 0 && raw.allowedActions?.includes("ready")) {
+    throw new Error(`partner order ${orderId} exposes ready while preparation issues are open`);
+  }
+  if (resolvableCount === 0 && raw.allowedActions?.includes("resolve_issue")) {
+    throw new Error(`partner order ${orderId} exposes resolve_issue without a resolvable issue`);
+  }
 
   return { openCount, pendingCount, resolvableCount } as const;
 }
@@ -253,6 +258,8 @@ export function mapDshOrderToPartnerOrderItem(order: DshPartnerOrder): GovernedP
     || raw.preparation.preparationSlaState === "overdue";
   const issueRisk = preparationIssues.openCount > 0;
   const custodyExceptionRisk = handoffException.hasException;
+  const waitingOnlyForCustomer = preparationIssues.pendingCount > 0
+    && preparationIssues.resolvableCount === 0;
   const slaLabel = preparationSlaLabel(raw.preparation);
 
   return {
@@ -281,9 +288,11 @@ export function mapDshOrderToPartnerOrderItem(order: DshPartnerOrder): GovernedP
     elapsedLabel: elapsed.label,
     nextActionLabel: custodyExceptionRisk
       ? "بانتظار معالجة استثناء العهدة"
-      : issueRisk
-        ? "حل مشكلات التحضير"
-        : nextActionMap[status],
+      : waitingOnlyForCustomer
+        ? "بانتظار قرار العميل"
+        : issueRisk
+          ? "حل مشكلات التحضير"
+          : nextActionMap[status],
     ...(acceptanceRisk || preparationRisk || issueRisk || custodyExceptionRisk ? { urgent: true, slaRisk: true } : {}),
     ...(slaLabel ? { slaLabel } : {}),
     ...(status === "needs_accept" ? { unread: true } : {}),
@@ -292,27 +301,6 @@ export function mapDshOrderToPartnerOrderItem(order: DshPartnerOrder): GovernedP
     ...(issueRisk || custodyExceptionRisk || (status === "cancelled" && raw.rejectionReason)
       ? { issueRequired: true }
       : {}),
-  };
-}
-
-/** @deprecated New partner surfaces must use mapDshOrderToPartnerOrderItem. */
-export function mapRuntimeRowToPartnerOrderItem(row: DshRuntimeOrderRow): PartnerOrderItem {
-  const partnerStatus = resolvePartnerStatus(row.status);
-  const created = new Date(row.createdAt);
-  const elapsed = formatElapsed(created);
-  return {
-    id: row.id,
-    orderCode: `#${row.id.slice(-6).toUpperCase()}`,
-    branchLabel: row.storeId,
-    status: partnerStatus,
-    priority: "normal",
-    orderTypeLabel: "توصيل بثواني",
-    orderMode: "bthwani_delivery",
-    itemsCountLabel: "—",
-    amountLabel: `${row.totalPrice.toFixed(2)} ر.ي`,
-    createdAtLabel: created.toLocaleTimeString("ar-YE", { hour: "2-digit", minute: "2-digit" }),
-    elapsedLabel: elapsed.label,
-    nextActionLabel: nextActionMap[partnerStatus],
   };
 }
 
@@ -335,27 +323,27 @@ export function buildPartnerDeliveryOpsSummary(
   partnerActionableHandoffs: readonly DshOrderLifecycleHandoff[],
 ): PartnerDeliveryOpsSummary {
   const partnerReceivesOrders =
-    getSurfaceModeCapability("bthwani_delivery").partner.receivesOrder ||
-    getSurfaceModeCapability("partner_delivery").partner.receivesOrder;
+    getSurfaceModeCapability("bthwani_delivery").partner.receivesOrder
+    || getSurfaceModeCapability("partner_delivery").partner.receivesOrder;
 
   return {
     outForDelivery: partnerOrders.filter(
       (order) =>
-        order.status === "captain_assigned" ||
-        order.status === "captain_arriving" ||
-        order.status === "delivering",
+        order.status === "captain_assigned"
+        || order.status === "captain_arriving"
+        || order.status === "delivering",
     ).length,
     handoffReady: partnerReceivesOrders
       ? partnerOrders.filter(
           (order) =>
-            order.status === "ready" ||
-            order.status === "items_ready" ||
-            order.status === "handoff",
+            order.status === "ready"
+            || order.status === "items_ready"
+            || order.status === "handoff",
         ).length
       : 0,
     deliveredToday: partnerOrders.filter((order) => order.status === "completed").length,
     delayedRisk:
-      partnerOrders.filter((order) => order.priority === "high" || order.slaRisk || order.issueRequired).length +
-      partnerActionableHandoffs.filter((handoff) => handoff.wltImpact.eventKind !== "none").length,
+      partnerOrders.filter((order) => order.priority === "high" || order.slaRisk || order.issueRequired).length
+      + partnerActionableHandoffs.filter((handoff) => handoff.wltImpact.eventKind !== "none").length,
   };
 }
