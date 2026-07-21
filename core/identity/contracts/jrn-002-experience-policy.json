@@ -1,0 +1,28 @@
+{
+  "journeyId": "JRN-002",
+  "locale": "ar",
+  "direction": "rtl",
+  "accessibility": [
+    "Every mode and submit action has a visible Arabic label rather than an icon-only control.",
+    "Password fields use secure entry; phone and activation-code fields use appropriate mobile keyboards.",
+    "Loading, forbidden, unavailable, conflict, rate-limit, expired-session, and generic recovery states expose a title and description.",
+    "Submitting disables duplicate actions while preserving entered values.",
+    "Error presentation never depends on color alone and never exposes raw server details."
+  ],
+  "weakNetwork": [
+    "Session restoration first validates the access token and then performs one governed refresh rotation.",
+    "A network failure preserves the sign-in form and maps to a retryable unavailable state.",
+    "Logout clears local credentials immediately and treats remote revocation as best-effort.",
+    "Activation and login controls prevent duplicate submission while a request is in flight."
+  ],
+  "performance": {
+    "protectedRender": "No protected child renders before session restoration and role/surface checks complete.",
+    "requestBodyLimitBytes": 32768,
+    "readHeaderTimeoutSeconds": 5,
+    "readTimeoutSeconds": 15,
+    "writeTimeoutSeconds": 15,
+    "idleTimeoutSeconds": 60
+  },
+  "translationRule": "User-facing surfaces show Arabic operational wording. Stable machine error codes remain in contracts, logs, tests, and support evidence only.",
+  "deviceCoverage": ["Android native runtime", "control-panel browser runtime", "narrow and wide layouts through shared responsive UI kit"]
+}
