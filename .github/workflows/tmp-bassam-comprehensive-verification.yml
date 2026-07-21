@@ -1,10 +1,15 @@
-# Verification pass 5: after governed idempotency guard alignment
+# Verification pass 6: PR-visible comprehensive verification
 name: Temporary bassam comprehensive verification
 
 on:
   push:
     branches:
       - integration/bassam-all-achievements-20260721
+    paths:
+      - .github/workflows/tmp-bassam-comprehensive-verification.yml
+  pull_request:
+    branches:
+      - master
     paths:
       - .github/workflows/tmp-bassam-comprehensive-verification.yml
 
