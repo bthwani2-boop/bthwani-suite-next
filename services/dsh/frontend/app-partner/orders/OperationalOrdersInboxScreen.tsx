@@ -73,8 +73,13 @@ export function OperationalOrdersInboxScreen({
     if (
       handoffExceptionOrder
       && handoffException.state.kind !== 'success'
-      && handoffExceptionOrder.storeCaptainHandoffStatus !== 'awaiting_partner'
-      && handoffExceptionOrder.storeCaptainHandoffStatus !== 'partner_confirmed'
+      && (
+        handoffExceptionOrder.openStoreCaptainHandoffExceptionId !== ''
+        || (
+          handoffExceptionOrder.storeCaptainHandoffStatus !== 'awaiting_partner'
+          && handoffExceptionOrder.storeCaptainHandoffStatus !== 'partner_confirmed'
+        )
+      )
     ) {
       handoffException.cancel();
     }
@@ -97,8 +102,10 @@ export function OperationalOrdersInboxScreen({
     }
 
     if (actionId === 'handoff_exception') {
-      const handoffOpen = item.storeCaptainHandoffStatus === 'awaiting_partner'
-        || item.storeCaptainHandoffStatus === 'partner_confirmed';
+      const handoffOpen = item.openStoreCaptainHandoffExceptionId === '' && (
+        item.storeCaptainHandoffStatus === 'awaiting_partner'
+        || item.storeCaptainHandoffStatus === 'partner_confirmed'
+      );
       if (handoffOpen) handoffException.begin(orderId);
       else onNavigateAction('details', orderId);
       return;
@@ -130,7 +137,7 @@ export function OperationalOrdersInboxScreen({
       }
     }
     if (actionId === 'handoff') {
-      if (!item.allowedActions.includes('handoff')) {
+      if (!item.allowedActions.includes('handoff') || item.openStoreCaptainHandoffExceptionId !== '') {
         onNavigateAction('details', orderId);
         return;
       }
