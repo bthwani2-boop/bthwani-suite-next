@@ -140,7 +140,7 @@ export function OperationalOrdersInboxScreen({
 
       {expandedFulfillmentOrder ? (
         <Box padding={4} gap={3} background="surfaceInset">
-          <Box layoutDirection="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box layoutDirection="row" justify="space-between" align="center">
             <Box gap={1}>
               <Text role="bodyStrong">تنفيذ {expandedFulfillmentOrder.orderCode}</Text>
               <Text role="caption" tone="muted">{expandedFulfillmentOrder.orderTypeLabel}</Text>
