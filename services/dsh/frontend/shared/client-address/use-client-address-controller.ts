@@ -16,6 +16,7 @@ import type {
   DshClientAddress,
   DshClientAddressDraft,
 } from "./client-address.types";
+import { validateClientAddressDraft } from "./client-address.validation";
 
 export type ClientAddressState =
   | { readonly kind: "loading" }
@@ -118,7 +119,17 @@ export function useClientAddressController() {
     }
   }, [load]);
 
+  const validateMutationInput = useCallback((input: DshClientAddressDraft): boolean => {
+    const validation = validateClientAddressDraft(input);
+    if (validation) {
+      setMutationError(validation);
+      return false;
+    }
+    return true;
+  }, []);
+
   const createAddress = useCallback(async (input: DshClientAddressDraft): Promise<boolean> => {
+    if (!validateMutationInput(input)) return false;
     const address = await runMutation(async () => {
       const attempt = await getOrCreateClientAddressAttempt(input);
       const created = await createDshClientAddress(input, attempt.context);
@@ -133,12 +144,13 @@ export function useClientAddressController() {
     setSelectedAddressId(address.id);
     await load();
     return true;
-  }, [load, runMutation]);
+  }, [load, runMutation, validateMutationInput]);
 
   const updateAddress = useCallback(async (
     address: DshClientAddress,
     input: DshClientAddressDraft,
   ): Promise<boolean> => {
+    if (!validateMutationInput(input)) return false;
     const updated = await runMutation(() => updateDshClientAddress(
       address.id,
       { ...input, expectedVersion: address.version },
@@ -147,7 +159,7 @@ export function useClientAddressController() {
     if (!updated) return false;
     await load();
     return true;
-  }, [load, runMutation]);
+  }, [load, runMutation, validateMutationInput]);
 
   const deleteAddress = useCallback(async (address: DshClientAddress): Promise<boolean> => {
     const deleted = await runMutation(async () => {
