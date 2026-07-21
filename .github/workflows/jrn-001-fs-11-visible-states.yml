@@ -1,4 +1,5 @@
 name: JRN-001 FS-11 Visible States
+# Verification generation 2: rerun after order-truth and partner-self recovery fixes.
 
 on:
   push:
