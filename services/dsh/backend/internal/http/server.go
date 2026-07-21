@@ -30,7 +30,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("GET /dsh/store-context", protected.handleStoreContext)
 	mux.HandleFunc("GET /dsh/operator/stores", protected.handleOperatorStores)
 	mux.HandleFunc("GET /dsh/operator/stores/{storeId}", protected.handleOperatorStoreDetail)
-	mux.HandleFunc("GET /dsh/operator/diagnostics/stores/{storeId}", protected.handleOperatorStoreDiagnostics)
+	mux.HandleFunc("GET /dsh/operator/diagnostics/stores/{storeId}", protected.handleGovernedOperatorStoreDiagnostics)
 	mux.HandleFunc("GET /dsh/operator/stores/{storeId}/delivery-pricing", protected.handleOperatorListDeliveryPricing)
 	mux.HandleFunc("PUT /dsh/operator/stores/{storeId}/delivery-pricing/{fulfillmentMode}", protected.handleOperatorUpsertDeliveryPricing)
 	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/settings", protected.handleGetPartnerSettings)
