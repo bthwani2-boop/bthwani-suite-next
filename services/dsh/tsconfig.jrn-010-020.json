@@ -51,6 +51,7 @@
     "frontend/shared/media/pod/**/*.tsx",
     "frontend/shared/operations/**/*.ts",
     "frontend/shared/operations/**/*.tsx",
+    "frontend/shared/workforce/WorkforceAccessGate.tsx",
     "frontend/shared/workforce/workforce.api.ts",
     "frontend/shared/workforce/workforce.types.ts",
     "frontend/app-client/orders/**/*.ts",
