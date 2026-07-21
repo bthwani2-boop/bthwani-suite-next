@@ -36,7 +36,10 @@
       "Bash(echo \"guard exit: $?\")",
       "Bash(echo \"build exit: $?\")",
       "Bash(gofmt -l ./internal/...)",
-      "Bash(gofmt -w ./internal/http/dispatch.go ./internal/dispatch/dispatch.go)"
+      "Bash(gofmt -w ./internal/http/dispatch.go ./internal/dispatch/dispatch.go)",
+      "Bash(DSH_REQUIRE_DB_TESTS=true go -C services/dsh/backend test ./internal/partnerdelivery/... -v)",
+      "Bash(gofmt -l internal/http/dispatch.go internal/dispatch/dispatch.go)",
+      "Bash(gofmt -w internal/http/dispatch.go internal/dispatch/dispatch.go)"
     ],
     "additionalDirectories": [
       "C:\\Users\\bassa\\.claude\\plans"
