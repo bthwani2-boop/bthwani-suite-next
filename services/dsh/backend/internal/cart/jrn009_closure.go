@@ -130,14 +130,14 @@ func GetOrCreateSingleStoreCart(
 }
 
 type CartItemValidation struct {
-	ItemID                string   `json:"itemId"`
-	MasterProductID       string   `json:"masterProductId"`
-	Status                string   `json:"status"`
-	ReasonCode            string   `json:"reasonCode,omitempty"`
-	SnapshotUnitPrice     float64  `json:"snapshotUnitPrice"`
-	CurrentUnitPrice      *float64 `json:"currentUnitPrice,omitempty"`
-	SnapshotAssortmentID  *string  `json:"snapshotAssortmentId,omitempty"`
-	CurrentAssortmentID   *string  `json:"currentAssortmentId,omitempty"`
+	ItemID               string   `json:"itemId"`
+	MasterProductID      string   `json:"masterProductId"`
+	Status               string   `json:"status"`
+	ReasonCode           string   `json:"reasonCode,omitempty"`
+	SnapshotUnitPrice    float64  `json:"snapshotUnitPrice"`
+	CurrentUnitPrice     *float64 `json:"currentUnitPrice,omitempty"`
+	SnapshotAssortmentID *string  `json:"snapshotAssortmentId,omitempty"`
+	CurrentAssortmentID  *string  `json:"currentAssortmentId,omitempty"`
 }
 
 type CartValidation struct {
@@ -257,18 +257,18 @@ func ValidateCart(ctx context.Context, db *sql.DB, cartID string) (CartValidatio
 
 type GovernedServiceabilityResult struct {
 	ServiceabilityResult
-	AddressID             string          `json:"addressId,omitempty"`
-	AddressVersion        int             `json:"addressVersion,omitempty"`
-	RequestedMode         FulfillmentMode `json:"requestedMode,omitempty"`
-	CapacityState         string          `json:"capacityState"`
-	CapacityConfigured    bool            `json:"capacityConfigured"`
-	ActiveOrders          int             `json:"activeOrders"`
-	MaxConcurrentOrders   *int            `json:"maxConcurrentOrders,omitempty"`
-	CapacityLoadRatio     *float64        `json:"capacityLoadRatio,omitempty"`
-	SlaConfigured         bool            `json:"slaConfigured"`
-	SlaPrepMinutes        *int            `json:"slaPrepMinutes,omitempty"`
-	SlaDeliveryMinutes    *int            `json:"slaDeliveryMinutes,omitempty"`
-	CheckedAt             time.Time       `json:"checkedAt"`
+	AddressID           string          `json:"addressId,omitempty"`
+	AddressVersion      int             `json:"addressVersion,omitempty"`
+	RequestedMode       FulfillmentMode `json:"requestedMode,omitempty"`
+	CapacityState       string          `json:"capacityState"`
+	CapacityConfigured  bool            `json:"capacityConfigured"`
+	ActiveOrders        int             `json:"activeOrders"`
+	MaxConcurrentOrders *int            `json:"maxConcurrentOrders,omitempty"`
+	CapacityLoadRatio   *float64        `json:"capacityLoadRatio,omitempty"`
+	SlaConfigured       bool            `json:"slaConfigured"`
+	SlaPrepMinutes      *int            `json:"slaPrepMinutes,omitempty"`
+	SlaDeliveryMinutes  *int            `json:"slaDeliveryMinutes,omitempty"`
+	CheckedAt           time.Time       `json:"checkedAt"`
 }
 
 // CheckGovernedServiceability extends geographic/store readiness with the
@@ -334,12 +334,11 @@ func CheckGovernedServiceability(
 			FROM dsh_platform_zones candidate
 			WHERE candidate.is_active = TRUE
 			  AND (
-				lower(candidate.id) = lower(store_row.service_area_code)
-				OR lower(candidate.city_code) = lower(store_row.service_area_code)
+				lower(candidate.city_code) = lower(store_row.service_area_code)
 				OR lower(candidate.city_code) = lower(store_row.city_code)
 			  )
 			ORDER BY
-				CASE WHEN lower(candidate.id) = lower(store_row.service_area_code) THEN 0 ELSE 1 END,
+				CASE WHEN lower(candidate.city_code) = lower(store_row.service_area_code) THEN 0 ELSE 1 END,
 				candidate.id
 			LIMIT 1
 		) zone_match ON TRUE
