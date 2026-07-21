@@ -3,10 +3,10 @@ import { StyleSheet, Text, View } from "react-native";
 import { colorRoles, alpha } from "@bthwani/ui-kit";
 
 type Props = Readonly<{
-  openingHours: string;
-  coverageSummary: string;
-  addressLine: string;
-  deliveryReadiness: string;
+  openingHours?: string;
+  coverageSummary?: string;
+  addressLine?: string;
+  deliveryReadiness?: string;
   isRTL: boolean;
 }>;
 
@@ -18,10 +18,10 @@ type StoreInfoRow = Readonly<{
 }>;
 
 export function StoreDetailInfoCard({
-  openingHours,
-  coverageSummary,
-  addressLine,
-  deliveryReadiness,
+  openingHours = "",
+  coverageSummary = "",
+  addressLine = "",
+  deliveryReadiness = "",
   isRTL,
 }: Props) {
   const rows: readonly StoreInfoRow[] = [
