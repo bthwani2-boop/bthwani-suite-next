@@ -31,6 +31,7 @@ func RegisterActorNotificationRoutes(
 	mux.HandleFunc("POST /dsh/notifications/{notificationId}/read", protected.handleMarkNotificationRead)
 	mux.HandleFunc("GET /dsh/operator/notifications/config", protected.handleListPlatformNotificationConfig)
 	mux.HandleFunc("PUT /dsh/operator/notifications/config", protected.handleUpsertPlatformNotificationConfig)
+	mux.HandleFunc("GET /dsh/operator/notifications/delivery-attempts", protected.handleListNotificationDeliveryAttempts)
 }
 
 func (s *protectedStoreServer) handleListNotificationPreferences(w http.ResponseWriter, r *http.Request) {
