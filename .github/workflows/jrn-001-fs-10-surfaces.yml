@@ -11,7 +11,7 @@ on:
       - services/dsh/frontend/app-partner/**
       - services/dsh/frontend/control-panel/partners/**
       - apps/control-panel/runtime/src/app/dsh/partners/**
-      - services/dsh/tests/jrn-001-fs-10-surfaces.test.mjs
+      - services/dsh/tests/jrn-001-fs-10-*.test.mjs
       - tools/guards/partner/partner-surface-truth-gate.mjs
       - .github/workflows/jrn-001-fs-10-surfaces.yml
 
@@ -67,7 +67,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          node --test services/dsh/tests/jrn-001-fs-10-surfaces.test.mjs 2>&1 | tee /tmp/fs10.log
+          node --test services/dsh/tests/jrn-001-fs-10-*.test.mjs 2>&1 | tee /tmp/fs10.log
           EXIT_CODE=${PIPESTATUS[0]}
           exit "$EXIT_CODE"
       - name: Verify partner surface truth guard
