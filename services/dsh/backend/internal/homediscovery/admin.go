@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -82,6 +83,9 @@ func CreateAdminContent(ctx context.Context, db *sql.DB, kind, actorID, correlat
 }
 
 func UpdateAdminContent(ctx context.Context, db *sql.DB, kind, id, actorID, correlationID string, input AdminContentInput) (AdminContentItem, error) {
+	if input.ExpectedVersion <= 0 {
+		return AdminContentItem{}, fmt.Errorf("expectedVersion is required for update")
+	}
 	if err := validateAdminInput(kind, input); err != nil {
 		return AdminContentItem{}, err
 	}
@@ -169,10 +173,6 @@ func writeAdminContent(
 		} else if err != nil {
 			return AdminContentItem{}, err
 		}
-		expectedVersion := input.ExpectedVersion
-		if expectedVersion <= 0 {
-			expectedVersion = currentVersion
-		}
 		var result sql.Result
 		if kind == "promos" {
 			result, err = tx.ExecContext(ctx, `UPDATE `+table+` SET
@@ -185,7 +185,7 @@ func writeAdminContent(
 				WHERE id=$13 AND version=$14`,
 				input.Title, input.Subtitle, input.BadgeLabel, input.ImageURL, input.ActionType,
 				input.ActionTarget, input.SortOrder, isActive, status, input.PublishFrom,
-				input.PublishUntil, actorID, id, expectedVersion)
+				input.PublishUntil, actorID, id, input.ExpectedVersion)
 		} else {
 			result, err = tx.ExecContext(ctx, `UPDATE `+table+` SET
 				title=$1,subtitle=NULLIF($2,''),image_url=$3,action_type=$4,action_target=$5,
@@ -196,7 +196,7 @@ func writeAdminContent(
 				WHERE id=$12 AND version=$13`,
 				input.Title, input.Subtitle, input.ImageURL, input.ActionType, input.ActionTarget,
 				input.SortOrder, isActive, status, input.PublishFrom, input.PublishUntil,
-				actorID, id, expectedVersion)
+				actorID, id, input.ExpectedVersion)
 		}
 		if err == nil {
 			affected, _ := result.RowsAffected()
@@ -245,6 +245,17 @@ func adminTable(kind string) (string, error) {
 	}
 }
 
+func parseOptionalPublicationTime(value *string, field string) (*time.Time, error) {
+	if value == nil || strings.TrimSpace(*value) == "" {
+		return nil, nil
+	}
+	parsed, err := time.Parse(time.RFC3339, strings.TrimSpace(*value))
+	if err != nil {
+		return nil, fmt.Errorf("invalid %s", field)
+	}
+	return &parsed, nil
+}
+
 func validateAdminInput(kind string, input AdminContentInput) error {
 	if _, err := adminTable(kind); err != nil {
 		return err
@@ -255,8 +266,24 @@ func validateAdminInput(kind string, input AdminContentInput) error {
 	if strings.TrimSpace(input.ImageURL) == "" {
 		return fmt.Errorf("image url is required")
 	}
+	target := strings.TrimSpace(input.ActionTarget)
 	switch input.ActionType {
-	case "store", "category", "external", "none":
+	case "store", "category":
+		if target == "" {
+			return fmt.Errorf("action target is required")
+		}
+	case "external":
+		if target == "" {
+			return fmt.Errorf("action target is required")
+		}
+		parsed, err := url.ParseRequestURI(target)
+		if err != nil || parsed.Host == "" || (parsed.Scheme != "https" && parsed.Scheme != "http") {
+			return fmt.Errorf("external action target must be an http or https URL")
+		}
+	case "none":
+		if target != "" {
+			return fmt.Errorf("action target must be empty when action type is none")
+		}
 	default:
 		return fmt.Errorf("invalid action type")
 	}
@@ -266,15 +293,16 @@ func validateAdminInput(kind string, input AdminContentInput) error {
 	default:
 		return fmt.Errorf("invalid publication status")
 	}
-	if input.PublishFrom != nil && strings.TrimSpace(*input.PublishFrom) != "" {
-		if _, err := time.Parse(time.RFC3339, *input.PublishFrom); err != nil {
-			return fmt.Errorf("invalid publishFrom")
-		}
+	publishFrom, err := parseOptionalPublicationTime(input.PublishFrom, "publishFrom")
+	if err != nil {
+		return err
 	}
-	if input.PublishUntil != nil && strings.TrimSpace(*input.PublishUntil) != "" {
-		if _, err := time.Parse(time.RFC3339, *input.PublishUntil); err != nil {
-			return fmt.Errorf("invalid publishUntil")
-		}
+	publishUntil, err := parseOptionalPublicationTime(input.PublishUntil, "publishUntil")
+	if err != nil {
+		return err
+	}
+	if publishFrom != nil && publishUntil != nil && !publishUntil.After(*publishFrom) {
+		return fmt.Errorf("publishUntil must be after publishFrom")
 	}
 	return nil
 }
