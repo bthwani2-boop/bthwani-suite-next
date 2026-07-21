@@ -15,6 +15,7 @@ func TestJourneys015Through020ExposeGovernedRoutes(t *testing.T) {
 		pattern string
 	}{
 		{journey: "JRN-015 pickup state", method: http.MethodGet, path: "/dsh/partner/orders/order-1/pickup", pattern: "GET /dsh/partner/orders/{orderId}/pickup"},
+		{journey: "JRN-015 client pickup state", method: http.MethodGet, path: "/dsh/client/orders/order-1/pickup", pattern: "GET /dsh/client/orders/{orderId}/pickup"},
 		{journey: "JRN-015 pickup verify", method: http.MethodPost, path: "/dsh/partner/orders/order-1/pickup/verify", pattern: "POST /dsh/partner/orders/{orderId}/pickup/verify"},
 		{journey: "JRN-016 partner proof", method: http.MethodPost, path: "/dsh/partner/orders/order-1/partner-delivery/proof", pattern: "POST /dsh/partner/orders/{orderId}/partner-delivery/proof"},
 		{journey: "JRN-017 captain location", method: http.MethodPost, path: "/dsh/captain/dispatch/assignments/assignment-1/location", pattern: "POST /dsh/captain/dispatch/assignments/{assignmentId}/location"},

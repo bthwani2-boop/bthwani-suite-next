@@ -2552,6 +2552,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dsh/operator/checkout-intents/{intentId}/reconcile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reconcileDshCheckoutIntent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/dsh/internal/wlt/payment-session-events": {
         parameters: {
             query?: never;
@@ -3814,6 +3830,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dsh/client/orders/{orderId}/pickup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Return the authenticated client's resumable pickup session stage.
+         * @description Serves the deep link carried by the pickup_otp notification action_url. Reads the same durable order/session/audit truth as the partner pickup state endpoint, scoped to the requesting client's own order. Never returns the OTP in plaintext; the code only ever reaches the client through the notification body.
+         */
+        get: operations["getDshClientPickupSession"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/dsh/partner/orders/{orderId}/pickup": {
         parameters: {
             query?: never;
@@ -4194,10 +4230,39 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dsh/partner/order-workboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Return actor-scoped partner orders with server-authoritative executable actions. */
+        get: operations["getDshPartnerOrderWorkboard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * @description Server-authoritative action currently executable by the authenticated partner.
+         * @enum {string}
+         */
+        DshPartnerOrderAction: "accept" | "reject" | "prepare" | "ready" | "handoff";
+        DshPartnerOrderWorkboardOrder: components["schemas"]["DshOrder"] & {
+            allowedActions: components["schemas"]["DshPartnerOrderAction"][];
+        };
+        DshPartnerOrderWorkboardResponse: {
+            orders: components["schemas"]["DshPartnerOrderWorkboardOrder"][];
+            total: number;
+        };
         DshAcknowledgeDeliveryExceptionRequest: {
             expectedVersion: number;
         };
@@ -4878,7 +4943,7 @@ export interface components {
             /** @enum {string} */
             fulfillmentMode: "bthwani_delivery" | "partner_delivery" | "pickup";
             /** @enum {string} */
-            state: "pending" | "wlt_handoff_failed" | "payment_pending" | "payment_confirmed" | "payment_failed" | "confirmed" | "cancelled" | "expired";
+            state: "pending" | "wlt_handoff_failed" | "wlt_outcome_unknown" | "payment_pending" | "payment_confirmed" | "payment_failed" | "confirmed" | "cancelled" | "expired";
             /** @enum {string} */
             paymentMethod: "cod" | "wallet" | "mixed" | "official_wallet";
             /** @description Opaque WLT-owned payment-session reference. DSH never mutates financial truth. */
@@ -5649,6 +5714,7 @@ export interface components {
             mediaRef: string;
             notes?: string;
         };
+        /** @description reason is mandatory when decision is rejected or needs_resubmit. */
         DshReviewPartnerDocumentRequest: {
             /** @enum {string} */
             decision: "approved" | "rejected" | "needs_resubmit";
@@ -8719,7 +8785,7 @@ export interface operations {
     listOperatorCheckoutIntents: {
         parameters: {
             query?: {
-                state?: "pending" | "wlt_handoff_failed" | "payment_pending" | "payment_confirmed" | "payment_failed" | "confirmed" | "cancelled" | "expired";
+                state?: "pending" | "wlt_handoff_failed" | "wlt_outcome_unknown" | "payment_pending" | "payment_confirmed" | "payment_failed" | "confirmed" | "cancelled" | "expired";
             };
             header?: never;
             path?: never;
@@ -11089,6 +11155,40 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthenticated"];
+        };
+    };
+    reconcileDshCheckoutIntent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                intentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description WLT payment-session reference reconciled idempotently. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description WLT outcome remains unknown and requires another retry. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Reconciliation is not required or state changed. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     reportWltPaymentSessionEvent: {
@@ -13715,6 +13815,39 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    getDshClientPickupSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Resumable pickup state returned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerPickupStateResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            /** @description The order does not use pickup fulfillment. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+        };
+    };
     getDshPartnerPickupState: {
         parameters: {
             query?: never;
@@ -14517,6 +14650,31 @@ export interface operations {
                     "application/json": components["schemas"]["DshErrorResponse"];
                 };
             };
+        };
+    };
+    getDshPartnerOrderWorkboard: {
+        parameters: {
+            query?: {
+                /** @description Optional exact lifecycle status. Omit to return the complete store workboard. */
+                status?: components["schemas"]["DshOrderStatus"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Actor-scoped partner workboard. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerOrderWorkboardResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
 }

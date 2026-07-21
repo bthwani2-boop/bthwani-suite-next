@@ -17,7 +17,12 @@
       "Bash(docker compose *)",
       "Bash(echo \"exit: $?\")",
       "Bash(\"/c/Users/bassa/AppData/Local/Programs/Python/Python312/python\" -c \"import PIL; print\\(PIL.__version__\\)\")",
-      "Bash(\"/c/Users/bassa/AppData/Local/Programs/Python/Python312/python\" \"/c/Users/bassa/AppData/Local/Temp/claude/c--bthwani-suite-next/a64b1476-922a-44de-803a-feb6d4f8ada4/scratchpad/gen_store_pngs.py\")"
+      "Bash(\"/c/Users/bassa/AppData/Local/Programs/Python/Python312/python\" \"/c/Users/bassa/AppData/Local/Temp/claude/c--bthwani-suite-next/a64b1476-922a-44de-803a-feb6d4f8ada4/scratchpad/gen_store_pngs.py\")",
+      "Bash(git stash *)",
+      "Bash(xargs -I{} echo {})",
+      "Bash(xargs grep -liE \"proof.?of.?delivery|\\\\bPOD\\\\b|delivered|handoff|signature|otp\")",
+      "Bash(git check-ignore *)",
+      "Bash(echo \"exit:$?\")"
     ]
   },
   "project": "bthwani-suite-next",

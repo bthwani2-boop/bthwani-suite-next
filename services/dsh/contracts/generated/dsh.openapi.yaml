@@ -6827,6 +6827,29 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/DshErrorResponse" }
 
+  /dsh/partner/order-workboard:
+    get:
+      operationId: getDshPartnerOrderWorkboard
+      summary: Return actor-scoped partner orders with server-authoritative executable actions.
+      tags: [DshOrders]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: status
+          in: query
+          required: false
+          description: Optional exact lifecycle status. Omit to return the complete store workboard.
+          schema:
+            $ref: "#/components/schemas/DshOrderStatus"
+      responses:
+        "200":
+          description: Actor-scoped partner workboard.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DshPartnerOrderWorkboardResponse"
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -6901,6 +6924,35 @@ components:
           schema:
             $ref: "#/components/schemas/DshErrorResponse"
   schemas:
+    DshPartnerOrderAction:
+      type: string
+      description: Server-authoritative action currently executable by the authenticated partner.
+      enum: [accept, reject, prepare, ready, handoff]
+
+    DshPartnerOrderWorkboardOrder:
+      allOf:
+        - $ref: "#/components/schemas/DshOrder"
+        - type: object
+          required: [allowedActions]
+          properties:
+            allowedActions:
+              type: array
+              uniqueItems: true
+              items:
+                $ref: "#/components/schemas/DshPartnerOrderAction"
+
+    DshPartnerOrderWorkboardResponse:
+      type: object
+      required: [orders, total]
+      properties:
+        orders:
+          type: array
+          items:
+            $ref: "#/components/schemas/DshPartnerOrderWorkboardOrder"
+        total:
+          type: integer
+          minimum: 0
+
     DshAcknowledgeDeliveryExceptionRequest:
       type: object
       additionalProperties: false
