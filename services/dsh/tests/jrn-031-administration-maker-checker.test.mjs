@@ -10,6 +10,7 @@ describe("JRN-031 administration maker-checker closure", () => {
   const approvalMigration = source("../database/migrations/dsh-076_admin_role_assignment_approvals.sql");
   const permissionMigration = source("../database/migrations/dsh-077_admin_role_permissions.sql");
   const roleDefinitionMigration = source("../database/migrations/dsh-078_admin_role_definition_approvals.sql");
+  const revocationMigration = source("../database/migrations/dsh-079_admin_role_assignment_revocations.sql");
   const assignmentDomain = source("../backend/internal/administration/role_assignment_approvals.go");
   const roleDefinitionDomain = source("../backend/internal/administration/role_definition_approvals.go");
   const administration = source("../backend/internal/administration/administration.go");
@@ -27,22 +28,24 @@ describe("JRN-031 administration maker-checker closure", () => {
   const governedScreen = source("../frontend/control-panel/administration/GovernedAdministrationScreen.tsx");
   const page = source("../../../apps/control-panel/runtime/src/app/dsh/administration/page.tsx");
 
-  it("persists a versioned assignment approval queue with self-assignment protection", () => {
+  it("persists versioned role-change queues with self-change protection", () => {
     assert.match(approvalMigration, /dsh_admin_approval_requests/);
     assert.match(approvalMigration, /requested_by <> target_actor_id/);
     assert.match(approvalMigration, /status IN \('pending','approved','rejected'\)/);
-    assert.match(approvalMigration, /uq_dsh_admin_pending_role_assignment/);
     assert.match(approvalMigration, /version\s+INTEGER/);
+    assert.match(revocationMigration, /staff_role_revocation/);
+    assert.match(revocationMigration, /uq_dsh_admin_pending_role_change/);
   });
 
-  it("applies assignments only inside independent approval transactions", () => {
+  it("applies assignment and rollback only inside independent approval transactions", () => {
     assert.match(assignmentDomain, /BeginTx/);
+    assert.match(assignmentDomain, /RequestStaffRoleRevocation/);
     assert.match(assignmentDomain, /checkerActorID == current\.RequestedBy/);
     assert.match(assignmentDomain, /checkerActorID == current\.TargetActorID/);
     assert.match(assignmentDomain, /current\.Status != "pending" \|\| current\.Version != expectedVersion/);
     assert.match(assignmentDomain, /INSERT INTO dsh_admin_staff_assignments/);
-    assert.match(assignmentDomain, /staff_role_assignment_requested/);
-    assert.match(assignmentDomain, /staff_role_assignment_"\+decision/);
+    assert.match(assignmentDomain, /DELETE FROM dsh_admin_staff_assignments/);
+    assert.match(assignmentDomain, /current\.ActionType\+"_"\+decision/);
     assert.match(assignmentDomain, /tx\.Commit/);
   });
 
@@ -89,13 +92,13 @@ describe("JRN-031 administration maker-checker closure", () => {
     assert.doesNotMatch(dashboard, /style=\{\{/);
   });
 
-  it("mounts governed routes without mounting legacy direct mutations", () => {
+  it("mounts governed routes without direct role mutation endpoints", () => {
     assert.match(main, /RegisterAdministrationRoutes/);
     assert.match(routes, /POST \/dsh\/operator\/admin\/staff\/\{staffId\}\/roles/);
     assert.match(routes, /GET \/dsh\/operator\/admin\/approvals/);
     assert.match(routes, /POST \/dsh\/operator\/admin\/approvals\/\{approvalId\}\/review/);
-    assert.match(routes, /handleRequestStaffRoleAssignment/);
-    assert.match(routes, /handleReviewStaffRoleAssignment/);
+    assert.match(routes, /RoleChangeAssign/);
+    assert.match(routes, /RoleChangeRevoke/);
     assert.doesNotMatch(routes, /handleAssignStaffRole/);
     assert.doesNotMatch(routes, /handleCreateRole/);
     assert.doesNotMatch(routes, /handleActivatePartner/);
@@ -103,18 +106,23 @@ describe("JRN-031 administration maker-checker closure", () => {
   });
 
   it("binds contract, shared brain, and control-panel queues", () => {
-    assert.match(contract, /operationId: requestDshStaffRoleAssignment/);
-    assert.match(contract, /operationId: reviewDshRoleAssignmentApproval/);
-    assert.match(contract, /expectedVersion/);
+    assert.match(contract, /operationId: requestDshStaffRoleChange/);
+    assert.match(contract, /operationId: reviewDshStaffRoleChange/);
+    assert.match(contract, /staff_role_revocation/);
+    assert.match(contract, /required: \[roleId, actionType, reason\]/);
+    assert.match(adapter, /requestStaffRoleChange/);
+    assert.match(adapter, /actionType/);
     assert.match(adapter, /fetchRoleAssignmentApprovals/);
     assert.match(adapter, /reviewRoleAssignmentApproval/);
     assert.match(adapter, /requestRoleDefinition/);
     assert.match(adapter, /reviewRoleDefinitionRequest/);
+    assert.match(controller, /requestRoleRevocation/);
     assert.match(controller, /useRoleAssignmentApprovalController/);
     assert.match(controller, /useRoleDefinitionApprovalController/);
     assert.match(controller, /useAdministrationRolesController/);
-    assert.match(assignmentQueue, /useRoleAssignmentApprovalController/);
     assert.match(assignmentQueue, /requestRoleAssignment/);
+    assert.match(assignmentQueue, /requestRoleRevocation/);
+    assert.match(assignmentQueue, /إرسال طلب سحب/);
     assert.match(assignmentQueue, /اعتماد من مراجع مستقل/);
     assert.match(roleQueue, /useRoleDefinitionApprovalController/);
     assert.match(roleQueue, /إرسال تعريف الدور للمراجعة/);
