@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import assert from "node:assert/strict";
 
+// Re-run marker after canonical gofmt of the DSH/WLT ownership boundary.
 const read = (path) => fs.readFileSync(path, "utf8");
 const truth = JSON.parse(read("governance/product/contracts/jrn-001-partner-onboarding-store-publication.product-truth.json"));
 const lifecycleRoutes = read("services/dsh/backend/internal/http/partner_lifecycle_routes.go");
