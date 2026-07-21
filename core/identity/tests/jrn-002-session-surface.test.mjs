@@ -71,20 +71,24 @@ test("JRN-002 typechecks every identity-consuming runtime", async () => {
   }
 });
 
-test("JRN-002 removes stale generated declarations and temporary diagnostics", async () => {
-  const [clientDeclaration, storeDeclaration, hookDeclaration] = await Promise.all([
+test("JRN-002 removes stale declarations, temporary diagnostics, and unbound session artifacts", async () => {
+  const [clientDeclaration, storeDeclaration, hookDeclaration, model] = await Promise.all([
     read("core/identity/clients/identity-client.d.ts"),
     read("core/identity/clients/identity-session-store.d.ts"),
     read("core/identity/clients/use-identity-session.d.ts"),
+    read("core/identity/backend/internal/identity/model.go"),
   ]);
 
   assert.doesNotMatch(storeDeclaration, /devBypassLogin/);
   assert.match(clientDeclaration, /requestOtp/);
   assert.match(storeDeclaration, /activateIdentity\(actorType: ActivationActorType/);
   assert.match(hookDeclaration, /revokeSession/);
+  assert.doesNotMatch(model, /SupportSession/);
+  assert.doesNotMatch(model, /SessionKind/);
 
   for (const removedPath of [
     ".github/workflows/tmp-jrn-002-diagnostics.yml",
+    "core/identity/backend/internal/identity/support_sessions.go",
     "core/identity/clients/identity-client.d.ts.map",
     "core/identity/clients/identity-session-store.d.ts.map",
     "core/identity/clients/use-identity-session.d.ts.map",
