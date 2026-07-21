@@ -1,0 +1,49 @@
+openapi: 3.1.0
+info:
+  title: JRN-003 Workforce Slice Contract
+  version: 1.0.0
+paths:
+  /workforce/reference/cities:
+    post:
+      operationId: createWorkforceCity
+      summary: Create a governed workforce city reference
+      responses:
+        '201': { description: Created }
+  /workforce/reference/cities/{code}:
+    patch:
+      operationId: updateWorkforceCity
+      summary: Update or activate/deactivate a workforce city reference
+      parameters:
+        - in: path
+          name: code
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Updated }
+  /workforce/{collection}/{actorId}/documents:
+    post:
+      operationId: appendWorkforceProviderDocument
+      summary: Link an opaque DSH media reference to a Workforce profile
+      parameters:
+        - in: path
+          name: collection
+          required: true
+          schema:
+            type: string
+            enum: [field-agents, captains, employees]
+        - in: path
+          name: actorId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion, mediaRef]
+              properties:
+                expectedVersion: { type: integer, minimum: 1 }
+                mediaRef: { type: string, minLength: 1 }
+      responses:
+        '200': { description: Linked }
