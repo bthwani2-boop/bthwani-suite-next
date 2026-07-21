@@ -1,0 +1,143 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-013",
+  "journeyName": "تسليم العهدة من المتجر إلى الكابتن",
+  "closureMode": "CODE_AND_TARGETED_SOURCE_EVIDENCE",
+  "requiredSliceCount": 18,
+  "codeDecision": "CLOSED",
+  "releaseDecision": "READY_FOR_INDEPENDENT_REVIEW",
+  "slices": [
+    {
+      "id": "FS-01",
+      "name": "Product truth and ownership boundaries",
+      "codeStatus": "CLOSED",
+      "requiredFiles": ["governance/product/contracts/jrn-013-store-captain-handoff.product-truth.json"],
+      "requiredMarkers": ["JRN-013", "custodyLifecycle", "financialTruth", "READY_FOR_REVIEW"]
+    },
+    {
+      "id": "FS-02",
+      "name": "Custody database state and actor audit",
+      "codeStatus": "CLOSED",
+      "requiredFiles": ["services/dsh/database/migrations/dsh-095_store_captain_outbound_handoff.sql"],
+      "requiredMarkers": ["dsh_store_captain_handoffs", "awaiting_partner", "partner_confirmed_by_actor_id", "captain_confirmed_by_actor_id", "superseded"]
+    },
+    {
+      "id": "FS-03",
+      "name": "Captain arrival creates assignment-bound custody",
+      "codeStatus": "CLOSED",
+      "requiredFiles": ["services/dsh/backend/internal/dispatch/store_captain_handoff.go"],
+      "requiredMarkers": ["ensureStoreCaptainHandoff", "DeliveryArrivedStore", "INSERT INTO dsh_store_captain_handoffs", "ON CONFLICT (assignment_id) DO NOTHING"]
+    },
+    {
+      "id": "FS-04",
+      "name": "Partner scoped release confirmation",
+      "codeStatus": "CLOSED",
+      "requiredFiles": ["services/dsh/backend/internal/dispatch/store_captain_handoff.go", "services/dsh/backend/internal/http/store_captain_handoff.go"],
+      "requiredMarkers": ["ConfirmStoreCaptainHandoff", "resolvedStoreID != storeID", "StatusStoreHandoffConfirmed", "partnerStore"]
+    },
+    {
+      "id": "FS-05",
+      "name": "Captain pickup guard and custody completion",
+      "codeStatus": "CLOSED",
+      "requiredFiles": ["services/dsh/backend/internal/dispatch/store_captain_handoff.go"],
+      "requiredMarkers": ["requireStoreCaptainHandoffConfirmed", "ErrStoreHandoffRequired", "completeStoreCaptainHandoff", "captain_confirmed_at = NOW()"]
+    },
+    {
+      "id": "FS-06",
+      "name": "Idempotent arrival confirmation and pickup replay",
+      "codeStatus": "CLOSED",
+      "requiredFiles": ["services/dsh/backend/internal/dispatch/store_captain_handoff_idempotency.go", "services/dsh/backend/internal/dispatch/store_captain_handoff_idempotency_db_test.go"],
+      "requiredMarkers": ["UpdateDeliveryStatusGovernedIdempotent", "ConfirmStoreCaptainHandoffIdempotent", "current.Delivery.Status != status", "TestStoreCaptainHandoffConfirmationReplaysAfterPickupDBIntegration"]
+    },
+    {
+      "id": "FS-07",
+      "name": "Reassignment supersedes prior custody immediately",
+      "codeStatus": "CLOSED",
+      "requiredFiles": ["services/dsh/database/migrations/dsh-096_store_captain_handoff_reassignment.sql", "services/dsh/backend/internal/dispatch/store_captain_handoff_idempotency_db_test.go"],
+      "requiredMarkers": ["dsh_supersede_store_captain_handoff_on_assignment", "AFTER INSERT ON dsh_assignments", "status = 'superseded'", "TestReplacementAssignmentImmediatelySupersedesStoreCaptainHandoffDBIntegration"]
+    },
+    {
+      "id": "FS-08",
+      "name": "Handoff exception schema and reporter audit",
+      "codeStatus": "CLOSED",
+      "requiredFiles": ["services/dsh/database/migrations/dsh-097_store_captain_handoff_exceptions.sql"],
+      "requiredMarkers": ["handoff_shortage", "handoff_mismatch", "dsh_delivery_exception_reporters", "actor_role IN ('captain', 'partner')"]
+    },
+    {
+      "id": "FS-09",
+      "name": "Partner and captain exception commands",
+      "codeStatus": "CLOSED",
+      "requiredFiles": ["services/dsh/backend/internal/dispatch/store_captain_handoff_exceptions.go"],
+      "requiredMarkers": ["ReportPartnerStoreCaptainHandoffException", "ReportCaptainStoreCaptainHandoffException", "correlationId already belongs to a different exception command", "reporterActorID"]
+    },
+    {
+      "id": "FS-10",
+      "name": "Authenticated HTTP exception routes",
+      "codeStatus": "CLOSED",
+      "requiredFiles": ["services/dsh/backend/internal/http/store_captain_handoff_exceptions.go", "services/dsh/backend/internal/http/order_journey_routes.go"],
+      "requiredMarkers": ["handleReportCaptainStoreCaptainHandoffException", "handleReportPartnerStoreCaptainHandoffException", "/handoff-exceptions", "/captain-handoff/exceptions"]
+    },
+    {
+      "id": "FS-11",
+      "name": "Open exception blocks confirmation and pickup",
+      "codeStatus": "CLOSED",
+      "requiredFiles": ["services/dsh/backend/internal/dispatch/store_captain_handoff_idempotency.go", "services/dsh/backend/internal/dispatch/store_captain_handoff_exceptions_db_test.go"],
+      "requiredMarkers": ["ensureNoActiveStoreCaptainHandoffException", "status IN ('open', 'acknowledged')", "TestPartnerHandoffShortageOpensGovernedExceptionDBIntegration", "TestCaptainHandoffMismatchAfterPartnerConfirmationBlocksPickupDBIntegration"]
+    },
+    {
+      "id": "FS-12",
+      "name": "Persistent partner exception readback and action suppression",
+      "codeStatus": "CLOSED",
+      "requiredFiles": ["services/dsh/backend/internal/http/partner_order_workboard.go", "services/dsh/frontend/shared/partner/partner.adapters.ts", "services/dsh/frontend/app-partner/orders/GovernedPartnerOrdersScreen.tsx"],
+      "requiredMarkers": ["OpenStoreCaptainHandoffExceptionID", "openStoreCaptainHandoffExceptionId", "exposes handoff while custody exception is active", "استثناء عهدة قيد مراجعة العمليات"]
+    },
+    {
+      "id": "FS-13",
+      "name": "Persistent captain exception readback and fail-closed pickup",
+      "codeStatus": "CLOSED",
+      "requiredFiles": ["services/dsh/frontend/shared/dispatch/use-store-captain-handoff-exception.ts", "services/dsh/frontend/app-captain/orders/OperationalCaptainExecutionScreen.tsx"],
+      "requiredMarkers": ["fetchCaptainDeliveryException", "setReadback({ kind: \"blocked\"", "setInterval", "readbackBlocksPickup", "الاستلام محجوب"]
+    },
+    {
+      "id": "FS-14",
+      "name": "Shared API controller and governed form",
+      "codeStatus": "CLOSED",
+      "requiredFiles": ["services/dsh/frontend/shared/orders/orders.api.ts", "services/dsh/frontend/shared/dispatch/dispatch.api.ts", "services/dsh/frontend/shared/dispatch/StoreCaptainHandoffExceptionForm.tsx"],
+      "requiredMarkers": ["reportPartnerStoreCaptainHandoffException", "reportCaptainHandoffException", "StoreCaptainHandoffExceptionForm", "تسجيل الاستثناء"]
+    },
+    {
+      "id": "FS-15",
+      "name": "Operator exception queue and decisions",
+      "codeStatus": "CLOSED",
+      "requiredFiles": ["services/dsh/frontend/control-panel/operations/ExceptionsEscalationsScreen.tsx"],
+      "requiredMarkers": ["handoff_shortage", "handoff_mismatch", "استثناءات عهدة", "السماح باستكمال العهدة", "resolveDeliveryExceptionReassignCaptain"]
+    },
+    {
+      "id": "FS-16",
+      "name": "Client unified lifecycle readback",
+      "codeStatus": "CLOSED",
+      "requiredFiles": ["services/dsh/frontend/shared/orders/use-client-order-journey-controller.ts", "services/dsh/frontend/shared/orders/orders.types.ts"],
+      "requiredMarkers": ["fetchClientOrderTruthDetail", "fetchClientOrderTracking", "setInterval", "store_handoff_confirmed"]
+    },
+    {
+      "id": "FS-17",
+      "name": "OpenAPI security and WLT ownership boundary",
+      "codeStatus": "CLOSED",
+      "requiredFiles": ["services/dsh/contracts/dsh.store-captain-handoff.openapi.yaml", "services/dsh/contracts/contract-registry.ts", "governance/product/contracts/jrn-013-store-captain-handoff.product-truth.json"],
+      "requiredMarkers": ["bearerAuth", "dsh-store-captain-handoff", "frontend/shared/orders,frontend/shared/dispatch", "financialTruth", "WLT"]
+    },
+    {
+      "id": "FS-18",
+      "name": "Targeted source database and CI gates",
+      "codeStatus": "CLOSED",
+      "requiredFiles": ["services/dsh/tests/store-captain-handoff-closure.test.mjs", ".github/workflows/store-captain-handoff-verification.yml"],
+      "requiredMarkers": ["custody database truth has dual confirmation", "partner and captain surfaces consume only shared custody commands", "Prove custody, replay, reassignment, and exception invariants", "Typecheck DSH shared brain and surfaces"]
+    }
+  ],
+  "independentReviewPending": ["product-owner", "qa-device-accessibility", "security", "finance-boundary", "release-production"],
+  "executionEvidence": {
+    "sourceClosure": "REGISTERED",
+    "ciRuns": "NOT_OBSERVED_FROM_CONNECTOR",
+    "runtimeDeviceQa": "PENDING"
+  }
+}
