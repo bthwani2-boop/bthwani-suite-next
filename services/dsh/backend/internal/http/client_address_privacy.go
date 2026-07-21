@@ -35,7 +35,7 @@ func privacyMutationContext(w http.ResponseWriter, r *http.Request, actorID stri
 		return clientaddress.PrivacyMutationContext{}, false
 	}
 	return clientaddress.PrivacyMutationContext{
-		ActorID:       actorID,
+		ActorID:        actorID,
 		IdempotencyKey: idempotencyKey,
 		CorrelationID:  correlationID,
 	}, true
