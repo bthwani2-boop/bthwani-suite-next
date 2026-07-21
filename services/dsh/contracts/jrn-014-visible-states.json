@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-014",
+  "states": {
+    "control-panel": [
+      {"id":"loading","required":true},
+      {"id":"ready-orders-empty","required":true},
+      {"id":"candidate-loading","required":true},
+      {"id":"candidate-empty","required":true},
+      {"id":"candidate-error","required":true},
+      {"id":"assignment-submitting","required":true},
+      {"id":"assignment-success","required":true},
+      {"id":"assignment-conflict","required":true},
+      {"id":"active-assignments-empty","required":true},
+      {"id":"decision-log-empty","required":true},
+      {"id":"expire-running","required":true},
+      {"id":"cancel-running","required":true},
+      {"id":"reassign-running","required":true},
+      {"id":"offline-or-forbidden","required":true}
+    ],
+    "app-captain": [
+      {"id":"inbox-loading","required":true},
+      {"id":"inbox-empty","required":true},
+      {"id":"inbox-error","required":true},
+      {"id":"offer-pending","required":true},
+      {"id":"offer-countdown","required":true},
+      {"id":"offer-expired","required":true},
+      {"id":"accepting","required":true},
+      {"id":"declining","required":true},
+      {"id":"decline-reason-required","required":true},
+      {"id":"accepted-execution","required":true},
+      {"id":"assignment-closed-remotely","required":true},
+      {"id":"execution-blocked-before-acceptance","required":true}
+    ],
+    "app-client": [
+      {"id":"tracking-loading","required":true},
+      {"id":"tracking-active","required":true},
+      {"id":"tracking-delivered","required":true},
+      {"id":"tracking-cancelled","required":true},
+      {"id":"tracking-error-or-offline","required":true}
+    ]
+  },
+  "forbiddenPresentation": ["fake-success", "hardcoded-customer", "hardcoded-phone", "hardcoded-address", "hardcoded-distance", "hardcoded-financial-value"]
+}
