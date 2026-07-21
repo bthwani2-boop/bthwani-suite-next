@@ -7,6 +7,7 @@ on:
     paths:
       - .github/workflows/jrn-010-015-sambassam-verify.yml
       - services/dsh/frontend/shared/checkout/**
+      - services/dsh/frontend/shared/delivery/**
       - services/dsh/frontend/shared/dispatch/**
       - services/dsh/frontend/shared/pickup/**
       - services/dsh/frontend/app-client/checkout/**
@@ -64,6 +65,7 @@ jobs:
               "../services/dsh/frontend/app-partner/orders/OperationalOrderDecisionScreen.tsx",
               "../services/dsh/frontend/app-partner/orders/OperationalOrdersInboxScreen.tsx",
               "../services/dsh/frontend/shared/dispatch/use-dispatch-controller.ts",
+              "../services/dsh/frontend/shared/delivery/captain-inbox.model.ts",
               "../services/dsh/frontend/app-captain/dispatch/DshCaptainOrdersScreen.tsx",
               "../services/dsh/frontend/app-client/orders/OrderTrackingScreen.tsx",
               "../services/dsh/frontend/control-panel/operations/OrderJourneyDispatchAssignmentScreen.tsx",
