@@ -136,19 +136,21 @@ jobs:
         shell: bash
         run: |
           STAGE="$(cat /tmp/jrn-015-020-stage 2>/dev/null || echo workflow-bootstrap)"
+          CONTEXT="journeys/jrn-015-020-targeted"
           if [ "$JOB_STATUS" = "success" ]; then
             STATE="success"
             DESCRIPTION="JRN-015..020 targeted checks passed"
           else
             STATE="failure"
             FIRST_ERROR="$(grep -m1 -E 'undefined:|cannot use|not enough arguments|too many arguments|error TS[0-9]+|FAIL|Error:|ERR_' /tmp/jrn-015-020.log 2>/dev/null || true)"
-            FIRST_ERROR="$(printf '%s' "$FIRST_ERROR" | tr '\n' ' ' | cut -c1-90)"
-            DESCRIPTION="Failed at $STAGE${FIRST_ERROR:+: $FIRST_ERROR}"
-            DESCRIPTION="$(printf '%s' "$DESCRIPTION" | cut -c1-140)"
+            ERROR_TOKEN="$(printf '%s' "$FIRST_ERROR" | tr '[:upper:]' '[:lower:]' | tr -cs '[:alnum:]_.-' '-' | sed 's/^-//;s/-$//' | cut -c1-50)"
+            CONTEXT="journeys/jrn-015-020/$STAGE/${ERROR_TOKEN:-check-failed}"
+            CONTEXT="$(printf '%s' "$CONTEXT" | cut -c1-100)"
+            DESCRIPTION="Failed at $STAGE"
           fi
           jq -n \
             --arg state "$STATE" \
-            --arg context "journeys/jrn-015-020-targeted" \
+            --arg context "$CONTEXT" \
             --arg description "$DESCRIPTION" \
             --arg target_url "$TARGET_URL" \
             '{state:$state,context:$context,description:$description,target_url:$target_url}' \
