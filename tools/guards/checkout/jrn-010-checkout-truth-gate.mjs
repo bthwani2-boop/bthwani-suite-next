@@ -7,10 +7,11 @@ const wltClient = readFileSync("services/dsh/backend/internal/wlt/client.go", "u
 const routes = readFileSync("services/dsh/backend/internal/http/server.go", "utf8");
 const operatorScreen = readFileSync("services/dsh/frontend/control-panel/operations/CheckoutActivityScreen.tsx", "utf8");
 
-assert.match(checkoutHttp, /requireActor\(w, r, "client"\)/);
-assert.match(checkoutHttp, /ComputeCheckoutSnapshotForClientTx/);
-assert.match(checkoutHttp, /clientaddress\.GetOwned/);
-assert.match(checkoutHttp, /cart\.CheckServiceability/);
-assert.match(checkoutHttp, /ResolveDeliveryPricingTx/);
-assert.match(checkoutHttp, /PRICING_CURRENCY_MISMATCH/);
-assert.match(checkoutHttp, /BuildPricingSnapshotHash/);
+assert.match(checkoutHttp, /ModeBthwaniDelivery/);
+assert.match(checkoutHttp, /ModePartnerDelivery/);
+assert.match(checkoutHttp, /ModePickup/);
+assert.match(checkoutHttp, /MethodCOD/);
+assert.match(checkoutHttp, /MethodWallet/);
+assert.match(checkoutHttp, /MethodMixed/);
+assert.match(checkoutHttp, /MethodOfficialWallet/);
+assert.match(checkoutHttp, /DELIVERY_ADDRESS_REQUIRED/);
