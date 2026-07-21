@@ -48,7 +48,7 @@ jobs:
         run: |
           echo "install-workspace" > /tmp/jrn-verification-stage
           pnpm install --frozen-lockfile
-      - name: Create journey-scoped TypeScript project
+      - name: Create journey-scoped TypeScript projects
         run: |
           mkdir -p .tmp
           cat > .tmp/jrn-010-015.tsconfig.json <<'JSON'
@@ -72,12 +72,30 @@ jobs:
             ]
           }
           JSON
+          cat > .tmp/jrn-010-015-test-build.tsconfig.json <<'JSON'
+          {
+            "extends": "../services/dsh/tsconfig.json",
+            "files": [
+              "../services/dsh/frontend/shared/checkout/checkout.controller-core.ts",
+              "../services/dsh/frontend/shared/delivery/captain-inbox.model.ts"
+            ]
+          }
+          JSON
       - name: Typecheck journey files and consumers
         shell: bash
         run: |
           echo "typecheck-journey-files" > /tmp/jrn-verification-stage
           set +e
           pnpm exec tsc --noEmit -p .tmp/jrn-010-015.tsconfig.json 2>&1 | tee /tmp/jrn-verification.log
+          EXIT_CODE=${PIPESTATUS[0]}
+          exit "$EXIT_CODE"
+      - name: Build modules required by journey tests
+        shell: bash
+        run: |
+          echo "build-journey-test-modules" > /tmp/jrn-verification-stage
+          rm -rf services/dsh/dist
+          set +e
+          pnpm exec tsc -p .tmp/jrn-010-015-test-build.tsconfig.json 2>&1 | tee /tmp/jrn-verification.log
           EXIT_CODE=${PIPESTATUS[0]}
           exit "$EXIT_CODE"
       - name: Run journey contract tests
