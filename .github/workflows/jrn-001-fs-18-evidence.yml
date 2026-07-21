@@ -17,7 +17,13 @@ on:
       - services/dsh/database/migrations/dsh-098_partner_onboarding_integrity.sql
       - services/dsh/frontend/shared/partner/**
       - services/dsh/frontend/shared/field-onboarding/**
+      - services/dsh/frontend/shared/store/**
       - services/dsh/frontend/app-field/onboarding/**
+      - services/dsh/frontend/app-partner/account/**
+      - services/dsh/frontend/app-partner/team/**
+      - services/dsh/frontend/control-panel/partners/**
+      - services/dsh/frontend/app-client/home-discovery/**
+      - services/dsh/frontend/app-client/store/**
       - services/dsh/tests/jrn-001-*.test.mjs
       - tools/guards/partner/jrn-001-*.mjs
       - .github/workflows/jrn-001-fs-18-evidence.yml
