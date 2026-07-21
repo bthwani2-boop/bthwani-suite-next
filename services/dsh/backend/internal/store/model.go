@@ -107,8 +107,12 @@ type DshStoreSummary struct {
 
 type DshStoreDetail struct {
 	DshStoreSummary
-	CreatedAt string `json:"createdAt"`
-	UpdatedAt string `json:"updatedAt"`
+	AddressLine       string `json:"addressLine"`
+	CoverageSummary   string `json:"coverageSummary"`
+	OperatingHours    string `json:"operatingHours"`
+	DeliveryReadiness string `json:"deliveryReadiness"`
+	CreatedAt         string `json:"createdAt"`
+	UpdatedAt         string `json:"updatedAt"`
 }
 
 type FieldPartnerStoreDraft struct {
@@ -197,9 +201,13 @@ func IsPublicationEligible(row DshStoreRow) bool {
 
 func RowToDetail(row DshStoreRow) DshStoreDetail {
 	return DshStoreDetail{
-		DshStoreSummary: RowToSummary(row),
-		CreatedAt:       row.CreatedAt.UTC().Format(time.RFC3339Nano),
-		UpdatedAt:       row.UpdatedAt.UTC().Format(time.RFC3339Nano),
+		DshStoreSummary:  RowToSummary(row),
+		AddressLine:       row.AddressLine,
+		CoverageSummary:   row.CoverageSummary,
+		OperatingHours:    row.OperatingHours,
+		DeliveryReadiness: row.DeliveryReadiness,
+		CreatedAt:         row.CreatedAt.UTC().Format(time.RFC3339Nano),
+		UpdatedAt:         row.UpdatedAt.UTC().Format(time.RFC3339Nano),
 	}
 }
 
