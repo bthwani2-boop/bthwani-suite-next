@@ -7,6 +7,7 @@ import type {
   DshOrderPreparation,
   DshPartnerOrder,
   DshPartnerOrderAction,
+  DshStoreCaptainHandoffStatus,
 } from '../orders/orders.types';
 import type { DshOrderLifecycleHandoff } from '../orders/dsh-order-lifecycle-handoffs';
 import type { PartnerOrderItem, PartnerOrderStatus } from '../orders/orders.contract';
@@ -19,6 +20,7 @@ const statusMap: Record<string, PartnerOrderStatus> = {
   ready_for_pickup: 'ready',
   driver_assigned: 'captain_assigned',
   driver_arrived_store: 'captain_arriving',
+  store_handoff_confirmed: 'handoff',
   picked_up: 'handoff',
   arrived_customer: 'delivering',
   delivered: 'completed',
@@ -45,7 +47,7 @@ const nextActionMap: Record<PartnerOrderStatus, string> = {
   preparing: 'تأكيد جاهزية الطلب',
   items_ready: 'تأكيد جاهزية الطلب',
   ready: 'فتح مسار التسليم',
-  handoff: 'متابعة التسليم',
+  handoff: 'بانتظار تأكيد استلام الكابتن',
   captain_assigned: 'متابعة وصول الكابتن',
   captain_arriving: 'تأكيد التسليم للكابتن',
   delivering: 'متابعة التوصيل',
@@ -56,6 +58,8 @@ const nextActionMap: Record<PartnerOrderStatus, string> = {
 export type GovernedPartnerOrderItem = PartnerOrderItem & {
   readonly allowedActions: readonly DshPartnerOrderAction[];
   readonly preparation: DshOrderPreparation;
+  readonly storeCaptainHandoffStatus: DshStoreCaptainHandoffStatus;
+  readonly storeCaptainHandoffCaptainId: string;
 };
 
 type CanonicalOrderShape = {
@@ -69,6 +73,8 @@ type CanonicalOrderShape = {
   readonly updatedAt?: string;
   readonly allowedActions?: readonly DshPartnerOrderAction[];
   readonly preparation?: DshOrderPreparation;
+  readonly storeCaptainHandoffStatus?: DshStoreCaptainHandoffStatus;
+  readonly storeCaptainHandoffCaptainId?: string;
   readonly items?: readonly {
     readonly productName?: string;
     readonly quantity?: number;
@@ -163,6 +169,8 @@ export function mapDshOrderToPartnerOrderItem(order: DshPartnerOrder): GovernedP
     status,
     allowedActions: [...raw.allowedActions],
     preparation: raw.preparation,
+    storeCaptainHandoffStatus: raw.storeCaptainHandoffStatus ?? '',
+    storeCaptainHandoffCaptainId: String(raw.storeCaptainHandoffCaptainId ?? ''),
     priority: acceptanceRisk || raw.preparation.preparationSlaState === 'overdue' ? 'high' : 'normal',
     orderTypeLabel: resolveOrderTypeLabel(orderMode),
     orderMode,
