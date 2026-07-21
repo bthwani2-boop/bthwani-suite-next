@@ -11,41 +11,42 @@ import { StoreAdminStateView } from "./StoreAdminStateView";
 import { StoreGovernanceActions } from "./StoreGovernanceActions";
 
 export function StoreManagementScreen() {
-  const c = useStoreAdminController("authenticated");
+  const controller = useStoreAdminController("authenticated");
   const selectedDetail =
-    c.detailState?.kind === "success" ? c.detailState.detail : null;
+    controller.detailState?.kind === "success" ? controller.detailState.detail : null;
 
   return (
     <DataTablePageFrame
       dir="rtl"
       header={
         <CpPageHeader title="إدارة المتاجر">
-          {c.kpi !== null && <StoreAdminKpiStrip kpi={c.kpi} />}
+          {controller.kpi !== null && <StoreAdminKpiStrip kpi={controller.kpi} />}
         </CpPageHeader>
       }
-      filters={<StoreAdminFilters filters={c.filters} onChange={c.setFilters} />}
+      filters={<StoreAdminFilters filters={controller.filters} onChange={controller.setFilters} />}
       toolbar={
         <PaginationToolbar
-          label={c.paginationLabel}
-          hasPrev={c.hasPrevPage}
-          hasNext={c.hasNextPage}
-          onPrev={c.prevPage}
-          onNext={c.nextPage}
-          onRetry={c.retry}
+          label={controller.paginationLabel}
+          hasPrev={controller.hasPrevPage}
+          hasNext={controller.hasNextPage}
+          onPrev={controller.prevPage}
+          onNext={controller.nextPage}
+          onRetry={controller.retry}
         />
       }
       stateView={
-        c.isNonSuccess
-          ? <StoreAdminStateView state={c.listState} onRetry={c.retry} />
+        controller.isNonSuccess
+          ? <StoreAdminStateView state={controller.listState} onRetry={controller.retry} />
           : undefined
       }
       sidePanel={
-        c.selectedStoreId !== null && c.detailState !== null
+        controller.selectedStoreId !== null && controller.detailState !== null
           ? (
               <StoreDetailAdminPanel
-                state={c.detailState}
-                diagnosticsState={c.diagnosticsState}
-                onClose={() => c.selectStore(null)}
+                state={controller.detailState}
+                diagnosticsState={controller.diagnosticsState}
+                auditState={controller.auditState}
+                onClose={() => controller.selectStore(null)}
               />
             )
           : undefined
@@ -55,14 +56,14 @@ export function StoreManagementScreen() {
         {selectedDetail !== null && (
           <StoreGovernanceActions
             store={selectedDetail}
-            actionState={c.actionState}
-            onSubmit={(input) => c.govern(selectedDetail.id, input)}
+            actionState={controller.actionState}
+            onSubmit={(input) => controller.govern(selectedDetail.id, input)}
           />
         )}
         <StoreAdminTable
-          rows={c.visibleRows}
-          selectedStoreId={c.selectedStoreId}
-          onSelectStore={c.selectStore}
+          rows={controller.visibleRows}
+          selectedStoreId={controller.selectedStoreId}
+          onSelectStore={controller.selectStore}
         />
       </>
     </DataTablePageFrame>
