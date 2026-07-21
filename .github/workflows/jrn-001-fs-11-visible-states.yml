@@ -1,5 +1,5 @@
 name: JRN-001 FS-11 Visible States
-# Verification generation 2: rerun after order-truth and partner-self recovery fixes.
+# Verification generation 3: include exact assertion location in failure status.
 
 on:
   push:
@@ -95,11 +95,13 @@ jobs:
             RAW_ERROR="$(grep -m1 -E 'error TS[0-9]+|AssertionError|ERR_ASSERTION|not ok|missing|failed' /tmp/fs11.log 2>/dev/null || true)"
             ERROR_CODE="$(printf '%s' "$RAW_ERROR" | grep -o -m1 -E 'TS[0-9]+|ERR_[A-Z0-9_]+' || true)"
             ERROR_FILE="$(printf '%s' "$RAW_ERROR" | sed -E 's#^([^(:]+).*#\1#' | sed -E 's#^.*[/\\]##' | cut -c1-48)"
+            ASSERT_LOCATION="$(grep -o -m1 -E 'jrn-001-fs-11-visible-states\.test\.mjs:[0-9]+:[0-9]+' /tmp/fs11.log 2>/dev/null || true)"
             [ -n "$ERROR_CODE" ] || ERROR_CODE='visible-state-check-failed'
             [ -n "$ERROR_FILE" ] || ERROR_FILE='unknown-file'
-            CONTEXT="journeys/jrn-001/fs-11/${ERROR_FILE}-${ERROR_CODE}"
+            LOCATION_TOKEN="$(printf '%s' "${ASSERT_LOCATION:-no-location}" | tr ':.' '--')"
+            CONTEXT="journeys/jrn-001/fs-11/${ERROR_FILE}-${ERROR_CODE}-${LOCATION_TOKEN}"
             CONTEXT="$(printf '%s' "$CONTEXT" | tr -cd '[:alnum:]_./:-' | cut -c1-100)"
-            DESCRIPTION="$(printf '%s' "${RAW_ERROR:-FS-11 verification failed}" | cut -c1-120)"
+            DESCRIPTION="$(printf '%s' "${ASSERT_LOCATION:-} ${RAW_ERROR:-FS-11 verification failed}" | cut -c1-120)"
           fi
           jq -n --arg state "$STATE" --arg context "$CONTEXT" --arg description "$DESCRIPTION" --arg target_url "$TARGET_URL" '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/status.json
           curl --fail-with-body --silent --show-error -X POST \
