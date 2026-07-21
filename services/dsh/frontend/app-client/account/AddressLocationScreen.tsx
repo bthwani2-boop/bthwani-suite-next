@@ -14,6 +14,7 @@ import {
 } from "@bthwani/ui-kit";
 import {
   useClientAddressController,
+  validateClientAddressDraft,
   type DshClientAddress,
   type DshClientAddressDraft,
 } from "../../shared/client-address";
@@ -95,13 +96,7 @@ function toInput(draft: EditableDraft): DshClientAddressDraft {
 }
 
 function validateDraft(draft: EditableDraft): string | null {
-  if (draft.label.trim().length < 1) return "اكتب اسمًا مختصرًا للعنوان.";
-  if (draft.recipientName.trim().length < 2) return "اكتب اسم المستلم.";
-  if (!/^\+[1-9][0-9]{7,14}$/.test(draft.phoneE164.trim())) return "رقم الهاتف يجب أن يكون بصيغة دولية صحيحة.";
-  if (draft.addressLine.trim().length < 5) return "اختر موقعًا محكومًا أو اكتب وصفًا أوضح للتسليم.";
-  if (draft.serviceAreaCode.trim().length < 1) return "الموقع المختار خارج مناطق الخدمة المعتمدة.";
-  if ((draft.latitude === null) !== (draft.longitude === null)) return "يجب حفظ خط العرض والطول معًا.";
-  return null;
+  return validateClientAddressDraft(toInput(draft));
 }
 
 export function AddressLocationScreen({ onBack, onOpenCheckout }: AddressLocationScreenProps) {
@@ -152,6 +147,7 @@ export function AddressLocationScreen({ onBack, onOpenCheckout }: AddressLocatio
       longitude: location.longitude,
     }));
     setLocationError(null);
+    setFormError(null);
     setMapQuery(location.displayName);
     return true;
   };
@@ -216,7 +212,7 @@ export function AddressLocationScreen({ onBack, onOpenCheckout }: AddressLocatio
 
   if (controller.state.kind === "loading") {
     return (
-      <View style={styles.root}>
+      <View style={styles.root} accessibilityLiveRegion="polite">
         <TopBar title="العناوين والموقع" {...(onBack ? { onBack } : {})} />
         <StateView loading title="جارٍ تحميل عناوينك" />
       </View>
@@ -225,7 +221,7 @@ export function AddressLocationScreen({ onBack, onOpenCheckout }: AddressLocatio
 
   if (controller.state.kind === "error") {
     return (
-      <View style={styles.root}>
+      <View style={styles.root} accessibilityLiveRegion="assertive">
         <TopBar title="العناوين والموقع" {...(onBack ? { onBack } : {})} />
         <StateView
           tone="danger"
@@ -241,17 +237,36 @@ export function AddressLocationScreen({ onBack, onOpenCheckout }: AddressLocatio
   return (
     <View style={styles.root}>
       <TopBar title="العناوين والموقع" {...(onBack ? { onBack } : {})} />
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         {controller.mutationError ? (
-          <Card style={styles.errorCard}>
-            <Text tone="danger" style={styles.rtl}>{controller.mutationError}</Text>
-            <Button label="إغلاق" tone="ghost" size="sm" onPress={controller.clearMutationError} />
-          </Card>
+          <View accessibilityLiveRegion="assertive">
+            <Card style={styles.errorCard}>
+              <Text tone="danger" style={styles.rtl}>{controller.mutationError}</Text>
+              <Button
+                label="إغلاق"
+                accessibilityLabel="إغلاق رسالة خطأ العنوان"
+                tone="ghost"
+                size="sm"
+                onPress={controller.clearMutationError}
+              />
+            </Card>
+          </View>
         ) : null}
 
         <View style={styles.sectionHeader}>
           <Text role="titleMd">عناوين التسليم</Text>
-          <Button label="إضافة عنوان" tone="primary" size="sm" onPress={beginCreate} />
+          <Button
+            label="إضافة عنوان"
+            accessibilityLabel="إضافة عنوان تسليم جديد"
+            tone="primary"
+            size="sm"
+            disabled={controller.mutating}
+            onPress={beginCreate}
+          />
         </View>
 
         {controller.addresses.length === 0 ? (
@@ -280,31 +295,58 @@ export function AddressLocationScreen({ onBack, onOpenCheckout }: AddressLocatio
                 {!address.isDefault ? (
                   <Button
                     label="جعله افتراضيًا"
+                    accessibilityLabel={`جعل عنوان ${address.label} العنوان الافتراضي`}
+                    accessibilityState={{ busy: controller.mutating, selected: false }}
                     tone="secondary"
                     size="sm"
                     disabled={controller.mutating}
                     onPress={() => void controller.makeDefault(address)}
                   />
                 ) : null}
-                <Button label="تعديل" tone="ghost" size="sm" disabled={controller.mutating} onPress={() => beginEdit(address)} />
+                <Button
+                  label="تعديل"
+                  accessibilityLabel={`تعديل عنوان ${address.label}`}
+                  tone="ghost"
+                  size="sm"
+                  disabled={controller.mutating}
+                  onPress={() => beginEdit(address)}
+                />
                 {pendingDeleteId === address.id ? (
                   <>
                     <Button
                       label="تأكيد الحذف"
+                      accessibilityLabel={`تأكيد حذف عنوان ${address.label}`}
+                      accessibilityState={{ busy: controller.mutating }}
                       tone="danger"
                       size="sm"
                       disabled={controller.mutating}
                       onPress={() => void controller.deleteAddress(address).then((ok) => ok && setPendingDeleteId(null))}
                     />
-                    <Button label="إلغاء" tone="ghost" size="sm" onPress={() => setPendingDeleteId(null)} />
+                    <Button
+                      label="إلغاء"
+                      accessibilityLabel={`إلغاء حذف عنوان ${address.label}`}
+                      tone="ghost"
+                      size="sm"
+                      disabled={controller.mutating}
+                      onPress={() => setPendingDeleteId(null)}
+                    />
                   </>
                 ) : (
-                  <Button label="حذف" tone="danger" size="sm" disabled={controller.mutating} onPress={() => setPendingDeleteId(address.id)} />
+                  <Button
+                    label="حذف"
+                    accessibilityLabel={`طلب حذف عنوان ${address.label}`}
+                    tone="danger"
+                    size="sm"
+                    disabled={controller.mutating}
+                    onPress={() => setPendingDeleteId(address.id)}
+                  />
                 )}
               </View>
               {onOpenCheckout ? (
                 <Button
                   label={address.isDefault ? "استخدام هذا العنوان" : "تعيين واستخدام"}
+                  accessibilityLabel={`${address.isDefault ? "استخدام" : "تعيين واستخدام"} عنوان ${address.label}`}
+                  accessibilityState={{ selected: address.isDefault, busy: controller.mutating }}
                   tone="primary"
                   disabled={controller.mutating}
                   onPress={() => void controller.makeDefault(address).then((ok) => ok && onOpenCheckout())}
@@ -317,36 +359,66 @@ export function AddressLocationScreen({ onBack, onOpenCheckout }: AddressLocatio
         {showForm ? (
           <Card style={styles.formCard}>
             <Text role="titleMd" style={styles.rtl}>{editing ? "تعديل العنوان" : "عنوان جديد"}</Text>
-            <TextField label="اسم العنوان" value={draft.label} onChangeText={(value) => setDraft((current) => ({ ...current, label: value }))} placeholder="المنزل، العمل…" />
-            <TextField label="اسم المستلم" value={draft.recipientName} onChangeText={(value) => setDraft((current) => ({ ...current, recipientName: value }))} />
-            <TextField label="الهاتف الدولي" value={draft.phoneE164} onChangeText={(value) => setDraft((current) => ({ ...current, phoneE164: value }))} keyboardType="phone-pad" />
+            <TextField
+              id="client-address-label"
+              label="اسم العنوان"
+              value={draft.label}
+              maxLength={80}
+              onChangeText={(value) => setDraft((current) => ({ ...current, label: value }))}
+              placeholder="المنزل، العمل…"
+            />
+            <TextField
+              id="client-address-recipient"
+              label="اسم المستلم"
+              value={draft.recipientName}
+              maxLength={160}
+              onChangeText={(value) => setDraft((current) => ({ ...current, recipientName: value }))}
+            />
+            <TextField
+              id="client-address-phone"
+              label="الهاتف الدولي"
+              value={draft.phoneE164}
+              maxLength={16}
+              onChangeText={(value) => setDraft((current) => ({ ...current, phoneE164: value }))}
+              keyboardType="phone-pad"
+            />
 
             <Text role="bodyStrong" style={styles.rtl}>الموقع المحكوم</Text>
             <TextField
+              id="client-address-map-query"
               label="ابحث عن موقع أو معلم"
               value={mapQuery}
+              maxLength={160}
               onChangeText={setMapQuery}
               placeholder="مثال: جامعة صنعاء"
             />
             <View style={styles.actions}>
               <Button
-                label={mapController.state.kind === "loading" ? "جارٍ البحث…" : "بحث"}
+                label="بحث"
+                accessibilityLabel="البحث عن موقع معتمد"
+                loading={mapController.state.kind === "loading"}
                 tone="secondary"
-                disabled={mapController.state.kind === "loading" || controller.mutating}
+                disabled={controller.mutating}
                 onPress={() => void searchLocation()}
               />
               <Button
-                label={capturingLocation ? "جارٍ التحقق…" : "استخدام موقع الجهاز"}
+                label="استخدام موقع الجهاز"
+                accessibilityLabel="استخدام موقع الجهاز والتحقق من منطقة الخدمة"
+                loading={capturingLocation}
                 tone="secondary"
-                disabled={capturingLocation || mapController.state.kind === "loading" || controller.mutating}
+                disabled={mapController.state.kind === "loading" || controller.mutating}
                 onPress={() => void captureLocation()}
               />
             </View>
             {mapController.state.kind === "empty" ? (
-              <Text role="caption" tone="muted" style={styles.rtl}>لم يُعثر على موقع مطابق.</Text>
+              <View accessibilityLiveRegion="polite">
+                <Text role="caption" tone="muted" style={styles.rtl}>لم يُعثر على موقع مطابق.</Text>
+              </View>
             ) : null}
             {mapController.state.kind === "error" ? (
-              <Text tone="danger" style={styles.rtl}>{mapController.state.message}</Text>
+              <View accessibilityLiveRegion="assertive">
+                <Text tone="danger" style={styles.rtl}>{mapController.state.message}</Text>
+              </View>
             ) : null}
             {mapController.locations.map((location) => (
               <Card key={`${location.providerCode}:${location.providerPlaceId}`} style={styles.mapResult}>
@@ -359,34 +431,98 @@ export function AddressLocationScreen({ onBack, onOpenCheckout }: AddressLocatio
                 </View>
                 <Button
                   label="اختيار الموقع"
+                  accessibilityLabel={`اختيار ${location.displayName}${location.serviceAreaVerified ? "" : "، خارج التغطية"}`}
                   tone="primary"
                   size="sm"
-                  disabled={!location.serviceAreaVerified}
+                  disabled={!location.serviceAreaVerified || controller.mutating}
                   onPress={() => applyMapLocation(location)}
                 />
               </Card>
             ))}
 
-            <TextField label="وصف العنوان" value={draft.addressLine} onChangeText={(value) => setDraft((current) => ({ ...current, addressLine: value }))} multiline />
+            <TextField
+              id="client-address-line"
+              label="وصف العنوان"
+              value={draft.addressLine}
+              maxLength={500}
+              onChangeText={(value) => setDraft((current) => ({ ...current, addressLine: value }))}
+              multiline
+            />
             {draft.serviceAreaCode ? (
               <Text role="caption" tone="muted" style={styles.rtl}>منطقة الخدمة المعتمدة: {draft.serviceAreaCode}</Text>
             ) : null}
             <View style={styles.inlineFields}>
-              <TextField label="المبنى" value={draft.building} onChangeText={(value) => setDraft((current) => ({ ...current, building: value }))} />
-              <TextField label="الدور" value={draft.floor} onChangeText={(value) => setDraft((current) => ({ ...current, floor: value }))} />
-              <TextField label="الشقة" value={draft.unit} onChangeText={(value) => setDraft((current) => ({ ...current, unit: value }))} />
+              <TextField
+                id="client-address-building"
+                label="المبنى"
+                value={draft.building}
+                maxLength={120}
+                onChangeText={(value) => setDraft((current) => ({ ...current, building: value }))}
+              />
+              <TextField
+                id="client-address-floor"
+                label="الدور"
+                value={draft.floor}
+                maxLength={40}
+                onChangeText={(value) => setDraft((current) => ({ ...current, floor: value }))}
+              />
+              <TextField
+                id="client-address-unit"
+                label="الشقة"
+                value={draft.unit}
+                maxLength={40}
+                onChangeText={(value) => setDraft((current) => ({ ...current, unit: value }))}
+              />
             </View>
-            <TextField label="تعليمات التسليم" value={draft.deliveryInstructions} onChangeText={(value) => setDraft((current) => ({ ...current, deliveryInstructions: value }))} multiline />
+            <TextField
+              id="client-address-instructions"
+              label="تعليمات التسليم"
+              value={draft.deliveryInstructions}
+              maxLength={500}
+              onChangeText={(value) => setDraft((current) => ({ ...current, deliveryInstructions: value }))}
+              multiline
+            />
             {draft.latitude !== null && draft.longitude !== null ? (
               <Text role="caption" tone="muted" style={styles.rtl}>
-                {draft.latitude.toFixed(6)}, {draft.longitude.toFixed(6)}
+                موقع معتمد: {draft.latitude.toFixed(6)}, {draft.longitude.toFixed(6)}
               </Text>
+            ) : (
+              <Text role="caption" tone="warning" style={styles.rtl}>
+                يجب اختيار موقع معتمد قبل الحفظ.
+              </Text>
+            )}
+            {locationError ? (
+              <View accessibilityLiveRegion="assertive">
+                <Text tone="danger" style={styles.rtl}>{locationError}</Text>
+              </View>
             ) : null}
-            {locationError ? <Text tone="danger" style={styles.rtl}>{locationError}</Text> : null}
-            {formError ? <Text tone="danger" style={styles.rtl}>{formError}</Text> : null}
+            {formError ? (
+              <View accessibilityLiveRegion="assertive">
+                <Text tone="danger" style={styles.rtl}>{formError}</Text>
+              </View>
+            ) : null}
             <View style={styles.actions}>
-              <Button label={controller.mutating ? "جارٍ الحفظ…" : "حفظ"} tone="primary" disabled={controller.mutating} onPress={() => void save()} />
-              <Button label="إلغاء" tone="ghost" disabled={controller.mutating} onPress={() => { setShowForm(false); setEditing(null); setFormError(null); resetMap(); }} />
+              <Button
+                label="حفظ"
+                accessibilityLabel={editing ? `حفظ تعديلات عنوان ${editing.label}` : "حفظ العنوان الجديد"}
+                loading={controller.mutating}
+                tone="primary"
+                disabled={capturingLocation || mapController.state.kind === "loading"}
+                onPress={() => void save()}
+              />
+              <Button
+                label="إلغاء"
+                accessibilityLabel="إلغاء تحرير العنوان"
+                tone="ghost"
+                disabled={controller.mutating}
+                onPress={() => {
+                  setShowForm(false);
+                  setEditing(null);
+                  setFormError(null);
+                  setLocationError(null);
+                  resetMap();
+                }}
+              />
             </View>
           </Card>
         ) : null}
