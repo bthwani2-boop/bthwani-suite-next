@@ -1,0 +1,375 @@
+openapi: 3.0.3
+info:
+  title: BThwani DSH Partner Onboarding API
+  version: 1.0.0
+  description: Governed JRN-001 contract for partner onboarding, first-store ownership, evidence review, state transitions, and partner readback.
+servers:
+  - url: http://localhost:58080
+security:
+  - bearerAuth: []
+paths:
+  /dsh/operator/partners/{partnerId}:
+    get:
+      operationId: getDshPartner
+      summary: Read governed partner state for control-panel
+      parameters:
+        - $ref: '#/components/parameters/PartnerId'
+      responses:
+        '200':
+          description: Partner state with server-owned allowed actions and masked payout compatibility values.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PartnerState' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /dsh/operator/partners/{partnerId}/transition:
+    post:
+      operationId: transitionDshPartner
+      summary: Apply one governed partner activation transition
+      parameters:
+        - $ref: '#/components/parameters/PartnerId'
+        - $ref: '#/components/parameters/ExpectedVersion'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PartnerTransitionRequest' }
+      responses:
+        '200':
+          description: Applied transition or identical idempotent replay.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PartnerTransitionResponse' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ReadinessFailed' }
+        '428': { $ref: '#/components/responses/VersionRequired' }
+        '503': { $ref: '#/components/responses/WltUnavailable' }
+  /dsh/operator/partners/{partnerId}/stores:
+    post:
+      operationId: linkDshPartnerStore
+      summary: Link an unowned store to a partner
+      parameters:
+        - $ref: '#/components/parameters/PartnerId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [storeId]
+              properties:
+                storeId: { type: string, minLength: 1 }
+      responses:
+        '200':
+          description: Store ownership is linked or the existing same ownership is returned.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [stores, total]
+                properties:
+                  stores:
+                    type: array
+                    items: { $ref: '#/components/schemas/LinkedStore' }
+                  total: { type: integer, minimum: 0 }
+        '409': { $ref: '#/components/responses/StoreOwnershipConflict' }
+  /dsh/field/partners/{partnerId}:
+    get:
+      operationId: getFieldPartnerDraft
+      summary: Read an owned field partner draft
+      parameters:
+        - $ref: '#/components/parameters/PartnerId'
+      responses:
+        '200':
+          description: Owned partner draft and allowed actions.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PartnerState' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      operationId: updateFieldPartnerDraft
+      summary: Update an owned draft and hand raw payout details to WLT
+      parameters:
+        - $ref: '#/components/parameters/PartnerId'
+        - $ref: '#/components/parameters/ExpectedVersion'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PartnerUpdateRequest' }
+      responses:
+        '200':
+          description: Updated draft; payout fields in the response are masked.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PartnerState' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ReadinessFailed' }
+        '428': { $ref: '#/components/responses/VersionRequired' }
+        '502': { $ref: '#/components/responses/WltUnavailable' }
+  /dsh/field/partners/{partnerId}/visits:
+    post:
+      operationId: createFieldPartnerVisit
+      summary: Create an evidence-bearing field visit bound to the first store
+      parameters:
+        - $ref: '#/components/parameters/PartnerId'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FieldVisitRequest' }
+      responses:
+        '201':
+          description: Field visit recorded.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FieldVisit' }
+        '422': { $ref: '#/components/responses/ReadinessFailed' }
+  /dsh/field/partners/{partnerId}/submit:
+    post:
+      operationId: submitFieldPartnerDraft
+      summary: Submit an owned draft for independent review
+      parameters:
+        - $ref: '#/components/parameters/PartnerId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                reason: { type: string, maxLength: 500 }
+      responses:
+        '200':
+          description: Submitted state or identical replay.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PartnerTransitionResponse' }
+        '422': { $ref: '#/components/responses/ReadinessFailed' }
+  /dsh/partner/activation/status:
+    get:
+      operationId: getDshPartnerActivationStatus
+      summary: Read the authenticated partner activation state and allowed actions
+      responses:
+        '200':
+          description: Partner self state.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PartnerState' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /dsh/partner/activation/readiness:
+    get:
+      operationId: getDshPartnerSelfReadiness
+      summary: Read authenticated partner readiness gates
+      responses:
+        '200':
+          description: Readiness result.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Readiness' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    PartnerId:
+      name: partnerId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+    ExpectedVersion:
+      name: version
+      in: query
+      required: true
+      schema: { type: integer, minimum: 1 }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema: { type: string, minLength: 8 }
+      description: Omission is accepted only where the server derives a deterministic key from the versioned command.
+    CorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: false
+      schema: { type: string, minLength: 1 }
+  schemas:
+    ActivationStatus:
+      type: string
+      enum: [draft, submitted, field_visit_scheduled, field_visit_completed, documents_missing, documents_uploaded, documents_verified, catalog_not_ready, catalog_ready, delivery_modes_not_ready, delivery_modes_ready, ops_review, ops_approved, ops_rejected, partner_active, partner_deactivated, client_visible, client_hidden]
+    PartnerState:
+      type: object
+      required: [id, displayName, activationStatus, version, allowedActions, allowedTransitions]
+      properties:
+        id: { type: string }
+        legalNameAr: { type: string }
+        legalNameEn: { type: string }
+        displayName: { type: string }
+        ownerName: { type: string }
+        primaryPhone: { type: string }
+        category: { type: string }
+        activationStatus: { $ref: '#/components/schemas/ActivationStatus' }
+        payoutDestinationId: { type: string, description: WLT reference only. }
+        bankAccountNumber: { type: string, description: Masked compatibility value; never raw. }
+        bankIban: { type: string, description: Masked compatibility value; never raw. }
+        payoutMobileNumber: { type: string, description: Masked compatibility value; never raw. }
+        maskedAccountNumber: { type: string }
+        maskedIban: { type: string }
+        maskedMobileNumber: { type: string }
+        version: { type: integer, minimum: 1 }
+        allowedActions:
+          type: array
+          items: { type: string }
+        allowedTransitions:
+          type: array
+          items: { $ref: '#/components/schemas/ActivationStatus' }
+    PartnerUpdateRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        displayName: { type: string }
+        ownerName: { type: string }
+        primaryPhone: { type: string }
+        secondaryPhone: { type: string }
+        email: { type: string }
+        notes: { type: string }
+        beneficiaryName: { type: string }
+        bankName: { type: string }
+        bankBranch: { type: string }
+        accountNumber: { type: string, writeOnly: true }
+        iban: { type: string, writeOnly: true }
+        payoutMobileNumber: { type: string, writeOnly: true }
+        settlementPreference:
+          type: string
+          enum: [bank_transfer, mobile_wallet, manual]
+        bankAccountHolderMatchesOwner: { type: boolean }
+        bankNotes: { type: string }
+    PartnerTransitionRequest:
+      type: object
+      additionalProperties: false
+      required: [toStatus]
+      properties:
+        toStatus: { $ref: '#/components/schemas/ActivationStatus' }
+        reason: { type: string, maxLength: 500 }
+    PartnerTransitionResponse:
+      type: object
+      required: [partner, event]
+      properties:
+        partner: { $ref: '#/components/schemas/PartnerState' }
+        event: { $ref: '#/components/schemas/ActivationEvent' }
+    ActivationEvent:
+      type: object
+      required: [id, partnerId, fromStatus, toStatus, actorId, actorSurface, correlationId, createdAt]
+      properties:
+        id: { type: string }
+        partnerId: { type: string }
+        fromStatus: { $ref: '#/components/schemas/ActivationStatus' }
+        toStatus: { $ref: '#/components/schemas/ActivationStatus' }
+        actorId: { type: string }
+        actorSurface: { type: string }
+        reason: { type: string }
+        correlationId: { type: string }
+        createdAt: { type: string, format: date-time }
+    LinkedStore:
+      type: object
+      required: [storeId, displayName]
+      properties:
+        storeId: { type: string }
+        displayName: { type: string }
+        status: { type: string }
+        isVisible: { type: boolean }
+        partnerReadiness: { type: string }
+        publicationEligible: { type: boolean }
+    FieldVisitRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        storeId: { type: string }
+        visitNotes: { type: string }
+        locationLatitude: { type: number, minimum: -90, maximum: 90 }
+        locationLongitude: { type: number, minimum: -180, maximum: 180 }
+        evidenceMediaRefs:
+          type: array
+          items: { type: string }
+      anyOf:
+        - required: [visitNotes]
+        - required: [locationLatitude, locationLongitude]
+        - required: [evidenceMediaRefs]
+    FieldVisit:
+      type: object
+      required: [id, partnerId, storeId, fieldActorId, visitStatus, createdAt]
+      properties:
+        id: { type: string }
+        partnerId: { type: string }
+        storeId: { type: string }
+        fieldActorId: { type: string }
+        visitStatus: { type: string }
+        visitNotes: { type: string }
+        evidenceMediaRefs:
+          type: array
+          items: { type: string }
+        createdAt: { type: string, format: date-time }
+    Readiness:
+      type: object
+      required: [ready, missingRequirements, currentStatus]
+      properties:
+        ready: { type: boolean }
+        missingRequirements:
+          type: array
+          items: { type: string }
+        currentStatus: { $ref: '#/components/schemas/ActivationStatus' }
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+  responses:
+    Forbidden:
+      description: Actor is not authorized for this partner or surface.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Partner or store was not found.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Conflict:
+      description: Version conflict or idempotency key reuse with another payload.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    StoreOwnershipConflict:
+      description: Store already belongs to another partner.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    ReadinessFailed:
+      description: Required onboarding evidence or publication gate is incomplete.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    VersionRequired:
+      description: A positive expected version is required.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    WltUnavailable:
+      description: The WLT payout owner is unavailable or rejected the handoff.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
