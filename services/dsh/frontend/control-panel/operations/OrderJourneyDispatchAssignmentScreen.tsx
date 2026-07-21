@@ -14,10 +14,10 @@ import { useOperatorOrderWorkboard } from '../../shared/operations/use-operator-
 import {
   assignOrderToCaptain,
   dispatchAssignmentErrorMessage,
-} from '../../shared/operations/dispatch-assignment.api';
+} from '../../shared/operations';
 import { listCaptains } from '../../shared/workforce';
 import type { Captain } from '../../shared/workforce';
-import type { OperatorOrderWorkboardRow } from '../../shared/operations/order-workboard.api';
+import type { OperatorOrderWorkboardRow } from '../../shared/operations';
 
 export type OrderJourneyDispatchAssignmentScreenProps = {
   hubHref: string;

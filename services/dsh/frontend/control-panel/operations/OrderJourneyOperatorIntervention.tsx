@@ -11,7 +11,7 @@ import {
   cancelOperatorOrder,
   operatorOrderWorkboardErrorMessage,
   type OperatorOrderWorkboardRow,
-} from '../../shared/operations/order-workboard.api';
+} from '../../shared/operations';
 
 export type OrderJourneyOperatorInterventionProps = {
   readonly order: OperatorOrderWorkboardRow;

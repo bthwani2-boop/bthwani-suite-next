@@ -12,7 +12,7 @@ import {
 import styles from '../shared/control-panel-surface.module.css';
 import { FINANCIAL_CLOSURE_LABELS } from '../../shared/orders';
 import { useOperatorOrderWorkboard } from '../../shared/operations/use-operator-order-workboard';
-import type { OperatorOrderWorkboardRow } from '../../shared/operations/order-workboard.api';
+import type { OperatorOrderWorkboardRow } from '../../shared/operations';
 import { resolveRuntimeOrderStatusTone } from '../shared/ControlPanelDshDecisionBoard';
 import { buildOperationsHref } from './operations.registry';
 import { OrderJourneyOperatorIntervention } from './OrderJourneyOperatorIntervention';
