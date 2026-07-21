@@ -1,6 +1,33 @@
 import type { paths } from "../../../clients/generated/dsh-api";
 import type { DshFulfillmentDeliveryMode } from "../delivery/delivery.contract";
 
+export type DshStoreSummaryDto =
+  paths["/dsh/stores"]["get"]["responses"]["200"]["content"]["application/json"]["stores"][number];
+
+/**
+ * Operational context persisted by DSH and returned by the live store-detail
+ * endpoint. This intersection is temporary compatibility for the generated
+ * client until the next contract generation run; consumers still fail closed
+ * at runtime when any field is absent.
+ */
+export type DshStoreOperationalContextDto = {
+  readonly addressLine: string;
+  readonly coverageSummary: string;
+  readonly operatingHours: string;
+  readonly deliveryReadiness: string;
+};
+
+export type DshStoreDetailDto =
+  paths["/dsh/stores/{storeId}"]["get"]["responses"]["200"]["content"]["application/json"]["store"] &
+  DshStoreOperationalContextDto;
+
+type GeneratedStoreActionResponse =
+  paths["/dsh/partner/stores/{storeId}/settings"]["patch"]["responses"]["200"]["content"]["application/json"];
+type GeneratedStoreContextResponse =
+  paths["/dsh/store-context"]["get"]["responses"]["200"]["content"]["application/json"];
+type GeneratedOperatorStoreDetailResponse =
+  paths["/dsh/operator/stores/{storeId}"]["get"]["responses"]["200"]["content"]["application/json"];
+
 export type PartnerStoreSettingsRequest =
   paths["/dsh/partner/stores/{storeId}/settings"]["patch"]["requestBody"]["content"]["application/json"];
 export type FieldStoreVerificationRequest =
@@ -9,14 +36,17 @@ export type CaptainPickupReadinessRequest =
   paths["/dsh/captain/stores/{storeId}/pickup-readiness"]["post"]["requestBody"]["content"]["application/json"];
 export type OperatorStoreGovernanceRequest =
   paths["/dsh/operator/stores/{storeId}/governance"]["post"]["requestBody"]["content"]["application/json"];
-export type StoreActionResponse =
-  paths["/dsh/partner/stores/{storeId}/settings"]["patch"]["responses"]["200"]["content"]["application/json"];
-export type GetDshStoreContextResponse =
-  paths["/dsh/store-context"]["get"]["responses"]["200"]["content"]["application/json"];
+export type StoreActionResponse = Omit<GeneratedStoreActionResponse, "store"> & {
+  readonly store: DshStoreDetailDto;
+};
+export type GetDshStoreContextResponse = Omit<GeneratedStoreContextResponse, "store"> & {
+  readonly store: DshStoreDetailDto;
+};
 export type OperatorStoreListResponse =
   paths["/dsh/operator/stores"]["get"]["responses"]["200"]["content"]["application/json"];
-export type OperatorStoreDetailResponse =
-  paths["/dsh/operator/stores/{storeId}"]["get"]["responses"]["200"]["content"]["application/json"];
+export type OperatorStoreDetailResponse = Omit<GeneratedOperatorStoreDetailResponse, "store"> & {
+  readonly store: DshStoreDetailDto;
+};
 
 export type StoreRoleAction =
   | {
@@ -39,26 +69,6 @@ export type StoreRoleAction =
       readonly storeId: string;
       readonly input: OperatorStoreGovernanceRequest;
     };
-
-export type DshStoreSummaryDto =
-  paths["/dsh/stores"]["get"]["responses"]["200"]["content"]["application/json"]["stores"][number];
-
-/**
- * Operational context persisted by DSH and returned by the live store-detail
- * endpoint. This intersection is temporary compatibility for the generated
- * client until the next contract generation run; consumers still fail closed
- * at runtime when any field is absent.
- */
-export type DshStoreOperationalContextDto = {
-  readonly addressLine: string;
-  readonly coverageSummary: string;
-  readonly operatingHours: string;
-  readonly deliveryReadiness: string;
-};
-
-export type DshStoreDetailDto =
-  paths["/dsh/stores/{storeId}"]["get"]["responses"]["200"]["content"]["application/json"]["store"] &
-  DshStoreOperationalContextDto;
 
 export type StoreHeroFulfillmentMode = {
   readonly id: DshFulfillmentDeliveryMode;
