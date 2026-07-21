@@ -1,7 +1,8 @@
 # JRN-001 — Partner onboarding and store publication evidence
 
 - Branch: `sambassam`
-- Evidence base: `9348ee4734eff211c4d4ed4d94afde700712dfad`
+- Last successful broad targeted baseline: `7fc63949e7328ea135e84d4d0bc0d07aa0055fe1`
+- Baseline workflow run: `29847584806`
 - Tracking status: `READY_FOR_REVIEW`
 - Decision: `READY_FOR_REVIEW`
 - Closure claim: `CLOSED_WITH_EVIDENCE` is not claimed.
@@ -14,12 +15,14 @@ The functional journey includes field creation of an owned partner draft, legal 
 
 ## Verification
 
-The final evidence workflow reruns all `JRN-001` Node tests and journey guards, Go tests for partner and partner-WLT outbox packages, governed route registration tests, app-field TypeScript verification, WLT financial-boundary verification, repository hygiene, and the FS-18 evidence guard on one commit. The authoritative proof is the successful commit status contexts:
+The canonical JRN-001 DSH contract is `services/dsh/contracts/dsh.partner-onboarding.openapi.yaml`. The FS-17 and FS-18 workflows watch that live contract, all `JRN-001` registries, Node tests and guards, Go partner and partner-WLT outbox packages, governed route registration, the app-field TypeScript surface, the WLT financial-boundary guard, and repository hygiene.
+
+The authoritative same-commit proof is the successful final-head status contexts:
 
 - `journeys/jrn-001/fs-17-comprehensive`
 - `journeys/jrn-001/fs-18-evidence`
 
-Earlier targeted successful runs are retained in `JRN-001_PARTNER_ONBOARDING_EVIDENCE.json` for FS-10 through FS-17.
+The broad targeted baseline at run `29847584806` also passed JRN-001 static evidence, DSH partner/HTTP packages, and Identity/Workforce governed behavior on commit `7fc63949e7328ea135e84d4d0bc0d07aa0055fe1`.
 
 ## Rollback
 
