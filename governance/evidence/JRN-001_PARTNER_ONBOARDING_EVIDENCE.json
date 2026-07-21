@@ -157,7 +157,7 @@
   "closureClaim": "CLOSED_WITH_EVIDENCE is explicitly not claimed.",
   "registryLog": {
     "path": "governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md",
-    "evidenceCommit": "246d4e63d75fecaa64a982938885bb2bfd6249cb",
+    "evidenceCommit": "71edad3cee775ced0b727676cdf97af456436f76",
     "decision": "READY_FOR_REVIEW"
   }
 }
