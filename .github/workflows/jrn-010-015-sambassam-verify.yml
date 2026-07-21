@@ -148,17 +148,11 @@ jobs:
             DESCRIPTION="JRN-010..015 targeted checks passed"
           else
             STATE="failure"
-            RAW_ERROR="$(grep -m1 -E 'error TS[0-9]+|not ok|Error:|ERR_' /tmp/jrn-verification.log 2>/dev/null || true)"
-            ERROR_CODE="$(printf '%s' "$RAW_ERROR" | grep -o -m1 -E 'TS[0-9]+' || true)"
-            ERROR_FILE="$(printf '%s' "$RAW_ERROR" | sed -E 's/^.*\/(.*\.(ts|tsx|mjs))\(.*/\1/' | cut -c1-28)"
-            ERROR_LINE="$(printf '%s' "$RAW_ERROR" | sed -nE 's/^.*\(([0-9]+),[0-9]+\):.*/L\1/p')"
-            ERROR_MESSAGE="$(printf '%s' "$RAW_ERROR" | sed -E 's/^.*error TS[0-9]+: //' | tr '\n\r\t\"' '    ' | tr -cd '[:alnum:]_./:() -' | cut -c1-24)"
-            [ -n "$ERROR_CODE" ] || ERROR_CODE="check-failed"
-            [ -n "$ERROR_FILE" ] || ERROR_FILE="unknown-file"
-            [ -n "$ERROR_LINE" ] || ERROR_LINE="L0"
-            [ -n "$ERROR_MESSAGE" ] || ERROR_MESSAGE="unknown"
-            STATUS_CONTEXT="jrn-010-015/$STAGE/$ERROR_FILE-$ERROR_LINE-$ERROR_CODE-$ERROR_MESSAGE"
-            STATUS_CONTEXT="$(printf '%s' "$STATUS_CONTEXT" | tr -cd '[:alnum:]_./:()-' | cut -c1-100)"
+            RAW_ERROR="$(grep -m1 -E '^- |error TS[0-9]+|not ok|Error:|ERR_' /tmp/jrn-verification.log 2>/dev/null || true)"
+            ERROR_DETAIL="$(printf '%s' "$RAW_ERROR" | sed -E 's/^- //' | tr '\n\r\t\"' '    ' | tr -cd '[:alnum:]_./:() -' | cut -c1-62)"
+            [ -n "$ERROR_DETAIL" ] || ERROR_DETAIL="unknown"
+            STATUS_CONTEXT="jrn-010-015/$STAGE/$ERROR_DETAIL"
+            STATUS_CONTEXT="$(printf '%s' "$STATUS_CONTEXT" | tr ' ' '-' | tr -cd '[:alnum:]_./:()-' | cut -c1-100)"
             DESCRIPTION="JRN-010..015 failed at $STAGE"
           fi
           PAYLOAD="$(jq -n \
