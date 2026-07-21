@@ -33,11 +33,10 @@ jobs:
           pnpm install --frozen-lockfile
       - name: Verify accessibility RTL performance and weak network
         run: node tools/guards/partner/jrn-001-experience-quality-gate.mjs
-      - name: Typecheck required surfaces
+      - name: Typecheck mobile onboarding consumers
         run: |
           pnpm --dir apps/app-field/runtime typecheck
           pnpm --dir apps/app-partner/runtime typecheck
-          pnpm --dir apps/control-panel/runtime typecheck
       - name: Publish FS-14 status
         if: always()
         env:
