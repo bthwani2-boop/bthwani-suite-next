@@ -121,6 +121,9 @@ func CreateOrderTruth(db *sql.DB, input CreateOrderTruthInput) (*OrderTruth, boo
 			if readErr != nil {
 				return nil, false, readErr
 			}
+			if truth.ClientID != input.ClientID {
+				return nil, false, ErrConflict
+			}
 			if commitErr := tx.Commit(); commitErr != nil {
 				return nil, false, commitErr
 			}
@@ -132,21 +135,41 @@ func CreateOrderTruth(db *sql.DB, input CreateOrderTruthInput) (*OrderTruth, boo
 		return nil, false, err
 	}
 
+	// Verify actor ownership before any checkout-level replay lookup. This keeps
+	// a guessed Checkout Intent ID from becoming a cross-client existence or
+	// order read oracle inside the same tenant.
+	var ownedCheckout int
+	err = tx.QueryRow(`
+		SELECT 1
+		FROM dsh_checkout_intents
+		WHERE id=$1::uuid AND tenant_id=$2 AND client_id=$3
+		FOR SHARE`, input.CheckoutIntentID, input.TenantID, input.ClientID,
+	).Scan(&ownedCheckout)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, false, fmt.Errorf("%w: checkout intent is inaccessible", ErrConflict)
+	}
+	if err != nil {
+		return nil, false, err
+	}
+
 	// A retry may arrive with a replacement key after the original key was
-	// lost. The checkout-level row is locked before inserting a second attempt,
-	// so the unique tenant/checkout constraint never becomes an aborted-tx path.
+	// lost. The actor-scoped checkout row is locked before inserting a second
+	// attempt, so the unique tenant/checkout constraint never becomes an oracle.
 	var checkoutAttemptOrderID sql.NullString
 	err = tx.QueryRow(`
 		SELECT order_id::text
 		FROM dsh_order_create_idempotency
-		WHERE tenant_id=$1 AND checkout_intent_id=$2::uuid
-		FOR UPDATE`, input.TenantID, input.CheckoutIntentID,
+		WHERE tenant_id=$1 AND client_id=$2 AND checkout_intent_id=$3::uuid
+		FOR UPDATE`, input.TenantID, input.ClientID, input.CheckoutIntentID,
 	).Scan(&checkoutAttemptOrderID)
 	if err == nil {
 		if checkoutAttemptOrderID.Valid && checkoutAttemptOrderID.String != "" {
 			truth, readErr := getOrderTruthTx(tx, checkoutAttemptOrderID.String, input.TenantID, "client")
 			if readErr != nil {
 				return nil, false, readErr
+			}
+			if truth.ClientID != input.ClientID {
+				return nil, false, ErrConflict
 			}
 			if commitErr := tx.Commit(); commitErr != nil {
 				return nil, false, commitErr
@@ -191,8 +214,8 @@ func CreateOrderTruth(db *sql.DB, input CreateOrderTruthInput) (*OrderTruth, boo
 	var legacyOrderID string
 	err = tx.QueryRow(`
 		SELECT id::text FROM dsh_orders
-		WHERE tenant_id=$1 AND checkout_intent_id=$2::uuid
-		FOR UPDATE`, input.TenantID, input.CheckoutIntentID,
+		WHERE tenant_id=$1 AND client_id=$2 AND checkout_intent_id=$3::uuid
+		FOR UPDATE`, input.TenantID, input.ClientID, input.CheckoutIntentID,
 	).Scan(&legacyOrderID)
 	if err == nil {
 		if _, bindErr := tx.Exec(`
@@ -263,10 +286,10 @@ func CreateOrderTruth(db *sql.DB, input CreateOrderTruthInput) (*OrderTruth, boo
 
 	for _, item := range items {
 		snapshot, marshalErr := json.Marshal(map[string]any{
-			"productId": item.productID,
+			"productId":   item.productID,
 			"productName": item.productName,
-			"quantity": item.quantity,
-			"unitPrice": item.unitPrice,
+			"quantity":    item.quantity,
+			"unitPrice":   item.unitPrice,
 		})
 		if marshalErr != nil {
 			return nil, false, marshalErr
