@@ -1,0 +1,482 @@
+openapi: 3.1.0
+info:
+  title: BThwani DSH Governed Dispatch API
+  version: 1.0.0
+  description: >
+    Canonical operational contract for captain assignment, offer response,
+    eligibility, capacity, timeout, cancellation, reassignment, and decision readback.
+    DSH owns all operational truth in this contract. No financial mutation is allowed.
+x-bthwani-owner: services/dsh
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-client-generation: DISABLED
+x-bthwani-adapter-owner: frontend/shared/dispatch/dispatch.api.ts
+x-bthwani-runtime-dependency: true
+
+paths:
+  /dsh/operator/dispatch/assignments:
+    get:
+      operationId: listGovernedDispatchAssignments
+      tags: [DshDispatch]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Active and recent assignments visible to the operator.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [assignments]
+                properties:
+                  assignments:
+                    type: array
+                    items: { $ref: '#/components/schemas/GovernedDispatchAssignment' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      operationId: createGovernedDispatchAssignment
+      tags: [DshDispatch]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateGovernedDispatchAssignmentRequest' }
+      responses:
+        '201':
+          description: New offer created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GovernedDispatchAssignmentResponse' }
+        '200':
+          description: Idempotent replay of the original offer.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GovernedDispatchAssignmentResponse' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /dsh/captain/dispatch/assignments:
+    get:
+      operationId: listCaptainGovernedDispatchAssignments
+      tags: [DshDispatch]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Actionable offers and accepted tasks for the authenticated captain.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [assignments]
+                properties:
+                  assignments:
+                    type: array
+                    items: { $ref: '#/components/schemas/GovernedDispatchAssignment' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /dsh/captain/dispatch/assignments/{assignmentId}/accept:
+    post:
+      operationId: acceptGovernedDispatchAssignment
+      tags: [DshDispatch]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/AssignmentId'
+      responses:
+        '200':
+          description: Offer accepted.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GovernedDispatchAssignmentResponse' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /dsh/captain/dispatch/assignments/{assignmentId}/decline:
+    post:
+      operationId: declineGovernedDispatchAssignment
+      tags: [DshDispatch]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/AssignmentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DeclineDispatchAssignmentRequest' }
+      responses:
+        '200':
+          description: Offer declined and order returned to readiness.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GovernedDispatchAssignmentResponse' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /dsh/operator/dispatch/candidates:
+    get:
+      operationId: listCaptainDispatchCandidates
+      tags: [DshDispatch]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: serviceAreaCode
+          in: query
+          required: true
+          schema: { type: string, minLength: 1 }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 200, default: 100 }
+      responses:
+        '200':
+          description: Ranked eligibility and capacity projection.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [candidates]
+                properties:
+                  candidates:
+                    type: array
+                    items: { $ref: '#/components/schemas/CaptainDispatchCandidate' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /dsh/operator/dispatch/captains/{captainId}/profile:
+    put:
+      operationId: upsertCaptainDispatchProfile
+      tags: [DshDispatch]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: captainId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpsertCaptainDispatchProfileRequest' }
+      responses:
+        '200':
+          description: Dispatch profile updated using optimistic concurrency.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [candidate]
+                properties:
+                  candidate: { $ref: '#/components/schemas/CaptainDispatchCandidate' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /dsh/operator/dispatch/assignments/{assignmentId}/reassign:
+    post:
+      operationId: reassignGovernedDispatchAssignment
+      tags: [DshDispatch]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/AssignmentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReassignDispatchAssignmentRequest' }
+      responses:
+        '201':
+          description: Prior assignment cancelled and replacement offer created atomically.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GovernedDispatchAssignmentResponse' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /dsh/operator/dispatch/assignments/{assignmentId}/cancel:
+    post:
+      operationId: cancelGovernedDispatchAssignment
+      tags: [DshDispatch]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/AssignmentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CancelDispatchAssignmentRequest' }
+      responses:
+        '204': { description: Assignment cancelled and order returned to readiness. }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /dsh/operator/dispatch/assignments/expire:
+    post:
+      operationId: expireGovernedDispatchAssignments
+      tags: [DshDispatch]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tenantId: { type: string, default: default }
+                limit: { type: integer, minimum: 1, maximum: 500, default: 100 }
+      responses:
+        '200':
+          description: Overdue offers expired.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [expiredCount]
+                properties:
+                  expiredCount: { type: integer, minimum: 0 }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /dsh/operator/dispatch/decisions:
+    get:
+      operationId: listDispatchDecisions
+      tags: [DshDispatch]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: assignmentId
+          in: query
+          required: false
+          schema: { type: string, format: uuid }
+        - name: orderId
+          in: query
+          required: false
+          schema: { type: string, format: uuid }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 500, default: 100 }
+      responses:
+        '200':
+          description: Immutable dispatch decision history.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [decisions]
+                properties:
+                  decisions:
+                    type: array
+                    items: { $ref: '#/components/schemas/DispatchDecision' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    TenantId:
+      name: tenantId
+      in: query
+      required: false
+      schema: { type: string, default: default }
+    AssignmentId:
+      name: assignmentId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+
+  schemas:
+    AssignmentStatus:
+      type: string
+      enum: [offered, accepted, declined, completed, cancelled]
+    DeliveryStatus:
+      type: string
+      enum: [assigned, driver_assigned, driver_arrived_store, picked_up, arrived_customer, returning_to_store, return_arrived_store, returned_to_store, delivered, cancelled]
+    GovernedDispatchAssignment:
+      type: object
+      required: [id, orderId, captainId, assignedBy, status, responseDeadlineAt, createdAt, updatedAt, tenantId, serviceAreaCode, priority, version, delivery]
+      properties:
+        id: { type: string, format: uuid }
+        orderId: { type: string, format: uuid }
+        specialRequestId: { type: string, format: uuid }
+        requestType: { type: string }
+        captainId: { type: string }
+        assignedBy: { type: string }
+        status: { $ref: '#/components/schemas/AssignmentStatus' }
+        responseDeadlineAt: { type: string, format: date-time }
+        acceptedAt: { type: [string, 'null'], format: date-time }
+        declinedAt: { type: [string, 'null'], format: date-time }
+        completedAt: { type: [string, 'null'], format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        tenantId: { type: string }
+        serviceAreaCode: { type: string }
+        priority: { type: integer, minimum: 0, maximum: 100 }
+        distanceMeters: { type: [integer, 'null'], minimum: 0 }
+        offerReason: { type: string }
+        responseReason: { type: string }
+        expiredAt: { type: [string, 'null'], format: date-time }
+        cancelledAt: { type: [string, 'null'], format: date-time }
+        cancelledBy: { type: string }
+        supersedesAssignmentId: { type: string, format: uuid }
+        version: { type: integer, minimum: 1 }
+        delivery:
+          type: object
+          required: [id, assignmentId, captainId, status, createdAt, updatedAt]
+          properties:
+            id: { type: string, format: uuid }
+            assignmentId: { type: string, format: uuid }
+            orderId: { type: string, format: uuid }
+            specialRequestId: { type: string, format: uuid }
+            captainId: { type: string }
+            status: { $ref: '#/components/schemas/DeliveryStatus' }
+            podMethod: { type: string }
+            podReference: { type: string }
+            note: { type: string }
+            createdAt: { type: string, format: date-time }
+            updatedAt: { type: string, format: date-time }
+    GovernedDispatchAssignmentResponse:
+      type: object
+      required: [assignment]
+      properties:
+        assignment: { $ref: '#/components/schemas/GovernedDispatchAssignment' }
+        replayed: { type: boolean, default: false }
+    CreateGovernedDispatchAssignmentRequest:
+      type: object
+      additionalProperties: false
+      required: [orderId, captainId, serviceAreaCode, idempotencyKey]
+      properties:
+        orderId: { type: string, format: uuid }
+        tenantId: { type: string, default: default }
+        captainId: { type: string, minLength: 1 }
+        serviceAreaCode: { type: string, minLength: 1 }
+        idempotencyKey: { type: string, minLength: 16, maxLength: 200 }
+        priority: { type: integer, minimum: 0, maximum: 100, default: 0 }
+        distanceMeters: { type: integer, minimum: 0 }
+        offerReason: { type: string, maxLength: 500 }
+        responseTimeoutSeconds: { type: integer, minimum: 30, maximum: 600, default: 90 }
+    ReassignDispatchAssignmentRequest:
+      allOf:
+        - $ref: '#/components/schemas/CreateGovernedDispatchAssignmentRequest'
+        - type: object
+          required: [reason]
+          properties:
+            reason: { type: string, minLength: 3, maxLength: 500 }
+    DeclineDispatchAssignmentRequest:
+      type: object
+      additionalProperties: false
+      required: [reasonCode, reason]
+      properties:
+        reasonCode: { type: string, minLength: 1, maxLength: 100 }
+        reason: { type: string, minLength: 3, maxLength: 500 }
+    CancelDispatchAssignmentRequest:
+      type: object
+      additionalProperties: false
+      required: [reasonCode, reason]
+      properties:
+        reasonCode: { type: string, minLength: 1, maxLength: 100 }
+        reason: { type: string, minLength: 3, maxLength: 500 }
+    UpsertCaptainDispatchProfileRequest:
+      type: object
+      additionalProperties: false
+      required: [accreditationStatus, availabilityStatus, maxActiveAssignments, priorityScore]
+      properties:
+        tenantId: { type: string, default: default }
+        accreditationStatus: { type: string, enum: [pending, approved, suspended, expired] }
+        availabilityStatus: { type: string, enum: [available, busy, offline, suspended] }
+        maxActiveAssignments: { type: integer, minimum: 1, maximum: 20 }
+        priorityScore: { type: integer, minimum: 0, maximum: 1000 }
+        expectedVersion: { type: integer, minimum: 0, default: 0 }
+    CaptainDispatchCandidate:
+      type: object
+      required: [tenantId, captainId, serviceAreaCode, accreditationStatus, availabilityStatus, maxActiveAssignments, activeAssignments, remainingCapacity, priorityScore, eligible, version, updatedAt]
+      properties:
+        tenantId: { type: string }
+        captainId: { type: string }
+        serviceAreaCode: { type: string }
+        accreditationStatus: { type: string, enum: [pending, approved, suspended, expired] }
+        availabilityStatus: { type: string, enum: [available, busy, offline, suspended] }
+        maxActiveAssignments: { type: integer, minimum: 1, maximum: 20 }
+        activeAssignments: { type: integer, minimum: 0 }
+        remainingCapacity: { type: integer }
+        priorityScore: { type: integer, minimum: 0, maximum: 1000 }
+        eligible: { type: boolean }
+        ineligibilityReason: { type: string }
+        version: { type: integer, minimum: 1 }
+        updatedAt: { type: string, format: date-time }
+    DispatchDecision:
+      type: object
+      required: [id, tenantId, action, actorId, actorRole, metadata, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        tenantId: { type: string }
+        assignmentId: { type: string, format: uuid }
+        orderId: { type: string, format: uuid }
+        captainId: { type: string }
+        action:
+          type: string
+          enum: [offered, accepted, declined, expired, cancelled, reassigned, eligibility_rejected, capacity_rejected]
+        reasonCode: { type: string }
+        reason: { type: string }
+        actorId: { type: string }
+        actorRole: { type: string, enum: [operator, captain, system] }
+        metadata: { type: object, additionalProperties: true }
+        createdAt: { type: string, format: date-time }
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+
+  responses:
+    InvalidRequest:
+      description: Invalid request.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Unauthenticated:
+      description: Authentication required.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Forbidden:
+      description: Permission denied.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    NotFound:
+      description: Assignment or order not found.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Conflict:
+      description: State, eligibility, capacity, idempotency, tenant, or version conflict.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
