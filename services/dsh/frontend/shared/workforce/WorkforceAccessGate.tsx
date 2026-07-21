@@ -110,7 +110,13 @@ export function WorkforceAccessGate({
   return <>{children}</>;
 }
 
-function GateFrame({ children, onLogout }: { readonly children: ReactNode; readonly onLogout?: () => void }) {
+function GateFrame({
+  children,
+  onLogout,
+}: {
+  readonly children: ReactNode;
+  readonly onLogout?: (() => void) | undefined;
+}) {
   return (
     <View style={styles.root}>
       <View style={styles.content}>{children}</View>
