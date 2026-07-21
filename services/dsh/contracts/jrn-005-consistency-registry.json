@@ -1,15 +1,22 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "journeyId": "JRN-005",
   "journeyName": "Client address book",
   "truthOwner": "DSH persisted client-owned delivery addresses",
+  "productTruth": "governance/product/contracts/jrn-005-client-address-book.product-truth.json",
+  "allSlicesRegistry": "services/dsh/contracts/jrn-005-all-slices-registry.json",
   "canonicalContract": "services/dsh/contracts/dsh.client-address.openapi.yaml",
+  "observabilitySlo": "services/dsh/contracts/jrn-005-observability-slo.json",
+  "operationsRunbook": "governance/runbooks/JRN-005_CLIENT_ADDRESS_OPERATIONS.md",
   "databaseTruth": {
     "table": "dsh_client_addresses",
+    "eventsTable": "dsh_client_address_events",
     "singleDefaultIndex": "uq_dsh_client_addresses_single_default",
     "activeIdempotencyIndex": "uq_dsh_client_addresses_active_idempotency",
     "activeLogicalUniquenessIndex": "uq_dsh_client_addresses_active_fingerprint",
-    "logicalFingerprintMigration": "services/dsh/database/migrations/dsh-901_client_address_logical_deduplication.sql"
+    "logicalFingerprintMigration": "services/dsh/database/migrations/dsh-901_client_address_logical_deduplication.sql",
+    "serviceAreaBindingMigration": "services/dsh/database/migrations/dsh-906_jrn_006_client_address_geofence_binding.sql",
+    "privacyMigration": "services/dsh/database/migrations/dsh-081_client_address_subject_anonymization.sql"
   },
   "requiredCapabilities": [
     "list-owned-addresses",
@@ -18,6 +25,8 @@
     "update-with-optimistic-concurrency",
     "soft-delete-with-default-recovery",
     "set-one-default",
+    "verify-service-area-before-write",
+    "anonymize-expired-soft-deleted-pii",
     "checkout-owned-address-readback"
   ],
   "requiredReadAfterWrite": [
@@ -29,31 +38,43 @@
   "requiredVisibleStates": [
     "loading",
     "empty",
-    "error",
+    "ready",
     "network-retry",
+    "unauthenticated",
+    "not-found",
     "conflict",
-    "duplicate-address-recovery"
+    "duplicate-address-recovery",
+    "service-area-unverified",
+    "mutating"
   ],
   "forbiddenTruthSources": [
     "AsyncStorage address records",
     "localStorage address records",
     "sessionStorage address records",
+    "MMKV address records",
     "screen fixtures",
     "screen mocks",
-    "cart-owned address copies"
+    "cart-owned address copies",
+    "client-supplied checkout address snapshots"
   ],
   "requiredVerification": [
+    "services/dsh/tests/jrn-005-all-slices.test.mjs",
+    "services/dsh/tests/tsconfig.jrn-005-app-client.json",
     "services/dsh/backend/internal/http/client_addresses_error_test.go",
     "services/dsh/backend/internal/clientaddress/duplicate_error_test.go",
     "services/dsh/database/tests/dsh-901_client_address_logical_deduplication.sql",
-    "tools/guards/client-commerce/client-commerce-truth-gate.mjs"
+    "tools/guards/client-commerce/client-commerce-truth-gate.mjs",
+    ".github/workflows/jrn-005-all-slices.yml"
+  ],
+  "sameCommitVerificationContexts": [
+    "journeys/jrn-005/all-slices"
   ],
   "conflictPolicy": "Return ADDRESS_CONFLICT for stale versions and ADDRESS_ALREADY_EXISTS for an active logical duplicate; the client must keep committed state authoritative.",
   "successPolicy": "The surface reports success only after the canonical mutation response and a refreshed persisted address list.",
   "formalClosureRequires": [
-    "same-commit database migration execution",
-    "same-commit targeted CI",
-    "device visual and accessibility evidence",
-    "independent product, QA, security and privacy approvals"
+    "same-commit PostgreSQL 16 migration and invariant execution",
+    "same-commit targeted static, Go and TypeScript verification",
+    "device visual, RTL, accessibility and weak-network evidence",
+    "independent Product, QA, Security, Privacy, Accessibility and Release approvals"
   ]
 }
