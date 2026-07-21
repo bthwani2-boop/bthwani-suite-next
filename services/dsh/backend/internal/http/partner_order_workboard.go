@@ -20,27 +20,30 @@ type partnerOrderWorkboardItem struct {
 }
 
 type partnerOrderWorkboardOrder struct {
-	ID                              string                      `json:"id"`
-	CheckoutIntentID                string                      `json:"checkoutIntentId"`
-	StoreID                         string                      `json:"storeId"`
-	FulfillmentMode                 string                      `json:"fulfillmentMode"`
-	ClientID                        string                      `json:"clientId"`
-	Status                          string                      `json:"status"`
-	RejectionReason                 string                      `json:"rejectionReason"`
-	WltPaymentRefID                 string                      `json:"wltPaymentRefId"`
-	TotalPrice                      float64                     `json:"totalPrice"`
-	Items                           []partnerOrderWorkboardItem `json:"items"`
-	CreatedAt                       time.Time                   `json:"createdAt"`
-	AllowedActions                  []string                    `json:"allowedActions"`
-	Preparation                     orders.PreparationTiming    `json:"preparation"`
-	PreparationIssues               []orders.PreparationIssue   `json:"preparationIssues"`
-	OpenPreparationIssueCount       int                         `json:"openPreparationIssueCount"`
-	StoreCaptainHandoffStatus       string                      `json:"storeCaptainHandoffStatus"`
-	StoreCaptainHandoffAssignmentID string                      `json:"storeCaptainHandoffAssignmentId"`
-	StoreCaptainHandoffCaptainID    string                      `json:"storeCaptainHandoffCaptainId"`
-	PartnerHandoffConfirmedAt       *time.Time                  `json:"partnerHandoffConfirmedAt"`
-	CaptainPickupConfirmedAt        *time.Time                  `json:"captainPickupConfirmedAt"`
-	UpdatedAt                       time.Time                   `json:"updatedAt"`
+	ID                                      string                      `json:"id"`
+	CheckoutIntentID                        string                      `json:"checkoutIntentId"`
+	StoreID                                 string                      `json:"storeId"`
+	FulfillmentMode                         string                      `json:"fulfillmentMode"`
+	ClientID                                string                      `json:"clientId"`
+	Status                                  string                      `json:"status"`
+	RejectionReason                         string                      `json:"rejectionReason"`
+	WltPaymentRefID                         string                      `json:"wltPaymentRefId"`
+	TotalPrice                              float64                     `json:"totalPrice"`
+	Items                                   []partnerOrderWorkboardItem `json:"items"`
+	CreatedAt                               time.Time                   `json:"createdAt"`
+	AllowedActions                          []string                    `json:"allowedActions"`
+	Preparation                             orders.PreparationTiming    `json:"preparation"`
+	PreparationIssues                       []orders.PreparationIssue   `json:"preparationIssues"`
+	OpenPreparationIssueCount               int                         `json:"openPreparationIssueCount"`
+	StoreCaptainHandoffStatus               string                      `json:"storeCaptainHandoffStatus"`
+	StoreCaptainHandoffAssignmentID         string                      `json:"storeCaptainHandoffAssignmentId"`
+	StoreCaptainHandoffCaptainID            string                      `json:"storeCaptainHandoffCaptainId"`
+	PartnerHandoffConfirmedAt               *time.Time                  `json:"partnerHandoffConfirmedAt"`
+	CaptainPickupConfirmedAt                *time.Time                  `json:"captainPickupConfirmedAt"`
+	OpenStoreCaptainHandoffExceptionID       string                      `json:"openStoreCaptainHandoffExceptionId"`
+	OpenStoreCaptainHandoffExceptionReason   string                      `json:"openStoreCaptainHandoffExceptionReason"`
+	OpenStoreCaptainHandoffExceptionStatus   string                      `json:"openStoreCaptainHandoffExceptionStatus"`
+	UpdatedAt                               time.Time                   `json:"updatedAt"`
 }
 
 func partnerOrderAllowedActions(
@@ -48,6 +51,7 @@ func partnerOrderAllowedActions(
 	fulfillmentMode,
 	storeCaptainHandoffStatus string,
 	openPreparationIssueCount int,
+	hasOpenStoreCaptainHandoffException bool,
 ) []string {
 	switch strings.TrimSpace(status) {
 	case "pending":
@@ -69,6 +73,9 @@ func partnerOrderAllowedActions(
 			return []string{"handoff"}
 		}
 	case "driver_arrived_store":
+		if hasOpenStoreCaptainHandoffException {
+			return []string{}
+		}
 		if fulfillmentMode == "bthwani_delivery" && storeCaptainHandoffStatus == "awaiting_partner" {
 			return []string{"handoff"}
 		}
@@ -81,8 +88,8 @@ func partnerOrderAllowedActions(
 // The store scope is resolved from the authenticated partner actor. The
 // workboard deliberately returns all lifecycle states when status is omitted;
 // inbox tabs must not be backed by a hidden pending-only default. Executable
-// actions, preparation SLA, open issues, and custody state are derived by DSH,
-// never inferred by a screen.
+// actions, preparation SLA, open issues, custody state, and active custody
+// exception readback are derived by DSH, never inferred by a screen.
 func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter, r *http.Request) {
 	_, storeID, ok := s.partnerStore(w, r)
 	if !ok {
@@ -114,10 +121,13 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 			COALESCE(issue_projection.issues, '[]'::jsonb),
 			COALESCE(issue_projection.open_count, 0),
 			COALESCE(h.status, ''),
-			COALESCE(h.assignment_id, ''),
+			COALESCE(h.assignment_id::text, ''),
 			COALESCE(h.captain_id, ''),
 			h.partner_confirmed_at,
 			h.captain_confirmed_at,
+			COALESCE(he.id::text, ''),
+			COALESCE(he.reason_code, ''),
+			COALESCE(he.status, ''),
 			o.updated_at
 		FROM dsh_orders o
 		LEFT JOIN LATERAL (
@@ -174,7 +184,7 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 		) issue_projection ON TRUE
 		LEFT JOIN LATERAL (
 			SELECT
-				assignment_id::text AS assignment_id,
+				assignment_id,
 				captain_id,
 				status,
 				partner_confirmed_at,
@@ -184,6 +194,15 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 			ORDER BY created_at DESC
 			LIMIT 1
 		) h ON TRUE
+		LEFT JOIN LATERAL (
+			SELECT id, reason_code, status
+			FROM dsh_delivery_exceptions
+			WHERE assignment_id = h.assignment_id
+			  AND reason_code IN ('handoff_shortage', 'handoff_mismatch')
+			  AND status IN ('open', 'acknowledged')
+			ORDER BY reported_at DESC
+			LIMIT 1
+		) he ON TRUE
 		WHERE o.store_id = $1
 		  AND ($2 = '' OR o.status = $2)
 		ORDER BY
@@ -243,6 +262,9 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 			&order.StoreCaptainHandoffCaptainID,
 			&order.PartnerHandoffConfirmedAt,
 			&order.CaptainPickupConfirmedAt,
+			&order.OpenStoreCaptainHandoffExceptionID,
+			&order.OpenStoreCaptainHandoffExceptionReason,
+			&order.OpenStoreCaptainHandoffExceptionStatus,
 			&order.UpdatedAt,
 		); err != nil {
 			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to read partner order workboard")
@@ -267,6 +289,7 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 			order.FulfillmentMode,
 			order.StoreCaptainHandoffStatus,
 			order.OpenPreparationIssueCount,
+			order.OpenStoreCaptainHandoffExceptionID != "",
 		)
 		order.Preparation.OrderID = order.ID
 		order.Preparation = orders.EvaluatePreparationTiming(order.Preparation, now)
