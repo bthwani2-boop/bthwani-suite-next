@@ -3,9 +3,12 @@ import fs from 'node:fs';
 const violations = [];
 const surfaceFiles = [
   'services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx',
+  'services/dsh/frontend/app-captain/DshCaptainRouteRenderer.tsx',
   'services/dsh/frontend/app-captain/orders/DshCaptainPoDSubmissionScreen.tsx',
   'services/dsh/frontend/app-client/orders/OrderTrackingScreen.tsx',
   'services/dsh/frontend/control-panel/operations/PickupWorkbenchScreen.tsx',
+  'services/dsh/frontend/control-panel/operations/ExceptionsEscalationsScreen.tsx',
+  'services/dsh/frontend/control-panel/operations/OrderJourneyDispatchAssignmentScreen.tsx',
 ];
 const sharedFiles = [
   'services/dsh/frontend/shared/media/pod/delivery-proof-media.api.ts',
