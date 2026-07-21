@@ -48,6 +48,8 @@ test("JRN-004 uses one governed publication diagnostic across backend and contro
   const router = read("backend/internal/http/server.go");
   const diagnostics = read("backend/internal/store/publication_diagnostics.go");
   const handler = read("backend/internal/http/store_publication_diagnostics.go");
+  const repository = read("backend/internal/store/repository.go");
+  const model = read("backend/internal/store/model.go");
   const adminApi = read("frontend/shared/store/store-admin.api.ts");
   const adminController = read("frontend/shared/store/use-store-admin-controller.tsx");
   const adminPanel = read("frontend/control-panel/partners/stores/StoreDetailAdminPanel.tsx");
@@ -55,6 +57,13 @@ test("JRN-004 uses one governed publication diagnostic across backend and contro
   assert.match(router, /GET \/dsh\/operator\/diagnostics\/stores\/\{storeId\}.*handleGovernedOperatorStoreDiagnostics/);
   assert.doesNotMatch(router, /handleOperatorStoreDiagnostics/);
   assert.match(handler, /store\.DiagnoseStorePublication\(\*row\)/);
+  assert.match(model, /return DiagnoseStorePublication\(row\)\.IsReady/);
+  assert.match(repository, /const publicStorePredicate/);
+  assert.match(repository, /cardinality\(delivery_modes\) > 0/);
+  assert.match(repository, /delivery_readiness = 'ready'/);
+  assert.match(repository, /btrim\(COALESCE\(hero_image_url,''\)\) <> ''/);
+  assert.match(repository, /btrim\(COALESCE\(logo_url,''\)\) <> ''/);
+  assert.match(repository, /func GetStoreByID[\s\S]*publicStorePredicate/);
   for (const code of [
     "STORE_NOT_ACTIVE",
     "STORE_HIDDEN",
