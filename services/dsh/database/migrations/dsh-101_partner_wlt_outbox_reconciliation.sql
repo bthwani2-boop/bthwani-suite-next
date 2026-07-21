@@ -6,7 +6,7 @@
 CREATE TABLE IF NOT EXISTS dsh_partner_wlt_outbox (
   id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   partner_id          text NOT NULL REFERENCES dsh_partners(id) ON DELETE RESTRICT,
-  activation_event_id uuid NOT NULL REFERENCES dsh_partner_activation_events(id) ON DELETE RESTRICT,
+  activation_event_id text NOT NULL REFERENCES dsh_partner_activation_events(id) ON DELETE RESTRICT,
   event_type          text NOT NULL CHECK (event_type IN ('deactivate_payout_destination')),
   actor_id            text NOT NULL,
   correlation_id      text NOT NULL,
@@ -72,8 +72,8 @@ BEGIN
       NEW.id,
       'deactivate_payout_destination',
       NEW.actor_id,
-      COALESCE(NULLIF(NEW.correlation_id,''), 'partner-deactivation-' || NEW.id::text),
-      'partner-payout-deactivate-' || NEW.id::text
+      COALESCE(NULLIF(NEW.correlation_id,''), 'partner-deactivation-' || NEW.id),
+      'partner-payout-deactivate-' || NEW.id
     )
     ON CONFLICT (event_type, activation_event_id) DO NOTHING;
   END IF;
