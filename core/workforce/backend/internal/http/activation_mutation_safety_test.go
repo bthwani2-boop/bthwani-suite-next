@@ -26,7 +26,7 @@ func TestActivationMutationSafetyRequiresStableRetryKey(t *testing.T) {
 
 func TestActivationMutationSafetyAllowsGovernedRetryKey(t *testing.T) {
 	nextCalled := false
-	handler := ActivationMutationSafetyMiddleware(http.HandlerFunc(func(w http.ResponseWriter, *http.Request) {
+	handler := ActivationMutationSafetyMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		nextCalled = true
 		w.WriteHeader(http.StatusAccepted)
 	}))
