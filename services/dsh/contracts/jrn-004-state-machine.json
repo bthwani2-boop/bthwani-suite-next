@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-004",
+  "aggregate": "DshStore",
+  "versionField": "version",
+  "states": {
+    "status": ["active", "inactive", "temporarily_closed", "unavailable"],
+    "serviceability": ["serviceable", "limited", "out_of_area", "unavailable"],
+    "partnerReadiness": ["pending", "ready", "blocked"],
+    "catalogApproval": ["draft", "submitted", "approved", "rejected"],
+    "marketingVisibility": ["hidden", "visible"],
+    "deliveryReadiness": ["", "pending", "ready", "blocked"]
+  },
+  "actions": {
+    "partner.settings.update": {
+      "actorRoles": ["partner"],
+      "requires": ["active_store_scope", "expectedVersion", "reason", "idempotencyKey", "correlationId", "deliveryModes_non_empty"],
+      "writes": ["status", "deliveryModes", "version", "updatedAt"],
+      "readback": ["store", "audit", "replayed"]
+    },
+    "field.verification.submit": {
+      "actorRoles": ["field"],
+      "requires": ["active_store_scope", "owned_completed_visit", "required_evidence_complete_for_verified", "expectedVersion", "idempotencyKey", "correlationId"],
+      "writes": ["fieldVerification", "partnerReadiness", "version", "audit"],
+      "readback": ["store", "audit", "replayed"]
+    },
+    "captain.readiness.report": {
+      "actorRoles": ["captain"],
+      "requires": ["active_store_scope", "expectedVersion", "reason", "idempotencyKey", "correlationId"],
+      "writes": ["pickupReadinessReport", "deliveryReadiness", "version", "audit"],
+      "readback": ["store", "audit", "replayed"]
+    },
+    "operator.governance.apply": {
+      "actorRoles": ["operator"],
+      "requires": ["partners.manage", "expectedVersion", "reason", "idempotencyKey", "correlationId"],
+      "writes": ["governed_store_fields", "version", "audit"],
+      "readback": ["store", "audit", "replayed", "publicationDiagnostics"]
+    }
+  },
+  "publicationGate": {
+    "owner": "services/dsh/backend/internal/store/DiagnoseStorePublication",
+    "requiredBlockersToBeAbsent": [
+      "STORE_NOT_ACTIVE",
+      "STORE_HIDDEN",
+      "STORE_NOT_SERVICEABLE",
+      "PARTNER_NOT_READY",
+      "CATALOG_NOT_APPROVED",
+      "MARKETING_HIDDEN",
+      "DELIVERY_MODES_MISSING",
+      "ADDRESS_MISSING",
+      "COVERAGE_MISSING",
+      "OPERATING_HOURS_MISSING",
+      "DELIVERY_NOT_READY",
+      "STORE_LOGO_MISSING",
+      "STORE_COVER_MISSING"
+    ]
+  },
+  "negativeInvariants": [
+    "Version conflicts return 409 and never partially write.",
+    "An idempotency key replay with a different request hash is rejected.",
+    "A verified field outcome is rejected when visit or evidence is incomplete.",
+    "A scoped actor cannot read or mutate another store.",
+    "A store with any publication blocker cannot appear in public discovery.",
+    "Every successful mutation creates an immutable audit row."
+  ],
+  "fsDecision": {
+    "slice": "FS-03",
+    "result": "CLOSED_WITH_IMPLEMENTATION_EVIDENCE"
+  }
+}
