@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import {
+  fetchNotificationPreferences,
   fetchNotifications,
   markNotificationRead,
   markAllNotificationsRead,
+  updateNotificationPreferences,
   fetchPlatformNotificationConfigs,
   upsertPlatformNotificationConfig,
 } from "./notifications.api";
@@ -10,7 +12,11 @@ import {
   notifIdle, notifLoading, notifSuccess, notifError,
   configIdle, configLoading, configSuccess, configError,
 } from "./notifications.states";
-import type { DshNotificationsState, DshNotificationConfigState } from "./notifications.types";
+import type {
+  DshNotificationConfigState,
+  DshNotificationPreference,
+  DshNotificationsState,
+} from "./notifications.types";
 
 function resolveMessage(err: unknown): string {
   const e = err as { kind?: string; status?: number } | undefined;
@@ -19,10 +25,16 @@ function resolveMessage(err: unknown): string {
   return "تعذّر تحميل الإشعارات";
 }
 
+type PreferenceState =
+  | { readonly kind: "idle" | "loading" }
+  | { readonly kind: "success"; readonly preferences: readonly DshNotificationPreference[] }
+  | { readonly kind: "error"; readonly message: string };
+
 export function useNotificationsController(authKind: string) {
   const [state, setState] = useState<DshNotificationsState>(notifIdle());
+  const [preferenceState, setPreferenceState] = useState<PreferenceState>({ kind: "idle" });
 
-  const load = useCallback(async () => {
+  const loadNotifications = useCallback(async () => {
     setState(notifLoading());
     try {
       const data = await fetchNotifications();
@@ -32,29 +44,52 @@ export function useNotificationsController(authKind: string) {
     }
   }, []);
 
-  const markRead = useCallback(async (id: string) => {
+  const loadPreferences = useCallback(async () => {
+    setPreferenceState({ kind: "loading" });
     try {
-      await markNotificationRead(id);
-      await load();
-    } catch {}
-  }, [load]);
+      const data = await fetchNotificationPreferences();
+      setPreferenceState({ kind: "success", preferences: data.preferences });
+    } catch (err) {
+      setPreferenceState({ kind: "error", message: resolveMessage(err) });
+    }
+  }, []);
+
+  const reload = useCallback(async () => {
+    await Promise.all([loadNotifications(), loadPreferences()]);
+  }, [loadNotifications, loadPreferences]);
+
+  const markRead = useCallback(async (id: string) => {
+    await markNotificationRead(id);
+    await loadNotifications();
+  }, [loadNotifications]);
 
   const markAllRead = useCallback(async () => {
-    try {
-      await markAllNotificationsRead();
-      await load();
-    } catch {}
-  }, [load]);
+    await markAllNotificationsRead();
+    await loadNotifications();
+  }, [loadNotifications]);
+
+  const savePreference = useCallback(async (topic: string, enabled: boolean) => {
+    await updateNotificationPreferences(topic, enabled);
+    await loadPreferences();
+  }, [loadPreferences]);
 
   useEffect(() => {
     if (authKind !== "authenticated") {
       setState(notifIdle());
+      setPreferenceState({ kind: "idle" });
       return;
     }
-    load();
-  }, [authKind, load]);
+    void reload();
+  }, [authKind, reload]);
 
-  return { state, reload: load, markRead, markAllRead };
+  return {
+    state,
+    preferenceState,
+    reload,
+    markRead,
+    markAllRead,
+    savePreference,
+  };
 }
 
 export function usePlatformNotificationConfigController(authKind: string) {
@@ -82,7 +117,7 @@ export function usePlatformNotificationConfigController(authKind: string) {
 
   useEffect(() => {
     if (authKind !== "authenticated") { setState(configIdle()); return; }
-    load();
+    void load();
   }, [authKind, load]);
 
   return { state, reload: load, save };
