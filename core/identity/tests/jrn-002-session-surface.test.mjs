@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
@@ -23,6 +24,8 @@ test("JRN-002 binds actor-specific activation and the full session lifecycle", a
   assert.doesNotMatch(store, /actorType:\s*["']field["']/);
   assert.match(gate, /requestOtp\(requiredRole, phone\.trim\(\)\)/);
   assert.match(gate, /activate\(requiredRole, phone\.trim\(\), code\.trim\(\)\)/);
+  assert.match(gate, /keyboardType="numeric"/);
+  assert.doesNotMatch(gate, /maxLength=\{6\}/);
   assert.match(account, /identity\.phoneE164/);
   assert.match(account, /listSessions\(\)/);
   assert.match(account, /revokeSession\(sessionId\)/);
@@ -66,4 +69,8 @@ test("JRN-002 typechecks every identity-consuming runtime", async () => {
   ]) {
     assert.ok(script.includes(runtime), `identity typecheck must cover ${runtime}`);
   }
+});
+
+test("JRN-002 leaves no temporary diagnostic workflow", () => {
+  assert.equal(existsSync(".github/workflows/tmp-jrn-002-diagnostics.yml"), false);
 });
