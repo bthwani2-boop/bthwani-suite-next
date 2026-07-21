@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"errors"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
 func ListClientOrderTruth(db *sql.DB, tenantID, clientID string, limit int) ([]OrderTruth, error) {
@@ -18,11 +20,16 @@ func ListOperatorOrderTruth(db *sql.DB, tenantID, status string, limit int) ([]O
 	return listOrderTruthByScope(db, tenantID, "operator", "", status, limit)
 }
 
+func validOrderTruthID(value string) bool {
+	_, err := uuid.Parse(strings.TrimSpace(value))
+	return err == nil
+}
+
 func GetClientScopedOrderTruth(db *sql.DB, orderID, tenantID, clientID string) (*OrderTruth, error) {
 	orderID = strings.TrimSpace(orderID)
 	tenantID = strings.TrimSpace(tenantID)
 	clientID = strings.TrimSpace(clientID)
-	if orderID == "" || tenantID == "" || clientID == "" { return nil, ErrInvalid }
+	if !validOrderTruthID(orderID) || tenantID == "" || clientID == "" { return nil, ErrInvalid }
 	var scopedID string
 	err := db.QueryRow(`
 		SELECT id::text FROM dsh_orders
@@ -37,7 +44,7 @@ func GetPartnerScopedOrderTruth(db *sql.DB, orderID, tenantID, storeID string) (
 	orderID = strings.TrimSpace(orderID)
 	tenantID = strings.TrimSpace(tenantID)
 	storeID = strings.TrimSpace(storeID)
-	if orderID == "" || tenantID == "" || storeID == "" { return nil, ErrInvalid }
+	if !validOrderTruthID(orderID) || tenantID == "" || storeID == "" { return nil, ErrInvalid }
 	var scopedID string
 	err := db.QueryRow(`
 		SELECT id::text FROM dsh_orders
@@ -46,6 +53,13 @@ func GetPartnerScopedOrderTruth(db *sql.DB, orderID, tenantID, storeID string) (
 	if errors.Is(err, sql.ErrNoRows) { return nil, ErrNotFound }
 	if err != nil { return nil, err }
 	return GetOrderTruth(db, scopedID, tenantID, "partner")
+}
+
+func GetOperatorScopedOrderTruth(db *sql.DB, orderID, tenantID string) (*OrderTruth, error) {
+	orderID = strings.TrimSpace(orderID)
+	tenantID = strings.TrimSpace(tenantID)
+	if !validOrderTruthID(orderID) || tenantID == "" { return nil, ErrInvalid }
+	return GetOrderTruth(db, orderID, tenantID, "operator")
 }
 
 func listOrderTruthByScope(db *sql.DB, tenantID, viewerRole, scopeID, status string, limit int) ([]OrderTruth, error) {
@@ -105,11 +119,9 @@ func RedactOrderTruthForViewer(truth *OrderTruth, viewerRole string) {
 	if viewerRole == "partner" || viewerRole == "operator" {
 		truth.ClientID = ""
 		truth.DeliveryAddressSnapshot = []byte(`{"redacted":true}`)
-	}
-	for index := range truth.StatusTimeline {
-		// Actor identifiers are deliberately absent from the public event model;
-		// metadata is reduced for non-client surfaces to prevent accidental PII.
-		if viewerRole == "partner" {
+		for index := range truth.StatusTimeline {
+			// Event metadata may contain actor- or provider-specific diagnostics.
+			// Non-client surfaces receive only the canonical event envelope.
 			truth.StatusTimeline[index].Metadata = []byte(`{}`)
 		}
 	}
