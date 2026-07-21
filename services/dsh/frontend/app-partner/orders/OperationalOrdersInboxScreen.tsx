@@ -83,6 +83,11 @@ export function OperationalOrdersInboxScreen({
         setExpandedFulfillmentOrderId(orderId);
         return;
       }
+      const handoffMutation = resolvePartnerOrderMutation('handoff', item.allowedActions);
+      if (handoffMutation) {
+        void commands.execute(handoffMutation, orderId);
+        return;
+      }
       onNavigateAction('details', orderId);
       return;
     }
@@ -104,7 +109,16 @@ export function OperationalOrdersInboxScreen({
       ) : null}
       {commands.state.kind === 'submitting' ? (
         <Box paddingX={4} paddingY={2} background="surfaceInset">
-          <Text role="bodySm" tone="muted">جارٍ تثبيت انتقال حالة الطلب…</Text>
+          <Text role="bodySm" tone="muted">
+            {commands.state.command === 'handoff'
+              ? 'جارٍ تثبيت تسليم العهدة للكابتن…'
+              : 'جارٍ تثبيت انتقال حالة الطلب…'}
+          </Text>
+        </Box>
+      ) : null}
+      {commands.state.kind === 'success' && commands.state.command === 'handoff' ? (
+        <Box paddingX={4} paddingY={2} background="successSurface">
+          <Text role="bodySm" tone="success">تم تأكيد تسليم الطلب للكابتن. ينتظر النظام تأكيده الاستلام.</Text>
         </Box>
       ) : null}
 
