@@ -24,7 +24,8 @@ export type DshContractRegistration = {
     | "dsh-client-map"
     | "dsh-platform-policies"
     | "dsh-partner-support"
-    | "dsh-support-governance";
+    | "dsh-support-governance"
+    | "dsh-store-captain-handoff";
   readonly path: string;
   readonly state: "CONTRACT_ACTIVE";
   readonly runtimeDependency: boolean;
@@ -156,5 +157,13 @@ export const DSH_CONTRACT_REGISTRY = [
     runtimeDependency: true,
     clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
     adapterOwner: "frontend/shared/support",
+  },
+  {
+    id: "dsh-store-captain-handoff",
+    path: "contracts/dsh.store-captain-handoff.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/orders,frontend/shared/dispatch",
   },
 ] as const satisfies readonly DshContractRegistration[];
