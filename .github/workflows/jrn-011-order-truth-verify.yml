@@ -47,6 +47,13 @@ jobs:
         run: node tools/guards/jrn-011-cross-surface-integrity-gate.mjs
       - name: Focused JRN-011 tests
         run: node --test services/dsh/tests/jrn-011-order-*.test.mjs
+      - name: Export current journey registry for safe whole-file update
+        uses: actions/upload-artifact@v4
+        with:
+          name: jrn011-registry-source
+          path: governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md
+          retention-days: 1
+          if-no-files-found: error
 
   go-contracts:
     name: Go order and WLT projection tests
