@@ -47,7 +47,11 @@ export function CartActivityScreen() {
   return (
     <DataTablePageFrame
       dir="rtl"
-      header={<CpPageHeader title="نشاط سلال التسوق" description="قراءة تشغيلية لحالة السلة والتشكيلة فقط؛ لا توجد كتابة أو حقيقة مالية في هذا السطح." />}
+      header={(
+        <CpPageHeader title="نشاط سلال التسوق">
+          قراءة تشغيلية لحالة السلة والتشكيلة فقط؛ لا توجد كتابة أو حقيقة مالية في هذا السطح.
+        </CpPageHeader>
+      )}
       stateView={
         controller.loadState === "loading" ? <Text role="body">جاري تحميل السلال…</Text>
           : controller.loadState === "empty" ? <Text role="body">لا توجد سلال في هذه الحالة.</Text>
