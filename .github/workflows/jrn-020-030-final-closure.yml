@@ -72,6 +72,7 @@ on:
       - "services/dsh/tests/jrn-023-notification-delivery-binding.test.mjs"
       - "services/dsh/tests/jrn-030-partner-fleet-surface-binding.test.mjs"
       - "services/wlt/backend/internal/promotionfunding/**"
+      - "services/wlt/backend/internal/http/promotion_funding*"
       - "services/wlt/contracts/wlt.promotion-funding.openapi.yaml"
       - "tools/guards/fullstack-boundary-gate.mjs"
       - "tools/guards/wlt-financial-boundary-gate.mjs"
@@ -80,7 +81,6 @@ on:
       - "governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md"
       - "governance/evidence/JRN-020-030_FULLSTACK_CLOSURE.json"
       - ".github/actions/setup-node-workspace/action.yml"
-      - ".github/workflows/jrn-020-030-sambassam-closure.yml"
       - ".github/workflows/jrn-020-030-final-closure.yml"
 
 permissions:
@@ -131,8 +131,8 @@ jobs:
       - name: Typecheck JRN-020..030 scope
         run: pnpm --dir services/dsh exec tsc -p tsconfig.jrn-020-030.json --noEmit --pretty false
 
-  go-integration:
-    name: Go domains, routes, and runtime compile
+  dsh-go-integration:
+    name: DSH Go domains, routes, and runtime compile
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
@@ -143,12 +143,12 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false
-      - name: Setup Go from module
+      - name: Setup Go from DSH module
         uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5
         with:
           go-version-file: services/dsh/backend/go.mod
           cache-dependency-path: services/dsh/backend/go.sum
-      - name: Verify domains and routes
+      - name: Verify DSH domains and routes
         run: >-
           go test
           ./cmd/dsh-api
@@ -165,6 +165,26 @@ jobs:
           ./internal/operationaloutbox
           ./internal/http
           -count=1
+
+  wlt-go-integration:
+    name: WLT promotion funding integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: services/wlt/backend
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Setup Go from WLT module
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5
+        with:
+          go-version-file: services/wlt/backend/go.mod
+          cache-dependency-path: services/wlt/backend/go.sum
+      - name: Verify WLT promotion funding domain and routes
+        run: go test ./internal/promotionfunding ./internal/http -count=1
 
   database-integration:
     name: PostgreSQL migrations and authorized SQL invariants
@@ -219,10 +239,100 @@ jobs:
           done
           echo "executed_sql_tests=${#tests[@]}"
 
+  runtime-smoke:
+    name: Live DSH API route smoke on PostgreSQL 16
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: dsh_runtime
+          POSTGRES_PASSWORD: dsh_runtime_password
+          POSTGRES_DB: dsh_runtime
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U dsh_runtime -d dsh_runtime"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      PGPASSWORD: dsh_runtime_password
+      DATABASE_URL: postgres://dsh_runtime:dsh_runtime_password@localhost:5432/dsh_runtime?sslmode=disable
+      PORT: "58080"
+      DSH_AUTH_MODE: "identity"
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Setup Go from DSH module
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: services/dsh/backend/go.sum
+      - name: Apply DSH migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r file; do
+            psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f "$file" >/dev/null
+          done < <(find services/dsh/database/migrations -maxdepth 1 -type f -name '*.sql' | sort)
+      - name: Start live DSH API
+        shell: bash
+        working-directory: services/dsh/backend
+        run: |
+          nohup go run ./cmd/dsh-api > "$RUNNER_TEMP/dsh-api.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/dsh-api.pid"
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:58080/dsh/health >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/dsh-api.log"
+          exit 1
+      - name: Smoke governed JRN-020..030 route registration
+        shell: bash
+        run: |
+          set -euo pipefail
+          assert_mounted() {
+            method="$1"
+            path="$2"
+            status=$(curl --silent --show-error --output "$RUNNER_TEMP/route-body.txt" --write-out '%{http_code}' -X "$method" -H 'Content-Type: application/json' --data '{}' "http://127.0.0.1:58080$path")
+            echo "$method $path -> $status"
+            case "$status" in
+              000|404|405)
+                cat "$RUNNER_TEMP/route-body.txt"
+                return 1
+                ;;
+            esac
+          }
+          curl --fail --silent http://127.0.0.1:58080/dsh/health >/dev/null
+          assert_mounted POST /dsh/captain/dispatch/assignments/asg-1/exceptions
+          assert_mounted POST /dsh/support/tickets/ticket-1/messages/read
+          assert_mounted POST /dsh/client/special-requests
+          assert_mounted GET /dsh/operator/notifications/delivery-attempts
+          assert_mounted POST /dsh/field/stores/store-1/visits
+          assert_mounted GET /dsh/operator/marketing/campaigns
+          assert_mounted GET /dsh/operator/marketing/coupons
+          assert_mounted POST /dsh/client/marketing/subscriptions/purchase
+          assert_mounted GET /dsh/operator/platform/service-areas
+          assert_mounted POST /dsh/captain/partner-fleet/connect
+      - name: Upload DSH runtime log
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: jrn-020-030-live-runtime-log
+          path: ${{ runner.temp }}/dsh-api.log
+          if-no-files-found: warn
+          retention-days: 7
+
   publish-result:
     name: Publish final same-commit closure status
     if: always()
-    needs: [static-integrity, typecheck, go-integration, database-integration]
+    needs: [static-integrity, typecheck, dsh-go-integration, wlt-go-integration, database-integration, runtime-smoke]
     runs-on: ubuntu-latest
     steps:
       - name: Publish aggregate status
@@ -231,14 +341,16 @@ jobs:
           COMMIT_SHA: ${{ github.sha }}
           STATIC_RESULT: ${{ needs.static-integrity.result }}
           TYPECHECK_RESULT: ${{ needs.typecheck.result }}
-          GO_RESULT: ${{ needs.go-integration.result }}
+          DSH_GO_RESULT: ${{ needs.dsh-go-integration.result }}
+          WLT_GO_RESULT: ${{ needs.wlt-go-integration.result }}
           DATABASE_RESULT: ${{ needs.database-integration.result }}
+          RUNTIME_RESULT: ${{ needs.runtime-smoke.result }}
           TARGET_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         shell: bash
         run: |
           STATE=failure
           DESCRIPTION="JRN-020..030 final closure failed"
-          if [ "$STATIC_RESULT" = success ] && [ "$TYPECHECK_RESULT" = success ] && [ "$GO_RESULT" = success ] && [ "$DATABASE_RESULT" = success ]; then
+          if [ "$STATIC_RESULT" = success ] && [ "$TYPECHECK_RESULT" = success ] && [ "$DSH_GO_RESULT" = success ] && [ "$WLT_GO_RESULT" = success ] && [ "$DATABASE_RESULT" = success ] && [ "$RUNTIME_RESULT" = success ]; then
             STATE=success
             DESCRIPTION="JRN-020..030 final closure passed"
           fi
