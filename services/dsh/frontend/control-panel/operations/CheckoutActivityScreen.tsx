@@ -70,12 +70,13 @@ export function CheckoutActivityScreen() {
               <CpTableHeaderCell>طريقة الدفع</CpTableHeaderCell>
               <CpTableHeaderCell>مرجع WLT</CpTableHeaderCell>
               <CpTableHeaderCell>الحالة</CpTableHeaderCell>
+              <CpTableHeaderCell>المصالحة</CpTableHeaderCell>
               <CpTableHeaderCell>آخر تحديث</CpTableHeaderCell>
             </tr>
           </thead>
           <tbody>
             {controller.intents.map((intent) => (
-              <CheckoutIntentRow key={intent.id} intent={intent} />
+              <CheckoutIntentRow key={intent.id} intent={intent} onReconcile={controller.reconcile} />
             ))}
           </tbody>
         </CpTable>
@@ -84,7 +85,13 @@ export function CheckoutActivityScreen() {
   );
 }
 
-function CheckoutIntentRow({ intent }: { readonly intent: DshCheckoutIntent }) {
+function CheckoutIntentRow({
+  intent,
+  onReconcile,
+}: {
+  readonly intent: DshCheckoutIntent;
+  readonly onReconcile: (intentId: string) => Promise<void>;
+}) {
   return (
     <tr>
       <CpTableCell>{intent.clientId}</CpTableCell>
@@ -93,6 +100,13 @@ function CheckoutIntentRow({ intent }: { readonly intent: DshCheckoutIntent }) {
       <CpTableCell>{intent.paymentMethod}</CpTableCell>
       <CpTableCell>{intent.wltPaymentSessionId || "غير متوفر"}</CpTableCell>
       <CpTableCell><StatusBadge state={intent.state} /></CpTableCell>
+      <CpTableCell>
+        {intent.reconciliationRequired ? (
+          <button type="button" onClick={() => void onReconcile(intent.id)}>
+            إعادة المصالحة ({Math.max(0, intent.reconciliationAgeSeconds ?? 0)}ث)
+          </button>
+        ) : "لا يلزم"}
+      </CpTableCell>
       <CpTableCell>{new Date(intent.updatedAt).toLocaleString("ar-SA")}</CpTableCell>
     </tr>
   );

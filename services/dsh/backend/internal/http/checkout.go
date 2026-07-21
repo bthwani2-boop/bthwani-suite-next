@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	"dsh-api/internal/cart"
 	"dsh-api/internal/checkout"
@@ -478,6 +479,12 @@ func marshalIntentWithPricing(i *checkout.Intent, pricing checkout.PricingSnapsh
 	result["couponId"] = pricing.CouponID
 	result["couponRedemptionId"] = pricing.CouponRedemptionID
 	result["couponCodeLast4"] = pricing.CouponCodeLast4
+	result["reconciliationRequired"] = i.State == checkout.StateWltOutcomeUnknown
+	if i.State == checkout.StateWltOutcomeUnknown {
+		result["reconciliationAgeSeconds"] = int64(time.Since(i.UpdatedAt).Seconds())
+	} else {
+		result["reconciliationAgeSeconds"] = int64(0)
+	}
 	return result
 }
 

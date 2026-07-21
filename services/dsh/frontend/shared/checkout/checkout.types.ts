@@ -38,6 +38,8 @@ export type DshCheckoutIntent = {
   readonly version: number;
   readonly createdAt: string;
   readonly updatedAt: string;
+  readonly reconciliationRequired?: boolean;
+  readonly reconciliationAgeSeconds?: number;
 };
 
 export type DshCreateIntentInput = {
