@@ -39,7 +39,7 @@ export type CaptainSupportScreenRouterProps = {
   onNavigate: (screenId: CaptainSupportRoute) => void;
   captainCollectsCod: boolean;
   dshClientId?: string | undefined;
-  activeOrderId?: string;
+  activeOrderId?: string | undefined;
   onAcceptTask: (orderId: string) => void;
   onDeclineTask: (orderId: string) => void;
 };
@@ -54,11 +54,13 @@ export function CaptainSupportScreenRouter({
   onAcceptTask,
   onDeclineTask,
 }: CaptainSupportScreenRouterProps): React.ReactNode {
+  const activeOrderProps = activeOrderId ? { orderId: activeOrderId } : {};
+
   switch (selectedSupportScreen) {
     case 'chat-read-ack':
       return (
         <CaptainOrderSupportConversationScreen
-          orderId={activeOrderId}
+          {...activeOrderProps}
           composerEnabled={false}
           onBack={onBack}
         />
@@ -66,7 +68,7 @@ export function CaptainSupportScreenRouter({
     case 'chat-send':
       return (
         <CaptainOrderSupportConversationScreen
-          orderId={activeOrderId}
+          {...activeOrderProps}
           composerEnabled
           onBack={onBack}
         />
@@ -82,7 +84,7 @@ export function CaptainSupportScreenRouter({
     case 'order-accept':
       return (
         <DshCaptainOrderAcceptScreen
-          orderId={activeOrderId}
+          {...activeOrderProps}
           onBack={onBack}
           onAccept={onAcceptTask}
           onDecline={onDeclineTask}
