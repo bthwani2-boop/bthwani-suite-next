@@ -13,9 +13,10 @@ type Props = {
 
 export function HomeDiscoveryScreen({ onStorePress, onSpecialCategoryPress }: Props) {
   const addressController = useClientAddressController();
+  const serviceAreaCode = addressController.selectedAddress?.serviceAreaCode;
   const controller = useHomeDiscoveryController({
     enabled: addressController.state.kind === "ready",
-    serviceAreaCode: addressController.selectedAddress?.serviceAreaCode,
+    ...(serviceAreaCode !== undefined ? { serviceAreaCode } : {}),
   });
 
   const state: HomeDiscoveryState = addressController.state.kind === "error"
