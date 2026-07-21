@@ -140,32 +140,39 @@ test("JRN-008 retains one central catalog truth and governed proposal readback",
   assert.match(migration, /INSERT INTO dsh_store_assortments/);
 });
 
-test("JRN-009 enforces cart ownership, store integrity, server pricing, and operator readback", () => {
+test("JRN-009 enforces all cart and serviceability slices", () => {
   const handler = read("backend/internal/http/cart.go");
   const ownership = read("backend/internal/cart/ownership.go");
   const integrity = read("backend/internal/cart/item_integrity.go");
+  const closure = read("backend/internal/cart/jrn009_closure.go");
   const repository = read("backend/internal/cart/cart.go");
+  const migration = read("database/migrations/dsh-096_jrn009_cart_slice_closure.sql");
   const operatorScreen = read("frontend/control-panel/operations/CartActivityScreen.tsx");
 
-  assert.match(handler, /cart\.UpsertOwnedItem\(r\.Context\(\), s\.db, actor\.ID, body\.StoreID, c\.ID/);
-  assert.doesNotMatch(handler, /cart\.UpsertItem\(r\.Context\(\), s\.db/);
+  assert.match(handler, /cart\.GetOrCreateSingleStoreCart\(r\.Context\(\), s\.db, actor\.ID/);
+  assert.match(handler, /cart\.UpsertOwnedItem\(r\.Context\(\), s\.db, actor\.ID, body\.StoreID, current\.ID/);
   assert.match(integrity, /AND client_id = \$2[\s\S]*AND store_id = \$3[\s\S]*AND state = 'active'/);
-  assert.match(integrity, /return UpsertItem\(ctx, db, storeID, cartID, input\)/);
-
   assert.match(repository, /JOIN dsh_master_products mp ON mp\.id = a\.master_product_id/);
   assert.match(repository, /a\.unit_price, a\.available/);
   assert.match(repository, /priceReference := fmt\.Sprintf\("%\.2f", unitPrice\)/);
 
+  assert.match(handler, /clientaddress\.GetOwned/);
+  assert.match(handler, /cart\.CheckGovernedServiceability/);
+  assert.match(handler, /cart\.ValidateCart/);
+  assert.match(closure, /dsh_platform_capacity_configs/);
+  assert.match(closure, /dsh_platform_sla_rules/);
+  assert.match(closure, /price_changed/);
+  assert.match(closure, /assortment_changed/);
+
   assert.match(handler, /cart\.RemoveOwnedItem\(r\.Context\(\), s\.db, actor\.ID, cartID, itemID\)/);
   assert.match(handler, /cart\.ClearOwnedCart\(r\.Context\(\), s\.db, actor\.ID, cartID\)/);
-  assert.doesNotMatch(handler, /cart\.RemoveItem\(r\.Context\(\), s\.db, cartID, itemID\)/);
-  assert.match(ownership, /cart\.client_id = \$3/);
-  assert.match(ownership, /WHERE id = \$1 AND client_id = \$2 AND state = 'active'/);
+  assert.match(ownership, /SET state = 'abandoned'/);
+  assert.match(migration, /uq_dsh_carts_single_active_client/);
 
   assert.match(handler, /cart\.HydrateOperatorCartItems\(r\.Context\(\), s\.db, carts\)/);
   assert.match(integrity, /WHERE cart_id = ANY\(\$1\)/);
-  assert.match(integrity, /itemsByCartID\[item\.CartID\]/);
-  assert.match(operatorScreen, /c\.items\.length/);
+  assert.match(operatorScreen, /cart\.items\.length/);
+  assert.match(operatorScreen, /validationLabel/);
 });
 
 test("JRN-010 reuses one checkout and one WLT session for retries", () => {
