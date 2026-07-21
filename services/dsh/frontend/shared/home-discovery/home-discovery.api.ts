@@ -1,3 +1,4 @@
+import { getIdentityAccessToken } from '@bthwani/core-identity';
 import { createDshFlexibleHttpClient } from '../_kernel/dsh-http-request';
 import {
   toBannerViewModel,
@@ -25,12 +26,15 @@ export async function fetchHomeDiscovery(params?: DshHomeDiscoveryParams): Promi
   }
 
   const httpClient = createDshFlexibleHttpClient(baseUrl);
+  const audienceSegment = params?.audienceSegment
+    ?? (getIdentityAccessToken() === null ? 'guest' : 'authenticated');
 
   try {
     const dto = await httpClient.request<DshHomeDiscoveryResponseDto>('/dsh/home-discovery', {
       query: {
         cityCode: params?.cityCode,
         serviceAreaCode: params?.serviceAreaCode,
+        audienceSegment,
         limit: params?.limit != null ? String(params.limit) : undefined,
       },
     });
