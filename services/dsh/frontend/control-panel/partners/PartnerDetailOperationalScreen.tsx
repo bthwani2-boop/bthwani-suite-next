@@ -48,12 +48,6 @@ function card(title: string, children: ReactNode): ReactNode {
   );
 }
 
-function mutationMessage(message: string): string {
-  if (message === "invalid_transition") return "الانتقال غير مسموح من الحالة الحالية.";
-  if (message === "version_conflict") return "تغيرت بيانات الشريك. أعد التحميل ثم راجع القرار من جديد.";
-  return message;
-}
-
 function statusStyle(tone: string): CSSProperties {
   const color = tone === "success"
     ? statusScale.success
@@ -145,6 +139,14 @@ export function PartnerDetailOperationalScreen({ partnerId, onBack }: PartnerDet
     if (succeeded) setStoreIdToLink("");
   };
 
+  const reloadAfterConflict = async () => {
+    const reloaded = await detail.reload();
+    if (reloaded) {
+      setTransitionTarget(null);
+      setTransitionReason("");
+    }
+  };
+
   return (
     <DetailPageFrame
       header={(
@@ -218,8 +220,32 @@ export function PartnerDetailOperationalScreen({ partnerId, onBack }: PartnerDet
                     </div>
                   </div>
                 ) : null}
-                {detail.mutationState.kind === "error" ? (
-                  <p role="alert" style={{ color: statusScale.danger, margin: 0 }}>{mutationMessage(detail.mutationState.message)}</p>
+                {detail.mutationState.kind === "loading" ? (
+                  <CpStatePanel role="status" title="جارٍ تطبيق القرار والتحقق من الحالة المحدثة…" />
+                ) : detail.mutationState.kind === "version_conflict" ? (
+                  <CpStatePanel
+                    role="alert"
+                    title="تعارض نسخة الشريك"
+                    code="تغيرت بيانات الشريك من جلسة أخرى. لا يجوز إعادة القرار على النسخة القديمة."
+                  >
+                    <CpRetryButton onClick={() => void reloadAfterConflict()}>تحميل أحدث نسخة</CpRetryButton>
+                  </CpStatePanel>
+                ) : detail.mutationState.kind === "invalid_transition" ? (
+                  <CpStatePanel
+                    role="alert"
+                    title="القرار محجوب ببوابات الجاهزية"
+                    code={detail.mutationState.message}
+                  >
+                    <CpRetryButton onClick={() => setTab("readiness")}>فتح تبويب الجاهزية</CpRetryButton>
+                  </CpStatePanel>
+                ) : detail.mutationState.kind === "error" ? (
+                  <CpStatePanel
+                    role="alert"
+                    title="تعذر تطبيق قرار دورة الحياة"
+                    code={detail.mutationState.message}
+                  >
+                    <CpRetryButton onClick={() => void detail.reload()}>إعادة تحميل الملف</CpRetryButton>
+                  </CpStatePanel>
                 ) : null}
               </>
             ))}
