@@ -14,8 +14,6 @@ import (
 
 const AdministrationPermissionApprove = "administration.approve"
 
-// RegisterAdministrationRoutes exposes read models and governed maker-checker
-// lifecycles. Legacy direct sensitive mutations are deliberately not mounted.
 func RegisterAdministrationRoutes(
 	router *http.ServeMux,
 	db *sql.DB,
@@ -46,13 +44,12 @@ func writeAdministrationApprovalError(w http.ResponseWriter, err error) {
 	case errors.Is(err, administration.ErrSelfApproval):
 		store.SendError(w, http.StatusForbidden, "SELF_APPROVAL_FORBIDDEN", "maker, beneficiary, and checker must be different actors")
 	case errors.Is(err, administration.ErrApprovalConflict):
-		store.SendError(w, http.StatusConflict, "APPROVAL_CONFLICT", "approval request changed or an equivalent request is already pending")
+		store.SendError(w, http.StatusConflict, "APPROVAL_CONFLICT", "approval request changed or the requested role state is no longer valid")
 	default:
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "administration approval action failed")
 	}
 }
 
-// POST /dsh/operator/admin/roles/requests
 func (s *protectedStoreServer) handleRequestRoleDefinition(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireAdministrationPermission(w, r, AdministrationPermissionManage)
 	if !ok {
@@ -77,7 +74,6 @@ func (s *protectedStoreServer) handleRequestRoleDefinition(w http.ResponseWriter
 	store.SendJSON(w, http.StatusAccepted, map[string]any{"request": request})
 }
 
-// GET /dsh/operator/admin/role-requests?status=pending
 func (s *protectedStoreServer) handleListRoleDefinitionRequests(w http.ResponseWriter, r *http.Request) {
 	_, ok := s.requireAdministrationPermission(w, r, AdministrationPermissionRead)
 	if !ok {
@@ -91,7 +87,6 @@ func (s *protectedStoreServer) handleListRoleDefinitionRequests(w http.ResponseW
 	store.SendJSON(w, http.StatusOK, map[string]any{"requests": requests})
 }
 
-// POST /dsh/operator/admin/role-requests/{requestId}/review
 func (s *protectedStoreServer) handleReviewRoleDefinition(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireAdministrationPermission(w, r, AdministrationPermissionApprove)
 	if !ok {
@@ -117,21 +112,36 @@ func (s *protectedStoreServer) handleReviewRoleDefinition(w http.ResponseWriter,
 }
 
 // POST /dsh/operator/admin/staff/{staffId}/roles
+// actionType is mandatory so assignment and revocation share one governed path.
 func (s *protectedStoreServer) handleRequestStaffRoleAssignment(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireAdministrationPermission(w, r, AdministrationPermissionManage)
 	if !ok {
 		return
 	}
 	var body struct {
-		RoleID string `json:"roleId"`
-		Reason string `json:"reason"`
+		RoleID     string `json:"roleId"`
+		ActionType string `json:"actionType"`
+		Reason     string `json:"reason"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	approval, err := administration.RequestStaffRoleAssignment(
-		r.Context(), s.db, r.PathValue("staffId"), body.RoleID, actor.ID, body.Reason,
+	var (
+		approval administration.RoleAssignmentApproval
+		err      error
 	)
+	switch body.ActionType {
+	case administration.RoleChangeAssign:
+		approval, err = administration.RequestStaffRoleAssignment(
+			r.Context(), s.db, r.PathValue("staffId"), body.RoleID, actor.ID, body.Reason,
+		)
+	case administration.RoleChangeRevoke:
+		approval, err = administration.RequestStaffRoleRevocation(
+			r.Context(), s.db, r.PathValue("staffId"), body.RoleID, actor.ID, body.Reason,
+		)
+	default:
+		err = administration.ErrInvalid
+	}
 	if err != nil {
 		writeAdministrationApprovalError(w, err)
 		return
@@ -139,7 +149,6 @@ func (s *protectedStoreServer) handleRequestStaffRoleAssignment(w http.ResponseW
 	store.SendJSON(w, http.StatusAccepted, map[string]any{"approval": approval})
 }
 
-// GET /dsh/operator/admin/approvals?status=pending
 func (s *protectedStoreServer) handleListRoleAssignmentApprovals(w http.ResponseWriter, r *http.Request) {
 	_, ok := s.requireAdministrationPermission(w, r, AdministrationPermissionRead)
 	if !ok {
@@ -153,7 +162,6 @@ func (s *protectedStoreServer) handleListRoleAssignmentApprovals(w http.Response
 	store.SendJSON(w, http.StatusOK, map[string]any{"approvals": approvals})
 }
 
-// POST /dsh/operator/admin/approvals/{approvalId}/review
 func (s *protectedStoreServer) handleReviewStaffRoleAssignment(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireAdministrationPermission(w, r, AdministrationPermissionApprove)
 	if !ok {
