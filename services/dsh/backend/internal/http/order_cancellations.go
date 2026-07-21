@@ -14,6 +14,7 @@ import (
 )
 
 type orderCancellationBody struct {
+	Reason        string `json:"reason"`
 	ReasonCode    string `json:"reasonCode"`
 	ReasonNote    string `json:"reasonNote"`
 	CommandID     string `json:"commandId"`
@@ -50,9 +51,24 @@ func decodeCancellationBody(w http.ResponseWriter, r *http.Request) (orderCancel
 	if !decodeProtectedJSON(w, r, &body) {
 		return body, false
 	}
+	body.Reason = strings.TrimSpace(body.Reason)
 	body.ReasonCode = strings.TrimSpace(body.ReasonCode)
 	body.ReasonNote = strings.TrimSpace(body.ReasonNote)
 	body.CommandID = strings.TrimSpace(body.CommandID)
+	body.CorrelationID = strings.TrimSpace(body.CorrelationID)
+
+	// `/cancel` is retained as an explicit compatibility alias. Normalize its
+	// historical `{reason}` body into the canonical cancellation command instead
+	// of invoking the former parallel cancellation implementation.
+	if body.ReasonCode == "" && body.Reason != "" {
+		body.ReasonCode = "operator_cancelled"
+		if body.ReasonNote == "" {
+			body.ReasonNote = body.Reason
+		}
+	}
+	if body.CommandID == "" {
+		body.CommandID = operationalCorrelationID(r, body.CorrelationID)
+	}
 	if body.ReasonCode == "" || body.CommandID == "" {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "reasonCode and commandId are required")
 		return body, false
