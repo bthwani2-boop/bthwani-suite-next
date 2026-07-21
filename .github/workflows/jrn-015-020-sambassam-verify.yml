@@ -9,6 +9,7 @@ on:
       - services/dsh/backend/internal/http/delivery_proof_upload.go
       - services/dsh/backend/internal/http/dispatch_location_integrity.go
       - services/dsh/backend/internal/http/journeys_015_020_test.go
+      - services/dsh/backend/internal/http/partner_self_routes.go
       - services/dsh/backend/internal/http/server.go
       - services/dsh/database/migrations/dsh-096_delivery_proof_media_integrity.sql
       - services/dsh/database/migrations/dsh-097_dispatch_location_integrity.sql
