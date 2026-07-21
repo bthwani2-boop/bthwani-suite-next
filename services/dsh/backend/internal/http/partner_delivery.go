@@ -18,7 +18,6 @@ import (
 const (
 	PartnerDeliveryPermissionRead   = "partner_delivery.read"
 	PartnerDeliveryPermissionManage = "partner_delivery.manage" // operator monitoring/exception actions
-	PartnerDeliveryActionPermission = "partner_delivery.act"    // partner-side assign/pickup/depart/arrive/proof
 )
 
 type partnerDeliveryMutationBody struct {

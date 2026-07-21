@@ -28,7 +28,11 @@
       "Bash(xargs -I{} basename {})",
       "Bash(xargs -n1 basename)",
       "Bash(mkdir -p \"C:\\\\Users\\\\bassa\\\\.claude\\\\plans\" 2>&1; echo done)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(pg_isready)",
+      "Bash(DSH_REQUIRE_DB_TESTS=true DATABASE_URL=\"postgres://bthwani_runtime:bthwani_runtime_password@127.0.0.1:55432/bthwani_runtime?sslmode=disable\" go test ./internal/dispatch/... -run 'DeliveryException' -v)",
+      "Bash(DSH_REQUIRE_DB_TESTS=true DATABASE_URL=\"postgres://dsh_runtime:dsh_runtime_password@127.0.0.1:55432/dsh_runtime?sslmode=disable\" go test ./internal/dispatch/... -run 'DeliveryException' -v)",
+      "Bash(npm run *)"
     ],
     "additionalDirectories": [
       "C:\\Users\\bassa\\.claude\\plans"

@@ -13,6 +13,7 @@ import {
 import {
   acknowledgeDeliveryException,
   fetchOperatorDeliveryExceptions,
+  resolveDeliveryExceptionCancelOrder,
   resolveDeliveryExceptionReassignCaptain,
   resolveDeliveryExceptionRetrySameCaptain,
   resolveDeliveryExceptionReturnToStore,
@@ -205,6 +206,21 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
       await load();
     } catch (error) {
       setActionState({ kind: 'error', id: item.id, message: error instanceof Error ? error.message : 'تعذر بدء إرجاع الطلب.' });
+    }
+  }, [load, note]);
+
+  const resolveCancel = React.useCallback(async (item: DshDeliveryException) => {
+    if (note.trim().length < 5) {
+      setActionState({ kind: 'error', id: item.id, message: 'اكتب سبب الإلغاء المباشر قبل الاستلام.' });
+      return;
+    }
+    setActionState({ kind: 'submitting', id: item.id });
+    try {
+      await resolveDeliveryExceptionCancelOrder(item.id, item.version, note.trim());
+      setSelectedDeliveryId(null);
+      await load();
+    } catch (error) {
+      setActionState({ kind: 'error', id: item.id, message: error instanceof Error ? error.message : 'تعذر إلغاء الطلب مباشرة.' });
     }
   }, [load, note]);
 
@@ -403,6 +419,7 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
             {selectedDelivery.status === 'open' ? <Button label="اعتماد وبدء المراجعة" tone="secondary" disabled={actionState.kind === 'submitting'} onPress={() => void acknowledge(selectedDelivery)} /> : null}
             <Button label="حل: إعادة المحاولة مع الكابتن نفسه" tone="primary" disabled={actionState.kind === 'submitting'} onPress={() => void resolveRetry(selectedDelivery)} />
             {canReassign(selectedDelivery) ? <Button label="حل: إعادة الإسناد للكابتن البديل" tone="secondary" disabled={!selectedReplacementCaptainId || actionState.kind === 'submitting'} onPress={() => void resolveReassign(selectedDelivery)} /> : null}
+            {canReassign(selectedDelivery) ? <Button label="حل: إلغاء الطلب قبل الاستلام" tone="danger" disabled={actionState.kind === 'submitting'} onPress={() => void resolveCancel(selectedDelivery)} /> : null}
             {(selectedDelivery.deliveryStatusAtReport === 'picked_up' || selectedDelivery.deliveryStatusAtReport === 'arrived_customer') ? <Button label="حل: إرجاع الطلب إلى المتجر" tone="secondary" disabled={actionState.kind === 'submitting'} onPress={() => void resolveReturn(selectedDelivery)} /> : null}
             <Button label="إغلاق التفاصيل" tone="ghost" onPress={() => setSelectedDeliveryId(null)} />
           </Box>

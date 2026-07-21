@@ -131,6 +131,18 @@ export async function resolveDeliveryExceptionReturnToStore(
   return data.exception;
 }
 
+export async function resolveDeliveryExceptionCancelOrder(
+  id: string,
+  expectedVersion: number,
+  note: string,
+): Promise<DshDeliveryException> {
+  const data = await request<{ exception: DshDeliveryException }>(
+    `/dsh/operator/delivery-exceptions/${encodeURIComponent(id)}/resolve`,
+    { method: "POST", body: { expectedVersion, action: "cancel_order", note } },
+  );
+  return data.exception;
+}
+
 export async function arriveCaptainReturnToStore(assignmentId: string): Promise<DshDeliveryException> {
   await request<{ exception: DshDeliveryException }>(
     `/dsh/captain/dispatch/assignments/${encodeURIComponent(assignmentId)}/return-to-store/arrive`,
