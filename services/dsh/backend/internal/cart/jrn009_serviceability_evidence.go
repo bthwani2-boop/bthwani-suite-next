@@ -43,7 +43,7 @@ func RecordServiceabilityCheck(
 		VALUES (
 			$1,
 			$2,
-			$3::uuid,
+			$3,
 			$4,
 			$5,
 			$6,
