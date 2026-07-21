@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 
 const cartScreen = fs.readFileSync("services/dsh/frontend/app-client/cart/CartScreen.tsx", "utf8");
+const governedCartScreen = fs.readFileSync("services/dsh/frontend/app-client/cart/GovernedCartScreen.tsx", "utf8");
 
 assert.match(cartScreen, /controller\.removeItem\(item\.cartId, item\.id\)/);
 assert.doesNotMatch(cartScreen, /controller\.state\.cart\.id/);
@@ -11,4 +12,8 @@ assert.match(cartScreen, /serviceabilityController\.serviceability\.kind === "bl
 assert.match(cartScreen, /serviceabilityController\.serviceability\.kind === "error"/);
 assert.doesNotMatch(cartScreen, /disabled=\{serviceabilityController\.serviceability\.kind === "checking"\}/);
 
-console.log("JRN-001 FS-10 app-client cart action ownership and reachable serviceability actions verified");
+assert.match(governedCartScreen, /const payment = useWltDshPaymentController\(\);/);
+assert.doesNotMatch(governedCartScreen, /useWltDshPaymentController\(presentationSubtotal\)/);
+assert.match(governedCartScreen, /presentationSubtotal\.toLocaleString/);
+
+console.log("JRN-001 FS-10 app-client cart actions and WLT presentation boundary verified");
