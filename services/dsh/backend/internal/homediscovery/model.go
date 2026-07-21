@@ -71,6 +71,7 @@ type AdminContentInput struct {
 type HomeDiscoveryQuery struct {
 	CityCode        string
 	ServiceAreaCode string
+	AudienceSegment string
 	Limit           int
 }
 
