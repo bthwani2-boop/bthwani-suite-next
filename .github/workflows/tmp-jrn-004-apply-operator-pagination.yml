@@ -1,0 +1,43 @@
+name: Temporary JRN-004 Operator Pagination Patch
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [sambassam]
+    paths:
+      - "tools/scripts/apply-jrn-004-operator-pagination.py"
+      - ".github/workflows/tmp-jrn-004-apply-operator-pagination.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tmp-jrn-004-operator-pagination
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: sambassam
+          fetch-depth: 0
+      - name: Apply guarded patch
+        run: python3 tools/scripts/apply-jrn-004-operator-pagination.py
+      - name: Verify patch
+        shell: bash
+        run: |
+          grep -F 'store.ParseListQuery(r.URL.Query())' services/dsh/backend/internal/http/protected_store.go
+          ! grep -F 'store.DshStoreListQuery{Limit: 100, Offset: 0}' services/dsh/backend/internal/http/protected_store.go
+          git diff --check
+      - name: Commit and push
+        shell: bash
+        run: |
+          git config user.name "bthwani-jrn-004-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add services/dsh/backend/internal/http/protected_store.go
+          git commit -m "fix(jrn-004): honor operator store pagination" || exit 0
+          git push origin HEAD:sambassam
