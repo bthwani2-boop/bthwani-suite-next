@@ -68,6 +68,8 @@ export type GovernedPartnerOrderItem = PartnerOrderItem & {
   readonly preparation: DshOrderPreparation;
   readonly preparationIssues: readonly DshPreparationIssue[];
   readonly openPreparationIssueCount: number;
+  readonly pendingCustomerDecisionCount: number;
+  readonly resolvablePreparationIssueCount: number;
   readonly orderItems: readonly GovernedPreparationOrderItem[];
   readonly storeCaptainHandoffStatus: DshStoreCaptainHandoffStatus;
   readonly storeCaptainHandoffCaptainId: string;
@@ -89,6 +91,8 @@ type CanonicalOrderShape = {
   readonly preparation?: DshOrderPreparation;
   readonly preparationIssues?: readonly DshPreparationIssue[];
   readonly openPreparationIssueCount?: number;
+  readonly pendingCustomerDecisionCount?: number;
+  readonly resolvablePreparationIssueCount?: number;
   readonly storeCaptainHandoffStatus?: DshStoreCaptainHandoffStatus;
   readonly storeCaptainHandoffCaptainId?: string;
   readonly openStoreCaptainHandoffExceptionId?: string;
@@ -149,6 +153,41 @@ function preparationSlaLabel(preparation: DshOrderPreparation): string | undefin
   return undefined;
 }
 
+function validateCount(value: unknown, name: string, orderId: string): number {
+  const count = Number(value);
+  if (!Number.isInteger(count) || count < 0) {
+    throw new Error(`partner order ${orderId} has invalid ${name}`);
+  }
+  return count;
+}
+
+function validatePreparationIssueProjection(raw: CanonicalOrderShape, orderId: string) {
+  const openCount = validateCount(raw.openPreparationIssueCount, "openPreparationIssueCount", orderId);
+  const pendingCount = validateCount(raw.pendingCustomerDecisionCount, "pendingCustomerDecisionCount", orderId);
+  const resolvableCount = validateCount(raw.resolvablePreparationIssueCount, "resolvablePreparationIssueCount", orderId);
+  const issues = raw.preparationIssues ?? [];
+  const openIssues = issues.filter((issue) => issue.status === "open");
+  const projectedPendingCount = openIssues.filter((issue) => issue.customerDecision === "pending").length;
+  const projectedResolvableCount = openIssues.filter((issue) => !(
+    issue.kind === "substitution_required" && issue.customerDecision === "pending"
+  )).length;
+
+  if (openIssues.length !== openCount) {
+    throw new Error(`partner order ${orderId} preparation issue count is inconsistent`);
+  }
+  if (projectedPendingCount !== pendingCount) {
+    throw new Error(`partner order ${orderId} pending customer decision count is inconsistent`);
+  }
+  if (projectedResolvableCount !== resolvableCount) {
+    throw new Error(`partner order ${orderId} resolvable preparation issue count is inconsistent`);
+  }
+  if (pendingCount > openCount || resolvableCount > openCount) {
+    throw new Error(`partner order ${orderId} preparation decision counts exceed open issues`);
+  }
+
+  return { openCount, pendingCount, resolvableCount } as const;
+}
+
 function validateHandoffExceptionProjection(raw: CanonicalOrderShape, orderId: string) {
   const id = String(raw.openStoreCaptainHandoffExceptionId ?? "").trim();
   const reason = raw.openStoreCaptainHandoffExceptionReason ?? "";
@@ -183,15 +222,8 @@ export function mapDshOrderToPartnerOrderItem(order: DshPartnerOrder): GovernedP
   if (!Array.isArray(raw.items)) {
     throw new Error(`partner order ${orderId} is missing immutable order items`);
   }
-  const openPreparationIssueCount = Number(raw.openPreparationIssueCount);
-  if (!Number.isInteger(openPreparationIssueCount) || openPreparationIssueCount < 0) {
-    throw new Error(`partner order ${orderId} has invalid openPreparationIssueCount`);
-  }
-  const projectedOpenCount = raw.preparationIssues.filter((issue) => issue.status === "open").length;
-  if (projectedOpenCount !== openPreparationIssueCount) {
-    throw new Error(`partner order ${orderId} preparation issue count is inconsistent`);
-  }
 
+  const preparationIssues = validatePreparationIssueProjection(raw, orderId);
   const handoffException = validateHandoffExceptionProjection(raw, orderId);
   const status = resolvePartnerStatus(raw.status);
   const orderMode = resolveOrderMode(orderId, raw.fulfillmentMode);
@@ -219,7 +251,7 @@ export function mapDshOrderToPartnerOrderItem(order: DshPartnerOrder): GovernedP
   const acceptanceRisk = status === "needs_accept" && elapsed.minutes >= 10;
   const preparationRisk = raw.preparation.preparationSlaState === "due_soon"
     || raw.preparation.preparationSlaState === "overdue";
-  const issueRisk = openPreparationIssueCount > 0;
+  const issueRisk = preparationIssues.openCount > 0;
   const custodyExceptionRisk = handoffException.hasException;
   const slaLabel = preparationSlaLabel(raw.preparation);
 
@@ -231,7 +263,9 @@ export function mapDshOrderToPartnerOrderItem(order: DshPartnerOrder): GovernedP
     allowedActions: [...raw.allowedActions],
     preparation: raw.preparation,
     preparationIssues: [...raw.preparationIssues],
-    openPreparationIssueCount,
+    openPreparationIssueCount: preparationIssues.openCount,
+    pendingCustomerDecisionCount: preparationIssues.pendingCount,
+    resolvablePreparationIssueCount: preparationIssues.resolvableCount,
     orderItems,
     storeCaptainHandoffStatus: raw.storeCaptainHandoffStatus ?? "",
     storeCaptainHandoffCaptainId: String(raw.storeCaptainHandoffCaptainId ?? ""),
