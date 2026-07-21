@@ -7,7 +7,7 @@
       "runtime": "apps/app-client/runtime",
       "requiredRole": "client",
       "requiredSurface": "app-client",
-      "entry": "apps/app-client/runtime/App.tsx",
+      "entry": "apps/app-client/runtime/src/App.tsx",
       "selfService": "services/dsh/frontend/app-client/account/IdentityHubScreen.tsx"
     },
     {
@@ -15,21 +15,21 @@
       "runtime": "apps/app-partner/runtime",
       "requiredRole": "partner",
       "requiredSurface": "app-partner",
-      "entry": "apps/app-partner/runtime/App.tsx"
+      "entry": "apps/app-partner/runtime/src/App.tsx"
     },
     {
       "surface": "app-captain",
       "runtime": "apps/app-captain/runtime",
       "requiredRole": "captain",
       "requiredSurface": "app-captain",
-      "entry": "apps/app-captain/runtime/App.tsx"
+      "entry": "apps/app-captain/runtime/src/App.tsx"
     },
     {
       "surface": "app-field",
       "runtime": "apps/app-field/runtime",
       "requiredRole": "field",
       "requiredSurface": "app-field",
-      "entry": "apps/app-field/runtime/App.tsx"
+      "entry": "apps/app-field/runtime/src/App.tsx"
     },
     {
       "surface": "control-panel",
