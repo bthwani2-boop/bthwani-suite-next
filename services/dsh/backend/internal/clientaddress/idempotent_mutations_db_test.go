@@ -72,16 +72,17 @@ func integrationDraft(suffix string, makeDefault bool) CreateInput {
 		PhoneE164:            integrationPhone(suffix, "71"),
 		AddressLine:          "Updated integration address " + suffix,
 		ServiceAreaCode:      "integration-area-" + suffix,
-		Building:             "updated-building-" + suffix,
-		Floor:                "2",
-		Unit:                 "updated-unit-" + suffix,
-		DeliveryInstructions: "updated-instruction-" + suffix,
+		Building:             stringPointer("updated-building-" + suffix),
+		Floor:                stringPointer("2"),
+		Unit:                 stringPointer("updated-unit-" + suffix),
+		DeliveryInstructions: stringPointer("updated-instruction-" + suffix),
 		Latitude:             floatPointer(15.31),
 		Longitude:            floatPointer(44.21),
 		MakeDefault:          makeDefault,
 	}
 }
 
+func stringPointer(value string) *string { return &value }
 func floatPointer(value float64) *float64 { return &value }
 
 func eventCount(t *testing.T, db *sql.DB, clientID, addressID, action string) int {
