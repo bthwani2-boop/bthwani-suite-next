@@ -4,13 +4,13 @@
 -- the targeting projection and therefore does not create a second content owner.
 
 CREATE TABLE IF NOT EXISTS dsh_home_content_targets (
-  content_kind       TEXT        NOT NULL CHECK (content_kind IN ('banners','promos')),
-  content_id         TEXT        NOT NULL,
-  target_type        TEXT        NOT NULL CHECK (target_type IN ('city','service_area','audience')),
-  target_value       TEXT        NOT NULL CHECK (length(trim(target_value)) BETWEEN 1 AND 80),
-  created_by_actor_id TEXT       NOT NULL,
-  correlation_id     TEXT        NOT NULL CHECK (length(trim(correlation_id)) >= 8),
-  created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  content_kind        TEXT        NOT NULL CHECK (content_kind IN ('banners','promos')),
+  content_id          TEXT        NOT NULL,
+  target_type         TEXT        NOT NULL CHECK (target_type IN ('city','service_area','audience')),
+  target_value        TEXT        NOT NULL CHECK (length(trim(target_value)) BETWEEN 1 AND 80),
+  created_by_actor_id TEXT        NOT NULL,
+  correlation_id      TEXT        NOT NULL CHECK (length(trim(correlation_id)) >= 8),
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (content_kind, content_id, target_type, target_value)
 );
 
@@ -19,6 +19,25 @@ CREATE INDEX IF NOT EXISTS idx_dsh_home_content_targets_lookup
 
 CREATE INDEX IF NOT EXISTS idx_dsh_home_content_targets_reverse
   ON dsh_home_content_targets(target_type, target_value, content_kind, content_id);
+
+CREATE OR REPLACE FUNCTION dsh_cleanup_home_content_targets()
+RETURNS TRIGGER AS $$
+BEGIN
+  DELETE FROM dsh_home_content_targets
+  WHERE content_kind = TG_ARGV[0] AND content_id = OLD.id;
+  RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_dsh_home_banner_target_cleanup ON dsh_home_banners;
+CREATE TRIGGER trg_dsh_home_banner_target_cleanup
+AFTER DELETE ON dsh_home_banners
+FOR EACH ROW EXECUTE FUNCTION dsh_cleanup_home_content_targets('banners');
+
+DROP TRIGGER IF EXISTS trg_dsh_home_promo_target_cleanup ON dsh_home_promos;
+CREATE TRIGGER trg_dsh_home_promo_target_cleanup
+AFTER DELETE ON dsh_home_promos
+FOR EACH ROW EXECUTE FUNCTION dsh_cleanup_home_content_targets('promos');
 
 COMMENT ON TABLE dsh_home_content_targets IS
   'JRN-007 targeting projection. Empty dimension = all; audience values are guest/authenticated.';
