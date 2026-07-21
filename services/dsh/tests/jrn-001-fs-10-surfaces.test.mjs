@@ -43,6 +43,9 @@ const clientStoreScreen = read("services/dsh/frontend/app-client/store/StoreDeta
 const clientCartScreen = read("services/dsh/frontend/app-client/cart/CartScreen.tsx");
 assert.match(clientDiscoveryRoute, /onStorePress=\{onStorePress\}/);
 assert.match(clientDiscoveryScreen, /onStorePress=\{onStorePress\}/);
+assert.match(clientDiscoveryScreen, /const serviceAreaCode = addressController\.selectedAddress\?\.serviceAreaCode/);
+assert.match(clientDiscoveryScreen, /\.\.\.\(serviceAreaCode !== undefined \? \{ serviceAreaCode \} : \{\}\)/);
+assert.doesNotMatch(clientDiscoveryScreen, /serviceAreaCode:\s*addressController\.selectedAddress\?\.serviceAreaCode/);
 assert.match(clientStoreRoute, /storeId=\{storeId\}/);
 assert.match(clientStoreRoute, /onBack=\{onBack\}/);
 assert.match(clientStoreScreen, /!store\.isClientEligible/);
