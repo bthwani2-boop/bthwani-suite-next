@@ -23,7 +23,7 @@ test("DSH reads WLT truth and updates a read-only projection without wallet muta
   const main = read("backend/cmd/dsh-api/main.go");
 
   assert.match(client, /GetPaymentSession/);
-  assert.match(client, /"GET", "\/payment-sessions\/"\+sessionID/);
+  assert.match(client, /http\.MethodGet, c\.baseURL\+"\/wlt\/payment-sessions\/"\+sessionID/);
   assert.match(worker, /FOR UPDATE SKIP LOCKED/);
   assert.match(worker, /GetPaymentSession/);
   assert.match(worker, /payment_projection_source_updated_at/);
