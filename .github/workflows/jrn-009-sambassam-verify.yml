@@ -75,7 +75,18 @@ jobs:
       - name: Setup pinned Node workspace
         uses: ./.github/actions/setup-node-workspace
       - name: Typecheck cart shared brain and affected surfaces
-        run: pnpm --dir services/dsh exec tsc -p tsconfig.jrn-009.json --noEmit --pretty false
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm --dir services/dsh exec tsc -p tsconfig.jrn-009.json --noEmit --pretty false 2>&1 | tee /tmp/jrn-009-frontend-typecheck.log
+      - name: Upload frontend typecheck evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: jrn-009-frontend-typecheck-evidence
+          path: /tmp/jrn-009-frontend-typecheck.log
+          retention-days: 3
+          if-no-files-found: error
 
   backend-go:
     name: JRN-009 cart and HTTP behavior
