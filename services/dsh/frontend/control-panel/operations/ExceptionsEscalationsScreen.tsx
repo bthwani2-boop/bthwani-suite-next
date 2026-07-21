@@ -17,24 +17,31 @@ import {
   resolveDeliveryExceptionReassignCaptain,
   resolveDeliveryExceptionRetrySameCaptain,
   resolveDeliveryExceptionReturnToStore,
+  type DshDeliveryException,
 } from '../../shared/dispatch';
-import type { DshDeliveryException } from '../../shared/dispatch';
 import {
   FINANCIAL_CLOSURE_LABELS,
   cancelOrder,
   fetchOrderCancellation,
   type DshOrderCancellation,
 } from '../../shared/orders';
-import { listCaptains } from '../../shared/workforce';
-import type { Captain } from '../../shared/workforce';
+import { listCaptains, type Captain } from '../../shared/workforce';
 import { buildOperationsHref } from './operations.registry';
 
-export type ExceptionsEscalationsScreenProps = { readonly hubHref: string; readonly subGroup?: string };
+export type ExceptionsEscalationsScreenProps = {
+  readonly hubHref: string;
+  readonly subGroup?: string;
+};
 
 type WorkspaceState =
   | { readonly kind: 'loading' }
   | { readonly kind: 'error'; readonly message: string }
-  | { readonly kind: 'ready'; readonly readiness: readonly DshReadinessEscalation[]; readonly delivery: readonly DshDeliveryException[]; readonly returns: readonly DshDeliveryException[] };
+  | {
+      readonly kind: 'ready';
+      readonly readiness: readonly DshReadinessEscalation[];
+      readonly delivery: readonly DshDeliveryException[];
+      readonly returns: readonly DshDeliveryException[];
+    };
 
 type ActionState =
   | { readonly kind: 'idle' }
@@ -52,8 +59,14 @@ const DELIVERY_EXCEPTION_REASON_LABELS: Record<DshDeliveryException['reasonCode'
   cash_collection_issue: 'تعذر تحصيل النقد',
   weather_or_road_block: 'طقس أو طريق مغلق',
   proof_unavailable: 'تعذر إثبات التسليم',
+  handoff_shortage: 'نقص في محتوى عهدة المتجر والكابتن',
+  handoff_mismatch: 'محتوى العهدة لا يطابق الطلب',
   other: 'سبب آخر',
 };
+
+function isHandoffException(item: DshDeliveryException): boolean {
+  return item.reasonCode === 'handoff_shortage' || item.reasonCode === 'handoff_mismatch';
+}
 
 function exceptionTone(severity: DshDeliveryException['severity']): 'danger' | 'warning' | 'neutral' {
   if (severity === 'critical') return 'danger';
@@ -61,7 +74,9 @@ function exceptionTone(severity: DshDeliveryException['severity']): 'danger' | '
   return 'neutral';
 }
 
-function financialTone(status: DshOrderCancellation['financialClosureStatus']): 'danger' | 'warning' | 'success' | 'neutral' | 'info' {
+function financialTone(
+  status: DshOrderCancellation['financialClosureStatus'],
+): 'danger' | 'warning' | 'success' | 'neutral' | 'info' {
   if (status === 'failed') return 'danger';
   if (status === 'pending') return 'warning';
   if (status === 'refund_requested') return 'info';
@@ -85,7 +100,13 @@ function isEligibleCaptain(captain: Captain): boolean {
 }
 
 function canReassign(item: DshDeliveryException): boolean {
-  return item.deliveryStatusAtReport === 'driver_assigned' || item.deliveryStatusAtReport === 'driver_arrived_store';
+  return item.deliveryStatusAtReport === 'driver_assigned'
+    || item.deliveryStatusAtReport === 'driver_arrived_store';
+}
+
+function canReturnToStore(item: DshDeliveryException): boolean {
+  return item.deliveryStatusAtReport === 'picked_up'
+    || item.deliveryStatusAtReport === 'arrived_customer';
 }
 
 export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsScreenProps) {
@@ -97,8 +118,10 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
   const [selectedReadinessId, setSelectedReadinessId] = React.useState<string | null>(null);
   const [selectedDeliveryId, setSelectedDeliveryId] = React.useState<string | null>(null);
   const [selectedReturnId, setSelectedReturnId] = React.useState<string | null>(null);
-  const [returnCancellations, setReturnCancellations] = React.useState<Readonly<Record<string, DshOrderCancellation | null>>>({});
   const [selectedReplacementCaptainId, setSelectedReplacementCaptainId] = React.useState('');
+  const [returnCancellations, setReturnCancellations] = React.useState<
+    Readonly<Record<string, DshOrderCancellation | null>>
+  >({});
   const [note, setNote] = React.useState('');
   const [actionState, setActionState] = React.useState<ActionState>({ kind: 'idle' });
 
@@ -128,7 +151,10 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
         returns,
       });
     } catch (error) {
-      setState({ kind: 'error', message: error instanceof Error ? error.message : 'تعذر تحميل الاستثناءات الحية من DSH.' });
+      setState({
+        kind: 'error',
+        message: error instanceof Error ? error.message : 'تعذر تحميل الاستثناءات الحية من DSH.',
+      });
     }
   }, []);
 
@@ -146,12 +172,43 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
     }
   }, []);
 
-  React.useEffect(() => { void load(); void loadCaptains(); }, [load, loadCaptains]);
+  React.useEffect(() => {
+    void load();
+    void loadCaptains();
+  }, [load, loadCaptains]);
+
   React.useEffect(() => {
     setNote('');
     setSelectedReplacementCaptainId('');
     setActionState({ kind: 'idle' });
   }, [selectedReadinessId, selectedDeliveryId, selectedReturnId]);
+
+  const runDeliveryAction = React.useCallback(async (
+    item: DshDeliveryException,
+    action: () => Promise<unknown>,
+    fallbackMessage: string,
+  ) => {
+    if (note.trim().length < 5) {
+      setActionState({
+        kind: 'error',
+        id: item.id,
+        message: 'اكتب قرارًا تشغيليًا واضحًا من خمسة أحرف على الأقل.',
+      });
+      return;
+    }
+    setActionState({ kind: 'submitting', id: item.id });
+    try {
+      await action();
+      setSelectedDeliveryId(null);
+      await load();
+    } catch (error) {
+      setActionState({
+        kind: 'error',
+        id: item.id,
+        message: error instanceof Error ? error.message : fallbackMessage,
+      });
+    }
+  }, [load, note]);
 
   const acknowledge = React.useCallback(async (item: DshDeliveryException) => {
     setActionState({ kind: 'submitting', id: item.id });
@@ -160,69 +217,13 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
       setSelectedDeliveryId(null);
       await load();
     } catch (error) {
-      setActionState({ kind: 'error', id: item.id, message: error instanceof Error ? error.message : 'تعذر اعتماد الاستثناء.' });
+      setActionState({
+        kind: 'error',
+        id: item.id,
+        message: error instanceof Error ? error.message : 'تعذر اعتماد الاستثناء.',
+      });
     }
   }, [load]);
-
-  const resolveRetry = React.useCallback(async (item: DshDeliveryException) => {
-    if (note.trim().length < 5) {
-      setActionState({ kind: 'error', id: item.id, message: 'اكتب قرارًا تشغيليًا واضحًا من خمسة أحرف على الأقل.' });
-      return;
-    }
-    setActionState({ kind: 'submitting', id: item.id });
-    try {
-      await resolveDeliveryExceptionRetrySameCaptain(item.id, item.version, note.trim());
-      setSelectedDeliveryId(null);
-      await load();
-    } catch (error) {
-      setActionState({ kind: 'error', id: item.id, message: error instanceof Error ? error.message : 'تعذر حل الاستثناء.' });
-    }
-  }, [load, note]);
-
-  const resolveReassign = React.useCallback(async (item: DshDeliveryException) => {
-    if (!selectedReplacementCaptainId || note.trim().length < 5) {
-      setActionState({ kind: 'error', id: item.id, message: 'اختر كابتنًا مؤهلًا واكتب قرارًا تشغيليًا واضحًا.' });
-      return;
-    }
-    setActionState({ kind: 'submitting', id: item.id });
-    try {
-      await resolveDeliveryExceptionReassignCaptain(item.id, item.version, selectedReplacementCaptainId, note.trim());
-      setSelectedDeliveryId(null);
-      await load();
-    } catch (error) {
-      setActionState({ kind: 'error', id: item.id, message: error instanceof Error ? error.message : 'تعذر إعادة إسناد المهمة.' });
-    }
-  }, [load, note, selectedReplacementCaptainId]);
-
-  const resolveReturn = React.useCallback(async (item: DshDeliveryException) => {
-    if (note.trim().length < 5) {
-      setActionState({ kind: 'error', id: item.id, message: 'اكتب سبب الإرجاع وخطوات التسليم للمتجر.' });
-      return;
-    }
-    setActionState({ kind: 'submitting', id: item.id });
-    try {
-      await resolveDeliveryExceptionReturnToStore(item.id, item.version, note.trim());
-      setSelectedDeliveryId(null);
-      await load();
-    } catch (error) {
-      setActionState({ kind: 'error', id: item.id, message: error instanceof Error ? error.message : 'تعذر بدء إرجاع الطلب.' });
-    }
-  }, [load, note]);
-
-  const resolveCancel = React.useCallback(async (item: DshDeliveryException) => {
-    if (note.trim().length < 5) {
-      setActionState({ kind: 'error', id: item.id, message: 'اكتب سبب الإلغاء المباشر قبل الاستلام.' });
-      return;
-    }
-    setActionState({ kind: 'submitting', id: item.id });
-    try {
-      await resolveDeliveryExceptionCancelOrder(item.id, item.version, note.trim());
-      setSelectedDeliveryId(null);
-      await load();
-    } catch (error) {
-      setActionState({ kind: 'error', id: item.id, message: error instanceof Error ? error.message : 'تعذر إلغاء الطلب مباشرة.' });
-    }
-  }, [load, note]);
 
   const cancelReturnedOrder = React.useCallback(async (item: DshDeliveryException) => {
     if (!item.returnedAt) {
@@ -243,39 +244,70 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
       setReturnCancellations((current) => ({ ...current, [item.orderId]: response.cancellation }));
       await load();
     } catch (error) {
-      setActionState({ kind: 'error', id: item.id, message: error instanceof Error ? error.message : 'تعذر تنفيذ الإلغاء المالي الحاكم.' });
+      setActionState({
+        kind: 'error',
+        id: item.id,
+        message: error instanceof Error ? error.message : 'تعذر تنفيذ الإلغاء المالي الحاكم.',
+      });
     }
   }, [load, note]);
 
-  const resolveReadiness = React.useCallback(async (item: DshReadinessEscalation, status: 'acknowledged' | 'resolved') => {
+  const resolveReadiness = React.useCallback(async (
+    item: DshReadinessEscalation,
+    status: 'acknowledged' | 'resolved',
+  ) => {
     if (status === 'resolved' && note.trim().length < 5) {
       setActionState({ kind: 'error', id: item.id, message: 'اكتب نتيجة حل واضحة من خمسة أحرف على الأقل.' });
       return;
     }
     setActionState({ kind: 'submitting', id: item.id });
     try {
-      await updateEscalation(item.id, { status, resolutionNote: note.trim() || 'تم استلام التصعيد وبدء المراجعة التشغيلية.' });
+      await updateEscalation(item.id, {
+        status,
+        resolutionNote: note.trim() || 'تم استلام التصعيد وبدء المراجعة التشغيلية.',
+      });
       setSelectedReadinessId(null);
       await load();
     } catch (error) {
-      setActionState({ kind: 'error', id: item.id, message: error instanceof Error ? error.message : 'تعذر حفظ التصعيد.' });
+      setActionState({
+        kind: 'error',
+        id: item.id,
+        message: error instanceof Error ? error.message : 'تعذر حفظ التصعيد.',
+      });
     }
   }, [load, note]);
 
-  if (state.kind === 'loading') return <StateView loading title="جارٍ تحميل الاستثناءات الحية من DSH" />;
-  if (state.kind === 'error') return <StateView tone="danger" title="تعذر تحميل مساحة الاستثناءات" description={state.message} actionLabel="إعادة المحاولة" onActionPress={load} />;
+  if (state.kind === 'loading') {
+    return <StateView loading title="جارٍ تحميل الاستثناءات الحية من DSH" />;
+  }
+  if (state.kind === 'error') {
+    return (
+      <StateView
+        tone="danger"
+        title="تعذر تحميل مساحة الاستثناءات"
+        description={state.message}
+        actionLabel="إعادة المحاولة"
+        onActionPress={load}
+      />
+    );
+  }
 
   const selectedDelivery = state.delivery.find((item) => item.id === selectedDeliveryId) ?? null;
   const selectedReadiness = state.readiness.find((item) => item.id === selectedReadinessId) ?? null;
   const selectedReturn = state.returns.find((item) => item.id === selectedReturnId) ?? null;
-  const replacementCaptains = selectedDelivery ? captains.filter((captain) => captain.actorId !== selectedDelivery.captainId) : [];
+  const replacementCaptains = selectedDelivery
+    ? captains.filter((captain) => captain.actorId !== selectedDelivery.captainId)
+    : [];
+  const activeHandoffExceptions = state.delivery.filter(isHandoffException);
 
   return (
     <Box gap={4}>
       <Box gap={2} style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
         <Box gap={1}>
           <Text role="titleMd" align="start">الاستثناءات والتصعيدات</Text>
-          <Text role="caption" tone="muted" align="start">طابور حقيقي من DSH، والكباتن البدلاء من Workforce فقط.</Text>
+          <Text role="caption" tone="muted" align="start">
+            طابور حقيقي من DSH. استثناءات العهدة توقف تأكيد المتجر والتقاط الكابتن حتى قرار العمليات.
+          </Text>
         </Box>
         <Box gap={2} style={{ flexDirection: 'row' }}>
           <Button label="تحديث" tone="secondary" onPress={() => { void load(); void loadCaptains(); }} />
@@ -283,37 +315,69 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
         </Box>
       </Box>
 
-      {captainsState === 'error' ? <StateView tone="warning" title="تعذر تحميل الكباتن البدلاء" description={captainsError} actionLabel="إعادة المحاولة" onActionPress={loadCaptains} /> : null}
+      {captainsState === 'error' ? (
+        <StateView
+          tone="warning"
+          title="تعذر تحميل الكباتن البدلاء"
+          description={captainsError}
+          actionLabel="إعادة المحاولة"
+          onActionPress={loadCaptains}
+        />
+      ) : null}
 
       <Box gap={2} style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-        <Badge label={`استثناءات توصيل نشطة: ${state.delivery.length}`} tone={state.delivery.length ? 'warning' : 'success'} />
+        <Badge label={`استثناءات نشطة: ${state.delivery.length}`} tone={state.delivery.length ? 'warning' : 'success'} />
+        <Badge label={`استثناءات عهدة: ${activeHandoffExceptions.length}`} tone={activeHandoffExceptions.length ? 'danger' : 'success'} />
         <Badge label={`كباتن مؤهلون: ${captainsState === 'ready' ? captains.length : '—'}`} tone={captains.length ? 'success' : 'warning'} />
         <Badge label={`مرتجعات في الطريق: ${state.returns.filter((item) => !item.returnArrivedAt).length}`} tone="warning" />
         <Badge label={`بانتظار المتجر: ${state.returns.filter((item) => Boolean(item.returnArrivedAt) && !item.returnedAt).length}`} tone="warning" />
-        <Badge label={`مرتجعات مستلمة: ${state.returns.filter((item) => Boolean(item.returnedAt)).length}`} tone="neutral" />
         <Badge label={`تصعيدات جاهزية: ${state.readiness.filter((item) => item.status !== 'resolved').length}`} tone="neutral" />
       </Box>
 
       <Box gap={4} style={{ flexDirection: 'row', alignItems: 'flex-start', flexWrap: 'wrap' }}>
         <Box gap={3} style={{ flex: 1, minWidth: 340 }}>
-          <Text role="titleSm" align="start">استثناءات التوصيل الحاكمة</Text>
-          {state.delivery.length === 0 ? <StateView tone="success" title="لا توجد استثناءات توصيل نشطة" /> : state.delivery.map((item) => (
+          <Text role="titleSm" align="start">استثناءات التوصيل والعهدة</Text>
+          {state.delivery.length === 0 ? (
+            <StateView tone="success" title="لا توجد استثناءات نشطة" />
+          ) : state.delivery.map((item) => (
             <Card key={item.id} padding={4} gap={2}>
               <Box gap={2} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Box gap={1} style={{ flex: 1 }}>
                   <Text role="bodyStrong" align="start">{DELIVERY_EXCEPTION_REASON_LABELS[item.reasonCode]}</Text>
-                  <Text role="caption" tone="muted" align="start">الطلب: {item.orderId} · الكابتن: {item.captainId}</Text>
-                  <Text role="caption" tone="muted" align="start">المرحلة المحفوظة: {item.deliveryStatusAtReport}</Text>
+                  <Text role="caption" tone="muted" align="start">
+                    الطلب: {item.orderId} · الكابتن: {item.captainId}
+                  </Text>
+                  <Text role="caption" tone="muted" align="start">
+                    المرحلة المحفوظة: {item.deliveryStatusAtReport}
+                  </Text>
                   {item.note ? <Text role="bodySm" align="start">{item.note}</Text> : null}
                 </Box>
                 <Box gap={1} style={{ alignItems: 'flex-end' }}>
+                  {isHandoffException(item) ? <Badge label="عهدة متجر–كابتن" tone="danger" /> : null}
                   <Badge label={item.severity} tone={exceptionTone(item.severity)} />
-                  <Badge label={item.status === 'open' ? 'جديد' : 'قيد المراجعة'} tone={item.status === 'open' ? 'danger' : 'warning'} />
+                  <Badge
+                    label={item.status === 'open' ? 'جديد' : 'قيد المراجعة'}
+                    tone={item.status === 'open' ? 'danger' : 'warning'}
+                  />
                 </Box>
               </Box>
               <Box gap={2} style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                <Button label="فتح القرار" tone="secondary" size="sm" onPress={() => { setSelectedReadinessId(null); setSelectedDeliveryId(item.id); }} />
-                <Button label="فتح الطلب الحي" tone="ghost" size="sm" onPress={() => router.push(buildOperationsHref('live-orders', { subGroup: 'queue', orderId: item.orderId }))} />
+                <Button
+                  label="فتح القرار"
+                  tone="secondary"
+                  size="sm"
+                  onPress={() => {
+                    setSelectedReadinessId(null);
+                    setSelectedReturnId(null);
+                    setSelectedDeliveryId(item.id);
+                  }}
+                />
+                <Button
+                  label="فتح الطلب الحي"
+                  tone="ghost"
+                  size="sm"
+                  onPress={() => router.push(buildOperationsHref('live-orders', { subGroup: 'queue', orderId: item.orderId }))}
+                />
               </Box>
             </Card>
           ))}
@@ -321,12 +385,28 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
 
         <Box gap={3} style={{ flex: 1, minWidth: 340 }}>
           <Text role="titleSm" align="start">تصعيدات الجاهزية</Text>
-          {state.readiness.length === 0 ? <StateView tone="neutral" title="لا توجد تصعيدات جاهزية" /> : state.readiness.map((item) => (
+          {state.readiness.length === 0 ? (
+            <StateView tone="neutral" title="لا توجد تصعيدات جاهزية" />
+          ) : state.readiness.map((item) => (
             <Card key={item.id} padding={4} gap={2}>
               <Text role="bodyStrong" align="start">{ESCALATION_CATEGORY_LABELS[item.category] ?? item.category}</Text>
               <Text role="caption" tone="muted" align="start">{item.description}</Text>
-              <Badge label={ESCALATION_SEVERITY_LABELS[item.severity] ?? item.severity} tone={item.severity === 'critical' || item.severity === 'high' ? 'danger' : 'neutral'} />
-              {item.status !== 'resolved' ? <Button label="فتح التصعيد" tone="secondary" size="sm" onPress={() => { setSelectedDeliveryId(null); setSelectedReadinessId(item.id); }} /> : null}
+              <Badge
+                label={ESCALATION_SEVERITY_LABELS[item.severity] ?? item.severity}
+                tone={item.severity === 'critical' || item.severity === 'high' ? 'danger' : 'neutral'}
+              />
+              {item.status !== 'resolved' ? (
+                <Button
+                  label="فتح التصعيد"
+                  tone="secondary"
+                  size="sm"
+                  onPress={() => {
+                    setSelectedDeliveryId(null);
+                    setSelectedReturnId(null);
+                    setSelectedReadinessId(item.id);
+                  }}
+                />
+              ) : null}
             </Card>
           ))}
         </Box>
@@ -342,25 +422,181 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
             <Card key={`return-${item.id}`} padding={4} gap={2}>
               <Text role="bodyStrong" align="start">الطلب: {item.orderId}</Text>
               <Text role="caption" tone="muted" align="start">الكابتن: {item.captainId}</Text>
-              <Badge label={item.returnedAt ? 'استلم المتجر المرتجع' : item.returnArrivedAt ? 'وصل المرتجع وينتظر تأكيد المتجر' : 'في طريق العودة إلى المتجر'} tone={item.returnedAt ? 'success' : 'warning'} />
+              <Badge
+                label={item.returnedAt
+                  ? 'استلم المتجر المرتجع'
+                  : item.returnArrivedAt
+                    ? 'وصل المرتجع وينتظر تأكيد المتجر'
+                    : 'في طريق العودة إلى المتجر'}
+                tone={item.returnedAt ? 'success' : 'warning'}
+              />
               <Text role="bodySm" align="start">{item.resolutionNote}</Text>
               {cancellation ? (
                 <>
-                  <Badge label={FINANCIAL_CLOSURE_LABELS[cancellation.financialClosureStatus]} tone={financialTone(cancellation.financialClosureStatus)} />
-                  {cancellation.financialReference ? <Text role="caption" align="start">المرجع المالي: {cancellation.financialReference}</Text> : null}
-                  {cancellation.financialFailure ? <Text role="caption" tone="danger" align="start">{cancellation.financialFailure}</Text> : null}
+                  <Badge
+                    label={FINANCIAL_CLOSURE_LABELS[cancellation.financialClosureStatus]}
+                    tone={financialTone(cancellation.financialClosureStatus)}
+                  />
+                  {cancellation.financialReference ? (
+                    <Text role="caption" align="start">المرجع المالي: {cancellation.financialReference}</Text>
+                  ) : null}
+                  {cancellation.financialFailure ? (
+                    <Text role="caption" tone="danger" align="start">{cancellation.financialFailure}</Text>
+                  ) : null}
                 </>
-              ) : item.returnedAt ? (
-                <Badge label="بانتظار قرار الإلغاء المالي" tone="warning" />
-              ) : null}
+              ) : item.returnedAt ? <Badge label="بانتظار قرار الإلغاء المالي" tone="warning" /> : null}
               <Box gap={2} style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                {item.returnedAt ? <Button label={cancellation ? 'فتح الإغلاق المالي' : 'بدء الإغلاق المالي'} tone="secondary" size="sm" onPress={() => { setSelectedDeliveryId(null); setSelectedReadinessId(null); setSelectedReturnId(item.id); }} /> : null}
-                <Button label="فتح الطلب الحي" tone="ghost" size="sm" onPress={() => router.push(buildOperationsHref('live-orders', { subGroup: 'queue', orderId: item.orderId }))} />
+                {item.returnedAt ? (
+                  <Button
+                    label={cancellation ? 'فتح الإغلاق المالي' : 'بدء الإغلاق المالي'}
+                    tone="secondary"
+                    size="sm"
+                    onPress={() => {
+                      setSelectedDeliveryId(null);
+                      setSelectedReadinessId(null);
+                      setSelectedReturnId(item.id);
+                    }}
+                  />
+                ) : null}
+                <Button
+                  label="فتح الطلب الحي"
+                  tone="ghost"
+                  size="sm"
+                  onPress={() => router.push(buildOperationsHref('live-orders', { subGroup: 'queue', orderId: item.orderId }))}
+                />
               </Box>
             </Card>
           );
         })}
       </Box>
+
+      {selectedDelivery ? (
+        <Card padding={4} gap={3}>
+          <Text role="titleSm" align="start">
+            {isHandoffException(selectedDelivery) ? 'قرار استثناء عهدة المتجر والكابتن' : 'قرار استثناء التوصيل'}
+          </Text>
+          <Text role="bodySm" align="start">
+            {isHandoffException(selectedDelivery)
+              ? 'إعادة المحاولة ترفع حظر العهدة بعد التحقق. إعادة الإسناد تبطل محاولة العهدة الحالية فورًا وتفتح محاولة جديدة للكابتن البديل عند وصوله.'
+              : 'إعادة المحاولة ترفع الحظر فقط. إعادة الإسناد متاحة قبل الاستلام وتلغي الإسناد القديم ذريًا.'}
+          </Text>
+          <TextField
+            label="قرار العمليات"
+            value={note}
+            onChangeText={setNote}
+            placeholder="سجل سبب القرار وخطوات التحقق"
+            multiline
+          />
+          {canReassign(selectedDelivery) ? (
+            <>
+              <label htmlFor="replacement-captain-select" style={{ fontWeight: 700 }}>الكابتن البديل المؤهل</label>
+              <select
+                id="replacement-captain-select"
+                value={selectedReplacementCaptainId}
+                onChange={(event) => setSelectedReplacementCaptainId(event.target.value)}
+                disabled={captainsState !== 'ready' || actionState.kind === 'submitting'}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  border: '1px solid var(--bthwani-control-panel-border)',
+                  borderRadius: 8,
+                  background: 'var(--bthwani-control-panel-surface-base)',
+                }}
+              >
+                <option value="">اختر كابتنًا بديلًا</option>
+                {replacementCaptains.map((captain) => (
+                  <option key={captain.actorId} value={captain.actorId}>
+                    {`${captain.fullNameAr} · ${captain.captainProfile?.vehicleType ?? ''} · ${captain.captainProfile?.serviceZoneId ?? ''}`}
+                  </option>
+                ))}
+              </select>
+            </>
+          ) : (
+            <Text role="caption" tone="muted">
+              بعد الاستلام لا يُسمح بإعادة الإسناد؛ استخدم رحلة الإرجاع أو الإلغاء الحاكمة.
+            </Text>
+          )}
+          {actionState.kind === 'error' && actionState.id === selectedDelivery.id ? (
+            <Text role="caption" tone="danger">{actionState.message}</Text>
+          ) : null}
+          <Box gap={2} style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+            {selectedDelivery.status === 'open' ? (
+              <Button
+                label="اعتماد وبدء المراجعة"
+                tone="secondary"
+                disabled={actionState.kind === 'submitting'}
+                onPress={() => void acknowledge(selectedDelivery)}
+              />
+            ) : null}
+            <Button
+              label={isHandoffException(selectedDelivery)
+                ? 'حل: السماح باستكمال العهدة مع الكابتن نفسه'
+                : 'حل: إعادة المحاولة مع الكابتن نفسه'}
+              tone="primary"
+              disabled={actionState.kind === 'submitting'}
+              onPress={() => void runDeliveryAction(
+                selectedDelivery,
+                () => resolveDeliveryExceptionRetrySameCaptain(
+                  selectedDelivery.id,
+                  selectedDelivery.version,
+                  note.trim(),
+                ),
+                'تعذر حل الاستثناء.',
+              )}
+            />
+            {canReassign(selectedDelivery) ? (
+              <Button
+                label="حل: إعادة الإسناد للكابتن البديل"
+                tone="secondary"
+                disabled={!selectedReplacementCaptainId || actionState.kind === 'submitting'}
+                onPress={() => void runDeliveryAction(
+                  selectedDelivery,
+                  () => resolveDeliveryExceptionReassignCaptain(
+                    selectedDelivery.id,
+                    selectedDelivery.version,
+                    selectedReplacementCaptainId,
+                    note.trim(),
+                  ),
+                  'تعذر إعادة إسناد المهمة.',
+                )}
+              />
+            ) : null}
+            {canReassign(selectedDelivery) ? (
+              <Button
+                label="حل: إلغاء الطلب قبل الاستلام"
+                tone="danger"
+                disabled={actionState.kind === 'submitting'}
+                onPress={() => void runDeliveryAction(
+                  selectedDelivery,
+                  () => resolveDeliveryExceptionCancelOrder(
+                    selectedDelivery.id,
+                    selectedDelivery.version,
+                    note.trim(),
+                  ),
+                  'تعذر إلغاء الطلب مباشرة.',
+                )}
+              />
+            ) : null}
+            {canReturnToStore(selectedDelivery) ? (
+              <Button
+                label="حل: إرجاع الطلب إلى المتجر"
+                tone="secondary"
+                disabled={actionState.kind === 'submitting'}
+                onPress={() => void runDeliveryAction(
+                  selectedDelivery,
+                  () => resolveDeliveryExceptionReturnToStore(
+                    selectedDelivery.id,
+                    selectedDelivery.version,
+                    note.trim(),
+                  ),
+                  'تعذر بدء إرجاع الطلب.',
+                )}
+              />
+            ) : null}
+            <Button label="إغلاق التفاصيل" tone="ghost" onPress={() => setSelectedDeliveryId(null)} />
+          </Box>
+        </Card>
+      ) : null}
 
       {selectedReturn ? (
         <Card padding={4} gap={3}>
@@ -373,67 +609,70 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
                 tone={financialTone(returnCancellations[selectedReturn.orderId]!.financialClosureStatus)}
               />
               {returnCancellations[selectedReturn.orderId]!.financialReference ? (
-                <Text role="caption">المرجع المالي: {returnCancellations[selectedReturn.orderId]!.financialReference}</Text>
+                <Text role="caption">
+                  المرجع المالي: {returnCancellations[selectedReturn.orderId]!.financialReference}
+                </Text>
               ) : null}
               {returnCancellations[selectedReturn.orderId]!.financialFailure ? (
-                <Text role="caption" tone="danger">{returnCancellations[selectedReturn.orderId]!.financialFailure}</Text>
+                <Text role="caption" tone="danger">
+                  {returnCancellations[selectedReturn.orderId]!.financialFailure}
+                </Text>
               ) : null}
               <Button label="تحديث نتيجة WLT" tone="secondary" onPress={() => void load()} />
             </>
           ) : (
             <>
-              <Text role="bodySm" tone="muted">لن ينشئ DSH استردادًا مباشرًا. سيُنشئ أمر الإلغاء سجلًا واحدًا وOutbox واحدًا، ثم يقرر WLT تحرير الجلسة أو طلب الاسترداد.</Text>
-              <TextField label="سبب الإلغاء بعد فحص المرتجع" value={note} onChangeText={setNote} placeholder="سجل حالة المرتجع وسبب عدم إعادة التنفيذ" multiline />
-              {actionState.kind === 'error' && actionState.id === selectedReturn.id ? <Text role="caption" tone="danger">{actionState.message}</Text> : null}
-              <Button label="إلغاء الطلب وبدء الإغلاق المالي" tone="danger" disabled={actionState.kind === 'submitting' || note.trim().length < 5} onPress={() => void cancelReturnedOrder(selectedReturn)} />
+              <Text role="bodySm" tone="muted">
+                لن ينشئ DSH استردادًا مباشرًا. ينشئ أمر الإلغاء سجلًا وOutbox واحدًا، ثم يقرر WLT تحرير الجلسة أو طلب الاسترداد.
+              </Text>
+              <TextField
+                label="سبب الإلغاء بعد فحص المرتجع"
+                value={note}
+                onChangeText={setNote}
+                placeholder="سجل حالة المرتجع وسبب عدم إعادة التنفيذ"
+                multiline
+              />
+              {actionState.kind === 'error' && actionState.id === selectedReturn.id ? (
+                <Text role="caption" tone="danger">{actionState.message}</Text>
+              ) : null}
+              <Button
+                label="إلغاء الطلب وبدء الإغلاق المالي"
+                tone="danger"
+                disabled={actionState.kind === 'submitting' || note.trim().length < 5}
+                onPress={() => void cancelReturnedOrder(selectedReturn)}
+              />
             </>
           )}
           <Button label="إغلاق التفاصيل" tone="ghost" onPress={() => setSelectedReturnId(null)} />
         </Card>
       ) : null}
 
-      {selectedDelivery ? (
-        <Card padding={4} gap={3}>
-          <Text role="titleSm" align="start">قرار استثناء التوصيل {selectedDelivery.id}</Text>
-          <Text role="bodySm" align="start">إعادة المحاولة ترفع الحظر فقط. إعادة الإسناد متاحة قبل الاستلام وتلغي الإسناد القديم ذريًا.</Text>
-          <TextField label="قرار العمليات" value={note} onChangeText={setNote} placeholder="سجل سبب القرار وخطوات التحقق" multiline />
-          {canReassign(selectedDelivery) ? (
-            <>
-              <label htmlFor="replacement-captain-select" style={{ fontWeight: 700 }}>الكابتن البديل المؤهل</label>
-              <select
-                id="replacement-captain-select"
-                value={selectedReplacementCaptainId}
-                onChange={(event) => setSelectedReplacementCaptainId(event.target.value)}
-                disabled={captainsState !== 'ready' || actionState.kind === 'submitting'}
-                style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--bthwani-control-panel-border)', borderRadius: 8, background: 'var(--bthwani-control-panel-surface-base)' }}
-              >
-                <option value="">اختر كابتنًا بديلًا</option>
-                {replacementCaptains.map((captain) => (
-                  <option key={captain.actorId} value={captain.actorId}>{`${captain.fullNameAr} · ${captain.captainProfile?.vehicleType ?? ''} · ${captain.captainProfile?.serviceZoneId ?? ''}`}</option>
-                ))}
-              </select>
-            </>
-          ) : <Text role="caption" tone="muted">بعد استلام الطلب لا يُسمح بإعادة الإسناد؛ استخدم رحلة الإرجاع أو الإلغاء الحاكمة.</Text>}
-          {actionState.kind === 'error' && actionState.id === selectedDelivery.id ? <Text role="caption" tone="danger">{actionState.message}</Text> : null}
-          <Box gap={2} style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-            {selectedDelivery.status === 'open' ? <Button label="اعتماد وبدء المراجعة" tone="secondary" disabled={actionState.kind === 'submitting'} onPress={() => void acknowledge(selectedDelivery)} /> : null}
-            <Button label="حل: إعادة المحاولة مع الكابتن نفسه" tone="primary" disabled={actionState.kind === 'submitting'} onPress={() => void resolveRetry(selectedDelivery)} />
-            {canReassign(selectedDelivery) ? <Button label="حل: إعادة الإسناد للكابتن البديل" tone="secondary" disabled={!selectedReplacementCaptainId || actionState.kind === 'submitting'} onPress={() => void resolveReassign(selectedDelivery)} /> : null}
-            {canReassign(selectedDelivery) ? <Button label="حل: إلغاء الطلب قبل الاستلام" tone="danger" disabled={actionState.kind === 'submitting'} onPress={() => void resolveCancel(selectedDelivery)} /> : null}
-            {(selectedDelivery.deliveryStatusAtReport === 'picked_up' || selectedDelivery.deliveryStatusAtReport === 'arrived_customer') ? <Button label="حل: إرجاع الطلب إلى المتجر" tone="secondary" disabled={actionState.kind === 'submitting'} onPress={() => void resolveReturn(selectedDelivery)} /> : null}
-            <Button label="إغلاق التفاصيل" tone="ghost" onPress={() => setSelectedDeliveryId(null)} />
-          </Box>
-        </Card>
-      ) : null}
-
       {selectedReadiness ? (
         <Card padding={4} gap={3}>
           <Text role="titleSm" align="start">إجراء على تصعيد الجاهزية {selectedReadiness.id}</Text>
-          <TextField label="ملاحظات المراجعة أو الحل" value={note} onChangeText={setNote} placeholder="اكتب نتيجة تشغيلية قابلة للتدقيق" multiline />
-          {actionState.kind === 'error' && actionState.id === selectedReadiness.id ? <Text role="caption" tone="danger">{actionState.message}</Text> : null}
+          <TextField
+            label="ملاحظات المراجعة أو الحل"
+            value={note}
+            onChangeText={setNote}
+            placeholder="اكتب نتيجة تشغيلية قابلة للتدقيق"
+            multiline
+          />
+          {actionState.kind === 'error' && actionState.id === selectedReadiness.id ? (
+            <Text role="caption" tone="danger">{actionState.message}</Text>
+          ) : null}
           <Box gap={2} style={{ flexDirection: 'row' }}>
-            {selectedReadiness.status === 'open' ? <Button label="تأكيد الاستلام" tone="secondary" onPress={() => void resolveReadiness(selectedReadiness, 'acknowledged')} /> : null}
-            <Button label="حل وإغلاق" tone="primary" onPress={() => void resolveReadiness(selectedReadiness, 'resolved')} />
+            {selectedReadiness.status === 'open' ? (
+              <Button
+                label="تأكيد الاستلام"
+                tone="secondary"
+                onPress={() => void resolveReadiness(selectedReadiness, 'acknowledged')}
+              />
+            ) : null}
+            <Button
+              label="حل وإغلاق"
+              tone="primary"
+              onPress={() => void resolveReadiness(selectedReadiness, 'resolved')}
+            />
             <Button label="إغلاق التفاصيل" tone="ghost" onPress={() => setSelectedReadinessId(null)} />
           </Box>
         </Card>
