@@ -90,7 +90,7 @@ export function transitionPartner(
   return request(`/dsh/operator/partners/${partnerId}/transition`, {
     method: "POST",
     body: input,
-    mutation: { ...mutation, expectedVersion },
+    mutation: { ...mutation, expectedVersion } as PartnerMutationContext,
   });
 }
 
