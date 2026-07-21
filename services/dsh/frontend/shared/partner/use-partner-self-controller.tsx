@@ -4,9 +4,13 @@ import type { DshPartnerDetailState, DshPartnerReadinessState } from "./partner.
 import { buildPartnerDetailViewModel, buildPartnerReadinessViewModel } from "./partner.view-model";
 
 function resolveMessage(err: unknown): string {
-  const e = err as { status?: number };
+  const e = err as { status?: number; kind?: string };
+  if (e?.kind === "network" || e?.status === 0) {
+    return "تعذر الوصول إلى DSH. تحقق من الاتصال ثم أعد المحاولة";
+  }
   if (e?.status === 401) return "جلسة منتهية — يرجى تسجيل الدخول مجدداً";
-  if (e?.status === 404) return "لم يتم إيجاد ملف الشريك";
+  if (e?.status === 403) return "الجلسة الحالية غير مصرح لها بعرض ملف الشريك";
+  if (e?.status === 404) return "الجلسة الحالية غير مرتبطة بملف شريك صالح";
   return "حدث خطأ، يرجى المحاولة مجدداً";
 }
 
@@ -22,10 +26,10 @@ export function usePartnerSelfController(authKind: string) {
       const partner = await fetchPartnerSelfStatus();
       setStatusState({ kind: "success", partner });
     } catch (err) {
-      const e = err as { status?: number };
-      if (e?.status === 404) setStatusState({ kind: "not_found" });
-      else if (e?.status === 403) setStatusState({ kind: "forbidden" });
-      else setStatusState({ kind: "error", message: resolveMessage(err) });
+      // app-partner Product Truth exposes one recoverable error state rather
+      // than separate operator-facing not-found/forbidden states. Preserve the
+      // precise explanation while routing both through the Hub retry boundary.
+      setStatusState({ kind: "error", message: resolveMessage(err) });
     }
   }, [isAuth]);
 
