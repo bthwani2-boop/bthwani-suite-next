@@ -108,3 +108,25 @@ func TestBrowserOriginGuardAllowsConfiguredOrigin(t *testing.T) {
 		t.Fatalf("expected downstream response, got %d", response.Code)
 	}
 }
+
+func TestBrowserOriginGuardAllowsOriginlessNativeAndServiceRequests(t *testing.T) {
+	t.Setenv("IDENTITY_CORS_ALLOWED_ORIGINS", "https://control-panel.example.com")
+
+	nextCalled := false
+	handler := BrowserOriginGuard(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		nextCalled = true
+		w.WriteHeader(http.StatusAccepted)
+	}))
+
+	request := httptest.NewRequest(http.MethodPost, "/auth/activate", nil)
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, request)
+
+	if !nextCalled {
+		t.Fatal("originless native or service request must reach identity handlers")
+	}
+	if response.Code != http.StatusAccepted {
+		t.Fatalf("expected downstream response, got %d", response.Code)
+	}
+}
