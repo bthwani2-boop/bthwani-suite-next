@@ -11,6 +11,7 @@ on:
       - "services/dsh/backend/internal/clientaddress/**"
       - "services/dsh/backend/internal/http/client_address*"
       - "services/dsh/backend/internal/http/client_addresses.go"
+      - "services/dsh/backend/internal/http/unified_handler_aliases.go"
       - "services/dsh/contracts/dsh.client-address.openapi.yaml"
       - "services/dsh/contracts/jrn-005-*.json"
       - "services/dsh/database/migrations/dsh-056_client_addresses.sql"
@@ -25,6 +26,7 @@ on:
       - "services/dsh/frontend/app-client/cart/CartScreen.tsx"
       - "services/dsh/frontend/app-client/checkout/ClientCheckoutRoute.tsx"
       - "services/dsh/tests/jrn-005-all-slices.test.mjs"
+      - "services/dsh/tests/jrn-005-runtime-observability.test.mjs"
       - "services/dsh/tests/tsconfig.jrn-005-app-client.json"
       - "tools/guards/client-commerce/client-commerce-truth-gate.mjs"
       - ".github/workflows/jrn-005-all-slices.yml"
@@ -98,7 +100,10 @@ jobs:
           git diff --check 2>&1 | tee -a /tmp/jrn-005-all-slices.log
           HYGIENE_EXIT=${PIPESTATUS[0]}
 
-          node --test services/dsh/tests/jrn-005-all-slices.test.mjs 2>&1 | tee -a /tmp/jrn-005-all-slices.log
+          node --test \
+            services/dsh/tests/jrn-005-all-slices.test.mjs \
+            services/dsh/tests/jrn-005-runtime-observability.test.mjs \
+            2>&1 | tee -a /tmp/jrn-005-all-slices.log
           STATIC_EXIT=${PIPESTATUS[0]}
 
           node tools/guards/client-commerce/client-commerce-truth-gate.mjs 2>&1 | tee -a /tmp/jrn-005-all-slices.log
