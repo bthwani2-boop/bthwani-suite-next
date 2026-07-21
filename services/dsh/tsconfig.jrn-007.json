@@ -1,0 +1,25 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "outDir": "dist-jrn-007"
+  },
+  "include": [
+    "frontend/**/*.d.ts",
+    "frontend/shared/_kernel/**/*.ts",
+    "frontend/shared/_kernel/**/*.tsx",
+    "frontend/shared/home-discovery/**/*.ts",
+    "frontend/shared/home-discovery/**/*.tsx",
+    "frontend/app-client/home-discovery/**/*.ts",
+    "frontend/app-client/home-discovery/**/*.tsx",
+    "frontend/app-client/DshClientSurface.tsx",
+    "frontend/control-panel/marketing/components/MarketingHomeDiscoveryPanel.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "dist-jrn-007"
+  ]
+}
