@@ -1,0 +1,203 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-011",
+  "title": "إنشاء الطلب وحقيقة الطلب",
+  "closureMode": "CODE_AND_AUTOMATED_EVIDENCE",
+  "requiredSliceCount": 18,
+  "codeDecision": "CLOSED",
+  "releaseDecision": "READY_FOR_INDEPENDENT_REVIEW",
+  "slices": [
+    {
+      "id": "FS-01",
+      "name": "Product Truth",
+      "codeStatus": "CLOSED",
+      "requiredFiles": [
+        "governance/product/contracts/jrn-011-order-creation-truth.product-truth.json"
+      ],
+      "requiredMarkers": ["acceptanceCriteria", "negativeInvariants", "READY_FOR_REVIEW"]
+    },
+    {
+      "id": "FS-02",
+      "name": "Roles, permissions and surfaces",
+      "codeStatus": "CLOSED",
+      "requiredFiles": [
+        "services/dsh/contracts/jrn-011-surface-rbac-registry.json"
+      ],
+      "requiredMarkers": ["defaultEffect", "operations.read", "partnerStoreIds"]
+    },
+    {
+      "id": "FS-03",
+      "name": "States, ownership and allowedActions",
+      "codeStatus": "CLOSED",
+      "requiredFiles": [
+        "services/dsh/contracts/jrn-011-order-state-policy.json",
+        "services/dsh/backend/internal/orders/order_truth.go",
+        "services/dsh/backend/internal/orders/order_truth_test.go"
+      ],
+      "requiredMarkers": ["allowedActionsByActor", "AllowedActions", "CurrentOwnerFollowsOperationalState"]
+    },
+    {
+      "id": "FS-04",
+      "name": "DSH and WLT truth boundary",
+      "codeStatus": "CLOSED",
+      "requiredFiles": [
+        "governance/boundaries/jrn-011-dsh-wlt-order-truth-boundary.md",
+        "services/dsh/backend/internal/wlt/payment_session_client.go"
+      ],
+      "requiredMarkers": ["WLT owns", "GetPaymentSession", "read-only"]
+    },
+    {
+      "id": "FS-05",
+      "name": "Database truth and immutability",
+      "codeStatus": "CLOSED",
+      "requiredFiles": [
+        "services/dsh/database/migrations/dsh-902_jrn_011_order_truth.sql",
+        "services/dsh/database/migrations/dsh-903_jrn_011_order_event_runtime.sql",
+        "services/dsh/database/migrations/dsh-904_jrn_011_order_truth_audit.sql",
+        "services/dsh/database/migrations/dsh-905_jrn_011_payment_projection_reconciliation.sql",
+        "services/dsh/backend/internal/orders/order_truth_db_test.go"
+      ],
+      "requiredMarkers": ["protect_order_snapshot", "order_create_idempotency", "TestCreateOrderTruthLifecycleDBIntegration"]
+    },
+    {
+      "id": "FS-06",
+      "name": "OpenAPI and canonical contracts",
+      "codeStatus": "CLOSED",
+      "requiredFiles": [
+        "services/dsh/contracts/dsh.order-truth.openapi.yaml"
+      ],
+      "requiredMarkers": ["Idempotency-Key", "Idempotent-Replay", "paymentStatusProjection"]
+    },
+    {
+      "id": "FS-07",
+      "name": "Backend domain and HTTP behavior",
+      "codeStatus": "CLOSED",
+      "requiredFiles": [
+        "services/dsh/backend/internal/orders/order_truth.go",
+        "services/dsh/backend/internal/orders/order_truth_queries.go",
+        "services/dsh/backend/internal/http/order_truth.go",
+        "services/dsh/backend/internal/http/order_truth_validation_test.go"
+      ],
+      "requiredMarkers": ["CreateOrderTruth", "GetOperatorScopedOrderTruth", "INVALID_CHECKOUT_INTENT_ID"]
+    },
+    {
+      "id": "FS-08",
+      "name": "Events, outbox, readback and reconciliation",
+      "codeStatus": "CLOSED",
+      "requiredFiles": [
+        "services/dsh/backend/internal/orders/order_event_outbox.go",
+        "services/dsh/backend/internal/orders/order_event_bridge_worker.go",
+        "services/dsh/backend/internal/orders/order_truth_db_test.go"
+      ],
+      "requiredMarkers": ["FOR UPDATE SKIP LOCKED", "order.created", "transactional outbox"]
+    },
+    {
+      "id": "FS-09",
+      "name": "Shared frontend brain",
+      "codeStatus": "CLOSED",
+      "requiredFiles": [
+        "services/dsh/frontend/shared/order-truth/order-truth.api.ts",
+        "services/dsh/frontend/shared/order-truth/use-order-truth-controller.ts",
+        "services/dsh/frontend/shared/order-truth/order-truth.view-model.ts",
+        "services/dsh/tsconfig.jrn-011.json"
+      ],
+      "requiredMarkers": ["fetchClientOrderTruthDetail", "getOrCreateOrderTruthAttempt", "toOrderTruthSummary"]
+    },
+    {
+      "id": "FS-10",
+      "name": "Required surface binding",
+      "codeStatus": "CLOSED",
+      "requiredFiles": [
+        "services/dsh/contracts/jrn-011-cross-surface-binding.json",
+        "services/dsh/frontend/shared/checkout/use-checkout-to-order-flow.tsx",
+        "services/dsh/frontend/app-partner/orders/OperationalOrdersInboxScreen.tsx",
+        "services/dsh/frontend/control-panel/operations/OrderJourneyLiveOrdersScreen.tsx"
+      ],
+      "requiredMarkers": ["app-client", "actor=\"partner\"", "actor=\"operator\""]
+    },
+    {
+      "id": "FS-11",
+      "name": "Visible operational states",
+      "codeStatus": "CLOSED",
+      "requiredFiles": [
+        "services/dsh/frontend/shared/order-truth/order-truth.visible-states.ts",
+        "services/dsh/frontend/shared/order-truth/OrderTruthReadbackSummary.tsx"
+      ],
+      "requiredMarkers": ["offline", "forbidden", "partial"]
+    },
+    {
+      "id": "FS-12",
+      "name": "Cross-surface integrity and read-after-write",
+      "codeStatus": "CLOSED",
+      "requiredFiles": [
+        "tools/guards/jrn-011-cross-surface-integrity-gate.mjs",
+        "services/dsh/tests/jrn-011-order-truth-integrity.test.mjs",
+        "services/dsh/tests/jrn-011-order-truth-hardening.test.mjs"
+      ],
+      "requiredMarkers": ["read-after-write", "cross-surface", "mustNotContain"]
+    },
+    {
+      "id": "FS-13",
+      "name": "Security, isolation, PII and audit",
+      "codeStatus": "CLOSED",
+      "requiredFiles": [
+        "services/dsh/backend/internal/orders/order_truth_queries.go",
+        "services/dsh/backend/internal/orders/order_truth_db_test.go",
+        "services/dsh/database/migrations/dsh-904_jrn_011_order_truth_audit.sql"
+      ],
+      "requiredMarkers": ["validOrderTruthID", "cross-client", "authorization|bearer|idempotency"]
+    },
+    {
+      "id": "FS-14",
+      "name": "RTL, accessibility, performance and weak network",
+      "codeStatus": "CLOSED",
+      "requiredFiles": [
+        "services/dsh/frontend/shared/order-truth/order-truth.experience.ts",
+        "services/dsh/frontend/shared/order-truth/OrderTruthReadbackSummary.tsx"
+      ],
+      "requiredMarkers": ["minimumTouchTargetPx", "bidiIsolate", "accessibilityLabel"]
+    },
+    {
+      "id": "FS-15",
+      "name": "SLA, monitoring, diagnostics and support",
+      "codeStatus": "CLOSED",
+      "requiredFiles": [
+        "services/dsh/backend/internal/orders/order_truth_diagnostics.go",
+        "governance/runbooks/jrn-011-order-truth-operations.md"
+      ],
+      "requiredMarkers": ["DeadLetterOutboxEvents", "ORDER_EVENT_OUTBOX_DEAD_LETTER", "Safe recovery"]
+    },
+    {
+      "id": "FS-16",
+      "name": "Legacy cleanup and compatibility",
+      "codeStatus": "CLOSED",
+      "requiredFiles": [
+        "services/dsh/contracts/jrn-011-legacy-compatibility.json",
+        "services/dsh/frontend/shared/order-truth/OrderTruthReadbackSummary.tsx"
+      ],
+      "requiredMarkers": ["COMPATIBILITY_ONLY", "newJrn011ConsumersAllowed", "justify=\"space-between\""]
+    },
+    {
+      "id": "FS-17",
+      "name": "Targeted verification and CI",
+      "codeStatus": "CLOSED",
+      "requiredFiles": [
+        ".github/workflows/jrn-011-order-truth-verify.yml",
+        "services/dsh/backend/internal/orders/order_truth_db_test.go",
+        "services/dsh/tsconfig.jrn-011.json"
+      ],
+      "requiredMarkers": ["database-invariants", "go-contracts", "typescript-binding"]
+    },
+    {
+      "id": "FS-18",
+      "name": "Same-commit evidence, rollback and final gate",
+      "codeStatus": "CLOSED",
+      "requiredFiles": [
+        "governance/evidence/jrn-011-order-truth-evidence.json",
+        "governance/evidence/jrn-011-order-truth-evidence.md",
+        "services/dsh/contracts/jrn-011-slice-closure.json"
+      ],
+      "requiredMarkers": ["zeroGate", "rollback", "nextJourneyStarted"]
+    }
+  ]
+}
