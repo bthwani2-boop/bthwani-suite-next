@@ -1,4 +1,5 @@
 import React from 'react';
+import type { DshDeliveryStatus } from '../shared/dispatch';
 import type { DshCaptainRoute } from './dsh-captain.types';
 import {
   DshCaptainRouteRenderer,
@@ -8,6 +9,7 @@ import { OperationalCaptainExecutionScreen } from './orders/OperationalCaptainEx
 
 export type DshCaptainOrderJourneyRendererProps = DshCaptainRouteRendererProps & {
   readonly setRoute: (route: DshCaptainRoute) => void;
+  readonly activeDeliveryStatus: DshDeliveryStatus | '';
 };
 
 export function DshCaptainOrderJourneyRenderer(
@@ -23,8 +25,10 @@ export function DshCaptainOrderJourneyRenderer(
       orderId={props.activeOrderId}
       captainId={props.captainRuntimeId}
       currentStageLabel={props.activeSummary?.currentStageLabel ?? 'لا توجد مهمة نشطة'}
+      handoffExceptionEnabled={props.activeDeliveryStatus === 'driver_arrived_store'}
       podRequired={props.captainPodRequired}
       onBack={props.onBack}
+      onRefresh={props.onRetryInbox}
       onConfirmPickup={props.onConfirmPickup}
       onConfirmDelivery={props.onConfirmDelivery}
       onOpenPod={() => props.setRoute('pod-submission')}
