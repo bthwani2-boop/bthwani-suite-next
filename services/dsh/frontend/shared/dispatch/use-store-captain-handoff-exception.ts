@@ -44,9 +44,9 @@ function exceptionMessage(error: unknown): string {
 
 function readbackMessage(error: unknown): string {
   const classified = classifyDispatchError(error);
-  if (classified.kind === "permission_denied") return "تعذر التحقق من استثناء العهدة بسبب الصلاحيات.";
-  if (classified.kind === "offline") return "تعذر التحقق من حالة العهدة. الاستلام محجوب حتى عودة الاتصال.";
-  return classified.message ?? "تعذر التحقق من حالة استثناء العهدة.";
+  if (classified.kind === "permission_denied") return "تعذر التحقق من استثناء المهمة بسبب الصلاحيات.";
+  if (classified.kind === "offline") return "تعذر التحقق من حالة المهمة. الاستلام محجوب حتى عودة الاتصال.";
+  return classified.message ?? "تعذر التحقق من حالة الاستثناء التشغيلي.";
 }
 
 function isEditableState(
@@ -95,11 +95,10 @@ export function useStoreCaptainHandoffException(
     setReadback({ kind: "loading", entityId });
     try {
       const item = await fetchCaptainDeliveryException(entityId);
-      if (item.reasonCode === "handoff_shortage" || item.reasonCode === "handoff_mismatch") {
-        setReadback({ kind: "blocked", entityId, exception: item });
-        return;
-      }
-      setReadback({ kind: "clear", entityId });
+      // The backend pickup guard blocks on every open/acknowledged delivery
+      // exception, not only handoff-specific reasons. The surface must mirror
+      // that fail-closed rule after refresh or a new session.
+      setReadback({ kind: "blocked", entityId, exception: item });
     } catch (error) {
       const classified = classifyDispatchError(error);
       if (classified.kind === "not_found") {
