@@ -79,6 +79,8 @@ jobs:
           cat > services/dsh/.tmp/jrn-010-015-test-build.tsconfig.json <<'JSON'
           {
             "extends": "../tsconfig.json",
+            "include": [],
+            "exclude": [],
             "files": [
               "../frontend/shared/checkout/checkout.controller-core.ts",
               "../frontend/shared/delivery/captain-inbox.mapper.ts"
