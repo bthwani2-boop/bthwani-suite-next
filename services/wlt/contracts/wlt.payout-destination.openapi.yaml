@@ -1,0 +1,186 @@
+openapi: 3.0.3
+info:
+  title: BThwani WLT Payout Destination API
+  version: 1.0.0
+  description: Sovereign WLT contract for encrypted partner payout destinations used by JRN-001.
+servers:
+  - url: http://localhost:58083
+security:
+  - serviceBearer: []
+paths:
+  /wlt/payout-destinations/{partnerId}:
+    put:
+      operationId: upsertWltPayoutDestination
+      summary: Replace the active encrypted payout destination for a partner
+      parameters:
+        - $ref: '#/components/parameters/PartnerId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/ServiceCaller'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PayoutDestinationWrite' }
+      responses:
+        '201':
+          description: New active destination created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PayoutDestinationRef' }
+        '200':
+          description: Identical idempotent replay returned the original destination reference.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PayoutDestinationRef' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/MutationDisabled' }
+        '409': { $ref: '#/components/responses/IdempotencyConflict' }
+        '422': { $ref: '#/components/responses/InvalidDestination' }
+        '500': { $ref: '#/components/responses/InternalError' }
+    get:
+      operationId: getWltPayoutDestination
+      summary: Read the active masked payout destination reference
+      parameters:
+        - $ref: '#/components/parameters/PartnerId'
+        - $ref: '#/components/parameters/ServiceCaller'
+      responses:
+        '200':
+          description: Active masked destination reference.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PayoutDestinationRef' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /wlt/payout-destinations/{partnerId}/deactivate:
+    post:
+      operationId: deactivateWltPayoutDestination
+      summary: Deactivate the current payout destination after governed partner deactivation
+      parameters:
+        - $ref: '#/components/parameters/PartnerId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/ServiceCaller'
+      responses:
+        '204': { description: Active destination deactivated or already inactive. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/MutationDisabled' }
+components:
+  securitySchemes:
+    serviceBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: service-token
+  parameters:
+    PartnerId:
+      name: partnerId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 8 }
+    CorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: true
+      schema: { type: string, minLength: 1 }
+    ServiceCaller:
+      name: X-Service-Caller
+      in: header
+      required: true
+      schema:
+        type: string
+        enum: [dsh]
+  schemas:
+    PayoutDestinationWrite:
+      type: object
+      additionalProperties: false
+      required: [beneficiaryName, settlementPreference, createdByActorId]
+      properties:
+        beneficiaryName: { type: string, minLength: 1 }
+        bankName: { type: string }
+        bankBranch: { type: string }
+        accountNumber: { type: string, writeOnly: true }
+        iban: { type: string, writeOnly: true }
+        payoutMobileNumber: { type: string, writeOnly: true }
+        settlementPreference:
+          type: string
+          enum: [bank, mobile_money, manual]
+        bankAccountHolderMatchesOwner: { type: boolean }
+        bankNotes: { type: string }
+        createdByActorId: { type: string, minLength: 1 }
+      allOf:
+        - if:
+            properties:
+              settlementPreference: { const: bank }
+          then:
+            required: [bankName, accountNumber]
+        - if:
+            properties:
+              settlementPreference: { const: mobile_money }
+          then:
+            required: [payoutMobileNumber]
+    PayoutDestinationRef:
+      type: object
+      additionalProperties: false
+      required: [id, partnerId, settlementPreference, maskedAccountNumber, maskedIban, maskedMobileNumber, beneficiaryName, bankName, bankBranch, active, updatedAt]
+      properties:
+        id: { type: string }
+        partnerId: { type: string }
+        settlementPreference:
+          type: string
+          enum: [bank, mobile_money, manual]
+        maskedAccountNumber: { type: string }
+        maskedIban: { type: string }
+        maskedMobileNumber: { type: string }
+        beneficiaryName: { type: string }
+        bankName: { type: string }
+        bankBranch: { type: string }
+        active: { type: boolean }
+        updatedAt: { type: string, format: date-time }
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+  responses:
+    InvalidRequest:
+      description: Required request identity or body is invalid.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unauthorized:
+      description: DSH service authentication failed.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    MutationDisabled:
+      description: WLT mutation gate is disabled.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    IdempotencyConflict:
+      description: Idempotency key was reused with a different payload.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    InvalidDestination:
+      description: Mode-specific payout destination fields are incomplete.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: No active payout destination exists.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    InternalError:
+      description: Encrypted payout persistence failed.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
