@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, type CSSProperties } from "react";
+import React, { useState } from "react";
 import {
   CpButton,
   CpPageHeader,
@@ -8,26 +8,15 @@ import {
   CpTextInput,
 } from "@bthwani/control-panel/components";
 import { DataTablePageFrame } from "@bthwani/control-panel/shell";
+import { WebStyleSheet } from "@bthwani/ui-kit/web";
 import {
   useRoleAssignmentApprovalController,
   useStaffController,
 } from "../../shared/administration";
 
-const contentStyle: CSSProperties = { display: "grid", gap: "1rem" };
-const cardStyle: CSSProperties = {
-  display: "grid",
-  gap: "0.75rem",
-  padding: "1rem",
-  border: "1px solid color-mix(in srgb, currentColor 14%, transparent)",
-  borderRadius: "1rem",
-};
-const formGridStyle: CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(14rem, 1fr))",
-  gap: "0.75rem",
-};
-const actionRowStyle: CSSProperties = { display: "flex", gap: "0.75rem", flexWrap: "wrap" };
-const metadataStyle: CSSProperties = { display: "grid", gap: "0.25rem", fontSize: "0.875rem" };
+function actionLabel(actionType: "staff_role_assignment" | "staff_role_revocation"): string {
+  return actionType === "staff_role_revocation" ? "سحب الدور" : "إسناد الدور";
+}
 
 export function RoleAssignmentApprovalQueue() {
   const approvals = useRoleAssignmentApprovalController("authenticated", "pending");
@@ -39,18 +28,22 @@ export function RoleAssignmentApprovalQueue() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const requestAssignment = async () => {
+  const requestChange = async (actionType: "staff_role_assignment" | "staff_role_revocation") => {
     if (submitting) return;
     setSubmitting(true);
     setActionError(null);
     try {
-      await staff.requestRoleAssignment(targetActorId.trim(), roleId.trim(), reason.trim());
+      if (actionType === "staff_role_revocation") {
+        await staff.requestRoleRevocation(targetActorId.trim(), roleId.trim(), reason.trim());
+      } else {
+        await staff.requestRoleAssignment(targetActorId.trim(), roleId.trim(), reason.trim());
+      }
       setTargetActorId("");
       setRoleId("");
       setReason("");
       await approvals.reload();
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : "تعذر إنشاء طلب إسناد الدور.");
+      setActionError(error instanceof Error ? error.message : "تعذر إنشاء طلب تغيير الدور.");
     } finally {
       setSubmitting(false);
     }
@@ -69,20 +62,25 @@ export function RoleAssignmentApprovalQueue() {
     }
   };
 
+  const formInvalid = submitting
+    || targetActorId.trim().length < 2
+    || roleId.trim().length < 2
+    || reason.trim().length < 5;
+
   return (
     <DataTablePageFrame
       dir="rtl"
-      header={<CpPageHeader title="طلبات إسناد الأدوار — Maker / Checker" />}
+      header={<CpPageHeader title="تغييرات أدوار الموظفين — Maker / Checker" />}
       stateView={
         approvals.state.kind === "loading" ? <CpStatePanel role="status" title="جارٍ تحميل طلبات الاعتماد…" />
           : approvals.state.kind === "error" ? <CpStatePanel role="alert" title={approvals.state.message} />
           : undefined
       }
     >
-      <section style={contentStyle}>
-        <article style={cardStyle}>
-          <strong>إنشاء طلب إسناد دور</strong>
-          <div style={formGridStyle}>
+      <section style={styles.content}>
+        <article style={styles.card}>
+          <strong>إنشاء طلب تغيير دور</strong>
+          <div style={styles.formGrid}>
             <CpTextInput
               value={targetActorId}
               onChange={setTargetActorId}
@@ -98,28 +96,30 @@ export function RoleAssignmentApprovalQueue() {
             <CpTextInput
               value={reason}
               onChange={setReason}
-              placeholder="سبب الإسناد — خمسة أحرف على الأقل"
-              aria-label="سبب طلب إسناد الدور"
+              placeholder="سبب التغيير — خمسة أحرف على الأقل"
+              aria-label="سبب طلب تغيير الدور"
             />
           </div>
-          <CpButton
-            disabled={submitting || targetActorId.trim().length < 2 || roleId.trim().length < 2 || reason.trim().length < 5}
-            onClick={() => void requestAssignment()}
-          >
-            إرسال للمراجعة
-          </CpButton>
+          <div style={styles.actions}>
+            <CpButton disabled={formInvalid} onClick={() => void requestChange("staff_role_assignment")}>
+              إرسال طلب إسناد
+            </CpButton>
+            <CpButton disabled={formInvalid} onClick={() => void requestChange("staff_role_revocation")}>
+              إرسال طلب سحب
+            </CpButton>
+          </div>
         </article>
 
         {actionError ? <CpStatePanel role="alert" title={actionError} /> : null}
 
         {approvals.state.kind === "success" && approvals.state.data.length === 0 ? (
-          <CpStatePanel role="status" title="لا توجد طلبات إسناد أدوار معلقة." />
+          <CpStatePanel role="status" title="لا توجد طلبات تغيير أدوار معلقة." />
         ) : null}
 
         {approvals.state.kind === "success" ? approvals.state.data.map((approval) => (
-          <article key={approval.id} style={cardStyle}>
-            <strong>{approval.targetActorId} ← {approval.roleName}</strong>
-            <div style={metadataStyle}>
+          <article key={approval.id} style={styles.card}>
+            <strong>{actionLabel(approval.actionType)}: {approval.targetActorId} ← {approval.roleName}</strong>
+            <div style={styles.metadata}>
               <span>المنشئ: {approval.requestedBy}</span>
               <span>السبب: {approval.reason}</span>
               <span>النسخة: {approval.version}</span>
@@ -130,7 +130,7 @@ export function RoleAssignmentApprovalQueue() {
               placeholder="ملاحظة المراجع — إلزامية عند الرفض"
               aria-label={`ملاحظة مراجعة ${approval.targetActorId}`}
             />
-            <div style={actionRowStyle}>
+            <div style={styles.actions}>
               <CpButton disabled={submitting} onClick={() => void review(approval.id, approval.version, "approved")}>
                 اعتماد من مراجع مستقل
               </CpButton>
@@ -147,3 +147,21 @@ export function RoleAssignmentApprovalQueue() {
     </DataTablePageFrame>
   );
 }
+
+const styles = WebStyleSheet.create({
+  content: { display: "grid", gap: "1rem" },
+  card: {
+    display: "grid",
+    gap: "0.75rem",
+    padding: "1rem",
+    border: "1px solid var(--card-border, currentColor)",
+    borderRadius: "1rem",
+  },
+  formGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(14rem, 1fr))",
+    gap: "0.75rem",
+  },
+  actions: { display: "flex", gap: "0.75rem", flexWrap: "wrap" },
+  metadata: { display: "grid", gap: "0.25rem", fontSize: "0.875rem" },
+});
