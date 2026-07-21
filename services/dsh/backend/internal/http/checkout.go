@@ -333,7 +333,7 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 		return
 	}
 
-	intent, err = checkout.AttachWltPaymentSession(s.db, intent.ID, actor.TenantID, actor.ID, paymentSession.ID)
+	intent, err = checkout.AttachWltPaymentSessionIdempotent(s.db, intent.ID, actor.TenantID, actor.ID, paymentSession.ID)
 	if err != nil {
 		_ = s.wlt.ExpireSession(r.Context(), paymentSession.ID, correlationID)
 		if fundingProjection != nil {
