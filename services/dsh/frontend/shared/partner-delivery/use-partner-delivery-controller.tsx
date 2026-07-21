@@ -15,6 +15,8 @@ import type {
   ClassifiedPartnerDeliveryError,
   DshPartnerDeliveryTask,
 } from "./partner-delivery.types";
+import { useCameraPhotoCapture } from "../media/useCameraPhotoCapture";
+import { uploadAndSubmitPartnerDeliveryProof } from "../media/pod/delivery-proof-media.api";
 
 export type FetchState<T> = { readonly loaded: boolean; readonly error: string | null; readonly offline: boolean; readonly data: T };
 
@@ -39,6 +41,7 @@ export type PartnerDeliveryActionState = {
  * transition so reopening the app resumes from server truth.
  */
 export function usePartnerDeliveryActionsController(orderId: string) {
+  const camera = useCameraPhotoCapture();
   const [state, setState] = useState<PartnerDeliveryActionState>({
     task: null,
     stage: "unassigned",
@@ -79,7 +82,7 @@ export function usePartnerDeliveryActionsController(orderId: string) {
 
   const runAction = useCallback(async (
     label: string,
-    action: () => Promise<{ task: DshPartnerDeliveryTask }>,
+    action: () => Promise<unknown>,
   ) => {
     setState((current) => ({ ...current, busy: true, message: null, isError: false }));
     try {
@@ -140,7 +143,26 @@ export function usePartnerDeliveryActionsController(orderId: string) {
       }));
   }, [orderId, runAction, state.task]);
 
-  return { state, assign, pickup, depart, arrive, submitProof, refresh: load } as const;
+  const captureAndSubmitProof = useCallback(async () => {
+    if (!state.task) return false;
+    let photo;
+    try {
+      photo = await camera.captureFromCamera();
+    } catch (error) {
+      setState((current) => ({
+        ...current,
+        busy: false,
+        isError: true,
+        message: error instanceof Error ? error.message : "تعذر فتح الكاميرا.",
+      }));
+      return false;
+    }
+    if (!photo) return false;
+    return runAction("تم رفع صورة الإثبات وإغلاق مهمة توصيل المتجر.", () =>
+      uploadAndSubmitPartnerDeliveryProof(orderId, photo));
+  }, [camera, orderId, runAction, state.task]);
+
+  return { state, assign, pickup, depart, arrive, submitProof, captureAndSubmitProof, refresh: load } as const;
 }
 
 export type UseOperatorPartnerDeliveriesControllerParams = {
