@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"dsh-api/internal/orders"
 	"dsh-api/internal/store"
 )
 
@@ -31,6 +32,7 @@ type partnerOrderWorkboardOrder struct {
 	Items            []partnerOrderWorkboardItem `json:"items"`
 	CreatedAt        time.Time                   `json:"createdAt"`
 	AllowedActions   []string                    `json:"allowedActions"`
+	Preparation      orders.PreparationTiming    `json:"preparation"`
 	UpdatedAt        time.Time                   `json:"updatedAt"`
 }
 
@@ -39,9 +41,9 @@ func partnerOrderAllowedActions(status, fulfillmentMode string) []string {
 	case "pending":
 		return []string{"accept", "reject"}
 	case "store_accepted":
-		return []string{"prepare"}
+		return []string{"prepare", "revise_estimate"}
 	case "preparing":
-		return []string{"ready"}
+		return []string{"ready", "revise_estimate"}
 	case "ready_for_pickup":
 		if fulfillmentMode == "partner_delivery" || fulfillmentMode == "pickup" {
 			return []string{"handoff"}
@@ -55,8 +57,7 @@ func partnerOrderAllowedActions(status, fulfillmentMode string) []string {
 // The store scope is resolved from the authenticated partner actor. The
 // workboard deliberately returns all lifecycle states when status is omitted;
 // inbox tabs must not be backed by a hidden pending-only default. Executable
-// actions are derived here so every partner surface follows the same governed
-// transition rules instead of inferring permissions locally.
+// actions and preparation SLA are derived by DSH, never inferred by a screen.
 func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter, r *http.Request) {
 	_, storeID, ok := s.partnerStore(w, r)
 	if !ok {
@@ -90,6 +91,14 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 				'[]'::jsonb
 			) AS items,
 			o.created_at,
+			o.accepted_at,
+			o.preparation_started_at,
+			o.estimated_ready_at,
+			o.ready_at,
+			o.estimated_preparation_minutes,
+			o.preparation_warning_minutes,
+			COALESCE(o.preparation_delay_reason, ''),
+			o.preparation_estimate_revision_count,
 			o.updated_at
 		FROM dsh_orders o
 		LEFT JOIN dsh_order_items oi ON oi.order_id = o.id
@@ -105,6 +114,14 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 			o.rejection_reason,
 			o.wlt_payment_ref_id,
 			o.created_at,
+			o.accepted_at,
+			o.preparation_started_at,
+			o.estimated_ready_at,
+			o.ready_at,
+			o.estimated_preparation_minutes,
+			o.preparation_warning_minutes,
+			o.preparation_delay_reason,
+			o.preparation_estimate_revision_count,
 			o.updated_at
 		ORDER BY
 			CASE o.status
@@ -116,8 +133,10 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 				WHEN 'driver_arrived_store' THEN 6
 				WHEN 'picked_up' THEN 7
 				WHEN 'arrived_customer' THEN 8
-				WHEN 'delivered' THEN 9
-				WHEN 'cancelled' THEN 10
+				WHEN 'returning_to_store' THEN 9
+				WHEN 'return_arrived_store' THEN 10
+				WHEN 'returned_to_store' THEN 11
+				WHEN 'delivered' THEN 12
 				ELSE 99
 			END,
 			o.created_at ASC
@@ -128,7 +147,8 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 	}
 	defer rows.Close()
 
-	orders := make([]partnerOrderWorkboardOrder, 0)
+	now := time.Now()
+	workboardOrders := make([]partnerOrderWorkboardOrder, 0)
 	for rows.Next() {
 		var order partnerOrderWorkboardOrder
 		var itemsJSON []byte
@@ -144,6 +164,14 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 			&order.TotalPrice,
 			&itemsJSON,
 			&order.CreatedAt,
+			&order.Preparation.AcceptedAt,
+			&order.Preparation.PreparationStartedAt,
+			&order.Preparation.EstimatedReadyAt,
+			&order.Preparation.ReadyAt,
+			&order.Preparation.EstimatedMinutes,
+			&order.Preparation.WarningMinutes,
+			&order.Preparation.DelayReason,
+			&order.Preparation.EstimateRevisionCount,
 			&order.UpdatedAt,
 		); err != nil {
 			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to read partner order workboard")
@@ -157,7 +185,9 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 			order.Items = []partnerOrderWorkboardItem{}
 		}
 		order.AllowedActions = partnerOrderAllowedActions(order.Status, order.FulfillmentMode)
-		orders = append(orders, order)
+		order.Preparation.OrderID = order.ID
+		order.Preparation = orders.EvaluatePreparationTiming(order.Preparation, now)
+		workboardOrders = append(workboardOrders, order)
 	}
 	if err := rows.Err(); err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to complete partner order workboard")
@@ -165,7 +195,7 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 	}
 
 	store.SendJSON(w, http.StatusOK, map[string]any{
-		"orders": orders,
-		"total":  len(orders),
+		"orders": workboardOrders,
+		"total":  len(workboardOrders),
 	})
 }
