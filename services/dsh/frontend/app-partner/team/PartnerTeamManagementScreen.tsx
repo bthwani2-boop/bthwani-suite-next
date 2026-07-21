@@ -12,6 +12,7 @@ import {
   radius,
   spacing,
 } from "@bthwani/ui-kit";
+import { usePartnerFleetController } from "../../shared/partner";
 import type { PartnerTeamMember } from "./partner-team.types";
 import type { PartnerTeamMutationResult } from "./usePartnerTeamModel";
 
@@ -98,6 +99,7 @@ export function PartnerTeamManagementScreen({
   onIssueCourierConnectionCode,
   onRevokeCourierConnection,
 }: PartnerTeamManagementScreenProps) {
+  const fleet = usePartnerFleetController(storeId);
   const [section, setSection] = React.useState<PartnerTeamSection>("members");
   const [inviteIdentity, setInviteIdentity] = React.useState("");
   const [mutation, setMutation] = React.useState<MutationState>({ kind: "idle" });
@@ -134,21 +136,25 @@ export function PartnerTeamManagementScreen({
   };
 
   const issueCourierCode = async (member: PartnerTeamMember) => {
-    if (!onIssueCourierConnectionCode || busy) return;
+    if (busy) return;
     setMutation({ kind: "submitting", target: member.id });
-    const code = await onIssueCourierConnectionCode(member);
+    const code = onIssueCourierConnectionCode
+      ? await onIssueCourierConnectionCode(member)
+      : await fleet.issueCourierConnectionCode(member.id);
     setMutation(code
       ? { kind: "success", message: `رمز الربط الصادر من DSH: ${code}` }
-      : { kind: "error", message: "تعذر إصدار رمز الربط من DSH." });
+      : { kind: "error", message: fleet.error ?? "تعذر إصدار رمز الربط من DSH." });
   };
 
   const revokeCourier = async (member: PartnerTeamMember) => {
-    if (!onRevokeCourierConnection || busy) return;
+    if (busy) return;
     setMutation({ kind: "submitting", target: member.id });
-    const ok = await onRevokeCourierConnection(member);
+    const ok = onRevokeCourierConnection
+      ? await onRevokeCourierConnection(member)
+      : await fleet.revokePendingCourierConnection(member.id);
     setMutation(ok
-      ? { kind: "success", message: "تم إلغاء ربط الموصل في DSH." }
-      : { kind: "error", message: "تعذر إلغاء ربط الموصل." });
+      ? { kind: "success", message: "تم إلغاء رمز الربط المعلق في DSH." }
+      : { kind: "error", message: fleet.error ?? "تعذر إلغاء رمز الربط المعلق." });
   };
 
   if (error) {
@@ -240,11 +246,11 @@ export function PartnerTeamManagementScreen({
                   onPress={() => void submitAction(member, member.inlineAction)}
                 />
               ) : null}
-              {member.role === "courier" && onIssueCourierConnectionCode ? (
+              {member.role === "courier" ? (
                 <Button label="إصدار رمز ربط" tone="secondary" size="sm" disabled={busy} onPress={() => void issueCourierCode(member)} />
               ) : null}
-              {member.role === "courier" && onRevokeCourierConnection ? (
-                <Button label="إلغاء الربط" tone="danger" size="sm" disabled={busy} onPress={() => void revokeCourier(member)} />
+              {member.role === "courier" ? (
+                <Button label="إلغاء رمز الربط" tone="danger" size="sm" disabled={busy} onPress={() => void revokeCourier(member)} />
               ) : null}
             </View>
           </Card>
