@@ -9,7 +9,9 @@ function source(relativePath) {
 describe("JRN-031 administration maker-checker closure", () => {
   const approvalMigration = source("../database/migrations/dsh-076_admin_role_assignment_approvals.sql");
   const permissionMigration = source("../database/migrations/dsh-077_admin_role_permissions.sql");
-  const domain = source("../backend/internal/administration/role_assignment_approvals.go");
+  const roleDefinitionMigration = source("../database/migrations/dsh-078_admin_role_definition_approvals.sql");
+  const assignmentDomain = source("../backend/internal/administration/role_assignment_approvals.go");
+  const roleDefinitionDomain = source("../backend/internal/administration/role_definition_approvals.go");
   const administration = source("../backend/internal/administration/administration.go");
   const routes = source("../backend/internal/http/administration_approval_routes.go");
   const permissionGate = source("../backend/internal/http/administration_permission.go");
@@ -20,10 +22,12 @@ describe("JRN-031 administration maker-checker closure", () => {
   const controller = source("../frontend/shared/administration/use-administration-controller.tsx");
   const registry = source("../frontend/shared/administration/administration-registry.ts");
   const dashboard = source("../frontend/control-panel/administration/AdministrationDashboardScreen.tsx");
-  const queue = source("../frontend/control-panel/administration/RoleAssignmentApprovalQueue.tsx");
+  const roleQueue = source("../frontend/control-panel/administration/RoleDefinitionApprovalQueue.tsx");
+  const assignmentQueue = source("../frontend/control-panel/administration/RoleAssignmentApprovalQueue.tsx");
+  const governedScreen = source("../frontend/control-panel/administration/GovernedAdministrationScreen.tsx");
   const page = source("../../../apps/control-panel/runtime/src/app/dsh/administration/page.tsx");
 
-  it("persists a versioned approval queue with self-assignment protection", () => {
+  it("persists a versioned assignment approval queue with self-assignment protection", () => {
     assert.match(approvalMigration, /dsh_admin_approval_requests/);
     assert.match(approvalMigration, /requested_by <> target_actor_id/);
     assert.match(approvalMigration, /status IN \('pending','approved','rejected'\)/);
@@ -32,14 +36,28 @@ describe("JRN-031 administration maker-checker closure", () => {
   });
 
   it("applies assignments only inside independent approval transactions", () => {
-    assert.match(domain, /BeginTx/);
-    assert.match(domain, /checkerActorID == current\.RequestedBy/);
-    assert.match(domain, /checkerActorID == current\.TargetActorID/);
-    assert.match(domain, /current\.Status != "pending" \|\| current\.Version != expectedVersion/);
-    assert.match(domain, /INSERT INTO dsh_admin_staff_assignments/);
-    assert.match(domain, /staff_role_assignment_requested/);
-    assert.match(domain, /staff_role_assignment_"\+decision/);
-    assert.match(domain, /tx\.Commit/);
+    assert.match(assignmentDomain, /BeginTx/);
+    assert.match(assignmentDomain, /checkerActorID == current\.RequestedBy/);
+    assert.match(assignmentDomain, /checkerActorID == current\.TargetActorID/);
+    assert.match(assignmentDomain, /current\.Status != "pending" \|\| current\.Version != expectedVersion/);
+    assert.match(assignmentDomain, /INSERT INTO dsh_admin_staff_assignments/);
+    assert.match(assignmentDomain, /staff_role_assignment_requested/);
+    assert.match(assignmentDomain, /staff_role_assignment_"\+decision/);
+    assert.match(assignmentDomain, /tx\.Commit/);
+  });
+
+  it("creates role definitions only after independent approval", () => {
+    assert.match(roleDefinitionMigration, /dsh_admin_role_definition_requests/);
+    assert.match(roleDefinitionMigration, /uq_dsh_admin_pending_role_definition/);
+    assert.match(roleDefinitionDomain, /governedAdministrationPermissions/);
+    assert.match(roleDefinitionDomain, /current\.RequestedBy == checkerActorID/);
+    assert.match(roleDefinitionDomain, /INSERT INTO dsh_admin_roles/);
+    assert.match(roleDefinitionDomain, /role_definition_requested/);
+    assert.match(roleDefinitionDomain, /role_definition_"\+decision/);
+    assert.match(routes, /POST \/dsh\/operator\/admin\/roles\/requests/);
+    assert.match(routes, /POST \/dsh\/operator\/admin\/role-requests\/\{requestId\}\/review/);
+    assert.match(contract, /operationId: requestDshAdministrationRoleDefinition/);
+    assert.match(contract, /operationId: reviewDshAdministrationRoleDefinitionRequest/);
   });
 
   it("binds approved assignments to real DSH permission checks", () => {
@@ -84,21 +102,30 @@ describe("JRN-031 administration maker-checker closure", () => {
     assert.doesNotMatch(routes, /handleUpsertCaptainCredential/);
   });
 
-  it("binds contract, shared brain, and control-panel queue", () => {
+  it("binds contract, shared brain, and control-panel queues", () => {
     assert.match(contract, /operationId: requestDshStaffRoleAssignment/);
     assert.match(contract, /operationId: reviewDshRoleAssignmentApproval/);
     assert.match(contract, /expectedVersion/);
     assert.match(adapter, /fetchRoleAssignmentApprovals/);
     assert.match(adapter, /reviewRoleAssignmentApproval/);
+    assert.match(adapter, /requestRoleDefinition/);
+    assert.match(adapter, /reviewRoleDefinitionRequest/);
     assert.match(controller, /useRoleAssignmentApprovalController/);
+    assert.match(controller, /useRoleDefinitionApprovalController/);
     assert.match(controller, /useAdministrationRolesController/);
-    assert.match(queue, /useRoleAssignmentApprovalController/);
-    assert.match(queue, /requestRoleAssignment/);
-    assert.match(queue, /اعتماد من مراجع مستقل/);
+    assert.match(assignmentQueue, /useRoleAssignmentApprovalController/);
+    assert.match(assignmentQueue, /requestRoleAssignment/);
+    assert.match(assignmentQueue, /اعتماد من مراجع مستقل/);
+    assert.match(roleQueue, /useRoleDefinitionApprovalController/);
+    assert.match(roleQueue, /إرسال تعريف الدور للمراجعة/);
+    assert.match(roleQueue, /اعتماد تعريف الدور/);
     assert.match(dashboard, /useAdministrationRolesController/);
     assert.match(dashboard, /useAdminAuditController/);
-    assert.doesNotMatch(queue, /fetch\(|axios\.|createDshRawHttpClient/);
-    assert.doesNotMatch(queue, /style=\{\{/);
+    assert.doesNotMatch(assignmentQueue, /fetch\(|axios\.|createDshRawHttpClient/);
+    assert.doesNotMatch(roleQueue, /fetch\(|axios\.|createDshRawHttpClient/);
+    assert.doesNotMatch(assignmentQueue, /style=\{\{/);
+    assert.doesNotMatch(roleQueue, /style=\{\{/);
+    assert.match(governedScreen, /RoleDefinitionApprovalQueue/);
     assert.match(page, /GovernedAdministrationScreen/);
   });
 });
