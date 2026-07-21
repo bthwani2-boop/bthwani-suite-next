@@ -1,0 +1,77 @@
+openapi: 3.1.0
+info:
+  title: BThwani DSH Home Marketing Events API
+  version: 1.0.0
+  description: >
+    Standalone public event-ingestion contract for client-home banner and promo
+    impressions and clicks. The runtime accepts events only while the referenced
+    content is currently publishable and writes to the existing marketing
+    analytics owner tables.
+
+x-bthwani-owner: services/dsh
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-client-generation: DISABLED
+x-bthwani-runtime-dependency: true
+x-bthwani-adapter-owner: services/dsh/frontend/shared/home-discovery
+
+paths:
+  /dsh/home-discovery/events:
+    post:
+      operationId: recordDshHomeMarketingEvent
+      summary: Record one publishable home banner or promo impression/click.
+      tags: [DshHomeMarketing]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DshHomeMarketingEventInput"
+      responses:
+        "204":
+          description: Event accepted and persisted.
+        "400":
+          $ref: "#/components/responses/InvalidEvent"
+        "404":
+          $ref: "#/components/responses/ContentNotPublishable"
+
+components:
+  schemas:
+    DshHomeMarketingEventInput:
+      type: object
+      additionalProperties: false
+      required: [eventType, contentKind, contentId]
+      properties:
+        eventType:
+          type: string
+          enum: [impression, click]
+        contentKind:
+          type: string
+          enum: [banners, promos]
+        contentId:
+          type: string
+          minLength: 1
+        viewerRef:
+          type: string
+          maxLength: 160
+
+    DshHomeMarketingEventError:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+
+  responses:
+    InvalidEvent:
+      description: Event payload failed validation.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/DshHomeMarketingEventError"
+    ContentNotPublishable:
+      description: Referenced content does not exist or is not currently publishable.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/DshHomeMarketingEventError"
