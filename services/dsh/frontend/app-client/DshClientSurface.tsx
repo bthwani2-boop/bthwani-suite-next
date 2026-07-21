@@ -23,6 +23,7 @@ import { BenefitsHubScreen } from "./account/BenefitsHubScreen";
 import { PreferencesHubScreen } from "./account/PreferencesHubScreen";
 import { NotificationCenterScreen } from "./notifications/NotificationCenterScreen";
 import { OrderTrackingScreen } from "./orders/OrderTrackingScreen";
+import { PickupSessionScreen } from "./orders/PickupSessionScreen";
 import { SupportTicketScreen } from "./support/SupportTicketScreen";
 import { TicketDetailScreen } from "./support/TicketDetailScreen";
 import { SheinForm } from "../shared/shein/SheinForm";
@@ -72,6 +73,7 @@ export function DshClientSurface() {
   const [profileRoute, setProfileRoute] = useState<ProfileRoute>("profile");
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
   const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
+  const [activePickupOrderId, setActivePickupOrderId] = useState<string | null>(null);
   const [showNotifications, setShowNotifications] = useState(false);
   const [activeTicketId, setActiveTicketId] = useState<string | null>(null);
   const [appearanceMode, setAppearanceMode] = useState<BThwaniAppearanceMode>("lightPremium");
@@ -83,6 +85,21 @@ export function DshClientSurface() {
     setActiveTab("orders");
     setActiveOrderId(orderId);
   }, []);
+
+  const openNotificationActionUrl = useCallback((actionUrl: string) => {
+    const pickupMatch = /^\/orders\/([^/]+)\/pickup$/.exec(actionUrl);
+    if (pickupMatch?.[1]) {
+      setShowNotifications(false);
+      setActiveTab("orders");
+      setActivePickupOrderId(pickupMatch[1]);
+      return;
+    }
+    const orderMatch = /^\/orders\/([^/]+)$/.exec(actionUrl);
+    if (orderMatch?.[1]) {
+      setShowNotifications(false);
+      openOrderTracking(orderMatch[1]);
+    }
+  }, [openOrderTracking]);
 
   const openAddressBookFromCart = useCallback(() => {
     setProfileRoute("addresses");
@@ -101,6 +118,10 @@ export function DshClientSurface() {
     }
     if (activeSpecialRequest !== null) {
       setActiveSpecialRequest(null);
+      return true;
+    }
+    if (activePickupOrderId !== null) {
+      setActivePickupOrderId(null);
       return true;
     }
     if (activeOrderId !== null) {
@@ -128,7 +149,7 @@ export function DshClientSurface() {
       return true;
     }
     return false;
-  }, [activeOrderId, activeSpecialRequest, activeTab, activeTicketId, profileRoute, selectedStoreId, showNotifications]);
+  }, [activeOrderId, activePickupOrderId, activeSpecialRequest, activeTab, activeTicketId, profileRoute, selectedStoreId, showNotifications]);
 
   useEffect(() => {
     const subscription = BackHandler.addEventListener("hardwareBackPress", goBack);
@@ -139,6 +160,7 @@ export function DshClientSurface() {
     showNotifications ||
     activeSpecialRequest !== null ||
     activeOrderId !== null ||
+    activePickupOrderId !== null ||
     activeTicketId !== null ||
     (activeTab === "stores" && selectedStoreId !== null) ||
     (activeTab === "profile" && profileRoute !== "profile");
@@ -169,7 +191,9 @@ export function DshClientSurface() {
 
       <View style={styles.content}>
         {showNotifications ? (
-          <NotificationCenterScreen />
+          <NotificationCenterScreen onOpenActionUrl={openNotificationActionUrl} />
+        ) : activePickupOrderId !== null ? (
+          <PickupSessionScreen orderId={activePickupOrderId} onBack={() => setActivePickupOrderId(null)} />
         ) : activeOrderId !== null ? (
           <OrderTrackingScreen orderId={activeOrderId} onBack={() => setActiveOrderId(null)} />
         ) : activeSpecialRequest === "shein" ? (

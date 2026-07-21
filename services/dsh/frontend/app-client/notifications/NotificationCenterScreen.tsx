@@ -12,9 +12,10 @@ import { ActorNotificationsPanel } from "../../shared/notifications";
 
 type Props = {
   readonly onBack?: () => void;
+  readonly onOpenActionUrl?: (actionUrl: string) => void;
 };
 
-export function NotificationCenterScreen({ onBack }: Props) {
+export function NotificationCenterScreen({ onBack, onOpenActionUrl }: Props) {
   const identity = useIdentitySession();
 
   return (
@@ -26,6 +27,7 @@ export function NotificationCenterScreen({ onBack }: Props) {
             authKind={identity.state.kind}
             title="إشعارات العميل"
             emptyDescription="ستظهر هنا إشعارات الطلبات، التتبع، والدعم الخاصة بك."
+            {...(onOpenActionUrl ? { onOpenActionUrl } : {})}
           />
           {onBack ? <Button label="العودة" tone="secondary" onPress={onBack} /> : null}
         </View>
