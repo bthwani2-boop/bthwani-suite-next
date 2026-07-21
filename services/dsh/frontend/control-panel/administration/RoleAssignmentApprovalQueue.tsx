@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type CSSProperties } from "react";
+import React, { useState, type CSSProperties } from "react";
 import {
   CpButton,
   CpPageHeader,
