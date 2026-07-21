@@ -12,8 +12,8 @@ import (
 // RegisterPlatformPolicyRoutes binds the DSH-owned operational platform
 // policies to the same protected server boundary used by the rest of DSH.
 // Platform Control remains the owner of runtime variables, flags, change sets,
-// and rollouts; DSH owns service zones, SLA, capacity, serviceability, and the
-// onboarding-fee policy definition.
+// and rollouts; DSH owns service zones, SLA, capacity, serviceability, map
+// provider readback, and the onboarding-fee policy definition.
 func RegisterPlatformPolicyRoutes(
 	mux *http.ServeMux,
 	db *sql.DB,
@@ -21,8 +21,10 @@ func RegisterPlatformPolicyRoutes(
 	wltClient *wlt.Client,
 	mediaProvider *media.Provider,
 ) {
-	// protected := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
-	// The following routes are now registered via registerUnifiedCatalogRoutes in catalog_unified_routes.go
+	protected := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
+	mux.HandleFunc("GET /dsh/operator/platform/map-provider-health", protected.handleOperatorMapProviderHealth)
+
+	// The following routes are now registered via registerUnifiedCatalogRoutes in catalog_unified_routes.go.
 	// mux.HandleFunc("GET /dsh/operator/platform/zones", protected.handleListZones)
 	// mux.HandleFunc("POST /dsh/operator/platform/zones", protected.handleCreateZone)
 	// mux.HandleFunc("PATCH /dsh/operator/platform/zones/{zoneId}", protected.handleUpdateZone)
