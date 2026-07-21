@@ -30,7 +30,10 @@ func TestJRN011PaymentProjectionDBIntegration(t *testing.T) {
 		SessionID:    created.WltPaymentRefID,
 		AttemptCount: 1,
 	}
-	capturedAt := time.Now().UTC().Add(2 * time.Minute)
+	// PostgreSQL timestamptz stores microsecond precision. Use the same precision
+	// in the source fact so the assertion verifies semantic equality rather than
+	// failing on nanoseconds discarded by the database driver.
+	capturedAt := time.Now().UTC().Add(2 * time.Minute).Truncate(time.Microsecond)
 	if err := applyPaymentProjection(context.Background(), db, work, &wlt.PaymentSessionDetail{
 		ID:        created.WltPaymentRefID,
 		Method:    "cod",
@@ -51,7 +54,7 @@ func TestJRN011PaymentProjectionDBIntegration(t *testing.T) {
 		t.Fatalf("read captured projection: %v", err)
 	}
 	if projection != "confirmed" || version <= created.Version || !sourceUpdatedAt.Equal(capturedAt) {
-		t.Fatalf("captured projection was not applied: projection=%s version=%d source=%s", projection, version, sourceUpdatedAt)
+		t.Fatalf("captured projection was not applied: projection=%s version=%d source=%s expectedSource=%s", projection, version, sourceUpdatedAt, capturedAt)
 	}
 
 	var projectionEventCount int
