@@ -6,10 +6,9 @@ import (
 	"strings"
 )
 
-// FindUpdateReplay checks the durable mutation receipt before any mutable
-// service-area validation. This preserves idempotency when an address update was
-// committed but its HTTP response was lost and the service-area configuration
-// changed before the client retried.
+// FindUpdateReplay checks the durable mutation receipt before any mutable service-area validation.
+// This preserves idempotency when an address update was committed but its HTTP
+// response was lost and service-area configuration changed before the retry.
 func FindUpdateReplay(
 	ctx context.Context,
 	db *sql.DB,
