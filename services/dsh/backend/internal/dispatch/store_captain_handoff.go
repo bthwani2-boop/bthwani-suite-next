@@ -219,11 +219,15 @@ func updateDeliveryProgressWithStoreHandoff(
 	}
 
 	if current.OrderID != "" {
+		allowedOrderStatuses := []orders.OrderStatus{orders.OrderStatus(current.Delivery.Status)}
+		if next == DeliveryPickedUp {
+			allowedOrderStatuses = []orders.OrderStatus{orders.StatusStoreHandoffConfirmed}
+		}
 		if _, err = orders.TransitionDispatchOrder(
 			tx,
 			current.OrderID,
 			"captain",
-			[]orders.OrderStatus{orders.OrderStatus(current.Delivery.Status)},
+			allowedOrderStatuses,
 			orderStatus,
 			string(next),
 		); err != nil {
@@ -292,10 +296,11 @@ func ConfirmStoreCaptainHandoff(db *sql.DB, orderID, storeID, actorID string) (*
 	if fulfillmentMode != "bthwani_delivery" {
 		return nil, fmt.Errorf("%w: store-captain handoff applies only to bthwani_delivery", ErrConflict)
 	}
-	if assignmentStatus != string(AssignmentAccepted) ||
-		deliveryStatus != string(DeliveryArrivedStore) ||
-		orderStatus != string(DeliveryArrivedStore) {
+	if assignmentStatus != string(AssignmentAccepted) || deliveryStatus != string(DeliveryArrivedStore) {
 		return nil, fmt.Errorf("%w: captain must be at the store before partner handoff", ErrConflict)
+	}
+	if orderStatus != string(orders.StatusArrivedStore) && orderStatus != string(orders.StatusStoreHandoffConfirmed) {
+		return nil, fmt.Errorf("%w: order is not awaiting store handoff", ErrConflict)
 	}
 
 	current := &Assignment{
@@ -324,6 +329,19 @@ func ConfirmStoreCaptainHandoff(db *sql.DB, orderID, storeID, actorID string) (*
 		WHERE assignment_id = $1::uuid
 		  AND status IN ('awaiting_partner','partner_confirmed')`, assignmentID, actorID); err != nil {
 		return nil, err
+	}
+
+	if orderStatus == string(orders.StatusArrivedStore) {
+		if _, err = orders.TransitionDispatchOrder(
+			tx,
+			orderID,
+			"partner",
+			[]orders.OrderStatus{orders.StatusArrivedStore},
+			orders.StatusStoreHandoffConfirmed,
+			"store released package to assigned captain",
+		); err != nil {
+			return nil, mapOrderError(err)
+		}
 	}
 
 	item, err := scanStoreCaptainHandoff(tx.QueryRow(
