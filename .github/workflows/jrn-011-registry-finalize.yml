@@ -1,0 +1,88 @@
+name: JRN-011 Registry Finalization
+
+on:
+  push:
+    branches:
+      - sambassam
+    paths:
+      - ".github/workflows/jrn-011-registry-finalize.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: jrn-011-registry-finalization
+  cancel-in-progress: false
+
+jobs:
+  finalize-registry:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: sambassam
+          fetch-depth: 0
+      - name: Finalize JRN-011 registry entry and section
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md")
+          source = path.read_text()
+
+          old_index = "| JRN-011 | إنشاء الطلب وحقيقة الطلب | DSH | NEEDS_EVIDENCE |"
+          new_index = "| JRN-011 | إنشاء الطلب وحقيقة الطلب | DSH | READY_FOR_REVIEW |"
+          if old_index in source:
+              source = source.replace(old_index, new_index, 1)
+          elif new_index not in source:
+              raise SystemExit("JRN-011 registry index row was not found")
+
+          old_section = """### JRN-011 — إنشاء الطلب وحقيقة الطلب
+
+الأسطح المرشحة: `app-client`, `app-partner`, `control-panel`.
+"""
+          new_section = """### JRN-011 — إنشاء الطلب وحقيقة الطلب
+
+tracking_status: READY_FOR_REVIEW
+decision: READY_FOR_REVIEW
+verified_implementation_commit: `9254986458ed4f3126162a440bd4a78ad3a333ae`
+workflow_run_id: `29877543554`
+status_context: `jrn-011/order-truth`
+technical_slices: `FS-01..FS-18 CODE_CLOSED`
+owner_services: `DSH`, `WLT read-only boundary`
+required_surfaces: `app-client`, `app-partner`, `control-panel`, `dsh-backend`, `dsh-postgresql`, `wlt-read-boundary`
+open_code_gaps: `[]`
+independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security؛ Finance/WLT boundary؛ Release/Production.
+
+الأسطح المرشحة: `app-client`, `app-partner`, `control-panel`.
+"""
+          if old_section in source:
+              source = source.replace(old_section, new_section, 1)
+          elif new_section not in source:
+              raise SystemExit("JRN-011 registry detail section was not found")
+
+          path.write_text(source)
+          PY
+          git diff --check
+      - name: Commit registry finalization
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md; then
+            exit 0
+          fi
+          git config user.name "bthwani-journey-closure"
+          git config user.email "actions@users.noreply.github.com"
+          git add governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md
+          git commit -m "docs(jrn-011): finalize journey registry closure"
+          for attempt in 1 2 3; do
+            git fetch origin sambassam
+            git rebase origin/sambassam
+            if git push origin HEAD:sambassam; then
+              exit 0
+            fi
+            sleep 2
+          done
+          exit 1
