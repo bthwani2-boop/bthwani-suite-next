@@ -93,7 +93,7 @@ export function OrderTruthReadbackSummary({
   );
   return (
     <Box padding={3} gap={2} background={state.kind === "partial" ? "warningSurface" : "surfaceInset"}>
-      <Box layoutDirection="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+      <Box layoutDirection="row" justify="space-between" align="center">
         <Box gap={1}>
           <Text role="bodyStrong">{title}</Text>
           <Text role="caption" tone="muted">{orders.length} طلب · قراءة فقط · الصلاحيات من الخادم</Text>
