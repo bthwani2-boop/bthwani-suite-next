@@ -160,6 +160,24 @@ func (s *protectedStoreServer) handleUpdateClientAddress(w http.ResponseWriter, 
 		operationErr = clientaddress.ErrInvalid
 		return
 	}
+	addressID := r.PathValue("addressId")
+	replay, found, err := clientaddress.FindUpdateReplay(
+		r.Context(),
+		s.db,
+		actor.ID,
+		addressID,
+		input,
+		mutation,
+	)
+	if err != nil {
+		operationErr = err
+		addressError(w, err)
+		return
+	}
+	if found {
+		store.SendJSON(w, http.StatusOK, map[string]any{"address": replay})
+		return
+	}
 	if err := clientaddress.ValidateServiceArea(r.Context(), s.db, input.CreateInput); err != nil {
 		operationErr = err
 		addressError(w, err)
@@ -169,7 +187,7 @@ func (s *protectedStoreServer) handleUpdateClientAddress(w http.ResponseWriter, 
 		r.Context(),
 		s.db,
 		actor.ID,
-		r.PathValue("addressId"),
+		addressID,
 		input,
 		mutation,
 	)
