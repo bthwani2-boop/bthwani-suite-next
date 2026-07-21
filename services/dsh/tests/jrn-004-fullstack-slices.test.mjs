@@ -11,6 +11,8 @@ const registryPath = "contracts/jrn-004-slice-verification-registry.json";
 test("JRN-004 registers all nine functional slices and FS-01 through FS-18", () => {
   const registry = json(registryPath);
   assert.equal(registry.journeyId, "JRN-004");
+  assert.equal(registry.decision, "READY_FOR_REVIEW");
+  assert.equal(registry.evidenceCommit, "2a330d9ccd37484d6c156cb40b4be87271a53545");
   assert.equal(registry.functionalSlices.length, 9);
   assert.equal(registry.fullStackSlices.length, 18);
   assert.deepEqual(
@@ -18,8 +20,10 @@ test("JRN-004 registers all nine functional slices and FS-01 through FS-18", () 
     Array.from({ length: 18 }, (_, index) => `FS-${String(index + 1).padStart(2, "0")}`),
   );
   assert.equal(registry.functionalSlices.filter((slice) => slice.status !== "COMPLETE").length, 0);
+  assert.equal(registry.fullStackSlices.filter((slice) => !slice.status.startsWith("COMPLETE")).length, 0);
   assert.equal(registry.zeroGate.unclosedFunctionalSlices, 0);
   assert.equal(registry.zeroGate.unclosedImplementationSlices, 0);
+  assert.equal(registry.zeroGate.failedRequiredChecks, 0);
 });
 
 test("JRN-004 Product Truth owns one 13-condition publication gate", () => {
@@ -125,4 +129,26 @@ test("JRN-004 security, observability, cleanup and runbook remain explicit", () 
   assert.match(runbook, /Idempotency retention/);
   assert.equal(fs.existsSync(new URL("../../.github/workflows/tmp-jrn-004-apply-operator-pagination.yml", root)), false);
   assert.equal(fs.existsSync(new URL("../../tools/scripts/apply-jrn-004-operator-pagination.py", root)), false);
+});
+
+test("JRN-004 evidence is machine-readable and keeps independent approvals explicit", () => {
+  const evidence = json("../../governance/evidence/JRN-004_STORE_DISCOVERY_CONTEXT_GOVERNANCE_CLOSURE.json");
+  const log = read("../../governance/evidence/JRN-004_SLICE_EXECUTION_LOG.md");
+
+  assert.equal(evidence.decision, "READY_FOR_REVIEW");
+  assert.equal(evidence.functionalSlices.complete, 9);
+  assert.equal(evidence.fullStackSlices.completeInternal, 18);
+  assert.equal(evidence.verification.runId, 29860178822);
+  assert.equal(evidence.verification.checks.nodeTests.failed, 0);
+  assert.equal(evidence.zeroGate.unclosedInternalSlices, 0);
+  assert.deepEqual(evidence.independentApprovals.obtained, []);
+  assert.equal(evidence.independentApprovals.remaining.length, 5);
+  assert.match(log, /FS-17 \| COMPLETE/);
+  assert.match(log, /READY_FOR_REVIEW/);
+});
+
+test("JRN-004 canonical registry records READY_FOR_REVIEW rather than self-approval", () => {
+  const canonical = read("../../governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md");
+  assert.match(canonical, /\| JRN-004 \| اكتشاف المتاجر وسياقها وحوكمتها \| DSH \| READY_FOR_REVIEW \|/);
+  assert.doesNotMatch(canonical, /\| JRN-004 \| اكتشاف المتاجر وسياقها وحوكمتها \| DSH \| CLOSED_WITH_EVIDENCE \|/);
 });
