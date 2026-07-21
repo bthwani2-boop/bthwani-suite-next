@@ -1,14 +1,15 @@
 import React from 'react';
 import {
-  fetchClientOrder,
   fetchOrderPreparation,
   classifyOrderError,
 } from './orders.api';
+import type { DshOrderPreparation } from './orders.types';
 import {
-  isOrderCancellationStatus,
-  type DshOrder,
-  type DshOrderPreparation,
-} from './orders.types';
+  classifyOrderTruthFailure,
+  fetchClientOrderTruthDetail,
+  isTerminalOrderTruth,
+  type OrderTruth,
+} from '../order-truth';
 import { fetchClientOrderTracking, classifyDispatchError } from '../dispatch/dispatch.api';
 import type { DshDispatchAssignment } from '../dispatch/dispatch.types';
 
@@ -17,22 +18,25 @@ export type ClientOrderJourneyState =
   | { readonly kind: 'error'; readonly message: string }
   | {
       readonly kind: 'ready';
-      readonly order: DshOrder;
+      readonly order: OrderTruth;
       readonly preparation: DshOrderPreparation;
       readonly assignment: DshDispatchAssignment | null;
     };
 
 function orderErrorMessage(error: unknown): string {
+  const truthFailure = classifyOrderTruthFailure(error, 'client');
+  if (truthFailure.kind !== 'error') return truthFailure.message;
   const classified = classifyOrderError(error);
   if (classified.kind === 'permission_denied') return 'لا تملك صلاحية عرض هذا الطلب.';
   if (classified.kind === 'not_found') return 'الطلب غير موجود.';
   if (classified.kind === 'offline') return 'تعذر الاتصال بخدمة الطلبات.';
-  return classified.message ?? 'تعذر تحميل الطلب.';
+  return classified.message ?? truthFailure.message;
 }
 
 /**
- * Shared DSH controller for client order readback across order, preparation,
- * and optional dispatch assignment. Surfaces render this state only.
+ * Shared client journey controller. The order itself is always read from the
+ * JRN-011 actor-scoped order-truth endpoint. Preparation and dispatch remain
+ * separate operational projections and cannot override order truth.
  */
 export function useClientOrderJourneyController(orderId: string) {
   const [state, setState] = React.useState<ClientOrderJourneyState>({ kind: 'loading' });
@@ -45,7 +49,7 @@ export function useClientOrderJourneyController(orderId: string) {
 
     try {
       const [order, preparation] = await Promise.all([
-        fetchClientOrder(orderId),
+        fetchClientOrderTruthDetail(orderId),
         fetchOrderPreparation(orderId),
       ]);
       let assignment: DshDispatchAssignment | null = null;
@@ -73,8 +77,7 @@ export function useClientOrderJourneyController(orderId: string) {
   }, [load]);
 
   React.useEffect(() => {
-    if (state.kind !== 'ready') return undefined;
-    if (state.order.status === 'delivered' || isOrderCancellationStatus(state.order.status)) return undefined;
+    if (state.kind !== 'ready' || isTerminalOrderTruth(state.order)) return undefined;
     const interval = setInterval(() => void load(), 15_000);
     return () => clearInterval(interval);
   }, [load, state]);
