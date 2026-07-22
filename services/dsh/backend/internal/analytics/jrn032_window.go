@@ -35,7 +35,7 @@ func ParseWindow(period, fromValue, toValue string, now time.Time) (Window, erro
 	fromValue = strings.TrimSpace(fromValue)
 	toValue = strings.TrimSpace(toValue)
 	if fromValue != "" || toValue != "" {
-		if fromValue == "" || toValue == "" {
+		if period != "" || fromValue == "" || toValue == "" {
 			return Window{}, ErrInvalidAnalyticsRange
 		}
 		from, err := parseAnalyticsTime(fromValue, false)
@@ -43,7 +43,12 @@ func ParseWindow(period, fromValue, toValue string, now time.Time) (Window, erro
 			return Window{}, ErrInvalidAnalyticsRange
 		}
 		to, err := parseAnalyticsTime(toValue, true)
-		if err != nil || !to.After(from) || to.Sub(from) > MaxAnalyticsRange || to.After(now.Add(time.Minute)) {
+		latestAllowedTo := now.Add(time.Minute)
+		if isAnalyticsDateOnly(toValue) {
+			year, month, day := now.Date()
+			latestAllowedTo = time.Date(year, month, day, 0, 0, 0, 0, time.UTC).Add(24 * time.Hour)
+		}
+		if err != nil || !to.After(from) || to.Sub(from) > MaxAnalyticsRange || to.After(latestAllowedTo) {
 			return Window{}, ErrInvalidAnalyticsRange
 		}
 		return Window{Period: "custom", From: from, To: to}, nil
@@ -66,6 +71,14 @@ func ParseWindow(period, fromValue, toValue string, now time.Time) (Window, erro
 	return Window{Period: period, From: from, To: now}, nil
 }
 
+func isAnalyticsDateOnly(value string) bool {
+	if len(value) != len("2006-01-02") {
+		return false
+	}
+	_, err := time.Parse("2006-01-02", value)
+	return err == nil
+}
+
 func parseAnalyticsTime(value string, endOfDay bool) (time.Time, error) {
 	if parsed, err := time.Parse(time.RFC3339, value); err == nil {
 		return parsed.UTC(), nil
@@ -82,12 +95,12 @@ func parseAnalyticsTime(value string, endOfDay bool) (time.Time, error) {
 
 func NewMetadata(window Window, lineage ...string) Metadata {
 	return Metadata{
-		SourceSystem: "DSH",
-		ReadOnly: true,
-		GeneratedAt: time.Now().UTC(),
-		WindowFrom: window.From,
-		WindowTo: window.To,
+		SourceSystem:     "DSH",
+		ReadOnly:         true,
+		GeneratedAt:      time.Now().UTC(),
+		WindowFrom:       window.From,
+		WindowTo:         window.To,
 		FreshnessSeconds: 0,
-		Lineage: append([]string(nil), lineage...),
+		Lineage:          append([]string(nil), lineage...),
 	}
 }
