@@ -8,6 +8,7 @@ import (
 func TestJourneys026To030ExposeGovernedRoutes(t *testing.T) {
 	router := NewRouter(nil, nil, nil, nil)
 	RegisterPartnerFleetMembershipRoutes(router, nil, nil, nil, nil)
+	RegisterPartnerFleetOperatorRoutes(router, nil, nil, nil, nil)
 
 	cases := []struct {
 		journey string
@@ -39,13 +40,14 @@ func TestJourneys026To030ExposeGovernedRoutes(t *testing.T) {
 		{journey: "JRN-029 read store coverage", method: http.MethodGet, path: "/dsh/partner/stores/store-1/coverage-zones", pattern: "GET /dsh/partner/stores/{storeId}/coverage-zones"},
 		{journey: "JRN-029 read courier mode", method: http.MethodGet, path: "/dsh/partner/stores/store-1/courier-settings", pattern: "GET /dsh/partner/stores/{storeId}/courier-settings"},
 
-		// JRN-030 — partner fleet connection and captain-owned disconnect.
+		// JRN-030 — partner fleet connection, operator readback, and captain-owned disconnect.
 		{journey: "JRN-030 issue fleet code", method: http.MethodPost, path: "/dsh/partner/stores/store-1/couriers/member-1/connection-code", pattern: "POST /dsh/partner/stores/{storeId}/couriers/{memberId}/connection-code"},
 		{journey: "JRN-030 list partner connections", method: http.MethodGet, path: "/dsh/partner/stores/store-1/courier-connections", pattern: "GET /dsh/partner/stores/{storeId}/courier-connections"},
 		{journey: "JRN-030 revoke pending connection", method: http.MethodPost, path: "/dsh/partner/stores/store-1/courier-connections/connection-1/revoke", pattern: "POST /dsh/partner/stores/{storeId}/courier-connections/{connectionId}/revoke"},
 		{journey: "JRN-030 connect captain", method: http.MethodPost, path: "/dsh/captain/partner-fleet/connect", pattern: "POST /dsh/captain/partner-fleet/connect"},
 		{journey: "JRN-030 list captain memberships", method: http.MethodGet, path: "/dsh/captain/partner-fleet/memberships", pattern: "GET /dsh/captain/partner-fleet/memberships"},
 		{journey: "JRN-030 disconnect captain membership", method: http.MethodPost, path: "/dsh/captain/partner-fleet/memberships/member-1/disconnect", pattern: "POST /dsh/captain/partner-fleet/memberships/{teamMemberId}/disconnect"},
+		{journey: "JRN-030 operator fleet readback", method: http.MethodGet, path: "/dsh/operator/stores/store-1/partner-fleet", pattern: "GET /dsh/operator/stores/{storeId}/partner-fleet"},
 	}
 
 	for _, tc := range cases {
