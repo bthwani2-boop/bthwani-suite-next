@@ -24,7 +24,7 @@ permissions:
 
 concurrency:
   group: jrn-043-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   verify:
