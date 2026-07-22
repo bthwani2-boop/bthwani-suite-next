@@ -90,11 +90,12 @@ jobs:
           for file in $(find services/dsh/database/migrations -maxdepth 1 -type f -name '*.sql' | sort); do
             psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file" >/dev/null
           done
-      - name: Prove governed exception and return custody behavior
+      - name: Prove governed HTTP boundary
         working-directory: services/dsh/backend
-        run: |
-          go test ./internal/http -run 'TestValidateDeliveryException|TestDeliveryExceptionPathID' -count=1
-          go test ./internal/dispatch -run 'TestDeliveryException' -count=1
+        run: go test ./internal/http -run '^(TestValidateDeliveryExceptionReportNote|TestValidateDeliveryExceptionResolutionState|TestDeliveryExceptionPathID)$' -count=1
+      - name: Prove return custody DB lifecycle
+        working-directory: services/dsh/backend
+        run: go test ./internal/dispatch -run '^TestDeliveryExceptionReturnToStoreLifecycleDBIntegration$' -count=1 -v
 
   contract-surfaces:
     name: JRN-020 contract and surfaces
