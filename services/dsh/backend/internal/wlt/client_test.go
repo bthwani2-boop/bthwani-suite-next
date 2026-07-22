@@ -212,7 +212,7 @@ func TestNotifyDeliveryCollectionNotConfigured(t *testing.T) {
 	}
 }
 
-func TestFinanceReadWalletBuildsPathParameterizedURL(t *testing.T) {
+func TestFinanceReadWalletWithTenantBuildsPathAndHeaders(t *testing.T) {
 	var gotPath string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotPath = r.URL.Path
@@ -225,6 +225,9 @@ func TestFinanceReadWalletBuildsPathParameterizedURL(t *testing.T) {
 		if r.Header.Get("X-Service-Caller") != "dsh" {
 			t.Fatalf("expected X-Service-Caller=dsh, got %q", r.Header.Get("X-Service-Caller"))
 		}
+		if r.Header.Get("X-Tenant-ID") != "tenant-a" {
+			t.Fatalf("expected X-Tenant-ID=tenant-a, got %q", r.Header.Get("X-Tenant-ID"))
+		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"balanceMinorUnits":0}`))
@@ -232,7 +235,7 @@ func TestFinanceReadWalletBuildsPathParameterizedURL(t *testing.T) {
 	defer server.Close()
 
 	c := NewClient(server.URL, "test-service-token")
-	status, body, err := c.FinanceReadWallet(context.Background(), "field", "field-123", "corr-1")
+	status, body, err := c.FinanceReadWalletWithTenant(context.Background(), "field", "field-123", "corr-1", "tenant-a")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -247,13 +250,10 @@ func TestFinanceReadWalletBuildsPathParameterizedURL(t *testing.T) {
 	}
 }
 
-func TestFinanceReadWalletEscapesActorIDSegment(t *testing.T) {
+func TestFinanceReadWalletWithTenantEscapesActorIDSegment(t *testing.T) {
 	var gotEscapedPath string
 	var gotSegmentCount int
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// r.URL.Path is the *decoded* path (Go transparently decodes %2F back
-		// into "/"), so the wire-level escaping must be verified against the
-		// raw request target / escaped path, not the decoded one.
 		gotEscapedPath = r.URL.EscapedPath()
 		gotSegmentCount = len(strings.Split(strings.TrimPrefix(r.URL.EscapedPath(), "/"), "/"))
 		w.WriteHeader(http.StatusOK)
@@ -261,41 +261,54 @@ func TestFinanceReadWalletEscapesActorIDSegment(t *testing.T) {
 	defer server.Close()
 
 	c := NewClient(server.URL, "test-service-token")
-	// An actor id containing a path separator must not be able to alter the
-	// route shape (e.g. escape into another WLT collection) once the WLT
-	// server routes on path segments.
-	if _, _, err := c.FinanceReadWallet(context.Background(), "field", "../admin", "corr-1"); err != nil {
+	if _, _, err := c.FinanceReadWalletWithTenant(context.Background(), "field", "../admin", "corr-1", "tenant-a"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if gotEscapedPath != "/wlt/wallets/field/..%2Fadmin" {
 		t.Fatalf("expected escaped path /wlt/wallets/field/..%%2Fadmin, got %q", gotEscapedPath)
 	}
 	if gotSegmentCount != 4 {
-		t.Fatalf("expected exactly 4 path segments (wlt, wallets, field, <escaped actor id>), got %d from %q", gotSegmentCount, gotEscapedPath)
+		t.Fatalf("expected exactly 4 path segments, got %d from %q", gotSegmentCount, gotEscapedPath)
 	}
 }
 
-func TestFinanceReadWalletRejectsUnknownActorType(t *testing.T) {
+func TestFinanceReadWalletWithTenantRejectsUnknownActorType(t *testing.T) {
 	c := NewClient("https://wlt.internal", "test-service-token")
-	_, _, err := c.FinanceReadWallet(context.Background(), "operator", "operator-1", "corr-1")
+	_, _, err := c.FinanceReadWalletWithTenant(context.Background(), "operator", "operator-1", "corr-1", "tenant-a")
 	if err == nil || !strings.Contains(err.Error(), "not allowlisted") {
 		t.Fatalf("expected not-allowlisted error, got: %v", err)
 	}
 }
 
-func TestFinanceReadWalletRejectsEmptyActorID(t *testing.T) {
+func TestFinanceReadWalletWithTenantRejectsEmptyActorID(t *testing.T) {
 	c := NewClient("https://wlt.internal", "test-service-token")
-	_, _, err := c.FinanceReadWallet(context.Background(), "field", "", "corr-1")
+	_, _, err := c.FinanceReadWalletWithTenant(context.Background(), "field", "", "corr-1", "tenant-a")
 	if err == nil {
 		t.Fatalf("expected error for empty actor id")
 	}
 }
 
-func TestFinanceReadWalletNotConfigured(t *testing.T) {
+func TestFinanceReadWalletWithTenantRejectsEmptyTenant(t *testing.T) {
+	c := NewClient("https://wlt.internal", "test-service-token")
+	_, _, err := c.FinanceReadWalletWithTenant(context.Background(), "field", "field-1", "corr-1", "")
+	if err == nil || !strings.Contains(err.Error(), "tenant id is required") {
+		t.Fatalf("expected tenant-required error, got: %v", err)
+	}
+}
+
+func TestFinanceReadWalletWithTenantNotConfigured(t *testing.T) {
 	c := NewClient("", "")
-	_, _, err := c.FinanceReadWallet(context.Background(), "field", "field-1", "corr-1")
+	_, _, err := c.FinanceReadWalletWithTenant(context.Background(), "field", "field-1", "corr-1", "tenant-a")
 	if err == nil || !strings.Contains(err.Error(), "not configured") {
 		t.Fatalf("expected 'not configured' error, got: %v", err)
+	}
+}
+
+func TestFinanceReadWalletFailsClosedWithoutTenant(t *testing.T) {
+	c := NewClient("https://wlt.internal", "test-service-token")
+	_, _, err := c.FinanceReadWallet(context.Background(), "field", "field-1", "corr-1")
+	if err == nil || !strings.Contains(err.Error(), "tenant id is required") {
+		t.Fatalf("expected fail-closed tenant error, got: %v", err)
 	}
 }
 
