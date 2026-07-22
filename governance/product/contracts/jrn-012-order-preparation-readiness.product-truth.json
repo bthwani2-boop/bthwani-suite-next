@@ -1,8 +1,9 @@
 {
-  "schemaVersion": "1.1.0",
+  "schemaVersion": "1.2.0",
   "journeyId": "JRN-012",
   "title": "قبول الطلب وتحضيره وجاهزيته",
   "status": "CODE_COMPLETE_READY_FOR_INDEPENDENT_REVIEW",
+  "codeClosure": "CLOSED_WITH_SAME_COMMIT_CI_EVIDENCE",
   "owner": "DSH",
   "purpose": "إدارة قرار المتجر وتوقيت التحضير والمشكلات والاستبدالات وقرار العميل والتنبيهات والجاهزية من حقيقة تشغيلية واحدة تمنع الانتقالات غير الصالحة وتعرض القراءة الراجعة للأسطح المتأثرة.",
   "actors": ["partner", "client", "captain", "operator", "system"],
@@ -84,8 +85,16 @@
     "weakNetwork": "surfaces keep no optimistic business truth and expose retryable offline or error states",
     "rollback": "disable preparation alert scan UI and routes first; preserve append-only issue, decision, alert, outbox, and status history; never roll back by deleting operational history"
   },
+  "verification": {
+    "context": "jrn-012/order-preparation",
+    "successfulImplementationCommit": "2a73559864baadc2f4e1df12649d19d35810331c",
+    "successfulWorkflowRunId": 29880166347,
+    "requiredOnGovernanceCommit": true,
+    "coveredGates": ["static", "postgresql", "go", "openapi-generation", "typescript", "wlt-financial-boundary"]
+  },
   "evidenceRequired": ["static", "database", "contract", "backend", "runtime", "cross-surface", "security", "finance-boundary", "accessibility", "qa", "governance", "ci"],
-  "codeZeroGate": "IMPLEMENTED",
+  "codeZeroGate": "PASSED",
+  "openCodeGaps": [],
   "releaseGate": "PENDING_INDEPENDENT_APPROVALS",
   "independentReviewPending": ["product-owner", "qa-device-accessibility", "security", "finance-boundary", "release-production"],
   "decision": "READY_FOR_REVIEW"
