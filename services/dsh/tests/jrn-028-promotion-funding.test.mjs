@@ -5,6 +5,7 @@ import test from "node:test";
 const read = (path) => fs.readFileSync(path, "utf8");
 
 const wltMigration = read("services/wlt/database/migrations/wlt-034_jrn_028_promotion_funding_audit_integrity.sql");
+const integrityProof = read("services/wlt/database/tests/jrn-028-promotion-funding-integrity.sh");
 const wltJSON = read("services/wlt/backend/internal/promotionfunding/reservation_json.go");
 const serviceAuth = read("services/wlt/backend/internal/shared/serviceauth.go");
 const dshReadback = read("services/dsh/backend/internal/wlt/promotion_funding_read.go");
@@ -15,21 +16,30 @@ const couponsController = read("services/dsh/frontend/shared/marketing/use-coupo
 const couponsDeck = read("services/dsh/frontend/control-panel/marketing/components/CouponsCommandDeck.tsx");
 const panel = read("services/dsh/frontend/control-panel/marketing/components/CouponFundingReconciliationPanel.tsx");
 const dashboard = read("services/dsh/frontend/control-panel/marketing/MarketingDashboardScreen.tsx");
+const productTruth = read("governance/product/JRN-028_PROMOTION_FUNDING_PRODUCT_TRUTH.md");
+const workflow = read(".github/workflows/jrn-026-coupons-pricing-loyalty-verification.yml");
+const closure = JSON.parse(read("governance/evidence/JRN-028_ALL_SLICES_CLOSURE.json"));
 
 const slices = [
-  ["FS-01..04 product and service boundary", () => {
+  ["FS-01..04 product, reserve, persistence and readback boundary", () => {
     assert.match(diagnostics, /DSH state[\s\S]*WLT state/);
     assert.match(dshReadback, /GetPromotionFundingReservation/);
+    assert.match(productTruth, /DSH owns coupon eligibility/);
+    assert.match(productTruth, /WLT owns reservation state/);
   }],
-  ["FS-05..08 sovereign financial integrity", () => {
+  ["FS-05..08 transition, monetary, tenant and idempotency integrity", () => {
     assert.match(wltMigration, /DEFERRABLE INITIALLY DEFERRED/);
     assert.match(wltMigration, /same-transaction append-only event/);
     assert.match(wltMigration, /transaction_id = txid_current\(\)/);
     assert.match(wltMigration, /reservation_id, to_status/);
+    assert.match(integrityProof, /Audited release from reserved/);
+    assert.match(integrityProof, /Audited reverse from committed/);
+    assert.match(integrityProof, /split mismatch was accepted/);
+    assert.match(integrityProof, /conflicting idempotency replay was accepted/);
     assert.doesNotMatch(wltJSON, /IdempotencyKey\s+string/);
     assert.match(serviceAuth, /MISSING_TENANT_ID/);
   }],
-  ["FS-09..12 operator reconciliation surface", () => {
+  ["FS-09..12 outbox, recovery, reconciliation and operator read model", () => {
     assert.match(couponsHTTP, /ListFundingLifecycleDiagnostics/);
     assert.match(couponsHTTP, /GetPromotionFundingReservation/);
     assert.match(couponsHTTP, /"fundingLifecycle"/);
@@ -42,12 +52,32 @@ const slices = [
     assert.doesNotMatch(panel, /createDshRawHttpClient/);
     assert.doesNotMatch(dashboard, /CouponFundingReconciliationPanel/);
   }],
-  ["FS-13..16 safety, privacy and recovery", () => {
+  ["FS-13..16 UI states, privacy, audit and negative recovery", () => {
     assert.match(diagnostics, /wlt_unavailable/);
     assert.match(diagnostics, /mismatch/);
     assert.match(panel, /role="alert"/);
+    assert.match(integrityProof, /unaudited transition was accepted/);
+    assert.match(integrityProof, /stale event authorized a later transition/);
+    assert.match(integrityProof, /terminal reversed reservation transitioned again/);
     assert.doesNotMatch(panel, /idempotencyKey/i);
     assert.doesNotMatch(couponsHTTP, /idempotencyKey/i);
+  }],
+  ["FS-17 contract and duplicate-owner hygiene", () => {
+    assert.match(productTruth, /Manual control-panel commit, release, and reverse actions are intentionally absent/);
+    assert.match(productTruth, /The control panel compares DSH projection with an authenticated WLT readback/);
+    assert.match(workflow, /Verify Product Truth and modular OpenAPI/);
+    assert.match(workflow, /git diff --exit-code/);
+    assert.doesNotMatch(panel, /fetch\s*\(/);
+  }],
+  ["FS-18 exact-head integrated zero-gate and closure record", () => {
+    assert.equal(closure.journeyId, "JRN-028");
+    assert.equal(closure.technicalDecision, "IMPLEMENTED_AND_VERIFIED_READY_FOR_INDEPENDENT_APPROVAL");
+    assert.deepEqual(closure.slices.map((slice) => slice.id), Array.from({ length: 18 }, (_, index) => `FS-${String(index + 1).padStart(2, "0")}`));
+    assert.ok(closure.slices.every((slice) => slice.status === "CLOSED_BY_EXACT_HEAD_GATE"));
+    assert.deepEqual(closure.openCodeGaps, []);
+    assert.match(workflow, /Verify JRN-028 database lifecycle and negative invariants/);
+    assert.match(workflow, /Verify repository whitespace/);
+    assert.match(productTruth, /does not self-issue independent Finance, Security, QA, Release, or Production approval/);
   }],
 ];
 
