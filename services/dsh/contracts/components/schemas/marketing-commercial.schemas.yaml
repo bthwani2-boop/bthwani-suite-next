@@ -5,20 +5,30 @@ DshMarketingTargetType:
   type: string
   enum: [home, stores, store, category, subcategory, product, offer, campaign, search, custom]
 
+DshMarketingAudience:
+  type: string
+  enum: [all, client, partner, captain, field]
+
+DshCampaignPlacement:
+  type: string
+  enum: [home, hero, feed, floating, banner, store-card]
+
 DshCampaign:
   type: object
-  required: [id, title, status, audience, createdBy, createdAt, updatedAt]
+  additionalProperties: false
+  required: [id, title, description, status, startDate, endDate, audience, version, createdBy, createdAt, updatedAt]
   properties:
     id: { type: string }
     title: { type: string }
     description: { type: string }
     status: { type: string, enum: [draft, active, paused, completed, cancelled] }
-    startDate: { type: string }
-    endDate: { type: string }
+    startDate: { type: string, format: date }
+    endDate: { type: string, format: date }
     targetType: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshMarketingTargetType" }
     targetId: { type: string }
-    audience: { type: string }
-    placement: { type: string }
+    audience: { $ref: "#/DshMarketingAudience" }
+    placement: { $ref: "#/DshCampaignPlacement" }
+    version: { type: integer, minimum: 1 }
     createdBy: { type: string }
     archivedAt: { type: ["string", "null"], format: date-time }
     createdAt: { type: string, format: date-time }
@@ -26,6 +36,7 @@ DshCampaign:
 
 DshCampaignsListResponse:
   type: object
+  additionalProperties: false
   required: [campaigns]
   properties:
     campaigns:
@@ -34,31 +45,56 @@ DshCampaignsListResponse:
 
 DshCampaignResponse:
   type: object
+  additionalProperties: false
   required: [campaign]
   properties:
     campaign: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshCampaign" }
 
 DshCreateCampaignRequest:
   type: object
-  required: [title]
+  additionalProperties: false
+  required: [title, startDate, endDate]
   properties:
     title: { type: string, minLength: 1 }
     description: { type: string }
-    startDate: { type: string }
-    endDate: { type: string }
+    startDate: { type: string, format: date }
+    endDate: { type: string, format: date }
     targetType: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshMarketingTargetType" }
     targetId: { type: string }
-    audience: { type: string }
-    placement: { type: string }
+    audience: { $ref: "#/DshMarketingAudience" }
+    placement: { $ref: "#/DshCampaignPlacement" }
 
 DshUpdateCampaignRequest:
   type: object
+  additionalProperties: false
+  required: [expectedVersion]
   properties:
-    title: { type: string }
+    expectedVersion: { type: integer, minimum: 1 }
+    title: { type: string, minLength: 1 }
     description: { type: string }
     status: { type: string, enum: [draft, active, paused, completed, cancelled] }
+    startDate: { type: string, format: date }
+    endDate: { type: string, format: date }
     targetType: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshMarketingTargetType" }
     targetId: { type: string }
+    audience: { $ref: "#/DshMarketingAudience" }
+    placement: { $ref: "#/DshCampaignPlacement" }
+
+DshUpdatePartnerOfferRequest:
+  type: object
+  additionalProperties: false
+  required: [expectedVersion]
+  properties:
+    expectedVersion: { type: integer, minimum: 1 }
+    status: { type: string, enum: [inbound, review, marketing-ready, published, paused, rejected] }
+    title: { type: string, minLength: 1 }
+    valueLabel: { type: string, minLength: 1 }
+    eligibility: { type: string, enum: [all, client] }
+    activeFromDate: { type: string, format: date }
+    activeToDate: { type: string, format: date }
+    rejectionReason: { type: string }
+    marginRiskNote: { type: string }
+    couponId: { type: string }
 
 DshMarketingTicker:
   type: object
