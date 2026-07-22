@@ -1,11 +1,12 @@
 openapi: 3.1.0
 info:
   title: WLT Governed Financial Refunds
-  version: 1.0.0
+  version: 1.1.0
   description: >-
     Canonical JRN-035 financial refund contract. WLT owns amount, provider,
     ledger, reconciliation and audit truth. All routes are service-authenticated
-    and tenant-scoped by the trusted DSH caller.
+    and tenant-scoped by the trusted DSH caller. Provider outcomes are not
+    acknowledged unless their terminal or unknown state is durably persisted.
 servers:
   - url: http://localhost:58083
 security:
@@ -133,8 +134,9 @@ paths:
       summary: Claim and execute an approved refund through the provider
       description: >-
         The approved-to-processing claim is committed before the provider call.
-        An ambiguous provider result returns 202, moves the refund to
-        provider_unknown and opens reconciliation. It must not be retried.
+        An ambiguous provider result returns 202 only after provider_unknown and
+        its reconciliation case are durably persisted. A persistence failure
+        returns 500 and must be investigated; the provider must not be called again.
       parameters:
         - $ref: '#/components/parameters/RefundId'
         - $ref: '#/components/parameters/TenantHeader'
@@ -153,10 +155,11 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/RefundEnvelope' }
         '202':
-          description: Provider result is unknown and requires reconciliation
+          description: Provider result is unknown, durably recorded and requires reconciliation
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ProviderUnknownError' }
+        '500': { $ref: '#/components/responses/OutcomePersistenceFailure' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '502': { $ref: '#/components/responses/ProviderFailure' }
@@ -385,6 +388,12 @@ components:
         - type: object
           properties:
             code: { const: PROVIDER_RESULT_UNKNOWN }
+    OutcomePersistenceError:
+      allOf:
+        - $ref: '#/components/schemas/Error'
+        - type: object
+          properties:
+            code: { const: REFUND_OUTCOME_PERSISTENCE_FAILED }
   responses:
     BadRequest:
       description: Invalid request or evidence
@@ -416,6 +425,11 @@ components:
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
+    OutcomePersistenceFailure:
+      description: Provider outcome could not be durably recorded; automatic provider retry is forbidden
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/OutcomePersistenceError' }
     ProviderFailure:
       description: Definitive provider failure
       content:
