@@ -13,10 +13,10 @@ import {
   spacing,
 } from "@bthwani/ui-kit";
 import {
-  buildOperationalAnalyticsExportUrl,
   fetchCaptainPerformanceAnalytics,
   fetchFieldPerformanceAnalytics,
   fetchFinancialAnalyticsSnapshot,
+  fetchOperationalAnalyticsExport,
   fetchOrderAnalyticsDrilldown,
   fetchPreparationSlaAnalytics,
   type DshAnalyticsPeriod,
@@ -61,6 +61,8 @@ export function OperationalAnalyticsExtensionsScreen(): React.ReactElement {
   const [customFrom, setCustomFrom] = React.useState("");
   const [customTo, setCustomTo] = React.useState("");
   const [filterError, setFilterError] = React.useState<string | null>(null);
+  const [exportError, setExportError] = React.useState<string | null>(null);
+  const [exporting, setExporting] = React.useState(false);
   const [reloadToken, setReloadToken] = React.useState(0);
   const [state, setState] = React.useState<State>({ kind: "loading" });
 
@@ -105,6 +107,7 @@ export function OperationalAnalyticsExtensionsScreen(): React.ReactElement {
 
   const applyNamedPeriod = React.useCallback((period: DshAnalyticsPeriod) => {
     setFilterError(null);
+    setExportError(null);
     setAnalyticsWindow({ period });
   }, []);
 
@@ -131,13 +134,31 @@ export function OperationalAnalyticsExtensionsScreen(): React.ReactElement {
       return;
     }
     setFilterError(null);
+    setExportError(null);
     setAnalyticsWindow({ from: customFrom, to: customTo });
   }, [customFrom, customTo]);
 
-  const openExport = React.useCallback(() => {
-    const url = buildOperationalAnalyticsExportUrl(analyticsWindow);
-    if (typeof window !== "undefined") window.location.assign(url);
-  }, [analyticsWindow]);
+  const openExport = React.useCallback(async () => {
+    if (exporting || typeof document === "undefined") return;
+    setExporting(true);
+    setExportError(null);
+    try {
+      const blob = await fetchOperationalAnalyticsExport(analyticsWindow);
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = "jrn-032-operational-analytics.csv";
+      anchor.style.display = "none";
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      setExportError(error instanceof Error ? error.message : "تعذر تصدير ملف CSV بالمصادقة الحالية.");
+    } finally {
+      setExporting(false);
+    }
+  }, [analyticsWindow, exporting]);
 
   const activeWindowLabel = analyticsWindow.period
     ? periodLabels[analyticsWindow.period]
@@ -161,7 +182,11 @@ export function OperationalAnalyticsExtensionsScreen(): React.ReactElement {
               />
             ))}
           </Box>
-          <Button label="تصدير CSV" tone="secondary" onPress={openExport} />
+          <Button
+            label={exporting ? "جاري التصدير…" : "تصدير CSV"}
+            tone="secondary"
+            onPress={() => void openExport()}
+          />
         </Box>
         <Box style={styles.customRange}>
           <label>
@@ -188,6 +213,7 @@ export function OperationalAnalyticsExtensionsScreen(): React.ReactElement {
           <Badge label={`الفترة النشطة: ${activeWindowLabel}`} tone="info" />
         </Box>
         {filterError ? <Text role="bodySm" tone="danger">{filterError}</Text> : null}
+        {exportError ? <Text role="bodySm" tone="danger">{exportError}</Text> : null}
       </Card>
 
       {state.kind === "loading" ? <StateView title="جاري احتساب المؤشرات من السجلات التشغيلية…" /> : null}
