@@ -100,9 +100,17 @@ jobs:
             exit 1
           fi
 
-      - name: Compile JRN-029 Go packages
+      - name: Compile platform policy package
         working-directory: services/dsh/backend
-        run: go test ./internal/platformpolicies ./internal/http ./cmd/dsh-api -run '^$'
+        run: go test ./internal/platformpolicies -run '^$'
+
+      - name: Compile HTTP package
+        working-directory: services/dsh/backend
+        run: go test ./internal/http -run '^$'
+
+      - name: Compile DSH API composition package
+        working-directory: services/dsh/backend
+        run: go test ./cmd/dsh-api -run '^$'
 
       - name: Build DSH API executable
         working-directory: services/dsh/backend
