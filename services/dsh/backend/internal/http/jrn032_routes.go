@@ -1,14 +1,28 @@
 package http
 
-import "net/http"
+import (
+	"database/sql"
+	"net/http"
 
-// registerJRN032AnalyticsRoutes binds the JRN-032 operational-analytics routes
+	"dsh-api/internal/auth"
+	"dsh-api/internal/media"
+	"dsh-api/internal/wlt"
+)
+
+// RegisterJRN032AnalyticsRoutes binds the JRN-032 operational-analytics routes
 // that do not already have a canonical compatibility owner in NewRouter.
 // Partner self-service performance remains owned by RegisterPartnerSelfRoutes;
 // registering it here too causes net/http ServeMux to panic during bootstrap.
-// The support route remains registered once in server.go and delegates through
+// The support route remains registered once in NewRouter and delegates through
 // handleGetSupportAnalytics to the same handleSupportAnalytics implementation.
-func registerJRN032AnalyticsRoutes(mux *http.ServeMux, s *protectedStoreServer) {
+func RegisterJRN032AnalyticsRoutes(
+	mux *http.ServeMux,
+	db *sql.DB,
+	identityClient *auth.Client,
+	wltClient *wlt.Client,
+	mediaProvider *media.Provider,
+) {
+	s := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
 	mux.HandleFunc("GET /dsh/operator/analytics/platform", s.handlePlatformKpis)
 	mux.HandleFunc("GET /dsh/operator/analytics/orders", s.handleOrderAnalytics)
 	mux.HandleFunc("GET /dsh/operator/analytics/delivery", s.handleDeliveryAnalytics)
