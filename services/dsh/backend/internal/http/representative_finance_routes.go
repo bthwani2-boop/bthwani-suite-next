@@ -146,24 +146,58 @@ func (s *protectedStoreServer) handleFieldOwnLedger(w http.ResponseWriter, r *ht
 	s.handleOwnRepresentativeLedger(w, r, "field")
 }
 
-func (s *protectedStoreServer) handleControlPanelRepresentativeWallet(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok {
-		return
-	}
+func resolveControlPanelRepresentativeActor(w http.ResponseWriter, r *http.Request) (string, string, bool) {
 	actorType, ok := normalizeRepresentativeWalletActorType(r.PathValue("actorType"))
 	if !ok {
 		store.SendError(w, http.StatusBadRequest, "UNSUPPORTED_ACTOR_TYPE", "actorType must be client, partner, captain, or field")
-		return
+		return "", "", false
 	}
 	actorID := strings.TrimSpace(r.PathValue("actorId"))
 	if actorID == "" || len(actorID) > 200 {
 		store.SendError(w, http.StatusBadRequest, "INVALID_ACTOR_ID", "actorId is required and must not exceed 200 characters")
+		return "", "", false
+	}
+	return actorType, actorID, true
+}
+
+func (s *protectedStoreServer) handleControlPanelRepresentativeWallet(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok {
+		return
+	}
+	actorType, actorID, ok := resolveControlPanelRepresentativeActor(w, r)
+	if !ok {
 		return
 	}
 	status, body, err := s.wlt.FinanceReadWallet(
 		r.Context(),
 		actorType,
 		actorID,
+		r.Header.Get("X-Correlation-ID"),
+	)
+	writeRepresentativeFinanceResponse(w, status, body, err)
+}
+
+func (s *protectedStoreServer) handleControlPanelRepresentativeLedger(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok {
+		return
+	}
+	actorType, actorID, ok := resolveControlPanelRepresentativeActor(w, r)
+	if !ok {
+		return
+	}
+	query := url.Values{
+		"actorId":   {actorID},
+		"actorType": {actorType},
+	}
+	for _, key := range []string{"entryType", "limit", "cursor"} {
+		if value := strings.TrimSpace(r.URL.Query().Get(key)); value != "" {
+			query.Set(key, value)
+		}
+	}
+	status, body, err := s.wlt.FinanceRead(
+		r.Context(),
+		"/wlt/ledger/entries",
+		query,
 		r.Header.Get("X-Correlation-ID"),
 	)
 	writeRepresentativeFinanceResponse(w, status, body, err)
@@ -194,6 +228,7 @@ func registerRepresentativeFinanceRoutes(mux *http.ServeMux, s *protectedStoreSe
 	mux.HandleFunc("POST /dsh/field/me/finance/payout-requests", s.handleSubmitFieldMePayoutRequest)
 
 	mux.HandleFunc("GET /dsh/control-panel/finance/wallets/{actorType}/{actorId}", s.handleControlPanelRepresentativeWallet)
+	mux.HandleFunc("GET /dsh/control-panel/finance/wallets/{actorType}/{actorId}/ledger-entries", s.handleControlPanelRepresentativeLedger)
 	mux.HandleFunc("GET /dsh/control-panel/finance/settlements/{settlementId}/evidence", s.handleFinanceSettlementEvidence)
 	mux.HandleFunc("PUT /dsh/control-panel/finance/commission-policies", s.handleUpsertFinanceCommissionPolicy)
 	mux.HandleFunc("GET /dsh/control-panel/finance/commissions/{commissionId}", s.handleFinanceCommissionDetail)
