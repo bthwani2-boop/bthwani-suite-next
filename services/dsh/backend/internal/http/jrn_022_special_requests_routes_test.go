@@ -45,6 +45,24 @@ func TestJRN022SpecialRequestRoutes(t *testing.T) {
 			pattern: "POST /dsh/client/special-requests/{requestId}/approve-quote",
 		},
 		{
+			name:    "client reads requested information",
+			method:  http.MethodGet,
+			path:    "/dsh/client/special-requests/request-1/information-exchange",
+			pattern: "GET /dsh/client/special-requests/{requestId}/information-exchange",
+		},
+		{
+			name:    "client responds with requested information",
+			method:  http.MethodPost,
+			path:    "/dsh/client/special-requests/request-1/information-response",
+			pattern: "POST /dsh/client/special-requests/{requestId}/information-response",
+		},
+		{
+			name:    "client reads execution evidence",
+			method:  http.MethodGet,
+			path:    "/dsh/client/special-requests/request-1/execution",
+			pattern: "GET /dsh/client/special-requests/{requestId}/execution",
+		},
+		{
 			name:    "operator lists special requests",
 			method:  http.MethodGet,
 			path:    "/dsh/operator/special-requests",
@@ -55,6 +73,24 @@ func TestJRN022SpecialRequestRoutes(t *testing.T) {
 			method:  http.MethodGet,
 			path:    "/dsh/operator/special-requests/request-1",
 			pattern: "GET /dsh/operator/special-requests/{requestId}",
+		},
+		{
+			name:    "operator reads information exchange",
+			method:  http.MethodGet,
+			path:    "/dsh/operator/special-requests/request-1/information-exchange",
+			pattern: "GET /dsh/operator/special-requests/{requestId}/information-exchange",
+		},
+		{
+			name:    "operator requests client information",
+			method:  http.MethodPost,
+			path:    "/dsh/operator/special-requests/request-1/information-request",
+			pattern: "POST /dsh/operator/special-requests/{requestId}/information-request",
+		},
+		{
+			name:    "operator reads execution evidence",
+			method:  http.MethodGet,
+			path:    "/dsh/operator/special-requests/request-1/execution",
+			pattern: "GET /dsh/operator/special-requests/{requestId}/execution",
 		},
 		{
 			name:    "operator transitions special request",

@@ -5877,6 +5877,73 @@ paths:
         "409": { $ref: "#/components/responses/Conflict" }
         "503": { description: WLT payment-session handoff is unavailable. }
 
+  /dsh/client/special-requests/{requestId}/information-exchange:
+    get:
+      operationId: getDshClientSpecialRequestInformationExchange
+      summary: Read the latest governed operator question and client response for an owned special request.
+      tags: [DshClientSpecialRequests]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Latest information exchange or null when no question exists.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshSpecialRequestInformationExchangeResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/client/special-requests/{requestId}/information-response:
+    post:
+      operationId: respondDshClientSpecialRequestInformation
+      summary: Answer the pending operator question and return the request to governed review.
+      tags: [DshClientSpecialRequests]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshRespondSpecialRequestInformation" }
+      responses:
+        "200":
+          description: Canonical request and completed information exchange.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshSpecialRequestInformationMutationResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/client/special-requests/{requestId}/execution:
+    get:
+      operationId: getDshClientSpecialRequestExecution
+      summary: Read governed assignment, delivery, proof, and latest exception evidence for an owned special request.
+      tags: [DshClientSpecialRequests]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Dispatch-owned execution evidence.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshSpecialRequestExecutionResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /dsh/operator/special-requests:
     get:
       operationId: listDshOperatorSpecialRequests
@@ -5949,6 +6016,76 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/DshSpecialRequestResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/operator/special-requests/{requestId}/information-exchange:
+    get:
+      operationId: getDshOperatorSpecialRequestInformationExchange
+      summary: Read the latest governed information exchange for a special request.
+      tags: [DshOperatorSpecialRequests]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Latest information exchange or null.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshSpecialRequestInformationExchangeResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/operator/special-requests/{requestId}/information-request:
+    post:
+      operationId: requestDshOperatorSpecialRequestInformation
+      summary: Ask the client for missing information and move the request to customer_information.
+      tags: [DshOperatorSpecialRequests]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshRequestSpecialRequestInformation" }
+      responses:
+        "200":
+          description: Canonical request and pending information exchange.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshSpecialRequestInformationMutationResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/operator/special-requests/{requestId}/execution:
+    get:
+      operationId: getDshOperatorSpecialRequestExecution
+      summary: Read dispatch-owned execution, proof, and exception evidence for a special request.
+      tags: [DshOperatorSpecialRequests]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Dispatch-owned execution evidence.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshSpecialRequestExecutionResponse" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
@@ -7588,7 +7725,6 @@ components:
         - id
         - tenantId
         - assignmentId
-        - orderId
         - captainId
         - reasonCode
         - note
@@ -7604,7 +7740,8 @@ components:
         id: { type: string, format: uuid }
         tenantId: { type: string }
         assignmentId: { type: string, format: uuid }
-        orderId: { type: string, format: uuid }
+        orderId: { type: [string, "null"], format: uuid }
+        specialRequestId: { type: [string, "null"], format: uuid }
         captainId: { type: string }
         reasonCode: { $ref: "#/components/schemas/DshDeliveryExceptionReasonCode" }
         note: { type: string }
@@ -9709,6 +9846,8 @@ components:
         endDate: { type: string, format: date }
         targetType: { $ref: "#/components/schemas/DshMarketingTargetType" }
         targetId: { type: string }
+        targetCityCode: { type: string, pattern: "^[A-Za-z0-9._:-]{1,64}$" }
+        targetServiceAreaCode: { type: string, pattern: "^[A-Za-z0-9._:-]{1,64}$" }
         audience: { type: string, enum: [all, client, partner, captain, field] }
         placement: { type: string, enum: [home, hero, feed, floating, banner, store-card] }
         version: { type: integer, minimum: 1 }
@@ -9744,6 +9883,8 @@ components:
         endDate: { type: string, format: date }
         targetType: { $ref: "#/components/schemas/DshMarketingTargetType" }
         targetId: { type: string }
+        targetCityCode: { type: string, pattern: "^[A-Za-z0-9._:-]{1,64}$" }
+        targetServiceAreaCode: { type: string, pattern: "^[A-Za-z0-9._:-]{1,64}$" }
         audience: { type: string, enum: [all, client] }
         placement: { type: string, enum: [home, hero, feed, floating, banner, store-card] }
 
@@ -9760,6 +9901,8 @@ components:
         endDate: { type: string, format: date }
         targetType: { $ref: "#/components/schemas/DshMarketingTargetType" }
         targetId: { type: string }
+        targetCityCode: { type: string, pattern: "^[A-Za-z0-9._:-]{1,64}$" }
+        targetServiceAreaCode: { type: string, pattern: "^[A-Za-z0-9._:-]{1,64}$" }
         audience: { type: string, enum: [all, client] }
         placement: { type: string, enum: [home, hero, feed, floating, banner, store-card] }
 
@@ -10698,6 +10841,104 @@ components:
         captainAssignedAt: { type: ["string", "null"], format: date-time }
         pickedUpAt: { type: ["string", "null"], format: date-time }
         deliveredAt: { type: ["string", "null"], format: date-time }
+
+    DshSpecialRequestInformationExchange:
+      type: object
+      additionalProperties: false
+      required: [id, specialRequestId, clientId, requestedByOperatorId, question, status, requestVersionAtRequest, requestedAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        specialRequestId: { type: string, format: uuid }
+        clientId: { type: string }
+        requestedByOperatorId: { type: string }
+        question: { type: string }
+        response: { type: [string, "null"] }
+        status: { type: string, enum: [pending, responded] }
+        requestVersionAtRequest: { type: integer, minimum: 1 }
+        requestVersionAtResponse: { type: [integer, "null"], minimum: 1 }
+        requestedAt: { type: string, format: date-time }
+        respondedAt: { type: [string, "null"], format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    DshSpecialRequestInformationExchangeResponse:
+      type: object
+      additionalProperties: false
+      required: [informationExchange]
+      properties:
+        informationExchange:
+          oneOf:
+            - $ref: "#/components/schemas/DshSpecialRequestInformationExchange"
+            - type: "null"
+
+    DshSpecialRequestInformationMutationResponse:
+      type: object
+      additionalProperties: false
+      required: [request, informationExchange]
+      properties:
+        request: { $ref: "#/components/schemas/DshSpecialRequestResponse" }
+        informationExchange: { $ref: "#/components/schemas/DshSpecialRequestInformationExchange" }
+
+    DshRequestSpecialRequestInformation:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, question]
+      properties:
+        expectedVersion: { type: integer, minimum: 1 }
+        question: { type: string, minLength: 5, maxLength: 2000 }
+
+    DshRespondSpecialRequestInformation:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, exchangeId, response]
+      properties:
+        expectedVersion: { type: integer, minimum: 1 }
+        exchangeId: { type: string, format: uuid }
+        response: { type: string, minLength: 1, maxLength: 2000 }
+
+    DshSpecialRequestExecutionException:
+      type: object
+      additionalProperties: false
+      required: [id, reasonCode, note, severity, status, reportedAt]
+      properties:
+        id: { type: string, format: uuid }
+        reasonCode: { type: string }
+        note: { type: string }
+        severity: { type: string, enum: [medium, high, critical] }
+        status: { type: string, enum: [open, acknowledged, resolved] }
+        reportedAt: { type: string, format: date-time }
+        acknowledgedAt: { type: [string, "null"], format: date-time }
+        resolvedAt: { type: [string, "null"], format: date-time }
+        resolutionAction: { type: [string, "null"] }
+        resolutionNote: { type: [string, "null"] }
+
+    DshSpecialRequestExecution:
+      type: object
+      additionalProperties: false
+      required: [specialRequestId]
+      properties:
+        specialRequestId: { type: string, format: uuid }
+        assignmentId: { type: [string, "null"], format: uuid }
+        captainId: { type: [string, "null"] }
+        assignmentStatus: { type: [string, "null"] }
+        assignmentCreatedAt: { type: [string, "null"], format: date-time }
+        acceptedAt: { type: [string, "null"], format: date-time }
+        assignmentCompletedAt: { type: [string, "null"], format: date-time }
+        deliveryStatus: { type: [string, "null"] }
+        podMethod: { type: [string, "null"] }
+        podReference: { type: [string, "null"] }
+        deliveryNote: { type: [string, "null"] }
+        deliveryUpdatedAt: { type: [string, "null"], format: date-time }
+        latestException:
+          oneOf:
+            - $ref: "#/components/schemas/DshSpecialRequestExecutionException"
+            - type: "null"
+
+    DshSpecialRequestExecutionResponse:
+      type: object
+      additionalProperties: false
+      required: [execution]
+      properties:
+        execution: { $ref: "#/components/schemas/DshSpecialRequestExecution" }
 
     DshPartnerDeliveryTaskStatus:
       type: string

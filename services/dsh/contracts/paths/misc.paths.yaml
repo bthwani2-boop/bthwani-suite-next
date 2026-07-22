@@ -714,3 +714,140 @@
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
       "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
       "503": { description: WLT payment-session handoff is unavailable. }
+
+/dsh/client/special-requests/{requestId}/information-exchange:
+  get:
+    operationId: getDshClientSpecialRequestInformationExchange
+    summary: Read the latest governed operator question and client response for an owned special request.
+    tags: [DshClientSpecialRequests]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: requestId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    responses:
+      "200":
+        description: Latest information exchange or null when no question exists.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshSpecialRequestInformationExchangeResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
+/dsh/client/special-requests/{requestId}/information-response:
+  post:
+    operationId: respondDshClientSpecialRequestInformation
+    summary: Answer the pending operator question and return the request to governed review.
+    tags: [DshClientSpecialRequests]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: requestId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshRespondSpecialRequestInformation" }
+    responses:
+      "200":
+        description: Canonical request and completed information exchange.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshSpecialRequestInformationMutationResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
+/dsh/client/special-requests/{requestId}/execution:
+  get:
+    operationId: getDshClientSpecialRequestExecution
+    summary: Read governed assignment, delivery, proof, and latest exception evidence for an owned special request.
+    tags: [DshClientSpecialRequests]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: requestId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    responses:
+      "200":
+        description: Dispatch-owned execution evidence.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshSpecialRequestExecutionResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
+/dsh/operator/special-requests/{requestId}/information-exchange:
+  get:
+    operationId: getDshOperatorSpecialRequestInformationExchange
+    summary: Read the latest governed information exchange for a special request.
+    tags: [DshOperatorSpecialRequests]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: requestId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    responses:
+      "200":
+        description: Latest information exchange or null.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshSpecialRequestInformationExchangeResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
+/dsh/operator/special-requests/{requestId}/information-request:
+  post:
+    operationId: requestDshOperatorSpecialRequestInformation
+    summary: Ask the client for missing information and move the request to customer_information.
+    tags: [DshOperatorSpecialRequests]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: requestId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshRequestSpecialRequestInformation" }
+    responses:
+      "200":
+        description: Canonical request and pending information exchange.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshSpecialRequestInformationMutationResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
+/dsh/operator/special-requests/{requestId}/execution:
+  get:
+    operationId: getDshOperatorSpecialRequestExecution
+    summary: Read dispatch-owned execution, proof, and exception evidence for a special request.
+    tags: [DshOperatorSpecialRequests]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: requestId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    responses:
+      "200":
+        description: Dispatch-owned execution evidence.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshSpecialRequestExecutionResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }

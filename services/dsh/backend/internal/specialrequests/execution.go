@@ -11,19 +11,19 @@ import (
 // not duplicate assignment, delivery, proof, or exception truth inside the
 // special-request aggregate.
 type ExecutionEvidence struct {
-	SpecialRequestID   string
-	AssignmentID       *string
-	CaptainID          *string
-	AssignmentStatus   *string
-	AssignmentCreatedAt *time.Time
-	AcceptedAt         *time.Time
+	SpecialRequestID      string
+	AssignmentID          *string
+	CaptainID             *string
+	AssignmentStatus      *string
+	AssignmentCreatedAt   *time.Time
+	AcceptedAt            *time.Time
 	AssignmentCompletedAt *time.Time
-	DeliveryStatus     *string
-	PoDMethod          *string
-	PoDReference       *string
-	DeliveryNote       *string
-	DeliveryUpdatedAt  *time.Time
-	LatestException    *ExecutionException
+	DeliveryStatus        *string
+	PoDMethod             *string
+	PoDReference          *string
+	DeliveryNote          *string
+	DeliveryUpdatedAt     *time.Time
+	LatestException       *ExecutionException
 }
 
 type ExecutionException struct {
@@ -60,10 +60,10 @@ func (s *Service) ExecutionEvidenceInTenant(ctx context.Context, tenantID, reque
 
 	result := &ExecutionEvidence{SpecialRequestID: requestID}
 	var (
-		assignmentID, captainID, assignmentStatus sql.NullString
+		assignmentID, captainID, assignmentStatus              sql.NullString
 		assignmentCreatedAt, acceptedAt, assignmentCompletedAt sql.NullTime
-		deliveryStatus, podMethod, podReference, deliveryNote sql.NullString
-		deliveryUpdatedAt sql.NullTime
+		deliveryStatus, podMethod, podReference, deliveryNote  sql.NullString
+		deliveryUpdatedAt                                      sql.NullTime
 	)
 	err := s.repo.DB().QueryRowContext(ctx, `
 		SELECT a.id::text, a.captain_id, a.status, a.created_at, a.accepted_at, a.completed_at,
