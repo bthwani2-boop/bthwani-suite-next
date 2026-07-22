@@ -34,7 +34,7 @@ func DisconnectCaptainMembership(
 	defer tx.Rollback()
 
 	var membership CaptainFleetMembership
-	var role, boundActorID string
+	var role, boundActorID, partnerActorID string
 	err = tx.QueryRowContext(ctx, `
 		SELECT m.id::TEXT,
 		       m.store_id,
@@ -45,11 +45,21 @@ func DisconnectCaptainMembership(
 		       COALESCE(m.delivery_assignment, ''),
 		       m.version,
 		       m.role,
-		       COALESCE(m.identity_actor_id, '')
+		       COALESCE(m.identity_actor_id, ''),
+		       COALESCE((
+		           SELECT connection.created_by_actor_id
+		           FROM dsh_partner_courier_connection_codes connection
+		           WHERE connection.store_id = m.store_id
+		             AND connection.team_member_id = m.id
+		             AND connection.redeemed_by_captain_actor_id = $3
+		             AND connection.status = 'redeemed'
+		           ORDER BY connection.redeemed_at DESC, connection.created_at DESC
+		           LIMIT 1
+		       ), '')
 		FROM dsh_store_team_members m
 		JOIN dsh_stores s ON s.id::TEXT = m.store_id
 		WHERE m.id = $1 AND m.store_id = $2
-		FOR UPDATE OF m`, teamMemberID, storeID).Scan(
+		FOR UPDATE OF m`, teamMemberID, storeID, captainActorID).Scan(
 		&membership.TeamMemberID,
 		&membership.StoreID,
 		&membership.StoreName,
@@ -60,6 +70,7 @@ func DisconnectCaptainMembership(
 		&membership.Version,
 		&role,
 		&boundActorID,
+		&partnerActorID,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return CaptainFleetMembership{}, ErrNotFound
@@ -82,6 +93,7 @@ func DisconnectCaptainMembership(
 		UPDATE dsh_store_team_members
 		SET identity_actor_id = '',
 		    status = 'paused',
+		    invite_lifecycle = 'captain_disconnected',
 		    version = version + 1,
 		    updated_at = NOW()
 		WHERE id = $1
@@ -129,6 +141,18 @@ func DisconnectCaptainMembership(
 		        '/account/partner-fleet')`,
 		captainActorID, "تم فك عضويتك كموصل لمتجر "+membership.StoreName+"."); err != nil {
 		return CaptainFleetMembership{}, err
+	}
+	if partnerActorID != "" {
+		if _, err := tx.ExecContext(ctx, `
+			INSERT INTO dsh_notifications
+				(actor_id, actor_type, topic, title, body, action_url)
+			VALUES ($1, 'partner', 'partner_fleet_connection',
+			        'فك الكابتن عضوية أسطول المتجر',
+			        $2,
+			        '/team')`,
+			partnerActorID, "فك الكابتن عضوية الموصل "+membership.CourierName+" من متجر "+membership.StoreName+"."); err != nil {
+			return CaptainFleetMembership{}, err
+		}
 	}
 
 	if err := tx.Commit(); err != nil {
