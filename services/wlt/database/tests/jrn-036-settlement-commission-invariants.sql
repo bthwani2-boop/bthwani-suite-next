@@ -45,6 +45,29 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'missing commission request-hash uniqueness';
   END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'wlt_jrn036_commission_adjustments_idempotency_key_key'
+      AND contype = 'u'
+  ) THEN
+    RAISE EXCEPTION 'missing adjustment idempotency uniqueness';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'wlt_jrn036_commission_adjustments_request_hash_key'
+  ) THEN
+    RAISE EXCEPTION 'adjustment request hash must not be globally unique';
+  END IF;
+
+  IF to_regclass('public.wlt_jrn036_commission_adjustments_request_hash_idx') IS NULL THEN
+    RAISE EXCEPTION 'missing non-unique adjustment request-hash diagnostics index';
+  END IF;
+
+  IF to_regclass('public.wlt_jrn036_commission_adjustments_commission_created_idx') IS NULL THEN
+    RAISE EXCEPTION 'missing adjustment history ordering index';
+  END IF;
 END $$;
 
 BEGIN;
