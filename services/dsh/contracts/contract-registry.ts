@@ -136,7 +136,7 @@ export const DSH_CONTRACT_REGISTRY = [
     path: "contracts/dsh.partner-onboarding.openapi.yaml",
     state: "CONTRACT_ACTIVE",
     runtimeDependency: true,
-    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    clientStrategy: "PARENT_GENERATED_SUBSET",
     adapterOwner: "frontend/shared/partner",
   },
   {
