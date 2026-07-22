@@ -1,18 +1,12 @@
 package http
 
 import (
-	"database/sql"
 	"errors"
-	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"dsh-api/internal/fieldreadiness"
-	"dsh-api/internal/media"
 	"dsh-api/internal/store"
-
-	"github.com/google/uuid"
 )
 
 func (s *protectedStoreServer) writeGovernedFieldReadinessError(w http.ResponseWriter, err error) {
@@ -30,7 +24,7 @@ func (s *protectedStoreServer) handleCreateGovernedFieldVisit(w http.ResponseWri
 		return
 	}
 	var body struct {
-		VisitType     string                           `json:"visitType"`
+		VisitType     string                            `json:"visitType"`
 		StartLocation *fieldreadiness.LocationEvidence `json:"startLocation"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
@@ -175,74 +169,4 @@ func (s *protectedStoreServer) handleGovernedPartnerOnboardingStatus(w http.Resp
 		return
 	}
 	store.SendJSON(w, http.StatusOK, status)
-}
-
-// POST /dsh/field/stores/{storeId}/media/uploads
-// Registers readiness evidence against the exact store in the route. This avoids
-// selecting an arbitrary first store for partners that own multiple stores.
-func (s *protectedStoreServer) handleFieldReadinessMediaUpload(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "field")
-	if !ok {
-		return
-	}
-	mediaClient := s.mediaClient()
-	if mediaClient == nil {
-		store.SendError(w, http.StatusServiceUnavailable, "MEDIA_UNAVAILABLE", "media storage is not configured")
-		return
-	}
-	storeID := r.PathValue("storeId")
-	if err := fieldreadiness.AuthorizeStore(r.Context(), s.db, actor, storeID); err != nil {
-		s.writeGovernedFieldReadinessError(w, err)
-		return
-	}
-	var partnerID sql.NullString
-	if err := s.db.QueryRowContext(r.Context(), `SELECT partner_id FROM dsh_stores WHERE id = $1`, storeID).Scan(&partnerID); errors.Is(err, sql.ErrNoRows) {
-		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "store not found")
-		return
-	} else if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load store ownership")
-		return
-	}
-	if !partnerID.Valid || strings.TrimSpace(partnerID.String) == "" {
-		store.SendError(w, http.StatusConflict, "STORE_PARTNER_REQUIRED", "store must be linked to a partner before readiness evidence can be uploaded")
-		return
-	}
-
-	r.Body = http.MaxBytesReader(w, r.Body, maxMediaUploadBytes+mediaUploadMultipartOverheadBytes)
-	if err := r.ParseMultipartForm(maxMediaUploadBytes); err != nil {
-		store.SendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid multipart upload or file too large")
-		return
-	}
-	file, header, err := r.FormFile("file")
-	if err != nil {
-		store.SendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "file field is required")
-		return
-	}
-	defer file.Close()
-
-	uploadBody, contentType, err := prepareMediaUploadBody(file, header.Header.Get("Content-Type"))
-	if err != nil {
-		store.SendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "unsupported media type")
-		return
-	}
-	opaqueID := strings.ReplaceAll(uuid.NewString(), "-", "")
-	key := media.BuildKey("dsh-field-readiness", "objects", opaqueID, fmt.Sprintf("%d-%s", time.Now().UnixNano(), header.Filename))
-	if err := mediaClient.Upload(r.Context(), key, uploadBody, header.Size, contentType); err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to upload media")
-		return
-	}
-
-	var mediaRef string
-	err = s.db.QueryRowContext(r.Context(), `
-		INSERT INTO dsh_media_refs
-			(storage_key, owner_actor_id, owner_actor_role, partner_id, store_id, purpose, content_type, original_filename)
-		VALUES ($1,$2,'field',$3,$4,'field_readiness_evidence',$5,$6)
-		RETURNING media_ref`,
-		key, actor.ID, partnerID.String, storeID, contentType, header.Filename,
-	).Scan(&mediaRef)
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to register media reference")
-		return
-	}
-	store.SendJSON(w, http.StatusCreated, map[string]string{"mediaRef": mediaRef})
 }
