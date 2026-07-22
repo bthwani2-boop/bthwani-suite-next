@@ -229,16 +229,19 @@ function collectParameters(blockLines, componentParameters, file) {
   const parameters = [];
   for (let i = 0; i < blockLines.length; i += 1) {
     const trimmed = blockLines[i].trim();
+
     for (const match of trimmed.matchAll(/\$ref:\s*["']?([^"'\]\s}]+)["']?/g)) {
       const parameter = resolveParameterReference(match[1], file, componentParameters);
       if (parameter) parameters.push(parameter);
     }
+
     if (/^-\s*(?:name|in|required):/.test(trimmed) || /^-\s*\{/.test(trimmed)) {
       const parsed = parseParameterBlock(blockLines, i);
       if (parsed.parameter) parameters.push(parsed.parameter);
       i = Math.max(i, parsed.nextIndex - 1);
     }
   }
+
   const unique = new Map();
   for (const parameter of parameters) {
     const key = `${parameter.in}:${parameter.name}`;
