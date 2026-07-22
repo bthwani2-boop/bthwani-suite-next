@@ -4,6 +4,8 @@ import "net/http"
 
 // registerJRN032AnalyticsRoutes binds the JRN-032 operational-analytics routes
 // that do not already have a canonical compatibility owner in NewRouter.
+// Partner self-service performance remains owned by RegisterPartnerSelfRoutes;
+// registering it here too causes net/http ServeMux to panic during bootstrap.
 // The support route remains registered once in server.go and delegates through
 // handleGetSupportAnalytics to the same handleSupportAnalytics implementation.
 func registerJRN032AnalyticsRoutes(mux *http.ServeMux, s *protectedStoreServer) {
@@ -17,5 +19,4 @@ func registerJRN032AnalyticsRoutes(mux *http.ServeMux, s *protectedStoreServer) 
 	mux.HandleFunc("GET /dsh/operator/analytics/drill-down/orders", s.handleOrderAnalyticsDrilldown)
 	mux.HandleFunc("GET /dsh/operator/analytics/financial-snapshot", s.handleAnalyticsFinancialSnapshot)
 	mux.HandleFunc("GET /dsh/operator/analytics/export.csv", s.handleAnalyticsExportCSV)
-	mux.HandleFunc("GET /dsh/partner/analytics/performance", s.handlePartnerPerformance)
 }
