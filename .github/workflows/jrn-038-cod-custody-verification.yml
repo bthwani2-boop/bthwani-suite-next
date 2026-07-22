@@ -5,16 +5,23 @@ on:
   push:
     branches: [sambassam]
     paths: &jrn038_paths
-      - "services/wlt/backend/internal/cod/**"
+      - "services/wlt/backend/internal/cod/sovereign_cod.go"
+      - "services/wlt/backend/internal/cod/sovereign_cod_jrn038_test.go"
       - "services/wlt/backend/internal/http/server.go"
       - "services/wlt/contracts/jrn-038-cod-custody.openapi.yaml"
       - "services/wlt/database/migrations/wlt-038_cod_custody_evidence_reconciliation.sql"
       - "services/dsh/backend/internal/http/actor_finance_handlers.go"
-      - "services/dsh/backend/internal/http/jrn038_cod_finance_*.go"
+      - "services/dsh/backend/internal/http/jrn038_cod_finance_handlers.go"
+      - "services/dsh/backend/internal/http/jrn038_cod_finance_routes.go"
       - "services/dsh/backend/internal/http/refund_finance_routes.go"
       - "services/dsh/backend/internal/wlt/actor_finance_client.go"
-      - "services/dsh/frontend/**/finance/**"
-      - "services/dsh/frontend/**/wlt-cod/**"
+      - "services/dsh/frontend/shared/finance-wlt-link/wlt-cod/**"
+      - "services/dsh/frontend/shared/finance-wlt-link/finance/cod-reconciliation.api.ts"
+      - "services/dsh/frontend/shared/finance-wlt-link/wlt/generated/WltDshPartnerBridge.tsx"
+      - "services/dsh/frontend/app-captain/account/DshCaptainCodCustodyScreen.tsx"
+      - "services/dsh/frontend/app-captain/account/DshCaptainFinanceScreen.tsx"
+      - "services/dsh/frontend/control-panel/finance/CodReconciliationCasesPanel.tsx"
+      - "services/dsh/frontend/control-panel/finance/FinanceDashboardScreen.tsx"
       - ".github/workflows/jrn-038-cod-custody-verification.yml"
   pull_request:
     branches: [master]
