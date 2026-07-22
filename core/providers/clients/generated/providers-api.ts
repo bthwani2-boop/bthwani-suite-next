@@ -9,6 +9,11 @@ export interface paths {
     get: operations["getExternalProviderHealth"];
     put?: never; post?: never; delete?: never; options?: never; head?: never; patch?: never; trace?: never;
   };
+  "/providers/readiness": {
+    parameters: { query?: never; header?: never; path?: never; cookie?: never };
+    get: operations["getExternalProviderReadiness"];
+    put?: never; post?: never; delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+  };
   "/providers": {
     parameters: { query?: never; header?: never; path?: never; cookie?: never };
     get: operations["listProviders"];
@@ -46,6 +51,10 @@ export type webhooks = Record<string, never>;
 
 export interface components {
   schemas: {
+    RuntimeReadinessResponse: {
+      status: "ready" | "not_ready";
+      reason?: "database_unavailable";
+    };
     ExternalProviderKind: "sms" | "maps" | "payment" | "push" | "email" | "storage" | "search" | "fraud";
     ExternalProviderStatus: "healthy" | "degraded" | "down" | "not_configured";
     ExternalProviderHealthItem: {
@@ -132,6 +141,13 @@ export interface operations {
     responses: {
       200: JsonResponse<components["schemas"]["ExternalProviderHealthResponse"]>;
       500: EmptyResponse;
+    };
+  };
+  getExternalProviderReadiness: EmptyRequest & {
+    parameters: EmptyParameters;
+    responses: {
+      200: JsonResponse<components["schemas"]["RuntimeReadinessResponse"]>;
+      503: JsonResponse<components["schemas"]["RuntimeReadinessResponse"]>;
     };
   };
   listProviders: EmptyRequest & {
