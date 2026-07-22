@@ -7,7 +7,7 @@ import type { CompactOrderChatMessage, CaptainAppMode } from './captain.contract
 import type { StoreCourierStage, ActiveOrderPhase } from './delivery.contract';
 import { useCaptainOrderRuntime, type CaptainDeliveryExceptionDraft } from './use-captain-order-runtime';
 import { DSH_CAPTAIN_CONTRACT_CAPABILITIES } from '../orders/dsh-order-lifecycle-client';
-import { uploadAndSubmitCaptainDeliveryProof } from '../media/pod/delivery-proof-media.api';
+import { fetchCaptainDeliveryProof } from '../delivery-proof/delivery-proof.api';
 
 export type DeliveryActionsDeps = {
   captainRuntimeId: string;
@@ -37,7 +37,6 @@ export function useCaptainDeliveryActions(deps: DeliveryActionsDeps) {
     captainRuntimeId,
     activeAssignmentId,
     setActiveAssignmentId,
-    captainPodPhotoUri,
     captainAppMode,
     setRoute,
     resetOrderState,
@@ -115,19 +114,16 @@ export function useCaptainDeliveryActions(deps: DeliveryActionsDeps) {
     setRoute('pod-submission');
   }, [activeAssignmentId, captainRuntimeId, setCaptainPodState, setRoute]);
 
-  const confirmPodSubmission = React.useCallback(async (pin = '') => {
-    const normalizedPin = pin.trim();
-    if (!captainRuntimeId || !activeAssignmentId || (!captainPodPhotoUri && !/^\d{6}$/.test(normalizedPin))) {
+  // The PoD screen submits through the governed shared controller. This action
+  // performs the cross-surface readback and derives the visible completion state
+  // from DSH instead of assuming success after an upload request.
+  const confirmPodSubmission = React.useCallback(async () => {
+    if (!captainRuntimeId || !activeAssignmentId) {
       setCaptainPodState('error');
       return;
     }
-    setCaptainPodState('loading');
     try {
-      const proof = await uploadAndSubmitCaptainDeliveryProof(
-        activeAssignmentId,
-        captainPodPhotoUri ? { uri: captainPodPhotoUri } : undefined,
-        { pin: normalizedPin, capturedAt: new Date().toISOString() },
-      );
+      const proof = await fetchCaptainDeliveryProof(activeAssignmentId);
       await Promise.resolve(refreshInbox());
       if (proof.status === 'pending_review' || proof.status === 'submitted') {
         setCaptainPodState('pending_review');
@@ -148,10 +144,10 @@ export function useCaptainDeliveryActions(deps: DeliveryActionsDeps) {
         setStoreCourierStage('delivered' as StoreCourierStage);
       }
     } catch (err) {
-      console.error('[captain:pod-submit]', err);
+      console.error('[captain:pod-readback]', err);
       setCaptainPodState('error');
     }
-  }, [activeAssignmentId, captainAppMode, captainPodPhotoUri, captainRuntimeId, refreshInbox, setActiveOrderExpanded, setCaptainPodState, setInboxState, setStoreCourierStage]);
+  }, [activeAssignmentId, captainAppMode, captainRuntimeId, refreshInbox, setActiveOrderExpanded, setCaptainPodState, setInboxState, setStoreCourierStage]);
 
   const reportPodFailure = React.useCallback(async (draft: CaptainDeliveryExceptionDraft) => {
     if (!captainRuntimeId || !activeAssignmentId) {
