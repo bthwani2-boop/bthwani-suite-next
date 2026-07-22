@@ -52,6 +52,9 @@ test("JRN-029 backend returns one fail-closed cross-surface decision", async () 
   const profile = await text(
     "services/dsh/backend/internal/platformpolicies/jrn029_profile.go",
   );
+  const storeEffects = await text(
+    "services/dsh/backend/internal/platformpolicies/jrn029_store_effects.go",
+  );
   for (const required of [
     "ZONE_INACTIVE",
     "SERVICE_AREA_MISMATCH",
@@ -72,7 +75,11 @@ test("JRN-029 backend returns one fail-closed cross-surface decision", async () 
   assert.match(profile, /MaxAssignmentMins/);
   assert.match(profile, /ExpectedCapacityVersion/);
   assert.match(profile, /insertEvent/);
-  assert.doesNotMatch(domain + profile, /internal\/wlt|wlt\./);
+  assert.match(storeEffects, /EvaluateOperationalPolicyForStore/);
+  assert.match(storeEffects, /COUNT\(\*\)/);
+  assert.match(storeEffects, /dsh_orders/);
+  assert.match(storeEffects, /"pickup", FulfillmentModeClientPickup/);
+  assert.doesNotMatch(domain + profile + storeEffects, /internal\/wlt|wlt\./);
 });
 
 test("JRN-029 routes expose profile modes evaluation audit and rollback", async () => {
@@ -95,6 +102,33 @@ test("JRN-029 routes expose profile modes evaluation audit and rollback", async 
   assert.match(handler, /PlatformPermissionManage/);
   assert.match(handler, /requireActor\(w, r, "client", "partner", "captain", "operator"\)/);
   assert.match(handler, /platformPolicyMutation/);
+});
+
+test("JRN-029 runtime guard enforces cart checkout order and dispatch effects", async () => {
+  const guard = await text(
+    "services/dsh/backend/internal/http/jrn029_effects_middleware.go",
+  );
+  const main = await text("services/dsh/backend/cmd/dsh-api/main.go");
+  for (const route of [
+    "/dsh/client/cart/items",
+    "/dsh/client/cart/serviceability",
+    "/dsh/client/checkout-intents",
+    "/dsh/client/orders",
+    "/dsh/operator/dispatch/assignments",
+  ]) {
+    assert.match(guard, new RegExp(route.replaceAll("/", "\\/")));
+  }
+  for (const effect of [
+    "CartAllowed",
+    "CheckoutAllowed",
+    "OrderCreationAllowed",
+    "DispatchAllowed",
+  ]) {
+    assert.match(guard, new RegExp(effect));
+  }
+  assert.match(guard, /OPERATIONAL_POLICY_DENIED/);
+  assert.match(guard, /EvaluateOperationalPolicyForStore/);
+  assert.match(main, /OperationalPolicyEffectsMiddleware\(db, router\)/);
 });
 
 test("JRN-029 shared brain and control panel consume canonical APIs", async () => {
