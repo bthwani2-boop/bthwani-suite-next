@@ -6,6 +6,7 @@ const read = (path) => fs.readFileSync(path, "utf8");
 
 const wltMigration = read("services/wlt/database/migrations/wlt-034_jrn_028_promotion_funding_audit_integrity.sql");
 const integrityProof = read("services/wlt/database/tests/jrn-028-promotion-funding-integrity.sh");
+const concurrencyProof = read("services/wlt/database/tests/jrn-028-promotion-funding-concurrency.sh");
 const wltJSON = read("services/wlt/backend/internal/promotionfunding/reservation_json.go");
 const serviceAuth = read("services/wlt/backend/internal/shared/serviceauth.go");
 const dshReadback = read("services/dsh/backend/internal/wlt/promotion_funding_read.go");
@@ -27,7 +28,7 @@ const slices = [
     assert.match(productTruth, /DSH owns coupon eligibility/);
     assert.match(productTruth, /WLT owns reservation state/);
   }],
-  ["FS-05..08 transition, monetary, tenant and idempotency integrity", () => {
+  ["FS-05..08 transition, monetary, tenant, idempotency and concurrency integrity", () => {
     assert.match(wltMigration, /DEFERRABLE INITIALLY DEFERRED/);
     assert.match(wltMigration, /same-transaction append-only event/);
     assert.match(wltMigration, /transaction_id = txid_current\(\)/);
@@ -36,6 +37,8 @@ const slices = [
     assert.match(integrityProof, /Audited reverse from committed/);
     assert.match(integrityProof, /split mismatch was accepted/);
     assert.match(integrityProof, /conflicting idempotency replay was accepted/);
+    assert.match(concurrencyProof, /BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE/);
+    assert.match(concurrencyProof, /concurrent transitions produced more than one financial event/);
     assert.doesNotMatch(wltJSON, /IdempotencyKey\s+string/);
     assert.match(serviceAuth, /MISSING_TENANT_ID/);
   }],
@@ -76,6 +79,7 @@ const slices = [
     assert.ok(closure.slices.every((slice) => slice.status === "CLOSED_BY_EXACT_HEAD_GATE"));
     assert.deepEqual(closure.openCodeGaps, []);
     assert.match(workflow, /Verify JRN-028 database lifecycle and negative invariants/);
+    assert.match(workflow, /Verify JRN-028 concurrent transition serialization/);
     assert.match(workflow, /Verify repository whitespace/);
     assert.match(productTruth, /does not self-issue independent Finance, Security, QA, Release, or Production approval/);
   }],
