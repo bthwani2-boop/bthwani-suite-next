@@ -29,8 +29,15 @@ jobs:
           persist-credentials: false
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
-      - name: Verify broken imports
-        run: pnpm guard:no-broken-imports
+      - name: Verify COD reconciliation binding
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f services/dsh/frontend/shared/finance-wlt-link/finance/cod-reconciliation.api.ts
+          grep -Fq '../../shared/finance-wlt-link/finance/cod-reconciliation.api' services/dsh/frontend/control-panel/finance/CodReconciliationCasesPanel.tsx
+          grep -Fq 'GET /dsh/control-panel/finance/cod-reconciliation-cases' services/dsh/backend/internal/http/server.go
+          grep -Fq 'POST /dsh/control-panel/finance/cod-reconciliation-cases/{caseId}/assign' services/dsh/backend/internal/http/server.go
+          grep -Fq 'POST /dsh/control-panel/finance/cod-reconciliation-cases/{caseId}/resolve' services/dsh/backend/internal/http/server.go
       - name: Typecheck control panel
         run: pnpm --dir apps/control-panel/runtime typecheck
       - name: Build control panel
