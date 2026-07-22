@@ -12,7 +12,7 @@
   },
   "technicalDecision": "IMPLEMENTED_AND_VERIFIED_READY_FOR_INDEPENDENT_APPROVAL",
   "validityRule": "This manifest is valid only when both jobs in .github/workflows/jrn-026-coupons-pricing-loyalty-verification.yml succeed on the exact repository head that contains this file.",
-  "verificationTrigger": "FINAL_ALL_SLICES",
+  "verificationTrigger": "FINAL_ACCEPTED_ALL_SLICES_GATE",
   "slices": [
     {
       "id": "FS-01",
