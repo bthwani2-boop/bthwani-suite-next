@@ -1,9 +1,10 @@
 name: JRN-027 Subscription Lifecycle Verification
 
 on:
+  workflow_dispatch:
   push:
     branches: [sambassam]
-    paths:
+    paths: &jrn027_paths
       - "governance/product/contracts/jrn-027-subscriptions-commercial-benefits.product-truth.json"
       - "services/dsh/backend/internal/http/subscription_purchases.go"
       - "services/dsh/backend/internal/http/commercial_programs.go"
@@ -15,10 +16,7 @@ on:
       - "services/dsh/contracts/dsh.marketing-commercial.openapi.yaml"
       - "services/dsh/database/migrations/dsh-103_jrn_027_subscription_lifecycle.sql"
       - "services/dsh/frontend/app-client/account/BenefitsHubScreen.tsx"
-      - "services/dsh/frontend/shared/marketing/loyalty-subscriptions.types.ts"
-      - "services/dsh/frontend/shared/marketing/subscription-lifecycle.types.ts"
-      - "services/dsh/frontend/shared/marketing/subscription-lifecycle.api.ts"
-      - "services/dsh/frontend/shared/marketing/use-subscription-lifecycle-controller.tsx"
+      - "services/dsh/frontend/shared/marketing/**"
       - "services/dsh/tsconfig.jrn027.json"
       - "services/wlt/backend/internal/commercial/subscription_lifecycle.go"
       - "services/wlt/backend/internal/http/server.go"
@@ -29,26 +27,7 @@ on:
       - ".github/workflows/jrn-027-subscription-lifecycle.yml"
   pull_request:
     branches: [master]
-    paths:
-      - "governance/product/contracts/jrn-027-subscriptions-commercial-benefits.product-truth.json"
-      - "services/dsh/backend/internal/http/subscription_purchases.go"
-      - "services/dsh/backend/internal/http/commercial_programs.go"
-      - "services/dsh/backend/internal/http/server.go"
-      - "services/dsh/backend/internal/marketing/commercial_programs.go"
-      - "services/dsh/backend/internal/wlt/commercial.go"
-      - "services/dsh/backend/internal/wlt/subscription_lifecycle.go"
-      - "services/dsh/contracts/dsh.marketing-commercial.openapi.yaml"
-      - "services/dsh/database/migrations/dsh-103_jrn_027_subscription_lifecycle.sql"
-      - "services/dsh/frontend/app-client/account/BenefitsHubScreen.tsx"
-      - "services/dsh/frontend/shared/marketing/**"
-      - "services/dsh/tsconfig.jrn027.json"
-      - "services/wlt/backend/internal/commercial/subscription_lifecycle.go"
-      - "services/wlt/backend/internal/http/server.go"
-      - "services/wlt/contracts/wlt.commercial.openapi.yaml"
-      - "services/wlt/database/migrations/wlt-033_jrn027_subscription_lifecycle.sql"
-      - "tools/guards/jrn027-closure-gate.py"
-      - ".github/workflows/jrn-027-subscription-lifecycle.yml"
-  workflow_dispatch:
+    paths: *jrn027_paths
 
 permissions:
   contents: read
@@ -59,66 +38,50 @@ concurrency:
 
 jobs:
   verify:
+    name: JRN-027 full-stack subscription lifecycle proof
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version-file: services/dsh/backend/go.mod
           cache-dependency-path: |
             services/dsh/backend/go.sum
             services/wlt/backend/go.sum
-
       - name: Set up pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           version: "10.34.2"
-
       - name: Set up Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: "24.17.0"
           cache: pnpm
-
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
-
       - name: Verify Go formatting
-        shell: bash
         run: |
-          files=$(gofmt -l \
-            services/dsh/backend/internal/http/subscription_purchases.go \
-            services/dsh/backend/internal/http/commercial_programs.go \
-            services/dsh/backend/internal/marketing/commercial_programs.go \
-            services/dsh/backend/internal/wlt/commercial.go \
-            services/dsh/backend/internal/wlt/subscription_lifecycle.go \
-            services/wlt/backend/internal/commercial/subscription_lifecycle.go \
-            services/wlt/backend/internal/http/server.go)
+          files=$(gofmt -l services/dsh/backend/internal/http/subscription_purchases.go services/dsh/backend/internal/http/commercial_programs.go services/dsh/backend/internal/marketing/commercial_programs.go services/dsh/backend/internal/wlt/commercial.go services/dsh/backend/internal/wlt/subscription_lifecycle.go services/wlt/backend/internal/commercial/subscription_lifecycle.go services/wlt/backend/internal/http/server.go)
           test -z "$files" || { printf '%s\n' "$files"; exit 1; }
-
       - name: Run static closure gate
         run: python3 tools/guards/jrn027-closure-gate.py
-
       - name: Test WLT lifecycle
         working-directory: services/wlt/backend
         run: |
           go test ./internal/commercial ./internal/http -count=1
           go build ./internal/commercial ./internal/http
-
       - name: Test DSH orchestration
         working-directory: services/dsh/backend
         run: |
           go test ./internal/http ./internal/marketing ./internal/wlt -count=1
           go build ./internal/http ./internal/marketing ./internal/wlt
-
       - name: Verify DSH OpenAPI
         run: pnpm --dir services/dsh openapi:test
-
       - name: Verify JRN-027 frontend types
         run: pnpm --dir services/dsh exec tsc -p tsconfig.jrn027.json --noEmit
-
       - name: Verify repository diff
         run: git diff --check
