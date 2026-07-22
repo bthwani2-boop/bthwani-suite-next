@@ -91,11 +91,12 @@ jobs:
           cache: pnpm
       - name: Install locked workspace
         run: pnpm install --frozen-lockfile
-      - name: Verify JRN-035 cross-surface ownership privacy and accessibility invariants
-        run: |
-          node --test tools/verification/jrn-035-financial-refunds.test.mjs
-          node --test tools/verification/jrn-035-openapi-contracts.test.mjs
-          node tools/guards/wlt-financial-boundary-gate.mjs
+      - name: Verify JRN-035 journey invariants
+        run: node --test tools/verification/jrn-035-financial-refunds.test.mjs
+      - name: Verify JRN-035 OpenAPI and privacy invariants
+        run: node --test tools/verification/jrn-035-openapi-contracts.test.mjs
+      - name: Verify WLT financial ownership boundary
+        run: node tools/guards/wlt-financial-boundary-gate.mjs
       - name: Generate typed WLT and DSH refund contracts
         run: |
           pnpm dlx openapi-typescript@7.10.1 services/wlt/contracts/jrn-035-refunds.openapi.yaml --output /tmp/jrn-035-wlt-refunds.generated.ts
