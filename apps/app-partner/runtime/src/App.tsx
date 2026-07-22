@@ -30,7 +30,7 @@ configureIdentitySession(resolveIdentityApiBaseUrl());
 function AppContent() {
   const insets = useSafeAreaInsets();
   const identity = useIdentitySession();
-  useDshMobilePushRegistration(identity.state.kind, "app-partner");
+  useDshMobilePushRegistration(identity.state.kind, "app-partner", "bthwani-partner-next");
 
   return (
     <View style={[styles.root, { paddingBottom: insets.bottom }]}>
