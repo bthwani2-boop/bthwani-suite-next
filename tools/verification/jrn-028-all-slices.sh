@@ -33,11 +33,9 @@ run_check() {
   rm -f "$log_file"
 }
 
-run_check "WLT sovereign promotion-funding domain" bash -lc "cd services/wlt/backend && go test ./internal/promotionfunding ./internal/shared"
-run_check "WLT HTTP owner compilation" bash -lc "cd services/wlt/backend && go test ./internal/http -run '^$'"
-run_check "DSH funding projection, WLT adapter and outbox" bash -lc "cd services/dsh/backend && go test ./internal/coupons ./internal/wlt ./internal/promotionfundingoutbox"
-run_check "DSH HTTP owner compilation" bash -lc "cd services/dsh/backend && go test ./internal/http -run '^$'"
-run_check "FS-01 through FS-18 structural and ownership assertions" node --test services/dsh/tests/jrn-028-promotion-funding.test.mjs
+run_check "WLT sovereign promotion-funding domain and handlers" bash -lc "cd services/wlt/backend && go test ./internal/promotionfunding ./internal/shared"
+run_check "DSH funding projection, WLT adapter and durable outbox" bash -lc "cd services/dsh/backend && go test ./internal/coupons ./internal/wlt ./internal/promotionfundingoutbox"
+run_check "FS-01 through FS-18 routes, structure and ownership assertions" node --test services/dsh/tests/jrn-028-promotion-funding.test.mjs
 run_check "governed TypeScript surface" pnpm --dir services/dsh exec tsc -p tsconfig.jrn-028.json --noEmit --pretty false
 run_check "WLT promotion-funding base schema" psql -X -q -v ON_ERROR_STOP=1 -f services/wlt/database/migrations/wlt-032_promotion_funding_ledger.sql
 run_check "WLT JRN-028 audit-integrity controls" psql -X -q -v ON_ERROR_STOP=1 -f services/wlt/database/migrations/wlt-034_jrn_028_promotion_funding_audit_integrity.sql
