@@ -88,9 +88,49 @@ FieldStoreVerificationRequest:
       minLength: 3
       maxLength: 1000
 
+DshLocationEvidence:
+  type: object
+  additionalProperties: false
+  required: [latitude, longitude, accuracyMeters, capturedAt, provider]
+  properties:
+    latitude:
+      type: number
+      minimum: -90
+      maximum: 90
+    longitude:
+      type: number
+      minimum: -180
+      maximum: 180
+    accuracyMeters:
+      type: number
+      exclusiveMinimum: 0
+      maximum: 50
+    capturedAt:
+      type: string
+      format: date-time
+    provider:
+      type: string
+      minLength: 1
+    deviceReference:
+      type: string
+    isMocked:
+      type: boolean
+      default: false
+
 DshFieldVisit:
   type: object
-  required: [id, storeId, fieldAgentId, visitType, status, notes, startedAt, createdAt, updatedAt]
+  required:
+    - id
+    - storeId
+    - fieldAgentId
+    - visitType
+    - status
+    - notes
+    - startedAt
+    - createdAt
+    - updatedAt
+    - geofenceRadiusMeters
+    - startIsMocked
   properties:
     id: { type: string }
     storeId: { type: string }
@@ -102,6 +142,20 @@ DshFieldVisit:
     completedAt: { type: ["string", "null"], format: date-time }
     createdAt: { type: string, format: date-time }
     updatedAt: { type: string, format: date-time }
+    geofenceRadiusMeters: { type: number, exclusiveMinimum: 0 }
+    startLatitude: { type: [number, "null"], minimum: -90, maximum: 90 }
+    startLongitude: { type: [number, "null"], minimum: -180, maximum: 180 }
+    startAccuracyMeters: { type: [number, "null"], exclusiveMinimum: 0 }
+    startGeofenceStatus: { type: [string, "null"], enum: [inside, outside, null] }
+    startDistanceFromStoreMeters: { type: [number, "null"], minimum: 0 }
+    startIsMocked: { type: boolean }
+    completionLatitude: { type: [number, "null"], minimum: -90, maximum: 90 }
+    completionLongitude: { type: [number, "null"], minimum: -180, maximum: 180 }
+    completionAccuracyMeters: { type: [number, "null"], exclusiveMinimum: 0 }
+    completionGeofenceStatus: { type: [string, "null"], enum: [inside, outside, null] }
+    completionDistanceFromStoreMeters: { type: [number, "null"], minimum: 0 }
+    storeLatitude: { type: [number, "null"], minimum: -90, maximum: 90 }
+    storeLongitude: { type: [number, "null"], minimum: -180, maximum: 180 }
 
 DshFieldVisitResponse:
   type: object
@@ -119,8 +173,18 @@ DshFieldVisitsResponse:
 
 DshCreateFieldVisitRequest:
   type: object
+  additionalProperties: false
+  required: [startLocation]
   properties:
     visitType: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshVisitType" }
+    startLocation: { $ref: "#/DshLocationEvidence" }
+
+DshCompleteFieldVisitRequest:
+  type: object
+  additionalProperties: false
+  required: [completionLocation]
+  properties:
+    completionLocation: { $ref: "#/DshLocationEvidence" }
 
 DshFieldWorkQueueResponse:
   type: object
