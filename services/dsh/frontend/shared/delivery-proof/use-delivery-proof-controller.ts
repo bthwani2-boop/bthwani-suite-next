@@ -9,6 +9,11 @@ import {
   rejectOperatorDeliveryProof,
   submitCaptainDeliveryProof,
 } from "./delivery-proof.api";
+import {
+  uploadAndSubmitCaptainDeliveryProof,
+  type CaptainDeliveryProofSubmission,
+  type CapturedDeliveryProofPhoto,
+} from "../media/pod/delivery-proof-media.api";
 import type {
   DshClientDeliveryProof,
   DshDeliveryPinResponse,
@@ -23,6 +28,12 @@ import type {
 
 function isNotFound(error: DshDeliveryProofError): boolean {
   return error.kind === "not_found";
+}
+
+function mutationStateFor(proof: DshDeliveryProof): DshDeliveryProofMutationState {
+  if (proof.status === "accepted") return "accepted";
+  if (proof.status === "rejected") return "rejected";
+  return "pending_review";
 }
 
 export function useClientDeliveryPinController(orderId: string) {
@@ -87,13 +98,14 @@ export function useCaptainDeliveryProofController(assignmentId: string) {
       const next = await fetchCaptainDeliveryProof(assignmentId);
       setProof(next);
       setLoadState("ready");
-      setMutationState(next.status === "pending_review" ? "pending_review" : next.status === "accepted" ? "accepted" : next.status === "rejected" ? "rejected" : "idle");
+      setMutationState(mutationStateFor(next));
       return next;
     } catch (cause) {
       const classified = classifyDeliveryProofError(cause);
       if (isNotFound(classified)) {
         setProof(null);
         setLoadState("empty");
+        setMutationState("idle");
         return null;
       }
       setError(classified);
@@ -110,7 +122,28 @@ export function useCaptainDeliveryProofController(assignmentId: string) {
       const next = await submitCaptainDeliveryProof(assignmentId, input);
       setProof(next);
       setLoadState("ready");
-      setMutationState(next.status === "accepted" ? "accepted" : next.status === "rejected" ? "rejected" : "pending_review");
+      setMutationState(mutationStateFor(next));
+      return next;
+    } catch (cause) {
+      const classified = classifyDeliveryProofError(cause);
+      setError(classified);
+      setMutationState("error");
+      return null;
+    }
+  }, [assignmentId]);
+
+  const submitCaptured = React.useCallback(async (
+    photo: CapturedDeliveryProofPhoto | undefined,
+    submission: CaptainDeliveryProofSubmission,
+  ) => {
+    if (!assignmentId) return null;
+    setMutationState("submitting");
+    setError(null);
+    try {
+      const next = await uploadAndSubmitCaptainDeliveryProof(assignmentId, photo, submission);
+      setProof(next);
+      setLoadState("ready");
+      setMutationState(mutationStateFor(next));
       return next;
     } catch (cause) {
       const classified = classifyDeliveryProofError(cause);
@@ -128,7 +161,7 @@ export function useCaptainDeliveryProofController(assignmentId: string) {
     }
   }, [proof]);
 
-  return { loadState, mutationState, proof, error, refresh, submit, resetRejected } as const;
+  return { loadState, mutationState, proof, error, refresh, submit, submitCaptured, resetRejected } as const;
 }
 
 export function useOperatorDeliveryProofReviewController(initialStatus: DshDeliveryProofStatus = "pending_review") {
