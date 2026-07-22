@@ -1,218 +1,272 @@
 {
-  "schemaVersion": "1.0.0",
-  "journeyId": "JRN-027",
-  "nameAr": "الاشتراكات والمنافع التجارية",
-  "status": "ACTIVE_CANONICAL",
+  "schemaVersion": 1,
+  "capabilityId": "JRN_027_SUBSCRIPTIONS_COMMERCIAL_BENEFITS",
+  "state": "DISCOVERY",
+  "problem": {
+    "statement": "Paid subscriptions and commercial benefits require one governed DSH orchestration and WLT financial lifecycle from plan publication through payment, activation, renewal, cancellation, expiry, compensation and client readback.",
+    "affectedActors": ["client", "operator"],
+    "currentWorkaround": "The repository can display plans and create a payment-bound purchase, but the client surface has no purchase actions and the lifecycle does not govern renewal, cancellation, expiry, compensation or activation loyalty evidence end to end.",
+    "frequency": "continuous",
+    "severity": "critical",
+    "evidenceState": "QUALITATIVE",
+    "evidenceReferences": [
+      "governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md#jrn-027",
+      "services/dsh/backend/internal/http/commercial_programs.go",
+      "services/dsh/backend/internal/http/subscription_purchases.go",
+      "services/wlt/backend/internal/commercial/commercial_governed.go",
+      "services/dsh/frontend/app-client/account/BenefitsHubScreen.tsx"
+    ]
+  },
+  "actors": [
+    {
+      "id": "client",
+      "role": "Authenticated customer purchasing and consuming a paid commercial entitlement",
+      "permittedActions": [
+        "read active purchasable plans",
+        "read own effective benefits and lifecycle",
+        "create an idempotent subscription purchase",
+        "refresh captured payment status",
+        "activate a purchase after captured payment",
+        "renew an active subscription through new payment evidence",
+        "cancel an owned active subscription with a reason"
+      ],
+      "forbiddenActions": [
+        "activate without captured payment evidence",
+        "read or mutate another client subscription",
+        "change price currency or WLT financial status",
+        "claim completed compensation without WLT evidence"
+      ]
+    },
+    {
+      "id": "operator",
+      "role": "Authorized commercial-program operator",
+      "permittedActions": [
+        "create and edit subscription plan drafts",
+        "independently activate eligible plans",
+        "pause and archive plans",
+        "read WLT-backed active subscriber and recurring revenue summaries",
+        "inspect operational purchase and lifecycle diagnostics"
+      ],
+      "forbiddenActions": [
+        "self-approve a plan",
+        "edit active commercial terms",
+        "mutate wallet ledger payment or refund truth in DSH",
+        "publish subscriber or revenue claims without WLT readback"
+      ]
+    },
+    {
+      "id": "dsh-service",
+      "role": "Authenticated DSH service caller orchestrating WLT-owned financial operations",
+      "permittedActions": [
+        "create bound WLT payment sessions",
+        "request governed WLT activation renewal cancellation and expiry",
+        "read WLT client entitlement and compensation truth",
+        "persist non-financial operational projections and audit correlation"
+      ],
+      "forbiddenActions": [
+        "write WLT tables directly",
+        "derive payment capture from a DSH flag",
+        "retry a mutation without an idempotency key",
+        "cross tenant or client boundaries"
+      ]
+    }
+  ],
+  "surfaces": [
+    {
+      "id": "app-client",
+      "required": true,
+      "actors": ["client"],
+      "routesOrScreens": ["BenefitsHubScreen", "subscription plan cards", "active entitlement lifecycle card"],
+      "operationIds": ["getDshClientBenefits", "createDshSubscriptionPurchase", "getDshSubscriptionPurchase", "activateDshSubscriptionPurchase", "renewDshSubscription", "cancelDshSubscription"],
+      "states": ["loading", "empty", "success", "pending_payment", "payment_captured", "active", "renewal_pending_payment", "cancelled", "expired", "compensation_pending", "forbidden", "conflict", "offline", "partial", "error"],
+      "actions": ["purchase", "refresh payment", "activate", "renew", "cancel", "retry", "refresh canonical readback"]
+    },
+    {
+      "id": "control-panel",
+      "required": true,
+      "actors": ["operator"],
+      "routesOrScreens": ["SubscriptionsCommandDeck", "subscription plan editor", "WLT-backed subscription summary"],
+      "operationIds": ["listDshSubscriptionPlans", "createDshSubscriptionPlan", "updateDshSubscriptionPlan"],
+      "states": ["loading", "empty", "success", "draft", "active", "paused", "archived", "forbidden", "conflict", "offline", "error"],
+      "actions": ["create", "edit", "independently activate", "pause", "archive", "refresh", "inspect WLT summary"]
+    },
+    {
+      "id": "backend",
+      "required": true,
+      "actors": ["client", "operator", "dsh-service"],
+      "routesOrScreens": ["DSH commercial routes", "DSH subscription purchase orchestration", "WLT commercial lifecycle routes"],
+      "operationIds": ["createWltCommercialPaymentSession", "activateWltCommercialSubscription", "renewWltCommercialSubscription", "cancelWltCommercialSubscription", "expireDueWltCommercialSubscriptions", "getWltCommercialSubscriptionLifecycle"],
+      "states": ["authorized", "forbidden", "not_found", "invalid", "conflict", "pending_payment", "captured", "active", "cancelled", "expired", "compensation_pending"],
+      "actions": ["authorize", "validate binding", "enforce idempotency", "enforce lifecycle", "orchestrate services", "reconcile readback", "audit"]
+    },
+    {
+      "id": "database",
+      "required": true,
+      "actors": ["client", "operator", "dsh-service"],
+      "routesOrScreens": ["dsh_subscription_plans", "dsh_subscription_purchases", "dsh_subscription_lifecycle_events", "wlt_commercial_products", "wlt_payment_sessions", "wlt_client_subscriptions", "wlt_subscription_lifecycle_events", "wlt_subscription_compensations", "wlt_loyalty_entries"],
+      "operationIds": [],
+      "states": ["versioned", "tenant_isolated", "idempotent", "append_only", "payment_bound", "active", "cancelled", "expired", "compensated"],
+      "actions": ["enforce constraints", "retain lifecycle evidence", "prevent duplicate activation", "prevent overlapping active subscriptions", "retain financial references"]
+    },
+    {
+      "id": "shared",
+      "required": true,
+      "actors": ["client", "operator"],
+      "routesOrScreens": ["services/dsh/frontend/shared/marketing"],
+      "operationIds": ["createDshSubscriptionPurchase", "getDshSubscriptionPurchase", "activateDshSubscriptionPurchase", "renewDshSubscription", "cancelDshSubscription"],
+      "states": ["idle", "loading", "success", "pending_payment", "payment_captured", "active", "cancelled", "expired", "forbidden", "conflict", "offline", "partial", "error"],
+      "actions": ["bind contracts", "generate idempotency and correlation identifiers", "classify errors", "disable duplicate actions", "refresh canonical readback"]
+    },
+    {
+      "id": "app-partner",
+      "required": false,
+      "exclusionReason": "JRN-027 is a client paid-benefit lifecycle; partners neither own nor administer client subscriptions.",
+      "actors": ["operator"],
+      "routesOrScreens": [],
+      "operationIds": [],
+      "states": ["not_affected"],
+      "actions": []
+    },
+    {
+      "id": "app-captain",
+      "required": false,
+      "exclusionReason": "Captains have no paid client subscription entitlement or lifecycle action in JRN-027.",
+      "actors": ["operator"],
+      "routesOrScreens": [],
+      "operationIds": [],
+      "states": ["not_affected"],
+      "actions": []
+    },
+    {
+      "id": "app-field",
+      "required": false,
+      "exclusionReason": "Field staff do not own client subscription plans, payments or entitlements in JRN-027.",
+      "actors": ["operator"],
+      "routesOrScreens": [],
+      "operationIds": [],
+      "states": ["not_affected"],
+      "actions": []
+    }
+  ],
+  "outcome": {
+    "statement": "Every client subscription is backed by an exact WLT product and captured payment, exposes one effective entitlement, and follows an idempotent auditable lifecycle through activation, renewal, cancellation, expiry and compensation.",
+    "primaryMetric": "WLT-backed subscription lifecycle readback rate",
+    "guardrailMetrics": [
+      "activation before capture count",
+      "payment binding mismatch count",
+      "duplicate subscription purchase count",
+      "overlapping active subscription count",
+      "expired benefit exposure count",
+      "duplicate activation loyalty award count",
+      "unresolved compensation count",
+      "subscriber or MRR claim without WLT evidence count"
+    ],
+    "baselineState": "Plans and basic purchase activation exist, but the client cannot operate them and lifecycle, expiry, renewal, cancellation, compensation and exactly-once loyalty evidence are incomplete.",
+    "targetState": "Client and operator surfaces consume one DSH shared controller backed by WLT financial truth with complete lifecycle actions, negative invariants, readback and evidence.",
+    "observationWindow": "targeted static, database, contract, backend, frontend, security, finance, runtime and independent product review"
+  },
+  "acceptance": {
+    "criteria": [
+      "Only an active DSH plan with an exactly matching active WLT product is purchasable.",
+      "Purchase creation is tenant isolated, idempotent and resumable without orphaning a WLT payment session.",
+      "Activation fails before capture and succeeds exactly once after payment binding integrity passes.",
+      "Activation appends the configured WLT loyalty award exactly once.",
+      "Client benefits expose only effective unexpired WLT entitlements and legal allowed actions.",
+      "Renewal uses a new bound payment session and extends the period without overlap or double charge.",
+      "Cancellation immediately removes effective benefits or records a governed period-end cancellation according to policy.",
+      "Due subscriptions expire deterministically and no longer contribute to active subscriber or recurring revenue summaries.",
+      "Compensation state and completion reference are owned and read from WLT.",
+      "Control panel subscriber and MRR summaries are WLT backed and fail closed when unavailable.",
+      "All required controls are bound through the shared controller with loading conflict offline recovery and disabled busy states.",
+      "No runtime mock fixture local financial calculation or duplicate truth owner remains."
+    ],
+    "failureStates": [
+      "frontend-only purchase",
+      "activation without capture",
+      "payment or product mismatch",
+      "orphaned payment session",
+      "duplicate activation or loyalty award",
+      "overlapping active subscription",
+      "expired benefit exposure",
+      "unverified subscriber or revenue claim",
+      "unresolved compensation hidden from client",
+      "local runtime truth"
+    ],
+    "requiredChecks": [
+      "product-truth schema validation",
+      "DSH and WLT migration invariant tests",
+      "targeted Go subscription lifecycle tests",
+      "DSH and WLT route registration tests",
+      "OpenAPI contract and generated-client drift check",
+      "TypeScript shared marketing and app-client typecheck",
+      "captured-payment activation integration test",
+      "renewal cancellation expiry and compensation integration tests",
+      "tenant and client isolation tests",
+      "finance boundary and idempotency gates",
+      "client runtime and visual verification",
+      "accessibility and weak-network review",
+      "independent product acceptance"
+    ],
+    "runtimeEvidenceRequired": true,
+    "visualEvidenceRequired": true
+  },
+  "invariants": {
+    "business": [
+      "DSH owns marketing definitions and operational orchestration while WLT exclusively owns product amount, payment, subscription period, loyalty, compensation and recurring revenue truth.",
+      "Every financial mutation carries service authentication, tenant context, correlation and idempotency.",
+      "Every subscription purchase and lifecycle action is read back from WLT before the client sees success.",
+      "Every activation renewal cancellation expiry and compensation transition retains append-only lifecycle evidence.",
+      "Only one effective active paid entitlement exists per client."
+    ],
+    "negative": [
+      "No DSH or frontend component writes wallet ledger payment refund or loyalty balance truth.",
+      "No captured payment activates a different client tenant product amount currency or DSH purchase.",
+      "No expired cancelled or uncompensated-as-complete subscription exposes paid benefits.",
+      "No idempotency key represents different mutation inputs.",
+      "No plan creator activates the same plan.",
+      "No subscriber or MRR number is computed from DSH purchase rows."
+    ]
+  },
   "owners": {
-    "operationalOrchestrator": "DSH",
-    "financialTruth": "WLT",
-    "identityTruth": "Identity",
-    "presentation": ["app-client", "control-panel"]
+    "productManager": "DSH Commercial Product Management",
+    "productOwner": "DSH and WLT Subscription Operations Product Owner",
+    "uxJourneyOwner": "Client Benefits Multi-Surface Experience Owner",
+    "engineeringOwner": "DSH and WLT Full-Stack Engineering",
+    "productManagerApproval": "PENDING",
+    "productOwnerApproval": "PENDING",
+    "productAcceptanceDecision": "PENDING"
   },
-  "problem": "The existing implementation exposes subscription plans and a paid-subscription read model, but it does not provide a complete client purchase lifecycle, governed renewal, cancellation, expiry, compensation readback, or same-commit evidence. A plan or subscriber count must never be treated as financial truth without WLT evidence.",
-  "goals": [
-    "Create and govern subscription plans and benefits without duplicating financial ownership.",
-    "Allow an authenticated client to purchase an active plan through a WLT-bound payment session.",
-    "Activate only after captured-payment proof matches client, tenant, product, amount, currency and DSH purchase reference.",
-    "Expose the effective entitlement, lifecycle status and allowed actions to the client from WLT truth.",
-    "Support governed renewal, cancellation, expiry and compensation tracking.",
-    "Append an auditable WLT loyalty entry for the configured activation award exactly once.",
-    "Prevent subscriber or revenue claims when WLT evidence is missing, stale or inconsistent."
-  ],
-  "actors": {
-    "client": {
-      "surfaces": ["app-client"],
-      "allowed": [
-        "read_available_plans",
-        "read_effective_benefits",
-        "create_subscription_purchase",
-        "read_own_purchase",
-        "activate_paid_purchase",
-        "request_renewal",
-        "cancel_own_subscription"
-      ],
-      "forbidden": [
-        "activate_without_captured_payment",
-        "read_other_client_subscription",
-        "mutate_price_or_financial_status",
-        "complete_compensation"
-      ]
-    },
-    "operator": {
-      "surfaces": ["control-panel"],
-      "permissions": ["dsh.marketing.read", "dsh.marketing.manage"],
-      "allowed": [
-        "create_plan",
-        "edit_non_active_plan",
-        "pause_plan",
-        "independently_activate_plan",
-        "archive_plan",
-        "read_subscription_operational_summary"
-      ],
-      "forbidden": [
-        "self_approve_plan",
-        "edit_active_commercial_terms",
-        "directly_mutate_wallet_or_ledger",
-        "claim_mrr_without_wlt_summary"
-      ]
-    },
-    "dshService": {
-      "allowed": [
-        "create_bound_wlt_payment_session",
-        "request_wlt_activation",
-        "request_wlt_renewal",
-        "request_wlt_cancellation",
-        "read_wlt_client_benefits",
-        "persist_operational_purchase_projection"
-      ]
-    }
-  },
-  "surfaces": {
-    "required": ["app-client", "control-panel"],
-    "notAffected": {
-      "app-partner": "Partners do not own client paid subscriptions in JRN-027.",
-      "app-captain": "Captains have no subscription action or entitlement in JRN-027.",
-      "app-field": "Field workers have no subscription action or entitlement in JRN-027.",
-      "webapp": "No authenticated client subscription runtime is registered for this surface.",
-      "website": "Public website may market plans later but is not an authenticated purchase surface in this journey."
-    }
-  },
-  "truthBoundaries": {
-    "dshOwns": [
-      "marketing plan labels and non-financial benefits",
-      "plan-to-WLT-product reference",
-      "client purchase orchestration and idempotency",
-      "operational purchase projection",
-      "control-panel marketing workflow"
+  "execution": {
+    "appetite": "Close JRN-027 code, data, contract, lifecycle, surface and verification gaps without duplicating WLT financial ownership, deploying production or activating commercial SaaS.",
+    "fixedConstraints": [
+      "Repository mode is REMOTE_ONLY on sambassam.",
+      "WLT remains the sole owner of payment subscription loyalty compensation and recurring revenue truth.",
+      "DSH remains the operational orchestrator and marketing definition owner.",
+      "No PR merge force push release production deployment or commercial SaaS activation is authorized.",
+      "Independent product approvals cannot be self-issued by engineering."
     ],
-    "wltOwns": [
-      "commercial product amount and currency",
-      "payment session and captured-payment evidence",
-      "subscription activation, period, cancellation and expiry",
-      "renewal financial evidence",
-      "loyalty balances and append-only entries",
-      "compensation and refund reference",
-      "active subscriber and recurring revenue summaries"
+    "variableScope": [
+      "Arabic lifecycle wording",
+      "subscription card presentation",
+      "non-financial operator diagnostic labels",
+      "immediate versus period-end cancellation policy when explicitly represented in WLT"
     ],
-    "prohibitedDuplication": [
-      "DSH must not store wallet balances, ledger entries, provider captures or financial refund completion.",
-      "Frontends must not derive an active subscription from a successful button response alone.",
-      "A DSH plan is purchasable only when an active WLT product with exactly matching terms exists."
+    "forbiddenScope": [
+      "DSH-owned financial ledger or wallet truth",
+      "frontend-owned payment or entitlement derivation",
+      "production deployment",
+      "commercial SaaS activation",
+      "self-approval of product or visual acceptance",
+      "fake runtime or financial evidence"
+    ],
+    "forecastRange": "one sequential journey closure",
+    "confidence": "high",
+    "unknowns": [
+      "Independent product manager approval outcome",
+      "Independent product owner approval outcome",
+      "Runtime and visual verification outcome",
+      "Accessibility and weak-network device outcome",
+      "Production telemetry outcome"
     ]
-  },
-  "states": {
-    "plan": ["draft", "active", "paused", "archived"],
-    "purchase": [
-      "initiated",
-      "pending_payment",
-      "payment_captured",
-      "active",
-      "renewal_pending_payment",
-      "renewed",
-      "cancelled",
-      "expired",
-      "compensation_pending",
-      "compensated",
-      "failed"
-    ],
-    "subscription": ["active", "cancel_at_period_end", "cancelled", "expired", "superseded"],
-    "compensation": ["not_required", "pending", "completed", "failed"]
-  },
-  "transitions": [
-    {"from": "initiated", "to": "pending_payment", "requires": ["active_matching_wlt_product", "idempotency_key", "correlation_id"]},
-    {"from": "pending_payment", "to": "payment_captured", "requires": ["wlt_payment_session_status_captured"]},
-    {"from": "payment_captured", "to": "active", "requires": ["payment_binding_integrity", "no_overlapping_active_subscription"]},
-    {"from": "active", "to": "renewal_pending_payment", "requires": ["renewal_requested", "new_bound_payment_session"]},
-    {"from": "renewal_pending_payment", "to": "renewed", "requires": ["renewal_payment_captured", "wlt_period_extension_committed"]},
-    {"from": "active", "to": "cancelled", "requires": ["client_or_authorized_operator", "reason", "wlt_cancellation_committed"]},
-    {"from": "active", "to": "expired", "requires": ["ends_at_lte_now", "wlt_expiry_committed"]},
-    {"from": "cancelled", "to": "compensation_pending", "requires": ["wlt_compensation_required"]},
-    {"from": "compensation_pending", "to": "compensated", "requires": ["wlt_compensation_reference_completed"]}
-  ],
-  "negativeInvariants": [
-    "A subscription cannot be active before captured-payment proof.",
-    "A captured payment cannot activate a different client, tenant, product, currency, amount or DSH purchase.",
-    "Only one effective active subscription may exist per client.",
-    "An idempotency key cannot represent different plan, client, tenant, payment method or lifecycle action.",
-    "An activation loyalty award is append-only and exactly once per subscription purchase.",
-    "An expired or cancelled subscription cannot expose paid benefits.",
-    "MRR and active-subscriber counts come from WLT only.",
-    "A compensation claim is not complete until a WLT-owned completion reference exists.",
-    "No runtime mock, fixture or hard-coded subscriber data is allowed."
-  ],
-  "api": {
-    "dsh": [
-      "GET /dsh/operator/marketing/subscription-plans",
-      "POST /dsh/operator/marketing/subscription-plans",
-      "PATCH /dsh/operator/marketing/subscription-plans/{planId}",
-      "GET /dsh/client/benefits",
-      "POST /dsh/client/marketing/subscriptions/purchase",
-      "GET /dsh/client/marketing/subscriptions/purchases/{purchaseId}",
-      "POST /dsh/client/marketing/subscriptions/{purchaseId}/activate",
-      "POST /dsh/client/marketing/subscriptions/{subscriptionId}/renew",
-      "POST /dsh/client/marketing/subscriptions/{subscriptionId}/cancel"
-    ],
-    "wlt": [
-      "GET /wlt/commercial/products/{productReference}",
-      "POST /wlt/commercial/payment-sessions",
-      "GET /wlt/commercial/clients/{clientId}/benefits",
-      "POST /wlt/commercial/subscriptions",
-      "POST /wlt/commercial/subscriptions/{subscriptionId}/renew",
-      "POST /wlt/commercial/subscriptions/{subscriptionId}/cancel",
-      "POST /wlt/commercial/subscriptions/expire-due",
-      "GET /wlt/commercial/subscriptions/{subscriptionId}/lifecycle"
-    ]
-  },
-  "requiredHeaders": {
-    "mutations": ["Authorization", "X-Service-Caller", "X-Tenant-ID", "X-Correlation-ID", "Idempotency-Key"]
-  },
-  "errorCodes": [
-    "MISSING_IDEMPOTENCY_KEY",
-    "MISSING_CORRELATION_ID",
-    "PLAN_NOT_PURCHASABLE",
-    "PLAN_TERMS_MISMATCH",
-    "PAYMENT_NOT_CAPTURED",
-    "PAYMENT_SESSION_INTEGRITY_ERROR",
-    "ACTIVE_SUBSCRIPTION_EXISTS",
-    "SUBSCRIPTION_NOT_ACTIVE",
-    "SUBSCRIPTION_EXPIRED",
-    "RENEWAL_PAYMENT_MISMATCH",
-    "CANCELLATION_REASON_REQUIRED",
-    "COMPENSATION_PENDING",
-    "IDEMPOTENCY_CONFLICT",
-    "TENANT_REQUIRED",
-    "WLT_NOT_CONFIGURED"
-  ],
-  "clientExperience": {
-    "requiredStates": ["loading", "empty", "offline", "forbidden", "conflict", "partial", "error", "success"],
-    "requiredActions": ["purchase", "refresh_payment_status", "activate", "renew", "cancel", "retry"],
-    "accessibility": ["Arabic and RTL labels", "screen-reader action labels", "disabled busy state", "clear destructive-action confirmation"],
-    "weakNetwork": ["idempotent retries", "no duplicate payment session", "readback after every mutation"]
-  },
-  "observability": {
-    "metrics": [
-      "jrn027_purchase_created_total",
-      "jrn027_payment_capture_waiting_total",
-      "jrn027_activation_success_total",
-      "jrn027_activation_failure_total",
-      "jrn027_renewal_success_total",
-      "jrn027_cancellation_total",
-      "jrn027_expiry_total",
-      "jrn027_compensation_pending_total",
-      "jrn027_integrity_error_total"
-    ],
-    "auditFields": ["tenantId", "clientId", "planId", "purchaseId", "subscriptionId", "paymentSessionId", "correlationId", "actorId", "action", "result"]
-  },
-  "acceptance": [
-    "Operator can create, independently activate, pause and archive a plan while active terms remain immutable.",
-    "Client can purchase an active matching plan and receives a WLT-bound payment session.",
-    "Activation fails before capture and succeeds exactly once after valid capture.",
-    "Activation appends the configured loyalty award exactly once in WLT.",
-    "Client benefits show only effective unexpired WLT entitlements.",
-    "Renewal creates new payment evidence and extends the period without overlap or double charge.",
-    "Cancellation removes effective benefits and exposes compensation state from WLT.",
-    "Due subscriptions expire deterministically and disappear from active benefits.",
-    "All required surfaces consume the shared controller and contain no local financial logic.",
-    "Static, database, contract, backend, frontend, security, finance and isolation checks pass on one commit."
-  ]
+  }
 }
