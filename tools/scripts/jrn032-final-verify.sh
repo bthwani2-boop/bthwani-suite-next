@@ -8,6 +8,14 @@ RUN_ATTEMPT="${GITHUB_RUN_ATTEMPT:?GITHUB_RUN_ATTEMPT is required}"
 BUNDLE_PATH="services/dsh/contracts/generated/dsh.bundle.openapi.yaml"
 CLIENT_PATH="services/dsh/clients/generated/dsh-api.ts"
 
+hash_file() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" | awk '{print $1}'
+  else
+    shasum -a 256 "$1" | awk '{print $1}'
+  fi
+}
+
 echo "[JRN-032] Registering canonical OpenAPI paths"
 node tools/scripts/patch-jrn032-openapi.mjs
 
@@ -30,8 +38,8 @@ gofmt -w \
 
 echo "[JRN-032] Composing OpenAPI and generating the DSH client"
 pnpm --dir services/dsh openapi:verify
-FIRST_BUNDLE_SHA="$(sha256sum "${BUNDLE_PATH}" | awk '{print $1}')"
-FIRST_CLIENT_SHA="$(sha256sum "${CLIENT_PATH}" | awk '{print $1}')"
+FIRST_BUNDLE_SHA="$(hash_file "${BUNDLE_PATH}")"
+FIRST_CLIENT_SHA="$(hash_file "${CLIENT_PATH}")"
 
 echo "[JRN-032] Running Go verification"
 (
@@ -53,8 +61,8 @@ pnpm run swagger:build
 
 echo "[JRN-032] Verifying generated artifacts are deterministic"
 pnpm --dir services/dsh openapi:verify
-SECOND_BUNDLE_SHA="$(sha256sum "${BUNDLE_PATH}" | awk '{print $1}')"
-SECOND_CLIENT_SHA="$(sha256sum "${CLIENT_PATH}" | awk '{print $1}')"
+SECOND_BUNDLE_SHA="$(hash_file "${BUNDLE_PATH}")"
+SECOND_CLIENT_SHA="$(hash_file "${CLIENT_PATH}")"
 if [[ "${FIRST_BUNDLE_SHA}" != "${SECOND_BUNDLE_SHA}" || "${FIRST_CLIENT_SHA}" != "${SECOND_CLIENT_SHA}" ]]; then
   echo "Generated DSH artifacts changed between consecutive generation passes." >&2
   exit 1
