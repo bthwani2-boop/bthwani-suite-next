@@ -17,7 +17,7 @@ concurrency:
 jobs:
   verify:
     name: JRN-032 isolated canonical closure
-    runs-on: macos-14
+    runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
       - name: Checkout immutable JRN-032 verification source
@@ -88,7 +88,7 @@ jobs:
             git push origin HEAD:verify/jrn-032-final2-8e71db5
             exit "$status"
           fi
-          shasum -a 256 \
+          sha256sum \
             services/dsh/contracts/generated/dsh.bundle.openapi.yaml \
             services/dsh/clients/generated/dsh-api.ts \
             > "${RUNNER_TEMP}/jrn032-first.sha256"
@@ -144,7 +144,7 @@ jobs:
       - name: Verify deterministic generated artifacts
         run: |
           pnpm --dir services/dsh openapi:verify
-          shasum -a 256 \
+          sha256sum \
             services/dsh/contracts/generated/dsh.bundle.openapi.yaml \
             services/dsh/clients/generated/dsh-api.ts \
             > "${RUNNER_TEMP}/jrn032-second.sha256"
