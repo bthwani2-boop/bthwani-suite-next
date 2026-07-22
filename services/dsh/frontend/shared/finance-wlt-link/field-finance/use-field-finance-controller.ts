@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import {
   fetchFieldMeWallet,
+  fetchFieldMeLedgerEntries,
   fetchFieldMeCommissions,
   fetchFieldMePayoutRequests,
   submitFieldMePayoutRequest,
   type FieldWallet,
+  type FieldLedgerEntry,
   type FieldCommission,
   type FieldPayoutRequest,
 } from "./field-finance.api";
@@ -20,8 +22,10 @@ type FieldFinanceState =
   | {
       kind: "loaded";
       wallet: FieldWallet;
+      ledgerEntries: FieldLedgerEntry[];
       commissions: FieldCommission[];
       payoutRequests: FieldPayoutRequest[];
+      ledgerError: string | null;
       commissionsError: string | null;
       payoutRequestsError: string | null;
     };
@@ -31,8 +35,10 @@ type Action =
   | {
       type: "LOADED";
       wallet: FieldWallet;
+      ledgerEntries: FieldLedgerEntry[];
       commissions: FieldCommission[];
       payoutRequests: FieldPayoutRequest[];
+      ledgerError: string | null;
       commissionsError: string | null;
       payoutRequestsError: string | null;
     }
@@ -46,8 +52,10 @@ function reducer(_state: FieldFinanceState, action: Action): FieldFinanceState {
       return {
         kind: "loaded",
         wallet: action.wallet,
+        ledgerEntries: action.ledgerEntries,
         commissions: action.commissions,
         payoutRequests: action.payoutRequests,
+        ledgerError: action.ledgerError,
         commissionsError: action.commissionsError,
         payoutRequestsError: action.payoutRequestsError,
       };
@@ -75,10 +83,11 @@ export function useFieldFinanceController(): FieldFinanceController {
 
     void Promise.all([
       fetchFieldMeWallet(),
+      fetchFieldMeLedgerEntries(),
       fetchFieldMeCommissions(),
       fetchFieldMePayoutRequests(),
     ])
-      .then(([walletResult, commissionsResult, payoutsResult]) => {
+      .then(([walletResult, ledgerResult, commissionsResult, payoutsResult]) => {
         if (!walletResult.ok) {
           dispatch({ type: "ERROR", message: walletResult.message });
           return;
@@ -86,8 +95,10 @@ export function useFieldFinanceController(): FieldFinanceController {
         dispatch({
           type: "LOADED",
           wallet: walletResult.wallet,
+          ledgerEntries: ledgerResult.ok ? ledgerResult.ledgerEntries : [],
           commissions: commissionsResult.ok ? commissionsResult.commissions : [],
           payoutRequests: payoutsResult.ok ? payoutsResult.payoutRequests : [],
+          ledgerError: ledgerResult.ok ? null : ledgerResult.message,
           commissionsError: commissionsResult.ok ? null : commissionsResult.message,
           payoutRequestsError: payoutsResult.ok ? null : payoutsResult.message,
         });
