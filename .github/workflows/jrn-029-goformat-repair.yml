@@ -1,0 +1,80 @@
+name: JRN-029 Go Format Repair
+
+on:
+  push:
+    branches: [sambassam]
+    paths:
+      - "governance/evidence/JRN-029_GOFORMAT_TRIGGER.txt"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: jrn-029-goformat-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  repair:
+    name: Apply gofmt to JRN-029 code
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: services/dsh/backend/go.sum
+
+      - name: Format and publish over latest remote head
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          for attempt in 1 2 3 4 5; do
+            git fetch origin sambassam
+            git reset --hard origin/sambassam
+
+            cd services/dsh/backend
+            mapfile -d '' go_files < <(find internal/platformpolicies -maxdepth 1 -type f -name 'jrn029*.go' -print0)
+            go_files+=(
+              internal/http/jrn029_operational_policy.go
+              internal/http/jrn029_effects_middleware.go
+              internal/http/jrn029_effects_middleware_test.go
+              internal/http/jrn_029_operational_policy_routes_test.go
+              cmd/dsh-api/main.go
+            )
+            gofmt -w "${go_files[@]}"
+            cd ../../..
+
+            if git diff --quiet -- services/dsh/backend; then
+              echo "All JRN-029 Go files are already formatted."
+              exit 0
+            fi
+
+            git add -- \
+              services/dsh/backend/internal/platformpolicies/jrn029*.go \
+              services/dsh/backend/internal/http/jrn029_operational_policy.go \
+              services/dsh/backend/internal/http/jrn029_effects_middleware.go \
+              services/dsh/backend/internal/http/jrn029_effects_middleware_test.go \
+              services/dsh/backend/internal/http/jrn_029_operational_policy_routes_test.go \
+              services/dsh/backend/cmd/dsh-api/main.go
+            git commit -m "style(jrn-029): apply gofmt to operational policy closure"
+
+            if git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:sambassam; then
+              exit 0
+            fi
+            echo "Concurrent update detected; retrying from latest sambassam."
+          done
+
+          echo "Unable to publish deterministic JRN-029 formatting after retries."
+          exit 1
