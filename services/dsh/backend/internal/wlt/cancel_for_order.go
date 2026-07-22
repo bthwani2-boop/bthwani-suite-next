@@ -107,18 +107,34 @@ func (c *Client) CancelSessionForOrderWithResult(
 	if err := json.NewDecoder(response.Body).Decode(&envelope); err != nil {
 		return nil, fmt.Errorf("decode WLT cancel-for-order response: %w", err)
 	}
-	if envelope.Action != "expired" && envelope.Action != "refund_requested" && envelope.Action != "none" {
-		return nil, fmt.Errorf("WLT cancel-for-order returned unsupported action %q", envelope.Action)
+	action := strings.TrimSpace(envelope.Action)
+	if action != "expired" && action != "refund_requested" && action != "none" {
+		return nil, fmt.Errorf("WLT cancel-for-order returned unsupported action %q", action)
 	}
 	result := &CancelSessionForOrderResult{
-		Action:        envelope.Action,
-		SessionStatus: envelope.SessionStatus,
+		Action:        action,
+		SessionStatus: strings.TrimSpace(envelope.SessionStatus),
 	}
 	if envelope.PaymentSession != nil {
-		result.PaymentSessionID = envelope.PaymentSession.ID
+		result.PaymentSessionID = strings.TrimSpace(envelope.PaymentSession.ID)
 	}
 	if envelope.Refund != nil {
-		result.RefundID = envelope.Refund.ID
+		result.RefundID = strings.TrimSpace(envelope.Refund.ID)
+	}
+
+	switch action {
+	case "expired":
+		if result.PaymentSessionID == "" || result.PaymentSessionID != paymentSessionID {
+			return nil, fmt.Errorf("WLT expired result does not identify the requested payment session")
+		}
+	case "refund_requested":
+		if result.RefundID == "" {
+			return nil, fmt.Errorf("WLT refund_requested result is missing refund id")
+		}
+	case "none":
+		if result.SessionStatus == "" {
+			return nil, fmt.Errorf("WLT none result is missing session status")
+		}
 	}
 	return result, nil
 }
