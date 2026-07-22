@@ -80,9 +80,9 @@ func RedeemCode(ctx context.Context, db *sql.DB, captainActorID, plainCode strin
 
 		if _, err := tx.ExecContext(ctx, `
 			INSERT INTO dsh_store_team_member_actions
-				(member_id, store_id, action_label, from_status, to_status, actor_id)
-			VALUES ($1, $2, 'expire_captain_connection_code', $3, $3, 'system')`,
-			memberID, storeID, memberStatus); err != nil {
+				(member_id, store_id, action_label, from_status, to_status, actor_id, idempotency_key)
+			VALUES ($1, $2, 'expire_captain_connection_code', $3, $3, 'system', $4)`,
+			memberID, storeID, memberStatus, auditIdempotencyKey("expire", connectionID)); err != nil {
 			return CaptainFleetMembership{}, err
 		}
 		if _, err := tx.ExecContext(ctx, `
@@ -195,9 +195,9 @@ func RedeemCode(ctx context.Context, db *sql.DB, captainActorID, plainCode strin
 	}
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO dsh_store_team_member_actions
-			(member_id, store_id, action_label, from_status, to_status, actor_id)
-		VALUES ($1, $2, 'redeem_captain_connection_code', $3, 'active', $4)`,
-		memberID, storeID, memberStatus, captainActorID); err != nil {
+			(member_id, store_id, action_label, from_status, to_status, actor_id, idempotency_key)
+		VALUES ($1, $2, 'redeem_captain_connection_code', $3, 'active', $4, $5)`,
+		memberID, storeID, memberStatus, captainActorID, auditIdempotencyKey("redeem", connectionID)); err != nil {
 		return CaptainFleetMembership{}, err
 	}
 
