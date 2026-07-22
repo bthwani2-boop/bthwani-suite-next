@@ -1,0 +1,313 @@
+openapi: 3.1.0
+info:
+  title: WLT JRN-038 COD Custody and Reconciliation
+  version: 1.0.0
+  description: >-
+    Canonical additive contract for evidence-backed COD collection, remittance,
+    double-entry linkage, variance detection, assignment, investigation and resolution.
+servers:
+  - url: http://localhost:58083
+security:
+  - DshServiceBearer: []
+    DshServiceCaller: []
+paths:
+  /wlt/cod-records/{codRecordId}/collect:
+    post:
+      operationId: collectCodCustody
+      parameters:
+        - $ref: '#/components/parameters/CodRecordId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CollectCodInput'
+      responses:
+        '200':
+          description: Collection committed atomically or replayed idempotently.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodCustodyMutationResult'
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /wlt/cod-records/{codRecordId}/remit:
+    post:
+      operationId: remitCodCustody
+      parameters:
+        - $ref: '#/components/parameters/CodRecordId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RemitCodInput'
+      responses:
+        '200':
+          description: Remittance committed atomically or replayed idempotently.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodCustodyMutationResult'
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /wlt/cod-reconciliation-cases:
+    get:
+      operationId: listCodReconciliationCases
+      parameters:
+        - in: query
+          name: status
+          schema:
+            $ref: '#/components/schemas/CodReconciliationStatus'
+      responses:
+        '200':
+          description: COD variance cases.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [codReconciliationCases]
+                properties:
+                  codReconciliationCases:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CodReconciliationCase'
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /wlt/cod-reconciliation-cases/{caseId}/assign:
+    post:
+      operationId: assignCodReconciliationCase
+      parameters:
+        - $ref: '#/components/parameters/CaseId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [operatorId]
+              properties:
+                operatorId: { type: string, minLength: 1 }
+                investigationNote: { type: string, maxLength: 4000, default: '' }
+      responses:
+        '200':
+          description: Case assigned for investigation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodReconciliationCaseEnvelope'
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /wlt/cod-reconciliation-cases/{caseId}/resolve:
+    post:
+      operationId: resolveCodReconciliationCase
+      parameters:
+        - $ref: '#/components/parameters/CaseId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [operatorId, resolutionAction, resolutionNote]
+              properties:
+                operatorId: { type: string, minLength: 1 }
+                resolutionAction:
+                  type: string
+                  enum: [confirmed_variance, cash_adjustment, collector_recovery, write_off]
+                resolutionNote: { type: string, minLength: 1, maxLength: 4000 }
+      responses:
+        '200':
+          description: Assigned case resolved by the assigned operator.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodReconciliationCaseEnvelope'
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+components:
+  securitySchemes:
+    DshServiceBearer:
+      type: http
+      scheme: bearer
+    DshServiceCaller:
+      type: apiKey
+      in: header
+      name: X-Service-Caller
+  parameters:
+    CodRecordId:
+      in: path
+      name: codRecordId
+      required: true
+      schema: { type: string, minLength: 1 }
+    CaseId:
+      in: path
+      name: caseId
+      required: true
+      schema: { type: string, minLength: 1 }
+    CorrelationId:
+      in: header
+      name: X-Correlation-ID
+      required: true
+      schema: { type: string, minLength: 3 }
+    IdempotencyKey:
+      in: header
+      name: Idempotency-Key
+      required: true
+      schema: { type: string, minLength: 3 }
+  schemas:
+    ActorType:
+      type: string
+      enum: [captain, store_courier, partner_store, partner, operator]
+    CollectCodInput:
+      type: object
+      additionalProperties: false
+      required: [actualAmountMinorUnits, proofReference, actorId, actorType]
+      properties:
+        actualAmountMinorUnits: { type: integer, format: int64, minimum: 1 }
+        proofReference: { type: string, minLength: 3, maxLength: 512 }
+        actorId: { type: string, minLength: 1 }
+        actorType: { $ref: '#/components/schemas/ActorType' }
+        note: { type: string, maxLength: 4000, default: '' }
+    RemitCodInput:
+      type: object
+      additionalProperties: false
+      required: [proofReference, actorId, actorType]
+      properties:
+        proofReference: { type: string, minLength: 3, maxLength: 512 }
+        actorId: { type: string, minLength: 1 }
+        actorType: { $ref: '#/components/schemas/ActorType' }
+        note: { type: string, maxLength: 4000, default: '' }
+    CodRecord:
+      type: object
+      additionalProperties: true
+      required: [id, orderId, partnerId, collectorId, collectorType, amountMinorUnits, currency, status]
+      properties:
+        id: { type: string }
+        orderId: { type: string }
+        partnerId: { type: string }
+        captainId: { type: string }
+        collectorId: { type: string }
+        collectorType: { type: string }
+        amountMinorUnits: { type: integer, format: int64 }
+        currency: { type: string }
+        status: { type: string, enum: [pending_collection, collected, remitted] }
+    CodCustodyEvidence:
+      type: object
+      additionalProperties: false
+      required: [id, codRecordId, eventType, expectedAmountMinorUnits, actualAmountMinorUnits, differenceMinorUnits, currency, proofReference, actorId, actorType, note, correlationId, idempotencyKey, ledgerTransactionId, createdAt]
+      properties:
+        id: { type: string }
+        codRecordId: { type: string }
+        eventType: { type: string, enum: [collection, remittance] }
+        expectedAmountMinorUnits: { type: integer, format: int64, minimum: 0 }
+        actualAmountMinorUnits: { type: integer, format: int64, minimum: 0 }
+        differenceMinorUnits: { type: integer, format: int64 }
+        currency: { type: string }
+        proofReference: { type: string }
+        actorId: { type: string }
+        actorType: { type: string }
+        note: { type: string }
+        correlationId: { type: string }
+        idempotencyKey: { type: string }
+        ledgerTransactionId: { type: string }
+        createdAt: { type: string, format: date-time }
+    CodReconciliationStatus:
+      type: string
+      enum: [open, investigating, resolved]
+    CodReconciliationCase:
+      type: object
+      additionalProperties: false
+      required: [id, codRecordId, custodyEvidenceId, expectedAmountMinorUnits, actualAmountMinorUnits, differenceMinorUnits, currency, triggerReason, status, investigationNote, resolutionNote, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        codRecordId: { type: string }
+        custodyEvidenceId: { type: string }
+        expectedAmountMinorUnits: { type: integer, format: int64, minimum: 0 }
+        actualAmountMinorUnits: { type: integer, format: int64, minimum: 0 }
+        differenceMinorUnits: { type: integer, format: int64, not: { const: 0 } }
+        currency: { type: string }
+        triggerReason: { type: string }
+        status: { $ref: '#/components/schemas/CodReconciliationStatus' }
+        assignedToOperatorId: { type: [string, 'null'] }
+        assignedAt: { type: [string, 'null'], format: date-time }
+        investigationNote: { type: string }
+        resolvedByOperatorId: { type: [string, 'null'] }
+        resolutionAction: { type: [string, 'null'] }
+        resolutionNote: { type: string }
+        resolvedAt: { type: [string, 'null'], format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    CodCustodyMutationResult:
+      type: object
+      additionalProperties: false
+      required: [codRecord, custodyEvidence, replayed]
+      properties:
+        codRecord: { $ref: '#/components/schemas/CodRecord' }
+        custodyEvidence: { $ref: '#/components/schemas/CodCustodyEvidence' }
+        reconciliationCase:
+          anyOf:
+            - $ref: '#/components/schemas/CodReconciliationCase'
+            - type: 'null'
+        replayed: { type: boolean }
+    CodReconciliationCaseEnvelope:
+      type: object
+      additionalProperties: false
+      required: [codReconciliationCase]
+      properties:
+        codReconciliationCase:
+          $ref: '#/components/schemas/CodReconciliationCase'
+    Error:
+      type: object
+      additionalProperties: true
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+  responses:
+    InvalidRequest:
+      description: Invalid request.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unauthorized:
+      description: Missing or invalid service authentication.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Forbidden:
+      description: Actor or mutation gate forbids the operation.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: COD record was not found.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Conflict:
+      description: State, evidence or idempotency conflict.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
