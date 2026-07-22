@@ -1,0 +1,26 @@
+{
+  "extends": "./tsconfig.jrn-020-030.json",
+  "compilerOptions": {
+    "outDir": "dist-jrn-030"
+  },
+  "include": [
+    "frontend/**/*.d.ts",
+    "frontend/shared/_kernel/**/*.ts",
+    "frontend/shared/_kernel/**/*.tsx",
+    "frontend/shared/partner/partner-fleet.api.ts",
+    "frontend/shared/partner/use-partner-fleet-controller.ts",
+    "frontend/shared/partner/index.ts",
+    "frontend/app-partner/team/partner-team.types.ts",
+    "frontend/app-partner/team/usePartnerTeamModel.ts",
+    "frontend/app-partner/team/PartnerTeamManagementScreen.tsx",
+    "frontend/app-captain/account/PartnerFleetConnectionCard.tsx",
+    "frontend/control-panel/partners/stores/OperatorPartnerFleetPanel.tsx",
+    "frontend/control-panel/partners/stores/OperatorDeliveryPricingPanel.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "dist-jrn-020-030",
+    "dist-jrn-030"
+  ]
+}
