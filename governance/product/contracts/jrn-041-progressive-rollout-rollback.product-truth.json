@@ -4,9 +4,9 @@
   "state": "DISCOVERY",
   "problem": {
     "statement": "Platform operators need one governed progressive-delivery lifecycle that releases only an independently approved feature-flag change to an explicit audience, region or surface, blocks unhealthy progression, separates pause from resume, supports abort and rollback, and leaves an immutable recovery trail.",
-    "affectedActors": ["platform_operator", "platform_approver", "rollout_manager", "support_operator", "platform_control_service", "target_surface"],
+    "affectedActors": ["platform-operator", "platform-approver", "rollout-manager", "support-operator", "platform-control-service", "target-surface"],
     "currentWorkaround": "The platform-control service already stores rollouts and can advance, pause, abort and restore a flag baseline, but resume is implicit inside advance, target scope accepts ungoverned JSON, health-gate failures are not recorded as operational alerts, and no canonical recovery guide is exposed for support.",
-    "frequency": "per approved platform feature release",
+    "frequency": "occasional",
     "severity": "critical",
     "evidenceState": "QUALITATIVE",
     "evidenceReferences": [
@@ -19,37 +19,37 @@
   },
   "actors": [
     {
-      "id": "platform_operator",
+      "id": "platform-operator",
       "role": "Authorized maker of a platform change set",
       "permittedActions": ["propose and validate a change set", "submit for independent approval", "read rollout state"],
       "forbiddenActions": ["approve own change", "create a rollout from an unapplied change", "bypass health gates", "erase audit evidence"]
     },
     {
-      "id": "platform_approver",
+      "id": "platform-approver",
       "role": "Independent checker for the underlying platform change",
       "permittedActions": ["approve or reject a submitted change", "inspect impact and rollback plan"],
       "forbiddenActions": ["approve own proposal", "operate a rollout created from the same change when maker-checker separation would be lost"]
     },
     {
-      "id": "rollout_manager",
+      "id": "rollout-manager",
       "role": "Authorized control-panel operator running the approved rollout lifecycle",
       "permittedActions": ["create from an applied feature-flag change", "advance after health evaluation", "pause", "resume without advancing", "abort and restore baseline", "rollback a completed rollout", "read recovery guidance"],
       "forbiddenActions": ["target an empty or unknown scope", "advance while paused", "advance while unhealthy", "publish an unapproved flag", "mutate another service database"]
     },
     {
-      "id": "support_operator",
+      "id": "support-operator",
       "role": "Authorized reader using audit and recovery guidance during incidents",
       "permittedActions": ["read rollout status", "read health-gate block events", "read deterministic recovery steps"],
       "forbiddenActions": ["perform rollout mutations without manage permission", "edit or delete audit history"]
     },
     {
-      "id": "platform_control_service",
+      "id": "platform-control-service",
       "role": "Sole owner of rollout state, feature-flag revision checks, health gating, audit and baseline restoration",
       "permittedActions": ["validate target scope", "serialize state transitions", "compare flag revisions", "record blocked health gates", "restore captured baseline", "produce canonical readback"],
       "forbiddenActions": ["self-approve product or release acceptance", "deploy production", "activate commercial SaaS", "write DSH or WLT business truth"]
     },
     {
-      "id": "target_surface",
+      "id": "target-surface",
       "role": "Consumer surface evaluating the canonical feature flag and targeting projection",
       "permittedActions": ["read effective flag state", "apply the platform-owned percentage and scope"],
       "forbiddenActions": ["invent a local rollout", "override percentage", "persist mock targeting as runtime truth"]
@@ -59,7 +59,7 @@
     {
       "id": "control-panel",
       "required": true,
-      "actors": ["rollout_manager", "support_operator"],
+      "actors": ["rollout-manager", "support-operator"],
       "routesOrScreens": ["PlatformRolloutPanel", "platform rollout workspace"],
       "operationIds": ["createPlatformRollout", "advancePlatformRollout", "pausePlatformRollout", "resumePlatformRollout", "abortPlatformRollout", "rollbackPlatformRollout", "getPlatformRolloutRecovery"],
       "states": ["loading", "empty", "running", "paused", "completed", "aborted", "rolled_back", "failed", "forbidden", "conflict", "health_blocked", "offline", "error"],
@@ -68,7 +68,7 @@
     {
       "id": "backend",
       "required": true,
-      "actors": ["platform_control_service", "rollout_manager", "support_operator"],
+      "actors": ["platform-control-service", "rollout-manager", "support-operator"],
       "routesOrScreens": ["platform-control rollout HTTP routes", "rollout service and repository"],
       "operationIds": ["listPlatformRollouts", "getPlatformRollout", "createPlatformRollout", "advancePlatformRollout", "pausePlatformRollout", "resumePlatformRollout", "abortPlatformRollout", "rollbackPlatformRollout", "getPlatformRolloutRecovery"],
       "states": ["running", "paused", "completed", "aborted", "rolled_back", "failed", "invalid_transition", "version_conflict", "health_blocked"],
@@ -77,7 +77,7 @@
     {
       "id": "database",
       "required": true,
-      "actors": ["platform_control_service"],
+      "actors": ["platform-control-service"],
       "routesOrScreens": ["platform_rollouts", "platform_feature_flags", "platform_change_sets", "platform_change_set_items", "platform_audit_events"],
       "operationIds": [],
       "states": ["revision_checked", "serializable", "auditable", "baseline_captured", "target_scope_validated"],
@@ -86,7 +86,7 @@
     {
       "id": "shared",
       "required": true,
-      "actors": ["rollout_manager", "support_operator"],
+      "actors": ["rollout-manager", "support-operator"],
       "routesOrScreens": ["services/dsh/frontend/shared/platform"],
       "operationIds": ["fetchPlatformRollouts", "resumePlatformRollout", "fetchPlatformRolloutRecovery"],
       "states": ["idle", "loading", "success", "forbidden", "conflict", "health_blocked", "offline", "error"],
@@ -95,7 +95,7 @@
     {
       "id": "app-client",
       "required": false,
-      "actors": ["target_surface"],
+      "actors": ["target-surface"],
       "routesOrScreens": ["feature-flag consumers only"],
       "operationIds": [],
       "states": ["targeted", "not_targeted"],
@@ -105,7 +105,7 @@
     {
       "id": "app-partner",
       "required": false,
-      "actors": ["target_surface"],
+      "actors": ["target-surface"],
       "routesOrScreens": ["feature-flag consumers only"],
       "operationIds": [],
       "states": ["targeted", "not_targeted"],
@@ -115,7 +115,7 @@
     {
       "id": "app-captain",
       "required": false,
-      "actors": ["target_surface"],
+      "actors": ["target-surface"],
       "routesOrScreens": ["feature-flag consumers only"],
       "operationIds": [],
       "states": ["targeted", "not_targeted"],
@@ -125,7 +125,7 @@
     {
       "id": "app-field",
       "required": false,
-      "actors": ["target_surface"],
+      "actors": ["target-surface"],
       "routesOrScreens": ["feature-flag consumers only"],
       "operationIds": [],
       "states": ["targeted", "not_targeted"],
