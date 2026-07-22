@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: BThwani Master API Index
-  version: 0.3.1
+  version: 0.3.2
   description: Root contract index only. No runtime endpoints are defined here.
 paths: {}
 x-bthwani-contract-state: CONTRACT_ACTIVE
@@ -46,9 +46,11 @@ x-bthwani-contracts:
     dshPartnerOnboarding: ../services/dsh/contracts/dsh.partner-onboarding.openapi.yaml
     dshPartnerSupport: ../services/dsh/contracts/dsh.partner-support.openapi.yaml
     dshPaymentSessions: ../services/dsh/contracts/dsh.payment-sessions.openapi.yaml
+    dshPayoutDestinations: ../services/dsh/contracts/dsh.jrn-037-payouts-destinations.openapi.yaml
     dshPlatformPolicies: ../services/dsh/contracts/dsh.platform-policies.openapi.yaml
     dshRepresentativeFinance: ../services/dsh/contracts/jrn-033-representative-finance.openapi.yaml
     dshRefunds: ../services/dsh/contracts/jrn-035-refunds.openapi.yaml
+    dshSettlementCommissions: ../services/dsh/contracts/dsh.jrn-036-settlements-commissions.openapi.yaml
     dshStoreCaptainHandoff: ../services/dsh/contracts/dsh.store-captain-handoff.openapi.yaml
     dshSupportGovernance: ../services/dsh/contracts/dsh.support-governance.openapi.yaml
     dshWorkforceScopes: ../services/dsh/contracts/dsh.jrn-003-workforce-scopes.openapi.yaml
