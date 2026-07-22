@@ -10,6 +10,7 @@ import {
   colorRoles,
   brandScale,
 } from "@bthwani/ui-kit";
+import { ActorWalletPanel } from "../../shared/finance-wlt-link/actor-wallet";
 
 export type BThwaniAppearanceMode = "lightPremium" | "darkGlass";
 
@@ -116,6 +117,8 @@ export function MySpaceScreen({
       <TopBar title="مساحتي" />
 
       <MobileScrollView fill padding={4} gap={3} contentContainerStyle={styles.scrollContent}>
+        <ActorWalletPanel actorType="client" title="محفظتي" embedded />
+
         {TABS.map((tab) => {
           let actionElement: React.ReactNode = undefined;
 
