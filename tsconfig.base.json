@@ -63,6 +63,9 @@
       ],
       "expo-secure-store": [
         "apps/app-field/runtime/node_modules/expo-secure-store"
+      ],
+      "@dsh-shared/*": [
+        "services/dsh/frontend/shared/*"
       ]
     }
   }

@@ -337,7 +337,7 @@ export function PartnerDetailOperationalScreen({ partnerId, onBack }: PartnerDet
             : readiness.state.kind === "error" ? <CpStatePanel role="alert" title="تعذر تحميل الجاهزية" code={readiness.state.message}><CpRetryButton onClick={() => void readiness.reload()}>إعادة المحاولة</CpRetryButton></CpStatePanel>
               : readiness.viewModel ? (
                 <div style={{ display: "grid", gap: 8 }}>
-                  {readiness.viewModel.items.map((item) => <CpStatePanel key={item.id} role="status" title={`${item.satisfied ? "مستوفى" : "غير مستوفى"}: ${item.label}`} code={item.blockedReason || undefined} />)}
+                  {readiness.viewModel.items.map((item) => <CpStatePanel key={item.id} role="status" title={`${item.satisfied ? "مستوفى" : "غير مستوفى"}: ${item.label}`} {...(item.blockedReason ? { code: item.blockedReason } : {})} />)}
                   {readiness.viewModel.allGatesPassed ? <CpStatePanel role="status" title="جميع بوابات الجاهزية مستوفاة." /> : null}
                 </div>
               ) : null

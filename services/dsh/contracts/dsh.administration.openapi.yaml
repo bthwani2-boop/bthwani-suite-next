@@ -1,4 +1,5 @@
 openapi: 3.1.0
+x-bthwani-contract-state: CONTRACT_ACTIVE
 info:
   title: DSH Administration Governance API
   version: 1.2.0

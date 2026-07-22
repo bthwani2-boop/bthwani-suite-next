@@ -28,14 +28,14 @@ export type DshCaptainOrdersScreenProps = {
   section?: DshCaptainOrderMode;
   state?: DshCaptainOrdersScreenState;
   items?: DshCaptainOrderBellItem[];
-  summary?: DshCaptainOrderDetailSummary;
+  summary?: DshCaptainOrderDetailSummary | undefined;
   messages?: DshCaptainOrderMessage[];
   proofStatus?: DshCaptainOrderProofStatus;
-  onOpenOrder?: (orderId: DshCaptainOrderId) => void;
-  onOpenNextOrder?: (orderId: DshCaptainOrderId) => void;
-  onBackToInbox?: () => void;
-  onRetry?: () => void;
-  onActionPress?: (action: DshCaptainOrderAction) => void;
+  onOpenOrder?: ((orderId: DshCaptainOrderId) => void) | undefined;
+  onOpenNextOrder?: ((orderId: DshCaptainOrderId) => void) | undefined;
+  onBackToInbox?: (() => void) | undefined;
+  onRetry?: (() => void) | undefined;
+  onActionPress?: ((action: DshCaptainOrderAction) => void) | undefined;
 };
 
 function renderOrdersState(state: DshCaptainOrdersScreenState, onRetry?: () => void) {
@@ -111,9 +111,9 @@ export function DshCaptainOrderOffersListScreen({
   onOpenOrder,
 }: {
   items?: DshCaptainOrderBellItem[];
-  onBack?: () => void;
-  onSecondaryAction?: () => void;
-  onOpenOrder?: (id: DshCaptainOrderId) => void;
+  onBack?: (() => void) | undefined;
+  onSecondaryAction?: (() => void) | undefined;
+  onOpenOrder?: ((id: DshCaptainOrderId) => void) | undefined;
 }) {
   const offers = items.filter((item) => item.kind === 'incoming-offer');
   return (
@@ -139,9 +139,9 @@ export function DshCaptainOrdersListScreen({
   onOpenOrder,
 }: {
   items?: DshCaptainOrderBellItem[];
-  onBack?: () => void;
-  onSecondaryAction?: () => void;
-  onOpenOrder?: (id: DshCaptainOrderId) => void;
+  onBack?: (() => void) | undefined;
+  onSecondaryAction?: (() => void) | undefined;
+  onOpenOrder?: ((id: DshCaptainOrderId) => void) | undefined;
 }) {
   const activeOrders = items.filter((item) => item.kind === 'active');
   return (
@@ -166,10 +166,10 @@ export function DshCaptainOrderGetScreen({
   onSecondaryAction,
   onActionPress,
 }: {
-  summary?: DshCaptainOrderDetailSummary;
-  onBack?: () => void;
-  onSecondaryAction?: () => void;
-  onActionPress?: (action: DshCaptainOrderAction) => void;
+  summary?: DshCaptainOrderDetailSummary | undefined;
+  onBack?: (() => void) | undefined;
+  onSecondaryAction?: (() => void) | undefined;
+  onActionPress?: ((action: DshCaptainOrderAction) => void) | undefined;
 }) {
   if (!summary) {
     return <StateView title="تفاصيل المهمة غير متاحة" description="حدّث صندوق المهام ثم أعد الفتح." tone="warning" onActionPress={onBack} actionLabel={onBack ? 'العودة' : undefined} />;
@@ -202,7 +202,7 @@ export function DshCaptainOrderAcceptScreen({
   onDecline,
 }: {
   assignment?: DshDispatchAssignment;
-  onBack?: () => void;
+  onBack?: (() => void) | undefined;
   onAccept?: (assignmentId: string) => void;
   onDecline?: (assignmentId: string) => void;
 }) {
@@ -248,19 +248,19 @@ export function DshCaptainOrderAcceptScreen({
   );
 }
 
-export function DshCaptainOrderPickupScreen({ onBack, onSecondaryAction }: { onBack?: () => void; onSecondaryAction?: () => void }) {
+export function DshCaptainOrderPickupScreen({ onBack, onSecondaryAction }: { onBack?: (() => void) | undefined; onSecondaryAction?: () => void }) {
   return <SimpleSupportScreen title="استلام الطلب" subtitle="أكد الاستلام بعد مطابقة الطلب الحي." heroTitle="في انتظار الاستلام" heroDescription="لا يبدأ هذا المسار قبل قبول الإسناد ووصول الكابتن للمتجر." primaryLabel="تأكيد الاستلام" secondaryLabel="فتح خريطة التوجيه" onBack={onBack} onSecondaryAction={onSecondaryAction} />;
 }
 
-export function DshCaptainOrderDeliverScreen({ onBack, onSecondaryAction }: { onBack?: () => void; onSecondaryAction?: () => void }) {
+export function DshCaptainOrderDeliverScreen({ onBack, onSecondaryAction }: { onBack?: (() => void) | undefined; onSecondaryAction?: () => void }) {
   return <SimpleSupportScreen title="تسليم الطلب" subtitle="أكد التسليم عبر المسار المحكوم وإثباته." heroTitle="في انتظار التسليم" heroDescription="تعرض تفاصيل المهمة الحية فقط ولا تفترض قيمة COD محلية." primaryLabel="فتح إثبات التسليم" secondaryLabel="فتح خريطة التوجيه" onBack={onBack} onSecondaryAction={onSecondaryAction} />;
 }
 
-export function DshCaptainOrderDetailsScreen({ summary, onBack, onSecondaryAction }: { summary?: DshCaptainOrderDetailSummary; onBack?: () => void; onSecondaryAction?: () => void }) {
+export function DshCaptainOrderDetailsScreen({ summary, onBack, onSecondaryAction }: { summary?: DshCaptainOrderDetailSummary | undefined; onBack?: (() => void) | undefined; onSecondaryAction?: () => void }) {
   return <DshCaptainOrderGetScreen summary={summary} onBack={onBack} onSecondaryAction={onSecondaryAction} />;
 }
 
-export function DshCaptainOrdersOffersListScreen({ items = [], onBack, onSecondaryAction, onOpenOrder }: { items?: DshCaptainOrderBellItem[]; onBack?: () => void; onSecondaryAction?: () => void; onOpenOrder?: (id: string) => void }) {
+export function DshCaptainOrdersOffersListScreen({ items = [], onBack, onSecondaryAction, onOpenOrder }: { items?: DshCaptainOrderBellItem[]; onBack?: (() => void) | undefined; onSecondaryAction?: (() => void) | undefined; onOpenOrder?: (id: string) => void }) {
   return <DshCaptainOrderOffersListScreen items={items} onBack={onBack} onSecondaryAction={onSecondaryAction} onOpenOrder={onOpenOrder} />;
 }
 
@@ -273,9 +273,9 @@ export function DshCaptainProofUploadScreen({
 }: {
   orderId?: string;
   status?: DshCaptainOrderProofStatus;
-  onBack?: () => void;
-  onSecondaryAction?: () => void;
-  onActionPress?: (action: DshCaptainOrderAction) => void;
+  onBack?: (() => void) | undefined;
+  onSecondaryAction?: (() => void) | undefined;
+  onActionPress?: ((action: DshCaptainOrderAction) => void) | undefined;
 }) {
   if (!orderId) return <StateView title="لا توجد مهمة لإثباتها" description="افتح مهمة مقبولة أولًا." tone="warning" onActionPress={onBack} actionLabel={onBack ? 'العودة' : undefined} />;
   return (
@@ -346,8 +346,8 @@ export function DshCaptainBellScreen({
   items?: DshCaptainOrderBellItem[];
   onOpenInbox?: () => void;
   onOpenNextOrder?: () => void;
-  onRetry?: () => void;
-  onBack?: () => void;
+  onRetry?: (() => void) | undefined;
+  onBack?: (() => void) | undefined;
 }) {
   if (state && state !== 'ready') {
     const stateProps = {
@@ -376,12 +376,12 @@ export function CaptainOrderDetailScreen({
   onBackToInbox,
   onRetry,
 }: {
-  summary?: DshCaptainOrderDetailSummary;
+  summary?: DshCaptainOrderDetailSummary | undefined;
   onConfirmPickup?: () => void;
   onConfirmDelivery?: () => void;
   onOpenNextOrder?: () => void;
-  onBackToInbox?: () => void;
-  onRetry?: () => void;
+  onBackToInbox?: (() => void) | undefined;
+  onRetry?: (() => void) | undefined;
 }) {
   return <OrderDetailSection summary={summary} onConfirmPickup={onConfirmPickup} onConfirmDelivery={onConfirmDelivery} onOpenNextOrder={onOpenNextOrder} onBackToInbox={onBackToInbox} onRetry={onRetry} />;
 }

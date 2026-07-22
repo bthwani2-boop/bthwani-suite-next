@@ -206,7 +206,7 @@ export function OperationalPolicyGovernanceSection() {
       const reason = requiredReason(zoneForm.reason);
       setValidationError(null);
       const ok = await editor.saveZone(selectedZone, {
-        ...(selectedZone ? {} : { id: zoneForm.id.trim().toLowerCase() || undefined }),
+        ...(!selectedZone && zoneForm.id.trim() ? { id: zoneForm.id.trim().toLowerCase() } : {}),
         name,
         cityCode,
         description: zoneForm.description.trim(),

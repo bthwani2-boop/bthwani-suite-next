@@ -17,7 +17,7 @@ export type {
   DshPartnerAuditEvent, DshPartnerLinkedStore, DshFieldPartnerStoreDraft, DshFieldPartnerStoreDraftInput,
   DshCreatePartnerInput, DshUpdatePartnerRequest, DshPartnerTransitionInput,
   DshAddDocumentInput, DshReviewDocumentInput, DshCreatePartnerFieldVisitRequest,
-  DshPartnerListResponse,
+  DshPartnerListResponse, DshPartnerOperationalScope,
 } from "./partner.types";
 
 export type {
@@ -58,6 +58,8 @@ export {
   fetchOperatorDeliveryPricing,
   updateOperatorDeliveryPricing,
   useOperatorDeliveryPricingController,
+  usePartnerDeliveryPricingController,
+  findDeliveryPricing,
 } from "./operator-delivery-pricing";
 
 export {

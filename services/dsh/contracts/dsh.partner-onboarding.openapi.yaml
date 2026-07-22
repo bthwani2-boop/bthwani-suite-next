@@ -1,4 +1,5 @@
 openapi: 3.0.3
+x-bthwani-contract-state: CONTRACT_ACTIVE
 info:
   title: BThwani DSH Partner Onboarding API
   version: 1.0.0

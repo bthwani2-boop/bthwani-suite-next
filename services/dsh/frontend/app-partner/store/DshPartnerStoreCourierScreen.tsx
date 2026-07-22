@@ -88,7 +88,7 @@ export function DshPartnerStoreCourierScreen({
 }: {
   storeId: string;
   scopes: readonly DshPartnerOperationalScope[];
-  onBack: () => void;
+  onBack?: (() => void) | undefined;
 }) {
   const { direction } = useDirection();
   const [courierName, setCourierName] = React.useState('');

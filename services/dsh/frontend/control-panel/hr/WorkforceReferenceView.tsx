@@ -116,8 +116,8 @@ export function WorkforceReferenceView(props: { readonly onBack: () => void }) {
             void run(() => createWorkforceShift({
               code: shiftCode.trim(),
               nameAr: shiftName.trim(),
-              startsAt: shiftStartsAt.trim() || undefined,
-              endsAt: shiftEndsAt.trim() || undefined,
+              ...(shiftStartsAt.trim() ? { startsAt: shiftStartsAt.trim() } : {}),
+              ...(shiftEndsAt.trim() ? { endsAt: shiftEndsAt.trim() } : {}),
               active: true,
             })).then((ok) => {
               if (ok) {

@@ -301,3 +301,63 @@ export function useStoreOnboardingFeeReferenceController(authKind: string) {
 
   return { state } as const;
 }
+
+export function useOperationalPolicyEditor(onSaved: () => Promise<void>) {
+  const [mutating, setMutating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const execute = useCallback(async (action: () => Promise<void>): Promise<boolean> => {
+    setMutating(true);
+    setError(null);
+    try {
+      await action();
+      await onSaved();
+      return true;
+    } catch (caught) {
+      setError(resolveMsg(caught));
+      return false;
+    } finally {
+      setMutating(false);
+    }
+  }, [onSaved]);
+
+  const saveZone = useCallback((
+    current: DshZone | null,
+    input: DshCreateZoneInput & { readonly reason: string },
+  ) => execute(async () => {
+    if (current) {
+      await updateZone(current.id, {
+        name: input.name,
+        description: input.description,
+        isActive: input.isActive,
+        expectedVersion: current.version,
+        reason: input.reason,
+      });
+      return;
+    }
+    await createZone(input);
+  }), [execute]);
+
+  const saveSla = useCallback((
+    current: DshSlaRule | null,
+    input: Omit<DshUpsertSlaRuleInput, "expectedVersion">,
+  ) => execute(async () => {
+    await upsertSlaRule({ ...input, expectedVersion: current?.version ?? 0 });
+  }), [execute]);
+
+  const saveCapacity = useCallback((
+    current: DshCapacityConfig | null,
+    input: Omit<DshUpsertCapacityInput, "expectedVersion">,
+  ) => execute(async () => {
+    await upsertCapacityConfig({ ...input, expectedVersion: current?.version ?? 0 });
+  }), [execute]);
+
+  return {
+    mutating,
+    error,
+    clearError: () => setError(null),
+    saveZone,
+    saveSla,
+    saveCapacity,
+  } as const;
+}

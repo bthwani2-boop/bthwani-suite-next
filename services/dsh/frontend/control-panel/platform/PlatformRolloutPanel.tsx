@@ -83,7 +83,7 @@ export function PlatformRolloutPanel({ changeSets, healthState, onChanged }: Pla
     if (
       steps.length === 0 ||
       steps[steps.length - 1] !== 100 ||
-      steps.some((step, index) => !Number.isInteger(step) || step < 1 || step > 100 || (index > 0 && step <= steps[index - 1]))
+      steps.some((step, index) => !Number.isInteger(step) || step < 1 || step > 100 || (index > 0 && step <= steps[index - 1]!))
     ) {
       setFormError("PLATFORM_ROLLOUT_STEPS_INVALID");
       return;

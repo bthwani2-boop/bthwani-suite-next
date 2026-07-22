@@ -123,9 +123,11 @@ export function CatalogGovernanceScreen() {
   }, []);
 
   const loadAudit = useCallback(async () => {
+    const normalizedEntityType = auditEntityType.trim();
+    const normalizedEntityId = auditEntityId.trim();
     const page = await fetchOperatorCatalogAudit({
-      entityType: auditEntityType.trim() || undefined,
-      entityId: auditEntityId.trim() || undefined,
+      ...(normalizedEntityType ? { entityType: normalizedEntityType } : {}),
+      ...(normalizedEntityId ? { entityId: normalizedEntityId } : {}),
       limit: 100,
       offset: 0,
     });
@@ -262,7 +264,8 @@ export function CatalogGovernanceScreen() {
             const parsed: unknown = JSON.parse(valueJson);
             const current = attributeValues.find((item) => item.attributeId === valueAttributeId.trim());
             const saved = await upsertOperatorMasterProductAttributeValue(productId.trim(), valueAttributeId.trim(), {
-              value: parsed, expectedVersion: current?.version,
+              value: parsed,
+              ...(current ? { expectedVersion: current.version } : {}),
             });
             setAttributeValues((items) => [...items.filter((item) => item.id !== saved.id), saved]);
           }, "تم حفظ قيمة الخاصية.")}>حفظ قيمة الخاصية</CpButton>
@@ -277,7 +280,8 @@ export function CatalogGovernanceScreen() {
             const current = relationships.find((item) => item.targetMasterProductId === targetProductId.trim() && item.relationshipType === relationshipType);
             const saved = await upsertOperatorMasterProductRelationship(productId.trim(), {
               targetMasterProductId: targetProductId.trim(), relationshipType, priority: current?.priority ?? relationships.length,
-              reason: relationshipReason.trim(), isActive: true, expectedVersion: current?.version,
+              reason: relationshipReason.trim(), isActive: true,
+              ...(current ? { expectedVersion: current.version } : {}),
             });
             setRelationships((items) => [...items.filter((item) => item.id !== saved.id), saved]);
           }, "تم حفظ علاقة المنتج.")}>حفظ البديل/العلاقة</CpButton>
