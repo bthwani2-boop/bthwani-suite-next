@@ -55,7 +55,6 @@ const periods: readonly { id: DshAnalyticsPeriod; label: string }[] = [
 ];
 
 export function AnalyticsInsightsPanel({ storeName, canonicalStoreId }: { storeName: string; canonicalStoreId?: string }) {
-  const theme = useTheme() as any;
   const [period, setPeriod] = React.useState<DshAnalyticsPeriod>('today');
   const [state, setState] = React.useState<PerformanceState>({ kind: 'loading' });
   const [reloadToken, setReloadToken] = React.useState(0);
@@ -139,9 +138,12 @@ function PeriodSelector({ period, onChange }: { period: DshAnalyticsPeriod; onCh
   return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] }}>
       {periods.map((item) => (
-        <Button key={item.id} size="sm" variant={period === item.id ? 'primary' : 'secondary'} onPress={() => onChange(item.id)}>
-          {item.label}
-        </Button>
+        <Button
+          key={item.id}
+          label={item.label}
+          tone={period === item.id ? 'primary' : 'ghost'}
+          onPress={() => onChange(item.id)}
+        />
       ))}
     </View>
   );
