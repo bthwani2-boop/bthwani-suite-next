@@ -40,6 +40,8 @@ func main() {
 	identityBaseURL := os.Getenv("DSH_IDENTITY_BASE_URL")
 	wltBaseURL := os.Getenv("DSH_WLT_BASE_URL")
 	wltServiceToken := os.Getenv("WLT_DSH_SERVICE_TOKEN")
+	pushProviderURL := os.Getenv("DSH_PUSH_PROVIDER_URL")
+	pushProviderToken := os.Getenv("DSH_PUSH_PROVIDER_TOKEN")
 
 	log.Println("[dsh-api] connecting to database...")
 	db, err := sql.Open("postgres", databaseURL)
@@ -97,6 +99,18 @@ func main() {
 	go orders.RunOrderEventBridgeWorker(outboxCtx, db, 5*time.Second)
 	go operationaloutbox.RunWorker(outboxCtx, db, 5*time.Second)
 	log.Println("[dsh-api] order event bridge and operational outbox workers enabled")
+
+	if pushProviderURL == "" {
+		log.Println("[dsh-api] push worker disabled: DSH_PUSH_PROVIDER_URL is required")
+	} else {
+		pushProvider, pushErr := operationaloutbox.NewHTTPPushProvider(pushProviderURL, pushProviderToken, 15*time.Second)
+		if pushErr != nil {
+			log.Printf("[dsh-api] push worker disabled: %v", pushErr)
+		} else {
+			go operationaloutbox.RunPushWorker(outboxCtx, db, pushProvider, 5*time.Second)
+			log.Println("[dsh-api] governed notification push worker enabled")
+		}
+	}
 
 	if wltClient.Configured() {
 		go orders.RunPaymentProjectionWorker(outboxCtx, db, wltClient, 15*time.Second)
