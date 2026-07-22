@@ -15,7 +15,8 @@
       "infra/docker/scripts/invoke-runtime-database-migrations.ps1",
       "infra/docker/scripts/backup-runtime.ps1",
       "infra/docker/scripts/restore-runtime.ps1",
-      "tools/scripts/test-runtime-backup-restore.ps1"
+      "tools/scripts/test-runtime-backup-restore.ps1",
+      "core/platform-control/contracts/platform-control.openapi.yaml"
     ]
   },
   "actors": [
@@ -44,7 +45,7 @@
       "required": true,
       "actors": ["platform-operator", "incident-responder"],
       "routesOrScreens": ["platform runtime and provider health read models"],
-      "operationIds": [],
+      "operationIds": ["listPlatformServices", "getPlatformHealth", "getPlatformRuntimeConfig"],
       "states": ["loading", "healthy", "ready", "degraded", "not_ready", "unavailable", "forbidden", "error"],
       "actions": ["refresh", "inspect sanitized status", "inspect recovery guidance"]
     },
@@ -53,7 +54,7 @@
       "required": true,
       "actors": ["platform-operator", "service-owner", "incident-responder"],
       "routesOrScreens": ["six service health and readiness endpoints", "runtime orchestration", "worker lifecycle"],
-      "operationIds": [],
+      "operationIds": ["getPlatformControlProcessHealth", "getPlatformControlReadiness", "listPlatformServices", "getPlatformHealth", "getPlatformRuntimeConfig"],
       "states": ["starting", "healthy", "ready", "degraded", "not_ready", "failed", "recovering"],
       "actions": ["start", "migrate", "seed local only", "probe", "retry", "dead-letter", "recover"]
     },
@@ -71,7 +72,7 @@
       "required": true,
       "actors": ["platform-operator", "service-owner", "incident-responder"],
       "routesOrScreens": ["runtime governance catalog", "sanitized evidence contract", "rollback runbook"],
-      "operationIds": [],
+      "operationIds": ["listPlatformServices", "getPlatformHealth"],
       "states": ["declared", "verified", "blocked", "needs_evidence"],
       "actions": ["resolve service ownership", "map ports", "classify failure", "record same-commit evidence"]
     },
