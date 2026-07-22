@@ -6,6 +6,7 @@ import { ActorWalletPanel } from '../../shared/finance-wlt-link/actor-wallet';
 import { RepresentativeCommissionPanel } from '../../shared/finance-wlt-link/jrn036';
 import { PayoutDestinationPanel } from '../../shared/finance-wlt-link/jrn037';
 import { DshOperationScreen } from '../DshOperationScreen';
+import { DshCaptainCodCustodyScreen } from './DshCaptainCodCustodyScreen';
 import type {
 	DshCaptainFinanceScreenState,
 	DshCaptainFinanceSection,
@@ -20,7 +21,7 @@ export type DshCaptainFinanceScreenProps = {
 };
 
 export function DshCaptainFinanceScreen({
-	section = 'earnings',
+	section = 'cod-liability',
 	state = 'ready',
 	onBack,
 	onRetry,
@@ -37,6 +38,10 @@ export function DshCaptainFinanceScreen({
 				onRetry={onRetry}
 			/>
 		);
+	}
+
+	if (section === 'cod-liability') {
+		return <DshCaptainCodCustodyScreen {...(onBack ? { onBack } : {})} />;
 	}
 
 	if (section === 'earnings') {
