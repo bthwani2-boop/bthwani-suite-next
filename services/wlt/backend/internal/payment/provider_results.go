@@ -13,6 +13,7 @@ import (
 
 var ErrProviderEventConflict = errors.New("provider event identity already exists with a different payload")
 var ErrIllegalProviderTransition = errors.New("provider result is not legal from the current payment-session state")
+var ErrProviderTenantMismatch = errors.New("provider event tenant does not own the payment session")
 
 type ProviderEventInput struct {
 	EventID           string
@@ -34,9 +35,10 @@ type ProviderResultApplication struct {
 }
 
 // ApplyAuthoritativeProviderEvent is the only asynchronous/provider-readback
-// path that may finalize a payment session. Provider event persistence, legal
-// state transition, reconciliation resolution, capture ledger posting and DSH
-// outbox projection commit or roll back together.
+// path that may finalize a payment session. The session is locked and its
+// tenant is verified before an event row is accepted. Provider event
+// persistence, legal state transition, reconciliation resolution, capture
+// ledger posting and DSH outbox projection commit or roll back together.
 func ApplyAuthoritativeProviderEvent(ctx context.Context, db *sql.DB, input ProviderEventInput) (*ProviderResultApplication, error) {
 	if input.EventID == "" || input.TenantID == "" || input.PaymentSessionID == "" || input.PayloadHash == "" {
 		return nil, fmt.Errorf("eventId, tenantId, paymentSessionId and payloadHash are required")
@@ -49,6 +51,17 @@ func ApplyAuthoritativeProviderEvent(ctx context.Context, db *sql.DB, input Prov
 		return nil, err
 	}
 	defer tx.Rollback()
+
+	session, err := getSessionForUpdateTx(tx, input.PaymentSessionID)
+	if err != nil {
+		return nil, err
+	}
+	if session == nil {
+		return nil, nil
+	}
+	if session.TenantID != input.TenantID {
+		return nil, ErrProviderTenantMismatch
+	}
 
 	inserted := false
 	err = tx.QueryRowContext(ctx, `
@@ -72,35 +85,32 @@ func ApplyAuthoritativeProviderEvent(ctx context.Context, db *sql.DB, input Prov
 		return nil, err
 	}
 	if !inserted {
-		var existingHash, existingSessionID string
+		var existingHash, existingSessionID, existingTenantID string
 		err = tx.QueryRowContext(ctx, `
-			SELECT payload_hash, payment_session_id
+			SELECT payload_hash, payment_session_id, tenant_id
 			FROM wlt_payment_provider_events
 			WHERE provider_event_id = $1`, input.EventID,
-		).Scan(&existingHash, &existingSessionID)
+		).Scan(&existingHash, &existingSessionID, &existingTenantID)
 		if err != nil {
 			return nil, err
 		}
-		if existingHash != input.PayloadHash || existingSessionID != input.PaymentSessionID {
+		if existingHash != input.PayloadHash || existingSessionID != input.PaymentSessionID || existingTenantID != input.TenantID {
 			return nil, ErrProviderEventConflict
 		}
-		session, err := getSessionTx(tx, input.PaymentSessionID)
-		if err != nil {
+		ledgerTransactionID := ""
+		if session.Status == "captured" {
+			_ = tx.QueryRowContext(ctx, `SELECT COALESCE(capture_ledger_transaction_id, '') FROM wlt_payment_sessions WHERE id = $1`, session.ID).Scan(&ledgerTransactionID)
+		}
+		if err := tx.Commit(); err != nil {
 			return nil, err
 		}
-		if session == nil {
-			return nil, nil
-		}
-		return &ProviderResultApplication{Session: session, IdempotentReplay: true}, tx.Commit()
+		return &ProviderResultApplication{
+			Session:             session,
+			IdempotentReplay:    true,
+			LedgerTransactionID: ledgerTransactionID,
+		}, nil
 	}
 
-	session, err := getSessionForUpdateTx(tx, input.PaymentSessionID)
-	if err != nil || session == nil {
-		return nil, err
-	}
-	if session.TenantID != input.TenantID {
-		return nil, fmt.Errorf("tenant mismatch for payment session")
-	}
 	if !legalAuthoritativeTransition(session.Status, input.ProviderStatus) {
 		_, _ = tx.ExecContext(ctx, `
 			UPDATE wlt_payment_provider_events
@@ -178,14 +188,6 @@ func getSessionForUpdateTx(tx *sql.Tx, sessionID string) (*PaymentSession, error
 		       store_id, payment_method, status, provider_reference,
 		       amount_minor_units, currency, captured_at, created_at, updated_at
 		FROM wlt_payment_sessions WHERE id = $1 FOR UPDATE`, sessionID))
-}
-
-func getSessionTx(tx *sql.Tx, sessionID string) (*PaymentSession, error) {
-	return scanSessionNullable(tx.QueryRow(`
-		SELECT id, checkout_intent_id, special_request_id, tenant_id, client_id,
-		       store_id, payment_method, status, provider_reference,
-		       amount_minor_units, currency, captured_at, created_at, updated_at
-		FROM wlt_payment_sessions WHERE id = $1`, sessionID))
 }
 
 func scanSessionNullable(row *sql.Row) (*PaymentSession, error) {
