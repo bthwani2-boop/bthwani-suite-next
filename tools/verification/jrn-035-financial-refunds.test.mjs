@@ -12,8 +12,10 @@ const paths = {
   productTruth: "governance/product/contracts/jrn-035-financial-refunds.product-truth.json",
   contract: "services/wlt/contracts/jrn-035-refund-governance.json",
   migration: "services/wlt/database/migrations/wlt-037_jrn_035_refund_governance.sql",
+  receiptMigration: "services/wlt/database/migrations/wlt-092_jrn_035_refund_operation_idempotency.sql",
   core: "services/wlt/backend/internal/refund/governed_refund.go",
   durableCompletion: "services/wlt/backend/internal/refund/governed_refund_durable_completion.go",
+  mutationIdempotency: "services/wlt/backend/internal/refund/mutation_idempotency.go",
   tenantGuard: "services/wlt/backend/internal/refund/tenant_guard.go",
   router: "services/wlt/backend/internal/http/server.go",
   outbox: "services/wlt/backend/internal/dshoutbox/dshoutbox.go",
@@ -50,9 +52,12 @@ test("state machine forbids over-refund, self approval and unknown retry", () =>
   assert.ok(contract.transitions.some((transition) => transition.to === "completed" && transition.requiresLedger && transition.requiresDshOutbox));
   assert.ok(contract.forbidden.some((entry) => entry.includes("maker")));
   assert.ok(contract.forbidden.some((entry) => entry.includes("provider_unknown")));
+  assert.equal(contract.idempotency.mutations, "durable receipt before create approve reject complete and reconcile");
+  assert.equal(contract.idempotency.replay, "same canonical payload returns stored status and body");
+  assert.equal(contract.idempotency.changedPayload, "conflict before business handler or provider call");
 });
 
-test("database persists amount, audit, provider and readback evidence", () => {
+test("database persists amount, audit, provider, mutation replay and readback evidence", () => {
   mustContain(paths.migration, [
     /requested_by_operator_id/, /approved_by_operator_id/, /provider_idempotency_key/,
     /provider_unknown/, /wlt_refund_audit_events/, /wlt_reconciliation_cases_operation_chk/,
@@ -60,11 +65,22 @@ test("database persists amount, audit, provider and readback evidence", () => {
     /NEW\.amount_minor_units <= 0 OR NEW\.amount_minor_units > v_amount/,
     /wlt_sync_refund_provider_reference/,
   ]);
+  mustContain(paths.receiptMigration, [
+    /wlt_refund_operation_receipts/,
+    /tenant_id, operation, request_path, idempotency_key/,
+    /request_hash/,
+    /actor_id/,
+    /reason/,
+    /correlation_id/,
+    /response_status/,
+    /response_body/,
+    /status IN \('processing','completed'\)/,
+  ]);
   assert.doesNotMatch(read(paths.migration), /NEW\.amount_minor_units := v_amount/);
   assert.doesNotMatch(read(paths.migration), /CREATE UNIQUE INDEX[^;]*payment_session_id\s*\)\s*WHERE status IN \('requested','approved'\)/s);
 });
 
-test("WLT claims provider once and commits ledger plus durable DSH event", () => {
+test("WLT claims provider once, replays mutations and commits ledger plus durable DSH event", () => {
   mustContain(paths.core, [
     /FOR UPDATE/, /status IN \('requested','approved','processing','provider_unknown','completed'\)/,
     /status='processing'/, /ErrRefundProviderUnknown/, /INSERT INTO wlt_reconciliation_cases/,
@@ -80,8 +96,27 @@ test("WLT claims provider once and commits ledger plus durable DSH event", () =>
     /markGovernedRefundProviderFailure/,
     /REFUND_OUTCOME_PERSISTENCE_FAILED/,
   ]);
+  mustContain(paths.mutationIdempotency, [
+    /RequireMutationIdempotency/,
+    /canonicalRefundMutationBody/,
+    /claimRefundMutationReceipt/,
+    /X-Idempotent-Replay/,
+    /IDEMPOTENCY_CONFLICT/,
+    /IDEMPOTENCY_IN_PROGRESS/,
+    /completeRefundMutationReceipt/,
+  ]);
   mustContain(paths.tenantGuard, [/X-Tenant-ID/, /SELECT tenant_id FROM wlt_refunds/, /TENANT_MISMATCH/]);
-  mustContain(paths.router, [/refund\.RequireTenantScope/, /HandleCompleteGovernedRefundDurable/, /HandleReconcileGovernedRefund/, /HandleListGovernedRefundAudit/]);
+  mustContain(paths.router, [
+    /refund\.RequireTenantScope/,
+    /RequireMutationIdempotency\(db, "create"/,
+    /RequireMutationIdempotency\(db, "approve"/,
+    /RequireMutationIdempotency\(db, "reject"/,
+    /RequireMutationIdempotency\(db, "complete"/,
+    /RequireMutationIdempotency\(db, "reconcile"/,
+    /HandleCompleteGovernedRefundDurable/,
+    /HandleReconcileGovernedRefund/,
+    /HandleListGovernedRefundAudit/,
+  ]);
   mustContain(paths.outbox, [/EventTypeRefunded/, /func EnqueueRefund/, /refund_reference/]);
   mustContain(paths.worker, [/NotifyEvent/, /RefundReference/]);
 });
