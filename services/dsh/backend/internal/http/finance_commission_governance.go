@@ -27,6 +27,7 @@ type governedCommissionPolicyRequest struct {
 type governedCommissionAdjustmentRequest struct {
 	DeltaMinorUnits int64  `json:"deltaMinorUnits"`
 	Reason          string `json:"reason"`
+	IdempotencyKey  string `json:"idempotencyKey"`
 }
 
 type governedCommissionLifecycleRequest struct {
@@ -117,13 +118,19 @@ func (s *protectedStoreServer) handleAdjustFinanceCommission(w http.ResponseWrit
 		return
 	}
 	input.Reason = strings.TrimSpace(input.Reason)
-	if input.DeltaMinorUnits == 0 || input.Reason == "" {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "non-zero deltaMinorUnits and reason are required")
+	input.IdempotencyKey = strings.TrimSpace(input.IdempotencyKey)
+	if input.DeltaMinorUnits == 0 || input.Reason == "" || input.IdempotencyKey == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "non-zero deltaMinorUnits, reason and idempotencyKey are required")
+		return
+	}
+	if len(input.IdempotencyKey) > 200 {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "idempotencyKey must not exceed 200 characters")
 		return
 	}
 	s.proxyGovernedCommissionLifecycle(w, r, actor.ID, "adjust", map[string]any{
 		"deltaMinorUnits": input.DeltaMinorUnits,
 		"reason":          input.Reason,
+		"idempotencyKey":  input.IdempotencyKey,
 	})
 }
 
