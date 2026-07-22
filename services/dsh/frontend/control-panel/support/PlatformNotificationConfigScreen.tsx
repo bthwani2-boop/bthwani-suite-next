@@ -11,6 +11,7 @@ import type {
   DshNotificationDeliveryAttempt,
   DshNotificationDeliveryOutcome,
   DshPlatformNotificationConfig,
+  DshPushDeliveryAudit,
 } from "../../shared/notifications";
 
 const OUTCOME_LABELS: Readonly<Record<DshNotificationDeliveryOutcome, string>> = {
@@ -23,6 +24,18 @@ function outcomeTone(outcome: DshNotificationDeliveryOutcome): "success" | "warn
   if (outcome === "sent") return "success";
   if (outcome === "dead_letter") return "danger";
   return "warning";
+}
+
+function pushStatusTone(status: DshPushDeliveryAudit["status"]): "success" | "warning" | "danger" {
+  if (status === "sent") return "success";
+  if (status === "failed") return "danger";
+  return "warning";
+}
+
+function pushStatusLabel(status: DshPushDeliveryAudit["status"]): string {
+  if (status === "sent") return "Push مرسل";
+  if (status === "failed") return "Push فاشل";
+  return "Push معلّق";
 }
 
 function splitValues(value: string): string[] {
@@ -193,11 +206,14 @@ export function PlatformNotificationConfigScreen() {
           ) : (
             <>
               <Box style={styles.auditSummary}>
-                <Badge label={`تم الإرسال: ${deliveryAudit.state.summary.sent}`} tone="success" />
-                <Badge label={`إعادة المحاولة: ${deliveryAudit.state.summary.retryScheduled}`} tone="warning" />
-                <Badge label={`Dead letter: ${deliveryAudit.state.summary.deadLetter}`} tone="danger" />
+                <Badge label={`Outbox مرسل: ${deliveryAudit.state.summary.sent}`} tone="success" />
+                <Badge label={`Outbox يعاد: ${deliveryAudit.state.summary.retryScheduled}`} tone="warning" />
+                <Badge label={`Outbox dead letter: ${deliveryAudit.state.summary.deadLetter}`} tone="danger" />
                 <Badge label={`Outbox معلّق: ${deliveryAudit.state.summary.pendingOutbox}`} tone="neutral" />
                 <Badge label={`Outbox فاشل: ${deliveryAudit.state.summary.failedOutbox}`} tone="danger" />
+                <Badge label={`Push مرسل: ${deliveryAudit.state.summary.sentPush}`} tone="success" />
+                <Badge label={`Push معلّق: ${deliveryAudit.state.summary.pendingPush}`} tone="warning" />
+                <Badge label={`Push فاشل: ${deliveryAudit.state.summary.failedPush}`} tone="danger" />
               </Box>
               <Box style={styles.actions}>
                 <Button label="الكل" tone={deliveryAudit.outcome ? "secondary" : "brand"} size="sm" fullWidth={false} onPress={() => { void deliveryAudit.filter(); }} />
@@ -206,7 +222,7 @@ export function PlatformNotificationConfigScreen() {
                 <Button label="Dead letter" tone={deliveryAudit.outcome === "dead_letter" ? "brand" : "secondary"} size="sm" fullWidth={false} onPress={() => { void deliveryAudit.filter("dead_letter"); }} />
               </Box>
               {deliveryAudit.state.attempts.length === 0 ? (
-                <StateView title="لا توجد محاولات" description="لا توجد محاولات مطابقة للفلتر الحالي." />
+                <StateView title="لا توجد محاولات Outbox" description="لا توجد محاولات مطابقة للفلتر الحالي." />
               ) : (
                 <DataTable<DshNotificationDeliveryAttempt>
                   columns={[
@@ -218,6 +234,25 @@ export function PlatformNotificationConfigScreen() {
                     { key: "createdAt", header: "الوقت", render: (row) => <Text role="bodySm">{new Date(row.createdAt).toLocaleString("ar-YE")}</Text> },
                   ]}
                   rows={deliveryAudit.state.attempts}
+                  getRowKey={(row) => row.id}
+                />
+              )}
+
+              <Text role="titleSm" style={styles.editorTitle}>تسليم قناة Push</Text>
+              {deliveryAudit.state.pushDeliveries.length === 0 ? (
+                <StateView title="لا توجد عمليات Push" description="لم تنشأ عمليات تسليم Push بعد." />
+              ) : (
+                <DataTable<DshPushDeliveryAudit>
+                  columns={[
+                    { key: "topic", header: "الموضوع", render: (row) => <Text role="bodySm">{row.topic}</Text> },
+                    { key: "actor", header: "الممثل", render: (row) => <Text role="bodySm">{row.actorType} · {row.actorId}</Text> },
+                    { key: "status", header: "الحالة", render: (row) => <Badge label={pushStatusLabel(row.status)} tone={pushStatusTone(row.status)} /> },
+                    { key: "attemptCount", header: "المحاولات", render: (row) => <Text role="bodySm">{String(row.attemptCount)}</Text> },
+                    { key: "providerMessageId", header: "معرّف المزود", render: (row) => <Text role="bodySm">{row.providerMessageId || "—"}</Text> },
+                    { key: "lastError", header: "آخر خطأ", render: (row) => <Text role="bodySm">{row.lastError || "—"}</Text> },
+                    { key: "updatedAt", header: "آخر تحديث", render: (row) => <Text role="bodySm">{new Date(row.updatedAt).toLocaleString("ar-YE")}</Text> },
+                  ]}
+                  rows={deliveryAudit.state.pushDeliveries}
                   getRowKey={(row) => row.id}
                 />
               )}
