@@ -1,0 +1,181 @@
+{
+  "schemaVersion": 1,
+  "journeyId": "JRN-029",
+  "title": "Operational zones, SLA, capacity and fulfillment modes",
+  "repositoryMode": "REMOTE_ONLY",
+  "repository": "bthwani2-boop/bthwani-suite-next",
+  "targetBranch": "sambassam",
+  "initialResolvedCommit": "10a281093f571595300b5245e9d427a4dc71dd16",
+  "implementationCommit": "ccc217e7701a8d0f1ba94450f3aebbe9cc3d163f",
+  "concurrentBranchHeadObservedBeforeEvidence": "4d1d1e069aa29c447fd4a1d61a5a818649c39974",
+  "mode": "fullstack unified multi-surface",
+  "decision": "CODE_COMPLETE_PENDING_REMOTE_CHECKS_AND_INDEPENDENT_PRODUCT_ACCEPTANCE",
+  "closureClaim": {
+    "codeImplementation": "COMPLETE",
+    "databaseMigration": "COMPLETE",
+    "backendRuntimeBinding": "COMPLETE",
+    "sharedFrontendBrain": "COMPLETE",
+    "controlPanelOperationsSurface": "COMPLETE",
+    "focusedOpenApiContract": "COMPLETE",
+    "automatedVerificationDefinition": "COMPLETE",
+    "remoteWorkflowConclusion": "PENDING_OBSERVATION",
+    "runtimeSmokeEvidence": "NOT_CAPTURED",
+    "visualEvidence": "NOT_CAPTURED",
+    "productManagerApproval": "PENDING",
+    "productOwnerApproval": "PENDING",
+    "productAcceptanceDecision": "PENDING"
+  },
+  "slices": [
+    {
+      "id": "JRN-029-S01",
+      "name": "Zone creation, editing and geofence boundary ownership",
+      "status": "CODE_CLOSED",
+      "evidence": [
+        "Existing dsh_platform_zones remains the operational zone owner.",
+        "Existing governed service-area geofences remain the spatial boundary owner; JRN-029 does not create a competing geometry model.",
+        "Zone versions, active state and audit rollback are consumed by the unified decision."
+      ]
+    },
+    {
+      "id": "JRN-029-S02",
+      "name": "Store and location serviceability",
+      "status": "CODE_CLOSED",
+      "evidence": [
+        "EvaluateOperationalPolicyForStore resolves the store through its canonical service_area_code to the governed zone.",
+        "Existing client-address geofence checks remain responsible for address-to-service-area validation.",
+        "No local frontend serviceability truth was introduced."
+      ]
+    },
+    {
+      "id": "JRN-029-S03",
+      "name": "Preparation, assignment and delivery SLA",
+      "status": "CODE_CLOSED",
+      "evidence": [
+        "Migration adds max_assignment_mins with bounded database validation.",
+        "Operational profiles manage preparation, assignment and delivery limits with independent expected-version guards.",
+        "The canonical decision returns all three SLA limits and their version."
+      ]
+    },
+    {
+      "id": "JRN-029-S04",
+      "name": "Capacity, pressure, pause and resume",
+      "status": "CODE_CLOSED",
+      "evidence": [
+        "Capacity adds explicit is_paused and pause_reason state.",
+        "Live non-terminal order count is evaluated against maximum orders and throttle threshold.",
+        "Pause, exhausted capacity and throttling fail closed before protected mutations."
+      ]
+    },
+    {
+      "id": "JRN-029-S05",
+      "name": "BThwani delivery, partner delivery and client pickup",
+      "status": "CODE_CLOSED",
+      "evidence": [
+        "dsh_platform_delivery_mode_policies owns the three canonical modes per zone.",
+        "Legacy pickup is normalized to client_pickup without creating a second mode truth.",
+        "Pickup never creates a captain-dispatch effect; partner delivery requires partner handoff."
+      ]
+    },
+    {
+      "id": "JRN-029-S06",
+      "name": "Store onboarding fee policy and reference",
+      "status": "CODE_CLOSED_EXISTING_OWNER_VERIFIED",
+      "evidence": [
+        "Existing DSH store-onboarding-fee policy remains the definition and reference owner.",
+        "JRN-029 rollback supports the existing policy aggregate.",
+        "No WLT wallet balance or ledger mutation was added."
+      ]
+    },
+    {
+      "id": "JRN-029-S07",
+      "name": "Effects on cart, checkout, order and dispatch",
+      "status": "CODE_CLOSED",
+      "evidence": [
+        "OperationalPolicyEffectsMiddleware is mounted in the executable composition before existing mutation guards.",
+        "Cart item mutation, cart serviceability, checkout intent, order creation and dispatch assignment consume the same store decision.",
+        "Denied effects return OPERATIONAL_POLICY_DENIED with the canonical decision and do not reach the owning mutation handler."
+      ]
+    },
+    {
+      "id": "JRN-029-S08",
+      "name": "Audit, versions and rollback",
+      "status": "CODE_CLOSED",
+      "evidence": [
+        "Every governed mutation requires actor, surface, reason, idempotency key and correlation ID.",
+        "Append-only events cover zone, SLA, capacity, fulfillment mode and onboarding fee aggregates.",
+        "Rollback restores an event snapshot only through a new expected-version-guarded mutation and emits rolled_back audit evidence."
+      ]
+    }
+  ],
+  "changedPaths": [
+    "governance/product/contracts/jrn-029-zones-sla-capacity-delivery-modes.product-truth.json",
+    "governance/evidence/JRN-029_FULLSTACK_CLOSURE.json",
+    "services/dsh/database/migrations/dsh-129_jrn029_operational_policy_closure.sql",
+    "services/dsh/backend/internal/platformpolicies/jrn029_closure.go",
+    "services/dsh/backend/internal/platformpolicies/jrn029_profile.go",
+    "services/dsh/backend/internal/platformpolicies/jrn029_store_effects.go",
+    "services/dsh/backend/internal/platformpolicies/jrn029_closure_test.go",
+    "services/dsh/backend/internal/platformpolicies/jrn029_store_effects_test.go",
+    "services/dsh/backend/internal/http/jrn029_operational_policy.go",
+    "services/dsh/backend/internal/http/jrn029_effects_middleware.go",
+    "services/dsh/backend/internal/http/jrn029_effects_middleware_test.go",
+    "services/dsh/backend/internal/http/jrn_029_operational_policy_routes_test.go",
+    "services/dsh/backend/internal/http/platformpolicies_routes.go",
+    "services/dsh/backend/cmd/dsh-api/main.go",
+    "services/dsh/frontend/shared/platform/jrn029-operational-policy.api.ts",
+    "services/dsh/frontend/shared/platform/index.ts",
+    "services/dsh/frontend/control-panel/platform/Jrn029OperationalPolicySection.tsx",
+    "services/dsh/frontend/control-panel/platform/PlatformPoliciesScreen.tsx",
+    "services/dsh/contracts/dsh.jrn-029.openapi.yaml",
+    "services/dsh/tsconfig.jrn-029.json",
+    "services/dsh/tests/jrn-029-operational-policy.test.mjs",
+    ".github/workflows/jrn-029-operational-policy-verification.yml"
+  ],
+  "checks": [
+    {
+      "name": "JRN-029 targeted Go decision and route tests",
+      "command": "go test ./internal/platformpolicies ./internal/http -run 'TestJRN029' -count=1",
+      "status": "DEFINED_IN_REMOTE_WORKFLOW_PENDING_CONCLUSION"
+    },
+    {
+      "name": "JRN-029 backend executable build",
+      "command": "go build ./internal/platformpolicies ./internal/http ./cmd/dsh-api",
+      "status": "DEFINED_IN_REMOTE_WORKFLOW_PENDING_CONCLUSION"
+    },
+    {
+      "name": "JRN-029 static full-stack gate",
+      "command": "node --test services/dsh/tests/jrn-029-operational-policy.test.mjs",
+      "status": "DEFINED_IN_REMOTE_WORKFLOW_PENDING_CONCLUSION"
+    },
+    {
+      "name": "JRN-029 focused TypeScript graph",
+      "command": "pnpm --dir services/dsh exec tsc -p tsconfig.jrn-029.json --noEmit --pretty false",
+      "status": "DEFINED_IN_REMOTE_WORKFLOW_PENDING_CONCLUSION"
+    },
+    {
+      "name": "JRN-029 focused OpenAPI parse",
+      "command": "pnpm --dir services/dsh exec openapi-typescript contracts/dsh.jrn-029.openapi.yaml -o /tmp/jrn-029-operational-policy-api.ts",
+      "status": "DEFINED_IN_REMOTE_WORKFLOW_PENDING_CONCLUSION"
+    },
+    {
+      "name": "Product Truth independent authority separation",
+      "status": "PASS_BY_CONTRACT_ASSERTION",
+      "detail": "Engineering approvals remain PENDING and cannot be self-issued."
+    }
+  ],
+  "remainingRisks": [
+    "The remote JRN-029 workflow conclusion was not yet observable through the commit workflow API when this evidence was written.",
+    "No live database migration, API smoke, mobile runtime or browser visual capture was executed from this remote-only interaction.",
+    "Product-manager approval, product-owner approval and independent product acceptance remain pending by governance policy.",
+    "The focused JRN-029 OpenAPI contract is verified independently; registration into the large generated modular DSH bundle remains a separate contract-maintenance action unless the repository composition owner adopts the focused contract."
+  ],
+  "forbiddenActionsRespected": [
+    "no force push",
+    "no pull request",
+    "no merge",
+    "no production deployment",
+    "no WLT ledger mutation",
+    "no self-issued product approval",
+    "no fabricated runtime or visual evidence"
+  ]
+}
