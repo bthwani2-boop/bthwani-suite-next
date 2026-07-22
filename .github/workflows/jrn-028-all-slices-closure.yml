@@ -3,7 +3,7 @@ name: JRN-028 All Slices Closure
 on:
   push:
     branches: [sambassam]
-    paths:
+    paths: &jrn028_paths
       - "services/dsh/backend/internal/coupons/**"
       - "services/dsh/backend/internal/http/coupon_funding_lifecycle.go"
       - "services/dsh/backend/internal/http/coupons.go"
@@ -25,6 +25,10 @@ on:
       - "governance/evidence/JRN-028_ALL_SLICES_CLOSURE.json"
       - "tools/verification/jrn-028-all-slices.sh"
       - ".github/workflows/jrn-028-all-slices-closure.yml"
+  pull_request:
+    branches: [master]
+    types: [synchronize]
+    paths: *jrn028_paths
 
 permissions:
   contents: write
@@ -56,9 +60,10 @@ jobs:
       PGUSER: postgres
       PGDATABASE: wlt_jrn_028
     steps:
-      - name: Checkout exact remote snapshot
+      - name: Checkout exact remote branch snapshot
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          ref: sambassam
           fetch-depth: 0
           persist-credentials: true
 
@@ -99,6 +104,7 @@ jobs:
           VERIFY_OUTCOME: ${{ steps.verify.outcome }}
         run: |
           set -Eeuo pipefail
+          tested_sha="$(git rev-parse HEAD)"
           temporary_workflow=".github/workflows/jrn-028-all-slices-closure.yml"
           proof_file="governance/evidence/JRN-028_VERIFIED_SNAPSHOT.json"
           failure_file="governance/evidence/JRN-028_LAST_FAILURE.txt"
@@ -145,7 +151,7 @@ jobs:
             git fetch origin sambassam
             current_head="$(git rev-parse origin/sambassam)"
             final_status="$VERIFY_OUTCOME"
-            if ! git diff --quiet "$GITHUB_SHA" "$current_head" -- "${governed_paths[@]}"; then
+            if ! git diff --quiet "$tested_sha" "$current_head" -- "${governed_paths[@]}"; then
               final_status="stale"
             fi
 
@@ -156,8 +162,8 @@ jobs:
             if [[ "$final_status" == "success" ]]; then
               rm -f "$failure_file" "$temporary_workflow"
             else
-              git checkout "$GITHUB_SHA" -- "$temporary_workflow"
-              cp /tmp/JRN-028_LAST_FAILURE.txt "$failure_file" 2>/dev/null || printf 'status=%s\ntested_sha=%s\n' "$final_status" "$GITHUB_SHA" > "$failure_file"
+              git checkout "$tested_sha" -- "$temporary_workflow"
+              cp /tmp/JRN-028_LAST_FAILURE.txt "$failure_file" 2>/dev/null || printf 'status=%s\ntested_sha=%s\n' "$final_status" "$tested_sha" > "$failure_file"
             fi
 
             status_label="FAILED"
@@ -168,7 +174,7 @@ jobs:
           {
             "journeyId": "JRN-028",
             "status": "$status_label",
-            "testedSha": "$GITHUB_SHA",
+            "testedSha": "$tested_sha",
             "verifiedBranchHeadBeforeProof": "$current_head",
             "workflowRunId": "$GITHUB_RUN_ID",
             "workflowRunAttempt": "$GITHUB_RUN_ATTEMPT",
