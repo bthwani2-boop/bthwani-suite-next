@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: BThwani DSH Partner Fleet Connection API
-  version: 0.5.0
+  version: 0.5.1
   description: Partner-store courier connection codes and authenticated captain fleet memberships, including governed disconnect and redacted operator readback.
 x-bthwani-owner: services/dsh
 x-bthwani-parent-contract: services/dsh/contracts/dsh.openapi.yaml
@@ -196,15 +196,14 @@ components:
           type: string
           minLength: 8
           maxLength: 16
-          pattern: '^[A-Z0-9-]+$'
+          pattern: '^[A-Za-z0-9-]+$'
     DisconnectMembershipRequest:
-      allOf:
-        - $ref: '#/components/schemas/ExpectedVersionRequest'
-        - type: object
-          additionalProperties: false
-          required: [storeId]
-          properties:
-            storeId: { type: string, minLength: 1 }
+      type: object
+      additionalProperties: false
+      required: [storeId, expectedVersion]
+      properties:
+        storeId: { type: string, minLength: 1 }
+        expectedVersion: { type: integer, minimum: 1 }
     ConnectionStatus:
       type: string
       enum: [pending, redeemed, revoked, expired]
