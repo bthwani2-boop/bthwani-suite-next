@@ -3,7 +3,6 @@ import { StyleSheet, View } from 'react-native';
 import {
   Badge,
   Box,
-  Button,
   KeyValueList,
   SectionHeader,
   Surface,
@@ -18,7 +17,6 @@ import {
   readCaptainForegroundLocation,
   type DshCaptainLocationPush,
 } from '../../shared/delivery';
-import type { DshDispatchLocationSyncResult } from '../../shared/dispatch/dispatch-location.api';
 
 type LastLocation = {
   readonly latitude: number;
@@ -34,7 +32,19 @@ export interface DshCaptainMapScreenProps {
   readonly captainId: string;
   readonly currentStageLabel: string;
   readonly onBack: () => void;
-  readonly onPushLocation: (push: DshCaptainLocationPush) => Promise<DshDispatchLocationSyncResult>;
+  readonly onPushLocation: (push: DshCaptainLocationPush) => Promise<unknown>;
+}
+
+function locationSyncKind(result: unknown): 'sent' | 'queued' {
+  if (
+    typeof result === 'object'
+    && result !== null
+    && 'kind' in result
+    && (result as { readonly kind?: unknown }).kind === 'queued'
+  ) {
+    return 'queued';
+  }
+  return 'sent';
 }
 
 export function DshCaptainMapScreen({
@@ -72,9 +82,10 @@ export function DshCaptainMapScreen({
         accuracyMeters: point.accuracyMeters,
         recordedAt,
       });
-      setLastLocation({ ...point, recordedAt, syncState: result.kind });
+      const syncState = locationSyncKind(result);
+      setLastLocation({ ...point, recordedAt, syncState });
       setSuccessMessage(
-        result.kind === 'sent'
+        syncState === 'sent'
           ? 'تم إرسال الموقع المصدق وربطه بالإسناد النشط.'
           : 'الشبكة غير مستقرة. حُفظت آخر عينة للنقل وستعاد مزامنتها عند عودة الاتصال.',
       );
