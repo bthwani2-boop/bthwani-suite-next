@@ -12,7 +12,17 @@ import (
 	"dsh-api/internal/wlt"
 )
 
-const AdministrationPermissionApprove = "administration.approve"
+const (
+	AdministrationPermissionApprove          = "administration.approve"
+	AdministrationPermissionRoleRequest      = "administration.role.request"
+	AdministrationPermissionRoleApprove      = "administration.role.approve"
+	AdministrationPermissionStaffRequest     = "administration.staff.request"
+	AdministrationPermissionStaffApprove     = "administration.staff.approve"
+	AdministrationPermissionAuditRead        = "administration.audit.read"
+	AdministrationPermissionDiagnosticsRead  = "administration.diagnostics.read"
+	AdministrationPermissionRollbackRequest  = "administration.rollback.request"
+	AdministrationPermissionRollbackApprove  = "administration.rollback.approve"
+)
 
 func RegisterAdministrationRoutes(
 	router *http.ServeMux,
@@ -30,6 +40,10 @@ func RegisterAdministrationRoutes(
 	router.HandleFunc("POST /dsh/operator/admin/staff/{staffId}/roles", server.handleRequestStaffRoleAssignment)
 	router.HandleFunc("GET /dsh/operator/admin/approvals", server.handleListRoleAssignmentApprovals)
 	router.HandleFunc("POST /dsh/operator/admin/approvals/{approvalId}/review", server.handleReviewStaffRoleAssignment)
+	router.HandleFunc("POST /dsh/operator/admin/approvals/{approvalId}/rollback-requests", server.handleRequestDecisionRollback)
+	router.HandleFunc("GET /dsh/operator/admin/rollback-requests", server.handleListRollbackRequests)
+	router.HandleFunc("POST /dsh/operator/admin/rollback-requests/{requestId}/review", server.handleReviewDecisionRollback)
+	router.HandleFunc("GET /dsh/operator/admin/diagnostics", server.handleAdministrationDiagnostics)
 	router.HandleFunc("GET /dsh/operator/admin/partners", server.handleListPartnerActivations)
 	router.HandleFunc("GET /dsh/operator/admin/captains", server.handleListCaptainCredentials)
 	router.HandleFunc("GET /dsh/operator/admin/audit", server.handleListAdminAudit)
@@ -51,7 +65,7 @@ func writeAdministrationApprovalError(w http.ResponseWriter, err error) {
 }
 
 func (s *protectedStoreServer) handleRequestRoleDefinition(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireAdministrationPermission(w, r, AdministrationPermissionManage)
+	actor, ok := s.requireAdministrationPermission(w, r, AdministrationPermissionRoleRequest)
 	if !ok {
 		return
 	}
@@ -59,13 +73,15 @@ func (s *protectedStoreServer) handleRequestRoleDefinition(w http.ResponseWriter
 		Name        string   `json:"name"`
 		Description string   `json:"description"`
 		Permissions []string `json:"permissions"`
+		Surfaces    []string `json:"surfaces"`
 		Reason      string   `json:"reason"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
 	request, err := administration.RequestRoleDefinition(
-		r.Context(), s.db, body.Name, body.Description, body.Permissions, actor.ID, body.Reason,
+		r.Context(), s.db, body.Name, body.Description, body.Permissions,
+		body.Surfaces, actor.ID, body.Reason,
 	)
 	if err != nil {
 		writeAdministrationApprovalError(w, err)
@@ -88,7 +104,7 @@ func (s *protectedStoreServer) handleListRoleDefinitionRequests(w http.ResponseW
 }
 
 func (s *protectedStoreServer) handleReviewRoleDefinition(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireAdministrationPermission(w, r, AdministrationPermissionApprove)
+	actor, ok := s.requireAdministrationPermission(w, r, AdministrationPermissionRoleApprove)
 	if !ok {
 		return
 	}
@@ -114,7 +130,7 @@ func (s *protectedStoreServer) handleReviewRoleDefinition(w http.ResponseWriter,
 // POST /dsh/operator/admin/staff/{staffId}/roles
 // actionType is mandatory so assignment and revocation share one governed path.
 func (s *protectedStoreServer) handleRequestStaffRoleAssignment(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireAdministrationPermission(w, r, AdministrationPermissionManage)
+	actor, ok := s.requireAdministrationPermission(w, r, AdministrationPermissionStaffRequest)
 	if !ok {
 		return
 	}
@@ -163,7 +179,7 @@ func (s *protectedStoreServer) handleListRoleAssignmentApprovals(w http.Response
 }
 
 func (s *protectedStoreServer) handleReviewStaffRoleAssignment(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireAdministrationPermission(w, r, AdministrationPermissionApprove)
+	actor, ok := s.requireAdministrationPermission(w, r, AdministrationPermissionStaffApprove)
 	if !ok {
 		return
 	}
