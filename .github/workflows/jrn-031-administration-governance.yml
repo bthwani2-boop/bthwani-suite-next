@@ -17,6 +17,20 @@ on:
       - "services/dsh/tsconfig.jrn-031.json"
       - "governance/product/contracts/jrn-031-administration-roles-approvals-audit.product-truth.json"
       - ".github/workflows/jrn-031-administration-governance.yml"
+  pull_request:
+    paths:
+      - "services/dsh/backend/internal/administration/**"
+      - "services/dsh/backend/internal/http/administration*.go"
+      - "services/dsh/backend/internal/http/journey_031_routes_test.go"
+      - "services/dsh/database/migrations/dsh-131_jrn031_governed_administration_closure.sql"
+      - "services/dsh/frontend/shared/administration/**"
+      - "services/dsh/frontend/control-panel/administration/**"
+      - "apps/control-panel/runtime/src/app/dsh/administration/page.tsx"
+      - "services/dsh/contracts/jrn-031-administration.openapi.yaml"
+      - "services/dsh/tests/jrn-031-administration-governance.test.mjs"
+      - "services/dsh/tsconfig.jrn-031.json"
+      - "governance/product/contracts/jrn-031-administration-roles-approvals-audit.product-truth.json"
+      - ".github/workflows/jrn-031-administration-governance.yml"
 
 permissions:
   contents: read
