@@ -7,14 +7,74 @@ import (
 	"strings"
 )
 
+type expiredConnectionProjection struct {
+	TeamMemberID     string
+	CreatedByActorID string
+	CourierName      string
+	MemberStatus     string
+}
+
 func expirePendingStoreCodes(ctx context.Context, db *sql.DB, storeID string) error {
-	_, err := db.ExecContext(ctx, `
-		UPDATE dsh_partner_courier_connection_codes
-		SET status = 'expired', version = version + 1, updated_at = NOW()
-		WHERE store_id = $1
-		  AND status = 'pending'
-		  AND expires_at <= NOW()`, storeID)
-	return err
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	rows, err := tx.QueryContext(ctx, `
+		UPDATE dsh_partner_courier_connection_codes AS connection
+		SET status = 'expired', version = connection.version + 1, updated_at = NOW()
+		FROM dsh_store_team_members AS member
+		WHERE connection.store_id = $1
+		  AND connection.status = 'pending'
+		  AND connection.expires_at <= NOW()
+		  AND member.id = connection.team_member_id
+		RETURNING connection.team_member_id,
+		          connection.created_by_actor_id,
+		          member.name,
+		          member.status`, storeID)
+	if err != nil {
+		return err
+	}
+
+	expired := make([]expiredConnectionProjection, 0)
+	for rows.Next() {
+		var item expiredConnectionProjection
+		if err := rows.Scan(&item.TeamMemberID, &item.CreatedByActorID, &item.CourierName, &item.MemberStatus); err != nil {
+			rows.Close()
+			return err
+		}
+		expired = append(expired, item)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return err
+	}
+	if err := rows.Close(); err != nil {
+		return err
+	}
+
+	for _, item := range expired {
+		if _, err := tx.ExecContext(ctx, `
+			INSERT INTO dsh_store_team_member_actions
+				(member_id, store_id, action_label, from_status, to_status, actor_id)
+			VALUES ($1, $2, 'expire_captain_connection_code', $3, $3, 'system')`,
+			item.TeamMemberID, storeID, item.MemberStatus); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `
+			INSERT INTO dsh_notifications
+				(actor_id, actor_type, topic, title, body, action_url)
+			VALUES ($1, 'partner', 'partner_fleet_connection',
+			        'انتهت صلاحية رمز ربط الكابتن',
+			        $2,
+			        '/team')`,
+			item.CreatedByActorID, "انتهت صلاحية رمز الربط للموصل "+item.CourierName+" دون استخدامه."); err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
 }
 
 func ListStoreConnections(ctx context.Context, db *sql.DB, storeID string) ([]ConnectionCode, error) {
