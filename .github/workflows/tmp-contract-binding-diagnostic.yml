@@ -1,0 +1,77 @@
+name: Temporary Contract Binding Diagnostic
+
+on:
+  push:
+    branches: [sambassam]
+    paths:
+      - ".github/workflows/tmp-contract-binding-diagnostic.yml"
+      - "services/dsh/contracts/**"
+      - "services/wlt/contracts/**"
+      - "core/identity/contracts/**"
+      - "tools/guards/**"
+      - "governance/guards/**"
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: temporary-contract-binding-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout immutable branch head
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Capture every contract and binding gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p contract-binding-diagnostic
+          run_check() {
+            local name="$1"
+            shift
+            set +e
+            "$@" >"contract-binding-diagnostic/${name}.log" 2>&1
+            local code=$?
+            set -e
+            printf '%s\n' "$code" >"contract-binding-diagnostic/${name}.exit"
+            printf '%s=%s\n' "$name" "$code" | tee -a contract-binding-diagnostic/summary.txt
+          }
+          run_check contracts-lint pnpm run contracts:lint
+          run_check api-binding pnpm run guard:api-binding
+          run_check backend-api-binding pnpm run guard:backend-api-binding
+          run_check service-manifest-drift pnpm run guard:service-manifest-drift
+          run_check frontend-feature-binding pnpm run guard:frontend-feature-binding
+      - name: Upload complete diagnostic
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: contract-binding-diagnostic-${{ github.event.pull_request.head.sha || github.sha }}
+          path: contract-binding-diagnostic
+          if-no-files-found: error
+          retention-days: 1
+      - name: Enforce captured results
+        shell: bash
+        run: |
+          set -euo pipefail
+          failed=0
+          for result in contract-binding-diagnostic/*.exit; do
+            name="$(basename "$result" .exit)"
+            code="$(cat "$result")"
+            if [[ "$code" != "0" ]]; then
+              echo "$name failed with exit $code"
+              failed=1
+            fi
+          done
+          exit "$failed"
