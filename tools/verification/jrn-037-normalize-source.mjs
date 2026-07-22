@@ -55,6 +55,24 @@ replaceExactly(
   `[[ "$CROSS_STATUS" = "403" ]]\n[[ "$(cat /tmp/jrn037-cross.json | json_field code)" = "PAYOUT_DESTINATION_FORBIDDEN" ]]\n`,
 );
 
+const wltServerPath = "services/wlt/backend/internal/http/server.go";
+for (const [before, after] of [
+  [
+    `\tmux.HandleFunc("PUT /wlt/payout-destinations/{partnerId}", gate(serviceAuth(payout.HandleUpsertPayoutDestinationGoverned(db))))\n`,
+    `\tmux.HandleFunc("PUT /wlt/payout-destinations/{partnerId}", gate(serviceAuth(payout.HandleUpsertPartnerPayoutDestinationJRN037(db))))\n`,
+  ],
+  [
+    `\tmux.HandleFunc("GET /wlt/payout-destinations/{partnerId}", readGate(payout.HandleGetPayoutDestination(db)))\n`,
+    `\tmux.HandleFunc("GET /wlt/payout-destinations/{partnerId}", readGate(payout.HandleGetPartnerPayoutDestinationJRN037(db)))\n`,
+  ],
+  [
+    `\tmux.HandleFunc("POST /wlt/payout-destinations/{partnerId}/deactivate", gate(serviceAuth(payout.HandleDeactivatePayoutDestination(db))))\n`,
+    `\tmux.HandleFunc("POST /wlt/payout-destinations/{partnerId}/deactivate", gate(serviceAuth(payout.HandleDeactivatePartnerPayoutDestinationJRN037(db))))\n`,
+  ],
+]) {
+  replaceExactly(wltServerPath, before, after);
+}
+
 const dshServerPath = "services/dsh/backend/internal/http/server.go";
 for (const [before, after] of [
   [
@@ -96,6 +114,7 @@ for (const [before, after] of [
 const goFiles = [
   "services/wlt/backend/internal/payout/jrn037_governed_payout.go",
   "services/wlt/backend/internal/payout/jrn037_governed_payout_test.go",
+  "services/wlt/backend/internal/payout/jrn037_legacy_destination_adapter.go",
   "services/wlt/backend/internal/payout/model_request.go",
   "services/wlt/backend/internal/payout/read_provider_proof.go",
   "services/wlt/backend/internal/http/server.go",
