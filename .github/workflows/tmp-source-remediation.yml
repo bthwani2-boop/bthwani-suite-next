@@ -1,0 +1,88 @@
+name: Temporary Source Remediation
+
+on:
+  push:
+    branches: [sambassam]
+    paths:
+      - ".github/workflows/tmp-source-remediation.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: temporary-source-remediation
+  cancel-in-progress: false
+
+jobs:
+  remediate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout latest sambassam
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: sambassam
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Apply deterministic source fixes
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          contracts = [
+              Path("core/platform-control/contracts/jrn-040-platform-change-sets.openapi.yaml"),
+              Path("core/platform-control/contracts/jrn-041-progressive-rollout.openapi.yaml"),
+              Path("services/dsh/contracts/dsh.analytics-extensions.openapi.yaml"),
+              Path("services/dsh/contracts/dsh.jrn-036-settlements-commissions.openapi.yaml"),
+              Path("services/dsh/contracts/dsh.jrn-037-payouts-destinations.openapi.yaml"),
+              Path("services/dsh/contracts/dsh.order-workboards.openapi.yaml"),
+              Path("services/dsh/contracts/jrn-038-cod-custody.openapi.yaml"),
+              Path("services/wlt/contracts/jrn-038-cod-reconciliation.openapi.yaml"),
+          ]
+          for path in contracts:
+              text = path.read_text(encoding="utf-8")
+              if "x-bthwani-contract-state:" not in text:
+                  lines = text.splitlines(keepends=True)
+                  if not lines or not lines[0].startswith("openapi:"):
+                      raise SystemExit(f"unexpected OpenAPI header: {path}")
+                  lines.insert(1, "x-bthwani-contract-state: CONTRACT_ACTIVE\n")
+                  path.write_text("".join(lines), encoding="utf-8")
+
+          test_path = Path("core/platform-control/backend/internal/platformcontrol/jrn040_change_set_governance_test.go")
+          text = test_path.read_text(encoding="utf-8")
+          old = "('JRN040_TARGET', 'legacy-owner', 'integer', 'public', 'global', '', '5'::jsonb, 1, 'inactive')"
+          new = "('JRN040_TARGET', 'legacy-owner', 'integer', 'public', 'global', '', '5'::jsonb, 1, 'disabled')"
+          if old in text:
+              text = text.replace(old, new, 1)
+          elif new not in text:
+              raise SystemExit("JRN-040 fixture no longer matches the governed status model")
+          test_path.write_text(text, encoding="utf-8")
+          PY
+      - name: Commit deterministic fixes
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "No source changes required."
+            exit 0
+          fi
+          git config user.name "bthwani-governance-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add \
+            core/platform-control/contracts/jrn-040-platform-change-sets.openapi.yaml \
+            core/platform-control/contracts/jrn-041-progressive-rollout.openapi.yaml \
+            core/platform-control/backend/internal/platformcontrol/jrn040_change_set_governance_test.go \
+            services/dsh/contracts/dsh.analytics-extensions.openapi.yaml \
+            services/dsh/contracts/dsh.jrn-036-settlements-commissions.openapi.yaml \
+            services/dsh/contracts/dsh.jrn-037-payouts-destinations.openapi.yaml \
+            services/dsh/contracts/dsh.order-workboards.openapi.yaml \
+            services/dsh/contracts/jrn-038-cod-custody.openapi.yaml \
+            services/wlt/contracts/jrn-038-cod-reconciliation.openapi.yaml
+          git commit -m "fix(governance): align contract states and platform fixture"
+          for attempt in 1 2 3; do
+            if git push origin HEAD:sambassam; then
+              exit 0
+            fi
+            git pull --rebase origin sambassam
+          done
+          exit 1
