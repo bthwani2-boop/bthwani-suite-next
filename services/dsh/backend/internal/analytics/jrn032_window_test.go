@@ -41,11 +41,17 @@ func TestParseWindowRejectsUnknownAndUnsafeRanges(t *testing.T) {
 	if _, err := ParseWindow("", "2026-07-01", "", now); !errors.Is(err, ErrInvalidAnalyticsRange) {
 		t.Fatalf("partial range error=%v", err)
 	}
+	if _, err := ParseWindow("week", "2026-07-01", "2026-07-02", now); !errors.Is(err, ErrInvalidAnalyticsRange) {
+		t.Fatalf("mixed period and range error=%v", err)
+	}
 	if _, err := ParseWindow("", "2025-01-01", "2026-07-01", now); !errors.Is(err, ErrInvalidAnalyticsRange) {
 		t.Fatalf("oversized range error=%v", err)
 	}
 	if _, err := ParseWindow("", "2026-07-20", "2026-07-19", now); !errors.Is(err, ErrInvalidAnalyticsRange) {
 		t.Fatalf("reversed range error=%v", err)
+	}
+	if _, err := ParseWindow("", "2026-07-22T10:00:00Z", "2026-07-22T11:00:01Z", now); !errors.Is(err, ErrInvalidAnalyticsRange) {
+		t.Fatalf("future RFC3339 range error=%v", err)
 	}
 }
 
@@ -57,6 +63,13 @@ func TestParseWindowSupportsDateAndRFC3339Ranges(t *testing.T) {
 	}
 	if dateWindow.Period != "custom" || dateWindow.To.Sub(dateWindow.From) != 48*time.Hour {
 		t.Fatalf("date window=%+v", dateWindow)
+	}
+	currentDateWindow, err := ParseWindow("", "2026-07-22", "2026-07-22", now)
+	if err != nil {
+		t.Fatalf("current date should be accepted: %v", err)
+	}
+	if currentDateWindow.To != time.Date(2026, time.July, 23, 0, 0, 0, 0, time.UTC) {
+		t.Fatalf("current date exclusive end=%s", currentDateWindow.To)
 	}
 	rfcWindow, err := ParseWindow("", "2026-07-20T10:00:00Z", "2026-07-20T12:00:00Z", now)
 	if err != nil {
