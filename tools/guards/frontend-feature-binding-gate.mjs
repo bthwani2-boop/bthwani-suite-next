@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import Ajv from "ajv";
 import { fail, repoRoot, toPosix } from "./_guard-utils.mjs";
+import { parseOpenApiContract } from "./_openapi-utils.mjs";
 import { cleanupGoRouteExtractor, extractGoRoutes, routeKey } from "./lib/go-route-extractor.mjs";
 
 const guardId = "frontend-feature-binding-gate";
@@ -9,8 +10,11 @@ const violations = [];
 const registryRelative = "governance/guards/frontend-binding-registry.json";
 const schemaRelative = "governance/guards/frontend-binding-registry.schema.json";
 const openapiPath = "services/dsh/contracts/dsh.openapi.yaml";
-const routerPath = "services/dsh/backend/internal/http/server.go";
-const manifestPath = "services/dsh/service.manifest.ts";
+const routerDir = "services/dsh/backend/internal/http";
+const capabilityFiles = [
+  "services/dsh/capability-map.ts",
+  "services/dsh/capability-map.extensions.ts",
+];
 const sourceExtensions = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"];
 
 function readJson(relativePath) {
@@ -38,9 +42,7 @@ function moduleSpecifiers(content) {
   return specifiers;
 }
 
-function resolveRelativeModule(fromRelative, specifier) {
-  if (!specifier.startsWith(".")) return null;
-  const base = path.resolve(repoRoot, path.dirname(fromRelative), specifier);
+function resolveSourceCandidate(base) {
   const candidates = [
     base,
     ...sourceExtensions.map((extension) => `${base}${extension}`),
@@ -52,6 +54,40 @@ function resolveRelativeModule(fromRelative, specifier) {
       return toPosix(path.relative(repoRoot, candidate));
     }
   }
+  return null;
+}
+
+function loadAliases() {
+  const config = readJson("tsconfig.base.json");
+  const aliases = [];
+  for (const [pattern, targets] of Object.entries(config?.compilerOptions?.paths ?? {})) {
+    for (const target of Array.isArray(targets) ? targets : []) aliases.push({ pattern, target });
+  }
+  return aliases;
+}
+
+const aliases = loadAliases();
+
+function resolveModule(fromRelative, specifier) {
+  if (specifier.startsWith(".")) {
+    return resolveSourceCandidate(path.resolve(repoRoot, path.dirname(fromRelative), specifier));
+  }
+
+  for (const alias of aliases) {
+    const wildcardIndex = alias.pattern.indexOf("*");
+    if (wildcardIndex === -1) {
+      if (specifier !== alias.pattern) continue;
+      return resolveSourceCandidate(path.resolve(repoRoot, alias.target));
+    }
+
+    const prefix = alias.pattern.slice(0, wildcardIndex);
+    const suffix = alias.pattern.slice(wildcardIndex + 1);
+    if (!specifier.startsWith(prefix) || !specifier.endsWith(suffix)) continue;
+    const wildcard = specifier.slice(prefix.length, specifier.length - suffix.length);
+    const target = alias.target.replace("*", wildcard);
+    return resolveSourceCandidate(path.resolve(repoRoot, target));
+  }
+
   return null;
 }
 
@@ -68,11 +104,31 @@ function hasDependencyPath(startRelative, targetRelative) {
 
     const content = readText(current);
     for (const specifier of moduleSpecifiers(content)) {
-      const resolved = resolveRelativeModule(current, specifier);
+      const resolved = resolveModule(current, specifier);
       if (resolved && !visited.has(resolved)) queue.push(resolved);
     }
   }
   return false;
+}
+
+function collectRouteSet() {
+  const set = new Set();
+  const absoluteDir = path.join(repoRoot, routerDir);
+  for (const entry of fs.readdirSync(absoluteDir)) {
+    if (!entry.endsWith(".go") || entry.endsWith("_test.go")) continue;
+    const relative = `${routerDir}/${entry}`;
+    for (const route of extractGoRoutes(relative)) set.add(routeKey(route));
+  }
+  return set;
+}
+
+function collectCapabilityIds() {
+  const ids = new Set();
+  for (const file of capabilityFiles) {
+    const source = readText(file);
+    for (const match of source.matchAll(/\bid:\s*["']([^"']+)["']/g)) ids.add(match[1]);
+  }
+  return ids;
 }
 
 const registry = readJson(registryRelative);
@@ -86,17 +142,19 @@ if (registry && schema) {
   }
 }
 
-const openapi = readText(openapiPath);
-const manifest = readText(manifestPath);
+const operationIds = new Set(
+  parseOpenApiContract(openapiPath).map((operation) => operation.operationId).filter(Boolean),
+);
+const capabilityIds = collectCapabilityIds();
 let routeSet;
 try {
-  routeSet = new Set(extractGoRoutes(routerPath).map(routeKey));
+  routeSet = collectRouteSet();
 } catch (error) {
-  violations.push({ file: routerPath, line: 0, message: `GO_AST_ROUTE_EXTRACTION_FAILED ${error.message}` });
+  violations.push({ file: routerDir, line: 0, message: `GO_AST_ROUTE_EXTRACTION_FAILED ${error.message}` });
 }
 
 const seenIds = new Set();
-const seenScreens = new Set();
+const seenBindings = new Set();
 const expectedPrefix = {
   "app-client": "services/dsh/frontend/app-client/",
   "app-partner": "services/dsh/frontend/app-partner/",
@@ -108,9 +166,11 @@ const expectedPrefix = {
 try {
   for (const entry of registry?.entries ?? []) {
     if (seenIds.has(entry.id)) violations.push({ file: registryRelative, line: 0, message: `DUPLICATE_BINDING_ID ${entry.id}` });
-    if (seenScreens.has(entry.screen)) violations.push({ file: registryRelative, line: 0, message: `DUPLICATE_SCREEN_BINDING ${entry.screen}` });
     seenIds.add(entry.id);
-    seenScreens.add(entry.screen);
+
+    const bindingKey = `${entry.screen}|${entry.controller}|${entry.operationId}|${entry.route}`;
+    if (seenBindings.has(bindingKey)) violations.push({ file: registryRelative, line: 0, message: `DUPLICATE_FRONTEND_BINDING ${entry.id}` });
+    seenBindings.add(bindingKey);
 
     if (!entry.screen.startsWith(expectedPrefix[entry.surface] ?? "<invalid>/")) {
       violations.push({ file: registryRelative, line: 0, message: `SURFACE_SCREEN_PATH_MISMATCH ${entry.id}` });
@@ -124,15 +184,14 @@ try {
       violations.push({ file: entry.screen, line: 0, message: `SCREEN_CONTROLLER_DEPENDENCY_UNREACHABLE ${entry.id} -> ${entry.controller}` });
     }
 
-    const escapedOperationId = entry.operationId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    if (!new RegExp(`operationId:\\s*${escapedOperationId}\\b`).test(openapi)) {
+    if (!operationIds.has(entry.operationId)) {
       violations.push({ file: openapiPath, line: 0, message: `OPENAPI_OPERATION_MISSING ${entry.id} -> ${entry.operationId}` });
     }
     if (routeSet && !routeSet.has(entry.route)) {
-      violations.push({ file: routerPath, line: 0, message: `BACKEND_ROUTE_MISSING ${entry.id} -> ${entry.route}` });
+      violations.push({ file: routerDir, line: 0, message: `BACKEND_ROUTE_MISSING ${entry.id} -> ${entry.route}` });
     }
-    if (!manifest.includes(entry.capabilityId)) {
-      violations.push({ file: manifestPath, line: 0, message: `SERVICE_MANIFEST_CAPABILITY_MISSING ${entry.id} -> ${entry.capabilityId}` });
+    if (!capabilityIds.has(entry.capabilityId)) {
+      violations.push({ file: capabilityFiles.join(","), line: 0, message: `SERVICE_MANIFEST_CAPABILITY_MISSING ${entry.id} -> ${entry.capabilityId}` });
     }
   }
 } finally {
