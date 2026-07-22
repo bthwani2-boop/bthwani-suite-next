@@ -101,14 +101,23 @@ jobs:
             psql "$DSH_DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file" >/dev/null
           done
       - name: Prove command replay and exception evidence
+        id: database_closure
         shell: bash
         run: |
-          set -euo pipefail
+          set -o pipefail
           cd services/dsh/backend
           DSH_REQUIRE_DB_TESTS=true DATABASE_URL="$DSH_DATABASE_URL" \
             go test ./internal/partnerdelivery \
               -run '^(TestPartnerDeliveryCommandReplayDBIntegration|TestPartnerDeliveryExceptionEvidenceDBIntegration)$' \
-              -count=1 -v
+              -count=1 -v 2>&1 | tee ../../../jrn016-database-closure.log
+      - name: Preserve database closure diagnostics
+        if: failure() && steps.database_closure.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: jrn016-database-closure-${{ github.run_id }}
+          path: jrn016-database-closure.log
+          retention-days: 3
+          if-no-files-found: error
 
   contract-and-surfaces:
     name: JRN-016 contract and surfaces
