@@ -1,0 +1,28 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false
+  },
+  "include": [
+    "frontend/**/*.d.ts",
+    "frontend/shared/_kernel/**/*.ts",
+    "frontend/shared/orders/orders.api.ts",
+    "frontend/shared/orders/orders.types.ts",
+    "frontend/shared/orders/use-client-order-journey-controller.ts",
+    "frontend/shared/dispatch/**/*.ts",
+    "frontend/shared/dispatch/**/*.tsx",
+    "frontend/shared/delivery/captain.surface-model.ts",
+    "frontend/shared/delivery/captain.surface.types.ts",
+    "frontend/shared/partner/partner.adapters.ts",
+    "frontend/app-partner/orders/GovernedPartnerOrdersScreen.tsx",
+    "frontend/app-partner/orders/OperationalOrdersInboxScreen.tsx",
+    "frontend/app-captain/DshCaptainSurface.tsx",
+    "frontend/app-captain/DshCaptainOrderJourneyRenderer.tsx",
+    "frontend/app-captain/orders/OperationalCaptainExecutionScreen.tsx",
+    "frontend/control-panel/operations/ExceptionsEscalationsScreen.tsx"
+  ],
+  "exclude": ["node_modules", "dist"]
+}
