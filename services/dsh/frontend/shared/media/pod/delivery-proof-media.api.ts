@@ -1,11 +1,21 @@
 import { getIdentityAccessToken } from '@bthwani/core-identity';
 import { resolveDshApiBaseUrl } from '../../_kernel/dsh-api-base-url';
 import { corrId } from '../../_kernel/dsh-http-request';
+import { submitCaptainDeliveryProof } from '../../delivery-proof/delivery-proof.api';
+import type { DshDeliveryProof } from '../../delivery-proof/delivery-proof.types';
 
 export type CapturedDeliveryProofPhoto = {
   readonly uri: string;
   readonly fileName?: string;
   readonly mimeType?: string;
+};
+
+export type CaptainDeliveryProofSubmission = {
+  readonly pin?: string;
+  readonly capturedLatitude?: number;
+  readonly capturedLongitude?: number;
+  readonly capturedAt?: string;
+  readonly idempotencyKey?: string;
 };
 
 function resolveUploadUrl(path: string): string {
@@ -79,17 +89,63 @@ async function uploadAndSubmitDeliveryProof(
 
 export async function uploadAndSubmitCaptainDeliveryProof(
   assignmentId: string,
-  photo: CapturedDeliveryProofPhoto,
-): Promise<void> {
+  photo: CapturedDeliveryProofPhoto | undefined,
+  submission: CaptainDeliveryProofSubmission = {},
+): Promise<DshDeliveryProof> {
   const normalizedAssignmentId = assignmentId.trim();
+  const pin = submission.pin?.trim() ?? '';
+  const idempotencyKey = submission.idempotencyKey?.trim() || corrId('captain-delivery-proof');
   if (!normalizedAssignmentId) throw new Error('لا توجد مهمة نشطة لرفع الإثبات.');
-  return uploadAndSubmitDeliveryProof(
-    `/dsh/captain/dispatch/assignments/${encodeURIComponent(normalizedAssignmentId)}/pod`,
-    'captain-pod-media',
-    'جلسة الكابتن غير صالحة.',
-    'رفض DSH إثبات التسليم.',
-    photo,
-  );
+  if (!photo && !/^\d{6}$/.test(pin)) throw new Error('أدخل رمز التسليم أو التقط صورة إثبات.');
+
+  if (!photo) {
+    return submitCaptainDeliveryProof(normalizedAssignmentId, {
+      method: 'otp_pin',
+      pin,
+      idempotencyKey,
+      capturedAt: submission.capturedAt ?? new Date().toISOString(),
+      ...(submission.capturedLatitude === undefined ? {} : { capturedLatitude: submission.capturedLatitude }),
+      ...(submission.capturedLongitude === undefined ? {} : { capturedLongitude: submission.capturedLongitude }),
+    });
+  }
+
+  const baseUrl = resolveDshApiBaseUrl();
+  const cookieMode = baseUrl.startsWith('/');
+  const token = cookieMode ? undefined : getIdentityAccessToken();
+  if (!cookieMode && !token) throw new Error('جلسة الكابتن غير صالحة.');
+
+  const form = new FormData();
+  await appendPhoto(form, photo);
+  form.append('method', pin ? 'composite' : 'photo');
+  form.append('idempotencyKey', idempotencyKey);
+  form.append('capturedAt', submission.capturedAt ?? new Date().toISOString());
+  if (pin) form.append('pin', pin);
+  if (submission.capturedLatitude !== undefined) form.append('latitude', String(submission.capturedLatitude));
+  if (submission.capturedLongitude !== undefined) form.append('longitude', String(submission.capturedLongitude));
+
+  let response: Response;
+  try {
+    response = await fetch(
+      resolveUploadUrl(`/dsh/captain/dispatch/assignments/${encodeURIComponent(normalizedAssignmentId)}/delivery-proof`),
+      {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'X-Correlation-ID': corrId('captain-delivery-proof-media'),
+          'X-Idempotency-Key': idempotencyKey,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: form,
+        ...(cookieMode ? { credentials: 'include' as const } : {}),
+      },
+    );
+  } catch (error) {
+    throw new Error(error instanceof Error ? error.message : 'تعذر الاتصال بخدمة إثبات التسليم.');
+  }
+
+  const body = await response.json().catch(() => null) as { proof?: DshDeliveryProof; message?: string } | null;
+  if (!response.ok || !body?.proof) throw new Error(body?.message || 'رفض DSH إثبات التسليم.');
+  return body.proof;
 }
 
 export async function uploadAndSubmitPartnerDeliveryProof(
