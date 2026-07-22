@@ -1,8 +1,9 @@
 import React from "react";
-import { View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Box, Button, Card, Text, TextField, spacing } from "@bthwani/ui-kit";
 import {
   connectCaptainToPartnerFleet,
+  disconnectCaptainPartnerFleetMembership,
   listCaptainPartnerFleetMemberships,
   type DshCaptainFleetMembership,
 } from "../../shared/partner";
@@ -22,6 +23,7 @@ export function PartnerFleetConnectionCard({ onMembershipStateChange }: Props) {
   const [memberships, setMemberships] = React.useState<readonly DshCaptainFleetMembership[]>([]);
   const [feedback, setFeedback] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
+  const [disconnectingMembershipId, setDisconnectingMembershipId] = React.useState<string | null>(null);
 
   const loadMemberships = React.useCallback(async () => {
     setLoading(true);
@@ -29,11 +31,12 @@ export function PartnerFleetConnectionCard({ onMembershipStateChange }: Props) {
       const response = await listCaptainPartnerFleetMemberships();
       setMemberships(response.memberships);
       onMembershipStateChange(response.memberships.some((membership) => membership.status === "active"));
-      setFeedback(null);
+      return true;
     } catch (error) {
       setMemberships([]);
       onMembershipStateChange(false);
       setFeedback(`تعذر تحميل عضويات متاجر الشركاء: ${resolveErrorMessage(error)}`);
+      return false;
     } finally {
       setLoading(false);
     }
@@ -51,17 +54,36 @@ export function PartnerFleetConnectionCard({ onMembershipStateChange }: Props) {
     }
 
     setLoading(true);
+    setFeedback(null);
     try {
       const response = await connectCaptainToPartnerFleet(normalizedCode);
       setConnectionCode("");
-      setFeedback(`تم ربط الحساب بمتجر ${response.membership.storeName} كموصل متجر.`);
-      await loadMemberships();
+      const refreshed = await loadMemberships();
+      if (refreshed) {
+        setFeedback(`تم ربط الحساب بمتجر ${response.membership.storeName} كموصل متجر.`);
+      }
     } catch (error) {
       setFeedback(`فشل ربط موصل المتجر: ${resolveErrorMessage(error)}`);
     } finally {
       setLoading(false);
     }
   }, [connectionCode, loadMemberships]);
+
+  const handleDisconnect = React.useCallback(async (membership: DshCaptainFleetMembership) => {
+    setDisconnectingMembershipId(membership.teamMemberId);
+    setFeedback(null);
+    try {
+      await disconnectCaptainPartnerFleetMembership(membership);
+      const refreshed = await loadMemberships();
+      if (refreshed) {
+        setFeedback(`تم فك عضوية موصل متجر ${membership.storeName}.`);
+      }
+    } catch (error) {
+      setFeedback(`فشل فك عضوية موصل المتجر: ${resolveErrorMessage(error)}`);
+    } finally {
+      setDisconnectingMembershipId(null);
+    }
+  }, [loadMemberships]);
 
   return (
     <Box gap={3}>
@@ -76,7 +98,7 @@ export function PartnerFleetConnectionCard({ onMembershipStateChange }: Props) {
           value={connectionCode}
           onChangeText={setConnectionCode}
         />
-        <View style={{ flexDirection: "row-reverse", gap: spacing[2], flexWrap: "wrap" }}>
+        <View style={styles.actions}>
           <Button
             label={loading ? "جاري التحقق…" : "ربط الحساب بالمتجر"}
             tone="brand"
@@ -103,7 +125,7 @@ export function PartnerFleetConnectionCard({ onMembershipStateChange }: Props) {
         ) : null}
       </Card>
 
-      <View style={{ gap: spacing[2] }}>
+      <View style={styles.memberships}>
         <Text role="bodyStrong" align="start">عضويات متاجر الشركاء</Text>
         {memberships.length === 0 ? (
           <Text role="bodySm" tone="muted" align="start">
@@ -125,9 +147,33 @@ export function PartnerFleetConnectionCard({ onMembershipStateChange }: Props) {
                 نطاق التكليف: {membership.deliveryAssignment}
               </Text>
             ) : null}
+            <View style={styles.membershipActions}>
+              <Button
+                label={disconnectingMembershipId === membership.teamMemberId ? "جاري فك العضوية…" : "فك العضوية"}
+                tone="secondary"
+                fullWidth={false}
+                disabled={loading || disconnectingMembershipId !== null}
+                onPress={() => void handleDisconnect(membership)}
+              />
+            </View>
           </Card>
         ))}
       </View>
     </Box>
   );
 }
+
+const styles = StyleSheet.create({
+  actions: {
+    flexDirection: "row-reverse",
+    gap: spacing[2],
+    flexWrap: "wrap",
+  },
+  memberships: {
+    gap: spacing[2],
+  },
+  membershipActions: {
+    alignItems: "flex-start",
+    marginTop: spacing[1],
+  },
+});

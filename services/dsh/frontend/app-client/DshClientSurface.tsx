@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { BackHandler, StyleSheet, View } from "react-native";
+import { BackHandler, Linking, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppHeader } from "../../../../apps/app-client/runtime/src/shell/AppHeader";
 import {
@@ -23,14 +23,18 @@ import { BenefitsHubScreen } from "./account/BenefitsHubScreen";
 import { PreferencesHubScreen } from "./account/PreferencesHubScreen";
 import { NotificationCenterScreen } from "./notifications/NotificationCenterScreen";
 import { OrderTrackingScreen } from "./orders/OrderTrackingScreen";
+import { PickupSessionScreen } from "./orders/PickupSessionScreen";
 import { SupportTicketScreen } from "./support/SupportTicketScreen";
 import { TicketDetailScreen } from "./support/TicketDetailScreen";
 import { SheinForm } from "../shared/shein/SheinForm";
 import { AwnakForm } from "../shared/awnak/AwnakForm";
-import { useSpecialRequestsController } from "../shared/special-requests/use-special-requests-controller";
+import {
+  ClientSpecialRequestsScreen,
+  useSpecialRequestsController,
+} from "../shared/special-requests";
 import { generateSpecialRequestIdempotencyKey } from "../shared/special-requests/special-requests.idempotency";
 
-type ClientTab = "home" | "stores" | "orders" | "profile" | "cart";
+type ClientTab = "home" | "stores" | "orders" | "special" | "profile" | "cart";
 type ProfileRoute =
   | "profile"
   | "appearance"
@@ -49,6 +53,12 @@ const NAV_ITEMS: BottomNavItem[] = [
     activeIcon: <Icon name="person" size={22} color={colorRoles.brandAction} />,
   },
   {
+    id: "special",
+    label: "طلبات خاصة",
+    icon: <Icon name="sparkles-outline" size={22} color={colorRoles.brandStructure} />,
+    activeIcon: <Icon name="sparkles" size={22} color={colorRoles.brandAction} />,
+  },
+  {
     id: "orders",
     label: "طلباتي",
     icon: <Icon name="bag-outline" size={22} color={colorRoles.brandStructure} />,
@@ -63,7 +73,18 @@ const NAV_ITEMS: BottomNavItem[] = [
 ];
 
 function isClientTab(value: string): value is ClientTab {
-  return value === "home" || value === "stores" || value === "orders" || value === "profile" || value === "cart";
+  return value === "home"
+    || value === "stores"
+    || value === "orders"
+    || value === "special"
+    || value === "profile"
+    || value === "cart";
+}
+
+function notificationActionFromDeepLink(url: string): string | null {
+  const parsed = Linking.parse(url);
+  if (parsed.scheme !== "bthwani-client-next" || !parsed.path) return null;
+  return `/${parsed.path.replace(/^\/+/, "")}`;
 }
 
 export function DshClientSurface() {
@@ -72,6 +93,7 @@ export function DshClientSurface() {
   const [profileRoute, setProfileRoute] = useState<ProfileRoute>("profile");
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
   const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
+  const [activePickupOrderId, setActivePickupOrderId] = useState<string | null>(null);
   const [showNotifications, setShowNotifications] = useState(false);
   const [activeTicketId, setActiveTicketId] = useState<string | null>(null);
   const [appearanceMode, setAppearanceMode] = useState<BThwaniAppearanceMode>("lightPremium");
@@ -84,6 +106,45 @@ export function DshClientSurface() {
     setActiveOrderId(orderId);
   }, []);
 
+  const openNotificationActionUrl = useCallback((actionUrl: string) => {
+    const normalized = actionUrl.trim();
+    const pickupMatch = /^\/orders\/([^/]+)\/pickup$/.exec(normalized);
+    if (pickupMatch?.[1]) {
+      setShowNotifications(false);
+      setActiveTab("orders");
+      setActivePickupOrderId(pickupMatch[1]);
+      return;
+    }
+    if (normalized === "/orders/pickup") {
+      setShowNotifications(false);
+      setActiveTab("orders");
+      return;
+    }
+    const orderMatch = /^\/orders\/([^/]+)$/.exec(normalized);
+    if (orderMatch?.[1]) {
+      setShowNotifications(false);
+      openOrderTracking(orderMatch[1]);
+      return;
+    }
+    if (/^\/special-requests(?:\/[^/]+)?$/.test(normalized)) {
+      setShowNotifications(false);
+      setActiveSpecialRequest(null);
+      setActiveTab("special");
+    }
+  }, [openOrderTracking]);
+
+  const openHomeMarketingAction = useCallback((actionType: string, actionTarget: string) => {
+    const target = actionTarget.trim();
+    if (actionType === "store" && target) {
+      setSelectedStoreId(target);
+      setActiveTab("stores");
+      return;
+    }
+    if (actionType === "external" && /^https?:\/\//i.test(target)) {
+      void Linking.openURL(target);
+    }
+  }, []);
+
   const openAddressBookFromCart = useCallback(() => {
     setProfileRoute("addresses");
     setActiveTab("profile");
@@ -94,6 +155,11 @@ export function DshClientSurface() {
     setActiveTab("cart");
   }, []);
 
+  const openSpecialRequestList = useCallback(() => {
+    setActiveSpecialRequest(null);
+    setActiveTab("special");
+  }, []);
+
   const goBack = useCallback(() => {
     if (showNotifications) {
       setShowNotifications(false);
@@ -101,6 +167,11 @@ export function DshClientSurface() {
     }
     if (activeSpecialRequest !== null) {
       setActiveSpecialRequest(null);
+      setActiveTab("special");
+      return true;
+    }
+    if (activePickupOrderId !== null) {
+      setActivePickupOrderId(null);
       return true;
     }
     if (activeOrderId !== null) {
@@ -115,7 +186,7 @@ export function DshClientSurface() {
       setSelectedStoreId(null);
       return true;
     }
-    if (activeTab === "stores") {
+    if (activeTab === "stores" || activeTab === "special") {
       setActiveTab("home");
       return true;
     }
@@ -128,17 +199,35 @@ export function DshClientSurface() {
       return true;
     }
     return false;
-  }, [activeOrderId, activeSpecialRequest, activeTab, activeTicketId, profileRoute, selectedStoreId, showNotifications]);
+  }, [activeOrderId, activePickupOrderId, activeSpecialRequest, activeTab, activeTicketId, profileRoute, selectedStoreId, showNotifications]);
 
   useEffect(() => {
     const subscription = BackHandler.addEventListener("hardwareBackPress", goBack);
     return () => subscription.remove();
   }, [goBack]);
 
+  useEffect(() => {
+    let active = true;
+    void Linking.getInitialURL().then((url) => {
+      if (!active || !url) return;
+      const actionUrl = notificationActionFromDeepLink(url);
+      if (actionUrl) openNotificationActionUrl(actionUrl);
+    });
+    const subscription = Linking.addEventListener("url", ({ url }) => {
+      const actionUrl = notificationActionFromDeepLink(url);
+      if (actionUrl) openNotificationActionUrl(actionUrl);
+    });
+    return () => {
+      active = false;
+      subscription.remove();
+    };
+  }, [openNotificationActionUrl]);
+
   const nestedRoute =
     showNotifications ||
     activeSpecialRequest !== null ||
     activeOrderId !== null ||
+    activePickupOrderId !== null ||
     activeTicketId !== null ||
     (activeTab === "stores" && selectedStoreId !== null) ||
     (activeTab === "profile" && profileRoute !== "profile");
@@ -169,12 +258,15 @@ export function DshClientSurface() {
 
       <View style={styles.content}>
         {showNotifications ? (
-          <NotificationCenterScreen />
+          <NotificationCenterScreen onOpenActionUrl={openNotificationActionUrl} />
+        ) : activePickupOrderId !== null ? (
+          <PickupSessionScreen orderId={activePickupOrderId} onBack={() => setActivePickupOrderId(null)} />
         ) : activeOrderId !== null ? (
           <OrderTrackingScreen orderId={activeOrderId} onBack={() => setActiveOrderId(null)} />
         ) : activeSpecialRequest === "shein" ? (
           <SheinForm
-            onBack={() => setActiveSpecialRequest(null)}
+            onBack={openSpecialRequestList}
+            onViewRequests={openSpecialRequestList}
             onSubmit={(data) => specialRequestController.submit({
               requestType: "SHEIN_ASSISTED_PURCHASE",
               idempotencyKey: generateSpecialRequestIdempotencyKey(),
@@ -183,7 +275,8 @@ export function DshClientSurface() {
           />
         ) : activeSpecialRequest === "awnak" ? (
           <AwnakForm
-            onBack={() => setActiveSpecialRequest(null)}
+            onBack={openSpecialRequestList}
+            onViewRequests={openSpecialRequestList}
             onSubmit={(data) => specialRequestController.submit({
               requestType: "AWNAK_ERRAND",
               idempotencyKey: generateSpecialRequestIdempotencyKey(),
@@ -200,6 +293,13 @@ export function DshClientSurface() {
               if (nodeId === "node-shein") setActiveSpecialRequest("shein");
               if (nodeId === "node-awnak") setActiveSpecialRequest("awnak");
             }}
+            onMarketingAction={openHomeMarketingAction}
+          />
+        ) : activeTab === "special" ? (
+          <ClientSpecialRequestsScreen
+            onBack={() => setActiveTab("home")}
+            onCreateShein={() => setActiveSpecialRequest("shein")}
+            onCreateAwnak={() => setActiveSpecialRequest("awnak")}
           />
         ) : activeTab === "stores" ? (
           selectedStoreId === null ? (

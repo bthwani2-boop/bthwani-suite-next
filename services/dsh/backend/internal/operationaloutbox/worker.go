@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -14,10 +15,9 @@ const (
 	workerLease     = 2 * time.Minute
 )
 
-// RunWorker drains durable operational events into the canonical in-app
-// notification store. Delivery is idempotent: the outbox UUID is reused as
-// the notification UUID, so a crash between insertion and MarkSent cannot
-// create duplicate notifications on retry.
+// RunWorker drains durable operational events into the canonical notification
+// store. Delivery is idempotent: the outbox UUID is reused as the notification
+// UUID, so a crash between insertion and MarkSent cannot create duplicates.
 func RunWorker(ctx context.Context, db *sql.DB, interval time.Duration) {
 	if interval <= 0 {
 		interval = 5 * time.Second
@@ -25,8 +25,6 @@ func RunWorker(ctx context.Context, db *sql.DB, interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
-	// Process immediately at startup so pending events are not forced to wait
-	// for the first tick.
 	if err := ProcessOnce(ctx, db); err != nil {
 		log.Printf("[operational-outbox] startup batch failed: %v", err)
 	}
@@ -45,6 +43,7 @@ func RunWorker(ctx context.Context, db *sql.DB, interval time.Duration) {
 
 // ProcessOnce claims and delivers one batch. Individual event failures are
 // recorded for retry and do not prevent independent events from progressing.
+// Quiet-hour deferrals do not consume a delivery attempt.
 func ProcessOnce(ctx context.Context, db *sql.DB) error {
 	events, err := ClaimBatch(db, workerBatchSize, workerLease)
 	if err != nil {
@@ -52,6 +51,13 @@ func ProcessOnce(ctx context.Context, db *sql.DB) error {
 	}
 	for _, event := range events {
 		if err := deliver(ctx, db, event); err != nil {
+			var deferred *DeliveryDeferredError
+			if errors.As(err, &deferred) {
+				if deferErr := DeferUntil(db, event.ID, deferred.Until); deferErr != nil {
+					log.Printf("[operational-outbox] failed to defer %s: %v", event.ID, deferErr)
+				}
+				continue
+			}
 			if markErr := MarkFailed(db, event.ID, event.AttemptCount, err); markErr != nil {
 				log.Printf("[operational-outbox] failed to persist retry for %s: %v", event.ID, markErr)
 			}
@@ -64,47 +70,113 @@ func ProcessOnce(ctx context.Context, db *sql.DB) error {
 	return nil
 }
 
-type pickupPayload struct {
-	ClientID string `json:"ClientID"`
-	OrderID  string `json:"OrderID"`
+type notificationRecipientPayload struct {
+	ActorID   string `json:"actorId"`
+	ActorType string `json:"actorType"`
+	ClientID  string `json:"ClientID"`
+	OrderID   string `json:"OrderID"`
+}
+
+type notificationRecipient struct {
+	ID   string
+	Type string
 }
 
 func deliver(ctx context.Context, db *sql.DB, event Event) error {
-	clientID, err := resolveClientID(ctx, db, event)
+	recipient, err := resolveNotificationRecipient(ctx, db, event)
 	if err != nil {
 		return err
 	}
-	if clientID == "" {
-		// Some audit-only events intentionally have no customer recipient. They
-		// are still considered consumed after downstream analytics can read the
-		// durable outbox table.
+	if recipient.ID == "" {
+		// Audit-only events intentionally have no actor recipient.
 		return nil
 	}
 
-	title, body := notificationCopy(event.EventType)
-	actionURL := "/orders"
-	switch event.EntityType {
-	case "pickup_session":
-		actionURL = "/orders/pickup"
-	case "special_request":
-		actionURL = "/special-requests/" + event.EntityID
+	plan, err := buildNotificationDeliveryPlan(ctx, db, event, recipient.ID, recipient.Type, time.Now().UTC())
+	if err != nil {
+		return err
+	}
+	if !plan.Enabled {
+		return nil
+	}
+	if plan.DeferredUntil != nil {
+		return &DeliveryDeferredError{Until: *plan.DeferredUntil}
 	}
 
-	_, err = db.ExecContext(ctx, `
-		INSERT INTO dsh_notifications
-			(id, actor_id, actor_type, topic, title, body, action_url)
-		VALUES ($1::uuid, $2, 'client', $3, $4, $5, $6)
-		ON CONFLICT (id) DO NOTHING`,
-		event.ID, clientID, event.EventType, title, body, actionURL,
-	)
+	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
+		return fmt.Errorf("begin notification delivery transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.ExecContext(ctx, `
+		INSERT INTO dsh_notifications
+			(id, actor_id, actor_type, topic, title, body, action_url, delivery_channels)
+		VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8::TEXT[])
+		ON CONFLICT (id) DO NOTHING`,
+		event.ID,
+		recipient.ID,
+		recipient.Type,
+		event.EventType,
+		plan.Title,
+		plan.Body,
+		plan.ActionURL,
+		pqStringArray(plan.Channels),
+	); err != nil {
 		return fmt.Errorf("deliver operational notification %s: %w", event.ID, err)
+	}
+	if err := enqueueNotificationChannels(tx, event.ID, plan.Channels); err != nil {
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit operational notification %s: %w", event.ID, err)
 	}
 	return nil
 }
 
+func resolveNotificationRecipient(ctx context.Context, db *sql.DB, event Event) (notificationRecipient, error) {
+	var payload notificationRecipientPayload
+	if len(event.Payload) > 0 {
+		_ = json.Unmarshal(event.Payload, &payload)
+	}
+	if payload.ActorID != "" && validNotificationActorType(payload.ActorType) {
+		return notificationRecipient{ID: payload.ActorID, Type: payload.ActorType}, nil
+	}
+	if payload.ClientID != "" {
+		return notificationRecipient{ID: payload.ClientID, Type: "client"}, nil
+	}
+
+	clientID, err := resolveClientID(ctx, db, event)
+	if err != nil {
+		return notificationRecipient{}, err
+	}
+	if clientID == "" {
+		return notificationRecipient{}, nil
+	}
+	return notificationRecipient{ID: clientID, Type: "client"}, nil
+}
+
+func validNotificationActorType(value string) bool {
+	switch value {
+	case "client", "partner", "captain", "field", "operator":
+		return true
+	default:
+		return false
+	}
+}
+
 func resolveClientID(ctx context.Context, db *sql.DB, event Event) (string, error) {
 	switch event.EntityType {
+	case "order":
+		var clientID string
+		err := db.QueryRowContext(ctx, `
+			SELECT client_id::text
+			FROM dsh_orders
+			WHERE id = $1::uuid`, event.EntityID).Scan(&clientID)
+		if err != nil {
+			return "", fmt.Errorf("resolve order recipient: %w", err)
+		}
+		return clientID, nil
 	case "partner_delivery_task":
 		var clientID string
 		err := db.QueryRowContext(ctx, `
@@ -117,13 +189,6 @@ func resolveClientID(ctx context.Context, db *sql.DB, event Event) (string, erro
 		}
 		return clientID, nil
 	case "pickup_session":
-		var payload pickupPayload
-		if len(event.Payload) > 0 {
-			_ = json.Unmarshal(event.Payload, &payload)
-		}
-		if payload.ClientID != "" {
-			return payload.ClientID, nil
-		}
 		var clientID string
 		err := db.QueryRowContext(ctx, `
 			SELECT client_id::text FROM dsh_pickup_sessions WHERE id = $1`, event.EntityID).Scan(&clientID)
@@ -155,6 +220,10 @@ func resolveClientID(ctx context.Context, db *sql.DB, event Event) (string, erro
 
 func notificationCopy(eventType string) (string, string) {
 	switch eventType {
+	case "order.created":
+		return "تم إنشاء طلبك", "تم تثبيت الطلب وبدأت رحلة التنفيذ."
+	case "order.status_changed":
+		return "تحديث على طلبك", "تغيرت الحالة التشغيلية للطلب. افتح الطلب لعرض التفاصيل."
 	case "partner_delivery_assigned":
 		return "تم إسناد طلبك لمندوب المتجر", "بدأ المتجر تجهيز رحلة التوصيل الخاصة بطلبك."
 	case "partner_delivery_mark_picked_up":

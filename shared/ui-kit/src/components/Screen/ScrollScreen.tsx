@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import type { StyleProp, ViewStyle } from "react-native";
+import { StyleSheet, type StyleProp, type ViewStyle } from "react-native";
 import { ScrollView } from "tamagui";
 import { asUiComponent } from "../../internal/tamagui-compat";
 import { colorRoles, spacing } from "../../tokens";
@@ -21,17 +21,19 @@ export function ScrollScreen({
   gap = spacing[4],
   contentContainerStyle,
 }: ScrollScreenProps) {
+  const resolvedContentContainerStyle = StyleSheet.flatten([
+    {
+      padding: padded ? spacing[4] : 0,
+      paddingBottom: spacing[8],
+      gap,
+    },
+    contentContainerStyle,
+  ]);
+
   return (
     <StyledScrollView
       style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}
-      contentContainerStyle={[
-        {
-          padding: padded ? spacing[4] : 0,
-          paddingBottom: spacing[8],
-          gap,
-        },
-        contentContainerStyle,
-      ]}
+      contentContainerStyle={resolvedContentContainerStyle}
       showsVerticalScrollIndicator={false}
     >
       {children}

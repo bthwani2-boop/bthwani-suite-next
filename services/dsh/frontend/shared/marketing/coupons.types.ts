@@ -12,6 +12,37 @@ export type CouponFundingPolicy = {
   readonly updatedAt: string;
 };
 
+export type CouponFundingReconciliationStatus =
+  | "reconciled"
+  | "mismatch"
+  | "wlt_unavailable"
+  | "incomplete"
+  | "not_checked";
+
+export type CouponFundingLifecycleRecord = {
+  readonly redemptionId: string;
+  readonly couponId: string;
+  readonly checkoutIntentId: string;
+  readonly tenantId: string;
+  readonly partnerId?: string;
+  readonly platformFundedMinorUnits: number;
+  readonly partnerFundedMinorUnits: number;
+  readonly totalDiscountMinorUnits: number;
+  readonly currency: string;
+  readonly dshStatus: string;
+  readonly wltReservationId?: string;
+  readonly wltStatus?: string;
+  readonly failureCode?: string;
+  readonly fundingUpdatedAt?: string;
+  readonly latestOutboxType?: string;
+  readonly latestOutboxStatus?: string;
+  readonly latestOutboxAttempts: number;
+  readonly latestOutboxError?: string;
+  readonly latestOutboxUpdatedAt?: string;
+  readonly reconciliationStatus: CouponFundingReconciliationStatus;
+  readonly reconciliationMessage?: string;
+};
+
 export type CouponRecord = {
   readonly id: string;
   readonly nameAr: string;
@@ -72,4 +103,5 @@ export type IssuedCoupon = {
 export type CouponListResponse = {
   readonly coupons: readonly CouponRecord[];
   readonly fundingPolicies: Readonly<Record<string, CouponFundingPolicy>>;
+  readonly fundingLifecycle: readonly CouponFundingLifecycleRecord[];
 };

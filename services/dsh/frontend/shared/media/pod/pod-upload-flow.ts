@@ -6,8 +6,16 @@ import React from 'react';
 import type { CaptainAppMode } from '../../delivery/captain.contract';
 import { getCaptainLifecycleForOrderStage } from '../../delivery/delivery.policy';
 
+export type CaptainPodState =
+  | 'ready'
+  | 'loading'
+  | 'pending_review'
+  | 'success'
+  | 'rejected'
+  | 'error';
+
 export function usePodUploadFlow() {
-  const [captainPodState, setCaptainPodState] = React.useState<'ready' | 'loading' | 'success' | 'error'>('ready');
+  const [captainPodState, setCaptainPodState] = React.useState<CaptainPodState>('ready');
   const [captainPodPhotoUri, setCaptainPodPhotoUri] = React.useState<string | undefined>(undefined);
   const [captainPodMediaKey, setCaptainPodMediaKey] = React.useState<string | undefined>(undefined);
 

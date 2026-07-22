@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
   Animated,
-  I18nManager,
   Platform,
   StyleSheet,
   Text,
@@ -17,7 +16,6 @@ import type {
 import type { CatalogMedia } from "../../shared/catalog/catalog.types";
 import type { DshFulfillmentDeliveryMode } from "../../shared/delivery/delivery.contract";
 import { StoreDetailHeroSection } from "./StoreDetailHeroSection";
-import { StoreDetailInfoCard } from "./StoreDetailInfoCard";
 import { StoreDetailCarousel } from "./StoreDetailCarousel";
 import { StoreDetailCategoryRail } from "./StoreDetailCategoryRail";
 import { StoreMeasurementSheet } from "./StoreMeasurementSheet";
@@ -68,7 +66,6 @@ export function StoreDetailShell({
   onBack,
   onGoToCart,
 }: Props) {
-  const isRTL = I18nManager.isRTL;
   const [selectedCategoryId, setSelectedCategoryId] = useState("all");
   const [selectedMode, setSelectedMode] = useState<DshFulfillmentDeliveryMode>(
     () => store.availableFulfillmentModes[0] ?? FALLBACK_FULFILLMENT_MODE,
@@ -177,7 +174,6 @@ export function StoreDetailShell({
           onBack={onBack}
           scrollY={scrollY}
         />
-        <StoreDetailInfoCard isRTL={isRTL} />
         {bannerItems.length > 0 ? (
           <StoreDetailCarousel bannerItems={bannerItems} />
         ) : null}
@@ -195,7 +191,6 @@ export function StoreDetailShell({
       onGoToCart,
       onBack,
       scrollY,
-      isRTL,
       bannerItems,
       categories,
       selectedCategoryId,

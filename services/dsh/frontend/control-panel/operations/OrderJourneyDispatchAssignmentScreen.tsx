@@ -4,36 +4,25 @@ import React from 'react';
 import { Box, Button, StateView, Text } from '@bthwani/ui-kit';
 import {
   WebControlPanelDecisionRow,
-  WebControlPanelInspectorShell,
   WebControlPanelKpiStrip,
   WebControlPanelQueue,
-  WebControlPanelRecommendation,
 } from '@bthwani/ui-kit/web';
 import styles from '../shared/control-panel-surface.module.css';
 import { useOperatorOrderWorkboard } from '../../shared/operations/use-operator-order-workboard';
 import {
   assignOrderToCaptain,
+  buildDispatchAssignmentIdempotencyKey,
   dispatchAssignmentErrorMessage,
-} from '../../shared/operations/dispatch-assignment.api';
-import { listCaptains } from '../../shared/workforce/workforce.api';
-import type { Captain } from '../../shared/workforce/workforce.types';
-import type { OperatorOrderWorkboardRow } from '../../shared/operations/order-workboard.api';
+} from '../../shared/operations';
+import { useDispatchCaptainOptions } from '../../shared/operations/use-dispatch-captain-options';
+import type { OperationsFocusParams, OperatorOrderWorkboardRow } from '../../shared/operations';
+import { DispatchOperationsPanel } from './DispatchOperationsPanel';
 
 export type OrderJourneyDispatchAssignmentScreenProps = {
   hubHref: string;
   subGroup?: string;
-  focusParams?: { orderId?: string };
+  focusParams?: OperationsFocusParams;
 };
-
-function isEligibleCaptain(captain: Captain): boolean {
-  const profile = captain.captainProfile;
-  return captain.workforceKind === 'captain'
-    && captain.engagementStatus === 'active'
-    && profile?.licenseStatus === 'valid'
-    && Boolean(profile.vehicleType?.trim())
-    && Boolean(profile.vehicleIdentifier?.trim())
-    && Boolean(profile.serviceZoneId?.trim());
-}
 
 function eligibleOrder(order: OperatorOrderWorkboardRow): boolean {
   return order.fulfillmentMode === 'bthwani_delivery'
@@ -45,147 +34,194 @@ export function OrderJourneyDispatchAssignmentScreen({
   focusParams,
 }: OrderJourneyDispatchAssignmentScreenProps) {
   const workboard = useOperatorOrderWorkboard();
-  const [captains, setCaptains] = React.useState<readonly Captain[]>([]);
-  const [captainsState, setCaptainsState] = React.useState<'loading' | 'ready' | 'error'>('loading');
-  const [captainsError, setCaptainsError] = React.useState('');
   const [selectedOrderId, setSelectedOrderId] = React.useState<string | null>(focusParams?.orderId ?? null);
   const [selectedCaptainId, setSelectedCaptainId] = React.useState('');
   const [mutationState, setMutationState] = React.useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [mutationMessage, setMutationMessage] = React.useState('');
 
-  const loadCaptains = React.useCallback(async () => {
-    setCaptainsState('loading');
-    setCaptainsError('');
-    try {
-      const result = await listCaptains({ status: 'active', limit: 200 });
-      setCaptains(result.filter(isEligibleCaptain));
-      setCaptainsState('ready');
-    } catch (error) {
-      setCaptains([]);
-      setCaptainsState('error');
-      setCaptainsError(error instanceof Error ? error.message : 'تعذر تحميل الكباتن من Workforce.');
-    }
-  }, []);
+  const orders = workboard.state.orders.filter(eligibleOrder);
+  const selectedOrder = orders.find((order) => order.id === selectedOrderId) ?? null;
+  const captainList = useDispatchCaptainOptions(selectedOrder?.storeId);
+  const options = captainList.state.options;
+  const selectedOption = options.find((option) => option.candidate.captainId === selectedCaptainId) ?? null;
 
-  React.useEffect(() => {
-    void loadCaptains();
-  }, [loadCaptains]);
+  const idempotencyKey = React.useMemo(() => {
+    if (!selectedOrder || !selectedOption) return '';
+    return buildDispatchAssignmentIdempotencyKey(
+      selectedOrder.id,
+      selectedOption.candidate.captainId,
+    );
+  }, [selectedOrder, selectedOption]);
 
   React.useEffect(() => {
     if (focusParams?.orderId) setSelectedOrderId(focusParams.orderId);
   }, [focusParams?.orderId]);
 
-  if (workboard.state.kind === 'loading') {
-    return <StateView stateId="loading" title="جاري تحميل طابور الإسناد" description="نقرأ الطلبات الجاهزة من DSH والكباتن المؤهلين من Workforce." />;
-  }
-  if (workboard.state.kind === 'error') {
-    return <StateView stateId="recoverableError" title="تعذر تحميل طابور الإسناد" description={workboard.state.message} actionLabel="إعادة المحاولة" onActionPress={workboard.refresh} />;
-  }
+  React.useEffect(() => {
+    setSelectedCaptainId('');
+    setMutationState('idle');
+    setMutationMessage('');
+  }, [selectedOrderId]);
 
-  const queue = workboard.state.orders.filter(eligibleOrder);
-  const selectedOrder = queue.find((order) => order.id === selectedOrderId) ?? null;
-
-  const submit = async () => {
-    if (!selectedOrder || !selectedCaptainId) {
-      setMutationState('error');
-      setMutationMessage('اختر طلبًا وكابتنًا مؤهلًا.');
-      return;
-    }
+  async function handleAssign() {
+    if (!selectedOrder || !selectedOption || !idempotencyKey) return;
     setMutationState('loading');
     setMutationMessage('');
     try {
-      await assignOrderToCaptain(selectedOrder.id, selectedCaptainId);
-      await workboard.refresh();
+      await assignOrderToCaptain({
+        orderId: selectedOrder.id,
+        captainId: selectedOption.candidate.captainId,
+        serviceAreaCode: selectedOption.candidate.serviceAreaCode,
+        idempotencyKey,
+        offerReason: 'operator selected ranked eligible captain',
+        responseTimeoutSeconds: 90,
+      });
       setMutationState('success');
-      setMutationMessage('تم إنشاء عرض الإسناد للكابتن وتحديث Workboard.');
+      setMutationMessage('تم إنشاء عرض الإسناد المحكوم وإرساله إلى صندوق مهام الكابتن.');
       setSelectedOrderId(null);
       setSelectedCaptainId('');
+      await workboard.refresh();
     } catch (error) {
       setMutationState('error');
       setMutationMessage(dispatchAssignmentErrorMessage(error));
     }
-  };
+  }
+
+  if (workboard.state.kind === 'loading') {
+    return (
+      <StateView
+        stateId="loading"
+        title="جاري تحميل طابور الإسناد"
+        description="نقرأ الطلبات الجاهزة من DSH ثم نحل منطقة المتجر ومرشحي الإسناد المحكومين."
+      />
+    );
+  }
+
+  if (workboard.state.kind === 'error') {
+    return (
+      <StateView
+        stateId="recoverableError"
+        title="تعذر تحميل طابور الإسناد"
+        description={workboard.state.message}
+        actionLabel="إعادة المحاولة"
+        onActionPress={workboard.refresh}
+      />
+    );
+  }
 
   return (
-    <Box gap={3}>
+    <Box gap={4}>
       <WebControlPanelKpiStrip items={[
-        { id: 'queue', label: 'جاهزة للإسناد', value: String(queue.length), tone: queue.length > 0 ? 'warning' : 'success' },
-        { id: 'eligible-captains', label: 'كباتن مؤهلون', value: captainsState === 'ready' ? String(captains.length) : '—', tone: captains.length > 0 ? 'success' : 'warning' },
-        { id: 'order-source', label: 'مصدر الطلب', value: 'DSH Workboard', tone: 'success' },
-        { id: 'captain-source', label: 'مصدر الكابتن', value: 'Workforce', tone: 'success' },
+        {
+          id: 'ready',
+          label: 'جاهزة للإسناد',
+          value: String(orders.length),
+          tone: orders.length > 0 ? 'warning' : 'success',
+        },
+        {
+          id: 'captains',
+          label: 'مرشحون محكومون',
+          value: selectedOrder ? String(options.length) : '—',
+          tone: selectedOrder && options.length > 0 ? 'success' : 'warning',
+        },
+        {
+          id: 'area',
+          label: 'منطقة الخدمة',
+          value: captainList.state.serviceAreaCode || '—',
+          tone: captainList.state.serviceAreaCode ? 'success' : 'neutral',
+        },
       ]} />
 
-      {captainsState === 'error' ? (
-        <StateView stateId="recoverableError" title="تعذر تحميل الكباتن" description={captainsError} actionLabel="إعادة المحاولة" onActionPress={loadCaptains} />
+      {captainList.state.kind === 'error' ? (
+        <StateView
+          stateId="recoverableError"
+          title="تعذر تحميل مرشحي الإسناد"
+          description={captainList.state.message}
+          actionLabel="إعادة المحاولة"
+          onActionPress={() => void captainList.reload()}
+        />
       ) : null}
 
       <div className={styles.surfaceSplitGrid}>
-        <WebControlPanelQueue title="طلبات جاهزة لتوصيل بثواني" meta={`${queue.length} طلب`}>
-          {queue.length === 0 ? (
-            <StateView stateId="empty" title="لا توجد طلبات قابلة للإسناد" description="يدخل الطابور فقط طلب توصيل بثواني بعد أن يؤكد الشريك جاهزيته." actionLabel="تحديث" onActionPress={workboard.refresh} />
-          ) : queue.map((order) => (
+        <WebControlPanelQueue title="طلبات جاهزة بلا كابتن" meta={String(orders.length)}>
+          {orders.length === 0 ? (
+            <StateView
+              stateId="empty"
+              title="لا توجد طلبات تنتظر الإسناد"
+              description="كل الطلبات الجاهزة مسندة أو لا تنطبق عليها خدمة توصيل بثواني."
+              actionLabel="تحديث"
+              onActionPress={workboard.refresh}
+            />
+          ) : orders.map((order) => (
             <WebControlPanelDecisionRow
               key={order.id}
               entityId={order.id}
-              entityLabel={`متجر: ${order.storeId} — عميل: ${order.clientId}`}
-              status="جاهز للإسناد"
+              entityLabel={`متجر: ${order.storeId}`}
+              status={order.status}
               statusTone="warning"
-              reason={`${order.totalPrice.toLocaleString('ar-YE')} ر.ي · جاهز للاستلام`}
-              sla={`منذ ${new Date(order.updatedAt).toLocaleString('ar-YE')}`}
-              onInspect={() => {
-                setSelectedOrderId(order.id);
-                setSelectedCaptainId('');
-                setMutationState('idle');
-                setMutationMessage('');
-              }}
+              reason={`طلب ${order.id}`}
+              sla={`آخر تحديث: ${new Date(order.updatedAt).toLocaleString('ar-YE')}`}
+              onInspect={() => setSelectedOrderId(order.id)}
             />
           ))}
         </WebControlPanelQueue>
 
-        {selectedOrder ? (
-          <WebControlPanelInspectorShell title={`إسناد الطلب ${selectedOrder.id}`} onClose={() => setSelectedOrderId(null)}>
-            <Box gap={3} padding={4}>
-              <Text role="bodySm">المتجر: {selectedOrder.storeId}</Text>
-              <Text role="bodySm">العميل: {selectedOrder.clientId}</Text>
-              <Text role="bodySm">الحالة المثبتة: {selectedOrder.status}</Text>
-              <label htmlFor="eligible-captain-select" style={{ fontWeight: 700 }}>الكابتن المؤهل</label>
-              <select
-                id="eligible-captain-select"
-                value={selectedCaptainId}
-                onChange={(event) => setSelectedCaptainId(event.target.value)}
-                disabled={captainsState !== 'ready' || mutationState === 'loading'}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  border: '1px solid var(--bthwani-control-panel-border)',
-                  borderRadius: '8px',
-                  background: 'var(--bthwani-control-panel-surface-base)',
-                }}
-              >
-                <option value="">اختر كابتنًا</option>
-                {captains.map((captain) => (
-                  <option key={captain.actorId} value={captain.actorId}>
-                    {`${captain.fullNameAr} · ${captain.captainProfile?.vehicleType ?? ''} · ${captain.captainProfile?.serviceZoneId ?? ''}`}
-                  </option>
-                ))}
-              </select>
-              {mutationMessage ? <Text role="bodySm" tone={mutationState === 'error' ? 'danger' : 'success'}>{mutationMessage}</Text> : null}
-              <Button
-                label={mutationState === 'loading' ? 'جارٍ إنشاء الإسناد…' : 'إرسال عرض الإسناد'}
-                disabled={!selectedCaptainId || mutationState === 'loading'}
-                onPress={() => void submit()}
+        <Box gap={3}>
+          <Box gap={1}>
+            <Text role="label">إسناد محكوم</Text>
+            <Text role="bodySm" tone={selectedOrder && options.length === 0 ? 'warning' : 'muted'}>
+              الأهلية والسعة والترتيب ومنطقة الخدمة تأتي من DSH. بيانات Workforce تستخدم لعرض اسم الكابتن والمركبة فقط.
+            </Text>
+          </Box>
+
+          <Box gap={2}>
+            <Text role="label">اختيار الكابتن</Text>
+            <Text role="bodySm" tone="muted">
+              {selectedOrder
+                ? `الطلب: ${selectedOrder.id} — المتجر: ${selectedOrder.storeId}`
+                : 'اختر طلبًا من الطابور أولًا.'}
+            </Text>
+            {captainList.state.kind === 'loading' ? (
+              <Text role="bodySm">جاري حل منطقة المتجر وترتيب المرشحين…</Text>
+            ) : null}
+            {captainList.state.kind === 'empty' ? (
+              <StateView
+                stateId="empty"
+                title="لا يوجد كابتن مؤهل"
+                description="لا يوجد كابتن معتمد ومتاح ولديه سعة متبقية في منطقة خدمة المتجر."
+                actionLabel="تحديث المرشحين"
+                onActionPress={() => void captainList.reload()}
               />
-            </Box>
-          </WebControlPanelInspectorShell>
-        ) : (
-          <WebControlPanelRecommendation
-            title="إسناد محكوم"
-            reason="اختر طلبًا جاهزًا ثم كابتنًا مفعلًا برخصة صالحة ومركبة ونطاق خدمة من Workforce."
-            confidence="high"
-            auditTag="ORDER_DISPATCH_ELIGIBILITY"
-          />
-        )}
+            ) : null}
+            {options.map((option) => {
+              const captain = option.captain;
+              const candidate = option.candidate;
+              const captainName = captain?.fullNameAr?.trim() || candidate.captainId;
+              const vehicle = captain?.captainProfile?.vehicleIdentifier?.trim() || 'بيانات المركبة غير متاحة';
+              return (
+                <Button
+                  key={`${candidate.serviceAreaCode}:${candidate.captainId}`}
+                  label={`${captainName} — ${vehicle} — السعة ${candidate.remainingCapacity}/${candidate.maxActiveAssignments}`}
+                  tone={selectedCaptainId === candidate.captainId ? 'brand' : 'secondary'}
+                  onPress={() => setSelectedCaptainId(candidate.captainId)}
+                />
+              );
+            })}
+            <Button
+              label={mutationState === 'loading' ? 'جاري إنشاء عرض الإسناد…' : 'تأكيد الإسناد'}
+              disabled={!selectedOrder || !selectedOption || !idempotencyKey || mutationState === 'loading'}
+              onPress={() => void handleAssign()}
+            />
+            {mutationMessage ? (
+              <Text role="bodySm" tone={mutationState === 'error' ? 'danger' : 'success'}>
+                {mutationMessage}
+              </Text>
+            ) : null}
+          </Box>
+        </Box>
       </div>
+
+      <DispatchOperationsPanel />
     </Box>
   );
 }

@@ -19,6 +19,15 @@ export type DshPartnerPickupStateResponse = {
   readonly stage: PartnerPickupStage;
 };
 
+// --- Client side ------------------------------------------------------------
+
+/** Backs the pickup_otp notification action_url; the client never receives the OTP here. */
+export async function fetchClientPickupState(orderId: string): Promise<DshPartnerPickupStateResponse> {
+  return request<DshPartnerPickupStateResponse>(
+    `/dsh/client/orders/${encodeURIComponent(orderId)}/pickup`,
+  );
+}
+
 // --- Partner (store) side --------------------------------------------------
 
 export async function fetchPartnerPickupState(orderId: string): Promise<DshPartnerPickupStateResponse> {
@@ -103,6 +112,16 @@ export async function extendPickupWindow(
   return request<DshPickupSessionResponse>(
     `/dsh/operator/pickups/${encodeURIComponent(orderId)}/extend-window`,
     { method: "POST", body: { ...input, commandId: corrId("pk-extend") } },
+  );
+}
+
+export async function reschedulePickupWindow(
+  orderId: string,
+  input: { readonly expectedVersion: number; readonly reason: string; readonly newExpiry: string },
+): Promise<DshPickupSessionResponse> {
+  return request<DshPickupSessionResponse>(
+    `/dsh/operator/pickups/${encodeURIComponent(orderId)}/reschedule`,
+    { method: "POST", body: { ...input, commandId: corrId("pk-reschedule") } },
   );
 }
 

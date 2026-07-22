@@ -44,6 +44,23 @@ export type DshCaptainFleetMembership = {
   readonly version: number;
 };
 
+export type DshOperatorStoreFleetMember = {
+  readonly teamMemberId: string;
+  readonly storeId: string;
+  readonly courierName: string;
+  readonly status: string;
+  readonly captainActorId?: string;
+  readonly branchAssignment: string;
+  readonly deliveryAssignment: string;
+  readonly version: number;
+};
+
+export type DshOperatorPartnerFleetSnapshot = {
+  readonly storeId: string;
+  readonly connections: readonly DshCourierConnection[];
+  readonly members: readonly DshOperatorStoreFleetMember[];
+};
+
 export function issuePartnerCourierConnectionCode(
   storeId: string,
   memberId: string,
@@ -85,4 +102,25 @@ export function listCaptainPartnerFleetMemberships(): Promise<{
   memberships: DshCaptainFleetMembership[];
 }> {
   return request("/dsh/captain/partner-fleet/memberships");
+}
+
+export function disconnectCaptainPartnerFleetMembership(
+  membership: Pick<DshCaptainFleetMembership, "teamMemberId" | "storeId" | "version">,
+): Promise<{ membership: DshCaptainFleetMembership }> {
+  return request(
+    `/dsh/captain/partner-fleet/memberships/${membership.teamMemberId}/disconnect`,
+    {
+      method: "POST",
+      body: {
+        storeId: membership.storeId,
+        expectedVersion: membership.version,
+      },
+    },
+  );
+}
+
+export function fetchOperatorPartnerFleetSnapshot(
+  storeId: string,
+): Promise<DshOperatorPartnerFleetSnapshot> {
+  return request(`/dsh/operator/stores/${storeId}/partner-fleet`);
 }

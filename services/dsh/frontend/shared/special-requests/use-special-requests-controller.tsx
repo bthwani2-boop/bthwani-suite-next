@@ -6,42 +6,60 @@ import {
   classifySpecialRequestError,
   createSpecialRequest,
   fetchClientSpecialRequest,
+  fetchClientSpecialRequestExecution,
+  fetchClientSpecialRequestInformation,
+  fetchClientSpecialRequests,
   fetchOperatorSpecialRequest,
+  fetchOperatorSpecialRequestExecution,
+  fetchOperatorSpecialRequestInformation,
   fetchOperatorSpecialRequests,
+  requestOperatorSpecialRequestInformation,
+  respondClientSpecialRequestInformation,
   updateOperatorSpecialRequest,
 } from "./special-requests.api";
 import type {
+  ClassifiedSpecialRequestError,
   DshCreateSpecialRequest,
+  DshSpecialRequestInformationExchange,
   DshSpecialRequestResponse,
   DshUpdateSpecialRequest,
+  SpecialRequestDetailBundle,
+  SpecialRequestStatus,
+  SpecialRequestType,
 } from "./special-requests.types";
 import {
   beginSubmit,
-  resolveCancelSuccess,
   resolveApproveQuoteSuccess,
+  resolveCancelSuccess,
   resolveSubmitError,
   resolveSubmitSuccess,
 } from "./special-requests.controller-core";
 import { specialRequestIdleState, specialRequestListLoadState } from "./special-requests.states";
-import type { DshSpecialRequestState, DshSpecialRequestListLoadState } from "./special-requests.states";
+import type { DshSpecialRequestListLoadState, DshSpecialRequestState } from "./special-requests.states";
 
-/**
- * Client-side controller: create / cancel / approve-quote a single special
- * request. Every mutation only reaches a success state AFTER the API call
- * resolves — never optimistically.
- */
+function listLoadStateForError(error: ClassifiedSpecialRequestError): DshSpecialRequestListLoadState {
+  switch (error.kind) {
+    case "network":
+    case "unavailable":
+      return "offline";
+    case "forbidden":
+      return "forbidden";
+    case "conflict":
+      return "conflict";
+    default:
+      return "error";
+  }
+}
+
 export function useSpecialRequestsController() {
   const [state, setState] = useState<DshSpecialRequestState>(specialRequestIdleState());
 
   const submit = useCallback(async (input: DshCreateSpecialRequest): Promise<boolean> => {
-    // Guard against double-submit: bail out before making any API call.
     if (state.kind === "submitting") return false;
     setState(beginSubmit());
     try {
-      const request = await createSpecialRequest(input, {
-        idempotencyKey: input.idempotencyKey,
-      });
-      setState(resolveSubmitSuccess(request));
+      const created = await createSpecialRequest(input, { idempotencyKey: input.idempotencyKey });
+      setState(resolveSubmitSuccess(await fetchClientSpecialRequest(created.id)));
       return true;
     } catch (error) {
       setState(resolveSubmitError(classifySpecialRequestError(error)));
@@ -53,8 +71,8 @@ export function useSpecialRequestsController() {
     if (state.kind === "submitting") return;
     setState(beginSubmit());
     try {
-      const request = await cancelSpecialRequest(id, expectedVersion);
-      setState(resolveCancelSuccess(request));
+      await cancelSpecialRequest(id, expectedVersion);
+      setState(resolveCancelSuccess(await fetchClientSpecialRequest(id)));
     } catch (error) {
       setState(resolveSubmitError(classifySpecialRequestError(error)));
     }
@@ -64,8 +82,8 @@ export function useSpecialRequestsController() {
     if (state.kind === "submitting") return;
     setState(beginSubmit());
     try {
-      const request = await approveSpecialRequestQuote(id, expectedVersion);
-      setState(resolveApproveQuoteSuccess(request));
+      await approveSpecialRequestQuote(id, expectedVersion);
+      setState(resolveApproveQuoteSuccess(await fetchClientSpecialRequest(id)));
     } catch (error) {
       setState(resolveSubmitError(classifySpecialRequestError(error)));
     }
@@ -73,39 +91,149 @@ export function useSpecialRequestsController() {
 
   const reload = useCallback(async (id: string) => {
     try {
-      const request = await fetchClientSpecialRequest(id);
-      setState(resolveSubmitSuccess(request));
+      setState(resolveSubmitSuccess(await fetchClientSpecialRequest(id)));
     } catch (error) {
       setState(resolveSubmitError(classifySpecialRequestError(error)));
     }
   }, []);
 
   const reset = useCallback(() => setState(specialRequestIdleState()), []);
-
   return { state, submit, cancel, approveQuote, reload, reset };
+}
+
+async function fetchClientDetailBundle(id: string): Promise<SpecialRequestDetailBundle> {
+  const [information, execution] = await Promise.all([
+    fetchClientSpecialRequestInformation(id),
+    fetchClientSpecialRequestExecution(id),
+  ]);
+  return {
+    informationExchange: information.informationExchange ?? null,
+    execution: execution.execution,
+    financial: execution.financial,
+  };
+}
+
+async function fetchOperatorDetailBundle(id: string): Promise<SpecialRequestDetailBundle> {
+  const [information, execution] = await Promise.all([
+    fetchOperatorSpecialRequestInformation(id),
+    fetchOperatorSpecialRequestExecution(id),
+  ]);
+  return {
+    informationExchange: information.informationExchange ?? null,
+    execution: execution.execution,
+    financial: execution.financial,
+  };
+}
+
+export type UseClientSpecialRequestsListControllerParams = {
+  readonly limit?: number;
+  readonly autoLoad?: boolean;
+};
+
+export function useClientSpecialRequestsListController(
+  params: UseClientSpecialRequestsListControllerParams = {},
+) {
+  const { limit = 50, autoLoad = true } = params;
+  const [requests, setRequests] = useState<readonly DshSpecialRequestResponse[]>([]);
+  const [detailsByRequestId, setDetailsByRequestId] = useState<Readonly<Record<string, SpecialRequestDetailBundle>>>({});
+  const [total, setTotal] = useState(0);
+  const [loadState, setLoadState] = useState<DshSpecialRequestListLoadState>("loading");
+  const [busyRequestId, setBusyRequestId] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoadState("loading");
+    try {
+      const result = await fetchClientSpecialRequests({ limit, offset: 0 });
+      const nextRequests = result.requests ?? [];
+      const detailEntries = await Promise.all(
+        nextRequests.map(async (item) => [item.id, await fetchClientDetailBundle(item.id)] as const),
+      );
+      setRequests(nextRequests);
+      setDetailsByRequestId(Object.fromEntries(detailEntries));
+      setTotal(result.total ?? 0);
+      setLoadState(specialRequestListLoadState(nextRequests));
+    } catch (error) {
+      setLoadState(listLoadStateForError(classifySpecialRequestError(error)));
+    }
+  }, [limit]);
+
+  useEffect(() => {
+    if (autoLoad) void load();
+  }, [autoLoad, load]);
+
+  const runMutation = useCallback(async (
+    request: DshSpecialRequestResponse,
+    mutation: () => Promise<unknown>,
+  ) => {
+    setBusyRequestId(request.id);
+    try {
+      await mutation();
+      await load();
+      return true;
+    } catch (error) {
+      setLoadState(listLoadStateForError(classifySpecialRequestError(error)));
+      return false;
+    } finally {
+      setBusyRequestId(null);
+    }
+  }, [load]);
+
+  const cancelRequest = useCallback(
+    (request: DshSpecialRequestResponse) => runMutation(
+      request,
+      () => cancelSpecialRequest(request.id, request.version),
+    ),
+    [runMutation],
+  );
+
+  const approveQuote = useCallback(
+    (request: DshSpecialRequestResponse) => runMutation(
+      request,
+      () => approveSpecialRequestQuote(request.id, request.version),
+    ),
+    [runMutation],
+  );
+
+  const respondInformation = useCallback((
+    request: DshSpecialRequestResponse,
+    exchange: DshSpecialRequestInformationExchange,
+    response: string,
+  ) => runMutation(
+    request,
+    () => respondClientSpecialRequestInformation(request.id, {
+      expectedVersion: request.version,
+      exchangeId: exchange.id,
+      response,
+    }),
+  ), [runMutation]);
+
+  return {
+    requests,
+    detailsByRequestId,
+    total,
+    loadState,
+    busyRequestId,
+    load,
+    cancelRequest,
+    approveQuote,
+    respondInformation,
+  };
 }
 
 export type UseOperatorSpecialRequestsControllerParams = {
   readonly limit?: number;
-  readonly requestType?: string;
-  readonly status?: string;
+  readonly requestType?: SpecialRequestType;
+  readonly status?: SpecialRequestStatus;
   readonly workflowStage?: string;
   readonly autoLoad?: boolean;
 };
 
-/**
- * Operator-side controller: paginated list + single-item transitions.
- * After a successful mutation (update / dispatch-assign) the affected item
- * is patched in local list state in place — mirroring the "surgical local
- * patch, not a full refetch" convention already used by this codebase's
- * operator screens for responsiveness.
- */
 export function useOperatorSpecialRequestsController(
   params: UseOperatorSpecialRequestsControllerParams = {},
 ) {
   const { limit = 50, requestType, status, workflowStage, autoLoad = true } = params;
-
   const [requests, setRequests] = useState<readonly DshSpecialRequestResponse[]>([]);
+  const [detailsByRequestId, setDetailsByRequestId] = useState<Readonly<Record<string, SpecialRequestDetailBundle>>>({});
   const [total, setTotal] = useState(0);
   const [offset, setOffset] = useState(0);
   const [loadState, setLoadState] = useState<DshSpecialRequestListLoadState>("loading");
@@ -125,11 +253,8 @@ export function useOperatorSpecialRequestsController(
       setTotal(result.total ?? 0);
       setOffset(nextOffset);
       setLoadState(specialRequestListLoadState(nextRequests));
-    } catch (error: any) {
-      if (error?.status === 403) setLoadState("forbidden");
-      else if (error?.status === 409) setLoadState("conflict");
-      else if (!globalThis.navigator?.onLine || error?.message?.includes('Network')) setLoadState("offline");
-      else setLoadState("error");
+    } catch (error) {
+      setLoadState(listLoadStateForError(classifySpecialRequestError(error)));
     }
   }, [limit, requestType, status, workflowStage]);
 
@@ -141,39 +266,70 @@ export function useOperatorSpecialRequestsController(
     setRequests((current) => current.map((item) => (item.id === updated.id ? updated : item)));
   }, []);
 
+  const loadDetailBundle = useCallback(async (id: string) => {
+    const detail = await fetchOperatorDetailBundle(id);
+    setDetailsByRequestId((current) => ({ ...current, [id]: detail }));
+    return detail;
+  }, []);
+
   const getOne = useCallback(async (id: string): Promise<DshSpecialRequestResponse | undefined> => {
     try {
-      const request = await fetchOperatorSpecialRequest(id);
+      const [request] = await Promise.all([
+        fetchOperatorSpecialRequest(id),
+        loadDetailBundle(id),
+      ]);
       patchLocal(request);
       return request;
-    } catch {
+    } catch (error) {
+      setLoadState(listLoadStateForError(classifySpecialRequestError(error)));
       return undefined;
     }
-  }, [patchLocal]);
+  }, [loadDetailBundle, patchLocal]);
 
   const update = useCallback(async (id: string, input: DshUpdateSpecialRequest) => {
-    const updated = await updateOperatorSpecialRequest(id, input);
-    patchLocal(updated);
-    return updated;
-  }, [patchLocal]);
+    await updateOperatorSpecialRequest(id, input);
+    const readback = await fetchOperatorSpecialRequest(id);
+    patchLocal(readback);
+    await loadDetailBundle(id);
+    return readback;
+  }, [loadDetailBundle, patchLocal]);
 
   const assignDispatch = useCallback(async (id: string, captainId: string) => {
-    const updated = await assignSpecialRequestDispatch(id, captainId);
-    patchLocal(updated);
-    return updated;
-  }, [patchLocal]);
+    await assignSpecialRequestDispatch(id, captainId);
+    const readback = await fetchOperatorSpecialRequest(id);
+    patchLocal(readback);
+    await loadDetailBundle(id);
+    return readback;
+  }, [loadDetailBundle, patchLocal]);
+
+  const requestInformation = useCallback(async (
+    request: DshSpecialRequestResponse,
+    question: string,
+  ) => {
+    await requestOperatorSpecialRequestInformation(request.id, {
+      expectedVersion: request.version,
+      question,
+    });
+    const readback = await fetchOperatorSpecialRequest(request.id);
+    patchLocal(readback);
+    await loadDetailBundle(request.id);
+    return readback;
+  }, [loadDetailBundle, patchLocal]);
 
   const reload = useCallback(() => void load(offset), [load, offset]);
 
   return {
     requests,
+    detailsByRequestId,
     total,
     offset,
     loadState,
     load,
     reload,
     getOne,
+    loadDetailBundle,
     update,
     assignDispatch,
+    requestInformation,
   };
 }

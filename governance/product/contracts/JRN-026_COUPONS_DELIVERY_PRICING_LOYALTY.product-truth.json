@@ -1,0 +1,398 @@
+{
+  "schemaVersion": 1,
+  "capabilityId": "JRN_026_COUPONS_DELIVERY_PRICING_LOYALTY",
+  "state": "PRODUCT_MODEL_APPROVED",
+  "problem": {
+    "statement": "Coupons, delivery pricing, and loyalty earning policies must be governed once across operator, partner, and client surfaces while WLT remains the sole owner of financial loyalty and promotion-funding truth.",
+    "affectedActors": [
+      "marketing-operator",
+      "marketing-approver",
+      "partner-operator",
+      "customer",
+      "wlt-ledger"
+    ],
+    "currentWorkaround": "The current implementation is operational, but closure evidence was attached to an older commit and the partner empty state previously could not create its first delivery-pricing policy.",
+    "frequency": "continuous",
+    "severity": "critical",
+    "evidenceState": "QUALITATIVE",
+    "evidenceReferences": [
+      "governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md",
+      "services/dsh/backend/internal/coupons/governed.go",
+      "services/dsh/backend/internal/checkout/delivery_pricing.go",
+      "services/dsh/backend/internal/marketing/loyalty_policy.go",
+      "services/dsh/backend/internal/wltoutbox/worker.go",
+      "services/wlt/backend/internal/commercial/commercial.go",
+      "services/dsh/tests/jrn-026-coupons-pricing-loyalty.test.mjs"
+    ]
+  },
+  "actors": [
+    {
+      "id": "marketing-operator",
+      "role": "Creates and maintains coupon and loyalty-policy drafts and operates platform delivery pricing.",
+      "permittedActions": [
+        "create coupon draft",
+        "update inactive coupon terms",
+        "create loyalty policy draft",
+        "update inactive loyalty policy terms",
+        "manage platform delivery pricing"
+      ],
+      "forbiddenActions": [
+        "approve own coupon",
+        "approve own loyalty policy",
+        "write loyalty balances",
+        "bypass version checks"
+      ]
+    },
+    {
+      "id": "marketing-approver",
+      "role": "Independently activates governed coupon and loyalty policies.",
+      "permittedActions": [
+        "activate another actor coupon",
+        "activate another actor loyalty policy",
+        "pause governed policies"
+      ],
+      "forbiddenActions": [
+        "approve own draft",
+        "write WLT ledger entries directly",
+        "change active terms in place"
+      ]
+    },
+    {
+      "id": "partner-operator",
+      "role": "Reads store pricing and manages only the owned store partner-delivery fee.",
+      "permittedActions": [
+        "read owned store pricing",
+        "create partner delivery pricing",
+        "update partner delivery pricing",
+        "pause partner delivery pricing"
+      ],
+      "forbiddenActions": [
+        "change platform delivery pricing",
+        "charge pickup",
+        "archive delivery pricing",
+        "write another store pricing"
+      ]
+    },
+    {
+      "id": "customer",
+      "role": "Applies a coupon and reads the authoritative checkout pricing snapshot.",
+      "permittedActions": [
+        "submit coupon code",
+        "read discount and delivery fee",
+        "retry governed checkout readback"
+      ],
+      "forbiddenActions": [
+        "calculate authoritative discount locally",
+        "calculate authoritative delivery fee locally",
+        "mutate loyalty balance"
+      ]
+    },
+    {
+      "id": "wlt-ledger",
+      "role": "Owns promotion-funding reservations and loyalty ledger entries and reversals.",
+      "permittedActions": [
+        "append idempotent loyalty entry",
+        "reverse loyalty entry once",
+        "commit release or reverse promotion funding"
+      ],
+      "forbiddenActions": [
+        "own DSH coupon eligibility",
+        "own store delivery-mode availability",
+        "accept non-idempotent financial mutation"
+      ]
+    }
+  ],
+  "surfaces": [
+    {
+      "id": "control-panel",
+      "required": true,
+      "actors": ["marketing-operator", "marketing-approver"],
+      "routesOrScreens": [
+        "CouponsCommandDeck",
+        "LoyaltyEarningPoliciesDeck",
+        "OperatorDeliveryPricingCard"
+      ],
+      "states": [
+        "loading",
+        "empty",
+        "success",
+        "error",
+        "draft",
+        "active",
+        "paused",
+        "archived",
+        "version-conflict",
+        "separation-of-duties-required"
+      ],
+      "actions": [
+        "create and govern coupons",
+        "govern loyalty earning policies",
+        "operate delivery pricing",
+        "read back persisted versions"
+      ]
+    },
+    {
+      "id": "app-partner",
+      "required": true,
+      "actors": ["partner-operator"],
+      "routesOrScreens": [
+        "DshPartnerStoreCourierScreen",
+        "PartnerDeliveryPricingCard"
+      ],
+      "states": [
+        "loading",
+        "empty-create",
+        "success",
+        "error",
+        "mutation-loading",
+        "version-conflict",
+        "forbidden"
+      ],
+      "actions": [
+        "read owned store pricing",
+        "create first partner-delivery policy",
+        "update partner-delivery policy",
+        "reload after conflict"
+      ]
+    },
+    {
+      "id": "app-client",
+      "required": true,
+      "actors": ["customer"],
+      "routesOrScreens": [
+        "ClientCheckoutRoute",
+        "GovernedCheckoutScreen"
+      ],
+      "states": [
+        "loading",
+        "payment-pending",
+        "reconciliation-pending",
+        "order-ready",
+        "coupon-invalid",
+        "out-of-area",
+        "error"
+      ],
+      "actions": [
+        "submit coupon to authoritative checkout",
+        "read pricing snapshot",
+        "retry idempotent readback"
+      ]
+    },
+    {
+      "id": "shared",
+      "required": true,
+      "actors": [
+        "marketing-operator",
+        "marketing-approver",
+        "partner-operator",
+        "customer"
+      ],
+      "routesOrScreens": [
+        "useCouponsController",
+        "usePartnerDeliveryPricingController",
+        "useOperatorDeliveryPricingController",
+        "useCheckoutToOrderFlow"
+      ],
+      "states": [
+        "loading",
+        "empty",
+        "success",
+        "error",
+        "mutation-loading",
+        "mutation-error"
+      ],
+      "actions": [
+        "call owner APIs",
+        "carry optimistic versions",
+        "reload authoritative state"
+      ]
+    },
+    {
+      "id": "backend",
+      "required": true,
+      "actors": [
+        "marketing-operator",
+        "marketing-approver",
+        "partner-operator",
+        "customer",
+        "wlt-ledger"
+      ],
+      "operationIds": [
+        "listCoupons",
+        "createCoupon",
+        "updateCoupon",
+        "listOperatorDeliveryPricing",
+        "upsertOperatorDeliveryPricing",
+        "listPartnerDeliveryPricing",
+        "upsertPartnerDeliveryPricing",
+        "listLoyaltyEarningPolicies",
+        "createLoyaltyEarningPolicy",
+        "updateLoyaltyEarningPolicy",
+        "createCheckoutIntent",
+        "appendLoyaltyEntry"
+      ],
+      "states": [
+        "draft",
+        "active",
+        "paused",
+        "archived",
+        "reserved",
+        "committed",
+        "released",
+        "reversed",
+        "version-conflict",
+        "forbidden"
+      ],
+      "actions": [
+        "enforce tenant and store scope",
+        "enforce optimistic concurrency",
+        "enforce maker checker",
+        "persist pricing snapshot",
+        "enqueue durable WLT events",
+        "read back owner state"
+      ]
+    },
+    {
+      "id": "database",
+      "required": true,
+      "actors": ["marketing-operator", "marketing-approver", "partner-operator", "wlt-ledger"],
+      "routesOrScreens": [
+        "dsh_coupons",
+        "dsh_coupon_redemptions",
+        "dsh_store_delivery_pricing",
+        "dsh_store_delivery_pricing_audit",
+        "dsh_loyalty_earning_policies",
+        "dsh_wlt_outbox",
+        "wlt_loyalty_accounts",
+        "wlt_loyalty_entries"
+      ],
+      "states": [
+        "transactional",
+        "versioned",
+        "audited",
+        "idempotent",
+        "reconcilable"
+      ],
+      "actions": [
+        "enforce constraints",
+        "lock concurrent mutations",
+        "retain immutable audit",
+        "prevent duplicate reversal"
+      ]
+    }
+  ],
+  "outcome": {
+    "statement": "Operators, partners, and customers observe one governed coupon and delivery-pricing truth while loyalty and promotion funding are posted idempotently to the sovereign WLT ledger.",
+    "primaryMetric": "jrn_026_governed_mutations_with_authoritative_readback",
+    "guardrailMetrics": [
+      "cross_store_pricing_write",
+      "pickup_fee_nonzero",
+      "self_approval",
+      "stale_version_overwrite",
+      "local_client_price_calculation",
+      "duplicate_loyalty_entry",
+      "duplicate_loyalty_reversal",
+      "unreconciled_wlt_event"
+    ],
+    "baselineState": "Core capabilities existed, but current-head evidence was stale and partner first-policy creation was blocked by the UI empty state.",
+    "targetState": "Every declared action is executable on its authorized surface, persisted by its owner, read back consistently, and continuously verified.",
+    "observationWindow": "Every JRN-026 change, pull request, runtime smoke, and release review."
+  },
+  "acceptance": {
+    "criteria": [
+      "Coupon lifecycle, limits, scope, funding, and activation separation are enforced.",
+      "Operator can govern delivery pricing for supported modes.",
+      "Partner can create and update only owned-store partner delivery pricing.",
+      "Pickup remains free and checkout fails closed without an active enabled pricing policy.",
+      "Client renders coupon and delivery pricing only from the authoritative checkout snapshot.",
+      "Loyalty earning policy lifecycle is versioned and independently activated.",
+      "DSH emits durable idempotent loyalty and promotion-funding events without owning balances.",
+      "WLT owns serializable loyalty balances, idempotency, and single reversal.",
+      "Targeted DSH, WLT, TypeScript, binding, and OpenAPI checks pass on the same commit."
+    ],
+    "failureStates": [
+      "partner empty state cannot create pricing",
+      "partner changes another store or delivery mode",
+      "pickup fee becomes nonzero",
+      "active policy terms mutate in place",
+      "creator approves own policy",
+      "client computes authoritative pricing locally",
+      "DSH stores loyalty balance",
+      "WLT accepts duplicate entry or reversal",
+      "closure evidence references an older commit"
+    ],
+    "requiredChecks": [
+      "JRN-026 DSH package compilation",
+      "JRN-026 route verification",
+      "sovereign WLT commercial package compilation",
+      "JRN-026 TypeScript verification",
+      "JRN-026 governed binding tests",
+      "DSH modular OpenAPI verification",
+      "independent finance boundary review",
+      "runtime and visual evidence"
+    ],
+    "runtimeEvidenceRequired": true,
+    "visualEvidenceRequired": true
+  },
+  "invariants": {
+    "business": [
+      "DSH owns coupon eligibility and delivery pricing policy.",
+      "WLT owns loyalty balances and promotion-funding financial state.",
+      "Every surface reads the same persisted owner truth.",
+      "Every mutation is scoped, versioned, audited, and recoverable."
+    ],
+    "negative": [
+      "no local authoritative coupon arithmetic",
+      "no local authoritative delivery-fee arithmetic",
+      "no partner access outside the owned store and partner-delivery mode",
+      "no pickup fee",
+      "no self approval",
+      "no stale overwrite",
+      "no loyalty balance in DSH",
+      "no non-idempotent WLT mutation",
+      "no final closure without same-commit evidence and independent approvals"
+    ]
+  },
+  "owners": {
+    "productManager": "CURRENT_USER_INSTRUCTION",
+    "productOwner": "PRODUCT_OWNER_ACCEPTANCE_AUTHORITY",
+    "uxJourneyOwner": "UX_JOURNEY_AUTHORITY",
+    "engineeringOwner": "services/dsh + services/wlt",
+    "productManagerApproval": "APPROVED",
+    "productOwnerApproval": "PENDING",
+    "productAcceptanceDecision": "PENDING"
+  },
+  "execution": {
+    "appetite": "Close JRN-026 code and permanent verification without falsely granting independent product, finance, QA, security, release, or production approval.",
+    "fixedConstraints": [
+      "GitHub Remote sambassam is the only execution truth",
+      "WLT remains sovereign for financial loyalty and promotion funding",
+      "DSH remains sovereign for coupon eligibility and delivery pricing",
+      "maker checker and optimistic concurrency are mandatory",
+      "same-commit evidence is mandatory for closure"
+    ],
+    "variableScope": [
+      "surface presentation",
+      "Arabic recovery copy",
+      "focused test composition",
+      "workflow diagnostics"
+    ],
+    "forbiddenScope": [
+      "financial ownership in DSH",
+      "cross-store partner access",
+      "local pricing truth",
+      "self approval",
+      "PR merge or deployment without separate authorization",
+      "final closure without independent approvals"
+    ],
+    "forecastRange": "Remote implementation and review on sambassam.",
+    "confidence": "high",
+    "unknowns": [
+      "same-commit workflow conclusion",
+      "runtime database smoke conclusion",
+      "visual evidence",
+      "product owner acceptance",
+      "independent finance QA security and release approvals"
+    ]
+  }
+}

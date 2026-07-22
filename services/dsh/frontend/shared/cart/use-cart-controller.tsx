@@ -27,6 +27,8 @@ import type {
 type CartMutationError = {
   readonly kind?: string;
   readonly status?: number;
+  readonly code?: string;
+  readonly message?: string;
 };
 
 function mutationErrorMessage(error: unknown): string {
@@ -38,7 +40,13 @@ function mutationErrorMessage(error: unknown): string {
   if (typed.kind === "network") {
     return "تعذر الوصول إلى DSH. تحقق من الشبكة ثم أعد المحاولة.";
   }
-  return "رفض DSH عملية السلة أو تعذر إكمالها.";
+  if (typed.code === "CART_STORE_CONFLICT") {
+    return "لديك سلة نشطة لمتجر آخر. أفرغها أولًا قبل إضافة منتجات من هذا المتجر.";
+  }
+  if (typed.code === "CART_ITEM_UNAVAILABLE") {
+    return "المنتج غير متاح حاليًا أو لا يملك سعرًا صالحًا في تشكيلة المتجر.";
+  }
+  return typed.message?.trim() || "رفض DSH عملية السلة أو تعذر إكمالها.";
 }
 
 export function useCartController(
@@ -162,7 +170,7 @@ export function useCartController(
     setActionError(null);
     try {
       await clearCart(cart.id);
-      setState({ kind: "empty" });
+      await load();
       setAction("success");
       return true;
     } catch (error) {
@@ -170,7 +178,7 @@ export function useCartController(
       setActionError(mutationErrorMessage(error));
       return false;
     }
-  }, []);
+  }, [load]);
 
   return {
     state,
@@ -191,18 +199,12 @@ export function useServiceabilityController() {
   const check = useCallback(
     async (
       storeId: string,
-      serviceAreaCode: string,
-      latitude?: number,
-      longitude?: number,
+      addressId: string,
+      fulfillmentMode: DshFulfillmentMode,
     ) => {
       setServiceability({ kind: "checking" });
       try {
-        const result = await checkServiceability(
-          storeId,
-          serviceAreaCode,
-          latitude,
-          longitude,
-        );
+        const result = await checkServiceability(storeId, addressId, fulfillmentMode);
         setServiceability(resolveServiceabilityState(result));
       } catch {
         setServiceability(resolveServiceabilityError());

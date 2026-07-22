@@ -2,6 +2,16 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Box, Button, Icon, MobileScrollView, StateView, Surface, Text, TopBar, colorRoles, spacing } from '@bthwani/ui-kit';
 import {
+  StoreCaptainHandoffExceptionForm,
+  useStoreCaptainHandoffException,
+  type DshDeliveryExceptionReasonCode,
+} from '../../shared/dispatch';
+import {
+  OrderPreparationReadbackCard,
+  STORE_CAPTAIN_HANDOFF_EXCEPTION_LABELS,
+  useOrderPreparationReadback,
+} from '../../shared/orders';
+import {
   readCaptainForegroundLocation,
   type DshCaptainLocationPush,
 } from '../../shared/delivery/use-captain-order-runtime';
@@ -11,21 +21,39 @@ export type OperationalCaptainExecutionScreenProps = {
   readonly orderId: string;
   readonly captainId: string;
   readonly currentStageLabel: string;
+  readonly handoffExceptionEnabled: boolean;
   readonly podRequired: boolean;
   readonly onBack: () => void;
+  readonly onRefresh: () => void | Promise<void>;
   readonly onConfirmPickup: () => void;
   readonly onConfirmDelivery: () => void;
   readonly onOpenPod: () => void;
   readonly onPushLocation: (push: DshCaptainLocationPush) => Promise<unknown>;
 };
 
+function deliveryExceptionLabel(reason: DshDeliveryExceptionReasonCode): string {
+  if (reason === 'handoff_shortage' || reason === 'handoff_mismatch') {
+    return STORE_CAPTAIN_HANDOFF_EXCEPTION_LABELS[reason];
+  }
+  return 'يوجد استثناء توصيل نشط لهذه المهمة';
+}
+
+function isQueuedLocationResult(result: unknown): boolean {
+  return typeof result === 'object'
+    && result !== null
+    && 'kind' in result
+    && (result as { readonly kind?: unknown }).kind === 'queued';
+}
+
 export function OperationalCaptainExecutionScreen({
   assignmentId,
   orderId,
   captainId,
   currentStageLabel,
+  handoffExceptionEnabled,
   podRequired,
   onBack,
+  onRefresh,
   onConfirmPickup,
   onConfirmDelivery,
   onOpenPod,
@@ -33,6 +61,33 @@ export function OperationalCaptainExecutionScreen({
 }: OperationalCaptainExecutionScreenProps) {
   const [locationState, setLocationState] = React.useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [locationMessage, setLocationMessage] = React.useState<string | null>(null);
+  const handoffException = useStoreCaptainHandoffException('captain', onRefresh);
+  const preparationReadback = useOrderPreparationReadback(orderId, { pollIntervalMs: 15_000 });
+  const handoffExceptionKind = handoffException.state.kind;
+  const handoffReadback = handoffException.readback;
+  const cancelHandoffException = handoffException.cancel;
+  const loadExistingHandoffException = handoffException.loadExisting;
+  const readbackBlocksPickup = handoffExceptionEnabled && handoffReadback.kind !== 'clear';
+  const handoffBlocked = handoffExceptionKind !== 'idle' || readbackBlocksPickup;
+
+  React.useEffect(() => {
+    if (!handoffExceptionEnabled || !assignmentId) return undefined;
+    void loadExistingHandoffException(assignmentId);
+    const interval = setInterval(() => {
+      void loadExistingHandoffException(assignmentId);
+    }, 15_000);
+    return () => clearInterval(interval);
+  }, [assignmentId, handoffExceptionEnabled, loadExistingHandoffException]);
+
+  React.useEffect(() => {
+    if (
+      !handoffExceptionEnabled
+      && handoffExceptionKind !== 'idle'
+      && handoffExceptionKind !== 'success'
+    ) {
+      cancelHandoffException();
+    }
+  }, [cancelHandoffException, handoffExceptionEnabled, handoffExceptionKind]);
 
   const pushCurrentLocation = async () => {
     if (!assignmentId || !captainId) {
@@ -44,13 +99,19 @@ export function OperationalCaptainExecutionScreen({
     setLocationMessage(null);
     try {
       const point = await readCaptainForegroundLocation();
-      await onPushLocation({
+      const result = await onPushLocation({
         assignmentId,
         latitude: point.latitude,
         longitude: point.longitude,
+        accuracyMeters: point.accuracyMeters,
+        recordedAt: new Date().toISOString(),
       });
       setLocationState('success');
-      setLocationMessage('تم تحديث آخر موقع فعلي للمهمة.');
+      setLocationMessage(
+        isQueuedLocationResult(result)
+          ? 'حُفظت آخر عينة للنقل وستعاد مزامنتها عند عودة الشبكة.'
+          : `تم إرسال الموقع المصدق بدقة ${Math.round(point.accuracyMeters)} متر.`,
+      );
     } catch (error) {
       setLocationState('error');
       setLocationMessage(error instanceof Error ? error.message : 'تعذر تحديث الموقع.');
@@ -67,13 +128,19 @@ export function OperationalCaptainExecutionScreen({
           <Text role="caption" style={styles.inverted}>{`الإسناد: ${assignmentId}`}</Text>
         </Surface>
 
+        <OrderPreparationReadbackCard
+          state={preparationReadback.state}
+          title="جاهزية الطلب لدى المتجر"
+          onRetry={preparationReadback.refresh}
+        />
+
         <Surface tone="raised" gap={3}>
           <View style={styles.row}>
             <Icon name="navigate-outline" size={22} tone="brand" />
             <View style={styles.flex}>
-              <Text role="bodyStrong">الموقع الفعلي فقط</Text>
+              <Text role="bodyStrong">الموقع المصدق فقط</Text>
               <Text role="bodySm" tone="muted">
-                يُحدّث من GPS أثناء وجود التطبيق في المقدمة. لا تُرسل إحداثيات تجريبية ولا يُحفظ سجل للمسار.
+                يُحدّث من GPS أثناء وجود التطبيق في المقدمة، ويُرفض إذا تجاوزت الدقة 100 متر. لا تُرسل إحداثيات تجريبية ولا يُحفظ سجل للمسار.
               </Text>
             </View>
           </View>
@@ -85,17 +152,77 @@ export function OperationalCaptainExecutionScreen({
           />
           {locationMessage ? (
             <StateView
-              title={locationState === 'success' ? 'تم تحديث الموقع' : 'تعذر تحديث الموقع'}
+              title={locationState === 'success' ? 'حالة مزامنة الموقع' : 'تعذر تحديث الموقع'}
               description={locationMessage}
               tone={locationState === 'success' ? 'success' : 'danger'}
             />
           ) : null}
         </Surface>
 
+        {handoffExceptionEnabled && handoffReadback.kind === 'loading' ? (
+          <StateView
+            loading
+            title="جارٍ التحقق من عهدة الطلب"
+            description="يبقى الاستلام محجوبًا حتى تكتمل قراءة DSH."
+          />
+        ) : null}
+
+        {handoffExceptionEnabled && handoffReadback.kind === 'blocked' ? (
+          <StateView
+            title="الاستلام محجوب بقرار تشغيلي"
+            description={`${deliveryExceptionLabel(handoffReadback.exception.reasonCode)} · ${handoffReadback.exception.note}`}
+            tone="warning"
+          />
+        ) : null}
+
+        {handoffExceptionEnabled && handoffReadback.kind === 'error' ? (
+          <StateView
+            title="تعذر التحقق من الاستثناء التشغيلي"
+            description={handoffReadback.message}
+            tone="danger"
+            actionLabel="إعادة التحقق"
+            onActionPress={() => void loadExistingHandoffException(assignmentId)}
+          />
+        ) : null}
+
+        {handoffExceptionKind === 'success' && handoffReadback.kind !== 'blocked' ? (
+          <StateView
+            title="تم إيقاف الاستلام"
+            description="سُجل استثناء العهدة في طابور العمليات. لا تؤكد الاستلام حتى تعالج العمليات البلاغ."
+            tone="warning"
+          />
+        ) : null}
+
+        {handoffExceptionKind !== 'idle' && handoffExceptionKind !== 'success' ? (
+          <StoreCaptainHandoffExceptionForm
+            entityLabel={`الإسناد ${assignmentId}`}
+            state={handoffException.state}
+            onReasonCodeChange={handoffException.setReasonCode}
+            onNoteChange={handoffException.setNote}
+            onSubmit={async () => {
+              await handoffException.submit();
+            }}
+            onCancel={cancelHandoffException}
+          />
+        ) : null}
+
         <Surface tone="raised" gap={3}>
           <Text role="bodyStrong">إجراءات المهمة</Text>
           <Box gap={2}>
-            <Button label="تأكيد الاستلام" onPress={onConfirmPickup} />
+            <Button
+              label="تأكيد الاستلام"
+              disabled={handoffBlocked}
+              onPress={onConfirmPickup}
+            />
+            {handoffExceptionEnabled
+              && handoffExceptionKind === 'idle'
+              && handoffReadback.kind === 'clear' ? (
+                <Button
+                  label="نقص أو عدم تطابق في الطرد"
+                  tone="danger"
+                  onPress={() => handoffException.begin(assignmentId)}
+                />
+              ) : null}
             <Button
               label={podRequired ? 'فتح إثبات التسليم' : 'تأكيد التسليم'}
               tone="secondary"

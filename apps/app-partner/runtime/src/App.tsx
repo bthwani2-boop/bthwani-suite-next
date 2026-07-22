@@ -1,17 +1,18 @@
 import React from "react";
-import { StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colorRoles } from "@bthwani/ui-kit";
 import { DshPartnerSurface } from "../../../../services/dsh/frontend/app-partner";
-import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import {
   configureIdentitySession,
   configureIdentitySessionStorage,
   type SessionStorageAdapter,
+  useIdentitySession,
 } from "@bthwani/core-identity";
 import { resolveIdentityApiBaseUrl } from "../../../../services/dsh/frontend/shared/_kernel/identity-api-base-url";
 import { IdentitySessionGate } from "../../../../services/dsh/frontend/shared/session/IdentitySessionGate";
+import { useDshMobilePushRegistration } from "../../../../services/dsh/frontend/shared/notifications/use-mobile-push-registration";
 
 function createSecureStoreSessionStorageAdapter(): SessionStorageAdapter {
   return {
@@ -25,8 +26,11 @@ if (Platform.OS !== "web") {
   configureIdentitySessionStorage(createSecureStoreSessionStorageAdapter());
 }
 configureIdentitySession(resolveIdentityApiBaseUrl());
+
 function AppContent() {
   const insets = useSafeAreaInsets();
+  const identity = useIdentitySession();
+  useDshMobilePushRegistration(identity.state.kind, "app-partner", "bthwani-partner-next");
 
   return (
     <View style={[styles.root, { paddingBottom: insets.bottom }]}>

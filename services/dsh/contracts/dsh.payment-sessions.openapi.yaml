@@ -1,0 +1,147 @@
+openapi: 3.1.0
+info:
+  title: BThwani DSH Payment Session Operations API
+  version: 1.0.0
+  description: >-
+    Authenticated DSH projection and finance-operator routes for WLT-owned
+    payment sessions. DSH proxies WLT truth and never persists a second ledger
+    or provider state.
+x-bthwani-owner: services/dsh
+x-bthwani-journey: JRN-034
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-client-generation: ENABLED
+servers:
+  - url: http://localhost:58080
+paths:
+  /dsh/control-panel/finance/payment-sessions/{paymentSessionId}/timeline:
+    get:
+      operationId: getDshPaymentSessionTimeline
+      summary: Read the WLT-owned payment timeline through authenticated DSH.
+      tags: [DshFinancePaymentSessions]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/PaymentSessionId'
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Payment session timeline from WLT.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaymentTimelineEnvelope' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '502': { $ref: '#/components/responses/Error' }
+        '503': { $ref: '#/components/responses/Error' }
+  /dsh/control-panel/finance/payment-sessions/{paymentSessionId}/refresh-provider-status:
+    post:
+      operationId: refreshDshPaymentSessionProviderStatus
+      summary: Ask WLT to query provider status without repeating authorize or capture.
+      tags: [DshFinancePaymentSessions]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/PaymentSessionId'
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Authoritative WLT payment state.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaymentOperationEnvelope' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '502': { $ref: '#/components/responses/Error' }
+        '503': { $ref: '#/components/responses/Error' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    PaymentSessionId:
+      name: paymentSessionId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 200 }
+    TenantId:
+      name: tenantId
+      in: query
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 120 }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 8, maxLength: 200 }
+    CorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: false
+      schema: { type: string, minLength: 1, maxLength: 200 }
+  schemas:
+    PaymentStatus:
+      type: string
+      enum: [reference_created, pending_provider, authorization_pending, authorized, capture_pending, captured, cod_pending, cod_collected, failed, expired, provider_result_unknown]
+    PaymentSession:
+      type: object
+      required: [id, tenantId, clientId, storeId, paymentMethod, status, providerReference, amountMinorUnits, currency, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        checkoutIntentId: { type: [string, 'null'] }
+        specialRequestId: { type: [string, 'null'] }
+        tenantId: { type: string }
+        clientId: { type: string }
+        storeId: { type: string }
+        paymentMethod: { type: string, enum: [cod, wallet, mixed, official_wallet] }
+        status: { $ref: '#/components/schemas/PaymentStatus' }
+        providerReference: { type: string }
+        amountMinorUnits: { type: integer, format: int64 }
+        currency: { type: string }
+        capturedAt: { type: [string, 'null'], format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    PaymentTimelineEnvelope:
+      type: object
+      required: [paymentTimeline]
+      properties:
+        paymentTimeline:
+          type: object
+          required: [paymentSession, operationReceipts, providerEvents, reconciliationCases]
+          properties:
+            paymentSession: { $ref: '#/components/schemas/PaymentSession' }
+            captureLedgerTransactionId: { type: string }
+            lastProviderEventId: { type: string }
+            lastProviderStatus: { type: string }
+            operationReceipts: { type: array, items: { type: object, additionalProperties: true } }
+            providerEvents: { type: array, items: { type: object, additionalProperties: true } }
+            reconciliationCases: { type: array, items: { type: object, additionalProperties: true } }
+    PaymentOperationEnvelope:
+      type: object
+      required: [paymentSession]
+      properties:
+        paymentSession: { $ref: '#/components/schemas/PaymentSession' }
+        idempotentReplay: { type: boolean }
+        ledgerTransactionId: { type: string }
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string }
+            message: { type: string }
+  responses:
+    Error:
+      description: Governed DSH error envelope.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }

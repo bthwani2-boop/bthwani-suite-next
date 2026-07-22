@@ -108,9 +108,9 @@ CREATE INDEX IF NOT EXISTS idx_dsh_marketing_target_bindings_entity
   ON dsh_marketing_target_bindings (entity_type, entity_id, created_at DESC);
 
 -- ── Impression / click analytics ─────────────────────────────────────────
--- Schema-only in this closure pass: no producer wired yet in app-client.
--- See marketing_visibility_gate_matrix.md / file_decision_matrix.md for the
--- FIX_REQUIRED note on client-side event emission.
+-- Producers are owned by JRN-007: app-client emits through the governed
+-- /dsh/home-discovery/events route, which accepts only currently publishable
+-- home banners and promos before writing to these analytics truth tables.
 CREATE TABLE IF NOT EXISTS dsh_marketing_impressions (
   id          TEXT        PRIMARY KEY,
   entity_type TEXT        NOT NULL CHECK (entity_type IN ('campaign','banner','promo')),

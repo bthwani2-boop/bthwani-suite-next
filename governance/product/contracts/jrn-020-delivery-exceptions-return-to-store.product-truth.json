@@ -1,0 +1,90 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-020",
+  "journeyNameAr": "استثناءات التوصيل والعودة إلى المتجر",
+  "status": "PENDING_INDEPENDENT_APPROVAL",
+  "truthOwner": "services/dsh",
+  "sharedBrainOwner": "services/dsh/frontend/shared/dispatch",
+  "operationalProblem": "عند تعذر التسليم يجب منع التسليم المتأخر، وتسجيل دليل قابل للمراجعة، وتعيين مسؤول قرار، ثم إكمال مسار إعادة المحاولة أو إعادة الإسناد أو الإرجاع أو الإلغاء دون كسر عهدة الطلب أو اختراع حقيقة مالية داخل DSH.",
+  "targetOutcome": "استثناء موثق ومحكوم ينتقل من التقرير إلى الإقرار والحل والقراءة الراجعة، مع إغلاق عهدة الإرجاع فقط بعد تأكيد المتجر، وتفويض أي أثر مالي إلى WLT.",
+  "actors": [
+    "client",
+    "captain",
+    "partner",
+    "operator"
+  ],
+  "requiredSurfaces": [
+    "app-captain",
+    "app-partner",
+    "app-client",
+    "control-panel"
+  ],
+  "services": [
+    "DSH",
+    "WLT_READBACK_AND_FINANCIAL_HANDOFF_ONLY"
+  ],
+  "entities": [
+    "delivery_exception",
+    "dispatch_assignment",
+    "delivery",
+    "order",
+    "return_custody",
+    "financial_closure_reference"
+  ],
+  "states": {
+    "exception": [
+      "open",
+      "acknowledged",
+      "resolved"
+    ],
+    "return": [
+      "returning_to_store",
+      "return_arrived_store",
+      "returned_to_store"
+    ]
+  },
+  "allowedActions": [
+    "report_exception_with_evidence",
+    "acknowledge_and_assign_operator_responsibility",
+    "retry_same_captain",
+    "reassign_captain_before_pickup",
+    "return_to_store_after_pickup",
+    "cancel_order_through_governed_order_cancellation",
+    "captain_confirm_return_arrival",
+    "partner_confirm_return_receipt"
+  ],
+  "forbiddenActions": [
+    "resolve_without_operational_responsibility",
+    "submit_delivery_proof_while_exception_is_open_or_acknowledged",
+    "captain_self_confirm_store_receipt",
+    "reassign_after_pickup",
+    "mark_returned_before_partner_receipt",
+    "create_refund_or_ledger_mutation_inside_DSH",
+    "derive_final_financial_state_in_a_surface"
+  ],
+  "negativeInvariants": [
+    "A delivery exception report must include a reason code, correlation id, and an operational evidence note of at least five characters.",
+    "An operator identity must be recorded before a resolution action is applied.",
+    "Proof of delivery cannot complete while the exception remains open or acknowledged.",
+    "Store custody is not complete when the captain merely arrives; the owning partner must confirm receipt.",
+    "returned_to_store is a terminal delivery readback state and must not be represented as active delivery tracking.",
+    "DSH cancellation may emit a governed financial handoff, but WLT remains the only owner of refund, ledger, balance, and reconciliation truth."
+  ],
+  "acceptanceCriteria": [
+    "Captain can report every governed exception type with mandatory evidence and receive readback.",
+    "Operations can list, sort, acknowledge, and resolve exceptions with optimistic versioning.",
+    "Retry, reassignment, return-to-store, and cancellation are available only in valid lifecycle states.",
+    "Captain and partner complete a two-party return custody handshake.",
+    "Client, partner, captain, and control panel read the same return lifecycle.",
+    "Late delivery completion is blocked while an exception remains unresolved.",
+    "Cancellation financial consequences are delegated to WLT without a DSH financial mutation.",
+    "The canonical JRN-020 OpenAPI contract, shared adapter, backend runtime, and targeted tests remain aligned."
+  ],
+  "independentApprovalsRequired": [
+    "product-owner",
+    "qa-device-accessibility",
+    "application-security",
+    "financial-control",
+    "release-production"
+  ]
+}

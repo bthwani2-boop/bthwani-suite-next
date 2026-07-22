@@ -1,5 +1,5 @@
 // Partner Onboarding & Store Publication — shared brain public barrel.
-// Surfaces import ONLY from this file, never from internal subpaths.
+// Surfaces import from this barrel or an explicit *.public.ts capability entrypoint, never implementation modules.
 
 export type { DshPartnerActivationStatus, DshPartnerActivationStateMetadata, DshPartnerReadinessCheckItem, DshPartnerDecisionCommand, DshPartnerDecisionCommandId } from "./partner-activation.model";
 export {
@@ -17,7 +17,7 @@ export type {
   DshPartnerAuditEvent, DshPartnerLinkedStore, DshFieldPartnerStoreDraft, DshFieldPartnerStoreDraftInput,
   DshCreatePartnerInput, DshUpdatePartnerRequest, DshPartnerTransitionInput,
   DshAddDocumentInput, DshReviewDocumentInput, DshCreatePartnerFieldVisitRequest,
-  DshPartnerListResponse,
+  DshPartnerListResponse, DshPartnerOperationalScope,
 } from "./partner.types";
 
 export type {
@@ -58,6 +58,7 @@ export {
   fetchOperatorDeliveryPricing,
   updateOperatorDeliveryPricing,
   useOperatorDeliveryPricingController,
+  findDeliveryPricing,
 } from "./operator-delivery-pricing";
 
 export {
@@ -87,5 +88,27 @@ export {
 export type { DshPartnerReadinessItem, DshPartnerDocumentType } from "./partner.types";
 export { REQUIRED_DOCUMENT_TYPES, DOCUMENT_TYPE_LABELS } from "./partner.types";
 export * from "./partner.workflow";
+export type {
+  DshPartnerAllowedAction,
+  DshGovernedPartner,
+  PartnerMutationContext,
+  PartnerOnboardingRuntimeState,
+  PartnerOnboardingFailure,
+  PartnerOnboardingViewModel,
+} from "./partner-onboarding.runtime";
+export {
+  createPartnerMutationContext,
+  derivePartnerOnboardingViewModel,
+  mapPartnerOnboardingFailure,
+  assertPartnerReadback,
+} from "./partner-onboarding.runtime";
+export type { PartnerOnboardingVisibleState } from "./partner-onboarding.visible-state";
+export {
+  PARTNER_ONBOARDING_VISIBLE_STATE_KINDS,
+  resolvePartnerOnboardingFailureState,
+  resolvePartnerOnboardingVisibleState,
+} from "./partner-onboarding.visible-state";
 export * from "./catalog-approval.api";
 export * from "./partner-fleet.api";
+export { usePartnerFleetController } from "./use-partner-fleet-controller";
+export type { PartnerFleetController } from "./use-partner-fleet-controller";

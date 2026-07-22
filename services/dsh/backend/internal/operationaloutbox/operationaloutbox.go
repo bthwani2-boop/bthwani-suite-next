@@ -17,6 +17,8 @@ import (
 	"time"
 )
 
+const MaxDeliveryAttempts = 10
+
 // Event represents a pending or retried operational-closure event.
 type Event struct {
 	ID            string
@@ -123,19 +125,36 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 	return events, nil
 }
 
-// MarkSent marks the event as successfully delivered.
+// MarkSent records the final successful delivery attempt atomically with the
+// outbox terminal state.
 func MarkSent(db *sql.DB, id string) error {
-	_, err := db.Exec(`
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	var previousAttempts int
+	if err := tx.QueryRow(`
 		UPDATE dsh_operational_outbox_events
-		SET status = 'sent', updated_at = NOW()
-		WHERE id = $1::uuid`,
-		id,
-	)
-	return err
+		SET status = 'sent', sent_at = NOW(), failed_at = NULL,
+		    last_error = NULL, updated_at = NOW()
+		WHERE id = $1::uuid
+		RETURNING attempt_count`, id).Scan(&previousAttempts); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`
+		INSERT INTO dsh_notification_delivery_attempts
+			(event_id, attempt_number, outcome, error_message)
+		VALUES ($1::uuid, $2, 'sent', '')
+		ON CONFLICT (event_id, attempt_number) DO NOTHING`, id, previousAttempts+1); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // MarkFailed records a delivery failure and schedules the next retry with
-// exponential backoff capped at 30 minutes.
+// exponential backoff capped at 30 minutes. After MaxDeliveryAttempts the row
+// enters the terminal failed/dead-letter state and is no longer claimed.
 func MarkFailed(db *sql.DB, id string, attemptCount int, cause error) error {
 	next := attemptCount + 1
 	backoff := time.Duration(1<<uint(min(next, 10))) * time.Second
@@ -146,13 +165,44 @@ func MarkFailed(db *sql.DB, id string, attemptCount int, cause error) error {
 	if cause != nil {
 		errMsg = cause.Error()
 	}
-	_, err := db.Exec(`
+	status := "pending"
+	outcome := "retry_scheduled"
+	var nextRetryAt *time.Time
+	if next >= MaxDeliveryAttempts {
+		status = "failed"
+		outcome = "dead_letter"
+	} else {
+		value := time.Now().UTC().Add(backoff)
+		nextRetryAt = &value
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err := tx.Exec(`
 		UPDATE dsh_operational_outbox_events
-		SET attempt_count = $2, last_error = $3, next_retry_at = NOW() + $4::interval, updated_at = NOW()
-		WHERE id = $1::uuid`,
-		id, next, errMsg, backoff.String(),
-	)
-	return err
+		SET attempt_count = $2,
+		    last_error = $3,
+		    status = $4,
+		    next_retry_at = CASE WHEN $4 = 'pending' THEN $5 ELSE next_retry_at END,
+		    failed_at = CASE WHEN $4 = 'failed' THEN NOW() ELSE NULL END,
+		    updated_at = NOW()
+		WHERE id = $1::uuid`, id, next, errMsg, status, nextRetryAt); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`
+		INSERT INTO dsh_notification_delivery_attempts
+			(event_id, attempt_number, outcome, error_message, next_retry_at)
+		VALUES ($1::uuid, $2, $3, $4, $5)
+		ON CONFLICT (event_id, attempt_number) DO UPDATE
+		SET outcome = EXCLUDED.outcome,
+		    error_message = EXCLUDED.error_message,
+		    next_retry_at = EXCLUDED.next_retry_at`, id, next, outcome, errMsg, nextRetryAt); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 func min(a, b int) int {

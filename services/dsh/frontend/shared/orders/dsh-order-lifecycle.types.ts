@@ -218,11 +218,13 @@ export interface DshOrderLifecycleClient {
   pushLocation(
     assignmentId: string,
     req: {
-      captain_id: string;
-      latitude: number;
-      longitude: number;
-      lifecycle_status: string;
-      order_status?: 'EN_ROUTE' | 'ARRIVED';
+      readonly captain_id: string;
+      readonly latitude: number;
+      readonly longitude: number;
+      readonly accuracy_meters: number;
+      readonly recorded_at: string;
+      readonly lifecycle_status?: string;
+      readonly order_status?: 'EN_ROUTE' | 'ARRIVED';
     }
   ): Promise<DshOrderRecord>;
   getCaptainLocation(

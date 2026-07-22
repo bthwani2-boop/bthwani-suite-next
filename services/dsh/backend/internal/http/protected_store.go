@@ -309,7 +309,12 @@ func (s *protectedStoreServer) handleOperatorStores(w http.ResponseWriter, r *ht
 	if !ok {
 		return
 	}
-	result, err := store.ListAllStores(s.db, store.DshStoreListQuery{Limit: 100, Offset: 0})
+	listQuery, errMessage := store.ParseListQuery(r.URL.Query())
+	if errMessage != "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_PARAMETER", errMessage)
+		return
+	}
+	result, err := store.ListAllStores(s.db, listQuery)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "could not load stores")
 		return
@@ -328,35 +333,6 @@ func (s *protectedStoreServer) handleOperatorStoreDetail(w http.ResponseWriter, 
 		return
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"store": store.RowToDetail(*row)})
-}
-
-func (s *protectedStoreServer) handleOperatorStoreDiagnostics(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", PartnersPermissionRead, "operator")
-	if !ok {
-		return
-	}
-	storeId := r.PathValue("storeId")
-	row, err := store.GetStoreByIDInternal(r.Context(), s.db, storeId)
-	if err != nil {
-		s.writeStoreError(w, err)
-		return
-	}
-
-	blockers := []string{}
-	// Example logic for publication blockers
-	if row.LogoURL == nil || *row.LogoURL == "" {
-		blockers = append(blockers, "Missing store logo")
-	}
-	if row.HeroImageURL == nil || *row.HeroImageURL == "" {
-		blockers = append(blockers, "Missing store cover image")
-	}
-
-	isReady := len(blockers) == 0
-
-	store.SendJSON(w, http.StatusOK, map[string]any{
-		"isReady":  isReady,
-		"blockers": blockers,
-	})
 }
 
 func (s *protectedStoreServer) handlePartnerSettings(w http.ResponseWriter, r *http.Request) {

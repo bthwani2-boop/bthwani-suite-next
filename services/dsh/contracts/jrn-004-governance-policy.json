@@ -1,0 +1,69 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-004",
+  "truthBoundaries": {
+    "DSH": ["store state", "serviceability", "coverage", "operating context", "actor scopes", "publication diagnostics", "audit", "idempotency"],
+    "Identity": ["actor identity", "role", "permissions", "session"],
+    "Workforce": ["field and captain employment profile", "assignment eligibility"],
+    "Catalog": ["catalog approval and published assortment reference"],
+    "Marketing": ["marketing visibility reference"],
+    "WLT": ["no store-state mutation; finance references only"]
+  },
+  "security": {
+    "authentication": "Bearer identity session for all protected operations",
+    "authorization": ["surface", "role", "permission", "active actor/store scope"],
+    "isolation": ["actor_id", "actor_role", "store_id", "active scope"],
+    "mutationControls": ["Idempotency-Key", "X-Correlation-ID", "expectedVersion", "non-empty reason", "transactional audit"],
+    "pii": "Store address is operational data; actor phone and workforce PII are not returned by public discovery.",
+    "secrets": "No provider, database, or service secret is accepted from a surface request.",
+    "auditRetention": "Store actions are immutable; correlation and store/time indexes support investigation."
+  },
+  "observability": {
+    "statusContext": "journeys/jrn-004/fullstack-slices",
+    "diagnosticRoute": "/dsh/operator/diagnostics/stores/{storeId}",
+    "auditRoute": "/dsh/operator/stores/{storeId}/audit",
+    "signals": [
+      "publication blocker codes",
+      "HTTP 401/403/404/409/500 counts",
+      "idempotency replay and conflict counts",
+      "operator governance action counts",
+      "field verification rejection reasons",
+      "captain pickup blocked reasons",
+      "public discovery latency and empty result rate"
+    ],
+    "supportEvidence": ["correlationId", "actorRole", "actorId", "storeId", "action", "fromState", "toState", "createdAt"]
+  },
+  "reliability": {
+    "offline": "Surfaces show a non-success state and never synthesize store truth.",
+    "retry": "Retry reuses the same idempotency attempt for an uncertain mutation.",
+    "conflict": "HTTP 409 clears stale attempts and requires reload.",
+    "partial": "Incomplete operational context blocks pickup or publication instead of defaulting to success.",
+    "pagination": "Operator and public lists use validated limit/offset in [1,100]."
+  },
+  "cleanup": {
+    "removed": [
+      "hard-coded client operating hours and popularity summary",
+      "partner profile placeholder phone and documents",
+      "dead image-only publication diagnostics handler",
+      "fixed operator list page of 100 records",
+      "unconsumed operator audit route"
+    ],
+    "forbiddenToReturn": [
+      "local store business truth",
+      "duplicate publication predicates",
+      "runtime mocks or fixtures in production surfaces",
+      "success toast without server readback",
+      "temporary patch workflows or scripts"
+    ],
+    "idempotencyRetention": "expires_at defaults to seven days and is indexed for governed cleanup."
+  },
+  "rollback": {
+    "code": "Revert the exact JRN-004 implementation commits while retaining audit records.",
+    "database": "Drop only JRN-004 indexes/constraints after verifying no dependent query plan or cleanup process; do not delete store or audit data.",
+    "visibilityIncident": "Set marketing_visibility=hidden or is_visible=false through operator governance, record reason, then diagnose before reactivation."
+  },
+  "fsDecision": {
+    "slices": ["FS-04", "FS-08", "FS-13", "FS-15", "FS-16", "FS-18"],
+    "result": "CLOSED_INTERNAL_PENDING_INDEPENDENT_APPROVALS"
+  }
+}

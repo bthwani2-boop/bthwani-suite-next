@@ -1,0 +1,87 @@
+# BThwani DSH OpenAPI schemas module: support.
+# Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
+
+DshTicketStatus:
+  type: string
+  enum: [open, in_review, pending_user, resolved, closed]
+
+DshTicketPriority:
+  type: string
+  enum: [low, normal, high, urgent]
+
+DshSupportTicket:
+  type: object
+  required: [id, storeId, reporterId, reporterRole, subject, description, category, priority, status, assignedTo, orderId, createdAt, updatedAt]
+  properties:
+    id: { type: string }
+    storeId: { type: string }
+    reporterId: { type: string }
+    reporterRole: { type: string }
+    subject: { type: string }
+    description: { type: string }
+    category: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshTicketCategory" }
+    priority: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshTicketPriority" }
+    status: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshTicketStatus" }
+    assignedTo: { type: string }
+    orderId: { type: string }
+    resolvedAt: { type: ["string", "null"], format: date-time }
+    closedAt: { type: ["string", "null"], format: date-time }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+
+DshTicketResponse:
+  type: object
+  required: [ticket]
+  properties:
+    ticket: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshSupportTicket" }
+
+DshTicketsResponse:
+  type: object
+  required: [tickets]
+  properties:
+    tickets:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshSupportTicket" }
+
+DshCreateTicketRequest:
+  type: object
+  required: [subject, description, category]
+  properties:
+    subject: { type: string, minLength: 3 }
+    description: { type: string, minLength: 10 }
+    category: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshTicketCategory" }
+    priority: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshTicketPriority" }
+    storeId: { type: string }
+    orderId: { type: string }
+
+DshUpdateTicketRequest:
+  type: object
+  required: [status]
+  properties:
+    status: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshTicketStatus" }
+    assignedTo: { type: string }
+
+DshSupportMessage:
+  type: object
+  required: [id, ticketId, senderId, senderRole, body, isInternal, createdAt]
+  properties:
+    id: { type: string }
+    ticketId: { type: string }
+    senderId: { type: string }
+    senderRole: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshSenderRole" }
+    body: { type: string }
+    isInternal: { type: boolean }
+    createdAt: { type: string, format: date-time }
+
+DshSupportAnalyticsResponse:
+  type: object
+  required: [totalTickets, openTickets, resolvedTickets, byCategory, period, generatedAt]
+  properties:
+    totalTickets: { type: integer }
+    openTickets: { type: integer }
+    resolvedTickets: { type: integer }
+    byCategory:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshTicketCategoryCount" }
+    period: { type: string }
+    generatedAt: { type: string, format: date-time }

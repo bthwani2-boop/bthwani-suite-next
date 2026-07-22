@@ -196,3 +196,18 @@ export function useOperatorDeliveryPricingController(storeId: string) {
     save,
   } as const;
 }
+
+export function findDeliveryPricing(
+  records: readonly DeliveryPricingRecord[],
+  fulfillmentMode: DeliveryPricingFulfillmentMode,
+): DeliveryPricingRecord | undefined {
+  return records.find((record) => record.fulfillmentMode === fulfillmentMode);
+}
+
+/**
+ * Partner delivery pricing uses the same governed pricing projection and mutation
+ * controller. Backend authorization remains the source of truth for actor scope.
+ */
+export function usePartnerDeliveryPricingController(storeId: string) {
+  return useOperatorDeliveryPricingController(storeId);
+}

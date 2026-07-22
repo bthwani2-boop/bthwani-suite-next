@@ -13,9 +13,12 @@ import {
   CpSelect,
 } from "@bthwani/control-panel/components";
 import {
+  findDeliveryPricing,
   useOperatorDeliveryPricingController,
+  type DeliveryPricingMode,
   type DeliveryPricingRecord,
-} from "../../../shared/partner";
+} from "../../../shared/partner/operator-delivery-pricing.public";
+import { OperatorPartnerFleetPanel } from "./OperatorPartnerFleetPanel";
 
 export type OperatorDeliveryPricingPanelProps = {
   readonly storeId: string;
@@ -27,7 +30,9 @@ type Draft = {
   readonly reason: string;
 };
 
-const MODE_LABEL: Record<DeliveryPricingRecord["fulfillmentMode"], string> = {
+const MODES: readonly DeliveryPricingMode[] = ["bthwani_delivery", "partner_delivery", "pickup"];
+
+const MODE_LABEL: Record<DeliveryPricingMode, string> = {
   bthwani_delivery: "توصيل بثواني",
   partner_delivery: "توصيل المتجر",
   pickup: "استلم بنفسك",
@@ -35,44 +40,45 @@ const MODE_LABEL: Record<DeliveryPricingRecord["fulfillmentMode"], string> = {
 
 export function OperatorDeliveryPricingPanel({ storeId }: OperatorDeliveryPricingPanelProps) {
   const controller = useOperatorDeliveryPricingController(storeId);
-  const [drafts, setDrafts] = React.useState<Record<string, Draft>>({});
+  const [drafts, setDrafts] = React.useState<Record<DeliveryPricingMode, Draft>>({
+    bthwani_delivery: { feeYer: "0", status: "paused", reason: "" },
+    partner_delivery: { feeYer: "0", status: "paused", reason: "" },
+    pickup: { feeYer: "0", status: "active", reason: "" },
+  });
 
   React.useEffect(() => {
-    const next: Record<string, Draft> = {};
-    for (const record of controller.records) {
-      next[record.fulfillmentMode] = {
-        feeYer: String(record.feeMinorUnits / 100),
-        status: record.status,
+    const next = {} as Record<DeliveryPricingMode, Draft>;
+    for (const mode of MODES) {
+      const record = findDeliveryPricing(controller.records, mode);
+      next[mode] = {
+        feeYer: mode === "pickup" ? "0" : String((record?.feeMinorUnits ?? 0) / 100),
+        status: record?.status ?? (mode === "pickup" ? "active" : "paused"),
         reason: "",
       };
     }
     setDrafts(next);
   }, [controller.records]);
 
-  const patchDraft = (mode: string, patch: Partial<Draft>) => {
+  const patchDraft = (mode: DeliveryPricingMode, patch: Partial<Draft>) => {
     setDrafts((current) => ({
       ...current,
-      [mode]: {
-        feeYer: current[mode]?.feeYer ?? "0",
-        status: current[mode]?.status ?? "paused",
-        reason: current[mode]?.reason ?? "",
-        ...patch,
-      },
+      [mode]: { ...current[mode], ...patch },
     }));
   };
 
-  const save = async (record: DeliveryPricingRecord) => {
-    const draft = drafts[record.fulfillmentMode];
-    if (!draft?.reason.trim()) return;
-    const fee = Number(draft.feeYer);
+  const save = async (mode: DeliveryPricingMode) => {
+    const record = findDeliveryPricing(controller.records, mode);
+    const draft = drafts[mode];
+    if (!draft.reason.trim()) return;
+    const fee = mode === "pickup" ? 0 : Number(draft.feeYer);
     if (!Number.isFinite(fee) || fee < 0) return;
     const succeeded = await controller.save(record, {
       feeMinorUnits: Math.round(fee * 100),
       currency: "YER",
-      status: draft.status,
+      status: !record && draft.status === "archived" ? "paused" : draft.status,
       reason: draft.reason.trim(),
-    });
-    if (succeeded) patchDraft(record.fulfillmentMode, { reason: "" });
+    }, mode);
+    if (succeeded) patchDraft(mode, { reason: "" });
   };
 
   if (controller.state.kind === "loading") {
@@ -85,80 +91,86 @@ export function OperatorDeliveryPricingPanel({ storeId }: OperatorDeliveryPricin
       </CpStatePanel>
     );
   }
-  if (controller.state.kind === "empty") {
-    return <CpStatePanel role="status" title="لا توجد سياسات تسعير لهذا المتجر." />;
-  }
 
   return (
-    <section dir="rtl" style={{ display: "grid", gap: "1rem" }}>
-      <div>
-        <h2 style={{ margin: 0, color: colorRoles.brandStructure }}>تسعير تنفيذ الطلب</h2>
-        <p style={{ margin: "0.35rem 0 0", opacity: 0.68 }}>
-          هذه القيم هي المصدر الذي يستخدمه DSH في checkout قبل إرسال الإجمالي إلى WLT. كل تغيير يحتاج سببًا ويُسجل بإصدار جديد.
-        </p>
-      </div>
+    <section dir="rtl" style={{ display: "grid", gap: "2rem" }}>
+      <section style={{ display: "grid", gap: "1rem" }} aria-label="تسعير تنفيذ الطلب">
+        <div>
+          <h2 style={{ margin: 0, color: colorRoles.brandStructure }}>تسعير تنفيذ الطلب</h2>
+          <p style={{ margin: "0.35rem 0 0", opacity: 0.68 }}>
+            هذه القيم هي المصدر الذي يستخدمه DSH في checkout قبل إرسال الإجمالي إلى WLT. كل تغيير يحتاج سببًا ويُسجل بإصدار جديد.
+          </p>
+        </div>
 
-      {controller.mutationError ? <p role="alert" style={{ color: colorRoles.danger }}>{controller.mutationError}</p> : null}
+        {controller.state.kind === "empty" ? (
+          <CpStatePanel role="status" title="لا توجد سياسات مهيأة. أنشئ السياسة الأولى لكل نمط من الجدول أدناه." />
+        ) : null}
+        {controller.mutationError ? <p role="alert" style={{ color: colorRoles.danger }}>{controller.mutationError}</p> : null}
 
-      <CpTable aria-label="سياسات تسعير توصيل المتجر">
-        <thead>
-          <tr>
-            <CpTableHeaderCell>النمط</CpTableHeaderCell>
-            <CpTableHeaderCell>الرسم ر.ي</CpTableHeaderCell>
-            <CpTableHeaderCell>الحالة</CpTableHeaderCell>
-            <CpTableHeaderCell>المصدر</CpTableHeaderCell>
-            <CpTableHeaderCell>الإصدار</CpTableHeaderCell>
-            <CpTableHeaderCell>سبب التغيير</CpTableHeaderCell>
-            <CpTableHeaderCell>الإجراء</CpTableHeaderCell>
-          </tr>
-        </thead>
-        <tbody>
-          {controller.records.map((record) => {
-            const draft = drafts[record.fulfillmentMode];
-            return (
-              <tr key={record.fulfillmentMode}>
-                <CpTableCell>{MODE_LABEL[record.fulfillmentMode]}</CpTableCell>
-                <CpTableCell>
-                  <CpTextInput
-                    value={draft?.feeYer ?? String(record.feeMinorUnits / 100)}
-                    onChange={(value) => patchDraft(record.fulfillmentMode, { feeYer: value })}
-                    aria-label={`رسم ${MODE_LABEL[record.fulfillmentMode]}`}
-                    disabled={record.fulfillmentMode === "pickup"}
-                  />
-                </CpTableCell>
-                <CpTableCell>
-                  <CpSelect
-                    value={draft?.status ?? record.status}
-                    onChange={(value) => patchDraft(record.fulfillmentMode, { status: value as DeliveryPricingRecord["status"] })}
-                    options={[
-                      { value: "active", label: "نشط" },
-                      { value: "paused", label: "موقوف" },
-                      { value: "archived", label: "مؤرشف" },
-                    ]}
-                  />
-                </CpTableCell>
-                <CpTableCell>{record.pricingSource}</CpTableCell>
-                <CpTableCell>{record.version}</CpTableCell>
-                <CpTableCell>
-                  <CpTextInput
-                    value={draft?.reason ?? ""}
-                    onChange={(value) => patchDraft(record.fulfillmentMode, { reason: value })}
-                    placeholder="السبب إلزامي"
-                  />
-                </CpTableCell>
-                <CpTableCell>
-                  <CpButton
-                    disabled={controller.mutationLoading || !draft?.reason.trim()}
-                    onClick={() => void save(record)}
-                  >
-                    {controller.mutationLoading ? "جاري الحفظ…" : "حفظ"}
-                  </CpButton>
-                </CpTableCell>
-              </tr>
-            );
-          })}
-        </tbody>
-      </CpTable>
+        <CpTable aria-label="سياسات تسعير توصيل المتجر">
+          <thead>
+            <tr>
+              <CpTableHeaderCell>النمط</CpTableHeaderCell>
+              <CpTableHeaderCell>الرسم ر.ي</CpTableHeaderCell>
+              <CpTableHeaderCell>الحالة</CpTableHeaderCell>
+              <CpTableHeaderCell>المصدر</CpTableHeaderCell>
+              <CpTableHeaderCell>الإصدار</CpTableHeaderCell>
+              <CpTableHeaderCell>سبب التغيير</CpTableHeaderCell>
+              <CpTableHeaderCell>الإجراء</CpTableHeaderCell>
+            </tr>
+          </thead>
+          <tbody>
+            {MODES.map((mode) => {
+              const record = findDeliveryPricing(controller.records, mode);
+              const draft = drafts[mode];
+              const statusOptions = [
+                { value: "active", label: "نشط" },
+                { value: "paused", label: "موقوف" },
+                ...(record ? [{ value: "archived", label: "مؤرشف" }] : []),
+              ];
+              return (
+                <tr key={mode}>
+                  <CpTableCell>{MODE_LABEL[mode]}</CpTableCell>
+                  <CpTableCell>
+                    <CpTextInput
+                      value={draft.feeYer}
+                      onChange={(value) => patchDraft(mode, { feeYer: value })}
+                      aria-label={`رسم ${MODE_LABEL[mode]}`}
+                      disabled={mode === "pickup"}
+                    />
+                  </CpTableCell>
+                  <CpTableCell>
+                    <CpSelect
+                      value={draft.status}
+                      onChange={(value) => patchDraft(mode, { status: value as DeliveryPricingRecord["status"] })}
+                      options={statusOptions}
+                    />
+                  </CpTableCell>
+                  <CpTableCell>{record?.pricingSource ?? "سيُحدد عند الإنشاء"}</CpTableCell>
+                  <CpTableCell>{record?.version ?? 0}</CpTableCell>
+                  <CpTableCell>
+                    <CpTextInput
+                      value={draft.reason}
+                      onChange={(value) => patchDraft(mode, { reason: value })}
+                      placeholder="السبب إلزامي"
+                    />
+                  </CpTableCell>
+                  <CpTableCell>
+                    <CpButton
+                      disabled={controller.mutationLoading || !draft.reason.trim()}
+                      onClick={() => void save(mode)}
+                    >
+                      {controller.mutationLoading ? "جاري الحفظ…" : record ? "حفظ" : "إنشاء"}
+                    </CpButton>
+                  </CpTableCell>
+                </tr>
+              );
+            })}
+          </tbody>
+        </CpTable>
+      </section>
+
+      <OperatorPartnerFleetPanel storeId={storeId} />
     </section>
   );
 }

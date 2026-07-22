@@ -1,0 +1,255 @@
+{
+  "schemaVersion": 1,
+  "capabilityId": "JRN_021_SUPPORT_INCIDENTS_ORDER_RESCUE",
+  "state": "DISCOVERY",
+  "problem": {
+    "statement": "Support conversations, operational incidents and order rescue require one governed DSH truth instead of disconnected or local-only controls.",
+    "affectedActors": [
+      "client",
+      "partner",
+      "captain",
+      "operator"
+    ],
+    "currentWorkaround": "Operators manually correlate support tickets, incident status and blocked orders across separate screens and informal follow-up.",
+    "frequency": "frequent",
+    "severity": "high",
+    "evidenceState": "QUALITATIVE",
+    "evidenceReferences": [
+      "governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md#jrn-021",
+      "services/dsh/frontend/control-panel/operations/OrderRescueScreen.tsx",
+      "services/dsh/backend/internal/support/incident_governance.go",
+      "services/dsh/backend/internal/support/order_rescue.go"
+    ]
+  },
+  "actors": [
+    {
+      "id": "client",
+      "role": "Customer support requester",
+      "permittedActions": [
+        "create owned support ticket",
+        "read owned support ticket",
+        "send message to owned ticket",
+        "read non-internal messages and attachments"
+      ],
+      "forbiddenActions": [
+        "read another actor ticket",
+        "read internal operator notes",
+        "change incident or rescue state"
+      ]
+    },
+    {
+      "id": "partner",
+      "role": "Store support requester",
+      "permittedActions": [
+        "create support ticket for owned store or order",
+        "read owned support conversation",
+        "send support message"
+      ],
+      "forbiddenActions": [
+        "read another store ticket",
+        "mutate incident or rescue state",
+        "mutate WLT financial truth"
+      ]
+    },
+    {
+      "id": "captain",
+      "role": "Assigned delivery support requester",
+      "permittedActions": [
+        "open support conversation for assigned order",
+        "send delivery support messages",
+        "read owned conversation and attachments"
+      ],
+      "forbiddenActions": [
+        "open conversation for unassigned order",
+        "read internal operator notes",
+        "mutate rescue or financial truth"
+      ]
+    },
+    {
+      "id": "operator",
+      "role": "Authorized support and operations operator",
+      "permittedActions": [
+        "manage support queue",
+        "record incident transitions",
+        "open and resolve order rescue case",
+        "read append-only audit events",
+        "open read-only WLT visibility"
+      ],
+      "forbiddenActions": [
+        "skip expected-state conflict checks",
+        "create local-only rescue state",
+        "mutate WLT ledger or balance from DSH"
+      ]
+    }
+  ],
+  "surfaces": [
+    {
+      "id": "app-client",
+      "required": true,
+      "actors": ["client"],
+      "routesOrScreens": ["support tickets", "support conversation"],
+      "operationIds": ["createDshClientSupportTicket", "addDshClientSupportMessage"],
+      "states": ["loading", "empty", "error", "open", "resolved", "closed", "offline"],
+      "actions": ["create ticket", "send message", "retry", "read attachment"]
+    },
+    {
+      "id": "app-partner",
+      "required": true,
+      "actors": ["partner"],
+      "routesOrScreens": ["partner support", "order support conversation"],
+      "operationIds": ["createDshPartnerSupportTicket", "addDshPartnerSupportMessage"],
+      "states": ["loading", "empty", "error", "open", "resolved", "closed", "offline"],
+      "actions": ["create ticket", "send message", "retry", "read attachment"]
+    },
+    {
+      "id": "app-captain",
+      "required": true,
+      "actors": ["captain"],
+      "routesOrScreens": ["CaptainOrderSupportConversationScreen"],
+      "operationIds": ["createDshActorSupportTicket", "addDshActorSupportMessage"],
+      "states": ["loading", "empty", "error", "open", "resolved", "closed", "offline"],
+      "actions": ["open assigned-order conversation", "send message", "retry"]
+    },
+    {
+      "id": "control-panel",
+      "required": true,
+      "actors": ["operator"],
+      "routesOrScreens": ["SupportDashboardScreen", "OrderRescueScreen"],
+      "operationIds": [
+        "listDshGovernedIncidents",
+        "updateDshGovernedIncident",
+        "listDshOrderRescueCases",
+        "updateDshOrderRescueCase"
+      ],
+      "states": ["loading", "empty", "error", "open", "investigating", "action_required", "resolved", "closed", "conflict"],
+      "actions": ["reply", "transition ticket", "transition incident", "open rescue case", "resolve rescue case", "read audit"]
+    },
+    {
+      "id": "backend",
+      "required": true,
+      "actors": ["client", "partner", "captain", "operator"],
+      "routesOrScreens": ["governed support routes", "governed incident middleware", "order rescue routes"],
+      "operationIds": [
+        "createDshGovernedIncident",
+        "updateDshGovernedIncident",
+        "createDshOrderRescueCase",
+        "updateDshOrderRescueCase"
+      ],
+      "states": ["authorized", "forbidden", "conflict", "not_found", "idempotent_replay"],
+      "actions": ["validate ownership", "enforce transition", "write event", "return readback"]
+    },
+    {
+      "id": "database",
+      "required": true,
+      "actors": ["operator"],
+      "routesOrScreens": ["dsh_support_tickets", "dsh_incidents", "dsh_order_rescue_cases"],
+      "operationIds": [],
+      "states": ["transactional", "constrained", "audited", "idempotent"],
+      "actions": ["persist support truth", "persist incident truth", "persist rescue truth", "append audit event"]
+    },
+    {
+      "id": "shared",
+      "required": true,
+      "actors": ["client", "partner", "captain", "operator"],
+      "routesOrScreens": ["services/dsh/frontend/shared/support"],
+      "operationIds": [],
+      "states": ["loading", "empty", "success", "error", "offline", "conflict"],
+      "actions": ["map contract", "preserve mutation identity", "refresh readback", "classify error"]
+    }
+  ],
+  "outcome": {
+    "statement": "Every support, incident and order rescue action produces one authorized DSH effect and an immediate governed readback without local operational truth.",
+    "primaryMetric": "successful governed readback rate",
+    "guardrailMetrics": [
+      "cross-actor data leakage incidents",
+      "duplicate mutation count",
+      "unresolved conflict count",
+      "DSH-originated WLT mutation count"
+    ],
+    "baselineState": "Incident mutations were legacy CRUD and order rescue was quarantined without backend truth.",
+    "targetState": "Support, incidents and rescue use retry-safe state machines, append-only audit and role-scoped readback.",
+    "observationWindow": "independent QA and runtime verification cycle"
+  },
+  "acceptance": {
+    "criteria": [
+      "Actor support access is owner scoped and internal notes do not leak.",
+      "Support message attachments and read receipts are registered and route-tested.",
+      "Incident mutations require idempotency context and valid expected-state transitions.",
+      "Order rescue cases are linked to a real order and reject duplicate active cases.",
+      "Resolution and closure require operator evidence.",
+      "Incident and rescue audit events are append-only and readable by authorized operators.",
+      "WLT access from rescue is visibility-only and cannot mutate financial truth."
+    ],
+    "failureStates": [
+      "local-only rescue state",
+      "cross-actor support leakage",
+      "duplicate active rescue case",
+      "invalid status transition",
+      "missing audit event",
+      "DSH financial mutation"
+    ],
+    "requiredChecks": [
+      "targeted Go tests",
+      "route registration tests",
+      "OpenAPI registry drift check",
+      "shared support TypeScript typecheck",
+      "control-panel runtime smoke",
+      "role isolation negative tests",
+      "independent product acceptance"
+    ],
+    "runtimeEvidenceRequired": true,
+    "visualEvidenceRequired": true
+  },
+  "invariants": {
+    "business": [
+      "One active rescue case exists per order.",
+      "Every mutation preserves one idempotency key and one correlation identifier.",
+      "All transitions produce immediate readback and an audit event.",
+      "Internal support notes are visible only to authorized operators.",
+      "WLT remains the sole owner of financial truth."
+    ],
+    "negative": [
+      "No actor can read another actor support ticket.",
+      "No closed rescue case can reopen.",
+      "No incident or rescue transition can silently overwrite a stale state.",
+      "No production mock or local array can represent support, incident or rescue truth.",
+      "No DSH rescue action can mutate a WLT ledger, balance, refund or settlement."
+    ]
+  },
+  "owners": {
+    "productManager": "DSH Product Management",
+    "productOwner": "DSH Operations Product Owner",
+    "uxJourneyOwner": "DSH Multi-Surface Experience Owner",
+    "engineeringOwner": "DSH Full-Stack Engineering",
+    "productManagerApproval": "PENDING",
+    "productOwnerApproval": "PENDING",
+    "productAcceptanceDecision": "PENDING"
+  },
+  "execution": {
+    "appetite": "Close JRN-021 code gaps without expanding into financial mutation, production deployment or commercial SaaS activation.",
+    "fixedConstraints": [
+      "Repository mode is REMOTE_ONLY on sambassam.",
+      "DSH shared support owns frontend business coordination.",
+      "WLT remains read-only from order rescue.",
+      "No PR, merge, force push, release or production deployment is authorized."
+    ],
+    "variableScope": [
+      "Operator interaction wording",
+      "Queue filters",
+      "Audit presentation density"
+    ],
+    "forbiddenScope": [
+      "WLT ledger mutation",
+      "production deployment",
+      "commercial SaaS activation",
+      "self-approval of product acceptance"
+    ],
+    "forecastRange": "one sequential journey closure",
+    "confidence": "high",
+    "unknowns": [
+      "Independent product acceptance outcome",
+      "Device and accessibility QA outcome",
+      "Production provider and deployment evidence"
+    ]
+  }
+}

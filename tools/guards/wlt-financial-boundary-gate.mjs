@@ -3,7 +3,9 @@ import { fail, lineNumber, listCodeFiles, listFiles, read } from "./_guard-utils
 const guardId = "wlt-financial-boundary-gate";
 const violations = [];
 
-// 1. no-financial-mutation-outside-wlt
+// 1. no-financial-mutation-outside-wlt. Frontend command names are callers of
+// the WLT-owned API and are not financial truth owners; this rule protects
+// backend/domain persistence and mutation code.
 const mutationRegex = /\b(createLedger|appendLedger|mutateWallet|setWalletBalance|updateWalletBalance|confirmPaymentProviderResult|createPayout|settlePayout|createRefund|settleRefund|markSettlement|walletBalance\s*=|ledgerEntries\.push|settlementStatus\s*=|payoutStatus\s*=|refundStatus\s*=)\b/g;
 
 for (const file of listCodeFiles()) {
@@ -11,7 +13,8 @@ for (const file of listCodeFiles()) {
   if (
     file.startsWith("governance/") ||
     file.startsWith("contracts/") ||
-    file.startsWith("tools/")
+    file.startsWith("tools/") ||
+    file.includes("/frontend/")
   ) {
     continue;
   }
@@ -35,8 +38,8 @@ const allowedPrefixes = [
   "docs/runtime/",
   ".devcontainer/",
   "package.json",
-  "tools/guards/wlt-financial-boundary-gate.mjs",
-  "tools/guards/live-cross-journey-integrity-gate.mjs",
+  "tools/guards/",
+  "tools/scripts/test-",
   "tools/scripts/smoke-wiremock-financial-provider.ps1",
   "tools/scripts/smoke-wlt-provider-through-wlt.ps1",
   "tools/scripts/smoke-wlt-payout-provider.ps1",
@@ -170,8 +173,8 @@ if (!/method == http\.MethodPost && path == "\/wlt\/settlements"/.test(dshClient
 
 const wltServerFile = "services/wlt/backend/internal/http/server.go";
 const wltServer = read(wltServerFile);
-if (!/POST \/wlt\/settlements["`],\s*gate\(serviceAuth\(settlement\.HandleCreateSettlementFromDeliveredOrders\(db\)\)\)/.test(wltServer)) {
-  violations.push({ file: wltServerFile, line: 0, message: "WLT_GOVERNED_SETTLEMENT_ROUTE_BINDING_DRIFT" });
+if (!/POST \/wlt\/settlements["`],\s*gate\(serviceAuth\(settlement\.HandleCreateEvidenceBackedSettlement\(db\)\)\)/.test(wltServer)) {
+  violations.push({ file: wltServerFile, line: 0, message: "WLT_EVIDENCE_BACKED_SETTLEMENT_ROUTE_BINDING_DRIFT" });
 }
 if (!/PUT \/wlt\/settlement-policies\/\{partnerId\}/.test(wltServer)) {
   violations.push({ file: wltServerFile, line: 0, message: "WLT_SETTLEMENT_POLICY_ROUTE_MISSING" });

@@ -1,0 +1,145 @@
+# BThwani DSH OpenAPI schemas module: system.
+# Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
+
+CaptainPickupReadinessRequest:
+  type: object
+  additionalProperties: false
+  required: [expectedVersion, readiness, reason]
+  properties:
+    expectedVersion:
+      type: integer
+      minimum: 1
+    readiness:
+      type: string
+      enum: [ready, blocked]
+    reason:
+      type: string
+      minLength: 3
+      maxLength: 500
+
+DshHealthResponse:
+  type: object
+  required:
+    - service
+    - status
+    - checkedAt
+  properties:
+    service:
+      type: string
+      const: dsh
+    status:
+      type: string
+      enum:
+        - healthy
+    checkedAt:
+      type: string
+      format: date-time
+
+DshReadinessResponse:
+  type: object
+  required:
+    - service
+    - status
+    - dependencies
+    - checkedAt
+  properties:
+    service:
+      type: string
+      const: dsh
+    status:
+      type: string
+      enum:
+        - ready
+        - not_ready
+    dependencies:
+      type: object
+      additionalProperties:
+        type: string
+        enum:
+          - ready
+          - degraded
+          - down
+          - not_configured
+    checkedAt:
+      type: string
+      format: date-time
+
+DshReadinessCheck:
+  type: object
+  required: [id, visitId, storeId, checkType, status, evidenceUrl, notes, verifiedBy, createdAt, updatedAt]
+  properties:
+    id: { type: string }
+    visitId: { type: string }
+    storeId: { type: string }
+    checkType: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshCheckType" }
+    status: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshCheckStatus" }
+    evidenceUrl: { type: string }
+    notes: { type: string }
+    verifiedBy: { type: string }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+
+DshReadinessCheckResponse:
+  type: object
+  required: [check]
+  properties:
+    check: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshReadinessCheck" }
+
+DshReadinessChecksResponse:
+  type: object
+  required: [checks]
+  properties:
+    checks:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshReadinessCheck" }
+
+DshUpsertReadinessCheckRequest:
+  type: object
+  required: [checkType, status]
+  properties:
+    checkType: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshCheckType" }
+    status: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshCheckStatus" }
+    evidenceUrl: { type: string }
+    notes: { type: string }
+
+DshReadinessEscalation:
+  type: object
+  required: [id, visitId, storeId, raisedBy, severity, category, description, status, resolutionNote, createdAt, updatedAt]
+  properties:
+    id: { type: string }
+    visitId: { type: string }
+    storeId: { type: string }
+    raisedBy: { type: string }
+    severity: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshEscalationSeverity" }
+    category: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshEscalationCategory" }
+    description: { type: string }
+    status: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshEscalationStatus" }
+    resolvedBy: { type: string }
+    resolvedAt: { type: ["string", "null"], format: date-time }
+    resolutionNote: { type: string }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+
+DshPartnerReadiness:
+  type: object
+  required: [partnerId, canActivate, canActivatePartner, canPublishStoreToClient, checklist]
+  properties:
+    partnerId: { type: string }
+    canActivate: { type: boolean }
+    canActivatePartner: { type: boolean }
+    canPublishStoreToClient: { type: boolean }
+    blockedReason: { type: string }
+    partnerActivationBlockedReason: { type: string }
+    storePublicationBlockedReason: { type: string }
+    checklist:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshPartnerReadinessItem" }
+
+DshPartnerReadinessItem:
+  type: object
+  required: [id, label, satisfied]
+  properties:
+    id: { type: string }
+    label: { type: string }
+    satisfied: { type: boolean }
+    blockedReason: { type: string }

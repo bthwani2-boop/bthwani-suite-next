@@ -3,6 +3,7 @@ package wlt
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -90,20 +91,28 @@ func TestDeliverFieldCommissionUsesSameBodyAndHeaderIdempotencyKey(t *testing.T)
 	}
 }
 
-func TestActorFinanceMutationRejectsMissingCorrelation(t *testing.T) {
-	called := false
+func TestActorFinanceCodMutationAddsFallbackCorrelation(t *testing.T) {
+	proof := []byte(`{"proofReference":"proof-1"}`)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		called = true
+		requireMutationHeaders(t, r)
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Fatalf("read COD evidence body: %v", err)
+		}
+		if string(body) != string(proof) {
+			t.Fatalf("unexpected COD evidence body %q", body)
+		}
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
 
 	client := NewClient(server.URL, "token")
-	if _, _, err := client.FinanceWriteCodRecord(context.Background(), "cod-1", "collect", ""); err == nil {
-		t.Fatal("expected missing correlation to fail")
+	status, _, err := client.FinanceWriteCodRecord(context.Background(), "cod-1", "collect", proof, "")
+	if err != nil {
+		t.Fatalf("expected governed fallback correlation: %v", err)
 	}
-	if called {
-		t.Fatal("mutation reached network without required correlation")
+	if status != http.StatusOK {
+		t.Fatalf("expected 200, got %d", status)
 	}
 }
 

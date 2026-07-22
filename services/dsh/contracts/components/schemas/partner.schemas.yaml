@@ -1,0 +1,602 @@
+# BThwani DSH OpenAPI schemas module: partner.
+# Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
+
+DshPartnerOperationalScope:
+  type: object
+  required:
+    - scopeId
+    - storeId
+    - partnerId
+    - displayName
+    - role
+    - permissions
+  properties:
+    scopeId: { type: string }
+    storeId: { type: string }
+    partnerId: { type: string }
+    displayName: { type: string }
+    role:
+      type: string
+      enum: [owner, manager, staff]
+    permissions:
+      type: array
+      items:
+        type: string
+
+PartnerStoreSettingsRequest:
+  type: object
+  additionalProperties: false
+  required: [expectedVersion, status, deliveryModes, reason]
+  properties:
+    expectedVersion:
+      type: integer
+      minimum: 1
+    status:
+      $ref: "../../dsh.openapi.yaml#/components/schemas/DshStoreStatus"
+    deliveryModes:
+      type: array
+      minItems: 1
+      uniqueItems: true
+      items:
+        $ref: "../../dsh.openapi.yaml#/components/schemas/DshStoreDeliveryMode"
+    reason:
+      type: string
+      minLength: 3
+      maxLength: 500
+
+DshPartnerPerformanceResponse:
+  type: object
+  required: [storeId, totalOrders, acceptedOrders, rejectedOrders, period, generatedAt]
+  properties:
+    storeId: { type: string }
+    totalOrders: { type: integer }
+    acceptedOrders: { type: integer }
+    rejectedOrders: { type: integer }
+    period: { type: string }
+    generatedAt: { type: string, format: date-time }
+
+DshPartner:
+  type: object
+  required: [id, legalNameAr, displayName, legalIdentityType, legalIdentityNumber, ownerName, primaryPhone, category, activationStatus, version, createdAt, updatedAt]
+  properties:
+    id: { type: string }
+    legalNameAr: { type: string }
+    legalNameEn: { type: string }
+    displayName: { type: string }
+    legalIdentityType: { type: string, enum: [commercial_register, national_id, freelancer_certificate] }
+    legalIdentityNumber: { type: string }
+    ownerName: { type: string }
+    primaryPhone: { type: string }
+    secondaryPhone: { type: string }
+    email: { type: string }
+    category: { type: string, enum: [restaurant, grocery, pharmacy, bakery, default] }
+    activationStatus:
+      type: string
+      enum:
+        - draft
+        - submitted
+        - field_visit_scheduled
+        - field_visit_completed
+        - documents_missing
+        - documents_uploaded
+        - documents_verified
+        - catalog_not_ready
+        - catalog_ready
+        - delivery_modes_not_ready
+        - delivery_modes_ready
+        - ops_review
+        - ops_approved
+        - ops_rejected
+        - partner_active
+        - partner_deactivated
+        - client_visible
+        - client_hidden
+    rejectionReason: { type: string }
+    createdBy: { type: string }
+    assignedFieldAgent: { type: string }
+    # Bank account metadata — Partner-level readiness/metadata captured by
+    # app-field onboarding. Never a WLT mutation; WLT stays the sole owner
+    # of financial truth. Control-panel masks these on display.
+    beneficiaryName: { type: string }
+    bankName: { type: string }
+    bankBranch: { type: string }
+    accountNumber: { type: string }
+    iban: { type: string }
+    payoutMobileNumber: { type: string }
+    settlementPreference: { type: string, enum: ["", bank_transfer, mobile_wallet] }
+    bankAccountHolderMatchesOwner: { type: boolean }
+    bankNotes: { type: string }
+    version: { type: integer }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+
+DshPartnersListResponse:
+  type: object
+  required: [partners, total]
+  properties:
+    partners:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshPartner" }
+    total: { type: integer }
+
+DshPartnerListResponse:
+  type: object
+  required: [partners, pagination]
+  properties:
+    partners:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshPartner" }
+    pagination:
+      type: object
+      required: [total, limit, offset]
+      properties:
+        total: { type: integer }
+        limit: { type: integer }
+        offset: { type: integer }
+
+DshCreatePartnerRequest:
+  type: object
+  required: [legalNameAr, displayName, legalIdentityType, legalIdentityNumber, ownerName, primaryPhone, category]
+  properties:
+    legalNameAr: { type: string, minLength: 1 }
+    legalNameEn: { type: string }
+    displayName: { type: string, minLength: 1 }
+    legalIdentityType: { type: string, enum: [national_id, commercial_registration, other] }
+    legalIdentityNumber: { type: string, minLength: 1 }
+    ownerName: { type: string, minLength: 1 }
+    primaryPhone: { type: string, minLength: 8 }
+    secondaryPhone: { type: string }
+    email: { type: string }
+    category: { type: string, enum: [restaurant, grocery, pharmacy, bakery, other] }
+    createdBy: { type: string }
+    assignedFieldAgent: { type: string }
+    idempotencyKey: { type: string }
+
+DshPartnerTransitionRequest:
+  type: object
+  required: [toStatus]
+  properties:
+    toStatus: { type: string }
+    reason: { type: string }
+    actorId: { type: string }
+    actorSurface: { type: string, enum: [app-field, app-partner, app-captain, control-panel, system] }
+    correlationId: { type: string }
+    version: { type: integer }
+
+DshPartnerTransitionResponse:
+  type: object
+  required: [partner, event]
+  properties:
+    partner: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshPartner" }
+    event: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshPartnerAuditEvent" }
+
+DshPartnerActivationStatus:
+  type: object
+  required: [id, displayName, legalNameAr, category, activationStatus, primaryPhone, createdAt, updatedAt]
+  properties:
+    id: { type: string }
+    displayName: { type: string }
+    legalNameAr: { type: string }
+    category: { type: string }
+    activationStatus: { type: string }
+    primaryPhone: { type: string }
+    email: { type: string }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+
+DshPartnerTeamMember:
+  type: object
+  properties:
+    id: { type: string }
+    name: { type: string }
+    role: { type: string, enum: [owner, supervisor, staff, courier] }
+    roleLabel: { type: string }
+    status: { type: string, enum: [active, paused, invited, blocked, review-needed] }
+    statusLabel: { type: string }
+    branchAssignment: { type: string }
+    permissionsSummary: { type: string }
+    deliveryAssignment: { type: string }
+    inviteLifecycle: { type: string }
+    operationalImpact: { type: string }
+    auditNote: { type: string }
+    inlineActionLabel: { type: string }
+  required: [id, name, role, roleLabel, status, statusLabel, branchAssignment, permissionsSummary, deliveryAssignment, inviteLifecycle, operationalImpact, auditNote, inlineActionLabel]
+
+DshPartnerStoreCourierSettings:
+  type: object
+  properties:
+    courierName: { type: string }
+    courierPhone: { type: string }
+    isActive: { type: boolean }
+    policy: { type: string }
+    pricingSource: { type: string }
+    compensation: { type: string }
+    selectedBranchIds:
+      type: array
+      items: { type: string }
+    version: { type: integer, format: int64 }
+  required: [courierName, courierPhone, isActive, policy, pricingSource, compensation, selectedBranchIds, version]
+
+DshPartnerCoverageZone:
+  type: object
+  properties:
+    id: { type: string }
+    name: { type: string }
+    status: { type: string, enum: [active, pending, blocked] }
+    statusLabel: { type: string }
+    branchRelation: { type: string }
+    serviceModeRelation: { type: string }
+    policySummary: { type: string }
+    policyReason: { type: string }
+    operationalImpact: { type: string }
+    pricingReference: { type: string }
+    commissionReference: { type: string }
+    payoutReference: { type: string }
+    reviewActionLabel: { type: string }
+    auditNote: { type: string }
+  required: [id, name, status, statusLabel, branchRelation, serviceModeRelation, policySummary, policyReason, operationalImpact, pricingReference, commissionReference, payoutReference, reviewActionLabel, auditNote]
+
+DshPartnerDocument:
+  type: object
+  required: [id, partnerId, documentType, documentStatus, uploadedByActorId, mediaRef, version, createdAt, updatedAt]
+  properties:
+    id: { type: string }
+    partnerId: { type: string }
+    documentType:
+      type: string
+      enum: [national_id, commercial_register, lease_agreement, health_certificate, store_photo, owner_photo, other]
+    documentStatus:
+      type: string
+      enum: [pending, under_review, approved, rejected]
+    uploadedByActorId: { type: string }
+    mediaRef: { type: string }
+    notes: { type: string }
+    rejectionReason: { type: string }
+    version: { type: integer }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+
+DshPartnerDocumentsListResponse:
+  type: object
+  required: [documents]
+  properties:
+    documents:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshPartnerDocument" }
+
+DshAddPartnerDocumentRequest:
+  type: object
+  required: [documentType, mediaRef]
+  properties:
+    documentType:
+      type: string
+      enum: [national_id, commercial_register, lease_agreement, health_certificate, store_photo, owner_photo, other]
+    mediaRef: { type: string, minLength: 1 }
+    notes: { type: string }
+
+DshReviewPartnerDocumentRequest:
+  type: object
+  required: [decision]
+  description: reason is mandatory when decision is rejected or needs_resubmit.
+  properties:
+    decision: { type: string, enum: [approved, rejected, needs_resubmit] }
+    reason: { type: string, minLength: 1 }
+
+DshPartnerDocumentReview:
+  type: object
+  required: [id, documentId, partnerId, reviewedByActorId, decision, reason, correlationId, createdAt]
+  properties:
+    id: { type: string }
+    documentId: { type: string }
+    partnerId: { type: string }
+    reviewedByActorId: { type: string }
+    decision: { type: string, enum: [approved, rejected, needs_resubmit] }
+    reason: { type: string }
+    correlationId: { type: string }
+    createdAt: { type: string, format: date-time }
+
+DshPartnerDocumentReviewResponse:
+  type: object
+  required: [document, review]
+  properties:
+    document: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshPartnerDocument" }
+    review: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshPartnerDocumentReview" }
+
+DshPartnerLinkedStore:
+  type: object
+  required: [id, partnerId, slug, displayName, status, isVisible, cityCode, createdAt]
+  properties:
+    id: { type: string }
+    partnerId: { type: string }
+    slug: { type: string }
+    displayName: { type: string }
+    status: { type: string }
+    isVisible: { type: boolean }
+    cityCode: { type: string }
+    createdAt: { type: string, format: date-time }
+
+DshPartnerStoresListResponse:
+  type: object
+  required: [stores, total]
+  properties:
+    stores:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshPartnerLinkedStore" }
+    total: { type: integer }
+
+DshLinkPartnerStoreRequest:
+  type: object
+  required: [storeId]
+  properties:
+    storeId: { type: string, minLength: 1 }
+
+DshPartnerAuditEvent:
+  type: object
+  required: [id, partnerId, fromStatus, toStatus, actorId, actorSurface, createdAt]
+  properties:
+    id: { type: string, format: uuid }
+    partnerId: { type: string }
+    fromStatus: { type: string }
+    toStatus: { type: string }
+    actorId: { type: string }
+    actorSurface: { type: string }
+    reason: { type: string }
+    correlationId: { type: string }
+    createdAt: { type: string, format: date-time }
+
+DshPartnerAuditEventsListResponse:
+  type: object
+  required: [events, total]
+  properties:
+    events:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshPartnerAuditEvent" }
+    total: { type: integer }
+
+DshUpdatePartnerRequest:
+  type: object
+  properties:
+    displayName: { type: string }
+    ownerName: { type: string }
+    primaryPhone: { type: string }
+    secondaryPhone: { type: string }
+    email: { type: string }
+    notes: { type: string }
+    # Bank account metadata (readiness/metadata only — never a WLT mutation).
+    beneficiaryName: { type: string }
+    bankName: { type: string }
+    bankBranch: { type: string }
+    accountNumber: { type: string }
+    iban: { type: string }
+    payoutMobileNumber: { type: string }
+    settlementPreference: { type: string, enum: ["", bank_transfer, mobile_wallet] }
+    bankAccountHolderMatchesOwner: { type: boolean }
+    bankNotes: { type: string }
+
+DshPartnerOffer:
+  type: object
+  required: [id, title, partnerName, storeId, storeLabel, productId, productLabel, category, offerType, status, source, valueLabel, eligibility, version, createdBy, createdBySurface, createdAt, updatedAt]
+  properties:
+    id: { type: string }
+    title: { type: string }
+    partnerName: { type: string }
+    storeId: { type: string }
+    storeLabel: { type: string }
+    productId: { type: string }
+    productLabel: { type: string }
+    category: { type: string }
+    offerType: { type: string, enum: [discount, free-delivery, bundle, buy-x-get-y, coupon] }
+    status: { type: string, enum: [inbound, review, marketing-ready, published, paused, rejected, archived] }
+    source: { type: string, enum: [partner, control-panel] }
+    valueLabel: { type: string }
+    eligibility: { type: string }
+    activeFromDate: { type: string }
+    activeToDate: { type: string }
+    rejectionReason: { type: string }
+    marginRiskNote: { type: string }
+    version: { type: integer }
+    linkedCampaignId: { type: string }
+    createdBy: { type: string }
+    createdBySurface: { type: string }
+    createdAt: { type: string }
+    updatedAt: { type: string }
+
+DshPartnerOffersListResponse:
+  type: object
+  required: [offers]
+  properties:
+    offers:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshPartnerOffer" }
+
+DshPartnerOfferResponse:
+  type: object
+  required: [offer]
+  properties:
+    offer: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshPartnerOffer" }
+
+DshUpdatePartnerOfferRequest:
+  type: object
+  properties:
+    status: { type: string, enum: [inbound, review, marketing-ready, published, paused, rejected, archived] }
+    title: { type: string, minLength: 1 }
+    valueLabel: { type: string, minLength: 1 }
+    eligibility: { type: string }
+    activeFromDate: { type: string }
+    activeToDate: { type: string }
+    rejectionReason: { type: string }
+    marginRiskNote: { type: string }
+
+DshSubmitPartnerOfferRequest:
+  type: object
+  required: [title, valueLabel]
+  properties:
+    title: { type: string, minLength: 1 }
+    partnerName: { type: string }
+    storeLabel: { type: string }
+    productId: { type: string }
+    productLabel: { type: string }
+    category: { type: string }
+    offerType: { type: string, enum: [discount, free-delivery, bundle, buy-x-get-y, coupon] }
+    valueLabel: { type: string, minLength: 1 }
+    eligibility: { type: string }
+# ── Platform Policies Schemas ────────────────────────────────────
+
+DshPartnerActivation:
+  type: object
+  required: [partnerId, status, submittedAt]
+  properties:
+    partnerId: { type: string }
+    status: { type: string }
+    submittedAt: { type: string, format: date-time }
+    reviewedAt: { type: ["string", "null"], format: date-time }
+    reviewedBy: { type: string }
+    rejectionReason: { type: string }
+
+DshPartnerActivationsListResponse:
+  type: object
+  required: [partners, total]
+  properties:
+    partners:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshPartnerActivation" }
+    total: { type: integer }
+
+DshActivatePartnerRequest:
+  type: object
+  required: [note]
+  properties:
+    note: { type: string }
+
+DshBlockPartnerRequest:
+  type: object
+  required: [reason]
+  properties:
+    reason: { type: string, minLength: 1 }
+
+DshPartnerDeliveryTaskStatus:
+  type: string
+  enum:
+    - unassigned
+    - assigned
+    - departed
+    - arrived
+    - proof_pending
+    - completed
+    - cancelled
+    - exception
+
+DshPartnerDeliveryTask:
+  type: object
+  required:
+    - id
+    - orderId
+    - storeId
+    - branchId
+    - storeCourierId
+    - status
+    - version
+    - createdAt
+    - updatedAt
+  properties:
+    id: { type: string }
+    orderId: { type: string }
+    storeId: { type: string }
+    branchId: { type: string }
+    storeCourierId: { type: string }
+    status:
+      $ref: "../../dsh.openapi.yaml#/components/schemas/DshPartnerDeliveryTaskStatus"
+    assignedAt: { type: ["string", "null"], format: date-time }
+    pickedUpAt: { type: ["string", "null"], format: date-time }
+    departedAt: { type: ["string", "null"], format: date-time }
+    arrivedAt: { type: ["string", "null"], format: date-time }
+    proofMethod: { type: ["string", "null"] }
+    proofReference: { type: ["string", "null"] }
+    completedAt: { type: ["string", "null"], format: date-time }
+    version: { type: integer }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+
+DshPartnerDeliveryTaskResponse:
+  type: object
+  required: [task]
+  properties:
+    task:
+      $ref: "../../dsh.openapi.yaml#/components/schemas/DshPartnerDeliveryTask"
+
+DshPartnerDeliveryStateResponse:
+  type: object
+  additionalProperties: false
+  required: [task, stage]
+  properties:
+    task:
+      oneOf:
+        - $ref: "../../dsh.openapi.yaml#/components/schemas/DshPartnerDeliveryTask"
+        - type: "null"
+    stage:
+      type: string
+      description: task.status when a task exists, or "unassigned" before assignment.
+
+DshPartnerDeliveryTaskListResponse:
+  type: object
+  required: [tasks]
+  properties:
+    tasks:
+      type: array
+      items:
+        $ref: "../../dsh.openapi.yaml#/components/schemas/DshPartnerDeliveryTask"
+
+DshPartnerDeliveryMutationRequest:
+  type: object
+  required: [expectedVersion, commandId]
+  properties:
+    expectedVersion: { type: integer }
+    commandId: { type: string }
+    correlationId: { type: string }
+    reason: { type: string }
+
+DshAssignPartnerDeliveryTaskRequest:
+  allOf:
+    - $ref: "../../dsh.openapi.yaml#/components/schemas/DshPartnerDeliveryMutationRequest"
+    - type: object
+      required: [storeCourierId]
+      properties:
+        storeCourierId: { type: string }
+
+DshSubmitPartnerDeliveryProofRequest:
+  allOf:
+    - $ref: "../../dsh.openapi.yaml#/components/schemas/DshPartnerDeliveryMutationRequest"
+    - type: object
+      required: [proofMethod]
+      properties:
+        proofMethod: { type: string }
+        proofReference: { type: string }
+
+DshRaisePartnerDeliveryExceptionRequest:
+  allOf:
+    - $ref: "../../dsh.openapi.yaml#/components/schemas/DshPartnerDeliveryMutationRequest"
+    - type: object
+      required: [reason]
+      properties:
+        reason: { type: string }
+
+DshPartnerPickupStage:
+  type: string
+  enum: [not_ready, ready, notified, customer_arrived, verified, no_show, cancelled]
+  description: Resumable partner pickup stage derived by DSH from order, session, and audit truth.
+
+DshPartnerPickupStateResponse:
+  type: object
+  additionalProperties: false
+  required: [session, stage]
+  properties:
+    session:
+      oneOf:
+        - $ref: "../../dsh.openapi.yaml#/components/schemas/DshPickupSession"
+        - type: "null"
+    stage: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshPartnerPickupStage" }
+
+DshPartnerOrderAction:
+  type: string
+  description: Server-authoritative action currently executable by the authenticated partner.
+  enum: [accept, reject, prepare, ready, revise_estimate, report_issue, resolve_issue, handoff]

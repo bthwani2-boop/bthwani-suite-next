@@ -74,12 +74,17 @@ func TestGovernedChangeSetApplyAndRollback(t *testing.T) {
 	if err != nil || validated.Status != ChangeSetValidated {
 		t.Fatalf("validate change set: status=%s err=%v", validated.Status, err)
 	}
+	for _, item := range validated.Items {
+		if item.ValidatedRevision == nil || item.ItemValidatedAt == nil {
+			t.Fatalf("validation snapshot missing for %s", item.TargetKey)
+		}
+	}
 	submitted, err := service.SubmitChangeSet(ctx, created.ID, "operator-1", []string{"platform-operator"}, "integration-change-1")
 	if err != nil || submitted.Status != ChangeSetSubmitted {
 		t.Fatalf("submit change set: status=%s err=%v", submitted.Status, err)
 	}
 
-	if _, err := service.ApproveChangeSet(ctx, created.ID, "operator-1", []string{"platform-operator"}, "integration-change-1"); !errors.Is(err, ErrMakerChecker) {
+	if _, err := service.ApproveChangeSet(ctx, created.ID, "operator-1", []string{"platform-operator"}, "integration-change-1"); !errors.Is(err, ErrMakerCheckerReview) {
 		t.Fatalf("expected maker-checker rejection, got %v", err)
 	}
 
@@ -110,9 +115,8 @@ func TestGovernedChangeSetApplyAndRollback(t *testing.T) {
 		t.Fatalf("expected five committed audit events, got %d err=%v", len(events), err)
 	}
 
-	rolledBack, err := service.RollbackChangeSet(ctx, created.ID, "applier-1", []string{"platform-applier"}, "integration-change-1")
-	if err != nil || rolledBack.Status != ChangeSetRolledBack {
-		t.Fatalf("rollback change set: status=%s err=%v", rolledBack.Status, err)
+	if _, err := service.RollbackChangeSet(ctx, created.ID, "applier-1", []string{"platform-applier"}, "integration-change-1", "restore verified baseline"); err != nil {
+		t.Fatalf("rollback change set: %v", err)
 	}
 	if _, err := service.GetVariable(ctx, "DSH_DISPATCH_LIMITS", "global", ""); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("expected newly created variable to be removed by rollback, got %v", err)
@@ -122,7 +126,7 @@ func TestGovernedChangeSetApplyAndRollback(t *testing.T) {
 		t.Fatalf("expected newly created flag to be removed by rollback, flags=%#v err=%v", flags, err)
 	}
 	events, err = service.AuditEvents(ctx)
-	if err != nil || len(events) != 6 || events[0].Action != "change_set_rolled_back" {
+	if err != nil || len(events) != 6 || events[0].Action != "change_set_rolled_back" || events[0].Reason != "restore verified baseline" {
 		t.Fatalf("unexpected rollback audit trail: events=%#v err=%v", events, err)
 	}
 }

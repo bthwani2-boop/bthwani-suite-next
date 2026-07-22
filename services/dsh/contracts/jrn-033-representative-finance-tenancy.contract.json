@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "capabilityId": "JRN_033_REPRESENTATIVE_FINANCE_TENANCY",
+  "parentContract": "services/dsh/contracts/jrn-033-representative-finance.openapi.yaml",
+  "truthOwner": "WLT",
+  "tenantBoundary": {
+    "source": "core.identity.session.tenantId",
+    "clientSuppliedTenantAccepted": false,
+    "description": "The tenant is derived from the authenticated Identity session and forwarded server-to-server by DSH. Browser query, path, and header values cannot select the WLT tenant.",
+    "walletLookupKey": ["tenant_id", "actor_type", "actor_id"],
+    "ledgerLookupKey": ["tenant_id", "actor_type", "actor_id"],
+    "crossTenantWalletBehavior": "NOT_FOUND",
+    "crossTenantLedgerBehavior": "EMPTY_COLLECTION"
+  },
+  "invariants": [
+    "Self-service representative finance uses the actor and tenant resolved from the bearer session.",
+    "Control-panel representative finance uses the operator tenant resolved from the bearer session.",
+    "DSH forwards X-Tenant-ID only from trusted Identity context.",
+    "WLT rejects representative wallet and ledger reads without X-Tenant-ID.",
+    "No frontend can override actorId, actorType, or tenantId for a self-service financial read.",
+    "WLT remains the sole owner of wallet balance and ledger truth."
+  ],
+  "negativeEvidence": [
+    "anonymous request rejected",
+    "cross-role request rejected",
+    "unsupported representative actor rejected",
+    "cross-tenant wallet hidden as not found",
+    "cross-tenant ledger hidden as empty",
+    "direct browser-style WLT call rejected",
+    "DSH and frontend balance mutation absent"
+  ]
+}

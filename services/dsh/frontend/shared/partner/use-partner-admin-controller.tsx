@@ -16,8 +16,19 @@ import type {
 } from "./partner.states";
 import { buildPartnerListRowViewModel, buildPartnerDetailViewModel, buildPartnerReadinessViewModel } from "./partner.view-model";
 
+type PartnerControllerError = {
+  readonly status?: number;
+  readonly kind?: string;
+};
+
+function isNetworkError(err: unknown): boolean {
+  const e = err as PartnerControllerError;
+  return e?.kind === "network" || e?.status === 0;
+}
+
 function resolveErrorMessage(err: unknown): string {
-  const e = err as { status?: number };
+  const e = err as PartnerControllerError;
+  if (isNetworkError(err)) return "تعذر الوصول إلى DSH. تحقق من الاتصال ثم أعد المحاولة";
   if (e?.status === 401) return "جلسة منتهية — يرجى تسجيل الدخول مجدداً";
   if (e?.status === 403) return "غير مصرح لك بهذه العملية";
   if (e?.status === 404) return "الشريك غير موجود";
@@ -56,7 +67,9 @@ export function usePartnerAdminController(authKind: string) {
         : { kind: "success", partners, total, page: p });
       return true;
     } catch (err) {
-      setListState({ kind: "error", message: resolveErrorMessage(err) });
+      setListState(isNetworkError(err)
+        ? { kind: "offline" }
+        : { kind: "error", message: resolveErrorMessage(err) });
       return false;
     }
   }, [isAuth]);
@@ -73,7 +86,7 @@ export function usePartnerAdminController(authKind: string) {
       setDetailState({ kind: "success", partner });
       return true;
     } catch (err) {
-      const e = err as { status?: number };
+      const e = err as PartnerControllerError;
       if (e?.status === 404) setDetailState({ kind: "not_found" });
       else if (e?.status === 403) setDetailState({ kind: "forbidden" });
       else setDetailState({ kind: "error", message: resolveErrorMessage(err) });
@@ -104,7 +117,7 @@ export function usePartnerAdminController(authKind: string) {
       await loadList(filters, page);
       return partner;
     } catch (err) {
-      const e = err as { status?: number };
+      const e = err as PartnerControllerError;
       if (e?.status === 422) {
         setMutationState({ kind: "invalid_transition", message: "الانتقال غير مسموح من الحالة الحالية" });
       } else if (e?.status === 409) {
@@ -252,8 +265,9 @@ export function usePartnerDetailController(partnerId: string, authKind: string) 
       setDetailState({ kind: "success", partner });
       return true;
     } catch (err) {
-      const e = err as { status?: number };
+      const e = err as PartnerControllerError;
       if (e?.status === 404) setDetailState({ kind: "not_found" });
+      else if (e?.status === 403) setDetailState({ kind: "forbidden" });
       else setDetailState({ kind: "error", message: resolveErrorMessage(err) });
       return false;
     }
@@ -269,11 +283,11 @@ export function usePartnerDetailController(partnerId: string, authKind: string) 
       setMutationState({ kind: "idle" });
       return true;
     } catch (err) {
-      const e = err as { status?: number };
+      const e = err as PartnerControllerError;
       if (e?.status === 422) {
-        setMutationState({ kind: "error", message: "invalid_transition" });
+        setMutationState({ kind: "invalid_transition", message: "الانتقال غير مسموح من الحالة الحالية" });
       } else if (e?.status === 409) {
-        setMutationState({ kind: "error", message: "version_conflict" });
+        setMutationState({ kind: "version_conflict" });
       } else {
         setMutationState({ kind: "error", message: resolveErrorMessage(err) });
       }

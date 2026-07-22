@@ -1,0 +1,44 @@
+openapi: 3.1.0
+info:
+  title: BThwani DSH Store Operational Context Overlay
+  version: 1.0.0
+  description: Required operational context returned with DshStoreDetail for public detail, actor-scoped store context, and operator detail readback.
+x-bthwani-owner: services/dsh
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-contract-role: SCHEMA_OVERLAY
+x-bthwani-overlay-target:
+  contract: dsh.openapi.yaml
+  schema: DshStoreDetail
+  operations:
+    - getDshStore
+    - getDshStoreContext
+    - getDshOperatorStoreDetail
+x-bthwani-client-generation: DISABLED
+x-bthwani-client-binding: MANUAL_TYPED_ADAPTER
+x-bthwani-runtime-dependency: true
+
+paths: {}
+
+components:
+  schemas:
+    DshStoreOperationalContext:
+      type: object
+      additionalProperties: false
+      required:
+        - addressLine
+        - coverageSummary
+        - operatingHours
+        - deliveryReadiness
+      properties:
+        addressLine:
+          type: string
+          minLength: 1
+        coverageSummary:
+          type: string
+          minLength: 1
+        operatingHours:
+          type: string
+          minLength: 1
+        deliveryReadiness:
+          type: string
+          minLength: 1

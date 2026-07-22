@@ -13,6 +13,7 @@ import {
   fetchFieldStoreAssortment,
   createFieldProductProposal,
 } from "../catalog/central-catalog.api";
+import { fetchFieldProductProposals } from "../catalog/product-proposal-readback.api";
 import { upsertFieldStoreAssortmentOCC } from "../catalog/central-catalog-occ.api";
 import type {
   CentralCatalogDomain,
@@ -77,12 +78,16 @@ export function useFieldCatalogController(partnerId: string) {
     if (!partnerId) return;
     setStoreState({ kind: "loading" });
     try {
-      const { storeId, store } = await fieldGetPartnerStore(partnerId);
-      const currentAssortment = await fetchFieldStoreAssortment(partnerId);
+      const [{ storeId, store }, currentAssortment, proposalPage] = await Promise.all([
+        fieldGetPartnerStore(partnerId),
+        fetchFieldStoreAssortment(partnerId),
+        fetchFieldProductProposals(partnerId, { limit: 100, offset: 0 }),
+      ]);
       if (currentAssortment.storeId !== storeId) {
         throw new Error("field catalog store scope mismatch");
       }
       setAssortmentItems(currentAssortment.assortment);
+      setProposals(proposalPage.items);
       setStoreState({ kind: "success", storeId, store });
     } catch {
       setStoreState({ kind: "error", message: "تعذر تحميل متجر الشريك" });
@@ -160,7 +165,7 @@ export function useFieldCatalogController(partnerId: string) {
           imageObjectKey: input.imageObjectKey || null,
           sourceSurface: "app-field",
         });
-        setProposals((prev) => [proposal, ...prev]);
+        setProposals((prev) => [proposal, ...prev.filter((item) => item.id !== proposal.id)]);
         setActionState({ kind: "idle" });
         return proposal;
       } catch {

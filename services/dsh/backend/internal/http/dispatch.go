@@ -222,7 +222,7 @@ func writeDeliveryExceptionError(w http.ResponseWriter, err error) {
 func marshalDeliveryException(item *dispatch.DeliveryException) map[string]any {
 	return map[string]any{
 		"id": item.ID, "tenantId": item.TenantID, "assignmentId": item.AssignmentID,
-		"orderId": item.OrderID, "captainId": item.CaptainID,
+		"orderId": item.OrderID, "specialRequestId": item.SpecialRequestID, "captainId": item.CaptainID,
 		"reasonCode": string(item.ReasonCode), "note": item.Note,
 		"deliveryStatusAtReport": string(item.DeliveryStatusAtReport),
 		"severity":               string(item.Severity), "status": string(item.Status),
@@ -287,6 +287,8 @@ func (s *protectedStoreServer) handleResolveDeliveryException(w http.ResponseWri
 		item, err = dispatch.ResolveDeliveryExceptionReassignCaptain(s.db, r.PathValue("exceptionId"), body.ExpectedVersion, body.NewCaptainID, body.Note, actor.ID)
 	case "return_to_store":
 		item, err = dispatch.ResolveDeliveryExceptionReturnToStore(s.db, r.PathValue("exceptionId"), body.ExpectedVersion, body.Note, actor.ID)
+	case "cancel_order":
+		item, err = dispatch.ResolveDeliveryExceptionCancelOrder(s.db, r.PathValue("exceptionId"), body.ExpectedVersion, body.Note, actor.ID)
 	default:
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "unsupported delivery exception resolution action")
 		return
@@ -320,6 +322,42 @@ func (s *protectedStoreServer) handleGetClientTracking(w http.ResponseWriter, r 
 	}
 	assignment, err := dispatch.GetClientTracking(s.db, r.PathValue("orderId"), actor.ID)
 	s.writeDispatchResult(w, http.StatusOK, assignment, err)
+}
+
+// GET /dsh/partner/orders/{orderId}/dispatch-tracking
+//
+// JRN-017 restricts the partner to a reference status read: no captain
+// location, no PoD reference — those stay client/operator/captain-only.
+func (s *protectedStoreServer) handleGetPartnerDispatchTracking(w http.ResponseWriter, r *http.Request) {
+	_, ownedOrder, ok := s.partnerOrder(w, r)
+	if !ok {
+		return
+	}
+	assignment, err := dispatch.GetPartnerTracking(s.db, ownedOrder.ID, ownedOrder.StoreID)
+	switch {
+	case err == nil:
+		store.SendJSON(w, http.StatusOK, map[string]any{"assignment": marshalDispatchAssignmentForPartner(*assignment)})
+	case errors.Is(err, dispatch.ErrNotFound):
+		store.SendJSON(w, http.StatusOK, map[string]any{"assignment": nil})
+	case errors.Is(err, dispatch.ErrInvalid):
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+	default:
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "dispatch operation failed")
+	}
+}
+
+func marshalDispatchAssignmentForPartner(a dispatch.Assignment) map[string]any {
+	return map[string]any{
+		"id":             a.ID,
+		"orderId":        a.OrderID,
+		"captainId":      a.CaptainID,
+		"status":         string(a.Status),
+		"acceptedAt":     a.AcceptedAt,
+		"completedAt":    a.CompletedAt,
+		"createdAt":      a.CreatedAt,
+		"updatedAt":      a.UpdatedAt,
+		"deliveryStatus": string(a.Delivery.Status),
+	}
 }
 
 func (s *protectedStoreServer) writeDispatchResult(w http.ResponseWriter, status int, assignment *dispatch.Assignment, err error) {

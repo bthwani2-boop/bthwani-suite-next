@@ -1,18 +1,50 @@
+import { getIdentityAccessToken } from "@bthwani/core-identity";
+
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
-import { createDshHttpClient } from "../_kernel/dsh-http-request";
+import { corrId, createDshHttpClient } from "../_kernel/dsh-http-request";
 import type {
   DshAnalyticsPeriod,
+  DshAnalyticsWindowInput,
   DshPlatformKpis,
   DshOrderAnalytics,
   DshDeliveryAnalytics,
   DshSupportAnalytics,
   DshStoreAnalytics,
   DshPartnerPerformance,
+  DshPreparationSlaAnalytics,
+  DshCaptainPerformanceAnalytics,
+  DshFieldPerformanceAnalytics,
+  DshOperationalAnalyticsDrilldown,
+  WltAnalyticsFinancialSnapshot,
 } from "./analytics.types";
 
-const { request: rawRequest } = createDshHttpClient(resolveDshApiBaseUrl(), "analytics", 12000);
+const baseUrl = resolveDshApiBaseUrl();
+const { request: rawRequest } = createDshHttpClient(baseUrl, "analytics", 12000);
 async function request<T>(path: string): Promise<T> {
   return rawRequest<T>(path);
+}
+
+function queryString(values: Record<string, string | number | undefined>): string {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(values)) {
+    if (value !== undefined && value !== "") params.set(key, String(value));
+  }
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}
+
+function analyticsWindowValues(window: DshAnalyticsWindowInput): Record<string, string | undefined> {
+  if (window.period) {
+    return { period: window.period };
+  }
+  return { from: window.from, to: window.to };
+}
+
+function resolveAnalyticsUrl(path: string): string | URL {
+  if (baseUrl.startsWith("/")) {
+    return `${baseUrl.replace(/\/$/, "")}/${path.replace(/^\//, "")}`;
+  }
+  return new URL(path, baseUrl);
 }
 
 export async function fetchPlatformKpis(period: DshAnalyticsPeriod = "today"): Promise<DshPlatformKpis> {
@@ -37,4 +69,93 @@ export async function fetchStoreAnalytics(): Promise<DshStoreAnalytics> {
 
 export async function fetchPartnerPerformance(period: DshAnalyticsPeriod = "today"): Promise<DshPartnerPerformance> {
   return request<DshPartnerPerformance>(`/dsh/partner/analytics/performance?period=${period}`);
+}
+
+export async function fetchPreparationSlaAnalytics(
+  window: DshAnalyticsWindowInput,
+  storeId?: string,
+): Promise<DshPreparationSlaAnalytics> {
+  return request<DshPreparationSlaAnalytics>(
+    `/dsh/operator/analytics/preparation-sla${queryString({ ...analyticsWindowValues(window), storeId })}`,
+  );
+}
+
+export async function fetchCaptainPerformanceAnalytics(
+  window: DshAnalyticsWindowInput,
+  limit = 25,
+): Promise<DshCaptainPerformanceAnalytics> {
+  return request<DshCaptainPerformanceAnalytics>(
+    `/dsh/operator/analytics/captains${queryString({ ...analyticsWindowValues(window), limit })}`,
+  );
+}
+
+export async function fetchFieldPerformanceAnalytics(
+  window: DshAnalyticsWindowInput,
+  limit = 25,
+): Promise<DshFieldPerformanceAnalytics> {
+  return request<DshFieldPerformanceAnalytics>(
+    `/dsh/operator/analytics/field${queryString({ ...analyticsWindowValues(window), limit })}`,
+  );
+}
+
+export async function fetchOrderAnalyticsDrilldown(
+  window: DshAnalyticsWindowInput,
+  filters: { storeId?: string; status?: string; limit?: number } = {},
+): Promise<DshOperationalAnalyticsDrilldown> {
+  return request<DshOperationalAnalyticsDrilldown>(
+    `/dsh/operator/analytics/drill-down/orders${queryString({
+      ...analyticsWindowValues(window),
+      storeId: filters.storeId,
+      status: filters.status,
+      limit: filters.limit ?? 25,
+    })}`,
+  );
+}
+
+export async function fetchFinancialAnalyticsSnapshot(): Promise<WltAnalyticsFinancialSnapshot> {
+  const envelope = await request<{ financialSnapshot: WltAnalyticsFinancialSnapshot }>(
+    "/dsh/operator/analytics/financial-snapshot",
+  );
+  return envelope.financialSnapshot;
+}
+
+export function buildOperationalAnalyticsExportUrl(window: DshAnalyticsWindowInput): string {
+  const normalizedBase = baseUrl.replace(/\/$/, "");
+  return `${normalizedBase}/dsh/operator/analytics/export.csv${queryString(analyticsWindowValues(window))}`;
+}
+
+export async function fetchOperationalAnalyticsExport(window: DshAnalyticsWindowInput): Promise<Blob> {
+  const cookieMode = baseUrl.startsWith("/");
+  const token = cookieMode ? undefined : getIdentityAccessToken();
+  if (!cookieMode && !token) {
+    throw { kind: "http", status: 401, message: "missing identity access token" };
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(
+      resolveAnalyticsUrl(`/dsh/operator/analytics/export.csv${queryString(analyticsWindowValues(window))}`),
+      {
+        method: "GET",
+        headers: {
+          Accept: "text/csv",
+          "X-Correlation-ID": corrId("analytics-export"),
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        ...(cookieMode ? { credentials: "include" as const } : {}),
+        signal: AbortSignal.timeout(30000),
+      },
+    );
+  } catch (error) {
+    throw {
+      kind: "network",
+      message: error instanceof Error ? error.message : "analytics export network error",
+    };
+  }
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    throw { kind: "http", status: response.status, body };
+  }
+  return response.blob();
 }

@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "journeyId": "JRN-001",
+  "sliceId": "FS-15",
+  "serviceOwner": "DSH partner onboarding",
+  "slos": [
+    { "id": "partner-read-p95", "objective": "p95 <= 500ms", "window": "30d" },
+    { "id": "partner-mutation-success", "objective": ">= 99.5% excluding governed 4xx", "window": "30d" },
+    { "id": "partner-outbox-age", "objective": "oldest pending <= 5m", "window": "rolling" },
+    { "id": "wlt-payout-handoff", "objective": ">= 99.0% within 2 attempts", "window": "30d" },
+    { "id": "publication-gate-violations", "objective": "0", "window": "continuous" }
+  ],
+  "metrics": [
+    "dsh_partner_mutation_total",
+    "dsh_partner_mutation_duration_seconds",
+    "dsh_partner_readiness_block_total",
+    "dsh_partner_version_conflict_total",
+    "dsh_partner_idempotency_conflict_total",
+    "dsh_partner_wlt_outbox_pending",
+    "dsh_partner_wlt_outbox_oldest_seconds",
+    "dsh_partner_publication_gate_reject_total"
+  ],
+  "requiredDimensions": ["operation", "result", "actorSurface", "tenant", "correlationIdPresent"],
+  "alerts": [
+    { "id": "partner-outbox-stalled", "condition": "oldest pending > 5m", "severity": "high" },
+    { "id": "partner-mutation-error-burst", "condition": "5xx ratio > 2% for 10m", "severity": "high" },
+    { "id": "partner-publication-gate-bypass", "condition": "count > 0", "severity": "critical" },
+    { "id": "partner-conflict-spike", "condition": "409 ratio > 10% for 15m", "severity": "medium" }
+  ],
+  "runbook": "governance/runbooks/JRN-001_PARTNER_ONBOARDING_SUPPORT.md"
+}

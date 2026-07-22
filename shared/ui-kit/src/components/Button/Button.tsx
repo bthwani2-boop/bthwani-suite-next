@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { Platform } from "react-native";
 import { Spinner } from "tamagui";
 import { StyledButton } from "../_shared";
 
@@ -46,16 +47,36 @@ export function Button({
   style
 }: ButtonProps) {
   const resolvedDisabled = Boolean(disabled || loading);
+  const resolvedAccessibilityState = {
+    ...accessibilityState,
+    disabled: resolvedDisabled,
+    busy: loading
+  };
+  const accessibilityProps = Platform.OS === "web"
+    ? {
+        role: "button",
+        ...(accessibilityLabel ? { "aria-label": accessibilityLabel } : {}),
+        "aria-disabled": resolvedDisabled,
+        "aria-busy": loading,
+        ...(accessibilityState?.expanded === undefined
+          ? {}
+          : { "aria-expanded": accessibilityState.expanded }),
+        ...(accessibilityState?.selected === undefined
+          ? {}
+          : { "aria-pressed": accessibilityState.selected }),
+        ...(accessibilityState?.checked === undefined
+          ? {}
+          : { "aria-checked": accessibilityState.checked })
+      }
+    : {
+        accessibilityRole: "button",
+        accessibilityLabel,
+        accessibilityState: resolvedAccessibilityState
+      };
 
   return (
     <StyledButton
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
-      accessibilityState={{
-        ...accessibilityState,
-        disabled: resolvedDisabled,
-        busy: loading
-      }}
+      {...accessibilityProps}
       disabled={resolvedDisabled}
       uiSize={size}
       icon={loading ? <Spinner size="small" color="currentColor" /> : leading}

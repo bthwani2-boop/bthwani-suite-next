@@ -1,0 +1,105 @@
+name: Temporary Backend Diagnostic
+
+on:
+  push:
+    branches: [sambassam]
+    paths:
+      - ".github/workflows/tmp-backend-diagnostic.yml"
+  pull_request:
+    branches: [master]
+    paths:
+      - ".github/workflows/tmp-backend-diagnostic.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: temporary-backend-diagnostic-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  dsh:
+    name: Capture DSH diagnostics
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: services/dsh/backend/go.sum
+      - name: Capture DSH test and build
+        shell: bash
+        working-directory: services/dsh/backend
+        run: |
+          set +e
+          go test ./... -count=1 > "${GITHUB_WORKSPACE}/dsh-diagnostic.log" 2>&1
+          test_exit=$?
+          go build ./... >> "${GITHUB_WORKSPACE}/dsh-diagnostic.log" 2>&1
+          build_exit=$?
+          printf '\ngo_test_exit=%s\ngo_build_exit=%s\n' "${test_exit}" "${build_exit}" >> "${GITHUB_WORKSPACE}/dsh-diagnostic.log"
+          exit 0
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: dsh-diagnostic
+          path: dsh-diagnostic.log
+          retention-days: 1
+
+  platform:
+    name: Capture Platform diagnostics
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: platform
+          POSTGRES_PASSWORD: platform
+          POSTGRES_DB: platform
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U platform -d platform"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://platform:platform@localhost:5432/platform?sslmode=disable
+      PGPASSWORD: platform
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: core/platform-control/backend/go.mod
+          cache-dependency-path: core/platform-control/backend/go.sum
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Apply migrations and capture tests
+        shell: bash
+        run: |
+          set +e
+          : > platform-diagnostic.log
+          for migration in core/platform-control/database/migrations/platform-*.sql; do
+            echo "Applying ${migration}" >> platform-diagnostic.log
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration" >> platform-diagnostic.log 2>&1
+            if [[ $? -ne 0 ]]; then
+              echo "migration_exit=1" >> platform-diagnostic.log
+              break
+            fi
+          done
+          cd core/platform-control/backend
+          go test ./... -count=1 >> "${GITHUB_WORKSPACE}/platform-diagnostic.log" 2>&1
+          test_exit=$?
+          go build ./... >> "${GITHUB_WORKSPACE}/platform-diagnostic.log" 2>&1
+          build_exit=$?
+          printf '\ngo_test_exit=%s\ngo_build_exit=%s\n' "${test_exit}" "${build_exit}" >> "${GITHUB_WORKSPACE}/platform-diagnostic.log"
+          exit 0
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: platform-diagnostic
+          path: platform-diagnostic.log
+          retention-days: 1

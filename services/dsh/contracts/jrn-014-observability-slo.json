@@ -1,0 +1,35 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-014",
+  "slos": [
+    {"id":"offer-create-availability","target":">=99.9%","measurement":"successful governed create or idempotent replay excluding invalid/conflict"},
+    {"id":"candidate-read-p95","target":"<=500ms","measurement":"GET candidates p95"},
+    {"id":"captain-inbox-p95","target":"<=500ms","measurement":"GET captain assignments p95"},
+    {"id":"decision-read-p95","target":"<=750ms","measurement":"GET decisions p95"},
+    {"id":"overdue-offer-lag","target":"<=60s","measurement":"now-response_deadline_at for remaining offered rows"},
+    {"id":"active-order-uniqueness","target":"100%","measurement":"orders with more than one active assignment equals zero"},
+    {"id":"decision-audit-completeness","target":"100%","measurement":"governed mutations with a matching decision row"},
+    {"id":"cross-tenant-leakage","target":"0","measurement":"authorization and isolation test failures"}
+  ],
+  "metrics": [
+    "dispatch_offer_created_total",
+    "dispatch_offer_replayed_total",
+    "dispatch_offer_expired_total",
+    "dispatch_offer_accepted_total",
+    "dispatch_offer_declined_total",
+    "dispatch_assignment_cancelled_total",
+    "dispatch_assignment_reassigned_total",
+    "dispatch_candidate_rejected_total_by_reason",
+    "dispatch_active_assignments_by_captain",
+    "dispatch_operation_duration_ms_by_operation",
+    "dispatch_conflict_total_by_code"
+  ],
+  "alerts": [
+    {"id":"overdue-offer-backlog","condition":"overdue offered rows > 0 for 5 minutes","severity":"high","runbook":"governance/runbooks/jrn-014-dispatch-operations.md"},
+    {"id":"duplicate-active-order","condition":"active assignments per tenant/order > 1","severity":"critical","runbook":"governance/runbooks/jrn-014-dispatch-operations.md"},
+    {"id":"capacity-rejection-spike","condition":"CAPTAIN_AT_CAPACITY rate exceeds baseline for 15 minutes","severity":"medium"},
+    {"id":"eligibility-rejection-spike","condition":"CAPTAIN_NOT_ELIGIBLE rate exceeds baseline for 15 minutes","severity":"medium"},
+    {"id":"decision-audit-gap","condition":"mutation without decision row","severity":"critical"}
+  ],
+  "piiLoggingPolicy": "No customer phone, address, document, wallet, or bank data in dispatch logs or metrics."
+}

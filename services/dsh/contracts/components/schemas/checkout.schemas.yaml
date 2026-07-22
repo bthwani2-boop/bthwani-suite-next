@@ -1,0 +1,61 @@
+# BThwani DSH OpenAPI schemas module: checkout.
+# Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
+
+DshCheckoutIntent:
+  type: object
+  required: [id, clientId, cartId, storeId, fulfillmentMode, state, paymentMethod, wltPaymentSessionId, deliveryAddress, note, version, createdAt, updatedAt]
+  properties:
+    id: { type: string }
+    clientId: { type: string }
+    cartId: { type: string }
+    storeId: { type: string }
+    fulfillmentMode:
+      type: string
+      enum: [bthwani_delivery, partner_delivery, pickup]
+    state:
+      type: string
+      enum: [pending, wlt_handoff_failed, wlt_outcome_unknown, payment_pending, payment_confirmed, payment_failed, confirmed, cancelled, expired]
+    paymentMethod:
+      type: string
+      enum: [cod, wallet, mixed, official_wallet]
+    wltPaymentSessionId:
+      type: string
+      description: "Opaque WLT-owned payment-session reference. DSH never mutates financial truth."
+    deliveryAddress: { type: string }
+    note: { type: string }
+    version: { type: integer }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+
+DshCreateCheckoutIntentRequest:
+  type: object
+  required: [cartId, storeId]
+  properties:
+    cartId: { type: string }
+    storeId: { type: string }
+    fulfillmentMode:
+      type: string
+      enum: [bthwani_delivery, partner_delivery, pickup]
+    paymentMethod:
+      type: string
+      enum: [cod, wallet, mixed, official_wallet]
+    deliveryAddress: { type: string }
+    note: { type: string }
+
+DshCheckoutIntentResponse:
+  type: object
+  required: [intent]
+  properties:
+    intent:
+      $ref: "../../dsh.openapi.yaml#/components/schemas/DshCheckoutIntent"
+
+DshOperatorCheckoutIntentsResponse:
+  type: object
+  required: [intents]
+  properties:
+    intents:
+      type: array
+      items:
+        $ref: "../../dsh.openapi.yaml#/components/schemas/DshCheckoutIntent"
+
+# ─── Order schemas ──────────────────────────────────────────────

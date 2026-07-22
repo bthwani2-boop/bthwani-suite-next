@@ -1,0 +1,55 @@
+{
+  "journeyId": "JRN-011",
+  "canonicalSharedModule": "services/dsh/frontend/shared/order-truth/index.ts",
+  "writePolicy": {
+    "surface": "app-client",
+    "endpoint": "POST /dsh/client/order-truth",
+    "idempotency": "persistent-attempt-until-readback",
+    "readAfterWrite": "GET /dsh/client/order-truth/{orderId}",
+    "acceptMutationResponseAsFinalTruth": false
+  },
+  "readBindings": [
+    {
+      "surface": "app-client",
+      "module": "services/dsh/frontend/shared/checkout/use-checkout-to-order-flow.tsx",
+      "source": "services/dsh/frontend/shared/order-truth/use-order-truth-controller.ts",
+      "scope": "authenticated client + tenant"
+    },
+    {
+      "surface": "app-partner",
+      "module": "services/dsh/frontend/app-partner/orders/OperationalOrdersInboxScreen.tsx",
+      "source": "services/dsh/frontend/shared/order-truth/OrderTruthReadbackSummary.tsx",
+      "scope": "authenticated partner store + tenant"
+    },
+    {
+      "surface": "control-panel",
+      "module": "services/dsh/frontend/control-panel/operations/OrderJourneyLiveOrdersScreen.tsx",
+      "source": "services/dsh/frontend/shared/order-truth/OrderTruthReadbackSummary.tsx",
+      "scope": "operations.read + tenant"
+    }
+  ],
+  "consistencyKeys": [
+    "id",
+    "orderNumber",
+    "checkoutIntentId",
+    "status",
+    "currentOwner",
+    "allowedActions",
+    "pricingSnapshotHash",
+    "totalMinorUnits",
+    "currency",
+    "paymentStatusProjection",
+    "correlationId",
+    "version",
+    "updatedAt"
+  ],
+  "forbidden": [
+    "surface-owned order status",
+    "surface-derived allowedActions",
+    "mock order fallback",
+    "recalculated order total from live catalog",
+    "direct WLT mutation from a DSH surface",
+    "accepting POST response without scoped GET readback",
+    "partner or operator selecting clientId, storeId or tenantId in request"
+  ]
+}

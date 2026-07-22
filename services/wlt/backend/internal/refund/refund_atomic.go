@@ -1,6 +1,7 @@
 package refund
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -8,15 +9,26 @@ import (
 	"net/http"
 	"strings"
 
-	"wlt-api/internal/reference"
 	"wlt-api/internal/shared"
 )
 
 var ErrRefundReferenceConflict = errors.New("refund references do not match the payment session")
 
-// CreateRefundAtomic creates at most one active refund per payment session.
-// Concurrent callers either create the row or read the row created by the
-// winner; none receives a raw unique-constraint error.
+func legacyRefundView(item *GovernedRefund) *Refund {
+	if item == nil {
+		return nil
+	}
+	return &Refund{
+		ID: item.ID, PaymentSessionID: item.PaymentSessionID, OrderID: item.OrderID,
+		ClientID: item.ClientID, AmountMinorUnits: item.AmountMinorUnits,
+		Currency: item.Currency, Reason: item.Reason, Status: item.Status,
+		ResolvedAt: item.ResolvedAt, CreatedAt: item.CreatedAt, UpdatedAt: item.UpdatedAt,
+	}
+}
+
+// CreateRefundAtomic preserves order-cancellation compatibility while using
+// the JRN-035 amount reservation, tenant isolation, audit and idempotency
+// engine. A missing amount means "refund the full remaining amount".
 func CreateRefundAtomic(db *sql.DB, input CreateRefundInput) (*Refund, bool, error) {
 	input.PaymentSessionID = strings.TrimSpace(input.PaymentSessionID)
 	input.OrderID = strings.TrimSpace(input.OrderID)
@@ -25,78 +37,25 @@ func CreateRefundAtomic(db *sql.DB, input CreateRefundInput) (*Refund, bool, err
 	if input.PaymentSessionID == "" || input.OrderID == "" || input.ClientID == "" || input.Reason == "" {
 		return nil, false, fmt.Errorf("paymentSessionId, orderId, clientId, and reason are required")
 	}
-
-	session, err := reference.GetPaymentSession(db, input.PaymentSessionID)
-	if err != nil {
-		return nil, false, err
-	}
-	if session == nil {
-		return nil, false, fmt.Errorf("payment session not found")
-	}
-	if session.ClientID != input.ClientID {
-		return nil, false, ErrRefundReferenceConflict
-	}
-	if session.Status != "captured" && session.Status != "cod_collected" {
-		return nil, false, ErrSessionNotRefundable
-	}
-	currency := session.Currency
-	if currency == "" {
-		currency = "YER"
-	}
-
-	tx, err := db.Begin()
-	if err != nil {
-		return nil, false, err
-	}
-	defer tx.Rollback()
-
-	created, scanErr := scanRefund(tx.QueryRow(`
-		INSERT INTO wlt_refunds(
-			payment_session_id,order_id,client_id,amount_minor_units,currency,reason)
-		VALUES($1,$2,$3,$4,$5,$6)
-		ON CONFLICT (payment_session_id) WHERE status != 'rejected' DO NOTHING
-		RETURNING `+refundCols,
-		input.PaymentSessionID,
-		input.OrderID,
-		input.ClientID,
-		session.AmountMinorUnits,
-		currency,
-		input.Reason,
-	))
-	if scanErr == nil {
-		if err := tx.Commit(); err != nil {
-			return nil, false, err
-		}
-		return created, true, nil
-	}
-	if !errors.Is(scanErr, sql.ErrNoRows) {
-		return nil, false, scanErr
-	}
-
-	existing, err := getActiveRefundForSessionTx(tx, input.PaymentSessionID)
-	if err != nil {
-		return nil, false, err
-	}
-	if existing == nil {
-		return nil, false, fmt.Errorf("active refund disappeared after conflict")
-	}
-	if existing.OrderID != input.OrderID || existing.ClientID != input.ClientID ||
-		existing.AmountMinorUnits != session.AmountMinorUnits || existing.Currency != currency {
-		return nil, false, ErrRefundReferenceConflict
-	}
-	if err := tx.Commit(); err != nil {
-		return nil, false, err
-	}
-	return existing, false, nil
+	key := "order-cancellation:" + input.PaymentSessionID + ":" + input.OrderID
+	item, replayed, err := CreateGovernedRefund(context.Background(), db, GovernedCreateRefundInput{
+		PaymentSessionID: input.PaymentSessionID,
+		OrderID: input.OrderID,
+		ClientID: input.ClientID,
+		Reason: input.Reason,
+		EligibilityReference: "order-cancellation:" + input.OrderID,
+		RequestedByOperatorID: "dsh-order-cancellation",
+		IdempotencyKey: key,
+		CorrelationID: key,
+	})
+	return legacyRefundView(item), !replayed, err
 }
 
-// HandleCreateRefundAtomic is the compatibility HTTP surface for
-// POST /wlt/refunds. It preserves the established route while enforcing the
-// same atomic and reference-safe implementation used by order cancellation.
 func HandleCreateRefundAtomic(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var input CreateRefundInput
 		decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64*1024))
+		decoder.DisallowUnknownFields()
 		if err := decoder.Decode(&input); err != nil {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
 			return
@@ -106,7 +65,7 @@ func HandleCreateRefundAtomic(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusConflict, "REFUND_REFERENCE_CONFLICT", err.Error())
 			return
 		}
-		if errors.Is(err, ErrSessionNotRefundable) {
+		if errors.Is(err, ErrSessionNotRefundable) || errors.Is(err, ErrRefundAmountUnavailable) {
 			shared.SendError(w, http.StatusConflict, "PAYMENT_SESSION_NOT_REFUNDABLE", err.Error())
 			return
 		}
@@ -115,12 +74,7 @@ func HandleCreateRefundAtomic(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		status := http.StatusOK
-		if wasCreated {
-			status = http.StatusCreated
-		}
-		shared.SendJSON(w, status, map[string]any{
-			"refund":   created,
-			"replayed": !wasCreated,
-		})
+		if wasCreated { status = http.StatusCreated }
+		shared.SendJSON(w, status, map[string]any{"refund": created, "replayed": !wasCreated})
 	}
 }

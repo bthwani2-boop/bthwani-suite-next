@@ -25,6 +25,12 @@ func writeClientMapError(w http.ResponseWriter, err error) {
 		store.SendError(w, http.StatusServiceUnavailable, "MAP_RUNTIME_NOT_CONFIGURED", "governed map runtime is not configured")
 	case errors.Is(err, mapproviders.ErrInvalid), errors.Is(err, servicearea.ErrInvalid):
 		store.SendError(w, http.StatusBadRequest, "INVALID_MAP_REQUEST", "map request is invalid")
+	case errors.Is(err, servicearea.ErrNotFound):
+		store.SendError(w, http.StatusNotFound, "SERVICE_AREA_NOT_FOUND", "service area was not found")
+	case errors.Is(err, mapproviders.ErrUncertain):
+		store.SendError(w, http.StatusUnprocessableEntity, "MAP_RESULT_UNCERTAIN", "map provider returned a result that could not be trusted")
+	case errors.Is(err, mapproviders.ErrTimeout):
+		store.SendError(w, http.StatusGatewayTimeout, "MAP_RUNTIME_TIMEOUT", "governed map runtime exceeded its timeout")
 	case errors.Is(err, mapproviders.ErrUnavailable):
 		store.SendError(w, http.StatusBadGateway, "MAP_RUNTIME_UNAVAILABLE", "governed map runtime is unavailable")
 	case errors.Is(err, servicearea.ErrVersionConflict):
@@ -84,6 +90,19 @@ func (s *protectedStoreServer) handleClientMapReverse(w http.ResponseWriter, r *
 	store.SendJSON(w, http.StatusOK, map[string]any{"location": location})
 }
 
+func (s *protectedStoreServer) handleOperatorMapProviderHealth(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requirePermission(w, r, "control-panel", "platform.read", "operator"); !ok {
+		return
+	}
+	client := mapproviders.NewClient(os.Getenv("DSH_PROVIDERS_BASE_URL"))
+	health, err := client.Health(r.Context(), r.Header.Get("Authorization"))
+	if err != nil {
+		writeClientMapError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"mapProviderHealth": health})
+}
+
 func (s *protectedStoreServer) verifyMapLocation(r *http.Request, location mapproviders.Location) (verifiedMapLocation, error) {
 	resolution, err := servicearea.Resolve(r.Context(), s.db, location.Latitude, location.Longitude)
 	if err != nil {
@@ -102,12 +121,24 @@ func (s *protectedStoreServer) handleOperatorListServiceAreas(w http.ResponseWri
 	if _, ok := s.requirePermission(w, r, "control-panel", "platform.read", "operator"); !ok {
 		return
 	}
-	items, err := servicearea.List(r.Context(), s.db)
+	items, err := servicearea.ListProjections(r.Context(), s.db)
 	if err != nil {
 		writeClientMapError(w, err)
 		return
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"serviceAreas": items})
+}
+
+func (s *protectedStoreServer) handleOperatorGetServiceArea(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requirePermission(w, r, "control-panel", "platform.read", "operator"); !ok {
+		return
+	}
+	item, err := servicearea.GetProjection(r.Context(), s.db, r.PathValue("serviceAreaCode"))
+	if err != nil {
+		writeClientMapError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"serviceArea": item})
 }
 
 func (s *protectedStoreServer) handleOperatorUpsertServiceArea(w http.ResponseWriter, r *http.Request) {
@@ -128,10 +159,10 @@ func (s *protectedStoreServer) handleOperatorUpsertServiceArea(w http.ResponseWr
 	input.ActorSurface = "control-panel"
 	input.IdempotencyKey = idempotencyKey
 	input.CorrelationID = strings.TrimSpace(r.Header.Get("X-Correlation-ID"))
-	item, err := servicearea.Upsert(r.Context(), s.db, r.PathValue("serviceAreaCode"), input)
+	item, err := servicearea.UpsertGoverned(r.Context(), s.db, r.PathValue("serviceAreaCode"), input)
 	if err != nil {
 		writeClientMapError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"serviceArea": item})
+	store.SendJSON(w, http.StatusOK, map[string]any{"serviceArea": servicearea.Project(item)})
 }

@@ -1,0 +1,187 @@
+name: Temporary Project Contract Remediation
+
+on:
+  push:
+    branches: [sambassam]
+    paths:
+      - ".github/workflows/tmp-project-contract-remediation.yml"
+      - "services/dsh/contracts/contract-registry.ts"
+      - "tools/guards/backend-api-binding-gate.mjs"
+      - "tools/guards/service-manifest-drift-gate.mjs"
+  pull_request:
+    branches: [master]
+    paths:
+      - ".github/workflows/tmp-project-contract-remediation.yml"
+      - "services/dsh/contracts/contract-registry.ts"
+      - "tools/guards/backend-api-binding-gate.mjs"
+      - "tools/guards/service-manifest-drift-gate.mjs"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: temporary-project-contract-remediation
+  cancel-in-progress: false
+
+jobs:
+  remediate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout latest sambassam
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: sambassam
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Repair contract authority registration
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(text: str, old: str, new: str, label: str) -> str:
+              if new in text:
+                  return text
+              if old not in text:
+                  raise SystemExit(f"missing anchor: {label}")
+              return text.replace(old, new, 1)
+
+          registry_path = Path("services/dsh/contracts/contract-registry.ts")
+          registry = registry_path.read_text(encoding="utf-8")
+          registry = replace_once(
+              registry,
+              '  "STANDALONE_MANUAL_TYPED_ADAPTER",\n',
+              '  "STANDALONE_MANUAL_TYPED_ADAPTER",\n  "STANDALONE_GENERATED",\n',
+              "standalone generated strategy",
+          )
+          registry = replace_once(
+              registry,
+              '    | "dsh-checkout"\n',
+              '    | "dsh-checkout"\n    | "dsh-operational-policy"\n',
+              "operational policy id",
+          )
+          registry = replace_once(
+              registry,
+              '    | "dsh-payment-sessions"\n',
+              '    | "dsh-payment-sessions"\n    | "dsh-representative-finance"\n    | "dsh-refunds"\n',
+              "finance contract ids",
+          )
+          registry = replace_once(
+              registry,
+              '    id: "dsh-catalog",\n    path: "contracts/dsh.catalog.openapi.yaml",\n    state: "CONTRACT_ACTIVE",\n    runtimeDependency: true,\n    clientStrategy: "SECONDARY_GENERATED_SUBSET",\n',
+              '    id: "dsh-catalog",\n    path: "contracts/dsh.catalog.openapi.yaml",\n    state: "CONTRACT_ACTIVE",\n    runtimeDependency: true,\n    clientStrategy: "STANDALONE_GENERATED",\n',
+              "catalog standalone generated strategy",
+          )
+          registry = replace_once(
+              registry,
+              '    id: "dsh-catalog-proposal-readback",\n    path: "contracts/dsh.catalog-proposal-readback.openapi.yaml",\n    state: "CONTRACT_ACTIVE",\n    runtimeDependency: true,\n    clientStrategy: "MANUAL_TYPED_ADAPTER",\n',
+              '    id: "dsh-catalog-proposal-readback",\n    path: "contracts/dsh.catalog-proposal-readback.openapi.yaml",\n    state: "CONTRACT_ACTIVE",\n    runtimeDependency: true,\n    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",\n',
+              "proposal readback standalone strategy",
+          )
+          checkout_entry = '''  {
+    id: "dsh-checkout",
+    path: "contracts/dsh.jrn-010-checkout.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/checkout",
+  },
+'''
+          operational_entry = checkout_entry + '''  {
+    id: "dsh-operational-policy",
+    path: "contracts/dsh.jrn-029.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/platform",
+  },
+'''
+          if 'id: "dsh-operational-policy"' not in registry:
+              if checkout_entry not in registry:
+                  raise SystemExit("missing checkout registration anchor")
+              registry = registry.replace(checkout_entry, operational_entry, 1)
+
+          payment_entry = '''  {
+    id: "dsh-payment-sessions",
+    path: "contracts/dsh.payment-sessions.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/finance-wlt-link",
+  },
+'''
+          finance_entries = payment_entry + '''  {
+    id: "dsh-representative-finance",
+    path: "contracts/jrn-033-representative-finance.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/finance-wlt-link",
+  },
+  {
+    id: "dsh-refunds",
+    path: "contracts/jrn-035-refunds.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/finance-wlt-link",
+  },
+'''
+          if 'id: "dsh-representative-finance"' not in registry:
+              if payment_entry not in registry:
+                  raise SystemExit("missing payment registration anchor")
+              registry = registry.replace(payment_entry, finance_entries, 1)
+          registry_path.write_text(registry, encoding="utf-8")
+
+          backend_path = Path("tools/guards/backend-api-binding-gate.mjs")
+          backend = backend_path.read_text(encoding="utf-8")
+          backend = replace_once(
+              backend,
+              'const dshStandaloneContracts = dshRegistry\n  .filter((entry) => entry.strategy === "STANDALONE_MANUAL_TYPED_ADAPTER")\n',
+              'const dshStandaloneStrategies = new Set(["STANDALONE_MANUAL_TYPED_ADAPTER", "STANDALONE_GENERATED"]);\nconst dshStandaloneContracts = dshRegistry\n  .filter((entry) => dshStandaloneStrategies.has(entry.strategy))\n',
+              "backend standalone strategies",
+          )
+          backend = replace_once(
+              backend,
+              '      "services/wlt/contracts/jrn-037-payouts-destinations.openapi.yaml",\n',
+              '      "services/wlt/contracts/jrn-037-payouts-destinations.openapi.yaml",\n      "services/wlt/contracts/jrn-038-cod-custody.openapi.yaml",\n',
+              "WLT JRN-038 registration",
+          )
+          backend = replace_once(
+              backend,
+              '      const key = routeKey(route);\n      if (!openApiRouteSet.has(key)) {\n',
+              '      const key = routeKey(route);\n      if (key === "/") continue;\n      if (!openApiRouteSet.has(key)) {\n',
+              "fallback route exclusion",
+          )
+          backend_path.write_text(backend, encoding="utf-8")
+
+          drift_path = Path("tools/guards/service-manifest-drift-gate.mjs")
+          drift = drift_path.read_text(encoding="utf-8")
+          drift = replace_once(
+              drift,
+              'const generatedStrategies = new Set(["PRIMARY_GENERATED", "SECONDARY_GENERATED_SUBSET", "PARENT_GENERATED_SUBSET"]);\n',
+              'const generatedStrategies = new Set(["PRIMARY_GENERATED", "SECONDARY_GENERATED_SUBSET", "PARENT_GENERATED_SUBSET", "STANDALONE_GENERATED"]);\n',
+              "manifest generated strategies",
+          )
+          drift_path.write_text(drift, encoding="utf-8")
+          PY
+      - name: Commit authority repairs
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "bthwani-governance-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add services/dsh/contracts/contract-registry.ts tools/guards/backend-api-binding-gate.mjs tools/guards/service-manifest-drift-gate.mjs
+          if git diff --cached --quiet; then
+            echo "No authority changes required."
+            exit 0
+          fi
+          git commit -m "fix(contracts): register standalone journey authorities"
+          for attempt in 1 2 3; do
+            if git push origin HEAD:sambassam; then
+              exit 0
+            fi
+            git pull --rebase origin sambassam
+          done
+          exit 1

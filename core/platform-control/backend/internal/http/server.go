@@ -43,9 +43,11 @@ func NewRouter(service *platformcontrol.Service, authClient *auth.Client) http.H
 
 	mux.HandleFunc("GET /platform/v1/rollouts", s.operatorOnly("platform:read", s.listRollouts))
 	mux.HandleFunc("GET /platform/v1/rollouts/{id}", s.operatorOnly("platform:read", s.getRollout))
+	mux.HandleFunc("GET /platform/v1/rollouts/{id}/recovery", s.operatorOnly("platform:read", s.getRolloutRecovery))
 	mux.HandleFunc("POST /platform/v1/rollouts", s.operatorOnly("platform:rollouts:manage", s.createRollout))
 	mux.HandleFunc("POST /platform/v1/rollouts/{id}/advance", s.operatorOnly("platform:rollouts:manage", s.advanceRollout))
 	mux.HandleFunc("POST /platform/v1/rollouts/{id}/pause", s.operatorOnly("platform:rollouts:manage", s.pauseRollout))
+	mux.HandleFunc("POST /platform/v1/rollouts/{id}/resume", s.operatorOnly("platform:rollouts:manage", s.resumeRollout))
 	mux.HandleFunc("POST /platform/v1/rollouts/{id}/abort", s.operatorOnly("platform:rollouts:manage", s.abortRollout))
 	mux.HandleFunc("POST /platform/v1/rollouts/{id}/rollback", s.operatorOnly("platform:rollouts:manage", s.rollbackRollout))
 	return mux

@@ -2,25 +2,24 @@
 
 import { useEffect, useState, type CSSProperties } from "react";
 import { colorRoles } from "@bthwani/ui-kit";
-import {
-  useCouponsController,
-  type CouponDiscountType,
-  type CouponFundingPolicy,
-  type CouponFundingSource,
-  type CouponRecord,
-} from "../../../shared/marketing";
+import { useCouponsController } from "../../../shared/marketing/use-coupons-controller";
+import type {
+  CouponDiscountType,
+  CouponFundingPolicy,
+  CouponFundingSource,
+  CouponRecord,
+  CouponUpdatePayload,
+} from "../../../shared/marketing/coupons.types";
+import { CouponFundingReconciliationPanel } from "./CouponFundingReconciliationPanel";
+import { CouponTermsEditor } from "./CouponTermsEditor";
 
 type FundingEditorProps = {
   readonly coupon: CouponRecord;
-  readonly policy?: CouponFundingPolicy;
+  readonly policy?: CouponFundingPolicy | undefined;
   readonly loading: boolean;
   readonly onSave: (
     coupon: CouponRecord,
-    payload: {
-      readonly fundingSource: CouponFundingSource;
-      readonly platformShareBps: number;
-      readonly fundingPartnerId?: string;
-    },
+    payload: Omit<CouponUpdatePayload, "expectedVersion">,
   ) => Promise<boolean>;
 };
 
@@ -156,6 +155,9 @@ export function CouponsCommandDeck() {
   const fundingPolicies = controller.state.kind === "success" || controller.state.kind === "empty"
     ? controller.state.fundingPolicies
     : {};
+  const fundingLifecycle = controller.state.kind === "success" || controller.state.kind === "empty"
+    ? controller.state.fundingLifecycle
+    : [];
 
   return (
     <section dir="rtl" style={styles.root}>
@@ -232,6 +234,11 @@ export function CouponsCommandDeck() {
                   loading={controller.mutationLoading}
                   onSave={controller.update}
                 />
+                <CouponTermsEditor
+                  coupon={coupon}
+                  loading={controller.mutationLoading}
+                  onSave={controller.update}
+                />
               </div>
               <div style={styles.actions}>
                 {coupon.status === "draft" || coupon.status === "paused" ? (
@@ -248,6 +255,13 @@ export function CouponsCommandDeck() {
           );
         })}
       </div>
+
+      <CouponFundingReconciliationPanel
+        records={fundingLifecycle}
+        loading={controller.state.kind === "loading"}
+        {...(controller.state.kind === "error" ? { error: controller.state.message } : {})}
+        onReload={() => { void controller.reload(); }}
+      />
     </section>
   );
 }

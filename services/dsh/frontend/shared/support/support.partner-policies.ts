@@ -21,10 +21,7 @@ export function resolveSupportFilterFromOperationalFlow(
   if (
     flowId === 'inventory-adjust' ||
     flowId === 'inventory-update' ||
-    flowId === 'items-upsert' ||
-    flowId === 'doc-upload' ||
-    flowId === 'intake-start' ||
-    flowId === 'store-nomination'
+    flowId === 'items-upsert'
   ) {
     return 'inventory-branch';
   }
@@ -56,11 +53,7 @@ export function resolveSupportFilterFromRoute(
   if (
     routeId === 'inventory-adjust' ||
     routeId === 'inventory-update' ||
-    routeId === 'items-upsert' ||
-    routeId === 'doc-upload' ||
-    routeId === 'intake-start' ||
-    routeId === 'store-nomination' ||
-    routeId === 'video-upload'
+    routeId === 'items-upsert'
   ) {
     return 'inventory-branch';
   }

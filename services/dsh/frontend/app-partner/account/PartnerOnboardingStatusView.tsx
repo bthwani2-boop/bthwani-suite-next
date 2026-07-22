@@ -5,6 +5,7 @@ import {
   Button,
   Icon,
   MobileScrollView,
+  StateView,
   Surface,
   Text,
   radius,
@@ -120,15 +121,30 @@ export function PartnerOnboardingStatusView({
         >
           النواقص والجاهزية
         </Text>
-        {selfReadinessState.kind === "loading" ||
-        selfReadinessState.kind === "idle" ? (
-          <Text role="bodySm" tone="muted" style={{ textAlign: "right" }}>
-            جاري تحميل الجاهزية…
-          </Text>
+        {selfReadinessState.kind === "error" ? (
+          <StateView
+            tone="warning"
+            title="الحالة التشغيلية متاحة جزئيًا"
+            description={selfReadinessState.message}
+            actionLabel="تحديث الحالة"
+            onActionPress={reloadSelfStatus}
+          />
+        ) : selfReadinessState.kind === "loading" ||
+          selfReadinessState.kind === "idle" ? (
+          <StateView
+            loading
+            tone="info"
+            title="جاري تحميل الجاهزية"
+            description="تُقرأ بوابات التأهيل من DSH قبل عرض أي حكم تشغيلي."
+          />
         ) : readinessItems.length === 0 ? (
-          <Text role="bodySm" tone="muted" style={{ textAlign: "right" }}>
-            لا توجد تفاصيل جاهزية متاحة الآن.
-          </Text>
+          <StateView
+            tone="neutral"
+            title="لا توجد تفاصيل جاهزية"
+            description="لم يعد DSH عناصر جاهزية قابلة للعرض في هذه القراءة."
+            actionLabel="تحديث الحالة"
+            onActionPress={reloadSelfStatus}
+          />
         ) : (
           readinessItems.map((item) => (
             <View

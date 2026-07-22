@@ -34,8 +34,8 @@ export function resolveCartLoadError(error: { kind?: string; status?: number }):
 
 export function resolveServiceabilityState(result: DshServiceabilityResult): DshServiceabilityState {
   const availableModes = result.availableModes ?? [];
-  if (result.serviceable) return serviceabilityServiceableState(availableModes);
-  return serviceabilityBlockedState(result.code, availableModes, result.reason);
+  if (result.serviceable) return serviceabilityServiceableState(result, availableModes);
+  return serviceabilityBlockedState(result, result.code, availableModes, result.reason);
 }
 
 export function resolveServiceabilityError(): DshServiceabilityState {

@@ -1,0 +1,211 @@
+from pathlib import Path
+
+
+def replace_between(text: str, start_marker: str, end_marker: str, replacement: str) -> str:
+    start = text.find(start_marker)
+    end = text.find(end_marker, start + len(start_marker))
+    if start < 0 or end < 0:
+        raise SystemExit(f"missing replacement anchors: {start_marker} -> {end_marker}")
+    return text[:start] + replacement.rstrip() + "\n\n" + text[end:]
+
+
+parser_path = Path("tools/guards/_openapi-utils.mjs")
+parser = parser_path.read_text(encoding="utf-8")
+
+parameter_block = r'''function parseParameterBlock(lines, startIndex) {
+  const startLine = lines[startIndex] ?? "";
+  const trimmedStart = startLine.trim();
+  if (!trimmedStart.startsWith("- ")) return { parameter: null, nextIndex: startIndex + 1 };
+
+  const parameter = { name: "", in: "", required: false };
+  const startIndent = countIndent(startLine);
+  const applyField = (text) => {
+    const match = String(text ?? "").trim().match(/^(name|in|required):\s*(.+)$/);
+    if (!match) return;
+    const [, key, rawValue] = match;
+    const value = parseScalar(rawValue);
+    if (key === "name") parameter.name = String(value);
+    if (key === "in") parameter.in = String(value);
+    if (key === "required") parameter.required = value === true;
+  };
+
+  const firstItem = trimmedStart.slice(2).trim();
+  if (firstItem.startsWith("{") && firstItem.endsWith("}")) {
+    const body = firstItem.slice(1, -1);
+    for (const match of body.matchAll(/(?:^|,)\s*(name|in|required):\s*([^,}]+)/g)) {
+      applyField(`${match[1]}: ${match[2]}`);
+    }
+    return { parameter: parameter.name ? parameter : null, nextIndex: startIndex + 1 };
+  }
+
+  applyField(firstItem);
+  let nextIndex = startIndex + 1;
+  for (; nextIndex < lines.length; nextIndex += 1) {
+    const line = lines[nextIndex];
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    if (countIndent(line) <= startIndent) break;
+    applyField(trimmed);
+  }
+  return { parameter: parameter.name ? parameter : null, nextIndex };
+}'''
+
+if "return { parameter: parameter.name ? parameter : null, nextIndex }" not in parser:
+    parser = replace_between(
+        parser,
+        "function parseParameterBlock",
+        "function parseComponentParameters",
+        parameter_block,
+    )
+
+parameter_collection = r'''const externalComponentParameterCache = new Map();
+
+function componentParametersForFile(file) {
+  if (externalComponentParameterCache.has(file)) return externalComponentParameterCache.get(file);
+  const absolute = path.join(repoRoot, file);
+  const parsed = fs.existsSync(absolute)
+    ? parseComponentParameters(read(file).split(/\r?\n/))
+    : new Map();
+  externalComponentParameterCache.set(file, parsed);
+  return parsed;
+}
+
+function resolveParameterReference(reference, file, componentParameters) {
+  const localPrefix = "#/components/parameters/";
+  if (reference.startsWith(localPrefix)) {
+    return componentParameters.get(reference.slice(localPrefix.length)) ?? null;
+  }
+
+  const marker = "#/components/parameters/";
+  const markerIndex = reference.indexOf(marker);
+  if (markerIndex <= 0) return null;
+
+  const referencedPath = reference.slice(0, markerIndex);
+  const parameterName = reference.slice(markerIndex + marker.length);
+  const absolute = path.resolve(repoRoot, path.dirname(file), referencedPath);
+  const relative = toPosix(path.relative(repoRoot, absolute));
+  if (!relative || relative.startsWith("..")) return null;
+  return componentParametersForFile(relative).get(parameterName) ?? null;
+}
+
+function collectParameters(blockLines, componentParameters, file) {
+  const parameters = [];
+  for (let i = 0; i < blockLines.length; i += 1) {
+    const trimmed = blockLines[i].trim();
+
+    for (const match of trimmed.matchAll(/\$ref:\s*["']?([^"'\]\s}]+)["']?/g)) {
+      const parameter = resolveParameterReference(match[1], file, componentParameters);
+      if (parameter) parameters.push(parameter);
+    }
+
+    if (/^-\s*(?:name|in|required):/.test(trimmed) || /^-\s*\{/.test(trimmed)) {
+      const parsed = parseParameterBlock(blockLines, i);
+      if (parsed.parameter) parameters.push(parsed.parameter);
+      i = Math.max(i, parsed.nextIndex - 1);
+    }
+  }
+
+  const unique = new Map();
+  for (const parameter of parameters) {
+    const key = `${parameter.in}:${parameter.name}`;
+    if (!unique.has(key)) unique.set(key, parameter);
+  }
+  return [...unique.values()];
+}'''
+
+if "externalComponentParameterCache" not in parser:
+    parser = replace_between(
+        parser,
+        "function collectParameters",
+        "function parseOperationBlock",
+        parameter_collection,
+    )
+
+parser = parser.replace(
+    "parameters: collectParameters(blockLines, componentParameters),",
+    "parameters: collectParameters(blockLines, componentParameters, file),",
+    1,
+)
+parser_path.write_text(parser, encoding="utf-8")
+
+
+test_path = Path("tools/guards/_openapi-utils.test.mjs")
+test = test_path.read_text(encoding="utf-8")
+test = test.replace(
+    'import { parseOpenApiContractContent } from "./_openapi-utils.mjs";',
+    'import { parseOpenApiContract, parseOpenApiContractContent } from "./_openapi-utils.mjs";',
+    1,
+)
+if "modularOperations = parseOpenApiContract" not in test:
+    test = test.replace(
+        '  console.log("All parser tests PASSED!");',
+        '''  const modularOperations = parseOpenApiContract("services/dsh/contracts/dsh.openapi.yaml");
+  const homeUpdate = modularOperations.find((item) => item.operationId === "updateOperatorHomeDiscoveryContent");
+  assert.ok(homeUpdate?.parameters.some((parameter) => parameter.in === "path" && parameter.name === "kind"));
+  assert.ok(homeUpdate?.parameters.some((parameter) => parameter.in === "path" && parameter.name === "itemId"));
+  const workforceRead = parseOpenApiContract("services/dsh/contracts/dsh.jrn-003-workforce-scopes.openapi.yaml")
+    .find((item) => item.operationId === "getWorkforceActorScopes");
+  assert.ok(workforceRead?.parameters.some((parameter) => parameter.in === "path" && parameter.name === "actorId"));
+  console.log("All parser tests PASSED!");''',
+        1,
+    )
+test_path.write_text(test, encoding="utf-8")
+
+
+checkout_path = Path("services/dsh/contracts/dsh.jrn-010-checkout.openapi.yaml")
+checkout = checkout_path.read_text(encoding="utf-8")
+if "name: X-Service-Caller" not in checkout:
+    checkout = checkout.replace(
+        "      security: [{ serviceToken: [] }]\n      requestBody:",
+        "      security: [{ serviceToken: [] }]\n      parameters:\n        - name: Authorization\n          in: header\n          required: true\n          schema: { type: string, minLength: 1 }\n        - name: X-Service-Caller\n          in: header\n          required: true\n          schema: { type: string, enum: [wlt] }\n      requestBody:",
+        1,
+    )
+checkout_path.write_text(checkout, encoding="utf-8")
+
+
+wlt_path = Path("services/wlt/contracts/jrn-036-settlements-commissions.openapi.yaml")
+wlt = wlt_path.read_text(encoding="utf-8")
+if "operationId: createWltEvidenceBackedSettlement\n      x-bthwani-mutation-approved:" not in wlt:
+    wlt = wlt.replace(
+        "      operationId: createWltEvidenceBackedSettlement\n",
+        "      operationId: createWltEvidenceBackedSettlement\n      x-bthwani-mutation-approved: true\n      x-bthwani-default-enabled: false\n",
+        1,
+    )
+
+settlement_start = wlt.index("  /wlt/settlements:\n")
+settlement_end = wlt.index("  /wlt/settlements/{settlementId}/evidence:\n", settlement_start)
+settlement = wlt[settlement_start:settlement_end]
+if "'403':" not in settlement:
+    settlement = settlement.replace(
+        "        '409': { $ref: '#/components/responses/Conflict' }\n",
+        "        '403': { description: FEATURE_NOT_ENABLED when WLT_MUTATIONS_ENABLED is not true }\n        '409': { $ref: '#/components/responses/Conflict' }\n",
+        1,
+    )
+    wlt = wlt[:settlement_start] + settlement + wlt[settlement_end:]
+
+commissions_start = wlt.index("  /wlt/commissions:\n")
+commissions_end = wlt.index("  /wlt/commissions/{commissionId}:\n", commissions_start)
+commissions = wlt[commissions_start:commissions_end]
+if "name: Authorization" not in commissions:
+    commissions = commissions.replace(
+        "        - $ref: '#/components/parameters/CorrelationId'\n",
+        "        - $ref: '#/components/parameters/CorrelationId'\n        - name: Authorization\n          in: header\n          required: true\n          schema: { type: string, minLength: 1 }\n        - name: X-Service-Caller\n          in: header\n          required: true\n          schema: { type: string, enum: [dsh] }\n",
+        1,
+    )
+if "operationId: createWltGovernedCommission\n      x-bthwani-mutation-approved:" not in commissions:
+    commissions = commissions.replace(
+        "      operationId: createWltGovernedCommission\n",
+        "      operationId: createWltGovernedCommission\n      x-bthwani-mutation-approved: false\n      x-bthwani-default-enabled: false\n",
+        1,
+    )
+post_index = commissions.index("    post:\n")
+post = commissions[post_index:]
+if "'403':" not in post:
+    post = post.replace(
+        "        '409': { $ref: '#/components/responses/Conflict' }\n",
+        "        '403': { description: FEATURE_NOT_ENABLED when WLT_MUTATIONS_ENABLED is not true }\n        '409': { $ref: '#/components/responses/Conflict' }\n",
+        1,
+    )
+    commissions = commissions[:post_index] + post
+wlt = wlt[:commissions_start] + commissions + wlt[commissions_end:]
+wlt_path.write_text(wlt, encoding="utf-8")

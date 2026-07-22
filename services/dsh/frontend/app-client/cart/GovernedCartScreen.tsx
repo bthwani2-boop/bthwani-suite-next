@@ -64,7 +64,7 @@ export function GovernedCartScreen({
     () => cart?.items.reduce((sum, item) => sum + parseItemPrice(item.priceReference) * item.quantity, 0) ?? 0,
     [cart],
   );
-  const payment = useWltDshPaymentController(presentationSubtotal);
+  const payment = useWltDshPaymentController();
 
   React.useEffect(() => {
     if (cart) setFulfillmentMode(cart.fulfillmentMode);
@@ -72,7 +72,7 @@ export function GovernedCartScreen({
 
   React.useEffect(() => {
     if (!storeId || !serviceAreaCode || fulfillmentMode === "pickup") return;
-    void serviceability.check(storeId, serviceAreaCode);
+    void serviceability.check(storeId, serviceAreaCode, fulfillmentMode);
   }, [fulfillmentMode, serviceAreaCode, storeId]);
 
   if (cartController.state.kind === "loading") {
@@ -135,7 +135,7 @@ export function GovernedCartScreen({
             <Button
               label="إعادة فحص التغطية"
               tone="secondary"
-              onPress={() => void serviceability.check(storeId, serviceAreaCode)}
+              onPress={() => void serviceability.check(storeId, serviceAreaCode, fulfillmentMode)}
             />
           </Card>
         ) : null}

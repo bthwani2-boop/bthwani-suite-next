@@ -1,0 +1,216 @@
+# BThwani DSH OpenAPI schemas module: analytics.
+# Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
+
+DshReportDeliveryExceptionRequest:
+  type: object
+  additionalProperties: false
+  required: [reasonCode, correlationId]
+  properties:
+    reasonCode: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshDeliveryExceptionReasonCode" }
+    note: { type: string, maxLength: 1000 }
+    correlationId: { type: string, minLength: 1, maxLength: 200 }
+    latitude: { type: number, format: double, minimum: -90, maximum: 90, nullable: true }
+    longitude: { type: number, format: double, minimum: -180, maximum: 180, nullable: true }
+
+DshOrderAnalyticsResponse:
+  type: object
+  required: [totalOrders, byStatus, period, generatedAt]
+  properties:
+    totalOrders: { type: integer, minimum: 0 }
+    byStatus:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshOrderStatusCount" }
+    period: { type: string, enum: [today, week, month] }
+    generatedAt: { type: string, format: date-time }
+
+DshDeliveryAnalyticsResponse:
+  type: object
+  required: [totalAssignments, acceptedAssignments, completedAssignments, declinedAssignments, period, generatedAt]
+  properties:
+    totalAssignments: { type: integer, minimum: 0 }
+    acceptedAssignments: { type: integer, minimum: 0 }
+    completedAssignments: { type: integer, minimum: 0 }
+    declinedAssignments: { type: integer, minimum: 0 }
+    period: { type: string, enum: [today, week, month] }
+    generatedAt: { type: string, format: date-time }
+
+DshStoreAnalyticsResponse:
+  type: object
+  required: [totalStores, activeStores, suspendedStores, pendingReadiness, readinessComplete, generatedAt]
+  properties:
+    totalStores: { type: integer, minimum: 0 }
+    activeStores: { type: integer, minimum: 0 }
+    suspendedStores: { type: integer, minimum: 0 }
+    pendingReadiness: { type: integer, minimum: 0 }
+    readinessComplete: { type: integer, minimum: 0 }
+    generatedAt: { type: string, format: date-time }
+
+DshAnalyticsMetadata:
+  type: object
+  additionalProperties: false
+  required: [sourceSystem, readOnly, generatedAt, windowFrom, windowTo, freshnessSeconds, lineage]
+  properties:
+    sourceSystem: { type: string, enum: [DSH] }
+    readOnly: { type: boolean, const: true }
+    generatedAt: { type: string, format: date-time }
+    windowFrom: { type: string, format: date-time }
+    windowTo: { type: string, format: date-time }
+    freshnessSeconds: { type: integer, minimum: 0 }
+    lineage:
+      type: array
+      minItems: 1
+      items: { type: string, minLength: 1 }
+
+DshPreparationSlaAnalyticsResponse:
+  type: object
+  additionalProperties: false
+  required: [totalMeasured, withinSla, breachedSla, openPastEstimate, averagePreparationMinutes, metadata]
+  properties:
+    totalMeasured: { type: integer, minimum: 0 }
+    withinSla: { type: integer, minimum: 0 }
+    breachedSla: { type: integer, minimum: 0 }
+    openPastEstimate: { type: integer, minimum: 0 }
+    averagePreparationMinutes: { type: number, format: double, minimum: 0 }
+    metadata: { $ref: "#/DshAnalyticsMetadata" }
+
+DshCaptainPerformanceRow:
+  type: object
+  additionalProperties: false
+  required: [captainId, assignments, accepted, declined, completed, acceptanceRate, completionRate, averageResponseSeconds]
+  properties:
+    captainId: { type: string, minLength: 1 }
+    assignments: { type: integer, minimum: 0 }
+    accepted: { type: integer, minimum: 0 }
+    declined: { type: integer, minimum: 0 }
+    completed: { type: integer, minimum: 0 }
+    acceptanceRate: { type: number, format: double, minimum: 0, maximum: 100 }
+    completionRate: { type: number, format: double, minimum: 0, maximum: 100 }
+    averageResponseSeconds: { type: number, format: double, minimum: 0 }
+
+DshCaptainPerformanceAnalyticsResponse:
+  type: object
+  additionalProperties: false
+  required: [rows, metadata]
+  properties:
+    rows:
+      type: array
+      items: { $ref: "#/DshCaptainPerformanceRow" }
+    metadata: { $ref: "#/DshAnalyticsMetadata" }
+
+DshFieldPerformanceRow:
+  type: object
+  additionalProperties: false
+  required: [fieldAgentId, visits, completed, escalated, completionRate, averageVisitMinutes]
+  properties:
+    fieldAgentId: { type: string, minLength: 1 }
+    visits: { type: integer, minimum: 0 }
+    completed: { type: integer, minimum: 0 }
+    escalated: { type: integer, minimum: 0 }
+    completionRate: { type: number, format: double, minimum: 0, maximum: 100 }
+    averageVisitMinutes: { type: number, format: double, minimum: 0 }
+
+DshFieldPerformanceAnalyticsResponse:
+  type: object
+  additionalProperties: false
+  required: [rows, metadata]
+  properties:
+    rows:
+      type: array
+      items: { $ref: "#/DshFieldPerformanceRow" }
+    metadata: { $ref: "#/DshAnalyticsMetadata" }
+
+DshOperationalAnalyticsRecord:
+  type: object
+  additionalProperties: false
+  required: [id, kind, status, storeId, createdAt, updatedAt, detailUrl]
+  properties:
+    id: { type: string, format: uuid }
+    kind: { type: string, enum: [order] }
+    status: { type: string, minLength: 1 }
+    storeId: { type: string, minLength: 1 }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+    detailUrl: { type: string, minLength: 1 }
+
+DshOperationalAnalyticsDrilldownResponse:
+  type: object
+  additionalProperties: false
+  required: [records, metadata]
+  properties:
+    records:
+      type: array
+      items: { $ref: "#/DshOperationalAnalyticsRecord" }
+    metadata: { $ref: "#/DshAnalyticsMetadata" }
+
+WltAnalyticsAccountBalance:
+  type: object
+  additionalProperties: false
+  required: [accountType, category, normalBalanceSide, currency, balanceMinorUnits]
+  properties:
+    accountType: { type: string, minLength: 1 }
+    category: { type: string, enum: [asset, liability, revenue, expense] }
+    normalBalanceSide: { type: string, enum: [debit, credit] }
+    currency: { type: string, minLength: 3, maxLength: 3 }
+    balanceMinorUnits: { type: integer, format: int64 }
+
+WltAnalyticsCurrencySummary:
+  type: object
+  additionalProperties: false
+  required: [currency, assetsMinorUnits, liabilitiesMinorUnits, revenueMinorUnits, expensesMinorUnits, netPositionMinorUnits, accounts]
+  properties:
+    currency: { type: string, minLength: 3, maxLength: 3 }
+    assetsMinorUnits: { type: integer, format: int64 }
+    liabilitiesMinorUnits: { type: integer, format: int64 }
+    revenueMinorUnits: { type: integer, format: int64 }
+    expensesMinorUnits: { type: integer, format: int64 }
+    netPositionMinorUnits: { type: integer, format: int64 }
+    accounts:
+      type: array
+      items: { $ref: "#/WltAnalyticsAccountBalance" }
+
+WltAnalyticsFinancialSummary:
+  type: object
+  additionalProperties: false
+  required: [currencies, dataCompleteness]
+  properties:
+    currencies:
+      type: array
+      items: { $ref: "#/WltAnalyticsCurrencySummary" }
+    dataCompleteness:
+      type: array
+      items: { type: string }
+
+DshWltFinancialAnalyticsSnapshot:
+  type: object
+  additionalProperties: false
+  required: [owner, readOnly, readState, generatedAt, summary]
+  properties:
+    owner: { type: string, enum: [WLT] }
+    readOnly: { type: boolean, const: true }
+    readState: { type: string, enum: [available, unavailable] }
+    generatedAt: { type: string, format: date-time }
+    summary:
+      oneOf:
+        - { $ref: "#/WltAnalyticsFinancialSummary" }
+        - type: "null"
+
+DshWltFinancialAnalyticsSnapshotResponse:
+  type: object
+  additionalProperties: false
+  required: [financialSnapshot]
+  properties:
+    financialSnapshot: { $ref: "#/DshWltFinancialAnalyticsSnapshot" }
+
+DshWltFinancialAnalyticsUnavailableResponse:
+  type: object
+  additionalProperties: false
+  required: [financialSnapshot, error]
+  properties:
+    financialSnapshot: { $ref: "#/DshWltFinancialAnalyticsSnapshot" }
+    error:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code: { type: string, enum: [WLT_ANALYTICS_UNAVAILABLE] }
+        message: { type: string, minLength: 1 }

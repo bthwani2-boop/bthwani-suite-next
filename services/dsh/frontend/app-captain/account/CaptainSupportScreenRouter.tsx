@@ -9,10 +9,7 @@ import {
   DshCaptainOrdersOffersListScreen,
   DshCaptainProofUploadScreen,
 } from '../orders/DshCaptainOrdersScreen';
-import {
-  DshCaptainChatReadAckScreen,
-  DshCaptainChatSendScreen,
-} from './DshCaptainOperationsScreen';
+import { CaptainOrderSupportConversationScreen } from '../orders/CaptainOrderSupportConversationScreen';
 import { DshCaptainCodBalanceScreen } from './DshCaptainFinanceScreen';
 import {
   DshCaptainProfileGetScreen,
@@ -42,7 +39,7 @@ export type CaptainSupportScreenRouterProps = {
   onNavigate: (screenId: CaptainSupportRoute) => void;
   captainCollectsCod: boolean;
   dshClientId?: string | undefined;
-  activeOrderId?: string;
+  activeOrderId?: string | undefined;
   onAcceptTask: (orderId: string) => void;
   onDeclineTask: (orderId: string) => void;
 };
@@ -57,11 +54,25 @@ export function CaptainSupportScreenRouter({
   onAcceptTask,
   onDeclineTask,
 }: CaptainSupportScreenRouterProps): React.ReactNode {
+  const activeOrderProps = activeOrderId ? { orderId: activeOrderId } : {};
+
   switch (selectedSupportScreen) {
     case 'chat-read-ack':
-      return <DshCaptainChatReadAckScreen onBack={onBack} onSecondaryAction={onBack} />;
+      return (
+        <CaptainOrderSupportConversationScreen
+          {...activeOrderProps}
+          composerEnabled={false}
+          onBack={onBack}
+        />
+      );
     case 'chat-send':
-      return <DshCaptainChatSendScreen onBack={onBack} onSecondaryAction={onBack} />;
+      return (
+        <CaptainOrderSupportConversationScreen
+          {...activeOrderProps}
+          composerEnabled
+          onBack={onBack}
+        />
+      );
     case 'cod-liability':
       return captainCollectsCod ? (
         <DshCaptainCodBalanceScreen
@@ -73,7 +84,7 @@ export function CaptainSupportScreenRouter({
     case 'order-accept':
       return (
         <DshCaptainOrderAcceptScreen
-          orderId={activeOrderId}
+          {...activeOrderProps}
           onBack={onBack}
           onAccept={onAcceptTask}
           onDecline={onDeclineTask}

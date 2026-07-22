@@ -145,12 +145,17 @@ func (s *server) applyChangeSet(w http.ResponseWriter, r *http.Request, identity
 }
 
 func (s *server) rollbackChangeSet(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+	var input platformcontrol.RollbackChangeSetInput
+	if err := decodePlatformJSON(w, r, &input); err != nil {
+		return
+	}
 	changeSet, err := s.service.RollbackChangeSet(
 		r.Context(),
 		r.PathValue("id"),
 		identity.Subject,
 		identity.Roles,
 		correlationID(r),
+		input.Reason,
 	)
 	if err != nil {
 		sendPlatformError(w, err)
@@ -186,13 +191,21 @@ func sendPlatformError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, platformcontrol.ErrNotFound):
 		sendError(w, http.StatusNotFound, "PLATFORM_RECORD_NOT_FOUND", err.Error())
+	case errors.Is(err, platformcontrol.ErrSensitiveValue):
+		sendError(w, http.StatusUnprocessableEntity, "PLATFORM_SENSITIVE_VALUE_FORBIDDEN", err.Error())
+	case errors.Is(err, platformcontrol.ErrRollbackReason):
+		sendError(w, http.StatusUnprocessableEntity, "PLATFORM_ROLLBACK_REASON_REQUIRED", err.Error())
 	case errors.Is(err, platformcontrol.ErrValidation):
 		sendError(w, http.StatusUnprocessableEntity, "PLATFORM_CHANGE_VALIDATION_FAILED", err.Error())
+	case errors.Is(err, platformcontrol.ErrTargetConflict):
+		sendError(w, http.StatusConflict, "PLATFORM_TARGET_CONFLICT", err.Error())
+	case errors.Is(err, platformcontrol.ErrValidationSnapshot):
+		sendError(w, http.StatusConflict, "PLATFORM_VALIDATION_SNAPSHOT_REQUIRED", err.Error())
 	case errors.Is(err, platformcontrol.ErrInvalidTransition):
 		sendError(w, http.StatusConflict, "PLATFORM_INVALID_TRANSITION", err.Error())
 	case errors.Is(err, platformcontrol.ErrVersionConflict):
 		sendError(w, http.StatusConflict, "PLATFORM_VERSION_CONFLICT", err.Error())
-	case errors.Is(err, platformcontrol.ErrMakerChecker):
+	case errors.Is(err, platformcontrol.ErrMakerChecker), errors.Is(err, platformcontrol.ErrMakerCheckerReview):
 		sendError(w, http.StatusConflict, "PLATFORM_MAKER_CHECKER_VIOLATION", err.Error())
 	case errors.Is(err, platformcontrol.ErrHealthGate):
 		sendError(w, http.StatusConflict, "PLATFORM_ROLLOUT_HEALTH_GATE_FAILED", err.Error())

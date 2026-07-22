@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { createCoupon, fetchCoupons, updateCoupon } from "./marketing.api";
 import type {
   CouponCreatePayload,
+  CouponFundingLifecycleRecord,
   CouponFundingPolicy,
   CouponRecord,
   CouponStatus,
@@ -13,11 +14,16 @@ import type {
 
 export type CouponsControllerState =
   | { readonly kind: "loading" }
-  | { readonly kind: "empty"; readonly fundingPolicies: Readonly<Record<string, CouponFundingPolicy>> }
+  | {
+      readonly kind: "empty";
+      readonly fundingPolicies: Readonly<Record<string, CouponFundingPolicy>>;
+      readonly fundingLifecycle: readonly CouponFundingLifecycleRecord[];
+    }
   | {
       readonly kind: "success";
       readonly coupons: readonly CouponRecord[];
       readonly fundingPolicies: Readonly<Record<string, CouponFundingPolicy>>;
+      readonly fundingLifecycle: readonly CouponFundingLifecycleRecord[];
     }
   | { readonly kind: "error"; readonly message: string };
 
@@ -47,8 +53,13 @@ export function useCouponsController(authKind: string) {
             kind: "success",
             coupons: response.coupons,
             fundingPolicies: response.fundingPolicies,
+            fundingLifecycle: response.fundingLifecycle,
           }
-        : { kind: "empty", fundingPolicies: response.fundingPolicies });
+        : {
+            kind: "empty",
+            fundingPolicies: response.fundingPolicies,
+            fundingLifecycle: response.fundingLifecycle,
+          });
       return true;
     } catch (error) {
       setState({ kind: "error", message: errorMessage(error) });

@@ -5,17 +5,45 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"dsh-api/internal/clientaddress"
 	"dsh-api/internal/store"
+	"github.com/lib/pq"
 )
+
+func isAddressServiceAreaConstraint(err error) bool {
+	var postgresError *pq.Error
+	if !errors.As(err, &postgresError) || postgresError.Code != "23514" {
+		return false
+	}
+	switch strings.TrimSpace(postgresError.Message) {
+	case "DSH_ADDRESS_COORDINATES_REQUIRED", "DSH_ADDRESS_SERVICE_AREA_UNVERIFIED":
+		return true
+	default:
+		return false
+	}
+}
+
+func observeClientAddressOperation(operation string, started time.Time, err error) {
+	if isAddressServiceAreaConstraint(err) {
+		err = clientaddress.ErrServiceAreaUnverified
+	}
+	clientaddress.RecordOperation(operation, started, err)
+}
 
 func addressError(w http.ResponseWriter, err error) {
 	switch {
+	case errors.Is(err, clientaddress.ErrServiceAreaUnverified), isAddressServiceAreaConstraint(err):
+		store.SendError(w, http.StatusUnprocessableEntity, "ADDRESS_SERVICE_AREA_UNVERIFIED", "address coordinates must resolve to the supplied active DSH service area")
 	case errors.Is(err, clientaddress.ErrInvalid):
 		store.SendError(w, http.StatusBadRequest, "INVALID_ADDRESS", "address input is invalid")
 	case errors.Is(err, clientaddress.ErrNotFound):
 		store.SendError(w, http.StatusNotFound, "ADDRESS_NOT_FOUND", "address was not found")
+	case clientaddress.IsDuplicateError(err):
+		store.SendError(w, http.StatusConflict, "ADDRESS_ALREADY_EXISTS", "an identical active address already exists; update the existing address instead")
+	case errors.Is(err, clientaddress.ErrMutationIdempotencyConflict):
+		store.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", "Idempotency-Key was already used for a different address mutation")
 	case errors.Is(err, clientaddress.ErrConflict):
 		store.SendError(w, http.StatusConflict, "ADDRESS_CONFLICT", "address changed; reload and retry")
 	default:
@@ -23,12 +51,35 @@ func addressError(w http.ResponseWriter, err error) {
 	}
 }
 
+func addressMutationContext(w http.ResponseWriter, r *http.Request) (clientaddress.MutationContext, bool) {
+	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	if len(idempotencyKey) < 8 || len(idempotencyKey) > 200 {
+		store.SendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key must contain between 8 and 200 characters")
+		return clientaddress.MutationContext{}, false
+	}
+	return clientaddress.MutationContext{
+		IdempotencyKey: idempotencyKey,
+		CorrelationID:  strings.TrimSpace(r.Header.Get("X-Correlation-ID")),
+	}, true
+}
+
+func addressExpectedVersion(w http.ResponseWriter, r *http.Request) (int, bool) {
+	expectedVersion, err := strconv.Atoi(strings.TrimSpace(r.Header.Get("If-Match-Version")))
+	if err != nil || expectedVersion < 1 {
+		store.SendError(w, http.StatusBadRequest, "EXPECTED_VERSION_REQUIRED", "If-Match-Version must be a positive integer")
+		return 0, false
+	}
+	return expectedVersion, true
+}
+
 func (s *protectedStoreServer) handleListClientAddresses(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "client")
 	if !ok {
 		return
 	}
+	started := time.Now()
 	addresses, err := clientaddress.List(r.Context(), s.db, actor.ID)
+	observeClientAddressOperation("list", started, err)
 	if err != nil {
 		addressError(w, err)
 		return
@@ -41,20 +92,45 @@ func (s *protectedStoreServer) handleCreateClientAddress(w http.ResponseWriter, 
 	if !ok {
 		return
 	}
-	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
-	if len(idempotencyKey) < 8 {
-		store.SendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key must contain at least 8 characters")
+	started := time.Now()
+	var operationErr error
+	defer func() { observeClientAddressOperation("create", started, operationErr) }()
+
+	mutation, ok := addressMutationContext(w, r)
+	if !ok {
+		operationErr = clientaddress.ErrInvalid
 		return
 	}
 	var input clientaddress.CreateInput
 	if !decodeProtectedJSON(w, r, &input) {
+		operationErr = clientaddress.ErrInvalid
 		return
 	}
-	address, created, err := clientaddress.Create(r.Context(), s.db, actor.ID, input, clientaddress.MutationContext{
-		IdempotencyKey: idempotencyKey,
-		CorrelationID:  strings.TrimSpace(r.Header.Get("X-Correlation-ID")),
-	})
+
+	replay, found, err := clientaddress.FindCreateReplay(
+		r.Context(),
+		s.db,
+		actor.ID,
+		mutation.IdempotencyKey,
+	)
 	if err != nil {
+		operationErr = err
+		addressError(w, err)
+		return
+	}
+	if found {
+		store.SendJSON(w, http.StatusOK, map[string]any{"address": replay})
+		return
+	}
+	if err := clientaddress.ValidateServiceArea(r.Context(), s.db, input); err != nil {
+		operationErr = err
+		addressError(w, err)
+		return
+	}
+
+	address, created, err := clientaddress.Create(r.Context(), s.db, actor.ID, input, mutation)
+	if err != nil {
+		operationErr = err
 		addressError(w, err)
 		return
 	}
@@ -70,15 +146,53 @@ func (s *protectedStoreServer) handleUpdateClientAddress(w http.ResponseWriter, 
 	if !ok {
 		return
 	}
-	var input clientaddress.UpdateInput
-	if !decodeProtectedJSON(w, r, &input) {
+	started := time.Now()
+	var operationErr error
+	defer func() { observeClientAddressOperation("update", started, operationErr) }()
+
+	mutation, ok := addressMutationContext(w, r)
+	if !ok {
+		operationErr = clientaddress.ErrInvalid
 		return
 	}
-	address, err := clientaddress.Update(
-		r.Context(), s.db, actor.ID, r.PathValue("addressId"), input,
-		strings.TrimSpace(r.Header.Get("X-Correlation-ID")),
+	var input clientaddress.UpdateInput
+	if !decodeProtectedJSON(w, r, &input) {
+		operationErr = clientaddress.ErrInvalid
+		return
+	}
+	addressID := r.PathValue("addressId")
+	replay, found, err := clientaddress.FindUpdateReplay(
+		r.Context(),
+		s.db,
+		actor.ID,
+		addressID,
+		input,
+		mutation,
 	)
 	if err != nil {
+		operationErr = err
+		addressError(w, err)
+		return
+	}
+	if found {
+		store.SendJSON(w, http.StatusOK, map[string]any{"address": replay})
+		return
+	}
+	if err := clientaddress.ValidateServiceArea(r.Context(), s.db, input.CreateInput); err != nil {
+		operationErr = err
+		addressError(w, err)
+		return
+	}
+	address, err := clientaddress.UpdateIdempotent(
+		r.Context(),
+		s.db,
+		actor.ID,
+		addressID,
+		input,
+		mutation,
+	)
+	if err != nil {
+		operationErr = err
 		addressError(w, err)
 		return
 	}
@@ -90,17 +204,30 @@ func (s *protectedStoreServer) handleDeleteClientAddress(w http.ResponseWriter, 
 	if !ok {
 		return
 	}
-	expectedVersion, err := strconv.Atoi(strings.TrimSpace(r.Header.Get("If-Match-Version")))
-	if err != nil || expectedVersion < 1 {
-		store.SendError(w, http.StatusBadRequest, "EXPECTED_VERSION_REQUIRED", "If-Match-Version must be a positive integer")
+	started := time.Now()
+	var operationErr error
+	defer func() { observeClientAddressOperation("delete", started, operationErr) }()
+
+	mutation, ok := addressMutationContext(w, r)
+	if !ok {
+		operationErr = clientaddress.ErrInvalid
 		return
 	}
-	err = clientaddress.Delete(
-		r.Context(), s.db, actor.ID, r.PathValue("addressId"), expectedVersion,
-		strings.TrimSpace(r.Header.Get("X-Correlation-ID")),
+	expectedVersion, ok := addressExpectedVersion(w, r)
+	if !ok {
+		operationErr = clientaddress.ErrInvalid
+		return
+	}
+	operationErr = clientaddress.DeleteIdempotent(
+		r.Context(),
+		s.db,
+		actor.ID,
+		r.PathValue("addressId"),
+		expectedVersion,
+		mutation,
 	)
-	if err != nil {
-		addressError(w, err)
+	if operationErr != nil {
+		addressError(w, operationErr)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -111,27 +238,30 @@ func (s *protectedStoreServer) handleSetClientDefaultAddress(w http.ResponseWrit
 	if !ok {
 		return
 	}
-	if len(strings.TrimSpace(r.Header.Get("Idempotency-Key"))) < 8 {
-		store.SendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key must contain at least 8 characters")
+	started := time.Now()
+	var operationErr error
+	defer func() { observeClientAddressOperation("set_default", started, operationErr) }()
+
+	mutation, ok := addressMutationContext(w, r)
+	if !ok {
+		operationErr = clientaddress.ErrInvalid
 		return
 	}
-	addressID := r.PathValue("addressId")
-	addresses, err := clientaddress.List(r.Context(), s.db, actor.ID)
-	if err != nil {
-		addressError(w, err)
+	expectedVersion, ok := addressExpectedVersion(w, r)
+	if !ok {
+		operationErr = clientaddress.ErrInvalid
 		return
 	}
-	for index := range addresses {
-		if addresses[index].ID == addressID && addresses[index].IsDefault {
-			store.SendJSON(w, http.StatusOK, map[string]any{"address": addresses[index]})
-			return
-		}
-	}
-	address, err := clientaddress.SetDefault(
-		r.Context(), s.db, actor.ID, addressID,
-		strings.TrimSpace(r.Header.Get("X-Correlation-ID")),
+	address, err := clientaddress.SetDefaultIdempotent(
+		r.Context(),
+		s.db,
+		actor.ID,
+		r.PathValue("addressId"),
+		expectedVersion,
+		mutation,
 	)
 	if err != nil {
+		operationErr = err
 		addressError(w, err)
 		return
 	}

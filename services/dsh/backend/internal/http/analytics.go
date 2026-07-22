@@ -11,15 +11,33 @@ import (
 // remains a valid fallback role during RBAC data migration.
 const AnalyticsPermissionRead = "analytics.read"
 
+func namedAnalyticsPeriod(w http.ResponseWriter, r *http.Request) (string, bool) {
+	if r.URL.Query().Get("from") != "" || r.URL.Query().Get("to") != "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_ANALYTICS_RANGE", "this analytics slice accepts period only")
+		return "", false
+	}
+	period := r.URL.Query().Get("period")
+	if period == "" {
+		period = "today"
+	}
+	switch period {
+	case "today", "week", "month":
+		return period, true
+	default:
+		store.SendError(w, http.StatusBadRequest, "INVALID_ANALYTICS_PERIOD", "period must be today, week, or month")
+		return "", false
+	}
+}
+
 // GET /dsh/operator/analytics/platform
 func (s *protectedStoreServer) handlePlatformKpis(w http.ResponseWriter, r *http.Request) {
 	_, ok := s.requirePermission(w, r, "control-panel", AnalyticsPermissionRead, "operator")
 	if !ok {
 		return
 	}
-	period := r.URL.Query().Get("period")
-	if period == "" {
-		period = "today"
+	period, ok := namedAnalyticsPeriod(w, r)
+	if !ok {
+		return
 	}
 	kpis, err := analytics.GetPlatformKpis(s.db, period)
 	if err != nil {
@@ -35,9 +53,9 @@ func (s *protectedStoreServer) handleOrderAnalytics(w http.ResponseWriter, r *ht
 	if !ok {
 		return
 	}
-	period := r.URL.Query().Get("period")
-	if period == "" {
-		period = "today"
+	period, ok := namedAnalyticsPeriod(w, r)
+	if !ok {
+		return
 	}
 	data, err := analytics.GetOrderAnalytics(s.db, period)
 	if err != nil {
@@ -53,9 +71,9 @@ func (s *protectedStoreServer) handleDeliveryAnalytics(w http.ResponseWriter, r 
 	if !ok {
 		return
 	}
-	period := r.URL.Query().Get("period")
-	if period == "" {
-		period = "today"
+	period, ok := namedAnalyticsPeriod(w, r)
+	if !ok {
+		return
 	}
 	data, err := analytics.GetDeliveryAnalytics(s.db, period)
 	if err != nil {
@@ -71,9 +89,9 @@ func (s *protectedStoreServer) handleSupportAnalytics(w http.ResponseWriter, r *
 	if !ok {
 		return
 	}
-	period := r.URL.Query().Get("period")
-	if period == "" {
-		period = "today"
+	period, ok := namedAnalyticsPeriod(w, r)
+	if !ok {
+		return
 	}
 	data, err := analytics.GetSupportAnalytics(s.db, period)
 	if err != nil {
@@ -103,9 +121,9 @@ func (s *protectedStoreServer) handlePartnerPerformance(w http.ResponseWriter, r
 	if !ok {
 		return
 	}
-	period := r.URL.Query().Get("period")
-	if period == "" {
-		period = "today"
+	period, ok := namedAnalyticsPeriod(w, r)
+	if !ok {
+		return
 	}
 	data, err := analytics.GetPartnerPerformance(s.db, storeID, period)
 	if err != nil {

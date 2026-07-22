@@ -42,6 +42,7 @@ export function NotificationsScreen({
         authKind={identity.state.kind}
         title="إشعارات الشريك"
         emptyDescription="ستظهر هنا إشعارات الفرع، القبول، والمراسلات التشغيلية للشريك."
+        appScheme="bthwani-partner-next"
       />
 
       <DshPartnerOrderAlertsPanel

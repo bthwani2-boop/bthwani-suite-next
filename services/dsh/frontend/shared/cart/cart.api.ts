@@ -18,8 +18,7 @@ export async function fetchCart(storeId: string): Promise<DshCart | null> {
 
 // productName/priceReference are accepted here for caller convenience (e.g.
 // optimistic UI updates) but are never sent to the server: DSH derives the
-// authoritative name/price snapshot server-side from the store assortment,
-// never from the client (see dsh-033 migration).
+// authoritative name/price snapshot server-side from the store assortment.
 export async function upsertCartItem(input: {
   readonly storeId: string;
   readonly fulfillmentMode?: DshFulfillmentMode;
@@ -55,13 +54,12 @@ export async function clearCart(cartId?: string, storeId?: string): Promise<void
 
 export async function checkServiceability(
   storeId: string,
-  serviceAreaCode: string,
-  latitude?: number,
-  longitude?: number,
+  addressId: string,
+  fulfillmentMode: DshFulfillmentMode,
 ): Promise<DshServiceabilityResult> {
   return request<DshServiceabilityResult>("/dsh/client/cart/serviceability", {
     method: "POST",
-    body: { storeId, serviceAreaCode, latitude, longitude },
+    body: { storeId, addressId, fulfillmentMode },
   });
 }
 
@@ -69,15 +67,4 @@ export async function fetchOperatorCarts(state?: string): Promise<readonly DshCa
   const params = state ? `?state=${encodeURIComponent(state)}` : "";
   const data = await request<{ carts: DshCart[] }>(`/dsh/operator/carts${params}`);
   return data.carts ?? [];
-}
-
-function classifyCartError(error: unknown): { kind: "permission_denied" | "offline" | "error"; message?: string } {
-  const typed = error as { kind?: string; status?: number; message?: string };
-  if (typed.kind === "http" && (typed.status === 401 || typed.status === 403)) {
-    return { kind: "permission_denied" };
-  }
-  if (typed.kind === "network") {
-    return { kind: "offline" };
-  }
-  return { kind: "error", message: "تعذر تنفيذ عملية السلة." };
 }

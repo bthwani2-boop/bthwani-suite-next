@@ -1,0 +1,113 @@
+{
+  "journeyId": "JRN-011",
+  "journeyNameAr": "إنشاء الطلب وحقيقة الطلب",
+  "repository": "bthwani2-boop/bthwani-suite-next",
+  "branch": "sambassam",
+  "repositoryMode": "REMOTE_ONLY",
+  "observedBaselineCommit": "c19f122764fd3172b4ea5e11bcd42a4e3c91ee99",
+  "verifiedImplementationCommit": "fdace18a6ae4a92b077db32254d7f0253d102fd7",
+  "workflowRunId": "29873796768",
+  "statusContext": "jrn-011/order-truth",
+  "statusConclusion": "success",
+  "decision": "READY_FOR_REVIEW",
+  "decisionReason": "All repository-internal JRN-011 gaps identified during this closure were repaired, all FS-01 through FS-18 implementation slices are represented, and the exact implementation commit published successful static, Go, PostgreSQL 16 and focused TypeScript verification. Device/browser QA, target-environment live DSH/WLT fault-injection proof and independent product, QA, security, finance-boundary and release approvals remain external review evidence, so CLOSED_WITH_EVIDENCE is not claimed.",
+  "sliceExecution": [
+    { "slice": "FS-01", "status": "CLOSED_INTERNAL", "evidence": "governance/product/contracts/jrn-011-order-creation-truth.product-truth.json" },
+    { "slice": "FS-02", "status": "CLOSED_INTERNAL", "evidence": "services/dsh/contracts/jrn-011-surface-rbac-registry.json" },
+    { "slice": "FS-03", "status": "CLOSED_INTERNAL", "evidence": "services/dsh/contracts/jrn-011-order-state-policy.json" },
+    { "slice": "FS-04", "status": "CLOSED_INTERNAL", "evidence": "governance/boundaries/jrn-011-dsh-wlt-order-truth-boundary.md" },
+    { "slice": "FS-05", "status": "CLOSED_INTERNAL", "evidence": "workflow run 29873796768 applied all DSH migrations and passed dsh-902_903 plus dsh-905 PostgreSQL invariants" },
+    { "slice": "FS-06", "status": "CLOSED_INTERNAL", "evidence": "services/dsh/contracts/dsh.order-truth.openapi.yaml" },
+    { "slice": "FS-07", "status": "CLOSED_INTERNAL", "evidence": "services/dsh/backend/internal/orders/order_truth.go and order_truth_queries.go; Go verification passed" },
+    { "slice": "FS-08", "status": "CLOSED_INTERNAL", "evidence": "services/dsh/backend/internal/orders/order_event_bridge_worker.go and transactional outbox invariants" },
+    { "slice": "FS-09", "status": "CLOSED_INTERNAL", "evidence": "services/dsh/frontend/shared/order-truth plus tsconfig.jrn-011.json; focused TypeScript verification passed" },
+    { "slice": "FS-10", "status": "CLOSED_INTERNAL", "evidence": "services/dsh/contracts/jrn-011-cross-surface-binding.json and required surface bindings" },
+    { "slice": "FS-11", "status": "CLOSED_INTERNAL", "evidence": "services/dsh/frontend/shared/order-truth/order-truth.visible-states.ts" },
+    { "slice": "FS-12", "status": "CLOSED_INTERNAL", "evidence": "tools/guards/jrn-011-cross-surface-integrity-gate.mjs and read-after-write controller" },
+    { "slice": "FS-13", "status": "CLOSED_INTERNAL", "evidence": "UUID validation before SQL, tenant/actor/store scoping, operator and partner event metadata redaction, Go and database tests" },
+    { "slice": "FS-14", "status": "CLOSED_INTERNAL_EXTERNAL_QA_PENDING", "evidence": "shared experience/accessibility policies and no-inline-style cleanup; device/browser verification remains independent" },
+    { "slice": "FS-15", "status": "CLOSED_INTERNAL_EXTERNAL_RUNTIME_REVIEW_PENDING", "evidence": "governance/runbooks/jrn-011-order-truth-operations.md and workflow status publication" },
+    { "slice": "FS-16", "status": "CLOSED_INTERNAL", "evidence": "services/dsh/contracts/jrn-011-legacy-compatibility.json and removal of JRN-011 inline layout styles" },
+    { "slice": "FS-17", "status": "CLOSED_INTERNAL", "evidence": ".github/workflows/jrn-011-order-truth-verify.yml; run 29873796768 passed all four verification jobs" },
+    { "slice": "FS-18", "status": "READY_FOR_INDEPENDENT_REVIEW", "evidence": "this JSON record, the companion Markdown record, rollback plan and explicit remaining external reviews" }
+  ],
+  "canonicalCapabilities": [
+    "One actor-owned eligible Checkout Intent creates at most one order.",
+    "Persistent client idempotency attempt survives retries until actor-scoped readback succeeds.",
+    "Malformed checkout and order identifiers are rejected before PostgreSQL UUID casts; scoped reads preserve the canonical NOT_FOUND contract.",
+    "Order item, address and pricing snapshots are immutable after creation.",
+    "Client, partner and operator reads apply tenant and actor/store scopes before hydration.",
+    "Partner and operator responses redact client identity, private address data and event metadata that may contain actor or provider diagnostics.",
+    "Server returns allowedActions and surfaces do not derive authority locally.",
+    "Order events enter a transactional outbox, bridge to the canonical operational outbox and are delivered idempotently.",
+    "WLT remains financially authoritative; DSH periodically reconciles only a read-only payment projection.",
+    "Correlation identifiers are distinct from and do not expose raw idempotency keys.",
+    "Shared and partner order-truth layouts use governed UI-kit layout properties rather than inline styles."
+  ],
+  "changedPaths": [
+    ".github/workflows/jrn-011-order-truth-verify.yml",
+    "services/dsh/backend/internal/http/order_truth.go",
+    "services/dsh/backend/internal/http/order_truth_validation_test.go",
+    "services/dsh/backend/internal/orders/order_truth_queries.go",
+    "services/dsh/backend/internal/orders/order_truth_test.go",
+    "services/dsh/frontend/app-partner/orders/OperationalOrdersInboxScreen.tsx",
+    "services/dsh/frontend/shared/order-truth/OrderTruthReadbackSummary.tsx",
+    "services/dsh/tests/jrn-011-order-truth-hardening.test.mjs",
+    "services/dsh/tsconfig.jrn-011.json",
+    "tools/guards/jrn-011-cross-surface-integrity-gate.mjs"
+  ],
+  "verificationDefinitions": {
+    "staticNode": "node tools/guards/jrn-011-cross-surface-integrity-gate.mjs && node --test services/dsh/tests/jrn-011-order-*.test.mjs",
+    "go": "go test ./internal/orders ./internal/http ./internal/wlt -count=1",
+    "postgres": "Apply all DSH migrations in lexical order, then execute dsh-902_903 and dsh-905 invariant SQL files on PostgreSQL 16.",
+    "typescript": "pnpm --dir services/dsh exec tsc -p tsconfig.jrn-011.json --noEmit",
+    "workflow": ".github/workflows/jrn-011-order-truth-verify.yml"
+  },
+  "publishedVerificationObserved": {
+    "verifiedCommit": "fdace18a6ae4a92b077db32254d7f0253d102fd7",
+    "workflowRunId": "29873796768",
+    "commitStatusContext": "jrn-011/order-truth",
+    "commitStatusState": "success",
+    "jobs": {
+      "staticOrderTruthIntegrity": "success",
+      "goOrderAndWltProjectionTests": "success",
+      "postgresqlOrderTruthInvariants": "success",
+      "jrn011TypeScriptBinding": "success",
+      "publishGovernedVerificationStatus": "success"
+    },
+    "conclusion": "SAME_COMMIT_INTERNAL_VERIFICATION_PASSED"
+  },
+  "zeroGate": {
+    "unboundUiControls": 0,
+    "frontendOnlyFeatures": 0,
+    "backendOnlyFeatures": 0,
+    "contractClientDrift": 0,
+    "requestResponseMismatches": 0,
+    "permissionMismatches": 0,
+    "localSurfaceBusinessLogic": 0,
+    "rawSurfaceApiCalls": 0,
+    "duplicateTruthOwners": 0,
+    "runtimeMockOrDemoTruths": 0,
+    "obsoleteOrDeadCodeInScope": 0,
+    "unclosedRegisteredSlices": 0,
+    "unclosedDiscoveredInternalSlices": 0,
+    "crossSliceIntegrationGaps": 0,
+    "unresolvedInternalGaps": 0,
+    "failedRequiredInternalChecks": 0
+  },
+  "remainingExternalReviewEvidence": [
+    "Run the governed live DSH/WLT smoke against the intended target runtime, covering first create, identical retry replay, different-fingerprint conflict, actor-scoped readback, event bridge retry/crash and payment-projection outage/recovery.",
+    "Verify app-client, app-partner and control-panel on representative device/browser targets for Arabic, RTL, dynamic text, accessibility, offline and partial states.",
+    "Obtain independent Product Owner, QA, security, finance-boundary and release/production approvals.",
+    "No pull request or merge was authorized or created."
+  ],
+  "rollback": [
+    "Stop RunPaymentProjectionWorker and RunOrderEventBridgeWorker before schema rollback.",
+    "Restore the pre-JRN-011 shared-surface bindings while retaining compatibility-only legacy reads.",
+    "Do not drop idempotency, event outbox, audit or reconciliation tables until every in-flight row is reconciled and archived.",
+    "Roll back application code before removing additive columns or triggers.",
+    "Never perform a debit, credit, refund or settlement from DSH as a rollback mechanism.",
+    "After rollback verify one-order-per-checkout, event continuity and WLT authority."
+  ],
+  "nextJourneyStarted": false
+}

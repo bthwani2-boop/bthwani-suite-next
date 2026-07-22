@@ -5,10 +5,12 @@ import {
   markPickupCustomerArrived,
   verifyPickupSession,
   markPickupNoShow,
+  fetchClientPickupState,
   fetchPartnerPickupState,
   fetchOperatorPickups,
   fetchOperatorPickup,
   extendPickupWindow,
+  reschedulePickupWindow,
   classifyPickupError,
   type PartnerPickupStage,
 } from "./pickup.api";
@@ -161,6 +163,61 @@ export function usePickupActionsController(orderId: string) {
   return { state, markReady, notify, customerArrived, verify, noShow, refresh: load } as const;
 }
 
+export type ClientPickupViewState = {
+  readonly session: DshPickupSession | null;
+  readonly stage: PickupActionStage;
+  readonly loaded: boolean;
+  readonly message: string | null;
+  readonly isError: boolean;
+  readonly errorCode?: string | undefined;
+};
+
+/**
+ * Read-only client view of their own pickup session. Backs the screen opened
+ * from the pickup_otp notification action_url; the client observes status,
+ * they never mutate the session directly.
+ */
+export function useClientPickupSessionController(orderId: string) {
+  const [state, setState] = useState<ClientPickupViewState>({
+    session: null,
+    stage: "not_ready",
+    loaded: false,
+    message: null,
+    isError: false,
+  });
+
+  const load = useCallback(async () => {
+    if (!orderId) return;
+    try {
+      const response = await fetchClientPickupState(orderId);
+      setState({
+        session: response.session,
+        stage: response.stage,
+        loaded: true,
+        message: null,
+        isError: false,
+      });
+    } catch (error) {
+      const { message, classified } = classifiedMessage(error, "تعذر تحميل حالة استلام طلبك.");
+      setState((current) => ({
+        ...current,
+        loaded: true,
+        isError: true,
+        message,
+        errorCode: classified.code,
+      }));
+    }
+  }, [orderId]);
+
+  useEffect(() => {
+    void load();
+    const interval = setInterval(() => void load(), 10_000);
+    return () => clearInterval(interval);
+  }, [load]);
+
+  return { state, refresh: load } as const;
+}
+
 export type UseOperatorPickupsControllerParams = {
   readonly storeId?: string;
   readonly limit?: number;
@@ -176,7 +233,7 @@ type OperatorPickupMutationResult =
       readonly message: string;
     };
 
-/** Operator-owned pickup monitoring controller. */
+/** Operator-owned pickup monitoring and no-show recovery controller. */
 export function useOperatorPickupsController(
   params: UseOperatorPickupsControllerParams = {},
 ) {
@@ -202,7 +259,7 @@ export function useOperatorPickupsController(
       )
       .catch((error: unknown) => {
         const { message, classified } = classifiedMessage(error, "تعذر تحميل جلسات الاستلام الذاتي");
-        setListState({ loaded: false, error: message, offline: classified.kind === "network", data: [] });
+        setListState({ loaded: true, error: message, offline: classified.kind === "network", data: [] });
       });
   }, [storeId, limit]);
 
@@ -221,24 +278,26 @@ export function useOperatorPickupsController(
       )
       .catch((error: unknown) => {
         const { message, classified } = classifiedMessage(error, "تعذر تحميل تفاصيل جلسة الاستلام");
-        setDetailState({ loaded: false, error: message, offline: classified.kind === "network", data: null });
+        setDetailState({ loaded: true, error: message, offline: classified.kind === "network", data: null });
       });
   }, []);
 
-  const extendWindow = useCallback(
+  const executeWindowMutation = useCallback(
     (
+      action: typeof extendPickupWindow,
       orderIdValue: string,
       expectedVersion: number,
       reason: string,
       newExpiry: string,
+      fallback: string,
     ): Promise<OperatorPickupMutationResult> => {
-      return extendPickupWindow(orderIdValue, { expectedVersion, reason, newExpiry })
+      return action(orderIdValue, { expectedVersion, reason, newExpiry })
         .then((response) => {
           setDetailState({ loaded: true, error: null, offline: false, data: response.session });
           return { ok: true as const, session: response.session };
         })
         .catch((error: unknown) => {
-          const { message, classified } = classifiedMessage(error, "تعذر تمديد نافذة الاستلام.");
+          const { message, classified } = classifiedMessage(error, fallback);
           return {
             ok: false as const,
             kind: classified.kind,
@@ -250,5 +309,38 @@ export function useOperatorPickupsController(
     [],
   );
 
-  return { listState, loadList, detailState, loadDetail, extendWindow };
+  const extendWindow = useCallback(
+    (orderIdValue: string, expectedVersion: number, reason: string, newExpiry: string) =>
+      executeWindowMutation(
+        extendPickupWindow,
+        orderIdValue,
+        expectedVersion,
+        reason,
+        newExpiry,
+        "تعذر تمديد نافذة الاستلام.",
+      ),
+    [executeWindowMutation],
+  );
+
+  const rescheduleWindow = useCallback(
+    (orderIdValue: string, expectedVersion: number, reason: string, newExpiry: string) =>
+      executeWindowMutation(
+        reschedulePickupWindow,
+        orderIdValue,
+        expectedVersion,
+        reason,
+        newExpiry,
+        "تعذر إعادة جدولة نافذة الاستلام.",
+      ),
+    [executeWindowMutation],
+  );
+
+  return {
+    listState,
+    loadList,
+    detailState,
+    loadDetail,
+    extendWindow,
+    rescheduleWindow,
+  } as const;
 }

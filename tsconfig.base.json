@@ -61,8 +61,14 @@
       "expo-location": [
         "apps/app-field/runtime/node_modules/expo-location"
       ],
+      "expo-notifications": [
+        "apps/app-field/runtime/node_modules/expo-notifications"
+      ],
       "expo-secure-store": [
         "apps/app-field/runtime/node_modules/expo-secure-store"
+      ],
+      "@dsh-shared/*": [
+        "services/dsh/frontend/shared/*"
       ]
     }
   }

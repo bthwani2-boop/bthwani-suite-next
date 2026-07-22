@@ -1,13 +1,14 @@
 openapi: 3.1.0
 info:
   title: BThwani DSH Client Address Privacy API
-  version: 0.1.0
-  description: Governed retention and irreversible anonymization controls for deleted client addresses.
+  version: 0.2.0
+  description: Governed retention, queue visibility, irreversible anonymization, and PII-safe audit controls for deleted client addresses.
 x-bthwani-owner: services/dsh
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-client-generation: DISABLED
 x-bthwani-client-binding: MANUAL_TYPED_ADAPTER
 x-bthwani-runtime-dependency: true
+x-bthwani-pii-rule: Raw client identifiers, recipient names, phones, address text, delivery instructions, and coordinates are forbidden from audit responses.
 
 paths:
   /dsh/operator/privacy/client-addresses/policy:
@@ -41,7 +42,7 @@ paths:
             schema: { $ref: "#/components/schemas/DshUpdateClientAddressPrivacyPolicyInput" }
       responses:
         "200":
-          description: Policy updated or replayed idempotently.
+          description: Policy updated or replayed idempotently; deleted non-anonymized addresses are rescheduled by database trigger.
           content:
             application/json:
               schema:
@@ -53,6 +54,50 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/operator/privacy/client-addresses/status:
+    get:
+      operationId: getDshClientAddressPrivacyQueueStatus
+      tags: [DshClientAddressPrivacy]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Current queue counts and next due time without address PII.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: { $ref: "#/components/schemas/DshClientAddressPrivacyQueueStatus" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /dsh/operator/privacy/client-addresses/events:
+    get:
+      operationId: listDshClientAddressPrivacyAuditEvents
+      tags: [DshClientAddressPrivacy]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+      responses:
+        "200":
+          description: PII-safe audit events from the database projection. No raw client or address fields are returned.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [events]
+                properties:
+                  events:
+                    type: array
+                    items: { $ref: "#/components/schemas/DshClientAddressPrivacyAuditEvent" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
   /dsh/operator/privacy/client-addresses/anonymize:
     post:
@@ -71,17 +116,18 @@ paths:
               additionalProperties: false
               required: [limit]
               properties:
-                limit: { type: integer, minimum: 0, maximum: 10000 }
+                limit: { type: integer, minimum: 1, maximum: 10000 }
       responses:
         "200":
-          description: Due deleted addresses anonymized or prior result replayed.
+          description: Due deleted addresses anonymized or prior run result replayed, with refreshed queue status.
           content:
             application/json:
               schema:
                 type: object
-                required: [result]
+                required: [result, status]
                 properties:
                   result: { $ref: "#/components/schemas/DshClientAddressAnonymizationResult" }
+                  status: { $ref: "#/components/schemas/DshClientAddressPrivacyQueueStatus" }
         "400": { $ref: "#/components/responses/InvalidRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
@@ -95,6 +141,7 @@ components:
       name: Idempotency-Key
       in: header
       required: true
+      description: Stable identity for one mutation or anonymization run. Reuse only for the same request.
       schema: { type: string, minLength: 8, maxLength: 200 }
     CorrelationId:
       name: X-Correlation-ID
@@ -104,6 +151,7 @@ components:
   schemas:
     DshClientAddressPrivacyPolicy:
       type: object
+      additionalProperties: false
       required: [enabled, retentionDays, batchLimit, version, updatedBy, updatedAt]
       properties:
         enabled: { type: boolean }
@@ -112,6 +160,20 @@ components:
         version: { type: integer, minimum: 1 }
         updatedBy: { type: string }
         updatedAt: { type: string, format: date-time }
+    DshClientAddressPrivacyQueueStatus:
+      type: object
+      additionalProperties: false
+      required: [policyEnabled, policyVersion, retentionDays, batchLimit, scheduledCount, dueCount, anonymizedCount, checkedAt]
+      properties:
+        policyEnabled: { type: boolean }
+        policyVersion: { type: integer, minimum: 1 }
+        retentionDays: { type: integer, minimum: 0, maximum: 3650 }
+        batchLimit: { type: integer, minimum: 1, maximum: 10000 }
+        scheduledCount: { type: integer, minimum: 0 }
+        dueCount: { type: integer, minimum: 0 }
+        anonymizedCount: { type: integer, minimum: 0 }
+        nextPurgeAt: { type: [string, "null"], format: date-time }
+        checkedAt: { type: string, format: date-time }
     DshUpdateClientAddressPrivacyPolicyInput:
       type: object
       additionalProperties: false
@@ -124,10 +186,25 @@ components:
         reason: { type: string, minLength: 3, maxLength: 500 }
     DshClientAddressAnonymizationResult:
       type: object
+      additionalProperties: false
       required: [anonymizedCount, completedAt]
       properties:
         anonymizedCount: { type: integer, minimum: 0 }
         completedAt: { type: string, format: date-time }
+    DshClientAddressPrivacyAuditEvent:
+      type: object
+      additionalProperties: false
+      required: [eventId, addressId, clientSubjectHash, action, actorId, policyVersion, metadata, createdAt]
+      properties:
+        eventId: { type: string, format: uuid }
+        addressId: { type: string, description: Operational address identifier; not address content. }
+        clientSubjectHash: { type: string, pattern: "^[a-f0-9]{64}$" }
+        action: { type: string, enum: [retention_scheduled, anonymized, policy_updated] }
+        actorId: { type: string }
+        correlationId: { type: [string, "null"] }
+        policyVersion: { type: integer, minimum: 1 }
+        metadata: { type: object, additionalProperties: true }
+        createdAt: { type: string, format: date-time }
     DshError:
       type: object
       required: [code, message]

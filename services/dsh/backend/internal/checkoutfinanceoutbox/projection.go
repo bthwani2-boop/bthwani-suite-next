@@ -23,11 +23,15 @@ func financialProjection(result DeliveryResult) (status, reference string, err e
 		reference = result.RefundID
 	case "none":
 		status = "no_action"
-		reference = result.SessionStatus
+		reference = result.PaymentSessionID
 	default:
 		return "", "", fmt.Errorf("unsupported financial closure action %q", result.Action)
 	}
-	return status, strings.TrimSpace(reference), nil
+	reference = strings.TrimSpace(reference)
+	if reference == "" {
+		return "", "", fmt.Errorf("financial closure action %q is missing its WLT reference", result.Action)
+	}
+	return status, reference, nil
 }
 
 // MarkSentWithResult atomically closes the outbox event and projects WLT's

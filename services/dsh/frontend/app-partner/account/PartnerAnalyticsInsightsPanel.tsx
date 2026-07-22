@@ -1,13 +1,24 @@
 import React from 'react';
-import { ActivityIndicator, View } from 'react-native';
-import { Box, Divider, Icon, Text, spacing, useDirection, useTheme } from '@bthwani/ui-kit';
+import { View } from 'react-native';
+import {
+  Box,
+  Button,
+  Divider,
+  Icon,
+  StateView,
+  Text,
+  spacing,
+  useDirection,
+  useTheme,
+} from '@bthwani/ui-kit';
 
-/** Analytics view-model — preview/seed data only.
- * No customer PII. Summary metrics only per on-demand retrieval contract.
- * Designed for later real-data binding without layout changes. */
+import {
+  fetchPartnerPerformance,
+  type DshAnalyticsPeriod,
+  type DshPartnerPerformance,
+} from '../../shared/analytics';
 
 export function AnalyticsInsightMetric({ label, value, tone = 'default', icon }: { label: string; value: string; tone?: 'default' | 'action' | 'success' | 'info' | 'muted' | 'danger'; icon: React.ComponentProps<typeof Icon>['name'] }) {
-
   const { direction } = useDirection();
   const theme = useTheme() as any;
   const accentColor = tone === 'action' ? theme.brand : tone === 'success' ? theme.success : tone === 'info' ? theme.info : tone === 'danger' ? theme.danger : theme.lineStrong;
@@ -20,77 +31,120 @@ export function AnalyticsInsightMetric({ label, value, tone = 'default', icon }:
               : tone;
 
   return (
-    <Box
-      padding={3}
-      gap={1}
-      style={{ flex: 1, minWidth: 140, borderBottomWidth: 2, borderBottomColor: accentColor }}
-    >
+    <Box padding={3} gap={1} style={{ flex: 1, minWidth: 140, borderBottomWidth: 2, borderBottomColor: accentColor }}>
       <View style={{ flexDirection: direction === 'rtl' ? 'row-reverse' : 'row', alignItems: 'center', gap: 6 }}>
         <Icon name={icon} size={14} {...(iconTone !== undefined ? { tone: iconTone } : {})} />
         <Text role="caption" tone="muted" numberOfLines={1} style={{ flex: 1, textAlign: direction === 'rtl' ? 'right' : 'left' }}>
           {label}
         </Text>
       </View>
-      <Text role="titleSm" tone={tone} numberOfLines={1} align="start">
-        {value}
-      </Text>
+      <Text role="titleSm" tone={tone} numberOfLines={1} align="start">{value}</Text>
     </Box>
   );
 }
 
-export function AnalyticsInsightsPanel({ storeName, canonicalStoreId }: { storeName: string; canonicalStoreId?: string }) {
-  const theme = useTheme() as any;
+type PerformanceState =
+  | { kind: 'loading' }
+  | { kind: 'success'; value: DshPartnerPerformance }
+  | { kind: 'error'; message: string };
 
-  const [performance, setPerformance] = React.useState<import('../../shared/partner/partner.types').DshPartnerPerformanceResponse | null>(null);
-  const [loading, setLoading] = React.useState(true);
+const periods: readonly { id: DshAnalyticsPeriod; label: string }[] = [
+  { id: 'today', label: 'اليوم' },
+  { id: 'week', label: '7 أيام' },
+  { id: 'month', label: 'شهر' },
+];
+
+export function AnalyticsInsightsPanel({ storeName, canonicalStoreId }: { storeName: string; canonicalStoreId?: string }) {
+  const [period, setPeriod] = React.useState<DshAnalyticsPeriod>('today');
+  const [state, setState] = React.useState<PerformanceState>({ kind: 'loading' });
+  const [reloadToken, setReloadToken] = React.useState(0);
 
   React.useEffect(() => {
-    if (!canonicalStoreId) {
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    import('../../shared/partner/partner.api').then(({ fetchPartnerPerformance }) => {
-      fetchPartnerPerformance('today').then(res => {
-        setPerformance(res);
-        setLoading(false);
-      }).catch(() => setLoading(false));
-    }).catch(() => setLoading(false));
-  }, [canonicalStoreId]);
+    let cancelled = false;
+    setState({ kind: 'loading' });
+    void fetchPartnerPerformance(period)
+      .then((value) => {
+        if (!cancelled) setState({ kind: 'success', value });
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setState({
+            kind: 'error',
+            message: error instanceof Error ? error.message : 'تعذر تحميل أداء المتجر من DSH.',
+          });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [canonicalStoreId, period, reloadToken]);
 
-  if (loading) {
+  if (state.kind === 'loading') {
+    return <StateView loading title="جاري تحميل أداء المتجر…" description="تُقرأ المؤشرات من DSH ضمن نطاق المتجر الموثق في الجلسة." />;
+  }
+
+  if (state.kind === 'error') {
     return (
-      <Box padding={4} align="center">
-        <ActivityIndicator color={theme.brand} />
+      <StateView
+        tone="danger"
+        title="تعذر تحميل التحليلات"
+        description={state.message}
+        actionLabel="إعادة المحاولة"
+        onActionPress={() => setReloadToken((value) => value + 1)}
+      />
+    );
+  }
+
+  const performance = state.value;
+  if (performance.totalOrders === 0) {
+    return (
+      <Box gap={3}>
+        <PeriodSelector period={period} onChange={setPeriod} />
+        <StateView
+          tone="neutral"
+          title="لا توجد طلبات في الفترة"
+          description="لم يعد DSH سجلات طلبات لهذا المتجر ضمن الفترة المحددة؛ لم تُنشأ أرقام بديلة."
+        />
       </Box>
     );
   }
 
   return (
     <Box gap={4}>
-      {/* Summary headline */}
       <Box gap={2} paddingY={2}>
-        <Text role="label" tone="muted" align="start">
-          ملخص الأداء — {storeName}
-        </Text>
+        <Text role="label" tone="muted" align="start">ملخص الأداء — {storeName}</Text>
         <Text role="bodySm" tone="muted" align="start">
-          مؤشرات موجزة للطلبات. لا تتضمن بيانات عملاء تفصيلية.
+          مصدر البيانات DSH • آخر تحديث {new Date(performance.generatedAt).toLocaleString('ar')}
         </Text>
       </Box>
-
+      <PeriodSelector period={period} onChange={setPeriod} />
       <Divider />
-
-      {/* Engagement metrics grid */}
       <Box gap={3} paddingY={2}>
-        <Text role="bodyStrong" align="start">الطلبات اليوم ({performance?.period || 'اليوم'})</Text>
+        <Text role="bodyStrong" align="start">الطلبات — {periods.find((item) => item.id === period)?.label}</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] }}>
-          <AnalyticsInsightMetric label="إجمالي الطلبات" value={(performance?.totalOrders || 0).toLocaleString('ar')} tone="action" icon="receipt-outline" />
-          <AnalyticsInsightMetric label="الطلبات المقبولة" value={(performance?.acceptedOrders || 0).toLocaleString('ar')} tone="success" icon="checkmark-circle-outline" />
+          <AnalyticsInsightMetric label="إجمالي الطلبات" value={performance.totalOrders.toLocaleString('ar')} tone="action" icon="receipt-outline" />
+          <AnalyticsInsightMetric label="الطلبات المقبولة" value={performance.acceptedOrders.toLocaleString('ar')} tone="success" icon="checkmark-circle-outline" />
         </View>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] }}>
-          <AnalyticsInsightMetric label="الطلبات المرفوضة" value={(performance?.rejectedOrders || 0).toLocaleString('ar')} tone="danger" icon="close-circle-outline" />
+          <AnalyticsInsightMetric label="الطلبات المرفوضة" value={performance.rejectedOrders.toLocaleString('ar')} tone="danger" icon="close-circle-outline" />
         </View>
       </Box>
+      <Text role="caption" tone="muted" align="start">النطاق التشغيلي: {canonicalStoreId ?? 'متجر الجلسة الموثق'}</Text>
     </Box>
+  );
+}
+
+function PeriodSelector({ period, onChange }: { period: DshAnalyticsPeriod; onChange: (period: DshAnalyticsPeriod) => void }) {
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] }}>
+      {periods.map((item) => (
+        <Button
+          key={item.id}
+          label={item.label}
+          tone={period === item.id ? 'primary' : 'ghost'}
+          onPress={() => onChange(item.id)}
+        />
+      ))}
+    </View>
   );
 }

@@ -44,7 +44,7 @@ $script:WltMigrationProbes = [ordered]@{
   "wlt-017_ledger_kernel.sql"                     = "to_regclass('public.wlt_ledger_accounts') IS NOT NULL"
   "wlt-018_payout_destination_encryption.sql"     = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_payout_destinations' AND column_name = 'account_number_encrypted')"
   "wlt-019_payout_operator_audit.sql"             = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_payout_requests' AND column_name = 'approved_by_operator_id')"
-  "wlt-020_payment_pending_states.sql"            = "EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'wlt_payment_sessions_status_chk' AND pg_get_constraintdef(oid) LIKE '%authorization_pending%')"
+  "wlt-020_payment_pending_states.sql"             = "EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'wlt_payment_sessions_status_chk' AND pg_get_constraintdef(oid) LIKE '%authorization_pending%')"
   "wlt-021_reconciliation_resolution.sql"         = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_reconciliation_cases' AND column_name = 'assigned_to_operator_id')"
   "wlt-022_commission_lifecycle.sql"              = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_commissions' AND column_name = 'updated_at')"
   "wlt-023_special_request_payment_sessions.sql"  = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_payment_sessions' AND column_name = 'special_request_id')"
@@ -57,11 +57,20 @@ $script:WltMigrationProbes = [ordered]@{
   "wlt-030_subscription_payment_source.sql"       = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_payment_sessions' AND column_name = 'subscription_purchase_id') AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_payment_sessions' AND column_name = 'commercial_product_reference') AND to_regclass('public.uq_wlt_client_subscription_purchase') IS NOT NULL"
   "wlt-031_governed_settlement_sources.sql"       = "to_regclass('public.wlt_settlement_policies') IS NOT NULL AND to_regclass('public.wlt_settlement_source_orders') IS NOT NULL"
   "wlt-032_promotion_funding_ledger.sql"          = "to_regclass('public.wlt_promotion_funding_reservations') IS NOT NULL AND to_regclass('public.wlt_promotion_funding_events') IS NOT NULL"
+  "wlt-033_cod_collector_identity.sql"            = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_cod_records' AND column_name = 'collector_type') AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_cod_records' AND column_name = 'collector_id') AND EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'wlt_cod_records_captain_projection_chk') AND to_regclass('public.wlt_cod_records_collector_idx') IS NOT NULL"
+  "wlt-034_payout_destination_idempotency.sql"    = "to_regclass('public.wlt_payout_destination_requests') IS NOT NULL AND to_regclass('public.wlt_payout_destinations_one_active_partner_idx') IS NOT NULL"
+  "wlt-035_refund_reference_integrity.sql"        = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_refunds' AND column_name = 'request_source') AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_refunds' AND column_name = 'provider_refund_reference') AND EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_wlt_validate_refund_payment_reference' AND NOT tgisinternal) AND to_regclass('public.idx_wlt_refunds_operational_queue') IS NOT NULL"
+  "wlt-036_payment_session_operations_and_provider_events.sql" = "to_regclass('public.wlt_payment_operation_receipts') IS NOT NULL AND to_regclass('public.wlt_payment_provider_events') IS NOT NULL AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_payment_sessions' AND column_name = 'capture_ledger_transaction_id')"
+  "wlt-037_jrn_035_refund_governance.sql"         = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_refunds' AND column_name = 'requested_by_operator_id') AND to_regclass('public.wlt_refund_audit_events') IS NOT NULL AND to_regclass('public.wlt_refunds_session_idempotency_idx') IS NOT NULL AND to_regclass('public.wlt_dsh_outbox_events_refund_event_idx') IS NOT NULL"
+  "wlt-038_jrn_033_representative_finance_tenancy.sql" = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_wallets' AND column_name = 'tenant_id' AND is_nullable = 'NO') AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_ledger_entries' AND column_name = 'tenant_id' AND is_nullable = 'NO') AND to_regclass('public.wlt_wallets_tenant_actor_idx') IS NOT NULL AND to_regclass('public.wlt_ledger_entries_tenant_actor_idx') IS NOT NULL"
+  "wlt-090_jrn036_settlement_commission_governance.sql" = "to_regclass('public.wlt_jrn036_settlement_requests') IS NOT NULL AND to_regclass('public.wlt_jrn036_commission_policy_versions') IS NOT NULL AND to_regclass('public.wlt_jrn036_audit_events') IS NOT NULL"
+  "wlt-091_jrn036_adjustment_ledger_identity.sql" = "to_regclass('public.wlt_jrn036_commission_adjustments_request_hash_idx') IS NOT NULL AND to_regclass('public.wlt_jrn036_commission_adjustments_commission_created_idx') IS NOT NULL"
+  "wlt-092_jrn_035_refund_operation_idempotency.sql" = "to_regclass('public.wlt_refund_operation_receipts') IS NOT NULL AND to_regclass('public.wlt_refund_operation_receipts_identity_uq') IS NOT NULL"
+  "wlt-093_jrn036_mutation_receipts.sql" = "to_regclass('public.wlt_jrn036_mutation_receipts') IS NOT NULL AND to_regclass('public.wlt_jrn036_mutation_receipts_aggregate_idx') IS NOT NULL AND to_regclass('public.wlt_jrn036_mutation_receipts_request_hash_idx') IS NOT NULL"
 }
 
 function Test-WltMigrationProbeCoverage {
   param([System.IO.FileInfo[]]$MigrationFiles)
-
   $numbers = @{}
   $fileNames = @{}
   foreach ($f in $MigrationFiles) {
@@ -74,12 +83,10 @@ function Test-WltMigrationProbeCoverage {
       throw "Duplicate WLT migration number ${number}: $($numbers[$number]) and $($f.Name)."
     }
     $numbers[$number] = $f.Name
-
     if (-not $script:WltMigrationProbes.Contains($f.Name)) {
       throw "No legacy-detection probe registered for $($f.Name) in `$script:WltMigrationProbes (infra/docker/scripts/wlt-migration-probes.ps1). Add one before merging a new WLT migration."
     }
   }
-
   foreach ($registeredName in $script:WltMigrationProbes.Keys) {
     if (-not $fileNames.ContainsKey($registeredName)) {
       throw "Stale WLT migration probe registered for missing file $registeredName."
@@ -87,13 +94,6 @@ function Test-WltMigrationProbeCoverage {
   }
 }
 
-# Returns the ordered prefix of $MigrationFiles whose schema objects already
-# exist (per $script:WltMigrationProbes), stopping at the first migration
-# whose probe is false. Migrations apply in file order, so a gap means every
-# later migration must be genuinely (re-)applied rather than assumed present.
-# $PsqlRunner is a [scriptblock] taking a single SQL string and returning its
-# scalar text result, so this stays testable against either a docker-exec'd
-# psql (production) or a native psql connection (tests).
 function Get-WltLegacyBackfillList {
   param(
     [System.IO.FileInfo[]]$MigrationFiles,

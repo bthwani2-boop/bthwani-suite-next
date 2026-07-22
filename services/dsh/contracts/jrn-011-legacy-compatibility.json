@@ -1,0 +1,38 @@
+{
+  "journeyId": "JRN-011",
+  "canonicalApi": {
+    "create": "POST /dsh/client/order-truth",
+    "clientList": "GET /dsh/client/order-truth",
+    "clientDetail": "GET /dsh/client/order-truth/{orderId}",
+    "clientEvents": "GET /dsh/client/order-truth/{orderId}/events",
+    "partnerList": "GET /dsh/partner/order-truth",
+    "partnerDetail": "GET /dsh/partner/order-truth/{orderId}",
+    "operatorList": "GET /dsh/operator/order-truth",
+    "operatorDetail": "GET /dsh/operator/order-truth/{orderId}"
+  },
+  "legacyApi": {
+    "paths": [
+      "/dsh/client/orders",
+      "/dsh/client/orders/{orderId}",
+      "/dsh/partner/orders",
+      "/dsh/operator/orders"
+    ],
+    "status": "COMPATIBILITY_ONLY",
+    "newJrn011ConsumersAllowed": false,
+    "removalCondition": "All post-JRN-011 lifecycle consumers must be migrated and a separately approved deprecation window must complete."
+  },
+  "canonicalConsumers": [
+    "services/dsh/frontend/shared/checkout/use-checkout-to-order-flow.tsx",
+    "services/dsh/frontend/app-client/orders/OrdersListScreen.tsx",
+    "services/dsh/frontend/shared/orders/use-client-order-journey-controller.ts",
+    "services/dsh/frontend/app-partner/orders/OperationalOrdersInboxScreen.tsx",
+    "services/dsh/frontend/control-panel/operations/OrderJourneyLiveOrdersScreen.tsx"
+  ],
+  "cleanupAssertions": [
+    "Client list does not sum live item prices to derive the order total.",
+    "Client detail uses orderNumber, totalMinorUnits, statusTimeline, paymentStatusProjection, correlationId and version from order truth.",
+    "Client cancellation visibility consumes server allowedActions.",
+    "New JRN-011 clients never call the legacy create endpoint.",
+    "Legacy routes remain only to avoid breaking later lifecycle journeys during their separate migration."
+  ]
+}

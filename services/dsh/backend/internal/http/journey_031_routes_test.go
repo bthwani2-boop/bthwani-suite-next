@@ -1,0 +1,47 @@
+package http
+
+import (
+	"net/http"
+	"testing"
+)
+
+func TestJourney031ExposesGovernedAdministrationRoutes(t *testing.T) {
+	router := NewRouter(nil, nil, nil, nil)
+	RegisterAdministrationRoutes(router, nil, nil, nil, nil)
+
+	cases := []struct {
+		name    string
+		method  string
+		path    string
+		pattern string
+	}{
+		{name: "list roles", method: http.MethodGet, path: "/dsh/operator/admin/roles", pattern: "GET /dsh/operator/admin/roles"},
+		{name: "request role definition", method: http.MethodPost, path: "/dsh/operator/admin/roles/requests", pattern: "POST /dsh/operator/admin/roles/requests"},
+		{name: "list role definitions", method: http.MethodGet, path: "/dsh/operator/admin/role-requests?status=pending", pattern: "GET /dsh/operator/admin/role-requests"},
+		{name: "review role definition", method: http.MethodPost, path: "/dsh/operator/admin/role-requests/request-1/review", pattern: "POST /dsh/operator/admin/role-requests/{requestId}/review"},
+		{name: "list staff", method: http.MethodGet, path: "/dsh/operator/admin/staff", pattern: "GET /dsh/operator/admin/staff"},
+		{name: "request role assignment", method: http.MethodPost, path: "/dsh/operator/admin/staff/actor-2/roles", pattern: "POST /dsh/operator/admin/staff/{staffId}/roles"},
+		{name: "list approvals", method: http.MethodGet, path: "/dsh/operator/admin/approvals?status=pending", pattern: "GET /dsh/operator/admin/approvals"},
+		{name: "review approval", method: http.MethodPost, path: "/dsh/operator/admin/approvals/approval-1/review", pattern: "POST /dsh/operator/admin/approvals/{approvalId}/review"},
+		{name: "request rollback", method: http.MethodPost, path: "/dsh/operator/admin/approvals/approval-1/rollback-requests", pattern: "POST /dsh/operator/admin/approvals/{approvalId}/rollback-requests"},
+		{name: "list rollback requests", method: http.MethodGet, path: "/dsh/operator/admin/rollback-requests?status=pending", pattern: "GET /dsh/operator/admin/rollback-requests"},
+		{name: "review rollback", method: http.MethodPost, path: "/dsh/operator/admin/rollback-requests/rollback-1/review", pattern: "POST /dsh/operator/admin/rollback-requests/{requestId}/review"},
+		{name: "administration diagnostics", method: http.MethodGet, path: "/dsh/operator/admin/diagnostics", pattern: "GET /dsh/operator/admin/diagnostics"},
+		{name: "list partner activations", method: http.MethodGet, path: "/dsh/operator/admin/partners", pattern: "GET /dsh/operator/admin/partners"},
+		{name: "list captain credentials", method: http.MethodGet, path: "/dsh/operator/admin/captains", pattern: "GET /dsh/operator/admin/captains"},
+		{name: "list audit", method: http.MethodGet, path: "/dsh/operator/admin/audit", pattern: "GET /dsh/operator/admin/audit"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			request, err := http.NewRequest(tc.method, tc.path, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, pattern := router.Handler(request)
+			if pattern != tc.pattern {
+				t.Fatalf("expected route %q, got %q", tc.pattern, pattern)
+			}
+		})
+	}
+}

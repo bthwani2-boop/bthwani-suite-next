@@ -2,7 +2,7 @@ import React from 'react';
 import {
   classifyOrderError,
   fetchPartnerOrders,
-} from '../../shared/orders/orders.api';
+} from '../../shared/orders';
 import {
   mapDshOrderToPartnerOrderItem,
   type GovernedPartnerOrderItem,

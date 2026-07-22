@@ -64,11 +64,30 @@ export type ClientLoyaltyAccount = {
 
 export type ClientSubscriptionEntitlement = {
   readonly id: string;
-  readonly status: string;
+  readonly status: "active" | "cancelled" | "expired" | "superseded";
   readonly wltSubscriptionReference?: string;
   readonly startsAt?: string;
   readonly endsAt?: string;
+  readonly cancelAtPeriodEnd?: boolean;
+  readonly cancelledAt?: string;
+  readonly cancellationReason?: string;
+  readonly compensationStatus?: "not_required" | "pending" | "completed" | "failed";
+  readonly compensationReference?: string;
+  readonly allowedActions?: readonly ("renew" | "cancel")[];
   readonly plan: SubscriptionPlanRecord;
+};
+
+export type ClientSubscriptionCompensation = {
+  readonly id: string;
+  readonly subscriptionId: string;
+  readonly status: "pending" | "completed" | "failed";
+  readonly reason: string;
+  readonly refundReference?: string;
+  readonly amountMinorUnits: number;
+  readonly currency: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly completedAt?: string;
 };
 
 export type PublishedPartnerOffer = PartnerOfferRecord & {
@@ -80,5 +99,6 @@ export type ClientBenefitsPayload = {
   readonly availableTiers: readonly LoyaltyTierRecord[];
   readonly availablePlans: readonly SubscriptionPlanRecord[];
   readonly activeSubscription?: ClientSubscriptionEntitlement;
+  readonly compensation?: ClientSubscriptionCompensation;
   readonly offers: readonly PublishedPartnerOffer[];
 };

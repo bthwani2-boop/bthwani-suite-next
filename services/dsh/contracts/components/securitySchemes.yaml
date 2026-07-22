@@ -1,0 +1,6 @@
+# BThwani DSH OpenAPI components/securitySchemes module: securitySchemes.
+# Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
+
+bearerAuth:
+  type: http
+  scheme: bearer

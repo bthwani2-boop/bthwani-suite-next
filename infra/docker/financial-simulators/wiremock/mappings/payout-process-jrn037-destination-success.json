@@ -1,0 +1,35 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "POST",
+    "urlPath": "/financial/payout/process",
+    "headers": {
+      "Idempotency-Key": { "matches": ".+" },
+      "X-Correlation-ID": { "matches": ".+" }
+    },
+    "bodyPatterns": [
+      { "matchesJsonPath": "$.payoutId" },
+      { "matchesJsonPath": "$.beneficiaryActorId" },
+      { "matchesJsonPath": "$.beneficiaryActorType" },
+      { "matchesJsonPath": "$.destination.id" },
+      { "matchesJsonPath": "$.destination.type" },
+      { "matchesJsonPath": "$.destination.beneficiaryName" },
+      {
+        "matchesJsonPath": {
+          "expression": "$.destination",
+          "equalToJson": "{\"id\":\"${json-unit.any-string}\",\"type\":\"${json-unit.any-string}\",\"beneficiaryName\":\"${json-unit.any-string}\"}",
+          "ignoreExtraElements": true
+        }
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json" },
+    "jsonBody": {
+      "providerReference": "sim-payout-destination-{{randomValue length=14 type='ALPHANUMERIC'}}",
+      "status": "processed"
+    },
+    "transformers": ["response-template"]
+  }
+}

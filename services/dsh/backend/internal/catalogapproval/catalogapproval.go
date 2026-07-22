@@ -1,8 +1,4 @@
-// Package catalogapproval backs the partner catalog approval queue: a
-// partner (or field agent) submits a product/category/media/store change,
-// it moves through marketing review and catalog adoption before becoming
-// client-visible. This replaces the in-memory mock previously held in
-// services/dsh/frontend/shared/partner/partner.workflow.ts.
+// Package catalogapproval owns the durable multi-surface catalog approval queue.
 package catalogapproval
 
 import (
@@ -16,21 +12,24 @@ import (
 )
 
 var (
-	ErrInvalid  = errors.New("invalid catalog approval input")
-	ErrNotFound = errors.New("catalog approval record not found")
+	ErrInvalid           = errors.New("invalid catalog approval input")
+	ErrInvalidTransition = errors.New("invalid catalog approval transition")
+	ErrNotFound          = errors.New("catalog approval record not found")
 )
 
 type Record struct {
-	ID          string          `json:"id"`
-	EntityType  string          `json:"entityType"`
-	EntityID    string          `json:"entityId,omitempty"`
-	Source      string          `json:"source"`
-	Stage       string          `json:"stage"`
-	Title       string          `json:"title"`
-	Metadata    json.RawMessage `json:"metadata,omitempty"`
-	SubmittedAt time.Time       `json:"submittedAt"`
-	UpdatedAt   time.Time       `json:"updatedAt"`
-	AuditTrail  []AuditEntry    `json:"auditTrail,omitempty"`
+	ID           string          `json:"id"`
+	TenantID     string          `json:"-"`
+	EntityType   string          `json:"entityType"`
+	EntityID     string          `json:"entityId,omitempty"`
+	OwnerActorID string          `json:"-"`
+	Source       string          `json:"source"`
+	Stage        string          `json:"stage"`
+	Title        string          `json:"title"`
+	Metadata     json.RawMessage `json:"metadata,omitempty"`
+	SubmittedAt  time.Time       `json:"submittedAt"`
+	UpdatedAt    time.Time       `json:"updatedAt"`
+	AuditTrail   []AuditEntry    `json:"auditTrail,omitempty"`
 }
 
 type AuditEntry struct {
@@ -41,8 +40,6 @@ type AuditEntry struct {
 	ActionLabel string    `json:"actionLabel"`
 }
 
-// PartnerQueueRecord is the safe projection exposed to the partner surface --
-// it does not expose title/metadata/auditTrail (marketing/catalog-owned).
 type PartnerQueueRecord struct {
 	ID         string    `json:"id"`
 	EntityID   string    `json:"entityId"`
@@ -61,17 +58,30 @@ var partnerQueueStages = map[string]bool{
 	"rejected":          true,
 }
 
+var allowedTransitions = map[string]map[string]bool{
+	"partner-submitted":  {"partner-review": true, "needs-fix": true, "rejected": true},
+	"field-submitted":    {"partner-review": true, "needs-fix": true, "rejected": true},
+	"partner-review":     {"partner-approved": true, "needs-fix": true, "rejected": true},
+	"partner-approved":   {"marketing-review": true, "needs-fix": true, "rejected": true},
+	"marketing-review":   {"marketing-approved": true, "needs-fix": true, "rejected": true},
+	"marketing-approved": {"catalog-adopted": true, "needs-fix": true, "rejected": true},
+	"catalog-adopted":    {"client-visible": true, "needs-fix": true, "rejected": true},
+	"needs-fix":          {"partner-submitted": true, "field-submitted": true, "partner-review": true, "rejected": true},
+}
+
 type CreateInput struct {
-	EntityType string
-	EntityID   string
-	Source     string
-	Stage      string
-	Title      string
-	Metadata   json.RawMessage
+	TenantID     string
+	EntityType   string
+	EntityID     string
+	OwnerActorID string
+	Source       string
+	Stage        string
+	Title        string
+	Metadata     json.RawMessage
 }
 
 func Create(db *sql.DB, input CreateInput) (Record, error) {
-	if input.EntityType == "" || input.Source == "" || input.Stage == "" || input.Title == "" {
+	if input.TenantID == "" || input.EntityType == "" || input.OwnerActorID == "" || input.Source == "" || input.Stage == "" || input.Title == "" {
 		return Record{}, ErrInvalid
 	}
 	metadata := input.Metadata
@@ -83,19 +93,26 @@ func Create(db *sql.DB, input CreateInput) (Record, error) {
 		entityID = sql.NullString{String: input.EntityID, Valid: true}
 	}
 	row := db.QueryRow(`
-		INSERT INTO dsh_catalog_approval_records (id, entity_type, entity_id, source, stage, title, metadata)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-		RETURNING id, entity_type, COALESCE(entity_id,''), source, stage, title, metadata, submitted_at, updated_at`,
-		uuid.NewString(), input.EntityType, entityID, input.Source, input.Stage, input.Title, metadata,
+		INSERT INTO dsh_catalog_approval_records
+		  (id, tenant_id, entity_type, entity_id, owner_actor_id, source, stage, title, metadata)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		RETURNING id, tenant_id, entity_type, COALESCE(entity_id,''), owner_actor_id,
+		          source, stage, title, metadata, submitted_at, updated_at`,
+		uuid.NewString(), input.TenantID, input.EntityType, entityID, input.OwnerActorID,
+		input.Source, input.Stage, input.Title, metadata,
 	)
 	return scanRecord(row)
 }
 
-func Get(db *sql.DB, id string) (Record, error) {
-	row := db.QueryRow(`
-		SELECT id, entity_type, COALESCE(entity_id,''), source, stage, title, metadata, submitted_at, updated_at
-		FROM dsh_catalog_approval_records WHERE id = $1`, id)
-	rec, err := scanRecord(row)
+func Get(db *sql.DB, tenantID, id string) (Record, error) {
+	if tenantID == "" || id == "" {
+		return Record{}, ErrInvalid
+	}
+	rec, err := scanRecord(db.QueryRow(`
+		SELECT id, tenant_id, entity_type, COALESCE(entity_id,''), owner_actor_id,
+		       source, stage, title, metadata, submitted_at, updated_at
+		FROM dsh_catalog_approval_records
+		WHERE tenant_id = $1 AND id = $2`, tenantID, id))
 	if errors.Is(err, sql.ErrNoRows) {
 		return Record{}, ErrNotFound
 	}
@@ -110,13 +127,17 @@ func Get(db *sql.DB, id string) (Record, error) {
 	return rec, nil
 }
 
-func List(db *sql.DB, entityType, stage, source string, limit int) ([]Record, error) {
+func List(db *sql.DB, tenantID, entityType, stage, source string, limit int) ([]Record, error) {
+	if tenantID == "" {
+		return nil, ErrInvalid
+	}
 	if limit <= 0 {
 		limit = 100
 	}
-	q := `SELECT id, entity_type, COALESCE(entity_id,''), source, stage, title, metadata, submitted_at, updated_at
-	      FROM dsh_catalog_approval_records WHERE 1=1`
-	var args []any
+	q := `SELECT id, tenant_id, entity_type, COALESCE(entity_id,''), owner_actor_id,
+	             source, stage, title, metadata, submitted_at, updated_at
+	      FROM dsh_catalog_approval_records WHERE tenant_id = $1`
+	args := []any{tenantID}
 	if entityType != "" {
 		args = append(args, entityType)
 		q += fmt.Sprintf(" AND entity_type = $%d", len(args))
@@ -148,18 +169,21 @@ func List(db *sql.DB, entityType, stage, source string, limit int) ([]Record, er
 	return list, rows.Err()
 }
 
-// ListPartnerQueue returns the safe partner-facing projection, scoped to the
-// stages a partner is allowed to see (partner submission/review lifecycle).
-func ListPartnerQueue(db *sql.DB, source string, limit int) ([]PartnerQueueRecord, error) {
+func ListPartnerQueue(db *sql.DB, tenantID, ownerActorID string, limit int) ([]PartnerQueueRecord, error) {
+	if tenantID == "" || ownerActorID == "" {
+		return nil, ErrInvalid
+	}
 	if limit <= 0 {
 		limit = 100
 	}
 	rows, err := db.Query(`
 		SELECT id, COALESCE(entity_id,''), entity_type, stage, source, submitted_at
 		FROM dsh_catalog_approval_records
-		WHERE source = $1
+		WHERE tenant_id = $1
+		  AND owner_actor_id = $2
+		  AND source = 'app-partner'
 		  AND stage IN ('partner-submitted','field-submitted','partner-review','partner-approved','needs-fix','rejected')
-		ORDER BY submitted_at DESC LIMIT $2`, source, limit)
+		ORDER BY submitted_at DESC LIMIT $3`, tenantID, ownerActorID, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -170,13 +194,16 @@ func ListPartnerQueue(db *sql.DB, source string, limit int) ([]PartnerQueueRecor
 		if err := rows.Scan(&rec.ID, &rec.EntityID, &rec.EntityType, &rec.Stage, &rec.Owner, &rec.CreatedAt); err != nil {
 			return nil, err
 		}
+		if !partnerQueueStages[rec.Stage] {
+			return nil, ErrInvalid
+		}
 		list = append(list, rec)
 	}
 	return list, rows.Err()
 }
 
-func Transition(db *sql.DB, id, toStage, owner, actionLabel string) (Record, error) {
-	if id == "" || toStage == "" || owner == "" || actionLabel == "" {
+func Transition(db *sql.DB, tenantID, id, toStage, owner, actionLabel string) (Record, error) {
+	if tenantID == "" || id == "" || toStage == "" || owner == "" || actionLabel == "" {
 		return Record{}, ErrInvalid
 	}
 	tx, err := db.Begin()
@@ -186,32 +213,35 @@ func Transition(db *sql.DB, id, toStage, owner, actionLabel string) (Record, err
 	defer tx.Rollback()
 
 	var fromStage string
-	if err := tx.QueryRow(`SELECT stage FROM dsh_catalog_approval_records WHERE id = $1 FOR UPDATE`, id).Scan(&fromStage); err != nil {
+	if err := tx.QueryRow(`
+		SELECT stage FROM dsh_catalog_approval_records
+		WHERE tenant_id = $1 AND id = $2 FOR UPDATE`, tenantID, id).Scan(&fromStage); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return Record{}, ErrNotFound
 		}
 		return Record{}, err
 	}
+	if !allowedTransitions[fromStage][toStage] {
+		return Record{}, ErrInvalidTransition
+	}
 
 	row := tx.QueryRow(`
-		UPDATE dsh_catalog_approval_records SET stage = $2, updated_at = NOW()
-		WHERE id = $1
-		RETURNING id, entity_type, COALESCE(entity_id,''), source, stage, title, metadata, submitted_at, updated_at`,
-		id, toStage,
-	)
+		UPDATE dsh_catalog_approval_records SET stage = $3, updated_at = NOW()
+		WHERE tenant_id = $1 AND id = $2
+		RETURNING id, tenant_id, entity_type, COALESCE(entity_id,''), owner_actor_id,
+		          source, stage, title, metadata, submitted_at, updated_at`, tenantID, id, toStage)
 	rec, err := scanRecord(row)
 	if err != nil {
 		return Record{}, err
 	}
-
 	if _, err := tx.Exec(`
-		INSERT INTO dsh_catalog_approval_audit_trail (id, approval_record_id, from_stage, to_stage, owner, action_label)
+		INSERT INTO dsh_catalog_approval_audit_trail
+		  (id, approval_record_id, from_stage, to_stage, owner, action_label)
 		VALUES ($1, $2, $3, $4, $5, $6)`,
 		uuid.NewString(), id, fromStage, toStage, owner, actionLabel,
 	); err != nil {
 		return Record{}, err
 	}
-
 	if err := tx.Commit(); err != nil {
 		return Record{}, err
 	}
@@ -226,18 +256,19 @@ func Transition(db *sql.DB, id, toStage, owner, actionLabel string) (Record, err
 func listAuditTrail(db *sql.DB, recordID string) ([]AuditEntry, error) {
 	rows, err := db.Query(`
 		SELECT from_stage, to_stage, owner, action_label, at
-		FROM dsh_catalog_approval_audit_trail WHERE approval_record_id = $1 ORDER BY at ASC`, recordID)
+		FROM dsh_catalog_approval_audit_trail
+		WHERE approval_record_id = $1 ORDER BY at ASC`, recordID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	var list []AuditEntry
 	for rows.Next() {
-		var e AuditEntry
-		if err := rows.Scan(&e.FromStage, &e.ToStage, &e.Owner, &e.ActionLabel, &e.At); err != nil {
+		var entry AuditEntry
+		if err := rows.Scan(&entry.FromStage, &entry.ToStage, &entry.Owner, &entry.ActionLabel, &entry.At); err != nil {
 			return nil, err
 		}
-		list = append(list, e)
+		list = append(list, entry)
 	}
 	return list, rows.Err()
 }
@@ -246,10 +277,22 @@ type rowScanner interface {
 	Scan(dest ...any) error
 }
 
-func scanRecord(s rowScanner) (Record, error) {
+func scanRecord(scanner rowScanner) (Record, error) {
 	var rec Record
 	var metadata []byte
-	err := s.Scan(&rec.ID, &rec.EntityType, &rec.EntityID, &rec.Source, &rec.Stage, &rec.Title, &metadata, &rec.SubmittedAt, &rec.UpdatedAt)
+	err := scanner.Scan(
+		&rec.ID,
+		&rec.TenantID,
+		&rec.EntityType,
+		&rec.EntityID,
+		&rec.OwnerActorID,
+		&rec.Source,
+		&rec.Stage,
+		&rec.Title,
+		&metadata,
+		&rec.SubmittedAt,
+		&rec.UpdatedAt,
+	)
 	if err != nil {
 		return Record{}, err
 	}

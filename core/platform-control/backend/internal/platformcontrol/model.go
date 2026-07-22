@@ -122,18 +122,21 @@ type AuditEvent struct {
 }
 
 type ChangeSetItem struct {
-	ID               string           `json:"id"`
-	TargetType       ChangeTargetType `json:"targetType"`
-	TargetKey        string           `json:"targetKey"`
-	OwnerService     string           `json:"ownerService"`
-	ScopeType        string           `json:"scopeType"`
-	ScopeID          string           `json:"scopeId,omitempty"`
-	ValueType        string           `json:"valueType"`
-	Classification   string           `json:"classification"`
-	ExpectedRevision int64            `json:"expectedRevision"`
-	BeforeValue      any              `json:"beforeValue,omitempty"`
-	ProposedValue    any              `json:"proposedValue"`
-	AppliedRevision  *int64           `json:"appliedRevision,omitempty"`
+	ID                   string           `json:"id"`
+	TargetType           ChangeTargetType `json:"targetType"`
+	TargetKey            string           `json:"targetKey"`
+	OwnerService         string           `json:"ownerService"`
+	ScopeType            string           `json:"scopeType"`
+	ScopeID              string           `json:"scopeId,omitempty"`
+	ValueType            string           `json:"valueType"`
+	Classification       string           `json:"classification"`
+	ExpectedRevision     int64            `json:"expectedRevision"`
+	PreconditionSnapshot any              `json:"preconditionSnapshot,omitempty"`
+	ValidatedRevision    *int64           `json:"validatedRevision,omitempty"`
+	ItemValidatedAt      *time.Time       `json:"itemValidatedAt,omitempty"`
+	BeforeValue          any              `json:"beforeValue,omitempty"`
+	ProposedValue        any              `json:"proposedValue"`
+	AppliedRevision      *int64           `json:"appliedRevision,omitempty"`
 }
 
 type ChangeSet struct {
@@ -181,6 +184,10 @@ type CreateChangeSetInput struct {
 }
 
 type RejectChangeSetInput struct {
+	Reason string `json:"reason"`
+}
+
+type RollbackChangeSetInput struct {
 	Reason string `json:"reason"`
 }
 

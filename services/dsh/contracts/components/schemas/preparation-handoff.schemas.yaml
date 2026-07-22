@@ -1,0 +1,298 @@
+# BThwani DSH OpenAPI schemas module: preparation-handoff.
+# Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
+
+DshPreparationSlaState:
+  type: string
+  enum: [not_started, on_track, due_soon, overdue, ready]
+
+DshOrderPreparation:
+  type: object
+  required:
+    - orderId
+    - estimatedPreparationMinutes
+    - preparationWarningMinutes
+    - preparationDelayReason
+    - preparationEstimateRevisionCount
+    - preparationSlaState
+    - preparationRemainingSeconds
+  properties:
+    orderId: { type: string, format: uuid }
+    acceptedAt: { type: string, format: date-time, nullable: true }
+    preparationStartedAt: { type: string, format: date-time, nullable: true }
+    estimatedReadyAt: { type: string, format: date-time, nullable: true }
+    readyAt: { type: string, format: date-time, nullable: true }
+    estimatedPreparationMinutes: { type: integer, minimum: 0, maximum: 180 }
+    preparationWarningMinutes: { type: integer, minimum: 0, maximum: 60 }
+    preparationDelayReason: { type: string }
+    preparationEstimateRevisionCount: { type: integer, minimum: 0 }
+    preparationSlaState:
+      $ref: "../../dsh.openapi.yaml#/components/schemas/DshPreparationSlaState"
+    preparationRemainingSeconds: { type: integer, format: int64 }
+
+DshPreparationIssueKind:
+  type: string
+  enum: [missing_item, substitution_required, quality_issue, other]
+
+DshPreparationIssueStatus:
+  type: string
+  enum: [open, resolved]
+
+DshPreparationIssueCustomerDecision:
+  type: string
+  enum: [not_required, pending, approved, rejected]
+
+DshPreparationIssue:
+  type: object
+  required:
+    - id
+    - orderId
+    - storeId
+    - orderItemId
+    - kind
+    - status
+    - affectedQuantity
+    - note
+    - replacementProductId
+    - replacementProductName
+    - customerDecision
+    - customerDecidedByActorId
+    - customerDecisionNote
+    - openedByActorId
+    - openedAt
+    - resolvedByActorId
+    - resolutionNote
+    - version
+    - createdAt
+    - updatedAt
+  properties:
+    id: { type: string, format: uuid }
+    orderId: { type: string, format: uuid }
+    storeId: { type: string }
+    orderItemId:
+      type: string
+      description: Immutable order-item UUID for item-level issues; empty only for kind=other.
+    kind:
+      $ref: "../../dsh.openapi.yaml#/components/schemas/DshPreparationIssueKind"
+    status:
+      $ref: "../../dsh.openapi.yaml#/components/schemas/DshPreparationIssueStatus"
+    affectedQuantity: { type: integer, minimum: 1 }
+    note: { type: string, minLength: 3, maxLength: 500 }
+    replacementProductId: { type: string }
+    replacementProductName: { type: string }
+    customerDecision:
+      $ref: "../../dsh.openapi.yaml#/components/schemas/DshPreparationIssueCustomerDecision"
+    customerDecidedByActorId: { type: string }
+    customerDecisionNote: { type: string, maxLength: 500 }
+    customerDecidedAt: { type: string, format: date-time, nullable: true }
+    openedByActorId: { type: string }
+    openedAt: { type: string, format: date-time }
+    resolvedByActorId: { type: string }
+    resolutionNote: { type: string }
+    resolvedAt: { type: string, format: date-time, nullable: true }
+    version: { type: integer, minimum: 1 }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+
+DshCreatePreparationIssueInput:
+  type: object
+  required: [kind, affectedQuantity, note]
+  properties:
+    orderItemId:
+      type: string
+      format: uuid
+      description: Required when kind is missing_item, substitution_required, or quality_issue.
+    kind:
+      $ref: "../../dsh.openapi.yaml#/components/schemas/DshPreparationIssueKind"
+    affectedQuantity: { type: integer, minimum: 1 }
+    note: { type: string, minLength: 3, maxLength: 500 }
+    replacementProductId: { type: string }
+    replacementProductName: { type: string, minLength: 2 }
+  oneOf:
+    - required: [orderItemId]
+      properties:
+        kind:
+          type: string
+          enum: [missing_item, substitution_required, quality_issue]
+    - properties:
+        kind:
+          type: string
+          enum: [other]
+
+DshDecidePreparationIssueInput:
+  type: object
+  required: [expectedVersion, decision]
+  properties:
+    expectedVersion: { type: integer, minimum: 1 }
+    decision:
+      type: string
+      enum: [approved, rejected]
+    note: { type: string, maxLength: 500 }
+
+DshResolvePreparationIssueInput:
+  type: object
+  required: [expectedVersion, resolutionNote]
+  properties:
+    expectedVersion: { type: integer, minimum: 1 }
+    resolutionNote: { type: string, minLength: 3, maxLength: 500 }
+
+DshPreparationIssueListResponse:
+  type: object
+  required: [issues, openCount, pendingCustomerDecisionCount]
+  properties:
+    issues:
+      type: array
+      items:
+        $ref: "../../dsh.openapi.yaml#/components/schemas/DshPreparationIssue"
+    openCount: { type: integer, minimum: 0 }
+    pendingCustomerDecisionCount: { type: integer, minimum: 0 }
+
+DshRevisePreparationEstimateInput:
+  type: object
+  required: [remainingMinutes, reason]
+  properties:
+    remainingMinutes: { type: integer, minimum: 5, maximum: 180 }
+    reason: { type: string, minLength: 3, maxLength: 500 }
+
+DshStorePreparationPolicy:
+  type: object
+  required:
+    - storeId
+    - defaultPreparationMinutes
+    - warningBeforeMinutes
+    - version
+    - updatedByActorId
+    - updatedAt
+  properties:
+    storeId: { type: string }
+    defaultPreparationMinutes: { type: integer, minimum: 5, maximum: 180 }
+    warningBeforeMinutes: { type: integer, minimum: 1, maximum: 60 }
+    version: { type: integer, minimum: 1 }
+    updatedByActorId: { type: string }
+    updatedAt: { type: string, format: date-time }
+
+DshUpdateStorePreparationPolicyInput:
+  type: object
+  required: [expectedVersion, defaultPreparationMinutes, warningBeforeMinutes, reason]
+  properties:
+    expectedVersion: { type: integer, minimum: 1 }
+    defaultPreparationMinutes: { type: integer, minimum: 5, maximum: 180 }
+    warningBeforeMinutes: { type: integer, minimum: 1, maximum: 60 }
+    reason: { type: string, minLength: 3, maxLength: 500 }
+
+DshPreparationAlertKind:
+  type: string
+  enum: [due_soon, overdue, customer_decision_pending]
+
+DshPreparationAlertStatus:
+  type: string
+  enum: [open, acknowledged, resolved]
+
+DshPreparationAlert:
+  type: object
+  required:
+    - id
+    - orderId
+    - storeId
+    - kind
+    - status
+    - estimateRevision
+    - detectedAt
+    - acknowledgedByActorId
+    - resolutionReason
+    - version
+    - createdAt
+    - updatedAt
+  properties:
+    id: { type: string, format: uuid }
+    orderId: { type: string, format: uuid }
+    storeId: { type: string }
+    kind:
+      $ref: "../../dsh.openapi.yaml#/components/schemas/DshPreparationAlertKind"
+    status:
+      $ref: "../../dsh.openapi.yaml#/components/schemas/DshPreparationAlertStatus"
+    estimateRevision: { type: integer, minimum: 0 }
+    detectedAt: { type: string, format: date-time }
+    acknowledgedByActorId: { type: string }
+    acknowledgedAt: { type: string, format: date-time, nullable: true }
+    resolvedAt: { type: string, format: date-time, nullable: true }
+    resolutionReason: { type: string }
+    version: { type: integer, minimum: 1 }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+
+DshRefreshPreparationAlertsResult:
+  type: object
+  required: [opened, resolved, active]
+  properties:
+    opened: { type: integer, minimum: 0 }
+    resolved: { type: integer, minimum: 0 }
+    active: { type: integer, minimum: 0 }
+
+DshAcknowledgePreparationAlertInput:
+  type: object
+  required: [expectedVersion]
+  properties:
+    expectedVersion: { type: integer, minimum: 1 }
+
+DshPreparationAlertListResponse:
+  type: object
+  required: [alerts, total]
+  properties:
+    alerts:
+      type: array
+      items:
+        $ref: "../../dsh.openapi.yaml#/components/schemas/DshPreparationAlert"
+    total: { type: integer, minimum: 0 }
+
+DshPartnerOrderWorkboardOrder:
+  allOf:
+    - $ref: "../../dsh.openapi.yaml#/components/schemas/DshOrder"
+    - type: object
+      required:
+        - allowedActions
+        - preparation
+        - preparationIssues
+        - openPreparationIssueCount
+        - pendingCustomerDecisionCount
+        - resolvablePreparationIssueCount
+        - storeCaptainHandoffStatus
+        - storeCaptainHandoffAssignmentId
+        - storeCaptainHandoffCaptainId
+        - openStoreCaptainHandoffExceptionId
+        - openStoreCaptainHandoffExceptionReason
+        - openStoreCaptainHandoffExceptionStatus
+      properties:
+        allowedActions:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: "../../dsh.openapi.yaml#/components/schemas/DshPartnerOrderAction"
+        preparation:
+          $ref: "../../dsh.openapi.yaml#/components/schemas/DshOrderPreparation"
+        preparationIssues:
+          type: array
+          items:
+            $ref: "../../dsh.openapi.yaml#/components/schemas/DshPreparationIssue"
+        openPreparationIssueCount: { type: integer, minimum: 0 }
+        pendingCustomerDecisionCount: { type: integer, minimum: 0 }
+        resolvablePreparationIssueCount: { type: integer, minimum: 0 }
+        storeCaptainHandoffStatus: { type: string }
+        storeCaptainHandoffAssignmentId: { type: string }
+        storeCaptainHandoffCaptainId: { type: string }
+        partnerHandoffConfirmedAt: { type: string, format: date-time, nullable: true }
+        captainPickupConfirmedAt: { type: string, format: date-time, nullable: true }
+        openStoreCaptainHandoffExceptionId: { type: string }
+        openStoreCaptainHandoffExceptionReason: { type: string }
+        openStoreCaptainHandoffExceptionStatus: { type: string }
+
+DshPartnerOrderWorkboardResponse:
+  type: object
+  required: [orders, total]
+  properties:
+    orders:
+      type: array
+      items:
+        $ref: "../../dsh.openapi.yaml#/components/schemas/DshPartnerOrderWorkboardOrder"
+    total:
+      type: integer
+      minimum: 0

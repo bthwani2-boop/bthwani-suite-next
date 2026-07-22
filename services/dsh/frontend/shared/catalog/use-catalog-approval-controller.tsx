@@ -1,69 +1,143 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  listCatalogApprovals,
+  transitionCatalogApproval,
+  type CatalogApprovalRecord,
+} from "../partner/catalog-approval.api";
+import type { ApprovalStage } from "../partner/partner.types";
 import type { CatalogSubmission, CatalogSubmissionState } from "./catalog.types";
 
-const INITIAL_MOCK_SUBMISSIONS: CatalogSubmission[] = [
-  {
-    id: "sub-1",
-    storeId: "store-albaraka",
-    revision: 3,
-    status: "submitted",
-    submittedBy: "user-partner-1",
-    reviewReason: "",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "sub-2",
-    storeId: "store-yemen-mall",
-    revision: 1,
-    status: "submitted",
-    submittedBy: "user-partner-2",
-    reviewReason: "",
-    createdAt: new Date().toISOString(),
-  },
-];
+const NEXT_APPROVAL_STAGE: Partial<Record<ApprovalStage, ApprovalStage>> = {
+  "partner-submitted": "partner-review",
+  "field-submitted": "partner-review",
+  "partner-review": "partner-approved",
+  "partner-approved": "marketing-review",
+  "marketing-review": "marketing-approved",
+  "marketing-approved": "catalog-adopted",
+  "catalog-adopted": "client-visible",
+};
+
+function entityKey(record: CatalogApprovalRecord): string {
+  return record.entityId || record.title;
+}
+
+function statusFor(stage: ApprovalStage): CatalogSubmission["status"] {
+  if (stage === "rejected") return "rejected";
+  if (["partner-approved", "marketing-approved", "catalog-adopted", "client-visible"].includes(stage)) {
+    return "approved";
+  }
+  return "submitted";
+}
+
+function toSubmission(record: CatalogApprovalRecord): CatalogSubmission {
+  return {
+    id: record.id,
+    storeId: entityKey(record),
+    revision: Math.max(1, (record.auditTrail?.length ?? 0) + 1),
+    status: statusFor(record.stage),
+    submittedBy: record.source,
+    reviewReason: record.metadata?.rejectionReason ?? record.metadata?.requiredFix ?? "",
+    createdAt: record.submittedAt,
+  };
+}
+
+function errorMessage(error: unknown): string {
+  const typed = error as { readonly message?: string };
+  return typed.message ?? "تعذر تنفيذ قرار اعتماد الكتالوج.";
+}
+
+function classify(error: unknown): CatalogSubmissionState {
+  const typed = error as { readonly status?: number; readonly message?: string };
+  if (typed.status === 401 || typed.status === 403) return { kind: "permission_denied" };
+  return { kind: "error", message: typed.message ?? "تعذر تحميل طلبات اعتماد الكتالوج من DSH." };
+}
 
 export function useCatalogApprovalController(authSession: string) {
-  const [submissions, setSubmissions] = useState<CatalogSubmission[]>([]);
-  const [kind, setKind] = useState<CatalogSubmissionState["kind"]>("loading");
+  const [records, setRecords] = useState<readonly CatalogApprovalRecord[]>([]);
+  const [state, setState] = useState<CatalogSubmissionState>({ kind: "loading" });
   const [action, setAction] = useState<"idle" | "submitting">("idle");
+  const [mutationError, setMutationError] = useState<string | null>(null);
+
+  const reload = useCallback(async () => {
+    if (authSession === "restoring" || authSession === "authenticating") {
+      setRecords([]);
+      setState({ kind: "loading" });
+      return;
+    }
+    if (authSession !== "authenticated") {
+      setRecords([]);
+      setMutationError(null);
+      setState({ kind: "permission_denied" });
+      return;
+    }
+    setState({ kind: "loading" });
+    try {
+      const next = await listCatalogApprovals();
+      setRecords(next);
+      setState(next.length === 0
+        ? { kind: "empty" }
+        : { kind: "success", submissions: next.map(toSubmission) });
+    } catch (error) {
+      setRecords([]);
+      setState(classify(error));
+    }
+  }, [authSession]);
 
   useEffect(() => {
-    const stored = localStorage.getItem("bthwani-catalog-submissions");
-    if (stored) {
-      setSubmissions(JSON.parse(stored));
-    } else {
-      localStorage.setItem("bthwani-catalog-submissions", JSON.stringify(INITIAL_MOCK_SUBMISSIONS));
-      setSubmissions(INITIAL_MOCK_SUBMISSIONS);
+    void reload();
+  }, [reload]);
+
+  const recordByStore = useMemo(() => {
+    const map = new Map<string, CatalogApprovalRecord>();
+    for (const record of records) map.set(entityKey(record), record);
+    return map;
+  }, [records]);
+
+  const canApprove = useCallback((storeId: string) => {
+    const record = recordByStore.get(storeId);
+    return Boolean(record && NEXT_APPROVAL_STAGE[record.stage]);
+  }, [recordByStore]);
+
+  const canReject = useCallback((storeId: string) => {
+    const stage = recordByStore.get(storeId)?.stage;
+    return Boolean(stage && stage !== "rejected" && stage !== "client-visible");
+  }, [recordByStore]);
+
+  const decide = useCallback(async (input: {
+    readonly storeId: string;
+    readonly decision: "approved" | "rejected";
+    readonly reason: string;
+  }) => {
+    const record = recordByStore.get(input.storeId);
+    if (!record) {
+      setMutationError("لم يعد طلب الاعتماد موجودًا في القراءة الحية.");
+      return;
     }
-    setKind("success");
-  }, []);
+    const reason = input.reason.trim();
+    if (reason.length < 3) {
+      setMutationError("سبب القرار مطلوب.");
+      return;
+    }
 
-  const save = (updated: CatalogSubmission[]) => {
-    localStorage.setItem("bthwani-catalog-submissions", JSON.stringify(updated));
-    setSubmissions(updated);
-  };
+    const toStage = input.decision === "rejected"
+      ? "rejected"
+      : NEXT_APPROVAL_STAGE[record.stage];
+    if (!toStage) {
+      setMutationError("لا يوجد انتقال اعتماد قانوني من الحالة الحالية.");
+      return;
+    }
 
-  const decide = async (input: { storeId: string; decision: "approved" | "rejected"; reason: string }) => {
     setAction("submitting");
-    const updated = submissions.map((s) =>
-      s.storeId === input.storeId ? { ...s, status: input.decision, reviewReason: input.reason } : s
-    );
-    save(updated);
-    setAction("idle");
-  };
+    setMutationError(null);
+    try {
+      await transitionCatalogApproval(record.id, toStage, reason);
+      await reload();
+    } catch (error) {
+      setMutationError(errorMessage(error));
+    } finally {
+      setAction("idle");
+    }
+  }, [recordByStore, reload]);
 
-  const activeSubmissions = submissions.filter((s) => s.status === "submitted");
-
-  const state: CatalogSubmissionState =
-    kind === "loading"
-      ? { kind: "loading" }
-      : activeSubmissions.length === 0
-      ? { kind: "empty" }
-      : { kind: "success", submissions: activeSubmissions };
-
-  return {
-    state: state as CatalogSubmissionState,
-    action,
-    decide,
-  };
+  return { state, action, mutationError, canApprove, canReject, decide, reload };
 }

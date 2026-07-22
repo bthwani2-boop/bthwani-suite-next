@@ -50,6 +50,19 @@ export function PartnersReviewQueueScreen({ onOpenPartner }: Props) {
       );
     }
 
+    if (adminController.listState.kind === "offline") {
+      return (
+        <StateView
+          stateId="offline"
+          tone="warning"
+          title="لا يوجد اتصال بخدمة الشركاء"
+          description="لم تُعرض بيانات محلية كحقيقة تشغيلية. أعد الاتصال ثم اقرأ أحدث حالة من DSH."
+          actionLabel="إعادة المحاولة"
+          onActionPress={adminController.retry}
+        />
+      );
+    }
+
     if (adminController.listState.kind === "error") {
       return (
         <StateView

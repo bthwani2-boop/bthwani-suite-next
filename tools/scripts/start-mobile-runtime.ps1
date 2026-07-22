@@ -132,6 +132,7 @@ if ($ShouldClearCache) {
 $AdbWatchdog = $null
 
 if (
+    $env:BTHWANI_ADB_WATCHDOG -eq "1" -and
     $SelectedSerial -match
     "^\d{1,3}(?:\.\d{1,3}){3}:\d+$"
 ) {

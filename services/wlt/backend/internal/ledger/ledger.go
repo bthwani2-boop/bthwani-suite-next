@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"wlt-api/internal/shared"
 )
@@ -128,6 +129,7 @@ func GetLedgerEntry(db *sql.DB, entryID string) (*LedgerEntry, error) {
 }
 
 type ListLedgerEntriesParams struct {
+	TenantID  string
 	ActorID   string
 	ActorType string
 	OrderID   string
@@ -137,14 +139,18 @@ type ListLedgerEntriesParams struct {
 }
 
 func ListLedgerEntries(db *sql.DB, params ListLedgerEntriesParams) ([]*LedgerEntry, error) {
+	tenantID := strings.TrimSpace(params.TenantID)
+	if tenantID == "" {
+		return nil, fmt.Errorf("tenantId is required")
+	}
 	limit := params.Limit
 	if limit <= 0 || limit > 100 {
 		limit = 50
 	}
 
-	q := `SELECT ` + ledgerCols + ` FROM wlt_ledger_entries WHERE 1=1`
-	args := []any{}
-	idx := 1
+	q := `SELECT ` + ledgerCols + ` FROM wlt_ledger_entries WHERE tenant_id = $1`
+	args := []any{tenantID}
+	idx := 2
 
 	if params.ActorID != "" {
 		q += fmt.Sprintf(" AND actor_id = $%d", idx)
@@ -167,7 +173,7 @@ func ListLedgerEntries(db *sql.DB, params ListLedgerEntriesParams) ([]*LedgerEnt
 		idx++
 	}
 	if params.Cursor != "" {
-		q += fmt.Sprintf(" AND created_at < (SELECT created_at FROM wlt_ledger_entries WHERE id = $%d)", idx)
+		q += fmt.Sprintf(" AND created_at < (SELECT created_at FROM wlt_ledger_entries WHERE id = $%d AND tenant_id = $1)", idx)
 		args = append(args, params.Cursor)
 		idx++
 	}
@@ -228,6 +234,11 @@ func HandleGetLedgerEntry(db *sql.DB) http.HandlerFunc {
 
 func HandleListLedgerEntries(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		tenantID := strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
+		if tenantID == "" {
+			shared.SendError(w, http.StatusBadRequest, "TENANT_REQUIRED", "X-Tenant-ID is required for ledger reads")
+			return
+		}
 		q := r.URL.Query()
 		limit := 50
 		if l := q.Get("limit"); l != "" {
@@ -236,6 +247,7 @@ func HandleListLedgerEntries(db *sql.DB) http.HandlerFunc {
 			}
 		}
 		params := ListLedgerEntriesParams{
+			TenantID:  tenantID,
 			ActorID:   q.Get("actorId"),
 			ActorType: q.Get("actorType"),
 			OrderID:   q.Get("orderId"),
@@ -251,6 +263,8 @@ func HandleListLedgerEntries(db *sql.DB) http.HandlerFunc {
 		if entries == nil {
 			entries = []*LedgerEntry{}
 		}
+		w.Header().Set("Cache-Control", "private, no-store")
+		w.Header().Set("Pragma", "no-cache")
 		shared.SendJSON(w, http.StatusOK, map[string]any{"ledgerEntries": entries})
 	}
 }

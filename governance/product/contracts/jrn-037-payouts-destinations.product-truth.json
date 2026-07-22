@@ -1,0 +1,171 @@
+{
+  "schemaVersion": 1,
+  "capabilityId": "JRN_037_PAYOUTS_DESTINATIONS",
+  "state": "DISCOVERY",
+  "problem": {
+    "statement": "Partners, captains and field representatives need one WLT-owned payout lifecycle that binds every request to an actor-owned protected destination, enforces maker-checker separation, survives ambiguous provider outcomes, and exposes canonical scoped readback across all required surfaces.",
+    "affectedActors": ["partner", "captain", "field", "finance_operator", "dsh_service", "wlt_service"],
+    "currentWorkaround": "Payout requests and provider processing exist, but destination ownership is keyed only by an untyped partner identifier, field routes can collide with partner identifiers, captain and partner destination surfaces are missing, requests are not bound to a destination, and unknown provider outcomes do not have a payout-specific governed reconciliation action.",
+    "frequency": "continuous",
+    "severity": "critical",
+    "evidenceState": "QUALITATIVE",
+    "evidenceReferences": [
+      "governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md#jrn-037",
+      "services/wlt/backend/internal/payout/payout.go",
+      "services/wlt/backend/internal/payout/sovereign_payout.go",
+      "services/dsh/backend/internal/http/actor_finance_handlers.go",
+      "services/dsh/frontend/control-panel/finance/PayoutRequestsPanel.tsx"
+    ]
+  },
+  "actors": [
+    {
+      "id": "partner",
+      "role": "Authenticated partner managing and using only its own payout destination and reading only its own payout requests",
+      "permittedActions": ["create or replace own destination", "deactivate own destination", "create payout against own active destination", "read own payout lifecycle"],
+      "forbiddenActions": ["read or mutate another actor destination", "approve process complete or reconcile a payout", "supply provider proof", "release held funds"]
+    },
+    {
+      "id": "captain",
+      "role": "Authenticated captain managing and using only a personal payout destination",
+      "permittedActions": ["create or replace own destination", "deactivate own destination", "create payout against own active destination", "read own payout lifecycle"],
+      "forbiddenActions": ["enumerate another captain", "use a partner or field destination", "mutate operator states", "retry provider processing directly"]
+    },
+    {
+      "id": "field",
+      "role": "Authenticated field representative managing and using only a personal payout destination",
+      "permittedActions": ["create or replace own destination", "deactivate own destination", "create payout against own active destination", "read own payout lifecycle"],
+      "forbiddenActions": ["spoof owner identifiers", "update a destination not owned by the authenticated field actor", "complete or fail a payout", "read raw bank values"]
+    },
+    {
+      "id": "finance_operator",
+      "role": "Authorized control-panel operator executing separated payout decisions and reconciliation",
+      "permittedActions": ["approve or reject pending payout", "process approved payout", "complete provider-proven payout", "inquire and reconcile unknown provider result", "inspect append-only audit"],
+      "forbiddenActions": ["approve and process the same payout", "process and complete the same payout", "complete without provider proof", "manually fail an unknown result without inquiry", "erase audit or outbox evidence"]
+    },
+    {
+      "id": "dsh_service",
+      "role": "Identity-aware proxy that resolves the authenticated actor server-side",
+      "permittedActions": ["forward typed actor identity", "proxy masked destination references", "carry correlation and idempotency headers", "expose scoped read models"],
+      "forbiddenActions": ["store raw destination secrets", "calculate balances", "change payout state locally", "trust actor identifiers from a mobile request body"]
+    },
+    {
+      "id": "wlt_service",
+      "role": "Sole financial truth owner for destination, holds, provider proof, ledger, payout audit and reconciliation",
+      "permittedActions": ["encrypt destination secrets", "verify owner and active destination", "hold and release funds atomically", "call and inquire provider", "post balanced ledger", "append audit and notification outbox"],
+      "forbiddenActions": ["complete without successful provider proof", "release held funds twice", "reuse idempotency key for different destination or amount", "return raw account data", "accept unsupported actor type"]
+    }
+  ],
+  "surfaces": [
+    {
+      "id": "app-partner",
+      "required": true,
+      "actors": ["partner"],
+      "routesOrScreens": ["Partner finance bridge", "payout destination card", "payout request list"],
+      "operationIds": ["getPartnerPayoutDestination", "upsertPartnerPayoutDestination", "deactivatePartnerPayoutDestination", "createPartnerPayoutRequest", "listPartnerPayoutRequests"],
+      "states": ["loading", "missing_destination", "ready", "pending", "provider_pending", "processing", "provider_result_unknown", "completed", "rejected", "failed", "forbidden", "offline", "error"],
+      "actions": ["save destination", "deactivate destination", "submit payout", "refresh"]
+    },
+    {
+      "id": "app-captain",
+      "required": true,
+      "actors": ["captain"],
+      "routesOrScreens": ["DshCaptainFinanceScreen", "payout destination card", "payout request list"],
+      "operationIds": ["getCaptainPayoutDestination", "upsertCaptainPayoutDestination", "deactivateCaptainPayoutDestination", "createCaptainPayoutRequest", "listCaptainPayoutRequests"],
+      "states": ["loading", "missing_destination", "ready", "pending", "provider_pending", "processing", "provider_result_unknown", "completed", "rejected", "failed", "forbidden", "offline", "error"],
+      "actions": ["save destination", "deactivate destination", "submit payout", "refresh"]
+    },
+    {
+      "id": "app-field",
+      "required": true,
+      "actors": ["field"],
+      "routesOrScreens": ["DshFieldFinanceScreen", "payout destination card", "payout request list"],
+      "operationIds": ["getFieldPayoutDestination", "upsertFieldPayoutDestination", "deactivateFieldPayoutDestination", "createFieldPayoutRequest", "listFieldPayoutRequests"],
+      "states": ["loading", "missing_destination", "ready", "pending", "provider_pending", "processing", "provider_result_unknown", "completed", "rejected", "failed", "forbidden", "offline", "error"],
+      "actions": ["save destination", "deactivate destination", "submit payout", "refresh"]
+    },
+    {
+      "id": "control-panel",
+      "required": true,
+      "actors": ["finance_operator"],
+      "routesOrScreens": ["PayoutRequestsPanel", "provider proof", "payout reconciliation", "payout audit"],
+      "operationIds": ["approvePayoutRequest", "rejectPayoutRequest", "processPayoutRequest", "completePayoutRequest", "reconcilePayoutRequest", "listPayoutAudit"],
+      "states": ["pending", "approved", "provider_pending", "processing", "provider_result_unknown", "completed", "rejected", "failed", "conflict", "forbidden", "error"],
+      "actions": ["approve", "reject", "process", "complete", "inquire and reconcile", "inspect audit"]
+    },
+    {
+      "id": "backend",
+      "required": true,
+      "actors": ["dsh_service", "wlt_service", "finance_operator"],
+      "routesOrScreens": ["DSH typed self routes", "WLT typed destination routes", "WLT governed payout routes"],
+      "operationIds": ["upsertWltPayoutDestination", "createWltGovernedPayoutRequest", "processWltPayoutRequest", "reconcileWltPayoutRequest"],
+      "states": ["authorized", "forbidden", "invalid", "conflict", "idempotent_replay", "provider_unknown", "reconciled"],
+      "actions": ["authenticate", "scope", "validate", "hold", "process", "inquire", "journal", "audit", "notify"]
+    },
+    {
+      "id": "database",
+      "required": true,
+      "actors": ["wlt_service"],
+      "routesOrScreens": ["typed payout destinations", "destination-bound payout requests", "payout audit events", "payout notification outbox", "payout reconciliation records"],
+      "operationIds": [],
+      "states": ["encrypted", "actor_scoped", "idempotent", "append_only", "balanced", "auditable"],
+      "actions": ["enforce one active destination per actor", "retain destination reference", "prevent duplicate financial release", "append audit", "enqueue notification"]
+    },
+    {
+      "id": "shared",
+      "required": true,
+      "actors": ["partner", "captain", "field", "finance_operator"],
+      "routesOrScreens": ["services/dsh/frontend/shared/finance-wlt-link/jrn037"],
+      "operationIds": ["readActorPayoutDestination", "saveActorPayoutDestination", "createActorPayoutRequest", "readActorPayoutRequests"],
+      "states": ["idle", "loading", "missing_destination", "ready", "submitting", "success", "forbidden", "conflict", "offline", "error"],
+      "actions": ["map canonical state", "mask destination", "disable duplicate action", "refresh canonical readback"]
+    }
+  ],
+  "outcome": {
+    "statement": "Every payout request is bound to one active destination owned by the same typed actor, every operator transition is separated and idempotent, every provider result is proven or reconciled, and every financial effect is balanced, audited and surfaced canonically.",
+    "primaryMetric": "destination-bound payout requests completed with canonical provider proof",
+    "guardrailMetrics": ["cross-actor destination access count", "request without destination count", "same-operator protected transition count", "duplicate provider submission count", "unknown result manually released count", "duplicate held-fund release count", "unbalanced payout journal count", "raw destination value exposure count"],
+    "baselineState": "Provider-backed payout processing exists but destination ownership and multi-surface bindings are incomplete and unknown outcomes lack a payout-specific reconciliation lifecycle.",
+    "targetState": "WLT owns one typed, encrypted, destination-bound, maker-checker, provider-proven and reconcilable payout lifecycle across partner, captain, field and control panel.",
+    "observationWindow": "targeted static database contract backend frontend finance security runtime and independent review"
+  },
+  "acceptance": {
+    "criteria": [
+      "Destination owner type is one of partner captain or field and owner identity always comes from an authenticated DSH self route.",
+      "Only masked destination values leave WLT; raw account IBAN and mobile-money values remain encrypted at rest.",
+      "A payout request references an active destination owned by the same actor type and actor id.",
+      "Idempotency hash includes actor destination amount and currency, and a conflicting replay is rejected.",
+      "Approval processor and completer are distinct authenticated operators.",
+      "Provider submission is single-claim and ambiguous outcomes remain held until governed inquiry resolves them.",
+      "Completion requires successful provider reference and posts one balanced ledger transaction atomically.",
+      "Failure or rejection releases held funds exactly once and never after successful provider proof.",
+      "Every destination and payout transition appends correlation-linked audit and notification outbox evidence.",
+      "Partner captain and field surfaces expose only their own destination and payout lifecycle; control panel exposes only legal actions."
+    ],
+    "failureStates": ["untyped destination owner", "cross-actor destination", "raw secret exposure", "payout without destination", "idempotency conflict", "maker-checker violation", "duplicate provider submission", "unknown result released", "duplicate held release", "completion without provider proof", "unbalanced journal", "frontend-only success"],
+    "requiredChecks": ["product-truth schema validation", "migration invariant checks", "targeted WLT payout tests", "DSH typed self-route tests", "OpenAPI and generated binding drift check", "targeted shared and surface TypeScript typecheck", "finance boundary and idempotency gates", "actor isolation tests", "provider process and inquiry runtime smoke", "independent finance review", "independent product acceptance", "visual and accessibility review"],
+    "runtimeEvidenceRequired": true,
+    "visualEvidenceRequired": true
+  },
+  "invariants": {
+    "business": ["WLT exclusively owns destination payout wallet ledger provider proof audit and reconciliation truth.", "DSH resolves actor identity and never accepts owner identity from a mobile body.", "Every payout mutation carries service authentication correlation and idempotency.", "Every visible success is read back from WLT.", "Unknown provider results keep funds held until inquiry and reconciliation."],
+    "negative": ["No raw bank account IBAN or payout mobile value leaves WLT.", "No destination is shared across actor types.", "No request uses another actor destination.", "No protected transition is performed by the same operator.", "No payout is submitted to the provider twice.", "No held amount is released or paid twice.", "No payout is completed without provider proof."]
+  },
+  "owners": {
+    "productManager": "DSH and WLT Financial Product Management",
+    "productOwner": "Payout Operations Product Owner",
+    "uxJourneyOwner": "Representative Payout Multi-Surface Experience Owner",
+    "engineeringOwner": "DSH and WLT Full-Stack Engineering",
+    "productManagerApproval": "PENDING",
+    "productOwnerApproval": "PENDING",
+    "productAcceptanceDecision": "PENDING"
+  },
+  "execution": {
+    "appetite": "Close JRN-037 code data contract lifecycle and required surface gaps without moving financial truth out of WLT, enabling production providers, deploying production or self-approving protected evidence.",
+    "fixedConstraints": ["Repository mode is REMOTE_ONLY on sambassam.", "WLT remains the sole financial truth owner.", "DSH resolves actor identity server-side.", "No PR merge force push release production deployment or SaaS activation is authorized.", "Independent product finance security QA release and risk approvals cannot be self-issued by engineering."],
+    "variableScope": ["Arabic status wording", "destination card presentation", "non-financial diagnostics"],
+    "forbiddenScope": ["DSH-owned financial mutation", "frontend-owned financial calculation", "production provider enablement", "production deployment", "commercial SaaS activation", "fake runtime evidence", "self-approval of protected gates"],
+    "forecastRange": "one sequential journey closure",
+    "confidence": "high",
+    "unknowns": ["Independent product manager approval outcome", "Independent product owner approval outcome", "Independent financial control review outcome", "Runtime migration and provider inquiry outcome", "Visual accessibility and weak-network outcome", "Release and production evidence outcome"]
+  }
+}

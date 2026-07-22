@@ -1,0 +1,249 @@
+# BThwani DSH OpenAPI path-items module: orders.
+# Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
+
+/dsh/client/orders:
+  post:
+    operationId: createDshOrder
+    summary: Create an order from a confirmed checkout intent (client).
+    tags: [DshOrders]
+    security: [{ bearerAuth: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCreateOrderRequest" }
+    responses:
+      "201":
+        description: Order created in pending state, awaiting partner acceptance.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshOrderResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+  get:
+    operationId: listDshClientOrders
+    summary: List the authenticated client's orders.
+    tags: [DshOrders]
+    security: [{ bearerAuth: [] }]
+    responses:
+      "200":
+        description: Paginated list of client orders.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshOrdersResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+
+/dsh/client/orders/{orderId}:
+  get:
+    operationId: getDshClientOrder
+    summary: Get a single order by ID (client-scoped).
+    tags: [DshOrders]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: Order detail with items.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshOrderResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
+/dsh/operator/orders:
+  get:
+    operationId: listDshOperatorOrders
+    summary: Operator view of all orders with optional status filter.
+    tags: [DshOrders]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: [pending, store_accepted, preparing, ready_for_pickup, driver_assigned, driver_arrived_store, picked_up, arrived_customer, delivered, cancelled]
+    responses:
+      "200":
+        description: List of all orders.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshOrdersResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+
+/dsh/operator/orders/{orderId}/cancel:
+  post:
+    operationId: cancelDshOperatorOrder
+    summary: Operator cancels an active order with a mandatory reason.
+    tags: [DshOrders]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [reason]
+            properties:
+              reason:
+                type: string
+                minLength: 1
+    responses:
+      "200":
+        description: Order cancelled successfully.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshOrderResponse"
+      "400":
+        $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest"
+      "401":
+        $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated"
+      "403":
+        $ref: "../dsh.openapi.yaml#/components/responses/Forbidden"
+      "404":
+        $ref: "../dsh.openapi.yaml#/components/responses/NotFound"
+
+/dsh/client/orders/{orderId}/pickup:
+  get:
+    operationId: getDshClientPickupSession
+    summary: Return the authenticated client's resumable pickup session stage.
+    description: >-
+      Serves the deep link carried by the pickup_otp notification action_url.
+      Reads the same durable order/session/audit truth as the partner pickup
+      state endpoint, scoped to the requesting client's own order. Never
+      returns the OTP in plaintext; the code only ever reaches the client
+      through the notification body.
+    tags: [DshPickup]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: Resumable pickup state returned.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartnerPickupStateResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "422":
+        description: The order does not use pickup fulfillment.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshErrorResponse" }
+
+/dsh/client/orders/{orderId}/cancel:
+  post:
+    operationId: cancelDshClientOrder
+    summary: Cancel an authenticated client's early-stage order and start governed WLT closure.
+    tags: [DshOrders]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshOrderCancellationRequest" }
+    responses:
+      "200":
+        description: Order cancelled and financial closure queued or not required.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCancelOrderResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409":
+        description: Order state requires operator review or no longer permits direct client cancellation.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshErrorResponse" }
+
+/dsh/client/orders/{orderId}/cancellation:
+  get:
+    operationId: getDshClientOrderCancellation
+    summary: Return the client's cancellation and WLT financial-closure projection.
+    tags: [DshOrders]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: Cancellation projection returned.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshOrderCancellationResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
+/dsh/operator/orders/{orderId}/cancellation:
+  get:
+    operationId: getDshOperatorOrderCancellation
+    summary: Return cancellation, refund reference and financial delivery failure for operations.
+    tags: [DshOperatorOrders]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: Cancellation projection returned.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshOrderCancellationResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+  post:
+    operationId: cancelDshOperatorOrderGoverned
+    summary: Cancel an order after operational review and stop all dependent work atomically.
+    tags: [DshOperatorOrders]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshOrderCancellationRequest" }
+    responses:
+      "200":
+        description: Order cancelled and WLT closure queued or not required.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCancelOrderResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409":
+        description: Order is already terminal or cannot be cancelled from its current state.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshErrorResponse" }

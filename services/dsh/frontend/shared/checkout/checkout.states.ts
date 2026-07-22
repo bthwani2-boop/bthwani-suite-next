@@ -1,4 +1,8 @@
-import type { DshCheckoutIntent, DshCheckoutState } from "./checkout.types";
+import type {
+  DshCheckoutIntent,
+  DshCheckoutState,
+  DshCheckoutTerminalReason,
+} from "./checkout.types";
 
 export type DshCheckoutIntentListLoadState = "loading" | "success" | "empty" | "error";
 
@@ -20,6 +24,17 @@ export function checkoutSuccessState(intent: DshCheckoutIntent): DshCheckoutStat
 
 export function checkoutPaymentPendingState(intent: DshCheckoutIntent): DshCheckoutState {
   return { kind: "payment_pending", intent };
+}
+
+export function checkoutReconciliationPendingState(intent: DshCheckoutIntent): DshCheckoutState {
+  return { kind: "reconciliation_pending", intent };
+}
+
+export function checkoutTerminalState(
+  intent: DshCheckoutIntent,
+  reason: DshCheckoutTerminalReason,
+): DshCheckoutState {
+  return { kind: "terminal", intent, reason };
 }
 
 export function checkoutErrorState(message: string): DshCheckoutState {

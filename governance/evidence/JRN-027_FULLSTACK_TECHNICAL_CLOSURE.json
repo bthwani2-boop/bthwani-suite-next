@@ -1,0 +1,56 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-027",
+  "name": "Subscriptions and commercial benefits",
+  "repositoryMode": "REMOTE_ONLY",
+  "repository": "bthwani2-boop/bthwani-suite-next",
+  "branch": "sambassam",
+  "verifiedCommitSha": "744c3c7638ccbd2633f594581eaf3d6bb0a9eb43",
+  "verification": {
+    "workflow": ".github/workflows/jrn-027-subscription-lifecycle.yml",
+    "workflowRunId": 29898214712,
+    "workflowJobId": 88852862316,
+    "conclusion": "success",
+    "checks": {
+      "goFormatting": "passed",
+      "staticClosureGate": "passed",
+      "wltLifecycleGoTestAndBuild": "passed",
+      "dshOrchestrationGoTestAndBuild": "passed",
+      "dshOpenApi": "passed",
+      "focusedFrontendTypecheck": "passed",
+      "repositoryDiffCheck": "passed"
+    }
+  },
+  "implementedSlices": [
+    "canonical Product Truth and actor/surface boundaries",
+    "DSH operational purchase lifecycle and tenant/client isolation",
+    "WLT financial product, payment, entitlement and recurring-revenue ownership",
+    "captured-payment integrity before activation",
+    "exactly-once activation loyalty entry",
+    "renewal with new bound payment evidence",
+    "cancellation and WLT-owned compensation state",
+    "deterministic expiry and effective-benefit readback",
+    "append-only DSH and WLT lifecycle evidence",
+    "client purchase, payment refresh, activation, renewal and cancellation controls",
+    "DSH and WLT OpenAPI lifecycle contracts",
+    "focused permanent verification workflow",
+    "removal of temporary diagnostic workflows and stale failure evidence"
+  ],
+  "technicalDecision": "VERIFIED_CLOSED",
+  "externalDecisions": {
+    "productManagerApproval": "PENDING_INDEPENDENT_REVIEW",
+    "productOwnerApproval": "PENDING_INDEPENDENT_REVIEW",
+    "productAcceptanceDecision": "PENDING_INDEPENDENT_REVIEW",
+    "runtimeVisualEvidence": "NOT_EXECUTED_IN_REMOTE_ONLY_CODE_RUN",
+    "accessibilityDeviceEvidence": "NOT_EXECUTED_IN_REMOTE_ONLY_CODE_RUN",
+    "weakNetworkDeviceEvidence": "NOT_EXECUTED_IN_REMOTE_ONLY_CODE_RUN",
+    "productionDeployment": "NOT_AUTHORIZED",
+    "commercialSaasActivation": "NOT_AUTHORIZED"
+  },
+  "remainingTechnicalBlockers": [],
+  "notes": [
+    "The technical closure does not self-approve independent product or visual acceptance.",
+    "Production deployment and commercial SaaS activation were explicitly outside the authorized scope.",
+    "Repository-wide TypeScript errors belonging to concurrently executing journeys were not used to weaken JRN-027 verification; JRN-027 has a dedicated focused type gate and its backend still compiles against the integrated DSH packages."
+  ]
+}

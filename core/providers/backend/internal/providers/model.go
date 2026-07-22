@@ -6,13 +6,14 @@ import (
 )
 
 type ExternalProvider struct {
-	ProviderID  string          `json:"providerId"`
-	Kind        string          `json:"kind"`
-	Code        string          `json:"code"`
-	Active      bool            `json:"active"`
-	Credentials json.RawMessage `json:"credentials,omitempty"`
-	Parameters  json.RawMessage `json:"parameters,omitempty"`
-	UpdatedAt   time.Time       `json:"updatedAt"`
+	ProviderID           string          `json:"providerId"`
+	Kind                 string          `json:"kind"`
+	Code                 string          `json:"code"`
+	Active               bool            `json:"active"`
+	CredentialConfigured bool            `json:"credentialConfigured"`
+	Credentials          json.RawMessage `json:"-"`
+	Parameters           json.RawMessage `json:"parameters,omitempty"`
+	UpdatedAt            time.Time       `json:"updatedAt"`
 }
 
 type UpdateProviderInput struct {

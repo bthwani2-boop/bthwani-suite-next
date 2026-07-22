@@ -1,0 +1,142 @@
+# BThwani DSH OpenAPI path-items module: checkout.
+# Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
+
+/dsh/client/checkout-intents:
+  post:
+    operationId: createDshCheckoutIntent
+    summary: Create a checkout intent from an active cart. DSH never executes payment.
+    tags: [DshCheckout]
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCreateCheckoutIntentRequest" }
+    responses:
+      "201":
+        description: Checkout intent created with opaque WLT payment-session reference.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCheckoutIntentResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "503": { description: WLT payment-session handoff is unavailable. }
+
+/dsh/client/checkout-intents/{intentId}:
+  get:
+    operationId: getDshCheckoutIntent
+    summary: Get a checkout intent by ID (client-scoped).
+    tags: [DshCheckout]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: intentId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: Checkout intent.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCheckoutIntentResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
+/dsh/client/checkout-intents/{intentId}/cancel:
+  post:
+    operationId: cancelDshCheckoutIntent
+    summary: Cancel a checkout intent. Never triggers refund — financial finalization is WLT-owned.
+    tags: [DshCheckout]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: intentId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: Intent cancelled.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCheckoutIntentResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "409": { description: Intent already closed or not found. }
+
+/dsh/operator/checkout-intents:
+  get:
+    operationId: listOperatorCheckoutIntents
+    summary: List checkout intents for operator monitoring. No financial mutation.
+    tags: [DshCheckout]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: state
+        in: query
+        schema:
+          type: string
+          enum: [pending, wlt_handoff_failed, wlt_outcome_unknown, payment_pending, payment_confirmed, payment_failed, confirmed, cancelled, expired]
+    responses:
+      "200":
+        description: List of checkout intents.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshOperatorCheckoutIntentsResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+
+# ─── Order Fulfillment & Partner Acceptance ────────────────────────
+
+/dsh/operator/checkout-intents/{intentId}/reconcile:
+  post:
+    operationId: reconcileDshCheckoutIntent
+    tags: [Checkout]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: intentId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    responses:
+      "200": { description: WLT payment-session reference reconciled idempotently. }
+      "202": { description: WLT outcome remains unknown and requires another retry. }
+      "409": { description: Reconciliation is not required or state changed. }
+
+/dsh/internal/wlt/payment-session-events:
+  post:
+    operationId: reportWltPaymentSessionEvent
+    summary: "WLT-owned payment-session outcome callback; DSH consumes opaque status references only and advances the checkout intent state machine. Requires the X-Service-Caller: wlt header in addition to Authorization."
+    tags: [DshCheckout]
+    x-bthwani-client-generation: DISABLED
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: Authorization
+        in: header
+        required: true
+        schema: { type: string }
+      - name: X-Service-Caller
+        in: header
+        required: true
+        schema:
+          type: string
+          enum: [wlt]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/WltPaymentCallbackEnvelope" }
+    responses:
+      "200":
+        description: Checkout intent updated from the WLT payment-session outcome.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCheckoutIntentResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { description: Only the WLT service may report payment-session events. }
+      "404": { description: Checkout intent not found. }
+      "409": { description: "paymentSessionId does not match the checkout intent, or the intent is not awaiting a payment outcome." }
+
+# ── Notifications ─────────────────────────────────────────────────

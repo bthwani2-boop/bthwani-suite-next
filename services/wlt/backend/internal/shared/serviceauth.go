@@ -4,6 +4,7 @@ import (
 	"crypto/subtle"
 	"net/http"
 	"os"
+	"strings"
 )
 
 // RequireServiceCaller enforces that a request carries a valid shared-secret
@@ -32,6 +33,10 @@ func RequireServiceCaller(w http.ResponseWriter, r *http.Request, tokenEnvVar, e
 	}
 	if r.Header.Get("X-Service-Caller") != expectedCaller {
 		SendError(w, http.StatusForbidden, "SERVICE_CALLER_FORBIDDEN", "unexpected service caller")
+		return false
+	}
+	if strings.HasPrefix(r.URL.Path, "/wlt/promotion-funding/") && strings.TrimSpace(r.Header.Get("X-Tenant-ID")) == "" {
+		SendError(w, http.StatusBadRequest, "MISSING_TENANT_ID", "X-Tenant-ID is required for promotion funding")
 		return false
 	}
 	return true

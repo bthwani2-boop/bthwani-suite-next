@@ -1,0 +1,363 @@
+# BThwani DSH OpenAPI path-items module: preparation-handoff.
+# Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
+
+/dsh/partner/order-workboard:
+  get:
+    operationId: getDshPartnerOrderWorkboard
+    summary: Return actor-scoped partner orders with server-authoritative executable actions.
+    tags: [DshOrders]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: status
+        in: query
+        required: false
+        description: Optional exact lifecycle status. Omit to return the complete store workboard.
+        schema:
+          $ref: "../dsh.openapi.yaml#/components/schemas/DshOrderStatus"
+    responses:
+      "200":
+        description: Actor-scoped partner workboard.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshPartnerOrderWorkboardResponse"
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+
+/dsh/orders/{orderId}/preparation:
+  get:
+    operationId: getDshOrderPreparation
+    summary: Return governed preparation timing to an authorized client, partner, assigned captain, or operator.
+    tags: [DshOrders]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    responses:
+      "200":
+        description: Preparation timing returned.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [preparation]
+              properties:
+                preparation:
+                  $ref: "../dsh.openapi.yaml#/components/schemas/DshOrderPreparation"
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
+/dsh/partner/orders/{orderId}/preparation-estimate:
+  post:
+    operationId: reviseDshPartnerOrderPreparationEstimate
+    summary: Revise the remaining preparation estimate with an auditable reason.
+    tags: [DshOrders]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../dsh.openapi.yaml#/components/schemas/DshRevisePreparationEstimateInput"
+    responses:
+      "200":
+        description: Preparation estimate revised.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [preparation]
+              properties:
+                preparation:
+                  $ref: "../dsh.openapi.yaml#/components/schemas/DshOrderPreparation"
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
+/dsh/orders/{orderId}/preparation-issues:
+  get:
+    operationId: listDshOrderPreparationIssues
+    summary: List preparation issues for an authorized client, partner, assigned captain, or operator.
+    tags: [DshOrders]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    responses:
+      "200":
+        description: Preparation issues returned.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshPreparationIssueListResponse"
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
+/dsh/partner/orders/{orderId}/preparation-issues:
+  post:
+    operationId: createDshPartnerOrderPreparationIssue
+    summary: Open a missing-item, substitution, quality, or order-level preparation issue.
+    tags: [DshOrders]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../dsh.openapi.yaml#/components/schemas/DshCreatePreparationIssueInput"
+    responses:
+      "201":
+        description: Preparation issue opened.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [issue]
+              properties:
+                issue:
+                  $ref: "../dsh.openapi.yaml#/components/schemas/DshPreparationIssue"
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
+/dsh/client/orders/{orderId}/preparation-issues/{issueId}/decision:
+  post:
+    operationId: decideDshClientOrderPreparationIssue
+    summary: Record the owning client's approval or rejection of a proposed substitution.
+    tags: [DshOrders]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+      - name: issueId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../dsh.openapi.yaml#/components/schemas/DshDecidePreparationIssueInput"
+    responses:
+      "200":
+        description: Customer substitution decision recorded.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [issue]
+              properties:
+                issue:
+                  $ref: "../dsh.openapi.yaml#/components/schemas/DshPreparationIssue"
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
+/dsh/partner/orders/{orderId}/preparation-issues/{issueId}/resolve:
+  post:
+    operationId: resolveDshPartnerOrderPreparationIssue
+    summary: Resolve one open preparation issue after any required customer decision.
+    tags: [DshOrders]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+      - name: issueId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../dsh.openapi.yaml#/components/schemas/DshResolvePreparationIssueInput"
+    responses:
+      "200":
+        description: Preparation issue resolved.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [issue]
+              properties:
+                issue:
+                  $ref: "../dsh.openapi.yaml#/components/schemas/DshPreparationIssue"
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
+/dsh/partner/stores/{storeId}/order-preparation-policy:
+  get:
+    operationId: getDshPartnerStorePreparationPolicy
+    summary: Return the authenticated store preparation policy.
+    tags: [DshOrders]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: storeId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: Store preparation policy returned.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [policy]
+              properties:
+                policy:
+                  $ref: "../dsh.openapi.yaml#/components/schemas/DshStorePreparationPolicy"
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+  put:
+    operationId: updateDshPartnerStorePreparationPolicy
+    summary: Update the authenticated store preparation policy with version control.
+    tags: [DshOrders]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: storeId
+        in: path
+        required: true
+        schema: { type: string }
+      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../dsh.openapi.yaml#/components/schemas/DshUpdateStorePreparationPolicyInput"
+    responses:
+      "200":
+        description: Store preparation policy updated.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [policy]
+              properties:
+                policy:
+                  $ref: "../dsh.openapi.yaml#/components/schemas/DshStorePreparationPolicy"
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
+/dsh/operator/order-preparation/alerts/refresh:
+  post:
+    operationId: refreshDshOperatorOrderPreparationAlerts
+    summary: Detect, open, and auto-resolve durable preparation alerts.
+    tags: [DshOrders]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
+    responses:
+      "200":
+        description: Preparation alert scan completed.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [result]
+              properties:
+                result:
+                  $ref: "../dsh.openapi.yaml#/components/schemas/DshRefreshPreparationAlertsResult"
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+
+/dsh/operator/order-preparation/alerts:
+  get:
+    operationId: listDshOperatorOrderPreparationAlerts
+    summary: List durable preparation alerts for operations.
+    tags: [DshOrders]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: status
+        in: query
+        required: false
+        schema:
+          $ref: "../dsh.openapi.yaml#/components/schemas/DshPreparationAlertStatus"
+      - name: limit
+        in: query
+        required: false
+        schema: { type: integer, minimum: 1, maximum: 500, default: 100 }
+    responses:
+      "200":
+        description: Preparation alerts returned.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshPreparationAlertListResponse"
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+
+/dsh/operator/order-preparation/alerts/{alertId}/acknowledge:
+  post:
+    operationId: acknowledgeDshOperatorOrderPreparationAlert
+    summary: Acknowledge one active preparation alert using optimistic concurrency.
+    tags: [DshOrders]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: alertId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../dsh.openapi.yaml#/components/schemas/DshAcknowledgePreparationAlertInput"
+    responses:
+      "200":
+        description: Preparation alert acknowledged.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [alert]
+              properties:
+                alert:
+                  $ref: "../dsh.openapi.yaml#/components/schemas/DshPreparationAlert"
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }

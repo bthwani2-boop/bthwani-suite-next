@@ -1,0 +1,32 @@
+{
+  "extends": "./tsconfig.jrn-020-030.json",
+  "compilerOptions": {
+    "outDir": "dist-jrn-026"
+  },
+  "include": [
+    "frontend/**/*.d.ts",
+    "frontend/shared/_kernel/**/*.ts",
+    "frontend/shared/_kernel/**/*.tsx",
+    "frontend/shared/partner/partner-delivery-pricing.api.ts",
+    "frontend/shared/partner/use-delivery-pricing-controller.ts",
+    "frontend/shared/partner/partner-delivery-pricing.public.ts",
+    "frontend/shared/partner/operator-delivery-pricing.public.ts",
+    "frontend/shared/marketing/coupons.types.ts",
+    "frontend/shared/marketing/marketing.api.ts",
+    "frontend/shared/marketing/use-coupons-controller.ts",
+    "frontend/shared/marketing/coupons.public.ts",
+    "frontend/shared/marketing/loyalty-policy.api.ts",
+    "frontend/shared/marketing/use-loyalty-policy-controller.ts",
+    "frontend/shared/marketing/loyalty-policy.public.ts",
+    "frontend/app-partner/store/PartnerDeliveryPricingCard.tsx",
+    "frontend/control-panel/partners/stores/OperatorDeliveryPricingPanel.tsx",
+    "frontend/control-panel/marketing/components/CouponTermsEditor.tsx",
+    "frontend/control-panel/marketing/components/LoyaltyPolicyPanel.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "dist-jrn-020-030",
+    "dist-jrn-026"
+  ]
+}

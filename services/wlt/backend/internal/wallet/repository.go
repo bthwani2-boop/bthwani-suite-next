@@ -3,6 +3,7 @@ package wallet
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 )
 
 const walletCols = `id, actor_id, actor_type, status, currency,
@@ -33,6 +34,9 @@ func scanWallet(s walletScanner) (*Wallet, error) {
 	return &w, nil
 }
 
+// GetWallet is retained for internal WLT callers that already own a globally
+// resolved actor identity. HTTP representative reads must use
+// GetWalletForTenant so a finance operator cannot cross a SaaS tenant boundary.
 func GetWallet(db *sql.DB, actorType, actorID string) (*Wallet, error) {
 	const q = `
 		SELECT ` + walletCols + `
@@ -48,6 +52,29 @@ func GetWallet(db *sql.DB, actorType, actorID string) (*Wallet, error) {
 	}
 	if err != nil {
 		return nil, fmt.Errorf("get wallet: %w", err)
+	}
+	return w, nil
+}
+
+func GetWalletForTenant(db *sql.DB, tenantID, actorType, actorID string) (*Wallet, error) {
+	tenantID = strings.TrimSpace(tenantID)
+	if tenantID == "" {
+		return nil, fmt.Errorf("tenantId is required")
+	}
+	const q = `
+		SELECT ` + walletCols + `
+		FROM wlt_wallets
+		WHERE tenant_id = $1 AND actor_type = $2 AND actor_id = $3
+		ORDER BY updated_at DESC
+		LIMIT 1`
+
+	row := db.QueryRow(q, tenantID, actorType, actorID)
+	w, err := scanWallet(row)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get tenant wallet: %w", err)
 	}
 	return w, nil
 }

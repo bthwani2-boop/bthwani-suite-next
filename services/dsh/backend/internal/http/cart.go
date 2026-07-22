@@ -3,8 +3,10 @@ package http
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"dsh-api/internal/cart"
+	"dsh-api/internal/clientaddress"
 	"dsh-api/internal/store"
 )
 
@@ -14,23 +16,80 @@ type cartServer struct {
 
 // POST /dsh/client/cart/serviceability
 func (s *protectedStoreServer) handleCartServiceability(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireActor(w, r, "client"); !ok {
+	actor, ok := s.requireActor(w, r, "client")
+	if !ok {
 		return
 	}
 	var body struct {
-		StoreID         string   `json:"storeId"`
-		ServiceAreaCode string   `json:"serviceAreaCode"`
-		Latitude        *float64 `json:"latitude"`
-		Longitude       *float64 `json:"longitude"`
+		StoreID         string `json:"storeId"`
+		AddressID       string `json:"addressId"`
+		FulfillmentMode string `json:"fulfillmentMode"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
+	body.StoreID = strings.TrimSpace(body.StoreID)
+	body.AddressID = strings.TrimSpace(body.AddressID)
 	if body.StoreID == "" {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "storeId is required")
 		return
 	}
-	result := cart.CheckServiceability(r.Context(), s.db, body.StoreID, body.ServiceAreaCode, body.Latitude, body.Longitude)
+	mode := cart.FulfillmentMode(strings.TrimSpace(body.FulfillmentMode))
+	if mode == "" {
+		mode = cart.ModeBthwaniDelivery
+	}
+	if mode != cart.ModeBthwaniDelivery && mode != cart.ModePartnerDelivery && mode != cart.ModePickup {
+		store.SendError(w, http.StatusBadRequest, "INVALID_FULFILLMENT_MODE", "fulfillmentMode is invalid")
+		return
+	}
+
+	var address *clientaddress.Address
+	var err error
+	if body.AddressID != "" {
+		address, err = clientaddress.GetOwned(r.Context(), s.db, actor.ID, body.AddressID)
+	} else {
+		var addresses []clientaddress.Address
+		addresses, err = clientaddress.List(r.Context(), s.db, actor.ID)
+		if err == nil && len(addresses) == 0 {
+			store.SendError(w, http.StatusUnprocessableEntity, "ADDRESS_REQUIRED", "create a governed client address before checking delivery serviceability")
+			return
+		}
+		if err == nil {
+			address = &addresses[0]
+		}
+	}
+	if errors.Is(err, clientaddress.ErrNotFound) {
+		store.SendError(w, http.StatusNotFound, "ADDRESS_NOT_FOUND", "address is not owned by the authenticated client")
+		return
+	}
+	if err != nil || address == nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "could not resolve delivery address")
+		return
+	}
+
+	result := cart.CheckGovernedServiceability(
+		r.Context(),
+		s.db,
+		body.StoreID,
+		address.ServiceAreaCode,
+		address.Latitude,
+		address.Longitude,
+		mode,
+	)
+	result.AddressID = address.ID
+	result.AddressVersion = address.Version
+	if err := cart.RecordServiceabilityCheck(
+		r.Context(),
+		s.db,
+		actor.ID,
+		body.StoreID,
+		address.ServiceAreaCode,
+		correlationID(r),
+		result,
+	); err != nil {
+		store.SendError(w, http.StatusInternalServerError, "SERVICEABILITY_AUDIT_FAILED", "serviceability result could not be recorded")
+		return
+	}
 	store.SendJSON(w, http.StatusOK, result)
 }
 
@@ -45,7 +104,7 @@ func (s *protectedStoreServer) handleGetCart(w http.ResponseWriter, r *http.Requ
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "storeId query parameter is required")
 		return
 	}
-	c, err := cart.GetCart(r.Context(), s.db, actor.ID, storeID)
+	current, err := cart.GetCart(r.Context(), s.db, actor.ID, storeID)
 	if errors.Is(err, cart.ErrNotFound) {
 		store.SendJSON(w, http.StatusOK, map[string]any{"cart": nil})
 		return
@@ -54,7 +113,14 @@ func (s *protectedStoreServer) handleGetCart(w http.ResponseWriter, r *http.Requ
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "cart lookup failed")
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"cart": c})
+	validation, err := cart.ValidateCart(r.Context(), s.db, current.ID)
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "cart validation failed")
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{
+		"cart": cart.ClientCartView{Cart: current, Validation: validation},
+	})
 }
 
 // POST /dsh/client/cart/items
@@ -80,24 +146,46 @@ func (s *protectedStoreServer) handleUpsertCartItem(w http.ResponseWriter, r *ht
 	if mode != cart.ModeBthwaniDelivery && mode != cart.ModePartnerDelivery && mode != cart.ModePickup {
 		mode = cart.ModeBthwaniDelivery
 	}
-	c, err := cart.GetOrCreateActiveCart(r.Context(), s.db, actor.ID, body.StoreID, mode)
+	current, err := cart.GetOrCreateSingleStoreCart(r.Context(), s.db, actor.ID, body.StoreID, mode)
+	if errors.Is(err, cart.ErrStoreConflict) {
+		conflict := &cart.StoreConflictError{}
+		if errors.As(err, &conflict) {
+			store.SendJSON(w, http.StatusConflict, map[string]any{
+				"code":          "CART_STORE_CONFLICT",
+				"message":       "clear the active cart before adding products from another store",
+				"activeCartId":  conflict.ActiveCartID,
+				"activeStoreId": conflict.ActiveStoreID,
+			})
+			return
+		}
+		store.SendError(w, http.StatusConflict, "CART_STORE_CONFLICT", "another store already owns the active cart")
+		return
+	}
+	if errors.Is(err, cart.ErrInvalid) {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "cart store or fulfillment mode is invalid")
+		return
+	}
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "could not resolve cart")
 		return
 	}
-	item, err := cart.UpsertItem(r.Context(), s.db, body.StoreID, c.ID, cart.UpsertItemInput{
+	item, err := cart.UpsertOwnedItem(r.Context(), s.db, actor.ID, body.StoreID, current.ID, cart.UpsertItemInput{
 		MasterProductID: body.MasterProductID,
 		Quantity:        body.Quantity,
 	})
+	if errors.Is(err, cart.ErrNotFound) {
+		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "active cart not found")
+		return
+	}
 	if errors.Is(err, cart.ErrInvalid) {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid cart item")
+		store.SendError(w, http.StatusUnprocessableEntity, "CART_ITEM_UNAVAILABLE", "product is unavailable or has no valid store price")
 		return
 	}
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "could not update cart item")
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"cartId": c.ID, "item": item})
+	store.SendJSON(w, http.StatusOK, map[string]any{"cartId": current.ID, "item": item})
 }
 
 // DELETE /dsh/client/cart/items/{itemId}?cartId=xxx
@@ -112,16 +200,11 @@ func (s *protectedStoreServer) handleRemoveCartItem(w http.ResponseWriter, r *ht
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "cartId and itemId are required")
 		return
 	}
-	// Verify cart belongs to actor
-	storeID := r.URL.Query().Get("storeId")
-	if storeID != "" {
-		if _, err := cart.GetCart(r.Context(), s.db, actor.ID, storeID); errors.Is(err, cart.ErrNotFound) {
-			store.SendError(w, http.StatusForbidden, "FORBIDDEN", "cart not accessible")
-			return
-		}
-	}
-	if err := cart.RemoveItem(r.Context(), s.db, cartID, itemID); errors.Is(err, cart.ErrNotFound) {
+	if err := cart.RemoveOwnedItem(r.Context(), s.db, actor.ID, cartID, itemID); errors.Is(err, cart.ErrNotFound) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "cart item not found")
+		return
+	} else if errors.Is(err, cart.ErrInvalid) {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid cart item reference")
 		return
 	} else if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "could not remove cart item")
@@ -143,7 +226,7 @@ func (s *protectedStoreServer) handleClearCart(w http.ResponseWriter, r *http.Re
 		return
 	}
 	if storeID != "" {
-		c, err := cart.GetCart(r.Context(), s.db, actor.ID, storeID)
+		current, err := cart.GetCart(r.Context(), s.db, actor.ID, storeID)
 		if errors.Is(err, cart.ErrNotFound) {
 			w.WriteHeader(http.StatusNoContent)
 			return
@@ -152,9 +235,15 @@ func (s *protectedStoreServer) handleClearCart(w http.ResponseWriter, r *http.Re
 			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "cart lookup failed")
 			return
 		}
-		cartID = c.ID
+		cartID = current.ID
 	}
-	if err := cart.ClearCart(r.Context(), s.db, cartID); err != nil {
+	if err := cart.ClearOwnedCart(r.Context(), s.db, actor.ID, cartID); errors.Is(err, cart.ErrNotFound) {
+		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "cart not found")
+		return
+	} else if errors.Is(err, cart.ErrInvalid) {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid cart reference")
+		return
+	} else if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "could not clear cart")
 		return
 	}
@@ -172,5 +261,20 @@ func (s *protectedStoreServer) handleOperatorCarts(w http.ResponseWriter, r *htt
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "could not load carts")
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"carts": carts})
+	carts, err = cart.HydrateOperatorCartItems(r.Context(), s.db, carts)
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "could not load cart items")
+		return
+	}
+	views := make([]cart.ClientCartView, 0, len(carts))
+	for index := range carts {
+		validation, validationErr := cart.ValidateCart(r.Context(), s.db, carts[index].ID)
+		if validationErr != nil {
+			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "could not validate operator cart view")
+			return
+		}
+		current := carts[index]
+		views = append(views, cart.ClientCartView{Cart: &current, Validation: validation})
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"carts": views})
 }

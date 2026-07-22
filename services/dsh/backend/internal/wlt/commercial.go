@@ -32,6 +32,7 @@ type CommercialProduct struct {
 	Currency          string  `json:"currency"`
 	BillingCycle      string  `json:"billingCycle"`
 	Status            string  `json:"status"`
+	ActivationPoints  int64   `json:"activationPoints,omitempty"`
 	Version           int     `json:"version"`
 	CreatedByActorID  string  `json:"createdByActorId"`
 	ApprovedByActorID *string `json:"approvedByActorId,omitempty"`
@@ -72,20 +73,46 @@ type CommercialLoyaltyAccount struct {
 }
 
 type CommercialSubscription struct {
+	ID                          string   `json:"id"`
+	ClientID                    string   `json:"clientId"`
+	ProductReference            string   `json:"productReference"`
+	Status                      string   `json:"status"`
+	PaymentSessionID            *string  `json:"paymentSessionId,omitempty"`
+	SubscriptionPurchaseID      *string  `json:"subscriptionPurchaseId,omitempty"`
+	StartsAt                    string   `json:"startsAt"`
+	EndsAt                      *string  `json:"endsAt,omitempty"`
+	CancelAtPeriodEnd           bool     `json:"cancelAtPeriodEnd"`
+	CancelledAt                 *string  `json:"cancelledAt,omitempty"`
+	CancellationReason          *string  `json:"cancellationReason,omitempty"`
+	LastRenewalPaymentSessionID *string  `json:"lastRenewalPaymentSessionId,omitempty"`
+	CompensationStatus          string   `json:"compensationStatus,omitempty"`
+	CompensationReference       *string  `json:"compensationReference,omitempty"`
+	Version                     int      `json:"version,omitempty"`
+	AllowedActions              []string `json:"allowedActions,omitempty"`
+	CreatedAt                   string   `json:"createdAt"`
+	UpdatedAt                   string   `json:"updatedAt"`
+}
+
+type CommercialSubscriptionCompensation struct {
 	ID               string  `json:"id"`
+	SubscriptionID   string  `json:"subscriptionId"`
 	ClientID         string  `json:"clientId"`
-	ProductReference string  `json:"productReference"`
+	PaymentSessionID string  `json:"paymentSessionId"`
 	Status           string  `json:"status"`
-	PaymentSessionID *string `json:"paymentSessionId,omitempty"`
-	StartsAt         string  `json:"startsAt"`
-	EndsAt           *string `json:"endsAt,omitempty"`
+	Reason           string  `json:"reason"`
+	RefundReference  *string `json:"refundReference,omitempty"`
+	AmountMinorUnits int64   `json:"amountMinorUnits"`
+	Currency         string  `json:"currency"`
+	CorrelationID    string  `json:"correlationId"`
 	CreatedAt        string  `json:"createdAt"`
 	UpdatedAt        string  `json:"updatedAt"`
+	CompletedAt      *string `json:"completedAt,omitempty"`
 }
 
 type ClientCommercialBenefits struct {
-	LoyaltyAccount     *CommercialLoyaltyAccount `json:"loyaltyAccount,omitempty"`
-	ActiveSubscription *CommercialSubscription   `json:"activeSubscription,omitempty"`
+	LoyaltyAccount     *CommercialLoyaltyAccount           `json:"loyaltyAccount,omitempty"`
+	ActiveSubscription *CommercialSubscription             `json:"activeSubscription,omitempty"`
+	Compensation       *CommercialSubscriptionCompensation `json:"compensation,omitempty"`
 }
 
 type CommercialSummary struct {

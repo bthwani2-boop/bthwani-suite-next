@@ -17,7 +17,7 @@ export type StoreMeasurementSheetProps = {
   readonly setQuantity: (quantity: number | ((current: number) => number)) => void;
   readonly isAddedToCart: boolean;
   readonly isSubmitting: boolean;
-  readonly errorMessage?: string | null;
+  readonly errorMessage?: string | null | undefined;
   readonly onAddToCart: () => void;
   readonly onGoToCart: () => void;
   readonly onClose: () => void;

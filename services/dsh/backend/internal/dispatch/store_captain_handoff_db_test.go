@@ -10,13 +10,13 @@ import (
 )
 
 type outboundHandoffFixture struct {
-	AssignmentID    string
-	CaptainID       string
-	OrderID         string
-	StoreID         string
-	PartnerID       string
+	AssignmentID     string
+	CaptainID        string
+	OrderID          string
+	StoreID          string
+	PartnerID        string
 	CheckoutIntentID string
-	CartID          string
+	CartID           string
 }
 
 func seedOutboundHandoffFixture(t *testing.T, db *sql.DB) outboundHandoffFixture {

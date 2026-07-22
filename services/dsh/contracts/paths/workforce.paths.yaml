@@ -1,0 +1,44 @@
+# BThwani DSH OpenAPI path-items module: workforce.
+# Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
+
+/dsh/operator/workforce/media/uploads:
+  post:
+    operationId: uploadWorkforceMedia
+    summary: Operator-only. Upload workforce media document (license, photo, etc.).
+    tags:
+      - DshWorkforce
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            type: object
+            required: [actorId, actorRole, file]
+            properties:
+              actorId:
+                type: string
+              actorRole:
+                type: string
+                enum: [field, captain]
+              file:
+                type: string
+                format: binary
+    responses:
+      "201":
+        description: Media uploaded successfully.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mediaRef]
+              properties:
+                mediaRef:
+                  type: string
+      "400":
+        $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest"
+      "401":
+        $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated"
+      "403":
+        $ref: "../dsh.openapi.yaml#/components/responses/Forbidden"

@@ -10,7 +10,9 @@ import {
   type FinanceActionResult,
   type FinancePayoutRequest,
 } from "../../shared/finance-wlt-link/finance/finance.controller";
+import { reconcilePayoutRequest } from "../../shared/finance-wlt-link/jrn037";
 import { GovernedSettlementPanel } from "./GovernedSettlementPanel";
+import { Jrn036CommissionGovernancePanel } from "./Jrn036CommissionGovernancePanel";
 
 type PayoutRequestsPanelProps = {
   readonly requests: readonly FinancePayoutRequest[];
@@ -18,7 +20,7 @@ type PayoutRequestsPanelProps = {
 };
 
 type PayoutAction = {
-  readonly id: "approve" | "reject" | "process" | "complete";
+  readonly id: "approve" | "reject" | "process" | "complete" | "reconcile";
   readonly label: string;
   readonly tone: "success" | "danger" | "primary" | "secondary";
   readonly run: (payoutId: string) => Promise<FinanceActionResult>;
@@ -49,6 +51,9 @@ function actionsForStatus(status: string): readonly PayoutAction[] {
       ];
     case "processing":
       return [{ id: "complete", label: "تأكيد الاكتمال والترحيل", tone: "success", run: completePayoutRequest }];
+    case "provider_pending":
+    case "provider_result_unknown":
+      return [{ id: "reconcile", label: "استعلام ومطابقة نتيجة المزود", tone: "secondary", run: reconcilePayoutRequest }];
     default:
       return [];
   }
@@ -67,9 +72,9 @@ function formatMoney(amountMinorUnits: number, currency: string): string {
 function terminalOrHoldMessage(request: FinancePayoutRequest): string | null {
   switch (request.status) {
     case "provider_pending":
-      return "تم حجز الطلب لدى المزود ولم تصل نتيجة نهائية بعد. لا يُسمح بإعادة الإرسال أو تحرير الرصيد.";
+      return "تم حجز الطلب لدى المزود ولم تصل نتيجة نهائية بعد. الاستعلام يقرأ حالة المزود ولا يعيد الإرسال.";
     case "provider_result_unknown":
-      return "النتيجة غير محسومة. يجب استخدام المطابقة والاستعلام لدى المزود؛ لا يوجد زر فشل يدوي يحرر الأموال.";
+      return "النتيجة غير محسومة. استخدم الاستعلام والمطابقة؛ لا يوجد زر فشل يدوي يحرر الأموال.";
     case "completed":
       return "اكتمل الصرف، أُزيل الحجز من المحفظة، وكُتب القيد المحاسبي.";
     case "rejected":
@@ -109,10 +114,11 @@ export function PayoutRequestsPanel({ requests, reload }: PayoutRequestsPanelPro
   return (
     <>
       <GovernedSettlementPanel reload={reload} />
+      <Jrn036CommissionGovernancePanel />
       <Card style={{ padding: "1.5rem" }}>
         <Text role="titleMd" style={{ marginBottom: "0.5rem" }}>طلبات الصرف والتسويات الميدانية</Text>
         <Text role="body" tone="muted" style={{ marginBottom: "1rem" }}>
-          WLT يملك الرصيد والحجز ودليل المزود والقيد. كل زر أدناه ظاهر فقط عندما تسمح به حالة الطلب.
+          WLT يملك الوجهة والرصيد والحجز ودليل المزود والقيد. كل زر ظاهر فقط عندما تسمح به الحالة، وهوية المشغّل تُحل في DSH ولا تُقبل من المتصفح.
         </Text>
         {actionError ? (
           <Card style={{ padding: "0.75rem", marginBottom: "1rem", borderLeft: `4px solid ${lightThemeColors.danger}` }}>

@@ -1,0 +1,372 @@
+openapi: 3.1.0
+x-bthwani-contract-state: CONTRACT_ACTIVE
+info:
+  title: WLT JRN-037 Payout Destinations and Outbound Payments
+  version: 1.0.0
+  description: >-
+    WLT-owned typed payout destinations, destination-bound payout requests,
+    separated operator transitions, provider proof and governed reconciliation.
+servers:
+  - url: http://localhost:58083
+security:
+  - serviceBearer: []
+paths:
+  /wlt/payout-destinations/{actorType}/{actorId}:
+    parameters:
+      - $ref: '#/components/parameters/ActorType'
+      - $ref: '#/components/parameters/ActorId'
+    get:
+      operationId: getWltTypedPayoutDestination
+      responses:
+        '200':
+          description: Active masked payout destination.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayoutDestinationEnvelope'
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      operationId: upsertWltTypedPayoutDestination
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PayoutDestinationInput'
+      responses:
+        '201':
+          description: Destination encrypted and activated; prior destination deactivated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayoutDestinationEnvelope'
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /wlt/payout-destinations/{actorType}/{actorId}/deactivate:
+    parameters:
+      - $ref: '#/components/parameters/ActorType'
+      - $ref: '#/components/parameters/ActorId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/IdempotencyKey'
+    post:
+      operationId: deactivateWltTypedPayoutDestination
+      responses:
+        '204': { description: Destination deactivated. }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /wlt/payout-requests:
+    get:
+      operationId: listWltPayoutRequests
+      parameters:
+        - name: beneficiaryActorId
+          in: query
+          schema: { type: string }
+        - name: beneficiaryActorType
+          in: query
+          schema: { $ref: '#/components/schemas/PayoutActorType' }
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/PayoutStatus' }
+      responses:
+        '200':
+          description: Scoped canonical payout requests.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [payoutRequests, total]
+                properties:
+                  payoutRequests:
+                    type: array
+                    items: { $ref: '#/components/schemas/PayoutRequest' }
+                  total: { type: integer, minimum: 0 }
+    post:
+      operationId: createWltDestinationBoundPayoutRequest
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePayoutRequest'
+      responses:
+        '201':
+          description: Funds held and destination-bound request created atomically.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PayoutRequestEnvelope' }
+        '200':
+          description: Exact idempotent replay.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PayoutRequestEnvelope' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /wlt/payout-requests/{payoutId}:
+    parameters:
+      - $ref: '#/components/parameters/PayoutId'
+    get:
+      operationId: getWltPayoutRequest
+      responses:
+        '200':
+          description: Canonical payout state and provider proof.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PayoutRequestEnvelope' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /wlt/payout-requests/{payoutId}/approve:
+    post:
+      operationId: approveWltPayoutRequest
+      parameters:
+        - $ref: '#/components/parameters/PayoutId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody: { $ref: '#/components/requestBodies/OperatorBody' }
+      responses:
+        '200': { $ref: '#/components/responses/PayoutResponse' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /wlt/payout-requests/{payoutId}/reject:
+    post:
+      operationId: rejectWltPayoutRequest
+      parameters:
+        - $ref: '#/components/parameters/PayoutId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody: { $ref: '#/components/requestBodies/OperatorBody' }
+      responses:
+        '200': { $ref: '#/components/responses/PayoutResponse' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /wlt/payout-requests/{payoutId}/process:
+    post:
+      operationId: processWltPayoutRequest
+      parameters:
+        - $ref: '#/components/parameters/PayoutId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody: { $ref: '#/components/requestBodies/OperatorBody' }
+      responses:
+        '200': { $ref: '#/components/responses/PayoutResponse' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '502': { $ref: '#/components/responses/ProviderError' }
+  /wlt/payout-requests/{payoutId}/complete:
+    post:
+      operationId: completeWltPayoutRequest
+      parameters:
+        - $ref: '#/components/parameters/PayoutId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody: { $ref: '#/components/requestBodies/OperatorBody' }
+      responses:
+        '200': { $ref: '#/components/responses/PayoutResponse' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /wlt/payout-requests/{payoutId}/reconcile:
+    post:
+      operationId: reconcileWltPayoutRequest
+      parameters:
+        - $ref: '#/components/parameters/PayoutId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody: { $ref: '#/components/requestBodies/OperatorBody' }
+      responses:
+        '200':
+          description: Inquiry resolved to a provider-proven success or confirmed failure.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PayoutRequestEnvelope' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '502': { $ref: '#/components/responses/ProviderError' }
+  /wlt/payout-requests/{payoutId}/audit:
+    get:
+      operationId: listWltPayoutAudit
+      parameters:
+        - $ref: '#/components/parameters/PayoutId'
+      responses:
+        '200':
+          description: Append-only correlation-linked audit.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [auditEvents]
+                properties:
+                  auditEvents:
+                    type: array
+                    items: { $ref: '#/components/schemas/PayoutAuditEvent' }
+components:
+  securitySchemes:
+    serviceBearer:
+      type: http
+      scheme: bearer
+  parameters:
+    ActorType:
+      name: actorType
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/PayoutActorType' }
+    ActorId:
+      name: actorId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 200 }
+    PayoutId:
+      name: payoutId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+    CorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: true
+      schema: { type: string, minLength: 1 }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 1 }
+  requestBodies:
+    OperatorBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [operatorId]
+            properties:
+              operatorId: { type: string, minLength: 1 }
+  responses:
+    PayoutResponse:
+      description: Updated canonical payout state.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/PayoutRequestEnvelope' }
+    InvalidRequest:
+      description: Invalid request.
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Forbidden:
+      description: Actor scope or maker-checker rule failed.
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    NotFound:
+      description: Resource not found.
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Conflict:
+      description: Invalid transition, inactive destination, balance mismatch, or idempotency conflict.
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    ProviderError:
+      description: Provider unavailable, declined, invalid, or still ambiguous.
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+  schemas:
+    PayoutActorType:
+      type: string
+      enum: [partner, captain, field]
+    PayoutStatus:
+      type: string
+      enum: [pending, approved, provider_pending, provider_result_unknown, processing, completed, rejected, failed]
+    ReconciliationStatus:
+      type: string
+      enum: [not_required, required, inquiry_pending, resolved_success, resolved_failed]
+    PayoutDestinationInput:
+      type: object
+      additionalProperties: false
+      required: [beneficiaryName, settlementPreference, bankAccountHolderMatchesOwner]
+      properties:
+        beneficiaryName: { type: string, minLength: 1 }
+        bankName: { type: string }
+        bankBranch: { type: string }
+        accountNumber: { type: string }
+        iban: { type: string }
+        payoutMobileNumber: { type: string }
+        settlementPreference: { type: string, enum: [bank, mobile_money, manual] }
+        bankAccountHolderMatchesOwner: { type: boolean }
+        bankNotes: { type: string }
+        operatorId: { type: string, minLength: 1 }
+    PayoutDestination:
+      type: object
+      required: [id, ownerActorId, ownerActorType, settlementPreference, maskedAccountNumber, maskedIban, maskedMobileNumber, beneficiaryName, active, updatedAt]
+      properties:
+        id: { type: string }
+        ownerActorId: { type: string }
+        ownerActorType: { $ref: '#/components/schemas/PayoutActorType' }
+        settlementPreference: { type: string, enum: [bank, mobile_money, manual] }
+        maskedAccountNumber: { type: string }
+        maskedIban: { type: string }
+        maskedMobileNumber: { type: string }
+        beneficiaryName: { type: string }
+        bankName: { type: string }
+        bankBranch: { type: string }
+        active: { type: boolean }
+        updatedAt: { type: string, format: date-time }
+    PayoutDestinationEnvelope:
+      type: object
+      required: [payoutDestination]
+      properties:
+        payoutDestination: { $ref: '#/components/schemas/PayoutDestination' }
+    CreatePayoutRequest:
+      type: object
+      additionalProperties: false
+      required: [beneficiaryActorId, beneficiaryActorType, payoutDestinationId, amountMinorUnits, currency, idempotencyKey]
+      properties:
+        beneficiaryActorId: { type: string, minLength: 1 }
+        beneficiaryActorType: { $ref: '#/components/schemas/PayoutActorType' }
+        payoutDestinationId: { type: string, minLength: 1 }
+        amountMinorUnits: { type: integer, minimum: 1 }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        idempotencyKey: { type: string, minLength: 1 }
+    PayoutRequest:
+      type: object
+      required: [id, beneficiaryActorId, beneficiaryActorType, payoutDestinationId, amountMinorUnits, currency, status, reconciliationStatus, requestedAt]
+      properties:
+        id: { type: string }
+        beneficiaryActorId: { type: string }
+        beneficiaryActorType: { $ref: '#/components/schemas/PayoutActorType' }
+        payoutDestinationId: { type: string }
+        amountMinorUnits: { type: integer }
+        currency: { type: string }
+        status: { $ref: '#/components/schemas/PayoutStatus' }
+        reconciliationStatus: { $ref: '#/components/schemas/ReconciliationStatus' }
+        requestedAt: { type: string, format: date-time }
+        approvedAt: { type: [string, 'null'], format: date-time }
+        rejectedAt: { type: [string, 'null'], format: date-time }
+        processedAt: { type: [string, 'null'], format: date-time }
+        completedAt: { type: [string, 'null'], format: date-time }
+        failedAt: { type: [string, 'null'], format: date-time }
+        reconciledAt: { type: [string, 'null'], format: date-time }
+        failureReason: { type: string }
+        providerReference: { type: string }
+        providerStatus: { type: string }
+        approvedByOperatorId: { type: string }
+        processedByOperatorId: { type: string }
+        completedByOperatorId: { type: string }
+        reconciledByOperatorId: { type: string }
+    PayoutRequestEnvelope:
+      type: object
+      required: [payoutRequest]
+      properties:
+        payoutRequest: { $ref: '#/components/schemas/PayoutRequest' }
+    PayoutAuditEvent:
+      type: object
+      required: [id, aggregateType, aggregateId, action, actorId, actorType, correlationId, metadata, createdAt]
+      properties:
+        id: { type: string }
+        aggregateType: { type: string }
+        aggregateId: { type: string }
+        action: { type: string }
+        actorId: { type: string }
+        actorType: { type: string }
+        reason: { type: string }
+        correlationId: { type: string }
+        metadata: { type: object, additionalProperties: true }
+        createdAt: { type: string, format: date-time }
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }

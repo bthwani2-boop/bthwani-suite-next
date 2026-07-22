@@ -2,65 +2,118 @@ package administration
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
+	"strings"
 	"time"
 )
 
 var (
-	ErrNotFound  = errors.New("not found")
-	ErrInvalid   = errors.New("invalid input")
-	ErrForbidden = errors.New("transition not allowed")
+	ErrNotFound = errors.New("not found")
+	ErrInvalid  = errors.New("invalid input")
 )
 
-// ── Roles ─────────────────────────────────────────────────────────────────────
-
+// Role is the governed DSH authorization role projection. Identity owns the
+// authenticated actor and session, while these permissions own only DSH
+// administration actions after an independently approved assignment.
 type Role struct {
 	ID          string    `json:"id"`
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
 	Permissions []string  `json:"permissions"`
+	Surfaces    []string  `json:"surfaces"`
+	Active      bool      `json:"active"`
+	Version     int       `json:"version"`
 	CreatedAt   time.Time `json:"createdAt"`
 }
 
 func ListRoles(db *sql.DB) ([]Role, error) {
+	if db == nil {
+		return nil, ErrInvalid
+	}
 	rows, err := db.Query(`
-		SELECT id, name, COALESCE(description,''), created_at
-		FROM dsh_admin_roles ORDER BY name`)
+		SELECT id, name, COALESCE(description,''), permissions, surfaces,
+		       active, version, created_at
+		FROM dsh_admin_roles ORDER BY active DESC, name`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var out []Role
+	out := make([]Role, 0)
 	for rows.Next() {
-		var r Role
-		if err := rows.Scan(&r.ID, &r.Name, &r.Description, &r.CreatedAt); err != nil {
+		var role Role
+		var permissionsJSON, surfacesJSON []byte
+		if err := rows.Scan(
+			&role.ID, &role.Name, &role.Description, &permissionsJSON, &surfacesJSON,
+			&role.Active, &role.Version, &role.CreatedAt,
+		); err != nil {
 			return nil, err
 		}
-		r.Permissions = []string{}
-		out = append(out, r)
-	}
-	if out == nil {
-		out = []Role{}
+		if err := json.Unmarshal(permissionsJSON, &role.Permissions); err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(surfacesJSON, &role.Surfaces); err != nil {
+			return nil, err
+		}
+		if role.Permissions == nil {
+			role.Permissions = []string{}
+		}
+		if role.Surfaces == nil {
+			role.Surfaces = []string{}
+		}
+		out = append(out, role)
 	}
 	return out, rows.Err()
 }
 
-func CreateRole(db *sql.DB, name, description string) (Role, error) {
-	if name == "" {
-		return Role{}, ErrInvalid
+// AdministrationPermissionCandidates keeps legacy broad permissions working
+// while allowing least-privilege permissions for each governed operation.
+func AdministrationPermissionCandidates(action string) []string {
+	action = strings.TrimSpace(action)
+	if !strings.HasPrefix(action, "administration.") {
+		return nil
 	}
-	var r Role
-	err := db.QueryRow(`
-		INSERT INTO dsh_admin_roles (name, description)
-		VALUES ($1, $2)
-		RETURNING id, name, COALESCE(description,''), created_at`,
-		name, description).Scan(&r.ID, &r.Name, &r.Description, &r.CreatedAt)
-	r.Permissions = []string{}
-	return r, err
+	candidates := []string{action}
+	switch action {
+	case "administration.role.request", "administration.staff.request", "administration.rollback.request":
+		candidates = append(candidates, "administration.manage")
+	case "administration.role.approve", "administration.staff.approve", "administration.rollback.approve":
+		candidates = append(candidates, "administration.approve")
+	case "administration.audit.read", "administration.diagnostics.read":
+		candidates = append(candidates, "administration.read")
+	}
+	return candidates
 }
 
-// ── Staff ─────────────────────────────────────────────────────────────────────
+// ActorHasPermission evaluates only approved, active DSH role assignments. It
+// never authenticates the actor and never expands access outside the DSH
+// administration action namespace or the control-panel surface.
+func ActorHasPermission(db *sql.DB, actorID string, action string) (bool, error) {
+	actorID = strings.TrimSpace(actorID)
+	candidates := AdministrationPermissionCandidates(action)
+	if db == nil || actorID == "" || len(candidates) == 0 {
+		return false, ErrInvalid
+	}
+	candidate1, candidate2 := candidates[0], candidates[0]
+	if len(candidates) > 1 {
+		candidate2 = candidates[1]
+	}
+	var allowed bool
+	err := db.QueryRow(`
+		SELECT EXISTS (
+			SELECT 1
+			FROM dsh_admin_staff_assignments assignment
+			JOIN dsh_admin_roles role ON role.id = assignment.role_id
+			WHERE assignment.actor_id = $1
+			  AND role.active = TRUE
+			  AND role.surfaces ? 'control-panel'
+			  AND (role.permissions ? $2 OR role.permissions ? $3)
+		)`, actorID, candidate1, candidate2).Scan(&allowed)
+	return allowed, err
+}
 
+// StaffMember is an approved role-assignment projection. Writes are performed
+// only by ReviewStaffRoleAssignment or an independently approved rollback.
 type StaffMember struct {
 	ID         string    `json:"id"`
 	ActorID    string    `json:"actorId"`
@@ -71,70 +124,54 @@ type StaffMember struct {
 }
 
 func ListStaff(db *sql.DB) ([]StaffMember, error) {
+	if db == nil {
+		return nil, ErrInvalid
+	}
 	rows, err := db.Query(`
 		SELECT sa.id, sa.actor_id, sa.role_id, r.name,
 		       COALESCE(sa.assigned_by,''), sa.assigned_at
 		FROM dsh_admin_staff_assignments sa
 		JOIN dsh_admin_roles r ON r.id=sa.role_id
+		WHERE r.active = TRUE
+		  AND r.surfaces ? 'control-panel'
 		ORDER BY sa.assigned_at DESC`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var out []StaffMember
+	out := make([]StaffMember, 0)
 	for rows.Next() {
-		var m StaffMember
-		if err := rows.Scan(&m.ID, &m.ActorID, &m.RoleID, &m.RoleName,
-			&m.AssignedBy, &m.AssignedAt); err != nil {
+		var member StaffMember
+		if err := rows.Scan(
+			&member.ID, &member.ActorID, &member.RoleID, &member.RoleName,
+			&member.AssignedBy, &member.AssignedAt,
+		); err != nil {
 			return nil, err
 		}
-		out = append(out, m)
-	}
-	if out == nil {
-		out = []StaffMember{}
+		out = append(out, member)
 	}
 	return out, rows.Err()
 }
 
-func AssignStaffRole(db *sql.DB, actorID, roleID, assignedBy string) (StaffMember, error) {
-	if actorID == "" || roleID == "" {
-		return StaffMember{}, ErrInvalid
-	}
-	var m StaffMember
-	err := db.QueryRow(`
-		INSERT INTO dsh_admin_staff_assignments (actor_id, role_id, assigned_by)
-		VALUES ($1, $2, $3)
-		ON CONFLICT (actor_id, role_id) DO UPDATE SET assigned_by=EXCLUDED.assigned_by, assigned_at=NOW()
-		RETURNING id, actor_id, role_id, (SELECT name FROM dsh_admin_roles WHERE id=$2),
-		          COALESCE(assigned_by,''), assigned_at`,
-		actorID, roleID, assignedBy).Scan(
-		&m.ID, &m.ActorID, &m.RoleID, &m.RoleName, &m.AssignedBy, &m.AssignedAt)
-	return m, err
-}
-
-// ── Partner Activation ────────────────────────────────────────────────────────
-
+// PartnerActivation is a privacy-minimized read-only compatibility projection.
+// Partner lifecycle mutations and review notes remain owned by the governed
+// partner lifecycle and are never exposed through administration diagnostics.
 type PartnerActivation struct {
 	ID         string    `json:"id"`
 	PartnerID  string    `json:"partnerId"`
 	Status     string    `json:"status"`
 	ReviewedBy string    `json:"reviewedBy"`
-	Notes      string    `json:"notes"`
 	CreatedAt  time.Time `json:"createdAt"`
 	UpdatedAt  time.Time `json:"updatedAt"`
 }
 
-var validActivationTransitions = map[string][]string{
-	"submitted":      {"ops_approved", "blocked"},
-	"ops_approved":   {"partner_active", "blocked"},
-	"partner_active": {"blocked"},
-	"blocked":        {"submitted"},
-}
-
 func ListPartnerActivations(db *sql.DB, status string) ([]PartnerActivation, error) {
+	if db == nil {
+		return nil, ErrInvalid
+	}
 	rows, err := db.Query(`
 		SELECT id, partner_id, status, COALESCE(reviewed_by,''),
-		       COALESCE(notes,''), created_at, updated_at
+		       created_at, updated_at
 		FROM dsh_admin_partner_activations
 		WHERE ($1='' OR status=$1)
 		ORDER BY created_at DESC`, status)
@@ -142,89 +179,38 @@ func ListPartnerActivations(db *sql.DB, status string) ([]PartnerActivation, err
 		return nil, err
 	}
 	defer rows.Close()
-	var out []PartnerActivation
+	out := make([]PartnerActivation, 0)
 	for rows.Next() {
-		var a PartnerActivation
-		if err := rows.Scan(&a.ID, &a.PartnerID, &a.Status,
-			&a.ReviewedBy, &a.Notes, &a.CreatedAt, &a.UpdatedAt); err != nil {
+		var activation PartnerActivation
+		if err := rows.Scan(
+			&activation.ID, &activation.PartnerID, &activation.Status,
+			&activation.ReviewedBy, &activation.CreatedAt, &activation.UpdatedAt,
+		); err != nil {
 			return nil, err
 		}
-		out = append(out, a)
-	}
-	if out == nil {
-		out = []PartnerActivation{}
+		out = append(out, activation)
 	}
 	return out, rows.Err()
 }
 
-func transitionPartner(db *sql.DB, partnerID, targetStatus, reviewedBy, notes string) (PartnerActivation, error) {
-	var current string
-	var id string
-	err := db.QueryRow(`SELECT id, status FROM dsh_admin_partner_activations WHERE partner_id=$1`, partnerID).
-		Scan(&id, &current)
-	if errors.Is(err, sql.ErrNoRows) {
-		if targetStatus == "ops_approved" || targetStatus == "partner_active" {
-			var a PartnerActivation
-			err2 := db.QueryRow(`
-				INSERT INTO dsh_admin_partner_activations (partner_id, status, reviewed_by, notes)
-				VALUES ($1, $2, $3, $4)
-				RETURNING id, partner_id, status, COALESCE(reviewed_by,''),
-				          COALESCE(notes,''), created_at, updated_at`,
-				partnerID, targetStatus, reviewedBy, notes).Scan(
-				&a.ID, &a.PartnerID, &a.Status, &a.ReviewedBy, &a.Notes, &a.CreatedAt, &a.UpdatedAt)
-			return a, err2
-		}
-		return PartnerActivation{}, ErrNotFound
-	}
-	if err != nil {
-		return PartnerActivation{}, err
-	}
-	allowed := validActivationTransitions[current]
-	valid := false
-	for _, s := range allowed {
-		if s == targetStatus {
-			valid = true
-			break
-		}
-	}
-	if !valid {
-		return PartnerActivation{}, ErrForbidden
-	}
-	var a PartnerActivation
-	err = db.QueryRow(`
-		UPDATE dsh_admin_partner_activations
-		SET status=$2, reviewed_by=$3, notes=$4, updated_at=NOW()
-		WHERE id=$1
-		RETURNING id, partner_id, status, COALESCE(reviewed_by,''),
-		          COALESCE(notes,''), created_at, updated_at`,
-		id, targetStatus, reviewedBy, notes).Scan(
-		&a.ID, &a.PartnerID, &a.Status, &a.ReviewedBy, &a.Notes, &a.CreatedAt, &a.UpdatedAt)
-	return a, err
-}
-
-func ActivatePartner(db *sql.DB, partnerID, reviewedBy, notes string) (PartnerActivation, error) {
-	return transitionPartner(db, partnerID, "partner_active", reviewedBy, notes)
-}
-
-func BlockPartner(db *sql.DB, partnerID, reviewedBy, notes string) (PartnerActivation, error) {
-	return transitionPartner(db, partnerID, "blocked", reviewedBy, notes)
-}
-
-// ── Captain Credentials ───────────────────────────────────────────────────────
-
+// CaptainCredential is a privacy-minimized read-only projection. Credential
+// review and the raw license number remain owned by Workforce/captain
+// accreditation and are never exposed through the administration projection.
 type CaptainCredential struct {
-	ID            string    `json:"id"`
-	CaptainID     string    `json:"captainId"`
-	LicenseNumber string    `json:"licenseNumber"`
-	VehicleType   string    `json:"vehicleType"`
-	Status        string    `json:"status"`
-	ReviewedBy    string    `json:"reviewedBy"`
-	UpdatedAt     time.Time `json:"updatedAt"`
+	ID          string    `json:"id"`
+	CaptainID   string    `json:"captainId"`
+	VehicleType string    `json:"vehicleType"`
+	Status      string    `json:"status"`
+	ReviewedBy  string    `json:"reviewedBy"`
+	UpdatedAt   time.Time `json:"updatedAt"`
 }
 
 func ListCaptainCredentials(db *sql.DB, status string) ([]CaptainCredential, error) {
+	if db == nil {
+		return nil, ErrInvalid
+	}
 	rows, err := db.Query(`
-		SELECT id, captain_id, COALESCE(license_number,''), COALESCE(vehicle_type,''),
+		SELECT id, captain_id, COALESCE(vehicle_type,''),
 		       status, COALESCE(reviewed_by,''), updated_at
 		FROM dsh_admin_captain_credentials
 		WHERE ($1='' OR status=$1)
@@ -233,80 +219,59 @@ func ListCaptainCredentials(db *sql.DB, status string) ([]CaptainCredential, err
 		return nil, err
 	}
 	defer rows.Close()
-	var out []CaptainCredential
+	out := make([]CaptainCredential, 0)
 	for rows.Next() {
-		var c CaptainCredential
-		if err := rows.Scan(&c.ID, &c.CaptainID, &c.LicenseNumber, &c.VehicleType,
-			&c.Status, &c.ReviewedBy, &c.UpdatedAt); err != nil {
+		var credential CaptainCredential
+		if err := rows.Scan(
+			&credential.ID, &credential.CaptainID, &credential.VehicleType,
+			&credential.Status, &credential.ReviewedBy, &credential.UpdatedAt,
+		); err != nil {
 			return nil, err
 		}
-		out = append(out, c)
-	}
-	if out == nil {
-		out = []CaptainCredential{}
+		out = append(out, credential)
 	}
 	return out, rows.Err()
 }
 
-func UpsertCaptainCredential(db *sql.DB, captainID, licenseNumber, vehicleType, status, reviewedBy string) (CaptainCredential, error) {
-	if captainID == "" {
-		return CaptainCredential{}, ErrInvalid
-	}
-	if status == "" {
-		status = "pending"
-	}
-	var c CaptainCredential
-	err := db.QueryRow(`
-		INSERT INTO dsh_admin_captain_credentials
-		       (captain_id, license_number, vehicle_type, status, reviewed_by)
-		VALUES ($1, $2, $3, $4, $5)
-		ON CONFLICT (captain_id) DO UPDATE
-		SET license_number=EXCLUDED.license_number,
-		    vehicle_type=EXCLUDED.vehicle_type,
-		    status=EXCLUDED.status,
-		    reviewed_by=EXCLUDED.reviewed_by,
-		    updated_at=NOW()
-		RETURNING id, captain_id, COALESCE(license_number,''), COALESCE(vehicle_type,''),
-		          status, COALESCE(reviewed_by,''), updated_at`,
-		captainID, licenseNumber, vehicleType, status, reviewedBy).Scan(
-		&c.ID, &c.CaptainID, &c.LicenseNumber, &c.VehicleType,
-		&c.Status, &c.ReviewedBy, &c.UpdatedAt)
-	return c, err
-}
-
-// ── Audit Trail ───────────────────────────────────────────────────────────────
-
 type AdminAuditEntry struct {
-	ID        string    `json:"id"`
-	ActorID   string    `json:"actorId"`
-	Action    string    `json:"action"`
-	TargetID  string    `json:"targetId"`
-	Detail    string    `json:"detail"`
-	CreatedAt time.Time `json:"createdAt"`
+	ID            string    `json:"id"`
+	ActorID       string    `json:"actorId"`
+	Action        string    `json:"action"`
+	TargetID      string    `json:"targetId"`
+	Detail        string    `json:"detail"`
+	Sensitivity   string    `json:"sensitivity"`
+	CorrelationID string    `json:"correlationId"`
+	CreatedAt     time.Time `json:"createdAt"`
 }
 
 func ListAdminAudit(db *sql.DB, actorID string, limit int) ([]AdminAuditEntry, error) {
+	if db == nil {
+		return nil, ErrInvalid
+	}
+	if limit < 1 || limit > 500 {
+		limit = 100
+	}
 	rows, err := db.Query(`
 		SELECT id, actor_id, action, COALESCE(target_id,''),
-		       COALESCE(detail,''), created_at
+		       COALESCE(detail,''), sensitivity, COALESCE(correlation_id,''), created_at
 		FROM dsh_admin_audit
 		WHERE ($1='' OR actor_id=$1)
-		ORDER BY created_at DESC LIMIT $2`, actorID, limit)
+		ORDER BY created_at DESC LIMIT $2`, strings.TrimSpace(actorID), limit)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var out []AdminAuditEntry
+	out := make([]AdminAuditEntry, 0)
 	for rows.Next() {
-		var e AdminAuditEntry
-		if err := rows.Scan(&e.ID, &e.ActorID, &e.Action,
-			&e.TargetID, &e.Detail, &e.CreatedAt); err != nil {
+		var entry AdminAuditEntry
+		if err := rows.Scan(
+			&entry.ID, &entry.ActorID, &entry.Action, &entry.TargetID,
+			&entry.Detail, &entry.Sensitivity, &entry.CorrelationID, &entry.CreatedAt,
+		); err != nil {
 			return nil, err
 		}
-		out = append(out, e)
-	}
-	if out == nil {
-		out = []AdminAuditEntry{}
+		entry.Detail = redactAuditDetail(entry.Detail)
+		out = append(out, entry)
 	}
 	return out, rows.Err()
 }

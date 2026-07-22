@@ -7,6 +7,12 @@ import {
 import { loadingState, type HomeDiscoveryState } from "./home-discovery.states";
 import type { DiscoveryFilterKind } from "./home-discovery.types";
 
+export type HomeDiscoveryScope = {
+  readonly cityCode?: string;
+  readonly serviceAreaCode?: string;
+  readonly enabled?: boolean;
+};
+
 export type HomeDiscoveryController = {
   readonly state: HomeDiscoveryState;
   readonly activeFilter: DiscoveryFilterKind;
@@ -14,18 +20,31 @@ export type HomeDiscoveryController = {
   readonly retry: () => void;
 };
 
-export function useHomeDiscoveryController(): HomeDiscoveryController {
+export function useHomeDiscoveryController(
+  scope: HomeDiscoveryScope = {},
+): HomeDiscoveryController {
   const [state, setState] = useState<HomeDiscoveryState>(loadingState());
   const [activeFilter, setActiveFilter] = useState<DiscoveryFilterKind>(
     HOME_DISCOVERY_INITIAL_FILTER,
   );
+  const enabled = scope.enabled ?? true;
+  const cityCode = scope.cityCode?.trim() || undefined;
+  const serviceAreaCode = scope.serviceAreaCode?.trim() || undefined;
 
   const load = useCallback(async () => {
+    if (!enabled) {
+      setState(loadingState());
+      return;
+    }
     await loadHomeDiscovery(
-      () => fetchHomeDiscovery({ limit: 20 }),
+      () => fetchHomeDiscovery({
+        ...(cityCode !== undefined ? { cityCode } : {}),
+        ...(serviceAreaCode !== undefined ? { serviceAreaCode } : {}),
+        limit: 20,
+      }),
       setState,
     );
-  }, []);
+  }, [cityCode, enabled, serviceAreaCode]);
 
   useEffect(() => {
     void load();

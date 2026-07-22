@@ -1,0 +1,231 @@
+openapi: 3.1.0
+x-bthwani-contract-state: CONTRACT_ACTIVE
+info:
+  title: BThwani Platform Change Sets API
+  version: 1.0.0
+  description: Governed JRN-040 contract for multi-item platform change sets.
+servers:
+  - url: http://localhost:58085
+paths:
+  /platform/v1/change-sets:
+    get:
+      operationId: listPlatformChangeSetsJRN040
+      summary: List governed platform change sets.
+      responses:
+        '200':
+          description: Change-set list.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [changeSets]
+                properties:
+                  changeSets:
+                    type: array
+                    items: { $ref: '#/components/schemas/PlatformChangeSet' }
+    post:
+      operationId: createPlatformChangeSetJRN040
+      summary: Create a governed multi-item draft.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreatePlatformChangeSetInput' }
+      responses:
+        '201': { $ref: '#/components/responses/ChangeSetResponse' }
+        '422': { $ref: '#/components/responses/ErrorResponse' }
+  /platform/v1/change-sets/{id}:
+    parameters:
+      - $ref: '#/components/parameters/ChangeSetId'
+    get:
+      operationId: getPlatformChangeSetJRN040
+      summary: Read details, validation snapshot, diff, impact and audit actors.
+      responses:
+        '200': { $ref: '#/components/responses/ChangeSetResponse' }
+        '404': { $ref: '#/components/responses/ErrorResponse' }
+  /platform/v1/change-sets/{id}/validate:
+    parameters: [{ $ref: '#/components/parameters/ChangeSetId' }]
+    post:
+      operationId: validatePlatformChangeSetJRN040
+      summary: Capture target snapshots and reserve targets.
+      responses:
+        '200': { $ref: '#/components/responses/ChangeSetResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '422': { $ref: '#/components/responses/ErrorResponse' }
+  /platform/v1/change-sets/{id}/submit:
+    parameters: [{ $ref: '#/components/parameters/ChangeSetId' }]
+    post:
+      operationId: submitPlatformChangeSetJRN040
+      summary: Submit a still-current validated request.
+      responses:
+        '200': { $ref: '#/components/responses/ChangeSetResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+  /platform/v1/change-sets/{id}/approve:
+    parameters: [{ $ref: '#/components/parameters/ChangeSetId' }]
+    post:
+      operationId: approvePlatformChangeSetJRN040
+      summary: Independently approve a submitted request.
+      responses:
+        '200': { $ref: '#/components/responses/ChangeSetResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+  /platform/v1/change-sets/{id}/reject:
+    parameters: [{ $ref: '#/components/parameters/ChangeSetId' }]
+    post:
+      operationId: rejectPlatformChangeSetJRN040
+      summary: Independently reject a submitted request with a reason.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReviewReasonInput' }
+      responses:
+        '200': { $ref: '#/components/responses/ChangeSetResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '422': { $ref: '#/components/responses/ErrorResponse' }
+  /platform/v1/change-sets/{id}/apply:
+    parameters: [{ $ref: '#/components/parameters/ChangeSetId' }]
+    post:
+      operationId: applyPlatformChangeSetJRN040
+      summary: Atomically apply an approved request when preconditions still match.
+      responses:
+        '200': { $ref: '#/components/responses/ChangeSetResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+  /platform/v1/change-sets/{id}/rollback:
+    parameters: [{ $ref: '#/components/parameters/ChangeSetId' }]
+    post:
+      operationId: rollbackPlatformChangeSetJRN040
+      summary: Restore the captured safe baseline with a mandatory reason.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RollbackPlatformChangeSetInput' }
+      responses:
+        '200': { $ref: '#/components/responses/ChangeSetResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '422': { $ref: '#/components/responses/ErrorResponse' }
+components:
+  parameters:
+    ChangeSetId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  responses:
+    ChangeSetResponse:
+      description: Governed change-set readback.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [changeSet]
+            properties:
+              changeSet: { $ref: '#/components/schemas/PlatformChangeSet' }
+    ErrorResponse:
+      description: Governed validation, conflict or workflow error.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/PlatformApiError' }
+  schemas:
+    PlatformChangeSetStatus:
+      type: string
+      enum: [draft, validated, submitted, approved, rejected, applied, rolled_back, failed]
+    PlatformChangeTargetType:
+      type: string
+      enum: [variable, feature_flag]
+    PlatformChangeSetItem:
+      type: object
+      required: [id, targetType, targetKey, ownerService, scopeType, valueType, classification, expectedRevision, proposedValue]
+      properties:
+        id: { type: string, format: uuid }
+        targetType: { $ref: '#/components/schemas/PlatformChangeTargetType' }
+        targetKey: { type: string }
+        ownerService: { type: string }
+        scopeType: { type: string }
+        scopeId: { type: string }
+        valueType: { type: string }
+        classification: { type: string }
+        expectedRevision: { type: integer, format: int64, minimum: 0 }
+        preconditionSnapshot:
+          description: Full target state captured during validation; absent for a new target.
+        validatedRevision: { type: integer, format: int64, minimum: 0 }
+        itemValidatedAt: { type: string, format: date-time }
+        beforeValue:
+          description: Full safe baseline captured immediately before apply.
+        proposedValue: {}
+        appliedRevision: { type: integer, format: int64, minimum: 1 }
+    PlatformChangeSet:
+      type: object
+      required: [id, title, reason, impactAssessment, rollbackPlan, status, proposerActorId, version, createdAt, updatedAt, items]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        reason: { type: string }
+        impactAssessment: { type: string }
+        rollbackPlan: { type: string }
+        status: { $ref: '#/components/schemas/PlatformChangeSetStatus' }
+        proposerActorId: { type: string }
+        approverActorId: { type: string }
+        appliedByActorId: { type: string }
+        rejectedByActorId: { type: string }
+        rejectionReason: { type: string }
+        version: { type: integer, format: int64, minimum: 1 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        validatedAt: { type: string, format: date-time }
+        submittedAt: { type: string, format: date-time }
+        approvedAt: { type: string, format: date-time }
+        rejectedAt: { type: string, format: date-time }
+        appliedAt: { type: string, format: date-time }
+        rolledBackAt: { type: string, format: date-time }
+        items:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items: { $ref: '#/components/schemas/PlatformChangeSetItem' }
+    CreatePlatformChangeSetItemInput:
+      type: object
+      required: [targetType, targetKey, ownerService, expectedRevision, proposedValue]
+      properties:
+        targetType: { $ref: '#/components/schemas/PlatformChangeTargetType' }
+        targetKey: { type: string, minLength: 1, maxLength: 200 }
+        ownerService: { type: string, minLength: 1, maxLength: 120 }
+        scopeType: { type: string, default: global }
+        scopeId: { type: string, default: '' }
+        valueType: { type: string, default: json }
+        classification: { type: string, default: internal, not: { enum: [secret, credential, credentials, password, token, private_key, api_key, client_secret] } }
+        expectedRevision: { type: integer, format: int64, minimum: 0 }
+        proposedValue: {}
+    CreatePlatformChangeSetInput:
+      type: object
+      required: [title, reason, impactAssessment, rollbackPlan, items]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 160 }
+        reason: { type: string, minLength: 1, maxLength: 4000 }
+        impactAssessment: { type: string, minLength: 1, maxLength: 4000 }
+        rollbackPlan: { type: string, minLength: 1, maxLength: 4000 }
+        items:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items: { $ref: '#/components/schemas/CreatePlatformChangeSetItemInput' }
+    ReviewReasonInput:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 1, maxLength: 4000 }
+    RollbackPlatformChangeSetInput:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 1, maxLength: 4000 }
+    PlatformApiError:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          enum: [PLATFORM_CHANGE_VALIDATION_FAILED, PLATFORM_SENSITIVE_VALUE_FORBIDDEN, PLATFORM_TARGET_CONFLICT, PLATFORM_VALIDATION_SNAPSHOT_REQUIRED, PLATFORM_INVALID_TRANSITION, PLATFORM_VERSION_CONFLICT, PLATFORM_MAKER_CHECKER_VIOLATION, PLATFORM_ROLLBACK_REASON_REQUIRED, PLATFORM_RECORD_NOT_FOUND, PLATFORM_INTERNAL_ERROR]
+        message: { type: string }

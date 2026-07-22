@@ -8,3 +8,6 @@ export * from './home-discovery.policy';
 export * from './use-home-discovery-controller';
 export * from './home-discovery-admin';
 export * from './use-home-discovery-admin-controller';
+export * from './home-discovery-events';
+export * from './home-discovery-targeting';
+export * from './home-discovery.groups';

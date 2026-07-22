@@ -21,6 +21,8 @@ func writePartnerFleetError(w http.ResponseWriter, err error) {
 		store.SendError(w, http.StatusConflict, "VERSION_CONFLICT", "courier connection changed; reload before retrying")
 	case errors.Is(err, partnerfleet.ErrCourierIneligible):
 		store.SendError(w, http.StatusUnprocessableEntity, "COURIER_INELIGIBLE", "team member must be an eligible courier")
+	case errors.Is(err, partnerfleet.ErrStoreIneligible):
+		store.SendError(w, http.StatusUnprocessableEntity, "STORE_INELIGIBLE", "store must be active before fleet identities can be connected")
 	case errors.Is(err, partnerfleet.ErrInvalid):
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid courier connection request")
 	default:

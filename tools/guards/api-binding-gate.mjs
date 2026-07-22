@@ -11,23 +11,13 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import ts from "typescript";
 import { fail, listCodeFiles, read, repoRoot, toPosix } from "./_guard-utils.mjs";
+import { parseOpenApiContract } from "./_openapi-utils.mjs";
 
 const guardId = "api-binding-gate";
 const violations = [];
 const masterContractPath = "contracts/master.openapi.yaml";
-
-function loadOpenApiPaths(relPath) {
-  const fullPath = path.join(repoRoot, relPath);
-  if (!fs.existsSync(fullPath)) return new Set();
-  const content = fs.readFileSync(fullPath, "utf8");
-  const paths = new Set();
-  for (const line of content.split(/\r?\n/)) {
-    const match = line.match(/^  (\/(?:dsh|wlt|identity|providers)[^\s:]+)\s*:/);
-    if (match) paths.add(match[1]);
-  }
-  return paths;
-}
 
 function loadMasterContractReferences() {
   const master = read(masterContractPath);
@@ -52,24 +42,82 @@ function loadMasterContractReferences() {
   return references;
 }
 
-// Runtime shards are accepted only through the master index. Router-to-contract
-// parity is enforced separately by backend-api-binding-gate, so maintaining a
-// second hardcoded "unimplemented" blacklist here would become stale and can
-// incorrectly reject already registered and persisted capabilities.
 const masterReferences = loadMasterContractReferences();
-const knownPaths = masterReferences.flatMap((relative) => [...loadOpenApiPaths(relative)]);
+const knownPaths = new Set(
+  masterReferences.flatMap((relative) => parseOpenApiContract(relative).map((operation) => operation.path)),
+);
+
+function normalizePath(rawPath) {
+  return rawPath
+    .replace(/[?#].*$/, "")
+    .replace(/\{[^}]+\}/g, "{param}")
+    .replace(/`/g, "")
+    .replace(/\/+$/, "");
+}
+
+function pathSegments(rawPath) {
+  return normalizePath(rawPath).split("/").filter(Boolean);
+}
+
+function pathsAreCompatible(candidatePath, contractPath) {
+  const candidate = pathSegments(candidatePath);
+  const contract = pathSegments(contractPath);
+  if (candidate.length !== contract.length) return false;
+
+  return candidate.every((segment, index) => {
+    const contractSegment = contract[index];
+    return segment === contractSegment || segment === "{param}" || contractSegment === "{param}";
+  });
+}
 
 function isKnownPath(rawPath) {
-  const normalized = rawPath
-    .replace(/\?.*$/, "")
-    .replace(/\$\{[^}]+\}/g, "{param}")
-    .replace(/`/g, "");
   for (const known of knownPaths) {
-    const knownNorm = known.replace(/\{[^}]+\}/g, "{param}");
-    if (knownNorm === normalized || known === rawPath) return true;
-    if (normalized.startsWith(knownNorm)) return true;
+    if (pathsAreCompatible(rawPath, known)) return true;
   }
   return false;
+}
+
+function scriptKindFor(file) {
+  if (file.endsWith(".tsx")) return ts.ScriptKind.TSX;
+  if (file.endsWith(".jsx")) return ts.ScriptKind.JSX;
+  if (file.endsWith(".js") || file.endsWith(".mjs") || file.endsWith(".cjs")) return ts.ScriptKind.JS;
+  return ts.ScriptKind.TS;
+}
+
+function materializeTemplatePath(node) {
+  let value = node.head.text;
+  for (const span of node.templateSpans) {
+    if (/[?#]/.test(value)) break;
+    if (!value.endsWith("/")) {
+      // Expressions appended to a complete route are query fragments or other
+      // runtime suffixes, not path parameters. The contract path ends here.
+      break;
+    }
+    value += `{param}${span.literal.text}`;
+  }
+  return value;
+}
+
+function extractApiPathLiterals(file, content) {
+  const sourceFile = ts.createSourceFile(file, content, ts.ScriptTarget.Latest, true, scriptKindFor(file));
+  const paths = new Set();
+
+  function record(value) {
+    const normalized = value.replace(/[?#].*$/, "");
+    if (/^\/(?:dsh|wlt|identity|providers)\//.test(normalized)) paths.add(normalized);
+  }
+
+  function visit(node) {
+    if (ts.isStringLiteralLike(node)) {
+      record(node.text);
+    } else if (ts.isTemplateExpression(node)) {
+      record(materializeTemplatePath(node));
+    }
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+  return paths;
 }
 
 const DSH_HTTP_CLIENT_PATTERN = /\bcreate(?:Dsh|DshPublic|DshFlexible|DshRaw)HttpClient\b/;
@@ -77,7 +125,6 @@ const WLT_HTTP_CLIENT_PATTERN = /\bwltFetchJson\b/;
 const RAW_FETCH_PATTERN = /\bfetch\s*\(/g;
 const MOCK_RESOLVE_PATTERN = /\breturn\s+Promise\.resolve\s*\(\s*[\[{]/;
 const HARDCODED_URL_PATTERN = /https?:\/\/(?!localhost|127\.0\.0\.1|\.\.\.|example\.com)/;
-const API_PATH_LITERAL = /[`'"](\/(?:dsh|wlt|identity|providers)\/[^`'"?\s]*)/g;
 
 const apiFiles = listCodeFiles().filter((file) => {
   if (file.endsWith("-registry.ts")) return false;
@@ -140,11 +187,7 @@ for (const file of apiFiles) {
   }
 
   if (isDshAdapter || isWltAdapter) {
-    API_PATH_LITERAL.lastIndex = 0;
-    let match;
-    while ((match = API_PATH_LITERAL.exec(content)) !== null) {
-      const rawPath = match[1];
-      if (/^\/(?:dsh|wlt|identity|providers)\/\$\{/.test(rawPath)) continue;
+    for (const rawPath of extractApiPathLiterals(file, content)) {
       if (!isKnownPath(rawPath)) {
         violations.push({
           file,

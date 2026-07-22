@@ -1,0 +1,157 @@
+{
+  "schemaVersion": 1,
+  "capabilityId": "JRN_042_RUNTIME_DATA_MIGRATIONS_BACKUP",
+  "state": "DISCOVERY",
+  "problem": {
+    "statement": "Runtime operators need one fail-closed path that starts and verifies the six sovereign services, applies ordered migrations, checks asynchronous delivery posture, and proves backup and restore without leaking secrets or treating fixtures as production evidence.",
+    "affectedActors": ["platform-operator", "service-owner", "incident-responder"],
+    "currentWorkaround": "The repository has strong migration, backup, restore and observability components, but the central runtime command omits Providers and Platform Control and does not assemble all JRN-042 checks into one same-commit execution path.",
+    "frequency": "continuous",
+    "severity": "critical",
+    "evidenceState": "QUALITATIVE",
+    "evidenceReferences": [
+      "governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md#jrn-042",
+      "infra/docker/compose.runtime.yml",
+      "infra/docker/scripts/invoke-runtime-database-migrations.ps1",
+      "infra/docker/scripts/backup-runtime.ps1",
+      "infra/docker/scripts/restore-runtime.ps1",
+      "tools/scripts/test-runtime-backup-restore.ps1",
+      "core/platform-control/contracts/platform-control.openapi.yaml"
+    ]
+  },
+  "actors": [
+    {
+      "id": "platform-operator",
+      "role": "Authorized runtime operator executing startup, migrations, verification, backup, restore and rollback procedures",
+      "permittedActions": ["start approved profiles", "apply governed migrations", "inspect sanitized health", "create governed backup", "run restore drill", "execute documented rollback"],
+      "forbiddenActions": ["commit real secrets", "use destructive reset without explicit force", "activate production providers", "claim production readiness from static configuration"]
+    },
+    {
+      "id": "service-owner",
+      "role": "Owner of service schema, health semantics, worker lifecycle and bounded retry behavior",
+      "permittedActions": ["publish service migrations", "define health and readiness", "operate owned workers", "inspect owned dead-letter state"],
+      "forbiddenActions": ["write another service database", "silently edit applied migrations", "treat a seed as live data", "erase failed delivery evidence"]
+    },
+    {
+      "id": "incident-responder",
+      "role": "Authorized responder using observable state and tested recovery procedures",
+      "permittedActions": ["inspect metrics and logs", "run readiness probes", "restore a governed backup", "verify recovered integrity"],
+      "forbiddenActions": ["read secrets from logs", "restore an unverified artifact", "bypass ownership isolation", "declare recovery before readback"]
+    }
+  ],
+  "surfaces": [
+    {
+      "id": "control-panel",
+      "required": true,
+      "actors": ["platform-operator", "incident-responder"],
+      "routesOrScreens": ["platform runtime and provider health read models"],
+      "operationIds": ["listPlatformServices", "getPlatformHealth", "getPlatformRuntimeConfig"],
+      "states": ["loading", "healthy", "ready", "degraded", "not_ready", "unavailable", "forbidden", "error"],
+      "actions": ["refresh", "inspect sanitized status", "inspect recovery guidance"]
+    },
+    {
+      "id": "backend",
+      "required": true,
+      "actors": ["platform-operator", "service-owner", "incident-responder"],
+      "routesOrScreens": ["six service health and readiness endpoints", "runtime orchestration", "worker lifecycle"],
+      "operationIds": ["getPlatformControlProcessHealth", "getPlatformControlReadiness", "listPlatformServices", "getPlatformHealth", "getPlatformRuntimeConfig"],
+      "states": ["starting", "healthy", "ready", "degraded", "not_ready", "failed", "recovering"],
+      "actions": ["start", "migrate", "seed local only", "probe", "retry", "dead-letter", "recover"]
+    },
+    {
+      "id": "database",
+      "required": true,
+      "actors": ["platform-operator", "service-owner", "incident-responder"],
+      "routesOrScreens": ["six isolated PostgreSQL databases", "migration ledgers", "backup manifests", "restore probes"],
+      "operationIds": [],
+      "states": ["isolated", "migrating", "clean", "dirty", "backed_up", "restoring", "verified", "failed"],
+      "actions": ["apply ordered migration", "verify checksum", "backup", "restore", "read back integrity"]
+    },
+    {
+      "id": "shared",
+      "required": true,
+      "actors": ["platform-operator", "service-owner", "incident-responder"],
+      "routesOrScreens": ["runtime governance catalog", "sanitized evidence contract", "rollback runbook"],
+      "operationIds": ["listPlatformServices", "getPlatformHealth"],
+      "states": ["declared", "verified", "blocked", "needs_evidence"],
+      "actions": ["resolve service ownership", "map ports", "classify failure", "record same-commit evidence"]
+    },
+    {
+      "id": "app-client",
+      "required": false,
+      "exclusionReason": "Customers do not operate infrastructure; only normal service availability is visible.",
+      "actors": ["platform-operator"],
+      "states": ["excluded"],
+      "actions": []
+    },
+    {
+      "id": "app-partner",
+      "required": false,
+      "exclusionReason": "Partners do not operate infrastructure; operational recovery remains platform-owned.",
+      "actors": ["platform-operator"],
+      "states": ["excluded"],
+      "actions": []
+    },
+    {
+      "id": "app-captain",
+      "required": false,
+      "exclusionReason": "Captains do not operate infrastructure; runtime internals and secrets are not exposed.",
+      "actors": ["platform-operator"],
+      "states": ["excluded"],
+      "actions": []
+    },
+    {
+      "id": "app-field",
+      "required": false,
+      "exclusionReason": "Field representatives do not operate infrastructure; runtime internals and recovery controls remain restricted.",
+      "actors": ["platform-operator"],
+      "states": ["excluded"],
+      "actions": []
+    }
+  ],
+  "outcome": {
+    "statement": "One exact-commit command verifies all six services, isolated databases, governed migrations, asynchronous delivery controls, backup restore integrity, observability and fail-closed secret posture without destructive defaults.",
+    "primaryMetric": "same-commit JRN-042 runtime verification pass rate",
+    "guardrailMetrics": ["dirty migration count", "cross-service database ownership violation count", "unbounded retry count", "dead-letter backlog age", "restore drill failure count", "secret exposure count", "readiness false-positive count"],
+    "baselineState": "Runtime components exist but are not assembled into one six-service JRN-042 closure path.",
+    "targetState": "The six-service path is deterministic, fail-closed, observable, recoverable and evidence-scoped.",
+    "observationWindow": "targeted static, Go, compose, migration, runtime, backup-restore, security and independent release review"
+  },
+  "acceptance": {
+    "criteria": [
+      "Identity, Workforce, DSH, WLT, Providers and Platform Control expose health and database-backed readiness on approved loopback ports.",
+      "Every service uses its own PostgreSQL database and owner and migrations execute in lexical order through a checksum ledger.",
+      "Seeds are explicitly local-only and never count as production or provider evidence.",
+      "Owned outbox workers use bounded retry, durable failure state and observable dead-letter or exhausted state.",
+      "A checksummed backup contains all six databases and governed MinIO data and a quiesced restore drill proves readback.",
+      "Logs, metrics and alerts expose operational state without secrets or unnecessary PII.",
+      "Destructive reset and restore require explicit force and rollback instructions remain executable."
+    ],
+    "failureStates": ["service missing", "readiness false positive", "shared database owner", "dirty migration", "checksum drift", "runtime fixture fallback", "unbounded retry", "lost failed event", "incomplete backup", "unverified restore", "secret leakage", "destructive default"],
+    "requiredChecks": ["product truth schema", "providers readiness Go test", "runtime governance static gate", "docker compose config", "six governed migration ledgers", "outbox worker and dead-letter runtime probes", "six-service health and readiness smoke", "quiesced backup restore round trip", "observability configuration check", "secret scan", "independent security QA release and production review"],
+    "runtimeEvidenceRequired": true,
+    "visualEvidenceRequired": false
+  },
+  "invariants": {
+    "business": ["Service schema remains owned by the service database directory.", "Infrastructure owns lifecycle, backup, restore and platform health only.", "Runtime truth is read from live health readiness database and persistence probes.", "Recovery evidence is bound to an immutable commit and checksummed backup manifest."],
+    "negative": ["No service writes another service database.", "No applied migration is silently edited.", "No fixture mock or seed is reported as production evidence.", "No retry loop is unbounded or discards exhausted work.", "No secret is committed logged or embedded in evidence.", "No destructive action runs without explicit force."]
+  },
+  "owners": {
+    "productManager": "Platform Runtime Product Management",
+    "productOwner": "Platform Operations Product Owner",
+    "uxJourneyOwner": "Control Panel Platform Operations Experience Owner",
+    "engineeringOwner": "Platform Runtime Engineering",
+    "productManagerApproval": "PENDING",
+    "productOwnerApproval": "PENDING",
+    "productAcceptanceDecision": "PENDING"
+  },
+  "execution": {
+    "appetite": "Close JRN-042 code and verification gaps by composing existing sovereign runtime capabilities and adding only missing readiness and evidence controls.",
+    "fixedConstraints": ["Repository mode is REMOTE_ONLY on sambassam.", "The six sovereign services and six isolated databases remain mandatory.", "Real secrets are external and examples remain local-only placeholders.", "No PR merge force push release production deployment provider activation or SaaS activation is authorized.", "Independent protected approvals cannot be self-issued by engineering."],
+    "variableScope": ["diagnostic wording", "evidence JSON presentation", "local backup output directory", "non-production observability profile selection"],
+    "forbiddenScope": ["production provider activation", "shared service database", "committed credentials", "automatic destructive reset", "runtime evidence fabrication", "self-approval of security release production or risk gates"],
+    "forecastRange": "one sequential journey closure",
+    "confidence": "high",
+    "unknowns": ["independent product approval", "independent security and QA outcome", "same-commit live Docker execution outcome", "release and production evidence outcome"]
+  }
+}

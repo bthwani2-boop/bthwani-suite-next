@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 1,
+  "journeyId": "JRN-042",
+  "mode": "REMOTE_ONLY_CODE_AND_SAME_COMMIT_RUNTIME_EVIDENCE",
+  "canonicalCompose": "infra/docker/compose.runtime.yml",
+  "environmentExample": "infra/docker/env/runtime.env.example",
+  "verificationPolicy": {
+    "workflow": ".github/workflows/jrn-042-runtime-data-verification.yml",
+    "sourceRef": "sambassam",
+    "sourceCommit": "exact_triggering_sha",
+    "trigger": "workflow_dispatch_or_jrn_042_commit",
+    "requiredDecision": "fail_closed",
+    "protectedApprovals": "independent_and_not_self_issued"
+  },
+  "approvedBindings": {
+    "postgres": "127.0.0.1:55432",
+    "minioApi": "127.0.0.1:59000",
+    "minioConsole": "127.0.0.1:59001"
+  },
+  "services": [
+    {
+      "id": "identity",
+      "composeService": "identity-api",
+      "profile": "identity",
+      "hostPort": 58082,
+      "healthPath": "/identity/health",
+      "readinessPath": "/identity/readiness",
+      "database": "identity_runtime",
+      "owner": "identity_runtime",
+      "migrationDirectory": "core/identity/database/migrations"
+    },
+    {
+      "id": "workforce",
+      "composeService": "workforce-api",
+      "profile": "workforce",
+      "hostPort": 58086,
+      "healthPath": "/workforce/health",
+      "readinessPath": "/workforce/readiness",
+      "database": "workforce_runtime",
+      "owner": "workforce_runtime",
+      "migrationDirectory": "core/workforce/database/migrations"
+    },
+    {
+      "id": "dsh",
+      "composeService": "dsh-api",
+      "profile": "dsh",
+      "hostPort": 58080,
+      "healthPath": "/dsh/health",
+      "readinessPath": "/dsh/readiness",
+      "database": "dsh_runtime",
+      "owner": "dsh_runtime",
+      "migrationDirectory": "services/dsh/database/migrations"
+    },
+    {
+      "id": "wlt",
+      "composeService": "wlt-api",
+      "profile": "wlt",
+      "hostPort": 58083,
+      "healthPath": "/wlt/health",
+      "readinessPath": "/wlt/readiness",
+      "database": "wlt_runtime",
+      "owner": "wlt_runtime",
+      "migrationDirectory": "services/wlt/database/migrations"
+    },
+    {
+      "id": "providers",
+      "composeService": "providers-api",
+      "profile": "providers",
+      "hostPort": 58087,
+      "healthPath": "/providers/health",
+      "readinessPath": "/providers/readiness",
+      "database": "providers_runtime",
+      "owner": "providers_runtime",
+      "migrationDirectory": "core/providers/database/migrations"
+    },
+    {
+      "id": "platform-control",
+      "composeService": "platform-control-api",
+      "profile": "platform",
+      "hostPort": 58088,
+      "healthPath": "/platform/health",
+      "readinessPath": "/platform/readiness",
+      "database": "platform_control_runtime",
+      "owner": "platform_control_runtime",
+      "migrationDirectory": "core/platform-control/database/migrations"
+    }
+  ],
+  "migrationPolicy": {
+    "runner": "infra/docker/scripts/invoke-runtime-database-migrations.ps1",
+    "ledger": "schema_migrations",
+    "ordering": "lexical_filename",
+    "checksum": "sha256",
+    "lock": "postgres_advisory_lock_per_service",
+    "dirtyState": "fail_closed",
+    "appliedHistoryMutation": "forbidden"
+  },
+  "seedPolicy": {
+    "allowedEnvironment": "local_development_only",
+    "productionEvidence": false,
+    "fixtureFallback": "forbidden",
+    "dshDirectory": "services/dsh/database/seeds/local",
+    "wltDirectory": "services/wlt/database/seeds/local"
+  },
+  "asynchronousDelivery": {
+    "requiredProperties": ["durable_outbox", "bounded_retry", "next_attempt_at", "attempt_count", "last_error", "terminal_failed_state", "observable_backlog"],
+    "dshWorkers": [
+      "services/dsh/backend/internal/wltoutbox/worker.go",
+      "services/dsh/backend/internal/operationaloutbox/worker.go",
+      "services/dsh/backend/internal/checkoutfinanceoutbox/worker.go",
+      "services/dsh/backend/internal/fieldcommissionoutbox/worker.go",
+      "services/dsh/backend/internal/promotionfundingoutbox/worker.go"
+    ],
+    "wltWorkers": ["services/wlt/backend/internal/dshoutbox/worker.go"],
+    "identityOutboxMigration": "core/identity/database/migrations/identity-004_otp_and_deletion_outbox.sql"
+  },
+  "backupRestore": {
+    "backupCommand": "infra/docker/scripts/backup-runtime.ps1",
+    "restoreCommand": "infra/docker/scripts/restore-runtime.ps1",
+    "integrityCommand": "infra/docker/scripts/restore-verify-runtime.ps1",
+    "roundTripCommand": "tools/scripts/test-runtime-backup-restore.ps1",
+    "requiredConsistencyForClosure": "Quiesced",
+    "requiredDatabases": 6,
+    "minioRequired": true,
+    "manifestChecksum": "sha256",
+    "restoreRequiresExplicitForce": true
+  },
+  "observability": {
+    "compose": "infra/docker/compose.observability.yml",
+    "requiredSignals": ["service_health", "service_readiness", "migration_dirty_rows", "outbox_pending", "outbox_exhausted", "backup_age", "restore_drill_result"],
+    "logsMayContainSecrets": false,
+    "logsMayContainUnnecessaryPii": false
+  },
+  "security": {
+    "realEnvironmentFilesCommitted": false,
+    "productionProviderActivation": false,
+    "strongSecretsGate": "BTHWANI_REQUIRE_STRONG_SECRETS=true",
+    "loopbackHostPortsOnly": true,
+    "crossServiceDatabaseWrites": "forbidden"
+  },
+  "rollback": {
+    "strategy": "forward_fix_schema_and_restore_verified_backup_for_data_loss",
+    "automaticDestructiveReset": false,
+    "requiredBeforeRestore": ["explicit_force", "verified_manifest", "verified_checksums", "required_roles_present", "writer_quiescence_for_closure"],
+    "requiredAfterRestore": ["database_owner_readback", "table_count_readback", "minio_integrity", "six_service_health", "six_service_readiness"]
+  }
+}

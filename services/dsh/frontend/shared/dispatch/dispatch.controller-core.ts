@@ -15,6 +15,7 @@ import {
   trackingDeliveredState,
   trackingErrorState,
   trackingLoadingState,
+  trackingReturnedToStoreState,
 } from "./dispatch.states";
 
 export type DispatchErrorKind = "permission_denied" | "offline" | "conflict" | "not_found" | "error";
@@ -40,6 +41,9 @@ export function beginTrackingLoad(): DshTrackingState {
 export function resolveTrackingSuccess(assignment: DshDispatchAssignment): DshTrackingState {
   if (assignment.status === "cancelled" || assignment.delivery.status === "cancelled") {
     return trackingCancelledState(assignment);
+  }
+  if (assignment.delivery.status === "returned_to_store") {
+    return trackingReturnedToStoreState(assignment);
   }
   return assignment.delivery.status === "delivered"
     ? trackingDeliveredState(assignment)

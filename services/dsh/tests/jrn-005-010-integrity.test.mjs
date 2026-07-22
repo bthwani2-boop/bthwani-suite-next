@@ -1,0 +1,199 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import test from "node:test";
+
+const read = (path) => fs.readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
+
+test("JRN-005 persists address retry identity across application restarts", () => {
+  const attempt = read("frontend/shared/client-address/client-address-create-attempt.ts");
+  const controller = read("frontend/shared/client-address/use-client-address-controller.ts");
+
+  assert.match(attempt, /AsyncStorage/);
+  assert.match(attempt, /getOrCreateClientAddressAttempt/);
+  assert.match(attempt, /clearClientAddressAttempt/);
+  assert.match(controller, /createDshClientAddress\(input, attempt\.context\)/);
+  assert.match(controller, /clearClientAddressAttempt\(attempt\.fingerprint\)/);
+  assert.doesNotMatch(controller, /createAttempt\s*=\s*useRef/);
+});
+
+test("JRN-006 keeps map, geofence, address and privacy truth governed across all eight slices", () => {
+  const controller = read("frontend/shared/client-map/use-client-map-controller.ts");
+  const api = read("frontend/shared/client-map/client-map.api.ts");
+  const mapHandler = read("backend/internal/http/client_maps.go");
+  const addressHandler = read("backend/internal/http/client_addresses.go");
+  const addressBinding = read("backend/internal/clientaddress/address_service_area.go");
+  const provider = read("backend/internal/mapproviders/client.go");
+  const geofenceMigration = read("database/migrations/dsh-906_jrn_006_client_address_geofence_binding.sql");
+  const topologyMigration = read("database/migrations/dsh-907_jrn_006_service_area_topology.sql");
+  const privacyProjection = read("database/migrations/dsh-908_jrn_006_privacy_audit_projection.sql");
+  const addressContract = read("contracts/dsh.client-address.openapi.yaml");
+  const mapContract = read("contracts/dsh.client-map.openapi.yaml");
+  const privacyContract = read("contracts/dsh.client-address-privacy.openapi.yaml");
+  const sliceRegistry = JSON.parse(read("contracts/jrn-006-slice-verification-registry.json"));
+  const productTruth = JSON.parse(
+    read("../../governance/product/contracts/jrn-006-maps-service-area-address-privacy.product-truth.json"),
+  );
+
+  assert.match(controller, /searchDshClientMapLocations/);
+  assert.match(controller, /reverseDshClientMapLocation/);
+  assert.match(api, /\/dsh\/client\/maps\/search/);
+  assert.match(api, /\/dsh\/client\/maps\/reverse/);
+  assert.match(api, /\/dsh\/operator\/platform\/map-provider-health/);
+  assert.match(mapHandler, /servicearea\.Resolve/);
+  assert.match(mapHandler, /ServiceAreaVerified/);
+  assert.match(mapHandler, /servicearea\.UpsertGoverned/);
+  assert.match(provider, /normalizeSearchInput/);
+  assert.match(provider, /normalizeReverseInput/);
+  assert.match(provider, /ErrTimeout/);
+  assert.match(provider, /ErrUncertain/);
+
+  assert.match(addressBinding, /FindCreateReplay/);
+  assert.match(addressBinding, /ValidateServiceArea/);
+  assert.match(addressBinding, /servicearea\.Resolve/);
+  assert.match(addressBinding, /ErrServiceAreaUnverified/);
+  assert.match(addressHandler, /clientaddress\.FindCreateReplay/);
+  assert.match(addressHandler, /clientaddress\.ValidateServiceArea/);
+  assert.match(addressHandler, /ADDRESS_SERVICE_AREA_UNVERIFIED/);
+  assert.match(addressHandler, /StatusUnprocessableEntity/);
+
+  assert.match(geofenceMigration, /dsh_enforce_client_address_service_area/);
+  assert.match(geofenceMigration, /DSH_ADDRESS_COORDINATES_REQUIRED/);
+  assert.match(geofenceMigration, /DSH_ADDRESS_SERVICE_AREA_UNVERIFIED/);
+  assert.match(geofenceMigration, /g\.active = TRUE/);
+  assert.match(geofenceMigration, /FOR SHARE/);
+  assert.match(topologyMigration, /dsh_validate_service_area_polygon/);
+  assert.match(topologyMigration, /dsh_service_area_geofences_polygon_topology_check/);
+  assert.match(privacyProjection, /dsh_client_address_privacy_audit_projection/);
+  assert.match(privacyProjection, /client_subject_hash/);
+
+  assert.match(addressContract, /"422": \{ \$ref: "#\/components\/responses\/ServiceAreaUnverified" \}/);
+  assert.match(addressContract, /required: \[label, recipientName, phoneE164, addressLine, serviceAreaCode, latitude, longitude\]/);
+  assert.match(mapContract, /operationId: getDshOperatorMapProviderHealth/);
+  assert.match(mapContract, /operationId: getDshOperatorServiceArea/);
+  assert.match(privacyContract, /operationId: getDshClientAddressPrivacyQueueStatus/);
+  assert.match(privacyContract, /operationId: listDshClientAddressPrivacyAuditEvents/);
+
+  assert.equal(productTruth.journeyId, "JRN-006");
+  assert.equal(productTruth.status, "IMPLEMENTED_PENDING_INDEPENDENT_REVIEW");
+  assert.equal(productTruth.decision, "READY_FOR_REVIEW");
+  assert.equal(productTruth.technicalAcceptanceResult, "PASS");
+  assert.equal(sliceRegistry.journeyId, "JRN-006");
+  assert.equal(sliceRegistry.status, "READY_FOR_REVIEW");
+  assert.equal(sliceRegistry.codeClosure, "COMPLETE");
+  assert.equal(sliceRegistry.slices.length, 8);
+  for (const slice of sliceRegistry.slices) {
+    assert.equal(slice.status, "CLOSED_WITH_EVIDENCE");
+  }
+});
+
+test("JRN-007 scopes discovery to the persisted selected address", () => {
+  const screen = read("frontend/app-client/home-discovery/HomeDiscoveryScreen.tsx");
+  const controller = read("frontend/shared/home-discovery/use-home-discovery-controller.tsx");
+
+  assert.match(screen, /useClientAddressController/);
+  assert.match(screen, /serviceAreaCode = addressController\.selectedAddress\?\.serviceAreaCode/);
+  assert.match(screen, /enabled: addressController\.state\.kind === "ready"/);
+  assert.match(controller, /fetchHomeDiscovery\(\{/);
+  assert.match(controller, /\.\.\.\(cityCode !== undefined \? \{ cityCode \} : \{\}\)/);
+  assert.match(controller, /\.\.\.\(serviceAreaCode !== undefined \? \{ serviceAreaCode \} : \{\}\)/);
+  assert.match(controller, /limit: 20,/);
+});
+
+test("JRN-008 retains one central catalog truth and governed proposal readback", () => {
+  const router = read("backend/internal/http/server.go");
+  const unifiedRoutes = read("backend/internal/http/catalog_unified_routes.go");
+  const readbackHandler = read("backend/internal/http/catalog_proposal_readback.go");
+  const readbackApi = read("frontend/shared/catalog/product-proposal-readback.api.ts");
+  const fieldController = read("frontend/shared/partner/use-field-catalog-controller.tsx");
+  const partnerScreen = read("frontend/app-partner/catalog/PartnerCatalogManagementScreen.tsx");
+  const readbackContract = read("contracts/dsh.catalog-proposal-readback.openapi.yaml");
+  const masterContract = read("../../contracts/master.openapi.yaml");
+  const migration = read("database/migrations/dsh-036_central_catalog_runtime_closure.sql");
+
+  assert.match(router, /registerUnifiedCatalogRoutes\(mux, protected\)/);
+  assert.match(unifiedRoutes, /GET \/dsh\/partner\/catalog\/taxonomy/);
+  assert.match(unifiedRoutes, /GET \/dsh\/operator\/catalog\/master-products/);
+  assert.match(unifiedRoutes, /GET \/dsh\/partner\/stores\/\{storeId\}\/assortment/);
+  assert.match(unifiedRoutes, /GET \/dsh\/partner\/catalog\/product-proposals/);
+  assert.match(unifiedRoutes, /GET \/dsh\/field\/partners\/\{partnerId\}\/catalog\/product-proposals/);
+
+  assert.match(readbackHandler, /s\.partnerStore\(w, r\)/);
+  assert.match(readbackHandler, /s\.fieldPartnerStore\(w, r\)/);
+  assert.match(readbackHandler, /StoreID: storeID/);
+  assert.doesNotMatch(readbackHandler, /Query\(\)\.Get\("storeId"\)/);
+
+  assert.match(readbackApi, /fetchPartnerProductProposals/);
+  assert.match(readbackApi, /fetchFieldProductProposals/);
+  assert.match(readbackApi, /\/dsh\/partner\/catalog\/product-proposals/);
+  assert.match(readbackApi, /\/dsh\/field\/partners\/\$\{encodeURIComponent\(partnerId\)\}\/catalog\/product-proposals/);
+  assert.match(fieldController, /fetchFieldProductProposals\(partnerId/);
+  assert.match(fieldController, /setProposals\(proposalPage\.items\)/);
+  assert.match(partnerScreen, /اقتراحات المنتجات وحالة المراجعة/);
+
+  assert.match(readbackContract, /operationId: listPartnerProductProposals/);
+  assert.match(readbackContract, /operationId: listFieldProductProposals/);
+  assert.match(masterContract, /dshCatalogProposalReadback:/);
+
+  assert.match(migration, /DROP TABLE IF EXISTS dsh_catalog_products/);
+  assert.match(migration, /DROP TABLE IF EXISTS dsh_catalog_categories/);
+  assert.match(migration, /INSERT INTO dsh_master_products/);
+  assert.match(migration, /INSERT INTO dsh_store_assortments/);
+});
+
+test("JRN-009 enforces all cart and serviceability slices", () => {
+  const handler = read("backend/internal/http/cart.go");
+  const ownership = read("backend/internal/cart/ownership.go");
+  const integrity = read("backend/internal/cart/item_integrity.go");
+  const closure = read("backend/internal/cart/jrn009_closure.go");
+  const repository = read("backend/internal/cart/cart.go");
+  const migration = read("database/migrations/dsh-096_jrn009_cart_slice_closure.sql");
+  const operatorScreen = read("frontend/control-panel/operations/CartActivityScreen.tsx");
+
+  assert.match(handler, /cart\.GetOrCreateSingleStoreCart\(r\.Context\(\), s\.db, actor\.ID/);
+  assert.match(handler, /cart\.UpsertOwnedItem\(r\.Context\(\), s\.db, actor\.ID, body\.StoreID, current\.ID/);
+  assert.match(integrity, /AND client_id = \$2[\s\S]*AND store_id = \$3[\s\S]*AND state = 'active'/);
+  assert.match(repository, /JOIN dsh_master_products mp ON mp\.id = a\.master_product_id/);
+  assert.match(repository, /a\.unit_price, a\.available/);
+  assert.match(repository, /priceReference := fmt\.Sprintf\("%\.2f", unitPrice\)/);
+
+  assert.match(handler, /clientaddress\.GetOwned/);
+  assert.match(handler, /cart\.CheckGovernedServiceability/);
+  assert.match(handler, /cart\.ValidateCart/);
+  assert.match(closure, /dsh_platform_capacity_configs/);
+  assert.match(closure, /dsh_platform_sla_rules/);
+  assert.match(closure, /price_changed/);
+  assert.match(closure, /assortment_changed/);
+
+  assert.match(handler, /cart\.RemoveOwnedItem\(r\.Context\(\), s\.db, actor\.ID, cartID, itemID\)/);
+  assert.match(handler, /cart\.ClearOwnedCart\(r\.Context\(\), s\.db, actor\.ID, cartID\)/);
+  assert.match(ownership, /SET state = 'abandoned'/);
+  assert.match(migration, /uq_dsh_carts_single_active_client/);
+
+  assert.match(handler, /cart\.HydrateOperatorCartItems\(r\.Context\(\), s\.db, carts\)/);
+  assert.match(integrity, /WHERE cart_id = ANY\(\$1\)/);
+  assert.match(operatorScreen, /cart\.items\.length/);
+  assert.match(operatorScreen, /validationLabel/);
+});
+
+test("JRN-010 reuses one checkout and one WLT session for retries", () => {
+  const attempt = read("frontend/shared/checkout/checkout-create-attempt.ts");
+  const api = read("frontend/shared/checkout/checkout.api.ts");
+  const controller = read("frontend/shared/checkout/use-checkout-controller.tsx");
+  const handler = read("backend/internal/http/checkout.go");
+  const idempotency = read("backend/internal/checkout/create_idempotency.go");
+  const session = read("backend/internal/checkout/wlt_session_idempotency.go");
+  const migration = read("database/migrations/dsh-901_checkout_create_idempotency.sql");
+
+  assert.match(attempt, /AsyncStorage/);
+  assert.match(controller, /getOrCreateCheckoutAttempt/);
+  assert.match(controller, /createCheckoutIntent\(input, attempt\.context\)/);
+  assert.match(api, /idempotencyKey: mutation\.idempotencyKey/);
+  assert.match(handler, /r\.Header\.Get\("Idempotency-Key"\)/);
+  assert.match(handler, /LockCreateIdempotencyTx/);
+  assert.match(handler, /FindCreateIdempotencyTx/);
+  assert.match(handler, /BindCreateIdempotencyTx/);
+  assert.match(handler, /AttachWltPaymentSessionIdempotent/);
+  assert.match(idempotency, /pg_advisory_xact_lock/);
+  assert.match(session, /state = 'payment_pending' AND wlt_payment_session_id = \$2/);
+  assert.match(migration, /PRIMARY KEY \(tenant_id, client_id, idempotency_key\)/);
+});

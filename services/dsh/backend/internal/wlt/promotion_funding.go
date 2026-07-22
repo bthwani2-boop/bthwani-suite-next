@@ -123,7 +123,7 @@ func (c *Client) ReservePromotionFunding(
 	if strings.TrimSpace(correlationID) == "" {
 		correlationID = strings.TrimSpace(input.CheckoutIntentID)
 	}
-	return c.promotionFundingRequest(
+	reservation, err := c.promotionFundingRequest(
 		ctx,
 		http.MethodPost,
 		"/wlt/promotion-funding/reservations",
@@ -132,6 +132,13 @@ func (c *Client) ReservePromotionFunding(
 		correlationID,
 		input,
 	)
+	if err != nil {
+		return nil, err
+	}
+	if err := validatePromotionFundingReserveResponse(reservation, input); err != nil {
+		return nil, err
+	}
+	return reservation, nil
 }
 
 func (c *Client) transitionPromotionFunding(
@@ -152,7 +159,7 @@ func (c *Client) transitionPromotionFunding(
 	if strings.TrimSpace(correlationID) == "" {
 		correlationID = reservationID
 	}
-	return c.promotionFundingRequest(
+	reservation, err := c.promotionFundingRequest(
 		ctx,
 		http.MethodPost,
 		"/wlt/promotion-funding/reservations/"+url.PathEscape(reservationID)+"/"+action,
@@ -161,6 +168,13 @@ func (c *Client) transitionPromotionFunding(
 		correlationID,
 		input,
 	)
+	if err != nil {
+		return nil, err
+	}
+	if err := validatePromotionFundingTransitionResponse(reservation, reservationID, action, input); err != nil {
+		return nil, err
+	}
+	return reservation, nil
 }
 
 func (c *Client) CommitPromotionFunding(

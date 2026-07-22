@@ -1,15 +1,16 @@
 import React from "react";
-import { StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
+import * as SecureStore from "expo-secure-store";
 import { DshClientSurface } from "../../../../services/dsh/frontend/app-client";
 import {
   configureIdentitySession,
   configureIdentitySessionStorage,
   type SessionStorageAdapter,
+  useIdentitySession,
 } from "@bthwani/core-identity";
 import { resolveIdentityApiBaseUrl } from "../../../../services/dsh/frontend/shared/_kernel/identity-api-base-url";
 import { IdentitySessionGate } from "../../../../services/dsh/frontend/shared/session/IdentitySessionGate";
-import * as SecureStore from "expo-secure-store";
-import { Platform } from "react-native";
+import { useDshMobilePushRegistration } from "../../../../services/dsh/frontend/shared/notifications/use-mobile-push-registration";
 
 function createSecureStoreSessionStorageAdapter(): SessionStorageAdapter {
   return {
@@ -23,7 +24,11 @@ if (Platform.OS !== "web") {
   configureIdentitySessionStorage(createSecureStoreSessionStorageAdapter());
 }
 configureIdentitySession(resolveIdentityApiBaseUrl());
-export default function App() {
+
+function AppContent() {
+  const identity = useIdentitySession();
+  useDshMobilePushRegistration(identity.state.kind, "app-client", "bthwani-client-next");
+
   return (
     <View style={styles.root}>
       <IdentitySessionGate requiredRole="client" requiredSurface="app-client">
@@ -31,6 +36,10 @@ export default function App() {
       </IdentitySessionGate>
     </View>
   );
+}
+
+export default function App() {
+  return <AppContent />;
 }
 
 const styles = StyleSheet.create({

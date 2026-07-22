@@ -1,8 +1,8 @@
-// Authority: services/dsh/frontend/app-client — identity sub-screen.
-// Sovereign shared: services/dsh/frontend/shared
+// Authority: services/dsh/frontend/app-client — identity and session management.
+// Sovereign identity behavior: core/identity/clients.
 
-import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import React from "react";
+import { StyleSheet, View } from "react-native";
 import {
   Button,
   Card,
@@ -10,224 +10,244 @@ import {
   ScrollScreen,
   Text,
   TextField,
-  spacing,
   colorRoles,
-} from '@bthwani/ui-kit';
-import { useIdentitySession } from '@bthwani/core-identity';
+  spacing,
+} from "@bthwani/ui-kit";
+import {
+  useIdentitySession,
+  type SessionInfo,
+} from "@bthwani/core-identity";
 
 export type IdentityHubScreenProps = {
-  onBack?: () => void;
-  onSaveProfile?: (data: { displayName: string; phone: string; email: string }) => void;
-  onDeleteAccount?: () => void;
+  readonly onBack?: () => void;
+  readonly onDeleteAccount?: () => void;
 };
 
-export function IdentityHubScreen({ onBack, onSaveProfile, onDeleteAccount }: IdentityHubScreenProps) {
-  const { state: sessionState, changePassword, deleteAccount } = useIdentitySession();
+type AsyncState = "idle" | "loading" | "error";
 
-  const [displayName, setDisplayName] = React.useState('');
-  const [phone, setPhone] = React.useState('');
-  const [email, setEmail] = React.useState('');
+function errorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === "object" && error !== null && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message) return message;
+  }
+  return fallback;
+}
 
-  const [isChangingPassword, setIsChangingPassword] = React.useState(false);
-  const [password, setPassword] = React.useState('');
-  const [confirmPassword, setConfirmPassword] = React.useState('');
-  const [passwordMsg, setPasswordMsg] = React.useState('');
-  const [passwordTone, setPasswordTone] = React.useState<'success' | 'danger'>('success');
+function formatDate(value: string): string {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString("ar");
+}
 
-  const [isDeletingAccount, setIsDeletingAccount] = React.useState(false);
-  const [deleteConfirm, setDeleteConfirm] = React.useState('');
+export function IdentityHubScreen({ onBack, onDeleteAccount }: IdentityHubScreenProps) {
+  const {
+    state: sessionState,
+    listSessions,
+    revokeSession,
+    changePassword,
+    deleteAccount,
+  } = useIdentitySession();
+  const [sessions, setSessions] = React.useState<SessionInfo[]>([]);
+  const [sessionsState, setSessionsState] = React.useState<AsyncState>("idle");
+  const [sessionsMessage, setSessionsMessage] = React.useState("");
+  const [password, setPassword] = React.useState("");
+  const [confirmPassword, setConfirmPassword] = React.useState("");
+  const [passwordMessage, setPasswordMessage] = React.useState("");
+  const [passwordSaving, setPasswordSaving] = React.useState(false);
+  const [deleteConfirm, setDeleteConfirm] = React.useState("");
+  const [deleteMessage, setDeleteMessage] = React.useState("");
+  const [deleting, setDeleting] = React.useState(false);
+
+  const refreshSessions = React.useCallback(async () => {
+    if (sessionState.kind !== "authenticated") return;
+    setSessionsState("loading");
+    setSessionsMessage("");
+    try {
+      const current = await listSessions();
+      setSessions(current);
+      setSessionsState("idle");
+    } catch (error) {
+      setSessionsState("error");
+      setSessionsMessage(errorMessage(error, "تعذر تحميل الجلسات النشطة."));
+    }
+  }, [listSessions, sessionState]);
 
   React.useEffect(() => {
-    if (sessionState.kind === 'authenticated') {
-      setDisplayName(sessionState.identity.subject);
-      setPhone(sessionState.identity.subject);
-      setEmail(sessionState.identity.subject + '@bthwani.yemen');
-    }
-  }, [sessionState]);
+    void refreshSessions();
+  }, [refreshSessions]);
 
-  const handleSavePassword = async () => {
-    if (!password || !confirmPassword) {
-      setPasswordMsg('يرجى ملء جميع الحقول المطلوبة');
-      setPasswordTone('danger');
+  if (sessionState.kind !== "authenticated") {
+    return (
+      <ScrollScreen>
+        <Header title="الهوية والجلسات" subtitle="يلزم تسجيل الدخول لعرض بيانات الحساب." />
+      </ScrollScreen>
+    );
+  }
+
+  const identity = sessionState.identity;
+
+  const savePassword = async () => {
+    if (password.length < 6) {
+      setPasswordMessage("يجب أن تتكون كلمة المرور من ستة أحرف على الأقل.");
       return;
     }
     if (password !== confirmPassword) {
-      setPasswordMsg('كلمتا المرور غير متطابقتين');
-      setPasswordTone('danger');
+      setPasswordMessage("كلمتا المرور غير متطابقتين.");
       return;
     }
+    setPasswordSaving(true);
+    setPasswordMessage("");
     try {
       await changePassword(password);
-      setPasswordMsg('تم تحديث كلمة المرور بنجاح في قاعدة البيانات');
-      setPasswordTone('success');
-      setTimeout(() => {
-        setIsChangingPassword(false);
-        setPassword('');
-        setConfirmPassword('');
-        setPasswordMsg('');
-      }, 2000);
-    } catch (err: any) {
-      setPasswordMsg(`فشل تحديث كلمة المرور: ${err.message || 'خطأ غير معروف'}`);
-      setPasswordTone('danger');
+      setPassword("");
+      setConfirmPassword("");
+      setPasswordMessage("تم تغيير كلمة المرور.");
+    } catch (error) {
+      setPasswordMessage(errorMessage(error, "تعذر تغيير كلمة المرور."));
+    } finally {
+      setPasswordSaving(false);
+    }
+  };
+
+  const revoke = async (sessionId: string) => {
+    setSessionsMessage("");
+    try {
+      await revokeSession(sessionId);
+      if (sessionId !== identity.sessionId) await refreshSessions();
+    } catch (error) {
+      setSessionsMessage(errorMessage(error, "تعذر سحب الجلسة."));
+    }
+  };
+
+  const removeAccount = async () => {
+    if (deleteConfirm !== "حذف") return;
+    setDeleting(true);
+    setDeleteMessage("");
+    try {
+      await deleteAccount();
+      setDeleteConfirm("");
+      onDeleteAccount?.();
+    } catch (error) {
+      setDeleteMessage(errorMessage(error, "تعذر حذف الحساب."));
+    } finally {
+      setDeleting(false);
     }
   };
 
   return (
     <ScrollScreen>
-      <Header title="الملف الشخصي" subtitle="بيانات الحساب الشخصي" />
-
+      <Header title="الهوية والجلسات" subtitle="بيانات الهوية السيادية والتحكم في الوصول" />
       <View style={styles.container}>
-        {/* Profile Fields */}
+        {onBack ? <Button label="رجوع" tone="ghost" onPress={onBack} /> : null}
+
+        <Card style={styles.card}>
+          <Text role="titleMd" style={styles.sectionTitle}>بيانات الهوية</Text>
+          <View style={styles.detailRow}>
+            <Text role="caption" tone="muted">المعرّف</Text>
+            <Text role="body">{identity.subject}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text role="caption" tone="muted">رقم الهاتف</Text>
+            <Text role="body">{identity.phoneE164}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text role="caption" tone="muted">الأدوار</Text>
+            <Text role="body">{identity.roles.join("، ")}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text role="caption" tone="muted">انتهاء الجلسة الحالية</Text>
+            <Text role="body">{formatDate(identity.expiresAt)}</Text>
+          </View>
+        </Card>
+
         <Card style={styles.card}>
           <View style={styles.cardHeader}>
-            <Text role="titleMd" style={styles.sectionTitle}>بيانات الحساب</Text>
-            <Text tone="success" style={styles.statusText}>● نشط وآمن</Text>
-          </View>
-
-          <View style={styles.fieldGroup}>
-            <Text role="caption" tone="muted" style={styles.fieldLabel}>الاسم الظاهر</Text>
-            <TextField
-              value={displayName}
-              onChangeText={setDisplayName}
-              placeholder="الاسم الظاهر"
+            <Text role="titleMd" style={styles.sectionTitle}>الجلسات النشطة</Text>
+            <Button
+              label={sessionsState === "loading" ? "جاري التحديث" : "تحديث"}
+              tone="ghost"
+              disabled={sessionsState === "loading"}
+              onPress={refreshSessions}
             />
           </View>
 
-          <View style={styles.fieldGroup}>
-            <Text role="caption" tone="muted" style={styles.fieldLabel}>رقم الجوال</Text>
-            <TextField
-              value={phone}
-              onChangeText={setPhone}
-              placeholder="رقم الجوال"
-            />
-          </View>
+          {sessions.length === 0 && sessionsState !== "loading" ? (
+            <Text role="body" tone="muted" style={styles.message}>لا توجد جلسات نشطة أخرى.</Text>
+          ) : null}
 
-          <View style={styles.fieldGroup}>
-            <Text role="caption" tone="muted" style={styles.fieldLabel}>البريد الإلكتروني</Text>
-            <TextField
-              value={email}
-              onChangeText={setEmail}
-              placeholder="البريد الإلكتروني"
-            />
-          </View>
+          {sessions.map((session) => {
+            const isCurrent = session.sessionId === identity.sessionId;
+            return (
+              <View key={session.sessionId} style={styles.sessionRow}>
+                <View style={styles.sessionInfo}>
+                  <Text role="body" style={styles.sessionTitle}>
+                    {isCurrent ? "هذه الجلسة" : session.deviceFingerprint || "جهاز غير مسمى"}
+                  </Text>
+                  <Text role="caption" tone="muted">
+                    أُنشئت: {formatDate(session.createdAt)}
+                  </Text>
+                  <Text role="caption" tone="muted">
+                    تنتهي: {formatDate(session.expiresAt)}
+                  </Text>
+                </View>
+                <Button
+                  label={isCurrent ? "تسجيل الخروج" : "سحب الجلسة"}
+                  tone={isCurrent ? "secondary" : "danger"}
+                  onPress={() => revoke(session.sessionId)}
+                />
+              </View>
+            );
+          })}
 
-          <Button
-            label="حفظ البيانات"
-            tone="primary"
-            onPress={() => onSaveProfile?.({ displayName, phone, email })}
-          />
+          {sessionsMessage ? (
+            <Text role="caption" style={styles.errorText}>{sessionsMessage}</Text>
+          ) : null}
         </Card>
 
-        {/* Password Section */}
         <Card style={styles.card}>
-          <Text role="titleMd" style={styles.sectionTitle}>كلمة المرور</Text>
-
-          {!isChangingPassword ? (
-            <Button
-              label="تغيير كلمة المرور"
-              tone="secondary"
-              onPress={() => setIsChangingPassword(true)}
-            />
-          ) : (
-            <View style={styles.fieldGroup}>
-              <View style={styles.fieldGroup}>
-                <Text role="caption" tone="muted" style={styles.fieldLabel}>كلمة المرور الجديدة</Text>
-                <TextField
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder="أدخل كلمة المرور الجديدة"
-                  secureTextEntry
-                />
-              </View>
-
-              <View style={styles.fieldGroup}>
-                <Text role="caption" tone="muted" style={styles.fieldLabel}>تأكيد كلمة المرور</Text>
-                <TextField
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  placeholder="أعد كتابة كلمة المرور"
-                  secureTextEntry
-                />
-              </View>
-
-              {passwordMsg ? (
-                <Text
-                  role="caption"
-                  style={[styles.fieldLabel, { color: passwordTone === 'success' ? colorRoles.brandStructure : colorRoles.brandAction }]}
-                >
-                  {passwordMsg}
-                </Text>
-              ) : null}
-
-              <View style={styles.actionRow}>
-                <Button label="حفظ كلمة المرور" tone="primary" onPress={handleSavePassword} />
-                <Button
-                  label="إلغاء"
-                  tone="ghost"
-                  onPress={() => {
-                    setIsChangingPassword(false);
-                    setPassword('');
-                    setConfirmPassword('');
-                    setPasswordMsg('');
-                  }}
-                />
-              </View>
-            </View>
-          )}
+          <Text role="titleMd" style={styles.sectionTitle}>تغيير كلمة المرور</Text>
+          <TextField
+            value={password}
+            onChangeText={setPassword}
+            placeholder="كلمة المرور الجديدة"
+            secureTextEntry
+          />
+          <TextField
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            placeholder="تأكيد كلمة المرور"
+            secureTextEntry
+          />
+          <Button
+            label={passwordSaving ? "جاري الحفظ" : "حفظ كلمة المرور"}
+            tone="primary"
+            disabled={passwordSaving}
+            onPress={savePassword}
+          />
+          {passwordMessage ? (
+            <Text role="caption" style={styles.message}>{passwordMessage}</Text>
+          ) : null}
         </Card>
 
-        {/* Danger Zone */}
         <Card style={[styles.card, styles.dangerCard]}>
-          <Text role="titleMd" style={styles.dangerTitle}>منطقة الخطر</Text>
-
-          {!isDeletingAccount ? (
-            <Button
-              label="حذف الحساب"
-              tone="danger"
-              onPress={() => setIsDeletingAccount(true)}
-            />
-          ) : (
-            <View style={styles.fieldGroup}>
-              <Text role="body" style={styles.dangerText}>
-                حذف الحساب سيؤدي إلى مسح كافة البيانات والطلبات بشكل نهائي لا يمكن استرجاعه.
-              </Text>
-              <Text role="caption" style={styles.dangerText}>اكتب "حذف" في الحقل أدناه للتأكيد:</Text>
-
-              <TextField
-                value={deleteConfirm}
-                onChangeText={setDeleteConfirm}
-                placeholder='اكتب "حذف" للتأكيد'
-              />
-
-              <View style={styles.actionRow}>
-                <Button
-                  label="حذف الحساب نهائياً"
-                  disabled={deleteConfirm !== 'حذف'}
-                  tone="danger"
-                  onPress={async () => {
-                    try {
-                      await deleteAccount();
-                      onDeleteAccount?.();
-                      setIsDeletingAccount(false);
-                      setDeleteConfirm('');
-                    } catch (err: any) {
-                      console.error('Failed to delete account', err);
-                      setIsDeletingAccount(false);
-                      setDeleteConfirm('');
-                    }
-                  }}
-                />
-                <Button
-                  label="تراجع"
-                  tone="ghost"
-                  onPress={() => {
-                    setIsDeletingAccount(false);
-                    setDeleteConfirm('');
-                  }}
-                />
-              </View>
-            </View>
-          )}
+          <Text role="titleMd" style={styles.dangerTitle}>حذف الحساب</Text>
+          <Text role="body" style={styles.dangerText}>
+            سيُخفى الحساب وتُسحب جلساته وتُنشأ عملية الحذف في outbox. اكتب «حذف» للتأكيد.
+          </Text>
+          <TextField
+            value={deleteConfirm}
+            onChangeText={setDeleteConfirm}
+            placeholder="اكتب حذف"
+          />
+          <Button
+            label={deleting ? "جاري الحذف" : "حذف الحساب"}
+            tone="danger"
+            disabled={deleting || deleteConfirm !== "حذف"}
+            onPress={removeAccount}
+          />
+          {deleteMessage ? (
+            <Text role="caption" style={styles.errorText}>{deleteMessage}</Text>
+          ) : null}
         </Card>
       </View>
     </ScrollScreen>
@@ -241,53 +261,58 @@ const styles = StyleSheet.create({
   },
   card: {
     padding: spacing[4],
-    backgroundColor: colorRoles.surfaceBase,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colorRoles.surfaceBase,
     gap: spacing[3],
-    marginBottom: spacing[3],
-  },
-  dangerCard: {
-    borderColor: colorRoles.surfaceBase,
-    backgroundColor: colorRoles.surfaceBase,
   },
   cardHeader: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: spacing[2],
   },
   sectionTitle: {
-    fontWeight: 'bold',
     color: colorRoles.brandStructure,
-    textAlign: 'right',
+    textAlign: "right",
   },
-  statusText: {
-    fontSize: 13,
-    fontWeight: '600',
+  detailRow: {
+    gap: spacing[1],
+    alignItems: "flex-end",
   },
-  fieldGroup: {
-    gap: spacing[2],
+  sessionRow: {
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: spacing[3],
+    paddingVertical: spacing[2],
+    borderBottomWidth: 1,
+    borderBottomColor: colorRoles.surfaceMuted,
   },
-  fieldLabel: {
-    textAlign: 'right',
+  sessionInfo: {
+    flex: 1,
+    alignItems: "flex-end",
+    gap: spacing[1],
+  },
+  sessionTitle: {
+    color: colorRoles.brandStructure,
+    textAlign: "right",
+  },
+  message: {
+    textAlign: "right",
     color: colorRoles.brandStructure,
   },
-  actionRow: {
-    flexDirection: 'row-reverse',
-    gap: spacing[2],
-    flexWrap: 'wrap',
+  errorText: {
+    textAlign: "right",
+    color: colorRoles.brandAction,
+  },
+  dangerCard: {
+    borderWidth: 1,
+    borderColor: colorRoles.brandAction,
   },
   dangerTitle: {
-    fontWeight: 'bold',
+    textAlign: "right",
     color: colorRoles.brandAction,
-    textAlign: 'right',
   },
   dangerText: {
-    textAlign: 'right',
+    textAlign: "right",
     color: colorRoles.brandAction,
-    lineHeight: 20,
   },
 });
-
-// export default IdentityHubScreen; // Unused default export

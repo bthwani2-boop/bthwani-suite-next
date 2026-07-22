@@ -1,0 +1,74 @@
+{
+  "journeyId": "JRN-011",
+  "initialState": "pending",
+  "states": [
+    "pending",
+    "store_accepted",
+    "preparing",
+    "ready_for_pickup",
+    "driver_assigned",
+    "driver_arrived_store",
+    "picked_up",
+    "arrived_customer",
+    "returning_to_store",
+    "return_arrived_store",
+    "returned_to_store",
+    "delivered",
+    "cancelled_by_client",
+    "cancelled_by_store",
+    "cancelled_by_operator",
+    "cancelled_no_driver",
+    "failed_payment",
+    "failed_dispatch"
+  ],
+  "terminalStates": [
+    "delivered",
+    "returned_to_store",
+    "cancelled_by_client",
+    "cancelled_by_store",
+    "cancelled_by_operator",
+    "cancelled_no_driver",
+    "failed_payment",
+    "failed_dispatch"
+  ],
+  "creation": {
+    "fromCheckoutStates": ["payment_confirmed"],
+    "codException": {"checkoutState": "payment_pending", "paymentMethod": "cod"},
+    "toOrderState": "pending",
+    "eventType": "order.created"
+  },
+  "allowedActionsByActor": {
+    "client": {
+      "pending": ["view", "cancel_if_policy_allows"],
+      "store_accepted": ["view"],
+      "preparing": ["view"],
+      "ready_for_pickup": ["view"],
+      "driver_assigned": ["view", "track"],
+      "driver_arrived_store": ["view", "track"],
+      "picked_up": ["view", "track"],
+      "arrived_customer": ["view", "track"],
+      "delivered": ["view", "rate"],
+      "*": ["view"]
+    },
+    "partner": {
+      "pending": ["view", "accept", "reject"],
+      "store_accepted": ["view", "start_preparing"],
+      "preparing": ["view", "revise_estimate", "mark_ready"],
+      "ready_for_pickup": ["view", "confirm_handoff"],
+      "*": ["view"]
+    },
+    "operator": {
+      "*": ["view", "view_audit"],
+      "pending": ["view", "view_audit", "cancel_if_policy_allows"],
+      "store_accepted": ["view", "view_audit", "cancel_if_policy_allows"],
+      "preparing": ["view", "view_audit", "cancel_if_policy_allows"]
+    }
+  },
+  "negativeInvariants": [
+    "state changes require a server-owned transition and expected current state",
+    "terminal states cannot transition through JRN-011",
+    "surfaces must consume allowedActions returned by DSH and must not infer mutation authority",
+    "paymentProjection never drives order state without a verified WLT event and an explicit DSH policy",
+    "order snapshot fields are immutable in every state"
+  ]
+}

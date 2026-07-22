@@ -1,0 +1,27 @@
+openapi: 3.1.0
+info:
+  title: BThwani DSH Analytics Extensions API
+  version: 1.0.0
+  description: >-
+    Active standalone index for analytics path-items implemented by JRN-032 but
+    not yet composed into the primary generated DSH document. The path-item
+    definitions remain sovereign in paths/analytics.paths.yaml.
+x-bthwani-owner: services/dsh
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-client-generation: MANUAL_TYPED_ADAPTER
+x-bthwani-runtime-dependency: true
+servers:
+  - url: http://localhost:58080
+paths:
+  /dsh/operator/analytics/preparation-sla:
+    $ref: "./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1preparation-sla"
+  /dsh/operator/analytics/captains:
+    $ref: "./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1captains"
+  /dsh/operator/analytics/field:
+    $ref: "./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1field"
+  /dsh/operator/analytics/drill-down/orders:
+    $ref: "./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1drill-down~1orders"
+  /dsh/operator/analytics/financial-snapshot:
+    $ref: "./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1financial-snapshot"
+  /dsh/operator/analytics/export.csv:
+    $ref: "./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1export.csv"

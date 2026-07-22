@@ -9,13 +9,31 @@ Set-Location -LiteralPath (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $ErrorActionPreference = "Stop"
 
 $manifestPath = "tools\guards\guard-manifest.json"
-if (-not (Test-Path -LiteralPath $manifestPath)) {
-  throw "Guard manifest is missing: $manifestPath"
+$registryPath = "governance\guards\guard-registry.json"
+foreach ($requiredPath in @($manifestPath, $registryPath)) {
+  if (-not (Test-Path -LiteralPath $requiredPath)) {
+    throw "Required guard configuration is missing: $requiredPath"
+  }
 }
 
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+$registry = Get-Content -LiteralPath $registryPath -Raw | ConvertFrom-Json
 $registeredJourneyGuards = @($manifest.guardSets.journey)
 $journeyGuards = $registeredJourneyGuards
+$guardEntries = @{}
+foreach ($entry in @($registry.entries)) {
+  if ($entry.id) { $guardEntries[[string]$entry.id] = $entry }
+}
+
+$journeySpecificGuardIds = @(
+  $registry.entries |
+    Where-Object { $_.id -match '^jrn-\d{3}-' -and $_.source_file -match '\.(mjs|cjs|js)$' } |
+    ForEach-Object { [string]$_.id }
+)
+$unregisteredJourneyGuards = @($journeySpecificGuardIds | Where-Object { $registeredJourneyGuards -notcontains $_ })
+if ($unregisteredJourneyGuards.Count -gt 0) {
+  throw "Journey-specific guards are missing from the journey manifest: $($unregisteredJourneyGuards -join ', ')"
+}
 
 if ($Guard) {
   if ($registeredJourneyGuards -notcontains $Guard) {
@@ -31,8 +49,9 @@ function Run-Step {
   Write-Host "[ RUN ] $Name" -ForegroundColor Cyan
   $global:LASTEXITCODE = 0
   try {
-    & $Block
-    if ($LASTEXITCODE -and $LASTEXITCODE -ne 0) { throw "exit $LASTEXITCODE" }
+    & $Block 2>&1 | ForEach-Object { Write-Host $_ }
+    $nativeExitCode = $global:LASTEXITCODE
+    if ($nativeExitCode -ne 0) { throw "exit $nativeExitCode" }
     Write-Host "[ OK  ] $Name" -ForegroundColor Green
     return $true
   }
@@ -40,6 +59,15 @@ function Run-Step {
     Write-Host "[ FAIL] $Name — $_" -ForegroundColor Red
     return $false
   }
+}
+
+function Test-JourneyGuardSelected {
+  param([Parameter(Mandatory)][string]$GuardId)
+  if ($Guard) { return $true }
+  if ($GuardId -notmatch '^jrn-\d{3}-') { return $true }
+  $normalizedJourney = $Journey.Trim().ToLowerInvariant().Replace('_', '-')
+  if ($normalizedJourney -notmatch '^jrn-\d{3}$') { return $true }
+  return $GuardId.StartsWith("$normalizedJourney-")
 }
 
 $results += [pscustomobject]@{ step = "git-diff-check"; ok = (Run-Step "git-diff-check" { git --no-pager diff --check }) }
@@ -58,10 +86,28 @@ if ($Full) {
 }
 
 foreach ($guardName in $journeyGuards) {
-  $scriptName = "guard:$guardName"
+  if (-not (Test-JourneyGuardSelected -GuardId $guardName)) { continue }
+
+  $entry = $guardEntries[$guardName]
+  if (-not $entry) { throw "Journey guard is not present in the guard registry: $guardName" }
+
+  $stepName = "guard:$guardName"
+  if ($entry.script) {
+    $scriptName = [string]$entry.script
+    $results += [pscustomobject]@{
+      step = $stepName
+      ok = Run-Step $stepName { pnpm run $scriptName }
+    }
+    continue
+  }
+
+  $sourceFile = [string]$entry.source_file
+  if (-not $sourceFile -or $sourceFile -notmatch '\.(mjs|cjs|js)$') {
+    throw "Journey guard has no executable package script or Node source: $guardName"
+  }
   $results += [pscustomobject]@{
-    step = $scriptName
-    ok = Run-Step $scriptName { pnpm run $scriptName }
+    step = $stepName
+    ok = Run-Step $stepName { node $sourceFile }
   }
 }
 

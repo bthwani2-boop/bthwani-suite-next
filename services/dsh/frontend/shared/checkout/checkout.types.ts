@@ -3,6 +3,7 @@ export type DshPaymentMethod = "cod" | "wallet" | "mixed" | "official_wallet";
 export type DshIntentState =
   | "pending"
   | "wlt_handoff_failed"
+  | "wlt_outcome_unknown"
   | "payment_pending"
   | "confirmed"
   | "cancelled"
@@ -16,6 +17,8 @@ export type DshFulfillmentMode = DshFulfillmentDeliveryMode;
 
 export type DshCheckoutIntent = {
   readonly id: string;
+  /** Present on all current server responses; optional only for legacy typed fixtures. */
+  readonly tenantId?: string;
   readonly clientId: string;
   readonly cartId: string;
   readonly storeId: string;
@@ -37,6 +40,8 @@ export type DshCheckoutIntent = {
   readonly version: number;
   readonly createdAt: string;
   readonly updatedAt: string;
+  readonly reconciliationRequired?: boolean;
+  readonly reconciliationAgeSeconds?: number;
 };
 
 export type DshCreateIntentInput = {
@@ -50,12 +55,16 @@ export type DshCreateIntentInput = {
   readonly couponCode?: string;
 };
 
+export type DshCheckoutTerminalReason = "cancelled" | "expired" | "payment_failed";
+
 export type DshCheckoutState =
   | { readonly kind: "idle" }
   | { readonly kind: "loading" }
   | { readonly kind: "confirming" }
   | { readonly kind: "success"; readonly intent: DshCheckoutIntent }
   | { readonly kind: "payment_pending"; readonly intent: DshCheckoutIntent }
+  | { readonly kind: "reconciliation_pending"; readonly intent: DshCheckoutIntent }
+  | { readonly kind: "terminal"; readonly intent: DshCheckoutIntent; readonly reason: DshCheckoutTerminalReason }
   | { readonly kind: "error"; readonly message: string }
   | { readonly kind: "blocked_payment_unavailable" }
   | { readonly kind: "out_of_area" };

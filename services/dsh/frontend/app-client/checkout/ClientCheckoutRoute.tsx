@@ -65,7 +65,7 @@ function AuthenticatedCheckout({
         paymentMethod={checkoutData.paymentMethod}
         couponCode={checkoutData.couponCode}
         onCancel={() => setCheckoutData(null)}
-        onSuccess={onSuccess}
+        {...(onSuccess ? { onSuccess } : {})}
       />
     );
   }

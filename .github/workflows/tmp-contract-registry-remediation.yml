@@ -1,0 +1,115 @@
+name: Temporary Contract Registry Remediation
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - ".github/workflows/tmp-contract-registry-remediation.yml"
+  push:
+    branches: [sambassam]
+    paths:
+      - ".github/workflows/tmp-contract-registry-remediation.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: temporary-contract-registry-remediation-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  remediate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout latest sambassam
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: sambassam
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Register active operational and financial contracts
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("services/dsh/contracts/contract-registry.ts")
+          text = path.read_text(encoding="utf-8")
+          union_anchor = '''    | "dsh-order-truth"
+              | "dsh-order-workboards"
+              | "dsh-partner-onboarding"'''.replace('              |', '    |')
+          union_replacement = '''    | "dsh-order-truth"
+    | "dsh-order-workboards"
+    | "dsh-operational-policy"
+    | "dsh-representative-finance"
+    | "dsh-refunds"
+    | "dsh-partner-onboarding"'''
+          if '"dsh-operational-policy"' not in text:
+              if union_anchor not in text:
+                  raise SystemExit("contract registry union anchor changed")
+              text = text.replace(union_anchor, union_replacement, 1)
+
+          entry_anchor = '''  {
+    id: "dsh-order-workboards",
+    path: "contracts/dsh.order-workboards.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/orders",
+  },
+  {
+    id: "dsh-partner-onboarding",'''
+          entry_replacement = '''  {
+    id: "dsh-order-workboards",
+    path: "contracts/dsh.order-workboards.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/orders",
+  },
+  {
+    id: "dsh-operational-policy",
+    path: "contracts/dsh.jrn-029.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/platform",
+  },
+  {
+    id: "dsh-representative-finance",
+    path: "contracts/jrn-033-representative-finance.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/finance-wlt-link",
+  },
+  {
+    id: "dsh-refunds",
+    path: "contracts/jrn-035-refunds.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/finance-wlt-link",
+  },
+  {
+    id: "dsh-partner-onboarding",'''
+          if 'id: "dsh-operational-policy"' not in text:
+              if entry_anchor not in text:
+                  raise SystemExit("contract registry entry anchor changed")
+              text = text.replace(entry_anchor, entry_replacement, 1)
+          path.write_text(text, encoding="utf-8")
+          PY
+      - name: Commit registry repair
+        shell: bash
+        run: |
+          git config user.name "bthwani-governance-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add services/dsh/contracts/contract-registry.ts
+          git commit -m "fix(contracts): register active operational finance APIs"
+          for attempt in 1 2 3; do
+            if git push origin HEAD:sambassam; then
+              exit 0
+            fi
+            git pull --rebase origin sambassam
+          done
+          exit 1

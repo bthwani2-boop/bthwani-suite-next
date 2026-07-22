@@ -1,6 +1,7 @@
 package homediscovery
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"time"
@@ -22,8 +23,45 @@ const clientEligibleStorePredicate = `
 		  AND p.archived_at IS NULL
 	)`
 
-func ListBanners(db *sql.DB) ([]HomeBanner, error) {
-	rows, err := db.Query(`
+func homeContentTargetPredicate(alias string) string {
+	return fmt.Sprintf(`
+		  AND (
+			NOT EXISTS (
+				SELECT 1 FROM dsh_home_content_targets t
+				WHERE t.content_kind = $4 AND t.content_id = %s.id AND t.target_type = 'city'
+			)
+			OR ($1 <> '' AND EXISTS (
+				SELECT 1 FROM dsh_home_content_targets t
+				WHERE t.content_kind = $4 AND t.content_id = %s.id
+				  AND t.target_type = 'city' AND t.target_value = $1
+			))
+		  )
+		  AND (
+			NOT EXISTS (
+				SELECT 1 FROM dsh_home_content_targets t
+				WHERE t.content_kind = $4 AND t.content_id = %s.id AND t.target_type = 'service_area'
+			)
+			OR ($2 <> '' AND EXISTS (
+				SELECT 1 FROM dsh_home_content_targets t
+				WHERE t.content_kind = $4 AND t.content_id = %s.id
+				  AND t.target_type = 'service_area' AND t.target_value = $2
+			))
+		  )
+		  AND (
+			NOT EXISTS (
+				SELECT 1 FROM dsh_home_content_targets t
+				WHERE t.content_kind = $4 AND t.content_id = %s.id AND t.target_type = 'audience'
+			)
+			OR EXISTS (
+				SELECT 1 FROM dsh_home_content_targets t
+				WHERE t.content_kind = $4 AND t.content_id = %s.id
+				  AND t.target_type = 'audience' AND t.target_value = $3
+			)
+		  )`, alias, alias, alias, alias, alias, alias)
+}
+
+func ListBanners(ctx context.Context, db *sql.DB, discoveryQuery HomeDiscoveryQuery) ([]HomeBanner, error) {
+	query := `
 		SELECT b.id, b.title, COALESCE(b.subtitle,''), b.image_url, b.action_type, b.action_target
 		FROM dsh_home_banners b
 		WHERE b.is_active = true
@@ -47,8 +85,14 @@ func ListBanners(db *sql.DB) ([]HomeBanner, error) {
 				  AND d.is_active = true
 				  AND d.is_client_visible = true
 			)
-		  )
-		ORDER BY b.sort_order ASC`)
+		  )` + homeContentTargetPredicate("b") + `
+		ORDER BY b.sort_order ASC, b.id ASC`
+	rows, err := db.QueryContext(ctx, query,
+		discoveryQuery.CityCode,
+		discoveryQuery.ServiceAreaCode,
+		discoveryQuery.AudienceSegment,
+		"banners",
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query banners: %w", err)
 	}
@@ -68,8 +112,8 @@ func ListBanners(db *sql.DB) ([]HomeBanner, error) {
 	return banners, nil
 }
 
-func ListPromos(db *sql.DB) ([]HomePromo, error) {
-	rows, err := db.Query(`
+func ListPromos(ctx context.Context, db *sql.DB, discoveryQuery HomeDiscoveryQuery) ([]HomePromo, error) {
+	query := `
 		SELECT p.id, p.title, COALESCE(p.subtitle,''), COALESCE(p.badge_label,''), p.image_url, p.action_type, p.action_target
 		FROM dsh_home_promos p
 		WHERE p.is_active = true
@@ -93,8 +137,14 @@ func ListPromos(db *sql.DB) ([]HomePromo, error) {
 				  AND d.is_active = true
 				  AND d.is_client_visible = true
 			)
-		  )
-		ORDER BY p.sort_order ASC`)
+		  )` + homeContentTargetPredicate("p") + `
+		ORDER BY p.sort_order ASC, p.id ASC`
+	rows, err := db.QueryContext(ctx, query,
+		discoveryQuery.CityCode,
+		discoveryQuery.ServiceAreaCode,
+		discoveryQuery.AudienceSegment,
+		"promos",
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query promos: %w", err)
 	}
@@ -114,8 +164,8 @@ func ListPromos(db *sql.DB) ([]HomePromo, error) {
 	return promos, nil
 }
 
-func ListCategories(db *sql.DB) ([]HomeCategory, error) {
-	rows, err := db.Query(`
+func ListCategories(ctx context.Context, db *sql.DB) ([]HomeCategory, error) {
+	rows, err := db.QueryContext(ctx, `
 		SELECT id, name_ar, COALESCE(icon,''), sort_order
 		FROM dsh_catalog_domains
 		WHERE is_active = true
@@ -147,7 +197,7 @@ func ListCategories(db *sql.DB) ([]HomeCategory, error) {
 	return categories, nil
 }
 
-func ListHomeStores(db *sql.DB, query HomeDiscoveryQuery) ([]HomeStore, int, error) {
+func ListHomeStores(ctx context.Context, db *sql.DB, query HomeDiscoveryQuery) ([]HomeStore, int, error) {
 	conditions := []string{clientEligibleStorePredicate}
 	params := []any{}
 	idx := 1
@@ -173,7 +223,7 @@ func ListHomeStores(db *sql.DB, query HomeDiscoveryQuery) ([]HomeStore, int, err
 	}
 
 	var total int
-	if err := db.QueryRow("SELECT COUNT(*) FROM dsh_stores s LEFT JOIN dsh_catalog_domains c ON c.id = s.catalog_domain_id "+whereClause, params...).Scan(&total); err != nil {
+	if err := db.QueryRowContext(ctx, "SELECT COUNT(*) FROM dsh_stores s LEFT JOIN dsh_catalog_domains c ON c.id = s.catalog_domain_id "+whereClause, params...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("failed to count home stores: %w", err)
 	}
 
@@ -191,7 +241,7 @@ func ListHomeStores(db *sql.DB, query HomeDiscoveryQuery) ([]HomeStore, int, err
 		ORDER BY s.rating_average DESC NULLS LAST, s.display_name ASC
 		LIMIT $%d OFFSET 0`, cols, whereClause, idx)
 
-	rows, err := db.Query(q, append(params, query.Limit)...)
+	rows, err := db.QueryContext(ctx, q, append(params, query.Limit)...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to query home stores: %w", err)
 	}

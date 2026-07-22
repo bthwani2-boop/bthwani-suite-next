@@ -21,10 +21,20 @@ func RegisterOrderJourneyRoutes(
 	protected := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
 	mux.HandleFunc("GET /dsh/operator/order-workboard", protected.handleOperatorOrderWorkboard)
 	mux.HandleFunc("GET /dsh/partner/orders/{orderId}/partner-delivery", protected.handleGetPartnerDeliveryTask)
-	mux.HandleFunc("GET /dsh/partner/orders/{orderId}/pickup", protected.handleGetPartnerPickupSession)
 
 	mux.HandleFunc("GET /dsh/orders/{orderId}/preparation", protected.handleGetOrderPreparation)
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/preparation-estimate", protected.handleRevisePreparationEstimate)
+	mux.HandleFunc("GET /dsh/orders/{orderId}/preparation-issues", protected.handleListPreparationIssues)
+	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/preparation-issues", protected.handleCreatePreparationIssue)
+	mux.HandleFunc("POST /dsh/client/orders/{orderId}/preparation-issues/{issueId}/decision", protected.handleDecidePreparationIssue)
+	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/preparation-issues/{issueId}/resolve", protected.handleResolvePreparationIssue)
 	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/order-preparation-policy", protected.handleGetStorePreparationPolicy)
 	mux.HandleFunc("PUT /dsh/partner/stores/{storeId}/order-preparation-policy", protected.handleUpdateStorePreparationPolicy)
+
+	mux.HandleFunc("POST /dsh/operator/order-preparation/alerts/refresh", protected.handleRefreshPreparationAlerts)
+	mux.HandleFunc("GET /dsh/operator/order-preparation/alerts", protected.handleListPreparationAlerts)
+	mux.HandleFunc("POST /dsh/operator/order-preparation/alerts/{alertId}/acknowledge", protected.handleAcknowledgePreparationAlert)
+
+	mux.HandleFunc("POST /dsh/captain/dispatch/assignments/{assignmentId}/handoff-exceptions", protected.handleReportCaptainStoreCaptainHandoffException)
+	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/captain-handoff/exceptions", protected.handleReportPartnerStoreCaptainHandoffException)
 }

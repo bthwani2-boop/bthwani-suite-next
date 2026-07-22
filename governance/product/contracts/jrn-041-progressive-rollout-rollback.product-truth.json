@@ -1,0 +1,186 @@
+{
+  "schemaVersion": 1,
+  "capabilityId": "JRN_041_PROGRESSIVE_ROLLOUT_ROLLBACK",
+  "state": "DISCOVERY",
+  "problem": {
+    "statement": "Platform operators need one governed progressive-delivery lifecycle that releases only an independently approved feature-flag change to an explicit audience, region or surface, blocks unhealthy progression, separates pause from resume, supports abort and rollback, and leaves an immutable recovery trail.",
+    "affectedActors": ["platform-operator", "platform-approver", "rollout-manager", "support-operator", "platform-control-service", "target-surface"],
+    "currentWorkaround": "The platform-control service already stores rollouts and can advance, pause, abort and restore a flag baseline, but resume is implicit inside advance, target scope accepts ungoverned JSON, health-gate failures are not recorded as operational alerts, and no canonical recovery guide is exposed for support.",
+    "frequency": "occasional",
+    "severity": "critical",
+    "evidenceState": "QUALITATIVE",
+    "evidenceReferences": [
+      "governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md#jrn-041",
+      "core/platform-control/backend/internal/platformcontrol/rollout_service.go",
+      "core/platform-control/backend/internal/platformcontrol/rollout_repository.go",
+      "core/platform-control/database/migrations/platform-002_progressive_rollouts.sql",
+      "services/dsh/frontend/control-panel/platform/PlatformRolloutPanel.tsx"
+    ]
+  },
+  "actors": [
+    {
+      "id": "platform-operator",
+      "role": "Authorized maker of a platform change set",
+      "permittedActions": ["propose and validate a change set", "submit for independent approval", "read rollout state"],
+      "forbiddenActions": ["approve own change", "create a rollout from an unapplied change", "bypass health gates", "erase audit evidence"]
+    },
+    {
+      "id": "platform-approver",
+      "role": "Independent checker for the underlying platform change",
+      "permittedActions": ["approve or reject a submitted change", "inspect impact and rollback plan"],
+      "forbiddenActions": ["approve own proposal", "operate a rollout created from the same change when maker-checker separation would be lost"]
+    },
+    {
+      "id": "rollout-manager",
+      "role": "Authorized control-panel operator running the approved rollout lifecycle",
+      "permittedActions": ["create from an applied feature-flag change", "advance after health evaluation", "pause", "resume without advancing", "abort and restore baseline", "rollback a completed rollout", "read recovery guidance"],
+      "forbiddenActions": ["target an empty or unknown scope", "advance while paused", "advance while unhealthy", "publish an unapproved flag", "mutate another service database"]
+    },
+    {
+      "id": "support-operator",
+      "role": "Authorized reader using audit and recovery guidance during incidents",
+      "permittedActions": ["read rollout status", "read health-gate block events", "read deterministic recovery steps"],
+      "forbiddenActions": ["perform rollout mutations without manage permission", "edit or delete audit history"]
+    },
+    {
+      "id": "platform-control-service",
+      "role": "Sole owner of rollout state, feature-flag revision checks, health gating, audit and baseline restoration",
+      "permittedActions": ["validate target scope", "serialize state transitions", "compare flag revisions", "record blocked health gates", "restore captured baseline", "produce canonical readback"],
+      "forbiddenActions": ["self-approve product or release acceptance", "deploy production", "activate commercial SaaS", "write DSH or WLT business truth"]
+    },
+    {
+      "id": "target-surface",
+      "role": "Consumer surface evaluating the canonical feature flag and targeting projection",
+      "permittedActions": ["read effective flag state", "apply the platform-owned percentage and scope"],
+      "forbiddenActions": ["invent a local rollout", "override percentage", "persist mock targeting as runtime truth"]
+    }
+  ],
+  "surfaces": [
+    {
+      "id": "control-panel",
+      "required": true,
+      "actors": ["rollout-manager", "support-operator"],
+      "routesOrScreens": ["PlatformRolloutPanel", "platform rollout workspace"],
+      "operationIds": ["createPlatformRollout", "advancePlatformRollout", "pausePlatformRollout", "resumePlatformRollout", "abortPlatformRollout", "rollbackPlatformRollout", "getPlatformRolloutRecovery"],
+      "states": ["loading", "empty", "running", "paused", "completed", "aborted", "rolled_back", "failed", "forbidden", "conflict", "health_blocked", "offline", "error"],
+      "actions": ["create", "advance", "pause", "resume", "abort", "rollback", "inspect targeting", "inspect recovery guidance", "refresh canonical readback"]
+    },
+    {
+      "id": "backend",
+      "required": true,
+      "actors": ["platform-control-service", "rollout-manager", "support-operator"],
+      "routesOrScreens": ["platform-control rollout HTTP routes", "rollout service and repository"],
+      "operationIds": ["listPlatformRollouts", "getPlatformRollout", "createPlatformRollout", "advancePlatformRollout", "pausePlatformRollout", "resumePlatformRollout", "abortPlatformRollout", "rollbackPlatformRollout", "getPlatformRolloutRecovery"],
+      "states": ["running", "paused", "completed", "aborted", "rolled_back", "failed", "invalid_transition", "version_conflict", "health_blocked"],
+      "actions": ["authorize", "validate", "health check", "revision check", "transition", "audit", "restore baseline", "read back"]
+    },
+    {
+      "id": "database",
+      "required": true,
+      "actors": ["platform-control-service"],
+      "routesOrScreens": ["platform_rollouts", "platform_feature_flags", "platform_change_sets", "platform_change_set_items", "platform_audit_events"],
+      "operationIds": [],
+      "states": ["revision_checked", "serializable", "auditable", "baseline_captured", "target_scope_validated"],
+      "actions": ["enforce status", "enforce nonempty target scope", "retain baseline", "prevent concurrent active rollout", "retain immutable audit"]
+    },
+    {
+      "id": "shared",
+      "required": true,
+      "actors": ["rollout-manager", "support-operator"],
+      "routesOrScreens": ["services/dsh/frontend/shared/platform"],
+      "operationIds": ["fetchPlatformRollouts", "resumePlatformRollout", "fetchPlatformRolloutRecovery"],
+      "states": ["idle", "loading", "success", "forbidden", "conflict", "health_blocked", "offline", "error"],
+      "actions": ["map canonical state", "classify errors", "disable illegal actions", "refresh after mutation"]
+    },
+    {
+      "id": "app-client",
+      "required": false,
+      "actors": ["target-surface"],
+      "routesOrScreens": ["feature-flag consumers only"],
+      "operationIds": [],
+      "states": ["targeted", "not_targeted"],
+      "actions": ["evaluate canonical effective flag"],
+      "exclusionReason": "The journey exposes no client-operated rollout UI; the client only consumes the controlled effect."
+    },
+    {
+      "id": "app-partner",
+      "required": false,
+      "actors": ["target-surface"],
+      "routesOrScreens": ["feature-flag consumers only"],
+      "operationIds": [],
+      "states": ["targeted", "not_targeted"],
+      "actions": ["evaluate canonical effective flag"],
+      "exclusionReason": "The partner app does not own rollout operations."
+    },
+    {
+      "id": "app-captain",
+      "required": false,
+      "actors": ["target-surface"],
+      "routesOrScreens": ["feature-flag consumers only"],
+      "operationIds": [],
+      "states": ["targeted", "not_targeted"],
+      "actions": ["evaluate canonical effective flag"],
+      "exclusionReason": "The captain app does not own rollout operations."
+    },
+    {
+      "id": "app-field",
+      "required": false,
+      "actors": ["target-surface"],
+      "routesOrScreens": ["feature-flag consumers only"],
+      "operationIds": [],
+      "states": ["targeted", "not_targeted"],
+      "actions": ["evaluate canonical effective flag"],
+      "exclusionReason": "The field app does not own rollout operations."
+    }
+  ],
+  "outcome": {
+    "statement": "Every progressive release begins from an applied independently approved feature-flag change, targets an explicit governed scope, advances only from running state after the configured health gate passes, separates pause from resume, restores the captured baseline on abort or rollback, and exposes immutable audit plus deterministic recovery guidance.",
+    "primaryMetric": "healthy governed rollout transitions with canonical readback",
+    "guardrailMetrics": ["unapproved rollout count", "empty target scope count", "advance while paused count", "advance after failed health gate count", "flag revision conflict count", "baseline restoration failure count", "missing audit count", "local mock rollout count"],
+    "baselineState": "Progressive rollout storage and basic transitions exist, but resume, target-scope governance, blocked-health audit and recovery guidance are incomplete.",
+    "targetState": "Platform Control owns a complete explicit and auditable progressive-delivery lifecycle with safe recovery.",
+    "observationWindow": "targeted product contract static database backend frontend runtime security governance CI and independent review"
+  },
+  "acceptance": {
+    "criteria": [
+      "A rollout references an applied change set containing the same feature flag and preserves maker-checker separation.",
+      "Target scope contains at least one supported nonempty audience, region, city, surface or surfaces selector.",
+      "Steps are strictly increasing, bounded by 1..100 and finish at 100.",
+      "Advance is legal only from running and cannot implicitly resume a paused rollout.",
+      "Resume changes only paused to running and does not change percentage, step or feature-flag revision.",
+      "Every advance evaluates required aggregate and service health before changing the flag.",
+      "A blocked health gate creates an immutable correlated audit event.",
+      "Abort is legal from running or paused and restores the captured baseline with revision checks.",
+      "Rollback is legal only from completed and restores the captured baseline with revision checks.",
+      "Recovery guidance identifies the legal next action and references the approved change rollback plan.",
+      "Control-panel actions are permission gated and refresh canonical server state after mutation.",
+      "No target surface or frontend stores a local rollout truth or mock runtime result."
+    ],
+    "failureStates": ["unapproved change", "maker-checker bypass", "empty or unknown target scope", "invalid steps", "advance while paused", "health gate bypass", "missing blocked-health audit", "stale flag revision", "baseline restore conflict", "frontend-only success"],
+    "requiredChecks": ["product-truth validation", "target-scope unit tests", "health-gate unit tests", "PostgreSQL migration invariants", "platform-control Go tests", "rollout integration lifecycle test", "HTTP route registration", "OpenAPI journey contract gate", "targeted TypeScript typecheck", "control-panel binding gate", "runtime PostgreSQL smoke", "security review", "product owner review", "visual accessibility review", "release and production evidence"],
+    "runtimeEvidenceRequired": true,
+    "visualEvidenceRequired": true
+  },
+  "invariants": {
+    "business": ["Platform Control exclusively owns rollout state and feature-flag mutation.", "Every rollout derives from an applied independently approved change set.", "Pause and resume are distinct transitions.", "Health is evaluated immediately before every advance.", "Abort and rollback restore the captured baseline under revision control.", "Every mutation and blocked health gate is correlated and audited."],
+    "negative": ["No rollout is created for an unapplied or unrelated change.", "No empty or arbitrary target JSON is accepted.", "No advance occurs from paused.", "No unhealthy advance changes the feature flag.", "No stale revision overwrites a newer flag.", "No frontend or target surface owns rollout truth.", "No implementation actor self-approves protected product release or production closure."]
+  },
+  "owners": {
+    "productManager": "Platform Runtime Product Management",
+    "productOwner": "Platform Release Operations Product Owner",
+    "uxJourneyOwner": "Control Panel Operations Experience Owner",
+    "engineeringOwner": "Platform Control Full-Stack Engineering",
+    "productManagerApproval": "PENDING",
+    "productOwnerApproval": "PENDING",
+    "productAcceptanceDecision": "PENDING"
+  },
+  "execution": {
+    "appetite": "Close JRN-041 code data contract and control-panel gaps without deploying production or self-approving protected release evidence.",
+    "fixedConstraints": ["Repository mode is REMOTE_ONLY on sambassam.", "Platform Control remains the sole rollout owner.", "No PR merge force push release production deployment or SaaS activation is authorized.", "Independent product security QA release and risk approvals cannot be self-issued by engineering."],
+    "variableScope": ["Arabic operational wording", "supported target selector labels", "recovery guidance presentation", "non-secret diagnostics"],
+    "forbiddenScope": ["DSH-owned rollout mutation", "frontend-owned rollout state", "production deployment", "commercial SaaS activation", "fake runtime evidence", "self-approval of protected gates"],
+    "forecastRange": "one sequential journey closure",
+    "confidence": "high",
+    "unknowns": ["Independent product manager approval outcome", "Independent product owner approval outcome", "Runtime database integration outcome", "Visual accessibility and weak-network outcome", "Security review outcome", "Release and production evidence outcome"]
+  }
+}

@@ -2,6 +2,7 @@ import type {
   DshCart,
   DshCartState,
   DshFulfillmentModeAvailability,
+  DshServiceabilityResult,
   DshServiceabilityState,
   DshServiceabilityCode,
 } from "./cart.types";
@@ -34,24 +35,22 @@ export function serviceabilityIdleState(): DshServiceabilityState {
   return { kind: "idle" };
 }
 
-function serviceabilityCheckingState(): DshServiceabilityState {
-  return { kind: "checking" };
-}
-
 export function serviceabilityServiceableState(
+  result: DshServiceabilityResult,
   availableModes: readonly DshFulfillmentModeAvailability[],
 ): DshServiceabilityState {
-  return { kind: "serviceable", availableModes };
+  return { kind: "serviceable", result, availableModes };
 }
 
 export function serviceabilityBlockedState(
+  result: DshServiceabilityResult,
   code: DshServiceabilityCode,
   availableModes: readonly DshFulfillmentModeAvailability[],
   reason?: string,
 ): DshServiceabilityState {
   return reason !== undefined
-    ? { kind: "blocked", code, reason, availableModes }
-    : { kind: "blocked", code, availableModes };
+    ? { kind: "blocked", result, code, reason, availableModes }
+    : { kind: "blocked", result, code, availableModes };
 }
 
 export function serviceabilityErrorState(message: string): DshServiceabilityState {

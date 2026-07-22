@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"wlt-api/internal/shared"
 )
@@ -31,22 +32,21 @@ func payoutEncryptionKey() (string, error) {
 // intentionally not loaded here -- nothing in this package currently needs
 // the decrypted value, since only masked fields are ever returned to DSH.
 type PayoutDestination struct {
-	ID                            string `json:"id"`
-	PartnerID                     string `json:"partnerId"`
-	BeneficiaryName               string `json:"beneficiaryName"`
-	BankName                      string `json:"bankName"`
-	BankBranch                    string `json:"bankBranch"`
-	SettlementPreference          string `json:"settlementPreference"`
-	BankAccountHolderMatchesOwner bool   `json:"bankAccountHolderMatchesOwner"`
-	BankNotes                     string `json:"bankNotes"`
-	// Masked fields returned to DSH for display — real values never leave WLT.
-	MaskedAccountNumber string `json:"maskedAccountNumber"`
-	MaskedIBAN          string `json:"maskedIban"`
-	MaskedMobileNumber  string `json:"maskedMobileNumber"`
-	Active              bool   `json:"active"`
-	CreatedByActorID    string `json:"createdByActorId"`
-	CreatedAt           string `json:"createdAt"`
-	UpdatedAt           string `json:"updatedAt"`
+	ID                            string    `json:"id"`
+	PartnerID                     string    `json:"partnerId"`
+	BeneficiaryName               string    `json:"beneficiaryName"`
+	BankName                      string    `json:"bankName"`
+	BankBranch                    string    `json:"bankBranch"`
+	SettlementPreference          string    `json:"settlementPreference"`
+	BankAccountHolderMatchesOwner bool      `json:"bankAccountHolderMatchesOwner"`
+	BankNotes                     string    `json:"bankNotes"`
+	MaskedAccountNumber           string    `json:"maskedAccountNumber"`
+	MaskedIBAN                    string    `json:"maskedIban"`
+	MaskedMobileNumber            string    `json:"maskedMobileNumber"`
+	Active                        bool      `json:"active"`
+	CreatedByActorID              string    `json:"createdByActorId"`
+	CreatedAt                     time.Time `json:"createdAt"`
+	UpdatedAt                     time.Time `json:"updatedAt"`
 }
 
 // PayoutDestinationRef is returned to DSH — contains the reference ID and
@@ -79,10 +79,6 @@ type UpsertPayoutDestinationInput struct {
 	CreatedByActorID              string `json:"createdByActorId"`
 }
 
-// ─── Masking helpers ────────────────────────────────────────────────────────
-
-// maskLast4 returns a string with all but the last 4 characters replaced with
-// asterisks, so raw financial identifiers are never passed back to DSH.
 func maskLast4(s string) string {
 	s = strings.TrimSpace(s)
 	if len(s) <= 4 {
@@ -90,8 +86,6 @@ func maskLast4(s string) string {
 	}
 	return strings.Repeat("*", len(s)-4) + s[len(s)-4:]
 }
-
-// ─── Repository helpers ─────────────────────────────────────────────────────
 
 const cols = `id, partner_id, beneficiary_name, bank_name, bank_branch,
 	settlement_preference,
@@ -123,11 +117,9 @@ func toRef(d *PayoutDestination) PayoutDestinationRef {
 		BankName:             d.BankName,
 		BankBranch:           d.BankBranch,
 		Active:               d.Active,
-		UpdatedAt:            d.UpdatedAt,
+		UpdatedAt:            d.UpdatedAt.UTC().Format(time.RFC3339Nano),
 	}
 }
-
-// ─── Handlers ──────────────────────────────────────────────────────────────
 
 // HandleUpsertPayoutDestination creates or replaces the active payout
 // destination for a partner. Only DSH is an allowed caller (service-token
@@ -147,7 +139,6 @@ func HandleUpsertPayoutDestination(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		input.PartnerID = partnerID
-
 		if input.SettlementPreference == "" {
 			input.SettlementPreference = "bank"
 		}
@@ -155,23 +146,17 @@ func HandleUpsertPayoutDestination(db *sql.DB) http.HandlerFunc {
 		maskedAccount := maskLast4(input.AccountNumber)
 		maskedIBAN := maskLast4(input.IBAN)
 		maskedMobile := maskLast4(input.PayoutMobileNumber)
-
 		key, err := payoutEncryptionKey()
 		if err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "WLT_INTERNAL_ERROR", "payout encryption is not configured")
 			return
 		}
-
 		tx, err := db.BeginTx(r.Context(), nil)
 		if err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "WLT_INTERNAL_ERROR", "failed to start tx")
 			return
 		}
-		defer tx.Rollback()
-
-		// Deactivate the existing active destination and insert the new one
-		// atomically: if the insert fails, the old destination must not be
-		// left deactivated with no active replacement.
+		defer tx.Rollback() //nolint:errcheck
 		_, err = tx.ExecContext(r.Context(), `
 			UPDATE wlt_payout_destinations
 			SET active = false, updated_at = now()
@@ -180,7 +165,6 @@ func HandleUpsertPayoutDestination(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusInternalServerError, "WLT_INTERNAL_ERROR", "could not update payout destination")
 			return
 		}
-
 		row, err := tx.QueryContext(r.Context(), `
 			INSERT INTO wlt_payout_destinations
 				(partner_id, beneficiary_name, bank_name, bank_branch,
@@ -203,17 +187,17 @@ func HandleUpsertPayoutDestination(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusInternalServerError, "WLT_INTERNAL_ERROR", "could not create payout destination")
 			return
 		}
-		defer row.Close()
 		if !row.Next() {
+			row.Close()
 			shared.SendError(w, http.StatusInternalServerError, "WLT_INTERNAL_ERROR", "payout destination not returned")
 			return
 		}
 		dest, err := scanDestination(row)
+		row.Close()
 		if err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "WLT_INTERNAL_ERROR", "could not scan payout destination")
 			return
 		}
-		row.Close()
 		if err := tx.Commit(); err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "WLT_INTERNAL_ERROR", "could not commit payout destination")
 			return
@@ -222,8 +206,6 @@ func HandleUpsertPayoutDestination(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-// HandleGetPayoutDestination returns the masked ref for the active payout
-// destination of a partner. DSH calls this to display masked bank info.
 func HandleGetPayoutDestination(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		partnerID := r.PathValue("partnerId")
@@ -231,7 +213,6 @@ func HandleGetPayoutDestination(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "partnerId is required")
 			return
 		}
-
 		rows, err := db.QueryContext(r.Context(), `
 			SELECT `+cols+`
 			FROM wlt_payout_destinations
@@ -256,8 +237,6 @@ func HandleGetPayoutDestination(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-// HandleDeactivatePayoutDestination marks the active payout destination for a
-// partner as inactive. Used when a partner is deactivated.
 func HandleDeactivatePayoutDestination(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		partnerID := r.PathValue("partnerId")
@@ -265,7 +244,6 @@ func HandleDeactivatePayoutDestination(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "partnerId is required")
 			return
 		}
-
 		_, err := db.ExecContext(r.Context(), `
 			UPDATE wlt_payout_destinations
 			SET active = false, updated_at = now()

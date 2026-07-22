@@ -18,6 +18,8 @@ import (
 	dshHttp "dsh-api/internal/http"
 	"dsh-api/internal/media"
 	"dsh-api/internal/operationaloutbox"
+	"dsh-api/internal/orders"
+	"dsh-api/internal/partnerwltoutbox"
 	"dsh-api/internal/promotionfundingoutbox"
 	"dsh-api/internal/wlt"
 	"dsh-api/internal/wltoutbox"
@@ -38,6 +40,8 @@ func main() {
 	identityBaseURL := os.Getenv("DSH_IDENTITY_BASE_URL")
 	wltBaseURL := os.Getenv("DSH_WLT_BASE_URL")
 	wltServiceToken := os.Getenv("WLT_DSH_SERVICE_TOKEN")
+	pushProviderURL := os.Getenv("DSH_PUSH_PROVIDER_URL")
+	pushProviderToken := os.Getenv("DSH_PUSH_PROVIDER_TOKEN")
 
 	log.Println("[dsh-api] connecting to database...")
 	db, err := sql.Open("postgres", databaseURL)
@@ -60,24 +64,67 @@ func main() {
 	router := dshHttp.NewRouter(db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterPartnerLifecycleRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterPartnerSelfRoutes(router, db, identityClient, wltClient, mediaProvider)
+	dshHttp.RegisterJRN032AnalyticsRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterActorNotificationRoutes(router, db, identityClient, wltClient, mediaProvider)
+	dshHttp.RegisterFieldReadinessRoutes(router, db, identityClient, wltClient, mediaProvider)
+	dshHttp.RegisterPartnerFleetMembershipRoutes(router, db, identityClient, wltClient, mediaProvider)
+	dshHttp.RegisterPartnerFleetOperatorRoutes(router, db, identityClient, wltClient, mediaProvider)
+	dshHttp.RegisterSupportMessageDeliveryRoutes(router, db, identityClient, wltClient, mediaProvider)
+	dshHttp.RegisterOrderRescueRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterOrderJourneyRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterOrderCancellationRoutes(router, db, identityClient, wltClient, mediaProvider)
+	dshHttp.RegisterPickupRecoveryRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterPlatformPolicyRoutes(router, db, identityClient, wltClient, mediaProvider)
-	handler := dshHttp.CorsMiddleware(authMode, router)
+	dshHttp.RegisterAdministrationRoutes(router, db, identityClient, wltClient, mediaProvider)
+	dshHttp.RegisterWorkforceScopeRoutes(router, db, identityClient, wltClient, mediaProvider)
+	dshHttp.RegisterWorkforceEmployeeMediaRoute(router, db, identityClient, wltClient, mediaProvider)
+	operationalPolicyGuardedRouter := dshHttp.OperationalPolicyEffectsMiddleware(db, router)
+	pickupGuardedRouter := dshHttp.PickupMutationPathContext(
+		dshHttp.PickupMutationGuard(db, identityClient, wltClient, mediaProvider, operationalPolicyGuardedRouter),
+	)
+	deliveryExceptionGovernedRouter := dshHttp.DeliveryExceptionGovernanceMiddleware(
+		db,
+		identityClient,
+		wltClient,
+		mediaProvider,
+		pickupGuardedRouter,
+	)
+	governedIncidentRouter := dshHttp.GovernedIncidentMiddleware(
+		db,
+		identityClient,
+		wltClient,
+		mediaProvider,
+		deliveryExceptionGovernedRouter,
+	)
+	handler := dshHttp.CorsMiddleware(authMode, governedIncidentRouter)
 
 	outboxCtx, cancelOutbox := context.WithCancel(context.Background())
+	go orders.RunOrderEventBridgeWorker(outboxCtx, db, 5*time.Second)
 	go operationaloutbox.RunWorker(outboxCtx, db, 5*time.Second)
-	log.Println("[dsh-api] operational outbox worker enabled")
+	log.Println("[dsh-api] order event bridge and operational outbox workers enabled")
+
+	if pushProviderURL == "" {
+		log.Println("[dsh-api] push worker disabled: DSH_PUSH_PROVIDER_URL is required")
+	} else {
+		pushProvider, pushErr := operationaloutbox.NewHTTPPushProvider(pushProviderURL, pushProviderToken, 15*time.Second)
+		if pushErr != nil {
+			log.Printf("[dsh-api] push worker disabled: %v", pushErr)
+		} else {
+			go operationaloutbox.RunPushWorker(outboxCtx, db, pushProvider, 5*time.Second)
+			log.Println("[dsh-api] governed notification push worker enabled")
+		}
+	}
 
 	if wltClient.Configured() {
+		go orders.RunPaymentProjectionWorker(outboxCtx, db, wltClient, 15*time.Second)
 		go wltoutbox.RunWorker(outboxCtx, db, wltClient, 15*time.Second)
 		go fieldcommissionoutbox.RunWorker(outboxCtx, db, wltClient, 15*time.Second)
 		go checkoutfinanceoutbox.RunWorker(outboxCtx, db, wltClient, 15*time.Second)
 		go promotionfundingoutbox.RunWorker(outboxCtx, db, wltClient, 15*time.Second)
-		log.Println("[dsh-api] WLT promotion funding outbox worker enabled")
+		go partnerwltoutbox.RunWorker(outboxCtx, db, wltClient, 15*time.Second)
+		log.Println("[dsh-api] WLT readback, outbox and payout reconciliation workers enabled")
 	} else {
-		log.Println("[dsh-api] WLT outbox workers disabled: DSH_WLT_BASE_URL and WLT_DSH_SERVICE_TOKEN are required")
+		log.Println("[dsh-api] WLT workers disabled: DSH_WLT_BASE_URL and WLT_DSH_SERVICE_TOKEN are required")
 	}
 
 	server := &http.Server{
@@ -138,8 +185,8 @@ func newMediaProvider(ctx context.Context) *media.Provider {
 		PublicEndpoint: publicEndpoint,
 		AccessKey:      accessKey,
 		SecretKey:      secretKey,
-		Bucket:         bucket,
-		UseSSL:         useSSL,
-		PublicUseSSL:   publicUseSSL,
+		Bucket:          bucket,
+		UseSSL:          useSSL,
+		PublicUseSSL:    publicUseSSL,
 	}, 15*time.Second)
 }

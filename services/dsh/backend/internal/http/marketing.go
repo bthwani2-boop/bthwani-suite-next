@@ -30,6 +30,8 @@ func writeMarketingError(w http.ResponseWriter, err error, notFoundMsg string) {
 		store.SendError(w, http.StatusBadRequest, "TARGET_GATE_FAILED", "target failed the client-visibility gate")
 	case errors.Is(err, marketing.ErrInvalidTransition):
 		store.SendError(w, http.StatusConflict, "INVALID_TRANSITION", "illegal status transition")
+	case errors.Is(err, marketing.ErrCommercialVersionConflict):
+		store.SendError(w, http.StatusConflict, "VERSION_CONFLICT", "marketing entity changed; reload before retrying")
 	default:
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "unexpected error")
 	}
@@ -56,30 +58,34 @@ func (s *protectedStoreServer) handleCreateCampaign(w http.ResponseWriter, r *ht
 		return
 	}
 	var body struct {
-		Title       string `json:"title"`
-		Description string `json:"description"`
-		StartDate   string `json:"startDate"`
-		EndDate     string `json:"endDate"`
-		TargetType  string `json:"targetType"`
-		TargetID    string `json:"targetId"`
-		Audience    string `json:"audience"`
-		Placement   string `json:"placement"`
+		Title                 string `json:"title"`
+		Description           string `json:"description"`
+		StartDate             string `json:"startDate"`
+		EndDate               string `json:"endDate"`
+		TargetType            string `json:"targetType"`
+		TargetID              string `json:"targetId"`
+		TargetCityCode        string `json:"targetCityCode"`
+		TargetServiceAreaCode string `json:"targetServiceAreaCode"`
+		Audience              string `json:"audience"`
+		Placement             string `json:"placement"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
 	c, err := marketing.CreateCampaign(s.db, marketing.CreateCampaignInput{
-		Title:            body.Title,
-		Description:      body.Description,
-		StartDate:        body.StartDate,
-		EndDate:          body.EndDate,
-		TargetType:       body.TargetType,
-		TargetID:         body.TargetID,
-		Audience:         body.Audience,
-		Placement:        body.Placement,
-		CreatedBy:        actor.ID,
-		CreatedBySurface: "control-panel",
-		CorrelationID:    marketingCorrelationID(r),
+		Title:                 body.Title,
+		Description:           body.Description,
+		StartDate:             body.StartDate,
+		EndDate:               body.EndDate,
+		TargetType:            body.TargetType,
+		TargetID:              body.TargetID,
+		TargetCityCode:        body.TargetCityCode,
+		TargetServiceAreaCode: body.TargetServiceAreaCode,
+		Audience:              body.Audience,
+		Placement:             body.Placement,
+		CreatedBy:             actor.ID,
+		CreatedBySurface:      "control-panel",
+		CorrelationID:         marketingCorrelationID(r),
 	})
 	if err != nil {
 		writeMarketingError(w, err, "campaign not found")
@@ -111,23 +117,37 @@ func (s *protectedStoreServer) handleUpdateCampaign(w http.ResponseWriter, r *ht
 	}
 	id := r.PathValue("campaignId")
 	var body struct {
-		Status      string `json:"status"`
-		Title       string `json:"title"`
-		Description string `json:"description"`
-		TargetType  string `json:"targetType"`
-		TargetID    string `json:"targetId"`
+		Status                string  `json:"status"`
+		Title                 string  `json:"title"`
+		Description           string  `json:"description"`
+		StartDate             string  `json:"startDate"`
+		EndDate               string  `json:"endDate"`
+		TargetType            string  `json:"targetType"`
+		TargetID              string  `json:"targetId"`
+		TargetCityCode        *string `json:"targetCityCode"`
+		TargetServiceAreaCode *string `json:"targetServiceAreaCode"`
+		Audience              string  `json:"audience"`
+		Placement             string  `json:"placement"`
+		ExpectedVersion       int     `json:"expectedVersion"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
 	c, err := marketing.UpdateCampaign(s.db, id, marketing.UpdateCampaignInput{
-		Status:        body.Status,
-		Title:         body.Title,
-		Description:   body.Description,
-		TargetType:    body.TargetType,
-		TargetID:      body.TargetID,
-		ActorID:       actor.ID,
-		CorrelationID: marketingCorrelationID(r),
+		Status:                body.Status,
+		Title:                 body.Title,
+		Description:           body.Description,
+		StartDate:             body.StartDate,
+		EndDate:               body.EndDate,
+		TargetType:            body.TargetType,
+		TargetID:              body.TargetID,
+		TargetCityCode:        body.TargetCityCode,
+		TargetServiceAreaCode: body.TargetServiceAreaCode,
+		Audience:              body.Audience,
+		Placement:             body.Placement,
+		ExpectedVersion:       body.ExpectedVersion,
+		ActorID:               actor.ID,
+		CorrelationID:         marketingCorrelationID(r),
 	})
 	if err != nil {
 		writeMarketingError(w, err, "campaign not found")

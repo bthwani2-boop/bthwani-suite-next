@@ -1,7 +1,11 @@
-import React, { useEffect } from 'react';
-import { View, Pressable, ActivityIndicator } from 'react-native';
-import { Text, Icon, Box, StateView, Button, spacing, radius, useTheme } from '@bthwani/ui-kit';
-import { useWltSettlementSummaryController } from '../../wlt-settlement/use-wlt-settlement-controller';
+import React from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text, Icon, Box, Button, spacing, radius, useTheme } from '@bthwani/ui-kit';
+import { ActorWalletPanel } from '../../actor-wallet';
+import { RepresentativeCommissionPanel } from '../../jrn036';
+import { PayoutDestinationPanel } from '../../jrn037';
+import { PartnerCodCustodyPanel } from '../../wlt-cod/PartnerCodCustodyPanel';
+
 export type WltDshPartnerBridgeProps = {
   readonly title?: string | undefined;
   readonly subtitle?: string | undefined;
@@ -27,93 +31,80 @@ export function WltDshPartnerBridge({
   onOpenExpandedWallet,
   onOpenSettlementReview,
   onOpenFinancialReport,
-  canonicalStoreId,
 }: WltDshPartnerBridgeProps) {
-  const resolvedTitle = title ?? branchLabel;
-  const resolvedSubtitle = subtitle ?? activeZoneLabel;
+  const resolvedTitle = title ?? branchLabel ?? 'مالية الشريك';
+  const resolvedSubtitle = subtitle ?? activeZoneLabel ?? 'المحفظة والتسويات وعهدة COD من WLT';
   const resolvedOnPress = onPress ?? onBack;
   const theme = useTheme() as any;
-
-  const partnerId = canonicalStoreId ?? 'partner_123';
-  
-  const { state, loadSummary, reset } = useWltSettlementSummaryController();
-
-  useEffect(() => {
-    loadSummary(partnerId);
-    return () => reset();
-  }, [loadSummary, reset, partnerId]);
+  const styles = React.useMemo(
+    () => StyleSheet.create({
+      header: {
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        paddingVertical: spacing[3],
+        paddingHorizontal: spacing[4],
+        backgroundColor: theme.surfaceHighlight,
+        borderRadius: radius.md,
+      },
+      headerPressed: {
+        backgroundColor: theme.surfaceInset,
+      },
+      headingContent: {
+        flex: 1,
+        marginRight: spacing[3],
+        alignItems: 'flex-end',
+      },
+      title: {
+        color: theme.text,
+        fontWeight: '700',
+        fontSize: 16,
+      },
+      subtitle: {
+        color: theme.textMuted,
+        fontSize: 14,
+        marginTop: 4,
+        textAlign: 'right',
+      },
+      actions: {
+        gap: spacing[3],
+      },
+    }),
+    [theme.surfaceHighlight, theme.surfaceInset, theme.text, theme.textMuted],
+  );
 
   return (
     <Box padding={4} gap={4}>
-      <Pressable
-        onPress={resolvedOnPress}
-        style={({ pressed }: { pressed: boolean }) => ({
-          flexDirection: 'row-reverse',
-          alignItems: 'center',
-          paddingVertical: spacing[3],
-          paddingHorizontal: spacing[4],
-          backgroundColor: pressed ? theme.surfaceInset : theme.surfaceHighlight,
-          borderRadius: radius.md,
-          marginBottom: spacing[4],
-        })}
-      >
-        <Icon name="arrow-right" tone="muted" size={20} />
-        <View style={{ flex: 1, marginRight: spacing[3] }}>
-          {resolvedTitle && <Text style={{ color: theme.text, fontWeight: '700', fontSize: 16 }}>{resolvedTitle}</Text>}
-          {resolvedSubtitle && <Text style={{ color: theme.textMuted, fontSize: 14, marginTop: 4 }}>{resolvedSubtitle}</Text>}
-        </View>
-      </Pressable>
-
-      <Box style={{ backgroundColor: theme.surfaceInset, borderRadius: radius.lg, padding: spacing[4] }}>
-        <Text style={{ fontSize: 18, fontWeight: '700', color: theme.text, marginBottom: spacing[4] }}>محفظة الشريك</Text>
-        
-        {state.kind === 'loading' && (
-          <Box padding={4} align="center">
-            <ActivityIndicator color={theme.brand} />
-          </Box>
-        )}
-        
-        {state.kind === 'error' && (
-          <StateView
-            title="تعذر تحميل بيانات المحفظة"
-            description={state.message}
-            tone="danger"
-            actionLabel="إعادة المحاولة"
-            onActionPress={() => loadSummary(partnerId)}
-          />
-        )}
-
-        {state.kind === 'loaded' && (
-          <View>
-            <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', marginBottom: spacing[4] }}>
-              <View>
-                <Text style={{ fontSize: 14, color: theme.textMuted }}>الرصيد المتاح</Text>
-                <Text style={{ fontSize: 24, fontWeight: '700', color: theme.success }}>
-                  {state.summary.pendingAmountLabel} {state.summary.currency}
-                </Text>
-              </View>
-              <View>
-                <Text style={{ fontSize: 14, color: theme.textMuted }}>إجمالي المسويات</Text>
-                <Text style={{ fontSize: 24, fontWeight: '700', color: theme.text }}>
-                  {state.summary.totalSettledLabel} {state.summary.currency}
-                </Text>
-              </View>
-            </View>
-
-            <View style={{ gap: spacing[3] }}>
-              {onOpenExpandedWallet && (
-                <Button label="عرض المحفظة الكاملة" tone="brand" onPress={onOpenExpandedWallet} />
-              )}
-              {onOpenSettlementReview && (
-                <Button label="مراجعة المسويات" tone="secondary" onPress={onOpenSettlementReview} />
-              )}
-              {onOpenFinancialReport && (
-                <Button label="التقارير المالية" tone="ghost" onPress={onOpenFinancialReport} />
-              )}
-            </View>
+      {resolvedOnPress ? (
+        <Pressable
+          onPress={resolvedOnPress}
+          style={({ pressed }: { pressed: boolean }) => [styles.header, pressed ? styles.headerPressed : null]}
+        >
+          <Icon name="arrow-right" tone="muted" size={20} />
+          <View style={styles.headingContent}>
+            <Text style={styles.title}>{resolvedTitle}</Text>
+            <Text style={styles.subtitle}>{resolvedSubtitle}</Text>
           </View>
-        )}
-      </Box>
+        </Pressable>
+      ) : null}
+
+      <PartnerCodCustodyPanel />
+      <ActorWalletPanel actorType="partner" title="محفظة الشريك" embedded />
+      <RepresentativeCommissionPanel actorType="partner" title="عمولات الشريك" embedded />
+      <PayoutDestinationPanel actorType="partner" title="وجهة صرف الشريك وطلبات الدفع" embedded />
+
+      <View style={styles.actions}>
+        {onOpenExpandedWallet ? (
+          <Button label="عرض المحفظة الكاملة" tone="brand" onPress={onOpenExpandedWallet} />
+        ) : null}
+        {onOpenSettlementReview ? (
+          <Button label="مراجعة التسويات المرجعية" tone="secondary" onPress={onOpenSettlementReview} />
+        ) : null}
+        {onOpenFinancialReport ? (
+          <Button label="التقارير المالية" tone="ghost" onPress={onOpenFinancialReport} />
+        ) : null}
+      </View>
     </Box>
   );
 }
+
+export default WltDshPartnerBridge;

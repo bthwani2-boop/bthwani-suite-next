@@ -19,6 +19,10 @@ import {
   createIncident, fetchIncidents, updateIncident,
   classifySupportError,
 } from "./support.api";
+import {
+  clearSupportMutationAttempt,
+  getOrCreateSupportMutationAttempt,
+} from "./support-mutation-attempt";
 import type {
   DshCreateTicketInput, DshAddMessageInput, DshUpdateTicketInput,
   DshCreateIncidentInput, DshUpdateIncidentInput,
@@ -39,6 +43,10 @@ export type SupportIncidentControllerState = {
   readonly listState: DshIncidentListState;
   readonly actionState: DshIncidentActionState;
 };
+
+function stableFingerprint(value: unknown): string {
+  return JSON.stringify(value);
+}
 
 export function makeSupportTicketController(
   state: SupportTicketControllerState,
@@ -75,9 +83,20 @@ export function makeSupportTicketController(
   }
 
   async function submitTicket(input: DshCreateTicketInput): Promise<void> {
+    const fingerprint = stableFingerprint(input);
+    const attempt = await getOrCreateSupportMutationAttempt({
+      scope: "client",
+      operation: "ticket-create",
+      fingerprint,
+    });
     setState({ ...state, actionState: ticketActionSubmitting() });
     try {
-      const ticket = await createSupportTicket(input);
+      const ticket = await createSupportTicket(input, attempt.context);
+      await clearSupportMutationAttempt({
+        scope: "client",
+        operation: "ticket-create",
+        fingerprint,
+      });
       setState({ ...state, actionState: ticketActionSuccess(ticket) });
     } catch (err) {
       setState({ ...state, actionState: ticketActionError(resolveMessage(err)) });
@@ -85,9 +104,22 @@ export function makeSupportTicketController(
   }
 
   async function operatorUpdateTicket(ticketId: string, input: DshUpdateTicketInput): Promise<void> {
+    const fingerprint = stableFingerprint(input);
+    const attempt = await getOrCreateSupportMutationAttempt({
+      scope: "operator",
+      operation: "ticket-transition",
+      entityId: ticketId,
+      fingerprint,
+    });
     setState({ ...state, actionState: ticketActionSubmitting() });
     try {
-      const ticket = await updateTicket(ticketId, input);
+      const ticket = await updateTicket(ticketId, input, attempt.context);
+      await clearSupportMutationAttempt({
+        scope: "operator",
+        operation: "ticket-transition",
+        entityId: ticketId,
+        fingerprint,
+      });
       setState({ ...state, actionState: ticketActionSuccess(ticket) });
     } catch (err) {
       setState({ ...state, actionState: ticketActionError(resolveMessage(err)) });
@@ -116,9 +148,22 @@ export function makeSupportMessageController(
   }
 
   async function sendMessage(ticketId: string, input: DshAddMessageInput): Promise<void> {
+    const fingerprint = stableFingerprint({ body: input.body.trim(), isInternal: input.isInternal === true });
+    const attempt = await getOrCreateSupportMutationAttempt({
+      scope: "client",
+      operation: "ticket-message",
+      entityId: ticketId,
+      fingerprint,
+    });
     setState({ ...state, actionState: messageActionSubmitting() });
     try {
-      const msg = await addTicketMessage(ticketId, input);
+      const msg = await addTicketMessage(ticketId, input, attempt.context);
+      await clearSupportMutationAttempt({
+        scope: "client",
+        operation: "ticket-message",
+        entityId: ticketId,
+        fingerprint,
+      });
       setState({ ...state, actionState: messageActionSuccess(msg) });
     } catch (err) {
       setState({ ...state, actionState: messageActionError(resolveMessage(err)) });
@@ -179,6 +224,7 @@ function resolveMessage(err: unknown): string {
     case "permission_denied": return "غير مصرح لك بهذه العملية";
     case "offline": return "لا يوجد اتصال بالإنترنت";
     case "not_found": return "لم يتم إيجاد السجل";
+    case "conflict": return "تغيرت حالة السجل من جلسة أخرى؛ حدّث البيانات ثم أعد المحاولة";
     default: return "حدث خطأ، يرجى المحاولة مجدداً";
   }
 }

@@ -5,9 +5,9 @@ import (
 	"errors"
 )
 
-// ErrTargetGateFailed is returned when a campaign/banner/promo target does not
-// pass the client-visibility gate (store not client_visible, product not
-// approved/active, category not approved, or partner not published).
+// ErrTargetGateFailed is returned when a marketing target does not pass the
+// client-visibility gate: inactive store, unapproved catalog target, expired
+// campaign, or unpublished partner offer.
 var ErrTargetGateFailed = errors.New("marketing target failed visibility gate")
 
 var validTargetTypes = map[string]bool{
@@ -16,9 +16,8 @@ var validTargetTypes = map[string]bool{
 	"search": true, "custom": true,
 }
 
-// ValidateTarget checks that targetType/targetID may be published to
-// clients. It returns (passed, reason). No-target-id types (home, stores,
-// search, custom) pass trivially since they carry no entity reference to gate.
+// ValidateTarget checks that targetType/targetID may be published to clients.
+// No-target-id types pass trivially because they carry no entity reference.
 func ValidateTarget(db *sql.DB, targetType, targetID string) (bool, string, error) {
 	if targetType == "" {
 		return true, "", nil
@@ -39,10 +38,7 @@ func ValidateTarget(db *sql.DB, targetType, targetID string) (bool, string, erro
 	case "campaign":
 		return validateCampaignTarget(db, targetID)
 	case "offer":
-		// Partner offers have no backend persistence yet (no dsh_partner_offers
-		// table) — see marketing_partner_offer_matrix.md. Reject rather than
-		// silently allow an unverifiable target.
-		return false, "offer targeting is not yet backed by a partner-offer table", nil
+		return validateOfferTarget(db, targetID)
 	default:
 		return false, "unsupported target_type", nil
 	}
@@ -140,12 +136,46 @@ func validateCampaignTarget(db *sql.DB, campaignID string) (bool, string, error)
 		SELECT EXISTS (
 		  SELECT 1 FROM dsh_marketing_campaigns
 		  WHERE id=$1 AND status='active' AND archived_at IS NULL
+		    AND audience IN ('all','client')
+		    AND COALESCE(start_date,'') <> '' AND COALESCE(end_date,'') <> ''
+		    AND start_date <= TO_CHAR(CURRENT_DATE,'YYYY-MM-DD')
+		    AND end_date >= TO_CHAR(CURRENT_DATE,'YYYY-MM-DD')
 		)`, campaignID).Scan(&eligible)
 	if err != nil {
 		return false, "", err
 	}
 	if !eligible {
-		return false, "referenced campaign is not active", nil
+		return false, "referenced campaign is not active in its client-visible schedule", nil
+	}
+	return true, "", nil
+}
+
+func validateOfferTarget(db *sql.DB, offerID string) (bool, string, error) {
+	if offerID == "" {
+		return false, "target_id is required for target_type=offer", nil
+	}
+	var eligible bool
+	err := db.QueryRow(`
+		SELECT EXISTS (
+		  SELECT 1
+		  FROM dsh_partner_offers o
+		  JOIN dsh_stores s ON s.id=o.store_id
+		  WHERE o.id::TEXT=$1 AND o.status='published' AND o.archived_at IS NULL
+		    AND o.eligibility IN ('all','client')
+		    AND o.active_from_date <> '' AND o.active_to_date <> ''
+		    AND o.active_from_date <= TO_CHAR(CURRENT_DATE,'YYYY-MM-DD')
+		    AND o.active_to_date >= TO_CHAR(CURRENT_DATE,'YYYY-MM-DD')
+		    AND s.status='active' AND s.is_visible=true
+		    AND s.serviceability_status IN ('serviceable','limited')
+		    AND s.partner_readiness='ready'
+		    AND s.catalog_approval_status='approved'
+		    AND s.marketing_visibility='visible'
+		)`, offerID).Scan(&eligible)
+	if err != nil {
+		return false, "", err
+	}
+	if !eligible {
+		return false, "partner offer is not published in an active client-visible window", nil
 	}
 	return true, "", nil
 }

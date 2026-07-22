@@ -20,40 +20,68 @@ type partnerOrderWorkboardItem struct {
 }
 
 type partnerOrderWorkboardOrder struct {
-	ID                              string                      `json:"id"`
-	CheckoutIntentID                string                      `json:"checkoutIntentId"`
-	StoreID                         string                      `json:"storeId"`
-	FulfillmentMode                 string                      `json:"fulfillmentMode"`
-	ClientID                        string                      `json:"clientId"`
-	Status                          string                      `json:"status"`
-	RejectionReason                 string                      `json:"rejectionReason"`
-	WltPaymentRefID                 string                      `json:"wltPaymentRefId"`
-	TotalPrice                      float64                     `json:"totalPrice"`
-	Items                           []partnerOrderWorkboardItem `json:"items"`
-	CreatedAt                       time.Time                   `json:"createdAt"`
-	AllowedActions                  []string                    `json:"allowedActions"`
-	Preparation                     orders.PreparationTiming    `json:"preparation"`
-	StoreCaptainHandoffStatus       string                      `json:"storeCaptainHandoffStatus"`
-	StoreCaptainHandoffAssignmentID string                      `json:"storeCaptainHandoffAssignmentId"`
-	StoreCaptainHandoffCaptainID    string                      `json:"storeCaptainHandoffCaptainId"`
-	PartnerHandoffConfirmedAt       *time.Time                  `json:"partnerHandoffConfirmedAt"`
-	CaptainPickupConfirmedAt        *time.Time                  `json:"captainPickupConfirmedAt"`
-	UpdatedAt                       time.Time                   `json:"updatedAt"`
+	ID                                     string                      `json:"id"`
+	CheckoutIntentID                       string                      `json:"checkoutIntentId"`
+	StoreID                                string                      `json:"storeId"`
+	FulfillmentMode                        string                      `json:"fulfillmentMode"`
+	ClientID                               string                      `json:"clientId"`
+	Status                                 string                      `json:"status"`
+	RejectionReason                        string                      `json:"rejectionReason"`
+	WltPaymentRefID                        string                      `json:"wltPaymentRefId"`
+	TotalPrice                             float64                     `json:"totalPrice"`
+	Items                                  []partnerOrderWorkboardItem `json:"items"`
+	CreatedAt                              time.Time                   `json:"createdAt"`
+	AllowedActions                         []string                    `json:"allowedActions"`
+	Preparation                            orders.PreparationTiming    `json:"preparation"`
+	PreparationIssues                      []orders.PreparationIssue   `json:"preparationIssues"`
+	OpenPreparationIssueCount              int                         `json:"openPreparationIssueCount"`
+	PendingCustomerDecisionCount           int                         `json:"pendingCustomerDecisionCount"`
+	ResolvablePreparationIssueCount        int                         `json:"resolvablePreparationIssueCount"`
+	StoreCaptainHandoffStatus              string                      `json:"storeCaptainHandoffStatus"`
+	StoreCaptainHandoffAssignmentID        string                      `json:"storeCaptainHandoffAssignmentId"`
+	StoreCaptainHandoffCaptainID           string                      `json:"storeCaptainHandoffCaptainId"`
+	PartnerHandoffConfirmedAt              *time.Time                  `json:"partnerHandoffConfirmedAt"`
+	CaptainPickupConfirmedAt               *time.Time                  `json:"captainPickupConfirmedAt"`
+	OpenStoreCaptainHandoffExceptionID     string                      `json:"openStoreCaptainHandoffExceptionId"`
+	OpenStoreCaptainHandoffExceptionReason string                      `json:"openStoreCaptainHandoffExceptionReason"`
+	OpenStoreCaptainHandoffExceptionStatus string                      `json:"openStoreCaptainHandoffExceptionStatus"`
+	UpdatedAt                              time.Time                   `json:"updatedAt"`
 }
 
-func partnerOrderAllowedActions(status, fulfillmentMode, storeCaptainHandoffStatus string) []string {
+func partnerOrderAllowedActions(
+	status,
+	fulfillmentMode,
+	storeCaptainHandoffStatus string,
+	openPreparationIssueCount,
+	resolvablePreparationIssueCount int,
+	hasOpenStoreCaptainHandoffException bool,
+) []string {
 	switch strings.TrimSpace(status) {
 	case "pending":
 		return []string{"accept", "reject"}
 	case "store_accepted":
-		return []string{"prepare", "revise_estimate"}
+		actions := []string{"prepare", "revise_estimate", "report_issue"}
+		if resolvablePreparationIssueCount > 0 {
+			actions = append(actions, "resolve_issue")
+		}
+		return actions
 	case "preparing":
-		return []string{"ready", "revise_estimate"}
+		actions := []string{"revise_estimate", "report_issue"}
+		if openPreparationIssueCount > 0 {
+			if resolvablePreparationIssueCount > 0 {
+				actions = append(actions, "resolve_issue")
+			}
+			return actions
+		}
+		return append([]string{"ready"}, actions...)
 	case "ready_for_pickup":
 		if fulfillmentMode == "partner_delivery" || fulfillmentMode == "pickup" {
 			return []string{"handoff"}
 		}
 	case "driver_arrived_store":
+		if hasOpenStoreCaptainHandoffException {
+			return []string{}
+		}
 		if fulfillmentMode == "bthwani_delivery" && storeCaptainHandoffStatus == "awaiting_partner" {
 			return []string{"handoff"}
 		}
@@ -66,8 +94,8 @@ func partnerOrderAllowedActions(status, fulfillmentMode, storeCaptainHandoffStat
 // The store scope is resolved from the authenticated partner actor. The
 // workboard deliberately returns all lifecycle states when status is omitted;
 // inbox tabs must not be backed by a hidden pending-only default. Executable
-// actions, preparation SLA, and custody state are derived by DSH, never inferred
-// by a screen.
+// actions, preparation SLA, open issues, customer substitution decisions,
+// custody state, and active custody exception readback are derived by DSH.
 func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter, r *http.Request) {
 	_, storeID, ok := s.partnerStore(w, r)
 	if !ok {
@@ -85,21 +113,8 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 			o.status,
 			COALESCE(o.rejection_reason, ''),
 			o.wlt_payment_ref_id,
-			COALESCE(SUM(oi.quantity * oi.unit_price), 0)::float8 AS total_price,
-			COALESCE(
-				jsonb_agg(
-					jsonb_build_object(
-						'id', oi.id::text,
-						'orderId', oi.order_id::text,
-						'productId', oi.product_id,
-						'productName', oi.product_name,
-						'quantity', oi.quantity,
-						'unitPrice', oi.unit_price
-					)
-					ORDER BY oi.created_at
-				) FILTER (WHERE oi.id IS NOT NULL),
-				'[]'::jsonb
-			) AS items,
+			COALESCE(item_projection.total_price, 0)::float8,
+			COALESCE(item_projection.items, '[]'::jsonb),
 			o.created_at,
 			o.accepted_at,
 			o.preparation_started_at,
@@ -109,17 +124,89 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 			o.preparation_warning_minutes,
 			COALESCE(o.preparation_delay_reason, ''),
 			o.preparation_estimate_revision_count,
+			COALESCE(issue_projection.issues, '[]'::jsonb),
+			COALESCE(issue_projection.open_count, 0),
+			COALESCE(issue_projection.pending_customer_decision_count, 0),
+			COALESCE(issue_projection.resolvable_count, 0),
 			COALESCE(h.status, ''),
-			COALESCE(h.assignment_id, ''),
+			COALESCE(h.assignment_id::text, ''),
 			COALESCE(h.captain_id, ''),
 			h.partner_confirmed_at,
 			h.captain_confirmed_at,
+			COALESCE(he.id::text, ''),
+			COALESCE(he.reason_code, ''),
+			COALESCE(he.status, ''),
 			o.updated_at
 		FROM dsh_orders o
-		LEFT JOIN dsh_order_items oi ON oi.order_id = o.id
 		LEFT JOIN LATERAL (
 			SELECT
-				assignment_id::text AS assignment_id,
+				COALESCE(SUM(oi.quantity * oi.unit_price), 0) AS total_price,
+				COALESCE(
+					jsonb_agg(
+						jsonb_build_object(
+							'id', oi.id::text,
+							'orderId', oi.order_id::text,
+							'productId', oi.product_id,
+							'productName', oi.product_name,
+							'quantity', oi.quantity,
+							'unitPrice', oi.unit_price
+						)
+						ORDER BY oi.created_at
+					),
+					'[]'::jsonb
+				) AS items
+			FROM dsh_order_items oi
+			WHERE oi.order_id = o.id
+		) item_projection ON TRUE
+		LEFT JOIN LATERAL (
+			SELECT
+				COALESCE(
+					jsonb_agg(
+						jsonb_build_object(
+							'id', pi.id::text,
+							'orderId', pi.order_id::text,
+							'storeId', pi.store_id,
+							'orderItemId', COALESCE(pi.order_item_id::text, ''),
+							'kind', pi.issue_kind,
+							'status', pi.status,
+							'affectedQuantity', pi.affected_quantity,
+							'note', pi.note,
+							'replacementProductId', COALESCE(pi.replacement_product_id, ''),
+							'replacementProductName', COALESCE(pi.replacement_product_name, ''),
+							'customerDecision', pi.customer_decision,
+							'customerDecidedByActorId', COALESCE(pi.customer_decided_by_actor_id, ''),
+							'customerDecisionNote', COALESCE(pi.customer_decision_note, ''),
+							'customerDecidedAt', pi.customer_decided_at,
+							'openedByActorId', pi.opened_by_actor_id,
+							'openedAt', pi.opened_at,
+							'resolvedByActorId', COALESCE(pi.resolved_by_actor_id, ''),
+							'resolutionNote', COALESCE(pi.resolution_note, ''),
+							'resolvedAt', pi.resolved_at,
+							'version', pi.version,
+							'createdAt', pi.created_at,
+							'updatedAt', pi.updated_at
+						)
+						ORDER BY CASE pi.status WHEN 'open' THEN 0 ELSE 1 END, pi.created_at DESC
+					),
+					'[]'::jsonb
+				) AS issues,
+				COUNT(*) FILTER (WHERE pi.status = 'open') AS open_count,
+				COUNT(*) FILTER (
+					WHERE pi.status = 'open' AND pi.customer_decision = 'pending'
+				) AS pending_customer_decision_count,
+				COUNT(*) FILTER (
+					WHERE pi.status = 'open'
+					  AND NOT (
+						pi.issue_kind = 'substitution_required'
+						AND pi.customer_decision = 'pending'
+					  )
+				) AS resolvable_count
+			FROM dsh_order_preparation_issues pi
+			WHERE pi.order_id = o.id
+		) issue_projection ON TRUE
+		LEFT JOIN LATERAL (
+			SELECT
+				assignment_id,
 				captain_id,
 				status,
 				partner_confirmed_at,
@@ -129,32 +216,17 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 			ORDER BY created_at DESC
 			LIMIT 1
 		) h ON TRUE
+		LEFT JOIN LATERAL (
+			SELECT id, reason_code, status
+			FROM dsh_delivery_exceptions
+			WHERE assignment_id = h.assignment_id
+			  AND reason_code IN ('handoff_shortage', 'handoff_mismatch')
+			  AND status IN ('open', 'acknowledged')
+			ORDER BY reported_at DESC
+			LIMIT 1
+		) he ON TRUE
 		WHERE o.store_id = $1
 		  AND ($2 = '' OR o.status = $2)
-		GROUP BY
-			o.id,
-			o.checkout_intent_id,
-			o.store_id,
-			o.fulfillment_mode,
-			o.client_id,
-			o.status,
-			o.rejection_reason,
-			o.wlt_payment_ref_id,
-			o.created_at,
-			o.accepted_at,
-			o.preparation_started_at,
-			o.estimated_ready_at,
-			o.ready_at,
-			o.estimated_preparation_minutes,
-			o.preparation_warning_minutes,
-			o.preparation_delay_reason,
-			o.preparation_estimate_revision_count,
-			h.status,
-			h.assignment_id,
-			h.captain_id,
-			h.partner_confirmed_at,
-			h.captain_confirmed_at,
-			o.updated_at
 		ORDER BY
 			CASE o.status
 				WHEN 'pending' THEN 1
@@ -184,6 +256,7 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 	for rows.Next() {
 		var order partnerOrderWorkboardOrder
 		var itemsJSON []byte
+		var issuesJSON []byte
 		if err := rows.Scan(
 			&order.ID,
 			&order.CheckoutIntentID,
@@ -204,11 +277,18 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 			&order.Preparation.WarningMinutes,
 			&order.Preparation.DelayReason,
 			&order.Preparation.EstimateRevisionCount,
+			&issuesJSON,
+			&order.OpenPreparationIssueCount,
+			&order.PendingCustomerDecisionCount,
+			&order.ResolvablePreparationIssueCount,
 			&order.StoreCaptainHandoffStatus,
 			&order.StoreCaptainHandoffAssignmentID,
 			&order.StoreCaptainHandoffCaptainID,
 			&order.PartnerHandoffConfirmedAt,
 			&order.CaptainPickupConfirmedAt,
+			&order.OpenStoreCaptainHandoffExceptionID,
+			&order.OpenStoreCaptainHandoffExceptionReason,
+			&order.OpenStoreCaptainHandoffExceptionStatus,
 			&order.UpdatedAt,
 		); err != nil {
 			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to read partner order workboard")
@@ -218,13 +298,23 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "invalid partner order item projection")
 			return
 		}
+		if err := json.Unmarshal(issuesJSON, &order.PreparationIssues); err != nil {
+			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "invalid preparation issue projection")
+			return
+		}
 		if order.Items == nil {
 			order.Items = []partnerOrderWorkboardItem{}
+		}
+		if order.PreparationIssues == nil {
+			order.PreparationIssues = []orders.PreparationIssue{}
 		}
 		order.AllowedActions = partnerOrderAllowedActions(
 			order.Status,
 			order.FulfillmentMode,
 			order.StoreCaptainHandoffStatus,
+			order.OpenPreparationIssueCount,
+			order.ResolvablePreparationIssueCount,
+			order.OpenStoreCaptainHandoffExceptionID != "",
 		)
 		order.Preparation.OrderID = order.ID
 		order.Preparation = orders.EvaluatePreparationTiming(order.Preparation, now)

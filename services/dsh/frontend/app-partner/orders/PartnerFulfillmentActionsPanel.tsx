@@ -1,12 +1,11 @@
 import React from 'react';
-import { View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Badge, Box, Button, Icon, StateView, Surface, Text, TextField, spacing, useDirection } from '@bthwani/ui-kit';
 import type { DshFulfillmentDeliveryMode } from '../../shared/delivery/delivery.contract';
 import type { PartnerTeamMember } from '../team/partner-team.types';
 import { usePartnerDeliveryActionsController } from '../../shared/partner-delivery/use-partner-delivery-controller';
 import { usePickupActionsController } from '../../shared/pickup/use-pickup-controller';
-import { acceptPartnerReturnToStore, fetchPartnerReturnToStore } from '../../shared/dispatch/dispatch.api';
-import type { DshDeliveryException } from '../../shared/dispatch/dispatch.types';
+import { usePartnerReturnToStoreController } from '../../shared/dispatch/use-partner-return-to-store-controller';
 
 export type PartnerFulfillmentActionsPanelProps = {
   readonly orderId: string;
@@ -32,64 +31,39 @@ const PICKUP_ERROR_LABELS: Record<string, string> = {
   VERSION_CONFLICT: 'تغيّرت الجلسة من سطح آخر؛ أعد التحميل قبل المتابعة.',
 };
 
-function isNotFound(error: unknown): boolean {
-  const typed = error as { status?: number; body?: { code?: string } };
-  return typed.status === 404 || typed.body?.code === 'NOT_FOUND';
-}
+const styles = StyleSheet.create({
+  textRight: { textAlign: 'right' },
+  textLeft: { textAlign: 'left' },
+  compactStack: { gap: spacing[1] },
+  statusRow: { alignItems: 'center', gap: spacing[2] },
+});
 
 function ReturnToStoreReceiptActions({ orderId }: { readonly orderId: string }) {
   const { direction } = useDirection();
-  const textAlign = direction === 'rtl' ? 'right' : 'left';
-  const [state, setState] = React.useState<
-    | { readonly kind: 'loading' }
-    | { readonly kind: 'none' }
-    | { readonly kind: 'ready'; readonly item: DshDeliveryException }
-    | { readonly kind: 'error'; readonly message: string }
-  >({ kind: 'loading' });
-  const [accepting, setAccepting] = React.useState(false);
-
-  const load = React.useCallback(async () => {
-    try {
-      const item = await fetchPartnerReturnToStore(orderId);
-      setState({ kind: 'ready', item });
-    } catch (error) {
-      if (isNotFound(error)) {
-        setState({ kind: 'none' });
-        return;
-      }
-      setState({ kind: 'error', message: error instanceof Error ? error.message : 'تعذر قراءة حالة المرتجع.' });
-    }
-  }, [orderId]);
-
-  React.useEffect(() => {
-    void load();
-    const interval = setInterval(() => void load(), 10_000);
-    return () => clearInterval(interval);
-  }, [load]);
-
-  const accept = React.useCallback(async () => {
-    setAccepting(true);
-    try {
-      const item = await acceptPartnerReturnToStore(orderId);
-      setState({ kind: 'ready', item });
-    } catch (error) {
-      setState({ kind: 'error', message: error instanceof Error ? error.message : 'تعذر تأكيد استلام المرتجع.' });
-    } finally {
-      setAccepting(false);
-    }
-  }, [orderId]);
+  const textAlignStyle = direction === 'rtl' ? styles.textRight : styles.textLeft;
+  const { state, load, accept } = usePartnerReturnToStoreController(orderId);
 
   if (state.kind === 'none') return null;
   if (state.kind === 'loading') return null;
-  if (state.kind === 'error') return <StateView tone="danger" title="تعذر قراءة المرتجع" description={state.message} actionLabel="إعادة المحاولة" onActionPress={() => void load()} />;
+  if (state.kind === 'error') {
+    return (
+      <StateView
+        tone="danger"
+        title="تعذر قراءة المرتجع"
+        description={state.message}
+        actionLabel="إعادة المحاولة"
+        onActionPress={() => void load()}
+      />
+    );
+  }
 
-  const item = state.item;
+  const { item, accepting } = state;
   const arrived = Boolean(item.returnArrivedAt);
   const accepted = Boolean(item.returnedAt);
   return (
     <Surface tone="raised" gap={3}>
-      <Text role="label" style={{ textAlign }}>استلام مرتجع توصيل بثواني</Text>
-      <Text role="bodySm" tone="muted" style={{ textAlign }}>
+      <Text role="label" style={textAlignStyle}>استلام مرتجع توصيل بثواني</Text>
+      <Text role="bodySm" tone="muted" style={textAlignStyle}>
         لا يتحول الطلب إلى «أعيد إلى المتجر» إلا بعد تأكيدك استلام العهدة فعليًا من الكابتن.
       </Text>
       <Badge
@@ -117,10 +91,9 @@ function PartnerDeliveryActions({
   readonly teamMembers: readonly PartnerTeamMember[];
 }) {
   const { direction } = useDirection();
-  const textAlign = direction === 'rtl' ? 'right' : 'left';
+  const textAlignStyle = direction === 'rtl' ? styles.textRight : styles.textLeft;
   const [selectedCourierId, setSelectedCourierId] = React.useState('');
-  const [proofReference, setProofReference] = React.useState('');
-  const { state, assign, pickup, depart, arrive, submitProof, refresh } =
+  const { state, assign, pickup, depart, arrive, captureAndSubmitProof, refresh } =
     usePartnerDeliveryActionsController(orderId);
   const { task, loaded, busy, message, isError, errorCode } = state;
   const displayMessage = isError
@@ -141,19 +114,19 @@ function PartnerDeliveryActions({
 
   return (
     <Surface tone="raised" gap={3}>
-      <Text role="label" style={{ textAlign }}>توصيل المتجر</Text>
-      <Text role="bodySm" tone="muted" style={{ textAlign }}>
+      <Text role="label" style={textAlignStyle}>توصيل المتجر</Text>
+      <Text role="bodySm" tone="muted" style={textAlignStyle}>
         هذه الرحلة تدار بموصل من فريق المتجر فقط ولا تدخل صندوق كباتن بثواني.
       </Text>
 
       {!task || status === 'unassigned' ? (
         <Box gap={2}>
           {eligibleCouriers.length === 0 ? (
-            <Text role="bodySm" tone="warning" style={{ textAlign }}>
+            <Text role="bodySm" tone="warning" style={textAlignStyle}>
               لا يوجد عضو فريق نشط بدور courier في هذا الفرع. أضف موصلًا من إدارة الفريق أولًا.
             </Text>
           ) : (
-            <View style={{ gap: spacing[1] }}>
+            <View style={styles.compactStack}>
               {eligibleCouriers.map((courier) => (
                 <Button
                   key={courier.id}
@@ -197,18 +170,13 @@ function PartnerDeliveryActions({
 
           {status === 'arrived' || status === 'proof_pending' ? (
             <Box gap={2}>
-              <TextField
-                label="مرجع إثبات التسليم"
-                placeholder="مفتاح صورة DAM أو مرجع OTP/توقيع موثق"
-                value={proofReference}
-                onChangeText={setProofReference}
-              />
+              <Text role="bodySm" tone="muted" style={textAlignStyle}>
+                التقط صورة إثبات حقيقية. يرفعها التطبيق إلى التخزين المحكوم ثم يغلق المهمة فقط بعد قبول DSH.
+              </Text>
               <Button
-                label={busy ? 'جارٍ تثبيت الإثبات…' : 'إغلاق المهمة بإثبات التسليم'}
-                disabled={busy || !proofReference.trim()}
-                onPress={() => void submitProof('photo', proofReference).then((ok) => {
-                  if (ok) setProofReference('');
-                })}
+                label={busy ? 'جارٍ رفع الإثبات وتثبيت التسليم…' : 'التقاط صورة وإغلاق المهمة'}
+                disabled={busy}
+                onPress={() => void captureAndSubmitProof()}
               />
             </Box>
           ) : null}
@@ -225,7 +193,7 @@ function PartnerDeliveryActions({
       )}
 
       {displayMessage ? (
-        <Text role="caption" tone={isError ? 'danger' : 'success'} style={{ textAlign }}>
+        <Text role="caption" tone={isError ? 'danger' : 'success'} style={textAlignStyle}>
           {displayMessage}
         </Text>
       ) : null}
@@ -235,7 +203,7 @@ function PartnerDeliveryActions({
 
 function PickupActions({ orderId }: { readonly orderId: string }) {
   const { direction } = useDirection();
-  const textAlign = direction === 'rtl' ? 'right' : 'left';
+  const textAlignStyle = direction === 'rtl' ? styles.textRight : styles.textLeft;
   const [code, setCode] = React.useState('');
   const [noShowReason, setNoShowReason] = React.useState('');
   const { state, markReady, notify, customerArrived, verify, noShow, refresh } =
@@ -251,8 +219,8 @@ function PickupActions({ orderId }: { readonly orderId: string }) {
 
   return (
     <Surface tone="raised" gap={3}>
-      <Text role="label" style={{ textAlign }}>الاستلام الذاتي</Text>
-      <Text role="bodySm" tone="muted" style={{ textAlign }}>
+      <Text role="label" style={textAlignStyle}>الاستلام الذاتي</Text>
+      <Text role="bodySm" tone="muted" style={textAlignStyle}>
         لا يُنشأ إسناد كابتن أو موصل متجر. الإغلاق يتم فقط بعد رمز العميل أحادي الاستخدام.
       </Text>
       <Badge
@@ -309,22 +277,22 @@ function PickupActions({ orderId }: { readonly orderId: string }) {
       ) : null}
 
       {stage === 'verified' ? (
-        <Box layoutDirection="row" style={{ alignItems: 'center', gap: spacing[2] }}>
+        <Box layoutDirection="row" style={styles.statusRow}>
           <Icon name="checkmark-circle" size={18} tone="success" />
           <Text role="bodySm" tone="success">تم تسليم الطلب للعميل والتحقق من الرمز.</Text>
         </Box>
       ) : null}
 
       {stage === 'no_show' ? (
-        <Text role="bodySm" tone="warning" style={{ textAlign }}>
+        <Text role="bodySm" tone="warning" style={textAlignStyle}>
           أغلقت جلسة الرمز كعدم حضور. يبقى قرار إلغاء الطلب أو تمديد النافذة بيد العمليات.
         </Text>
       ) : null}
 
       {stage === 'cancelled' ? (
-        <Box layoutDirection="row" style={{ alignItems: 'center', gap: spacing[2] }}>
+        <Box layoutDirection="row" style={styles.statusRow}>
           <Icon name="close-circle" size={18} tone="danger" />
-          <Text role="bodySm" tone="danger" style={{ textAlign }}>
+          <Text role="bodySm" tone="danger" style={textAlignStyle}>
             ألغيت جلسة الاستلام الذاتي مع الطلب، وتم تعطيل إصدار الرمز والتحقق والتمديد.
             {session?.cancellationReason ? ` السبب: ${session.cancellationReason}` : ''}
           </Text>
@@ -335,7 +303,7 @@ function PickupActions({ orderId }: { readonly orderId: string }) {
       {session ? <Text role="caption" tone="muted">الإصدار: {session.version}</Text> : null}
 
       {displayMessage ? (
-        <Text role="caption" tone={isError ? 'danger' : 'success'} style={{ textAlign }}>
+        <Text role="caption" tone={isError ? 'danger' : 'success'} style={textAlignStyle}>
           {displayMessage}
         </Text>
       ) : null}

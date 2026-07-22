@@ -270,6 +270,26 @@ func GetClientTracking(db *sql.DB, orderID, clientID string) (*Assignment, error
 	return assignment, err
 }
 
+// GetPartnerTracking returns the store's reference view of the captain
+// assignment for a bthwani_delivery order it owns. JRN-017 restricts the
+// partner to reference status only — the HTTP layer must not marshal the
+// captain's live coordinates from this read the way it does for the client.
+func GetPartnerTracking(db *sql.DB, orderID, storeID string) (*Assignment, error) {
+	if orderID == "" || storeID == "" {
+		return nil, fmt.Errorf("%w: orderId and store actor are required", ErrInvalid)
+	}
+	row := db.QueryRow(assignmentSelectSQL()+`
+		JOIN dsh_orders o ON o.id = a.order_id
+		WHERE a.order_id = $1::uuid AND o.store_id = $2
+		ORDER BY a.created_at DESC
+		LIMIT 1`, orderID, storeID)
+	assignment, err := scanAssignmentRowWithDelivery(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	return assignment, err
+}
+
 func AcceptAssignment(db *sql.DB, assignmentID, captainID string) (*Assignment, error) {
 	return updateAssignmentStatus(db, assignmentID, captainID, AssignmentAccepted, DeliveryDriverAssigned, orders.StatusDriverAssigned, "")
 }

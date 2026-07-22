@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-014",
+  "cleanupDecision": "LEGACY_CONSUMERS_REMOVED",
+  "canonicalBackend": [
+    "backend/internal/dispatch/assignment_governance.go",
+    "backend/internal/dispatch/assignment_governance_queries.go",
+    "backend/internal/http/dispatch_governance_handlers.go"
+  ],
+  "canonicalFrontend": [
+    "frontend/shared/dispatch/dispatch.api.ts",
+    "frontend/shared/operations/use-dispatch-captain-options.ts",
+    "frontend/shared/operations/use-dispatch-operations.ts",
+    "frontend/control-panel/operations/OrderJourneyDispatchAssignmentScreen.tsx",
+    "frontend/app-captain/DshCaptainSurface.tsx"
+  ],
+  "removedOrNeutralized": [
+    {"path":"frontend/app-captain/dispatch/DshCaptainOrdersScreen.tsx","action":"re-export canonical live screen; mock customer/phone/address/distance/value removed"},
+    {"path":"frontend/shared/dispatch/use-dispatch-controller.ts","action":"operator assign consumes createGovernedDispatchAssignment"},
+    {"path":"backend/internal/dispatch/jrn014_governance.go","action":"renamed and deleted"},
+    {"path":"backend/internal/dispatch/jrn014_readback.go","action":"renamed and deleted"},
+    {"path":"backend/internal/http/jrn014_dispatch_handlers.go","action":"renamed and deleted"},
+    {"path":"database/migrations/dsh-079_jrn_014_dispatch_governance.sql","action":"renamed and deleted"}
+  ],
+  "newConsumersAllowed": ["createGovernedDispatchAssignment", "assignOrderToCaptain", "useDispatchCaptainOptions", "useDispatchOperations", "useCaptainInboxModel"],
+  "newConsumersForbidden": ["createDispatchAssignment", "captainId-only assignment body", "local candidate eligibility calculation", "hardcoded captain order success"],
+  "compatibility": "Existing non-JRN-014 special-request dispatch internals may remain only where routed by their own governed contract; they must not be used by order assignment surfaces."
+}

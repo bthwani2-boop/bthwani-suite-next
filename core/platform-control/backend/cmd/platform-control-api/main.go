@@ -44,7 +44,7 @@ func main() {
 	service := platformcontrol.NewService(repository)
 	service.ConfigureDependencies([]platformcontrol.ServiceDependency{
 		{Name: "identity", HealthURL: envOr("PLATFORM_CONTROL_IDENTITY_HEALTH_URL", identityBaseURL+"/identity/health")},
-		{Name: "providers", HealthURL: envOr("PLATFORM_CONTROL_PROVIDERS_HEALTH_URL", "http://providers-api:8087/providers/health")},
+		{Name: "providers", HealthURL: envOr("PLATFORM_CONTROL_PROVIDERS_HEALTH_URL", "http://providers-api:8087/providers/readiness")},
 		{Name: "wlt", HealthURL: envOr("PLATFORM_CONTROL_WLT_HEALTH_URL", "http://wlt-api:8083/wlt/health")},
 		{Name: "dsh", HealthURL: envOr("PLATFORM_CONTROL_DSH_HEALTH_URL", "http://dsh-api:8080/dsh/health")},
 	})

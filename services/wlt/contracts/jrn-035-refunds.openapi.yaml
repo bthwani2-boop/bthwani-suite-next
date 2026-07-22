@@ -1,0 +1,460 @@
+openapi: 3.1.0
+x-bthwani-contract-state: CONTRACT_ACTIVE
+info:
+  title: WLT Governed Financial Refunds
+  version: 1.2.0
+  description: >-
+    Canonical JRN-035 financial refund contract. WLT owns amount, provider,
+    ledger, reconciliation and audit truth. All routes are service-authenticated
+    and tenant-scoped by the trusted DSH caller. Every mutation is claimed by a
+    durable idempotency receipt before business execution, and provider outcomes
+    are not acknowledged unless their state is durably persisted.
+servers:
+  - url: http://localhost:58083
+security:
+  - bearerAuth: []
+paths:
+  /wlt/refunds:
+    get:
+      operationId: listWltRefunds
+      summary: List tenant-scoped refunds
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/ServiceCallerHeader'
+        - $ref: '#/components/parameters/CorrelationHeaderOptional'
+        - name: orderId
+          in: query
+          schema: { type: string, minLength: 1 }
+        - name: clientId
+          in: query
+          schema: { type: string, minLength: 1 }
+      responses:
+        '200':
+          description: Canonical refunds
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RefundListEnvelope' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      operationId: createWltRefund
+      summary: Create a partial or full remaining refund request
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/ServiceCallerHeader'
+        - $ref: '#/components/parameters/CorrelationHeader'
+        - $ref: '#/components/parameters/IdempotencyHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateRefundRequest' }
+      responses:
+        '201':
+          description: Refund request created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RefundEnvelope' }
+        '200':
+          description: Idempotent replay of the same request
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RefundEnvelope' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/MutationReceiptFailure' }
+  /wlt/refunds/{refundId}:
+    get:
+      operationId: getWltRefund
+      summary: Read one tenant-scoped refund
+      parameters:
+        - $ref: '#/components/parameters/RefundId'
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/ServiceCallerHeader'
+        - $ref: '#/components/parameters/CorrelationHeaderOptional'
+      responses:
+        '200':
+          description: Canonical refund
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RefundEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /wlt/refunds/{refundId}/approve:
+    post:
+      operationId: approveWltRefund
+      summary: Independently approve a requested refund
+      parameters:
+        - $ref: '#/components/parameters/RefundId'
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/ServiceCallerHeader'
+        - $ref: '#/components/parameters/CorrelationHeader'
+        - $ref: '#/components/parameters/IdempotencyHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DecisionRequest' }
+      responses:
+        '200':
+          description: Approved refund or exact idempotent replay
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RefundEnvelope' }
+        '403': { $ref: '#/components/responses/MakerCheckerViolation' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/MutationReceiptFailure' }
+  /wlt/refunds/{refundId}/reject:
+    post:
+      operationId: rejectWltRefund
+      summary: Independently reject a requested refund
+      parameters:
+        - $ref: '#/components/parameters/RefundId'
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/ServiceCallerHeader'
+        - $ref: '#/components/parameters/CorrelationHeader'
+        - $ref: '#/components/parameters/IdempotencyHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DecisionRequest' }
+      responses:
+        '200':
+          description: Rejected refund or exact idempotent replay
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RefundEnvelope' }
+        '403': { $ref: '#/components/responses/MakerCheckerViolation' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/MutationReceiptFailure' }
+  /wlt/refunds/{refundId}/complete:
+    post:
+      operationId: completeWltRefund
+      summary: Claim and execute an approved refund through the provider
+      description: >-
+        The mutation receipt and approved-to-processing claim are committed before
+        the provider call. An ambiguous provider result returns 202 only after
+        provider_unknown and its reconciliation case are durably persisted. A
+        persistence or receipt failure returns 500 and is not retry permission.
+      parameters:
+        - $ref: '#/components/parameters/RefundId'
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/ServiceCallerHeader'
+        - $ref: '#/components/parameters/CorrelationHeader'
+        - $ref: '#/components/parameters/IdempotencyHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CompleteRequest' }
+      responses:
+        '200':
+          description: Provider-confirmed, ledger-posted and outbox-enqueued refund or exact replay
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RefundEnvelope' }
+        '202':
+          description: Provider result is unknown, durably recorded and requires reconciliation
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProviderUnknownError' }
+        '500': { $ref: '#/components/responses/CompletionPersistenceFailure' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '502': { $ref: '#/components/responses/ProviderFailure' }
+  /wlt/refunds/{refundId}/reconcile:
+    post:
+      operationId: reconcileWltRefund
+      summary: Resolve a provider-unknown refund with external evidence
+      parameters:
+        - $ref: '#/components/parameters/RefundId'
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/ServiceCallerHeader'
+        - $ref: '#/components/parameters/CorrelationHeader'
+        - $ref: '#/components/parameters/IdempotencyHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReconcileRequest' }
+      responses:
+        '200':
+          description: Reconciled refund or exact idempotent replay
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RefundEnvelope' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/MutationReceiptFailure' }
+  /wlt/refunds/{refundId}/audit:
+    get:
+      operationId: listWltRefundAudit
+      summary: List append-only refund audit evidence
+      parameters:
+        - $ref: '#/components/parameters/RefundId'
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/ServiceCallerHeader'
+        - $ref: '#/components/parameters/CorrelationHeaderOptional'
+      responses:
+        '200':
+          description: Ordered audit events
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuditEnvelope' }
+        '404': { $ref: '#/components/responses/NotFound' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  parameters:
+    RefundId:
+      name: refundId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+    TenantHeader:
+      name: X-Tenant-ID
+      in: header
+      required: true
+      schema: { type: string, minLength: 1 }
+    ServiceCallerHeader:
+      name: X-Service-Caller
+      in: header
+      required: true
+      schema: { type: string, const: dsh }
+    CorrelationHeader:
+      name: X-Correlation-ID
+      in: header
+      required: true
+      schema: { type: string, minLength: 1 }
+    CorrelationHeaderOptional:
+      name: X-Correlation-ID
+      in: header
+      required: false
+      schema: { type: string, minLength: 1 }
+    IdempotencyHeader:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 255 }
+  schemas:
+    RefundStatus:
+      type: string
+      enum: [requested, approved, processing, provider_unknown, completed, rejected, reversed]
+    GovernedRefund:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - tenantId
+        - paymentSessionId
+        - orderId
+        - clientId
+        - amountMinorUnits
+        - currency
+        - reason
+        - status
+        - requestedByOperatorId
+        - eligibilityReference
+        - idempotencyKey
+        - providerIdempotencyKey
+        - version
+        - createdAt
+        - updatedAt
+      properties:
+        id: { type: string }
+        tenantId: { type: string }
+        paymentSessionId: { type: string }
+        orderId: { type: string }
+        clientId: { type: string }
+        amountMinorUnits: { type: integer, format: int64, minimum: 1 }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        reason: { type: string, minLength: 1 }
+        status: { $ref: '#/components/schemas/RefundStatus' }
+        requestedByOperatorId: { type: string }
+        approvedByOperatorId: { type: string }
+        rejectedByOperatorId: { type: string }
+        decisionReason: { type: string }
+        eligibilityReference: { type: string }
+        idempotencyKey: { type: string }
+        providerIdempotencyKey: { type: string }
+        providerReference: { type: string }
+        providerStatus: { type: string }
+        providerError: { type: string }
+        reconciliationCaseId: { type: string }
+        version: { type: integer, minimum: 1 }
+        providerAttemptedAt: { type: [string, 'null'], format: date-time }
+        resolvedAt: { type: [string, 'null'], format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    CreateRefundRequest:
+      type: object
+      additionalProperties: false
+      required: [tenantId, paymentSessionId, orderId, clientId, amountMinorUnits, reason, eligibilityReference, requestedByOperatorId]
+      properties:
+        tenantId: { type: string, minLength: 1 }
+        paymentSessionId: { type: string, minLength: 1 }
+        orderId: { type: string, minLength: 1 }
+        clientId: { type: string, minLength: 1 }
+        amountMinorUnits:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Zero means the entire remaining refundable amount.
+        reason: { type: string, minLength: 1 }
+        eligibilityReference: { type: string, minLength: 1 }
+        requestedByOperatorId: { type: string, minLength: 1 }
+    DecisionRequest:
+      type: object
+      additionalProperties: false
+      required: [operatorId, reason]
+      properties:
+        operatorId: { type: string, minLength: 1 }
+        reason: { type: string, minLength: 1 }
+    CompleteRequest:
+      type: object
+      additionalProperties: false
+      required: [operatorId]
+      properties:
+        operatorId: { type: string, minLength: 1 }
+    ReconcileRequest:
+      type: object
+      additionalProperties: false
+      required: [operatorId, resolutionAction, evidenceNote]
+      properties:
+        operatorId: { type: string, minLength: 1 }
+        resolutionAction:
+          type: string
+          enum: [confirmed_success, confirmed_failed]
+        evidenceNote: { type: string, minLength: 1 }
+        providerReference: { type: string, minLength: 1 }
+      allOf:
+        - if:
+            properties:
+              resolutionAction: { const: confirmed_success }
+          then:
+            required: [providerReference]
+    RefundAuditEvent:
+      type: object
+      additionalProperties: false
+      required: [id, refundId, tenantId, eventType, actorId, actorType, toStatus, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        refundId: { type: string }
+        tenantId: { type: string }
+        eventType: { type: string }
+        actorId: { type: string }
+        actorType:
+          type: string
+          enum: [operator, service, provider, reconciler, system]
+        fromStatus: { type: string }
+        toStatus: { type: string }
+        reason: { type: string }
+        correlationId: { type: string }
+        idempotencyKey: { type: string }
+        providerReference: { type: string }
+        createdAt: { type: string, format: date-time }
+    RefundEnvelope:
+      type: object
+      required: [refund]
+      properties:
+        refund: { $ref: '#/components/schemas/GovernedRefund' }
+        replayed: { type: boolean }
+    RefundListEnvelope:
+      type: object
+      required: [refunds]
+      properties:
+        refunds:
+          type: array
+          items: { $ref: '#/components/schemas/GovernedRefund' }
+    AuditEnvelope:
+      type: object
+      required: [auditEvents]
+      properties:
+        auditEvents:
+          type: array
+          items: { $ref: '#/components/schemas/RefundAuditEvent' }
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+    ProviderUnknownError:
+      allOf:
+        - $ref: '#/components/schemas/Error'
+        - type: object
+          properties:
+            code: { const: PROVIDER_RESULT_UNKNOWN }
+    OutcomePersistenceError:
+      allOf:
+        - $ref: '#/components/schemas/Error'
+        - type: object
+          properties:
+            code: { const: REFUND_OUTCOME_PERSISTENCE_FAILED }
+    MutationReceiptError:
+      allOf:
+        - $ref: '#/components/schemas/Error'
+        - type: object
+          properties:
+            code:
+              type: string
+              enum: [REFUND_IDEMPOTENCY_STORE_FAILED, REFUND_IDEMPOTENCY_RECEIPT_FAILED]
+    CompletionPersistenceError:
+      oneOf:
+        - $ref: '#/components/schemas/OutcomePersistenceError'
+        - $ref: '#/components/schemas/MutationReceiptError'
+  responses:
+    BadRequest:
+      description: Invalid request or evidence
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unauthorized:
+      description: Missing or invalid service authentication
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Forbidden:
+      description: Tenant or authority denied
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    MakerCheckerViolation:
+      description: Request maker attempted to review the same refund
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Refund not found in the trusted tenant
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Conflict:
+      description: Lifecycle, amount, changed-payload or in-progress idempotency conflict
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    MutationReceiptFailure:
+      description: The mutation receipt could not be claimed or completed durably
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/MutationReceiptError' }
+    CompletionPersistenceFailure:
+      description: Provider outcome or mutation replay evidence could not be persisted; automatic provider retry is forbidden
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/CompletionPersistenceError' }
+    ProviderFailure:
+      description: Definitive provider failure
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }

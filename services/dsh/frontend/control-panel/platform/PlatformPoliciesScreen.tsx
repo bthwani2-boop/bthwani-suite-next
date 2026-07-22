@@ -19,6 +19,9 @@ import {
   type DshSlaRule,
   type DshZone,
 } from "../../shared/platform";
+import { ClientAddressPrivacySection } from "./ClientAddressPrivacySection";
+import { Jrn029OperationalPolicySection } from "./Jrn029OperationalPolicySection";
+import { MapProviderHealthCard } from "./MapProviderHealthCard";
 import { ServiceAreaGovernanceSection } from "./ServiceAreaGovernanceSection";
 import { StoreOnboardingFeePolicySection } from "./StoreOnboardingFeePolicySection";
 
@@ -30,10 +33,12 @@ export function PlatformPoliciesScreen() {
     <ScrollScreen>
       <Header
         title="سياسات المنصة ومناطق الخدمة"
-        subtitle="حقيقة DSH التشغيلية للمناطق والمضلعات وSLA والسعة ورسوم تهيئة المتجر"
+        subtitle="حقيقة DSH التشغيلية للخرائط والمناطق وخصوصية العناوين وSLA والسعة"
       />
 
+      <MapProviderHealthCard />
       <ServiceAreaGovernanceSection />
+      <ClientAddressPrivacySection />
 
       <View style={styles.section}>
         <Text role="titleSm">مناطق التشغيل المنطقية</Text>
@@ -64,21 +69,9 @@ export function PlatformPoliciesScreen() {
           ) : (
             <DataTable<DshZone & Record<string, unknown>>
               columns={[
-                {
-                  key: "name",
-                  header: "المنطقة",
-                  render: (row) => row.name,
-                },
-                {
-                  key: "cityCode",
-                  header: "رمز المدينة",
-                  render: (row) => row.cityCode,
-                },
-                {
-                  key: "version",
-                  header: "الإصدار",
-                  render: (row) => String(row.version),
-                },
+                { key: "name", header: "المنطقة", render: (row) => row.name },
+                { key: "cityCode", header: "رمز المدينة", render: (row) => row.cityCode },
+                { key: "version", header: "الإصدار", render: (row) => String(row.version) },
                 {
                   key: "isActive",
                   header: "الحالة",
@@ -90,14 +83,9 @@ export function PlatformPoliciesScreen() {
                   ),
                 },
               ]}
-              rows={
-                zonesController.state.data as (DshZone &
-                  Record<string, unknown>)[]
-              }
+              rows={zonesController.state.data as (DshZone & Record<string, unknown>)[]}
               getRowKey={(row) => row.id}
-              onRowPress={(row) =>
-                void zonesController.toggle(row, !row.isActive)
-              }
+              onRowPress={(row) => void zonesController.toggle(row, !row.isActive)}
             />
           )
         ) : null}
@@ -105,12 +93,8 @@ export function PlatformPoliciesScreen() {
 
       <View style={styles.section}>
         <Text role="titleSm">قواعد SLA</Text>
-        {slaController.mutationError ? (
-          <Text tone="danger">{slaController.mutationError}</Text>
-        ) : null}
-        {slaController.state.kind === "loading" ? (
-          <StateView title="جارٍ تحميل قواعد SLA…" />
-        ) : null}
+        {slaController.mutationError ? <Text tone="danger">{slaController.mutationError}</Text> : null}
+        {slaController.state.kind === "loading" ? <StateView title="جارٍ تحميل قواعد SLA…" /> : null}
         {slaController.state.kind === "error" ? (
           <StateView
             title="تعذر تحميل قواعد SLA"
@@ -121,49 +105,24 @@ export function PlatformPoliciesScreen() {
         ) : null}
         {slaController.state.kind === "success" ? (
           slaController.state.data.length === 0 ? (
-            <StateView
-              title="لا توجد قواعد SLA"
-              description="لا تعتبر المنطقة جاهزة تشغيليًا حتى تعريف قواعد SLA المناسبة لها."
-            />
+            <StateView title="لا توجد قواعد SLA" description="لا تعتبر المنطقة جاهزة تشغيليًا حتى تعريف قواعد SLA المناسبة لها." />
           ) : (
             <DataTable<DshSlaRule & Record<string, unknown>>
               columns={[
-                {
-                  key: "zoneId",
-                  header: "المنطقة",
-                  render: (row) => row.zoneId,
-                },
-                {
-                  key: "category",
-                  header: "الفئة",
-                  render: (row) => row.category,
-                },
-                {
-                  key: "maxPrepMins",
-                  header: "حد التحضير (د)",
-                  render: (row) => String(row.maxPrepMins),
-                },
-                {
-                  key: "maxDeliveryMins",
-                  header: "حد التوصيل (د)",
-                  render: (row) => String(row.maxDeliveryMins),
-                },
-                {
-                  key: "version",
-                  header: "الإصدار",
-                  render: (row) => String(row.version),
-                },
+                { key: "zoneId", header: "المنطقة", render: (row) => row.zoneId },
+                { key: "category", header: "الفئة", render: (row) => row.category },
+                { key: "maxPrepMins", header: "حد التحضير (د)", render: (row) => String(row.maxPrepMins) },
+                { key: "maxDeliveryMins", header: "حد التوصيل (د)", render: (row) => String(row.maxDeliveryMins) },
+                { key: "version", header: "الإصدار", render: (row) => String(row.version) },
               ]}
-              rows={
-                slaController.state.data as (DshSlaRule &
-                  Record<string, unknown>)[]
-              }
+              rows={slaController.state.data as (DshSlaRule & Record<string, unknown>)[]}
               getRowKey={(row) => `${row.zoneId}-${row.category}`}
             />
           )
         ) : null}
       </View>
 
+      <Jrn029OperationalPolicySection />
       <StoreOnboardingFeePolicySection authKind="authenticated" />
     </ScrollScreen>
   );

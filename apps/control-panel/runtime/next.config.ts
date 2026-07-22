@@ -20,6 +20,10 @@ const nextConfig: NextConfig = {
       // so we use a relative path from the project root (next.config.ts location).
       "@expo/vector-icons/Ionicons": "./stubs/ionicons-stub.js",
       "@react-native-community/netinfo": "./stubs/netinfo-stub.js",
+      // Shared DSH mobile surfaces import expo-image-picker. The control panel
+      // must resolve that package to the browser adapter instead of bundling the
+      // native Expo TypeScript source, which Turbopack cannot classify.
+      "expo-image-picker": "./stubs/expo-image-picker-web.js",
     },
   },
   webpack: (config) => {
@@ -28,6 +32,7 @@ const nextConfig: NextConfig = {
       "react-native$": "react-native-web",
       "@expo/vector-icons/Ionicons": require.resolve("./stubs/ionicons-stub.js"),
       "@react-native-community/netinfo": require.resolve("./stubs/netinfo-stub.js"),
+      "expo-image-picker": require.resolve("./stubs/expo-image-picker-web.js"),
     };
     return config;
   },

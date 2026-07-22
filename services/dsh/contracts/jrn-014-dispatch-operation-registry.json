@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-014",
+  "truthOwner": "DSH",
+  "operations": [
+    {"id":"list-operator-assignments","method":"GET","path":"/dsh/operator/dispatch/assignments","actor":"operator","permission":"operations.read","handler":"handleListGovernedOperatorDispatchAssignments","domain":"ListOperatorAssignmentsInTenant","readAfterWrite":true},
+    {"id":"create-assignment","method":"POST","path":"/dsh/operator/dispatch/assignments","actor":"operator","permission":"operations.manage","handler":"handleCreateGovernedDispatchAssignment","domain":"CreateGovernedAssignment","idempotencyRequired":true,"transactional":true},
+    {"id":"list-captain-inbox","method":"GET","path":"/dsh/captain/dispatch/assignments","actor":"captain","scope":"authenticated-actor","handler":"handleListGovernedCaptainDispatchAssignments","domain":"ListCaptainAssignmentsInTenant"},
+    {"id":"accept-offer","method":"POST","path":"/dsh/captain/dispatch/assignments/{assignmentId}/accept","actor":"captain","scope":"assignment-captain","handler":"handleAcceptGovernedDispatchAssignment","domain":"AcceptGovernedAssignment"},
+    {"id":"decline-offer","method":"POST","path":"/dsh/captain/dispatch/assignments/{assignmentId}/decline","actor":"captain","scope":"assignment-captain","handler":"handleDeclineGovernedDispatchAssignment","domain":"DeclineGovernedAssignment","reasonRequired":true},
+    {"id":"list-candidates","method":"GET","path":"/dsh/operator/dispatch/candidates","actor":"operator","permission":"operations.read","handler":"handleListCaptainDispatchCandidates","domain":"ListCaptainDispatchCandidates"},
+    {"id":"upsert-captain-profile","method":"PUT","path":"/dsh/operator/dispatch/captains/{captainId}/profile","actor":"operator","permission":"operations.manage","handler":"handleUpsertCaptainDispatchProfile","domain":"UpsertCaptainDispatchProfile","optimisticConcurrency":true},
+    {"id":"expire-offers","method":"POST","path":"/dsh/operator/dispatch/assignments/expire","actor":"operator","permission":"operations.manage","handler":"handleExpireGovernedDispatchAssignments","domain":"ExpireOverdueAssignments","transactional":true},
+    {"id":"cancel-assignment","method":"POST","path":"/dsh/operator/dispatch/assignments/{assignmentId}/cancel","actor":"operator","permission":"operations.manage","handler":"handleCancelGovernedDispatchAssignment","domain":"CancelGovernedAssignment","reasonRequired":true,"transactional":true},
+    {"id":"reassign-assignment","method":"POST","path":"/dsh/operator/dispatch/assignments/{assignmentId}/reassign","actor":"operator","permission":"operations.manage","handler":"handleReassignGovernedDispatchAssignment","domain":"ReassignGovernedAssignment","reasonRequired":true,"idempotencyRequired":true,"transactional":true},
+    {"id":"list-decisions","method":"GET","path":"/dsh/operator/dispatch/decisions","actor":"operator","permission":"operations.read","handler":"handleListDispatchDecisions","domain":"ListDispatchDecisions"},
+    {"id":"client-tracking","method":"GET","path":"/dsh/client/orders/{orderId}/tracking","actor":"client","scope":"owned-order","handler":"handleGetClientTracking","redaction":"operational-public-projection"}
+  ],
+  "financialMutationAllowed": false
+}

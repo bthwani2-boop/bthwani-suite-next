@@ -1,4 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { useIdentitySession } from "@bthwani/core-identity";
+
 import { fetchWorkforceMe, updateWorkforceMeSelf } from "./workforce-me.api";
 import type { WorkforceMeResult } from "./workforce-me.api";
 import type { UpdateSelfInput, WorkforceMe } from "./workforce.types";
@@ -34,6 +36,7 @@ function toState(result: WorkforceMeResult): WorkforceProfileState {
 }
 
 export function WorkforceProfileProvider({ children }: { children: React.ReactNode }) {
+  const identity = useIdentitySession();
   const [state, setState] = useState<WorkforceProfileState>({ kind: "loading" });
 
   const reload = useCallback(async () => {
@@ -43,15 +46,17 @@ export function WorkforceProfileProvider({ children }: { children: React.ReactNo
 
   const updateSelf = useCallback(async (input: UpdateSelfInput) => {
     const result = await updateWorkforceMeSelf(input);
-    if (result.kind === "ok") {
-      setState({ kind: "ready", me: result.me });
-    }
+    setState(toState(result));
     return result;
   }, []);
 
   useEffect(() => {
-    void reload();
-  }, [reload]);
+    if (identity.state.kind === "authenticated") {
+      void reload();
+      return;
+    }
+    setState({ kind: "loading" });
+  }, [identity.state.kind, reload]);
 
   return (
     <WorkforceProfileContext.Provider value={{ state, reload, updateSelf }}>

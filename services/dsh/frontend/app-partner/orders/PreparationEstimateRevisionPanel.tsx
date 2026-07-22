@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Button, StateView, Text, TextField } from '@bthwani/ui-kit';
-import { classifyOrderError, reviseOrderPreparationEstimate } from '../../shared/orders/orders.api';
+import { classifyOrderError, reviseOrderPreparationEstimate } from '../../shared/orders';
 import type { GovernedPartnerOrderItem } from '../../shared/partner/partner.adapters';
 
 export function PreparationEstimateRevisionPanel({

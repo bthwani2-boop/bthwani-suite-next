@@ -32,6 +32,7 @@ import {
   resolveStoreDeliveryPricingSourceLabel,
 } from '../../shared/store';
 import { getSurfaceModeCapability, getSurfaceRoleSummaryForMode } from '../../shared/identity-access';
+import { PartnerDeliveryPricingCard } from './PartnerDeliveryPricingCard';
 
 const BOTTOM_INSET = 144;
 
@@ -88,7 +89,7 @@ export function DshPartnerStoreCourierScreen({
 }: {
   storeId: string;
   scopes: readonly DshPartnerOperationalScope[];
-  onBack: () => void;
+  onBack?: (() => void) | undefined;
 }) {
   const { direction } = useDirection();
   const [courierName, setCourierName] = React.useState('');
@@ -206,7 +207,6 @@ export function DshPartnerStoreCourierScreen({
               <Chip
                 key={branch.id}
                 label={branch.label}
-
                 selected={isSelected}
                 onPress={() => toggleBranch(branch.id)}
               />
@@ -282,6 +282,9 @@ export function DshPartnerStoreCourierScreen({
           </Box>
         </>
       ) : null}
+
+      <Divider />
+      <PartnerDeliveryPricingCard storeId={storeId} />
 
       <MobileStickyPrimaryAction
         label="حفظ إعدادات الموصل"

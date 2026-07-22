@@ -83,15 +83,35 @@ type ClientSubscriptionEntitlement struct {
 	WLTSubscriptionReference string           `json:"wltSubscriptionReference,omitempty"`
 	StartsAt                 *string          `json:"startsAt,omitempty"`
 	EndsAt                   *string          `json:"endsAt,omitempty"`
+	CancelAtPeriodEnd        bool             `json:"cancelAtPeriodEnd"`
+	CancelledAt              *string          `json:"cancelledAt,omitempty"`
+	CancellationReason       *string          `json:"cancellationReason,omitempty"`
+	CompensationStatus       string           `json:"compensationStatus,omitempty"`
+	CompensationReference    *string          `json:"compensationReference,omitempty"`
+	AllowedActions           []string         `json:"allowedActions"`
 	Plan                     SubscriptionPlan `json:"plan"`
 }
 
+type ClientSubscriptionCompensation struct {
+	ID               string  `json:"id"`
+	SubscriptionID   string  `json:"subscriptionId"`
+	Status           string  `json:"status"`
+	Reason           string  `json:"reason"`
+	RefundReference  *string `json:"refundReference,omitempty"`
+	AmountMinorUnits int64   `json:"amountMinorUnits"`
+	Currency         string  `json:"currency"`
+	CreatedAt        string  `json:"createdAt"`
+	UpdatedAt        string  `json:"updatedAt"`
+	CompletedAt      *string `json:"completedAt,omitempty"`
+}
+
 type ClientBenefits struct {
-	LoyaltyAccount     *ClientLoyaltyAccount          `json:"loyaltyAccount,omitempty"`
-	AvailableTiers     []LoyaltyTier                  `json:"availableTiers"`
-	AvailablePlans     []SubscriptionPlan             `json:"availablePlans"`
-	ActiveSubscription *ClientSubscriptionEntitlement `json:"activeSubscription,omitempty"`
-	Offers             []PartnerOffer                 `json:"offers"`
+	LoyaltyAccount     *ClientLoyaltyAccount           `json:"loyaltyAccount,omitempty"`
+	AvailableTiers     []LoyaltyTier                   `json:"availableTiers"`
+	AvailablePlans     []SubscriptionPlan              `json:"availablePlans"`
+	ActiveSubscription *ClientSubscriptionEntitlement  `json:"activeSubscription,omitempty"`
+	Compensation       *ClientSubscriptionCompensation `json:"compensation,omitempty"`
+	Offers             []PartnerOffer                  `json:"offers"`
 }
 
 type CreateLoyaltyTierInput struct {

@@ -28,7 +28,7 @@ import { usePartnerSelfController } from "../../shared/partner/use-partner-self-
 import {
   fetchPartnerStoreCoverageZones,
   fetchPartnerStoreSettings,
-} from "../../shared/partner/partner.api";
+} from "../../shared/partner";
 import type {
   BThwaniAppearanceMode,
   NotificationPreferenceId,
@@ -251,7 +251,7 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
         ...current,
         [preferenceId]: nextValue,
       }));
-      void import("../../shared/notifications/notifications.api")
+      void import("../../shared/notifications")
         .then(({ updateNotificationPreferences }) =>
           updateNotificationPreferences(preferenceId, nextValue),
         )
@@ -375,12 +375,38 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
     );
   }
 
+  if (selfStatusState.kind === "not_found") {
+    return (
+      <StateView
+        tone="warning"
+        title="ملف الشريك غير موجود"
+        description="الجلسة الحالية غير مرتبطة بملف شريك صالح في DSH."
+        actionLabel="إعادة التحقق"
+        onActionPress={reloadSelfStatus}
+      />
+    );
+  }
+
+  if (selfStatusState.kind === "forbidden") {
+    return (
+      <StateView
+        tone="danger"
+        title="غير مصرح بعرض ملف الشريك"
+        description="تحقق من هوية الشريك ونطاق المتجر المرتبط بهذه الجلسة."
+        actionLabel="إعادة التحقق"
+        onActionPress={reloadSelfStatus}
+      />
+    );
+  }
+
   if (selfStatusState.kind !== "success") {
     return (
       <StateView
         tone="danger"
         title="حالة شريك غير قابلة للعرض"
-        description="لم يعد DSH حالة نجاح أو خطأ صريحة."
+        description="لم يعد DSH حالة صريحة قابلة للعرض."
+        actionLabel="إعادة التحقق"
+        onActionPress={reloadSelfStatus}
       />
     );
   }
@@ -424,7 +450,7 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
   const isClientVisibleStage = isDshPartnerClientVisible(activationStatus);
   const isInternalActiveOnly =
     isDshPartnerActivationComplete(activationStatus) && !isClientVisibleStage;
-  const serviceabilityVerified = false;
+  const serviceabilityVerified = coverageZones.some((zone) => zone.status === "active");
   const storeVisibility = resolveDshStoreClientVisibility({
     activationStatus,
     catalogPublished: resolvedListingEnabled,

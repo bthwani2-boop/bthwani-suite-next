@@ -1,0 +1,24 @@
+{
+  "extends": "./tsconfig.jrn-020-030.json",
+  "compilerOptions": {
+    "outDir": "dist-jrn-024"
+  },
+  "include": [
+    "frontend/**/*.d.ts",
+    "frontend/shared/_kernel/**/*.ts",
+    "frontend/shared/_kernel/**/*.tsx",
+    "frontend/shared/field-readiness/**/*.ts",
+    "frontend/shared/field-readiness/**/*.tsx",
+    "frontend/shared/media/field-document-media.ts",
+    "frontend/app-field/escalation/DshFieldVisitScreen.tsx",
+    "frontend/app-field/escalation/DshFieldWorkQueueScreen.tsx",
+    "frontend/app-field/escalation/DshFieldReadinessChecklistScreen.tsx",
+    "frontend/control-panel/partners/field-readiness/FieldReadinessQueueScreen.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "dist-jrn-020-030",
+    "dist-jrn-024"
+  ]
+}

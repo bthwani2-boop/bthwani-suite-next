@@ -4,6 +4,7 @@ export const DSH_CONTRACT_CLIENT_STRATEGIES = [
   "PARENT_GENERATED_SUBSET",
   "MANUAL_TYPED_ADAPTER",
   "STANDALONE_MANUAL_TYPED_ADAPTER",
+  "STANDALONE_GENERATED",
 ] as const;
 
 export type DshContractClientStrategy =
@@ -12,16 +13,45 @@ export type DshContractClientStrategy =
 export type DshContractRegistration = {
   readonly id:
     | "dsh-main"
+    | "dsh-administration"
+    | "dsh-analytics-extensions"
     | "dsh-catalog"
+    | "dsh-catalog-proposal-readback"
+    | "dsh-catalog-governance"
+    | "dsh-client-address-privacy"
+    | "dsh-workforce-scopes"
+    | "dsh-checkout"
+    | "dsh-order-truth"
+    | "dsh-order-workboards"
+    | "dsh-operational-policy"
+    | "dsh-representative-finance"
+    | "dsh-refunds"
+    | "dsh-partner-onboarding"
+    | "dsh-payment-sessions"
+    | "dsh-settlement-commissions"
+    | "dsh-payout-destinations"
+    | "dsh-cod-custody"
     | "dsh-marketing-commercial"
     | "dsh-partner-commercial"
     | "dsh-partner-fleet"
+    | "dsh-partner-delivery"
     | "dsh-home-marketing-governance"
+    | "dsh-home-marketing-events"
     | "dsh-client-address"
     | "dsh-client-map"
     | "dsh-platform-policies"
     | "dsh-partner-support"
-    | "dsh-support-governance";
+    | "dsh-support-governance"
+    | "dsh-support-message-delivery"
+    | "dsh-notifications-governance"
+    | "dsh-incident-governance"
+    | "dsh-order-rescue"
+    | "dsh-store-captain-handoff"
+    | "dsh-dispatch-governance"
+    | "dsh-live-tracking"
+    | "dsh-delivery-exceptions"
+    | "dsh-delivery-proof-media"
+    | "dsh-delivery-proof-completion";
   readonly path: string;
   readonly state: "CONTRACT_ACTIVE";
   readonly runtimeDependency: boolean;
@@ -31,15 +61,12 @@ export type DshContractRegistration = {
 };
 
 /**
- * Every active DSH OpenAPI document must be registered here exactly once.
+ * Every active DSH OpenAPI document is registered here exactly once.
  *
- * Subset strategies mean that every shard operation must also exist in the
- * primary contract. A secondary generated subset may additionally own a
- * specialized generated type surface. Manual adapters are allowed only when
- * the contract declares generation disabled and names the adapter explicitly.
- * A standalone manual adapter owns operations that are intentionally not part
- * of the primary generated client; those operations are still included in the
- * canonical capability-ownership and drift checks.
+ * Subset strategies mean that every shard operation is represented by the
+ * primary generated contract. Standalone manual adapters own active operations
+ * outside that primary generated surface while preserving one explicit shared
+ * frontend owner and backend route parity.
  */
 export const DSH_CONTRACT_REGISTRY = [
   {
@@ -51,6 +78,22 @@ export const DSH_CONTRACT_REGISTRY = [
     generatedClient: "clients/generated/dsh-api.ts",
   },
   {
+    id: "dsh-administration",
+    path: "contracts/dsh.administration.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/administration",
+  },
+  {
+    id: "dsh-analytics-extensions",
+    path: "contracts/dsh.analytics-extensions.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/analytics",
+  },
+  {
     id: "dsh-catalog",
     path: "contracts/dsh.catalog.openapi.yaml",
     state: "CONTRACT_ACTIVE",
@@ -59,11 +102,132 @@ export const DSH_CONTRACT_REGISTRY = [
     generatedClient: "clients/generated/dsh-catalog-api.ts",
   },
   {
+    id: "dsh-catalog-proposal-readback",
+    path: "contracts/dsh.catalog-proposal-readback.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/catalog/product-proposal-readback.api.ts",
+  },
+  {
+    id: "dsh-catalog-governance",
+    path: "contracts/dsh.catalog-governance.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/catalog/catalog-governance.api.ts",
+  },
+  {
+    id: "dsh-client-address-privacy",
+    path: "contracts/dsh.client-address-privacy.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/privacy",
+  },
+  {
+    id: "dsh-workforce-scopes",
+    path: "contracts/dsh.jrn-003-workforce-scopes.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/workforce",
+  },
+  {
+    id: "dsh-checkout",
+    path: "contracts/dsh.jrn-010-checkout.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/checkout",
+  },
+  {
+    id: "dsh-order-truth",
+    path: "contracts/dsh.order-truth.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/order-truth",
+  },
+  {
+    id: "dsh-order-workboards",
+    path: "contracts/dsh.order-workboards.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/orders",
+  },
+  {
+    id: "dsh-operational-policy",
+    path: "contracts/dsh.jrn-029.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/platform",
+  },
+  {
+    id: "dsh-representative-finance",
+    path: "contracts/jrn-033-representative-finance.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/finance-wlt-link",
+  },
+  {
+    id: "dsh-refunds",
+    path: "contracts/jrn-035-refunds.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/finance-wlt-link",
+  },
+  {
+    id: "dsh-partner-onboarding",
+    path: "contracts/dsh.partner-onboarding.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "PARENT_GENERATED_SUBSET",
+    generatedClient: "clients/generated/dsh-api.ts",
+    adapterOwner: "frontend/shared/partner",
+  },
+  {
+    id: "dsh-payment-sessions",
+    path: "contracts/dsh.payment-sessions.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/finance-wlt-link",
+  },
+  {
+    id: "dsh-settlement-commissions",
+    path: "contracts/dsh.jrn-036-settlements-commissions.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/finance-wlt-link/jrn036",
+  },
+  {
+    id: "dsh-payout-destinations",
+    path: "contracts/dsh.jrn-037-payouts-destinations.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/finance-wlt-link/jrn037",
+  },
+  {
+    id: "dsh-cod-custody",
+    path: "contracts/dsh.jrn-038-cod-custody.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/finance-wlt-link/finance",
+  },
+  {
     id: "dsh-marketing-commercial",
     path: "contracts/dsh.marketing-commercial.openapi.yaml",
     state: "CONTRACT_ACTIVE",
     runtimeDependency: true,
-    clientStrategy: "MANUAL_TYPED_ADAPTER",
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
     adapterOwner: "frontend/shared/marketing",
   },
   {
@@ -71,24 +235,40 @@ export const DSH_CONTRACT_REGISTRY = [
     path: "contracts/dsh.partner-commercial-closure.openapi.yaml",
     state: "CONTRACT_ACTIVE",
     runtimeDependency: true,
-    clientStrategy: "PARENT_GENERATED_SUBSET",
-    generatedClient: "clients/generated/dsh-api.ts",
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/marketing",
   },
   {
     id: "dsh-partner-fleet",
     path: "contracts/dsh.partner-fleet.openapi.yaml",
     state: "CONTRACT_ACTIVE",
     runtimeDependency: true,
-    clientStrategy: "MANUAL_TYPED_ADAPTER",
-    adapterOwner: "frontend/shared/partner-fleet",
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/partner/partner-fleet.api.ts",
+  },
+  {
+    id: "dsh-partner-delivery",
+    path: "contracts/dsh.partner-delivery.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/partner-delivery",
   },
   {
     id: "dsh-home-marketing-governance",
     path: "contracts/dsh.home-marketing-governance.openapi.yaml",
     state: "CONTRACT_ACTIVE",
     runtimeDependency: true,
-    clientStrategy: "PARENT_GENERATED_SUBSET",
-    generatedClient: "clients/generated/dsh-api.ts",
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/home-discovery",
+  },
+  {
+    id: "dsh-home-marketing-events",
+    path: "contracts/dsh.home-marketing-events.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/home-discovery",
   },
   {
     id: "dsh-client-address",
@@ -129,5 +309,85 @@ export const DSH_CONTRACT_REGISTRY = [
     runtimeDependency: true,
     clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
     adapterOwner: "frontend/shared/support",
+  },
+  {
+    id: "dsh-support-message-delivery",
+    path: "contracts/dsh.support-message-delivery.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/support",
+  },
+  {
+    id: "dsh-notifications-governance",
+    path: "contracts/dsh.notifications-governance.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/notifications",
+  },
+  {
+    id: "dsh-incident-governance",
+    path: "contracts/dsh.incident-governance.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/support/incident-governance.api.ts",
+  },
+  {
+    id: "dsh-order-rescue",
+    path: "contracts/dsh.order-rescue.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/support/order-rescue.api.ts",
+  },
+  {
+    id: "dsh-store-captain-handoff",
+    path: "contracts/dsh.store-captain-handoff.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/orders",
+  },
+  {
+    id: "dsh-dispatch-governance",
+    path: "contracts/dsh.dispatch-governance.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/dispatch",
+  },
+  {
+    id: "dsh-live-tracking",
+    path: "contracts/dsh.live-tracking.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/dispatch",
+  },
+  {
+    id: "dsh-delivery-exceptions",
+    path: "contracts/dsh.delivery-exceptions.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/dispatch/dispatch.api.ts",
+  },
+  {
+    id: "dsh-delivery-proof-media",
+    path: "contracts/dsh.delivery-proof-media.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/media/pod/delivery-proof-media.api.ts",
+  },
+  {
+    id: "dsh-delivery-proof-completion",
+    path: "contracts/dsh.delivery-proof-completion.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/delivery-proof",
   },
 ] as const satisfies readonly DshContractRegistration[];

@@ -1,0 +1,219 @@
+openapi: 3.1.0
+info:
+  title: DSH Governed Order Rescue API
+  version: 1.0.0
+  description: Operator-owned order rescue cases with explicit decisions, retry-safe transitions, audit readback and a read-only WLT boundary.
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-runtime-dependency: true
+x-bthwani-generation: DISABLED
+x-bthwani-client-binding: MANUAL_TYPED_ADAPTER
+servers:
+  - url: http://localhost:58080
+security:
+  - bearerAuth: []
+paths:
+  /dsh/operator/support/order-rescue-cases:
+    get:
+      operationId: listDshOrderRescueCases
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/RescueStatus' }
+      responses:
+        '200': { $ref: '#/components/responses/RescueCaseList' }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      operationId: createDshOrderRescueCase
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateRescueCaseInput' }
+      responses:
+        '201': { $ref: '#/components/responses/RescueCase' }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /dsh/operator/support/order-rescue-cases/{caseId}:
+    parameters:
+      - $ref: '#/components/parameters/CaseId'
+    get:
+      operationId: getDshOrderRescueCase
+      responses:
+        '200': { $ref: '#/components/responses/RescueCase' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      operationId: updateDshOrderRescueCase
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateRescueCaseInput' }
+      responses:
+        '200': { $ref: '#/components/responses/RescueCase' }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /dsh/operator/support/order-rescue-cases/{caseId}/events:
+    parameters:
+      - $ref: '#/components/parameters/CaseId'
+    get:
+      operationId: listDshOrderRescueEvents
+      responses:
+        '200':
+          description: Append-only order rescue audit events.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [events]
+                properties:
+                  events:
+                    type: array
+                    items: { $ref: '#/components/schemas/RescueEvent' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    CaseId:
+      name: caseId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 200 }
+    CorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: false
+      schema: { type: string, minLength: 1, maxLength: 200 }
+  schemas:
+    RescueStatus:
+      type: string
+      enum: [open, investigating, action_required, resolved, closed]
+    RescueReason:
+      type: string
+      enum: [item_unavailable, customer_not_reachable, store_closed_after_order, captain_no_show, captain_declined, pickup_failed, handoff_mismatch, delivery_failed, address_issue, payment_failure, wlt_visibility]
+    RescueSeverity:
+      type: string
+      enum: [warning, danger]
+    RescueOwner:
+      type: string
+      enum: [support, operations, partner, captain, wlt_reference_only]
+    RescueNextAction:
+      type: string
+      enum: [replace_item, remove_item, wait_customer, change_delivery_mode, reassign_captain, convert_to_support_exception, create_follow_up_task, open_wlt_visibility]
+    CreateRescueCaseInput:
+      type: object
+      required: [orderId, reason, summary]
+      properties:
+        orderId: { type: string, minLength: 1 }
+        ticketId: { type: string }
+        reason: { $ref: '#/components/schemas/RescueReason' }
+        severity: { $ref: '#/components/schemas/RescueSeverity' }
+        summary: { type: string, minLength: 5, maxLength: 1000 }
+        assignedTo: { type: string }
+    UpdateRescueCaseInput:
+      type: object
+      required: [expectedStatus, status, reason, owner, nextAction, operatorNote, affectedEntity, resolutionNote]
+      properties:
+        expectedStatus: { $ref: '#/components/schemas/RescueStatus' }
+        status: { $ref: '#/components/schemas/RescueStatus' }
+        reason: { $ref: '#/components/schemas/RescueReason' }
+        owner: { $ref: '#/components/schemas/RescueOwner' }
+        nextAction: { $ref: '#/components/schemas/RescueNextAction' }
+        operatorNote: { type: string, maxLength: 4000 }
+        affectedEntity: { type: string, maxLength: 500 }
+        assignedTo: { type: string }
+        resolutionNote: { type: string, maxLength: 4000 }
+    RescueCase:
+      type: object
+      required: [id, orderId, ticketId, status, reason, severity, owner, nextAction, summary, operatorNote, affectedEntity, assignedTo, openedBy, resolutionNote, version, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        orderId: { type: string }
+        ticketId: { type: string }
+        status: { $ref: '#/components/schemas/RescueStatus' }
+        reason: { $ref: '#/components/schemas/RescueReason' }
+        severity: { $ref: '#/components/schemas/RescueSeverity' }
+        owner: { $ref: '#/components/schemas/RescueOwner' }
+        nextAction: { $ref: '#/components/schemas/RescueNextAction' }
+        summary: { type: string }
+        operatorNote: { type: string }
+        affectedEntity: { type: string }
+        assignedTo: { type: string }
+        openedBy: { type: string }
+        resolutionNote: { type: string }
+        version: { type: integer, minimum: 1 }
+        resolvedAt: { type: [string, 'null'], format: date-time }
+        closedAt: { type: [string, 'null'], format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    RescueEvent:
+      type: object
+      required: [id, rescueCaseId, orderId, actorId, eventType, toStatus, correlationId, createdAt]
+      properties:
+        id: { type: string }
+        rescueCaseId: { type: string }
+        orderId: { type: string }
+        actorId: { type: string }
+        eventType:
+          type: string
+          enum: [created, decision_recorded, status_changed, resolved, closed]
+        fromStatus:
+          oneOf:
+            - { $ref: '#/components/schemas/RescueStatus' }
+            - { type: string, maxLength: 0 }
+        toStatus: { $ref: '#/components/schemas/RescueStatus' }
+        correlationId: { type: string }
+        createdAt: { type: string, format: date-time }
+  responses:
+    RescueCase:
+      description: Governed order rescue case.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [rescueCase]
+            properties:
+              rescueCase: { $ref: '#/components/schemas/RescueCase' }
+    RescueCaseList:
+      description: Governed order rescue queue.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [rescueCases]
+            properties:
+              rescueCases:
+                type: array
+                items: { $ref: '#/components/schemas/RescueCase' }
+    Error:
+      description: Governed error response.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [code, message]
+            properties:
+              code: { type: string }
+              message: { type: string }

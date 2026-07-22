@@ -1,0 +1,65 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-031",
+  "journeyNameAr": "الإدارة والأدوار والاعتمادات والتدقيق",
+  "implementationState": "IMPLEMENTED_AND_VERIFIED_READY_FOR_INDEPENDENT_APPROVAL",
+  "approvalState": "PENDING_INDEPENDENT_APPROVAL",
+  "technicalEvidence": {
+    "verifiedSnapshot": "4e5b74e1c46286ee52a6a0fd8bfede3676284d56",
+    "workflowRunId": 29920877185,
+    "workflowJobId": 88925767497,
+    "conclusion": "success",
+    "evidencePath": "governance/evidence/jrn-031-administration-governance-evidence.md"
+  },
+  "rules": {
+    "selfApprovalForbidden": true,
+    "implementationAgentCannotApprove": true,
+    "reviewMustReferenceCommit": true,
+    "reviewMustBeRecordedOnGitHub": true,
+    "allApprovalsRequiredBeforeRelease": true,
+    "mergeDoesNotEqualApproval": true,
+    "deploymentDoesNotEqualApproval": true
+  },
+  "approvals": [
+    {
+      "role": "product-manager",
+      "status": "pending",
+      "approver": null,
+      "reviewUrl": null,
+      "reviewedCommit": null,
+      "reviewedAt": null
+    },
+    {
+      "role": "product-owner",
+      "status": "pending",
+      "approver": null,
+      "reviewUrl": null,
+      "reviewedCommit": null,
+      "reviewedAt": null
+    },
+    {
+      "role": "independent-quality",
+      "status": "pending",
+      "approver": null,
+      "reviewUrl": null,
+      "reviewedCommit": null,
+      "reviewedAt": null
+    },
+    {
+      "role": "application-security",
+      "status": "pending",
+      "approver": null,
+      "reviewUrl": null,
+      "reviewedCommit": null,
+      "reviewedAt": null
+    },
+    {
+      "role": "release-production",
+      "status": "pending",
+      "approver": null,
+      "reviewUrl": null,
+      "reviewedCommit": null,
+      "reviewedAt": null
+    }
+  ]
+}

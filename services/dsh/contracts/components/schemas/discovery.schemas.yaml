@@ -1,0 +1,41 @@
+# BThwani DSH OpenAPI schemas module: discovery.
+# Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
+
+DshHomeDiscoveryResponse:
+  type: object
+  required:
+    - banners
+    - promos
+    - filters
+    - categories
+    - stores
+    - pagination
+    - generatedAt
+  properties:
+    banners:
+      type: array
+      items:
+        $ref: "../../dsh.openapi.yaml#/components/schemas/DshHomeBanner"
+    promos:
+      type: array
+      items:
+        $ref: "../../dsh.openapi.yaml#/components/schemas/DshHomePromo"
+    filters:
+      type: array
+      items:
+        $ref: "../../dsh.openapi.yaml#/components/schemas/DshHomeFilter"
+    categories:
+      type: array
+      items:
+        $ref: "../../dsh.openapi.yaml#/components/schemas/DshHomeCategory"
+    stores:
+      type: array
+      items:
+        $ref: "../../dsh.openapi.yaml#/components/schemas/DshStoreSummary"
+    pagination:
+      $ref: "../../dsh.openapi.yaml#/components/schemas/DshPagination"
+    generatedAt:
+      type: string
+      format: date-time
+
+# ─── Cart schemas ────────────────────────────────────────────────

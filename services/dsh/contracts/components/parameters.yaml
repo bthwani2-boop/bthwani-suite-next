@@ -1,0 +1,36 @@
+# BThwani DSH OpenAPI components/parameters module: parameters.
+# Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
+
+HomeContentKind:
+  name: kind
+  in: path
+  required: true
+  schema:
+    type: string
+    enum: [banners, promos]
+
+StoreId:
+  name: storeId
+  in: path
+  required: true
+  schema:
+    type: string
+    minLength: 1
+
+IdempotencyKey:
+  name: Idempotency-Key
+  in: header
+  required: true
+  schema:
+    type: string
+    minLength: 8
+    maxLength: 200
+
+CorrelationId:
+  name: X-Correlation-ID
+  in: header
+  required: true
+  schema:
+    type: string
+    minLength: 8
+    maxLength: 200

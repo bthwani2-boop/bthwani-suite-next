@@ -1,0 +1,20 @@
+{
+  "priority": 10,
+  "request": {
+    "method": "GET",
+    "urlPathPattern": "/financial/payout/status/[^/]+",
+    "headers": {
+      "Idempotency-Key": { "matches": ".+" },
+      "X-Correlation-ID": { "matches": ".+" }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json" },
+    "jsonBody": {
+      "providerReference": "sim-payout-reconciled-{{randomValue length=14 type='ALPHANUMERIC'}}",
+      "status": "processed"
+    },
+    "transformers": ["response-template"]
+  }
+}

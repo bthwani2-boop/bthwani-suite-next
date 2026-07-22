@@ -1,0 +1,145 @@
+# BThwani DSH OpenAPI path-items module: cart-serviceability.
+# Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
+
+/dsh/client/cart:
+  get:
+    operationId: getDshClientCart
+    summary: Get the active cart for the authenticated client at a given store.
+    tags: [DshCart]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: storeId
+        in: query
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: Active cart or null if no active cart for this store.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCartResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+  delete:
+    operationId: clearDshClientCart
+    summary: Remove all items from the active cart (cart itself is kept).
+    tags: [DshCart]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: cartId
+        in: query
+        schema: { type: string }
+      - name: storeId
+        in: query
+        schema: { type: string }
+    responses:
+      "204": { description: Cart cleared. }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+
+/dsh/client/cart/items:
+  post:
+    operationId: upsertDshCartItem
+    summary: Add or update an item in the client cart. Creates cart if not exists.
+    tags: [DshCart]
+    security: [{ bearerAuth: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshUpsertCartItemRequest" }
+    responses:
+      "200":
+        description: Cart item upserted. Returns cartId and updated item.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshUpsertCartItemResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+
+/dsh/client/cart/items/{itemId}:
+  delete:
+    operationId: removeDshCartItem
+    summary: Remove a specific item from the client cart.
+    tags: [DshCart]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: itemId
+        in: path
+        required: true
+        schema: { type: string }
+      - name: cartId
+        in: query
+        required: true
+        schema: { type: string }
+    responses:
+      "204": { description: Item removed. }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
+/dsh/client/cart/serviceability:
+  post:
+    operationId: checkDshCartServiceability
+    summary: Check whether the store can be served in the client's zone. No financial computation.
+    tags: [DshCart]
+    security: [{ bearerAuth: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/CartServiceabilityRequest" }
+    responses:
+      "200":
+        description: Operational serviceability decision.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/CartServiceabilityResult" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+
+/dsh/operator/carts:
+  get:
+    operationId: listOperatorCarts
+    summary: List carts for operator monitoring. No financial mutation.
+    tags: [DshCart]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: state
+        in: query
+        schema:
+          type: string
+          enum: [active, checked_out, abandoned]
+    responses:
+      "200":
+        description: Cart list for operator review.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshOperatorCartsResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+
+# ─── Checkout Intent & WLT Handoff ──────────────────────────────
+# Implemented. DSH creates intent records only; payment truth is WLT-owned.
+# wltPaymentSessionId is an opaque WLT-owned payment-session reference.
+# ──────────────────────────────────────────────────────────────────────────
+
+/dsh/operator/platform/serviceability/{zoneId}:
+  get:
+    operationId: getDshZoneServiceability
+    summary: Get live serviceability state for a zone.
+    tags: [DshPlatformPolicies]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: zoneId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: Zone serviceability state.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshZoneServiceabilityResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }

@@ -1,0 +1,48 @@
+{
+  "journeyId": "JRN-035",
+  "journeyNameAr": "الاستردادات المالية",
+  "targetBranch": "sambassam",
+  "repositoryMode": "REMOTE_ONLY",
+  "implementationStatus": "IMPLEMENTED_FOR_REVIEW",
+  "protectedClosureStatus": "NEEDS_EVIDENCE",
+  "financialTruthOwner": "WLT",
+  "orchestrationOwner": "DSH",
+  "requiredSurfaces": [
+    "control-panel",
+    "app-client",
+    "app-partner"
+  ],
+  "implementedCapabilities": [
+    "eligible_refund_request",
+    "remaining_refundable_amount_reservation",
+    "partial_and_full_refunds",
+    "maker_checker_decision",
+    "provider_single_claim_execution",
+    "provider_unknown_reconciliation",
+    "double_entry_ledger_posting",
+    "durable_dsh_outbox_readback",
+    "tenant_scoped_reads_and_mutations",
+    "privacy_safe_client_and_partner_status",
+    "append_only_refund_audit"
+  ],
+  "verificationWorkflows": [
+    ".github/workflows/jrn-035-financial-refunds-verification.yml",
+    ".github/workflows/jrn-035-openapi-verification.yml"
+  ],
+  "evidenceRequiredBeforeClosed": [
+    "successful_independent_workflow_runs",
+    "provider_sandbox_success_failure_and_ambiguous_result",
+    "balanced_ledger_runtime_queries",
+    "outbox_delivery_and_retry_runtime_evidence",
+    "control_panel_visual_and_accessibility_evidence",
+    "app_client_device_evidence",
+    "app_partner_device_evidence",
+    "product_manager_approval",
+    "product_owner_approval"
+  ],
+  "forbiddenDecisionsWithoutEvidence": [
+    "CLOSED",
+    "RELEASE_READY",
+    "PRODUCTION_READY"
+  ]
+}

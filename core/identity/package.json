@@ -8,7 +8,7 @@
   "scripts": {
     "test": "cd backend && go test ./...",
     "build": "cd backend && go build ./...",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json && pnpm --dir ../../apps/app-client/runtime typecheck && pnpm --dir ../../apps/app-partner/runtime typecheck && pnpm --dir ../../apps/app-captain/runtime typecheck && pnpm --dir ../../apps/app-field/runtime typecheck && pnpm --dir ../../apps/control-panel/runtime typecheck"
   },
   "peerDependencies": {
     "react": "19.2.3"

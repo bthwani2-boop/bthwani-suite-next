@@ -1,0 +1,26 @@
+{
+  "extends": "./tsconfig.jrn-020-030.json",
+  "compilerOptions": {
+    "outDir": "dist-jrn-025"
+  },
+  "include": [
+    "frontend/**/*.d.ts",
+    "frontend/shared/_kernel/**/*.ts",
+    "frontend/shared/_kernel/**/*.tsx",
+    "frontend/shared/marketing/**/*.ts",
+    "frontend/shared/marketing/**/*.tsx",
+    "frontend/shared/partner/dsh-partner-offer-types.ts",
+    "frontend/shared/home-discovery/**/*.ts",
+    "frontend/shared/home-discovery/**/*.tsx",
+    "frontend/control-panel/marketing/**/*.ts",
+    "frontend/control-panel/marketing/**/*.tsx",
+    "frontend/app-client/home-discovery/**/*.ts",
+    "frontend/app-client/home-discovery/**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "dist-jrn-020-030",
+    "dist-jrn-025"
+  ]
+}

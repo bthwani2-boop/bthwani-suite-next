@@ -14,6 +14,9 @@ import {
   fieldSubmitPartner,
   fieldUploadDocument,
   fieldCreateVisit,
+  createPartnerMutationContext,
+  assertPartnerReadback,
+  mapPartnerOnboardingFailure,
   type DshPartnerDocumentType,
 } from "../partner";
 import {
@@ -84,23 +87,39 @@ function buildUpdatePartnerInput(form: Partial<FieldPartnerDraftForm>) {
 
 export function useFieldPartnerOnboardingController(): FieldOnboardingController {
   const [state, setState] = useState<FieldOnboardingDraftState>(initialDraftState);
-  const [validationErrors, setValidationErrors] = useState<FieldOnboardingValidationErrors>( {});
+  const [validationErrors, setValidationErrors] = useState<FieldOnboardingValidationErrors>({});
   const activeRouteKeyRef = useRef("new-draft");
 
   const updateForm = useCallback((patch: Partial<FieldPartnerDraftForm>) => {
-    setState((s) => ({ ...s, form: { ...s.form, ...patch }, isDirty: true }));
+    setState((s) => ({
+      ...s,
+      form: { ...s.form, ...patch },
+      isDirty: true,
+      failure: null,
+    }));
   }, []);
 
   const updateVisitNotes = useCallback((notes: string) => {
-    setState((s) => ({ ...s, visitNotes: notes, isDirty: true }));
+    setState((s) => ({ ...s, visitNotes: notes, isDirty: true, failure: null }));
   }, []);
 
   const updateLocation = useCallback((lat: number, lon: number) => {
-    setState((s) => ({ ...s, locationLatitude: lat, locationLongitude: lon, isDirty: true }));
+    setState((s) => ({
+      ...s,
+      locationLatitude: lat,
+      locationLongitude: lon,
+      isDirty: true,
+      failure: null,
+    }));
   }, []);
 
   const addEvidenceRef = useCallback((ref: string) => {
-    setState((s) => ({ ...s, evidenceMediaRefs: [...s.evidenceMediaRefs, ref], isDirty: true }));
+    setState((s) => ({
+      ...s,
+      evidenceMediaRefs: [...s.evidenceMediaRefs, ref],
+      isDirty: true,
+      failure: null,
+    }));
   }, []);
 
   const ensureDraftCreated = useCallback(async (placeholder = false): Promise<string | false> => {
@@ -123,6 +142,7 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
     }
 
     try {
+      const createMutation = createPartnerMutationContext("field-create-draft", "new-draft");
       const res = await fieldCreateDraft({
         legalNameAr: form.legalNameAr!,
         displayName: form.displayName!,
@@ -135,27 +155,36 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
         email: form.email ?? "",
         category: form.category ?? "default",
         notes: form.notes ?? "",
-      });
-      await fieldUpdatePartnerStore(res.id, buildStoreDraftInput(form));
+      }, createMutation);
+      await fieldUpdatePartnerStore(
+        res.id,
+        buildStoreDraftInput(form),
+        createPartnerMutationContext("field-update-first-store", res.id),
+      );
+      const readback = assertPartnerReadback(res.id, res.version, await fieldGetPartner(res.id));
       setState((s) => ({
         ...s,
-        partnerId: res.id,
-        partnerVersion: res.version,
+        partnerId: readback.id,
+        partnerVersion: readback.version,
         form: { ...s.form, ...form },
         submitError: null,
+        failure: null,
       }));
-      return res.id;
+      return readback.id;
     } catch (err) {
-      const msg = err && typeof err === "object" && "status" in err
-        ? `فشل إنشاء مسودة الشريك (رمز الخطأ: ${(err as any).status})`
-        : "فشل إنشاء مسودة الشريك";
-      setState((s) => ({ ...s, submitError: msg }));
+      const failure = mapPartnerOnboardingFailure(err);
+      setState((s) => ({ ...s, submitError: failure.message, failure }));
       return false;
     }
   }, [state.partnerId, state.form, setState, setValidationErrors]);
 
   const loadDraft = useCallback(async (partnerId: string): Promise<boolean> => {
-    setState((s) => ({ ...s, loadStatus: "hydrating", loadError: null }));
+    setState((s) => ({
+      ...s,
+      loadStatus: "hydrating",
+      loadError: null,
+      failure: null,
+    }));
     try {
       const [partner, storeRes, documentsRes, visitsRes] = await Promise.all([
         fieldGetPartner(partnerId),
@@ -193,9 +222,9 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
           beneficiaryName: partner.beneficiaryName,
           bankName: partner.bankName,
           bankBranch: partner.bankBranch,
-          accountNumber: partner.accountNumber,
-          iban: partner.iban,
-          payoutMobileNumber: partner.payoutMobileNumber,
+          accountNumber: "",
+          iban: "",
+          payoutMobileNumber: "",
           settlementPreference: partner.settlementPreference as FieldPartnerDraftForm["settlementPreference"],
           bankAccountHolderMatchesOwner: partner.bankAccountHolderMatchesOwner,
           bankNotes: partner.bankNotes,
@@ -208,16 +237,19 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
         evidenceMediaRefs: latestVisit?.evidenceMediaRefs ?? [],
         isDirty: false,
         loadStatus: "ready",
+        loadError: null,
+        submitError: null,
+        failure: null,
       }));
       return true;
     } catch (err) {
-      const status = err && typeof err === "object" && "status" in err ? (err as any).status : undefined;
-      const msg = status === 403
-        ? "لا تملك صلاحية الوصول إلى ملف هذا الشريك"
-        : status === 404
-          ? "تعذر العثور على ملف الشريك"
-          : "تعذر تحميل بيانات ملف الشريك";
-      setState((s) => ({ ...s, loadStatus: "error", loadError: msg }));
+      const failure = mapPartnerOnboardingFailure(err);
+      setState((s) => ({
+        ...s,
+        loadStatus: "error",
+        loadError: failure.message,
+        failure,
+      }));
       return false;
     }
   }, []);
@@ -238,37 +270,47 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
 
   const saveDraft = useCallback(async (): Promise<boolean> => {
     if (!state.partnerId) return false;
-    setState((s) => ({ ...s, isSaving: true, submitError: null }));
+    setState((s) => ({
+      ...s,
+      isSaving: true,
+      submitError: null,
+      failure: null,
+    }));
     try {
+      const expectedVersion = state.partnerVersion ?? 0;
       const updatedPartner = await fieldUpdatePartner(
         state.partnerId,
         buildUpdatePartnerInput(state.form),
-        state.partnerVersion ?? 0
+        expectedVersion,
+        createPartnerMutationContext("field-save-partner", state.partnerId, expectedVersion),
       );
-      await fieldUpdatePartnerStore(state.partnerId, buildStoreDraftInput(state.form));
+      await fieldUpdatePartnerStore(
+        state.partnerId,
+        buildStoreDraftInput(state.form),
+        createPartnerMutationContext("field-save-store", state.partnerId),
+      );
+      const readback = assertPartnerReadback(
+        state.partnerId,
+        updatedPartner.version,
+        await fieldGetPartner(state.partnerId),
+      );
       setState((s) => ({
         ...s,
         isSaving: false,
         isDirty: false,
-        partnerVersion: updatedPartner.version,
+        partnerVersion: readback.version,
         submitError: null,
+        failure: null,
         lastSavedAt: new Date().toISOString(),
       }));
       return true;
     } catch (err) {
-      const status = err && typeof err === "object" && "status" in err ? (err as any).status : undefined;
-      if (status === 409) {
-        setState((s) => ({
-          ...s,
-          isSaving: false,
-          submitError: "تم تعديل بيانات هذا الملف من مكان آخر. أعد تحميل الملف قبل الحفظ مرة أخرى.",
-        }));
-        return false;
-      }
+      const failure = mapPartnerOnboardingFailure(err);
       setState((s) => ({
         ...s,
         isSaving: false,
-        submitError: "فشل حفظ التعديلات. تحقق من اتصال الشبكة وأعد المحاولة.",
+        submitError: failure.message,
+        failure,
       }));
       return false;
     }
@@ -281,41 +323,69 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
 
   const uploadDocument = useCallback(async (kind: DshPartnerDocumentType, mediaRef: string): Promise<boolean> => {
     if (!state.partnerId) {
-      setState((s) => ({ ...s, submitError: "يجب إنشاء ملف الشريك أولًا قبل رفع المستندات" }));
+      const failure = {
+        state: "readiness_blocked",
+        code: "PARTNER_DRAFT_REQUIRED",
+        message: "يجب إنشاء ملف الشريك أولًا قبل رفع المستندات",
+        retryable: false,
+        reloadRequired: false,
+      } as const;
+      setState((s) => ({ ...s, submitError: failure.message, failure }));
       return false;
     }
     try {
-      const doc = await fieldUploadDocument(state.partnerId, {
-        documentType: kind,
-        mediaRef,
-        notes: "مرفوع عبر تطبيق الميداني",
-      });
+      const doc = await fieldUploadDocument(
+        state.partnerId,
+        {
+          documentType: kind,
+          mediaRef,
+          notes: "مرفوع عبر تطبيق الميداني",
+        },
+        createPartnerMutationContext("field-upload-document", `${state.partnerId}:${kind}`),
+      );
       setState((s) => ({
         ...s,
-        uploadedDocumentIds: s.uploadedDocumentIds.includes(doc.id) ? s.uploadedDocumentIds : [...s.uploadedDocumentIds, doc.id],
-        uploadedDocumentTypes: s.uploadedDocumentTypes.includes(kind) ? s.uploadedDocumentTypes : [...s.uploadedDocumentTypes, kind],
+        uploadedDocumentIds: s.uploadedDocumentIds.includes(doc.id)
+          ? s.uploadedDocumentIds
+          : [...s.uploadedDocumentIds, doc.id],
+        uploadedDocumentTypes: s.uploadedDocumentTypes.includes(kind)
+          ? s.uploadedDocumentTypes
+          : [...s.uploadedDocumentTypes, kind],
         submitError: null,
+        failure: null,
       }));
       return true;
     } catch (err) {
-      setState((s) => ({ ...s, submitError: "تعذر رفع المستند. يرجى التحقق من اتصال الشبكة." }));
+      const failure = mapPartnerOnboardingFailure(err);
+      setState((s) => ({ ...s, submitError: failure.message, failure }));
       return false;
     }
   }, [state.partnerId]);
 
   const submitDraft = useCallback(async () => {
     if (!state.partnerId) return;
-    setState((s) => ({ ...s, isSubmitting: true, submitError: null }));
+    setState((s) => ({
+      ...s,
+      isSubmitting: true,
+      submitError: null,
+      failure: null,
+    }));
 
     try {
+      const expectedVersion = state.partnerVersion ?? 0;
       const updatedPartner = await fieldUpdatePartner(
         state.partnerId,
         buildUpdatePartnerInput(state.form),
-        state.partnerVersion ?? 0
+        expectedVersion,
+        createPartnerMutationContext("field-submit-save", state.partnerId, expectedVersion),
       );
-      await fieldUpdatePartnerStore(state.partnerId, buildStoreDraftInput(state.form));
+      await fieldUpdatePartnerStore(
+        state.partnerId,
+        buildStoreDraftInput(state.form),
+        createPartnerMutationContext("field-submit-store", state.partnerId),
+      );
 
-      // Create field visit if we have location or notes
+      // Create field visit if we have location or notes.
       if (state.visitNotes || state.locationLatitude !== null) {
         const visitPayload: import("../partner").DshCreatePartnerFieldVisitRequest = {
           visitNotes: state.visitNotes,
@@ -325,19 +395,37 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
             locationLongitude: state.locationLongitude,
           }),
         };
-        await fieldCreateVisit(state.partnerId, visitPayload);
+        await fieldCreateVisit(
+          state.partnerId,
+          visitPayload,
+          createPartnerMutationContext("field-submit-visit", state.partnerId),
+        );
       }
 
-      await fieldSubmitPartner(state.partnerId);
-      setState((s) => ({ ...s, isSubmitting: false, isSubmitted: true, partnerVersion: updatedPartner.version }));
-    } catch (err) {
-      const msg = err && typeof err === "object" && "status" in err && (err as any).status === 422
-        ? "لا يمكن إرسال الملف في الحالة الحالية — تأكد من استكمال البيانات"
-        : "فشل إرسال مسودة الشريك للمراجعة";
+      const submitted = await fieldSubmitPartner(
+        state.partnerId,
+        createPartnerMutationContext("field-submit-partner", state.partnerId, updatedPartner.version),
+      );
+      const readback = assertPartnerReadback(
+        state.partnerId,
+        submitted.partner.version,
+        await fieldGetPartner(state.partnerId),
+      );
       setState((s) => ({
         ...s,
         isSubmitting: false,
-        submitError: msg,
+        isSubmitted: true,
+        partnerVersion: readback.version,
+        submitError: null,
+        failure: null,
+      }));
+    } catch (err) {
+      const failure = mapPartnerOnboardingFailure(err);
+      setState((s) => ({
+        ...s,
+        isSubmitting: false,
+        submitError: failure.message,
+        failure,
       }));
     }
   }, [state]);

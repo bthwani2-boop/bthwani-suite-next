@@ -24,6 +24,7 @@ import {
   usePartnerVisitsController,
 } from "../../shared/partner";
 import type { DshPartnerActivationStatus } from "../../shared/partner";
+import { OperatorDeliveryPricingPanel } from "./stores/OperatorDeliveryPricingPanel";
 
 type Tab = "overview" | "documents" | "visits" | "stores" | "readiness" | "audit";
 type DocumentDecision = "rejected" | "needs_resubmit";
@@ -46,12 +47,6 @@ function card(title: string, children: ReactNode): ReactNode {
       {children}
     </section>
   );
-}
-
-function mutationMessage(message: string): string {
-  if (message === "invalid_transition") return "الانتقال غير مسموح من الحالة الحالية.";
-  if (message === "version_conflict") return "تغيرت بيانات الشريك. أعد التحميل ثم راجع القرار من جديد.";
-  return message;
 }
 
 function statusStyle(tone: string): CSSProperties {
@@ -82,11 +77,10 @@ export function PartnerDetailOperationalScreen({ partnerId, onBack }: PartnerDet
   const [tab, setTab] = useState<Tab>("overview");
   const [transitionTarget, setTransitionTarget] = useState<string | null>(null);
   const [transitionReason, setTransitionReason] = useState("");
-  const [documentDecision, setDocumentDecision] = useState<{
-    readonly documentId: string;
-    readonly decision: DocumentDecision;
-  } | null>(null);
+  const [documentDecision, setDocumentDecision] = useState<{ readonly documentId: string; readonly decision: DocumentDecision } | null>(null);
   const [documentReason, setDocumentReason] = useState("");
+  const [storeIdToLink, setStoreIdToLink] = useState("");
+  const [selectedPricingStoreId, setSelectedPricingStoreId] = useState<string | null>(null);
 
   if (detail.detailState.kind === "idle" || detail.detailState.kind === "loading") {
     return <DetailPageFrame stateView={<CpStatePanel role="status" title="جاري تحميل بيانات الشريك…" />}>{null}</DetailPageFrame>;
@@ -137,6 +131,13 @@ export function PartnerDetailOperationalScreen({ partnerId, onBack }: PartnerDet
     }
   };
 
+  const confirmStoreLink = async () => {
+    const storeId = storeIdToLink.trim();
+    if (!storeId) return;
+    const succeeded = await stores.linkStore(storeId);
+    if (succeeded) setStoreIdToLink("");
+  };
+
   return (
     <DetailPageFrame
       header={(
@@ -181,14 +182,11 @@ export function PartnerDetailOperationalScreen({ partnerId, onBack }: PartnerDet
                 <CpDescriptionRow label="الإصدار التشغيلي">{partner.version}</CpDescriptionRow>
               </CpDescriptionList>
             ))}
-
             {card("إجراءات دورة الحياة", (
               <>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   {vm.allowedNextStatuses.map((status) => (
-                    <CpButton key={status} onClick={() => { setTransitionTarget(status); setTransitionReason(""); }}>
-                      {status}
-                    </CpButton>
+                    <CpButton key={status} onClick={() => { setTransitionTarget(status); setTransitionReason(""); }}>{status}</CpButton>
                   ))}
                 </div>
                 {transitionTarget ? (
@@ -200,18 +198,23 @@ export function PartnerDetailOperationalScreen({ partnerId, onBack }: PartnerDet
                       aria-label="سبب انتقال حالة الشريك"
                     />
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      <CpButton
-                        onClick={() => void confirmTransition()}
-                        disabled={detail.mutationState.kind === "loading" || (REASON_REQUIRED.has(transitionTarget) && !transitionReason.trim())}
-                      >
+                      <CpButton onClick={() => void confirmTransition()} disabled={detail.mutationState.kind === "loading" || (REASON_REQUIRED.has(transitionTarget) && !transitionReason.trim())}>
                         {detail.mutationState.kind === "loading" ? "جاري الحفظ…" : "تأكيد القرار"}
                       </CpButton>
                       <CpButton onClick={() => { setTransitionTarget(null); setTransitionReason(""); }}>إلغاء</CpButton>
                     </div>
                   </div>
                 ) : null}
-                {detail.mutationState.kind === "error" ? (
-                  <p role="alert" style={{ color: statusScale.danger, margin: 0 }}>{mutationMessage(detail.mutationState.message)}</p>
+                {detail.mutationState.kind === "version_conflict" ? (
+                  <CpStatePanel role="alert" title="تعارض نسخة الشريك" code="تغيرت بيانات الشريك من جلسة أخرى. حمّل أحدث نسخة قبل إعادة القرار.">
+                    <CpRetryButton onClick={() => void detail.reload()}>تحميل أحدث نسخة</CpRetryButton>
+                  </CpStatePanel>
+                ) : detail.mutationState.kind === "invalid_transition" ? (
+                  <CpStatePanel role="alert" title="القرار محجوب ببوابات الجاهزية" code={detail.mutationState.message}>
+                    <CpRetryButton onClick={() => setTab("readiness")}>فتح تبويب الجاهزية</CpRetryButton>
+                  </CpStatePanel>
+                ) : detail.mutationState.kind === "error" ? (
+                  <CpStatePanel role="alert" title="تعذر تطبيق قرار دورة الحياة" code={detail.mutationState.message} />
                 ) : null}
               </>
             ))}
@@ -268,14 +271,42 @@ export function PartnerDetailOperationalScreen({ partnerId, onBack }: PartnerDet
         ) : null}
 
         {tab === "stores" ? (
-          stores.state.kind === "loading" || stores.state.kind === "idle" ? <CpStatePanel role="status" title="جاري تحميل المتاجر…" />
-            : stores.state.kind === "empty" ? <CpStatePanel role="status" title="لا توجد متاجر مرتبطة بهذا الشريك بعد." />
-              : stores.state.kind === "error" ? <CpStatePanel role="alert" title="تعذر تحميل المتاجر" code={stores.state.message}><CpRetryButton onClick={() => void stores.reload()}>إعادة المحاولة</CpRetryButton></CpStatePanel>
-                : (
-                  <CpTable aria-label="متاجر الشريك"><thead><tr><CpTableHeaderCell>المتجر</CpTableHeaderCell><CpTableHeaderCell>المدينة</CpTableHeaderCell><CpTableHeaderCell>الحالة</CpTableHeaderCell><CpTableHeaderCell>ظهور العميل</CpTableHeaderCell></tr></thead><tbody>
-                    {stores.state.stores.map((store) => <tr key={store.id}><CpTableCell>{store.displayName}</CpTableCell><CpTableCell>{store.cityCode}</CpTableCell><CpTableCell>{store.status}</CpTableCell><CpTableCell>{store.isVisible ? "ظاهر" : "مخفي"}</CpTableCell></tr>)}
-                  </tbody></CpTable>
-                )
+          <div style={{ display: "grid", gap: 12 }}>
+            <section style={{ display: "grid", gap: 8, border: `1px solid ${neutralScale[200]}`, borderRadius: 12, padding: 16 }}>
+              <h3 style={{ margin: 0, fontSize: 14 }}>ربط متجر غير مملوك</h3>
+              <CpTextInput value={storeIdToLink} onChange={setStoreIdToLink} placeholder="معرف المتجر" aria-label="معرف المتجر المراد ربطه" />
+              <CpButton disabled={!storeIdToLink.trim() || stores.actionState.kind === "loading"} onClick={() => void confirmStoreLink()}>
+                {stores.actionState.kind === "loading" ? "جارٍ الربط…" : "ربط المتجر بالشريك"}
+              </CpButton>
+              {stores.actionState.kind === "error" ? <p role="alert" style={{ color: statusScale.danger, margin: 0 }}>{stores.actionState.message}</p> : null}
+            </section>
+            {stores.state.kind === "loading" || stores.state.kind === "idle" ? <CpStatePanel role="status" title="جاري تحميل المتاجر…" />
+              : stores.state.kind === "empty" ? <CpStatePanel role="status" title="لا توجد متاجر مرتبطة بهذا الشريك بعد." />
+                : stores.state.kind === "error" ? <CpStatePanel role="alert" title="تعذر تحميل المتاجر" code={stores.state.message}><CpRetryButton onClick={() => void stores.reload()}>إعادة المحاولة</CpRetryButton></CpStatePanel>
+                  : (
+                    <div style={{ display: "grid", gap: 16 }}>
+                      <CpTable aria-label="متاجر الشريك">
+                        <thead><tr><CpTableHeaderCell>المتجر</CpTableHeaderCell><CpTableHeaderCell>المدينة</CpTableHeaderCell><CpTableHeaderCell>الحالة</CpTableHeaderCell><CpTableHeaderCell>ظهور العميل</CpTableHeaderCell><CpTableHeaderCell>التسعير</CpTableHeaderCell></tr></thead>
+                        <tbody>
+                          {stores.state.stores.map((store) => (
+                            <tr key={store.id}>
+                              <CpTableCell>{store.displayName}</CpTableCell>
+                              <CpTableCell>{store.cityCode}</CpTableCell>
+                              <CpTableCell>{store.status}</CpTableCell>
+                              <CpTableCell>{store.isVisible ? "ظاهر" : "مخفي"}</CpTableCell>
+                              <CpTableCell>
+                                <CpButton onClick={() => setSelectedPricingStoreId((current) => current === store.id ? null : store.id)}>
+                                  {selectedPricingStoreId === store.id ? "إغلاق التسعير" : "إدارة التسعير"}
+                                </CpButton>
+                              </CpTableCell>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </CpTable>
+                      {selectedPricingStoreId ? <OperatorDeliveryPricingPanel storeId={selectedPricingStoreId} /> : null}
+                    </div>
+                  )}
+          </div>
         ) : null}
 
         {tab === "readiness" ? (
@@ -283,7 +314,7 @@ export function PartnerDetailOperationalScreen({ partnerId, onBack }: PartnerDet
             : readiness.state.kind === "error" ? <CpStatePanel role="alert" title="تعذر تحميل الجاهزية" code={readiness.state.message}><CpRetryButton onClick={() => void readiness.reload()}>إعادة المحاولة</CpRetryButton></CpStatePanel>
               : readiness.viewModel ? (
                 <div style={{ display: "grid", gap: 8 }}>
-                  {readiness.viewModel.items.map((item) => <CpStatePanel key={item.id} role="status" title={`${item.satisfied ? "مستوفى" : "غير مستوفى"}: ${item.label}`} code={item.blockedReason || undefined} />)}
+                  {readiness.viewModel.items.map((item) => <CpStatePanel key={item.id} role="status" title={`${item.satisfied ? "مستوفى" : "غير مستوفى"}: ${item.label}`} {...(item.blockedReason ? { code: item.blockedReason } : {})} />)}
                   {readiness.viewModel.allGatesPassed ? <CpStatePanel role="status" title="جميع بوابات الجاهزية مستوفاة." /> : null}
                 </div>
               ) : null

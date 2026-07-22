@@ -18,7 +18,7 @@
   "properties": {
     "schemaVersion": { "const": 4 },
     "repository": { "const": "bthwani2-boop/bthwani-suite-next" },
-    "targetBranch": { "const": "lian" },
+    "targetBranch": { "const": "sambassam" },
     "observedAt": { "type": "string", "format": "date-time" },
     "observed": {
       "type": "object",

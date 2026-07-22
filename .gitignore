@@ -131,3 +131,7 @@ infra/data-plane/backups/
 
 # Generated same-commit runtime evidence
 /artifacts/
+
+# Composed OpenAPI intermediates (source of truth is the fragment files under
+# */contracts/*.openapi.yaml; only the generated client is a tracked deliverable)
+**/contracts/generated/

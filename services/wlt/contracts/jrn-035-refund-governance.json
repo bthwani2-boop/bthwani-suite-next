@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "journeyId": "JRN-035",
+  "owner": "WLT",
+  "operationalOrchestrator": "DSH",
+  "states": ["requested", "approved", "processing", "provider_unknown", "completed", "rejected", "reversed"],
+  "transitions": [
+    {"from": "requested", "action": "approve", "to": "approved", "authority": "refund-checker", "requiresDifferentActorFrom": "requestedBy"},
+    {"from": "requested", "action": "reject", "to": "rejected", "authority": "refund-checker", "requiresDifferentActorFrom": "requestedBy"},
+    {"from": "approved", "action": "execute", "to": "processing", "authority": "refund-checker", "providerCall": true, "atMostOnceClaim": true},
+    {"from": "processing", "action": "provider_success", "to": "completed", "authority": "WLT", "requiresLedger": true, "requiresDshOutbox": true},
+    {"from": "processing", "action": "provider_definitive_failure", "to": "rejected", "authority": "WLT"},
+    {"from": "processing", "action": "provider_ambiguous", "to": "provider_unknown", "authority": "WLT", "requiresReconciliation": true},
+    {"from": "provider_unknown", "action": "confirm_success", "to": "completed", "authority": "finance-reconciler", "requiresEvidence": true, "requiresLedger": true, "requiresDshOutbox": true},
+    {"from": "provider_unknown", "action": "confirm_failure", "to": "rejected", "authority": "finance-reconciler", "requiresEvidence": true}
+  ],
+  "amountPolicy": {
+    "minimumMinorUnits": 1,
+    "currencySource": "wlt_payment_sessions.currency",
+    "capturedAmountSource": "wlt_payment_sessions.amount_minor_units",
+    "remainingFormula": "captured - sum(requested,approved,processing,provider_unknown,completed)",
+    "supports": ["partial", "full"]
+  },
+  "idempotency": {
+    "creation": "tenant_id + payment_session_id + idempotency_key",
+    "mutations": "durable receipt before create approve reject complete and reconcile",
+    "replay": "same canonical payload returns stored status and body",
+    "changedPayload": "conflict before business handler or provider call",
+    "inProgress": "conflict without executing the business handler",
+    "providerExecution": "stable provider_idempotency_key per refund",
+    "ledger": "one refund_completed transaction per refund",
+    "dshReadback": "one refunded event per refund"
+  },
+  "privacy": {
+    "clientAndPartnerReadback": ["refundId", "orderId", "amountMinorUnits", "currency", "status", "createdAt", "updatedAt", "resolvedAt"],
+    "restricted": ["providerReference", "providerError", "operatorIds", "auditDetails", "reconciliationEvidence"]
+  },
+  "forbidden": [
+    "DSH writes WLT refund or ledger tables",
+    "maker approves or rejects own refund",
+    "provider_unknown automatically retries provider",
+    "completed without ledger and durable DSH readback",
+    "amount exceeds remaining refundable amount",
+    "same mutation idempotency key reaches a handler with changed payload",
+    "completed mutation response is released before its replay receipt is durable"
+  ]
+}

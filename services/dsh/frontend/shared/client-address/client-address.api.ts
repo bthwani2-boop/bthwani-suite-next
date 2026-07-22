@@ -62,12 +62,14 @@ export async function deleteDshClientAddress(
 
 export async function setDshClientDefaultAddress(
   addressId: string,
+  expectedVersion: number,
   mutation: DshAddressMutationContext,
 ): Promise<DshClientAddress> {
   const result = await request<{ address: DshClientAddress }>(
     `/dsh/client/addresses/${encodeURIComponent(addressId)}/default`,
     {
       method: "POST",
+      expectedVersion,
       idempotencyKey: mutation.idempotencyKey,
       correlationId: mutation.correlationId,
     },

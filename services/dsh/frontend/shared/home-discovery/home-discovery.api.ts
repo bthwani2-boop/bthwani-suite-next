@@ -1,3 +1,4 @@
+import { getIdentityAccessToken } from '@bthwani/core-identity';
 import { createDshFlexibleHttpClient } from '../_kernel/dsh-http-request';
 import {
   toBannerViewModel,
@@ -25,12 +26,17 @@ export async function fetchHomeDiscovery(params?: DshHomeDiscoveryParams): Promi
   }
 
   const httpClient = createDshFlexibleHttpClient(baseUrl);
+  const audienceSegment = params?.audienceSegment
+    ?? (getIdentityAccessToken() === null ? 'guest' : 'authenticated');
+  const cityCode = params?.cityCode?.trim() ?? '';
+  const serviceAreaCode = params?.serviceAreaCode?.trim() ?? '';
 
   try {
     const dto = await httpClient.request<DshHomeDiscoveryResponseDto>('/dsh/home-discovery', {
       query: {
-        cityCode: params?.cityCode,
-        serviceAreaCode: params?.serviceAreaCode,
+        cityCode: cityCode || undefined,
+        serviceAreaCode: serviceAreaCode || undefined,
+        audienceSegment,
         limit: params?.limit != null ? String(params.limit) : undefined,
       },
     });
@@ -61,6 +67,7 @@ export async function fetchHomeDiscovery(params?: DshHomeDiscoveryParams): Promi
       stores,
       pagination: dto.pagination,
       generatedAt: dto.generatedAt,
+      context: { cityCode, serviceAreaCode, audienceSegment },
     });
   } catch (err: unknown) {
     if (err && typeof err === 'object' && 'kind' in err) {

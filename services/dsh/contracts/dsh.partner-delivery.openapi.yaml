@@ -1,0 +1,287 @@
+openapi: 3.1.0
+info:
+  title: BThwani DSH Partner Delivery API
+  version: 1.0.0
+  description: >-
+    Governed partner-owned store courier lifecycle, actor-scoped readback,
+    durable command identity, proof completion, and operator exception evidence.
+x-bthwani-owner: services/dsh
+x-bthwani-parent-contract: services/dsh/contracts/dsh.openapi.yaml
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-client-generation: DISABLED
+x-bthwani-client-binding: MANUAL_TYPED_ADAPTER
+x-bthwani-runtime-dependency: true
+paths:
+  /dsh/partner/orders/{orderId}/partner-delivery:
+    get:
+      operationId: getDshPartnerDeliveryTask
+      tags: [DshPartnerDelivery]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/OrderId' }]
+      responses:
+        '200': { $ref: '#/components/responses/TaskStateResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/client/orders/{orderId}/partner-delivery:
+    get:
+      operationId: getDshClientPartnerDeliveryTask
+      tags: [DshPartnerDelivery]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/OrderId' }]
+      responses:
+        '200': { $ref: '#/components/responses/TaskStateResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '404': { $ref: '#/components/responses/ErrorResponse' }
+        '422': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/partner/orders/{orderId}/partner-delivery/assign:
+    post:
+      operationId: assignDshPartnerDeliveryTask
+      tags: [DshPartnerDelivery]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/OrderId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AssignRequest' }
+      responses:
+        '200': { $ref: '#/components/responses/TaskResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '422': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/partner/orders/{orderId}/partner-delivery/pickup:
+    post:
+      operationId: markDshPartnerDeliveryPickedUp
+      tags: [DshPartnerDelivery]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/OrderId' }]
+      requestBody: { $ref: '#/components/requestBodies/MutationRequest' }
+      responses:
+        '200': { $ref: '#/components/responses/TaskResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '422': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/partner/orders/{orderId}/partner-delivery/depart:
+    post:
+      operationId: departDshPartnerDeliveryTask
+      tags: [DshPartnerDelivery]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/OrderId' }]
+      requestBody: { $ref: '#/components/requestBodies/MutationRequest' }
+      responses:
+        '200': { $ref: '#/components/responses/TaskResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '422': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/partner/orders/{orderId}/partner-delivery/arrive:
+    post:
+      operationId: arriveDshPartnerDeliveryTask
+      tags: [DshPartnerDelivery]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/OrderId' }]
+      requestBody: { $ref: '#/components/requestBodies/MutationRequest' }
+      responses:
+        '200': { $ref: '#/components/responses/TaskResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '422': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/partner/orders/{orderId}/partner-delivery/proof:
+    post:
+      operationId: submitDshPartnerDeliveryProof
+      tags: [DshPartnerDelivery]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/OrderId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProofRequest' }
+      responses:
+        '200': { $ref: '#/components/responses/TaskResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '422': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/partner/orders/{orderId}/partner-delivery/exception:
+    post:
+      operationId: raiseDshPartnerDeliveryException
+      tags: [DshPartnerDelivery]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/OrderId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ExceptionRequest' }
+      responses:
+        '200': { $ref: '#/components/responses/TaskResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '422': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/operator/partner-deliveries:
+    get:
+      operationId: listDshOperatorPartnerDeliveries
+      tags: [DshPartnerDelivery]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: storeId, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/TaskStatus' } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200': { $ref: '#/components/responses/TaskListResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/operator/partner-deliveries/{taskId}:
+    get:
+      operationId: getDshOperatorPartnerDelivery
+      tags: [DshPartnerDelivery]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: taskId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { $ref: '#/components/responses/TaskResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '404': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/operator/partner-deliveries/order/{orderId}:
+    get:
+      operationId: getDshOperatorPartnerDeliveryByOrder
+      tags: [DshPartnerDelivery]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/OrderId' }]
+      responses:
+        '200': { $ref: '#/components/responses/TaskResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '404': { $ref: '#/components/responses/ErrorResponse' }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  parameters:
+    OrderId:
+      name: orderId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  requestBodies:
+    MutationRequest:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/MutationRequest' }
+  schemas:
+    TaskStatus:
+      type: string
+      enum: [unassigned, assigned, departed, arrived, proof_pending, completed, cancelled, exception]
+    MutationRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, commandId]
+      properties:
+        expectedVersion: { type: integer, minimum: 0 }
+        commandId: { type: string, minLength: 1, maxLength: 160 }
+        correlationId: { type: string, minLength: 1, maxLength: 128 }
+    AssignRequest:
+      allOf:
+        - { $ref: '#/components/schemas/MutationRequest' }
+        - type: object
+          required: [storeCourierId]
+          properties:
+            storeCourierId: { type: string, minLength: 1 }
+    ProofRequest:
+      allOf:
+        - { $ref: '#/components/schemas/MutationRequest' }
+        - type: object
+          required: [proofMethod, proofReference]
+          properties:
+            proofMethod: { type: string, minLength: 1 }
+            proofReference: { type: string, minLength: 1 }
+    ExceptionRequest:
+      allOf:
+        - { $ref: '#/components/schemas/MutationRequest' }
+        - type: object
+          required: [reason]
+          properties:
+            reason: { type: string, minLength: 1 }
+            evidenceReferences:
+              type: array
+              maxItems: 10
+              uniqueItems: true
+              items: { type: string, minLength: 1, maxLength: 512 }
+    PartnerDeliveryTask:
+      type: object
+      additionalProperties: false
+      required: [id, orderId, storeId, branchId, storeCourierId, status, version, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        orderId: { type: string, format: uuid }
+        storeId: { type: string }
+        branchId: { type: string }
+        storeCourierId: { type: string }
+        status: { $ref: '#/components/schemas/TaskStatus' }
+        assignedAt: { type: string, format: date-time, nullable: true }
+        pickedUpAt: { type: string, format: date-time, nullable: true }
+        departedAt: { type: string, format: date-time, nullable: true }
+        arrivedAt: { type: string, format: date-time, nullable: true }
+        proofMethod: { type: string, nullable: true }
+        proofReference: { type: string, nullable: true }
+        completedAt: { type: string, format: date-time, nullable: true }
+        exceptionReason: { type: string, nullable: true }
+        exceptionEvidenceReferences:
+          type: array
+          items: { type: string }
+        exceptionReportedAt: { type: string, format: date-time, nullable: true }
+        version: { type: integer, minimum: 1 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    TaskEnvelope:
+      type: object
+      additionalProperties: false
+      required: [task]
+      properties:
+        task: { $ref: '#/components/schemas/PartnerDeliveryTask' }
+    TaskStateEnvelope:
+      type: object
+      additionalProperties: false
+      required: [task, stage]
+      properties:
+        task:
+          oneOf:
+            - { $ref: '#/components/schemas/PartnerDeliveryTask' }
+            - { type: 'null' }
+        stage: { type: string }
+    TaskListEnvelope:
+      type: object
+      additionalProperties: false
+      required: [tasks]
+      properties:
+        tasks:
+          type: array
+          items: { $ref: '#/components/schemas/PartnerDeliveryTask' }
+    ErrorEnvelope:
+      type: object
+      additionalProperties: true
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+  responses:
+    TaskResponse:
+      description: Partner delivery task.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/TaskEnvelope' }
+    TaskStateResponse:
+      description: Actor-scoped partner delivery state.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/TaskStateEnvelope' }
+    TaskListResponse:
+      description: Operator partner delivery list.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/TaskListEnvelope' }
+    ErrorResponse:
+      description: Partner delivery request failed.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }

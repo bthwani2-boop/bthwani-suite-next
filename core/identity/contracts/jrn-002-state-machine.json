@@ -1,0 +1,56 @@
+{
+  "journeyId": "JRN-002",
+  "actorStates": {
+    "provisioned_inactive": {
+      "allowedActions": ["activation.issue", "actor.read", "actor.reactivate"],
+      "forbiddenActions": ["auth.login", "session.refresh"]
+    },
+    "active": {
+      "allowedActions": ["auth.login", "activation.issue", "session.read", "session.listOwn", "password.changeOwn", "account.deleteOwn", "actor.deactivate"],
+      "forbiddenActions": ["actor.overrideRoleFromClient", "actor.overrideSurfaceFromClient"]
+    },
+    "deactivated": {
+      "allowedActions": ["actor.read", "actor.reactivate"],
+      "forbiddenActions": ["auth.login", "activation.consume", "session.read", "session.refresh"]
+    },
+    "deleted_anonymized": {
+      "allowedActions": ["deletionOutbox.process"],
+      "forbiddenActions": ["auth.login", "activation.issue", "activation.consume", "session.refresh", "actor.reactivate"]
+    }
+  },
+  "activationStates": {
+    "pending": {
+      "allowedTransitions": ["consumed", "revoked", "expired", "locked"],
+      "allowedActions": ["activation.consume", "activation.revoke"]
+    },
+    "consumed": {"allowedTransitions": [], "allowedActions": []},
+    "revoked": {"allowedTransitions": [], "allowedActions": []},
+    "expired": {"allowedTransitions": [], "allowedActions": []},
+    "locked": {"allowedTransitions": [], "allowedActions": []}
+  },
+  "sessionStates": {
+    "active": {
+      "allowedTransitions": ["revoked", "expired", "rotated"],
+      "allowedActions": ["session.read", "session.listOwn", "session.revokeOwn", "session.logout", "session.refresh"]
+    },
+    "rotated": {"allowedTransitions": [], "allowedActions": []},
+    "revoked": {"allowedTransitions": [], "allowedActions": []},
+    "expired": {"allowedTransitions": [], "allowedActions": []}
+  },
+  "clientStates": {
+    "unconfigured": ["configure"],
+    "restoring": ["restore.success", "restore.refresh", "restore.fail"],
+    "signed_out": ["login", "activation.request", "activation.consume"],
+    "authenticating": ["auth.success", "auth.fail"],
+    "authenticated": ["session.read", "session.listOwn", "session.revokeOwn", "session.logout", "password.changeOwn", "account.deleteOwn"],
+    "error": ["login", "activation.request", "activation.consume", "session.clear"]
+  },
+  "negativeInvariants": [
+    "A consumed, revoked, expired, or locked activation can never return to pending.",
+    "A rotated refresh token can never create another session.",
+    "A deactivated actor has no live session and no consumable activation.",
+    "A session can only be listed or revoked by its own actor.",
+    "Role and surface are resolved from the sovereign actor record, never trusted from stored client state.",
+    "Account deletion revokes sessions before emitting deletion outbox work."
+  ]
+}

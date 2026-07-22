@@ -1,22 +1,28 @@
 import type { components } from "../../../clients/generated/dsh-api";
 
-export type DshPartnerDeliveryTask = components["schemas"]["DshPartnerDeliveryTask"];
+type GeneratedPartnerDeliveryTask = components["schemas"]["DshPartnerDeliveryTask"];
+
+export type DshPartnerDeliveryTask = GeneratedPartnerDeliveryTask & {
+  readonly exceptionReason?: string | null;
+  readonly exceptionEvidenceReferences?: readonly string[];
+  readonly exceptionReportedAt?: string | null;
+};
 export type DshPartnerDeliveryTaskStatus = components["schemas"]["DshPartnerDeliveryTaskStatus"];
-export type DshPartnerDeliveryTaskResponse = components["schemas"]["DshPartnerDeliveryTaskResponse"];
-export type DshPartnerDeliveryTaskListResponse = components["schemas"]["DshPartnerDeliveryTaskListResponse"];
+export type DshPartnerDeliveryTaskResponse = Omit<components["schemas"]["DshPartnerDeliveryTaskResponse"], "task"> & {
+  readonly task: DshPartnerDeliveryTask;
+};
+export type DshPartnerDeliveryTaskListResponse = Omit<components["schemas"]["DshPartnerDeliveryTaskListResponse"], "tasks"> & {
+  readonly tasks: readonly DshPartnerDeliveryTask[];
+};
 export type DshAssignPartnerDeliveryTaskRequest = components["schemas"]["DshAssignPartnerDeliveryTaskRequest"];
 export type DshSubmitPartnerDeliveryProofRequest = components["schemas"]["DshSubmitPartnerDeliveryProofRequest"];
 export type DshRaisePartnerDeliveryExceptionRequest = components["schemas"]["DshRaisePartnerDeliveryExceptionRequest"];
 export type DshPartnerDeliveryMutationRequest = components["schemas"]["DshPartnerDeliveryMutationRequest"];
 
-/**
- * Error codes returned by the Go handler in
- * dsh/backend/internal/http/partnerdelivery.go (writePartnerDeliveryError).
- * Hand-declared union — no such enum exists on the generated error schema.
- */
 export type PartnerDeliveryErrorCode =
   | "NOT_FOUND"
   | "VERSION_CONFLICT"
+  | "IDEMPOTENCY_CONFLICT"
   | "PARTNER_DELIVERY_ALREADY_ASSIGNED"
   | "PARTNER_DELIVERY_NOT_READY"
   | "COURIER_INELIGIBLE"

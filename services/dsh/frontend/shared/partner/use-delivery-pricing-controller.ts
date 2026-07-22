@@ -63,8 +63,9 @@ function useDeliveryPricingBase(
   );
 
   const save = useCallback(async (
-    record: DeliveryPricingRecord,
+    record: DeliveryPricingRecord | null,
     input: Omit<DeliveryPricingMutation, "expectedVersion">,
+    requestedMode?: DeliveryPricingMode,
   ) => {
     setMutationLoading(true);
     setMutationError(null);
@@ -72,12 +73,16 @@ function useDeliveryPricingBase(
       if (surface === "partner") {
         await updatePartnerDeliveryPricing(storeId, {
           ...input,
-          expectedVersion: record.version,
+          expectedVersion: record?.version ?? 0,
         });
       } else {
-        await updateOperatorDeliveryPricing(storeId, record.fulfillmentMode, {
+        const fulfillmentMode = record?.fulfillmentMode ?? requestedMode;
+        if (!fulfillmentMode) {
+          throw new Error("تعذر تحديد وضع التوصيل المطلوب.");
+        }
+        await updateOperatorDeliveryPricing(storeId, fulfillmentMode, {
           ...input,
-          expectedVersion: record.version,
+          expectedVersion: record?.version ?? 0,
         });
       }
       await load();

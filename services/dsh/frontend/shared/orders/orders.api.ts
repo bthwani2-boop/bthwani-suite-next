@@ -1,5 +1,6 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { createDshHttpClient, type DshRequestOptions } from "../_kernel/dsh-http-request";
+import type { DshDeliveryException } from "../dispatch/dispatch.types";
 import type {
   DshOrder,
   DshOrderPreparation,
@@ -8,6 +9,12 @@ import type {
   DshRejectOrderInput,
   DshStoreCaptainHandoff,
   DshStorePreparationPolicy,
+  DshPreparationIssue,
+  DshPreparationIssueList,
+  DshCreatePreparationIssueInput,
+  DshDecidePreparationIssueInput,
+  DshResolvePreparationIssueInput,
+  DshReportStoreCaptainHandoffExceptionInput,
 } from "./orders.types";
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "order");
@@ -48,6 +55,25 @@ export async function fetchOrderPreparation(
     withOptionalToken({}, token),
   );
   return data.preparation;
+}
+
+export async function fetchOrderPreparationIssues(
+  orderId: string,
+  token?: string,
+): Promise<DshPreparationIssueList> {
+  const data = await request<{
+    issues: DshPreparationIssue[];
+    openCount: number;
+    pendingCustomerDecisionCount: number;
+  }>(
+    `/dsh/orders/${encodeURIComponent(orderId)}/preparation-issues`,
+    withOptionalToken({}, token),
+  );
+  return {
+    issues: data.issues ?? [],
+    openCount: Math.max(0, Number(data.openCount ?? 0)),
+    pendingCustomerDecisionCount: Math.max(0, Number(data.pendingCustomerDecisionCount ?? 0)),
+  };
 }
 
 /**
@@ -116,6 +142,18 @@ export async function confirmStoreCaptainHandoff(
   return data.handoff;
 }
 
+export async function reportPartnerStoreCaptainHandoffException(
+  orderId: string,
+  input: DshReportStoreCaptainHandoffExceptionInput,
+  token?: string,
+): Promise<DshDeliveryException> {
+  const data = await request<{ exception: DshDeliveryException }>(
+    `/dsh/partner/orders/${encodeURIComponent(orderId)}/captain-handoff/exceptions`,
+    withOptionalToken({ method: "POST", body: input }, token),
+  );
+  return data.exception;
+}
+
 export async function reviseOrderPreparationEstimate(
   orderId: string,
   input: { readonly remainingMinutes: number; readonly reason: string },
@@ -126,6 +164,44 @@ export async function reviseOrderPreparationEstimate(
     withOptionalToken({ method: "POST", body: input }, token),
   );
   return data.preparation;
+}
+
+export async function createOrderPreparationIssue(
+  orderId: string,
+  input: DshCreatePreparationIssueInput,
+  token?: string,
+): Promise<DshPreparationIssue> {
+  const data = await request<{ issue: DshPreparationIssue }>(
+    `/dsh/partner/orders/${encodeURIComponent(orderId)}/preparation-issues`,
+    withOptionalToken({ method: "POST", body: input }, token),
+  );
+  return data.issue;
+}
+
+export async function decideOrderPreparationIssue(
+  orderId: string,
+  issueId: string,
+  input: DshDecidePreparationIssueInput,
+  token?: string,
+): Promise<DshPreparationIssue> {
+  const data = await request<{ issue: DshPreparationIssue }>(
+    `/dsh/client/orders/${encodeURIComponent(orderId)}/preparation-issues/${encodeURIComponent(issueId)}/decision`,
+    withOptionalToken({ method: "POST", body: input }, token),
+  );
+  return data.issue;
+}
+
+export async function resolveOrderPreparationIssue(
+  orderId: string,
+  issueId: string,
+  input: DshResolvePreparationIssueInput,
+  token?: string,
+): Promise<DshPreparationIssue> {
+  const data = await request<{ issue: DshPreparationIssue }>(
+    `/dsh/partner/orders/${encodeURIComponent(orderId)}/preparation-issues/${encodeURIComponent(issueId)}/resolve`,
+    withOptionalToken({ method: "POST", body: input }, token),
+  );
+  return data.issue;
 }
 
 export async function fetchStorePreparationPolicy(

@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
+import { configureIdentityActivationActorType } from "@bthwani/core-identity";
 import { Button, Card, Text, TextField, spacing } from "@bthwani/ui-kit";
+
+configureIdentityActivationActorType("field");
 
 export type DshFieldActivationCardProps = {
   readonly loading?: boolean;
@@ -46,12 +49,6 @@ export function DshFieldActivationCard({
           loading={loading}
           disabled={disabled}
           onPress={() => onSubmit(phone.trim(), normalizedCode)}
-        />
-        <Button
-          label="تجاوز المطور (دخول فوري)"
-          tone="secondary"
-          fullWidth
-          onPress={() => onSubmit("774182730", "000000")}
         />
       </View>
     </Card>

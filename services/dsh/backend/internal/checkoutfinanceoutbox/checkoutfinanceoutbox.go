@@ -21,6 +21,7 @@ package checkoutfinanceoutbox
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -40,6 +41,7 @@ type Event struct {
 	OrderID          string
 	ClientID         string
 	Reason           string
+	CorrelationID    string
 	AttemptCount     int
 }
 
@@ -52,9 +54,10 @@ type EnqueueInput struct {
 	PaymentSessionID string
 	// OrderID is nil for expire_session events raised before any order
 	// exists, and set for cancel_for_order events raised against an order.
-	OrderID  *string
-	ClientID string
-	Reason   string
+	OrderID       *string
+	ClientID      string
+	Reason        string
+	CorrelationID string
 }
 
 // Enqueue writes a financial closure event inside tx. It must be called
@@ -67,13 +70,17 @@ func Enqueue(tx *sql.Tx, input EnqueueInput) error {
 	if input.EventType == "" || input.CheckoutIntentID == "" || input.PaymentSessionID == "" || input.ClientID == "" {
 		return fmt.Errorf("checkout finance outbox: eventType, checkoutIntentId, paymentSessionId, and clientId are required")
 	}
+	correlationID := strings.TrimSpace(input.CorrelationID)
+	if correlationID == "" {
+		correlationID = strings.TrimSpace(input.CheckoutIntentID)
+	}
 	_, err := tx.Exec(`
 		INSERT INTO dsh_checkout_financial_closure_outbox
-			(event_type, checkout_intent_id, payment_session_id, order_id, client_id, reason)
-		VALUES ($1, $2::uuid, $3, $4::uuid, $5, $6)
+			(event_type, checkout_intent_id, payment_session_id, order_id, client_id, reason, correlation_id)
+		VALUES ($1, $2::uuid, $3, $4::uuid, $5, $6, $7)
 		ON CONFLICT (payment_session_id, event_type) DO NOTHING`,
 		input.EventType, input.CheckoutIntentID, input.PaymentSessionID,
-		input.OrderID, input.ClientID, input.Reason,
+		input.OrderID, input.ClientID, input.Reason, correlationID,
 	)
 	if err != nil {
 		return fmt.Errorf("enqueue checkout finance outbox event: %w", err)
@@ -92,7 +99,8 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 
 	rows, err := tx.Query(`
 		SELECT id, event_type, checkout_intent_id::text, payment_session_id,
-		       COALESCE(order_id::text, ''), client_id, reason, attempt_count
+		       COALESCE(order_id::text, ''), client_id, reason,
+		       COALESCE(correlation_id, checkout_intent_id::text), attempt_count
 		FROM dsh_checkout_financial_closure_outbox
 		WHERE status = 'pending' AND next_retry_at <= NOW()
 		ORDER BY created_at
@@ -108,7 +116,7 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 		var e Event
 		if err := rows.Scan(
 			&e.ID, &e.EventType, &e.CheckoutIntentID, &e.PaymentSessionID,
-			&e.OrderID, &e.ClientID, &e.Reason, &e.AttemptCount,
+			&e.OrderID, &e.ClientID, &e.Reason, &e.CorrelationID, &e.AttemptCount,
 		); err != nil {
 			rows.Close()
 			return nil, fmt.Errorf("scan checkout finance outbox event: %w", err)

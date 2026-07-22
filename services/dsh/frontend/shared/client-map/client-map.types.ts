@@ -28,10 +28,38 @@ export type DshMapReverseInput = {
   readonly language?: string;
 };
 
+export type DshMapProviderHealthItem = {
+  readonly kind: "map" | "maps";
+  readonly status: string;
+  readonly checkedAt: string;
+  readonly message?: string;
+};
+
+export type DshMapProviderHealth = {
+  readonly configured: boolean;
+  readonly status: "healthy" | "degraded" | "unknown" | "not_configured";
+  readonly checkedAt: string;
+  readonly providers: readonly DshMapProviderHealthItem[];
+};
+
+export type DshMapProviderHealthState =
+  | { readonly kind: "loading" }
+  | { readonly kind: "success"; readonly data: DshMapProviderHealth }
+  | { readonly kind: "error"; readonly message: string };
+
+export type DshServiceAreaBounds = {
+  readonly minLongitude: number;
+  readonly minLatitude: number;
+  readonly maxLongitude: number;
+  readonly maxLatitude: number;
+};
+
 export type DshServiceArea = {
   readonly serviceAreaCode: string;
   readonly displayName: string;
   readonly polygon: readonly (readonly [number, number])[];
+  readonly pointCount: number;
+  readonly bounds: DshServiceAreaBounds;
   readonly active: boolean;
   readonly priority: number;
   readonly version: number;

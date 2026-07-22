@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "journeyId": "JRN-043",
+  "repository": "bthwani2-boop/bthwani-suite-next",
+  "targetBranch": "sambassam",
+  "repositoryMode": "REMOTE_ONLY",
+  "ciPolicy": {
+    "verificationOnly": true,
+    "sourceMutationForbidden": true,
+    "commitOrPushForbidden": true,
+    "externalActionsRequireFullCommitSha": true,
+    "checkoutPersistedCredentialsForbidden": true,
+    "topLevelPermissionsRequired": true,
+    "leastPrivilegeRequired": true,
+    "temporaryOneShotWorkflowsForbidden": true,
+    "sameCommitEvidenceRequired": true
+  },
+  "pullRequestPolicy": {
+    "implementationActorMayOpenPullRequest": false,
+    "implementationActorMayMerge": false,
+    "independentReviewRequired": true,
+    "staleApprovalDismissalRequired": true,
+    "conversationResolutionRequired": true,
+    "lastPushApprovalByDifferentActorRequired": true,
+    "requiredChecksMustPassOnHeadCommit": true
+  },
+  "releasePolicy": {
+    "automaticReleaseForbidden": true,
+    "releaseAuthorityApprovalRequired": true,
+    "immutableCommitRequired": true,
+    "signedTagRequired": true,
+    "signedArtifactRequired": true,
+    "artifactProvenanceRequired": true,
+    "rollbackPlanRequired": true,
+    "rollbackOwnerRequired": true,
+    "rollbackEvidenceRequired": true,
+    "productionEvidenceRequiredForProductionClaim": true,
+    "closureWithoutApplicableEvidenceForbidden": true
+  },
+  "decisionPolicy": {
+    "technicalPassDoesNotAuthorizeMerge": true,
+    "technicalPassDoesNotAuthorizeRelease": true,
+    "technicalPassDoesNotAuthorizeProduction": true,
+    "closedWithEvidenceRequiresAllApplicableScopes": true,
+    "independentApprovalsMustReferenceFinalCommit": true
+  }
+}

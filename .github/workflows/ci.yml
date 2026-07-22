@@ -1,0 +1,538 @@
+name: BThwani Contextual CI
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Verification depth
+        required: true
+        default: affected
+        type: choice
+        options:
+          - affected
+          - full
+      journey:
+        description: Optional journey such as JRN-040
+        required: false
+        type: string
+      runtime_proof:
+        description: Start the full local runtime and execute smoke proof
+        required: true
+        default: false
+        type: boolean
+  push:
+    branches: [sambassam]
+    paths:
+      - "AGENTS.md"
+      - "GEMINI.md"
+      - ".agents/**"
+      - ".github/**"
+      - "governance/**"
+      - "tools/**"
+      - "contracts/**"
+      - "core/**"
+      - "services/**"
+      - "apps/**"
+      - "shared/**"
+      - "infra/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "nx.json"
+  pull_request:
+    branches: [sambassam, master]
+    paths:
+      - "AGENTS.md"
+      - "GEMINI.md"
+      - ".agents/**"
+      - ".github/**"
+      - "governance/**"
+      - "tools/**"
+      - "contracts/**"
+      - "core/**"
+      - "services/**"
+      - "apps/**"
+      - "shared/**"
+      - "infra/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "nx.json"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: contextual-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  context:
+    name: Detect affected CI context
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      base_sha: ${{ steps.scope.outputs.base_sha }}
+      head_sha: ${{ steps.scope.outputs.head_sha }}
+      changed_count: ${{ steps.scope.outputs.changed_count }}
+      governance: ${{ steps.scope.outputs.governance }}
+      workflow: ${{ steps.scope.outputs.workflow }}
+      infrastructure: ${{ steps.scope.outputs.infrastructure }}
+      security: ${{ steps.scope.outputs.security }}
+      policy: ${{ steps.scope.outputs.policy }}
+      frontend: ${{ steps.scope.outputs.frontend }}
+      contracts: ${{ steps.scope.outputs.contracts }}
+      journey: ${{ steps.scope.outputs.journey }}
+      journey_scope: ${{ steps.scope.outputs.journey_scope }}
+      node: ${{ steps.scope.outputs.node }}
+      node_scope: ${{ steps.scope.outputs.node_scope }}
+      dsh: ${{ steps.scope.outputs.dsh }}
+      wlt: ${{ steps.scope.outputs.wlt }}
+      identity: ${{ steps.scope.outputs.identity }}
+      workforce: ${{ steps.scope.outputs.workforce }}
+      platform: ${{ steps.scope.outputs.platform }}
+      providers: ${{ steps.scope.outputs.providers }}
+      database: ${{ steps.scope.outputs.database }}
+      runtime: ${{ steps.scope.outputs.runtime }}
+      shared_brain: ${{ steps.scope.outputs.shared_brain }}
+      heavy: ${{ steps.scope.outputs.heavy }}
+      jrn040: ${{ steps.scope.outputs.jrn040 }}
+    steps:
+      - name: Checkout immutable source history
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up locked Node runtime
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24.17.0"
+      - name: Verify contextual router decisions
+        run: node --test tools/scripts/detect-ci-context.test.mjs
+      - name: Classify changed paths
+        id: scope
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_BEFORE: ${{ github.event.before }}
+          PR_ACTION: ${{ github.event.action }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_HEAD_REF: ${{ github.head_ref }}
+          DISPATCH_MODE: ${{ inputs.mode }}
+          DISPATCH_JOURNEY: ${{ inputs.journey }}
+        run: |
+          set -euo pipefail
+          HEAD_SHA="${PR_HEAD_SHA:-${GITHUB_SHA}}"
+          if [[ "${EVENT_NAME}" == "pull_request" && "${PR_HEAD_REF}" == "sambassam" && "${PR_ACTION}" == "synchronize" ]]; then
+            BASE_SHA="$(git rev-parse "${HEAD_SHA}^")"
+          else
+            BASE_SHA="${PR_BASE_SHA:-${EVENT_BEFORE:-}}"
+          fi
+          if [[ -z "${BASE_SHA}" || "${BASE_SHA}" =~ ^0+$ ]]; then
+            BASE_SHA="$(git rev-parse "${HEAD_SHA}^" 2>/dev/null || printf '%s' "${HEAD_SHA}")"
+          fi
+          CI_BASE_SHA="${BASE_SHA}" \
+          CI_HEAD_SHA="${HEAD_SHA}" \
+          CI_MODE="${DISPATCH_MODE:-affected}" \
+          CI_JOURNEY="${DISPATCH_JOURNEY:-}" \
+          node tools/scripts/detect-ci-context.mjs
+      - name: Publish routing summary
+        run: |
+          echo "### Contextual CI routing" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Changed files: ${{ steps.scope.outputs.changed_count }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Base: ${{ steps.scope.outputs.base_sha }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Head: ${{ steps.scope.outputs.head_sha }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Node scope: ${{ steps.scope.outputs.node_scope }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Journey scope: ${{ steps.scope.outputs.journey_scope || 'none' }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Heavy checks: ${{ steps.scope.outputs.heavy }}" >> "$GITHUB_STEP_SUMMARY"
+
+  policy:
+    name: Verify affected governance, workflow, and infrastructure policy
+    needs: [context]
+    if: ${{ needs.context.outputs.policy == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    concurrency:
+      group: policy-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Verify canonical governance
+        if: ${{ needs.context.outputs.governance == 'true' }}
+        run: |
+          pnpm run guard:governance-schema
+          pnpm run guard:agent-governance
+          pnpm run guard:authority-separation
+          pnpm run guard:saas-governance
+          pnpm run guard:guard-registry
+          pnpm run guard:sdlc
+          pnpm run guard:cleanup-policy
+      - name: Verify workflow integrity and security
+        if: ${{ needs.context.outputs.workflow == 'true' || needs.context.outputs.security == 'true' }}
+        run: |
+          pnpm run guard:actions-pin
+          pnpm run guard:workflow-lint
+          pnpm run guard:workflow-security
+          pnpm run guard:opa-policies
+      - name: Verify infrastructure policy
+        if: ${{ needs.context.outputs.infrastructure == 'true' }}
+        run: |
+          pnpm run guard:runtime-config
+          pnpm run guard:opa-policies
+      - name: Verify immutable diff hygiene
+        run: git diff --check
+
+  node_affected:
+    name: Verify affected frontend, contracts, and journeys
+    needs: [context]
+    if: ${{ needs.context.outputs.node == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    concurrency:
+      group: node-${{ github.event.pull_request.number || github.ref }}-${{ needs.context.outputs.node_scope }}
+      cancel-in-progress: true
+    steps:
+      - name: Checkout immutable source history
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Verify affected contracts and bindings
+        if: ${{ needs.context.outputs.contracts == 'true' }}
+        run: |
+          pnpm run contracts:lint
+          pnpm run guard:api-binding
+          pnpm run guard:backend-api-binding
+          pnpm run guard:service-manifest-drift
+          pnpm run guard:frontend-feature-binding
+      - name: Typecheck, lint, and test affected frontend projects
+        if: ${{ needs.context.outputs.frontend == 'true' }}
+        env:
+          NX_BASE: ${{ needs.context.outputs.base_sha }}
+          NX_HEAD: ${{ needs.context.outputs.head_sha }}
+        run: |
+          pnpm run affected:typecheck -- --base="${NX_BASE}" --head="${NX_HEAD}"
+          pnpm run affected:lint -- --base="${NX_BASE}" --head="${NX_HEAD}"
+          pnpm run affected:test -- --base="${NX_BASE}" --head="${NX_HEAD}"
+      - name: Build affected frontend projects for high-risk changes
+        if: ${{ needs.context.outputs.frontend == 'true' && needs.context.outputs.heavy == 'true' }}
+        env:
+          NX_BASE: ${{ needs.context.outputs.base_sha }}
+          NX_HEAD: ${{ needs.context.outputs.head_sha }}
+        run: pnpm run affected:build -- --base="${NX_BASE}" --head="${NX_HEAD}"
+      - name: Run only the detected journey gates
+        if: ${{ needs.context.outputs.journey == 'true' && needs.context.outputs.journey_scope != '' }}
+        shell: pwsh
+        env:
+          JOURNEY_SCOPE: ${{ needs.context.outputs.journey_scope }}
+        run: |
+          $journeys = $env:JOURNEY_SCOPE -split ',' | Where-Object { $_ -and $_.Trim() }
+          foreach ($journey in $journeys) {
+            ./tools/scripts/run-journey-gate.ps1 -Journey $journey.Trim()
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+      - name: Verify JRN-040 platform contract and frontend binding
+        if: ${{ needs.context.outputs.jrn040 == 'true' }}
+        run: |
+          pnpm --dir services/dsh exec tsc -p tsconfig.jrn-040.json --noEmit --pretty false
+          pnpm --dir services/dsh exec openapi-typescript ../../core/platform-control/contracts/jrn-040-platform-change-sets.openapi.yaml -o /tmp/jrn-040-platform-change-sets-api.ts
+          node tools/guards/jrn-040-platform-change-sets-gate.mjs
+      - name: Verify immutable diff hygiene
+        run: git diff --check
+
+  dsh:
+    name: Verify affected DSH backend
+    needs: [context]
+    if: ${{ needs.context.outputs.dsh == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    concurrency:
+      group: dsh-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Set up Go from DSH module
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: services/dsh/backend/go.sum
+      - name: Test and build DSH
+        working-directory: services/dsh/backend
+        run: |
+          go test ./... -count=1
+          go build ./...
+
+  wlt:
+    name: Verify affected WLT backend
+    needs: [context]
+    if: ${{ needs.context.outputs.wlt == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    concurrency:
+      group: wlt-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Set up Go from WLT module
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: services/wlt/backend/go.mod
+          cache-dependency-path: services/wlt/backend/go.sum
+      - name: Test and build WLT
+        working-directory: services/wlt/backend
+        run: |
+          go test ./... -count=1
+          go build ./...
+
+  identity:
+    name: Verify affected Identity backend
+    needs: [context]
+    if: ${{ needs.context.outputs.identity == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    concurrency:
+      group: identity-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Set up Go from Identity module
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: core/identity/backend/go.mod
+          cache-dependency-path: core/identity/backend/go.sum
+      - name: Test and build Identity
+        working-directory: core/identity/backend
+        run: |
+          go test ./... -count=1
+          go build ./...
+
+  workforce:
+    name: Verify affected Workforce backend
+    needs: [context]
+    if: ${{ needs.context.outputs.workforce == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    concurrency:
+      group: workforce-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Set up Go from Workforce module
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: core/workforce/backend/go.mod
+          cache-dependency-path: core/workforce/backend/go.sum
+      - name: Test and build Workforce
+        working-directory: core/workforce/backend
+        run: |
+          go test ./... -count=1
+          go build ./...
+
+  platform:
+    name: Verify affected Platform Control backend
+    needs: [context]
+    if: ${{ needs.context.outputs.platform == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    concurrency:
+      group: platform-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: platform
+          POSTGRES_PASSWORD: platform
+          POSTGRES_DB: platform
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U platform -d platform"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://platform:platform@localhost:5432/platform?sslmode=disable
+      PGPASSWORD: platform
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Set up Go from Platform Control module
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: core/platform-control/backend/go.mod
+          cache-dependency-path: core/platform-control/backend/go.sum
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Apply platform migrations
+        run: |
+          for migration in core/platform-control/database/migrations/platform-*.sql; do
+            echo "Applying ${migration}"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
+          done
+      - name: Test and build Platform Control
+        working-directory: core/platform-control/backend
+        run: |
+          go test ./... -count=1
+          go build ./...
+
+  providers:
+    name: Verify affected Providers backend
+    needs: [context]
+    if: ${{ needs.context.outputs.providers == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    concurrency:
+      group: providers-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Set up Go from Providers module
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: core/providers/backend/go.mod
+          cache-dependency-path: core/providers/backend/go.sum
+      - name: Test and build Providers
+        working-directory: core/providers/backend
+        run: |
+          go test ./... -count=1
+          go build ./...
+
+  runtime_proof:
+    name: Execute explicitly requested runtime proof
+    needs: [context]
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.runtime_proof }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    concurrency:
+      group: runtime-${{ inputs.journey || github.sha }}
+      cancel-in-progress: true
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Start and verify full runtime
+        shell: pwsh
+        run: |
+          pnpm run runtime:full:up
+          pnpm run runtime:full:bootstrap-dev
+          pnpm run runtime:full:smoke
+      - name: Stop runtime
+        if: always()
+        shell: pwsh
+        run: pnpm run runtime:full:down
+
+  contextual_result:
+    name: BThwani Contextual CI result
+    needs: [context, policy, node_affected, dsh, wlt, identity, workforce, platform, providers, runtime_proof]
+    if: ${{ always() && !cancelled() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Enforce contextual result
+        env:
+          CONTEXT_RESULT: ${{ needs.context.result }}
+          POLICY_RESULT: ${{ needs.policy.result }}
+          NODE_RESULT: ${{ needs.node_affected.result }}
+          DSH_RESULT: ${{ needs.dsh.result }}
+          WLT_RESULT: ${{ needs.wlt.result }}
+          IDENTITY_RESULT: ${{ needs.identity.result }}
+          WORKFORCE_RESULT: ${{ needs.workforce.result }}
+          PLATFORM_RESULT: ${{ needs.platform.result }}
+          PROVIDERS_RESULT: ${{ needs.providers.result }}
+          RUNTIME_RESULT: ${{ needs.runtime_proof.result }}
+        run: |
+          set -euo pipefail
+          failed=0
+          for entry in \
+            "context=${CONTEXT_RESULT}" \
+            "policy=${POLICY_RESULT}" \
+            "node=${NODE_RESULT}" \
+            "dsh=${DSH_RESULT}" \
+            "wlt=${WLT_RESULT}" \
+            "identity=${IDENTITY_RESULT}" \
+            "workforce=${WORKFORCE_RESULT}" \
+            "platform=${PLATFORM_RESULT}" \
+            "providers=${PROVIDERS_RESULT}" \
+            "runtime=${RUNTIME_RESULT}"; do
+            name="${entry%%=*}"
+            result="${entry#*=}"
+            if [[ "${result}" != "success" && "${result}" != "skipped" ]]; then
+              echo "${name} failed with ${result}"
+              failed=1
+            fi
+          done
+          exit "${failed}"
+
+  repository_result:
+    name: BThwani Repository CI result
+    needs: [contextual_result]
+    if: ${{ always() && !cancelled() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - run: test "${{ needs.contextual_result.result }}" = "success"
+
+  workflow_security_result:
+    name: BThwani Workflow Security result
+    needs: [contextual_result]
+    if: ${{ always() && !cancelled() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - run: test "${{ needs.contextual_result.result }}" = "success"
+
+  governance_result:
+    name: BThwani Governance Audit result
+    needs: [contextual_result]
+    if: ${{ always() && !cancelled() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - run: test "${{ needs.contextual_result.result }}" = "success"
+
+  dsh_operational_result:
+    name: DSH Operational Closure CI result
+    needs: [contextual_result]
+    if: ${{ always() && !cancelled() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - run: test "${{ needs.contextual_result.result }}" = "success"
+
+  jrn043_release_result:
+    name: JRN-043 SDLC Governance CI Release result
+    needs: [contextual_result]
+    if: ${{ always() && !cancelled() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - run: test "${{ needs.contextual_result.result }}" = "success"

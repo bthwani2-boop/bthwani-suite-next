@@ -1,15 +1,19 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { createDshHttpClient } from "../_kernel/dsh-http-request";
+import type { DshCheckoutMutationContext } from "./checkout-create-attempt";
 import type { DshCheckoutIntent, DshCreateIntentInput } from "./checkout.types";
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "checkout");
 
 export async function createCheckoutIntent(
   input: DshCreateIntentInput,
+  mutation: DshCheckoutMutationContext,
 ): Promise<DshCheckoutIntent> {
   const data = await request<{ intent: DshCheckoutIntent }>("/dsh/client/checkout-intents", {
     method: "POST",
     body: input,
+    idempotencyKey: mutation.idempotencyKey,
+    correlationId: mutation.correlationId,
   });
   return data.intent;
 }
@@ -24,6 +28,14 @@ export async function fetchCheckoutIntent(intentId: string): Promise<DshCheckout
 export async function cancelCheckoutIntent(intentId: string): Promise<DshCheckoutIntent> {
   const data = await request<{ intent: DshCheckoutIntent }>(
     `/dsh/client/checkout-intents/${encodeURIComponent(intentId)}/cancel`,
+    { method: "POST" },
+  );
+  return data.intent;
+}
+
+export async function reconcileOperatorCheckoutIntent(intentId: string): Promise<DshCheckoutIntent> {
+  const data = await request<{ intent: DshCheckoutIntent }>(
+    `/dsh/operator/checkout-intents/${encodeURIComponent(intentId)}/reconcile`,
     { method: "POST" },
   );
   return data.intent;

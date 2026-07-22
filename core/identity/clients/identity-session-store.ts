@@ -1,8 +1,11 @@
 import {
   createIdentityClient,
+  type ActivationActorType,
   type ActorIdentity,
   type IdentityClient,
   type IdentityClientError,
+  type IssueActivationResponse,
+  type SessionInfo,
 } from "./identity-client.ts";
 import {
   defaultSessionStorageAdapter,
@@ -17,33 +20,16 @@ export type IdentitySessionState =
   | { readonly kind: "authenticated"; readonly identity: ActorIdentity; readonly accessToken: string }
   | { readonly kind: "error"; readonly message: string };
 
+export type IdentityBeforeSessionEndHook = () => void | Promise<void>;
+
 type StoredSession = {
   readonly accessToken: string;
   readonly refreshToken: string;
   readonly identity: ActorIdentity;
 };
 
-let client: IdentityClient | null = null;
-let state: IdentitySessionState = { kind: "unconfigured" };
-let stored: StoredSession | null = null;
-const listeners = new Set<() => void>();
-
-let storageAdapter: SessionStorageAdapter = defaultSessionStorageAdapter();
-
-/**
- * Injects a platform-specific session storage adapter (e.g. Expo SecureStore
- * on React Native). Must be called before configureIdentitySession(); calls
- * after the identity client is configured are ignored, mirroring
- * configureIdentitySession's own idempotency guard.
- */
-export function configureIdentitySessionStorage(
-  adapter: SessionStorageAdapter,
-): void {
-  if (client !== null) return;
-  storageAdapter = adapter;
-}
-
 const STORAGE_KEY = "bthwani-identity-session";
+const DEVICE_FINGERPRINT = "bthwani-runtime-session";
 const ACTOR_ROLES = new Set([
   "client",
   "partner",
@@ -52,6 +38,33 @@ const ACTOR_ROLES = new Set([
   "operator",
   "system",
 ]);
+
+let client: IdentityClient | null = null;
+let state: IdentitySessionState = { kind: "unconfigured" };
+let stored: StoredSession | null = null;
+let storageAdapter: SessionStorageAdapter = defaultSessionStorageAdapter();
+const listeners = new Set<() => void>();
+const beforeSessionEndHooks = new Set<IdentityBeforeSessionEndHook>();
+
+export function configureIdentitySessionStorage(adapter: SessionStorageAdapter): void {
+  if (client !== null) return;
+  storageAdapter = adapter;
+}
+
+export function registerIdentityBeforeSessionEndHook(
+  hook: IdentityBeforeSessionEndHook,
+): () => void {
+  beforeSessionEndHooks.add(hook);
+  return () => beforeSessionEndHooks.delete(hook);
+}
+
+async function runBeforeSessionEndHooks(): Promise<void> {
+  await Promise.allSettled(
+    Array.from(beforeSessionEndHooks, async (hook) => {
+      await hook();
+    }),
+  );
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -62,76 +75,58 @@ function isNonEmptyString(value: unknown): value is string {
 }
 
 function isBooleanRecord(value: unknown): boolean {
-  return (
-    isRecord(value) &&
-    Object.values(value).every((entry) => typeof entry === "boolean")
-  );
+  return isRecord(value) && Object.values(value).every((entry) => typeof entry === "boolean");
 }
 
 function isValidPermission(value: unknown): boolean {
-  if (!isRecord(value)) return false;
-  return (
-    isNonEmptyString(value.service) &&
-    isNonEmptyString(value.surface) &&
-    isNonEmptyString(value.action) &&
-    isNonEmptyString(value.scope)
-  );
+  return isRecord(value)
+    && isNonEmptyString(value.service)
+    && isNonEmptyString(value.surface)
+    && isNonEmptyString(value.action)
+    && isNonEmptyString(value.scope);
 }
 
 function isValidActorIdentity(value: unknown): value is ActorIdentity {
   if (!isRecord(value)) return false;
-
   if (
-    !isNonEmptyString(value.subject) ||
-    !isNonEmptyString(value.tenantId) ||
-    value.authState !== "authenticated" ||
-    !isNonEmptyString(value.sessionId) ||
-    !isNonEmptyString(value.expiresAt)
+    !isNonEmptyString(value.subject)
+    || !isNonEmptyString(value.tenantId)
+    || !isNonEmptyString(value.phoneE164)
+    || value.authState !== "authenticated"
+    || !isNonEmptyString(value.sessionId)
+    || !isNonEmptyString(value.expiresAt)
   ) {
     return false;
   }
 
   const expiresAtMs = Date.parse(value.expiresAt);
-  if (!Number.isFinite(expiresAtMs) || expiresAtMs <= Date.now()) {
-    return false;
-  }
+  if (!Number.isFinite(expiresAtMs) || expiresAtMs <= Date.now()) return false;
 
   if (
-    !Array.isArray(value.roles) ||
-    value.roles.length === 0 ||
-    !value.roles.every(
-      (role) => typeof role === "string" && ACTOR_ROLES.has(role),
-    )
+    !Array.isArray(value.roles)
+    || value.roles.length === 0
+    || !value.roles.every((role) => typeof role === "string" && ACTOR_ROLES.has(role))
   ) {
     return false;
   }
 
-  if (
-    !Array.isArray(value.permissions) ||
-    !value.permissions.every(isValidPermission)
-  ) {
-    return false;
-  }
-
-  return (
-    isBooleanRecord(value.surfaceAccess) &&
-    isBooleanRecord(value.serviceAccess)
-  );
+  return Array.isArray(value.permissions)
+    && value.permissions.every(isValidPermission)
+    && isBooleanRecord(value.surfaceAccess)
+    && isBooleanRecord(value.serviceAccess);
 }
 
 function parseStoredSession(raw: string): StoredSession | null {
   try {
     const parsed: unknown = JSON.parse(raw);
-    if (!isRecord(parsed)) return null;
-
     if (
-      !isNonEmptyString(parsed.accessToken) ||
-      !isNonEmptyString(parsed.refreshToken) ||
-      !isValidActorIdentity(parsed.identity)
+      !isRecord(parsed)
+      || !isNonEmptyString(parsed.accessToken)
+      || !isNonEmptyString(parsed.refreshToken)
+      || !isValidActorIdentity(parsed.identity)
     ) {
       return null;
     }
-
     return {
       accessToken: parsed.accessToken,
       refreshToken: parsed.refreshToken,
@@ -145,11 +140,8 @@ function parseStoredSession(raw: string): StoredSession | null {
 async function loadStoredSession(): Promise<StoredSession | null> {
   const raw = await storageAdapter.getItem(STORAGE_KEY);
   if (!raw) return null;
-
   const session = parseStoredSession(raw);
-  if (!session) {
-    await storageAdapter.removeItem(STORAGE_KEY);
-  }
+  if (!session) await storageAdapter.removeItem(STORAGE_KEY);
   return session;
 }
 
@@ -165,78 +157,55 @@ function emit(): void {
   for (const listener of listeners) listener();
 }
 
-function clearSession(message?: string): void {
-  stored = null;
-  void saveStoredSession(null);
-  state = message
-    ? { kind: "error", message }
-    : { kind: "signed_out" };
+function setState(next: IdentitySessionState): void {
+  state = next;
   emit();
 }
 
-function commitAuthenticatedSession(
-  session: StoredSession,
-  persist: boolean,
-): void {
+function identityErrorCode(error: unknown): string {
+  const typed = error as Partial<IdentityClientError>;
+  return typed.kind === "http" && typeof typed.code === "string"
+    ? typed.code
+    : "IDENTITY_UNAVAILABLE";
+}
+
+function clearSession(message?: string): void {
+  stored = null;
+  void saveStoredSession(null);
+  setState(message ? { kind: "error", message } : { kind: "signed_out" });
+}
+
+function commitAuthenticatedSession(session: StoredSession, persist: boolean): void {
   if (!isValidActorIdentity(session.identity)) {
     clearSession("IDENTITY_SESSION_INVALID");
     return;
   }
-
   stored = session;
-  if (persist) {
-    void saveStoredSession(session);
-  }
-
-  state = {
+  if (persist) void saveStoredSession(session);
+  setState({
     kind: "authenticated",
     identity: session.identity,
     accessToken: session.accessToken,
-  };
-  emit();
+  });
 }
 
-async function restoreStoredSession(
-  identityClient: IdentityClient,
-  session: StoredSession,
-): Promise<void> {
-  state = { kind: "authenticating" };
-  emit();
-
+async function restoreStoredSession(identityClient: IdentityClient, session: StoredSession): Promise<void> {
+  setState({ kind: "authenticating" });
   try {
     const identity = await identityClient.session(session.accessToken);
-    if (!isValidActorIdentity(identity)) {
-      throw new Error("invalid identity session payload");
-    }
-
-    commitAuthenticatedSession(
-      {
-        accessToken: session.accessToken,
-        refreshToken: session.refreshToken,
-        identity,
-      },
-      true,
-    );
+    commitAuthenticatedSession({ ...session, identity }, true);
     return;
   } catch {
-    // Access token may have expired. A refresh is accepted only if the
-    // replacement identity is structurally valid and not expired.
+    // Continue with governed refresh-token rotation.
   }
 
   try {
     const refreshed = await identityClient.refresh(session.refreshToken);
-    if (!isValidActorIdentity(refreshed.identity)) {
-      throw new Error("invalid refreshed identity payload");
-    }
-
-    commitAuthenticatedSession(
-      {
-        accessToken: refreshed.accessToken,
-        refreshToken: refreshed.refreshToken,
-        identity: refreshed.identity,
-      },
-      true,
-    );
+    commitAuthenticatedSession({
+      accessToken: refreshed.accessToken,
+      refreshToken: refreshed.refreshToken,
+      identity: refreshed.identity,
+    }, true);
   } catch {
     clearSession("IDENTITY_SESSION_INVALID");
   }
@@ -244,18 +213,14 @@ async function restoreStoredSession(
 
 export function configureIdentitySession(baseUrl: string): void {
   if (!baseUrl || client !== null) return;
-
   const configuredClient = createIdentityClient(baseUrl);
   client = configuredClient;
-
-  state = { kind: "restoring" };
-  emit();
+  setState({ kind: "restoring" });
 
   void (async () => {
     const saved = await loadStoredSession();
     if (!saved) {
-      state = { kind: "signed_out" };
-      emit();
+      setState({ kind: "signed_out" });
       return;
     }
     await restoreStoredSession(configuredClient, saved);
@@ -263,9 +228,7 @@ export function configureIdentitySession(baseUrl: string): void {
 }
 
 export function getIdentityAccessToken(): string | null {
-  return state.kind === "authenticated"
-    ? stored?.accessToken ?? null
-    : null;
+  return state.kind === "authenticated" ? stored?.accessToken ?? null : null;
 }
 
 export function getIdentityState(): IdentitySessionState {
@@ -277,97 +240,84 @@ export function subscribeIdentityState(listener: () => void): () => void {
   return () => listeners.delete(listener);
 }
 
-export async function loginIdentity(
-  username: string,
-  password: string,
-): Promise<void> {
+export async function loginIdentity(username: string, password: string): Promise<void> {
   if (client === null) {
-    state = { kind: "error", message: "IDENTITY_NOT_CONFIGURED" };
-    emit();
+    setState({ kind: "error", message: "IDENTITY_NOT_CONFIGURED" });
     return;
   }
-
-  state = { kind: "authenticating" };
-  emit();
-
+  setState({ kind: "authenticating" });
   try {
     const response = await client.login({
       username,
       password,
-      deviceFingerprint: "bthwani-runtime-session",
+      deviceFingerprint: DEVICE_FINGERPRINT,
     });
-
-    if (!isValidActorIdentity(response.identity)) {
-      clearSession("IDENTITY_SESSION_INVALID");
-      return;
-    }
-
-    commitAuthenticatedSession(
-      {
-        accessToken: response.accessToken,
-        refreshToken: response.refreshToken,
-        identity: response.identity,
-      },
-      true,
-    );
+    commitAuthenticatedSession({
+      accessToken: response.accessToken,
+      refreshToken: response.refreshToken,
+      identity: response.identity,
+    }, true);
   } catch (error) {
-    const typed = error as IdentityClientError;
-    clearSession(
-      typed.kind === "http"
-        ? typed.code
-        : "IDENTITY_UNAVAILABLE",
-    );
+    clearSession(identityErrorCode(error));
   }
 }
 
+export async function requestOtpIdentity(
+  actorType: ActivationActorType,
+  phone: string,
+): Promise<IssueActivationResponse> {
+  if (client === null) throw new Error("IDENTITY_NOT_CONFIGURED");
+  return client.requestOtp({ actorType, phone });
+}
+
 export async function activateIdentity(
+  actorType: ActivationActorType,
   phone: string,
   code: string,
 ): Promise<void> {
   if (client === null) {
-    state = { kind: "error", message: "IDENTITY_NOT_CONFIGURED" };
-    emit();
+    setState({ kind: "error", message: "IDENTITY_NOT_CONFIGURED" });
     return;
   }
-
-  state = { kind: "authenticating" };
-  emit();
-
+  setState({ kind: "authenticating" });
   try {
     const response = await client.activate({
-      actorType: "field",
+      actorType,
       phone,
       code,
-      deviceFingerprint: "bthwani-runtime-session",
+      deviceFingerprint: DEVICE_FINGERPRINT,
     });
-
-    if (!isValidActorIdentity(response.identity)) {
-      clearSession("IDENTITY_SESSION_INVALID");
-      return;
-    }
-
-    commitAuthenticatedSession(
-      {
-        accessToken: response.accessToken,
-        refreshToken: response.refreshToken,
-        identity: response.identity,
-      },
-      true,
-    );
+    commitAuthenticatedSession({
+      accessToken: response.accessToken,
+      refreshToken: response.refreshToken,
+      identity: response.identity,
+    }, true);
   } catch (error) {
-    const typed = error as IdentityClientError;
-    clearSession(
-      typed.kind === "http"
-        ? typed.code
-        : "IDENTITY_UNAVAILABLE",
-    );
+    clearSession(identityErrorCode(error));
   }
+}
+
+export async function listIdentitySessions(): Promise<SessionInfo[]> {
+  const token = getIdentityAccessToken();
+  if (!token) throw new Error("UNAUTHENTICATED");
+  if (client === null) throw new Error("IDENTITY_NOT_CONFIGURED");
+  return client.listSessions(token);
+}
+
+export async function revokeIdentitySession(sessionId: string): Promise<void> {
+  const token = getIdentityAccessToken();
+  if (!token) throw new Error("UNAUTHENTICATED");
+  if (client === null) throw new Error("IDENTITY_NOT_CONFIGURED");
+  const revokingCurrentSession = stored?.identity.sessionId === sessionId;
+  if (revokingCurrentSession) await runBeforeSessionEndHooks();
+  await client.revokeSession(token, sessionId);
+  if (revokingCurrentSession) clearSession();
 }
 
 export async function logoutIdentity(): Promise<void> {
   const accessToken = stored?.accessToken;
+  if (accessToken !== undefined) await runBeforeSessionEndHooks();
   clearSession();
-
   if (client !== null && accessToken !== undefined) {
     await client.logout(accessToken).catch(() => undefined);
   }
@@ -384,10 +334,9 @@ export async function deleteAccountIdentity(): Promise<void> {
   const token = getIdentityAccessToken();
   if (!token) throw new Error("UNAUTHENTICATED");
   if (client === null) throw new Error("IDENTITY_NOT_CONFIGURED");
+  await runBeforeSessionEndHooks();
   await client.deleteAccount(token);
   clearSession();
 }
 
-
-// Compliance markers:
-// message: "IDENTITY_SESSION_INVALID"
+// Compliance marker: IDENTITY_SESSION_INVALID

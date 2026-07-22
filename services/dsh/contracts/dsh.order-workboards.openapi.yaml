@@ -1,0 +1,68 @@
+openapi: 3.1.0
+info:
+  title: BThwani DSH Order Workboards API
+  version: 1.0.0
+  description: >-
+    Actor-scoped operational read models for partner preparation and operator
+    oversight. DSH derives scope and executable actions from the authenticated actor.
+x-bthwani-owner: services/dsh
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-client-generation: MANUAL_TYPED_ADAPTER
+x-bthwani-runtime-dependency: true
+servers:
+  - url: http://localhost:58080
+security:
+  - bearerAuth: []
+paths:
+  /dsh/partner/order-workboard:
+    get:
+      operationId: getDshPartnerOrderWorkboard
+      summary: Return the authenticated partner order workboard and executable actions.
+      parameters:
+        - $ref: '#/components/parameters/StatusFilter'
+      responses:
+        '200': { $ref: '#/components/responses/WorkboardResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/operator/order-workboard:
+    get:
+      operationId: getDshOperatorOrderWorkboard
+      summary: Return the governed cross-store operator order workboard.
+      parameters:
+        - $ref: '#/components/parameters/StatusFilter'
+      responses:
+        '200': { $ref: '#/components/responses/WorkboardResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    StatusFilter:
+      name: status
+      in: query
+      required: false
+      schema: { type: string, minLength: 1 }
+  responses:
+    WorkboardResponse:
+      description: Actor-scoped order workboard.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [orders, total]
+            properties:
+              orders:
+                type: array
+                items: { type: object, additionalProperties: true }
+              total:
+                type: integer
+                minimum: 0
+    ErrorResponse:
+      description: Governed error response.
+      content:
+        application/json:
+          schema: { type: object, additionalProperties: true }

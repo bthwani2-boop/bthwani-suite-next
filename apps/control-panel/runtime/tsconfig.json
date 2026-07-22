@@ -29,7 +29,8 @@
       "@dsh-cp/*": ["../../../services/dsh/frontend/control-panel/*"],
       "@dsh-shared/*": ["../../../services/dsh/frontend/shared/*"],
       "@dsh-clients/*": ["../../../services/dsh/clients/*"],
-      "react-native": ["../../app-client/runtime/node_modules/react-native"]
+      "react-native": ["../../app-client/runtime/node_modules/react-native"],
+      "expo-image-picker": ["../../app-field/runtime/node_modules/expo-image-picker"]
     },
     "plugins": [
       {

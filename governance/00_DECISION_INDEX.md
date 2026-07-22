@@ -37,10 +37,11 @@ The machine-readable authority registry overrides stale `Status: CANONICAL`, sel
 11. `governance/07_SECURITY_AND_SECRETS.md`
 12. `governance/08_CLEANUP_AND_DEPRECATION.md`
 13. `governance/09_JOURNEY_OPERATING_MODEL.md`
-14. `governance/10_TOOLCHAIN_VERSION_LOCK.md`
-15. `governance/17_PERFORMANCE_AND_RUNTIME_BASELINE.md`
-16. `governance/26_SDLC_TEAM_AND_STAGE_GATES.md`
-17. `governance/product/PRODUCT_TRUTH_POLICY.md`
+14. `governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md`
+15. `governance/10_TOOLCHAIN_VERSION_LOCK.md`
+16. `governance/17_PERFORMANCE_AND_RUNTIME_BASELINE.md`
+17. `governance/26_SDLC_TEAM_AND_STAGE_GATES.md`
+18. `governance/product/PRODUCT_TRUTH_POLICY.md`
 
 ## Active machine-readable contracts
 

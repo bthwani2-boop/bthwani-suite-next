@@ -1,0 +1,88 @@
+{
+  "journeyId": "JRN-010",
+  "name": "Checkout and WLT payment-session handoff",
+  "status": "ACTIVE_CANONICAL",
+  "problem": "A client needs one server-owned checkout intent built from a valid cart and an owned serviceable address, while WLT remains the sole financial authority. Network ambiguity, retries and event replay must never create duplicate sessions, duplicate discounts or divergent projections.",
+  "goal": "Create one tenant-scoped checkout intent, freeze operational pricing and address snapshots, create one idempotent WLT payment-session reference, project WLT outcomes atomically, and expose recoverable client and operator states.",
+  "actors": [
+    {
+      "actor": "client",
+      "surface": "app-client",
+      "allowed": ["create_checkout", "read_owned_checkout", "cancel_open_checkout", "refresh_owned_checkout"],
+      "forbidden": ["read_other_client_checkout", "reconcile_wlt", "mutate_financial_truth"]
+    },
+    {
+      "actor": "operator",
+      "surface": "control-panel",
+      "allowed": ["list_checkout_projection", "filter_checkout_projection", "reconcile_unknown_wlt_outcome"],
+      "forbidden": ["capture_payment", "refund_payment", "edit_wlt_reference", "edit_checkout_amount"]
+    },
+    {
+      "actor": "wlt-service",
+      "surface": "service-to-service",
+      "allowed": ["publish_payment_session_outcome"],
+      "forbidden": ["mutate_cart", "mutate_address", "create_order"]
+    }
+  ],
+  "requiredSurfaces": ["app-client", "control-panel", "dsh-backend", "dsh-postgresql", "wlt-boundary"],
+  "excludedSurfaces": [
+    {"surface": "app-partner", "reason": "The partner receives order truth in JRN-011, not pre-order checkout intent truth."},
+    {"surface": "app-captain", "reason": "Captain execution begins after order and dispatch journeys."},
+    {"surface": "app-field", "reason": "Field operations do not own client checkout."},
+    {"surface": "website", "reason": "No active website checkout runtime is registered."}
+  ],
+  "truthOwners": {
+    "cartItemsAndPriceSnapshot": "DSH",
+    "addressOwnershipAndServiceability": "DSH",
+    "checkoutIntentAndOperationalState": "DSH",
+    "paymentSessionAuthorizationCaptureRefundLedger": "WLT",
+    "paymentProjectionInCheckout": "DSH read-only projection from authenticated WLT events"
+  },
+  "states": [
+    "pending",
+    "wlt_handoff_failed",
+    "wlt_outcome_unknown",
+    "payment_pending",
+    "payment_confirmed",
+    "payment_failed",
+    "expired",
+    "cancelled",
+    "confirmed"
+  ],
+  "transitions": [
+    {"from": "new", "to": "pending", "trigger": "valid checkout creation"},
+    {"from": ["pending", "wlt_handoff_failed", "wlt_outcome_unknown"], "to": "payment_pending", "trigger": "idempotent WLT session reference attached"},
+    {"from": ["pending", "wlt_handoff_failed"], "to": "wlt_outcome_unknown", "trigger": "ambiguous WLT response"},
+    {"from": ["pending", "payment_pending", "wlt_outcome_unknown"], "to": "wlt_handoff_failed", "trigger": "definitive WLT handoff failure"},
+    {"from": "payment_pending", "to": "payment_confirmed", "trigger": "authenticated WLT captured or cod_collected event"},
+    {"from": "payment_pending", "to": "payment_failed", "trigger": "authenticated WLT failed event"},
+    {"from": "payment_pending", "to": "expired", "trigger": "authenticated WLT expired event"},
+    {"from": ["pending", "wlt_handoff_failed", "wlt_outcome_unknown", "payment_pending"], "to": "cancelled", "trigger": "client cancellation"},
+    {"from": ["payment_pending", "payment_confirmed"], "to": "confirmed", "trigger": "JRN-011 order creation where payment policy permits"}
+  ],
+  "negativeInvariants": [
+    "A checkout intent cannot be created without an authenticated tenant and client.",
+    "A client cannot read or cancel another client's checkout intent.",
+    "Delivery checkout cannot proceed without an owned address and successful serviceability check.",
+    "One Idempotency-Key cannot represent two different checkout request fingerprints.",
+    "One checkout intent cannot attach two different WLT payment-session references.",
+    "DSH cannot capture, refund, settle or mutate a wallet balance.",
+    "A WLT event cannot cross tenant or payment-session boundaries.",
+    "A replayed event key cannot carry a different payload.",
+    "Checkout and coupon projections cannot commit partially for one WLT event.",
+    "Unknown WLT outcomes cannot cause creation of a second non-idempotent session.",
+    "No local or mocked checkout truth may replace server readback in a runtime screen."
+  ],
+  "acceptanceCriteria": [
+    "Valid cart, address and serviceability create one priced checkout intent.",
+    "The WLT request uses dsh-checkout-intent:<intentId> as the stable idempotency key.",
+    "Ambiguous WLT outcomes remain recoverable by client polling and operator reconciliation.",
+    "Authenticated WLT events are recorded durably and applied atomically with coupon effects.",
+    "Duplicate identical events are safe and conflicting replays return a conflict.",
+    "Client UI renders loading, offline/error, unavailable, unknown, pending, failed, expired, cancelled and success paths.",
+    "Control panel exposes tenant, state, WLT reference, reconciliation age and governed filters without financial mutation controls.",
+    "Targeted static, Go, TypeScript, PostgreSQL runtime and DSH/WLT boundary checks pass on the same commit."
+  ],
+  "evidenceScopes": ["product", "static", "database", "backend", "contract", "frontend", "runtime", "security", "finance-boundary", "accessibility", "ci", "release"],
+  "finalDecisionPolicy": "Technical slices may reach READY_FOR_REVIEW after same-commit evidence. CLOSED_WITH_EVIDENCE additionally requires independent Product, QA/device/accessibility, Security/Finance and Release/Production approvals."
+}

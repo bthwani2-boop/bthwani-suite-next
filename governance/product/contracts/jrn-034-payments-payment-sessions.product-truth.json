@@ -1,0 +1,174 @@
+{
+  "schemaVersion": 1,
+  "capabilityId": "JRN_034_PAYMENTS_PAYMENT_SESSIONS",
+  "state": "DISCOVERY",
+  "problem": {
+    "statement": "Card and wallet payment sessions need one WLT-owned, tenant-isolated and auditable lifecycle from reference creation through authorization, capture, provider uncertainty, webhook confirmation, ledger posting, DSH readback and reconciliation without any double charge or duplicate financial truth.",
+    "affectedActors": ["client", "finance-operator", "dsh-service", "payment-provider"],
+    "currentWorkaround": "The repository creates WLT payment-session references and guards concurrent authorize/capture calls, but it has no durable operation replay receipts, no signed provider webhook route, no payment capture posting into the double-entry ledger, and no complete payment-session API contract or operator session timeline.",
+    "frequency": "continuous",
+    "severity": "critical",
+    "evidenceState": "QUALITATIVE",
+    "evidenceReferences": [
+      "governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md#jrn-034",
+      "services/wlt/backend/internal/payment/payment.go",
+      "services/wlt/backend/internal/http/server.go",
+      "services/wlt/backend/internal/ledger/kernel.go",
+      "services/dsh/backend/internal/checkout",
+      "services/dsh/frontend/app-client/checkout"
+    ]
+  },
+  "actors": [
+    {
+      "id": "client",
+      "role": "Authenticated customer selecting a supported payment method and reading the resulting payment state through DSH.",
+      "permittedActions": ["create checkout intent", "start one payment session through DSH", "read own payment status", "retry a recoverable DSH action with the same idempotency identity", "refresh canonical status"],
+      "forbiddenActions": ["call WLT mutations directly", "supply an authorization or capture amount", "read another client payment", "treat a timeout as success or failure", "repeat provider charges from the frontend"]
+    },
+    {
+      "id": "finance-operator",
+      "role": "Authorized financial operations reviewer using the control panel.",
+      "permittedActions": ["inspect payment-session timeline", "inspect provider events and operation receipts", "assign and resolve reconciliation cases", "request provider status refresh through a governed service route", "read linked ledger transaction"],
+      "forbiddenActions": ["edit captured amount or currency", "forge provider events", "mark capture complete without provider evidence", "post an unbalanced ledger transaction", "cross tenant boundaries"]
+    },
+    {
+      "id": "dsh-service",
+      "role": "Authenticated DSH service caller that creates references and reads WLT truth for operational projection.",
+      "permittedActions": ["create an idempotent payment session", "request authorize capture expiry cancellation and status refresh", "read payment status and timeline", "consume WLT outbox readback"],
+      "forbiddenActions": ["write WLT tables", "own payment state", "derive capture from order state", "retry a financial mutation without an idempotency key", "change tenant client amount currency or payment method after reference creation"]
+    },
+    {
+      "id": "payment-provider",
+      "role": "Configured external financial provider returning synchronous results and signed asynchronous events.",
+      "permittedActions": ["authorize", "capture", "return authoritative status", "send signed idempotent events"],
+      "forbiddenActions": ["call internal DSH routes", "send unsigned or stale events", "change the bound session amount or currency", "reuse one event identity for a different payload"]
+    }
+  ],
+  "surfaces": [
+    {
+      "id": "app-client",
+      "required": true,
+      "actors": ["client"],
+      "routesOrScreens": ["checkout payment state", "payment pending and recovery state", "order payment readback"],
+      "operationIds": ["createDshCheckoutIntent", "getDshCheckoutIntent", "refreshDshCheckoutPaymentStatus"],
+      "states": ["loading", "reference_created", "authorization_pending", "authorized", "capture_pending", "captured", "provider_result_unknown", "failed", "expired", "offline", "forbidden", "conflict", "error"],
+      "actions": ["submit payment once", "refresh canonical status", "retry recoverable orchestration", "return to checkout"]
+    },
+    {
+      "id": "control-panel",
+      "required": true,
+      "actors": ["finance-operator"],
+      "routesOrScreens": ["payment sessions command view", "payment session timeline", "reconciliation queue", "linked ledger evidence"],
+      "operationIds": ["getDshPaymentSessionTimeline", "refreshDshPaymentSessionProviderStatus", "listWltReconciliationCases", "assignWltReconciliationCase", "resolveWltReconciliationCase"],
+      "states": ["loading", "empty", "ready", "provider_result_unknown", "reconciliation_open", "reconciliation_resolved", "forbidden", "offline", "conflict", "error"],
+      "actions": ["search by payment session", "refresh provider status", "inspect receipts events and ledger", "assign reconciliation", "resolve with evidence"]
+    },
+    {
+      "id": "backend",
+      "required": true,
+      "actors": ["dsh-service", "payment-provider", "finance-operator"],
+      "routesOrScreens": ["WLT payment session routes", "signed provider webhook", "DSH financial read proxy"],
+      "operationIds": ["createWltPaymentSession", "getWltPaymentSession", "authorizeWltPaymentSession", "captureWltPaymentSession", "expireWltPaymentSession", "refreshWltPaymentSessionProviderStatus", "receiveWltPaymentProviderWebhook", "getWltPaymentSessionTimeline"],
+      "states": ["reference_created", "pending_provider", "authorization_pending", "authorized", "capture_pending", "captured", "provider_result_unknown", "failed", "expired"],
+      "actions": ["authenticate service", "verify tenant", "claim idempotency", "verify webhook signature", "apply legal transition", "post ledger atomically", "enqueue DSH readback", "open and resolve reconciliation"]
+    },
+    {
+      "id": "database",
+      "required": true,
+      "actors": ["dsh-service", "payment-provider", "finance-operator"],
+      "routesOrScreens": ["wlt_payment_sessions", "wlt_payment_operation_receipts", "wlt_payment_provider_events", "wlt_reconciliation_cases", "wlt_ledger_transactions", "wlt_ledger_lines", "wlt_dsh_outbox_events"],
+      "operationIds": [],
+      "states": ["tenant_isolated", "idempotent", "append_only", "balanced", "reconcilable", "auditable"],
+      "actions": ["enforce unique operation replay", "deduplicate provider events", "retain payload hashes", "link capture to ledger", "prevent illegal status overwrite", "retain correlation"]
+    },
+    {
+      "id": "shared",
+      "required": true,
+      "actors": ["client", "finance-operator"],
+      "routesOrScreens": ["WLT payment session client", "DSH checkout payment controller", "control-panel payment timeline controller"],
+      "operationIds": ["getDshPaymentSessionTimeline", "refreshDshPaymentSessionProviderStatus"],
+      "states": ["idle", "loading", "ready", "unknown", "offline", "forbidden", "conflict", "partial", "error"],
+      "actions": ["create idempotency and correlation identifiers", "classify financial states", "disable duplicate actions", "refresh canonical readback", "render safe Arabic status"]
+    },
+    {
+      "id": "app-partner",
+      "required": false,
+      "exclusionReason": "Partner settlement and payout views belong to JRN-036 and JRN-037; partners do not authorize or capture client payment sessions.",
+      "actors": ["finance-operator"],
+      "routesOrScreens": [],
+      "operationIds": [],
+      "states": ["not_affected"],
+      "actions": []
+    },
+    {
+      "id": "app-captain",
+      "required": false,
+      "exclusionReason": "Captain cash custody belongs to JRN-038 and must not share the online payment-session mutation path.",
+      "actors": ["client"],
+      "routesOrScreens": [],
+      "operationIds": [],
+      "states": ["not_affected"],
+      "actions": []
+    },
+    {
+      "id": "app-field",
+      "required": false,
+      "exclusionReason": "Field finance requests and commissions are separate journeys and have no payment-session authorization action.",
+      "actors": ["finance-operator"],
+      "routesOrScreens": [],
+      "operationIds": [],
+      "states": ["not_affected"],
+      "actions": []
+    }
+  ],
+  "outcome": {
+    "statement": "Every non-COD payment session is tenant bound, replay safe, provider verifiable, atomically posted to the WLT ledger on capture, projected to DSH without transferring ownership, and recoverable through an auditable reconciliation timeline.",
+    "primaryMetric": "captured payment sessions with exactly one matching ledger transaction and DSH readback",
+    "guardrailMetrics": ["duplicate provider authorization count", "duplicate provider capture count", "unsigned webhook acceptance count", "captured payment session without ledger transaction count", "ledger posting without captured session count", "unresolved provider_result_unknown age", "cross-tenant payment access count", "DSH-owned financial mutation count"],
+    "baselineState": "Session state claims and outbox readback exist, but operation replay, signed webhook intake, capture ledger posting, complete contract binding and operator timeline are incomplete.",
+    "targetState": "WLT exposes one governed payment lifecycle with durable idempotency, signed events, balanced ledger posting, DSH projection and recoverable operator readback.",
+    "observationWindow": "targeted product, migration, backend, contract, security, finance, runtime, UI and independent review"
+  },
+  "acceptance": {
+    "criteria": [
+      "Reference creation is service-authenticated, tenant isolated and idempotent for the bound checkout intent and payload.",
+      "Authorize and capture require an Idempotency-Key; exact replay never repeats the provider call and payload conflict is rejected.",
+      "At most one concurrent caller can claim each authorize or capture transition.",
+      "Provider declines become failed while ambiguous transport outcomes become provider_result_unknown with one open reconciliation case.",
+      "Signed provider events reject missing, invalid, stale or replay-conflicting signatures and event identities.",
+      "A captured transition posts one balanced provider_clearing to platform_payable ledger transaction in the same database transaction.",
+      "Captured failed and expired terminal transitions enqueue durable DSH readback without moving financial ownership to DSH.",
+      "Provider status refresh resolves unknown results without blindly repeating authorization or capture.",
+      "Control panel exposes receipts provider events reconciliation and ledger references through a DSH-authenticated read path.",
+      "App client displays canonical pending unknown failed expired and captured states with safe retry and offline recovery.",
+      "No frontend or DSH component calls the external financial provider or writes WLT ledger truth.",
+      "All required paths are represented in an active OpenAPI contract and typed client/controller binding."
+    ],
+    "failureStates": ["double authorization", "double capture", "idempotency key payload reuse", "unsigned webhook", "stale webhook", "provider event replay conflict", "captured without ledger", "ledger without captured state", "unknown result treated as failure", "cross-tenant read", "frontend-owned financial truth", "runtime mock payment success"],
+    "requiredChecks": ["product-truth schema validation", "WLT migration probe coverage", "targeted Go payment and webhook tests", "payment state concurrency tests", "ledger exactly-once and balance tests", "OpenAPI validation and client drift check", "DSH proxy route tests", "TypeScript shared and surface typecheck", "tenant and service-auth isolation tests", "signed webhook security tests", "runtime provider and DSH readback smoke", "Arabic RTL and weak-network visual review", "independent finance control review", "independent product acceptance"],
+    "runtimeEvidenceRequired": true,
+    "visualEvidenceRequired": true
+  },
+  "invariants": {
+    "business": ["WLT is the sole owner of payment provider state and ledger truth.", "DSH owns checkout orchestration and stores only WLT references and operational projections.", "The amount currency tenant client store and source binding are immutable after payment-session creation.", "Every financial mutation carries service authentication tenant context correlation and idempotency.", "Every capture state change ledger posting and DSH outbox event commits or rolls back together.", "An unknown provider result is reconciled by authoritative status evidence rather than by repeating the financial operation."],
+    "negative": ["No idempotency key represents different payment operation inputs.", "No provider webhook is trusted without a configured secret valid signature acceptable timestamp and unique event identity.", "No captured session lacks exactly one matching balanced ledger transaction.", "No DSH or frontend code writes WLT session ledger reconciliation or provider event tables.", "No COD collection uses the online authorization or capture route.", "No operator self-approves final financial or product closure."]
+  },
+  "owners": {
+    "productManager": "Payments Product Management",
+    "productOwner": "WLT Payment Operations Product Owner",
+    "uxJourneyOwner": "Client Checkout and Finance Operations Experience Owner",
+    "engineeringOwner": "WLT and DSH Full-Stack Engineering",
+    "productManagerApproval": "PENDING",
+    "productOwnerApproval": "PENDING",
+    "productAcceptanceDecision": "PENDING"
+  },
+  "execution": {
+    "appetite": "Close JRN-034 code, data, contract, security, ledger, readback and surface gaps without moving financial ownership out of WLT, deploying production or self-approving protected evidence.",
+    "fixedConstraints": ["Repository mode is REMOTE_ONLY on sambassam.", "WLT remains the financial and provider truth owner.", "DSH remains the checkout orchestration and projection owner.", "Provider secrets are environment-owned and fail closed.", "No PR merge force push release production deployment or commercial SaaS activation is authorized.", "Independent product finance security visual release and production approvals cannot be self-issued by engineering."],
+    "variableScope": ["Provider-neutral webhook envelope mapping", "Arabic payment status labels", "operator payment timeline presentation", "reconciliation note wording"],
+    "forbiddenScope": ["DSH-owned payment or ledger truth", "frontend provider credentials or direct provider calls", "automatic success inference after timeout", "production deployment", "commercial SaaS activation", "self-approval of protected closure", "fake runtime visual or finance evidence"],
+    "forecastRange": "one sequential journey closure",
+    "confidence": "high",
+    "unknowns": ["Independent product manager approval outcome", "Independent product owner approval outcome", "Independent financial control approval outcome", "Independent application security approval outcome", "Runtime provider sandbox outcome", "Visual and weak-network device outcome", "Production telemetry outcome"]
+  }
+}

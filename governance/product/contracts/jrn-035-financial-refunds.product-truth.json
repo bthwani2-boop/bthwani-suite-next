@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "capabilityId": "JRN_035_FINANCIAL_REFUNDS",
+  "state": "DISCOVERY",
+  "problem": {
+    "statement": "Eligible DSH reversals need one tenant-isolated WLT refund lifecycle supporting partial/full amounts, maker-checker review, ambiguous provider results, ledger reversal, durable DSH readback, reconciliation and audit without duplicate money movement.",
+    "affectedActors": ["client", "partner", "refund-maker", "refund-checker", "finance-reconciler", "dsh-service"],
+    "currentWorkaround": "The existing route derives only a full-session amount and retains neither operator separation nor sufficient provider outcome evidence.",
+    "frequency": "continuous",
+    "severity": "critical",
+    "evidenceState": "QUALITATIVE",
+    "evidenceReferences": ["governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md#jrn-035", "services/wlt/backend/internal/refund", "services/dsh/backend/internal/http/financeproxy.go"]
+  },
+  "actors": [
+    {"id":"client","role":"Customer reading an owned order refund state","permittedActions":["read privacy-safe own-order refund status","refresh canonical status"],"forbiddenActions":["approve execute or reconcile","read another client refund","infer success before WLT completion"]},
+    {"id":"partner","role":"Partner reading an authorized store-order refund state","permittedActions":["read privacy-safe authorized-order refund status"],"forbiddenActions":["mutate WLT refund or ledger truth","read provider or operator details"]},
+    {"id":"refund-maker","role":"Authorized operator requesting a refund","permittedActions":["request partial or full refund with reason and eligibility reference","read request state"],"forbiddenActions":["approve or reject own request","exceed remaining amount","reuse idempotency key with changed payload"]},
+    {"id":"refund-checker","role":"Independent operator reviewing refunds","permittedActions":["approve or reject with decision reason"],"forbiddenActions":["review own request","execute unapproved request","change financial identity or amount"]},
+    {"id":"finance-reconciler","role":"Independent operator resolving unknown provider outcomes","permittedActions":["confirm provider success or failure with evidence","inspect audit"],"forbiddenActions":["re-call provider while unknown","post duplicate ledger","resolve without evidence"]},
+    {"id":"dsh-service","role":"Authenticated operational orchestrator","permittedActions":["submit eligible candidates","read WLT references","consume durable completion events"],"forbiddenActions":["write WLT tables or ledger","derive completion locally","cross tenants"]}
+  ],
+  "surfaces": [
+    {"id":"control-panel","required":true,"actors":["refund-maker","refund-checker","finance-reconciler"],"routesOrScreens":["FinanceRefundsCommandDeck","refund detail","reconciliation queue"],"operationIds":["createDshFinanceRefund","approveDshFinanceRefund","rejectDshFinanceRefund","completeDshFinanceRefund","reconcileDshFinanceRefund","listDshFinanceRefundAudit"],"states":["loading","empty","requested","approved","processing","provider_unknown","completed","rejected","forbidden","conflict","offline","error"],"actions":["request","approve","reject","execute","reconcile","refresh","inspect audit"]},
+    {"id":"app-client","required":true,"actors":["client"],"routesOrScreens":["order details refund status"],"operationIds":["getDshClientOrderRefundStatus"],"states":["none","requested","approved","processing","provider_unknown","partially_refunded","refunded","rejected","offline","error"],"actions":["refresh"]},
+    {"id":"app-partner","required":true,"actors":["partner"],"routesOrScreens":["partner order refund status"],"operationIds":["getDshPartnerOrderRefundStatus"],"states":["none","requested","approved","processing","provider_unknown","partially_refunded","refunded","rejected","offline","error"],"actions":["refresh"]},
+    {"id":"backend","required":true,"actors":["refund-maker","refund-checker","finance-reconciler","dsh-service"],"routesOrScreens":["DSH finance proxy","WLT refund lifecycle","WLT mutation receipt boundary","WLT reconciliation","DSH refund event projection"],"operationIds":["createWltRefund","approveWltRefund","rejectWltRefund","completeWltRefund","reconcileWltRefund","getWltRefund","listWltRefundAudit"],"states":["authorized","forbidden","invalid","conflict","idempotency_processing","idempotency_replayed","requested","approved","processing","provider_unknown","completed","rejected"],"actions":["validate eligibility","claim mutation receipt","replay identical mutation","reserve amount","enforce maker-checker","claim execution","post ledger","emit readback","audit","reconcile"]},
+    {"id":"database","required":true,"actors":["dsh-service","refund-maker","refund-checker","finance-reconciler"],"routesOrScreens":["wlt_refunds","wlt_refund_operation_receipts","wlt_refund_audit_events","wlt_dsh_outbox_events","wlt_ledger_transactions","wlt_reconciliation_cases"],"operationIds":[],"states":["tenant_isolated","idempotent","versioned","append_only","balanced","durable"],"actions":["claim every mutation before execution","store replay status and body","retain actor reason correlation and request hash","enforce remaining amount","prevent duplicate execution","retain evidence","retain readback"]},
+    {"id":"shared","required":true,"actors":["client","partner","refund-maker","refund-checker","finance-reconciler"],"routesOrScreens":["services/dsh/frontend/shared/finance-wlt-link/wlt-refund"],"operationIds":["createDshFinanceRefund","approveDshFinanceRefund","rejectDshFinanceRefund","completeDshFinanceRefund","reconcileDshFinanceRefund"],"states":["idle","loading","success","forbidden","conflict","offline","provider_unknown","error"],"actions":["bind contracts","classify errors","disable duplicate actions","refresh readback"]},
+    {"id":"app-captain","required":false,"exclusionReason":"Captains do not own refund decisions or financial readback in JRN-035.","actors":["client"],"routesOrScreens":[],"operationIds":[],"states":["not_affected"],"actions":[]},
+    {"id":"app-field","required":false,"exclusionReason":"Field staff do not own refund decisions or financial readback in JRN-035.","actors":["client"],"routesOrScreens":[],"operationIds":[],"states":["not_affected"],"actions":[]}
+  ],
+  "outcome": {
+    "statement": "Every eligible refund is tenant-bound, amount-safe, independently approved, executed at most once, ledger-balanced, durably projected and explicitly reconciled when provider truth is unknown.",
+    "primaryMetric": "completed refunds with matching provider ledger and DSH evidence rate",
+    "guardrailMetrics": ["over-refund count","maker-checker violation count","duplicate provider execution count","mutation idempotency conflict count","unbalanced journal count","unresolved unknown count","lost DSH event count"],
+    "baselineState": "Full-only creation and basic completion exist without complete actor, partial, ambiguity, readback and audit governance.",
+    "targetState": "One governed WLT lifecycle and DSH shared readback cover request through reconciliation.",
+    "observationWindow": "targeted static database contract backend frontend finance security runtime and independent review"
+  },
+  "acceptance": {
+    "criteria": [
+      "Refund references a captured or COD-collected session in the same tenant order and client scope.",
+      "Amount is positive and no greater than captured amount minus active and completed refunds.",
+      "Every mutation claims a tenant operation path and idempotency receipt before entering its business handler.",
+      "An idempotency key replays the same canonical payload status and body and conflicts before side effects on a changed payload.",
+      "The maker cannot approve or reject the same refund.",
+      "Only one approved execution claim reaches the provider.",
+      "Ambiguous provider result becomes provider_unknown, opens reconciliation and blocks automatic retry.",
+      "Completion posts exactly one balanced platform_payable/provider_clearing journal.",
+      "Completion updates references and enqueues a durable DSH event in the same transaction.",
+      "Client and partner receive privacy-safe canonical status.",
+      "Every mutation retains actor reason correlation idempotency request hash response and state evidence."
+    ],
+    "failureStates": ["over refund","cross tenant refund","self approval","duplicate provider call","changed payload replay","unknown shown as success","unbalanced completion","lost readback","frontend financial truth"],
+    "requiredChecks": ["product-truth schema validation","migration invariants","mutation receipt replay and conflict test","targeted Go lifecycle tests","route authorization tests","OpenAPI generated-client drift","shared surface typecheck","finance boundary gate","provider runtime smoke","independent finance security product and QA review"],
+    "runtimeEvidenceRequired": true,
+    "visualEvidenceRequired": true
+  },
+  "invariants": {
+    "business": ["WLT exclusively owns provider ledger reconciliation and audit truth.","DSH owns eligibility orchestration and privacy-safe projection.","Amount and currency remain constrained by the payment session.","Every mutation is receipt-idempotent and execution and completion remain evidence preserving."],
+    "negative": ["No refund exceeds remaining amount.","No maker checks own request.","No changed-payload idempotency replay enters a business handler.","No provider_unknown refund is automatically retried.","No completed refund lacks ledger and durable DSH event.","No DSH or frontend code mutates financial truth."]
+  },
+  "owners": {"productManager":"DSH Financial Operations Product Management","productOwner":"WLT Refund Operations Product Owner","uxJourneyOwner":"Financial Refund Multi-Surface Experience Owner","engineeringOwner":"DSH and WLT Full-Stack Engineering","productManagerApproval":"PENDING","productOwnerApproval":"PENDING","productAcceptanceDecision":"PENDING"},
+  "execution": {
+    "appetite": "Close JRN-035 code data contract state surface and verification gaps without production deployment or protected self-approval.",
+    "fixedConstraints": ["REMOTE_ONLY on sambassam.","WLT remains sole financial truth owner.","Maker-checker is mandatory.","No PR merge force push release deploy or SaaS activation.","Independent approvals cannot be self-issued."],
+    "variableScope": ["Arabic status wording","command deck presentation","diagnostic labels"],
+    "forbiddenScope": ["DSH-owned ledger or provider mutation","frontend-derived completion","automatic retry from provider_unknown","production deployment","self-approval","fake evidence"],
+    "forecastRange": "one sequential journey closure",
+    "confidence": "high",
+    "unknowns": ["Independent product approvals","runtime and visual verification","independent finance security QA and release outcomes"]
+  }
+}

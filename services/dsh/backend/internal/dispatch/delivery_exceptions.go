@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"dsh-api/internal/orders"
 )
 
 type DeliveryExceptionReasonCode string
@@ -39,6 +41,7 @@ type DeliveryException struct {
 	TenantID                string
 	AssignmentID            string
 	OrderID                 string
+	SpecialRequestID        string
 	CaptainID               string
 	ReasonCode              DeliveryExceptionReasonCode
 	Note                    string
@@ -153,16 +156,25 @@ func ReportDeliveryException(db *sql.DB, assignmentID, captainID string, input R
 	if err != nil {
 		return nil, err
 	}
-	if current.OrderID == "" {
-		return nil, fmt.Errorf("%w: delivery exceptions require an order-backed assignment", ErrConflict)
+	if current.OrderID == "" && current.SpecialRequestID == "" {
+		return nil, fmt.Errorf("%w: delivery exception source is missing", ErrConflict)
 	}
 
 	var tenantID string
-	if err := tx.QueryRow(`SELECT tenant_id FROM dsh_orders WHERE id=$1::uuid FOR UPDATE`, current.OrderID).Scan(&tenantID); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrNotFound
+	if current.OrderID != "" {
+		if err := tx.QueryRow(`SELECT tenant_id FROM dsh_orders WHERE id=$1::uuid FOR UPDATE`, current.OrderID).Scan(&tenantID); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, ErrNotFound
+			}
+			return nil, err
 		}
-		return nil, err
+	} else {
+		if err := tx.QueryRow(`SELECT tenant_id FROM dsh_special_requests WHERE id=$1::uuid FOR UPDATE`, current.SpecialRequestID).Scan(&tenantID); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, ErrNotFound
+			}
+			return nil, err
+		}
 	}
 
 	// Idempotency is evaluated before current-state eligibility so a retried
@@ -198,12 +210,12 @@ func ReportDeliveryException(db *sql.DB, assignmentID, captainID string, input R
 	var id string
 	err = tx.QueryRow(`
 		INSERT INTO dsh_delivery_exceptions (
-			tenant_id, assignment_id, order_id, captain_id, reason_code, note,
+			tenant_id, assignment_id, order_id, special_request_id, captain_id, reason_code, note,
 			delivery_status_at_report, severity, correlation_id,
 			reported_latitude, reported_longitude
-		) VALUES ($1,$2::uuid,$3::uuid,$4,$5,$6,$7,$8,$9,$10,$11)
+		) VALUES ($1,$2::uuid,NULLIF($3,'')::uuid,NULLIF($4,'')::uuid,$5,$6,$7,$8,$9,$10,$11,$12)
 		RETURNING id::text`,
-		tenantID, assignmentID, current.OrderID, captainID, string(input.ReasonCode), input.Note,
+		tenantID, assignmentID, current.OrderID, current.SpecialRequestID, captainID, string(input.ReasonCode), input.Note,
 		string(current.Delivery.Status), string(severityForDeliveryException(input.ReasonCode)), input.CorrelationID,
 		input.Latitude, input.Longitude,
 	).Scan(&id)
@@ -356,6 +368,15 @@ func ResolveDeliveryExceptionReassignCaptain(db *sql.DB, id string, expectedVers
 	if newCaptainID == current.CaptainID {
 		return nil, fmt.Errorf("%w: replacement captain must differ from current captain", ErrInvalid)
 	}
+	if current.SpecialRequestID != "" {
+		if _, err := resolveSpecialRequestExceptionReassignCaptainTx(tx, current, expectedVersion, newCaptainID, note, actorID); err != nil {
+			return nil, err
+		}
+		if err := tx.Commit(); err != nil {
+			return nil, err
+		}
+		return GetDeliveryException(db, id)
+	}
 
 	var assignmentStatus AssignmentStatus
 	var deliveryStatus DeliveryStatus
@@ -435,6 +456,100 @@ func ResolveDeliveryExceptionReassignCaptain(db *sql.DB, id string, expectedVers
 	return GetDeliveryException(db, id)
 }
 
+// ResolveDeliveryExceptionCancelOrder resolves an open/acknowledged delivery
+// exception directly as a cancellation, for the pre-pickup window only
+// (driver_assigned / driver_arrived_store) where the captain does not yet
+// hold the order's goods. Once goods are picked up, operations must use
+// return-to-store instead so custody is accounted for before any financial
+// cancellation - this mirrors the reassignment eligibility window and the
+// operator-facing copy already shown in the control-panel exception panel.
+//
+// The order cancellation itself is delegated to the one governed
+// orders.CancelOrder primitive (same financial outbox / WLT hand-off used by
+// every other cancellation path) rather than re-implemented here. Because
+// that call owns its own transaction, this function runs as two sequential
+// steps guarded by idempotent keys: cancelling the order, then marking the
+// exception resolved. A retry after a partial failure is safe - CancelOrder
+// replays by correlationId and the exception update is guarded by version.
+func ResolveDeliveryExceptionCancelOrder(db *sql.DB, id string, expectedVersion int, note, actorID string) (*DeliveryException, error) {
+	note = strings.TrimSpace(note)
+	actorID = strings.TrimSpace(actorID)
+	if strings.TrimSpace(id) == "" || expectedVersion <= 0 || actorID == "" || len(note) < 5 {
+		return nil, fmt.Errorf("%w: id, expectedVersion, actor, and cancellation note are required", ErrInvalid)
+	}
+	if len(note) > 1000 {
+		return nil, fmt.Errorf("%w: cancellation note must not exceed 1000 characters", ErrInvalid)
+	}
+
+	current, err := GetDeliveryException(db, id)
+	if err != nil {
+		return nil, err
+	}
+	if current.Status == DeliveryExceptionResolved {
+		if current.ResolutionAction != nil && *current.ResolutionAction == "cancel_order" && current.ResolutionNote != nil && *current.ResolutionNote == note {
+			return current, nil
+		}
+		return nil, fmt.Errorf("%w: delivery exception was already resolved differently", ErrConflict)
+	}
+	if current.Version != expectedVersion {
+		return nil, fmt.Errorf("%w: delivery exception version changed", ErrConflict)
+	}
+	if current.SpecialRequestID != "" {
+		return nil, fmt.Errorf("%w: special-request exceptions support retry_same_captain or reassign_captain; cancel_order is order-owned", ErrConflict)
+	}
+
+	var deliveryStatus DeliveryStatus
+	if err := db.QueryRow(`SELECT d.status FROM dsh_deliveries d WHERE d.assignment_id=$1::uuid`, current.AssignmentID).Scan(&deliveryStatus); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	if deliveryStatus != DeliveryDriverAssigned && deliveryStatus != DeliveryArrivedStore {
+		return nil, fmt.Errorf("%w: cancel resolution is allowed only before pickup; use return-to-store after pickup", ErrConflict)
+	}
+
+	if _, err := orders.CancelOrder(db, orders.CancellationInput{
+		OrderID:       current.OrderID,
+		ActorID:       actorID,
+		ActorRole:     "operator",
+		ReasonCode:    "operational_failure",
+		ReasonNote:    note,
+		CorrelationID: "delivery-exception-cancel:" + id,
+	}); err != nil {
+		if errors.Is(err, orders.ErrConflict) {
+			return nil, fmt.Errorf("%w: order is no longer eligible for governed cancellation", ErrConflict)
+		}
+		if errors.Is(err, orders.ErrNotFound) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	res, err := tx.Exec(`
+		UPDATE dsh_delivery_exceptions
+		SET status='resolved', resolved_at=NOW(), resolved_by_actor_id=$1,
+		    resolution_action='cancel_order', resolution_note=$2,
+		    version=version+1, updated_at=NOW()
+		WHERE id=$3::uuid AND version=$4 AND status IN ('open','acknowledged')`,
+		actorID, note, id, expectedVersion)
+	if err != nil {
+		return nil, err
+	}
+	if n, _ := res.RowsAffected(); n != 1 {
+		return nil, fmt.Errorf("%w: delivery exception version changed", ErrConflict)
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return GetDeliveryException(db, id)
+}
+
 func ResolveDeliveryExceptionReturnToStore(db *sql.DB, id string, expectedVersion int, note, actorID string) (*DeliveryException, error) {
 	note = strings.TrimSpace(note)
 	actorID = strings.TrimSpace(actorID)
@@ -461,6 +576,9 @@ func ResolveDeliveryExceptionReturnToStore(db *sql.DB, id string, expectedVersio
 	}
 	if current.Version != expectedVersion {
 		return nil, fmt.Errorf("%w: delivery exception version changed", ErrConflict)
+	}
+	if current.SpecialRequestID != "" {
+		return nil, fmt.Errorf("%w: return_to_store is order/store-owned; use retry_same_captain or reassign_captain", ErrConflict)
 	}
 	var assignmentStatus AssignmentStatus
 	var deliveryStatus DeliveryStatus
@@ -740,7 +858,7 @@ func ListOperatorDeliveryExceptions(db *sql.DB, status DeliveryExceptionStatus, 
 }
 
 const deliveryExceptionColumns = `
-	e.id::text, e.tenant_id, e.assignment_id::text, e.order_id::text, e.captain_id,
+	e.id::text, e.tenant_id, e.assignment_id::text, COALESCE(e.order_id::text, ''), COALESCE(e.special_request_id::text, ''), e.captain_id,
 	e.reason_code, e.note, e.delivery_status_at_report, e.severity, e.status,
 	e.correlation_id, e.reported_latitude, e.reported_longitude, e.reported_at,
 	e.acknowledged_at, e.acknowledged_by_actor_id, e.resolved_at, e.resolved_by_actor_id, e.resolution_action,
@@ -751,7 +869,7 @@ type deliveryExceptionScanner func(dest ...any) error
 func scanDeliveryException(scan deliveryExceptionScanner) (*DeliveryException, error) {
 	var item DeliveryException
 	err := scan(
-		&item.ID, &item.TenantID, &item.AssignmentID, &item.OrderID, &item.CaptainID,
+		&item.ID, &item.TenantID, &item.AssignmentID, &item.OrderID, &item.SpecialRequestID, &item.CaptainID,
 		&item.ReasonCode, &item.Note, &item.DeliveryStatusAtReport, &item.Severity, &item.Status,
 		&item.CorrelationID, &item.ReportedLatitude, &item.ReportedLongitude, &item.ReportedAt,
 		&item.AcknowledgedAt, &item.AcknowledgedByActorID, &item.ResolvedAt, &item.ResolvedByActorID, &item.ResolutionAction,

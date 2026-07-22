@@ -38,6 +38,71 @@ export type DshOrderPreparation = {
   readonly preparationRemainingSeconds: number;
 };
 
+export type DshPreparationIssueKind =
+  | "missing_item"
+  | "substitution_required"
+  | "quality_issue"
+  | "other";
+
+export type DshPreparationIssueStatus = "open" | "resolved";
+
+export type DshPreparationIssueCustomerDecision =
+  | "not_required"
+  | "pending"
+  | "approved"
+  | "rejected";
+
+export type DshPreparationIssue = {
+  readonly id: string;
+  readonly orderId: string;
+  readonly storeId: string;
+  readonly orderItemId: string;
+  readonly kind: DshPreparationIssueKind;
+  readonly status: DshPreparationIssueStatus;
+  readonly affectedQuantity: number;
+  readonly note: string;
+  readonly replacementProductId: string;
+  readonly replacementProductName: string;
+  readonly customerDecision: DshPreparationIssueCustomerDecision;
+  readonly customerDecidedByActorId: string;
+  readonly customerDecisionNote: string;
+  readonly customerDecidedAt?: string | null;
+  readonly openedByActorId: string;
+  readonly openedAt: string;
+  readonly resolvedByActorId: string;
+  readonly resolutionNote: string;
+  readonly resolvedAt?: string | null;
+  readonly version: number;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+};
+
+export type DshCreatePreparationIssueInput = {
+  readonly orderItemId?: string;
+  readonly kind: DshPreparationIssueKind;
+  readonly affectedQuantity: number;
+  readonly note: string;
+  readonly replacementProductId?: string;
+  readonly replacementProductName?: string;
+};
+
+export type DshDecidePreparationIssueInput = {
+  readonly expectedVersion: number;
+  readonly decision: Extract<DshPreparationIssueCustomerDecision, "approved" | "rejected">;
+  readonly note?: string;
+};
+
+export type DshResolvePreparationIssueInput = {
+  readonly expectedVersion: number;
+  readonly resolutionNote: string;
+};
+
+export type DshPreparationIssueList = {
+  readonly issues: readonly DshPreparationIssue[];
+  readonly openCount: number;
+  readonly pendingCustomerDecisionCount: number;
+};
+
 export type DshStorePreparationPolicy = {
   readonly storeId: string;
   readonly defaultPreparationMinutes: number;
@@ -53,6 +118,8 @@ export type DshPartnerOrderAction =
   | "prepare"
   | "ready"
   | "revise_estimate"
+  | "report_issue"
+  | "resolve_issue"
   | "handoff";
 
 export type DshStoreCaptainHandoffStatus =
@@ -78,14 +145,35 @@ export type DshStoreCaptainHandoff = {
   readonly updatedAt: string;
 };
 
+export type DshStoreCaptainHandoffExceptionReason =
+  | "handoff_shortage"
+  | "handoff_mismatch";
+
+export type DshStoreCaptainHandoffExceptionStatus = "" | "open" | "acknowledged";
+
+export type DshReportStoreCaptainHandoffExceptionInput = {
+  readonly reasonCode: DshStoreCaptainHandoffExceptionReason;
+  readonly note: string;
+  readonly correlationId: string;
+  readonly latitude?: number;
+  readonly longitude?: number;
+};
+
 export type DshPartnerOrder = DshOrder & {
   readonly allowedActions: readonly DshPartnerOrderAction[];
   readonly preparation: DshOrderPreparation;
+  readonly preparationIssues: readonly DshPreparationIssue[];
+  readonly openPreparationIssueCount: number;
+  readonly pendingCustomerDecisionCount: number;
+  readonly resolvablePreparationIssueCount: number;
   readonly storeCaptainHandoffStatus: DshStoreCaptainHandoffStatus;
   readonly storeCaptainHandoffAssignmentId: string;
   readonly storeCaptainHandoffCaptainId: string;
   readonly partnerHandoffConfirmedAt?: string | null;
   readonly captainPickupConfirmedAt?: string | null;
+  readonly openStoreCaptainHandoffExceptionId: string;
+  readonly openStoreCaptainHandoffExceptionReason: DshStoreCaptainHandoffExceptionReason | "";
+  readonly openStoreCaptainHandoffExceptionStatus: DshStoreCaptainHandoffExceptionStatus;
 };
 
 export type DshFinancialClosureStatus =
@@ -165,6 +253,31 @@ export const PREPARATION_SLA_LABELS: Record<DshPreparationSlaState, string> = {
   due_soon: "اقترب موعد الجاهزية",
   overdue: "متأخر عن موعد الجاهزية",
   ready: "جاهز",
+};
+
+export const PREPARATION_ISSUE_KIND_LABELS: Record<DshPreparationIssueKind, string> = {
+  missing_item: "صنف غير متوفر",
+  substitution_required: "استبدال مطلوب",
+  quality_issue: "مشكلة جودة",
+  other: "مشكلة أخرى",
+};
+
+export const PREPARATION_ISSUE_CUSTOMER_DECISION_LABELS: Record<
+  DshPreparationIssueCustomerDecision,
+  string
+> = {
+  not_required: "لا يحتاج قرار العميل",
+  pending: "بانتظار قرار العميل",
+  approved: "وافق العميل",
+  rejected: "رفض العميل",
+};
+
+export const STORE_CAPTAIN_HANDOFF_EXCEPTION_LABELS: Record<
+  DshStoreCaptainHandoffExceptionReason,
+  string
+> = {
+  handoff_shortage: "نقص في محتوى الطرد",
+  handoff_mismatch: "محتوى الطرد لا يطابق الطلب",
 };
 
 export const FINANCIAL_CLOSURE_LABELS: Record<DshFinancialClosureStatus, string> = {

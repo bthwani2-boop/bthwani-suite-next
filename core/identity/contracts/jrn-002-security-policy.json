@@ -1,0 +1,57 @@
+{
+  "journeyId": "JRN-002",
+  "classification": "HIGH_IMPACT_AUTHENTICATION",
+  "pii": {
+    "fields": ["phoneE164", "username", "ipAddress", "deviceFingerprint"],
+    "owner": "core/identity",
+    "rules": [
+      "Phone is returned only to the authenticated subject or authenticated internal Workforce caller.",
+      "Activation responses expose maskedPhone, never another actor's full phone.",
+      "Passwords, activation codes, access tokens, refresh tokens, and hashes never appear in logs or error bodies.",
+      "Account deletion anonymizes identity before downstream outbox processing."
+    ]
+  },
+  "sessionControls": {
+    "accessTtlMinutes": 15,
+    "refreshTtlDays": 7,
+    "refreshRotation": "mandatory-single-use",
+    "storage": "platform-secure-adapter",
+    "revocation": ["logout", "session.revokeOwn", "actor.deactivate", "account.deleteOwn"]
+  },
+  "activationControls": {
+    "codeDigits": 6,
+    "maxAttempts": 5,
+    "singleUse": true,
+    "roleBound": true,
+    "surfaceBound": true,
+    "rateLimited": true,
+    "hmacSecretMinimumBytes": 32
+  },
+  "serviceControls": {
+    "callerHeader": "X-Service-Caller",
+    "allowedCaller": "workforce",
+    "bearerSecret": "IDENTITY_WORKFORCE_SERVICE_TOKEN",
+    "comparison": "constant-time",
+    "failClosedWhenMissing": true
+  },
+  "browserControls": {
+    "originAllowlist": "IDENTITY_CORS_ALLOWED_ORIGINS",
+    "untrustedOriginResult": "403 CORS_ORIGIN_FORBIDDEN",
+    "allowedMethods": ["GET", "POST", "DELETE", "OPTIONS"],
+    "responseHeaders": ["Cache-Control: no-store", "X-Content-Type-Options: nosniff", "X-Correlation-ID"]
+  },
+  "tenantIsolation": "Every resolved identity carries tenantId from the actor row; clients cannot submit or override tenantId during authentication.",
+  "audit": [
+    "Login attempts store username, success flag, IP, and timestamp without credentials.",
+    "Activation challenges store issuer, correlation ID, idempotency key, attempts, status, and timestamps.",
+    "Deletion uses a stable outbox event key for downstream audit and reconciliation."
+  ],
+  "forbidden": [
+    "wildcard browser origin",
+    "plaintext credential persistence",
+    "token or password logging",
+    "cross-actor session listing or revocation",
+    "support impersonation without approved security design",
+    "client-controlled roles, permissions, surfaceAccess, serviceAccess, tenantId, or sessionId"
+  ]
+}

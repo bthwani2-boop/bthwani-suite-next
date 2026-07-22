@@ -1,8 +1,20 @@
+export type DshAdministrationSurface =
+  | "control-panel"
+  | "app-client"
+  | "app-partner"
+  | "app-captain"
+  | "app-field"
+  | "webapp"
+  | "website";
+
 export type DshRole = {
   readonly id: string;
   readonly name: string;
   readonly description: string;
   readonly permissions: readonly string[];
+  readonly surfaces: readonly DshAdministrationSurface[];
+  readonly active: boolean;
+  readonly version: number;
   readonly createdAt: string;
 };
 
@@ -15,12 +27,80 @@ export type DshStaffMember = {
   readonly assignedAt: string;
 };
 
+export type DshAdministrationApprovalStatus = "pending" | "approved" | "rejected";
+export type DshRoleAssignmentApprovalStatus = DshAdministrationApprovalStatus;
+export type DshRoleChangeAction = "staff_role_assignment" | "staff_role_revocation";
+
+export type DshRoleAssignmentApproval = {
+  readonly id: string;
+  readonly actionType: DshRoleChangeAction;
+  readonly targetActorId: string;
+  readonly roleId: string;
+  readonly roleName: string;
+  readonly requestedBy: string;
+  readonly reason: string;
+  readonly status: DshRoleAssignmentApprovalStatus;
+  readonly reviewedBy: string;
+  readonly reviewNote: string;
+  readonly version: number;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly reviewedAt?: string;
+};
+
+export type DshRoleDefinitionRequest = {
+  readonly id: string;
+  readonly roleName: string;
+  readonly description: string;
+  readonly permissions: readonly string[];
+  readonly surfaces: readonly DshAdministrationSurface[];
+  readonly requestedBy: string;
+  readonly reason: string;
+  readonly status: DshAdministrationApprovalStatus;
+  readonly reviewedBy: string;
+  readonly reviewNote: string;
+  readonly version: number;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly reviewedAt?: string;
+};
+
+export type DshAdministrationRollbackRequest = {
+  readonly id: string;
+  readonly sourceApprovalId: string;
+  readonly sourceActionType: DshRoleChangeAction;
+  readonly inverseActionType: DshRoleChangeAction;
+  readonly targetActorId: string;
+  readonly roleId: string;
+  readonly roleName: string;
+  readonly requestedBy: string;
+  readonly reason: string;
+  readonly status: DshAdministrationApprovalStatus;
+  readonly reviewedBy: string;
+  readonly reviewNote: string;
+  readonly version: number;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly reviewedAt?: string;
+  readonly sourceApprovedBy: string;
+};
+
+export type DshAdministrationDiagnostics = {
+  readonly status: "healthy" | "attention";
+  readonly activeRoleCount: number;
+  readonly approvedAssignmentCount: number;
+  readonly pendingRoleDefinitionCount: number;
+  readonly pendingRoleAssignmentCount: number;
+  readonly pendingRollbackCount: number;
+  readonly recentRestrictedAuditCount: number;
+  readonly generatedAt: string;
+};
+
 export type DshPartnerActivation = {
   readonly id: string;
   readonly partnerId: string;
   readonly status: "submitted" | "ops_approved" | "partner_active" | "blocked";
   readonly reviewedBy: string;
-  readonly notes: string;
   readonly createdAt: string;
   readonly updatedAt: string;
 };
@@ -28,7 +108,6 @@ export type DshPartnerActivation = {
 export type DshCaptainCredential = {
   readonly id: string;
   readonly captainId: string;
-  readonly licenseNumber: string;
   readonly vehicleType: string;
   readonly status: "pending" | "approved" | "rejected" | "suspended";
   readonly reviewedBy: string;
@@ -41,6 +120,8 @@ export type DshAdminAuditEntry = {
   readonly action: string;
   readonly targetId: string;
   readonly detail: string;
+  readonly sensitivity: "internal" | "restricted";
+  readonly correlationId: string;
   readonly createdAt: string;
 };
 

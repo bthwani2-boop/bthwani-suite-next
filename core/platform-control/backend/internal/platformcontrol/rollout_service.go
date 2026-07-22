@@ -28,6 +28,9 @@ func (s *Service) CreateRollout(
 	correlationID string,
 	input CreateRolloutInput,
 ) (Rollout, error) {
+	if err := validateRolloutTargetScope(input.TargetScope); err != nil {
+		return Rollout{}, err
+	}
 	if err := validateHealthGate(input.HealthGate); err != nil {
 		return Rollout{}, err
 	}
@@ -53,7 +56,10 @@ func (s *Service) AdvanceRollout(
 	if err != nil {
 		return Rollout{}, err
 	}
-	if err := evaluateHealthGate(s.Health(ctx), rollout.HealthGate); err != nil {
+	if rollout.Status != RolloutRunning {
+		return Rollout{}, ErrInvalidTransition
+	}
+	if err := s.evaluateAndAuditRolloutHealth(ctx, repository, rollout, actorID, roles, correlationID); err != nil {
 		return Rollout{}, err
 	}
 	return repository.AdvanceRollout(ctx, id, actorID, roles, correlationID)
@@ -71,6 +77,47 @@ func (s *Service) PauseRollout(
 		return Rollout{}, err
 	}
 	return repository.PauseRollout(ctx, id, actorID, roles, correlationID)
+}
+
+func (s *Service) ResumeRollout(
+	ctx context.Context,
+	id string,
+	actorID string,
+	roles []string,
+	correlationID string,
+) (Rollout, error) {
+	repository, err := s.requireRepository()
+	if err != nil {
+		return Rollout{}, err
+	}
+	rollout, err := repository.GetRollout(ctx, id)
+	if err != nil {
+		return Rollout{}, err
+	}
+	if rollout.Status != RolloutPaused {
+		return Rollout{}, ErrInvalidTransition
+	}
+	if err := s.evaluateAndAuditRolloutHealth(ctx, repository, rollout, actorID, roles, correlationID); err != nil {
+		return Rollout{}, err
+	}
+	return repository.ResumeRollout(ctx, id, actorID, roles, correlationID)
+}
+
+func (s *Service) evaluateAndAuditRolloutHealth(
+	ctx context.Context,
+	repository *Repository,
+	rollout Rollout,
+	actorID string,
+	roles []string,
+	correlationID string,
+) error {
+	if err := evaluateHealthGate(s.Health(ctx), rollout.HealthGate); err != nil {
+		if auditErr := repository.RecordRolloutHealthGateFailure(ctx, rollout, actorID, roles, correlationID, err); auditErr != nil {
+			return fmt.Errorf("%w: failed to persist health gate audit: %v", err, auditErr)
+		}
+		return err
+	}
+	return nil
 }
 
 func (s *Service) AbortRollout(

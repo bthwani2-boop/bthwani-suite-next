@@ -23,6 +23,21 @@ export type FieldWallet = {
   readonly updatedAt: string | null;
 };
 
+export type FieldLedgerEntry = {
+  readonly id: string;
+  readonly entryType: string;
+  readonly sourceType: string;
+  readonly sourceId: string;
+  readonly referenceId: string;
+  readonly referenceType: string;
+  readonly amountMinorUnits: number;
+  readonly currency: string;
+  readonly debitCredit: string;
+  readonly balanceAfter: number;
+  readonly description: string;
+  readonly createdAt: string;
+};
+
 export type FieldCommission = {
   readonly id: string;
   readonly beneficiaryActorId: string;
@@ -31,12 +46,18 @@ export type FieldCommission = {
   readonly sourceId: string;
   readonly visitId: string | null;
   readonly storeId: string | null;
-  readonly partnerId: string | null;
   readonly commissionPolicyId: string | null;
+  readonly commissionType: string;
   readonly amountMinorUnits: number;
   readonly currency: string;
   readonly status: string;
-  readonly idempotencyKey: string | null;
+  readonly settledAt: string | null;
+  readonly confirmedAt: string | null;
+  readonly rejectedAt: string | null;
+  readonly reversedAt: string | null;
+  readonly resolutionNote: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
 };
 
 export type FieldPayoutRequest = {
@@ -51,6 +72,11 @@ export type FieldPayoutRequest = {
   readonly failureReason: string | null;
 };
 
+function messageFrom(error: unknown): string {
+  const err = error as { status?: number; message?: string };
+  return err.message ?? `HTTP ${err.status ?? "error"}`;
+}
+
 export async function fetchFieldMeWallet(): Promise<
   | { ok: true; wallet: FieldWallet }
   | { ok: false; message: string }
@@ -58,9 +84,22 @@ export async function fetchFieldMeWallet(): Promise<
   try {
     const data = await fieldGet<{ wallet: FieldWallet }>("/dsh/field/me/finance/wallet");
     return { ok: true, wallet: data.wallet };
-  } catch (e) {
-    const err = e as { status?: number; message?: string };
-    return { ok: false, message: err.message ?? `HTTP ${err.status ?? "error"}` };
+  } catch (error) {
+    return { ok: false, message: messageFrom(error) };
+  }
+}
+
+export async function fetchFieldMeLedgerEntries(): Promise<
+  | { ok: true; ledgerEntries: FieldLedgerEntry[] }
+  | { ok: false; message: string }
+> {
+  try {
+    const data = await fieldGet<{ ledgerEntries: FieldLedgerEntry[] }>(
+      "/dsh/field/me/finance/ledger-entries?limit=30",
+    );
+    return { ok: true, ledgerEntries: data.ledgerEntries ?? [] };
+  } catch (error) {
+    return { ok: false, message: messageFrom(error) };
   }
 }
 
@@ -69,11 +108,12 @@ export async function fetchFieldMeCommissions(): Promise<
   | { ok: false; message: string }
 > {
   try {
-    const data = await fieldGet<{ commissions: FieldCommission[] }>("/dsh/field/me/finance/commissions");
-    return { ok: true, commissions: data.commissions };
-  } catch (e) {
-    const err = e as { status?: number; message?: string };
-    return { ok: false, message: err.message ?? `HTTP ${err.status ?? "error"}` };
+    const data = await fieldGet<{ commissions: FieldCommission[] }>(
+      "/dsh/field/me/finance/commissions",
+    );
+    return { ok: true, commissions: data.commissions ?? [] };
+  } catch (error) {
+    return { ok: false, message: messageFrom(error) };
   }
 }
 
@@ -82,11 +122,12 @@ export async function fetchFieldMePayoutRequests(): Promise<
   | { ok: false; message: string }
 > {
   try {
-    const data = await fieldGet<{ payoutRequests: FieldPayoutRequest[] }>("/dsh/field/me/finance/payout-requests");
-    return { ok: true, payoutRequests: data.payoutRequests };
-  } catch (e) {
-    const err = e as { status?: number; message?: string };
-    return { ok: false, message: err.message ?? `HTTP ${err.status ?? "error"}` };
+    const data = await fieldGet<{ payoutRequests: FieldPayoutRequest[] }>(
+      "/dsh/field/me/finance/payout-requests",
+    );
+    return { ok: true, payoutRequests: data.payoutRequests ?? [] };
+  } catch (error) {
+    return { ok: false, message: messageFrom(error) };
   }
 }
 
@@ -99,14 +140,16 @@ export async function submitFieldMePayoutRequest(
   | { ok: false; message: string }
 > {
   try {
-    const data = await fieldGet<{ payoutRequest: FieldPayoutRequest }>("/dsh/field/me/finance/payout-requests", {
-      method: "POST",
-      body: { amountMinorUnits, currency, idempotencyKey },
-      idempotencyKey,
-    });
+    const data = await fieldGet<{ payoutRequest: FieldPayoutRequest }>(
+      "/dsh/field/me/finance/payout-requests",
+      {
+        method: "POST",
+        body: { amountMinorUnits, currency, idempotencyKey },
+        idempotencyKey,
+      },
+    );
     return { ok: true, payoutRequest: data.payoutRequest };
-  } catch (e) {
-    const err = e as { status?: number; message?: string };
-    return { ok: false, message: err.message ?? `HTTP ${err.status ?? "error"}` };
+  } catch (error) {
+    return { ok: false, message: messageFrom(error) };
   }
 }

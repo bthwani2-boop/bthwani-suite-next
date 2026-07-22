@@ -60,6 +60,7 @@ export type FieldAgent = {
 };
 
 export type Captain = FieldAgent;
+export type Employee = FieldAgent;
 
 export type ActivationMetadata = {
   readonly activationId: string;
@@ -77,6 +78,7 @@ export type FieldAgentDetail = FieldAgent & {
 };
 
 export type CaptainDetail = FieldAgentDetail;
+export type EmployeeDetail = FieldAgentDetail;
 
 export type WorkforceMe = FieldAgent & {
   readonly phoneMasked?: string;
@@ -141,6 +143,32 @@ export type UpdateCaptainInput = {
   readonly supervisorActorId?: string | undefined;
 };
 
+export type CreateEmployeeInput = {
+  readonly fullNameAr: string;
+  readonly fullNameEn?: string | undefined;
+  readonly phoneE164: string;
+  readonly engagementType?: "employee" | undefined;
+  readonly engagementStartDate?: string | undefined;
+  readonly photoMediaRef?: string | undefined;
+  readonly department: string;
+  readonly role: string;
+  readonly officeLocation?: string | undefined;
+  readonly supervisorActorId?: string | undefined;
+  readonly documentMediaRefs?: readonly string[] | undefined;
+};
+
+export type UpdateEmployeeInput = {
+  readonly expectedVersion: number;
+  readonly fullNameAr?: string | undefined;
+  readonly fullNameEn?: string | undefined;
+  readonly engagementStartDate?: string | undefined;
+  readonly photoMediaRef?: string | undefined;
+  readonly department?: string | undefined;
+  readonly role?: string | undefined;
+  readonly officeLocation?: string | undefined;
+  readonly supervisorActorId?: string | undefined;
+};
+
 export type UpdateSelfInput = {
   readonly photoMediaRef?: string | undefined;
   readonly emergencyContactName?: string | undefined;
@@ -196,11 +224,12 @@ export type FieldAgentListFilter = {
 };
 
 export type CaptainListFilter = FieldAgentListFilter;
+export type EmployeeListFilter = FieldAgentListFilter;
 
 export const PROVIDER_KIND_LABEL_AR: Record<ProviderKind, string> = {
   field: "ميداني",
   captain: "كابتن",
-  employee: "موظف",
+  employee: "موظف إداري",
 };
 
 export const ENGAGEMENT_STATUS_LABEL_AR: Record<EngagementStatus, string> = {

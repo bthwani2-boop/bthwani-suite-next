@@ -1,0 +1,109 @@
+{
+  "schemaVersion": "1.3.1",
+  "journeyId": "JRN-012",
+  "title": "قبول الطلب وتحضيره وجاهزيته",
+  "status": "CODE_COMPLETE_READY_FOR_INDEPENDENT_REVIEW",
+  "codeClosure": "CLOSED_WITH_SAME_COMMIT_CI_EVIDENCE",
+  "owner": "DSH",
+  "purpose": "إدارة قرار المتجر وتوقيت التحضير والمشكلات والاستبدالات وقرار العميل والتنبيهات والجاهزية من حقيقة تشغيلية واحدة تمنع الانتقالات غير الصالحة وتعرض القراءة الراجعة للأسطح المتأثرة.",
+  "actors": ["partner", "client", "captain", "operator", "system"],
+  "requiredSurfaces": ["app-partner", "app-client", "app-captain", "control-panel"],
+  "excludedSurfaces": {
+    "app-field": "لا يملك دورًا تشغيليًا في قبول الطلب أو تحضيره.",
+    "webapp": "لا يوجد سطح طلبات تشغيلي منشور له في الحالة الحالية.",
+    "website": "سطح تعريفي فقط."
+  },
+  "truthOwnership": {
+    "orderLifecycle": "DSH",
+    "preparationTiming": "DSH",
+    "preparationIssues": "DSH",
+    "customerSubstitutionDecision": "DSH operational consent owned by the order client",
+    "preparationAlerts": "DSH",
+    "allowedActions": "DSH backend",
+    "financialTruth": "WLT",
+    "surfaceResponsibility": "render, interact, navigate, and refresh only"
+  },
+  "permissions": {
+    "partner": ["read owned-store workboard", "accept", "reject with reason", "start preparation", "revise estimate", "open issue", "resolve eligible issue", "announce readiness", "confirm governed handoff"],
+    "client": ["read own preparation", "read own issues", "approve or reject pending substitution"],
+    "captain": ["read preparation only for an offered, accepted, or completed assignment linked to the captain"],
+    "operatorRead": ["operations.read: read timing, issues, alerts, and cross-surface readback"],
+    "operatorManage": ["operations.manage: refresh alerts, acknowledge alerts, and perform separately governed interventions"]
+  },
+  "preconditions": [
+    "الطلب موجود ومملوك للمتجر المحلول من هوية الشريك.",
+    "قبول الطلب مسموح فقط من pending ورفضه يتطلب سببًا.",
+    "بدء التحضير مسموح فقط بعد القبول.",
+    "كل تعديل لموعد الجاهزية يحمل سببًا ومعرف ارتباط ويُحفظ في سجل تاريخي.",
+    "كل مشكلة تخص صنفًا مرتبطة بعنصر الطلب الثابت ولا تتجاوز كميته.",
+    "الاستبدال المقترح يبقى pending حتى يسجل العميل المالك موافقته أو رفضه.",
+    "أي أثر مالي يبقى مرجع قراءة أو مرشح تسوية إلى WLT ولا يُحسب داخل DSH."
+  ],
+  "acceptanceCriteria": [
+    "تعرض لوحة الشريك الطلبات المملوكة للمتجر فقط وتستقبل allowedActions من الخادم.",
+    "ينشئ القبول snapshot لسياسة زمن التحضير وموعد الجاهزية دون إعادة كتابة التاريخ عند تعديل السياسة لاحقًا.",
+    "يسجل بدء التحضير وتعديل التقدير والجاهزية كأحداث قابلة للتدقيق.",
+    "يمكن تسجيل صنف ناقص أو استبدال أو مشكلة جودة أو مشكلة أخرى دون تعديل الحقيقة المالية.",
+    "يعرض العميل البديل المقترح ويوافق أو يرفض باستخدام expectedVersion وقراءة راجعة من DSH.",
+    "لا يستطيع الشريك حل استبدال pending ولا يظهر له resolve_issue لهذا الاستبدال.",
+    "لا يظهر إجراء الجاهزية ولا ينجح endpoint الجاهزية عندما توجد مشكلة تحضير مفتوحة.",
+    "حل المشكلة يستخدم optimistic concurrency ويعيد allowedActions المحدثة بعد القراءة الراجعة.",
+    "يسجل DSH تنبيهات due_soon وoverdue وcustomer_decision_pending دون تكرار ويغلقها تلقائيًا عند زوال السبب.",
+    "يستطيع المشغل ذو operations.manage فحص التنبيهات وإقرارها، ويقرأها operations.read.",
+    "تظهر حالة الجاهزية والمشكلات الموحدة لأسطح العميل والكابتن والشريك والمشغل عبر حقيقة DSH المشتركة.",
+    "لا تنتقل عهدة الطلب إلى الكابتن قبل حالة جاهزية صحيحة ومسار handoff معتمد.",
+    "تدعم الواجهات loading وempty وoffline وforbidden وconflict وnot_found وerror وretry دون Mock أو حقيقة محلية."
+  ],
+  "negativeInvariants": [
+    "لا قبول أو رفض أو تحضير أو جاهزية خارج الحالة المسموحة.",
+    "لا جاهزية مع مشكلة تحضير مفتوحة حتى عند استدعاء endpoint مباشرة أو بقراءة قديمة.",
+    "لا حل لاستبدال قبل قرار العميل.",
+    "لا قرار استبدال من عميل لا يملك الطلب أو من سطح آخر.",
+    "لا قراءة للكابتن دون إسناد مرتبط به ولا قراءة للمشغل دون operations.read.",
+    "لا يستنتج أي سطح allowedActions أو عدادات المشكلات من status محليًا.",
+    "لا تخزن الشاشات قائمة مشكلات أو تنبيهات تشغيلية بديلة عن DSH.",
+    "لا ينفذ DSH خصمًا أو استردادًا أو تسوية أو تغيير رصيد بسبب الاستبدال.",
+    "لا يتجاوز الشريك نطاق متجره بإرسال storeId من الطلب.",
+    "لا يعاد تطبيق إنشاء المشكلة أو القرار أو الحل أو التنبيه عند إعادة نفس correlationId أو تعارض الإصدار.",
+    "لا يتحول الاستبدال المقترح إلى تغيير سعر أو عنصر نهائي دون رحلة مالية أو تجارية مستقلة مصرح بها."
+  ],
+  "registeredFunctionalSlices": [
+    "server-owned order workboard and sovereign allowedActions",
+    "accept or reject with reason and permission enforcement",
+    "start preparation and calculate expected ready time",
+    "revise ready estimate with reason and version history",
+    "missing items, substitutions, customer decisions, and order problems",
+    "durable SLA risk alerts, acknowledgement, and automatic resolution",
+    "announce readiness only in a valid state",
+    "preparation truth visible to partner, captain, client, and operator",
+    "audit and settlement candidate handoff to WLT without DSH financial computation"
+  ],
+  "operationalSupport": {
+    "diagnosticContext": "jrn-012/order-preparation",
+    "operatorEntry": "control-panel operations live orders and preparation alerts panel",
+    "retryPolicy": "idempotent correlation ids for issue create, decision, alert scan, acknowledgement, and resolution; optimistic version checks for decisions and acknowledgements",
+    "weakNetwork": "surfaces keep no optimistic business truth and expose retryable offline or error states",
+    "rollback": "disable preparation alert scan UI and routes first; preserve append-only issue, decision, alert, outbox, and status history; never roll back by deleting operational history"
+  },
+  "verification": {
+    "context": "jrn-012/order-preparation",
+    "lastSuccessfulImplementationCommit": "281e3fc547957244f6bb3a706cc9690235fa9f9f",
+    "lastSuccessfulWorkflowRunId": 29880510629,
+    "reverificationBaseCommit": "6675d1fb69cece6348367afaf6c70dedf41a7eda",
+    "reverificationReason": "shared OpenAPI and generated-client files changed after the previous closure evidence",
+    "requiredOnFinalGovernanceCommit": true,
+    "coveredGates": ["static", "postgresql", "go", "openapi-generation", "typescript", "wlt-financial-boundary"]
+  },
+  "approvalTracking": {
+    "issueNumber": 103,
+    "issuePath": "https://github.com/bthwani2-boop/bthwani-suite-next/issues/103",
+    "evidenceFile": "governance/evidence/JRN-012_FINAL_TECHNICAL_CLOSURE.md",
+    "rule": "independent approvals must be recorded before CLOSED_WITH_EVIDENCE"
+  },
+  "evidenceRequired": ["static", "database", "contract", "backend", "runtime", "cross-surface", "security", "finance-boundary", "accessibility", "qa", "governance", "ci"],
+  "codeZeroGate": "PASSED",
+  "openCodeGaps": [],
+  "releaseGate": "PENDING_INDEPENDENT_APPROVALS",
+  "independentReviewPending": ["product-owner", "qa-device-accessibility", "security", "finance-boundary", "release-production"],
+  "decision": "READY_FOR_REVIEW"
+}

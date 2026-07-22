@@ -1,0 +1,53 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-004",
+  "owner": "services/dsh",
+  "defaultDecision": "DENY",
+  "actors": {
+    "client": {
+      "surface": "app-client",
+      "scope": "published_stores_only",
+      "allowed": ["list_public_stores", "read_public_store_detail"],
+      "forbidden": ["read_store_audit", "read_internal_diagnostics", "mutate_store", "select_arbitrary_store_context"]
+    },
+    "partner": {
+      "surface": "app-partner",
+      "scope": "active_actor_store_scope",
+      "allowed": ["read_store_context", "read_store_settings", "update_store_settings", "read_courier_settings", "update_courier_settings", "read_coverage_zones", "read_latest_action"],
+      "forbidden": ["govern_other_store", "read_full_store_audit", "bypass_expected_version"]
+    },
+    "field": {
+      "surface": "app-field",
+      "scope": "active_assigned_store_scope",
+      "allowed": ["read_store_context", "submit_field_verification", "read_latest_action"],
+      "forbidden": ["change_store_visibility", "change_partner_readiness_directly", "read_unassigned_store"]
+    },
+    "captain": {
+      "surface": "app-captain",
+      "scope": "active_assigned_store_scope",
+      "allowed": ["read_store_context", "report_pickup_readiness", "read_latest_action"],
+      "forbidden": ["change_store_settings", "read_unassigned_store", "publish_store"]
+    },
+    "operator": {
+      "surface": "control-panel",
+      "scope": "permission:partners.read|partners.manage",
+      "allowed": ["list_all_stores", "read_store_detail", "read_publication_diagnostics", "read_store_audit", "govern_store"],
+      "forbidden": ["govern_without_reason", "govern_without_expected_version", "financial_mutation"]
+    }
+  },
+  "permissions": {
+    "partners.read": ["list_all_stores", "read_store_detail", "read_publication_diagnostics", "read_store_audit"],
+    "partners.manage": ["govern_store"],
+    "operator_fallback_role": "temporary migration compatibility only"
+  },
+  "crossActorInvariants": [
+    "Every non-client protected read resolves an active actor/store scope.",
+    "Operator access is permission-gated on control-panel.",
+    "No client endpoint returns audit, scope, internal readiness, or unpublished records.",
+    "No partner, field, or captain may select an arbitrary store outside active scope."
+  ],
+  "fsDecision": {
+    "slice": "FS-02",
+    "result": "CLOSED_WITH_IMPLEMENTATION_EVIDENCE"
+  }
+}

@@ -58,5 +58,6 @@
     "start": {
       "cache": false
     }
-  }
+  },
+  "analytics": true
 }

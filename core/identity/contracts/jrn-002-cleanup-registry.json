@@ -1,0 +1,34 @@
+{
+  "journeyId": "JRN-002",
+  "canonical": {
+    "backend": "core/identity/backend",
+    "openapi": "core/identity/contracts/auth.openapi.yaml",
+    "client": "core/identity/clients/identity-client.ts",
+    "sessionStore": "core/identity/clients/identity-session-store.ts",
+    "sessionPolicy": "core/identity/clients/identity-session-policy.ts",
+    "surfaceGate": "services/dsh/frontend/shared/session/IdentitySessionGate.tsx"
+  },
+  "removedArtifacts": [
+    ".github/workflows/tmp-jrn-002-diagnostics.yml",
+    "core/identity/backend/internal/identity/support_sessions.go",
+    "core/identity/backend/internal/http/support_sessions.go",
+    "core/identity/clients/identity-client.d.ts.map",
+    "core/identity/clients/identity-session-store.d.ts.map",
+    "core/identity/clients/use-identity-session.d.ts.map"
+  ],
+  "forbiddenPatterns": [
+    "devBypassLogin",
+    "actorType: \"field\" in the shared session store",
+    "@bthwani.yemen fabricated account identity",
+    "BrowserCorsMiddleware duplicate wrapper",
+    "support-session role without approved contract",
+    "local identity mock or fixture as runtime truth",
+    "second actor/session table outside core/identity"
+  ],
+  "rules": [
+    "Generated declarations may not contradict TypeScript source.",
+    "Temporary workflows must be removed after diagnosis.",
+    "A new route, migration, client method, state, or surface must update the JRN-002 registries and permanent tests.",
+    "Dead compatibility wrappers are removed rather than layered over the sovereign middleware."
+  ]
+}

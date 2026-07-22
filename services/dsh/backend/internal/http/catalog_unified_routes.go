@@ -33,73 +33,60 @@ func (s *protectedStoreServer) writeCatalogMutationError(w http.ResponseWriter, 
 }
 
 func (s *protectedStoreServer) handleUpdateCatalogDomainAtomic(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyManage, "operator"); !ok {
-		return
-	}
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyManage, "operator"); !ok { return }
 	var input centralcatalog.DomainPatchInput
-	if !decodeProtectedJSON(w, r, &input) {
-		return
-	}
+	if !decodeProtectedJSON(w, r, &input) { return }
 	domain, err := centralcatalog.UpdateDomainAtomic(r.Context(), s.db, r.PathValue("domainId"), input)
-	if err != nil {
-		s.writeCatalogMutationError(w, err)
-		return
-	}
+	if err != nil { s.writeCatalogMutationError(w, err); return }
 	store.SendJSON(w, http.StatusOK, map[string]any{"domain": domain})
 }
 
 func (s *protectedStoreServer) handleUpdateCatalogNodeAtomic(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyManage, "operator"); !ok {
-		return
-	}
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyManage, "operator"); !ok { return }
 	var input centralcatalog.NodePatchInput
-	if !decodeProtectedJSON(w, r, &input) {
-		return
-	}
+	if !decodeProtectedJSON(w, r, &input) { return }
 	node, err := centralcatalog.UpdateNodeAtomic(r.Context(), s.db, r.PathValue("nodeId"), input)
-	if err != nil {
-		s.writeCatalogMutationError(w, err)
-		return
-	}
+	if err != nil { s.writeCatalogMutationError(w, err); return }
 	store.SendJSON(w, http.StatusOK, map[string]any{"node": node})
 }
 
 func (s *protectedStoreServer) handleUpdateCatalogMasterProductAtomic(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionProductManage, "operator"); !ok {
-		return
-	}
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionProductManage, "operator"); !ok { return }
 	var input centralcatalog.MasterProductPatchInput
-	if !decodeProtectedJSON(w, r, &input) {
-		return
-	}
+	if !decodeProtectedJSON(w, r, &input) { return }
 	product, err := centralcatalog.UpdateMasterProductAtomic(r.Context(), s.db, r.PathValue("productId"), input)
-	if err != nil {
-		s.writeCatalogMutationError(w, err)
-		return
-	}
+	if err != nil { s.writeCatalogMutationError(w, err); return }
 	store.SendJSON(w, http.StatusOK, map[string]any{"masterProduct": product})
 }
 
 func (s *protectedStoreServer) handleUpdateCatalogPlatformPolicyAtomic(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionPolicyManage, "operator"); !ok {
-		return
-	}
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionPolicyManage, "operator"); !ok { return }
 	var input centralcatalog.CatalogPolicyPatchInput
-	if !decodeProtectedJSON(w, r, &input) {
-		return
-	}
+	if !decodeProtectedJSON(w, r, &input) { return }
 	policy, err := centralcatalog.UpdateCatalogPolicyAtomic(r.Context(), s.db, r.PathValue("policyId"), input)
-	if err != nil {
-		s.writeCatalogMutationError(w, err)
-		return
-	}
+	if err != nil { s.writeCatalogMutationError(w, err); return }
 	store.SendJSON(w, http.StatusOK, map[string]any{"policy": policy})
 }
 
-// registerUnifiedCatalogRoutes binds exact paths consumed by the shared
-// multi-surface clients and restores the platform policy routes declared by
-// the capability registry.
+// registerUnifiedCatalogRoutes is the final protected-route extension point.
+// Independent bounded registrars are composed before catalog-specific routes.
 func registerUnifiedCatalogRoutes(mux *http.ServeMux, s *protectedStoreServer) {
+	registerDeliveryProofRoutes(mux, s)
+	registerRepresentativeFinanceRoutes(mux, s)
+	registerRefundFinanceRoutes(mux, s)
+	registerCatalogApprovalRoutes(mux, s)
+
+	// JRN-011 canonical order-truth routes.
+	mux.HandleFunc("POST /dsh/client/order-truth", s.handleCreateOrderTruth)
+	mux.HandleFunc("GET /dsh/client/order-truth", s.handleListClientOrderTruth)
+	mux.HandleFunc("GET /dsh/client/order-truth/{orderId}", s.handleGetClientOrderTruth)
+	mux.HandleFunc("GET /dsh/client/order-truth/{orderId}/events", s.handleListClientOrderTruthEvents)
+	mux.HandleFunc("GET /dsh/partner/order-truth", s.handleListPartnerOrderTruth)
+	mux.HandleFunc("GET /dsh/partner/order-truth/{orderId}", s.handleGetPartnerOrderTruth)
+	mux.HandleFunc("GET /dsh/operator/order-truth", s.handleListOperatorOrderTruth)
+	mux.HandleFunc("GET /dsh/operator/order-truth/diagnostics", s.handleGetOrderTruthDiagnostics)
+	mux.HandleFunc("GET /dsh/operator/order-truth/{orderId}", s.handleGetOperatorOrderTruth)
+
 	// Sovereign operational policy truth.
 	mux.HandleFunc("GET /dsh/operator/platform/zones", s.handleListPlatformZones)
 	mux.HandleFunc("POST /dsh/operator/platform/zones", s.handleCreatePlatformZone)
@@ -113,36 +100,68 @@ func registerUnifiedCatalogRoutes(mux *http.ServeMux, s *protectedStoreServer) {
 	mux.HandleFunc("PUT /dsh/operator/platform/store-onboarding-fee", s.handleUpsertStoreOnboardingFeePolicy)
 	mux.HandleFunc("GET /dsh/platform/store-onboarding-fee", s.handleGetStoreOnboardingFeeReference)
 
-	// Operator taxonomy, products, proposals, policies and assortment.
+	// Operator taxonomy, products, attributes, relationships, proposals,
+	// policies, assortments, audit and rollback.
 	mux.HandleFunc("GET /dsh/operator/catalog/domains", s.handleListCatalogDomains)
 	mux.HandleFunc("POST /dsh/operator/catalog/domains", s.handleCreateCatalogDomain)
 	mux.HandleFunc("PATCH /dsh/operator/catalog/domains/{domainId}", s.handleUpdateCatalogDomainAtomic)
 	mux.HandleFunc("GET /dsh/operator/catalog/nodes", s.handleListCatalogNodes)
 	mux.HandleFunc("POST /dsh/operator/catalog/nodes", s.handleCreateCatalogNode)
 	mux.HandleFunc("PATCH /dsh/operator/catalog/nodes/{nodeId}", s.handleUpdateCatalogNodeAtomic)
+	mux.HandleFunc("GET /dsh/operator/catalog/attributes", s.handleListCatalogAttributes)
+	mux.HandleFunc("POST /dsh/operator/catalog/attributes", s.handleCreateCatalogAttribute)
+	mux.HandleFunc("GET /dsh/operator/catalog/attributes/{attributeId}/options", s.handleListCatalogAttributeOptions)
+	mux.HandleFunc("POST /dsh/operator/catalog/attributes/{attributeId}/options", s.handleCreateCatalogAttributeOption)
+	mux.HandleFunc("PUT /dsh/operator/catalog/nodes/{nodeId}/attributes/{attributeId}", s.handleUpsertCatalogNodeAttributeRule)
 	mux.HandleFunc("GET /dsh/operator/catalog/master-products", s.handleListCatalogMasterProducts)
 	mux.HandleFunc("POST /dsh/operator/catalog/master-products", s.handleCreateCatalogMasterProduct)
 	mux.HandleFunc("PATCH /dsh/operator/catalog/master-products/{productId}", s.handleUpdateCatalogMasterProductAtomic)
+	mux.HandleFunc("GET /dsh/operator/catalog/master-products/{productId}/attribute-values", s.handleListMasterProductAttributeValues)
+	mux.HandleFunc("PUT /dsh/operator/catalog/master-products/{productId}/attribute-values/{attributeId}", s.handleUpsertMasterProductAttributeValue)
+	mux.HandleFunc("GET /dsh/operator/catalog/master-products/{productId}/relationships", s.handleListMasterProductRelationships)
+	mux.HandleFunc("PUT /dsh/operator/catalog/master-products/{productId}/relationships", s.handleUpsertMasterProductRelationship)
+	mux.HandleFunc("DELETE /dsh/operator/catalog/master-products/{productId}/relationships/{relationshipId}", s.handleDeleteMasterProductRelationship)
 	mux.HandleFunc("GET /dsh/operator/catalog/product-proposals", s.handleListCatalogProposals)
 	mux.HandleFunc("POST /dsh/operator/catalog/product-proposals/{proposalId}/decision", s.handleDecideCatalogProposalExpected)
 	mux.HandleFunc("POST /dsh/operator/catalog/product-proposals/{proposalId}/transition", s.handleTransitionCatalogProposalExpected)
 	mux.HandleFunc("GET /dsh/operator/catalog/platform-policies", s.handleListCatalogPlatformPolicies)
 	mux.HandleFunc("PATCH /dsh/operator/catalog/platform-policies/{policyId}", s.handleUpdateCatalogPlatformPolicyAtomic)
 	mux.HandleFunc("PUT /dsh/operator/catalog/platform-policies/{policyId}", s.handleUpdateCatalogPlatformPolicyAtomic)
+	mux.HandleFunc("GET /dsh/operator/catalog/audit", s.handleListCatalogAudit)
+	mux.HandleFunc("POST /dsh/operator/catalog/audit/{auditId}/rollback", s.handleRollbackCatalogAudit)
 	mux.HandleFunc("GET /dsh/operator/stores/{storeId}/assortment", s.handleGetOperatorStoreAssortment)
 	mux.HandleFunc("PUT /dsh/operator/stores/{storeId}/assortment/{masterProductId}", s.handleOperatorUpsertStoreAssortmentAtomic)
+	mux.HandleFunc("GET /dsh/operator/stores/{storeId}/assortment-pauses", s.handleListOperatorAssortmentPauses)
+	mux.HandleFunc("POST /dsh/operator/stores/{storeId}/assortment/{masterProductId}/pause", s.handlePauseOperatorAssortment)
+	mux.HandleFunc("POST /dsh/operator/stores/{storeId}/assortment/{masterProductId}/resume", s.handleResumeOperatorAssortment)
 
 	// Partner and field taxonomy and store-scoped catalog operations.
 	mux.HandleFunc("GET /dsh/partner/catalog/taxonomy", s.handleCatalogTaxonomy)
+	mux.HandleFunc("GET /dsh/partner/catalog/attributes", s.handleListCatalogAttributes)
+	mux.HandleFunc("GET /dsh/partner/catalog/attributes/{attributeId}/options", s.handleListCatalogAttributeOptions)
+	mux.HandleFunc("GET /dsh/partner/catalog/master-products/{productId}/attribute-values", s.handleListMasterProductAttributeValues)
+	mux.HandleFunc("GET /dsh/partner/catalog/master-products/{productId}/relationships", s.handleListMasterProductRelationships)
+	mux.HandleFunc("GET /dsh/partner/catalog/product-proposals", s.handleListPartnerProductProposals)
 	mux.HandleFunc("POST /dsh/partner/catalog/product-proposals", s.handlePartnerCreateProductProposal)
 	mux.HandleFunc("PATCH /dsh/partner/catalog/product-proposals/{proposalId}", s.handleUpdatePartnerProductProposalAtomic)
 	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/assortment", s.handlePartnerGetStoreAssortment)
 	mux.HandleFunc("PUT /dsh/partner/stores/{storeId}/assortment/{masterProductId}", s.handlePartnerUpsertStoreAssortmentAtomic)
+	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/assortment-pauses", s.handleListPartnerAssortmentPauses)
+	mux.HandleFunc("POST /dsh/partner/stores/{storeId}/assortment/{masterProductId}/pause", s.handlePausePartnerAssortment)
+	mux.HandleFunc("POST /dsh/partner/stores/{storeId}/assortment/{masterProductId}/resume", s.handleResumePartnerAssortment)
 	mux.HandleFunc("GET /dsh/field/catalog/taxonomy", s.handleCatalogTaxonomy)
+	mux.HandleFunc("GET /dsh/field/catalog/attributes", s.handleListCatalogAttributes)
+	mux.HandleFunc("GET /dsh/field/catalog/attributes/{attributeId}/options", s.handleListCatalogAttributeOptions)
+	mux.HandleFunc("GET /dsh/field/catalog/master-products/{productId}/attribute-values", s.handleListMasterProductAttributeValues)
+	mux.HandleFunc("GET /dsh/field/catalog/master-products/{productId}/relationships", s.handleListMasterProductRelationships)
+	mux.HandleFunc("GET /dsh/field/partners/{partnerId}/catalog/product-proposals", s.handleListFieldProductProposals)
 	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/catalog/product-proposals", s.handleFieldCreateProductProposal)
 	mux.HandleFunc("PATCH /dsh/field/partners/{partnerId}/catalog/product-proposals/{proposalId}", s.handleUpdateFieldProductProposalAtomic)
 	mux.HandleFunc("GET /dsh/field/partners/{partnerId}/assortment", s.handleFieldGetStoreAssortment)
 	mux.HandleFunc("PUT /dsh/field/partners/{partnerId}/stores/{storeId}/assortment/{masterProductId}", s.handleFieldUpsertStoreAssortmentAtomic)
+	mux.HandleFunc("GET /dsh/field/partners/{partnerId}/assortment-pauses", s.handleListFieldAssortmentPauses)
+	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/assortment/{masterProductId}/pause", s.handlePauseFieldAssortment)
+	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/assortment/{masterProductId}/resume", s.handleResumeFieldAssortment)
 
 	// Seed diagnostics and digital-asset management.
 	mux.HandleFunc("GET /dsh/operator/catalog/seed-status", s.handleCatalogSeedStatus)

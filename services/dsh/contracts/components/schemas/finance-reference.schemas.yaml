@@ -1,0 +1,27 @@
+# BThwani DSH OpenAPI schemas module: finance-reference.
+# Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
+
+DshFinancialClosureStatus:
+  type: string
+  enum: [not_required, pending, session_expired, refund_requested, refund_completed, no_action, failed]
+  description: DSH projection of the WLT-owned financial closure decision.
+
+WltPaymentCallbackEnvelope:
+  type: object
+  required: [paymentSessionId, status]
+  properties:
+    checkoutIntentId: { type: string }
+    specialRequestId: { type: string }
+    tenantId:
+      type: string
+      description: Trusted tenant context for special-request sourced payment sessions.
+    paymentSessionId: { type: string }
+    status:
+      type: string
+      enum: [reference_created, cod_pending, authorized, captured, cod_collected, failed, expired]
+  description: >
+    Contains opaque WLT references only. No amount, ledger, refund, settlement,
+    or signature verification logic belongs to DSH. Fields are DisallowUnknownFields-strict
+    on the DSH side: this schema must always match services/dsh/backend/internal/http/wlt_events.go exactly.
+
+# ── Notification Schemas ─────────────────────────────────────────

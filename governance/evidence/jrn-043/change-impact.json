@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 3,
+  "capabilityId": "JRN-043",
+  "taskMode": "implementation_or_closure",
+  "repositoryMode": "REMOTE_ONLY",
+  "branch": "sambassam",
+  "baseCommitSha": "ef8831d43ed8ff8f9ea370768c36d2b1d7591c8d",
+  "affectedPaths": [
+    ".github/actions/**",
+    ".github/workflows/**",
+    "governance/evidence/jrn-043/**",
+    "governance/github/repository-enforcement.json",
+    "governance/github/repository-enforcement.schema.json",
+    "governance/guards/guard-registry.json",
+    "governance/release/jrn-043-release-control-policy.json",
+    "tools/guards/guard-registry-gate.mjs",
+    "tools/verification/jrn-043-sdlc-ci-release.test.mjs"
+  ],
+  "riskClass": "high",
+  "productImpact": "NONE",
+  "productImpactReason": "The change governs repository SDLC, CI supply-chain integrity, release authorization, and evidence policy without changing customer, partner, captain, field, backend business, API, database, or financial product behavior.",
+  "impacts": {
+    "backend": false,
+    "frontend": false,
+    "apiContract": false,
+    "database": false,
+    "visual": false,
+    "qa": true,
+    "security": true,
+    "runtime": false,
+    "wltFinance": false,
+    "tenant": false,
+    "governance": true,
+    "ci": true,
+    "release": true,
+    "production": false
+  }
+}

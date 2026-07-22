@@ -1,5 +1,5 @@
 /**
- * Home Discovery Home Discovery — UI States
+ * Home Discovery — UI States
  * Discriminated union for all screen states.
  * DB-backed runtime data in success state only.
  */
@@ -10,7 +10,17 @@ import type {
   CategoryViewModel,
   HomeStoreCardViewModel,
 } from './home-discovery.view-model';
-import type { DshHomeFilterDto, DshHomePaginationDto } from './home-discovery.types';
+import type {
+  DshHomeAudienceSegment,
+  DshHomeFilterDto,
+  DshHomePaginationDto,
+} from './home-discovery.types';
+
+export type HomeDiscoveryResolvedContext = Readonly<{
+  cityCode: string;
+  serviceAreaCode: string;
+  audienceSegment: DshHomeAudienceSegment;
+}>;
 
 export type HomeDiscoverySuccessPayload = {
   banners: BannerViewModel[];
@@ -20,6 +30,7 @@ export type HomeDiscoverySuccessPayload = {
   stores: HomeStoreCardViewModel[];
   pagination: DshHomePaginationDto;
   generatedAt: string;
+  context: HomeDiscoveryResolvedContext;
 };
 
 export type HomeDiscoveryState =

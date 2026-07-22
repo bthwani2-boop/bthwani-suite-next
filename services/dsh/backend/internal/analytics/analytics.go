@@ -42,12 +42,12 @@ func GetPlatformKpis(db *sql.DB, period string) (PlatformKpis, error) {
 	}{
 		{&kpis.TotalOrders, `SELECT COUNT(*) FROM dsh_orders WHERE created_at >= $1`, []any{since}},
 		{&kpis.DeliveredOrders, `SELECT COUNT(*) FROM dsh_orders WHERE status = 'delivered' AND created_at >= $1`, []any{since}},
-		{&kpis.CancelledOrders, `SELECT COUNT(*) FROM dsh_orders WHERE status = 'cancelled' AND created_at >= $1`, []any{since}},
-		{&kpis.ActiveStores, `SELECT COUNT(*) FROM dsh_stores WHERE visibility_status = 'active'`, nil},
+		{&kpis.CancelledOrders, `SELECT COUNT(*) FROM dsh_orders WHERE (status = 'cancelled' OR status LIKE 'cancelled_%') AND created_at >= $1`, []any{since}},
+		{&kpis.ActiveStores, `SELECT COUNT(*) FROM dsh_stores WHERE status = 'active' AND is_visible = TRUE`, nil},
 		{&kpis.OpenTickets, `SELECT COUNT(*) FROM dsh_support_tickets WHERE status NOT IN ('resolved','closed')`, nil},
 		{&kpis.FieldVisitsCompleted, `SELECT COUNT(*) FROM dsh_field_visits WHERE status = 'complete' AND created_at >= $1`, []any{since}},
-		{&kpis.OpenEscalations, `SELECT COUNT(*) FROM dsh_readiness_escalations WHERE status = 'open'`, nil},
-		{&kpis.OpenIncidents, `SELECT COUNT(*) FROM dsh_incidents WHERE status != 'resolved'`, nil},
+		{&kpis.OpenEscalations, `SELECT COUNT(*) FROM dsh_readiness_escalations WHERE status <> 'resolved'`, nil},
+		{&kpis.OpenIncidents, `SELECT COUNT(*) FROM dsh_incidents WHERE status <> 'resolved'`, nil},
 	}
 
 	for _, row := range rows {
@@ -200,8 +200,8 @@ func GetStoreAnalytics(db *sql.DB) (StoreAnalytics, error) {
 		q    string
 	}{
 		{&out.TotalStores, `SELECT COUNT(*) FROM dsh_stores`},
-		{&out.ActiveStores, `SELECT COUNT(*) FROM dsh_stores WHERE visibility_status = 'active'`},
-		{&out.SuspendedStores, `SELECT COUNT(*) FROM dsh_stores WHERE visibility_status = 'suspended'`},
+		{&out.ActiveStores, `SELECT COUNT(*) FROM dsh_stores WHERE status = 'active' AND is_visible = TRUE`},
+		{&out.SuspendedStores, `SELECT COUNT(*) FROM dsh_stores WHERE status IN ('inactive','unavailable') OR is_visible = FALSE`},
 		{&out.PendingReadiness, `SELECT COUNT(*) FROM dsh_stores s WHERE NOT EXISTS (
 			SELECT 1 FROM dsh_field_visits fv WHERE fv.store_id = s.id AND fv.status = 'complete'
 		)`},
@@ -234,8 +234,11 @@ func GetPartnerPerformance(db *sql.DB, storeID, period string) (PartnerPerforman
 		q    string
 	}{
 		{&out.TotalOrders, `SELECT COUNT(*) FROM dsh_orders WHERE store_id = $2 AND created_at >= $1`},
-		{&out.AcceptedOrders, `SELECT COUNT(*) FROM dsh_orders WHERE store_id = $2 AND status != 'cancelled' AND created_at >= $1`},
-		{&out.RejectedOrders, `SELECT COUNT(*) FROM dsh_orders WHERE store_id = $2 AND status = 'cancelled' AND created_at >= $1`},
+		{&out.AcceptedOrders, `SELECT COUNT(*) FROM dsh_orders WHERE store_id = $2 AND status IN (
+			'store_accepted','preparing','ready_for_pickup','driver_assigned','driver_arrived_store',
+			'picked_up','arrived_customer','returning_to_store','returned_to_store','delivered'
+		) AND created_at >= $1`},
+		{&out.RejectedOrders, `SELECT COUNT(*) FROM dsh_orders WHERE store_id = $2 AND (status = 'cancelled' OR status LIKE 'cancelled_%') AND created_at >= $1`},
 	}
 	for _, query := range queries {
 		if err := db.QueryRow(query.q, since, storeID).Scan(query.dest); err != nil {

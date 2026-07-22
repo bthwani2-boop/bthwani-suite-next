@@ -1,0 +1,29 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false
+  },
+  "include": [
+    "frontend/shared/_kernel/**/*.ts",
+    "frontend/shared/dispatch/**/*.ts",
+    "frontend/shared/delivery/**/*.ts",
+    "frontend/shared/delivery/**/*.tsx",
+    "frontend/shared/orders/**/*.ts",
+    "frontend/shared/orders/**/*.tsx",
+    "frontend/shared/operations/**/*.ts",
+    "frontend/shared/session/**/*.ts",
+    "frontend/shared/workforce/**/*.ts",
+    "frontend/app-captain/orders/DshCaptainPoDSubmissionScreen.tsx",
+    "frontend/app-captain/DshOperationScreen.tsx",
+    "frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx",
+    "frontend/app-partner/orders/PartnerDispatchTrackingScreen.tsx",
+    "frontend/app-client/orders/OrderTrackingScreen.tsx",
+    "frontend/app-client/orders/useClientOrderJourneyController.ts",
+    "frontend/control-panel/operations/ExceptionsEscalationsScreen.tsx",
+    "frontend/control-panel/operations/OperationsHubScreen.tsx",
+    "frontend/**/*.d.ts"
+  ]
+}

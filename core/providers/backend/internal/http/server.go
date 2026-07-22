@@ -23,11 +23,13 @@ func NewRouter(db *sql.DB, service *providers.Service, repo *providers.Repositor
 	s := &server{db: db, service: service, repo: repo, auth: authClient}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /providers/health", s.health)
+	mux.HandleFunc("GET /providers/readiness", s.readiness)
 	mux.HandleFunc("GET /providers", s.operatorOnly("provider:read", s.listProviders))
 	mux.HandleFunc("GET /providers/{providerId}", s.operatorOnly("provider:read", s.getProvider))
 	mux.HandleFunc("PATCH /providers/{providerId}", s.operatorOnly("provider:update", s.updateProvider))
 	mux.HandleFunc("POST /providers/maps/search", s.mapConsumer(s.searchMaps))
 	mux.HandleFunc("POST /providers/maps/reverse", s.mapConsumer(s.reverseMap))
+	mux.HandleFunc("POST /providers/maps/route", s.mapConsumer(s.routeMaps))
 	return mux
 }
 
@@ -75,14 +77,25 @@ func (s *server) health(w http.ResponseWriter, r *http.Request) {
 	sendJSON(w, http.StatusOK, resp)
 }
 
+func (s *server) readiness(w http.ResponseWriter, r *http.Request) {
+	if s.db == nil || s.db.PingContext(r.Context()) != nil {
+		sendJSON(w, http.StatusServiceUnavailable, map[string]string{
+			"status": "not_ready",
+			"reason": "database_unavailable",
+		})
+		return
+	}
+	sendJSON(w, http.StatusOK, map[string]string{"status": "ready"})
+}
+
 // ---- auth guards ----
 
 type guardedHandler func(w http.ResponseWriter, r *http.Request, identity auth.Identity)
 
 func (s *server) operatorOnly(action string, next guardedHandler) http.HandlerFunc {
 	return s.withIdentity(func(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
-		if !identity.HasPermission("workforce", action, "all") && !identity.HasPermission("providers", action, "all") {
-			sendError(w, http.StatusForbidden, "FORBIDDEN", "provider permission is required")
+		if !identity.HasPermission("providers", action, "all") {
+			sendError(w, http.StatusForbidden, "FORBIDDEN", "providers service permission is required")
 			return
 		}
 		next(w, r, identity)
@@ -141,8 +154,14 @@ func (s *server) updateProvider(w http.ResponseWriter, r *http.Request, identity
 	if !decodeJSON(w, r, &input) {
 		return
 	}
-	p, err := s.service.UpdateProvider(r.Context(), r.PathValue("providerId"), input,
-		operatorOf(r, identity), r.Header.Get("X-Correlation-ID"))
+	p, err := s.service.UpdateProvider(
+		r.Context(),
+		r.PathValue("providerId"),
+		input,
+		operatorOf(r, identity),
+		r.Header.Get("X-Correlation-ID"),
+		r.Header.Get("Idempotency-Key"),
+	)
 	if err != nil {
 		writeProvidersError(w, err)
 		return
@@ -182,6 +201,8 @@ func sendError(w http.ResponseWriter, status int, code, message string) {
 
 func writeProvidersError(w http.ResponseWriter, err error) {
 	switch {
+	case errors.Is(err, providers.ErrInvalidInput):
+		sendError(w, http.StatusBadRequest, "INVALID_PROVIDER_CONFIGURATION", "provider update is empty, malformed, missing governance headers, or contains secret material outside credentials")
 	case errors.Is(err, providers.ErrNotFound):
 		sendError(w, http.StatusNotFound, "PROVIDER_NOT_FOUND", "provider was not found")
 	case errors.Is(err, providers.ErrIdempotencyConflict):

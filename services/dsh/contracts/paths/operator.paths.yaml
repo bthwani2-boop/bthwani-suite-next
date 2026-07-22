@@ -1,0 +1,601 @@
+# BThwani DSH OpenAPI path-items module: operator.
+# Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
+
+/dsh/operator/stores:
+  get:
+    operationId: listOperatorDshStores
+    summary: List all stores for an authenticated operator.
+    tags: [DshStoreGovernance]
+    security:
+      - bearerAuth: []
+    responses:
+      "200":
+        description: All stores including hidden and suspended stores.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshStoreListResponse"
+      "401":
+        $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated"
+      "403":
+        $ref: "../dsh.openapi.yaml#/components/responses/Forbidden"
+
+/dsh/operator/stores/{storeId}:
+  get:
+    operationId: getOperatorDshStore
+    summary: Get unrestricted store detail for an authenticated operator.
+    tags: [DshStoreGovernance]
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/StoreId"
+    responses:
+      "200":
+        description: Operator store detail.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshStoreDetailResponse"
+      "401":
+        $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated"
+      "403":
+        $ref: "../dsh.openapi.yaml#/components/responses/Forbidden"
+      "404":
+        $ref: "../dsh.openapi.yaml#/components/responses/NotFound"
+
+/dsh/operator/stores/{storeId}/governance:
+  post:
+    operationId: governDshStore
+    summary: Apply an authenticated and audited lifecycle, visibility, or serviceability action.
+    tags: [DshStoreGovernance]
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/StoreId"
+      - $ref: "../dsh.openapi.yaml#/components/parameters/IdempotencyKey"
+      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../dsh.openapi.yaml#/components/schemas/OperatorStoreGovernanceRequest"
+    responses:
+      "200":
+        description: Governance action applied.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshStoreActionResponse"
+      "400":
+        $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest"
+      "401":
+        $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated"
+      "403":
+        $ref: "../dsh.openapi.yaml#/components/responses/Forbidden"
+      "404":
+        $ref: "../dsh.openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../dsh.openapi.yaml#/components/responses/Conflict"
+
+/dsh/operator/diagnostics/stores/{storeId}:
+  get:
+    operationId: getStoreDiagnostics
+    summary: Get store publication diagnostics
+    tags: [Operator Store Management]
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/StoreId"
+    responses:
+      "200":
+        description: Store diagnostics.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                isReady: { type: boolean }
+                blockers:
+                  type: array
+                  items: { type: string }
+      "401":
+        $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated"
+      "403":
+        $ref: "../dsh.openapi.yaml#/components/responses/Forbidden"
+      "404":
+        $ref: "../dsh.openapi.yaml#/components/responses/NotFound"
+
+/dsh/operator/stores/{storeId}/audit:
+  get:
+    operationId: listDshStoreAudit
+    summary: List the latest audited store actions for an operator.
+    tags: [DshStoreGovernance]
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/StoreId"
+    responses:
+      "200":
+        description: Store audit timeline.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshStoreAuditResponse"
+      "401":
+        $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated"
+      "403":
+        $ref: "../dsh.openapi.yaml#/components/responses/Forbidden"
+
+/dsh/operator/notifications/config:
+  get:
+    operationId: listDshPlatformNotificationConfig
+    summary: List platform-level notification topic configurations.
+    tags: [notifications]
+    security:
+      - bearerAuth: []
+    responses:
+      "200":
+        description: Platform notification config list.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPlatformNotificationConfigListResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+  put:
+    operationId: upsertDshPlatformNotificationConfig
+    summary: Upsert platform-level notification config for a topic.
+    tags: [notifications]
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshUpsertPlatformNotificationConfigRequest" }
+    responses:
+      "200":
+        description: Config upserted.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPlatformNotificationConfigResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+
+# ── Marketing ─────────────────────────────────────────────────────
+
+/dsh/operator/platform/zones:
+  get:
+    operationId: listDshZones
+    summary: List service zones.
+    tags: [DshPlatformPolicies]
+    security:
+      - bearerAuth: []
+    responses:
+      "200":
+        description: Zones list.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshZonesListResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+  post:
+    operationId: createDshZone
+    summary: Create a service zone.
+    tags: [DshPlatformPolicies]
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCreateZoneRequest" }
+    responses:
+      "200":
+        description: Zone created.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshZoneResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+
+/dsh/operator/platform/zones/{zoneId}:
+  patch:
+    operationId: updateDshZone
+    summary: Update a service zone.
+    tags: [DshPlatformPolicies]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: zoneId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshUpdateZoneRequest" }
+    responses:
+      "200":
+        description: Zone updated.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshZoneResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
+/dsh/operator/platform/sla-rules:
+  get:
+    operationId: getDshSlaRules
+    summary: Get SLA rules for a zone.
+    tags: [DshPlatformPolicies]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: zoneId
+        in: query
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: SLA rules.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshSlaRulesResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+  put:
+    operationId: upsertDshSlaRules
+    summary: Upsert SLA rules for a zone.
+    tags: [DshPlatformPolicies]
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshUpsertSlaRulesRequest" }
+    responses:
+      "200":
+        description: SLA rules upserted.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshSlaRulesResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+
+/dsh/operator/platform/capacity:
+  get:
+    operationId: getDshCapacityConfig
+    summary: Get capacity configuration for a zone.
+    tags: [DshPlatformPolicies]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: zoneId
+        in: query
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: Capacity config.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCapacityConfigResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+  put:
+    operationId: upsertDshCapacityConfig
+    summary: Upsert capacity configuration for a zone.
+    tags: [DshPlatformPolicies]
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshUpsertCapacityConfigRequest" }
+    responses:
+      "200":
+        description: Capacity config upserted.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCapacityConfigResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+
+/dsh/operator/admin/roles:
+  get:
+    operationId: listDshAdminRoles
+    summary: List admin roles.
+    tags: [DshAdministration]
+    security:
+      - bearerAuth: []
+    responses:
+      "200":
+        description: Admin roles list.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshAdminRolesListResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+  post:
+    operationId: createDshAdminRole
+    summary: Create an admin role.
+    tags: [DshAdministration]
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCreateAdminRoleRequest" }
+    responses:
+      "200":
+        description: Admin role created.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshAdminRoleResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+
+/dsh/operator/admin/staff:
+  get:
+    operationId: listDshAdminStaff
+    summary: List admin staff members.
+    tags: [DshAdministration]
+    security:
+      - bearerAuth: []
+    responses:
+      "200":
+        description: Staff list.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshStaffListResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+
+/dsh/operator/admin/staff/{staffId}/roles:
+  post:
+    operationId: assignDshStaffRole
+    summary: Assign a role to a staff member.
+    tags: [DshAdministration]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: staffId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshAssignStaffRoleRequest" }
+    responses:
+      "200":
+        description: Role assigned.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshStaffMember" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
+# ─── Partner Onboarding & Store Publication ─────────────────────────
+
+/dsh/operator/admin/audit:
+  get:
+    operationId: listDshAdminAudit
+    summary: List admin audit log entries.
+    tags: [DshAdministration]
+    security:
+      - bearerAuth: []
+    responses:
+      "200":
+        description: Audit log entries.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshAdminAuditListResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+
+/dsh/operator/special-requests:
+  get:
+    operationId: listDshOperatorSpecialRequests
+    summary: List special requests for operators
+    tags:
+      - DshOperatorSpecialRequests
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: limit
+        in: query
+        schema: { type: integer, default: 50 }
+      - name: offset
+        in: query
+        schema: { type: integer, default: 0 }
+      - name: requestType
+        in: query
+        schema: { type: string }
+      - name: status
+        in: query
+        schema: { type: string }
+    responses:
+      "200":
+        description: OK
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshSpecialRequestListResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+
+/dsh/operator/special-requests/{requestId}:
+  get:
+    operationId: getDshOperatorSpecialRequest
+    summary: Get special request
+    tags:
+      - DshOperatorSpecialRequests
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: requestId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: OK
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshSpecialRequestResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+  patch:
+    operationId: updateDshOperatorSpecialRequest
+    summary: Update special request
+    tags:
+      - DshOperatorSpecialRequests
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: requestId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshUpdateSpecialRequest" }
+    responses:
+      "200":
+        description: OK
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshSpecialRequestResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
+/dsh/operator/pickups:
+  get:
+    operationId: listDshOperatorPickups
+    summary: List pickup sessions for operators
+    tags:
+      - DshOperatorPickup
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: storeId
+        in: query
+        schema: { type: string }
+      - name: limit
+        in: query
+        schema: { type: integer, default: 50 }
+      - name: offset
+        in: query
+        schema: { type: integer, default: 0 }
+    responses:
+      "200":
+        description: OK
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPickupSessionListResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+
+/dsh/operator/pickups/{orderId}:
+  get:
+    operationId: getDshOperatorPickup
+    summary: Get a pickup session by order id
+    tags:
+      - DshOperatorPickup
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: OK
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPickupSessionResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
+/dsh/operator/pickups/{orderId}/extend-window:
+  post:
+    operationId: extendDshPickupWindow
+    summary: Manually extend a pickup session's expiry window
+    tags:
+      - DshOperatorPickup
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshExtendPickupWindowRequest" }
+    responses:
+      "200":
+        description: OK
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPickupSessionResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409":
+        description: Pickup session version changed; reload before retrying (VERSION_CONFLICT).
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshErrorResponse" }
+      "422":
+        description: Pickup session was already used (PICKUP_CODE_ALREADY_USED).
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshErrorResponse" }
+
+/dsh/operator/pickups/{orderId}/reschedule:
+  post:
+    operationId: rescheduleDshPickupWindow
+    summary: Reopen a no-show pickup session with a new governed collection window.
+    description: >-
+      Invalidates the previous OTP, clears the no-show projection, advances the
+      optimistic version, and requires the partner to issue and deliver a fresh
+      OTP before collection. This operation never exposes an OTP to operators.
+    tags: [DshOperatorPickup]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshReschedulePickupWindowRequest" }
+    responses:
+      "200":
+        description: No-show pickup session reopened with the requested window.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPickupSessionResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409":
+        description: Pickup version changed; reload before retrying.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshErrorResponse" }
+      "422":
+        description: Only a no-show pickup session can be rescheduled.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshErrorResponse" }

@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-006",
+  "journeyName": "الخرائط ومناطق الخدمة وخصوصية العناوين",
+  "repositoryMode": "REMOTE_ONLY",
+  "repository": "bthwani2-boop/bthwani-suite-next",
+  "targetRef": "sambassam",
+  "evidenceCommit": "5497fe684329e2d905bc399d8f6ad09ca7f69c9a",
+  "workflowRun": {
+    "id": 29849739451,
+    "statusContext": "journeys/jrn-006/targeted-verification",
+    "status": "success",
+    "artifactId": 8502848818,
+    "artifactName": "jrn-006-governed-geofence-evidence",
+    "artifactDigest": "sha256:62f2d841f7878cc245d462c6702bb0acfdf2992f1a45ea5a1195ff7a6b643245"
+  },
+  "rootCause": "Client address create and update trusted client-supplied serviceAreaCode and coordinates after UI verification, leaving a direct API bypass around governed DSH geofences and serviceability truth.",
+  "implemented": [
+    "Backend resolves submitted coordinates through the DSH service-area resolver and requires the resolved active code to match serviceAreaCode.",
+    "Create idempotency replay is checked before fresh geofence verification so a previously committed request remains replayable after geofence changes.",
+    "PostgreSQL trigger rejects missing coordinates, inactive geofences, mismatched codes, outside-polygon writes, and race/direct-database bypasses.",
+    "Soft deletion remains permitted so privacy anonymization and retention workflows can operate.",
+    "OpenAPI documents required coordinates and HTTP 422 ADDRESS_SERVICE_AREA_UNVERIFIED behavior.",
+    "Dedicated JRN-006 CI publishes an exact-commit status and artifact."
+  ],
+  "checks": {
+    "staticIntegrity": "PASS",
+    "goClientAddress": "PASS",
+    "goServiceArea": "PASS",
+    "goMapProviders": "PASS",
+    "postgres16MigrationApply": "PASS",
+    "postgresValidInsidePolygon": "PASS",
+    "postgresMissingCoordinatesRejected": "PASS",
+    "postgresOutsidePolygonRejected": "PASS",
+    "postgresInactiveGeofenceRejected": "PASS",
+    "postgresInvalidUpdateRejected": "PASS",
+    "postgresSoftDeleteAllowed": "PASS"
+  },
+  "scopeNotes": {
+    "jrn006": "PASS — evidence_scope: static, Go ownership packages, PostgreSQL 16 migration and invariant behavior",
+    "aggregateWorkflow": "The aggregate JRN-001..010 status was failure because of unrelated concurrent failures outside JRN-006; the dedicated JRN-006 status was success on the same commit.",
+    "runtimeDeviceVisual": "NEEDS_EVIDENCE",
+    "independentProductReview": "PENDING",
+    "independentQaReview": "PENDING",
+    "independentSecurityPrivacyReview": "PENDING"
+  },
+  "decision": "READY_FOR_REVIEW"
+}

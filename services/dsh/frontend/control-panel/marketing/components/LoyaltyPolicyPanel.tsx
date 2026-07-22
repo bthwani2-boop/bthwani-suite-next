@@ -5,7 +5,16 @@ import { colorRoles } from "@bthwani/ui-kit";
 import {
   useLoyaltyPolicyController,
   type LoyaltyEarningPolicy,
-} from "../../../shared/marketing";
+} from "../../../shared/marketing/loyalty-policy.public";
+
+type PolicyTermsDraft = {
+  readonly policyId: string;
+  readonly nameAr: string;
+  readonly points: string;
+  readonly denominatorYer: string;
+  readonly minimumPoints: string;
+  readonly maximumPoints: string;
+};
 
 export function LoyaltyPolicyPanel() {
   const controller = useLoyaltyPolicyController("authenticated");
@@ -14,26 +23,56 @@ export function LoyaltyPolicyPanel() {
   const [denominatorYer, setDenominatorYer] = React.useState("100");
   const [minimumPoints, setMinimumPoints] = React.useState("0");
   const [maximumPoints, setMaximumPoints] = React.useState("0");
+  const [editDraft, setEditDraft] = React.useState<PolicyTermsDraft | null>(null);
 
   const policies = controller.state.kind === "success" ? controller.state.policies : [];
 
-  const create = async () => {
-    const numerator = Number(points);
-    const denominator = Number(denominatorYer);
-    const minimum = Number(minimumPoints);
-    const maximum = Number(maximumPoints);
-    if (!nameAr.trim() || !Number.isInteger(numerator) || numerator <= 0 ||
+  const parseTerms = (draft: Omit<PolicyTermsDraft, "policyId">) => {
+    const numerator = Number(draft.points);
+    const denominator = Number(draft.denominatorYer);
+    const minimum = Number(draft.minimumPoints);
+    const maximum = Number(draft.maximumPoints);
+    if (!draft.nameAr.trim() || !Number.isInteger(numerator) || numerator <= 0 ||
         !Number.isFinite(denominator) || denominator <= 0 ||
         !Number.isInteger(minimum) || minimum < 0 ||
-        !Number.isInteger(maximum) || maximum < 0) return;
-    const succeeded = await controller.create({
-      nameAr: nameAr.trim(),
+        !Number.isInteger(maximum) || maximum < 0) return null;
+    return {
+      nameAr: draft.nameAr.trim(),
       pointsNumerator: numerator,
       eligibleMinorUnitsDenominator: Math.round(denominator * 100),
       minimumPoints: minimum,
       maximumPointsPerOrder: maximum,
-    });
+    };
+  };
+
+  const create = async () => {
+    const terms = parseTerms({ nameAr, points, denominatorYer, minimumPoints, maximumPoints });
+    if (!terms) return;
+    const succeeded = await controller.create(terms);
     if (succeeded) setNameAr("");
+  };
+
+  const beginEdit = (policy: LoyaltyEarningPolicy) => {
+    setEditDraft({
+      policyId: policy.id,
+      nameAr: policy.nameAr,
+      points: String(policy.pointsNumerator),
+      denominatorYer: String(policy.eligibleMinorUnitsDenominator / 100),
+      minimumPoints: String(policy.minimumPoints),
+      maximumPoints: String(policy.maximumPointsPerOrder),
+    });
+  };
+
+  const patchEdit = (patch: Partial<PolicyTermsDraft>) => {
+    setEditDraft((current) => current ? { ...current, ...patch } : current);
+  };
+
+  const saveEdit = async (policy: LoyaltyEarningPolicy) => {
+    if (!editDraft || editDraft.policyId !== policy.id) return;
+    const terms = parseTerms(editDraft);
+    if (!terms) return;
+    const succeeded = await controller.updateTerms(policy, terms);
+    if (succeeded) setEditDraft(null);
   };
 
   const formatPolicy = (policy: LoyaltyEarningPolicy): string => {
@@ -65,31 +104,54 @@ export function LoyaltyPolicyPanel() {
       {controller.state.kind === "empty" ? <p style={{ opacity: 0.68 }}>لا توجد سياسات.</p> : null}
 
       <div style={{ display: "grid", gap: "0.6rem" }}>
-        {policies.map((policy) => (
-          <article key={policy.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", padding: "0.9rem", border: `1px solid ${colorRoles.borderSubtle}`, borderRadius: "0.75rem", background: colorRoles.surfaceBase }}>
-            <div>
-              <strong>{policy.nameAr}</strong>
-              <p style={{ margin: "0.3rem 0", opacity: 0.72 }}>{formatPolicy(policy)}</p>
-              <p style={{ margin: 0, opacity: 0.6, fontSize: "0.8rem" }}>
-                الحالة: {policy.status} · الإصدار: {policy.version} · المنشئ: {policy.createdByActorId}
-              </p>
-              <p style={{ margin: "0.2rem 0 0", opacity: 0.6, fontSize: "0.8rem" }}>
-                المعتمد: {policy.approvedByActorId || "لم يعتمد بعد"}
-              </p>
-            </div>
-            <div style={{ display: "flex", gap: "0.45rem", flexWrap: "wrap" }}>
-              {policy.status === "draft" || policy.status === "paused" ? (
-                <button type="button" disabled={controller.mutationLoading} onClick={() => void controller.setStatus(policy, "active")} style={primaryButtonStyle}>اعتماد وتفعيل</button>
+        {policies.map((policy) => {
+          const isEditing = editDraft?.policyId === policy.id;
+          const termsEditable = policy.status === "draft" || policy.status === "paused";
+          return (
+            <article key={policy.id} style={{ display: "grid", gap: "0.8rem", padding: "0.9rem", border: `1px solid ${colorRoles.borderSubtle}`, borderRadius: "0.75rem", background: colorRoles.surfaceBase }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
+                <div>
+                  <strong>{policy.nameAr}</strong>
+                  <p style={{ margin: "0.3rem 0", opacity: 0.72 }}>{formatPolicy(policy)}</p>
+                  <p style={{ margin: 0, opacity: 0.6, fontSize: "0.8rem" }}>
+                    الحالة: {policy.status} · الإصدار: {policy.version} · المنشئ: {policy.createdByActorId}
+                  </p>
+                  <p style={{ margin: "0.2rem 0 0", opacity: 0.6, fontSize: "0.8rem" }}>
+                    المعتمد: {policy.approvedByActorId || "لم يعتمد بعد"}
+                  </p>
+                </div>
+                <div style={{ display: "flex", gap: "0.45rem", flexWrap: "wrap" }}>
+                  {termsEditable ? (
+                    <button type="button" disabled={controller.mutationLoading} onClick={() => beginEdit(policy)} style={secondaryButtonStyle}>تعديل الشروط</button>
+                  ) : null}
+                  {policy.status === "draft" || policy.status === "paused" ? (
+                    <button type="button" disabled={controller.mutationLoading} onClick={() => void controller.setStatus(policy, "active")} style={primaryButtonStyle}>اعتماد وتفعيل</button>
+                  ) : null}
+                  {policy.status === "active" ? (
+                    <button type="button" disabled={controller.mutationLoading} onClick={() => void controller.setStatus(policy, "paused")} style={secondaryButtonStyle}>إيقاف</button>
+                  ) : null}
+                  {policy.status !== "archived" ? (
+                    <button type="button" disabled={controller.mutationLoading} onClick={() => void controller.setStatus(policy, "archived")} style={secondaryButtonStyle}>أرشفة</button>
+                  ) : null}
+                </div>
+              </div>
+
+              {isEditing && editDraft ? (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: "0.6rem", paddingTop: "0.75rem", borderTop: `1px solid ${colorRoles.borderSubtle}` }}>
+                  <input value={editDraft.nameAr} onChange={(event) => patchEdit({ nameAr: event.target.value })} placeholder="اسم السياسة" style={inputStyle} />
+                  <input value={editDraft.points} onChange={(event) => patchEdit({ points: event.target.value })} inputMode="numeric" placeholder="عدد النقاط" style={inputStyle} />
+                  <input value={editDraft.denominatorYer} onChange={(event) => patchEdit({ denominatorYer: event.target.value })} inputMode="decimal" placeholder="لكل مبلغ ر.ي" style={inputStyle} />
+                  <input value={editDraft.minimumPoints} onChange={(event) => patchEdit({ minimumPoints: event.target.value })} inputMode="numeric" placeholder="الحد الأدنى" style={inputStyle} />
+                  <input value={editDraft.maximumPoints} onChange={(event) => patchEdit({ maximumPoints: event.target.value })} inputMode="numeric" placeholder="الأقصى لكل طلب" style={inputStyle} />
+                  <div style={{ display: "flex", gap: "0.45rem", alignItems: "center" }}>
+                    <button type="button" disabled={controller.mutationLoading} onClick={() => void saveEdit(policy)} style={primaryButtonStyle}>حفظ الشروط</button>
+                    <button type="button" disabled={controller.mutationLoading} onClick={() => setEditDraft(null)} style={secondaryButtonStyle}>إلغاء</button>
+                  </div>
+                </div>
               ) : null}
-              {policy.status === "active" ? (
-                <button type="button" disabled={controller.mutationLoading} onClick={() => void controller.setStatus(policy, "paused")} style={secondaryButtonStyle}>إيقاف</button>
-              ) : null}
-              {policy.status !== "archived" ? (
-                <button type="button" disabled={controller.mutationLoading} onClick={() => void controller.setStatus(policy, "archived")} style={secondaryButtonStyle}>أرشفة</button>
-              ) : null}
-            </div>
-          </article>
-        ))}
+            </article>
+          );
+        })}
       </div>
     </section>
   );

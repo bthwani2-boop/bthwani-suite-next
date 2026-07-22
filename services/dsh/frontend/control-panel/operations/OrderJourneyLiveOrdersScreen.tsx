@@ -7,20 +7,25 @@ import {
   WebControlPanelDecisionRow,
   WebControlPanelKpiStrip,
   WebControlPanelQueue,
-  WebControlPanelRecommendation,
 } from '@bthwani/ui-kit/web';
 import styles from '../shared/control-panel-surface.module.css';
-import { FINANCIAL_CLOSURE_LABELS } from '../../shared/orders';
+import {
+  FINANCIAL_CLOSURE_LABELS,
+  OrderPreparationReadbackCard,
+  useOrderPreparationReadback,
+} from '../../shared/orders';
+import { OrderTruthReadbackSummary } from '../../shared/order-truth';
 import { useOperatorOrderWorkboard } from '../../shared/operations/use-operator-order-workboard';
-import type { OperatorOrderWorkboardRow } from '../../shared/operations/order-workboard.api';
+import type { OperationsFocusParams, OperatorOrderWorkboardRow } from '../../shared/operations';
 import { resolveRuntimeOrderStatusTone } from '../shared/ControlPanelDshDecisionBoard';
 import { buildOperationsHref } from './operations.registry';
 import { OrderJourneyOperatorIntervention } from './OrderJourneyOperatorIntervention';
+import { OrderPreparationAlertsPanel } from './OrderPreparationAlertsPanel';
 
 export type OrderJourneyLiveOrdersScreenProps = {
   hubHref: string;
   subGroup?: string;
-  focusParams?: { orderId?: string };
+  focusParams?: OperationsFocusParams;
 };
 
 function isCancelled(status: string): boolean {
@@ -57,14 +62,6 @@ function modeLabel(mode: OperatorOrderWorkboardRow['fulfillmentMode']): string {
   return 'توصيل بثواني';
 }
 
-function financialTone(status: OperatorOrderWorkboardRow['financialClosureStatus']): 'neutral' | 'success' | 'warning' | 'danger' | 'info' {
-  if (status === 'failed') return 'danger';
-  if (status === 'pending') return 'warning';
-  if (status === 'refund_requested') return 'info';
-  if (status === 'session_expired' || status === 'refund_completed' || status === 'no_action') return 'success';
-  return 'neutral';
-}
-
 export function OrderJourneyLiveOrdersScreen({
   subGroup,
   focusParams,
@@ -73,6 +70,10 @@ export function OrderJourneyLiveOrdersScreen({
   const workboard = useOperatorOrderWorkboard();
   const [selectedOrderId, setSelectedOrderId] = React.useState<string | null>(
     focusParams?.orderId ?? null,
+  );
+  const preparationReadback = useOrderPreparationReadback(
+    selectedOrderId ?? '',
+    { pollIntervalMs: 15_000 },
   );
 
   React.useEffect(() => {
@@ -111,6 +112,14 @@ export function OrderJourneyLiveOrdersScreen({
 
   return (
     <Box gap={3}>
+      <OrderTruthReadbackSummary
+        actor="operator"
+        title="حقيقة الطلبات السيادية"
+        {...(subGroup === 'cancelled' ? { status: 'cancelled_by_operator' } : {})}
+        limit={10}
+        onOpenOrder={setSelectedOrderId}
+      />
+
       <WebControlPanelKpiStrip items={[
         { id: 'visible', label: 'المعروض', value: String(visible.length), tone: 'neutral' },
         { id: 'unassigned', label: 'جاهزة بلا كابتن', value: String(unassigned), tone: unassigned > 0 ? 'warning' : 'success' },
@@ -119,6 +128,8 @@ export function OrderJourneyLiveOrdersScreen({
         { id: 'refunds', label: 'استردادات مطلوبة', value: String(requestedRefunds), tone: requestedRefunds > 0 ? 'warning' : 'neutral' },
         { id: 'financial-failures', label: 'تعثر مالي', value: String(financialFailures), tone: financialFailures > 0 ? 'danger' : 'success' },
       ]} />
+
+      <OrderPreparationAlertsPanel onOpenOrder={setSelectedOrderId} />
 
       <div className={styles.surfaceSplitGrid}>
         <WebControlPanelQueue title="الطلبات المباشرة" meta={`${visible.length} من ${workboard.state.total}`}>
@@ -139,9 +150,9 @@ export function OrderJourneyLiveOrdersScreen({
               {...(order.fulfillmentMode === 'bthwani_delivery' && order.status === 'ready_for_pickup' && !order.captainId
                 ? {
                     primaryAction: {
-                      id: `${order.id}-dispatch`,
+                      id: 'assign-captain',
                       label: 'إسناد كابتن',
-                      onAction: () => router.push(buildOperationsHref('dispatch-capacity', { orderId: order.id, subGroup: 'pending' })),
+                      onAction: () => router.push(buildOperationsHref('dispatch-capacity', { orderId: order.id, panel: 'dispatch' })),
                     },
                   }
                 : {})}
@@ -149,41 +160,48 @@ export function OrderJourneyLiveOrdersScreen({
           ))}
         </WebControlPanelQueue>
 
-        {selected ? (
-          <Box gap={3}>
-            <Box gap={2} padding={4} background="brandSurface" radiusToken="md">
-              <Text role="titleSm">الطلب {selected.id}</Text>
-              <Text role="bodySm">الحالة: {selected.status}</Text>
-              <Text role="bodySm">النمط: {modeLabel(selected.fulfillmentMode)}</Text>
-              <Text role="bodySm">الإجمالي: {selected.totalPrice.toLocaleString('ar-YE')} ر.ي</Text>
-              <Text role="bodySm">الكابتن: {selected.captainId ?? 'غير مسند'}</Text>
-              <Text role="bodySm">مرحلة التوصيل: {selected.captainLifecycleStatus ?? 'لم تبدأ'}</Text>
-              <Text role="bodySm">الإثبات: {selected.podMediaKey ?? 'لا يوجد'}</Text>
-              {selected.cancellationReasonCode ? (
-                <>
-                  <Text role="bodySm">سبب الإلغاء: {selected.cancellationReasonCode}</Text>
-                  <Text role="bodySm">فاعل الإلغاء: {selected.cancelledByRole ?? 'غير محدد'}</Text>
-                  {selected.cancellationNote ? <Text role="caption">{selected.cancellationNote}</Text> : null}
-                  <Badge
-                    label={FINANCIAL_CLOSURE_LABELS[selected.financialClosureStatus]}
-                    tone={financialTone(selected.financialClosureStatus)}
-                  />
-                  {selected.financialClosureReference ? <Text role="caption">المرجع المالي: {selected.financialClosureReference}</Text> : null}
-                  {selected.financialClosureFailure ? <Text role="bodySm" tone="danger">{selected.financialClosureFailure}</Text> : null}
-                </>
-              ) : null}
-              <Button label="إغلاق التفاصيل" tone="secondary" onPress={() => setSelectedOrderId(null)} />
-            </Box>
-            <OrderJourneyOperatorIntervention order={selected} onChanged={workboard.refresh} />
+        <Box gap={3}>
+          <Box gap={2}>
+            <Text role="label">القرار التشغيلي التالي</Text>
+            <Text role="bodySm" tone={unassigned > 0 ? 'warning' : 'muted'}>
+              {unassigned > 0
+                ? 'ابدأ بإسناد الطلبات الجاهزة بلا كابتن، ثم راقب الإثبات والإغلاق المالي.'
+                : 'راقب الحالات النشطة والإثباتات والاستردادات دون إنشاء حقيقة محلية.'}
+            </Text>
+            <Button
+              label="فتح الإسناد"
+              tone="secondary"
+              onPress={() => router.push(buildOperationsHref('dispatch-capacity', { subGroup: 'pending' }))}
+            />
           </Box>
-        ) : (
-          <WebControlPanelRecommendation
-            title="حقيقة الطلب الموحدة"
-            reason="اختر طلبًا لعرض الطلب والإسناد والإلغاء وقرار WLT المالي دون استنتاج حقول غير موجودة."
-            confidence="high"
-            auditTag="ORDER_CANCELLATION_REFUND_WORKBOARD"
-          />
-        )}
+
+          {selected ? (
+            <OrderPreparationReadbackCard
+              state={preparationReadback.state}
+              title="التجهيز والمشكلات"
+              onRetry={preparationReadback.refresh}
+            />
+          ) : null}
+
+          {selected ? (
+            <OrderJourneyOperatorIntervention order={selected} onChanged={workboard.refresh} />
+          ) : (
+            <StateView stateId="empty" title="اختر طلبًا" description="اختر صفًا لعرض التجهيز والتدخلات المحكومة والنتيجة المالية." />
+          )}
+
+          {selected ? (
+            <Box gap={2}>
+              <Text role="label">ملخص القراءة الراجعة</Text>
+              <Badge label={selected.status} tone={resolveRuntimeOrderStatusTone(selected.status)} />
+              <Text role="bodySm">الوضع: {modeLabel(selected.fulfillmentMode)}</Text>
+              <Text role="bodySm">الإغلاق المالي: {FINANCIAL_CLOSURE_LABELS[selected.financialClosureStatus]}</Text>
+              <Text role="bodySm">مرجع الإغلاق المالي: {selected.financialClosureReference || 'غير متاح'}</Text>
+              {selected.podMediaKey ? <Text role="bodySm">إثبات التسليم: {selected.podMediaKey}</Text> : null}
+              {selected.deliveryFailureReason ? <Text role="bodySm" tone="danger">سبب التعثر: {selected.deliveryFailureReason}</Text> : null}
+              <Button label="فتح التفاصيل" tone="secondary" onPress={() => router.push(buildOperationsHref('live-orders', { orderId: selected.id, panel: 'detail' }))} />
+            </Box>
+          ) : null}
+        </Box>
       </div>
     </Box>
   );

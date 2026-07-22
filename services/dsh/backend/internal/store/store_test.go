@@ -39,6 +39,10 @@ func TestRowToSummary(t *testing.T) {
 		PartnerReadiness:      "ready",
 		CatalogApprovalStatus: "approved",
 		MarketingVisibility:   "visible",
+		AddressLine:           "شارع حدة",
+		CoverageSummary:       "حدة والمناطق المجاورة",
+		OperatingHours:        "08:00-23:00",
+		DeliveryReadiness:     "ready",
 		CreatedAt:             time.Date(2026, 6, 21, 10, 0, 0, 0, time.UTC),
 		UpdatedAt:             time.Date(2026, 6, 21, 11, 0, 0, 0, time.UTC),
 	}
@@ -66,12 +70,7 @@ func TestRowToSummary(t *testing.T) {
 }
 
 func TestPublicationEligibilityRequiresAllGates(t *testing.T) {
-	row := DshStoreRow{
-		Status: StatusActive, IsVisible: true,
-		ServiceabilityStatus: ServiceabilityServiceable,
-		PartnerReadiness:     "ready", CatalogApprovalStatus: "approved",
-		MarketingVisibility: "visible",
-	}
+	row := eligibleStoreRow()
 	if !IsPublicationEligible(row) {
 		t.Fatal("all gates should publish the store")
 	}
