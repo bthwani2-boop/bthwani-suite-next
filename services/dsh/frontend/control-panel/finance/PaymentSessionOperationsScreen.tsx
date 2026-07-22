@@ -25,11 +25,11 @@ type ScreenState = "idle" | "loading" | "ready" | "refreshing" | "offline" | "fo
 
 const inputStyle = {
   width: "100%",
-  border: `1px solid ${lightThemeColors.borderColor}`,
+  border: `1px solid ${lightThemeColors.borderSubtle}`,
   borderRadius: "10px",
   padding: "0.75rem",
-  background: lightThemeColors.surface,
-  color: lightThemeColors.color,
+  background: lightThemeColors.surfacePrimary,
+  color: lightThemeColors.textPrimary,
   direction: "ltr" as const,
 };
 
@@ -125,7 +125,7 @@ export function PaymentSessionOperationsScreen() {
             <div><Text role="caption" tone="muted">قيد التحصيل</Text><Text role="body">{timeline.captureLedgerTransactionId || "غير موجود"}</Text></div>
           </div>
           {unknown ? (
-            <Card style={{ padding: "1rem", marginTop: "1rem", background: lightThemeColors.dangerSurface }}>
+            <Card style={{ padding: "1rem", marginTop: "1rem", background: lightThemeColors.surfaceInset }}>
               <Text role="body">ممنوع إعادة التفويض أو التحصيل. استخدم تحديث حالة المزود، ثم عالج حالة المطابقة المفتوحة بناءً على دليل مزود موثوق.</Text>
             </Card>
           ) : null}
@@ -142,7 +142,7 @@ export function PaymentSessionOperationsScreen() {
         <Card style={{ padding: "1.25rem" }}>
           <Text role="titleMd">إيصالات العمليات ({timeline.operationReceipts.length})</Text>
           {timeline.operationReceipts.length === 0 ? <Text role="body" tone="muted" style={{ marginTop: "0.75rem" }}>لا توجد عمليات authorize/capture مسجلة.</Text> : timeline.operationReceipts.map((receipt) => (
-            <div key={receipt.id} style={{ borderTop: `1px solid ${lightThemeColors.borderColor}`, padding: "0.75rem 0" }}>
+            <div key={receipt.id} style={{ borderTop: `1px solid ${lightThemeColors.borderSubtle}`, padding: "0.75rem 0" }}>
               <Text role="body">{receipt.operation} · {receipt.state}</Text>
               <Text role="caption" tone="muted">{receipt.correlationId || "بدون correlation"} · {receipt.responseStatus || "—"}</Text>
             </div>
@@ -152,7 +152,7 @@ export function PaymentSessionOperationsScreen() {
         <Card style={{ padding: "1.25rem" }}>
           <Text role="titleMd">أحداث المزود الموقعة ({timeline.providerEvents.length})</Text>
           {timeline.providerEvents.length === 0 ? <Text role="body" tone="muted" style={{ marginTop: "0.75rem" }}>لا توجد أحداث مزود مستلمة.</Text> : timeline.providerEvents.map((event) => (
-            <div key={event.providerEventId} style={{ borderTop: `1px solid ${lightThemeColors.borderColor}`, padding: "0.75rem 0" }}>
+            <div key={event.providerEventId} style={{ borderTop: `1px solid ${lightThemeColors.borderSubtle}`, padding: "0.75rem 0" }}>
               <Text role="body">{event.eventType} · {event.processingState}</Text>
               <Text role="caption" tone="muted">{event.providerEventId} · {event.providerStatus}</Text>
             </div>
@@ -162,7 +162,7 @@ export function PaymentSessionOperationsScreen() {
         <Card style={{ padding: "1.25rem" }}>
           <Text role="titleMd">المطابقة والتسوية ({timeline.reconciliationCases.length})</Text>
           {timeline.reconciliationCases.length === 0 ? <Text role="body" tone="muted" style={{ marginTop: "0.75rem" }}>لا توجد حالة مطابقة مرتبطة.</Text> : timeline.reconciliationCases.map((item) => (
-            <div key={item.id} style={{ borderTop: `1px solid ${lightThemeColors.borderColor}`, padding: "0.75rem 0" }}>
+            <div key={item.id} style={{ borderTop: `1px solid ${lightThemeColors.borderSubtle}`, padding: "0.75rem 0" }}>
               <Text role="body">{item.operation} · {item.status}</Text>
               <Text role="caption" tone="muted">{item.triggerReason}{item.resolutionAction ? ` · ${item.resolutionAction}` : ""}</Text>
             </div>
