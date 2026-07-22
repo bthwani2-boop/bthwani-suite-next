@@ -66,6 +66,7 @@ $script:WltMigrationProbes = [ordered]@{
   "wlt-090_jrn036_settlement_commission_governance.sql" = "to_regclass('public.wlt_jrn036_settlement_requests') IS NOT NULL AND to_regclass('public.wlt_jrn036_commission_policy_versions') IS NOT NULL AND to_regclass('public.wlt_jrn036_audit_events') IS NOT NULL"
   "wlt-091_jrn036_adjustment_ledger_identity.sql" = "to_regclass('public.wlt_jrn036_commission_adjustments_request_hash_idx') IS NOT NULL AND to_regclass('public.wlt_jrn036_commission_adjustments_commission_created_idx') IS NOT NULL"
   "wlt-092_jrn_035_refund_operation_idempotency.sql" = "to_regclass('public.wlt_refund_operation_receipts') IS NOT NULL AND to_regclass('public.wlt_refund_operation_receipts_identity_uq') IS NOT NULL"
+  "wlt-093_jrn036_mutation_receipts.sql" = "to_regclass('public.wlt_jrn036_mutation_receipts') IS NOT NULL AND to_regclass('public.wlt_jrn036_mutation_receipts_aggregate_idx') IS NOT NULL AND to_regclass('public.wlt_jrn036_mutation_receipts_request_hash_idx') IS NOT NULL"
 }
 
 function Test-WltMigrationProbeCoverage {
