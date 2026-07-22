@@ -135,7 +135,7 @@ func TestCatalogContractMatchesRuntimeOCCSurface(t *testing.T) {
 
 	requireContractSnippet(t, registry, "id: \"dsh-catalog\"")
 	requireContractSnippet(t, registry, "path: \"contracts/dsh.catalog.openapi.yaml\"")
-	requireContractSnippet(t, registry, "clientStrategy: \"SECONDARY_GENERATED_SUBSET\"")
+	requireContractSnippet(t, registry, "clientStrategy: \"STANDALONE_GENERATED\"")
 	requireContractSnippet(t, registry, "generatedClient: \"clients/generated/dsh-catalog-api.ts\"")
 	requireContractSnippet(t, manifest, "DSH_CONTRACT_REGISTRY")
 	requireContractSnippet(t, manifest, "contracts: DSH_CONTRACT_REGISTRY.map((contract) => contract.path)")
