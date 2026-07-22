@@ -86,9 +86,15 @@ settlement_policy_body='{
   "changeReason":"JRN-036 runtime verification",
   "operatorId":"operator-jrn036-ci"
 }'
-json_request PUT "/wlt/settlement-policies/partner-jrn036-ci" \
-  "corr-settlement-policy-jrn036-ci" "" "${settlement_policy_body}" \
-  | jq -e '.settlementPolicy.version == 1 and .settlementPolicy.status == "active"' >/dev/null
+settlement_policy_key="settlement-policy-jrn036-ci"
+settlement_policy_response=$(json_request PUT "/wlt/settlement-policies/partner-jrn036-ci" \
+  "corr-settlement-policy-jrn036-ci" "${settlement_policy_key}" "${settlement_policy_body}")
+jq -e '.settlementPolicy.version == 1 and .settlementPolicy.status == "active"' \
+  <<<"${settlement_policy_response}" >/dev/null
+settlement_policy_repeat=$(json_request PUT "/wlt/settlement-policies/partner-jrn036-ci" \
+  "corr-settlement-policy-repeat-jrn036-ci" "${settlement_policy_key}" "${settlement_policy_body}")
+jq -e '.settlementPolicy.version == 1 and .settlementPolicy.status == "active"' \
+  <<<"${settlement_policy_repeat}" >/dev/null
 
 settlement_body='{
   "partnerId":"partner-jrn036-ci",
@@ -161,9 +167,15 @@ commission_policy_body='{
   "changeReason":"JRN-036 runtime verification",
   "operatorId":"operator-jrn036-ci"
 }'
-json_request PUT "/wlt/commission-policies" \
-  "corr-commission-policy-jrn036-ci" "" "${commission_policy_body}" \
-  | jq -e '.commissionPolicy.version == 1 and .commissionPolicy.fixedAmountMinorUnits == 2000' >/dev/null
+commission_policy_key="commission-policy-jrn036-ci"
+commission_policy_response=$(json_request PUT "/wlt/commission-policies" \
+  "corr-commission-policy-jrn036-ci" "${commission_policy_key}" "${commission_policy_body}")
+jq -e '.commissionPolicy.version == 1 and .commissionPolicy.fixedAmountMinorUnits == 2000' \
+  <<<"${commission_policy_response}" >/dev/null
+commission_policy_repeat=$(json_request PUT "/wlt/commission-policies" \
+  "corr-commission-policy-repeat-jrn036-ci" "${commission_policy_key}" "${commission_policy_body}")
+jq -e '.commissionPolicy.version == 1 and .commissionPolicy.fixedAmountMinorUnits == 2000' \
+  <<<"${commission_policy_repeat}" >/dev/null
 
 # The governed route must reject any caller-supplied financial result. The
 # source may provide evidence and a gross basis only; WLT owns the amount.
@@ -189,6 +201,32 @@ caller_amount_status=$(curl --silent --show-error \
   "${base_url}/wlt/commissions")
 test "${caller_amount_status}" = "400"
 jq -e '.code == "INVALID_REQUEST"' /tmp/jrn036-caller-amount.json >/dev/null
+
+# Exercise reasoned rejection and exact replay on an independent beneficiary.
+rejected_commission_body='{
+  "beneficiaryActorId":"field-jrn036-reject-ci",
+  "beneficiaryActorType":"field",
+  "sourceType":"field_visit",
+  "sourceId":"visit-jrn036-reject-ci",
+  "commissionType":"field_visit_fee",
+  "grossBasisMinorUnits":0,
+  "currency":"YER",
+  "idempotencyKey":"commission-jrn036-reject-ci"
+}'
+rejected_commission_response=$(json_request POST "/wlt/commissions" \
+  "corr-commission-reject-create-jrn036-ci" "commission-jrn036-reject-ci" \
+  "${rejected_commission_body}")
+rejected_commission_id=$(jq -er '.commission.id' <<<"${rejected_commission_response}")
+reject_key="commission-reject-jrn036-ci"
+reject_body='{"operatorId":"operator-jrn036-ci","reason":"verified rejection proof"}'
+reject_response=$(json_request POST "/wlt/commissions/${rejected_commission_id}/reject" \
+  "corr-reject-jrn036-ci" "${reject_key}" "${reject_body}")
+jq -e '.commission.status == "rejected" and .commission.resolutionNote == "verified rejection proof"' \
+  <<<"${reject_response}" >/dev/null
+reject_repeat=$(json_request POST "/wlt/commissions/${rejected_commission_id}/reject" \
+  "corr-reject-repeat-jrn036-ci" "${reject_key}" "${reject_body}")
+jq -e '.commission.status == "rejected" and .commission.resolutionNote == "verified rejection proof"' \
+  <<<"${reject_repeat}" >/dev/null
 
 commission_body='{
   "beneficiaryActorId":"field-jrn036-ci",
@@ -233,18 +271,34 @@ json_request POST "/wlt/commissions/${commission_id}/adjust" \
   "corr-adjustment-b-jrn036-ci" "adjustment-jrn036-ci-b" "${adjustment_body_b}" \
   | jq -e '.commission.amountMinorUnits == 3000 and .commission.status == "pending"' >/dev/null
 
-json_request POST "/wlt/commissions/${commission_id}/confirm" \
-  "corr-confirm-jrn036-ci" "" '{"operatorId":"operator-jrn036-ci"}' \
-  | jq -e '.commission.status == "confirmed"' >/dev/null
+confirm_key="commission-confirm-jrn036-ci"
+confirm_body='{"operatorId":"operator-jrn036-ci"}'
+confirm_response=$(json_request POST "/wlt/commissions/${commission_id}/confirm" \
+  "corr-confirm-jrn036-ci" "${confirm_key}" "${confirm_body}")
+jq -e '.commission.status == "confirmed"' <<<"${confirm_response}" >/dev/null
+confirm_repeat=$(json_request POST "/wlt/commissions/${commission_id}/confirm" \
+  "corr-confirm-repeat-jrn036-ci" "${confirm_key}" "${confirm_body}")
+jq -e '.commission.status == "confirmed"' <<<"${confirm_repeat}" >/dev/null
 
-json_request POST "/wlt/commissions/${commission_id}/settle" \
-  "corr-settle-jrn036-ci" "" '{"operatorId":"operator-jrn036-ci"}' \
-  | jq -e '.commission.status == "settled"' >/dev/null
+settle_key="commission-settle-jrn036-ci"
+settle_body='{"operatorId":"operator-jrn036-ci"}'
+settle_response=$(json_request POST "/wlt/commissions/${commission_id}/settle" \
+  "corr-settle-jrn036-ci" "${settle_key}" "${settle_body}")
+jq -e '.commission.status == "settled"' <<<"${settle_response}" >/dev/null
+settle_repeat=$(json_request POST "/wlt/commissions/${commission_id}/settle" \
+  "corr-settle-repeat-jrn036-ci" "${settle_key}" "${settle_body}")
+jq -e '.commission.status == "settled"' <<<"${settle_repeat}" >/dev/null
 
-json_request POST "/wlt/commissions/${commission_id}/reverse" \
-  "corr-reverse-jrn036-ci" "" \
-  '{"operatorId":"operator-jrn036-ci","reason":"runtime reversal proof"}' \
-  | jq -e '.commission.status == "reversed" and .commission.resolutionNote == "runtime reversal proof"' >/dev/null
+reverse_key="commission-reverse-jrn036-ci"
+reverse_body='{"operatorId":"operator-jrn036-ci","reason":"runtime reversal proof"}'
+reverse_response=$(json_request POST "/wlt/commissions/${commission_id}/reverse" \
+  "corr-reverse-jrn036-ci" "${reverse_key}" "${reverse_body}")
+jq -e '.commission.status == "reversed" and .commission.resolutionNote == "runtime reversal proof"' \
+  <<<"${reverse_response}" >/dev/null
+reverse_repeat=$(json_request POST "/wlt/commissions/${commission_id}/reverse" \
+  "corr-reverse-repeat-jrn036-ci" "${reverse_key}" "${reverse_body}")
+jq -e '.commission.status == "reversed" and .commission.resolutionNote == "runtime reversal proof"' \
+  <<<"${reverse_repeat}" >/dev/null
 
 commission_detail=$(curl --fail-with-body --silent --show-error \
   "${auth_headers[@]}" \
@@ -264,6 +318,7 @@ jq -e '
 wallet_response=$(curl --fail-with-body --silent --show-error \
   "${auth_headers[@]}" \
   -H "X-Correlation-ID: corr-wallet-jrn036-ci" \
+  -H "X-Tenant-ID: legacy-unscoped" \
   "${base_url}/wlt/wallets/field/field-jrn036-ci")
 jq -e '
   .wallet.pendingBalanceMinorUnits == 0 and
@@ -271,12 +326,26 @@ jq -e '
   .wallet.settledTotalMinorUnits == 0
 ' <<<"${wallet_response}" >/dev/null
 
+rejected_wallet_response=$(curl --fail-with-body --silent --show-error \
+  "${auth_headers[@]}" \
+  -H "X-Correlation-ID: corr-wallet-rejected-jrn036-ci" \
+  -H "X-Tenant-ID: legacy-unscoped" \
+  "${base_url}/wlt/wallets/field/field-jrn036-reject-ci")
+jq -e '
+  .wallet.pendingBalanceMinorUnits == 0 and
+  .wallet.availableBalanceMinorUnits == 0 and
+  .wallet.earnedTotalMinorUnits == 0
+' <<<"${rejected_wallet_response}" >/dev/null
+
 psql "${database_url}" -v ON_ERROR_STOP=1 <<'SQL'
 DO $$
 DECLARE
   unbalanced_count bigint;
   audit_count bigint;
   adjustment_ledger_count bigint;
+  mutation_receipt_count bigint;
+  settlement_policy_version_count bigint;
+  commission_policy_version_count bigint;
 BEGIN
   SELECT COUNT(*) INTO unbalanced_count
   FROM (
@@ -301,11 +370,39 @@ BEGIN
     RAISE EXCEPTION 'expected 2 independent adjustment ledger transactions, found %', adjustment_ledger_count;
   END IF;
 
+  SELECT COUNT(*) INTO settlement_policy_version_count
+  FROM wlt_jrn036_settlement_policy_versions
+  WHERE partner_id = 'partner-jrn036-ci';
+  IF settlement_policy_version_count <> 1 THEN
+    RAISE EXCEPTION 'expected one settlement policy version after retry, found %', settlement_policy_version_count;
+  END IF;
+
+  SELECT COUNT(*) INTO commission_policy_version_count
+  FROM wlt_jrn036_commission_policy_versions
+  WHERE policy_id = 'field-visit-jrn036-ci';
+  IF commission_policy_version_count <> 1 THEN
+    RAISE EXCEPTION 'expected one commission policy version after retry, found %', commission_policy_version_count;
+  END IF;
+
+  SELECT COUNT(*) INTO mutation_receipt_count
+  FROM wlt_jrn036_mutation_receipts
+  WHERE idempotency_key IN (
+    'settlement-policy-jrn036-ci',
+    'commission-policy-jrn036-ci',
+    'commission-reject-jrn036-ci',
+    'commission-confirm-jrn036-ci',
+    'commission-settle-jrn036-ci',
+    'commission-reverse-jrn036-ci'
+  );
+  IF mutation_receipt_count <> 6 THEN
+    RAISE EXCEPTION 'expected 6 atomic JRN-036 mutation receipts, found %', mutation_receipt_count;
+  END IF;
+
   SELECT COUNT(*) INTO audit_count
   FROM wlt_jrn036_audit_events
   WHERE correlation_id LIKE 'corr-%-jrn036-ci';
-  IF audit_count < 8 THEN
-    RAISE EXCEPTION 'expected at least 8 JRN-036 audit events, found %', audit_count;
+  IF audit_count < 9 THEN
+    RAISE EXCEPTION 'expected at least 9 JRN-036 audit events, found %', audit_count;
   END IF;
 END $$;
 SQL
