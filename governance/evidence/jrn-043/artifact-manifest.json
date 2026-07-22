@@ -3,7 +3,7 @@
   "capabilityId": "JRN-043",
   "repositoryMode": "REMOTE_ONLY",
   "branch": "sambassam",
-  "resolvedCommitSha": "5b4e382d889b350e5fac75b6331be10b3476d97f",
+  "resolvedCommitSha": "a78d2fe32da7a090fa5d3727a11bd168337bb280",
   "currentStage": "G4_IMPLEMENTATION_VERIFIED",
   "requestedStage": "G8_RELEASE_APPROVED",
   "productTruthState": "NOT_APPLICABLE",
