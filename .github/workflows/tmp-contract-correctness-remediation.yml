@@ -6,11 +6,13 @@ on:
     paths:
       - ".github/workflows/tmp-contract-correctness-remediation.yml"
       - "tools/scripts/tmp-contract-correctness-remediation.py"
+      - "tools/scripts/tmp-contract-parser-fs-fix.py"
   pull_request:
     branches: [master]
     paths:
       - ".github/workflows/tmp-contract-correctness-remediation.yml"
       - "tools/scripts/tmp-contract-correctness-remediation.py"
+      - "tools/scripts/tmp-contract-parser-fs-fix.py"
 
 permissions:
   contents: read
@@ -31,7 +33,9 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Apply safe contract corrections in diagnostic workspace
-        run: python tools/scripts/tmp-contract-correctness-remediation.py
+        run: |
+          python tools/scripts/tmp-contract-correctness-remediation.py
+          python tools/scripts/tmp-contract-parser-fs-fix.py
       - name: Capture parser verification
         shell: bash
         run: |
