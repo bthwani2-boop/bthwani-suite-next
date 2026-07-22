@@ -52,6 +52,7 @@ LANGUAGE plpgsql
 AS $$
 BEGIN
     IF OLD.status = 'paused'
+       AND NEW.status NOT IN ('aborted', 'rolled_back')
        AND (
            NEW.current_step_index IS DISTINCT FROM OLD.current_step_index
            OR NEW.current_percentage IS DISTINCT FROM OLD.current_percentage
@@ -77,4 +78,4 @@ COMMENT ON CONSTRAINT platform_rollout_health_gate_governed ON platform_rollouts
 COMMENT ON CONSTRAINT platform_rollout_terminal_state_consistency ON platform_rollouts IS
     'JRN-041 lifecycle timestamps and completed percentage must match the persisted rollout status.';
 COMMENT ON FUNCTION platform_prevent_paused_rollout_advance() IS
-    'JRN-041 defense in depth: a paused rollout cannot change step, percentage or flag revision until an explicit resume.';
+    'JRN-041 defense in depth: a paused rollout cannot change step, percentage or flag revision until an explicit resume; abort and rollback baseline restoration remain legal.';
