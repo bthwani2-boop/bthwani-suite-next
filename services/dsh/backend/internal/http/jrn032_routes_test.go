@@ -8,6 +8,8 @@ import (
 
 func TestJRN032AnalyticsRoutesRegistered(t *testing.T) {
 	mux := NewRouter(nil, nil, nil, nil)
+	RegisterPartnerSelfRoutes(mux, nil, nil, nil, nil)
+	RegisterJRN032AnalyticsRoutes(mux, nil, nil, nil, nil)
 	routes := []string{
 		"/dsh/operator/analytics/platform",
 		"/dsh/operator/analytics/orders",
