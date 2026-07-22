@@ -87,9 +87,16 @@ export function useStoreCaptainHandoffException(
 
   const cancel = React.useCallback(() => setState({ kind: "idle" }), []);
 
+  const clearResolvedLocalState = React.useCallback((entityId: string) => {
+    setReadback({ kind: "clear", entityId });
+    setState((current) => current.kind === "success" && current.entityId === entityId
+      ? { kind: "idle" }
+      : current);
+  }, []);
+
   const loadExisting = React.useCallback(async (entityId: string): Promise<void> => {
     if (actor !== "captain" || !entityId.trim()) {
-      setReadback({ kind: "clear", entityId });
+      clearResolvedLocalState(entityId);
       return;
     }
     setReadback({ kind: "loading", entityId });
@@ -102,12 +109,12 @@ export function useStoreCaptainHandoffException(
     } catch (error) {
       const classified = classifyDispatchError(error);
       if (classified.kind === "not_found") {
-        setReadback({ kind: "clear", entityId });
+        clearResolvedLocalState(entityId);
         return;
       }
       setReadback({ kind: "error", entityId, message: readbackMessage(error) });
     }
-  }, [actor]);
+  }, [actor, clearResolvedLocalState]);
 
   const submit = React.useCallback(async (): Promise<boolean> => {
     if (!isEditableState(state)) return false;
