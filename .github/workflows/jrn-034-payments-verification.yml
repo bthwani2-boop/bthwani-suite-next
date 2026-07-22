@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches: [sambassam]
-    paths:
+    paths: &jrn034_paths
       - ".github/workflows/jrn-034-payments-verification.yml"
       - "governance/product/contracts/jrn-034-payments-payment-sessions.product-truth.json"
       - "governance/runbooks/JRN-034_PAYMENT_SESSIONS.md"
@@ -25,26 +25,10 @@ on:
       - "services/dsh/frontend/shared/finance-wlt-link/payment/**"
       - "services/dsh/tsconfig.jrn-034.json"
       - "apps/control-panel/runtime/src/app/dsh/finance/payment-sessions/**"
-      - "infra/docker/scripts/wlt-migration-probes.ps1"
-      - "contracts/master.openapi.yaml"
       - "tools/scripts/test-jrn-034-payments.mjs"
   pull_request:
-    paths:
-      - ".github/workflows/jrn-034-payments-verification.yml"
-      - "governance/product/contracts/jrn-034-payments-payment-sessions.product-truth.json"
-      - "services/wlt/backend/internal/payment/**"
-      - "services/wlt/backend/internal/provider/**"
-      - "services/wlt/backend/internal/http/server.go"
-      - "services/wlt/database/migrations/wlt-036_payment_session_operations_and_provider_events.sql"
-      - "services/wlt/contracts/wlt.payments.openapi.yaml"
-      - "services/dsh/backend/internal/wlt/payment_sessions.go"
-      - "services/dsh/backend/internal/wlt/payment_sessions_test.go"
-      - "services/dsh/backend/internal/http/finance_payment_sessions.go"
-      - "services/dsh/contracts/dsh.payment-sessions.openapi.yaml"
-      - "services/dsh/frontend/control-panel/finance/PaymentSessionOperationsScreen.tsx"
-      - "services/dsh/frontend/shared/finance-wlt-link/payment/**"
-      - "services/dsh/tsconfig.jrn-034.json"
-      - "tools/scripts/test-jrn-034-payments.mjs"
+    branches: [master]
+    paths: *jrn034_paths
 
 permissions:
   contents: read
@@ -54,90 +38,52 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  structural:
-    name: Structural journey guard
+  verify:
+    name: JRN-034 governed payment ownership and surfaces
     runs-on: ubuntu-latest
     steps:
       - name: Checkout exact commit
-        uses: actions/checkout@v4
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          node-version: "24.17.0"
-      - name: Verify governed journey structure
-        run: node tools/scripts/test-jrn-034-payments.mjs
-      - name: Verify repository whitespace
-        run: git diff --check
-
-  backend:
-    name: WLT and DSH payment backend
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout exact commit
-        uses: actions/checkout@v4
+          persist-credentials: false
       - name: Set up Go from DSH module
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version-file: services/dsh/backend/go.mod
           cache-dependency-path: |
             services/dsh/backend/go.sum
             services/wlt/backend/go.sum
-      - name: Test WLT payment and provider packages
-        working-directory: services/wlt/backend
-        run: go test ./internal/payment ./internal/provider -count=1
-      - name: Build WLT router and payment owners
-        working-directory: services/wlt/backend
-        run: go build ./internal/payment ./internal/provider ./internal/reference ./internal/http
-      - name: Test DSH WLT payment boundary
-        working-directory: services/dsh/backend
-        run: go test ./internal/wlt -count=1
-      - name: Build DSH payment proxy and router
-        working-directory: services/dsh/backend
-        run: go build ./internal/wlt ./internal/http
-
-  frontend:
-    name: Shared brain and payment operations surface
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout exact commit
-        uses: actions/checkout@v4
       - name: Set up pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           version: "10.34.2"
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "24.17.0"
           cache: pnpm
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
-      - name: Typecheck WLT shared brain
-        run: pnpm --dir services/wlt typecheck
-      - name: Typecheck focused JRN-034 DSH and control-panel graph
-        run: pnpm --dir services/dsh exec tsc -p tsconfig.jrn-034.json --noEmit --pretty false
-
-  contract:
-    name: Focused contracts and product truth
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout exact commit
-        uses: actions/checkout@v4
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: "10.34.2"
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "24.17.0"
-          cache: pnpm
-      - name: Install workspace dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Parse WLT payment contract
-        run: pnpm --dir services/dsh exec openapi-typescript ../wlt/contracts/wlt.payments.openapi.yaml -o /tmp/wlt-payments-api.ts
-      - name: Parse DSH payment operations contract
-        run: pnpm --dir services/dsh exec openapi-typescript contracts/dsh.payment-sessions.openapi.yaml -o /tmp/dsh-payment-sessions-api.ts
+      - name: Verify governed journey structure
+        run: node tools/scripts/test-jrn-034-payments.mjs
+      - name: Test and build WLT payment owners
+        working-directory: services/wlt/backend
+        run: |
+          go test ./internal/payment ./internal/provider -count=1
+          go build ./internal/payment ./internal/provider ./internal/reference ./internal/http
+      - name: Test and build DSH payment boundary
+        working-directory: services/dsh/backend
+        run: |
+          go test ./internal/wlt -count=1
+          go build ./internal/wlt ./internal/http
+      - name: Typecheck WLT shared brain and focused DSH graph
+        run: |
+          pnpm --dir services/wlt typecheck
+          pnpm --dir services/dsh exec tsc -p tsconfig.jrn-034.json --noEmit --pretty false
+      - name: Parse WLT and DSH payment contracts
+        run: |
+          pnpm --dir services/dsh exec openapi-typescript ../wlt/contracts/wlt.payments.openapi.yaml -o /tmp/wlt-payments-api.ts
+          pnpm --dir services/dsh exec openapi-typescript contracts/dsh.payment-sessions.openapi.yaml -o /tmp/dsh-payment-sessions-api.ts
       - name: Validate product truth against governed schema
         run: >-
           node --input-type=module -e
@@ -147,3 +93,5 @@ jobs:
           const validate=new Ajv({allErrors:true,strict:false}).compile(schema);
           if(!validate(truth)){console.error(validate.errors);process.exit(1)}
           if(truth.capabilityId!=='JRN_034_PAYMENTS_PAYMENT_SESSIONS'||truth.state!=='DISCOVERY')process.exit(1);"
+      - name: Verify repository whitespace
+        run: git diff --check
