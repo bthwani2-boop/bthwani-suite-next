@@ -8,6 +8,16 @@ import type { CatalogSubmission, CatalogSubmissionState } from "./catalog.types"
 
 type LiveApprovalRecord = ApprovalRecord & { readonly entityId?: string };
 
+const NEXT_APPROVAL_STAGE: Partial<Record<ApprovalStage, ApprovalStage>> = {
+  "partner-submitted": "partner-review",
+  "field-submitted": "partner-review",
+  "partner-review": "partner-approved",
+  "partner-approved": "marketing-review",
+  "marketing-review": "marketing-approved",
+  "marketing-approved": "catalog-adopted",
+  "catalog-adopted": "client-visible",
+};
+
 function entityKey(record: ApprovalRecord): string {
   return (record as LiveApprovalRecord).entityId || record.title;
 }
@@ -32,6 +42,11 @@ function toSubmission(record: ApprovalRecord): CatalogSubmission {
   };
 }
 
+function errorMessage(error: unknown): string {
+  const typed = error as { readonly message?: string };
+  return typed.message ?? "تعذر تنفيذ قرار اعتماد الكتالوج.";
+}
+
 function classify(error: unknown): CatalogSubmissionState {
   const typed = error as { readonly status?: number; readonly message?: string };
   if (typed.status === 401 || typed.status === 403) return { kind: "permission_denied" };
@@ -42,6 +57,7 @@ export function useCatalogApprovalController(authSession: string) {
   const [records, setRecords] = useState<readonly ApprovalRecord[]>([]);
   const [state, setState] = useState<CatalogSubmissionState>({ kind: "loading" });
   const [action, setAction] = useState<"idle" | "submitting">("idle");
+  const [mutationError, setMutationError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     if (authSession !== "authenticated") {
@@ -71,28 +87,51 @@ export function useCatalogApprovalController(authSession: string) {
     return map;
   }, [records]);
 
+  const canApprove = useCallback((storeId: string) => {
+    const record = recordByStore.get(storeId);
+    return Boolean(record && NEXT_APPROVAL_STAGE[record.stage]);
+  }, [recordByStore]);
+
+  const canReject = useCallback((storeId: string) => {
+    const stage = recordByStore.get(storeId)?.stage;
+    return Boolean(stage && stage !== "rejected" && stage !== "client-visible");
+  }, [recordByStore]);
+
   const decide = useCallback(async (input: {
     readonly storeId: string;
     readonly decision: "approved" | "rejected";
     readonly reason: string;
   }) => {
     const record = recordByStore.get(input.storeId);
-    if (!record) throw new Error("لم يعد طلب الاعتماد موجودًا في القراءة الحية.");
+    if (!record) {
+      setMutationError("لم يعد طلب الاعتماد موجودًا في القراءة الحية.");
+      return;
+    }
     const reason = input.reason.trim();
-    if (reason.length < 3) throw new Error("سبب القرار مطلوب.");
+    if (reason.length < 3) {
+      setMutationError("سبب القرار مطلوب.");
+      return;
+    }
+
+    const toStage = input.decision === "rejected"
+      ? "rejected"
+      : NEXT_APPROVAL_STAGE[record.stage];
+    if (!toStage) {
+      setMutationError("لا يوجد انتقال اعتماد قانوني من الحالة الحالية.");
+      return;
+    }
 
     setAction("submitting");
+    setMutationError(null);
     try {
-      await transitionCatalogApproval(
-        record.id,
-        input.decision === "approved" ? "catalog-adopted" : "rejected",
-        reason,
-      );
+      await transitionCatalogApproval(record.id, toStage, reason);
       await reload();
+    } catch (error) {
+      setMutationError(errorMessage(error));
     } finally {
       setAction("idle");
     }
   }, [recordByStore, reload]);
 
-  return { state, action, decide, reload };
+  return { state, action, mutationError, canApprove, canReject, decide, reload };
 }
