@@ -14,6 +14,7 @@ on:
       - "core/platform-control/contracts/jrn-040-platform-change-sets.openapi.yaml"
       - "core/platform-control/clients/generated/jrn-040-platform-change-sets-api.ts"
       - "core/platform-control/database/migrations/platform-005_jrn040_change_set_validation.sql"
+      - "core/platform-control/database/migrations/platform-006_jrn040_sensitive_change_boundary.sql"
       - "services/dsh/frontend/shared/platform/**"
       - "services/dsh/frontend/control-panel/platform/PlatformChangeWorkflowPanel.tsx"
       - "governance/product/contracts/jrn-040-platform-change-sets.product-truth.json"
@@ -80,7 +81,7 @@ jobs:
           done
       - name: Verify Go formatting without rewriting source
         run: |
-          files=$(gofmt -l core/platform-control/backend/internal/platformcontrol/jrn040_change_set_read_create.go core/platform-control/backend/internal/platformcontrol/jrn040_change_set_workflow.go core/platform-control/backend/internal/platformcontrol/jrn040_change_set_apply_rollback.go core/platform-control/backend/internal/platformcontrol/jrn040_change_set_governance_test.go core/platform-control/backend/internal/platformcontrol/repository_integration_test.go core/platform-control/backend/internal/platformcontrol/model.go core/platform-control/backend/internal/platformcontrol/service.go core/platform-control/backend/internal/http/workflow_handlers.go core/platform-control/backend/internal/http/jrn040_workflow_handlers_test.go)
+          files=$(gofmt -l core/platform-control/backend/internal/platformcontrol/jrn040_change_set_read_create.go core/platform-control/backend/internal/platformcontrol/jrn040_change_set_workflow.go core/platform-control/backend/internal/platformcontrol/jrn040_change_set_apply_rollback.go core/platform-control/backend/internal/platformcontrol/jrn040_change_set_governance_test.go core/platform-control/backend/internal/platformcontrol/jrn040_database_sensitive_guard_test.go core/platform-control/backend/internal/platformcontrol/repository_integration_test.go core/platform-control/backend/internal/platformcontrol/model.go core/platform-control/backend/internal/platformcontrol/service.go core/platform-control/backend/internal/http/workflow_handlers.go core/platform-control/backend/internal/http/jrn040_workflow_handlers_test.go)
           test -z "${files}" || { echo "${files}"; exit 1; }
       - name: Run targeted Go tests
         working-directory: core/platform-control/backend
