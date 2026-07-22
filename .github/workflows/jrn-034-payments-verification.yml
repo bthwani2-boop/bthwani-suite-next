@@ -9,6 +9,7 @@ on:
       - "governance/product/contracts/jrn-034-payments-payment-sessions.product-truth.json"
       - "governance/runbooks/JRN-034_PAYMENT_SESSIONS.md"
       - "services/wlt/backend/internal/payment/**"
+      - "services/wlt/backend/internal/provider/**"
       - "services/wlt/backend/internal/http/server.go"
       - "services/wlt/backend/internal/reference/payment_session_read.go"
       - "services/wlt/database/migrations/wlt-036_payment_session_operations_and_provider_events.sql"
@@ -30,6 +31,7 @@ on:
       - ".github/workflows/jrn-034-payments-verification.yml"
       - "governance/product/contracts/jrn-034-payments-payment-sessions.product-truth.json"
       - "services/wlt/backend/internal/payment/**"
+      - "services/wlt/backend/internal/provider/**"
       - "services/wlt/backend/internal/http/server.go"
       - "services/wlt/database/migrations/wlt-036_payment_session_operations_and_provider_events.sql"
       - "services/wlt/contracts/wlt.payments.openapi.yaml"
@@ -76,12 +78,12 @@ jobs:
           cache-dependency-path: |
             services/dsh/backend/go.sum
             services/wlt/backend/go.sum
-      - name: Test WLT payment package
+      - name: Test WLT payment and provider packages
         working-directory: services/wlt/backend
-        run: go test ./internal/payment -count=1
+        run: go test ./internal/payment ./internal/provider -count=1
       - name: Build WLT router and payment owners
         working-directory: services/wlt/backend
-        run: go build ./internal/payment ./internal/reference ./internal/http
+        run: go build ./internal/payment ./internal/provider ./internal/reference ./internal/http
       - name: Test DSH WLT boundary
         working-directory: services/dsh/backend
         run: go test ./internal/wlt ./internal/http -count=1
