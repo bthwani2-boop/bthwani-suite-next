@@ -43,6 +43,11 @@ type PickupSession struct {
 	Status             SessionStatus
 	CancelledAt        *time.Time
 	CancellationReason *string
+	CustomerNotifiedAt *time.Time
+	CustomerArrivedAt  *time.Time
+	NoShowAt           *time.Time
+	NoShowReason       *string
+	RescheduledAt      *time.Time
 	Version            int
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
@@ -52,6 +57,7 @@ const sessionColumns = `
 	id, order_id::text, store_id, client_id::text, hashed_otp, expires_at,
 	attempt_count, max_attempts, used_at, verified_by_actor_id, verification_method,
 	status, cancelled_at, cancellation_reason,
+	customer_notified_at, customer_arrived_at, no_show_at, no_show_reason, rescheduled_at,
 	version, created_at, updated_at
 `
 
@@ -72,6 +78,11 @@ func scanSession(scan func(...any) error) (*PickupSession, error) {
 		&session.Status,
 		&session.CancelledAt,
 		&session.CancellationReason,
+		&session.CustomerNotifiedAt,
+		&session.CustomerArrivedAt,
+		&session.NoShowAt,
+		&session.NoShowReason,
+		&session.RescheduledAt,
 		&session.Version,
 		&session.CreatedAt,
 		&session.UpdatedAt,
