@@ -3814,18 +3814,24 @@ paths:
       tags: [DshAnalytics]
       security:
         - bearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          schema: { type: string, enum: [today, week, month], default: today }
       responses:
         "200":
-          description: Platform KPIs snapshot.
+          description: Platform KPIs snapshot derived from DSH records.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/DshPlatformKpisResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
   /dsh/operator/analytics/orders:
     get:
       operationId: getDshOrderAnalytics
-      summary: Order volume and fulfillment analytics for a given period.
+      summary: Order volume and fulfillment analytics for a governed period.
       tags: [DshAnalytics]
       security:
         - bearerAuth: []
@@ -3839,7 +3845,9 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/DshOrderAnalyticsResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
   /dsh/operator/analytics/delivery:
     get:
@@ -3858,7 +3866,9 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/DshDeliveryAnalyticsResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
   /dsh/operator/analytics/support:
     get:
@@ -3893,11 +3903,12 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/DshStoreAnalyticsResponse" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
   /dsh/partner/analytics/performance:
     get:
       operationId: getDshPartnerPerformance
-      summary: Authenticated partner's own store performance summary.
+      summary: Authenticated partner's own store performance summary; store scope is derived from identity.
       tags: [DshAnalytics]
       security:
         - bearerAuth: []
@@ -3907,11 +3918,13 @@ paths:
           schema: { type: string, enum: [today, week, month], default: today }
       responses:
         "200":
-          description: Partner performance metrics for their own store.
+          description: Partner performance metrics for the actor's authorized store only.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/DshPartnerPerformanceResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
   /dsh/operator/checkout-intents/{intentId}/reconcile:
     post:
@@ -9655,22 +9668,22 @@ components:
       type: object
       required: [totalOrders, byStatus, period, generatedAt]
       properties:
-        totalOrders: { type: integer }
+        totalOrders: { type: integer, minimum: 0 }
         byStatus:
           type: array
           items: { $ref: "#/components/schemas/DshOrderStatusCount" }
-        period: { type: string }
+        period: { type: string, enum: [today, week, month] }
         generatedAt: { type: string, format: date-time }
 
     DshDeliveryAnalyticsResponse:
       type: object
       required: [totalAssignments, acceptedAssignments, completedAssignments, declinedAssignments, period, generatedAt]
       properties:
-        totalAssignments: { type: integer }
-        acceptedAssignments: { type: integer }
-        completedAssignments: { type: integer }
-        declinedAssignments: { type: integer }
-        period: { type: string }
+        totalAssignments: { type: integer, minimum: 0 }
+        acceptedAssignments: { type: integer, minimum: 0 }
+        completedAssignments: { type: integer, minimum: 0 }
+        declinedAssignments: { type: integer, minimum: 0 }
+        period: { type: string, enum: [today, week, month] }
         generatedAt: { type: string, format: date-time }
 
     DshTicketCategoryCount:
@@ -9697,11 +9710,11 @@ components:
       type: object
       required: [totalStores, activeStores, suspendedStores, pendingReadiness, readinessComplete, generatedAt]
       properties:
-        totalStores: { type: integer }
-        activeStores: { type: integer }
-        suspendedStores: { type: integer }
-        pendingReadiness: { type: integer }
-        readinessComplete: { type: integer }
+        totalStores: { type: integer, minimum: 0 }
+        activeStores: { type: integer, minimum: 0 }
+        suspendedStores: { type: integer, minimum: 0 }
+        pendingReadiness: { type: integer, minimum: 0 }
+        readinessComplete: { type: integer, minimum: 0 }
         generatedAt: { type: string, format: date-time }
 
     DshPartnerPerformanceResponse:

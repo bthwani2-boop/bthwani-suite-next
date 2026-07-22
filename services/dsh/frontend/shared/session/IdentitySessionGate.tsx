@@ -29,7 +29,7 @@ export type IdentitySessionGateProps = {
 type SignInMode = "login" | "activation";
 
 function isActivationActorType(role: DshSurfaceRole): role is ActivationActorType {
-  return role === "client" || role === "partner" || role === "captain" || role === "field";
+  return role === "partner" || role === "captain" || role === "field";
 }
 
 function errorCode(error: unknown): string {
@@ -109,7 +109,9 @@ function IdentityAccessPanel({
       <Card style={styles.accessCard}>
         <Text role="titleLg" style={styles.title}>الدخول إلى بثواني</Text>
         <Text role="body" tone="muted" style={styles.description}>
-          استخدم بيانات الحساب أو رمز التفعيل المخصص لهذا التطبيق.
+          {activationAvailable
+            ? "استخدم بيانات الحساب أو رمز التفعيل المخصص لهذا التطبيق."
+            : "استخدم بيانات الحساب للدخول إلى التطبيق."}
         </Text>
 
         {errorPresentation ? (
@@ -119,16 +121,16 @@ function IdentityAccessPanel({
           </View>
         ) : null}
 
-        <View style={styles.modeRow}>
-          <Button
-            label="تسجيل الدخول"
-            tone={mode === "login" ? "primary" : "ghost"}
-            onPress={() => {
-              setMode("login");
-              setFeedback("");
-            }}
-          />
-          {activationAvailable ? (
+        {activationAvailable ? (
+          <View style={styles.modeRow}>
+            <Button
+              label="تسجيل الدخول"
+              tone={mode === "login" ? "primary" : "ghost"}
+              onPress={() => {
+                setMode("login");
+                setFeedback("");
+              }}
+            />
             <Button
               label="التفعيل بالرمز"
               tone={mode === "activation" ? "primary" : "ghost"}
@@ -137,8 +139,8 @@ function IdentityAccessPanel({
                 setFeedback("");
               }}
             />
-          ) : null}
-        </View>
+          </View>
+        ) : null}
 
         {mode === "login" ? (
           <View style={styles.form}>
