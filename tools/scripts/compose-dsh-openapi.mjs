@@ -3,36 +3,78 @@ import { dirname, resolve } from 'node:path';
 
 const repositoryRoot = resolve(import.meta.dirname, '../..');
 const basePath = resolve(repositoryRoot, 'services/dsh/contracts/dsh.openapi.yaml');
-const fragmentPath = resolve(
-  repositoryRoot,
-  'services/dsh/contracts/fragments/order-preparation-handoff.fragment.yaml',
-);
 const outputPath = resolve(repositoryRoot, 'services/dsh/contracts/generated/dsh.openapi.yaml');
-
-const baseContract = readFileSync(basePath, 'utf8');
-const fragment = readFileSync(fragmentPath, 'utf8');
 const pathMarker = '# @paths\n';
 const schemaMarker = '\n# @schemas\n';
+const pickupSessionPropertiesMarker = '\n# @pickup-session-properties\n';
 
-if (!fragment.startsWith(pathMarker) || !fragment.includes(schemaMarker)) {
-  throw new Error('DSH contract fragment must contain exactly @paths and @schemas sections.');
+const fragments = [
+  {
+    path: resolve(
+      repositoryRoot,
+      'services/dsh/contracts/fragments/order-preparation-handoff.fragment.yaml',
+    ),
+    requiredPath: '  /dsh/partner/order-workboard:',
+    requiredSchema: '    DshPartnerOrderAction:',
+  },
+  {
+    path: resolve(
+      repositoryRoot,
+      'services/dsh/contracts/fragments/pickup-recovery.fragment.yaml',
+    ),
+    requiredPath: '  /dsh/operator/pickups/{orderId}/reschedule:',
+    requiredSchema: '    DshReschedulePickupWindowRequest:',
+    requiredSessionProperty: '        rescheduledAt:',
+  },
+];
+
+const baseContract = readFileSync(basePath, 'utf8');
+
+function parseFragment(spec) {
+  const fragment = readFileSync(spec.path, 'utf8');
+  if (!fragment.startsWith(pathMarker) || !fragment.includes(schemaMarker)) {
+    throw new Error(`${spec.path} must contain exactly @paths and @schemas sections.`);
+  }
+
+  const schemaMarkerIndex = fragment.indexOf(schemaMarker);
+  if (fragment.indexOf(schemaMarker, schemaMarkerIndex + schemaMarker.length) !== -1) {
+    throw new Error(`${spec.path} contains duplicate @schemas markers.`);
+  }
+
+  const sessionPropertiesMarkerIndex = fragment.indexOf(pickupSessionPropertiesMarker);
+  const pathSectionEnd = sessionPropertiesMarkerIndex === -1
+    ? schemaMarkerIndex
+    : sessionPropertiesMarkerIndex;
+  if (sessionPropertiesMarkerIndex > schemaMarkerIndex) {
+    throw new Error(`${spec.path} has pickup session properties after @schemas.`);
+  }
+
+  const pathSection = fragment.slice(pathMarker.length, pathSectionEnd).trimEnd();
+  const sessionProperties = sessionPropertiesMarkerIndex === -1
+    ? ''
+    : fragment
+      .slice(
+        sessionPropertiesMarkerIndex + pickupSessionPropertiesMarker.length,
+        schemaMarkerIndex,
+      )
+      .trimEnd();
+  const schemaSection = fragment.slice(schemaMarkerIndex + schemaMarker.length).trimEnd();
+
+  if (!pathSection.includes(spec.requiredPath) || !schemaSection.includes(spec.requiredSchema)) {
+    throw new Error(`${spec.path} is missing its governed path or schema.`);
+  }
+  if (spec.requiredSessionProperty && !sessionProperties.includes(spec.requiredSessionProperty)) {
+    throw new Error(`${spec.path} is missing its governed pickup session projection.`);
+  }
+
+  return { ...spec, pathSection, schemaSection, sessionProperties };
 }
 
-const schemaMarkerIndex = fragment.indexOf(schemaMarker);
-if (fragment.indexOf(schemaMarker, schemaMarkerIndex + schemaMarker.length) !== -1) {
-  throw new Error('DSH contract fragment contains duplicate @schemas markers.');
-}
-
-const pathSection = fragment.slice(pathMarker.length, schemaMarkerIndex).trimEnd();
-const schemaSection = fragment.slice(schemaMarkerIndex + schemaMarker.length).trimEnd();
-
-const requiredPath = '  /dsh/partner/order-workboard:';
-const requiredSchema = '    DshPartnerOrderAction:';
-if (!pathSection.includes(requiredPath) || !schemaSection.includes(requiredSchema)) {
-  throw new Error('Order preparation fragment is missing its governed path or action schema.');
-}
-if (baseContract.includes(requiredPath) || baseContract.includes(requiredSchema)) {
-  throw new Error('Order preparation contract is duplicated in the DSH base contract.');
+const parsedFragments = fragments.map(parseFragment);
+for (const fragment of parsedFragments) {
+  if (baseContract.includes(fragment.requiredPath) || baseContract.includes(fragment.requiredSchema)) {
+    throw new Error(`${fragment.path} duplicates a governed item in the DSH base contract.`);
+  }
 }
 
 const componentsAnchor = '\ncomponents:\n';
@@ -44,17 +86,54 @@ if (baseContract.split(schemasAnchor).length !== 2) {
   throw new Error('DSH base contract must contain one schemas anchor.');
 }
 
-const withPaths = baseContract.replace(
+const pathSections = parsedFragments.map((fragment) => fragment.pathSection).join('\n\n');
+let composedContract = baseContract.replace(
   componentsAnchor,
-  `\n${pathSection}\n\ncomponents:\n`,
-);
-const composedContract = withPaths.replace(
-  schemasAnchor,
-  `${schemasAnchor}${schemaSection}\n\n`,
+  `\n${pathSections}\n\ncomponents:\n`,
 );
 
-if (!composedContract.includes(requiredPath) || !composedContract.includes(requiredSchema)) {
-  throw new Error('Composed DSH contract did not contain the order preparation fragment.');
+const schemaSections = parsedFragments.map((fragment) => fragment.schemaSection).join('\n\n');
+composedContract = composedContract.replace(
+  schemasAnchor,
+  `${schemasAnchor}${schemaSections}\n\n`,
+);
+
+const pickupProperties = parsedFragments
+  .map((fragment) => fragment.sessionProperties)
+  .filter(Boolean)
+  .join('\n');
+if (pickupProperties) {
+  const pickupSchemaStart = composedContract.indexOf('    DshPickupSession:\n');
+  const pickupSchemaEnd = composedContract.indexOf(
+    '\n    DshPickupSessionResponse:',
+    pickupSchemaStart,
+  );
+  if (pickupSchemaStart === -1 || pickupSchemaEnd === -1) {
+    throw new Error('DSH base contract is missing the governed DshPickupSession schema.');
+  }
+
+  const pickupSchema = composedContract.slice(pickupSchemaStart, pickupSchemaEnd);
+  const propertyAnchor = '        version: { type: integer }\n';
+  if (!pickupSchema.includes(propertyAnchor)) {
+    throw new Error('DshPickupSession is missing its version property anchor.');
+  }
+  if (pickupSchema.includes('        customerNotifiedAt:')) {
+    throw new Error('Pickup lifecycle properties are duplicated in the DSH base contract.');
+  }
+  const updatedPickupSchema = pickupSchema.replace(
+    propertyAnchor,
+    `${pickupProperties}\n${propertyAnchor}`,
+  );
+  composedContract = `${composedContract.slice(0, pickupSchemaStart)}${updatedPickupSchema}${composedContract.slice(pickupSchemaEnd)}`;
+}
+
+for (const fragment of parsedFragments) {
+  if (!composedContract.includes(fragment.requiredPath) || !composedContract.includes(fragment.requiredSchema)) {
+    throw new Error(`Composed DSH contract did not contain ${fragment.path}.`);
+  }
+  if (fragment.requiredSessionProperty && !composedContract.includes(fragment.requiredSessionProperty)) {
+    throw new Error(`Composed DSH contract did not contain ${fragment.requiredSessionProperty}.`);
+  }
 }
 
 mkdirSync(dirname(outputPath), { recursive: true });
