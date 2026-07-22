@@ -4,6 +4,7 @@ import { useState, type CSSProperties } from "react";
 import { CpButton, CpPageHeader, CpTextInput } from "@bthwani/control-panel/components";
 import { DataTablePageFrame } from "@bthwani/control-panel/shell";
 import { useCatalogApprovalController } from "../../shared/catalog";
+import { useControlPanelSession } from "../../shared/session/control-panel-session";
 
 const listSectionStyle: CSSProperties = { display: "grid", gap: "1rem" };
 const submissionCardStyle: CSSProperties = {
@@ -16,7 +17,8 @@ const submissionCardStyle: CSSProperties = {
 const decisionButtonRowStyle: CSSProperties = { display: "flex", gap: "0.75rem" };
 
 export function CatalogApprovalScreen() {
-  const controller = useCatalogApprovalController("authenticated");
+  const session = useControlPanelSession();
+  const controller = useCatalogApprovalController(session.state.kind);
   const [reasonByStore, setReasonByStore] = useState<Record<string, string>>({});
 
   return (
