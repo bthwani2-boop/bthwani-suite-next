@@ -6,8 +6,12 @@ on:
     branches: [sambassam]
     paths:
       - "services/dsh/backend/internal/specialrequests/**"
-      - "services/dsh/backend/internal/http/specialrequests.go"
+      - "services/dsh/backend/internal/http/specialrequests*.go"
       - "services/dsh/backend/internal/http/jrn_022_special_requests_routes_test.go"
+      - "services/dsh/backend/internal/http/dispatch.go"
+      - "services/dsh/backend/internal/dispatch/delivery_exceptions*.go"
+      - "services/dsh/database/migrations/dsh-096_special_request_information_exchange.sql"
+      - "services/dsh/database/migrations/dsh-097_special_request_delivery_exceptions.sql"
       - "services/dsh/frontend/shared/special-requests/**"
       - "services/dsh/frontend/shared/shein/**"
       - "services/dsh/frontend/shared/awnak/**"
@@ -19,10 +23,12 @@ on:
       - "governance/product/product-truth.schema.json"
       - "governance/product/contracts/jrn-022-special-requests.product-truth.json"
       - "services/dsh/contracts/dsh.openapi.yaml"
+      - "services/dsh/contracts/dsh.modular.manifest.json"
       - "services/dsh/contracts/paths/**"
       - "services/dsh/contracts/components/**"
+      - "services/dsh/contracts/generated/dsh.bundle.openapi.yaml"
       - "services/dsh/clients/generated/dsh-api.ts"
-      - "services/dsh/tsconfig.jrn-020-030.json"
+      - "services/dsh/tsconfig.jrn-022.json"
       - ".github/workflows/jrn-022-special-requests-verification.yml"
 
 permissions:
@@ -34,7 +40,7 @@ concurrency:
 
 jobs:
   backend:
-    name: State model and governed routes
+    name: State information execution and exception model
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -49,13 +55,17 @@ jobs:
           go-version-file: services/dsh/backend/go.mod
           cache-dependency-path: services/dsh/backend/go.sum
 
-      - name: Verify JRN-022 state model and route registration
+      - name: Verify JRN-022 state routes information and dispatch exception ownership
         run: >-
           go test
           ./internal/specialrequests
           ./internal/http
-          -run 'Test(JRN022SpecialRequestRoutes|CanonicalSpecialRequestStagesAreKnownToService|DefaultWorkflowStageMatchesCustomerAndDeliveryReadback)$'
+          ./internal/dispatch
+          -run 'Test(JRN022SpecialRequestRoutes|CanonicalSpecialRequestStagesAreKnownToService|DefaultWorkflowStageMatchesCustomerAndDeliveryReadback|InformationExchangeValidationAndCanonicalStage)$'
           -count=1
+
+      - name: Build affected backend owners
+        run: go build ./internal/specialrequests ./internal/http ./internal/dispatch
 
   frontend:
     name: Shared brain and governed surfaces
@@ -81,8 +91,8 @@ jobs:
       - name: Run JRN-022 full-stack static gate
         run: node --test services/dsh/tests/jrn-022-special-requests.test.mjs
 
-      - name: Typecheck JRN-022 shared brain and surfaces
-        run: pnpm --dir services/dsh exec tsc -p tsconfig.jrn-020-030.json --noEmit --pretty false
+      - name: Typecheck only the JRN-022 ownership graph
+        run: pnpm --dir services/dsh exec tsc -p tsconfig.jrn-022.json --noEmit --pretty false
 
   contract:
     name: Modular contract and generated client drift
