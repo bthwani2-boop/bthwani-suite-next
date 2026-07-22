@@ -180,9 +180,9 @@ func HandleProcessPayoutRequestJRN037(db *sql.DB) http.HandlerFunc {
 				"payoutId":             req.ID,
 				"beneficiaryActorId":   req.BeneficiaryActorID,
 				"beneficiaryActorType": req.BeneficiaryActorType,
-				"amountMinorUnits":     req.AmountMinorUnits,
-				"currency":             req.Currency,
-				"destination":          destinationProviderPayload(destination),
+				"amountMinorUnits":      req.AmountMinorUnits,
+				"currency":              req.Currency,
+				"destination":           destinationProviderPayload(destination),
 			},
 			provider.RequestMetaFromHTTP(r, "wlt-payout-process"),
 		)
@@ -209,7 +209,14 @@ func HandleProcessPayoutRequestJRN037(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		updated, err := payoutAfterUpdate(r.Context(), db, `
+		finalTx, err := db.BeginTx(r.Context(), nil)
+		if err != nil {
+			markProviderResultUnknown(r.Context(), db, req.ID, err)
+			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to start provider proof transaction")
+			return
+		}
+		defer finalTx.Rollback()
+		updated, err := payoutAfterUpdate(r.Context(), finalTx, `
 			UPDATE wlt_payout_requests
 			SET status = 'processing',
 			    provider_reference = $2,
@@ -224,9 +231,18 @@ func HandleProcessPayoutRequestJRN037(db *sql.DB) http.HandlerFunc {
 			providerStatus,
 			operatorID,
 		)
+		if errors.Is(err, sql.ErrNoRows) {
+			shared.SendError(w, http.StatusConflict, "INVALID_STATUS", "payout provider result arrived after state changed")
+			return
+		}
 		if err != nil {
-			markProviderResultUnknown(r.Context(), db, req.ID, errors.New("provider proof could not be persisted"))
+			markProviderResultUnknown(r.Context(), db, req.ID, err)
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to persist provider payout proof")
+			return
+		}
+		if err := finalTx.Commit(); err != nil {
+			markProviderResultUnknown(r.Context(), db, req.ID, err)
+			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to commit provider payout proof")
 			return
 		}
 		updated.PayoutDestinationID = destination.ID
