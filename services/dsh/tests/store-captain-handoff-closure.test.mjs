@@ -13,6 +13,7 @@ const paths = {
   handoffDomain: 'services/dsh/backend/internal/dispatch/store_captain_handoff.go',
   idempotencyDomain: 'services/dsh/backend/internal/dispatch/store_captain_handoff_idempotency.go',
   exceptionDomain: 'services/dsh/backend/internal/dispatch/store_captain_handoff_exceptions.go',
+  exceptionTests: 'services/dsh/backend/internal/dispatch/store_captain_handoff_exceptions_db_test.go',
   resolutionTests: 'services/dsh/backend/internal/dispatch/store_captain_handoff_resolution_db_test.go',
   routes: 'services/dsh/backend/internal/http/order_journey_routes.go',
   server: 'services/dsh/backend/internal/http/server.go',
@@ -56,10 +57,11 @@ test('custody database truth has dual confirmation, reassignment, and reporter a
   assert.match(exception, /actor_role IN \('captain', 'partner'\)/);
 });
 
-test('backend enforces idempotency, early-pickup prevention, and exception blocking', () => {
+test('backend enforces idempotency, exact payload replay, and pickup blocking', () => {
   const handoff = read(paths.handoffDomain);
   const idempotency = read(paths.idempotencyDomain);
   const exception = read(paths.exceptionDomain);
+  const exceptionTests = read(paths.exceptionTests);
 
   assert.match(handoff, /ErrStoreHandoffRequired/);
   assert.match(handoff, /ensureStoreCaptainHandoff/);
@@ -78,9 +80,13 @@ test('backend enforces idempotency, early-pickup prevention, and exception block
   assert.match(exception, /ReportCaptainStoreCaptainHandoffException/);
   assert.match(exception, /findPartnerHandoffExceptionReplay/);
   assert.match(exception, /findCaptainHandoffExceptionReplay/);
-  assert.match(exception, /correlationId already belongs to a different exception command/);
+  assert.match(exception, /validateHandoffExceptionPayload/);
+  assert.match(exception, /sameOptionalFloat64/);
+  assert.match(exception, /correlationId already belongs to a different exception command payload/);
   assert.match(exception, /severity/);
   assert.match(exception, /'high'/);
+  assert.match(exceptionTests, /partner payload drift error/);
+  assert.match(exceptionTests, /captain payload drift error/);
 });
 
 test('runtime routes and OpenAPI contracts have single operation ownership', () => {
@@ -117,7 +123,7 @@ test('runtime routes and OpenAPI contracts have single operation ownership', () 
   assert.match(registry, /dsh\.store-captain-handoff\.openapi\.yaml/);
 });
 
-test('partner readback survives refresh and preserves preparation decision governance', () => {
+test('partner readback survives refresh, releases resolved state, and preserves decision governance', () => {
   const workboard = read(paths.workboard);
   const adapter = read(paths.partnerAdapter);
   const list = read(paths.partnerList);
@@ -137,11 +143,14 @@ test('partner readback survives refresh and preserves preparation decision gover
   assert.match(list, /استثناء عهدة قيد مراجعة العمليات/);
   assert.match(list, /handoffExceptionAvailable/);
   assert.match(screen, /openStoreCaptainHandoffExceptionId === ''/);
+  assert.match(screen, /observedServerHandoffExceptionOrderId/);
+  assert.match(screen, /if \(item\.allowedActions\.includes\(actionId\)\)/);
   assert.match(screen, /StoreCaptainHandoffExceptionForm/);
+  assert.doesNotMatch(screen, /actionId === 'resolve_issue'.*openPreparationIssueCount/s);
   assert.doesNotMatch(screen, /fetch\s*\(|\/dsh\//);
 });
 
-test('captain readback is persistent and fail-closed for every active exception', () => {
+test('captain readback is persistent, fail-closed, and releases after resolution', () => {
   const captainApi = read(paths.captainApi);
   const controller = read(paths.controller);
   const screen = read(paths.captainScreen);
@@ -150,6 +159,8 @@ test('captain readback is persistent and fail-closed for every active exception'
   assert.match(controller, /fetchCaptainDeliveryException/);
   assert.match(controller, /backend pickup guard blocks on every open\/acknowledged delivery/);
   assert.match(controller, /setReadback\(\{ kind: "blocked"/);
+  assert.match(controller, /clearResolvedLocalState/);
+  assert.match(controller, /current\.kind === "success" && current\.entityId === entityId/);
   assert.match(screen, /setInterval/);
   assert.match(screen, /readbackBlocksPickup/);
   assert.match(screen, /handoffReadback\.kind !== 'clear'/);
@@ -208,6 +219,7 @@ test('product truth and slice manifest close code without claiming release appro
   assert.equal(truth.evidenceState.ciExecution, 'NOT_OBSERVED_FROM_CONNECTOR');
   assert.equal(truth.evidenceState.productionRelease, 'NOT_APPROVED');
   assert.ok(truth.negativeInvariants.includes('لا pickup قبل اكتمال العهدة الثنائية.'));
+  assert.ok(truth.negativeInvariants.includes('لا يبقى pickup محجوبًا محليًا بعد أن يثبت DSH حل الاستثناء.'));
 
   assert.equal(manifest.requiredSliceCount, 18);
   assert.equal(manifest.codeDecision, 'CLOSED');
