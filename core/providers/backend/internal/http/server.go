@@ -154,8 +154,14 @@ func (s *server) updateProvider(w http.ResponseWriter, r *http.Request, identity
 	if !decodeJSON(w, r, &input) {
 		return
 	}
-	p, err := s.service.UpdateProvider(r.Context(), r.PathValue("providerId"), input,
-		operatorOf(r, identity), r.Header.Get("X-Correlation-ID"))
+	p, err := s.service.UpdateProvider(
+		r.Context(),
+		r.PathValue("providerId"),
+		input,
+		operatorOf(r, identity),
+		r.Header.Get("X-Correlation-ID"),
+		r.Header.Get("Idempotency-Key"),
+	)
 	if err != nil {
 		writeProvidersError(w, err)
 		return
@@ -196,7 +202,7 @@ func sendError(w http.ResponseWriter, status int, code, message string) {
 func writeProvidersError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, providers.ErrInvalidInput):
-		sendError(w, http.StatusBadRequest, "INVALID_PROVIDER_CONFIGURATION", "provider update is empty, malformed, or contains secret material outside credentials")
+		sendError(w, http.StatusBadRequest, "INVALID_PROVIDER_CONFIGURATION", "provider update is empty, malformed, missing governance headers, or contains secret material outside credentials")
 	case errors.Is(err, providers.ErrNotFound):
 		sendError(w, http.StatusNotFound, "PROVIDER_NOT_FOUND", "provider was not found")
 	case errors.Is(err, providers.ErrIdempotencyConflict):
