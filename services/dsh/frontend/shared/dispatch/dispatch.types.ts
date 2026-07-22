@@ -121,6 +121,7 @@ export type DshTrackingState =
   | { readonly kind: "loading" }
   | { readonly kind: "tracking_active"; readonly assignment: DshDispatchAssignment }
   | { readonly kind: "delivered"; readonly assignment: DshDispatchAssignment }
+  | { readonly kind: "returned_to_store"; readonly assignment: DshDispatchAssignment }
   | { readonly kind: "cancelled"; readonly assignment: DshDispatchAssignment }
   | { readonly kind: "error"; readonly message: string };
 
