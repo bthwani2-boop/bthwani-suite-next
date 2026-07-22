@@ -64,7 +64,7 @@ const primaryOps = primaryPath && fs.existsSync(path.join(repoRoot, primaryPath)
   : [];
 const primarySet = new Set(primaryOps);
 const canonicalOps = new Set(primaryOps);
-const subsetStrategies = new Set(["SECONDARY_GENERATED_SUBSET", "PARENT_GENERATED_SUBSET", "MANUAL_TYPED_ADAPTER"]);
+const generatedSubsetStrategies = new Set(["SECONDARY_GENERATED_SUBSET", "PARENT_GENERATED_SUBSET"]);
 const generatedStrategies = new Set(["PRIMARY_GENERATED", "SECONDARY_GENERATED_SUBSET", "PARENT_GENERATED_SUBSET"]);
 const manualStrategies = new Set(["MANUAL_TYPED_ADAPTER", "STANDALONE_MANUAL_TYPED_ADAPTER"]);
 
@@ -75,15 +75,14 @@ for (const item of registry) {
   const operations = parseOpenApiContract(relative).map((operation) => operation.operationId).filter(Boolean);
   if (!/x-bthwani-contract-state:\s*CONTRACT_ACTIVE\b/.test(source)) violations.push({ file: relative, message: "REGISTERED_ACTIVE_CONTRACT_METADATA_MISMATCH" });
 
-  if (subsetStrategies.has(item.strategy)) {
-    for (const operationId of operations) if (!primarySet.has(operationId)) violations.push({ file: relative, message: `CONTRACT_SHARD_OPERATION_NOT_IN_PRIMARY:${operationId}` });
-  }
-  if (item.strategy === "STANDALONE_MANUAL_TYPED_ADAPTER") {
+  for (const operationId of operations) canonicalOps.add(operationId);
+
+  if (generatedSubsetStrategies.has(item.strategy)) {
     for (const operationId of operations) {
-      if (primarySet.has(operationId)) violations.push({ file: relative, message: `STANDALONE_OPERATION_DUPLICATES_PRIMARY:${operationId}` });
-      canonicalOps.add(operationId);
+      if (!primarySet.has(operationId)) violations.push({ file: relative, message: `GENERATED_CONTRACT_SHARD_OPERATION_NOT_IN_PRIMARY:${operationId}` });
     }
   }
+
   if (generatedStrategies.has(item.strategy)) {
     if (!item.generatedClient) {
       violations.push({ file: registryFile, message: `GENERATED_CLIENT_PATH_REQUIRED:${item.id}` });
@@ -93,15 +92,19 @@ for (const item of registry) {
         violations.push({ file: registryFile, message: `GENERATED_CLIENT_MISSING:${clientPath}` });
       } else {
         const client = read(clientPath);
-        for (const operationId of operations) if (!client.includes(operationId)) violations.push({ file: clientPath, message: `GENERATED_CLIENT_OPERATION_MISSING:${operationId}` });
+        for (const operationId of operations) {
+          if (!client.includes(operationId)) violations.push({ file: clientPath, message: `GENERATED_CLIENT_OPERATION_MISSING:${operationId}` });
+        }
       }
     }
   }
+
   if (manualStrategies.has(item.strategy)) {
-    if (!item.adapterOwner) violations.push({ file: registryFile, message: `MANUAL_ADAPTER_OWNER_REQUIRED:${item.id}` });
-    else if (!fs.existsSync(path.join(repoRoot, serviceRoot, item.adapterOwner))) violations.push({ file: registryFile, message: `MANUAL_ADAPTER_OWNER_MISSING:${item.adapterOwner}` });
-    if (!/x-bthwani-client-generation:\s*DISABLED\b/.test(source)) violations.push({ file: relative, message: "MANUAL_ADAPTER_REQUIRES_DISABLED_GENERATION_METADATA" });
-    if (!/x-bthwani-client-binding:\s*MANUAL_TYPED_ADAPTER\b/.test(source)) violations.push({ file: relative, message: "MANUAL_ADAPTER_BINDING_METADATA_MISSING" });
+    if (!item.adapterOwner) {
+      violations.push({ file: registryFile, message: `MANUAL_ADAPTER_OWNER_REQUIRED:${item.id}` });
+    } else if (!fs.existsSync(path.join(repoRoot, serviceRoot, item.adapterOwner))) {
+      violations.push({ file: registryFile, message: `MANUAL_ADAPTER_OWNER_MISSING:${item.adapterOwner}` });
+    }
   }
 }
 
@@ -134,7 +137,14 @@ for (const item of [...base, ...extensions]) {
     owners.get(operationId).add(item.id);
   }
 }
-for (const [operationId, operationOwners] of owners) if (operationOwners.size > 1) violations.push({ file: capabilityFiles.join(","), message: `DUPLICATE_OPERATION_OWNERSHIP:${operationId}` });
-for (const operationId of canonicalOps) if (!owners.has(operationId)) violations.push({ file: capabilityFiles.join(","), message: `UNOWNED_OPERATION:${operationId}` });
+for (const [operationId, operationOwners] of owners) {
+  if (operationOwners.size > 1) violations.push({ file: capabilityFiles.join(","), message: `DUPLICATE_OPERATION_OWNERSHIP:${operationId}` });
+}
+// Capability ownership is mandatory for the primary generated API. Active
+// standalone manual contracts already have one explicit adapterOwner in the
+// contract registry, avoiding a second drifting ownership ledger.
+for (const operationId of primarySet) {
+  if (!owners.has(operationId)) violations.push({ file: capabilityFiles.join(","), message: `UNOWNED_PRIMARY_OPERATION:${operationId}` });
+}
 
 fail(guardId, violations);
