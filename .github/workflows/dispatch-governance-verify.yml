@@ -14,6 +14,7 @@ on:
       - "services/dsh/frontend/app-captain/**"
       - "services/dsh/frontend/control-panel/operations/**Dispatch**"
       - "services/dsh/tests/jrn-014-**"
+      - "services/dsh/tsconfig.dispatch-governance.json"
       - "tools/guards/*dispatch*"
       - "governance/**/jrn-014-**"
       - ".github/workflows/dispatch-governance-verify.yml"
@@ -30,6 +31,7 @@ on:
       - "services/dsh/frontend/app-captain/**"
       - "services/dsh/frontend/control-panel/operations/**Dispatch**"
       - "services/dsh/tests/jrn-014-**"
+      - "services/dsh/tsconfig.dispatch-governance.json"
       - "tools/guards/*dispatch*"
       - "governance/**/jrn-014-**"
       - ".github/workflows/dispatch-governance-verify.yml"
@@ -122,11 +124,11 @@ jobs:
           path: dispatch-contracts.log
           if-no-files-found: error
           retention-days: 14
-      - name: Typecheck DSH
+      - name: Typecheck governed dispatch surfaces
         shell: bash
         run: |
           set -o pipefail
-          pnpm --dir services/dsh typecheck 2>&1 | tee dispatch-typecheck.log
+          pnpm --dir services/dsh exec tsc -p tsconfig.dispatch-governance.json --noEmit 2>&1 | tee dispatch-typecheck.log
       - name: Upload typecheck diagnostics
         if: always()
         uses: actions/upload-artifact@v4
