@@ -29,6 +29,8 @@ test("partner, captain, and field surfaces expose WLT-owned commission truth", (
   assert.match(captain, /actorType="captain"/);
   assert.match(field, /useFieldFinanceController/);
   assert.match(field, /مصدرها WLT/);
+  assert.match(field, /commissionPolicyId/);
+  assert.match(field, /resolutionNote/);
   assert.doesNotMatch(field, /partnerId\s*[=:]/);
 });
 
@@ -63,6 +65,8 @@ test("control-panel commission mutations are reasoned and state-gated", () => {
     "سبب رفض العمولة",
     "سبب عكس العمولة",
     "سبب التعديل",
+    "validatePolicy",
+    "maximumAmountMinorUnits",
     "commission.status === \"pending\"",
     "commission.status === \"confirmed\"",
     "commission.status === \"settled\"",
@@ -72,15 +76,27 @@ test("control-panel commission mutations are reasoned and state-gated", () => {
 });
 
 test("settlement policy editor sends the complete strict contract", () => {
-  for (const required of [
-    "cycleDays",
-    "minimumNetMinorUnits",
-    "changeReason",
+  for (const requiredField of ["cycleDays", "minimumNetMinorUnits", "changeReason"]) {
+    assert.equal(
+      settlementPanel.includes(requiredField),
+      true,
+      `missing settlement UI field: ${requiredField}`,
+    );
+    assert.equal(
+      settlementApi.includes(requiredField),
+      true,
+      `missing settlement API field: ${requiredField}`,
+    );
+  }
+  for (const requiredCopy of [
     "سبب تغيير سياسة التسوية",
     "حفظ إصدار سياسة التسوية في WLT",
   ]) {
-    assert.equal(settlementPanel.includes(required), true, `missing settlement policy field/copy: ${required}`);
-    assert.equal(settlementApi.includes(required), true, `missing settlement API field: ${required}`);
+    assert.equal(
+      settlementPanel.includes(requiredCopy),
+      true,
+      `missing settlement UI copy: ${requiredCopy}`,
+    );
   }
 
   const createFunction = settlementApi.slice(
@@ -93,8 +109,15 @@ test("settlement policy editor sends the complete strict contract", () => {
 });
 
 test("all actionable controls carry explicit labels", () => {
-  const commissionLabels = [...control.matchAll(/<Button\s+label="([^"]+)"/g)].map((match) => match[1]);
-  const settlementLabels = [...settlementPanel.matchAll(/<Button[\s\S]*?label=\{?"([^"]+)"/g)].map((match) => match[1]);
+  const commissionLabels = [...control.matchAll(/<Button\s+label="([^"]+)"/g)].map(
+    (match) => match[1],
+  );
+  const settlementLabels = [
+    ...settlementPanel.matchAll(/<Button[\s\S]*?label=\{?"([^"]+)"/g),
+  ].map((match) => match[1]);
   assert.ok(commissionLabels.length >= 5, "expected labelled commission actions");
-  assert.equal([...commissionLabels, ...settlementLabels].some((label) => label.trim() === ""), false);
+  assert.equal(
+    [...commissionLabels, ...settlementLabels].some((label) => label.trim() === ""),
+    false,
+  );
 });
