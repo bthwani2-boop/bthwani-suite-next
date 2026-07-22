@@ -1,5 +1,6 @@
 name: Temporary JRN-022 Backend Contract Closure
 
+# Armed on the review branch; successful execution removes this workflow.
 on:
   pull_request:
     branches: [sambassam]
