@@ -14,21 +14,41 @@ async function readManifest() {
   return JSON.parse(await readRepo(MANIFEST_PATH));
 }
 
-function expectedSliceIds() {
-  return Array.from({ length: 18 }, (_, index) => `FS-${String(index + 1).padStart(2, "0")}`);
-}
+const EXPECTED_SLICES = [
+  ["FS-01", "Product truth"],
+  ["FS-02", "Roles, permissions"],
+  ["FS-03", "States, transitions"],
+  ["FS-04", "Truth ownership"],
+  ["FS-05", "Database migrations"],
+  ["FS-06", "OpenAPI"],
+  ["FS-07", "Backend routes"],
+  ["FS-08", "Events, outbox"],
+  ["FS-09", "Shared frontend brain"],
+  ["FS-10", "All required surfaces"],
+  ["FS-11", "Visible loading"],
+  ["FS-12", "Cross-surface read-after-write"],
+  ["FS-13", "Security, privacy"],
+  ["FS-14", "Accessibility, Arabic RTL"],
+  ["FS-15", "SLA, monitoring"],
+  ["FS-16", "Cleanup of legacy"],
+  ["FS-17", "Targeted verification"],
+  ["FS-18", "Same-commit evidence"],
+];
 
-test("JRN-012 registers exactly FS-01 through FS-18 as code-closed", async () => {
+test("JRN-012 registers canonical FS-01 through FS-18 as code-closed", async () => {
   const manifest = await readManifest();
   assert.equal(manifest.journeyId, "JRN-012");
   assert.equal(manifest.requiredSliceCount, 18);
   assert.equal(manifest.codeDecision, "CLOSED");
   assert.equal(manifest.releaseDecision, "READY_FOR_INDEPENDENT_REVIEW");
-  assert.deepEqual(manifest.slices.map((slice) => slice.id), expectedSliceIds());
+  assert.deepEqual(
+    manifest.slices.map((slice) => slice.id),
+    EXPECTED_SLICES.map(([id]) => id),
+  );
   assert.equal(new Set(manifest.slices.map((slice) => slice.id)).size, 18);
-  for (const slice of manifest.slices) {
+  for (const [index, slice] of manifest.slices.entries()) {
     assert.equal(slice.codeStatus, "CLOSED", `${slice.id} is not code-closed`);
-    assert.ok(slice.name.length >= 3, `${slice.id} has no meaningful name`);
+    assert.ok(slice.name.startsWith(EXPECTED_SLICES[index][1]), `${slice.id} does not match the canonical slice definition`);
     assert.ok(slice.requiredFiles.length > 0, `${slice.id} has no evidence files`);
     assert.ok(slice.requiredMarkers.length > 0, `${slice.id} has no evidence markers`);
   }
@@ -56,11 +76,12 @@ test("every JRN-012 slice points to existing code and proves its markers", async
   assert.deepEqual(failures, []);
 });
 
-test("JRN-012 closure cannot hide internal code gaps behind independent review", async () => {
+test("JRN-012 code closure remains distinct from release and production approval", async () => {
   const manifest = await readManifest();
-  const serialized = JSON.stringify(manifest);
-  assert.doesNotMatch(serialized, /IMPLEMENTED_PENDING|DEFINED_NOT_PROVEN|FIX_REQUIRED|NEEDS_EVIDENCE/);
-  assert.match(serialized, /READY_FOR_INDEPENDENT_REVIEW/);
+  assert.deepEqual(manifest.openCodeGaps, []);
+  assert.match(manifest.releaseDecision, /READY_FOR_INDEPENDENT_REVIEW/);
+  assert.ok(Array.isArray(manifest.remainingReleaseGates));
+  assert.ok(manifest.remainingReleaseGates.some((gate) => gate.includes("same-commit CI status")));
   assert.ok(Array.isArray(manifest.independentReviewPending));
   assert.ok(manifest.independentReviewPending.length > 0);
 
@@ -70,22 +91,34 @@ test("JRN-012 closure cannot hide internal code gaps behind independent review",
   assert.equal(productTruth.decision, "READY_FOR_REVIEW");
   assert.equal(productTruth.owner, "DSH");
   assert.equal(productTruth.truthOwnership.financialTruth, "WLT");
+  assert.equal(productTruth.codeZeroGate, "IMPLEMENTED");
+  assert.equal(productTruth.releaseGate, "PENDING_INDEPENDENT_APPROVALS");
+  assert.ok(productTruth.operationalSupport.rollback.length > 0);
 });
 
-test("JRN-012 issue gate is represented in backend tests and cross-layer closure tests", async () => {
+test("JRN-012 removes the legacy partner row adapter and enforces all critical gates", async () => {
+  const adapter = await readRepo("services/dsh/frontend/shared/partner/partner.adapters.ts");
+  assert.doesNotMatch(adapter, /mapRuntimeRowToPartnerOrderItem/);
+  assert.doesNotMatch(adapter, /@deprecated/);
+  assert.match(adapter, /No compatibility projection for legacy rows/);
+  assert.match(adapter, /exposes ready while preparation issues are open/);
+  assert.match(adapter, /exposes resolve_issue without a resolvable issue/);
+
   const goTest = await readRepo("services/dsh/backend/internal/http/partner_order_workboard_test.go");
-  const closureTest = await readRepo("services/dsh/tests/jrn-012-order-preparation-closure.test.mjs");
   for (const marker of [
-    "preparing issue blocks ready",
-    "resolve_issue",
-    "report_issue",
+    "preparing resolvable issue blocks ready",
+    "preparing pending substitution blocks ready and resolve",
+    "handoff exception blocks confirmation",
   ]) {
     assert.ok(goTest.includes(marker), `Go action test is missing ${marker}`);
   }
+
+  const closureTest = await readRepo("services/dsh/tests/jrn-012-order-preparation-closure.test.mjs");
   for (const marker of [
-    "atomically blocks invalid readiness",
+    "atomic readiness",
     "OpenAPI declares every live preparation capability",
-    "partner UI reports and resolves issues",
+    "partner and client perform real issue and substitution workflows",
+    "captain and operator surfaces read the same preparation truth",
   ]) {
     assert.ok(closureTest.includes(marker), `closure test is missing ${marker}`);
   }
