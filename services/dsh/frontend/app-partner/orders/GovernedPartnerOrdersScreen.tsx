@@ -14,6 +14,7 @@ import {
   PREPARATION_ISSUE_KIND_LABELS,
   STORE_CAPTAIN_HANDOFF_EXCEPTION_LABELS,
 } from '../../shared/orders';
+import { OrderRefundStatusCard } from '../../shared/finance-wlt-link/wlt-refund/OrderRefundStatusCard';
 import type { GovernedPartnerOrderItem } from '../../shared/partner/partner.adapters';
 import type { PartnerOrdersHomeScreenState } from './OrdersInboxScreen';
 
@@ -232,6 +233,7 @@ export function GovernedPartnerOrdersScreen({
                         <Text role="caption" tone="muted">{`الكابتن المعيّن: ${item.storeCaptainHandoffCaptainId}`}</Text>
                       ) : null}
                       {item.nextOwnerLabel ? <Text role="caption" tone="muted">{`الجهة التالية: ${item.nextOwnerLabel}`}</Text> : null}
+                      <OrderRefundStatusCard orderId={item.id} surface="partner" />
                     </Box>
                   ) : null}
 
