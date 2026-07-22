@@ -29,6 +29,7 @@ on:
       - "services/wlt/database/migrations/wlt-032_promotion_funding_ledger.sql"
       - "services/wlt/database/migrations/wlt-034_jrn_028_promotion_funding_audit_integrity.sql"
       - "services/wlt/database/tests/jrn-028-promotion-funding-integrity.sh"
+      - "services/wlt/database/tests/jrn-028-promotion-funding-concurrency.sh"
       - "services/wlt/contracts/wlt.promotion-funding.openapi.yaml"
       - "services/dsh/contracts/**"
       - "services/dsh/tests/jrn-026-*.test.mjs"
@@ -169,5 +170,7 @@ jobs:
           psql -v ON_ERROR_STOP=1 -Atc "SELECT to_regclass('public.wlt_promotion_funding_events') IS NOT NULL" | grep -qx t
       - name: Verify JRN-028 database lifecycle and negative invariants
         run: bash services/wlt/database/tests/jrn-028-promotion-funding-integrity.sh
+      - name: Verify JRN-028 concurrent transition serialization
+        run: bash services/wlt/database/tests/jrn-028-promotion-funding-concurrency.sh
       - name: Verify repository whitespace
         run: git diff --check
