@@ -1,0 +1,137 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-017",
+  "title": "تنفيذ الكابتن والتتبع الحي",
+  "closureMode": "CODE_AND_AUTOMATED_EVIDENCE",
+  "requiredSliceCount": 18,
+  "codeDecision": "NEEDS_EVIDENCE",
+  "releaseDecision": "READY_FOR_REVIEW",
+  "slices": [
+    {
+      "id": "FS-01",
+      "name": "Product Truth",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["governance/product/contracts/jrn-017-captain-live-tracking.product-truth.json"],
+      "requiredMarkers": ["acceptanceCriteria", "negativeInvariants", "PENDING_TARGETED_CI"]
+    },
+    {
+      "id": "FS-02",
+      "name": "Roles, permissions and affected surfaces",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/backend/internal/http/server.go", "services/dsh/backend/internal/http/dispatch_live_tracking.go"],
+      "requiredMarkers": ["captain", "client", "partner", "control-panel", "requirePermission"]
+    },
+    {
+      "id": "FS-03",
+      "name": "Delivery states and allowed actions",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/backend/internal/dispatch/dispatch.go", "services/dsh/frontend/shared/dispatch/dispatch.types.ts"],
+      "requiredMarkers": ["picked_up", "arrived_customer", "delivered", "returning_to_store"]
+    },
+    {
+      "id": "FS-04",
+      "name": "DSH, Providers and WLT ownership boundaries",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["governance/product/contracts/jrn-017-captain-live-tracking.product-truth.json", "services/dsh/backend/internal/http/dispatch_live_tracking.go"],
+      "requiredMarkers": ["WLT_REFERENCE_ONLY", "truthOwner", "routeEta", "لا mutation مالية"]
+    },
+    {
+      "id": "FS-05",
+      "name": "Database location truth and retention",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/database/migrations/dsh-039_dispatch_captain_location.sql", "services/dsh/backend/internal/dispatch/dispatch.go"],
+      "requiredMarkers": ["location_recorded_at", "last_latitude", "last_longitude", "NULL"]
+    },
+    {
+      "id": "FS-06",
+      "name": "Canonical live tracking contract",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/contracts/dsh.live-tracking.openapi.yaml", "services/dsh/contracts/contract-registry.ts"],
+      "requiredMarkers": ["dsh-live-tracking", "pushTrustedCaptainDispatchLocation", "getClientPrivacyAwareLiveTracking", "listOperatorDispatchTrackingAlerts"]
+    },
+    {
+      "id": "FS-07",
+      "name": "Trusted location backend behavior",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/backend/internal/http/dispatch_location_integrity.go", "services/dsh/backend/internal/http/dispatch_location_integrity_test.go"],
+      "requiredMarkers": ["accuracyMeters", "LOCATION_SAMPLE_OUT_OF_ORDER", "sameDispatchLocationSample", "LOCATION_SAMPLE_TOO_FREQUENT"]
+    },
+    {
+      "id": "FS-08",
+      "name": "Idempotency, retry and readback",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/backend/internal/http/dispatch_location_integrity.go", "services/dsh/frontend/shared/dispatch/dispatch-location.api.ts"],
+      "requiredMarkers": ["exact latest sample", "pendingLocationByAssignment", "flushPendingForegroundDispatchLocations", "queued"]
+    },
+    {
+      "id": "FS-09",
+      "name": "Shared frontend brain",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/frontend/shared/dispatch/dispatch-tracking.api.ts", "services/dsh/frontend/shared/delivery/use-captain-order-runtime.ts"],
+      "requiredMarkers": ["fetchClientLiveTracking", "fetchPartnerDispatchTrackingReference", "syncForegroundDispatchLocation", "readCaptainForegroundLocation"]
+    },
+    {
+      "id": "FS-10",
+      "name": "Captain, client, partner and operator bindings",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/frontend/app-captain/orders/OperationalCaptainExecutionScreen.tsx", "services/dsh/frontend/app-client/orders/OrderTrackingScreen.tsx", "services/dsh/frontend/app-partner/orders/PartnerDispatchTrackingScreen.tsx", "services/dsh/frontend/control-panel/dashboard/DispatchTrackingAlertsPanel.tsx"],
+      "requiredMarkers": ["accuracyMeters", "ClientLiveTrackingCard", "مرجع التوصيل", "تنبيهات التتبع الحي"]
+    },
+    {
+      "id": "FS-11",
+      "name": "Visible loading, empty, error, stale and lost states",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/frontend/app-client/orders/ClientLiveTrackingCard.tsx", "services/dsh/frontend/app-partner/orders/PartnerDispatchTrackingScreen.tsx", "services/dsh/frontend/control-panel/dashboard/DispatchTrackingAlertsPanel.tsx"],
+      "requiredMarkers": ["location_lost", "provider_unavailable", "إعادة المحاولة", "لا توجد تنبيهات"]
+    },
+    {
+      "id": "FS-12",
+      "name": "Cross-surface readback integrity",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/backend/internal/http/dispatch_live_tracking.go", "services/dsh/frontend/shared/orders/use-client-order-journey-controller.ts", "services/dsh/frontend/shared/dispatch/use-partner-dispatch-tracking.ts"],
+      "requiredMarkers": ["buildLiveTrackingProjection", "liveTracking", "fetchPartnerDispatchTrackingReference"]
+    },
+    {
+      "id": "FS-13",
+      "name": "Privacy, authorization and ownership",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/backend/internal/http/dispatch_live_tracking.go", "services/dsh/backend/internal/http/dispatch_live_tracking_test.go"],
+      "requiredMarkers": ["hidden_until_pickup", "delivery_window_rounded", "roundTrackingCoordinate", "clientCanSeeCaptainLocation"]
+    },
+    {
+      "id": "FS-14",
+      "name": "RTL, accessibility and weak network recovery",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/frontend/app-captain/orders/DshCaptainMapScreen.tsx", "services/dsh/frontend/app-client/orders/ClientLiveTrackingCard.tsx", "services/dsh/frontend/shared/dispatch/dispatch-location.api.ts"],
+      "requiredMarkers": ["textAlign: 'right'", "الشبكة غير مستقرة", "retry", "queued"]
+    },
+    {
+      "id": "FS-15",
+      "name": "ETA, monitoring and operator diagnostics",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["core/providers/backend/internal/providers/routes.go", "services/dsh/backend/internal/http/dispatch_live_tracking.go", "services/dsh/frontend/control-panel/dashboard/DispatchTrackingAlertsPanel.tsx"],
+      "requiredMarkers": ["RouteMaps", "estimatedArrivalAt", "LOCATION_NOT_RECEIVED", "LOCATION_lost"]
+    },
+    {
+      "id": "FS-16",
+      "name": "Legacy contradiction and mock cleanup",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/frontend/shared/orders/dsh-order-lifecycle.transport.ts", "services/dsh/frontend/app-captain/orders/DshCaptainMapScreen.tsx"],
+      "requiredMarkers": ["/location", "GPS مصدق", "لا تُعرض أو تُرسل إحداثيات افتراضية"]
+    },
+    {
+      "id": "FS-17",
+      "name": "Targeted verification and CI",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": [".github/workflows/jrn-017-live-tracking-verify.yml", "services/dsh/tests/jrn-017-live-tracking-closure.test.mjs", "services/dsh/tsconfig.jrn-017.json"],
+      "requiredMarkers": ["JRN-017 backend and provider", "JRN-017 contract and surfaces", "jrn-017/captain-live-tracking"]
+    },
+    {
+      "id": "FS-18",
+      "name": "Same-commit evidence and independent review gate",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/contracts/jrn-017-slice-closure.json", ".github/workflows/jrn-017-live-tracking-verify.yml"],
+      "requiredMarkers": ["NEEDS_EVIDENCE", "requiredSliceCount", "github.sha", "independentReviewPending"]
+    }
+  ]
+}
