@@ -4,6 +4,7 @@ import { MobileScrollView, TopBar, useTheme } from '@bthwani/ui-kit';
 import { WltDshCaptainBridge } from '../../shared/finance-wlt-link/wlt/generated/wlt_frontend_dsh_app_captain.facade';
 import { ActorWalletPanel } from '../../shared/finance-wlt-link/actor-wallet';
 import { RepresentativeCommissionPanel } from '../../shared/finance-wlt-link/jrn036';
+import { PayoutDestinationPanel } from '../../shared/finance-wlt-link/jrn037';
 import { DshOperationScreen } from '../DshOperationScreen';
 import type {
 	DshCaptainFinanceScreenState,
@@ -32,7 +33,7 @@ export function DshCaptainFinanceScreen({
 			<DshOperationScreen
 				state={state}
 				title="المالية"
-				subtitle="محفظة الكابتن والدفتر وذمة COD والعمولات تُقرأ من WLT عبر وكيل DSH المحكوم."
+				subtitle="محفظة الكابتن والدفتر وذمة COD والعمولات والصرف تُقرأ من WLT عبر وكيل DSH المحكوم."
 				onRetry={onRetry}
 			/>
 		);
@@ -45,6 +46,7 @@ export function DshCaptainFinanceScreen({
 				<MobileScrollView fill padding={4} gap={4} contentContainerStyle={{ paddingBottom: 120 }}>
 					<ActorWalletPanel actorType="captain" title="الرصيد والأرباح المرجعية" embedded />
 					<RepresentativeCommissionPanel actorType="captain" title="عمولات التوصيل" embedded />
+					<PayoutDestinationPanel actorType="captain" title="وجهة صرف الكابتن وطلبات الدفع" embedded />
 				</MobileScrollView>
 			</View>
 		);
