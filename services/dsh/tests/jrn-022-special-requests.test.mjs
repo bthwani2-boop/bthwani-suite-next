@@ -55,17 +55,21 @@ test("JRN-022 shared client screen binds governed actions and recovery states", 
   assert.ok(!screen.includes('role="headingXs"'), "client screen must only use governed typography roles");
 });
 
-test("JRN-022 operator workbench performs quote transition and dispatch", () => {
+test("JRN-022 operator workbench performs quote transition and dispatch through UI Kit controls", () => {
   const workbench = read("services/dsh/frontend/shared/special-requests/OperatorSpecialRequestsWorkbench.tsx");
   assertIncludesAll(workbench, [
     "expectedVersion: selectedRequest.version",
     "workflowStage: 'customer_approval'",
     "quotePreparedAt: new Date().toISOString()",
     "assignDispatch(selectedRequest.id, captainId)",
+    "<TextField",
+    "<Button",
     "إرسال العرض للعميل",
     "إسناد الطلب للكابتن",
   ], "operator special-request workbench");
   assert.ok(!workbench.includes('role="titleXs"'), "operator workbench must only use governed typography roles");
+  assert.ok(!workbench.includes("<input"), "operator workbench must not bypass the governed TextField");
+  assert.ok(!workbench.includes("<button"), "operator workbench must not bypass the governed Button");
 });
 
 test("JRN-022 frontend dispatch adapter matches the backend assignment response", () => {
