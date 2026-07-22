@@ -1,5 +1,5 @@
 // Partner Onboarding & Store Publication — shared brain public barrel.
-// Surfaces import ONLY from this file, never from internal subpaths.
+// Surfaces import from this barrel or an explicit *.public.ts capability entrypoint, never implementation modules.
 
 export type { DshPartnerActivationStatus, DshPartnerActivationStateMetadata, DshPartnerReadinessCheckItem, DshPartnerDecisionCommand, DshPartnerDecisionCommandId } from "./partner-activation.model";
 export {
@@ -61,13 +61,6 @@ export {
   usePartnerDeliveryPricingController,
   findDeliveryPricing,
 } from "./operator-delivery-pricing";
-
-// JRN-026 partner pricing uses the dedicated partner endpoint and supports first-policy creation.
-// Aliases avoid colliding with the legacy operator projection while keeping surfaces on this barrel.
-export {
-  usePartnerDeliveryPricingController as useGovernedPartnerDeliveryPricingController,
-  findDeliveryPricing as findGovernedDeliveryPricing,
-} from "./use-delivery-pricing-controller";
 
 export {
   fieldListDrafts,
