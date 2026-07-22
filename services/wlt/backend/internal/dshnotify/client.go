@@ -1,11 +1,6 @@
-// Package dshnotify sends payment-session outcome events from WLT (the sole
-// owner of payment authorization/capture truth) back to DSH, so non-COD
-// checkout intents (wallet, mixed, official_wallet) can leave payment_pending
-// once WLT reaches a terminal outcome. Delivery is durable: callers enqueue
-// the event in the wlt_dsh_outbox_events table (see internal/dshoutbox) in
-// the same transaction as the status transition, and a background worker
-// calls Notify with retry until DSH accepts it -- a lost webhook no longer
-// depends on a single best-effort HTTP call surviving.
+// Package dshnotify sends durable payment and refund outcome events from WLT
+// back to DSH. WLT remains the sole owner of financial truth; DSH receives
+// only the operational projection needed to advance affected journeys.
 package dshnotify
 
 import (
@@ -18,10 +13,6 @@ import (
 	"time"
 )
 
-// ErrNotConfigured is returned by Notify when the client is missing the DSH
-// base URL or the shared service token, so callers (the outbox worker) can
-// distinguish a misconfiguration from a delivery failure rather than
-// silently treating an unsent notification as success.
 var ErrNotConfigured = errors.New("dshnotify: client is not configured (missing baseURL or serviceToken)")
 
 type Client struct {
@@ -30,9 +21,19 @@ type Client struct {
 	http         *http.Client
 }
 
-// NewClient builds a client for calling DSH. serviceToken is the shared
-// secret DSH validates via DSH_WLT_SERVICE_TOKEN; it is sent as the bearer
-// token on every outbound request alongside X-Service-Caller: wlt.
+type Event struct {
+	EventID          string
+	CorrelationID    string
+	TenantID         string
+	CheckoutIntentID *string
+	SpecialRequestID *string
+	PaymentSessionID string
+	Status           string
+	OrderID          string
+	RefundReference  string
+	Reason           string
+}
+
 func NewClient(baseURL, serviceToken string) *Client {
 	return &Client{
 		baseURL:      strings.TrimRight(baseURL, "/"),
@@ -45,34 +46,54 @@ func (c *Client) Configured() bool {
 	return c != nil && c.baseURL != "" && c.serviceToken != ""
 }
 
-// Notify reports a terminal payment-session status to DSH, for either a
-// checkout intent or a special request -- exactly one of
-// checkoutIntentID/specialRequestID must be non-nil/non-empty, matching the
-// session's own source identity (see internal/dshoutbox.Event). The payload
-// carries whichever one is set; the other key is omitted entirely rather
-// than sent as an empty string, since DSH's inbound handler treats an empty
-// checkoutIntentId as invalid. Callers (see internal/dshoutbox) are
-// responsible for retrying on error; this call does not retry or swallow
-// failures itself.
+// Notify preserves the established payment-event call contract.
 func (c *Client) Notify(ctx context.Context, tenantID string, checkoutIntentID, specialRequestID *string, paymentSessionID, status string) error {
+	return c.NotifyEvent(ctx, Event{
+		TenantID: tenantID, CheckoutIntentID: checkoutIntentID, SpecialRequestID: specialRequestID,
+		PaymentSessionID: paymentSessionID, Status: status,
+	})
+}
+
+// NotifyEvent delivers either a payment-session event or a completed-refund
+// event. Refund events include order/refund identity and never expose provider
+// secrets or operator identities to DSH.
+func (c *Client) NotifyEvent(ctx context.Context, event Event) error {
 	if !c.Configured() {
 		return ErrNotConfigured
 	}
 	payload := map[string]string{
-		"paymentSessionId": paymentSessionID,
-		"status":           status,
+		"paymentSessionId": event.PaymentSessionID,
+		"status":           event.Status,
 	}
-	if tenantID != "" {
-		payload["tenantId"] = tenantID
+	if event.EventID != "" {
+		payload["eventId"] = event.EventID
 	}
-	correlationID := paymentSessionID
+	if event.TenantID != "" {
+		payload["tenantId"] = event.TenantID
+	}
+	if event.OrderID != "" {
+		payload["orderId"] = event.OrderID
+	}
+	if event.RefundReference != "" {
+		payload["refundReference"] = event.RefundReference
+	}
+	if event.Reason != "" {
+		payload["reason"] = event.Reason
+	}
+	correlationID := strings.TrimSpace(event.CorrelationID)
+	if correlationID == "" {
+		correlationID = event.PaymentSessionID
+	}
 	switch {
-	case checkoutIntentID != nil && *checkoutIntentID != "":
-		payload["checkoutIntentId"] = *checkoutIntentID
-		correlationID = *checkoutIntentID
-	case specialRequestID != nil && *specialRequestID != "":
-		payload["specialRequestId"] = *specialRequestID
-		correlationID = *specialRequestID
+	case event.CheckoutIntentID != nil && *event.CheckoutIntentID != "":
+		payload["checkoutIntentId"] = *event.CheckoutIntentID
+		if correlationID == "" { correlationID = *event.CheckoutIntentID }
+	case event.SpecialRequestID != nil && *event.SpecialRequestID != "":
+		payload["specialRequestId"] = *event.SpecialRequestID
+		if correlationID == "" { correlationID = *event.SpecialRequestID }
+	}
+	if correlationID != "" {
+		payload["correlationId"] = correlationID
 	}
 	body, err := json.Marshal(payload)
 	if err != nil {
@@ -86,7 +107,6 @@ func (c *Client) Notify(ctx context.Context, tenantID string, checkoutIntentID, 
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "wlt")
 	req.Header.Set("X-Correlation-ID", correlationID)
-
 	resp, err := c.http.Do(req)
 	if err != nil {
 		return err
@@ -101,5 +121,5 @@ func (c *Client) Notify(ctx context.Context, tenantID string, checkoutIntentID, 
 type httpStatusError struct{ status int }
 
 func (e *httpStatusError) Error() string {
-	return "DSH payment-session event webhook returned non-2xx status"
+	return "DSH WLT event webhook returned non-2xx status"
 }
