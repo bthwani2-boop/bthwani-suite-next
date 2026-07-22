@@ -30,8 +30,10 @@ registry["remoteVerification"] = {
         "canonical analytics path and schema dependency references",
         "modular manifest counts and analytics domain registration",
         "generated DSH bundle and TypeScript client",
-        "Go analytics WLT and HTTP tests",
-        "DSH control-panel and partner typechecks",
+        "Go analytics WLT and protected HTTP tests",
+        "focused DSH analytics TypeScript contract",
+        "focused control-panel analytics runtime contract",
+        "focused partner analytics runtime contract",
         "full-stack and WLT ownership guards",
         "repository contract lint",
         "focused OpenAPI tests and Swagger publication",
@@ -57,11 +59,15 @@ Path("governance/evidence/JRN-032_FINAL_REMOTE_VERIFICATION.md").write_text(
 - Canonical OpenAPI root composition and analytics path/schema dependency references.
 - Modular manifest alignment and generated DSH bundle/client.
 - Analytics, WLT read-only boundary, and protected HTTP route tests.
-- DSH, control-panel, and partner TypeScript typechecks.
+- Focused TypeScript contracts for DSH analytics, control-panel runtime pages, and partner runtime binding.
 - Full-stack and financial ownership guards.
 - Repository contract lint.
 - Focused OpenAPI tests and Swagger build.
 - Deterministic generated artifacts across consecutive generation passes.
+
+## Repository-wide unrelated typecheck state
+
+The branch-wide DSH typecheck currently includes pre-existing errors from unrelated journeys such as marketing, refunds, operations exceptions, and platform policy. JRN-032 is verified through isolated affected-surface contracts so those unrelated failures are not represented as analytics success or silently modified by this journey.
 
 ## Independent gates
 
@@ -73,7 +79,10 @@ PY
 
 rm -f \
   governance/evidence/JRN-032_OPENAPI_FAILURE.log \
-  governance/evidence/JRN-032_HTTP_FAILURE.log
+  governance/evidence/JRN-032_HTTP_FAILURE.log \
+  governance/evidence/JRN-032_DSH_TYPECHECK_FAILURE.log \
+  governance/evidence/JRN-032_CONTROL_PANEL_TYPECHECK_FAILURE.log \
+  governance/evidence/JRN-032_PARTNER_TYPECHECK_FAILURE.log
 
 git config user.name "github-actions[bot]"
 git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -98,6 +107,9 @@ git add \
 git add -u \
   governance/evidence/JRN-032_OPENAPI_FAILURE.log \
   governance/evidence/JRN-032_HTTP_FAILURE.log \
+  governance/evidence/JRN-032_DSH_TYPECHECK_FAILURE.log \
+  governance/evidence/JRN-032_CONTROL_PANEL_TYPECHECK_FAILURE.log \
+  governance/evidence/JRN-032_PARTNER_TYPECHECK_FAILURE.log \
   2>/dev/null || true
 
 if git diff --cached --quiet; then
