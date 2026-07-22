@@ -1,4 +1,4 @@
-name: DSH OpenAPI Modularization
+name: DSH OpenAPI Verification
 
 on:
   workflow_dispatch:
@@ -6,22 +6,17 @@ on:
     branches: [sambassam]
     paths:
       - ".github/workflows/dsh-openapi-modularize.yml"
-      - "tools/scripts/dsh-openapi-modular-lib.mjs"
-      - "tools/scripts/patch-dsh-openapi-modular-lib.mjs"
-      - "tools/scripts/migrate-dsh-openapi-modular.mjs"
-      - "tools/scripts/compose-dsh-openapi.mjs"
-      - "tools/guards/dsh-openapi-modular-gate.mjs"
 
 permissions:
   contents: write
 
 concurrency:
-  group: dsh-openapi-modularize-${{ github.ref }}
+  group: dsh-openapi-verification-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  modularize:
-    name: Split DSH OpenAPI and commit governed modules
+  verify:
+    name: Verify modular contract, bundle, client, and tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sambassam
@@ -31,31 +26,106 @@ jobs:
           fetch-depth: 1
           show-progress: false
 
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "10.34.2"
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "24.17.0"
+          cache: pnpm
 
-      - name: Finalize modularization engine
-        run: node tools/scripts/patch-dsh-openapi-modular-lib.mjs
+      - name: Prepare diagnostics
+        run: mkdir -p .diagnostics/contracts
 
-      - name: Split and structurally verify DSH contract
-        run: node tools/scripts/migrate-dsh-openapi-modular.mjs --apply
+      - name: Install workspace dependencies
+        run: |
+          set -o pipefail
+          pnpm install --frozen-lockfile 2>&1 | tee .diagnostics/contracts/dsh-openapi-install.log
+
+      - name: Verify contract and regenerate TypeScript client
+        run: |
+          set -o pipefail
+          pnpm --dir services/dsh openapi:verify 2>&1 | tee .diagnostics/contracts/dsh-openapi-verify.log
+
+      - name: Run contract foundation gate
+        run: |
+          set -o pipefail
+          pnpm run contracts:lint 2>&1 | tee .diagnostics/contracts/dsh-contract-foundation.log
+
+      - name: Run DSH contract tests
+        run: |
+          set -o pipefail
+          pnpm --dir services/dsh test 2>&1 | tee .diagnostics/contracts/dsh-contract-tests.log
 
       - name: Validate generated tree
         run: git diff --check
 
-      - name: Commit modular contract
+      - name: Record verification evidence
         run: |
-          if [ -z "$(git status --porcelain)" ]; then
-            echo "No modularization changes were produced."
-            exit 0
-          fi
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const manifest = JSON.parse(fs.readFileSync('services/dsh/contracts/dsh.modular.manifest.json', 'utf8'));
+          const evidence = {
+            status: 'PASS',
+            sourceCommit: process.env.GITHUB_SHA,
+            verifiedAt: new Date().toISOString(),
+            entryContract: manifest.entryContract,
+            generatedBundle: manifest.generatedBundle,
+            pathCount: manifest.pathCount,
+            operationIdCount: manifest.operationIdCount,
+            componentCounts: manifest.componentCounts,
+            checks: [
+              'openapi-modular-gate',
+              'openapi-typescript-generation',
+              'contracts-foundation',
+              'dsh-contract-tests',
+              'git-diff-check',
+            ],
+          };
+          fs.writeFileSync(
+            'services/dsh/contracts/dsh.openapi.verification.json',
+            `${JSON.stringify(evidence, null, 2)}\n`,
+            'utf8',
+          );
+          NODE
+
+      - name: Commit verified generated artifacts
+        run: |
+          rm -rf .diagnostics/contracts
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           git add -f services/dsh/contracts/generated/dsh.bundle.openapi.yaml
-          git commit -m "refactor(dsh): modularize sovereign OpenAPI contract"
+          git commit -m "chore(dsh): verify modular OpenAPI and regenerate client"
+          git fetch origin sambassam
+          git rebase origin/sambassam
+          git push origin HEAD:sambassam
+
+      - name: Persist failure evidence
+        if: failure()
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          fs.mkdirSync('.diagnostics/contracts', { recursive: true });
+          fs.writeFileSync(
+            '.diagnostics/contracts/dsh-openapi-verification-failure.json',
+            `${JSON.stringify({
+              status: 'FAIL',
+              sourceCommit: process.env.GITHUB_SHA,
+              workflow: process.env.GITHUB_WORKFLOW,
+              runId: process.env.GITHUB_RUN_ID,
+              recordedAt: new Date().toISOString(),
+            }, null, 2)}\n`,
+            'utf8',
+          );
+          NODE
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f .diagnostics/contracts
+          git commit -m "diagnostics(dsh): capture modular OpenAPI verification failure"
           git fetch origin sambassam
           git rebase origin/sambassam
           git push origin HEAD:sambassam
