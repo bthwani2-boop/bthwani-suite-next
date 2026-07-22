@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Pressable } from 'react-native';
 import { Text, Icon, Box, Button, spacing, radius, useTheme } from '@bthwani/ui-kit';
 import { ActorWalletPanel } from '../../actor-wallet';
+import { RepresentativeCommissionPanel } from '../../jrn036';
 
 export type WltDshPartnerBridgeProps = {
   readonly title?: string | undefined;
@@ -30,7 +31,7 @@ export function WltDshPartnerBridge({
   onOpenFinancialReport,
 }: WltDshPartnerBridgeProps) {
   const resolvedTitle = title ?? branchLabel ?? 'مالية الشريك';
-  const resolvedSubtitle = subtitle ?? activeZoneLabel ?? 'المحفظة والدفتر المرجعي من WLT';
+  const resolvedSubtitle = subtitle ?? activeZoneLabel ?? 'المحفظة والتسويات والعمولات من WLT';
   const resolvedOnPress = onPress ?? onBack;
   const theme = useTheme() as any;
 
@@ -57,6 +58,7 @@ export function WltDshPartnerBridge({
       ) : null}
 
       <ActorWalletPanel actorType="partner" title="محفظة الشريك" embedded />
+      <RepresentativeCommissionPanel actorType="partner" title="عمولات الشريك" embedded />
 
       <View style={{ gap: spacing[3] }}>
         {onOpenExpandedWallet ? (
