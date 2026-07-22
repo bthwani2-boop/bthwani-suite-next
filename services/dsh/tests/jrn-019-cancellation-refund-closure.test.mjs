@@ -85,6 +85,6 @@ test('JRN-019 readback is shared across client, partner, and operations', async 
   assert.match(operatorSurface, /FINANCIAL_CLOSURE_LABELS/);
   assert.match(operatorSurface, /<TextField/);
   assert.doesNotMatch(operatorSurface, /<textarea/);
-  assert.match(controller, /financialClosureStatus === "pending"/);
+  assert.match(controller, /financialClosureStatus !== "pending"/);
   assert.match(controller, /setInterval/);
 });
