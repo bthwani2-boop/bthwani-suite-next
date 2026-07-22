@@ -149,7 +149,7 @@ export function ActorNotificationsPanel({
           <StateView title="لا توجد تفضيلات مخصصة" description="تستخدم الإشعارات إعدادات المنصة الافتراضية لهذا الممثل." />
         ) : (
           preferenceState.preferences.map((preference) => (
-            <Surface key={preference.topic} tone="subtle" padding={3} gap={2}>
+            <Surface key={preference.topic} tone="inset" padding={3} gap={2}>
               <Box layoutDirection="row" align="center" justify="space-between" gap={2}>
                 <Box gap={1}>
                   <Text role="label" align="start">{preference.topic}</Text>

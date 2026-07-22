@@ -24,6 +24,8 @@ const { req } = createDshRawHttpClient(resolveDshApiBaseUrl(), "mkt");
 type MarketingTargetFields = {
   targetType?: string;
   targetId?: string;
+  targetCityCode?: string;
+  targetServiceAreaCode?: string;
   audience?: string;
   placement?: string;
 };
