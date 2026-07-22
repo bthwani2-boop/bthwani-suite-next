@@ -47,23 +47,46 @@ func validateStoreCaptainHandoffExceptionInput(input ReportDeliveryExceptionInpu
 	return nil
 }
 
+func sameOptionalFloat64(left, right *float64) bool {
+	if left == nil || right == nil {
+		return left == nil && right == nil
+	}
+	return *left == *right
+}
+
+func validateHandoffExceptionPayload(
+	item *DeliveryException,
+	input ReportDeliveryExceptionInput,
+) error {
+	if item.ReasonCode != input.ReasonCode ||
+		item.Note != input.Note ||
+		!sameOptionalFloat64(item.ReportedLatitude, input.Latitude) ||
+		!sameOptionalFloat64(item.ReportedLongitude, input.Longitude) {
+		return fmt.Errorf("%w: correlationId already belongs to a different exception command payload", ErrConflict)
+	}
+	return nil
+}
+
 func validateExistingHandoffExceptionCommand(
 	db *sql.DB,
 	exceptionID string,
-	recordedReason DeliveryExceptionReasonCode,
 	recordedActorID string,
 	recordedRole string,
-	expectedReason DeliveryExceptionReasonCode,
 	expectedActorID string,
 	expectedRole StoreCaptainHandoffExceptionReporterRole,
+	input ReportDeliveryExceptionInput,
 ) (*DeliveryException, error) {
-	if recordedReason != expectedReason {
-		return nil, fmt.Errorf("%w: correlationId already belongs to a different exception command", ErrConflict)
-	}
 	if recordedActorID != expectedActorID || recordedRole != string(expectedRole) {
 		return nil, fmt.Errorf("%w: correlationId already belongs to another reporter", ErrConflict)
 	}
-	return GetDeliveryException(db, exceptionID)
+	item, err := GetDeliveryException(db, exceptionID)
+	if err != nil {
+		return nil, err
+	}
+	if err = validateHandoffExceptionPayload(item, input); err != nil {
+		return nil, err
+	}
+	return item, nil
 }
 
 func findCaptainHandoffExceptionReplay(
@@ -73,9 +96,8 @@ func findCaptainHandoffExceptionReplay(
 	input ReportDeliveryExceptionInput,
 ) (*DeliveryException, bool, error) {
 	var exceptionID, recordedActorID, recordedRole string
-	var recordedReason DeliveryExceptionReasonCode
 	err := db.QueryRow(`
-		SELECT e.id::text, e.reason_code, r.actor_id, r.actor_role
+		SELECT e.id::text, r.actor_id, r.actor_role
 		FROM dsh_delivery_exceptions e
 		JOIN dsh_delivery_exception_reporters r ON r.exception_id = e.id
 		WHERE e.assignment_id = $1::uuid
@@ -84,7 +106,6 @@ func findCaptainHandoffExceptionReplay(
 		ORDER BY e.reported_at DESC
 		LIMIT 1`, assignmentID, captainID, input.CorrelationID).Scan(
 		&exceptionID,
-		&recordedReason,
 		&recordedActorID,
 		&recordedRole,
 	)
@@ -97,12 +118,11 @@ func findCaptainHandoffExceptionReplay(
 	item, err := validateExistingHandoffExceptionCommand(
 		db,
 		exceptionID,
-		recordedReason,
 		recordedActorID,
 		recordedRole,
-		input.ReasonCode,
 		captainID,
 		HandoffExceptionReporterCaptain,
+		input,
 	)
 	return item, true, err
 }
@@ -115,9 +135,8 @@ func findPartnerHandoffExceptionReplay(
 	input ReportDeliveryExceptionInput,
 ) (*DeliveryException, bool, error) {
 	var exceptionID, recordedActorID, recordedRole string
-	var recordedReason DeliveryExceptionReasonCode
 	err := db.QueryRow(`
-		SELECT e.id::text, e.reason_code, r.actor_id, r.actor_role
+		SELECT e.id::text, r.actor_id, r.actor_role
 		FROM dsh_delivery_exceptions e
 		JOIN dsh_delivery_exception_reporters r ON r.exception_id = e.id
 		JOIN dsh_orders o ON o.id = e.order_id
@@ -127,7 +146,6 @@ func findPartnerHandoffExceptionReplay(
 		ORDER BY e.reported_at DESC
 		LIMIT 1`, orderID, storeID, input.CorrelationID).Scan(
 		&exceptionID,
-		&recordedReason,
 		&recordedActorID,
 		&recordedRole,
 	)
@@ -140,12 +158,11 @@ func findPartnerHandoffExceptionReplay(
 	item, err := validateExistingHandoffExceptionCommand(
 		db,
 		exceptionID,
-		recordedReason,
 		recordedActorID,
 		recordedRole,
-		input.ReasonCode,
 		actorID,
 		HandoffExceptionReporterPartner,
+		input,
 	)
 	return item, true, err
 }
@@ -301,8 +318,11 @@ func reportStoreCaptainHandoffException(
 
 	existing, err := getDeliveryExceptionByCorrelationTx(tx, tenantID, input.CorrelationID)
 	if err == nil {
-		if existing.AssignmentID != assignmentID || existing.ReasonCode != input.ReasonCode {
+		if existing.AssignmentID != assignmentID {
 			return nil, fmt.Errorf("%w: correlationId already belongs to a different exception command", ErrConflict)
+		}
+		if err = validateHandoffExceptionPayload(existing, input); err != nil {
+			return nil, err
 		}
 		var recordedActorID, recordedRole string
 		if err = tx.QueryRow(`
