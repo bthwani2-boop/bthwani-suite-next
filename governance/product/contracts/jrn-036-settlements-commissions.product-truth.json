@@ -1,0 +1,171 @@
+{
+  "schemaVersion": 1,
+  "capabilityId": "JRN_036_SETTLEMENTS_COMMISSIONS",
+  "state": "DISCOVERY",
+  "problem": {
+    "statement": "Partner settlements and representative commissions require one auditable WLT-owned financial lifecycle backed by durable DSH operational evidence, versioned policies, deterministic calculation, explicit adjustments and read-only multi-surface readback.",
+    "affectedActors": ["partner", "captain", "field", "finance_operator", "dsh_service", "wlt_service"],
+    "currentWorkaround": "Settlement creation is derived from delivered orders and field commissions use one WLT policy, but order/captain commission amounts can still be caller supplied, settlement inputs do not retain cancellation/refund evidence, adjustments are not first-class, and representative surfaces expose fragmented read models.",
+    "frequency": "continuous",
+    "severity": "critical",
+    "evidenceState": "QUALITATIVE",
+    "evidenceReferences": [
+      "governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md#jrn-036",
+      "services/wlt/backend/internal/settlement/governed_source.go",
+      "services/wlt/backend/internal/cod/cod.go",
+      "services/dsh/backend/internal/http/finance_settlement_sources.go",
+      "services/wlt/database/migrations/wlt-031_governed_settlement_sources.sql"
+    ]
+  },
+  "actors": [
+    {
+      "id": "partner",
+      "role": "Authenticated partner viewing only its WLT settlement and commission references",
+      "permittedActions": ["read own settlement cycles", "read own deductions and adjustments", "read own commission references", "refresh canonical WLT readback"],
+      "forbiddenActions": ["calculate commission locally", "post or reverse a settlement", "change a financial policy", "read another partner financial record"]
+    },
+    {
+      "id": "captain",
+      "role": "Authenticated captain viewing only personal commission lifecycle and adjustment reasons",
+      "permittedActions": ["read own commissions", "read own pending confirmed settled rejected and reversed states", "refresh canonical readback"],
+      "forbiddenActions": ["submit an amount", "confirm settle reject reverse or adjust a commission", "read another beneficiary record"]
+    },
+    {
+      "id": "field",
+      "role": "Authenticated field representative viewing only personal visit commission lifecycle",
+      "permittedActions": ["read own visit commissions", "read policy-derived amount and adjustment reasons", "refresh canonical readback"],
+      "forbiddenActions": ["submit an amount", "change visit evidence", "mutate a commission state", "read another representative record"]
+    },
+    {
+      "id": "finance_operator",
+      "role": "Authorized control-panel operator managing policies and governed financial lifecycle actions",
+      "permittedActions": ["create or update a versioned policy with reason", "initiate a settlement from DSH evidence", "confirm reject settle or reverse an eligible commission", "create a reasoned adjustment", "read audit and reconciliation references"],
+      "forbiddenActions": ["supply settlement or commission truth amounts", "approve an action created by the same actor where maker-checker applies", "erase audit evidence", "bypass mutation or service authentication gates"]
+    },
+    {
+      "id": "dsh_service",
+      "role": "Operational truth owner providing durable completion and cancellation evidence",
+      "permittedActions": ["deliver immutable order and visit evidence", "carry correlation and idempotency identifiers", "proxy authorized read-only references"],
+      "forbiddenActions": ["calculate a WLT fee or commission", "write WLT tables", "declare refund completion", "send mutable or unverifiable evidence"]
+    },
+    {
+      "id": "wlt_service",
+      "role": "Sole financial truth owner for policy application settlement commission wallet ledger adjustment and audit",
+      "permittedActions": ["verify DSH evidence", "verify WLT refund truth", "calculate governed amounts", "post balanced ledger effects", "retain policy and adjustment versions", "return canonical readback"],
+      "forbiddenActions": ["trust caller supplied financial amounts", "settle unverified evidence", "allow negative wallet buckets", "reuse an idempotency key for different inputs"]
+    }
+  ],
+  "surfaces": [
+    {
+      "id": "app-partner",
+      "required": true,
+      "actors": ["partner"],
+      "routesOrScreens": ["PartnerHubScreen", "settlement cycle card", "commission and adjustment history"],
+      "operationIds": ["listDshWltSettlements", "getDshWltSettlementSummary", "listDshWltCommissions"],
+      "states": ["loading", "empty", "success", "pending", "settled", "rejected", "reversed", "forbidden", "offline", "partial", "error"],
+      "actions": ["refresh", "inspect cycle", "inspect adjustment reason"]
+    },
+    {
+      "id": "app-captain",
+      "required": true,
+      "actors": ["captain"],
+      "routesOrScreens": ["DshCaptainFinanceScreen", "commission lifecycle list"],
+      "operationIds": ["listDshWltCommissions"],
+      "states": ["loading", "empty", "success", "pending", "confirmed", "settled", "rejected", "reversed", "forbidden", "offline", "error"],
+      "actions": ["refresh", "inspect commission", "inspect adjustment reason"]
+    },
+    {
+      "id": "app-field",
+      "required": true,
+      "actors": ["field"],
+      "routesOrScreens": ["DshFieldFinanceScreen", "visit commission lifecycle list"],
+      "operationIds": ["listDshWltCommissions"],
+      "states": ["loading", "empty", "success", "pending", "confirmed", "settled", "rejected", "reversed", "forbidden", "offline", "error"],
+      "actions": ["refresh", "inspect visit source", "inspect adjustment reason"]
+    },
+    {
+      "id": "control-panel",
+      "required": true,
+      "actors": ["finance_operator"],
+      "routesOrScreens": ["finance settlements", "settlement policy editor", "commission policy editor", "commission lifecycle and audit"],
+      "operationIds": ["createDshSettlementFromDeliveredOrders", "upsertWltSettlementPolicy", "upsertWltCommissionPolicy", "adjustWltCommission", "confirmWltCommission", "settleWltCommission", "rejectWltCommission", "reverseWltCommission"],
+      "states": ["loading", "empty", "success", "draft", "active", "inactive", "pending", "confirmed", "settled", "rejected", "reversed", "forbidden", "conflict", "offline", "error"],
+      "actions": ["create policy version", "initiate settlement", "confirm", "settle", "reject", "reverse", "adjust", "inspect audit"]
+    },
+    {
+      "id": "backend",
+      "required": true,
+      "actors": ["finance_operator", "dsh_service", "wlt_service"],
+      "routesOrScreens": ["DSH finance orchestration", "WLT settlement and commission routes"],
+      "operationIds": ["createWltGovernedSettlement", "upsertWltSettlementPolicy", "createWltGovernedCommission", "upsertWltCommissionPolicy", "adjustWltCommission"],
+      "states": ["authorized", "forbidden", "invalid", "conflict", "pending", "confirmed", "settled", "rejected", "reversed"],
+      "actions": ["authenticate", "validate evidence", "calculate", "enforce idempotency", "post ledger", "audit", "read back"]
+    },
+    {
+      "id": "database",
+      "required": true,
+      "actors": ["wlt_service"],
+      "routesOrScreens": ["wlt settlement requests", "settlement evidence", "commission policy versions", "commission evidence", "commission adjustments", "financial audit"],
+      "operationIds": [],
+      "states": ["versioned", "immutable", "idempotent", "balanced", "auditable", "tenant_scoped"],
+      "actions": ["enforce uniqueness", "retain evidence", "retain reasoned adjustment", "prevent negative amount", "retain policy version"]
+    },
+    {
+      "id": "shared",
+      "required": true,
+      "actors": ["partner", "captain", "field", "finance_operator"],
+      "routesOrScreens": ["services/dsh/frontend/shared/finance-wlt-link"],
+      "operationIds": ["listDshWltSettlements", "getDshWltSettlementSummary", "listDshWltCommissions"],
+      "states": ["idle", "loading", "empty", "success", "forbidden", "conflict", "offline", "partial", "error"],
+      "actions": ["map canonical states", "classify errors", "disable duplicate actions", "refresh canonical readback"]
+    }
+  ],
+  "outcome": {
+    "statement": "Every settlement and commission is deterministically calculated by WLT from durable evidence and a retained policy version, every adjustment has a reason and balanced financial effect, and every required surface reads only canonical scoped references.",
+    "primaryMetric": "verified evidence to canonical settlement or commission readback rate",
+    "guardrailMetrics": ["caller supplied financial amount count", "duplicate source settlement count", "unverified completion evidence count", "completed refund omitted from settlement count", "commission without policy version count", "reasonless adjustment count", "negative wallet bucket count", "cross-actor read count", "unbalanced ledger transaction count"],
+    "baselineState": "Delivered-order settlement and field visit commission foundations exist, but evidence retention, non-field policy calculation, first-class adjustments and complete multi-surface readback are incomplete.",
+    "targetState": "WLT owns one evidence-backed idempotent settlement and commission lifecycle with policy versions, refund-aware calculation, adjustments, audit and scoped readback across partner captain field and control panel.",
+    "observationWindow": "targeted static database contract backend frontend finance security runtime and independent review"
+  },
+  "acceptance": {
+    "criteria": [
+      "DSH sends operational identities and immutable evidence only; it never sends a fee, net settlement amount or commission amount.",
+      "WLT verifies delivered or completed evidence, rejects cancelled evidence and applies completed WLT refund truth before settlement calculation.",
+      "A deterministic idempotency key cannot create two settlements or two commissions for the same evidence.",
+      "Every settlement and commission retains the exact policy version used for calculation.",
+      "Every non-field commission amount is calculated by an active WLT policy and never accepted from the caller.",
+      "Confirmation settlement rejection and reversal enforce legal source states and balanced wallet or ledger effects.",
+      "Every deduction or adjustment is signed, bounded, reasoned, operator-attributed and auditable.",
+      "Partner captain and field reads are actor-scoped and mutation-free.",
+      "Control-panel mutations require service authentication, explicit permissions, correlation and idempotency.",
+      "No runtime mock fixture local financial calculation or duplicate truth owner remains."
+    ],
+    "failureStates": ["caller supplied amount", "unverified evidence", "cancelled source settled", "completed refund ignored", "duplicate settlement", "duplicate commission", "missing policy", "stale policy ambiguity", "reasonless adjustment", "negative wallet bucket", "cross-actor financial read", "unbalanced ledger", "frontend-only success"],
+    "requiredChecks": ["product-truth schema validation", "WLT migration invariant checks", "targeted Go settlement and commission tests", "DSH and WLT route registration tests", "contract and generated-client drift check", "targeted TypeScript shared and surface typecheck", "finance boundary and idempotency gates", "actor isolation tests", "runtime settlement and commission smoke", "independent finance review", "independent product acceptance", "visual and accessibility review"],
+    "runtimeEvidenceRequired": true,
+    "visualEvidenceRequired": true
+  },
+  "invariants": {
+    "business": ["WLT exclusively owns settlement commission wallet ledger refund and adjustment truth.", "DSH exclusively owns operational completion cancellation order store visit and representative evidence.", "Every financial mutation carries service authentication correlation and idempotency.", "Every visible success is read back from WLT.", "Every policy change and adjustment is append-only auditable."],
+    "negative": ["No DSH or frontend code calculates settlement fees or commission amounts.", "No caller supplied monetary value becomes commission truth.", "No completed refund remains in the payable settlement basis.", "No cancelled or unverified source is settled.", "No idempotency key represents different inputs.", "No wallet balance becomes negative.", "No actor reads another actor financial detail."]
+  },
+  "owners": {
+    "productManager": "DSH and WLT Financial Product Management",
+    "productOwner": "Settlement and Commission Operations Product Owner",
+    "uxJourneyOwner": "Representative Finance Multi-Surface Experience Owner",
+    "engineeringOwner": "DSH and WLT Full-Stack Engineering",
+    "productManagerApproval": "PENDING",
+    "productOwnerApproval": "PENDING",
+    "productAcceptanceDecision": "PENDING"
+  },
+  "execution": {
+    "appetite": "Close JRN-036 code data contract lifecycle and surface gaps without moving financial truth out of WLT, deploying production or self-approving protected evidence.",
+    "fixedConstraints": ["Repository mode is REMOTE_ONLY on sambassam.", "WLT remains the sole financial truth owner.", "DSH provides durable operational evidence only.", "No PR merge force push release production deployment or SaaS activation is authorized.", "Independent product finance security QA release and risk approvals cannot be self-issued by engineering."],
+    "variableScope": ["Arabic status wording", "representative finance card presentation", "policy cycle labels", "non-financial operational diagnostics"],
+    "forbiddenScope": ["DSH-owned financial calculation", "frontend-owned financial derivation", "production provider enablement", "production deployment", "commercial SaaS activation", "fake runtime or financial evidence", "self-approval of protected gates"],
+    "forecastRange": "one sequential journey closure",
+    "confidence": "high",
+    "unknowns": ["Independent product manager approval outcome", "Independent product owner approval outcome", "Independent financial control review outcome", "Runtime database integration outcome", "Visual accessibility and weak-network outcome", "Release and production evidence outcome"]
+  }
+}
