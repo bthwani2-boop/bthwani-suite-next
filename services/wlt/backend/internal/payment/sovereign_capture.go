@@ -18,7 +18,10 @@ var ErrCodCollectionRequiresCodRecord = errors.New("COD collection must be recor
 // CaptureSessionWithProviderSovereign is the live capture path. Provider
 // success, payment-session state, double-entry posting and DSH notification are
 // committed as one WLT transaction. A captured session can therefore never be
-// visible without its accounting effect.
+// visible without its accounting effect. If the provider confirms success but
+// local finalization fails, WLT moves the claimed session to the explicit
+// provider_result_unknown reconciliation path instead of allowing a blind
+// capture retry.
 func CaptureSessionWithProviderSovereign(ctx context.Context, db *sql.DB, client financialProvider, sessionID string, meta provider.RequestMeta) (*PaymentSession, error) {
 	if sessionID == "" {
 		return nil, fmt.Errorf("paymentSessionId is required")
@@ -41,14 +44,19 @@ func CaptureSessionWithProviderSovereign(ctx context.Context, db *sql.DB, client
 		return nil, err
 	}
 
+	finalizationFailure := func(cause error) (*PaymentSession, error) {
+		_ = markSessionResultUnknownAndOpenCase(db, claimed, "capture", cause, "capture_pending")
+		return nil, cause
+	}
+
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
-		return nil, err
+		return finalizationFailure(fmt.Errorf("begin capture finalization: %w", err))
 	}
 	defer tx.Rollback()
 
 	if claimed.AmountMinorUnits <= 0 || claimed.Currency == "" {
-		return nil, fmt.Errorf("captured session %s has invalid accounting amount/currency", claimed.ID)
+		return finalizationFailure(fmt.Errorf("captured session %s has invalid accounting amount/currency", claimed.ID))
 	}
 	lines := []ledger.LedgerLine{
 		{AccountType: "provider_clearing", DebitCredit: "debit", AmountMinorUnits: claimed.AmountMinorUnits, Currency: claimed.Currency},
@@ -56,7 +64,7 @@ func CaptureSessionWithProviderSovereign(ctx context.Context, db *sql.DB, client
 	}
 	ledgerTransactionID, err := ledger.PostLedgerTransaction(ctx, tx, "payment_captured", "payment_session", claimed.ID, lines, ledger.Actor{ID: "wlt", Type: "service"})
 	if err != nil {
-		return nil, fmt.Errorf("post capture ledger transaction: %w", err)
+		return finalizationFailure(fmt.Errorf("post capture ledger transaction: %w", err))
 	}
 
 	const q = `
@@ -72,16 +80,16 @@ func CaptureSessionWithProviderSovereign(ctx context.Context, db *sql.DB, client
 		          captured_at, created_at, updated_at`
 	s, err := scanSession(tx.QueryRowContext(ctx, q, sessionID, result.ProviderReference, ledgerTransactionID))
 	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("session %s was no longer capture_pending when finalizing capture", sessionID)
+		return finalizationFailure(fmt.Errorf("session %s was no longer capture_pending when finalizing capture", sessionID))
 	}
 	if err != nil {
-		return nil, err
+		return finalizationFailure(fmt.Errorf("finalize captured session: %w", err))
 	}
 	if err := dshoutbox.Enqueue(tx, dshoutbox.EventTypeCaptured, s.ID, s.TenantID, s.CheckoutIntentID, s.SpecialRequestID); err != nil {
-		return nil, err
+		return finalizationFailure(fmt.Errorf("enqueue captured DSH projection: %w", err))
 	}
 	if err := tx.Commit(); err != nil {
-		return nil, err
+		return finalizationFailure(fmt.Errorf("commit captured session: %w", err))
 	}
 	return s, nil
 }
