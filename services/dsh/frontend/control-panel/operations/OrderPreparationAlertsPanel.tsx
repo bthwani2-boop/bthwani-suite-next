@@ -40,7 +40,7 @@ export function OrderPreparationAlertsPanel({
       ) : null}
       {state.kind === 'offline' || state.kind === 'forbidden' || state.kind === 'conflict' || state.kind === 'error' ? (
         <StateView
-          stateId={state.kind === 'offline' ? 'offline' : state.kind === 'forbidden' ? 'forbidden' : 'recoverableError'}
+          stateId={state.kind === 'offline' ? 'offline' : 'recoverableError'}
           tone={state.kind === 'offline' || state.kind === 'forbidden' ? 'warning' : 'danger'}
           title={state.kind === 'forbidden' ? 'إدارة التنبيهات غير مصرح بها' : 'تعذر تحديث التنبيهات'}
           description={state.message}
