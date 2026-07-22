@@ -128,8 +128,8 @@ export function OperatorSpecialRequestsWorkbench({ requestType, title, stageLabe
     return () => { cancelled = true; };
   }, [focusParams?.requestId, getOne]);
 
-  const updateForm = React.useCallback(<K extends keyof OperatorForm>(field: K, value: OperatorForm[K]) => {
-    setForm((current) => current ? { ...current, [field]: value } : current);
+  const updateForm = React.useCallback((field: keyof OperatorForm, value: string) => {
+    setForm((current) => current ? ({ ...current, [field]: value } as OperatorForm) : current);
     setFeedback(null);
   }, []);
 
@@ -367,7 +367,7 @@ export function OperatorSpecialRequestsWorkbench({ requestType, title, stageLabe
           </Box>
 
           <Box gap={2}>
-            <Text role="titleXs">عرض السعر وموافقة العميل</Text>
+            <Text role="titleSm">عرض السعر وموافقة العميل</Text>
             <label>
               القيمة بالوحدة الصغرى
               <input
@@ -392,7 +392,7 @@ export function OperatorSpecialRequestsWorkbench({ requestType, title, stageLabe
           </Box>
 
           <Box gap={2}>
-            <Text role="titleXs">إسناد الكابتن</Text>
+            <Text role="titleSm">إسناد الكابتن</Text>
             <label>
               معرّف الكابتن
               <input
