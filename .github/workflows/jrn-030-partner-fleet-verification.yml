@@ -13,47 +13,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: jrn-030-${{ github.workflow }}-${{ github.event_name }}-${{ github.sha }}
-  cancel-in-progress: false
+  group: jrn-030-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  detect-relevant-change:
-    name: Detect latest JRN-030 change
-    runs-on: ubuntu-latest
-    outputs:
-      relevant: ${{ steps.detect.outputs.relevant }}
-    steps:
-      - name: Checkout repository state
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-          fetch-depth: 10
-      - name: Detect JRN-030 paths in the triggering commit
-        id: detect
-        shell: bash
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          BEFORE_SHA: ${{ github.event.before }}
-        run: |
-          set -euo pipefail
-          if [[ "${EVENT_NAME}" == "workflow_dispatch" ]]; then
-            echo "relevant=true" >> "${GITHUB_OUTPUT}"
-            exit 0
-          fi
-          base="${BEFORE_SHA:-}"
-          if [[ -z "${base}" || "${base}" == "0000000000000000000000000000000000000000" ]]; then base="HEAD^"; fi
-          git diff --name-only "${base}" "${GITHUB_SHA}" > /tmp/jrn-030-changed-paths.txt
-          cat /tmp/jrn-030-changed-paths.txt
-          if grep -Eq '^((services/dsh/backend/internal/partnerfleet/)|(services/dsh/backend/internal/http/partner_fleet.*\.go$)|(services/dsh/backend/internal/http/journeys_026_030_routes_test\.go$)|(services/dsh/backend/cmd/dsh-api/main\.go$)|(services/dsh/database/migrations/dsh-059_partner_courier_connection_codes\.sql$)|(services/dsh/database/migrations/dsh-089_store_team_actor_scope_uniqueness\.sql$)|(services/dsh/frontend/shared/partner/partner-fleet\.api\.ts$)|(services/dsh/frontend/shared/partner/use-partner-fleet-controller\.ts$)|(services/dsh/frontend/app-partner/team/PartnerTeamManagementScreen\.tsx$)|(services/dsh/frontend/app-captain/account/PartnerFleetConnectionCard\.tsx$)|(services/dsh/frontend/control-panel/partners/stores/OperatorPartnerFleetPanel\.tsx$)|(services/dsh/contracts/dsh\.partner-fleet\.openapi\.yaml$)|(services/dsh/tests/jrn-030-partner-fleet\.test\.mjs$)|(services/dsh/tsconfig\.jrn-030\.json$)|(governance/product/contracts/JRN-030_PARTNER_FLEET_CONNECTION\.product-truth\.json$)|(\.github/workflows/jrn-030-partner-fleet-verification\.yml$))' /tmp/jrn-030-changed-paths.txt; then
-            echo "relevant=true" >> "${GITHUB_OUTPUT}"
-          else
-            echo "relevant=false" >> "${GITHUB_OUTPUT}"
-          fi
-
   verify:
     name: JRN-030 same-commit full-stack proof
-    needs: detect-relevant-change
-    if: needs.detect-relevant-change.outputs.relevant == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     services:
@@ -95,12 +60,30 @@ jobs:
           cache: pnpm
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
-      - name: Verify Go formatting and compile API composition root
+      - name: Verify JRN-030 Go formatting
         working-directory: services/dsh/backend
         run: |
-          test -z "$(gofmt -l internal/partnerfleet internal/http/partner_fleet.go internal/http/partner_fleet_membership_routes.go internal/http/partner_fleet_operator.go internal/http/journeys_026_030_routes_test.go cmd/dsh-api/main.go)"
-          go test ./internal/partnerfleet -run '^$'
-          go test ./internal/http -run '^TestJourneys026To030ExposeGovernedRoutes$' -count=1
+          mapfile -d '' go_files < <(find internal/partnerfleet -type f -name '*.go' -print0)
+          go_files+=(
+            internal/http/partner_fleet.go
+            internal/http/partner_fleet_membership_routes.go
+            internal/http/partner_fleet_operator.go
+            internal/http/journeys_026_030_routes_test.go
+          )
+          unformatted="$(gofmt -l "${go_files[@]}")"
+          if [[ -n "${unformatted}" ]]; then
+            printf 'Unformatted JRN-030 Go files:\n%s\n' "${unformatted}"
+            exit 1
+          fi
+      - name: Compile JRN-030 partner-fleet package
+        working-directory: services/dsh/backend
+        run: go test ./internal/partnerfleet -run '^$'
+      - name: Verify governed JRN-026..030 route composition
+        working-directory: services/dsh/backend
+        run: go test ./internal/http -run '^TestJourneys026To030ExposeGovernedRoutes$' -count=1
+      - name: Compile and build DSH API composition root
+        working-directory: services/dsh/backend
+        run: |
           go test ./cmd/dsh-api -run '^$'
           go build -o /tmp/dsh-api ./cmd/dsh-api
       - name: Parse and verify strict OpenAPI contract
@@ -111,6 +94,7 @@ jobs:
       - name: Apply all DSH migrations to PostgreSQL 16
         run: |
           for migration in $(find services/dsh/database/migrations -maxdepth 1 -type f -name '*.sql' | sort); do
+            echo "Applying ${migration}"
             psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d dsh_jrn_030 -f "${migration}"
           done
       - name: Prove JRN-030 schema invariants
@@ -133,7 +117,11 @@ jobs:
           /tmp/dsh-api > /tmp/dsh-jrn-030.log 2>&1 &
           api_pid=$!
           trap 'kill ${api_pid} || true; cat /tmp/dsh-jrn-030.log' EXIT
-          for attempt in $(seq 1 30); do curl --fail --silent http://127.0.0.1:58080/dsh/health >/dev/null && break; sleep 1; done
+          for attempt in $(seq 1 30); do
+            curl --fail --silent http://127.0.0.1:58080/dsh/health >/dev/null && break
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:58080/dsh/health
           status=$(curl --silent --output /tmp/operator-response.json --write-out '%{http_code}' http://127.0.0.1:58080/dsh/operator/stores/store-1/partner-fleet)
           test "${status}" = "401" || test "${status}" = "503"
           test "${status}" != "404"
