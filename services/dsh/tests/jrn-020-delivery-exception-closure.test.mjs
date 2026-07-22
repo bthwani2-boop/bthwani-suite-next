@@ -40,6 +40,7 @@ test('JRN-020 governed mutation boundary is active in runtime', async () => {
 
 test('JRN-020 shared mutation contract requires evidence and every governed action', async () => {
   const types = await source('../frontend/shared/dispatch/dispatch.types.ts');
+  const api = await source('../frontend/shared/dispatch/dispatch.api.ts');
 
   assert.match(types, /"reasonCode" \| "note"/);
   assert.match(types, /readonly note: string/);
@@ -47,6 +48,9 @@ test('JRN-020 shared mutation contract requires evidence and every governed acti
   for (const action of ['retry_same_captain', 'reassign_captain', 'return_to_store', 'cancel_order']) {
     assert.match(types, new RegExp(`\\| "${action}"`));
   }
+  assert.match(api, /requiresDeliveryExceptionAcknowledgement/);
+  assert.match(api, /acknowledgeDeliveryException\(id, expectedVersion\)/);
+  assert.match(api, /execute\(acknowledged\.version\)/);
 });
 
 test('JRN-020 blocks late delivery and keeps financial mutation WLT-owned', async () => {
