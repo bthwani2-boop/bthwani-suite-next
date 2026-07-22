@@ -1,0 +1,100 @@
+name: JRN-013 Primary Contract Enum Migration
+
+on:
+  push:
+    branches: ["sambassam"]
+    paths:
+      - ".github/workflows/jrn-013-contract-enum-migration.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: jrn-013-primary-contract-enum-migration
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          ref: sambassam
+          fetch-depth: 0
+
+      - name: Rebase on latest remote branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git pull --rebase origin sambassam
+
+      - name: Patch primary OpenAPI and generated artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          function patchYaml(path) {
+            if (!fs.existsSync(path)) return false;
+            const source = fs.readFileSync(path, 'utf8');
+            const start = source.indexOf('    DshDeliveryExceptionReasonCode:');
+            const end = source.indexOf('    DshDeliveryExceptionStatus:', start);
+            if (start < 0 || end < 0) throw new Error(`${path}: delivery exception reason schema not found`);
+            const section = source.slice(start, end);
+            if (section.includes('      - handoff_shortage') && section.includes('      - handoff_mismatch')) return false;
+            const needle = '      - proof_unavailable\n      - other';
+            if (!section.includes(needle)) throw new Error(`${path}: expected enum insertion point not found`);
+            const updatedSection = section.replace(
+              needle,
+              '      - proof_unavailable\n      - handoff_shortage\n      - handoff_mismatch\n      - other',
+            );
+            fs.writeFileSync(path, source.slice(0, start) + updatedSection + source.slice(end), 'utf8');
+            return true;
+          }
+
+          function patchGeneratedClient(path) {
+            const source = fs.readFileSync(path, 'utf8');
+            if (source.includes('| "handoff_shortage" | "handoff_mismatch" | "other"')) return false;
+            const oldUnion = 'DshDeliveryExceptionReasonCode: "customer_unreachable" | "recipient_refused" | "wrong_address" | "unsafe_location" | "vehicle_breakdown" | "accident" | "damaged_order" | "cash_collection_issue" | "weather_or_road_block" | "proof_unavailable" | "other";';
+            const newUnion = 'DshDeliveryExceptionReasonCode: "customer_unreachable" | "recipient_refused" | "wrong_address" | "unsafe_location" | "vehicle_breakdown" | "accident" | "damaged_order" | "cash_collection_issue" | "weather_or_road_block" | "proof_unavailable" | "handoff_shortage" | "handoff_mismatch" | "other";';
+            const count = source.split(oldUnion).length - 1;
+            if (count !== 1) throw new Error(`${path}: expected one generated reason union, found ${count}`);
+            fs.writeFileSync(path, source.replace(oldUnion, newUnion), 'utf8');
+            return true;
+          }
+
+          const changed = [
+            patchYaml('services/dsh/contracts/dsh.openapi.yaml'),
+            patchYaml('services/dsh/contracts/generated/dsh.openapi.yaml'),
+            patchGeneratedClient('services/dsh/clients/generated/dsh-api.ts'),
+          ].some(Boolean);
+
+          if (!changed) console.log('Primary contract and generated artifacts are already current.');
+          NODE
+
+      - name: Verify exact reason alignment
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q -- '- handoff_shortage' services/dsh/contracts/dsh.openapi.yaml
+          grep -q -- '- handoff_mismatch' services/dsh/contracts/dsh.openapi.yaml
+          grep -q '"handoff_shortage" | "handoff_mismatch"' services/dsh/clients/generated/dsh-api.ts
+
+      - name: Commit migration result
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo "No contract migration changes required."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            services/dsh/contracts/dsh.openapi.yaml \
+            services/dsh/contracts/generated/dsh.openapi.yaml \
+            services/dsh/clients/generated/dsh-api.ts
+          git commit -m "fix(jrn-013): align primary delivery exception reasons"
+          git push origin HEAD:sambassam
