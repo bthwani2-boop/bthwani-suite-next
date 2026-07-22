@@ -1,4 +1,5 @@
 # Registered one-shot final proof for the JRN-029 technical closure.
+# Trigger revision: execute the registered workflow after branch registration.
 name: JRN-029 Final Closure Proof
 
 on:
