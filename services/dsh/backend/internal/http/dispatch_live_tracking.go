@@ -246,7 +246,7 @@ func (s *protectedStoreServer) handleListDispatchTrackingAlerts(w http.ResponseW
 	if _, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead, "operator"); !ok {
 		return
 	}
-	assignments, err := dispatch.ListOperatorAssignments(s.db, "")
+	assignments, err := dispatch.ListOperatorAssignments(s.db, 200)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list dispatch tracking alerts")
 		return
