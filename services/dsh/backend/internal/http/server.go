@@ -169,6 +169,8 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("POST /dsh/operator/pickups/{orderId}/extend-window", protected.handleExtendPickupWindow)
 
 	// Governed finance proxy — WLT remains the sole owner of financial truth.
+	mux.HandleFunc("GET /dsh/control-panel/finance/payment-sessions/{paymentSessionId}/timeline", protected.handleFinancePaymentSessionTimeline)
+	mux.HandleFunc("POST /dsh/control-panel/finance/payment-sessions/{paymentSessionId}/refresh-provider-status", protected.handleRefreshFinancePaymentSessionProviderStatus)
 	mux.HandleFunc("GET /dsh/control-panel/finance/settlements", protected.handleFinanceSettlements)
 	mux.HandleFunc("GET /dsh/control-panel/finance/settlements/summary", protected.handleFinanceSettlementSummary)
 	mux.HandleFunc("POST /dsh/control-panel/finance/settlements/from-delivered-orders", protected.handleCreateFinanceSettlementFromDeliveredOrders)
