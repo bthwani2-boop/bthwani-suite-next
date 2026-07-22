@@ -117,11 +117,29 @@ jobs:
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Compile JRN-026 DSH domains and WLT adapter
+      - name: Compile governed coupon domain
         working-directory: services/dsh/backend
-        run: |
-          go test ./internal/coupons ./internal/checkout ./internal/marketing ./internal/wlt ./internal/wltoutbox -run '^$'
-          go test ./internal/http -run '^TestJourneys026To030ExposeGovernedRoutes$'
+        run: go test ./internal/coupons -run '^$'
+
+      - name: Compile delivery pricing and checkout domain
+        working-directory: services/dsh/backend
+        run: go test ./internal/checkout -run '^$'
+
+      - name: Compile governed loyalty policy domain
+        working-directory: services/dsh/backend
+        run: go test ./internal/marketing -run '^$'
+
+      - name: Compile DSH WLT adapters
+        working-directory: services/dsh/backend
+        run: go test ./internal/wlt -run '^$'
+
+      - name: Compile durable WLT outbox
+        working-directory: services/dsh/backend
+        run: go test ./internal/wltoutbox -run '^$'
+
+      - name: Verify governed JRN-026 route registration
+        working-directory: services/dsh/backend
+        run: go test ./internal/http -run '^TestJourneys026To030ExposeGovernedRoutes$'
 
       - name: Compile sovereign WLT loyalty ledger
         working-directory: services/wlt/backend
