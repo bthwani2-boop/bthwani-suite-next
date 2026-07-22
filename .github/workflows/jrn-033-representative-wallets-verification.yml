@@ -82,12 +82,39 @@ jobs:
           -run 'TestFinanceReadWallet'
           -count=1
 
-      - name: Test DSH actor-scoped representative routes
+      - name: Test own wallet actor scoping
         working-directory: services/dsh/backend
-        run: >-
-          go test ./internal/http
-          -run 'Test(RepresentativeOwnWalletRoutesResolveAuthenticatedActor|RepresentativeOwnLedgerRoutesOverrideActorQuery|ControlPanelRepresentativeWalletValidatesTypeAndUsesPermissionFallback|ControlPanelRepresentativeLedgerPinsActorAndNoStore)$'
-          -count=1
+        run: go test ./internal/http -run '^TestRepresentativeOwnWalletRoutesResolveAuthenticatedActor$' -count=1 -v
+
+      - name: Test own ledger actor scoping
+        working-directory: services/dsh/backend
+        run: go test ./internal/http -run '^TestRepresentativeOwnLedgerRoutesOverrideActorQuery$' -count=1 -v
+
+      - name: Test operator wallet permission and validation
+        working-directory: services/dsh/backend
+        run: go test ./internal/http -run '^TestControlPanelRepresentativeWalletValidatesTypeAndUsesPermissionFallback$' -count=1 -v
+
+      - name: Test operator ledger path-pinned scope
+        id: operator-ledger-test
+        continue-on-error: true
+        working-directory: services/dsh/backend
+        shell: bash
+        run: |
+          set -o pipefail
+          go test ./internal/http -run '^TestControlPanelRepresentativeLedgerPinsActorAndNoStore$' -count=1 -v 2>&1 | tee /tmp/jrn-033-go-routes.log
+
+      - name: Upload Go route diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jrn-033-go-route-diagnostics-${{ github.run_attempt }}
+          path: /tmp/jrn-033-go-routes.log
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Fail when operator ledger test failed
+        if: steps.operator-ledger-test.outcome == 'failure'
+        run: exit 1
 
       - name: Build affected financial owners
         working-directory: services/dsh/backend
@@ -118,7 +145,25 @@ jobs:
         run: node --test services/dsh/tests/jrn-033-representative-wallets-governance.test.mjs
 
       - name: Typecheck the JRN-033 multi-surface ownership graph
-        run: pnpm --dir services/dsh exec tsc -p tsconfig.jrn-033.json --noEmit --pretty false
+        id: focused-typecheck
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm --dir services/dsh exec tsc -p tsconfig.jrn-033.json --noEmit --pretty false 2>&1 | tee /tmp/jrn-033-typescript.log
+
+      - name: Upload TypeScript diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jrn-033-typescript-diagnostics-${{ github.run_attempt }}
+          path: /tmp/jrn-033-typescript.log
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Fail when focused typecheck failed
+        if: steps.focused-typecheck.outcome == 'failure'
+        run: exit 1
 
   contract:
     name: Focused contract and product truth
