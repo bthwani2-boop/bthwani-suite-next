@@ -26,6 +26,15 @@ func RegisterLegacyContractCompatibilityRoutes(
 	mux.HandleFunc("PUT /dsh/partner/catalog/product-proposals/{proposalId}", protected.handleUpdatePartnerProductProposalAtomic)
 	mux.HandleFunc("PUT /dsh/field/partners/{partnerId}/catalog/product-proposals/{proposalId}", protected.handleUpdateFieldProductProposalAtomic)
 
+	// JRN-021 canonical support incident aliases delegate to the same governed
+	// handlers used by GovernedIncidentMiddleware. Keeping both registrations
+	// preserves one state machine, one permission model and one audit trail.
+	mux.HandleFunc("GET /dsh/operator/support/incidents", protected.handleListGovernedIncidents)
+	mux.HandleFunc("POST /dsh/operator/support/incidents", protected.handleCreateGovernedIncident)
+	mux.HandleFunc("GET /dsh/operator/support/incidents/{incidentId}", protected.handleGetGovernedIncident)
+	mux.HandleFunc("PATCH /dsh/operator/support/incidents/{incidentId}", protected.handleUpdateGovernedIncident)
+	mux.HandleFunc("GET /dsh/operator/support/incidents/{incidentId}/events", protected.handleListGovernedIncidentEvents)
+
 	// JRN-038 partner finance compatibility remains actor- and tenant-bound.
 	// The handlers verify partner ownership before forwarding to WLT, which
 	// remains the sole owner of COD financial truth.
