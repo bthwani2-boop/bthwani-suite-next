@@ -12,7 +12,9 @@ on:
       - "services/wlt/backend/internal/dshoutbox/**"
       - "services/wlt/backend/internal/dshnotify/**"
       - "services/wlt/backend/internal/http/server.go"
-      - "services/wlt/database/migrations/wlt-035_jrn_035_refund_governance.sql"
+      - "services/wlt/database/migrations/wlt-037_jrn_035_refund_governance.sql"
+      - "services/wlt/database/tests/jrn-035-refund-invariants.sql"
+      - "infra/docker/scripts/wlt-migration-probes.ps1"
       - "services/dsh/backend/internal/http/refund_finance_*"
       - "services/dsh/backend/internal/http/financeproxy.go"
       - "services/dsh/backend/internal/wlt/finance_proxy.go"
@@ -44,6 +46,48 @@ jobs:
         run: node --test tools/verification/jrn-035-financial-refunds.test.mjs
       - name: Verify WLT financial ownership boundary
         run: node tools/guards/wlt-financial-boundary-gate.mjs
+
+  wlt-database:
+    name: WLT PostgreSQL migration and invariants
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: wlt_ci
+          POSTGRES_PASSWORD: wlt_ci_password
+          POSTGRES_DB: wlt_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U wlt_ci -d wlt_ci"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      PGHOST: localhost
+      PGPORT: "5432"
+      PGUSER: wlt_ci
+      PGPASSWORD: wlt_ci_password
+      PGDATABASE: wlt_ci
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify migration numbering and probe coverage
+        shell: pwsh
+        run: |
+          . ./infra/docker/scripts/wlt-migration-probes.ps1
+          $files = Get-ChildItem ./services/wlt/database/migrations -Filter '*.sql' | Sort-Object Name
+          Test-WltMigrationProbeCoverage -MigrationFiles $files
+      - name: Apply WLT migrations in lexical order
+        shell: bash
+        run: |
+          set -euo pipefail
+          for migration in services/wlt/database/migrations/*.sql; do
+            echo "Applying ${migration}"
+            psql -v ON_ERROR_STOP=1 -f "${migration}"
+          done
+      - name: Assert JRN-035 database invariants
+        run: psql -v ON_ERROR_STOP=1 -f services/wlt/database/tests/jrn-035-refund-invariants.sql
 
   wlt-go:
     name: WLT Go compile and tests
