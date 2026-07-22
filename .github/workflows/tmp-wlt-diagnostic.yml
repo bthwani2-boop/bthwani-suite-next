@@ -5,10 +5,12 @@ on:
     branches: [sambassam]
     paths:
       - ".github/workflows/tmp-wlt-diagnostic.yml"
+      - "services/wlt/backend/**"
   pull_request:
     branches: [master]
     paths:
       - ".github/workflows/tmp-wlt-diagnostic.yml"
+      - "services/wlt/backend/**"
 
 permissions:
   contents: read
