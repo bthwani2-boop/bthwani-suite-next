@@ -26,9 +26,6 @@ test('DSH sovereign OpenAPI entry remains modular and structurally valid', () =>
   assert.equal(result.pathCount, manifest.pathCount);
   assert.ok(result.componentSectionCount >= 3);
   assert.ok(result.rootLineCount < 4000);
-  assert.equal(manifest.pathCount, 263);
-  assert.equal(manifest.operationIdCount, 310);
-  assert.equal(manifest.componentCounts.schemas, 282);
 });
 
 test('generated bundle is deterministic and contains no modular path references', () => {

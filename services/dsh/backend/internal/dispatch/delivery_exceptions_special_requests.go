@@ -121,15 +121,15 @@ func resolveSpecialRequestExceptionReassignCaptainTx(
 	}
 	payload, _ := json.Marshal(map[string]any{
 		"specialRequestId": specialRequestID,
-		"assignmentId": replacementAssignmentID,
-		"captainId": newCaptainID,
-		"occurredAt": time.Now().UTC(),
+		"assignmentId":     replacementAssignmentID,
+		"captainId":        newCaptainID,
+		"occurredAt":       time.Now().UTC(),
 	})
 	if err := operationaloutbox.Enqueue(tx, operationaloutbox.EnqueueInput{
-		EventType: "special_request_reassigned",
-		EntityType: "special_request",
-		EntityID: specialRequestID,
-		Payload: payload,
+		EventType:     "special_request_reassigned",
+		EntityType:    "special_request",
+		EntityID:      specialRequestID,
+		Payload:       payload,
 		CorrelationID: correlation,
 	}); err != nil {
 		return nil, err

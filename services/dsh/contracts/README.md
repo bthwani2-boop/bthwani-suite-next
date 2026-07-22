@@ -1,35 +1,26 @@
 # DSH OpenAPI contract layout
 
-`dsh.openapi.yaml` is the sovereign DSH API contract entry point. It contains service metadata plus external references to governed path and component modules.
+`dsh.openapi.yaml` is the sovereign entry contract. It contains metadata and external references only.
 
-## Structure
-
-- `dsh.openapi.yaml`: sovereign entry contract; edit references and metadata here.
-- `paths/*.paths.yaml`: API path items grouped by operational domain.
-- `components/schemas/*.schemas.yaml`: reusable schemas grouped by domain.
+- `paths/*.paths.yaml`: path items grouped by operational domain.
+- `components/schemas/*.schemas.yaml`: schemas grouped by domain.
 - `components/*.yaml`: shared parameters, responses, security schemes, and other component maps.
-- `generated/dsh.bundle.openapi.yaml`: deterministic monolithic bundle used by TypeScript client generation and Swagger tooling. Never edit it directly.
+- `generated/dsh.bundle.openapi.yaml`: deterministic monolithic bundle used for client generation and Swagger. Never edit it directly.
 - `dsh.modular.manifest.json`: expected path, operation, component, and domain counts.
-- `dsh.contract-ownership.json`: audit of sovereign paths and governed projection contracts.
+- `dsh.contract-ownership.json`: cross-contract path ownership audit.
 
 ## Commands
 
-```powershell
-pnpm --dir services/dsh openapi:compose
-pnpm --dir services/dsh openapi:generate
-pnpm --dir services/dsh openapi:verify
-```
+`pnpm --dir services/dsh openapi:compose` regenerates the bundle.
 
-- `openapi:compose` regenerates the monolithic bundle from the modular source contract.
-- `openapi:generate` regenerates the bundle and `clients/generated/dsh-api.ts`.
-- `openapi:verify` checks reference integrity, uniqueness, manifest parity, bundle drift, and client generation.
+`pnpm --dir services/dsh openapi:generate` regenerates the bundle and TypeScript client.
 
-## Contract rules
+`pnpm --dir services/dsh openapi:verify` validates references, uniqueness, ownership, bundle drift, and regenerates the client.
 
-1. Every runtime endpoint has one sovereign definition under exactly one `paths/*.paths.yaml` module.
-2. Every `operationId` is globally unique across DSH.
-3. Shared schemas belong in the appropriate `components/schemas` domain module and are referenced through `dsh.openapi.yaml`.
-4. Module files must not use unresolved root-relative `#/components/...` references. They must reference `../dsh.openapi.yaml` or `../../dsh.openapi.yaml`, depending on their depth.
-5. Governed journey and surface contracts may project sovereign paths, but they do not become competing runtime sources of truth.
-6. Generated bundle and client files are never edited manually.
-7. Any contract change must pass the modular OpenAPI gate, contract foundation gate, DSH tests, and generated-artifact drift check.
+## Rules
+
+1. Add each endpoint to exactly one path module.
+2. Keep every `operationId` globally unique.
+3. Add reusable schemas under the correct domain module and reference them through the root contract.
+4. Do not add root-relative `#/components/...` references inside module files; module references must point back to `dsh.openapi.yaml`.
+5. Do not edit generated artifacts manually.

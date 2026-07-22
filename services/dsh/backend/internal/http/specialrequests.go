@@ -303,8 +303,8 @@ func (s *protectedStoreServer) handleApproveSpecialRequestQuote(w http.ResponseW
 		writeSpecialRequestError(w, err, "special request not found")
 		return
 	}
-	if req.Status != specialrequests.StatusUnderReview && req.Status != specialrequests.StatusNeedsCustomerInput {
-		writeSpecialRequestError(w, fmt.Errorf("%w: cannot approve quote from status %s", specialrequests.ErrConflict, req.Status), "special request not found")
+	if req.Status != specialrequests.StatusNeedsCustomerInput || req.WorkflowStage == nil || *req.WorkflowStage != "customer_approval" {
+		writeSpecialRequestError(w, fmt.Errorf("%w: quote approval requires customer_approval stage", specialrequests.ErrConflict), "special request not found")
 		return
 	}
 	if req.EstimatedAmountMinorUnits == nil || req.Currency == nil {

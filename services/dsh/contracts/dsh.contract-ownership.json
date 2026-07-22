@@ -449,6 +449,14 @@
       "projectionContract": "dsh.home-marketing-events.openapi.yaml"
     },
     {
+      "path": "/dsh/notifications/push-endpoints",
+      "projectionContract": "dsh.notifications-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/notifications/push-endpoints/{deviceId}",
+      "projectionContract": "dsh.notifications-governance.openapi.yaml"
+    },
+    {
       "path": "/dsh/operator/catalog/attributes",
       "projectionContract": "dsh.catalog-governance.openapi.yaml"
     },
@@ -573,6 +581,10 @@
       "projectionContract": "dsh.marketing-commercial.openapi.yaml"
     },
     {
+      "path": "/dsh/operator/notifications/delivery-attempts",
+      "projectionContract": "dsh.notifications-governance.openapi.yaml"
+    },
+    {
       "path": "/dsh/operator/order-truth",
       "projectionContract": "dsh.order-truth.openapi.yaml"
     },
@@ -631,6 +643,30 @@
     {
       "path": "/dsh/operator/stores/{storeId}/delivery-pricing/{fulfillmentMode}",
       "projectionContract": "dsh.partner-commercial-closure.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/support/incidents",
+      "projectionContract": "dsh.incident-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/support/incidents/{incidentId}",
+      "projectionContract": "dsh.incident-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/support/incidents/{incidentId}/events",
+      "projectionContract": "dsh.incident-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/support/order-rescue-cases",
+      "projectionContract": "dsh.order-rescue.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/support/order-rescue-cases/{caseId}",
+      "projectionContract": "dsh.order-rescue.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/support/order-rescue-cases/{caseId}/events",
+      "projectionContract": "dsh.order-rescue.openapi.yaml"
     },
     {
       "path": "/dsh/operator/support/tickets/{ticketId}/events",
@@ -873,6 +909,12 @@
       "parentContract": "services/dsh/contracts/dsh.openapi.yaml",
       "contractRole": "governed-projection"
     },
+    "dsh.incident-governance.openapi.yaml": {
+      "pathCount": 3,
+      "owner": "services/dsh",
+      "parentContract": null,
+      "contractRole": "governed-projection"
+    },
     "dsh.jrn-003-workforce-scopes.openapi.yaml": {
       "pathCount": 2,
       "owner": "services/dsh",
@@ -895,6 +937,18 @@
       "pathCount": 9,
       "owner": "services/dsh",
       "parentContract": "services/dsh/contracts/dsh.openapi.yaml",
+      "contractRole": "governed-projection"
+    },
+    "dsh.notifications-governance.openapi.yaml": {
+      "pathCount": 3,
+      "owner": "services/dsh",
+      "parentContract": null,
+      "contractRole": "governed-projection"
+    },
+    "dsh.order-rescue.openapi.yaml": {
+      "pathCount": 3,
+      "owner": "services/dsh",
+      "parentContract": null,
       "contractRole": "governed-projection"
     },
     "dsh.order-truth.openapi.yaml": {

@@ -3662,6 +3662,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dsh/client/special-requests/{requestId}/information-exchange": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the latest governed operator question and client response for an owned special request. */
+        get: operations["getDshClientSpecialRequestInformationExchange"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/client/special-requests/{requestId}/information-response": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Answer the pending operator question and return the request to governed review. */
+        post: operations["respondDshClientSpecialRequestInformation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/client/special-requests/{requestId}/execution": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read governed assignment, delivery, proof, and latest exception evidence for an owned special request. */
+        get: operations["getDshClientSpecialRequestExecution"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/dsh/operator/special-requests": {
         parameters: {
             query?: never;
@@ -3695,6 +3746,57 @@ export interface paths {
         head?: never;
         /** Update special request */
         patch: operations["updateDshOperatorSpecialRequest"];
+        trace?: never;
+    };
+    "/dsh/operator/special-requests/{requestId}/information-exchange": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the latest governed information exchange for a special request. */
+        get: operations["getDshOperatorSpecialRequestInformationExchange"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/special-requests/{requestId}/information-request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ask the client for missing information and move the request to customer_information. */
+        post: operations["requestDshOperatorSpecialRequestInformation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/special-requests/{requestId}/execution": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read dispatch-owned execution, proof, and exception evidence for a special request. */
+        get: operations["getDshOperatorSpecialRequestExecution"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/dsh/operator/special-requests/{requestId}/dispatch": {
@@ -4552,7 +4654,9 @@ export interface components {
             /** Format: uuid */
             assignmentId: string;
             /** Format: uuid */
-            orderId: string;
+            orderId?: string | null;
+            /** Format: uuid */
+            specialRequestId?: string | null;
             captainId: string;
             reasonCode: components["schemas"]["DshDeliveryExceptionReasonCode"];
             note: string;
@@ -5815,6 +5919,8 @@ export interface components {
             endDate: string;
             targetType?: components["schemas"]["DshMarketingTargetType"];
             targetId?: string;
+            targetCityCode?: string;
+            targetServiceAreaCode?: string;
             /** @enum {string} */
             audience: "all" | "client" | "partner" | "captain" | "field";
             /** @enum {string} */
@@ -5843,6 +5949,8 @@ export interface components {
             endDate: string;
             targetType?: components["schemas"]["DshMarketingTargetType"];
             targetId?: string;
+            targetCityCode?: string;
+            targetServiceAreaCode?: string;
             /** @enum {string} */
             audience?: "all" | "client";
             /** @enum {string} */
@@ -5860,6 +5968,8 @@ export interface components {
             endDate?: string;
             targetType?: components["schemas"]["DshMarketingTargetType"];
             targetId?: string;
+            targetCityCode?: string;
+            targetServiceAreaCode?: string;
             /** @enum {string} */
             audience?: "all" | "client";
             /** @enum {string} */
@@ -6606,6 +6716,85 @@ export interface components {
             pickedUpAt?: string | null;
             /** Format: date-time */
             deliveredAt?: string | null;
+        };
+        DshSpecialRequestInformationExchange: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            specialRequestId: string;
+            clientId: string;
+            requestedByOperatorId: string;
+            question: string;
+            response?: string | null;
+            /** @enum {string} */
+            status: "pending" | "responded";
+            requestVersionAtRequest: number;
+            requestVersionAtResponse?: number | null;
+            /** Format: date-time */
+            requestedAt: string;
+            /** Format: date-time */
+            respondedAt?: string | null;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshSpecialRequestInformationExchangeResponse: {
+            informationExchange: components["schemas"]["DshSpecialRequestInformationExchange"] | null;
+        };
+        DshSpecialRequestInformationMutationResponse: {
+            request: components["schemas"]["DshSpecialRequestResponse"];
+            informationExchange: components["schemas"]["DshSpecialRequestInformationExchange"];
+        };
+        DshRequestSpecialRequestInformation: {
+            expectedVersion: number;
+            question: string;
+        };
+        DshRespondSpecialRequestInformation: {
+            expectedVersion: number;
+            /** Format: uuid */
+            exchangeId: string;
+            response: string;
+        };
+        DshSpecialRequestExecutionException: {
+            /** Format: uuid */
+            id: string;
+            reasonCode: string;
+            note: string;
+            /** @enum {string} */
+            severity: "medium" | "high" | "critical";
+            /** @enum {string} */
+            status: "open" | "acknowledged" | "resolved";
+            /** Format: date-time */
+            reportedAt: string;
+            /** Format: date-time */
+            acknowledgedAt?: string | null;
+            /** Format: date-time */
+            resolvedAt?: string | null;
+            resolutionAction?: string | null;
+            resolutionNote?: string | null;
+        };
+        DshSpecialRequestExecution: {
+            /** Format: uuid */
+            specialRequestId: string;
+            /** Format: uuid */
+            assignmentId?: string | null;
+            captainId?: string | null;
+            assignmentStatus?: string | null;
+            /** Format: date-time */
+            assignmentCreatedAt?: string | null;
+            /** Format: date-time */
+            acceptedAt?: string | null;
+            /** Format: date-time */
+            assignmentCompletedAt?: string | null;
+            deliveryStatus?: string | null;
+            podMethod?: string | null;
+            podReference?: string | null;
+            deliveryNote?: string | null;
+            /** Format: date-time */
+            deliveryUpdatedAt?: string | null;
+            latestException?: components["schemas"]["DshSpecialRequestExecutionException"] | null;
+        };
+        DshSpecialRequestExecutionResponse: {
+            execution: components["schemas"]["DshSpecialRequestExecution"];
         };
         /** @enum {string} */
         DshPartnerDeliveryTaskStatus: "unassigned" | "assigned" | "departed" | "arrived" | "proof_pending" | "completed" | "cancelled" | "exception";
@@ -13974,6 +14163,84 @@ export interface operations {
             };
         };
     };
+    getDshClientSpecialRequestInformationExchange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Latest information exchange or null when no question exists. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshSpecialRequestInformationExchangeResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    respondDshClientSpecialRequestInformation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshRespondSpecialRequestInformation"];
+            };
+        };
+        responses: {
+            /** @description Canonical request and completed information exchange. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshSpecialRequestInformationMutationResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    getDshClientSpecialRequestExecution: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dispatch-owned execution evidence. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshSpecialRequestExecutionResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     listDshOperatorSpecialRequests: {
         parameters: {
             query?: {
@@ -14048,6 +14315,87 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DshSpecialRequestResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getDshOperatorSpecialRequestInformationExchange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Latest information exchange or null. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshSpecialRequestInformationExchangeResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    requestDshOperatorSpecialRequestInformation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshRequestSpecialRequestInformation"];
+            };
+        };
+        responses: {
+            /** @description Canonical request and pending information exchange. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshSpecialRequestInformationMutationResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    getDshOperatorSpecialRequestExecution: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dispatch-owned execution evidence. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshSpecialRequestExecutionResponse"];
                 };
             };
             401: components["responses"]["Unauthenticated"];
