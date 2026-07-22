@@ -188,33 +188,32 @@ jobs:
           /tmp/dsh-api > /tmp/dsh-jrn-029.log 2>&1 &
           api_pid=$!
           trap 'kill ${api_pid} || true; cat /tmp/dsh-jrn-029.log' EXIT
+
+          ready=false
           for _attempt in $(seq 1 30); do
-            curl --fail --silent http://127.0.0.1:58080/dsh/health >/dev/null && break
+            if curl --fail --silent http://127.0.0.1:58080/dsh/health >/dev/null; then
+              ready=true
+              break
+            fi
             sleep 1
           done
+          test "${ready}" = "true"
           curl --fail --silent http://127.0.0.1:58080/dsh/health
 
-          check_route() {
-            method="$1"
-            path="$2"
-            body="${3:-}"
-            if [[ -n "${body}" ]]; then
-              status=$(curl --silent --output /tmp/jrn029-route.json --write-out '%{http_code}' -X "${method}" -H 'Content-Type: application/json' --data "${body}" "http://127.0.0.1:58080${path}")
-            else
-              status=$(curl --silent --output /tmp/jrn029-route.json --write-out '%{http_code}' -X "${method}" "http://127.0.0.1:58080${path}")
-            fi
-            test "${status}" != "000"
-            test "${status}" != "404"
+          check_mounted_path() {
+            path="$1"
+            status=$(curl --silent --output /tmp/jrn029-route.json --write-out '%{http_code}' -X OPTIONS "http://127.0.0.1:58080${path}")
+            test "${status}" = "405"
           }
 
           zone_id=00000000-0000-0000-0000-000000000001
           event_id=00000000-0000-0000-0000-000000000002
-          check_route GET "/dsh/operator/platform/operational-profiles/${zone_id}"
-          check_route GET "/dsh/operator/platform/operational-profiles/${zone_id}/delivery-modes"
-          check_route PUT "/dsh/operator/platform/operational-profiles/${zone_id}/delivery-modes/bthwani_delivery" '{}'
-          check_route POST "/dsh/platform/operational-policy/evaluate" '{}'
-          check_route GET "/dsh/operator/platform/operational-policy/audit"
-          check_route POST "/dsh/operator/platform/operational-policy/audit/${event_id}/rollback" '{}'
+          check_mounted_path "/dsh/operator/platform/operational-profiles/${zone_id}"
+          check_mounted_path "/dsh/operator/platform/operational-profiles/${zone_id}/delivery-modes"
+          check_mounted_path "/dsh/operator/platform/operational-profiles/${zone_id}/delivery-modes/bthwani_delivery"
+          check_mounted_path "/dsh/platform/operational-policy/evaluate"
+          check_mounted_path "/dsh/operator/platform/operational-policy/audit"
+          check_mounted_path "/dsh/operator/platform/operational-policy/audit/${event_id}/rollback"
 
       - name: Verify JRN-029 shared brain and required surface binding
         run: pnpm --dir services/dsh exec tsc -p tsconfig.jrn-029.json --noEmit --pretty false
@@ -272,7 +271,7 @@ jobs:
       - name: Build same-commit evidence manifest
         run: |
           mkdir -p /tmp/jrn-029-evidence
-          printf '{"journey":"JRN-029","commitSha":"%s","runId":"%s","database":"PostgreSQL 16","contract":"sovereign modular DSH OpenAPI","runtimeSmoke":"all governed routes mounted","result":"all-gates-passed"}\n' "${GITHUB_SHA}" "${GITHUB_RUN_ID}" > /tmp/jrn-029-evidence/manifest.json
+          printf '{"journey":"JRN-029","commitSha":"%s","runId":"%s","database":"PostgreSQL 16","contract":"sovereign modular DSH OpenAPI","runtimeSmoke":"all governed routes mounted by OPTIONS/405 negotiation","result":"all-gates-passed"}\n' "${GITHUB_SHA}" "${GITHUB_RUN_ID}" > /tmp/jrn-029-evidence/manifest.json
 
       - name: Upload same-commit evidence manifest
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
