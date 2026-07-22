@@ -43,17 +43,11 @@ const FINANCIAL_MUTATION_PATTERNS = [
 
 for (const file of listCodeFiles()) {
   const content = read(file);
-  
-  // 1. Identify surface
-  // A file is in a surface if it matches services/*/frontend/<surface>/... where <surface> is not 'shared'
   const surfaceMatch = file.match(/^services\/([^/]+)\/frontend\/([^/]+)\//);
   const isSurface = surfaceMatch && surfaceMatch[2] !== "shared";
   const currentSurface = isSurface ? surfaceMatch[2] : null;
-
-  // 2. Identify shared frontend
   const isShared = file.startsWith("shared/") || file.includes("/frontend/shared/");
 
-  // 3. Surface code checks
   if (isSurface) {
     if (/\bfetch\(/.test(content)) {
       violations.push({ file, message: "direct fetch() call in surface — move to shared API adapter" });
@@ -67,8 +61,7 @@ for (const file of listCodeFiles()) {
     if (/\bnew\s+URL\(/.test(content)) {
       violations.push({ file, message: "direct new URL() call in surface — move to config/adapter" });
     }
-    
-    // Check for hardcoded URLs (ignoring comments and placeholder/example URLs)
+
     const lines = content.split(/\r?\n/);
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
@@ -77,14 +70,13 @@ for (const file of listCodeFiles()) {
           violations.push({
             file,
             line: i + 1,
-            message: `hardcoded runtime URL in surface: "${line.trim()}"`
+            message: `hardcoded runtime URL in surface: "${line.trim()}"`,
           });
         }
       }
     }
   }
 
-  // 4. DSH frontend / apps runtime financial mutation check
   const isDshFrontendOrAppRuntime = file.startsWith("services/dsh/frontend/") || file.startsWith("apps/");
   if (isDshFrontendOrAppRuntime) {
     for (const pattern of FINANCIAL_MUTATION_PATTERNS) {
@@ -94,7 +86,6 @@ for (const file of listCodeFiles()) {
     }
   }
 
-  // 5. WLT shared boundary mutation HTTP methods check
   if (file.startsWith(wltSharedDshPath) && !mutationApproved) {
     const httpMutationRegex = /\bmethod\s*:\s*["'](?:POST|PUT|PATCH|DELETE)["']/i;
     if (httpMutationRegex.test(content)) {
@@ -102,14 +93,12 @@ for (const file of listCodeFiles()) {
     }
   }
 
-  // 6. Import-based checks
   const specs = findImportSpecifiers(content);
   for (const { specifier, index } of specs) {
     const resolved = resolveSpecifier(file, specifier);
     if (resolved.includes("node_modules/")) continue;
 
     if (isSurface) {
-      // Surfaces must not import other surfaces
       const resolvedSurfaceMatch = resolved.match(/^services\/([^/]+)\/frontend\/([^/]+)\//);
       if (resolvedSurfaceMatch) {
         const resolvedSurface = resolvedSurfaceMatch[2];
@@ -117,17 +106,15 @@ for (const file of listCodeFiles()) {
           violations.push({
             file,
             line: lineNumber(content, index),
-            message: `FORBIDDEN: importing from other surface '${resolvedSurface}' (resolved: ${resolved})`
+            message: `FORBIDDEN: importing from other surface '${resolvedSurface}' (resolved: ${resolved})`,
           });
         }
       }
 
-      // Surfaces must not import backend, generated, or clients directly
+      // Shared API adapters are the approved surface boundary. Surfaces still
+      // cannot reach backend/generated clients or internal controller cores.
       if (
         /^services\/[^/]+\/(backend|clients|generated)\//.test(resolved) ||
-        resolved.endsWith(".api") ||
-        resolved.includes(".api.") ||
-        resolved.includes(".api/") ||
         resolved.endsWith(".controller-core") ||
         resolved.includes(".controller-core.") ||
         resolved.includes(".controller-core/")
@@ -135,28 +122,26 @@ for (const file of listCodeFiles()) {
         violations.push({
           file,
           line: lineNumber(content, index),
-          message: `FORBIDDEN: importing backend/client/generated/api/controller-core directly (resolved: ${resolved})`
+          message: `FORBIDDEN: importing backend/client/generated/controller-core directly (resolved: ${resolved})`,
         });
       }
     }
 
     if (isShared) {
-      // Shared brain must not import from surfaces
       const resolvedSurfaceMatch = resolved.match(/^services\/([^/]+)\/frontend\/([^/]+)\//);
       if (resolvedSurfaceMatch && resolvedSurfaceMatch[2] !== "shared") {
         violations.push({
           file,
           line: lineNumber(content, index),
-          message: `FORBIDDEN: shared brain importing from surface '${resolvedSurfaceMatch[2]}' (resolved: ${resolved})`
+          message: `FORBIDDEN: shared brain importing from surface '${resolvedSurfaceMatch[2]}' (resolved: ${resolved})`,
         });
       }
 
-      // Shared brain must not import from apps runtime
       if (resolved.startsWith("apps/")) {
         violations.push({
           file,
           line: lineNumber(content, index),
-          message: `FORBIDDEN: shared brain importing from apps runtime (resolved: ${resolved})`
+          message: `FORBIDDEN: shared brain importing from apps runtime (resolved: ${resolved})`,
         });
       }
     }
