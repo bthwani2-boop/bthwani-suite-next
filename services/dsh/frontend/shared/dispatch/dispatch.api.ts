@@ -5,6 +5,7 @@ import type {
   DshCaptainDispatchProfileInput,
   DshCreateAssignmentInput,
   DshDeliveryException,
+  DshDeliveryExceptionResolutionAction,
   DshDeliveryStatus,
   DshDispatchAssignment,
   DshDispatchDecision,
@@ -198,53 +199,85 @@ export async function acknowledgeDeliveryException(id: string, expectedVersion: 
   return data.exception;
 }
 
-export async function resolveDeliveryExceptionRetrySameCaptain(
+type DeliveryExceptionResolutionInput = {
+  readonly action: DshDeliveryExceptionResolutionAction;
+  readonly note: string;
+  readonly newCaptainId?: string;
+};
+
+function requiresDeliveryExceptionAcknowledgement(error: unknown): boolean {
+  const typed = error as { status?: number; body?: { message?: string }; message?: string };
+  const message = typed.body?.message ?? typed.message ?? "";
+  return typed.status === 409 && message.includes("acknowledge the exception");
+}
+
+async function resolveAcknowledgedDeliveryException(
+  id: string,
+  expectedVersion: number,
+  input: DeliveryExceptionResolutionInput,
+): Promise<DshDeliveryException> {
+  const path = `/dsh/operator/delivery-exceptions/${encodeURIComponent(id)}/resolve`;
+  const execute = async (version: number) => {
+    const data = await request<{ exception: DshDeliveryException }>(path, {
+      method: "POST",
+      body: { expectedVersion: version, ...input },
+    });
+    return data.exception;
+  };
+
+  try {
+    return await execute(expectedVersion);
+  } catch (error) {
+    if (!requiresDeliveryExceptionAcknowledgement(error)) throw error;
+    const acknowledged = await acknowledgeDeliveryException(id, expectedVersion);
+    return execute(acknowledged.version);
+  }
+}
+
+export function resolveDeliveryExceptionRetrySameCaptain(
   id: string,
   expectedVersion: number,
   note: string,
 ): Promise<DshDeliveryException> {
-  const data = await request<{ exception: DshDeliveryException }>(
-    `/dsh/operator/delivery-exceptions/${encodeURIComponent(id)}/resolve`,
-    { method: "POST", body: { expectedVersion, action: "retry_same_captain", note } },
-  );
-  return data.exception;
+  return resolveAcknowledgedDeliveryException(id, expectedVersion, {
+    action: "retry_same_captain",
+    note,
+  });
 }
 
-export async function resolveDeliveryExceptionReassignCaptain(
+export function resolveDeliveryExceptionReassignCaptain(
   id: string,
   expectedVersion: number,
   newCaptainId: string,
   note: string,
 ): Promise<DshDeliveryException> {
-  const data = await request<{ exception: DshDeliveryException }>(
-    `/dsh/operator/delivery-exceptions/${encodeURIComponent(id)}/resolve`,
-    { method: "POST", body: { expectedVersion, action: "reassign_captain", newCaptainId, note } },
-  );
-  return data.exception;
+  return resolveAcknowledgedDeliveryException(id, expectedVersion, {
+    action: "reassign_captain",
+    newCaptainId,
+    note,
+  });
 }
 
-export async function resolveDeliveryExceptionReturnToStore(
+export function resolveDeliveryExceptionReturnToStore(
   id: string,
   expectedVersion: number,
   note: string,
 ): Promise<DshDeliveryException> {
-  const data = await request<{ exception: DshDeliveryException }>(
-    `/dsh/operator/delivery-exceptions/${encodeURIComponent(id)}/resolve`,
-    { method: "POST", body: { expectedVersion, action: "return_to_store", note } },
-  );
-  return data.exception;
+  return resolveAcknowledgedDeliveryException(id, expectedVersion, {
+    action: "return_to_store",
+    note,
+  });
 }
 
-export async function resolveDeliveryExceptionCancelOrder(
+export function resolveDeliveryExceptionCancelOrder(
   id: string,
   expectedVersion: number,
   note: string,
 ): Promise<DshDeliveryException> {
-  const data = await request<{ exception: DshDeliveryException }>(
-    `/dsh/operator/delivery-exceptions/${encodeURIComponent(id)}/resolve`,
-    { method: "POST", body: { expectedVersion, action: "cancel_order", note } },
-  );
-  return data.exception;
+  return resolveAcknowledgedDeliveryException(id, expectedVersion, {
+    action: "cancel_order",
+    note,
+  });
 }
 
 export async function arriveCaptainReturnToStore(assignmentId: string): Promise<DshDeliveryException> {
