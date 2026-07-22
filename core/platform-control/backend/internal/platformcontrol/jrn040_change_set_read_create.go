@@ -214,6 +214,9 @@ RETURNING id::text`,
 
 	for _, inputItem := range input.Items {
 		item := normalizeGovernedCreateItem(inputItem)
+		if err := ensureGovernedTargetIsNotSensitive(ctx, tx, item); err != nil {
+			return ChangeSet{}, err
+		}
 		if _, err := tx.ExecContext(ctx, `
 INSERT INTO platform_change_set_items
     (change_set_id, target_type, target_key, owner_service, scope_type,
@@ -253,6 +256,29 @@ VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb)`,
 		return ChangeSet{}, err
 	}
 	return r.GetChangeSetGoverned(ctx, id)
+}
+
+func ensureGovernedTargetIsNotSensitive(ctx context.Context, tx *sql.Tx, item CreateChangeSetItemInput) error {
+	if item.TargetType != ChangeTargetVariable {
+		return nil
+	}
+	var classification string
+	err := tx.QueryRowContext(ctx, `
+SELECT classification
+FROM platform_variables
+WHERE variable_key = $1 AND scope_type = $2 AND scope_id = $3`,
+		item.TargetKey, item.ScopeType, item.ScopeID,
+	).Scan(&classification)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if isSensitiveClassification(classification) {
+		return fmt.Errorf("%w: existing target %s is classified as sensitive", ErrSensitiveValue, item.TargetKey)
+	}
+	return nil
 }
 
 func validateGovernedCreateInput(input CreateChangeSetInput) error {
