@@ -82,4 +82,19 @@ replace_once(
     '''    "DSH handlers": ("services/dsh/backend/internal/http/subscription_purchases.go", "handleCancelSubscriptionPurchase"),''',
 )
 
-print("JRN-027 DSH lifecycle converged on subscription_purchases.go")
+# exactOptionalPropertyTypes requires an optional property that may be supplied
+# as undefined to state that explicitly. Import the journey controller and
+# contracts directly so the focused gate does not pull unrelated in-flight
+# marketing surfaces into JRN-027 verification.
+replace_once(
+    "services/dsh/frontend/app-client/account/BenefitsHubScreen.tsx",
+    "  readonly helper?: string;\n",
+    "  readonly helper?: string | undefined;\n",
+)
+replace_once(
+    "services/dsh/frontend/app-client/account/BenefitsHubScreen.tsx",
+    '''import {\n  useSubscriptionLifecycleController,\n  type ClientBenefitsPayload,\n  type SubscriptionPlanRecord,\n} from "../../shared/marketing";''',
+    '''import { useSubscriptionLifecycleController } from "../../shared/marketing/use-subscription-lifecycle-controller";\nimport type {\n  ClientBenefitsPayload,\n  SubscriptionPlanRecord,\n} from "../../shared/marketing/loyalty-subscriptions.types";''',
+)
+
+print("JRN-027 DSH lifecycle and focused client type surface converged")
