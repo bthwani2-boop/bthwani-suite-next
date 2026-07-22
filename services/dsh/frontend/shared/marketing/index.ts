@@ -1,6 +1,7 @@
 export * from "./marketing.types";
 export * from "./campaign.types";
 export * from "./use-marketing-controller";
+export * from "./use-governed-campaigns-controller";
 export * from "./dsh-signal-layer.model";
 export * from "./marketing-registry";
 export * from "./marketing.api";
