@@ -11,12 +11,13 @@ const deliveryPricingAdmin = read("services/dsh/backend/internal/checkout/delive
 const loyaltyPolicy = read("services/dsh/backend/internal/marketing/loyalty_policy.go");
 const loyaltyHTTP = read("services/dsh/backend/internal/http/loyalty_policy.go");
 const wltOutboxWorker = read("services/dsh/backend/internal/wltoutbox/worker.go");
+const wltCommercial = read("services/wlt/backend/internal/commercial/commercial.go");
 const partnerController = read("services/dsh/frontend/shared/partner/use-delivery-pricing-controller.ts");
 const partnerCard = read("services/dsh/frontend/app-partner/store/PartnerDeliveryPricingCard.tsx");
 const couponsDeck = read("services/dsh/frontend/control-panel/marketing/components/CouponsCommandDeck.tsx");
 const clientCheckout = read("services/dsh/frontend/app-client/checkout/GovernedCheckoutScreen.tsx");
 
- test("JRN-026 lets the partner create the first governed delivery pricing policy", () => {
+test("JRN-026 lets the partner create the first governed delivery pricing policy", () => {
   assert.match(partnerController, /record: DeliveryPricingRecord \| null/);
   assert.match(partnerController, /expectedVersion: record\?\.version \?\? 0/);
   assert.doesNotMatch(partnerCard, /if \(!partnerPolicy\) return/);
@@ -66,4 +67,8 @@ test("JRN-026 governs loyalty earning policies and delegates financial entries t
   assert.match(wltOutboxWorker, /AppendLoyaltyEntry/);
   assert.match(wltOutboxWorker, /:loyalty:earn/);
   assert.match(wltOutboxWorker, /:loyalty:reverse/);
+  assert.match(wltCommercial, /wlt_loyalty_accounts/);
+  assert.match(wltCommercial, /sql\.LevelSerializable/);
+  assert.match(wltCommercial, /GetLoyaltyEntryByIdempotency/);
+  assert.match(wltCommercial, /ErrAlreadyReversed/);
 });
