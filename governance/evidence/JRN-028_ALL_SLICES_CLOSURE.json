@@ -57,9 +57,9 @@
     },
     {
       "id": "FS-08",
-      "name": "Tenant, correlation and idempotency enforcement",
+      "name": "Tenant, correlation, idempotency and concurrent-transition enforcement",
       "status": "CLOSED_BY_EXACT_HEAD_GATE",
-      "evidence": ["services/wlt/backend/internal/shared/serviceauth.go", "services/wlt/backend/internal/promotionfunding/promotion_funding_test.go"]
+      "evidence": ["services/wlt/backend/internal/shared/serviceauth.go", "services/wlt/backend/internal/promotionfunding/promotion_funding_test.go", "services/wlt/database/tests/jrn-028-promotion-funding-concurrency.sh"]
     },
     {
       "id": "FS-09",
