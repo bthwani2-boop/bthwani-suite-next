@@ -65,6 +65,7 @@ $script:WltMigrationProbes = [ordered]@{
   "wlt-038_jrn_033_representative_finance_tenancy.sql" = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_wallets' AND column_name = 'tenant_id' AND is_nullable = 'NO') AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_ledger_entries' AND column_name = 'tenant_id' AND is_nullable = 'NO') AND to_regclass('public.wlt_wallets_tenant_actor_idx') IS NOT NULL AND to_regclass('public.wlt_ledger_entries_tenant_actor_idx') IS NOT NULL"
   "wlt-090_jrn036_settlement_commission_governance.sql" = "to_regclass('public.wlt_jrn036_settlement_requests') IS NOT NULL AND to_regclass('public.wlt_jrn036_commission_policy_versions') IS NOT NULL AND to_regclass('public.wlt_jrn036_audit_events') IS NOT NULL"
   "wlt-091_jrn036_adjustment_ledger_identity.sql" = "to_regclass('public.wlt_jrn036_commission_adjustments_request_hash_idx') IS NOT NULL AND to_regclass('public.wlt_jrn036_commission_adjustments_commission_created_idx') IS NOT NULL"
+  "wlt-092_jrn_035_refund_operation_idempotency.sql" = "to_regclass('public.wlt_refund_operation_receipts') IS NOT NULL AND to_regclass('public.wlt_refund_operation_receipts_identity_uq') IS NOT NULL"
 }
 
 function Test-WltMigrationProbeCoverage {
