@@ -48,7 +48,7 @@ func (s *protectedStoreServer) handleJRN037ActorPayoutDestinationUpsert(w http.R
 	delete(object, "partnerId")
 	delete(object, "actorId")
 	delete(object, "actorType")
-	if _, exists := object["operatorId"]; !exists { object["operatorId"] = actor.ID }
+	object["operatorId"] = actor.ID
 	body, err = json.Marshal(object)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to encode payout destination")
@@ -128,13 +128,20 @@ func (s *protectedStoreServer) handleFieldPayoutRequestsJRN037(w http.ResponseWr
 func (s *protectedStoreServer) handleFieldCreatePayoutRequestJRN037(w http.ResponseWriter, r *http.Request) { s.handleJRN037ActorPayoutCreate(w, r, "field") }
 
 func (s *protectedStoreServer) handleReconcileFinancePayoutRequestJRN037(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage, "operator"); !ok { return }
-	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 16*1024))
-	if err != nil || len(body) == 0 || !json.Valid(body) {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "reconciliation body is invalid")
+	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage, "operator")
+	if !ok { return }
+	payoutID := strings.TrimSpace(r.PathValue("payoutId"))
+	if payoutID == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "payoutId is required")
 		return
 	}
-	status, responseBody, err := s.wlt.FinanceWrite(r.Context(), http.MethodPost, "/wlt/payout-requests/"+url.PathEscape(r.PathValue("payoutId"))+"/reconcile", body, correlationForActorMutation(r, "payout-reconcile-"+r.PathValue("payoutId")))
+	status, responseBody, err := s.wlt.FinanceWrite(
+		r.Context(),
+		http.MethodPost,
+		"/wlt/payout-requests/"+url.PathEscape(payoutID)+"/reconcile",
+		operatorWriteBody(actor.ID),
+		correlationForActorMutation(r, "payout-reconcile-"+payoutID),
+	)
 	writeWltActorFinanceResponse(w, status, responseBody, err)
 }
 
