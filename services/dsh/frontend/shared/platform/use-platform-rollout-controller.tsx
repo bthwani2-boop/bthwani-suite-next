@@ -5,6 +5,7 @@ import {
   createPlatformRollout,
   fetchPlatformRollouts,
   pausePlatformRollout,
+  resumePlatformRollout,
   rollbackPlatformRollout,
   type CreatePlatformRolloutInput,
   type PlatformRollout,
@@ -82,6 +83,8 @@ export function usePlatformRolloutController(enabled: boolean) {
       runMutation("rollout_advance", id, () => advancePlatformRollout(id)),
     pause: (id: string) =>
       runMutation("rollout_pause", id, () => pausePlatformRollout(id)),
+    resume: (id: string) =>
+      runMutation("rollout_resume", id, () => resumePlatformRollout(id)),
     abort: (id: string) =>
       runMutation("rollout_abort", id, () => abortPlatformRollout(id)),
     rollback: (id: string) =>
