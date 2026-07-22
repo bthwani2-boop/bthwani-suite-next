@@ -83,11 +83,15 @@ func dispatch(ctx context.Context, client *wlt.Client, event Event) (DeliveryRes
 		if result == nil {
 			return DeliveryResult{}, fmt.Errorf("WLT cancel-for-order returned no result")
 		}
+		paymentSessionID := result.PaymentSessionID
+		if paymentSessionID == "" {
+			paymentSessionID = event.PaymentSessionID
+		}
 		return DeliveryResult{
 			Action:           result.Action,
 			SessionStatus:    result.SessionStatus,
 			RefundID:         result.RefundID,
-			PaymentSessionID: result.PaymentSessionID,
+			PaymentSessionID: paymentSessionID,
 		}, nil
 	default:
 		return DeliveryResult{}, fmt.Errorf("unknown checkout finance outbox event type %q", event.EventType)
