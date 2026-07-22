@@ -1,4 +1,4 @@
-name: JRN-034 Payments Verification — Immutable Candidate Diagnostics
+name: JRN-034 Payments Verification — Immutable Ubuntu Candidate
 
 on:
   workflow_dispatch:
@@ -50,13 +50,13 @@ permissions:
   contents: read
 
 concurrency:
-  group: jrn-034-payments-${{ github.ref }}
+  group: jrn-034-payments-ubuntu-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   structural:
     name: Structural journey guard
-    runs-on: macos-15
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout exact commit
         uses: actions/checkout@v4
@@ -71,7 +71,7 @@ jobs:
 
   backend:
     name: WLT and DSH payment backend
-    runs-on: macos-15
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout exact commit
         uses: actions/checkout@v4
@@ -116,7 +116,7 @@ jobs:
 
   frontend:
     name: Shared brain and payment operations surface
-    runs-on: macos-15
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout exact commit
         uses: actions/checkout@v4
@@ -138,7 +138,7 @@ jobs:
 
   contract:
     name: Focused contracts and product truth
-    runs-on: macos-15
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout exact commit
         uses: actions/checkout@v4
