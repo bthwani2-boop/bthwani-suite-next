@@ -67,7 +67,15 @@ jobs:
       - name: Verify SaaS governance boundary
         run: pnpm run guard:saas-governance
       - name: Verify guard registry and CI policy
-        run: pnpm run guard:guard-registry
+        run: pnpm run guard:guard-registry 2>&1 | tee guard-registry.log
+      - name: Preserve guard registry failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: guard-registry-failure
+          path: guard-registry.log
+          if-no-files-found: error
+          retention-days: 7
       - name: Verify SDLC contracts
         run: pnpm run guard:sdlc
       - name: Verify cleanup policy
