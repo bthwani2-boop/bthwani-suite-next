@@ -6,6 +6,7 @@ import { resolveDshApiBaseUrl } from "../../shared/_kernel/dsh-api-base-url";
 import { createDshHttpClient } from "../../shared/_kernel/dsh-http-request";
 import type {
   RepresentativeActorType,
+  RepresentativeLedgerEntry,
   RepresentativeWallet,
 } from "../../shared/finance-wlt-link/actor-wallet";
 
@@ -18,7 +19,12 @@ type LookupState =
   | { readonly kind: "idle" }
   | { readonly kind: "loading" }
   | { readonly kind: "error"; readonly message: string }
-  | { readonly kind: "loaded"; readonly wallet: RepresentativeWallet };
+  | {
+      readonly kind: "loaded";
+      readonly wallet: RepresentativeWallet;
+      readonly ledgerEntries: readonly RepresentativeLedgerEntry[];
+      readonly ledgerError: string | null;
+    };
 
 function amountLabel(value: number, currency: string): string {
   return `${(value / 100).toLocaleString("ar-YE", {
@@ -34,6 +40,18 @@ function statusTone(status: string): "success" | "warning" | "danger" | "neutral
   return "neutral";
 }
 
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "object" && error !== null && "message" in error) {
+    return String((error as { readonly message?: unknown }).message ?? "unknown error");
+  }
+  return String(error);
+}
+
+function ledgerDirectionLabel(entry: RepresentativeLedgerEntry): string {
+  return entry.debitCredit === "credit" ? "دائن" : "مدين";
+}
+
 export function RepresentativeWalletLookup() {
   const [actorType, setActorType] = useState<RepresentativeActorType>("client");
   const [actorId, setActorId] = useState("");
@@ -46,17 +64,28 @@ export function RepresentativeWalletLookup() {
       return;
     }
     setState({ kind: "loading" });
-    try {
-      const response = await request<{ readonly wallet: RepresentativeWallet }>(
-        `/dsh/control-panel/finance/wallets/${actorType}/${encodeURIComponent(normalizedActorId)}`,
-      );
-      setState({ kind: "loaded", wallet: response.wallet });
-    } catch (error) {
-      setState({
-        kind: "error",
-        message: error instanceof Error ? error.message : String(error),
-      });
+
+    const encodedActorId = encodeURIComponent(normalizedActorId);
+    const [walletResult, ledgerResult] = await Promise.allSettled([
+      request<{ readonly wallet: RepresentativeWallet }>(
+        `/dsh/control-panel/finance/wallets/${actorType}/${encodedActorId}`,
+      ),
+      request<{ readonly ledgerEntries: RepresentativeLedgerEntry[] }>(
+        `/dsh/control-panel/finance/ledger/entries?actorType=${actorType}&actorId=${encodedActorId}&limit=50`,
+      ),
+    ]);
+
+    if (walletResult.status === "rejected") {
+      setState({ kind: "error", message: errorMessage(walletResult.reason) });
+      return;
     }
+
+    setState({
+      kind: "loaded",
+      wallet: walletResult.value.wallet,
+      ledgerEntries: ledgerResult.status === "fulfilled" ? ledgerResult.value.ledgerEntries ?? [] : [],
+      ledgerError: ledgerResult.status === "rejected" ? errorMessage(ledgerResult.reason) : null,
+    });
   };
 
   return (
@@ -109,7 +138,7 @@ export function RepresentativeWalletLookup() {
       {state.kind === "idle" ? (
         <StateView tone="neutral" title="حدد نوع الممثل ومعرفه" description="لن يتم إرسال أي معرف من تطبيقات الممثلين؛ هذا الإدخال مخصص للمشغّل المخوّل فقط." />
       ) : state.kind === "loading" ? (
-        <StateView loading title="جارٍ تحميل المحفظة" />
+        <StateView loading title="جارٍ تحميل المحفظة والدفتر" />
       ) : state.kind === "error" ? (
         <StateView tone="danger" title="تعذر تحميل المحفظة" description={state.message} actionLabel="إعادة المحاولة" onActionPress={() => void lookup()} />
       ) : (
@@ -140,6 +169,48 @@ export function RepresentativeWalletLookup() {
           <Text role="caption" tone="muted">
             المالك: {state.wallet.actorType}/{state.wallet.actorId} · آخر تحديث: {state.wallet.updatedAt ?? "غير متاح"} · آخر قيد: {state.wallet.lastLedgerEntryAt ?? "لا يوجد"}
           </Text>
+
+          <div style={{ borderTop: `1px solid ${lightThemeColors.borderColor}`, paddingTop: "1rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+              <Text role="titleSm">دفتر الممثل المرجعي</Text>
+              <Badge label={`${state.ledgerEntries.length.toLocaleString("ar-YE")} قيد`} tone="neutral" />
+            </div>
+            {state.ledgerError ? (
+              <StateView
+                tone="warning"
+                title="تم تحميل المحفظة وتعذر تحميل الدفتر"
+                description={state.ledgerError}
+                actionLabel="إعادة المحاولة"
+                onActionPress={() => void lookup()}
+              />
+            ) : state.ledgerEntries.length === 0 ? (
+              <StateView tone="neutral" title="لا توجد قيود لهذا الممثل" description="لم يسجل WLT حركة مالية مطابقة لنوع الممثل ومعرفه حتى الآن." />
+            ) : (
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 760 }}>
+                  <thead>
+                    <tr style={{ borderBottom: `1px solid ${lightThemeColors.borderColor}` }}>
+                      {['التاريخ', 'نوع القيد', 'الاتجاه', 'المبلغ', 'الرصيد بعد القيد', 'المرجع'].map((label) => (
+                        <th key={label} style={{ padding: "0.65rem", textAlign: "right" }}><Text role="caption" tone="muted">{label}</Text></th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {state.ledgerEntries.map((entry) => (
+                      <tr key={entry.id} style={{ borderBottom: `1px solid ${lightThemeColors.borderColor}` }}>
+                        <td style={{ padding: "0.65rem" }}><Text role="caption">{entry.createdAt}</Text></td>
+                        <td style={{ padding: "0.65rem" }}><Text role="body">{entry.entryType || "قيد مالي"}</Text></td>
+                        <td style={{ padding: "0.65rem" }}><Badge label={ledgerDirectionLabel(entry)} tone={entry.debitCredit === "credit" ? "success" : "warning"} /></td>
+                        <td style={{ padding: "0.65rem" }}><Text role="body" tone={entry.debitCredit === "credit" ? "success" : "danger"}>{amountLabel(entry.amountMinorUnits, entry.currency)}</Text></td>
+                        <td style={{ padding: "0.65rem" }}><Text role="body">{amountLabel(entry.balanceAfter, entry.currency)}</Text></td>
+                        <td style={{ padding: "0.65rem" }}><Text role="caption" tone="muted">{entry.referenceId || entry.sourceId || entry.description}</Text></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </Card>
