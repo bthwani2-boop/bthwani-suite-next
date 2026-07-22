@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches: [sambassam]
-    paths:
+    paths: &jrn021_paths
       - "services/dsh/backend/internal/support/**"
       - "services/dsh/backend/internal/http/**"
       - "services/dsh/backend/cmd/dsh-api/main.go"
@@ -22,22 +22,7 @@ on:
       - ".github/workflows/jrn-021-support-incidents-order-rescue.yml"
   pull_request:
     branches: [master]
-    paths:
-      - "services/dsh/backend/internal/support/**"
-      - "services/dsh/backend/internal/http/**"
-      - "services/dsh/backend/cmd/dsh-api/main.go"
-      - "services/dsh/database/migrations/dsh-098_jrn_021_incident_governance.sql"
-      - "services/dsh/database/migrations/dsh-099_jrn_021_order_rescue.sql"
-      - "services/dsh/frontend/shared/support/**"
-      - "services/dsh/frontend/control-panel/operations/OrderRescueScreen.tsx"
-      - "services/dsh/contracts/dsh.support-governance.openapi.yaml"
-      - "services/dsh/contracts/dsh.incident-governance.openapi.yaml"
-      - "services/dsh/contracts/dsh.order-rescue.openapi.yaml"
-      - "services/dsh/contracts/contract-registry.ts"
-      - "services/dsh/tests/jrn-021-support-incidents-order-rescue.test.mjs"
-      - "services/dsh/tsconfig.jrn-021.json"
-      - "governance/product/contracts/jrn-021-support-incidents-order-rescue.product-truth.json"
-      - ".github/workflows/jrn-021-support-incidents-order-rescue.yml"
+    paths: *jrn021_paths
 
 permissions:
   contents: read
@@ -52,53 +37,31 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository state
-        uses: actions/checkout@v4
-
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
       - name: Set up pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           version: "10.34.2"
-
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "24.17.0"
           cache: pnpm
-
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version-file: services/dsh/backend/go.mod
           cache-dependency-path: services/dsh/backend/go.sum
-
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
-
       - name: Verify governed support, incident, and rescue backend
         working-directory: services/dsh/backend
         run: go test ./internal/support ./internal/http
-
       - name: Verify JRN-021 shared brain and control-panel types
-        id: jrn021_typecheck
         run: pnpm exec tsc -p services/dsh/tsconfig.jrn-021.json --noEmit
-
-      - name: Audit full DSH typecheck baseline
-        id: dsh_typecheck_baseline
-        continue-on-error: true
-        shell: bash
-        run: |
-          set -o pipefail
-          pnpm --dir services/dsh typecheck 2>&1 | tee jrn-021-typecheck-baseline.log
-
-      - name: Upload DSH baseline diagnostics
-        if: steps.dsh_typecheck_baseline.outcome == 'failure'
-        uses: actions/upload-artifact@v4
-        with:
-          name: jrn-021-dsh-baseline-diagnostics
-          path: jrn-021-typecheck-baseline.log
-          if-no-files-found: error
-          retention-days: 3
-
       - name: Verify JRN-021 contracts, runtime bindings, and product truth
-        if: steps.jrn021_typecheck.outcome == 'success'
         run: node --test services/dsh/tests/jrn-021-support-incidents-order-rescue.test.mjs
+      - name: Verify repository whitespace
+        run: git diff --check
