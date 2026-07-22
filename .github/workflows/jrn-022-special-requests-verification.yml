@@ -16,6 +16,8 @@ on:
       - "services/dsh/frontend/app-client/DshClientSurface.tsx"
       - "services/dsh/frontend/control-panel/operations/SpecialOpsWorkbenchScreen.tsx"
       - "services/dsh/tests/jrn-022-special-requests.test.mjs"
+      - "governance/product/product-truth.schema.json"
+      - "governance/product/contracts/jrn-022-special-requests.product-truth.json"
       - "services/dsh/contracts/dsh.openapi.yaml"
       - "services/dsh/contracts/paths/**"
       - "services/dsh/contracts/components/**"
