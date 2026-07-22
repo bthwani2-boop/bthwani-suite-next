@@ -1,0 +1,80 @@
+-- JRN-038: COD cash custody, evidence, variance and reconciliation truth.
+--
+-- WLT remains the financial source of truth. A collection/remittance state
+-- transition is not considered complete unless the corresponding evidence and
+-- double-entry ledger transaction commit in the same database transaction.
+
+CREATE TABLE IF NOT EXISTS wlt_cod_custody_evidence (
+  id                           text PRIMARY KEY DEFAULT ('wcde_' || gen_random_uuid()::text),
+  cod_record_id                text NOT NULL REFERENCES wlt_cod_records(id) ON DELETE RESTRICT,
+  event_type                   text NOT NULL,
+  expected_amount_minor_units  bigint NOT NULL CHECK (expected_amount_minor_units >= 0),
+  actual_amount_minor_units    bigint NOT NULL CHECK (actual_amount_minor_units >= 0),
+  difference_minor_units       bigint NOT NULL,
+  currency                     text NOT NULL,
+  proof_reference              text NOT NULL,
+  actor_id                     text NOT NULL,
+  actor_type                   text NOT NULL,
+  note                         text NOT NULL DEFAULT '',
+  correlation_id               text NOT NULL,
+  idempotency_key              text NOT NULL,
+  ledger_transaction_id        text NOT NULL,
+  created_at                   timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT wlt_cod_custody_evidence_event_chk
+    CHECK (event_type IN ('collection', 'remittance')),
+  CONSTRAINT wlt_cod_custody_evidence_actor_chk
+    CHECK (actor_type IN ('captain', 'store_courier', 'partner_store', 'partner', 'operator')),
+  CONSTRAINT wlt_cod_custody_evidence_proof_chk
+    CHECK (length(btrim(proof_reference)) >= 3),
+  CONSTRAINT wlt_cod_custody_evidence_correlation_chk
+    CHECK (length(btrim(correlation_id)) >= 3),
+  CONSTRAINT wlt_cod_custody_evidence_idempotency_chk
+    CHECK (length(btrim(idempotency_key)) >= 3),
+  CONSTRAINT wlt_cod_custody_evidence_difference_chk
+    CHECK (difference_minor_units = actual_amount_minor_units - expected_amount_minor_units),
+  UNIQUE (cod_record_id, event_type),
+  UNIQUE (event_type, idempotency_key),
+  UNIQUE (event_type, proof_reference)
+);
+
+CREATE INDEX IF NOT EXISTS wlt_cod_custody_evidence_record_created_idx
+  ON wlt_cod_custody_evidence(cod_record_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS wlt_cod_reconciliation_cases (
+  id                           text PRIMARY KEY DEFAULT ('wcrc_' || gen_random_uuid()::text),
+  cod_record_id                text NOT NULL REFERENCES wlt_cod_records(id) ON DELETE RESTRICT,
+  custody_evidence_id          text NOT NULL REFERENCES wlt_cod_custody_evidence(id) ON DELETE RESTRICT,
+  expected_amount_minor_units  bigint NOT NULL CHECK (expected_amount_minor_units >= 0),
+  actual_amount_minor_units    bigint NOT NULL CHECK (actual_amount_minor_units >= 0),
+  difference_minor_units       bigint NOT NULL,
+  currency                     text NOT NULL,
+  trigger_reason               text NOT NULL DEFAULT 'cod_collection_variance',
+  status                       text NOT NULL DEFAULT 'open',
+  assigned_to_operator_id      text,
+  assigned_at                  timestamptz,
+  investigation_note           text NOT NULL DEFAULT '',
+  resolved_by_operator_id      text,
+  resolution_action            text,
+  resolution_note              text NOT NULL DEFAULT '',
+  resolved_at                  timestamptz,
+  created_at                   timestamptz NOT NULL DEFAULT now(),
+  updated_at                   timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT wlt_cod_reconciliation_difference_chk
+    CHECK (difference_minor_units = actual_amount_minor_units - expected_amount_minor_units),
+  CONSTRAINT wlt_cod_reconciliation_non_zero_chk
+    CHECK (difference_minor_units <> 0),
+  CONSTRAINT wlt_cod_reconciliation_status_chk
+    CHECK (status IN ('open', 'investigating', 'resolved')),
+  CONSTRAINT wlt_cod_reconciliation_action_chk
+    CHECK (resolution_action IS NULL OR resolution_action IN ('confirmed_variance', 'cash_adjustment', 'collector_recovery', 'write_off')),
+  UNIQUE (cod_record_id),
+  UNIQUE (custody_evidence_id)
+);
+
+CREATE INDEX IF NOT EXISTS wlt_cod_reconciliation_status_created_idx
+  ON wlt_cod_reconciliation_cases(status, created_at DESC);
+
+COMMENT ON TABLE wlt_cod_custody_evidence IS
+  'Immutable proof and accounting linkage for COD collection/remittance events.';
+COMMENT ON TABLE wlt_cod_reconciliation_cases IS
+  'COD-specific expected-vs-actual variance workflow with assignment, investigation and resolution truth.';
