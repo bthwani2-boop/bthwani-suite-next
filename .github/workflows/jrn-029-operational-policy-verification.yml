@@ -8,6 +8,7 @@ on:
     paths: &jrn029_paths
       - "governance/product/contracts/jrn-029-zones-sla-capacity-delivery-modes.product-truth.json"
       - "governance/evidence/JRN-029_FULLSTACK_CLOSURE.json"
+      - "governance/evidence/JRN-029_TECHNICAL_CLOSURE_2026-07-22.md"
       - "services/dsh/database/migrations/dsh-129_jrn029_operational_policy_closure.sql"
       - "services/dsh/database/migrations/dsh-130_jrn029_store_visibility_projection.sql"
       - "services/dsh/backend/cmd/dsh-api/main.go"
@@ -16,23 +17,26 @@ on:
       - "services/dsh/backend/internal/http/jrn_029_operational_policy_routes_test.go"
       - "services/dsh/backend/internal/http/platformpolicies_routes.go"
       - "services/dsh/frontend/shared/platform/jrn029-operational-policy.api.ts"
+      - "services/dsh/frontend/shared/platform/index.ts"
       - "services/dsh/frontend/control-panel/platform/Jrn029OperationalPolicySection.tsx"
       - "services/dsh/frontend/control-panel/platform/PlatformPoliciesScreen.tsx"
       - "services/dsh/contracts/**"
       - "services/dsh/clients/generated/dsh-api.ts"
       - "services/dsh/tests/jrn-029-operational-policy.test.mjs"
       - "services/dsh/tsconfig.jrn-029.json"
+      - "tools/scripts/integrate-jrn029-openapi.mjs"
+      - "tools/scripts/finalize-jrn029-openapi.mjs"
       - ".github/workflows/jrn-029-operational-policy-verification.yml"
   pull_request:
     branches: [master]
     paths: *jrn029_paths
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
-  group: jrn-029-${{ github.workflow }}-${{ github.event_name }}-${{ github.sha }}
-  cancel-in-progress: false
+  group: jrn-029-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   verify:
@@ -57,55 +61,129 @@ jobs:
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/dsh_jrn_029?sslmode=disable
       PORT: "58080"
       DSH_AUTH_MODE: identity
+
     steps:
       - name: Checkout exact repository state
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
           fetch-depth: 0
+
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version-file: services/dsh/backend/go.mod
           cache-dependency-path: services/dsh/backend/go.sum
+
       - name: Set up pnpm
         uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           version: "10.34.2"
+
       - name: Set up Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "24.17.0"
           cache: pnpm
+
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
-      - name: Verify canonical modular OpenAPI is already current
+
+      - name: Integrate JRN-029 into sovereign modular OpenAPI
         run: |
+          node tools/scripts/finalize-jrn029-openapi.mjs
           pnpm --dir services/dsh openapi:verify
-          git diff --exit-code -- services/dsh/contracts services/dsh/clients/generated/dsh-api.ts
+
       - name: Verify sovereign contract and generated client contain JRN-029
         run: |
           for token in getDshOperationalProfile upsertDshOperationalProfile listDshOperationalDeliveryModes upsertDshOperationalDeliveryMode evaluateDshOperationalPolicy listDshOperationalPolicyAudit rollbackDshOperationalPolicy; do
             grep -q "operationId: ${token}" services/dsh/contracts/generated/dsh.bundle.openapi.yaml
           done
           grep -q '/dsh/platform/operational-policy/evaluate' services/dsh/clients/generated/dsh-api.ts
+          test ! -e services/dsh/contracts/dsh.jrn-029.openapi.yaml
+
       - name: Verify Go formatting and compile executable composition
         working-directory: services/dsh/backend
         run: |
-          test -z "$(gofmt -l internal/platformpolicies/jrn029*.go internal/http/jrn029*.go internal/http/jrn_029_operational_policy_routes_test.go cmd/dsh-api/main.go)"
+          mapfile -d '' go_files < <(find internal/platformpolicies -maxdepth 1 -type f -name 'jrn029*.go' -print0)
+          go_files+=(
+            internal/http/jrn029_operational_policy.go
+            internal/http/jrn029_effects_middleware.go
+            internal/http/jrn029_effects_middleware_test.go
+            internal/http/jrn_029_operational_policy_routes_test.go
+            cmd/dsh-api/main.go
+          )
+          unformatted="$(gofmt -l "${go_files[@]}")"
+          if [[ -n "${unformatted}" ]]; then
+            printf 'Unformatted JRN-029 Go files:\n%s\n' "${unformatted}"
+            exit 1
+          fi
           go test ./internal/platformpolicies ./internal/http ./cmd/dsh-api -run '^$'
           go build -o /tmp/dsh-api ./cmd/dsh-api
+
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
       - name: Apply all DSH migrations to PostgreSQL 16
         run: |
           for migration in $(find services/dsh/database/migrations -maxdepth 1 -type f -name '*.sql' | sort); do
+            echo "Applying ${migration}"
             psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d dsh_jrn_029 -f "${migration}"
           done
+
+      - name: Prove JRN-029 schema and derived visibility invariants
+        run: |
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d dsh_jrn_029 <<'SQL'
+          DO $$
+          DECLARE
+            required_columns integer;
+            generated_visibility text;
+            required_indexes integer;
+          BEGIN
+            SELECT COUNT(*) INTO required_columns
+              FROM information_schema.columns
+             WHERE table_schema = 'public'
+               AND (
+                 (table_name = 'dsh_platform_sla_rules' AND column_name = 'max_assignment_mins') OR
+                 (table_name = 'dsh_platform_capacity_configs' AND column_name IN ('is_paused', 'pause_reason'))
+               );
+            IF required_columns <> 3 THEN
+              RAISE EXCEPTION 'JRN-029 required operational columns missing: found % of 3', required_columns;
+            END IF;
+
+            IF to_regclass('public.dsh_platform_delivery_mode_policies') IS NULL THEN
+              RAISE EXCEPTION 'JRN-029 delivery-mode policy table is missing';
+            END IF;
+
+            SELECT is_generated INTO generated_visibility
+              FROM information_schema.columns
+             WHERE table_schema = 'public'
+               AND table_name = 'dsh_stores'
+               AND column_name = 'visibility_status';
+            IF generated_visibility IS DISTINCT FROM 'ALWAYS' THEN
+              RAISE EXCEPTION 'visibility_status must be a read-only generated projection, got %', generated_visibility;
+            END IF;
+
+            SELECT COUNT(*) INTO required_indexes
+              FROM pg_indexes
+             WHERE schemaname = 'public'
+               AND indexname IN (
+                 'idx_dsh_platform_delivery_modes_zone_enabled',
+                 'idx_dsh_platform_policy_events_correlation',
+                 'idx_dsh_stores_operational_visibility_area'
+               );
+            IF required_indexes <> 3 THEN
+              RAISE EXCEPTION 'JRN-029 indexes missing: found % of 3', required_indexes;
+            END IF;
+          END
+          $$;
+          SQL
+
       - name: Execute targeted and PostgreSQL lifecycle tests
         working-directory: services/dsh/backend
         run: go test ./internal/platformpolicies ./internal/http -run 'TestJRN029' -count=1 -v
-      - name: Run DSH API and verify governed routes are mounted
+
+      - name: Run DSH API and verify all governed routes are mounted
         working-directory: services/dsh/backend
         run: |
           /tmp/dsh-api > /tmp/dsh-jrn-029.log 2>&1 &
@@ -116,15 +194,35 @@ jobs:
             sleep 1
           done
           curl --fail --silent http://127.0.0.1:58080/dsh/health
-          for path in "/dsh/operator/platform/operational-profiles/00000000-0000-0000-0000-000000000001" "/dsh/operator/platform/operational-policy/audit"; do
-            status=$(curl --silent --output /tmp/jrn029-route.json --write-out '%{http_code}' "http://127.0.0.1:58080${path}")
+
+          check_route() {
+            method="$1"
+            path="$2"
+            body="${3:-}"
+            if [[ -n "${body}" ]]; then
+              status=$(curl --silent --output /tmp/jrn029-route.json --write-out '%{http_code}' -X "${method}" -H 'Content-Type: application/json' --data "${body}" "http://127.0.0.1:58080${path}")
+            else
+              status=$(curl --silent --output /tmp/jrn029-route.json --write-out '%{http_code}' -X "${method}" "http://127.0.0.1:58080${path}")
+            fi
             test "${status}" != "000"
             test "${status}" != "404"
-          done
+          }
+
+          zone_id=00000000-0000-0000-0000-000000000001
+          event_id=00000000-0000-0000-0000-000000000002
+          check_route GET "/dsh/operator/platform/operational-profiles/${zone_id}"
+          check_route GET "/dsh/operator/platform/operational-profiles/${zone_id}/delivery-modes"
+          check_route PUT "/dsh/operator/platform/operational-profiles/${zone_id}/delivery-modes/bthwani_delivery" '{}'
+          check_route POST "/dsh/platform/operational-policy/evaluate" '{}'
+          check_route GET "/dsh/operator/platform/operational-policy/audit"
+          check_route POST "/dsh/operator/platform/operational-policy/audit/${event_id}/rollback" '{}'
+
       - name: Verify JRN-029 shared brain and required surface binding
         run: pnpm --dir services/dsh exec tsc -p tsconfig.jrn-029.json --noEmit --pretty false
+
       - name: Verify JRN-029 full-stack and negative invariants
         run: node --test services/dsh/tests/jrn-029-operational-policy.test.mjs
+
       - name: Validate Product Truth without self-approval
         run: |
           node --input-type=module <<'NODE'
@@ -136,5 +234,50 @@ jobs:
           if (!validate(contract)) { console.error(validate.errors); process.exit(1); }
           if (contract.owners.productManagerApproval !== 'PENDING' || contract.owners.productOwnerApproval !== 'PENDING' || contract.owners.productAcceptanceDecision !== 'PENDING') process.exit(1);
           NODE
+
+      - name: Publish sovereign OpenAPI from latest remote head
+        if: github.event_name == 'push' && github.ref == 'refs/heads/sambassam'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          for attempt in 1 2 3; do
+            git fetch origin sambassam
+            git reset --hard origin/sambassam
+            pnpm install --frozen-lockfile
+            node tools/scripts/finalize-jrn029-openapi.mjs
+            pnpm --dir services/dsh openapi:verify
+
+            if git diff --quiet; then
+              echo "Sovereign OpenAPI outputs are already current."
+              exit 0
+            fi
+
+            git add -A services/dsh/contracts services/dsh/clients/generated/dsh-api.ts
+            git commit -m "chore(jrn-029): register sovereign OpenAPI and generated client"
+            if git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:sambassam; then
+              exit 0
+            fi
+            echo "Concurrent branch update detected; rebuilding from the latest remote head."
+          done
+
+          echo "Failed to publish generated JRN-029 contract after retries."
+          exit 1
+
       - name: Verify repository remains unchanged
         run: git diff --exit-code
+
+      - name: Build same-commit evidence manifest
+        run: |
+          mkdir -p /tmp/jrn-029-evidence
+          printf '{"journey":"JRN-029","commitSha":"%s","runId":"%s","database":"PostgreSQL 16","contract":"sovereign modular DSH OpenAPI","runtimeSmoke":"all governed routes mounted","result":"all-gates-passed"}\n' "${GITHUB_SHA}" "${GITHUB_RUN_ID}" > /tmp/jrn-029-evidence/manifest.json
+
+      - name: Upload same-commit evidence manifest
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: jrn-029-evidence-${{ github.sha }}
+          path: /tmp/jrn-029-evidence/manifest.json
+          if-no-files-found: error
+          retention-days: 30
