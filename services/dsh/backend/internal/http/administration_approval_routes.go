@@ -13,15 +13,15 @@ import (
 )
 
 const (
-	AdministrationPermissionApprove          = "administration.approve"
-	AdministrationPermissionRoleRequest      = "administration.role.request"
-	AdministrationPermissionRoleApprove      = "administration.role.approve"
-	AdministrationPermissionStaffRequest     = "administration.staff.request"
-	AdministrationPermissionStaffApprove     = "administration.staff.approve"
-	AdministrationPermissionAuditRead        = "administration.audit.read"
-	AdministrationPermissionDiagnosticsRead  = "administration.diagnostics.read"
-	AdministrationPermissionRollbackRequest  = "administration.rollback.request"
-	AdministrationPermissionRollbackApprove  = "administration.rollback.approve"
+	AdministrationPermissionApprove         = "administration.approve"
+	AdministrationPermissionRoleRequest     = "administration.role.request"
+	AdministrationPermissionRoleApprove     = "administration.role.approve"
+	AdministrationPermissionStaffRequest    = "administration.staff.request"
+	AdministrationPermissionStaffApprove    = "administration.staff.approve"
+	AdministrationPermissionAuditRead       = "administration.audit.read"
+	AdministrationPermissionDiagnosticsRead = "administration.diagnostics.read"
+	AdministrationPermissionRollbackRequest = "administration.rollback.request"
+	AdministrationPermissionRollbackApprove = "administration.rollback.approve"
 )
 
 func RegisterAdministrationRoutes(
@@ -91,7 +91,7 @@ func (s *protectedStoreServer) handleRequestRoleDefinition(w http.ResponseWriter
 }
 
 func (s *protectedStoreServer) handleListRoleDefinitionRequests(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireAdministrationPermission(w, r, AdministrationPermissionRead)
+	_, ok := s.requireAdministrationPermission(w, r, AdministrationPermissionRoleApprove)
 	if !ok {
 		return
 	}
@@ -166,7 +166,7 @@ func (s *protectedStoreServer) handleRequestStaffRoleAssignment(w http.ResponseW
 }
 
 func (s *protectedStoreServer) handleListRoleAssignmentApprovals(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireAdministrationPermission(w, r, AdministrationPermissionRead)
+	_, ok := s.requireAdministrationPermission(w, r, AdministrationPermissionStaffApprove)
 	if !ok {
 		return
 	}
