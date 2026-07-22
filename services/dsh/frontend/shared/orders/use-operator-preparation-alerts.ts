@@ -65,7 +65,8 @@ export function useOperatorPreparationAlerts() {
   const acknowledge = React.useCallback(async (alert: DshPreparationAlert) => {
     setState((current) => ({ kind: 'submitting', alerts: current.alerts, action: 'acknowledge' }));
     try {
-      await acknowledgeOrderPreparationAlert(alert.id, alert.version);
+      const expectedVersion = alert.version;
+      await acknowledgeOrderPreparationAlert(alert.id, expectedVersion);
       const alerts = await fetchOrderPreparationAlerts(undefined, 100);
       setState({ kind: 'ready', alerts });
     } catch (error) {
