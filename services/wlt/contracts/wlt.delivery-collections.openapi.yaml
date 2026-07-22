@@ -1,0 +1,172 @@
+openapi: 3.1.0
+info:
+  title: BThwani WLT Delivery Collection Custody API
+  version: 1.0.0
+  description: >-
+    Fulfillment-neutral collection custody routes. WLT owns amount, currency,
+    custody state, ledger linkage and reconciliation. DSH supplies only trusted
+    delivery and collector identities through the service boundary.
+x-bthwani-owner: services/wlt
+x-bthwani-journey: JRN-038
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-client-generation: ENABLED
+x-bthwani-runtime-dependency: true
+x-bthwani-financial-owner: true
+servers:
+  - url: http://localhost:58083
+security:
+  - serviceBearer: []
+paths:
+  /wlt/delivery-collections:
+    get:
+      operationId: listWltDeliveryCollections
+      summary: List delivery collection custody records through the internal financial boundary.
+      tags: [WltDeliveryCollections]
+      parameters:
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/ServiceCaller'
+        - name: captainId
+          in: query
+          schema: { type: string }
+        - name: partnerId
+          in: query
+          schema: { type: string }
+        - name: collectorId
+          in: query
+          schema: { type: string }
+        - name: collectorType
+          in: query
+          schema: { type: string }
+      responses:
+        '200': { description: Delivery collection custody records }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /wlt/delivery-collections/{codRecordId}:
+    get:
+      operationId: getWltDeliveryCollection
+      summary: Read one delivery collection custody record.
+      tags: [WltDeliveryCollections]
+      parameters:
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/ServiceCaller'
+        - $ref: '#/components/parameters/CodRecordId'
+      responses:
+        '200': { description: Delivery collection custody record }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /wlt/delivery-collections/{codRecordId}/collect:
+    post:
+      operationId: collectWltDeliveryCollection
+      summary: Commit evidence-backed collection against WLT-owned custody truth.
+      tags: [WltDeliveryCollections]
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
+      parameters:
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/ServiceCaller'
+        - $ref: '#/components/parameters/CodRecordId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CollectDeliveryCollectionRequest'
+      responses:
+        '200': { description: Collection committed atomically or replayed exactly }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/FeatureNotEnabled' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /wlt/delivery-collections/{codRecordId}/remit:
+    post:
+      operationId: remitWltDeliveryCollection
+      summary: Commit evidence-backed remittance against WLT-owned custody truth.
+      tags: [WltDeliveryCollections]
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
+      parameters:
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/ServiceCaller'
+        - $ref: '#/components/parameters/CodRecordId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RemitDeliveryCollectionRequest'
+      responses:
+        '200': { description: Remittance committed atomically or replayed exactly }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/FeatureNotEnabled' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+components:
+  securitySchemes:
+    serviceBearer:
+      type: http
+      scheme: bearer
+  parameters:
+    Authorization:
+      name: Authorization
+      in: header
+      required: true
+      schema: { type: string, minLength: 1 }
+    ServiceCaller:
+      name: X-Service-Caller
+      in: header
+      required: true
+      schema: { type: string, const: dsh }
+    CodRecordId:
+      name: codRecordId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 3, maxLength: 200 }
+    CorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: true
+      schema: { type: string, minLength: 3, maxLength: 200 }
+  schemas:
+    CollectionActorType:
+      type: string
+      enum: [captain, store_courier, partner_store, partner, operator]
+    CollectDeliveryCollectionRequest:
+      type: object
+      additionalProperties: false
+      required: [actualAmountMinorUnits, proofReference, actorId, actorType]
+      properties:
+        actualAmountMinorUnits: { type: integer, format: int64, minimum: 1 }
+        proofReference: { type: string, minLength: 3, maxLength: 512 }
+        actorId: { type: string, minLength: 1 }
+        actorType: { $ref: '#/components/schemas/CollectionActorType' }
+        note: { type: string, maxLength: 4000 }
+    RemitDeliveryCollectionRequest:
+      type: object
+      additionalProperties: false
+      required: [proofReference, actorId, actorType]
+      properties:
+        proofReference: { type: string, minLength: 3, maxLength: 512 }
+        actorId: { type: string, minLength: 1 }
+        actorType: { $ref: '#/components/schemas/CollectionActorType' }
+        note: { type: string, maxLength: 4000 }
+  responses:
+    InvalidRequest: { description: Invalid request }
+    Unauthorized: { description: Missing or invalid service authentication }
+    Forbidden: { description: Caller is not permitted to read financial custody truth }
+    FeatureNotEnabled: { description: FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true }
+    NotFound: { description: Delivery collection record not found }
+    Conflict: { description: Invalid custody transition, replay conflict, or actor mismatch }
