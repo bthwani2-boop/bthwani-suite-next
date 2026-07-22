@@ -85,6 +85,10 @@ jobs:
         with:
           go-version-file: core/platform-control/backend/go.mod
           cache-dependency-path: core/platform-control/backend/go.sum
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
       - name: Apply Platform Control migrations in order
         run: |
           for migration in core/platform-control/database/migrations/*.sql; do
