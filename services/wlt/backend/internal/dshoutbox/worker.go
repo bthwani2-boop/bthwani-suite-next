@@ -15,10 +15,6 @@ const (
 	notifyTimeout = 10 * time.Second
 )
 
-// RunWorker polls for pending DSH outbox events until ctx is cancelled. It is
-// meant to run as a single background goroutine per wlt-api process; ClaimBatch's
-// row-level locking makes it safe to run more than one instance concurrently
-// too, but a single poller is enough at current volume.
 func RunWorker(ctx context.Context, db *sql.DB, client *dshnotify.Client, interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
@@ -34,7 +30,6 @@ func RunWorker(ctx context.Context, db *sql.DB, client *dshnotify.Client, interv
 	}
 }
 
-// ProcessOnce claims and attempts delivery of one batch of pending events.
 func ProcessOnce(ctx context.Context, db *sql.DB, client *dshnotify.Client) error {
 	events, err := ClaimBatch(db, batchSize, claimLease)
 	if err != nil {
@@ -42,10 +37,15 @@ func ProcessOnce(ctx context.Context, db *sql.DB, client *dshnotify.Client) erro
 	}
 	for _, e := range events {
 		notifyCtx, cancel := context.WithTimeout(ctx, notifyTimeout)
-		err := client.Notify(notifyCtx, e.TenantID, e.CheckoutIntentID, e.SpecialRequestID, e.PaymentSessionID, e.EventType)
+		err := client.NotifyEvent(notifyCtx, dshnotify.Event{
+			EventID: e.ID, CorrelationID: e.CorrelationID, TenantID: e.TenantID,
+			CheckoutIntentID: e.CheckoutIntentID, SpecialRequestID: e.SpecialRequestID,
+			PaymentSessionID: e.PaymentSessionID, Status: e.EventType,
+			OrderID: e.OrderID, RefundReference: e.RefundReference, Reason: e.Reason,
+		})
 		cancel()
 		if err != nil {
-			log.Printf("[dsh-outbox] payment-session event notify failed for session %s (attempt %d): %v", e.PaymentSessionID, e.AttemptCount+1, err)
+			log.Printf("[dsh-outbox] WLT event notify failed for session %s refund %s (attempt %d): %v", e.PaymentSessionID, e.RefundReference, e.AttemptCount+1, err)
 			if markErr := MarkFailed(db, e.ID, e.AttemptCount, err); markErr != nil {
 				log.Printf("[dsh-outbox] failed to record retry state for event %s: %v", e.ID, markErr)
 			}
