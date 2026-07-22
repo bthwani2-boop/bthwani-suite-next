@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import "./jrn-028-promotion-funding.test.mjs";
 
 const read = (path) => readFileSync(new URL(`../../../${path}`, import.meta.url), "utf8");
 
@@ -81,4 +83,15 @@ test("JRN-026 governs loyalty earning policies and delegates financial entries t
   assert.match(wltCommercial, /sql\.LevelSerializable/);
   assert.match(wltCommercial, /GetLoyaltyEntryByIdempotency/);
   assert.match(wltCommercial, /ErrAlreadyReversed/);
+});
+
+test("JRN-028 compiles and runs DSH and WLT funding packages in the trusted coupons gate", () => {
+  execFileSync("go", ["test", "./internal/promotionfunding", "./internal/shared"], {
+    cwd: new URL("../../../services/wlt/backend/", import.meta.url),
+    stdio: "inherit",
+  });
+  execFileSync("go", ["test", "./internal/coupons", "./internal/wlt", "./internal/promotionfundingoutbox"], {
+    cwd: new URL("../../../services/dsh/backend/", import.meta.url),
+    stdio: "inherit",
+  });
 });
