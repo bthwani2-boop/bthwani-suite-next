@@ -68,10 +68,10 @@ func (s *protectedStoreServer) specialRequestFinancialReadback(ctx context.Conte
 	result["readState"] = "available"
 	result["paymentSession"] = map[string]any{
 		"id":                session.ID,
-		"specialRequestId":  session.SpecialRequestID,
+		"specialRequestId":  request.ID,
 		"status":            session.Status,
-		"providerReference": session.ProviderReference,
-		"amountMinorUnits":  session.AmountMinorUnits,
+		"providerReference": session.Reference,
+		"amountMinorUnits":  session.Amount,
 		"currency":          session.Currency,
 		"updatedAt":         session.UpdatedAt,
 	}
