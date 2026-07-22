@@ -22,8 +22,6 @@ import {
 import { resolveIdentityApiBaseUrl } from "../../../../services/dsh/frontend/shared/_kernel/identity-api-base-url";
 import { IdentitySessionGate } from "../../../../services/dsh/frontend/shared/session/IdentitySessionGate";
 
-// Only call this from app-field's own tree — expo-secure-store is only
-// installed there, not in app-partner/app-client/app-captain.
 function createSecureStoreSessionStorageAdapter(): SessionStorageAdapter {
   return {
     getItem: (key: string) => SecureStore.getItemAsync(key),
@@ -38,7 +36,7 @@ if (Platform.OS !== "web") {
 configureIdentitySession(resolveIdentityApiBaseUrl());
 
 // ─── Deep-link / notification URL → navigation command ───────────────────────
-// URL scheme: dsh-field://route?storeId=X&visitId=Y&partnerId=Z
+// URL scheme: bthwani-field-next://route?storeId=X&visitId=Y&partnerId=Z
 function parseDeepLink(url: string): DshFieldNavigationCommand | null {
   try {
     const parsed = Linking.parse(url);
@@ -71,25 +69,25 @@ function parseDeepLink(url: string): DshFieldNavigationCommand | null {
 function parseNotificationData(data: Record<string, unknown>): DshFieldNavigationCommand | null {
   const route = data.route as string | undefined;
   if (!route) return null;
-  return parseDeepLink(`dsh-field://${route}?storeId=${data.storeId ?? ""}&visitId=${data.visitId ?? ""}&partnerId=${data.partnerId ?? ""}`);
+  return parseDeepLink(`bthwani-field-next://${route}?storeId=${data.storeId ?? ""}&visitId=${data.visitId ?? ""}&partnerId=${data.partnerId ?? ""}`);
 }
 
 function AppContent() {
   const identity = useIdentitySession();
-  useDshMobilePushRegistration(identity.state.kind, "app-field");
+  useDshMobilePushRegistration(identity.state.kind, "app-field", "bthwani-field-next");
 
   const [navCommand, setNavCommand] = useState<DshFieldNavigationCommand | undefined>();
   const notifListenerRef = useRef<Notifications.EventSubscription | null>(null);
 
   useEffect(() => {
-    // Handle notification taps (foreground + background)
+    // Handle legacy route payloads while governed actionUrl payloads are handled
+    // by useDshMobilePushRegistration for foreground, background and cold start.
     notifListenerRef.current = Notifications.addNotificationResponseReceivedListener((response) => {
       const data = response.notification.request.content.data as Record<string, unknown>;
       const cmd = parseNotificationData(data);
       if (cmd) setNavCommand(cmd);
     });
 
-    // Handle initial deep link (app launched via URL)
     void Linking.getInitialURL().then((url) => {
       if (url) {
         const cmd = parseDeepLink(url);
@@ -97,7 +95,6 @@ function AppContent() {
       }
     });
 
-    // Handle deep links while app is running
     const linkSub = Linking.addEventListener("url", ({ url }) => {
       const cmd = parseDeepLink(url);
       if (cmd) setNavCommand(cmd);
