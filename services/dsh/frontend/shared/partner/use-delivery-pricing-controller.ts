@@ -63,7 +63,7 @@ function useDeliveryPricingBase(
   );
 
   const save = useCallback(async (
-    record: DeliveryPricingRecord,
+    record: DeliveryPricingRecord | null,
     input: Omit<DeliveryPricingMutation, "expectedVersion">,
   ) => {
     setMutationLoading(true);
@@ -72,9 +72,12 @@ function useDeliveryPricingBase(
       if (surface === "partner") {
         await updatePartnerDeliveryPricing(storeId, {
           ...input,
-          expectedVersion: record.version,
+          expectedVersion: record?.version ?? 0,
         });
       } else {
+        if (!record) {
+          throw new Error("تعذر تحديد وضع التوصيل المطلوب.");
+        }
         await updateOperatorDeliveryPricing(storeId, record.fulfillmentMode, {
           ...input,
           expectedVersion: record.version,
