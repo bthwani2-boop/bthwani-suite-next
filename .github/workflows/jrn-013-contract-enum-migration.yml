@@ -1,133 +1,55 @@
-name: JRN-013 Primary Contract Enum Migration
+name: JRN-013 Primary Contract Sync
 
 on:
   push:
-    branches: ["sambassam"]
+    branches:
+      - sambassam
     paths:
       - ".github/workflows/jrn-013-contract-enum-migration.yml"
-  workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: jrn-013-primary-contract-enum-migration
+  group: jrn-013-primary-contract-sync
   cancel-in-progress: false
 
 jobs:
-  migrate:
+  synchronize:
+    if: contains(github.event.head_commit.message, '[jrn013-contract-sync]')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/checkout@v4
         with:
           ref: sambassam
           fetch-depth: 0
 
-      - name: Rebase on latest remote branch
+      - name: Synchronize primary contract artifacts
         shell: bash
         run: |
           set -euo pipefail
           git pull --rebase origin sambassam
+          node tools/contracts/sync-jrn-013-handoff-reasons.mjs --write
+          node tools/contracts/sync-jrn-013-handoff-reasons.mjs
 
-      - name: Patch primary OpenAPI generated artifacts and closure assertion
+      - name: Commit synchronized artifacts
         shell: bash
         run: |
           set -euo pipefail
-          node <<'NODE'
-          const fs = require('node:fs');
-
-          function patchYaml(path) {
-            if (!fs.existsSync(path)) throw new Error(`${path}: file not found`);
-            const source = fs.readFileSync(path, 'utf8');
-            const start = source.indexOf('    DshDeliveryExceptionReasonCode:');
-            const end = source.indexOf('    DshDeliveryExceptionStatus:', start);
-            if (start < 0 || end < 0) throw new Error(`${path}: delivery exception reason schema not found`);
-            const section = source.slice(start, end);
-            if (section.includes('      - handoff_shortage') && section.includes('      - handoff_mismatch')) return false;
-            const needle = '      - proof_unavailable\n      - other';
-            if (!section.includes(needle)) throw new Error(`${path}: expected enum insertion point not found`);
-            const updatedSection = section.replace(
-              needle,
-              '      - proof_unavailable\n      - handoff_shortage\n      - handoff_mismatch\n      - other',
-            );
-            fs.writeFileSync(path, source.slice(0, start) + updatedSection + source.slice(end), 'utf8');
-            return true;
-          }
-
-          function patchGeneratedClient(path) {
-            if (!fs.existsSync(path)) throw new Error(`${path}: file not found`);
-            const source = fs.readFileSync(path, 'utf8');
-            if (source.includes('| "handoff_shortage" | "handoff_mismatch" | "other"')) return false;
-            const oldUnion = 'DshDeliveryExceptionReasonCode: "customer_unreachable" | "recipient_refused" | "wrong_address" | "unsafe_location" | "vehicle_breakdown" | "accident" | "damaged_order" | "cash_collection_issue" | "weather_or_road_block" | "proof_unavailable" | "other";';
-            const newUnion = 'DshDeliveryExceptionReasonCode: "customer_unreachable" | "recipient_refused" | "wrong_address" | "unsafe_location" | "vehicle_breakdown" | "accident" | "damaged_order" | "cash_collection_issue" | "weather_or_road_block" | "proof_unavailable" | "handoff_shortage" | "handoff_mismatch" | "other";';
-            const count = source.split(oldUnion).length - 1;
-            if (count !== 1) throw new Error(`${path}: expected one generated reason union, found ${count}`);
-            fs.writeFileSync(path, source.replace(oldUnion, newUnion), 'utf8');
-            return true;
-          }
-
-          function patchClosureAssertion(path) {
-            if (!fs.existsSync(path)) throw new Error(`${path}: file not found`);
-            const source = fs.readFileSync(path, 'utf8');
-            const oldAssertion = "  assert.doesNotMatch(screen, /actionId === 'resolve_issue'.*openPreparationIssueCount/s);";
-            const newAssertion = "  assert.doesNotMatch(screen, /\\|\\| \\(actionId === 'resolve_issue' && item\\.openPreparationIssueCount > 0\\)/);";
-            if (!source.includes(oldAssertion)) return false;
-            fs.writeFileSync(path, source.replace(oldAssertion, newAssertion), 'utf8');
-            return true;
-          }
-
-          const changed = [
-            patchYaml('services/dsh/contracts/dsh.openapi.yaml'),
-            patchYaml('services/dsh/contracts/generated/dsh.openapi.yaml'),
-            patchGeneratedClient('services/dsh/clients/generated/dsh-api.ts'),
-            patchClosureAssertion('services/dsh/tests/store-captain-handoff-closure.test.mjs'),
-          ].some(Boolean);
-
-          if (!changed) console.log('JRN-013 contract artifacts and closure assertion are already current.');
-          NODE
-
-      - name: Verify exact reason alignment and assertion scope
-        shell: bash
-        run: |
-          set -euo pipefail
-          grep -q -- '- handoff_shortage' services/dsh/contracts/dsh.openapi.yaml
-          grep -q -- '- handoff_mismatch' services/dsh/contracts/dsh.openapi.yaml
-          grep -q -- '- handoff_shortage' services/dsh/contracts/generated/dsh.openapi.yaml
-          grep -q -- '- handoff_mismatch' services/dsh/contracts/generated/dsh.openapi.yaml
-          grep -q '"handoff_shortage" | "handoff_mismatch"' services/dsh/clients/generated/dsh-api.ts
-          grep -q "item\\.openPreparationIssueCount > 0" services/dsh/tests/store-captain-handoff-closure.test.mjs
-
-      - name: Commit and push migration over latest branch head
-        shell: bash
-        run: |
-          set -euo pipefail
-          if git diff --quiet; then
-            echo "No JRN-013 migration changes required."
+          if git diff --quiet -- \
+            services/dsh/contracts/dsh.openapi.yaml \
+            services/dsh/clients/generated/dsh-api.ts \
+            services/dsh/tests/store-captain-handoff-closure.test.mjs; then
+            echo "JRN-013 contract artifacts already synchronized"
             exit 0
           fi
-
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add \
             services/dsh/contracts/dsh.openapi.yaml \
-            services/dsh/contracts/generated/dsh.openapi.yaml \
             services/dsh/clients/generated/dsh-api.ts \
             services/dsh/tests/store-captain-handoff-closure.test.mjs
-          git commit -m "fix(jrn-013): align primary exception contract and closure assertion"
-
-          for attempt in 1 2 3 4 5; do
-            git fetch origin sambassam
-            if ! git rebase origin/sambassam; then
-              git rebase --abort || true
-              echo "Unable to rebase JRN-013 migration onto latest branch head."
-              exit 1
-            fi
-            if git push origin HEAD:sambassam; then
-              exit 0
-            fi
-            echo "Push raced with another commit; retrying from the new head (attempt ${attempt}/5)."
-          done
-
-          echo "Unable to publish JRN-013 migration after five attempts."
-          exit 1
+          git commit -m "fix(jrn-013): synchronize primary handoff exception contract"
+          git pull --rebase origin sambassam
+          git push origin HEAD:sambassam
