@@ -1,0 +1,24 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false
+  },
+  "include": [
+    "frontend/shared/_kernel/**/*.ts",
+    "frontend/shared/orders/order-cancellation.api.ts",
+    "frontend/shared/orders/order-cancellation.types.ts",
+    "frontend/shared/orders/use-order-cancellation-controller.tsx",
+    "frontend/shared/orders/index.ts",
+    "frontend/shared/operations/order-workboard.api.ts",
+    "frontend/shared/operations/index.ts",
+    "frontend/shared/partner-delivery/**/*.ts",
+    "frontend/app-client/orders/OrderTrackingScreen.tsx",
+    "frontend/app-partner/orders/OperationalOrderDecisionScreen.tsx",
+    "frontend/app-partner/orders/DshPartnerOrderRejectionScreen.tsx",
+    "frontend/control-panel/operations/OrderJourneyOperatorIntervention.tsx",
+    "frontend/**/*.d.ts"
+  ]
+}
