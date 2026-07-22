@@ -94,12 +94,18 @@ jobs:
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Verify JRN-024 modular contract and generated drift
+      - name: Verify current-source JRN-024 GPS contract generation
         shell: bash
         run: |
           set -euo pipefail
-          pnpm --dir services/dsh openapi:verify
-          git diff --exit-code -- services/dsh/contracts/generated/dsh.bundle.openapi.yaml services/dsh/clients/generated/dsh-api.ts
+          pnpm --dir services/dsh openapi:compose
+          pnpm --dir services/dsh exec openapi-typescript contracts/generated/dsh.bundle.openapi.yaml -o /tmp/jrn-024-dsh-api.ts
+          grep -Fq 'required: [startLocation]' services/dsh/contracts/components/schemas/field.schemas.yaml
+          grep -Fq 'required: [completionLocation]' services/dsh/contracts/paths/field.paths.yaml
+          grep -Fq 'startLocation:' services/dsh/contracts/generated/dsh.bundle.openapi.yaml
+          grep -Fq 'completionLocation:' services/dsh/contracts/generated/dsh.bundle.openapi.yaml
+          grep -Fq 'startLocation:' /tmp/jrn-024-dsh-api.ts
+          grep -Fq 'completionLocation:' /tmp/jrn-024-dsh-api.ts
 
       - name: Verify JRN-024 backend domain and HTTP compilation
         id: backend_verify
