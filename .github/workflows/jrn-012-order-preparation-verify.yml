@@ -75,7 +75,7 @@ jobs:
         with:
           go-version-file: services/dsh/backend/go.mod
           cache-dependency-path: services/dsh/backend/go.sum
-      - name: Reject Go formatting drift
+      - name: Produce canonical Go formatting evidence
         shell: bash
         run: |
           set -euo pipefail
@@ -94,11 +94,33 @@ jobs:
             services/dsh/backend/internal/http/partner_order_workboard.go
             services/dsh/backend/internal/http/partner_order_workboard_test.go
           )
-          unformatted="$(gofmt -l "${files[@]}")"
-          if [[ -n "$unformatted" ]]; then
-            printf 'Unformatted JRN-012 Go files:\n%s\n' "$unformatted"
-            exit 1
-          fi
+          gofmt -w "${files[@]}"
+          git diff -- "${files[@]}" > jrn012-gofmt.patch
+          printf '%s\n' "${files[@]}" > jrn012-gofmt-files.txt
+      - name: Preserve canonical formatted Go files
+        uses: actions/upload-artifact@v4
+        with:
+          name: jrn012-gofmt-output
+          path: |
+            jrn012-gofmt.patch
+            jrn012-gofmt-files.txt
+            services/dsh/backend/internal/orders/lifecycle.go
+            services/dsh/backend/internal/orders/preparation.go
+            services/dsh/backend/internal/orders/preparation_sla.go
+            services/dsh/backend/internal/orders/preparation_issues.go
+            services/dsh/backend/internal/orders/preparation_alerts.go
+            services/dsh/backend/internal/orders/preparation_ready_guard.go
+            services/dsh/backend/internal/http/order_preparation.go
+            services/dsh/backend/internal/http/order_preparation_access.go
+            services/dsh/backend/internal/http/order_preparation_issues.go
+            services/dsh/backend/internal/http/order_preparation_alerts.go
+            services/dsh/backend/internal/http/order_journey_routes.go
+            services/dsh/backend/internal/http/partner_order_workboard.go
+            services/dsh/backend/internal/http/partner_order_workboard_test.go
+          retention-days: 3
+          if-no-files-found: error
+      - name: Reject Go formatting drift
+        run: test ! -s jrn012-gofmt.patch
       - name: Verify preparation lifecycle and HTTP contracts
         working-directory: services/dsh/backend
         run: go test ./internal/orders ./internal/http -count=1
