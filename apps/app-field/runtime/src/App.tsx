@@ -8,6 +8,7 @@ import { colorRoles } from "@bthwani/ui-kit";
 import { DshFieldSurface } from "../../../../services/dsh/frontend/app-field";
 import type { DshFieldNavigationCommand } from "../../../../services/dsh/frontend/app-field/dsh-field.routes";
 import { DshFieldProfileCompletionScreen } from "../../../../services/dsh/frontend/app-field/account/DshFieldProfileCompletionScreen";
+import { useDshMobilePushRegistration } from "../../../../services/dsh/frontend/shared/notifications/use-mobile-push-registration";
 import {
   WorkforceAccessGate,
   WorkforceProfileProvider,
@@ -75,6 +76,8 @@ function parseNotificationData(data: Record<string, unknown>): DshFieldNavigatio
 
 function AppContent() {
   const identity = useIdentitySession();
+  useDshMobilePushRegistration(identity.state.kind, "app-field");
+
   const [navCommand, setNavCommand] = useState<DshFieldNavigationCommand | undefined>();
   const notifListenerRef = useRef<Notifications.EventSubscription | null>(null);
 
