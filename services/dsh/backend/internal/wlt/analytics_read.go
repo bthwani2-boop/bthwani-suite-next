@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"time"
 )
 
@@ -46,28 +45,17 @@ func (c *Client) ReadAnalyticsFinancialSnapshot(ctx context.Context) (AnalyticsF
 		ReadState:   "unavailable",
 		GeneratedAt: time.Now().UTC(),
 	}
-	if !c.Configured() {
-		return snapshot, fmt.Errorf("WLT analytics read is not configured")
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/wlt/ledger/financial-summary", nil)
+	statusCode, body, err := c.FinanceRead(ctx, "/wlt/ledger/financial-summary", nil, "")
 	if err != nil {
-		return snapshot, fmt.Errorf("build WLT analytics read request: %w", err)
+		return snapshot, fmt.Errorf("read WLT analytics through governed finance boundary: %w", err)
 	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
-	req.Header.Set("X-Service-Caller", "dsh")
-	response, err := c.http.Do(req)
-	if err != nil {
-		return snapshot, fmt.Errorf("call WLT analytics read: %w", err)
-	}
-	defer response.Body.Close()
-	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return snapshot, fmt.Errorf("WLT analytics read returned HTTP %d", response.StatusCode)
+	if statusCode < 200 || statusCode >= 300 {
+		return snapshot, fmt.Errorf("WLT analytics read returned HTTP %d", statusCode)
 	}
 	var envelope struct {
 		FinancialSummary AnalyticsFinancialSummary `json:"financialSummary"`
 	}
-	if err := json.NewDecoder(response.Body).Decode(&envelope); err != nil {
+	if err := json.Unmarshal(body, &envelope); err != nil {
 		return snapshot, fmt.Errorf("decode WLT analytics read: %w", err)
 	}
 	if envelope.FinancialSummary.Currencies == nil {
