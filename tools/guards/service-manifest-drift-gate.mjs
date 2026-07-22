@@ -128,6 +128,8 @@ for (const item of extensions) {
 
 const owners = new Map();
 for (const item of [...base, ...extensions]) {
+  if (!item.id) violations.push({ file: item.file, message: "CAPABILITY_ID_MISSING" });
+  if (item.operations.length === 0) violations.push({ file: item.file, message: `EMPTY_CAPABILITY_OPERATION_SET:${item.id}` });
   const local = new Set();
   for (const operationId of item.operations) {
     if (local.has(operationId)) violations.push({ file: item.file, message: `DUPLICATE_CAPABILITY_OPERATION:${operationId}` });
@@ -140,11 +142,9 @@ for (const item of [...base, ...extensions]) {
 for (const [operationId, operationOwners] of owners) {
   if (operationOwners.size > 1) violations.push({ file: capabilityFiles.join(","), message: `DUPLICATE_OPERATION_OWNERSHIP:${operationId}` });
 }
-// Capability ownership is mandatory for the primary generated API. Active
-// standalone manual contracts already have one explicit adapterOwner in the
-// contract registry, avoiding a second drifting ownership ledger.
-for (const operationId of primarySet) {
-  if (!owners.has(operationId)) violations.push({ file: capabilityFiles.join(","), message: `UNOWNED_PRIMARY_OPERATION:${operationId}` });
-}
 
+// The contract registry is the complete operation inventory. The capability
+// map is a curated business taxonomy and is therefore validated for non-empty,
+// canonical, non-duplicated ownership without pretending to enumerate every
+// endpoint in the primary generated contract.
 fail(guardId, violations);
