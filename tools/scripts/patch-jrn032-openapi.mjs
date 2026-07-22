@@ -6,6 +6,7 @@ const scriptPath = fileURLToPath(import.meta.url);
 const repositoryRoot = path.resolve(path.dirname(scriptPath), "../..");
 const rootPath = path.join(repositoryRoot, "services/dsh/contracts/dsh.openapi.yaml");
 const analyticsModulePath = path.join(repositoryRoot, "services/dsh/contracts/paths/analytics.paths.yaml");
+const manifestPath = path.join(repositoryRoot, "services/dsh/contracts/dsh.modular.manifest.json");
 
 const pathIds = [
   "preparation-sla",
@@ -16,7 +17,16 @@ const pathIds = [
   "export.csv",
 ];
 
-const refs = `  /dsh/operator/analytics/preparation-sla:
+const responseSchemas = [
+  "DshPreparationSlaAnalyticsResponse",
+  "DshCaptainPerformanceAnalyticsResponse",
+  "DshFieldPerformanceAnalyticsResponse",
+  "DshOperationalAnalyticsDrilldownResponse",
+  "DshWltFinancialAnalyticsSnapshotResponse",
+  "DshWltFinancialAnalyticsUnavailableResponse",
+];
+
+const pathRefs = `  /dsh/operator/analytics/preparation-sla:
     $ref: "./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1preparation-sla"
   /dsh/operator/analytics/captains:
     $ref: "./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1captains"
@@ -30,9 +40,16 @@ const refs = `  /dsh/operator/analytics/preparation-sla:
     $ref: "./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1export.csv"
 `;
 
-const partnerAnchor = "  /dsh/partner/analytics/performance:\n";
-const root = await readFile(rootPath, "utf8");
-const analyticsModule = await readFile(analyticsModulePath, "utf8");
+const schemaRefs = responseSchemas
+  .map((schemaName) => `    ${schemaName}:\n      $ref: "./components/schemas/analytics.schemas.yaml#/${schemaName}"`)
+  .join("\n") + "\n";
+
+const partnerPathAnchor = "  /dsh/partner/analytics/performance:\n";
+const partnerSchemaAnchor = "    DshPartnerPerformanceResponse:\n";
+
+let root = await readFile(rootPath, "utf8");
+let analyticsModule = await readFile(analyticsModulePath, "utf8");
+const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
 
 for (const pathId of pathIds) {
   const modulePath = `/dsh/operator/analytics/${pathId}:`;
@@ -41,27 +58,55 @@ for (const pathId of pathIds) {
   }
 }
 
-const missingRefs = pathIds.filter(
+for (const schemaName of responseSchemas) {
+  const legacyRef = `../components/schemas/analytics.schemas.yaml#/${schemaName}`;
+  const canonicalRef = `../dsh.openapi.yaml#/components/schemas/${schemaName}`;
+  if (analyticsModule.includes(legacyRef)) {
+    analyticsModule = analyticsModule.replaceAll(legacyRef, canonicalRef);
+  }
+  if (!analyticsModule.includes(canonicalRef)) {
+    throw new Error(`analytics path module is missing canonical schema reference ${schemaName}`);
+  }
+}
+
+const missingPaths = pathIds.filter(
   (pathId) => !root.includes(`  /dsh/operator/analytics/${pathId}:`),
 );
-
-if (missingRefs.length === 0) {
-  console.log("JRN-032 OpenAPI root paths are already registered.");
-  process.exit(0);
+if (missingPaths.length !== 0 && missingPaths.length !== pathIds.length) {
+  throw new Error(`partial JRN-032 root path registration detected: missing ${missingPaths.join(", ")}`);
+}
+if (missingPaths.length === pathIds.length) {
+  if (!root.includes(partnerPathAnchor)) {
+    throw new Error("partner analytics path anchor was not found in dsh.openapi.yaml");
+  }
+  root = root.replace(partnerPathAnchor, `${pathRefs}${partnerPathAnchor}`);
 }
 
-if (missingRefs.length !== pathIds.length) {
-  throw new Error(`partial JRN-032 root registration detected: missing ${missingRefs.join(", ")}`);
+const missingSchemas = responseSchemas.filter(
+  (schemaName) => !root.includes(`    ${schemaName}:`),
+);
+if (missingSchemas.length !== 0 && missingSchemas.length !== responseSchemas.length) {
+  throw new Error(`partial JRN-032 schema registration detected: missing ${missingSchemas.join(", ")}`);
+}
+if (missingSchemas.length === responseSchemas.length) {
+  if (!root.includes(partnerSchemaAnchor)) {
+    throw new Error("partner analytics schema anchor was not found in dsh.openapi.yaml");
+  }
+  root = root.replace(partnerSchemaAnchor, `${schemaRefs}${partnerSchemaAnchor}`);
 }
 
-if (!root.includes(partnerAnchor)) {
-  throw new Error("partner analytics anchor was not found in dsh.openapi.yaml");
-}
+manifest.pathCount = 275;
+manifest.operationIdCount = 322;
+manifest.componentCounts.schemas = 298;
+manifest.pathDomains.analytics = 11;
+manifest.schemaDomains.analytics = 10;
 
-const patched = root.replace(partnerAnchor, `${refs}${partnerAnchor}`);
-if (patched === root) {
-  throw new Error("JRN-032 OpenAPI root patch did not change the contract");
-}
+await Promise.all([
+  writeFile(rootPath, root, "utf8"),
+  writeFile(analyticsModulePath, analyticsModule, "utf8"),
+  writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8"),
+]);
 
-await writeFile(rootPath, patched, "utf8");
-console.log(`Registered ${pathIds.length} JRN-032 paths in ${path.relative(repositoryRoot, rootPath)}.`);
+console.log(
+  `JRN-032 OpenAPI registered: ${pathIds.length} paths, ${responseSchemas.length} response schemas, canonical refs, and manifest counts.`,
+);
