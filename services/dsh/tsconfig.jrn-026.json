@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.jrn-020-030.json",
+  "compilerOptions": {
+    "outDir": "dist-jrn-026"
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    "dist-jrn-020-030",
+    "dist-jrn-026"
+  ]
+}
