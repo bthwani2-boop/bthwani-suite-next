@@ -15,9 +15,9 @@ import (
 )
 
 type uploadedDeliveryProof struct {
-	storageKey string
+	storageKey  string
 	contentType string
-	fileName string
+	fileName    string
 }
 
 func isMultipartRequest(r *http.Request) bool {
