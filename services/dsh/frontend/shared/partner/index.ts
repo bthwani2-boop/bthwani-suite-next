@@ -62,6 +62,13 @@ export {
   findDeliveryPricing,
 } from "./operator-delivery-pricing";
 
+// JRN-026 partner pricing uses the dedicated partner endpoint and supports first-policy creation.
+// Aliases avoid colliding with the legacy operator projection while keeping surfaces on this barrel.
+export {
+  usePartnerDeliveryPricingController as useGovernedPartnerDeliveryPricingController,
+  findDeliveryPricing as findGovernedDeliveryPricing,
+} from "./use-delivery-pricing-controller";
+
 export {
   fieldListDrafts,
   fieldCreateDraft,
