@@ -7,6 +7,8 @@ on:
       - sambassam
     paths:
       - '.github/workflows/jrn-019-cancellation-refund.yml'
+      - 'governance/product/contracts/jrn-019-cancellation-refund.product-truth.json'
+      - 'services/dsh/contracts/jrn-019-slice-closure.json'
       - 'services/dsh/backend/internal/http/order_cancellations.go'
       - 'services/dsh/backend/internal/http/order_cancellations_compatibility_test.go'
       - 'services/dsh/backend/internal/orders/**'
@@ -21,12 +23,14 @@ on:
       - 'services/dsh/frontend/app-client/orders/OrderTrackingScreen.tsx'
       - 'services/dsh/frontend/app-partner/orders/OperationalOrderDecisionScreen.tsx'
       - 'services/dsh/frontend/control-panel/operations/OrderJourneyOperatorIntervention.tsx'
-      - 'services/dsh/tests/jrn-019-cancellation-refund-closure.test.mjs'
+      - 'services/dsh/tests/jrn-019-*.test.mjs'
   pull_request:
     branches:
       - master
     paths:
       - '.github/workflows/jrn-019-cancellation-refund.yml'
+      - 'governance/product/contracts/jrn-019-cancellation-refund.product-truth.json'
+      - 'services/dsh/contracts/jrn-019-slice-closure.json'
       - 'services/dsh/backend/internal/http/order_cancellations.go'
       - 'services/dsh/backend/internal/http/order_cancellations_compatibility_test.go'
       - 'services/dsh/backend/internal/orders/**'
@@ -41,7 +45,7 @@ on:
       - 'services/dsh/frontend/app-client/orders/OrderTrackingScreen.tsx'
       - 'services/dsh/frontend/app-partner/orders/OperationalOrderDecisionScreen.tsx'
       - 'services/dsh/frontend/control-panel/operations/OrderJourneyOperatorIntervention.tsx'
-      - 'services/dsh/tests/jrn-019-cancellation-refund-closure.test.mjs'
+      - 'services/dsh/tests/jrn-019-*.test.mjs'
 
 permissions:
   contents: read
@@ -76,4 +80,4 @@ jobs:
           ./internal/partnerdelivery
 
       - name: Verify JRN-019 cross-surface closure
-        run: node --test services/dsh/tests/jrn-019-cancellation-refund-closure.test.mjs
+        run: node --test services/dsh/tests/jrn-019-*.test.mjs
