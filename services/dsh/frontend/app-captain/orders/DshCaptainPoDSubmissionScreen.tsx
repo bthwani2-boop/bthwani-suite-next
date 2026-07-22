@@ -23,6 +23,7 @@ import {
   type DshDeliveryExceptionReasonCode,
 } from '../../shared/dispatch';
 import { useCaptainDeliveryProofController } from '../../shared/delivery-proof';
+import type { CaptainDeliveryEvidenceKind } from '../../shared/media/pod/delivery-proof-media.api';
 import type { CaptainDeliveryExceptionDraft } from '../../shared/delivery/use-captain-order-runtime';
 
 export type DshCaptainPoDSubmissionScreenProps = {
@@ -80,6 +81,7 @@ export function DshCaptainPoDSubmissionScreen({
   const theme = useTheme() as { surfaceInset?: string; brandStrong?: string; text?: string };
   const proofController = useCaptainDeliveryProofController(assignmentId);
   const [pin, setPin] = React.useState('');
+  const [evidenceKind, setEvidenceKind] = React.useState<CaptainDeliveryEvidenceKind>('photo');
   const [proofGuideVisible, setProofGuideVisible] = React.useState(false);
   const [proofPreviewVisible, setProofPreviewVisible] = React.useState(false);
   const [exceptionFormVisible, setExceptionFormVisible] = React.useState(false);
@@ -132,10 +134,10 @@ export function DshCaptainPoDSubmissionScreen({
     const normalizedPin = pin.replace(/\D/g, '').slice(0, 6);
     const proof = await proofController.submitCaptured(
       photoUri ? { uri: photoUri } : undefined,
-      { pin: normalizedPin, capturedAt: new Date().toISOString() },
+      { pin: normalizedPin, evidenceKind, capturedAt: new Date().toISOString() },
     );
     if (proof) await Promise.resolve(onConfirm());
-  }, [onConfirm, photoUri, pin, proofController.submitCaptured]);
+  }, [evidenceKind, onConfirm, photoUri, pin, proofController.submitCaptured]);
 
   const submitException = React.useCallback(async () => {
     if (reasonNote.trim().length < 5) return;
@@ -225,6 +227,7 @@ export function DshCaptainPoDSubmissionScreen({
   }
 
   const pinValid = /^\d{6}$/.test(pin);
+  const evidenceLabel = evidenceKind === 'signature' ? 'صورة توقيع العميل' : 'صورة التسليم';
   return (
     <DshOperationScreen
       title="إثبات التسليم"
@@ -236,7 +239,7 @@ export function DshCaptainPoDSubmissionScreen({
               <Badge label="إثبات مطلوب" tone="warning" />
               <Text role="caption" tone="muted">#{orderId}</Text>
             </Box>
-            <Text role="bodySm" tone="muted">استخدم رمز العميل لقبول فوري، أو صورة تُرسل لمراجعة العمليات، أو الاثنين معًا كإثبات مركب.</Text>
+            <Text role="bodySm" tone="muted">استخدم رمز العميل لقبول فوري، أو صورة/توقيع يراجعها المشغل، أو رمزًا مع وسائط كإثبات مركب.</Text>
           </Box>
 
           <Divider />
@@ -255,26 +258,37 @@ export function DshCaptainPoDSubmissionScreen({
 
           <Divider />
 
+          <Box gap={2}>
+            <Text role="bodyStrong">نوع الوسائط</Text>
+            <Box layoutDirection="row" gap={2}>
+              <Button label="صورة التسليم" tone={evidenceKind === 'photo' ? 'brand' : 'secondary'} size="sm" fullWidth={false} onPress={() => setEvidenceKind('photo')} />
+              <Button label="توقيع العميل" tone={evidenceKind === 'signature' ? 'brand' : 'secondary'} size="sm" fullWidth={false} onPress={() => setEvidenceKind('signature')} />
+            </Box>
+            <Text role="caption" tone="muted">
+              {evidenceKind === 'signature' ? 'التقط توقيع العميل المكتوب بوضوح دون تصوير بيانات شخصية إضافية.' : 'التقط مشهد التسليم دون وجوه أو بيانات حساسة غير لازمة.'}
+            </Text>
+          </Box>
+
           <Pressable onPress={onCapturePhoto} style={[styles.photoContainer, { backgroundColor: theme.surfaceInset }]}> 
             {photoUri && proofPreviewVisible ? (
               <View style={styles.previewWrapper}>
                 <Image source={{ uri: photoUri }} style={styles.previewImage} alt="" />
                 <View style={styles.changeOverlay}>
                   <Icon name="camera-outline" size={24} color={colorPalette.white} />
-                  <Text role="bodySm" style={styles.whiteText}>تغيير الصورة</Text>
+                  <Text role="bodySm" style={styles.whiteText}>تغيير الوسائط</Text>
                 </View>
               </View>
             ) : photoUri ? (
               <View style={styles.placeholderWrapper}>
                 <Icon name="image-outline" size={40} tone="brand" />
-                <Text role="titleMd" style={{ color: theme.brandStrong ?? theme.text }}>تم حفظ لقطة الإثبات</Text>
+                <Text role="titleMd" style={{ color: theme.brandStrong ?? theme.text }}>تم حفظ {evidenceLabel}</Text>
                 <Text role="caption" tone="muted">سيُرسل الإثبات المركب إذا أدخلت PIN أيضًا.</Text>
               </View>
             ) : (
               <View style={styles.placeholderWrapper}>
                 <Icon name="camera" size={48} tone="brand" />
-                <Text role="titleMd" style={{ color: theme.brandStrong ?? theme.text }}>التقاط صورة اختيارية</Text>
-                <Text role="caption" tone="muted">الصورة دون PIN تدخل مراجعة العمليات ولا تغلق الطلب تلقائيًا.</Text>
+                <Text role="titleMd" style={{ color: theme.brandStrong ?? theme.text }}>التقاط {evidenceLabel}</Text>
+                <Text role="caption" tone="muted">الوسائط دون PIN تدخل مراجعة العمليات ولا تغلق الطلب تلقائيًا.</Text>
               </View>
             )}
           </Pressable>
@@ -289,7 +303,7 @@ export function DshCaptainPoDSubmissionScreen({
             {proofGuideVisible ? (
               <Box gap={1}>
                 <Text role="caption" tone="muted">• استخدم PIN الذي يعرضه العميل للطلب نفسه فقط.</Text>
-                <Text role="caption" tone="muted">• التقط صورة واضحة في موقع التسليم عند الحاجة.</Text>
+                <Text role="caption" tone="muted">• صنف الوسائط بصورتها الصحيحة: تسليم أو توقيع.</Text>
                 <Text role="caption" tone="muted">• لا تصوّر الوجوه أو بيانات حساسة دون ضرورة تشغيلية.</Text>
               </Box>
             ) : null}
@@ -320,7 +334,7 @@ export function DshCaptainPoDSubmissionScreen({
           )}
         </Box>
       }
-      primaryActionLabel={photoUri && pinValid ? 'إرسال الإثبات المركب' : pinValid ? 'تحقق بالرمز وأكمل' : 'إرسال الصورة للمراجعة'}
+      primaryActionLabel={photoUri && pinValid ? 'إرسال الإثبات المركب' : pinValid ? 'تحقق بالرمز وأكمل' : `إرسال ${evidenceLabel} للمراجعة`}
       onPrimaryAction={() => void submitProof()}
       primaryActionDisabled={(!photoUri && !pinValid) || effectiveState === 'loading' || reporting}
       primaryActionLoading={effectiveState === 'loading'}
