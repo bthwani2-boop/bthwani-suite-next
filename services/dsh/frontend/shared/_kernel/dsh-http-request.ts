@@ -8,7 +8,6 @@ export type DshRequestOptions = {
   readonly token?: string;
   readonly idempotencyKey?: string;
   readonly correlationId?: string;
-  /** Positive optimistic-concurrency version sent as If-Match-Version. */
   readonly expectedVersion?: number;
 };
 
@@ -38,7 +37,7 @@ async function parseResponse<T>(response: Response): Promise<T> {
       if (parsed && typeof parsed.code === "string") code = parsed.code;
       if (parsed && typeof parsed.message === "string") message = parsed.message;
     } catch {
-      // body was not a JSON error envelope; code/message stay undefined
+      // Non-JSON errors preserve the raw body only.
     }
     throw { kind: "http", status: response.status, body, code, message };
   }
@@ -46,13 +45,6 @@ async function parseResponse<T>(response: Response): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-/**
- * `baseUrl` values that are same-origin relative paths (e.g. "/api/dsh")
- * address a same-origin BFF proxy: the browser never holds a bearer token,
- * and the HttpOnly session cookie rides along via `credentials: "include"`.
- * Absolute URLs keep the historical direct-to-backend bearer-token mode
- * used by native apps, which have no browser cookie jar/BFF to rely on.
- */
 function isRelativeBaseUrl(baseUrl: string): boolean {
   return baseUrl.startsWith("/");
 }
@@ -63,39 +55,55 @@ function resolveRequestUrl(path: string, baseUrl: string): string | URL {
     : new URL(path, baseUrl);
 }
 
-/**
- * Shared authenticated HTTP client for DSH frontend `.api.ts` modules.
- * Centralizes the fetch/timeout/correlation-ID/error-shape logic that was
- * previously hand-copied per module.
- */
-export function createDshHttpClient(baseUrl: string, corrPrefix: string, timeoutMs = 10000) {
+function requestCredentials(cookieMode: boolean) {
+  return cookieMode ? ({ credentials: "include" as const } as const) : {};
+}
+
+export function createDshHttpClient(
+  baseUrl: string,
+  corrPrefix: string,
+  timeoutMs = 10000,
+) {
   const cookieMode = isRelativeBaseUrl(baseUrl);
 
-  async function request<T>(path: string, options: DshRequestOptions = {}): Promise<T> {
+  async function request<T>(
+    path: string,
+    options: DshRequestOptions = {},
+  ): Promise<T> {
     const token = options.token ?? (cookieMode ? undefined : getIdentityAccessToken());
     if (!cookieMode && !token) throw { kind: "http", status: 401 };
     if (
       options.expectedVersion !== undefined &&
       (!Number.isInteger(options.expectedVersion) || options.expectedVersion < 1)
     ) {
-      throw { kind: "invalid_request", message: "expectedVersion must be a positive integer" };
+      throw {
+        kind: "invalid_request",
+        message: "expectedVersion must be a positive integer",
+      };
     }
+
     let response: Response;
     try {
       response = await fetch(resolveRequestUrl(path, baseUrl), {
         method: options.method ?? "GET",
         headers: {
           Accept: "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(!cookieMode && token ? { Authorization: `Bearer ${token}` } : {}),
           "X-Correlation-ID": options.correlationId ?? corrId(corrPrefix),
-          ...(options.idempotencyKey ? { "Idempotency-Key": options.idempotencyKey } : {}),
+          ...(options.idempotencyKey
+            ? { "Idempotency-Key": options.idempotencyKey }
+            : {}),
           ...(options.expectedVersion !== undefined
             ? { "If-Match-Version": String(options.expectedVersion) }
             : {}),
-          ...(options.body !== undefined ? { "Content-Type": "application/json" } : {}),
+          ...(options.body !== undefined
+            ? { "Content-Type": "application/json" }
+            : {}),
         },
-        ...(options.body !== undefined ? { body: JSON.stringify(options.body) } : {}),
-        ...(cookieMode ? { credentials: "include" as const } : {}),
+        ...(options.body !== undefined
+          ? { body: JSON.stringify(options.body) }
+          : {}),
+        ...requestCredentials(cookieMode),
         signal: AbortSignal.timeout(timeoutMs),
       });
     } catch (error) {
@@ -107,20 +115,25 @@ export function createDshHttpClient(baseUrl: string, corrPrefix: string, timeout
       ) {
         throw error;
       }
-      throw { kind: "network", message: error instanceof Error ? error.message : "network error" };
+      throw {
+        kind: "network",
+        message: error instanceof Error ? error.message : "network error",
+      };
     }
     return parseResponse<T>(response);
   }
+
   return { request };
 }
 
-/**
- * Same-origin control-panel session client. It lives beside the DSH HTTP
- * kernel because browser session calls use the same BFF/cookie transport
- * rules as `/api/dsh` and `/api/workforce` callers.
- */
-export function createDshSessionHttpClient(corrPrefix = "cp-session", timeoutMs = 10000) {
-  async function request<T>(path: string, init: RequestInit = {}): Promise<DshSessionRequestResult<T>> {
+export function createDshSessionHttpClient(
+  corrPrefix = "cp-session",
+  timeoutMs = 10000,
+) {
+  async function request<T>(
+    path: string,
+    init: RequestInit = {},
+  ): Promise<DshSessionRequestResult<T>> {
     try {
       const response = await fetch(path, {
         ...init,
@@ -130,7 +143,9 @@ export function createDshSessionHttpClient(corrPrefix = "cp-session", timeoutMs 
           "Cache-Control": "no-cache",
           Pragma: "no-cache",
           "X-Correlation-ID": corrId(corrPrefix),
-          ...(init.body !== undefined ? { "Content-Type": "application/json" } : {}),
+          ...(init.body !== undefined
+            ? { "Content-Type": "application/json" }
+            : {}),
           ...init.headers,
         },
         signal: init.signal ?? AbortSignal.timeout(timeoutMs),
@@ -147,21 +162,28 @@ export function createDshSessionHttpClient(corrPrefix = "cp-session", timeoutMs 
       };
     }
   }
-
   return { request };
 }
 
-/** Unauthenticated variant for public (non-session) GET endpoints. */
-export function createDshPublicHttpClient(baseUrl: string, timeoutMs = 10000) {
+/** Unauthenticated GET client. Relative bases still use the same-origin BFF. */
+export function createDshPublicHttpClient(
+  baseUrl: string,
+  timeoutMs = 10000,
+) {
+  const cookieMode = isRelativeBaseUrl(baseUrl);
   async function request<T>(path: string): Promise<T> {
     let response: Response;
     try {
-      response = await fetch(new URL(path, baseUrl), {
+      response = await fetch(resolveRequestUrl(path, baseUrl), {
         headers: { Accept: "application/json" },
+        ...requestCredentials(cookieMode),
         signal: AbortSignal.timeout(timeoutMs),
       });
     } catch (error) {
-      throw { kind: "network", message: error instanceof Error ? error.message : "network error" };
+      throw {
+        kind: "network",
+        message: error instanceof Error ? error.message : "network error",
+      };
     }
     return parseResponse<T>(response);
   }
@@ -178,34 +200,37 @@ export type DshFlexibleRequestOptions = {
   readonly method?: DshRequestMethod;
   readonly body?: unknown;
   readonly query?: Record<string, string | undefined>;
-  /** Simple bearer token. Omit both `token` and `auth` for unauthenticated requests. */
   readonly token?: string;
-  /** Idempotent-mutation auth: bearer token + Idempotency-Key + explicit correlation id. */
   readonly auth?: DshMutationAuth;
 };
 
-/**
- * Variant for clients with mixed auth modes on the same resource: some
- * operations are public (no token), others take a plain bearer token, and
- * mutations take idempotent-mutation auth (token + idempotency key +
- * caller-supplied correlation id instead of an auto-generated one). Also
- * sends `Cache-Control`/`Pragma: no-cache` for read-your-writes freshness.
- */
-export function createDshFlexibleHttpClient(baseUrl: string, timeoutMs = 10000) {
+export function createDshFlexibleHttpClient(
+  baseUrl: string,
+  timeoutMs = 10000,
+) {
   const cookieMode = isRelativeBaseUrl(baseUrl);
 
-  async function request<T>(path: string, options: DshFlexibleRequestOptions = {}): Promise<T> {
+  async function request<T>(
+    path: string,
+    options: DshFlexibleRequestOptions = {},
+  ): Promise<T> {
     let requestUrl = resolveRequestUrl(path, baseUrl);
     if (options.query) {
-      const params = requestUrl instanceof URL ? requestUrl.searchParams : new URLSearchParams();
+      const params =
+        requestUrl instanceof URL
+          ? requestUrl.searchParams
+          : new URLSearchParams();
       for (const [key, value] of Object.entries(options.query)) {
         if (value !== undefined) params.set(key, value);
       }
       if (!(requestUrl instanceof URL)) {
         const qs = params.toString();
-        requestUrl = qs ? `${requestUrl}${requestUrl.includes("?") ? "&" : "?"}${qs}` : requestUrl;
+        requestUrl = qs
+          ? `${requestUrl}${requestUrl.includes("?") ? "&" : "?"}${qs}`
+          : requestUrl;
       }
     }
+
     let response: Response;
     try {
       response = await fetch(requestUrl, {
@@ -214,53 +239,75 @@ export function createDshFlexibleHttpClient(baseUrl: string, timeoutMs = 10000) 
           Accept: "application/json",
           "Cache-Control": "no-cache",
           Pragma: "no-cache",
-          ...(options.body !== undefined ? { "Content-Type": "application/json" } : {}),
-          ...(options.token !== undefined ? { Authorization: `Bearer ${options.token}` } : {}),
+          ...(options.body !== undefined
+            ? { "Content-Type": "application/json" }
+            : {}),
+          ...(!cookieMode && options.token !== undefined
+            ? { Authorization: `Bearer ${options.token}` }
+            : {}),
           ...(options.auth !== undefined
             ? {
-                ...(options.auth.accessToken ? { Authorization: `Bearer ${options.auth.accessToken}` } : {}),
+                ...(!cookieMode && options.auth.accessToken
+                  ? { Authorization: `Bearer ${options.auth.accessToken}` }
+                  : {}),
                 "Idempotency-Key": options.auth.idempotencyKey,
                 "X-Correlation-ID": options.auth.correlationId,
               }
             : {}),
         },
-        ...(options.body !== undefined ? { body: JSON.stringify(options.body) } : {}),
-        ...(cookieMode ? { credentials: "include" as const } : {}),
+        ...(options.body !== undefined
+          ? { body: JSON.stringify(options.body) }
+          : {}),
+        ...requestCredentials(cookieMode),
         signal: AbortSignal.timeout(timeoutMs),
       });
     } catch (error) {
-      throw { kind: "network", message: error instanceof Error ? error.message : "network error" };
+      throw {
+        kind: "network",
+        message: error instanceof Error ? error.message : "network error",
+      };
     }
     return parseResponse<T>(response);
   }
+
   return { request };
 }
 
-/**
- * Raw `RequestInit`-style variant for callers that pre-serialize their own
- * body (`body: JSON.stringify(...)`) instead of passing a plain object.
- */
-export function createDshRawHttpClient(baseUrl: string, corrPrefix: string, timeoutMs = 10000) {
+export function createDshRawHttpClient(
+  baseUrl: string,
+  corrPrefix: string,
+  timeoutMs = 10000,
+) {
+  const cookieMode = isRelativeBaseUrl(baseUrl);
+
   async function req<T>(path: string, init: RequestInit = {}): Promise<T> {
-    const token = getIdentityAccessToken();
-    if (!token) throw { kind: "http", status: 401 };
+    const token = cookieMode ? null : getIdentityAccessToken();
+    if (!cookieMode && !token) throw { kind: "http", status: 401 };
+
     let response: Response;
     try {
-      response = await fetch(new URL(path, baseUrl), {
+      response = await fetch(resolveRequestUrl(path, baseUrl), {
         ...init,
         headers: {
           Accept: "application/json",
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          ...(!cookieMode && token
+            ? { Authorization: `Bearer ${token}` }
+            : {}),
           "X-Correlation-ID": corrId(corrPrefix),
           ...(init.headers ?? {}),
         },
+        ...requestCredentials(cookieMode),
         signal: AbortSignal.timeout(timeoutMs),
       });
     } catch (error) {
-      throw { kind: "network", message: error instanceof Error ? error.message : "network error" };
+      throw {
+        kind: "network",
+        message: error instanceof Error ? error.message : "network error",
+      };
     }
     return parseResponse<T>(response);
   }
+
   return { req };
 }
