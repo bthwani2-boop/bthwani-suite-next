@@ -28,6 +28,9 @@ func (s *Service) CreateRollout(
 	correlationID string,
 	input CreateRolloutInput,
 ) (Rollout, error) {
+	if err := validateRolloutTargetScope(input.TargetScope); err != nil {
+		return Rollout{}, err
+	}
 	if err := validateHealthGate(input.HealthGate); err != nil {
 		return Rollout{}, err
 	}
@@ -53,7 +56,13 @@ func (s *Service) AdvanceRollout(
 	if err != nil {
 		return Rollout{}, err
 	}
+	if rollout.Status != RolloutRunning {
+		return Rollout{}, ErrInvalidTransition
+	}
 	if err := evaluateHealthGate(s.Health(ctx), rollout.HealthGate); err != nil {
+		if auditErr := repository.RecordRolloutHealthGateFailure(ctx, rollout, actorID, roles, correlationID, err); auditErr != nil {
+			return Rollout{}, fmt.Errorf("%w: failed to persist health gate audit: %v", err, auditErr)
+		}
 		return Rollout{}, err
 	}
 	return repository.AdvanceRollout(ctx, id, actorID, roles, correlationID)
