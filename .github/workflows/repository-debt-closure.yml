@@ -1,5 +1,9 @@
 name: Repository debt closure
 
+concurrency:
+  group: repository-debt-closure-${{ github.ref }}
+  cancel-in-progress: false
+
 on:
   push:
     branches: [sambassam]
