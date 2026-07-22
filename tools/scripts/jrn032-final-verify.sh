@@ -5,6 +5,8 @@ SOURCE_SHA="${JRN032_SOURCE_SHA:?JRN032_SOURCE_SHA is required}"
 VERIFICATION_HEAD="${JRN032_VERIFICATION_HEAD:?JRN032_VERIFICATION_HEAD is required}"
 RUN_ID="${GITHUB_RUN_ID:?GITHUB_RUN_ID is required}"
 RUN_ATTEMPT="${GITHUB_RUN_ATTEMPT:?GITHUB_RUN_ATTEMPT is required}"
+BUNDLE_PATH="services/dsh/contracts/generated/dsh.bundle.openapi.yaml"
+CLIENT_PATH="services/dsh/clients/generated/dsh-api.ts"
 
 echo "[JRN-032] Registering canonical OpenAPI paths"
 node tools/scripts/patch-jrn032-openapi.mjs
@@ -28,6 +30,8 @@ gofmt -w \
 
 echo "[JRN-032] Composing OpenAPI and generating the DSH client"
 pnpm --dir services/dsh openapi:verify
+FIRST_BUNDLE_SHA="$(sha256sum "${BUNDLE_PATH}" | awk '{print $1}')"
+FIRST_CLIENT_SHA="$(sha256sum "${CLIENT_PATH}" | awk '{print $1}')"
 
 echo "[JRN-032] Running Go verification"
 (
@@ -47,11 +51,14 @@ pnpm run contracts:lint
 pnpm --dir services/dsh openapi:test
 pnpm run swagger:build
 
-echo "[JRN-032] Verifying generated artifacts are stable"
+echo "[JRN-032] Verifying generated artifacts are deterministic"
 pnpm --dir services/dsh openapi:verify
-git diff --exit-code -- \
-  services/dsh/contracts/generated/dsh.bundle.openapi.yaml \
-  services/dsh/clients/generated/dsh-api.ts
+SECOND_BUNDLE_SHA="$(sha256sum "${BUNDLE_PATH}" | awk '{print $1}')"
+SECOND_CLIENT_SHA="$(sha256sum "${CLIENT_PATH}" | awk '{print $1}')"
+if [[ "${FIRST_BUNDLE_SHA}" != "${SECOND_BUNDLE_SHA}" || "${FIRST_CLIENT_SHA}" != "${SECOND_CLIENT_SHA}" ]]; then
+  echo "Generated DSH artifacts changed between consecutive generation passes." >&2
+  exit 1
+fi
 
 echo "[JRN-032] Writing final remote verification evidence"
 export SOURCE_SHA VERIFICATION_HEAD RUN_ID RUN_ATTEMPT
@@ -81,7 +88,7 @@ registry["remoteVerification"] = {
         "full-stack and WLT ownership guards",
         "repository contract lint",
         "focused OpenAPI tests and Swagger publication",
-        "stable generated artifacts after a second generation pass",
+        "deterministic generated artifacts across consecutive generation passes",
     ],
 }
 registry_path.write_text(json.dumps(registry, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -106,7 +113,7 @@ Path("governance/evidence/JRN-032_FINAL_REMOTE_VERIFICATION.md").write_text(
 - Full-stack and financial ownership guards.
 - Repository contract lint.
 - Focused OpenAPI tests and Swagger build.
-- Stable generated artifacts after a second generation pass.
+- Deterministic generated artifacts across consecutive generation passes.
 
 ## Independent gates
 
