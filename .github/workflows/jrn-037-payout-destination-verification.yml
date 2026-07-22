@@ -29,7 +29,7 @@ on:
     paths: *jrn037_paths
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: jrn-037-${{ github.ref }}
@@ -39,7 +39,7 @@ jobs:
   verify:
     name: JRN-037 database, backend, contract, and multi-surface proof
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 40
     services:
       postgres:
         image: postgres:16-alpine
@@ -61,55 +61,206 @@ jobs:
       PGPASSWORD: wlt_ci_password
       PGDATABASE: wlt_ci
       DATABASE_URL: postgres://wlt_ci:wlt_ci_password@localhost:5432/wlt_ci?sslmode=disable
+      EVIDENCE_DIR: governance/evidence/jrn037-ci
     steps:
       - name: Checkout immutable source
+        id: checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          persist-credentials: false
+          persist-credentials: true
+        continue-on-error: true
+      - name: Initialize evidence directory
+        if: always() && steps.checkout.outcome == 'success'
+        run: mkdir -p "${EVIDENCE_DIR}"
       - name: Set up Go
+        id: setup_go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
           go-version-file: services/wlt/backend/go.mod
           cache-dependency-path: |
             services/wlt/backend/go.sum
             services/dsh/backend/go.sum
+        continue-on-error: true
       - name: Set up pnpm
+        id: setup_pnpm
         uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           version: "10.34.2"
+        continue-on-error: true
       - name: Set up Node.js
+        id: setup_node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "24.17.0"
           cache: pnpm
+        continue-on-error: true
       - name: Install locked workspace
-        run: pnpm install --frozen-lockfile
-      - name: Verify product, contract, ownership, and surface boundaries
-        run: node tools/guards/jrn-037-payout-destination-gate.mjs
-      - name: Apply all WLT migrations in lexical order
+        id: install
+        continue-on-error: true
         shell: bash
         run: |
-          set -euo pipefail
-          for migration in services/wlt/database/migrations/*.sql; do
-            psql -v ON_ERROR_STOP=1 -f "${migration}"
-          done
+          set -o pipefail
+          pnpm install --frozen-lockfile 2>&1 | tee "${EVIDENCE_DIR}/install.log"
+      - name: Verify product, contract, ownership, and surface boundaries
+        id: guard
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          node tools/guards/jrn-037-payout-destination-gate.mjs 2>&1 | tee "${EVIDENCE_DIR}/guard.log"
+      - name: Apply all WLT migrations in lexical order
+        id: migrations
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          {
+            set -euo pipefail
+            for migration in services/wlt/database/migrations/*.sql; do
+              echo "applying ${migration}"
+              psql -v ON_ERROR_STOP=1 -f "${migration}"
+            done
+          } 2>&1 | tee "${EVIDENCE_DIR}/migrations.log"
       - name: Assert JRN-037 PostgreSQL invariants
-        run: psql -v ON_ERROR_STOP=1 -f services/wlt/database/tests/jrn-037-payout-destination-invariants.sql
+        id: database_invariants
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          psql -v ON_ERROR_STOP=1 -f services/wlt/database/tests/jrn-037-payout-destination-invariants.sql 2>&1 | tee "${EVIDENCE_DIR}/database-invariants.log"
       - name: Verify Go formatting without rewriting source
+        id: gofmt
+        continue-on-error: true
+        shell: bash
         run: |
-          test -z "$(gofmt -l services/wlt/backend/internal/payout/jrn037_governed_payout.go services/wlt/backend/internal/payout/jrn037_governed_payout_test.go services/wlt/backend/internal/payout/model_request.go services/wlt/backend/internal/payout/read_provider_proof.go services/wlt/backend/internal/http/server.go)"
-          test -z "$(gofmt -l services/dsh/backend/internal/http/jrn037_payout_routes.go services/dsh/backend/internal/http/representative_finance_routes.go services/dsh/backend/internal/wlt/actor_finance_client.go services/dsh/backend/internal/wlt/finance_proxy.go)"
+          set -o pipefail
+          files=(
+            services/wlt/backend/internal/payout/jrn037_governed_payout.go
+            services/wlt/backend/internal/payout/jrn037_governed_payout_test.go
+            services/wlt/backend/internal/payout/model_request.go
+            services/wlt/backend/internal/payout/read_provider_proof.go
+            services/wlt/backend/internal/http/server.go
+            services/dsh/backend/internal/http/jrn037_payout_routes.go
+            services/dsh/backend/internal/http/representative_finance_routes.go
+            services/dsh/backend/internal/wlt/actor_finance_client.go
+            services/dsh/backend/internal/wlt/finance_proxy.go
+          )
+          gofmt -l "${files[@]}" | tee "${EVIDENCE_DIR}/gofmt-files.log"
+          gofmt -d "${files[@]}" > "${EVIDENCE_DIR}/gofmt.patch"
+          test ! -s "${EVIDENCE_DIR}/gofmt-files.log"
       - name: Compile and test WLT payout packages
+        id: wlt_go
+        continue-on-error: true
         working-directory: services/wlt/backend
-        run: go test ./internal/payout ./internal/http
-      - name: Compile and test DSH payout proxy packages
-        working-directory: services/dsh/backend
-        run: go test ./internal/http ./internal/wlt
-      - name: Typecheck DSH multi-surface payout bindings
-        run: pnpm --dir services/dsh typecheck
-      - name: Verify backend and frontend bindings
+        shell: bash
         run: |
-          pnpm run guard:backend-api-binding
-          pnpm run guard:frontend-feature-binding
+          set -o pipefail
+          go test ./internal/payout ./internal/http 2>&1 | tee "../../../${EVIDENCE_DIR}/wlt-go-test.log"
+      - name: Compile and test DSH payout proxy packages
+        id: dsh_go
+        continue-on-error: true
+        working-directory: services/dsh/backend
+        shell: bash
+        run: |
+          set -o pipefail
+          go test ./internal/http ./internal/wlt 2>&1 | tee "../../../${EVIDENCE_DIR}/dsh-go-test.log"
+      - name: Typecheck DSH multi-surface payout bindings
+        id: typecheck
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm --dir services/dsh typecheck 2>&1 | tee "${EVIDENCE_DIR}/typecheck.log"
+      - name: Verify backend and frontend bindings
+        id: bindings
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          {
+            pnpm run guard:backend-api-binding
+            pnpm run guard:frontend-feature-binding
+          } 2>&1 | tee "${EVIDENCE_DIR}/bindings.log"
       - name: Verify repository whitespace
-        run: git diff --check
+        id: whitespace
+        continue-on-error: true
+        shell: bash
+        run: git diff --check 2>&1 | tee "${EVIDENCE_DIR}/whitespace.log"
+      - name: Publish immutable remote verification evidence
+        id: report
+        if: always() && steps.checkout.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        env:
+          SOURCE_COMMIT: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+          CHECKOUT_OUTCOME: ${{ steps.checkout.outcome }}
+          SETUP_GO_OUTCOME: ${{ steps.setup_go.outcome }}
+          SETUP_PNPM_OUTCOME: ${{ steps.setup_pnpm.outcome }}
+          SETUP_NODE_OUTCOME: ${{ steps.setup_node.outcome }}
+          INSTALL_OUTCOME: ${{ steps.install.outcome }}
+          GUARD_OUTCOME: ${{ steps.guard.outcome }}
+          MIGRATIONS_OUTCOME: ${{ steps.migrations.outcome }}
+          DATABASE_OUTCOME: ${{ steps.database_invariants.outcome }}
+          GOFMT_OUTCOME: ${{ steps.gofmt.outcome }}
+          WLT_GO_OUTCOME: ${{ steps.wlt_go.outcome }}
+          DSH_GO_OUTCOME: ${{ steps.dsh_go.outcome }}
+          TYPECHECK_OUTCOME: ${{ steps.typecheck.outcome }}
+          BINDINGS_OUTCOME: ${{ steps.bindings.outcome }}
+          WHITESPACE_OUTCOME: ${{ steps.whitespace.outcome }}
+        run: |
+          cat > "${EVIDENCE_DIR}/latest.md" <<EOF
+          # JRN-037 Remote Verification
+
+          - source_commit: ${SOURCE_COMMIT}
+          - workflow_run_id: ${RUN_ID}
+          - checkout: ${CHECKOUT_OUTCOME}
+          - setup_go: ${SETUP_GO_OUTCOME}
+          - setup_pnpm: ${SETUP_PNPM_OUTCOME}
+          - setup_node: ${SETUP_NODE_OUTCOME}
+          - install: ${INSTALL_OUTCOME}
+          - product_contract_surface_guard: ${GUARD_OUTCOME}
+          - all_wlt_migrations: ${MIGRATIONS_OUTCOME}
+          - postgresql_invariants: ${DATABASE_OUTCOME}
+          - gofmt: ${GOFMT_OUTCOME}
+          - wlt_go_test: ${WLT_GO_OUTCOME}
+          - dsh_go_test: ${DSH_GO_OUTCOME}
+          - dsh_typecheck: ${TYPECHECK_OUTCOME}
+          - backend_frontend_binding_guards: ${BINDINGS_OUTCOME}
+          - whitespace: ${WHITESPACE_OUTCOME}
+          EOF
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "${EVIDENCE_DIR}"
+          git commit -m "test(jrn-037): publish remote verification evidence [skip ci]" || exit 0
+          git checkout -B sambassam
+          for attempt in 1 2 3; do
+            git pull --rebase origin sambassam && git push origin HEAD:sambassam && exit 0
+            sleep $((attempt * 3))
+          done
+          exit 1
+      - name: Enforce verification result
+        if: always()
+        shell: bash
+        env:
+          OUTCOMES: >-
+            ${{ steps.checkout.outcome }}
+            ${{ steps.setup_go.outcome }}
+            ${{ steps.setup_pnpm.outcome }}
+            ${{ steps.setup_node.outcome }}
+            ${{ steps.install.outcome }}
+            ${{ steps.guard.outcome }}
+            ${{ steps.migrations.outcome }}
+            ${{ steps.database_invariants.outcome }}
+            ${{ steps.gofmt.outcome }}
+            ${{ steps.wlt_go.outcome }}
+            ${{ steps.dsh_go.outcome }}
+            ${{ steps.typecheck.outcome }}
+            ${{ steps.bindings.outcome }}
+            ${{ steps.whitespace.outcome }}
+            ${{ steps.report.outcome }}
+        run: |
+          echo "${OUTCOMES}"
+          if grep -Eq 'failure|cancelled|skipped' <<<"${OUTCOMES}"; then
+            exit 1
+          fi
