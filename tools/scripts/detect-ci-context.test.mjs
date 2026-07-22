@@ -30,13 +30,20 @@ test("routes infrastructure without product-wide verification", () => {
   assert.equal(result.frontend, false);
 });
 
-test("treats shared DSH frontend changes as heavy cross-surface work", () => {
+test("treats shared DSH frontend changes as heavy cross-surface frontend work only", () => {
   const result = classifyFiles(["services/dsh/frontend/shared/cart/cart-controller.ts"]);
-  assert.equal(result.dsh, true);
+  assert.equal(result.dsh, false);
   assert.equal(result.frontend, true);
   assert.equal(result.shared_brain, true);
   assert.equal(result.heavy, true);
   assert.equal(result.journey_scope, "PROJECT-WIDE");
+});
+
+test("routes DSH backend changes to Go verification", () => {
+  const result = classifyFiles(["services/dsh/backend/internal/cart/cart.go"]);
+  assert.equal(result.dsh, true);
+  assert.equal(result.frontend, false);
+  assert.equal(result.wlt, false);
 });
 
 test("detects JRN-040 targeted platform verification", () => {
@@ -44,7 +51,7 @@ test("detects JRN-040 targeted platform verification", () => {
     "core/platform-control/contracts/jrn-040-platform-change-sets.openapi.yaml",
     "services/dsh/tsconfig.jrn-040.json"
   ]);
-  assert.equal(result.platform, true);
+  assert.equal(result.platform, false);
   assert.equal(result.contracts, true);
   assert.equal(result.jrn040, true);
   assert.equal(result.journey_scope, "JRN-040");
