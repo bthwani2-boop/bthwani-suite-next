@@ -14,11 +14,13 @@ import {
   CpTextInput,
 } from "@bthwani/control-panel/components";
 import {
+  fetchPlatformRolloutRecovery,
   usePlatformRolloutController,
   type CreatePlatformRolloutInput,
   type PlatformChangeSet,
   type PlatformControlState,
   type PlatformRollout,
+  type PlatformRolloutRecoveryGuide,
 } from "../../shared/platform";
 import { hasControlPanelPermission } from "../../shared/session/control-panel-permissions";
 import { useControlPanelSession } from "../../shared/session/control-panel-session";
@@ -37,6 +39,20 @@ const STATUS_TONE: Record<string, "neutral" | "warning" | "success" | "danger" |
   rolled_back: "neutral",
   failed: "danger",
 };
+
+const TARGET_SCOPE_KEYS = new Set(["audience", "audienceIds", "city", "regions", "surface", "surfaces"]);
+const TARGET_SCOPE_ARRAY_KEYS = new Set(["audienceIds", "regions", "surfaces"]);
+
+function hasGovernedTargetScope(scope: Record<string, unknown>): boolean {
+  const entries = Object.entries(scope);
+  if (entries.length === 0 || entries.some(([key]) => !TARGET_SCOPE_KEYS.has(key))) return false;
+  return entries.some(([key, value]) => {
+    if (TARGET_SCOPE_ARRAY_KEYS.has(key)) {
+      return Array.isArray(value) && value.length > 0 && value.every((item) => typeof item === "string" && item.trim().length > 0);
+    }
+    return typeof value === "string" && value.trim().length > 0;
+  });
+}
 
 export function PlatformRolloutPanel({ changeSets, healthState, onChanged }: PlatformRolloutPanelProps) {
   const { state: sessionState } = useControlPanelSession();
@@ -61,9 +77,15 @@ export function PlatformRolloutPanel({ changeSets, healthState, onChanged }: Pla
     ? featureFlagKey
     : flagOptions[0]?.value ?? "";
   const [stepsText, setStepsText] = useState("10,25,50,100");
-  const [targetScopeText, setTargetScopeText] = useState("{}");
+  const [targetScopeText, setTargetScopeText] = useState('{"surfaces":["app-client"],"regions":["sanaa"]}');
   const [healthGateText, setHealthGateText] = useState('{"requiredState":"OPERATIONAL"}');
   const [formError, setFormError] = useState<string | null>(null);
+  const [recoveryState, setRecoveryState] = useState<
+    | { readonly kind: "idle" }
+    | { readonly kind: "loading"; readonly rolloutId: string }
+    | { readonly kind: "success"; readonly recovery: PlatformRolloutRecoveryGuide }
+    | { readonly kind: "error"; readonly message: string }
+  >({ kind: "idle" });
   const busy = rollouts.mutationState.kind === "loading";
 
   const refreshAffectedState = async () => {
@@ -101,6 +123,14 @@ export function PlatformRolloutPanel({ changeSets, healthState, onChanged }: Pla
       setFormError("PLATFORM_ROLLOUT_SCOPE_OR_HEALTH_GATE_INVALID_JSON");
       return;
     }
+    if (!hasGovernedTargetScope(targetScope)) {
+      setFormError("PLATFORM_ROLLOUT_TARGET_SCOPE_INVALID");
+      return;
+    }
+    if (healthGate.requiredState !== "OPERATIONAL") {
+      setFormError("PLATFORM_ROLLOUT_HEALTH_GATE_REQUIRED_STATE_INVALID");
+      return;
+    }
 
     const input: CreatePlatformRolloutInput = {
       changeSetId: selectedChangeSet.id,
@@ -118,6 +148,17 @@ export function PlatformRolloutPanel({ changeSets, healthState, onChanged }: Pla
     if (succeeded) await refreshAffectedState();
   };
 
+  const loadRecovery = async (rolloutId: string) => {
+    setRecoveryState({ kind: "loading", rolloutId });
+    try {
+      const response = await fetchPlatformRolloutRecovery(rolloutId);
+      setRecoveryState({ kind: "success", recovery: response.recovery });
+    } catch (error) {
+      const candidate = error as { code?: string; message?: string } | undefined;
+      setRecoveryState({ kind: "error", message: candidate?.code ?? candidate?.message ?? "PLATFORM_ROLLOUT_RECOVERY_UNAVAILABLE" });
+    }
+  };
+
   return (
     <View style={styles.stack}>
       <CpStatePanel
@@ -125,8 +166,8 @@ export function PlatformRolloutPanel({ changeSets, healthState, onChanged }: Pla
         title={`بوابة صحة الإطلاق: ${healthState}`}
         description={
           healthState === "OPERATIONAL"
-            ? "يمكن التقدم إلى الخطوة التالية. يعاد فحص الصحة قبل كل advance."
-            : "إنشاء وإيقاف وإلغاء وتراجع الإطلاقات متاح حسب الصلاحية، لكن advance محجوب حتى تصبح الصحة OPERATIONAL."
+            ? "يمكن الاستئناف أو التقدم حسب الحالة. يعاد فحص الصحة قبل كل انتقال يؤثر في الإطلاق."
+            : "التقدم والاستئناف محجوبان حتى تصبح الصحة OPERATIONAL. يبقى الإيقاف والإلغاء والتراجع متاحًا حسب الحالة والصلاحية."
         }
         code="PLATFORM_ROLLOUT_HEALTH_GATE"
       />
@@ -160,8 +201,8 @@ export function PlatformRolloutPanel({ changeSets, healthState, onChanged }: Pla
                   aria-label="علم الميزة"
                 />
                 <CpTextInput value={stepsText} onChange={setStepsText} placeholder="10,25,50,100" aria-label="خطوات النسب" />
-                <CpTextInput value={targetScopeText} onChange={setTargetScopeText} placeholder="نطاق JSON" aria-label="نطاق الاستهداف بصيغة JSON" />
-                <CpTextInput value={healthGateText} onChange={setHealthGateText} placeholder="بوابة صحة JSON" aria-label="بوابة الصحة بصيغة JSON" />
+                <CpTextInput value={targetScopeText} onChange={setTargetScopeText} placeholder='{"surfaces":["app-client"],"regions":["sanaa"]}' aria-label="نطاق الاستهداف بصيغة JSON" />
+                <CpTextInput value={healthGateText} onChange={setHealthGateText} placeholder='{"requiredState":"OPERATIONAL"}' aria-label="بوابة الصحة بصيغة JSON" />
                 <View style={styles.actions}>
                   <CpButton onClick={() => void createRollout()} disabled={busy || !selectedChangeSet} aria-label="إنشاء إطلاق تدريجي">
                     {busy ? "جاري الحفظ…" : "إنشاء الإطلاق"}
@@ -200,6 +241,7 @@ export function PlatformRolloutPanel({ changeSets, healthState, onChanged }: Pla
           <thead>
             <tr>
               <CpTableHeaderCell>العلم</CpTableHeaderCell>
+              <CpTableHeaderCell>النطاق</CpTableHeaderCell>
               <CpTableHeaderCell>الحالة</CpTableHeaderCell>
               <CpTableHeaderCell>النسبة</CpTableHeaderCell>
               <CpTableHeaderCell>الخطوة</CpTableHeaderCell>
@@ -211,6 +253,7 @@ export function PlatformRolloutPanel({ changeSets, healthState, onChanged }: Pla
             {rollouts.state.rollouts.map((rollout) => (
               <tr key={rollout.id}>
                 <CpTableCell>{rollout.featureFlagKey}</CpTableCell>
+                <CpTableCell><Text role="caption">{JSON.stringify(rollout.targetScope)}</Text></CpTableCell>
                 <CpTableCell><Badge label={rollout.status} tone={STATUS_TONE[rollout.status] ?? "neutral"} /></CpTableCell>
                 <CpTableCell>{rollout.currentPercentage}%</CpTableCell>
                 <CpTableCell>{rollout.currentStepIndex + 1}/{rollout.steps.length}</CpTableCell>
@@ -223,8 +266,10 @@ export function PlatformRolloutPanel({ changeSets, healthState, onChanged }: Pla
                     busy={busy}
                     onAdvance={() => void runTransition(() => rollouts.advance(rollout.id))}
                     onPause={() => void runTransition(() => rollouts.pause(rollout.id))}
+                    onResume={() => void runTransition(() => rollouts.resume(rollout.id))}
                     onAbort={() => void runTransition(() => rollouts.abort(rollout.id))}
                     onRollback={() => void runTransition(() => rollouts.rollback(rollout.id))}
+                    onRecovery={() => void loadRecovery(rollout.id)}
                   />
                 </CpTableCell>
               </tr>
@@ -232,6 +277,21 @@ export function PlatformRolloutPanel({ changeSets, healthState, onChanged }: Pla
           </tbody>
         </CpTable>
       )}
+
+      {recoveryState.kind === "loading" ? (
+        <CpStatePanel role="status" title="جاري تحميل دليل الاستعادة…" code={recoveryState.rolloutId} />
+      ) : recoveryState.kind === "error" ? (
+        <CpStatePanel role="alert" title="تعذر تحميل دليل الاستعادة" code={recoveryState.message} />
+      ) : recoveryState.kind === "success" ? (
+        <Card>
+          <View style={styles.cardContent}>
+            <Text role="titleSm">دليل الاستعادة: {recoveryState.recovery.featureFlagKey}</Text>
+            <Text role="body">الإجراء المقترح: {recoveryState.recovery.recommendedAction}</Text>
+            <Text role="body">خطة التراجع المعتمدة: {recoveryState.recovery.rollbackPlan}</Text>
+            {recoveryState.recovery.recoverySteps.map((step) => <Text key={step} role="body">• {step}</Text>)}
+          </View>
+        </Card>
+      ) : null}
     </View>
   );
 }
@@ -243,8 +303,10 @@ function RolloutActions({
   busy,
   onAdvance,
   onPause,
+  onResume,
   onAbort,
   onRollback,
+  onRecovery,
 }: {
   readonly rollout: PlatformRollout;
   readonly canManage: boolean;
@@ -252,21 +314,25 @@ function RolloutActions({
   readonly busy: boolean;
   readonly onAdvance: () => void;
   readonly onPause: () => void;
+  readonly onResume: () => void;
   readonly onAbort: () => void;
   readonly onRollback: () => void;
+  readonly onRecovery: () => void;
 }) {
-  if (!canManage) return <Text role="caption">قراءة فقط</Text>;
+  if (!canManage) return <CpButton onClick={onRecovery}>دليل الاستعادة</CpButton>;
   return (
     <View style={styles.actions}>
-      {(rollout.status === "running" || rollout.status === "paused") ? (
+      {rollout.status === "running" ? (
         <CpButton onClick={onAdvance} disabled={busy || !canAdvance}>تقدم</CpButton>
       ) : null}
       {rollout.status === "running" ? <CpButton onClick={onPause} disabled={busy}>إيقاف مؤقت</CpButton> : null}
+      {rollout.status === "paused" ? <CpButton onClick={onResume} disabled={busy || !canAdvance}>استئناف دون تغيير النسبة</CpButton> : null}
       {(rollout.status === "running" || rollout.status === "paused") ? (
         <CpButton onClick={onAbort} disabled={busy}>إلغاء واستعادة baseline</CpButton>
       ) : null}
       {rollout.status === "completed" ? <CpButton onClick={onRollback} disabled={busy}>تراجع كامل</CpButton> : null}
-      {!["running", "paused", "completed"].includes(rollout.status) ? <Text role="caption">لا يوجد إجراء متاح</Text> : null}
+      <CpButton onClick={onRecovery} disabled={busy}>دليل الاستعادة</CpButton>
+      {!['running', 'paused', 'completed'].includes(rollout.status) ? <Text role="caption">الاستعادة مكتملة أو تتطلب مراجعة</Text> : null}
     </View>
   );
 }
