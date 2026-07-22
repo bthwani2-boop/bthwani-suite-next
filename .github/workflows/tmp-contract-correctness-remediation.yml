@@ -7,12 +7,14 @@ on:
       - ".github/workflows/tmp-contract-correctness-remediation.yml"
       - "tools/scripts/tmp-contract-correctness-remediation.py"
       - "tools/scripts/tmp-contract-parser-fs-fix.py"
+      - "tools/scripts/tmp-contract-parser-component-ref-fix.py"
   pull_request:
     branches: [master]
     paths:
       - ".github/workflows/tmp-contract-correctness-remediation.yml"
       - "tools/scripts/tmp-contract-correctness-remediation.py"
       - "tools/scripts/tmp-contract-parser-fs-fix.py"
+      - "tools/scripts/tmp-contract-parser-component-ref-fix.py"
 
 permissions:
   contents: read
@@ -36,6 +38,7 @@ jobs:
         run: |
           python tools/scripts/tmp-contract-correctness-remediation.py
           python tools/scripts/tmp-contract-parser-fs-fix.py
+          python tools/scripts/tmp-contract-parser-component-ref-fix.py
       - name: Capture parser verification
         shell: bash
         run: |
