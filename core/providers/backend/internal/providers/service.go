@@ -2,11 +2,11 @@ package providers
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -216,6 +216,33 @@ func validateUpdateProviderInput(input UpdateProviderInput) error {
 	return nil
 }
 
+func providerUpdateRequestHash(id string, input UpdateProviderInput) (string, error) {
+	canonical := map[string]any{"providerId": id}
+	if input.Active != nil {
+		canonical["active"] = *input.Active
+	}
+	if input.Credentials != nil {
+		credentials, err := decodeJSONObject(*input.Credentials)
+		if err != nil {
+			return "", err
+		}
+		canonical["credentials"] = credentials
+	}
+	if input.Parameters != nil {
+		parameters, err := decodeJSONObject(*input.Parameters)
+		if err != nil {
+			return "", err
+		}
+		canonical["parameters"] = parameters
+	}
+	encoded, err := json.Marshal(canonical)
+	if err != nil {
+		return "", err
+	}
+	digest := sha256.Sum256(encoded)
+	return fmt.Sprintf("%x", digest[:]), nil
+}
+
 func (s *Service) ListProviders(ctx context.Context, op Operator) ([]ExternalProvider, error) {
 	providers, err := s.repo.ListProviders(ctx)
 	if err != nil {
@@ -235,27 +262,31 @@ func (s *Service) GetProvider(ctx context.Context, id string, op Operator) (Exte
 	return providerForRead(provider), nil
 }
 
-func (s *Service) UpdateProvider(ctx context.Context, id string, input UpdateProviderInput, op Operator, correlationID string) (ExternalProvider, error) {
+func (s *Service) UpdateProvider(
+	ctx context.Context,
+	id string,
+	input UpdateProviderInput,
+	op Operator,
+	correlationID string,
+	idempotencyKey string,
+) (ExternalProvider, error) {
 	if err := validateUpdateProviderInput(input); err != nil {
 		return ExternalProvider{}, err
 	}
-
-	before, err := s.repo.GetProvider(ctx, id)
+	if strings.TrimSpace(id) == "" || strings.TrimSpace(op.ActorID) == "" || strings.TrimSpace(op.Role) == "" || strings.TrimSpace(correlationID) == "" || strings.TrimSpace(idempotencyKey) == "" {
+		return ExternalProvider{}, ErrInvalidInput
+	}
+	requestHash, err := providerUpdateRequestHash(id, input)
 	if err != nil {
 		return ExternalProvider{}, err
 	}
-
-	after, err := s.repo.UpdateProvider(ctx, id, input)
-	if err != nil {
-		return ExternalProvider{}, err
-	}
-
-	if err := s.repo.RecordAudit(ctx, op.ActorID, op.Role, id,
-		"provider.configured", providerForRead(before), providerForRead(after), "", correlationID); err != nil {
-		log.Printf("[providers] RecordAudit error in UpdateProvider: %v", err)
-	}
-
-	return providerForRead(after), nil
+	return s.repo.UpdateProviderGoverned(ctx, id, input, GovernedProviderUpdate{
+		ActorID:        op.ActorID,
+		ActorRole:      op.Role,
+		CorrelationID:  strings.TrimSpace(correlationID),
+		IdempotencyKey: strings.TrimSpace(idempotencyKey),
+		RequestHash:    requestHash,
+	})
 }
 
 type healthProbeParameters struct {
