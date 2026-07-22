@@ -19,6 +19,7 @@ var (
 
 type Record struct {
 	ID           string          `json:"id"`
+	TenantID     string          `json:"-"`
 	EntityType   string          `json:"entityType"`
 	EntityID     string          `json:"entityId,omitempty"`
 	OwnerActorID string          `json:"-"`
@@ -58,17 +59,18 @@ var partnerQueueStages = map[string]bool{
 }
 
 var allowedTransitions = map[string]map[string]bool{
-	"partner-submitted": {"partner-review": true, "needs-fix": true, "rejected": true},
-	"field-submitted":   {"partner-review": true, "needs-fix": true, "rejected": true},
-	"partner-review":    {"partner-approved": true, "needs-fix": true, "rejected": true},
-	"partner-approved":  {"marketing-review": true, "needs-fix": true, "rejected": true},
-	"marketing-review":  {"marketing-approved": true, "needs-fix": true, "rejected": true},
+	"partner-submitted":  {"partner-review": true, "needs-fix": true, "rejected": true},
+	"field-submitted":    {"partner-review": true, "needs-fix": true, "rejected": true},
+	"partner-review":     {"partner-approved": true, "needs-fix": true, "rejected": true},
+	"partner-approved":   {"marketing-review": true, "needs-fix": true, "rejected": true},
+	"marketing-review":   {"marketing-approved": true, "needs-fix": true, "rejected": true},
 	"marketing-approved": {"catalog-adopted": true, "needs-fix": true, "rejected": true},
-	"catalog-adopted":   {"client-visible": true, "needs-fix": true, "rejected": true},
-	"needs-fix":         {"partner-submitted": true, "field-submitted": true, "partner-review": true, "rejected": true},
+	"catalog-adopted":    {"client-visible": true, "needs-fix": true, "rejected": true},
+	"needs-fix":          {"partner-submitted": true, "field-submitted": true, "partner-review": true, "rejected": true},
 }
 
 type CreateInput struct {
+	TenantID     string
 	EntityType   string
 	EntityID     string
 	OwnerActorID string
@@ -79,7 +81,7 @@ type CreateInput struct {
 }
 
 func Create(db *sql.DB, input CreateInput) (Record, error) {
-	if input.EntityType == "" || input.OwnerActorID == "" || input.Source == "" || input.Stage == "" || input.Title == "" {
+	if input.TenantID == "" || input.EntityType == "" || input.OwnerActorID == "" || input.Source == "" || input.Stage == "" || input.Title == "" {
 		return Record{}, ErrInvalid
 	}
 	metadata := input.Metadata
@@ -92,37 +94,25 @@ func Create(db *sql.DB, input CreateInput) (Record, error) {
 	}
 	row := db.QueryRow(`
 		INSERT INTO dsh_catalog_approval_records
-		  (id, entity_type, entity_id, owner_actor_id, source, stage, title, metadata)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-		RETURNING id, entity_type, COALESCE(entity_id,''), owner_actor_id,
+		  (id, tenant_id, entity_type, entity_id, owner_actor_id, source, stage, title, metadata)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		RETURNING id, tenant_id, entity_type, COALESCE(entity_id,''), owner_actor_id,
 		          source, stage, title, metadata, submitted_at, updated_at`,
-		uuid.NewString(), input.EntityType, entityID, input.OwnerActorID,
+		uuid.NewString(), input.TenantID, input.EntityType, entityID, input.OwnerActorID,
 		input.Source, input.Stage, input.Title, metadata,
 	)
 	return scanRecord(row)
 }
 
-func Get(db *sql.DB, id string) (Record, error) {
-	return get(db, id, "")
-}
-
-func GetOwned(db *sql.DB, id, ownerActorID string) (Record, error) {
-	if ownerActorID == "" {
+func Get(db *sql.DB, tenantID, id string) (Record, error) {
+	if tenantID == "" || id == "" {
 		return Record{}, ErrInvalid
 	}
-	return get(db, id, ownerActorID)
-}
-
-func get(db *sql.DB, id, ownerActorID string) (Record, error) {
-	query := `SELECT id, entity_type, COALESCE(entity_id,''), owner_actor_id,
-	                 source, stage, title, metadata, submitted_at, updated_at
-	          FROM dsh_catalog_approval_records WHERE id = $1`
-	args := []any{id}
-	if ownerActorID != "" {
-		query += " AND owner_actor_id = $2"
-		args = append(args, ownerActorID)
-	}
-	rec, err := scanRecord(db.QueryRow(query, args...))
+	rec, err := scanRecord(db.QueryRow(`
+		SELECT id, tenant_id, entity_type, COALESCE(entity_id,''), owner_actor_id,
+		       source, stage, title, metadata, submitted_at, updated_at
+		FROM dsh_catalog_approval_records
+		WHERE tenant_id = $1 AND id = $2`, tenantID, id))
 	if errors.Is(err, sql.ErrNoRows) {
 		return Record{}, ErrNotFound
 	}
@@ -137,14 +127,17 @@ func get(db *sql.DB, id, ownerActorID string) (Record, error) {
 	return rec, nil
 }
 
-func List(db *sql.DB, entityType, stage, source string, limit int) ([]Record, error) {
+func List(db *sql.DB, tenantID, entityType, stage, source string, limit int) ([]Record, error) {
+	if tenantID == "" {
+		return nil, ErrInvalid
+	}
 	if limit <= 0 {
 		limit = 100
 	}
-	q := `SELECT id, entity_type, COALESCE(entity_id,''), owner_actor_id,
+	q := `SELECT id, tenant_id, entity_type, COALESCE(entity_id,''), owner_actor_id,
 	             source, stage, title, metadata, submitted_at, updated_at
-	      FROM dsh_catalog_approval_records WHERE 1=1`
-	var args []any
+	      FROM dsh_catalog_approval_records WHERE tenant_id = $1`
+	args := []any{tenantID}
 	if entityType != "" {
 		args = append(args, entityType)
 		q += fmt.Sprintf(" AND entity_type = $%d", len(args))
@@ -176,8 +169,8 @@ func List(db *sql.DB, entityType, stage, source string, limit int) ([]Record, er
 	return list, rows.Err()
 }
 
-func ListPartnerQueue(db *sql.DB, ownerActorID string, limit int) ([]PartnerQueueRecord, error) {
-	if ownerActorID == "" {
+func ListPartnerQueue(db *sql.DB, tenantID, ownerActorID string, limit int) ([]PartnerQueueRecord, error) {
+	if tenantID == "" || ownerActorID == "" {
 		return nil, ErrInvalid
 	}
 	if limit <= 0 {
@@ -186,10 +179,11 @@ func ListPartnerQueue(db *sql.DB, ownerActorID string, limit int) ([]PartnerQueu
 	rows, err := db.Query(`
 		SELECT id, COALESCE(entity_id,''), entity_type, stage, source, submitted_at
 		FROM dsh_catalog_approval_records
-		WHERE owner_actor_id = $1
+		WHERE tenant_id = $1
+		  AND owner_actor_id = $2
 		  AND source = 'app-partner'
 		  AND stage IN ('partner-submitted','field-submitted','partner-review','partner-approved','needs-fix','rejected')
-		ORDER BY submitted_at DESC LIMIT $2`, ownerActorID, limit)
+		ORDER BY submitted_at DESC LIMIT $3`, tenantID, ownerActorID, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -208,8 +202,8 @@ func ListPartnerQueue(db *sql.DB, ownerActorID string, limit int) ([]PartnerQueu
 	return list, rows.Err()
 }
 
-func Transition(db *sql.DB, id, toStage, owner, actionLabel string) (Record, error) {
-	if id == "" || toStage == "" || owner == "" || actionLabel == "" {
+func Transition(db *sql.DB, tenantID, id, toStage, owner, actionLabel string) (Record, error) {
+	if tenantID == "" || id == "" || toStage == "" || owner == "" || actionLabel == "" {
 		return Record{}, ErrInvalid
 	}
 	tx, err := db.Begin()
@@ -219,7 +213,9 @@ func Transition(db *sql.DB, id, toStage, owner, actionLabel string) (Record, err
 	defer tx.Rollback()
 
 	var fromStage string
-	if err := tx.QueryRow(`SELECT stage FROM dsh_catalog_approval_records WHERE id = $1 FOR UPDATE`, id).Scan(&fromStage); err != nil {
+	if err := tx.QueryRow(`
+		SELECT stage FROM dsh_catalog_approval_records
+		WHERE tenant_id = $1 AND id = $2 FOR UPDATE`, tenantID, id).Scan(&fromStage); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return Record{}, ErrNotFound
 		}
@@ -230,10 +226,10 @@ func Transition(db *sql.DB, id, toStage, owner, actionLabel string) (Record, err
 	}
 
 	row := tx.QueryRow(`
-		UPDATE dsh_catalog_approval_records SET stage = $2, updated_at = NOW()
-		WHERE id = $1
-		RETURNING id, entity_type, COALESCE(entity_id,''), owner_actor_id,
-		          source, stage, title, metadata, submitted_at, updated_at`, id, toStage)
+		UPDATE dsh_catalog_approval_records SET stage = $3, updated_at = NOW()
+		WHERE tenant_id = $1 AND id = $2
+		RETURNING id, tenant_id, entity_type, COALESCE(entity_id,''), owner_actor_id,
+		          source, stage, title, metadata, submitted_at, updated_at`, tenantID, id, toStage)
 	rec, err := scanRecord(row)
 	if err != nil {
 		return Record{}, err
@@ -286,6 +282,7 @@ func scanRecord(scanner rowScanner) (Record, error) {
 	var metadata []byte
 	err := scanner.Scan(
 		&rec.ID,
+		&rec.TenantID,
 		&rec.EntityType,
 		&rec.EntityID,
 		&rec.OwnerActorID,
