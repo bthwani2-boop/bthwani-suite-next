@@ -34,6 +34,9 @@ jobs:
       - name: Synchronize before execution
         run: git pull --rebase origin sambassam
 
+      - name: Apply JRN-027 atomic remaining slices
+        run: python3 tools/scripts/close-jrn-027-remaining-slices.py
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
@@ -55,9 +58,6 @@ jobs:
 
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
-
-      - name: Apply JRN-027 atomic remaining slices
-        run: python3 tools/scripts/close-jrn-027-remaining-slices.py
 
       - name: Format Go implementation
         run: |
