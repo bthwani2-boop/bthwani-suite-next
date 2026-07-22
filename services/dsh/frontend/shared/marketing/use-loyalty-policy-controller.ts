@@ -67,6 +67,27 @@ export function useLoyaltyPolicyController(authKind: string) {
     }
   }, [load]);
 
+  const updateTerms = useCallback(async (
+    policy: LoyaltyEarningPolicy,
+    input: LoyaltyPolicyCreateInput,
+  ) => {
+    setMutationLoading(true);
+    setMutationError(null);
+    try {
+      await updateLoyaltyEarningPolicy(policy.id, {
+        ...input,
+        expectedVersion: policy.version,
+      });
+      await load();
+      return true;
+    } catch (error) {
+      setMutationError(resolveError(error));
+      return false;
+    } finally {
+      setMutationLoading(false);
+    }
+  }, [load]);
+
   const setStatus = useCallback(async (
     policy: LoyaltyEarningPolicy,
     status: LoyaltyPolicyStatus,
@@ -88,5 +109,5 @@ export function useLoyaltyPolicyController(authKind: string) {
     }
   }, [load]);
 
-  return { state, mutationLoading, mutationError, reload: load, create, setStatus };
+  return { state, mutationLoading, mutationError, reload: load, create, updateTerms, setStatus };
 }
