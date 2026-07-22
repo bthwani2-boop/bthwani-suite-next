@@ -28,10 +28,9 @@ function registeredDshContracts() {
 
 const dshRegistry = registeredDshContracts();
 const dshRegisteredFiles = new Set(dshRegistry.map((entry) => entry.file));
-const dshStandaloneStrategies = new Set(["STANDALONE_MANUAL_TYPED_ADAPTER", "STANDALONE_GENERATED"]);
-const dshStandaloneContracts = dshRegistry
-  .filter((entry) => dshStandaloneStrategies.has(entry.strategy))
-  .map((entry) => entry.file);
+const dshAdditionalContracts = dshRegistry
+  .map((entry) => entry.file)
+  .filter((file) => file !== dshPrimary);
 
 const dshClientAddressContract = "services/dsh/contracts/dsh.client-address.openapi.yaml";
 if (!dshRegisteredFiles.has(dshClientAddressContract)) {
@@ -46,7 +45,7 @@ const services = [
   {
     name: "DSH",
     openapi: dshPrimary,
-    additionalOpenapi: dshStandaloneContracts,
+    additionalOpenapi: dshAdditionalContracts,
     router: "services/dsh/backend/internal/http/server.go",
     routerDir: "services/dsh/backend/internal/http",
   },
@@ -54,6 +53,7 @@ const services = [
     name: "WLT",
     openapi: "services/wlt/contracts/wlt.openapi.yaml",
     additionalOpenapi: [
+      "services/wlt/contracts/wlt.payments.openapi.yaml",
       "services/wlt/contracts/wlt.commercial.openapi.yaml",
       "services/wlt/contracts/wlt.commercial-summary.openapi.yaml",
       "services/wlt/contracts/wlt.promotion-funding.openapi.yaml",
@@ -171,9 +171,8 @@ function uniqueOperations(service, operations) {
     const previous = seen.get(operation.operationId);
     if (previous) {
       if (operationKey(previous) === operationKey(operation)) {
-        // A registered manual adapter may repeat the exact canonical operation
-        // for a narrower generated/type surface. Only identical method+path
-        // overlays are accepted; divergent reuse remains a hard failure.
+        // Registered fragments may repeat the exact canonical operation for a
+        // narrower generated/type surface. Divergent reuse remains forbidden.
         continue;
       }
       violations.push({
