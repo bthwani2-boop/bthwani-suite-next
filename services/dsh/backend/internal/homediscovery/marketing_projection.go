@@ -34,7 +34,7 @@ func listCampaignPromos(ctx context.Context, db *sql.DB, query HomeDiscoveryQuer
 		LEFT JOIN dsh_stores s ON c.target_type='store' AND s.id::TEXT=c.target_id
 		WHERE c.archived_at IS NULL
 		  AND c.status='active'
-		  AND c.audience IN ('all','client')
+		  AND (c.audience='all' OR (c.audience='client' AND $3='authenticated'))
 		  AND COALESCE(c.start_date,'') <> ''
 		  AND COALESCE(c.end_date,'') <> ''
 		  AND c.start_date <= TO_CHAR(CURRENT_DATE,'YYYY-MM-DD')
@@ -51,7 +51,7 @@ func listCampaignPromos(ctx context.Context, db *sql.DB, query HomeDiscoveryQuer
 		    ))
 		  )
 		ORDER BY c.updated_at DESC, c.id
-		LIMIT 10`, query.CityCode, query.ServiceAreaCode)
+		LIMIT 10`, query.CityCode, query.ServiceAreaCode, query.AudienceSegment)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query marketing campaign projection: %w", err)
 	}
@@ -86,7 +86,7 @@ func listPartnerOfferPromos(ctx context.Context, db *sql.DB, query HomeDiscovery
 		JOIN dsh_stores s ON s.id=o.store_id
 		WHERE o.archived_at IS NULL
 		  AND o.status='published'
-		  AND o.eligibility IN ('all','client')
+		  AND (o.eligibility='all' OR (o.eligibility='client' AND $3='authenticated'))
 		  AND o.active_from_date <> ''
 		  AND o.active_to_date <> ''
 		  AND o.active_from_date <= TO_CHAR(CURRENT_DATE,'YYYY-MM-DD')
@@ -95,7 +95,7 @@ func listPartnerOfferPromos(ctx context.Context, db *sql.DB, query HomeDiscovery
 		  AND ($1='' OR s.city_code=$1)
 		  AND ($2='' OR s.service_area_code=$2)
 		ORDER BY o.updated_at DESC, o.id
-		LIMIT 10`, query.CityCode, query.ServiceAreaCode)
+		LIMIT 10`, query.CityCode, query.ServiceAreaCode, query.AudienceSegment)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query partner-offer projection: %w", err)
 	}
