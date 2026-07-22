@@ -8,6 +8,11 @@ on:
       - ".github/workflows/jrn-034-payments-verification.yml"
       - "services/wlt/backend/**"
       - "services/dsh/backend/**"
+  pull_request:
+    paths:
+      - ".github/workflows/jrn-034-payments-verification.yml"
+      - "services/wlt/backend/**"
+      - "services/dsh/backend/**"
 
 permissions:
   contents: read
