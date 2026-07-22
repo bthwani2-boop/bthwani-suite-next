@@ -195,4 +195,4 @@ export const updateSubscriptionPlan = (id: string, body: SubscriptionPlanUpdateP
   });
 
 export const fetchClientBenefits = () =>
-  req<ClientBenefitsPayload>("/dsh/client/benefits");
+  req<{ benefits: ClientBenefitsPayload }>("/dsh/client/benefits");
