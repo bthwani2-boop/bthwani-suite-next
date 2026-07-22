@@ -23,11 +23,11 @@ on:
       - "tools/scripts/test-jrn-034-payments.mjs"
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
-  group: jrn-034-payments-${{ github.ref }}
-  cancel-in-progress: true
+  group: jrn-034-payments-${{ github.sha }}
+  cancel-in-progress: false
 
 jobs:
   structural:
@@ -79,3 +79,53 @@ jobs:
       - run: pnpm --dir services/wlt typecheck
       - run: pnpm --dir services/dsh typecheck
       - run: pnpm --dir apps/control-panel/runtime typecheck
+
+  evidence:
+    name: Persist exact-SHA verification receipt
+    needs: [structural, wlt-go, dsh-go, typescript]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: sambassam
+          fetch-depth: 0
+      - name: Write verification receipt
+        env:
+          VERIFIED_SHA: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          mkdir -p governance/evidence/jrn-034/ci
+          cat > "governance/evidence/jrn-034/ci/${VERIFIED_SHA}.json" <<EOF
+          {
+            "schemaVersion": 1,
+            "journeyId": "JRN-034",
+            "verifiedSha": "${VERIFIED_SHA}",
+            "workflowRunId": "${RUN_ID}",
+            "workflowRunAttempt": "${RUN_ATTEMPT}",
+            "result": "PASS",
+            "checks": [
+              "structural-journey-guard",
+              "wlt-go-test-all",
+              "dsh-go-test-all",
+              "wlt-typescript-typecheck",
+              "dsh-typescript-typecheck",
+              "control-panel-typescript-typecheck"
+            ],
+            "productionEvidence": false,
+            "independentApprovals": false
+          }
+          EOF
+      - name: Commit verification receipt
+        env:
+          VERIFIED_SHA: ${{ github.sha }}
+        run: |
+          git config user.name "bthwani-ci"
+          git config user.email "bthwani-ci@users.noreply.github.com"
+          git add "governance/evidence/jrn-034/ci/${VERIFIED_SHA}.json"
+          git commit -m "evidence(jrn-034): record CI pass for ${VERIFIED_SHA}"
+          for attempt in 1 2 3; do
+            git pull --rebase origin sambassam
+            if git push origin HEAD:sambassam; then exit 0; fi
+          done
+          exit 1
