@@ -1,0 +1,89 @@
+openapi: 3.1.0
+info:
+  title: DSH Support Message Delivery API
+  version: 1.0.0
+  description: Actor-owned support attachment delivery and durable read receipts.
+x-bthwani-owner: services/dsh
+x-bthwani-journey: JRN-021
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-runtime-dependency: true
+x-bthwani-client-generation: DISABLED
+x-bthwani-client-binding: MANUAL_TYPED_ADAPTER
+servers:
+  - url: http://localhost:58080
+security:
+  - bearerAuth: []
+paths:
+  /dsh/support/tickets/{ticketId}/messages/{messageId}/attachments:
+    parameters:
+      - $ref: '#/components/parameters/TicketId'
+      - $ref: '#/components/parameters/MessageId'
+    get:
+      operationId: listDshActorSupportMessageAttachments
+      responses:
+        '200': { description: Actor-visible message attachments }
+        '403': { description: Actor does not own the ticket }
+        '404': { description: Ticket or message not found }
+    post:
+      operationId: attachDshActorSupportMessageAsset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AttachmentInput' }
+      responses:
+        '201': { description: Attachment linked to the message }
+        '403': { description: Actor does not own the ticket }
+        '404': { description: Ticket or message not found }
+  /dsh/support/tickets/{ticketId}/messages/read:
+    parameters:
+      - $ref: '#/components/parameters/TicketId'
+    post:
+      operationId: markDshActorSupportMessagesRead
+      responses:
+        '200': { description: Durable actor read receipt }
+        '403': { description: Actor does not own the ticket }
+  /dsh/operator/support/tickets/{ticketId}/messages/{messageId}/attachments:
+    parameters:
+      - $ref: '#/components/parameters/TicketId'
+      - $ref: '#/components/parameters/MessageId'
+    get:
+      operationId: listDshOperatorSupportMessageAttachments
+      responses:
+        '200': { description: Operator-visible message attachments }
+        '403': { description: Missing support read permission }
+    post:
+      operationId: attachDshOperatorSupportMessageAsset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AttachmentInput' }
+      responses:
+        '201': { description: Operator attachment linked to the message }
+        '403': { description: Missing support manage permission }
+  /dsh/operator/support/tickets/{ticketId}/messages/read:
+    parameters:
+      - $ref: '#/components/parameters/TicketId'
+    post:
+      operationId: markDshOperatorSupportMessagesRead
+      responses:
+        '200': { description: Durable operator read receipt }
+        '403': { description: Missing support read permission }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  parameters:
+    TicketId: { name: ticketId, in: path, required: true, schema: { type: string, minLength: 1 } }
+    MessageId: { name: messageId, in: path, required: true, schema: { type: string, minLength: 1 } }
+  schemas:
+    AttachmentInput:
+      type: object
+      additionalProperties: false
+      required: [mediaAssetId, fileName, mimeType, sizeBytes]
+      properties:
+        mediaAssetId: { type: string, minLength: 1 }
+        fileName: { type: string, minLength: 1 }
+        mimeType: { type: string, minLength: 1 }
+        sizeBytes: { type: integer, minimum: 1 }
+        isInternal: { type: boolean, default: false }
