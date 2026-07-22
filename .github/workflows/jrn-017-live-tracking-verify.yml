@@ -27,6 +27,12 @@ on:
       - "services/dsh/tests/jrn-017-live-tracking-closure.test.mjs"
       - "services/dsh/tsconfig.jrn-017.json"
       - "governance/product/contracts/jrn-017-captain-live-tracking.product-truth.json"
+      - "tools/scripts/dsh-openapi-modular-lib.mjs"
+      - "tools/scripts/patch-dsh-openapi-modular-lib.mjs"
+      - "tools/scripts/migrate-dsh-openapi-modular.mjs"
+      - "tools/scripts/compose-dsh-openapi.mjs"
+      - "tools/guards/dsh-openapi-modular-gate.mjs"
+      - ".github/workflows/dsh-openapi-modularize.yml"
       - ".github/workflows/jrn-017-live-tracking-verify.yml"
   pull_request:
     branches: [master]
@@ -138,3 +144,50 @@ jobs:
           name: jrn-017-frontend-log-${{ github.sha }}
           path: jrn-017-typescript.log
           if-no-files-found: warn
+
+  dsh-openapi-modularization:
+    name: Split and verify sovereign DSH OpenAPI
+    if: github.event_name == 'push' && github.ref == 'refs/heads/sambassam'
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: sambassam
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.17.0"
+      - name: Activate pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.34.2 --activate
+      - name: Finalize modularization engine
+        run: node tools/scripts/patch-dsh-openapi-modular-lib.mjs
+      - name: Split DSH contract into governed modules
+        run: node tools/scripts/migrate-dsh-openapi-modular.mjs --apply
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Verify modular contract and regenerate client
+        run: pnpm --dir services/dsh openapi:verify
+      - name: Run contract foundation gate
+        run: pnpm run contracts:lint
+      - name: Run DSH contract tests
+        run: pnpm --dir services/dsh test
+      - name: Validate generated diff
+        run: git diff --check
+      - name: Commit modular contract
+        run: |
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "No modularization changes were produced."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git add -f services/dsh/contracts/generated/dsh.bundle.openapi.yaml
+          git commit -m "refactor(dsh): modularize sovereign OpenAPI contract"
+          git fetch origin sambassam
+          git rebase origin/sambassam
+          git push origin HEAD:sambassam
