@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import Ajv from "ajv";
 
 const currentFile = fileURLToPath(import.meta.url);
 const repositoryRoot = path.resolve(path.dirname(currentFile), "../../..");
@@ -118,4 +119,20 @@ test("JRN-022 WLT approval handoff and structured dispatch blockers remain bound
     '"SPECIAL_REQUEST_NOT_READY_FOR_DISPATCH"',
     '"blockingReasons": notReady.Readiness.BlockingReasons',
   ], "special-request HTTP boundary");
+});
+
+test("JRN-022 product truth is schema-valid and remains independently approvable", () => {
+  const schema = JSON.parse(read("governance/product/product-truth.schema.json"));
+  const productTruth = JSON.parse(read("governance/product/contracts/jrn-022-special-requests.product-truth.json"));
+  const validate = new Ajv({ allErrors: true, strict: false }).compile(schema);
+  assert.equal(validate(productTruth), true, JSON.stringify(validate.errors));
+  assert.equal(productTruth.capabilityId, "JRN_022_SPECIAL_REQUESTS");
+  assert.equal(productTruth.state, "DISCOVERY");
+  assert.equal(productTruth.owners.productManagerApproval, "PENDING");
+  assert.equal(productTruth.owners.productOwnerApproval, "PENDING");
+  assert.equal(productTruth.owners.productAcceptanceDecision, "PENDING");
+  assert.ok(
+    productTruth.acceptance.criteria.some((criterion) => criterion.includes("Binary media is not required")),
+    "media applicability decision must remain explicit",
+  );
 });
