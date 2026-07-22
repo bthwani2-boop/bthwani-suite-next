@@ -9,6 +9,7 @@
     "frontend/shared/_kernel/**/*.tsx",
     "frontend/shared/partner/partner-delivery-pricing.api.ts",
     "frontend/shared/partner/use-delivery-pricing-controller.ts",
+    "frontend/shared/partner/partner-delivery-pricing.public.ts",
     "frontend/app-partner/store/PartnerDeliveryPricingCard.tsx"
   ],
   "exclude": [
