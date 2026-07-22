@@ -2,6 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { Badge, Box, Icon, Surface, Text } from '@bthwani/ui-kit';
 import type { DshLiveTrackingProjection } from '../../shared/dispatch/dispatch-tracking.api';
+import { ClientDeliveryProofPanel } from './ClientDeliveryProofPanel';
 
 function freshnessLabel(state: 'fresh' | 'stale' | 'lost'): string {
   if (state === 'fresh') return 'موقع حديث';
@@ -56,48 +57,57 @@ export function ClientLiveTrackingCard({
   const eta = tracking.eta;
 
   return (
-    <Surface tone="raised" gap={3}>
-      <Box layoutDirection="row" justify="space-between" align="center">
-        <Text role="titleSm">التتبع الحي ووقت الوصول</Text>
-        <Badge
-          label={freshness ? freshnessLabel(freshness) : 'الموقع محمي'}
-          tone={freshness === 'lost' ? 'danger' : freshness === 'stale' ? 'warning' : freshness === 'fresh' ? 'success' : 'neutral'}
-        />
-      </Box>
-
-      <View>
-        <Text role="bodySm" tone="muted">حماية الخصوصية</Text>
-        <Text role="bodyStrong">
-          {tracking.locationVisibility === 'delivery_window_rounded'
-            ? 'تظهر إحداثيات تقريبية فقط أثناء نافذة التوصيل.'
-            : 'موقع الكابتن مخفي حتى يستلم الطلب من المتجر.'}
-        </Text>
-      </View>
-
-      {eta ? (
-        <Box gap={2}>
-          <Box layoutDirection="row" align="center" gap={2}>
-            <Icon name="time-outline" size={20} tone="brand" />
-            <Text role="titleMd">{formatDuration(eta.durationSeconds)}</Text>
-          </Box>
-          <Text role="bodySm">
-            {`الوصول المتوقع ${new Date(eta.estimatedArrivalAt).toLocaleString('ar-YE')}`}
-          </Text>
-          <Text role="caption" tone="muted">
-            {`المسافة التقريبية ${Math.max(0, Math.round(eta.distanceMeters / 100) / 10)} كم · المزود ${eta.providerCode}`}
-          </Text>
+    <Box gap={3}>
+      <Surface tone="raised" gap={3}>
+        <Box layoutDirection="row" justify="space-between" align="center">
+          <Text role="titleSm">التتبع الحي ووقت الوصول</Text>
+          <Badge
+            label={freshness ? freshnessLabel(freshness) : 'الموقع محمي'}
+            tone={freshness === 'lost' ? 'danger' : freshness === 'stale' ? 'warning' : freshness === 'fresh' ? 'success' : 'neutral'}
+          />
         </Box>
-      ) : (
-        <Text role="bodySm" tone={tracking.routeState === 'location_lost' ? 'danger' : 'muted'}>
-          {routeMessage(tracking)}
-        </Text>
-      )}
 
-      {tracking.location ? (
-        <Text role="caption" tone="muted">
-          {`آخر تحديث منذ ${Math.max(0, tracking.location.ageSeconds)} ثانية · الدقة المعروضة محدودة لحماية الكابتن`}
-        </Text>
+        <View>
+          <Text role="bodySm" tone="muted">حماية الخصوصية</Text>
+          <Text role="bodyStrong">
+            {tracking.locationVisibility === 'delivery_window_rounded'
+              ? 'تظهر إحداثيات تقريبية فقط أثناء نافذة التوصيل.'
+              : 'موقع الكابتن مخفي حتى يستلم الطلب من المتجر.'}
+          </Text>
+        </View>
+
+        {eta ? (
+          <Box gap={2}>
+            <Box layoutDirection="row" align="center" gap={2}>
+              <Icon name="time-outline" size={20} tone="brand" />
+              <Text role="titleMd">{formatDuration(eta.durationSeconds)}</Text>
+            </Box>
+            <Text role="bodySm">
+              {`الوصول المتوقع ${new Date(eta.estimatedArrivalAt).toLocaleString('ar-YE')}`}
+            </Text>
+            <Text role="caption" tone="muted">
+              {`المسافة التقريبية ${Math.max(0, Math.round(eta.distanceMeters / 100) / 10)} كم · المزود ${eta.providerCode}`}
+            </Text>
+          </Box>
+        ) : (
+          <Text role="bodySm" tone={tracking.routeState === 'location_lost' ? 'danger' : 'muted'}>
+            {routeMessage(tracking)}
+          </Text>
+        )}
+
+        {tracking.location ? (
+          <Text role="caption" tone="muted">
+            {`آخر تحديث منذ ${Math.max(0, tracking.location.ageSeconds)} ثانية · الدقة المعروضة محدودة لحماية الكابتن`}
+          </Text>
+        ) : null}
+      </Surface>
+
+      {tracking.orderId ? (
+        <ClientDeliveryProofPanel
+          orderId={tracking.orderId}
+          captainArrived={tracking.routeState === 'arrived'}
+        />
       ) : null}
-    </Surface>
+    </Box>
   );
 }
