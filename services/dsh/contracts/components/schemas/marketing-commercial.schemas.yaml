@@ -18,6 +18,8 @@ DshCampaign:
     endDate: { type: string, format: date }
     targetType: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshMarketingTargetType" }
     targetId: { type: string }
+    targetCityCode: { type: string, pattern: "^[A-Za-z0-9._:-]{1,64}$" }
+    targetServiceAreaCode: { type: string, pattern: "^[A-Za-z0-9._:-]{1,64}$" }
     audience: { type: string, enum: [all, client, partner, captain, field] }
     placement: { type: string, enum: [home, hero, feed, floating, banner, store-card] }
     version: { type: integer, minimum: 1 }
@@ -53,6 +55,8 @@ DshCreateCampaignRequest:
     endDate: { type: string, format: date }
     targetType: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshMarketingTargetType" }
     targetId: { type: string }
+    targetCityCode: { type: string, pattern: "^[A-Za-z0-9._:-]{1,64}$" }
+    targetServiceAreaCode: { type: string, pattern: "^[A-Za-z0-9._:-]{1,64}$" }
     audience: { type: string, enum: [all, client] }
     placement: { type: string, enum: [home, hero, feed, floating, banner, store-card] }
 
@@ -69,6 +73,8 @@ DshUpdateCampaignRequest:
     endDate: { type: string, format: date }
     targetType: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshMarketingTargetType" }
     targetId: { type: string }
+    targetCityCode: { type: string, pattern: "^[A-Za-z0-9._:-]{1,64}$" }
+    targetServiceAreaCode: { type: string, pattern: "^[A-Za-z0-9._:-]{1,64}$" }
     audience: { type: string, enum: [all, client] }
     placement: { type: string, enum: [home, hero, feed, floating, banner, store-card] }
 
