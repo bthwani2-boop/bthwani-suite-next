@@ -1,0 +1,122 @@
+name: JRN-033 Remote Diagnostic One-Shot
+
+on:
+  push:
+    branches: [sambassam]
+    paths:
+      - ".github/workflows/jrn-033-diagnostic-oneshot.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: jrn-033-diagnostic-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout diagnostic commit
+        uses: actions/checkout@v4
+        with:
+          ref: sambassam
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: |
+            services/dsh/backend/go.sum
+            services/wlt/backend/go.sum
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "10.34.2"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.17.0"
+          cache: pnpm
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Execute and record focused verification
+        id: verify
+        shell: bash
+        run: |
+          set +e
+          mkdir -p /tmp/jrn033
+
+          run_check() {
+            local key="$1"
+            shift
+            echo "### ${key}" >> /tmp/jrn033/results.md
+            echo '```text' >> /tmp/jrn033/results.md
+            "$@" > "/tmp/jrn033/${key}.log" 2>&1
+            local code=$?
+            tail -n 240 "/tmp/jrn033/${key}.log" >> /tmp/jrn033/results.md
+            echo '```' >> /tmp/jrn033/results.md
+            echo "exit_code: \`${code}\`" >> /tmp/jrn033/results.md
+            echo >> /tmp/jrn033/results.md
+            echo "${key}=${code}" >> /tmp/jrn033/codes.env
+          }
+
+          : > /tmp/jrn033/results.md
+          : > /tmp/jrn033/codes.env
+
+          run_check wlt_wallet bash -lc "cd services/wlt/backend && go test ./internal/wallet -count=1 -v"
+          run_check dsh_wlt bash -lc "cd services/dsh/backend && go test ./internal/wlt -run 'TestFinanceReadWallet' -count=1 -v"
+          run_check own_wallet bash -lc "cd services/dsh/backend && go test ./internal/http -run '^TestRepresentativeOwnWalletRoutesResolveAuthenticatedActor$' -count=1 -v"
+          run_check own_ledger bash -lc "cd services/dsh/backend && go test ./internal/http -run '^TestRepresentativeOwnLedgerRoutesOverrideActorQuery$' -count=1 -v"
+          run_check operator_wallet bash -lc "cd services/dsh/backend && go test ./internal/http -run '^TestControlPanelRepresentativeWalletValidatesTypeAndUsesPermissionFallback$' -count=1 -v"
+          run_check operator_ledger bash -lc "cd services/dsh/backend && go test ./internal/http -run '^TestControlPanelRepresentativeLedgerPinsActorAndNoStore$' -count=1 -v"
+          run_check dsh_build bash -lc "cd services/dsh/backend && go build ./internal/wlt ./internal/http"
+          run_check static_guard bash -lc "node --test services/dsh/tests/jrn-033-representative-wallets-governance.test.mjs"
+          run_check focused_typescript bash -lc "pnpm --dir services/dsh exec tsc -p tsconfig.jrn-033.json --noEmit --pretty false"
+          run_check focused_openapi bash -lc "pnpm --dir services/dsh exec openapi-typescript contracts/jrn-033-representative-finance.openapi.yaml -o /tmp/jrn033/jrn-033-api.ts"
+          run_check product_truth bash -lc "node --input-type=module -e \"import fs from 'node:fs'; import Ajv from 'ajv'; const schema=JSON.parse(fs.readFileSync('governance/product/product-truth.schema.json','utf8')); const truth=JSON.parse(fs.readFileSync('governance/product/contracts/jrn-033-representative-wallets.product-truth.json','utf8')); const validate=new Ajv({allErrors:true,strict:false}).compile(schema); if(!validate(truth)){console.error(validate.errors);process.exit(1)}\""
+          run_check whitespace bash -lc "git diff --check"
+
+          {
+            echo '# JRN-033 Remote Diagnostic Result'
+            echo
+            echo "- source_sha: \`${GITHUB_SHA}\`"
+            echo "- workflow_run: \`${GITHUB_RUN_ID}\`"
+            echo "- workflow_attempt: \`${GITHUB_RUN_ATTEMPT}\`"
+            echo "- generated_at: \`$(date -u +%Y-%m-%dT%H:%M:%SZ)\`"
+            echo
+            cat /tmp/jrn033/results.md
+          } > /tmp/jrn033/final.md
+
+          overall=0
+          while IFS='=' read -r key code; do
+            if [ "$code" -ne 0 ]; then overall=1; fi
+          done < /tmp/jrn033/codes.env
+          echo "overall=${overall}" >> "$GITHUB_OUTPUT"
+
+      - name: Commit diagnostic evidence to sambassam
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin sambassam
+          git checkout sambassam
+          git pull --rebase origin sambassam
+          mkdir -p governance/evidence
+          cp /tmp/jrn033/final.md governance/evidence/jrn-033-diagnostic-results.md
+          git add governance/evidence/jrn-033-diagnostic-results.md
+          if git diff --cached --quiet; then
+            echo "Diagnostic evidence unchanged."
+          else
+            git commit -m "test(jrn-033): record remote diagnostic results [skip ci]"
+            git push origin HEAD:sambassam
+          fi
+
+      - name: Enforce focused verification outcome
+        if: steps.verify.outputs.overall != '0'
+        run: exit 1
