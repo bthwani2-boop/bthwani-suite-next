@@ -3427,6 +3427,27 @@ paths:
           in: path
           required: true
           schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [completionLocation]
+              properties:
+                completionLocation:
+                  type: object
+                  additionalProperties: false
+                  required: [latitude, longitude, accuracyMeters, capturedAt, provider]
+                  properties:
+                    latitude: { type: number, minimum: -90, maximum: 90 }
+                    longitude: { type: number, minimum: -180, maximum: 180 }
+                    accuracyMeters: { type: number, exclusiveMinimum: 0, maximum: 50 }
+                    capturedAt: { type: string, format: date-time }
+                    provider: { type: string, minLength: 1 }
+                    deviceReference: { type: string }
+                    isMocked: { type: boolean, default: false }
       responses:
         "200":
           description: Visit marked complete.
@@ -4060,7 +4081,7 @@ paths:
   /dsh/operator/marketing/campaigns:
     get:
       operationId: listDshCampaigns
-      summary: List marketing campaigns.
+      summary: List non-archived marketing campaigns with their current optimistic-concurrency version.
       tags: [DshMarketing]
       security:
         - bearerAuth: []
@@ -4074,7 +4095,7 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
     post:
       operationId: createDshCampaign
-      summary: Create a marketing campaign.
+      summary: Create a scheduled marketing campaign draft after validating its audience, placement and target.
       tags: [DshMarketing]
       security:
         - bearerAuth: []
@@ -4096,7 +4117,7 @@ paths:
   /dsh/operator/marketing/campaigns/{campaignId}:
     get:
       operationId: getDshCampaign
-      summary: Get a single marketing campaign.
+      summary: Get a single non-archived marketing campaign.
       tags: [DshMarketing]
       security:
         - bearerAuth: []
@@ -4116,7 +4137,7 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
     patch:
       operationId: updateDshCampaign
-      summary: Update a marketing campaign.
+      summary: Update campaign content, schedule, target or lifecycle using expectedVersion; activation revalidates the schedule and target and stale writes return 409.
       tags: [DshMarketing]
       security:
         - bearerAuth: []
@@ -4140,6 +4161,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
     delete:
       operationId: archiveDshCampaign
       summary: Archive a marketing campaign (soft archive — status set to cancelled, archived_at recorded; the row is never physically deleted).
@@ -4228,6 +4250,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
     delete:
       operationId: deleteDshMarketingTicker
       summary: Delete a marketing news ticker (soft delete — deleted_at recorded; the row keeps an auditable history).
@@ -4265,14 +4288,25 @@ paths:
           description: Partner offers.
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/DshPartnerOffersListResponse" }
+              schema:
+                type: object
+                required: [offers]
+                properties:
+                  offers:
+                    type: array
+                    items:
+                      allOf:
+                        - { $ref: "#/components/schemas/DshPartnerOffer" }
+                        - type: object
+                          properties:
+                            couponId: { type: string }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
   /dsh/operator/marketing/partner-offers/{offerId}:
     patch:
       operationId: updateDshPartnerOffer
-      summary: Review a partner offer (advance lifecycle, edit fields). Rejecting requires rejectionReason; publishing runs the client-visibility gate.
+      summary: Apply one legal partner-offer transition using expectedVersion. Marketing-ready and published states require a valid active window; rejection requires a reason and publication revalidates store and coupon eligibility.
       tags: [DshMarketing]
       security:
         - bearerAuth: []
@@ -4285,17 +4319,41 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/DshUpdatePartnerOfferRequest" }
+            schema:
+              type: object
+              additionalProperties: false
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer, minimum: 1 }
+                status: { type: string, enum: [inbound, review, marketing-ready, published, paused, rejected] }
+                title: { type: string, minLength: 1 }
+                valueLabel: { type: string, minLength: 1 }
+                eligibility: { type: string, enum: [all, client] }
+                activeFromDate: { type: string, format: date }
+                activeToDate: { type: string, format: date }
+                rejectionReason: { type: string }
+                marginRiskNote: { type: string }
+                couponId: { type: string }
       responses:
         "200":
           description: Partner offer updated.
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/DshPartnerOfferResponse" }
+              schema:
+                type: object
+                required: [offer]
+                properties:
+                  offer:
+                    allOf:
+                      - { $ref: "#/components/schemas/DshPartnerOffer" }
+                      - type: object
+                        properties:
+                          couponId: { type: string }
         "400": { $ref: "#/components/responses/InvalidRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
     delete:
       operationId: archiveDshPartnerOffer
       summary: Archive a partner offer (soft archive — archived_at recorded; the row is never physically deleted).
@@ -4333,7 +4391,18 @@ paths:
           description: Own partner offers.
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/DshPartnerOffersListResponse" }
+              schema:
+                type: object
+                required: [offers]
+                properties:
+                  offers:
+                    type: array
+                    items:
+                      allOf:
+                        - { $ref: "#/components/schemas/DshPartnerOffer" }
+                        - type: object
+                          properties:
+                            couponId: { type: string }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
     post:
@@ -4346,13 +4415,35 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/DshSubmitPartnerOfferRequest" }
+            schema:
+              type: object
+              additionalProperties: false
+              required: [title, valueLabel]
+              properties:
+                title: { type: string, minLength: 1 }
+                partnerName: { type: string }
+                storeLabel: { type: string }
+                productId: { type: string }
+                productLabel: { type: string }
+                category: { type: string }
+                offerType: { type: string, enum: [discount, free-delivery, bundle, buy-x-get-y, coupon] }
+                valueLabel: { type: string, minLength: 1 }
+                eligibility: { type: string, enum: [all, client] }
       responses:
         "201":
           description: Partner offer submitted.
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/DshPartnerOfferResponse" }
+              schema:
+                type: object
+                required: [offer]
+                properties:
+                  offer:
+                    allOf:
+                      - { $ref: "#/components/schemas/DshPartnerOffer" }
+                      - type: object
+                        properties:
+                          couponId: { type: string }
         "400": { $ref: "#/components/responses/InvalidRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
@@ -9073,6 +9164,26 @@ components:
         completedAt: { type: ["string", "null"], format: date-time }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+        geofenceRadiusMeters: { type: number }
+        startLatitude: { type: [number, "null"] }
+        startLongitude: { type: [number, "null"] }
+        startAccuracyMeters: { type: [number, "null"] }
+        startCapturedAt: { type: ["string", "null"], format: date-time }
+        startProvider: { type: ["string", "null"] }
+        startDeviceReference: { type: ["string", "null"] }
+        startIsMocked: { type: boolean }
+        startGeofenceStatus: { type: ["string", "null"], enum: [inside, outside, unknown] }
+        startDistanceFromStoreMeters: { type: [number, "null"] }
+        completionLatitude: { type: [number, "null"] }
+        completionLongitude: { type: [number, "null"] }
+        completionAccuracyMeters: { type: [number, "null"] }
+        completionCapturedAt: { type: ["string", "null"], format: date-time }
+        completionProvider: { type: ["string", "null"] }
+        completionIsMocked: { type: [boolean, "null"] }
+        completionGeofenceStatus: { type: ["string", "null"], enum: [inside, outside, unknown] }
+        completionDistanceFromStoreMeters: { type: [number, "null"] }
+        storeLatitude: { type: [number, "null"] }
+        storeLongitude: { type: [number, "null"] }
 
     DshFieldVisitResponse:
       type: object
@@ -9090,8 +9201,22 @@ components:
 
     DshCreateFieldVisitRequest:
       type: object
+      additionalProperties: false
+      required: [startLocation]
       properties:
         visitType: { $ref: "#/components/schemas/DshVisitType" }
+        startLocation:
+          type: object
+          additionalProperties: false
+          required: [latitude, longitude, accuracyMeters, capturedAt, provider]
+          properties:
+            latitude: { type: number, minimum: -90, maximum: 90 }
+            longitude: { type: number, minimum: -180, maximum: 180 }
+            accuracyMeters: { type: number, exclusiveMinimum: 0, maximum: 50 }
+            capturedAt: { type: string, format: date-time }
+            provider: { type: string, minLength: 1 }
+            deviceReference: { type: string }
+            isMocked: { type: boolean, default: false }
 
     DshReadinessCheck:
       type: object
@@ -9573,18 +9698,20 @@ components:
 
     DshCampaign:
       type: object
-      required: [id, title, status, audience, createdBy, createdAt, updatedAt]
+      additionalProperties: false
+      required: [id, title, description, status, startDate, endDate, audience, version, createdBy, createdAt, updatedAt]
       properties:
         id: { type: string }
         title: { type: string }
         description: { type: string }
         status: { type: string, enum: [draft, active, paused, completed, cancelled] }
-        startDate: { type: string }
-        endDate: { type: string }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
         targetType: { $ref: "#/components/schemas/DshMarketingTargetType" }
         targetId: { type: string }
-        audience: { type: string }
-        placement: { type: string }
+        audience: { type: string, enum: [all, client, partner, captain, field] }
+        placement: { type: string, enum: [home, hero, feed, floating, banner, store-card] }
+        version: { type: integer, minimum: 1 }
         createdBy: { type: string }
         archivedAt: { type: ["string", "null"], format: date-time }
         createdAt: { type: string, format: date-time }
@@ -9592,6 +9719,7 @@ components:
 
     DshCampaignsListResponse:
       type: object
+      additionalProperties: false
       required: [campaigns]
       properties:
         campaigns:
@@ -9600,31 +9728,40 @@ components:
 
     DshCampaignResponse:
       type: object
+      additionalProperties: false
       required: [campaign]
       properties:
         campaign: { $ref: "#/components/schemas/DshCampaign" }
 
     DshCreateCampaignRequest:
       type: object
-      required: [title]
+      additionalProperties: false
+      required: [title, startDate, endDate]
       properties:
         title: { type: string, minLength: 1 }
         description: { type: string }
-        startDate: { type: string }
-        endDate: { type: string }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
         targetType: { $ref: "#/components/schemas/DshMarketingTargetType" }
         targetId: { type: string }
-        audience: { type: string }
-        placement: { type: string }
+        audience: { type: string, enum: [all, client] }
+        placement: { type: string, enum: [home, hero, feed, floating, banner, store-card] }
 
     DshUpdateCampaignRequest:
       type: object
+      additionalProperties: false
+      required: [expectedVersion]
       properties:
-        title: { type: string }
+        expectedVersion: { type: integer, minimum: 1 }
+        title: { type: string, minLength: 1 }
         description: { type: string }
         status: { type: string, enum: [draft, active, paused, completed, cancelled] }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
         targetType: { $ref: "#/components/schemas/DshMarketingTargetType" }
         targetId: { type: string }
+        audience: { type: string, enum: [all, client] }
+        placement: { type: string, enum: [home, hero, feed, floating, banner, store-card] }
 
     DshPartner:
       type: object

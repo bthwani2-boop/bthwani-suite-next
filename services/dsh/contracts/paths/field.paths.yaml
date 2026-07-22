@@ -393,6 +393,27 @@
         in: path
         required: true
         schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [completionLocation]
+            properties:
+              completionLocation:
+                type: object
+                additionalProperties: false
+                required: [latitude, longitude, accuracyMeters, capturedAt, provider]
+                properties:
+                  latitude: { type: number, minimum: -90, maximum: 90 }
+                  longitude: { type: number, minimum: -180, maximum: 180 }
+                  accuracyMeters: { type: number, exclusiveMinimum: 0, maximum: 50 }
+                  capturedAt: { type: string, format: date-time }
+                  provider: { type: string, minLength: 1 }
+                  deviceReference: { type: string }
+                  isMocked: { type: boolean, default: false }
     responses:
       "200":
         description: Visit marked complete.

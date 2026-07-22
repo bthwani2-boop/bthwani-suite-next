@@ -2698,10 +2698,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List marketing campaigns. */
+        /** List non-archived marketing campaigns with their current optimistic-concurrency version. */
         get: operations["listDshCampaigns"];
         put?: never;
-        /** Create a marketing campaign. */
+        /** Create a scheduled marketing campaign draft after validating its audience, placement and target. */
         post: operations["createDshCampaign"];
         delete?: never;
         options?: never;
@@ -2716,7 +2716,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get a single marketing campaign. */
+        /** Get a single non-archived marketing campaign. */
         get: operations["getDshCampaign"];
         put?: never;
         post?: never;
@@ -2724,7 +2724,7 @@ export interface paths {
         delete: operations["archiveDshCampaign"];
         options?: never;
         head?: never;
-        /** Update a marketing campaign. */
+        /** Update campaign content, schedule, target or lifecycle using expectedVersion; activation revalidates the schedule and target and stale writes return 409. */
         patch: operations["updateDshCampaign"];
         trace?: never;
     };
@@ -2795,7 +2795,7 @@ export interface paths {
         delete: operations["archiveDshPartnerOffer"];
         options?: never;
         head?: never;
-        /** Review a partner offer (advance lifecycle, edit fields). Rejecting requires rejectionReason; publishing runs the client-visibility gate. */
+        /** Apply one legal partner-offer transition using expectedVersion. Marketing-ready and published states require a valid active window; rejection requires a reason and publication revalidates store and coupon eligibility. */
         patch: operations["updateDshPartnerOffer"];
         trace?: never;
     };
@@ -5445,6 +5445,30 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+            geofenceRadiusMeters?: number;
+            startLatitude?: number | null;
+            startLongitude?: number | null;
+            startAccuracyMeters?: number | null;
+            /** Format: date-time */
+            startCapturedAt?: string | null;
+            startProvider?: string | null;
+            startDeviceReference?: string | null;
+            startIsMocked?: boolean;
+            /** @enum {string|null} */
+            startGeofenceStatus?: "inside" | "outside" | "unknown" | null;
+            startDistanceFromStoreMeters?: number | null;
+            completionLatitude?: number | null;
+            completionLongitude?: number | null;
+            completionAccuracyMeters?: number | null;
+            /** Format: date-time */
+            completionCapturedAt?: string | null;
+            completionProvider?: string | null;
+            completionIsMocked?: boolean | null;
+            /** @enum {string|null} */
+            completionGeofenceStatus?: "inside" | "outside" | "unknown" | null;
+            completionDistanceFromStoreMeters?: number | null;
+            storeLatitude?: number | null;
+            storeLongitude?: number | null;
         };
         DshFieldVisitResponse: {
             visit: components["schemas"]["DshFieldVisit"];
@@ -5454,6 +5478,17 @@ export interface components {
         };
         DshCreateFieldVisitRequest: {
             visitType?: components["schemas"]["DshVisitType"];
+            startLocation: {
+                latitude: number;
+                longitude: number;
+                accuracyMeters: number;
+                /** Format: date-time */
+                capturedAt: string;
+                provider: string;
+                deviceReference?: string;
+                /** @default false */
+                isMocked: boolean;
+            };
         };
         DshReadinessCheck: {
             id: string;
@@ -5771,15 +5806,20 @@ export interface components {
         DshCampaign: {
             id: string;
             title: string;
-            description?: string;
+            description: string;
             /** @enum {string} */
             status: "draft" | "active" | "paused" | "completed" | "cancelled";
-            startDate?: string;
-            endDate?: string;
+            /** Format: date */
+            startDate: string;
+            /** Format: date */
+            endDate: string;
             targetType?: components["schemas"]["DshMarketingTargetType"];
             targetId?: string;
-            audience: string;
-            placement?: string;
+            /** @enum {string} */
+            audience: "all" | "client" | "partner" | "captain" | "field";
+            /** @enum {string} */
+            placement?: "home" | "hero" | "feed" | "floating" | "banner" | "store-card";
+            version: number;
             createdBy: string;
             /** Format: date-time */
             archivedAt?: string | null;
@@ -5797,20 +5837,33 @@ export interface components {
         DshCreateCampaignRequest: {
             title: string;
             description?: string;
-            startDate?: string;
-            endDate?: string;
+            /** Format: date */
+            startDate: string;
+            /** Format: date */
+            endDate: string;
             targetType?: components["schemas"]["DshMarketingTargetType"];
             targetId?: string;
-            audience?: string;
-            placement?: string;
+            /** @enum {string} */
+            audience?: "all" | "client";
+            /** @enum {string} */
+            placement?: "home" | "hero" | "feed" | "floating" | "banner" | "store-card";
         };
         DshUpdateCampaignRequest: {
+            expectedVersion: number;
             title?: string;
             description?: string;
             /** @enum {string} */
             status?: "draft" | "active" | "paused" | "completed" | "cancelled";
+            /** Format: date */
+            startDate?: string;
+            /** Format: date */
+            endDate?: string;
             targetType?: components["schemas"]["DshMarketingTargetType"];
             targetId?: string;
+            /** @enum {string} */
+            audience?: "all" | "client";
+            /** @enum {string} */
+            placement?: "home" | "hero" | "feed" | "floating" | "banner" | "store-card";
         };
         DshPartner: {
             id: string;
@@ -11102,7 +11155,23 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": {
+                    completionLocation: {
+                        latitude: number;
+                        longitude: number;
+                        accuracyMeters: number;
+                        /** Format: date-time */
+                        capturedAt: string;
+                        provider: string;
+                        deviceReference?: string;
+                        /** @default false */
+                        isMocked?: boolean;
+                    };
+                };
+            };
+        };
         responses: {
             /** @description Visit marked complete. */
             200: {
@@ -12008,6 +12077,7 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     listDshMarketingTickers: {
@@ -12114,6 +12184,7 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     listDshPartnerOffers: {
@@ -12131,7 +12202,11 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshPartnerOffersListResponse"];
+                    "application/json": {
+                        offers: (components["schemas"]["DshPartnerOffer"] & {
+                            couponId?: string;
+                        })[];
+                    };
                 };
             };
             401: components["responses"]["Unauthenticated"];
@@ -12176,7 +12251,22 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DshUpdatePartnerOfferRequest"];
+                "application/json": {
+                    expectedVersion: number;
+                    /** @enum {string} */
+                    status?: "inbound" | "review" | "marketing-ready" | "published" | "paused" | "rejected";
+                    title?: string;
+                    valueLabel?: string;
+                    /** @enum {string} */
+                    eligibility?: "all" | "client";
+                    /** Format: date */
+                    activeFromDate?: string;
+                    /** Format: date */
+                    activeToDate?: string;
+                    rejectionReason?: string;
+                    marginRiskNote?: string;
+                    couponId?: string;
+                };
             };
         };
         responses: {
@@ -12186,13 +12276,18 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshPartnerOfferResponse"];
+                    "application/json": {
+                        offer: components["schemas"]["DshPartnerOffer"] & {
+                            couponId?: string;
+                        };
+                    };
                 };
             };
             400: components["responses"]["InvalidRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     listDshPartnerSelfOffers: {
@@ -12210,7 +12305,11 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshPartnerOffersListResponse"];
+                    "application/json": {
+                        offers: (components["schemas"]["DshPartnerOffer"] & {
+                            couponId?: string;
+                        })[];
+                    };
                 };
             };
             401: components["responses"]["Unauthenticated"];
@@ -12226,7 +12325,19 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DshSubmitPartnerOfferRequest"];
+                "application/json": {
+                    title: string;
+                    partnerName?: string;
+                    storeLabel?: string;
+                    productId?: string;
+                    productLabel?: string;
+                    category?: string;
+                    /** @enum {string} */
+                    offerType?: "discount" | "free-delivery" | "bundle" | "buy-x-get-y" | "coupon";
+                    valueLabel: string;
+                    /** @enum {string} */
+                    eligibility?: "all" | "client";
+                };
             };
         };
         responses: {
@@ -12236,7 +12347,11 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshPartnerOfferResponse"];
+                    "application/json": {
+                        offer: components["schemas"]["DshPartnerOffer"] & {
+                            couponId?: string;
+                        };
+                    };
                 };
             };
             400: components["responses"]["InvalidRequest"];
