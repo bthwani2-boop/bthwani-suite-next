@@ -9,6 +9,7 @@ on:
       - "services/dsh/backend/internal/http/administration*.go"
       - "services/dsh/backend/internal/http/journey_031_routes_test.go"
       - "services/dsh/database/migrations/dsh-131_jrn031_governed_administration_closure.sql"
+      - "services/dsh/database/tests/jrn-031-administration-governance.sql"
       - "services/dsh/frontend/shared/administration/**"
       - "services/dsh/frontend/control-panel/administration/**"
       - "services/dsh/frontend/control-panel/partners/PartnerDetailOperationalScreen.tsx"
@@ -26,6 +27,7 @@ on:
       - "services/dsh/backend/internal/http/administration*.go"
       - "services/dsh/backend/internal/http/journey_031_routes_test.go"
       - "services/dsh/database/migrations/dsh-131_jrn031_governed_administration_closure.sql"
+      - "services/dsh/database/tests/jrn-031-administration-governance.sql"
       - "services/dsh/frontend/shared/administration/**"
       - "services/dsh/frontend/control-panel/administration/**"
       - "services/dsh/frontend/control-panel/partners/PartnerDetailOperationalScreen.tsx"
@@ -46,6 +48,45 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  database:
+    name: PostgreSQL migration and invariant verification
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: dsh
+          POSTGRES_PASSWORD: dsh
+          POSTGRES_DB: dsh
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U dsh -d dsh"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://dsh:dsh@localhost:5432/dsh?sslmode=disable
+      PGPASSWORD: dsh
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Apply JRN-031 administration migrations in order
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/dsh/database/migrations/dsh-014_administration.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/dsh/database/migrations/dsh-076_admin_role_assignment_approvals.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/dsh/database/migrations/dsh-077_admin_role_permissions.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/dsh/database/migrations/dsh-078_admin_role_definition_approvals.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/dsh/database/migrations/dsh-079_admin_role_assignment_revocations.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/dsh/database/migrations/dsh-131_jrn031_governed_administration_closure.sql
+
+      - name: Execute PostgreSQL invariants
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/dsh/database/tests/jrn-031-administration-governance.sql
+
   backend:
     name: Approval rollback audit and route model
     runs-on: ubuntu-latest
