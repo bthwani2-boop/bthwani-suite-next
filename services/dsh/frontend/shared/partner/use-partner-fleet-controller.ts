@@ -65,15 +65,18 @@ export function usePartnerFleetController(storeId: string): PartnerFleetControll
       const response = await issuePartnerCourierConnectionCode(storeId, memberId);
       setConnections((current) => [
         response.issued.connection,
-        ...current.filter((connection) => connection.id !== response.issued.connection.id),
+        ...current.filter((connection) => (
+          connection.id !== response.issued.connection.id
+          && !(connection.teamMemberId === memberId && connection.status === "pending")
+        )),
       ]);
       setError(null);
       try {
         const refreshed = await listPartnerCourierConnections(storeId);
         setConnections(refreshed.connections);
       } catch {
-        // Preserve the successful one-time issuance and its returned plaintext
-        // even when the follow-up readback is temporarily unavailable.
+        // Preserve the successful one-time issuance and remove any superseded
+        // pending projection even when follow-up readback is temporarily unavailable.
       }
       return response.issued.code;
     } catch (caught) {
