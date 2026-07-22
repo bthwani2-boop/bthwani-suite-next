@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
   push:
     branches: [sambassam]
-    paths: &jrn026_paths
+    paths:
       - "services/dsh/backend/internal/coupons/**"
       - "services/dsh/backend/internal/checkout/delivery_pricing*.go"
       - "services/dsh/backend/internal/http/coupons.go"
@@ -43,16 +43,13 @@ on:
       - "tools/guards/product-truth-gate.mjs"
       - "tools/guards/dsh-openapi-modular-gate.mjs"
       - ".github/workflows/jrn-026-coupons-pricing-loyalty-verification.yml"
-  pull_request:
-    branches: [master]
-    paths: *jrn026_paths
 
 permissions:
   contents: read
 
 concurrency:
   group: jrn-026-028-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   verify-jrn-026:
