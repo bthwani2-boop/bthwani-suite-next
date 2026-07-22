@@ -85,7 +85,7 @@ async function uploadAndSubmitDeliveryProof(
   }
 
   if (!response.ok) {
-    const body = await response.json().catch(() => null) as { message?: string } | null;
+    const body = await response.json().catch(() => undefined) as { message?: string } | undefined;
     throw new Error(body?.message || rejectionMessage);
   }
 }
@@ -148,7 +148,7 @@ export async function uploadAndSubmitCaptainDeliveryProof(
     throw new Error(error instanceof Error ? error.message : 'تعذر الاتصال بخدمة إثبات التسليم.');
   }
 
-  const body = await response.json().catch(() => null) as { proof?: DshDeliveryProof; message?: string } | null;
+  const body = await response.json().catch(() => undefined) as { proof?: DshDeliveryProof; message?: string } | undefined;
   if (!response.ok || !body?.proof) throw new Error(body?.message || 'رفض DSH إثبات التسليم.');
   return body.proof;
 }
