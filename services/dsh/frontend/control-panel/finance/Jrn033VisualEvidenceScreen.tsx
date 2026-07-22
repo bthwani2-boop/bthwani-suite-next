@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ActorWalletPanel, type RepresentativeActorType } from "../../shared/finance-wlt-link/actor-wallet";
+import { resolveVisualEvidenceRequestPath } from "../../shared/finance-wlt-link/visual-evidence/request-path";
 import { RepresentativeWalletLookup } from "./RepresentativeWalletLookup";
 
 export type Jrn033VisualEvidenceMode = "success" | "empty" | "frozen" | "error" | "loading";
@@ -81,9 +82,8 @@ export function Jrn033VisualEvidenceScreen({ mode }: Props) {
     const originalFetch = globalThis.fetch;
     globalThis.fetch = (async (input: RequestInfo | URL) => {
       if (mode === "loading") return new Promise<Response>(() => undefined);
-      const raw = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
-      const url = new URL(raw, window.location.origin);
-      const ownMatch = url.pathname.match(/\/dsh\/(client|partner|captain|field)\/me\/finance\/(wallet|ledger-entries)$/);
+      const pathname = resolveVisualEvidenceRequestPath(input, window.location.origin);
+      const ownMatch = pathname.match(/\/dsh\/(client|partner|captain|field)\/me\/finance\/(wallet|ledger-entries)$/);
       if (ownMatch) {
         const actorType = ownMatch[1] as RepresentativeActorType;
         if (mode === "error") return jsonResponse({ code: "WLT_UNAVAILABLE", message: "تعذر الوصول إلى WLT" }, 503);
