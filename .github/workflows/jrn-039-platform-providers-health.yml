@@ -1,0 +1,195 @@
+name: JRN-039 platform providers and health verification
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [sambassam]
+    paths: &jrn039_paths
+      - 'core/platform-control/**'
+      - 'core/providers/**'
+      - 'services/dsh/frontend/shared/platform/**'
+      - 'services/dsh/frontend/control-panel/platform/**'
+      - 'governance/product-truth/JRN-039_PLATFORM_VARIABLES_PROVIDERS_HEALTH.md'
+      - '.github/workflows/jrn-039-platform-providers-health.yml'
+  pull_request:
+    branches: [sambassam]
+    paths: *jrn039_paths
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jrn-039-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  providers-go:
+    name: Providers security health and route tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: core/providers/backend/go.mod
+          cache-dependency-path: core/providers/backend/go.sum
+      - name: Enforce gofmt on JRN-039 provider code
+        shell: bash
+        run: |
+          set -euo pipefail
+          diff="$(gofmt -d \
+            core/providers/backend/internal/providers/model.go \
+            core/providers/backend/internal/providers/service.go \
+            core/providers/backend/internal/providers/jrn039_security_health_test.go)"
+          test -z "${diff}" || { printf '%s\n' "${diff}"; exit 1; }
+      - name: Compile and test Providers
+        working-directory: core/providers/backend
+        run: go test ./...
+
+  platform-control-go:
+    name: Platform Control process config and dependency health tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: core/platform-control/backend/go.mod
+          cache-dependency-path: core/platform-control/backend/go.sum
+      - name: Compile and test Platform Control
+        working-directory: core/platform-control/backend
+        run: go test ./...
+
+  database-runtime:
+    name: PostgreSQL migration and live process health
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: jrn039_ci
+          POSTGRES_PASSWORD: jrn039_ci_password
+          POSTGRES_DB: jrn039_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U jrn039_ci -d jrn039_ci"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      PGHOST: localhost
+      PGPORT: '5432'
+      PGUSER: jrn039_ci
+      PGPASSWORD: jrn039_ci_password
+      PGDATABASE: jrn039_ci
+      DATABASE_URL: postgres://jrn039_ci:jrn039_ci_password@localhost:5432/jrn039_ci?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.25.x'
+      - name: Apply Providers and Platform Control migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          for migration in core/providers/database/migrations/*.sql; do
+            echo "Applying ${migration}"
+            psql -v ON_ERROR_STOP=1 -f "${migration}"
+          done
+          for migration in core/platform-control/database/migrations/*.sql; do
+            echo "Applying ${migration}"
+            psql -v ON_ERROR_STOP=1 -f "${migration}"
+          done
+      - name: Assert mock provider truth was retired
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(psql -tA -c "SELECT count(*) FROM external_providers WHERE active AND (credentials::text ILIKE '%mock%' OR code ILIKE '%mock%');")" = "0"
+          test "$(psql -tA -c "SELECT count(*) FROM pg_indexes WHERE indexname = 'external_providers_kind_active_idx';")" = "1"
+      - name: Start Providers and Platform Control runtimes
+        shell: bash
+        run: |
+          set -euo pipefail
+          (
+            cd core/providers/backend
+            PORT=58087 \
+            DATABASE_URL="${DATABASE_URL}" \
+            PROVIDERS_IDENTITY_BASE_URL="http://127.0.0.1:59999" \
+            PROVIDERS_HEALTH_PROBE_ALLOWED_HOSTS="" \
+            go run ./cmd/providers-api
+          ) > /tmp/jrn039-providers.log 2>&1 &
+          echo $! > /tmp/jrn039-providers.pid
+          (
+            cd core/platform-control/backend
+            PORT=58088 \
+            DATABASE_URL="${DATABASE_URL}" \
+            PLATFORM_CONTROL_IDENTITY_BASE_URL="http://127.0.0.1:59999" \
+            PLATFORM_CONTROL_PROVIDERS_HEALTH_URL="http://127.0.0.1:58087/providers/health" \
+            PLATFORM_CONTROL_WLT_HEALTH_URL="http://127.0.0.1:59998/wlt/health" \
+            PLATFORM_CONTROL_DSH_HEALTH_URL="http://127.0.0.1:59997/dsh/health" \
+            go run ./cmd/platform-control-api
+          ) > /tmp/jrn039-platform.log 2>&1 &
+          echo $! > /tmp/jrn039-platform.pid
+      - name: Verify live health readiness and truthful provider posture
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:58087/providers/health > /tmp/providers-health.json && \
+               curl -fsS http://127.0.0.1:58088/platform/health > /tmp/platform-health.json && \
+               curl -fsS http://127.0.0.1:58088/platform/readiness > /tmp/platform-readiness.json; then
+              break
+            fi
+            sleep 2
+          done
+          grep -q '"service":"platform-control"' /tmp/platform-health.json
+          grep -q '"status":"ready"' /tmp/platform-readiness.json
+          grep -q '"providers"' /tmp/providers-health.json
+          if grep -q '"status":"healthy"' /tmp/providers-health.json; then
+            echo 'A seeded or unprobed provider was incorrectly reported healthy.'
+            cat /tmp/providers-health.json
+            exit 1
+          fi
+          if grep -qi 'mock\|credentials\|healthUrl' /tmp/providers-health.json; then
+            echo 'Provider health response leaked forbidden configuration.'
+            cat /tmp/providers-health.json
+            exit 1
+          fi
+      - name: Upload targeted runtime logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jrn-039-runtime-${{ github.run_id }}
+          path: |
+            /tmp/jrn039-providers.log
+            /tmp/jrn039-platform.log
+            /tmp/providers-health.json
+            /tmp/platform-health.json
+            /tmp/platform-readiness.json
+          if-no-files-found: warn
+
+  contracts-frontend:
+    name: OpenAPI generated types and control-panel binding
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: pnpm
+      - name: Install locked workspace
+        run: pnpm install --frozen-lockfile
+      - name: Validate repository contracts
+        run: pnpm run contracts:lint
+      - name: Typecheck generated provider client
+        run: pnpm --filter @bthwani/core-providers typecheck
+      - name: Typecheck DSH shared brain and control panel
+        run: pnpm --dir services/dsh typecheck
+      - name: Verify API and frontend ownership bindings
+        run: |
+          pnpm run guard:backend-api-binding
+          pnpm run guard:frontend-feature-binding
