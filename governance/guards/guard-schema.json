@@ -10,7 +10,11 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["id", "name", "script", "exit_level", "description"],
+        "required": ["id", "name", "exit_level", "description"],
+        "anyOf": [
+          { "required": ["script"] },
+          { "required": ["source_file"] }
+        ],
         "additionalProperties": false,
         "properties": {
           "id": {
