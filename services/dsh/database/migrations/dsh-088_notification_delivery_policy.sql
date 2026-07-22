@@ -61,6 +61,34 @@ ALTER TABLE dsh_platform_notification_config
     AND default_channels <@ ARRAY['in_app', 'push']::TEXT[]
   );
 
+ALTER TABLE dsh_platform_notification_config
+  DROP CONSTRAINT IF EXISTS dsh_platform_notification_config_actor_types_check;
+ALTER TABLE dsh_platform_notification_config
+  ADD CONSTRAINT dsh_platform_notification_config_actor_types_check
+  CHECK (
+    actor_types <@ ARRAY['client', 'partner', 'captain', 'field', 'operator']::TEXT[]
+  );
+
+CREATE TABLE IF NOT EXISTS dsh_notification_push_endpoints (
+  id             UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_id       TEXT        NOT NULL,
+  actor_type     TEXT        NOT NULL CHECK (actor_type IN ('client', 'partner', 'captain', 'field', 'operator')),
+  provider       TEXT        NOT NULL DEFAULT 'expo' CHECK (provider IN ('expo')),
+  endpoint_token TEXT        NOT NULL,
+  device_id      TEXT        NOT NULL,
+  platform       TEXT        NOT NULL CHECK (platform IN ('android', 'ios')),
+  active         BOOLEAN     NOT NULL DEFAULT TRUE,
+  last_seen_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (actor_id, actor_type, device_id),
+  UNIQUE (provider, endpoint_token)
+);
+
+CREATE INDEX IF NOT EXISTS idx_dsh_notification_push_endpoints_actor
+  ON dsh_notification_push_endpoints (actor_id, actor_type)
+  WHERE active = TRUE;
+
 CREATE TABLE IF NOT EXISTS dsh_notification_channel_deliveries (
   id                  UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   notification_id     UUID        NOT NULL REFERENCES dsh_notifications(id) ON DELETE CASCADE,
