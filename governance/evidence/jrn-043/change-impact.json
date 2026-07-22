@@ -4,13 +4,16 @@
   "taskMode": "implementation_or_closure",
   "repositoryMode": "REMOTE_ONLY",
   "branch": "sambassam",
-  "baseCommitSha": "a78d2fe32da7a090fa5d3727a11bd168337bb280",
+  "baseCommitSha": "ef8831d43ed8ff8f9ea370768c36d2b1d7591c8d",
   "affectedPaths": [
     ".github/actions/**",
     ".github/workflows/**",
     "governance/evidence/jrn-043/**",
     "governance/github/repository-enforcement.json",
+    "governance/github/repository-enforcement.schema.json",
+    "governance/guards/guard-registry.json",
     "governance/release/jrn-043-release-control-policy.json",
+    "tools/guards/guard-registry-gate.mjs",
     "tools/verification/jrn-043-sdlc-ci-release.test.mjs"
   ],
   "riskClass": "high",
