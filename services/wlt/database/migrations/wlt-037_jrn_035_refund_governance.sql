@@ -11,6 +11,7 @@ ALTER TABLE wlt_refunds
   ADD COLUMN IF NOT EXISTS eligibility_reference TEXT NOT NULL DEFAULT 'legacy',
   ADD COLUMN IF NOT EXISTS idempotency_key TEXT,
   ADD COLUMN IF NOT EXISTS provider_idempotency_key TEXT,
+  ADD COLUMN IF NOT EXISTS provider_reference TEXT,
   ADD COLUMN IF NOT EXISTS provider_status TEXT,
   ADD COLUMN IF NOT EXISTS provider_error TEXT,
   ADD COLUMN IF NOT EXISTS provider_attempted_at TIMESTAMPTZ,
@@ -34,6 +35,46 @@ WHERE idempotency_key IS NULL OR idempotency_key = '';
 UPDATE wlt_refunds
 SET provider_idempotency_key = 'refund:' || id
 WHERE provider_idempotency_key IS NULL OR provider_idempotency_key = '';
+
+-- WLT-035 introduced provider_refund_reference. The public API and the new
+-- lifecycle use provider_reference. Keep both columns synchronized as a
+-- compatibility projection so there is one effective provider identity while
+-- older operational readers continue to function.
+UPDATE wlt_refunds
+SET provider_reference = provider_refund_reference
+WHERE provider_reference IS NULL
+  AND provider_refund_reference IS NOT NULL;
+
+CREATE OR REPLACE FUNCTION wlt_sync_refund_provider_reference()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF NEW.provider_reference IS NULL AND NEW.provider_refund_reference IS NOT NULL THEN
+    NEW.provider_reference := NEW.provider_refund_reference;
+  ELSIF NEW.provider_reference IS NOT NULL THEN
+    NEW.provider_refund_reference := NEW.provider_reference;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_wlt_sync_refund_provider_reference ON wlt_refunds;
+CREATE TRIGGER trg_wlt_sync_refund_provider_reference
+BEFORE INSERT OR UPDATE OF provider_reference, provider_refund_reference
+ON wlt_refunds
+FOR EACH ROW
+EXECUTE FUNCTION wlt_sync_refund_provider_reference();
+
+ALTER TABLE wlt_refunds
+  DROP CONSTRAINT IF EXISTS wlt_refunds_provider_reference_sync_chk;
+ALTER TABLE wlt_refunds
+  ADD CONSTRAINT wlt_refunds_provider_reference_sync_chk
+  CHECK (
+    provider_reference IS NULL
+    OR provider_refund_reference IS NULL
+    OR provider_reference = provider_refund_reference
+  );
 
 ALTER TABLE wlt_refunds
   ALTER COLUMN tenant_id SET NOT NULL,
