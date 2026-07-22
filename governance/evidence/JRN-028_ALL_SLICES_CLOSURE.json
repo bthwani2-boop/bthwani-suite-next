@@ -1,0 +1,141 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-028",
+  "journeyNameAr": "تمويل العروض والترويج",
+  "repositoryMode": "REMOTE_ONLY",
+  "repository": "bthwani2-boop/bthwani-suite-next",
+  "targetBranch": "sambassam",
+  "truthOwners": {
+    "operational": "DSH",
+    "financial": "WLT",
+    "operatorSurface": "control-panel/marketing/coupons"
+  },
+  "technicalDecision": "IMPLEMENTED_AND_VERIFIED_READY_FOR_INDEPENDENT_APPROVAL",
+  "validityRule": "This manifest is valid only when both jobs in .github/workflows/jrn-026-coupons-pricing-loyalty-verification.yml succeed on the exact repository head that contains this file.",
+  "slices": [
+    {
+      "id": "FS-01",
+      "name": "DSH governed reserve request",
+      "status": "CLOSED_BY_EXACT_HEAD_GATE",
+      "evidence": ["services/dsh/backend/internal/wlt/promotion_funding.go", "services/dsh/backend/internal/coupons"]
+    },
+    {
+      "id": "FS-02",
+      "name": "WLT sovereign reservation persistence",
+      "status": "CLOSED_BY_EXACT_HEAD_GATE",
+      "evidence": ["services/wlt/backend/internal/promotionfunding/promotion_funding.go", "services/wlt/database/migrations/wlt-032_promotion_funding_ledger.sql"]
+    },
+    {
+      "id": "FS-03",
+      "name": "Opaque reservation reference and authenticated readback",
+      "status": "CLOSED_BY_EXACT_HEAD_GATE",
+      "evidence": ["services/dsh/backend/internal/wlt/promotion_funding_read.go", "services/wlt/backend/internal/promotionfunding/reservation_json.go"]
+    },
+    {
+      "id": "FS-04",
+      "name": "Governed commit transition",
+      "status": "CLOSED_BY_EXACT_HEAD_GATE",
+      "evidence": ["services/wlt/backend/internal/promotionfunding/promotion_funding.go", "services/wlt/database/tests/jrn-028-promotion-funding-integrity.sh"]
+    },
+    {
+      "id": "FS-05",
+      "name": "Governed release transition",
+      "status": "CLOSED_BY_EXACT_HEAD_GATE",
+      "evidence": ["services/wlt/backend/internal/promotionfunding/promotion_funding.go", "services/wlt/database/tests/jrn-028-promotion-funding-integrity.sh"]
+    },
+    {
+      "id": "FS-06",
+      "name": "Governed reverse transition",
+      "status": "CLOSED_BY_EXACT_HEAD_GATE",
+      "evidence": ["services/wlt/backend/internal/promotionfunding/promotion_funding.go", "services/wlt/database/tests/jrn-028-promotion-funding-integrity.sh"]
+    },
+    {
+      "id": "FS-07",
+      "name": "Immutable monetary split and partner ownership",
+      "status": "CLOSED_BY_EXACT_HEAD_GATE",
+      "evidence": ["services/wlt/database/migrations/wlt-032_promotion_funding_ledger.sql", "services/wlt/database/tests/jrn-028-promotion-funding-integrity.sh"]
+    },
+    {
+      "id": "FS-08",
+      "name": "Tenant, correlation and idempotency enforcement",
+      "status": "CLOSED_BY_EXACT_HEAD_GATE",
+      "evidence": ["services/wlt/backend/internal/shared/serviceauth.go", "services/wlt/backend/internal/promotionfunding/promotion_funding_test.go"]
+    },
+    {
+      "id": "FS-09",
+      "name": "Durable DSH transition outbox",
+      "status": "CLOSED_BY_EXACT_HEAD_GATE",
+      "evidence": ["services/dsh/backend/internal/promotionfundingoutbox"]
+    },
+    {
+      "id": "FS-10",
+      "name": "Retry attempts and last-failure recovery projection",
+      "status": "CLOSED_BY_EXACT_HEAD_GATE",
+      "evidence": ["services/dsh/backend/internal/promotionfundingoutbox", "services/dsh/backend/internal/coupons/funding_diagnostics.go"]
+    },
+    {
+      "id": "FS-11",
+      "name": "DSH and WLT identity, status, currency and amount comparison",
+      "status": "CLOSED_BY_EXACT_HEAD_GATE",
+      "evidence": ["services/dsh/backend/internal/wlt/promotion_funding_read.go", "services/dsh/backend/internal/coupons/funding_diagnostics.go"]
+    },
+    {
+      "id": "FS-12",
+      "name": "Reconciliation classification and read model",
+      "status": "CLOSED_BY_EXACT_HEAD_GATE",
+      "evidence": ["services/dsh/backend/internal/http/coupon_funding_lifecycle.go", "services/dsh/frontend/shared/marketing/coupons.types.ts"]
+    },
+    {
+      "id": "FS-13",
+      "name": "Arabic RTL operator reconciliation surface",
+      "status": "CLOSED_BY_EXACT_HEAD_GATE",
+      "evidence": ["services/dsh/frontend/control-panel/marketing/components/CouponFundingReconciliationPanel.tsx"]
+    },
+    {
+      "id": "FS-14",
+      "name": "Loading, empty, error, mismatch, unavailable and retry feedback",
+      "status": "CLOSED_BY_EXACT_HEAD_GATE",
+      "evidence": ["services/dsh/frontend/control-panel/marketing/components/CouponFundingReconciliationPanel.tsx", "services/dsh/frontend/shared/marketing/use-coupons-controller.ts"]
+    },
+    {
+      "id": "FS-15",
+      "name": "Browser privacy and internal-key redaction",
+      "status": "CLOSED_BY_EXACT_HEAD_GATE",
+      "evidence": ["services/wlt/backend/internal/promotionfunding/reservation_json.go", "services/dsh/backend/internal/http/coupons.go"]
+    },
+    {
+      "id": "FS-16",
+      "name": "Same-transaction append-only audit integrity and stale-event rejection",
+      "status": "CLOSED_BY_EXACT_HEAD_GATE",
+      "evidence": ["services/wlt/database/migrations/wlt-034_jrn_028_promotion_funding_audit_integrity.sql", "services/wlt/database/tests/jrn-028-promotion-funding-integrity.sh"]
+    },
+    {
+      "id": "FS-17",
+      "name": "Contract, generated-client and duplicate-owner hygiene",
+      "status": "CLOSED_BY_EXACT_HEAD_GATE",
+      "evidence": ["services/wlt/contracts/wlt.promotion-funding.openapi.yaml", "services/dsh/contracts", ".github/workflows/jrn-026-coupons-pricing-loyalty-verification.yml"]
+    },
+    {
+      "id": "FS-18",
+      "name": "Exact-head integrated zero-gate and closure record",
+      "status": "CLOSED_BY_EXACT_HEAD_GATE",
+      "evidence": ["services/dsh/tests/jrn-028-promotion-funding.test.mjs", "services/dsh/tsconfig.jrn-028.json", ".github/workflows/jrn-026-coupons-pricing-loyalty-verification.yml"]
+    }
+  ],
+  "openCodeGaps": [],
+  "independentApprovalsPending": [
+    "finance",
+    "security",
+    "quality",
+    "release",
+    "production"
+  ],
+  "forbiddenActionsRespected": [
+    "no force push",
+    "no pull request creation",
+    "no merge",
+    "no tag or release",
+    "no production deployment",
+    "no self-issued independent approval"
+  ]
+}
