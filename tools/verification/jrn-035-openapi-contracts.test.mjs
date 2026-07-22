@@ -19,7 +19,13 @@ function operationSection(contract, path, nextPath) {
   return contract.slice(start, end);
 }
 
-test("WLT refund contract exposes the complete governed lifecycle", () => {
+function assertMutationReceiptResponse(contract, path, nextPath) {
+  const section = operationSection(contract, path, nextPath);
+  assert.match(section, /'500': \{ \$ref: '#\/components\/responses\/(MutationReceiptFailure|CompletionPersistenceFailure)' \}/);
+  return section;
+}
+
+test("WLT refund contract exposes the complete governed lifecycle and durable mutation replay", () => {
   const contract = read(wltPath);
   requireAll(contract, [
     "operationId: createWltRefund",
@@ -35,17 +41,23 @@ test("WLT refund contract exposes the complete governed lifecycle", () => {
     "provider_unknown",
     "PROVIDER_RESULT_UNKNOWN",
     "REFUND_OUTCOME_PERSISTENCE_FAILED",
-    "OutcomePersistenceFailure:",
+    "REFUND_IDEMPOTENCY_STORE_FAILED",
+    "REFUND_IDEMPOTENCY_RECEIPT_FAILED",
+    "MutationReceiptFailure:",
+    "CompletionPersistenceFailure:",
     "amountMinorUnits:",
     "minimum: 0",
   ], "WLT refund OpenAPI");
-  const complete = operationSection(contract, "/wlt/refunds/{refundId}/complete", "/wlt/refunds/{refundId}/reconcile");
+  assertMutationReceiptResponse(contract, "/wlt/refunds", "/wlt/refunds/{refundId}");
+  assertMutationReceiptResponse(contract, "/wlt/refunds/{refundId}/approve", "/wlt/refunds/{refundId}/reject");
+  assertMutationReceiptResponse(contract, "/wlt/refunds/{refundId}/reject", "/wlt/refunds/{refundId}/complete");
+  const complete = assertMutationReceiptResponse(contract, "/wlt/refunds/{refundId}/complete", "/wlt/refunds/{refundId}/reconcile");
   assert.match(complete, /'202':/);
-  assert.match(complete, /'500': \{ \$ref: '#\/components\/responses\/OutcomePersistenceFailure' \}/);
-  assert.match(complete, /automatic provider retry is forbidden|must not be called again/i);
+  assert.match(complete, /not retry permission/i);
+  assertMutationReceiptResponse(contract, "/wlt/refunds/{refundId}/reconcile", "/wlt/refunds/{refundId}/audit");
 });
 
-test("DSH refund contract binds command, client and partner surfaces", () => {
+test("DSH refund contract binds command, client and partner surfaces and preserves WLT failures", () => {
   const contract = read(dshPath);
   requireAll(contract, [
     "operationId: createDshFinanceRefund",
@@ -62,12 +74,18 @@ test("DSH refund contract binds command, client and partner surfaces", () => {
     "/dsh/partner/orders/{orderId}/refunds:",
     "PROVIDER_RESULT_UNKNOWN",
     "REFUND_OUTCOME_PERSISTENCE_FAILED",
-    "OutcomePersistenceFailure:",
+    "REFUND_IDEMPOTENCY_STORE_FAILED",
+    "REFUND_IDEMPOTENCY_RECEIPT_FAILED",
+    "MutationReceiptFailure:",
+    "CompletionPersistenceFailure:",
   ], "DSH refund OpenAPI");
-  const complete = operationSection(contract, "/dsh/control-panel/finance/refunds/{refundId}/complete", "/dsh/control-panel/finance/refunds/{refundId}/reconcile");
+  assertMutationReceiptResponse(contract, "/dsh/control-panel/finance/refunds", "/dsh/control-panel/finance/refunds/{refundId}");
+  assertMutationReceiptResponse(contract, "/dsh/control-panel/finance/refunds/{refundId}/approve", "/dsh/control-panel/finance/refunds/{refundId}/reject");
+  assertMutationReceiptResponse(contract, "/dsh/control-panel/finance/refunds/{refundId}/reject", "/dsh/control-panel/finance/refunds/{refundId}/complete");
+  const complete = assertMutationReceiptResponse(contract, "/dsh/control-panel/finance/refunds/{refundId}/complete", "/dsh/control-panel/finance/refunds/{refundId}/reconcile");
   assert.match(complete, /'202':/);
-  assert.match(complete, /'500': \{ \$ref: '#\/components\/responses\/OutcomePersistenceFailure' \}/);
-  assert.match(complete, /preserves the WLT status|must not cause another provider call/i);
+  assert.match(complete, /must not cause another provider call|not retry permission/i);
+  assertMutationReceiptResponse(contract, "/dsh/control-panel/finance/refunds/{refundId}/reconcile", "/dsh/control-panel/finance/refunds/{refundId}/audit");
 });
 
 test("privacy refund schema excludes provider and operator evidence", () => {
