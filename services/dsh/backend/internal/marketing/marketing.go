@@ -3,6 +3,7 @@ package marketing
 import (
 	"database/sql"
 	"errors"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -25,6 +26,8 @@ var campaignAudiences = map[string]bool{
 var campaignPlacements = map[string]bool{
 	"home": true, "hero": true, "feed": true, "floating": true, "banner": true, "store-card": true,
 }
+
+var campaignRegionCodePattern = regexp.MustCompile(`^[A-Za-z0-9._:-]{1,64}$`)
 
 func campaignTransitionAllowed(from, to string) bool {
 	if from == to {
@@ -75,47 +78,64 @@ func validateCampaignActivationWindow(startDate, endDate string, now time.Time) 
 	return nil
 }
 
+func validateCampaignRegion(cityCode, serviceAreaCode string) error {
+	if cityCode != "" && !campaignRegionCodePattern.MatchString(cityCode) {
+		return ErrInvalid
+	}
+	if serviceAreaCode != "" && !campaignRegionCodePattern.MatchString(serviceAreaCode) {
+		return ErrInvalid
+	}
+	return nil
+}
+
 type Campaign struct {
-	ID          string     `json:"id"`
-	Title       string     `json:"title"`
-	Description string     `json:"description"`
-	Status      string     `json:"status"`
-	StartDate   string     `json:"startDate"`
-	EndDate     string     `json:"endDate"`
-	TargetType  string     `json:"targetType,omitempty"`
-	TargetID    string     `json:"targetId,omitempty"`
-	Audience    string     `json:"audience"`
-	Placement   string     `json:"placement,omitempty"`
-	Version     int        `json:"version"`
-	CreatedBy   string     `json:"createdBy"`
-	ArchivedAt  *time.Time `json:"archivedAt,omitempty"`
-	CreatedAt   time.Time  `json:"createdAt"`
-	UpdatedAt   time.Time  `json:"updatedAt"`
+	ID                    string     `json:"id"`
+	Title                 string     `json:"title"`
+	Description           string     `json:"description"`
+	Status                string     `json:"status"`
+	StartDate             string     `json:"startDate"`
+	EndDate               string     `json:"endDate"`
+	TargetType            string     `json:"targetType,omitempty"`
+	TargetID              string     `json:"targetId,omitempty"`
+	TargetCityCode        string     `json:"targetCityCode,omitempty"`
+	TargetServiceAreaCode string     `json:"targetServiceAreaCode,omitempty"`
+	Audience              string     `json:"audience"`
+	Placement             string     `json:"placement,omitempty"`
+	Version               int        `json:"version"`
+	CreatedBy             string     `json:"createdBy"`
+	ArchivedAt            *time.Time `json:"archivedAt,omitempty"`
+	CreatedAt             time.Time  `json:"createdAt"`
+	UpdatedAt             time.Time  `json:"updatedAt"`
 }
 
 type CreateCampaignInput struct {
-	Title            string
-	Description      string
-	StartDate        string
-	EndDate          string
-	TargetType       string
-	TargetID         string
-	Audience         string
-	Placement        string
-	CreatedBy        string
-	CreatedBySurface string
-	CorrelationID    string
+	Title                 string
+	Description           string
+	StartDate             string
+	EndDate               string
+	TargetType            string
+	TargetID              string
+	TargetCityCode        string
+	TargetServiceAreaCode string
+	Audience              string
+	Placement             string
+	CreatedBy             string
+	CreatedBySurface      string
+	CorrelationID         string
 }
 
 var campaignSelectCols = `id, title, COALESCE(description,''), status,
 	          COALESCE(start_date,''), COALESCE(end_date,''),
-	          COALESCE(target_type,''), COALESCE(target_id,''), audience, COALESCE(placement,''),
-	          version, COALESCE(created_by,''), archived_at, created_at, updated_at`
+	          COALESCE(target_type,''), COALESCE(target_id,''),
+	          COALESCE(target_city_code,''), COALESCE(target_service_area_code,''),
+	          audience, COALESCE(placement,''), version, COALESCE(created_by,''),
+	          archived_at, created_at, updated_at`
 
 func scanCampaign(row interface{ Scan(dest ...any) error }) (Campaign, error) {
 	var c Campaign
 	err := row.Scan(&c.ID, &c.Title, &c.Description, &c.Status,
-		&c.StartDate, &c.EndDate, &c.TargetType, &c.TargetID, &c.Audience, &c.Placement,
+		&c.StartDate, &c.EndDate, &c.TargetType, &c.TargetID,
+		&c.TargetCityCode, &c.TargetServiceAreaCode, &c.Audience, &c.Placement,
 		&c.Version, &c.CreatedBy, &c.ArchivedAt, &c.CreatedAt, &c.UpdatedAt)
 	return c, err
 }
@@ -155,9 +175,12 @@ func CreateCampaign(db *sql.DB, in CreateCampaignInput) (Campaign, error) {
 	in.Title = strings.TrimSpace(in.Title)
 	in.StartDate = strings.TrimSpace(in.StartDate)
 	in.EndDate = strings.TrimSpace(in.EndDate)
+	in.TargetCityCode = strings.TrimSpace(in.TargetCityCode)
+	in.TargetServiceAreaCode = strings.TrimSpace(in.TargetServiceAreaCode)
 	in.Audience = strings.TrimSpace(in.Audience)
 	in.Placement = strings.TrimSpace(in.Placement)
-	if in.Title == "" || validateCampaignDates(in.StartDate, in.EndDate) != nil {
+	if in.Title == "" || validateCampaignDates(in.StartDate, in.EndDate) != nil ||
+		validateCampaignRegion(in.TargetCityCode, in.TargetServiceAreaCode) != nil {
 		return Campaign{}, ErrInvalid
 	}
 	if in.Audience == "" {
@@ -184,11 +207,14 @@ func CreateCampaign(db *sql.DB, in CreateCampaignInput) (Campaign, error) {
 	}
 	c, err := scanCampaign(db.QueryRow(`
 		INSERT INTO dsh_marketing_campaigns
-			(title, description, status, start_date, end_date, target_type, target_id, audience, placement, created_by, created_by_surface)
-		VALUES ($1, $2, 'draft', $3, $4, NULLIF($5,''), NULLIF($6,''), $7, NULLIF($8,''), $9, $10)
+			(title, description, status, start_date, end_date, target_type, target_id,
+			 target_city_code, target_service_area_code, audience, placement, created_by, created_by_surface)
+		VALUES ($1, $2, 'draft', $3, $4, NULLIF($5,''), NULLIF($6,''),
+		        NULLIF($7,''), NULLIF($8,''), $9, NULLIF($10,''), $11, $12)
 		RETURNING `+campaignSelectCols,
 		in.Title, in.Description, in.StartDate, in.EndDate, in.TargetType, in.TargetID,
-		in.Audience, in.Placement, in.CreatedBy, in.CreatedBySurface))
+		in.TargetCityCode, in.TargetServiceAreaCode, in.Audience, in.Placement,
+		in.CreatedBy, in.CreatedBySurface))
 	if err != nil {
 		return Campaign{}, err
 	}
@@ -200,18 +226,20 @@ func CreateCampaign(db *sql.DB, in CreateCampaignInput) (Campaign, error) {
 }
 
 type UpdateCampaignInput struct {
-	Status          string
-	Title           string
-	Description     string
-	StartDate       string
-	EndDate         string
-	TargetType      string
-	TargetID        string
-	Audience        string
-	Placement       string
-	ExpectedVersion int
-	ActorID         string
-	CorrelationID   string
+	Status                string
+	Title                 string
+	Description           string
+	StartDate             string
+	EndDate               string
+	TargetType            string
+	TargetID              string
+	TargetCityCode        *string
+	TargetServiceAreaCode *string
+	Audience              string
+	Placement             string
+	ExpectedVersion       int
+	ActorID               string
+	CorrelationID         string
 }
 
 func UpdateCampaign(db *sql.DB, id string, in UpdateCampaignInput) (Campaign, error) {
@@ -262,6 +290,15 @@ func UpdateCampaign(db *sql.DB, id string, in UpdateCampaignInput) (Campaign, er
 		next.TargetType = strings.TrimSpace(in.TargetType)
 		next.TargetID = strings.TrimSpace(in.TargetID)
 	}
+	if in.TargetCityCode != nil {
+		next.TargetCityCode = strings.TrimSpace(*in.TargetCityCode)
+	}
+	if in.TargetServiceAreaCode != nil {
+		next.TargetServiceAreaCode = strings.TrimSpace(*in.TargetServiceAreaCode)
+	}
+	if validateCampaignRegion(next.TargetCityCode, next.TargetServiceAreaCode) != nil {
+		return Campaign{}, ErrInvalid
+	}
 
 	if next.Status == "active" {
 		if validateCampaignActivationWindow(next.StartDate, next.EndDate, time.Now()) != nil {
@@ -287,12 +324,14 @@ func UpdateCampaign(db *sql.DB, id string, in UpdateCampaignInput) (Campaign, er
 		SET status=$2, title=$3, description=$4,
 		    start_date=NULLIF($5,''), end_date=NULLIF($6,''),
 		    target_type=NULLIF($7,''), target_id=NULLIF($8,''),
-		    audience=$9, placement=NULLIF($10,''),
+		    target_city_code=NULLIF($9,''), target_service_area_code=NULLIF($10,''),
+		    audience=$11, placement=NULLIF($12,''),
 		    version=version+1, updated_at=NOW()
-		WHERE id=$1 AND version=$11 AND archived_at IS NULL
+		WHERE id=$1 AND version=$13 AND archived_at IS NULL
 		RETURNING `+campaignSelectCols,
 		id, next.Status, next.Title, next.Description, next.StartDate, next.EndDate,
-		next.TargetType, next.TargetID, next.Audience, next.Placement, in.ExpectedVersion))
+		next.TargetType, next.TargetID, next.TargetCityCode, next.TargetServiceAreaCode,
+		next.Audience, next.Placement, in.ExpectedVersion))
 	if errors.Is(err, sql.ErrNoRows) {
 		return Campaign{}, ErrCommercialVersionConflict
 	}
