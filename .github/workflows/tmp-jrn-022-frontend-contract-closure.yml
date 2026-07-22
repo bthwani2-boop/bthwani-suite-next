@@ -64,7 +64,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          pnpm --dir services/dsh exec tsc -p tsconfig.jrn-020-030.json --noEmit --pretty false 2>&1 | tee "$RUNNER_TEMP/jrn-022-typescript.log"
+          pnpm --dir services/dsh exec tsc -p tsconfig.jrn-022.json --noEmit --pretty false 2>&1 | tee "$RUNNER_TEMP/jrn-022-typescript.log"
           git diff --check
 
       - name: Upload frontend diagnostics
