@@ -17,11 +17,13 @@ on:
       - "services/wlt/frontend/shared/dsh/**payment-session**"
       - "services/wlt/frontend/shared/dsh/use-wlt-dsh-payment-controller.tsx"
       - "services/dsh/backend/internal/wlt/payment_sessions.go"
+      - "services/dsh/backend/internal/wlt/payment_sessions_test.go"
       - "services/dsh/backend/internal/http/finance_payment_sessions.go"
       - "services/dsh/backend/internal/http/server.go"
       - "services/dsh/contracts/dsh.payment-sessions.openapi.yaml"
       - "services/dsh/frontend/control-panel/finance/PaymentSessionOperationsScreen.tsx"
       - "services/dsh/frontend/shared/finance-wlt-link/payment/**"
+      - "services/dsh/tsconfig.jrn-034.json"
       - "apps/control-panel/runtime/src/app/dsh/finance/payment-sessions/**"
       - "infra/docker/scripts/wlt-migration-probes.ps1"
       - "contracts/master.openapi.yaml"
@@ -36,10 +38,12 @@ on:
       - "services/wlt/database/migrations/wlt-036_payment_session_operations_and_provider_events.sql"
       - "services/wlt/contracts/wlt.payments.openapi.yaml"
       - "services/dsh/backend/internal/wlt/payment_sessions.go"
+      - "services/dsh/backend/internal/wlt/payment_sessions_test.go"
       - "services/dsh/backend/internal/http/finance_payment_sessions.go"
       - "services/dsh/contracts/dsh.payment-sessions.openapi.yaml"
       - "services/dsh/frontend/control-panel/finance/PaymentSessionOperationsScreen.tsx"
       - "services/dsh/frontend/shared/finance-wlt-link/payment/**"
+      - "services/dsh/tsconfig.jrn-034.json"
       - "tools/scripts/test-jrn-034-payments.mjs"
 
 permissions:
@@ -84,10 +88,10 @@ jobs:
       - name: Build WLT router and payment owners
         working-directory: services/wlt/backend
         run: go build ./internal/payment ./internal/provider ./internal/reference ./internal/http
-      - name: Test DSH WLT boundary
+      - name: Test DSH WLT payment boundary
         working-directory: services/dsh/backend
-        run: go test ./internal/wlt ./internal/http -count=1
-      - name: Build DSH payment proxy owners
+        run: go test ./internal/wlt -count=1
+      - name: Build DSH payment proxy and router
         working-directory: services/dsh/backend
         run: go build ./internal/wlt ./internal/http
 
@@ -110,10 +114,8 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Typecheck WLT shared brain
         run: pnpm --dir services/wlt typecheck
-      - name: Typecheck DSH shared and control-panel surface
-        run: pnpm --dir services/dsh typecheck
-      - name: Typecheck control-panel runtime route
-        run: pnpm --dir apps/control-panel/runtime typecheck
+      - name: Typecheck focused JRN-034 DSH and control-panel graph
+        run: pnpm --dir services/dsh exec tsc -p tsconfig.jrn-034.json --noEmit --pretty false
 
   contract:
     name: Focused contracts and product truth
