@@ -63,6 +63,13 @@ function Import-RuntimeEnvironment {
   }
 }
 
+function Get-EnvOrDefault {
+  param([Parameter(Mandatory = $true)][string]$Name, [Parameter(Mandatory = $true)][string]$Default)
+  $Value = [Environment]::GetEnvironmentVariable($Name)
+  if ([string]::IsNullOrWhiteSpace($Value)) { return $Default }
+  return $Value.Trim()
+}
+
 function Assert-SecretPosture {
   $ForbiddenLiveLikeValues = @(
     "bthwani_runtime_password",
@@ -107,7 +114,7 @@ function Invoke-Compose {
 function Invoke-AdminSql {
   param([Parameter(Mandatory = $true)][string]$Database, [Parameter(Mandatory = $true)][string]$Sql)
   $Result = docker compose --env-file $EnvPath -f $ComposePath exec -T postgres `
-    psql -U bthwani_runtime -d $Database -X -qAt -v ON_ERROR_STOP=1 -c $Sql
+    psql -U $PostgresAdminUser -d $Database -X -qAt -v ON_ERROR_STOP=1 -c $Sql
   if ($LASTEXITCODE -ne 0) { throw "PostgreSQL verification failed in $Database." }
   return ($Result -join "").Trim()
 }
@@ -115,7 +122,7 @@ function Invoke-AdminSql {
 function Wait-Postgres {
   for ($Attempt = 1; $Attempt -le 40; $Attempt++) {
     docker compose --env-file $EnvPath -f $ComposePath exec -T postgres `
-      pg_isready -U bthwani_runtime -d bthwani_runtime *> $null
+      pg_isready -U $PostgresAdminUser -d $PostgresAdminDatabase *> $null
     if ($LASTEXITCODE -eq 0) { return }
     Start-Sleep -Seconds 2
   }
@@ -164,9 +171,12 @@ function Test-StaticRuntimeControls {
   foreach ($WorkerPath in $RequiredWorkerPaths) {
     $Absolute = Join-Path $RepoRoot $WorkerPath
     if (-not (Test-Path -LiteralPath $Absolute)) { throw "Required outbox worker is missing: $WorkerPath" }
-    $Source = Get-Content -LiteralPath $Absolute -Raw
-    if ($Source -notmatch '(?i)(retry|attempt|backoff|next)') { throw "Outbox worker lacks bounded retry semantics: $WorkerPath" }
-    if ($Source -notmatch '(?i)(failed|dead|exhaust|last.?error)') { throw "Outbox worker lacks terminal failure semantics: $WorkerPath" }
+    $PackageDirectory = Split-Path -Parent $Absolute
+    $Source = (Get-ChildItem -LiteralPath $PackageDirectory -Filter "*.go" -File | Sort-Object Name | ForEach-Object {
+      Get-Content -LiteralPath $_.FullName -Raw
+    }) -join "`n"
+    if ($Source -notmatch '(?i)(retry|attempt|backoff|next)') { throw "Outbox package lacks bounded retry semantics: $WorkerPath" }
+    if ($Source -notmatch '(?i)(failed|dead|exhaust|last.?error)') { throw "Outbox package lacks terminal failure semantics: $WorkerPath" }
   }
 
   $BackupSource = Get-Content -LiteralPath (Join-Path $RepoRoot $Catalog.backupRestore.backupCommand) -Raw
@@ -181,6 +191,8 @@ function Test-StaticRuntimeControls {
 
 Import-RuntimeEnvironment
 Assert-SecretPosture
+$PostgresAdminUser = Get-EnvOrDefault -Name "BTHWANI_POSTGRES_USER" -Default "bthwani_runtime"
+$PostgresAdminDatabase = Get-EnvOrDefault -Name "BTHWANI_POSTGRES_DB" -Default "bthwani_runtime"
 $ResolvedCommitSha = Resolve-ExactCommitSha
 $ResolvedRef = Resolve-ExactRef
 
@@ -256,7 +268,7 @@ try {
         }
       }
 
-      $Owner = Invoke-AdminSql -Database "bthwani_runtime" -Sql "SELECT pg_get_userbyid(datdba) FROM pg_database WHERE datname = '$($Service.database)';"
+      $Owner = Invoke-AdminSql -Database $PostgresAdminDatabase -Sql "SELECT pg_get_userbyid(datdba) FROM pg_database WHERE datname = '$($Service.database)';"
       if ($Owner -ne $Service.owner) { throw "Database owner mismatch for $($Service.database): expected $($Service.owner), got $Owner" }
       $MigrationFileCount = @(Get-ChildItem -LiteralPath (Join-Path $RepoRoot $Service.migrationDirectory) -Filter "*.sql" -File).Count
       $Ledger = Invoke-AdminSql -Database $Service.database -Sql "SELECT COUNT(*) || ':' || COUNT(*) FILTER (WHERE dirty OR NOT success) FROM schema_migrations WHERE service_name = '$($Service.id)';"
