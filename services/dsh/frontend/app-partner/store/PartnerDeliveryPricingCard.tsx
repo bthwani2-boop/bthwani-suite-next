@@ -4,7 +4,7 @@ import { Button, Card, Text, TextField, spacing } from "@bthwani/ui-kit";
 import {
   findDeliveryPricing,
   usePartnerDeliveryPricingController,
-} from "../../shared/partner";
+} from "../../shared/partner/use-delivery-pricing-controller";
 
 export type PartnerDeliveryPricingCardProps = {
   readonly storeId: string;
