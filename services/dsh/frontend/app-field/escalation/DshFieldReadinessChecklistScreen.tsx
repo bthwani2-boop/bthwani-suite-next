@@ -127,7 +127,7 @@ export function DshFieldReadinessChecklistScreen({ storeId, visitId, onBack }: P
         <Button label="رجوع" tone="ghost" size="sm" fullWidth={false} onPress={onBack} />
       </View>
 
-      <Card padding="$4" style={{ marginBottom: spacing[2] }}>
+      <Card padding="$4" style={styles.summaryCard}>
         <View style={styles.summaryRow}>
           <View>
             <Text role="titleMd" style={styles.rtl}>تقدم الجاهزية</Text>
@@ -239,6 +239,7 @@ export function DshFieldReadinessChecklistScreen({ storeId, visitId, onBack }: P
 
 const styles = StyleSheet.create({
   topActions: { alignItems: "flex-start", marginBottom: spacing[2] },
+  summaryCard: { marginBottom: spacing[2] },
   summaryRow: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" },
   rtl: { textAlign: "right" },
   notice: { padding: spacing[3], gap: spacing[1] },
