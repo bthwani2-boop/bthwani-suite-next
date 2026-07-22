@@ -1,0 +1,38 @@
+name: JRN-035 Migration Probe Diagnostic
+
+on:
+  pull_request:
+    branches: [sambassam]
+    paths:
+      - "services/wlt/database/migrations/**"
+      - "infra/docker/scripts/wlt-migration-probes.ps1"
+      - "governance/evidence/.jrn-035-final-validation-trigger"
+      - ".github/workflows/jrn-035-migration-probe-diagnostic.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jrn-035-migration-probe-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    name: Print and validate WLT migration registry
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Print migration files and registered probes
+        shell: pwsh
+        run: |
+          . ./infra/docker/scripts/wlt-migration-probes.ps1
+          $files = Get-ChildItem ./services/wlt/database/migrations -Filter '*.sql' | Sort-Object Name
+          Write-Host 'MIGRATION_FILES_BEGIN'
+          $files | ForEach-Object { Write-Host $_.Name }
+          Write-Host 'MIGRATION_FILES_END'
+          Write-Host 'REGISTERED_PROBES_BEGIN'
+          $script:WltMigrationProbes.Keys | Sort-Object | ForEach-Object { Write-Host $_ }
+          Write-Host 'REGISTERED_PROBES_END'
+          Test-WltMigrationProbeCoverage -MigrationFiles $files
