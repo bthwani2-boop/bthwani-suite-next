@@ -49,7 +49,36 @@ jobs:
             git fetch origin sambassam
             git reset --hard origin/sambassam
             node tools/scripts/sync-jrn-024-contract.mjs
-            pnpm --dir services/dsh openapi:generate
+            pnpm --dir services/dsh openapi:compose
+
+            node <<'NODE'
+          const fs = require('node:fs');
+          const file = 'services/dsh/contracts/generated/dsh.bundle.openapi.yaml';
+          const lines = fs.readFileSync(file, 'utf8').split(/\r?\n/);
+          const invalid = [];
+          for (let i = 0; i < lines.length; i += 1) {
+            const match = lines[i].match(/^(\s*)schema:\s*(null)?\s*$/);
+            if (!match) continue;
+            if (match[2] === 'null') {
+              invalid.push(i);
+              continue;
+            }
+            let next = i + 1;
+            while (next < lines.length && (!lines[next].trim() || lines[next].trim().startsWith('#'))) next += 1;
+            const nextIndent = next < lines.length ? lines[next].match(/^\s*/)[0].length : -1;
+            if (nextIndent <= match[1].length) invalid.push(i);
+          }
+          if (invalid.length) {
+            for (const index of invalid) {
+              console.error(`Invalid null schema near generated line ${index + 1}:`);
+              console.error(lines.slice(Math.max(0, index - 8), index + 9).join('\n'));
+            }
+            process.exit(1);
+          }
+          console.log('Generated request-body schema null scan: PASS');
+          NODE
+
+            pnpm --dir services/dsh exec openapi-typescript contracts/generated/dsh.bundle.openapi.yaml -o clients/generated/dsh-api.ts
 
             grep -Fq 'required: [startLocation]' services/dsh/contracts/components/schemas/field.schemas.yaml
             grep -Fq 'required: [completionLocation]' services/dsh/contracts/paths/field.paths.yaml
