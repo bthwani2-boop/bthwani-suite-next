@@ -1,0 +1,104 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-019",
+  "journeyNameAr": "الإلغاء التشغيلي وتسليم الاسترداد",
+  "status": "PENDING_INDEPENDENT_APPROVAL",
+  "truthOwner": "services/dsh",
+  "financialTruthOwner": "services/wlt",
+  "sharedBrainOwner": "services/dsh/frontend/shared/orders",
+  "operationalProblem": "يجب أن يؤدي إلغاء الطلب إلى قرار تشغيلي واحد محكوم حسب الفاعل والحالة، وأن يحرر الإسناد والعهدة والمهام التابعة بصورة ذرية، ثم يسلم الأثر المالي إلى WLT بصورة دائمة وقابلة لإعادة المحاولة دون إنشاء حقيقة مالية ثانية داخل DSH أو الأسطح.",
+  "targetOutcome": "إلغاء متسق متعدد الأسطح يحفظ السبب والفاعل والارتباط، يمنع الإلغاء غير المسموح، يوقف جميع الأعمال التابعة، ويسقط قرار انتهاء جلسة الدفع أو طلب الاسترداد من WLT إلى الطلب وسجل الإلغاء مع مرجع مالي قابل للتدقيق.",
+  "actors": [
+    "client",
+    "partner",
+    "operator",
+    "system"
+  ],
+  "requiredSurfaces": [
+    "app-client",
+    "app-partner",
+    "control-panel"
+  ],
+  "supportingReadbackSurfaces": [
+    "app-captain"
+  ],
+  "services": [
+    "DSH_OPERATIONAL_TRUTH",
+    "WLT_FINANCIAL_TRUTH"
+  ],
+  "entities": [
+    "order",
+    "order_cancellation",
+    "dispatch_assignment",
+    "delivery",
+    "partner_delivery_task",
+    "pickup_session",
+    "financial_closure_outbox",
+    "payment_session",
+    "refund"
+  ],
+  "states": {
+    "orderTerminal": [
+      "cancelled_by_client",
+      "cancelled_by_store",
+      "cancelled_by_operator",
+      "cancelled_no_driver",
+      "failed_payment",
+      "failed_dispatch"
+    ],
+    "financialClosure": [
+      "not_required",
+      "pending",
+      "session_expired",
+      "refund_requested",
+      "refund_completed",
+      "no_action",
+      "failed"
+    ]
+  },
+  "allowedActions": [
+    "client_cancel_before_irreversible_preparation",
+    "partner_cancel_before_ready_for_pickup",
+    "operator_cancel_with_operations_manage_permission",
+    "system_cancel_for_no_driver_payment_or_dispatch_failure",
+    "release_dispatch_partner_delivery_and_pickup_work",
+    "enqueue_durable_wlt_cancellation_handoff",
+    "retry_wlt_handoff_with_stable_command_identity",
+    "read_financial_closure_on_client_partner_and_operator_surfaces"
+  ],
+  "forbiddenActions": [
+    "client_cancel_after_preparation_without_operator_review",
+    "partner_cancel_after_ready_for_pickup",
+    "surface_created_refund",
+    "dsh_ledger_or_balance_mutation",
+    "financial_success_without_wlt_reference",
+    "duplicate_cancellation_truth_owner",
+    "active_assignment_or_pickup_session_after_order_cancellation",
+    "loss_of_correlation_between_cancellation_and_wlt_handoff"
+  ],
+  "negativeInvariants": [
+    "A human cancellation reason code must belong to the authenticated actor role; the other reason requires a note.",
+    "A cancellation command replay with the same correlation is idempotent; a different correlation against the same order conflicts.",
+    "An order cannot enter a cancellation terminal state while leaving an accepted assignment, active delivery, partner-delivery task, or pickup session actionable.",
+    "DSH may request financial closure but cannot create a refund, mutate a ledger, calculate a final balance, or invent a payment result.",
+    "Every WLT closure result projected to DSH must carry the real payment-session or refund reference owned by WLT.",
+    "The cancellation command correlation must be persisted in the DSH outbox and forwarded to WLT on every retry.",
+    "Client, partner, and operator surfaces must read the same cancellation and financial-closure projection from the shared orders brain."
+  ],
+  "acceptanceCriteria": [
+    "Client, partner, operator, and system cancellation policies map to explicit terminal states and reject forbidden lifecycle transitions.",
+    "Cancellation reason, note, actor, role, source state, target state, and correlation are persisted once and read back.",
+    "Assignments, deliveries, partner-delivery tasks, and pickup sessions are released by the order cancellation transaction boundary.",
+    "A durable idempotent outbox carries the cancellation correlation to WLT and retries transient failures.",
+    "WLT alone decides expiration, refund request, or no action and returns a validated financial reference.",
+    "The WLT result is projected onto the order and cancellation record and is visible on all required surfaces.",
+    "Targeted Go tests and the JRN-019 cross-surface closure guard pass on the same immutable commit."
+  ],
+  "independentApprovalsRequired": [
+    "product-owner",
+    "qa-device-accessibility",
+    "application-security",
+    "financial-control",
+    "release-production"
+  ]
+}
