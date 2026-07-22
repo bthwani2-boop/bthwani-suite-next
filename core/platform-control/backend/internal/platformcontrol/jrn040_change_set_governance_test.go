@@ -88,7 +88,7 @@ func TestJRN040ConflictStaleSnapshotAndMetadataRollback(t *testing.T) {
 INSERT INTO platform_variables
   (variable_key, owner_service, value_type, classification, scope_type, scope_id, value_json, revision, status)
 VALUES
-  ('JRN040_TARGET', 'legacy-owner', 'integer', 'public', 'global', '', '5'::jsonb, 1, 'inactive'),
+  ('JRN040_TARGET', 'legacy-owner', 'integer', 'public', 'global', '', '5'::jsonb, 1, 'disabled'),
   ('JRN040_SECRET', 'vault', 'json', 'secret', 'global', '', '{"credential":"redacted"}'::jsonb, 1, 'active')`); err != nil {
 		t.Fatalf("seed variables: %v", err)
 	}
@@ -167,7 +167,7 @@ VALUES
 	if err := db.QueryRowContext(ctx, `SELECT owner_service, value_type, classification, status, value_json, revision FROM platform_variables WHERE variable_key='JRN040_TARGET' AND scope_type='global' AND scope_id=''`).Scan(&owner, &valueType, &classification, &status, &valueRaw, &revision); err != nil {
 		t.Fatalf("read restored variable: %v", err)
 	}
-	if owner != "legacy-owner" || valueType != "integer" || classification != "public" || status != "inactive" || string(valueRaw) != "5" || revision != 3 {
+	if owner != "legacy-owner" || valueType != "integer" || classification != "public" || status != "disabled" || string(valueRaw) != "5" || revision != 3 {
 		t.Fatalf("rollback did not restore metadata: owner=%s type=%s class=%s status=%s value=%s revision=%d", owner, valueType, classification, status, string(valueRaw), revision)
 	}
 
