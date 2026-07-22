@@ -45,13 +45,14 @@ jobs:
       - name: Verify JRN-030 Go formatting
         working-directory: services/dsh/backend
         run: |
-          unformatted="$({ find internal/partnerfleet -type f -name '*.go' -print0 | xargs -0 gofmt -l; gofmt -l internal/http/partner_fleet.go internal/http/partner_fleet_membership_routes.go internal/http/partner_fleet_operator.go internal/http/jrn030_partner_fleet_routes_test.go; })"
+          unformatted="$({ find internal/partnerfleet -type f -name '*.go' -print0 | xargs -0 gofmt -l; gofmt -l internal/http/partner_fleet.go internal/http/partner_fleet_membership_routes.go internal/http/partner_fleet_operator.go cmd/jrn030-route-proof/main.go; })"
           test -z "${unformatted}" || { printf 'Unformatted files:\n%s\n' "${unformatted}"; exit 1; }
-      - name: Compile partner fleet and governed routes
+      - name: Compile partner fleet package
         working-directory: services/dsh/backend
-        run: |
-          go test ./internal/partnerfleet -run '^$'
-          go test ./internal/http -run '^TestJourney030ExposesGovernedPartnerFleetRoutes$' -count=1
+        run: go test ./internal/partnerfleet -run '^$'
+      - name: Verify seven production route registrations
+        working-directory: services/dsh/backend
+        run: go run ./cmd/jrn030-route-proof
       - name: Compile and build DSH API
         working-directory: services/dsh/backend
         run: |
