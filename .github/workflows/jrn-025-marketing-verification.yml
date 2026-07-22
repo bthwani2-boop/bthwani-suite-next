@@ -1,0 +1,140 @@
+# Permanent targeted gate for JRN-025 campaigns, tickers and partner offers.
+name: JRN-025 Marketing Verification
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [sambassam]
+    paths:
+      - "governance/product/contracts/jrn-025-*.json"
+      - "services/dsh/backend/internal/marketing/**"
+      - "services/dsh/backend/internal/homediscovery/**"
+      - "services/dsh/backend/internal/http/marketing.go"
+      - "services/dsh/backend/internal/http/jrn_025_marketing_routes_test.go"
+      - "services/dsh/database/migrations/dsh-101_jrn_025_marketing_lifecycle.sql"
+      - "services/dsh/frontend/shared/marketing/**"
+      - "services/dsh/frontend/shared/home-discovery/**"
+      - "services/dsh/frontend/shared/partner/dsh-partner-offer-types.ts"
+      - "services/dsh/frontend/control-panel/marketing/**"
+      - "services/dsh/frontend/app-client/home-discovery/**"
+      - "services/dsh/contracts/**"
+      - "services/dsh/tests/jrn-025-marketing-closure.test.mjs"
+      - "services/dsh/tsconfig.jrn-025.json"
+      - ".github/workflows/jrn-025-marketing-verification.yml"
+  pull_request:
+    branches: [master]
+    paths:
+      - "governance/product/contracts/jrn-025-*.json"
+      - "services/dsh/backend/internal/marketing/**"
+      - "services/dsh/backend/internal/homediscovery/**"
+      - "services/dsh/backend/internal/http/marketing.go"
+      - "services/dsh/backend/internal/http/jrn_025_marketing_routes_test.go"
+      - "services/dsh/database/migrations/dsh-101_jrn_025_marketing_lifecycle.sql"
+      - "services/dsh/frontend/shared/marketing/**"
+      - "services/dsh/frontend/shared/home-discovery/**"
+      - "services/dsh/frontend/shared/partner/dsh-partner-offer-types.ts"
+      - "services/dsh/frontend/control-panel/marketing/**"
+      - "services/dsh/frontend/app-client/home-discovery/**"
+      - "services/dsh/contracts/**"
+      - "services/dsh/tests/jrn-025-marketing-closure.test.mjs"
+      - "services/dsh/tsconfig.jrn-025.json"
+      - ".github/workflows/jrn-025-marketing-verification.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jrn-025-${{ github.workflow }}-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: JRN-025 targeted full-stack verification
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: dsh_jrn025
+          POSTGRES_USER: dsh_jrn025
+          POSTGRES_PASSWORD: dsh_jrn025
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U dsh_jrn025 -d dsh_jrn025"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://dsh_jrn025:dsh_jrn025@localhost:5432/dsh_jrn025?sslmode=disable
+      DSH_REQUIRE_DB_TESTS: "true"
+    steps:
+      - name: Checkout repository state
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "10.34.2"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.17.0"
+          cache: pnpm
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: services/dsh/backend/go.sum
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate DSH modular OpenAPI and client
+        run: pnpm --dir services/dsh openapi:verify
+
+      - name: Upload generated contract artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: jrn-025-generated-contract-${{ github.sha }}
+          path: |
+            services/dsh/contracts/generated/dsh.bundle.openapi.yaml
+            services/dsh/clients/generated/dsh-api.ts
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Apply all DSH migrations to PostgreSQL 16
+        shell: bash
+        run: |
+          set -euo pipefail
+          for migration in services/dsh/database/migrations/*.sql; do
+            echo "Applying ${migration}"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
+          done
+
+      - name: Verify JRN-025 marketing domain and database behavior
+        working-directory: services/dsh/backend
+        run: go test ./internal/marketing -run 'TestCampaignTransitionPolicy|TestPartnerOfferTransitionPolicy|TestValidateCampaignDates|TestValidateCampaignActivationWindow|TestMarketingCampaignLifecycleDBIntegration|TestMarketingTickerLifecycleDBIntegration|TestMarketingTargetVisibilityGateDBIntegration'
+
+      - name: Verify JRN-025 HTTP routes and compilation
+        working-directory: services/dsh/backend
+        run: |
+          go test ./internal/http -run '^TestJRN025MarketingRoutesAreRegistered$'
+          go build ./internal/http
+
+      - name: Verify JRN-025 shared brain and affected surfaces
+        run: pnpm --dir services/dsh exec tsc -p tsconfig.jrn-025.json --noEmit --pretty false
+
+      - name: Verify JRN-025 full-stack bindings and negative invariants
+        run: node --test services/dsh/tests/jrn-025-marketing-closure.test.mjs
+
+      - name: Verify DSH modular OpenAPI foundation
+        run: pnpm --dir services/dsh openapi:test
+
+      - name: Reject generated artifact drift
+        run: git diff --exit-code -- services/dsh/contracts/generated/dsh.bundle.openapi.yaml services/dsh/clients/generated/dsh-api.ts
