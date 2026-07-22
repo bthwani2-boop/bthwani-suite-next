@@ -18,11 +18,14 @@ import {
   readCaptainForegroundLocation,
   type DshCaptainLocationPush,
 } from '../../shared/delivery';
+import type { DshDispatchLocationSyncResult } from '../../shared/dispatch/dispatch-location.api';
 
 type LastLocation = {
   readonly latitude: number;
   readonly longitude: number;
+  readonly accuracyMeters: number;
   readonly recordedAt: string;
+  readonly syncState: 'sent' | 'queued';
 };
 
 export interface DshCaptainMapScreenProps {
@@ -31,7 +34,7 @@ export interface DshCaptainMapScreenProps {
   readonly captainId: string;
   readonly currentStageLabel: string;
   readonly onBack: () => void;
-  readonly onPushLocation: (push: DshCaptainLocationPush) => Promise<unknown>;
+  readonly onPushLocation: (push: DshCaptainLocationPush) => Promise<DshDispatchLocationSyncResult>;
 }
 
 export function DshCaptainMapScreen({
@@ -61,14 +64,20 @@ export function DshCaptainMapScreen({
     setSuccessMessage(null);
     try {
       const point = await readCaptainForegroundLocation();
-      await onPushLocation({
+      const recordedAt = new Date().toISOString();
+      const result = await onPushLocation({
         assignmentId,
         latitude: point.latitude,
         longitude: point.longitude,
+        accuracyMeters: point.accuracyMeters,
+        recordedAt,
       });
-      const recordedAt = new Date().toISOString();
-      setLastLocation({ ...point, recordedAt });
-      setSuccessMessage('تم إرسال الموقع الفعلي وربطه بالإسناد النشط.');
+      setLastLocation({ ...point, recordedAt, syncState: result.kind });
+      setSuccessMessage(
+        result.kind === 'sent'
+          ? 'تم إرسال الموقع المصدق وربطه بالإسناد النشط.'
+          : 'الشبكة غير مستقرة. حُفظت آخر عينة للنقل وستعاد مزامنتها عند عودة الاتصال.',
+      );
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'تعذر تحديث الموقع الفعلي.');
     } finally {
@@ -92,18 +101,18 @@ export function DshCaptainMapScreen({
 
           {successMessage ? (
             <Surface tone="raised" padding={3} gap={1}>
-              <Text role="bodyStrong" tone="success">تم تحديث الموقع</Text>
+              <Text role="bodyStrong" tone="success">حالة مزامنة الموقع</Text>
               <Text role="bodySm" tone="success">{successMessage}</Text>
             </Surface>
           ) : null}
 
           <Surface tone="action" gap={3}>
             <View style={styles.headerRow}>
-              <Badge label="GPS فعلي" tone="success" />
+              <Badge label="GPS مصدق" tone="success" />
               <Text role="bodyStrong" style={styles.inverted}>{currentStageLabel}</Text>
             </View>
             <Text role="bodySm" style={styles.inverted}>
-              لا تُعرض أو تُرسل إحداثيات افتراضية. التحديث يتم من صلاحية الموقع الفعلية على الجهاز وفي مقدمة التطبيق فقط.
+              لا تُعرض أو تُرسل إحداثيات افتراضية. لا يقبل DSH العينة إلا بدقة لا تتجاوز 100 متر ومن مقدمة التطبيق فقط.
             </Text>
           </Surface>
 
@@ -124,23 +133,25 @@ export function DshCaptainMapScreen({
 
           <Surface tone="raised" gap={3}>
             <SectionHeader
-              title="آخر موقع أرسل من هذا الجهاز"
-              subtitle="لا يُخزن سجل مسار محلي داخل الشاشة."
+              title="آخر عينة من هذا الجهاز"
+              subtitle="تُحفظ عينة نقل واحدة مؤقتًا عند انقطاع الشبكة، ولا يُنشأ سجل مسار محلي."
             />
             {lastLocation ? (
               <KeyValueList
                 items={[
                   { label: 'خط العرض', value: lastLocation.latitude.toFixed(6) },
                   { label: 'خط الطول', value: lastLocation.longitude.toFixed(6) },
+                  { label: 'الدقة', value: `${Math.round(lastLocation.accuracyMeters)} متر` },
+                  { label: 'المزامنة', value: lastLocation.syncState === 'sent' ? 'أرسلت إلى DSH' : 'بانتظار الشبكة' },
                   {
-                    label: 'وقت الإرسال',
+                    label: 'وقت أخذ العينة',
                     value: new Date(lastLocation.recordedAt).toLocaleString('ar-YE'),
                   },
                 ]}
               />
             ) : (
               <Text role="bodySm" tone="muted">
-                لم يُرسل موقع من هذه الشاشة بعد. استخدم زر التحديث لقراءة GPS الفعلي.
+                لم تؤخذ عينة موقع من هذه الشاشة بعد. استخدم زر التحديث لقراءة GPS الفعلي.
               </Text>
             )}
           </Surface>
@@ -156,7 +167,7 @@ export function DshCaptainMapScreen({
           </Surface>
         </Box>
       }
-      primaryActionLabel="تحديث موقعي الفعلي"
+      primaryActionLabel="تحديث موقعي المصدق"
       tertiaryActionLabel="العودة للتفاصيل"
       onPrimaryAction={() => void pushCurrentLocation()}
       onTertiaryAction={onBack}
