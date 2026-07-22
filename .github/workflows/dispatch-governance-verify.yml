@@ -14,7 +14,7 @@ on:
       - "services/dsh/frontend/app-captain/**"
       - "services/dsh/frontend/control-panel/operations/**Dispatch**"
       - "services/dsh/tests/jrn-014-**"
-      - "tools/guards/jrn-014-**"
+      - "tools/guards/*dispatch*"
       - "governance/**/jrn-014-**"
       - ".github/workflows/dispatch-governance-verify.yml"
   pull_request:
@@ -30,7 +30,7 @@ on:
       - "services/dsh/frontend/app-captain/**"
       - "services/dsh/frontend/control-panel/operations/**Dispatch**"
       - "services/dsh/tests/jrn-014-**"
-      - "tools/guards/jrn-014-**"
+      - "tools/guards/*dispatch*"
       - "governance/**/jrn-014-**"
       - ".github/workflows/dispatch-governance-verify.yml"
   workflow_dispatch:
@@ -109,11 +109,11 @@ jobs:
           cache: pnpm
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
-      - name: Verify contract registry
+      - name: Verify dispatch contract registry
         shell: bash
         run: |
           set -o pipefail
-          pnpm contracts:lint 2>&1 | tee dispatch-contracts.log
+          node tools/guards/dispatch-contract-registry-gate.mjs 2>&1 | tee dispatch-contracts.log
       - name: Upload contract diagnostics
         if: always()
         uses: actions/upload-artifact@v4
