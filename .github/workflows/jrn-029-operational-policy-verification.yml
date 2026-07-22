@@ -4,7 +4,7 @@ name: JRN-029 Operational Policy Verification
 on:
   workflow_dispatch:
   push:
-    branches: [sambassam]
+    branches: [sambassam, "verify/jrn-029-final-20260722"]
     paths: &jrn029_paths
       - "governance/product/contracts/jrn-029-zones-sla-capacity-delivery-modes.product-truth.json"
       - "governance/evidence/JRN-029_FULLSTACK_CLOSURE.json"
@@ -35,8 +35,8 @@ permissions:
   contents: write
 
 concurrency:
-  group: jrn-029-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: jrn-029-${{ github.workflow }}-${{ github.run_id }}
+  cancel-in-progress: false
 
 jobs:
   verify:
@@ -235,16 +235,35 @@ jobs:
           if (contract.owners.productManagerApproval !== 'PENDING' || contract.owners.productOwnerApproval !== 'PENDING' || contract.owners.productAcceptanceDecision !== 'PENDING') process.exit(1);
           NODE
 
-      - name: Publish sovereign OpenAPI from latest remote head
-        if: github.event_name == 'push' && github.ref == 'refs/heads/sambassam'
+      - name: Publish sovereign OpenAPI to sambassam from latest remote head
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          tested_sha="${GITHUB_SHA}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
+          jrn_paths=(
+            services/dsh/database/migrations/dsh-129_jrn029_operational_policy_closure.sql
+            services/dsh/database/migrations/dsh-130_jrn029_store_visibility_projection.sql
+            services/dsh/backend/internal/platformpolicies
+            services/dsh/backend/internal/http/jrn029_operational_policy.go
+            services/dsh/backend/internal/http/jrn029_effects_middleware.go
+            services/dsh/backend/internal/http/jrn_029_operational_policy_routes_test.go
+            services/dsh/backend/cmd/dsh-api/main.go
+            services/dsh/frontend/shared/platform/jrn029-operational-policy.api.ts
+            services/dsh/frontend/control-panel/platform/Jrn029OperationalPolicySection.tsx
+            services/dsh/frontend/control-panel/platform/PlatformPoliciesScreen.tsx
+            services/dsh/tests/jrn-029-operational-policy.test.mjs
+            services/dsh/tsconfig.jrn-029.json
+            tools/scripts/integrate-jrn029-openapi.mjs
+            tools/scripts/finalize-jrn029-openapi.mjs
+          )
           for attempt in 1 2 3; do
             git fetch origin sambassam
+            if ! git diff --quiet "${tested_sha}..origin/sambassam" -- "${jrn_paths[@]}"; then
+              echo "JRN-029 source changed after the tested branch point; refusing untested publication."
+              exit 1
+            fi
             git reset --hard origin/sambassam
             pnpm install --frozen-lockfile
             node tools/scripts/finalize-jrn029-openapi.mjs
@@ -260,7 +279,7 @@ jobs:
             if git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:sambassam; then
               exit 0
             fi
-            echo "Concurrent branch update detected; rebuilding from the latest remote head."
+            echo "Concurrent branch update detected; rebuilding from latest sambassam."
           done
 
           echo "Failed to publish generated JRN-029 contract after retries."
