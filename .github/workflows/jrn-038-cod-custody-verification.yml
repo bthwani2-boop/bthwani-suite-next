@@ -10,6 +10,7 @@ on:
       - "services/wlt/backend/internal/http/server.go"
       - "services/wlt/contracts/jrn-038-cod-custody.openapi.yaml"
       - "services/wlt/database/migrations/wlt-038_cod_custody_evidence_reconciliation.sql"
+      - "services/wlt/database/tests/jrn-038-cod-custody-invariants.sql"
       - "services/dsh/backend/internal/http/actor_finance_handlers.go"
       - "services/dsh/backend/internal/http/jrn038_cod_finance_handlers.go"
       - "services/dsh/backend/internal/http/jrn038_cod_finance_routes.go"
@@ -99,15 +100,14 @@ jobs:
             services/dsh/backend/internal/http/refund_finance_routes.go \
             services/dsh/backend/internal/wlt/actor_finance_client.go)"
 
-      - name: Apply WLT migrations from zero
+      - name: Apply WLT migrations and custody invariants from zero
         shell: bash
         run: |
           for migration in $(find services/wlt/database/migrations -maxdepth 1 -type f -name '*.sql' | sort); do
             echo "Applying ${migration}"
             psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
           done
-          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "SELECT to_regclass('public.wlt_cod_custody_evidence'), to_regclass('public.wlt_cod_reconciliation_cases');"
-          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "SELECT conname FROM pg_constraint WHERE conname = 'wlt_ledger_accounts_type_chk' AND pg_get_constraintdef(oid) LIKE '%cash_variance%';"
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/wlt/database/tests/jrn-038-cod-custody-invariants.sql
 
       - name: Test WLT backend
         working-directory: services/wlt/backend
