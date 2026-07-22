@@ -1,4 +1,4 @@
-# Permanent targeted gate for JRN-024 field visits and store readiness.
+# Permanent targeted gate for JRN-024 field visits, store readiness, contract parity, and PostgreSQL evidence.
 name: JRN-024 Field Readiness Verification
 
 on:
@@ -93,6 +93,13 @@ jobs:
 
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Verify JRN-024 modular contract and generated drift
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm --dir services/dsh openapi:verify
+          git diff --exit-code -- services/dsh/contracts/generated/dsh.bundle.openapi.yaml services/dsh/clients/generated/dsh-api.ts
 
       - name: Verify JRN-024 backend domain and HTTP compilation
         id: backend_verify
