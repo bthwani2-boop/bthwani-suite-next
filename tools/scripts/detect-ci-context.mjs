@@ -28,6 +28,8 @@ export function classifyFiles(inputFiles, options = {}) {
   const equals = (...names) => has((file) => names.includes(file));
   const includes = (...parts) => has((file) => parts.some((part) => file.includes(part)));
 
+  const workspaceManifest = equals("package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "nx.json");
+
   const workflow = full || starts(".github/") || has((file) =>
     file === "tools/scripts/run-actionlint.mjs" ||
     file === "tools/scripts/run-zizmor.mjs" ||
@@ -35,10 +37,14 @@ export function classifyFiles(inputFiles, options = {}) {
   );
 
   const governance = full || equals("AGENTS.md", "GEMINI.md") || starts(".agents/", "governance/") || has((file) =>
-    file.startsWith("tools/guards/") ||
-    file === "package.json" ||
-    file === "pnpm-lock.yaml"
+    file.startsWith("tools/guards/") || workspaceManifest
   );
+
+  const infrastructure = full || starts("infra/") || has((file) =>
+    /(^|\/)Dockerfile(?:\.|$)/.test(file) ||
+    file.endsWith(".dockerfile")
+  );
+  const security = workflow || starts("governance/security/", "tools/security/");
 
   const dsh = full || starts("services/dsh/");
   const wlt = full || starts("services/wlt/");
@@ -47,10 +53,16 @@ export function classifyFiles(inputFiles, options = {}) {
   const platform = full || starts("core/platform-control/");
   const providers = full || starts("core/providers/");
 
-  const frontend = full || starts("apps/", "shared/") || includes("/frontend/");
+  const frontend = full || workspaceManifest || starts("apps/", "shared/") || includes("/frontend/");
   const contracts = full || starts("contracts/") || includes("/contracts/", "/clients/generated/") || has((file) => file.endsWith(".openapi.yaml"));
   const database = full || includes("/database/", "/migrations/") || starts("infra/docker/");
-  const runtime = full || starts("infra/") || includes("/runtime/") || has((file) => file.endsWith("service.manifest.ts"));
+  const runtime = full || starts("infra/") || has((file) =>
+    file.endsWith("service.manifest.ts") ||
+    file.endsWith("start.ps1") ||
+    /(^|\/)(next|metro|babel|app)\.config\.[cm]?[jt]s$/.test(file) ||
+    /(^|\/)eas\.json$/.test(file) ||
+    /(^|\/)runtime\.env(?:\.|$)/.test(file)
+  );
 
   const sharedBrain = full || starts("shared/", "services/dsh/frontend/shared/", "services/wlt/frontend/shared/") || equals(
     "contracts/master.openapi.yaml",
@@ -68,7 +80,8 @@ export function classifyFiles(inputFiles, options = {}) {
     file.startsWith("governance/product/") ||
     file.startsWith("governance/product-truth/") ||
     file.startsWith("governance/evidence/") ||
-    /tools\/guards\/jrn[-_]?\d{3}/i.test(file)
+    /tools\/guards\/jrn[-_]?\d{3}/i.test(file) ||
+    file === "tools/scripts/run-journey-gate.ps1"
   );
 
   const jrn040 = manualJourney === "JRN-040" || journeyIds.has("JRN-040") || has((file) =>
@@ -77,8 +90,8 @@ export function classifyFiles(inputFiles, options = {}) {
     file === "services/dsh/frontend/control-panel/platform/PlatformChangeWorkflowPanel.tsx"
   );
 
-  const heavy = full || sharedBrain || database || runtime || (contracts && frontend);
-  const policy = governance || workflow;
+  const heavy = full || workspaceManifest || sharedBrain || database || runtime || (contracts && frontend);
+  const policy = governance || workflow || infrastructure || security;
   const node = frontend || contracts || journey || jrn040;
 
   let journeyScope = "";
@@ -103,6 +116,8 @@ export function classifyFiles(inputFiles, options = {}) {
     changed_count: files.length,
     governance,
     workflow,
+    infrastructure,
+    security,
     policy,
     frontend,
     contracts,
