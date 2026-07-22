@@ -12,19 +12,17 @@ import (
 	"github.com/google/uuid"
 )
 
-// Permission constants for the partner_delivery domain. No central registry
-// exists in this repo -- constants are declared next to their handler file,
-// mirroring OperationsPermissionRead/Manage in orders.go.
 const (
 	PartnerDeliveryPermissionRead   = "partner_delivery.read"
-	PartnerDeliveryPermissionManage = "partner_delivery.manage" // operator monitoring/exception actions
+	PartnerDeliveryPermissionManage = "partner_delivery.manage"
 )
 
 type partnerDeliveryMutationBody struct {
-	ExpectedVersion int    `json:"expectedVersion"`
-	CommandID       string `json:"commandId"`
-	CorrelationID   string `json:"correlationId"`
-	Reason          string `json:"reason"`
+	ExpectedVersion   int      `json:"expectedVersion"`
+	CommandID         string   `json:"commandId"`
+	CorrelationID     string   `json:"correlationId"`
+	Reason            string   `json:"reason"`
+	EvidenceReferences []string `json:"evidenceReferences"`
 }
 
 type assignPartnerDeliveryBody struct {
@@ -38,9 +36,6 @@ type submitPartnerDeliveryProofBody struct {
 	ProofReference string `json:"proofReference"`
 }
 
-// operationalCorrelationID mirrors specialRequestCorrelationID's
-// header-or-generated behavior: a request-body correlationId wins, then the
-// X-Correlation-ID header, then a freshly generated one.
 func operationalCorrelationID(r *http.Request, bodyValue string) string {
 	if strings.TrimSpace(bodyValue) != "" {
 		return bodyValue
@@ -61,6 +56,8 @@ func writePartnerDeliveryError(w http.ResponseWriter, err error) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "partner delivery task not found")
 	case errors.Is(err, partnerdelivery.ErrVersionConflict):
 		store.SendError(w, http.StatusConflict, "VERSION_CONFLICT", "partner delivery task version changed; reload before retrying")
+	case errors.Is(err, partnerdelivery.ErrIdempotencyConflict):
+		store.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", "commandId was already used with different partner delivery input")
 	case errors.Is(err, partnerdelivery.ErrAlreadyAssigned):
 		store.SendError(w, http.StatusConflict, "PARTNER_DELIVERY_ALREADY_ASSIGNED", err.Error())
 	case errors.Is(err, partnerdelivery.ErrNotReadyForAssignment):
@@ -78,26 +75,28 @@ func writePartnerDeliveryError(w http.ResponseWriter, err error) {
 
 func marshalPartnerDeliveryTask(t *partnerdelivery.PartnerDeliveryTask) map[string]any {
 	return map[string]any{
-		"id":             t.ID,
-		"orderId":        t.OrderID,
-		"storeId":        t.StoreID,
-		"branchId":       t.BranchID,
-		"storeCourierId": t.StoreCourierID,
-		"status":         t.Status,
-		"assignedAt":     t.AssignedAt,
-		"pickedUpAt":     t.PickedUpAt,
-		"departedAt":     t.DepartedAt,
-		"arrivedAt":      t.ArrivedAt,
-		"proofMethod":    t.ProofMethod,
-		"proofReference": t.ProofReference,
-		"completedAt":    t.CompletedAt,
-		"version":        t.Version,
-		"createdAt":      t.CreatedAt,
-		"updatedAt":      t.UpdatedAt,
+		"id":                          t.ID,
+		"orderId":                     t.OrderID,
+		"storeId":                     t.StoreID,
+		"branchId":                    t.BranchID,
+		"storeCourierId":              t.StoreCourierID,
+		"status":                      t.Status,
+		"assignedAt":                  t.AssignedAt,
+		"pickedUpAt":                  t.PickedUpAt,
+		"departedAt":                  t.DepartedAt,
+		"arrivedAt":                   t.ArrivedAt,
+		"proofMethod":                 t.ProofMethod,
+		"proofReference":              t.ProofReference,
+		"completedAt":                 t.CompletedAt,
+		"exceptionReason":             t.ExceptionReason,
+		"exceptionEvidenceReferences": t.ExceptionEvidenceReferences,
+		"exceptionReportedAt":         t.ExceptionReportedAt,
+		"version":                     t.Version,
+		"createdAt":                   t.CreatedAt,
+		"updatedAt":                   t.UpdatedAt,
 	}
 }
 
-// POST /dsh/partner/orders/{orderId}/partner-delivery/assign
 func (s *protectedStoreServer) handleAssignPartnerDelivery(w http.ResponseWriter, r *http.Request) {
 	actor, ownedOrder, ok := s.partnerOrder(w, r)
 	if !ok {
@@ -107,16 +106,18 @@ func (s *protectedStoreServer) handleAssignPartnerDelivery(w http.ResponseWriter
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	if body.CommandID == "" {
+	if strings.TrimSpace(body.CommandID) == "" {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "commandId is required")
 		return
 	}
-	if body.StoreCourierID == "" {
+	if strings.TrimSpace(body.StoreCourierID) == "" {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "storeCourierId is required")
 		return
 	}
-	svc := partnerdelivery.NewService(s.db)
-	task, err := svc.AssignCourier(r.Context(), ownedOrder.ID, body.StoreCourierID, actor.ID, actor.Role, partnerDeliveryCorrelationID(r, body.CorrelationID))
+	correlationID := partnerDeliveryCorrelationID(r, body.CorrelationID)
+	task, err := partnerdelivery.NewService(s.db).AssignCourierCommand(
+		r.Context(), ownedOrder.ID, body.StoreCourierID, actor.ID, actor.Role, correlationID, body.CommandID,
+	)
 	if err != nil {
 		writePartnerDeliveryError(w, err)
 		return
@@ -124,31 +125,29 @@ func (s *protectedStoreServer) handleAssignPartnerDelivery(w http.ResponseWriter
 	store.SendJSON(w, http.StatusOK, map[string]any{"task": marshalPartnerDeliveryTask(task)})
 }
 
-// POST /dsh/partner/orders/{orderId}/partner-delivery/pickup
 func (s *protectedStoreServer) handlePartnerDeliveryPickup(w http.ResponseWriter, r *http.Request) {
-	s.handlePartnerDeliveryTaskTransition(w, r, func(svc *partnerdelivery.Service, taskID string, version int, actorID, actorRole, correlationID string) (*partnerdelivery.PartnerDeliveryTask, error) {
-		return svc.MarkPickedUp(r.Context(), taskID, version, actorID, actorRole, correlationID)
+	s.handlePartnerDeliveryTaskTransition(w, r, func(svc *partnerdelivery.Service, taskID string, version int, actorID, actorRole, correlationID, commandID string) (*partnerdelivery.PartnerDeliveryTask, error) {
+		return svc.MarkPickedUpCommand(r.Context(), taskID, version, actorID, actorRole, correlationID, commandID)
 	})
 }
 
-// POST /dsh/partner/orders/{orderId}/partner-delivery/depart
 func (s *protectedStoreServer) handlePartnerDeliveryDepart(w http.ResponseWriter, r *http.Request) {
-	s.handlePartnerDeliveryTaskTransition(w, r, func(svc *partnerdelivery.Service, taskID string, version int, actorID, actorRole, correlationID string) (*partnerdelivery.PartnerDeliveryTask, error) {
-		return svc.MarkDeparted(r.Context(), taskID, version, actorID, actorRole, correlationID)
+	s.handlePartnerDeliveryTaskTransition(w, r, func(svc *partnerdelivery.Service, taskID string, version int, actorID, actorRole, correlationID, commandID string) (*partnerdelivery.PartnerDeliveryTask, error) {
+		return svc.MarkDepartedCommand(r.Context(), taskID, version, actorID, actorRole, correlationID, commandID)
 	})
 }
 
-// POST /dsh/partner/orders/{orderId}/partner-delivery/arrive
 func (s *protectedStoreServer) handlePartnerDeliveryArrive(w http.ResponseWriter, r *http.Request) {
-	s.handlePartnerDeliveryTaskTransition(w, r, func(svc *partnerdelivery.Service, taskID string, version int, actorID, actorRole, correlationID string) (*partnerdelivery.PartnerDeliveryTask, error) {
-		return svc.MarkArrived(r.Context(), taskID, version, actorID, actorRole, correlationID)
+	s.handlePartnerDeliveryTaskTransition(w, r, func(svc *partnerdelivery.Service, taskID string, version int, actorID, actorRole, correlationID, commandID string) (*partnerdelivery.PartnerDeliveryTask, error) {
+		return svc.MarkArrivedCommand(r.Context(), taskID, version, actorID, actorRole, correlationID, commandID)
 	})
 }
 
-// handlePartnerDeliveryTaskTransition is shared plumbing for the
-// pickup/depart/arrive partner-side actions: resolve and authorize the order,
-// resolve the task by orderId, decode the common mutation body, and delegate.
-func (s *protectedStoreServer) handlePartnerDeliveryTaskTransition(w http.ResponseWriter, r *http.Request, call func(svc *partnerdelivery.Service, taskID string, version int, actorID, actorRole, correlationID string) (*partnerdelivery.PartnerDeliveryTask, error)) {
+func (s *protectedStoreServer) handlePartnerDeliveryTaskTransition(
+	w http.ResponseWriter,
+	r *http.Request,
+	call func(svc *partnerdelivery.Service, taskID string, version int, actorID, actorRole, correlationID, commandID string) (*partnerdelivery.PartnerDeliveryTask, error),
+) {
 	actor, ownedOrder, ok := s.partnerOrder(w, r)
 	if !ok {
 		return
@@ -157,17 +156,19 @@ func (s *protectedStoreServer) handlePartnerDeliveryTaskTransition(w http.Respon
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	if body.CommandID == "" {
+	if strings.TrimSpace(body.CommandID) == "" {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "commandId is required")
 		return
 	}
-	svc := partnerdelivery.NewService(s.db)
 	task, err := partnerdelivery.GetByOrderID(s.db, ownedOrder.ID)
 	if err != nil {
 		writePartnerDeliveryError(w, err)
 		return
 	}
-	updated, err := call(svc, task.ID, body.ExpectedVersion, actor.ID, actor.Role, partnerDeliveryCorrelationID(r, body.CorrelationID))
+	updated, err := call(
+		partnerdelivery.NewService(s.db), task.ID, body.ExpectedVersion, actor.ID, actor.Role,
+		partnerDeliveryCorrelationID(r, body.CorrelationID), body.CommandID,
+	)
 	if err != nil {
 		writePartnerDeliveryError(w, err)
 		return
@@ -175,7 +176,6 @@ func (s *protectedStoreServer) handlePartnerDeliveryTaskTransition(w http.Respon
 	store.SendJSON(w, http.StatusOK, map[string]any{"task": marshalPartnerDeliveryTask(updated)})
 }
 
-// POST /dsh/partner/orders/{orderId}/partner-delivery/proof
 func (s *protectedStoreServer) handlePartnerDeliveryProof(w http.ResponseWriter, r *http.Request) {
 	actor, ownedOrder, ok := s.partnerOrder(w, r)
 	if !ok {
@@ -185,7 +185,7 @@ func (s *protectedStoreServer) handlePartnerDeliveryProof(w http.ResponseWriter,
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	if body.CommandID == "" {
+	if strings.TrimSpace(body.CommandID) == "" {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "commandId is required")
 		return
 	}
@@ -194,8 +194,11 @@ func (s *protectedStoreServer) handlePartnerDeliveryProof(w http.ResponseWriter,
 		writePartnerDeliveryError(w, err)
 		return
 	}
-	svc := partnerdelivery.NewService(s.db)
-	updated, err := svc.SubmitProof(r.Context(), task.ID, body.ExpectedVersion, body.ProofMethod, body.ProofReference, actor.ID, actor.Role, partnerDeliveryCorrelationID(r, body.CorrelationID))
+	correlationID := partnerDeliveryCorrelationID(r, body.CorrelationID)
+	updated, err := partnerdelivery.NewService(s.db).SubmitProofCommand(
+		r.Context(), task.ID, body.ExpectedVersion, body.ProofMethod, body.ProofReference,
+		actor.ID, actor.Role, correlationID, body.CommandID,
+	)
 	if err != nil {
 		writePartnerDeliveryError(w, err)
 		return
@@ -203,22 +206,21 @@ func (s *protectedStoreServer) handlePartnerDeliveryProof(w http.ResponseWriter,
 	store.SendJSON(w, http.StatusOK, map[string]any{"task": marshalPartnerDeliveryTask(updated)})
 }
 
-// POST /dsh/partner/orders/{orderId}/partner-delivery/exception
 func (s *protectedStoreServer) handlePartnerDeliveryException(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requirePermission(w, r, "control-panel", PartnerDeliveryPermissionManage, "operator")
 	if !ok {
 		return
 	}
-	orderID := r.PathValue("orderId")
+	orderID := strings.TrimSpace(r.PathValue("orderId"))
 	var body partnerDeliveryMutationBody
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	if body.CommandID == "" {
+	if strings.TrimSpace(body.CommandID) == "" {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "commandId is required")
 		return
 	}
-	if body.Reason == "" {
+	if strings.TrimSpace(body.Reason) == "" {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "reason is required")
 		return
 	}
@@ -227,8 +229,11 @@ func (s *protectedStoreServer) handlePartnerDeliveryException(w http.ResponseWri
 		writePartnerDeliveryError(w, err)
 		return
 	}
-	svc := partnerdelivery.NewService(s.db)
-	updated, err := svc.RaiseException(r.Context(), task.ID, body.ExpectedVersion, body.Reason, actor.ID, actor.Role, partnerDeliveryCorrelationID(r, body.CorrelationID))
+	correlationID := partnerDeliveryCorrelationID(r, body.CorrelationID)
+	updated, err := partnerdelivery.NewService(s.db).RaiseExceptionCommand(
+		r.Context(), task.ID, body.ExpectedVersion, body.Reason, body.EvidenceReferences,
+		actor.ID, actor.Role, correlationID, body.CommandID,
+	)
 	if err != nil {
 		writePartnerDeliveryError(w, err)
 		return
@@ -236,7 +241,6 @@ func (s *protectedStoreServer) handlePartnerDeliveryException(w http.ResponseWri
 	store.SendJSON(w, http.StatusOK, map[string]any{"task": marshalPartnerDeliveryTask(updated)})
 }
 
-// GET /dsh/operator/partner-deliveries
 func (s *protectedStoreServer) handleListOperatorPartnerDeliveries(w http.ResponseWriter, r *http.Request) {
 	_, ok := s.requirePermission(w, r, "control-panel", PartnerDeliveryPermissionRead, "operator")
 	if !ok {
@@ -260,7 +264,6 @@ func (s *protectedStoreServer) handleListOperatorPartnerDeliveries(w http.Respon
 	store.SendJSON(w, http.StatusOK, map[string]any{"tasks": results})
 }
 
-// GET /dsh/operator/partner-deliveries/{taskId}
 func (s *protectedStoreServer) handleGetOperatorPartnerDelivery(w http.ResponseWriter, r *http.Request) {
 	_, ok := s.requirePermission(w, r, "control-panel", PartnerDeliveryPermissionRead, "operator")
 	if !ok {
@@ -274,12 +277,6 @@ func (s *protectedStoreServer) handleGetOperatorPartnerDelivery(w http.ResponseW
 	store.SendJSON(w, http.StatusOK, map[string]any{"task": marshalPartnerDeliveryTask(task)})
 }
 
-// GET /dsh/operator/partner-deliveries/order/{orderId}
-// Lets the LiveOrders operator surface resolve a partner-delivery task's
-// current version by orderId (the only key it holds), mirroring
-// handleGetOperatorPickup's by-orderId lookup. Required before an operator
-// can raise an exception, since that mutation is optimistic-concurrency
-// gated on expectedVersion.
 func (s *protectedStoreServer) handleGetOperatorPartnerDeliveryByOrder(w http.ResponseWriter, r *http.Request) {
 	_, ok := s.requirePermission(w, r, "control-panel", PartnerDeliveryPermissionRead, "operator")
 	if !ok {
@@ -293,7 +290,6 @@ func (s *protectedStoreServer) handleGetOperatorPartnerDeliveryByOrder(w http.Re
 	store.SendJSON(w, http.StatusOK, map[string]any{"task": marshalPartnerDeliveryTask(task)})
 }
 
-// GET /dsh/partner/orders/{orderId}/return-to-store
 func (s *protectedStoreServer) handleGetPartnerReturnToStore(w http.ResponseWriter, r *http.Request) {
 	_, order, ok := s.partnerOrder(w, r)
 	if !ok {
@@ -307,7 +303,6 @@ func (s *protectedStoreServer) handleGetPartnerReturnToStore(w http.ResponseWrit
 	store.SendJSON(w, http.StatusOK, map[string]any{"exception": marshalDeliveryException(item)})
 }
 
-// POST /dsh/partner/orders/{orderId}/return-to-store/accept
 func (s *protectedStoreServer) handleAcceptPartnerReturnToStore(w http.ResponseWriter, r *http.Request) {
 	actor, order, ok := s.partnerOrder(w, r)
 	if !ok {
