@@ -28,7 +28,17 @@ jobs:
         with:
           node-version: 24.17.0
       - name: Apply guarded repository repairs
-        run: node tools/important-scripts/close-repository-debt.mjs
+        shell: bash
+        run: |
+          set -o pipefail
+          node tools/important-scripts/close-repository-debt.mjs 2>&1 | tee repository-debt-repair.log
+      - name: Preserve repair diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: repository-debt-repair-log
+          path: repository-debt-repair.log
+          retention-days: 7
       - name: Show proposed repairs on pull request
         if: github.event_name == 'pull_request'
         run: git diff --stat && git diff --check
