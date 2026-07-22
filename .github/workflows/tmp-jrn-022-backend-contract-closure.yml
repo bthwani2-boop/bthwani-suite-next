@@ -67,7 +67,20 @@ jobs:
         run: |
           set -o pipefail
           {
-            gofmt -w services/dsh/backend/internal/specialrequests services/dsh/backend/internal/http services/dsh/backend/internal/dispatch
+            gofmt -w \
+              services/dsh/backend/internal/specialrequests/information_exchange.go \
+              services/dsh/backend/internal/specialrequests/information_exchange_test.go \
+              services/dsh/backend/internal/specialrequests/execution.go \
+              services/dsh/backend/internal/specialrequests/workflow_stages.go \
+              services/dsh/backend/internal/http/specialrequests_information.go \
+              services/dsh/backend/internal/http/specialrequests_execution.go \
+              services/dsh/backend/internal/http/specialrequests.go \
+              services/dsh/backend/internal/http/server.go \
+              services/dsh/backend/internal/http/jrn_022_special_requests_routes_test.go \
+              services/dsh/backend/internal/http/dispatch.go \
+              services/dsh/backend/internal/http/subscription_lifecycle_governed.go \
+              services/dsh/backend/internal/dispatch/delivery_exceptions.go \
+              services/dsh/backend/internal/dispatch/delivery_exceptions_special_requests.go
             cd services/dsh/backend
             go test ./internal/specialrequests ./internal/http ./internal/dispatch -run 'Test(JRN022SpecialRequestRoutes|CanonicalSpecialRequestStagesAreKnownToService|DefaultWorkflowStageMatchesCustomerAndDeliveryReadback|InformationExchangeValidationAndCanonicalStage)$' -count=1
             go build ./internal/http ./internal/dispatch ./internal/specialrequests
@@ -110,7 +123,9 @@ jobs:
           {
             git config user.name "bthwani-journey-closure"
             git config user.email "actions@users.noreply.github.com"
-            git checkout HEAD -- .github/workflows/tmp-jrn-022-backend-contract-closure.yml
+            git checkout HEAD -- \
+              .github/workflows/tmp-jrn-022-backend-contract-closure.yml \
+              .github/workflows/jrn-022-special-requests-verification.yml
             git status --short
             git add -A
             git commit -m "feat(jrn-022): close information evidence and exception backend slices [skip ci]"
