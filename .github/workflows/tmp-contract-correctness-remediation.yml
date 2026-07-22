@@ -13,14 +13,14 @@ on:
       - "tools/scripts/tmp-contract-correctness-remediation.py"
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: temporary-contract-correctness-remediation
   cancel-in-progress: false
 
 jobs:
-  remediate:
+  diagnose:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -29,25 +29,25 @@ jobs:
         with:
           ref: sambassam
           fetch-depth: 0
-          persist-credentials: true
-      - name: Apply safe contract corrections
+          persist-credentials: false
+      - name: Apply safe contract corrections in diagnostic workspace
         run: python tools/scripts/tmp-contract-correctness-remediation.py
-      - name: Verify parser repair
-        run: node tools/guards/_openapi-utils.test.mjs
-      - name: Commit repaired contracts
+      - name: Capture parser verification
         shell: bash
         run: |
-          set -euo pipefail
-          git config user.name "bthwani-governance-bot"
-          git config user.email "actions@users.noreply.github.com"
-          git add tools/guards/_openapi-utils.mjs tools/guards/_openapi-utils.test.mjs services/dsh/contracts/dsh.jrn-010-checkout.openapi.yaml services/wlt/contracts/jrn-036-settlements-commissions.openapi.yaml
-          if git diff --cached --quiet; then
-            echo "No correctness changes required."
-            exit 0
-          fi
-          git commit -m "fix(contracts): resolve modular parameters and financial gates"
-          for attempt in 1 2 3; do
-            if git push origin HEAD:sambassam; then exit 0; fi
-            git pull --rebase origin sambassam
-          done
-          exit 1
+          set +e
+          mkdir -p contract-correctness-diagnostic
+          node tools/guards/_openapi-utils.test.mjs > contract-correctness-diagnostic/parser-test.log 2>&1
+          printf '\nexit=%s\n' "$?" >> contract-correctness-diagnostic/parser-test.log
+          cp tools/guards/_openapi-utils.mjs contract-correctness-diagnostic/openapi-utils.mjs
+          cp tools/guards/_openapi-utils.test.mjs contract-correctness-diagnostic/openapi-utils.test.mjs
+          cp services/dsh/contracts/dsh.jrn-010-checkout.openapi.yaml contract-correctness-diagnostic/dsh.jrn-010-checkout.openapi.yaml
+          cp services/wlt/contracts/jrn-036-settlements-commissions.openapi.yaml contract-correctness-diagnostic/jrn-036-settlements-commissions.openapi.yaml
+          exit 0
+      - name: Upload transformed diagnostic
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: contract-correctness-diagnostic
+          path: contract-correctness-diagnostic
+          if-no-files-found: error
+          retention-days: 1
