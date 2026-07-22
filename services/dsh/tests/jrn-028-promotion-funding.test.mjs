@@ -11,6 +11,8 @@ const verifier = read("tools/verification/jrn-028-all-slices.sh");
 const wltServer = read("services/wlt/backend/internal/http/server.go");
 const wltJSON = read("services/wlt/backend/internal/promotionfunding/reservation_json.go");
 const serviceAuth = read("services/wlt/backend/internal/shared/serviceauth.go");
+const wltFundingContract = read("services/wlt/contracts/wlt.promotion-funding.openapi.yaml");
+const dshMarketingContract = read("services/dsh/contracts/dsh.marketing-commercial.openapi.yaml");
 const dshReadback = read("services/dsh/backend/internal/wlt/promotion_funding_read.go");
 const diagnostics = read("services/dsh/backend/internal/coupons/funding_diagnostics.go");
 const couponsHTTP = read("services/dsh/backend/internal/http/coupons.go");
@@ -79,13 +81,24 @@ const slices = [
     assert.doesNotMatch(panel, /idempotencyKey/i);
     assert.doesNotMatch(couponsHTTP, /idempotencyKey/i);
   }],
-  ["FS-17 contract and duplicate-owner hygiene", () => {
+  ["FS-17 scoped contracts, manual adapters and duplicate-owner hygiene", () => {
+    assert.match(wltFundingContract, /x-bthwani-owner: services\/wlt/);
+    assert.match(wltFundingContract, /x-bthwani-client-generation: DISABLED/);
+    assert.match(wltFundingContract, /x-bthwani-client-binding: MANUAL_TYPED_ADAPTER/);
+    assert.match(wltFundingContract, /operationId: reserveWltPromotionFunding/);
+    assert.match(wltFundingContract, /operationId: getWltPromotionFundingReservation/);
+    assert.match(wltFundingContract, /operationId: commitWltPromotionFunding/);
+    assert.match(wltFundingContract, /operationId: releaseWltPromotionFunding/);
+    assert.match(wltFundingContract, /operationId: reverseWltPromotionFunding/);
+    assert.match(dshMarketingContract, /x-bthwani-owner: services\/dsh/);
+    assert.match(dshMarketingContract, /x-bthwani-client-generation: DISABLED/);
+    assert.match(dshMarketingContract, /x-bthwani-client-binding: MANUAL_TYPED_ADAPTER/);
+    assert.match(dshMarketingContract, /operationId: listDshMarketingCoupons/);
     assert.match(productTruth, /Manual control-panel commit, release, and reverse actions are intentionally absent/);
     assert.match(productTruth, /The control panel compares DSH projection with an authenticated WLT readback/);
     assert.match(verifier, /product-truth-gate\.mjs/);
     assert.match(verifier, /dsh-openapi-modular-gate\.mjs/);
-    assert.match(verifier, /openapi:generate/);
-    assert.match(verifier, /git diff --exit-code/);
+    assert.match(verifier, /openapi:compose/);
     assert.doesNotMatch(panel, /fetch\s*\(/);
   }],
   ["FS-18 exact-head integrated zero-gate and closure record", () => {
