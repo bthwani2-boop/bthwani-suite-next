@@ -46,12 +46,18 @@ export type FieldCommission = {
   readonly sourceId: string;
   readonly visitId: string | null;
   readonly storeId: string | null;
-  readonly partnerId: string | null;
   readonly commissionPolicyId: string | null;
+  readonly commissionType: string;
   readonly amountMinorUnits: number;
   readonly currency: string;
   readonly status: string;
-  readonly idempotencyKey: string | null;
+  readonly settledAt: string | null;
+  readonly confirmedAt: string | null;
+  readonly rejectedAt: string | null;
+  readonly reversedAt: string | null;
+  readonly resolutionNote: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
 };
 
 export type FieldPayoutRequest = {
@@ -102,8 +108,10 @@ export async function fetchFieldMeCommissions(): Promise<
   | { ok: false; message: string }
 > {
   try {
-    const data = await fieldGet<{ commissions: FieldCommission[] }>("/dsh/field/me/finance/commissions");
-    return { ok: true, commissions: data.commissions };
+    const data = await fieldGet<{ commissions: FieldCommission[] }>(
+      "/dsh/field/me/finance/commissions",
+    );
+    return { ok: true, commissions: data.commissions ?? [] };
   } catch (error) {
     return { ok: false, message: messageFrom(error) };
   }
@@ -114,8 +122,10 @@ export async function fetchFieldMePayoutRequests(): Promise<
   | { ok: false; message: string }
 > {
   try {
-    const data = await fieldGet<{ payoutRequests: FieldPayoutRequest[] }>("/dsh/field/me/finance/payout-requests");
-    return { ok: true, payoutRequests: data.payoutRequests };
+    const data = await fieldGet<{ payoutRequests: FieldPayoutRequest[] }>(
+      "/dsh/field/me/finance/payout-requests",
+    );
+    return { ok: true, payoutRequests: data.payoutRequests ?? [] };
   } catch (error) {
     return { ok: false, message: messageFrom(error) };
   }
@@ -130,11 +140,14 @@ export async function submitFieldMePayoutRequest(
   | { ok: false; message: string }
 > {
   try {
-    const data = await fieldGet<{ payoutRequest: FieldPayoutRequest }>("/dsh/field/me/finance/payout-requests", {
-      method: "POST",
-      body: { amountMinorUnits, currency, idempotencyKey },
-      idempotencyKey,
-    });
+    const data = await fieldGet<{ payoutRequest: FieldPayoutRequest }>(
+      "/dsh/field/me/finance/payout-requests",
+      {
+        method: "POST",
+        body: { amountMinorUnits, currency, idempotencyKey },
+        idempotencyKey,
+      },
+    );
     return { ok: true, payoutRequest: data.payoutRequest };
   } catch (error) {
     return { ok: false, message: messageFrom(error) };
