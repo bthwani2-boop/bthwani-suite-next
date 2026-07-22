@@ -1,0 +1,60 @@
+name: JRN-036 settlement and commission verification
+
+on:
+  push:
+    branches: [sambassam]
+    paths:
+      - 'governance/product/contracts/jrn-036-settlements-commissions.product-truth.json'
+      - 'services/wlt/backend/internal/cod/**'
+      - 'services/wlt/backend/internal/settlement/**'
+      - 'services/wlt/backend/internal/http/server.go'
+      - 'services/wlt/database/migrations/wlt-090_jrn036_settlement_commission_governance.sql'
+      - 'services/dsh/backend/internal/http/finance_settlement_sources.go'
+      - 'services/dsh/frontend/shared/finance-wlt-link/jrn036/**'
+      - 'services/dsh/frontend/app-captain/account/DshCaptainFinanceScreen.tsx'
+      - 'services/dsh/frontend/app-field/finance/DshFieldFinanceScreen.tsx'
+      - 'services/dsh/frontend/app-partner/**'
+      - 'services/dsh/frontend/control-panel/finance/**'
+      - 'services/wlt/contracts/jrn-036-settlements-commissions.openapi.yaml'
+      - 'tools/guards/jrn-036-settlement-commission-gate.mjs'
+      - '.github/workflows/jrn-036-settlement-commission-verification.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jrn-036-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  governed-finance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact branch commit
+        uses: actions/checkout@v4
+      - name: Set up Go from WLT module
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: services/wlt/backend/go.mod
+          cache-dependency-path: services/wlt/backend/go.sum
+      - name: Format gate
+        run: |
+          unformatted=$(gofmt -l \
+            services/wlt/backend/internal/cod/jrn036_governed_commission.go \
+            services/wlt/backend/internal/cod/jrn036_governed_lifecycle.go \
+            services/wlt/backend/internal/cod/jrn036_governed_commission_test.go \
+            services/wlt/backend/internal/settlement/jrn036_evidence_settlement.go \
+            services/wlt/backend/internal/settlement/jrn036_evidence_settlement_test.go \
+            services/wlt/backend/internal/http/server.go \
+            services/dsh/backend/internal/http/finance_settlement_sources.go)
+          test -z "$unformatted" || { echo "$unformatted"; exit 1; }
+      - name: WLT targeted tests
+        working-directory: services/wlt/backend
+        run: go test ./internal/cod ./internal/settlement ./internal/http
+      - name: DSH backend compile and targeted tests
+        working-directory: services/dsh/backend
+        run: go test ./internal/http ./internal/wlt
+      - name: Product, contract, migration and boundary gate
+        run: node tools/guards/jrn-036-settlement-commission-gate.mjs
