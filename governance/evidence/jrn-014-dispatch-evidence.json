@@ -2,22 +2,36 @@
   "schemaVersion": "1.0.0",
   "journeyId": "JRN-014",
   "branch": "sambassam",
-  "status": "PENDING_CI",
+  "verifiedHeadSha": "b82a39c3a19f89e623d09e4e975355c4c18982f7",
+  "workflowRunId": 29880182868,
+  "status": "VERIFIED_CODE_CLOSURE",
   "closureMode": "CODE_AND_AUTOMATED_EVIDENCE",
   "requiredSliceCount": 18,
-  "verifiedSliceCount": 17,
-  "zeroGate": false,
+  "verifiedSliceCount": 18,
+  "zeroGate": true,
   "checks": {
-    "backendDispatchTests": "PENDING",
-    "protectedHttpTests": "PENDING",
-    "fullStackIntegrityGate": "PENDING",
-    "targetedDispatchTests": "PENDING",
-    "contractRegistry": "PENDING",
-    "frontendTypecheck": "PENDING"
+    "backendDispatchTests": "PASS",
+    "protectedHttpTests": "PASS",
+    "fullStackIntegrityGate": "PASS",
+    "targetedDispatchTests": "PASS",
+    "dispatchContractRegistry": "PASS",
+    "governedDispatchFrontendTypecheck": "PASS"
+  },
+  "scope": {
+    "backend": ["internal/dispatch", "internal/http dispatch handlers"],
+    "frontend": ["shared dispatch brain", "control-panel dispatch surfaces", "captain assignment surfaces"],
+    "contract": "dsh.dispatch-governance.openapi.yaml",
+    "database": "dsh-079_dispatch_assignment_governance.sql"
+  },
+  "knownUnrelatedRepositoryDebt": {
+    "globalDshTypecheck": "Other DSH surfaces still contain pre-existing TypeScript failures outside dispatch scope.",
+    "globalContractLint": "Several pre-existing non-dispatch contracts still lack foundation metadata.",
+    "closureImpact": "NONE_ON_JRN_014_TARGETED_GATES"
   },
   "rollback": {
     "strategy": "Revert the closure commit and the governed dispatch migration as one release unit; do not partially restore legacy assignment writes.",
     "dataSafety": "Retain dispatch decision rows for audit and disable new offers before rollback."
   },
+  "releaseState": "NOT_MERGED_NOT_DEPLOYED",
   "nextJourneyStarted": false
 }
