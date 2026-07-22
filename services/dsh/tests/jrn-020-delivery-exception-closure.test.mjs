@@ -8,6 +8,9 @@ async function source(relativePath) {
 
 test('JRN-020 return lifecycle has complete shared readback', async () => {
   const viewModel = await source('../frontend/shared/dispatch/dispatch.view-model.ts');
+  const types = await source('../frontend/shared/dispatch/dispatch.types.ts');
+  const states = await source('../frontend/shared/dispatch/dispatch.states.ts');
+  const controller = await source('../frontend/shared/dispatch/dispatch.controller-core.ts');
 
   for (const status of ['returning_to_store', 'return_arrived_store', 'returned_to_store']) {
     assert.match(viewModel, new RegExp(`assignment\\.delivery\\.status === "${status}"`));
@@ -15,6 +18,10 @@ test('JRN-020 return lifecycle has complete shared readback', async () => {
   }
   assert.match(viewModel, /RETURN_SEQUENCE/);
   assert.match(viewModel, /أغلقت محاولة التوصيل بعد استلام المتجر/);
+  assert.match(types, /kind: "returned_to_store"/);
+  assert.match(states, /trackingReturnedToStoreState/);
+  assert.match(controller, /assignment\.delivery\.status === "returned_to_store"/);
+  assert.match(controller, /trackingReturnedToStoreState\(assignment\)/);
 });
 
 test('JRN-020 governed mutation boundary is active in runtime', async () => {
