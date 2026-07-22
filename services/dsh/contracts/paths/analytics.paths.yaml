@@ -18,7 +18,7 @@
         content:
           application/json:
             schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPlatformKpisResponse" }
-      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidParameter" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
 
@@ -39,7 +39,7 @@
         content:
           application/json:
             schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshOrderAnalyticsResponse" }
-      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidParameter" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
 
@@ -60,7 +60,7 @@
         content:
           application/json:
             schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshDeliveryAnalyticsResponse" }
-      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidParameter" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
 
@@ -106,7 +106,7 @@
         content:
           application/json:
             schema: { $ref: "../components/schemas/analytics.schemas.yaml#/DshPreparationSlaAnalyticsResponse" }
-      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidParameter" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
 
@@ -136,7 +136,7 @@
         content:
           application/json:
             schema: { $ref: "../components/schemas/analytics.schemas.yaml#/DshCaptainPerformanceAnalyticsResponse" }
-      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidParameter" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
 
@@ -166,7 +166,7 @@
         content:
           application/json:
             schema: { $ref: "../components/schemas/analytics.schemas.yaml#/DshFieldPerformanceAnalyticsResponse" }
-      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidParameter" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
 
@@ -202,7 +202,7 @@
         content:
           application/json:
             schema: { $ref: "../components/schemas/analytics.schemas.yaml#/DshOperationalAnalyticsDrilldownResponse" }
-      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidParameter" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
 
@@ -256,7 +256,7 @@
         content:
           text/csv:
             schema: { type: string }
-      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidParameter" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
 
@@ -277,6 +277,6 @@
         content:
           application/json:
             schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartnerPerformanceResponse" }
-      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidParameter" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
