@@ -9,16 +9,6 @@ on:
       - "services/wlt/contracts/jrn-035-refunds.openapi.yaml"
       - "services/dsh/contracts/jrn-035-refunds.openapi.yaml"
       - "tools/verification/jrn-035-openapi-contracts.test.mjs"
-      - "governance/evidence/.jrn-035-final-validation-trigger"
-      - ".github/workflows/jrn-035-openapi-verification.yml"
-  pull_request:
-    branches:
-      - sambassam
-    paths:
-      - "services/wlt/contracts/jrn-035-refunds.openapi.yaml"
-      - "services/dsh/contracts/jrn-035-refunds.openapi.yaml"
-      - "tools/verification/jrn-035-openapi-contracts.test.mjs"
-      - "governance/evidence/.jrn-035-final-validation-trigger"
       - ".github/workflows/jrn-035-openapi-verification.yml"
 
 permissions:
@@ -33,8 +23,10 @@ jobs:
     name: Parse OpenAPI and generate TypeScript clients
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24.17.0
       - name: Verify operation and privacy contracts
