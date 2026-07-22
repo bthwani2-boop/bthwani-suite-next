@@ -7,6 +7,7 @@ on:
     paths:
       - "tools/scripts/close-jrn-022-backend-contract-slices.py"
       - ".github/workflows/tmp-jrn-022-backend-contract-closure.yml"
+      - "services/dsh/backend/internal/http/subscription_lifecycle_governed.go"
   workflow_dispatch:
 
 permissions:
@@ -48,7 +49,17 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Apply atomic backend and contract closure
-        run: python3 tools/scripts/close-jrn-022-backend-contract-slices.py
+        run: |
+          python3 tools/scripts/close-jrn-022-backend-contract-slices.py
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path("services/dsh/backend/internal/http/subscription_lifecycle_governed.go")
+          content = path.read_text(encoding="utf-8")
+          old = "\treturn plan, product, nil\n"
+          if content.count(old) != 1:
+              raise SystemExit("subscription plan pointer anchor is missing or duplicated")
+          path.write_text(content.replace(old, "\treturn &plan, product, nil\n", 1), encoding="utf-8")
+          PY
 
       - name: Format and verify backend
         id: backend_verify
