@@ -97,6 +97,7 @@ test("JRN-033 tenant migration and local seed bind wallet and ledger truth", () 
   const migration = read("services/wlt/database/migrations/wlt-038_jrn_033_representative_finance_tenancy.sql");
   const probes = read("infra/docker/scripts/wlt-migration-probes.ps1");
   const seed = read("services/wlt/database/seeds/local/wlt-033_representative_wallets.local.sql");
+  const tenancy = JSON.parse(read("services/dsh/contracts/jrn-033-representative-finance-tenancy.contract.json"));
   assertIncludesAll(migration, [
     "ALTER TABLE wlt_wallets",
     "ALTER TABLE wlt_ledger_entries",
@@ -105,7 +106,12 @@ test("JRN-033 tenant migration and local seed bind wallet and ledger truth", () 
     "wlt_ledger_entries_tenant_actor_idx",
   ], "JRN-033 tenant migration");
   assert.ok(probes.includes('"wlt-038_jrn_033_representative_finance_tenancy.sql"'));
-  assertIncludesAll(seed, ["'local-dsh'", "tenant_id", "client-local-001", "partner-local-001", "captain-local-001", "field-local-001"], "JRN-033 runtime seed");
+  assertIncludesAll(seed, ["'local-dsh'", "'other-tenant'", "tenant_id", "client-local-001", "partner-local-001", "captain-local-001", "field-local-001", "client-other-tenant-001"], "JRN-033 runtime seed");
+  assert.equal(tenancy.parentContract, "services/dsh/contracts/jrn-033-representative-finance.openapi.yaml");
+  assert.equal(tenancy.tenantBoundary.source, "core.identity.session.tenantId");
+  assert.equal(tenancy.tenantBoundary.clientSuppliedTenantAccepted, false);
+  assert.equal(tenancy.tenantBoundary.crossTenantWalletBehavior, "NOT_FOUND");
+  assert.equal(tenancy.tenantBoundary.crossTenantLedgerBehavior, "EMPTY_COLLECTION");
 });
 
 test("JRN-033 shared actor wallet brain uses canonical DSH routes only", () => {
@@ -167,8 +173,9 @@ test("JRN-033 control panel lookup loads a permission-scoped wallet and matching
   assert.ok(!lookup.includes("/wlt/"), "control panel must not call WLT directly");
 });
 
-test("JRN-033 focused contract declares every wallet and ledger operation", () => {
+test("JRN-033 focused OpenAPI and tenancy contract declare every wallet and ledger operation", () => {
   const contract = read("services/dsh/contracts/jrn-033-representative-finance.openapi.yaml");
+  const tenancy = read("services/dsh/contracts/jrn-033-representative-finance-tenancy.contract.json");
   assertIncludesAll(contract, [
     "operationId: getDshClientOwnWallet",
     "operationId: listDshClientOwnLedgerEntries",
@@ -181,10 +188,15 @@ test("JRN-033 focused contract declares every wallet and ledger operation", () =
     "operationId: getDshRepresentativeWallet",
     "operationId: listDshRepresentativeLedgerEntries",
     "/dsh/control-panel/finance/wallets/{actorType}/{actorId}/ledger-entries:",
-    "tenant is derived from the authenticated Identity session",
     "enum: [client, partner, captain, field]",
     "private, no-store",
   ], "JRN-033 OpenAPI contract");
+  assertIncludesAll(tenancy, [
+    "The tenant is derived from the authenticated Identity session",
+    "clientSuppliedTenantAccepted",
+    "crossTenantWalletBehavior",
+    "crossTenantLedgerBehavior",
+  ], "JRN-033 tenancy contract");
 });
 
 test("JRN-033 runtime evidence aligns Identity subjects with tenant-bound WLT wallets and negative checks", () => {
@@ -209,6 +221,7 @@ test("JRN-033 runtime evidence aligns Identity subjects with tenant-bound WLT wa
     "client using operator wallet lookup",
     "unsupported representative actor",
     "cross-tenant wallet lookup",
+    "cross-tenant ledger lookup",
     "suspended wallet lookup",
     "frozen wallet lookup",
     "internal WLT wallet route was readable without service authentication",
