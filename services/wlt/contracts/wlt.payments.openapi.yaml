@@ -1,0 +1,405 @@
+openapi: 3.1.0
+info:
+  title: BThwani WLT Payment Sessions API
+  version: 1.0.0
+  description: >-
+    WLT-owned payment session lifecycle. DSH may orchestrate and project these
+    states, but it never owns provider or ledger truth. Provider webhook input
+    is authenticated by its own HMAC signature rather than the DSH service token.
+x-bthwani-owner: services/wlt
+x-bthwani-journey: JRN-034
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-client-generation: ENABLED
+x-bthwani-financial-owner: true
+servers:
+  - url: http://localhost:58083
+paths:
+  /wlt/payment-sessions:
+    post:
+      operationId: createWltPaymentSession
+      summary: Create or replay a tenant-bound payment-session reference.
+      tags: [WltPayments]
+      security: [{ serviceBearer: [] }]
+      parameters:
+        - $ref: '#/components/parameters/ServiceCaller'
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreatePaymentSessionRequest' }
+      responses:
+        '201':
+          description: Created or replayed payment session.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaymentSessionResponse' }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /wlt/payment-sessions/{paymentSessionId}:
+    get:
+      operationId: getWltPaymentSession
+      summary: Read one payment session in the trusted tenant.
+      tags: [WltPayments]
+      security: [{ serviceBearer: [] }]
+      parameters:
+        - $ref: '#/components/parameters/PaymentSessionId'
+        - $ref: '#/components/parameters/ServiceCaller'
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Payment session.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaymentSessionResponse' }
+        '400': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /wlt/payment-sessions/{paymentSessionId}/authorize:
+    post:
+      operationId: authorizeWltPaymentSession
+      summary: Authorize the immutable session amount with durable replay protection.
+      tags: [WltPayments]
+      security: [{ serviceBearer: [] }]
+      parameters:
+        - $ref: '#/components/parameters/PaymentSessionId'
+        - $ref: '#/components/parameters/ServiceCaller'
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Authorized or exact idempotent replay.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaymentOperationResponse' }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '502': { $ref: '#/components/responses/Error' }
+  /wlt/payment-sessions/{paymentSessionId}/capture:
+    post:
+      operationId: captureWltPaymentSession
+      summary: Capture an authorized session and atomically post its double-entry ledger transaction.
+      tags: [WltPayments]
+      security: [{ serviceBearer: [] }]
+      parameters:
+        - $ref: '#/components/parameters/PaymentSessionId'
+        - $ref: '#/components/parameters/ServiceCaller'
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Captured with exactly-once ledger effect or exact replay.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaymentOperationResponse' }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '502': { $ref: '#/components/responses/Error' }
+  /wlt/payment-sessions/{paymentSessionId}/refresh-provider-status:
+    post:
+      operationId: refreshWltPaymentSessionProviderStatus
+      summary: Query authoritative provider status without repeating authorize or capture.
+      tags: [WltPayments]
+      security: [{ serviceBearer: [] }]
+      parameters:
+        - $ref: '#/components/parameters/PaymentSessionId'
+        - $ref: '#/components/parameters/ServiceCaller'
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Current authoritative state.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaymentOperationResponse' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '502': { $ref: '#/components/responses/Error' }
+  /wlt/payment-sessions/{paymentSessionId}/timeline:
+    get:
+      operationId: getWltPaymentSessionTimeline
+      summary: Read session, operation receipts, provider events, reconciliation and ledger cross-reference.
+      tags: [WltPayments]
+      security: [{ serviceBearer: [] }]
+      parameters:
+        - $ref: '#/components/parameters/PaymentSessionId'
+        - $ref: '#/components/parameters/ServiceCaller'
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Governed payment timeline.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [paymentTimeline]
+                properties:
+                  paymentTimeline: { $ref: '#/components/schemas/PaymentTimeline' }
+        '400': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /wlt/payment-sessions/{paymentSessionId}/expire:
+    post:
+      operationId: expireWltPaymentSession
+      summary: Expire a legally expirable non-captured payment session.
+      tags: [WltPayments]
+      security: [{ serviceBearer: [] }]
+      parameters:
+        - $ref: '#/components/parameters/PaymentSessionId'
+        - $ref: '#/components/parameters/ServiceCaller'
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Expired session.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaymentSessionResponse' }
+        '409': { $ref: '#/components/responses/Error' }
+  /wlt/payment-sessions/{paymentSessionId}/cancel-for-order:
+    post:
+      operationId: cancelWltPaymentSessionForOrder
+      summary: Let WLT choose expiry or governed refund according to captured truth.
+      tags: [WltPayments]
+      security: [{ serviceBearer: [] }]
+      parameters:
+        - $ref: '#/components/parameters/PaymentSessionId'
+        - $ref: '#/components/parameters/ServiceCaller'
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [orderId, clientId, reason]
+              properties:
+                orderId: { type: string, minLength: 1 }
+                clientId: { type: string, minLength: 1 }
+                reason: { type: string, minLength: 1, maxLength: 500 }
+      responses:
+        '200':
+          description: Expiry, refund request, or no-op decision.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '409': { $ref: '#/components/responses/Error' }
+  /wlt/provider/webhooks/payment:
+    post:
+      operationId: receiveWltPaymentProviderWebhook
+      summary: Receive a signed, timestamped and deduplicated provider payment event.
+      tags: [WltProviderWebhooks]
+      parameters:
+        - name: X-WLT-Provider-Timestamp
+          in: header
+          required: true
+          schema: { type: string, pattern: '^[0-9]+$' }
+        - name: X-WLT-Provider-Signature
+          in: header
+          required: true
+          schema: { type: string, pattern: '^sha256=[a-fA-F0-9]{64}$' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProviderWebhookRequest' }
+      responses:
+        '200':
+          description: Applied or exact replay.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [accepted, paymentSession]
+                properties:
+                  accepted: { type: boolean, const: true }
+                  idempotentReplay: { type: boolean }
+                  ledgerTransactionId: { type: string }
+                  paymentSession: { $ref: '#/components/schemas/PaymentSession' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '503': { $ref: '#/components/responses/Error' }
+components:
+  securitySchemes:
+    serviceBearer:
+      type: http
+      scheme: bearer
+  parameters:
+    PaymentSessionId:
+      name: paymentSessionId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+    ServiceCaller:
+      name: X-Service-Caller
+      in: header
+      required: true
+      schema: { type: string, const: dsh }
+    TenantId:
+      name: X-Tenant-ID
+      in: header
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 120 }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 8, maxLength: 200 }
+    CorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 200 }
+  schemas:
+    PaymentStatus:
+      type: string
+      enum: [reference_created, pending_provider, authorization_pending, authorized, capture_pending, captured, cod_pending, cod_collected, failed, expired, provider_result_unknown]
+    PaymentSession:
+      type: object
+      required: [id, tenantId, clientId, storeId, paymentMethod, status, providerReference, amountMinorUnits, currency, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        checkoutIntentId: { type: [string, 'null'] }
+        specialRequestId: { type: [string, 'null'] }
+        subscriptionPurchaseId: { type: [string, 'null'] }
+        commercialProductReference: { type: [string, 'null'] }
+        tenantId: { type: string }
+        clientId: { type: string }
+        storeId: { type: string }
+        paymentMethod: { type: string, enum: [cod, wallet, mixed, official_wallet] }
+        status: { $ref: '#/components/schemas/PaymentStatus' }
+        providerReference: { type: string }
+        amountMinorUnits: { type: integer, format: int64, minimum: 1 }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        capturedAt: { type: [string, 'null'], format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    CreatePaymentSessionRequest:
+      type: object
+      required: [tenantId, clientId, storeId, paymentMethod, amountMinorUnits, currency]
+      properties:
+        checkoutIntentId: { type: string }
+        specialRequestId: { type: string }
+        subscriptionPurchaseId: { type: string }
+        commercialProductReference: { type: string }
+        tenantId: { type: string }
+        clientId: { type: string }
+        storeId: { type: string }
+        paymentMethod: { type: string, enum: [cod, wallet, mixed, official_wallet] }
+        amountMinorUnits: { type: integer, format: int64, minimum: 1 }
+        currency: { type: string, default: YER }
+        cartSnapshotHash: { type: string }
+      oneOf:
+        - required: [checkoutIntentId]
+        - required: [specialRequestId]
+        - required: [subscriptionPurchaseId, commercialProductReference]
+    PaymentSessionResponse:
+      type: object
+      required: [paymentSession]
+      properties:
+        paymentSession: { $ref: '#/components/schemas/PaymentSession' }
+    PaymentOperationResponse:
+      allOf:
+        - $ref: '#/components/schemas/PaymentSessionResponse'
+        - type: object
+          properties:
+            idempotentReplay: { type: boolean }
+            receiptState: { type: string }
+            ledgerTransactionId: { type: string }
+    ProviderWebhookRequest:
+      type: object
+      required: [eventId, type, tenantId, paymentSessionId, status]
+      additionalProperties: false
+      properties:
+        eventId: { type: string, minLength: 1, maxLength: 200 }
+        type: { type: string, enum: [payment.authorized, payment.captured, payment.failed, payment.expired] }
+        tenantId: { type: string, minLength: 1 }
+        paymentSessionId: { type: string, minLength: 1 }
+        status: { type: string, enum: [authorized, captured, failed, expired] }
+        providerReference: { type: string }
+        occurredAt: { type: string, format: date-time }
+    PaymentTimeline:
+      type: object
+      required: [paymentSession, operationReceipts, providerEvents, reconciliationCases]
+      properties:
+        paymentSession: { $ref: '#/components/schemas/PaymentSession' }
+        captureLedgerTransactionId: { type: string }
+        lastProviderEventId: { type: string }
+        lastProviderStatus: { type: string }
+        operationReceipts:
+          type: array
+          items: { $ref: '#/components/schemas/PaymentOperationReceipt' }
+        providerEvents:
+          type: array
+          items: { $ref: '#/components/schemas/PaymentProviderEvent' }
+        reconciliationCases:
+          type: array
+          items: { $ref: '#/components/schemas/PaymentReconciliationCase' }
+    PaymentOperationReceipt:
+      type: object
+      required: [id, operation, state, responseStatus, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        operation: { type: string, enum: [authorize, capture, provider_status_refresh] }
+        state: { type: string, enum: [in_progress, completed, failed, provider_result_unknown] }
+        responseStatus: { type: string }
+        providerReference: { type: string }
+        correlationId: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        completedAt: { type: [string, 'null'], format: date-time }
+    PaymentProviderEvent:
+      type: object
+      required: [providerEventId, eventType, providerStatus, processingState, signatureTime, receivedAt]
+      properties:
+        providerEventId: { type: string }
+        eventType: { type: string }
+        providerStatus: { type: string }
+        providerReference: { type: string }
+        processingState: { type: string, enum: [received, applied, ignored, conflict] }
+        processingResult: { type: string }
+        signatureTime: { type: string, format: date-time }
+        occurredAt: { type: [string, 'null'], format: date-time }
+        receivedAt: { type: string, format: date-time }
+        processedAt: { type: [string, 'null'], format: date-time }
+    PaymentReconciliationCase:
+      type: object
+      required: [id, operation, triggerReason, status, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        operation: { type: string, enum: [authorize, capture] }
+        triggerReason: { type: string }
+        status: { type: string, enum: [open, resolved] }
+        assignedToOperatorId: { type: [string, 'null'] }
+        resolution: { type: [string, 'null'] }
+        resolutionAction: { type: [string, 'null'] }
+        resolutionNote: { type: [string, 'null'] }
+        resolvedAt: { type: [string, 'null'], format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string }
+            message: { type: string }
+  responses:
+    Error:
+      description: Governed error envelope.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
