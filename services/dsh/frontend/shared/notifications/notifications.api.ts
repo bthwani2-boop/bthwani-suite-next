@@ -6,8 +6,10 @@ import type {
   DshNotificationDeliveryAuditSummary,
   DshNotificationDeliveryOutcome,
   DshNotificationPreference,
+  DshNotificationPushEndpoint,
   DshPlatformNotificationConfig,
   DshUpdateNotificationPreferenceInput,
+  DshUpsertNotificationPushEndpointInput,
   DshUpsertPlatformNotificationConfigInput,
 } from "./notifications.types";
 
@@ -35,6 +37,21 @@ export async function updateNotificationPreferences(
   return request("/dsh/notifications/preferences", {
     method: "PUT",
     body: JSON.stringify(input),
+  });
+}
+
+export async function upsertNotificationPushEndpoint(
+  input: DshUpsertNotificationPushEndpointInput,
+): Promise<{ endpoint: DshNotificationPushEndpoint }> {
+  return request("/dsh/notifications/push-endpoints", {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deactivateNotificationPushEndpoint(deviceId: string): Promise<{ deactivated: true }> {
+  return request(`/dsh/notifications/push-endpoints/${encodeURIComponent(deviceId)}`, {
+    method: "DELETE",
   });
 }
 
