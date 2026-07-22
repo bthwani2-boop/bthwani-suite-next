@@ -52,8 +52,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: jrn-033-representative-wallets-${{ github.ref }}
-  cancel-in-progress: true
+  group: jrn-033-representative-wallets-${{ github.sha }}
+  cancel-in-progress: false
 
 jobs:
   backend:
