@@ -10,7 +10,9 @@
     "frontend/shared/partner/partner-delivery-pricing.api.ts",
     "frontend/shared/partner/use-delivery-pricing-controller.ts",
     "frontend/shared/partner/partner-delivery-pricing.public.ts",
-    "frontend/app-partner/store/PartnerDeliveryPricingCard.tsx"
+    "frontend/shared/partner/operator-delivery-pricing.public.ts",
+    "frontend/app-partner/store/PartnerDeliveryPricingCard.tsx",
+    "frontend/control-panel/partners/stores/OperatorDeliveryPricingPanel.tsx"
   ],
   "exclude": [
     "node_modules",
