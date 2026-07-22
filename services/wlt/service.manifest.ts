@@ -15,13 +15,13 @@ export const wltServiceManifest = {
 
   implementationReadiness: {
     backend: true,
-    database: true,
-    generatedClient: true,
+    database: false,
+    generatedClient: false,
     frontend: true,
     frontendDshBoundary: true,
     paymentSessionReference: true,
-    localSimulatorMutations: true,
-    stagingProviderLabMutations: true,
+    localSimulatorMutations: false,
+    stagingProviderLabMutations: false,
   },
 
   runtimeEvidence: {
@@ -33,7 +33,7 @@ export const wltServiceManifest = {
     productionMutationsVerified: false,
     evidenceState: "NEEDS_EVIDENCE",
     reason:
-      "Implementation exists, but reference, mutation, reconciliation, and cross-service journeys require fresh same-commit runtime evidence.",
+      "Implementation exists, but database migration, generated/manual clients, reference, mutation, reconciliation, and cross-service journeys require fresh same-commit evidence.",
   },
 
   productionReadiness: {
@@ -43,18 +43,18 @@ export const wltServiceManifest = {
       "Production provider mutations remain fail-closed unless WLT_ALLOW_PRODUCTION_PROVIDER is explicitly true and independent finance, security, release, and same-commit runtime evidence are complete.",
   },
 
-  // Compatibility fields remain deliberately evidence-safe. They must not be
-  // promoted independently from runtimeEvidence and productionReadiness.
-  backendRuntimeReady: true,
-  databaseReady: true,
-  generatedClientReady: true,
+  // Compatibility fields are deliberately evidence-safe. Static source or
+  // simulator configuration must not promote runtime or financial readiness.
+  backendRuntimeReady: false,
+  databaseReady: false,
+  generatedClientReady: false,
   frontendReady: true,
   frontendDshBoundaryReady: true,
   referenceRuntimeVerified: false,
   journeyRuntimeVerified: false,
   paymentSessionReferenceReady: true,
-  localSimulatorMutationsReady: true,
-  stagingProviderLabMutationsReady: true,
+  localSimulatorMutationsReady: false,
+  stagingProviderLabMutationsReady: false,
   productionMutationsReady: false,
   productionMutationBlocker:
     "Production provider mutations remain fail-closed pending explicit provider enablement and same-commit independent evidence.",
@@ -69,7 +69,8 @@ export const wltServiceManifest = {
       "settlements",
       "payout_decisions",
       "commissions",
-      "cod_financial_state",
+      "delivery_collection_custody",
+      "cod_legacy_compatibility",
       "ledger",
       "reconciliation",
       "finance_reports",
@@ -83,6 +84,7 @@ export const wltServiceManifest = {
       "ledger_entry_mutation",
       "payout_decision_mutation",
       "commission_finalization",
+      "collection_custody_mutation",
     ],
     allowedForDsh: [
       "wlt_reference",
@@ -90,6 +92,7 @@ export const wltServiceManifest = {
       "payment_status_reference",
       "settlement_status_reference",
       "refund_status_reference",
+      "delivery_collection_reference",
     ],
   },
 } as const;
