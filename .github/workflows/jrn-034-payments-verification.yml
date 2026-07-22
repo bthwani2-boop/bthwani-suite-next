@@ -1,4 +1,4 @@
-name: JRN-034 DSH Build Diagnostic
+name: JRN-034 DSH Build Diagnostic macOS
 
 on:
   workflow_dispatch:
@@ -18,13 +18,13 @@ permissions:
   contents: read
 
 concurrency:
-  group: jrn-034-dsh-build-diagnostic-${{ github.ref }}
+  group: jrn-034-dsh-build-diagnostic-macos-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   backend:
     name: WLT and DSH payment backend diagnostic
-    runs-on: ubuntu-latest
+    runs-on: macos-15
     steps:
       - name: Checkout exact commit
         uses: actions/checkout@v4
