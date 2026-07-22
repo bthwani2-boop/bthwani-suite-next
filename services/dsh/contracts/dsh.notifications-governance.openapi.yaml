@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: BThwani DSH Notification Governance API
-  version: 1.1.0
+  version: 1.2.0
   description: >-
     Standalone governed contract for JRN-023 notification delivery policy,
     actor channels, quiet hours, localized templates, deep links, actor-owned
@@ -298,6 +298,41 @@ components:
           type: string
           enum: [pending, sent, failed]
         correlationId: { type: string }
+    DshNotificationPushDeliveryAudit:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - notificationId
+        - actorId
+        - actorType
+        - topic
+        - status
+        - attemptCount
+        - nextRetryAt
+        - providerMessageId
+        - lastError
+        - createdAt
+        - updatedAt
+      properties:
+        id: { type: string, format: uuid }
+        notificationId: { type: string, format: uuid }
+        actorId: { type: string }
+        actorType:
+          type: string
+          enum: [client, partner, captain, field, operator]
+        topic: { type: string }
+        status:
+          type: string
+          enum: [pending, sent, failed]
+        attemptCount: { type: integer, minimum: 0 }
+        nextRetryAt: { type: string, format: date-time }
+        providerMessageId: { type: string }
+        lastError: { type: string }
+        sentAt: { type: [string, "null"], format: date-time }
+        failedAt: { type: [string, "null"], format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
     DshNotificationDeliveryAuditSummary:
       type: object
       additionalProperties: false
@@ -322,12 +357,16 @@ components:
     DshNotificationDeliveryAuditResponse:
       type: object
       additionalProperties: false
-      required: [attempts, summary]
+      required: [attempts, pushDeliveries, summary]
       properties:
         attempts:
           type: array
           items:
             $ref: "#/components/schemas/DshNotificationDeliveryAttempt"
+        pushDeliveries:
+          type: array
+          items:
+            $ref: "#/components/schemas/DshNotificationPushDeliveryAudit"
         summary:
           $ref: "#/components/schemas/DshNotificationDeliveryAuditSummary"
     DshNotificationError:
