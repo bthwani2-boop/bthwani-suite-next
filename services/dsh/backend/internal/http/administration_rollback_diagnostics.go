@@ -29,7 +29,7 @@ func (s *protectedStoreServer) handleRequestDecisionRollback(w http.ResponseWrit
 }
 
 func (s *protectedStoreServer) handleListRollbackRequests(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireAdministrationPermission(w, r, AdministrationPermissionRead)
+	_, ok := s.requireAdministrationPermission(w, r, AdministrationPermissionRollbackApprove)
 	if !ok {
 		return
 	}
