@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import shutil
 import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 
-# Concurrent journey executions share sambassam. Restore only files that are
-# absent, from the exact commits that originally introduced them. Existing
-# files are never overwritten, so newer compatible work remains authoritative.
+# Concurrent journey executions share sambassam. Restore only absent sovereign
+# dependencies. The obsolete governed DSH file is restored temporarily because
+# the legacy atomic patch references it, then removed after its remaining
+# contract/read-model patches have been applied.
 RESTORE_SOURCES: dict[str, str] = {
     "services/dsh/backend/internal/http/subscription_lifecycle_governed.go": "ac0c27fc97f080262122a5090779f8844a40ccf1",
     "services/dsh/backend/internal/wlt/subscription_lifecycle.go": "f04df3ebde3f07a45659ed0a8db9a19d8364e5fe",
@@ -24,13 +26,20 @@ def restore_missing(path: str, commit: str) -> None:
     target = ROOT / path
     if target.exists():
         return
-    content = subprocess.check_output(
-        ["git", "show", f"{commit}:{path}"],
-        cwd=ROOT,
-    )
+    content = subprocess.check_output(["git", "show", f"{commit}:{path}"], cwd=ROOT)
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_bytes(content)
     print(f"restored missing JRN-027 file: {path} from {commit}")
+
+
+def replace_once(path: str, old: str, new: str) -> None:
+    target = ROOT / path
+    content = target.read_text(encoding="utf-8")
+    if new in content:
+        return
+    if old not in content:
+        raise SystemExit(f"JRN-027 convergence anchor missing: {path}")
+    target.write_text(content.replace(old, new, 1), encoding="utf-8")
 
 
 for relative_path, source_commit in RESTORE_SOURCES.items():
@@ -41,3 +50,28 @@ subprocess.run(
     cwd=ROOT,
     check=True,
 )
+
+# Converge on the existing subscription_purchases.go as the sole DSH lifecycle
+# owner. This removes the duplicate implementation identified by integrated
+# HTTP compilation while preserving all JRN-027 lifecycle behavior.
+shutil.copyfile(
+    ROOT / "tools/templates/jrn027_subscription_purchases.go",
+    ROOT / "services/dsh/backend/internal/http/subscription_purchases.go",
+)
+obsolete = ROOT / "services/dsh/backend/internal/http/subscription_lifecycle_governed.go"
+if obsolete.exists():
+    obsolete.unlink()
+
+replace_once(
+    "services/dsh/backend/internal/http/server.go",
+    '''\tmux.HandleFunc("POST /dsh/client/marketing/subscriptions/purchase", protected.handleCreateGovernedSubscriptionPurchase)\n\tmux.HandleFunc("GET /dsh/client/marketing/subscriptions/purchases/{purchaseId}", protected.handleGetGovernedSubscriptionPurchase)\n\tmux.HandleFunc("POST /dsh/client/marketing/subscriptions/{purchaseId}/activate", protected.handleActivateGovernedSubscriptionPurchase)\n\tmux.HandleFunc("POST /dsh/client/marketing/subscriptions/{subscriptionId}/renew", protected.handleRenewGovernedSubscription)\n\tmux.HandleFunc("POST /dsh/client/marketing/subscriptions/{subscriptionId}/cancel", protected.handleCancelGovernedSubscription)''',
+    '''\tmux.HandleFunc("POST /dsh/client/marketing/subscriptions/purchase", protected.handleCreateSubscriptionPurchase)\n\tmux.HandleFunc("GET /dsh/client/marketing/subscriptions/purchases/{purchaseId}", protected.handleGetSubscriptionPurchase)\n\tmux.HandleFunc("POST /dsh/client/marketing/subscriptions/{purchaseId}/activate", protected.handleActivateSubscriptionPurchase)\n\tmux.HandleFunc("POST /dsh/client/marketing/subscriptions/{subscriptionId}/renew", protected.handleRenewSubscriptionPurchase)\n\tmux.HandleFunc("POST /dsh/client/marketing/subscriptions/{subscriptionId}/cancel", protected.handleCancelSubscriptionPurchase)''',
+)
+
+replace_once(
+    "tools/guards/jrn027-closure-gate.py",
+    '''    "DSH handlers": ("services/dsh/backend/internal/http/subscription_lifecycle_governed.go", "handleCancelGovernedSubscription"),''',
+    '''    "DSH handlers": ("services/dsh/backend/internal/http/subscription_purchases.go", "handleCancelSubscriptionPurchase"),''',
+)
+
+print("JRN-027 DSH lifecycle converged on subscription_purchases.go")
