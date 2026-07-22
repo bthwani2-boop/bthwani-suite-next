@@ -5,12 +5,16 @@ on:
     branches: [sambassam]
     paths:
       - ".github/workflows/tmp-wlt-diagnostic.yml"
+  pull_request:
+    branches: [master]
+    paths:
+      - ".github/workflows/tmp-wlt-diagnostic.yml"
 
 permissions:
   contents: read
 
 concurrency:
-  group: temporary-wlt-diagnostic-${{ github.sha }}
+  group: temporary-wlt-diagnostic-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: false
 
 jobs:
