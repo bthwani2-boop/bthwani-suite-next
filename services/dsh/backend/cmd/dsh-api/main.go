@@ -83,7 +83,14 @@ func main() {
 		mediaProvider,
 		pickupGuardedRouter,
 	)
-	handler := dshHttp.CorsMiddleware(authMode, deliveryExceptionGovernedRouter)
+	governedIncidentRouter := dshHttp.GovernedIncidentMiddleware(
+		db,
+		identityClient,
+		wltClient,
+		mediaProvider,
+		deliveryExceptionGovernedRouter,
+	)
+	handler := dshHttp.CorsMiddleware(authMode, governedIncidentRouter)
 
 	outboxCtx, cancelOutbox := context.WithCancel(context.Background())
 	go orders.RunOrderEventBridgeWorker(outboxCtx, db, 5*time.Second)
