@@ -112,6 +112,7 @@ export function DecisionRollbackQueue() {
             <span>الإجراء الأصلي: {request.sourceActionType}</span>
             <span>الإجراء العكسي: {request.inverseActionType}</span>
             <span>المنشئ: {request.requestedBy}</span>
+            <span>معتمد القرار الأصلي: {request.sourceApprovedBy}</span>
             <span>السبب: {request.reason}</span>
             <CpTextInput
               value={reviewNotes[request.id] ?? ""}
