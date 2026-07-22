@@ -5,6 +5,8 @@ const validationMigrationFile = "core/platform-control/database/migrations/platf
 const sensitiveBoundaryMigrationFile = "core/platform-control/database/migrations/platform-006_jrn040_sensitive_change_boundary.sql";
 const contractFile = "core/platform-control/contracts/jrn-040-platform-change-sets.openapi.yaml";
 const generatedClientFile = "core/platform-control/clients/generated/jrn-040-platform-change-sets-api.ts";
+const strictBoundaryFile = "core/platform-control/backend/internal/platformcontrol/jrn040_strict_boundary.go";
+const strictBoundaryProofFile = "core/platform-control/backend/internal/platformcontrol/jrn040_strict_boundary_test.go";
 const databaseProofFile = "core/platform-control/backend/internal/platformcontrol/jrn040_database_sensitive_guard_test.go";
 const httpProofFile = "core/platform-control/backend/internal/http/jrn040_workflow_handlers_test.go";
 const workflowFile = ".github/workflows/jrn-040-platform-change-sets-verification.yml";
@@ -15,7 +17,9 @@ const requiredFiles = [
   "core/platform-control/backend/internal/platformcontrol/jrn040_change_set_read_create.go",
   "core/platform-control/backend/internal/platformcontrol/jrn040_change_set_workflow.go",
   "core/platform-control/backend/internal/platformcontrol/jrn040_change_set_apply_rollback.go",
+  strictBoundaryFile,
   "core/platform-control/backend/internal/platformcontrol/jrn040_change_set_governance_test.go",
+  strictBoundaryProofFile,
   databaseProofFile,
   "core/platform-control/backend/internal/platformcontrol/repository_integration_test.go",
   "core/platform-control/backend/internal/http/workflow_handlers.go",
@@ -87,11 +91,29 @@ if (failures.length === 0) {
     "valuesRedacted",
     "maxGovernedChangeSetItems",
   ]);
+  requireText(strictBoundaryFile, [
+    "CreateChangeSetStrict",
+    "RejectChangeSetStrict",
+    "RollbackChangeSetStrict",
+    "confidential",
+    "maxGovernedTextLength",
+  ]);
+  requireText("core/platform-control/backend/internal/platformcontrol/service.go", [
+    "CreateChangeSetStrict",
+    "RejectChangeSetStrict",
+    "RollbackChangeSetStrict",
+  ]);
   requireText("core/platform-control/backend/internal/platformcontrol/jrn040_change_set_governance_test.go", [
     "ErrTargetConflict",
     "ErrVersionConflict",
     "ErrSensitiveValue",
     "restore legacy metadata",
+  ]);
+  requireText(strictBoundaryProofFile, [
+    "sensitive",
+    "confidential",
+    "restricted",
+    "maxGovernedTextLength+1",
   ]);
   requireText(databaseProofFile, [
     "expected database to reject a sensitive change-set classification",
@@ -138,6 +160,8 @@ if (failures.length === 0) {
   requireText(workflowFile, [
     "group: jrn-040-${{ github.sha }}",
     "cancel-in-progress: false",
+    "jrn040_strict_boundary.go",
+    "jrn040_strict_boundary_test.go",
     "jrn040_database_sensitive_guard_test.go",
     "platform-006_jrn040_sensitive_change_boundary.sql",
     "Run targeted Go tests",
