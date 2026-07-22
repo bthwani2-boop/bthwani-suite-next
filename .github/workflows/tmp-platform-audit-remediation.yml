@@ -5,6 +5,10 @@ on:
     branches: [sambassam]
     paths:
       - ".github/workflows/tmp-platform-audit-remediation.yml"
+  pull_request:
+    branches: [master]
+    paths:
+      - ".github/workflows/tmp-platform-audit-remediation.yml"
 
 permissions:
   contents: write
