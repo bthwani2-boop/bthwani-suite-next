@@ -57,7 +57,7 @@ func ListCaptainMemberships(ctx context.Context, db *sql.DB, captainActorID stri
 	rows, err := db.QueryContext(ctx, `
 		SELECT m.id::text,
 		       m.store_id,
-		       s.name,
+		       s.display_name,
 		       m.name,
 		       m.status,
 		       COALESCE(m.branch_assignment, ''),
@@ -67,7 +67,7 @@ func ListCaptainMemberships(ctx context.Context, db *sql.DB, captainActorID stri
 		JOIN dsh_stores s ON s.id::text = m.store_id
 		WHERE m.identity_actor_id = $1
 		  AND m.role = 'courier'
-		ORDER BY s.name, m.name, m.id`, captainActorID)
+		ORDER BY s.display_name, m.name, m.id`, captainActorID)
 	if err != nil {
 		return nil, fmt.Errorf("query captain fleet memberships: %w", err)
 	}
