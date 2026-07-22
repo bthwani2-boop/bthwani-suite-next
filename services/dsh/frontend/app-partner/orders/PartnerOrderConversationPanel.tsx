@@ -1,5 +1,5 @@
 import React from 'react';
-import { Badge, Box, Button, ListItem, SectionHeader, StateView, Surface, Text, TextField } from '@bthwani/ui-kit';
+import { Badge, Box, ListItem, SectionHeader, StateView, Surface, Text } from '@bthwani/ui-kit';
 import type { DshPartnerOperationalFlowId } from '../dsh-partner.types';
 import {
   shouldShowDshPartnerOrderConversation,
@@ -10,21 +10,17 @@ import {
 export type DshPartnerOrderConversationPanelProps = {
   enabledForOrderMode?: DshPartnerOrderConversationMode;
   messages?: readonly DshPartnerOrderConversationMessage[];
+  /** Navigation compatibility only; it is not a message mutation binding. */
   onOpenFlow?: (flowId: DshPartnerOperationalFlowId) => void;
 };
 
-const DEFAULT_MESSAGES: DshPartnerOrderConversationMessage[] = [
-  { id: '1', authorLabel: 'المندوب', body: 'أنا عند بوابة الفرع الآن.', timestampLabel: 'قبل دقيقتين', acknowledged: false },
-  { id: '2', authorLabel: 'الفرع', body: 'الطلب في مرحلة التغليف الأخيرة.', timestampLabel: 'الآن', acknowledged: true },
-];
-
 export function DshPartnerOrderConversationPanel({
   enabledForOrderMode = 'pickup',
-  messages = DEFAULT_MESSAGES,
+  messages = [],
   onOpenFlow,
 }: DshPartnerOrderConversationPanelProps) {
-  const [draftMessage, setDraftMessage] = React.useState('');
   const visibility = shouldShowDshPartnerOrderConversation(enabledForOrderMode);
+  const hasNavigationCompatibility = typeof onOpenFlow === 'function';
 
   if (visibility === 'disabled-for-mode') {
     return (
@@ -40,33 +36,34 @@ export function DshPartnerOrderConversationPanel({
 
   return (
     <Surface tone="raised" gap={3}>
-      <SectionHeader title="محادثة الطلب" subtitle="المحادثة مرتبطة بالطلب الحالي فقط وتغلق مباشرةً عند إغلاق دورة الطلب." />
-      <Box gap={2}>
-        {messages.map((message) => (
-          <ListItem
-            key={message.id}
-            title={message.authorLabel}
-            subtitle={message.body}
-            meta={message.timestampLabel}
-            trailing={<Badge label={message.acknowledged ? 'مقروء' : 'بانتظار الإقرار'} tone="neutral" />}
-          />
-        ))}
-      </Box>
-      <TextField
-        label="رسالة سريعة للطلب"
-        value={draftMessage}
-        onChangeText={setDraftMessage}
-        hint="تُرسل داخل الطلب النشط فقط ولا تُحفظ كمحادثة عامة."
+      <SectionHeader
+        title="محادثة الطلب"
+        subtitle="تعرض هذه المساحة رسائل الطلب الحية فقط؛ لا توجد رسائل تجريبية أو محلية."
       />
-      <Box layoutDirection="row" gap={2}>
-        <Button label="إقرار القراءة" tone="secondary" onPress={() => onOpenFlow?.('order-chat-read-ack')} />
-        <Button label="إرسال الرسالة" onPress={() => onOpenFlow?.('order-chat-send')} />
-      </Box>
+      {messages.length === 0 ? (
+        <StateView
+          title="لا توجد رسائل حية"
+          description="الإرسال وإقرار القراءة محجوبان حتى يتوفر عقد محادثة حي، صلاحيات actor-scoped، حفظ، وتأكيد قراءة راجعة من DSH Runtime."
+          tone="warning"
+        />
+      ) : (
+        <Box gap={2}>
+          {messages.map((message) => (
+            <ListItem
+              key={message.id}
+              title={message.authorLabel}
+              subtitle={message.body}
+              meta={message.timestampLabel}
+              trailing={<Badge label={message.acknowledged ? 'مقروء' : 'بانتظار الإقرار'} tone="neutral" />}
+            />
+          ))}
+        </Box>
+      )}
       <Text role="bodySm" tone="muted">
-        الردود السريعة تظل جزءًا من هذا الطلب وحده، ولا يوجد chat دائم أو inbox عام في هذا المسار.
+        {hasNavigationCompatibility
+          ? 'مسارات التنقل القديمة متاحة للتوافق فقط، ولا تُعامل كإثبات إرسال أو إقرار قراءة.'
+          : 'لا يوجد binding تنقل أو mutation للمحادثة في هذا السطح.'}
       </Text>
     </Surface>
   );
 }
-
-// export default DshPartnerOrderConversationPanel; // Unused default export
