@@ -1,0 +1,144 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-020",
+  "title": "استثناءات التوصيل والعودة إلى المتجر",
+  "closureMode": "CODE_AND_AUTOMATED_EVIDENCE",
+  "requiredSliceCount": 18,
+  "codeDecision": "NEEDS_EVIDENCE",
+  "releaseDecision": "NEEDS_EVIDENCE",
+  "slices": [
+    {
+      "id": "FS-01",
+      "name": "Product Truth and operational outcome",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["governance/product/contracts/jrn-020-delivery-exceptions-return-to-store.product-truth.json"],
+      "requiredMarkers": ["PENDING_INDEPENDENT_APPROVAL", "negativeInvariants", "acceptanceCriteria"]
+    },
+    {
+      "id": "FS-02",
+      "name": "Actors, permissions and affected surfaces",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/backend/internal/http/delivery_exception_governance.go", "services/dsh/frontend/control-panel/operations/ExceptionsEscalationsScreen.tsx"],
+      "requiredMarkers": ["captain", "partner", "client", "operator", "OperationsPermissionManage"]
+    },
+    {
+      "id": "FS-03",
+      "name": "Exception and return state machine",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/backend/internal/dispatch/delivery_exceptions.go", "services/dsh/frontend/shared/dispatch/dispatch.types.ts"],
+      "requiredMarkers": ["open", "acknowledged", "resolved", "returning_to_store", "return_arrived_store", "returned_to_store"]
+    },
+    {
+      "id": "FS-04",
+      "name": "DSH and WLT ownership boundary",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/contracts/dsh.delivery-exceptions.openapi.yaml", "services/dsh/frontend/control-panel/operations/ExceptionsEscalationsScreen.tsx"],
+      "requiredMarkers": ["WLT_OWNS_ALL_FINANCIAL_MUTATION", "لن ينشئ DSH استردادًا مباشرًا"]
+    },
+    {
+      "id": "FS-05",
+      "name": "Database custody constraints and indexes",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/database/migrations/dsh-094_delivery_return_partner_receipt.sql", "services/dsh/backend/internal/dispatch/delivery_exceptions.go"],
+      "requiredMarkers": ["return_arrived_at", "return_accepted_by_actor_id", "idx_dsh_delivery_exceptions_partner_return_receipt"]
+    },
+    {
+      "id": "FS-06",
+      "name": "Canonical OpenAPI and adapter contract",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/contracts/dsh.delivery-exceptions.openapi.yaml", "services/dsh/contracts/contract-registry.ts", "services/dsh/frontend/shared/dispatch/dispatch.types.ts"],
+      "requiredMarkers": ["dsh-delivery-exceptions", "ReportDeliveryExceptionRequest", "cancel_order", "readonly note: string"]
+    },
+    {
+      "id": "FS-07",
+      "name": "Captain exception reporting evidence",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/backend/internal/http/delivery_exception_governance.go", "services/dsh/frontend/app-captain/orders/DshCaptainPoDSubmissionScreen.tsx"],
+      "requiredMarkers": ["validateDeliveryExceptionReportNote", "reasonCode", "correlationId", "note"]
+    },
+    {
+      "id": "FS-08",
+      "name": "Acknowledgement, responsibility and optimistic concurrency",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/backend/internal/http/delivery_exception_governance.go", "services/dsh/frontend/shared/dispatch/dispatch.api.ts"],
+      "requiredMarkers": ["acknowledge the exception", "acknowledgeDeliveryException", "acknowledged.version"]
+    },
+    {
+      "id": "FS-09",
+      "name": "Retry, reassignment, return and cancellation decisions",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/backend/internal/dispatch/delivery_exceptions.go", "services/dsh/frontend/shared/dispatch/dispatch.api.ts"],
+      "requiredMarkers": ["retry_same_captain", "reassign_captain", "return_to_store", "cancel_order"]
+    },
+    {
+      "id": "FS-10",
+      "name": "Captain return arrival and partner receipt",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/backend/internal/dispatch/delivery_exceptions.go", "services/dsh/database/migrations/dsh-094_delivery_return_partner_receipt.sql"],
+      "requiredMarkers": ["CaptainArriveReturnToStore", "AcceptReturnToStoreByPartner", "return_accepted_by_actor_id"]
+    },
+    {
+      "id": "FS-11",
+      "name": "Late delivery prevention and terminal closure",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/backend/internal/dispatch/dispatch.go", "services/dsh/frontend/shared/dispatch/dispatch.controller-core.ts"],
+      "requiredMarkers": ["ensureNoOpenDeliveryException", "trackingReturnedToStoreState"]
+    },
+    {
+      "id": "FS-12",
+      "name": "Cross-surface readback",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/frontend/shared/dispatch/dispatch.view-model.ts", "services/dsh/frontend/shared/dispatch/dispatch.controller-core.ts"],
+      "requiredMarkers": ["RETURN_SEQUENCE", "returned_to_store", "أغلقت محاولة التوصيل بعد استلام المتجر"]
+    },
+    {
+      "id": "FS-13",
+      "name": "Authorization and tenant-owned custody",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/backend/internal/http/delivery_exception_governance.go", "services/dsh/backend/internal/http/partner_delivery.go"],
+      "requiredMarkers": ["requirePermission", "partnerOrder", "AcceptReturnToStoreByPartner"]
+    },
+    {
+      "id": "FS-14",
+      "name": "RTL, accessible states and recovery feedback",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/frontend/app-captain/orders/DshCaptainPoDSubmissionScreen.tsx", "services/dsh/frontend/control-panel/operations/ExceptionsEscalationsScreen.tsx"],
+      "requiredMarkers": ["إعادة المحاولة", "تعذر", "بانتظار"]
+    },
+    {
+      "id": "FS-15",
+      "name": "Operational evidence and audit references",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/backend/internal/http/delivery_exception_governance.go", "services/dsh/backend/internal/dispatch/delivery_exceptions.go"],
+      "requiredMarkers": ["operationalCorrelationID", "reported_at", "resolved_by_actor_id"]
+    },
+    {
+      "id": "FS-16",
+      "name": "Legacy bypass and duplicate truth cleanup",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/backend/cmd/dsh-api/main.go", "services/dsh/backend/internal/http/delivery_exception_governance.go"],
+      "requiredMarkers": ["DeliveryExceptionGovernanceMiddleware", "deliveryExceptionGovernedRouter"]
+    },
+    {
+      "id": "FS-17",
+      "name": "Targeted backend, contract and frontend verification",
+      "codeStatus": "NEEDS_EVIDENCE",
+      "requiredFiles": ["services/dsh/backend/internal/http/delivery_exception_governance_test.go", "services/dsh/tests/jrn-020-delivery-exception-closure.test.mjs", "services/dsh/tsconfig.jrn-020.json", ".github/workflows/jrn-020-delivery-exception-verify.yml"],
+      "requiredMarkers": ["JRN-020 backend", "JRN-020 contract and surfaces", "JRN-020 governed frontend typecheck"]
+    },
+    {
+      "id": "FS-18",
+      "name": "Same-commit evidence and independent review gate",
+      "codeStatus": "NEEDS_EVIDENCE",
+      "requiredFiles": ["services/dsh/contracts/jrn-020-slice-closure.json", ".github/workflows/jrn-020-delivery-exception-verify.yml"],
+      "requiredMarkers": ["NEEDS_EVIDENCE", "requiredSliceCount", "github.sha", "independentReviewPending"]
+    }
+  ],
+  "independentReviewPending": [
+    "product-owner",
+    "qa-device-accessibility",
+    "application-security",
+    "financial-control",
+    "release-production"
+  ]
+}
