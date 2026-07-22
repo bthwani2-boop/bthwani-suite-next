@@ -38,6 +38,17 @@ test('JRN-020 governed mutation boundary is active in runtime', async () => {
   assert.match(main, /CorsMiddleware\(authMode, deliveryExceptionGovernedRouter\)/);
 });
 
+test('JRN-020 shared mutation contract requires evidence and every governed action', async () => {
+  const types = await source('../frontend/shared/dispatch/dispatch.types.ts');
+
+  assert.match(types, /"reasonCode" \| "note"/);
+  assert.match(types, /readonly note: string/);
+  assert.match(types, /DshDeliveryExceptionResolutionAction/);
+  for (const action of ['retry_same_captain', 'reassign_captain', 'return_to_store', 'cancel_order']) {
+    assert.match(types, new RegExp(`\\| "${action}"`));
+  }
+});
+
 test('JRN-020 blocks late delivery and keeps financial mutation WLT-owned', async () => {
   const dispatch = await source('../backend/internal/dispatch/dispatch.go');
   const exceptions = await source('../backend/internal/dispatch/delivery_exceptions.go');
