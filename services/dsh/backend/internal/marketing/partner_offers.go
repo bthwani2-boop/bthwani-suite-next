@@ -45,7 +45,10 @@ func partnerOfferJSON(o PartnerOffer) []byte {
 	return b
 }
 
-var partnerOfferTypes = map[string]bool{"discount": true, "free-delivery": true, "bundle": true, "buy-x-get-y": true, "coupon": true}
+var partnerOfferTypes = map[string]bool{
+	"discount": true, "free-delivery": true, "bundle": true, "buy-x-get-y": true, "coupon": true,
+}
+var partnerOfferEligibilities = map[string]bool{"all": true, "client": true}
 var partnerOfferStatuses = map[string]bool{
 	"inbound": true, "review": true, "marketing-ready": true, "published": true,
 	"paused": true, "rejected": true, "archived": true,
@@ -170,7 +173,7 @@ func CreatePartnerOffer(db *sql.DB, in CreatePartnerOfferInput) (PartnerOffer, e
 	if in.CreatedBySurface == "" {
 		in.CreatedBySurface = "app-partner"
 	}
-	if !partnerOfferTypes[in.OfferType] {
+	if !partnerOfferTypes[in.OfferType] || !partnerOfferEligibilities[in.Eligibility] {
 		return PartnerOffer{}, ErrInvalid
 	}
 	o, err := scanPartnerOffer(db.QueryRow(`
@@ -227,7 +230,7 @@ func UpdatePartnerOffer(db *sql.DB, id string, in UpdatePartnerOfferInput) (Part
 	}
 	if in.Eligibility != nil {
 		next.Eligibility = strings.TrimSpace(*in.Eligibility)
-		if next.Eligibility == "" {
+		if !partnerOfferEligibilities[next.Eligibility] {
 			return PartnerOffer{}, ErrInvalid
 		}
 	}
