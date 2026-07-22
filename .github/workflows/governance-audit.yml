@@ -51,7 +51,15 @@ jobs:
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
       - name: Verify governance schemas
-        run: pnpm run guard:governance-schema
+        run: pnpm run guard:governance-schema 2>&1 | tee governance-schema.log
+      - name: Preserve governance schema failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: governance-schema-failure
+          path: governance-schema.log
+          if-no-files-found: error
+          retention-days: 7
       - name: Verify agent governance
         run: pnpm run guard:agent-governance
       - name: Verify authority separation
@@ -79,7 +87,15 @@ jobs:
       - name: Verify workflow syntax
         run: pnpm run guard:workflow-lint
       - name: Verify workflow security
-        run: pnpm run guard:workflow-security
+        run: pnpm run guard:workflow-security 2>&1 | tee workflow-security.log
+      - name: Preserve workflow security failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: workflow-security-failure
+          path: workflow-security.log
+          if-no-files-found: error
+          retention-days: 7
       - name: Verify immutable action pins
         run: pnpm run guard:actions-pin
 
