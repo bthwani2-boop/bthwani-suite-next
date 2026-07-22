@@ -18,6 +18,7 @@ $timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
 $actorId = "payout-smoke-actor-$timestamp"
 $idempotencyKey = "payout-smoke-idem-$timestamp"
 $correlationId = "payout-smoke-correlation-$timestamp"
+$destinationKey = "payout-smoke-destination-$timestamp"
 $amount = 2500
 
 function Invoke-PsqlScalar {
@@ -34,13 +35,14 @@ function Invoke-WltJson {
     [Parameter(Mandatory = $true)][ValidateSet('GET','POST','PUT')][string]$Method,
     [Parameter(Mandatory = $true)][string]$Path,
     [object]$Body = $null,
-    [string]$OperationIdempotencyKey = $idempotencyKey
+    [string]$OperationIdempotencyKey = $idempotencyKey,
+    [string]$OperationCorrelationId = $correlationId
   )
 
   $headers = @{
     'Authorization' = 'Bearer dev-only-dsh-wlt-shared-secret'
     'X-Service-Caller' = 'dsh'
-    'X-Correlation-ID' = $correlationId
+    'X-Correlation-ID' = $OperationCorrelationId
     'Idempotency-Key' = $OperationIdempotencyKey
   }
   $uri = "$BaseUrl$Path"
@@ -73,9 +75,26 @@ DO UPDATE SET
 "@
 Invoke-PsqlScalar -Sql $walletSql | Out-Null
 
+$destination = Invoke-WltJson -Method PUT -Path "/wlt/payout-destinations/captain/$actorId" -OperationIdempotencyKey $destinationKey -OperationCorrelationId $destinationKey -Body @{
+  beneficiaryName = 'Payout Smoke Captain'
+  bankName = 'Runtime Bank'
+  bankBranch = 'Sanaa'
+  accountNumber = '1234567890123456'
+  iban = 'YE00SMOKE1234567890123456'
+  payoutMobileNumber = ''
+  settlementPreference = 'bank'
+  bankAccountHolderMatchesOwner = $true
+  bankNotes = 'provider-backed payout smoke'
+  operatorId = $actorId
+}
+$destinationId = "$($destination.payoutDestination.id)"
+if ([string]::IsNullOrWhiteSpace($destinationId)) { throw 'Payout destination was not created' }
+if ($destination.payoutDestination.maskedAccountNumber -eq '1234567890123456') { throw 'Payout destination was returned without masking' }
+
 $created = Invoke-WltJson -Method POST -Path '/wlt/payout-requests' -Body @{
   beneficiaryActorId = $actorId
   beneficiaryActorType = 'captain'
+  payoutDestinationId = $destinationId
   amountMinorUnits = $amount
   currency = 'YER'
   idempotencyKey = $idempotencyKey
@@ -83,6 +102,7 @@ $created = Invoke-WltJson -Method POST -Path '/wlt/payout-requests' -Body @{
 $payoutId = "$($created.payoutRequest.id)"
 if ([string]::IsNullOrWhiteSpace($payoutId)) { throw 'Payout request was not created' }
 if ($created.payoutRequest.status -ne 'pending') { throw "Unexpected created payout status: $($created.payoutRequest.status)" }
+if ($created.payoutRequest.payoutDestinationId -ne $destinationId) { throw 'Payout request was not bound to the governed destination' }
 
 $approved = Invoke-WltJson -Method POST -Path "/wlt/payout-requests/$payoutId/approve" -OperationIdempotencyKey "$idempotencyKey-approve" -Body @{
   operatorId = 'finance-maker-1'
@@ -100,16 +120,17 @@ $completed = Invoke-WltJson -Method POST -Path "/wlt/payout-requests/$payoutId/c
 if ($completed.payoutRequest.status -ne 'completed') { throw "Payout completion failed: $($completed.payoutRequest.status)" }
 
 $proofSql = @"
-SELECT status || '|' || provider_reference || '|' || provider_status
+SELECT status || '|' || provider_reference || '|' || provider_status || '|' || payout_destination_id
 FROM wlt_payout_requests
 WHERE id = '$payoutId';
 "@
 $proof = Invoke-PsqlScalar -Sql $proofSql
 $proofParts = $proof.Split('|')
-if ($proofParts.Count -ne 3) { throw "Invalid payout provider proof row: $proof" }
+if ($proofParts.Count -ne 4) { throw "Invalid payout provider proof row: $proof" }
 if ($proofParts[0] -ne 'completed') { throw "Payout database status is not completed: $proof" }
 if ([string]::IsNullOrWhiteSpace($proofParts[1])) { throw 'Payout provider reference was not persisted' }
 if ($proofParts[2] -notin @('processed','succeeded')) { throw "Unexpected payout provider status: $($proofParts[2])" }
+if ($proofParts[3] -ne $destinationId) { throw 'Payout destination reference was not persisted' }
 
 $walletReadbackSql = @"
 SELECT available_balance_minor_units || '|' || held_balance_minor_units || '|' || paid_total_minor_units
@@ -139,6 +160,7 @@ if ($journal -ne '2500|2500|2') {
 }
 
 Write-Host "Provider-backed payout journey: PASS"
+Write-Host "Destination ID: $destinationId"
 Write-Host "Payout ID: $payoutId"
 Write-Host "Provider reference: $($proofParts[1])"
 Write-Host "Wallet readback: $walletReadback"
