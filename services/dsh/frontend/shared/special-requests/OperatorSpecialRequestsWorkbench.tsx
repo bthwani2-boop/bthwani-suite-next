@@ -3,7 +3,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Box, Button, StateView, Text, TextField, type StateTone } from '@bthwani/ui-kit';
-import { WebControlPanelKpiStrip, WebControlPanelDecisionRow } from '@bthwani/ui-kit/web';
+import { WebControlPanelDecisionRow, WebControlPanelKpiStrip } from '@bthwani/ui-kit/web';
 import { buildOperationsHref } from '../operations/operations-registry';
 import type { OperationsFocusParams } from '../operations/operations.types';
 import { DSH_CONTROL_PANEL_TONE_MAP } from '../operations/operations.types';
@@ -11,6 +11,7 @@ import { useOperatorSpecialRequestsController } from './use-special-requests-con
 import type {
   DshSpecialRequestResponse,
   DshUpdateSpecialRequest,
+  SpecialRequestDetailBundle,
   SpecialRequestStatus,
 } from './special-requests.types';
 
@@ -24,11 +25,7 @@ export type OperatorSpecialRequestsWorkbenchProps = {
   focusParams?: OperationsFocusParams;
 };
 
-type FailureCopy = {
-  title: string;
-  description: string;
-  tone: StateTone;
-};
+type FailureCopy = { title: string; description: string; tone: StateTone };
 
 type OperatorForm = {
   status: SpecialRequestStatus;
@@ -38,6 +35,7 @@ type OperatorForm = {
   assignedOperatorId: string;
   rejectionReason: string;
   captainId: string;
+  informationQuestion: string;
 };
 
 const OPERATOR_STATUSES: readonly SpecialRequestStatus[] = [
@@ -52,26 +50,10 @@ const OPERATOR_STATUSES: readonly SpecialRequestStatus[] = [
 ];
 
 const FAILURE_COPY: Readonly<Record<'error' | 'offline' | 'forbidden' | 'conflict', FailureCopy>> = {
-  error: {
-    title: 'خطأ في تحميل الطلبات',
-    description: 'تعذر تحميل طلبات هذه الخدمة.',
-    tone: 'danger',
-  },
-  offline: {
-    title: 'غير متصل',
-    description: 'تأكد من اتصالك بالإنترنت.',
-    tone: 'warning',
-  },
-  forbidden: {
-    title: 'الوصول مرفوض',
-    description: 'لا تملك الصلاحية اللازمة.',
-    tone: 'danger',
-  },
-  conflict: {
-    title: 'تعارض في البيانات',
-    description: 'أعد القراءة قبل متابعة الإجراء.',
-    tone: 'warning',
-  },
+  error: { title: 'خطأ في تحميل الطلبات', description: 'تعذر تحميل طلبات هذه الخدمة.', tone: 'danger' },
+  offline: { title: 'غير متصل', description: 'تأكد من اتصالك بالإنترنت.', tone: 'warning' },
+  forbidden: { title: 'الوصول مرفوض', description: 'لا تملك الصلاحية اللازمة.', tone: 'danger' },
+  conflict: { title: 'تعارض في البيانات', description: 'أعد القراءة قبل متابعة الإجراء.', tone: 'warning' },
 };
 
 function formFromRequest(request: DshSpecialRequestResponse): OperatorForm {
@@ -85,6 +67,7 @@ function formFromRequest(request: DshSpecialRequestResponse): OperatorForm {
     assignedOperatorId: request.assignedOperatorId ?? '',
     rejectionReason: request.rejectionReason ?? '',
     captainId: '',
+    informationQuestion: '',
   };
 }
 
@@ -96,19 +79,69 @@ function parsePositiveMinorUnits(value: string): number {
   return parsed;
 }
 
-export function OperatorSpecialRequestsWorkbench({ requestType, title, stageLabels, stageOrder, focusParams }: OperatorSpecialRequestsWorkbenchProps) {
+function DetailValue({ label, value }: { readonly label: string; readonly value: unknown }) {
+  if (value === null || value === undefined || value === '') return null;
+  return <Text role="bodySm">{label}: {String(value)}</Text>;
+}
+
+function ExecutionEvidence({ detail }: { readonly detail: SpecialRequestDetailBundle | undefined }) {
+  const execution = detail?.execution;
+  const financial = detail?.financial;
+  const exception = execution?.latestException;
+  const payment = financial?.paymentSession;
+  return (
+    <Box gap={2} padding={3} background="surfaceMuted" radiusToken="md">
+      <Text role="titleSm">التنفيذ والأدلة والاستثناءات</Text>
+      <DetailValue label="الكابتن" value={execution?.captainId} />
+      <DetailValue label="حالة الإسناد" value={execution?.assignmentStatus} />
+      <DetailValue label="حالة التوصيل" value={execution?.deliveryStatus} />
+      <DetailValue label="طريقة إثبات التسليم" value={execution?.podMethod} />
+      <DetailValue label="مرجع إثبات التسليم" value={execution?.podReference} />
+      <DetailValue label="ملاحظة التنفيذ" value={execution?.deliveryNote} />
+      {exception ? (
+        <Box gap={1} padding={2} background="warningSurface" radiusToken="sm">
+          <Text role="titleSm">آخر استثناء</Text>
+          <DetailValue label="السبب" value={exception.reasonCode} />
+          <DetailValue label="التفاصيل" value={exception.note} />
+          <DetailValue label="الشدة" value={exception.severity} />
+          <DetailValue label="الحالة" value={exception.status} />
+          <DetailValue label="قرار المعالجة" value={exception.resolutionAction} />
+          <DetailValue label="ملاحظة القرار" value={exception.resolutionNote} />
+        </Box>
+      ) : <Text role="bodySm" tone="secondary">لا يوجد استثناء مسجل.</Text>}
+      <Text role="titleSm">القراءة المالية من WLT</Text>
+      <DetailValue label="حالة القراءة" value={financial?.readState} />
+      <DetailValue label="حالة جلسة الدفع" value={payment?.status} />
+      <DetailValue label="مرجع المزود" value={payment?.providerReference} />
+      <DetailValue label="القيمة" value={payment?.amountMinorUnits} />
+      <DetailValue label="العملة" value={payment?.currency} />
+      <DetailValue label="قابلية التسوية" value={financial?.settlementApplicability} />
+      <DetailValue label="سبب قرار التسوية" value={financial?.settlementReason} />
+    </Box>
+  );
+}
+
+export function OperatorSpecialRequestsWorkbench({
+  requestType,
+  title,
+  stageLabels,
+  stageOrder,
+  focusParams,
+}: OperatorSpecialRequestsWorkbenchProps) {
   const router = useRouter();
   const {
     requests,
+    detailsByRequestId,
     loadState,
     getOne,
     reload,
     update,
     assignDispatch,
+    requestInformation,
   } = useOperatorSpecialRequestsController({ requestType, autoLoad: true });
   const [selectedRequest, setSelectedRequest] = React.useState<DshSpecialRequestResponse | null>(null);
   const [form, setForm] = React.useState<OperatorForm | null>(null);
-  const [pendingAction, setPendingAction] = React.useState<'transition' | 'quote' | 'dispatch' | null>(null);
+  const [pendingAction, setPendingAction] = React.useState<'transition' | 'information' | 'quote' | 'dispatch' | null>(null);
   const [feedback, setFeedback] = React.useState<string | null>(null);
 
   React.useEffect(() => {
@@ -151,14 +184,34 @@ export function OperatorSpecialRequestsWorkbench({ requestType, title, stageLabe
         ...(form.assignedOperatorId.trim() ? { assignedOperatorId: form.assignedOperatorId.trim() } : {}),
         ...(form.rejectionReason.trim() ? { rejectionReason: form.rejectionReason.trim() } : {}),
       };
-      const readback = await update(selectedRequest.id, input);
-      applyReadback(readback, 'تم تطبيق الانتقال وقراءة النسخة المحدثة من DSH.');
+      applyReadback(await update(selectedRequest.id, input), 'تم تطبيق الانتقال وقراءة النسخة المحدثة من DSH.');
     } catch (error) {
       setFeedback(error instanceof Error ? error.message : 'تعذر تطبيق الانتقال التشغيلي.');
     } finally {
       setPendingAction(null);
     }
   }, [applyReadback, form, selectedRequest, update]);
+
+  const handleRequestInformation = React.useCallback(async () => {
+    if (!selectedRequest || !form) return;
+    const question = form.informationQuestion.trim();
+    if (question.length < 5) {
+      setFeedback('سؤال المعلومات الإضافية يجب أن يحتوي على خمسة أحرف على الأقل.');
+      return;
+    }
+    setPendingAction('information');
+    setFeedback(null);
+    try {
+      applyReadback(
+        await requestInformation(selectedRequest, question),
+        'تم إرسال السؤال للعميل ونقل الطلب إلى مرحلة المعلومات الإضافية.',
+      );
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : 'تعذر طلب المعلومات الإضافية.');
+    } finally {
+      setPendingAction(null);
+    }
+  }, [applyReadback, form, requestInformation, selectedRequest]);
 
   const handleQuote = React.useCallback(async () => {
     if (!selectedRequest || !form) return;
@@ -168,15 +221,14 @@ export function OperatorSpecialRequestsWorkbench({ requestType, title, stageLabe
       const amount = parsePositiveMinorUnits(form.estimatedAmountMinorUnits);
       const currency = form.currency.trim().toUpperCase();
       if (!currency) throw new Error('رمز العملة مطلوب.');
-      const readback = await update(selectedRequest.id, {
+      applyReadback(await update(selectedRequest.id, {
         expectedVersion: selectedRequest.version,
         status: 'needs_customer_input',
         workflowStage: 'customer_approval',
         estimatedAmountMinorUnits: amount,
         currency,
         quotePreparedAt: new Date().toISOString(),
-      });
-      applyReadback(readback, 'تم إرسال العرض للعميل وأصبحت الموافقة والدفع متاحين من تطبيق العميل.');
+      }), 'تم إرسال العرض للعميل وأصبحت الموافقة والدفع متاحين من تطبيق العميل.');
     } catch (error) {
       setFeedback(error instanceof Error ? error.message : 'تعذر إرسال العرض للعميل.');
     } finally {
@@ -194,8 +246,7 @@ export function OperatorSpecialRequestsWorkbench({ requestType, title, stageLabe
     setPendingAction('dispatch');
     setFeedback(null);
     try {
-      const readback = await assignDispatch(selectedRequest.id, captainId);
-      applyReadback(readback, 'تم إنشاء إسناد الكابتن وقراءة حالة الطلب المحدثة.');
+      applyReadback(await assignDispatch(selectedRequest.id, captainId), 'تم إنشاء إسناد الكابتن وقراءة حالة الطلب المحدثة.');
     } catch (error) {
       setFeedback(error instanceof Error ? error.message : 'تعذر إسناد الطلب إلى الكابتن.');
     } finally {
@@ -234,40 +285,24 @@ export function OperatorSpecialRequestsWorkbench({ requestType, title, stageLabe
 
   if (loadState === 'error' || loadState === 'offline' || loadState === 'forbidden' || loadState === 'conflict') {
     const errorState = FAILURE_COPY[loadState];
-    return (
-      <StateView
-        title={errorState.title}
-        description={errorState.description}
-        tone={errorState.tone}
-        actionLabel="إعادة المحاولة"
-        onActionPress={reload}
-      />
-    );
+    return <StateView title={errorState.title} description={errorState.description} tone={errorState.tone} actionLabel="إعادة المحاولة" onActionPress={reload} />;
   }
+
+  const selectedDetail = selectedRequest ? detailsByRequestId[selectedRequest.id] : undefined;
+  const exchange = selectedDetail?.informationExchange;
 
   return (
     <Box gap={3}>
       <Box gap={1}>
         <Text role="titleMd">{title}</Text>
-        <Text role="bodySm" tone="secondary">البيانات والحالات مقروءة من خدمة الطلبات الخاصة السيادية.</Text>
+        <Text role="bodySm" tone="secondary">البيانات والحالات والأدلة مقروءة من الملاك السياديين DSH وDispatch وWLT.</Text>
       </Box>
-
       <WebControlPanelKpiStrip items={summaryKpi} />
 
       {loadState === 'loading' && requests.length === 0 ? (
-        <StateView
-          title="جاري تحميل الطلبات"
-          description="تتم قراءة قائمة الطلبات الخاصة من DSH."
-          tone="info"
-          loading
-        />
+        <StateView title="جاري تحميل الطلبات" description="تتم قراءة قائمة الطلبات الخاصة من DSH." tone="info" loading />
       ) : requests.length === 0 ? (
-        <StateView
-          title="لا توجد طلبات"
-          description="لا توجد طلبات خاصة في هذا القسم حاليًا."
-          actionLabel="تحديث"
-          onActionPress={reload}
-        />
+        <StateView title="لا توجد طلبات" description="لا توجد طلبات خاصة في هذا القسم حاليًا." actionLabel="تحديث" onActionPress={reload} />
       ) : (
         <Box gap={2}>
           {rows.map((item) => (
@@ -295,116 +330,89 @@ export function OperatorSpecialRequestsWorkbench({ requestType, title, stageLabe
       )}
 
       {selectedRequest && form && focusParams?.panel === 'detail' ? (
-        <Box gap={2} padding={4} background="brandSurface" radiusToken="md">
+        <Box gap={3} padding={4} background="brandSurface" radiusToken="md">
           <Text role="titleSm">المفتش: {selectedRequest.id}</Text>
-          <Text role="bodySm">العميل: {selectedRequest.clientId}</Text>
-          <Text role="bodySm">مرجع WLT: {selectedRequest.wltPaymentSessionId || 'غير متوفر'}</Text>
-          <Text role="bodySm">الحالة: {stageLabels[selectedRequest.workflowStage || ''] ?? selectedRequest.workflowStage ?? selectedRequest.status}</Text>
-          <Text role="bodySm">الإسناد: {selectedRequest.dispatchAssignmentId || 'غير مسند'}</Text>
-          <Text role="bodySm">النسخة: {selectedRequest.version}</Text>
+          <DetailValue label="العميل" value={selectedRequest.clientId} />
+          <DetailValue label="الحالة" value={stageLabels[selectedRequest.workflowStage || ''] ?? selectedRequest.workflowStage ?? selectedRequest.status} />
+          <DetailValue label="الإسناد" value={selectedRequest.dispatchAssignmentId || 'غير مسند'} />
+          <DetailValue label="النسخة" value={selectedRequest.version} />
 
           {requestType === 'SHEIN_ASSISTED_PURCHASE' ? (
             <Box gap={1}>
-              <Text role="bodySm">رابط المنتج: {selectedRequest.productUrl || '—'}</Text>
-              <Text role="bodySm">الكمية: {selectedRequest.quantity || '—'} | المقاس: {selectedRequest.size || '—'} | اللون: {selectedRequest.color || '—'}</Text>
-              <Text role="bodySm">دليل الشراء: {selectedRequest.purchaseBatchId || '—'}</Text>
-              <Text role="bodySm">مرجع الاستلام: {selectedRequest.inboundReference || '—'}</Text>
+              <DetailValue label="رابط المنتج" value={selectedRequest.productUrl} />
+              <DetailValue label="الكمية" value={selectedRequest.quantity} />
+              <DetailValue label="المقاس" value={selectedRequest.size} />
+              <DetailValue label="اللون" value={selectedRequest.color} />
+              <DetailValue label="دفعة الشراء" value={selectedRequest.purchaseBatchId} />
+              <DetailValue label="مرجع الاستلام" value={selectedRequest.inboundReference} />
             </Box>
           ) : (
             <Box gap={1}>
-              <Text role="bodySm">النوع: {selectedRequest.itemType || '—'}</Text>
-              <Text role="bodySm">مرجع الاستلام: {selectedRequest.pickupAddressReference || '—'}</Text>
-              <Text role="bodySm">مرجع التسليم: {selectedRequest.dropoffAddressReference || '—'}</Text>
-              <Text role="bodySm">متطلبات المناولة: {selectedRequest.handlingRequirements || '—'}</Text>
+              <DetailValue label="النوع" value={selectedRequest.itemType} />
+              <DetailValue label="مرجع الاستلام" value={selectedRequest.pickupAddressReference} />
+              <DetailValue label="مرجع التسليم" value={selectedRequest.dropoffAddressReference} />
+              <DetailValue label="متطلبات المناولة" value={selectedRequest.handlingRequirements} />
             </Box>
           )}
+
+          <Box gap={2} padding={3} background="surfaceMuted" radiusToken="md">
+            <Text role="titleSm">طلب معلومات إضافية</Text>
+            {exchange ? (
+              <Box gap={1}>
+                <DetailValue label="السؤال" value={exchange.question} />
+                <DetailValue label="رد العميل" value={exchange.response} />
+                <DetailValue label="حالة الجولة" value={exchange.status} />
+              </Box>
+            ) : <Text role="bodySm" tone="secondary">لم تُفتح جولة معلومات لهذا الطلب.</Text>}
+            <TextField
+              label="السؤال المطلوب من العميل"
+              value={form.informationQuestion}
+              onChangeText={(value) => updateForm('informationQuestion', value)}
+              multiline
+              numberOfLines={4}
+              maxLength={2000}
+              disabled={pendingAction !== null || exchange?.status === 'pending'}
+            />
+            <Button
+              label={pendingAction === 'information' ? 'جارٍ إرسال السؤال...' : 'طلب المعلومات من العميل'}
+              tone="secondary"
+              loading={pendingAction === 'information'}
+              disabled={pendingAction !== null || exchange?.status === 'pending' || form.informationQuestion.trim().length < 5}
+              onPress={() => void handleRequestInformation()}
+            />
+          </Box>
 
           <Box gap={2}>
             <label>
               الحالة التشغيلية
-              <select
-                value={form.status}
-                onChange={(event) => updateForm('status', event.target.value as SpecialRequestStatus)}
-                disabled={pendingAction !== null}
-              >
-                {OPERATOR_STATUSES.map((status) => (
-                  <option key={status} value={status}>{status}</option>
-                ))}
+              <select value={form.status} onChange={(event) => updateForm('status', event.target.value as SpecialRequestStatus)} disabled={pendingAction !== null}>
+                {OPERATOR_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}
               </select>
             </label>
             <label>
               مرحلة سير العمل
-              <select
-                value={form.workflowStage}
-                onChange={(event) => updateForm('workflowStage', event.target.value)}
-                disabled={pendingAction !== null}
-              >
+              <select value={form.workflowStage} onChange={(event) => updateForm('workflowStage', event.target.value)} disabled={pendingAction !== null}>
                 <option value="">بدون تغيير صريح</option>
-                {stageOrder.map((stage) => (
-                  <option key={stage} value={stage}>{stageLabels[stage] ?? stage}</option>
-                ))}
+                {stageOrder.map((stage) => <option key={stage} value={stage}>{stageLabels[stage] ?? stage}</option>)}
               </select>
             </label>
-            <TextField
-              label="المشغّل المسؤول"
-              value={form.assignedOperatorId}
-              onChangeText={(value) => updateForm('assignedOperatorId', value)}
-              disabled={pendingAction !== null}
-            />
-            <TextField
-              label="سبب الرفض أو الملاحظة الحاكمة"
-              value={form.rejectionReason}
-              onChangeText={(value) => updateForm('rejectionReason', value)}
-              disabled={pendingAction !== null}
-            />
-            <Button
-              label={pendingAction === 'transition' ? 'جارٍ تطبيق الانتقال...' : 'تطبيق الانتقال وقراءة النتيجة'}
-              tone="primary"
-              loading={pendingAction === 'transition'}
-              disabled={pendingAction !== null}
-              onPress={() => void handleTransition()}
-            />
+            <TextField label="المشغّل المسؤول" value={form.assignedOperatorId} onChangeText={(value) => updateForm('assignedOperatorId', value)} disabled={pendingAction !== null} />
+            <TextField label="سبب الرفض التشغيلي" value={form.rejectionReason} onChangeText={(value) => updateForm('rejectionReason', value)} disabled={pendingAction !== null} />
+            <Button label={pendingAction === 'transition' ? 'جارٍ تطبيق الانتقال...' : 'تطبيق الانتقال وقراءة النتيجة'} tone="primary" loading={pendingAction === 'transition'} disabled={pendingAction !== null} onPress={() => void handleTransition()} />
           </Box>
 
           <Box gap={2}>
             <Text role="titleSm">عرض السعر وموافقة العميل</Text>
-            <TextField
-              label="القيمة بالوحدة الصغرى"
-              value={form.estimatedAmountMinorUnits}
-              keyboardType="numeric"
-              onChangeText={(value) => updateForm('estimatedAmountMinorUnits', value)}
-              disabled={pendingAction !== null}
-            />
-            <TextField
-              label="العملة"
-              value={form.currency}
-              autoCapitalize="characters"
-              onChangeText={(value) => updateForm('currency', value)}
-              disabled={pendingAction !== null}
-            />
-            <Button
-              label={pendingAction === 'quote' ? 'جارٍ إرسال العرض...' : 'إرسال العرض للعميل'}
-              tone="primary"
-              loading={pendingAction === 'quote'}
-              disabled={pendingAction !== null}
-              onPress={() => void handleQuote()}
-            />
+            <TextField label="القيمة بالوحدة الصغرى" value={form.estimatedAmountMinorUnits} keyboardType="numeric" onChangeText={(value) => updateForm('estimatedAmountMinorUnits', value)} disabled={pendingAction !== null} />
+            <TextField label="العملة" value={form.currency} autoCapitalize="characters" onChangeText={(value) => updateForm('currency', value)} disabled={pendingAction !== null} />
+            <Button label={pendingAction === 'quote' ? 'جارٍ إرسال العرض...' : 'إرسال العرض للعميل'} tone="primary" loading={pendingAction === 'quote'} disabled={pendingAction !== null || exchange?.status === 'pending'} onPress={() => void handleQuote()} />
           </Box>
 
           <Box gap={2}>
             <Text role="titleSm">إسناد الكابتن</Text>
-            <TextField
-              label="معرّف الكابتن"
-              value={form.captainId}
-              onChangeText={(value) => updateForm('captainId', value)}
-              disabled={pendingAction !== null || Boolean(selectedRequest.dispatchAssignmentId)}
-            />
+            <TextField label="معرّف الكابتن" value={form.captainId} onChangeText={(value) => updateForm('captainId', value)} disabled={pendingAction !== null || Boolean(selectedRequest.dispatchAssignmentId)} />
             <Button
-              label={selectedRequest.dispatchAssignmentId
-                ? 'تم إنشاء الإسناد'
-                : pendingAction === 'dispatch'
-                  ? 'جارٍ إنشاء الإسناد...'
-                  : 'إسناد الطلب للكابتن'}
+              label={selectedRequest.dispatchAssignmentId ? 'تم إنشاء الإسناد' : pendingAction === 'dispatch' ? 'جارٍ إنشاء الإسناد...' : 'إسناد الطلب للكابتن'}
               tone={selectedRequest.dispatchAssignmentId ? 'success' : 'primary'}
               loading={pendingAction === 'dispatch'}
               disabled={pendingAction !== null || Boolean(selectedRequest.dispatchAssignmentId)}
@@ -412,9 +420,9 @@ export function OperatorSpecialRequestsWorkbench({ requestType, title, stageLabe
             />
           </Box>
 
-          <Text role="bodySm">الإجراءات المتاحة: {selectedRequest.allowedActions?.join('، ') || 'تتحقق عند التنفيذ من الباك إند'}</Text>
-          <Text role="bodySm">أسباب الحظر: {selectedRequest.blockingReasons?.join('، ') || 'لا يوجد سبب حظر معلن'}</Text>
-          <Text role="bodySm">الاستثناء: {selectedRequest.rejectionReason || 'لا يوجد'}</Text>
+          <ExecutionEvidence detail={selectedDetail} />
+          <DetailValue label="الإجراءات المتاحة" value={selectedRequest.allowedActions?.join('، ') || 'تتحقق عند التنفيذ من الباك إند'} />
+          <DetailValue label="أسباب الحظر" value={selectedRequest.blockingReasons?.join('، ') || 'لا يوجد سبب حظر معلن'} />
           {feedback ? <Text role="bodySm" tone="secondary">{feedback}</Text> : null}
         </Box>
       ) : null}
