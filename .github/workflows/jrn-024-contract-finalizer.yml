@@ -94,8 +94,8 @@ jobs:
 
             git add services/dsh/contracts/components/schemas/field.schemas.yaml \
                     services/dsh/contracts/paths/field.paths.yaml \
-                    services/dsh/contracts/generated/dsh.bundle.openapi.yaml \
                     services/dsh/clients/generated/dsh-api.ts
+            git add -f services/dsh/contracts/generated/dsh.bundle.openapi.yaml
             git commit -m "fix(jrn-024): synchronize GPS visit contracts"
             if git push origin HEAD:sambassam; then
               exit 0
