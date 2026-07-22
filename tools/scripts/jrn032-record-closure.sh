@@ -71,7 +71,9 @@ Product Manager, Product Owner, financial-control, deployment, and live-environm
 )
 PY
 
-rm -f governance/evidence/JRN-032_OPENAPI_FAILURE.log
+rm -f \
+  governance/evidence/JRN-032_OPENAPI_FAILURE.log \
+  governance/evidence/JRN-032_HTTP_FAILURE.log
 
 git config user.name "github-actions[bot]"
 git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -93,7 +95,10 @@ git add \
   governance/evidence/JRN-032_SLICE_VERIFICATION.json \
   governance/evidence/JRN-032_FINAL_REMOTE_VERIFICATION.md
 
-git add -u governance/evidence/JRN-032_OPENAPI_FAILURE.log 2>/dev/null || true
+git add -u \
+  governance/evidence/JRN-032_OPENAPI_FAILURE.log \
+  governance/evidence/JRN-032_HTTP_FAILURE.log \
+  2>/dev/null || true
 
 if git diff --cached --quiet; then
   echo "No materialized JRN-032 changes to commit."
