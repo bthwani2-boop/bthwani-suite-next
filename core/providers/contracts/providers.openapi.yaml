@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: BThwani Core External Provider API
-  version: 0.3.0
-  description: External provider registry, governed health probing, secret-safe configuration, and provider invocation API.
+  version: 0.4.0
+  description: External provider registry, governed health and database-backed readiness, secret-safe configuration, and provider invocation API.
 
 x-bthwani-owner: core/providers
 x-bthwani-contract-state: CONTRACT_ACTIVE
@@ -24,6 +24,26 @@ paths:
                 $ref: "#/components/schemas/ExternalProviderHealthResponse"
         "500":
           description: Provider registry could not be read.
+
+  /providers/readiness:
+    get:
+      operationId: getExternalProviderReadiness
+      summary: Return database-backed runtime readiness for the Providers service.
+      description: Readiness is reported only when the service can reach its sovereign PostgreSQL database. External provider configuration does not affect process readiness.
+      tags: [ExternalProviderHealth]
+      responses:
+        "200":
+          description: Providers runtime is ready to serve database-backed requests.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeReadinessResponse"
+        "503":
+          description: Providers runtime is not ready because its sovereign database is unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeReadinessResponse"
 
   /providers:
     get:
@@ -202,6 +222,18 @@ components:
       bearerFormat: JWT
 
   schemas:
+    RuntimeReadinessResponse:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ready, not_ready]
+        reason:
+          type: string
+          enum: [database_unavailable]
+
     ExternalProviderKind:
       type: string
       enum: [sms, maps, payment, push, email, storage, search, fraud]
