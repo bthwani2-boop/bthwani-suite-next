@@ -40,6 +40,84 @@ function Assert-PlatformHttpFailureStatus {
   }
 }
 
+function Assert-ProviderResponseIsSecretSafe {
+  param(
+    [Parameter(Mandatory = $true)]$Provider,
+    [Parameter(Mandatory = $true)][string]$Context
+  )
+  if ($Provider.PSObject.Properties.Name -contains "credentials") {
+    throw "$Context exposed the credentials field"
+  }
+  $serialized = $Provider | ConvertTo-Json -Depth 12 -Compress
+  if ($serialized -match 'apiKey|password|privateKey|refreshToken|accountSid|secret-value') {
+    throw "$Context exposed secret-like provider material"
+  }
+}
+
+function Invoke-Jrn039ProviderSmoke {
+  param(
+    [Parameter(Mandatory = $true)][string]$AccessToken,
+    [Parameter(Mandatory = $true)][string]$CorrelationId
+  )
+
+  $providerHealth = Invoke-RestMethod "http://localhost:58087/providers/health" -TimeoutSec 10
+  if ($null -eq $providerHealth.providers -or @($providerHealth.providers).Count -eq 0) {
+    throw "provider health did not return the governed provider-kind snapshot"
+  }
+  if (@($providerHealth.providers | Where-Object { $_.status -eq "healthy" }).Count -ne 0) {
+    throw "unconfigured local providers were incorrectly reported healthy"
+  }
+  $providerReadiness = Invoke-RestMethod "http://localhost:58087/providers/readiness" -TimeoutSec 10
+  if ($providerReadiness.status -ne "ready") { throw "providers readiness is not ready" }
+
+  $readHeaders = New-PlatformAuthHeaders -AccessToken $AccessToken -CorrelationId "$CorrelationId-provider-read"
+  $providers = @(Invoke-RestMethod "http://localhost:58087/providers" -Headers $readHeaders -TimeoutSec 10)
+  if ($providers.Count -eq 0) { throw "provider registry is empty after governed migrations" }
+  foreach ($providerRow in $providers) {
+    Assert-ProviderResponseIsSecretSafe -Provider $providerRow -Context "provider list"
+  }
+
+  $provider = @($providers | Where-Object { $_.code -ne "wlt-mock" })[0]
+  if ($null -eq $provider) { throw "no non-mock provider is available for JRN-039 smoke" }
+  $providerId = $provider.providerId
+  $originalActive = [bool]$provider.active
+  $targetActive = -not $originalActive
+
+  $detail = Invoke-RestMethod "http://localhost:58087/providers/$providerId" -Headers $readHeaders -TimeoutSec 10
+  Assert-ProviderResponseIsSecretSafe -Provider $detail -Context "provider detail"
+  if ($detail.providerId -ne $providerId) { throw "provider detail read-back returned another provider" }
+
+  $mutationId = "$CorrelationId-provider-toggle"
+  $mutationHeaders = New-PlatformAuthHeaders -AccessToken $AccessToken -CorrelationId $mutationId
+  $mutationHeaders["Idempotency-Key"] = $mutationId
+  $mutationBody = @{ active = $targetActive } | ConvertTo-Json -Compress
+  $updated = Invoke-RestMethod "http://localhost:58087/providers/$providerId" -Method Patch -Headers $mutationHeaders -ContentType "application/json" -Body $mutationBody -TimeoutSec 10
+  Assert-ProviderResponseIsSecretSafe -Provider $updated -Context "provider update"
+  if ([bool]$updated.active -ne $targetActive) { throw "provider update did not apply the requested state" }
+
+  $replay = Invoke-RestMethod "http://localhost:58087/providers/$providerId" -Method Patch -Headers $mutationHeaders -ContentType "application/json" -Body $mutationBody -TimeoutSec 10
+  if ($replay.updatedAt -ne $updated.updatedAt) { throw "idempotent provider replay did not return the original response" }
+
+  $conflictBody = @{ active = $originalActive } | ConvertTo-Json -Compress
+  Assert-PlatformHttpFailureStatus -ExpectedStatus 409 -Operation {
+    Invoke-RestMethod "http://localhost:58087/providers/$providerId" -Method Patch -Headers $mutationHeaders -ContentType "application/json" -Body $conflictBody -TimeoutSec 10
+  }
+
+  $readBack = Invoke-RestMethod "http://localhost:58087/providers/$providerId" -Headers $readHeaders -TimeoutSec 10
+  if ([bool]$readBack.active -ne $targetActive) { throw "provider source-of-truth read-back did not match the committed mutation" }
+
+  $restoreId = "$CorrelationId-provider-restore"
+  $restoreHeaders = New-PlatformAuthHeaders -AccessToken $AccessToken -CorrelationId $restoreId
+  $restoreHeaders["Idempotency-Key"] = $restoreId
+  $restored = Invoke-RestMethod "http://localhost:58087/providers/$providerId" -Method Patch -Headers $restoreHeaders -ContentType "application/json" -Body $conflictBody -TimeoutSec 10
+  if ([bool]$restored.active -ne $originalActive) { throw "provider state was not restored after smoke verification" }
+
+  $auditCount = Invoke-PlatformDatabasePsql -User "providers_runtime" -Database "providers_runtime" -Sql "SELECT count(*) FROM providers_action_audit WHERE correlation_id IN ('$mutationId', '$restoreId');"
+  if ([int]$auditCount -ne 2) { throw "expected two atomic provider audit rows, got $auditCount" }
+  $secretAuditCount = Invoke-PlatformDatabasePsql -User "providers_runtime" -Database "providers_runtime" -Sql "SELECT count(*) FROM providers_action_audit WHERE correlation_id IN ('$mutationId', '$restoreId') AND (from_state::text ILIKE '%credentials%' OR to_state::text ILIKE '%credentials%');"
+  if ([int]$secretAuditCount -ne 0) { throw "provider audit payload exposed credentials" }
+}
+
 function Invoke-PlatformP3Smoke {
   Start-PlatformP3Runtime
   $health = Invoke-RestMethod "http://localhost:58088/platform/health" -TimeoutSec 10
@@ -57,6 +135,8 @@ function Invoke-PlatformP3Smoke {
   $approverHeaders = New-PlatformAuthHeaders -AccessToken $approverToken -CorrelationId $correlationId
   $applierHeaders = New-PlatformAuthHeaders -AccessToken $applierToken -CorrelationId $correlationId
   $rolloutHeaders = New-PlatformAuthHeaders -AccessToken $rolloutToken -CorrelationId $correlationId
+
+  Invoke-Jrn039ProviderSmoke -AccessToken $operatorToken -CorrelationId $correlationId
 
   $snapshot = Invoke-RestMethod "http://localhost:58088/platform/v1/runtime-config" -Headers $operatorHeaders -TimeoutSec 10
   if ($snapshot.status -ne "OPERATIONAL" -or $snapshot.rolloutsState -ne "OPERATIONAL") {
@@ -134,5 +214,5 @@ function Invoke-PlatformP3Smoke {
   $audit = Invoke-RestMethod "http://localhost:58088/platform/v1/audit-events" -Headers $rolloutHeaders -TimeoutSec 10
   $journeyEvents = @($audit.events | Where-Object { $_.correlationId -eq $correlationId })
   if ($journeyEvents.Count -ne 10) { throw "expected ten persisted P3 workflow events, got $($journeyEvents.Count)" }
-  Write-Host "Platform-control P3 multi-service runtime smoke: PASS"
+  Write-Host "Platform-control P3 multi-service runtime smoke including JRN-039 providers: PASS"
 }
