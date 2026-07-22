@@ -1,0 +1,184 @@
+name: JRN-032 Operational Analytics Closure
+
+on:
+  push:
+    branches: [sambassam]
+    paths:
+      - ".github/workflows/jrn-032-operational-analytics.yml"
+      - "governance/product-truth/JRN-032_OPERATIONAL_ANALYTICS.md"
+      - "governance/evidence/JRN-032_SLICE_VERIFICATION.json"
+      - "services/dsh/backend/internal/analytics/jrn032_*"
+      - "services/dsh/backend/internal/http/analytics.go"
+      - "services/dsh/backend/internal/http/jrn032_*"
+      - "services/dsh/backend/internal/http/delivery_proof_routes.go"
+      - "services/dsh/backend/internal/wlt/analytics_read*"
+      - "services/dsh/contracts/paths/analytics.paths.yaml"
+      - "services/dsh/contracts/components/schemas/analytics.schemas.yaml"
+      - "services/dsh/frontend/shared/analytics/**"
+      - "services/dsh/frontend/control-panel/analytics/**"
+      - "services/dsh/frontend/app-partner/account/PartnerAnalyticsInsightsPanel.tsx"
+      - "apps/control-panel/runtime/src/app/dsh/analytics/**"
+      - "tools/scripts/patch-jrn032-openapi.mjs"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: jrn-032-sambassam
+  cancel-in-progress: false
+
+jobs:
+  verify-and-compose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout sambassam
+        uses: actions/checkout@v4
+        with:
+          ref: sambassam
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: pnpm
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.2
+          run_install: false
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: services/dsh/backend/go.sum
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Register JRN-032 in canonical OpenAPI root
+        run: node tools/scripts/patch-jrn032-openapi.mjs
+
+      - name: Format governed Go changes
+        working-directory: services/dsh/backend
+        run: |
+          gofmt -w \
+            internal/analytics/jrn032_window.go \
+            internal/analytics/jrn032_preparation.go \
+            internal/analytics/jrn032_people.go \
+            internal/analytics/jrn032_drilldown.go \
+            internal/analytics/jrn032_window_test.go \
+            internal/http/analytics.go \
+            internal/http/jrn032_analytics.go \
+            internal/http/jrn032_routes.go \
+            internal/http/jrn032_routes_test.go \
+            internal/http/delivery_proof_routes.go \
+            internal/wlt/analytics_read.go \
+            internal/wlt/analytics_read_test.go
+
+      - name: Verify and generate DSH OpenAPI
+        run: pnpm --dir services/dsh openapi:verify
+
+      - name: Run DSH analytics backend tests
+        working-directory: services/dsh/backend
+        run: go test ./internal/analytics ./internal/wlt ./internal/http
+
+      - name: Typecheck DSH shared and sovereign surfaces
+        run: pnpm --dir services/dsh typecheck
+
+      - name: Typecheck control panel runtime
+        run: pnpm --dir apps/control-panel/runtime typecheck
+
+      - name: Typecheck partner runtime
+        run: pnpm --dir apps/app-partner/runtime typecheck
+
+      - name: Verify full-stack and financial boundaries
+        run: |
+          pnpm run guard:fullstack-boundary
+          pnpm run guard:wlt-financial-boundary
+
+      - name: Verify repository contracts
+        run: pnpm run contracts:lint
+
+      - name: Write same-run verification evidence
+        env:
+          VERIFIED_EVENT_SHA: ${{ github.sha }}
+          VERIFIED_RUN_ID: ${{ github.run_id }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          registry_path = Path("governance/evidence/JRN-032_SLICE_VERIFICATION.json")
+          registry = json.loads(registry_path.read_text(encoding="utf-8"))
+          for item in registry["slices"]:
+              if item["id"] in {"JRN-032-S16", "JRN-032-S18"}:
+                  item["status"] = "verified_remote"
+          registry["formalDecision"] = "READY_FOR_INDEPENDENT_ACCEPTANCE"
+          registry["remoteVerification"] = {
+              "eventSha": os.environ["VERIFIED_EVENT_SHA"],
+              "workflowRunId": os.environ["VERIFIED_RUN_ID"],
+              "verifiedAt": datetime.now(timezone.utc).isoformat(),
+              "checks": [
+                  "DSH OpenAPI composition and generation",
+                  "Go analytics, WLT and HTTP tests",
+                  "DSH TypeScript typecheck",
+                  "control-panel runtime typecheck",
+                  "app-partner runtime typecheck",
+                  "full-stack boundary guard",
+                  "WLT financial boundary guard",
+                  "repository contract lint"
+              ]
+          }
+          registry_path.write_text(json.dumps(registry, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+          evidence_path = Path("governance/evidence/JRN-032_REMOTE_EXECUTION_LOG.md")
+          evidence_path.write_text(f"""# JRN-032 Remote Execution Log
+
+- repository_mode: REMOTE_ONLY
+- branch: sambassam
+- verified_event_sha: {os.environ['VERIFIED_EVENT_SHA']}
+- workflow_run_id: {os.environ['VERIFIED_RUN_ID']}
+- verified_at: {datetime.now(timezone.utc).isoformat()}
+- implementation_decision: READY_FOR_INDEPENDENT_ACCEPTANCE
+
+## Passed checks
+
+- DSH OpenAPI root registration, composition, and generated client.
+- Go tests for analytics windows, route registration, fail-closed periods, and WLT read-only boundary.
+- DSH shared/surface TypeScript typecheck.
+- Control-panel runtime TypeScript typecheck.
+- Partner runtime TypeScript typecheck.
+- Full-stack ownership boundary guard.
+- WLT financial ownership boundary guard.
+- Repository contract lint.
+
+## Independent gates still required
+
+- Product Manager approval.
+- Product Owner acceptance.
+- Financial control review of the WLT read-only exposure.
+- Deployment and live-environment runtime evidence were not executed by this workflow.
+""", encoding="utf-8")
+          PY
+
+      - name: Commit composed contract and verification evidence
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if git diff --quiet; then
+            echo "No generated or evidence changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore(jrn-032): compose contract and record remote verification [skip ci]"
+          git pull --rebase origin sambassam
+          git push origin HEAD:sambassam
