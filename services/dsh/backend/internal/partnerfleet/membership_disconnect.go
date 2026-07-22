@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"strconv"
 	"strings"
 )
 
@@ -126,9 +127,14 @@ func DisconnectCaptainMembership(
 
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO dsh_store_team_member_actions
-			(member_id, store_id, action_label, from_status, to_status, actor_id)
-		VALUES ($1, $2, 'captain_disconnect', $3, 'paused', $4)`,
-		teamMemberID, storeID, membership.Status, captainActorID); err != nil {
+			(member_id, store_id, action_label, from_status, to_status, actor_id, idempotency_key)
+		VALUES ($1, $2, 'captain_disconnect', $3, 'paused', $4, $5)`,
+		teamMemberID,
+		storeID,
+		membership.Status,
+		captainActorID,
+		auditIdempotencyKey("disconnect", teamMemberID+":"+strconv.Itoa(expectedVersion)),
+	); err != nil {
 		return CaptainFleetMembership{}, err
 	}
 
