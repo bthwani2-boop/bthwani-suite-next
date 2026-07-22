@@ -1,6 +1,7 @@
 package http
 
 import (
+	"database/sql"
 	"testing"
 	"time"
 )
@@ -56,5 +57,22 @@ func TestValidateDispatchLocationAccuracy(t *testing.T) {
 				t.Fatalf("validateDispatchLocationAccuracy() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestSameDispatchLocationSample(t *testing.T) {
+	recordedAt := time.Date(2026, 7, 22, 1, 2, 3, 0, time.UTC)
+	previousRecordedAt := sql.NullTime{Time: recordedAt, Valid: true}
+	previousLatitude := sql.NullFloat64{Float64: 15.369445, Valid: true}
+	previousLongitude := sql.NullFloat64{Float64: 44.191006, Valid: true}
+
+	if !sameDispatchLocationSample(recordedAt, 15.369445, 44.191006, previousRecordedAt, previousLatitude, previousLongitude) {
+		t.Fatal("expected exact replay to be idempotent")
+	}
+	if sameDispatchLocationSample(recordedAt, 15.370000, 44.191006, previousRecordedAt, previousLatitude, previousLongitude) {
+		t.Fatal("expected same timestamp with changed coordinates to be rejected")
+	}
+	if sameDispatchLocationSample(recordedAt.Add(time.Second), 15.369445, 44.191006, previousRecordedAt, previousLatitude, previousLongitude) {
+		t.Fatal("expected a newer sample to continue through normal validation")
 	}
 }
