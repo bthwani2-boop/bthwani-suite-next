@@ -4,6 +4,7 @@ import { Text, Icon, Box, Button, spacing, radius, useTheme } from '@bthwani/ui-
 import { ActorWalletPanel } from '../../actor-wallet';
 import { RepresentativeCommissionPanel } from '../../jrn036';
 import { PayoutDestinationPanel } from '../../jrn037';
+import { PartnerCodCustodyPanel } from '../../wlt-cod/PartnerCodCustodyPanel';
 
 export type WltDshPartnerBridgeProps = {
   readonly title?: string | undefined;
@@ -32,7 +33,7 @@ export function WltDshPartnerBridge({
   onOpenFinancialReport,
 }: WltDshPartnerBridgeProps) {
   const resolvedTitle = title ?? branchLabel ?? 'مالية الشريك';
-  const resolvedSubtitle = subtitle ?? activeZoneLabel ?? 'المحفظة والتسويات والعمولات والصرف من WLT';
+  const resolvedSubtitle = subtitle ?? activeZoneLabel ?? 'المحفظة والتسويات وعهدة COD من WLT';
   const resolvedOnPress = onPress ?? onBack;
   const theme = useTheme() as any;
 
@@ -58,6 +59,7 @@ export function WltDshPartnerBridge({
         </Pressable>
       ) : null}
 
+      <PartnerCodCustodyPanel />
       <ActorWalletPanel actorType="partner" title="محفظة الشريك" embedded />
       <RepresentativeCommissionPanel actorType="partner" title="عمولات الشريك" embedded />
       <PayoutDestinationPanel actorType="partner" title="وجهة صرف الشريك وطلبات الدفع" embedded />
