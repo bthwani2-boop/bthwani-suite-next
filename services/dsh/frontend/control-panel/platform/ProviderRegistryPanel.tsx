@@ -38,8 +38,26 @@ function credentialLabel(configured: boolean): string {
   return configured ? "مهيأة في الخادم" : "غير مهيأة";
 }
 
-export function ProviderRegistryPanel() {
-  const registry = useProviderRegistryController(true);
+export type ProviderRegistryPanelProps = {
+  readonly canRead: boolean;
+  readonly canUpdate: boolean;
+};
+
+export function ProviderRegistryPanel({ canRead, canUpdate }: ProviderRegistryPanelProps) {
+  const registry = useProviderRegistryController(canRead);
+
+  if (!canRead) {
+    return (
+      <ScrollScreen>
+        <Header title="سجل مزودي المنصة" subtitle="مزودو الخرائط والمدفوعات والبنية التحتية" />
+        <StateView
+          tone="danger"
+          title="صلاحية قراءة المزودين مطلوبة"
+          description="لا يتم استدعاء خدمة providers قبل تحقق provider:read على سطح لوحة التحكم."
+        />
+      </ScrollScreen>
+    );
+  }
 
   if (registry.state.kind === "loading" || registry.state.kind === "idle") {
     return (
@@ -74,6 +92,16 @@ export function ProviderRegistryPanel() {
         title="سجل مزودي المنصة"
         subtitle="قراءة وتحديث محكومان من خدمة providers؛ قيم الاعتماد لا تُعاد إلى المتصفح ولا تظهر في سجل التدقيق."
       />
+
+      {!canUpdate ? (
+        <View style={styles.section}>
+          <StateView
+            tone="info"
+            title="وضع القراءة فقط"
+            description="يمكن قراءة السجل والصحة والتفاصيل، لكن التفعيل والتعطيل مخفيان لعدم توفر provider:update."
+          />
+        </View>
+      ) : null}
 
       {mapsProvider ? (
         <View style={styles.section}>
@@ -142,12 +170,14 @@ export function ProviderRegistryPanel() {
                         disabled={mutationLoading}
                         onPress={() => void registry.selectProvider(row.providerId)}
                       />
-                      <Button
-                        label={row.active ? "تعطيل" : "تفعيل"}
-                        loading={mutationLoading}
-                        disabled={mutationLoading}
-                        onPress={() => void registry.setProviderActive(row.providerId, !row.active)}
-                      />
+                      {canUpdate ? (
+                        <Button
+                          label={row.active ? "تعطيل" : "تفعيل"}
+                          loading={mutationLoading}
+                          disabled={mutationLoading}
+                          onPress={() => void registry.setProviderActive(row.providerId, !row.active)}
+                        />
+                      ) : null}
                     </View>
                   );
                 },
