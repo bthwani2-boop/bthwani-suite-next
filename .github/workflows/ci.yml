@@ -41,7 +41,7 @@ on:
       - "pnpm-workspace.yaml"
       - "nx.json"
   push:
-    branches: [master]
+    branches: [master, lianbassam]
     paths:
       - "AGENTS.md"
       - "GEMINI.md"
@@ -119,6 +119,7 @@ jobs:
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           DISPATCH_MODE: ${{ inputs.mode }}
           DISPATCH_JOURNEY: ${{ inputs.journey }}
+          ACTIVE_BRANCH_FULL: ${{ github.event_name == 'push' && github.ref == 'refs/heads/lianbassam' }}
         run: |
           set -euo pipefail
           HEAD_SHA="${PR_HEAD_SHA:-${GITHUB_SHA}}"
@@ -126,9 +127,13 @@ jobs:
           if [[ -z "${BASE_SHA}" || "${BASE_SHA}" =~ ^0+$ ]]; then
             BASE_SHA="$(git rev-parse "${HEAD_SHA}^" 2>/dev/null || printf '%s' "${HEAD_SHA}")"
           fi
+          MODE="${DISPATCH_MODE:-affected}"
+          if [[ "${ACTIVE_BRANCH_FULL}" == "true" ]]; then
+            MODE="full"
+          fi
           CI_BASE_SHA="${BASE_SHA}" \
           CI_HEAD_SHA="${HEAD_SHA}" \
-          CI_MODE="${DISPATCH_MODE:-affected}" \
+          CI_MODE="${MODE}" \
           CI_JOURNEY="${DISPATCH_JOURNEY:-}" \
           node tools/scripts/detect-ci-context.mjs
       - name: Publish routing summary
@@ -155,7 +160,7 @@ jobs:
     needs: [context]
     if: ${{ needs.context.outputs.policy == 'true' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 35
     steps:
       - name: Checkout immutable source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -173,6 +178,7 @@ jobs:
           pnpm run guard:guard-registry
           pnpm run guard:sdlc
           pnpm run guard:cleanup-policy
+          pnpm run guard:required-command-integrity
       - name: Verify pinned GitHub Actions
         if: ${{ needs.context.outputs.workflow == 'true' || needs.context.outputs.security == 'true' }}
         run: pnpm run guard:actions-pin
@@ -198,7 +204,7 @@ jobs:
     needs: [context]
     if: ${{ needs.context.outputs.node == 'true' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - name: Checkout immutable source history
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -207,9 +213,10 @@ jobs:
           persist-credentials: false
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
-      - name: Verify affected contracts and bindings
+      - name: Verify imports, contracts, and bindings
         if: ${{ needs.context.outputs.contracts == 'true' }}
         run: |
+          pnpm run guard:no-broken-imports
           pnpm run contracts:lint
           pnpm run guard:api-binding
           pnpm run guard:backend-api-binding
@@ -230,7 +237,7 @@ jobs:
           NX_BASE: ${{ needs.context.outputs.base_sha }}
           NX_HEAD: ${{ needs.context.outputs.head_sha }}
         run: pnpm run affected:build -- --base="${NX_BASE}" --head="${NX_HEAD}"
-      - name: Run only detected journey gates
+      - name: Run detected journey gates
         if: ${{ needs.context.outputs.journey == 'true' && needs.context.outputs.journey_scope != '' }}
         shell: pwsh
         env:
@@ -255,7 +262,25 @@ jobs:
     needs: [context]
     if: ${{ needs.context.outputs.dsh == 'true' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 55
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: dsh_runtime
+          POSTGRES_PASSWORD: dsh_runtime_password
+          POSTGRES_DB: dsh_runtime
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U dsh_runtime -d dsh_runtime"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://dsh_runtime:dsh_runtime_password@localhost:5432/dsh_runtime?sslmode=disable
+      DSH_REQUIRE_DB_TESTS: "true"
+      PGPASSWORD: dsh_runtime_password
     steps:
       - name: Checkout immutable source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -266,7 +291,16 @@ jobs:
         with:
           go-version-file: services/dsh/backend/go.mod
           cache-dependency-path: services/dsh/backend/go.sum
-      - name: Test and build DSH
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Apply DSH migrations
+        run: |
+          set -euo pipefail
+          for migration in services/dsh/database/migrations/*.sql; do
+            echo "Applying ${migration}"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
+          done
+      - name: Test and build DSH with required database integration
         working-directory: services/dsh/backend
         run: |
           go test ./... -count=1
@@ -277,7 +311,25 @@ jobs:
     needs: [context]
     if: ${{ needs.context.outputs.wlt == 'true' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 55
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: wlt_runtime
+          POSTGRES_PASSWORD: wlt_runtime_password
+          POSTGRES_DB: wlt_runtime
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U wlt_runtime -d wlt_runtime"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://wlt_runtime:wlt_runtime_password@localhost:5432/wlt_runtime?sslmode=disable
+      WLT_REQUIRE_DB_TESTS: "true"
+      PGPASSWORD: wlt_runtime_password
     steps:
       - name: Checkout immutable source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -288,7 +340,16 @@ jobs:
         with:
           go-version-file: services/wlt/backend/go.mod
           cache-dependency-path: services/wlt/backend/go.sum
-      - name: Test and build WLT
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Apply WLT migrations
+        run: |
+          set -euo pipefail
+          for migration in services/wlt/database/migrations/*.sql; do
+            echo "Applying ${migration}"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
+          done
+      - name: Test and build WLT with required database integration
         working-directory: services/wlt/backend
         run: |
           go test ./... -count=1
@@ -299,7 +360,24 @@ jobs:
     needs: [context]
     if: ${{ needs.context.outputs.identity == 'true' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 40
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: identity_runtime
+          POSTGRES_PASSWORD: identity_runtime_password
+          POSTGRES_DB: identity_runtime
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U identity_runtime -d identity_runtime"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://identity_runtime:identity_runtime_password@localhost:5432/identity_runtime?sslmode=disable
+      PGPASSWORD: identity_runtime_password
     steps:
       - name: Checkout immutable source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -310,6 +388,15 @@ jobs:
         with:
           go-version-file: core/identity/backend/go.mod
           cache-dependency-path: core/identity/backend/go.sum
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Apply Identity migrations
+        run: |
+          set -euo pipefail
+          for migration in core/identity/database/migrations/*.sql; do
+            echo "Applying ${migration}"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
+          done
       - name: Test and build Identity
         working-directory: core/identity/backend
         run: |
@@ -321,7 +408,24 @@ jobs:
     needs: [context]
     if: ${{ needs.context.outputs.workforce == 'true' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 40
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: workforce_runtime
+          POSTGRES_PASSWORD: workforce_runtime_password
+          POSTGRES_DB: workforce_runtime
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U workforce_runtime -d workforce_runtime"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://workforce_runtime:workforce_runtime_password@localhost:5432/workforce_runtime?sslmode=disable
+      PGPASSWORD: workforce_runtime_password
     steps:
       - name: Checkout immutable source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -332,6 +436,15 @@ jobs:
         with:
           go-version-file: core/workforce/backend/go.mod
           cache-dependency-path: core/workforce/backend/go.sum
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Apply Workforce migrations
+        run: |
+          set -euo pipefail
+          for migration in core/workforce/database/migrations/*.sql; do
+            echo "Applying ${migration}"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
+          done
       - name: Test and build Workforce
         working-directory: core/workforce/backend
         run: |
@@ -343,7 +456,7 @@ jobs:
     needs: [context]
     if: ${{ needs.context.outputs.platform == 'true' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 45
     services:
       postgres:
         image: postgres:16-alpine
@@ -373,9 +486,10 @@ jobs:
           cache-dependency-path: core/platform-control/backend/go.sum
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
-      - name: Apply platform migrations
+      - name: Apply Platform Control migrations
         run: |
-          for migration in core/platform-control/database/migrations/platform-*.sql; do
+          set -euo pipefail
+          for migration in core/platform-control/database/migrations/*.sql; do
             echo "Applying ${migration}"
             psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
           done
@@ -390,7 +504,24 @@ jobs:
     needs: [context]
     if: ${{ needs.context.outputs.providers == 'true' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 40
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: providers_runtime
+          POSTGRES_PASSWORD: providers_runtime_password
+          POSTGRES_DB: providers_runtime
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U providers_runtime -d providers_runtime"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://providers_runtime:providers_runtime_password@localhost:5432/providers_runtime?sslmode=disable
+      PGPASSWORD: providers_runtime_password
     steps:
       - name: Checkout immutable source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -401,6 +532,15 @@ jobs:
         with:
           go-version-file: core/providers/backend/go.mod
           cache-dependency-path: core/providers/backend/go.sum
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Apply Providers migrations
+        run: |
+          set -euo pipefail
+          for migration in core/providers/database/migrations/*.sql; do
+            echo "Applying ${migration}"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
+          done
       - name: Test and build Providers
         working-directory: core/providers/backend
         run: |
@@ -408,11 +548,11 @@ jobs:
           go build ./...
 
   runtime_proof:
-    name: Execute explicitly requested runtime proof
+    name: Execute required runtime proof
     needs: [context]
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.runtime_proof }}
+    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.runtime_proof) || (github.event_name == 'push' && github.ref == 'refs/heads/lianbassam') }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 75
     steps:
       - name: Checkout immutable source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -450,25 +590,42 @@ jobs:
           PLATFORM_RESULT: ${{ needs.platform.result }}
           PROVIDERS_RESULT: ${{ needs.providers.result }}
           RUNTIME_RESULT: ${{ needs.runtime_proof.result }}
+          EXPECTED_POLICY: ${{ needs.context.outputs.policy }}
+          EXPECTED_NODE: ${{ needs.context.outputs.node }}
+          EXPECTED_DSH: ${{ needs.context.outputs.dsh }}
+          EXPECTED_WLT: ${{ needs.context.outputs.wlt }}
+          EXPECTED_IDENTITY: ${{ needs.context.outputs.identity }}
+          EXPECTED_WORKFORCE: ${{ needs.context.outputs.workforce }}
+          EXPECTED_PLATFORM: ${{ needs.context.outputs.platform }}
+          EXPECTED_PROVIDERS: ${{ needs.context.outputs.providers }}
+          EXPECTED_RUNTIME: ${{ (github.event_name == 'workflow_dispatch' && inputs.runtime_proof) || (github.event_name == 'push' && github.ref == 'refs/heads/lianbassam') }}
         run: |
           set -euo pipefail
           failed=0
-          for entry in \
-            "context=${CONTEXT_RESULT}" \
-            "policy=${POLICY_RESULT}" \
-            "node=${NODE_RESULT}" \
-            "dsh=${DSH_RESULT}" \
-            "wlt=${WLT_RESULT}" \
-            "identity=${IDENTITY_RESULT}" \
-            "workforce=${WORKFORCE_RESULT}" \
-            "platform=${PLATFORM_RESULT}" \
-            "providers=${PROVIDERS_RESULT}" \
-            "runtime=${RUNTIME_RESULT}"; do
-            name="${entry%%=*}"
-            result="${entry#*=}"
+          check_result() {
+            local name="$1"
+            local expected="$2"
+            local result="$3"
+            if [[ "${expected}" == "true" ]]; then
+              if [[ "${result}" != "success" ]]; then
+                echo "${name} was required but completed with ${result}"
+                failed=1
+              fi
+              return
+            fi
             if [[ "${result}" != "success" && "${result}" != "skipped" ]]; then
-              echo "${name} failed with ${result}"
+              echo "${name} was not required but completed with ${result}"
               failed=1
             fi
-          done
+          }
+          check_result context true "${CONTEXT_RESULT}"
+          check_result policy "${EXPECTED_POLICY}" "${POLICY_RESULT}"
+          check_result node "${EXPECTED_NODE}" "${NODE_RESULT}"
+          check_result dsh "${EXPECTED_DSH}" "${DSH_RESULT}"
+          check_result wlt "${EXPECTED_WLT}" "${WLT_RESULT}"
+          check_result identity "${EXPECTED_IDENTITY}" "${IDENTITY_RESULT}"
+          check_result workforce "${EXPECTED_WORKFORCE}" "${WORKFORCE_RESULT}"
+          check_result platform "${EXPECTED_PLATFORM}" "${PLATFORM_RESULT}"
+          check_result providers "${EXPECTED_PROVIDERS}" "${PROVIDERS_RESULT}"
+          check_result runtime "${EXPECTED_RUNTIME}" "${RUNTIME_RESULT}"
           exit "${failed}"
