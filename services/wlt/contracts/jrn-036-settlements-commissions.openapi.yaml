@@ -1,0 +1,422 @@
+openapi: 3.0.3
+info:
+  title: WLT JRN-036 Governed Settlements and Commissions
+  version: 1.0.0
+  description: >-
+    Internal DSH-to-WLT financial contract. DSH supplies immutable operational
+    evidence and actor identities only. WLT owns policies, amounts, refunds,
+    wallet effects, ledger effects, adjustments, lifecycle and audit.
+servers:
+  - url: http://localhost:58083
+security:
+  - DshServiceToken: []
+tags:
+  - name: Settlements
+  - name: Commissions
+paths:
+  /wlt/settlements:
+    post:
+      tags: [Settlements]
+      operationId: createWltEvidenceBackedSettlement
+      summary: Create one refund-aware settlement from verified DSH evidence
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSettlementRequest'
+      responses:
+        '201':
+          description: Settlement calculated by WLT
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [settlement]
+                properties:
+                  settlement: { $ref: '#/components/schemas/Settlement' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /wlt/settlements/{settlementId}/evidence:
+    get:
+      tags: [Settlements]
+      operationId: listWltSettlementEvidence
+      parameters:
+        - $ref: '#/components/parameters/SettlementId'
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Immutable source and refund evidence
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [evidence]
+                properties:
+                  evidence:
+                    type: array
+                    items: { $ref: '#/components/schemas/SettlementEvidence' }
+  /wlt/settlement-policies/{partnerId}:
+    put:
+      tags: [Settlements]
+      operationId: upsertWltSettlementPolicy
+      parameters:
+        - $ref: '#/components/parameters/PartnerId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SettlementPolicyInput' }
+      responses:
+        '200': { description: New immutable policy version }
+  /wlt/commission-policies:
+    put:
+      tags: [Commissions]
+      operationId: upsertWltCommissionPolicy
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CommissionPolicyInput' }
+      responses:
+        '200': { description: New immutable policy version }
+  /wlt/commissions:
+    get:
+      tags: [Commissions]
+      operationId: listWltGovernedCommissions
+      parameters:
+        - { name: sourceId, in: query, schema: { type: string } }
+        - { name: beneficiaryActorId, in: query, schema: { type: string } }
+        - { name: beneficiaryActorType, in: query, schema: { $ref: '#/components/schemas/RepresentativeActorType' } }
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/CommissionStatus' } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200, default: 100 } }
+      responses:
+        '200':
+          description: Scoped or operator-authorized commission list
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [commissions]
+                properties:
+                  commissions:
+                    type: array
+                    items: { $ref: '#/components/schemas/Commission' }
+    post:
+      tags: [Commissions]
+      operationId: createWltGovernedCommission
+      description: >-
+        Calculates the commission from the active retained WLT policy. The
+        request deliberately has no amountMinorUnits property.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateCommissionRequest' }
+      responses:
+        '201':
+          description: Policy-calculated commission
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [commission]
+                properties:
+                  commission: { $ref: '#/components/schemas/Commission' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /wlt/commissions/{commissionId}:
+    get:
+      tags: [Commissions]
+      operationId: getWltGovernedCommission
+      parameters:
+        - $ref: '#/components/parameters/CommissionId'
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Commission with exact evidence and adjustments
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommissionDetail' }
+  /wlt/commissions/{commissionId}/adjust:
+    post:
+      tags: [Commissions]
+      operationId: adjustWltCommission
+      parameters:
+        - $ref: '#/components/parameters/CommissionId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [deltaMinorUnits, reason, operatorId]
+              properties:
+                deltaMinorUnits: { type: integer, not: { const: 0 } }
+                reason: { type: string, minLength: 1 }
+                operatorId: { type: string, minLength: 1 }
+      responses:
+        '200': { description: Adjusted commission and balanced wallet/ledger effect }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /wlt/commissions/{commissionId}/confirm:
+    post:
+      tags: [Commissions]
+      operationId: confirmWltCommission
+      parameters:
+        - $ref: '#/components/parameters/CommissionId'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody: { $ref: '#/components/requestBodies/LifecycleAction' }
+      responses: { '200': { description: Pending commission confirmed } }
+  /wlt/commissions/{commissionId}/settle:
+    post:
+      tags: [Commissions]
+      operationId: settleWltCommission
+      parameters:
+        - $ref: '#/components/parameters/CommissionId'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody: { $ref: '#/components/requestBodies/LifecycleAction' }
+      responses: { '200': { description: Confirmed commission settled } }
+  /wlt/commissions/{commissionId}/reject:
+    post:
+      tags: [Commissions]
+      operationId: rejectWltCommission
+      parameters:
+        - $ref: '#/components/parameters/CommissionId'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody: { $ref: '#/components/requestBodies/ReasonedLifecycleAction' }
+      responses: { '200': { description: Pending commission rejected with reversal } }
+  /wlt/commissions/{commissionId}/reverse:
+    post:
+      tags: [Commissions]
+      operationId: reverseWltCommission
+      parameters:
+        - $ref: '#/components/parameters/CommissionId'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody: { $ref: '#/components/requestBodies/ReasonedLifecycleAction' }
+      responses: { '200': { description: Settled commission reversed with balanced ledger effect } }
+components:
+  securitySchemes:
+    DshServiceToken:
+      type: http
+      scheme: bearer
+  parameters:
+    CorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: true
+      schema: { type: string, minLength: 1 }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 1 }
+    SettlementId:
+      name: settlementId
+      in: path
+      required: true
+      schema: { type: string }
+    CommissionId:
+      name: commissionId
+      in: path
+      required: true
+      schema: { type: string }
+    PartnerId:
+      name: partnerId
+      in: path
+      required: true
+      schema: { type: string }
+  requestBodies:
+    LifecycleAction:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [operatorId]
+            properties:
+              operatorId: { type: string, minLength: 1 }
+    ReasonedLifecycleAction:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [operatorId, reason]
+            properties:
+              operatorId: { type: string, minLength: 1 }
+              reason: { type: string, minLength: 1 }
+  responses:
+    Conflict:
+      description: Missing policy, invalid evidence, illegal state or idempotency conflict
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+  schemas:
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+    RepresentativeActorType:
+      type: string
+      enum: [partner, captain, field]
+    CommissionStatus:
+      type: string
+      enum: [pending, confirmed, settled, rejected, reversed]
+    VerifiedDeliveredOrderSource:
+      type: object
+      additionalProperties: false
+      required: [orderId, grossAmountMinorUnits, currency, deliveredAt, pricingSnapshotHash, completionEventId, completionEvidenceHash, cancellationStatus]
+      properties:
+        orderId: { type: string, minLength: 1 }
+        grossAmountMinorUnits: { type: integer, minimum: 1 }
+        currency: { type: string, minLength: 1 }
+        deliveredAt: { type: string, format: date-time }
+        pricingSnapshotHash: { type: string, minLength: 1 }
+        completionEventId: { type: string, minLength: 1 }
+        completionEvidenceHash: { type: string, minLength: 1 }
+        cancellationStatus: { type: string, enum: [not_cancelled] }
+    CreateSettlementRequest:
+      type: object
+      additionalProperties: false
+      required: [partnerId, periodStart, periodEnd, orderSources, operatorId]
+      properties:
+        partnerId: { type: string, minLength: 1 }
+        periodStart: { type: string, format: date }
+        periodEnd: { type: string, format: date }
+        orderSources:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/VerifiedDeliveredOrderSource' }
+        operatorId: { type: string, minLength: 1 }
+    SettlementPolicyInput:
+      type: object
+      additionalProperties: false
+      required: [feeBasisPoints, currency, status, cycleDays, minimumNetMinorUnits, changeReason, operatorId]
+      properties:
+        feeBasisPoints: { type: integer, minimum: 0, maximum: 10000 }
+        currency: { type: string, minLength: 1 }
+        status: { type: string, enum: [active, inactive] }
+        cycleDays: { type: integer, minimum: 1, maximum: 366 }
+        minimumNetMinorUnits: { type: integer, minimum: 0 }
+        changeReason: { type: string, minLength: 1 }
+        operatorId: { type: string, minLength: 1 }
+    CommissionPolicyInput:
+      type: object
+      additionalProperties: false
+      required: [policyId, commissionType, sourceType, beneficiaryActorType, calculationType, fixedAmountMinorUnits, basisPoints, minimumAmountMinorUnits, currency, status, changeReason, operatorId]
+      properties:
+        policyId: { type: string, minLength: 1 }
+        commissionType: { type: string, minLength: 1 }
+        sourceType: { type: string, minLength: 1 }
+        beneficiaryActorType: { $ref: '#/components/schemas/RepresentativeActorType' }
+        calculationType: { type: string, enum: [fixed, basis_points] }
+        fixedAmountMinorUnits: { type: integer, minimum: 0 }
+        basisPoints: { type: integer, minimum: 0, maximum: 10000 }
+        minimumAmountMinorUnits: { type: integer, minimum: 0 }
+        maximumAmountMinorUnits: { type: integer, minimum: 0, nullable: true }
+        currency: { type: string, minLength: 1 }
+        status: { type: string, enum: [active, inactive] }
+        changeReason: { type: string, minLength: 1 }
+        operatorId: { type: string, minLength: 1 }
+    CreateCommissionRequest:
+      type: object
+      additionalProperties: false
+      required: [beneficiaryActorId, beneficiaryActorType, sourceType, sourceId, commissionType, sourceEvidenceId, sourceEvidenceHash, sourceEvidenceStatus, grossBasisMinorUnits, currency]
+      properties:
+        beneficiaryActorId: { type: string, minLength: 1 }
+        beneficiaryActorType: { $ref: '#/components/schemas/RepresentativeActorType' }
+        sourceType: { type: string, minLength: 1 }
+        sourceId: { type: string, minLength: 1 }
+        visitId: { type: string, nullable: true }
+        storeId: { type: string, nullable: true }
+        commissionType: { type: string, minLength: 1 }
+        sourceEvidenceId: { type: string, minLength: 1 }
+        sourceEvidenceHash: { type: string, minLength: 1 }
+        sourceEvidenceStatus: { type: string, enum: [completed, delivered, approved] }
+        grossBasisMinorUnits: { type: integer, minimum: 0 }
+        currency: { type: string, minLength: 1 }
+    Settlement:
+      type: object
+      required: [id, partnerId, grossAmount, platformFee, netAmount, currency, status]
+      properties:
+        id: { type: string }
+        partnerId: { type: string }
+        grossAmount: { type: integer }
+        platformFee: { type: integer }
+        netAmount: { type: integer }
+        currency: { type: string }
+        status: { type: string }
+    SettlementEvidence:
+      type: object
+      required: [orderId, pricingSnapshotHash, completionEventId, completionEvidenceHash, cancellationStatus, originalGrossMinorUnits, completedRefundMinorUnits, settlementBasisMinorUnits, refundEvidenceCount, verifiedAt]
+      properties:
+        orderId: { type: string }
+        pricingSnapshotHash: { type: string }
+        completionEventId: { type: string }
+        completionEvidenceHash: { type: string }
+        cancellationStatus: { type: string }
+        originalGrossMinorUnits: { type: integer }
+        completedRefundMinorUnits: { type: integer }
+        settlementBasisMinorUnits: { type: integer }
+        refundEvidenceCount: { type: integer }
+        verifiedAt: { type: string, format: date-time }
+    Commission:
+      type: object
+      required: [id, beneficiaryActorId, beneficiaryActorType, sourceType, sourceId, commissionType, amountMinorUnits, currency, status, resolutionNote, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        beneficiaryActorId: { type: string }
+        beneficiaryActorType: { $ref: '#/components/schemas/RepresentativeActorType' }
+        sourceType: { type: string }
+        sourceId: { type: string }
+        commissionPolicyId: { type: string, nullable: true }
+        commissionType: { type: string }
+        amountMinorUnits: { type: integer, minimum: 1, readOnly: true }
+        currency: { type: string }
+        status: { $ref: '#/components/schemas/CommissionStatus' }
+        resolutionNote: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    CommissionDetail:
+      type: object
+      required: [commission, adjustments]
+      properties:
+        commission: { $ref: '#/components/schemas/Commission' }
+        evidence:
+          type: object
+          properties:
+            policyId: { type: string }
+            policyVersion: { type: integer, minimum: 1 }
+            sourceEvidenceId: { type: string }
+            sourceEvidenceHash: { type: string }
+            sourceEvidenceStatus: { type: string }
+            grossBasisMinorUnits: { type: integer }
+            calculatedAmountMinorUnits: { type: integer }
+            verifiedAt: { type: string, format: date-time }
+        adjustments:
+          type: array
+          items:
+            type: object
+            required: [id, deltaMinorUnits, reason, operatorId, createdAt]
+            properties:
+              id: { type: string }
+              deltaMinorUnits: { type: integer }
+              reason: { type: string }
+              operatorId: { type: string }
+              createdAt: { type: string, format: date-time }
