@@ -32,6 +32,24 @@ jobs:
       - name: Canonical decision effects
         working-directory: services/dsh/backend
         run: go test ./internal/http -run '^TestJRN029EffectAllowedUsesCanonicalDecisionEffects$' -count=1 -v
-      - name: Operational policy route registration
+      - name: Route — get operational profile
         working-directory: services/dsh/backend
-        run: go test ./internal/http -run '^TestJRN029OperationalPolicyRoutes$' -count=1 -v
+        run: go test ./internal/http -run '^TestJRN029OperationalPolicyRoutes/get_operational_profile$' -count=1 -v
+      - name: Route — upsert operational profile
+        working-directory: services/dsh/backend
+        run: go test ./internal/http -run '^TestJRN029OperationalPolicyRoutes/upsert_operational_profile$' -count=1 -v
+      - name: Route — list delivery modes
+        working-directory: services/dsh/backend
+        run: go test ./internal/http -run '^TestJRN029OperationalPolicyRoutes/list_delivery_modes$' -count=1 -v
+      - name: Route — upsert delivery mode
+        working-directory: services/dsh/backend
+        run: go test ./internal/http -run '^TestJRN029OperationalPolicyRoutes/upsert_delivery_mode$' -count=1 -v
+      - name: Route — evaluate operational policy
+        working-directory: services/dsh/backend
+        run: go test ./internal/http -run '^TestJRN029OperationalPolicyRoutes/evaluate_operational_policy$' -count=1 -v
+      - name: Route — list operational audit
+        working-directory: services/dsh/backend
+        run: go test ./internal/http -run '^TestJRN029OperationalPolicyRoutes/list_operational_audit$' -count=1 -v
+      - name: Route — rollback operational policy
+        working-directory: services/dsh/backend
+        run: go test ./internal/http -run '^TestJRN029OperationalPolicyRoutes/rollback_operational_policy$' -count=1 -v
