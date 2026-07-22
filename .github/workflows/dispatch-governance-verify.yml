@@ -60,11 +60,10 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p \
-            jrn013-patched/services/dsh/contracts/generated \
+            jrn013-patched/services/dsh/contracts \
             jrn013-patched/services/dsh/clients/generated \
             jrn013-patched/services/dsh/tests
           cp services/dsh/contracts/dsh.openapi.yaml jrn013-patched/services/dsh/contracts/dsh.openapi.yaml
-          cp services/dsh/contracts/generated/dsh.openapi.yaml jrn013-patched/services/dsh/contracts/generated/dsh.openapi.yaml
           cp services/dsh/clients/generated/dsh-api.ts jrn013-patched/services/dsh/clients/generated/dsh-api.ts
           cp services/dsh/tests/store-captain-handoff-closure.test.mjs jrn013-patched/services/dsh/tests/store-captain-handoff-closure.test.mjs
           : > jrn013-migration.log
@@ -130,7 +129,6 @@ jobs:
           }
 
           run('primary OpenAPI', () => patchYaml('services/dsh/contracts/dsh.openapi.yaml'));
-          run('generated OpenAPI', () => patchYaml('services/dsh/contracts/generated/dsh.openapi.yaml'));
           run('generated TypeScript client', () => patchClient('services/dsh/clients/generated/dsh-api.ts'));
           run('closure assertion', () => patchAssertion('services/dsh/tests/store-captain-handoff-closure.test.mjs'));
 
