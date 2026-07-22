@@ -158,15 +158,16 @@ test("JRN-025 OpenAPI exposes schedule, version and conflict semantics", () => {
     "required: [title, startDate, endDate]",
     "required: [expectedVersion]",
     "version: { type: integer, minimum: 1 }",
-    "DshUpdatePartnerOfferRequest:",
-    "couponId: { type: string }",
-    "eligibility: { type: string, enum: [all, client] }",
+    "audience: { type: string, enum: [all, client] }",
+    "placement: { type: string, enum: [home, hero, feed, floating, banner, store-card] }",
   ], "marketing OpenAPI schemas");
   assertIncludesAll(paths, [
     "stale writes return 409",
     '"409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }',
     "one legal partner-offer transition",
-    "marketing-commercial.schemas.yaml#/DshUpdatePartnerOfferRequest",
+    "required: [expectedVersion]",
+    "couponId: { type: string }",
+    "never client-supplied",
   ], "marketing OpenAPI paths");
 });
 
