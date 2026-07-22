@@ -39,6 +39,7 @@ export function AnalyticsDashboardScreen() {
     platformState.kind === "loading" ||
     orderState.kind === "loading" ||
     deliveryState.kind === "loading" ||
+    supportState.kind === "loading" ||
     storeState.kind === "loading";
 
   const platformVm = platformState.kind === "success" ? buildPlatformKpisViewModel(platformState.kpis) : null;
@@ -53,35 +54,28 @@ export function AnalyticsDashboardScreen() {
         subtitle="لوحة مؤشرات الأداء الرئيسية لمنصة DSH"
       />
 
-      {/* Period selector */}
       <Card>
         <Box style={styles.periodRow}>
           <Text role="titleSm">الفترة الزمنية</Text>
           <Box style={styles.periodChips}>
-            {(["today", "week", "month"] as DshAnalyticsPeriod[]).map((p) => (
+            {(["today", "week", "month"] as DshAnalyticsPeriod[]).map((item) => (
               <Button
-                key={p}
-                label={PERIOD_LABELS[p]}
-                tone={period === p ? "primary" : "ghost"}
-                onPress={() => setPeriod(p)}
+                key={item}
+                label={PERIOD_LABELS[item]}
+                tone={period === item ? "primary" : "ghost"}
+                onPress={() => setPeriod(item)}
               />
             ))}
           </Box>
         </Box>
       </Card>
 
-      {isLoading && <StateView title="جاري تحميل البيانات…" />}
+      {isLoading ? <StateView title="جاري تحميل البيانات من DSH…" /> : null}
 
-      {/* Platform KPIs */}
-      {platformState.kind === "error" && (
-        <StateView
-          title="تعذّر تحميل مؤشرات المنصة"
-          description={platformState.message}
-          actionLabel="إعادة المحاولة"
-          onActionPress={reload}
-        />
-      )}
-      {platformState.kind === "success" && platformVm && (
+      {platformState.kind === "error" ? (
+        <AnalyticsError title="تعذّر تحميل مؤشرات المنصة" message={platformState.message} reload={reload} />
+      ) : null}
+      {platformState.kind === "success" && platformVm ? (
         <Card>
           <Box style={styles.sectionHeader}>
             <Text role="titleSm">مؤشرات المنصة</Text>
@@ -97,11 +91,14 @@ export function AnalyticsDashboardScreen() {
             <KpiCard label="تصعيدات مفتوحة" value={String(platformState.kpis.openEscalations)} tone={platformState.kpis.openEscalations > 0 ? "warning" : "success"} />
             <KpiCard label="حوادث مفتوحة" value={String(platformState.kpis.openIncidents)} tone={platformState.kpis.openIncidents > 0 ? "danger" : "success"} />
           </Box>
+          <Freshness generatedAt={platformState.kpis.generatedAt} />
         </Card>
-      )}
+      ) : null}
 
-      {/* Order Analytics */}
-      {orderState.kind === "success" && orderVm && (
+      {orderState.kind === "error" ? (
+        <AnalyticsError title="تعذّر تحميل تحليلات الطلبات" message={orderState.message} reload={reload} />
+      ) : null}
+      {orderState.kind === "success" && orderVm ? (
         <Card>
           <Box style={styles.sectionHeader}>
             <Text role="titleSm">تحليلات الطلبات</Text>
@@ -113,14 +110,17 @@ export function AnalyticsDashboardScreen() {
               <Badge label={String(row.count)} tone={row.tone} />
             </Box>
           ))}
-          {orderVm.statusRows.length === 0 && (
-            <Text role="body" tone="muted" style={styles.emptyNote}>لا توجد طلبات في هذه الفترة</Text>
-          )}
+          {orderVm.statusRows.length === 0 ? (
+            <Text role="body" tone="muted" style={styles.emptyNote}>لا توجد طلبات في هذه الفترة، ولم تُنشأ أرقام بديلة.</Text>
+          ) : null}
+          <Freshness generatedAt={orderState.data.generatedAt} />
         </Card>
-      )}
+      ) : null}
 
-      {/* Delivery Analytics */}
-      {deliveryState.kind === "success" && deliveryVm && (
+      {deliveryState.kind === "error" ? (
+        <AnalyticsError title="تعذّر تحميل تحليلات التوصيل" message={deliveryState.message} reload={reload} />
+      ) : null}
+      {deliveryState.kind === "success" && deliveryVm ? (
         <Card>
           <Box style={styles.sectionHeader}>
             <Text role="titleSm">تحليلات التوصيل</Text>
@@ -136,11 +136,14 @@ export function AnalyticsDashboardScreen() {
             <Text role="caption" tone="muted">معدل القبول: {deliveryVm.acceptanceRate}</Text>
             <Text role="caption" tone="muted">معدل الإتمام: {deliveryVm.completionRate}</Text>
           </Box>
+          <Freshness generatedAt={deliveryState.data.generatedAt} />
         </Card>
-      )}
+      ) : null}
 
-      {/* Support Analytics */}
-      {supportState.kind === "success" && (
+      {supportState.kind === "error" ? (
+        <AnalyticsError title="تعذّر تحميل تحليلات الدعم" message={supportState.message} reload={reload} />
+      ) : null}
+      {supportState.kind === "success" ? (
         <Card>
           <Box style={styles.sectionHeader}>
             <Text role="titleSm">تحليلات الدعم</Text>
@@ -151,22 +154,27 @@ export function AnalyticsDashboardScreen() {
             <KpiCard label="مفتوحة" value={String(supportState.data.openTickets)} tone={supportState.data.openTickets > 0 ? "warning" : "success"} />
             <KpiCard label="محلولة" value={String(supportState.data.resolvedTickets)} tone="success" />
           </Box>
-          {supportState.data.byCategory.length > 0 && (
+          {supportState.data.byCategory.length > 0 ? (
             <>
               <Text role="caption" tone="muted" style={styles.categoryTitle}>التوزيع حسب الفئة</Text>
-              {supportState.data.byCategory.map((c) => (
-                <Box key={c.category} style={styles.statusRow}>
-                  <Text role="body">{c.category}</Text>
-                  <Badge label={String(c.count)} tone="info" />
+              {supportState.data.byCategory.map((category) => (
+                <Box key={category.category} style={styles.statusRow}>
+                  <Text role="body">{category.category}</Text>
+                  <Badge label={String(category.count)} tone="info" />
                 </Box>
               ))}
             </>
+          ) : (
+            <Text role="body" tone="muted" style={styles.emptyNote}>لا توجد تذاكر في هذه الفترة.</Text>
           )}
+          <Freshness generatedAt={supportState.data.generatedAt} />
         </Card>
-      )}
+      ) : null}
 
-      {/* Store Analytics */}
-      {storeState.kind === "success" && storeVm && (
+      {storeState.kind === "error" ? (
+        <AnalyticsError title="تعذّر تحميل تحليلات المتاجر" message={storeState.message} reload={reload} />
+      ) : null}
+      {storeState.kind === "success" && storeVm ? (
         <Card>
           <Box style={styles.sectionHeader}>
             <Text role="titleSm">تحليلات المتاجر</Text>
@@ -174,14 +182,34 @@ export function AnalyticsDashboardScreen() {
           </Box>
           <Box style={styles.kpiGrid}>
             <KpiCard label="إجمالي المتاجر" value={String(storeState.data.totalStores)} tone="info" />
-            <KpiCard label="نشطة" value={String(storeState.data.activeStores)} tone="success" />
-            <KpiCard label="موقوفة" value={String(storeState.data.suspendedStores)} tone="danger" />
+            <KpiCard label="نشطة ومرئية" value={String(storeState.data.activeStores)} tone="success" />
+            <KpiCard label="غير متاحة أو مخفية" value={String(storeState.data.suspendedStores)} tone="danger" />
             <KpiCard label="تحتاج زيارة ميدانية" value={String(storeState.data.pendingReadiness)} tone="warning" />
             <KpiCard label="اكتملت جاهزيتها" value={String(storeState.data.readinessComplete)} tone="success" />
           </Box>
+          <Freshness generatedAt={storeState.data.generatedAt} />
         </Card>
-      )}
+      ) : null}
     </ScrollScreen>
+  );
+}
+
+function AnalyticsError({ title, message, reload }: { title: string; message: string; reload: () => void }) {
+  return (
+    <StateView
+      title={title}
+      description={message}
+      actionLabel="إعادة المحاولة"
+      onActionPress={reload}
+    />
+  );
+}
+
+function Freshness({ generatedAt }: { generatedAt: string }) {
+  return (
+    <Text role="caption" tone="muted" style={styles.freshness}>
+      المصدر DSH • آخر تحديث {new Date(generatedAt).toLocaleString("ar")}
+    </Text>
   );
 }
 
@@ -210,4 +238,5 @@ const styles = {
   emptyNote: { padding: spacing[3] },
   deliveryRates: { flexDirection: "row-reverse", justifyContent: "space-around", paddingHorizontal: spacing[3], paddingBottom: spacing[3] },
   categoryTitle: { paddingHorizontal: spacing[3], paddingTop: spacing[2] },
+  freshness: { paddingHorizontal: spacing[3], paddingBottom: spacing[3] },
 } as const;
