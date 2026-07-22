@@ -1,0 +1,66 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-018",
+  "title": "إثبات التسليم وإكمال الطلب",
+  "owner": "services/dsh",
+  "truthOwner": "DSH",
+  "financialBoundary": "WLT_DELIVERY_COMPLETION_HANDOFF_ONLY",
+  "surfaces": ["app-captain", "app-client", "control-panel"],
+  "excludedSurfaces": {
+    "app-partner": "The partner reads the canonical order status through its existing order read model; customer proof media and PIN material are not partner-visible.",
+    "app-field": "Field operations do not submit, approve, or read customer delivery proof.",
+    "webapp": "No active authenticated delivery-proof runtime is registered for this surface.",
+    "website": "The public website cannot access order or proof evidence."
+  },
+  "goal": "إثبات تسليم طلب بثواني بهوية الكابتن ووقت وموقع وطريقة تحقق صالحة، ومنع إكمال الطلب أكثر من مرة، وإتاحة المراجعة الاستثنائية والقراءة الراجعة المصرح بها، ثم إرسال حدث إكمال دائم إلى WLT دون إنشاء حقيقة مالية داخل DSH.",
+  "actors": ["client", "captain", "operator", "system"],
+  "states": ["challenge_issued", "submitted", "pending_review", "accepted", "rejected", "superseded"],
+  "allowedActions": [
+    "client_issue_or_refresh_delivery_pin",
+    "captain_submit_pin_photo_signature_or_composite_proof",
+    "captain_retry_rejected_proof",
+    "operator_list_pending_proofs",
+    "operator_accept_exceptional_proof",
+    "operator_reject_exceptional_proof",
+    "client_read_accepted_proof_summary",
+    "operator_read_full_proof_evidence",
+    "system_enqueue_wlt_delivery_completed_once"
+  ],
+  "acceptanceCriteria": [
+    "لا ينشأ PIN إلا لعميل الطلب عندما تكون مهمة الكابتن المقبولة في arrived_customer.",
+    "يخزن PIN كـhash بمدة صلاحية ومحاولات محدودة ولا يظهر للكابتن أو المشغل.",
+    "كل إثبات يحمل idempotencyKey ويمنع إعادة التنفيذ أو اختلاف الحمولة تحت المفتاح نفسه.",
+    "يثبت الإثبات هوية الكابتن ووقت الالتقاط والموقع عند توفره ومراجع الصورة أو التوقيع المحكومة.",
+    "PIN صالح يقبل الإثبات تلقائيًا؛ الإثبات البديل يدخل pending_review ولا يغلق الطلب قبل قرار المشغل.",
+    "رفض الإثبات يعيد المهمة إلى arrived_customer ويسمح بمحاولة جديدة دون فقد سجل التدقيق.",
+    "قبول الإثبات يحول الطلب والإسناد والتوصيل إلى الحالة النهائية مرة واحدة فقط.",
+    "العميل يقرأ ملخص الإثبات المقبول فقط، والمشغل يقرأ الأدلة الكاملة وفق الصلاحية.",
+    "ينشأ حدث delivery_completed دائم داخل نفس المعاملة ويكون WLT المالك الوحيد لأي تسوية أو تحصيل أو رصيد.",
+    "توجد حالات loading وempty وerror وoffline وpending_review وrejected وaccepted على الأسطح المطلوبة."
+  ],
+  "negativeInvariants": [
+    "لا إكمال للطلب بمجرد مرجع نصي أو صورة غير مسجلة في dsh_media_refs.",
+    "لا تخزين PIN بصيغته الصريحة ولا إعادة كشفه بعد استجابة الإصدار.",
+    "لا قبول إثبات من كابتن غير مالك للإسناد أو قبل arrived_customer.",
+    "لا تجاوز لمراجعة الإثبات البديل ولا قبول ذاتي بواسطة الكابتن.",
+    "لا حدث WLT قبل قبول الإثبات ولا أكثر من حدث إكمال لنفس الطلب.",
+    "لا mutation مالية أو احتساب COD أو ledger أو settlement داخل DSH.",
+    "لا عرض PIN أو موقع دقيق أو مراجع وسائط غير مصرح بها على سطح العميل.",
+    "لا fallback أو mock أو proofReference وهمي داخل Runtime.",
+    "لا ادعاء CLOSED_WITH_EVIDENCE دون مراجعات المنتج وQA والأمن والمالية والإطلاق المستقلة."
+  ],
+  "sliceClosureRegistry": "services/dsh/contracts/jrn-018-slice-closure.json",
+  "evidenceRequired": ["static", "database", "contract", "backend", "runtime", "cross-surface", "security", "finance", "qa", "governance", "ci"],
+  "statusContext": "delivery-proof-order-completion-governance",
+  "internalZeroGate": "TARGET_READY_FOR_REVIEW",
+  "openCodeGaps": [
+    "delivery proof database lifecycle",
+    "PIN challenge and verification",
+    "manual review routes",
+    "client and operator proof readback",
+    "shared frontend proof controller",
+    "captain PIN and review states"
+  ],
+  "independentReviewPending": ["product-manager", "product-owner", "qa-device-accessibility", "application-security", "financial-control", "release-production"],
+  "decision": "FIX_REQUIRED"
+}
