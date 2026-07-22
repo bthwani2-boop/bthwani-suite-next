@@ -20,6 +20,7 @@ import {
   type DshZone,
 } from "../../shared/platform";
 import { ClientAddressPrivacySection } from "./ClientAddressPrivacySection";
+import { Jrn029OperationalPolicySection } from "./Jrn029OperationalPolicySection";
 import { MapProviderHealthCard } from "./MapProviderHealthCard";
 import { ServiceAreaGovernanceSection } from "./ServiceAreaGovernanceSection";
 import { StoreOnboardingFeePolicySection } from "./StoreOnboardingFeePolicySection";
@@ -121,6 +122,7 @@ export function PlatformPoliciesScreen() {
         ) : null}
       </View>
 
+      <Jrn029OperationalPolicySection />
       <StoreOnboardingFeePolicySection authKind="authenticated" />
     </ScrollScreen>
   );
