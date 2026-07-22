@@ -35,6 +35,7 @@ test('JRN-016 binds every JSON mutation to a stable command identity', () => {
   const handlers = source('services/dsh/backend/internal/http/partner_delivery.go');
   const commands = source('services/dsh/backend/internal/partnerdelivery/lifecycle_commands.go');
   const api = source('services/dsh/frontend/shared/partner-delivery/partner-delivery.api.ts');
+  const types = source('services/dsh/frontend/shared/partner-delivery/partner-delivery.types.ts');
   const controller = source('services/dsh/frontend/shared/partner-delivery/use-partner-delivery-controller.tsx');
 
   for (const operation of [
@@ -49,7 +50,7 @@ test('JRN-016 binds every JSON mutation to a stable command identity', () => {
   }
   assert.match(commands, /commandFingerprint/);
   assert.match(api, /suppliedCommandId/);
-  assert.match(api, /IDEMPOTENCY_CONFLICT/);
+  assert.match(types, /IDEMPOTENCY_CONFLICT/);
   assert.match(controller, /commandIds = useRef/);
   assert.match(controller, /classified\.kind !== "network"/);
 });
