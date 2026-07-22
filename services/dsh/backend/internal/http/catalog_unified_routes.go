@@ -33,79 +33,49 @@ func (s *protectedStoreServer) writeCatalogMutationError(w http.ResponseWriter, 
 }
 
 func (s *protectedStoreServer) handleUpdateCatalogDomainAtomic(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyManage, "operator"); !ok {
-		return
-	}
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyManage, "operator"); !ok { return }
 	var input centralcatalog.DomainPatchInput
-	if !decodeProtectedJSON(w, r, &input) {
-		return
-	}
+	if !decodeProtectedJSON(w, r, &input) { return }
 	domain, err := centralcatalog.UpdateDomainAtomic(r.Context(), s.db, r.PathValue("domainId"), input)
-	if err != nil {
-		s.writeCatalogMutationError(w, err)
-		return
-	}
+	if err != nil { s.writeCatalogMutationError(w, err); return }
 	store.SendJSON(w, http.StatusOK, map[string]any{"domain": domain})
 }
 
 func (s *protectedStoreServer) handleUpdateCatalogNodeAtomic(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyManage, "operator"); !ok {
-		return
-	}
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyManage, "operator"); !ok { return }
 	var input centralcatalog.NodePatchInput
-	if !decodeProtectedJSON(w, r, &input) {
-		return
-	}
+	if !decodeProtectedJSON(w, r, &input) { return }
 	node, err := centralcatalog.UpdateNodeAtomic(r.Context(), s.db, r.PathValue("nodeId"), input)
-	if err != nil {
-		s.writeCatalogMutationError(w, err)
-		return
-	}
+	if err != nil { s.writeCatalogMutationError(w, err); return }
 	store.SendJSON(w, http.StatusOK, map[string]any{"node": node})
 }
 
 func (s *protectedStoreServer) handleUpdateCatalogMasterProductAtomic(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionProductManage, "operator"); !ok {
-		return
-	}
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionProductManage, "operator"); !ok { return }
 	var input centralcatalog.MasterProductPatchInput
-	if !decodeProtectedJSON(w, r, &input) {
-		return
-	}
+	if !decodeProtectedJSON(w, r, &input) { return }
 	product, err := centralcatalog.UpdateMasterProductAtomic(r.Context(), s.db, r.PathValue("productId"), input)
-	if err != nil {
-		s.writeCatalogMutationError(w, err)
-		return
-	}
+	if err != nil { s.writeCatalogMutationError(w, err); return }
 	store.SendJSON(w, http.StatusOK, map[string]any{"masterProduct": product})
 }
 
 func (s *protectedStoreServer) handleUpdateCatalogPlatformPolicyAtomic(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionPolicyManage, "operator"); !ok {
-		return
-	}
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionPolicyManage, "operator"); !ok { return }
 	var input centralcatalog.CatalogPolicyPatchInput
-	if !decodeProtectedJSON(w, r, &input) {
-		return
-	}
+	if !decodeProtectedJSON(w, r, &input) { return }
 	policy, err := centralcatalog.UpdateCatalogPolicyAtomic(r.Context(), s.db, r.PathValue("policyId"), input)
-	if err != nil {
-		s.writeCatalogMutationError(w, err)
-		return
-	}
+	if err != nil { s.writeCatalogMutationError(w, err); return }
 	store.SendJSON(w, http.StatusOK, map[string]any{"policy": policy})
 }
 
-// registerUnifiedCatalogRoutes binds exact paths consumed by the shared
-// multi-surface clients and restores the platform policy routes declared by
-// the capability registry. It is the final protected-route extension point
-// called by NewRouter, so independent bounded registrars are composed here.
+// registerUnifiedCatalogRoutes is the final protected-route extension point.
+// Independent bounded registrars are composed before catalog-specific routes.
 func registerUnifiedCatalogRoutes(mux *http.ServeMux, s *protectedStoreServer) {
 	registerDeliveryProofRoutes(mux, s)
 	registerRepresentativeFinanceRoutes(mux, s)
+	registerRefundFinanceRoutes(mux, s)
 
-	// JRN-011 canonical order-truth routes. Legacy /orders routes remain for
-	// compatibility while all new shared clients consume these governed paths.
+	// JRN-011 canonical order-truth routes.
 	mux.HandleFunc("POST /dsh/client/order-truth", s.handleCreateOrderTruth)
 	mux.HandleFunc("GET /dsh/client/order-truth", s.handleListClientOrderTruth)
 	mux.HandleFunc("GET /dsh/client/order-truth/{orderId}", s.handleGetClientOrderTruth)
