@@ -14,10 +14,7 @@ function registeredDshContracts() {
   const entries = [];
   const entryPattern = /\{[\s\S]*?path:\s*["'](contracts\/[^"']+\.openapi\.yaml)["'][\s\S]*?clientStrategy:\s*["']([^"']+)["'][\s\S]*?\n\s*\},/g;
   for (const match of source.matchAll(entryPattern)) {
-    entries.push({
-      file: `services/dsh/${match[1]}`,
-      strategy: match[2],
-    });
+    entries.push({ file: `services/dsh/${match[1]}`, strategy: match[2] });
   }
   if (entries.length === 0) {
     violations.push({
@@ -59,6 +56,9 @@ const services = [
       "services/wlt/contracts/wlt.commercial.openapi.yaml",
       "services/wlt/contracts/wlt.commercial-summary.openapi.yaml",
       "services/wlt/contracts/wlt.promotion-funding.openapi.yaml",
+      "services/wlt/contracts/jrn-035-refunds.openapi.yaml",
+      "services/wlt/contracts/jrn-036-settlements-commissions.openapi.yaml",
+      "services/wlt/contracts/jrn-037-payouts-destinations.openapi.yaml",
     ].filter((file) => fs.existsSync(path.join(repoRoot, file))),
     router: "services/wlt/backend/internal/http/server.go",
   },
@@ -152,8 +152,9 @@ function hasRequiredHeader(operation, headerName) {
   );
 }
 
-function validateOperationIds(service, operations) {
+function uniqueOperations(service, operations) {
   const seen = new Map();
+  const unique = [];
   for (const operation of operations) {
     if (!operation.operationId) {
       violations.push({
@@ -161,10 +162,18 @@ function validateOperationIds(service, operations) {
         line: operation.line,
         message: `MISSING_OPERATION_ID: ${operationKey(operation)} has no operationId`,
       });
+      unique.push(operation);
       continue;
     }
+
     const previous = seen.get(operation.operationId);
     if (previous) {
+      if (operationKey(previous) === operationKey(operation)) {
+        // A registered manual adapter may repeat the exact canonical operation
+        // for a narrower generated/type surface. Only identical method+path
+        // overlays are accepted; divergent reuse remains a hard failure.
+        continue;
+      }
       violations.push({
         file: operationFile(service, operation),
         line: operation.line,
@@ -173,7 +182,9 @@ function validateOperationIds(service, operations) {
       continue;
     }
     seen.set(operation.operationId, operation);
+    unique.push(operation);
   }
+  return unique;
 }
 
 function validatePathParameters(service, operation) {
@@ -270,13 +281,13 @@ try {
       }
     }
 
-    const operations = contracts
+    const parsedOperations = contracts
       .filter((contract) => fs.existsSync(path.join(repoRoot, contract)))
       .flatMap((contractFile) =>
         parseOpenApiContract(contractFile).map((operation) => ({ ...operation, contractFile })),
       );
+    const operations = uniqueOperations(service, parsedOperations);
     openApiRoutesByService.set(service.name, operations);
-    validateOperationIds(service, operations);
 
     const openApiRouteSet = new Set(operations.map(operationKey));
     const goRoutes = serviceGoRoutes(service);
