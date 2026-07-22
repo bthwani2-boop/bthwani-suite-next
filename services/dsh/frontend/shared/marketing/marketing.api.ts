@@ -1,6 +1,7 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { createDshRawHttpClient } from "../_kernel/dsh-http-request";
-import type { DshCampaign, MarketingNewsTickerItem } from "./marketing.types";
+import type { MarketingNewsTickerItem } from "./marketing.types";
+import type { GovernedCampaignWritePayload, GovernedDshCampaign } from "./campaign.types";
 import type {
   ClientBenefitsPayload,
   LoyaltyProgramSummary,
@@ -27,22 +28,27 @@ type MarketingTargetFields = {
   placement?: string;
 };
 
-export const fetchCampaigns = () => req<{ campaigns: DshCampaign[] }>("/dsh/operator/marketing/campaigns");
-export const createCampaign = (
-  body: { title: string; description?: string; startDate?: string; endDate?: string } & MarketingTargetFields,
-) => req<{ campaign: DshCampaign }>("/dsh/operator/marketing/campaigns", {
-  method: "POST",
-  body: JSON.stringify(body),
-});
+export type CampaignCreatePayload = {
+  readonly title: string;
+  readonly description?: string | undefined;
+  readonly startDate: string;
+  readonly endDate: string;
+} & MarketingTargetFields;
+
+export const fetchCampaigns = () =>
+  req<{ campaigns: GovernedDshCampaign[] }>("/dsh/operator/marketing/campaigns");
+export const createCampaign = (body: CampaignCreatePayload) =>
+  req<{ campaign: GovernedDshCampaign }>("/dsh/operator/marketing/campaigns", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 export const getCampaign = (id: string) =>
-  req<{ campaign: DshCampaign }>(`/dsh/operator/marketing/campaigns/${id}`);
-export const updateCampaign = (
-  id: string,
-  body: { status?: string; title?: string; description?: string } & MarketingTargetFields,
-) => req<{ campaign: DshCampaign }>(`/dsh/operator/marketing/campaigns/${id}`, {
-  method: "PATCH",
-  body: JSON.stringify(body),
-});
+  req<{ campaign: GovernedDshCampaign }>(`/dsh/operator/marketing/campaigns/${id}`);
+export const updateCampaign = (id: string, body: GovernedCampaignWritePayload) =>
+  req<{ campaign: GovernedDshCampaign }>(`/dsh/operator/marketing/campaigns/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
 export const archiveCampaign = (id: string) =>
   req<{ archived: boolean }>(`/dsh/operator/marketing/campaigns/${id}`, { method: "DELETE" });
 
