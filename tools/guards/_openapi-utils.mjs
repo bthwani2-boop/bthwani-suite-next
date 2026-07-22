@@ -106,15 +106,28 @@ function parseComponentParameters(lines) {
   if (parametersStart === -1) return parameters;
 
   for (let i = parametersStart + 1; i < lines.length; i++) {
-    const componentMatch = lines[i].match(/^\s{4}([A-Za-z0-9_-]+):\s*$/);
-    if (!componentMatch) {
-      if (/^\s{2}[A-Za-z0-9_-]+:\s*$/.test(lines[i])) break;
+    if (/^\s{2}[A-Za-z0-9_-]+:\s*$/.test(lines[i])) break;
+
+    const inlineMatch = lines[i].match(/^\s{4}([A-Za-z0-9_-]+):\s*\{(.+)\}\s*$/);
+    if (inlineMatch) {
+      const body = inlineMatch[2];
+      const parameter = { name: "", in: "", required: false };
+      const nameMatch = body.match(/(?:^|,)\s*name:\s*([^,}]+)/);
+      if (nameMatch) parameter.name = parseScalar(nameMatch[1]);
+      const inMatch = body.match(/(?:^|,)\s*in:\s*([^,}]+)/);
+      if (inMatch) parameter.in = parseScalar(inMatch[1]);
+      const requiredMatch = body.match(/(?:^|,)\s*required:\s*([^,}]+)/);
+      if (requiredMatch) parameter.required = parseScalar(requiredMatch[1]) === true;
+      parameters.set(inlineMatch[1], parameter);
       continue;
     }
 
+    const componentMatch = lines[i].match(/^\s{4}([A-Za-z0-9_-]+):\s*$/);
+    if (!componentMatch) continue;
+
     const block = [lines[i]];
     for (let j = i + 1; j < lines.length; j++) {
-      if (/^\s{4}[A-Za-z0-9_-]+:\s*$/.test(lines[j]) || /^\s{2}[A-Za-z0-9_-]+:\s*$/.test(lines[j])) break;
+      if (/^\s{4}[A-Za-z0-9_-]+:\s*(?:\{.*\})?\s*$/.test(lines[j]) || /^\s{2}[A-Za-z0-9_-]+:\s*$/.test(lines[j])) break;
       block.push(lines[j]);
     }
 
