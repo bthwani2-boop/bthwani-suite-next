@@ -3,7 +3,7 @@ name: DSH Operational Closure CI
 on:
   workflow_dispatch:
   push:
-    branches: [sambassam, bassam]
+    branches: [sambassam]
     paths:
       - "services/dsh/**"
       - "services/wlt/**"
@@ -35,7 +35,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: dsh-operational-closure-${{ github.workflow }}-${{ github.ref }}
+  group: dsh-operational-verification-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -77,7 +77,7 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: Enforce operational closure result
+      - name: Enforce verification result
         env:
           VERIFY_RESULT: ${{ needs.verify.result }}
         run: test "${VERIFY_RESULT}" = "success"
