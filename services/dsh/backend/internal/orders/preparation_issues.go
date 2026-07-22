@@ -350,13 +350,13 @@ func CreatePreparationIssue(db *sql.DB, rawInput CreatePreparationIssueInput) (*
 		return nil, err
 	}
 	payload, _ := json.Marshal(map[string]any{
-		"issueId":           issue.ID,
-		"orderId":           issue.OrderID,
-		"storeId":           issue.StoreID,
-		"kind":              issue.Kind,
-		"orderItemId":       issue.OrderItemID,
-		"affectedQuantity":  issue.AffectedQuantity,
-		"customerDecision":  issue.CustomerDecision,
+		"issueId":            issue.ID,
+		"orderId":            issue.OrderID,
+		"storeId":            issue.StoreID,
+		"kind":               issue.Kind,
+		"orderItemId":        issue.OrderItemID,
+		"affectedQuantity":   issue.AffectedQuantity,
+		"customerDecision":   issue.CustomerDecision,
 		"replacementProduct": issue.ReplacementProductName,
 	})
 	if _, err := tx.Exec(`
