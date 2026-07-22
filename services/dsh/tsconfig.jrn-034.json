@@ -1,0 +1,34 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "outDir": "dist-jrn-034",
+    "module": "ESNext",
+    "jsx": "react-jsx",
+    "types": ["node", "react", "react-dom"],
+    "paths": {
+      "@bthwani/ui-kit": ["shared/ui-kit/src/index.ts"],
+      "@bthwani/ui-kit/web": ["shared/ui-kit/src/web.ts"],
+      "@bthwani/ui-kit/tokens": ["shared/ui-kit/src/tokens/index.ts"],
+      "@bthwani/app-shell": ["shared/app-shell/src/index.ts"],
+      "@bthwani/control-panel/components": ["apps/control-panel/runtime/src/components/index.ts"],
+      "@bthwani/control-panel/shell": ["apps/control-panel/runtime/src/shell/index.ts"],
+      "@dsh-cp/*": ["services/dsh/frontend/control-panel/*"],
+      "@dsh-shared/*": ["services/dsh/frontend/shared/*"],
+      "react-native": ["apps/app-client/runtime/node_modules/react-native"]
+    }
+  },
+  "include": [
+    "frontend/**/*.d.ts",
+    "frontend/shared/_kernel/**/*.ts",
+    "frontend/shared/_kernel/**/*.tsx",
+    "frontend/shared/finance-wlt-link/payment/**/*.ts",
+    "frontend/shared/finance-wlt-link/payment/**/*.tsx",
+    "frontend/control-panel/finance/PaymentSessionOperationsScreen.tsx",
+    "frontend/control-panel/finance/index.ts",
+    "../../apps/control-panel/runtime/src/app/dsh/finance/payment-sessions/page.tsx"
+  ],
+  "exclude": ["node_modules", "dist", "dist-jrn-034"]
+}
