@@ -168,7 +168,12 @@ export interface operations {
     };
   };
   updateProvider: {
-    parameters: { query?: never; header?: never; path: { providerId: string }; cookie?: never };
+    parameters: {
+      query?: never;
+      header: { "Idempotency-Key": string; "X-Correlation-ID": string };
+      path: { providerId: string };
+      cookie?: never;
+    };
     requestBody: { content: { "application/json": components["schemas"]["UpdateProviderRequest"] } };
     responses: {
       200: JsonResponse<components["schemas"]["ExternalProvider"]>;
@@ -176,6 +181,7 @@ export interface operations {
       401: EmptyResponse;
       403: EmptyResponse;
       404: EmptyResponse;
+      409: EmptyResponse;
     };
   };
   searchMapLocations: {
