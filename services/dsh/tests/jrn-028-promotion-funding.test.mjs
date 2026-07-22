@@ -8,11 +8,13 @@ const wltMigration = read("services/wlt/database/migrations/wlt-034_jrn_028_prom
 const integrityProof = read("services/wlt/database/tests/jrn-028-promotion-funding-integrity.sh");
 const concurrencyProof = read("services/wlt/database/tests/jrn-028-promotion-funding-concurrency.sh");
 const verifier = read("tools/verification/jrn-028-all-slices.sh");
+const wltServer = read("services/wlt/backend/internal/http/server.go");
 const wltJSON = read("services/wlt/backend/internal/promotionfunding/reservation_json.go");
 const serviceAuth = read("services/wlt/backend/internal/shared/serviceauth.go");
 const dshReadback = read("services/dsh/backend/internal/wlt/promotion_funding_read.go");
 const diagnostics = read("services/dsh/backend/internal/coupons/funding_diagnostics.go");
 const couponsHTTP = read("services/dsh/backend/internal/http/coupons.go");
+const lifecycleHTTP = read("services/dsh/backend/internal/http/coupon_funding_lifecycle.go");
 const couponTypes = read("services/dsh/frontend/shared/marketing/coupons.types.ts");
 const couponsController = read("services/dsh/frontend/shared/marketing/use-coupons-controller.ts");
 const couponsDeck = read("services/dsh/frontend/control-panel/marketing/components/CouponsCommandDeck.tsx");
@@ -22,11 +24,16 @@ const productTruth = read("governance/product/JRN-028_PROMOTION_FUNDING_PRODUCT_
 const closure = JSON.parse(read("governance/evidence/JRN-028_ALL_SLICES_CLOSURE.json"));
 
 const slices = [
-  ["FS-01..04 product, reserve, persistence and readback boundary", () => {
+  ["FS-01..04 product, reserve, persistence, readback and HTTP binding", () => {
     assert.match(diagnostics, /DSH state[\s\S]*WLT state/);
     assert.match(dshReadback, /GetPromotionFundingReservation/);
     assert.match(productTruth, /DSH owns coupon eligibility/);
     assert.match(productTruth, /WLT owns reservation state/);
+    assert.match(wltServer, /POST \/wlt\/promotion-funding\/reservations"[\s\S]*gate\(serviceAuth\(promotionfunding\.HandleReserve/);
+    assert.match(wltServer, /GET \/wlt\/promotion-funding\/reservations\/\{reservationId\}"[\s\S]*readGate\(promotionfunding\.HandleGet/);
+    assert.match(wltServer, /\/commit"[\s\S]*HandleCommit/);
+    assert.match(wltServer, /\/release"[\s\S]*HandleRelease/);
+    assert.match(wltServer, /\/reverse"[\s\S]*HandleReverse/);
   }],
   ["FS-05..08 transition, monetary, tenant, idempotency and concurrency integrity", () => {
     assert.match(wltMigration, /DEFERRABLE INITIALLY DEFERRED/);
@@ -43,9 +50,9 @@ const slices = [
     assert.match(serviceAuth, /MISSING_TENANT_ID/);
   }],
   ["FS-09..12 outbox, recovery, reconciliation and operator read model", () => {
-    assert.match(couponsHTTP, /ListFundingLifecycleDiagnostics/);
-    assert.match(couponsHTTP, /GetPromotionFundingReservation/);
     assert.match(couponsHTTP, /"fundingLifecycle"/);
+    assert.match(lifecycleHTTP, /ListFundingLifecycleDiagnostics/);
+    assert.match(lifecycleHTTP, /GetPromotionFundingReservation/);
     assert.match(couponTypes, /CouponFundingLifecycleRecord/);
     assert.match(couponTypes, /readonly fundingLifecycle/);
     assert.match(couponsController, /fundingLifecycle: response\.fundingLifecycle/);
