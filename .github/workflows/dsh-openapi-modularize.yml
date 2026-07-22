@@ -45,8 +45,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: dsh-openapi-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: dsh-openapi-${{ github.workflow }}-${{ github.sha }}
+  cancel-in-progress: false
 
 jobs:
   verify:
@@ -77,87 +77,10 @@ jobs:
         run: pnpm run contracts:lint
 
       - name: Run focused DSH OpenAPI tests
-        run: |
-          set -o pipefail
-          pnpm --dir services/dsh openapi:test 2>&1 | tee dsh-openapi-contract-tests.log
-
-      - name: Upload DSH verification diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: dsh-openapi-verification-${{ github.sha }}
-          path: dsh-openapi-contract-tests.log
-          if-no-files-found: warn
-          retention-days: 14
+        run: pnpm --dir services/dsh openapi:test
 
       - name: Build and validate Swagger publication
         run: pnpm run swagger:build
 
       - name: Reject generated artifact drift
-        run: |
-          git diff --check
-          git diff --exit-code -- \
-            services/dsh/contracts/generated/dsh.bundle.openapi.yaml \
-            services/dsh/clients/generated/dsh-api.ts
-
-  sync-generated:
-    name: Synchronize verified generated artifacts
-    if: github.event_name == 'push' && github.actor != 'github-actions[bot]'
-    permissions:
-      contents: write
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout sambassam
-        uses: actions/checkout@v4
-        with:
-          ref: sambassam
-          fetch-depth: 0
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: "10.34.2"
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "24.17.0"
-          cache: pnpm
-
-      - name: Synchronize against the latest moving branch head
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          for attempt in 1 2 3 4 5 6 7 8; do
-            echo "Synchronization attempt ${attempt}/8"
-            git fetch origin sambassam
-            git reset --hard origin/sambassam
-            git clean -fd
-
-            pnpm install --frozen-lockfile --prefer-offline
-            pnpm --dir services/dsh openapi:verify
-            pnpm run contracts:lint
-            pnpm --dir services/dsh openapi:test
-
-            git add -f \
-              services/dsh/contracts/generated/dsh.bundle.openapi.yaml \
-              services/dsh/clients/generated/dsh-api.ts
-
-            if git diff --cached --quiet; then
-              echo "Generated artifacts are already synchronized with the latest branch head."
-              exit 0
-            fi
-
-            git commit -m "generated(dsh): synchronize modular OpenAPI artifacts"
-            if git push origin HEAD:sambassam; then
-              echo "Generated artifacts synchronized successfully."
-              exit 0
-            fi
-
-            echo "Branch moved during generation; retrying from the new head."
-          done
-
-          echo "Unable to synchronize generated artifacts after 8 branch-safe attempts." >&2
-          exit 1
+        run: git diff --exit-code -- services/dsh/contracts/generated/dsh.bundle.openapi.yaml services/dsh/clients/generated/dsh-api.ts
