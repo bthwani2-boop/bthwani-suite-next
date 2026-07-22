@@ -56,10 +56,13 @@ function DshShell({ children }: { readonly children: ReactNode }) {
 export default function DshLayout({ children }: { readonly children: ReactNode }) {
   const pathname = usePathname();
   const isLoginRoute = pathname === "/dsh/login";
+  const isJrn033VisualEvidenceRoute =
+    pathname === "/dsh/finance/jrn-033-visual-evidence" &&
+    process.env.NEXT_PUBLIC_JRN_033_VISUAL_EVIDENCE === "1";
 
   return (
     <ControlPanelSessionProvider>
-      {isLoginRoute ? (
+      {isLoginRoute || isJrn033VisualEvidenceRoute ? (
         children
       ) : (
         <ControlPanelAuthBoundary>
