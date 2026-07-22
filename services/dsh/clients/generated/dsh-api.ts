@@ -4324,22 +4324,201 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dsh/orders/{orderId}/preparation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Return governed preparation timing to an authorized client, partner, assigned captain, or operator. */
+        get: operations["getDshOrderPreparation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/orders/{orderId}/preparation-estimate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revise the remaining preparation estimate with an auditable reason. */
+        post: operations["reviseDshPartnerOrderPreparationEstimate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/orders/{orderId}/preparation-issues": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List preparation issues for an authorized client, partner, assigned captain, or operator. */
+        get: operations["listDshOrderPreparationIssues"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/orders/{orderId}/preparation-issues": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Open a missing-item, substitution, quality, or order-level preparation issue. */
+        post: operations["createDshPartnerOrderPreparationIssue"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/client/orders/{orderId}/preparation-issues/{issueId}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record the owning client's approval or rejection of a proposed substitution. */
+        post: operations["decideDshClientOrderPreparationIssue"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/orders/{orderId}/preparation-issues/{issueId}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resolve one open preparation issue after any required customer decision. */
+        post: operations["resolveDshPartnerOrderPreparationIssue"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/stores/{storeId}/order-preparation-policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Return the authenticated store preparation policy. */
+        get: operations["getDshPartnerStorePreparationPolicy"];
+        /** Update the authenticated store preparation policy with version control. */
+        put: operations["updateDshPartnerStorePreparationPolicy"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/order-preparation/alerts/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Detect, open, and auto-resolve durable preparation alerts. */
+        post: operations["refreshDshOperatorOrderPreparationAlerts"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/order-preparation/alerts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List durable preparation alerts for operations. */
+        get: operations["listDshOperatorOrderPreparationAlerts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/order-preparation/alerts/{alertId}/acknowledge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Acknowledge one active preparation alert using optimistic concurrency. */
+        post: operations["acknowledgeDshOperatorOrderPreparationAlert"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/pickups/{orderId}/reschedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reopen a no-show pickup session with a new governed collection window.
+         * @description Invalidates the previous OTP, clears the no-show projection, advances the optimistic version, and requires the partner to issue and deliver a fresh OTP before collection. This operation never exposes an OTP to operators.
+         */
+        post: operations["rescheduleDshPickupWindow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /**
-         * @description Server-authoritative action currently executable by the authenticated partner.
-         * @enum {string}
-         */
-        DshPartnerOrderAction: "accept" | "reject" | "prepare" | "ready" | "handoff";
-        DshPartnerOrderWorkboardOrder: components["schemas"]["DshOrder"] & {
-            allowedActions: components["schemas"]["DshPartnerOrderAction"][];
-        };
-        DshPartnerOrderWorkboardResponse: {
-            orders: components["schemas"]["DshPartnerOrderWorkboardOrder"][];
-            total: number;
-        };
         DshAcknowledgeDeliveryExceptionRequest: {
             expectedVersion: number;
         };
@@ -6448,6 +6627,15 @@ export interface components {
             cancellationReason?: string | null;
             /** @description Known values: otp, no_show. */
             verificationMethod?: string | null;
+            /** Format: date-time */
+            customerNotifiedAt?: string | null;
+            /** Format: date-time */
+            customerArrivedAt?: string | null;
+            /** Format: date-time */
+            noShowAt?: string | null;
+            noShowReason?: string | null;
+            /** Format: date-time */
+            rescheduledAt?: string | null;
             version: number;
             /** Format: date-time */
             createdAt: string;
@@ -6500,6 +6688,188 @@ export interface components {
             orderId: string;
             notified: boolean;
             session?: components["schemas"]["DshPickupSession"];
+        };
+        /**
+         * @description Server-authoritative action currently executable by the authenticated partner.
+         * @enum {string}
+         */
+        DshPartnerOrderAction: "accept" | "reject" | "prepare" | "ready" | "revise_estimate" | "report_issue" | "resolve_issue" | "handoff";
+        /** @enum {string} */
+        DshPreparationSlaState: "not_started" | "on_track" | "due_soon" | "overdue" | "ready";
+        DshOrderPreparation: {
+            /** Format: uuid */
+            orderId: string;
+            /** Format: date-time */
+            acceptedAt?: string | null;
+            /** Format: date-time */
+            preparationStartedAt?: string | null;
+            /** Format: date-time */
+            estimatedReadyAt?: string | null;
+            /** Format: date-time */
+            readyAt?: string | null;
+            estimatedPreparationMinutes: number;
+            preparationWarningMinutes: number;
+            preparationDelayReason: string;
+            preparationEstimateRevisionCount: number;
+            preparationSlaState: components["schemas"]["DshPreparationSlaState"];
+            /** Format: int64 */
+            preparationRemainingSeconds: number;
+        };
+        /** @enum {string} */
+        DshPreparationIssueKind: "missing_item" | "substitution_required" | "quality_issue" | "other";
+        /** @enum {string} */
+        DshPreparationIssueStatus: "open" | "resolved";
+        /** @enum {string} */
+        DshPreparationIssueCustomerDecision: "not_required" | "pending" | "approved" | "rejected";
+        DshPreparationIssue: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            orderId: string;
+            storeId: string;
+            /** @description Immutable order-item UUID for item-level issues; empty only for kind=other. */
+            orderItemId: string;
+            kind: components["schemas"]["DshPreparationIssueKind"];
+            status: components["schemas"]["DshPreparationIssueStatus"];
+            affectedQuantity: number;
+            note: string;
+            replacementProductId: string;
+            replacementProductName: string;
+            customerDecision: components["schemas"]["DshPreparationIssueCustomerDecision"];
+            customerDecidedByActorId: string;
+            customerDecisionNote: string;
+            /** Format: date-time */
+            customerDecidedAt?: string | null;
+            openedByActorId: string;
+            /** Format: date-time */
+            openedAt: string;
+            resolvedByActorId: string;
+            resolutionNote: string;
+            /** Format: date-time */
+            resolvedAt?: string | null;
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshCreatePreparationIssueInput: {
+            /**
+             * Format: uuid
+             * @description Required when kind is missing_item, substitution_required, or quality_issue.
+             */
+            orderItemId?: string;
+            kind: components["schemas"]["DshPreparationIssueKind"];
+            affectedQuantity: number;
+            note: string;
+            replacementProductId?: string;
+            replacementProductName?: string;
+        } & ({
+            /** @enum {string} */
+            kind?: "missing_item" | "substitution_required" | "quality_issue";
+        } | {
+            /** @enum {string} */
+            kind?: "other";
+        });
+        DshDecidePreparationIssueInput: {
+            expectedVersion: number;
+            /** @enum {string} */
+            decision: "approved" | "rejected";
+            note?: string;
+        };
+        DshResolvePreparationIssueInput: {
+            expectedVersion: number;
+            resolutionNote: string;
+        };
+        DshPreparationIssueListResponse: {
+            issues: components["schemas"]["DshPreparationIssue"][];
+            openCount: number;
+            pendingCustomerDecisionCount: number;
+        };
+        DshRevisePreparationEstimateInput: {
+            remainingMinutes: number;
+            reason: string;
+        };
+        DshStorePreparationPolicy: {
+            storeId: string;
+            defaultPreparationMinutes: number;
+            warningBeforeMinutes: number;
+            version: number;
+            updatedByActorId: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshUpdateStorePreparationPolicyInput: {
+            expectedVersion: number;
+            defaultPreparationMinutes: number;
+            warningBeforeMinutes: number;
+            reason: string;
+        };
+        /** @enum {string} */
+        DshPreparationAlertKind: "due_soon" | "overdue" | "customer_decision_pending";
+        /** @enum {string} */
+        DshPreparationAlertStatus: "open" | "acknowledged" | "resolved";
+        DshPreparationAlert: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            orderId: string;
+            storeId: string;
+            kind: components["schemas"]["DshPreparationAlertKind"];
+            status: components["schemas"]["DshPreparationAlertStatus"];
+            estimateRevision: number;
+            /** Format: date-time */
+            detectedAt: string;
+            acknowledgedByActorId: string;
+            /** Format: date-time */
+            acknowledgedAt?: string | null;
+            /** Format: date-time */
+            resolvedAt?: string | null;
+            resolutionReason: string;
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshRefreshPreparationAlertsResult: {
+            opened: number;
+            resolved: number;
+            active: number;
+        };
+        DshAcknowledgePreparationAlertInput: {
+            expectedVersion: number;
+        };
+        DshPreparationAlertListResponse: {
+            alerts: components["schemas"]["DshPreparationAlert"][];
+            total: number;
+        };
+        DshPartnerOrderWorkboardOrder: components["schemas"]["DshOrder"] & {
+            allowedActions: components["schemas"]["DshPartnerOrderAction"][];
+            preparation: components["schemas"]["DshOrderPreparation"];
+            preparationIssues: components["schemas"]["DshPreparationIssue"][];
+            openPreparationIssueCount: number;
+            pendingCustomerDecisionCount: number;
+            resolvablePreparationIssueCount: number;
+            storeCaptainHandoffStatus: string;
+            storeCaptainHandoffAssignmentId: string;
+            storeCaptainHandoffCaptainId: string;
+            /** Format: date-time */
+            partnerHandoffConfirmedAt?: string | null;
+            /** Format: date-time */
+            captainPickupConfirmedAt?: string | null;
+            openStoreCaptainHandoffExceptionId: string;
+            openStoreCaptainHandoffExceptionReason: string;
+            openStoreCaptainHandoffExceptionStatus: string;
+        };
+        DshPartnerOrderWorkboardResponse: {
+            orders: components["schemas"]["DshPartnerOrderWorkboardOrder"][];
+            total: number;
+        };
+        DshReschedulePickupWindowRequest: components["schemas"]["DshPickupMutationRequest"] & {
+            reason: string;
+            /** Format: date-time */
+            newExpiry: string;
         };
     };
     responses: {
@@ -14894,6 +15264,396 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    getDshOrderPreparation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Preparation timing returned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        preparation: components["schemas"]["DshOrderPreparation"];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    reviseDshPartnerOrderPreparationEstimate: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshRevisePreparationEstimateInput"];
+            };
+        };
+        responses: {
+            /** @description Preparation estimate revised. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        preparation: components["schemas"]["DshOrderPreparation"];
+                    };
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    listDshOrderPreparationIssues: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Preparation issues returned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPreparationIssueListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    createDshPartnerOrderPreparationIssue: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshCreatePreparationIssueInput"];
+            };
+        };
+        responses: {
+            /** @description Preparation issue opened. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        issue: components["schemas"]["DshPreparationIssue"];
+                    };
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    decideDshClientOrderPreparationIssue: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
+            path: {
+                orderId: string;
+                issueId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshDecidePreparationIssueInput"];
+            };
+        };
+        responses: {
+            /** @description Customer substitution decision recorded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        issue: components["schemas"]["DshPreparationIssue"];
+                    };
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    resolveDshPartnerOrderPreparationIssue: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
+            path: {
+                orderId: string;
+                issueId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshResolvePreparationIssueInput"];
+            };
+        };
+        responses: {
+            /** @description Preparation issue resolved. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        issue: components["schemas"]["DshPreparationIssue"];
+                    };
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    getDshPartnerStorePreparationPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Store preparation policy returned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        policy: components["schemas"]["DshStorePreparationPolicy"];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateDshPartnerStorePreparationPolicy: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
+            path: {
+                storeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshUpdateStorePreparationPolicyInput"];
+            };
+        };
+        responses: {
+            /** @description Store preparation policy updated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        policy: components["schemas"]["DshStorePreparationPolicy"];
+                    };
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    refreshDshOperatorOrderPreparationAlerts: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Preparation alert scan completed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        result: components["schemas"]["DshRefreshPreparationAlertsResult"];
+                    };
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listDshOperatorOrderPreparationAlerts: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["DshPreparationAlertStatus"];
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Preparation alerts returned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPreparationAlertListResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    acknowledgeDshOperatorOrderPreparationAlert: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
+            path: {
+                alertId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshAcknowledgePreparationAlertInput"];
+            };
+        };
+        responses: {
+            /** @description Preparation alert acknowledged. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        alert: components["schemas"]["DshPreparationAlert"];
+                    };
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    rescheduleDshPickupWindow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshReschedulePickupWindowRequest"];
+            };
+        };
+        responses: {
+            /** @description No-show pickup session reopened with the requested window. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPickupSessionResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Pickup version changed; reload before retrying. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+            /** @description Only a no-show pickup session can be rescheduled. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
         };
     };
 }
