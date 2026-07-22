@@ -18,9 +18,7 @@ const aliases = loadTsconfigAliases();
 function aliasExists(alias) {
   const target = aliases.get(alias);
   if (!target) return false;
-
-  const abs = path.join(repoRoot, target);
-  return fs.existsSync(abs);
+  return fs.existsSync(path.join(repoRoot, target));
 }
 
 function scriptKindFor(file) {
@@ -60,6 +58,17 @@ function findParsedImportSpecifiers(file, content) {
   return specs;
 }
 
+function generatedImportHasSource(importingFile, specifier) {
+  const absoluteTarget = path.resolve(repoRoot, path.dirname(importingFile), specifier);
+  const distToken = `${path.sep}dist${path.sep}`;
+  const distIndex = absoluteTarget.indexOf(distToken);
+  if (distIndex === -1) return false;
+
+  const repositoryRelativeAfterDist = absoluteTarget.slice(distIndex + distToken.length);
+  const sourceBase = path.join(repoRoot, repositoryRelativeAfterDist).replace(/\.(?:mjs|cjs|js)$/, "");
+  return [".ts", ".tsx", ".mts", ".cts", ".js", ".jsx"].some((extension) => fs.existsSync(`${sourceBase}${extension}`));
+}
+
 for (const file of listCodeFiles()) {
   if (file.endsWith("next-env.d.ts")) continue;
   const content = read(file);
@@ -67,7 +76,7 @@ for (const file of listCodeFiles()) {
     const spec = item.specifier;
 
     if (spec.startsWith(".")) {
-      if (!existsResolved(file, spec)) {
+      if (!existsResolved(file, spec) && !generatedImportHasSource(file, spec)) {
         violations.push({
           file,
           line: lineNumber(content, item.index),
@@ -77,14 +86,12 @@ for (const file of listCodeFiles()) {
       continue;
     }
 
-    if (spec.startsWith("@bthwani/") && aliases.has(spec)) {
-      if (!aliasExists(spec)) {
-        violations.push({
-          file,
-          line: lineNumber(content, item.index),
-          message: `tsconfig alias target does not exist: ${spec}`
-        });
-      }
+    if (spec.startsWith("@bthwani/") && aliases.has(spec) && !aliasExists(spec)) {
+      violations.push({
+        file,
+        line: lineNumber(content, item.index),
+        message: `tsconfig alias target does not exist: ${spec}`
+      });
     }
   }
 }
