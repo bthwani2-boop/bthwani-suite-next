@@ -6,6 +6,11 @@
   "truthOwner": "core/platform-control",
   "scopeBoundary": "platform-change-control-plane",
   "sharedBrainOwner": "services/dsh/frontend/shared/platform",
+  "contractAuthority": {
+    "authoritativeOpenApi": "core/platform-control/contracts/jrn-040-platform-change-sets.openapi.yaml",
+    "generatedClient": "core/platform-control/clients/generated/jrn-040-platform-change-sets-api.ts",
+    "aggregateCompatibilityContract": "core/platform-control/contracts/platform-control.openapi.yaml"
+  },
   "operationalProblem": "تحتاج عمليات المنصة إلى تجميع تعديلات المتغيرات وأعلام الميزات في طلب واحد قابل للمراجعة، مع فرق وأثر واضحين، تحقق مسبق، فصل صانع القرار عن معتمده، تطبيق ذري، منع التعارض والتكرار، وتراجع يعيد الحالة الآمنة دون فقدان سجل التدقيق.",
   "targetOutcome": "دورة تغيير سيادية من المسودة إلى التحقق والإرسال والاعتماد أو الرفض ثم التطبيق والتراجع، ترتبط بقاعدة PostgreSQL الحية وتعرض في لوحة التحكم تفاصيل العناصر ولقطات الشروط والمراجعات والأثر، وتحظر الأسرار والتغييرات المتعارضة.",
   "actors": [
@@ -41,6 +46,7 @@
     "repeat_apply_or_repeat_rollback",
     "rollback_without_reason",
     "store_secret_or_credential_values_in_change_sets",
+    "snapshot_existing_sensitive_target_values",
     "store_proposed_values_in_audit_payload",
     "silently_ignore_scope_for_feature_flags",
     "delete_or_rewrite_change_history"
@@ -52,7 +58,7 @@
     "The proposer cannot approve or reject the same request even when holding reviewer permissions.",
     "Apply is atomic across all items and advances each target revision exactly once.",
     "Rollback requires an explicit reason, verifies the applied revision, and restores value plus owner, type, classification, status, and feature targeting metadata.",
-    "Sensitive classifications and secret-shaped JSON fields are rejected before persistence.",
+    "Sensitive classifications, existing sensitive targets, and secret-shaped JSON fields are rejected before any change-set snapshot can be persisted.",
     "Audit payloads record target metadata and transitions while redacting proposed and prior values."
   ],
   "acceptanceCriteria": [
@@ -62,7 +68,8 @@
     "Apply and rollback use serializable transactions, target locks, optimistic revisions, and immutable audit events.",
     "Rollback reasons are required by the API contract and user interface.",
     "Variable and feature-flag metadata survive an apply-and-rollback cycle.",
-    "Targeted Go integration tests, OpenAPI and generated-client checks, frontend binding checks, product contract checks, and migration checks pass on one immutable branch commit."
+    "Sensitive existing targets cannot enter the request or its validation snapshots.",
+    "Targeted Go integration tests, authoritative OpenAPI and generated-client checks, frontend binding checks, product contract checks, and migration checks pass on one immutable branch commit."
   ],
   "independentApprovalsRequired": [
     "product-manager",
