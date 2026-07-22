@@ -6,6 +6,8 @@ import type {
   DshSpecialRequestListResponse,
   DshSpecialRequestResponse,
   DshUpdateSpecialRequest,
+  SpecialRequestStatus,
+  SpecialRequestType,
 } from "./special-requests.types";
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "special-requests");
@@ -69,8 +71,8 @@ export async function approveSpecialRequestQuote(
 export async function fetchOperatorSpecialRequests(params: {
   readonly limit?: number;
   readonly offset?: number;
-  readonly requestType?: string;
-  readonly status?: string;
+  readonly requestType?: SpecialRequestType;
+  readonly status?: SpecialRequestStatus;
   readonly workflowStage?: string;
 } = {}): Promise<DshSpecialRequestListResponse> {
   const query = new URLSearchParams();
@@ -100,8 +102,8 @@ export async function updateOperatorSpecialRequest(
 export async function assignSpecialRequestDispatch(
   id: string,
   captainId: string,
-): Promise<DshSpecialRequestResponse> {
-  return request<DshSpecialRequestResponse>(
+): Promise<void> {
+  await request<{ readonly assignment: unknown }>(
     `/dsh/operator/special-requests/${encodeURIComponent(id)}/dispatch`,
     {
       method: "POST",
