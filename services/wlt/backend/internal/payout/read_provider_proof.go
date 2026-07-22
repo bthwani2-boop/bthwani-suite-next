@@ -9,31 +9,37 @@ import (
 	"wlt-api/internal/shared"
 )
 
-const payoutReadCols = `id, beneficiary_actor_id, beneficiary_actor_type, amount_minor_units, currency, status,
-	requested_at, approved_at, rejected_at, processed_at, completed_at, failed_at, failure_reason, operator_id,
-	approved_by_operator_id, rejected_by_operator_id, processed_by_operator_id, completed_by_operator_id, failed_by_operator_id,
+const payoutReadCols = `id, beneficiary_actor_id, beneficiary_actor_type, payout_destination_id,
+	amount_minor_units, currency, status, reconciliation_status,
+	requested_at, approved_at, rejected_at, processed_at, completed_at, failed_at, reconciled_at,
+	failure_reason, operator_id,
+	approved_by_operator_id, rejected_by_operator_id, processed_by_operator_id,
+	completed_by_operator_id, failed_by_operator_id, reconciled_by_operator_id,
 	provider_reference, provider_status, provider_processed_at, idempotency_key`
 
 func scanPayoutRequestWithProof(rows *sql.Rows) (*PayoutRequest, error) {
 	var payoutRequest PayoutRequest
-	var approvedAt, rejectedAt, processedAt, completedAt, failedAt, providerProcessedAt sql.NullTime
-	var failureReason, operatorID, idempotencyKey sql.NullString
-	var approvedBy, rejectedBy, processedBy, completedBy, failedBy sql.NullString
+	var approvedAt, rejectedAt, processedAt, completedAt, failedAt, reconciledAt, providerProcessedAt sql.NullTime
+	var destinationID, reconciliationStatus, failureReason, operatorID, idempotencyKey sql.NullString
+	var approvedBy, rejectedBy, processedBy, completedBy, failedBy, reconciledBy sql.NullString
 	var providerReference, providerStatus sql.NullString
 
 	err := rows.Scan(
 		&payoutRequest.ID,
 		&payoutRequest.BeneficiaryActorID,
 		&payoutRequest.BeneficiaryActorType,
+		&destinationID,
 		&payoutRequest.AmountMinorUnits,
 		&payoutRequest.Currency,
 		&payoutRequest.Status,
+		&reconciliationStatus,
 		&payoutRequest.RequestedAt,
 		&approvedAt,
 		&rejectedAt,
 		&processedAt,
 		&completedAt,
 		&failedAt,
+		&reconciledAt,
 		&failureReason,
 		&operatorID,
 		&approvedBy,
@@ -41,6 +47,7 @@ func scanPayoutRequestWithProof(rows *sql.Rows) (*PayoutRequest, error) {
 		&processedBy,
 		&completedBy,
 		&failedBy,
+		&reconciledBy,
 		&providerReference,
 		&providerStatus,
 		&providerProcessedAt,
@@ -50,24 +57,15 @@ func scanPayoutRequestWithProof(rows *sql.Rows) (*PayoutRequest, error) {
 		return nil, err
 	}
 
-	if approvedAt.Valid {
-		payoutRequest.ApprovedAt = &approvedAt.Time
-	}
-	if rejectedAt.Valid {
-		payoutRequest.RejectedAt = &rejectedAt.Time
-	}
-	if processedAt.Valid {
-		payoutRequest.ProcessedAt = &processedAt.Time
-	}
-	if completedAt.Valid {
-		payoutRequest.CompletedAt = &completedAt.Time
-	}
-	if failedAt.Valid {
-		payoutRequest.FailedAt = &failedAt.Time
-	}
-	if providerProcessedAt.Valid {
-		payoutRequest.ProviderProcessedAt = &providerProcessedAt.Time
-	}
+	if approvedAt.Valid { payoutRequest.ApprovedAt = &approvedAt.Time }
+	if rejectedAt.Valid { payoutRequest.RejectedAt = &rejectedAt.Time }
+	if processedAt.Valid { payoutRequest.ProcessedAt = &processedAt.Time }
+	if completedAt.Valid { payoutRequest.CompletedAt = &completedAt.Time }
+	if failedAt.Valid { payoutRequest.FailedAt = &failedAt.Time }
+	if reconciledAt.Valid { payoutRequest.ReconciledAt = &reconciledAt.Time }
+	if providerProcessedAt.Valid { payoutRequest.ProviderProcessedAt = &providerProcessedAt.Time }
+	payoutRequest.PayoutDestinationID = destinationID.String
+	payoutRequest.ReconciliationStatus = reconciliationStatus.String
 	payoutRequest.FailureReason = failureReason.String
 	payoutRequest.OperatorID = operatorID.String
 	payoutRequest.ApprovedByOperatorID = approvedBy.String
@@ -75,6 +73,7 @@ func scanPayoutRequestWithProof(rows *sql.Rows) (*PayoutRequest, error) {
 	payoutRequest.ProcessedByOperatorID = processedBy.String
 	payoutRequest.CompletedByOperatorID = completedBy.String
 	payoutRequest.FailedByOperatorID = failedBy.String
+	payoutRequest.ReconciledByOperatorID = reconciledBy.String
 	payoutRequest.ProviderReference = providerReference.String
 	payoutRequest.ProviderStatus = providerStatus.String
 	payoutRequest.IdempotencyKey = idempotencyKey.String
@@ -90,12 +89,18 @@ func HandleListPayoutRequestsWithProviderProof(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "beneficiaryActorId and beneficiaryActorType must be supplied together")
 			return
 		}
+		if beneficiaryActorType != "" {
+			if _, ok := governedPayoutActorTypes[strings.ToLower(beneficiaryActorType)]; !ok {
+				shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "unsupported beneficiaryActorType")
+				return
+			}
+		}
 
 		query := "SELECT " + payoutReadCols + " FROM wlt_payout_requests"
 		where := make([]string, 0, 2)
 		args := make([]any, 0, 3)
 		if beneficiaryActorID != "" {
-			args = append(args, beneficiaryActorID, beneficiaryActorType)
+			args = append(args, beneficiaryActorID, strings.ToLower(beneficiaryActorType))
 			where = append(where, "beneficiary_actor_id = $1 AND beneficiary_actor_type = $2")
 		}
 		if status != "" {
