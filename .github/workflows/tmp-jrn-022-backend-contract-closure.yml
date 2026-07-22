@@ -1,5 +1,6 @@
 name: Temporary JRN-022 Backend Contract Closure
 
+# Second push trigger after workflow registration.
 on:
   push:
     branches: [sambassam]
