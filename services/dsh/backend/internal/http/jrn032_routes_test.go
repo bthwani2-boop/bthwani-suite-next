@@ -30,3 +30,23 @@ func TestJRN032AnalyticsRoutesRegistered(t *testing.T) {
 		}
 	}
 }
+
+func TestNamedAnalyticsPeriodRejectsUnknownValues(t *testing.T) {
+	response := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodGet, "/dsh/operator/analytics/orders?period=quarter", nil)
+	if period, ok := namedAnalyticsPeriod(response, request); ok || period != "" {
+		t.Fatalf("period=%q ok=%v", period, ok)
+	}
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("status=%d", response.Code)
+	}
+}
+
+func TestNamedAnalyticsPeriodDefaultsToToday(t *testing.T) {
+	response := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodGet, "/dsh/operator/analytics/orders", nil)
+	period, ok := namedAnalyticsPeriod(response, request)
+	if !ok || period != "today" {
+		t.Fatalf("period=%q ok=%v", period, ok)
+	}
+}
