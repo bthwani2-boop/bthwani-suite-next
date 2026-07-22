@@ -106,6 +106,23 @@ export type DshNotificationDeliveryAttempt = {
   readonly correlationId: string;
 };
 
+export type DshPushDeliveryAudit = {
+  readonly id: string;
+  readonly notificationId: string;
+  readonly actorId: string;
+  readonly actorType: string;
+  readonly topic: string;
+  readonly status: "pending" | "sent" | "failed";
+  readonly attemptCount: number;
+  readonly nextRetryAt: string;
+  readonly providerMessageId: string;
+  readonly lastError: string;
+  readonly sentAt?: string | undefined;
+  readonly failedAt?: string | undefined;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+};
+
 export type DshNotificationDeliveryAuditSummary = {
   readonly sent: number;
   readonly retryScheduled: number;
@@ -135,6 +152,7 @@ export type DshNotificationDeliveryAuditState =
   | {
       readonly kind: "success";
       readonly attempts: readonly DshNotificationDeliveryAttempt[];
+      readonly pushDeliveries: readonly DshPushDeliveryAudit[];
       readonly summary: DshNotificationDeliveryAuditSummary;
     }
   | { readonly kind: "error"; readonly message: string };
