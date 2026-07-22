@@ -11,9 +11,13 @@ export function canClientCancelSpecialRequest(request: DshSpecialRequestResponse
   return CLIENT_CANCELLABLE_STATUSES.has(request.status);
 }
 
+export function canClientRespondToInformation(request: DshSpecialRequestResponse): boolean {
+  return request.status === "needs_customer_input" && request.workflowStage === "customer_information";
+}
+
 export function canClientApproveSpecialRequestQuote(request: DshSpecialRequestResponse): boolean {
-  const quoteStatus = request.status === "under_review" || request.status === "needs_customer_input";
-  return quoteStatus
+  return request.status === "needs_customer_input"
+    && request.workflowStage === "customer_approval"
     && request.estimatedAmountMinorUnits !== null
     && request.estimatedAmountMinorUnits !== undefined
     && request.currency !== null
@@ -21,11 +25,7 @@ export function canClientApproveSpecialRequestQuote(request: DshSpecialRequestRe
     && !request.wltPaymentSessionId;
 }
 
-/**
- * A client refusing a prepared quote uses the governed cancellation mutation.
- * The terminal `rejected` status remains operator-owned for operational refusal;
- * this keeps one client termination path and prevents a second financial truth.
- */
+/** Client quote refusal uses the governed cancellation mutation. */
 export function isClientQuoteDecisionPending(request: DshSpecialRequestResponse): boolean {
   return canClientApproveSpecialRequestQuote(request);
 }
@@ -43,7 +43,7 @@ export function specialRequestStatusLabel(request: DshSpecialRequestResponse): s
   const labels: Readonly<Record<string, string>> = {
     submitted: "تم الاستلام",
     under_review: "قيد المراجعة",
-    needs_customer_input: "بانتظار موافقتك",
+    needs_customer_input: "بانتظار إجراء منك",
     approved: "تم الاعتماد",
     assigned: "تم إسناد الكابتن",
     in_progress: "قيد التنفيذ",
@@ -52,7 +52,8 @@ export function specialRequestStatusLabel(request: DshSpecialRequestResponse): s
     rejected: "مرفوض",
     intake_review: "مراجعة الطلب",
     quote_pending: "إعداد العرض",
-    customer_approval: "بانتظار موافقتك",
+    customer_information: "مطلوب معلومات إضافية",
+    customer_approval: "بانتظار موافقة العرض",
     batch_pending: "بانتظار دفعة الشراء",
     purchased: "تم الشراء",
     inbound: "في الشحن الوارد",
@@ -68,8 +69,10 @@ export function specialRequestStatusLabel(request: DshSpecialRequestResponse): s
     captain_enroute_to_pickup: "الكابتن في طريقه للاستلام",
     arrived_at_pickup: "وصل إلى نقطة الاستلام",
     item_received: "تم استلام الغرض",
+    in_progress: "قيد التنفيذ",
     arrived_at_dropoff: "وصل إلى نقطة التسليم",
     proof_review: "مراجعة الإثبات",
+    completed: "مكتمل",
     escalated: "مصعّد للمراجعة",
     exception: "استثناء تشغيلي",
   };
