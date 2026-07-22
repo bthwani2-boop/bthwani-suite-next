@@ -26,6 +26,9 @@
     { "route": "GET /dsh/partner/catalog/nodes", "classification": "LEGACY_COMPATIBILITY", "canonicalRoute": "GET /dsh/partner/catalog/taxonomy", "owner": "central-catalog", "retirementState": "DEPRECATED_SUPPORTED" },
     { "route": "POST /dsh/partner/catalog/proposals", "classification": "LEGACY_COMPATIBILITY", "canonicalRoute": "POST /dsh/partner/catalog/product-proposals", "owner": "central-catalog", "retirementState": "DEPRECATED_SUPPORTED" },
     { "route": "GET /dsh/partner/catalog/assortment", "classification": "LEGACY_COMPATIBILITY", "canonicalRoute": "GET /dsh/partner/stores/{storeId}/assortment", "owner": "central-catalog", "retirementState": "DEPRECATED_SUPPORTED" },
-    { "route": "PUT /dsh/partner/catalog/assortment/{masterProductId}", "classification": "LEGACY_COMPATIBILITY", "canonicalRoute": "PUT /dsh/partner/stores/{storeId}/assortment/{masterProductId}", "owner": "central-catalog", "retirementState": "DEPRECATED_SUPPORTED" }
+    { "route": "PUT /dsh/partner/catalog/assortment/{masterProductId}", "classification": "LEGACY_COMPATIBILITY", "canonicalRoute": "PUT /dsh/partner/stores/{storeId}/assortment/{masterProductId}", "owner": "central-catalog", "retirementState": "DEPRECATED_SUPPORTED" },
+    { "route": "GET /dsh/operator/incidents", "classification": "LEGACY_COMPATIBILITY", "canonicalRoute": "GET /dsh/operator/support/incidents", "owner": "governed-support", "retirementState": "DEPRECATED_SUPPORTED" },
+    { "route": "POST /dsh/operator/incidents", "classification": "LEGACY_COMPATIBILITY", "canonicalRoute": "POST /dsh/operator/support/incidents", "owner": "governed-support", "retirementState": "DEPRECATED_SUPPORTED" },
+    { "route": "PATCH /dsh/operator/incidents/{incidentId}", "classification": "LEGACY_COMPATIBILITY", "canonicalRoute": "PATCH /dsh/operator/support/incidents/{incidentId}", "owner": "governed-support", "retirementState": "DEPRECATED_SUPPORTED" }
   ]
 }
