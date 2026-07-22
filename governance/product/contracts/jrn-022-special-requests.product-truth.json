@@ -5,7 +5,7 @@
   "problem": {
     "statement": "Awnak errands and SHEIN assisted purchases require one governed journey from client intake through quote, WLT approval, operator execution, captain assignment and client readback.",
     "affectedActors": ["client", "operator", "captain"],
-    "currentWorkaround": "The client could create a request but could not reliably list, approve, cancel or follow its lifecycle, while operator controls were primarily read-only.",
+    "currentWorkaround": "The client could create a request but could not reliably list, approve, refuse, cancel or follow its lifecycle, while operator controls were primarily read-only.",
     "frequency": "frequent",
     "severity": "high",
     "evidenceState": "QUALITATIVE",
@@ -25,6 +25,7 @@
         "create owned special request with an idempotency key",
         "list and read owned requests",
         "approve a prepared quote through the governed WLT handoff",
+        "refuse a prepared quote through the governed cancellation mutation",
         "cancel an eligible owned request"
       ],
       "forbiddenActions": [
@@ -42,7 +43,7 @@
         "prepare a quote",
         "apply valid expected-version transitions",
         "assign an eligible request to a captain",
-        "record rejection and exception context"
+        "record operational rejection and exception context"
       ],
       "forbiddenActions": [
         "skip optimistic concurrency",
@@ -74,7 +75,7 @@
       "routesOrScreens": ["DshClientSurface special tab", "ClientSpecialRequestsScreen", "SheinForm", "AwnakForm"],
       "operationIds": [],
       "states": ["loading", "empty", "success", "offline", "forbidden", "conflict", "error", "submitted", "quote_pending", "customer_approval", "assigned", "in_progress", "completed", "cancelled", "rejected"],
-      "actions": ["create", "list", "refresh", "approve quote", "cancel", "read WLT session reference"]
+      "actions": ["create", "list", "refresh", "approve quote", "refuse quote through cancellation", "cancel", "read WLT session reference"]
     },
     {
       "id": "control-panel",
@@ -83,7 +84,7 @@
       "routesOrScreens": ["SpecialOpsWorkbenchScreen", "OperatorSpecialRequestsWorkbench"],
       "operationIds": [],
       "states": ["loading", "empty", "success", "offline", "forbidden", "conflict", "error", "under_review", "needs_customer_input", "approved", "assigned", "in_progress", "completed", "cancelled", "rejected"],
-      "actions": ["inspect", "prepare quote", "transition", "assign captain", "read canonical result"]
+      "actions": ["inspect", "prepare quote", "transition", "record operational rejection", "assign captain", "read canonical result"]
     },
     {
       "id": "app-captain",
@@ -159,7 +160,8 @@
   "acceptance": {
     "criteria": [
       "Client creation is idempotent and validates required SHEIN or Awnak data.",
-      "Client can list, refresh, approve an eligible quote and cancel an eligible owned request.",
+      "Client can list, refresh, approve an eligible quote, refuse a prepared quote through the governed cancellation mutation, and cancel an eligible owned request.",
+      "The rejected terminal state is operator-owned for operational refusal with recorded reason; client quote refusal does not create a second terminal or financial truth.",
       "Operator can prepare a quote, apply an expected-version transition and assign an eligible captain.",
       "SHEIN dispatch is rejected before ready_for_delivery with structured blocking reasons.",
       "Captain inbox distinguishes Awnak and SHEIN final-mile assignments.",
@@ -195,14 +197,16 @@
       "Every operator mutation requires expectedVersion.",
       "Every successful write is followed by canonical readback.",
       "SHEIN cannot dispatch before purchase, inbound, sorting and readiness timestamps are complete.",
-      "Captain assignment retains the specialRequestId and requestType linkage."
+      "Captain assignment retains the specialRequestId and requestType linkage.",
+      "Client quote refusal and general client cancellation share one governed cancellation mutation; operational rejection remains operator-owned."
     ],
     "negative": [
       "No client can read or mutate another client request.",
       "No surface can calculate or persist final financial truth.",
       "No local array, mock or fallback can represent runtime request state.",
       "No operator can bypass the workflow-stage model.",
-      "No captain can receive an unready SHEIN request."
+      "No captain can receive an unready SHEIN request.",
+      "No client quote-refusal endpoint can create a duplicate terminal state or independent WLT mutation."
     ]
   },
   "owners": {
