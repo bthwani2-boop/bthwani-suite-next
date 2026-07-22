@@ -29,8 +29,12 @@ export function classifyFiles(inputFiles, options = {}) {
   const includes = (...parts) => has((file) => parts.some((part) => file.includes(part)));
 
   const workspaceManifest = equals("package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "nx.json");
+  const ciRouter = has((file) =>
+    file === "tools/scripts/detect-ci-context.mjs" ||
+    file === "tools/scripts/detect-ci-context.test.mjs"
+  );
 
-  const workflow = full || starts(".github/") || has((file) =>
+  const workflow = full || starts(".github/") || ciRouter || has((file) =>
     file === "tools/scripts/run-actionlint.mjs" ||
     file === "tools/scripts/run-zizmor.mjs" ||
     file === "tools/scripts/run-pinact.mjs"
@@ -53,8 +57,19 @@ export function classifyFiles(inputFiles, options = {}) {
   const platform = full || starts("core/platform-control/backend/", "core/platform-control/database/");
   const providers = full || starts("core/providers/backend/", "core/providers/database/");
 
+  const backendApiSurface = full || starts(
+    "services/dsh/backend/internal/http/",
+    "services/wlt/backend/internal/http/",
+    "core/identity/backend/internal/http/"
+  ) || equals(
+    "services/dsh/backend/cmd/dsh-api/main.go",
+    "services/wlt/backend/cmd/wlt-api/main.go",
+    "core/identity/backend/cmd/identity-api/main.go",
+    "tools/guards/backend-api-binding-gate.mjs"
+  );
+
   const frontend = full || workspaceManifest || starts("apps/", "shared/") || includes("/frontend/", "/clients/generated/");
-  const contracts = full || starts("contracts/") || includes("/contracts/", "/clients/generated/") || has((file) => file.endsWith(".openapi.yaml"));
+  const contracts = full || backendApiSurface || starts("contracts/") || includes("/contracts/", "/clients/generated/") || has((file) => file.endsWith(".openapi.yaml"));
   const database = full || includes("/database/", "/migrations/") || starts("infra/docker/");
   const runtime = full || starts("infra/") || has((file) =>
     file.endsWith("service.manifest.ts") ||
