@@ -1,6 +1,6 @@
 name: Temporary JRN-022 Backend Contract Closure
 
-# Armed on the review branch; successful execution removes this workflow.
+# Kept during the automated push and removed from sambassam after merge.
 on:
   pull_request:
     branches: [sambassam]
@@ -106,6 +106,7 @@ jobs:
         run: |
           git config user.name "bthwani-journey-closure"
           git config user.email "actions@users.noreply.github.com"
+          git checkout HEAD -- .github/workflows/tmp-jrn-022-backend-contract-closure.yml
           git add -A
           git commit -m "feat(jrn-022): close information evidence and exception backend slices [skip ci]"
           git pull --rebase origin "$HEAD_REF"
