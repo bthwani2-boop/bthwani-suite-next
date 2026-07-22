@@ -21,6 +21,7 @@ export type DshContractRegistration = {
     | "dsh-workforce-scopes"
     | "dsh-checkout"
     | "dsh-order-truth"
+    | "dsh-order-workboards"
     | "dsh-partner-onboarding"
     | "dsh-payment-sessions"
     | "dsh-settlement-commissions"
@@ -141,6 +142,14 @@ export const DSH_CONTRACT_REGISTRY = [
     runtimeDependency: true,
     clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
     adapterOwner: "frontend/shared/order-truth",
+  },
+  {
+    id: "dsh-order-workboards",
+    path: "contracts/dsh.order-workboards.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/orders",
   },
   {
     id: "dsh-partner-onboarding",
