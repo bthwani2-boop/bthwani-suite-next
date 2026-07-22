@@ -20,6 +20,8 @@
       "services/dsh/backend/internal/http/partner_fleet.go",
       "services/dsh/backend/internal/http/partner_fleet_membership_routes.go",
       "services/dsh/backend/internal/http/partner_fleet_operator.go",
+      "services/dsh/backend/internal/http/jrn030_partner_fleet_routes_test.go",
+      "services/dsh/database/migrations/dsh-933_jrn030_partner_fleet_action_audit.sql",
       "services/dsh/frontend/shared/partner/partner-fleet.api.ts",
       "services/dsh/frontend/shared/partner/use-partner-fleet-controller.ts",
       "services/dsh/frontend/app-partner/team/PartnerTeamManagementScreen.tsx",
@@ -27,6 +29,7 @@
       "services/dsh/frontend/control-panel/partners/stores/OperatorPartnerFleetPanel.tsx",
       "services/dsh/contracts/dsh.partner-fleet.openapi.yaml",
       "services/dsh/tests/jrn-030-partner-fleet.test.mjs",
+      "governance/evidence/JRN-030_TECHNICAL_CLOSURE_2026-07-22.md",
       ".github/workflows/jrn-030-partner-fleet-verification.yml"
     ]
   },
@@ -103,9 +106,9 @@
       "id": "database",
       "required": true,
       "actors": ["partner-operator", "captain", "control-panel-operator"],
-      "routesOrScreens": ["dsh_partner_courier_connection_codes", "dsh_store_team_members", "dsh_store_team_member_actions", "dsh_notifications"],
+      "routesOrScreens": ["dsh_partner_courier_connection_codes", "dsh_store_team_members", "dsh_store_team_member_actions", "dsh_notifications", "dsh-933_jrn030_partner_fleet_action_audit.sql"],
       "states": ["transactional", "versioned", "audited", "tenant-scoped", "single-use", "store-scoped-multi-membership"],
-      "actions": ["store digest only", "enforce one pending code", "persist and audit expiry", "prevent duplicate identity binding inside one store", "permit governed multi-store membership", "retain audit and notifications"]
+      "actions": ["store digest only", "enforce one pending code", "persist and audit expiry", "prevent duplicate identity binding inside one store", "permit governed multi-store membership", "allow all five JRN-030 lifecycle audit labels", "retain same-status security audit events", "retain audit and notifications"]
     }
   ],
   "outcome": {
@@ -127,6 +130,7 @@
       "Inactive stores and ineligible courier records fail closed.",
       "Optimistic versions protect revoke redeem and disconnect transitions.",
       "Disconnect pauses the member, records captain_disconnected lifecycle, revokes the redeemed connection, and notifies both actors.",
+      "The database audit guard permits issue redeem revoke expire and disconnect lifecycle labels and preserves same-status security events.",
       "Control panel readback is redacted and requires partners.read or operator authority.",
       "OpenAPI responses are typed and do not expose code hashes or plaintext outside issuance.",
       "Targeted Go TypeScript contract binding Product Truth and PostgreSQL checks pass on the same commit."
@@ -138,6 +142,8 @@
       "expired or revoked code redemption",
       "inactive-store binding",
       "duplicate captain membership inside one store",
+      "unsupported JRN-030 audit label",
+      "suppressed same-status fleet lifecycle audit",
       "unaudited issue redeem revoke expiry or disconnect",
       "missing lifecycle notification",
       "stale overwrite",
@@ -164,7 +170,8 @@
       "Identity authenticates actors while DSH authorizes store and team scope.",
       "Every surface reads the same persisted membership and connection lifecycle.",
       "Every mutation is versioned tenant-scoped audited and notified.",
-      "Captain identity uniqueness is scoped to one store so governed multi-store membership remains possible."
+      "Captain identity uniqueness is scoped to one store so governed multi-store membership remains possible.",
+      "Fleet lifecycle audit facts remain durable even when a transition does not change team-member status."
     ],
     "negative": [
       "no plaintext code persistence",
@@ -174,6 +181,8 @@
       "no duplicate captain membership inside one store",
       "no inactive-store binding",
       "no expired or revoked code reuse",
+      "no unsupported JRN-030 audit label",
+      "no suppressed same-status fleet lifecycle audit",
       "no unaudited lifecycle transition",
       "no missing partner or captain notification for successful binding and disconnect",
       "no stale overwrite",
