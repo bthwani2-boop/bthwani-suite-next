@@ -28,6 +28,7 @@ export type DshContractRegistration = {
     | "dsh-support-governance"
     | "dsh-store-captain-handoff"
     | "dsh-dispatch-governance"
+    | "dsh-live-tracking"
     | "dsh-delivery-proof-media"
     | "dsh-delivery-proof-completion";
   readonly path: string;
@@ -185,6 +186,14 @@ export const DSH_CONTRACT_REGISTRY = [
     runtimeDependency: true,
     clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
     adapterOwner: "frontend/shared/dispatch,frontend/shared/operations",
+  },
+  {
+    id: "dsh-live-tracking",
+    path: "contracts/dsh.live-tracking.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/dispatch",
   },
   {
     id: "dsh-delivery-proof-media",
