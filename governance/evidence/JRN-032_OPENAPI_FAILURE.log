@@ -2,39 +2,27 @@
 > @bthwani/dsh@0.0.0 openapi:compose /Users/runner/work/bthwani-suite-next/bthwani-suite-next/services/dsh
 > node ../../tools/scripts/compose-dsh-openapi.mjs
 
-Composed DSH OpenAPI bundle: services/dsh/contracts/generated/dsh.bundle.openapi.yaml (11751 lines)
+Composed DSH OpenAPI bundle: services/dsh/contracts/generated/dsh.bundle.openapi.yaml (11814 lines)
 
 > @bthwani/dsh@0.0.0 openapi:verify /Users/runner/work/bthwani-suite-next/bthwani-suite-next/services/dsh
 > node ../../tools/guards/dsh-openapi-modular-gate.mjs && pnpm run openapi:generate
 
-DSH OpenAPI modular gate passed: {"pathCount":275,"componentSectionCount":4,"rootLineCount":1182}
+file:///Users/runner/work/bthwani-suite-next/bthwani-suite-next/tools/scripts/dsh-openapi-modular-lib.mjs:826
+    throw new Error(`DSH OpenAPI modular gate failed:\n- ${failures.join('\n- ')}`);
+          ^
 
-> @bthwani/dsh@0.0.0 openapi:generate /Users/runner/work/bthwani-suite-next/bthwani-suite-next/services/dsh
-> pnpm run openapi:compose && pnpm exec openapi-typescript contracts/generated/dsh.bundle.openapi.yaml -o clients/generated/dsh-api.ts
-
-
-> @bthwani/dsh@0.0.0 openapi:compose /Users/runner/work/bthwani-suite-next/bthwani-suite-next/services/dsh
-> node ../../tools/scripts/compose-dsh-openapi.mjs
-
-Composed DSH OpenAPI bundle: services/dsh/contracts/generated/dsh.bundle.openapi.yaml (11751 lines)
-✨ openapi-typescript 7.13.0
- ✘  Can't resolve $ref: ENOENT: no such file or directory '/Users/runner/work/bthwani-suite-next/bthwani-suite-next/services/dsh/contracts/generated/components/schemas/analytics.schemas.yaml' at #/paths/~1dsh~1operator~1analytics~1preparation-sla/get/responses/200/content/application~1json/schema
- ✘  Can't resolve $ref: ENOENT: no such file or directory '/Users/runner/work/bthwani-suite-next/bthwani-suite-next/services/dsh/contracts/generated/components/schemas/analytics.schemas.yaml' at #/paths/~1dsh~1operator~1analytics~1captains/get/responses/200/content/application~1json/schema
- ✘  Can't resolve $ref: ENOENT: no such file or directory '/Users/runner/work/bthwani-suite-next/bthwani-suite-next/services/dsh/contracts/generated/components/schemas/analytics.schemas.yaml' at #/paths/~1dsh~1operator~1analytics~1field/get/responses/200/content/application~1json/schema
- ✘  Can't resolve $ref: ENOENT: no such file or directory '/Users/runner/work/bthwani-suite-next/bthwani-suite-next/services/dsh/contracts/generated/components/schemas/analytics.schemas.yaml' at #/paths/~1dsh~1operator~1analytics~1drill-down~1orders/get/responses/200/content/application~1json/schema
- ✘  Can't resolve $ref: ENOENT: no such file or directory '/Users/runner/work/bthwani-suite-next/bthwani-suite-next/services/dsh/contracts/generated/components/schemas/analytics.schemas.yaml' at #/paths/~1dsh~1operator~1analytics~1financial-snapshot/get/responses/200/content/application~1json/schema
- ✘  Can't resolve $ref: ENOENT: no such file or directory '/Users/runner/work/bthwani-suite-next/bthwani-suite-next/services/dsh/contracts/generated/components/schemas/analytics.schemas.yaml' at #/paths/~1dsh~1operator~1analytics~1financial-snapshot/get/responses/503/content/application~1json/schema
-file:///Users/runner/work/bthwani-suite-next/bthwani-suite-next/node_modules/.pnpm/openapi-typescript@7.13.0_typescript@6.0.3/node_modules/openapi-typescript/dist/lib/redoc.mjs:74
-      throw new Error(errorMessage);
-            ^
-
-Error: Can't resolve $ref: ENOENT: no such file or directory '/Users/runner/work/bthwani-suite-next/bthwani-suite-next/services/dsh/contracts/generated/components/schemas/analytics.schemas.yaml' at #/paths/~1dsh~1operator~1analytics~1financial-snapshot/get/responses/503/content/application~1json/schema
-    at _processProblems (file:///Users/runner/work/bthwani-suite-next/bthwani-suite-next/node_modules/.pnpm/openapi-typescript@7.13.0_typescript@6.0.3/node_modules/openapi-typescript/dist/lib/redoc.mjs:74:13)
-    at validateAndBundle (file:///Users/runner/work/bthwani-suite-next/bthwani-suite-next/node_modules/.pnpm/openapi-typescript@7.13.0_typescript@6.0.3/node_modules/openapi-typescript/dist/lib/redoc.mjs:116:3)
-    at async openapiTS (file:///Users/runner/work/bthwani-suite-next/bthwani-suite-next/node_modules/.pnpm/openapi-typescript@7.13.0_typescript@6.0.3/node_modules/openapi-typescript/dist/index.mjs:40:18)
-    at async generateSchema (file:///Users/runner/work/bthwani-suite-next/bthwani-suite-next/node_modules/.pnpm/openapi-typescript@7.13.0_typescript@6.0.3/node_modules/openapi-typescript/bin/cli.js:143:5)
-    at async main (file:///Users/runner/work/bthwani-suite-next/bthwani-suite-next/node_modules/.pnpm/openapi-typescript@7.13.0_typescript@6.0.3/node_modules/openapi-typescript/bin/cli.js:280:20)
+Error: DSH OpenAPI modular gate failed:
+- components.schemas.DshPreparationSlaAnalyticsResponse module contains root-relative internal references that would resolve against the wrong document.
+- components.schemas.DshCaptainPerformanceAnalyticsResponse module contains root-relative internal references that would resolve against the wrong document.
+- components.schemas.DshFieldPerformanceAnalyticsResponse module contains root-relative internal references that would resolve against the wrong document.
+- components.schemas.DshOperationalAnalyticsDrilldownResponse module contains root-relative internal references that would resolve against the wrong document.
+- components.schemas.DshWltFinancialAnalyticsSnapshotResponse module contains root-relative internal references that would resolve against the wrong document.
+- components.schemas.DshWltFinancialAnalyticsUnavailableResponse module contains root-relative internal references that would resolve against the wrong document.
+    at verifyDshOpenApiModular (file:///Users/runner/work/bthwani-suite-next/bthwani-suite-next/tools/scripts/dsh-openapi-modular-lib.mjs:826:11)
+    at file:///Users/runner/work/bthwani-suite-next/bthwani-suite-next/tools/guards/dsh-openapi-modular-gate.mjs:3:16
+    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+    at async node:internal/modules/esm/loader:633:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
 
 Node.js v24.17.0
- ELIFECYCLE  Command failed with exit code 1.
  ELIFECYCLE  Command failed with exit code 1.
