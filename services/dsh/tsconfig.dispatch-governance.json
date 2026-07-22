@@ -1,0 +1,34 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "exactOptionalPropertyTypes": false
+  },
+  "include": [
+    "frontend/**/*.d.ts",
+    "frontend/shared/_kernel/**/*.ts",
+    "frontend/shared/dispatch/**/*.ts",
+    "frontend/shared/dispatch/**/*.tsx",
+    "frontend/shared/delivery/**/*.ts",
+    "frontend/shared/delivery/**/*.tsx",
+    "frontend/shared/operations/dispatch-assignment.api.ts",
+    "frontend/shared/operations/use-dispatch-captain-options.ts",
+    "frontend/shared/operations/use-dispatch-operations.ts",
+    "frontend/shared/store/store-discovery.api.ts",
+    "frontend/shared/store/store-discovery.states.ts",
+    "frontend/shared/store/store-discovery.types.ts",
+    "frontend/shared/store/store-discovery.view-model.ts",
+    "frontend/shared/workforce/workforce.api.ts",
+    "frontend/shared/workforce/workforce.types.ts",
+    "frontend/app-captain/DshCaptainOrderJourneyRenderer.tsx",
+    "frontend/app-captain/DshCaptainSurface.tsx",
+    "frontend/app-captain/orders/**/*.ts",
+    "frontend/app-captain/orders/**/*.tsx",
+    "frontend/control-panel/operations/DispatchOperationsPanel.tsx",
+    "frontend/control-panel/operations/OrderJourneyDispatchAssignmentScreen.tsx"
+  ],
+  "exclude": ["node_modules", "dist"]
+}
