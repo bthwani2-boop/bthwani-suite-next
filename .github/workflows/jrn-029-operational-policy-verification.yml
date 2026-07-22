@@ -6,9 +6,11 @@ on:
     branches: [sambassam]
     paths:
       - "governance/product/contracts/jrn-029-zones-sla-capacity-delivery-modes.product-truth.json"
+      - "governance/evidence/JRN-029_FULLSTACK_CLOSURE.json"
       - "services/dsh/database/migrations/dsh-129_jrn029_operational_policy_closure.sql"
+      - "services/dsh/backend/cmd/dsh-api/main.go"
       - "services/dsh/backend/internal/platformpolicies/jrn029*.go"
-      - "services/dsh/backend/internal/http/jrn029_operational_policy.go"
+      - "services/dsh/backend/internal/http/jrn029*.go"
       - "services/dsh/backend/internal/http/jrn_029_operational_policy_routes_test.go"
       - "services/dsh/backend/internal/http/platformpolicies_routes.go"
       - "services/dsh/frontend/shared/platform/jrn029-operational-policy.api.ts"
@@ -29,7 +31,7 @@ concurrency:
 
 jobs:
   backend:
-    name: Go decision routes and invariants
+    name: Go decision routes effects and invariants
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -44,7 +46,7 @@ jobs:
           go-version-file: services/dsh/backend/go.mod
           cache-dependency-path: services/dsh/backend/go.sum
 
-      - name: Verify JRN-029 decision and route surface
+      - name: Verify JRN-029 decision route and live effect guards
         run: >-
           go test
           ./internal/platformpolicies
@@ -52,8 +54,8 @@ jobs:
           -run 'TestJRN029'
           -count=1
 
-      - name: Build affected backend owners
-        run: go build ./internal/platformpolicies ./internal/http
+      - name: Build affected backend owners and executable composition
+        run: go build ./internal/platformpolicies ./internal/http ./cmd/dsh-api
 
   frontend:
     name: Shared brain control panel and static closure
@@ -82,14 +84,34 @@ jobs:
       - name: Typecheck JRN-029 ownership graph
         run: pnpm --dir services/dsh exec tsc -p tsconfig.jrn-029.json --noEmit --pretty false
 
-  governance:
-    name: Product Truth contract and repository hygiene
+  contract:
+    name: Focused OpenAPI and Product Truth
     runs-on: ubuntu-latest
     steps:
       - name: Checkout exact commit
         uses: actions/checkout@v4
 
-      - name: Parse Product Truth and verify clean patches
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "10.34.2"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.17.0"
+          cache: pnpm
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Parse focused JRN-029 OpenAPI through repository tooling
+        run: >-
+          pnpm --dir services/dsh exec openapi-typescript
+          contracts/dsh.jrn-029.openapi.yaml
+          -o /tmp/jrn-029-operational-policy-api.ts
+
+      - name: Validate Product Truth and repository hygiene
         run: |
-          node -e "const fs=require('fs'); const p='governance/product/contracts/jrn-029-zones-sla-capacity-delivery-modes.product-truth.json'; const x=JSON.parse(fs.readFileSync(p,'utf8')); if(x.owners.productAcceptanceDecision!=='PENDING') process.exit(1);"
+          node -e "const fs=require('fs'); const p='governance/product/contracts/jrn-029-zones-sla-capacity-delivery-modes.product-truth.json'; const x=JSON.parse(fs.readFileSync(p,'utf8')); if(x.owners.productManagerApproval!=='PENDING'||x.owners.productOwnerApproval!=='PENDING'||x.owners.productAcceptanceDecision!=='PENDING') process.exit(1);"
           git diff --check
