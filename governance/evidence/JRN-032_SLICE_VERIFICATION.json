@@ -1,0 +1,122 @@
+{
+  "journeyId": "JRN-032",
+  "title": "Operational analytics and performance",
+  "repositoryMode": "REMOTE_ONLY",
+  "branch": "sambassam",
+  "formalDecision": "IMPLEMENTED_PENDING_INDEPENDENT_ACCEPTANCE",
+  "slices": [
+    {
+      "id": "JRN-032-S01",
+      "name": "product truth and invariants",
+      "status": "implemented",
+      "evidence": ["governance/product-truth/JRN-032_OPERATIONAL_ANALYTICS.md"]
+    },
+    {
+      "id": "JRN-032-S02",
+      "name": "governed named and custom time windows",
+      "status": "implemented",
+      "evidence": ["services/dsh/backend/internal/analytics/jrn032_window.go", "services/dsh/backend/internal/analytics/jrn032_window_test.go"]
+    },
+    {
+      "id": "JRN-032-S03",
+      "name": "platform and order KPI routes",
+      "status": "implemented",
+      "evidence": ["services/dsh/backend/internal/http/analytics.go", "services/dsh/backend/internal/http/jrn032_routes.go"]
+    },
+    {
+      "id": "JRN-032-S04",
+      "name": "preparation timing and SLA",
+      "status": "implemented",
+      "evidence": ["services/dsh/backend/internal/analytics/jrn032_preparation.go", "services/dsh/backend/internal/http/jrn032_analytics.go"]
+    },
+    {
+      "id": "JRN-032-S05",
+      "name": "assignment and delivery performance",
+      "status": "implemented",
+      "evidence": ["services/dsh/backend/internal/analytics/analytics.go", "services/dsh/backend/internal/analytics/jrn032_people.go"]
+    },
+    {
+      "id": "JRN-032-S06",
+      "name": "support analytics",
+      "status": "implemented",
+      "evidence": ["services/dsh/backend/internal/http/analytics.go", "services/dsh/backend/internal/http/jrn032_routes.go"]
+    },
+    {
+      "id": "JRN-032-S07",
+      "name": "store and authenticated partner analytics",
+      "status": "implemented",
+      "evidence": ["services/dsh/backend/internal/http/analytics.go", "services/dsh/frontend/app-partner/account/PartnerAnalyticsInsightsPanel.tsx"]
+    },
+    {
+      "id": "JRN-032-S08",
+      "name": "captain performance",
+      "status": "implemented",
+      "evidence": ["services/dsh/backend/internal/analytics/jrn032_people.go"]
+    },
+    {
+      "id": "JRN-032-S09",
+      "name": "field performance",
+      "status": "implemented",
+      "evidence": ["services/dsh/backend/internal/analytics/jrn032_people.go"]
+    },
+    {
+      "id": "JRN-032-S10",
+      "name": "operational record drill-down",
+      "status": "implemented",
+      "evidence": ["services/dsh/backend/internal/analytics/jrn032_drilldown.go", "services/dsh/frontend/control-panel/analytics/OperationalAnalyticsExtensionsScreen.tsx"]
+    },
+    {
+      "id": "JRN-032-S11",
+      "name": "WLT-owned read-only financial snapshot",
+      "status": "implemented",
+      "evidence": ["services/dsh/backend/internal/wlt/analytics_read.go", "services/dsh/backend/internal/wlt/analytics_read_test.go"]
+    },
+    {
+      "id": "JRN-032-S12",
+      "name": "filters periods and CSV export",
+      "status": "implemented",
+      "evidence": ["services/dsh/backend/internal/http/jrn032_analytics.go", "services/dsh/frontend/shared/analytics/analytics.api.ts"]
+    },
+    {
+      "id": "JRN-032-S13",
+      "name": "control-panel advanced analytics surface",
+      "status": "implemented",
+      "evidence": ["services/dsh/frontend/control-panel/analytics/OperationalAnalyticsExtensionsScreen.tsx", "apps/control-panel/runtime/src/app/dsh/analytics/operational/page.tsx"]
+    },
+    {
+      "id": "JRN-032-S14",
+      "name": "partner live-data states without synthetic zeroes",
+      "status": "implemented",
+      "evidence": ["services/dsh/frontend/app-partner/account/PartnerAnalyticsInsightsPanel.tsx"]
+    },
+    {
+      "id": "JRN-032-S15",
+      "name": "live protected route registration",
+      "status": "implemented",
+      "evidence": ["services/dsh/backend/internal/http/delivery_proof_routes.go", "services/dsh/backend/internal/http/jrn032_routes_test.go"]
+    },
+    {
+      "id": "JRN-032-S16",
+      "name": "modular and root OpenAPI contract",
+      "status": "implemented_pending_remote_composition",
+      "evidence": ["services/dsh/contracts/paths/analytics.paths.yaml", "services/dsh/contracts/components/schemas/analytics.schemas.yaml", "tools/scripts/patch-jrn032-openapi.mjs"]
+    },
+    {
+      "id": "JRN-032-S17",
+      "name": "source lineage refresh timestamps and explicit unavailable states",
+      "status": "implemented",
+      "evidence": ["services/dsh/backend/internal/analytics/jrn032_window.go", "services/dsh/backend/internal/wlt/analytics_read.go"]
+    },
+    {
+      "id": "JRN-032-S18",
+      "name": "targeted remote verification",
+      "status": "pending_workflow",
+      "evidence": [".github/workflows/jrn-032-operational-analytics.yml", "governance/evidence/JRN-032_REMOTE_EXECUTION_LOG.md"]
+    }
+  ],
+  "independentApprovals": {
+    "productManager": "pending",
+    "productOwner": "pending",
+    "financialControl": "pending"
+  }
+}
