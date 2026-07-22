@@ -9,6 +9,7 @@
     "jsx": "react-jsx",
     "types": ["node", "react"],
     "paths": {
+      "@bthwani/dsh/*": ["services/dsh/*"],
       "@bthwani/ui-kit": ["shared/ui-kit/src/index.ts"],
       "@bthwani/ui-kit/web": ["shared/ui-kit/src/web.ts"],
       "@bthwani/ui-kit/tokens": ["shared/ui-kit/src/tokens/index.ts"],
@@ -27,7 +28,6 @@
     "frontend/shared/finance-wlt-link/payment/**/*.ts",
     "frontend/shared/finance-wlt-link/payment/**/*.tsx",
     "frontend/control-panel/finance/PaymentSessionOperationsScreen.tsx",
-    "frontend/control-panel/finance/index.ts",
     "../../apps/control-panel/runtime/src/app/dsh/finance/payment-sessions/page.tsx"
   ],
   "exclude": ["node_modules", "dist", "dist-jrn-034"]
