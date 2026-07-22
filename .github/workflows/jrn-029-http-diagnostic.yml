@@ -1,0 +1,37 @@
+name: JRN-029 HTTP Test Diagnostic
+
+on:
+  pull_request:
+    branches: [sambassam]
+    paths:
+      - "governance/evidence/JRN-029_HTTP_DIAGNOSTIC_TRIGGER.txt"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jrn-029-http-diagnostic-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  diagnose:
+    name: Isolate JRN-029 HTTP tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact repository state
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: services/dsh/backend/go.sum
+      - name: Guarded mutation paths
+        working-directory: services/dsh/backend
+        run: go test ./internal/http -run '^TestJRN029GuardedMutationPaths$' -count=1 -v
+      - name: Canonical decision effects
+        working-directory: services/dsh/backend
+        run: go test ./internal/http -run '^TestJRN029EffectAllowedUsesCanonicalDecisionEffects$' -count=1 -v
+      - name: Operational policy route registration
+        working-directory: services/dsh/backend
+        run: go test ./internal/http -run '^TestJRN029OperationalPolicyRoutes$' -count=1 -v
