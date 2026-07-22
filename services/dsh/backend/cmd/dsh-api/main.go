@@ -76,7 +76,14 @@ func main() {
 	pickupGuardedRouter := dshHttp.PickupMutationPathContext(
 		dshHttp.PickupMutationGuard(db, identityClient, wltClient, mediaProvider, router),
 	)
-	handler := dshHttp.CorsMiddleware(authMode, pickupGuardedRouter)
+	deliveryExceptionGovernedRouter := dshHttp.DeliveryExceptionGovernanceMiddleware(
+		db,
+		identityClient,
+		wltClient,
+		mediaProvider,
+		pickupGuardedRouter,
+	)
+	handler := dshHttp.CorsMiddleware(authMode, deliveryExceptionGovernedRouter)
 
 	outboxCtx, cancelOutbox := context.WithCancel(context.Background())
 	go orders.RunOrderEventBridgeWorker(outboxCtx, db, 5*time.Second)
