@@ -5,9 +5,25 @@ on:
   workflow_dispatch:
   push:
     branches: [sambassam]
-  pull_request:
-    branches: [master]
-    types: [synchronize]
+    paths:
+      - "services/dsh/backend/internal/partnerfleet/**"
+      - "services/dsh/backend/internal/http/partner_fleet*.go"
+      - "services/dsh/backend/internal/http/jrn030_partner_fleet_routes_test.go"
+      - "services/dsh/backend/cmd/dsh-api/main.go"
+      - "services/dsh/database/migrations/dsh-059_partner_courier_connection_codes.sql"
+      - "services/dsh/database/migrations/dsh-089_store_team_actor_scope_uniqueness.sql"
+      - "services/dsh/frontend/shared/partner/partner-fleet.api.ts"
+      - "services/dsh/frontend/shared/partner/use-partner-fleet-controller.ts"
+      - "services/dsh/frontend/app-partner/team/PartnerTeamManagementScreen.tsx"
+      - "services/dsh/frontend/app-captain/account/PartnerFleetConnectionCard.tsx"
+      - "services/dsh/frontend/control-panel/partners/stores/OperatorPartnerFleetPanel.tsx"
+      - "services/dsh/frontend/control-panel/partners/stores/OperatorDeliveryPricingPanel.tsx"
+      - "services/dsh/contracts/dsh.partner-fleet.openapi.yaml"
+      - "services/dsh/tests/jrn-030-partner-fleet.test.mjs"
+      - "services/dsh/tsconfig.jrn-030.json"
+      - "governance/product/contracts/JRN-030_PARTNER_FLEET_CONNECTION.product-truth.json"
+      - "governance/evidence/JRN-030_TECHNICAL_CLOSURE_2026-07-22.md"
+      - ".github/workflows/jrn-030-partner-fleet-verification.yml"
 
 permissions:
   contents: read
