@@ -18,6 +18,7 @@ import {
   type DeliveryPricingMode,
   type DeliveryPricingRecord,
 } from "../../../shared/partner/operator-delivery-pricing.public";
+import { OperatorPartnerFleetPanel } from "./OperatorPartnerFleetPanel";
 
 export type OperatorDeliveryPricingPanelProps = {
   readonly storeId: string;
@@ -92,80 +93,84 @@ export function OperatorDeliveryPricingPanel({ storeId }: OperatorDeliveryPricin
   }
 
   return (
-    <section dir="rtl" style={{ display: "grid", gap: "1rem" }}>
-      <div>
-        <h2 style={{ margin: 0, color: colorRoles.brandStructure }}>تسعير تنفيذ الطلب</h2>
-        <p style={{ margin: "0.35rem 0 0", opacity: 0.68 }}>
-          هذه القيم هي المصدر الذي يستخدمه DSH في checkout قبل إرسال الإجمالي إلى WLT. كل تغيير يحتاج سببًا ويُسجل بإصدار جديد.
-        </p>
-      </div>
+    <section dir="rtl" style={{ display: "grid", gap: "2rem" }}>
+      <section style={{ display: "grid", gap: "1rem" }} aria-label="تسعير تنفيذ الطلب">
+        <div>
+          <h2 style={{ margin: 0, color: colorRoles.brandStructure }}>تسعير تنفيذ الطلب</h2>
+          <p style={{ margin: "0.35rem 0 0", opacity: 0.68 }}>
+            هذه القيم هي المصدر الذي يستخدمه DSH في checkout قبل إرسال الإجمالي إلى WLT. كل تغيير يحتاج سببًا ويُسجل بإصدار جديد.
+          </p>
+        </div>
 
-      {controller.state.kind === "empty" ? (
-        <CpStatePanel role="status" title="لا توجد سياسات مهيأة. أنشئ السياسة الأولى لكل نمط من الجدول أدناه." />
-      ) : null}
-      {controller.mutationError ? <p role="alert" style={{ color: colorRoles.danger }}>{controller.mutationError}</p> : null}
+        {controller.state.kind === "empty" ? (
+          <CpStatePanel role="status" title="لا توجد سياسات مهيأة. أنشئ السياسة الأولى لكل نمط من الجدول أدناه." />
+        ) : null}
+        {controller.mutationError ? <p role="alert" style={{ color: colorRoles.danger }}>{controller.mutationError}</p> : null}
 
-      <CpTable aria-label="سياسات تسعير توصيل المتجر">
-        <thead>
-          <tr>
-            <CpTableHeaderCell>النمط</CpTableHeaderCell>
-            <CpTableHeaderCell>الرسم ر.ي</CpTableHeaderCell>
-            <CpTableHeaderCell>الحالة</CpTableHeaderCell>
-            <CpTableHeaderCell>المصدر</CpTableHeaderCell>
-            <CpTableHeaderCell>الإصدار</CpTableHeaderCell>
-            <CpTableHeaderCell>سبب التغيير</CpTableHeaderCell>
-            <CpTableHeaderCell>الإجراء</CpTableHeaderCell>
-          </tr>
-        </thead>
-        <tbody>
-          {MODES.map((mode) => {
-            const record = findDeliveryPricing(controller.records, mode);
-            const draft = drafts[mode];
-            const statusOptions = [
-              { value: "active", label: "نشط" },
-              { value: "paused", label: "موقوف" },
-              ...(record ? [{ value: "archived", label: "مؤرشف" }] : []),
-            ];
-            return (
-              <tr key={mode}>
-                <CpTableCell>{MODE_LABEL[mode]}</CpTableCell>
-                <CpTableCell>
-                  <CpTextInput
-                    value={draft.feeYer}
-                    onChange={(value) => patchDraft(mode, { feeYer: value })}
-                    aria-label={`رسم ${MODE_LABEL[mode]}`}
-                    disabled={mode === "pickup"}
-                  />
-                </CpTableCell>
-                <CpTableCell>
-                  <CpSelect
-                    value={draft.status}
-                    onChange={(value) => patchDraft(mode, { status: value as DeliveryPricingRecord["status"] })}
-                    options={statusOptions}
-                  />
-                </CpTableCell>
-                <CpTableCell>{record?.pricingSource ?? "سيُحدد عند الإنشاء"}</CpTableCell>
-                <CpTableCell>{record?.version ?? 0}</CpTableCell>
-                <CpTableCell>
-                  <CpTextInput
-                    value={draft.reason}
-                    onChange={(value) => patchDraft(mode, { reason: value })}
-                    placeholder="السبب إلزامي"
-                  />
-                </CpTableCell>
-                <CpTableCell>
-                  <CpButton
-                    disabled={controller.mutationLoading || !draft.reason.trim()}
-                    onClick={() => void save(mode)}
-                  >
-                    {controller.mutationLoading ? "جاري الحفظ…" : record ? "حفظ" : "إنشاء"}
-                  </CpButton>
-                </CpTableCell>
-              </tr>
-            );
-          })}
-        </tbody>
-      </CpTable>
+        <CpTable aria-label="سياسات تسعير توصيل المتجر">
+          <thead>
+            <tr>
+              <CpTableHeaderCell>النمط</CpTableHeaderCell>
+              <CpTableHeaderCell>الرسم ر.ي</CpTableHeaderCell>
+              <CpTableHeaderCell>الحالة</CpTableHeaderCell>
+              <CpTableHeaderCell>المصدر</CpTableHeaderCell>
+              <CpTableHeaderCell>الإصدار</CpTableHeaderCell>
+              <CpTableHeaderCell>سبب التغيير</CpTableHeaderCell>
+              <CpTableHeaderCell>الإجراء</CpTableHeaderCell>
+            </tr>
+          </thead>
+          <tbody>
+            {MODES.map((mode) => {
+              const record = findDeliveryPricing(controller.records, mode);
+              const draft = drafts[mode];
+              const statusOptions = [
+                { value: "active", label: "نشط" },
+                { value: "paused", label: "موقوف" },
+                ...(record ? [{ value: "archived", label: "مؤرشف" }] : []),
+              ];
+              return (
+                <tr key={mode}>
+                  <CpTableCell>{MODE_LABEL[mode]}</CpTableCell>
+                  <CpTableCell>
+                    <CpTextInput
+                      value={draft.feeYer}
+                      onChange={(value) => patchDraft(mode, { feeYer: value })}
+                      aria-label={`رسم ${MODE_LABEL[mode]}`}
+                      disabled={mode === "pickup"}
+                    />
+                  </CpTableCell>
+                  <CpTableCell>
+                    <CpSelect
+                      value={draft.status}
+                      onChange={(value) => patchDraft(mode, { status: value as DeliveryPricingRecord["status"] })}
+                      options={statusOptions}
+                    />
+                  </CpTableCell>
+                  <CpTableCell>{record?.pricingSource ?? "سيُحدد عند الإنشاء"}</CpTableCell>
+                  <CpTableCell>{record?.version ?? 0}</CpTableCell>
+                  <CpTableCell>
+                    <CpTextInput
+                      value={draft.reason}
+                      onChange={(value) => patchDraft(mode, { reason: value })}
+                      placeholder="السبب إلزامي"
+                    />
+                  </CpTableCell>
+                  <CpTableCell>
+                    <CpButton
+                      disabled={controller.mutationLoading || !draft.reason.trim()}
+                      onClick={() => void save(mode)}
+                    >
+                      {controller.mutationLoading ? "جاري الحفظ…" : record ? "حفظ" : "إنشاء"}
+                    </CpButton>
+                  </CpTableCell>
+                </tr>
+              );
+            })}
+          </tbody>
+        </CpTable>
+      </section>
+
+      <OperatorPartnerFleetPanel storeId={storeId} />
     </section>
   );
 }
