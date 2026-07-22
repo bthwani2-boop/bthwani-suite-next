@@ -361,8 +361,8 @@ func RedeemCode(ctx context.Context, db *sql.DB, captainActorID, plainCode strin
 	err = tx.QueryRowContext(ctx, `
 		SELECT id::text
 		FROM dsh_store_team_members
-		WHERE identity_actor_id=$1 AND id<>$2
-		LIMIT 1`, captainActorID, memberID).Scan(&otherMemberID)
+		WHERE identity_actor_id=$1 AND store_id=$2 AND id<>$3
+		LIMIT 1`, captainActorID, storeID, memberID).Scan(&otherMemberID)
 	if err == nil {
 		return CaptainFleetMembership{}, ErrAlreadyBound
 	}
