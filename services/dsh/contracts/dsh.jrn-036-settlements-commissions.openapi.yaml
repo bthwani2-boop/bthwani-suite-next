@@ -1,0 +1,158 @@
+openapi: 3.1.0
+info:
+  title: BThwani DSH JRN-036 Settlements and Commissions Proxy API
+  version: 1.0.0
+  description: >-
+    DSH control-panel proxy surface for WLT-owned settlement evidence and governed
+    commission lifecycle. DSH authenticates the operator and never owns financial truth.
+x-bthwani-owner: services/dsh
+x-bthwani-journey: JRN-036
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-client-generation: MANUAL_TYPED_ADAPTER
+x-bthwani-runtime-dependency: true
+servers:
+  - url: http://localhost:58080
+security:
+  - bearerAuth: []
+paths:
+  /dsh/control-panel/finance/settlements/{settlementId}/evidence:
+    get:
+      operationId: getDshControlPanelSettlementEvidence
+      parameters:
+        - $ref: '#/components/parameters/SettlementId'
+      responses:
+        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '502': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/control-panel/finance/commission-policies:
+    put:
+      operationId: upsertDshControlPanelCommissionPolicy
+      requestBody:
+        $ref: '#/components/requestBodies/ObjectBody'
+      responses:
+        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '502': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/control-panel/finance/commissions/{commissionId}:
+    get:
+      operationId: getDshControlPanelCommission
+      parameters:
+        - $ref: '#/components/parameters/CommissionId'
+      responses:
+        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '404': { $ref: '#/components/responses/ErrorResponse' }
+        '502': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/control-panel/finance/commissions/{commissionId}/adjust:
+    post:
+      operationId: adjustDshControlPanelCommission
+      parameters:
+        - $ref: '#/components/parameters/CommissionId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        $ref: '#/components/requestBodies/ObjectBody'
+      responses:
+        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '502': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/control-panel/finance/commissions/{commissionId}/confirm:
+    post:
+      operationId: confirmDshControlPanelCommission
+      parameters:
+        - $ref: '#/components/parameters/CommissionId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '502': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/control-panel/finance/commissions/{commissionId}/settle:
+    post:
+      operationId: settleDshControlPanelCommission
+      parameters:
+        - $ref: '#/components/parameters/CommissionId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '502': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/control-panel/finance/commissions/{commissionId}/reject:
+    post:
+      operationId: rejectDshControlPanelCommission
+      parameters:
+        - $ref: '#/components/parameters/CommissionId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        $ref: '#/components/requestBodies/ObjectBody'
+      responses:
+        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '502': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/control-panel/finance/commissions/{commissionId}/reverse:
+    post:
+      operationId: reverseDshControlPanelCommission
+      parameters:
+        - $ref: '#/components/parameters/CommissionId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        $ref: '#/components/requestBodies/ObjectBody'
+      responses:
+        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '502': { $ref: '#/components/responses/ErrorResponse' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    SettlementId:
+      name: settlementId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+    CommissionId:
+      name: commissionId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 8, maxLength: 200 }
+  requestBodies:
+    ObjectBody:
+      required: true
+      content:
+        application/json:
+          schema: { type: object, additionalProperties: true }
+  responses:
+    ObjectResponse:
+      description: Governed WLT-owned financial response.
+      content:
+        application/json:
+          schema: { type: object, additionalProperties: true }
+    ErrorResponse:
+      description: Governed error response.
+      content:
+        application/json:
+          schema: { type: object, additionalProperties: true }
