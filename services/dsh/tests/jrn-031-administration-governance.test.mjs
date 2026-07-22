@@ -12,9 +12,7 @@ function read(relativePath) {
 }
 
 function assertIncludesAll(content, values, label) {
-  for (const value of values) {
-    assert.ok(content.includes(value), `${label} is missing ${value}`);
-  }
+  for (const value of values) assert.ok(content.includes(value), `${label} is missing ${value}`);
 }
 
 test("JRN-031 product truth preserves ownership and independent approval", () => {
@@ -42,10 +40,12 @@ test("JRN-031 database owns rollback and append-only audit enforcement", () => {
   ], "JRN-031 migration");
 });
 
-test("JRN-031 backend enforces operation permissions and independent rollback", () => {
+test("JRN-031 backend enforces operation and control-panel scoped permissions", () => {
+  const administration = read("services/dsh/backend/internal/administration/administration.go");
   const definitions = read("services/dsh/backend/internal/administration/role_definition_approvals.go");
   const rollback = read("services/dsh/backend/internal/administration/rollback_and_diagnostics.go");
   const permission = read("services/dsh/backend/internal/http/administration_permission.go");
+  assertIncludesAll(administration, ["role.surfaces ? 'control-panel'", "AdministrationPermissionCandidates"], "role authorization");
   assertIncludesAll(definitions, [
     '"administration.role.request"',
     '"administration.staff.approve"',
@@ -116,8 +116,11 @@ test("JRN-031 shared brain binds all live administration routes", () => {
   ], "administration controllers");
 });
 
-test("JRN-031 control panel composes complete governed workflow", () => {
+test("JRN-031 control panel composes the workflow and delegates owner mutations", () => {
   const screen = read("services/dsh/frontend/control-panel/administration/GovernedAdministrationScreen.tsx");
+  const dashboard = read("services/dsh/frontend/control-panel/administration/AdministrationDashboardScreen.tsx");
+  const partnerOwner = read("services/dsh/frontend/control-panel/partners/PartnerDetailOperationalScreen.tsx");
+  const captainOwner = read("services/dsh/frontend/control-panel/hr/CaptainDetailView.tsx");
   const roleQueue = read("services/dsh/frontend/control-panel/administration/RoleDefinitionApprovalQueue.tsx");
   const rollbackQueue = read("services/dsh/frontend/control-panel/administration/DecisionRollbackQueue.tsx");
   const diagnostics = read("services/dsh/frontend/control-panel/administration/AdministrationDiagnosticsPanel.tsx");
@@ -128,6 +131,15 @@ test("JRN-031 control panel composes complete governed workflow", () => {
     "RoleAssignmentApprovalQueue",
     "DecisionRollbackQueue",
   ], "governed administration screen");
+  assertIncludesAll(dashboard, [
+    "/dsh/partners/",
+    "/dsh/hr?",
+    "فتح التفعيل/الحظر",
+    "فتح ملف الاعتماد",
+    "role.surfaces",
+  ], "administration owner delegation");
+  assertIncludesAll(partnerOwner, ["detail.transition", "expectedVersion", "reason"], "partner lifecycle owner");
+  assertIncludesAll(captainOwner, ["useCaptainDetailController", "اعتماد الرخصة", "licenseExpiresAt"], "captain credential owner");
   assertIncludesAll(roleQueue, ["AVAILABLE_PERMISSIONS", "AVAILABLE_SURFACES", '"control-panel"'], "role queue");
   assertIncludesAll(rollbackQueue, ["requestRollback", "اعتماد التراجع", "sourceApprovedBy"], "rollback queue");
   assertIncludesAll(diagnostics, ["PII", "pendingRollbackCount", "recentRestrictedAuditCount"], "diagnostics panel");
@@ -137,18 +149,18 @@ test("JRN-031 control panel composes complete governed workflow", () => {
   }
 });
 
-test("JRN-031 focused contract contains every governed operation", () => {
-  const contract = read("services/dsh/contracts/jrn-031-administration.openapi.yaml");
+test("JRN-031 canonical contract contains every governed operation", () => {
+  const contract = read("services/dsh/contracts/dsh.administration.openapi.yaml");
   assertIncludesAll(contract, [
-    "operationId: requestAdministrationRoleDefinition",
-    "operationId: reviewAdministrationRoleDefinition",
-    "operationId: requestAdministrationStaffRoleChange",
-    "operationId: reviewAdministrationRoleAssignment",
-    "operationId: requestAdministrationDecisionRollback",
-    "operationId: reviewAdministrationDecisionRollback",
-    "operationId: getAdministrationDiagnostics",
-    "operationId: listAdministrationAudit",
+    "operationId: requestDshAdministrationRoleDefinition",
+    "operationId: reviewDshAdministrationRoleDefinitionRequest",
+    "operationId: requestDshStaffRoleChange",
+    "operationId: reviewDshStaffRoleChange",
+    "operationId: requestDshAdministrationDecisionRollback",
+    "operationId: reviewDshAdministrationDecisionRollback",
+    "operationId: getDshAdministrationDiagnostics",
+    "operationId: listDshAdministrationAudit",
     "contains: { const: control-panel }",
     "Redacted allowlisted metadata only",
-  ], "JRN-031 OpenAPI contract");
+  ], "JRN-031 canonical OpenAPI contract");
 });
