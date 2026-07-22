@@ -7,7 +7,7 @@
     "outDir": "dist-jrn-034",
     "module": "ESNext",
     "jsx": "react-jsx",
-    "types": ["node", "react", "react-dom"],
+    "types": ["node", "react"],
     "paths": {
       "@bthwani/ui-kit": ["shared/ui-kit/src/index.ts"],
       "@bthwani/ui-kit/web": ["shared/ui-kit/src/web.ts"],
