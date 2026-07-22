@@ -38,6 +38,11 @@ type PanelState =
       readonly requests: readonly ActorPayoutRequest[];
     };
 
+type DestinationTextField = Exclude<
+  keyof PayoutDestinationInput,
+  "settlementPreference" | "bankAccountHolderMatchesOwner"
+>;
+
 const EMPTY_INPUT: PayoutDestinationInput = {
   beneficiaryName: "",
   bankName: "",
@@ -46,7 +51,7 @@ const EMPTY_INPUT: PayoutDestinationInput = {
   iban: "",
   payoutMobileNumber: "",
   settlementPreference: "bank",
-  bankAccountHolderMatchesOwner: false,
+  bankAccountHolderMatchesOwner: true,
   bankNotes: "",
 };
 
@@ -102,7 +107,7 @@ function DestinationEditor({
   readonly onChange: (next: PayoutDestinationInput) => void;
 }) {
   const theme = useTheme() as any;
-  const field = (key: keyof PayoutDestinationInput, placeholder: string, secure = false) => (
+  const field = (key: DestinationTextField, placeholder: string, secure = false) => (
     <TextInput
       value={String(value[key] ?? "")}
       onChangeText={(text) => onChange({ ...value, [key]: text })}
@@ -152,6 +157,13 @@ function DestinationEditor({
       ) : (
         field("payoutMobileNumber", "رقم محفظة الهاتف", true)
       )}
+      <Button
+        label={value.bankAccountHolderMatchesOwner ? "تم تأكيد تطابق صاحب الحساب" : "أكد تطابق صاحب الحساب"}
+        tone={value.bankAccountHolderMatchesOwner ? "success" : "secondary"}
+        size="sm"
+        disabled={disabled}
+        onPress={() => onChange({ ...value, bankAccountHolderMatchesOwner: !value.bankAccountHolderMatchesOwner })}
+      />
       {field("bankNotes", "ملاحظات اختيارية")}
     </View>
   );
@@ -186,6 +198,7 @@ export function PayoutDestinationPanel({
           bankName: destination.bankName,
           bankBranch: destination.bankBranch,
           settlementPreference: destination.settlementPreference === "mobile_money" ? "mobile_money" : destination.settlementPreference === "manual" ? "manual" : "bank",
+          bankAccountHolderMatchesOwner: true,
         }));
       }
     } catch (error) {
@@ -199,6 +212,10 @@ export function PayoutDestinationPanel({
     setActionError(null);
     if (!editor.beneficiaryName.trim()) {
       setActionError("اسم المستفيد مطلوب.");
+      return;
+    }
+    if (!editor.bankAccountHolderMatchesOwner) {
+      setActionError("يجب تأكيد تطابق صاحب الحساب مع صاحب الملف.");
       return;
     }
     if (editor.settlementPreference === "bank" && !editor.accountNumber.trim() && !editor.iban.trim()) {
