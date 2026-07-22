@@ -38,23 +38,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  static-contracts:
-    name: Product contract and surface invariants
+  closure:
+    name: JRN-036 full closure gate
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24.17.0
-      - name: Product, contract, migration and ownership boundary gate
-        run: node tools/guards/jrn-036-settlement-commission-gate.mjs
-      - name: Multi-surface states and actor-isolation tests
-        run: node --test tools/verification/jrn-036-surfaces.test.mjs
-
-  wlt-runtime:
-    name: PostgreSQL migration and live WLT HTTP lifecycle
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 40
     services:
       postgres:
         image: postgres:16-alpine
@@ -83,14 +70,74 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: services/wlt/backend/go.mod
-          cache-dependency-path: services/wlt/backend/go.sum
-      - name: Verify WLT migration numbering and probe coverage
+          cache-dependency-path: |
+            services/wlt/backend/go.sum
+            services/dsh/backend/go.sum
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: pnpm
+
+      - name: Produce canonical gofmt output
+        id: gofmt
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=(
+            services/wlt/backend/internal/cod/jrn036_governed_commission.go
+            services/wlt/backend/internal/cod/jrn036_governed_lifecycle.go
+            services/wlt/backend/internal/cod/jrn036_commission_query.go
+            services/wlt/backend/internal/cod/jrn036_governed_commission_test.go
+            services/wlt/backend/internal/settlement/jrn036_evidence_settlement.go
+            services/wlt/backend/internal/settlement/jrn036_evidence_settlement_test.go
+            services/wlt/backend/internal/http/server.go
+            services/dsh/backend/internal/http/finance_settlement_sources.go
+            services/dsh/backend/internal/http/finance_commission_governance.go
+            services/dsh/backend/internal/http/representative_finance_routes.go
+            services/dsh/backend/internal/wlt/commission_client.go
+            services/dsh/backend/internal/wlt/finance_proxy.go
+          )
+          gofmt -w "${files[@]}"
+          if git diff --quiet -- "${files[@]}"; then
+            echo 'changed=false' >> "${GITHUB_OUTPUT}"
+          else
+            echo 'changed=true' >> "${GITHUB_OUTPUT}"
+            git diff --name-only -- "${files[@]}" | tee /tmp/jrn036-gofmt-changed.txt
+          fi
+      - name: Upload canonical formatted Go files
+        if: steps.gofmt.outputs.changed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: jrn-036-canonical-gofmt-${{ github.run_id }}
+          path: |
+            services/wlt/backend/internal/cod/jrn036_governed_commission.go
+            services/wlt/backend/internal/cod/jrn036_governed_lifecycle.go
+            services/wlt/backend/internal/cod/jrn036_commission_query.go
+            services/wlt/backend/internal/cod/jrn036_governed_commission_test.go
+            services/wlt/backend/internal/settlement/jrn036_evidence_settlement.go
+            services/wlt/backend/internal/settlement/jrn036_evidence_settlement_test.go
+            services/wlt/backend/internal/http/server.go
+            services/dsh/backend/internal/http/finance_settlement_sources.go
+            services/dsh/backend/internal/http/finance_commission_governance.go
+            services/dsh/backend/internal/http/representative_finance_routes.go
+            services/dsh/backend/internal/wlt/commission_client.go
+            services/dsh/backend/internal/wlt/finance_proxy.go
+
+      - name: Product contract ownership and surface invariants
+        run: |
+          node tools/guards/jrn-036-settlement-commission-gate.mjs
+          node --test tools/verification/jrn-036-surfaces.test.mjs
+
+      - name: Verify migration numbering and probe coverage
         shell: pwsh
         run: |
           . ./infra/docker/scripts/wlt-migration-probes.ps1
           $files = Get-ChildItem ./services/wlt/database/migrations -Filter '*.sql' | Sort-Object Name
           Test-WltMigrationProbeCoverage -MigrationFiles $files
-      - name: Apply all WLT migrations in lexical order
+      - name: Apply all WLT migrations and database invariants
         shell: bash
         run: |
           set -euo pipefail
@@ -98,8 +145,15 @@ jobs:
             echo "Applying ${migration}"
             psql -v ON_ERROR_STOP=1 -f "${migration}"
           done
-      - name: Assert JRN-036 PostgreSQL invariants
-        run: psql -v ON_ERROR_STOP=1 -f services/wlt/database/tests/jrn-036-settlement-commission-invariants.sql
+          psql -v ON_ERROR_STOP=1 -f services/wlt/database/tests/jrn-036-settlement-commission-invariants.sql
+
+      - name: Compile and test WLT governed finance packages
+        working-directory: services/wlt/backend
+        run: go test ./internal/cod ./internal/settlement ./internal/http
+      - name: Compile and test DSH finance proxy packages
+        working-directory: services/dsh/backend
+        run: go test ./internal/http ./internal/wlt
+
       - name: Start WLT runtime
         shell: bash
         run: |
@@ -114,7 +168,7 @@ jobs:
             go run ./cmd/wlt-api
           ) > /tmp/wlt-jrn036.log 2>&1 &
           echo $! > /tmp/wlt-jrn036.pid
-      - name: Run evidence-backed settlement and commission lifecycle
+      - name: Run live settlement commission refund and ledger lifecycle
         run: bash tools/verification/jrn-036-runtime-smoke.sh
       - name: Upload WLT runtime evidence
         if: always()
@@ -124,67 +178,6 @@ jobs:
           path: /tmp/wlt-jrn036.log
           if-no-files-found: warn
 
-  wlt-go:
-    name: WLT Go format compile and tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: services/wlt/backend/go.mod
-          cache-dependency-path: services/wlt/backend/go.sum
-      - name: Enforce gofmt on JRN-036 WLT code
-        shell: bash
-        run: |
-          diff="$(gofmt -d \
-            services/wlt/backend/internal/cod/jrn036_governed_commission.go \
-            services/wlt/backend/internal/cod/jrn036_governed_lifecycle.go \
-            services/wlt/backend/internal/cod/jrn036_commission_query.go \
-            services/wlt/backend/internal/cod/jrn036_governed_commission_test.go \
-            services/wlt/backend/internal/settlement/jrn036_evidence_settlement.go \
-            services/wlt/backend/internal/settlement/jrn036_evidence_settlement_test.go \
-            services/wlt/backend/internal/http/server.go)"
-          test -z "${diff}" || { printf '%s\n' "${diff}"; exit 1; }
-      - name: Compile and test WLT governed finance packages
-        working-directory: services/wlt/backend
-        run: go test ./internal/cod ./internal/settlement ./internal/http
-
-  dsh-go:
-    name: DSH Go format compile and tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: services/dsh/backend/go.mod
-          cache-dependency-path: services/dsh/backend/go.sum
-      - name: Enforce gofmt on JRN-036 DSH code
-        shell: bash
-        run: |
-          diff="$(gofmt -d \
-            services/dsh/backend/internal/http/finance_settlement_sources.go \
-            services/dsh/backend/internal/http/finance_commission_governance.go \
-            services/dsh/backend/internal/http/representative_finance_routes.go \
-            services/dsh/backend/internal/wlt/commission_client.go \
-            services/dsh/backend/internal/wlt/finance_proxy.go)"
-          test -z "${diff}" || { printf '%s\n' "${diff}"; exit 1; }
-      - name: Compile and test DSH finance proxy packages
-        working-directory: services/dsh/backend
-        run: go test ./internal/http ./internal/wlt
-
-  dsh-typescript:
-    name: DSH TypeScript and accessible multi-surface bindings
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10.34.2
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24.17.0
-          cache: pnpm
       - name: Install locked workspace
         run: pnpm install --frozen-lockfile
       - name: Typecheck DSH multi-surface finance bindings
@@ -193,3 +186,13 @@ jobs:
         run: |
           pnpm run guard:backend-api-binding
           pnpm run guard:frontend-feature-binding
+
+      - name: Enforce committed canonical Go formatting
+        if: always()
+        shell: bash
+        run: |
+          if [[ '${{ steps.gofmt.outputs.changed }}' == 'true' ]]; then
+            echo 'JRN-036 Go files require canonical gofmt; download the formatted artifact and commit it.'
+            cat /tmp/jrn036-gofmt-changed.txt
+            exit 1
+          fi
