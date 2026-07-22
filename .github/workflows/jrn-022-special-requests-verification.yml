@@ -9,7 +9,13 @@ on:
       - "services/dsh/backend/internal/http/specialrequests.go"
       - "services/dsh/backend/internal/http/jrn_022_special_requests_routes_test.go"
       - "services/dsh/frontend/shared/special-requests/**"
+      - "services/dsh/frontend/shared/shein/**"
+      - "services/dsh/frontend/shared/awnak/**"
+      - "services/dsh/frontend/shared/delivery/captain-inbox.model.ts"
+      - "services/dsh/frontend/shared/delivery/captain-inbox.mapper.ts"
+      - "services/dsh/frontend/app-client/DshClientSurface.tsx"
       - "services/dsh/frontend/control-panel/operations/SpecialOpsWorkbenchScreen.tsx"
+      - "services/dsh/tests/jrn-022-special-requests.test.mjs"
       - "services/dsh/contracts/dsh.openapi.yaml"
       - "services/dsh/contracts/paths/**"
       - "services/dsh/contracts/components/**"
@@ -69,6 +75,9 @@ jobs:
 
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Run JRN-022 full-stack static gate
+        run: node --test services/dsh/tests/jrn-022-special-requests.test.mjs
 
       - name: Typecheck JRN-022 shared brain and surfaces
         run: pnpm --dir services/dsh exec tsc -p tsconfig.jrn-020-030.json --noEmit --pretty false
