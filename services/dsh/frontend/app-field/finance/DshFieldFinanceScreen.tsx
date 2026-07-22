@@ -79,7 +79,7 @@ export function DshFieldFinanceScreen({ onBack }: DshFieldFinanceScreenProps) {
       <StateView
         loading
         title="جارٍ تحميل البيانات المالية"
-        description="نجلب محفظتك وعمولاتك وطلبات الصرف من محرك WLT."
+        description="نجلب محفظتك ودفتر الحركة وعمولاتك وطلبات الصرف من محرك WLT."
       />
     );
   }
@@ -96,7 +96,15 @@ export function DshFieldFinanceScreen({ onBack }: DshFieldFinanceScreenProps) {
     );
   }
 
-  const { wallet, commissions, payoutRequests, commissionsError, payoutRequestsError } = state;
+  const {
+    wallet,
+    ledgerEntries,
+    commissions,
+    payoutRequests,
+    ledgerError,
+    commissionsError,
+    payoutRequestsError,
+  } = state;
 
   const handleSubmitPayout = async () => {
     const amountMinorUnits = parseAmountMinorUnits(payoutAmountInput);
@@ -129,7 +137,13 @@ export function DshFieldFinanceScreen({ onBack }: DshFieldFinanceScreenProps) {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.card}>
-          <Text role="titleMd" style={styles.rtl}>المحفظة</Text>
+          <View style={styles.rowBetween}>
+            <Badge
+              label={wallet.status === 'active' ? 'نشطة' : wallet.status}
+              tone={wallet.status === 'active' ? 'success' : 'warning'}
+            />
+            <Text role="titleMd" style={styles.rtl}>المحفظة</Text>
+          </View>
           <View style={styles.balanceRow}>
             <Text role="caption" tone="muted">متاح</Text>
             <Text role="titleLg" style={styles.positiveAmount}>
@@ -157,9 +171,49 @@ export function DshFieldFinanceScreen({ onBack }: DshFieldFinanceScreenProps) {
             <Text role="caption" tone="muted">إجمالي المدفوع</Text>
             <Text role="bodyMd">{formatAmount(wallet.paidTotalMinorUnits, wallet.currency)}</Text>
           </View>
+          <Text role="caption" tone="muted" style={styles.rtl}>
+            آخر تحديث: {wallet.updatedAt ?? 'غير متاح'} · آخر قيد: {wallet.lastLedgerEntryAt ?? 'لا يوجد'}
+          </Text>
         </View>
 
         <Button label="تحديث" tone="secondary" size="sm" onPress={controller.refresh} />
+
+        <Text role="titleSm" style={styles.sectionTitle}>دفتر الحركة المرجعي</Text>
+        {ledgerError ? (
+          <StateView
+            tone="warning"
+            title="تعذر تحميل دفتر الحركة"
+            description={ledgerError}
+            actionLabel="إعادة المحاولة"
+            onActionPress={controller.refresh}
+          />
+        ) : ledgerEntries.length === 0 ? (
+          <StateView tone="neutral" title="لا توجد قيود مالية بعد" />
+        ) : (
+          ledgerEntries.map((entry) => (
+            <View key={entry.id} style={styles.card}>
+              <View style={styles.rowBetween}>
+                <Text
+                  role="bodyStrong"
+                  tone={entry.debitCredit === 'credit' ? 'success' : 'danger'}
+                >
+                  {entry.debitCredit === 'credit' ? '+' : '-'}
+                  {formatAmount(Math.abs(entry.amountMinorUnits), entry.currency)}
+                </Text>
+                <Text role="bodyStrong" style={styles.rtl}>{entry.entryType || 'قيد مالي'}</Text>
+              </View>
+              <Text role="caption" tone="muted" style={styles.rtl}>
+                {entry.description || entry.sourceType || entry.referenceType}
+              </Text>
+              <View style={styles.rowBetween}>
+                <Text role="caption" tone="muted">{entry.createdAt}</Text>
+                <Text role="caption" tone="muted">
+                  الرصيد بعد القيد: {formatAmount(entry.balanceAfter, entry.currency)}
+                </Text>
+              </View>
+            </View>
+          ))
+        )}
 
         <View style={styles.card}>
           <Text role="titleMd" style={styles.rtl}>طلب صرف جديد</Text>
@@ -267,6 +321,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: spacing[2],
   },
   positiveAmount: { color: colorRoles.brandAction },
   rtl: { textAlign: 'right' },
