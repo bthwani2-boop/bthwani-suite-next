@@ -20,6 +20,7 @@ import {
   fetchOrderAnalyticsDrilldown,
   fetchPreparationSlaAnalytics,
   type DshAnalyticsPeriod,
+  type DshAnalyticsWindowInput,
   type DshCaptainPerformanceAnalytics,
   type DshFieldPerformanceAnalytics,
   type DshOperationalAnalyticsDrilldown,
@@ -31,6 +32,15 @@ const periodLabels: Record<DshAnalyticsPeriod, string> = {
   today: "اليوم",
   week: "7 أيام",
   month: "شهر",
+};
+
+const dateInputStyle: React.CSSProperties = {
+  minHeight: 42,
+  minWidth: 170,
+  padding: "0.5rem 0.75rem",
+  border: "1px solid currentColor",
+  borderRadius: 8,
+  background: "transparent",
 };
 
 type State =
@@ -47,7 +57,10 @@ type State =
   | { kind: "error"; message: string };
 
 export function OperationalAnalyticsExtensionsScreen(): React.ReactElement {
-  const [period, setPeriod] = React.useState<DshAnalyticsPeriod>("today");
+  const [analyticsWindow, setAnalyticsWindow] = React.useState<DshAnalyticsWindowInput>({ period: "today" });
+  const [customFrom, setCustomFrom] = React.useState("");
+  const [customTo, setCustomTo] = React.useState("");
+  const [filterError, setFilterError] = React.useState<string | null>(null);
   const [reloadToken, setReloadToken] = React.useState(0);
   const [state, setState] = React.useState<State>({ kind: "loading" });
 
@@ -55,10 +68,10 @@ export function OperationalAnalyticsExtensionsScreen(): React.ReactElement {
     let cancelled = false;
     setState({ kind: "loading" });
     void Promise.all([
-      fetchPreparationSlaAnalytics(period),
-      fetchCaptainPerformanceAnalytics(period),
-      fetchFieldPerformanceAnalytics(period),
-      fetchOrderAnalyticsDrilldown(period, { limit: 20 }),
+      fetchPreparationSlaAnalytics(analyticsWindow),
+      fetchCaptainPerformanceAnalytics(analyticsWindow),
+      fetchFieldPerformanceAnalytics(analyticsWindow),
+      fetchOrderAnalyticsDrilldown(analyticsWindow, { limit: 20 }),
       fetchFinancialAnalyticsSnapshot().then(
         (value) => ({ value, unavailable: false }),
         () => ({ value: null, unavailable: true }),
@@ -88,12 +101,47 @@ export function OperationalAnalyticsExtensionsScreen(): React.ReactElement {
     return () => {
       cancelled = true;
     };
-  }, [period, reloadToken]);
+  }, [analyticsWindow, reloadToken]);
+
+  const applyNamedPeriod = React.useCallback((period: DshAnalyticsPeriod) => {
+    setFilterError(null);
+    setAnalyticsWindow({ period });
+  }, []);
+
+  const applyCustomRange = React.useCallback(() => {
+    if (!customFrom || !customTo) {
+      setFilterError("حدد تاريخ البداية والنهاية معًا.");
+      return;
+    }
+    const from = new Date(`${customFrom}T00:00:00Z`);
+    const to = new Date(`${customTo}T00:00:00Z`);
+    if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || to < from) {
+      setFilterError("نطاق التاريخ غير صالح أو معكوس.");
+      return;
+    }
+    const today = new Date();
+    const todayKey = today.toISOString().slice(0, 10);
+    if (customTo > todayKey) {
+      setFilterError("لا يمكن أن تنتهي التحليلات في تاريخ مستقبلي.");
+      return;
+    }
+    const inclusiveDays = Math.floor((to.getTime() - from.getTime()) / 86_400_000) + 1;
+    if (inclusiveDays > 366) {
+      setFilterError("الحد الأقصى للنطاق المخصص هو 366 يومًا.");
+      return;
+    }
+    setFilterError(null);
+    setAnalyticsWindow({ from: customFrom, to: customTo });
+  }, [customFrom, customTo]);
 
   const openExport = React.useCallback(() => {
-    const url = buildOperationalAnalyticsExportUrl(period);
+    const url = buildOperationalAnalyticsExportUrl(analyticsWindow);
     if (typeof window !== "undefined") window.location.assign(url);
-  }, [period]);
+  }, [analyticsWindow]);
+
+  const activeWindowLabel = analyticsWindow.period
+    ? periodLabels[analyticsWindow.period]
+    : `${analyticsWindow.from} — ${analyticsWindow.to}`;
 
   return (
     <ScrollScreen>
@@ -108,13 +156,38 @@ export function OperationalAnalyticsExtensionsScreen(): React.ReactElement {
               <Button
                 key={item}
                 label={periodLabels[item]}
-                tone={period === item ? "primary" : "ghost"}
-                onPress={() => setPeriod(item)}
+                tone={analyticsWindow.period === item ? "primary" : "ghost"}
+                onPress={() => applyNamedPeriod(item)}
               />
             ))}
           </Box>
           <Button label="تصدير CSV" tone="secondary" onPress={openExport} />
         </Box>
+        <Box style={styles.customRange}>
+          <label>
+            <Text role="caption">من</Text>
+            <input
+              aria-label="بداية نطاق التحليلات"
+              type="date"
+              value={customFrom}
+              onChange={(event) => setCustomFrom(event.target.value)}
+              style={dateInputStyle}
+            />
+          </label>
+          <label>
+            <Text role="caption">إلى</Text>
+            <input
+              aria-label="نهاية نطاق التحليلات"
+              type="date"
+              value={customTo}
+              onChange={(event) => setCustomTo(event.target.value)}
+              style={dateInputStyle}
+            />
+          </label>
+          <Button label="تطبيق النطاق" tone="secondary" onPress={applyCustomRange} />
+          <Badge label={`الفترة النشطة: ${activeWindowLabel}`} tone="info" />
+        </Box>
+        {filterError ? <Text role="bodySm" tone="danger">{filterError}</Text> : null}
       </Card>
 
       {state.kind === "loading" ? <StateView title="جاري احتساب المؤشرات من السجلات التشغيلية…" /> : null}
@@ -142,8 +215,9 @@ export function OperationalAnalyticsExtensionsScreen(): React.ReactElement {
               <Metric label="متوسط التحضير بالدقائق" value={state.preparation.averagePreparationMinutes.toFixed(1)} />
             </Box>
             <Text role="caption" tone="muted">
-              آخر تحديث {new Date(state.preparation.metadata.generatedAt).toLocaleString("ar")} • lineage: {state.preparation.metadata.lineage.join("، ")}
+              آخر تحديث {new Date(state.preparation.metadata.generatedAt).toLocaleString("ar")} • من {new Date(state.preparation.metadata.windowFrom).toLocaleString("ar")} إلى {new Date(state.preparation.metadata.windowTo).toLocaleString("ar")}
             </Text>
+            <Text role="caption" tone="muted">lineage: {state.preparation.metadata.lineage.join("، ")}</Text>
           </Card>
 
           <Card>
@@ -234,7 +308,7 @@ function Metric({ label, value, danger = false }: { label: string; value: string
   return (
     <Box style={styles.metric}>
       <Text role="caption" tone="muted">{label}</Text>
-      <Text role="titleMd" tone={danger ? "danger" : "default"}>{String(value)}</Text>
+      <Text role="titleMd" {...(danger ? { tone: "danger" as const } : {})}>{String(value)}</Text>
     </Box>
   );
 }
@@ -242,6 +316,7 @@ function Metric({ label, value, danger = false }: { label: string; value: string
 const styles = {
   toolbar: { display: "flex", flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: spacing[3] },
   periods: { display: "flex", flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
+  customRange: { display: "flex", flexDirection: "row", flexWrap: "wrap", alignItems: "flex-end", gap: spacing[3], marginTop: spacing[3] },
   sectionHeader: { display: "flex", flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: spacing[2] },
   grid: { display: "flex", flexDirection: "row", flexWrap: "wrap", gap: spacing[3], marginTop: spacing[3], marginBottom: spacing[3] },
   metric: { minWidth: 150, flex: 1, gap: spacing[1] },
