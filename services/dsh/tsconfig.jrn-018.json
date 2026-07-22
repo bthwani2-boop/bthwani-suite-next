@@ -1,0 +1,24 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false
+  },
+  "include": [
+    "frontend/shared/_kernel/**/*.ts",
+    "frontend/shared/delivery-proof/**/*.ts",
+    "frontend/shared/media/pod/**/*.ts",
+    "frontend/shared/delivery/delivery.actions.ts",
+    "frontend/shared/media/pod/pod-upload-flow.ts",
+    "frontend/shared/dispatch/dispatch-tracking.api.ts",
+    "frontend/app-captain/orders/DshCaptainPoDSubmissionScreen.tsx",
+    "frontend/app-captain/DshOperationScreen.tsx",
+    "frontend/app-client/orders/ClientDeliveryProofPanel.tsx",
+    "frontend/app-client/orders/ClientLiveTrackingCard.tsx",
+    "frontend/control-panel/operations/DeliveryProofReviewScreen.tsx",
+    "frontend/control-panel/operations/OperationsHubScreen.tsx",
+    "frontend/**/*.d.ts"
+  ]
+}
