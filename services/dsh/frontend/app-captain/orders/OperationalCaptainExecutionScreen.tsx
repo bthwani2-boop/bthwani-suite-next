@@ -38,6 +38,13 @@ function deliveryExceptionLabel(reason: DshDeliveryExceptionReasonCode): string 
   return 'يوجد استثناء توصيل نشط لهذه المهمة';
 }
 
+function isQueuedLocationResult(result: unknown): boolean {
+  return typeof result === 'object'
+    && result !== null
+    && 'kind' in result
+    && (result as { readonly kind?: unknown }).kind === 'queued';
+}
+
 export function OperationalCaptainExecutionScreen({
   assignmentId,
   orderId,
@@ -92,13 +99,19 @@ export function OperationalCaptainExecutionScreen({
     setLocationMessage(null);
     try {
       const point = await readCaptainForegroundLocation();
-      await onPushLocation({
+      const result = await onPushLocation({
         assignmentId,
         latitude: point.latitude,
         longitude: point.longitude,
+        accuracyMeters: point.accuracyMeters,
+        recordedAt: new Date().toISOString(),
       });
       setLocationState('success');
-      setLocationMessage('تم تحديث آخر موقع فعلي للمهمة.');
+      setLocationMessage(
+        isQueuedLocationResult(result)
+          ? 'حُفظت آخر عينة للنقل وستعاد مزامنتها عند عودة الشبكة.'
+          : `تم إرسال الموقع المصدق بدقة ${Math.round(point.accuracyMeters)} متر.`,
+      );
     } catch (error) {
       setLocationState('error');
       setLocationMessage(error instanceof Error ? error.message : 'تعذر تحديث الموقع.');
@@ -125,9 +138,9 @@ export function OperationalCaptainExecutionScreen({
           <View style={styles.row}>
             <Icon name="navigate-outline" size={22} tone="brand" />
             <View style={styles.flex}>
-              <Text role="bodyStrong">الموقع الفعلي فقط</Text>
+              <Text role="bodyStrong">الموقع المصدق فقط</Text>
               <Text role="bodySm" tone="muted">
-                يُحدّث من GPS أثناء وجود التطبيق في المقدمة. لا تُرسل إحداثيات تجريبية ولا يُحفظ سجل للمسار.
+                يُحدّث من GPS أثناء وجود التطبيق في المقدمة، ويُرفض إذا تجاوزت الدقة 100 متر. لا تُرسل إحداثيات تجريبية ولا يُحفظ سجل للمسار.
               </Text>
             </View>
           </View>
@@ -139,7 +152,7 @@ export function OperationalCaptainExecutionScreen({
           />
           {locationMessage ? (
             <StateView
-              title={locationState === 'success' ? 'تم تحديث الموقع' : 'تعذر تحديث الموقع'}
+              title={locationState === 'success' ? 'حالة مزامنة الموقع' : 'تعذر تحديث الموقع'}
               description={locationMessage}
               tone={locationState === 'success' ? 'success' : 'danger'}
             />
