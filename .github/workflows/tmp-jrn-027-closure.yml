@@ -30,12 +30,29 @@ jobs:
         with:
           ref: sambassam
           fetch-depth: 0
+          show-progress: false
 
       - name: Synchronize before execution
         run: git pull --rebase origin sambassam
 
       - name: Apply JRN-027 atomic remaining slices
-        run: python3 tools/scripts/close-jrn-027-remaining-slices.py
+        shell: bash
+        run: |
+          set +e
+          python3 tools/scripts/close-jrn-027-remaining-slices.py > /tmp/jrn027-patch.log 2>&1
+          status=$?
+          cat /tmp/jrn027-patch.log
+          if [ "$status" -ne 0 ]; then
+            mkdir -p governance/evidence
+            cp /tmp/jrn027-patch.log governance/evidence/JRN-027_PATCH_FAILURE.log
+            git config user.name "bthwani-journey-closure"
+            git config user.email "actions@users.noreply.github.com"
+            git add governance/evidence/JRN-027_PATCH_FAILURE.log
+            git commit -m "chore(jrn-027): capture atomic patch diagnostic [skip ci]"
+            git pull --rebase origin sambassam
+            git push origin HEAD:sambassam
+            exit "$status"
+          fi
 
       - name: Set up Go
         uses: actions/setup-go@v5
