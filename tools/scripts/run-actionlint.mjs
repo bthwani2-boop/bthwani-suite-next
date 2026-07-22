@@ -1,6 +1,10 @@
 import { spawnSync } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
 
 const lockedVersion = "v1.7.12";
+const diagnosticDir = path.resolve(".diagnostics/workflow");
+const diagnosticPath = path.join(diagnosticDir, "actionlint.jsonl");
 
 function execute(command, args) {
   return spawnSync(command, args, {
@@ -31,6 +35,12 @@ if (result.error?.code === "ENOENT") {
 }
 
 const output = normalizedOutput(result);
+fs.mkdirSync(diagnosticDir, { recursive: true });
+fs.writeFileSync(
+  diagnosticPath,
+  `${output || JSON.stringify({ status: result.status ?? 0, errors: [] })}\n`,
+  "utf8",
+);
 if (output) process.stdout.write(`${output}\n`);
 
 if (result.error) {
