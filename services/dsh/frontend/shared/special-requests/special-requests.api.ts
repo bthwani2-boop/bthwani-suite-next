@@ -3,6 +3,11 @@ import { createDshHttpClient } from "../_kernel/dsh-http-request";
 import type {
   ClassifiedSpecialRequestError,
   DshCreateSpecialRequest,
+  DshRequestSpecialRequestInformation,
+  DshRespondSpecialRequestInformation,
+  DshSpecialRequestExecutionResponse,
+  DshSpecialRequestInformationExchangeResponse,
+  DshSpecialRequestInformationMutationResponse,
   DshSpecialRequestListResponse,
   DshSpecialRequestResponse,
   DshUpdateSpecialRequest,
@@ -40,6 +45,32 @@ export async function fetchClientSpecialRequest(id: string): Promise<DshSpecialR
   return request<DshSpecialRequestResponse>(`/dsh/client/special-requests/${encodeURIComponent(id)}`);
 }
 
+export async function fetchClientSpecialRequestInformation(
+  id: string,
+): Promise<DshSpecialRequestInformationExchangeResponse> {
+  return request<DshSpecialRequestInformationExchangeResponse>(
+    `/dsh/client/special-requests/${encodeURIComponent(id)}/information-exchange`,
+  );
+}
+
+export async function respondClientSpecialRequestInformation(
+  id: string,
+  input: DshRespondSpecialRequestInformation,
+): Promise<DshSpecialRequestInformationMutationResponse> {
+  return request<DshSpecialRequestInformationMutationResponse>(
+    `/dsh/client/special-requests/${encodeURIComponent(id)}/information-response`,
+    { method: "POST", body: input },
+  );
+}
+
+export async function fetchClientSpecialRequestExecution(
+  id: string,
+): Promise<DshSpecialRequestExecutionResponse> {
+  return request<DshSpecialRequestExecutionResponse>(
+    `/dsh/client/special-requests/${encodeURIComponent(id)}/execution`,
+  );
+}
+
 export async function cancelSpecialRequest(
   id: string,
   expectedVersion?: number,
@@ -59,14 +90,11 @@ export async function approveSpecialRequestQuote(
 ): Promise<DshSpecialRequestResponse> {
   return request<DshSpecialRequestResponse>(
     `/dsh/client/special-requests/${encodeURIComponent(id)}/approve-quote`,
-    {
-      method: "POST",
-      body: { expectedVersion },
-    },
+    { method: "POST", body: { expectedVersion } },
   );
 }
 
-// --- Operator-side ---------------------------------------------------------
+// --- Operator-side ------------------------------------------------------
 
 export async function fetchOperatorSpecialRequests(params: {
   readonly limit?: number;
@@ -89,6 +117,32 @@ export async function fetchOperatorSpecialRequest(id: string): Promise<DshSpecia
   return request<DshSpecialRequestResponse>(`/dsh/operator/special-requests/${encodeURIComponent(id)}`);
 }
 
+export async function fetchOperatorSpecialRequestInformation(
+  id: string,
+): Promise<DshSpecialRequestInformationExchangeResponse> {
+  return request<DshSpecialRequestInformationExchangeResponse>(
+    `/dsh/operator/special-requests/${encodeURIComponent(id)}/information-exchange`,
+  );
+}
+
+export async function requestOperatorSpecialRequestInformation(
+  id: string,
+  input: DshRequestSpecialRequestInformation,
+): Promise<DshSpecialRequestInformationMutationResponse> {
+  return request<DshSpecialRequestInformationMutationResponse>(
+    `/dsh/operator/special-requests/${encodeURIComponent(id)}/information-request`,
+    { method: "POST", body: input },
+  );
+}
+
+export async function fetchOperatorSpecialRequestExecution(
+  id: string,
+): Promise<DshSpecialRequestExecutionResponse> {
+  return request<DshSpecialRequestExecutionResponse>(
+    `/dsh/operator/special-requests/${encodeURIComponent(id)}/execution`,
+  );
+}
+
 export async function updateOperatorSpecialRequest(
   id: string,
   input: DshUpdateSpecialRequest,
@@ -99,20 +153,14 @@ export async function updateOperatorSpecialRequest(
   });
 }
 
-export async function assignSpecialRequestDispatch(
-  id: string,
-  captainId: string,
-): Promise<void> {
+export async function assignSpecialRequestDispatch(id: string, captainId: string): Promise<void> {
   await request<{ readonly assignment: unknown }>(
     `/dsh/operator/special-requests/${encodeURIComponent(id)}/dispatch`,
-    {
-      method: "POST",
-      body: { captainId },
-    },
+    { method: "POST", body: { captainId } },
   );
 }
 
-// --- Error classification ---------------------------------------------------------
+// --- Error classification ----------------------------------------------
 
 function classified(
   kind: ClassifiedSpecialRequestError["kind"],
@@ -123,25 +171,13 @@ function classified(
 
 export function classifySpecialRequestError(error: unknown): ClassifiedSpecialRequestError {
   const typed = error as { kind?: string; status?: number; code?: string; message?: string };
-  if (typed?.kind === "network") {
-    return classified("network", typed.message);
-  }
+  if (typed?.kind === "network") return classified("network", typed.message);
   if (typed?.kind === "http") {
-    if (typed.status === 409) {
-      return classified("conflict", typed.message);
-    }
-    if (typed.status === 404) {
-      return classified("not_found", typed.message);
-    }
-    if (typed.status === 403 || typed.status === 401) {
-      return classified("forbidden", typed.message);
-    }
-    if (typed.status === 400) {
-      return classified("invalid", typed.message);
-    }
-    if (typed.status === 503) {
-      return classified("unavailable", typed.message);
-    }
+    if (typed.status === 409) return classified("conflict", typed.message);
+    if (typed.status === 404) return classified("not_found", typed.message);
+    if (typed.status === 403 || typed.status === 401) return classified("forbidden", typed.message);
+    if (typed.status === 400) return classified("invalid", typed.message);
+    if (typed.status === 503) return classified("unavailable", typed.message);
   }
   return classified("unknown", typed?.message);
 }

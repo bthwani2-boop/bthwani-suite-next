@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { View, StyleSheet, ScrollView, TextInput } from "react-native";
-import { Button, Screen, StateView, Text, colorRoles, spacing } from "@bthwani/ui-kit";
+import { ScrollView, StyleSheet, View } from "react-native";
+import { Button, Screen, StateView, Text, TextField, colorRoles, spacing } from "@bthwani/ui-kit";
 
 export type SheinFormSubmitInput = {
   readonly productUrl: string;
@@ -22,7 +22,6 @@ export function SheinForm({ onBack, onViewRequests, onSubmit }: Props) {
   const [color, setColor] = useState("");
   const [quantity, setQuantity] = useState("1");
   const [notes, setNotes] = useState("");
-
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -46,58 +45,40 @@ export function SheinForm({ onBack, onViewRequests, onSubmit }: Props) {
         <Text role="headingSm" style={styles.title}>طلب من شي إن (SHEIN)</Text>
 
         <View style={styles.formGroup}>
-          <TextInput
+          <TextField
+            label="رابط المنتج"
             placeholder="أدخل رابط المنتج من تطبيق شي إن"
             value={productUrl}
             onChangeText={setProductUrl}
-            style={styles.input}
-            textAlign="right"
             autoCapitalize="none"
-            keyboardType="url"
+            {...(submitError && !productUrl.trim() ? { error: "رابط المنتج مطلوب" } : {})}
           />
-          <TextInput
-            placeholder="مثال: M, L, 38"
-            value={size}
-            onChangeText={setSize}
-            style={styles.input}
-            textAlign="right"
-          />
-          <TextInput
-            placeholder="مثال: أسود، أبيض"
-            value={color}
-            onChangeText={setColor}
-            style={styles.input}
-            textAlign="right"
-          />
-          <TextInput
+          <TextField label="المقاس" placeholder="مثال: M, L, 38" value={size} onChangeText={setSize} />
+          <TextField label="اللون" placeholder="مثال: أسود، أبيض" value={color} onChangeText={setColor} />
+          <TextField
+            label="الكمية"
             placeholder="1"
             value={quantity}
             onChangeText={setQuantity}
-            keyboardType="number-pad"
-            style={styles.input}
-            textAlign="right"
+            keyboardType="numeric"
           />
-          <TextInput
+          <TextField
+            label="تفاصيل الخيار"
             placeholder="أي تفاصيل أخرى تود إضافتها"
             value={notes}
             onChangeText={setNotes}
             multiline
-            style={[styles.input, styles.textArea]}
-            textAlign="right"
-            textAlignVertical="top"
+            numberOfLines={4}
+            maxLength={2000}
           />
         </View>
 
         <View style={styles.actions}>
-          <Button
-            label="إلغاء"
-            tone="secondary"
-            onPress={onBack}
-            style={styles.actionButton}
-          />
+          <Button label="إلغاء" tone="secondary" onPress={onBack} style={styles.actionButton} />
           <Button
             label={isSubmitting ? "جاري الإرسال..." : "إرسال الطلب"}
             tone="primary"
+            loading={isSubmitting}
             onPress={async () => {
               const parsedQuantity = Number.parseInt(quantity, 10);
               if (!Number.isFinite(parsedQuantity) || parsedQuantity <= 0) {
@@ -114,11 +95,8 @@ export function SheinForm({ onBack, onViewRequests, onSubmit }: Props) {
                   ...(color.trim() ? { color: color.trim() } : {}),
                   ...(notes.trim() ? { variantNotes: notes.trim() } : {}),
                 });
-                if (ok) {
-                  setSubmitted(true);
-                } else {
-                  setSubmitError("تعذر إرسال طلب شي إن. تحقق من الاتصال ثم حاول مرة أخرى.");
-                }
+                if (ok) setSubmitted(true);
+                else setSubmitError("تعذر إرسال طلب شي إن. تحقق من الاتصال ثم حاول مرة أخرى.");
               } catch {
                 setSubmitError("تعذر إرسال طلب شي إن. تحقق من الاتصال ثم حاول مرة أخرى.");
               } finally {
@@ -136,40 +114,10 @@ export function SheinForm({ onBack, onViewRequests, onSubmit }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    paddingVertical: spacing[4],
-  },
-  title: {
-    marginBottom: spacing[6],
-    textAlign: "right",
-  },
-  formGroup: {
-    gap: spacing[4],
-    marginBottom: spacing[6],
-  },
-  input: {
-    borderColor: colorRoles.borderSubtle,
-    borderRadius: 12,
-    borderWidth: 1,
-    color: colorRoles.textPrimary,
-    minHeight: 48,
-    paddingHorizontal: spacing[4],
-    paddingVertical: spacing[3],
-    writingDirection: "rtl",
-  },
-  textArea: {
-    minHeight: 96,
-  },
-  actions: {
-    flexDirection: "row",
-    gap: spacing[3],
-  },
-  actionButton: {
-    flex: 1,
-  },
-  errorText: {
-    color: colorRoles.danger,
-    marginTop: spacing[3],
-    textAlign: "right",
-  },
+  container: { paddingVertical: spacing[4] },
+  title: { marginBottom: spacing[6], textAlign: "right" },
+  formGroup: { gap: spacing[4], marginBottom: spacing[6] },
+  actions: { flexDirection: "row", gap: spacing[3] },
+  actionButton: { flex: 1 },
+  errorText: { color: colorRoles.danger, marginTop: spacing[3], textAlign: "right" },
 });

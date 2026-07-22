@@ -1071,6 +1071,10 @@ components:
       $ref: "./components/schemas/common.schemas.yaml#/DshSpecialRequestExecutionException"
     DshSpecialRequestExecution:
       $ref: "./components/schemas/common.schemas.yaml#/DshSpecialRequestExecution"
+    DshSpecialRequestPaymentSessionReadback:
+      $ref: "./components/schemas/common.schemas.yaml#/DshSpecialRequestPaymentSessionReadback"
+    DshSpecialRequestFinancialReadback:
+      $ref: "./components/schemas/common.schemas.yaml#/DshSpecialRequestFinancialReadback"
     DshSpecialRequestExecutionResponse:
       $ref: "./components/schemas/common.schemas.yaml#/DshSpecialRequestExecutionResponse"
     DshPartnerDeliveryTaskStatus:
