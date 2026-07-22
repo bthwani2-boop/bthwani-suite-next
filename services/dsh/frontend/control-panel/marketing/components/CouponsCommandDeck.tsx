@@ -10,6 +10,7 @@ import {
   type CouponRecord,
 } from "../../../shared/marketing";
 import { CouponFundingReconciliationPanel } from "./CouponFundingReconciliationPanel";
+import { CouponTermsEditor } from "./CouponTermsEditor";
 
 type FundingEditorProps = {
   readonly coupon: CouponRecord;
@@ -233,6 +234,11 @@ export function CouponsCommandDeck() {
                 <CouponFundingEditor
                   coupon={coupon}
                   policy={policy}
+                  loading={controller.mutationLoading}
+                  onSave={controller.update}
+                />
+                <CouponTermsEditor
+                  coupon={coupon}
                   loading={controller.mutationLoading}
                   onSave={controller.update}
                 />
