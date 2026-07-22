@@ -281,7 +281,7 @@ export const DSH_CONTRACT_REGISTRY = [
     path: "contracts/dsh.platform-policies.openapi.yaml",
     state: "CONTRACT_ACTIVE",
     runtimeDependency: true,
-    clientStrategy: "MANUAL_TYPED_ADAPTER",
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
     adapterOwner: "frontend/shared/platform",
   },
   {
