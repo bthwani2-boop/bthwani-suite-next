@@ -2,7 +2,7 @@
   "schemaVersion": "1.0.0",
   "journeyId": "JRN-013",
   "title": "العهدة الثنائية من المتجر إلى الكابتن",
-  "status": "CODE_CLOSED_PENDING_INDEPENDENT_REVIEW_AND_EXECUTION_EVIDENCE",
+  "status": "CODE_AND_AUTOMATED_EVIDENCE_CLOSED_PENDING_INDEPENDENT_APPROVALS",
   "owner": "DSH",
   "purpose": "نقل عهدة الطلب من المتجر المالك إلى الكابتن المعين بتأكيدين مستقلين، ومنع الالتقاط المبكر، وتحويل النقص أو عدم التطابق إلى استثناء تشغيلي قابل للتدقيق والمعالجة.",
   "actors": ["partner", "captain", "operator", "system"],
@@ -78,17 +78,25 @@
     "verificationBranch": "verification/jrn-013-final-closure-20260722",
     "mode": "ISOLATED_AUTOMATED_FINAL_CLOSURE"
   },
+  "automatedEvidence": {
+    "workflow": "Store Captain Handoff Verification",
+    "runId": 29882102801,
+    "verifiedHead": "b95f44dda9b0b4eb1a8ad59001a933ca13ccb53f",
+    "verifiedMergeCommit": "6053052c04e929f07813744c84c18e2e4335cd89",
+    "sourceContractAndSurfaces": "PASSED",
+    "custodyDatabaseAndBackend": "PASSED"
+  },
   "evidenceState": {
     "sourceCode": "CLOSED",
     "sourceClosureManifest": "REGISTERED",
-    "targetedTests": "AUTHORED",
-    "ciExecution": "NOT_OBSERVED_FROM_CONNECTOR",
+    "targetedTests": "PASSED",
+    "ciExecution": "PASSED",
     "runtimeDeviceQa": "PENDING_INDEPENDENT_EXECUTION",
     "securityReview": "PENDING_INDEPENDENT_REVIEW",
     "financeBoundaryReview": "PENDING_INDEPENDENT_REVIEW",
     "productionRelease": "NOT_APPROVED"
   },
-  "internalZeroGate": "SOURCE_CODE_CLOSED",
+  "internalZeroGate": "AUTOMATED_CLOSURE_PASSED",
   "independentReviewPending": ["product-owner", "qa-device-accessibility", "security", "finance-boundary", "release-production"],
-  "decision": "READY_FOR_REVIEW"
+  "decision": "READY_FOR_INDEPENDENT_REVIEW"
 }
