@@ -3,6 +3,7 @@ import {
   Jrn033VisualEvidenceScreen,
   type Jrn033VisualEvidenceMode,
 } from "@dsh-cp/finance/Jrn033VisualEvidenceScreen";
+import { publicRuntimeFlags } from "../../../../config/public-runtime-flags";
 
 const supportedModes = new Set<Jrn033VisualEvidenceMode>(["success", "empty", "frozen", "error", "loading"]);
 
@@ -11,7 +12,7 @@ type Props = {
 };
 
 export default async function Jrn033VisualEvidencePage({ searchParams }: Props) {
-  if (process.env.NEXT_PUBLIC_JRN_033_VISUAL_EVIDENCE !== "1") notFound();
+  if (!publicRuntimeFlags.jrn033VisualEvidenceEnabled) notFound();
   const params = await searchParams;
   const requestedMode = params.mode ?? "success";
   const mode = supportedModes.has(requestedMode as Jrn033VisualEvidenceMode)
