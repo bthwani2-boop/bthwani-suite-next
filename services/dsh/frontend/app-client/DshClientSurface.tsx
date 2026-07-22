@@ -81,6 +81,12 @@ function isClientTab(value: string): value is ClientTab {
     || value === "cart";
 }
 
+function notificationActionFromDeepLink(url: string): string | null {
+  const parsed = Linking.parse(url);
+  if (parsed.scheme !== "bthwani-client-next" || !parsed.path) return null;
+  return `/${parsed.path.replace(/^\/+/, "")}`;
+}
+
 export function DshClientSurface() {
   const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<ClientTab>("home");
@@ -101,17 +107,29 @@ export function DshClientSurface() {
   }, []);
 
   const openNotificationActionUrl = useCallback((actionUrl: string) => {
-    const pickupMatch = /^\/orders\/([^/]+)\/pickup$/.exec(actionUrl);
+    const normalized = actionUrl.trim();
+    const pickupMatch = /^\/orders\/([^/]+)\/pickup$/.exec(normalized);
     if (pickupMatch?.[1]) {
       setShowNotifications(false);
       setActiveTab("orders");
       setActivePickupOrderId(pickupMatch[1]);
       return;
     }
-    const orderMatch = /^\/orders\/([^/]+)$/.exec(actionUrl);
+    if (normalized === "/orders/pickup") {
+      setShowNotifications(false);
+      setActiveTab("orders");
+      return;
+    }
+    const orderMatch = /^\/orders\/([^/]+)$/.exec(normalized);
     if (orderMatch?.[1]) {
       setShowNotifications(false);
       openOrderTracking(orderMatch[1]);
+      return;
+    }
+    if (/^\/special-requests(?:\/[^/]+)?$/.test(normalized)) {
+      setShowNotifications(false);
+      setActiveSpecialRequest(null);
+      setActiveTab("special");
     }
   }, [openOrderTracking]);
 
@@ -187,6 +205,23 @@ export function DshClientSurface() {
     const subscription = BackHandler.addEventListener("hardwareBackPress", goBack);
     return () => subscription.remove();
   }, [goBack]);
+
+  useEffect(() => {
+    let active = true;
+    void Linking.getInitialURL().then((url) => {
+      if (!active || !url) return;
+      const actionUrl = notificationActionFromDeepLink(url);
+      if (actionUrl) openNotificationActionUrl(actionUrl);
+    });
+    const subscription = Linking.addEventListener("url", ({ url }) => {
+      const actionUrl = notificationActionFromDeepLink(url);
+      if (actionUrl) openNotificationActionUrl(actionUrl);
+    });
+    return () => {
+      active = false;
+      subscription.remove();
+    };
+  }, [openNotificationActionUrl]);
 
   const nestedRoute =
     showNotifications ||
