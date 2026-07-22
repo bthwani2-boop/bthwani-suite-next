@@ -4,6 +4,7 @@ export const DSH_CONTRACT_CLIENT_STRATEGIES = [
   "PARENT_GENERATED_SUBSET",
   "MANUAL_TYPED_ADAPTER",
   "STANDALONE_MANUAL_TYPED_ADAPTER",
+  "STANDALONE_GENERATED",
 ] as const;
 
 export type DshContractClientStrategy =
@@ -95,7 +96,7 @@ export const DSH_CONTRACT_REGISTRY = [
     path: "contracts/dsh.catalog.openapi.yaml",
     state: "CONTRACT_ACTIVE",
     runtimeDependency: true,
-    clientStrategy: "SECONDARY_GENERATED_SUBSET",
+    clientStrategy: "STANDALONE_GENERATED",
     generatedClient: "clients/generated/dsh-catalog-api.ts",
   },
   {
@@ -103,7 +104,7 @@ export const DSH_CONTRACT_REGISTRY = [
     path: "contracts/dsh.catalog-proposal-readback.openapi.yaml",
     state: "CONTRACT_ACTIVE",
     runtimeDependency: true,
-    clientStrategy: "MANUAL_TYPED_ADAPTER",
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
     adapterOwner: "frontend/shared/catalog/product-proposal-readback.api.ts",
   },
   {

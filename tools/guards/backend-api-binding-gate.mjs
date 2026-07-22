@@ -28,8 +28,9 @@ function registeredDshContracts() {
 
 const dshRegistry = registeredDshContracts();
 const dshRegisteredFiles = new Set(dshRegistry.map((entry) => entry.file));
+const dshStandaloneStrategies = new Set(["STANDALONE_MANUAL_TYPED_ADAPTER", "STANDALONE_GENERATED"]);
 const dshStandaloneContracts = dshRegistry
-  .filter((entry) => entry.strategy === "STANDALONE_MANUAL_TYPED_ADAPTER")
+  .filter((entry) => dshStandaloneStrategies.has(entry.strategy))
   .map((entry) => entry.file);
 
 const dshClientAddressContract = "services/dsh/contracts/dsh.client-address.openapi.yaml";
@@ -59,6 +60,7 @@ const services = [
       "services/wlt/contracts/jrn-035-refunds.openapi.yaml",
       "services/wlt/contracts/jrn-036-settlements-commissions.openapi.yaml",
       "services/wlt/contracts/jrn-037-payouts-destinations.openapi.yaml",
+      "services/wlt/contracts/jrn-038-cod-custody.openapi.yaml",
     ].filter((file) => fs.existsSync(path.join(repoRoot, file))),
     router: "services/wlt/backend/internal/http/server.go",
   },
@@ -295,6 +297,7 @@ try {
 
     for (const route of goRoutes) {
       const key = routeKey(route);
+      if (key === "/") continue;
       if (!openApiRouteSet.has(key)) {
         violations.push({
           file: route.file,

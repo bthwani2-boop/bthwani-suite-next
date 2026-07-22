@@ -65,7 +65,7 @@ const primaryOps = primaryPath && fs.existsSync(path.join(repoRoot, primaryPath)
 const primarySet = new Set(primaryOps);
 const canonicalOps = new Set(primaryOps);
 const generatedSubsetStrategies = new Set(["SECONDARY_GENERATED_SUBSET", "PARENT_GENERATED_SUBSET"]);
-const generatedStrategies = new Set(["PRIMARY_GENERATED", "SECONDARY_GENERATED_SUBSET", "PARENT_GENERATED_SUBSET"]);
+const generatedStrategies = new Set(["PRIMARY_GENERATED", "SECONDARY_GENERATED_SUBSET", "PARENT_GENERATED_SUBSET", "STANDALONE_GENERATED"]);
 const manualStrategies = new Set(["MANUAL_TYPED_ADAPTER", "STANDALONE_MANUAL_TYPED_ADAPTER"]);
 
 for (const item of registry) {
