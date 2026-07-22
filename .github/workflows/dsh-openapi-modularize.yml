@@ -124,27 +124,40 @@ jobs:
           node-version: "24.17.0"
           cache: pnpm
 
-      - name: Install workspace dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Regenerate and verify DSH contract artifacts
+      - name: Synchronize against the latest moving branch head
         run: |
-          pnpm --dir services/dsh openapi:verify
-          pnpm run contracts:lint
-          pnpm --dir services/dsh openapi:test
-
-      - name: Commit generated artifacts when changed
-        run: |
-          git add -f \
-            services/dsh/contracts/generated/dsh.bundle.openapi.yaml \
-            services/dsh/clients/generated/dsh-api.ts
-          if git diff --cached --quiet; then
-            echo "Generated artifacts are already synchronized."
-            exit 0
-          fi
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "generated(dsh): synchronize modular OpenAPI artifacts"
-          git fetch origin sambassam
-          git rebase origin/sambassam
-          git push origin HEAD:sambassam
+
+          for attempt in 1 2 3 4 5 6 7 8; do
+            echo "Synchronization attempt ${attempt}/8"
+            git fetch origin sambassam
+            git reset --hard origin/sambassam
+            git clean -fd
+
+            pnpm install --frozen-lockfile --prefer-offline
+            pnpm --dir services/dsh openapi:verify
+            pnpm run contracts:lint
+            pnpm --dir services/dsh openapi:test
+
+            git add -f \
+              services/dsh/contracts/generated/dsh.bundle.openapi.yaml \
+              services/dsh/clients/generated/dsh-api.ts
+
+            if git diff --cached --quiet; then
+              echo "Generated artifacts are already synchronized with the latest branch head."
+              exit 0
+            fi
+
+            git commit -m "generated(dsh): synchronize modular OpenAPI artifacts"
+            if git push origin HEAD:sambassam; then
+              echo "Generated artifacts synchronized successfully."
+              exit 0
+            fi
+
+            echo "Branch moved during generation; retrying from the new head."
+          done
+
+          echo "Unable to synchronize generated artifacts after 8 branch-safe attempts." >&2
+          exit 1
