@@ -145,7 +145,7 @@ export function DshFieldVisitScreen({ storeId, onBack, onGoToChecklist, onGoToVe
       </View>
       <Header title="زيارات التأهيل الميداني" />
       <ScrollView
-        style={{ flex: 1 }}
+        style={styles.scroll}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
@@ -283,6 +283,7 @@ export function DshFieldVisitScreen({ storeId, onBack, onGoToChecklist, onGoToVe
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colorRoles.surfaceBase },
+  scroll: { flex: 1 },
   topActions: { alignItems: "flex-start", paddingHorizontal: spacing[4], paddingTop: spacing[2] },
   content: { padding: spacing[4], gap: spacing[4] },
   headerCard: {
