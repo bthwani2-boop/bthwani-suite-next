@@ -17,23 +17,37 @@ export function OrderRefundStatusCard({ orderId, surface }: OrderRefundStatusCar
 
   if (state.kind === "idle" || state.kind === "loading") {
     return (
-      <Surface style={styles.card} accessibilityLabel="جارٍ تحميل حالة الاسترداد">
-        <Text role="bodySm" tone="muted">جارٍ التحقق من حالة الاسترداد المالية…</Text>
-      </Surface>
+      <View
+        accessibilityRole="progressbar"
+        accessibilityLiveRegion="polite"
+        accessibilityLabel="جارٍ تحميل حالة الاسترداد"
+      >
+        <Surface style={styles.card}>
+          <Text role="bodySm" tone="muted">جارٍ التحقق من حالة الاسترداد المالية…</Text>
+        </Surface>
+      </View>
     );
   }
 
   if (state.kind === "error") {
     return (
-      <Surface style={[styles.card, styles.errorCard]}>
-        <Text role="bodyStrong">تعذر تحديث حالة الاسترداد</Text>
-        <Text role="bodySm" tone="muted">{state.message}</Text>
-        <Button label="إعادة المحاولة" tone="secondary" size="sm" onPress={() => void loadByOrder(orderId)} />
-      </Surface>
+      <View
+        accessibilityRole="alert"
+        accessibilityLiveRegion="assertive"
+        accessibilityLabel={`تعذر تحديث حالة الاسترداد: ${state.message}`}
+      >
+        <Surface style={[styles.card, styles.errorCard]}>
+          <Text role="bodyStrong">تعذر تحديث حالة الاسترداد</Text>
+          <Text role="bodySm" tone="muted">{state.message}</Text>
+          <Button label="إعادة المحاولة" tone="secondary" size="sm" onPress={() => void loadByOrder(orderId)} />
+        </Surface>
+      </View>
     );
   }
 
   if (state.refunds.length === 0) return null;
+
+  const hasProviderUnknown = state.refunds.some((refund) => refund.status === "provider_unknown");
 
   return (
     <Surface style={styles.card} accessibilityLabel={`حالة استردادات الطلب، العدد ${state.refunds.length}`}>
@@ -42,7 +56,12 @@ export function OrderRefundStatusCard({ orderId, surface }: OrderRefundStatusCar
         <Text role="caption" tone="muted">الحالة من WLT</Text>
       </View>
       {state.refunds.map((refund) => (
-        <View key={refund.id} style={styles.row}>
+        <View
+          key={refund.id}
+          style={styles.row}
+          accessible
+          accessibilityLabel={`${refund.amountLabel} ${refund.currency}، ${refund.statusLabel}`}
+        >
           <View style={styles.amountBlock}>
             <Text role="bodyStrong">{refund.amountLabel} {refund.currency}</Text>
             <Text role="caption" tone="muted">{refund.resolvedAt ? `حُسم: ${refund.resolvedAt}` : "لم يُحسم بعد"}</Text>
@@ -53,10 +72,12 @@ export function OrderRefundStatusCard({ orderId, surface }: OrderRefundStatusCar
           />
         </View>
       ))}
-      {state.refunds.some((refund) => refund.status === "provider_unknown") ? (
-        <Text role="bodySm" style={styles.warningText}>
-          نتيجة المزود غير محسومة. لا يعني ذلك نجاحًا أو فشلًا حتى تنتهي المصالحة المالية.
-        </Text>
+      {hasProviderUnknown ? (
+        <View accessibilityRole="alert" accessibilityLiveRegion="assertive">
+          <Text role="bodySm" style={styles.warningText}>
+            نتيجة المزود غير محسومة. لا يعني ذلك نجاحًا أو فشلًا حتى تنتهي المصالحة المالية.
+          </Text>
+        </View>
       ) : null}
     </Surface>
   );
