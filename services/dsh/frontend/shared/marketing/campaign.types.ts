@@ -1,6 +1,8 @@
 import type { DshCampaign } from "./marketing.types";
 
 export type GovernedDshCampaign = DshCampaign & {
+  readonly targetCityCode?: string | undefined;
+  readonly targetServiceAreaCode?: string | undefined;
   readonly version: number;
 };
 
@@ -12,6 +14,8 @@ export type GovernedCampaignWritePayload = {
   readonly endDate?: string | undefined;
   readonly targetType?: string | undefined;
   readonly targetId?: string | undefined;
+  readonly targetCityCode?: string | undefined;
+  readonly targetServiceAreaCode?: string | undefined;
   readonly audience?: string | undefined;
   readonly placement?: string | undefined;
   /**
