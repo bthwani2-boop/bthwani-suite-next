@@ -51,9 +51,23 @@ const { request } = createDshHttpClient(
   "dsh-jrn037-payouts",
 );
 
-function ownFinanceBase(actorType: PayoutActorType): string {
-  return `/dsh/${actorType}/me/finance`;
-}
+const payoutDestinationPathByActor: Record<PayoutActorType, string> = {
+  partner: "/dsh/partner/me/finance/payout-destination",
+  captain: "/dsh/captain/me/finance/payout-destination",
+  field: "/dsh/field/me/finance/payout-destination",
+};
+
+const payoutDestinationDeactivatePathByActor: Record<PayoutActorType, string> = {
+  partner: "/dsh/partner/me/finance/payout-destination/deactivate",
+  captain: "/dsh/captain/me/finance/payout-destination/deactivate",
+  field: "/dsh/field/me/finance/payout-destination/deactivate",
+};
+
+const payoutRequestsPathByActor: Record<PayoutActorType, string> = {
+  partner: "/dsh/partner/me/finance/payout-requests",
+  captain: "/dsh/captain/me/finance/payout-requests",
+  field: "/dsh/field/me/finance/payout-requests",
+};
 
 function errorStatus(error: unknown): number | undefined {
   return (error as { readonly status?: number }).status;
@@ -62,7 +76,7 @@ function errorStatus(error: unknown): number | undefined {
 export async function fetchOwnPayoutDestination(actorType: PayoutActorType): Promise<PayoutDestination | null> {
   try {
     const response = await request<{ readonly payoutDestination: PayoutDestination }>(
-      `${ownFinanceBase(actorType)}/payout-destination`,
+      payoutDestinationPathByActor[actorType],
     );
     return response.payoutDestination;
   } catch (error) {
@@ -76,7 +90,7 @@ export async function saveOwnPayoutDestination(
   input: PayoutDestinationInput,
 ): Promise<PayoutDestination> {
   const response = await request<{ readonly payoutDestination: PayoutDestination }>(
-    `${ownFinanceBase(actorType)}/payout-destination`,
+    payoutDestinationPathByActor[actorType],
     {
       method: "PUT",
       body: input,
@@ -87,7 +101,7 @@ export async function saveOwnPayoutDestination(
 }
 
 export async function deactivateOwnPayoutDestination(actorType: PayoutActorType): Promise<void> {
-  await request<void>(`${ownFinanceBase(actorType)}/payout-destination/deactivate`, {
+  await request<void>(payoutDestinationDeactivatePathByActor[actorType], {
     method: "POST",
     body: {},
     idempotencyKey: `destination-deactivate:${actorType}`,
@@ -96,7 +110,7 @@ export async function deactivateOwnPayoutDestination(actorType: PayoutActorType)
 
 export async function fetchOwnPayoutRequests(actorType: PayoutActorType): Promise<readonly ActorPayoutRequest[]> {
   const response = await request<{ readonly payoutRequests: ActorPayoutRequest[] }>(
-    `${ownFinanceBase(actorType)}/payout-requests`,
+    payoutRequestsPathByActor[actorType],
   );
   return response.payoutRequests ?? [];
 }
@@ -109,7 +123,7 @@ export async function createOwnPayoutRequest(
   idempotencyKey: string,
 ): Promise<ActorPayoutRequest> {
   const response = await request<{ readonly payoutRequest: ActorPayoutRequest }>(
-    `${ownFinanceBase(actorType)}/payout-requests`,
+    payoutRequestsPathByActor[actorType],
     {
       method: "POST",
       body: { payoutDestinationId, amountMinorUnits, currency, idempotencyKey },
