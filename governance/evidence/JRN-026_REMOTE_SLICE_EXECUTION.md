@@ -6,78 +6,103 @@
 - `initial_head`: `83d877aa52a644786fc64d1da270087345c3884d`
 - `journey`: `JRN-026 — القسائم وتسعير التوصيل وسياسات الولاء`
 - `mode`: `fullstack unified multi-surface`
-- `current_decision`: `READY_FOR_INDEPENDENT_REVIEW`
-- `verification_workflow_blob`: `48765746599f5570b8e16874703cda43c71c7773`
-- `verification_concurrency`: `event/ref serialized; cancel-in-progress=false`
+- `current_decision`: `VERIFYING_FINAL_REMOTE_GATE`
+- `verification_workflow`: `.github/workflows/jrn-026-coupons-pricing-loyalty-verification.yml`
+- `verification_concurrency`: `event/sha isolated; cancel-in-progress=false`
 
-## Executed code corrections
+## Implemented corrections
 
-The partner delivery-pricing path contained two concrete closure gaps:
+### Coupon lifecycle, limits, scope, and funding
 
-1. The shared controller required an existing pricing record even though the backend supports governed first creation through `expectedVersion=0`; the empty UI therefore had no executable action.
-2. The pricing card existed but was not mounted in the current `DshPartnerStoreCourierScreen`, so the capability was unreachable on the partner surface.
+- Mounted `CouponTermsEditor` inside the control-panel coupon card.
+- Added governed editing for name, description, store scope, discount type/value, minimum subtotal, maximum discount, global/per-client limits, eligible fulfillment modes, and validity window.
+- Active and archived coupon terms remain immutable; optimistic versioning and authoritative reload are preserved.
+- Existing maker-checker activation, encrypted coupon code, serializable mutation, WLT promotion-funding reservation/commit/release/reversal, and reconciliation readback remain the owners of truth.
+- Added the public capability entrypoint `frontend/shared/marketing/coupons.public.ts` and focused coupon-term tests.
 
-The final implementation now:
+### Operator delivery pricing
 
-- accepts a missing partner policy and creates it with `expectedVersion=0`;
-- keeps operator creation blocked when an existing mode cannot be identified;
-- exposes loading, empty-create, error, retry, success, and version-conflict recovery states;
-- mounts the card in the partner store-courier screen;
-- imports through `partner-delivery-pricing.public.ts`, not private implementation modules or the legacy operator projection;
-- prevents the legacy partner hook from being exported by the broad partner barrel;
-- permanently verifies DSH, WLT, TypeScript, bindings, Product Truth, and modular OpenAPI.
+- Added `operator-delivery-pricing.public.ts` as the public capability boundary.
+- Enabled first-policy creation with `expectedVersion=0` for each explicit mode.
+- Added actionable loading, empty-create, error, retry, success, conflict, and persisted-version readback states.
+- Forced pickup pricing to zero at the UI and retained database/backend enforcement.
+- Mounted `OperatorDeliveryPricingPanel` inside the partner-detail stores tab, with store selection and open/close pricing controls.
 
-## Material execution commits
+### Partner delivery pricing
 
-- `9b20f0cc0c0d328baf4f7fd68d083b2e4bba0d90` — allow governed partner pricing creation through version zero.
-- `a98c9916d2bdccd928cb20bc49256ca526c779d8` — expose the empty-state creation form and remove the dead end.
-- `df839e50cab60664c7d41445ab63c527fa9845c7` — mount partner pricing in the current store-courier screen.
-- `fcecdbde7202eca05ad34d63e5a02a0d8af3a87a` / `bfe982ed718d24a3471eca6f598554ee57858d2b` — add focused JRN-026 and sovereign WLT boundary tests.
-- `ba5ae7e2c18ea4e4a24f10f5f139c51804a10e86` — prove the partner pricing route mount.
-- `90526f5d9f08ebc710fe2e2cb0b6dca18466f681` / `f681516e5399d711f8eb6e5af08a3e14e2c94f31` — add and consume the public partner-pricing capability entrypoint.
-- `2860e8e189ad359ac388a3136f36c410acf1a701` — remove the legacy partner-pricing export from the broad barrel.
-- `73d27913d3c65332432669dd4cedb58a4fc79118` — typecheck the focused public capability graph.
-- `f32e4d987d4f2450a3c4b1bff70c08161eff660a` — enforce public-boundary and route-mount invariants.
-- `c1baf428110af1ae21ba0ac930abb46469e07e04` / `c6c48a66160e2b995b9b3f20dd1c4cef791d9b17` — add and stabilize the permanent JRN-026 workflow.
-- `688990aeb0d422612d8cf2580f89c542ea05a849` — add the JRN-026 Product Truth contract.
+- Enabled first partner-delivery policy creation with `expectedVersion=0`.
+- Removed the dead empty state and exposed Arabic create/update/retry states.
+- Mounted `PartnerDeliveryPricingCard` in `DshPartnerStoreCourierScreen`.
+- Added `partner-delivery-pricing.public.ts`; surfaces no longer import private controller modules or the legacy operator projection.
+- Backend store ownership, `partner_delivery` mode restriction, archive prohibition, OCC, and audit remain enforced.
 
-Intermediate import experiments were superseded by the explicit public capability entrypoint and are not the final architectural path.
+### Loyalty earning policies and WLT boundary
+
+- Added governed `updateTerms` with `expectedVersion` and reload.
+- Added editable name, earning numerator/denominator, minimum, and maximum points for draft/paused policies only.
+- Active policy terms remain immutable; maker-checker activation remains enforced.
+- Added `loyalty-policy.public.ts` and focused UI/backend/WLT assertions.
+- DSH emits durable idempotent earn/reverse events; WLT remains sovereign for balances, entries, and single reversal.
+
+### Contract, governance, and verification
+
+- Added focused route test `TestJourney026ExposesGovernedCouponPricingAndLoyaltyRoutes`.
+- Added focused TypeScript graph `services/dsh/tsconfig.jrn-026.json`.
+- Added JRN-026 tests for coupon terms, partner/operator pricing mounts and first creation, client authoritative readback, maker-checker, and WLT sovereignty.
+- Added Product Truth contract and executable journey validator, restored the Product Truth dispatcher, and kept independent product-owner acceptance pending.
+- Split Go packages, TypeScript, static invariants, Product Truth, OpenAPI source truth, and generated-client checks into named permanent CI steps.
+- Removed all temporary execution and OpenAPI synchronization workflows after use.
 
 ## Sequential slice record
 
-| Slice | Requirement | Execution evidence | Status |
-|---|---|---|---|
-| FS-01 | Product Truth and acceptance criteria | `governance/product/contracts/JRN-026_COUPONS_DELIVERY_PRICING_LOYALTY.product-truth.json` | IMPLEMENTED |
-| FS-02 | Roles, permissions, surfaces, forbidden actions | coupon maker-checker, operator permissions, partner store scoping, Product Truth actors | IMPLEMENTED |
-| FS-03 | States, transitions, allowed actions, negative invariants | coupon and loyalty lifecycle guards, pricing restrictions, empty-create and focused negative tests | IMPLEMENTED |
-| FS-04 | Truth ownership and service boundaries | DSH coupon/pricing ownership and WLT loyalty/funding ownership are explicit | IMPLEMENTED |
-| FS-05 | Database constraints, indexes, concurrency | serializable coupon/WLT ledger paths, delivery-pricing OCC and audit, pickup trigger | IMPLEMENTED |
-| FS-06 | OpenAPI contracts and approved adapters | DSH modular OpenAPI verification is included in the permanent gate | IMPLEMENTED_AWAITING_FINAL_HEAD_GATE |
-| FS-07 | Backend routes, validation, authz, idempotency | governed coupon, pricing, loyalty routes and route verification | IMPLEMENTED |
-| FS-08 | Events, outbox, readback, retry, reconciliation | durable WLT outbox, idempotent loyalty earn/reverse, promotion-funding transitions | IMPLEMENTED |
-| FS-09 | Shared brain types, adapters, controllers, view models | focused public partner-pricing entrypoint plus governed partner/operator controllers | IMPLEMENTED |
-| FS-10 | Required surface routes, screens, actions, navigation | control panel, mounted partner card, governed client checkout | IMPLEMENTED |
-| FS-11 | Loading, empty, offline, forbidden, conflict, recovery states | partner empty-create path, retry/error states, OCC conflict recovery | IMPLEMENTED |
-| FS-12 | Multi-surface readback and removal of local truth | client renders server pricing snapshot; partner reloads persisted policy | IMPLEMENTED |
-| FS-13 | Security, privacy, tenant isolation, RBAC, audit | partner store isolation, mode restriction, permission checks, append-only pricing audit | IMPLEMENTED |
-| FS-14 | Accessibility, Arabic/RTL, reliability, weak-network behavior | Arabic operational states and governed retry/readback paths | IMPLEMENTED |
-| FS-15 | SLA, observability, diagnostics, operational support | correlation IDs, audit records, outbox retries, workflow diagnostics | IMPLEMENTED |
-| FS-16 | Legacy, duplicate, temporary workflow cleanup | dead-end and legacy public partner hook removed; no alternate local pricing owner introduced | IMPLEMENTED |
-| FS-17 | Static, runtime, database, finance, governance, CI verification | permanent DSH/WLT/TypeScript/binding/Product-Truth/OpenAPI workflow | IMPLEMENTED_AWAITING_FINAL_HEAD_GATE |
-| FS-18 | Same-commit evidence, rollback, remaining-risk decision | code is ready for independent product, finance, QA, security, release, and production review | READY_FOR_INDEPENDENT_REVIEW |
+| Slice | Requirement | Status |
+|---|---|---|
+| FS-01 | Product Truth and acceptance criteria | IMPLEMENTED |
+| FS-02 | Roles, permissions, surfaces, forbidden actions | IMPLEMENTED |
+| FS-03 | States, transitions, allowed actions, negative invariants | IMPLEMENTED |
+| FS-04 | Truth ownership and service boundaries | IMPLEMENTED |
+| FS-05 | Database constraints, indexes, concurrency | IMPLEMENTED |
+| FS-06 | OpenAPI contracts and approved adapters | VERIFIED_ON_REMOTE; FINAL_COMBINED_GATE_RUNNING |
+| FS-07 | Backend routes, validation, authz, idempotency | IMPLEMENTED |
+| FS-08 | Events, outbox, readback, retry, reconciliation | IMPLEMENTED |
+| FS-09 | Shared brain types, adapters, controllers, view models | IMPLEMENTED |
+| FS-10 | Required surface routes, screens, actions, navigation | IMPLEMENTED |
+| FS-11 | Loading, empty, forbidden, conflict, recovery states | IMPLEMENTED |
+| FS-12 | Multi-surface readback and removal of local truth | IMPLEMENTED |
+| FS-13 | Security, tenant isolation, RBAC, audit | IMPLEMENTED |
+| FS-14 | Arabic/RTL, reliability, recovery behavior | IMPLEMENTED |
+| FS-15 | Observability, diagnostics, operational support | IMPLEMENTED |
+| FS-16 | Legacy, duplicate, temporary workflow cleanup | IMPLEMENTED |
+| FS-17 | Static, backend, finance-boundary, governance, and CI verification | FINAL_COMBINED_GATE_RUNNING |
+| FS-18 | Same-commit evidence and remaining-risk decision | VERIFYING_FINAL_REMOTE_GATE |
 
-## Required verification gate
+## Remote check evidence before the final combined rerun
 
-`.github/workflows/jrn-026-coupons-pricing-loyalty-verification.yml` must pass after this evidence update. It verifies:
+A prior focused run passed all of the following before reaching the then-missing Product Truth executable:
 
-1. DSH coupon, delivery-pricing, loyalty-policy, WLT-adapter, and outbox package compilation.
-2. Governed JRN-026 route registration.
-3. Sovereign WLT commercial loyalty-ledger compilation.
-4. The focused JRN-026 public TypeScript capability and partner card.
-5. Route mount, public-boundary, negative-invariant, and cross-surface binding tests.
-6. Product Truth schema and semantic governance.
-7. DSH modular OpenAPI composition and generated-client drift.
+1. Governed coupon package compilation.
+2. Delivery-pricing and checkout package compilation.
+3. Loyalty-policy package compilation.
+4. DSH WLT adapter and durable outbox compilation.
+5. Focused JRN-026 route registration.
+6. Sovereign WLT commercial loyalty-ledger compilation.
+7. Focused JRN-026 TypeScript verification.
+8. JRN-026 static, negative-invariant, and cross-surface tests.
+
+The dedicated DSH modular OpenAPI workflow also passed after the current contract state. The missing Product Truth executable was corrected by adding `tools/guards/jrn-026-product-truth-gate.mjs` and restoring `tools/guards/product-truth-gate.mjs`.
+
+## Final verification gate
+
+The current evidence update intentionally triggers the permanent remote workflow. Final technical verification requires the same commit to pass:
+
+1. DSH coupon, checkout/pricing, loyalty, WLT-adapter, and outbox packages.
+2. Focused governed route registration.
+3. Sovereign WLT loyalty ledger.
+4. Focused TypeScript surfaces and public capability boundaries.
+5. All `jrn-026-*.test.mjs` assertions.
+6. JRN-026 Product Truth semantics.
+7. DSH modular OpenAPI source truth and generated client.
 
 ## Closure boundary
 
-The code implementer does not grant independent product-owner, finance, QA, security, release, deployment, or production approvals. Final `CLOSED_WITH_EVIDENCE` remains prohibited until the relevant same-head workflow succeeds and those independent approvals and required runtime/visual evidence exist.
+The implementation agent does not grant independent product-owner, finance, QA, security, release, deployment, or production approvals. `CLOSED_WITH_EVIDENCE` remains prohibited until the final remote gate succeeds and the required independent runtime, visual, finance, security, QA, release, and product acceptance evidence exists.
