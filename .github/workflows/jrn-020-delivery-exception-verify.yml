@@ -1,0 +1,142 @@
+name: JRN-020 Delivery Exception Verification
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [sambassam]
+    paths:
+      - "services/dsh/backend/internal/dispatch/delivery_exceptions.go"
+      - "services/dsh/backend/internal/dispatch/dispatch.go"
+      - "services/dsh/backend/internal/orders/**"
+      - "services/dsh/backend/internal/http/delivery_exception_governance*.go"
+      - "services/dsh/backend/internal/http/dispatch.go"
+      - "services/dsh/backend/internal/http/partner_delivery.go"
+      - "services/dsh/backend/cmd/dsh-api/main.go"
+      - "services/dsh/database/migrations/dsh-094_delivery_return_partner_receipt.sql"
+      - "services/dsh/contracts/dsh.delivery-exceptions.openapi.yaml"
+      - "services/dsh/contracts/jrn-020-slice-closure.json"
+      - "services/dsh/contracts/contract-registry.ts"
+      - "services/dsh/frontend/shared/dispatch/**"
+      - "services/dsh/frontend/app-captain/orders/DshCaptainPoDSubmissionScreen.tsx"
+      - "services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx"
+      - "services/dsh/frontend/app-client/orders/OrderTrackingScreen.tsx"
+      - "services/dsh/frontend/control-panel/operations/ExceptionsEscalationsScreen.tsx"
+      - "services/dsh/tests/jrn-020-delivery-exception-closure.test.mjs"
+      - "services/dsh/tsconfig.jrn-020.json"
+      - "governance/product/contracts/jrn-020-delivery-exceptions-return-to-store.product-truth.json"
+      - ".github/workflows/jrn-020-delivery-exception-verify.yml"
+  pull_request:
+    branches: [master]
+    paths:
+      - "services/dsh/backend/internal/dispatch/delivery_exceptions.go"
+      - "services/dsh/backend/internal/dispatch/dispatch.go"
+      - "services/dsh/backend/internal/orders/**"
+      - "services/dsh/backend/internal/http/delivery_exception_governance*.go"
+      - "services/dsh/backend/internal/http/dispatch.go"
+      - "services/dsh/backend/internal/http/partner_delivery.go"
+      - "services/dsh/backend/cmd/dsh-api/main.go"
+      - "services/dsh/database/migrations/dsh-094_delivery_return_partner_receipt.sql"
+      - "services/dsh/contracts/dsh.delivery-exceptions.openapi.yaml"
+      - "services/dsh/contracts/jrn-020-slice-closure.json"
+      - "services/dsh/contracts/contract-registry.ts"
+      - "services/dsh/frontend/shared/dispatch/**"
+      - "services/dsh/frontend/app-captain/orders/DshCaptainPoDSubmissionScreen.tsx"
+      - "services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx"
+      - "services/dsh/frontend/app-client/orders/OrderTrackingScreen.tsx"
+      - "services/dsh/frontend/control-panel/operations/ExceptionsEscalationsScreen.tsx"
+      - "services/dsh/tests/jrn-020-delivery-exception-closure.test.mjs"
+      - "services/dsh/tsconfig.jrn-020.json"
+      - "governance/product/contracts/jrn-020-delivery-exceptions-return-to-store.product-truth.json"
+      - ".github/workflows/jrn-020-delivery-exception-verify.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jrn-020-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  backend:
+    name: JRN-020 backend
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: dsh_jrn020
+          POSTGRES_USER: dsh_jrn020
+          POSTGRES_PASSWORD: dsh_jrn020
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U dsh_jrn020 -d dsh_jrn020"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://dsh_jrn020:dsh_jrn020@localhost:5432/dsh_jrn020?sslmode=disable
+      DSH_REQUIRE_DB_TESTS: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache: false
+      - name: Compile exception, order, HTTP and runtime boundaries
+        working-directory: services/dsh/backend
+        run: go test ./internal/dispatch ./internal/orders ./internal/http ./cmd/dsh-api -run '^$' -count=1
+      - name: Apply DSH migrations
+        run: |
+          for file in $(find services/dsh/database/migrations -maxdepth 1 -type f -name '*.sql' | sort); do
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file" >/dev/null
+          done
+      - name: Prove governed exception and return custody behavior
+        working-directory: services/dsh/backend
+        run: |
+          go test ./internal/http -run 'TestValidateDeliveryException|TestDeliveryExceptionPathID' -count=1
+          go test ./internal/dispatch -run 'TestDeliveryException' -count=1
+
+  contract-surfaces:
+    name: JRN-020 contract and surfaces
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.17.0"
+      - name: Verify full-stack source guards
+        run: node --test services/dsh/tests/jrn-020-delivery-exception-closure.test.mjs
+      - name: Verify canonical contract, registry and slice inventory
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const closure = JSON.parse(fs.readFileSync('services/dsh/contracts/jrn-020-slice-closure.json', 'utf8'));
+          if (closure.journeyId !== 'JRN-020' || closure.requiredSliceCount !== 18 || closure.slices.length !== 18) process.exit(1);
+          const contract = fs.readFileSync('services/dsh/contracts/dsh.delivery-exceptions.openapi.yaml', 'utf8');
+          for (const marker of [
+            'x-bthwani-contract-state: CONTRACT_ACTIVE',
+            'required: [reasonCode, note, correlationId]',
+            'enum: [retry_same_captain, reassign_captain, return_to_store, cancel_order]',
+            'x-bthwani-financial-boundary: WLT_OWNS_ALL_FINANCIAL_MUTATION',
+          ]) if (!contract.includes(marker)) process.exit(1);
+          const registry = fs.readFileSync('services/dsh/contracts/contract-registry.ts', 'utf8');
+          if (!registry.includes('id: "dsh-delivery-exceptions"')) process.exit(1);
+          console.log(`jrn-020/delivery-exceptions verified on ${process.env.GITHUB_SHA}`);
+          NODE
+
+  frontend-typecheck:
+    name: JRN-020 governed frontend typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: "10.34.2"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.17.0"
+          cache: pnpm
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck JRN-020 shared brain and surfaces
+        run: pnpm exec tsc -p services/dsh/tsconfig.jrn-020.json --noEmit
