@@ -15,7 +15,7 @@ func (s *protectedStoreServer) handlePartnerFinanceCodRecords(w http.ResponseWri
 		return
 	}
 	query := url.Values{"partnerId": {actor.ID}}
-	s.proxyFinanceRead(w, r, "/wlt/cod-records", query)
+	s.proxyFinanceRead(w, r, "/wlt/cod-records", query, actor.TenantID)
 }
 
 func (s *protectedStoreServer) requirePartnerCodRecord(w http.ResponseWriter, r *http.Request, partnerID, recordID string) bool {
@@ -84,10 +84,11 @@ func (s *protectedStoreServer) handlePartnerRemitCod(w http.ResponseWriter, r *h
 }
 
 func (s *protectedStoreServer) handleFinanceCodReconciliationCases(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok {
+	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator")
+	if !ok {
 		return
 	}
-	s.proxyFinanceRead(w, r, "/wlt/cod-reconciliation-cases", financeQuery(r, "status"))
+	s.proxyFinanceRead(w, r, "/wlt/cod-reconciliation-cases", financeQuery(r, "status"), actor.TenantID)
 }
 
 func (s *protectedStoreServer) handleAssignFinanceCodReconciliationCase(w http.ResponseWriter, r *http.Request) {
@@ -107,7 +108,7 @@ func (s *protectedStoreServer) handleAssignFinanceCodReconciliationCase(w http.R
 		return
 	}
 	payload, err := json.Marshal(map[string]string{
-		"operatorId":       actor.ID,
+		"operatorId":        actor.ID,
 		"investigationNote": strings.TrimSpace(input.InvestigationNote),
 	})
 	if err != nil {
