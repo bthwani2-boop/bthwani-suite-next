@@ -1,9 +1,12 @@
-import { fail, read } from "./_guard-utils.mjs";
+import fs from "node:fs";
+import path from "node:path";
+import { fail, read, repoRoot } from "./_guard-utils.mjs";
 
 const guardId = "required-command-integrity-gate";
 const violations = [];
 const packageFile = "package.json";
 const enforcementFile = "governance/github/repository-enforcement.json";
+const canonicalWorkflowFile = ".github/workflows/ci.yml";
 const packageJson = JSON.parse(read(packageFile));
 const enforcement = JSON.parse(read(enforcementFile));
 const scripts = packageJson.scripts ?? {};
@@ -45,61 +48,87 @@ if (performanceQuick.includes("localhost:8080")) {
     file: packageFile,
     scriptName: "performance:api:quick",
     command: performanceQuick,
-    message:
-      "HOST_CONTAINER_PORT_CONFUSION: host-side DSH performance checks must not target localhost:8080",
+    message: "HOST_CONTAINER_PORT_CONFUSION: host-side DSH performance checks must not target localhost:8080",
   });
 }
-
 if (!performanceQuick.includes("localhost:58080/dsh/health")) {
   violations.push({
     file: packageFile,
     scriptName: "performance:api:quick",
     command: performanceQuick,
-    message:
-      "GOVERNED_DSH_HEALTH_TARGET_MISSING: performance:api:quick must target http://localhost:58080/dsh/health",
+    message: "GOVERNED_DSH_HEALTH_TARGET_MISSING: performance:api:quick must target http://localhost:58080/dsh/health",
   });
 }
 
 for (const [scriptName, command] of Object.entries(scripts)) {
-  if (scriptName.startsWith("diagnostics:")) continue;
-  if (typeof command !== "string") continue;
+  if (scriptName.startsWith("diagnostics:") || typeof command !== "string") continue;
   if (command.includes("BLOCKED_NEEDS_RUNTIME")) {
     violations.push({
       file: packageFile,
       scriptName,
       command,
-      message:
-        "DEPRECATED_DECISION_ALIAS: executable scripts must use canonical decisions and must not convert a failed check into BLOCKED_NEEDS_RUNTIME text",
+      message: "DEPRECATED_DECISION_ALIAS: executable scripts must not convert a failed check into BLOCKED_NEEDS_RUNTIME text",
     });
   }
 }
 
-const targetBranch = enforcement.targetBranch;
-if (typeof targetBranch !== "string" || targetBranch.length === 0) {
-  violations.push({
-    file: enforcementFile,
-    message: "TARGET_BRANCH_MISSING: repository enforcement must declare the active target branch",
-  });
-} else {
-  const criticalWorkflows = [
-    ".github/workflows/ci.yml",
-    ".github/workflows/security.yml",
-    ".github/workflows/governance-audit.yml",
-    ".github/workflows/dsh-operational-closure-ci.yml",
-    ".github/workflows/jrn-040-platform-change-sets-verification.yml",
-  ];
+const workflowDir = path.join(repoRoot, ".github/workflows");
+const workflowFiles = fs.existsSync(workflowDir)
+  ? fs.readdirSync(workflowDir).filter((name) => /\.ya?ml$/i.test(name)).sort()
+  : [];
 
-  for (const workflowFile of criticalWorkflows) {
-    const workflow = read(workflowFile);
+if (!workflowFiles.includes("ci.yml")) {
+  violations.push({
+    file: canonicalWorkflowFile,
+    message: "CANONICAL_WORKFLOW_MISSING: .github/workflows/ci.yml is required",
+  });
+}
+for (const workflowFile of workflowFiles) {
+  if (/^tmp-|diagnostic|remediation/i.test(workflowFile)) {
+    violations.push({
+      file: `.github/workflows/${workflowFile}`,
+      message: "TEMPORARY_WORKFLOW_FORBIDDEN: diagnostics and remediation must stay inside the canonical workflow",
+    });
+  }
+}
+
+if (fs.existsSync(path.join(repoRoot, canonicalWorkflowFile))) {
+  const workflow = read(canonicalWorkflowFile);
+  const targetBranch = enforcement.targetBranch;
+  if (typeof targetBranch !== "string" || targetBranch.length === 0) {
+    violations.push({
+      file: enforcementFile,
+      message: "TARGET_BRANCH_MISSING: repository enforcement must declare the active target branch",
+    });
+  } else {
     const escapedBranch = targetBranch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const branchArray = new RegExp(`branches:\\s*\\[[^\\]]*\\b${escapedBranch}\\b[^\\]]*\\]`, "m");
     const branchList = new RegExp(`branches:\\s*\\n(?:\\s*-\\s*[^\\n]+\\n)*\\s*-\\s*${escapedBranch}\\s*$`, "m");
-
     if (!branchArray.test(workflow) && !branchList.test(workflow)) {
       violations.push({
-        file: workflowFile,
+        file: canonicalWorkflowFile,
         targetBranch,
-        message: `ACTIVE_BRANCH_NOT_COVERED: critical workflow does not trigger for ${targetBranch}`,
+        message: `ACTIVE_BRANCH_NOT_COVERED: canonical workflow does not cover ${targetBranch}`,
+      });
+    }
+  }
+
+  for (const marker of [
+    "pnpm run guard:required-command-integrity",
+    "EXPECTED_POLICY",
+    "EXPECTED_NODE",
+    "EXPECTED_DSH",
+    "EXPECTED_WLT",
+    "EXPECTED_IDENTITY",
+    "EXPECTED_WORKFORCE",
+    "EXPECTED_PLATFORM",
+    "EXPECTED_PROVIDERS",
+    "EXPECTED_RUNTIME",
+  ]) {
+    if (!workflow.includes(marker)) {
+      violations.push({
+        file: canonicalWorkflowFile,
+        message: `FAIL_CLOSED_CI_MARKER_MISSING: ${marker}`,
       });
     }
   }

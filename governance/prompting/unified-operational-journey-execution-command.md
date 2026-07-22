@@ -1,6 +1,6 @@
 # أمر التنفيذ الموحد الحاكم للرحلات التشغيلية
 
-## Code-First / Fix-First / Full-Stack Unified Multi-Surface / Slice-by-Slice Closure
+## Code-First / Fix-First / Full-Stack Multi-Tenant SaaS / Slice-by-Slice Closure
 
 @GitHub
 
@@ -37,8 +37,9 @@ journey_selection:
 
 task_mode: implementation_or_closure
 execution_mode: CODE_FIRST_FIX_FIRST
-surface_mode: FULLSTACK_UNIFIED_MULTI_SURFACE
+surface_mode: FULLSTACK_UNIFIED_MULTI_SURFACE_SAAS
 closure_mode: SEQUENTIAL_SLICE_BY_SLICE
+saas_mode: FULLSTACK_MULTI_TENANT_SAAS_REQUIRED
 
 write_authorization:
   modify_target_ref: true
@@ -301,6 +302,7 @@ acceptance_conditions:
 * Runtime and Docker.
 * Events and outbox.
 * Notifications and providers.
+* Tenant isolation and SaaS context propagation.
 * Tests, guards and targeted CI.
 
 قرار كل عنصر يجب أن يكون واحدًا فقط:
@@ -613,15 +615,15 @@ User Intent
 → Generated API Client
 → OpenAPI Operation
 → Authentication
-→ Authorization
+→ Tenant Context Resolution & Authorization
 → Backend Route
 → Handler
-→ Input Validation
+→ Input Validation & Tenant Scoping
 → Domain Service
 → Repository
-→ Database Transaction
-→ Constraints / Indexes
-→ Event / Outbox
+→ Database Transaction (Tenant Filtered & Isolated)
+→ Constraints / Indexes / Unique Keys (Tenant-Aware)
+→ Event / Outbox (Tenant-Aware)
 → Retry / Idempotency
 → Cross-Service Handoff
 → State Readback
@@ -758,6 +760,7 @@ WLT هو المالك الوحيد للحقيقة المالية.
 * retention.
 * audit fields.
 * tenant or actor ownership.
+* multi-tenant database isolation & query scoping.
 * rollback safety.
 * seed compatibility.
 * nullable and optional semantics.
@@ -879,9 +882,9 @@ bthwani2-boop/bthwani-suite
 
 ## 17. SaaS والعزل
 
-عامل SaaS بوصفه بُعد جاهزية حاكمًا، لا بوصفه تفويضًا تلقائيًا للتفعيل التجاري.
+يجب تفعيل فحوص جاهزية SaaS وعزل المستأجرين (Tenant Isolation) كبُعد حاكم إلزامي في جميع الرحلات والشرائح التشغيلية، مع معاملتها كبُعد جاهزية حاكم وليس تفويضًا تلقائيًا للتفعيل التجاري.
 
-فعّل فحوص SaaS الإضافية فقط عندما تمس الرحلة:
+تطبّق وتُفعّل فحوص جاهزية SaaS وعزل المستأجرين بصورة إلزامية في جميع الشرائح والرحلات التي تمس:
 
 * tenant ownership.
 * tenant context.
@@ -1193,6 +1196,8 @@ runtime_journeys_unverified: 0
 open_security_blockers: 0
 open_financial_blockers: 0
 open_isolation_blockers: 0
+tenant_isolation_leaks: 0
+untrusted_tenant_id_inputs: 0
 ```
 
 يجب أيضًا إثبات:
@@ -1475,8 +1480,8 @@ final_decision:
 
 الهدف هو تنفيذ وتنظيف وتشطيب وربط كل رحلة مصرح بها بحيث تصبح:
 
-* موحدة فول ستاك.
-* متعددة الأسطح دون انفصال.
+* موحدة فول ستاك قائمة على منصة SaaS متعددة المستأجرين (Multi-Tenant SaaS).
+* متعددة الأسطح دون انفصال سياق المستأجر.
 * منفذة شريحةً بعد شريحة.
 * قائمة على مالك حقيقة واحد.
 * متطابقة بين الواجهة والباك إند وقاعدة البيانات والعقود.
