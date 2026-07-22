@@ -69,28 +69,40 @@ func (s *protectedStoreServer) handleUpdateNotificationPreferences(w http.Respon
 		return
 	}
 	var body struct {
-		Topic   string `json:"topic"`
-		Enabled bool   `json:"enabled"`
+		Topic           string   `json:"topic"`
+		Enabled         bool     `json:"enabled"`
+		Channels        []string `json:"channels"`
+		QuietHoursStart string   `json:"quietHoursStart"`
+		QuietHoursEnd   string   `json:"quietHoursEnd"`
+		Locale          string   `json:"locale"`
+		Timezone        string   `json:"timezone"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	pref, err := notifications.UpsertNotificationPreferences(s.db, actor.ID, actor.Role, body.Topic, body.Enabled)
+	pref, err := notifications.UpsertNotificationPreferencePolicy(
+		s.db,
+		actor.ID,
+		actor.Role,
+		notifications.NotificationPreferenceInput{
+			Topic:           body.Topic,
+			Enabled:         body.Enabled,
+			Channels:        body.Channels,
+			QuietHoursStart: body.QuietHoursStart,
+			QuietHoursEnd:   body.QuietHoursEnd,
+			Locale:          body.Locale,
+			Timezone:        body.Timezone,
+		},
+	)
 	if errors.Is(err, notifications.ErrInvalid) {
-		store.SendError(w, http.StatusBadRequest, "INVALID_INPUT", "topic is required")
+		store.SendError(w, http.StatusBadRequest, "INVALID_INPUT", "notification preference policy is invalid")
 		return
 	}
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to update preferences")
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"preference": map[string]any{
-		"actorId":   pref.ActorID,
-		"actorType": pref.ActorType,
-		"topic":     pref.Topic,
-		"enabled":   pref.Enabled,
-		"updatedAt": pref.UpdatedAt,
-	}})
+	store.SendJSON(w, http.StatusOK, map[string]any{"preference": pref})
 }
 
 // GET /dsh/operator/notifications/config
@@ -118,18 +130,40 @@ func (s *protectedStoreServer) handleUpsertPlatformNotificationConfig(w http.Res
 		return
 	}
 	var body struct {
-		Topic       string   `json:"topic"`
-		ActorTypes  []string `json:"actorTypes"`
-		IsEnabled   bool     `json:"isEnabled"`
-		Description string   `json:"description"`
+		Topic           string   `json:"topic"`
+		ActorTypes      []string `json:"actorTypes"`
+		IsEnabled       bool     `json:"isEnabled"`
+		Description     string   `json:"description"`
+		DefaultChannels []string `json:"defaultChannels"`
+		TitleAR         string   `json:"titleAr"`
+		BodyAR          string   `json:"bodyAr"`
+		TitleEN         string   `json:"titleEn"`
+		BodyEN          string   `json:"bodyEn"`
+		Variables       []string `json:"variables"`
+		DeepLinkPattern string   `json:"deepLinkPattern"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	cfg, err := notifications.UpsertPlatformNotificationConfig(s.db,
-		body.Topic, body.ActorTypes, body.IsEnabled, body.Description, actor.ID)
+	cfg, err := notifications.UpsertPlatformNotificationConfigPolicy(
+		s.db,
+		notifications.PlatformNotificationConfigInput{
+			Topic:           body.Topic,
+			ActorTypes:      body.ActorTypes,
+			IsEnabled:       body.IsEnabled,
+			Description:     body.Description,
+			DefaultChannels: body.DefaultChannels,
+			TitleAR:         body.TitleAR,
+			BodyAR:          body.BodyAR,
+			TitleEN:         body.TitleEN,
+			BodyEN:          body.BodyEN,
+			Variables:       body.Variables,
+			DeepLinkPattern: body.DeepLinkPattern,
+		},
+		actor.ID,
+	)
 	if errors.Is(err, notifications.ErrInvalid) {
-		store.SendError(w, http.StatusBadRequest, "INVALID_INPUT", "topic is required")
+		store.SendError(w, http.StatusBadRequest, "INVALID_INPUT", "notification platform policy is invalid")
 		return
 	}
 	if err != nil {
@@ -159,12 +193,19 @@ func marshalNotification(n notifications.Notification) map[string]any {
 
 func marshalNotificationConfig(c notifications.PlatformNotificationConfig) map[string]any {
 	return map[string]any{
-		"id":          c.ID,
-		"topic":       c.Topic,
-		"actorTypes":  c.ActorTypes,
-		"isEnabled":   c.IsEnabled,
-		"description": c.Description,
-		"updatedBy":   c.UpdatedBy,
-		"updatedAt":   c.UpdatedAt,
+		"id":              c.ID,
+		"topic":           c.Topic,
+		"actorTypes":      c.ActorTypes,
+		"isEnabled":       c.IsEnabled,
+		"description":     c.Description,
+		"defaultChannels": c.DefaultChannels,
+		"titleAr":         c.TitleAR,
+		"bodyAr":          c.BodyAR,
+		"titleEn":         c.TitleEN,
+		"bodyEn":          c.BodyEN,
+		"variables":       c.Variables,
+		"deepLinkPattern": c.DeepLinkPattern,
+		"updatedBy":       c.UpdatedBy,
+		"updatedAt":       c.UpdatedAt,
 	}
 }
