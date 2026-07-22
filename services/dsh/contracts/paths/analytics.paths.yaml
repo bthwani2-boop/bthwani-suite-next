@@ -8,18 +8,24 @@
     tags: [DshAnalytics]
     security:
       - bearerAuth: []
+    parameters:
+      - name: period
+        in: query
+        schema: { type: string, enum: [today, week, month], default: today }
     responses:
       "200":
-        description: Platform KPIs snapshot.
+        description: Platform KPIs snapshot derived from DSH records.
         content:
           application/json:
             schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPlatformKpisResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidParameter" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
 
 /dsh/operator/analytics/orders:
   get:
     operationId: getDshOrderAnalytics
-    summary: Order volume and fulfillment analytics for a given period.
+    summary: Order volume and fulfillment analytics for a governed period.
     tags: [DshAnalytics]
     security:
       - bearerAuth: []
@@ -33,7 +39,9 @@
         content:
           application/json:
             schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshOrderAnalyticsResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidParameter" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
 
 /dsh/operator/analytics/delivery:
   get:
@@ -52,7 +60,9 @@
         content:
           application/json:
             schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshDeliveryAnalyticsResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidParameter" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
 
 /dsh/operator/analytics/stores:
   get:
@@ -68,11 +78,192 @@
           application/json:
             schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshStoreAnalyticsResponse" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+
+/dsh/operator/analytics/preparation-sla:
+  get:
+    operationId: getDshPreparationSlaAnalytics
+    summary: Preparation timing and SLA compliance derived from accepted and ready timestamps.
+    tags: [DshAnalytics]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: period
+        in: query
+        schema: { type: string, enum: [today, week, month], default: today }
+      - name: from
+        in: query
+        schema: { type: string, format: date-time }
+      - name: to
+        in: query
+        schema: { type: string, format: date-time }
+      - name: storeId
+        in: query
+        schema: { type: string }
+    responses:
+      "200":
+        description: Preparation SLA snapshot with lineage and refresh metadata.
+        content:
+          application/json:
+            schema: { $ref: "../components/schemas/analytics.schemas.yaml#/DshPreparationSlaAnalyticsResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidParameter" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+
+/dsh/operator/analytics/captains:
+  get:
+    operationId: getDshCaptainPerformanceAnalytics
+    summary: Captain assignment acceptance and completion performance.
+    tags: [DshAnalytics]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: period
+        in: query
+        schema: { type: string, enum: [today, week, month], default: today }
+      - name: from
+        in: query
+        schema: { type: string, format: date-time }
+      - name: to
+        in: query
+        schema: { type: string, format: date-time }
+      - name: limit
+        in: query
+        schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+    responses:
+      "200":
+        description: Captain performance rows.
+        content:
+          application/json:
+            schema: { $ref: "../components/schemas/analytics.schemas.yaml#/DshCaptainPerformanceAnalyticsResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidParameter" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+
+/dsh/operator/analytics/field:
+  get:
+    operationId: getDshFieldPerformanceAnalytics
+    summary: Field visit completion and escalation performance.
+    tags: [DshAnalytics]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: period
+        in: query
+        schema: { type: string, enum: [today, week, month], default: today }
+      - name: from
+        in: query
+        schema: { type: string, format: date-time }
+      - name: to
+        in: query
+        schema: { type: string, format: date-time }
+      - name: limit
+        in: query
+        schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+    responses:
+      "200":
+        description: Field performance rows.
+        content:
+          application/json:
+            schema: { $ref: "../components/schemas/analytics.schemas.yaml#/DshFieldPerformanceAnalyticsResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidParameter" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+
+/dsh/operator/analytics/drill-down/orders:
+  get:
+    operationId: getDshOrderAnalyticsDrilldown
+    summary: Read-only drill-down from analytics to source order records.
+    tags: [DshAnalytics]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: period
+        in: query
+        schema: { type: string, enum: [today, week, month], default: today }
+      - name: from
+        in: query
+        schema: { type: string, format: date-time }
+      - name: to
+        in: query
+        schema: { type: string, format: date-time }
+      - name: storeId
+        in: query
+        schema: { type: string }
+      - name: status
+        in: query
+        schema: { type: string }
+      - name: limit
+        in: query
+        schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+    responses:
+      "200":
+        description: Source operational records with canonical detail URLs.
+        content:
+          application/json:
+            schema: { $ref: "../components/schemas/analytics.schemas.yaml#/DshOperationalAnalyticsDrilldownResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidParameter" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+
+/dsh/operator/analytics/financial-snapshot:
+  get:
+    operationId: getDshWltFinancialAnalyticsSnapshot
+    summary: Read-only WLT-owned financial summary exposed without DSH recomputation.
+    tags: [DshAnalytics]
+    security:
+      - bearerAuth: []
+    responses:
+      "200":
+        description: Available WLT financial snapshot.
+        content:
+          application/json:
+            schema: { $ref: "../components/schemas/analytics.schemas.yaml#/DshWltFinancialAnalyticsSnapshotResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "503":
+        description: WLT remains the owner, but its read model is unavailable. No zero values are fabricated.
+        content:
+          application/json:
+            schema: { $ref: "../components/schemas/analytics.schemas.yaml#/DshWltFinancialAnalyticsUnavailableResponse" }
+
+/dsh/operator/analytics/export.csv:
+  get:
+    operationId: exportDshOperationalAnalyticsCsv
+    summary: Export the governed operational analytics window as CSV.
+    tags: [DshAnalytics]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: period
+        in: query
+        schema: { type: string, enum: [today, week, month], default: today }
+      - name: from
+        in: query
+        schema: { type: string, format: date-time }
+      - name: to
+        in: query
+        schema: { type: string, format: date-time }
+      - name: storeId
+        in: query
+        schema: { type: string }
+    responses:
+      "200":
+        description: CSV generated from the same governed read models and filters.
+        headers:
+          Content-Disposition:
+            schema: { type: string }
+        content:
+          text/csv:
+            schema: { type: string }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidParameter" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
 
 /dsh/partner/analytics/performance:
   get:
     operationId: getDshPartnerPerformance
-    summary: Authenticated partner's own store performance summary.
+    summary: Authenticated partner's own store performance summary; store scope is derived from identity.
     tags: [DshAnalytics]
     security:
       - bearerAuth: []
@@ -82,8 +273,10 @@
         schema: { type: string, enum: [today, week, month], default: today }
     responses:
       "200":
-        description: Partner performance metrics for their own store.
+        description: Partner performance metrics for the actor's authorized store only.
         content:
           application/json:
             schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartnerPerformanceResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidParameter" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
