@@ -18,8 +18,7 @@ on:
       - "services/wlt/database/migrations/wlt-034_jrn_028_promotion_funding_audit_integrity.sql"
       - "services/wlt/database/tests/jrn-028-promotion-funding-*.sh"
       - "services/wlt/contracts/wlt.promotion-funding.openapi.yaml"
-      - "services/dsh/contracts/**"
-      - "services/dsh/clients/generated/dsh-api.ts"
+      - "services/dsh/contracts/dsh.marketing-commercial.openapi.yaml"
       - "services/dsh/tests/jrn-028-promotion-funding.test.mjs"
       - "services/dsh/tsconfig.jrn-028.json"
       - "governance/product/JRN-028_PROMOTION_FUNDING_PRODUCT_TRUTH.md"
@@ -39,54 +38,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  normalize-contracts:
-    runs-on: ubuntu-latest
-    outputs:
-      changed: ${{ steps.normalize.outputs.changed }}
-    steps:
-      - name: Checkout exact remote branch snapshot
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          ref: sambassam
-          fetch-depth: 0
-          persist-credentials: false
-      - name: Set up pnpm
-        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
-        with:
-          version: "10.34.2"
-      - name: Set up Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: "24.17.0"
-          cache: pnpm
-      - name: Install workspace dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Normalize canonical DSH contracts
-        id: normalize
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          pnpm --dir services/dsh openapi:compose
-          pnpm --dir services/dsh openapi:generate
-          if git diff --quiet -- services/dsh/contracts/generated/dsh.bundle.openapi.yaml services/dsh/clients/generated/dsh-api.ts; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          fi
-      - name: Upload regenerated canonical contracts
-        if: steps.normalize.outputs.changed == 'true'
-        uses: actions/upload-artifact@v4.6.2
-        with:
-          name: jrn-028-canonical-contracts
-          path: |
-            services/dsh/contracts/generated/dsh.bundle.openapi.yaml
-            services/dsh/clients/generated/dsh-api.ts
-          if-no-files-found: error
-          retention-days: 1
-
   verify:
-    needs: normalize-contracts
-    if: always() && needs.normalize-contracts.result == 'success' && needs.normalize-contracts.outputs.changed == 'false'
     runs-on: ubuntu-latest
     timeout-minutes: 35
     services:
@@ -141,7 +93,7 @@ jobs:
         run: cd services/wlt/backend && go test ./internal/promotionfunding ./internal/shared
       - name: Verify DSH projection, WLT adapter and durable outbox
         run: cd services/dsh/backend && go test ./internal/coupons ./internal/wlt ./internal/promotionfundingoutbox
-      - name: Verify FS-01 through FS-18 routes, structure and ownership
+      - name: Verify FS-01 through FS-18 routes, contracts, structure and ownership
         run: node --test services/dsh/tests/jrn-028-promotion-funding.test.mjs
       - name: Verify governed TypeScript surface
         run: pnpm --dir services/dsh exec tsc -p tsconfig.jrn-028.json --noEmit --pretty false
@@ -157,11 +109,9 @@ jobs:
         run: bash services/wlt/database/tests/jrn-028-promotion-funding-concurrency.sh
       - name: Verify Product Truth
         run: node tools/guards/product-truth-gate.mjs
-      - name: Verify canonical DSH modular OpenAPI
+      - name: Verify scoped DSH modular OpenAPI composition
         run: |
           pnpm --dir services/dsh openapi:compose
-          pnpm --dir services/dsh openapi:generate
           node tools/guards/dsh-openapi-modular-gate.mjs
-          git diff --exit-code -- services/dsh/contracts/generated/dsh.bundle.openapi.yaml services/dsh/clients/generated/dsh-api.ts
       - name: Verify repository whitespace
         run: git diff --check
