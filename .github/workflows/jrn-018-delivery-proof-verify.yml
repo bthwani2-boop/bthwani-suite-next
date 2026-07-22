@@ -1,0 +1,113 @@
+name: JRN-018 Delivery Proof Verification
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [sambassam]
+    paths:
+      - "services/dsh/backend/internal/dispatch/delivery_proof*.go"
+      - "services/dsh/backend/internal/http/delivery_proof*.go"
+      - "services/dsh/backend/internal/http/catalog_unified_routes.go"
+      - "services/dsh/database/migrations/dsh-117_jrn_018_delivery_proof_completion.sql"
+      - "services/dsh/database/migrations/dsh-118_jrn_018_delivery_proof_location_snapshot.sql"
+      - "services/dsh/contracts/dsh.delivery-proof-completion.openapi.yaml"
+      - "services/dsh/contracts/jrn-018-slice-closure.json"
+      - "services/dsh/contracts/contract-registry.ts"
+      - "services/dsh/frontend/shared/delivery-proof/**"
+      - "services/dsh/frontend/shared/media/pod/**"
+      - "services/dsh/frontend/shared/delivery/delivery.actions.ts"
+      - "services/dsh/frontend/shared/dispatch/dispatch-tracking.api.ts"
+      - "services/dsh/frontend/app-captain/orders/DshCaptainPoDSubmissionScreen.tsx"
+      - "services/dsh/frontend/app-client/orders/ClientDeliveryProofPanel.tsx"
+      - "services/dsh/frontend/app-client/orders/ClientLiveTrackingCard.tsx"
+      - "services/dsh/frontend/control-panel/operations/DeliveryProofReviewScreen.tsx"
+      - "services/dsh/frontend/control-panel/operations/OperationsHubScreen.tsx"
+      - "services/dsh/tests/jrn-018-delivery-proof-closure.test.mjs"
+      - "services/dsh/tsconfig.jrn-018.json"
+      - "governance/product/contracts/jrn-018-delivery-proof-order-completion.product-truth.json"
+      - ".github/workflows/jrn-018-delivery-proof-verify.yml"
+  pull_request:
+    branches: [master]
+    paths:
+      - "services/dsh/backend/internal/dispatch/delivery_proof*.go"
+      - "services/dsh/backend/internal/http/delivery_proof*.go"
+      - "services/dsh/backend/internal/http/catalog_unified_routes.go"
+      - "services/dsh/database/migrations/dsh-117_jrn_018_delivery_proof_completion.sql"
+      - "services/dsh/database/migrations/dsh-118_jrn_018_delivery_proof_location_snapshot.sql"
+      - "services/dsh/contracts/dsh.delivery-proof-completion.openapi.yaml"
+      - "services/dsh/contracts/jrn-018-slice-closure.json"
+      - "services/dsh/contracts/contract-registry.ts"
+      - "services/dsh/frontend/shared/delivery-proof/**"
+      - "services/dsh/frontend/shared/media/pod/**"
+      - "services/dsh/frontend/shared/delivery/delivery.actions.ts"
+      - "services/dsh/frontend/shared/dispatch/dispatch-tracking.api.ts"
+      - "services/dsh/frontend/app-captain/orders/DshCaptainPoDSubmissionScreen.tsx"
+      - "services/dsh/frontend/app-client/orders/ClientDeliveryProofPanel.tsx"
+      - "services/dsh/frontend/app-client/orders/ClientLiveTrackingCard.tsx"
+      - "services/dsh/frontend/control-panel/operations/DeliveryProofReviewScreen.tsx"
+      - "services/dsh/frontend/control-panel/operations/OperationsHubScreen.tsx"
+      - "services/dsh/tests/jrn-018-delivery-proof-closure.test.mjs"
+      - "services/dsh/tsconfig.jrn-018.json"
+      - "governance/product/contracts/jrn-018-delivery-proof-order-completion.product-truth.json"
+      - ".github/workflows/jrn-018-delivery-proof-verify.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jrn-018-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  backend:
+    name: JRN-018 backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.5"
+          cache: false
+      - name: Test proof domain and protected HTTP
+        working-directory: services/dsh/backend
+        run: go test ./internal/dispatch ./internal/http
+
+  contract-surfaces:
+    name: JRN-018 contract and surfaces
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.17.0"
+      - name: Verify static full-stack closure
+        run: node --test services/dsh/tests/jrn-018-delivery-proof-closure.test.mjs
+      - name: Verify slice count and contract registration
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const closure = JSON.parse(fs.readFileSync('services/dsh/contracts/jrn-018-slice-closure.json', 'utf8'));
+          if (closure.journeyId !== 'JRN-018' || closure.requiredSliceCount !== 18 || closure.slices.length !== 18) process.exit(1);
+          const contract = fs.readFileSync('services/dsh/contracts/dsh.delivery-proof-completion.openapi.yaml', 'utf8');
+          if (!contract.includes('x-bthwani-contract-state: CONTRACT_ACTIVE')) process.exit(1);
+          const registry = fs.readFileSync('services/dsh/contracts/contract-registry.ts', 'utf8');
+          if (!registry.includes('id: "dsh-delivery-proof-completion"')) process.exit(1);
+          console.log(`jrn-018/delivery-proof verified on ${process.env.GITHUB_SHA}`);
+          NODE
+
+  frontend-typecheck:
+    name: JRN-018 governed frontend typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: "10.34.2"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.17.0"
+          cache: pnpm
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck JRN-018 shared brain and surfaces
+        run: pnpm exec tsc -p services/dsh/tsconfig.jrn-018.json --noEmit
