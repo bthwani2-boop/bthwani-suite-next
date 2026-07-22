@@ -12,9 +12,7 @@
     "frontend/shared/analytics/**/*.tsx",
     "frontend/control-panel/analytics/**/*.ts",
     "frontend/control-panel/analytics/**/*.tsx",
-    "frontend/app-partner/account/PartnerAnalyticsInsightsPanel.tsx",
-    "../../apps/control-panel/runtime/src/app/dsh/analytics/**/*.ts",
-    "../../apps/control-panel/runtime/src/app/dsh/analytics/**/*.tsx"
+    "frontend/app-partner/account/PartnerAnalyticsInsightsPanel.tsx"
   ],
   "exclude": [
     "node_modules",
