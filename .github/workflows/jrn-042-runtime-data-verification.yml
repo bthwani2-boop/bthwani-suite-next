@@ -1,0 +1,167 @@
+name: JRN-042 runtime data migrations and recovery verification
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [sambassam]
+    paths: &jrn042_paths
+      - 'governance/product/contracts/jrn-042-runtime-data-migrations-backup.product-truth.json'
+      - 'infra/data-plane/jrn-042-runtime-governance.json'
+      - 'infra/data-plane/postgres/init/**'
+      - 'infra/docker/compose.runtime.yml'
+      - 'infra/docker/compose.observability.yml'
+      - 'infra/docker/env/runtime.env.example'
+      - 'infra/docker/scripts/schema-migration-runner.ps1'
+      - 'infra/docker/scripts/invoke-runtime-database-migrations.ps1'
+      - 'infra/docker/scripts/backup-runtime.ps1'
+      - 'infra/docker/scripts/restore-runtime.ps1'
+      - 'infra/docker/scripts/restore-verify-runtime.ps1'
+      - 'core/identity/database/migrations/**'
+      - 'core/workforce/database/migrations/**'
+      - 'core/providers/backend/**'
+      - 'core/providers/database/migrations/**'
+      - 'core/platform-control/database/migrations/**'
+      - 'services/dsh/backend/internal/*outbox/**'
+      - 'services/dsh/database/migrations/**'
+      - 'services/wlt/backend/internal/dshoutbox/**'
+      - 'services/wlt/database/migrations/**'
+      - 'tools/scripts/run-jrn-042-runtime-data.ps1'
+      - 'tools/scripts/test-runtime-backup-restore.ps1'
+      - 'tools/verification/jrn-042-runtime-data.test.mjs'
+      - '.github/workflows/jrn-042-runtime-data-verification.yml'
+  pull_request:
+    branches: [sambassam]
+    paths: *jrn042_paths
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jrn-042-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  static-governance:
+    name: Product runtime database and recovery invariants
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact triggering commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: pnpm
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.2
+
+      - name: Install locked workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Run JRN-042 governance tests
+        run: node --test tools/verification/jrn-042-runtime-data.test.mjs
+
+      - name: Parse PowerShell closure and recovery commands
+        shell: pwsh
+        run: |
+          $files = @(
+            'tools/scripts/run-jrn-042-runtime-data.ps1',
+            'infra/docker/scripts/schema-migration-runner.ps1',
+            'infra/docker/scripts/invoke-runtime-database-migrations.ps1',
+            'infra/docker/scripts/backup-runtime.ps1',
+            'infra/docker/scripts/restore-runtime.ps1',
+            'infra/docker/scripts/restore-verify-runtime.ps1',
+            'tools/scripts/test-runtime-backup-restore.ps1'
+          )
+          foreach ($file in $files) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $file), [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) {
+              $errors | Format-List | Out-String | Write-Error
+              throw "PowerShell parse failed: $file"
+            }
+          }
+
+      - name: Validate canonical compose graphs
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker compose --env-file infra/docker/env/runtime.env.example \
+            -f infra/docker/compose.runtime.yml \
+            --profile identity --profile workforce --profile dsh --profile wlt \
+            --profile providers --profile platform --profile media config --quiet
+          docker compose --env-file infra/docker/env/runtime.env.example \
+            -f infra/docker/compose.runtime.yml \
+            -f infra/docker/compose.observability.yml \
+            --profile observability config --quiet
+
+      - name: Set up Providers Go toolchain
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: core/providers/backend/go.mod
+          cache-dependency-path: core/providers/backend/go.sum
+
+      - name: Enforce Providers formatting and readiness test
+        shell: bash
+        run: |
+          set -euo pipefail
+          diff="$(gofmt -d core/providers/backend/internal/http/server.go core/providers/backend/internal/http/readiness_test.go)"
+          test -z "$diff" || { printf '%s\n' "$diff"; exit 1; }
+          cd core/providers/backend
+          go test ./internal/http ./internal/providers
+
+      - name: Verify no repository diff was produced
+        run: git diff --exit-code
+
+  six-service-runtime-dr:
+    name: Six services migrations outbox observability and DR
+    needs: static-governance
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout exact triggering commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Execute full JRN-042 isolated runtime closure
+        shell: pwsh
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+        run: |
+          ./tools/scripts/run-jrn-042-runtime-data.ps1 `
+            -Mode Full `
+            -Posture Local `
+            -ForceDisasterRecovery `
+            -Cleanup
+
+      - name: Upload same-commit runtime evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jrn-042-runtime-data-${{ github.sha }}
+          path: |
+            artifacts/jrn-042-runtime-data-evidence.json
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Capture failure diagnostics
+        if: failure()
+        shell: bash
+        run: |
+          docker ps -a || true
+          docker compose --env-file infra/docker/env/runtime.env.example \
+            -f infra/docker/compose.runtime.yml \
+            --profile identity --profile workforce --profile dsh --profile wlt \
+            --profile providers --profile platform --profile media logs --tail=200 || true
