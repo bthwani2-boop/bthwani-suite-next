@@ -3,7 +3,6 @@ go: downloading github.com/lib/pq v1.12.3
 go: downloading golang.org/x/image v0.44.0
 go: downloading golang.org/x/crypto v0.51.0
 go: downloading github.com/minio/minio-go/v7 v7.2.1
-go: downloading gopkg.in/ini.v1 v1.67.2
 go: downloading github.com/cespare/xxhash/v2 v2.3.0
 go: downloading github.com/dustin/go-humanize v1.0.1
 go: downloading github.com/klauspost/compress v1.18.6
@@ -13,34 +12,15 @@ go: downloading github.com/minio/md5-simd v1.1.2
 go: downloading github.com/zeebo/xxh3 v1.1.0
 go: downloading go.yaml.in/yaml/v3 v3.0.4
 go: downloading golang.org/x/net v0.53.0
+go: downloading gopkg.in/ini.v1 v1.67.2
 go: downloading github.com/klauspost/cpuid/v2 v2.2.11
 go: downloading golang.org/x/sys v0.44.0
 go: downloading github.com/rs/xid v1.6.0
 go: downloading github.com/tinylib/msgp v1.6.1
 go: downloading github.com/philhofer/fwd v1.2.0
 go: downloading golang.org/x/text v0.40.0
---- FAIL: TestFirstFiveJourneysExposeGovernedDSHRoutes (0.00s)
-panic: pattern "GET /dsh/partner/analytics/performance" (registered at /Users/runner/work/bthwani-suite-next/bthwani-suite-next/services/dsh/backend/internal/http/partner_self_routes.go:28) conflicts with pattern "GET /dsh/partner/analytics/performance" (registered at /Users/runner/work/bthwani-suite-next/bthwani-suite-next/services/dsh/backend/internal/http/jrn032_routes.go:19):
-	GET /dsh/partner/analytics/performance matches the same requests as GET /dsh/partner/analytics/performance [recovered, repanicked]
-
-goroutine 136 [running]:
-testing.tRunner.func1.2({0x100e9bf40, 0x4155fef88290})
-	/Users/runner/hostedtoolcache/go/1.26.4/arm64/src/testing/testing.go:1974 +0x1a0
-testing.tRunner.func1()
-	/Users/runner/hostedtoolcache/go/1.26.4/arm64/src/testing/testing.go:1977 +0x318
-panic({0x100e9bf40?, 0x4155fef88290?})
-	/Users/runner/hostedtoolcache/go/1.26.4/arm64/src/runtime/panic.go:860 +0x12c
-net/http.(*ServeMux).register(...)
-	/Users/runner/hostedtoolcache/go/1.26.4/arm64/src/net/http/server.go:2882
-net/http.(*ServeMux).HandleFunc(0x4155fee8e000?, {0x10094d44c?, 0x100b000ee?}, 0x11fba2?)
-	/Users/runner/hostedtoolcache/go/1.26.4/arm64/src/net/http/server.go:2856 +0x74
-dsh-api/internal/http.RegisterPartnerSelfRoutes(0x4155fee8e000, 0x0, 0x0, 0x0, 0x0)
-	/Users/runner/work/bthwani-suite-next/bthwani-suite-next/services/dsh/backend/internal/http/partner_self_routes.go:28 +0x180
-dsh-api/internal/http.TestFirstFiveJourneysExposeGovernedDSHRoutes(0x4155fee6f208)
-	/Users/runner/work/bthwani-suite-next/bthwani-suite-next/services/dsh/backend/internal/http/first_five_journeys_routes_test.go:11 +0x68
-testing.tRunner(0x4155fee6f208, 0x100f5d7e0)
-	/Users/runner/hostedtoolcache/go/1.26.4/arm64/src/testing/testing.go:2036 +0xc4
-created by testing.(*T).Run in goroutine 1
-	/Users/runner/hostedtoolcache/go/1.26.4/arm64/src/testing/testing.go:2101 +0x3a8
-FAIL	dsh-api/internal/http	0.035s
+--- FAIL: TestJRN032AnalyticsRoutesRegistered (0.00s)
+    jrn032_routes_test.go:29: route /dsh/partner/analytics/performance is not registered
+FAIL
+FAIL	dsh-api/internal/http	0.080s
 FAIL
