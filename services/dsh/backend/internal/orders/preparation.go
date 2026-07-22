@@ -24,17 +24,17 @@ const (
 )
 
 type PreparationTiming struct {
-	OrderID                  string              `json:"orderId"`
-	AcceptedAt               *time.Time          `json:"acceptedAt"`
-	PreparationStartedAt     *time.Time          `json:"preparationStartedAt"`
-	EstimatedReadyAt         *time.Time          `json:"estimatedReadyAt"`
-	ReadyAt                  *time.Time          `json:"readyAt"`
-	EstimatedMinutes         int                 `json:"estimatedPreparationMinutes"`
-	WarningMinutes           int                 `json:"preparationWarningMinutes"`
-	DelayReason              string              `json:"preparationDelayReason"`
-	EstimateRevisionCount    int                 `json:"preparationEstimateRevisionCount"`
-	SLAState                 PreparationSLAState `json:"preparationSlaState"`
-	RemainingSeconds         int64               `json:"preparationRemainingSeconds"`
+	OrderID               string              `json:"orderId"`
+	AcceptedAt            *time.Time          `json:"acceptedAt"`
+	PreparationStartedAt  *time.Time          `json:"preparationStartedAt"`
+	EstimatedReadyAt      *time.Time          `json:"estimatedReadyAt"`
+	ReadyAt               *time.Time          `json:"readyAt"`
+	EstimatedMinutes      int                 `json:"estimatedPreparationMinutes"`
+	WarningMinutes        int                 `json:"preparationWarningMinutes"`
+	DelayReason           string              `json:"preparationDelayReason"`
+	EstimateRevisionCount int                 `json:"preparationEstimateRevisionCount"`
+	SLAState              PreparationSLAState `json:"preparationSlaState"`
+	RemainingSeconds      int64               `json:"preparationRemainingSeconds"`
 }
 
 type StorePreparationPolicy struct {
@@ -57,12 +57,12 @@ type UpdateStorePreparationPolicyInput struct {
 }
 
 type RevisePreparationEstimateInput struct {
-	OrderID         string
-	StoreID         string
-	ActorID         string
+	OrderID          string
+	StoreID          string
+	ActorID          string
 	RemainingMinutes int
-	Reason          string
-	CorrelationID   string
+	Reason           string
+	CorrelationID    string
 }
 
 func calculatePreparationSLA(timing *PreparationTiming, now time.Time) {
