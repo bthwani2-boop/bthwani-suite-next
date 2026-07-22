@@ -19,6 +19,24 @@ export type CreatePlatformRolloutInput = Omit<GeneratedCreatePlatformRolloutInpu
   healthGate: Record<string, unknown>;
 };
 
+export type PlatformRolloutRecoveryGuide = {
+  readonly rolloutId: string;
+  readonly changeSetId: string;
+  readonly featureFlagKey: string;
+  readonly status: PlatformRollout["status"];
+  readonly healthState: PlatformControlState;
+  readonly currentPercentage: number;
+  readonly canAdvance: boolean;
+  readonly canPause: boolean;
+  readonly canResume: boolean;
+  readonly canAbort: boolean;
+  readonly canRollback: boolean;
+  readonly recommendedAction: string;
+  readonly rollbackPlan: string;
+  readonly recoverySteps: readonly string[];
+  readonly requiredPermission: "platform:rollouts:manage";
+};
+
 const { request } = createDshHttpClient(resolvePlatformControlApiBaseUrl(), "platform-control", 10000);
 
 export function fetchPlatformRuntimeConfig(): Promise<PlatformRuntimeSnapshot> {
@@ -117,6 +135,13 @@ export function fetchPlatformRollout(id: string): Promise<{ rollout: PlatformRol
   return request<{ rollout: PlatformRollout }>(`/platform/v1/rollouts/${encodeURIComponent(id)}`, { method: "GET" });
 }
 
+export function fetchPlatformRolloutRecovery(id: string): Promise<{ recovery: PlatformRolloutRecoveryGuide }> {
+  return request<{ recovery: PlatformRolloutRecoveryGuide }>(
+    `/platform/v1/rollouts/${encodeURIComponent(id)}/recovery`,
+    { method: "GET" },
+  );
+}
+
 function toGeneratedRolloutInput(input: CreatePlatformRolloutInput): GeneratedCreatePlatformRolloutInput {
   if (input.healthGate.requiredState !== "OPERATIONAL") {
     throw new Error("PLATFORM_ROLLOUT_HEALTH_GATE_REQUIRED_STATE_INVALID");
@@ -136,7 +161,7 @@ export function createPlatformRollout(input: CreatePlatformRolloutInput): Promis
 
 function transitionPlatformRollout(
   id: string,
-  transition: "advance" | "pause" | "abort" | "rollback",
+  transition: "advance" | "pause" | "resume" | "abort" | "rollback",
 ): Promise<{ rollout: PlatformRollout }> {
   return request<{ rollout: PlatformRollout }>(
     `/platform/v1/rollouts/${encodeURIComponent(id)}/${transition}`,
@@ -150,6 +175,10 @@ export function advancePlatformRollout(id: string): Promise<{ rollout: PlatformR
 
 export function pausePlatformRollout(id: string): Promise<{ rollout: PlatformRollout }> {
   return transitionPlatformRollout(id, "pause");
+}
+
+export function resumePlatformRollout(id: string): Promise<{ rollout: PlatformRollout }> {
+  return transitionPlatformRollout(id, "resume");
 }
 
 export function abortPlatformRollout(id: string): Promise<{ rollout: PlatformRollout }> {
