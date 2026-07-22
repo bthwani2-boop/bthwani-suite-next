@@ -5,14 +5,6 @@ DshMarketingTargetType:
   type: string
   enum: [home, stores, store, category, subcategory, product, offer, campaign, search, custom]
 
-DshMarketingAudience:
-  type: string
-  enum: [all, client, partner, captain, field]
-
-DshCampaignPlacement:
-  type: string
-  enum: [home, hero, feed, floating, banner, store-card]
-
 DshCampaign:
   type: object
   additionalProperties: false
@@ -26,8 +18,8 @@ DshCampaign:
     endDate: { type: string, format: date }
     targetType: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshMarketingTargetType" }
     targetId: { type: string }
-    audience: { $ref: "#/DshMarketingAudience" }
-    placement: { $ref: "#/DshCampaignPlacement" }
+    audience: { type: string, enum: [all, client, partner, captain, field] }
+    placement: { type: string, enum: [home, hero, feed, floating, banner, store-card] }
     version: { type: integer, minimum: 1 }
     createdBy: { type: string }
     archivedAt: { type: ["string", "null"], format: date-time }
@@ -61,8 +53,8 @@ DshCreateCampaignRequest:
     endDate: { type: string, format: date }
     targetType: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshMarketingTargetType" }
     targetId: { type: string }
-    audience: { $ref: "#/DshMarketingAudience" }
-    placement: { $ref: "#/DshCampaignPlacement" }
+    audience: { type: string, enum: [all, client] }
+    placement: { type: string, enum: [home, hero, feed, floating, banner, store-card] }
 
 DshUpdateCampaignRequest:
   type: object
@@ -77,85 +69,8 @@ DshUpdateCampaignRequest:
     endDate: { type: string, format: date }
     targetType: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshMarketingTargetType" }
     targetId: { type: string }
-    audience: { $ref: "#/DshMarketingAudience" }
-    placement: { $ref: "#/DshCampaignPlacement" }
-
-DshPartnerOffer:
-  type: object
-  additionalProperties: false
-  required: [id, title, partnerName, storeId, storeLabel, productId, productLabel, category, offerType, status, source, valueLabel, eligibility, version, createdBy, createdBySurface, createdAt, updatedAt]
-  properties:
-    id: { type: string }
-    title: { type: string }
-    partnerName: { type: string }
-    storeId: { type: string }
-    storeLabel: { type: string }
-    productId: { type: string }
-    productLabel: { type: string }
-    category: { type: string }
-    offerType: { type: string, enum: [discount, free-delivery, bundle, buy-x-get-y, coupon] }
-    couponId: { type: string }
-    status: { type: string, enum: [inbound, review, marketing-ready, published, paused, rejected, archived] }
-    source: { type: string, enum: [partner, control-panel] }
-    valueLabel: { type: string }
-    eligibility: { type: string, enum: [all, client] }
-    activeFromDate: { type: string, format: date }
-    activeToDate: { type: string, format: date }
-    rejectionReason: { type: string }
-    marginRiskNote: { type: string }
-    version: { type: integer, minimum: 1 }
-    linkedCampaignId: { type: string }
-    createdBy: { type: string }
-    createdBySurface: { type: string }
-    createdAt: { type: string, format: date-time }
-    updatedAt: { type: string, format: date-time }
-
-DshPartnerOffersListResponse:
-  type: object
-  additionalProperties: false
-  required: [offers]
-  properties:
-    offers:
-      type: array
-      items: { $ref: "#/DshPartnerOffer" }
-
-DshPartnerOfferResponse:
-  type: object
-  additionalProperties: false
-  required: [offer]
-  properties:
-    offer: { $ref: "#/DshPartnerOffer" }
-
-DshUpdatePartnerOfferRequest:
-  type: object
-  additionalProperties: false
-  required: [expectedVersion]
-  properties:
-    expectedVersion: { type: integer, minimum: 1 }
-    status: { type: string, enum: [inbound, review, marketing-ready, published, paused, rejected] }
-    title: { type: string, minLength: 1 }
-    valueLabel: { type: string, minLength: 1 }
-    eligibility: { type: string, enum: [all, client] }
-    activeFromDate: { type: string, format: date }
-    activeToDate: { type: string, format: date }
-    rejectionReason: { type: string }
-    marginRiskNote: { type: string }
-    couponId: { type: string }
-
-DshSubmitPartnerOfferRequest:
-  type: object
-  additionalProperties: false
-  required: [title, valueLabel]
-  properties:
-    title: { type: string, minLength: 1 }
-    partnerName: { type: string }
-    storeLabel: { type: string }
-    productId: { type: string }
-    productLabel: { type: string }
-    category: { type: string }
-    offerType: { type: string, enum: [discount, free-delivery, bundle, buy-x-get-y, coupon] }
-    valueLabel: { type: string, minLength: 1 }
-    eligibility: { type: string, enum: [all, client] }
+    audience: { type: string, enum: [all, client] }
+    placement: { type: string, enum: [home, hero, feed, floating, banner, store-card] }
 
 DshMarketingTicker:
   type: object
