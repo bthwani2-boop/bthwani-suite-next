@@ -152,7 +152,12 @@ func readGovernedTargetSnapshot(ctx context.Context, tx *sql.Tx, item ChangeSetI
 func jsonEquivalent(left, right any) bool {
 	leftRaw, leftErr := json.Marshal(left)
 	rightRaw, rightErr := json.Marshal(right)
-	return leftErr == nil && rightErr == nil && bytes.Equal(leftRaw, rightRaw)
+	if leftErr != nil || rightErr != nil { return false }
+	var leftCanonical, rightCanonical any
+	if json.Unmarshal(leftRaw, &leftCanonical) != nil || json.Unmarshal(rightRaw, &rightCanonical) != nil { return false }
+	leftNormalized, leftErr := json.Marshal(leftCanonical)
+	rightNormalized, rightErr := json.Marshal(rightCanonical)
+	return leftErr == nil && rightErr == nil && bytes.Equal(leftNormalized, rightNormalized)
 }
 
 func decodeSnapshot(value any, destination any) error {
