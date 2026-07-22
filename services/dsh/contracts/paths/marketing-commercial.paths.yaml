@@ -4,7 +4,7 @@
 /dsh/operator/marketing/campaigns:
   get:
     operationId: listDshCampaigns
-    summary: List marketing campaigns.
+    summary: List non-archived marketing campaigns with their current optimistic-concurrency version.
     tags: [DshMarketing]
     security:
       - bearerAuth: []
@@ -18,7 +18,7 @@
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
   post:
     operationId: createDshCampaign
-    summary: Create a marketing campaign.
+    summary: Create a scheduled marketing campaign draft after validating its audience, placement and target.
     tags: [DshMarketing]
     security:
       - bearerAuth: []
@@ -40,7 +40,7 @@
 /dsh/operator/marketing/campaigns/{campaignId}:
   get:
     operationId: getDshCampaign
-    summary: Get a single marketing campaign.
+    summary: Get a single non-archived marketing campaign.
     tags: [DshMarketing]
     security:
       - bearerAuth: []
@@ -60,7 +60,7 @@
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
   patch:
     operationId: updateDshCampaign
-    summary: Update a marketing campaign.
+    summary: Update campaign content, schedule, target or lifecycle using expectedVersion; activation revalidates the schedule and target and stale writes return 409.
     tags: [DshMarketing]
     security:
       - bearerAuth: []
@@ -84,6 +84,7 @@
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
   delete:
     operationId: archiveDshCampaign
     summary: Archive a marketing campaign (soft archive — status set to cancelled, archived_at recorded; the row is never physically deleted).
@@ -172,6 +173,7 @@
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
   delete:
     operationId: deleteDshMarketingTicker
     summary: Delete a marketing news ticker (soft delete — deleted_at recorded; the row keeps an auditable history).
@@ -209,14 +211,14 @@
         description: Partner offers.
         content:
           application/json:
-            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartnerOffersListResponse" }
+            schema: { $ref: "../components/schemas/marketing-commercial.schemas.yaml#/DshPartnerOffersListResponse" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
 
 /dsh/operator/marketing/partner-offers/{offerId}:
   patch:
     operationId: updateDshPartnerOffer
-    summary: Review a partner offer (advance lifecycle, edit fields). Rejecting requires rejectionReason; publishing runs the client-visibility gate.
+    summary: Apply one legal partner-offer transition using expectedVersion. Marketing-ready and published states require a valid active window; rejection requires a reason and publication revalidates store and coupon eligibility.
     tags: [DshMarketing]
     security:
       - bearerAuth: []
@@ -229,17 +231,18 @@
       required: true
       content:
         application/json:
-          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshUpdatePartnerOfferRequest" }
+          schema: { $ref: "../components/schemas/marketing-commercial.schemas.yaml#/DshUpdatePartnerOfferRequest" }
     responses:
       "200":
         description: Partner offer updated.
         content:
           application/json:
-            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartnerOfferResponse" }
+            schema: { $ref: "../components/schemas/marketing-commercial.schemas.yaml#/DshPartnerOfferResponse" }
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
   delete:
     operationId: archiveDshPartnerOffer
     summary: Archive a partner offer (soft archive — archived_at recorded; the row is never physically deleted).
@@ -277,7 +280,7 @@
         description: Own partner offers.
         content:
           application/json:
-            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartnerOffersListResponse" }
+            schema: { $ref: "../components/schemas/marketing-commercial.schemas.yaml#/DshPartnerOffersListResponse" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
   post:
@@ -290,13 +293,13 @@
       required: true
       content:
         application/json:
-          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshSubmitPartnerOfferRequest" }
+          schema: { $ref: "../components/schemas/marketing-commercial.schemas.yaml#/DshSubmitPartnerOfferRequest" }
     responses:
       "201":
         description: Partner offer submitted.
         content:
           application/json:
-            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartnerOfferResponse" }
+            schema: { $ref: "../components/schemas/marketing-commercial.schemas.yaml#/DshPartnerOfferResponse" }
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
