@@ -1,0 +1,232 @@
+# BThwani DSH OpenAPI schemas module: store.
+# Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
+
+DshStoreStatus:
+  type: string
+  enum:
+    - active
+    - inactive
+    - temporarily_closed
+    - unavailable
+
+DshStoreSummary:
+  type: object
+  required:
+    - id
+    - slug
+    - displayName
+    - status
+    - cityCode
+    - serviceAreaCode
+    - serviceability
+    - isVisible
+    - category
+    - categoryLabel
+    - deliveryModes
+    - isFreeDelivery
+    - followerCount
+    - hasProBadge
+    - hasCouponBadge
+    - isPopular
+    - partnerReadiness
+    - catalogApprovalStatus
+    - marketingVisibility
+    - publicationEligible
+  properties:
+    id:
+      type: string
+    slug:
+      type: string
+    displayName:
+      type: string
+    status:
+      $ref: "../../dsh.openapi.yaml#/components/schemas/DshStoreStatus"
+    cityCode:
+      type: string
+    serviceAreaCode:
+      type: string
+    serviceability:
+      $ref: "../../dsh.openapi.yaml#/components/schemas/DshStoreServiceabilitySummary"
+    ratingAverage:
+      type: ["number", "null"]
+      format: float
+    ratingCount:
+      type: integer
+    deliveryEtaMin:
+      type: ["integer", "null"]
+    deliveryEtaMax:
+      type: ["integer", "null"]
+    isVisible:
+      type: boolean
+    heroImageUrl:
+      type: ["string", "null"]
+    logoUrl:
+      type: ["string", "null"]
+    category:
+      $ref: "../../dsh.openapi.yaml#/components/schemas/DshStoreCategory"
+    categoryLabel:
+      type: string
+      description: Human-readable category label resolved from the sovereign central catalog domain
+    deliveryModes:
+      type: array
+      items:
+        $ref: "../../dsh.openapi.yaml#/components/schemas/DshStoreDeliveryMode"
+    isFreeDelivery:
+      type: boolean
+    distanceKm:
+      type: ["number", "null"]
+      format: float
+    followerCount:
+      type: integer
+      minimum: 0
+    hasProBadge:
+      type: boolean
+    hasCouponBadge:
+      type: boolean
+    pointsMultiplier:
+      type: ["integer", "null"]
+      minimum: 1
+    isPopular:
+      type: boolean
+    partnerReadiness:
+      type: string
+      enum: [pending, ready, blocked]
+    catalogApprovalStatus:
+      type: string
+      enum: [draft, submitted, approved, rejected]
+    marketingVisibility:
+      type: string
+      enum: [hidden, visible]
+    publicationEligible:
+      type: boolean
+
+DshStoreDeliveryMode:
+  type: string
+  enum:
+    - delivery
+    - pickup
+    - express
+
+DshStoreDetail:
+  allOf:
+    - $ref: "../../dsh.openapi.yaml#/components/schemas/DshStoreSummary"
+    - type: object
+      required:
+        - createdAt
+        - updatedAt
+        - version
+      properties:
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        version:
+          type: integer
+          minimum: 1
+
+DshStoreListResponse:
+  type: object
+  required:
+    - stores
+    - pagination
+  properties:
+    stores:
+      type: array
+      items:
+        $ref: "../../dsh.openapi.yaml#/components/schemas/DshStoreSummary"
+    pagination:
+      $ref: "../../dsh.openapi.yaml#/components/schemas/DshPagination"
+
+DshStoreDetailResponse:
+  type: object
+  required:
+    - store
+  properties:
+    store:
+      $ref: "../../dsh.openapi.yaml#/components/schemas/DshStoreDetail"
+
+DshStoreContextResponse:
+  type: object
+  required: [actorRole, scope, store]
+  properties:
+    actorRole:
+      type: string
+      enum: [partner, field, captain, operator]
+    scope:
+      type: string
+      enum: [own, assigned, all]
+    store:
+      $ref: "../../dsh.openapi.yaml#/components/schemas/DshStoreDetail"
+    latestAction:
+      $ref: "../../dsh.openapi.yaml#/components/schemas/DshStoreAuditEvent"
+      nullable: true
+
+OperatorStoreGovernanceRequest:
+  type: object
+  additionalProperties: false
+  required: [expectedVersion, action, value, reason]
+  properties:
+    expectedVersion:
+      type: integer
+      minimum: 1
+    action:
+      type: string
+      enum: [lifecycle, visibility, serviceability, partner-readiness, catalog-approval, marketing-visibility]
+    value:
+      type: string
+      minLength: 1
+    reason:
+      type: string
+      minLength: 3
+      maxLength: 500
+
+DshStoreActionResponse:
+  type: object
+  required: [store, audit, replayed]
+  properties:
+    store:
+      $ref: "../../dsh.openapi.yaml#/components/schemas/DshStoreDetail"
+    audit:
+      $ref: "../../dsh.openapi.yaml#/components/schemas/DshStoreAuditEvent"
+    replayed:
+      type: boolean
+
+DshStoreAuditEvent:
+  type: object
+  required:
+    [id, actorId, actorRole, storeId, action, fromState, toState, correlationId, createdAt]
+  properties:
+    id:
+      type: string
+    actorId:
+      type: string
+    actorRole:
+      type: string
+    storeId:
+      type: string
+    action:
+      type: string
+    fromState:
+      type: object
+      additionalProperties: true
+    toState:
+      type: object
+      additionalProperties: true
+    reason:
+      type: string
+    correlationId:
+      type: string
+    createdAt:
+      type: string
+      format: date-time
+
+DshStoreAuditResponse:
+  type: object
+  required: [events]
+  properties:
+    events:
+      type: array
+      items:
+        $ref: "../../dsh.openapi.yaml#/components/schemas/DshStoreAuditEvent"

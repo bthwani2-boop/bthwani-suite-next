@@ -1,0 +1,39 @@
+# BThwani DSH OpenAPI schemas module: platform-policies.
+# Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
+
+DshStoreOnboardingFeePolicy:
+  type: object
+  required: [enabled, amount, currency, appliesTo, chargeTiming, actorCharged, notes, updatedBy, updatedAt, isConfigured]
+  properties:
+    enabled: { type: boolean }
+    amount: { type: number }
+    currency: { type: string }
+    appliesTo: { type: string, enum: [first_store, additional_store, all_stores] }
+    chargeTiming: { type: string, enum: [on_approval, on_publication, on_first_order, manual] }
+    actorCharged: { type: string, enum: [partner] }
+    effectiveFrom: { type: ["string", "null"], format: date-time }
+    notes: { type: string }
+    updatedBy: { type: string }
+    updatedAt: { type: string, format: date-time }
+    isConfigured: { type: boolean }
+    blockedReason: { type: string }
+
+DshStoreOnboardingFeePolicyResponse:
+  type: object
+  required: [policy]
+  properties:
+    policy: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshStoreOnboardingFeePolicy" }
+
+DshUpsertStoreOnboardingFeePolicyRequest:
+  type: object
+  required: [enabled, amount, currency, appliesTo, chargeTiming]
+  properties:
+    enabled: { type: boolean }
+    amount: { type: number, minimum: 0 }
+    currency: { type: string }
+    appliesTo: { type: string, enum: [first_store, additional_store, all_stores] }
+    chargeTiming: { type: string, enum: [on_approval, on_publication, on_first_order, manual] }
+    effectiveFrom: { type: ["string", "null"], format: date-time }
+    notes: { type: string }
+
+# ── Administration Schemas ───────────────────────────────────────

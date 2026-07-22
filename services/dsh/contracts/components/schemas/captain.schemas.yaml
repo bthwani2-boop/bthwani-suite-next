@@ -1,0 +1,43 @@
+# BThwani DSH OpenAPI schemas module: captain.
+# Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
+
+DshCaptainCredential:
+  type: object
+  required: [captainId, licenseNumber, vehicleType, vehiclePlate, status]
+  properties:
+    captainId: { type: string }
+    licenseNumber: { type: string }
+    vehicleType: { type: string }
+    vehiclePlate: { type: string }
+    status: { type: string }
+    verifiedAt: { type: ["string", "null"], format: date-time }
+
+DshCaptainAppPersona:
+  type: string
+  enum: [bolisa_captain, partner_seller_courier]
+  description: Distinguishes whether the captain app user is an internal partner courier or a standard Bolisa fleet captain.
+
+DshCaptainIdentity:
+  type: object
+  required: [captainId, persona, status]
+  properties:
+    captainId: { type: string }
+    persona: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshCaptainAppPersona" }
+    status: { type: string }
+
+DshCaptainCredentialsListResponse:
+  type: object
+  required: [captains, total]
+  properties:
+    captains:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshCaptainCredential" }
+    total: { type: integer }
+
+DshUpsertCaptainCredentialRequest:
+  type: object
+  required: [licenseNumber, vehicleType, vehiclePlate]
+  properties:
+    licenseNumber: { type: string, minLength: 1 }
+    vehicleType: { type: string }
+    vehiclePlate: { type: string, minLength: 1 }

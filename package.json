@@ -227,7 +227,9 @@
     "guard:runtime-real-bindings": "node tools/guards/runtime-real-bindings-gate.mjs",
     "guard:live-cross-journey-integrity": "node tools/guards/live-cross-journey-integrity-gate.mjs",
     "journey:gate:runtime": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-journey-gate.ps1 -Runtime",
-    "journey:gate:runtime:full": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-journey-gate.ps1 -Full -Runtime"
+    "journey:gate:runtime:full": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-journey-gate.ps1 -Full -Runtime",
+    "openapi:lint:dsh": "node tools/guards/dsh-openapi-modular-gate.mjs",
+    "openapi:verify:dsh": "pnpm --dir services/dsh openapi:verify"
   },
   "devDependencies": {
     "@ast-grep/cli": "0.43.0",

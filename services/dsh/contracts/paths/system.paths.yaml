@@ -1,0 +1,94 @@
+# BThwani DSH OpenAPI path-items module: system.
+# Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
+
+/dsh/health:
+  get:
+    operationId: getDshHealth
+    summary: Return DSH liveness state.
+    tags:
+      - DshSystem
+    responses:
+      "200":
+        description: DSH process is alive.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshHealthResponse"
+
+/dsh/readiness:
+  get:
+    operationId: getDshReadiness
+    summary: Return DSH readiness state.
+    tags:
+      - DshSystem
+    responses:
+      "200":
+        description: DSH dependencies are ready.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshReadinessResponse"
+      "503":
+        description: DSH is not ready.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshReadinessResponse"
+
+/dsh/operator/partners/{partnerId}/readiness:
+  get:
+    operationId: getDshPartnerReadiness
+    summary: Get partner readiness checklist.
+    tags: [DshPartnerActivation]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: Partner readiness.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartnerReadiness" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
+/dsh/partner/activation/readiness:
+  get:
+    operationId: getDshPartnerSelfReadiness
+    summary: Get own partner readiness status.
+    tags: [DshPartner]
+    security:
+      - bearerAuth: []
+    responses:
+      "200":
+        description: Readiness object.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartnerReadiness" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+
+/dsh/field/partners/{partnerId}/readiness:
+  get:
+    operationId: getFieldPartnerReadiness
+    summary: Field agent reads the activation readiness of a partner draft it owns.
+    tags: [DshPartnerActivation]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: Partner readiness.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartnerReadiness" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }

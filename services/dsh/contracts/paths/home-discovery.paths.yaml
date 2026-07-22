@@ -1,0 +1,174 @@
+# BThwani DSH OpenAPI path-items module: home-discovery.
+# Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
+
+/dsh/home-discovery:
+  get:
+    operationId: getDshHomeDiscovery
+    summary: Return home discovery payload for the client home screen.
+    tags:
+      - DshHomeDiscovery
+    parameters:
+      - name: cityCode
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Filter by city code.
+      - name: serviceAreaCode
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Filter by service area code.
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 50
+          default: 10
+        description: Maximum number of stores to return.
+    responses:
+      "200":
+        description: Home discovery payload.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshHomeDiscoveryResponse"
+      "400":
+        description: Invalid query parameters.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshErrorResponse"
+      "503":
+        description: Service unavailable.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshErrorResponse"
+
+/dsh/operator/home-discovery/{kind}:
+  parameters:
+    - $ref: "../dsh.openapi.yaml#/components/parameters/HomeContentKind"
+  get:
+    operationId: listOperatorHomeDiscoveryContent
+    summary: List all home discovery content including inactive items.
+    tags: [DshHomeDiscovery]
+    security:
+      - bearerAuth: []
+    responses:
+      "200":
+        description: Administrative home discovery content.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshHomeAdminListResponse"
+      "401":
+        $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated"
+      "403":
+        $ref: "../dsh.openapi.yaml#/components/responses/Forbidden"
+  post:
+    operationId: createOperatorHomeDiscoveryContent
+    summary: Create a home banner or promotion; categories come from the central catalog.
+    tags: [DshHomeDiscovery]
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../dsh.openapi.yaml#/components/schemas/DshHomeAdminContentInput"
+    responses:
+      "201":
+        description: Content created.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshHomeAdminItemResponse"
+      "400":
+        $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest"
+      "401":
+        $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated"
+      "403":
+        $ref: "../dsh.openapi.yaml#/components/responses/Forbidden"
+
+/dsh/operator/home-discovery/{kind}/{itemId}:
+  parameters:
+    - $ref: "../dsh.openapi.yaml#/components/parameters/HomeContentKind"
+    - name: itemId
+      in: path
+      required: true
+      schema:
+        type: string
+  patch:
+    operationId: updateOperatorHomeDiscoveryContent
+    summary: Update a home discovery content item.
+    tags: [DshHomeDiscovery]
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../dsh.openapi.yaml#/components/schemas/DshHomeAdminContentInput"
+    responses:
+      "200":
+        description: Content updated.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshHomeAdminItemResponse"
+      "400":
+        $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest"
+      "401":
+        $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated"
+      "403":
+        $ref: "../dsh.openapi.yaml#/components/responses/Forbidden"
+      "404":
+        $ref: "../dsh.openapi.yaml#/components/responses/NotFound"
+  delete:
+    operationId: deleteOperatorHomeDiscoveryContent
+    summary: Delete a home discovery content item.
+    tags: [DshHomeDiscovery]
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
+    responses:
+      "204":
+        description: Content deleted.
+      "401":
+        $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated"
+      "403":
+        $ref: "../dsh.openapi.yaml#/components/responses/Forbidden"
+      "404":
+        $ref: "../dsh.openapi.yaml#/components/responses/NotFound"
+
+/dsh/public/reels:
+  get:
+    operationId: listPublicReels
+    tags: [DshHomeDiscovery]
+    parameters:
+      - name: limit
+        in: query
+        required: false
+        schema: { type: integer, default: 20 }
+    responses:
+      "200":
+        description: Approved reels for public home screen carousel.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reels:
+                  type: array
+                  items: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPublicReel" }

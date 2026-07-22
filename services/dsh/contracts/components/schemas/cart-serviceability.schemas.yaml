@@ -1,0 +1,132 @@
+# BThwani DSH OpenAPI schemas module: cart-serviceability.
+# Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
+
+DshStoreServiceabilityStatus:
+  type: string
+  enum:
+    - serviceable
+    - limited
+    - out_of_area
+    - unavailable
+
+DshStoreServiceabilitySummary:
+  type: object
+  required:
+    - status
+  properties:
+    status:
+      $ref: "../../dsh.openapi.yaml#/components/schemas/DshStoreServiceabilityStatus"
+
+DshCartItem:
+  type: object
+  required: [id, cartId, productId, masterProductId, storeAssortmentId, productName, priceReference, unitPrice, quantity, version, createdAt, updatedAt]
+  properties:
+    id: { type: string }
+    cartId: { type: string }
+    productId: { type: string }
+    masterProductId: { type: string, description: "Sovereign central-catalog master product id (equal to productId today)." }
+    storeAssortmentId: { type: ["string", "null"], description: "The dsh_store_assortments row this cart line resolved against." }
+    productName: { type: string, description: "Snapshotted server-side from the catalog product at add-to-cart time." }
+    priceReference: { type: string, description: "Display label snapshotted from catalog — not a computed financial amount." }
+    unitPrice: { type: number, format: double, minimum: 0, description: "Snapshotted from the catalog product's unitPrice at add-to-cart time." }
+    quantity: { type: integer, minimum: 1 }
+    version: { type: integer }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+
+DshCart:
+  type: object
+  required: [id, clientId, storeId, fulfillmentMode, state, note, items, version, createdAt, updatedAt]
+  properties:
+    id: { type: string }
+    clientId: { type: string }
+    storeId: { type: string }
+    fulfillmentMode:
+      type: string
+      enum: [bthwani_delivery, partner_delivery, pickup]
+    state:
+      type: string
+      enum: [active, checked_out, abandoned]
+    note: { type: string }
+    items:
+      type: array
+      items:
+        $ref: "../../dsh.openapi.yaml#/components/schemas/DshCartItem"
+    version: { type: integer }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+
+DshCartResponse:
+  type: object
+  required: [cart]
+  properties:
+    cart:
+      $ref: "../../dsh.openapi.yaml#/components/schemas/DshCart"
+      nullable: true
+
+DshUpsertCartItemRequest:
+  type: object
+  additionalProperties: false
+  required: [storeId, masterProductId, quantity]
+  properties:
+    storeId: { type: string }
+    fulfillmentMode:
+      type: string
+      enum: [bthwani_delivery, partner_delivery, pickup]
+    masterProductId: { type: string, description: "Sovereign central-catalog master product id to add/update in the cart." }
+    quantity: { type: integer, minimum: 1 }
+
+DshUpsertCartItemResponse:
+  type: object
+  required: [cartId, item]
+  properties:
+    cartId: { type: string }
+    item:
+      $ref: "../../dsh.openapi.yaml#/components/schemas/DshCartItem"
+
+DshOperatorCartsResponse:
+  type: object
+  required: [carts]
+  properties:
+    carts:
+      type: array
+      items:
+        $ref: "../../dsh.openapi.yaml#/components/schemas/DshCart"
+
+CartServiceabilityRequest:
+  type: object
+  required: [storeId]
+  properties:
+    storeId: { type: string }
+    serviceAreaCode: { type: string }
+
+CartServiceabilityResult:
+  type: object
+  required: [serviceable, code]
+  properties:
+    serviceable: { type: boolean }
+    code:
+      type: string
+      enum: [serviceable, store_unavailable, out_of_area, catalog_unavailable]
+    reason: { type: string }
+    availableModes:
+      type: array
+      description: >-
+        Per-mode availability for this store+location, derived from the
+        store's enabled delivery modes and the same zone/distance check as
+        `serviceable`/`code`. Never a static three-mode list.
+      items:
+        $ref: "../../dsh.openapi.yaml#/components/schemas/FulfillmentModeAvailability"
+
+DshZoneServiceabilityResponse:
+  type: object
+  required: [zoneId, isActive, activeOrders, capacityPct]
+  properties:
+    zoneId: { type: string }
+    isActive: { type: boolean }
+    activeOrders: { type: integer }
+    capacityPct: { type: number }
+
+# store_onboarding_fee_policy — DSH owns the policy DEFINITION only.
+# DSH never records WLT financial truth directly; WLT remains the sole
+# owner of settlement/payment truth once this fee is actually recorded.

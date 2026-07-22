@@ -1,0 +1,305 @@
+# BThwani DSH OpenAPI path-items module: marketing-commercial.
+# Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
+
+/dsh/operator/marketing/campaigns:
+  get:
+    operationId: listDshCampaigns
+    summary: List marketing campaigns.
+    tags: [DshMarketing]
+    security:
+      - bearerAuth: []
+    responses:
+      "200":
+        description: Campaigns list.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCampaignsListResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+  post:
+    operationId: createDshCampaign
+    summary: Create a marketing campaign.
+    tags: [DshMarketing]
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCreateCampaignRequest" }
+    responses:
+      "201":
+        description: Campaign created.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCampaignResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+
+/dsh/operator/marketing/campaigns/{campaignId}:
+  get:
+    operationId: getDshCampaign
+    summary: Get a single marketing campaign.
+    tags: [DshMarketing]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: campaignId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: Campaign detail.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCampaignResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+  patch:
+    operationId: updateDshCampaign
+    summary: Update a marketing campaign.
+    tags: [DshMarketing]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: campaignId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshUpdateCampaignRequest" }
+    responses:
+      "200":
+        description: Campaign updated.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCampaignResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+  delete:
+    operationId: archiveDshCampaign
+    summary: Archive a marketing campaign (soft archive — status set to cancelled, archived_at recorded; the row is never physically deleted).
+    tags: [DshMarketing]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: campaignId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: Campaign archived.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [archived]
+              properties:
+                archived: { type: boolean }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
+/dsh/operator/marketing/tickers:
+  get:
+    operationId: listDshMarketingTickers
+    summary: List marketing news tickers (excludes soft-deleted rows).
+    tags: [DshMarketing]
+    security:
+      - bearerAuth: []
+    responses:
+      "200":
+        description: Tickers.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshMarketingTickersListResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+  post:
+    operationId: createDshMarketingTicker
+    summary: Create a marketing news ticker.
+    tags: [DshMarketing]
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCreateMarketingTickerRequest" }
+    responses:
+      "201":
+        description: Ticker created.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshMarketingTickerResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+
+/dsh/operator/marketing/tickers/{tickerId}:
+  patch:
+    operationId: updateDshMarketingTicker
+    summary: Update a marketing news ticker. Status lifecycle is governed (draft -> published|paused, published <-> paused, never back to draft); illegal transitions return 409.
+    tags: [DshMarketing]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: tickerId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshUpdateMarketingTickerRequest" }
+    responses:
+      "200":
+        description: Ticker updated.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshMarketingTickerResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+  delete:
+    operationId: deleteDshMarketingTicker
+    summary: Delete a marketing news ticker (soft delete — deleted_at recorded; the row keeps an auditable history).
+    tags: [DshMarketing]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: tickerId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: Ticker deleted.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [deleted]
+              properties:
+                deleted: { type: boolean }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
+/dsh/operator/marketing/partner-offers:
+  get:
+    operationId: listDshPartnerOffers
+    summary: List partner marketing offers (operator review queue, excludes archived rows).
+    tags: [DshMarketing]
+    security:
+      - bearerAuth: []
+    responses:
+      "200":
+        description: Partner offers.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartnerOffersListResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+
+/dsh/operator/marketing/partner-offers/{offerId}:
+  patch:
+    operationId: updateDshPartnerOffer
+    summary: Review a partner offer (advance lifecycle, edit fields). Rejecting requires rejectionReason; publishing runs the client-visibility gate.
+    tags: [DshMarketing]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: offerId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshUpdatePartnerOfferRequest" }
+    responses:
+      "200":
+        description: Partner offer updated.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartnerOfferResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+  delete:
+    operationId: archiveDshPartnerOffer
+    summary: Archive a partner offer (soft archive — archived_at recorded; the row is never physically deleted).
+    tags: [DshMarketing]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: offerId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: Partner offer archived.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [archived]
+              properties:
+                archived: { type: boolean }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
+/dsh/partner/marketing/offers:
+  get:
+    operationId: listDshPartnerSelfOffers
+    summary: List the calling partner's own submitted offers, scoped to their resolved store.
+    tags: [DshMarketing]
+    security:
+      - bearerAuth: []
+    responses:
+      "200":
+        description: Own partner offers.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartnerOffersListResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+  post:
+    operationId: submitDshPartnerSelfOffer
+    summary: Submit a new offer for review. The store binding is always the caller's own resolved store, never client-supplied.
+    tags: [DshMarketing]
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshSubmitPartnerOfferRequest" }
+    responses:
+      "201":
+        description: Partner offer submitted.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartnerOfferResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
+# ── Platform Policies ────────────────────────────────────────────

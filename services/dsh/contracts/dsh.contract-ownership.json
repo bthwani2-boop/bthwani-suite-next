@@ -1,0 +1,955 @@
+{
+  "formatVersion": 2,
+  "sovereignContract": "services/dsh/contracts/dsh.openapi.yaml",
+  "governedProjectionPaths": [
+    {
+      "path": "/dsh/captain/dispatch/assignments",
+      "projectionContract": "dsh.dispatch-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/captain/dispatch/assignments/{assignmentId}/accept",
+      "projectionContract": "dsh.dispatch-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/captain/dispatch/assignments/{assignmentId}/decline",
+      "projectionContract": "dsh.dispatch-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/captain/dispatch/assignments/{assignmentId}/exceptions",
+      "projectionContract": "dsh.delivery-exceptions.openapi.yaml"
+    },
+    {
+      "path": "/dsh/captain/dispatch/assignments/{assignmentId}/location",
+      "projectionContract": "dsh.live-tracking.openapi.yaml"
+    },
+    {
+      "path": "/dsh/captain/dispatch/assignments/{assignmentId}/pod",
+      "projectionContract": "dsh.delivery-proof-media.openapi.yaml"
+    },
+    {
+      "path": "/dsh/captain/dispatch/assignments/{assignmentId}/return-to-store/arrive",
+      "projectionContract": "dsh.delivery-exceptions.openapi.yaml"
+    },
+    {
+      "path": "/dsh/client/checkout-intents",
+      "projectionContract": "dsh.jrn-010-checkout.openapi.yaml"
+    },
+    {
+      "path": "/dsh/client/checkout-intents/{intentId}",
+      "projectionContract": "dsh.jrn-010-checkout.openapi.yaml"
+    },
+    {
+      "path": "/dsh/client/checkout-intents/{intentId}/cancel",
+      "projectionContract": "dsh.jrn-010-checkout.openapi.yaml"
+    },
+    {
+      "path": "/dsh/client/orders/{orderId}/partner-delivery",
+      "projectionContract": "dsh.partner-delivery.openapi.yaml"
+    },
+    {
+      "path": "/dsh/client/orders/{orderId}/tracking",
+      "projectionContract": "dsh.live-tracking.openapi.yaml"
+    },
+    {
+      "path": "/dsh/field/catalog/master-products",
+      "projectionContract": "dsh.catalog.openapi.yaml"
+    },
+    {
+      "path": "/dsh/field/catalog/taxonomy",
+      "projectionContract": "dsh.catalog.openapi.yaml"
+    },
+    {
+      "path": "/dsh/field/partners/{partnerId}",
+      "projectionContract": "dsh.partner-onboarding.openapi.yaml"
+    },
+    {
+      "path": "/dsh/field/partners/{partnerId}/assortment",
+      "projectionContract": "dsh.catalog.openapi.yaml"
+    },
+    {
+      "path": "/dsh/field/partners/{partnerId}/catalog/product-proposals",
+      "projectionContract": "dsh.catalog-proposal-readback.openapi.yaml"
+    },
+    {
+      "path": "/dsh/field/partners/{partnerId}/catalog/product-proposals",
+      "projectionContract": "dsh.catalog.openapi.yaml"
+    },
+    {
+      "path": "/dsh/field/partners/{partnerId}/catalog/product-proposals/{proposalId}",
+      "projectionContract": "dsh.catalog.openapi.yaml"
+    },
+    {
+      "path": "/dsh/field/partners/{partnerId}/stores/{storeId}/assortment/{masterProductId}",
+      "projectionContract": "dsh.catalog.openapi.yaml"
+    },
+    {
+      "path": "/dsh/field/partners/{partnerId}/submit",
+      "projectionContract": "dsh.partner-onboarding.openapi.yaml"
+    },
+    {
+      "path": "/dsh/field/partners/{partnerId}/visits",
+      "projectionContract": "dsh.partner-onboarding.openapi.yaml"
+    },
+    {
+      "path": "/dsh/internal/wlt/payment-session-events",
+      "projectionContract": "dsh.jrn-010-checkout.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/catalog/assets",
+      "projectionContract": "dsh.catalog.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/catalog/assets/{assetId}",
+      "projectionContract": "dsh.catalog.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/catalog/assets/{assetId}/review",
+      "projectionContract": "dsh.catalog.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/catalog/domains",
+      "projectionContract": "dsh.catalog.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/catalog/domains/{domainId}",
+      "projectionContract": "dsh.catalog.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/catalog/master-products",
+      "projectionContract": "dsh.catalog.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/catalog/master-products/{productId}",
+      "projectionContract": "dsh.catalog.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/catalog/nodes",
+      "projectionContract": "dsh.catalog.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/catalog/nodes/{nodeId}",
+      "projectionContract": "dsh.catalog.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/catalog/platform-policies",
+      "projectionContract": "dsh.catalog.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/catalog/platform-policies/{policyId}",
+      "projectionContract": "dsh.catalog.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/catalog/product-proposals",
+      "projectionContract": "dsh.catalog.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/catalog/product-proposals/{proposalId}/decision",
+      "projectionContract": "dsh.catalog.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/catalog/product-proposals/{proposalId}/transition",
+      "projectionContract": "dsh.catalog.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/checkout-intents",
+      "projectionContract": "dsh.jrn-010-checkout.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/checkout-intents/{intentId}/reconcile",
+      "projectionContract": "dsh.jrn-010-checkout.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/delivery-exceptions",
+      "projectionContract": "dsh.delivery-exceptions.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/delivery-exceptions/{exceptionId}/acknowledge",
+      "projectionContract": "dsh.delivery-exceptions.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/delivery-exceptions/{exceptionId}/resolve",
+      "projectionContract": "dsh.delivery-exceptions.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/dispatch/assignments",
+      "projectionContract": "dsh.dispatch-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/home-discovery/{kind}",
+      "projectionContract": "dsh.home-marketing-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/home-discovery/{kind}/{itemId}",
+      "projectionContract": "dsh.home-marketing-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/partner-deliveries",
+      "projectionContract": "dsh.partner-delivery.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/partner-deliveries/{taskId}",
+      "projectionContract": "dsh.partner-delivery.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/partner-deliveries/order/{orderId}",
+      "projectionContract": "dsh.partner-delivery.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/partners/{partnerId}",
+      "projectionContract": "dsh.partner-onboarding.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/partners/{partnerId}/stores",
+      "projectionContract": "dsh.partner-onboarding.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/partners/{partnerId}/transition",
+      "projectionContract": "dsh.partner-onboarding.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/platform/capacity",
+      "projectionContract": "dsh.platform-policies.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/platform/serviceability/{zoneId}",
+      "projectionContract": "dsh.platform-policies.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/platform/sla-rules",
+      "projectionContract": "dsh.platform-policies.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/platform/store-onboarding-fee",
+      "projectionContract": "dsh.platform-policies.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/platform/zones",
+      "projectionContract": "dsh.platform-policies.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/platform/zones/{zoneId}",
+      "projectionContract": "dsh.platform-policies.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/stores/{storeId}/assortment",
+      "projectionContract": "dsh.catalog.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/stores/{storeId}/assortment/{masterProductId}",
+      "projectionContract": "dsh.catalog.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/support/tickets",
+      "projectionContract": "dsh.support-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/support/tickets/{ticketId}",
+      "projectionContract": "dsh.support-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/partner/activation/readiness",
+      "projectionContract": "dsh.partner-onboarding.openapi.yaml"
+    },
+    {
+      "path": "/dsh/partner/activation/status",
+      "projectionContract": "dsh.partner-onboarding.openapi.yaml"
+    },
+    {
+      "path": "/dsh/partner/catalog/master-products",
+      "projectionContract": "dsh.catalog.openapi.yaml"
+    },
+    {
+      "path": "/dsh/partner/catalog/product-proposals",
+      "projectionContract": "dsh.catalog-proposal-readback.openapi.yaml"
+    },
+    {
+      "path": "/dsh/partner/catalog/product-proposals",
+      "projectionContract": "dsh.catalog.openapi.yaml"
+    },
+    {
+      "path": "/dsh/partner/catalog/product-proposals/{proposalId}",
+      "projectionContract": "dsh.catalog.openapi.yaml"
+    },
+    {
+      "path": "/dsh/partner/catalog/taxonomy",
+      "projectionContract": "dsh.catalog.openapi.yaml"
+    },
+    {
+      "path": "/dsh/partner/orders/{orderId}/dispatch-tracking",
+      "projectionContract": "dsh.live-tracking.openapi.yaml"
+    },
+    {
+      "path": "/dsh/partner/orders/{orderId}/partner-delivery",
+      "projectionContract": "dsh.partner-delivery.openapi.yaml"
+    },
+    {
+      "path": "/dsh/partner/orders/{orderId}/partner-delivery/arrive",
+      "projectionContract": "dsh.partner-delivery.openapi.yaml"
+    },
+    {
+      "path": "/dsh/partner/orders/{orderId}/partner-delivery/assign",
+      "projectionContract": "dsh.partner-delivery.openapi.yaml"
+    },
+    {
+      "path": "/dsh/partner/orders/{orderId}/partner-delivery/depart",
+      "projectionContract": "dsh.partner-delivery.openapi.yaml"
+    },
+    {
+      "path": "/dsh/partner/orders/{orderId}/partner-delivery/exception",
+      "projectionContract": "dsh.partner-delivery.openapi.yaml"
+    },
+    {
+      "path": "/dsh/partner/orders/{orderId}/partner-delivery/pickup",
+      "projectionContract": "dsh.partner-delivery.openapi.yaml"
+    },
+    {
+      "path": "/dsh/partner/orders/{orderId}/partner-delivery/proof",
+      "projectionContract": "dsh.delivery-proof-media.openapi.yaml"
+    },
+    {
+      "path": "/dsh/partner/orders/{orderId}/partner-delivery/proof",
+      "projectionContract": "dsh.partner-delivery.openapi.yaml"
+    },
+    {
+      "path": "/dsh/partner/orders/{orderId}/return-to-store",
+      "projectionContract": "dsh.delivery-exceptions.openapi.yaml"
+    },
+    {
+      "path": "/dsh/partner/orders/{orderId}/return-to-store/accept",
+      "projectionContract": "dsh.delivery-exceptions.openapi.yaml"
+    },
+    {
+      "path": "/dsh/partner/stores/{storeId}/assortment",
+      "projectionContract": "dsh.catalog.openapi.yaml"
+    },
+    {
+      "path": "/dsh/partner/stores/{storeId}/assortment/{masterProductId}",
+      "projectionContract": "dsh.catalog.openapi.yaml"
+    },
+    {
+      "path": "/dsh/platform/store-onboarding-fee",
+      "projectionContract": "dsh.platform-policies.openapi.yaml"
+    }
+  ],
+  "orphanProjectionPaths": [
+    {
+      "path": "/dsh/captain/dispatch/assignments/{assignmentId}/delivery-proof",
+      "projectionContract": "dsh.delivery-proof-completion.openapi.yaml"
+    },
+    {
+      "path": "/dsh/captain/dispatch/assignments/{assignmentId}/handoff-exceptions",
+      "projectionContract": "dsh.store-captain-handoff.openapi.yaml"
+    },
+    {
+      "path": "/dsh/captain/partner-fleet/connect",
+      "projectionContract": "dsh.partner-fleet.openapi.yaml"
+    },
+    {
+      "path": "/dsh/captain/partner-fleet/memberships",
+      "projectionContract": "dsh.partner-fleet.openapi.yaml"
+    },
+    {
+      "path": "/dsh/captain/partner-fleet/memberships/{teamMemberId}/disconnect",
+      "projectionContract": "dsh.partner-fleet.openapi.yaml"
+    },
+    {
+      "path": "/dsh/client/addresses",
+      "projectionContract": "dsh.client-address.openapi.yaml"
+    },
+    {
+      "path": "/dsh/client/addresses/{addressId}",
+      "projectionContract": "dsh.client-address.openapi.yaml"
+    },
+    {
+      "path": "/dsh/client/addresses/{addressId}/default",
+      "projectionContract": "dsh.client-address.openapi.yaml"
+    },
+    {
+      "path": "/dsh/client/benefits",
+      "projectionContract": "dsh.marketing-commercial.openapi.yaml"
+    },
+    {
+      "path": "/dsh/client/maps/reverse",
+      "projectionContract": "dsh.client-map.openapi.yaml"
+    },
+    {
+      "path": "/dsh/client/maps/search",
+      "projectionContract": "dsh.client-map.openapi.yaml"
+    },
+    {
+      "path": "/dsh/client/marketing/subscriptions/{purchaseId}/activate",
+      "projectionContract": "dsh.marketing-commercial.openapi.yaml"
+    },
+    {
+      "path": "/dsh/client/marketing/subscriptions/purchase",
+      "projectionContract": "dsh.marketing-commercial.openapi.yaml"
+    },
+    {
+      "path": "/dsh/client/order-truth",
+      "projectionContract": "dsh.order-truth.openapi.yaml"
+    },
+    {
+      "path": "/dsh/client/order-truth/{orderId}",
+      "projectionContract": "dsh.order-truth.openapi.yaml"
+    },
+    {
+      "path": "/dsh/client/order-truth/{orderId}/events",
+      "projectionContract": "dsh.order-truth.openapi.yaml"
+    },
+    {
+      "path": "/dsh/client/orders/{orderId}/delivery-pin",
+      "projectionContract": "dsh.delivery-proof-completion.openapi.yaml"
+    },
+    {
+      "path": "/dsh/client/orders/{orderId}/delivery-proof",
+      "projectionContract": "dsh.delivery-proof-completion.openapi.yaml"
+    },
+    {
+      "path": "/dsh/client/support/tickets",
+      "projectionContract": "dsh.support-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/client/support/tickets/{ticketId}",
+      "projectionContract": "dsh.support-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/client/support/tickets/{ticketId}/messages",
+      "projectionContract": "dsh.support-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/field/catalog/attributes",
+      "projectionContract": "dsh.catalog-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/field/catalog/attributes/{attributeId}/options",
+      "projectionContract": "dsh.catalog-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/field/catalog/master-products/{productId}/attribute-values",
+      "projectionContract": "dsh.catalog-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/field/catalog/master-products/{productId}/relationships",
+      "projectionContract": "dsh.catalog-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/field/partners/{partnerId}/assortment-pauses",
+      "projectionContract": "dsh.catalog-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/field/partners/{partnerId}/assortment/{masterProductId}/pause",
+      "projectionContract": "dsh.catalog-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/field/partners/{partnerId}/assortment/{masterProductId}/resume",
+      "projectionContract": "dsh.catalog-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/home-discovery/events",
+      "projectionContract": "dsh.home-marketing-events.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/catalog/attributes",
+      "projectionContract": "dsh.catalog-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/catalog/attributes/{attributeId}/options",
+      "projectionContract": "dsh.catalog-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/catalog/audit",
+      "projectionContract": "dsh.catalog-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/catalog/audit/{auditId}/rollback",
+      "projectionContract": "dsh.catalog-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/catalog/master-products/{productId}/attribute-values",
+      "projectionContract": "dsh.catalog-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/catalog/master-products/{productId}/attribute-values/{attributeId}",
+      "projectionContract": "dsh.catalog-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/catalog/master-products/{productId}/relationships",
+      "projectionContract": "dsh.catalog-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/catalog/master-products/{productId}/relationships/{relationshipId}",
+      "projectionContract": "dsh.catalog-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/catalog/nodes/{nodeId}/attributes/{attributeId}",
+      "projectionContract": "dsh.catalog-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/delivery-proofs",
+      "projectionContract": "dsh.delivery-proof-completion.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/delivery-proofs/{proofId}",
+      "projectionContract": "dsh.delivery-proof-completion.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/delivery-proofs/{proofId}/accept",
+      "projectionContract": "dsh.delivery-proof-completion.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/delivery-proofs/{proofId}/reject",
+      "projectionContract": "dsh.delivery-proof-completion.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/dispatch/assignments/{assignmentId}/cancel",
+      "projectionContract": "dsh.dispatch-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/dispatch/assignments/{assignmentId}/reassign",
+      "projectionContract": "dsh.dispatch-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/dispatch/assignments/expire",
+      "projectionContract": "dsh.dispatch-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/dispatch/candidates",
+      "projectionContract": "dsh.dispatch-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/dispatch/captains/{captainId}/profile",
+      "projectionContract": "dsh.dispatch-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/dispatch/decisions",
+      "projectionContract": "dsh.dispatch-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/dispatch/tracking-alerts",
+      "projectionContract": "dsh.live-tracking.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/home-discovery/{kind}/{itemId}/targeting",
+      "projectionContract": "dsh.home-marketing-events.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/marketing/coupons",
+      "projectionContract": "dsh.marketing-commercial.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/marketing/coupons",
+      "projectionContract": "dsh.partner-commercial-closure.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/marketing/coupons/{couponId}",
+      "projectionContract": "dsh.marketing-commercial.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/marketing/coupons/{couponId}",
+      "projectionContract": "dsh.partner-commercial-closure.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/marketing/loyalty-earning-policies",
+      "projectionContract": "dsh.partner-commercial-closure.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/marketing/loyalty-earning-policies/{policyId}",
+      "projectionContract": "dsh.partner-commercial-closure.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/marketing/loyalty-tiers",
+      "projectionContract": "dsh.marketing-commercial.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/marketing/loyalty-tiers/{tierId}",
+      "projectionContract": "dsh.marketing-commercial.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/marketing/subscription-plans",
+      "projectionContract": "dsh.marketing-commercial.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/marketing/subscription-plans/{planId}",
+      "projectionContract": "dsh.marketing-commercial.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/order-truth",
+      "projectionContract": "dsh.order-truth.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/order-truth/{orderId}",
+      "projectionContract": "dsh.order-truth.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/order-truth/diagnostics",
+      "projectionContract": "dsh.order-truth.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/platform/map-provider-health",
+      "projectionContract": "dsh.client-map.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/platform/service-areas",
+      "projectionContract": "dsh.client-map.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/platform/service-areas/{serviceAreaCode}",
+      "projectionContract": "dsh.client-map.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/privacy/client-addresses/anonymize",
+      "projectionContract": "dsh.client-address-privacy.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/privacy/client-addresses/events",
+      "projectionContract": "dsh.client-address-privacy.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/privacy/client-addresses/policy",
+      "projectionContract": "dsh.client-address-privacy.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/privacy/client-addresses/status",
+      "projectionContract": "dsh.client-address-privacy.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/stores/{storeId}/assortment-pauses",
+      "projectionContract": "dsh.catalog-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/stores/{storeId}/assortment/{masterProductId}/pause",
+      "projectionContract": "dsh.catalog-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/stores/{storeId}/assortment/{masterProductId}/resume",
+      "projectionContract": "dsh.catalog-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/stores/{storeId}/delivery-pricing",
+      "projectionContract": "dsh.partner-commercial-closure.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/stores/{storeId}/delivery-pricing/{fulfillmentMode}",
+      "projectionContract": "dsh.partner-commercial-closure.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/support/tickets/{ticketId}/events",
+      "projectionContract": "dsh.support-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/support/tickets/{ticketId}/messages",
+      "projectionContract": "dsh.support-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/workforce/employees/{actorId}/media/uploads",
+      "projectionContract": "dsh.jrn-003-workforce-scopes.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/workforce/scopes/{actorId}",
+      "projectionContract": "dsh.jrn-003-workforce-scopes.openapi.yaml"
+    },
+    {
+      "path": "/dsh/partner/catalog/attributes",
+      "projectionContract": "dsh.catalog-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/partner/catalog/attributes/{attributeId}/options",
+      "projectionContract": "dsh.catalog-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/partner/catalog/master-products/{productId}/attribute-values",
+      "projectionContract": "dsh.catalog-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/partner/catalog/master-products/{productId}/relationships",
+      "projectionContract": "dsh.catalog-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/partner/order-truth",
+      "projectionContract": "dsh.order-truth.openapi.yaml"
+    },
+    {
+      "path": "/dsh/partner/order-truth/{orderId}",
+      "projectionContract": "dsh.order-truth.openapi.yaml"
+    },
+    {
+      "path": "/dsh/partner/orders/{orderId}/captain-handoff/confirm",
+      "projectionContract": "dsh.store-captain-handoff.openapi.yaml"
+    },
+    {
+      "path": "/dsh/partner/orders/{orderId}/captain-handoff/exceptions",
+      "projectionContract": "dsh.store-captain-handoff.openapi.yaml"
+    },
+    {
+      "path": "/dsh/partner/stores/{storeId}/assortment-pauses",
+      "projectionContract": "dsh.catalog-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/partner/stores/{storeId}/assortment/{masterProductId}/pause",
+      "projectionContract": "dsh.catalog-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/partner/stores/{storeId}/assortment/{masterProductId}/resume",
+      "projectionContract": "dsh.catalog-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/partner/stores/{storeId}/courier-connections",
+      "projectionContract": "dsh.partner-fleet.openapi.yaml"
+    },
+    {
+      "path": "/dsh/partner/stores/{storeId}/courier-connections/{connectionId}/revoke",
+      "projectionContract": "dsh.partner-fleet.openapi.yaml"
+    },
+    {
+      "path": "/dsh/partner/stores/{storeId}/couriers/{memberId}/connection-code",
+      "projectionContract": "dsh.partner-fleet.openapi.yaml"
+    },
+    {
+      "path": "/dsh/partner/stores/{storeId}/delivery-pricing",
+      "projectionContract": "dsh.partner-commercial-closure.openapi.yaml"
+    },
+    {
+      "path": "/dsh/partner/stores/{storeId}/delivery-pricing/{fulfillmentMode}",
+      "projectionContract": "dsh.partner-commercial-closure.openapi.yaml"
+    },
+    {
+      "path": "/dsh/partner/support/tickets",
+      "projectionContract": "dsh.partner-support.openapi.yaml"
+    },
+    {
+      "path": "/dsh/partner/support/tickets/{ticketId}",
+      "projectionContract": "dsh.partner-support.openapi.yaml"
+    },
+    {
+      "path": "/dsh/partner/support/tickets/{ticketId}/messages",
+      "projectionContract": "dsh.partner-support.openapi.yaml"
+    },
+    {
+      "path": "/operator/admin/approvals",
+      "projectionContract": "dsh.administration.openapi.yaml"
+    },
+    {
+      "path": "/operator/admin/approvals/{approvalId}/review",
+      "projectionContract": "dsh.administration.openapi.yaml"
+    },
+    {
+      "path": "/operator/admin/role-requests",
+      "projectionContract": "dsh.administration.openapi.yaml"
+    },
+    {
+      "path": "/operator/admin/role-requests/{requestId}/review",
+      "projectionContract": "dsh.administration.openapi.yaml"
+    },
+    {
+      "path": "/operator/admin/roles",
+      "projectionContract": "dsh.administration.openapi.yaml"
+    },
+    {
+      "path": "/operator/admin/roles/requests",
+      "projectionContract": "dsh.administration.openapi.yaml"
+    },
+    {
+      "path": "/operator/admin/staff",
+      "projectionContract": "dsh.administration.openapi.yaml"
+    },
+    {
+      "path": "/operator/admin/staff/{staffId}/roles",
+      "projectionContract": "dsh.administration.openapi.yaml"
+    }
+  ],
+  "projectionCollisions": [
+    {
+      "path": "/dsh/field/partners/{partnerId}/catalog/product-proposals",
+      "projectionContracts": [
+        "dsh.catalog-proposal-readback.openapi.yaml",
+        "dsh.catalog.openapi.yaml"
+      ]
+    },
+    {
+      "path": "/dsh/operator/marketing/coupons",
+      "projectionContracts": [
+        "dsh.marketing-commercial.openapi.yaml",
+        "dsh.partner-commercial-closure.openapi.yaml"
+      ]
+    },
+    {
+      "path": "/dsh/operator/marketing/coupons/{couponId}",
+      "projectionContracts": [
+        "dsh.marketing-commercial.openapi.yaml",
+        "dsh.partner-commercial-closure.openapi.yaml"
+      ]
+    },
+    {
+      "path": "/dsh/partner/catalog/product-proposals",
+      "projectionContracts": [
+        "dsh.catalog-proposal-readback.openapi.yaml",
+        "dsh.catalog.openapi.yaml"
+      ]
+    },
+    {
+      "path": "/dsh/partner/orders/{orderId}/partner-delivery/proof",
+      "projectionContracts": [
+        "dsh.delivery-proof-media.openapi.yaml",
+        "dsh.partner-delivery.openapi.yaml"
+      ]
+    }
+  ],
+  "siblingContracts": {
+    "dsh.administration.openapi.yaml": {
+      "pathCount": 8,
+      "owner": "services/dsh",
+      "parentContract": null,
+      "contractRole": "governed-projection"
+    },
+    "dsh.catalog-governance.openapi.yaml": {
+      "pathCount": 26,
+      "owner": "services/dsh",
+      "parentContract": "contracts/dsh.catalog.openapi.yaml",
+      "contractRole": "executable-fragment"
+    },
+    "dsh.catalog-proposal-readback.openapi.yaml": {
+      "pathCount": 2,
+      "owner": "services/dsh",
+      "parentContract": "contracts/dsh.catalog.openapi.yaml",
+      "contractRole": "executable-fragment"
+    },
+    "dsh.catalog.openapi.yaml": {
+      "pathCount": 28,
+      "owner": "services/dsh",
+      "parentContract": "contracts/dsh.openapi.yaml",
+      "contractRole": "executable-fragment"
+    },
+    "dsh.client-address-privacy.openapi.yaml": {
+      "pathCount": 4,
+      "owner": "services/dsh",
+      "parentContract": null,
+      "contractRole": "governed-projection"
+    },
+    "dsh.client-address.openapi.yaml": {
+      "pathCount": 3,
+      "owner": "services/dsh",
+      "parentContract": null,
+      "contractRole": "governed-projection"
+    },
+    "dsh.client-map.openapi.yaml": {
+      "pathCount": 5,
+      "owner": "services/dsh",
+      "parentContract": null,
+      "contractRole": "governed-projection"
+    },
+    "dsh.delivery-exceptions.openapi.yaml": {
+      "pathCount": 7,
+      "owner": "services/dsh",
+      "parentContract": null,
+      "contractRole": "governed-projection"
+    },
+    "dsh.delivery-proof-completion.openapi.yaml": {
+      "pathCount": 7,
+      "owner": "services/dsh",
+      "parentContract": null,
+      "contractRole": "governed-projection"
+    },
+    "dsh.delivery-proof-media.openapi.yaml": {
+      "pathCount": 2,
+      "owner": "services/dsh",
+      "parentContract": "services/dsh/contracts/dsh.openapi.yaml",
+      "contractRole": "governed-projection"
+    },
+    "dsh.dispatch-governance.openapi.yaml": {
+      "pathCount": 10,
+      "owner": "services/dsh",
+      "parentContract": null,
+      "contractRole": "governed-projection"
+    },
+    "dsh.home-marketing-events.openapi.yaml": {
+      "pathCount": 2,
+      "owner": "services/dsh",
+      "parentContract": null,
+      "contractRole": "governed-projection"
+    },
+    "dsh.home-marketing-governance.openapi.yaml": {
+      "pathCount": 2,
+      "owner": "services/dsh",
+      "parentContract": "services/dsh/contracts/dsh.openapi.yaml",
+      "contractRole": "governed-projection"
+    },
+    "dsh.jrn-003-workforce-scopes.openapi.yaml": {
+      "pathCount": 2,
+      "owner": "services/dsh",
+      "parentContract": null,
+      "contractRole": "governed-projection"
+    },
+    "dsh.jrn-010-checkout.openapi.yaml": {
+      "pathCount": 6,
+      "owner": "services/dsh",
+      "parentContract": null,
+      "contractRole": "governed-projection"
+    },
+    "dsh.live-tracking.openapi.yaml": {
+      "pathCount": 4,
+      "owner": "services/dsh",
+      "parentContract": null,
+      "contractRole": "governed-projection"
+    },
+    "dsh.marketing-commercial.openapi.yaml": {
+      "pathCount": 9,
+      "owner": "services/dsh",
+      "parentContract": "services/dsh/contracts/dsh.openapi.yaml",
+      "contractRole": "governed-projection"
+    },
+    "dsh.order-truth.openapi.yaml": {
+      "pathCount": 8,
+      "owner": "services/dsh",
+      "parentContract": null,
+      "contractRole": "governed-projection"
+    },
+    "dsh.partner-commercial-closure.openapi.yaml": {
+      "pathCount": 8,
+      "owner": "services/dsh",
+      "parentContract": "services/dsh/contracts/dsh.openapi.yaml",
+      "contractRole": "governed-projection"
+    },
+    "dsh.partner-delivery.openapi.yaml": {
+      "pathCount": 11,
+      "owner": "services/dsh",
+      "parentContract": "services/dsh/contracts/dsh.openapi.yaml",
+      "contractRole": "governed-projection"
+    },
+    "dsh.partner-fleet.openapi.yaml": {
+      "pathCount": 6,
+      "owner": "services/dsh",
+      "parentContract": "services/dsh/contracts/dsh.openapi.yaml",
+      "contractRole": "governed-projection"
+    },
+    "dsh.partner-onboarding.openapi.yaml": {
+      "pathCount": 8,
+      "owner": "services/dsh",
+      "parentContract": null,
+      "contractRole": "governed-projection"
+    },
+    "dsh.partner-support.openapi.yaml": {
+      "pathCount": 3,
+      "owner": "services/dsh",
+      "parentContract": null,
+      "contractRole": "governed-projection"
+    },
+    "dsh.platform-policies.openapi.yaml": {
+      "pathCount": 7,
+      "owner": "services/dsh",
+      "parentContract": null,
+      "contractRole": "governed-projection"
+    },
+    "dsh.store-captain-handoff.openapi.yaml": {
+      "pathCount": 3,
+      "owner": "services/dsh",
+      "parentContract": null,
+      "contractRole": "governed-projection"
+    },
+    "dsh.support-governance.openapi.yaml": {
+      "pathCount": 7,
+      "owner": "services/dsh",
+      "parentContract": null,
+      "contractRole": "governed-projection"
+    }
+  }
+}

@@ -1,0 +1,137 @@
+# BThwani DSH OpenAPI schemas module: marketing-commercial.
+# Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
+
+DshMarketingTargetType:
+  type: string
+  enum: [home, stores, store, category, subcategory, product, offer, campaign, search, custom]
+
+DshCampaign:
+  type: object
+  required: [id, title, status, audience, createdBy, createdAt, updatedAt]
+  properties:
+    id: { type: string }
+    title: { type: string }
+    description: { type: string }
+    status: { type: string, enum: [draft, active, paused, completed, cancelled] }
+    startDate: { type: string }
+    endDate: { type: string }
+    targetType: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshMarketingTargetType" }
+    targetId: { type: string }
+    audience: { type: string }
+    placement: { type: string }
+    createdBy: { type: string }
+    archivedAt: { type: ["string", "null"], format: date-time }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+
+DshCampaignsListResponse:
+  type: object
+  required: [campaigns]
+  properties:
+    campaigns:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshCampaign" }
+
+DshCampaignResponse:
+  type: object
+  required: [campaign]
+  properties:
+    campaign: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshCampaign" }
+
+DshCreateCampaignRequest:
+  type: object
+  required: [title]
+  properties:
+    title: { type: string, minLength: 1 }
+    description: { type: string }
+    startDate: { type: string }
+    endDate: { type: string }
+    targetType: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshMarketingTargetType" }
+    targetId: { type: string }
+    audience: { type: string }
+    placement: { type: string }
+
+DshUpdateCampaignRequest:
+  type: object
+  properties:
+    title: { type: string }
+    description: { type: string }
+    status: { type: string, enum: [draft, active, paused, completed, cancelled] }
+    targetType: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshMarketingTargetType" }
+    targetId: { type: string }
+
+DshMarketingTicker:
+  type: object
+  required: [id, message, kind, status, source, audience, deliveryMode, priority, pinned, actionType, actionTarget, clicks, impressions, createdBy, createdAt, updatedAt]
+  properties:
+    id: { type: string }
+    message: { type: string }
+    kind: { type: string, enum: [alert, news, promo] }
+    status: { type: string, enum: [draft, published, paused] }
+    source: { type: string, enum: [system, ops, partner] }
+    audience: { type: string, enum: [all, client, partner, captain] }
+    deliveryMode: { type: string, enum: [scroll, toast, overlay] }
+    priority: { type: string, enum: [low, normal, high, critical] }
+    pinned: { type: boolean }
+    actionType: { type: string }
+    actionTarget: { type: string }
+    clicks: { type: integer, minimum: 0 }
+    impressions: { type: integer, minimum: 0 }
+    openHour: { type: integer, minimum: 0, maximum: 23 }
+    closeHour: { type: integer, minimum: 0, maximum: 23 }
+    cooldownMinutes: { type: integer, minimum: 0 }
+    repeatGapMinutes: { type: integer, minimum: 0 }
+    createdBy: { type: string }
+    createdAt: { type: string }
+    updatedAt: { type: string }
+
+DshMarketingTickersListResponse:
+  type: object
+  required: [tickers]
+  properties:
+    tickers:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshMarketingTicker" }
+
+DshMarketingTickerResponse:
+  type: object
+  required: [ticker]
+  properties:
+    ticker: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshMarketingTicker" }
+
+DshCreateMarketingTickerRequest:
+  type: object
+  required: [message]
+  properties:
+    message: { type: string, minLength: 1 }
+    kind: { type: string, enum: [alert, news, promo] }
+    status: { type: string, enum: [draft, published, paused] }
+    source: { type: string, enum: [system, ops, partner] }
+    audience: { type: string, enum: [all, client, partner, captain] }
+    deliveryMode: { type: string, enum: [scroll, toast, overlay] }
+    priority: { type: string, enum: [low, normal, high, critical] }
+    pinned: { type: boolean }
+    actionType: { type: string }
+    actionTarget: { type: string }
+    openHour: { type: integer, minimum: 0, maximum: 23 }
+    closeHour: { type: integer, minimum: 0, maximum: 23 }
+    cooldownMinutes: { type: integer, minimum: 0 }
+    repeatGapMinutes: { type: integer, minimum: 0 }
+
+DshUpdateMarketingTickerRequest:
+  type: object
+  properties:
+    message: { type: string, minLength: 1 }
+    kind: { type: string, enum: [alert, news, promo] }
+    status: { type: string, enum: [draft, published, paused] }
+    source: { type: string, enum: [system, ops, partner] }
+    audience: { type: string, enum: [all, client, partner, captain] }
+    deliveryMode: { type: string, enum: [scroll, toast, overlay] }
+    priority: { type: string, enum: [low, normal, high, critical] }
+    pinned: { type: boolean }
+    actionType: { type: string }
+    actionTarget: { type: string }
+    openHour: { type: integer, minimum: 0, maximum: 23 }
+    closeHour: { type: integer, minimum: 0, maximum: 23 }
+    cooldownMinutes: { type: integer, minimum: 0 }
+    repeatGapMinutes: { type: integer, minimum: 0 }

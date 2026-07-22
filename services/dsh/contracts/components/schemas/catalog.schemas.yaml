@@ -1,0 +1,299 @@
+# BThwani DSH OpenAPI schemas module: catalog.
+# Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
+
+DshStoreCategory:
+  type: string
+  description: Sovereign central catalog domain identifier assigned to the store.
+  pattern: ^domain-[a-z0-9-]+$
+
+DshCatalogAsset:
+  type: object
+  required: [id, objectKey, mimeType, sizeBytes, status, sourceSurface, uploadedBy, createdAt, updatedAt, version]
+  properties:
+    id: { type: string }
+    objectKey: { type: string }
+    publicUrl: { type: [string, "null"] }
+    mimeType: { type: string }
+    sizeBytes: { type: integer }
+    widthPx: { type: [integer, "null"] }
+    heightPx: { type: [integer, "null"] }
+    checksum: { type: [string, "null"] }
+    altAr: { type: string }
+    altEn: { type: string }
+    dominantColor: { type: [string, "null"] }
+    status:
+      type: string
+      enum: [draft, uploaded, pending_review, approved, rejected, archived]
+    sourceSurface: { type: string }
+    uploadedBy: { type: string }
+    reviewedBy: { type: [string, "null"] }
+    reviewNote: { type: string }
+    intendedEntityType: { type: [string, "null"] }
+    intendedEntityId: { type: [string, "null"] }
+    intendedRole: { type: [string, "null"] }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+
+DshCatalogAssetListResponse:
+  type: object
+  required: [assets, total, limit, offset]
+  properties:
+    assets:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshCatalogAsset" }
+    total: { type: integer }
+    limit: { type: integer }
+    offset: { type: integer }
+
+DshMasterProduct:
+  type: object
+  required: [id, domainId, canonicalNameAr, canonicalNameEn, brand, unit, measurementType, approvalStatus, isActive, createdSource, createdAt, updatedAt, version]
+  properties:
+    id: { type: string }
+    domainId: { type: string }
+    categoryNodeId: { type: [string, "null"] }
+    canonicalNameAr: { type: string }
+    canonicalNameEn: { type: string }
+    brand: { type: string }
+    barcode: { type: [string, "null"] }
+    gtin: { type: [string, "null"] }
+    sku: { type: [string, "null"] }
+    unit: { type: string }
+    measurementType: { type: string }
+    canonicalImageObjectKey: { type: [string, "null"] }
+    approvalStatus:
+      type: string
+      enum: [draft, pending_review, approved, rejected, archived]
+    isActive: { type: boolean }
+    duplicateGroupId: { type: [string, "null"] }
+    createdSource: { type: string }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+    version: { type: integer }
+
+MasterProductSummary:
+  type: object
+  required: [id, domainId, canonicalNameAr, canonicalNameEn, brand, unit, measurementType, approvalStatus, isActive, updatedAt, version]
+  properties:
+    id: { type: string }
+    domainId: { type: string }
+    categoryNodeId: { type: [string, "null"] }
+    canonicalNameAr: { type: string }
+    canonicalNameEn: { type: string }
+    brand: { type: string }
+    barcode: { type: [string, "null"] }
+    sku: { type: [string, "null"] }
+    unit: { type: string }
+    measurementType: { type: string }
+    approvalStatus: { type: string }
+    isActive: { type: boolean }
+    effectiveImage: { type: [string, "null"] }
+    thumbnailUrl: { type: [string, "null"] }
+    imageAltAr: { type: [string, "null"] }
+    imageStatus: { type: string }
+    updatedAt: { type: string, format: date-time }
+    version: { type: integer }
+
+DshMasterProductListResponse:
+  type: object
+  required: [masterProducts, total, limit, offset]
+  properties:
+    masterProducts:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/MasterProductSummary" }
+    total: { type: integer }
+    limit: { type: integer }
+    offset: { type: integer }
+
+DshProductProposal:
+  type: object
+  required: [id, proposedNameAr, proposedNameEn, domainId, brand, sourceSurface, sourceActorId, status, reviewNote, createdAt, updatedAt, reviewStage, auditRequired, resubmissionCount, version]
+  properties:
+    id: { type: string }
+    proposedNameAr: { type: string }
+    proposedNameEn: { type: string }
+    domainId: { type: string }
+    categoryNodeId: { type: [string, "null"] }
+    brand: { type: string }
+    barcode: { type: [string, "null"] }
+    imageObjectKey: { type: [string, "null"] }
+    sourceSurface:
+      type: string
+      enum: [app-field, app-partner, control-panel-catalog, control-panel-platform]
+    sourceActorId: { type: string }
+    sourceStoreId: { type: [string, "null"] }
+    status:
+      type: string
+      enum: [catalog-draft, partner-proposed, partner-review, marketing-review, catalog-adopted, catalog-approved, client-visible, needs-fix, rejected]
+    reviewNote: { type: string }
+    adoptedMasterProductId: { type: [string, "null"] }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+    reviewStage: { type: string }
+    partnerReviewedBy: { type: [string, "null"] }
+    marketingReviewedBy: { type: [string, "null"] }
+    catalogAdoptedBy: { type: [string, "null"] }
+    catalogApprovedBy: { type: [string, "null"] }
+    clientVisibleAt: { type: [string, "null"], format: date-time }
+    auditRequired: { type: boolean }
+    blockedReason: { type: [string, "null"] }
+    resubmissionCount: { type: integer }
+    linkedStoreId: { type: [string, "null"] }
+
+DshProductProposalListResponse:
+  type: object
+  required: [proposals, total, limit, offset]
+  properties:
+    proposals:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshProductProposal" }
+    total: { type: integer }
+    limit: { type: integer }
+    offset: { type: integer }
+
+DshCentralCatalogDomain:
+
+  type: object
+  required: [id, slug, nameAr, nameEn, icon, sortOrder, isActive, isClientVisible, requiresProductCatalog, isManualRequest, version]
+  properties:
+    id: { type: string }
+    slug: { type: string }
+    nameAr: { type: string }
+    nameEn: { type: string }
+    icon: { type: string }
+    sortOrder: { type: integer }
+    isActive: { type: boolean }
+    isClientVisible: { type: boolean }
+    requiresProductCatalog: { type: boolean }
+    isManualRequest: { type: boolean }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+
+DshCentralCatalogNode:
+  type: object
+  required: [id, domainId, level, slug, nameAr, nameEn, icon, sortOrder, isActive, isClientVisible, version]
+  properties:
+    id: { type: string }
+    domainId: { type: string }
+    parentId: { type: ["string", "null"] }
+    level: { type: string, enum: [BUSINESS_SUBDOMAIN, PRODUCT_MAIN_CLASS, PRODUCT_SUB_CLASS] }
+    slug: { type: string }
+    nameAr: { type: string }
+    nameEn: { type: string }
+    icon: { type: string }
+    sortOrder: { type: integer }
+    isActive: { type: boolean }
+    isClientVisible: { type: boolean }
+
+DshClientCatalogProduct:
+  type: object
+  required: [id, domainId, canonicalNameAr, canonicalNameEn, brand, unit, measurementType, approvalStatus, isActive, unitPrice, currency, stockStatus, imageObjectKey]
+  properties:
+    id: { type: string }
+    domainId: { type: string }
+    categoryNodeId: { type: ["string", "null"] }
+    canonicalNameAr: { type: string }
+    canonicalNameEn: { type: string }
+    brand: { type: string }
+    barcode: { type: ["string", "null"] }
+    gtin: { type: ["string", "null"] }
+    sku: { type: ["string", "null"] }
+    unit: { type: string }
+    measurementType: { type: string }
+    canonicalImageObjectKey: { type: ["string", "null"] }
+    approvalStatus: { type: string, enum: [approved] }
+    isActive: { type: boolean }
+    unitPrice: { type: number, format: double, minimum: 0 }
+    currency: { type: string }
+    stockStatus: { type: string, enum: [in_stock, low_stock, out_of_stock] }
+    imageObjectKey: { type: string, deprecated: true, description: "Deprecated: use effectiveImage instead." }
+    effectiveImage:
+      type: object
+      nullable: true
+      description: >
+        DAM-computed effective product image. Priority: approved store-assortment
+        partner_custom_product_image (when policy allows) > approved master-product
+        canonical_product_image > null.
+      properties:
+        url: { type: string }
+        altAr: { type: string }
+        source: { type: string, enum: [store_custom, canonical] }
+
+DshCatalogAssetLink:
+  type: object
+  required: [id, assetId, entityType, entityId, role, sortOrder, isPrimary, status]
+  properties:
+    id: { type: string }
+    assetId: { type: string }
+    entityType: { type: string }
+    entityId: { type: string }
+    role: { type: string }
+    sortOrder: { type: integer }
+    isPrimary: { type: boolean }
+    status: { type: string }
+
+DshCatalogPolicySnapshot:
+  type: object
+  required: [id, policyScope, isActive, version]
+  properties:
+    id: { type: string }
+    domainId: { type: ["string", "null"] }
+    nodeId: { type: ["string", "null"] }
+    policyScope: { type: string, enum: [default, domain, node] }
+    isActive: { type: boolean }
+    allowsStoreProductCustomImage: { type: boolean }
+    allowsProductProposal: { type: boolean }
+    requiresBarcode: { type: boolean }
+    requiresCatalogReview: { type: boolean }
+    requiresProductImage: { type: boolean }
+
+DshCatalogResponse:
+  type: object
+  required: [domains, nodes, products, media, policySnapshot]
+  properties:
+    domains:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshCentralCatalogDomain" }
+    nodes:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshCentralCatalogNode" }
+    products:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshClientCatalogProduct" }
+    media:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshCatalogAssetLink" }
+    policySnapshot:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshCatalogPolicySnapshot" }
+
+DshHomeCategory:
+  type: object
+  required:
+    - id
+    - label
+    - sortOrder
+  properties:
+    id:
+      type: string
+    label:
+      type: string
+    iconUrl:
+      type: string
+    sortOrder:
+      type: integer
+
+DshEscalationCategory:
+  type: string
+  enum: [document_missing, safety_violation, location_mismatch, product_compliance, equipment_failure, other]
+
+DshTicketCategory:
+  type: string
+  enum: [order_issue, delivery_issue, store_quality, payment_reference, account_access, app_bug, other]
+
+DshTicketCategoryCount:
+  type: object
+  required: [category, count]
+  properties:
+    category: { type: string }
+    count: { type: integer }

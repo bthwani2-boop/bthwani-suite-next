@@ -1,0 +1,107 @@
+# BThwani DSH OpenAPI path-items module: discovery.
+# Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
+
+/dsh/stores:
+  get:
+    operationId: listDshStores
+    summary: List discoverable stores.
+    tags:
+      - DshStoreDiscovery
+    parameters:
+      - name: cityCode
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Filter by city code.
+      - name: serviceAreaCode
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Filter by service area code.
+      - name: status
+        in: query
+        required: false
+        schema:
+          $ref: "../dsh.openapi.yaml#/components/schemas/DshStoreStatus"
+        description: Filter by store status.
+      - name: isVisible
+        in: query
+        required: false
+        schema:
+          type: boolean
+        description: Filter by visibility flag.
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - name: offset
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+    responses:
+      "200":
+        description: Paginated list of stores.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshStoreListResponse"
+      "400":
+        description: Invalid query parameters.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshErrorResponse"
+      "500":
+        description: Internal server error.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshErrorResponse"
+
+/dsh/stores/{storeId}:
+  get:
+    operationId: getDshStore
+    summary: Get a single store by ID.
+    tags:
+      - DshStoreDiscovery
+    parameters:
+      - name: storeId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Store identifier.
+    responses:
+      "200":
+        description: Store detail.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshStoreDetailResponse"
+      "400":
+        description: Invalid store ID.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshErrorResponse"
+      "404":
+        description: Store not found.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshErrorResponse"
+      "500":
+        description: Internal server error.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshErrorResponse"

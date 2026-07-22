@@ -1,0 +1,937 @@
+# BThwani DSH OpenAPI schemas module: common.
+# Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
+
+DshAcknowledgeDeliveryExceptionRequest:
+  type: object
+  additionalProperties: false
+  required: [expectedVersion]
+  properties:
+    expectedVersion: { type: integer, minimum: 1 }
+
+DshResolveDeliveryExceptionRequest:
+  type: object
+  additionalProperties: false
+  required: [expectedVersion, action, note]
+  properties:
+    expectedVersion: { type: integer, minimum: 1 }
+    action:
+      type: string
+      enum: [retry_same_captain, reassign_captain, return_to_store]
+    note: { type: string, minLength: 5, maxLength: 1000 }
+    newCaptainId:
+      type: string
+      minLength: 1
+      description: Required only when action is reassign_captain.
+
+DshDeliveryExceptionReasonCode:
+  type: string
+  enum:
+    - customer_unreachable
+    - recipient_refused
+    - wrong_address
+    - unsafe_location
+    - vehicle_breakdown
+    - accident
+    - damaged_order
+    - cash_collection_issue
+    - weather_or_road_block
+    - proof_unavailable
+    - handoff_shortage
+    - handoff_mismatch
+    - other
+
+DshDeliveryExceptionStatus:
+  type: string
+  enum: [open, acknowledged, resolved]
+
+DshDeliveryExceptionSeverity:
+  type: string
+  enum: [medium, high, critical]
+
+DshDeliveryException:
+  type: object
+  additionalProperties: false
+  required:
+    - id
+    - tenantId
+    - assignmentId
+    - orderId
+    - captainId
+    - reasonCode
+    - note
+    - deliveryStatusAtReport
+    - severity
+    - status
+    - correlationId
+    - reportedAt
+    - version
+    - createdAt
+    - updatedAt
+  properties:
+    id: { type: string, format: uuid }
+    tenantId: { type: string }
+    assignmentId: { type: string, format: uuid }
+    orderId: { type: string, format: uuid }
+    captainId: { type: string }
+    reasonCode: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshDeliveryExceptionReasonCode" }
+    note: { type: string }
+    deliveryStatusAtReport: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshDeliveryStatus" }
+    severity: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshDeliveryExceptionSeverity" }
+    status: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshDeliveryExceptionStatus" }
+    correlationId: { type: string }
+    reportedLatitude: { type: number, format: double, nullable: true }
+    reportedLongitude: { type: number, format: double, nullable: true }
+    reportedAt: { type: string, format: date-time }
+    acknowledgedAt: { type: string, format: date-time, nullable: true }
+    acknowledgedByActorId: { type: string, nullable: true }
+    resolvedAt: { type: string, format: date-time, nullable: true }
+    resolvedByActorId: { type: string, nullable: true }
+    resolutionAction:
+      type: string
+      enum: [retry_same_captain, reassign_captain, return_to_store, cancel_order]
+      nullable: true
+    resolutionNote: { type: string, nullable: true }
+    replacementAssignmentId: { type: string, format: uuid, nullable: true }
+    replacementCaptainId: { type: string, nullable: true }
+    returnStartedAt: { type: string, format: date-time, nullable: true }
+    returnArrivedAt: { type: string, format: date-time, nullable: true }
+    returnedAt: { type: string, format: date-time, nullable: true }
+    returnAcceptedByActorId: { type: string, nullable: true }
+    version: { type: integer, minimum: 1 }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+
+DshDeliveryExceptionResponse:
+  type: object
+  additionalProperties: false
+  required: [exception]
+  properties:
+    exception: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshDeliveryException" }
+
+DshDeliveryExceptionListResponse:
+  type: object
+  additionalProperties: false
+  required: [exceptions]
+  properties:
+    exceptions:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshDeliveryException" }
+
+DshPagination:
+  type: object
+  required:
+    - limit
+    - offset
+    - total
+  properties:
+    limit:
+      type: integer
+    offset:
+      type: integer
+    total:
+      type: integer
+
+DshErrorResponse:
+  type: object
+  required:
+    - code
+    - message
+  properties:
+    code:
+      type: string
+    message:
+      type: string
+
+DshReel:
+  type: object
+  required: [id, assetId, targetType, targetId, status, sortOrder, submittedBy, submittedByRole, createdAt, updatedAt]
+  properties:
+    id: { type: string }
+    assetId: { type: string }
+    titleAr: { type: string }
+    titleEn: { type: string }
+    targetType: { type: string, enum: [master_product, store, offer] }
+    targetId: { type: string }
+    status: { type: string, enum: [pending_review, approved, rejected, archived] }
+    sortOrder: { type: integer }
+    submittedBy: { type: string }
+    submittedByRole: { type: string }
+    sourceStoreId: { type: [string, "null"] }
+    reviewedBy: { type: [string, "null"] }
+    reviewNote: { type: string }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+
+DshPublicReel:
+  type: object
+  required: [id, videoUrl, targetType, targetId, sortOrder]
+  properties:
+    id: { type: string }
+    titleAr: { type: string }
+    titleEn: { type: string }
+    videoUrl:
+      type: string
+      description: Public streaming URL from /dsh/public/media/{assetId}/original
+    targetType: { type: string, enum: [master_product, store, offer] }
+    targetId: { type: string }
+    sortOrder: { type: integer }
+
+DshHomeBanner:
+  type: object
+  required:
+    - id
+    - title
+    - imageUrl
+    - actionType
+    - actionTarget
+  properties:
+    id:
+      type: string
+    title:
+      type: string
+    subtitle:
+      type: string
+    imageUrl:
+      type: string
+    actionType:
+      type: string
+      enum:
+        - store
+        - category
+        - external
+        - none
+    actionTarget:
+      type: string
+
+DshHomePromo:
+  type: object
+  required:
+    - id
+    - title
+    - imageUrl
+  properties:
+    id:
+      type: string
+    title:
+      type: string
+    subtitle:
+      type: string
+    badgeLabel:
+      type: string
+    imageUrl:
+      type: string
+    actionType:
+      type: string
+      enum:
+        - store
+        - category
+        - external
+        - none
+    actionTarget:
+      type: string
+
+DshHomeFilter:
+  type: object
+  required:
+    - id
+    - label
+    - kind
+  properties:
+    id:
+      type: string
+    label:
+      type: string
+    kind:
+      type: string
+      enum:
+        - all
+        - favorites
+        - nearest
+        - new
+        - offers
+    isActive:
+      type: boolean
+      default: false
+
+DshHomeAdminContentItem:
+  type: object
+  required: [id, kind, title, actionType, actionTarget, sortOrder, isActive]
+  properties:
+    id:
+      type: string
+    kind:
+      type: string
+      enum: [banners, promos]
+    title:
+      type: string
+    subtitle:
+      type: string
+    badgeLabel:
+      type: string
+    imageUrl:
+      type: string
+    actionType:
+      type: string
+      enum: [store, category, external, none]
+    actionTarget:
+      type: string
+    sortOrder:
+      type: integer
+      minimum: 0
+    isActive:
+      type: boolean
+
+DshHomeAdminContentInput:
+  type: object
+  required: [title, subtitle, badgeLabel, imageUrl, actionType, actionTarget, sortOrder, isActive]
+  properties:
+    title:
+      type: string
+      minLength: 2
+    subtitle:
+      type: string
+    badgeLabel:
+      type: string
+    imageUrl:
+      type: string
+    actionType:
+      type: string
+      enum: [store, category, external, none]
+    actionTarget:
+      type: string
+    sortOrder:
+      type: integer
+      minimum: 0
+    isActive:
+      type: boolean
+
+DshHomeAdminListResponse:
+  type: object
+  required: [items]
+  properties:
+    items:
+      type: array
+      items:
+        $ref: "../../dsh.openapi.yaml#/components/schemas/DshHomeAdminContentItem"
+
+DshHomeAdminItemResponse:
+  type: object
+  required: [item]
+  properties:
+    item:
+      $ref: "../../dsh.openapi.yaml#/components/schemas/DshHomeAdminContentItem"
+
+DshAssignmentStatus:
+  type: string
+  enum: [offered, accepted, declined, completed, cancelled]
+
+DshDeliveryStatus:
+  type: string
+  enum: [assigned, driver_assigned, driver_arrived_store, picked_up, arrived_customer, returning_to_store, return_arrived_store, returned_to_store, delivered, cancelled]
+
+DshDelivery:
+  type: object
+  required: [id, assignmentId, orderId, captainId, status, podMethod, podReference, note, createdAt, updatedAt]
+  properties:
+    id: { type: string }
+    assignmentId: { type: string }
+    orderId: { type: string }
+    captainId: { type: string }
+    status: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshDeliveryStatus" }
+    podMethod: { type: string }
+    podReference: { type: string }
+    note: { type: string }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+
+DshCreateAssignmentRequest:
+  type: object
+  required: [orderId, captainId]
+  properties:
+    orderId: { type: string }
+    captainId: { type: string }
+
+DshDeclineAssignmentRequest:
+  type: object
+  properties:
+    reason: { type: string }
+
+DshUpdateDeliveryStatusRequest:
+  type: object
+  required: [status]
+  properties:
+    status:
+      type: string
+      enum: [driver_arrived_store, picked_up, arrived_customer]
+
+DshSubmitPoDRequest:
+  type: object
+  required: [method, reference]
+  properties:
+    method:
+      type: string
+      enum: [photo, code, signature]
+    reference:
+      type: string
+      minLength: 2
+    note:
+      type: string
+
+DshVisitType:
+  type: string
+  enum: [onboarding, periodic, escalation_followup]
+
+DshVisitStatus:
+  type: string
+  enum: [in_progress, complete, escalated]
+
+DshCheckType:
+  type: string
+  enum: [location_verified, documents_uploaded, product_list_submitted, equipment_checked, safety_compliant, hygiene_compliant]
+
+DshCheckStatus:
+  type: string
+  enum: [pending, passed, failed]
+
+DshEscalationStatus:
+  type: string
+  enum: [open, acknowledged, resolved, escalated_further]
+
+DshEscalationSeverity:
+  type: string
+  enum: [low, medium, high, critical]
+
+DshEscalationResponse:
+  type: object
+  required: [escalation]
+  properties:
+    escalation: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshReadinessEscalation" }
+
+DshEscalationsResponse:
+  type: object
+  required: [escalations]
+  properties:
+    escalations:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshReadinessEscalation" }
+
+DshCreateEscalationRequest:
+  type: object
+  required: [severity, category, description]
+  properties:
+    visitId: { type: string }
+    severity: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshEscalationSeverity" }
+    category: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshEscalationCategory" }
+    description: { type: string, minLength: 10 }
+
+DshUpdateEscalationRequest:
+  type: object
+  required: [status]
+  properties:
+    status: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshEscalationStatus" }
+    resolutionNote: { type: string }
+
+DshOnboardingStatusResponse:
+  type: object
+  required: [storeId, totalVisits, completedVisits, openEscalations, onboardingComplete, status]
+  properties:
+    storeId: { type: string }
+    totalVisits: { type: integer }
+    completedVisits: { type: integer }
+    openEscalations: { type: integer }
+    onboardingComplete: { type: boolean }
+    status:
+      type: string
+      enum: [pending, complete, escalation_required]
+
+# ── Support ──────────────────────────────────────────────────────
+
+DshSenderRole:
+  type: string
+  enum: [client, partner, captain, operator, system]
+
+DshIncidentStatus:
+  type: string
+  enum: [open, monitoring, resolved]
+
+DshIncidentSeverity:
+  type: string
+  enum: [low, medium, high, critical]
+
+DshIncidentScope:
+  type: string
+  enum: [delivery, stores, payments, platform, unknown]
+
+DshMessageResponse:
+  type: object
+  required: [message]
+  properties:
+    message: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshSupportMessage" }
+
+DshMessagesResponse:
+  type: object
+  required: [messages]
+  properties:
+    messages:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshSupportMessage" }
+
+DshAddMessageRequest:
+  type: object
+  required: [body]
+  properties:
+    body: { type: string, minLength: 2 }
+    isInternal: { type: boolean }
+
+DshIncident:
+  type: object
+  required: [id, title, description, severity, status, affectedScope, raisedBy, postmortemUrl, createdAt, updatedAt]
+  properties:
+    id: { type: string }
+    title: { type: string }
+    description: { type: string }
+    severity: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshIncidentSeverity" }
+    status: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshIncidentStatus" }
+    affectedScope: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshIncidentScope" }
+    raisedBy: { type: string }
+    resolvedBy: { type: string }
+    resolvedAt: { type: ["string", "null"], format: date-time }
+    postmortemUrl: { type: string }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+
+DshIncidentResponse:
+  type: object
+  required: [incident]
+  properties:
+    incident: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshIncident" }
+
+DshIncidentsResponse:
+  type: object
+  required: [incidents]
+  properties:
+    incidents:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshIncident" }
+
+DshCreateIncidentRequest:
+  type: object
+  required: [title, description, severity]
+  properties:
+    title: { type: string, minLength: 3 }
+    description: { type: string }
+    severity: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshIncidentSeverity" }
+    affectedScope: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshIncidentScope" }
+
+DshUpdateIncidentRequest:
+  type: object
+  required: [status]
+  properties:
+    status: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshIncidentStatus" }
+    postmortemUrl: { type: string }
+
+# ── Analytics Schemas ─────────────────────────────────────────
+
+DshPlatformKpisResponse:
+  type: object
+  required: [totalOrders, deliveredOrders, cancelledOrders, activeStores, openTickets, fieldVisitsCompleted, openEscalations, openIncidents, period, generatedAt]
+  properties:
+    totalOrders: { type: integer }
+    deliveredOrders: { type: integer }
+    cancelledOrders: { type: integer }
+    activeStores: { type: integer }
+    openTickets: { type: integer }
+    fieldVisitsCompleted: { type: integer }
+    openEscalations: { type: integer }
+    openIncidents: { type: integer }
+    period: { type: string }
+    generatedAt: { type: string, format: date-time }
+
+DshNotification:
+  type: object
+  required: [id, actorId, actorType, topic, title, body, actionUrl, isRead, createdAt]
+  properties:
+    id: { type: string }
+    actorId: { type: string }
+    actorType: { type: string }
+    topic: { type: string }
+    title: { type: string }
+    body: { type: string }
+    actionUrl: { type: string }
+    isRead: { type: boolean }
+    createdAt: { type: string, format: date-time }
+    readAt: { type: ["string", "null"], format: date-time }
+
+DshNotificationsListResponse:
+  type: object
+  required: [notifications, unreadCount]
+  properties:
+    notifications:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshNotification" }
+    unreadCount: { type: integer }
+
+DshNotificationResponse:
+  type: object
+  required: [notification]
+  properties:
+    notification: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshNotification" }
+
+DshUpdateNotificationPreferenceRequest:
+  type: object
+  required: [topic, enabled]
+  properties:
+    topic: { type: string }
+    enabled: { type: boolean }
+
+DshNotificationPreference:
+  type: object
+  required: [actorId, actorType, topic, enabled, updatedAt]
+  properties:
+    actorId: { type: string }
+    actorType: { type: string }
+    topic: { type: string }
+    enabled: { type: boolean }
+    updatedAt: { type: string, format: date-time }
+
+DshNotificationPreferenceResponse:
+  type: object
+  required: [preference]
+  properties:
+    preference: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshNotificationPreference" }
+
+DshPlatformNotificationConfig:
+  type: object
+  required: [id, topic, actorTypes, isEnabled, description, updatedBy, updatedAt]
+  properties:
+    id: { type: string }
+    topic: { type: string }
+    actorTypes:
+      type: array
+      items: { type: string }
+    isEnabled: { type: boolean }
+    description: { type: string }
+    updatedBy: { type: string }
+    updatedAt: { type: string, format: date-time }
+
+DshPlatformNotificationConfigListResponse:
+  type: object
+  required: [configs]
+  properties:
+    configs:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshPlatformNotificationConfig" }
+
+DshPlatformNotificationConfigResponse:
+  type: object
+  required: [config]
+  properties:
+    config: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshPlatformNotificationConfig" }
+
+DshUpsertPlatformNotificationConfigRequest:
+  type: object
+  required: [topic, actorTypes, isEnabled, description]
+  properties:
+    topic: { type: string }
+    actorTypes:
+      type: array
+      items: { type: string }
+    isEnabled: { type: boolean }
+    description: { type: string }
+
+# ── Marketing Schemas ─────────────────────────────────────────────
+
+DshZone:
+  type: object
+  required: [id, name, status, polygon, cityCode, serviceAreaCode, createdAt, updatedAt]
+  properties:
+    id: { type: string }
+    name: { type: string }
+    status: { type: string }
+    polygon: { type: string }
+    cityCode: { type: string }
+    serviceAreaCode: { type: string }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+
+DshZonesListResponse:
+  type: object
+  required: [zones, total]
+  properties:
+    zones:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshZone" }
+    total: { type: integer }
+
+DshZoneResponse:
+  type: object
+  required: [zone]
+  properties:
+    zone: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshZone" }
+
+DshCreateZoneRequest:
+  type: object
+  required: [name, polygon, cityCode, serviceAreaCode]
+  properties:
+    name: { type: string, minLength: 1 }
+    polygon: { type: string }
+    cityCode: { type: string }
+    serviceAreaCode: { type: string }
+
+DshUpdateZoneRequest:
+  type: object
+  properties:
+    name: { type: string }
+    status: { type: string }
+    polygon: { type: string }
+
+DshSlaRule:
+  type: object
+  required: [zoneId, captainSlaMinutes, partnerSlaMinutes, version, updatedAt]
+  properties:
+    zoneId: { type: string }
+    captainSlaMinutes: { type: integer }
+    partnerSlaMinutes: { type: integer }
+    version: { type: integer }
+    updatedAt: { type: string, format: date-time }
+
+DshSlaRulesResponse:
+  type: object
+  required: [rules]
+  properties:
+    rules: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshSlaRule" }
+
+DshUpsertSlaRulesRequest:
+  type: object
+  required: [zoneId, captainSlaMinutes, partnerSlaMinutes]
+  properties:
+    zoneId: { type: string }
+    captainSlaMinutes: { type: integer }
+    partnerSlaMinutes: { type: integer }
+
+DshCapacityConfig:
+  type: object
+  required: [zoneId, maxConcurrentOrders, warningThreshold, updatedAt]
+  properties:
+    zoneId: { type: string }
+    maxConcurrentOrders: { type: integer }
+    warningThreshold: { type: number }
+    updatedAt: { type: string, format: date-time }
+
+DshCapacityConfigResponse:
+  type: object
+  required: [config]
+  properties:
+    config: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshCapacityConfig" }
+
+DshUpsertCapacityConfigRequest:
+  type: object
+  required: [zoneId, maxConcurrentOrders, warningThreshold]
+  properties:
+    zoneId: { type: string }
+    maxConcurrentOrders: { type: integer }
+    warningThreshold: { type: number }
+
+DshAdminRole:
+  type: object
+  required: [id, name, permissions, createdAt]
+  properties:
+    id: { type: string }
+    name: { type: string }
+    permissions:
+      type: array
+      items: { type: string }
+    createdAt: { type: string, format: date-time }
+
+DshAdminRolesListResponse:
+  type: object
+  required: [roles, total]
+  properties:
+    roles:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshAdminRole" }
+    total: { type: integer }
+
+DshAdminRoleResponse:
+  type: object
+  required: [role]
+  properties:
+    role: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshAdminRole" }
+
+DshCreateAdminRoleRequest:
+  type: object
+  required: [name, permissions]
+  properties:
+    name: { type: string, minLength: 1 }
+    permissions:
+      type: array
+      items: { type: string }
+
+DshStaffMember:
+  type: object
+  required: [id, username, roles, createdAt]
+  properties:
+    id: { type: string }
+    username: { type: string }
+    roles:
+      type: array
+      items: { type: string }
+    createdAt: { type: string, format: date-time }
+
+DshStaffListResponse:
+  type: object
+  required: [staff, total]
+  properties:
+    staff:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshStaffMember" }
+    total: { type: integer }
+
+DshAssignStaffRoleRequest:
+  type: object
+  required: [roleId]
+  properties:
+    roleId: { type: string }
+
+DshAdminAuditEntry:
+  type: object
+  required: [id, actorId, actorType, action, targetId, targetType, details, createdAt]
+  properties:
+    id: { type: string }
+    actorId: { type: string }
+    actorType: { type: string }
+    action: { type: string }
+    targetId: { type: string }
+    targetType: { type: string }
+    details: { type: object }
+    createdAt: { type: string, format: date-time }
+
+DshAdminAuditListResponse:
+  type: object
+  required: [entries, total]
+  properties:
+    entries:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshAdminAuditEntry" }
+    total: { type: integer }
+
+DshCreateSpecialRequest:
+  type: object
+  required: [requestType, idempotencyKey]
+  properties:
+    requestType: { type: string, enum: [SHEIN_ASSISTED_PURCHASE, AWNAK_ERRAND] }
+    idempotencyKey: { type: string }
+    customerNotes: { type: string }
+    productUrl: { type: string }
+    quantity: { type: integer }
+    size: { type: string }
+    color: { type: string }
+    variantNotes: { type: string }
+    deliveryAddressReference: { type: string }
+    pickupAddressReference: { type: string }
+    dropoffAddressReference: { type: string }
+    itemType: { type: string }
+    scheduleMode: { type: string }
+    scheduledAt: { type: string, format: date-time }
+    handlingRequirements: { type: string }
+    pickupLocation:
+      type: ["object", "null"]
+      description: Raw JSON passthrough, e.g. `{lat, lng}`-shaped. Stored as-is by the backend.
+    dropoffLocation:
+      type: ["object", "null"]
+      description: Raw JSON passthrough, e.g. `{lat, lng}`-shaped. Stored as-is by the backend.
+
+DshSpecialRequestResponse:
+  type: object
+  required: [id, clientId, requestType, status, version, createdAt, updatedAt]
+  properties:
+    id: { type: string }
+    clientId: { type: string }
+    requestType: { type: string }
+    status: { type: string, enum: [submitted, under_review, needs_customer_input, approved, assigned, in_progress, completed, cancelled, rejected] }
+    version: { type: integer }
+    workflowStage: { type: ["string", "null"] }
+    customerNotes: { type: ["string", "null"] }
+    currency: { type: ["string", "null"] }
+    estimatedAmountReference:
+      type: ["string", "null"]
+      description: "Deprecated: use estimatedAmountMinorUnits/currency."
+      deprecated: true
+    estimatedAmountMinorUnits: { type: ["integer", "null"], format: int64 }
+    wltPaymentSessionId: { type: ["string", "null"] }
+    correlationId: { type: ["string", "null"] }
+    productUrl: { type: ["string", "null"] }
+    quantity: { type: ["integer", "null"] }
+    size: { type: ["string", "null"] }
+    color: { type: ["string", "null"] }
+    variantNotes: { type: ["string", "null"] }
+    deliveryAddressReference: { type: ["string", "null"] }
+    pickupAddressReference: { type: ["string", "null"] }
+    dropoffAddressReference: { type: ["string", "null"] }
+    pickupLocation: { type: ["object", "null"] }
+    dropoffLocation: { type: ["object", "null"] }
+    itemType: { type: ["string", "null"] }
+    scheduleMode: { type: ["string", "null"] }
+    scheduledAt: { type: ["string", "null"], format: date-time }
+    handlingRequirements: { type: ["string", "null"] }
+    assignedOperatorId: { type: ["string", "null"] }
+    dispatchAssignmentId: { type: ["string", "null"] }
+    rejectionReason: { type: ["string", "null"] }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+    completedAt: { type: ["string", "null"], format: date-time }
+    cancelledAt: { type: ["string", "null"], format: date-time }
+    quotePreparedAt: { type: ["string", "null"], format: date-time }
+    customerApprovedAt: { type: ["string", "null"], format: date-time }
+    purchaseBatchId: { type: ["string", "null"] }
+    purchasedAt: { type: ["string", "null"], format: date-time }
+    inboundReference: { type: ["string", "null"] }
+    inboundReceivedAt: { type: ["string", "null"], format: date-time }
+    sortingStartedAt: { type: ["string", "null"], format: date-time }
+    sortingCompletedAt: { type: ["string", "null"], format: date-time }
+    fulfillmentPreparedAt: { type: ["string", "null"], format: date-time }
+    readyForDeliveryAt: { type: ["string", "null"], format: date-time }
+    captainAssignedAt: { type: ["string", "null"], format: date-time }
+    pickedUpAt: { type: ["string", "null"], format: date-time }
+    deliveredAt: { type: ["string", "null"], format: date-time }
+    allowedActions:
+      type: array
+      items: { type: string }
+    blockingReasons:
+      type: array
+      items: { type: string }
+
+DshSpecialRequestListResponse:
+  type: object
+  required: [requests, total]
+  properties:
+    requests:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshSpecialRequestResponse" }
+    total: { type: integer }
+
+DshUpdateSpecialRequest:
+  type: object
+  required: [expectedVersion]
+  properties:
+    expectedVersion: { type: integer }
+    status: { type: string, enum: [under_review, needs_customer_input, approved, assigned, in_progress, completed, cancelled, rejected] }
+    workflowStage: { type: ["string", "null"] }
+    assignedOperatorId: { type: ["string", "null"] }
+    rejectionReason: { type: ["string", "null"] }
+    estimatedAmountMinorUnits: { type: ["integer", "null"], format: int64 }
+    wltPaymentSessionId: { type: ["string", "null"] }
+    currency: { type: ["string", "null"] }
+    quotePreparedAt: { type: ["string", "null"], format: date-time }
+    customerApprovedAt: { type: ["string", "null"], format: date-time }
+    purchaseBatchId: { type: ["string", "null"] }
+    purchasedAt: { type: ["string", "null"], format: date-time }
+    inboundReference: { type: ["string", "null"] }
+    inboundReceivedAt: { type: ["string", "null"], format: date-time }
+    sortingStartedAt: { type: ["string", "null"], format: date-time }
+    sortingCompletedAt: { type: ["string", "null"], format: date-time }
+    fulfillmentPreparedAt: { type: ["string", "null"], format: date-time }
+    readyForDeliveryAt: { type: ["string", "null"], format: date-time }
+    captainAssignedAt: { type: ["string", "null"], format: date-time }
+    pickedUpAt: { type: ["string", "null"], format: date-time }
+    deliveredAt: { type: ["string", "null"], format: date-time }

@@ -1,0 +1,189 @@
+# BThwani DSH OpenAPI path-items module: captain.
+# Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
+
+/dsh/captain/stores/{storeId}/pickup-readiness:
+  post:
+    operationId: reportCaptainPickupReadiness
+    summary: Report readiness for the authenticated captain's assigned pickup point.
+    tags: [DshStoreGovernance]
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/StoreId"
+      - $ref: "../dsh.openapi.yaml#/components/parameters/IdempotencyKey"
+      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../dsh.openapi.yaml#/components/schemas/CaptainPickupReadinessRequest"
+    responses:
+      "200":
+        description: Pickup readiness report recorded.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshStoreActionResponse"
+      "400":
+        $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest"
+      "401":
+        $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated"
+      "403":
+        $ref: "../dsh.openapi.yaml#/components/responses/Forbidden"
+      "404":
+        $ref: "../dsh.openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../dsh.openapi.yaml#/components/responses/Conflict"
+
+/dsh/captain/finance/cod-records/{recordId}/collect:
+  post:
+    operationId: POSTDshCaptainFinanceCodRecordsRecordIdCollect
+    summary: Governed finance operation owned by DSH/WLT.
+    tags: [DshCaptainFinance]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: recordId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: false
+      content:
+        application/json:
+          schema: { type: object, additionalProperties: true }
+    responses:
+      "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "201": { description: Governed finance object created, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
+/dsh/captain/finance/cod-records/{recordId}/remit:
+  post:
+    operationId: POSTDshCaptainFinanceCodRecordsRecordIdRemit
+    summary: Governed finance operation owned by DSH/WLT.
+    tags: [DshCaptainFinance]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: recordId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: false
+      content:
+        application/json:
+          schema: { type: object, additionalProperties: true }
+    responses:
+      "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "201": { description: Governed finance object created, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
+/dsh/captain/finance/commissions:
+  get:
+    operationId: GETDshCaptainFinanceCommissions
+    summary: Governed finance operation owned by DSH/WLT.
+    tags: [DshCaptainFinance]
+    security: [{ bearerAuth: [] }]
+    responses:
+      "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
+/dsh/captain/finance/payouts:
+  get:
+    operationId: GETDshCaptainFinancePayouts
+    summary: Governed finance operation owned by DSH/WLT.
+    tags: [DshCaptainFinance]
+    security: [{ bearerAuth: [] }]
+    responses:
+      "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+  post:
+    operationId: POSTDshCaptainFinancePayouts
+    summary: Governed finance operation owned by DSH/WLT.
+    tags: [DshCaptainFinance]
+    security: [{ bearerAuth: [] }]
+    requestBody:
+      required: false
+      content:
+        application/json:
+          schema: { type: object, additionalProperties: true }
+    responses:
+      "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "201": { description: Governed finance object created, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
+/dsh/captain/finance/cod-records:
+  get:
+    operationId: listDshCaptainFinanceCodRecords
+    summary: Captain reads their own governed WLT COD liability records. The captain id always comes from the authenticated actor, never from the query.
+    tags: [DshFinanceProxy]
+    security: [{ bearerAuth: [] }]
+    responses:
+      "200":
+        description: WLT COD records view for the authenticated captain (verbatim passthrough).
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+
+/dsh/operator/admin/captains:
+  get:
+    operationId: listDshCaptainCredentials
+    summary: List captain credentials.
+    tags: [DshAdministration]
+    security:
+      - bearerAuth: []
+    responses:
+      "200":
+        description: Captain credentials list.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCaptainCredentialsListResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+
+/dsh/operator/admin/captains/{captainId}/credential:
+  post:
+    operationId: upsertDshCaptainCredential
+    summary: Upsert credential for a captain.
+    tags: [DshAdministration]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: captainId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshUpsertCaptainCredentialRequest" }
+    responses:
+      "200":
+        description: Captain credential upserted.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCaptainCredential" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }

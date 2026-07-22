@@ -1,0 +1,888 @@
+# BThwani DSH OpenAPI path-items module: field.
+# Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
+
+/dsh/field/me/finance/wallet:
+  get:
+    operationId: getDshFieldMeWallet
+    summary: Return the authenticated field agent's wallet balance.
+    tags:
+      - DshFieldFinance
+    security: [{ bearerAuth: [] }]
+    responses:
+      "200":
+        description: Wallet returned successfully.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                wallet:
+                  type: object
+                  properties:
+                    actorId: { type: string }
+                    actorType: { type: string }
+                    status: { type: string }
+                    currency: { type: string }
+                    availableBalanceMinorUnits: { type: integer, format: int64 }
+                    pendingBalanceMinorUnits: { type: integer, format: int64 }
+                    heldBalanceMinorUnits: { type: integer, format: int64 }
+                    earnedTotalMinorUnits: { type: integer, format: int64 }
+                    settledTotalMinorUnits: { type: integer, format: int64 }
+                    paidTotalMinorUnits: { type: integer, format: int64 }
+                    lastLedgerEntryAt: { type: string, format: date-time, nullable: true }
+                    updatedAt: { type: string, format: date-time, nullable: true }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+
+/dsh/field/me/finance/commissions:
+  get:
+    operationId: getDshFieldMeCommissions
+    summary: Return the authenticated field agent's commissions.
+    tags:
+      - DshFieldFinance
+    security: [{ bearerAuth: [] }]
+    responses:
+      "200":
+        description: Commissions list returned successfully.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                commissions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      beneficiaryActorId: { type: string }
+                      beneficiaryActorType: { type: string }
+                      sourceType: { type: string }
+                      sourceId: { type: string }
+                      visitId: { type: string, nullable: true }
+                      storeId: { type: string, nullable: true }
+                      partnerId: { type: string, nullable: true }
+                      commissionPolicyId: { type: string, nullable: true }
+                      amountMinorUnits: { type: integer, format: int64 }
+                      currency: { type: string }
+                      status: { type: string }
+                      idempotencyKey: { type: string, nullable: true }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+
+/dsh/field/me/finance/ledger-entries:
+  get:
+    operationId: getDshFieldMeLedgerEntries
+    summary: Return the authenticated field agent's ledger entries.
+    tags:
+      - DshFieldFinance
+    security: [{ bearerAuth: [] }]
+    responses:
+      "200":
+        description: Ledger entries returned successfully.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+
+/dsh/field/me/finance/payout-requests:
+  get:
+    operationId: getDshFieldMePayoutRequests
+    summary: Return the authenticated field agent's payout requests.
+    tags:
+      - DshFieldFinance
+    security: [{ bearerAuth: [] }]
+    responses:
+      "200":
+        description: Payout requests returned successfully.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                payoutRequests:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      beneficiaryActorId: { type: string }
+                      beneficiaryActorType: { type: string }
+                      amountMinorUnits: { type: integer, format: int64 }
+                      currency: { type: string }
+                      status: { type: string }
+                      requestedAt: { type: string, format: date-time }
+                      completedAt: { type: string, format: date-time, nullable: true }
+                      failureReason: { type: string, nullable: true }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+  post:
+    operationId: submitDshFieldMePayoutRequest
+    summary: Submit a new payout request for the authenticated field agent.
+    tags:
+      - DshFieldFinance
+    security: [{ bearerAuth: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - amountMinorUnits
+              - currency
+              - idempotencyKey
+            properties:
+              amountMinorUnits: { type: integer, format: int64 }
+              currency: { type: string }
+              idempotencyKey: { type: string }
+    responses:
+      "201":
+        description: Payout request created successfully.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                payoutRequest:
+                  type: object
+                  properties:
+                    id: { type: string }
+                    beneficiaryActorId: { type: string }
+                    beneficiaryActorType: { type: string }
+                    amountMinorUnits: { type: integer, format: int64 }
+                    currency: { type: string }
+                    status: { type: string }
+                    requestedAt: { type: string, format: date-time }
+                    completedAt: { type: string, format: date-time, nullable: true }
+                    failureReason: { type: string, nullable: true }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+
+/dsh/field/stores/{storeId}/verifications:
+  post:
+    operationId: submitFieldStoreVerification
+    summary: Submit a verification outcome for the authenticated field actor's assigned store.
+    tags: [DshStoreGovernance]
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/StoreId"
+      - $ref: "../dsh.openapi.yaml#/components/parameters/IdempotencyKey"
+      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../dsh.openapi.yaml#/components/schemas/FieldStoreVerificationRequest"
+    responses:
+      "200":
+        description: Verification recorded.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshStoreActionResponse"
+      "400":
+        $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest"
+      "401":
+        $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated"
+      "403":
+        $ref: "../dsh.openapi.yaml#/components/responses/Forbidden"
+      "404":
+        $ref: "../dsh.openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../dsh.openapi.yaml#/components/responses/Conflict"
+
+/dsh/field/finance/commissions:
+  get:
+    operationId: GETDshFieldFinanceCommissions
+    summary: Governed finance operation owned by DSH/WLT.
+    tags: [DshFieldFinance]
+    security: [{ bearerAuth: [] }]
+    responses:
+      "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
+/dsh/field/finance/wallet:
+  get:
+    operationId: GETDshFieldFinanceWallet
+    summary: Governed finance operation owned by DSH/WLT.
+    tags: [DshFieldFinance]
+    security: [{ bearerAuth: [] }]
+    responses:
+      "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
+/dsh/field/finance/payouts:
+  get:
+    operationId: GETDshFieldFinancePayouts
+    summary: Governed finance operation owned by DSH/WLT.
+    tags: [DshFieldFinance]
+    security: [{ bearerAuth: [] }]
+    responses:
+      "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+  post:
+    operationId: POSTDshFieldFinancePayouts
+    summary: Governed finance operation owned by DSH/WLT.
+    tags: [DshFieldFinance]
+    security: [{ bearerAuth: [] }]
+    requestBody:
+      required: false
+      content:
+        application/json:
+          schema: { type: object, additionalProperties: true }
+    responses:
+      "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "201": { description: Governed finance object created, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
+/dsh/field/finance/payout-destinations:
+  get:
+    operationId: GETDshFieldFinancePayoutDestinations
+    summary: Governed finance operation owned by DSH/WLT.
+    tags: [DshFieldFinance]
+    security: [{ bearerAuth: [] }]
+    responses:
+      "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+  post:
+    operationId: POSTDshFieldFinancePayoutDestinations
+    summary: Governed finance operation owned by DSH/WLT.
+    tags: [DshFieldFinance]
+    security: [{ bearerAuth: [] }]
+    requestBody:
+      required: false
+      content:
+        application/json:
+          schema: { type: object, additionalProperties: true }
+    responses:
+      "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "201": { description: Governed finance object created, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
+/dsh/field/finance/payout-destinations/{destinationId}:
+  patch:
+    operationId: PATCHDshFieldFinancePayoutDestinationsDestinationId
+    summary: Governed finance operation owned by DSH/WLT.
+    tags: [DshFieldFinance]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: destinationId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: false
+      content:
+        application/json:
+          schema: { type: object, additionalProperties: true }
+    responses:
+      "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+  delete:
+    operationId: DELETEDshFieldFinancePayoutDestinationsDestinationId
+    summary: Governed finance operation owned by DSH/WLT.
+    tags: [DshFieldFinance]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: destinationId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "204": { description: Governed finance object deleted }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
+/dsh/field/stores/{storeId}/visits:
+  post:
+    operationId: createDshFieldVisit
+    summary: Field agent starts a new store visit.
+    tags: [DshFieldReadiness]
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/StoreId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCreateFieldVisitRequest" }
+    responses:
+      "201":
+        description: Visit created.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshFieldVisitResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+  get:
+    operationId: listDshFieldVisits
+    summary: List field visits for a store.
+    tags: [DshFieldReadiness]
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/StoreId"
+    responses:
+      "200":
+        description: List of visits.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshFieldVisitsResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+
+/dsh/field/work-queue:
+  get:
+    operationId: getDshFieldWorkQueue
+    summary: Field agent's own open visits and escalations across every store.
+    tags: [DshFieldReadiness]
+    security:
+      - bearerAuth: []
+    responses:
+      "200":
+        description: Field agent's open work queue.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshFieldWorkQueueResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+
+/dsh/field/visits/{visitId}/complete:
+  post:
+    operationId: completeDshFieldVisit
+    summary: Field agent marks a visit complete.
+    tags: [DshFieldReadiness]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: visitId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: Visit marked complete.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshFieldVisitResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
+/dsh/field/visits/{visitId}/checks:
+  put:
+    operationId: upsertDshReadinessCheck
+    summary: Field agent records or updates a readiness checklist item.
+    tags: [DshFieldReadiness]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: visitId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshUpsertReadinessCheckRequest" }
+    responses:
+      "200":
+        description: Check recorded.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshReadinessCheckResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+  get:
+    operationId: listDshVisitChecks
+    summary: List all readiness checks for a visit.
+    tags: [DshFieldReadiness]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: visitId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: List of checks.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshReadinessChecksResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+
+/dsh/field/stores/{storeId}/escalations:
+  post:
+    operationId: createDshReadinessEscalation
+    summary: Field agent raises a quality escalation for a store.
+    tags: [DshFieldReadiness]
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/StoreId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCreateEscalationRequest" }
+    responses:
+      "201":
+        description: Escalation created.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshEscalationResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+
+/dsh/operator/field-readiness/escalations:
+  get:
+    operationId: listDshOperatorEscalations
+    summary: Operator views all field readiness escalations with optional status filter.
+    tags: [DshFieldReadiness]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: [open, acknowledged, resolved, escalated_further]
+    responses:
+      "200":
+        description: List of escalations.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshEscalationsResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+
+/dsh/operator/field-readiness/escalations/{escalationId}:
+  patch:
+    operationId: updateDshOperatorEscalation
+    summary: Operator acknowledges or resolves an escalation.
+    tags: [DshFieldReadiness]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: escalationId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshUpdateEscalationRequest" }
+    responses:
+      "200":
+        description: Escalation updated.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshEscalationResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
+/dsh/partner/stores/{storeId}/onboarding-status:
+  get:
+    operationId: getDshPartnerOnboardingStatus
+    summary: Partner views their store's field onboarding status.
+    tags: [DshFieldReadiness]
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/StoreId"
+    responses:
+      "200":
+        description: Onboarding status.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshOnboardingStatusResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+
+# ── Support, Incidents & Escalation Room ──────────────────────────
+
+/dsh/operator/partners/{partnerId}/field-visits:
+  get:
+    operationId: listDshPartnerFieldVisits
+    summary: List field visits recorded for a partner.
+    tags: [DshPartnerActivation]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: Partner field visits.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [visits]
+              properties:
+                visits:
+                  type: array
+                  items: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartnerFieldVisit" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
+/dsh/field/partners:
+  get:
+    operationId: listFieldPartnerDrafts
+    summary: List partner drafts created by the calling field actor.
+    tags: [DshPartnerActivation]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: status
+        in: query
+        schema: { type: string }
+      - name: limit
+        in: query
+        schema: { type: integer, default: 20, maximum: 100 }
+      - name: offset
+        in: query
+        schema: { type: integer, default: 0 }
+    responses:
+      "200":
+        description: Field partner drafts list, scoped to the calling field actor.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartnerListResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+
+/dsh/field/partners/drafts:
+  post:
+    operationId: createFieldPartnerDraft
+    summary: Field agent creates a new partner intake draft.
+    tags: [DshPartnerActivation]
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCreatePartnerRequest" }
+    responses:
+      "201":
+        description: Partner draft created.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartner" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
+/dsh/field/partners/{partnerId}:
+  get:
+    operationId: getFieldPartnerDraft
+    summary: Field agent gets partner draft details.
+    tags: [DshPartnerActivation]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: Partner details.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartner" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+  patch:
+    operationId: updateFieldPartnerDraft
+    summary: Field agent updates partner draft details.
+    tags: [DshPartnerActivation]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshUpdatePartnerRequest" }
+    responses:
+      "200":
+        description: Updated partner draft.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartner" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
+/dsh/field/partners/{partnerId}/store:
+  get:
+    operationId: getFieldPartnerStore
+    summary: Field agent reads the first store draft linked to a partner it owns.
+    tags: [DshPartnerActivation]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: Partner's draft store.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [storeId, store]
+              properties:
+                storeId: { type: string }
+                store: { $ref: "../dsh.openapi.yaml#/components/schemas/DshFieldPartnerStoreDraft" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+  patch:
+    operationId: updateFieldPartnerStore
+    summary: Field agent updates first-store draft data without publishing it to clients.
+    tags: [DshPartnerActivation]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshUpdateFieldPartnerStoreDraftRequest" }
+    responses:
+      "200":
+        description: Store draft updated.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [storeId, store, audit]
+              properties:
+                storeId: { type: string }
+                store: { $ref: "../dsh.openapi.yaml#/components/schemas/DshFieldPartnerStoreDraft" }
+                audit: { type: object }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+
+/dsh/field/partners/{partnerId}/documents:
+  get:
+    operationId: listFieldPartnerDocuments
+    summary: Field agent lists documents uploaded for a partner draft it owns.
+    tags: [DshPartnerActivation]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: Partner documents.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [documents]
+              properties:
+                documents:
+                  type: array
+                  items: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartnerDocument" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+  post:
+    operationId: uploadFieldPartnerDocument
+    summary: Field agent uploads a document for partner onboarding.
+    tags: [DshPartnerActivation]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshAddPartnerDocumentRequest" }
+    responses:
+      "201":
+        description: Document uploaded.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartnerDocument" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
+/dsh/field/media/uploads:
+  post:
+    operationId: uploadFieldMedia
+    summary: Field agent uploads a binary document/photo, receiving a mediaRef to attach via uploadFieldPartnerDocument.
+    tags: [DshPartnerActivation]
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            type: object
+            required: [partnerId, file]
+            properties:
+              partnerId: { type: string }
+              file: { type: string, format: binary }
+    responses:
+      "201":
+        description: Media uploaded.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mediaRef]
+              properties:
+                mediaRef: { type: string }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+
+/dsh/field/partners/{partnerId}/visits:
+  post:
+    operationId: createFieldPartnerVisit
+    summary: Field agent records a partner-level onboarding visit.
+    tags: [DshPartnerActivation]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCreatePartnerFieldVisitRequest" }
+    responses:
+      "201":
+        description: Partner field visit recorded.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartnerFieldVisit" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+
+/dsh/field/partners/{partnerId}/field-visits:
+  get:
+    operationId: listFieldPartnerFieldVisits
+    summary: Field agent lists field visits recorded for a partner draft it owns.
+    tags: [DshPartnerActivation]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: Partner field visits.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [visits]
+              properties:
+                visits:
+                  type: array
+                  items: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartnerFieldVisit" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+
+/dsh/field/partners/{partnerId}/submit:
+  post:
+    operationId: submitFieldPartnerDraft
+    summary: Field agent submits partner draft for review.
+    tags: [DshPartnerActivation]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: false
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              reason: { type: string }
+    responses:
+      "200":
+        description: Partner submitted.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                partner: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartner" }
+                event: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartnerAuditEvent" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "422":
+        description: Invalid transition.

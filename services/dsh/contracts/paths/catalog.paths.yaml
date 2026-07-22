@@ -1,0 +1,1056 @@
+# BThwani DSH OpenAPI path-items module: catalog.
+# Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
+
+/dsh/stores/{storeId}/catalog:
+  get:
+    operationId: getPublishedDshCatalog
+    deprecated: false # response shape changed: now { domains, products } from the master catalog (dsh-030); see CentralCatalog tag.
+    summary: Return the approved, active catalog for a publicly eligible store.
+    tags: [DshCatalog]
+    parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/StoreId"
+    responses:
+      "200":
+        description: Published categories and products.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshCatalogResponse"
+      "404":
+        $ref: "../dsh.openapi.yaml#/components/responses/NotFound"
+
+/dsh/public/media/{assetId}/{variant}:
+  get:
+    operationId: getPublicCatalogMedia
+    summary: Stream an approved DAM asset's binary. Unauthenticated -- only status=approved assets are ever served.
+    tags: [DshCatalog]
+    parameters:
+      - name: assetId
+        in: path
+        required: true
+        schema: { type: string }
+      - name: variant
+        in: path
+        required: true
+        description: Rendition selector; only "original" is served today.
+        schema: { type: string }
+    responses:
+      "200":
+        description: Image bytes.
+      "404":
+        $ref: "../dsh.openapi.yaml#/components/responses/NotFound"
+
+# ─── Central Catalog Sovereignty ───────────────────────────────────────────
+# governance/catalog/CENTRAL_CATALOG_SOVEREIGNTY_DECISION.md. From dsh-030
+# forward, dsh_catalog_domains/dsh_catalog_nodes/dsh_master_products are the
+# only ground truth for categories/products. Local catalog routes and tables
+# were retired by dsh-036; every surface uses the endpoints below.
+
+/dsh/operator/catalog/domains:
+  get:
+    operationId: listCatalogDomains
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    responses:
+      "200": { description: BUSINESS_DOMAIN (L1) list. }
+  post:
+    operationId: createCatalogDomain
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    responses:
+      "201": { description: Domain created. }
+
+/dsh/operator/catalog/domains/{domainId}:
+  patch:
+    operationId: updateCatalogDomain
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: domainId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: false
+      content:
+        application/json:
+          schema:
+            type: object
+            description: All fields are optional. Only provided fields are updated.
+            properties:
+              expectedVersion: { type: integer }
+              nameAr: { type: string }
+              nameEn: { type: string }
+              icon: { type: string }
+              sortOrder: { type: integer }
+              isActive: { type: boolean }
+              isClientVisible: { type: boolean }
+              requiresProductCatalog: { type: boolean }
+              isManualRequest: { type: boolean }
+    responses:
+      "200": { description: Domain updated. }
+
+/dsh/operator/catalog/nodes:
+  get:
+    operationId: listCatalogNodes
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: domainId
+        in: query
+        schema: { type: string }
+      - name: parentId
+        in: query
+        schema: { type: string }
+    responses:
+      "200": { description: BUSINESS_SUBDOMAIN/PRODUCT_MAIN_CLASS/PRODUCT_SUB_CLASS (L2-L4) list. }
+  post:
+    operationId: createCatalogNode
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    responses:
+      "201": { description: Node created. }
+
+/dsh/operator/catalog/nodes/{nodeId}:
+  patch:
+    operationId: updateCatalogNode
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: nodeId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: false
+      content:
+        application/json:
+          schema:
+            type: object
+            description: All fields are optional. Only provided fields are updated.
+            properties:
+              expectedVersion: { type: integer }
+              nameAr: { type: string }
+              nameEn: { type: string }
+              icon: { type: string }
+              sortOrder: { type: integer }
+              isActive: { type: boolean }
+              isClientVisible: { type: boolean }
+    responses:
+      "200": { description: Node updated. }
+
+/dsh/operator/catalog/master-products:
+  get:
+    operationId: listMasterProductsOperator
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: domainId
+        in: query
+        schema: { type: string }
+      - name: categoryNodeId
+        in: query
+        schema: { type: string }
+      - name: approvalStatus
+        in: query
+        schema: { type: string }
+      - name: search
+        in: query
+        schema: { type: string }
+      - name: isActive
+        in: query
+        schema: { type: boolean }
+      - name: imageStatus
+        in: query
+        schema: { type: string }
+      - name: sortBy
+        in: query
+        schema: { type: string, enum: [createdAt, updatedAt, nameAr, price] }
+      - name: sortDirection
+        in: query
+        schema: { type: string, enum: [asc, desc] }
+      - name: createdFrom
+        in: query
+        schema: { type: string, format: date-time }
+      - name: createdTo
+        in: query
+        schema: { type: string, format: date-time }
+      - name: limit
+        in: query
+        schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+      - name: offset
+        in: query
+        schema: { type: integer, minimum: 0, default: 0 }
+    responses:
+      "200":
+        description: MASTER_PRODUCT (L5) list.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshMasterProductListResponse"
+  post:
+    operationId: createMasterProduct
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    responses:
+      "201": { description: Master product created. }
+
+/dsh/operator/catalog/master-products/{productId}:
+  patch:
+    operationId: updateMasterProduct
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: productId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: false
+      content:
+        application/json:
+          schema:
+            type: object
+            description: All fields are optional. Only provided fields are updated. Do NOT send canonicalImageObjectKey — images are managed via DAM asset links.
+            properties:
+              expectedVersion: { type: integer }
+              canonicalNameAr: { type: string }
+              canonicalNameEn: { type: string }
+              brand: { type: string }
+              unit: { type: string }
+              unitPrice: { type: number }
+              currency: { type: string }
+              stockStatus: { type: string, enum: [in_stock, low_stock, out_of_stock] }
+              isActive: { type: boolean }
+              approvalStatus: { type: string }
+    responses:
+      "200": { description: Master product updated. }
+
+/dsh/operator/catalog/product-proposals:
+  get:
+    operationId: listProductProposals
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: status
+        in: query
+        schema: { type: string }
+      - name: storeId
+        in: query
+        schema: { type: string }
+      - name: limit
+        in: query
+        schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+      - name: offset
+        in: query
+        schema: { type: integer, minimum: 0, default: 0 }
+    responses:
+      "200":
+        description: Product proposal queue (requests to add to the master catalog).
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshProductProposalListResponse"
+
+/dsh/operator/catalog/product-proposals/{proposalId}/decision:
+  post:
+    operationId: decideProductProposal
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: proposalId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200": { description: Proposal moved to under_review/adopted/rejected/needs_fix. }
+
+/dsh/operator/catalog/product-proposals/{proposalId}/transition:
+  post:
+    operationId: transitionProductProposal
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: proposalId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200": { description: Proposal transitioned along the multi-stage review pipeline. }
+
+/dsh/operator/catalog/platform-policies:
+  get:
+    operationId: listCatalogPlatformPolicies
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    responses:
+      "200": { description: "Per-domain/per-node/default commission, fee, and capability policy rows." }
+
+/dsh/operator/catalog/platform-policies/{policyId}:
+  put:
+    operationId: updateCatalogPlatformPolicy
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: policyId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            description: >
+              All fields must be sent (PUT semantics — omitted fields will be cleared).
+              This prevents unintentional zeroing of booleans and integers.
+            properties:
+              expectedVersion: { type: integer }
+              isActive: { type: boolean }
+              requiresMarketingReview: { type: boolean }
+              requiresProductImage: { type: boolean }
+              requiresCategoryImage: { type: boolean }
+              requiresDescription: { type: boolean }
+              requiresBrand: { type: boolean }
+              requiresUnit: { type: boolean }
+              productDataQualityMinimumScore: { type: integer }
+              maxGalleryImages: { type: integer }
+              manualRequestMode: { type: boolean }
+              allowsStoreProductCustomImage: { type: boolean }
+    responses:
+      "200": { description: Policy updated. }
+  patch:
+    operationId: patchCatalogPlatformPolicy
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: policyId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: false
+      content:
+        application/json:
+          schema:
+            type: object
+            description: All fields are optional. Only provided fields are updated.
+            properties:
+              expectedVersion: { type: integer }
+              isActive: { type: boolean }
+              requiresMarketingReview: { type: boolean }
+              requiresProductImage: { type: boolean }
+              requiresCategoryImage: { type: boolean }
+              requiresDescription: { type: boolean }
+              requiresBrand: { type: boolean }
+              requiresUnit: { type: boolean }
+              productDataQualityMinimumScore: { type: integer }
+              maxGalleryImages: { type: integer }
+              manualRequestMode: { type: boolean }
+              allowsStoreProductCustomImage: { type: boolean }
+    responses:
+      "200": { description: Policy updated. }
+
+/dsh/operator/catalog/seed-status:
+  get:
+    operationId: getCatalogSeedStatus
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    responses:
+      "200":
+        description: Seed status diagnostics.
+
+/dsh/operator/catalog/assets:
+  get:
+    operationId: listCatalogAssets
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: status
+        in: query
+        required: false
+        schema: { type: string }
+      - name: limit
+        in: query
+        required: false
+        schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+      - name: offset
+        in: query
+        required: false
+        schema: { type: integer, minimum: 0, default: 0 }
+    responses:
+      "200":
+        description: List of DAM assets.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshCatalogAssetListResponse"
+
+/dsh/operator/catalog/assets/upload-intents:
+  post:
+    operationId: createAssetUploadIntent
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [fileName, mimeType, sizeBytes]
+            properties:
+              fileName: { type: string }
+              mimeType:
+                type: string
+                description: >
+                  For image assets: image/jpeg, image/png, or image/webp only.
+                  For reel videos: video/mp4 only.
+              sizeBytes: { type: integer }
+              altAr: { type: string }
+              altEn: { type: string }
+              intendedEntityType:
+                type: string
+                description: Optional target entity type (domain, node, master_product, store, store_assortment, product_proposal, campaign).
+              intendedEntityId:
+                type: string
+                description: Optional target entity ID.
+              intendedRole:
+                type: string
+                description: Optional DAM role for the target entity.
+    responses:
+      "201":
+        description: Upload intent created.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                asset: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCatalogAsset" }
+                uploadUrl:
+                  type: string
+                  description: >
+                    Short-lived presigned MinIO PUT URL signed against the public endpoint.
+                    The client must PUT directly to this URL without modifying it.
+                expiresAt: { type: string, format: date-time }
+
+/dsh/operator/catalog/assets/{assetId}/complete:
+  post:
+    operationId: completeAssetUpload
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: assetId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: Asset upload verified against storage and moved out of draft.
+
+/dsh/operator/catalog/assets/{assetId}:
+  patch:
+    operationId: updateCatalogAsset
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: assetId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: false
+      content:
+        application/json:
+          schema:
+            type: object
+            description: >
+              Only alt text and dominant color may be updated via PATCH.
+              Status, size, checksum, and publicUrl are controlled by the upload lifecycle
+              (intent → PUT → complete) and must not be sent here.
+            properties:
+              altAr: { type: string }
+              altEn: { type: string }
+              dominantColor: { type: string }
+    responses:
+      "200":
+        description: Asset alt text / dominant color updated.
+  delete:
+    operationId: deleteCatalogAsset
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: assetId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "204":
+        description: Asset deleted (only draft/uploaded/rejected with no active links).
+
+/dsh/operator/catalog/assets/{assetId}/review:
+  post:
+    operationId: reviewCatalogAsset
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: assetId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [decision]
+            properties:
+              decision:
+                type: string
+                enum: [approved, rejected, archived]
+                description: >
+                  Valid transitions: uploaded→pending_review (automatic on complete),
+                  pending_review→approved|rejected, approved→archived.
+                  draft assets may not be approved directly.
+              reviewNote: { type: string }
+    responses:
+      "200":
+        description: Asset reviewed by operator.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                asset: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCatalogAsset" }
+
+/dsh/operator/catalog/assets/{assetId}/link:
+  post:
+    operationId: linkCatalogAsset
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: assetId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "201":
+        description: Link established.
+
+/dsh/operator/catalog/assets/{assetId}/links/{linkId}:
+  delete:
+    operationId: unlinkCatalogAsset
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: assetId
+        in: path
+        required: true
+        schema: { type: string }
+      - name: linkId
+        in: path
+        required: true
+        schema: { type: string }
+      - name: entityType
+        in: query
+        required: true
+        schema: { type: string }
+      - name: entityId
+        in: query
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: Link removed.
+
+/dsh/operator/reels:
+  get:
+    operationId: listReels
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: status
+        in: query
+        required: false
+        schema: { type: string, enum: [pending_review, approved, rejected, archived] }
+      - name: limit
+        in: query
+        required: false
+        schema: { type: integer, default: 50 }
+      - name: offset
+        in: query
+        required: false
+        schema: { type: integer, default: 0 }
+    responses:
+      "200":
+        description: List of reels (operator view).
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reels:
+                  type: array
+                  items: { $ref: "../dsh.openapi.yaml#/components/schemas/DshReel" }
+
+/dsh/operator/reels/{reelId}/review:
+  post:
+    operationId: reviewReel
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: reelId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [decision]
+            properties:
+              decision: { type: string, enum: [approved, rejected, archived] }
+              reviewNote: { type: string }
+              targetType: { type: string, enum: [master_product, store, offer] }
+              targetId: { type: string }
+              sortOrder: { type: integer }
+    responses:
+      "200":
+        description: Reel reviewed.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reel: { $ref: "../dsh.openapi.yaml#/components/schemas/DshReel" }
+
+/dsh/partner/reels:
+  post:
+    operationId: submitReel
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [assetId, targetType, targetId]
+            properties:
+              assetId: { type: string }
+              titleAr: { type: string }
+              titleEn: { type: string }
+              targetType: { type: string, enum: [master_product, store, offer] }
+              targetId: { type: string }
+              sortOrder: { type: integer }
+              sourceStoreId: { type: string }
+    responses:
+      "201":
+        description: Reel submitted for review.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reel: { $ref: "../dsh.openapi.yaml#/components/schemas/DshReel" }
+
+/dsh/operator/catalog/asset-links:
+  get:
+    operationId: listCatalogAssetLinks
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: entityType
+        in: query
+        required: true
+        schema: { type: string }
+      - name: entityId
+        in: query
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: List of links for the entity.
+
+/dsh/operator/catalog/domains/{domainId}/images/{role}:
+  put:
+    operationId: putDomainImage
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: domainId
+        in: path
+        required: true
+        schema: { type: string }
+      - name: role
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: Domain image updated.
+
+/dsh/operator/catalog/nodes/{nodeId}/images/{role}:
+  put:
+    operationId: putNodeImage
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: nodeId
+        in: path
+        required: true
+        schema: { type: string }
+      - name: role
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: Node image updated.
+
+/dsh/operator/catalog/master-products/{productId}/images/{role}:
+  put:
+    operationId: putMasterProductImage
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: productId
+        in: path
+        required: true
+        schema: { type: string }
+      - name: role
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: Product image updated.
+
+/dsh/operator/catalog/product-proposals/{proposalId}/images/{role}:
+  put:
+    operationId: putProductProposalImage
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: proposalId
+        in: path
+        required: true
+        schema: { type: string }
+      - name: role
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: Proposal image updated.
+
+/dsh/stores/{storeId}/images/{role}:
+  put:
+    operationId: putStoreImage
+    summary: Set a store's logo/cover/storefront/interior/signage photo. Callable by the store's own partner/field actor, not just operator.
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: storeId
+        in: path
+        required: true
+        schema: { type: string }
+      - name: role
+        in: path
+        required: true
+        schema:
+          type: string
+          enum: [store_logo, store_cover, storefront_photo, interior_photo, signage_photo]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [assetId]
+            properties:
+              assetId: { type: string }
+    responses:
+      "200":
+        description: Store image updated.
+
+/dsh/operator/stores/{storeId}/assortment:
+  get:
+    operationId: getOperatorStoreAssortment
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    parameters: [{ $ref: "../dsh.openapi.yaml#/components/parameters/StoreId" }]
+    responses:
+      "200": { description: Store's master-product links (price/availability/stock/note/local image). }
+
+/dsh/operator/stores/{storeId}/assortment/{masterProductId}:
+  put:
+    operationId: upsertOperatorStoreAssortment
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/StoreId"
+      - name: masterProductId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200": { description: Assortment row created/updated. }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+
+/dsh/partner/catalog/taxonomy:
+  get:
+    operationId: getPartnerCatalogTaxonomy
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    responses:
+      "200": { description: Read-only domain+node tree for the partner surface (never hardcode categories in app-partner). }
+
+/dsh/partner/catalog/master-products:
+  get:
+    operationId: listPartnerMasterProducts
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    responses:
+      "200": { description: Searchable master product list for building an assortment. }
+
+/dsh/partner/stores/{storeId}/assortment:
+  get:
+    operationId: getPartnerStoreAssortment
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    parameters: [{ $ref: "../dsh.openapi.yaml#/components/parameters/StoreId" }]
+    responses:
+      "200": { description: The authenticated partner's own store assortment. }
+
+/dsh/partner/stores/{storeId}/assortment/{masterProductId}:
+  put:
+    operationId: upsertPartnerStoreAssortment
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/StoreId"
+      - name: masterProductId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200": { description: Assortment row created/updated for the partner's own store. }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+
+/dsh/partner/catalog/product-proposals:
+  post:
+    operationId: createPartnerProductProposal
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    responses:
+      "201": { description: Product proposal submitted — never a final sellable product. }
+
+/dsh/partner/catalog/product-proposals/{proposalId}:
+  put:
+    operationId: updatePartnerProductProposal
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: proposalId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200": { description: Product proposal updated and resubmitted. }
+
+/dsh/field/catalog/taxonomy:
+  get:
+    operationId: getFieldCatalogTaxonomy
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    responses:
+      "200": { description: Read-only domain+node tree for the field surface (never hardcode categories in app-field). }
+
+/dsh/field/catalog/master-products:
+  get:
+    operationId: listFieldMasterProducts
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    responses:
+      "200": { description: Searchable master product list for the field surface. }
+
+/dsh/field/partners/{partnerId}/stores/{storeId}/assortment/{masterProductId}:
+  put:
+    operationId: fieldUpsertStoreAssortment
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema: { type: string }
+      - $ref: "../dsh.openapi.yaml#/components/parameters/StoreId"
+      - name: masterProductId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200": { description: Assortment row created/updated on behalf of a field-onboarded partner's store. }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+
+/dsh/field/partners/{partnerId}/assortment:
+  get:
+    operationId: fieldGetStoreAssortment
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200": { description: Current central assortment for the field-owned partner draft. }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+
+/dsh/field/partners/{partnerId}/catalog/product-proposals:
+  post:
+    operationId: createFieldProductProposal
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "201": { description: Product proposal submitted for the field-owned partner store — never a final sellable product. }
+
+/dsh/field/partners/{partnerId}/catalog/product-proposals/{proposalId}:
+  put:
+    operationId: updateFieldProductProposal
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema: { type: string }
+      - name: proposalId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200": { description: Product proposal updated and resubmitted. }
+
+# ─── Cart & Serviceability Quote ────────────────────────────────
+# Runtime handlers registered in server.go. Client must be authenticated.
+# DSH catalog now owns a real numeric unitPrice per product (see dsh-022
+# migration): checkout derives the cart total from this, never from the
+# client. priceReference remains a display-only label. Payment execution,
+# capture, settlement, refund, and ledger truth remain WLT-owned.
+# ──────────────────────────────────────────────────────────────────────────
+
+/dsh/catalog-approvals:
+  get:
+    operationId: listDshCatalogApprovals
+    summary: List catalog approval records (partner submission review queue).
+    tags: [DshCatalogApprovals]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: entityType
+        in: query
+        required: false
+        schema: { type: string }
+      - name: stage
+        in: query
+        required: false
+        schema: { type: string }
+      - name: source
+        in: query
+        required: false
+        schema: { type: string }
+    responses:
+      "200":
+        description: Catalog approval records.
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+  post:
+    operationId: createDshCatalogApproval
+    summary: Create a catalog approval record.
+    tags: [DshCatalogApprovals]
+    security: [{ bearerAuth: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { type: object, additionalProperties: true }
+    responses:
+      "201":
+        description: Created catalog approval record.
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+
+/dsh/catalog-approvals/{recordId}:
+  get:
+    operationId: getDshCatalogApproval
+    summary: Read one catalog approval record.
+    tags: [DshCatalogApprovals]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: recordId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: Catalog approval record.
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
+/dsh/catalog-approvals/{recordId}/transition:
+  post:
+    operationId: transitionDshCatalogApproval
+    summary: Transition a catalog approval record to a new stage.
+    tags: [DshCatalogApprovals]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: recordId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { type: object, additionalProperties: true }
+    responses:
+      "200":
+        description: Updated catalog approval record.
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
+/dsh/partner/catalog-approvals:
+  get:
+    operationId: listDshPartnerCatalogApprovals
+    summary: Partner reads their own catalog approval queue.
+    tags: [DshCatalogApprovals]
+    security: [{ bearerAuth: [] }]
+    responses:
+      "200":
+        description: Partner catalog approval queue.
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+# ── Field Verification & Store Quality Assurance ──────────────────

@@ -1,0 +1,340 @@
+# BThwani DSH OpenAPI schemas module: orders.
+# Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
+
+FulfillmentModeAvailability:
+  type: object
+  required: [mode, available]
+  properties:
+    mode:
+      type: string
+      enum: [bthwani_delivery, partner_delivery, pickup]
+    available: { type: boolean }
+    unavailableReasonCode:
+      type: string
+      enum: [mode_not_enabled, out_of_area, store_unavailable]
+
+# ─── Checkout Intent schemas ────────────────────────────────────
+
+DshOrderStatus:
+  type: string
+  enum:
+    - pending
+    - store_accepted
+    - preparing
+    - ready_for_pickup
+    - driver_assigned
+    - driver_arrived_store
+    - picked_up
+    - arrived_customer
+    - returning_to_store
+    - return_arrived_store
+    - returned_to_store
+    - delivered
+    - cancelled_by_client
+    - cancelled_by_store
+    - cancelled_by_operator
+    - cancelled_no_driver
+    - failed_payment
+    - failed_dispatch
+  description: Explicit operational terminal states; the ambiguous legacy `cancelled` value is forbidden.
+
+DshOrderItem:
+  type: object
+  required: [id, productId, productName, quantity, unitPrice]
+  properties:
+    id: { type: string }
+    productId: { type: string }
+    productName: { type: string }
+    quantity: { type: integer, minimum: 1 }
+    unitPrice: { type: number, format: double, minimum: 0 }
+
+DshOrder:
+  type: object
+  required: [id, checkoutIntentId, storeId, fulfillmentMode, clientId, status, wltPaymentRefId, createdAt, updatedAt]
+  properties:
+    id: { type: string }
+    checkoutIntentId: { type: string }
+    storeId: { type: string }
+    fulfillmentMode:
+      type: string
+      enum: [bthwani_delivery, partner_delivery, pickup]
+    clientId: { type: string }
+    status: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshOrderStatus" }
+    rejectionReason: { type: string }
+    cancellationReasonCode: { type: [string, "null"] }
+    cancellationNote: { type: [string, "null"] }
+    cancelledByActorId: { type: [string, "null"] }
+    cancelledByRole:
+      type: [string, "null"]
+      enum: [client, partner, operator, system, null]
+    cancelledAt: { type: [string, "null"], format: date-time }
+    financialClosureStatus: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshFinancialClosureStatus" }
+    financialClosureReference: { type: [string, "null"] }
+    wltPaymentRefId:
+      type: string
+      description: "Opaque WLT payment reference. DSH never mutates financial truth."
+    items:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshOrderItem" }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+
+DshOrderResponse:
+  type: object
+  required: [order]
+  properties:
+    order: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshOrder" }
+
+DshOrdersResponse:
+  type: object
+  required: [orders]
+  properties:
+    orders:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshOrder" }
+
+DshCreateOrderRequest:
+  type: object
+  required: [checkoutIntentId]
+  properties:
+    checkoutIntentId: { type: string }
+
+DshRejectOrderRequest:
+  type: object
+  required: [reason]
+  properties:
+    reason:
+      type: string
+      description: Mandatory rejection reason from partner.
+
+
+# ─── Order cancellation and refund closure schemas ─────────────────
+
+DshOrderCancellationReasonCode:
+  type: string
+  enum:
+    - changed_mind
+    - duplicate_order
+    - address_error
+    - payment_issue
+    - excessive_delay
+    - out_of_stock
+    - store_closed
+    - capacity
+    - pricing_issue
+    - cannot_fulfill
+    - customer_request
+    - partner_request
+    - no_driver
+    - fraud_risk
+    - safety
+    - operational_failure
+    - other
+
+DshOrderCancellationRequest:
+  type: object
+  additionalProperties: false
+  required: [reasonCode, commandId]
+  properties:
+    reasonCode: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshOrderCancellationReasonCode" }
+    reasonNote:
+      type: string
+      maxLength: 1000
+      description: Required when reasonCode is `other`; otherwise optional operational context.
+    commandId:
+      type: string
+      minLength: 1
+      description: Idempotent command identifier.
+    correlationId:
+      type: string
+      description: Cross-service correlation identifier; defaults to commandId.
+
+DshOrderCancellation:
+  type: object
+  required:
+    - id
+    - orderId
+    - actorId
+    - actorRole
+    - reasonCode
+    - reasonNote
+    - fromStatus
+    - toStatus
+    - financialClosureStatus
+    - financialReference
+    - financialResultAction
+    - financialFailure
+    - createdAt
+    - updatedAt
+  properties:
+    id: { type: string }
+    orderId: { type: string }
+    actorId: { type: string }
+    actorRole:
+      type: string
+      enum: [client, partner, operator, system]
+    reasonCode: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshOrderCancellationReasonCode" }
+    reasonNote: { type: string }
+    fromStatus: { type: string }
+    toStatus: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshOrderStatus" }
+    financialClosureStatus: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshFinancialClosureStatus" }
+    financialReference: { type: string }
+    financialResultAction:
+      type: string
+      enum: [expired, refund_requested, none, ""]
+    financialFailure: { type: string }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+
+DshOrderCancellationResponse:
+  type: object
+  required: [cancellation]
+  properties:
+    cancellation: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshOrderCancellation" }
+
+DshCancelOrderResponse:
+  type: object
+  required: [order, cancellation]
+  properties:
+    order: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshOrder" }
+    cancellation: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshOrderCancellation" }
+
+# ─── Dispatch schemas ───────────────────────────────────────────
+
+DshOrderStatusCount:
+  type: object
+  required: [status, count]
+  properties:
+    status: { type: string }
+    count: { type: integer }
+
+DshPickupSession:
+  type: object
+  required:
+    - id
+    - orderId
+    - storeId
+    - clientId
+    - expiresAt
+    - attemptCount
+    - maxAttempts
+    - version
+    - createdAt
+    - updatedAt
+  properties:
+    id: { type: string }
+    orderId: { type: string }
+    storeId: { type: string }
+    clientId: { type: string }
+    expiresAt: { type: string, format: date-time }
+    attemptCount: { type: integer }
+    maxAttempts: { type: integer }
+    usedAt: { type: ["string", "null"], format: date-time }
+    verifiedByActorId: { type: ["string", "null"] }
+    status:
+      type: string
+      enum: [active, verified, no_show, consumed, cancelled]
+    cancelledAt: { type: [string, "null"], format: date-time }
+    cancellationReason: { type: [string, "null"] }
+    verificationMethod:
+      type: ["string", "null"]
+      description: "Known values: otp, no_show."
+    customerNotifiedAt: { type: ["string", "null"], format: date-time }
+    customerArrivedAt: { type: ["string", "null"], format: date-time }
+    noShowAt: { type: ["string", "null"], format: date-time }
+    noShowReason: { type: ["string", "null"] }
+    rescheduledAt: { type: ["string", "null"], format: date-time }
+    version: { type: integer }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+
+DshPickupSessionResponse:
+  type: object
+  required: [session]
+  properties:
+    session:
+      $ref: "../../dsh.openapi.yaml#/components/schemas/DshPickupSession"
+
+DshPickupSessionListResponse:
+  type: object
+  required: [sessions]
+  properties:
+    sessions:
+      type: array
+      items:
+        $ref: "../../dsh.openapi.yaml#/components/schemas/DshPickupSession"
+
+DshPickupMutationRequest:
+  type: object
+  required: [expectedVersion, commandId]
+  properties:
+    expectedVersion: { type: integer }
+    commandId: { type: string }
+    correlationId: { type: string }
+    reason: { type: string }
+
+DshIssuePickupOtpRequest:
+  allOf:
+    - $ref: "../../dsh.openapi.yaml#/components/schemas/DshPickupMutationRequest"
+    - type: object
+      properties:
+        clientId: { type: string }
+
+DshVerifyPickupOtpRequest:
+  allOf:
+    - $ref: "../../dsh.openapi.yaml#/components/schemas/DshPickupMutationRequest"
+    - type: object
+      required: [code]
+      properties:
+        code: { type: string }
+
+DshPickupNoShowRequest:
+  allOf:
+    - $ref: "../../dsh.openapi.yaml#/components/schemas/DshPickupMutationRequest"
+
+DshExtendPickupWindowRequest:
+  allOf:
+    - $ref: "../../dsh.openapi.yaml#/components/schemas/DshPickupMutationRequest"
+    - type: object
+      required: [reason, newExpiry]
+      properties:
+        reason: { type: string }
+        newExpiry: { type: string, format: date-time }
+
+DshPickupMarkReadyResponse:
+  type: object
+  required: [orderId, status]
+  properties:
+    orderId: { type: string }
+    status: { type: string, enum: [ready_for_pickup] }
+
+DshPickupCustomerArrivedResponse:
+  type: object
+  required: [orderId, customerArrived]
+  properties:
+    orderId: { type: string }
+    customerArrived: { type: boolean }
+
+DshPickupNotifyResponse:
+  type: object
+  required: [orderId, notified]
+  properties:
+    orderId: { type: string }
+    notified: { type: boolean }
+    session:
+      $ref: "../../dsh.openapi.yaml#/components/schemas/DshPickupSession"
+
+DshReschedulePickupWindowRequest:
+  allOf:
+    - $ref: "../../dsh.openapi.yaml#/components/schemas/DshPickupMutationRequest"
+    - type: object
+      additionalProperties: false
+      required: [reason, newExpiry]
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        newExpiry:
+          type: string
+          format: date-time

@@ -1,0 +1,89 @@
+# BThwani DSH OpenAPI path-items module: analytics.
+# Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
+
+/dsh/operator/analytics/platform:
+  get:
+    operationId: getDshPlatformKpis
+    summary: Platform-wide operational KPIs for the operator dashboard.
+    tags: [DshAnalytics]
+    security:
+      - bearerAuth: []
+    responses:
+      "200":
+        description: Platform KPIs snapshot.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPlatformKpisResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+
+/dsh/operator/analytics/orders:
+  get:
+    operationId: getDshOrderAnalytics
+    summary: Order volume and fulfillment analytics for a given period.
+    tags: [DshAnalytics]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: period
+        in: query
+        schema: { type: string, enum: [today, week, month], default: today }
+    responses:
+      "200":
+        description: Order analytics breakdown.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshOrderAnalyticsResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+
+/dsh/operator/analytics/delivery:
+  get:
+    operationId: getDshDeliveryAnalytics
+    summary: Delivery assignment and completion analytics.
+    tags: [DshAnalytics]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: period
+        in: query
+        schema: { type: string, enum: [today, week, month], default: today }
+    responses:
+      "200":
+        description: Delivery analytics breakdown.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshDeliveryAnalyticsResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+
+/dsh/operator/analytics/stores:
+  get:
+    operationId: getDshStoreAnalytics
+    summary: Store activity and readiness analytics.
+    tags: [DshAnalytics]
+    security:
+      - bearerAuth: []
+    responses:
+      "200":
+        description: Store analytics snapshot.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshStoreAnalyticsResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+
+/dsh/partner/analytics/performance:
+  get:
+    operationId: getDshPartnerPerformance
+    summary: Authenticated partner's own store performance summary.
+    tags: [DshAnalytics]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: period
+        in: query
+        schema: { type: string, enum: [today, week, month], default: today }
+    responses:
+      "200":
+        description: Partner performance metrics for their own store.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartnerPerformanceResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }

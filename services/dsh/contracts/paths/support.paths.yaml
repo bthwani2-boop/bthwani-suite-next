@@ -1,0 +1,237 @@
+# BThwani DSH OpenAPI path-items module: support.
+# Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
+
+/dsh/support/tickets:
+  post:
+    operationId: createDshSupportTicket
+    summary: Any authenticated user creates a support ticket.
+    tags: [DshSupport]
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCreateTicketRequest" }
+    responses:
+      "201":
+        description: Ticket created.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshTicketResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+  get:
+    operationId: listDshMyTickets
+    summary: List support tickets submitted by the current user.
+    tags: [DshSupport]
+    security:
+      - bearerAuth: []
+    responses:
+      "200":
+        description: List of tickets.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshTicketsResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+
+/dsh/support/tickets/{ticketId}:
+  get:
+    operationId: getDshSupportTicket
+    summary: Get a single support ticket.
+    tags: [DshSupport]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: ticketId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: Ticket detail.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshTicketResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
+/dsh/support/tickets/{ticketId}/messages:
+  post:
+    operationId: addDshTicketMessage
+    summary: Add a message to a support ticket thread.
+    tags: [DshSupport]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: ticketId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshAddMessageRequest" }
+    responses:
+      "201":
+        description: Message added.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshMessageResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+  get:
+    operationId: listDshTicketMessages
+    summary: List messages in a support ticket thread.
+    tags: [DshSupport]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: ticketId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: List of messages.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshMessagesResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+
+/dsh/operator/support/tickets:
+  get:
+    operationId: listDshOperatorTickets
+    summary: Operator lists all support tickets with optional status filter.
+    tags: [DshSupport]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: [open, in_review, pending_user, resolved, closed]
+    responses:
+      "200":
+        description: List of tickets.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshTicketsResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+
+/dsh/operator/support/tickets/{ticketId}:
+  patch:
+    operationId: updateDshOperatorTicket
+    summary: Operator updates ticket status or assignee.
+    tags: [DshSupport]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: ticketId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshUpdateTicketRequest" }
+    responses:
+      "200":
+        description: Ticket updated.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshTicketResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
+/dsh/operator/incidents:
+  post:
+    operationId: createDshIncident
+    summary: Operator raises a new operational incident.
+    tags: [DshSupport]
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCreateIncidentRequest" }
+    responses:
+      "201":
+        description: Incident created.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshIncidentResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+  get:
+    operationId: listDshIncidents
+    summary: Operator lists incidents with optional status filter.
+    tags: [DshSupport]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: [open, monitoring, resolved]
+    responses:
+      "200":
+        description: List of incidents.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshIncidentsResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+
+/dsh/operator/incidents/{incidentId}:
+  patch:
+    operationId: updateDshIncident
+    summary: Operator resolves or sets an incident to monitoring.
+    tags: [DshSupport]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: incidentId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshUpdateIncidentRequest" }
+    responses:
+      "200":
+        description: Incident updated.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshIncidentResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
+# ── Platform Analytics & Operational Reporting ────────────────────
+
+/dsh/operator/analytics/support:
+  get:
+    operationId: getDshSupportAnalytics
+    summary: Support ticket volume and resolution analytics.
+    tags: [DshAnalytics]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: period
+        in: query
+        schema: { type: string, enum: [today, week, month], default: today }
+    responses:
+      "200":
+        description: Support analytics breakdown.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshSupportAnalyticsResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }

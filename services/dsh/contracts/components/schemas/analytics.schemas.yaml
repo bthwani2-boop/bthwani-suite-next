@@ -1,0 +1,46 @@
+# BThwani DSH OpenAPI schemas module: analytics.
+# Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
+
+DshReportDeliveryExceptionRequest:
+  type: object
+  additionalProperties: false
+  required: [reasonCode, correlationId]
+  properties:
+    reasonCode: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshDeliveryExceptionReasonCode" }
+    note: { type: string, maxLength: 1000 }
+    correlationId: { type: string, minLength: 1, maxLength: 200 }
+    latitude: { type: number, format: double, minimum: -90, maximum: 90, nullable: true }
+    longitude: { type: number, format: double, minimum: -180, maximum: 180, nullable: true }
+
+DshOrderAnalyticsResponse:
+  type: object
+  required: [totalOrders, byStatus, period, generatedAt]
+  properties:
+    totalOrders: { type: integer }
+    byStatus:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshOrderStatusCount" }
+    period: { type: string }
+    generatedAt: { type: string, format: date-time }
+
+DshDeliveryAnalyticsResponse:
+  type: object
+  required: [totalAssignments, acceptedAssignments, completedAssignments, declinedAssignments, period, generatedAt]
+  properties:
+    totalAssignments: { type: integer }
+    acceptedAssignments: { type: integer }
+    completedAssignments: { type: integer }
+    declinedAssignments: { type: integer }
+    period: { type: string }
+    generatedAt: { type: string, format: date-time }
+
+DshStoreAnalyticsResponse:
+  type: object
+  required: [totalStores, activeStores, suspendedStores, pendingReadiness, readinessComplete, generatedAt]
+  properties:
+    totalStores: { type: integer }
+    activeStores: { type: integer }
+    suspendedStores: { type: integer }
+    pendingReadiness: { type: integer }
+    readinessComplete: { type: integer }
+    generatedAt: { type: string, format: date-time }

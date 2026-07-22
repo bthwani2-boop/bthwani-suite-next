@@ -1,0 +1,44 @@
+# BThwani DSH OpenAPI components/responses module: responses.
+# Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
+
+InvalidRequest:
+  description: Validation failed.
+  content:
+    application/json:
+      schema:
+        $ref: "../dsh.openapi.yaml#/components/schemas/DshErrorResponse"
+
+Unauthenticated:
+  description: Bearer session is missing, invalid, or expired.
+  content:
+    application/json:
+      schema:
+        $ref: "../dsh.openapi.yaml#/components/schemas/DshErrorResponse"
+
+Forbidden:
+  description: Actor role cannot perform this function.
+  content:
+    application/json:
+      schema:
+        $ref: "../dsh.openapi.yaml#/components/schemas/DshErrorResponse"
+
+NotFound:
+  description: Scoped store context was not found.
+  content:
+    application/json:
+      schema:
+        $ref: "../dsh.openapi.yaml#/components/schemas/DshErrorResponse"
+
+Conflict:
+  description: Version or idempotency conflict.
+  content:
+    application/json:
+      schema:
+        $ref: "../dsh.openapi.yaml#/components/schemas/DshErrorResponse"
+
+ServiceUnavailable:
+  description: Identity or DSH dependency is unavailable.
+  content:
+    application/json:
+      schema:
+        $ref: "../dsh.openapi.yaml#/components/schemas/DshErrorResponse"

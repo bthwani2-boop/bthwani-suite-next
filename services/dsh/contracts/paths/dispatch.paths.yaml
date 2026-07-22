@@ -1,0 +1,467 @@
+# BThwani DSH OpenAPI path-items module: dispatch.
+# Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
+
+/dsh/operator/dispatch/assignments:
+  get:
+    operationId: listDshDispatchAssignments
+    summary: Operator dispatch room with active and historical captain assignments.
+    tags: [DshDispatch]
+    security: [{ bearerAuth: [] }]
+    responses:
+      "200":
+        description: Dispatch assignments.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshDispatchAssignmentsResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+  post:
+    operationId: createDshAssignment
+    summary: Operator assigns a ready-for-pickup order to a captain.
+    tags: [DshDispatch]
+    security: [{ bearerAuth: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCreateAssignmentRequest" }
+    responses:
+      "201":
+        description: Assignment created.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshDispatchAssignmentResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
+/dsh/captain/dispatch/assignments:
+  get:
+    operationId: listDshCaptainAssignments
+    summary: Captain lists only their own dispatch assignments.
+    tags: [DshDispatch]
+    security: [{ bearerAuth: [] }]
+    responses:
+      "200":
+        description: Captain assignments.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshDispatchAssignmentsResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+
+/dsh/captain/dispatch/assignments/{assignmentId}/accept:
+  post:
+    operationId: acceptDshAssignment
+    summary: Captain accepts an offered assignment.
+    tags: [DshDispatch]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: assignmentId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: Assignment accepted.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshDispatchAssignmentResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
+/dsh/captain/dispatch/assignments/{assignmentId}/decline:
+  post:
+    operationId: declineDshAssignment
+    summary: Captain declines an offered assignment and returns the order to ready-for-pickup.
+    tags: [DshDispatch]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: assignmentId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: false
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshDeclineAssignmentRequest" }
+    responses:
+      "200":
+        description: Assignment declined.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshDispatchAssignmentResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
+/dsh/captain/dispatch/assignments/{assignmentId}/status:
+  post:
+    operationId: updateDshDeliveryStatus
+    summary: Captain advances assigned delivery lifecycle status.
+    tags: [DshDispatch]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: assignmentId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshUpdateDeliveryStatusRequest" }
+    responses:
+      "200":
+        description: Delivery status updated.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshDispatchAssignmentResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
+/dsh/captain/dispatch/assignments/{assignmentId}/pod:
+  post:
+    operationId: submitDshPoD
+    summary: Captain submits proof of delivery and closes the DSH delivery lifecycle.
+    tags: [DshDispatch]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: assignmentId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshSubmitPoDRequest" }
+    responses:
+      "200":
+        description: Proof of delivery submitted.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshDispatchAssignmentResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
+/dsh/captain/dispatch/assignments/{assignmentId}/location:
+  post:
+    operationId: pushDshCaptainLocation
+    summary: >-
+      Captain pushes a foreground-only location sample for an active
+      assignment (register item 14 + 42 — no live tracking, no background
+      location). Rejected once the assignment is no longer accepted/active.
+    tags: [DshDispatch]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: assignmentId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPushDispatchLocationRequest" }
+    responses:
+      "200":
+        description: Location recorded.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshDispatchAssignmentResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
+/dsh/client/orders/{orderId}/tracking:
+  get:
+    operationId: getDshClientOrderTracking
+    summary: >-
+      Client reads order delivery status updates for their own order,
+      including the captain's last known foreground location (if any) while
+      the delivery is active. No location history is kept or exposed.
+    tags: [DshDispatch]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: Tracking assignment.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshDispatchAssignmentResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
+/dsh/partner/orders/{orderId}/dispatch-tracking:
+  get:
+    operationId: getDshPartnerDispatchTracking
+    summary: Partner reads reference-only bthwani_delivery captain assignment status.
+    description: >-
+      JRN-017: the partner never sees the captain's live location or proof
+      of delivery here — only lifecycle status, for orders it owns.
+    tags: [DshDispatch]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: Reference status (assignment is null before dispatch).
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartnerDispatchReferenceResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
+/dsh/operator/special-requests/{requestId}/dispatch:
+  post:
+    operationId: assignDshSpecialRequestDispatch
+    summary: Dispatch an approved special request to a captain
+    tags:
+      - DshOperatorSpecialRequests
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: requestId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [captainId]
+            properties:
+              captainId: { type: string }
+    responses:
+      "201":
+        description: Created
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshDispatchAssignmentResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
+/dsh/captain/dispatch/assignments/{assignmentId}/exceptions:
+  parameters:
+    - name: assignmentId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  get:
+    operationId: getDshCaptainDeliveryException
+    summary: Return the captain's active governed delivery exception.
+    tags: [DshDispatch]
+    security: [{ bearerAuth: [] }]
+    responses:
+      "200":
+        description: Active delivery exception returned.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshDeliveryExceptionResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+  post:
+    operationId: reportDshCaptainDeliveryException
+    summary: Report one idempotent delivery exception for an active accepted assignment.
+    description: >-
+      Creates an operational overlay without changing the order status or financial truth.
+      Delivery progression and proof are blocked until operations resolves the exception;
+      foreground location pushes remain allowed for safety and response coordination.
+    tags: [DshDispatch]
+    security: [{ bearerAuth: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshReportDeliveryExceptionRequest" }
+    responses:
+      "201":
+        description: Delivery exception recorded or idempotently replayed.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshDeliveryExceptionResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409":
+        description: Assignment is not active or already has an unresolved exception.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshErrorResponse" }
+
+/dsh/operator/delivery-exceptions:
+  get:
+    operationId: listDshOperatorDeliveryExceptions
+    summary: List the governed delivery-exception operations queue.
+    tags: [DshDispatch]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: status
+        in: query
+        required: false
+        schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshDeliveryExceptionStatus" }
+    responses:
+      "200":
+        description: Delivery-exception queue returned.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshDeliveryExceptionListResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+
+/dsh/operator/delivery-exceptions/{exceptionId}/acknowledge:
+  parameters:
+    - name: exceptionId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  post:
+    operationId: acknowledgeDshOperatorDeliveryException
+    summary: Acknowledge an open delivery exception for operations review.
+    tags: [DshDispatch]
+    security: [{ bearerAuth: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshAcknowledgeDeliveryExceptionRequest" }
+    responses:
+      "200":
+        description: Exception acknowledged.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshDeliveryExceptionResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409":
+        description: Version or lifecycle conflict.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshErrorResponse" }
+
+/dsh/operator/delivery-exceptions/{exceptionId}/resolve:
+  parameters:
+    - name: exceptionId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  post:
+    operationId: resolveDshOperatorDeliveryException
+    summary: Resolve an exception by allowing the same captain to retry from the preserved stage.
+    tags: [DshDispatch]
+    security: [{ bearerAuth: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshResolveDeliveryExceptionRequest" }
+    responses:
+      "200":
+        description: Exception resolved and delivery progression reopened.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshDeliveryExceptionResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409":
+        description: Version conflict or assignment no longer eligible for retry.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshErrorResponse" }
+
+/dsh/captain/dispatch/assignments/{assignmentId}/return-to-store/arrive:
+  parameters:
+    - name: assignmentId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  post:
+    operationId: arriveDshCaptainReturnToStore
+    summary: Confirm captain arrival at the store with the returned order.
+    description: Does not complete custody; the owning partner must accept the return.
+    tags: [DshDispatch]
+    security: [{ bearerAuth: [] }]
+    responses:
+      "200":
+        description: Captain arrival recorded; store receipt remains pending.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshDeliveryExceptionResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409":
+        description: Assignment is not in returning_to_store state.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshErrorResponse" }
+
+/dsh/partner/orders/{orderId}/return-to-store:
+  parameters:
+    - name: orderId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  get:
+    operationId: getDshPartnerReturnToStore
+    summary: Read the governed return state for an order owned by the partner.
+    tags: [DshDispatch]
+    security: [{ bearerAuth: [] }]
+    responses:
+      "200":
+        description: Return state returned.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshDeliveryExceptionResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
+/dsh/partner/orders/{orderId}/return-to-store/accept:
+  parameters:
+    - name: orderId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  post:
+    operationId: acceptDshPartnerReturnToStore
+    summary: Confirm store custody of a returned order after captain arrival.
+    tags: [DshDispatch]
+    security: [{ bearerAuth: [] }]
+    responses:
+      "200":
+        description: Store receipt confirmed and return completed.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshDeliveryExceptionResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409":
+        description: Captain has not arrived or return was already finalized inconsistently.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshErrorResponse" }

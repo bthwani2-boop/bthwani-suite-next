@@ -1,0 +1,165 @@
+# BThwani DSH OpenAPI schemas module: field.
+# Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
+
+DshFieldPartnerStoreDraft:
+  type: object
+  required:
+    - storeId
+    - partnerId
+    - displayName
+    - cityCode
+    - serviceAreaCode
+    - addressLine
+    - coverageSummary
+    - operatingHours
+    - deliveryReadiness
+    - storefrontPhotoRef
+    - interiorPhotoRef
+    - signagePhotoRef
+    - status
+    - isVisible
+    - partnerReadiness
+    - catalogApprovalStatus
+    - marketingVisibility
+    - version
+  properties:
+    storeId: { type: string }
+    partnerId: { type: string }
+    displayName: { type: string }
+    cityCode: { type: string }
+    serviceAreaCode: { type: string }
+    addressLine: { type: string }
+    coverageSummary: { type: string }
+    operatingHours: { type: string }
+    deliveryReadiness: { type: string }
+    storefrontPhotoRef: { type: string }
+    interiorPhotoRef: { type: string }
+    signagePhotoRef: { type: string }
+    status:
+      $ref: "../../dsh.openapi.yaml#/components/schemas/DshStoreStatus"
+    isVisible: { type: boolean }
+    partnerReadiness:
+      type: string
+      enum: [pending, ready, blocked]
+    catalogApprovalStatus:
+      type: string
+      enum: [draft, submitted, approved, rejected]
+    marketingVisibility:
+      type: string
+      enum: [hidden, visible]
+    version:
+      type: integer
+      minimum: 1
+
+DshUpdateFieldPartnerStoreDraftRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    displayName: { type: string }
+    cityCode: { type: string }
+    serviceAreaCode: { type: string }
+    addressLine: { type: string }
+    coverageSummary: { type: string }
+    operatingHours: { type: string }
+    deliveryReadiness: { type: string }
+    storefrontPhotoRef: { type: string }
+    interiorPhotoRef: { type: string }
+    signagePhotoRef: { type: string }
+
+FieldStoreVerificationRequest:
+  type: object
+  additionalProperties: false
+  required: [expectedVersion, visitId, outcome, evidenceStatus, notes]
+  properties:
+    expectedVersion:
+      type: integer
+      minimum: 1
+    visitId:
+      type: string
+      description: The readiness visit (dsh_field_visits.id) this verification is derived from.
+    outcome:
+      type: string
+      enum: [verified, needs_follow_up, rejected]
+    evidenceStatus:
+      type: string
+      enum: [complete, partial, missing]
+    notes:
+      type: string
+      minLength: 3
+      maxLength: 1000
+
+DshFieldVisit:
+  type: object
+  required: [id, storeId, fieldAgentId, visitType, status, notes, startedAt, createdAt, updatedAt]
+  properties:
+    id: { type: string }
+    storeId: { type: string }
+    fieldAgentId: { type: string }
+    visitType: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshVisitType" }
+    status: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshVisitStatus" }
+    notes: { type: string }
+    startedAt: { type: string, format: date-time }
+    completedAt: { type: ["string", "null"], format: date-time }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+
+DshFieldVisitResponse:
+  type: object
+  required: [visit]
+  properties:
+    visit: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshFieldVisit" }
+
+DshFieldVisitsResponse:
+  type: object
+  required: [visits]
+  properties:
+    visits:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshFieldVisit" }
+
+DshCreateFieldVisitRequest:
+  type: object
+  properties:
+    visitType: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshVisitType" }
+
+DshFieldWorkQueueResponse:
+  type: object
+  required: [visits, escalations]
+  properties:
+    visits:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshFieldVisit" }
+    escalations:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshReadinessEscalation" }
+
+DshPartnerFieldVisit:
+  type: object
+  required: [id, partnerId, storeId, fieldActorId, visitStatus, visitNotes, evidenceMediaRefs, version, createdAt]
+  properties:
+    id: { type: string }
+    partnerId: { type: string }
+    storeId: { type: string }
+    fieldActorId: { type: string }
+    visitStatus: { type: string, enum: [draft, in_progress, submitted, escalated] }
+    visitNotes: { type: string }
+    locationLatitude: { type: [number, "null"] }
+    locationLongitude: { type: [number, "null"] }
+    evidenceMediaRefs:
+      type: array
+      items: { type: string }
+    version: { type: integer }
+    createdAt: { type: string, format: date-time }
+    submittedAt: { type: ["string", "null"], format: date-time }
+
+DshCreatePartnerFieldVisitRequest:
+  type: object
+  required: [storeId, visitNotes]
+  properties:
+    storeId: { type: string }
+    visitNotes: { type: string }
+    locationLatitude: { type: number }
+    locationLongitude: { type: number }
+    evidenceMediaRefs:
+      type: array
+      items: { type: string }
