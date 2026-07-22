@@ -28,36 +28,49 @@ test("JRN-033 product truth keeps WLT ownership and independent acceptance pendi
   assert.equal(truth.owners.productOwnerApproval, "PENDING");
   assert.equal(truth.owners.productAcceptanceDecision, "PENDING");
   assert.ok(truth.invariants.business.includes("WLT is the sole owner of wallet and ledger truth."));
+  assert.ok(truth.invariants.business.some((value) => value.includes("tenant")));
   assert.ok(truth.invariants.negative.includes("No DSH table or handler mutates representative wallet balances."));
+  assert.ok(truth.acceptance.failureStates.includes("cross_tenant_read"));
   assert.ok(truth.acceptance.runtimeEvidenceRequired);
   assert.ok(truth.acceptance.visualEvidenceRequired);
 });
 
-test("JRN-033 WLT accepts only supported representative wallet actors", () => {
+test("JRN-033 WLT accepts only supported representative wallet actors and requires tenant context", () => {
   const handler = read("services/wlt/backend/internal/wallet/handler.go");
+  const repository = read("services/wlt/backend/internal/wallet/repository.go");
   const proxy = read("services/dsh/backend/internal/wlt/finance_proxy.go");
+  const ledger = read("services/wlt/backend/internal/ledger/ledger.go");
   for (const actorType of representativeTypes) {
     assert.ok(handler.includes(`"${actorType}":`), `WLT handler is missing ${actorType}`);
     assert.ok(proxy.includes(`"${actorType}":`), `DSH finance proxy is missing ${actorType}`);
   }
   assert.ok(!handler.includes('"operator": {}'), "operator must not own a representative wallet");
   assert.ok(!proxy.includes('"operator": {}'), "operator must not be proxied as a representative wallet owner");
+  assertIncludesAll(handler, ["X-Tenant-ID", "TENANT_REQUIRED", "GetWalletForTenant"], "WLT wallet handler");
+  assertIncludesAll(repository, ["GetWalletForTenant", "WHERE tenant_id = $1 AND actor_type = $2 AND actor_id = $3"], "WLT wallet repository");
+  assertIncludesAll(ledger, ["TenantID", "WHERE tenant_id = $1", "X-Tenant-ID", "TENANT_REQUIRED"], "WLT actor ledger");
   assertIncludesAll(proxy, [
     "url.PathEscape(actorType)",
     "url.PathEscape(actorID)",
     "len(actorID) > 200",
+    "FinanceReadWalletWithTenant",
+    "WLT wallet tenant id is required",
     "financeWritePathAllowed",
   ], "DSH WLT finance boundary");
 });
 
-test("JRN-033 self-service routes derive actor identity and operator routes pin actor scope", () => {
+test("JRN-033 self-service routes derive actor and tenant identity while operator routes pin scope", () => {
   const routes = read("services/dsh/backend/internal/http/representative_finance_routes.go");
   const registrar = read("services/dsh/backend/internal/http/catalog_unified_routes.go");
   assertIncludesAll(registrar, ["registerRepresentativeFinanceRoutes(mux, s)"], "protected route registrar");
   assertIncludesAll(routes, [
     "s.requireActor(w, r, actorType)",
-    '"actorId":   {actor.ID}',
+    '"actorId": {actor.ID}',
     '"actorType": {actorType}',
+    "FinanceReadWalletWithTenant",
+    "FinanceReadWithTenant",
+    "actor.TenantID",
+    "operator.TenantID",
     'GET /dsh/client/me/finance/wallet',
     'GET /dsh/client/me/finance/ledger-entries',
     'GET /dsh/partner/me/finance/wallet',
@@ -78,6 +91,21 @@ test("JRN-033 self-service routes derive actor identity and operator routes pin 
       assert.ok(!line.includes("{actorId}"), `self-service route must not accept actor id: ${line}`);
     }
   }
+});
+
+test("JRN-033 tenant migration and local seed bind wallet and ledger truth", () => {
+  const migration = read("services/wlt/database/migrations/wlt-038_jrn_033_representative_finance_tenancy.sql");
+  const probes = read("infra/docker/scripts/wlt-migration-probes.ps1");
+  const seed = read("services/wlt/database/seeds/local/wlt-033_representative_wallets.local.sql");
+  assertIncludesAll(migration, [
+    "ALTER TABLE wlt_wallets",
+    "ALTER TABLE wlt_ledger_entries",
+    "tenant_id text",
+    "wlt_wallets_tenant_actor_idx",
+    "wlt_ledger_entries_tenant_actor_idx",
+  ], "JRN-033 tenant migration");
+  assert.ok(probes.includes('"wlt-038_jrn_033_representative_finance_tenancy.sql"'));
+  assertIncludesAll(seed, ["'local-dsh'", "tenant_id", "client-local-001", "partner-local-001", "captain-local-001", "field-local-001"], "JRN-033 runtime seed");
 });
 
 test("JRN-033 shared actor wallet brain uses canonical DSH routes only", () => {
@@ -153,12 +181,13 @@ test("JRN-033 focused contract declares every wallet and ledger operation", () =
     "operationId: getDshRepresentativeWallet",
     "operationId: listDshRepresentativeLedgerEntries",
     "/dsh/control-panel/finance/wallets/{actorType}/{actorId}/ledger-entries:",
+    "tenant is derived from the authenticated Identity session",
     "enum: [client, partner, captain, field]",
     "private, no-store",
   ], "JRN-033 OpenAPI contract");
 });
 
-test("JRN-033 runtime evidence aligns Identity subjects with WLT wallets and negative checks", () => {
+test("JRN-033 runtime evidence aligns Identity subjects with tenant-bound WLT wallets and negative checks", () => {
   const identity = read("core/identity/backend/internal/identity/repository.go");
   const seed = read("services/wlt/database/seeds/local/wlt-033_representative_wallets.local.sql");
   const runtime = read("tools/scripts/test-jrn-033-representative-wallets-runtime.ps1");
@@ -179,6 +208,7 @@ test("JRN-033 runtime evidence aligns Identity subjects with WLT wallets and neg
     "partner reading client wallet",
     "client using operator wallet lookup",
     "unsupported representative actor",
+    "cross-tenant wallet lookup",
     "suspended wallet lookup",
     "frozen wallet lookup",
     "internal WLT wallet route was readable without service authentication",
