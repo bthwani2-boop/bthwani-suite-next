@@ -1,0 +1,159 @@
+# Permanent same-commit gates for JRN-030 partner fleet and captain binding.
+name: JRN-030 Partner Fleet Verification
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [sambassam]
+    paths:
+      - "services/dsh/backend/internal/partnerfleet/**"
+      - "services/dsh/backend/internal/http/partner_fleet*.go"
+      - "services/dsh/backend/internal/http/journeys_026_030_routes_test.go"
+      - "services/dsh/backend/cmd/dsh-api/main.go"
+      - "services/dsh/database/migrations/dsh-059_partner_courier_connection_codes.sql"
+      - "services/dsh/frontend/shared/partner/partner-fleet.api.ts"
+      - "services/dsh/frontend/shared/partner/use-partner-fleet-controller.ts"
+      - "services/dsh/frontend/app-partner/team/PartnerTeamManagementScreen.tsx"
+      - "services/dsh/frontend/app-captain/account/PartnerFleetConnectionCard.tsx"
+      - "services/dsh/frontend/control-panel/partners/stores/OperatorPartnerFleetPanel.tsx"
+      - "services/dsh/frontend/control-panel/partners/stores/OperatorDeliveryPricingPanel.tsx"
+      - "services/dsh/contracts/dsh.partner-fleet.openapi.yaml"
+      - "services/dsh/tests/jrn-030-partner-fleet.test.mjs"
+      - "services/dsh/tsconfig.jrn-030.json"
+      - "governance/product/contracts/JRN-030_PARTNER_FLEET_CONNECTION.product-truth.json"
+      - "governance/product/product-truth.schema.json"
+      - "tools/guards/product-truth-gate.mjs"
+      - ".github/workflows/jrn-030-partner-fleet-verification.yml"
+  pull_request:
+    branches: [master]
+    paths:
+      - "services/dsh/backend/internal/partnerfleet/**"
+      - "services/dsh/backend/internal/http/partner_fleet*.go"
+      - "services/dsh/backend/internal/http/journeys_026_030_routes_test.go"
+      - "services/dsh/backend/cmd/dsh-api/main.go"
+      - "services/dsh/database/migrations/dsh-059_partner_courier_connection_codes.sql"
+      - "services/dsh/frontend/shared/partner/partner-fleet.api.ts"
+      - "services/dsh/frontend/shared/partner/use-partner-fleet-controller.ts"
+      - "services/dsh/frontend/app-partner/team/PartnerTeamManagementScreen.tsx"
+      - "services/dsh/frontend/app-captain/account/PartnerFleetConnectionCard.tsx"
+      - "services/dsh/frontend/control-panel/partners/stores/OperatorPartnerFleetPanel.tsx"
+      - "services/dsh/frontend/control-panel/partners/stores/OperatorDeliveryPricingPanel.tsx"
+      - "services/dsh/contracts/dsh.partner-fleet.openapi.yaml"
+      - "services/dsh/tests/jrn-030-partner-fleet.test.mjs"
+      - "services/dsh/tsconfig.jrn-030.json"
+      - "governance/product/contracts/JRN-030_PARTNER_FLEET_CONNECTION.product-truth.json"
+      - "governance/product/product-truth.schema.json"
+      - "tools/guards/product-truth-gate.mjs"
+      - ".github/workflows/jrn-030-partner-fleet-verification.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jrn-030-${{ github.workflow }}-${{ github.event_name }}-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: JRN-030 same-commit full-stack proof
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: dsh_jrn_030
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d dsh_jrn_030"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGPASSWORD: postgres
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/dsh_jrn_030?sslmode=disable
+      PORT: "58080"
+      DSH_AUTH_MODE: identity
+
+    steps:
+      - name: Checkout repository state
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: services/dsh/backend/go.sum
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "10.34.2"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.17.0"
+          cache: pnpm
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Compile partner fleet backend and API composition root
+        working-directory: services/dsh/backend
+        run: |
+          go test ./internal/partnerfleet -run '^$'
+          go test ./internal/http -run '^TestJourneys026To030ExposeGovernedRoutes$' -count=1
+          go test ./cmd/dsh-api -run '^$'
+          go build -o /tmp/dsh-api ./cmd/dsh-api
+
+      - name: Apply all DSH migrations to PostgreSQL 16
+        run: |
+          for migration in $(find services/dsh/database/migrations -maxdepth 1 -type f -name '*.sql' | sort); do
+            echo "Applying ${migration}"
+            psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d dsh_jrn_030 -f "${migration}"
+          done
+
+      - name: Prove JRN-030 schema invariants
+        run: |
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d dsh_jrn_030 <<'SQL'
+          SELECT status
+            FROM dsh_partner_courier_connection_codes
+           WHERE FALSE;
+          SELECT indexname
+            FROM pg_indexes
+           WHERE schemaname = 'public'
+             AND indexname IN (
+               'uq_dsh_partner_courier_pending_code',
+               'uq_dsh_store_team_members_identity_actor'
+             )
+           ORDER BY indexname;
+          SQL
+
+      - name: Run DSH API and verify governed route runtime
+        working-directory: services/dsh/backend
+        run: |
+          /tmp/dsh-api > /tmp/dsh-jrn-030.log 2>&1 &
+          api_pid=$!
+          trap 'kill ${api_pid} || true; cat /tmp/dsh-jrn-030.log' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:58080/dsh/health >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:58080/dsh/health
+          status=$(curl --silent --output /tmp/operator-response.json --write-out '%{http_code}' http://127.0.0.1:58080/dsh/operator/stores/store-1/partner-fleet)
+          test "${status}" = "401"
+          grep -q 'UNAUTHORIZED' /tmp/operator-response.json
+
+      - name: Verify JRN-030 shared brain and required surfaces
+        run: pnpm --dir services/dsh exec tsc -p tsconfig.jrn-030.json --noEmit --pretty false
+
+      - name: Verify JRN-030 full-stack and negative invariants
+        run: node --test services/dsh/tests/jrn-030-partner-fleet.test.mjs
+
+      - name: Verify Product Truth schema
+        run: node tools/guards/product-truth-gate.mjs
