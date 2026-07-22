@@ -70,16 +70,18 @@ async function uploadFieldMediaForOwner(
 
   const form = new FormData();
   if (owner.partnerId) form.append("partnerId", owner.partnerId);
-  if (owner.storeId) form.append("storeId", owner.storeId);
   form.append("file", {
     uri: file.uri,
     name: file.name,
     type: file.mimeType,
   } as unknown as Blob);
 
+  const path = owner.storeId
+    ? `/dsh/field/stores/${encodeURIComponent(owner.storeId)}/media/uploads`
+    : "/dsh/field/media/uploads";
   const url = cookieMode
-    ? `${baseUrl.replace(/\/$/, "")}/dsh/field/media/uploads`
-    : new URL("/dsh/field/media/uploads", baseUrl);
+    ? `${baseUrl.replace(/\/$/, "")}${path}`
+    : new URL(path, baseUrl);
   const response = await fetch(url, {
     method: "POST",
     headers: {
