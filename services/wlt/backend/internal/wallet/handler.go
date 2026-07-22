@@ -23,9 +23,14 @@ func normalizeRepresentativeActorType(value string) (string, bool) {
 
 func HandleGetWallet(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		tenantID := strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
 		actorType, ok := normalizeRepresentativeActorType(r.PathValue("actorType"))
 		actorID := strings.TrimSpace(r.PathValue("actorId"))
 
+		if tenantID == "" {
+			shared.SendError(w, http.StatusBadRequest, "TENANT_REQUIRED", "X-Tenant-ID is required for representative finance reads")
+			return
+		}
 		if !ok {
 			shared.SendError(w, http.StatusBadRequest, "UNSUPPORTED_ACTOR_TYPE", "actorType must be client, partner, captain, or field")
 			return
@@ -35,13 +40,13 @@ func HandleGetWallet(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		wallet, err := GetWallet(db, actorType, actorID)
+		wallet, err := GetWalletForTenant(db, tenantID, actorType, actorID)
 		if err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to fetch wallet")
 			return
 		}
 		if wallet == nil {
-			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "wallet not found")
+			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "wallet not found in the authenticated tenant")
 			return
 		}
 
