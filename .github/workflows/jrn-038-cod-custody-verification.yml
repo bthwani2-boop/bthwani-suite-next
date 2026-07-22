@@ -21,9 +21,7 @@ on:
       - "services/dsh/frontend/shared/finance-wlt-link/wlt/generated/WltDshPartnerBridge.tsx"
       - "services/dsh/frontend/app-captain/account/DshCaptainCodCustodyScreen.tsx"
       - "services/dsh/frontend/app-captain/account/DshCaptainFinanceScreen.tsx"
-      - "services/dsh/frontend/control-panel/css-modules.d.ts"
       - "services/dsh/frontend/control-panel/finance/CodReconciliationCasesPanel.tsx"
-      - "services/dsh/frontend/control-panel/finance/CodReconciliationCasesPanel.module.css"
       - "services/dsh/frontend/control-panel/finance/FinanceDashboardScreen.tsx"
       - ".github/workflows/jrn-038-cod-custody-verification.yml"
   pull_request:
@@ -144,7 +142,7 @@ jobs:
           grep -Fq 'PartnerCodCustodyPanel' services/dsh/frontend/shared/finance-wlt-link/wlt/generated/WltDshPartnerBridge.tsx
           grep -Fq 'DshCaptainCodCustodyScreen' services/dsh/frontend/app-captain/account/DshCaptainFinanceScreen.tsx
           grep -Fq 'CodReconciliationCasesPanel' services/dsh/frontend/control-panel/finance/FinanceDashboardScreen.tsx
-          grep -Fq 'CodReconciliationCasesPanel.module.css' services/dsh/frontend/control-panel/finance/CodReconciliationCasesPanel.tsx
+          grep -Fq 'WebStyleSheet.create' services/dsh/frontend/control-panel/finance/CodReconciliationCasesPanel.tsx
           if grep -R -n -F 'style={{' \
             services/dsh/frontend/shared/finance-wlt-link/wlt-cod \
             services/dsh/frontend/shared/finance-wlt-link/wlt/generated/WltDshPartnerBridge.tsx \
