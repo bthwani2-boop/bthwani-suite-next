@@ -1,0 +1,111 @@
+# Permanent targeted gate for JRN-026 coupons, delivery pricing, and loyalty policies.
+name: JRN-026 Coupons Pricing Loyalty Verification
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [sambassam]
+    paths:
+      - "services/dsh/backend/internal/coupons/**"
+      - "services/dsh/backend/internal/checkout/delivery_pricing*.go"
+      - "services/dsh/backend/internal/http/coupons.go"
+      - "services/dsh/backend/internal/http/coupon_funding_lifecycle.go"
+      - "services/dsh/backend/internal/http/delivery_pricing.go"
+      - "services/dsh/backend/internal/http/loyalty_policy.go"
+      - "services/dsh/backend/internal/http/journeys_026_030_routes_test.go"
+      - "services/dsh/backend/internal/marketing/loyalty_policy.go"
+      - "services/dsh/backend/internal/wlt/**"
+      - "services/dsh/backend/internal/wltoutbox/**"
+      - "services/dsh/frontend/shared/marketing/**"
+      - "services/dsh/frontend/shared/partner/partner-delivery-pricing.api.ts"
+      - "services/dsh/frontend/shared/partner/use-delivery-pricing-controller.ts"
+      - "services/dsh/frontend/app-partner/store/PartnerDeliveryPricingCard.tsx"
+      - "services/dsh/frontend/app-partner/store/DshPartnerStoreCourierScreen.tsx"
+      - "services/dsh/frontend/app-client/checkout/GovernedCheckoutScreen.tsx"
+      - "services/dsh/frontend/control-panel/marketing/**"
+      - "services/wlt/backend/internal/commercial/**"
+      - "services/dsh/contracts/**"
+      - "services/dsh/tests/jrn-026-coupons-pricing-loyalty.test.mjs"
+      - "services/dsh/tsconfig.jrn-026.json"
+      - ".github/workflows/jrn-026-coupons-pricing-loyalty-verification.yml"
+  pull_request:
+    branches: [master]
+    paths:
+      - "services/dsh/backend/internal/coupons/**"
+      - "services/dsh/backend/internal/checkout/delivery_pricing*.go"
+      - "services/dsh/backend/internal/http/coupons.go"
+      - "services/dsh/backend/internal/http/coupon_funding_lifecycle.go"
+      - "services/dsh/backend/internal/http/delivery_pricing.go"
+      - "services/dsh/backend/internal/http/loyalty_policy.go"
+      - "services/dsh/backend/internal/http/journeys_026_030_routes_test.go"
+      - "services/dsh/backend/internal/marketing/loyalty_policy.go"
+      - "services/dsh/backend/internal/wlt/**"
+      - "services/dsh/backend/internal/wltoutbox/**"
+      - "services/dsh/frontend/shared/marketing/**"
+      - "services/dsh/frontend/shared/partner/partner-delivery-pricing.api.ts"
+      - "services/dsh/frontend/shared/partner/use-delivery-pricing-controller.ts"
+      - "services/dsh/frontend/app-partner/store/PartnerDeliveryPricingCard.tsx"
+      - "services/dsh/frontend/app-partner/store/DshPartnerStoreCourierScreen.tsx"
+      - "services/dsh/frontend/app-client/checkout/GovernedCheckoutScreen.tsx"
+      - "services/dsh/frontend/control-panel/marketing/**"
+      - "services/wlt/backend/internal/commercial/**"
+      - "services/dsh/contracts/**"
+      - "services/dsh/tests/jrn-026-coupons-pricing-loyalty.test.mjs"
+      - "services/dsh/tsconfig.jrn-026.json"
+      - ".github/workflows/jrn-026-coupons-pricing-loyalty-verification.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jrn-026-${{ github.workflow }}-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: JRN-026 targeted full-stack and WLT-boundary verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository state
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "10.34.2"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.17.0"
+          cache: pnpm
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: |
+            services/dsh/backend/go.sum
+            services/wlt/backend/go.sum
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Compile JRN-026 DSH domains and WLT adapter
+        working-directory: services/dsh/backend
+        run: |
+          go test ./internal/coupons ./internal/checkout ./internal/marketing ./internal/wlt ./internal/wltoutbox -run '^$'
+          go test ./internal/http -run '^TestJourneys026To030ExposeGovernedRoutes$'
+
+      - name: Compile sovereign WLT loyalty ledger
+        working-directory: services/wlt/backend
+        run: go test ./internal/commercial -run '^$'
+
+      - name: Verify JRN-026 shared brain and affected surfaces
+        run: pnpm --dir services/dsh exec tsc -p tsconfig.jrn-026.json --noEmit --pretty false
+
+      - name: Verify JRN-026 governed bindings and negative invariants
+        run: node --test services/dsh/tests/jrn-026-coupons-pricing-loyalty.test.mjs
+
+      - name: Verify DSH modular OpenAPI composition
+        run: pnpm --dir services/dsh openapi:verify
