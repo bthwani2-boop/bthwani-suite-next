@@ -34,6 +34,21 @@ func (s *protectedStoreServer) handleIssueDeliveryPIN(w http.ResponseWriter, r *
 	})
 }
 
+func deliveryProofIdempotencyKey(r *http.Request, fallback string) string {
+	return firstNonEmpty(
+		strings.TrimSpace(r.Header.Get("X-Idempotency-Key")),
+		strings.TrimSpace(r.Header.Get("Idempotency-Key")),
+		strings.TrimSpace(fallback),
+	)
+}
+
+func normalizeDeliveryEvidenceKind(raw string) string {
+	if strings.EqualFold(strings.TrimSpace(raw), "signature") {
+		return "signature"
+	}
+	return "photo"
+}
+
 func (s *protectedStoreServer) handleSubmitGovernedDeliveryProof(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "captain")
 	if !ok {
@@ -55,29 +70,42 @@ func (s *protectedStoreServer) handleSubmitGovernedDeliveryProof(w http.Response
 		if !uploadedOK {
 			return
 		}
+		evidenceKind := normalizeDeliveryEvidenceKind(r.FormValue("evidenceKind"))
+		purpose := "delivery_proof"
+		if evidenceKind == "signature" {
+			purpose = "delivery_signature"
+		}
 		if err := s.db.QueryRowContext(r.Context(), `
 			INSERT INTO dsh_media_refs
 				(storage_key, owner_actor_id, owner_actor_role, purpose, content_type, original_filename)
-			VALUES ($1,$2,'captain','delivery_proof',$3,$4)
-			RETURNING media_ref`, uploaded.storageKey, actor.ID, uploaded.contentType, uploaded.fileName).Scan(&uploadedMediaRef); err != nil {
+			VALUES ($1,$2,'captain',$3,$4,$5)
+			RETURNING media_ref`, uploaded.storageKey, actor.ID, purpose, uploaded.contentType, uploaded.fileName).Scan(&uploadedMediaRef); err != nil {
 			s.removeDeliveryProofObject(r, "", uploaded.storageKey)
 			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to register delivery proof")
 			return
 		}
-		input = dispatch.SubmitDeliveryProofInput{
-			Method:        dispatch.DeliveryProofMethod(strings.TrimSpace(r.FormValue("method"))),
-			PIN:           strings.TrimSpace(r.FormValue("pin")),
-			PhotoMediaRef: uploadedMediaRef,
-			IdempotencyKey: firstNonEmpty(
-				strings.TrimSpace(r.Header.Get("X-Idempotency-Key")),
-				strings.TrimSpace(r.FormValue("idempotencyKey")),
-			),
-		}
-		if input.Method == "" {
-			input.Method = dispatch.DeliveryProofPhoto
-			if input.PIN != "" {
-				input.Method = dispatch.DeliveryProofComposite
+
+		pin := strings.TrimSpace(r.FormValue("pin"))
+		method := dispatch.DeliveryProofMethod(strings.TrimSpace(r.FormValue("method")))
+		if method == "" {
+			if evidenceKind == "signature" {
+				method = dispatch.DeliveryProofSignature
+			} else {
+				method = dispatch.DeliveryProofPhoto
 			}
+			if pin != "" {
+				method = dispatch.DeliveryProofComposite
+			}
+		}
+		input = dispatch.SubmitDeliveryProofInput{
+			Method:         method,
+			PIN:            pin,
+			IdempotencyKey: deliveryProofIdempotencyKey(r, r.FormValue("idempotencyKey")),
+		}
+		if evidenceKind == "signature" {
+			input.SignatureMediaRef = uploadedMediaRef
+		} else {
+			input.PhotoMediaRef = uploadedMediaRef
 		}
 		if capturedAt := strings.TrimSpace(r.FormValue("capturedAt")); capturedAt != "" {
 			parsed, err := time.Parse(time.RFC3339, capturedAt)
@@ -117,10 +145,7 @@ func (s *protectedStoreServer) handleSubmitGovernedDeliveryProof(w http.Response
 			SignatureMediaRef: strings.TrimSpace(body.SignatureMediaRef),
 			CapturedLatitude:  body.CapturedLatitude,
 			CapturedLongitude: body.CapturedLongitude,
-			IdempotencyKey: firstNonEmpty(
-				strings.TrimSpace(r.Header.Get("X-Idempotency-Key")),
-				strings.TrimSpace(body.IdempotencyKey),
-			),
+			IdempotencyKey:    deliveryProofIdempotencyKey(r, body.IdempotencyKey),
 		}
 		if strings.TrimSpace(body.CapturedAt) != "" {
 			parsed, err := time.Parse(time.RFC3339, body.CapturedAt)
