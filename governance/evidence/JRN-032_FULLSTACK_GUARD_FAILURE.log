@@ -1,0 +1,11 @@
+
+> bthwani-suite-next@0.0.0 guard:fullstack-boundary /Users/runner/work/bthwani-suite-next/bthwani-suite-next
+> node tools/guards/fullstack-boundary-gate.mjs
+
+fullstack-boundary-gate: FAIL
+- services/dsh/frontend/app-captain/orders/DshCaptainPoDSubmissionScreen.tsx:26 FORBIDDEN: importing backend/client/generated/api/controller-core directly (resolved: services/dsh/frontend/shared/media/pod/delivery-proof-media.api)
+- services/dsh/frontend/app-client/orders/ClientLiveTrackingCard.tsx:4 FORBIDDEN: importing backend/client/generated/api/controller-core directly (resolved: services/dsh/frontend/shared/dispatch/dispatch-tracking.api)
+- services/dsh/frontend/app-partner/team/PartnerTeamManagementScreen.tsx:16 FORBIDDEN: importing backend/client/generated/api/controller-core directly (resolved: services/dsh/frontend/shared/partner/partner-fleet.api)
+- services/dsh/frontend/control-panel/finance/PaymentSessionOperationsScreen.tsx:18 FORBIDDEN: importing backend/client/generated/api/controller-core directly (resolved: services/dsh/frontend/shared/finance-wlt-link/payment/payment-session-runtime.api)
+- services/dsh/frontend/control-panel/partners/stores/OperatorPartnerFleetPanel.tsx:11 FORBIDDEN: importing backend/client/generated/api/controller-core directly (resolved: services/dsh/frontend/shared/partner/partner-fleet.api)
+ ELIFECYCLE  Command failed with exit code 1.
