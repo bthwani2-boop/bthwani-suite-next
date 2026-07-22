@@ -5,21 +5,20 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
-	"net/url"
 	"strconv"
 	"strings"
 )
 
 type MapRouteInput struct {
-	OriginLatitude      float64 `json:"originLatitude"`
-	OriginLongitude     float64 `json:"originLongitude"`
+	OriginLatitude       float64 `json:"originLatitude"`
+	OriginLongitude      float64 `json:"originLongitude"`
 	DestinationLatitude  float64 `json:"destinationLatitude"`
 	DestinationLongitude float64 `json:"destinationLongitude"`
 }
 
 type MapRouteResponse struct {
-	ProviderCode   string  `json:"providerCode"`
-	DistanceMeters float64 `json:"distanceMeters"`
+	ProviderCode    string  `json:"providerCode"`
+	DistanceMeters  float64 `json:"distanceMeters"`
 	DurationSeconds float64 `json:"durationSeconds"`
 }
 
@@ -107,8 +106,8 @@ func routeWithMapProvider(ctx context.Context, provider ExternalProvider, input 
 		return MapRouteResponse{}, fmt.Errorf("route provider %s returned invalid metrics", provider.Code)
 	}
 	return MapRouteResponse{
-		ProviderCode: provider.Code,
-		DistanceMeters: route.Distance,
+		ProviderCode:    provider.Code,
+		DistanceMeters:  route.Distance,
 		DurationSeconds: route.Duration,
 	}, nil
 }
@@ -118,5 +117,3 @@ func validRouteCoordinate(latitude, longitude float64) bool {
 		!math.IsInf(latitude, 0) && !math.IsInf(longitude, 0) &&
 		latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180
 }
-
-var _ url.Values
