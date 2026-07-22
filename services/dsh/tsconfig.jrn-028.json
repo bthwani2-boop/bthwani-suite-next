@@ -12,8 +12,7 @@
     "frontend/shared/marketing/use-coupons-controller.ts",
     "frontend/shared/marketing/index.ts",
     "frontend/control-panel/marketing/components/CouponFundingReconciliationPanel.tsx",
-    "frontend/control-panel/marketing/components/CouponsCommandDeck.tsx",
-    "frontend/control-panel/marketing/MarketingDashboardScreen.tsx"
+    "frontend/control-panel/marketing/components/CouponsCommandDeck.tsx"
   ],
   "exclude": [
     "node_modules",
