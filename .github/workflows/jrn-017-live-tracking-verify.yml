@@ -147,7 +147,7 @@ jobs:
 
   dsh-openapi-modularization:
     name: Split and verify sovereign DSH OpenAPI
-    if: github.event_name == 'push' && github.ref == 'refs/heads/sambassam'
+    if: github.actor != 'github-actions[bot]' && (github.event_name == 'push' || github.event_name == 'pull_request')
     permissions:
       contents: write
     runs-on: ubuntu-latest
