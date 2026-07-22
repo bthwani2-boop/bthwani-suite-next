@@ -6,9 +6,11 @@
   "truthOwner": "services/dsh",
   "identityTruthOwner": "core/identity",
   "workforceTruthOwner": "core/workforce",
+  "partnerLifecycleOwner": "services/dsh/frontend/control-panel/partners",
+  "captainCredentialOwner": "services/dsh/frontend/control-panel/hr",
   "sharedBrainOwner": "services/dsh/frontend/shared/administration",
   "operationalProblem": "تحتاج الإدارة إلى صلاحيات دقيقة مرتبطة بالعملية والسطح، وإلى فصل منشئ القرار عن معتمده ومستفيده، مع سجل تدقيق غير قابل للتعديل وتراجع محكوم لا يحذف التاريخ ولا ينقل حقيقة الهوية أو القوى العاملة إلى DSH.",
-  "targetOutcome": "إدارة أدوار وإسنادات قابلة للتدقيق والتراجع، تمر جميع طفراتها الحساسة عبر Maker-Checker، وتعرض تشخيصات تشغيلية منقحة من البيانات الحساسة، بينما تبقى تهيئة الشريك واعتماد الكابتن قراءات مملوكة لرحلاتها الأصلية.",
+  "targetOutcome": "إدارة أدوار وإسنادات قابلة للتدقيق والتراجع تمر طفراتها الحساسة عبر Maker-Checker، وتعرض تشخيصات منقحة، وتفتح من سطح الإدارة مسارات التفعيل والحظر واعتماد الكابتن لدى مالكي الحقيقة السياديين بدل إنشاء طفرات موازية.",
   "actors": [
     "operator-role-maker",
     "operator-role-checker",
@@ -29,7 +31,8 @@
   "services": [
     "DSH_ADMINISTRATION_PROJECTION",
     "IDENTITY_AUTHENTICATION_TRUTH",
-    "WORKFORCE_PROFILE_TRUTH"
+    "WORKFORCE_PROFILE_TRUTH",
+    "PARTNER_LIFECYCLE_TRUTH"
   ],
   "entities": [
     "administration_role",
@@ -63,7 +66,9 @@
     "independently_approve_or_reject_rollback",
     "read_append_only_redacted_administration_audit",
     "read_aggregate_privacy_safe_administration_diagnostics",
-    "read_partner_activation_and_captain_credential_projections_without_mutating_owner_truth"
+    "read_partner_activation_and_captain_credential_projections_without_mutating_owner_truth",
+    "delegate_partner_activation_or_blocking_to_partner_lifecycle_owner",
+    "delegate_captain_creation_update_documents_and_license_review_to_workforce_owner"
   ],
   "forbiddenActions": [
     "direct_role_creation_without_approval",
@@ -73,7 +78,7 @@
     "original_checker_approving_rollback",
     "deleting_or_rewriting_audit_history",
     "storing_phone_document_session_or_secret_values_in_audit_detail",
-    "mutating_partner_lifecycle_or_captain_credentials_from_administration",
+    "mutating_partner_lifecycle_or_captain_credentials_inside_administration_projection",
     "granting_administration_permission_outside_the_declared_surface_scope",
     "moving_identity_or_workforce_truth_into_dsh"
   ],
@@ -84,7 +89,7 @@
     "The administration audit table is append-only outside an explicit maintenance context and readback redacts non-allowlisted details.",
     "Administration diagnostics expose aggregate counts only and never return phone numbers, credentials, documents, session tokens, or secrets.",
     "Identity authenticates the actor; DSH evaluates only approved active administration role projections scoped to control-panel.",
-    "Partner activation and captain credential mutations remain owned by their lifecycle and accreditation journeys."
+    "Partner activation and captain credential mutations remain owned by their lifecycle and Workforce accreditation owners; administration only delegates navigation to those live owner surfaces."
   ],
   "acceptanceCriteria": [
     "Role definitions persist normalized operation permissions and explicit surface scope with control-panel mandatory.",
@@ -92,6 +97,7 @@
     "Approved assignment or revocation decisions can be reversed only through a separate independently approved inverse request.",
     "Audit writes avoid raw reason or review-note values, audit readback is redacted, and update or delete is rejected by the database trigger.",
     "The control-panel shared administration brain binds roles, approvals, rollback, diagnostics, and audit to live DSH routes.",
+    "The partner projection opens the governed partner lifecycle detail for activation or blocking and the captain projection opens Workforce for creation, update, documents, and license review.",
     "Targeted Go tests, TypeScript checks, route binding checks, contract checks, and migration checks pass on one immutable branch commit."
   ],
   "independentApprovalsRequired": [
