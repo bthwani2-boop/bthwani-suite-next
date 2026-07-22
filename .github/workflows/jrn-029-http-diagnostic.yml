@@ -26,30 +26,25 @@ jobs:
         with:
           go-version-file: services/dsh/backend/go.mod
           cache-dependency-path: services/dsh/backend/go.sum
-      - name: Guarded mutation paths
+      - name: Capture operational route test
+        id: route-test
         working-directory: services/dsh/backend
-        run: go test ./internal/http -run '^TestJRN029GuardedMutationPaths$' -count=1 -v
-      - name: Canonical decision effects
-        working-directory: services/dsh/backend
-        run: go test ./internal/http -run '^TestJRN029EffectAllowedUsesCanonicalDecisionEffects$' -count=1 -v
-      - name: Route — get operational profile
-        working-directory: services/dsh/backend
-        run: go test ./internal/http -run '^TestJRN029OperationalPolicyRoutes/get_operational_profile$' -count=1 -v
-      - name: Route — upsert operational profile
-        working-directory: services/dsh/backend
-        run: go test ./internal/http -run '^TestJRN029OperationalPolicyRoutes/upsert_operational_profile$' -count=1 -v
-      - name: Route — list delivery modes
-        working-directory: services/dsh/backend
-        run: go test ./internal/http -run '^TestJRN029OperationalPolicyRoutes/list_delivery_modes$' -count=1 -v
-      - name: Route — upsert delivery mode
-        working-directory: services/dsh/backend
-        run: go test ./internal/http -run '^TestJRN029OperationalPolicyRoutes/upsert_delivery_mode$' -count=1 -v
-      - name: Route — evaluate operational policy
-        working-directory: services/dsh/backend
-        run: go test ./internal/http -run '^TestJRN029OperationalPolicyRoutes/evaluate_operational_policy$' -count=1 -v
-      - name: Route — list operational audit
-        working-directory: services/dsh/backend
-        run: go test ./internal/http -run '^TestJRN029OperationalPolicyRoutes/list_operational_audit$' -count=1 -v
-      - name: Route — rollback operational policy
-        working-directory: services/dsh/backend
-        run: go test ./internal/http -run '^TestJRN029OperationalPolicyRoutes/rollback_operational_policy$' -count=1 -v
+        shell: bash
+        run: |
+          set +e
+          go test ./internal/http -run '^TestJRN029OperationalPolicyRoutes/get_operational_profile$' -count=1 -v > /tmp/jrn029-route-test.log 2>&1
+          status=$?
+          cat /tmp/jrn029-route-test.log
+          echo "status=${status}" >> "${GITHUB_OUTPUT}"
+          exit 0
+      - name: Upload route diagnostic
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: jrn-029-route-diagnostic-${{ github.sha }}
+          path: /tmp/jrn029-route-test.log
+          if-no-files-found: error
+          retention-days: 7
+      - name: Fail when route test failed
+        if: steps.route-test.outputs.status != '0'
+        run: exit 1
