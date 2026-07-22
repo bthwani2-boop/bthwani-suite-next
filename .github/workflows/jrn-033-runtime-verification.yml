@@ -5,6 +5,7 @@ on:
   push:
     branches: [sambassam]
     paths: &jrn033_runtime_paths
+      - "governance/evidence/jrn-033-final-verification-trigger.txt"
       - "core/identity/backend/internal/identity/repository.go"
       - "services/wlt/backend/internal/wallet/**"
       - "services/wlt/backend/internal/ledger/**"
@@ -15,6 +16,7 @@ on:
       - "services/dsh/backend/internal/http/representative_finance_routes.go"
       - "services/dsh/backend/internal/http/field_finance.go"
       - "services/dsh/backend/internal/http/actor_finance_handlers.go"
+      - "services/dsh/backend/internal/http/financeproxy.go"
       - "services/dsh/backend/internal/wlt/finance_proxy.go"
       - "tools/scripts/test-jrn-033-representative-wallets-runtime.ps1"
       - "infra/docker/compose.runtime.yml"
