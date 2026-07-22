@@ -20,7 +20,7 @@ permissions:
 
 concurrency:
   group: jrn-028-pr-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   full-stack-proof:
