@@ -101,7 +101,6 @@ export type DshPartnerActivation = {
   readonly partnerId: string;
   readonly status: "submitted" | "ops_approved" | "partner_active" | "blocked";
   readonly reviewedBy: string;
-  readonly notes: string;
   readonly createdAt: string;
   readonly updatedAt: string;
 };
@@ -109,7 +108,6 @@ export type DshPartnerActivation = {
 export type DshCaptainCredential = {
   readonly id: string;
   readonly captainId: string;
-  readonly licenseNumber: string;
   readonly vehicleType: string;
   readonly status: "pending" | "approved" | "rejected" | "suspended";
   readonly reviewedBy: string;
