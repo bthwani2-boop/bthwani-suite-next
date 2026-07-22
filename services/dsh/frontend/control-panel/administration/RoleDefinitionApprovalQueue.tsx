@@ -9,13 +9,32 @@ import {
 } from "@bthwani/control-panel/components";
 import { DataTablePageFrame } from "@bthwani/control-panel/shell";
 import { WebStyleSheet } from "@bthwani/ui-kit/web";
-import { useRoleDefinitionApprovalController } from "../../shared/administration";
+import {
+  useRoleDefinitionApprovalController,
+  type DshAdministrationSurface,
+} from "../../shared/administration";
 
 const AVAILABLE_PERMISSIONS = [
   "administration.read",
-  "administration.manage",
-  "administration.approve",
+  "administration.role.request",
+  "administration.role.approve",
+  "administration.staff.request",
+  "administration.staff.approve",
+  "administration.audit.read",
+  "administration.diagnostics.read",
+  "administration.rollback.request",
+  "administration.rollback.approve",
 ] as const;
+
+const AVAILABLE_SURFACES: readonly DshAdministrationSurface[] = [
+  "control-panel",
+  "app-client",
+  "app-partner",
+  "app-captain",
+  "app-field",
+  "webapp",
+  "website",
+];
 
 export function RoleDefinitionApprovalQueue() {
   const roleRequests = useRoleDefinitionApprovalController("authenticated", "pending");
@@ -23,6 +42,7 @@ export function RoleDefinitionApprovalQueue() {
   const [description, setDescription] = useState("");
   const [reason, setReason] = useState("");
   const [permissions, setPermissions] = useState<readonly string[]>(["administration.read"]);
+  const [surfaces, setSurfaces] = useState<readonly DshAdministrationSurface[]>(["control-panel"]);
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
   const [actionError, setActionError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -31,6 +51,13 @@ export function RoleDefinitionApprovalQueue() {
     setPermissions((current) => current.includes(permission)
       ? current.filter((item) => item !== permission)
       : [...current, permission]);
+  };
+
+  const toggleSurface = (surface: DshAdministrationSurface) => {
+    if (surface === "control-panel") return;
+    setSurfaces((current) => current.includes(surface)
+      ? current.filter((item) => item !== surface)
+      : [...current, surface]);
   };
 
   const requestRole = async () => {
@@ -42,12 +69,14 @@ export function RoleDefinitionApprovalQueue() {
         name: name.trim(),
         description: description.trim(),
         permissions,
+        surfaces,
         reason: reason.trim(),
       });
       setName("");
       setDescription("");
       setReason("");
       setPermissions(["administration.read"]);
+      setSurfaces(["control-panel"]);
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "تعذر إنشاء طلب تعريف الدور.");
     } finally {
@@ -101,18 +130,38 @@ export function RoleDefinitionApprovalQueue() {
               aria-label="سبب إنشاء الدور"
             />
           </div>
-          <div style={styles.permissionRow} aria-label="صلاحيات الدور">
+          <strong>صلاحيات العمليات</strong>
+          <div style={styles.optionRow} aria-label="صلاحيات الدور">
             {AVAILABLE_PERMISSIONS.map((permission) => (
               <CpButton
                 key={permission}
                 onClick={() => togglePermission(permission)}
                 aria-pressed={permissions.includes(permission)}
-                style={permissions.includes(permission) ? styles.selectedPermission : styles.permission}
+                style={permissions.includes(permission) ? styles.selectedOption : styles.option}
               >
                 {permission}
               </CpButton>
             ))}
           </div>
+          <strong>الأسطح المتأثرة</strong>
+          <div style={styles.optionRow} aria-label="أسطح الدور">
+            {AVAILABLE_SURFACES.map((surface) => (
+              <CpButton
+                key={surface}
+                onClick={() => toggleSurface(surface)}
+                aria-pressed={surfaces.includes(surface)}
+                disabled={surface === "control-panel"}
+                style={surfaces.includes(surface) ? styles.selectedOption : styles.option}
+              >
+                {surface}
+              </CpButton>
+            ))}
+          </div>
+          <CpStatePanel
+            role="status"
+            title="لوحة التحكم سطح إلزامي"
+            description="تحديد التطبيقات الأخرى يوثق أثر الدور، ولا يمنح مسار إدارة داخل تلك التطبيقات."
+          />
           <CpButton
             disabled={submitting || name.trim().length < 3 || reason.trim().length < 5 || permissions.length === 0}
             onClick={() => void requestRole()}
@@ -132,6 +181,7 @@ export function RoleDefinitionApprovalQueue() {
             <strong>{request.roleName}</strong>
             <span>{request.description || "بلا وصف"}</span>
             <span>الصلاحيات: {request.permissions.join("، ")}</span>
+            <span>الأسطح: {request.surfaces.join("، ")}</span>
             <span>المنشئ: {request.requestedBy}</span>
             <span>السبب: {request.reason}</span>
             <CpTextInput
@@ -159,10 +209,7 @@ export function RoleDefinitionApprovalQueue() {
 }
 
 const styles = WebStyleSheet.create({
-  content: {
-    display: "grid",
-    gap: "1rem",
-  },
+  content: { display: "grid", gap: "1rem" },
   card: {
     display: "grid",
     gap: "0.75rem",
@@ -175,21 +222,8 @@ const styles = WebStyleSheet.create({
     gridTemplateColumns: "repeat(auto-fit, minmax(14rem, 1fr))",
     gap: "0.75rem",
   },
-  permissionRow: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "0.5rem",
-  },
-  permission: {
-    opacity: 0.7,
-  },
-  selectedPermission: {
-    opacity: 1,
-    fontWeight: 700,
-  },
-  actionRow: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "0.75rem",
-  },
+  optionRow: { display: "flex", flexWrap: "wrap", gap: "0.5rem" },
+  option: { opacity: 0.7 },
+  selectedOption: { opacity: 1, fontWeight: 700 },
+  actionRow: { display: "flex", flexWrap: "wrap", gap: "0.75rem" },
 });
