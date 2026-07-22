@@ -12,6 +12,7 @@ on:
       - "services/dsh/backend/cmd/dsh-api/main.go"
       - "services/dsh/database/migrations/dsh-059_partner_courier_connection_codes.sql"
       - "services/dsh/database/migrations/dsh-089_store_team_actor_scope_uniqueness.sql"
+      - "services/dsh/database/migrations/dsh-933_jrn030_partner_fleet_action_audit.sql"
       - "services/dsh/frontend/shared/partner/partner-fleet.api.ts"
       - "services/dsh/frontend/shared/partner/use-partner-fleet-controller.ts"
       - "services/dsh/frontend/app-partner/team/PartnerTeamManagementScreen.tsx"
