@@ -74,7 +74,10 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          go test ./internal/fieldreadiness ./internal/http -run 'TestValidateGovernedLocation|TestEscalationTransitions|TestGovernedInputEnums|^$' 2>&1 | tee jrn-024-go-test.log
+          {
+            go test ./internal/fieldreadiness -run 'TestValidateGovernedLocation|TestEscalationTransitions|TestGovernedInputEnums'
+            go build ./internal/http
+          } 2>&1 | tee jrn-024-go-test.log
 
       - name: Upload JRN-024 backend diagnostics
         if: failure() && steps.backend_verify.outcome == 'failure'
