@@ -90,8 +90,29 @@ const { request } = createDshHttpClient(
   "dsh-jrn036-settlements-commissions",
 );
 
-function ownCommissionPath(actorType: Jrn036RepresentativeActorType): string {
-  return `/dsh/${actorType}/me/finance/commissions`;
+const ownCommissionPathByActor: Record<Jrn036RepresentativeActorType, string> = {
+  partner: "/dsh/partner/me/finance/commissions",
+  captain: "/dsh/captain/me/finance/commissions",
+  field: "/dsh/field/me/finance/commissions",
+};
+
+function commissionActionPath(
+  commissionId: string,
+  action: "adjust" | "confirm" | "settle" | "reject" | "reverse",
+): string {
+  const encodedId = encodeURIComponent(commissionId);
+  switch (action) {
+    case "adjust":
+      return `/dsh/control-panel/finance/commissions/${encodedId}/adjust`;
+    case "confirm":
+      return `/dsh/control-panel/finance/commissions/${encodedId}/confirm`;
+    case "settle":
+      return `/dsh/control-panel/finance/commissions/${encodedId}/settle`;
+    case "reject":
+      return `/dsh/control-panel/finance/commissions/${encodedId}/reject`;
+    case "reverse":
+      return `/dsh/control-panel/finance/commissions/${encodedId}/reverse`;
+  }
 }
 
 function newAdjustmentIdempotencyKey(commissionId: string): string {
@@ -104,7 +125,7 @@ export async function fetchOwnJrn036Commissions(
   actorType: Jrn036RepresentativeActorType,
 ): Promise<readonly Jrn036Commission[]> {
   const response = await request<{ readonly commissions: Jrn036Commission[] }>(
-    ownCommissionPath(actorType),
+    ownCommissionPathByActor[actorType],
   );
   return response.commissions ?? [];
 }
@@ -142,7 +163,7 @@ async function commissionAction(
   idempotencyKey?: string,
 ): Promise<Jrn036Commission> {
   const response = await request<{ readonly commission: Jrn036Commission }>(
-    `/dsh/control-panel/finance/commissions/${encodeURIComponent(commissionId)}/${action}`,
+    commissionActionPath(commissionId, action),
     {
       method: "POST",
       body,
