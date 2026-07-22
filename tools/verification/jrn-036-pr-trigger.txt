@@ -1,0 +1,3 @@
+JRN-036 closure validation trigger.
+Base branch: sambassam
+Validation scope: PostgreSQL migrations, WLT HTTP lifecycle, Go compilation, TypeScript bindings, static contracts.
