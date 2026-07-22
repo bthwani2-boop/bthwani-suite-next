@@ -12,6 +12,7 @@ func TestPaymentProviderFactory(t *testing.T) {
 	t.Run("Mock Mode factory", func(t *testing.T) {
 		t.Setenv("WLT_FINANCIAL_PROVIDER_MODE", "mock")
 		t.Setenv("WLT_FINANCIAL_PROVIDER_BASE_URL", "http://localhost:8080")
+		t.Setenv("WLT_ALLOW_MOCK_PROVIDER", "true")
 		provider, err := NewDefaultPaymentProvider()
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
