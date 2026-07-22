@@ -91,11 +91,16 @@ type PlatformNotificationConfigInput struct {
 }
 
 func ListActorNotifications(db *sql.DB, actorID, actorType string, limit int) ([]Notification, int, error) {
+	if db == nil || actorID == "" || actorType == "" {
+		return nil, 0, ErrInvalid
+	}
 	rows, err := db.Query(`
 		SELECT id, actor_id, actor_type, topic, title, body,
 		       COALESCE(action_url,''), is_read, created_at, read_at
 		FROM dsh_notifications
-		WHERE actor_id = $1 AND actor_type = $2
+		WHERE actor_id = $1
+		  AND actor_type = $2
+		  AND 'in_app' = ANY(delivery_channels)
 		ORDER BY created_at DESC
 		LIMIT $3`, actorID, actorType, limit)
 	if err != nil {
@@ -117,8 +122,13 @@ func ListActorNotifications(db *sql.DB, actorID, actorType string, limit int) ([
 	}
 
 	var unread int
-	if err := db.QueryRow(`SELECT COUNT(*) FROM dsh_notifications WHERE actor_id=$1 AND actor_type=$2 AND is_read=FALSE`,
-		actorID, actorType).Scan(&unread); err != nil {
+	if err := db.QueryRow(`
+		SELECT COUNT(*)
+		FROM dsh_notifications
+		WHERE actor_id=$1
+		  AND actor_type=$2
+		  AND is_read=FALSE
+		  AND 'in_app' = ANY(delivery_channels)`, actorID, actorType).Scan(&unread); err != nil {
 		return out, 0, err
 	}
 	return out, unread, rows.Err()
@@ -130,7 +140,9 @@ func MarkNotificationRead(db *sql.DB, notificationID, actorID string) (Notificat
 	err := db.QueryRow(`
 		UPDATE dsh_notifications
 		SET is_read=TRUE, read_at=$1
-		WHERE id=$2 AND actor_id=$3
+		WHERE id=$2
+		  AND actor_id=$3
+		  AND 'in_app' = ANY(delivery_channels)
 		RETURNING id, actor_id, actor_type, topic, title, body,
 		          COALESCE(action_url,''), is_read, created_at, read_at`,
 		now, notificationID, actorID).Scan(
@@ -147,7 +159,10 @@ func MarkAllNotificationsRead(db *sql.DB, actorID, actorType string) (int64, err
 	result, err := db.Exec(`
 		UPDATE dsh_notifications
 		SET is_read=TRUE, read_at=$1
-		WHERE actor_id=$2 AND actor_type=$3 AND is_read=FALSE`,
+		WHERE actor_id=$2
+		  AND actor_type=$3
+		  AND is_read=FALSE
+		  AND 'in_app' = ANY(delivery_channels)`,
 		now, actorID, actorType)
 	if err != nil {
 		return 0, err
@@ -223,6 +238,9 @@ func UpsertNotificationPreferencePolicy(db *sql.DB, actorID, actorType string, i
 }
 
 func ListPlatformNotificationConfigs(db *sql.DB) ([]PlatformNotificationConfig, error) {
+	if db == nil {
+		return nil, ErrInvalid
+	}
 	rows, err := db.Query(`
 		SELECT id, topic, actor_types, is_enabled,
 		       COALESCE(description,''), default_channels,
