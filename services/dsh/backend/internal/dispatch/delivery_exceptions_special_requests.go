@@ -21,6 +21,7 @@ func resolveSpecialRequestExceptionReassignCaptainTx(
 	newCaptainID, note, actorID string,
 ) (*DeliveryException, error) {
 	var (
+		specialRequestID string
 		assignmentStatus AssignmentStatus
 		deliveryStatus   DeliveryStatus
 		requestType      specialrequests.RequestType
@@ -30,13 +31,13 @@ func resolveSpecialRequestExceptionReassignCaptainTx(
 		correlationID    sql.NullString
 	)
 	if err := tx.QueryRow(`
-		SELECT a.status, d.status, sr.request_type, sr.status, sr.version, sr.tenant_id, sr.correlation_id
+		SELECT sr.id::text, a.status, d.status, sr.request_type, sr.status, sr.version, sr.tenant_id, sr.correlation_id
 		FROM dsh_assignments a
 		JOIN dsh_deliveries d ON d.assignment_id = a.id
 		JOIN dsh_special_requests sr ON sr.id = a.special_request_id
-		WHERE a.id = $1::uuid AND a.captain_id = $2 AND sr.id = $3::uuid
-		FOR UPDATE OF a, d, sr`, current.AssignmentID, current.CaptainID, current.SpecialRequestID).
-		Scan(&assignmentStatus, &deliveryStatus, &requestType, &requestStatus, &requestVersion, &tenantID, &correlationID); err != nil {
+		WHERE a.id = $1::uuid AND a.captain_id = $2
+		FOR UPDATE OF a, d, sr`, current.AssignmentID, current.CaptainID).
+		Scan(&specialRequestID, &assignmentStatus, &deliveryStatus, &requestType, &requestStatus, &requestVersion, &tenantID, &correlationID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}
@@ -63,13 +64,13 @@ func resolveSpecialRequestExceptionReassignCaptainTx(
 	if err := tx.QueryRow(`
 		INSERT INTO dsh_assignments (special_request_id, captain_id, assigned_by, status, response_deadline_at)
 		VALUES ($1::uuid, $2, $3, 'offered', NOW() + INTERVAL '90 seconds')
-		RETURNING id::text`, current.SpecialRequestID, newCaptainID, actorID).Scan(&replacementAssignmentID); err != nil {
+		RETURNING id::text`, specialRequestID, newCaptainID, actorID).Scan(&replacementAssignmentID); err != nil {
 		return nil, err
 	}
 	if _, err := tx.Exec(`
 		INSERT INTO dsh_deliveries (assignment_id, special_request_id, captain_id, status, note)
 		VALUES ($1::uuid, $2::uuid, $3, 'assigned', 'replacement assignment after governed special-request exception')`,
-		replacementAssignmentID, current.SpecialRequestID, newCaptainID); err != nil {
+		replacementAssignmentID, specialRequestID, newCaptainID); err != nil {
 		return nil, err
 	}
 
@@ -83,7 +84,7 @@ func resolveSpecialRequestExceptionReassignCaptainTx(
 		    captain_assigned_at = NOW(), version = version + 1, updated_at = NOW()
 		WHERE id = $3::uuid AND tenant_id = $4 AND version = $5
 		  AND status IN ('approved', 'assigned', 'in_progress')`,
-		stage, replacementAssignmentID, current.SpecialRequestID, tenantID, requestVersion)
+		stage, replacementAssignmentID, specialRequestID, tenantID, requestVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -114,12 +115,12 @@ func resolveSpecialRequestExceptionReassignCaptainTx(
 	})
 	correlation := correlationID.String
 	if err := specialrequests.WriteAuditEvent(
-		tx, current.SpecialRequestID, actorID, "operator", "reassign_captain", note, correlation, fromState, toState,
+		tx, specialRequestID, actorID, "operator", "reassign_captain", note, correlation, fromState, toState,
 	); err != nil {
 		return nil, fmt.Errorf("write special-request audit event: %w", err)
 	}
 	payload, _ := json.Marshal(map[string]any{
-		"specialRequestId": current.SpecialRequestID,
+		"specialRequestId": specialRequestID,
 		"assignmentId": replacementAssignmentID,
 		"captainId": newCaptainID,
 		"occurredAt": time.Now().UTC(),
@@ -127,7 +128,7 @@ func resolveSpecialRequestExceptionReassignCaptainTx(
 	if err := operationaloutbox.Enqueue(tx, operationaloutbox.EnqueueInput{
 		EventType: "special_request_reassigned",
 		EntityType: "special_request",
-		EntityID: current.SpecialRequestID,
+		EntityID: specialRequestID,
 		Payload: payload,
 		CorrelationID: correlation,
 	}); err != nil {
