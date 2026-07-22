@@ -34,6 +34,8 @@ export type DshLiveTrackingEta = {
 };
 
 export type DshLiveTrackingProjection = {
+  /** Client adapter-owned request context; the backend tracking projection does not duplicate order truth. */
+  readonly orderId?: string;
   readonly locationVisibility: DshTrackingLocationVisibility;
   readonly location: DshLiveTrackingLocation | null;
   readonly eta: DshLiveTrackingEta | null;
@@ -61,9 +63,16 @@ export type DshDispatchTrackingAlert = {
 };
 
 export async function fetchClientLiveTracking(orderId: string): Promise<DshClientLiveTrackingResponse> {
-  return request<DshClientLiveTrackingResponse>(
+  const response = await request<DshClientLiveTrackingResponse>(
     `/dsh/client/orders/${encodeURIComponent(orderId)}/tracking`,
   );
+  return {
+    ...response,
+    tracking: {
+      ...response.tracking,
+      orderId,
+    },
+  };
 }
 
 export async function fetchPartnerDispatchTrackingReference(
