@@ -1,0 +1,144 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-019",
+  "title": "الإلغاء التشغيلي وتسليم الاسترداد",
+  "closureMode": "CODE_AND_AUTOMATED_EVIDENCE",
+  "requiredSliceCount": 18,
+  "codeDecision": "NEEDS_EVIDENCE",
+  "releaseDecision": "NEEDS_EVIDENCE",
+  "slices": [
+    {
+      "id": "FS-01",
+      "name": "Product Truth and operational outcome",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["governance/product/contracts/jrn-019-cancellation-refund.product-truth.json"],
+      "requiredMarkers": ["WLT_FINANCIAL_TRUTH", "negativeInvariants", "acceptanceCriteria"]
+    },
+    {
+      "id": "FS-02",
+      "name": "Actors, permissions and affected surfaces",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/backend/internal/http/order_cancellations.go", "services/dsh/frontend/shared/orders/order-cancellation.types.ts"],
+      "requiredMarkers": ["client", "partner", "operator", "OperationsPermissionManage"]
+    },
+    {
+      "id": "FS-03",
+      "name": "Cancellation policy and terminal states",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/backend/internal/orders/runtime.go", "services/dsh/backend/internal/orders/jrn019_cancellation_policy_test.go"],
+      "requiredMarkers": ["StatusCancelledByClient", "StatusCancelledByStore", "StatusCancelledNoDriver", "StatusFailedPayment", "StatusFailedDispatch"]
+    },
+    {
+      "id": "FS-04",
+      "name": "Cancellation database truth and audit projection",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/database/migrations/dsh-090_order_cancellation_refund_lifecycle.sql", "services/dsh/backend/internal/orders/cancellation_read.go"],
+      "requiredMarkers": ["dsh_order_cancellations", "correlation_id", "financial_closure_status"]
+    },
+    {
+      "id": "FS-05",
+      "name": "Command idempotency and conflict handling",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/backend/internal/orders/runtime.go", "services/dsh/backend/internal/orders/cancellation_db_test.go"],
+      "requiredMarkers": ["existingCorrelation", "ErrConflict", "idempotent CancelOrder replay"]
+    },
+    {
+      "id": "FS-06",
+      "name": "Dependent dispatch and custody release",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/database/migrations/dsh-091_pickup_cancellation_state.sql", "services/dsh/backend/internal/pickup/jrn019_cancellation_db_test.go", "services/dsh/backend/internal/partnerdelivery/jrn019_cancellation_db_test.go"],
+      "requiredMarkers": ["dsh_assignments", "dsh_deliveries", "dsh_partner_delivery_tasks", "dsh_pickup_sessions"]
+    },
+    {
+      "id": "FS-07",
+      "name": "Canonical DSH cancellation contract and routes",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/contracts/dsh.openapi.yaml", "services/dsh/backend/internal/http/order_cancellations.go", "services/dsh/backend/cmd/dsh-api/main.go"],
+      "requiredMarkers": ["cancelClientOrder", "cancelPartnerOrder", "cancelOperatorOrder", "RegisterOrderCancellationRoutes"]
+    },
+    {
+      "id": "FS-08",
+      "name": "Durable DSH financial closure outbox",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/backend/internal/checkoutfinanceoutbox/checkoutfinanceoutbox.go", "services/dsh/backend/internal/orders/jrn019_outbox_correlation_db_test.go"],
+      "requiredMarkers": ["cancel_for_order", "CorrelationID", "ON CONFLICT", "stored correlation"]
+    },
+    {
+      "id": "FS-09",
+      "name": "Retry, leasing and failure recovery",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/backend/internal/checkoutfinanceoutbox/checkoutfinanceoutbox.go", "services/dsh/backend/internal/checkoutfinanceoutbox/worker.go", "services/dsh/backend/internal/checkoutfinanceoutbox/projection.go"],
+      "requiredMarkers": ["FOR UPDATE SKIP LOCKED", "MarkFailedWithProjection", "next_retry_at", "attempt_count"]
+    },
+    {
+      "id": "FS-10",
+      "name": "WLT-only financial decision boundary",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/wlt/backend/internal/payment/order_cancellation.go", "services/wlt/backend/internal/refund/refund_atomic.go", "services/dsh/backend/internal/wlt/cancel_for_order.go"],
+      "requiredMarkers": ["refund_requested", "HandleGovernedOrderCancellation", "X-Service-Caller", "missing refund id"]
+    },
+    {
+      "id": "FS-11",
+      "name": "Validated financial result projection",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/backend/internal/checkoutfinanceoutbox/projection.go", "services/dsh/backend/internal/checkoutfinanceoutbox/jrn019_projection_test.go"],
+      "requiredMarkers": ["session_expired", "refund_requested", "no_action", "missing its WLT reference"]
+    },
+    {
+      "id": "FS-12",
+      "name": "Shared cancellation frontend brain",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/frontend/shared/orders/order-cancellation.api.ts", "services/dsh/frontend/shared/orders/order-cancellation.types.ts", "services/dsh/frontend/shared/orders/use-order-cancellation-controller.tsx"],
+      "requiredMarkers": ["cancelOrder", "fetchOrderCancellation", "financialClosureStatus", "setInterval"]
+    },
+    {
+      "id": "FS-13",
+      "name": "Client cancellation and refund readback",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/frontend/app-client/orders/OrderTrackingScreen.tsx"],
+      "requiredMarkers": ["CLIENT_CANCELLATION_REASONS", "useOrderCancellationController", "FINANCIAL_CLOSURE_LABELS", "requires_review"]
+    },
+    {
+      "id": "FS-14",
+      "name": "Partner cancellation and operational readback",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/frontend/app-partner/orders/OperationalOrderDecisionScreen.tsx", "services/dsh/frontend/app-partner/orders/DshPartnerOrderRejectionScreen.tsx"],
+      "requiredMarkers": ["PARTNER_CANCELLATION_REASONS", "useOrderCancellationController", "requiresNote", "onReject"]
+    },
+    {
+      "id": "FS-15",
+      "name": "Operator intervention and dependent captain readback",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/frontend/control-panel/operations/OrderJourneyOperatorIntervention.tsx", "services/dsh/frontend/shared/dispatch/dispatch.controller-core.ts", "services/dsh/frontend/shared/dispatch/dispatch.types.ts"],
+      "requiredMarkers": ["OPERATOR_CANCELLATION_REASONS", "TextField", "cancelled", "trackingCancelledState"]
+    },
+    {
+      "id": "FS-16",
+      "name": "Legacy compatibility and duplicate-truth cleanup",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/backend/internal/http/orders.go", "services/dsh/backend/internal/http/order_cancellations.go", "services/dsh/backend/internal/http/order_cancellations_compatibility_test.go"],
+      "requiredMarkers": ["Compatibility alias", "handleOperatorCancelOrderGoverned", "ReasonCode = \"other\"", "does not mint a legacy parallel cancellation"]
+    },
+    {
+      "id": "FS-17",
+      "name": "Targeted package, database and cross-surface tests",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/backend/internal/wlt/cancel_for_order_jrn019_test.go", "services/dsh/backend/internal/checkoutfinanceoutbox/jrn019_correlation_test.go", "services/dsh/backend/internal/pickup/jrn019_cancellation_db_test.go", "services/dsh/backend/internal/partnerdelivery/jrn019_cancellation_db_test.go", "services/dsh/tests/jrn-019-cancellation-refund-closure.test.mjs", ".github/workflows/jrn-019-cancellation-refund.yml"],
+      "requiredMarkers": ["Verify JRN-019 Go packages", "Verify JRN-019 cross-surface closure", "DSH_REQUIRE_DB_TESTS"]
+    },
+    {
+      "id": "FS-18",
+      "name": "Same-commit evidence and independent review gate",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/contracts/jrn-019-slice-closure.json", ".github/workflows/jrn-019-cancellation-refund.yml"],
+      "requiredMarkers": ["requiredSliceCount", "github.sha", "independentReviewPending", "NEEDS_EVIDENCE"]
+    }
+  ],
+  "independentReviewPending": [
+    "product-owner",
+    "qa-device-accessibility",
+    "application-security",
+    "financial-control",
+    "release-production"
+  ]
+}
