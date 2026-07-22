@@ -2,53 +2,19 @@ name: JRN-031 Administration Governance Verification
 
 on:
   workflow_dispatch:
-  push:
-    branches: [sambassam]
-    paths:
-      - "services/dsh/backend/internal/administration/**"
-      - "services/dsh/backend/internal/http/administration*.go"
-      - "services/dsh/backend/internal/http/journey_031_routes_test.go"
-      - "services/dsh/database/migrations/dsh-131_jrn031_governed_administration_closure.sql"
-      - "services/dsh/database/tests/jrn-031-administration-governance.sql"
-      - "services/dsh/frontend/shared/administration/**"
-      - "services/dsh/frontend/control-panel/administration/**"
-      - "services/dsh/frontend/control-panel/partners/PartnerDetailOperationalScreen.tsx"
-      - "services/dsh/frontend/control-panel/hr/CaptainDetailView.tsx"
-      - "apps/control-panel/runtime/src/app/dsh/administration/page.tsx"
-      - "services/dsh/contracts/dsh.administration.openapi.yaml"
-      - "services/dsh/tests/jrn-031-administration-governance.test.mjs"
-      - "services/dsh/tests/jrn-031-administration-maker-checker.test.mjs"
-      - "services/dsh/tsconfig.jrn-031.json"
-      - "governance/product/contracts/jrn-031-administration-roles-approvals-audit.product-truth.json"
-      - ".github/workflows/jrn-031-administration-governance.yml"
   pull_request:
-    paths:
-      - "services/dsh/backend/internal/administration/**"
-      - "services/dsh/backend/internal/http/administration*.go"
-      - "services/dsh/backend/internal/http/journey_031_routes_test.go"
-      - "services/dsh/database/migrations/dsh-131_jrn031_governed_administration_closure.sql"
-      - "services/dsh/database/tests/jrn-031-administration-governance.sql"
-      - "services/dsh/frontend/shared/administration/**"
-      - "services/dsh/frontend/control-panel/administration/**"
-      - "services/dsh/frontend/control-panel/partners/PartnerDetailOperationalScreen.tsx"
-      - "services/dsh/frontend/control-panel/hr/CaptainDetailView.tsx"
-      - "apps/control-panel/runtime/src/app/dsh/administration/page.tsx"
-      - "services/dsh/contracts/dsh.administration.openapi.yaml"
-      - "services/dsh/tests/jrn-031-administration-governance.test.mjs"
-      - "services/dsh/tests/jrn-031-administration-maker-checker.test.mjs"
-      - "services/dsh/tsconfig.jrn-031.json"
-      - "governance/product/contracts/jrn-031-administration-roles-approvals-audit.product-truth.json"
-      - ".github/workflows/jrn-031-administration-governance.yml"
+    types: [edited]
 
 permissions:
   contents: read
 
 concurrency:
-  group: jrn-031-administration-${{ github.sha }}
+  group: jrn-031-administration-${{ github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: false
 
 jobs:
   database:
+    if: ${{ github.event_name != 'pull_request' || contains(github.event.pull_request.body, '<!-- JRN-031-VERIFY -->') }}
     name: PostgreSQL migration and invariant verification
     runs-on: ubuntu-latest
     services:
@@ -69,8 +35,10 @@ jobs:
       DATABASE_URL: postgres://dsh:dsh@localhost:5432/dsh?sslmode=disable
       PGPASSWORD: dsh
     steps:
-      - name: Checkout exact commit
+      - name: Checkout exact branch head
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
@@ -88,14 +56,17 @@ jobs:
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/dsh/database/tests/jrn-031-administration-governance.sql
 
   backend:
+    if: ${{ github.event_name != 'pull_request' || contains(github.event.pull_request.body, '<!-- JRN-031-VERIFY -->') }}
     name: Approval rollback audit and route model
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: services/dsh/backend
     steps:
-      - name: Checkout exact commit
+      - name: Checkout exact branch head
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Set up Go from DSH module
         uses: actions/setup-go@v5
@@ -115,11 +86,14 @@ jobs:
         run: go build ./internal/administration ./internal/http
 
   frontend:
+    if: ${{ github.event_name != 'pull_request' || contains(github.event.pull_request.body, '<!-- JRN-031-VERIFY -->') }}
     name: Shared brain and governed control-panel surface
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout exact commit
+      - name: Checkout exact branch head
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
@@ -145,11 +119,14 @@ jobs:
         run: pnpm --dir services/dsh exec tsc -p tsconfig.jrn-031.json --noEmit --pretty false
 
   contract:
+    if: ${{ github.event_name != 'pull_request' || contains(github.event.pull_request.body, '<!-- JRN-031-VERIFY -->') }}
     name: Canonical contract and product truth
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout exact commit
+      - name: Checkout exact branch head
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
