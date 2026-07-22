@@ -42,7 +42,7 @@ jobs:
       DATABASE_URL: postgres://wlt_ci:wlt_ci_password@localhost:5432/wlt_ci?sslmode=disable
       WLT_BASE_URL: http://127.0.0.1:58083
       WLT_SERVICE_TOKEN: jrn036-ci-service-token
-      SNAPSHOT_REF: verify/jrn-036-snapshot-20260722-v3
+      SNAPSHOT_REF: verify/jrn-036-snapshot-20260722-v4
     steps:
       - name: Checkout immutable JRN-036 snapshot
         uses: actions/checkout@v4
@@ -68,7 +68,7 @@ jobs:
         run: |
           set -euo pipefail
           git rev-parse HEAD | tee /tmp/jrn036-snapshot-sha.txt
-          test "$(git rev-parse HEAD)" = "2b355f8efa8c6be4e0877a9ca4149271a32aac8b"
+          test "$(git rev-parse HEAD)" = "68dc0810a9b9a57bfb66c1b6ffd1565a0ebc2cc1"
           git status --short
 
       - name: Produce canonical gofmt output
