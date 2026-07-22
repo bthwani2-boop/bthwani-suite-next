@@ -1,5 +1,5 @@
 name: Setup BThwani Node workspace
-description: Install the repository-pinned PNPM and Node toolchain, then install the frozen workspace.
+description: Install the repository-pinned PNPM and Node toolchain, then install the frozen workspace with concise logs.
 
 inputs:
   node-version:
@@ -27,4 +27,4 @@ runs:
 
     - name: Install frozen workspace
       shell: bash
-      run: pnpm install --frozen-lockfile
+      run: pnpm install --frozen-lockfile --reporter=silent
