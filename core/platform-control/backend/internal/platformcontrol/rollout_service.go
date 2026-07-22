@@ -79,7 +79,7 @@ func (s *Service) PauseRollout(
 	return repository.PauseRollout(ctx, id, actorID, roles, correlationID)
 }
 
-func (s *Service) ResumeRolloutWithHealthGate(
+func (s *Service) ResumeRollout(
 	ctx context.Context,
 	id string,
 	actorID string,
