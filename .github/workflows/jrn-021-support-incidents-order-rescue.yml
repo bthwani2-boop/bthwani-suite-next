@@ -77,7 +77,21 @@ jobs:
         run: go test ./internal/support ./internal/http
 
       - name: Verify DSH shared brain and control-panel types
-        run: pnpm --dir services/dsh typecheck
+        id: dsh_typecheck
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm --dir services/dsh typecheck 2>&1 | tee jrn-021-typecheck.log
+
+      - name: Upload failed typecheck diagnostics
+        if: failure() && steps.dsh_typecheck.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: jrn-021-typecheck-diagnostics
+          path: jrn-021-typecheck.log
+          if-no-files-found: error
+          retention-days: 3
 
       - name: Verify JRN-021 contracts, runtime bindings, and product truth
+        if: success()
         run: node --test services/dsh/tests/jrn-021-support-incidents-order-rescue.test.mjs
