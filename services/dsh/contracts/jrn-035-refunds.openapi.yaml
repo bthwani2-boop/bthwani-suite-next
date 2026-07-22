@@ -1,13 +1,12 @@
 openapi: 3.1.0
 info:
   title: DSH Financial Refund Orchestration
-  version: 1.1.0
+  version: 1.2.0
   description: >-
     JRN-035 DSH contract. DSH validates actor, permission, tenant and owned-order
     scope, then delegates all financial truth to WLT. Client and partner reads
-    intentionally exclude provider and operator evidence. WLT outcome-persistence
-    failures are propagated without converting them into provider success or a
-    durably acknowledged unknown result.
+    intentionally exclude provider and operator evidence. WLT idempotency and
+    outcome-persistence failures are propagated without changing status or body.
 servers:
   - url: http://localhost:58080
 security:
@@ -51,7 +50,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ControlPanelRefundEnvelope' }
         '200':
-          description: Idempotent replay
+          description: Exact idempotent replay
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ControlPanelRefundEnvelope' }
@@ -59,6 +58,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/MutationReceiptFailure' }
         '502': { $ref: '#/components/responses/WltUnavailable' }
   /dsh/control-panel/finance/refunds/{refundId}:
     get:
@@ -93,13 +93,14 @@ paths:
             schema: { $ref: '#/components/schemas/DecisionRequest' }
       responses:
         '200':
-          description: Approved refund
+          description: Approved refund or exact replay
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ControlPanelRefundEnvelope' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/MutationReceiptFailure' }
   /dsh/control-panel/finance/refunds/{refundId}/reject:
     post:
       operationId: rejectDshFinanceRefund
@@ -116,21 +117,22 @@ paths:
             schema: { $ref: '#/components/schemas/DecisionRequest' }
       responses:
         '200':
-          description: Rejected refund
+          description: Rejected refund or exact replay
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ControlPanelRefundEnvelope' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/MutationReceiptFailure' }
   /dsh/control-panel/finance/refunds/{refundId}/complete:
     post:
       operationId: completeDshFinanceRefund
       summary: Execute an approved refund through WLT and the provider
       description: >-
         DSH preserves the WLT status and error body. A 202 is returned only when
-        WLT durably records provider_unknown. A 500 outcome-persistence failure
-        is not retry permission and must not cause another provider call.
+        WLT durably records provider_unknown. A 500 persistence failure is not
+        retry permission and must not cause another provider call.
       parameters:
         - $ref: '#/components/parameters/RefundId'
         - $ref: '#/components/parameters/TenantHeader'
@@ -145,7 +147,7 @@ paths:
               additionalProperties: false
       responses:
         '200':
-          description: Provider-confirmed and ledger-posted refund
+          description: Provider-confirmed and ledger-posted refund or exact replay
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ControlPanelRefundEnvelope' }
@@ -154,7 +156,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ProviderUnknownError' }
-        '500': { $ref: '#/components/responses/OutcomePersistenceFailure' }
+        '500': { $ref: '#/components/responses/CompletionPersistenceFailure' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '502': { $ref: '#/components/responses/WltUnavailable' }
@@ -174,13 +176,14 @@ paths:
             schema: { $ref: '#/components/schemas/ReconcileRequest' }
       responses:
         '200':
-          description: Reconciled refund
+          description: Reconciled refund or exact replay
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ControlPanelRefundEnvelope' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/MutationReceiptFailure' }
   /dsh/control-panel/finance/refunds/{refundId}/audit:
     get:
       operationId: listDshFinanceRefundAudit
@@ -406,6 +409,18 @@ components:
         - type: object
           properties:
             code: { const: REFUND_OUTCOME_PERSISTENCE_FAILED }
+    MutationReceiptError:
+      allOf:
+        - $ref: '#/components/schemas/Error'
+        - type: object
+          properties:
+            code:
+              type: string
+              enum: [REFUND_IDEMPOTENCY_STORE_FAILED, REFUND_IDEMPOTENCY_RECEIPT_FAILED]
+    CompletionPersistenceError:
+      oneOf:
+        - $ref: '#/components/schemas/OutcomePersistenceError'
+        - $ref: '#/components/schemas/MutationReceiptError'
   responses:
     BadRequest:
       description: Invalid request or missing reconciliation evidence
@@ -428,15 +443,20 @@ components:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
     Conflict:
-      description: Amount reservation, lifecycle state or idempotency conflict
+      description: Lifecycle, amount, changed-payload or in-progress idempotency conflict
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
-    OutcomePersistenceFailure:
-      description: WLT could not durably persist the provider outcome; automatic retry is forbidden
+    MutationReceiptFailure:
+      description: WLT could not claim or complete the mutation replay receipt
       content:
         application/json:
-          schema: { $ref: '#/components/schemas/OutcomePersistenceError' }
+          schema: { $ref: '#/components/schemas/MutationReceiptError' }
+    CompletionPersistenceFailure:
+      description: WLT could not persist the provider outcome or mutation replay evidence; automatic retry is forbidden
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/CompletionPersistenceError' }
     WltUnavailable:
       description: DSH could not reach the canonical WLT financial service
       content:
