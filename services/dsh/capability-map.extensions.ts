@@ -148,6 +148,24 @@ export const DSH_CAPABILITY_MAP_EXTENSIONS = [
     ],
   },
   {
+    id: "dsh.notifications",
+    status: "experience-fix-required",
+    contractOperations: ["listDshNotificationDeliveryAttempts"],
+    surfaces: ["app-client", "app-partner", "app-captain", "app-field", "control-panel"],
+    runtimeBound: true,
+    closureState: "IMPLEMENTED_MULTI_SURFACE",
+    topicScope: [
+      "actor-inbox",
+      "channel-preferences",
+      "quiet-hours",
+      "localized-templates",
+      "deep-links",
+      "actor-targeting",
+      "delivery-audit",
+      "retry-dead-letter",
+    ],
+  },
+  {
     id: "dsh.client.dispatch",
     status: "experience-fix-required",
     contractOperations: [
