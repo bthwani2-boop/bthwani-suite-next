@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-017",
+  "title": "تنفيذ الكابتن والتتبع الحي",
+  "owner": "services/dsh",
+  "truthOwner": "DSH",
+  "financialBoundary": "WLT_REFERENCE_ONLY",
+  "surfaces": ["app-captain", "app-client", "app-partner", "control-panel"],
+  "excludedSurfaces": {
+    "app-field": "Field acquisition and audit do not execute or observe an active captain delivery route.",
+    "webapp": "No authenticated operational delivery surface is registered for this journey.",
+    "website": "The public website must not receive captain location or operational assignment data."
+  },
+  "goal": "تشغيل مهمة كابتن بثواني من الاستلام حتى الوصول والتسليم مع موقع أمامي مصدق، انتقالات حالة مملوكة لـDSH، ETA من مزود مسار محكوم، خصوصية دقيقة للعميل، قراءة مرجعية للشريك، وتنبيهات تشغيلية عند انقطاع الموقع.",
+  "acceptanceCriteria": [
+    "لا تبدأ نافذة التتبع إلا بعد قبول الإسناد واكتمال handoff التشغيلي السابق.",
+    "تتطلب كل عينة موقع recordedAt صالحًا ودقة موجبة لا تتجاوز 100 متر وتخضع لحد التردد والعمر والانحراف الزمني.",
+    "إعادة إرسال آخر عينة مطابقة تمامًا آمنة ولا تنشئ أثرًا مكررًا، بينما تغيير الإحداثيات بنفس التوقيت تعارض مرفوض.",
+    "تنتقل مراحل التوصيل فقط عبر state machine المملوكة لـDSH وتقرأها جميع الأسطح من المرجع نفسه.",
+    "يحسب ETA والمسافة من مزود توجيه معتمد ولا ينشأ fallback أو تقدير وهمي عند غياب المزود.",
+    "تبقى إحداثيات الكابتن مخفية عن العميل قبل الاستلام وتعرض بعده بدقة مقربة فقط خلال نافذة التوصيل.",
+    "لا يحصل الشريك على إحداثيات الكابتن ولا على mutation لدورة كابتن بثواني؛ تعرض له الحالة وETA كمرجع فقط.",
+    "تعرض لوحة التحكم تنبيهات المهام التي لم يصل موقعها أو تأخر أو فُقد تحديثها.",
+    "يحفظ التطبيق آخر عينة نقل واحدة مؤقتًا عند فشل قابل لإعادة المحاولة ويعيد إرسالها دون تحويلها إلى حقيقة تشغيلية محلية.",
+    "لا يحفظ DSH تاريخ مسار الكابتن وتزال عينة الموقع عند إغلاق الإسناد وفق سياسة الاحتفاظ الحالية."
+  ],
+  "negativeInvariants": [
+    "لا إحداثيات demo أو hardcoded أو mock داخل Runtime.",
+    "لا ETA محلي أو زمن وصول مختلق عند تعذر المزود.",
+    "لا state machine أو صلاحيات توصيل محلية داخل Surface.",
+    "لا إحداثيات للكابتن في قراءة الشريك أو الموقع العام.",
+    "لا إظهار لموقع الكابتن للعميل قبل picked_up أو بعد الحالة النهائية.",
+    "لا تخزين لتاريخ المسار أو ledger موقع ثانٍ خارج DSH.",
+    "لا mutation مالية أو رصيد أو استرداد داخل DSH أو الأسطح.",
+    "لا ادعاء CLOSED_WITH_EVIDENCE دون مراجعات المنتج وQA/device/accessibility والأمن والخصوصية والإطلاق المستقلة."
+  ],
+  "sliceClosureRegistry": "services/dsh/contracts/jrn-017-slice-closure.json",
+  "evidenceRequired": ["static", "database", "contract", "backend", "frontend", "runtime", "cross-surface", "privacy", "security", "qa", "governance", "ci"],
+  "statusContext": "jrn-017/captain-live-tracking",
+  "internalZeroGate": "PENDING_TARGETED_CI",
+  "openCodeGaps": [],
+  "independentReviewPending": ["product-owner", "qa-device-accessibility", "security-privacy", "release-production"],
+  "decision": "NEEDS_EVIDENCE"
+}
