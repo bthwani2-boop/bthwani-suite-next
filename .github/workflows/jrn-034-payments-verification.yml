@@ -1,4 +1,4 @@
-name: JRN-034 DSH Build Diagnostic macOS
+name: JRN-034 DSH Build Diagnostic Windows
 
 on:
   workflow_dispatch:
@@ -18,13 +18,13 @@ permissions:
   contents: read
 
 concurrency:
-  group: jrn-034-dsh-build-diagnostic-macos-${{ github.ref }}
+  group: jrn-034-dsh-build-diagnostic-windows-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   backend:
     name: WLT and DSH payment backend diagnostic
-    runs-on: macos-15
+    runs-on: windows-latest
     steps:
       - name: Checkout exact commit
         uses: actions/checkout@v4
@@ -46,14 +46,13 @@ jobs:
         run: go test ./internal/wlt -count=1
       - name: Capture DSH payment proxy and router build diagnostics
         id: dsh_build
-        shell: bash
+        shell: pwsh
         run: |
-          set +e
-          cd services/dsh/backend
-          go build ./internal/wlt ./internal/http > "$GITHUB_WORKSPACE/jrn034-dsh-build.log" 2>&1
-          status=$?
-          cat "$GITHUB_WORKSPACE/jrn034-dsh-build.log"
-          echo "status=$status" >> "$GITHUB_OUTPUT"
+          Set-Location services/dsh/backend
+          & go build ./internal/wlt ./internal/http *> "$env:GITHUB_WORKSPACE\jrn034-dsh-build.log"
+          $status = $LASTEXITCODE
+          Get-Content "$env:GITHUB_WORKSPACE\jrn034-dsh-build.log"
+          "status=$status" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           exit 0
       - name: Upload DSH build diagnostics
         if: always()
@@ -65,4 +64,5 @@ jobs:
           retention-days: 7
       - name: Enforce DSH build result
         if: steps.dsh_build.outputs.status != '0'
+        shell: pwsh
         run: exit 1
