@@ -1,4 +1,5 @@
 openapi: 3.0.3
+x-bthwani-contract-state: CONTRACT_ACTIVE
 info:
   title: WLT JRN-036 Settlements and Commissions
   version: 1.1.0
