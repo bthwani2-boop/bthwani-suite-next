@@ -8,11 +8,11 @@ import (
 )
 
 type expiredConnectionProjection struct {
-	ConnectionID      string
-	TeamMemberID      string
-	CreatedByActorID  string
-	CourierName       string
-	MemberStatus      string
+	ConnectionID     string
+	TeamMemberID     string
+	CreatedByActorID string
+	CourierName      string
+	MemberStatus     string
 }
 
 func expirePendingStoreCodes(ctx context.Context, db *sql.DB, storeID string) error {
