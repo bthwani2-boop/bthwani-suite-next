@@ -90,17 +90,17 @@
       "id": "control-panel",
       "required": true,
       "actors": ["operator"],
-      "routesOrScreens": ["representative wallet lookup", "financial ledger filters"],
-      "operationIds": ["getDshRepresentativeWallet", "listDshFinanceLedgerEntries"],
-      "states": ["idle", "loading", "success", "not_found", "forbidden", "invalid_actor", "offline", "error"],
-      "actions": ["select actor type", "enter actor id", "lookup", "filter ledger", "refresh"]
+      "routesOrScreens": ["representative wallet lookup", "representative ledger lookup"],
+      "operationIds": ["getDshRepresentativeWallet", "listDshRepresentativeLedgerEntries"],
+      "states": ["idle", "loading", "success", "empty", "partial", "not_found", "forbidden", "invalid_actor", "offline", "error"],
+      "actions": ["select actor type", "enter actor id", "lookup", "inspect ledger", "refresh"]
     },
     {
       "id": "backend",
       "required": true,
       "actors": ["client", "partner", "captain", "field", "operator"],
       "routesOrScreens": ["DSH actor-scoped finance BFF", "WLT wallet and ledger reads"],
-      "operationIds": ["getWltWallet", "listWltLedgerEntries", "getDshRepresentativeWallet"],
+      "operationIds": ["getWltWallet", "listWltLedgerEntries", "getDshRepresentativeWallet", "listDshRepresentativeLedgerEntries"],
       "states": ["authenticated", "authorized", "unsupported_actor", "not_found", "wlt_unavailable", "success"],
       "actions": ["resolve identity", "scope actor", "authorize", "proxy read", "propagate correlation", "fail closed"]
     },
@@ -115,11 +115,11 @@
     }
   ],
   "outcome": {
-    "statement": "Every representative sees an authenticated WLT-owned wallet and permission-scoped ledger view through DSH, while operators can inspect supported wallets without any DSH or frontend balance mutation path.",
-    "primaryMetric": "actor-scoped wallet read coverage across required surfaces",
+    "statement": "Every representative sees an authenticated WLT-owned wallet and permission-scoped ledger view through DSH, while operators can inspect supported wallets and matching ledgers without any DSH or frontend balance mutation path.",
+    "primaryMetric": "actor-scoped wallet and ledger read coverage across required surfaces",
     "guardrailMetrics": ["cross-actor wallet disclosure count", "frontend direct WLT financial read count", "DSH wallet balance mutation path count", "hardcoded actor identifier count", "route-contract drift count"],
     "baselineState": "Wallet capability is fragmented and route bindings are inconsistent.",
-    "targetState": "All four actor surfaces and the control panel consume canonical identity-scoped DSH reads backed by WLT truth.",
+    "targetState": "All four actor surfaces use canonical identity-scoped DSH reads and the control panel uses finance.read-scoped DSH lookups backed by WLT truth.",
     "observationWindow": "targeted contract, backend, frontend, runtime, finance-control and independent acceptance verification"
   },
   "acceptance": {
@@ -127,7 +127,7 @@
       "WLT accepts only client partner captain and field wallet actor types.",
       "DSH derives self-service actor identity from the authenticated session and never from a frontend query or body.",
       "Client partner captain and field have canonical own-wallet and own-ledger routes.",
-      "The control panel wallet lookup requires finance.read and validates actor type and id.",
+      "The control panel wallet and ledger lookup requires finance.read and validates actor type and id.",
       "Available pending held earned settled and paid balances are rendered from WLT without local derivation.",
       "Ledger entries are actor-scoped before forwarding to WLT.",
       "Partner wallet UI does not use settlement pending amount as available wallet balance and contains no hardcoded actor fallback.",
