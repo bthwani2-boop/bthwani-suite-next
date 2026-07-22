@@ -38,9 +38,15 @@ func (s *protectedStoreServer) requireAdministrationPermission(
 		actor.Role = "operator"
 		return actor, true
 	}
+	candidates := administration.AdministrationPermissionCandidates(action)
 	for _, permission := range identity.Permissions {
-		if permission.Service == "dsh" && permission.Surface == "control-panel" && permission.Action == action {
-			return actor, true
+		if permission.Service != "dsh" || permission.Surface != "control-panel" {
+			continue
+		}
+		for _, candidate := range candidates {
+			if permission.Action == candidate {
+				return actor, true
+			}
 		}
 	}
 
