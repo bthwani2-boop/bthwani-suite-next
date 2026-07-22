@@ -52,6 +52,7 @@ test("JRN-022 shared client screen binds governed actions and recovery states", 
     "إعادة المحاولة",
     "wltPaymentSessionId",
   ], "client special-request screen");
+  assert.ok(!screen.includes('role="headingXs"'), "client screen must only use governed typography roles");
 });
 
 test("JRN-022 operator workbench performs quote transition and dispatch", () => {
