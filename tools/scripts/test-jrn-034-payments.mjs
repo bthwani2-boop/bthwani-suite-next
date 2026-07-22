@@ -33,6 +33,8 @@ includesAll(router, [
   "/wlt/payment-sessions/{paymentSessionId}/refresh-provider-status",
   "/wlt/payment-sessions/{paymentSessionId}/timeline",
   "/wlt/provider/webhooks/payment",
+  "HandleAuthorizeSessionSovereign",
+  "HandleCaptureSessionSovereign",
   "HandleGovernedPaymentOperation",
   "HandleTenantScopedPaymentSession",
 ], "WLT router");
@@ -41,9 +43,12 @@ includesAll(operationGuard, ["Idempotency-Key", "X-Tenant-ID", "X-Correlation-ID
 const webhook = read("services/wlt/backend/internal/payment/provider_webhook.go");
 includesAll(webhook, ["hmac.New", "sha256.New", "providerWebhookMaxSkew", "MaxBytesReader", "WLT_PROVIDER_WEBHOOK_SECRET"], "provider webhook");
 const providerResults = read("services/wlt/backend/internal/payment/provider_results.go");
-includesAll(providerResults, ["ApplyAuthoritativeProviderEvent", "PostLedgerTransaction", "provider_clearing", "platform_payable", "dshoutbox.Enqueue"], "provider result application");
+includesAll(providerResults, ["ApplyAuthoritativeProviderEvent", "getSessionForUpdateTx", "ErrProviderTenantMismatch", "PostLedgerTransaction", "provider_clearing", "platform_payable", "dshoutbox.Enqueue"], "provider result application");
+assert.ok(providerResults.indexOf("getSessionForUpdateTx") < providerResults.indexOf("INSERT INTO wlt_payment_provider_events"), "provider event must validate and lock its payment session before persistence");
+const authorize = read("services/wlt/backend/internal/payment/sovereign_authorize.go");
+includesAll(authorize, ["AuthorizeSessionWithProviderSovereign", "finalizationFailure", "provider_result_unknown", "markSessionResultUnknownAndOpenCase", "last_provider_status = 'authorized'"], "sovereign authorize");
 const capture = read("services/wlt/backend/internal/payment/sovereign_capture.go");
-includesAll(capture, ["capture_ledger_transaction_id", "PostLedgerTransaction", "EventTypeCaptured"], "sovereign capture");
+includesAll(capture, ["capture_ledger_transaction_id", "PostLedgerTransaction", "EventTypeCaptured", "finalizationFailure", "markSessionResultUnknownAndOpenCase"], "sovereign capture");
 
 const wltContract = read("services/wlt/contracts/wlt.payments.openapi.yaml");
 includesAll(wltContract, [
