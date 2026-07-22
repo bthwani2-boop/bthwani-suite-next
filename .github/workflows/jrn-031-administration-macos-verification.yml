@@ -55,7 +55,9 @@ jobs:
           "$PG_BIN/pg_ctl" -D "$RUNNER_TEMP/jrn031-pgdata" -o "-p 55431" -w start
           "$PG_BIN/createdb" -p 55431 jrn031
 
-      - name: Apply administration migrations and PostgreSQL invariants
+      - id: database
+        name: Apply administration migrations and PostgreSQL invariants
+        continue-on-error: true
         shell: bash
         env:
           DATABASE_URL: postgresql://localhost:55431/jrn031?sslmode=disable
@@ -68,21 +70,37 @@ jobs:
           "$PG_BIN/psql" "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/dsh/database/migrations/dsh-131_jrn031_governed_administration_closure.sql
           "$PG_BIN/psql" "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/dsh/database/tests/jrn-031-administration-governance.sql
 
-      - name: Run Go tests and build affected owners
+      - id: go_tests
+        name: Run targeted Go tests
+        continue-on-error: true
         working-directory: services/dsh/backend
-        run: |
-          go test ./internal/administration ./internal/http -run 'Test(Journey031ExposesGovernedAdministrationRoutes|RequestStaffRoleAssignmentRejectsInvalidInput|RequestStaffRoleAssignmentRejectsSelfAssignment|ReviewStaffRoleAssignmentRejectsInvalidDecision|ReviewStaffRoleAssignmentRequiresVersion|RejectedRoleAssignmentRequiresReviewNote|NormalizeRoleDefinitionRequiresControlPanelAndNormalizesScope|AdministrationPermissionCandidatesPreserveLegacyFallback|InverseRoleAction|AuditRedactionDropsSensitiveValues)$' -count=1
-          go build ./internal/administration ./internal/http
+        run: go test ./internal/administration ./internal/http -run 'Test(Journey031ExposesGovernedAdministrationRoutes|RequestStaffRoleAssignmentRejectsInvalidInput|RequestStaffRoleAssignmentRejectsSelfAssignment|ReviewStaffRoleAssignmentRejectsInvalidDecision|ReviewStaffRoleAssignmentRequiresVersion|RejectedRoleAssignmentRequiresReviewNote|NormalizeRoleDefinitionRequiresControlPanelAndNormalizesScope|AdministrationPermissionCandidatesPreserveLegacyFallback|InverseRoleAction|AuditRedactionDropsSensitiveValues)$' -count=1
 
-      - name: Run governance guards and focused TypeScript
-        run: |
-          node --test services/dsh/tests/jrn-031-administration-maker-checker.test.mjs services/dsh/tests/jrn-031-administration-governance.test.mjs
-          pnpm --dir services/dsh exec tsc -p tsconfig.jrn-031.json --noEmit --pretty false
+      - id: go_build
+        name: Build affected Go owners
+        continue-on-error: true
+        working-directory: services/dsh/backend
+        run: go build ./internal/administration ./internal/http
 
-      - name: Parse canonical contract and validate product truth
-        run: |
-          pnpm --dir services/dsh exec openapi-typescript contracts/dsh.administration.openapi.yaml -o "$RUNNER_TEMP/jrn-031-administration-api.ts"
-          node -e "const fs=require('fs'); const p='governance/product/contracts/jrn-031-administration-roles-approvals-audit.product-truth.json'; const x=JSON.parse(fs.readFileSync(p,'utf8')); if(x.journeyId!=='JRN-031'||x.status!=='PENDING_INDEPENDENT_APPROVAL'||x.scopeBoundary!=='platform-control-plane') process.exit(1)"
+      - id: governance
+        name: Run JRN-031 governance guards
+        continue-on-error: true
+        run: node --test services/dsh/tests/jrn-031-administration-maker-checker.test.mjs services/dsh/tests/jrn-031-administration-governance.test.mjs
+
+      - id: typecheck
+        name: Typecheck the focused ownership graph
+        continue-on-error: true
+        run: pnpm --dir services/dsh exec tsc -p tsconfig.jrn-031.json --noEmit --pretty false
+
+      - id: contract
+        name: Parse the canonical administration contract
+        continue-on-error: true
+        run: pnpm --dir services/dsh exec openapi-typescript contracts/dsh.administration.openapi.yaml -o "$RUNNER_TEMP/jrn-031-administration-api.ts"
+
+      - id: product_truth
+        name: Validate JRN-031 product truth
+        continue-on-error: true
+        run: node -e "const fs=require('fs'); const p='governance/product/contracts/jrn-031-administration-roles-approvals-audit.product-truth.json'; const x=JSON.parse(fs.readFileSync(p,'utf8')); if(x.journeyId!=='JRN-031'||x.status!=='PENDING_INDEPENDENT_APPROVAL'||x.scopeBoundary!=='platform-control-plane') process.exit(1)"
 
       - name: Stop isolated PostgreSQL
         if: always()
@@ -91,3 +109,15 @@ jobs:
           if [[ -n "${PG_BIN:-}" && -d "${PGDATA:-}" ]]; then
             "$PG_BIN/pg_ctl" -D "$PGDATA" -m fast -w stop || true
           fi
+
+      - name: Require every JRN-031 full-stack gate
+        if: always()
+        shell: bash
+        run: |
+          [[ "${{ steps.database.outcome }}" == "success" ]]
+          [[ "${{ steps.go_tests.outcome }}" == "success" ]]
+          [[ "${{ steps.go_build.outcome }}" == "success" ]]
+          [[ "${{ steps.governance.outcome }}" == "success" ]]
+          [[ "${{ steps.typecheck.outcome }}" == "success" ]]
+          [[ "${{ steps.contract.outcome }}" == "success" ]]
+          [[ "${{ steps.product_truth.outcome }}" == "success" ]]
