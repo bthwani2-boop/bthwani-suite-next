@@ -2,15 +2,20 @@ import fs from "node:fs";
 import path from "node:path";
 import { fail, lineNumber, repoRoot, read } from "./_guard-utils.mjs";
 import { operationKey, parseOpenApiContract } from "./_openapi-utils.mjs";
-import { cleanupGoRouteExtractor, extractGoRoutes, routeKey } from "./lib/go-route-extractor.mjs";
+import {
+  cleanupGoRouteExtractor,
+  extractGoRoutes,
+  routeKey,
+} from "./lib/go-route-extractor.mjs";
 
 const guardId = "backend-api-binding-gate";
 const violations = [];
-const registryFile = "services/dsh/contracts/contract-registry.ts";
+const dshRegistryFile = "services/dsh/contracts/contract-registry.ts";
+const routeClassificationFile = "services/dsh/contracts/backend-route-classification.json";
 const dshPrimary = "services/dsh/contracts/dsh.openapi.yaml";
 
 function registeredDshContracts() {
-  const source = read(registryFile);
+  const source = read(dshRegistryFile);
   const entries = [];
   const entryPattern = /\{[\s\S]*?path:\s*["'](contracts\/[^"']+\.openapi\.yaml)["'][\s\S]*?clientStrategy:\s*["']([^"']+)["'][\s\S]*?\n\s*\},/g;
   for (const match of source.matchAll(entryPattern)) {
@@ -18,7 +23,7 @@ function registeredDshContracts() {
   }
   if (entries.length === 0) {
     violations.push({
-      file: registryFile,
+      file: dshRegistryFile,
       line: 0,
       message: "DSH_RUNTIME_CONTRACT_REGISTRY_EMPTY: no DSH contracts were discovered",
     });
@@ -26,20 +31,78 @@ function registeredDshContracts() {
   return entries;
 }
 
+function loadRouteClassifications() {
+  const absolute = path.join(repoRoot, routeClassificationFile);
+  if (!fs.existsSync(absolute)) return new Map();
+
+  let document;
+  try {
+    document = JSON.parse(read(routeClassificationFile));
+  } catch (error) {
+    violations.push({
+      file: routeClassificationFile,
+      line: 0,
+      message: `ROUTE_CLASSIFICATION_INVALID_JSON: ${error instanceof Error ? error.message : String(error)}`,
+    });
+    return new Map();
+  }
+
+  if (document.schemaVersion !== 1 || document.service !== "DSH" || !Array.isArray(document.routes)) {
+    violations.push({
+      file: routeClassificationFile,
+      line: 0,
+      message: "ROUTE_CLASSIFICATION_INVALID_DOCUMENT: schemaVersion=1, service=DSH and routes[] are required",
+    });
+    return new Map();
+  }
+
+  const result = new Map();
+  for (const [index, item] of document.routes.entries()) {
+    const line = index + 1;
+    if (
+      !item ||
+      typeof item.route !== "string" ||
+      typeof item.canonicalRoute !== "string" ||
+      item.classification !== "LEGACY_COMPATIBILITY" ||
+      item.retirementState !== "DEPRECATED_SUPPORTED" ||
+      typeof item.owner !== "string" ||
+      item.owner.trim() === ""
+    ) {
+      violations.push({
+        file: routeClassificationFile,
+        line,
+        message: "MALFORMED_ROUTE_CLASSIFICATION: every route must define a legacy route, canonical route, owner and governed retirement state",
+      });
+      continue;
+    }
+    if (result.has(item.route)) {
+      violations.push({
+        file: routeClassificationFile,
+        line,
+        message: `DUPLICATE_ROUTE_CLASSIFICATION: ${item.route}`,
+      });
+      continue;
+    }
+    result.set(item.route, item);
+  }
+  return result;
+}
+
 const dshRegistry = registeredDshContracts();
 const dshRegisteredFiles = new Set(dshRegistry.map((entry) => entry.file));
 const dshAdditionalContracts = dshRegistry
   .map((entry) => entry.file)
   .filter((file) => file !== dshPrimary);
-
 const dshClientAddressContract = "services/dsh/contracts/dsh.client-address.openapi.yaml";
 if (!dshRegisteredFiles.has(dshClientAddressContract)) {
   violations.push({
-    file: registryFile,
+    file: dshRegistryFile,
     line: 0,
     message: `DSH_CLIENT_ADDRESS_CONTRACT_UNREGISTERED: ${dshClientAddressContract} must stay registered`,
   });
 }
+
+const routeClassifications = loadRouteClassifications();
 
 const services = [
   {
@@ -63,12 +126,14 @@ const services = [
       "services/wlt/contracts/jrn-038-cod-custody.openapi.yaml",
     ].filter((file) => fs.existsSync(path.join(repoRoot, file))),
     router: "services/wlt/backend/internal/http/server.go",
+    routerDir: "services/wlt/backend/internal/http",
   },
   {
     name: "Identity",
     openapi: "core/identity/contracts/auth.openapi.yaml",
     additionalOpenapi: [],
     router: "core/identity/backend/internal/http/server.go",
+    routerDir: "core/identity/backend/internal/http",
   },
 ];
 
@@ -85,6 +150,8 @@ const gatedWltMutationRoutes = new Set([
   "POST /wlt/settlements/{settlementId}/post",
   "POST /wlt/cod-records/{codRecordId}/collect",
   "POST /wlt/cod-records/{codRecordId}/remit",
+  "POST /wlt/delivery-collections/{codRecordId}/collect",
+  "POST /wlt/delivery-collections/{codRecordId}/remit",
   "POST /wlt/commissions",
   "POST /wlt/ledger/entries",
   "POST /wlt/commercial/products",
@@ -92,9 +159,7 @@ const gatedWltMutationRoutes = new Set([
   "POST /wlt/commercial/loyalty-entries",
   "POST /wlt/commercial/subscriptions",
 ]);
-
 const approvedWltMutationScopes = new Set(["POST /wlt/settlements"]);
-
 const wltFinancialReadRoutes = new Set([
   "GET /wlt/refunds",
   "GET /wlt/refunds/{refundId}",
@@ -103,6 +168,8 @@ const wltFinancialReadRoutes = new Set([
   "GET /wlt/settlements/summary",
   "GET /wlt/cod-records",
   "GET /wlt/cod-records/{codRecordId}",
+  "GET /wlt/delivery-collections",
+  "GET /wlt/delivery-collections/{codRecordId}",
   "GET /wlt/commissions",
   "GET /wlt/ledger/entries",
   "GET /wlt/ledger/entries/{entryId}",
@@ -167,14 +234,9 @@ function uniqueOperations(service, operations) {
       unique.push(operation);
       continue;
     }
-
     const previous = seen.get(operation.operationId);
     if (previous) {
-      if (operationKey(previous) === operationKey(operation)) {
-        // Registered fragments may repeat the exact canonical operation for a
-        // narrower generated/type surface. Divergent reuse remains forbidden.
-        continue;
-      }
+      if (operationKey(previous) === operationKey(operation)) continue;
       violations.push({
         file: operationFile(service, operation),
         line: operation.line,
@@ -278,7 +340,11 @@ try {
     const contracts = contractFiles(service);
     for (const contract of contracts) {
       if (!fs.existsSync(path.join(repoRoot, contract))) {
-        violations.push({ file: contract, line: 0, message: `REGISTERED_CONTRACT_NOT_FOUND: ${contract}` });
+        violations.push({
+          file: contract,
+          line: 0,
+          message: `REGISTERED_CONTRACT_NOT_FOUND: ${contract}`,
+        });
       }
     }
 
@@ -296,14 +362,23 @@ try {
 
     for (const route of goRoutes) {
       const key = routeKey(route);
-      if (key === "/") continue;
-      if (!openApiRouteSet.has(key)) {
-        violations.push({
-          file: route.file,
-          line: route.line,
-          message: `FORBIDDEN_ROUTE: Route "${key}" is registered in Go but not documented in: ${contracts.join(", ")}`,
-        });
+      if (key === "/" || openApiRouteSet.has(key)) continue;
+      const classification = service.name === "DSH" ? routeClassifications.get(key) : undefined;
+      if (classification) {
+        if (!openApiRouteSet.has(classification.canonicalRoute)) {
+          violations.push({
+            file: routeClassificationFile,
+            line: 0,
+            message: `LEGACY_CANONICAL_ROUTE_MISSING: ${key} points to absent ${classification.canonicalRoute}`,
+          });
+        }
+        continue;
       }
+      violations.push({
+        file: route.file,
+        line: route.line,
+        message: `FORBIDDEN_ROUTE: Route "${key}" is registered in Go but is neither documented nor governed as a bounded legacy compatibility route`,
+      });
     }
 
     for (const operation of operations) {
@@ -317,6 +392,25 @@ try {
           line: operation.line,
           message: `MISSING_IMPLEMENTATION: Route "${key}" is not registered in ${service.router}`,
         });
+      }
+    }
+
+    if (service.name === "DSH") {
+      for (const [legacyRoute, classification] of routeClassifications) {
+        if (!goRouteSet.has(legacyRoute)) {
+          violations.push({
+            file: routeClassificationFile,
+            line: 0,
+            message: `STALE_ROUTE_CLASSIFICATION: ${legacyRoute} is classified but no longer registered`,
+          });
+        }
+        if (!openApiRouteSet.has(classification.canonicalRoute)) {
+          violations.push({
+            file: routeClassificationFile,
+            line: 0,
+            message: `STALE_CANONICAL_ROUTE_CLASSIFICATION: ${classification.canonicalRoute} is not active`,
+          });
+        }
       }
     }
   }
