@@ -39,6 +39,13 @@ export type PartnerCatalogApprovalQueueRecord = {
   readonly createdAt: string;
 };
 
+export type CatalogApprovalSubmissionMetadata = {
+  readonly mediaKey?: string;
+  readonly categoryId?: string;
+  readonly supportsPickup?: boolean;
+  readonly supportsPartnerDelivery?: boolean;
+};
+
 function resolveBaseUrl(): string | null {
   return PlatformVarsRegistry.get('dshApiBaseUrl');
 }
@@ -62,7 +69,7 @@ export type CreateCatalogApprovalInput = {
   readonly entityType: ApprovalEntityType;
   readonly entityId?: string;
   readonly title: string;
-  readonly metadata?: ApprovalRecordMetadata;
+  readonly metadata?: CatalogApprovalSubmissionMetadata;
 };
 
 export async function createCatalogApproval(input: CreateCatalogApprovalInput): Promise<CatalogApprovalRecord> {
