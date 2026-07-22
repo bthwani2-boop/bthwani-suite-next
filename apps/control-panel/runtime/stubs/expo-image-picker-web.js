@@ -1,5 +1,5 @@
 // Browser implementation for the subset of expo-image-picker consumed by
-// shared DSH surfaces. The control panel must not bundle Expo's native source.
+// shared DSH surfaces. The control panel must not bundle Expo native modules.
 
 export const MediaTypeOptions = Object.freeze({
   All: "All",
@@ -30,33 +30,65 @@ export const PermissionStatus = Object.freeze({
   UNDETERMINED: "undetermined",
 });
 
-const grantedPermission = Object.freeze({
-  status: PermissionStatus.GRANTED,
-  granted: true,
-  canAskAgain: true,
-  expires: "never",
-});
+function permissionResult(status, canAskAgain = status !== PermissionStatus.DENIED) {
+  return Object.freeze({
+    status,
+    granted: status === PermissionStatus.GRANTED,
+    canAskAgain,
+    expires: "never",
+  });
+}
 
+const filePickerPermission = permissionResult(PermissionStatus.GRANTED, true);
+const undeterminedPermission = permissionResult(PermissionStatus.UNDETERMINED, true);
+const deniedPermission = permissionResult(PermissionStatus.DENIED, false);
+
+// Browser file access is explicitly granted by the user for each selected file;
+// there is no persistent media-library permission comparable to native Expo.
 export async function getMediaLibraryPermissionsAsync() {
-  return grantedPermission;
+  return filePickerPermission;
 }
 
 export async function requestMediaLibraryPermissionsAsync() {
-  return grantedPermission;
+  return filePickerPermission;
+}
+
+async function queryCameraPermission() {
+  if (typeof navigator === "undefined") return undeterminedPermission;
+  if (!navigator.mediaDevices?.getUserMedia) return deniedPermission;
+  if (!navigator.permissions?.query) return undeterminedPermission;
+  try {
+    const permission = await navigator.permissions.query({ name: "camera" });
+    if (permission.state === "granted") return permissionResult(PermissionStatus.GRANTED, true);
+    if (permission.state === "denied") return deniedPermission;
+    return undeterminedPermission;
+  } catch {
+    return undeterminedPermission;
+  }
 }
 
 export async function getCameraPermissionsAsync() {
-  return grantedPermission;
+  return queryCameraPermission();
 }
 
 export async function requestCameraPermissionsAsync() {
-  return grantedPermission;
+  if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+    return deniedPermission;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    for (const track of stream.getTracks()) track.stop();
+    return permissionResult(PermissionStatus.GRANTED, true);
+  } catch (error) {
+    const name = error instanceof Error ? error.name : "";
+    if (name === "NotAllowedError" || name === "SecurityError") return deniedPermission;
+    throw error;
+  }
 }
 
 function resolveAccept(mediaTypes) {
   const values = Array.isArray(mediaTypes) ? mediaTypes : [mediaTypes];
   const normalized = values.filter(Boolean).map((value) => String(value).toLowerCase());
-
   if (normalized.some((value) => value.includes("all"))) return "image/*,video/*";
 
   const accepts = [];
@@ -80,11 +112,11 @@ function readBase64(file) {
 }
 
 function pickFromBrowser(options = {}, capture) {
-  if (typeof document === "undefined") {
-    return Promise.resolve({ canceled: true, assets: null });
+  if (typeof document === "undefined" || typeof window === "undefined") {
+    return Promise.reject(new Error("IMAGE_PICKER_BROWSER_UNAVAILABLE"));
   }
 
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = resolveAccept(options.mediaTypes);
@@ -92,12 +124,21 @@ function pickFromBrowser(options = {}, capture) {
     if (capture) input.setAttribute("capture", capture);
 
     let settled = false;
+    const cleanup = () => {
+      window.removeEventListener("focus", handleWindowFocus);
+      input.remove();
+    };
     const finish = (result) => {
       if (settled) return;
       settled = true;
-      window.removeEventListener("focus", handleWindowFocus);
-      input.remove();
+      cleanup();
       resolve(result);
+    };
+    const fail = (error) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(error instanceof Error ? error : new Error(String(error)));
     };
 
     const handleWindowFocus = () => {
@@ -129,13 +170,17 @@ function pickFromBrowser(options = {}, capture) {
           ...(options.base64 ? { base64: await readBase64(file) } : {}),
         })));
         finish({ canceled: false, assets });
-      } catch {
-        finish({ canceled: true, assets: null });
+      } catch (error) {
+        fail(error);
       }
     }, { once: true });
 
     window.addEventListener("focus", handleWindowFocus, { once: true });
-    input.click();
+    try {
+      input.click();
+    } catch (error) {
+      fail(error);
+    }
   });
 }
 
@@ -143,7 +188,11 @@ export function launchImageLibraryAsync(options = {}) {
   return pickFromBrowser(options);
 }
 
-export function launchCameraAsync(options = {}) {
+export async function launchCameraAsync(options = {}) {
+  const permission = await getCameraPermissionsAsync();
+  if (permission.status === PermissionStatus.DENIED) {
+    throw new Error("CAMERA_PERMISSION_DENIED");
+  }
   const capture = options.cameraType === CameraType.front ? "user" : "environment";
   return pickFromBrowser(options, capture);
 }
