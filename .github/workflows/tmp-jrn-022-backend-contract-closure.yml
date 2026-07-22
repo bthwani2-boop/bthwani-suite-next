@@ -51,11 +51,24 @@ jobs:
         run: python3 tools/scripts/close-jrn-022-backend-contract-slices.py
 
       - name: Format and verify backend
+        id: backend_verify
+        shell: bash
         run: |
-          gofmt -w services/dsh/backend/internal/specialrequests services/dsh/backend/internal/http services/dsh/backend/internal/dispatch
-          cd services/dsh/backend
-          go test ./internal/specialrequests ./internal/http ./internal/dispatch -run 'Test(JRN022SpecialRequestRoutes|CanonicalSpecialRequestStagesAreKnownToService|DefaultWorkflowStageMatchesCustomerAndDeliveryReadback|InformationExchangeValidationAndCanonicalStage)$' -count=1
-          go build ./internal/http ./internal/dispatch ./internal/specialrequests
+          set -o pipefail
+          {
+            gofmt -w services/dsh/backend/internal/specialrequests services/dsh/backend/internal/http services/dsh/backend/internal/dispatch
+            cd services/dsh/backend
+            go test ./internal/specialrequests ./internal/http ./internal/dispatch -run 'Test(JRN022SpecialRequestRoutes|CanonicalSpecialRequestStagesAreKnownToService|DefaultWorkflowStageMatchesCustomerAndDeliveryReadback|InformationExchangeValidationAndCanonicalStage)$' -count=1
+            go build ./internal/http ./internal/dispatch ./internal/specialrequests
+          } 2>&1 | tee "$RUNNER_TEMP/jrn-022-backend.log"
+
+      - name: Upload backend diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jrn-022-backend-diagnostics
+          path: ${{ runner.temp }}/jrn-022-backend.log
+          if-no-files-found: error
 
       - name: Regenerate and verify modular OpenAPI
         run: |
