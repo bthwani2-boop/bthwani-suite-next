@@ -96,6 +96,7 @@ test("JRN-030 shared brain and all three required surfaces bind to DSH", () => {
   assert.match(api, /disconnectCaptainPartnerFleetMembership/);
   assert.match(partnerController, /readonly connections/);
   assert.match(partnerController, /listPartnerCourierConnections/);
+  assert.match(partnerController, /superseded/);
   assert.match(partnerSurface, /اتصالات أسطول الشريك/);
   assert.match(partnerSurface, /connectionStatusLabel/);
   assert.match(partnerSurface, /إلغاء رمز الربط/);
@@ -106,7 +107,7 @@ test("JRN-030 shared brain and all three required surfaces bind to DSH", () => {
   assert.match(operatorHost, /OperatorPartnerFleetPanel/);
 });
 
-test("JRN-030 contract covers every governed operation", () => {
+test("JRN-030 contract covers every governed operation with strict typed schemas", () => {
   for (const path of [
     "/dsh/partner/stores/{storeId}/couriers/{memberId}/connection-code",
     "/dsh/partner/stores/{storeId}/courier-connections",
@@ -118,6 +119,21 @@ test("JRN-030 contract covers every governed operation", () => {
   ]) {
     assert.ok(contract.includes(path), `missing contract path ${path}`);
   }
+  for (const schema of [
+    "ConnectionCode:",
+    "IssuedConnectionCode:",
+    "CaptainFleetMembership:",
+    "OperatorStoreFleetMember:",
+    "OperatorPartnerFleetSnapshot:",
+  ]) {
+    assert.ok(contract.includes(schema), `missing typed schema ${schema}`);
+  }
+  assert.doesNotMatch(contract, /ObjectResponse:/);
+  assert.doesNotMatch(contract, /additionalProperties:\s*true/);
+  assert.match(contract, /DisconnectMembershipRequest:[\s\S]*required: \[storeId, expectedVersion\]/);
+  assert.match(contract, /ConnectCaptainRequest:[\s\S]*pattern: '\^\[A-Za-z0-9-\]\+\$'/);
+  assert.equal((contract.match(/description: Returned once/g) ?? []).length, 1);
+  assert.doesNotMatch(contract, /code_hash|CodeHash/);
 });
 
 test("JRN-030 Product Truth declares all required surfaces and negative invariants", () => {
@@ -130,5 +146,6 @@ test("JRN-030 Product Truth declares all required surfaces and negative invarian
   assert.match(negative, /no plaintext code persistence/);
   assert.match(negative, /no cross-tenant partner access/);
   assert.match(negative, /no expired or revoked code reuse/);
+  assert.match(negative, /no unaudited lifecycle transition/);
   assert.match(negative, /no stale overwrite/);
 });
