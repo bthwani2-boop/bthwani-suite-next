@@ -49,12 +49,12 @@ type DamEntityType = "domains" | "nodes" | "master-products" | "product-proposal
 // ─── Style constants (static/layout styles reused across the screen) ────────
 const pageDescStyle: CSSProperties = { margin: "0 0 0.75rem", opacity: 0.65, fontSize: "0.875rem" };
 const seedWarningBoxStyle: CSSProperties = {
-  margin: "0 1rem 1rem",
-  padding: "1rem",
-  borderRadius: "0.5rem",
-  backgroundColor: statusScale.dangerSoft,
-  border: `1px solid ${statusScale.danger}`,
-  color: statusScale.dangerStrong,
+  margin: "0 0 1rem",
+  padding: "0.85rem 1.25rem",
+  borderRadius: "0.75rem",
+  backgroundColor: statusScale.warningSoft,
+  border: `1px solid ${statusScale.warning}`,
+  color: statusScale.warningStrong,
   fontWeight: "bold",
   display: "flex",
   flexDirection: "column",
@@ -197,6 +197,42 @@ const TABS: { id: TabId; label: string; disabled?: boolean; reason?: string }[] 
   { id: "import_export", label: "الاستيراد والتصدير" },
   { id: "cleanup_quality", label: "التنظيف والجودة" },
   { id: "audit_logs", label: "سجل التدقيق", disabled: true, reason: "متاح للقراءة والتحقق عبر SQL/DB" },
+];
+
+export type MainGroupId = "overview_analytics" | "taxonomy_products" | "media_content" | "tools_governance";
+
+export type MainTabGroup = {
+  id: MainGroupId;
+  label: string;
+  icon: string;
+  subTabs: TabId[];
+};
+
+export const MAIN_TAB_GROUPS: MainTabGroup[] = [
+  {
+    id: "overview_analytics",
+    label: "النظرة العامة والتحليلات",
+    icon: "📊",
+    subTabs: ["overview", "audit_logs"],
+  },
+  {
+    id: "taxonomy_products",
+    label: "إدارة التصنيف والمنتجات",
+    icon: "🗂️",
+    subTabs: ["taxonomy", "master_products", "proposals", "assortment"],
+  },
+  {
+    id: "media_content",
+    label: "الوسائط والقصص",
+    icon: "🖼️",
+    subTabs: ["marketing_media", "reels"],
+  },
+  {
+    id: "tools_governance",
+    label: "الحوكمة والجودة والأدوات",
+    icon: "⚡",
+    subTabs: ["cleanup_quality", "import_export", "visibility", "policies"],
+  },
 ];
 
 const DAM_ENTITY_TYPES: readonly DamEntityType[] = ["domains", "nodes", "master-products", "product-proposals"];
@@ -432,36 +468,25 @@ export function CatalogDashboardScreen() {
     return [...groups.entries()].filter(([, products]) => products.length > 1);
   }, [controller.state.masterProducts.items]);
 
+  const activeMainGroup = useMemo(() => {
+    return MAIN_TAB_GROUPS.find((g) => g.subTabs.includes(activeTab)) || MAIN_TAB_GROUPS[0];
+  }, [activeTab]);
+
+  const handleSelectMainGroup = (groupId: MainGroupId) => {
+    const group = MAIN_TAB_GROUPS.find((g) => g.id === groupId);
+    if (!group) return;
+    if (!group.subTabs.includes(activeTab)) {
+      const firstTab = group.subTabs.find((stId) => {
+        const tabDef = TABS.find((t) => t.id === stId);
+        return tabDef && !tabDef.disabled;
+      }) || group.subTabs[0];
+      setActiveTab(firstTab);
+    }
+  };
+
   return (
     <OperationsRoomFrame
       dir="rtl"
-      sidePanel={
-        <div style={{ width: 280, borderLeft: "1px solid var(--bth-colors-borderColor)", padding: "1rem", height: "100%", overflowY: "auto", backgroundColor: "var(--bth-colors-surfaceBase)" }}>
-          <nav dir="rtl" aria-label="تبويبات الكتالوج المركزي" style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-            {TABS.map((t) => (
-              <button
-                key={t.id}
-                disabled={t.disabled}
-                onClick={() => setActiveTab(t.id)}
-                title={t.reason}
-                style={{
-                  ...tabButtonBaseStyle,
-                  textAlign: "right",
-                  background: activeTab === t.id ? colorRoles.brandAction : "transparent",
-                  color: t.disabled ? neutralScale[400] : activeTab === t.id ? colorRoles.surfaceBase : "currentColor",
-                  border: activeTab === t.id ? "none" : "1px solid color-mix(in srgb, currentColor 20%, transparent)",
-                  fontWeight: activeTab === t.id ? 700 : 500,
-                  cursor: t.disabled ? "not-allowed" : "pointer",
-                  opacity: t.disabled ? 0.5 : 1,
-                }}
-              >
-                {t.label}
-                {t.disabled && t.reason && <div style={tabDisabledReasonStyle}>{t.reason}</div>}
-              </button>
-            ))}
-          </nav>
-        </div>
-      }
       header={
         <CpPageHeader title="كتالوج DSH السيادي وPIM">
           <p style={pageDescStyle}>
@@ -482,9 +507,140 @@ export function CatalogDashboardScreen() {
         ) : null
       }
     >
+      {/* ─── 2-TIER TOP HORIZONTAL TAB NAVIGATION (2026 PREMIUM REDESIGN) ─── */}
+      <div
+        dir="rtl"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "0.75rem",
+          padding: "0.75rem 1rem",
+          margin: "0 1rem 1.25rem",
+          background: "color-mix(in srgb, currentColor 3%, transparent)",
+          borderRadius: "1rem",
+          border: "1px solid color-mix(in srgb, currentColor 8%, transparent)",
+          backdropFilter: "blur(12px)",
+        }}
+      >
+        {/* Tier 1: Main Horizontal Tabs */}
+        <div
+          style={{
+            display: "flex",
+            gap: "0.5rem",
+            borderBottom: "1px solid color-mix(in srgb, currentColor 10%, transparent)",
+            paddingBottom: "0.75rem",
+            overflowX: "auto",
+          }}
+        >
+          {MAIN_TAB_GROUPS.map((group) => {
+            const isActive = activeMainGroup.id === group.id;
+            return (
+              <button
+                key={group.id}
+                type="button"
+                onClick={() => handleSelectMainGroup(group.id)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  padding: "0.6rem 1.25rem",
+                  borderRadius: "0.75rem",
+                  fontSize: "0.875rem",
+                  fontWeight: isActive ? 700 : 500,
+                  cursor: "pointer",
+                  transition: "all 0.2s ease-in-out",
+                  border: isActive
+                    ? "1px solid color-mix(in srgb, var(--bth-colors-brandAction, #0052FF) 40%, transparent)"
+                    : "1px solid transparent",
+                  background: isActive
+                    ? "color-mix(in srgb, var(--bth-colors-brandAction, #0052FF) 12%, transparent)"
+                    : "transparent",
+                  color: isActive ? colorRoles.brandAction : "currentColor",
+                  boxShadow: isActive
+                    ? "0 4px 14px color-mix(in srgb, var(--bth-colors-brandAction, #0052FF) 15%, transparent)"
+                    : "none",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                <span style={{ fontSize: "1rem" }}>{group.icon}</span>
+                <span>{group.label}</span>
+                <span
+                  style={{
+                    fontSize: "0.7rem",
+                    padding: "0.1rem 0.45rem",
+                    borderRadius: "999px",
+                    background: isActive
+                      ? colorRoles.brandAction
+                      : "color-mix(in srgb, currentColor 10%, transparent)",
+                    color: isActive ? colorRoles.surfaceBase : "currentColor",
+                    fontWeight: 600,
+                  }}
+                >
+                  {group.subTabs.length}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Tier 2: Secondary Horizontal Sub-Tabs */}
+        <div
+          style={{
+            display: "flex",
+            gap: "0.375rem",
+            overflowX: "auto",
+            paddingTop: "0.25rem",
+            flexWrap: "wrap",
+          }}
+        >
+          {activeMainGroup.subTabs.map((subTabId) => {
+            const tabDef = TABS.find((t) => t.id === subTabId);
+            if (!tabDef) return null;
+            const isSubActive = activeTab === subTabId;
+            return (
+              <button
+                key={tabDef.id}
+                type="button"
+                disabled={tabDef.disabled}
+                onClick={() => setActiveTab(tabDef.id)}
+                title={tabDef.reason}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.35rem",
+                  padding: "0.45rem 0.95rem",
+                  borderRadius: "999px",
+                  fontSize: "0.813rem",
+                  fontWeight: isSubActive ? 700 : 500,
+                  cursor: tabDef.disabled ? "not-allowed" : "pointer",
+                  opacity: tabDef.disabled ? 0.5 : 1,
+                  transition: "all 0.15s ease",
+                  border: isSubActive
+                    ? "none"
+                    : "1px solid color-mix(in srgb, currentColor 15%, transparent)",
+                  background: isSubActive
+                    ? colorRoles.brandAction
+                    : "color-mix(in srgb, currentColor 2%, transparent)",
+                  color: isSubActive ? colorRoles.surfaceBase : "currentColor",
+                  boxShadow: isSubActive
+                    ? "0 2px 8px color-mix(in srgb, var(--bth-colors-brandAction, #0052FF) 30%, transparent)"
+                    : "none",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                <span>{tabDef.label}</span>
+                {tabDef.disabled && tabDef.reason && (
+                  <span style={{ fontSize: "0.65rem", opacity: 0.75 }}>({tabDef.reason})</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Seed status warning banner */}
       {seedStatus && seedStatus.missingSeeds.length > 0 && (
-        <div style={seedWarningBoxStyle}>
+        <div style={{ ...seedWarningBoxStyle, margin: "0 1rem 1rem" }}>
           <div>⚠️ بذور الكتالوج المركزي غير مطبقة بالكامل في هذه البيئة!</div>
           <div style={seedWarningDetailStyle}>
             العناصر المفقودة: {seedStatus.missingSeeds.join(", ")}. يرجى تشغيل برنامج التهيئة `apply-central-catalog-seed.ps1` لتثبيتها.
