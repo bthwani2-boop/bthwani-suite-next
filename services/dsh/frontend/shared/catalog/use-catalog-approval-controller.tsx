@@ -59,7 +59,14 @@ export function useCatalogApprovalController(authSession: string) {
   const [mutationError, setMutationError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
+    if (authSession === "restoring" || authSession === "authenticating") {
+      setRecords([]);
+      setState({ kind: "loading" });
+      return;
+    }
     if (authSession !== "authenticated") {
+      setRecords([]);
+      setMutationError(null);
       setState({ kind: "permission_denied" });
       return;
     }
