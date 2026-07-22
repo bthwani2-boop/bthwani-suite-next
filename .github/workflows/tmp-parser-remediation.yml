@@ -1,0 +1,135 @@
+name: Temporary OpenAPI Parser Remediation
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - ".github/workflows/tmp-parser-remediation.yml"
+  push:
+    branches: [sambassam]
+    paths:
+      - ".github/workflows/tmp-parser-remediation.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: temporary-openapi-parser-remediation-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  remediate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout latest sambassam
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: sambassam
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Teach parser inline component parameters
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("tools/guards/_openapi-utils.mjs")
+          text = path.read_text(encoding="utf-8")
+          old = '''function parseComponentParameters(lines) {
+            const parameters = new Map();
+            const parametersStart = lines.findIndex((line) => /^\\s{2}parameters:\\s*$/.test(line));
+            if (parametersStart === -1) return parameters;
+
+            for (let i = parametersStart + 1; i < lines.length; i++) {
+              const componentMatch = lines[i].match(/^\\s{4}([A-Za-z0-9_-]+):\\s*$/);
+              if (!componentMatch) {
+                if (/^\\s{2}[A-Za-z0-9_-]+:\\s*$/.test(lines[i])) break;
+                continue;
+              }
+
+              const block = [lines[i]];
+              for (let j = i + 1; j < lines.length; j++) {
+                if (/^\\s{4}[A-Za-z0-9_-]+:\\s*$/.test(lines[j]) || /^\\s{2}[A-Za-z0-9_-]+:\\s*$/.test(lines[j])) break;
+                block.push(lines[j]);
+              }
+
+              const parameter = { name: "", in: "", required: false };
+              for (const line of block) {
+                const trimmed = line.trim();
+                const nameMatch = trimmed.match(/^name:\\s*(.+?)\\s*$/);
+                if (nameMatch) parameter.name = parseScalar(nameMatch[1]);
+                const inMatch = trimmed.match(/^in:\\s*(.+?)\\s*$/);
+                if (inMatch) parameter.in = parseScalar(inMatch[1]);
+                const requiredMatch = trimmed.match(/^required:\\s*(.+?)\\s*$/);
+                if (requiredMatch) parameter.required = parseScalar(requiredMatch[1]) === true;
+              }
+              parameters.set(componentMatch[1], parameter);
+            }
+
+            return parameters;
+          }'''
+          new = '''function parseComponentParameters(lines) {
+            const parameters = new Map();
+            const parametersStart = lines.findIndex((line) => /^\\s{2}parameters:\\s*$/.test(line));
+            if (parametersStart === -1) return parameters;
+
+            for (let i = parametersStart + 1; i < lines.length; i++) {
+              if (/^\\s{2}[A-Za-z0-9_-]+:\\s*$/.test(lines[i])) break;
+
+              const inlineMatch = lines[i].match(/^\\s{4}([A-Za-z0-9_-]+):\\s*\\{(.+)\\}\\s*$/);
+              if (inlineMatch) {
+                const body = inlineMatch[2];
+                const parameter = { name: "", in: "", required: false };
+                const nameMatch = body.match(/(?:^|,)\\s*name:\\s*([^,}]+)/);
+                if (nameMatch) parameter.name = parseScalar(nameMatch[1]);
+                const inMatch = body.match(/(?:^|,)\\s*in:\\s*([^,}]+)/);
+                if (inMatch) parameter.in = parseScalar(inMatch[1]);
+                const requiredMatch = body.match(/(?:^|,)\\s*required:\\s*([^,}]+)/);
+                if (requiredMatch) parameter.required = parseScalar(requiredMatch[1]) === true;
+                parameters.set(inlineMatch[1], parameter);
+                continue;
+              }
+
+              const componentMatch = lines[i].match(/^\\s{4}([A-Za-z0-9_-]+):\\s*$/);
+              if (!componentMatch) continue;
+
+              const block = [lines[i]];
+              for (let j = i + 1; j < lines.length; j++) {
+                if (/^\\s{4}[A-Za-z0-9_-]+:\\s*(?:\\{.*\\})?\\s*$/.test(lines[j]) || /^\\s{2}[A-Za-z0-9_-]+:\\s*$/.test(lines[j])) break;
+                block.push(lines[j]);
+              }
+
+              const parameter = { name: "", in: "", required: false };
+              for (const line of block) {
+                const trimmed = line.trim();
+                const nameMatch = trimmed.match(/^name:\\s*(.+?)\\s*$/);
+                if (nameMatch) parameter.name = parseScalar(nameMatch[1]);
+                const inMatch = trimmed.match(/^in:\\s*(.+?)\\s*$/);
+                if (inMatch) parameter.in = parseScalar(inMatch[1]);
+                const requiredMatch = trimmed.match(/^required:\\s*(.+?)\\s*$/);
+                if (requiredMatch) parameter.required = parseScalar(requiredMatch[1]) === true;
+              }
+              parameters.set(componentMatch[1], parameter);
+            }
+
+            return parameters;
+          }'''
+          if old not in text:
+              raise SystemExit("OpenAPI parameter parser no longer matches the expected governed source")
+          path.write_text(text.replace(old, new, 1), encoding="utf-8")
+          PY
+      - name: Commit parser repair
+        shell: bash
+        run: |
+          git config user.name "bthwani-governance-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add tools/guards/_openapi-utils.mjs
+          git commit -m "fix(guards): parse inline OpenAPI path parameters"
+          for attempt in 1 2 3; do
+            if git push origin HEAD:sambassam; then
+              exit 0
+            fi
+            git pull --rebase origin sambassam
+          done
+          exit 1
