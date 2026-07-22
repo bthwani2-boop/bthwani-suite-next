@@ -24,6 +24,8 @@ const { req } = createDshRawHttpClient(resolveDshApiBaseUrl(), "mkt");
 type MarketingTargetFields = {
   targetType?: string;
   targetId?: string;
+  targetCityCode?: string;
+  targetServiceAreaCode?: string;
   audience?: string;
   placement?: string;
 };
@@ -193,4 +195,4 @@ export const updateSubscriptionPlan = (id: string, body: SubscriptionPlanUpdateP
   });
 
 export const fetchClientBenefits = () =>
-  req<{ benefits: ClientBenefitsPayload }>("/dsh/client/benefits");
+  req<ClientBenefitsPayload>("/dsh/client/benefits");
