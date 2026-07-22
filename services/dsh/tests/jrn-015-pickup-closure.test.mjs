@@ -59,7 +59,8 @@ test('JRN-015 guards every pickup mutation with command and version semantics', 
     assert.match(guard, new RegExp(`"${action}"`), `unguarded pickup action: ${action}`);
   }
   assert.match(guard, /pg_advisory_lock/);
-  assert.match(guard, /PICKUP_COMMAND_IN_PROGRESS/);
+  assert.match(guard, /replayOrRecoverPickupMutationCommand/);
+  assert.match(guard, /DELETE FROM dsh_pickup_mutation_commands/);
   assert.match(guard, /VERSION_CONFLICT/);
   assert.match(main, /PickupMutationPathContext/);
   assert.match(main, /PickupMutationGuard/);
