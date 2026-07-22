@@ -10,6 +10,7 @@ import {
   fetchOperatorPickups,
   fetchOperatorPickup,
   extendPickupWindow,
+  reschedulePickupWindow,
   classifyPickupError,
   type PartnerPickupStage,
 } from "./pickup.api";
@@ -232,7 +233,7 @@ type OperatorPickupMutationResult =
       readonly message: string;
     };
 
-/** Operator-owned pickup monitoring controller. */
+/** Operator-owned pickup monitoring and no-show recovery controller. */
 export function useOperatorPickupsController(
   params: UseOperatorPickupsControllerParams = {},
 ) {
@@ -281,20 +282,22 @@ export function useOperatorPickupsController(
       });
   }, []);
 
-  const extendWindow = useCallback(
+  const executeWindowMutation = useCallback(
     (
+      action: typeof extendPickupWindow,
       orderIdValue: string,
       expectedVersion: number,
       reason: string,
       newExpiry: string,
+      fallback: string,
     ): Promise<OperatorPickupMutationResult> => {
-      return extendPickupWindow(orderIdValue, { expectedVersion, reason, newExpiry })
+      return action(orderIdValue, { expectedVersion, reason, newExpiry })
         .then((response) => {
           setDetailState({ loaded: true, error: null, offline: false, data: response.session });
           return { ok: true as const, session: response.session };
         })
         .catch((error: unknown) => {
-          const { message, classified } = classifiedMessage(error, "تعذر تمديد نافذة الاستلام.");
+          const { message, classified } = classifiedMessage(error, fallback);
           return {
             ok: false as const,
             kind: classified.kind,
@@ -306,5 +309,38 @@ export function useOperatorPickupsController(
     [],
   );
 
-  return { listState, loadList, detailState, loadDetail, extendWindow };
+  const extendWindow = useCallback(
+    (orderIdValue: string, expectedVersion: number, reason: string, newExpiry: string) =>
+      executeWindowMutation(
+        extendPickupWindow,
+        orderIdValue,
+        expectedVersion,
+        reason,
+        newExpiry,
+        "تعذر تمديد نافذة الاستلام.",
+      ),
+    [executeWindowMutation],
+  );
+
+  const rescheduleWindow = useCallback(
+    (orderIdValue: string, expectedVersion: number, reason: string, newExpiry: string) =>
+      executeWindowMutation(
+        reschedulePickupWindow,
+        orderIdValue,
+        expectedVersion,
+        reason,
+        newExpiry,
+        "تعذر إعادة جدولة نافذة الاستلام.",
+      ),
+    [executeWindowMutation],
+  );
+
+  return {
+    listState,
+    loadList,
+    detailState,
+    loadDetail,
+    extendWindow,
+    rescheduleWindow,
+  } as const;
 }
