@@ -57,6 +57,7 @@ func parseAllowedHealthHosts(raw string) map[string]struct{} {
 func providerForRead(provider ExternalProvider) ExternalProvider {
 	provider.CredentialConfigured = credentialsConfigured(provider.Credentials)
 	provider.Credentials = nil
+	provider.Parameters = sanitizeProviderParameters(provider.Parameters)
 	return provider
 }
 
@@ -65,8 +66,8 @@ func credentialsConfigured(credentials json.RawMessage) bool {
 	return trimmed != "" && trimmed != "null" && trimmed != "{}"
 }
 
-func decodeJSONObject(raw json.RawMessage) (map[string]json.RawMessage, error) {
-	var object map[string]json.RawMessage
+func decodeJSONObject(raw json.RawMessage) (map[string]any, error) {
+	var object map[string]any
 	if len(raw) == 0 || json.Unmarshal(raw, &object) != nil || object == nil {
 		return nil, ErrInvalidInput
 	}
@@ -98,6 +99,102 @@ func parameterKeyContainsSecret(key string) bool {
 	return false
 }
 
+func validateHealthURL(value any) error {
+	raw, ok := value.(string)
+	if !ok || strings.TrimSpace(raw) == "" {
+		return ErrInvalidInput
+	}
+	parsed, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil || parsed.Hostname() == "" || (parsed.Scheme != "https" && parsed.Scheme != "http") || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
+		return ErrInvalidInput
+	}
+	return nil
+}
+
+func validatePublicParameterValue(value any) error {
+	switch typed := value.(type) {
+	case map[string]any:
+		for key, child := range typed {
+			if parameterKeyContainsSecret(key) {
+				return ErrInvalidInput
+			}
+			if normalizedProviderKey(key) == "healthurl" {
+				if err := validateHealthURL(child); err != nil {
+					return err
+				}
+			}
+			if err := validatePublicParameterValue(child); err != nil {
+				return err
+			}
+		}
+	case []any:
+		for _, child := range typed {
+			if err := validatePublicParameterValue(child); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func sanitizeHealthURL(value string) string {
+	parsed, err := url.Parse(strings.TrimSpace(value))
+	if err != nil || parsed.Hostname() == "" || (parsed.Scheme != "https" && parsed.Scheme != "http") {
+		return ""
+	}
+	parsed.User = nil
+	parsed.RawQuery = ""
+	parsed.ForceQuery = false
+	parsed.Fragment = ""
+	return parsed.String()
+}
+
+func sanitizePublicParameterValue(value any) any {
+	switch typed := value.(type) {
+	case map[string]any:
+		sanitized := make(map[string]any, len(typed))
+		for key, child := range typed {
+			if parameterKeyContainsSecret(key) {
+				continue
+			}
+			if normalizedProviderKey(key) == "healthurl" {
+				healthURL, ok := child.(string)
+				if !ok {
+					continue
+				}
+				safeURL := sanitizeHealthURL(healthURL)
+				if safeURL == "" {
+					continue
+				}
+				sanitized[key] = safeURL
+				continue
+			}
+			sanitized[key] = sanitizePublicParameterValue(child)
+		}
+		return sanitized
+	case []any:
+		sanitized := make([]any, 0, len(typed))
+		for _, child := range typed {
+			sanitized = append(sanitized, sanitizePublicParameterValue(child))
+		}
+		return sanitized
+	default:
+		return value
+	}
+}
+
+func sanitizeProviderParameters(raw json.RawMessage) json.RawMessage {
+	parameters, err := decodeJSONObject(raw)
+	if err != nil {
+		return nil
+	}
+	encoded, err := json.Marshal(sanitizePublicParameterValue(parameters))
+	if err != nil {
+		return nil
+	}
+	return encoded
+}
+
 func validateUpdateProviderInput(input UpdateProviderInput) error {
 	if input.Active == nil && input.Credentials == nil && input.Parameters == nil {
 		return ErrInvalidInput
@@ -112,10 +209,8 @@ func validateUpdateProviderInput(input UpdateProviderInput) error {
 		if err != nil {
 			return err
 		}
-		for key := range parameters {
-			if parameterKeyContainsSecret(key) {
-				return ErrInvalidInput
-			}
+		if err := validatePublicParameterValue(parameters); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -228,7 +323,7 @@ func (s *Service) probeProviderHealth(ctx context.Context, provider ExternalProv
 		return StatusDegraded, "Active provider has no governed health probe"
 	}
 	parsed, err := url.Parse(probeURL)
-	if err != nil || parsed.Hostname() == "" || (parsed.Scheme != "https" && parsed.Scheme != "http") || parsed.User != nil {
+	if err != nil || parsed.Hostname() == "" || (parsed.Scheme != "https" && parsed.Scheme != "http") || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
 		return StatusDegraded, "Provider health probe URL is invalid"
 	}
 	host := strings.ToLower(parsed.Hostname())
