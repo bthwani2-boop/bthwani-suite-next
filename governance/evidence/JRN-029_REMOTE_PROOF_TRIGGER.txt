@@ -1,0 +1,4 @@
+JRN-029 isolated remote proof trigger
+source_branch=sambassam
+verification_branch=verify/jrn-029-final-20260722
+requested_at=2026-07-22
