@@ -16,6 +16,8 @@ paths:
   /wlt/settlements:
     post:
       operationId: createWltEvidenceBackedSettlement
+      x-bthwani-mutation-approved: true
+      x-bthwani-default-enabled: false
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -35,6 +37,7 @@ paths:
                 required: [settlement]
                 properties:
                   settlement: { $ref: '#/components/schemas/Settlement' }
+        '403': { description: FEATURE_NOT_ENABLED when WLT_MUTATIONS_ENABLED is not true }
         '409': { $ref: '#/components/responses/Conflict' }
   /wlt/settlements/{settlementId}/evidence:
     get:
@@ -90,6 +93,14 @@ paths:
       operationId: listWltGovernedCommissions
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
+        - name: Authorization
+          in: header
+          required: true
+          schema: { type: string, minLength: 1 }
+        - name: X-Service-Caller
+          in: header
+          required: true
+          schema: { type: string, enum: [dsh] }
         - name: sourceId
           in: query
           schema: { type: string }
@@ -119,6 +130,8 @@ paths:
                     items: { $ref: '#/components/schemas/Commission' }
     post:
       operationId: createWltGovernedCommission
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -137,6 +150,7 @@ paths:
                 required: [commission]
                 properties:
                   commission: { $ref: '#/components/schemas/Commission' }
+        '403': { description: FEATURE_NOT_ENABLED when WLT_MUTATIONS_ENABLED is not true }
         '409': { $ref: '#/components/responses/Conflict' }
   /wlt/commissions/{commissionId}:
     get:

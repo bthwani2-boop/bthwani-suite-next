@@ -82,6 +82,15 @@ paths:
     post:
       operationId: applyDshWltPaymentSessionEvent
       security: [{ serviceToken: [] }]
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema: { type: string, minLength: 1 }
+        - name: X-Service-Caller
+          in: header
+          required: true
+          schema: { type: string, enum: [wlt] }
       requestBody:
         required: true
         content:

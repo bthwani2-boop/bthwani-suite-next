@@ -77,18 +77,19 @@ function parseParameterBlock(lines, startIndex) {
   const startLine = lines[startIndex] ?? "";
   const trimmedStart = startLine.trim();
   if (!trimmedStart.startsWith("- ")) return { parameter: null, nextIndex: startIndex + 1 };
+
   const parameter = { name: "", in: "", required: false };
   const startIndent = countIndent(startLine);
-  const cleanValue = (value) => String(value ?? "").trim().replace(/^['"]|['"]$/g, "");
   const applyField = (text) => {
     const match = String(text ?? "").trim().match(/^(name|in|required):\s*(.+)$/);
     if (!match) return;
     const [, key, rawValue] = match;
-    const value = cleanValue(rawValue);
-    if (key === "name") parameter.name = value;
-    if (key === "in") parameter.in = value;
-    if (key === "required") parameter.required = value === "true";
+    const value = parseScalar(rawValue);
+    if (key === "name") parameter.name = String(value);
+    if (key === "in") parameter.in = String(value);
+    if (key === "required") parameter.required = value === true;
   };
+
   const firstItem = trimmedStart.slice(2).trim();
   if (firstItem.startsWith("{") && firstItem.endsWith("}")) {
     const body = firstItem.slice(1, -1);
@@ -97,87 +98,133 @@ function parseParameterBlock(lines, startIndex) {
     }
     return { parameter: parameter.name ? parameter : null, nextIndex: startIndex + 1 };
   }
+
   applyField(firstItem);
-  let i = startIndex + 1;
-  for (; i < lines.length; i += 1) {
-    const line = lines[i];
+  let nextIndex = startIndex + 1;
+  for (; nextIndex < lines.length; nextIndex += 1) {
+    const line = lines[nextIndex];
     const trimmed = line.trim();
     if (!trimmed) continue;
-    const indent = countIndent(line);
-    if (indent <= startIndent) break;
+    if (countIndent(line) <= startIndent) break;
     applyField(trimmed);
   }
-  return { parameter: parameter.name ? parameter : null, nextIndex: i };
+  return { parameter: parameter.name ? parameter : null, nextIndex };
 }
 
 function parseComponentParameters(lines) {
   const parameters = new Map();
-  const parametersStart = lines.findIndex((line) => /^\s{2}parameters:\s*$/.test(line));
-  if (parametersStart === -1) return parameters;
+  const wrapperStart = lines.findIndex((line) => /^\s{2}parameters:\s*$/.test(line));
+  const entryIndent = wrapperStart === -1 ? 0 : 4;
+  const startIndex = wrapperStart === -1 ? 0 : wrapperStart + 1;
+  const entryPattern = new RegExp(`^\\s{${entryIndent}}([A-Za-z0-9_-]+):\\s*(?:\\{(.+)\\})?\\s*$`);
 
-  for (let i = parametersStart + 1; i < lines.length; i++) {
-    if (/^\s{2}[A-Za-z0-9_-]+:\s*$/.test(lines[i])) break;
+  for (let i = startIndex; i < lines.length; i += 1) {
+    const line = lines[i];
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    if (wrapperStart !== -1 && countIndent(line) <= 2) break;
 
-    const inlineMatch = lines[i].match(/^\s{4}([A-Za-z0-9_-]+):\s*\{(.+)\}\s*$/);
-    if (inlineMatch) {
-      const body = inlineMatch[2];
-      const parameter = { name: "", in: "", required: false };
-      const nameMatch = body.match(/(?:^|,)\s*name:\s*([^,}]+)/);
-      if (nameMatch) parameter.name = parseScalar(nameMatch[1]);
-      const inMatch = body.match(/(?:^|,)\s*in:\s*([^,}]+)/);
-      if (inMatch) parameter.in = parseScalar(inMatch[1]);
-      const requiredMatch = body.match(/(?:^|,)\s*required:\s*([^,}]+)/);
+    const entryMatch = line.match(entryPattern);
+    if (!entryMatch) continue;
+    const parameter = { name: "", in: "", required: false, ref: "" };
+    const applyField = (value) => {
+      const field = String(value ?? "").trim();
+      const nameMatch = field.match(/^name:\s*(.+?)\s*$/);
+      if (nameMatch) parameter.name = String(parseScalar(nameMatch[1]));
+      const inMatch = field.match(/^in:\s*(.+?)\s*$/);
+      if (inMatch) parameter.in = String(parseScalar(inMatch[1]));
+      const requiredMatch = field.match(/^required:\s*(.+?)\s*$/);
       if (requiredMatch) parameter.required = parseScalar(requiredMatch[1]) === true;
-      if (parameter.name) parameters.set(inlineMatch[1], parameter);
-      continue;
-    }
+      const refMatch = field.match(/^\$ref:\s*["']?([^"']+)["']?\s*$/);
+      if (refMatch) parameter.ref = refMatch[1];
+    };
 
-    const componentMatch = lines[i].match(/^\s{4}([A-Za-z0-9_-]+):\s*$/);
-    if (!componentMatch) continue;
-
-    const block = [lines[i]];
-    for (let j = i + 1; j < lines.length; j++) {
-      if (/^\s{4}[A-Za-z0-9_-]+:\s*(?:\{.*\})?\s*$/.test(lines[j]) || /^\s{2}[A-Za-z0-9_-]+:\s*$/.test(lines[j])) break;
-      block.push(lines[j]);
+    if (entryMatch[2]) {
+      for (const match of entryMatch[2].matchAll(/(?:^|,)\s*(name|in|required|\$ref):\s*([^,}]+)/g)) {
+        applyField(`${match[1]}: ${match[2]}`);
+      }
+    } else {
+      for (let j = i + 1; j < lines.length; j += 1) {
+        const blockLine = lines[j];
+        const blockTrimmed = blockLine.trim();
+        if (!blockTrimmed || blockTrimmed.startsWith("#")) continue;
+        if (countIndent(blockLine) <= entryIndent) break;
+        applyField(blockTrimmed);
+      }
     }
-
-    const parameter = { name: "", in: "", required: false };
-    for (const line of block) {
-      const trimmed = line.trim();
-      const nameMatch = trimmed.match(/^name:\s*(.+?)\s*$/);
-      if (nameMatch) parameter.name = parseScalar(nameMatch[1]);
-      const inMatch = trimmed.match(/^in:\s*(.+?)\s*$/);
-      if (inMatch) parameter.in = parseScalar(inMatch[1]);
-      const requiredMatch = trimmed.match(/^required:\s*(.+?)\s*$/);
-      if (requiredMatch) parameter.required = parseScalar(requiredMatch[1]) === true;
-    }
-    if (parameter.name) parameters.set(componentMatch[1], parameter);
+    parameters.set(entryMatch[1], parameter);
   }
 
   return parameters;
 }
 
-const externalComponentParameterCache = new Map();
-function componentParametersForFile(file) {
-  if (externalComponentParameterCache.has(file)) return externalComponentParameterCache.get(file);
+const rawComponentParameterCache = new Map();
+const resolvedComponentParameterCache = new Map();
+
+function rawComponentParametersForFile(file) {
+  if (rawComponentParameterCache.has(file)) return rawComponentParameterCache.get(file);
   const absolute = path.join(repoRoot, file);
-  const parsed = fs.existsSync(absolute) ? parseComponentParameters(read(file).split(/\r?\n/)) : new Map();
-  externalComponentParameterCache.set(file, parsed);
+  const parsed = fs.existsSync(absolute)
+    ? parseComponentParameters(read(file).split(/\r?\n/))
+    : new Map();
+  rawComponentParameterCache.set(file, parsed);
   return parsed;
 }
-function resolveParameterReference(reference, file, componentParameters) {
-  const localPrefix = "#/components/parameters/";
-  if (reference.startsWith(localPrefix)) return componentParameters.get(reference.slice(localPrefix.length)) ?? null;
-  const marker = "#/components/parameters/";
-  const markerIndex = reference.indexOf(marker);
-  if (markerIndex <= 0) return null;
-  const referencedPath = reference.slice(0, markerIndex);
-  const parameterName = reference.slice(markerIndex + marker.length);
-  const absolute = path.resolve(repoRoot, path.dirname(file), referencedPath);
-  const relative = toPosix(path.relative(repoRoot, absolute));
-  if (!relative || relative.startsWith("..")) return null;
-  return componentParametersForFile(relative).get(parameterName) ?? null;
+
+function splitParameterReference(reference, file) {
+  const [referenceFile = "", pointer = ""] = String(reference).split("#", 2);
+  const targetFile = referenceFile
+    ? toPosix(path.relative(repoRoot, path.resolve(repoRoot, path.dirname(file), referenceFile)))
+    : file;
+  const normalizedPointer = pointer.replace(/^\//, "");
+  const parameterName = normalizedPointer.startsWith("components/parameters/")
+    ? normalizedPointer.slice("components/parameters/".length)
+    : normalizedPointer;
+  return { targetFile, parameterName };
 }
+
+function resolveComponentParameter(file, parameterName, visited = new Set()) {
+  const key = `${file}#${parameterName}`;
+  if (resolvedComponentParameterCache.has(key)) return resolvedComponentParameterCache.get(key);
+  if (visited.has(key)) return null;
+  const nextVisited = new Set(visited);
+  nextVisited.add(key);
+
+  const parameter = rawComponentParametersForFile(file).get(parameterName);
+  if (!parameter) return null;
+  if (!parameter.ref) {
+    resolvedComponentParameterCache.set(key, parameter);
+    return parameter;
+  }
+
+  const target = splitParameterReference(parameter.ref, file);
+  if (!target.parameterName || !target.targetFile || target.targetFile.startsWith("..")) return null;
+  const resolved = resolveComponentParameter(target.targetFile, target.parameterName, nextVisited);
+  if (resolved) resolvedComponentParameterCache.set(key, resolved);
+  return resolved;
+}
+
+function componentParametersForFile(file) {
+  const resolved = new Map();
+  for (const name of rawComponentParametersForFile(file).keys()) {
+    const parameter = resolveComponentParameter(file, name);
+    if (parameter) resolved.set(name, parameter);
+  }
+  return resolved;
+}
+
+function resolveParameterReference(reference, file, componentParameters) {
+  const target = splitParameterReference(reference, file);
+  if (!target.parameterName) return null;
+  if (!target.targetFile || target.targetFile.startsWith("..")) return null;
+
+  const absolute = path.join(repoRoot, target.targetFile);
+  if (fs.existsSync(absolute)) {
+    return resolveComponentParameter(target.targetFile, target.parameterName);
+  }
+  return target.targetFile === file ? componentParameters.get(target.parameterName) ?? null : null;
+}
+
 function collectParameters(blockLines, componentParameters, file) {
   const parameters = [];
   for (let i = 0; i < blockLines.length; i += 1) {
