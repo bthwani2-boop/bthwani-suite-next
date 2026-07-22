@@ -123,25 +123,20 @@ function IdentityAccessPanel({
 
   const handleDevQuickLogin = async () => {
     const devUser = devUsernameForRole(requiredRole);
-    const candidatePasswords = [devUser, "password123", "password", "bthwani123"];
+    const devPass = "123456";
 
     setSubmitting(true);
     setFeedback("");
     setUsername(devUser);
-    setPassword(devUser);
+    setPassword(devPass);
 
-    for (const pass of candidatePasswords) {
-      try {
-        await login(devUser, pass);
-        return;
-      } catch {
-        // Try next candidate
-      }
+    try {
+      await login(devUser, devPass);
+    } catch (error) {
+      setFeedback(identityErrorPresentation(errorCode(error)).description);
+    } finally {
+      setSubmitting(false);
     }
-
-    setPassword("");
-    setFeedback(`تم إدخال حساب المطور (${devUser}). أدخل كلمة المرور للدخول.`);
-    setSubmitting(false);
   };
 
   return (

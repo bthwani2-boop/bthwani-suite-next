@@ -16,7 +16,7 @@ import { getDshFlowPolicySummary } from '../../shared/operations/dsh-operational
 import {
   readCaptainForegroundLocation,
   type DshCaptainLocationPush,
-} from '../../shared/delivery';
+} from '../../shared/delivery/use-captain-order-runtime';
 
 type LastLocation = {
   readonly latitude: number;
