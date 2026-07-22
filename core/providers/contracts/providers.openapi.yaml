@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: BThwani Core External Provider API
-  version: 0.4.0
-  description: External provider registry, governed health and database-backed readiness, secret-safe configuration, and provider invocation API.
+  version: 0.5.0
+  description: External provider registry, governed health and database-backed readiness, secret-safe configuration, atomic audit, idempotent mutation, and provider invocation API.
 
 x-bthwani-owner: core/providers
 x-bthwani-contract-state: CONTRACT_ACTIVE
@@ -95,10 +95,27 @@ paths:
           description: Provider not found.
     patch:
       operationId: updateProvider
-      summary: Update provider state, parameters, or write-only credentials.
+      summary: Atomically update provider state, parameters, or write-only credentials with audit and idempotency.
       tags: [ExternalProviderManagement]
       security:
         - bearerAuth: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          description: Caller-generated identifier. Reuse with the same request returns the original response; reuse with a different request returns 409.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 200
+        - name: X-Correlation-ID
+          in: header
+          required: true
+          description: Trace identifier persisted with the provider audit record.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 200
       requestBody:
         required: true
         content:
@@ -107,19 +124,21 @@ paths:
               $ref: "#/components/schemas/UpdateProviderRequest"
       responses:
         "200":
-          description: Updated secret-safe provider configuration.
+          description: Updated secret-safe provider configuration or the original idempotent response.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ExternalProvider"
         "400":
-          description: Invalid provider update.
+          description: Invalid provider update or missing governance headers.
         "401":
           description: Authentication is required.
         "403":
           description: Provider update permission is required.
         "404":
           description: Provider not found.
+        "409":
+          description: The idempotency key was already used with a different request.
 
   /providers/maps/search:
     post:
