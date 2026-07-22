@@ -15,6 +15,10 @@ on:
       - "services/dsh/frontend/app-field/escalation/DshFieldWorkQueueScreen.tsx"
       - "services/dsh/frontend/app-field/escalation/DshFieldReadinessChecklistScreen.tsx"
       - "services/dsh/frontend/control-panel/partners/field-readiness/FieldReadinessQueueScreen.tsx"
+      - "services/dsh/contracts/components/schemas/field.schemas.yaml"
+      - "services/dsh/contracts/paths/field.paths.yaml"
+      - "services/dsh/contracts/generated/dsh.bundle.openapi.yaml"
+      - "services/dsh/clients/generated/dsh-api.ts"
       - "services/dsh/tests/jrn-024-field-readiness.test.mjs"
       - "services/dsh/tsconfig.jrn-024.json"
       - ".github/workflows/jrn-024-field-readiness-verification.yml"
@@ -30,6 +34,10 @@ on:
       - "services/dsh/frontend/app-field/escalation/DshFieldWorkQueueScreen.tsx"
       - "services/dsh/frontend/app-field/escalation/DshFieldReadinessChecklistScreen.tsx"
       - "services/dsh/frontend/control-panel/partners/field-readiness/FieldReadinessQueueScreen.tsx"
+      - "services/dsh/contracts/components/schemas/field.schemas.yaml"
+      - "services/dsh/contracts/paths/field.paths.yaml"
+      - "services/dsh/contracts/generated/dsh.bundle.openapi.yaml"
+      - "services/dsh/clients/generated/dsh-api.ts"
       - "services/dsh/tests/jrn-024-field-readiness.test.mjs"
       - "services/dsh/tsconfig.jrn-024.json"
       - ".github/workflows/jrn-024-field-readiness-verification.yml"
@@ -45,6 +53,23 @@ jobs:
   verify:
     name: JRN-024 targeted full-stack verification
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: dsh_test
+          POSTGRES_PASSWORD: dsh_test_password
+          POSTGRES_DB: dsh_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U dsh_test -d dsh_test"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      DATABASE_URL: postgres://dsh_test:dsh_test_password@127.0.0.1:5432/dsh_test?sslmode=disable
+      PGPASSWORD: dsh_test_password
     steps:
       - name: Checkout repository state
         uses: actions/checkout@v4
@@ -80,17 +105,45 @@ jobs:
             go build ./internal/http
           } 2>&1 | tee jrn-024-go-test.log
 
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Apply DSH migrations to isolated PostgreSQL
+        id: migrate
+        shell: bash
+        run: |
+          set -o pipefail
+          for migration in $(find services/dsh/database/migrations -maxdepth 1 -type f -name '*.sql' | sort); do
+            echo "Applying ${migration}"
+            psql -h 127.0.0.1 -U dsh_test -d dsh_test -X -v ON_ERROR_STOP=1 -f "${migration}"
+          done 2>&1 | tee jrn-024-migrations.log
+
+      - name: Run JRN-024 PostgreSQL integration tests
+        id: db_verify
+        working-directory: services/dsh/backend
+        env:
+          DSH_REQUIRE_DB_TESTS: "true"
+        shell: bash
+        run: |
+          set -o pipefail
+          go test ./internal/fieldreadiness -count=1 2>&1 | tee jrn-024-db-test.log
+
       - name: Upload JRN-024 backend diagnostics
-        if: failure() && steps.backend_verify.outcome == 'failure'
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: jrn-024-backend-diagnostics
-          path: services/dsh/backend/jrn-024-go-test.log
-          if-no-files-found: error
+          path: |
+            services/dsh/backend/jrn-024-go-test.log
+            services/dsh/backend/jrn-024-db-test.log
+            jrn-024-migrations.log
+          if-no-files-found: warn
           retention-days: 3
 
       - name: Verify JRN-024 shared brain and affected surfaces
         run: pnpm --dir services/dsh exec tsc -p tsconfig.jrn-024.json --noEmit --pretty false
 
-      - name: Verify JRN-024 full-stack bindings
+      - name: Verify JRN-024 full-stack and contract bindings
         run: node --test services/dsh/tests/jrn-024-field-readiness.test.mjs
