@@ -10,7 +10,10 @@ export * from './delivery.view-model';
 
 // Adapters
 export * from './delivery.adapters';
-export * from './use-captain-order-runtime';
+
+// Native captain runtime is intentionally excluded from this general barrel.
+// It depends on expo-location and must be imported explicitly by app-captain from:
+// ./use-captain-order-runtime
 
 // Captain exports
 export * from './captain.contract';
