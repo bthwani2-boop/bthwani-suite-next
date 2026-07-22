@@ -98,9 +98,11 @@ func (s *protectedStoreServer) handleUpdateCatalogPlatformPolicyAtomic(w http.Re
 
 // registerUnifiedCatalogRoutes binds exact paths consumed by the shared
 // multi-surface clients and restores the platform policy routes declared by
-// the capability registry. JRN-011 routes are registered here because this is
-// the final protected-route extension point called by NewRouter.
+// the capability registry. It is the final protected-route extension point
+// called by NewRouter, so independent bounded registrars are composed here.
 func registerUnifiedCatalogRoutes(mux *http.ServeMux, s *protectedStoreServer) {
+	registerDeliveryProofRoutes(mux, s)
+
 	// JRN-011 canonical order-truth routes. Legacy /orders routes remain for
 	// compatibility while all new shared clients consume these governed paths.
 	mux.HandleFunc("POST /dsh/client/order-truth", s.handleCreateOrderTruth)
