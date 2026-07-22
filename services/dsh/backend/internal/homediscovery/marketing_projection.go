@@ -75,13 +75,15 @@ func listCampaignPromos(ctx context.Context, db *sql.DB, query HomeDiscoveryQuer
 		       COALESCE(c.description,''),
 		       'حملة',
 		       CASE WHEN c.target_type='store' THEN COALESCE(s.hero_image_url,s.logo_url,'') ELSE '' END,
-		       CASE WHEN c.target_type IN ('store','category','subcategory') THEN c.target_type ELSE 'none' END,
+		       CASE WHEN c.target_type='store' THEN 'store' WHEN c.target_type IN ('category','subcategory') THEN 'category' ELSE 'none' END,
 		       CASE WHEN c.target_type IN ('store','category','subcategory') THEN COALESCE(c.target_id,'') ELSE '' END
 		FROM dsh_marketing_campaigns c
 		LEFT JOIN dsh_stores s ON c.target_type='store' AND s.id::TEXT=c.target_id
 		WHERE c.archived_at IS NULL
 		  AND c.status='active'
 		  AND (c.audience='all' OR (c.audience='client' AND $3='authenticated'))
+		  AND (COALESCE(c.target_city_code,'')='' OR c.target_city_code=$1)
+		  AND (COALESCE(c.target_service_area_code,'')='' OR c.target_service_area_code=$2)
 		  AND COALESCE(c.start_date,'') <> ''
 		  AND COALESCE(c.end_date,'') <> ''
 		  AND c.start_date <= TO_CHAR(CURRENT_DATE,'YYYY-MM-DD')
