@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Pressable } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Text, Icon, Box, Button, spacing, radius, useTheme } from '@bthwani/ui-kit';
 import { ActorWalletPanel } from '../../actor-wallet';
 import { RepresentativeCommissionPanel } from '../../jrn036';
@@ -36,25 +36,53 @@ export function WltDshPartnerBridge({
   const resolvedSubtitle = subtitle ?? activeZoneLabel ?? 'المحفظة والتسويات وعهدة COD من WLT';
   const resolvedOnPress = onPress ?? onBack;
   const theme = useTheme() as any;
+  const styles = React.useMemo(
+    () => StyleSheet.create({
+      header: {
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        paddingVertical: spacing[3],
+        paddingHorizontal: spacing[4],
+        backgroundColor: theme.surfaceHighlight,
+        borderRadius: radius.md,
+      },
+      headerPressed: {
+        backgroundColor: theme.surfaceInset,
+      },
+      headingContent: {
+        flex: 1,
+        marginRight: spacing[3],
+        alignItems: 'flex-end',
+      },
+      title: {
+        color: theme.text,
+        fontWeight: '700',
+        fontSize: 16,
+      },
+      subtitle: {
+        color: theme.textMuted,
+        fontSize: 14,
+        marginTop: 4,
+        textAlign: 'right',
+      },
+      actions: {
+        gap: spacing[3],
+      },
+    }),
+    [theme.surfaceHighlight, theme.surfaceInset, theme.text, theme.textMuted],
+  );
 
   return (
     <Box padding={4} gap={4}>
       {resolvedOnPress ? (
         <Pressable
           onPress={resolvedOnPress}
-          style={({ pressed }: { pressed: boolean }) => ({
-            flexDirection: 'row-reverse',
-            alignItems: 'center',
-            paddingVertical: spacing[3],
-            paddingHorizontal: spacing[4],
-            backgroundColor: pressed ? theme.surfaceInset : theme.surfaceHighlight,
-            borderRadius: radius.md,
-          })}
+          style={({ pressed }: { pressed: boolean }) => [styles.header, pressed ? styles.headerPressed : null]}
         >
           <Icon name="arrow-right" tone="muted" size={20} />
-          <View style={{ flex: 1, marginRight: spacing[3], alignItems: 'flex-end' }}>
-            <Text style={{ color: theme.text, fontWeight: '700', fontSize: 16 }}>{resolvedTitle}</Text>
-            <Text style={{ color: theme.textMuted, fontSize: 14, marginTop: 4, textAlign: 'right' }}>{resolvedSubtitle}</Text>
+          <View style={styles.headingContent}>
+            <Text style={styles.title}>{resolvedTitle}</Text>
+            <Text style={styles.subtitle}>{resolvedSubtitle}</Text>
           </View>
         </Pressable>
       ) : null}
@@ -64,7 +92,7 @@ export function WltDshPartnerBridge({
       <RepresentativeCommissionPanel actorType="partner" title="عمولات الشريك" embedded />
       <PayoutDestinationPanel actorType="partner" title="وجهة صرف الشريك وطلبات الدفع" embedded />
 
-      <View style={{ gap: spacing[3] }}>
+      <View style={styles.actions}>
         {onOpenExpandedWallet ? (
           <Button label="عرض المحفظة الكاملة" tone="brand" onPress={onOpenExpandedWallet} />
         ) : null}
