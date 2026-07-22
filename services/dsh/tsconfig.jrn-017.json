@@ -1,0 +1,37 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false
+  },
+  "include": [
+    "frontend/shared/_kernel/**/*.ts",
+    "frontend/shared/dispatch/**/*.ts",
+    "frontend/shared/delivery/**/*.ts",
+    "frontend/shared/delivery/**/*.tsx",
+    "frontend/shared/orders/**/*.ts",
+    "frontend/shared/orders/**/*.tsx",
+    "frontend/shared/order-truth/**/*.ts",
+    "frontend/shared/order-truth/**/*.tsx",
+    "frontend/shared/partner-delivery/**/*.ts",
+    "frontend/shared/partner-delivery/**/*.tsx",
+    "frontend/shared/analytics/**/*.ts",
+    "frontend/shared/analytics/**/*.tsx",
+    "frontend/shared/partner/**/*.ts",
+    "frontend/shared/partner/**/*.tsx",
+    "frontend/app-captain/orders/DshCaptainMapScreen.tsx",
+    "frontend/app-captain/orders/OperationalCaptainExecutionScreen.tsx",
+    "frontend/app-captain/DshOperationScreen.tsx",
+    "frontend/app-client/orders/ClientLiveTrackingCard.tsx",
+    "frontend/app-client/orders/OrderTrackingScreen.tsx",
+    "frontend/app-client/orders/ClientPreparationDecisionPanel.tsx",
+    "frontend/app-client/orders/useClientOrderJourneyController.ts",
+    "frontend/app-partner/orders/PartnerDispatchTrackingScreen.tsx",
+    "frontend/app-partner/DshPartnerOrderJourneyRenderer.tsx",
+    "frontend/control-panel/dashboard/DispatchTrackingAlertsPanel.tsx",
+    "frontend/control-panel/dashboard/DshOperationalDashboardScreen.tsx",
+    "frontend/**/*.d.ts"
+  ]
+}
