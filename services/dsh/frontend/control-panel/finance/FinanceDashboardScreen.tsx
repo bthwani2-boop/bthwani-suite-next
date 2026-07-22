@@ -16,6 +16,7 @@ import {
 import { useFinanceController } from "../../shared/finance-wlt-link/finance/finance.controller";
 import { PayoutRequestsPanel } from "./PayoutRequestsPanel";
 import { ReconciliationCasesPanel } from "./ReconciliationCasesPanel";
+import { CodReconciliationCasesPanel } from "./CodReconciliationCasesPanel";
 import { RefundsCommandPanel } from "./RefundsCommandPanel";
 import type { WltFinancialCenter, WltFinancialCenterSection, WltAccountPositionLine } from "@bthwani/wlt";
 
@@ -115,8 +116,6 @@ export function FinanceDashboardScreen() {
   const renderContent = () => {
     const activeSub = activeSubGroup || activeGroupMeta.subGroups?.[0]?.id;
 
-    // The refund command deck owns its own precise loading/offline/conflict
-    // states. Do not hide it behind the aggregate finance read-model state.
     if (activeGroup === "refunds-disputes-holds" && activeSub === "refunds") {
       return <RefundsCommandPanel />;
     }
@@ -152,7 +151,7 @@ export function FinanceDashboardScreen() {
     }
     if (activeGroup === "settlements-payouts") {
       const requests = runtimeFinance?.state === "runtime" ? runtimeFinance.data.payoutRequests : [];
-      return <><PayoutRequestsPanel requests={requests} reload={reload} /><ReconciliationCasesPanel /></>;
+      return <><PayoutRequestsPanel requests={requests} reload={reload} /><CodReconciliationCasesPanel /><ReconciliationCasesPanel /></>;
     }
     return (
       <Card style={{ padding: "2rem", alignItems: "center", justifyContent: "center" }}>
