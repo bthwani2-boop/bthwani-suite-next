@@ -21,6 +21,7 @@ import {
   useOrderTruthCollectionController,
   type OrderTruth,
 } from "../../shared/order-truth";
+import { OrderRefundStatusCard } from "../../shared/finance-wlt-link/wlt-refund/OrderRefundStatusCard";
 
 type StatusTone = "neutral" | "success" | "warning" | "danger" | "info";
 
@@ -28,15 +29,7 @@ function orderStatusTone(status: string): StatusTone {
   if (status === "pending" || status === "arrived_customer") return "warning";
   if (status === "ready_for_pickup" || status === "delivered" || status === "returned_to_store") return "success";
   if (status.startsWith("cancelled_") || status.startsWith("failed_")) return "danger";
-  if ([
-    "store_accepted",
-    "preparing",
-    "driver_assigned",
-    "driver_arrived_store",
-    "picked_up",
-    "returning_to_store",
-    "return_arrived_store",
-  ].includes(status)) return "info";
+  if (["store_accepted", "preparing", "driver_assigned", "driver_arrived_store", "picked_up", "returning_to_store", "return_arrived_store"].includes(status)) return "info";
   return "neutral";
 }
 
@@ -75,12 +68,9 @@ function OrderCard({ order, onOpenOrder }: { order: OrderTruth; onOpenOrder?: (i
             </Text>
           </View>
         </View>
-
         <View style={styles.statusRow}>
           <Badge label={view.statusLabel} tone={orderStatusTone(order.status)} />
-          <Text role="caption" tone="muted" style={styles.dateText}>
-            {`${bidiIsolate(order.orderNumber)} • ${view.createdAtLabel}`}
-          </Text>
+          <Text role="caption" tone="muted" style={styles.dateText}>{`${bidiIsolate(order.orderNumber)} • ${view.createdAtLabel}`}</Text>
         </View>
       </Pressable>
 
@@ -91,9 +81,7 @@ function OrderCard({ order, onOpenOrder }: { order: OrderTruth; onOpenOrder?: (i
           {items.map((item) => (
             <View key={item.id} style={styles.itemRow}>
               <Text role="body" style={styles.itemName}>{item.productName}</Text>
-              <Text role="bodyStrong" style={styles.itemQtyPrice}>
-                {`×${item.quantity} (${formatMinorUnits(item.lineTotalMinorUnits, order.currency)})`}
-              </Text>
+              <Text role="bodyStrong" style={styles.itemQtyPrice}>{`×${item.quantity} (${formatMinorUnits(item.lineTotalMinorUnits, order.currency)})`}</Text>
             </View>
           ))}
           <View style={styles.truthMeta}>
@@ -101,7 +89,7 @@ function OrderCard({ order, onOpenOrder }: { order: OrderTruth; onOpenOrder?: (i
             <Text role="caption" tone="muted">حالة الدفع: {order.paymentStatusProjection}</Text>
             <Text role="caption" tone="muted">الإصدار: {order.version}</Text>
           </View>
-
+          <OrderRefundStatusCard orderId={order.id} surface="client" />
           <View style={styles.actionRow}>
             {canOpen ? (
               <Button
@@ -123,30 +111,16 @@ function OrderCard({ order, onOpenOrder }: { order: OrderTruth; onOpenOrder?: (i
 export function OrdersListScreen({ onOpenOrder, onBack }: Props) {
   const { state, reload } = useOrderTruthCollectionController("client", { limit: 100 });
   const visibleOrders = state.kind === "success" || state.kind === "partial" ? state.orders : [];
-
   return (
     <View style={styles.container}>
       <TopBar title="طلباتي" {...(onBack ? { onBack } : {})} />
-
       {state.kind === "idle" || state.kind === "loading" ? (
-        <View style={styles.center}>
-          <Text role="body">جارٍ تحميل حقيقة طلباتك من DSH…</Text>
-        </View>
+        <View style={styles.center}><Text role="body">جارٍ تحميل حقيقة طلباتك من DSH…</Text></View>
       ) : state.kind === "offline" || state.kind === "forbidden" || state.kind === "error" ? (
         <View style={styles.center}>
-          <Text role="bodyStrong" style={state.kind === "forbidden" ? styles.warningText : styles.dangerText}>
-            {state.kind === "forbidden" ? "لا تملك الجلسة صلاحية الطلبات" : "تعذر تحميل الطلبات"}
-          </Text>
+          <Text role="bodyStrong" style={state.kind === "forbidden" ? styles.warningText : styles.dangerText}>{state.kind === "forbidden" ? "لا تملك الجلسة صلاحية الطلبات" : "تعذر تحميل الطلبات"}</Text>
           <Text role="bodySm" tone="muted">{state.message}</Text>
-          {state.kind !== "forbidden" ? (
-            <Button
-              label="إعادة المحاولة"
-              accessibilityLabel="إعادة محاولة تحميل طلباتي"
-              tone="secondary"
-              onPress={reload}
-              style={styles.retryButton}
-            />
-          ) : null}
+          {state.kind !== "forbidden" ? <Button label="إعادة المحاولة" accessibilityLabel="إعادة محاولة تحميل طلباتي" tone="secondary" onPress={reload} style={styles.retryButton} /> : null}
         </View>
       ) : state.kind === "empty" ? (
         <View style={styles.center}>
@@ -162,13 +136,7 @@ export function OrdersListScreen({ onOpenOrder, onBack }: Props) {
               <Button label="تحديث" accessibilityLabel="تحديث حقيقة الطلبات" tone="ghost" size="sm" onPress={reload} />
             </Surface>
           ) : null}
-          {visibleOrders.map((order) => (
-            <OrderCard
-              key={order.id}
-              order={order}
-              {...(onOpenOrder ? { onOpenOrder } : {})}
-            />
-          ))}
+          {visibleOrders.map((order) => <OrderCard key={order.id} order={order} {...(onOpenOrder ? { onOpenOrder } : {})} />)}
         </MobileScrollView>
       )}
     </View>
@@ -176,121 +144,29 @@ export function OrdersListScreen({ onOpenOrder, onBack }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colorRoles.surfaceWarm,
-  },
-  scrollContent: {
-    paddingBottom: spacing[12],
-  },
-  center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: spacing[6],
-    gap: spacing[2],
-  },
-  retryButton: {
-    marginTop: spacing[4],
-  },
-  warningText: {
-    color: colorRoles.warning,
-  },
-  dangerText: {
-    color: colorRoles.danger,
-  },
-  partialBanner: {
-    padding: spacing[3],
-    gap: spacing[2],
-    borderColor: colorRoles.warning,
-    borderWidth: 1,
-    marginBottom: spacing[3],
-  },
-  card: {
-    backgroundColor: colorRoles.surfaceBase,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colorRoles.borderSubtle,
-    overflow: "hidden",
-    marginBottom: spacing[3],
-  },
-  cardHeader: {
-    padding: spacing[4],
-  },
-  cardHeaderMain: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: spacing[3],
-  },
-  iconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: colorRoles.borderSubtle,
-    backgroundColor: brandScale.action[50],
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerText: {
-    flex: 1,
-    gap: 2,
-  },
-  titleText: {
-    color: colorRoles.textPrimary,
-    textAlign: "right",
-  },
-  subtitleText: {
-    textAlign: "right",
-  },
-  statusRow: {
-    flexDirection: "row-reverse",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: spacing[3],
-    gap: spacing[2],
-  },
-  dateText: {
-    textAlign: "right",
-    flexShrink: 1,
-  },
-  expandedContent: {
-    paddingHorizontal: spacing[4],
-    paddingBottom: spacing[4],
-  },
-  divider: {
-    height: 1,
-    backgroundColor: colorRoles.borderSubtle,
-    marginBottom: spacing[3],
-  },
-  sectionTitle: {
-    textAlign: "right",
-    color: colorRoles.textPrimary,
-    marginBottom: spacing[2],
-  },
-  itemRow: {
-    flexDirection: "row-reverse",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: spacing[1],
-    gap: spacing[2],
-  },
-  itemName: {
-    textAlign: "right",
-    flex: 1,
-  },
-  itemQtyPrice: {
-    color: colorRoles.textSecondary,
-  },
-  truthMeta: {
-    marginTop: spacing[3],
-    gap: spacing[1],
-  },
-  actionRow: {
-    flexDirection: "row-reverse",
-    marginTop: spacing[4],
-  },
-  actionButton: {
-    flex: 1,
-  },
+  container: { flex: 1, backgroundColor: colorRoles.surfaceWarm },
+  scrollContent: { paddingBottom: spacing[12] },
+  center: { flex: 1, justifyContent: "center", alignItems: "center", padding: spacing[6], gap: spacing[2] },
+  retryButton: { marginTop: spacing[4] },
+  warningText: { color: colorRoles.warning },
+  dangerText: { color: colorRoles.danger },
+  partialBanner: { padding: spacing[3], gap: spacing[2], borderColor: colorRoles.warning, borderWidth: 1, marginBottom: spacing[3] },
+  card: { backgroundColor: colorRoles.surfaceBase, borderRadius: 16, borderWidth: 1, borderColor: colorRoles.borderSubtle, overflow: "hidden", marginBottom: spacing[3] },
+  cardHeader: { padding: spacing[4] },
+  cardHeaderMain: { flexDirection: "row-reverse", alignItems: "center", gap: spacing[3] },
+  iconContainer: { width: 44, height: 44, borderRadius: 15, borderWidth: 1, borderColor: colorRoles.borderSubtle, backgroundColor: brandScale.action[50], alignItems: "center", justifyContent: "center" },
+  headerText: { flex: 1, gap: 2 },
+  titleText: { color: colorRoles.textPrimary, textAlign: "right" },
+  subtitleText: { textAlign: "right" },
+  statusRow: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", marginTop: spacing[3], gap: spacing[2] },
+  dateText: { textAlign: "right", flexShrink: 1 },
+  expandedContent: { paddingHorizontal: spacing[4], paddingBottom: spacing[4] },
+  divider: { height: 1, backgroundColor: colorRoles.borderSubtle, marginBottom: spacing[3] },
+  sectionTitle: { textAlign: "right", color: colorRoles.textPrimary, marginBottom: spacing[2] },
+  itemRow: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", paddingVertical: spacing[1], gap: spacing[2] },
+  itemName: { textAlign: "right", flex: 1 },
+  itemQtyPrice: { color: colorRoles.textSecondary },
+  truthMeta: { marginTop: spacing[3], gap: spacing[1] },
+  actionRow: { flexDirection: "row-reverse", marginTop: spacing[4] },
+  actionButton: { flex: 1 },
 });
