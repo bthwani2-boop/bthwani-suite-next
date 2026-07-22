@@ -1,11 +1,13 @@
 openapi: 3.1.0
 info:
   title: DSH Financial Refund Orchestration
-  version: 1.0.0
+  version: 1.1.0
   description: >-
     JRN-035 DSH contract. DSH validates actor, permission, tenant and owned-order
     scope, then delegates all financial truth to WLT. Client and partner reads
-    intentionally exclude provider and operator evidence.
+    intentionally exclude provider and operator evidence. WLT outcome-persistence
+    failures are propagated without converting them into provider success or a
+    durably acknowledged unknown result.
 servers:
   - url: http://localhost:58080
 security:
@@ -125,6 +127,10 @@ paths:
     post:
       operationId: completeDshFinanceRefund
       summary: Execute an approved refund through WLT and the provider
+      description: >-
+        DSH preserves the WLT status and error body. A 202 is returned only when
+        WLT durably records provider_unknown. A 500 outcome-persistence failure
+        is not retry permission and must not cause another provider call.
       parameters:
         - $ref: '#/components/parameters/RefundId'
         - $ref: '#/components/parameters/TenantHeader'
@@ -148,6 +154,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ProviderUnknownError' }
+        '500': { $ref: '#/components/responses/OutcomePersistenceFailure' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '502': { $ref: '#/components/responses/WltUnavailable' }
@@ -393,6 +400,12 @@ components:
         - type: object
           properties:
             code: { const: PROVIDER_RESULT_UNKNOWN }
+    OutcomePersistenceError:
+      allOf:
+        - $ref: '#/components/schemas/Error'
+        - type: object
+          properties:
+            code: { const: REFUND_OUTCOME_PERSISTENCE_FAILED }
   responses:
     BadRequest:
       description: Invalid request or missing reconciliation evidence
@@ -419,6 +432,11 @@ components:
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
+    OutcomePersistenceFailure:
+      description: WLT could not durably persist the provider outcome; automatic retry is forbidden
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/OutcomePersistenceError' }
     WltUnavailable:
       description: DSH could not reach the canonical WLT financial service
       content:
