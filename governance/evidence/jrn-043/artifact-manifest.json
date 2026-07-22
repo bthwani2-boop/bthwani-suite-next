@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 3,
+  "capabilityId": "JRN-043",
+  "repositoryMode": "REMOTE_ONLY",
+  "branch": "sambassam",
+  "resolvedCommitSha": "5b4e382d889b350e5fac75b6331be10b3476d97f",
+  "currentStage": "G4_IMPLEMENTATION_VERIFIED",
+  "requestedStage": "G8_RELEASE_APPROVED",
+  "productTruthState": "NOT_APPLICABLE",
+  "applicableGates": [
+    "G0_INTAKE",
+    "G3_READY_FOR_IMPLEMENTATION",
+    "G4_IMPLEMENTATION_VERIFIED",
+    "G6_QA_APPROVED",
+    "G7_SECURITY_APPROVED",
+    "G8_RELEASE_APPROVED",
+    "JRN043_GOVERNANCE_CONTRACT_GATE",
+    "JRN043_CI_WORKFLOW_GATE"
+  ],
+  "passedGates": [
+    "G0_INTAKE",
+    "G3_READY_FOR_IMPLEMENTATION",
+    "G4_IMPLEMENTATION_VERIFIED"
+  ],
+  "failedGates": [],
+  "applicableEvidenceScopes": [
+    "static",
+    "qa",
+    "security",
+    "governance",
+    "ci",
+    "release"
+  ],
+  "passedEvidenceScopes": [
+    "static"
+  ],
+  "notApplicableStages": [
+    "G1_PRODUCT_MODEL_APPROVED",
+    "G2_DESIGN_APPROVED",
+    "G5_PRODUCT_ACCEPTED",
+    "G9_DEPLOYED",
+    "G10_PRODUCTION_VERIFIED"
+  ],
+  "stageExclusions": [
+    {
+      "stage": "G1_PRODUCT_MODEL_APPROVED",
+      "reason": "JRN-043 changes repository governance and CI controls only; no product behavior or actor journey is changed.",
+      "evidence": [
+        "governance/evidence/jrn-043/change-impact.json"
+      ]
+    },
+    {
+      "stage": "G2_DESIGN_APPROVED",
+      "reason": "No visual surface, interaction model, or UI composition is changed.",
+      "evidence": [
+        "governance/evidence/jrn-043/change-impact.json"
+      ]
+    },
+    {
+      "stage": "G5_PRODUCT_ACCEPTED",
+      "reason": "Product acceptance is not applicable because productImpact is NONE.",
+      "evidence": [
+        "governance/evidence/jrn-043/change-impact.json"
+      ]
+    },
+    {
+      "stage": "G9_DEPLOYED",
+      "reason": "The execution does not deploy application or infrastructure runtime and makes no deployment claim.",
+      "evidence": [
+        "governance/release/jrn-043-release-control-policy.json"
+      ]
+    },
+    {
+      "stage": "G10_PRODUCTION_VERIFIED",
+      "reason": "No production verification claim is made; production closure remains forbidden without live evidence.",
+      "evidence": [
+        "governance/release/jrn-043-release-control-policy.json"
+      ]
+    }
+  ],
+  "missingEvidence": [
+    "Independent governance contract approval on the final immutable commit",
+    "Independent CI workflow approval on the final immutable commit",
+    "Independent quality approval on the final immutable commit",
+    "Independent application-security approval on the final immutable commit",
+    "Release authority approval on the final immutable commit",
+    "Proven GitHub branch protection or ruleset and required-check enforcement for sambassam",
+    "Successful same-commit JRN-043 and critical workflow results"
+  ],
+  "requiredApprovals": [
+    "governance_contract_authority",
+    "ci_workflow_authority",
+    "independent_reviewer",
+    "independent_quality_authority",
+    "application_security_authority",
+    "release_authority"
+  ],
+  "approvals": [],
+  "changeAuthor": "openai-assistant",
+  "separationOfDutiesPass": false,
+  "openBlockers": [
+    "Independent governed approvals are not available to the implementation actor",
+    "Live repository protection and required-status enforcement remain unproven"
+  ],
+  "residualRisks": [
+    "Concurrent direct pushes to sambassam can supersede an already verified commit until branch protection is proven",
+    "A successful workflow run is evidence for one immutable commit only and does not authorize merge, release, or production deployment"
+  ],
+  "evidence": [
+    "governance/evidence/jrn-043/change-impact.json",
+    "governance/release/jrn-043-release-control-policy.json",
+    "tools/verification/jrn-043-sdlc-ci-release.test.mjs",
+    ".github/workflows/jrn-043-sdlc-governance-ci-release.yml"
+  ],
+  "decision": "NEEDS_EVIDENCE"
+}
