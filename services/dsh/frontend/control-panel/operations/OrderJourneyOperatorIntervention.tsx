@@ -196,20 +196,11 @@ export function OrderJourneyOperatorIntervention({
           ))}
         </Box>
         {selectedReason ? <Text role="caption" tone="muted">{selectedReason.description}</Text> : null}
-        <textarea
+        <TextField
+          label={noteRequired ? 'التوضيح المطلوب' : 'ملاحظة تشغيلية اختيارية'}
+          placeholder={noteRequired ? 'اكتب التوضيح المطلوب' : 'أضف سياقًا تشغيليًا عند الحاجة'}
           value={reasonNote}
-          onChange={(event) => setReasonNote(event.target.value)}
-          placeholder={noteRequired ? 'اكتب التوضيح المطلوب' : 'ملاحظة تشغيلية اختيارية'}
-          aria-label="توضيح إلغاء الطلب"
-          rows={3}
-          style={{
-            width: '100%',
-            padding: '10px 12px',
-            border: '1px solid var(--bthwani-control-panel-border)',
-            borderRadius: '8px',
-            background: 'var(--bthwani-control-panel-surface-base)',
-            resize: 'vertical',
-          }}
+          onChangeText={setReasonNote}
         />
         {message ? <Text role="bodySm" tone={state === 'error' ? 'danger' : 'success'}>{message}</Text> : null}
         <Button
