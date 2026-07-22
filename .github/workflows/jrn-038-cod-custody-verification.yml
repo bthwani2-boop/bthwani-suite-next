@@ -1,0 +1,121 @@
+name: JRN-038 COD Custody Verification
+
+on:
+  push:
+    branches: [sambassam]
+    paths:
+      - services/wlt/backend/internal/cod/**
+      - services/wlt/backend/internal/http/server.go
+      - services/wlt/contracts/jrn-038-cod-custody.openapi.yaml
+      - services/wlt/database/migrations/wlt-038_cod_custody_evidence_reconciliation.sql
+      - services/dsh/backend/internal/http/actor_finance_handlers.go
+      - services/dsh/backend/internal/http/jrn038_cod_finance_*.go
+      - services/dsh/backend/internal/http/refund_finance_routes.go
+      - services/dsh/backend/internal/wlt/actor_finance_client.go
+      - services/dsh/frontend/**/finance/**
+      - services/dsh/frontend/**/wlt-cod/**
+      - .github/workflows/jrn-038-cod-custody-verification.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jrn-038-cod-custody-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: wlt_jrn038
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d wlt_jrn038"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/wlt_jrn038?sslmode=disable
+      WLT_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/wlt_jrn038?sslmode=disable
+
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: pnpm
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.2
+          run_install: false
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.26.5
+          cache-dependency-path: |
+            services/wlt/backend/go.sum
+            services/dsh/backend/go.sum
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check Go formatting
+        shell: bash
+        run: |
+          test -z "$(gofmt -l services/wlt/backend/internal/cod services/wlt/backend/internal/http/server.go services/dsh/backend/internal/http services/dsh/backend/internal/wlt/actor_finance_client.go)"
+
+      - name: Apply WLT migrations from zero
+        shell: bash
+        run: |
+          for migration in $(find services/wlt/database/migrations -maxdepth 1 -type f -name '*.sql' | sort); do
+            echo "Applying ${migration}"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
+          done
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "SELECT to_regclass('public.wlt_cod_custody_evidence'), to_regclass('public.wlt_cod_reconciliation_cases');"
+
+      - name: Test WLT backend
+        working-directory: services/wlt/backend
+        run: go test ./...
+
+      - name: Test DSH backend
+        working-directory: services/dsh/backend
+        run: go test ./...
+
+      - name: Typecheck WLT boundary
+        run: pnpm --dir services/wlt typecheck
+
+      - name: Typecheck DSH shared and surfaces
+        run: pnpm --dir services/dsh typecheck
+
+      - name: Verify financial boundary guards
+        run: |
+          pnpm guard:wlt-financial-boundary
+          pnpm guard:fullstack-boundary
+
+      - name: Verify JRN-038 route and contract parity
+        shell: bash
+        run: |
+          grep -Fq 'POST /wlt/cod-records/{codRecordId}/collect' services/wlt/backend/internal/http/server.go
+          grep -Fq 'POST /wlt/cod-records/{codRecordId}/remit' services/wlt/backend/internal/http/server.go
+          grep -Fq 'GET /wlt/cod-reconciliation-cases' services/wlt/backend/internal/http/server.go
+          grep -Fq '/wlt/cod-records/{codRecordId}/collect:' services/wlt/contracts/jrn-038-cod-custody.openapi.yaml
+          grep -Fq '/wlt/cod-reconciliation-cases/{caseId}/resolve:' services/wlt/contracts/jrn-038-cod-custody.openapi.yaml
+          grep -Fq 'registerJRN038CodFinanceRoutes(mux, s)' services/dsh/backend/internal/http/refund_finance_routes.go
+          grep -Fq '/dsh/partner/me/finance/cod-records' services/dsh/backend/internal/http/jrn038_cod_finance_routes.go
+          grep -Fq '/dsh/control-panel/finance/cod-reconciliation-cases' services/dsh/backend/internal/http/jrn038_cod_finance_routes.go
