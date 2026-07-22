@@ -127,7 +127,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          go test -v ./internal/marketing -run 'TestCampaignTransitionPolicy|TestPartnerOfferTransitionPolicy|TestValidateCampaignDates|TestValidateCampaignActivationWindow|TestMarketingCampaignLifecycleDBIntegration|TestMarketingTickerLifecycleDBIntegration|TestMarketingTargetVisibilityGateDBIntegration' 2>&1 | tee "$RUNNER_TEMP/jrn-025-marketing-go.log"
+          go test -v ./internal/marketing -run 'TestCampaignTransitionPolicy|TestPartnerOfferTransitionPolicy|TestValidateCampaignDates|TestValidateCampaignActivationWindow|TestValidateCampaignRegion|TestMarketingCampaignLifecycleDBIntegration|TestMarketingTickerLifecycleDBIntegration|TestMarketingTargetVisibilityGateDBIntegration' 2>&1 | tee "$RUNNER_TEMP/jrn-025-marketing-go.log"
 
       - name: Verify JRN-025 HTTP routes and compilation
         id: marketing_http
