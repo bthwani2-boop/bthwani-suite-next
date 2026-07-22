@@ -13,6 +13,9 @@ assert.equal(truth.owners.productOwnerApproval, "PENDING");
 assert.equal(truth.owners.productAcceptanceDecision, "PENDING");
 assert.ok(truth.acceptance.criteria.length >= 10);
 assert.ok(truth.invariants.negative.some((value) => value.includes("captured session")));
+for (const actor of truth.actors) {
+  assert.match(actor.id, /^[a-z0-9-]+$/, `invalid governed actor id ${actor.id}`);
+}
 
 const migration = read("services/wlt/database/migrations/wlt-036_payment_session_operations_and_provider_events.sql");
 includesAll(migration, [
@@ -25,6 +28,16 @@ includesAll(migration, [
 ], "payment migration");
 const probes = read("infra/docker/scripts/wlt-migration-probes.ps1");
 assert.ok(probes.includes("wlt-036_payment_session_operations_and_provider_events.sql"));
+
+const providerMode = read("services/wlt/backend/internal/provider/provider_mode.go");
+includesAll(providerMode, [
+  "WLT_FINANCIAL_PROVIDER_MODE is required",
+  "WLT_ALLOW_MOCK_PROVIDER",
+  "ModeProduction",
+  "ErrProductionProviderUnavailable",
+  "WLT_FINANCIAL_PROVIDER_BASE_URL is required for sandbox mode",
+], "payment provider fail-closed configuration");
+assert.ok(!providerMode.includes('mode = ModeMock'), "provider mode must not silently default to mock");
 
 const router = read("services/wlt/backend/internal/http/server.go");
 includesAll(router, [
