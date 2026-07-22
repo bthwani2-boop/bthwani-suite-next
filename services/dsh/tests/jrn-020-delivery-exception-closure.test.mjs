@@ -30,3 +30,19 @@ test('JRN-020 governed mutation boundary is active in runtime', async () => {
   assert.match(main, /deliveryExceptionGovernedRouter/);
   assert.match(main, /CorsMiddleware\(authMode, deliveryExceptionGovernedRouter\)/);
 });
+
+test('JRN-020 blocks late delivery and keeps financial mutation WLT-owned', async () => {
+  const dispatch = await source('../backend/internal/dispatch/dispatch.go');
+  const exceptions = await source('../backend/internal/dispatch/delivery_exceptions.go');
+  const operatorSurface = await source('../frontend/control-panel/operations/ExceptionsEscalationsScreen.tsx');
+
+  assert.match(dispatch, /func SubmitPoD[\s\S]*ensureNoOpenDeliveryException\(tx, assignmentID\)/);
+  assert.match(exceptions, /UPDATE dsh_assignments SET status='completed'/);
+  assert.match(exceptions, /UPDATE dsh_orders SET status='returned_to_store'/);
+  assert.match(exceptions, /return_accepted_by_actor_id/);
+  assert.match(exceptions, /orders\.CancelOrder/);
+  assert.match(exceptions, /delivery-exception-cancel:/);
+  assert.match(operatorSurface, /cancelOrder\('operator'/);
+  assert.match(operatorSurface, /لن ينشئ DSH استردادًا مباشرًا/);
+  assert.match(operatorSurface, /ثم يقرر WLT تحرير الجلسة أو طلب الاسترداد/);
+});
