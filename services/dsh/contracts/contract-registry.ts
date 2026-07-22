@@ -23,6 +23,8 @@ export type DshContractRegistration = {
     | "dsh-order-truth"
     | "dsh-partner-onboarding"
     | "dsh-payment-sessions"
+    | "dsh-settlement-commissions"
+    | "dsh-payout-destinations"
     | "dsh-marketing-commercial"
     | "dsh-partner-commercial"
     | "dsh-partner-fleet"
@@ -156,6 +158,22 @@ export const DSH_CONTRACT_REGISTRY = [
     runtimeDependency: true,
     clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
     adapterOwner: "frontend/shared/finance-wlt-link",
+  },
+  {
+    id: "dsh-settlement-commissions",
+    path: "contracts/dsh.jrn-036-settlements-commissions.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/finance-wlt-link/jrn036",
+  },
+  {
+    id: "dsh-payout-destinations",
+    path: "contracts/dsh.jrn-037-payouts-destinations.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/finance-wlt-link/jrn037",
   },
   {
     id: "dsh-marketing-commercial",
