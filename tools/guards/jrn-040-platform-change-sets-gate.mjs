@@ -1,9 +1,10 @@
 import fs from "node:fs";
 
+const productTruthFile = "governance/product/contracts/jrn-040-platform-change-sets.product-truth.json";
 const contractFile = "core/platform-control/contracts/jrn-040-platform-change-sets.openapi.yaml";
 const generatedClientFile = "core/platform-control/clients/generated/jrn-040-platform-change-sets-api.ts";
 const requiredFiles = [
-  "governance/product/contracts/jrn-040-platform-change-sets.product-truth.json",
+  productTruthFile,
   "core/platform-control/database/migrations/platform-005_jrn040_change_set_validation.sql",
   "core/platform-control/backend/internal/platformcontrol/jrn040_change_set_read_create.go",
   "core/platform-control/backend/internal/platformcontrol/jrn040_change_set_workflow.go",
@@ -28,14 +29,17 @@ function requireText(file, tokens) {
 }
 
 if (failures.length === 0) {
-  const truth = JSON.parse(fs.readFileSync(requiredFiles[0], "utf8"));
+  const truth = JSON.parse(fs.readFileSync(productTruthFile, "utf8"));
   if (truth.journeyId !== "JRN-040") failures.push("product-truth:journeyId");
   if (truth.status !== "PENDING_INDEPENDENT_APPROVAL") failures.push("product-truth:status");
+  if (truth.contractAuthority?.authoritativeOpenApi !== contractFile) failures.push("product-truth:authoritativeOpenApi");
+  if (truth.contractAuthority?.generatedClient !== generatedClientFile) failures.push("product-truth:generatedClient");
   for (const invariant of [
     "approve_or_reject_own_change_set",
     "apply_stale_or_conflicting_change_set",
     "rollback_without_reason",
     "store_secret_or_credential_values_in_change_sets",
+    "snapshot_existing_sensitive_target_values",
   ]) {
     if (!truth.forbiddenActions.includes(invariant)) failures.push(`product-truth:forbidden:${invariant}`);
   }
@@ -60,6 +64,7 @@ if (failures.length === 0) {
   ]);
   requireText("core/platform-control/backend/internal/platformcontrol/jrn040_change_set_read_create.go", [
     "ErrSensitiveValue",
+    "ensureGovernedTargetIsNotSensitive",
     "proposedValueContainsSecret",
     "valuesRedacted",
     "maxGovernedChangeSetItems",
