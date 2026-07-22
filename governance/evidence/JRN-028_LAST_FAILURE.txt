@@ -2,7 +2,7 @@ status=FAILED
 check=WLT HTTP owner compilation
 exit_code=1
 command=bash -lc cd\ services/wlt/backend\ \&\&\ go\ test\ ./internal/http\ -run\ \'\^\$\' 
-tested_sha=02618ff0bf6ad3e7649633eb3f1d0666aa51ee74
+tested_sha=0ce30c791ab4337dae5db55cbb38fb26376ed0c9
 --- output tail ---
 # wlt-api/internal/payout
 internal/payout/jrn037_provider_process.go:135:74: input.OperatorID undefined (type string has no field or method OperatorID)
