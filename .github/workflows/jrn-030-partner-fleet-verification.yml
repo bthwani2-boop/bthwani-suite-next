@@ -11,6 +11,7 @@ on:
       - "services/dsh/backend/internal/http/journeys_026_030_routes_test.go"
       - "services/dsh/backend/cmd/dsh-api/main.go"
       - "services/dsh/database/migrations/dsh-059_partner_courier_connection_codes.sql"
+      - "services/dsh/database/migrations/dsh-089_store_team_actor_scope_uniqueness.sql"
       - "services/dsh/frontend/shared/partner/partner-fleet.api.ts"
       - "services/dsh/frontend/shared/partner/use-partner-fleet-controller.ts"
       - "services/dsh/frontend/app-partner/team/PartnerTeamManagementScreen.tsx"
@@ -32,6 +33,7 @@ on:
       - "services/dsh/backend/internal/http/journeys_026_030_routes_test.go"
       - "services/dsh/backend/cmd/dsh-api/main.go"
       - "services/dsh/database/migrations/dsh-059_partner_courier_connection_codes.sql"
+      - "services/dsh/database/migrations/dsh-089_store_team_actor_scope_uniqueness.sql"
       - "services/dsh/frontend/shared/partner/partner-fleet.api.ts"
       - "services/dsh/frontend/shared/partner/use-partner-fleet-controller.ts"
       - "services/dsh/frontend/app-partner/team/PartnerTeamManagementScreen.tsx"
@@ -122,17 +124,23 @@ jobs:
       - name: Prove JRN-030 schema invariants
         run: |
           psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d dsh_jrn_030 <<'SQL'
-          SELECT status
-            FROM dsh_partner_courier_connection_codes
-           WHERE FALSE;
-          SELECT indexname
-            FROM pg_indexes
-           WHERE schemaname = 'public'
-             AND indexname IN (
-               'uq_dsh_partner_courier_pending_code',
-               'uq_dsh_store_team_members_identity_actor'
-             )
-           ORDER BY indexname;
+          DO $$
+          DECLARE
+            matched_indexes integer;
+          BEGIN
+            SELECT COUNT(*)
+              INTO matched_indexes
+              FROM pg_indexes
+             WHERE schemaname = 'public'
+               AND indexname IN (
+                 'uq_dsh_partner_courier_pending_code',
+                 'uq_dsh_store_team_members_store_identity_actor'
+               );
+            IF matched_indexes <> 2 THEN
+              RAISE EXCEPTION 'JRN-030 required indexes missing: found % of 2', matched_indexes;
+            END IF;
+          END
+          $$;
           SQL
 
       - name: Execute JRN-030 PostgreSQL lifecycle proof
