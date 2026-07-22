@@ -3,6 +3,7 @@ import type { DshCaptainRoute, DshCaptainCommandTarget } from './captain.contrac
 import type { ActiveOrderPhase, StoreCourierStage } from './delivery.contract';
 import type { DshDeliveryStatus } from '../dispatch';
 import type { DshCaptainOrderBellItem, DshCaptainOrderDetailSummary } from '../orders';
+import type { CaptainPodState } from '../media/pod/pod-upload-flow';
 export type { ActiveOrderPhase, StoreCourierStage } from './delivery.contract';
 
 export type DshCaptainNavigationCommand = {
@@ -29,7 +30,7 @@ export type DshCaptainSurfaceState = {
   activeOrderDraft: string;
   activeOrderMessages: CompactOrderChatMessage[];
   storeCourierStage: StoreCourierStage;
-  captainPodState: 'ready' | 'loading' | 'success' | 'error';
+  captainPodState: CaptainPodState;
   captainPodPhotoUri: string | undefined;
   captainPodMediaKey: string | undefined;
   isDeclineSheetVisible: boolean;
