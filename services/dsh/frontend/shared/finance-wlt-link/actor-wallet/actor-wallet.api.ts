@@ -46,15 +46,25 @@ const { request } = createDshHttpClient(
   "dsh-representative-wallet",
 );
 
-function ownFinanceBase(actorType: RepresentativeActorType): string {
-  return `/dsh/${actorType}/me/finance`;
-}
+const walletPathByActor: Record<RepresentativeActorType, string> = {
+  client: "/dsh/client/me/finance/wallet",
+  partner: "/dsh/partner/me/finance/wallet",
+  captain: "/dsh/captain/me/finance/wallet",
+  field: "/dsh/field/me/finance/wallet",
+};
+
+const ledgerPathByActor: Record<RepresentativeActorType, string> = {
+  client: "/dsh/client/me/finance/ledger-entries",
+  partner: "/dsh/partner/me/finance/ledger-entries",
+  captain: "/dsh/captain/me/finance/ledger-entries",
+  field: "/dsh/field/me/finance/ledger-entries",
+};
 
 export async function fetchOwnRepresentativeWallet(
   actorType: RepresentativeActorType,
 ): Promise<RepresentativeWallet> {
   const response = await request<{ readonly wallet: RepresentativeWallet }>(
-    `${ownFinanceBase(actorType)}/wallet`,
+    walletPathByActor[actorType],
   );
   return response.wallet;
 }
@@ -65,7 +75,7 @@ export async function fetchOwnRepresentativeLedger(
 ): Promise<readonly RepresentativeLedgerEntry[]> {
   const safeLimit = Number.isInteger(limit) && limit > 0 && limit <= 100 ? limit : 30;
   const response = await request<{ readonly ledgerEntries: RepresentativeLedgerEntry[] }>(
-    `${ownFinanceBase(actorType)}/ledger-entries?limit=${safeLimit}`,
+    `${ledgerPathByActor[actorType]}?limit=${safeLimit}`,
   );
   return response.ledgerEntries ?? [];
 }
