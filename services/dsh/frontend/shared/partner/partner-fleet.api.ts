@@ -44,6 +44,23 @@ export type DshCaptainFleetMembership = {
   readonly version: number;
 };
 
+export type DshOperatorStoreFleetMember = {
+  readonly teamMemberId: string;
+  readonly storeId: string;
+  readonly courierName: string;
+  readonly status: string;
+  readonly captainActorId?: string;
+  readonly branchAssignment: string;
+  readonly deliveryAssignment: string;
+  readonly version: number;
+};
+
+export type DshOperatorPartnerFleetSnapshot = {
+  readonly storeId: string;
+  readonly connections: readonly DshCourierConnection[];
+  readonly members: readonly DshOperatorStoreFleetMember[];
+};
+
 export function issuePartnerCourierConnectionCode(
   storeId: string,
   memberId: string,
@@ -100,4 +117,10 @@ export function disconnectCaptainPartnerFleetMembership(
       },
     },
   );
+}
+
+export function fetchOperatorPartnerFleetSnapshot(
+  storeId: string,
+): Promise<DshOperatorPartnerFleetSnapshot> {
+  return request(`/dsh/operator/stores/${storeId}/partner-fleet`);
 }
