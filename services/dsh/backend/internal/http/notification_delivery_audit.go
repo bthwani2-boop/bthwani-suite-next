@@ -32,8 +32,14 @@ func (s *protectedStoreServer) handleListNotificationDeliveryAttempts(w http.Res
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list notification delivery attempts")
 		return
 	}
+	pushDeliveries, err := notifications.ListPushDeliveryAudit(s.db, limit)
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list push delivery audit")
+		return
+	}
 	store.SendJSON(w, http.StatusOK, map[string]any{
-		"attempts": items,
-		"summary":  summary,
+		"attempts":       items,
+		"pushDeliveries": pushDeliveries,
+		"summary":        summary,
 	})
 }
