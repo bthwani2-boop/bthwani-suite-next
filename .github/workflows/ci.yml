@@ -62,6 +62,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: contextual-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   context:
     name: Detect affected CI context
@@ -109,15 +113,22 @@ jobs:
         id: scope
         shell: bash
         env:
+          EVENT_NAME: ${{ github.event_name }}
           EVENT_BEFORE: ${{ github.event.before }}
+          PR_ACTION: ${{ github.event.action }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_HEAD_REF: ${{ github.head_ref }}
           DISPATCH_MODE: ${{ inputs.mode }}
           DISPATCH_JOURNEY: ${{ inputs.journey }}
         run: |
           set -euo pipefail
           HEAD_SHA="${PR_HEAD_SHA:-${GITHUB_SHA}}"
-          BASE_SHA="${PR_BASE_SHA:-${EVENT_BEFORE:-}}"
+          if [[ "${EVENT_NAME}" == "pull_request" && "${PR_HEAD_REF}" == "sambassam" && "${PR_ACTION}" == "synchronize" ]]; then
+            BASE_SHA="$(git rev-parse "${HEAD_SHA}^")"
+          else
+            BASE_SHA="${PR_BASE_SHA:-${EVENT_BEFORE:-}}"
+          fi
           if [[ -z "${BASE_SHA}" || "${BASE_SHA}" =~ ^0+$ ]]; then
             BASE_SHA="$(git rev-parse "${HEAD_SHA}^" 2>/dev/null || printf '%s' "${HEAD_SHA}")"
           fi
