@@ -1,6 +1,7 @@
 package refund
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -37,7 +38,7 @@ func CreateRefundAtomic(db *sql.DB, input CreateRefundInput) (*Refund, bool, err
 		return nil, false, fmt.Errorf("paymentSessionId, orderId, clientId, and reason are required")
 	}
 	key := "order-cancellation:" + input.PaymentSessionID + ":" + input.OrderID
-	item, replayed, err := CreateGovernedRefund(contextBackground(), db, GovernedCreateRefundInput{
+	item, replayed, err := CreateGovernedRefund(context.Background(), db, GovernedCreateRefundInput{
 		PaymentSessionID: input.PaymentSessionID,
 		OrderID: input.OrderID,
 		ClientID: input.ClientID,
@@ -49,10 +50,6 @@ func CreateRefundAtomic(db *sql.DB, input CreateRefundInput) (*Refund, bool, err
 	})
 	return legacyRefundView(item), !replayed, err
 }
-
-// contextBackground is isolated for compatibility so old callers retain their
-// signature while the governed engine remains context-aware.
-func contextBackground() context.Context { return context.Background() }
 
 func HandleCreateRefundAtomic(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
