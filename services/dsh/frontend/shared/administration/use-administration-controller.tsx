@@ -11,6 +11,10 @@ import {
   fetchAdminAudit,
   fetchRoleAssignmentApprovals,
   reviewRoleAssignmentApproval,
+  requestDecisionRollback,
+  fetchRollbackRequests,
+  reviewRollbackRequest,
+  fetchAdministrationDiagnostics,
 } from "./administration.api";
 import type {
   DshRole,
@@ -23,6 +27,9 @@ import type {
   DshRoleAssignmentApprovalStatus,
   DshRoleDefinitionRequest,
   DshAdministrationApprovalStatus,
+  DshAdministrationSurface,
+  DshAdministrationRollbackRequest,
+  DshAdministrationDiagnostics,
 } from "./administration.types";
 
 function useReadModel<T>(authKind: string, loader: () => Promise<T>) {
@@ -69,6 +76,7 @@ export function useRoleDefinitionApprovalController(
     name: string;
     description: string;
     permissions: readonly string[];
+    surfaces: readonly DshAdministrationSurface[];
     reason: string;
   }) => {
     const response = await requestRoleDefinition(input);
@@ -131,7 +139,42 @@ export function useRoleAssignmentApprovalController(
     await reload();
   }, [reload]);
 
+  const requestRollback = useCallback(async (approvalId: string, reason: string) => {
+    const response = await requestDecisionRollback(approvalId, reason);
+    await reload();
+    return response.request;
+  }, [reload]);
+
+  return { state, reload, review, requestRollback };
+}
+
+export function useAdministrationRollbackController(
+  authKind: string,
+  status: DshAdministrationApprovalStatus | "" = "pending",
+) {
+  const loader = useCallback(
+    async (): Promise<DshAdministrationRollbackRequest[]> => (await fetchRollbackRequests(status)).requests,
+    [status],
+  );
+  const { state, reload } = useReadModel(authKind, loader);
+  const review = useCallback(async (
+    requestId: string,
+    decision: "approved" | "rejected",
+    expectedVersion: number,
+    reviewNote: string,
+  ) => {
+    await reviewRollbackRequest(requestId, { decision, expectedVersion, reviewNote });
+    await reload();
+  }, [reload]);
   return { state, reload, review };
+}
+
+export function useAdministrationDiagnosticsController(authKind: string) {
+  const loader = useCallback(
+    async (): Promise<DshAdministrationDiagnostics> => (await fetchAdministrationDiagnostics()).diagnostics,
+    [],
+  );
+  return useReadModel(authKind, loader);
 }
 
 export function usePartnerActivationReadController(authKind: string) {
