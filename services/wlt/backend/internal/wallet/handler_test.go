@@ -19,8 +19,25 @@ func TestNormalizeRepresentativeActorType(t *testing.T) {
 	}
 }
 
+func TestHandleGetWalletRejectsMissingTenantBeforeDatabaseAccess(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/wlt/wallets/client/client-1", nil)
+	req.SetPathValue("actorType", "client")
+	req.SetPathValue("actorId", "client-1")
+	rec := httptest.NewRecorder()
+
+	HandleGetWallet(nil)(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), "TENANT_REQUIRED") {
+		t.Fatalf("expected tenant-required error, got %s", rec.Body.String())
+	}
+}
+
 func TestHandleGetWalletRejectsUnsupportedActorBeforeDatabaseAccess(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/wlt/wallets/operator/op-1", nil)
+	req.Header.Set("X-Tenant-ID", "tenant-a")
 	req.SetPathValue("actorType", "operator")
 	req.SetPathValue("actorId", "op-1")
 	rec := httptest.NewRecorder()
@@ -37,6 +54,7 @@ func TestHandleGetWalletRejectsUnsupportedActorBeforeDatabaseAccess(t *testing.T
 
 func TestHandleGetWalletRejectsOversizedActorIDBeforeDatabaseAccess(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/wlt/wallets/client/value", nil)
+	req.Header.Set("X-Tenant-ID", "tenant-a")
 	req.SetPathValue("actorType", "client")
 	req.SetPathValue("actorId", strings.Repeat("x", 201))
 	rec := httptest.NewRecorder()
