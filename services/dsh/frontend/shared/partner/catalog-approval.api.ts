@@ -4,12 +4,40 @@ import { PlatformVarsRegistry } from '../platform/platform-vars';
 import { createDshFlexibleHttpClient } from '../_kernel/dsh-http-request';
 import type {
   ApprovalEntityType,
-  ApprovalRecord,
   ApprovalRecordMetadata,
   ApprovalSourceSurface,
   ApprovalStage,
-  PartnerQueueRecord,
 } from './partner.types';
+
+export type CatalogApprovalAuditEntry = {
+  readonly at: string;
+  readonly fromStage: ApprovalStage;
+  readonly toStage: ApprovalStage;
+  readonly owner: string;
+  readonly actionLabel: string;
+};
+
+export type CatalogApprovalRecord = {
+  readonly id: string;
+  readonly entityType: ApprovalEntityType;
+  readonly entityId?: string;
+  readonly source: ApprovalSourceSurface;
+  readonly stage: ApprovalStage;
+  readonly title: string;
+  readonly submittedAt: string;
+  readonly updatedAt?: string;
+  readonly metadata?: ApprovalRecordMetadata;
+  readonly auditTrail?: readonly CatalogApprovalAuditEntry[];
+};
+
+export type PartnerCatalogApprovalQueueRecord = {
+  readonly id: string;
+  readonly entityId: string;
+  readonly entityType: ApprovalEntityType;
+  readonly stage: ApprovalStage;
+  readonly owner: ApprovalSourceSurface;
+  readonly createdAt: string;
+};
 
 function resolveBaseUrl(): string | null {
   return PlatformVarsRegistry.get('dshApiBaseUrl');
@@ -33,14 +61,12 @@ async function request<T>(path: string, options?: RequestOptions): Promise<T> {
 export type CreateCatalogApprovalInput = {
   readonly entityType: ApprovalEntityType;
   readonly entityId?: string;
-  readonly source?: ApprovalSourceSurface;
-  readonly stage?: ApprovalStage;
   readonly title: string;
   readonly metadata?: ApprovalRecordMetadata;
 };
 
-export async function createCatalogApproval(input: CreateCatalogApprovalInput): Promise<ApprovalRecord> {
-  const body = await request<{ readonly record: ApprovalRecord }>('/dsh/catalog-approvals', {
+export async function createCatalogApproval(input: CreateCatalogApprovalInput): Promise<CatalogApprovalRecord> {
+  const body = await request<{ readonly record: CatalogApprovalRecord }>('/dsh/catalog-approvals', {
     method: 'POST',
     body: input,
   });
@@ -51,25 +77,27 @@ export async function listCatalogApprovals(filters?: {
   readonly entityType?: ApprovalEntityType;
   readonly stage?: ApprovalStage;
   readonly source?: ApprovalSourceSurface;
-}): Promise<ApprovalRecord[]> {
+}): Promise<CatalogApprovalRecord[]> {
   const params = new URLSearchParams();
   if (filters?.entityType) params.set('entityType', filters.entityType);
   if (filters?.stage) params.set('stage', filters.stage);
   if (filters?.source) params.set('source', filters.source);
   const qs = params.toString();
-  const body = await request<{ readonly records: ApprovalRecord[] }>(
+  const body = await request<{ readonly records: CatalogApprovalRecord[] }>(
     `/dsh/catalog-approvals${qs ? `?${qs}` : ''}`,
   );
   return body.records ?? [];
 }
 
-export async function listPartnerCatalogQueue(): Promise<PartnerQueueRecord[]> {
-  const body = await request<{ readonly records: PartnerQueueRecord[] }>('/dsh/partner/catalog-approvals');
+export async function listPartnerCatalogQueue(): Promise<PartnerCatalogApprovalQueueRecord[]> {
+  const body = await request<{ readonly records: PartnerCatalogApprovalQueueRecord[] }>(
+    '/dsh/partner/catalog-approvals',
+  );
   return body.records ?? [];
 }
 
-export async function getCatalogApproval(id: string): Promise<ApprovalRecord> {
-  const body = await request<{ readonly record: ApprovalRecord }>(
+export async function getCatalogApproval(id: string): Promise<CatalogApprovalRecord> {
+  const body = await request<{ readonly record: CatalogApprovalRecord }>(
     `/dsh/catalog-approvals/${encodeURIComponent(id)}`,
   );
   return body.record;
@@ -79,8 +107,8 @@ export async function transitionCatalogApproval(
   id: string,
   toStage: ApprovalStage,
   actionLabel: string,
-): Promise<ApprovalRecord> {
-  const body = await request<{ readonly record: ApprovalRecord }>(
+): Promise<CatalogApprovalRecord> {
+  const body = await request<{ readonly record: CatalogApprovalRecord }>(
     `/dsh/catalog-approvals/${encodeURIComponent(id)}/transition`,
     { method: 'POST', body: { toStage, actionLabel } },
   );
