@@ -12,6 +12,13 @@ function requireAll(content, values, label) {
   }
 }
 
+function operationSection(contract, path, nextPath) {
+  const start = contract.indexOf(`  ${path}:\n`);
+  const end = contract.indexOf(`  ${nextPath}:\n`, start + 1);
+  assert.ok(start >= 0 && end > start, `${path} operation boundaries are missing`);
+  return contract.slice(start, end);
+}
+
 test("WLT refund contract exposes the complete governed lifecycle", () => {
   const contract = read(wltPath);
   requireAll(contract, [
@@ -27,9 +34,15 @@ test("WLT refund contract exposes the complete governed lifecycle", () => {
     "name: Idempotency-Key",
     "provider_unknown",
     "PROVIDER_RESULT_UNKNOWN",
+    "REFUND_OUTCOME_PERSISTENCE_FAILED",
+    "OutcomePersistenceFailure:",
     "amountMinorUnits:",
     "minimum: 0",
   ], "WLT refund OpenAPI");
+  const complete = operationSection(contract, "/wlt/refunds/{refundId}/complete", "/wlt/refunds/{refundId}/reconcile");
+  assert.match(complete, /'202':/);
+  assert.match(complete, /'500': \{ \$ref: '#\/components\/responses\/OutcomePersistenceFailure' \}/);
+  assert.match(complete, /automatic provider retry is forbidden|must not be called again/i);
 });
 
 test("DSH refund contract binds command, client and partner surfaces", () => {
@@ -48,7 +61,13 @@ test("DSH refund contract binds command, client and partner surfaces", () => {
     "/dsh/client/orders/{orderId}/refunds:",
     "/dsh/partner/orders/{orderId}/refunds:",
     "PROVIDER_RESULT_UNKNOWN",
+    "REFUND_OUTCOME_PERSISTENCE_FAILED",
+    "OutcomePersistenceFailure:",
   ], "DSH refund OpenAPI");
+  const complete = operationSection(contract, "/dsh/control-panel/finance/refunds/{refundId}/complete", "/dsh/control-panel/finance/refunds/{refundId}/reconcile");
+  assert.match(complete, /'202':/);
+  assert.match(complete, /'500': \{ \$ref: '#\/components\/responses\/OutcomePersistenceFailure' \}/);
+  assert.match(complete, /preserves the WLT status|must not cause another provider call/i);
 });
 
 test("privacy refund schema excludes provider and operator evidence", () => {
