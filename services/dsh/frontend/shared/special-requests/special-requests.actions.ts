@@ -69,10 +69,8 @@ export function specialRequestStatusLabel(request: DshSpecialRequestResponse): s
     captain_enroute_to_pickup: "الكابتن في طريقه للاستلام",
     arrived_at_pickup: "وصل إلى نقطة الاستلام",
     item_received: "تم استلام الغرض",
-    in_progress: "قيد التنفيذ",
     arrived_at_dropoff: "وصل إلى نقطة التسليم",
     proof_review: "مراجعة الإثبات",
-    completed: "مكتمل",
     escalated: "مصعّد للمراجعة",
     exception: "استثناء تشغيلي",
   };
