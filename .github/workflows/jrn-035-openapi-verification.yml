@@ -9,6 +9,16 @@ on:
       - "services/wlt/contracts/jrn-035-refunds.openapi.yaml"
       - "services/dsh/contracts/jrn-035-refunds.openapi.yaml"
       - "tools/verification/jrn-035-openapi-contracts.test.mjs"
+      - "governance/evidence/.jrn-035-final-validation-trigger"
+      - ".github/workflows/jrn-035-openapi-verification.yml"
+  pull_request:
+    branches:
+      - sambassam
+    paths:
+      - "services/wlt/contracts/jrn-035-refunds.openapi.yaml"
+      - "services/dsh/contracts/jrn-035-refunds.openapi.yaml"
+      - "tools/verification/jrn-035-openapi-contracts.test.mjs"
+      - "governance/evidence/.jrn-035-final-validation-trigger"
       - ".github/workflows/jrn-035-openapi-verification.yml"
 
 permissions:
