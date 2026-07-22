@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false
+  },
+  "include": [
+    "frontend/**/*.d.ts",
+    "frontend/shared/support/**/*.ts",
+    "frontend/shared/support/**/*.tsx",
+    "frontend/control-panel/operations/OrderRescueScreen.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
+}
