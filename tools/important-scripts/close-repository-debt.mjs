@@ -22,11 +22,11 @@ function write(relativePath, content) {
 
 function replaceRequired(relativePath, before, after) {
   const current = read(relativePath);
-  if (current.includes(after)) return;
   if (!current.includes(before)) {
+    if (current.includes(after)) return;
     throw new Error(`${relativePath}: expected source pattern was not found`);
   }
-  write(relativePath, current.replace(before, after));
+  write(relativePath, current.split(before).join(after));
 }
 
 const activeContracts = [
@@ -136,8 +136,8 @@ replaceRequired(
 
 replaceRequired(
   "services/dsh/frontend/control-panel/partners/PartnerDetailOperationalScreen.tsx",
-  `{readiness.viewModel.items.map((item) => <CpStatePanel key={item.id} role="status" title={\`${item.satisfied ? "مستوفى" : "غير مستوفى"}: ${item.label}\`} code={item.blockedReason || undefined} />)}`,
-  `{readiness.viewModel.items.map((item) => <CpStatePanel key={item.id} role="status" title={\`${item.satisfied ? "مستوفى" : "غير مستوفى"}: ${item.label}\`} {...(item.blockedReason ? { code: item.blockedReason } : {})} />)}`,
+  " code={item.blockedReason || undefined}",
+  " {...(item.blockedReason ? { code: item.blockedReason } : {})}",
 );
 
 replaceRequired(
