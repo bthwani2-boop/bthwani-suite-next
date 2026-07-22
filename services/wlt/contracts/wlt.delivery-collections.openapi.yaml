@@ -9,7 +9,9 @@ info:
 x-bthwani-owner: services/wlt
 x-bthwani-journey: JRN-038
 x-bthwani-contract-state: CONTRACT_ACTIVE
-x-bthwani-client-generation: ENABLED
+x-bthwani-client-generation: DISABLED
+x-bthwani-client-binding: MANUAL_TYPED_ADAPTER
+x-bthwani-adapter-owner: services/dsh/backend/internal/wlt/client.go
 x-bthwani-runtime-dependency: true
 x-bthwani-financial-owner: true
 servers:
