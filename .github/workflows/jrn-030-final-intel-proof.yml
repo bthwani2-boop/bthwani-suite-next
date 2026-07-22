@@ -53,9 +53,28 @@ jobs:
       - name: Verify seven production route registrations
         working-directory: services/dsh/backend
         run: go run ./cmd/jrn030-route-proof
-      - name: Build DSH API production binary
+      - name: Capture DSH API production build
+        id: api-build
         working-directory: services/dsh/backend
-        run: go build -o /tmp/dsh-api ./cmd/dsh-api
+        shell: bash
+        run: |
+          set +e
+          go build -o /tmp/dsh-api ./cmd/dsh-api > /tmp/jrn030-api-build.log 2>&1
+          status=$?
+          cat /tmp/jrn030-api-build.log
+          echo "status=${status}" >> "${GITHUB_OUTPUT}"
+          exit 0
+      - name: Upload API build diagnostic
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: jrn-030-api-build-${{ github.sha }}
+          path: /tmp/jrn030-api-build.log
+          if-no-files-found: error
+          retention-days: 7
+      - name: Fail when production API build failed
+        if: steps.api-build.outputs.status != '0'
+        run: exit 1
       - name: Parse strict JRN-030 OpenAPI
         run: |
           ruby -e 'require "yaml"; d=YAML.load_file(ARGV.fetch(0)); abort "expected OpenAPI 3.1.0" unless d["openapi"]=="3.1.0"; expected=%w[ConnectionCode IssuedConnectionCode CaptainFleetMembership OperatorStoreFleetMember OperatorPartnerFleetSnapshot]; schemas=d.dig("components","schemas")||{}; missing=expected.reject{|n| schemas.key?(n)}; abort "missing schemas: #{missing.join(",")}" unless missing.empty?; abort "operator snapshot must be strict" unless schemas.dig("OperatorPartnerFleetSnapshot","additionalProperties")==false' services/dsh/contracts/dsh.partner-fleet.openapi.yaml
