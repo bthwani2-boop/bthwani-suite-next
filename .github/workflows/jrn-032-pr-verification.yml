@@ -1,0 +1,101 @@
+name: JRN-032 Operational Analytics Verification
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - ".github/workflows/jrn-032-pr-verification.yml"
+      - ".github/workflows/jrn-032-operational-analytics.yml"
+      - "governance/product-truth/JRN-032_OPERATIONAL_ANALYTICS.md"
+      - "governance/evidence/JRN-032_SLICE_VERIFICATION.json"
+      - "services/dsh/backend/internal/analytics/jrn032_*"
+      - "services/dsh/backend/internal/http/analytics.go"
+      - "services/dsh/backend/internal/http/jrn032_*"
+      - "services/dsh/backend/internal/http/delivery_proof_routes.go"
+      - "services/dsh/backend/internal/wlt/analytics_read*"
+      - "services/dsh/contracts/paths/analytics.paths.yaml"
+      - "services/dsh/contracts/components/schemas/analytics.schemas.yaml"
+      - "services/dsh/frontend/shared/analytics/**"
+      - "services/dsh/frontend/control-panel/analytics/**"
+      - "services/dsh/frontend/app-partner/account/PartnerAnalyticsInsightsPanel.tsx"
+      - "apps/control-panel/runtime/src/app/dsh/analytics/**"
+      - "tools/scripts/patch-jrn032-openapi.mjs"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jrn-032-pr-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout branch commit
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.2
+          run_install: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: pnpm
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: services/dsh/backend/go.sum
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Compose canonical JRN-032 contract in workspace
+        run: node tools/scripts/patch-jrn032-openapi.mjs
+
+      - name: Format governed Go files in workspace
+        working-directory: services/dsh/backend
+        run: |
+          gofmt -w \
+            internal/analytics/jrn032_window.go \
+            internal/analytics/jrn032_preparation.go \
+            internal/analytics/jrn032_people.go \
+            internal/analytics/jrn032_drilldown.go \
+            internal/analytics/jrn032_window_test.go \
+            internal/http/analytics.go \
+            internal/http/jrn032_analytics.go \
+            internal/http/jrn032_routes.go \
+            internal/http/jrn032_routes_test.go \
+            internal/http/delivery_proof_routes.go \
+            internal/wlt/analytics_read.go \
+            internal/wlt/analytics_read_test.go
+
+      - name: Verify DSH OpenAPI
+        run: pnpm --dir services/dsh openapi:verify
+
+      - name: Test analytics backend
+        working-directory: services/dsh/backend
+        run: go test ./internal/analytics ./internal/wlt ./internal/http
+
+      - name: Typecheck DSH surfaces
+        run: pnpm --dir services/dsh typecheck
+
+      - name: Typecheck control panel
+        run: pnpm --dir apps/control-panel/runtime typecheck
+
+      - name: Typecheck partner app
+        run: pnpm --dir apps/app-partner/runtime typecheck
+
+      - name: Verify boundaries and contracts
+        run: |
+          pnpm run guard:fullstack-boundary
+          pnpm run guard:wlt-financial-boundary
+          pnpm run contracts:lint
