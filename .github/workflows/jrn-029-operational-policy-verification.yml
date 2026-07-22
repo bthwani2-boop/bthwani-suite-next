@@ -35,8 +35,8 @@ permissions:
   contents: write
 
 concurrency:
-  group: jrn-029-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: jrn-029-${{ github.workflow }}-${{ github.run_id }}
+  cancel-in-progress: false
 
 jobs:
   verify:
