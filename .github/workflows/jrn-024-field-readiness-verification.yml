@@ -69,8 +69,21 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Verify JRN-024 backend domain and HTTP compilation
+        id: backend_verify
         working-directory: services/dsh/backend
-        run: go test ./internal/fieldreadiness ./internal/http -run 'TestValidateGovernedLocation|TestEscalationTransitions|TestGovernedInputEnums|^$'
+        shell: bash
+        run: |
+          set -o pipefail
+          go test ./internal/fieldreadiness ./internal/http -run 'TestValidateGovernedLocation|TestEscalationTransitions|TestGovernedInputEnums|^$' 2>&1 | tee jrn-024-go-test.log
+
+      - name: Upload JRN-024 backend diagnostics
+        if: failure() && steps.backend_verify.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: jrn-024-backend-diagnostics
+          path: services/dsh/backend/jrn-024-go-test.log
+          if-no-files-found: error
+          retention-days: 3
 
       - name: Verify JRN-024 shared brain and affected surfaces
         run: pnpm --dir services/dsh exec tsc -p tsconfig.jrn-024.json --noEmit --pretty false
