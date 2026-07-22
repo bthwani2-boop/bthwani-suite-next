@@ -211,7 +211,18 @@
         description: Partner offers.
         content:
           application/json:
-            schema: { $ref: "../components/schemas/marketing-commercial.schemas.yaml#/DshPartnerOffersListResponse" }
+            schema:
+              type: object
+              required: [offers]
+              properties:
+                offers:
+                  type: array
+                  items:
+                    allOf:
+                      - { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartnerOffer" }
+                      - type: object
+                        properties:
+                          couponId: { type: string }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
 
@@ -231,13 +242,36 @@
       required: true
       content:
         application/json:
-          schema: { $ref: "../components/schemas/marketing-commercial.schemas.yaml#/DshUpdatePartnerOfferRequest" }
+          schema:
+            type: object
+            additionalProperties: false
+            required: [expectedVersion]
+            properties:
+              expectedVersion: { type: integer, minimum: 1 }
+              status: { type: string, enum: [inbound, review, marketing-ready, published, paused, rejected] }
+              title: { type: string, minLength: 1 }
+              valueLabel: { type: string, minLength: 1 }
+              eligibility: { type: string, enum: [all, client] }
+              activeFromDate: { type: string, format: date }
+              activeToDate: { type: string, format: date }
+              rejectionReason: { type: string }
+              marginRiskNote: { type: string }
+              couponId: { type: string }
     responses:
       "200":
         description: Partner offer updated.
         content:
           application/json:
-            schema: { $ref: "../components/schemas/marketing-commercial.schemas.yaml#/DshPartnerOfferResponse" }
+            schema:
+              type: object
+              required: [offer]
+              properties:
+                offer:
+                  allOf:
+                    - { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartnerOffer" }
+                    - type: object
+                      properties:
+                        couponId: { type: string }
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
@@ -280,7 +314,18 @@
         description: Own partner offers.
         content:
           application/json:
-            schema: { $ref: "../components/schemas/marketing-commercial.schemas.yaml#/DshPartnerOffersListResponse" }
+            schema:
+              type: object
+              required: [offers]
+              properties:
+                offers:
+                  type: array
+                  items:
+                    allOf:
+                      - { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartnerOffer" }
+                      - type: object
+                        properties:
+                          couponId: { type: string }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
   post:
@@ -293,13 +338,35 @@
       required: true
       content:
         application/json:
-          schema: { $ref: "../components/schemas/marketing-commercial.schemas.yaml#/DshSubmitPartnerOfferRequest" }
+          schema:
+            type: object
+            additionalProperties: false
+            required: [title, valueLabel]
+            properties:
+              title: { type: string, minLength: 1 }
+              partnerName: { type: string }
+              storeLabel: { type: string }
+              productId: { type: string }
+              productLabel: { type: string }
+              category: { type: string }
+              offerType: { type: string, enum: [discount, free-delivery, bundle, buy-x-get-y, coupon] }
+              valueLabel: { type: string, minLength: 1 }
+              eligibility: { type: string, enum: [all, client] }
     responses:
       "201":
         description: Partner offer submitted.
         content:
           application/json:
-            schema: { $ref: "../components/schemas/marketing-commercial.schemas.yaml#/DshPartnerOfferResponse" }
+            schema:
+              type: object
+              required: [offer]
+              properties:
+                offer:
+                  allOf:
+                    - { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartnerOffer" }
+                    - type: object
+                      properties:
+                        couponId: { type: string }
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
