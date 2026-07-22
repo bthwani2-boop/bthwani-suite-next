@@ -1,15 +1,17 @@
-name: Temporary JRN-027 Full-Stack Closure
+name: JRN-027 Subscription Lifecycle Verification
 
 on:
   push:
     branches: [sambassam]
     paths:
+      - "tools/scripts/run-jrn-027-closure.py"
       - "tools/scripts/close-jrn-027-remaining-slices.py"
       - ".github/workflows/tmp-jrn-027-closure.yml"
   pull_request:
     branches: [master]
     types: [opened, synchronize, reopened]
     paths:
+      - "tools/scripts/run-jrn-027-closure.py"
       - "tools/scripts/close-jrn-027-remaining-slices.py"
       - ".github/workflows/tmp-jrn-027-closure.yml"
   workflow_dispatch:
@@ -18,7 +20,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: tmp-jrn-027-${{ github.sha }}
+  group: jrn-027-${{ github.sha }}
   cancel-in-progress: false
 
 jobs:
@@ -35,11 +37,11 @@ jobs:
       - name: Synchronize before execution
         run: git pull --rebase origin sambassam
 
-      - name: Apply JRN-027 atomic remaining slices
+      - name: Restore and apply JRN-027 slices
         shell: bash
         run: |
           set +e
-          python3 tools/scripts/close-jrn-027-remaining-slices.py > /tmp/jrn027-patch.log 2>&1
+          python3 tools/scripts/run-jrn-027-closure.py > /tmp/jrn027-patch.log 2>&1
           status=$?
           cat /tmp/jrn027-patch.log
           if [ "$status" -ne 0 ]; then
@@ -142,6 +144,9 @@ jobs:
         run: |
           git config user.name "bthwani-journey-closure"
           git config user.email "actions@users.noreply.github.com"
+          rm -f governance/evidence/JRN-027_PATCH_FAILURE.log
+          rm -f governance/evidence/JRN-027_OPENAPI_FAILURE.log
+          rm -f governance/evidence/JRN-027_TYPECHECK_FAILURE.log
           git add -A
           if git diff --cached --quiet; then
             echo "No remaining JRN-027 changes to commit"
