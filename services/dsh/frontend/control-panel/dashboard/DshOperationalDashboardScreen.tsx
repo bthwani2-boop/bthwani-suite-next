@@ -5,6 +5,7 @@ import { Box, Text, StateView, colorRoles } from "@bthwani/ui-kit";
 import { WebControlPanelKpiStrip, WebCompactSurfaceHeader } from "@bthwani/ui-kit/web";
 import { useOperatorAnalyticsDashboardController, buildPlatformKpisViewModel } from "../../shared/analytics";
 import { usePartnerAdminController } from "../../shared/partner";
+import { DispatchTrackingAlertsPanel } from "./DispatchTrackingAlertsPanel";
 import styles from "../shared/control-panel-surface.module.css";
 
 type KpiTone = "success" | "warning" | "danger" | "neutral";
@@ -90,6 +91,10 @@ export function DshOperationalDashboardScreen() {
             </span>
           </div>
         </div>
+      </div>
+
+      <div style={{ padding: "0 14px 8px" }}>
+        <DispatchTrackingAlertsPanel />
       </div>
 
       {kpis.totalOrders === 0 && (
