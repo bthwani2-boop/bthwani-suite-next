@@ -88,6 +88,8 @@ export function CampaignsCommandDeck() {
   const [placement, setPlacement] = useState("home");
   const [targetType, setTargetType] = useState("");
   const [targetId, setTargetId] = useState("");
+  const [targetCityCode, setTargetCityCode] = useState("");
+  const [targetServiceAreaCode, setTargetServiceAreaCode] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
@@ -101,6 +103,8 @@ export function CampaignsCommandDeck() {
     setPlacement("home");
     setTargetType("");
     setTargetId("");
+    setTargetCityCode("");
+    setTargetServiceAreaCode("");
   };
 
   const beginEdit = (campaign: GovernedDshCampaign) => {
@@ -113,6 +117,8 @@ export function CampaignsCommandDeck() {
     setPlacement(campaign.placement || "home");
     setTargetType(campaign.targetType || "");
     setTargetId(campaign.targetId || "");
+    setTargetCityCode(campaign.targetCityCode || "");
+    setTargetServiceAreaCode(campaign.targetServiceAreaCode || "");
     setErrorMsg(null);
     setSuccessMsg(null);
   };
@@ -134,6 +140,12 @@ export function CampaignsCommandDeck() {
       setErrorMsg("نوع الهدف ومعرّف الهدف يجب إدخالهما معاً.");
       return false;
     }
+    const regionCode = /^[A-Za-z0-9._:-]{1,64}$/;
+    if ((targetCityCode && !regionCode.test(targetCityCode)) ||
+        (targetServiceAreaCode && !regionCode.test(targetServiceAreaCode))) {
+      setErrorMsg("رمز المدينة أو منطقة الخدمة غير صالح.");
+      return false;
+    }
     return true;
   };
 
@@ -142,6 +154,10 @@ export function CampaignsCommandDeck() {
     setErrorMsg(null);
     setSuccessMsg(null);
     try {
+      const regionalTarget = {
+        targetCityCode: targetCityCode.trim(),
+        targetServiceAreaCode: targetServiceAreaCode.trim(),
+      };
       if (editing) {
         await controller.update(editing, {
           title: title.trim(),
@@ -152,6 +168,7 @@ export function CampaignsCommandDeck() {
           placement,
           targetType,
           targetId,
+          ...regionalTarget,
         });
         setSuccessMsg("تم حفظ تعديلات الحملة وقراءة الإصدار الجديد من DSH.");
       } else {
@@ -164,6 +181,7 @@ export function CampaignsCommandDeck() {
           placement,
           targetType,
           targetId,
+          ...regionalTarget,
         });
         setSuccessMsg("تم حفظ الحملة كمسودة. لن تظهر للعميل قبل التفعيل.");
       }
@@ -216,7 +234,7 @@ export function CampaignsCommandDeck() {
                 <CpTableHeaderCell>الحملة</CpTableHeaderCell>
                 <CpTableHeaderCell>الحالة</CpTableHeaderCell>
                 <CpTableHeaderCell>الجدولة</CpTableHeaderCell>
-                <CpTableHeaderCell>الجمهور والهدف</CpTableHeaderCell>
+                <CpTableHeaderCell>الجمهور والمنطقة والهدف</CpTableHeaderCell>
                 <CpTableHeaderCell>العمليات</CpTableHeaderCell>
               </tr>
             </thead>
@@ -232,6 +250,9 @@ export function CampaignsCommandDeck() {
                   <CpTableCell>{campaign.startDate} — {campaign.endDate}</CpTableCell>
                   <CpTableCell>
                     <div>{campaign.audience || "all"} · {campaign.placement || "home"}</div>
+                    <div style={{ fontSize: "0.75rem", opacity: 0.65 }}>
+                      المنطقة: {campaign.targetCityCode || "كل المدن"} / {campaign.targetServiceAreaCode || "كل مناطق الخدمة"}
+                    </div>
                     <div style={{ fontSize: "0.75rem", opacity: 0.65 }}>
                       {campaign.targetType ? `${campaign.targetType}: ${campaign.targetId || "—"}` : "بدون هدف مرتبط"}
                     </div>
@@ -256,7 +277,7 @@ export function CampaignsCommandDeck() {
           {editing ? "تعديل الحملة" : "إنشاء مسودة حملة جديدة"}
         </h4>
         <p style={{ margin: "0 0 1rem", fontSize: "0.75rem", opacity: 0.7 }}>
-          النشر يعيد فحص الجدولة والجمهور وأهلية الهدف، والكتابة القديمة تُرفض بتعارض إصدار.
+          النشر يعيد فحص الجدولة والجمهور والمنطقة وأهلية الهدف، والكتابة القديمة تُرفض بتعارض إصدار.
         </p>
 
         <div style={{ display: "grid", gap: "0.75rem" }}>
@@ -281,6 +302,12 @@ export function CampaignsCommandDeck() {
           <select value={placement} onChange={(event) => setPlacement(event.target.value)}>
             {PLACEMENT_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
           </select>
+
+          <label style={{ fontSize: "0.75rem", fontWeight: 600 }}>رمز المدينة المستهدفة</label>
+          <CpTextInput value={targetCityCode} onChange={setTargetCityCode} placeholder="فارغ = كل المدن" />
+
+          <label style={{ fontSize: "0.75rem", fontWeight: 600 }}>رمز منطقة الخدمة المستهدفة</label>
+          <CpTextInput value={targetServiceAreaCode} onChange={setTargetServiceAreaCode} placeholder="فارغ = كل مناطق الخدمة" />
 
           <label style={{ fontSize: "0.75rem", fontWeight: 600 }}>نوع الهدف</label>
           <CpTextInput value={targetType} onChange={setTargetType} placeholder="store أو category أو product" />
