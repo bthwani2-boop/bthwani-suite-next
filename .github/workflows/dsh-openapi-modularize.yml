@@ -71,7 +71,19 @@ jobs:
 
       - name: Compose OpenAPI and generate DSH client
         run: |
-          pnpm --dir services/dsh openapi:verify
+          set +e
+          pnpm --dir services/dsh openapi:verify > "${RUNNER_TEMP}/jrn032-openapi.log" 2>&1
+          status=$?
+          set -e
+          if [ "$status" -ne 0 ]; then
+            tail -n 160 "${RUNNER_TEMP}/jrn032-openapi.log" > governance/evidence/JRN-032_OPENAPI_FAILURE.log
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add governance/evidence/JRN-032_OPENAPI_FAILURE.log
+            git commit -m "diagnostics(jrn-032): capture OpenAPI failure [skip ci]" || true
+            git push origin HEAD:verify/jrn-032-final2-8e71db5
+            exit "$status"
+          fi
           shasum -a 256 \
             services/dsh/contracts/generated/dsh.bundle.openapi.yaml \
             services/dsh/clients/generated/dsh-api.ts \
