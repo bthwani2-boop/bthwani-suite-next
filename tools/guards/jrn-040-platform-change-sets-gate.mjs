@@ -46,10 +46,14 @@ function requireText(file, tokens) {
 
 if (failures.length === 0) {
   const truth = JSON.parse(fs.readFileSync(productTruthFile, "utf8"));
-  if (truth.journeyId !== "JRN-040") failures.push("product-truth:journeyId");
-  if (truth.status !== "PENDING_INDEPENDENT_APPROVAL") failures.push("product-truth:status");
-  if (truth.contractAuthority?.authoritativeOpenApi !== contractFile) failures.push("product-truth:authoritativeOpenApi");
-  if (truth.contractAuthority?.generatedClient !== generatedClientFile) failures.push("product-truth:generatedClient");
+  const evidenceReferences = new Set(truth.problem?.evidenceReferences ?? []);
+  const forbiddenActions = new Set((truth.actors ?? []).flatMap((actor) => actor.forbiddenActions ?? []));
+  if (truth.capabilityId !== "JRN_040_PLATFORM_CHANGE_SETS") failures.push("product-truth:capabilityId");
+  if (truth.state !== "DISCOVERY") failures.push("product-truth:state");
+  if (truth.owners?.productManagerApproval !== "PENDING") failures.push("product-truth:productManagerApproval");
+  if (truth.owners?.productOwnerApproval !== "PENDING") failures.push("product-truth:productOwnerApproval");
+  if (!evidenceReferences.has(contractFile)) failures.push("product-truth:authoritativeOpenApi");
+  if (!evidenceReferences.has(generatedClientFile)) failures.push("product-truth:generatedClient");
   for (const invariant of [
     "approve_or_reject_own_change_set",
     "apply_stale_or_conflicting_change_set",
@@ -57,7 +61,7 @@ if (failures.length === 0) {
     "store_secret_or_credential_values_in_change_sets",
     "snapshot_existing_sensitive_target_values",
   ]) {
-    if (!truth.forbiddenActions.includes(invariant)) failures.push(`product-truth:forbidden:${invariant}`);
+    if (!forbiddenActions.has(invariant)) failures.push(`product-truth:forbidden:${invariant}`);
   }
 
   requireText(validationMigrationFile, [
