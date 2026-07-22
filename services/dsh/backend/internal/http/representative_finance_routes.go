@@ -35,116 +35,48 @@ func writeRepresentativeFinanceResponse(w http.ResponseWriter, status int, body 
 
 func (s *protectedStoreServer) handleOwnRepresentativeWallet(w http.ResponseWriter, r *http.Request, actorType string) {
 	actor, ok := s.requireActor(w, r, actorType)
-	if !ok {
-		return
-	}
-	status, body, err := s.wlt.FinanceReadWallet(
-		r.Context(),
-		actorType,
-		actor.ID,
-		r.Header.Get("X-Correlation-ID"),
-	)
+	if !ok { return }
+	status, body, err := s.wlt.FinanceReadWallet(r.Context(), actorType, actor.ID, r.Header.Get("X-Correlation-ID"))
 	writeRepresentativeFinanceResponse(w, status, body, err)
 }
 
 func (s *protectedStoreServer) handleOwnRepresentativeLedger(w http.ResponseWriter, r *http.Request, actorType string) {
 	actor, ok := s.requireActor(w, r, actorType)
-	if !ok {
-		return
-	}
-	query := url.Values{
-		"actorId":   {actor.ID},
-		"actorType": {actorType},
-	}
+	if !ok { return }
+	query := url.Values{"actorId": {actor.ID}, "actorType": {actorType}}
 	for _, key := range []string{"entryType", "limit", "cursor"} {
-		if value := strings.TrimSpace(r.URL.Query().Get(key)); value != "" {
-			query.Set(key, value)
-		}
+		if value := strings.TrimSpace(r.URL.Query().Get(key)); value != "" { query.Set(key, value) }
 	}
-	status, body, err := s.wlt.FinanceRead(
-		r.Context(),
-		"/wlt/ledger/entries",
-		query,
-		r.Header.Get("X-Correlation-ID"),
-	)
+	status, body, err := s.wlt.FinanceRead(r.Context(), "/wlt/ledger/entries", query, r.Header.Get("X-Correlation-ID"))
 	writeRepresentativeFinanceResponse(w, status, body, err)
 }
 
 func (s *protectedStoreServer) handleOwnRepresentativeCommissions(w http.ResponseWriter, r *http.Request, actorType string) {
 	actor, ok := s.requireActor(w, r, actorType)
-	if !ok {
-		return
-	}
-	query := url.Values{
-		"beneficiaryActorId":   {actor.ID},
-		"beneficiaryActorType": {actorType},
-	}
-	status, body, err := s.wlt.FinanceRead(
-		r.Context(),
-		"/wlt/commissions",
-		query,
-		r.Header.Get("X-Correlation-ID"),
-	)
+	if !ok { return }
+	query := url.Values{"beneficiaryActorId": {actor.ID}, "beneficiaryActorType": {actorType}}
+	status, body, err := s.wlt.FinanceRead(r.Context(), "/wlt/commissions", query, r.Header.Get("X-Correlation-ID"))
 	writeRepresentativeFinanceResponse(w, status, body, err)
 }
 
 func (s *protectedStoreServer) handleOwnRepresentativePayoutRequests(w http.ResponseWriter, r *http.Request, actorType string) {
 	actor, ok := s.requireActor(w, r, actorType)
-	if !ok {
-		return
-	}
-	query := url.Values{
-		"beneficiaryActorId":   {actor.ID},
-		"beneficiaryActorType": {actorType},
-	}
-	status, body, err := s.wlt.FinanceRead(
-		r.Context(),
-		"/wlt/payout-requests",
-		query,
-		r.Header.Get("X-Correlation-ID"),
-	)
+	if !ok { return }
+	query := url.Values{"beneficiaryActorId": {actor.ID}, "beneficiaryActorType": {actorType}}
+	status, body, err := s.wlt.FinanceRead(r.Context(), "/wlt/payout-requests", query, r.Header.Get("X-Correlation-ID"))
 	writeRepresentativeFinanceResponse(w, status, body, err)
 }
 
-func (s *protectedStoreServer) handleClientOwnWallet(w http.ResponseWriter, r *http.Request) {
-	s.handleOwnRepresentativeWallet(w, r, "client")
-}
-
-func (s *protectedStoreServer) handleClientOwnLedger(w http.ResponseWriter, r *http.Request) {
-	s.handleOwnRepresentativeLedger(w, r, "client")
-}
-
-func (s *protectedStoreServer) handlePartnerOwnWallet(w http.ResponseWriter, r *http.Request) {
-	s.handleOwnRepresentativeWallet(w, r, "partner")
-}
-
-func (s *protectedStoreServer) handlePartnerOwnLedger(w http.ResponseWriter, r *http.Request) {
-	s.handleOwnRepresentativeLedger(w, r, "partner")
-}
-
-func (s *protectedStoreServer) handlePartnerOwnCommissions(w http.ResponseWriter, r *http.Request) {
-	s.handleOwnRepresentativeCommissions(w, r, "partner")
-}
-
-func (s *protectedStoreServer) handlePartnerOwnPayoutRequests(w http.ResponseWriter, r *http.Request) {
-	s.handleOwnRepresentativePayoutRequests(w, r, "partner")
-}
-
-func (s *protectedStoreServer) handleCaptainOwnWallet(w http.ResponseWriter, r *http.Request) {
-	s.handleOwnRepresentativeWallet(w, r, "captain")
-}
-
-func (s *protectedStoreServer) handleCaptainOwnLedger(w http.ResponseWriter, r *http.Request) {
-	s.handleOwnRepresentativeLedger(w, r, "captain")
-}
-
-func (s *protectedStoreServer) handleFieldOwnWallet(w http.ResponseWriter, r *http.Request) {
-	s.handleOwnRepresentativeWallet(w, r, "field")
-}
-
-func (s *protectedStoreServer) handleFieldOwnLedger(w http.ResponseWriter, r *http.Request) {
-	s.handleOwnRepresentativeLedger(w, r, "field")
-}
+func (s *protectedStoreServer) handleClientOwnWallet(w http.ResponseWriter, r *http.Request) { s.handleOwnRepresentativeWallet(w, r, "client") }
+func (s *protectedStoreServer) handleClientOwnLedger(w http.ResponseWriter, r *http.Request) { s.handleOwnRepresentativeLedger(w, r, "client") }
+func (s *protectedStoreServer) handlePartnerOwnWallet(w http.ResponseWriter, r *http.Request) { s.handleOwnRepresentativeWallet(w, r, "partner") }
+func (s *protectedStoreServer) handlePartnerOwnLedger(w http.ResponseWriter, r *http.Request) { s.handleOwnRepresentativeLedger(w, r, "partner") }
+func (s *protectedStoreServer) handlePartnerOwnCommissions(w http.ResponseWriter, r *http.Request) { s.handleOwnRepresentativeCommissions(w, r, "partner") }
+func (s *protectedStoreServer) handlePartnerOwnPayoutRequests(w http.ResponseWriter, r *http.Request) { s.handleOwnRepresentativePayoutRequests(w, r, "partner") }
+func (s *protectedStoreServer) handleCaptainOwnWallet(w http.ResponseWriter, r *http.Request) { s.handleOwnRepresentativeWallet(w, r, "captain") }
+func (s *protectedStoreServer) handleCaptainOwnLedger(w http.ResponseWriter, r *http.Request) { s.handleOwnRepresentativeLedger(w, r, "captain") }
+func (s *protectedStoreServer) handleFieldOwnWallet(w http.ResponseWriter, r *http.Request) { s.handleOwnRepresentativeWallet(w, r, "field") }
+func (s *protectedStoreServer) handleFieldOwnLedger(w http.ResponseWriter, r *http.Request) { s.handleOwnRepresentativeLedger(w, r, "field") }
 
 func resolveControlPanelRepresentativeActor(w http.ResponseWriter, r *http.Request) (string, string, bool) {
 	actorType, ok := normalizeRepresentativeWalletActorType(r.PathValue("actorType"))
@@ -161,45 +93,22 @@ func resolveControlPanelRepresentativeActor(w http.ResponseWriter, r *http.Reque
 }
 
 func (s *protectedStoreServer) handleControlPanelRepresentativeWallet(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok {
-		return
-	}
+	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok { return }
 	actorType, actorID, ok := resolveControlPanelRepresentativeActor(w, r)
-	if !ok {
-		return
-	}
-	status, body, err := s.wlt.FinanceReadWallet(
-		r.Context(),
-		actorType,
-		actorID,
-		r.Header.Get("X-Correlation-ID"),
-	)
+	if !ok { return }
+	status, body, err := s.wlt.FinanceReadWallet(r.Context(), actorType, actorID, r.Header.Get("X-Correlation-ID"))
 	writeRepresentativeFinanceResponse(w, status, body, err)
 }
 
 func (s *protectedStoreServer) handleControlPanelRepresentativeLedger(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok {
-		return
-	}
+	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok { return }
 	actorType, actorID, ok := resolveControlPanelRepresentativeActor(w, r)
-	if !ok {
-		return
-	}
-	query := url.Values{
-		"actorId":   {actorID},
-		"actorType": {actorType},
-	}
+	if !ok { return }
+	query := url.Values{"actorId": {actorID}, "actorType": {actorType}}
 	for _, key := range []string{"entryType", "limit", "cursor"} {
-		if value := strings.TrimSpace(r.URL.Query().Get(key)); value != "" {
-			query.Set(key, value)
-		}
+		if value := strings.TrimSpace(r.URL.Query().Get(key)); value != "" { query.Set(key, value) }
 	}
-	status, body, err := s.wlt.FinanceRead(
-		r.Context(),
-		"/wlt/ledger/entries",
-		query,
-		r.Header.Get("X-Correlation-ID"),
-	)
+	status, body, err := s.wlt.FinanceRead(r.Context(), "/wlt/ledger/entries", query, r.Header.Get("X-Correlation-ID"))
 	writeRepresentativeFinanceResponse(w, status, body, err)
 }
 
@@ -213,19 +122,29 @@ func registerRepresentativeFinanceRoutes(mux *http.ServeMux, s *protectedStoreSe
 	mux.HandleFunc("GET /dsh/partner/me/finance/wallet", s.handlePartnerOwnWallet)
 	mux.HandleFunc("GET /dsh/partner/me/finance/ledger-entries", s.handlePartnerOwnLedger)
 	mux.HandleFunc("GET /dsh/partner/me/finance/commissions", s.handlePartnerOwnCommissions)
-	mux.HandleFunc("GET /dsh/partner/me/finance/payout-requests", s.handlePartnerOwnPayoutRequests)
+	mux.HandleFunc("GET /dsh/partner/me/finance/payout-requests", s.handlePartnerPayoutRequests)
+	mux.HandleFunc("POST /dsh/partner/me/finance/payout-requests", s.handlePartnerCreatePayoutRequest)
+	mux.HandleFunc("GET /dsh/partner/me/finance/payout-destination", s.handlePartnerPayoutDestinationRead)
+	mux.HandleFunc("PUT /dsh/partner/me/finance/payout-destination", s.handlePartnerPayoutDestinationUpsert)
+	mux.HandleFunc("POST /dsh/partner/me/finance/payout-destination/deactivate", s.handlePartnerPayoutDestinationDeactivate)
 
 	mux.HandleFunc("GET /dsh/captain/me/finance/wallet", s.handleCaptainOwnWallet)
 	mux.HandleFunc("GET /dsh/captain/me/finance/ledger-entries", s.handleCaptainOwnLedger)
 	mux.HandleFunc("GET /dsh/captain/me/finance/commissions", s.handleCaptainFinanceCommissions)
-	mux.HandleFunc("GET /dsh/captain/me/finance/payout-requests", s.handleCaptainFinancePayouts)
-	mux.HandleFunc("POST /dsh/captain/me/finance/payout-requests", s.handleCaptainCreatePayout)
+	mux.HandleFunc("GET /dsh/captain/me/finance/payout-requests", s.handleCaptainPayoutRequestsJRN037)
+	mux.HandleFunc("POST /dsh/captain/me/finance/payout-requests", s.handleCaptainCreatePayoutRequestJRN037)
+	mux.HandleFunc("GET /dsh/captain/me/finance/payout-destination", s.handleCaptainPayoutDestinationRead)
+	mux.HandleFunc("PUT /dsh/captain/me/finance/payout-destination", s.handleCaptainPayoutDestinationUpsert)
+	mux.HandleFunc("POST /dsh/captain/me/finance/payout-destination/deactivate", s.handleCaptainPayoutDestinationDeactivate)
 
 	mux.HandleFunc("GET /dsh/field/me/finance/wallet", s.handleFieldOwnWallet)
 	mux.HandleFunc("GET /dsh/field/me/finance/ledger-entries", s.handleFieldOwnLedger)
 	mux.HandleFunc("GET /dsh/field/me/finance/commissions", s.handleFieldMeCommissions)
-	mux.HandleFunc("GET /dsh/field/me/finance/payout-requests", s.handleFieldMePayoutRequests)
-	mux.HandleFunc("POST /dsh/field/me/finance/payout-requests", s.handleSubmitFieldMePayoutRequest)
+	mux.HandleFunc("GET /dsh/field/me/finance/payout-requests", s.handleFieldPayoutRequestsJRN037)
+	mux.HandleFunc("POST /dsh/field/me/finance/payout-requests", s.handleFieldCreatePayoutRequestJRN037)
+	mux.HandleFunc("GET /dsh/field/me/finance/payout-destination", s.handleFieldPayoutDestinationReadJRN037)
+	mux.HandleFunc("PUT /dsh/field/me/finance/payout-destination", s.handleFieldPayoutDestinationUpsertJRN037)
+	mux.HandleFunc("POST /dsh/field/me/finance/payout-destination/deactivate", s.handleFieldPayoutDestinationDeactivateJRN037)
 
 	mux.HandleFunc("GET /dsh/control-panel/finance/wallets/{actorType}/{actorId}", s.handleControlPanelRepresentativeWallet)
 	mux.HandleFunc("GET /dsh/control-panel/finance/wallets/{actorType}/{actorId}/ledger-entries", s.handleControlPanelRepresentativeLedger)
@@ -237,4 +156,6 @@ func registerRepresentativeFinanceRoutes(mux *http.ServeMux, s *protectedStoreSe
 	mux.HandleFunc("POST /dsh/control-panel/finance/commissions/{commissionId}/settle", s.handleSettleFinanceCommission)
 	mux.HandleFunc("POST /dsh/control-panel/finance/commissions/{commissionId}/reject", s.handleRejectFinanceCommission)
 	mux.HandleFunc("POST /dsh/control-panel/finance/commissions/{commissionId}/reverse", s.handleReverseFinanceCommission)
+	mux.HandleFunc("GET /dsh/control-panel/finance/payout-requests/{payoutId}/audit", s.handleFinancePayoutAuditJRN037)
+	mux.HandleFunc("POST /dsh/control-panel/finance/payout-requests/{payoutId}/reconcile", s.handleReconcileFinancePayoutRequestJRN037)
 }
