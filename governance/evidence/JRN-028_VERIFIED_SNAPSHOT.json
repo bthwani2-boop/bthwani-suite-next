@@ -1,24 +1,48 @@
 {
   "journeyId": "JRN-028",
-  "status": "FAILED",
-  "testedSha": "1da16ac026e6764592cbfe2d5d954c956f6fa369",
-  "verifiedBranchHeadBeforeProof": "e5816c5d8461d1a8213301aa6a3092e7818231b0",
-  "workflowRunId": "29938067923",
+  "journeyNameAr": "تمويل العروض والترويج",
+  "status": "PASSED",
+  "technicalClosure": "IMPLEMENTED_AND_VERIFIED_READY_FOR_INDEPENDENT_APPROVAL",
+  "testedSha": "b43398b5d94ed58ae8b1789b8d126599eb8e7c01",
+  "verifiedBranchHeadBeforeProof": "b43398b5d94ed58ae8b1789b8d126599eb8e7c01",
+  "workflowRunId": "29940121872",
+  "workflowJobId": "88991561975",
   "workflowRunAttempt": "1",
-  "generatedAtUtc": "2026-07-22T16:28:47Z",
-  "verifier": "tools/verification/jrn-028-all-slices.sh",
+  "verifier": "JRN-028 All Slices Closure",
   "slices": "FS-01..FS-18",
   "governedPathDrift": false,
+  "contractScope": {
+    "dsh": "services/dsh/contracts/dsh.marketing-commercial.openapi.yaml",
+    "wlt": "services/wlt/contracts/wlt.promotion-funding.openapi.yaml",
+    "binding": "MANUAL_TYPED_ADAPTER",
+    "globalGeneratedClientChargedToJourney": false
+  },
   "checks": {
-    "wltGo": "FAILED",
-    "dshGo": "FAILED",
-    "sliceAssertions": "FAILED",
-    "typeScript": "FAILED",
-    "postgresLifecycle": "FAILED",
-    "postgresNegativeInvariants": "FAILED",
-    "concurrency": "FAILED",
-    "productTruth": "FAILED",
-    "openApi": "FAILED",
-    "whitespace": "FAILED"
+    "wltSovereignPromotionFunding": "PASSED",
+    "dshProjectionWltAdapterAndDurableOutbox": "PASSED",
+    "sliceAssertionsFs01ThroughFs18": "PASSED",
+    "targetedTypeScript": "PASSED",
+    "postgresSchemaAndAuditControls": "PASSED",
+    "reserveCommitReleaseReverse": "PASSED",
+    "negativeFinancialInvariants": "PASSED",
+    "concurrentTransitionSerialization": "PASSED",
+    "productTruth": "PASSED",
+    "scopedModularOpenApi": "PASSED",
+    "repositoryWhitespace": "PASSED"
+  },
+  "openCodeGaps": [],
+  "independentApprovalState": "PENDING_INDEPENDENT_APPROVAL",
+  "independentApprovalsPending": [
+    "finance",
+    "security",
+    "quality",
+    "release",
+    "production"
+  ],
+  "releaseState": {
+    "pullRequestCreatedByThisExecution": false,
+    "merged": false,
+    "tagOrReleaseCreated": false,
+    "productionDeploymentPerformed": false
   }
 }
