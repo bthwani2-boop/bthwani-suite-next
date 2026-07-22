@@ -62,9 +62,9 @@ func cancellationTarget(role, reasonCode string) OrderStatus {
 		switch reasonCode {
 		case "no_driver":
 			return StatusCancelledNoDriver
-		case "payment_failed":
+		case "payment_issue":
 			return StatusFailedPayment
-		case "dispatch_failed":
+		case "operational_failure":
 			return StatusFailedDispatch
 		}
 	}
@@ -86,7 +86,7 @@ func validCancellationReason(role, code string) bool {
 			"fraud_risk": true, "safety": true, "operational_failure": true, "other": true,
 		},
 		"system": {
-			"no_driver": true, "payment_failed": true, "dispatch_failed": true,
+			"no_driver": true, "payment_issue": true, "operational_failure": true,
 		},
 	}
 	return allowed[role][code]
