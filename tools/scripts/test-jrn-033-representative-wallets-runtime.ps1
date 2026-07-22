@@ -165,6 +165,15 @@ $unsupportedActor = Invoke-Api GET "$DshBaseUrl/dsh/control-panel/finance/wallet
 Require-Status $unsupportedActor @(400) "unsupported representative actor"
 Require ("$(Get-Property $unsupportedActor.Json 'code')" -eq "UNSUPPORTED_ACTOR_TYPE") "unsupported actor returned the wrong error code"
 
+$crossTenant = Invoke-Api GET "$DshBaseUrl/dsh/control-panel/finance/wallets/client/client-other-tenant-001" (Actor-Headers $operator)
+Require-Status $crossTenant @(404) "cross-tenant wallet lookup"
+Require ("$(Get-Property $crossTenant.Json 'code')" -eq "NOT_FOUND") "cross-tenant wallet lookup did not fail closed as not found"
+
+$crossTenantLedger = Invoke-Api GET "$DshBaseUrl/dsh/control-panel/finance/wallets/client/client-other-tenant-001/ledger-entries?limit=50" (Actor-Headers $operator)
+Require-Status $crossTenantLedger @(200) "cross-tenant ledger lookup"
+Require-NoStore $crossTenantLedger "cross-tenant ledger lookup"
+Require (@((Get-Property $crossTenantLedger.Json 'ledgerEntries')).Count -eq 0) "cross-tenant ledger entries leaked into the operator tenant"
+
 $suspendedWallet = Invoke-Api GET "$DshBaseUrl/dsh/control-panel/finance/wallets/partner/partner-dev-0002" (Actor-Headers $operator)
 Require-Status $suspendedWallet @(200) "suspended wallet lookup"
 Require ("$(Get-Property (Get-Property $suspendedWallet.Json 'wallet') 'status')" -eq "suspended") "suspended wallet state was not preserved"
@@ -187,6 +196,7 @@ Require ($directWlt.Status -eq 401 -or $directWlt.Status -eq 403) "internal WLT 
     "cross-role self-service read rejected",
     "operator lookup without finance permission rejected",
     "unsupported wallet actor rejected",
+    "cross-tenant wallet and ledger reads rejected",
     "query actor override ignored",
     "suspended and frozen states preserved",
     "direct browser-style WLT financial read rejected"
