@@ -37,8 +37,8 @@
   "sliceClosureRegistry": "services/dsh/contracts/jrn-017-slice-closure.json",
   "evidenceRequired": ["static", "database", "contract", "backend", "frontend", "runtime", "cross-surface", "privacy", "security", "qa", "governance", "ci"],
   "statusContext": "jrn-017/captain-live-tracking",
-  "internalZeroGate": "PENDING_TARGETED_CI",
+  "internalZeroGate": "PASS_TARGETED_CI",
   "openCodeGaps": [],
   "independentReviewPending": ["product-owner", "qa-device-accessibility", "security-privacy", "release-production"],
-  "decision": "NEEDS_EVIDENCE"
+  "decision": "READY_FOR_REVIEW"
 }
