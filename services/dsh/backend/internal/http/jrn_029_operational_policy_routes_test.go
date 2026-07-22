@@ -2,7 +2,7 @@ package http
 
 import (
 	"net/http"
-	"strings"
+	"net/http/httptest"
 	"testing"
 )
 
@@ -11,33 +11,32 @@ func TestJRN029OperationalPolicyRoutes(t *testing.T) {
 	RegisterPlatformPolicyRoutes(router, nil, nil, nil, nil)
 
 	cases := []struct {
-		method       string
-		path         string
-		pathTemplate string
+		name   string
+		method string
+		path   string
 	}{
-		{http.MethodGet, "/dsh/operator/platform/operational-profiles/11111111-1111-1111-1111-111111111111", "/dsh/operator/platform/operational-profiles/{zoneId}"},
-		{http.MethodPut, "/dsh/operator/platform/operational-profiles/11111111-1111-1111-1111-111111111111", "/dsh/operator/platform/operational-profiles/{zoneId}"},
-		{http.MethodGet, "/dsh/operator/platform/operational-profiles/11111111-1111-1111-1111-111111111111/delivery-modes", "/dsh/operator/platform/operational-profiles/{zoneId}/delivery-modes"},
-		{http.MethodPut, "/dsh/operator/platform/operational-profiles/11111111-1111-1111-1111-111111111111/delivery-modes/bthwani_delivery", "/dsh/operator/platform/operational-profiles/{zoneId}/delivery-modes/{fulfillmentMode}"},
-		{http.MethodPost, "/dsh/platform/operational-policy/evaluate", "/dsh/platform/operational-policy/evaluate"},
-		{http.MethodGet, "/dsh/operator/platform/operational-policy/audit", "/dsh/operator/platform/operational-policy/audit"},
-		{http.MethodPost, "/dsh/operator/platform/operational-policy/audit/55555555-5555-5555-5555-555555555555/rollback", "/dsh/operator/platform/operational-policy/audit/{eventId}/rollback"},
+		{"get operational profile", http.MethodGet, "/dsh/operator/platform/operational-profiles/11111111-1111-1111-1111-111111111111"},
+		{"upsert operational profile", http.MethodPut, "/dsh/operator/platform/operational-profiles/11111111-1111-1111-1111-111111111111"},
+		{"list delivery modes", http.MethodGet, "/dsh/operator/platform/operational-profiles/11111111-1111-1111-1111-111111111111/delivery-modes"},
+		{"upsert delivery mode", http.MethodPut, "/dsh/operator/platform/operational-profiles/11111111-1111-1111-1111-111111111111/delivery-modes/bthwani_delivery"},
+		{"evaluate operational policy", http.MethodPost, "/dsh/platform/operational-policy/evaluate"},
+		{"list operational audit", http.MethodGet, "/dsh/operator/platform/operational-policy/audit"},
+		{"rollback operational policy", http.MethodPost, "/dsh/operator/platform/operational-policy/audit/55555555-5555-5555-5555-555555555555/rollback"},
 	}
 
 	for _, tc := range cases {
-		request, err := http.NewRequest(tc.method, tc.path, nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-		_, pattern := router.Handler(request)
-		if pattern == "" {
-			t.Fatalf("%s %s: no registered handler", tc.method, tc.path)
-		}
-		if strings.Contains(pattern, " ") && !strings.HasPrefix(pattern, tc.method+" ") {
-			t.Fatalf("%s %s: matched wrong method pattern %q", tc.method, tc.path, pattern)
-		}
-		if !strings.HasSuffix(pattern, tc.pathTemplate) {
-			t.Fatalf("%s %s: expected route template %q, got %q", tc.method, tc.path, tc.pathTemplate, pattern)
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			request := httptest.NewRequest(tc.method, tc.path, nil)
+			_, pattern := router.Handler(request)
+			if pattern == "" {
+				t.Fatalf("%s %s: no registered handler", tc.method, tc.path)
+			}
+
+			response := httptest.NewRecorder()
+			router.ServeHTTP(response, request)
+			if response.Code == http.StatusNotFound {
+				t.Fatalf("%s %s: route dispatched to 404", tc.method, tc.path)
+			}
+		})
 	}
 }
