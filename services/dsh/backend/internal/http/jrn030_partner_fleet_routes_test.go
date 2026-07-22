@@ -23,10 +23,10 @@ func TestJourney030ExposesGovernedPartnerFleetRoutes(t *testing.T) {
 	RegisterPartnerFleetOperatorRoutes(router, nil, nil, nil, nil)
 
 	cases := []struct {
-		name       string
-		method     string
-		path       string
-		routePath  string
+		name      string
+		method    string
+		path      string
+		routePath string
 	}{
 		{name: "issue fleet code", method: http.MethodPost, path: "/dsh/partner/stores/store-1/couriers/member-1/connection-code", routePath: "/dsh/partner/stores/{storeId}/couriers/{memberId}/connection-code"},
 		{name: "list partner connections", method: http.MethodGet, path: "/dsh/partner/stores/store-1/courier-connections", routePath: "/dsh/partner/stores/{storeId}/courier-connections"},
