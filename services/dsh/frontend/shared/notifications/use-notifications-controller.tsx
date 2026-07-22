@@ -19,12 +19,16 @@ import type {
   DshNotificationDeliveryOutcome,
   DshNotificationPreference,
   DshNotificationsState,
+  DshUpdateNotificationPreferenceInput,
+  DshUpsertPlatformNotificationConfigInput,
 } from "./notifications.types";
 
 function resolveMessage(err: unknown): string {
   const e = err as { kind?: string; status?: number } | undefined;
   if (e?.kind === "network") return "لا يوجد اتصال بالإنترنت";
   if (e?.status === 401) return "الجلسة منتهية، يرجى إعادة تسجيل الدخول";
+  if (e?.status === 403) return "لا تملك الصلاحية المطلوبة";
+  if (e?.status === 400) return "بيانات سياسة الإشعارات غير صالحة";
   return "تعذّر تحميل الإشعارات";
 }
 
@@ -72,8 +76,8 @@ export function useNotificationsController(authKind: string) {
     await loadNotifications();
   }, [loadNotifications]);
 
-  const savePreference = useCallback(async (topic: string, enabled: boolean) => {
-    await updateNotificationPreferences(topic, enabled);
+  const savePreference = useCallback(async (input: DshUpdateNotificationPreferenceInput) => {
+    await updateNotificationPreferences(input);
     await loadPreferences();
   }, [loadPreferences]);
 
@@ -109,13 +113,8 @@ export function usePlatformNotificationConfigController(authKind: string) {
     }
   }, []);
 
-  const save = useCallback(async (
-    topic: string,
-    actorTypes: string[],
-    isEnabled: boolean,
-    description: string
-  ) => {
-    await upsertPlatformNotificationConfig(topic, actorTypes, isEnabled, description);
+  const save = useCallback(async (input: DshUpsertPlatformNotificationConfigInput) => {
+    await upsertPlatformNotificationConfig(input);
     await load();
   }, [load]);
 
