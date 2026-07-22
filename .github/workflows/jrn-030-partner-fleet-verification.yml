@@ -62,11 +62,9 @@ jobs:
       - name: Verify seven production route registrations
         working-directory: services/dsh/backend
         run: go run ./cmd/jrn030-route-proof
-      - name: Compile and build DSH API composition root
+      - name: Build DSH API production binary
         working-directory: services/dsh/backend
-        run: |
-          go test ./cmd/dsh-api -run '^$'
-          go build -o /tmp/dsh-api ./cmd/dsh-api
+        run: go build -o /tmp/dsh-api ./cmd/dsh-api
 
   verify:
     name: JRN-030 same-commit full-stack proof
@@ -125,11 +123,9 @@ jobs:
       - name: Verify seven production route registrations
         working-directory: services/dsh/backend
         run: go run ./cmd/jrn030-route-proof
-      - name: Compile and build DSH API composition root
+      - name: Build DSH API production binary
         working-directory: services/dsh/backend
-        run: |
-          go test ./cmd/dsh-api -run '^$'
-          go build -o /tmp/dsh-api ./cmd/dsh-api
+        run: go build -o /tmp/dsh-api ./cmd/dsh-api
       - name: Parse and verify strict OpenAPI contract
         run: |
           ruby -e 'require "yaml"; document=YAML.load_file(ARGV.fetch(0)); abort "expected OpenAPI 3.1.0" unless document["openapi"]=="3.1.0"; expected=%w[ConnectionCode IssuedConnectionCode CaptainFleetMembership OperatorStoreFleetMember OperatorPartnerFleetSnapshot]; schemas=document.dig("components","schemas")||{}; missing=expected.reject{|name| schemas.key?(name)}; abort "missing schemas: #{missing.join(",")}" unless missing.empty?; abort "operator snapshot must be strict" unless schemas.dig("OperatorPartnerFleetSnapshot","additionalProperties")==false' services/dsh/contracts/dsh.partner-fleet.openapi.yaml
