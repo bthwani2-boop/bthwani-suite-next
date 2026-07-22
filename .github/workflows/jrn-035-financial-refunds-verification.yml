@@ -7,6 +7,8 @@ on:
     paths: &jrn035_paths
       - "governance/product/contracts/jrn-035-financial-refunds.product-truth.json"
       - "services/wlt/contracts/jrn-035-refund-governance.json"
+      - "services/wlt/contracts/jrn-035-refunds.openapi.yaml"
+      - "services/dsh/contracts/jrn-035-refunds.openapi.yaml"
       - "services/wlt/backend/internal/refund/**"
       - "services/wlt/backend/internal/dshoutbox/**"
       - "services/wlt/backend/internal/dshnotify/**"
@@ -23,9 +25,11 @@ on:
       - "services/dsh/frontend/app-client/orders/OrdersListScreen.tsx"
       - "services/dsh/frontend/app-partner/orders/GovernedPartnerOrdersScreen.tsx"
       - "tools/verification/jrn-035-financial-refunds.test.mjs"
+      - "tools/verification/jrn-035-openapi-contracts.test.mjs"
+      - "governance/evidence/.jrn-035-final-validation-trigger"
       - ".github/workflows/jrn-035-financial-refunds-verification.yml"
   pull_request:
-    branches: [master]
+    branches: [sambassam]
     paths: *jrn035_paths
 
 permissions:
@@ -67,6 +71,7 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
+          fetch-depth: 0
       - name: Set up Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
@@ -85,10 +90,22 @@ jobs:
           cache: pnpm
       - name: Install locked workspace
         run: pnpm install --frozen-lockfile
-      - name: Verify JRN-035 cross-surface and ownership invariants
+      - name: Verify JRN-035 cross-surface ownership privacy and accessibility invariants
         run: |
           node --test tools/verification/jrn-035-financial-refunds.test.mjs
+          node --test tools/verification/jrn-035-openapi-contracts.test.mjs
           node tools/guards/wlt-financial-boundary-gate.mjs
+      - name: Generate typed WLT and DSH refund contracts
+        run: |
+          pnpm dlx openapi-typescript@7.10.1 services/wlt/contracts/jrn-035-refunds.openapi.yaml --output /tmp/jrn-035-wlt-refunds.generated.ts
+          pnpm dlx openapi-typescript@7.10.1 services/dsh/contracts/jrn-035-refunds.openapi.yaml --output /tmp/jrn-035-dsh-refunds.generated.ts
+          test -s /tmp/jrn-035-wlt-refunds.generated.ts
+          test -s /tmp/jrn-035-dsh-refunds.generated.ts
+          grep -q "createWltRefund" /tmp/jrn-035-wlt-refunds.generated.ts
+          grep -q "reconcileWltRefund" /tmp/jrn-035-wlt-refunds.generated.ts
+          grep -q "createDshFinanceRefund" /tmp/jrn-035-dsh-refunds.generated.ts
+          grep -q "getDshClientOrderRefundStatus" /tmp/jrn-035-dsh-refunds.generated.ts
+          grep -q "getDshPartnerOrderRefundStatus" /tmp/jrn-035-dsh-refunds.generated.ts
       - name: Verify migration numbering and probe coverage
         shell: pwsh
         run: |
@@ -110,14 +127,14 @@ jobs:
           wlt_files=$(find services/wlt/backend/internal/refund services/wlt/backend/internal/dshoutbox services/wlt/backend/internal/dshnotify -type f -name '*.go' -print)
           test -z "$(gofmt -l ${wlt_files} services/wlt/backend/internal/http/server.go)"
           test -z "$(gofmt -l services/dsh/backend/internal/http/refund_finance_handlers.go services/dsh/backend/internal/http/refund_finance_routes.go services/dsh/backend/internal/http/financeproxy.go services/dsh/backend/internal/wlt/finance_proxy.go services/dsh/backend/internal/wlt/refund_proxy.go)"
-      - name: Execute WLT provider, ledger, reconciliation, and outbox proof
+      - name: Execute WLT provider ledger reconciliation and outbox proof
         working-directory: services/wlt/backend
         run: |
           go test ./internal/refund -run '^TestGovernedRefundRuntime' -count=1 -v
-          go test ./internal/refund ./internal/dshoutbox ./internal/dshnotify ./internal/http
+          go test ./internal/refund ./internal/dshoutbox ./internal/dshnotify ./internal/http -count=1
       - name: Compile and test DSH refund proxy boundary
         working-directory: services/dsh/backend
-        run: go test ./internal/http ./internal/wlt
+        run: go test ./internal/http ./internal/wlt -count=1
       - name: Typecheck DSH multi-surface refund bindings
         run: pnpm --dir services/dsh typecheck
       - name: Verify backend and frontend API bindings
