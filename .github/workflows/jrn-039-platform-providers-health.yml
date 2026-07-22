@@ -108,8 +108,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(psql -tA -c "SELECT count(*) FROM external_providers WHERE active AND (credentials::text ILIKE '%mock%' OR code ILIKE '%mock%');")" = "0"
-          test "$(psql -tA -c "SELECT count(*) FROM pg_indexes WHERE indexname = 'external_providers_kind_active_idx';")" = "1"
+          active_mock_count="$(psql -tA -c "SELECT count(*) FROM external_providers WHERE active AND (credentials::text ILIKE '%mock%' OR code ILIKE '%mock%');")"
+          provider_index_count="$(psql -tA -c "SELECT count(*) FROM pg_indexes WHERE indexname = 'external_providers_kind_active_idx';")"
+          test "${active_mock_count}" = "0"
+          test "${provider_index_count}" = "1"
       - name: Start Providers and Platform Control runtimes
         shell: bash
         run: |
@@ -138,14 +140,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          ready=false
           for attempt in $(seq 1 60); do
             if curl -fsS http://127.0.0.1:58087/providers/health > /tmp/providers-health.json && \
+               curl -fsS http://127.0.0.1:58087/providers/readiness > /tmp/providers-readiness.json && \
                curl -fsS http://127.0.0.1:58088/platform/health > /tmp/platform-health.json && \
                curl -fsS http://127.0.0.1:58088/platform/readiness > /tmp/platform-readiness.json; then
+              ready=true
               break
             fi
             sleep 2
           done
+          test "${ready}" = "true"
+          grep -q '"status":"ready"' /tmp/providers-readiness.json
           grep -q '"service":"platform-control"' /tmp/platform-health.json
           grep -q '"status":"ready"' /tmp/platform-readiness.json
           grep -q '"providers"' /tmp/providers-health.json
@@ -168,6 +175,7 @@ jobs:
             /tmp/jrn039-providers.log
             /tmp/jrn039-platform.log
             /tmp/providers-health.json
+            /tmp/providers-readiness.json
             /tmp/platform-health.json
             /tmp/platform-readiness.json
           if-no-files-found: warn
