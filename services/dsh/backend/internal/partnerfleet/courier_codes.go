@@ -192,8 +192,9 @@ func IssueCode(ctx context.Context, db *sql.DB, storeID, teamMemberID, actorID s
 
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO dsh_store_team_member_actions
-			(member_id,store_id,action_label,from_status,to_status,actor_id)
-		VALUES ($1,$2,'issue_captain_connection_code',$3,$3,$4)`, teamMemberID, storeID, status, actorID); err != nil {
+			(member_id,store_id,action_label,from_status,to_status,actor_id,idempotency_key)
+		VALUES ($1,$2,'issue_captain_connection_code',$3,$3,$4,$5)`,
+		teamMemberID, storeID, status, actorID, auditIdempotencyKey("issue", connection.ID)); err != nil {
 		return IssuedConnectionCode{}, err
 	}
 	if _, err := tx.ExecContext(ctx, `
@@ -257,8 +258,9 @@ func RevokeCode(ctx context.Context, db *sql.DB, storeID, codeID, actorID string
 	}
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO dsh_store_team_member_actions
-			(member_id,store_id,action_label,from_status,to_status,actor_id)
-		VALUES ($1,$2,'revoke_captain_connection_code',$3,$3,$4)`, teamMemberID, storeID, memberStatus, actorID); err != nil {
+			(member_id,store_id,action_label,from_status,to_status,actor_id,idempotency_key)
+		VALUES ($1,$2,'revoke_captain_connection_code',$3,$3,$4,$5)`,
+		teamMemberID, storeID, memberStatus, actorID, auditIdempotencyKey("revoke", codeID)); err != nil {
 		return ConnectionCode{}, err
 	}
 	if _, err := tx.ExecContext(ctx, `
