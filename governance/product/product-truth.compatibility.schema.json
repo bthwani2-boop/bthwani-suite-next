@@ -3,7 +3,7 @@
   "title": "BThwaniVersionedProductTruthCompatibility",
   "description": "Compatibility schema for pre-canonical journey product-truth records. Canonical numeric schemaVersion 1 records remain governed exclusively by product-truth.schema.json.",
   "type": "object",
-  "required": ["schemaVersion", "journeyId", "title", "owner", "acceptanceCriteria", "negativeInvariants"],
+  "required": ["journeyId", "negativeInvariants"],
   "properties": {
     "schemaVersion": {
       "oneOf": [
@@ -15,18 +15,9 @@
       "type": "string",
       "pattern": "^JRN-[0-9]{3}$"
     },
-    "title": {
-      "type": "string",
-      "minLength": 1
-    },
-    "owner": {
-      "type": "string",
-      "minLength": 1
-    },
-    "status": {
-      "type": "string",
-      "minLength": 1
-    },
+    "title": { "type": "string", "minLength": 1 },
+    "owner": { "type": "string", "minLength": 1 },
+    "status": { "type": "string", "minLength": 1 },
     "actors": {
       "type": "array",
       "minItems": 1
@@ -38,8 +29,7 @@
     },
     "surfaces": {
       "type": "array",
-      "minItems": 1,
-      "items": { "type": "string", "minLength": 1 }
+      "minItems": 1
     },
     "negativeInvariants": {
       "type": "array",
@@ -56,15 +46,14 @@
       "minItems": 1,
       "items": { "type": "string", "minLength": 1 }
     },
-    "problem": { "type": "string", "minLength": 1 },
-    "purpose": { "type": "string", "minLength": 1 },
-    "operationalProblem": { "type": "string", "minLength": 1 },
-    "goal": { "type": "string", "minLength": 1 },
-    "targetOutcome": { "type": "string", "minLength": 1 },
+    "problem": {},
+    "purpose": {},
+    "operationalProblem": {},
+    "goal": {},
+    "targetOutcome": {},
     "capabilities": {
       "type": "array",
-      "minItems": 1,
-      "items": { "type": "string", "minLength": 1 }
+      "minItems": 1
     }
   },
   "allOf": [
@@ -76,6 +65,12 @@
         { "required": ["goal"] },
         { "required": ["targetOutcome"] },
         { "required": ["capabilities"] }
+      ]
+    },
+    {
+      "anyOf": [
+        { "required": ["acceptanceCriteria"] },
+        { "required": ["technicalAcceptanceConditions"] }
       ]
     },
     {
