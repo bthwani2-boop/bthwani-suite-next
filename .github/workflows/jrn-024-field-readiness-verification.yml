@@ -1,0 +1,79 @@
+name: JRN-024 Field Readiness Verification
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [sambassam]
+    paths:
+      - "services/dsh/backend/internal/fieldreadiness/**"
+      - "services/dsh/backend/internal/http/field_readiness_routes.go"
+      - "services/dsh/backend/internal/http/field_readiness_governed_handlers.go"
+      - "services/dsh/frontend/shared/field-readiness/**"
+      - "services/dsh/frontend/shared/media/field-document-media.ts"
+      - "services/dsh/frontend/app-field/escalation/DshFieldVisitScreen.tsx"
+      - "services/dsh/frontend/app-field/escalation/DshFieldWorkQueueScreen.tsx"
+      - "services/dsh/frontend/app-field/escalation/DshFieldReadinessChecklistScreen.tsx"
+      - "services/dsh/frontend/control-panel/partners/field-readiness/FieldReadinessQueueScreen.tsx"
+      - "services/dsh/tests/jrn-024-field-readiness.test.mjs"
+      - "services/dsh/tsconfig.jrn-024.json"
+      - ".github/workflows/jrn-024-field-readiness-verification.yml"
+  pull_request:
+    branches: [master]
+    paths:
+      - "services/dsh/backend/internal/fieldreadiness/**"
+      - "services/dsh/backend/internal/http/field_readiness_routes.go"
+      - "services/dsh/backend/internal/http/field_readiness_governed_handlers.go"
+      - "services/dsh/frontend/shared/field-readiness/**"
+      - "services/dsh/frontend/shared/media/field-document-media.ts"
+      - "services/dsh/frontend/app-field/escalation/DshFieldVisitScreen.tsx"
+      - "services/dsh/frontend/app-field/escalation/DshFieldWorkQueueScreen.tsx"
+      - "services/dsh/frontend/app-field/escalation/DshFieldReadinessChecklistScreen.tsx"
+      - "services/dsh/frontend/control-panel/partners/field-readiness/FieldReadinessQueueScreen.tsx"
+      - "services/dsh/tests/jrn-024-field-readiness.test.mjs"
+      - "services/dsh/tsconfig.jrn-024.json"
+      - ".github/workflows/jrn-024-field-readiness-verification.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jrn-024-${{ github.workflow }}-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: JRN-024 targeted full-stack verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository state
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "10.34.2"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.17.0"
+          cache: pnpm
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: services/dsh/backend/go.sum
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify JRN-024 backend domain and HTTP compilation
+        working-directory: services/dsh/backend
+        run: go test ./internal/fieldreadiness ./internal/http -run 'TestValidateGovernedLocation|TestEscalationTransitions|TestGovernedInputEnums|^$'
+
+      - name: Verify JRN-024 shared brain and affected surfaces
+        run: pnpm --dir services/dsh exec tsc -p tsconfig.jrn-024.json --noEmit --pretty false
+
+      - name: Verify JRN-024 full-stack bindings
+        run: node --test services/dsh/tests/jrn-024-field-readiness.test.mjs
