@@ -105,7 +105,7 @@ test("JRN-025 governed campaign UI edits all registered campaign fields", () => 
   assertIncludesAll(controller, [
     "expectedVersion: campaign.version",
     "await load()",
-    "VERSION_CONFLICT",
+    "candidate?.status === 409",
     "لا يوجد اتصال",
   ], "campaign controller");
   assertIncludesAll(deck, [
@@ -132,8 +132,8 @@ test("JRN-025 client sees only eligible marketing projections", () => {
     "o.status='published'",
     "CURRENT_DATE",
     "clientEligibleStorePredicate",
-    '"campaign:"',
-    '"partner-offer:"',
+    "campaign:",
+    "partner-offer:",
     "AudienceSegment",
   ], "client marketing projection");
   assertIncludesAll(handler, [
