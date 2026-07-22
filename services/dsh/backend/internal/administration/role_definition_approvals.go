@@ -14,9 +14,27 @@ import (
 var roleNamePattern = regexp.MustCompile(`^[a-z][a-z0-9-]{2,79}$`)
 
 var governedAdministrationPermissions = map[string]struct{}{
-	"administration.read":    {},
-	"administration.manage":  {},
-	"administration.approve": {},
+	"administration.read":             {},
+	"administration.manage":           {},
+	"administration.approve":          {},
+	"administration.role.request":     {},
+	"administration.role.approve":     {},
+	"administration.staff.request":    {},
+	"administration.staff.approve":    {},
+	"administration.audit.read":       {},
+	"administration.diagnostics.read": {},
+	"administration.rollback.request": {},
+	"administration.rollback.approve": {},
+}
+
+var governedAdministrationSurfaces = map[string]struct{}{
+	"control-panel": {},
+	"app-client":    {},
+	"app-partner":   {},
+	"app-captain":   {},
+	"app-field":     {},
+	"webapp":        {},
+	"website":       {},
 }
 
 type RoleDefinitionRequest struct {
@@ -24,6 +42,7 @@ type RoleDefinitionRequest struct {
 	RoleName    string     `json:"roleName"`
 	Description string     `json:"description"`
 	Permissions []string   `json:"permissions"`
+	Surfaces    []string   `json:"surfaces"`
 	RequestedBy string     `json:"requestedBy"`
 	Reason      string     `json:"reason"`
 	Status      string     `json:"status"`
@@ -35,38 +54,59 @@ type RoleDefinitionRequest struct {
 	ReviewedAt  *time.Time `json:"reviewedAt,omitempty"`
 }
 
-func normalizeRoleDefinition(name string, permissions []string) (string, []string, error) {
+func normalizeRoleDefinition(name string, permissions []string, surfaces []string) (string, []string, []string, error) {
 	name = strings.ToLower(strings.TrimSpace(name))
 	if !roleNamePattern.MatchString(name) {
-		return "", nil, ErrInvalid
+		return "", nil, nil, ErrInvalid
 	}
-	unique := make(map[string]struct{}, len(permissions))
+	permissionSet := make(map[string]struct{}, len(permissions))
 	for _, permission := range permissions {
 		permission = strings.TrimSpace(permission)
 		if _, allowed := governedAdministrationPermissions[permission]; !allowed {
-			return "", nil, ErrInvalid
+			return "", nil, nil, ErrInvalid
 		}
-		unique[permission] = struct{}{}
+		permissionSet[permission] = struct{}{}
 	}
-	if len(unique) == 0 {
-		return "", nil, ErrInvalid
+	if len(permissionSet) == 0 {
+		return "", nil, nil, ErrInvalid
 	}
-	normalized := make([]string, 0, len(unique))
-	for permission := range unique {
-		normalized = append(normalized, permission)
+	normalizedPermissions := make([]string, 0, len(permissionSet))
+	for permission := range permissionSet {
+		normalizedPermissions = append(normalizedPermissions, permission)
 	}
-	sort.Strings(normalized)
-	return name, normalized, nil
+	sort.Strings(normalizedPermissions)
+
+	surfaceSet := make(map[string]struct{}, len(surfaces))
+	for _, surface := range surfaces {
+		surface = strings.ToLower(strings.TrimSpace(surface))
+		if _, allowed := governedAdministrationSurfaces[surface]; !allowed {
+			return "", nil, nil, ErrInvalid
+		}
+		surfaceSet[surface] = struct{}{}
+	}
+	if len(surfaceSet) == 0 {
+		surfaceSet["control-panel"] = struct{}{}
+	}
+	if _, hasControlPanel := surfaceSet["control-panel"]; !hasControlPanel {
+		return "", nil, nil, ErrInvalid
+	}
+	normalizedSurfaces := make([]string, 0, len(surfaceSet))
+	for surface := range surfaceSet {
+		normalizedSurfaces = append(normalizedSurfaces, surface)
+	}
+	sort.Strings(normalizedSurfaces)
+	return name, normalizedPermissions, normalizedSurfaces, nil
 }
 
 func scanRoleDefinition(scanner interface{ Scan(...any) error }) (RoleDefinitionRequest, error) {
 	var out RoleDefinitionRequest
-	var permissionsJSON []byte
+	var permissionsJSON, surfacesJSON []byte
 	if err := scanner.Scan(
 		&out.ID,
 		&out.RoleName,
 		&out.Description,
 		&permissionsJSON,
+		&surfacesJSON,
 		&out.RequestedBy,
 		&out.Reason,
 		&out.Status,
@@ -82,6 +122,9 @@ func scanRoleDefinition(scanner interface{ Scan(...any) error }) (RoleDefinition
 	if err := json.Unmarshal(permissionsJSON, &out.Permissions); err != nil {
 		return RoleDefinitionRequest{}, err
 	}
+	if err := json.Unmarshal(surfacesJSON, &out.Surfaces); err != nil {
+		return RoleDefinitionRequest{}, err
+	}
 	return out, nil
 }
 
@@ -91,13 +134,14 @@ func RequestRoleDefinition(
 	roleName string,
 	description string,
 	permissions []string,
+	surfaces []string,
 	requestedBy string,
 	reason string,
 ) (RoleDefinitionRequest, error) {
 	requestedBy = strings.TrimSpace(requestedBy)
 	reason = strings.TrimSpace(reason)
 	description = strings.TrimSpace(description)
-	roleName, permissions, err := normalizeRoleDefinition(roleName, permissions)
+	roleName, permissions, surfaces, err := normalizeRoleDefinition(roleName, permissions, surfaces)
 	if err != nil || db == nil || requestedBy == "" || len(reason) < 5 {
 		return RoleDefinitionRequest{}, ErrInvalid
 	}
@@ -105,7 +149,10 @@ func RequestRoleDefinition(
 	if err != nil {
 		return RoleDefinitionRequest{}, err
 	}
-	permissionsValue := string(permissionsJSON)
+	surfacesJSON, err := json.Marshal(surfaces)
+	if err != nil {
+		return RoleDefinitionRequest{}, err
+	}
 
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
@@ -115,13 +162,13 @@ func RequestRoleDefinition(
 
 	request, err := scanRoleDefinition(tx.QueryRowContext(ctx, `
 		INSERT INTO dsh_admin_role_definition_requests
-			(role_name, description, permissions, requested_by, reason)
-		SELECT $1, $2, $3::jsonb, $4, $5
+			(role_name, description, permissions, surfaces, requested_by, reason)
+		SELECT $1, $2, $3::jsonb, $4::jsonb, $5, $6
 		WHERE NOT EXISTS (SELECT 1 FROM dsh_admin_roles WHERE lower(name) = lower($1))
-		RETURNING id::TEXT, role_name, description, permissions, requested_by,
+		RETURNING id::TEXT, role_name, description, permissions, surfaces, requested_by,
 		          reason, status, COALESCE(reviewed_by,''), COALESCE(review_note,''),
 		          version, created_at, updated_at, reviewed_at`,
-		roleName, description, permissionsValue, requestedBy, reason))
+		roleName, description, string(permissionsJSON), string(surfacesJSON), requestedBy, reason))
 	if errors.Is(err, sql.ErrNoRows) {
 		return RoleDefinitionRequest{}, ErrApprovalConflict
 	}
@@ -131,10 +178,11 @@ func RequestRoleDefinition(
 		}
 		return RoleDefinitionRequest{}, err
 	}
-	if _, err := tx.ExecContext(ctx, `
-		INSERT INTO dsh_admin_audit (actor_id, action, target_id, detail)
-		VALUES ($1, 'role_definition_requested', $2, $3)`,
-		requestedBy, roleName, "permissions="+strings.Join(permissions, ",")+"; reason="+reason); err != nil {
+	if err := writeAdminAudit(ctx, tx, requestedBy, "role_definition_requested", roleName, map[string]string{
+		"permission_count": stringCount(len(permissions)),
+		"surface_count":    stringCount(len(surfaces)),
+		"reason_provided":  "true",
+	}); err != nil {
 		return RoleDefinitionRequest{}, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -157,7 +205,7 @@ func ListRoleDefinitionRequests(
 		limit = 100
 	}
 	rows, err := db.QueryContext(ctx, `
-		SELECT id::TEXT, role_name, description, permissions, requested_by,
+		SELECT id::TEXT, role_name, description, permissions, surfaces, requested_by,
 		       reason, status, COALESCE(reviewed_by,''), COALESCE(review_note,''),
 		       version, created_at, updated_at, reviewed_at
 		FROM dsh_admin_role_definition_requests
@@ -205,7 +253,7 @@ func ReviewRoleDefinition(
 	defer tx.Rollback()
 
 	current, err := scanRoleDefinition(tx.QueryRowContext(ctx, `
-		SELECT id::TEXT, role_name, description, permissions, requested_by,
+		SELECT id::TEXT, role_name, description, permissions, surfaces, requested_by,
 		       reason, status, COALESCE(reviewed_by,''), COALESCE(review_note,''),
 		       version, created_at, updated_at, reviewed_at
 		FROM dsh_admin_role_definition_requests
@@ -230,15 +278,20 @@ func ReviewRoleDefinition(
 		if marshalErr != nil {
 			return RoleDefinitionRequest{}, nil, marshalErr
 		}
-		permissionsValue := string(permissionsJSON)
+		surfacesJSON, marshalErr := json.Marshal(current.Surfaces)
+		if marshalErr != nil {
+			return RoleDefinitionRequest{}, nil, marshalErr
+		}
 		var role Role
-		var rolePermissionsJSON []byte
+		var rolePermissionsJSON, roleSurfacesJSON []byte
 		err = tx.QueryRowContext(ctx, `
-			INSERT INTO dsh_admin_roles (name, description, permissions)
-			VALUES ($1, $2, $3::jsonb)
-			RETURNING id::TEXT, name, COALESCE(description,''), permissions, created_at`,
-			current.RoleName, current.Description, permissionsValue).Scan(
-			&role.ID, &role.Name, &role.Description, &rolePermissionsJSON, &role.CreatedAt,
+			INSERT INTO dsh_admin_roles (name, description, permissions, surfaces)
+			VALUES ($1, $2, $3::jsonb, $4::jsonb)
+			RETURNING id::TEXT, name, COALESCE(description,''), permissions, surfaces,
+			          active, version, created_at`,
+			current.RoleName, current.Description, string(permissionsJSON), string(surfacesJSON)).Scan(
+			&role.ID, &role.Name, &role.Description, &rolePermissionsJSON, &roleSurfacesJSON,
+			&role.Active, &role.Version, &role.CreatedAt,
 		)
 		if err != nil {
 			if strings.Contains(strings.ToLower(err.Error()), "duplicate key") {
@@ -249,6 +302,9 @@ func ReviewRoleDefinition(
 		if err := json.Unmarshal(rolePermissionsJSON, &role.Permissions); err != nil {
 			return RoleDefinitionRequest{}, nil, err
 		}
+		if err := json.Unmarshal(roleSurfacesJSON, &role.Surfaces); err != nil {
+			return RoleDefinitionRequest{}, nil, err
+		}
 		createdRole = &role
 	}
 
@@ -257,7 +313,7 @@ func ReviewRoleDefinition(
 		SET status = $2, reviewed_by = $3, review_note = $4,
 		    reviewed_at = NOW(), updated_at = NOW(), version = version + 1
 		WHERE id = $1 AND status = 'pending' AND version = $5
-		RETURNING id::TEXT, role_name, description, permissions, requested_by,
+		RETURNING id::TEXT, role_name, description, permissions, surfaces, requested_by,
 		          reason, status, COALESCE(reviewed_by,''), COALESCE(review_note,''),
 		          version, created_at, updated_at, reviewed_at`,
 		requestID, decision, checkerActorID, reviewNote, expectedVersion))
@@ -267,15 +323,28 @@ func ReviewRoleDefinition(
 	if err != nil {
 		return RoleDefinitionRequest{}, nil, err
 	}
-	if _, err := tx.ExecContext(ctx, `
-		INSERT INTO dsh_admin_audit (actor_id, action, target_id, detail)
-		VALUES ($1, $2, $3, $4)`,
-		checkerActorID, "role_definition_"+decision, current.RoleName,
-		"request_id="+requestID+"; note="+reviewNote); err != nil {
+	if err := writeAdminAudit(ctx, tx, checkerActorID, "role_definition_"+decision, current.RoleName, map[string]string{
+		"request_id":    requestID,
+		"decision":      decision,
+		"note_provided": boolText(reviewNote != ""),
+	}); err != nil {
 		return RoleDefinitionRequest{}, nil, err
 	}
 	if err := tx.Commit(); err != nil {
 		return RoleDefinitionRequest{}, nil, err
 	}
 	return reviewed, createdRole, nil
+}
+
+func stringCount(value int) string {
+	if value == 0 {
+		return "0"
+	}
+	const digits = "0123456789"
+	result := ""
+	for value > 0 {
+		result = string(digits[value%10]) + result
+		value /= 10
+	}
+	return result
 }
