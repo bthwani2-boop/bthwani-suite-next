@@ -37,6 +37,8 @@ test("JRN-031 database owns rollback and append-only audit enforcement", () => {
     "dsh_admin_audit_append_only_guard",
     "BEFORE UPDATE OR DELETE ON dsh_admin_audit",
     "sensitivity IN ('internal','restricted')",
+    "dsh_admin_roles_surfaces_scope",
+    "status = 'pending' AND reviewed_by IS NULL",
   ], "JRN-031 migration");
 });
 
@@ -45,6 +47,8 @@ test("JRN-031 backend enforces operation and control-panel scoped permissions", 
   const definitions = read("services/dsh/backend/internal/administration/role_definition_approvals.go");
   const rollback = read("services/dsh/backend/internal/administration/rollback_and_diagnostics.go");
   const permission = read("services/dsh/backend/internal/http/administration_permission.go");
+  const approvalRoutes = read("services/dsh/backend/internal/http/administration_approval_routes.go");
+  const rollbackRoutes = read("services/dsh/backend/internal/http/administration_rollback_diagnostics.go");
   assertIncludesAll(administration, ["role.surfaces ? 'control-panel'", "AdministrationPermissionCandidates"], "role authorization");
   assertIncludesAll(definitions, [
     '"administration.role.request"',
@@ -67,6 +71,27 @@ test("JRN-031 backend enforces operation and control-panel scoped permissions", 
     'permission.Surface != "control-panel"',
     "ActorHasPermission",
   ], "authorization gate");
+  assert.doesNotMatch(permission, /HasRole\("operator"\)/, "broad operator role must not bypass operation permissions");
+  assert.doesNotMatch(permission, /PhoneE164/, "administration authorization must not propagate phone PII");
+  assertIncludesAll(approvalRoutes, [
+    "handleListRoleDefinitionRequests",
+    "AdministrationPermissionRoleApprove",
+    "handleListRoleAssignmentApprovals",
+    "AdministrationPermissionStaffApprove",
+  ], "approval queue permissions");
+  assertIncludesAll(rollbackRoutes, [
+    "handleListRollbackRequests",
+    "AdministrationPermissionRollbackApprove",
+  ], "rollback queue permission");
+});
+
+test("JRN-031 administration projections minimize partner and captain sensitive fields", () => {
+  const administration = read("services/dsh/backend/internal/administration/administration.go");
+  const types = read("services/dsh/frontend/shared/administration/administration.types.ts");
+  assert.doesNotMatch(administration, /json:"notes"/, "partner review notes must not leave the owner lifecycle");
+  assert.doesNotMatch(administration, /json:"licenseNumber"/, "captain license number must not leave Workforce");
+  assert.doesNotMatch(types, /readonly notes:/, "partner review notes must not exist in the administration shared type");
+  assert.doesNotMatch(types, /readonly licenseNumber:/, "captain license number must not exist in the administration shared type");
 });
 
 test("JRN-031 audit writers do not persist raw reason or review note", () => {
