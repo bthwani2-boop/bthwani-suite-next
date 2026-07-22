@@ -20,32 +20,32 @@ type partnerOrderWorkboardItem struct {
 }
 
 type partnerOrderWorkboardOrder struct {
-	ID                                      string                      `json:"id"`
-	CheckoutIntentID                        string                      `json:"checkoutIntentId"`
-	StoreID                                 string                      `json:"storeId"`
-	FulfillmentMode                         string                      `json:"fulfillmentMode"`
-	ClientID                                string                      `json:"clientId"`
-	Status                                  string                      `json:"status"`
-	RejectionReason                         string                      `json:"rejectionReason"`
-	WltPaymentRefID                         string                      `json:"wltPaymentRefId"`
-	TotalPrice                              float64                     `json:"totalPrice"`
-	Items                                   []partnerOrderWorkboardItem `json:"items"`
-	CreatedAt                               time.Time                   `json:"createdAt"`
-	AllowedActions                          []string                    `json:"allowedActions"`
-	Preparation                             orders.PreparationTiming    `json:"preparation"`
-	PreparationIssues                       []orders.PreparationIssue   `json:"preparationIssues"`
-	OpenPreparationIssueCount               int                         `json:"openPreparationIssueCount"`
-	PendingCustomerDecisionCount            int                         `json:"pendingCustomerDecisionCount"`
-	ResolvablePreparationIssueCount         int                         `json:"resolvablePreparationIssueCount"`
-	StoreCaptainHandoffStatus               string                      `json:"storeCaptainHandoffStatus"`
-	StoreCaptainHandoffAssignmentID         string                      `json:"storeCaptainHandoffAssignmentId"`
-	StoreCaptainHandoffCaptainID            string                      `json:"storeCaptainHandoffCaptainId"`
-	PartnerHandoffConfirmedAt               *time.Time                  `json:"partnerHandoffConfirmedAt"`
-	CaptainPickupConfirmedAt                *time.Time                  `json:"captainPickupConfirmedAt"`
-	OpenStoreCaptainHandoffExceptionID       string                      `json:"openStoreCaptainHandoffExceptionId"`
-	OpenStoreCaptainHandoffExceptionReason   string                      `json:"openStoreCaptainHandoffExceptionReason"`
-	OpenStoreCaptainHandoffExceptionStatus   string                      `json:"openStoreCaptainHandoffExceptionStatus"`
-	UpdatedAt                               time.Time                   `json:"updatedAt"`
+	ID                                     string                      `json:"id"`
+	CheckoutIntentID                       string                      `json:"checkoutIntentId"`
+	StoreID                                string                      `json:"storeId"`
+	FulfillmentMode                        string                      `json:"fulfillmentMode"`
+	ClientID                               string                      `json:"clientId"`
+	Status                                 string                      `json:"status"`
+	RejectionReason                        string                      `json:"rejectionReason"`
+	WltPaymentRefID                        string                      `json:"wltPaymentRefId"`
+	TotalPrice                             float64                     `json:"totalPrice"`
+	Items                                  []partnerOrderWorkboardItem `json:"items"`
+	CreatedAt                              time.Time                   `json:"createdAt"`
+	AllowedActions                         []string                    `json:"allowedActions"`
+	Preparation                            orders.PreparationTiming    `json:"preparation"`
+	PreparationIssues                      []orders.PreparationIssue   `json:"preparationIssues"`
+	OpenPreparationIssueCount              int                         `json:"openPreparationIssueCount"`
+	PendingCustomerDecisionCount           int                         `json:"pendingCustomerDecisionCount"`
+	ResolvablePreparationIssueCount        int                         `json:"resolvablePreparationIssueCount"`
+	StoreCaptainHandoffStatus              string                      `json:"storeCaptainHandoffStatus"`
+	StoreCaptainHandoffAssignmentID        string                      `json:"storeCaptainHandoffAssignmentId"`
+	StoreCaptainHandoffCaptainID           string                      `json:"storeCaptainHandoffCaptainId"`
+	PartnerHandoffConfirmedAt              *time.Time                  `json:"partnerHandoffConfirmedAt"`
+	CaptainPickupConfirmedAt               *time.Time                  `json:"captainPickupConfirmedAt"`
+	OpenStoreCaptainHandoffExceptionID     string                      `json:"openStoreCaptainHandoffExceptionId"`
+	OpenStoreCaptainHandoffExceptionReason string                      `json:"openStoreCaptainHandoffExceptionReason"`
+	OpenStoreCaptainHandoffExceptionStatus string                      `json:"openStoreCaptainHandoffExceptionStatus"`
+	UpdatedAt                              time.Time                   `json:"updatedAt"`
 }
 
 func partnerOrderAllowedActions(
