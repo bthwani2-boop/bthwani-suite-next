@@ -1,0 +1,57 @@
+name: Apply repository debt closure
+
+on:
+  push:
+    branches: [sambassam]
+    paths:
+      - "tools/important-scripts/close-repository-debt.mjs"
+      - ".github/workflows/apply-repository-debt-closure.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: sambassam
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+      - name: Apply guarded repository repairs
+        run: node tools/important-scripts/close-repository-debt.mjs
+      - name: Commit and push repaired files
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "No repository debt changes were required."
+            exit 0
+          fi
+          git config user.name "bthwani-governance-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add \
+            core/workforce/contracts/workforce.jrn-003.openapi.yaml \
+            services/dsh/contracts/dsh.administration.openapi.yaml \
+            services/dsh/contracts/dsh.jrn-003-workforce-scopes.openapi.yaml \
+            services/dsh/contracts/dsh.order-truth.openapi.yaml \
+            services/dsh/contracts/dsh.partner-onboarding.openapi.yaml \
+            services/wlt/contracts/wlt.payout-destination.openapi.yaml \
+            tsconfig.base.json \
+            services/dsh/frontend/app-captain/orders/DshCaptainOrdersScreen.tsx \
+            services/dsh/frontend/app-client/cart/GovernedCartScreen.tsx \
+            services/dsh/frontend/shared/partner/index.ts \
+            services/dsh/frontend/app-partner/store/DshPartnerStoreCourierScreen.tsx \
+            services/dsh/frontend/shared/partner/operator-delivery-pricing.tsx \
+            services/dsh/frontend/control-panel/catalogs/CatalogGovernanceScreen.tsx \
+            services/dsh/frontend/control-panel/hr/WorkforceReferenceView.tsx \
+            services/dsh/frontend/control-panel/partners/PartnerDetailOperationalScreen.tsx \
+            services/dsh/frontend/control-panel/platform/PlatformRolloutPanel.tsx \
+            services/dsh/frontend/control-panel/platform/OperationalPolicyGovernanceSection.tsx \
+            services/dsh/frontend/shared/platform/use-platform-policies-controller.tsx
+          git commit -m "fix: close repository contract and TypeScript debt"
+          git pull --rebase origin sambassam
+          git push origin HEAD:sambassam
