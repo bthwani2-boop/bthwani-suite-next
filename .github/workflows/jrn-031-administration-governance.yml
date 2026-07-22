@@ -42,8 +42,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: jrn-031-administration-${{ github.ref }}
-  cancel-in-progress: true
+  group: jrn-031-administration-${{ github.sha }}
+  cancel-in-progress: false
 
 jobs:
   backend:
