@@ -4,7 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
+	"net/http"
+	"net/http/httptest"
 	"os"
+	"sync/atomic"
 	"testing"
 )
 
@@ -26,8 +30,20 @@ func TestGovernedProgressiveRolloutJourney(t *testing.T) {
 	resetPlatformTables(t, db)
 	defer resetPlatformTables(t, db)
 
+	var healthy atomic.Bool
+	healthy.Store(true)
+	healthServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if !healthy.Load() {
+			http.Error(w, "degraded", http.StatusServiceUnavailable)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer healthServer.Close()
+
 	repository := NewRepository(db)
 	service := NewService(repository)
+	service.ConfigureDependencies([]ServiceDependency{{Name: "dsh", HealthURL: healthServer.URL}})
 	changeSet, err := service.CreateChangeSet(
 		ctx,
 		"operator-1",
@@ -68,7 +84,7 @@ func TestGovernedProgressiveRolloutJourney(t *testing.T) {
 		t.Fatalf("apply change set: %v", err)
 	}
 
-	rollout, err := repository.CreateRollout(
+	rollout, err := service.CreateRollout(
 		ctx,
 		"rollout-manager-1",
 		[]string{"platform-rollout-manager"},
@@ -78,7 +94,7 @@ func TestGovernedProgressiveRolloutJourney(t *testing.T) {
 			FeatureFlagKey: "DSH_SMART_DISPATCH_PROGRESSIVE",
 			TargetScope:    map[string]any{"surface": "app-captain", "city": "sanaa"},
 			Steps:          []int64{10, 50, 100},
-			HealthGate:     map[string]any{"requiredState": "OPERATIONAL"},
+			HealthGate:     map[string]any{"requiredState": "OPERATIONAL", "requiredServices": []string{"dsh"}},
 		},
 	)
 	if err != nil {
@@ -88,7 +104,7 @@ func TestGovernedProgressiveRolloutJourney(t *testing.T) {
 		t.Fatalf("unexpected initial rollout: %#v", rollout)
 	}
 
-	rollout, err = repository.AdvanceRollout(ctx, rollout.ID, "rollout-manager-1", []string{"platform-rollout-manager"}, "rollout-integration-1")
+	rollout, err = service.AdvanceRollout(ctx, rollout.ID, "rollout-manager-1", []string{"platform-rollout-manager"}, "rollout-integration-1")
 	if err != nil {
 		t.Fatalf("advance rollout to 10: %v", err)
 	}
@@ -96,15 +112,37 @@ func TestGovernedProgressiveRolloutJourney(t *testing.T) {
 		t.Fatalf("unexpected 10 percent rollout: %#v", rollout)
 	}
 
-	rollout, err = repository.PauseRollout(ctx, rollout.ID, "rollout-manager-1", []string{"platform-rollout-manager"}, "rollout-integration-1")
+	rollout, err = service.PauseRollout(ctx, rollout.ID, "rollout-manager-1", []string{"platform-rollout-manager"}, "rollout-integration-1")
 	if err != nil || rollout.Status != RolloutPaused {
 		t.Fatalf("pause rollout: status=%s err=%v", rollout.Status, err)
 	}
-	rollout, err = repository.AdvanceRollout(ctx, rollout.ID, "rollout-manager-1", []string{"platform-rollout-manager"}, "rollout-integration-1")
-	if err != nil || rollout.Status != RolloutRunning || rollout.CurrentPercentage != 50 || rollout.FlagRevision != 3 {
-		t.Fatalf("resume rollout to 50: rollout=%#v err=%v", rollout, err)
+	if _, err := service.AdvanceRollout(ctx, rollout.ID, "rollout-manager-1", []string{"platform-rollout-manager"}, "rollout-integration-1"); !errors.Is(err, ErrInvalidTransition) {
+		t.Fatalf("advance while paused must be rejected, got %v", err)
 	}
-	rollout, err = repository.AdvanceRollout(ctx, rollout.ID, "rollout-manager-1", []string{"platform-rollout-manager"}, "rollout-integration-1")
+
+	healthy.Store(false)
+	if _, err := service.ResumeRollout(ctx, rollout.ID, "rollout-manager-1", []string{"platform-rollout-manager"}, "rollout-health-blocked"); !errors.Is(err, ErrHealthGate) {
+		t.Fatalf("resume while unhealthy must be rejected, got %v", err)
+	}
+	stillPaused, err := repository.GetRollout(ctx, rollout.ID)
+	if err != nil || stillPaused.Status != RolloutPaused || stillPaused.CurrentPercentage != 10 || stillPaused.FlagRevision != 2 {
+		t.Fatalf("health-blocked resume changed rollout: rollout=%#v err=%v", stillPaused, err)
+	}
+	blockedGuide, err := service.GetRolloutRecoveryGuide(ctx, rollout.ID)
+	if err != nil || blockedGuide.CanResume || blockedGuide.RecommendedAction != "resume_after_health_or_abort" {
+		t.Fatalf("unexpected blocked recovery guide: guide=%#v err=%v", blockedGuide, err)
+	}
+
+	healthy.Store(true)
+	rollout, err = service.ResumeRollout(ctx, rollout.ID, "rollout-manager-1", []string{"platform-rollout-manager"}, "rollout-integration-1")
+	if err != nil || rollout.Status != RolloutRunning || rollout.CurrentPercentage != 10 || rollout.FlagRevision != 2 || rollout.PausedAt != nil {
+		t.Fatalf("resume rollout without advance: rollout=%#v err=%v", rollout, err)
+	}
+	rollout, err = service.AdvanceRollout(ctx, rollout.ID, "rollout-manager-1", []string{"platform-rollout-manager"}, "rollout-integration-1")
+	if err != nil || rollout.Status != RolloutRunning || rollout.CurrentPercentage != 50 || rollout.FlagRevision != 3 {
+		t.Fatalf("advance rollout to 50: rollout=%#v err=%v", rollout, err)
+	}
+	rollout, err = service.AdvanceRollout(ctx, rollout.ID, "rollout-manager-1", []string{"platform-rollout-manager"}, "rollout-integration-1")
 	if err != nil || rollout.Status != RolloutCompleted || rollout.CurrentPercentage != 100 || rollout.FlagRevision != 4 {
 		t.Fatalf("complete rollout: rollout=%#v err=%v", rollout, err)
 	}
@@ -117,8 +155,12 @@ func TestGovernedProgressiveRolloutJourney(t *testing.T) {
 	if !ok || percentage != 100 {
 		t.Fatalf("unexpected completed targeting: %#v", flags[0].Targeting)
 	}
+	completedGuide, err := service.GetRolloutRecoveryGuide(ctx, rollout.ID)
+	if err != nil || !completedGuide.CanRollback || completedGuide.RollbackPlan == "" {
+		t.Fatalf("unexpected completed recovery guide: guide=%#v err=%v", completedGuide, err)
+	}
 
-	rollout, err = repository.RollbackRollout(ctx, rollout.ID, "rollout-manager-1", []string{"platform-rollout-manager"}, "rollout-integration-1")
+	rollout, err = service.RollbackRollout(ctx, rollout.ID, "rollout-manager-1", []string{"platform-rollout-manager"}, "rollout-integration-1")
 	if err != nil || rollout.Status != RolloutRolledBack || rollout.FlagRevision != 5 {
 		t.Fatalf("rollback completed rollout: rollout=%#v err=%v", rollout, err)
 	}
@@ -134,7 +176,20 @@ func TestGovernedProgressiveRolloutJourney(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read audit events: %v", err)
 	}
-	if len(events) != 11 {
-		t.Fatalf("expected 11 workflow and rollout audit events, got %d", len(events))
+	if len(events) != 13 {
+		t.Fatalf("expected 13 workflow, rollout and health-block audit events, got %d", len(events))
+	}
+	foundHealthBlock := false
+	foundResume := false
+	for _, event := range events {
+		if event.Action == "rollout_health_gate_blocked" && event.CorrelationID == "rollout-health-blocked" {
+			foundHealthBlock = true
+		}
+		if event.Action == "rollout_resumed" {
+			foundResume = true
+		}
+	}
+	if !foundHealthBlock || !foundResume {
+		t.Fatalf("missing governed audit evidence: healthBlock=%t resume=%t events=%#v", foundHealthBlock, foundResume, events)
 	}
 }
