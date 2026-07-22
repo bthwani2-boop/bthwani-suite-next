@@ -11,13 +11,18 @@ import {
 import type { GovernedCampaignWritePayload, GovernedDshCampaign } from "./campaign.types";
 import type { DshMarketingState } from "./marketing.types";
 
+type GovernedCampaignCreatePayload = CampaignCreatePayload & {
+  readonly targetCityCode?: string | undefined;
+  readonly targetServiceAreaCode?: string | undefined;
+};
+
 function resolveCampaignError(error: unknown): string {
   const candidate = error as { readonly status?: number; readonly message?: string; readonly kind?: string } | undefined;
   if (candidate?.kind === "network") return "لا يوجد اتصال. تحقق من الشبكة ثم أعد المحاولة.";
   if (candidate?.status === 401) return "انتهت الجلسة. سجّل الدخول ثم أعد المحاولة.";
   if (candidate?.status === 403) return "لا تملك صلاحية إدارة الحملات.";
   if (candidate?.status === 409) return candidate.message || "تغيرت الحملة. أعد التحميل قبل تكرار الإجراء.";
-  if (candidate?.status === 400) return candidate.message || "بيانات الحملة أو الجدولة غير صالحة.";
+  if (candidate?.status === 400) return candidate.message || "بيانات الحملة أو الجدولة أو المنطقة غير صالحة.";
   return candidate?.message || "تعذر تنفيذ إجراء الحملة.";
 }
 
@@ -45,7 +50,7 @@ export function useGovernedCampaignsController(authKind: string) {
     void load();
   }, [load]);
 
-  const create = useCallback(async (body: CampaignCreatePayload) => {
+  const create = useCallback(async (body: GovernedCampaignCreatePayload) => {
     try {
       await createCampaign(body);
       await load();
