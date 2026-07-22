@@ -23,13 +23,15 @@ on:
       - "services/dsh/frontend/control-panel/finance/PayoutRequestsPanel.tsx"
       - "infra/docker/financial-simulators/wiremock/mappings/payout-status-success.json"
       - "tools/guards/jrn-037-payout-destination-gate.mjs"
+      - "tools/verification/jrn-037-normalize-source.mjs"
+      - "tools/verification/jrn-037-remote-verify.sh"
       - ".github/workflows/jrn-037-payout-destination-verification.yml"
   pull_request:
     branches: [master]
     paths: *jrn037_paths
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: jrn-037-${{ github.ref }}
@@ -39,7 +41,7 @@ jobs:
   verify:
     name: JRN-037 database, backend, contract, and multi-surface proof
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 40
     services:
       postgres:
         image: postgres:16-alpine
@@ -61,11 +63,12 @@ jobs:
       PGPASSWORD: wlt_ci_password
       PGDATABASE: wlt_ci
       DATABASE_URL: postgres://wlt_ci:wlt_ci_password@localhost:5432/wlt_ci?sslmode=disable
+      EVIDENCE_DIR: governance/evidence/jrn037-ci
     steps:
       - name: Checkout immutable source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          persist-credentials: false
+          persist-credentials: true
       - name: Set up Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
@@ -83,31 +86,56 @@ jobs:
           node-version: "24.17.0"
           cache: pnpm
       - name: Install locked workspace
+        id: install
+        continue-on-error: true
         run: pnpm install --frozen-lockfile
-      - name: Verify product, contract, ownership, and surface boundaries
-        run: node tools/guards/jrn-037-payout-destination-gate.mjs
-      - name: Apply all WLT migrations in lexical order
+      - name: Run deterministic JRN-037 verification
+        id: verification
+        continue-on-error: true
+        shell: bash
+        run: bash tools/verification/jrn-037-remote-verify.sh
+      - name: Publish source-normalization and verification evidence
+        id: publish
+        if: always()
+        continue-on-error: true
+        shell: bash
+        env:
+          SOURCE_COMMIT: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+          INSTALL_OUTCOME: ${{ steps.install.outcome }}
+          VERIFICATION_OUTCOME: ${{ steps.verification.outcome }}
         run: |
-          for migration in services/wlt/database/migrations/*.sql; do
-            psql -v ON_ERROR_STOP=1 -f "${migration}"
+          mkdir -p "${EVIDENCE_DIR}"
+          cat > "${EVIDENCE_DIR}/latest.md" <<EOF
+          # JRN-037 Remote Verification
+
+          - source_commit: ${SOURCE_COMMIT}
+          - workflow_run_id: ${RUN_ID}
+          - install: ${INSTALL_OUTCOME}
+          - verification: ${VERIFICATION_OUTCOME}
+          - detailed_log: governance/evidence/jrn037-ci/verification.log
+          EOF
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "test(jrn-037): publish remote verification evidence [skip ci]" || exit 0
+          for attempt in 1 2 3; do
+            if git pull --rebase origin sambassam && git push origin HEAD:sambassam; then
+              exit 0
+            fi
+            git rebase --abort || true
+            sleep $((attempt * 3))
           done
-      - name: Assert JRN-037 PostgreSQL invariants
-        run: psql -v ON_ERROR_STOP=1 -f services/wlt/database/tests/jrn-037-payout-destination-invariants.sql
-      - name: Verify Go formatting without rewriting source
+          exit 1
+      - name: Enforce verification result
+        if: always()
+        shell: bash
+        env:
+          INSTALL_OUTCOME: ${{ steps.install.outcome }}
+          VERIFICATION_OUTCOME: ${{ steps.verification.outcome }}
+          PUBLISH_OUTCOME: ${{ steps.publish.outcome }}
         run: |
-          test -z "$(gofmt -l services/wlt/backend/internal/payout/jrn037_governed_payout.go services/wlt/backend/internal/payout/jrn037_governed_payout_test.go services/wlt/backend/internal/payout/model_request.go services/wlt/backend/internal/payout/read_provider_proof.go services/wlt/backend/internal/http/server.go)"
-          test -z "$(gofmt -l services/dsh/backend/internal/http/jrn037_payout_routes.go services/dsh/backend/internal/http/representative_finance_routes.go services/dsh/backend/internal/wlt/actor_finance_client.go services/dsh/backend/internal/wlt/finance_proxy.go)"
-      - name: Compile and test WLT payout packages
-        working-directory: services/wlt/backend
-        run: go test ./internal/payout ./internal/http
-      - name: Compile and test DSH payout proxy packages
-        working-directory: services/dsh/backend
-        run: go test ./internal/http ./internal/wlt
-      - name: Typecheck DSH multi-surface payout bindings
-        run: pnpm --dir services/dsh typecheck
-      - name: Verify backend and frontend bindings
-        run: |
-          pnpm run guard:backend-api-binding
-          pnpm run guard:frontend-feature-binding
-      - name: Verify repository whitespace
-        run: git diff --check
+          printf 'install=%s\nverification=%s\npublish=%s\n' "${INSTALL_OUTCOME}" "${VERIFICATION_OUTCOME}" "${PUBLISH_OUTCOME}"
+          test "${INSTALL_OUTCOME}" = success
+          test "${VERIFICATION_OUTCOME}" = success
+          test "${PUBLISH_OUTCOME}" = success
