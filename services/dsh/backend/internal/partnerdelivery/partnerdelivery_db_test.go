@@ -36,6 +36,7 @@ func openRequiredDB(t *testing.T) *sql.DB {
 // an eligible active courier belonging to its store, ready for
 // AssignCourier's happy path.
 type fixture struct {
+	tenantID  string
 	partnerID string
 	storeID   string
 	clientID  string
@@ -48,6 +49,7 @@ func seedFixture(t *testing.T, db *sql.DB, orderStatus string) fixture {
 	ctx := context.Background()
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
 	f := fixture{
+		tenantID:  "pd-test-tenant-" + suffix,
 		partnerID: "pd-test-partner-" + suffix,
 		storeID:   "pd-test-store-" + suffix,
 		clientID:  "pd-test-client-" + suffix,
@@ -79,10 +81,10 @@ func seedFixture(t *testing.T, db *sql.DB, orderStatus string) fixture {
 
 	var checkoutIntentID string
 	if err := db.QueryRowContext(ctx, `
-		INSERT INTO dsh_checkout_intents (client_id, cart_id, store_id, state, fulfillment_mode, payment_method)
-		VALUES ($1, $2::uuid, $3, 'payment_pending', 'partner_delivery', 'wallet')
+		INSERT INTO dsh_checkout_intents (client_id, cart_id, store_id, state, fulfillment_mode, payment_method, tenant_id)
+		VALUES ($1, $2::uuid, $3, 'payment_pending', 'partner_delivery', 'wallet', $4)
 		RETURNING id::text`,
-		f.clientID, cartID, f.storeID,
+		f.clientID, cartID, f.storeID, f.tenantID,
 	).Scan(&checkoutIntentID); err != nil {
 		t.Fatalf("failed to insert test checkout intent: %v", err)
 	}
