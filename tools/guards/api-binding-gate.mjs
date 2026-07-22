@@ -55,10 +55,24 @@ function normalizePath(rawPath) {
     .replace(/\/+$/, "");
 }
 
+function pathSegments(rawPath) {
+  return normalizePath(rawPath).split("/").filter(Boolean);
+}
+
+function pathsAreCompatible(candidatePath, contractPath) {
+  const candidate = pathSegments(candidatePath);
+  const contract = pathSegments(contractPath);
+  if (candidate.length !== contract.length) return false;
+
+  return candidate.every((segment, index) => {
+    const contractSegment = contract[index];
+    return segment === contractSegment || segment === "{param}" || contractSegment === "{param}";
+  });
+}
+
 function isKnownPath(rawPath) {
-  const normalized = normalizePath(rawPath);
   for (const known of knownPaths) {
-    if (normalizePath(known) === normalized) return true;
+    if (pathsAreCompatible(rawPath, known)) return true;
   }
   return false;
 }
