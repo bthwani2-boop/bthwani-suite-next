@@ -24,3 +24,9 @@ func TestListDeliveryAttemptsRejectsInvalidContext(t *testing.T) {
 		t.Fatalf("expected ErrInvalid for invalid outcome, got %v", err)
 	}
 }
+
+func TestListPushDeliveryAuditRejectsMissingDatabase(t *testing.T) {
+	if _, err := ListPushDeliveryAudit(nil, 100); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("expected ErrInvalid for nil database, got %v", err)
+	}
+}
