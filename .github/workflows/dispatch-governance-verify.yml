@@ -41,7 +41,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: dispatch-governance-${{ github.ref }}
+  group: dispatch-governance-${{ github.sha }}
   cancel-in-progress: false
 
 jobs:
