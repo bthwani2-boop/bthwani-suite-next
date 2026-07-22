@@ -15,6 +15,25 @@ on:
       - "tools/scripts/**"
       - "package.json"
       - "pnpm-lock.yaml"
+      - "apps/control-panel/runtime/src/app/dsh/administration/page.tsx"
+      - "services/dsh/backend/internal/administration/**"
+      - "services/dsh/backend/internal/http/administration*.go"
+      - "services/dsh/backend/internal/http/journey_031_routes_test.go"
+      - "services/dsh/contracts/dsh.administration.openapi.yaml"
+      - "services/dsh/database/migrations/dsh-014_administration.sql"
+      - "services/dsh/database/migrations/dsh-076_admin_role_assignment_approvals.sql"
+      - "services/dsh/database/migrations/dsh-077_admin_role_permissions.sql"
+      - "services/dsh/database/migrations/dsh-078_admin_role_definition_approvals.sql"
+      - "services/dsh/database/migrations/dsh-079_admin_role_assignment_revocations.sql"
+      - "services/dsh/database/migrations/dsh-131_jrn031_governed_administration_closure.sql"
+      - "services/dsh/database/tests/jrn-031-administration-governance.sql"
+      - "services/dsh/frontend/shared/administration/**"
+      - "services/dsh/frontend/control-panel/administration/**"
+      - "services/dsh/frontend/control-panel/partners/PartnerDetailOperationalScreen.tsx"
+      - "services/dsh/frontend/control-panel/hr/CaptainDetailView.tsx"
+      - "services/dsh/tests/jrn-031-administration-maker-checker.test.mjs"
+      - "services/dsh/tests/jrn-031-administration-governance.test.mjs"
+      - "services/dsh/tsconfig.jrn-031.json"
   pull_request:
     branches: [sambassam, master]
     paths:
@@ -28,6 +47,25 @@ on:
       - "tools/scripts/**"
       - "package.json"
       - "pnpm-lock.yaml"
+      - "apps/control-panel/runtime/src/app/dsh/administration/page.tsx"
+      - "services/dsh/backend/internal/administration/**"
+      - "services/dsh/backend/internal/http/administration*.go"
+      - "services/dsh/backend/internal/http/journey_031_routes_test.go"
+      - "services/dsh/contracts/dsh.administration.openapi.yaml"
+      - "services/dsh/database/migrations/dsh-014_administration.sql"
+      - "services/dsh/database/migrations/dsh-076_admin_role_assignment_approvals.sql"
+      - "services/dsh/database/migrations/dsh-077_admin_role_permissions.sql"
+      - "services/dsh/database/migrations/dsh-078_admin_role_definition_approvals.sql"
+      - "services/dsh/database/migrations/dsh-079_admin_role_assignment_revocations.sql"
+      - "services/dsh/database/migrations/dsh-131_jrn031_governed_administration_closure.sql"
+      - "services/dsh/database/tests/jrn-031-administration-governance.sql"
+      - "services/dsh/frontend/shared/administration/**"
+      - "services/dsh/frontend/control-panel/administration/**"
+      - "services/dsh/frontend/control-panel/partners/PartnerDetailOperationalScreen.tsx"
+      - "services/dsh/frontend/control-panel/hr/CaptainDetailView.tsx"
+      - "services/dsh/tests/jrn-031-administration-maker-checker.test.mjs"
+      - "services/dsh/tests/jrn-031-administration-governance.test.mjs"
+      - "services/dsh/tsconfig.jrn-031.json"
 
 permissions:
   contents: read
@@ -74,6 +112,74 @@ jobs:
           pnpm run guard:actions-pin
           pnpm run guard:workflow-lint
 
+  jrn031:
+    name: Verify JRN-031 administration governance
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: dsh
+          POSTGRES_PASSWORD: dsh
+          POSTGRES_DB: dsh
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U dsh -d dsh"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://dsh:dsh@localhost:5432/dsh?sslmode=disable
+      PGPASSWORD: dsh
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Set up Go from the DSH module
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: services/dsh/backend/go.sum
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Apply administration migrations and invariants
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/dsh/database/migrations/dsh-014_administration.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/dsh/database/migrations/dsh-076_admin_role_assignment_approvals.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/dsh/database/migrations/dsh-077_admin_role_permissions.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/dsh/database/migrations/dsh-078_admin_role_definition_approvals.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/dsh/database/migrations/dsh-079_admin_role_assignment_revocations.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/dsh/database/migrations/dsh-131_jrn031_governed_administration_closure.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/dsh/database/tests/jrn-031-administration-governance.sql
+      - name: Run targeted administration Go tests
+        working-directory: services/dsh/backend
+        run: >-
+          go test
+          ./internal/administration
+          ./internal/http
+          -run 'Test(Journey031ExposesGovernedAdministrationRoutes|RequestStaffRoleAssignmentRejectsInvalidInput|RequestStaffRoleAssignmentRejectsSelfAssignment|ReviewStaffRoleAssignmentRejectsInvalidDecision|ReviewStaffRoleAssignmentRequiresVersion|RejectedRoleAssignmentRequiresReviewNote|NormalizeRoleDefinitionRequiresControlPanelAndNormalizesScope|AdministrationPermissionCandidatesPreserveLegacyFallback|InverseRoleAction|AuditRedactionDropsSensitiveValues)$'
+          -count=1
+      - name: Build affected Go owners
+        working-directory: services/dsh/backend
+        run: go build ./internal/administration ./internal/http
+      - name: Run Maker-Checker and closure guards
+        run: |
+          node --test services/dsh/tests/jrn-031-administration-maker-checker.test.mjs services/dsh/tests/jrn-031-administration-governance.test.mjs
+          node tools/guards/jrn-031-closure-gate.mjs
+      - name: Typecheck the focused ownership graph
+        run: pnpm --dir services/dsh exec tsc -p tsconfig.jrn-031.json --noEmit --pretty false
+      - name: Parse the canonical administration contract
+        run: pnpm --dir services/dsh exec openapi-typescript contracts/dsh.administration.openapi.yaml -o /tmp/jrn-031-administration-api.ts
+      - name: Validate product truth and approval ledger
+        run: |
+          node -e "const fs=require('fs'); const truth=JSON.parse(fs.readFileSync('governance/product/contracts/jrn-031-administration-roles-approvals-audit.product-truth.json','utf8')); const ledger=JSON.parse(fs.readFileSync('governance/approvals/jrn-031-independent-approvals.json','utf8')); if(truth.journeyId!=='JRN-031'||truth.status!=='PENDING_INDEPENDENT_APPROVAL'||ledger.journeyId!=='JRN-031'||ledger.approvalState!=='PENDING_INDEPENDENT_APPROVAL') process.exit(1)"
+          git diff --check
+
   whitespace:
     name: Verify repository whitespace
     runs-on: ubuntu-latest
@@ -88,7 +194,7 @@ jobs:
 
   result:
     name: BThwani Repository CI result
-    needs: [governance, integrity, whitespace]
+    needs: [governance, integrity, jrn031, whitespace]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -97,10 +203,11 @@ jobs:
         env:
           GOVERNANCE_RESULT: ${{ needs.governance.result }}
           INTEGRITY_RESULT: ${{ needs.integrity.result }}
+          JRN031_RESULT: ${{ needs.jrn031.result }}
           WHITESPACE_RESULT: ${{ needs.whitespace.result }}
         run: |
-          if [ "${GOVERNANCE_RESULT}" != "success" ] || [ "${INTEGRITY_RESULT}" != "success" ] || [ "${WHITESPACE_RESULT}" != "success" ]; then
-            echo "CI checks failed. Governance: ${GOVERNANCE_RESULT}, Integrity: ${INTEGRITY_RESULT}, Whitespace: ${WHITESPACE_RESULT}"
+          if [ "${GOVERNANCE_RESULT}" != "success" ] || [ "${INTEGRITY_RESULT}" != "success" ] || [ "${JRN031_RESULT}" != "success" ] || [ "${WHITESPACE_RESULT}" != "success" ]; then
+            echo "CI checks failed. Governance: ${GOVERNANCE_RESULT}, Integrity: ${INTEGRITY_RESULT}, JRN-031: ${JRN031_RESULT}, Whitespace: ${WHITESPACE_RESULT}"
             exit 1
           fi
-          echo "All parallel CI checks passed successfully."
+          echo "All parallel CI checks passed successfully, including JRN-031 administration governance."
