@@ -1,0 +1,103 @@
+name: JRN-022 Special Requests Verification
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [sambassam]
+    paths:
+      - "services/dsh/backend/internal/specialrequests/**"
+      - "services/dsh/backend/internal/http/specialrequests.go"
+      - "services/dsh/backend/internal/http/jrn_022_special_requests_routes_test.go"
+      - "services/dsh/frontend/shared/special-requests/**"
+      - "services/dsh/frontend/control-panel/operations/SpecialOpsWorkbenchScreen.tsx"
+      - "services/dsh/contracts/dsh.openapi.yaml"
+      - "services/dsh/contracts/paths/**"
+      - "services/dsh/contracts/components/**"
+      - "services/dsh/clients/generated/dsh-api.ts"
+      - "services/dsh/tsconfig.jrn-020-030.json"
+      - ".github/workflows/jrn-022-special-requests-verification.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jrn-022-special-requests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: State model and governed routes
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/dsh/backend
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+
+      - name: Set up Go from DSH module
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: services/dsh/backend/go.sum
+
+      - name: Verify JRN-022 state model and route registration
+        run: >-
+          go test
+          ./internal/specialrequests
+          ./internal/http
+          -run 'Test(JRN022SpecialRequestRoutes|CanonicalSpecialRequestStagesAreKnownToService|DefaultWorkflowStageMatchesCustomerAndDeliveryReadback)$'
+          -count=1
+
+  frontend:
+    name: Shared brain and governed surfaces
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "10.34.2"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.17.0"
+          cache: pnpm
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck JRN-022 shared brain and surfaces
+        run: pnpm --dir services/dsh exec tsc -p tsconfig.jrn-020-030.json --noEmit --pretty false
+
+  contract:
+    name: Modular contract and generated client drift
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "10.34.2"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.17.0"
+          cache: pnpm
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify modular OpenAPI and generated client
+        run: |
+          pnpm --dir services/dsh openapi:verify
+          git diff --check
+          git diff --exit-code -- \
+            services/dsh/contracts/generated/dsh.bundle.openapi.yaml \
+            services/dsh/clients/generated/dsh-api.ts
