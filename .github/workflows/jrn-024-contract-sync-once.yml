@@ -13,6 +13,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: jrn-024-contract-sync-sambassam
+  cancel-in-progress: true
+
 jobs:
   synchronize:
     if: github.event_name == 'push' || github.event.pull_request.head.ref == 'sambassam'
