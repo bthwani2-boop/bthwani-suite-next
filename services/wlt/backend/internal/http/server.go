@@ -39,13 +39,18 @@ func NewRouter(db *sql.DB, mutationsEnabled bool) *http.ServeMux {
 
 	mux.HandleFunc("GET /wlt/wallets/{actorType}/{actorId}", readGate(wallet.HandleGetWallet(db)))
 	mux.HandleFunc("POST /wlt/payment-sessions", gate(serviceAuth(reference.HandleCreatePaymentSessionTrustedDsh(db))))
-	mux.HandleFunc("GET /wlt/payment-sessions/{paymentSessionId}", readGate(reference.HandleGetPaymentSession(db)))
+	mux.HandleFunc("GET /wlt/payment-sessions/{paymentSessionId}", readGate(reference.HandleGetPaymentSessionTrustedDsh(db)))
+	mux.HandleFunc("GET /wlt/payment-sessions/{paymentSessionId}/timeline", readGate(payment.HandleGetPaymentSessionTimeline(db)))
 
-	mux.HandleFunc("POST /wlt/payment-sessions/{paymentSessionId}/authorize", gate(serviceAuth(payment.HandleAuthorizeSession(db))))
-	mux.HandleFunc("POST /wlt/payment-sessions/{paymentSessionId}/capture", gate(serviceAuth(payment.HandleCaptureSessionSovereign(db))))
+	mux.HandleFunc("POST /wlt/payment-sessions/{paymentSessionId}/authorize", gate(serviceAuth(payment.HandleGovernedPaymentOperation(db, "authorize", payment.HandleAuthorizeSession(db)))))
+	mux.HandleFunc("POST /wlt/payment-sessions/{paymentSessionId}/capture", gate(serviceAuth(payment.HandleGovernedPaymentOperation(db, "capture", payment.HandleCaptureSessionSovereign(db)))))
+	mux.HandleFunc("POST /wlt/payment-sessions/{paymentSessionId}/refresh-provider-status", gate(serviceAuth(payment.HandleGovernedPaymentOperation(db, "provider_status_refresh", payment.HandleRefreshProviderStatus(db)))))
 	mux.HandleFunc("POST /wlt/payment-sessions/{paymentSessionId}/expire", gate(serviceAuth(payment.HandleExpireSession(db))))
 	mux.HandleFunc("POST /wlt/payment-sessions/{paymentSessionId}/cod-collect", gate(serviceAuth(payment.HandleCodCollectionViaPaymentSessionBlocked(db))))
 	mux.HandleFunc("POST /wlt/payment-sessions/{paymentSessionId}/cancel-for-order", gate(serviceAuth(payment.HandleGovernedSessionCancellation(db))))
+	// Provider callbacks authenticate with a dedicated HMAC secret rather than
+	// the DSH service token. The mutation feature gate still fails closed.
+	mux.HandleFunc("POST /wlt/provider/webhooks/payment", gate(payment.HandlePaymentProviderWebhook(db)))
 
 	mux.HandleFunc("POST /wlt/refunds", gate(serviceAuth(refund.HandleCreateGovernedRefund(db))))
 	mux.HandleFunc("GET /wlt/refunds/{refundId}", readGate(refund.HandleGetGovernedRefund(db)))
