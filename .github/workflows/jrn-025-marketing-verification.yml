@@ -121,23 +121,74 @@ jobs:
           done
 
       - name: Verify JRN-025 marketing domain and database behavior
+        id: marketing_go
+        continue-on-error: true
         working-directory: services/dsh/backend
-        run: go test ./internal/marketing -run 'TestCampaignTransitionPolicy|TestPartnerOfferTransitionPolicy|TestValidateCampaignDates|TestValidateCampaignActivationWindow|TestMarketingCampaignLifecycleDBIntegration|TestMarketingTickerLifecycleDBIntegration|TestMarketingTargetVisibilityGateDBIntegration'
+        shell: bash
+        run: |
+          set -o pipefail
+          go test -v ./internal/marketing -run 'TestCampaignTransitionPolicy|TestPartnerOfferTransitionPolicy|TestValidateCampaignDates|TestValidateCampaignActivationWindow|TestMarketingCampaignLifecycleDBIntegration|TestMarketingTickerLifecycleDBIntegration|TestMarketingTargetVisibilityGateDBIntegration' 2>&1 | tee "$RUNNER_TEMP/jrn-025-marketing-go.log"
 
       - name: Verify JRN-025 HTTP routes and compilation
+        id: marketing_http
+        continue-on-error: true
         working-directory: services/dsh/backend
+        shell: bash
         run: |
-          go test ./internal/http -run '^TestJRN025MarketingRoutesAreRegistered$'
-          go build ./internal/http
+          set -o pipefail
+          {
+            go test -v ./internal/http -run '^TestJRN025MarketingRoutesAreRegistered$'
+            go build ./internal/http
+          } 2>&1 | tee "$RUNNER_TEMP/jrn-025-marketing-http.log"
 
       - name: Verify JRN-025 shared brain and affected surfaces
-        run: pnpm --dir services/dsh exec tsc -p tsconfig.jrn-025.json --noEmit --pretty false
+        id: marketing_ts
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm --dir services/dsh exec tsc -p tsconfig.jrn-025.json --noEmit --pretty false 2>&1 | tee "$RUNNER_TEMP/jrn-025-marketing-ts.log"
 
       - name: Verify JRN-025 full-stack bindings and negative invariants
-        run: node --test services/dsh/tests/jrn-025-marketing-closure.test.mjs
+        id: marketing_static
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          node --test services/dsh/tests/jrn-025-marketing-closure.test.mjs 2>&1 | tee "$RUNNER_TEMP/jrn-025-marketing-static.log"
 
       - name: Verify DSH modular OpenAPI foundation
-        run: pnpm --dir services/dsh openapi:test
+        id: marketing_openapi
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm --dir services/dsh openapi:test 2>&1 | tee "$RUNNER_TEMP/jrn-025-marketing-openapi.log"
 
       - name: Reject generated artifact drift
-        run: git diff --exit-code -- services/dsh/contracts/generated/dsh.bundle.openapi.yaml services/dsh/clients/generated/dsh-api.ts
+        id: marketing_drift
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          git diff --exit-code -- services/dsh/contracts/generated/dsh.bundle.openapi.yaml services/dsh/clients/generated/dsh-api.ts 2>&1 | tee "$RUNNER_TEMP/jrn-025-marketing-drift.log"
+
+      - name: Upload JRN-025 verification diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jrn-025-verification-diagnostics-${{ github.sha }}
+          path: ${{ runner.temp }}/jrn-025-marketing-*.log
+          if-no-files-found: warn
+          retention-days: 3
+
+      - name: Enforce JRN-025 verification results
+        if: always()
+        shell: bash
+        run: |
+          test "${{ steps.marketing_go.outcome }}" = success
+          test "${{ steps.marketing_http.outcome }}" = success
+          test "${{ steps.marketing_ts.outcome }}" = success
+          test "${{ steps.marketing_static.outcome }}" = success
+          test "${{ steps.marketing_openapi.outcome }}" = success
+          test "${{ steps.marketing_drift.outcome }}" = success
