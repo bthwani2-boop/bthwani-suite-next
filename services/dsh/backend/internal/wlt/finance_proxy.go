@@ -38,7 +38,10 @@ func financeReadPathAllowed(path string) bool {
 }
 
 var financeReadWalletAllowlist = map[string]struct{}{
-	"field": {},
+	"client":  {},
+	"partner": {},
+	"captain": {},
+	"field":   {},
 }
 
 func (c *Client) FinanceReadWallet(
@@ -50,13 +53,13 @@ func (c *Client) FinanceReadWallet(
 	if !c.Configured() {
 		return 0, nil, fmt.Errorf("WLT integration is not configured")
 	}
-	actorType = strings.TrimSpace(actorType)
+	actorType = strings.ToLower(strings.TrimSpace(actorType))
 	actorID = strings.TrimSpace(actorID)
 	if _, ok := financeReadWalletAllowlist[actorType]; !ok {
 		return 0, nil, fmt.Errorf("WLT wallet actor type %q is not allowlisted", actorType)
 	}
-	if actorID == "" {
-		return 0, nil, fmt.Errorf("WLT wallet actor id must not be empty")
+	if actorID == "" || len(actorID) > 200 {
+		return 0, nil, fmt.Errorf("WLT wallet actor id must be non-empty and no longer than 200 characters")
 	}
 	path := "/wlt/wallets/" + url.PathEscape(actorType) + "/" + url.PathEscape(actorID)
 	return c.financeReadRequest(ctx, path, nil, correlationID)
