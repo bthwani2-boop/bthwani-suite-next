@@ -6,6 +6,7 @@ const writeMode = process.argv.includes('--write');
 
 const primaryContractPath = resolve(root, 'services/dsh/contracts/dsh.openapi.yaml');
 const generatedClientPath = resolve(root, 'services/dsh/clients/generated/dsh-api.ts');
+const closureTestPath = resolve(root, 'services/dsh/tests/store-captain-handoff-closure.test.mjs');
 
 const requiredReasons = ['handoff_shortage', 'handoff_mismatch'];
 
@@ -54,19 +55,35 @@ function alignGeneratedClient(source) {
   return source;
 }
 
+function alignClosureTest(source) {
+  const broadAssertion = "  assert.doesNotMatch(screen, /actionId === 'resolve_issue'.*openPreparationIssueCount/s);";
+  const scopedAssertion = "  assert.doesNotMatch(screen, /\\|\\| \\(actionId === 'resolve_issue' && item\\.openPreparationIssueCount > 0\\)/);";
+  if (source.includes(broadAssertion)) source = source.replace(broadAssertion, scopedAssertion);
+  if (!source.includes(scopedAssertion)) {
+    throw new Error('JRN-013 closure test does not contain the scoped preparation-decision assertion.');
+  }
+  return source;
+}
+
 const currentContract = readFileSync(primaryContractPath, 'utf8');
 const currentClient = readFileSync(generatedClientPath, 'utf8');
+const currentClosureTest = readFileSync(closureTestPath, 'utf8');
 const alignedContract = alignPrimaryContract(currentContract);
 const alignedClient = alignGeneratedClient(currentClient);
+const alignedClosureTest = alignClosureTest(currentClosureTest);
 
-const changed = alignedContract !== currentContract || alignedClient !== currentClient;
+const changed = alignedContract !== currentContract
+  || alignedClient !== currentClient
+  || alignedClosureTest !== currentClosureTest;
+
 if (writeMode) {
   if (alignedContract !== currentContract) writeFileSync(primaryContractPath, alignedContract, 'utf8');
   if (alignedClient !== currentClient) writeFileSync(generatedClientPath, alignedClient, 'utf8');
-  console.log(changed ? 'JRN-013 primary contract artifacts synchronized.' : 'JRN-013 primary contract artifacts already synchronized.');
+  if (alignedClosureTest !== currentClosureTest) writeFileSync(closureTestPath, alignedClosureTest, 'utf8');
+  console.log(changed ? 'JRN-013 contract artifacts and closure assertion synchronized.' : 'JRN-013 contract artifacts and closure assertion already synchronized.');
 } else {
   if (changed) {
-    throw new Error('JRN-013 primary contract artifacts are stale. Run: node tools/contracts/sync-jrn-013-handoff-reasons.mjs --write');
+    throw new Error('JRN-013 contract artifacts are stale. Run: node tools/contracts/sync-jrn-013-handoff-reasons.mjs --write');
   }
-  console.log('JRN-013 primary contract artifacts are synchronized.');
+  console.log('JRN-013 contract artifacts and closure assertion are synchronized.');
 }
