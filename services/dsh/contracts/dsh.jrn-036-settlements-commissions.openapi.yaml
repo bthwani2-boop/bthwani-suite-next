@@ -1,10 +1,11 @@
 openapi: 3.1.0
 info:
-  title: BThwani DSH JRN-036 Settlements and Commissions Proxy API
-  version: 1.0.0
+  title: BThwani DSH JRN-036 Settlements, Commissions, and COD Proxy API
+  version: 1.1.0
   description: >-
-    DSH control-panel proxy surface for WLT-owned settlement evidence and governed
-    commission lifecycle. DSH authenticates the operator and never owns financial truth.
+    DSH control-panel and partner proxy surface for WLT-owned settlement evidence,
+    governed commission lifecycle, COD custody, and reconciliation. DSH authenticates
+    the actor and never owns financial truth.
 x-bthwani-owner: services/dsh
 x-bthwani-journey: JRN-036
 x-bthwani-contract-state: CONTRACT_ACTIVE
@@ -117,6 +118,67 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
         '502': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/control-panel/finance/cod-reconciliation-cases:
+    get:
+      operationId: listDshControlPanelCodReconciliationCases
+      responses:
+        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '502': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/control-panel/finance/cod-reconciliation-cases/{caseId}/assign:
+    post:
+      operationId: assignDshControlPanelCodReconciliationCase
+      parameters:
+        - $ref: '#/components/parameters/CaseId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        $ref: '#/components/requestBodies/ObjectBody'
+      responses:
+        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '502': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/control-panel/finance/cod-reconciliation-cases/{caseId}/resolve:
+    post:
+      operationId: resolveDshControlPanelCodReconciliationCase
+      parameters:
+        - $ref: '#/components/parameters/CaseId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        $ref: '#/components/requestBodies/ObjectBody'
+      responses:
+        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '502': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/partner/me/finance/cod-records:
+    get:
+      operationId: listDshPartnerCodRecords
+      responses:
+        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '502': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/partner/me/finance/cod-records/{recordId}/remit:
+    post:
+      operationId: remitDshPartnerCodRecord
+      parameters:
+        - $ref: '#/components/parameters/RecordId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        $ref: '#/components/requestBodies/ObjectBody'
+      responses:
+        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '502': { $ref: '#/components/responses/ErrorResponse' }
 components:
   securitySchemes:
     bearerAuth:
@@ -131,6 +193,16 @@ components:
       schema: { type: string, minLength: 1 }
     CommissionId:
       name: commissionId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+    CaseId:
+      name: caseId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+    RecordId:
+      name: recordId
       in: path
       required: true
       schema: { type: string, minLength: 1 }
