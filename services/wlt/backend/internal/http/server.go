@@ -57,7 +57,7 @@ func NewRouter(db *sql.DB, mutationsEnabled bool) *http.ServeMux {
 	mux.HandleFunc("GET /wlt/refunds", readGate(refund.RequireTenantScope(db, refund.HandleListGovernedRefunds(db))))
 	mux.HandleFunc("GET /wlt/refunds/{refundId}/audit", readGate(refund.RequireTenantScope(db, refund.HandleListGovernedRefundAudit(db))))
 	mux.HandleFunc("POST /wlt/refunds/{refundId}/approve", gate(serviceAuth(refund.RequireTenantScope(db, refund.HandleApproveGovernedRefund(db)))))
-	mux.HandleFunc("POST /wlt/refunds/{refundId}/complete", gate(serviceAuth(refund.RequireTenantScope(db, refund.HandleCompleteGovernedRefund(db)))))
+	mux.HandleFunc("POST /wlt/refunds/{refundId}/complete", gate(serviceAuth(refund.RequireTenantScope(db, refund.HandleCompleteGovernedRefundDurable(db)))))
 	mux.HandleFunc("POST /wlt/refunds/{refundId}/reject", gate(serviceAuth(refund.RequireTenantScope(db, refund.HandleRejectGovernedRefund(db)))))
 	mux.HandleFunc("POST /wlt/refunds/{refundId}/reconcile", gate(serviceAuth(refund.RequireTenantScope(db, refund.HandleReconcileGovernedRefund(db)))))
 
