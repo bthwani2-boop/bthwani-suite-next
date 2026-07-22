@@ -10,7 +10,7 @@
     "frontend/shared/marketing/coupons.types.ts",
     "frontend/shared/marketing/marketing.api.ts",
     "frontend/shared/marketing/use-coupons-controller.ts",
-    "frontend/shared/marketing/index.ts",
+    "frontend/control-panel/marketing/components/CouponTermsEditor.tsx",
     "frontend/control-panel/marketing/components/CouponFundingReconciliationPanel.tsx",
     "frontend/control-panel/marketing/components/CouponsCommandDeck.tsx"
   ],
