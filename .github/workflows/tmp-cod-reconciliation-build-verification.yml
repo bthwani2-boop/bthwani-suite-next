@@ -38,7 +38,27 @@ jobs:
           grep -Fq 'GET /dsh/control-panel/finance/cod-reconciliation-cases' services/dsh/backend/internal/http/server.go
           grep -Fq 'POST /dsh/control-panel/finance/cod-reconciliation-cases/{caseId}/assign' services/dsh/backend/internal/http/server.go
           grep -Fq 'POST /dsh/control-panel/finance/cod-reconciliation-cases/{caseId}/resolve' services/dsh/backend/internal/http/server.go
-      - name: Typecheck control panel
-        run: pnpm --dir apps/control-panel/runtime typecheck
-      - name: Build control panel
-        run: pnpm --dir apps/control-panel/runtime build
+      - name: Capture typecheck and build
+        shell: bash
+        run: |
+          set +e
+          mkdir -p cod-verification
+          pnpm --dir apps/control-panel/runtime typecheck > cod-verification/typecheck.log 2>&1
+          echo "$?" > cod-verification/typecheck.exit
+          pnpm --dir apps/control-panel/runtime build > cod-verification/build.log 2>&1
+          echo "$?" > cod-verification/build.exit
+          exit 0
+      - name: Upload COD verification output
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: cod-reconciliation-build-verification
+          path: cod-verification
+          if-no-files-found: error
+          retention-days: 1
+      - name: Enforce verification result
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(cat cod-verification/typecheck.exit)" = "0"
+          test "$(cat cod-verification/build.exit)" = "0"

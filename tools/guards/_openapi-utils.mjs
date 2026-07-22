@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import path from "node:path";
 import { read, repoRoot, toPosix } from "./_guard-utils.mjs";
 
@@ -73,31 +74,40 @@ function pathParamsFromPath(apiPath) {
 }
 
 function parseParameterBlock(lines, startIndex) {
-  const nameLine = lines[startIndex];
-  const nameMatch = nameLine.match(/-\s+name:\s*(.+?)\s*$/);
-  if (!nameMatch) return null;
-
-  const parameter = {
-    name: parseScalar(nameMatch[1]),
-    in: "",
-    required: false,
+  const startLine = lines[startIndex] ?? "";
+  const trimmedStart = startLine.trim();
+  if (!trimmedStart.startsWith("- ")) return { parameter: null, nextIndex: startIndex + 1 };
+  const parameter = { name: "", in: "", required: false };
+  const startIndent = countIndent(startLine);
+  const cleanValue = (value) => String(value ?? "").trim().replace(/^['"]|['"]$/g, "");
+  const applyField = (text) => {
+    const match = String(text ?? "").trim().match(/^(name|in|required):\s*(.+)$/);
+    if (!match) return;
+    const [, key, rawValue] = match;
+    const value = cleanValue(rawValue);
+    if (key === "name") parameter.name = value;
+    if (key === "in") parameter.in = value;
+    if (key === "required") parameter.required = value === "true";
   };
-
-  const startIndent = countIndent(nameLine);
-  for (let i = startIndex + 1; i < lines.length; i++) {
-    const line = lines[i];
-    const indent = countIndent(line);
-    if (indent <= startIndent && line.trim().startsWith("- ")) break;
-    if (indent <= 6 && /^[a-zA-Z0-9_-]+:/.test(line.trim())) break;
-
-    const inMatch = line.match(/^\s+in:\s*(.+?)\s*$/);
-    if (inMatch) parameter.in = parseScalar(inMatch[1]);
-
-    const requiredMatch = line.match(/^\s+required:\s*(.+?)\s*$/);
-    if (requiredMatch) parameter.required = parseScalar(requiredMatch[1]) === true;
+  const firstItem = trimmedStart.slice(2).trim();
+  if (firstItem.startsWith("{") && firstItem.endsWith("}")) {
+    const body = firstItem.slice(1, -1);
+    for (const match of body.matchAll(/(?:^|,)\s*(name|in|required):\s*([^,}]+)/g)) {
+      applyField(`${match[1]}: ${match[2]}`);
+    }
+    return { parameter: parameter.name ? parameter : null, nextIndex: startIndex + 1 };
   }
-
-  return parameter;
+  applyField(firstItem);
+  let i = startIndex + 1;
+  for (; i < lines.length; i += 1) {
+    const line = lines[i];
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    const indent = countIndent(line);
+    if (indent <= startIndent) break;
+    applyField(trimmed);
+  }
+  return { parameter: parameter.name ? parameter : null, nextIndex: i };
 }
 
 function parseComponentParameters(lines) {
@@ -118,7 +128,7 @@ function parseComponentParameters(lines) {
       if (inMatch) parameter.in = parseScalar(inMatch[1]);
       const requiredMatch = body.match(/(?:^|,)\s*required:\s*([^,}]+)/);
       if (requiredMatch) parameter.required = parseScalar(requiredMatch[1]) === true;
-      parameters.set(inlineMatch[1], parameter);
+      if (parameter.name) parameters.set(inlineMatch[1], parameter);
       continue;
     }
 
@@ -141,35 +151,53 @@ function parseComponentParameters(lines) {
       const requiredMatch = trimmed.match(/^required:\s*(.+?)\s*$/);
       if (requiredMatch) parameter.required = parseScalar(requiredMatch[1]) === true;
     }
-    parameters.set(componentMatch[1], parameter);
+    if (parameter.name) parameters.set(componentMatch[1], parameter);
   }
 
   return parameters;
 }
 
-function collectParameters(blockLines, componentParameters) {
+const externalComponentParameterCache = new Map();
+function componentParametersForFile(file) {
+  if (externalComponentParameterCache.has(file)) return externalComponentParameterCache.get(file);
+  const absolute = path.join(repoRoot, file);
+  const parsed = fs.existsSync(absolute) ? parseComponentParameters(read(file).split(/\r?\n/)) : new Map();
+  externalComponentParameterCache.set(file, parsed);
+  return parsed;
+}
+function resolveParameterReference(reference, file, componentParameters) {
+  const localPrefix = "#/components/parameters/";
+  if (reference.startsWith(localPrefix)) return componentParameters.get(reference.slice(localPrefix.length)) ?? null;
+  const marker = "#/components/parameters/";
+  const markerIndex = reference.indexOf(marker);
+  if (markerIndex <= 0) return null;
+  const referencedPath = reference.slice(0, markerIndex);
+  const parameterName = reference.slice(markerIndex + marker.length);
+  const absolute = path.resolve(repoRoot, path.dirname(file), referencedPath);
+  const relative = toPosix(path.relative(repoRoot, absolute));
+  if (!relative || relative.startsWith("..")) return null;
+  return componentParametersForFile(relative).get(parameterName) ?? null;
+}
+function collectParameters(blockLines, componentParameters, file) {
   const parameters = [];
-  for (let i = 0; i < blockLines.length; i++) {
+  for (let i = 0; i < blockLines.length; i += 1) {
     const trimmed = blockLines[i].trim();
-    const inlineRefMatches = [...trimmed.matchAll(/\$ref:\s*["']?#\/components\/parameters\/([^"'\]\s}]+)["']?/g)];
-    for (const inlineMatch of inlineRefMatches) {
-      const parameter = componentParameters.get(inlineMatch[1]);
+    for (const match of trimmed.matchAll(/\$ref:\s*["']?([^"'\]\s}]+)["']?/g)) {
+      const parameter = resolveParameterReference(match[1], file, componentParameters);
       if (parameter) parameters.push(parameter);
     }
-
-    if (trimmed.startsWith("- name:")) {
-      const parameter = parseParameterBlock(blockLines, i);
-      if (parameter) parameters.push(parameter);
-      continue;
-    }
-
-    const refMatch = trimmed.match(/^-\s+\$ref:\s*["']?#\/components\/parameters\/([^"']+)["']?\s*$/);
-    if (refMatch) {
-      const parameter = componentParameters.get(refMatch[1]);
-      if (parameter) parameters.push(parameter);
+    if (/^-\s*(?:name|in|required):/.test(trimmed) || /^-\s*\{/.test(trimmed)) {
+      const parsed = parseParameterBlock(blockLines, i);
+      if (parsed.parameter) parameters.push(parsed.parameter);
+      i = Math.max(i, parsed.nextIndex - 1);
     }
   }
-  return parameters;
+  const unique = new Map();
+  for (const parameter of parameters) {
+    const key = `${parameter.in}:${parameter.name}`;
+    if (!unique.has(key)) unique.set(key, parameter);
+  }
+  return [...unique.values()];
 }
 
 function parseOperationBlock({ file, apiPath, method, startLine, blockLines, componentParameters }) {
@@ -179,7 +207,7 @@ function parseOperationBlock({ file, apiPath, method, startLine, blockLines, com
     method: method.toUpperCase(),
     line: startLine,
     operationId: "",
-    parameters: collectParameters(blockLines, componentParameters),
+    parameters: collectParameters(blockLines, componentParameters, file),
     pathParams: pathParamsFromPath(apiPath),
     responses: new Set(),
     extensions: new Map(),
