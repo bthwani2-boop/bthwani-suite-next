@@ -28,7 +28,8 @@ export type DshContractRegistration = {
     | "dsh-support-governance"
     | "dsh-store-captain-handoff"
     | "dsh-dispatch-governance"
-    | "dsh-delivery-proof-media";
+    | "dsh-delivery-proof-media"
+    | "dsh-delivery-proof-completion";
   readonly path: string;
   readonly state: "CONTRACT_ACTIVE";
   readonly runtimeDependency: boolean;
@@ -192,5 +193,13 @@ export const DSH_CONTRACT_REGISTRY = [
     runtimeDependency: true,
     clientStrategy: "MANUAL_TYPED_ADAPTER",
     adapterOwner: "frontend/shared/media/pod/delivery-proof-media.api.ts",
+  },
+  {
+    id: "dsh-delivery-proof-completion",
+    path: "contracts/dsh.delivery-proof-completion.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/delivery-proof",
   },
 ] as const satisfies readonly DshContractRegistration[];
