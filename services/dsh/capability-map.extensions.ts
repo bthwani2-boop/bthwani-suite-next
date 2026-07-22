@@ -150,7 +150,11 @@ export const DSH_CAPABILITY_MAP_EXTENSIONS = [
   {
     id: "dsh.notifications",
     status: "experience-fix-required",
-    contractOperations: ["listDshNotificationDeliveryAttempts"],
+    contractOperations: [
+      "upsertDshNotificationPushEndpoint",
+      "deactivateDshNotificationPushEndpoint",
+      "listDshNotificationDeliveryAttempts",
+    ],
     surfaces: ["app-client", "app-partner", "app-captain", "app-field", "control-panel"],
     runtimeBound: true,
     closureState: "IMPLEMENTED_MULTI_SURFACE",
@@ -161,6 +165,8 @@ export const DSH_CAPABILITY_MAP_EXTENSIONS = [
       "localized-templates",
       "deep-links",
       "actor-targeting",
+      "push-endpoint-lifecycle",
+      "push-provider-worker",
       "delivery-audit",
       "retry-dead-letter",
     ],
