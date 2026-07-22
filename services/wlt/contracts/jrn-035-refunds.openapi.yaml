@@ -1,12 +1,13 @@
 openapi: 3.1.0
 info:
   title: WLT Governed Financial Refunds
-  version: 1.1.0
+  version: 1.2.0
   description: >-
     Canonical JRN-035 financial refund contract. WLT owns amount, provider,
     ledger, reconciliation and audit truth. All routes are service-authenticated
-    and tenant-scoped by the trusted DSH caller. Provider outcomes are not
-    acknowledged unless their terminal or unknown state is durably persisted.
+    and tenant-scoped by the trusted DSH caller. Every mutation is claimed by a
+    durable idempotency receipt before business execution, and provider outcomes
+    are not acknowledged unless their state is durably persisted.
 servers:
   - url: http://localhost:58083
 security:
@@ -63,6 +64,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/MutationReceiptFailure' }
   /wlt/refunds/{refundId}:
     get:
       operationId: getWltRefund
@@ -97,13 +99,14 @@ paths:
             schema: { $ref: '#/components/schemas/DecisionRequest' }
       responses:
         '200':
-          description: Approved refund
+          description: Approved refund or exact idempotent replay
           content:
             application/json:
               schema: { $ref: '#/components/schemas/RefundEnvelope' }
         '403': { $ref: '#/components/responses/MakerCheckerViolation' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/MutationReceiptFailure' }
   /wlt/refunds/{refundId}/reject:
     post:
       operationId: rejectWltRefund
@@ -121,22 +124,23 @@ paths:
             schema: { $ref: '#/components/schemas/DecisionRequest' }
       responses:
         '200':
-          description: Rejected refund
+          description: Rejected refund or exact idempotent replay
           content:
             application/json:
               schema: { $ref: '#/components/schemas/RefundEnvelope' }
         '403': { $ref: '#/components/responses/MakerCheckerViolation' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/MutationReceiptFailure' }
   /wlt/refunds/{refundId}/complete:
     post:
       operationId: completeWltRefund
       summary: Claim and execute an approved refund through the provider
       description: >-
-        The approved-to-processing claim is committed before the provider call.
-        An ambiguous provider result returns 202 only after provider_unknown and
-        its reconciliation case are durably persisted. A persistence failure
-        returns 500 and must be investigated; the provider must not be called again.
+        The mutation receipt and approved-to-processing claim are committed before
+        the provider call. An ambiguous provider result returns 202 only after
+        provider_unknown and its reconciliation case are durably persisted. A
+        persistence or receipt failure returns 500 and is not retry permission.
       parameters:
         - $ref: '#/components/parameters/RefundId'
         - $ref: '#/components/parameters/TenantHeader'
@@ -150,7 +154,7 @@ paths:
             schema: { $ref: '#/components/schemas/CompleteRequest' }
       responses:
         '200':
-          description: Provider-confirmed, ledger-posted and outbox-enqueued refund
+          description: Provider-confirmed, ledger-posted and outbox-enqueued refund or exact replay
           content:
             application/json:
               schema: { $ref: '#/components/schemas/RefundEnvelope' }
@@ -159,7 +163,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ProviderUnknownError' }
-        '500': { $ref: '#/components/responses/OutcomePersistenceFailure' }
+        '500': { $ref: '#/components/responses/CompletionPersistenceFailure' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '502': { $ref: '#/components/responses/ProviderFailure' }
@@ -180,13 +184,14 @@ paths:
             schema: { $ref: '#/components/schemas/ReconcileRequest' }
       responses:
         '200':
-          description: Reconciled refund
+          description: Reconciled refund or exact idempotent replay
           content:
             application/json:
               schema: { $ref: '#/components/schemas/RefundEnvelope' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/MutationReceiptFailure' }
   /wlt/refunds/{refundId}/audit:
     get:
       operationId: listWltRefundAudit
@@ -394,6 +399,18 @@ components:
         - type: object
           properties:
             code: { const: REFUND_OUTCOME_PERSISTENCE_FAILED }
+    MutationReceiptError:
+      allOf:
+        - $ref: '#/components/schemas/Error'
+        - type: object
+          properties:
+            code:
+              type: string
+              enum: [REFUND_IDEMPOTENCY_STORE_FAILED, REFUND_IDEMPOTENCY_RECEIPT_FAILED]
+    CompletionPersistenceError:
+      oneOf:
+        - $ref: '#/components/schemas/OutcomePersistenceError'
+        - $ref: '#/components/schemas/MutationReceiptError'
   responses:
     BadRequest:
       description: Invalid request or evidence
@@ -421,15 +438,20 @@ components:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
     Conflict:
-      description: Invalid lifecycle state, amount reservation or idempotency conflict
+      description: Lifecycle, amount, changed-payload or in-progress idempotency conflict
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
-    OutcomePersistenceFailure:
-      description: Provider outcome could not be durably recorded; automatic provider retry is forbidden
+    MutationReceiptFailure:
+      description: The mutation receipt could not be claimed or completed durably
       content:
         application/json:
-          schema: { $ref: '#/components/schemas/OutcomePersistenceError' }
+          schema: { $ref: '#/components/schemas/MutationReceiptError' }
+    CompletionPersistenceFailure:
+      description: Provider outcome or mutation replay evidence could not be persisted; automatic provider retry is forbidden
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/CompletionPersistenceError' }
     ProviderFailure:
       description: Definitive provider failure
       content:
