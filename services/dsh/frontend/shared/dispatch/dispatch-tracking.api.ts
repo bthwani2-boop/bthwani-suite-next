@@ -1,6 +1,6 @@
 import { resolveDshApiBaseUrl } from '../_kernel/dsh-api-base-url';
 import { createDshHttpClient } from '../_kernel/dsh-http-request';
-import type { DshDispatchAssignment, DshPartnerDispatchReference } from './dispatch.types';
+import type { DshDeliveryStatus, DshDispatchAssignment } from './dispatch.types';
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), 'dispatch-tracking');
 
@@ -47,8 +47,30 @@ export type DshClientLiveTrackingResponse = {
   readonly tracking: DshLiveTrackingProjection;
 };
 
+/**
+ * JRN-017 standalone contract projection. This intentionally does not reuse
+ * the older generated DshPartnerDispatchReference because the live-tracking
+ * contract returns a nested read-only delivery state and never returns captain
+ * coordinates or a partner mutation capability.
+ */
+export type DshPartnerLiveTrackingReference = {
+  readonly id: string;
+  readonly orderId: string;
+  readonly status: DshDispatchAssignment['status'];
+  readonly responseDeadlineAt?: string | null;
+  readonly acceptedAt?: string | null;
+  readonly completedAt?: string | null;
+  readonly delivery: {
+    readonly status: DshDeliveryStatus;
+    readonly podReference?: string;
+    readonly note?: string;
+    readonly updatedAt?: string;
+  };
+  readonly updatedAt: string;
+};
+
 export type DshPartnerDispatchTrackingResponse = {
-  readonly assignment: DshPartnerDispatchReference;
+  readonly assignment: DshPartnerLiveTrackingReference;
   readonly tracking: DshLiveTrackingProjection;
 };
 
