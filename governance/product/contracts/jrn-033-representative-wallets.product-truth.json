@@ -1,0 +1,166 @@
+{
+  "schemaVersion": 1,
+  "capabilityId": "JRN_033_REPRESENTATIVE_WALLETS_REFERENCE_FINANCE",
+  "state": "DISCOVERY",
+  "problem": {
+    "statement": "Client, partner, captain and field actors need one authenticated read-only view of their WLT-owned wallet, balances and ledger references through DSH BFF, while finance operators need permission-scoped lookup without transferring financial ownership to DSH or any frontend.",
+    "affectedActors": ["client", "partner", "captain", "field", "operator"],
+    "currentWorkaround": "Field finance has a partial wallet flow, captain finance exposes COD only, partner finance presents settlement data as a wallet, client has no wallet view, and canonical frontend routes do not all match the registered DSH router.",
+    "frequency": "continuous",
+    "severity": "critical",
+    "evidenceState": "QUALITATIVE",
+    "evidenceReferences": [
+      "governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md#jrn-033",
+      "services/wlt/contracts/wlt.openapi.yaml",
+      "services/wlt/backend/internal/wallet",
+      "services/dsh/backend/internal/wlt/finance_proxy.go",
+      "services/dsh/frontend/shared/finance-wlt-link"
+    ]
+  },
+  "actors": [
+    {
+      "id": "client",
+      "role": "Authenticated customer reading only their own wallet and ledger references",
+      "permittedActions": ["read own wallet status", "read own available pending and held balances", "read own ledger references", "refresh"],
+      "forbiddenActions": ["select another actor id", "mutate balance", "append ledger entries", "call WLT directly"]
+    },
+    {
+      "id": "partner",
+      "role": "Authenticated partner reading only their own wallet and reference finance",
+      "permittedActions": ["read own wallet", "read own ledger references", "read own settlements commissions and payouts", "refresh"],
+      "forbiddenActions": ["derive wallet balance from settlements", "use a hardcoded partner id", "mutate balance in DSH", "read another partner wallet"]
+    },
+    {
+      "id": "captain",
+      "role": "Authenticated captain reading their wallet, earnings references, payouts and COD liability",
+      "permittedActions": ["read own wallet", "read own ledger references", "read own commissions and payouts", "submit governed payout request", "perform authorized COD handoff actions"],
+      "forbiddenActions": ["read another captain wallet", "mutate balance", "complete payout locally", "call a provider directly"]
+    },
+    {
+      "id": "field",
+      "role": "Authenticated field actor reading their wallet, commissions, ledger and payout requests",
+      "permittedActions": ["read own wallet", "read own commissions", "read own ledger references", "read and submit own payout requests", "refresh"],
+      "forbiddenActions": ["supply beneficiary identity", "request more than available balance", "mutate wallet balance", "read another field actor wallet"]
+    },
+    {
+      "id": "operator",
+      "role": "Permission-scoped finance operator reading representative wallets and ledger references",
+      "permittedActions": ["lookup a supported actor wallet", "filter ledger by actor", "inspect reference commissions settlements and payouts", "audit correlation and update timestamps"],
+      "forbiddenActions": ["lookup without finance.read", "mutate wallet balance", "use read permission for a money-moving action", "treat DSH as financial truth owner"]
+    }
+  ],
+  "surfaces": [
+    {
+      "id": "app-client",
+      "required": true,
+      "actors": ["client"],
+      "routesOrScreens": ["MySpace wallet summary"],
+      "operationIds": ["getDshClientOwnWallet", "listDshClientOwnLedgerEntries"],
+      "states": ["loading", "success", "empty", "suspended", "frozen", "offline", "forbidden", "error"],
+      "actions": ["refresh", "inspect ledger"]
+    },
+    {
+      "id": "app-partner",
+      "required": true,
+      "actors": ["partner"],
+      "routesOrScreens": ["partner finance wallet"],
+      "operationIds": ["getDshPartnerOwnWallet", "listDshPartnerOwnLedgerEntries"],
+      "states": ["loading", "success", "empty", "suspended", "frozen", "offline", "forbidden", "error"],
+      "actions": ["refresh", "inspect ledger", "open settlement reference"]
+    },
+    {
+      "id": "app-captain",
+      "required": true,
+      "actors": ["captain"],
+      "routesOrScreens": ["captain finance wallet"],
+      "operationIds": ["getDshCaptainOwnWallet", "listDshCaptainOwnLedgerEntries"],
+      "states": ["loading", "success", "empty", "suspended", "frozen", "offline", "forbidden", "error"],
+      "actions": ["refresh", "inspect ledger", "inspect COD", "request payout"]
+    },
+    {
+      "id": "app-field",
+      "required": true,
+      "actors": ["field"],
+      "routesOrScreens": ["field finance wallet commissions ledger and payouts"],
+      "operationIds": ["getDshFieldOwnWallet", "listDshFieldOwnLedgerEntries", "listDshFieldOwnCommissions", "listDshFieldOwnPayoutRequests", "createDshFieldOwnPayoutRequest"],
+      "states": ["loading", "success", "empty", "partial", "suspended", "frozen", "offline", "forbidden", "validation_error", "error"],
+      "actions": ["refresh", "inspect ledger", "inspect commissions", "submit payout request"]
+    },
+    {
+      "id": "control-panel",
+      "required": true,
+      "actors": ["operator"],
+      "routesOrScreens": ["representative wallet lookup", "financial ledger filters"],
+      "operationIds": ["getDshRepresentativeWallet", "listDshFinanceLedgerEntries"],
+      "states": ["idle", "loading", "success", "not_found", "forbidden", "invalid_actor", "offline", "error"],
+      "actions": ["select actor type", "enter actor id", "lookup", "filter ledger", "refresh"]
+    },
+    {
+      "id": "backend",
+      "required": true,
+      "actors": ["client", "partner", "captain", "field", "operator"],
+      "routesOrScreens": ["DSH actor-scoped finance BFF", "WLT wallet and ledger reads"],
+      "operationIds": ["getWltWallet", "listWltLedgerEntries", "getDshRepresentativeWallet"],
+      "states": ["authenticated", "authorized", "unsupported_actor", "not_found", "wlt_unavailable", "success"],
+      "actions": ["resolve identity", "scope actor", "authorize", "proxy read", "propagate correlation", "fail closed"]
+    },
+    {
+      "id": "database",
+      "required": true,
+      "actors": ["operator"],
+      "routesOrScreens": ["wlt_wallets", "wlt_ledger_entries", "wlt_commissions", "wlt_payout_requests"],
+      "operationIds": [],
+      "states": ["unique_actor_wallet", "append_only_ledger", "currency_bound", "auditable"],
+      "actions": ["enforce actor uniqueness", "preserve ledger lineage", "prevent duplicate payout requests"]
+    }
+  ],
+  "outcome": {
+    "statement": "Every representative sees an authenticated WLT-owned wallet and permission-scoped ledger view through DSH, while operators can inspect supported wallets without any DSH or frontend balance mutation path.",
+    "primaryMetric": "actor-scoped wallet read coverage across required surfaces",
+    "guardrailMetrics": ["cross-actor wallet disclosure count", "frontend direct WLT financial read count", "DSH wallet balance mutation path count", "hardcoded actor identifier count", "route-contract drift count"],
+    "baselineState": "Wallet capability is fragmented and route bindings are inconsistent.",
+    "targetState": "All four actor surfaces and the control panel consume canonical identity-scoped DSH reads backed by WLT truth.",
+    "observationWindow": "targeted contract, backend, frontend, runtime, finance-control and independent acceptance verification"
+  },
+  "acceptance": {
+    "criteria": [
+      "WLT accepts only client partner captain and field wallet actor types.",
+      "DSH derives self-service actor identity from the authenticated session and never from a frontend query or body.",
+      "Client partner captain and field have canonical own-wallet and own-ledger routes.",
+      "The control panel wallet lookup requires finance.read and validates actor type and id.",
+      "Available pending held earned settled and paid balances are rendered from WLT without local derivation.",
+      "Ledger entries are actor-scoped before forwarding to WLT.",
+      "Partner wallet UI does not use settlement pending amount as available wallet balance and contains no hardcoded actor fallback.",
+      "Field payout requests remain idempotent and cannot exceed the loaded available balance in the UI.",
+      "No DSH or frontend route writes wallet balances or appends ledger truth for this journey.",
+      "Loading empty partial forbidden offline error and retry states are represented on required human-facing surfaces.",
+      "Correlation and no-store response controls are applied to representative finance reads."
+    ],
+    "failureStates": ["cross_actor_read", "unsupported_actor", "hardcoded_actor", "direct_wlt_browser_call", "local_balance_derivation", "route_not_registered", "wallet_mutation_in_dsh", "missing_permission", "stale_financial_display"],
+    "requiredChecks": ["product-truth schema validation", "WLT wallet handler tests", "DSH finance proxy allowlist tests", "DSH actor route and scoping tests", "OpenAPI contract check", "shared TypeScript typecheck", "multi-surface binding check", "financial boundary guard", "runtime DSH-to-WLT smoke", "independent financial control review", "independent product acceptance", "visual evidence"],
+    "runtimeEvidenceRequired": true,
+    "visualEvidenceRequired": true
+  },
+  "invariants": {
+    "business": ["WLT is the sole owner of wallet and ledger truth.", "DSH is an authenticated and authorized BFF only.", "Every self-service wallet read is scoped to the resolved actor.", "A wallet is unique by actor type and actor id.", "Ledger history is append-only financial evidence."],
+    "negative": ["No DSH table or handler mutates representative wallet balances.", "No frontend calls internal WLT financial routes directly.", "No user-facing surface supplies an arbitrary self-service actor id.", "No settlement summary is labeled as a wallet balance.", "No read permission authorizes a money-moving action."]
+  },
+  "owners": {
+    "productManager": "WLT Representative Finance Product Management",
+    "productOwner": "WLT Wallet and Ledger Product Owner",
+    "uxJourneyOwner": "Multi-Surface Representative Finance Experience Owner",
+    "engineeringOwner": "DSH WLT Full-Stack Engineering",
+    "productManagerApproval": "PENDING",
+    "productOwnerApproval": "PENDING",
+    "productAcceptanceDecision": "PENDING"
+  },
+  "execution": {
+    "appetite": "Close JRN-033 actor-scoped wallet, ledger, route, UI and boundary gaps without enabling unapproved money movement or production deployment.",
+    "fixedConstraints": ["Repository mode is REMOTE_ONLY on sambassam.", "WLT remains financial truth owner.", "No PR merge force push release or production deployment is authorized.", "Independent financial and product approvals cannot be self-issued by engineering."],
+    "variableScope": ["Arabic labels", "wallet summary presentation", "ledger row density", "non-financial navigation placement"],
+    "forbiddenScope": ["DSH wallet balance mutation", "frontend direct WLT financial call", "provider activation", "production deployment", "commercial SaaS activation", "self-approval"],
+    "forecastRange": "one sequential journey closure",
+    "confidence": "high",
+    "unknowns": ["Independent financial-control decision", "runtime integration outcome", "visual verification outcome", "production telemetry outcome"]
+  }
+}
