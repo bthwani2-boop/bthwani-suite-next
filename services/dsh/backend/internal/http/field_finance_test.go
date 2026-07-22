@@ -39,9 +39,17 @@ func fieldFinanceServer(t *testing.T, actorID string, wltHandler http.HandlerFun
 	}, wltServer
 }
 
+func requireFieldFinanceTenant(t *testing.T, r *http.Request) {
+	t.Helper()
+	if got := r.Header.Get("X-Tenant-ID"); got != "dsh" {
+		t.Fatalf("expected Identity tenant dsh, got %q", got)
+	}
+}
+
 func TestHandleFieldMeWalletCallsPathBasedWalletRoute(t *testing.T) {
 	var gotPath, gotQuery string
 	s, _ := fieldFinanceServer(t, "field-1", func(w http.ResponseWriter, r *http.Request) {
+		requireFieldFinanceTenant(t, r)
 		gotPath = r.URL.Path
 		gotQuery = r.URL.RawQuery
 		w.Header().Set("Content-Type", "application/json")
@@ -64,11 +72,15 @@ func TestHandleFieldMeWalletCallsPathBasedWalletRoute(t *testing.T) {
 	if gotQuery != "" {
 		t.Fatalf("expected no query params on path-based wallet call, got %q", gotQuery)
 	}
+	if rec.Header().Get("Cache-Control") != "private, no-store" {
+		t.Fatalf("expected private no-store wallet response, got %q", rec.Header().Get("Cache-Control"))
+	}
 }
 
-func TestHandleFieldMeCommissionsSendsBeneficiaryIDAndType(t *testing.T) {
+func TestHandleFieldMeCommissionsSendsBeneficiaryIDTypeAndTenant(t *testing.T) {
 	var gotQuery string
 	s, _ := fieldFinanceServer(t, "field-2", func(w http.ResponseWriter, r *http.Request) {
+		requireFieldFinanceTenant(t, r)
 		gotQuery = r.URL.RawQuery
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"commissions":[]}`))
@@ -95,9 +107,10 @@ func TestHandleFieldMeCommissionsSendsBeneficiaryIDAndType(t *testing.T) {
 	}
 }
 
-func TestHandleFieldMePayoutRequestsSendsBeneficiaryIDAndType(t *testing.T) {
+func TestHandleFieldMePayoutRequestsSendsBeneficiaryIDTypeAndTenant(t *testing.T) {
 	var gotQuery string
 	s, _ := fieldFinanceServer(t, "field-3", func(w http.ResponseWriter, r *http.Request) {
+		requireFieldFinanceTenant(t, r)
 		gotQuery = r.URL.RawQuery
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"payoutRequests":[]}`))
@@ -124,12 +137,13 @@ func TestHandleFieldMePayoutRequestsSendsBeneficiaryIDAndType(t *testing.T) {
 	}
 }
 
-func TestHandleFieldMeLedgerEntriesStillUsesActorIDAndType(t *testing.T) {
+func TestHandleFieldMeLedgerEntriesStillUsesActorIDTypeAndTenant(t *testing.T) {
 	// WLT's ledger/entries endpoint expects actorId/actorType (not the
 	// beneficiaryActorId/beneficiaryActorType scheme used by
 	// commissions/payout-requests) -- this must remain unchanged.
 	var gotQuery string
 	s, _ := fieldFinanceServer(t, "field-4", func(w http.ResponseWriter, r *http.Request) {
+		requireFieldFinanceTenant(t, r)
 		gotQuery = r.URL.RawQuery
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"ledgerEntries":[]}`))
@@ -154,10 +168,14 @@ func TestHandleFieldMeLedgerEntriesStillUsesActorIDAndType(t *testing.T) {
 	if q.Get("actorType") != "field" {
 		t.Fatalf("expected actorType=field, got %q", q.Get("actorType"))
 	}
+	if rec.Header().Get("Cache-Control") != "private, no-store" {
+		t.Fatalf("expected private no-store ledger response, got %q", rec.Header().Get("Cache-Control"))
+	}
 }
 
-func TestHandleSubmitFieldMePayoutRequestForwardsFullWltResponse(t *testing.T) {
+func TestHandleSubmitFieldMePayoutRequestForwardsTenantAndFullWltResponse(t *testing.T) {
 	s, _ := fieldFinanceServer(t, "field-5", func(w http.ResponseWriter, r *http.Request) {
+		requireFieldFinanceTenant(t, r)
 		var payload map[string]any
 		_ = json.NewDecoder(r.Body).Decode(&payload)
 		if payload["beneficiaryActorId"] != "field-5" || payload["beneficiaryActorType"] != "field" {
