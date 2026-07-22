@@ -42,16 +42,23 @@ test("JRN-022 client controller reads back quote approval and cancellation", () 
   ], "client special-request controller");
 });
 
-test("JRN-022 shared client screen binds governed actions and recovery states", () => {
+test("JRN-022 shared client screen binds approval, quote refusal, cancellation, and recovery states", () => {
   const screen = read("services/dsh/frontend/shared/special-requests/ClientSpecialRequestsScreen.tsx");
+  const actions = read("services/dsh/frontend/shared/special-requests/special-requests.actions.ts");
   assertIncludesAll(screen, [
     "canClientApproveSpecialRequestQuote",
     "canClientCancelSpecialRequest",
+    "clientCancellationActionLabel",
+    "isClientQuoteDecisionPending",
     "اعتماد العرض والدفع",
-    "إلغاء الطلب",
+    "جاري رفض العرض",
     "إعادة المحاولة",
     "wltPaymentSessionId",
   ], "client special-request screen");
+  assertIncludesAll(actions, [
+    'return isClientQuoteDecisionPending(request) ? "رفض العرض" : "إلغاء الطلب"',
+    "terminal `rejected` status remains operator-owned",
+  ], "client special-request actions");
   assert.ok(!screen.includes('role="headingXs"'), "client screen must only use governed typography roles");
 });
 
