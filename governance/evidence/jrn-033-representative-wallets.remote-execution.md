@@ -9,6 +9,7 @@
 - `journey_registry`: `governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md#JRN-033`
 - `initial_observed_branch_head`: `10a281093f571595300b5245e9d427a4dc71dd16`
 - `latest_jrn_033_implementation_anchor_before_this_report`: `02455f718da1cc06c24bda2556fa62d84834585e`
+- `verification_concurrency_fix_sha`: `6c4ec4fe46a2dd2915037af1d7b3f4fe10497cd4`
 - `execution_date`: `2026-07-22`
 - `mode`: `fullstack unified multi-surface`
 
@@ -85,11 +86,18 @@ The JRN-033 workflow executes:
 8. Product-truth validation against `governance/product/product-truth.schema.json`.
 9. Repository whitespace verification.
 
-At report creation time, no completed remote job result was available for citation on the latest branch head. The workflow and tests are committed, but an unobserved run is not treated as passed evidence.
+## Remote workflow observations
+
+- Earlier JRN-033 runs on shared branch-ref concurrency groups were cancelled before jobs began when later finance journey commits arrived.
+- The workflow concurrency policy was corrected at `6c4ec4fe46a2dd2915037af1d7b3f4fe10497cd4` to use `${{ github.sha }}` with `cancel-in-progress: false`, preserving verification per commit.
+- JRN-033 workflow run `29919146590` / run number `109` was created for that SHA.
+- Its three jobs are currently queued: `Focused contract and product truth`, `WLT ownership and DSH actor scoping`, and `Shared brain and all representative surfaces`.
+- The repository has multiple unrelated workflows queued on the same branch head, so queued state is recorded as infrastructure evidence, not interpreted as pass or test failure.
+- A queued or cancelled workflow is not treated as successful closure evidence.
 
 ## Evidence still required
 
-- Successful remote JRN-033 workflow jobs on the final reviewed SHA.
+- Successful remote JRN-033 workflow jobs on the reviewed implementation SHA.
 - Runtime DSH-to-WLT smoke evidence using authenticated client, partner, captain, field and operator identities.
 - Negative runtime evidence for cross-actor access, unsupported actor type, missing `finance.read`, WLT unavailable and frozen/suspended wallet states.
 - Visual evidence for client, partner, captain, field and control-panel loading, success, empty, partial and error states.
