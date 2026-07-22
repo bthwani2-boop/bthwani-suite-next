@@ -5,6 +5,7 @@ import "testing"
 func TestLoadConfigRejectsUnsetProviderMode(t *testing.T) {
 	t.Setenv("WLT_FINANCIAL_PROVIDER_MODE", "")
 	t.Setenv("WLT_FINANCIAL_PROVIDER_BASE_URL", "")
+	t.Setenv("WLT_ALLOW_MOCK_PROVIDER", "")
 
 	if _, err := LoadConfig(); err == nil {
 		t.Fatal("expected an unset provider mode to fail closed")
@@ -46,13 +47,24 @@ func TestLoadConfigRejectsSandboxWithoutBaseURL(t *testing.T) {
 	}
 }
 
+func TestLoadConfigRejectsMockWithoutExplicitAuthorization(t *testing.T) {
+	t.Setenv("WLT_FINANCIAL_PROVIDER_MODE", "mock")
+	t.Setenv("WLT_FINANCIAL_PROVIDER_BASE_URL", "")
+	t.Setenv("WLT_ALLOW_MOCK_PROVIDER", "")
+
+	if _, err := LoadConfig(); err == nil {
+		t.Fatal("expected mock mode without WLT_ALLOW_MOCK_PROVIDER=true to fail closed")
+	}
+}
+
 func TestLoadConfigAllowsExplicitLocalMock(t *testing.T) {
 	t.Setenv("WLT_FINANCIAL_PROVIDER_MODE", "mock")
 	t.Setenv("WLT_FINANCIAL_PROVIDER_BASE_URL", "")
+	t.Setenv("WLT_ALLOW_MOCK_PROVIDER", "true")
 
 	config, err := LoadConfig()
 	if err != nil {
-		t.Fatalf("expected explicit local mock mode to load: %v", err)
+		t.Fatalf("expected explicitly authorized local mock mode to load: %v", err)
 	}
 	if config.Mode != ModeMock || config.BaseURL != "http://wiremock-financial-provider:8080" {
 		t.Fatalf("unexpected explicit mock config: %+v", config)
