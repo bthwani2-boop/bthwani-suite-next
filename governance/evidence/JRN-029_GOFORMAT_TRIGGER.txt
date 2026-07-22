@@ -1,0 +1,6 @@
+JRN-029 deterministic gofmt repair
+requested_at=2026-07-22
+execution_nonce=pr-gofmt-repair-1
+source_failure_run=29929964037
+source_failure_job=88973276644
+scope=platformpolicies,http-routes,http-middleware,dsh-api-composition
