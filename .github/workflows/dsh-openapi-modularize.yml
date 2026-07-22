@@ -17,7 +17,7 @@ concurrency:
 jobs:
   verify:
     name: JRN-032 protected HTTP diagnostic
-    runs-on: ubuntu-latest
+    runs-on: macos-14
     timeout-minutes: 20
     steps:
       - name: Checkout immutable JRN-032 verification source
