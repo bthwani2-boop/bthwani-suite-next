@@ -21,7 +21,9 @@ export type IdentitySessionState = {
     readonly kind: "error";
     readonly message: string;
 };
+export type IdentityBeforeSessionEndHook = () => void | Promise<void>;
 export declare function configureIdentitySessionStorage(adapter: SessionStorageAdapter): void;
+export declare function registerIdentityBeforeSessionEndHook(hook: IdentityBeforeSessionEndHook): () => void;
 export declare function configureIdentitySession(baseUrl: string): void;
 export declare function getIdentityAccessToken(): string | null;
 export declare function getIdentityState(): IdentitySessionState;
