@@ -99,3 +99,52 @@ jobs:
           git diff --exit-code -- \
             services/dsh/contracts/generated/dsh.bundle.openapi.yaml \
             services/dsh/clients/generated/dsh-api.ts
+
+  sync-generated:
+    name: Synchronize verified generated artifacts
+    if: github.event_name == 'push' && github.actor != 'github-actions[bot]'
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sambassam
+        uses: actions/checkout@v4
+        with:
+          ref: sambassam
+          fetch-depth: 0
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "10.34.2"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.17.0"
+          cache: pnpm
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Regenerate and verify DSH contract artifacts
+        run: |
+          pnpm --dir services/dsh openapi:verify
+          pnpm run contracts:lint
+          pnpm --dir services/dsh openapi:test
+
+      - name: Commit generated artifacts when changed
+        run: |
+          git add -f \
+            services/dsh/contracts/generated/dsh.bundle.openapi.yaml \
+            services/dsh/clients/generated/dsh-api.ts
+          if git diff --cached --quiet; then
+            echo "Generated artifacts are already synchronized."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "generated(dsh): synchronize modular OpenAPI artifacts"
+          git fetch origin sambassam
+          git rebase origin/sambassam
+          git push origin HEAD:sambassam
