@@ -1,3 +1,6 @@
+export type DshNotificationChannel = "in_app" | "push";
+export type DshNotificationLocale = "ar" | "en";
+
 export type DshNotification = {
   readonly id: string;
   readonly actorId: string;
@@ -16,7 +19,22 @@ export type DshNotificationPreference = {
   readonly actorType: string;
   readonly topic: string;
   readonly enabled: boolean;
+  readonly channels: readonly DshNotificationChannel[];
+  readonly quietHoursStart?: string;
+  readonly quietHoursEnd?: string;
+  readonly locale: DshNotificationLocale;
+  readonly timezone: string;
   readonly updatedAt: string;
+};
+
+export type DshUpdateNotificationPreferenceInput = {
+  readonly topic: string;
+  readonly enabled: boolean;
+  readonly channels: readonly DshNotificationChannel[];
+  readonly quietHoursStart?: string;
+  readonly quietHoursEnd?: string;
+  readonly locale: DshNotificationLocale;
+  readonly timezone: string;
 };
 
 export type DshPlatformNotificationConfig = {
@@ -25,8 +43,29 @@ export type DshPlatformNotificationConfig = {
   readonly actorTypes: readonly string[];
   readonly isEnabled: boolean;
   readonly description: string;
+  readonly defaultChannels: readonly DshNotificationChannel[];
+  readonly titleAr: string;
+  readonly bodyAr: string;
+  readonly titleEn: string;
+  readonly bodyEn: string;
+  readonly variables: readonly string[];
+  readonly deepLinkPattern: string;
   readonly updatedBy: string;
   readonly updatedAt: string;
+};
+
+export type DshUpsertPlatformNotificationConfigInput = {
+  readonly topic: string;
+  readonly actorTypes: readonly string[];
+  readonly isEnabled: boolean;
+  readonly description: string;
+  readonly defaultChannels: readonly DshNotificationChannel[];
+  readonly titleAr: string;
+  readonly bodyAr: string;
+  readonly titleEn: string;
+  readonly bodyEn: string;
+  readonly variables: readonly string[];
+  readonly deepLinkPattern: string;
 };
 
 export type DshNotificationDeliveryOutcome = "sent" | "retry_scheduled" | "dead_letter";
