@@ -1,3 +1,4 @@
+# Permanent targeted gate for JRN-024 field visits and store readiness.
 name: JRN-024 Field Readiness Verification
 
 on:
