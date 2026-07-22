@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   diagnose:
-    name: Administration Go isolated gates
+    name: Administration Go isolated and combined gates
     runs-on: macos-14
     timeout-minutes: 20
     defaults:
@@ -58,6 +58,11 @@ jobs:
         continue-on-error: true
         run: go test ./internal/http -run 'TestJourney031ExposesGovernedAdministrationRoutes$' -count=1
 
+      - id: combined_tests
+        name: Run the exact combined test invocation
+        continue-on-error: true
+        run: go test ./internal/administration ./internal/http -run 'Test(Journey031ExposesGovernedAdministrationRoutes|RequestStaffRoleAssignmentRejectsInvalidInput|RequestStaffRoleAssignmentRejectsSelfAssignment|ReviewStaffRoleAssignmentRejectsInvalidDecision|ReviewStaffRoleAssignmentRequiresVersion|RejectedRoleAssignmentRequiresReviewNote|NormalizeRoleDefinitionRequiresControlPanelAndNormalizesScope|AdministrationPermissionCandidatesPreserveLegacyFallback|InverseRoleAction|AuditRedactionDropsSensitiveValues)$' -count=1
+
       - id: build_administration
         name: Build administration owner
         continue-on-error: true
@@ -68,7 +73,12 @@ jobs:
         continue-on-error: true
         run: go build ./internal/http
 
-      - name: Require every isolated Go gate
+      - id: combined_build
+        name: Run the exact combined build invocation
+        continue-on-error: true
+        run: go build ./internal/administration ./internal/http
+
+      - name: Require every isolated and combined Go gate
         shell: bash
         run: |
           [[ "${{ steps.validation.outcome }}" == "success" ]]
@@ -77,5 +87,7 @@ jobs:
           [[ "${{ steps.rollback.outcome }}" == "success" ]]
           [[ "${{ steps.redaction.outcome }}" == "success" ]]
           [[ "${{ steps.routes.outcome }}" == "success" ]]
+          [[ "${{ steps.combined_tests.outcome }}" == "success" ]]
           [[ "${{ steps.build_administration.outcome }}" == "success" ]]
           [[ "${{ steps.build_http.outcome }}" == "success" ]]
+          [[ "${{ steps.combined_build.outcome }}" == "success" ]]
