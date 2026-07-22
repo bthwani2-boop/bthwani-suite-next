@@ -25,9 +25,6 @@ on:
       - "governance/product/contracts/JRN-030_PARTNER_FLEET_CONNECTION.product-truth.json"
       - "governance/evidence/JRN-030_TECHNICAL_CLOSURE_2026-07-22.md"
       - ".github/workflows/jrn-030-partner-fleet-verification.yml"
-  pull_request:
-    branches: [master]
-    types: [synchronize]
 
 permissions:
   contents: read
