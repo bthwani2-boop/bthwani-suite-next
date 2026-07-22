@@ -73,7 +73,9 @@ func main() {
 	dshHttp.RegisterAdministrationRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterWorkforceScopeRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterWorkforceEmployeeMediaRoute(router, db, identityClient, wltClient, mediaProvider)
-	pickupGuardedRouter := dshHttp.PickupMutationGuard(db, identityClient, wltClient, mediaProvider, router)
+	pickupGuardedRouter := dshHttp.PickupMutationPathContext(
+		dshHttp.PickupMutationGuard(db, identityClient, wltClient, mediaProvider, router),
+	)
 	handler := dshHttp.CorsMiddleware(authMode, pickupGuardedRouter)
 
 	outboxCtx, cancelOutbox := context.WithCancel(context.Background())
