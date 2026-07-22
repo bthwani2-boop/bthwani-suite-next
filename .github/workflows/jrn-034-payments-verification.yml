@@ -3,7 +3,7 @@ name: JRN-034 Payments Verification
 on:
   workflow_dispatch:
   push:
-    branches: [sambassam]
+    branches: [verification/jrn-034-8423652]
     paths:
       - ".github/workflows/jrn-034-payments-verification.yml"
       - "governance/product/contracts/jrn-034-payments-payment-sessions.product-truth.json"
@@ -56,7 +56,7 @@ concurrency:
 jobs:
   structural:
     name: Structural journey guard
-    runs-on: ubuntu-latest
+    runs-on: macos-15
     steps:
       - name: Checkout exact commit
         uses: actions/checkout@v4
@@ -71,7 +71,7 @@ jobs:
 
   backend:
     name: WLT and DSH payment backend
-    runs-on: ubuntu-latest
+    runs-on: macos-15
     steps:
       - name: Checkout exact commit
         uses: actions/checkout@v4
@@ -97,7 +97,7 @@ jobs:
 
   frontend:
     name: Shared brain and payment operations surface
-    runs-on: ubuntu-latest
+    runs-on: macos-15
     steps:
       - name: Checkout exact commit
         uses: actions/checkout@v4
@@ -119,7 +119,7 @@ jobs:
 
   contract:
     name: Focused contracts and product truth
-    runs-on: ubuntu-latest
+    runs-on: macos-15
     steps:
       - name: Checkout exact commit
         uses: actions/checkout@v4
