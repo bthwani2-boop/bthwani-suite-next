@@ -27,6 +27,36 @@ function parseScalar(value) {
   return clean;
 }
 
+function parseServerBasePath(lines) {
+  let insideServers = false;
+  for (const line of lines) {
+    if (/^servers:\s*$/.test(line)) {
+      insideServers = true;
+      continue;
+    }
+    if (insideServers && /^\S/.test(line) && !/^servers:\s*$/.test(line)) break;
+    if (!insideServers) continue;
+    const match = line.match(/^\s*-\s+url:\s*(.+?)\s*$/);
+    if (!match) continue;
+    const raw = parseScalar(match[1]);
+    try {
+      const pathname = /^https?:\/\//i.test(raw) ? new URL(raw).pathname : raw;
+      const normalized = pathname.startsWith("/") ? pathname : `/${pathname}`;
+      return normalized === "/" ? "" : normalized.replace(/\/$/, "");
+    } catch {
+      return "";
+    }
+  }
+  return "";
+}
+
+function applyServerBasePath(apiPath, serverBasePath) {
+  if (!serverBasePath) return apiPath;
+  if (apiPath === serverBasePath || apiPath.startsWith(`${serverBasePath}/`)) return apiPath;
+  if (/^\/(?:dsh|wlt|identity|providers)(?:\/|$)/.test(apiPath)) return apiPath;
+  return `${serverBasePath}${apiPath.startsWith("/") ? apiPath : `/${apiPath}`}`;
+}
+
 function pathParamsFromPath(apiPath) {
   const params = [];
   const paramRegex = /\{([^}]+)\}/g;
@@ -163,6 +193,7 @@ function parseOperationBlock({ file, apiPath, method, startLine, blockLines, com
 export function parseOpenApiContractContent(content, file = "test.yaml") {
   const lines = content.split(/\r?\n/);
   const componentParameters = parseComponentParameters(lines);
+  const serverBasePath = parseServerBasePath(lines);
   const operations = [];
   let currentPath = null;
   let currentPathIndent = -1;
@@ -197,7 +228,7 @@ export function parseOpenApiContractContent(content, file = "test.yaml") {
     const pathMatch = line.match(/^(\s*)(["']?\/[^"']*["']?)\s*:/);
     if (pathMatch) {
       closePath();
-      currentPath = unquote(pathMatch[2]);
+      currentPath = applyServerBasePath(unquote(pathMatch[2]), serverBasePath);
       currentPathIndent = pathMatch[1].length;
       currentPathBlock = [line];
       continue;
