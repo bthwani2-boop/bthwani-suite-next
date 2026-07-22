@@ -5,12 +5,16 @@ on:
     branches: [sambassam]
     paths:
       - ".github/workflows/tmp-cod-reconciliation-build-verification.yml"
+  pull_request:
+    branches: [master]
+    paths:
+      - ".github/workflows/tmp-cod-reconciliation-build-verification.yml"
 
 permissions:
   contents: read
 
 concurrency:
-  group: temporary-cod-reconciliation-build-verification
+  group: temporary-cod-reconciliation-build-verification-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: false
 
 jobs:
