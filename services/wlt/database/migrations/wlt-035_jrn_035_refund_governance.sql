@@ -15,7 +15,7 @@ ALTER TABLE wlt_refunds
   ADD COLUMN IF NOT EXISTS provider_status TEXT,
   ADD COLUMN IF NOT EXISTS provider_error TEXT,
   ADD COLUMN IF NOT EXISTS provider_attempted_at TIMESTAMPTZ,
-  ADD COLUMN IF NOT EXISTS reconciliation_case_id UUID,
+  ADD COLUMN IF NOT EXISTS reconciliation_case_id TEXT,
   ADD COLUMN IF NOT EXISTS version INTEGER NOT NULL DEFAULT 1;
 
 UPDATE wlt_refunds r
@@ -92,6 +92,14 @@ CREATE INDEX IF NOT EXISTS wlt_refund_audit_refund_idx
   ON wlt_refund_audit_events (refund_id, created_at);
 CREATE INDEX IF NOT EXISTS wlt_refund_audit_tenant_idx
   ON wlt_refund_audit_events (tenant_id, created_at DESC);
+
+ALTER TABLE wlt_reconciliation_cases
+  DROP CONSTRAINT IF EXISTS wlt_reconciliation_cases_operation_check;
+ALTER TABLE wlt_reconciliation_cases
+  DROP CONSTRAINT IF EXISTS wlt_reconciliation_cases_operation_chk;
+ALTER TABLE wlt_reconciliation_cases
+  ADD CONSTRAINT wlt_reconciliation_cases_operation_chk
+  CHECK (operation IN ('authorize','capture','refund'));
 
 ALTER TABLE wlt_dsh_outbox_events
   ADD COLUMN IF NOT EXISTS order_id TEXT,
