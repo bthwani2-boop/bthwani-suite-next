@@ -1,3 +1,4 @@
 journey=JRN-035
 scope=final-remote-runtime-openapi-validation
 base=sambassam
+rerun=1
