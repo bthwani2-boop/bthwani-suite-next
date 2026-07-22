@@ -28,13 +28,15 @@ export type SettlementPolicyInput = {
   readonly feeBasisPoints: number;
   readonly currency: string;
   readonly status: "active" | "inactive";
+  readonly cycleDays: number;
+  readonly minimumNetMinorUnits: number;
+  readonly changeReason: string;
 };
 
 export type GovernedSettlementInput = {
   readonly partnerId: string;
   readonly periodStart: string;
   readonly periodEnd: string;
-  readonly currency: string;
 };
 
 export type SettlementActionResult =
@@ -177,6 +179,9 @@ export async function upsertSettlementPolicy(input: SettlementPolicyInput): Prom
           feeBasisPoints: input.feeBasisPoints,
           currency: input.currency,
           status: input.status,
+          cycleDays: input.cycleDays,
+          minimumNetMinorUnits: input.minimumNetMinorUnits,
+          changeReason: input.changeReason,
         },
       },
     );
@@ -195,7 +200,11 @@ export async function createSettlementFromDeliveredOrders(input: GovernedSettlem
   try {
     const data = await financeRequest<unknown>("/dsh/control-panel/finance/settlements/from-delivered-orders", {
       method: "POST",
-      body: input,
+      body: {
+        partnerId: input.partnerId,
+        periodStart: input.periodStart,
+        periodEnd: input.periodEnd,
+      },
     });
     return { ok: true, data };
   } catch (error) {
