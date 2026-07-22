@@ -27,6 +27,8 @@ func RegisterActorNotificationRoutes(
 	mux.HandleFunc("GET /dsh/notifications", protected.handleListNotifications)
 	mux.HandleFunc("GET /dsh/notifications/preferences", protected.handleListNotificationPreferences)
 	mux.HandleFunc("PUT /dsh/notifications/preferences", protected.handleUpdateNotificationPreferences)
+	mux.HandleFunc("PUT /dsh/notifications/push-endpoints", protected.handleUpsertNotificationPushEndpoint)
+	mux.HandleFunc("DELETE /dsh/notifications/push-endpoints/{deviceId}", protected.handleDeactivateNotificationPushEndpoint)
 	mux.HandleFunc("POST /dsh/notifications/read-all", protected.handleMarkAllNotificationsRead)
 	mux.HandleFunc("POST /dsh/notifications/{notificationId}/read", protected.handleMarkNotificationRead)
 	mux.HandleFunc("GET /dsh/operator/notifications/config", protected.handleListPlatformNotificationConfig)
