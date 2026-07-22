@@ -1,45 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useState, type CSSProperties } from "react";
+import { type CSSProperties } from "react";
 import { colorRoles } from "@bthwani/ui-kit";
-import { resolveDshApiBaseUrl } from "../../../shared/_kernel/dsh-api-base-url";
-import { createDshRawHttpClient } from "../../../shared/_kernel/dsh-http-request";
+import type { CouponFundingLifecycleRecord } from "../../../shared/marketing";
 
-export type CouponFundingLifecycleRecord = {
-  readonly redemptionId: string;
-  readonly couponId: string;
-  readonly checkoutIntentId: string;
-  readonly tenantId: string;
-  readonly partnerId?: string;
-  readonly platformFundedMinorUnits: number;
-  readonly partnerFundedMinorUnits: number;
-  readonly totalDiscountMinorUnits: number;
-  readonly currency: string;
-  readonly dshStatus: string;
-  readonly wltReservationId?: string;
-  readonly wltStatus?: string;
-  readonly failureCode?: string;
-  readonly fundingUpdatedAt?: string;
-  readonly latestOutboxType?: string;
-  readonly latestOutboxStatus?: string;
-  readonly latestOutboxAttempts: number;
-  readonly latestOutboxError?: string;
-  readonly latestOutboxUpdatedAt?: string;
-  readonly reconciliationStatus: "reconciled" | "mismatch" | "wlt_unavailable" | "incomplete" | "not_checked";
-  readonly reconciliationMessage?: string;
+type CouponFundingReconciliationPanelProps = {
+  readonly records: readonly CouponFundingLifecycleRecord[];
+  readonly loading: boolean;
+  readonly error?: string | undefined;
+  readonly onReload: () => void;
 };
-
-type FundingResponse = {
-  readonly fundingLifecycle?: readonly CouponFundingLifecycleRecord[];
-};
-
-type PanelState =
-  | { readonly kind: "loading" }
-  | { readonly kind: "empty" }
-  | { readonly kind: "error"; readonly message: string }
-  | { readonly kind: "success"; readonly records: readonly CouponFundingLifecycleRecord[] };
-
-const { req } = createDshRawHttpClient(resolveDshApiBaseUrl(), "mkt");
 
 const statusLabel: Record<CouponFundingLifecycleRecord["reconciliationStatus"], string> = {
   reconciled: "متطابق",
@@ -53,29 +23,12 @@ function formatMinorUnits(value: number, currency: string): string {
   return `${(value / 100).toLocaleString("ar")} ${currency || "YER"}`;
 }
 
-export function CouponFundingReconciliationPanel() {
-  const [state, setState] = useState<PanelState>({ kind: "loading" });
-
-  const load = useCallback(async () => {
-    setState({ kind: "loading" });
-    try {
-      const response = await req<FundingResponse>("/dsh/operator/marketing/coupons");
-      const records = response.fundingLifecycle ?? [];
-      setState(records.length ? { kind: "success", records } : { kind: "empty" });
-    } catch (error) {
-      setState({
-        kind: "error",
-        message: error instanceof Error && error.message.trim()
-          ? error.message
-          : "تعذر تحميل مصالحة تمويل الكوبونات.",
-      });
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
+export function CouponFundingReconciliationPanel({
+  records,
+  loading,
+  error,
+  onReload,
+}: CouponFundingReconciliationPanelProps) {
   return (
     <section dir="rtl" aria-labelledby="coupon-funding-reconciliation-title" style={styles.root}>
       <div style={styles.header}>
@@ -83,15 +36,15 @@ export function CouponFundingReconciliationPanel() {
           <h3 id="coupon-funding-reconciliation-title" style={styles.title}>مصالحة تمويل العروض</h3>
           <p style={styles.muted}>مقارنة فورية بين إسقاط DSH التشغيلي وحجز WLT المالي، مع حالة صندوق التسليم وإعادة المحاولة.</p>
         </div>
-        <button type="button" onClick={() => void load()} style={styles.button}>إعادة التحقق</button>
+        <button type="button" disabled={loading} onClick={onReload} style={styles.button}>إعادة التحقق</button>
       </div>
 
-      {state.kind === "loading" ? <p aria-live="polite">جارٍ التحقق من DSH وWLT…</p> : null}
-      {state.kind === "error" ? <p role="alert" style={styles.error}>{state.message}</p> : null}
-      {state.kind === "empty" ? <p style={styles.muted}>لا توجد حجوزات تمويل حتى الآن.</p> : null}
-      {state.kind === "success" ? (
+      {loading ? <p aria-live="polite">جارٍ التحقق من DSH وWLT…</p> : null}
+      {error ? <p role="alert" style={styles.error}>{error}</p> : null}
+      {!loading && !error && records.length === 0 ? <p style={styles.muted}>لا توجد حجوزات تمويل حتى الآن.</p> : null}
+      {!loading && !error && records.length > 0 ? (
         <div style={styles.list}>
-          {state.records.map((record) => (
+          {records.map((record) => (
             <article key={record.redemptionId} style={styles.card}>
               <div style={styles.cardHeader}>
                 <strong>Checkout {record.checkoutIntentId}</strong>
