@@ -19,6 +19,8 @@ on:
       - 'core/identity/database/migrations/**'
       - 'core/workforce/database/migrations/**'
       - 'core/providers/backend/**'
+      - 'core/providers/contracts/providers.openapi.yaml'
+      - 'core/providers/clients/generated/providers-api.ts'
       - 'core/providers/database/migrations/**'
       - 'core/platform-control/database/migrations/**'
       - 'services/dsh/backend/internal/*outbox/**'
@@ -34,7 +36,7 @@ on:
     paths: *jrn042_paths
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: jrn-042-${{ github.ref }}
@@ -68,6 +70,17 @@ jobs:
 
       - name: Run JRN-042 governance tests
         run: node --test tools/verification/jrn-042-runtime-data.test.mjs
+
+      - name: Verify Providers contract and generated readiness binding
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q '^  /providers/readiness:' core/providers/contracts/providers.openapi.yaml
+          grep -q 'operationId: getExternalProviderReadiness' core/providers/contracts/providers.openapi.yaml
+          grep -q '^    RuntimeReadinessResponse:' core/providers/contracts/providers.openapi.yaml
+          grep -q '"/providers/readiness"' core/providers/clients/generated/providers-api.ts
+          grep -q 'getExternalProviderReadiness' core/providers/clients/generated/providers-api.ts
+          test "$(grep -c '/readiness || exit 1' infra/docker/compose.runtime.yml)" -ge 6
 
       - name: Parse PowerShell closure and recovery commands
         shell: pwsh
@@ -151,8 +164,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: jrn-042-runtime-data-${{ github.sha }}
-          path: |
-            artifacts/jrn-042-runtime-data-evidence.json
+          path: artifacts/jrn-042-runtime-data-evidence.json
           if-no-files-found: warn
           retention-days: 14
 
@@ -165,3 +177,88 @@ jobs:
             -f infra/docker/compose.runtime.yml \
             --profile identity --profile workforce --profile dsh --profile wlt \
             --profile providers --profile platform --profile media logs --tail=200 || true
+
+  record-remote-result:
+    name: Record executor diagnostic on sambassam
+    if: ${{ always() && github.event_name != 'pull_request' && github.ref_name == 'sambassam' }}
+    needs: [static-governance, six-service-runtime-dr]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout current target branch
+        uses: actions/checkout@v4
+        with:
+          ref: sambassam
+          fetch-depth: 0
+
+      - name: Download same-commit runtime evidence when available
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: jrn-042-runtime-data-${{ github.sha }}
+          path: artifacts/jrn-042-downloaded
+
+      - name: Build bounded diagnostic record
+        shell: python
+        env:
+          SOURCE_COMMIT_SHA: ${{ github.sha }}
+          STATIC_RESULT: ${{ needs.static-governance.result }}
+          RUNTIME_RESULT: ${{ needs.six-service-runtime-dr.result }}
+          WORKFLOW_RUN_ID: ${{ github.run_id }}
+          WORKFLOW_RUN_ATTEMPT: ${{ github.run_attempt }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          import datetime
+          import json
+          import os
+          from pathlib import Path
+
+          evidence_candidates = list(Path('artifacts/jrn-042-downloaded').glob('**/*.json'))
+          runtime_evidence = None
+          if evidence_candidates:
+              runtime_evidence = json.loads(evidence_candidates[0].read_text(encoding='utf-8-sig'))
+
+          static_result = os.environ['STATIC_RESULT']
+          runtime_result = os.environ['RUNTIME_RESULT']
+          decision = 'PASS' if static_result == 'success' and runtime_result == 'success' else 'FAIL'
+          record = {
+              'schemaVersion': 1,
+              'journeyId': 'JRN-042',
+              'evidenceClass': 'EXECUTOR_REMOTE_DIAGNOSTIC_NOT_INDEPENDENT_APPROVAL',
+              'repository': os.environ['REPOSITORY'],
+              'branch': 'sambassam',
+              'sourceCommitSha': os.environ['SOURCE_COMMIT_SHA'],
+              'workflowRunId': os.environ['WORKFLOW_RUN_ID'],
+              'workflowRunAttempt': os.environ['WORKFLOW_RUN_ATTEMPT'],
+              'recordedAt': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+              'staticResult': static_result,
+              'runtimeDisasterRecoveryResult': runtime_result,
+              'decision': decision,
+              'runtimeEvidence': runtime_evidence,
+              'protectedApprovals': 'PENDING',
+              'releaseState': 'NOT_RELEASED',
+              'productionState': 'NOT_DEPLOYED',
+              'saasActivationState': 'NOT_ACTIVATED',
+          }
+          output = Path('governance/evidence/JRN-042_REMOTE_RUNTIME_RESULT.json')
+          output.parent.mkdir(parents=True, exist_ok=True)
+          output.write_text(json.dumps(record, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+      - name: Commit diagnostic record without self-approval
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add governance/evidence/JRN-042_REMOTE_RUNTIME_RESULT.json
+          git commit -m 'test(jrn-042): record remote runtime diagnostic [skip ci]'
+          for attempt in 1 2 3 4; do
+            git fetch origin sambassam
+            if git rebase origin/sambassam && git push origin HEAD:sambassam; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt * 2))
+          done
+          echo 'Unable to publish JRN-042 diagnostic after bounded retries.' >&2
+          exit 1
