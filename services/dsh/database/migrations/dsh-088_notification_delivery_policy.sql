@@ -1,5 +1,17 @@
 -- DSH-088: Notification delivery policy, actor channels, quiet hours and localized templates.
 
+ALTER TABLE dsh_notifications
+  ADD COLUMN IF NOT EXISTS delivery_channels TEXT[] NOT NULL DEFAULT ARRAY['in_app']::TEXT[];
+
+ALTER TABLE dsh_notifications
+  DROP CONSTRAINT IF EXISTS dsh_notifications_delivery_channels_check;
+ALTER TABLE dsh_notifications
+  ADD CONSTRAINT dsh_notifications_delivery_channels_check
+  CHECK (
+    cardinality(delivery_channels) > 0
+    AND delivery_channels <@ ARRAY['in_app', 'push']::TEXT[]
+  );
+
 ALTER TABLE dsh_notification_preferences
   ADD COLUMN IF NOT EXISTS channels TEXT[] NOT NULL DEFAULT ARRAY['in_app']::TEXT[],
   ADD COLUMN IF NOT EXISTS quiet_hours_start TIME,
