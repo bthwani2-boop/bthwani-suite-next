@@ -4,9 +4,8 @@ run-name: Store captain handoff verification · ${{ github.sha }}
 on:
   push:
     branches: ["sambassam"]
-    paths:
+    paths: &jrn013_paths
       - ".github/workflows/*store-captain-handoff*"
-      - ".github/workflows/jrn-013-contract-enum-migration.yml"
       - "governance/product/contracts/jrn-013-store-captain-handoff.product-truth.json"
       - "services/dsh/backend/cmd/dsh-api/main.go"
       - "services/dsh/backend/internal/dispatch/store_captain_handoff*.go"
@@ -16,7 +15,6 @@ on:
       - "services/dsh/backend/internal/http/partner_order_workboard.go"
       - "services/dsh/backend/internal/http/partner_order_workboard_test.go"
       - "services/dsh/contracts/dsh.openapi.yaml"
-      - "services/dsh/contracts/generated/dsh.openapi.yaml"
       - "services/dsh/contracts/dsh.store-captain-handoff.openapi.yaml"
       - "services/dsh/contracts/jrn-013-slice-closure.json"
       - "services/dsh/contracts/contract-registry.ts"
@@ -39,7 +37,11 @@ on:
       - "services/dsh/frontend/control-panel/operations/ExceptionsEscalationsScreen.tsx"
       - "services/dsh/tests/store-captain-handoff-closure.test.mjs"
       - "services/dsh/tests/jrn-013-slice-closure.test.mjs"
+      - "services/dsh/tests/jrn-013-primary-contract-sync.test.mjs"
       - "services/dsh/tsconfig.store-captain-handoff.json"
+      - "tools/contracts/sync-jrn-013-handoff-reasons.mjs"
+  pull_request:
+    paths: *jrn013_paths
   workflow_dispatch:
 
 permissions:
@@ -78,13 +80,18 @@ jobs:
           set -euo pipefail
           node --test \
             services/dsh/tests/store-captain-handoff-closure.test.mjs \
-            services/dsh/tests/jrn-013-slice-closure.test.mjs
+            services/dsh/tests/jrn-013-slice-closure.test.mjs \
+            services/dsh/tests/jrn-013-primary-contract-sync.test.mjs
+
+      - name: Verify primary contract synchronization
+        shell: bash
+        run: node tools/contracts/sync-jrn-013-handoff-reasons.mjs
 
       - name: Validate contract registry and OpenAPI foundation
         shell: bash
         run: pnpm run contracts:lint
 
-      - name: Typecheck JRN-013 shared brain and surfaces
+      - name: Typecheck DSH shared brain and surfaces
         shell: bash
         run: pnpm --dir services/dsh exec tsc -p tsconfig.store-captain-handoff.json --noEmit
 
