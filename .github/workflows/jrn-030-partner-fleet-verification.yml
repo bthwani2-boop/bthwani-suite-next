@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
   push:
     branches: [sambassam]
-    paths: &jrn030_paths
+    paths:
       - "services/dsh/backend/internal/partnerfleet/**"
       - "services/dsh/backend/internal/http/partner_fleet*.go"
       - "services/dsh/backend/internal/http/journeys_026_030_routes_test.go"
@@ -23,13 +23,10 @@ on:
       - "services/dsh/tsconfig.jrn-030.json"
       - "governance/product/contracts/JRN-030_PARTNER_FLEET_CONNECTION.product-truth.json"
       - "governance/evidence/JRN-030_REMOTE_SLICE_EXECUTION.md"
+      - "governance/evidence/JRN-030_TECHNICAL_CLOSURE_2026-07-22.md"
       - "governance/product/product-truth.schema.json"
       - "tools/guards/product-truth-gate.mjs"
       - ".github/workflows/jrn-030-partner-fleet-verification.yml"
-  pull_request:
-    branches: [master]
-    types: [opened, reopened, synchronize, ready_for_review]
-    paths: *jrn030_paths
 
 permissions:
   contents: read
