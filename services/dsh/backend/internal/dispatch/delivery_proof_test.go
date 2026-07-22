@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 func TestRandomDeliveryPINIsSixDigits(t *testing.T) {
@@ -12,25 +14,36 @@ func TestRandomDeliveryPINIsSixDigits(t *testing.T) {
 		if err != nil {
 			t.Fatalf("randomDeliveryPIN: %v", err)
 		}
-		if len(pin) != deliveryPINLength {
-			t.Fatalf("pin length=%d want %d", len(pin), deliveryPINLength)
-		}
-		for _, digit := range pin {
-			if digit < '0' || digit > '9' {
-				t.Fatalf("pin contains non-digit: %q", pin)
-			}
+		if !isSixDigitPIN(pin) {
+			t.Fatalf("invalid generated PIN %q", pin)
 		}
 	}
 }
 
-func TestDeliveryPINHashIsAssignmentBound(t *testing.T) {
-	first := hashDeliveryPIN("assignment-a", "123456")
-	second := hashDeliveryPIN("assignment-b", "123456")
-	if first == second {
-		t.Fatal("same clear PIN must not produce the same hash for different assignments")
+func TestDeliveryPINHashIsSlowAndAssignmentBound(t *testing.T) {
+	hash, err := hashDeliveryPIN("assignment-a", "123456")
+	if err != nil {
+		t.Fatalf("hashDeliveryPIN: %v", err)
 	}
-	if len(first) != 64 || strings.Contains(first, "123456") {
-		t.Fatalf("unexpected hash representation %q", first)
+	if !strings.HasPrefix(hash, "$2") || strings.Contains(hash, "123456") {
+		t.Fatalf("unexpected bcrypt representation %q", hash)
+	}
+	if err = bcrypt.CompareHashAndPassword([]byte(hash), []byte("assignment-a:123456")); err != nil {
+		t.Fatalf("correct assignment-bound PIN did not match: %v", err)
+	}
+	if err = bcrypt.CompareHashAndPassword([]byte(hash), []byte("assignment-b:123456")); err == nil {
+		t.Fatal("same clear PIN must not verify for a different assignment")
+	}
+}
+
+func TestSixDigitPINFormat(t *testing.T) {
+	for _, value := range []string{"", "12345", "1234567", "12A456", "١٢٣٤٥٦"} {
+		if isSixDigitPIN(value) {
+			t.Fatalf("invalid PIN format accepted: %q", value)
+		}
+	}
+	if !isSixDigitPIN("000042") {
+		t.Fatal("valid six digit PIN rejected")
 	}
 }
 
@@ -83,6 +96,19 @@ func TestDeliveryProofFingerprintChangesWithOperationalEvidence(t *testing.T) {
 	}
 	if first == deliveryProofFingerprint("assignment-a", "captain-b", base, capturedAt) {
 		t.Fatal("fingerprint must be actor-bound")
+	}
+}
+
+func TestDeliveryProofFingerprintIsStableWhenCapturedAtOmitted(t *testing.T) {
+	input := SubmitDeliveryProofInput{
+		Method:         DeliveryProofPhoto,
+		PhotoMediaRef:  "media-photo",
+		IdempotencyKey: "proof-key",
+	}
+	first := deliveryProofFingerprint("assignment-a", "captain-a", input, time.Time{})
+	second := deliveryProofFingerprint("assignment-a", "captain-a", input, time.Time{})
+	if first != second {
+		t.Fatal("same idempotent payload must have a stable fingerprint")
 	}
 }
 
