@@ -70,7 +70,7 @@ func (s *protectedStoreServer) handleListCaptainCredentials(w http.ResponseWrite
 
 // GET /dsh/operator/admin/audit
 func (s *protectedStoreServer) handleListAdminAudit(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireAdministrationPermission(w, r, AdministrationPermissionRead)
+	_, ok := s.requireAdministrationPermission(w, r, AdministrationPermissionAuditRead)
 	if !ok {
 		return
 	}
