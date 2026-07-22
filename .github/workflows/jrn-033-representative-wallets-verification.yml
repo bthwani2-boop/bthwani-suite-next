@@ -5,6 +5,7 @@ on:
   push:
     branches: [sambassam]
     paths: &jrn033_paths
+      - "governance/evidence/jrn-033-final-verification-trigger.txt"
       - "services/wlt/backend/internal/wallet/**"
       - "services/wlt/backend/internal/ledger/**"
       - "services/wlt/database/migrations/wlt-038_jrn_033_representative_finance_tenancy.sql"
@@ -16,20 +17,27 @@ on:
       - "services/dsh/backend/internal/http/representative_finance_routes.go"
       - "services/dsh/backend/internal/http/representative_finance_routes_test.go"
       - "services/dsh/backend/internal/http/field_finance.go"
+      - "services/dsh/backend/internal/http/field_finance_test.go"
       - "services/dsh/backend/internal/http/actor_finance_handlers.go"
+      - "services/dsh/backend/internal/http/financeproxy.go"
       - "services/dsh/frontend/shared/finance-wlt-link/**"
       - "services/dsh/frontend/app-client/account/MySpaceScreen.tsx"
       - "services/dsh/frontend/app-captain/account/DshCaptainFinanceScreen.tsx"
       - "services/dsh/frontend/app-field/finance/DshFieldFinanceScreen.tsx"
       - "services/dsh/frontend/control-panel/finance/**"
+      - "apps/control-panel/runtime/src/app/dsh/layout.tsx"
       - "apps/control-panel/runtime/src/app/dsh/finance/page.tsx"
+      - "apps/control-panel/runtime/src/app/dsh/finance/jrn-033-visual-evidence/page.tsx"
       - "services/dsh/contracts/jrn-033-representative-finance.openapi.yaml"
       - "services/dsh/contracts/jrn-033-representative-finance-tenancy.contract.json"
       - "services/dsh/tests/jrn-033-representative-wallets-governance.test.mjs"
+      - "services/dsh/tests/jrn-033-visual-evidence-governance.test.mjs"
       - "services/dsh/tsconfig.jrn-033.json"
       - "tools/scripts/test-jrn-033-representative-wallets-runtime.ps1"
       - "governance/product/contracts/jrn-033-representative-wallets.product-truth.json"
       - ".github/workflows/jrn-033-representative-wallets-verification.yml"
+      - ".github/workflows/jrn-033-runtime-verification.yml"
+      - ".github/workflows/jrn-033-visual-evidence.yml"
   pull_request:
     branches: [master]
     paths: *jrn033_paths
@@ -82,11 +90,17 @@ jobs:
           go test ./internal/http -run '^TestRepresentativeOwnLedgerRoutesOverrideActorQuery$' -count=1 -v
           go test ./internal/http -run '^TestControlPanelRepresentativeWalletValidatesTypeAndUsesPermissionFallback$' -count=1 -v
           go test ./internal/http -run '^TestControlPanelRepresentativeLedgerPinsActorAndNoStore$' -count=1 -v
+          go test ./internal/http -run 'TestHandle(FieldMe|SubmitFieldMe)' -count=1 -v
           go build ./internal/wlt ./internal/http
-      - name: Run JRN-033 ownership, tenancy, and route guard
-        run: node --test services/dsh/tests/jrn-033-representative-wallets-governance.test.mjs
-      - name: Typecheck the JRN-033 multi-surface ownership graph
-        run: pnpm --dir services/dsh exec tsc -p tsconfig.jrn-033.json --noEmit --pretty false
+      - name: Run JRN-033 ownership tenancy route and visual guards
+        run: >-
+          node --test
+          services/dsh/tests/jrn-033-representative-wallets-governance.test.mjs
+          services/dsh/tests/jrn-033-visual-evidence-governance.test.mjs
+      - name: Typecheck JRN-033 and control-panel evidence graph
+        run: |
+          pnpm --dir services/dsh exec tsc -p tsconfig.jrn-033.json --noEmit --pretty false
+          pnpm --dir apps/control-panel/runtime typecheck
       - name: Parse focused OpenAPI through the repository generator
         run: pnpm --dir services/dsh exec openapi-typescript contracts/jrn-033-representative-finance.openapi.yaml -o /tmp/jrn-033-representative-finance-api.ts
       - name: Validate tenancy and product truth contracts
