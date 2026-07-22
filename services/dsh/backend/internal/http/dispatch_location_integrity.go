@@ -6,9 +6,11 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"math"
 	"net/http"
 	"time"
 
+	"dsh-api/internal/dispatch"
 	"dsh-api/internal/store"
 )
 
@@ -18,6 +20,7 @@ const (
 	maxLocationFutureSkew        = 30 * time.Second
 	minLocationSampleInterval    = 5 * time.Second
 	maxLocationAccuracyMeters    = 100.0
+	locationCoordinateEpsilon    = 0.0000001
 )
 
 type dispatchLocationTimestampDecision string
@@ -55,9 +58,27 @@ func validateDispatchLocationAccuracy(accuracyMeters *float64) bool {
 	return accuracyMeters != nil && *accuracyMeters > 0 && *accuracyMeters <= maxLocationAccuracyMeters
 }
 
+func sameDispatchLocationSample(
+	recordedAt time.Time,
+	latitude float64,
+	longitude float64,
+	previousRecordedAt sql.NullTime,
+	previousLatitude sql.NullFloat64,
+	previousLongitude sql.NullFloat64,
+) bool {
+	if !previousRecordedAt.Valid || !previousLatitude.Valid || !previousLongitude.Valid {
+		return false
+	}
+	return recordedAt.UTC().Equal(previousRecordedAt.Time.UTC()) &&
+		math.Abs(latitude-previousLatitude.Float64) <= locationCoordinateEpsilon &&
+		math.Abs(longitude-previousLongitude.Float64) <= locationCoordinateEpsilon
+}
+
 // handlePushDispatchLocationGoverned validates sample freshness, monotonic
 // ordering, minimum frequency, and GPS accuracy before delegating to the
-// canonical dispatch handler. The request body is restored so decode/auth and
+// canonical dispatch handler. Replaying the exact latest sample is idempotent:
+// it returns the current assignment without writing another event or changing
+// the stored timestamp. The request body is restored so decode/auth and
 // persistence remain owned by dispatch.go.
 func (s *protectedStoreServer) handlePushDispatchLocationGoverned(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "captain")
@@ -73,6 +94,8 @@ func (s *protectedStoreServer) handlePushDispatchLocationGoverned(w http.Respons
 	r.Body = io.NopCloser(bytes.NewReader(bodyBytes))
 
 	var body struct {
+		Latitude       float64  `json:"latitude"`
+		Longitude      float64  `json:"longitude"`
 		RecordedAt     string   `json:"recordedAt"`
 		AccuracyMeters *float64 `json:"accuracyMeters"`
 	}
@@ -95,13 +118,15 @@ func (s *protectedStoreServer) handlePushDispatchLocationGoverned(w http.Respons
 		return
 	}
 
-	var previous sql.NullTime
+	var previousRecordedAt sql.NullTime
+	var previousLatitude sql.NullFloat64
+	var previousLongitude sql.NullFloat64
 	err = s.db.QueryRowContext(r.Context(), `
-		SELECT location_recorded_at
+		SELECT location_recorded_at, last_latitude, last_longitude
 		FROM dsh_assignments
 		WHERE id = $1::uuid AND captain_id = $2`,
 		r.PathValue("assignmentId"), actor.ID,
-	).Scan(&previous)
+	).Scan(&previousRecordedAt, &previousLatitude, &previousLongitude)
 	if errors.Is(err, sql.ErrNoRows) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "dispatch assignment not found")
 		return
@@ -111,9 +136,15 @@ func (s *protectedStoreServer) handlePushDispatchLocationGoverned(w http.Respons
 		return
 	}
 
+	if sameDispatchLocationSample(recordedAt, body.Latitude, body.Longitude, previousRecordedAt, previousLatitude, previousLongitude) {
+		assignment, getErr := dispatch.GetCaptainAssignment(s.db, r.PathValue("assignmentId"), actor.ID)
+		s.writeDispatchResult(w, http.StatusOK, assignment, getErr)
+		return
+	}
+
 	var previousTime *time.Time
-	if previous.Valid {
-		value := previous.Time
+	if previousRecordedAt.Valid {
+		value := previousRecordedAt.Time
 		previousTime = &value
 	}
 	switch validateDispatchLocationTimestamp(recordedAt, time.Now(), previousTime) {
