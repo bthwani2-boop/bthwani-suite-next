@@ -5,59 +5,50 @@ failure_file="governance/evidence/JRN-028_LAST_FAILURE.txt"
 mkdir -p "$(dirname "$failure_file")"
 rm -f "$failure_file"
 
-on_error() {
+run_check() {
+  local name="$1"
+  shift
+  local log_file
+  log_file="$(mktemp)"
+  printf 'JRN-028: %s\n' "$name"
+  set +e
+  "$@" > >(tee "$log_file") 2>&1
   local status=$?
-  {
-    printf 'status=FAILED\n'
-    printf 'exit_code=%s\n' "$status"
-    printf 'line=%s\n' "${BASH_LINENO[0]:-unknown}"
-    printf 'command=%s\n' "$BASH_COMMAND"
-    printf 'tested_sha=%s\n' "${GITHUB_SHA:-manual}"
-  } > "$failure_file"
-  exit "$status"
+  set -e
+  if [[ "$status" -ne 0 ]]; then
+    {
+      printf 'status=FAILED\n'
+      printf 'check=%s\n' "$name"
+      printf 'exit_code=%s\n' "$status"
+      printf 'command='
+      printf '%q ' "$@"
+      printf '\n'
+      printf 'tested_sha=%s\n' "${GITHUB_SHA:-manual}"
+      printf '%s\n' '--- output tail ---'
+      tail -n 200 "$log_file"
+    } > "$failure_file"
+    rm -f "$log_file"
+    return "$status"
+  fi
+  rm -f "$log_file"
 }
-trap on_error ERR
 
-printf 'JRN-028: WLT sovereign funding tests\n'
-(
-  cd services/wlt/backend
-  go test ./internal/promotionfunding ./internal/shared
-  go test ./internal/http -run '^$'
-)
-
-printf 'JRN-028: DSH projection, reconciliation and durable outbox tests\n'
-(
-  cd services/dsh/backend
-  go test ./internal/coupons ./internal/wlt ./internal/promotionfundingoutbox
-  go test ./internal/http -run '^$'
-)
-
-printf 'JRN-028: FS-01..FS-18 structural and ownership assertions\n'
-node --test services/dsh/tests/jrn-028-promotion-funding.test.mjs
-
-printf 'JRN-028: governed TypeScript surface\n'
-pnpm --dir services/dsh exec tsc -p tsconfig.jrn-028.json --noEmit --pretty false
-
-printf 'JRN-028: PostgreSQL schema and audit-integrity controls\n'
-psql -X -q -v ON_ERROR_STOP=1 -f services/wlt/database/migrations/wlt-032_promotion_funding_ledger.sql
-psql -X -q -v ON_ERROR_STOP=1 -f services/wlt/database/migrations/wlt-034_jrn_028_promotion_funding_audit_integrity.sql
-psql -X -q -v ON_ERROR_STOP=1 -Atc "SELECT to_regclass('public.wlt_promotion_funding_reservations') IS NOT NULL" | grep -qx t
-psql -X -q -v ON_ERROR_STOP=1 -Atc "SELECT to_regclass('public.wlt_promotion_funding_events') IS NOT NULL" | grep -qx t
-
-printf 'JRN-028: reserve/commit/release/reverse and negative database invariants\n'
-bash services/wlt/database/tests/jrn-028-promotion-funding-integrity.sh
-
-printf 'JRN-028: concurrent transition serialization\n'
-bash services/wlt/database/tests/jrn-028-promotion-funding-concurrency.sh
-
-printf 'JRN-028: Product Truth and canonical DSH contracts\n'
-node tools/guards/product-truth-gate.mjs
-node tools/guards/dsh-openapi-modular-gate.mjs
-pnpm --dir services/dsh openapi:generate
-git diff --exit-code -- services/dsh/contracts/generated/dsh.bundle.openapi.yaml services/dsh/clients/generated/dsh-api.ts
-
-printf 'JRN-028: repository whitespace\n'
-git diff --check
+run_check "WLT sovereign promotion-funding domain" bash -lc "cd services/wlt/backend && go test ./internal/promotionfunding ./internal/shared"
+run_check "WLT HTTP owner compilation" bash -lc "cd services/wlt/backend && go test ./internal/http -run '^$'"
+run_check "DSH funding projection, WLT adapter and outbox" bash -lc "cd services/dsh/backend && go test ./internal/coupons ./internal/wlt ./internal/promotionfundingoutbox"
+run_check "DSH HTTP owner compilation" bash -lc "cd services/dsh/backend && go test ./internal/http -run '^$'"
+run_check "FS-01 through FS-18 structural and ownership assertions" node --test services/dsh/tests/jrn-028-promotion-funding.test.mjs
+run_check "governed TypeScript surface" pnpm --dir services/dsh exec tsc -p tsconfig.jrn-028.json --noEmit --pretty false
+run_check "WLT promotion-funding base schema" psql -X -q -v ON_ERROR_STOP=1 -f services/wlt/database/migrations/wlt-032_promotion_funding_ledger.sql
+run_check "WLT JRN-028 audit-integrity controls" psql -X -q -v ON_ERROR_STOP=1 -f services/wlt/database/migrations/wlt-034_jrn_028_promotion_funding_audit_integrity.sql
+run_check "governed promotion-funding tables" bash -lc "psql -X -q -v ON_ERROR_STOP=1 -Atc \"SELECT to_regclass('public.wlt_promotion_funding_reservations') IS NOT NULL\" | grep -qx t && psql -X -q -v ON_ERROR_STOP=1 -Atc \"SELECT to_regclass('public.wlt_promotion_funding_events') IS NOT NULL\" | grep -qx t"
+run_check "reserve, commit, release, reverse and negative database invariants" bash services/wlt/database/tests/jrn-028-promotion-funding-integrity.sh
+run_check "concurrent transition serialization" bash services/wlt/database/tests/jrn-028-promotion-funding-concurrency.sh
+run_check "Product Truth gate" node tools/guards/product-truth-gate.mjs
+run_check "canonical DSH modular OpenAPI gate" node tools/guards/dsh-openapi-modular-gate.mjs
+run_check "generated DSH API client" pnpm --dir services/dsh openapi:generate
+run_check "generated contract cleanliness" git diff --exit-code -- services/dsh/contracts/generated/dsh.bundle.openapi.yaml services/dsh/clients/generated/dsh-api.ts
+run_check "repository whitespace" git diff --check
 
 rm -f "$failure_file"
 printf 'JRN-028 FS-01..FS-18 verification passed.\n'
