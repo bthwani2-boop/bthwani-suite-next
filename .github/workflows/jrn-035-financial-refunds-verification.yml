@@ -135,7 +135,8 @@ jobs:
       - name: Enforce gofmt on changed WLT packages
         shell: bash
         run: |
-          diff="$(gofmt -d services/wlt/backend/internal/refund services/wlt/backend/internal/dshoutbox services/wlt/backend/internal/dshnotify services/wlt/backend/internal/http/server.go)"
+          files="$(find services/wlt/backend/internal/refund services/wlt/backend/internal/dshoutbox services/wlt/backend/internal/dshnotify -type f -name '*.go' -print)"
+          diff="$(gofmt -d $files services/wlt/backend/internal/http/server.go)"
           test -z "$diff" || { printf '%s\n' "$diff"; exit 1; }
       - name: Compile and test WLT refund boundary
         working-directory: services/wlt/backend
