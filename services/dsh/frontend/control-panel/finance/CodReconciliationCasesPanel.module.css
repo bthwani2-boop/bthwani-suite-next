@@ -1,0 +1,82 @@
+.panel {
+  margin-top: 1rem;
+  padding: 1.5rem;
+}
+
+.heading {
+  margin-bottom: 0.5rem;
+}
+
+.description,
+.error,
+.emptyState {
+  margin-bottom: 1rem;
+}
+
+.caseList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.caseCard {
+  padding: 1rem;
+  border-inline-start: 4px solid var(--bthwani-warning, #b7791f);
+}
+
+.caseCardShortage {
+  border-inline-start-color: var(--bthwani-danger, #c53030);
+}
+
+.caseTopRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.caseIdentity {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.difference {
+  font-weight: 700;
+}
+
+.facts {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(180px, 240px);
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.selectDisabled {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 720px) {
+  .panel {
+    padding: 1rem;
+  }
+
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+}
