@@ -195,6 +195,8 @@ func sendError(w http.ResponseWriter, status int, code, message string) {
 
 func writeProvidersError(w http.ResponseWriter, err error) {
 	switch {
+	case errors.Is(err, providers.ErrInvalidInput):
+		sendError(w, http.StatusBadRequest, "INVALID_PROVIDER_CONFIGURATION", "provider update is empty, malformed, or contains secret material outside credentials")
 	case errors.Is(err, providers.ErrNotFound):
 		sendError(w, http.StatusNotFound, "PROVIDER_NOT_FOUND", "provider was not found")
 	case errors.Is(err, providers.ErrIdempotencyConflict):
