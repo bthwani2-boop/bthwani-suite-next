@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches: [sambassam]
-    paths:
+    paths: &jrn033_runtime_paths
       - "core/identity/backend/internal/identity/repository.go"
       - "services/wlt/backend/internal/wallet/**"
       - "services/wlt/database/migrations/**"
@@ -19,19 +19,7 @@ on:
       - ".github/workflows/jrn-033-runtime-verification.yml"
   pull_request:
     branches: [master]
-    paths:
-      - "core/identity/backend/internal/identity/repository.go"
-      - "services/wlt/backend/internal/wallet/**"
-      - "services/wlt/database/migrations/**"
-      - "services/wlt/database/seeds/local/wlt-000_financial_references.local.sql"
-      - "services/wlt/database/seeds/local/wlt-033_representative_wallets.local.sql"
-      - "services/dsh/backend/internal/http/representative_finance_routes.go"
-      - "services/dsh/backend/internal/wlt/finance_proxy.go"
-      - "tools/scripts/test-jrn-033-representative-wallets-runtime.ps1"
-      - "infra/docker/compose.runtime.yml"
-      - "infra/docker/env/runtime.env.example"
-      - "infra/docker/scripts/runtime.ps1"
-      - ".github/workflows/jrn-033-runtime-verification.yml"
+    paths: *jrn033_runtime_paths
 
 permissions:
   contents: read
@@ -47,23 +35,21 @@ jobs:
     timeout-minutes: 35
     steps:
       - name: Checkout exact commit
-        uses: actions/checkout@v4
-
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
       - name: Reset Identity and WLT truth owners
         shell: pwsh
         run: ./infra/docker/scripts/runtime.ps1 -Action reset -Profiles identity,wlt -Force
-
       - name: Start DSH BFF against the migrated WLT runtime
         shell: pwsh
         run: ./infra/docker/scripts/runtime.ps1 -Action up -Profiles identity,dsh,wlt
-
       - name: Run authenticated representative wallet matrix
         id: runtime-matrix
         shell: pwsh
         run: |
           ./tools/scripts/test-jrn-033-representative-wallets-runtime.ps1 *>&1 |
             Tee-Object -FilePath jrn-033-runtime-matrix.log
-
       - name: Prove DSH fails closed while WLT is unavailable
         shell: pwsh
         run: |
@@ -78,17 +64,13 @@ jobs:
           $body = @{ username = "client"; password = $password; deviceFingerprint = "jrn-033-wlt-unavailable" } | ConvertTo-Json
           $login = Invoke-RestMethod "http://127.0.0.1:58082/auth/login" -Method Post -ContentType "application/json" -Body $body -TimeoutSec 15
           $headers = @{ Authorization = "Bearer $($login.accessToken)"; "X-Correlation-ID" = "jrn-033-wlt-unavailable" }
-
           docker compose @compose stop wlt-api
           if ($LASTEXITCODE -ne 0) { throw "failed to stop WLT runtime" }
           Start-Sleep -Seconds 2
           $response = Invoke-WebRequest "http://127.0.0.1:58080/dsh/client/me/finance/wallet" -Headers $headers -SkipHttpErrorCheck -TimeoutSec 15
-          if ([int]$response.StatusCode -ne 502) {
-            throw "DSH did not fail closed with WLT unavailable: HTTP $($response.StatusCode) $($response.Content)"
-          }
+          if ([int]$response.StatusCode -ne 502) { throw "DSH did not fail closed with WLT unavailable: HTTP $($response.StatusCode) $($response.Content)" }
           $errorBody = $response.Content | ConvertFrom-Json
           if ($errorBody.code -ne "WLT_UNAVAILABLE") { throw "wrong unavailable error code: $($errorBody.code)" }
-
           docker compose @compose up -d wlt-api
           if ($LASTEXITCODE -ne 0) { throw "failed to restart WLT runtime" }
           for ($i = 1; $i -le 20; $i++) {
@@ -100,10 +82,9 @@ jobs:
             Start-Sleep -Seconds 3
           }
           "WLT unavailable fail-closed boundary: PASS" | Tee-Object -FilePath jrn-033-wlt-unavailable.log
-
       - name: Upload runtime evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: jrn-033-runtime-evidence-${{ github.sha }}
           path: |
@@ -111,17 +92,15 @@ jobs:
             jrn-033-wlt-unavailable.log
           if-no-files-found: warn
           retention-days: 30
-
       - name: Capture runtime diagnostics on failure
         if: failure()
         shell: bash
         run: |
           docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml --profile identity --profile dsh --profile wlt ps > jrn-033-runtime-ps.log || true
           docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml --profile identity --profile dsh --profile wlt logs --no-color --tail=300 identity-api dsh-api wlt-api postgres > jrn-033-runtime-services.log || true
-
       - name: Upload failure diagnostics
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: jrn-033-runtime-failure-${{ github.sha }}
           path: |
@@ -129,7 +108,6 @@ jobs:
             jrn-033-runtime-services.log
           if-no-files-found: warn
           retention-days: 14
-
       - name: Tear down runtime
         if: always()
         shell: pwsh
