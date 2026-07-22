@@ -7,10 +7,23 @@ import (
 	"strings"
 )
 
+func expirePendingStoreCodes(ctx context.Context, db *sql.DB, storeID string) error {
+	_, err := db.ExecContext(ctx, `
+		UPDATE dsh_partner_courier_connection_codes
+		SET status = 'expired', version = version + 1, updated_at = NOW()
+		WHERE store_id = $1
+		  AND status = 'pending'
+		  AND expires_at <= NOW()`, storeID)
+	return err
+}
+
 func ListStoreConnections(ctx context.Context, db *sql.DB, storeID string) ([]ConnectionCode, error) {
 	storeID = strings.TrimSpace(storeID)
 	if storeID == "" {
 		return nil, ErrInvalid
+	}
+	if err := expirePendingStoreCodes(ctx, db, storeID); err != nil {
+		return nil, fmt.Errorf("expire pending store fleet codes: %w", err)
 	}
 	rows, err := db.QueryContext(ctx, `
 		SELECT `+connectionSelectCols+`
