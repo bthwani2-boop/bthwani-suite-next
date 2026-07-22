@@ -17,6 +17,40 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  go-proof:
+    name: JRN-030 isolated Go proof
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository state
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: services/dsh/backend/go.sum
+      - name: Verify JRN-030 Go formatting
+        working-directory: services/dsh/backend
+        run: |
+          unformatted="$({ find internal/partnerfleet -type f -name '*.go' -print0 | xargs -0 gofmt -l; gofmt -l internal/http/partner_fleet.go internal/http/partner_fleet_membership_routes.go internal/http/partner_fleet_operator.go internal/http/journeys_026_030_routes_test.go; })"
+          if [[ -n "${unformatted}" ]]; then
+            printf 'Unformatted JRN-030 Go files:\n%s\n' "${unformatted}"
+            exit 1
+          fi
+      - name: Compile JRN-030 partner-fleet package
+        working-directory: services/dsh/backend
+        run: go test ./internal/partnerfleet -run '^$'
+      - name: Verify governed JRN-026..030 route composition
+        working-directory: services/dsh/backend
+        run: go test ./internal/http -run '^TestJourneys026To030ExposeGovernedRoutes$' -count=1
+      - name: Compile and build DSH API composition root
+        working-directory: services/dsh/backend
+        run: |
+          go test ./cmd/dsh-api -run '^$'
+          go build -o /tmp/dsh-api ./cmd/dsh-api
+
   verify:
     name: JRN-030 same-commit full-stack proof
     runs-on: ubuntu-latest
@@ -63,14 +97,7 @@ jobs:
       - name: Verify JRN-030 Go formatting
         working-directory: services/dsh/backend
         run: |
-          mapfile -d '' go_files < <(find internal/partnerfleet -type f -name '*.go' -print0)
-          go_files+=(
-            internal/http/partner_fleet.go
-            internal/http/partner_fleet_membership_routes.go
-            internal/http/partner_fleet_operator.go
-            internal/http/journeys_026_030_routes_test.go
-          )
-          unformatted="$(gofmt -l "${go_files[@]}")"
+          unformatted="$({ find internal/partnerfleet -type f -name '*.go' -print0 | xargs -0 gofmt -l; gofmt -l internal/http/partner_fleet.go internal/http/partner_fleet_membership_routes.go internal/http/partner_fleet_operator.go internal/http/journeys_026_030_routes_test.go; })"
           if [[ -n "${unformatted}" ]]; then
             printf 'Unformatted JRN-030 Go files:\n%s\n' "${unformatted}"
             exit 1
