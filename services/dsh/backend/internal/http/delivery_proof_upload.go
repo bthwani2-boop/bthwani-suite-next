@@ -70,10 +70,6 @@ func (s *protectedStoreServer) removeDeliveryProofObject(r *http.Request, mediaR
 	}
 }
 
-// handleSubmitDispatchPoDWithMedia keeps the existing JSON PoD contract while
-// adding a production-shaped multipart path for the captain surface. Multipart
-// submissions upload the binary first, register a governed mediaRef owned by
-// the authenticated captain, then complete the delivery with that reference.
 func (s *protectedStoreServer) handleSubmitDispatchPoDWithMedia(w http.ResponseWriter, r *http.Request) {
 	if !isMultipartRequest(r) {
 		s.handleSubmitDispatchPoD(w, r)
@@ -135,10 +131,6 @@ func (s *protectedStoreServer) handleSubmitDispatchPoDWithMedia(w http.ResponseW
 	s.writeDispatchResult(w, http.StatusOK, assignment, err)
 }
 
-// handlePartnerDeliveryProofWithMedia extends the existing partner proof
-// operation with multipart upload while retaining JSON compatibility. The
-// authenticated partner must own the order's store, and the task must already
-// be at the customer before the binary is accepted.
 func (s *protectedStoreServer) handlePartnerDeliveryProofWithMedia(w http.ResponseWriter, r *http.Request) {
 	if !isMultipartRequest(r) {
 		s.handlePartnerDeliveryProof(w, r)
@@ -165,6 +157,11 @@ func (s *protectedStoreServer) handlePartnerDeliveryProofWithMedia(w http.Respon
 		return
 	}
 
+	correlationID := partnerDeliveryCorrelationID(r, "")
+	commandID := strings.TrimSpace(r.Header.Get("X-Command-ID"))
+	if commandID == "" {
+		commandID = correlationID
+	}
 	upload, uploaded := s.uploadDeliveryProofObject(w, r, "dsh-partner-delivery-proofs", actor.ID)
 	if !uploaded {
 		return
@@ -181,16 +178,9 @@ func (s *protectedStoreServer) handlePartnerDeliveryProofWithMedia(w http.Respon
 		return
 	}
 
-	svc := partnerdelivery.NewService(s.db)
-	updated, err := svc.SubmitProof(
-		r.Context(),
-		task.ID,
-		task.Version,
-		"photo",
-		mediaRef,
-		actor.ID,
-		actor.Role,
-		partnerDeliveryCorrelationID(r, ""),
+	updated, err := partnerdelivery.NewService(s.db).SubmitProofCommand(
+		r.Context(), task.ID, task.Version, "photo", mediaRef,
+		actor.ID, actor.Role, correlationID, commandID,
 	)
 	if err != nil {
 		s.removeDeliveryProofObject(r, mediaRef, upload.storageKey)
