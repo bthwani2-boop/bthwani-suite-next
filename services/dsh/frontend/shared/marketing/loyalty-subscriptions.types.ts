@@ -73,7 +73,7 @@ export type ClientSubscriptionEntitlement = {
   readonly cancellationReason?: string;
   readonly compensationStatus?: "not_required" | "pending" | "completed" | "failed";
   readonly compensationReference?: string;
-  readonly allowedActions: readonly ("renew" | "cancel")[];
+  readonly allowedActions?: readonly ("renew" | "cancel")[];
   readonly plan: SubscriptionPlanRecord;
 };
 
