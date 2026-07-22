@@ -13,6 +13,7 @@ import {
   spacing,
 } from "@bthwani/ui-kit";
 import { usePartnerFleetController } from "../../shared/partner";
+import type { DshCourierConnectionStatus } from "../../shared/partner/partner-fleet.api";
 import type { PartnerTeamMember } from "./partner-team.types";
 import type { PartnerTeamMutationResult } from "./usePartnerTeamModel";
 
@@ -85,6 +86,27 @@ function memberStatusTone(status: PartnerTeamMember["status"]): "success" | "war
   return "neutral";
 }
 
+function connectionStatusLabel(status: DshCourierConnectionStatus): string {
+  switch (status) {
+    case "pending": return "رمز معلق";
+    case "redeemed": return "تم الربط";
+    case "revoked": return "مسحوب";
+    case "expired": return "منتهي";
+  }
+}
+
+function connectionStatusTone(status: DshCourierConnectionStatus): "success" | "warning" | "danger" | "neutral" {
+  if (status === "redeemed") return "success";
+  if (status === "pending") return "warning";
+  if (status === "expired") return "danger";
+  return "neutral";
+}
+
+function formatExpiry(value: string): string {
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString("ar-SA");
+}
+
 export function PartnerTeamManagementScreen({
   storeId,
   storeName,
@@ -141,6 +163,7 @@ export function PartnerTeamManagementScreen({
     const code = onIssueCourierConnectionCode
       ? await onIssueCourierConnectionCode(member)
       : await fleet.issueCourierConnectionCode(member.id);
+    if (onIssueCourierConnectionCode && code) await fleet.reload();
     setMutation(code
       ? { kind: "success", message: `رمز الربط الصادر من DSH: ${code}` }
       : { kind: "error", message: fleet.error ?? "تعذر إصدار رمز الربط من DSH." });
@@ -152,6 +175,7 @@ export function PartnerTeamManagementScreen({
     const ok = onRevokeCourierConnection
       ? await onRevokeCourierConnection(member)
       : await fleet.revokePendingCourierConnection(member.id);
+    if (onRevokeCourierConnection && ok) await fleet.reload();
     setMutation(ok
       ? { kind: "success", message: "تم إلغاء رمز الربط المعلق في DSH." }
       : { kind: "error", message: fleet.error ?? "تعذر إلغاء رمز الربط المعلق." });
@@ -216,45 +240,101 @@ export function PartnerTeamManagementScreen({
         />
       </Card>
 
+      {section === "couriers" ? (
+        <Card style={styles.connectionCard}>
+          <View style={styles.rowBetween}>
+            <Button label="تحديث الاتصالات" tone="ghost" size="sm" disabled={fleet.loading || busy} onPress={() => void fleet.reload()} />
+            <Text role="bodyStrong" style={styles.rtl}>اتصالات أسطول الشريك</Text>
+          </View>
+          {fleet.loading ? (
+            <StateView tone="neutral" title="جارٍ تحميل اتصالات الموصلين" />
+          ) : fleet.error ? (
+            <StateView
+              tone="danger"
+              title="تعذر تحميل اتصالات الموصلين"
+              description={fleet.error}
+              actionLabel="إعادة المحاولة"
+              onActionPress={() => void fleet.reload()}
+            />
+          ) : fleet.connections.length === 0 ? (
+            <StateView tone="neutral" title="لا توجد رموز أو عضويات مسجلة" />
+          ) : (
+            fleet.connections.map((connection) => (
+              <View key={connection.id} style={styles.connectionRow}>
+                <View style={styles.badges}>
+                  <Badge label={connectionStatusLabel(connection.status)} tone={connectionStatusTone(connection.status)} />
+                  <Badge label={`••••${connection.codeLast4}`} tone="neutral" />
+                </View>
+                <Text role="caption" style={styles.rtl}>الموصل: {connection.teamMemberId}</Text>
+                <Text role="caption" tone="muted" style={styles.rtl}>الانتهاء: {formatExpiry(connection.expiresAt)}</Text>
+                {connection.redeemedAt ? (
+                  <Text role="caption" tone="muted" style={styles.rtl}>تم الاستهلاك: {formatExpiry(connection.redeemedAt)}</Text>
+                ) : null}
+              </View>
+            ))
+          )}
+        </Card>
+      ) : null}
+
       {visibleMembers.length === 0 ? (
         <StateView tone="neutral" title="لا توجد سجلات في هذا القسم" />
       ) : (
-        visibleMembers.map((member) => (
-          <Card key={member.id} style={styles.memberCard}>
-            <View style={styles.rowBetween}>
-              <View style={styles.badges}>
-                <Badge label={member.statusLabel} tone={memberStatusTone(member.status)} />
-                <Badge label={member.roleLabel} tone="info" />
+        visibleMembers.map((member) => {
+          const connection = member.role === "courier" ? fleet.latestConnectionFor(member.id) : undefined;
+          const pendingConnection = connection?.status === "pending";
+          const activeMembership = connection?.status === "redeemed";
+          const ineligible = member.status === "blocked" || member.status === "review-needed";
+          return (
+            <Card key={member.id} style={styles.memberCard}>
+              <View style={styles.rowBetween}>
+                <View style={styles.badges}>
+                  <Badge label={member.statusLabel} tone={memberStatusTone(member.status)} />
+                  <Badge label={member.roleLabel} tone="info" />
+                  {connection ? (
+                    <Badge label={connectionStatusLabel(connection.status)} tone={connectionStatusTone(connection.status)} />
+                  ) : null}
+                </View>
+                <View style={styles.memberInfo}>
+                  <Text role="bodyStrong" style={styles.rtl}>{member.name}</Text>
+                  <Text role="caption" tone="muted" style={styles.rtl}>{member.branchAssignment || "لا يوجد فرع محدد"}</Text>
+                </View>
               </View>
-              <View style={styles.memberInfo}>
-                <Text role="bodyStrong" style={styles.rtl}>{member.name}</Text>
-                <Text role="caption" tone="muted" style={styles.rtl}>{member.branchAssignment || "لا يوجد فرع محدد"}</Text>
+
+              {member.permissionsSummary ? <Text role="caption" style={styles.rtl}>{member.permissionsSummary}</Text> : null}
+              {member.inviteLifecycle ? <Text role="caption" tone="muted" style={styles.rtl}>{member.inviteLifecycle}</Text> : null}
+              {member.operationalImpact ? <Text role="caption" tone="muted" style={styles.rtl}>{member.operationalImpact}</Text> : null}
+              {connection ? (
+                <Text role="caption" tone="muted" style={styles.rtl}>
+                  آخر اتصال: {connectionStatusLabel(connection.status)} · آخر أربعة: {connection.codeLast4} · الإصدار: {connection.version}
+                </Text>
+              ) : null}
+
+              <View style={styles.actions}>
+                {member.inlineAction && member.inlineAction !== "audit-log" ? (
+                  <Button
+                    label={member.inlineActionLabel || actionLabel(member.inlineAction)}
+                    tone={member.inlineAction === "block" || member.inlineAction === "cancel-invite" ? "danger" : "secondary"}
+                    size="sm"
+                    disabled={busy}
+                    onPress={() => void submitAction(member, member.inlineAction)}
+                  />
+                ) : null}
+                {member.role === "courier" ? (
+                  <Button
+                    label={connection?.status === "revoked" || connection?.status === "expired" ? "إصدار رمز جديد" : "إصدار رمز ربط"}
+                    tone="secondary"
+                    size="sm"
+                    disabled={busy || fleet.loading || pendingConnection || activeMembership || ineligible}
+                    onPress={() => void issueCourierCode(member)}
+                  />
+                ) : null}
+                {member.role === "courier" && pendingConnection ? (
+                  <Button label="إلغاء رمز الربط" tone="danger" size="sm" disabled={busy} onPress={() => void revokeCourier(member)} />
+                ) : null}
               </View>
-            </View>
-
-            {member.permissionsSummary ? <Text role="caption" style={styles.rtl}>{member.permissionsSummary}</Text> : null}
-            {member.inviteLifecycle ? <Text role="caption" tone="muted" style={styles.rtl}>{member.inviteLifecycle}</Text> : null}
-            {member.operationalImpact ? <Text role="caption" tone="muted" style={styles.rtl}>{member.operationalImpact}</Text> : null}
-
-            <View style={styles.actions}>
-              {member.inlineAction && member.inlineAction !== "audit-log" ? (
-                <Button
-                  label={member.inlineActionLabel || actionLabel(member.inlineAction)}
-                  tone={member.inlineAction === "block" || member.inlineAction === "cancel-invite" ? "danger" : "secondary"}
-                  size="sm"
-                  disabled={busy}
-                  onPress={() => void submitAction(member, member.inlineAction)}
-                />
-              ) : null}
-              {member.role === "courier" ? (
-                <Button label="إصدار رمز ربط" tone="secondary" size="sm" disabled={busy} onPress={() => void issueCourierCode(member)} />
-              ) : null}
-              {member.role === "courier" ? (
-                <Button label="إلغاء رمز الربط" tone="danger" size="sm" disabled={busy} onPress={() => void revokeCourier(member)} />
-              ) : null}
-            </View>
-          </Card>
-        ))
+            </Card>
+          );
+        })
       )}
     </ScrollScreen>
   );
@@ -266,6 +346,13 @@ const styles = StyleSheet.create({
   headerCard: { padding: spacing[4], gap: spacing[1], backgroundColor: colorRoles.surfaceBase },
   tabs: { flexDirection: "row-reverse", flexWrap: "wrap", gap: spacing[2] },
   inviteCard: { padding: spacing[4], gap: spacing[3], backgroundColor: colorRoles.surfaceBase },
+  connectionCard: { padding: spacing[4], gap: spacing[3], backgroundColor: colorRoles.surfaceBase },
+  connectionRow: {
+    paddingVertical: spacing[2],
+    gap: spacing[1],
+    borderBottomWidth: 1,
+    borderBottomColor: colorRoles.borderSubtle,
+  },
   memberCard: {
     padding: spacing[4],
     gap: spacing[2],
