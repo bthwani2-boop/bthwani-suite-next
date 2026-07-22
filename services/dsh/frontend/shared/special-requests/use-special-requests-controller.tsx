@@ -6,6 +6,7 @@ import {
   classifySpecialRequestError,
   createSpecialRequest,
   fetchClientSpecialRequest,
+  fetchClientSpecialRequests,
   fetchOperatorSpecialRequest,
   fetchOperatorSpecialRequests,
   updateOperatorSpecialRequest,
@@ -102,6 +103,81 @@ export function useSpecialRequestsController() {
   const reset = useCallback(() => setState(specialRequestIdleState()), []);
 
   return { state, submit, cancel, approveQuote, reload, reset };
+}
+
+export type UseClientSpecialRequestsListControllerParams = {
+  readonly limit?: number;
+  readonly autoLoad?: boolean;
+};
+
+/**
+ * Client list/readback controller. Quote approval and cancellation always
+ * reload the canonical list so the client sees the WLT reference, version and
+ * workflow stage written by the backend rather than optimistic local truth.
+ */
+export function useClientSpecialRequestsListController(
+  params: UseClientSpecialRequestsListControllerParams = {},
+) {
+  const { limit = 50, autoLoad = true } = params;
+  const [requests, setRequests] = useState<readonly DshSpecialRequestResponse[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loadState, setLoadState] = useState<DshSpecialRequestListLoadState>("loading");
+  const [busyRequestId, setBusyRequestId] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoadState("loading");
+    try {
+      const result = await fetchClientSpecialRequests({ limit, offset: 0 });
+      const nextRequests = result.requests ?? [];
+      setRequests(nextRequests);
+      setTotal(result.total ?? 0);
+      setLoadState(specialRequestListLoadState(nextRequests));
+    } catch (error) {
+      setLoadState(listLoadStateForError(classifySpecialRequestError(error)));
+    }
+  }, [limit]);
+
+  useEffect(() => {
+    if (autoLoad) void load();
+  }, [autoLoad, load]);
+
+  const cancelRequest = useCallback(async (request: DshSpecialRequestResponse) => {
+    setBusyRequestId(request.id);
+    try {
+      await cancelSpecialRequest(request.id, request.version);
+      await load();
+      return true;
+    } catch (error) {
+      setLoadState(listLoadStateForError(classifySpecialRequestError(error)));
+      return false;
+    } finally {
+      setBusyRequestId(null);
+    }
+  }, [load]);
+
+  const approveQuote = useCallback(async (request: DshSpecialRequestResponse) => {
+    setBusyRequestId(request.id);
+    try {
+      await approveSpecialRequestQuote(request.id, request.version);
+      await load();
+      return true;
+    } catch (error) {
+      setLoadState(listLoadStateForError(classifySpecialRequestError(error)));
+      return false;
+    } finally {
+      setBusyRequestId(null);
+    }
+  }, [load]);
+
+  return {
+    requests,
+    total,
+    loadState,
+    busyRequestId,
+    load,
+    cancelRequest,
+    approveQuote,
+  };
 }
 
 export type UseOperatorSpecialRequestsControllerParams = {
