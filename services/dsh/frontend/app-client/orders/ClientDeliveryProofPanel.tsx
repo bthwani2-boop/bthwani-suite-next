@@ -96,7 +96,7 @@ export function ClientDeliveryProofPanel({
       </Text>
       {controller.issued ? (
         <View style={styles.pinBox} accessibilityLabel={`رمز التسليم ${controller.issued.pin.split('').join(' ')}`}>
-          <Text role="displaySm" style={styles.pinText}>{controller.issued.pin}</Text>
+          <Text role="display" style={styles.pinText}>{controller.issued.pin}</Text>
           <Text role="caption" tone="muted">صالح حتى {expiresLabel(controller.issued.challenge.expiresAt)}</Text>
         </View>
       ) : null}
