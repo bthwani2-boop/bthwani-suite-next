@@ -1,0 +1,96 @@
+name: BThwani Governance Audit
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [sambassam]
+    paths:
+      - "AGENTS.md"
+      - "GEMINI.md"
+      - ".agents/**"
+      - "governance/**"
+      - "tools/guards/**"
+      - "tools/scripts/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - ".github/actions/**"
+      - ".github/workflows/**"
+      - ".github/CODEOWNERS"
+  pull_request:
+    branches: [sambassam, master]
+    paths:
+      - "AGENTS.md"
+      - "GEMINI.md"
+      - ".agents/**"
+      - "governance/**"
+      - "tools/guards/**"
+      - "tools/scripts/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - ".github/actions/**"
+      - ".github/workflows/**"
+      - ".github/CODEOWNERS"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: governance-audit-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  governance:
+    name: Verify governed repository contracts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Run canonical governance gates
+        run: |
+          pnpm run guard:governance-schema
+          pnpm run guard:agent-governance
+          pnpm run guard:authority-separation
+          pnpm run guard:saas-governance
+          pnpm run guard:guard-registry
+          pnpm run guard:sdlc
+          pnpm run guard:cleanup-policy
+
+  workflow-policy:
+    name: Verify workflow policy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Run immutable workflow gates
+        run: |
+          pnpm run guard:workflow-lint
+          pnpm run guard:workflow-security
+          pnpm run guard:actions-pin
+
+  result:
+    name: Governance audit result
+    needs: [governance, workflow-policy]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Enforce governance audit result
+        env:
+          GOVERNANCE_RESULT: ${{ needs.governance.result }}
+          WORKFLOW_POLICY_RESULT: ${{ needs.workflow-policy.result }}
+        run: |
+          if [ "${GOVERNANCE_RESULT}" != "success" ] || [ "${WORKFLOW_POLICY_RESULT}" != "success" ]; then
+            echo "Governance audit failed. Governance: ${GOVERNANCE_RESULT}; workflow policy: ${WORKFLOW_POLICY_RESULT}"
+            exit 1
+          fi
+          echo "Governance audit passed."
