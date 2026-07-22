@@ -22,28 +22,7 @@ on:
       - "services/dsh/tests/jrn-030-partner-fleet.test.mjs"
       - "services/dsh/tsconfig.jrn-030.json"
       - "governance/product/contracts/JRN-030_PARTNER_FLEET_CONNECTION.product-truth.json"
-      - "governance/product/product-truth.schema.json"
-      - "tools/guards/product-truth-gate.mjs"
-      - ".github/workflows/jrn-030-partner-fleet-verification.yml"
-  pull_request:
-    branches: [master]
-    paths:
-      - "services/dsh/backend/internal/partnerfleet/**"
-      - "services/dsh/backend/internal/http/partner_fleet*.go"
-      - "services/dsh/backend/internal/http/journeys_026_030_routes_test.go"
-      - "services/dsh/backend/cmd/dsh-api/main.go"
-      - "services/dsh/database/migrations/dsh-059_partner_courier_connection_codes.sql"
-      - "services/dsh/database/migrations/dsh-089_store_team_actor_scope_uniqueness.sql"
-      - "services/dsh/frontend/shared/partner/partner-fleet.api.ts"
-      - "services/dsh/frontend/shared/partner/use-partner-fleet-controller.ts"
-      - "services/dsh/frontend/app-partner/team/PartnerTeamManagementScreen.tsx"
-      - "services/dsh/frontend/app-captain/account/PartnerFleetConnectionCard.tsx"
-      - "services/dsh/frontend/control-panel/partners/stores/OperatorPartnerFleetPanel.tsx"
-      - "services/dsh/frontend/control-panel/partners/stores/OperatorDeliveryPricingPanel.tsx"
-      - "services/dsh/contracts/dsh.partner-fleet.openapi.yaml"
-      - "services/dsh/tests/jrn-030-partner-fleet.test.mjs"
-      - "services/dsh/tsconfig.jrn-030.json"
-      - "governance/product/contracts/JRN-030_PARTNER_FLEET_CONNECTION.product-truth.json"
+      - "governance/evidence/JRN-030_REMOTE_SLICE_EXECUTION.md"
       - "governance/product/product-truth.schema.json"
       - "tools/guards/product-truth-gate.mjs"
       - ".github/workflows/jrn-030-partner-fleet-verification.yml"
@@ -52,7 +31,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: jrn-030-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  group: jrn-030-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
