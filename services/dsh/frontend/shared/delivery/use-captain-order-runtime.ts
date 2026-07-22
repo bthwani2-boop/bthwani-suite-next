@@ -7,7 +7,11 @@ import {
   reportDeliveryException,
   updateDeliveryStatus,
 } from '../dispatch/dispatch.api';
-import { updateForegroundDispatchLocation } from '../dispatch/dispatch-location.api';
+import {
+  flushPendingForegroundDispatchLocations,
+  syncForegroundDispatchLocation,
+  type DshDispatchLocationSyncResult,
+} from '../dispatch/dispatch-location.api';
 import type { DshDeliveryException, DshDeliveryExceptionReasonCode } from '../dispatch/dispatch.types';
 
 export type CaptainDeliveryExceptionDraft = {
@@ -19,11 +23,14 @@ export type DshCaptainLocationPush = {
   readonly assignmentId: string;
   readonly latitude: number;
   readonly longitude: number;
+  readonly accuracyMeters: number;
+  readonly recordedAt: string;
 };
 
 export type DshCaptainCoordinates = {
   readonly latitude: number;
   readonly longitude: number;
+  readonly accuracyMeters: number;
 };
 
 export type DshCaptainActiveLocationPushConfig = {
@@ -44,6 +51,13 @@ const activeDeliveryStates = new Set([
 // Foreground-only periodic sampling. No background task and no location history.
 export const CAPTAIN_LOCATION_PUSH_INTERVAL_MS = 3 * 60 * 1000;
 
+function governedAccuracy(value: number | null | undefined): number {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0 || value > 100) {
+    throw new Error('دقة الموقع غير كافية. انتقل إلى مكان مفتوح ثم أعد المحاولة.');
+  }
+  return value;
+}
+
 export async function readCaptainForegroundLocation(): Promise<DshCaptainCoordinates> {
   if (Platform.OS === 'web') {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
@@ -51,10 +65,17 @@ export async function readCaptainForegroundLocation(): Promise<DshCaptainCoordin
     }
     return new Promise<DshCaptainCoordinates>((resolve, reject) => {
       navigator.geolocation.getCurrentPosition(
-        (position) => resolve({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-        }),
+        (position) => {
+          try {
+            resolve({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+              accuracyMeters: governedAccuracy(position.coords.accuracy),
+            });
+          } catch (error) {
+            reject(error);
+          }
+        },
         () => reject(new Error('تعذر قراءة الموقع الحالي. تحقق من صلاحية الموقع وحاول مجددًا.')),
         { enableHighAccuracy: true, maximumAge: 5_000, timeout: 10_000 },
       );
@@ -73,6 +94,7 @@ export async function readCaptainForegroundLocation(): Promise<DshCaptainCoordin
   return {
     latitude: position.coords.latitude,
     longitude: position.coords.longitude,
+    accuracyMeters: governedAccuracy(position.coords.accuracy),
   };
 }
 
@@ -95,11 +117,13 @@ export function useCaptainOrderRuntime() {
   );
 
   const pushLocation = React.useCallback(
-    (push: DshCaptainLocationPush) => updateForegroundDispatchLocation(push.assignmentId, {
-      latitude: push.latitude,
-      longitude: push.longitude,
-      recordedAt: new Date().toISOString(),
-    }),
+    (push: DshCaptainLocationPush): Promise<DshDispatchLocationSyncResult> =>
+      syncForegroundDispatchLocation(push.assignmentId, {
+        latitude: push.latitude,
+        longitude: push.longitude,
+        accuracyMeters: push.accuracyMeters,
+        recordedAt: push.recordedAt,
+      }),
     [],
   );
 
@@ -148,22 +172,26 @@ export function useCaptainActiveLocationPush({
     let cancelled = false;
     let intervalId: ReturnType<typeof setInterval> | undefined;
 
-    const postLocation = (latitude: number, longitude: number) => {
+    const postLocation = (coordinates: DshCaptainCoordinates) => {
       if (cancelled) return;
+      const recordedAt = new Date().toISOString();
       captainOrderRuntime.pushLocation({
         assignmentId: activeAssignmentId,
-        latitude,
-        longitude,
+        latitude: coordinates.latitude,
+        longitude: coordinates.longitude,
+        accuracyMeters: coordinates.accuracyMeters,
+        recordedAt,
       }).catch((err: unknown) => {
-        console.warn('[captain:location-push] failed', err);
+        console.warn('[captain:location-push] rejected', err);
       });
     };
 
     const sampleOnce = async () => {
       if (cancelled) return;
       try {
+        await flushPendingForegroundDispatchLocations();
         const position = await readCaptainForegroundLocation();
-        if (!cancelled) postLocation(position.latitude, position.longitude);
+        if (!cancelled) postLocation(position);
       } catch (err) {
         console.warn('[captain:location-push] failed to sample device location', err);
       }
