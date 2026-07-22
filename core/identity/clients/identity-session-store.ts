@@ -20,6 +20,8 @@ export type IdentitySessionState =
   | { readonly kind: "authenticated"; readonly identity: ActorIdentity; readonly accessToken: string }
   | { readonly kind: "error"; readonly message: string };
 
+export type IdentityBeforeSessionEndHook = () => void | Promise<void>;
+
 type StoredSession = {
   readonly accessToken: string;
   readonly refreshToken: string;
@@ -42,10 +44,26 @@ let state: IdentitySessionState = { kind: "unconfigured" };
 let stored: StoredSession | null = null;
 let storageAdapter: SessionStorageAdapter = defaultSessionStorageAdapter();
 const listeners = new Set<() => void>();
+const beforeSessionEndHooks = new Set<IdentityBeforeSessionEndHook>();
 
 export function configureIdentitySessionStorage(adapter: SessionStorageAdapter): void {
   if (client !== null) return;
   storageAdapter = adapter;
+}
+
+export function registerIdentityBeforeSessionEndHook(
+  hook: IdentityBeforeSessionEndHook,
+): () => void {
+  beforeSessionEndHooks.add(hook);
+  return () => beforeSessionEndHooks.delete(hook);
+}
+
+async function runBeforeSessionEndHooks(): Promise<void> {
+  await Promise.allSettled(
+    Array.from(beforeSessionEndHooks, async (hook) => {
+      await hook();
+    }),
+  );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -290,12 +308,15 @@ export async function revokeIdentitySession(sessionId: string): Promise<void> {
   const token = getIdentityAccessToken();
   if (!token) throw new Error("UNAUTHENTICATED");
   if (client === null) throw new Error("IDENTITY_NOT_CONFIGURED");
+  const revokingCurrentSession = stored?.identity.sessionId === sessionId;
+  if (revokingCurrentSession) await runBeforeSessionEndHooks();
   await client.revokeSession(token, sessionId);
-  if (stored?.identity.sessionId === sessionId) clearSession();
+  if (revokingCurrentSession) clearSession();
 }
 
 export async function logoutIdentity(): Promise<void> {
   const accessToken = stored?.accessToken;
+  if (accessToken !== undefined) await runBeforeSessionEndHooks();
   clearSession();
   if (client !== null && accessToken !== undefined) {
     await client.logout(accessToken).catch(() => undefined);
@@ -313,6 +334,7 @@ export async function deleteAccountIdentity(): Promise<void> {
   const token = getIdentityAccessToken();
   if (!token) throw new Error("UNAUTHENTICATED");
   if (client === null) throw new Error("IDENTITY_NOT_CONFIGURED");
+  await runBeforeSessionEndHooks();
   await client.deleteAccount(token);
   clearSession();
 }
