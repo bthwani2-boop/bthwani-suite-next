@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Button, Card, Text } from "@bthwani/ui-kit";
+import { Button, Card, Text, colorRoles } from "@bthwani/ui-kit";
+import { WebStyleSheet } from "@bthwani/ui-kit/web";
 import { CpSelect, CpTextInput } from "@bthwani/control-panel/components";
 import {
   assignCodReconciliationCase,
@@ -10,7 +11,6 @@ import {
   type CodReconciliationCase,
   type CodResolutionAction,
 } from "../../shared/finance-wlt-link/finance/cod-reconciliation.api";
-import styles from "./CodReconciliationCasesPanel.module.css";
 
 const RESOLUTION_OPTIONS = [
   { value: "confirmed_variance", label: "تأكيد الفرق" },
@@ -87,62 +87,59 @@ export function CodReconciliationCasesPanel() {
   const resolvedCases = cases?.filter((item) => item.status === "resolved") ?? [];
 
   return (
-    <div className={styles.panel}>
+    <div style={styles.panel}>
       <Card>
-        <div className={styles.heading}>
+        <div style={styles.heading}>
           <Text role="titleMd">مصالحة فروقات COD</Text>
         </div>
-        <div className={styles.description}>
+        <div style={styles.description}>
           <Text role="body" tone="muted">
             يقارن WLT المبلغ المتوقع بالمبلغ المستلم فعليًا. أي فرق يفتح قضية مستقلة للإسناد والتحقيق والقرار مع الاحتفاظ بإثبات العهدة والقيد المحاسبي.
           </Text>
         </div>
         {error ? (
-          <div className={styles.error} role="alert">
+          <div style={styles.error} role="alert">
             <Text role="body" tone="danger">{error}</Text>
           </div>
         ) : null}
         {activeCases.length === 0 ? (
-          <div className={styles.emptyState}>
+          <div style={styles.emptyState}>
             <Text role="body" tone="muted">لا توجد فروقات COD مفتوحة حاليًا. القضايا المحسومة: {resolvedCases.length}.</Text>
           </div>
         ) : (
-          <div className={styles.caseList}>
+          <div style={styles.caseList}>
             {activeCases.map((item) => {
               const busy = busyCaseId === item.id;
               const note = notes[item.id] ?? "";
               const assigned = item.status === "investigating";
-              const caseClassName = item.differenceMinorUnits < 0
-                ? `${styles.caseCard} ${styles.caseCardShortage}`
-                : styles.caseCard;
               return (
-                <div key={item.id} className={caseClassName}>
+                <div key={item.id} style={item.differenceMinorUnits < 0 ? styles.caseCardShortage : styles.caseCard}>
                   <Card>
-                    <div className={styles.caseTopRow}>
-                      <div className={styles.caseIdentity}>
+                    <div style={styles.caseTopRow}>
+                      <div style={styles.caseIdentity}>
                         <Text role="body">قضية {item.id}</Text>
                         <Text role="caption" tone="muted">سجل COD: {item.codRecordId} · إثبات: {item.custodyEvidenceId}</Text>
                       </div>
-                      <div className={styles.difference}>
+                      <div style={styles.difference}>
                         <Text role="body" tone={item.differenceMinorUnits < 0 ? "danger" : "warning"}>
                           الفرق: {amount(item.differenceMinorUnits, item.currency)}
                         </Text>
                       </div>
                     </div>
-                    <div className={styles.facts}>
+                    <div style={styles.facts}>
                       <Text role="caption" tone="muted">المتوقع: {amount(item.expectedAmountMinorUnits, item.currency)}</Text>
                       <Text role="caption" tone="muted">الفعلي: {amount(item.actualAmountMinorUnits, item.currency)}</Text>
                       <Text role="caption" tone="muted">الحالة: {item.status}</Text>
                       <Text role="caption" tone="muted">المشغل: {item.assignedToOperatorId ?? "—"}</Text>
                     </div>
-                    <div className={styles.formGrid}>
+                    <div style={styles.formGrid}>
                       <CpTextInput
                         placeholder={assigned ? "ملاحظة قرار المصالحة" : "ملاحظة التحقيق"}
                         value={note}
                         onChange={(value) => setNotes((current) => ({ ...current, [item.id]: value }))}
                         aria-label={`ملاحظة قضية COD ${item.id}`}
                       />
-                      <div className={!assigned || busy ? styles.selectDisabled : undefined} aria-disabled={!assigned || busy}>
+                      <div style={!assigned || busy ? styles.selectDisabled : undefined} aria-disabled={!assigned || busy}>
                         <CpSelect
                           aria-label={`قرار قضية COD ${item.id}`}
                           value={actions[item.id] ?? "confirmed_variance"}
@@ -155,7 +152,7 @@ export function CodReconciliationCasesPanel() {
                         />
                       </div>
                     </div>
-                    <div className={styles.actions}>
+                    <div style={styles.actions}>
                       {!assigned ? (
                         <Button label={busy ? "جارٍ الإسناد..." : "إسناد القضية لنفسي"} tone="secondary" disabled={busy} onPress={() => void assign(item.id)} />
                       ) : (
@@ -172,3 +169,73 @@ export function CodReconciliationCasesPanel() {
     </div>
   );
 }
+
+const caseCardBase = {
+  padding: "1rem",
+  borderInlineStart: `4px solid ${colorRoles.warning}`,
+};
+
+const styles = WebStyleSheet.create({
+  panel: {
+    marginTop: "1rem",
+    padding: "1.5rem",
+  },
+  heading: {
+    marginBottom: "0.5rem",
+  },
+  description: {
+    marginBottom: "1rem",
+  },
+  error: {
+    marginBottom: "1rem",
+  },
+  emptyState: {
+    marginBottom: "1rem",
+  },
+  caseList: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "0.75rem",
+  },
+  caseCard: caseCardBase,
+  caseCardShortage: {
+    ...caseCardBase,
+    borderInlineStartColor: colorRoles.danger,
+  },
+  caseTopRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: "1rem",
+    flexWrap: "wrap",
+  },
+  caseIdentity: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "0.25rem",
+  },
+  difference: {
+    fontWeight: 700,
+  },
+  facts: {
+    display: "flex",
+    gap: "1rem",
+    marginTop: "0.5rem",
+    flexWrap: "wrap",
+  },
+  formGrid: {
+    display: "grid",
+    gridTemplateColumns: "minmax(220px, 1fr) minmax(180px, 240px)",
+    gap: "0.75rem",
+    marginTop: "0.75rem",
+  },
+  selectDisabled: {
+    opacity: 0.55,
+    pointerEvents: "none",
+  },
+  actions: {
+    display: "flex",
+    gap: "0.5rem",
+    marginTop: "0.75rem",
+    flexWrap: "wrap",
+  },
+});
