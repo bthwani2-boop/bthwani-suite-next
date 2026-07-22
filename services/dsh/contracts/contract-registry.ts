@@ -26,6 +26,7 @@ export type DshContractRegistration = {
     | "dsh-platform-policies"
     | "dsh-partner-support"
     | "dsh-support-governance"
+    | "dsh-notifications-governance"
     | "dsh-incident-governance"
     | "dsh-order-rescue"
     | "dsh-store-captain-handoff"
@@ -173,6 +174,14 @@ export const DSH_CONTRACT_REGISTRY = [
     runtimeDependency: true,
     clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
     adapterOwner: "frontend/shared/support",
+  },
+  {
+    id: "dsh-notifications-governance",
+    path: "contracts/dsh.notifications-governance.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/notifications",
   },
   {
     id: "dsh-incident-governance",
