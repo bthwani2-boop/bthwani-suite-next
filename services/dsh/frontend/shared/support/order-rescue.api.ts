@@ -4,8 +4,8 @@ import type { SupportMutationContext } from "./support-mutation-attempt";
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "order-rescue");
 
-export type DshOrderRescueStatus = "open" | "investigating" | "action_required" | "resolved" | "closed";
-export type DshOrderRescueReason =
+export type DshGovernedOrderRescueStatus = "open" | "investigating" | "action_required" | "resolved" | "closed";
+export type DshGovernedOrderRescueReason =
   | "item_unavailable"
   | "customer_not_reachable"
   | "store_closed_after_order"
@@ -17,9 +17,9 @@ export type DshOrderRescueReason =
   | "address_issue"
   | "payment_failure"
   | "wlt_visibility";
-export type DshOrderRescueSeverity = "warning" | "danger";
-export type DshOrderRescueOwner = "support" | "operations" | "partner" | "captain" | "wlt_reference_only";
-export type DshOrderRescueNextAction =
+export type DshGovernedOrderRescueSeverity = "warning" | "danger";
+export type DshGovernedOrderRescueOwner = "support" | "operations" | "partner" | "captain" | "wlt_reference_only";
+export type DshGovernedOrderRescueNextAction =
   | "replace_item"
   | "remove_item"
   | "wait_customer"
@@ -33,11 +33,11 @@ export type DshGovernedOrderRescueCase = {
   readonly id: string;
   readonly orderId: string;
   readonly ticketId: string;
-  readonly status: DshOrderRescueStatus;
-  readonly reason: DshOrderRescueReason;
-  readonly severity: DshOrderRescueSeverity;
-  readonly owner: DshOrderRescueOwner;
-  readonly nextAction: DshOrderRescueNextAction;
+  readonly status: DshGovernedOrderRescueStatus;
+  readonly reason: DshGovernedOrderRescueReason;
+  readonly severity: DshGovernedOrderRescueSeverity;
+  readonly owner: DshGovernedOrderRescueOwner;
+  readonly nextAction: DshGovernedOrderRescueNextAction;
   readonly summary: string;
   readonly operatorNote: string;
   readonly affectedEntity: string;
@@ -51,33 +51,33 @@ export type DshGovernedOrderRescueCase = {
   readonly updatedAt: string;
 };
 
-export type DshOrderRescueEvent = {
+export type DshGovernedOrderRescueEvent = {
   readonly id: string;
   readonly rescueCaseId: string;
   readonly orderId: string;
   readonly actorId: string;
   readonly eventType: "created" | "decision_recorded" | "status_changed" | "resolved" | "closed";
-  readonly fromStatus?: DshOrderRescueStatus | "";
-  readonly toStatus: DshOrderRescueStatus;
+  readonly fromStatus?: DshGovernedOrderRescueStatus | "";
+  readonly toStatus: DshGovernedOrderRescueStatus;
   readonly correlationId: string;
   readonly createdAt: string;
 };
 
-export type DshCreateOrderRescueInput = {
+export type DshCreateGovernedOrderRescueInput = {
   readonly orderId: string;
   readonly ticketId?: string;
-  readonly reason: DshOrderRescueReason;
-  readonly severity?: DshOrderRescueSeverity;
+  readonly reason: DshGovernedOrderRescueReason;
+  readonly severity?: DshGovernedOrderRescueSeverity;
   readonly summary: string;
   readonly assignedTo?: string;
 };
 
-export type DshUpdateOrderRescueInput = {
-  readonly expectedStatus: DshOrderRescueStatus;
-  readonly status: DshOrderRescueStatus;
-  readonly reason: DshOrderRescueReason;
-  readonly owner: DshOrderRescueOwner;
-  readonly nextAction: DshOrderRescueNextAction;
+export type DshUpdateGovernedOrderRescueInput = {
+  readonly expectedStatus: DshGovernedOrderRescueStatus;
+  readonly status: DshGovernedOrderRescueStatus;
+  readonly reason: DshGovernedOrderRescueReason;
+  readonly owner: DshGovernedOrderRescueOwner;
+  readonly nextAction: DshGovernedOrderRescueNextAction;
   readonly operatorNote: string;
   readonly affectedEntity: string;
   readonly assignedTo?: string;
@@ -85,7 +85,7 @@ export type DshUpdateOrderRescueInput = {
 };
 
 export async function createOrderRescueCase(
-  input: DshCreateOrderRescueInput,
+  input: DshCreateGovernedOrderRescueInput,
   context: SupportMutationContext,
 ): Promise<DshGovernedOrderRescueCase> {
   const data = await request<{ rescueCase: DshGovernedOrderRescueCase }>(
@@ -101,7 +101,7 @@ export async function createOrderRescueCase(
 }
 
 export async function fetchOrderRescueCases(
-  statusFilter?: DshOrderRescueStatus,
+  statusFilter?: DshGovernedOrderRescueStatus,
 ): Promise<readonly DshGovernedOrderRescueCase[]> {
   const path = statusFilter
     ? `/dsh/operator/support/order-rescue-cases?status=${encodeURIComponent(statusFilter)}`
@@ -119,7 +119,7 @@ export async function fetchOrderRescueCase(caseId: string): Promise<DshGovernedO
 
 export async function updateOrderRescueCase(
   caseId: string,
-  input: DshUpdateOrderRescueInput,
+  input: DshUpdateGovernedOrderRescueInput,
   context: SupportMutationContext,
 ): Promise<DshGovernedOrderRescueCase> {
   const data = await request<{ rescueCase: DshGovernedOrderRescueCase }>(
@@ -134,8 +134,8 @@ export async function updateOrderRescueCase(
   return data.rescueCase;
 }
 
-export async function fetchOrderRescueEvents(caseId: string): Promise<readonly DshOrderRescueEvent[]> {
-  const data = await request<{ events: DshOrderRescueEvent[] }>(
+export async function fetchOrderRescueEvents(caseId: string): Promise<readonly DshGovernedOrderRescueEvent[]> {
+  const data = await request<{ events: DshGovernedOrderRescueEvent[] }>(
     `/dsh/operator/support/order-rescue-cases/${encodeURIComponent(caseId)}/events`,
   );
   return data.events ?? [];
