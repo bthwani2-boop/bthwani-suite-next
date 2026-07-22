@@ -30,10 +30,12 @@ func TestPartnerFleetLifecyclePostgres(t *testing.T) {
 	ctx := context.Background()
 	suffix := fmt.Sprintf("%d", time.Now().UnixNano())
 	storeID := "store_jrn030_" + suffix
+	secondStoreID := "store_jrn030_second_" + suffix
 	inactiveStoreID := "store_jrn030_inactive_" + suffix
 	member1 := "stm_jrn030_1_" + suffix
 	member2 := "stm_jrn030_2_" + suffix
 	member3 := "stm_jrn030_3_" + suffix
+	secondStoreMember := "stm_jrn030_second_" + suffix
 	inactiveMember := "stm_jrn030_inactive_" + suffix
 	partnerActor := "partner_jrn030_" + suffix
 	captainActor := "captain_jrn030_" + suffix
@@ -41,16 +43,16 @@ func TestPartnerFleetLifecyclePostgres(t *testing.T) {
 
 	t.Cleanup(func() {
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_notifications WHERE actor_id IN ($1,$2,$3)`, partnerActor, captainActor, otherCaptain)
-		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_stores WHERE id IN ($1,$2)`, storeID, inactiveStoreID)
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_stores WHERE id IN ($1,$2,$3)`, storeID, secondStoreID, inactiveStoreID)
 	})
 
-	insertStore := func(id, status string) {
+	insertStore := func(id, displayName, status string) {
 		t.Helper()
 		_, err := db.ExecContext(ctx, `
 			INSERT INTO dsh_stores
 				(id, slug, display_name, status, city_code, service_area_code, serviceability_status)
 			VALUES ($1, $2, $3, $4, 'SANAA', 'SANAA', 'serviceable')`,
-			id, id, "متجر اختبار المرحلة 30", status)
+			id, id, displayName, status)
 		if err != nil {
 			t.Fatalf("insert store %s: %v", id, err)
 		}
@@ -67,11 +69,13 @@ func TestPartnerFleetLifecyclePostgres(t *testing.T) {
 		}
 	}
 
-	insertStore(storeID, "active")
-	insertStore(inactiveStoreID, "inactive")
+	insertStore(storeID, "متجر اختبار المرحلة 30", "active")
+	insertStore(secondStoreID, "متجر ثانٍ لاختبار المرحلة 30", "active")
+	insertStore(inactiveStoreID, "متجر غير نشط لاختبار المرحلة 30", "inactive")
 	insertMember(member1, storeID, "موصل أول")
 	insertMember(member2, storeID, "موصل ثان")
 	insertMember(member3, storeID, "موصل منتهي")
+	insertMember(secondStoreMember, secondStoreID, "موصل المتجر الثاني")
 	insertMember(inactiveMember, inactiveStoreID, "موصل متجر غير نشط")
 
 	issued1, err := IssueCode(ctx, db, storeID, member1, partnerActor, time.Hour)
@@ -119,15 +123,45 @@ func TestPartnerFleetLifecyclePostgres(t *testing.T) {
 		t.Fatalf("issue second code: %v", err)
 	}
 	if _, err := RedeemCode(ctx, db, captainActor, issued2.Code); !errors.Is(err, ErrAlreadyBound) {
-		t.Fatalf("expected duplicate captain binding to fail closed, got %v", err)
+		t.Fatalf("expected duplicate captain binding in one store to fail closed, got %v", err)
+	}
+
+	secondStoreIssued, err := IssueCode(ctx, db, secondStoreID, secondStoreMember, partnerActor, time.Hour)
+	if err != nil {
+		t.Fatalf("issue second-store code: %v", err)
+	}
+	secondStoreMembership, err := RedeemCode(ctx, db, captainActor, secondStoreIssued.Code)
+	if err != nil {
+		t.Fatalf("expected governed multi-store membership to succeed, got %v", err)
+	}
+	if secondStoreMembership.StoreID != secondStoreID || secondStoreMembership.StoreName != "متجر ثانٍ لاختبار المرحلة 30" {
+		t.Fatalf("unexpected second-store membership: %#v", secondStoreMembership)
+	}
+	memberships, err = ListCaptainMemberships(ctx, db, captainActor)
+	if err != nil || len(memberships) != 2 {
+		t.Fatalf("captain must see both governed store memberships: memberships=%#v err=%v", memberships, err)
 	}
 
 	disconnected, err := DisconnectCaptainMembership(ctx, db, captainActor, storeID, member1, membership.Version)
 	if err != nil {
-		t.Fatalf("disconnect membership: %v", err)
+		t.Fatalf("disconnect first membership: %v", err)
 	}
 	if disconnected.Status != "paused" || disconnected.Version != membership.Version+1 {
 		t.Fatalf("unexpected disconnected membership: %#v", disconnected)
+	}
+	secondDisconnected, err := DisconnectCaptainMembership(
+		ctx,
+		db,
+		captainActor,
+		secondStoreID,
+		secondStoreMember,
+		secondStoreMembership.Version,
+	)
+	if err != nil {
+		t.Fatalf("disconnect second-store membership: %v", err)
+	}
+	if secondDisconnected.Status != "paused" || secondDisconnected.Version != secondStoreMembership.Version+1 {
+		t.Fatalf("unexpected second-store disconnect: %#v", secondDisconnected)
 	}
 	memberships, err = ListCaptainMemberships(ctx, db, captainActor)
 	if err != nil || len(memberships) != 0 {
@@ -191,7 +225,7 @@ func TestPartnerFleetLifecyclePostgres(t *testing.T) {
 		partnerActor, captainActor, otherCaptain).Scan(&notificationCount); err != nil {
 		t.Fatal(err)
 	}
-	if notificationCount < 6 {
-		t.Fatalf("expected partner/captain lifecycle notifications, got %d", notificationCount)
+	if notificationCount < 10 {
+		t.Fatalf("expected complete partner/captain lifecycle notifications, got %d", notificationCount)
 	}
 }
