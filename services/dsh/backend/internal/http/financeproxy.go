@@ -15,21 +15,16 @@ const (
 	FinancePermissionManage = "finance.manage"
 )
 
-// proxyFinanceRead keeps the WLT service credential server-side. When DSH has
-// resolved a trusted tenant it is forwarded as an authorization boundary, not
-// as a browser-controlled query value.
-func (s *protectedStoreServer) proxyFinanceRead(w http.ResponseWriter, r *http.Request, wltPath string, query url.Values) {
+// proxyFinanceRead keeps the WLT service credential server-side. tenantID is
+// always taken from the actor returned by Identity; browser-controlled tenant
+// headers, query values and paths are never used as the WLT authorization
+// boundary.
+func (s *protectedStoreServer) proxyFinanceRead(w http.ResponseWriter, r *http.Request, wltPath string, query url.Values, tenantID string) {
 	if !s.wlt.Configured() {
 		store.SendError(w, http.StatusServiceUnavailable, "WLT_NOT_CONFIGURED", "WLT integration is not configured")
 		return
 	}
-	status, body, err := s.wlt.FinanceReadWithTenant(
-		r.Context(),
-		wltPath,
-		query,
-		r.Header.Get("X-Correlation-ID"),
-		r.Header.Get("X-Tenant-ID"),
-	)
+	status, body, err := s.wlt.FinanceReadWithTenant(r.Context(), wltPath, query, r.Header.Get("X-Correlation-ID"), tenantID)
 	if err != nil {
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance read failed")
 		return
@@ -50,103 +45,84 @@ func financeQuery(r *http.Request, keys ...string) url.Values {
 }
 
 func (s *protectedStoreServer) handleFinanceSettlements(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok {
-		return
-	}
-	s.proxyFinanceRead(w, r, "/wlt/settlements", financeQuery(r, "partnerId", "limit", "cursor"))
+	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator")
+	if !ok { return }
+	s.proxyFinanceRead(w, r, "/wlt/settlements", financeQuery(r, "partnerId", "limit", "cursor"), actor.TenantID)
 }
 
 func (s *protectedStoreServer) handleFinanceSettlementSummary(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok {
-		return
-	}
-	s.proxyFinanceRead(w, r, "/wlt/settlements/summary", financeQuery(r, "partnerId"))
+	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator")
+	if !ok { return }
+	s.proxyFinanceRead(w, r, "/wlt/settlements/summary", financeQuery(r, "partnerId"), actor.TenantID)
 }
 
 func (s *protectedStoreServer) handlePartnerFinanceSettlements(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "partner")
-	if !ok {
-		return
-	}
+	if !ok { return }
 	query := financeQuery(r, "limit", "cursor")
 	query.Set("partnerId", actor.ID)
-	s.proxyFinanceRead(w, r, "/wlt/settlements", query)
+	s.proxyFinanceRead(w, r, "/wlt/settlements", query, actor.TenantID)
 }
 
 func (s *protectedStoreServer) handlePartnerFinanceSettlementSummary(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "partner")
-	if !ok {
-		return
-	}
+	if !ok { return }
 	query := url.Values{}
 	query.Set("partnerId", actor.ID)
-	s.proxyFinanceRead(w, r, "/wlt/settlements/summary", query)
+	s.proxyFinanceRead(w, r, "/wlt/settlements/summary", query, actor.TenantID)
 }
 
 // Control-panel refund reads are tenant-bound before WLT is called.
 func (s *protectedStoreServer) handleFinanceRefunds(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok {
-		return
-	}
-	if _, ok := requiredPaymentTenant(w, r); !ok {
-		return
-	}
-	s.proxyFinanceRead(w, r, "/wlt/refunds", financeQuery(r, "orderId", "limit", "cursor"))
+	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator")
+	if !ok { return }
+	if _, ok := requiredPaymentTenant(w, r); !ok { return }
+	s.proxyFinanceRead(w, r, "/wlt/refunds", financeQuery(r, "orderId", "limit", "cursor"), actor.TenantID)
 }
 
 func (s *protectedStoreServer) handleFinanceRefundDetail(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok {
-		return
-	}
-	if _, ok := requiredPaymentTenant(w, r); !ok {
-		return
-	}
-	s.proxyFinanceRead(w, r, "/wlt/refunds/"+url.PathEscape(r.PathValue("refundId")), nil)
+	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator")
+	if !ok { return }
+	if _, ok := requiredPaymentTenant(w, r); !ok { return }
+	s.proxyFinanceRead(w, r, "/wlt/refunds/"+url.PathEscape(r.PathValue("refundId")), nil, actor.TenantID)
 }
 
 func (s *protectedStoreServer) handleFinanceLedgerEntries(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok {
-		return
-	}
-	s.proxyFinanceRead(w, r, "/wlt/ledger/entries", financeQuery(r, "actorId", "actorType", "orderId", "entryType", "limit", "cursor"))
+	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator")
+	if !ok { return }
+	s.proxyFinanceRead(w, r, "/wlt/ledger/entries", financeQuery(r, "actorId", "actorType", "orderId", "entryType", "limit", "cursor"), actor.TenantID)
 }
 
 func (s *protectedStoreServer) handleFinanceFinancialSummary(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok {
-		return
-	}
-	s.proxyFinanceRead(w, r, "/wlt/ledger/financial-summary", nil)
+	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator")
+	if !ok { return }
+	s.proxyFinanceRead(w, r, "/wlt/ledger/financial-summary", nil, actor.TenantID)
 }
 
 func (s *protectedStoreServer) handleFinanceCodRecords(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok {
-		return
-	}
-	s.proxyFinanceRead(w, r, "/wlt/cod-records", financeQuery(r, "captainId", "orderId", "limit", "cursor"))
+	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator")
+	if !ok { return }
+	s.proxyFinanceRead(w, r, "/wlt/cod-records", financeQuery(r, "captainId", "orderId", "limit", "cursor"), actor.TenantID)
 }
 
 func (s *protectedStoreServer) handleFinanceCommissions(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok {
-		return
-	}
-	s.proxyFinanceRead(w, r, "/wlt/commissions", financeQuery(r, "orderId", "captainId", "limit", "cursor"))
+	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator")
+	if !ok { return }
+	s.proxyFinanceRead(w, r, "/wlt/commissions", financeQuery(r, "orderId", "captainId", "limit", "cursor"), actor.TenantID)
 }
 
 func (s *protectedStoreServer) handleCaptainFinanceCodRecords(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "captain")
-	if !ok {
-		return
-	}
+	if !ok { return }
 	query := url.Values{}
 	query.Set("captainId", actor.ID)
-	s.proxyFinanceRead(w, r, "/wlt/cod-records", query)
+	s.proxyFinanceRead(w, r, "/wlt/cod-records", query, actor.TenantID)
 }
 
 func (s *protectedStoreServer) handleFinancePayoutRequests(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok {
-		return
-	}
-	s.proxyFinanceRead(w, r, "/wlt/payout-requests", financeQuery(r, "status", "limit", "cursor", "beneficiaryActorId"))
+	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator")
+	if !ok { return }
+	s.proxyFinanceRead(w, r, "/wlt/payout-requests", financeQuery(r, "status", "limit", "cursor", "beneficiaryActorId"), actor.TenantID)
 }
 
 func operatorWriteBody(operatorID string) []byte {
@@ -156,9 +132,7 @@ func operatorWriteBody(operatorID string) []byte {
 
 func (s *protectedStoreServer) handleApproveFinancePayoutRequest(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage, "operator")
-	if !ok {
-		return
-	}
+	if !ok { return }
 	if !s.wlt.Configured() {
 		store.SendError(w, http.StatusServiceUnavailable, "WLT_NOT_CONFIGURED", "WLT integration is not configured")
 		return
@@ -168,7 +142,7 @@ func (s *protectedStoreServer) handleApproveFinancePayoutRequest(w http.Response
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "payoutId is required")
 		return
 	}
-	status, body, err := s.wlt.FinanceWrite(r.Context(), http.MethodPost, "/wlt/payout-requests/"+url.PathEscape(payoutID)+"/approve", operatorWriteBody(actor.ID), r.Header.Get("X-Correlation-ID"))
+	status, body, err := s.wlt.FinanceWriteWithTenant(r.Context(), http.MethodPost, "/wlt/payout-requests/"+url.PathEscape(payoutID)+"/approve", operatorWriteBody(actor.ID), r.Header.Get("X-Correlation-ID"), actor.TenantID)
 	if err != nil {
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance write failed")
 		return
@@ -180,9 +154,7 @@ func (s *protectedStoreServer) handleApproveFinancePayoutRequest(w http.Response
 
 func (s *protectedStoreServer) handleRejectFinancePayoutRequest(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage, "operator")
-	if !ok {
-		return
-	}
+	if !ok { return }
 	if !s.wlt.Configured() {
 		store.SendError(w, http.StatusServiceUnavailable, "WLT_NOT_CONFIGURED", "WLT integration is not configured")
 		return
@@ -192,7 +164,7 @@ func (s *protectedStoreServer) handleRejectFinancePayoutRequest(w http.ResponseW
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "payoutId is required")
 		return
 	}
-	status, body, err := s.wlt.FinanceWrite(r.Context(), http.MethodPost, "/wlt/payout-requests/"+url.PathEscape(payoutID)+"/reject", operatorWriteBody(actor.ID), r.Header.Get("X-Correlation-ID"))
+	status, body, err := s.wlt.FinanceWriteWithTenant(r.Context(), http.MethodPost, "/wlt/payout-requests/"+url.PathEscape(payoutID)+"/reject", operatorWriteBody(actor.ID), r.Header.Get("X-Correlation-ID"), actor.TenantID)
 	if err != nil {
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance write failed")
 		return
@@ -203,24 +175,20 @@ func (s *protectedStoreServer) handleRejectFinancePayoutRequest(w http.ResponseW
 }
 
 func (s *protectedStoreServer) handleFinanceReconciliationCases(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok {
-		return
-	}
-	s.proxyFinanceRead(w, r, "/wlt/reconciliation-cases", financeQuery(r, "status"))
+	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator")
+	if !ok { return }
+	s.proxyFinanceRead(w, r, "/wlt/reconciliation-cases", financeQuery(r, "status"), actor.TenantID)
 }
 
 func (s *protectedStoreServer) handleFinanceReconciliationCaseDetail(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok {
-		return
-	}
-	s.proxyFinanceRead(w, r, "/wlt/reconciliation-cases/"+url.PathEscape(r.PathValue("caseId")), nil)
+	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator")
+	if !ok { return }
+	s.proxyFinanceRead(w, r, "/wlt/reconciliation-cases/"+url.PathEscape(r.PathValue("caseId")), nil, actor.TenantID)
 }
 
 func (s *protectedStoreServer) handleAssignFinanceReconciliationCase(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage, "operator")
-	if !ok {
-		return
-	}
+	if !ok { return }
 	if !s.wlt.Configured() {
 		store.SendError(w, http.StatusServiceUnavailable, "WLT_NOT_CONFIGURED", "WLT integration is not configured")
 		return
@@ -230,7 +198,7 @@ func (s *protectedStoreServer) handleAssignFinanceReconciliationCase(w http.Resp
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "caseId is required")
 		return
 	}
-	status, body, err := s.wlt.FinanceWrite(r.Context(), http.MethodPost, "/wlt/reconciliation-cases/"+url.PathEscape(caseID)+"/assign", operatorWriteBody(actor.ID), r.Header.Get("X-Correlation-ID"))
+	status, body, err := s.wlt.FinanceWriteWithTenant(r.Context(), http.MethodPost, "/wlt/reconciliation-cases/"+url.PathEscape(caseID)+"/assign", operatorWriteBody(actor.ID), r.Header.Get("X-Correlation-ID"), actor.TenantID)
 	if err != nil {
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance write failed")
 		return
@@ -242,9 +210,7 @@ func (s *protectedStoreServer) handleAssignFinanceReconciliationCase(w http.Resp
 
 func (s *protectedStoreServer) handleResolveFinanceReconciliationCase(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage, "operator")
-	if !ok {
-		return
-	}
+	if !ok { return }
 	if !s.wlt.Configured() {
 		store.SendError(w, http.StatusServiceUnavailable, "WLT_NOT_CONFIGURED", "WLT integration is not configured")
 		return
@@ -264,10 +230,8 @@ func (s *protectedStoreServer) handleResolveFinanceReconciliationCase(w http.Res
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
 		return
 	}
-	body, _ := json.Marshal(map[string]string{
-		"operatorId": actor.ID, "resolutionAction": input.ResolutionAction, "resolutionNote": input.ResolutionNote,
-	})
-	status, responseBody, err := s.wlt.FinanceWrite(r.Context(), http.MethodPost, "/wlt/reconciliation-cases/"+url.PathEscape(caseID)+"/resolve", body, r.Header.Get("X-Correlation-ID"))
+	body, _ := json.Marshal(map[string]string{"operatorId": actor.ID, "resolutionAction": input.ResolutionAction, "resolutionNote": input.ResolutionNote})
+	status, responseBody, err := s.wlt.FinanceWriteWithTenant(r.Context(), http.MethodPost, "/wlt/reconciliation-cases/"+url.PathEscape(caseID)+"/resolve", body, r.Header.Get("X-Correlation-ID"), actor.TenantID)
 	if err != nil {
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance write failed")
 		return
