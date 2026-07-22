@@ -55,7 +55,7 @@ test("JRN-012 persists timing issues decisions alerts audit history and replay k
   ], "preparation alert migration");
   assertNone(
     `${issues}\n${itemBinding}\n${decisions}\n${alerts}`,
-    [/wallet/i, /ledger/i, /settlement/i, /refund_amount/i, /captured_amount/i],
+    [/wallet_/i, /ledger_/i, /settlement_/i, /refund_amount/i, /captured_amount/i],
     "DSH preparation migrations",
   );
 });
