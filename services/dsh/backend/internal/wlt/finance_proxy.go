@@ -29,10 +29,18 @@ func financeReadPathAllowed(path string) bool {
 	if _, ok := financeReadAllowlist[path]; ok {
 		return true
 	}
-	for _, prefix := range []string{"/wlt/refunds/", "/wlt/reconciliation-cases/"} {
+	for _, prefix := range []string{
+		"/wlt/refunds/",
+		"/wlt/reconciliation-cases/",
+		"/wlt/commissions/",
+	} {
 		if rest, ok := strings.CutPrefix(path, prefix); ok {
 			return rest != "" && !strings.Contains(rest, "/")
 		}
+	}
+	if rest, ok := strings.CutPrefix(path, "/wlt/settlements/"); ok {
+		parts := strings.Split(rest, "/")
+		return len(parts) == 2 && strings.TrimSpace(parts[0]) != "" && parts[1] == "evidence"
 	}
 	return false
 }
@@ -98,7 +106,6 @@ func (c *Client) financeReadRequest(
 	if correlationID = strings.TrimSpace(correlationID); correlationID != "" {
 		req.Header.Set("X-Correlation-ID", correlationID)
 	}
-
 	response, err := c.http.Do(req)
 	if err != nil {
 		return 0, nil, fmt.Errorf("call WLT finance read: %w", err)
@@ -131,21 +138,15 @@ func (c *Client) FinanceWrite(
 	if correlationID == "" {
 		return 0, nil, fmt.Errorf("WLT finance write correlation id is required")
 	}
-
 	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, bytes.NewReader(body))
 	if err != nil {
 		return 0, nil, fmt.Errorf("build WLT finance write request: %w", err)
 	}
 	setServiceHeaders(req, c.serviceToken)
 	req.Header.Set("Content-Type", "application/json")
-	if err := setRequiredMutationHeaders(
-		req,
-		correlationID,
-		deterministicMutationKey("finance-proxy", method, path, string(body)),
-	); err != nil {
+	if err := setRequiredMutationHeaders(req, correlationID, deterministicMutationKey("finance-proxy", method, path, string(body))); err != nil {
 		return 0, nil, fmt.Errorf("prepare WLT finance write request: %w", err)
 	}
-
 	response, err := c.http.Do(req)
 	if err != nil {
 		return 0, nil, fmt.Errorf("call WLT finance write: %w", err)
