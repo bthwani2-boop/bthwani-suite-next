@@ -22,6 +22,10 @@ var campaignAudiences = map[string]bool{
 	"all": true, "client": true, "partner": true, "captain": true, "field": true,
 }
 
+var campaignPlacements = map[string]bool{
+	"home": true, "hero": true, "feed": true, "floating": true, "banner": true, "store-card": true,
+}
+
 func campaignTransitionAllowed(from, to string) bool {
 	if from == to {
 		return true
@@ -60,6 +64,17 @@ func validateCampaignDates(startDate, endDate string) error {
 	return nil
 }
 
+func validateCampaignActivationWindow(startDate, endDate string, now time.Time) error {
+	if validateCampaignDates(startDate, endDate) != nil {
+		return ErrInvalid
+	}
+	end, _ := time.Parse("2006-01-02", endDate)
+	if end.Before(time.Date(now.UTC().Year(), now.UTC().Month(), now.UTC().Day(), 0, 0, 0, 0, time.UTC)) {
+		return ErrInvalid
+	}
+	return nil
+}
+
 type Campaign struct {
 	ID          string     `json:"id"`
 	Title       string     `json:"title"`
@@ -71,6 +86,7 @@ type Campaign struct {
 	TargetID    string     `json:"targetId,omitempty"`
 	Audience    string     `json:"audience"`
 	Placement   string     `json:"placement,omitempty"`
+	Version     int        `json:"version"`
 	CreatedBy   string     `json:"createdBy"`
 	ArchivedAt  *time.Time `json:"archivedAt,omitempty"`
 	CreatedAt   time.Time  `json:"createdAt"`
@@ -94,13 +110,13 @@ type CreateCampaignInput struct {
 var campaignSelectCols = `id, title, COALESCE(description,''), status,
 	          COALESCE(start_date,''), COALESCE(end_date,''),
 	          COALESCE(target_type,''), COALESCE(target_id,''), audience, COALESCE(placement,''),
-	          COALESCE(created_by,''), archived_at, created_at, updated_at`
+	          version, COALESCE(created_by,''), archived_at, created_at, updated_at`
 
 func scanCampaign(row interface{ Scan(dest ...any) error }) (Campaign, error) {
 	var c Campaign
 	err := row.Scan(&c.ID, &c.Title, &c.Description, &c.Status,
 		&c.StartDate, &c.EndDate, &c.TargetType, &c.TargetID, &c.Audience, &c.Placement,
-		&c.CreatedBy, &c.ArchivedAt, &c.CreatedAt, &c.UpdatedAt)
+		&c.Version, &c.CreatedBy, &c.ArchivedAt, &c.CreatedAt, &c.UpdatedAt)
 	return c, err
 }
 
@@ -128,7 +144,7 @@ func ListCampaigns(db *sql.DB) ([]Campaign, error) {
 }
 
 func GetCampaign(db *sql.DB, id string) (Campaign, error) {
-	c, err := scanCampaign(db.QueryRow(`SELECT `+campaignSelectCols+` FROM dsh_marketing_campaigns WHERE id=$1`, id))
+	c, err := scanCampaign(db.QueryRow(`SELECT `+campaignSelectCols+` FROM dsh_marketing_campaigns WHERE id=$1 AND archived_at IS NULL`, id))
 	if errors.Is(err, sql.ErrNoRows) {
 		return c, ErrNotFound
 	}
@@ -139,6 +155,8 @@ func CreateCampaign(db *sql.DB, in CreateCampaignInput) (Campaign, error) {
 	in.Title = strings.TrimSpace(in.Title)
 	in.StartDate = strings.TrimSpace(in.StartDate)
 	in.EndDate = strings.TrimSpace(in.EndDate)
+	in.Audience = strings.TrimSpace(in.Audience)
+	in.Placement = strings.TrimSpace(in.Placement)
 	if in.Title == "" || validateCampaignDates(in.StartDate, in.EndDate) != nil {
 		return Campaign{}, ErrInvalid
 	}
@@ -146,6 +164,9 @@ func CreateCampaign(db *sql.DB, in CreateCampaignInput) (Campaign, error) {
 		in.Audience = "all"
 	}
 	if !campaignAudiences[in.Audience] {
+		return Campaign{}, ErrInvalid
+	}
+	if in.Placement != "" && !campaignPlacements[in.Placement] {
 		return Campaign{}, ErrInvalid
 	}
 	if in.CreatedBySurface == "" {
@@ -179,13 +200,18 @@ func CreateCampaign(db *sql.DB, in CreateCampaignInput) (Campaign, error) {
 }
 
 type UpdateCampaignInput struct {
-	Status        string
-	Title         string
-	Description   string
-	TargetType    string
-	TargetID      string
-	ActorID       string
-	CorrelationID string
+	Status          string
+	Title           string
+	Description     string
+	StartDate       string
+	EndDate         string
+	TargetType      string
+	TargetID        string
+	Audience        string
+	Placement       string
+	ExpectedVersion int
+	ActorID         string
+	CorrelationID   string
 }
 
 func UpdateCampaign(db *sql.DB, id string, in UpdateCampaignInput) (Campaign, error) {
@@ -193,59 +219,88 @@ func UpdateCampaign(db *sql.DB, id string, in UpdateCampaignInput) (Campaign, er
 	if err != nil {
 		return Campaign{}, err
 	}
-	if before.ArchivedAt != nil {
-		return Campaign{}, ErrNotFound
+	if in.ExpectedVersion <= 0 || in.ExpectedVersion != before.Version {
+		return Campaign{}, ErrCommercialVersionConflict
 	}
 
+	next := before
 	if in.Status != "" {
-		if !campaignStatuses[in.Status] {
-			return Campaign{}, ErrInvalid
-		}
-		if !campaignTransitionAllowed(before.Status, in.Status) {
+		if !campaignStatuses[in.Status] || !campaignTransitionAllowed(before.Status, in.Status) {
 			return Campaign{}, ErrInvalidTransition
 		}
-		if in.Status == "active" && validateCampaignDates(before.StartDate, before.EndDate) != nil {
+		next.Status = in.Status
+	}
+	if in.Title != "" {
+		next.Title = strings.TrimSpace(in.Title)
+		if next.Title == "" {
 			return Campaign{}, ErrInvalid
 		}
 	}
-	if in.Title != "" && strings.TrimSpace(in.Title) == "" {
-		return Campaign{}, ErrInvalid
+	if in.Description != "" {
+		next.Description = strings.TrimSpace(in.Description)
+	}
+	if in.StartDate != "" || in.EndDate != "" {
+		next.StartDate = strings.TrimSpace(in.StartDate)
+		next.EndDate = strings.TrimSpace(in.EndDate)
+		if validateCampaignDates(next.StartDate, next.EndDate) != nil {
+			return Campaign{}, ErrInvalid
+		}
+	}
+	if in.Audience != "" {
+		next.Audience = strings.TrimSpace(in.Audience)
+		if !campaignAudiences[next.Audience] {
+			return Campaign{}, ErrInvalid
+		}
+	}
+	if in.Placement != "" {
+		next.Placement = strings.TrimSpace(in.Placement)
+		if !campaignPlacements[next.Placement] {
+			return Campaign{}, ErrInvalid
+		}
+	}
+	if in.TargetType != "" {
+		next.TargetType = strings.TrimSpace(in.TargetType)
+		next.TargetID = strings.TrimSpace(in.TargetID)
 	}
 
-	targetType := before.TargetType
-	targetID := before.TargetID
-	if in.TargetType != "" {
-		passed, reason, err := ValidateTarget(db, in.TargetType, in.TargetID)
-		if err != nil {
-			return Campaign{}, err
+	if next.Status == "active" {
+		if validateCampaignActivationWindow(next.StartDate, next.EndDate, time.Now()) != nil {
+			return Campaign{}, ErrInvalid
 		}
-		_ = WriteVisibilityGateCheck(db, "campaign", id, in.TargetType, in.TargetID, "target_client_visibility", passed, reason)
+		if next.Audience != "all" && next.Audience != "client" {
+			return Campaign{}, ErrInvalid
+		}
+	}
+	if next.TargetType != "" && (in.TargetType != "" || next.Status == "active") {
+		passed, reason, gateErr := ValidateTarget(db, next.TargetType, next.TargetID)
+		if gateErr != nil {
+			return Campaign{}, gateErr
+		}
+		_ = WriteVisibilityGateCheck(db, "campaign", id, next.TargetType, next.TargetID, "target_client_visibility", passed, reason)
 		if !passed {
 			return Campaign{}, ErrTargetGateFailed
 		}
-		targetType = in.TargetType
-		targetID = in.TargetID
 	}
 
 	c, err := scanCampaign(db.QueryRow(`
 		UPDATE dsh_marketing_campaigns
-		SET status=COALESCE(NULLIF($2,''), status),
-		    title=COALESCE(NULLIF($3,''), title),
-		    description=COALESCE(NULLIF($4,''), description),
-		    target_type=NULLIF($5,''),
-		    target_id=NULLIF($6,''),
-		    updated_at=NOW()
-		WHERE id=$1 AND archived_at IS NULL
+		SET status=$2, title=$3, description=$4,
+		    start_date=NULLIF($5,''), end_date=NULLIF($6,''),
+		    target_type=NULLIF($7,''), target_id=NULLIF($8,''),
+		    audience=$9, placement=NULLIF($10,''),
+		    version=version+1, updated_at=NOW()
+		WHERE id=$1 AND version=$11 AND archived_at IS NULL
 		RETURNING `+campaignSelectCols,
-		id, in.Status, strings.TrimSpace(in.Title), in.Description, targetType, targetID))
+		id, next.Status, next.Title, next.Description, next.StartDate, next.EndDate,
+		next.TargetType, next.TargetID, next.Audience, next.Placement, in.ExpectedVersion))
 	if errors.Is(err, sql.ErrNoRows) {
-		return c, ErrNotFound
+		return Campaign{}, ErrCommercialVersionConflict
 	}
 	if err != nil {
-		return c, err
+		return Campaign{}, err
 	}
 	if in.TargetType != "" {
-		_ = WriteTargetBinding(db, "campaign", id, in.TargetType, in.TargetID, in.ActorID, in.CorrelationID)
+		_ = WriteTargetBinding(db, "campaign", id, next.TargetType, next.TargetID, in.ActorID, in.CorrelationID)
 	}
 	_ = WriteAuditEvent(db, "campaign", id, in.ActorID, "operator", "update", "", in.CorrelationID, campaignJSON(before), campaignJSON(c))
 	return c, nil
@@ -258,12 +313,9 @@ func ArchiveCampaign(db *sql.DB, id, actorID, correlationID string) error {
 	if err != nil {
 		return err
 	}
-	if before.ArchivedAt != nil {
-		return ErrNotFound
-	}
 	result, err := db.Exec(`
 		UPDATE dsh_marketing_campaigns
-		SET status='cancelled', archived_at=NOW(), updated_at=NOW()
+		SET status='cancelled', archived_at=NOW(), version=version+1, updated_at=NOW()
 		WHERE id=$1 AND archived_at IS NULL`, id)
 	if err != nil {
 		return err
@@ -272,9 +324,5 @@ func ArchiveCampaign(db *sql.DB, id, actorID, correlationID string) error {
 	if n == 0 {
 		return ErrNotFound
 	}
-	after, err := GetCampaign(db, id)
-	if err != nil {
-		return err
-	}
-	return WriteAuditEvent(db, "campaign", id, actorID, "operator", "archive", "", correlationID, campaignJSON(before), campaignJSON(after))
+	return WriteAuditEvent(db, "campaign", id, actorID, "operator", "archive", "", correlationID, campaignJSON(before), nil)
 }
