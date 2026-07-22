@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SOURCE_SHA="${JRN032_SOURCE_SHA:?JRN032_SOURCE_SHA is required}"
+SOURCE_SHA="$(git rev-parse HEAD)"
 VERIFICATION_HEAD="${JRN032_VERIFICATION_HEAD:?JRN032_VERIFICATION_HEAD is required}"
 RUN_ID="${GITHUB_RUN_ID:?GITHUB_RUN_ID is required}"
 RUN_ATTEMPT="${GITHUB_RUN_ATTEMPT:?GITHUB_RUN_ATTEMPT is required}"
@@ -27,6 +27,7 @@ registry["remoteVerification"] = {
     "verifiedAt": verified_at,
     "checks": [
         "canonical OpenAPI root composition",
+        "modular manifest counts and analytics domain registration",
         "generated DSH bundle and TypeScript client",
         "Go analytics WLT and HTTP tests",
         "DSH control-panel and partner typechecks",
@@ -52,7 +53,8 @@ Path("governance/evidence/JRN-032_FINAL_REMOTE_VERIFICATION.md").write_text(
 
 ## Passed technical checks
 
-- Canonical OpenAPI root composition and generated DSH bundle/client.
+- Canonical OpenAPI root composition and modular manifest alignment.
+- Generated DSH bundle and TypeScript client.
 - Analytics, WLT read-only boundary, and protected HTTP route tests.
 - DSH, control-panel, and partner TypeScript typechecks.
 - Full-stack and financial ownership guards.
@@ -68,10 +70,13 @@ Product Manager, Product Owner, financial-control, deployment, and live-environm
 )
 PY
 
+rm -f governance/evidence/JRN-032_OPENAPI_FAILURE.log
+
 git config user.name "github-actions[bot]"
 git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 git add \
   services/dsh/contracts/dsh.openapi.yaml \
+  services/dsh/contracts/dsh.modular.manifest.json \
   services/dsh/contracts/generated/dsh.bundle.openapi.yaml \
   services/dsh/clients/generated/dsh-api.ts \
   services/dsh/backend/internal/analytics \
@@ -84,6 +89,8 @@ git add \
   services/dsh/backend/internal/wlt/analytics_read_test.go \
   governance/evidence/JRN-032_SLICE_VERIFICATION.json \
   governance/evidence/JRN-032_FINAL_REMOTE_VERIFICATION.md
+
+git add -u governance/evidence/JRN-032_OPENAPI_FAILURE.log 2>/dev/null || true
 
 if git diff --cached --quiet; then
   echo "No materialized JRN-032 changes to commit."
