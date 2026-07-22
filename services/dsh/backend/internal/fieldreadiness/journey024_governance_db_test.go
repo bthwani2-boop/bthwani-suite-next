@@ -2,15 +2,14 @@ package fieldreadiness
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"testing"
 
 	"dsh-api/internal/store"
 )
 
-func registerGovernedStoreLocation(t *testing.T, db interface {
-	ExecContext(context.Context, string, ...any) (sqlResult, error)
-}, storeID, partnerID string) {
+func registerGovernedStoreLocation(t *testing.T, db *sql.DB, storeID, partnerID string) {
 	t.Helper()
 	if _, err := db.ExecContext(context.Background(), `
 		UPDATE dsh_stores
@@ -20,14 +19,7 @@ func registerGovernedStoreLocation(t *testing.T, db interface {
 	}
 }
 
-type sqlResult interface {
-	LastInsertId() (int64, error)
-	RowsAffected() (int64, error)
-}
-
-func seedStoreBoundReadinessMedia(t *testing.T, db interface {
-	ExecContext(context.Context, string, ...any) (sqlResult, error)
-}, partnerID, storeID, agentID string) string {
+func seedStoreBoundReadinessMedia(t *testing.T, db *sql.DB, partnerID, storeID, agentID string) string {
 	t.Helper()
 	mediaRef := uniqueID("media-jrn024")
 	if _, err := db.ExecContext(context.Background(), `
