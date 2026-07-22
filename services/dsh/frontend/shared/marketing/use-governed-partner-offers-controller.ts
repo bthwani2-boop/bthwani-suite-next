@@ -9,11 +9,30 @@ import {
 import type { PartnerOfferRecord } from "../partner/dsh-partner-offer-types";
 
 function resolveError(error: unknown): string {
-  const candidate = error as { readonly status?: number; readonly message?: string } | undefined;
-  if (candidate?.status === 409) return candidate.message || "تعارض في الإصدار أو بوابة النشر. أعد التحميل ثم راجع القرار.";
+  const candidate = error as { readonly status?: number; readonly message?: string; readonly kind?: string } | undefined;
+  if (candidate?.kind === "network") return "لا يوجد اتصال. تحقق من الشبكة ثم أعد المحاولة.";
+  if (candidate?.status === 409) return candidate.message || "تعارض في الإصدار أو انتقال غير مسموح. أعد التحميل ثم راجع القرار.";
+  if (candidate?.status === 400) return candidate.message || "العرض أو الجدولة غير صالحين.";
   if (candidate?.status === 422) return candidate.message || "العرض غير مؤهل للنشر.";
   if (candidate?.status === 403) return "لا تملك صلاحية إدارة العرض.";
   return candidate?.message || "تعذر تنفيذ قرار العرض.";
+}
+
+function nextOperationalStatus(status: PartnerOfferRecord["status"]): PartnerOfferRecord["status"] | null {
+  switch (status) {
+    case "inbound":
+      return "review";
+    case "review":
+      return "marketing-ready";
+    case "marketing-ready":
+      return "published";
+    case "published":
+      return "paused";
+    case "paused":
+      return "published";
+    default:
+      return null;
+  }
 }
 
 export function useGovernedPartnerOffersController(authKind: string) {
@@ -83,14 +102,13 @@ export function useGovernedPartnerOffersController(authKind: string) {
   const toggleStatus = useCallback(async (id: string): Promise<boolean> => {
     const current = items.find((offer) => offer.id === id);
     if (!current) return false;
-    const nextStatus = current.status === "published"
-      ? "paused"
-      : current.status === "review"
-        ? "published"
-        : current.status === "inbound"
-          ? "review"
-          : current.status;
-    if (nextStatus === current.status) return false;
+    const nextStatus = nextOperationalStatus(current.status);
+    if (!nextStatus) return false;
+    if ((nextStatus === "marketing-ready" || nextStatus === "published") &&
+      (!current.activeFromDate || !current.activeToDate)) {
+      setErrorMessage("حدد تاريخ بداية ونهاية من شاشة المراجعة قبل اعتماد العرض.");
+      return false;
+    }
     if (current.offerType === "coupon" && nextStatus === "published" && !current.couponId) {
       setErrorMessage("اختر كوبون checkout نشطًا من شاشة المراجعة قبل النشر.");
       return false;
