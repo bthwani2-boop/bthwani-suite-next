@@ -64,6 +64,7 @@ $script:WltMigrationProbes = [ordered]@{
   "wlt-037_jrn_035_refund_governance.sql"         = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_refunds' AND column_name = 'requested_by_operator_id') AND to_regclass('public.wlt_refund_audit_events') IS NOT NULL AND to_regclass('public.wlt_refunds_session_idempotency_idx') IS NOT NULL AND to_regclass('public.wlt_dsh_outbox_events_refund_event_idx') IS NOT NULL"
   "wlt-038_jrn_033_representative_finance_tenancy.sql" = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_wallets' AND column_name = 'tenant_id' AND is_nullable = 'NO') AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_ledger_entries' AND column_name = 'tenant_id' AND is_nullable = 'NO') AND to_regclass('public.wlt_wallets_tenant_actor_idx') IS NOT NULL AND to_regclass('public.wlt_ledger_entries_tenant_actor_idx') IS NOT NULL"
   "wlt-090_jrn036_settlement_commission_governance.sql" = "to_regclass('public.wlt_jrn036_settlement_requests') IS NOT NULL AND to_regclass('public.wlt_jrn036_commission_policy_versions') IS NOT NULL AND to_regclass('public.wlt_jrn036_audit_events') IS NOT NULL"
+  "wlt-091_jrn036_adjustment_ledger_identity.sql" = "to_regclass('public.wlt_jrn036_commission_adjustments_request_hash_idx') IS NOT NULL AND to_regclass('public.wlt_jrn036_commission_adjustments_commission_created_idx') IS NOT NULL"
 }
 
 function Test-WltMigrationProbeCoverage {
