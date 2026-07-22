@@ -58,7 +58,6 @@ export {
   fetchOperatorDeliveryPricing,
   updateOperatorDeliveryPricing,
   useOperatorDeliveryPricingController,
-  usePartnerDeliveryPricingController,
   findDeliveryPricing,
 } from "./operator-delivery-pricing";
 
