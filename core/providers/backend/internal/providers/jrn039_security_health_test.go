@@ -3,6 +3,7 @@ package providers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -78,5 +79,33 @@ func TestProviderHealthRejectsUnallowlistedHost(t *testing.T) {
 	status, _ := service.probeProviderHealth(context.Background(), provider)
 	if status != StatusDegraded {
 		t.Fatalf("expected degraded status for unallowlisted host, got %s", status)
+	}
+}
+
+func TestProviderUpdateRequiresAtLeastOneField(t *testing.T) {
+	if err := validateUpdateProviderInput(UpdateProviderInput{}); !errors.Is(err, ErrInvalidInput) {
+		t.Fatalf("expected empty provider update to be rejected, got %v", err)
+	}
+}
+
+func TestProviderUpdateRejectsSecretMaterialInParameters(t *testing.T) {
+	parameters := json.RawMessage(`{"environment":"production","apiKey":"must-not-be-public"}`)
+	input := UpdateProviderInput{Parameters: &parameters}
+	if err := validateUpdateProviderInput(input); !errors.Is(err, ErrInvalidInput) {
+		t.Fatalf("expected secret-like parameter to be rejected, got %v", err)
+	}
+}
+
+func TestProviderUpdateAcceptsWriteOnlyCredentialsAndPublicParameters(t *testing.T) {
+	credentials := json.RawMessage(`{"apiKey":"write-only-secret"}`)
+	parameters := json.RawMessage(`{"environment":"production","healthUrl":"https://status.example.com/health"}`)
+	active := true
+	input := UpdateProviderInput{
+		Active:      &active,
+		Credentials: &credentials,
+		Parameters:  &parameters,
+	}
+	if err := validateUpdateProviderInput(input); err != nil {
+		t.Fatalf("expected governed provider update to be valid, got %v", err)
 	}
 }
