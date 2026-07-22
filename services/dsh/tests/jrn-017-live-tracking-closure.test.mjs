@@ -95,7 +95,15 @@ test('JRN-017 registers canonical contract and all eighteen slices', () => {
   assert.match(registry, /id: "dsh-live-tracking"/);
   assert.equal(closure.journeyId, 'JRN-017');
   assert.equal(closure.requiredSliceCount, 18);
+  assert.equal(closure.closedSliceCount, 18);
+  assert.equal(closure.openSliceCount, 0);
+  assert.equal(closure.allSlicesClosedInCode, true);
+  assert.equal(closure.codeDecision, 'PASS');
+  assert.equal(closure.releaseDecision, 'READY_FOR_REVIEW');
   assert.equal(closure.slices.length, 18);
+  assert.ok(closure.slices.every((slice) => slice.codeStatus === 'IMPLEMENTED_AND_VERIFIED'));
+  assert.ok(closure.slices.every((slice) => slice.sliceDecision === 'PASS'));
+  assert.ok(closure.slices.every((slice) => slice.closureState === 'CLOSED_IN_CODE'));
   assert.deepEqual(
     closure.slices.map((slice) => slice.id),
     Array.from({ length: 18 }, (_, index) => `FS-${String(index + 1).padStart(2, '0')}`),
